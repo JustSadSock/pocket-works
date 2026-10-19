@@ -1,11 +1,11 @@
-import { localScripts, hasWorkerRegistration, entrySources } from './pwa-entrypoints.mjs';
+import { localScripts, appOwnedScripts, hasWorkerRegistration, entrySources } from './pwa-entrypoints.mjs';
 import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { buildRegistryEntries } from './app-config.mjs';
 
 const root = process.cwd();
 const rootRequiredFiles = ['index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'sw.js', 'README.md', 'wrangler.jsonc'];
-const appRequiredFiles = ['index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'sw.js', 'README.md'];
+const appRequiredFiles = ['index.html', 'styles.css', 'manifest.webmanifest', 'sw.js', 'README.md'];
 const errors = [];
 const cacheNames = new Map();
 
@@ -47,7 +47,7 @@ async function validateHtml(label, relativePath) {
     if (!html.includes(reference) && !html.includes(reference.slice(2))) fail(`${label} must reference ${reference}`);
   }
   const scripts = localScripts(html);
-  if (!scripts.length) fail(`${label} must reference an app-owned JavaScript entrypoint`);
+  if (!appOwnedScripts(html).length) fail(`${label} must reference an app-owned JavaScript entrypoint`);
   for (const script of scripts) if (!(await exists(path.join(root,path.dirname(relativePath),script)))) fail(`${label} references missing entrypoint ${script}`);
   if (!/name=["']viewport["'][^>]*viewport-fit=cover/i.test(html)) fail(`${label} viewport meta must include viewport-fit=cover`);
 }
@@ -189,7 +189,7 @@ for (const [index, app] of apps.entries()) {
     continue;
   }
 
-  for (const requiredFile of appRequiredFiles) {
+  for (const requiredFile of [...appRequiredFiles, ...(app.runtime === 'enhanced' ? ['app.js'] : [])]) {
     if (!(await exists(path.join(root, appDirectory, requiredFile)))) fail(`${app.slug} is missing ${requiredFile}`);
   }
 
@@ -199,7 +199,9 @@ for (const [index, app] of apps.entries()) {
 
   if (app.runtime === 'quick') {
     try {
-      const appSource = await readText(path.join(appDirectory, 'app.js'));
+      const appSource = await exists(path.join(root, appDirectory, 'app.js'))
+        ? await readText(path.join(appDirectory, 'app.js'))
+        : '';
       const appHtml = await readText(path.join(appDirectory, 'index.html'));
       const reachableSources=await entrySources(path.join(root,appDirectory),appHtml);
       if (!validatesServiceWorkerRegistration(appSource+'\n'+reachableSources, appHtml)) fail(`${app.slug} must register ./sw.js directly or through the managed update script`);

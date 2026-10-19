@@ -394,7 +394,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
       gameOver = false,
       sel = null,
       zoneMap = null, zoneList = [],
-      spawnMode = false, spawnType = null, spawnZones = [],
+      spawnMode = false, spawnType = null, spawnZones = [], spawnSource = null,
       continueAfter = null,
       fogSnapshot = null,
       tooltipEnabled = false;
@@ -725,66 +725,19 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
   // === LOS ===
   function hasLOS(r0,c0,r1,c1,{forestBlock=true}={}){
-    let dx=abs(c1-c0), dy=abs(r1-r0),
-        sx=c0<c1?1:-1, sy=r0<r1?1:-1, err=dx-dy,
-        afterForest = forestBlock ? -1 : null;
-    while(true){
-      if(map[r0][c0]===TERRAIN.MOUNTAIN && (r0!==r1||c0!==c1)) return false;
-      if(afterForest!==null){
-        if(afterForest>=0) afterForest++;
-        if(afterForest>1) return false;
-        if(map[r0][c0]===TERRAIN.FOREST && (r0!==r1||c0!==c1)) afterForest=0;
-      }
-      if(r0===r1&&c0===c1) break;
-      let e2=err*2;
-      if(e2>-dy){ err-=dy; c0+=sx }
-      if(e2< dx){ err+=dx; r0+=sy }
-    }
-    return true;
+    return window.FogRuleKernel.lineOfSight(map,r0,c0,r1,c1,forestBlock);
   }
 
-  // === Fog ===
-  // A remembered building is a frozen observation, never its live hidden state.
+  // Fog storage and last-seen memory are in a side-private, testable module.
   function visibleBuildings(){
-    const p=state.currentPlayer,F=state.fog[p],S=state.seen[p];
-    const live=buildings.filter(b=>!b.lastSeen&&(!F?.[b.r]?.[b.c]||revealAll));
-    if(revealAll)return live;
-    const remembered=Object.values(state.lastSeen?.[p]||{})
-      .filter(b=>F?.[b.r]?.[b.c]&&S?.[b.r]?.[b.c]&&
-        !live.some(x=>x.r===b.r&&x.c===b.c))
-      .map(b=>({...b,stale:true}));
-    return [...live,...remembered];
+    return window.FogVisibility.visible({state,buildings,side:state.currentPlayer,revealAll});
   }
   window.FogVisibleBuildings=visibleBuildings;
   function updateFog(){
-    if(onlineGame) return; // Server supplies each participant's private visibility.
-    if(!modeBeta && !revealAll){
-      const p=state.currentPlayer, F=state.fog[p], S=state.seen[p];
-      for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)F[r][c]=true;
-      [...buildings.filter(b=>b.owner===p),
-        ...units.filter(u=>u.owner===p)].forEach(o=>{
-        let rad = map[o.r][o.c]===TERRAIN.FOREST?2:
-                  map[o.r][o.c]===TERRAIN.HILL?4:3;
-        for(let dr=-rad;dr<=rad;dr++)for(let dc=-rad;dc<=rad;dc++){
-          let rr=o.r+dr, cc=o.c+dc;
-          if(rr<0||rr>=ROWS||cc<0||cc>=COLS) continue;
-          if(abs(dr)+abs(dc)<=rad && hasLOS(o.r,o.c,rr,cc)){
-            F[rr][cc]=false; S[rr][cc]=true;
-          }
-        }
-      });
-    }
-    const p=state.currentPlayer, F=state.fog[p];
-    state.lastSeen??={1:{},2:{}};
-    const memory=state.lastSeen[p]??={};
-    for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-      if(!F[r][c]){
-        const b=buildings.find(b=>b.r===r&&b.c===c);
-        const key=r+','+c;
-        if(b)memory[key]={id:b.id,r,c,type:b.type,owner:b.owner,hp:b.hp,gen:b.gen};
-        else delete memory[key];
-      }
-    }
+    return window.FogVisibility.project({
+      map,units,buildings,state,side:state.currentPlayer,modeBeta,revealAll,
+      online:onlineGame,kernel:window.FogRuleKernel
+    });
   }
 
   // === Draw ===
@@ -1156,36 +1109,36 @@ window.addEventListener('DOMContentLoaded', ()=>{
     }
   }
 
-  function attemptCapture(unit, building){
-    if(!building) return;
-    if(unit.r===building.r && unit.c===building.c && building.hp<=0){
-      const already = building.owner === unit.owner;
-      const baseTaken = (building.gen ?? BUILD_TYPES[building.type].gen) === 0;
-      if(!already){
-        recordEvent(baseTaken
-          ? t('eventBaseCaptured')
-          : t('eventResourceCaptured').replace('{building}', BUILD_LABELS[building.type]));
-        playAudio(captureSfx);
-        window.FogVisual?.action('capture',building.r,building.c);
-        building.owner = unit.owner;
-        if(!aiMode) addReplay({type:'capture', building});
-      }
-      building.hp = BUILD_TYPES[building.type].hpMax;
-    }
+  function attemptCapture(unit,building){
+    if(!building)return;
+    const result=window.FogRuleKernel.capture(unit,building,BUILD_TYPES);
+    if(!result.valid||!result.captured)return;
+    const baseTaken=(building.gen??BUILD_TYPES[building.type].gen)===0;
+    recordEvent(baseTaken?t('eventBaseCaptured'):
+      t('eventResourceCaptured').replace('{building}',BUILD_LABELS[building.type]));
+    playAudio(captureSfx);
+    window.FogVisual?.action('capture',building.r,building.c);
+    if(!aiMode)addReplay({type:'capture',building});
   }
 
   // === spawn ===
   function spawn(type,r,c){
     const p=state.currentPlayer, cost=UNIT_TYPES[type].cost;
-    if(units.length>=140){reportSave('Лимит армии: 140 отрядов.',true);return;}
-    if(state.gold[p]<cost) return;
+    const source=spawnSource||buildings.find(b=>b.owner===p&&
+      BUILD_TYPES[b.type]?.spawn.includes(type)&&Math.abs(b.r-r)+Math.abs(b.c-c)===1);
+    if(!window.FogRuleKernel.canSpawn(map,units,buildings,state,source,type,
+      {r,c},UNIT_TYPES,BUILD_TYPES,modeBeta)){
+      reportSave(units.length>=140?'Лимит армии: 140 отрядов.':
+        'Наём невозможен: проверь золото и свободную клетку.',true);
+      return;
+    }
     const unit={id:nextUnitId++,r,c,owner:p,type,hp:UNIT_TYPES[type].hpMax,mp:0,startR:r,startC:c};
     units.push(unit);
     window.FogAudio?.play('spawn');window.FogVisual?.action('spawn',r,c);
     if(!aiMode) addReplay({type:'spawn',unit});
     state.gold[p]-=cost;
     recordEvent(t('eventUnitCreated').replace('{unit}', UNIT_LABELS[type]));
-    spawnMode=false; spawnZones=[]; window.spawnZones = spawnZones;
+    spawnMode=false; spawnSource=null; spawnZones=[]; window.spawnZones = spawnZones;
     updateAll();
   }
 
@@ -1268,7 +1221,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
     if(sel&&sel.type==='mage'&&sel.mp>0){
       let tgt=units.find(u=>u.r===y&&u.c===x&&u.owner===p&&u.hp<UNIT_TYPES[u.type].hpMax);
-      if(tgt&&abs(tgt.r-sel.r)+abs(tgt.c-sel.c)<=1){
+      if(window.FogRuleKernel.canHeal(sel,tgt,p,UNIT_TYPES)){
         sel.mp=0; tgt.hp=Math.min(UNIT_TYPES[tgt.type].hpMax,tgt.hp+2);
         recordEvent(t('mageHeal').replace('{unit}', UNIT_LABELS[tgt.type]));
         playAudio(healSfx);window.FogVisual?.action('heal',y,x,{amount:2});
@@ -1286,7 +1239,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
               let btn=document.createElement('button');
               btn.textContent=`${UNIT_LABELS[type]} (${UNIT_TYPES[type].cost} ${t('goldShort')})`;
               btn.onclick=()=>{
-                spawnType=type;
+                spawnType=type;spawnSource=bd;
               spawnZones=[
                 {r:bd.r-1,c:bd.c},{r:bd.r+1,c:bd.c},
                 {r:bd.r,c:bd.c-1},{r:bd.r,c:bd.c+1}

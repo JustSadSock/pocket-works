@@ -1,11 +1,13 @@
 // Dense Soviet interiors for the endless roguelike, using the same WebGL material
 // atlas as the authored chapter. All positions are actual collidable world cells.
 import {SECTOR,TILE} from './rogue-world.mjs';
-import {appendPropDetails,appendRoomDetails,appendWallDetails,appendDoorDetails} from './rogue-detail.mjs';
+import {appendPropDetails,appendRoomDetails,appendDoorDetails,appendHallFixtures} from './rogue-detail.mjs';
+import {architecturalWall,doorwayReturn} from './rogue-architecture.mjs';
+import {appendAlcoveSilhouette} from './rogue-silhouette.mjs';
 const S=TILE,HEIGHT=2.62;
 const C={
  living:[.49,.38,.30],kitchen:[.45,.52,.43],bedroom:[.46,.39,.32],
- bathroom:[.56,.59,.54],closet:[.42,.39,.32],nursery:[.48,.45,.34],hall:[.39,.47,.40]
+ bathroom:[.56,.59,.54],closet:[.42,.39,.32],nursery:[.48,.45,.34],toilet:[.52,.55,.48],hall:[.39,.47,.40]
 };
 function quad(out,a,b,c,d,color,n,mat=1){for(const p of [a,b,c,a,c,d])out.push(...p,...color,...n,mat)}
 function box(out,x,y,z,w,h,d,col,mat=6){
@@ -27,7 +29,7 @@ function roomDetail(out,c,room){
  box(out,x,HEIGHT-.25,z,.35,.13,.35,[.80,.64,.40],8);
  // Window facing the outer wall: recessed frame, two panes, heavy curtains and sill.
  const wx=x,wz=(rz+room.z0)*S+.035,w=Math.min(1.8,(room.x1-room.x0-1)*S);
- if(w>.7){
+ if(w>.7&&!room.service&&['living','kitchen','bedroom','nursery'].includes(room.type)){
   box(out,wx,1.12,wz,w,1.18,.045,wood,6);
   box(out,wx,1.18,wz+.040,w*.88,1.02,.019,glass,10);
   box(out,wx,1.18,wz+.063,.05,1.05,.07,paper,8);
@@ -109,7 +111,13 @@ function propMesh(out,p){
   box(out,x,.06,z,w,.67,d,[.76,.72,.63],8);
   box(out,x,.67,z,w*.91,.05,d*.91,[.35,.39,.39],9);return
  }
- if(p.type==='sink'){
+ if(p.type==='toilet'){
+   box(out,x,.05,z,w*.79,.39,d*.87,[.78,.75,.68],8);
+   box(out,x,.42,z+d*.16,w*.93,.10,d*.90,[.83,.80,.70],8);
+   box(out,x,.57,z-d*.36,w*.82,.39,d*.32,[.76,.73,.65],8);
+   box(out,x,.47,z+d*.16,w*.69,.032,d*.64,[.38,.39,.36],10);return
+  }
+  if(p.type==='sink'){
   box(out,x,.62,z,w,.19,d,[.73,.69,.60],8);
   box(out,x,.84,z-.12,.045,.25,.06,[.57,.48,.29],9);return
  }
@@ -129,42 +137,40 @@ export function rogueStaticMesh(world,player){
   const sec=world.chunk(Math.floor(x/SECTOR),Math.floor(z/SECTOR));
   const room=roomAt(sec,x-sec.cx*SECTOR,z-sec.cz*SECTOR);
   const col=room?C[room.type]:C.hall;
-  const mat=room?.type==='bathroom'?4:room?.type==='living'||room?.type==='bedroom'?3:5;
+  const mat=(room?.type==='bathroom'||room?.type==='toilet')?4:room?.type==='living'||room?.type==='bedroom'?3:5;
   const px=x*S,pz=z*S;
   quad(out,[px,0,pz+S],[px+S,0,pz+S],[px+S,0,pz],[px,0,pz],[.42,.35,.25],[0,1,0],mat);
   quad(out,[px,HEIGHT,pz],[px+S,HEIGHT,pz],[px+S,HEIGHT,pz+S],[px,HEIGHT,pz+S],[.56,.54,.46],[0,-1,0],1);
   for(const [dx,dz,n] of [[1,0,[-1,0,0]],[-1,0,[1,0,0]],[0,1,[0,0,-1]],[0,-1,[0,0,1]]]){
    if(world.pass(x+dx,z+dz))continue;
    const w=dx===1?px+S:dx===-1?px:0,q=dz===1?pz+S:dz===-1?pz:0;
-   if(dx){quad(out,[w,0,pz],[w,0,pz+S],[w,HEIGHT,pz+S],[w,HEIGHT,pz],col,n,room?2:1);
-    box(out,w,.08,pz+S/2,.055,.13,S,[.28,.24,.19],6);
-    if(!room)box(out,w,.84,pz+S/2,.018,.035,S,[.30,.34,.26],8);
-   }else{quad(out,[px,0,q],[px+S,0,q],[px+S,HEIGHT,q],[px,HEIGHT,q],col,n,room?2:1);
-    box(out,px+S/2,.08,q,S,.13,.055,[.28,.24,.19],6);
-    if(!room)box(out,px+S/2,.84,q,S,.035,.018,[.30,.34,.26],8)
-   }
-   if(Math.hypot(x+.5-player.x,z+.5-player.z)<9)appendWallDetails(out,{x,z,px,pz,dx,dz,room});
+   // Finite slab thickness projects strictly into SOLID cells: real volume
+   // and side caps without changing the world collision/door seam geometry.
+   architecturalWall(out,{x,z,px,pz,dx,dz,room,sector:sec,seed:world.seed,
+    tile:S,detail:Math.hypot(x+.5-player.x,z+.5-player.z)<9});
+
+  }
+  if(!room&&Math.hypot(x+.5-player.x,z+.5-player.z)<10){
+   const walls=[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dz])=>!world.pass(x+dx,z+dz));
+   appendHallFixtures(out,{x,z,px,pz,seed:world.seed,epoch:sec.epoch,walls,tile:S})
   }
  }
  for(const c of world.nearby(player.x,player.z,17)){
+  // v3 alcoves are part of the floor map but bring distinct architectural
+  // volume above normal head-height, not repeated wallpaper alone.
+  for(const bay of c.alcoves||[]){
+   const px=c.cx*SECTOR+bay.x+.5,pz=c.cz*SECTOR+bay.z+.5;
+   if(Math.hypot(px-player.x,pz-player.z)<13)appendAlcoveSilhouette(out,c,bay)
+  }
   for(const p of c.props)if(Math.hypot(p.x-player.x,p.z-player.z)<17){propMesh(out,p);if(Math.hypot(p.x-player.x,p.z-player.z)<9)appendPropDetails(out,p)}
   for(const room of c.rooms){
    const rx=c.cx*SECTOR+(room.x0+room.x1)/2+0.5,rz=c.cz*SECTOR+(room.z0+room.z1)/2+.5;
    if(Math.hypot(rx-player.x,rz-player.z)<17){roomDetail(out,c,room);if(Math.hypot(rx-player.x,rz-player.z)<11)appendRoomDetails(out,c,room)}
   }
-  for(const d of c.doors)if(Math.hypot(d.x-player.x,d.z-player.z)<17){
-   const x=(d.x+.5)*S,z=(d.z+.5)*S;
-   const wood=[.40,.27,.15];
-   if(d.side==='left'){
-    box(out,x,0,z-.53,.12,2.45,.12,wood,6);box(out,x,0,z+.53,.12,2.45,.12,wood,6);
-    box(out,x,2.41,z,.13,.12,1.21,wood,6)
-   }else{
-    box(out,x,0,z-.53,.12,2.45,.12,wood,6);box(out,x,0,z+.53,.12,2.45,.12,wood,6);
-    box(out,x,2.41,z,.13,.12,1.21,wood,6)
-   }
-   box(out,x+.29,.04,z+.48,.49,2.28,.075,[.37,.22,.12],6);
-   box(out,x+.29,1.25,z+.52,.36,.66,.03,[.16,.22,.21],10);
-   if(Math.hypot(d.x-player.x,d.z-player.z)<9)appendDoorDetails(out,d)
+  for(const door of c.doors){
+   if(Math.hypot(door.x-player.x,door.z-player.z)>=13)continue;
+   doorwayReturn(out,door,S);
+   appendDoorDetails(out,door)
   }
  }
  return out

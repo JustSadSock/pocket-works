@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "product": "petri-forge",
+  "captures": [
+    {
+      "id": "9a59e25c304ffd578d1e55792193e7320e2fd28f3b08920475e7ec1d25db8a21",
+      "recordedAt": "2026-10-18T20:33:18.742Z",
+      "commit": "7431cbb5d2e2a308abf000034c1cfa149fbf49b8",
+      "viewport": [
+        390,
+        844
+      ],
+      "state": "edited scene, learner action, paused",
+      "engine": "Chromium and WebKit",
+      "action": "Generate rooms, paint a hazard by touch, undo/redo, save/reload, switch to Q-learning, run then pause.",
+      "files": [
+        {
+          "path": "369b2bd70f38ba926dc458ec94de121fec6c4f079ad2077d1e329418b34d304e.png",
+          "sha256": "369b2bd70f38ba926dc458ec94de121fec6c4f079ad2077d1e329418b34d304e"
+        },
+        {
+          "path": "258ccaa1ea104640ee8a9895217b4c77281999ff4bde2e85d9cc2afe58e399cb.png",
+          "sha256": "258ccaa1ea104640ee8a9895217b4c77281999ff4bde2e85d9cc2afe58e399cb"
+        },
+        {
+          "path": "7475d3906a9b420e962cd3b3b32af24f52bb16f873e50e66dd491bfb1609f9c1.webm",
+          "sha256": "7475d3906a9b420e962cd3b3b32af24f52bb16f873e50e66dd491bfb1609f9c1"
+        }
+      ]
+    }
+  ],
+  "feedback": []
+}

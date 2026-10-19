@@ -10,7 +10,7 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),keyboard=new GameKeyboard(),stick
 const quiet=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches||false;
 let world,renderer,player,phase='menu',stress=0,energy=100,ammo=6,reserve=18,elapsed=0,shotTime=0,reloadTime=0,reloadAt=0;
 let torch=true,enemies=[],upgrades={},collected=0,kills=0,sectorBest=0,spawnAt=4,saveAt=6,worldAt=0,noise=null;
-let lastFrame=performance.now(),moveSteps=0,moves=0,attempts=0,blocked=0,joystickPointer=null,lookPointer=null,lastLook=null,mouseDrag=null,sprintHeld=false,sound=true,noticeUntil=0,upgradeChoices=[],lastPresenceCue=0;
+let qaVisualMode=false,lastFrame=performance.now(),moveSteps=0,moves=0,attempts=0,blocked=0,joystickPointer=null,lookPointer=null,lastLook=null,mouseDrag=null,sprintHeld=false,sound=true,noticeUntil=0,upgradeChoices=[],lastPresenceCue=0;
 const audio=createSoundscape();
 try{sound=JSON.parse(localStorage.getItem(OPTIONS)||'{}').sound!==false}catch{}
 audio.setEnabled(sound);
@@ -39,8 +39,13 @@ function overlay(id){for(const n of ['menu','pauseOverlay','inventoryOverlay','e
  const el=$(n);if(!el)continue;el.hidden=n!==id;el.classList.toggle('is-open',n===id)}}
 function notify(msg,duration=2.6){const h=$('hint');if(!h)return;h.textContent=msg;h.classList.add('visible');noticeUntil=elapsed+duration}
 function start(data=null){
- setup(data?.seed??newSeed(),data);phase='play';overlay(null);lastFrame=performance.now();audio.activate();audio.event('radio');
- notify(data?'Ты опять здесь.':'WASD — ходьба · Мышь — обзор · Клик по игре — захват мыши',4);
+ qaVisualMode=false;setup(data?.seed??newSeed(),data);phase='play';overlay(null);lastFrame=performance.now();audio.activate();audio.event('radio');
+ // Do not plaster desktop key bindings across a portrait phone's only
+ // view of the corridor. Controls are visible on mobile, and desktop help
+ // remains available in the pause menu.
+ if(window.matchMedia?.('(pointer:coarse)')?.matches){
+  $('hint').classList.remove('visible');noticeUntil=elapsed;
+ }else notify(data?'Ты опять здесь.':'WASD — ходьба · Мышь — обзор · ЛКМ — выстрел',2.25);
  focusScene();
  if(data?.phase==='upgrade'&&upgradeChoices.length)openUpgrade(true);else persist()
 }
@@ -112,7 +117,16 @@ function chooseUpgrade(id){
  upgradeChoices=[];phase='play';overlay(null);audio.event('pickup');notify('Вспомнил: '+UPGRADES.find(x=>x.id===id).name,2.2);
  lastFrame=performance.now();focusScene();persist();showHud()
 }
-function nearDrop(){return world.drops(player.x,player.z,1.65).filter(d=>world.visible(player.x,player.z,d.x,d.z))[0]||null}
+function nearDrop(){
+ // Interaction follows the nearest physical object, not the generation
+ // order of sector loot. This matters when medicine and a memory overlap.
+ const choices=world.drops(player.x,player.z,1.65).filter(d=>world.visible(player.x,player.z,d.x,d.z));
+ choices.sort((a,b)=>{
+  const da=(a.x-player.x)**2+(a.z-player.z)**2,db=(b.x-player.x)**2+(b.z-player.z)**2;
+  return da-db||String(a.id).localeCompare(String(b.id))
+ });
+ return choices[0]||null
+}
 function pickup(){
  const drop=nearDrop();if(!drop){notify('Здесь ничего нет.',1);return}
  if(!world.take(drop))return;
@@ -123,10 +137,26 @@ function pickup(){
  if(drop.type==='relic'){openUpgrade();return}
  persist();showHud()
 }
+function nearDoor(){return world.nearestDoor(player.x,player.z,player.yaw,1.75)}
+function interact(){
+ if(phase!=='play')return;
+ const door=nearDoor(),drop=nearDrop();
+ // Prefer the door when the crosshair faces it; nearby loot remains accessible
+ // after opening the room (no accidental pickups through a closed leaf).
+ if(door&&(!drop||door.dist<=Math.hypot(drop.x-player.x,drop.z-player.z)+.12)){
+  const result=world.toggleDoor(door.door,[player,...enemies]);
+  if(!result.ok){notify(result.reason==='occupied'?'Слишком близко. Отойди от створки.':'Не получается открыть.',1.4);return}
+  audio.event('door');
+  noise=acousticEvent(player.x,player.z,elapsed,'door');
+  notify(result.open?'Дверь открывается.':'Дверь закрывается.',1);
+  persist();showHud();return
+ }
+ pickup()
+}
 function torchToggle(){if(phase!=='play')return;torch=!torch;$('torch').textContent='Свет: '+(torch?'вкл':'выкл');audio.event('torch')}
 function reload(){
  if(phase!=='play'||reloadAt||ammo===6||reserve===0)return;
- reloadAt=elapsed+1.55;reloadTime=1.55;audio.event('reload');notify('Перезаряжаю...',1.2)
+ reloadAt=1;reloadTime=1.55;audio.event('reload');notify('Перезаряжаю...',1.2)
 }
 function shoot(){
  if(phase!=='play'||reloadAt)return;
@@ -154,10 +184,17 @@ function spawnEnemy(){
  enemies.push({...pos,kind,hp:kind==='coat'?1:kind==='crawler'?2:2+Math.floor(world.depth/6),age:0,hit:0,speed:kind==='crawler'?.88:kind==='coat'?.43:.53+Math.min(.26,world.depth*.009),attackAt:elapsed+1});
  audio.event('sighting')
 }
-function simulation(dt){
+function simulation(dt,wallDt=dt){
  elapsed+=dt;
- if(reloadAt&&elapsed>=reloadAt){const n=Math.min(6-ammo,reserve);ammo+=n;reserve-=n;reloadAt=0;reloadTime=0}
- else if(reloadAt)reloadTime=reloadAt-elapsed;
+ world.animateDoors(dt,[player,...enemies]);
+ // Reloading follows real active play time even when WebGL is slow. Keep
+ // camera movement/physics bounded independently of the gun clock.
+ if(reloadAt){
+  reloadTime=Math.max(0,reloadTime-wallDt);
+  if(reloadTime<=0){
+   const n=Math.min(6-ammo,reserve);ammo+=n;reserve-=n;reloadAt=0;reloadTime=0
+  }
+ }
  shotTime=Math.max(0,shotTime-dt);
  const controls=keyboard.intent;
  if(controls.turn)applyLook(controls.turn*dt*2.1,0,1);
@@ -223,13 +260,16 @@ function showHud(){
  $('lifeFill').style.width=Math.max(0,100-stress/maxStress()*100)+'%';
  $('count').textContent=String(world.depth);
  $('packCount').textContent=String(Object.values(upgrades).reduce((a,b)=>a+b,0));
- const drop=nearDrop();$('aimHint').textContent=drop?'E / ВЗЯТЬ — '+REWARDS[drop.type].name:'';
- $('interact').classList.toggle('ready',!!drop);
+ const door=nearDoor(),drop=nearDrop();
+ const useDoor=door&&(!drop||door.dist<=Math.hypot(drop.x-player.x,drop.z-player.z)+.12);
+ $('aimHint').textContent=useDoor?'E / '+(door.state.open?'ЗАКРЫТЬ':'ОТКРЫТЬ')+' ДВЕРЬ':drop?'E / ВЗЯТЬ — '+REWARDS[drop.type].name:'';
+ $('interact').textContent=useDoor?(door.state.open?'Закрыть':'Открыть'):'Взять';
+ $('interact').classList.toggle('ready',Boolean(useDoor||drop));
  $('torch').textContent='Свет: '+(torch?'вкл':'выкл')
 }
 function draw(time){
- let dt=clamp((time-lastFrame)/1000,0,.65);lastFrame=time;
- if(phase==='play')simulation(dt);
+ const wallDt=clamp((time-lastFrame)/1000,0,5),dt=Math.min(wallDt,.10);lastFrame=time;
+ if(phase==='play'&&!qaVisualMode)simulation(dt,wallDt);
  if(world&&renderer&&!renderer.lost){
   const drops=world.nearby(player.x,player.z,17).flatMap(c=>c.drops).filter(p=>!world.taken.has(p.id)&&Math.hypot(p.x-player.x,p.z-player.z)<17);
   renderer.draw(world,player,enemies,drops,torch,elapsed,stress/maxStress(),shotTime/.17,reloadTime>0?1-reloadTime/1.55:0)
@@ -238,7 +278,8 @@ function draw(time){
  window.__PW_TEST_STATE__={phase,seed:world?.seed,position:player?{x:player.x,z:player.z,yaw:player.yaw,pitch:player.pitch}:null,
   health:maxStress()-stress,ammo,reserve,elapsed,rearrangements:world?.changes||0,depth:world?.depth,visited:world?.visited.size,
   kills,collected,upgrades:{...upgrades},enemies:enemies.length,attempts,moves,blocked,renderer3D:!!renderer&&!renderer.lost,
-  sovietInterior:true,endless:true,variant:world?.fingerprint(),fpsFrameTime:dt,
+  sovietInterior:true,endless:true,variant:world?.fingerprint(),fpsFrameTime:wallDt,simulationFrameTime:dt,
+  doors:world?.doorStates?.size||0,
   geometry:renderer?.visualMetrics?{...renderer.visualMetrics}:null};
  requestAnimationFrame(draw)
 }
@@ -308,7 +349,7 @@ function wireInputs(){
    return
   }
   if(phase!=='play'||!key.first)return;
-  if(key.action==='interact')pickup();
+  if(key.action==='interact')interact();
   else if(key.action==='reload')reload();
   else if(key.action==='torch')torchToggle();
   else if(key.action==='inventory')showInventory();
@@ -319,7 +360,7 @@ function wireInputs(){
  const run=$('run');
  run.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();sprintHeld=true;run.classList.add('held');run.setPointerCapture(e.pointerId)});
  for(const ev of ['pointerup','pointercancel','lostpointercapture'])run.addEventListener(ev,()=>{sprintHeld=false;run.classList.remove('held')});
- $('interact').addEventListener('click',pickup);$('fire').addEventListener('click',shoot);
+ $('interact').addEventListener('click',interact);$('fire').addEventListener('click',shoot);
  $('reload').addEventListener('click',reload);$('torch').addEventListener('click',torchToggle);
  $('pause').addEventListener('click',pause);$('pack').addEventListener('click',showInventory);
  $('resume').addEventListener('click',resume);$('closePack').addEventListener('click',resume);
@@ -345,12 +386,16 @@ try{
    start:()=>start(),world:()=>world,player:()=>player,state:()=>window.__PW_TEST_STATE__,
    setPosition:(x,z)=>{if(!world.canStand(x,z))return false;player.x=x;player.z=z;return true},
    advance:(seconds)=>{if(phase==='play')simulation(seconds)},
-   shoot,collect:pickup,upgrade:chooseUpgrade,
+   shoot,collect:pickup,upgrade:chooseUpgrade,nearestDrop:()=>nearDrop(),
    spawn:()=>{spawnEnemy();return enemies.length},
    save:persist,
+   interact,
+   nearestDoor:()=>nearDoor(),
+   doorStates:()=>[...world.doorStates].map(([id,state])=>({id,...state})),
+   toggleDoor:door=>world.toggleDoor(door,[player,...enemies]),
    // Visual development mode: deterministic camera positions and mesh diagnostics.
    visual:()=>({seeds:VISUAL_SEEDS,scenes:VISUAL_SCENES,...visualCoverage(world,renderer)}),
-   startSeed:seed=>{if(!VISUAL_SEEDS.includes(seed))return false;start({seed});return true},
+   startSeed:seed=>{if(!VISUAL_SEEDS.includes(seed))return false;start({seed});qaVisualMode=true;elapsed=2;enemies=[];return true},
    bookmark:scene=>{
     const b=visualBookmark(world,scene);
     if(!b||!world.canStand(b.x,b.z))return null;
