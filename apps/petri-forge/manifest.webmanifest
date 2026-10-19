@@ -1,0 +1,25 @@
+{
+  "id": "/apps/petri-forge/",
+  "name": "PetriForge",
+  "short_name": "PetriForge",
+  "description": "Редактор клеточных сред с обучаемым агентом, наградами и препятствиями.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "landscape",
+  "background_color": "#0f1719",
+  "theme_color": "#0f1719",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

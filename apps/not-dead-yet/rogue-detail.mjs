@@ -2,6 +2,7 @@
 // Compact offline meshes share renderer.mjs's 10-float vertex ABI.
 // Decorative geometry never changes traversability or adds invisible collision.
 import {SECTOR,TILE} from './rogue-world.mjs';
+import {hallFixtureHash,hallHasLamp} from './rogue-lighting.mjs';
 const S=TILE,H=2.62;
 const wood=[.39,.25,.14],aged=[.57,.50,.37],metal=[.59,.55,.47],enamel=[.75,.72,.61];
 function q(o,a,b,c,d,col,n,m=6){for(const p of [a,b,c,a,c,d])o.push(...p,...col,...n,m)}
@@ -193,11 +194,11 @@ export function appendDoorDetails(o,d){
 // fastened to the plaster, never imaginary full-height corridor furniture.
 // Their visual footprint is at most 8 cm into an already walkable tile.
 export function appendHallFixtures(out,{x,z,px,pz,seed=0,epoch=0,walls=[],tile=S}){
- const a=(Math.imul(x+109,73856093)^Math.imul(z+47,19349663)^Math.imul(seed+epoch*29,83492791))>>>0;
+ const a=hallFixtureHash(x,z,seed,epoch);
  const cx=px+tile*.5,cz=pz+tile*.5;
  // Old opal glass ceiling lantern: porcelain fitting, stained shade,
  // exposed fixing and hanging glass. Rare enough to make lighting rhythmic.
- if(a%13===0){
+ if(hallHasLamp(x,z,seed,epoch)){
   round(out,cx,2.485,cz,.15,.065,[.29,.27,.23],9,12);
   round(out,cx,2.39,cz,.18,.105,[.66,.61,.48],8,12);
   round(out,cx,2.36,cz,.125,.036,[.76,.68,.50],8,12);

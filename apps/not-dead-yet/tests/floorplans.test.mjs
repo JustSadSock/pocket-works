@@ -98,8 +98,8 @@ test('old 2.0.x runs keep old layouts; new runs and new saves use v2',()=>{
  const legacy=new RogueWorld(321,old),fresh=new RogueWorld(321);
  assert.equal(legacy.layoutVersion,1);
  assert.equal(legacy.chunk(0,0).layoutName,'legacy-four-room');
- assert.equal(fresh.layoutVersion,2);
- assert.equal(new RogueWorld(321,fresh.save()).layoutVersion,2);
+ assert.equal(fresh.layoutVersion,3);
+ assert.equal(new RogueWorld(321,fresh.save()).layoutVersion,3);
  assert.equal(new RogueWorld(321,legacy.save()).chunk(0,0).layoutName,'legacy-four-room');
  assert.deepEqual([...legacy.chunk(0,0).tiles],[...new RogueWorld(321,old).chunk(0,0).tiles])
 });
