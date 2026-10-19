@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "ed649c2d14de2badb783bbfb28edcabe70e8c55d",
+    "revision": "c3c43a000a2299e9f4d0fa1ccce7a6c57e97cd65",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "9f1e1ab1cfcffe9f296fa8b5f929e33c2a26e13f970c1bb57da5424561fd9d9e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "ed649c2d14de2badb783bbfb28edcabe70e8c55d",
-    "lastAttemptAt": "2026-10-18T19:12:21.199Z",
+    "lastAttemptRevision": "c3c43a000a2299e9f4d0fa1ccce7a6c57e97cd65",
+    "lastAttemptAt": "2026-10-18T20:47:33.815Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -3199,7 +3199,7 @@
     "lastAttemptAt": "2026-10-15T21:02:38.238Z"
   },
   "living-history": {
-    "revision": "e2293daba79eb718519e837625c0745641630909",
+    "revision": "69243c16cbc91ff7be96064f12d1a3dd73cfd78d",
     "qualityScore": 72,
     "visionScore": null,
     "prepared": false,
@@ -3211,8 +3211,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "e2293daba79eb718519e837625c0745641630909",
-    "lastAttemptAt": "2026-10-18T19:35:46.107Z"
+    "lastAttemptRevision": "69243c16cbc91ff7be96064f12d1a3dd73cfd78d",
+    "lastAttemptAt": "2026-10-19T09:13:19.163Z"
   },
   "mezha": {
     "note": "No frame passed image-content checks",
@@ -3239,7 +3239,7 @@
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "b14fa3951b3d9643e465e3659cf50d872da937b4",
-    "lastAttemptAt": "2026-10-17T07:55:08.109Z"
+    "lastAttemptAt": "2026-10-19T08:40:09.797Z"
   },
   "oskolki": {
     "revision": "5bd6b125d60059beca391659370485e7681bb4a4",
@@ -3317,29 +3317,29 @@
   "meat-exe": {
     "note": "No frame passed image-content checks",
     "diagnostic": {
-      "bestScore": 72,
+      "bestScore": 71,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 36501,
-        "variance": 54.50969429883231,
-        "entropy": 1.9428251852018084,
-        "edgeDensity": 0.11036706349206349,
-        "colorfulness": 28.16943359375,
-        "centerDetail": 72.81600707250647,
-        "meanLight": 41.12136528320337
+        "bytes": 39887,
+        "variance": 52.50995283445435,
+        "entropy": 1.9922189337871365,
+        "edgeDensity": 0.11793154761904762,
+        "colorfulness": 28.895751953125,
+        "centerDetail": 60.92314712940596,
+        "meanLight": 39.74340175781279
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.6.0&pw_fp=fc99542156e6b93842d09b4d"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.8.4&pw_fp=60333e69d848aa6c2675ec46"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "f733bef34de6c4b3f6bf80e4068b2293bc76a6a6",
-    "lastAttemptAt": "2026-10-18T19:12:32.466Z"
+    "lastAttemptRevision": "031e25be041adf64f0323a28c09df94c7b962318",
+    "lastAttemptAt": "2026-10-19T09:41:51.167Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3448,15 +3448,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.6.0&pw_fp=6ee01f2b097052aea8feeeb0"
+      "url": "http://127.0.0.1:4173/apps/fog-of-conquest/?pw-cover=1&pw_release=1.10.0&pw_fp=365b10fcc250fe9182d71546"
     },
     "shot": 0,
     "sha256": "9f195cf9b4b8ce9625617002e3431ffdf789da6c3e7e9476e0054ce06bd4dd5c",
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "b4615609f477324a08eaba003781c31e59c59d5d",
-    "lastAttemptAt": "2026-10-18T19:20:41.003Z",
+    "lastAttemptRevision": "361d0d59fb00d0c5564c3b445652b6ada7b811a8",
+    "lastAttemptAt": "2026-10-18T21:20:16.286Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
@@ -3476,14 +3476,14 @@
     "lastAttemptAt": "2026-10-18T13:50:35.710Z"
   },
   "not-dead-yet": {
-    "note": "No frame passed image-content checks",
+    "note": "existing cover rated higher",
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "2a66f5775258f346e92e3cca47e30bb4b7a0f591",
-    "lastAttemptAt": "2026-10-18T19:35:35.058Z",
-    "revision": "2a66f5775258f346e92e3cca47e30bb4b7a0f591",
-    "qualityScore": 78,
+    "lastAttemptRevision": "9ee0a9961d1ba0fc99448975be4023a2d624f513",
+    "lastAttemptAt": "2026-10-19T09:54:35.261Z",
+    "revision": "9ee0a9961d1ba0fc99448975be4023a2d624f513",
+    "qualityScore": 71,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3494,8 +3494,8 @@
         "score": 74
       }
     ],
-    "shot": 1,
-    "sha256": "b5ba0489bab8e1c6d87d4730d77d560e23c39ae4d5ee88147f7b96c15c9d3091",
+    "shot": 0,
+    "sha256": "8a56f137d76e8cdc3608dfba97fcaf3d04d6fc3b35814ae993ae2d5a0371752e",
     "imageVersion": 2
   },
   "crossline-5x5": {
@@ -3515,8 +3515,8 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "c95082af588c7eea7a145b2b06f4515d2196e08d",
-    "qualityScore": 58,
+    "revision": "f28d6d5879f4164d40a16c3b7528ee7eced840e8",
+    "qualityScore": 60,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3529,11 +3529,71 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "92657ea3cdafbb28779ca4d58a311b36f2e3eb3003c6076d2d649daa8ad588b8",
+    "sha256": "bcc57080a013bd454382bbc0c8fddf6688695d5eaa760dce4c84c9b4c2bacc55",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "c95082af588c7eea7a145b2b06f4515d2196e08d",
-    "lastAttemptAt": "2026-10-18T19:12:44.392Z"
+    "lastAttemptRevision": "f28d6d5879f4164d40a16c3b7528ee7eced840e8",
+    "lastAttemptAt": "2026-10-19T09:41:39.746Z"
+  },
+  "portal-lab": {
+    "note": "existing cover rated higher",
+    "diagnostic": null,
+    "status": "preserved",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "280451251d45079e42cd80197e49b0a35b3e7b8d",
+    "lastAttemptAt": "2026-10-19T09:42:02.126Z",
+    "revision": "a2672a9600b739fdd5af458623b881c308430c7c",
+    "qualityScore": 76,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "shot": 0,
+    "sha256": "1fe3b1920c507e0a7b153ef737806a50efd23186637c0e1c1f1eb713226ae4d2",
+    "imageVersion": 2
+  },
+  "cavitation-lab": {
+    "revision": "ea71e979d8d2a5a4248af44f3d34f9fd10a8c566",
+    "qualityScore": 79,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "592feaf17e1008b10ace43e4448c5d69a8635fa9b94b1e1c8dd7942f01b5cd93",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "ea71e979d8d2a5a4248af44f3d34f9fd10a8c566",
+    "lastAttemptAt": "2026-10-19T09:54:14.160Z"
+  },
+  "petri-forge": {
+    "note": "No frame passed image-content checks",
+    "diagnostic": {
+      "bestScore": 38,
+      "qualityReasons": [
+        "low visual detail"
+      ],
+      "metrics": {
+        "bytes": 23384,
+        "variance": 22.9054978453002,
+        "entropy": 1.6611523109675774,
+        "edgeDensity": 0.07155257936507936,
+        "colorfulness": 13.431884765625,
+        "centerDetail": 17.6839768317013,
+        "meanLight": 35.00391015625099
+      },
+      "gameplayEntry": {
+        "started": false,
+        "actions": []
+      },
+      "url": "http://127.0.0.1:4173/apps/petri-forge/?pw-cover=1&pw_release=0.1.0&pw_fp=80bdbdb17d748228fd74792d"
+    },
+    "status": "failed",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "0a4ccb7b86030b37639f3746f8ce55aaa37bf761",
+    "lastAttemptAt": "2026-10-19T09:30:43.044Z"
   }
 }

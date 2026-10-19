@@ -63,7 +63,7 @@ const receive=(who,phase)=>who.next('game_event',m=>m.event.type==='state'&&m.ev
 try{
  host.send('create_room',{gameId:'perekos'});
  const opened=await host.next('room_joined');const room=opened.roomId,code=room.slice(0,8);
- assert.equal(opened.version,'v1');assert.equal(opened.state.phase,'lobby');assert.equal(opened.state.me,0);
+ assert.equal(opened.version,'v3');assert.equal(opened.state.phase,'lobby');assert.equal(opened.state.me,0);
  guest.send('join_room',{roomId:code.toUpperCase()});
  const joined=await guest.next('room_joined');assert.equal(joined.state.me,1);assert.equal(joined.roomId,room);
  assert.equal(joined.state.players.length,2);
@@ -91,7 +91,7 @@ try{
  rejoined=await client(b);rejoined.send('join_room',{roomId:code});
  const resumed=await rejoined.next('room_joined');
  assert.equal(resumed.state.me,1);assert.ok(resumed.state.nextSeq>0,'Reconnect must return server-side next input sequence');assert.equal(resumed.state.match.score.join(':'),originalScore);
- assert.equal(resumed.state.match.actors[0].runes.join(','),'on_cast,ball');
+ assert.equal(resumed.state.match.actors[0].runes.join(','),'on_hurt,armor');
  rejoined.send('game_message',{payload:{type:'input',seq:resumed.state.nextSeq,round:1,control:ctl(-.4)}});
  await idle(150);
  host.send('game_message',{payload:{type:'input',seq:19,round:1,control:ctl(0)}});

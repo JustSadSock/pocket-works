@@ -99,13 +99,57 @@ hiding simplistic assets.
       middle ground, distant darkness and familiar shapes must communicate
       space and danger.
 
-### 2.1.1 — Architectural geometry with depth, not a box labyrinth (P0)
+### 2.1.1 — Architectural geometry with depth, not a box labyrinth (in progress: 2.1.3 walls)
+- [x] Five floor-plan families: four-room, staggered-wing, walk-through,
+      service-nook and crooked-vestibule; actual path geometry differs.
+- [x] Room footprints shrink to maximum 4×4 cells, with 2-cell WC/pantry.
+      Furniture placement follows the doorway, so real collision remains safe.
+- [x] Modeled separate toilet; directionally aligned doorframes and thresholds
+      replace obstructive decorative leaves. Gameplay cannot interact with
+      a door until opening/hinge behavior actually exists.
+- [x] Legacy run generator is preserved for old saves (`layoutVersion: 1`),
+      while new runs are v2. The memory shift can change the layout family.
+- [x] 400 seeded/epoch collision traversals reached every room and reward;
+      pure regressions additionally verify all sector seam portals.
+- [x] v2.1.2: physical hinged single-leaf doors with 1.5-radian swing,
+      embossed wooden panels, handles, actual nearest-door interaction
+      (keyboard E / touch), audible door creaks and tactile captions.
+- [x] Door collision, AI A* navigation, flashlight/shot LOS and geometry
+      all consult the same rotating segment; moving leaf checks its full
+      occupied sweep to avoid closing over player or enemies.
+- [x] Persist actual door state/angle, clear outdated door states on
+      behind-player rewrites, leave old 2.0 save routes fully unobstructed.
+- [x] Door regression suite: rotation/orientation, player collision,
+      occlusion, safe sweeping, sound-relevant interaction, saved state,
+      enemy routing, epoch cleanup, rendered vertices; browser E journey
+      authored but not yet run on a real device.
+- [x] v2.1.3: create true 155mm thick partitions and 190mm wet-room
+      walls; the depth extends into non-walkable tile volumes and does not
+      interfere with door collision or reduce walkable corridor width.
+- [x] Wall finishes are deterministic across five aged palettes; modeled
+      skirting, cornices, irregularly patched wallpaper, exposed conduit
+      clips and deep doorway returns increase physical spatial cues.
+- [x] Bounded 3-entry `RogueMeshCache` uses fixed 5-cell render anchors;
+      backtracking reuses CPU meshes, while new run objects and terrain
+      revision changes safely invalidate cache. WebGL uploads reuse the
+      existing typed array rather than rematerializing it.
+- [x] Regression suite asserts finite bounded mesh output, five material
+      variants, wall thickness, cache reuse/eviction and door/collision
+      compatibility, including browser QA test authored for return visit.
+- [ ] Optimize WebGL buffer uploads when moving between cached regions,
+      profile real low-end phones and verify that thick wall corners/wallpaper
+      layers look convincing rather than z-fighting in screenshots.
+- [ ] Inspect five-family screenshot route in Chromium and mobile WebKit.
+- [ ] Add thick partition walls, more differentiated panel profiles,
+      deeper architectural connections, wall damage and varied ceiling construction before
+      closing the remaining 2.1.1 scope.
+
 - [ ] Generate several credible floor-plan families rather than a repeated
       four-room module: tiny L-shaped halls, vestibules, walk-through living
       rooms, attached kitchens, combined/separate toilets, closets, uneven
       doorway positions and dead-end service nooks. Preserve infinite seams,
       navigability and unseen regeneration.
-- [ ] Physically model **wall thickness, real door openings, lintels, baseboards,
+- [x] Physically model **wall thickness, real door openings, lintels, baseboards,
       ceiling cornices, uneven thresholds, protruding ducts/pipe runs,
       radiators, window reveals, sills and ventilation grilles**. Avoid
       floating trim and walls made of infinitely thin sheets.
@@ -234,6 +278,45 @@ hiding simplistic assets.
       inspection, weight in doors, subtle visual reaction on enemy hits,
       readable feedback on reaching a new depth. No overlay spam.
 
+### QA pass 2026-10-19 — real-browser visual and gameplay review (v2.1.4–2.1.7 shipped)
+- [x] Universal Pocket Works QA executed the real PWA in desktop Chromium,
+      mobile Chromium, desktop WebKit and mobile WebKit with full screenshot
+      evidence; all four initial viewport/browser visual checks passed.
+- [x] GitHub Actions ran the entire app Node regression suite (89/89 before
+      fixes, 91/91 after), no suite skipped in the CPU job.
+- [x] Reviewed actual screenshots to identify phone center-screen startup
+      banner, overlarge blocky gun, and long hallway repetition.
+- [x] Removed desktop keyboard instruction from mobile opening, moved
+      transient text away from the center, narrowed the portrait weapon rig
+      and introduced a faceted revolver barrel/bore.
+- [x] Added Playwright first-frame composition, real PNG screenshot pixel
+      variance, deterministic room screenshot and cache regression tests;
+      isolated the visual-regression suite for targeted reruns.
+- [x] Investigate failing real browser traces: nearest pickup priority
+      corrected, camera yaw asserted relative to starting heading,
+      memory-path test accounts for closed actual doors, and screenshot
+      test has a realistic time budget.
+- [x] Final independent GitHub CI: 93/93 Node, 12/12 image/visual
+      Playwright, 9/9 fast interaction/slow-GPU reload Playwright,
+      46 passed + 2 device-conditional skipped in the full gameplay
+      journey, 0 failures. [Full audit](./VISUAL_QA_REPORT_2026-10-19.md).
+- [x] v2.1.7: actual corridor-mounted ceiling fixtures, enamel electrical
+      panels, coat rails and apartment plaques; seeded sparsely by actual
+      world cell, invisible collision not added, deterministic mesh
+      regressions passed in real GitHub Actions (93/93 Node).
+- [x] Separate clock for weapon reloading from capped 100ms physics
+      timestep; resolves a regression observed only in full software-GPU
+      browser runs. Pixel and input QA now have dedicated fast suites.
+- [x] Inspect 60 new actual Chromium/WebKit screens (five seeds × four rooms
+      × three browser profiles): corridor lamps and wall objects are visible;
+      no visually broken geometry was found in these sampled frames.
+- [ ] Align practical lights with actual lighting sources and increase
+      recognizable corridor silhouette changes. A pixel crop audit found
+      cross-seed corridor pairs with just 4.7–5.2/255 absolute average
+      pixel difference, so some seeds still look nearly identical.
+- [ ] Address visually repetitive hallways and lighting after fixing
+      actual measured art issues, not by adding generic bloom or haze.
+
 ### 2.1.7 — Finishing pass, usability and performance (P1)
 - [ ] Unify first-person screen composition, reticle, inventory, upgrade
       choices and prompts around **focus-first** UX; fewer simultaneous
@@ -286,6 +369,41 @@ hiding simplistic assets.
 `2.1.7` usability/performance/visual acceptance.
 Each pass must deliver a visible playable difference and a test, not a
 decorative prototype. **No premature rework of the PocketWorks shell.**
+
+## 2.2.0 — Living architectural memory and spatial light (first implementation)
+
+- [x] New runs use versioned `layoutVersion: 3`, with 2–3 true carved
+      corridor alcoves per 18×18 sector, sometimes forming two-cell vestibules.
+      Old v1/v2 saves are frozen to their original map generators.
+- [x] Five types of room-family layout now receive extra architectural
+      silhouettes: lowered lintels, wood antresol cupboards, shallow service
+      hatches and overhead household rack details, all above player
+      collision height. Legacy corridors remain unmodified.
+- [x] Original physical room and corridor ceiling fixtures provide the
+      two near-field shader light sources; the light sources match the
+      actual offline 3D objects instead of arbitrary sector coordinates.
+- [x] 48×48 WebGL1 occupancy texture attenuates fixture light across
+      concrete partitions and closed physical doors. Mask updates are
+      tied to moving between tiles, memory rewrite and hinge animation.
+- [x] Fixed procedural cells, sector seams and old save versions verified
+      in deterministic 240-seed generator checks and new GPU-test suite.
+- [x] First physically located WebGL shader compiled in Chromium/WebKit;
+      the 2.2.1 test suite completed 6/6. The costly version caused a
+      software-rendered desktop click timeout, so the light occlusion
+      algorithm was redesigned in 2.2.2–2.2.3.
+- [x] 48×48 CPU lightmap caches concrete/door occlusion, reducing shader
+      work to one texture sample per pixel rather than many ray samples.
+      v2.2.2 Node CI passed 101/101; real 4-viewport browser visual smoke
+      passed without JS errors.
+- [ ] Finish and inspect dedicated 2.2.2 CPU-precomputed lightmap
+      Playwright screenshots, compare the four-viewport capture against
+      baseline and profile real device FPS.
+- [ ] Profile shader ray-march cost on real lower-tier mobile GPUs, add
+      device performance fallback if necessary.
+- [ ] Complete distinct large-scale connections between rooms and
+      fixture-controlled on/off switching; current atmosphere changes
+      architecture and fixture visibility but does not implement full
+      global illumination or physically correct shadow maps.
 
 ## 2.2 — Roguelike combat identity
 - [ ] Add distinct silhouettes, e.g. ceiling-crawling figure, wardrobe-bound

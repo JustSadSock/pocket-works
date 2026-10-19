@@ -1,11 +1,17 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorld } from './scene.js';
+import {immuneDefaults,updateImmune,provokeImmune,immuneIntensity,IMMUNE_EVENTS} from './immunity.js';
 import { validateRun, deadzone, findOpenFacing } from './stability.js';
 import { hitRay, pelletAim, staggerDuration } from './combat.js';
 import { createCombatAudio } from './sound-forge.js';
 import {initialEnemyIntent,advanceEnemyIntent,interruptIntent,enemyTerrainReaction,maxActiveAttackers,resetIntent,chooseEnemyKind} from './ecology.js';
 import {biomeForWave,biomeSpeedFactor,biomeDamage,biomeRuptureHeal} from './biomes.js';
 import {drawGrafts,applyGraft,graftForId,weaponBuild,dashCooldown,moveSpeed,incomingDamage,membraneDamage,immuneHeatGain,hasGraft,maxWeaponIndex} from './biobuilds.js';
+import {GENES,routeOptions,applyRoute,sanitizeArchive,unlockGene,equipGene,applyGene,earnEchoes} from './runPaths.js';
+import {guardianForWave,isGuardian,guardianReady,guardianSpawnResolved,guardianDamage,guardianAction} from './guardians.js';
+import {pulsePlan,pulseEnemyKind,nextPulse} from './runPacing.js';
+import {PROTOCOLS,sanitizeProtocol,applyProtocol,extraEnemiesForPulse,incomingProtocolDamage,
+  enemyProtocolSpeed,spawnCadence,registerCombatChain,recordFinishedRun,observedRunStats} from './runTuning.js';
 
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -28,26 +34,90 @@ let soundOn=safeRead('sound')!==false;
 const combatAudio=createCombatAudio();if(!soundOn)combatAudio.setEnabled(false);
 let best=safeRead('best')||{score:0,wave:0,kills:0};
 let mutation=safeRead('mutation')||null;
+let archive=sanitizeArchive(safeRead('archive'));
+let archiveOpen=false;
 let save=validateRun(safeRead('session'));
 let quality=safeRead('quality');if(!['auto','speed','detail'].includes(quality))quality='auto';
 let effectiveQuality=quality==='speed'?'low':quality==='detail'?'high':'medium';
 let gamepadFire=false,padMove={x:0,y:0},prevPadButtons=[],accumulator=0,lastPaint=0,fpsClock=0,fpsFrames=0;
-let paintCoolDownUntil=0,paintCost=0,draftIndex=0;
+let paintCoolDownUntil=0,paintCost=0,draftIndex=0,lastForkNearby='';
 const ui={
   menu:$('menu'),pause:$('pauseMenu'),result:$('result'),failure:$('failure'),hud:$('hud'),
   touch:$('touchControls'),cross:$('crosshair'),pauseBtn:$('pauseBtn'),wave:$('waveValue'),
-  hp:$('healthValue'),healthFill:$('healthFill'),enemies:$('enemyValue'),kills:$('killValue'),
+  hp:$('healthValue'),healthFill:$('healthFill'),enemies:$('enemyValue'),kills:$('killValue'),pulse:$('pulseValue'),combo:$('comboValue'),
   weapon:$('weaponValue'),score:$('scoreValue'),seed:$('seedValue'),intro:$('introSubtitle'),
   resume:$('resumeSaved'),record:$('record'),mutation:$('scar'),resultTitle:$('resultTitle'),
   resultBody:$('resultBody'),note:$('notice'),damage:$('damageOverlay'),
   mute:$('soundMenu'),pauseMute:$('soundPause'),resumeBtn:$('resumeBtn'),
   qualityMenu:$('qualityMenu'),qualityPause:$('qualityPause'),confirm:$('confirmRestart'),zone:$('zoneValue'),
-  draft:$('graftDraft'),draftCards:$('graftCards'),draftReroll:$('draftReroll'),draftCount:$('draftCount'),draftMass:$('draftMass'),buildLabel:$('buildLabel')
+  draft:$('graftDraft'),draftCards:$('graftCards'),draftReroll:$('draftReroll'),draftCount:$('draftCount'),draftMass:$('draftMass'),buildLabel:$('buildLabel'),
+  routeFork:$('routeFork'),archiveToggle:$('archiveToggle'),archivePanel:$('archivePanel'),archiveOptions:$('archiveOptions'),archiveBalance:$('archiveBalance'),
+  protocolOptions:$('protocolOptions'),archiveMetrics:$('archiveMetrics'),
+  guardian:$('guardianStatus'),guardianName:$('guardianName'),guardianFill:$('guardianFill'),forkBtn:$('forkInteract')
 };
 function audioStart(){combatAudio.unlock();}
 function sound(kind){combatAudio.pulse(kind);}
 function setNotice(message,seconds=2){
   ui.note.textContent=message;ui.note.classList.add('visible');noticeUntil=clock+seconds;
+}
+function renderArchive(){
+  ui.archiveBalance.textContent=archive.echoes+' ЭХО';
+  ui.archiveToggle.setAttribute('aria-expanded',String(archiveOpen));
+  ui.archivePanel.hidden=!archiveOpen;
+  ui.archiveOptions.replaceChildren();
+  const off=document.createElement('button');off.type='button';off.className='archive-option';
+  off.setAttribute('aria-pressed',String(archive.equipped===null));
+  off.innerHTML='<span><strong>БЕЗ ШРАМА</strong><small>Обычный старт</small></span><b>СНЯТЬ</b>';
+  off.addEventListener('click',()=>{equipGene(archive,null);safeWrite('archive',archive);renderArchive();});
+  ui.archiveOptions.append(off);
+  for(const gene of GENES){
+    const unlocked=archive.unlocked.includes(gene.id);
+    const button=document.createElement('button');button.type='button';button.className='archive-option';
+    button.setAttribute('aria-pressed',String(archive.equipped===gene.id));
+    const body=document.createElement('span'),title=document.createElement('strong'),desc=document.createElement('small'),price=document.createElement('b');
+    title.textContent=gene.name;desc.textContent=gene.description;
+    price.textContent=archive.equipped===gene.id?'ВСТРОЕН':unlocked?'ВЫБРАТЬ':gene.cost+' ЭХО';
+    body.append(title,desc);button.append(body,price);
+    button.disabled=!unlocked&&archive.echoes<gene.cost;
+    button.addEventListener('click',()=>{
+      if(!archive.unlocked.includes(gene.id)&&!unlockGene(archive,gene.id))return;
+      equipGene(archive,gene.id);safeWrite('archive',archive);renderArchive();sound('pickup');
+    });
+    ui.archiveOptions.append(button);
+  }
+  renderProtocols();
+}
+function renderProtocols(){
+ ui.protocolOptions.replaceChildren();
+ for(const protocol of PROTOCOLS){
+   const button=document.createElement('button');
+   button.type='button';button.className='archive-option protocol-option';
+   button.setAttribute('aria-pressed',String(archive.protocol===protocol.id));
+   const body=document.createElement('span'),name=document.createElement('strong'),detail=document.createElement('small'),tag=document.createElement('b');
+   name.textContent=protocol.name;detail.textContent=protocol.description;
+   tag.textContent=archive.protocol===protocol.id?'АКТИВЕН':protocol.bonus?'+ЭХО':'БАЗА';
+   body.append(name,detail);button.append(body,tag);
+   button.addEventListener('click',()=>{
+     archive.protocol=sanitizeProtocol(protocol.id);
+     safeWrite('archive',archive);renderArchive();sound('switch');
+   });
+   ui.protocolOptions.append(button);
+ }
+ const stats=observedRunStats(archive.history);
+ ui.archiveMetrics.replaceChildren();
+ const summary=document.createElement('div');
+ summary.className='archive-stats';
+ summary.textContent=stats.runs?('ПОСЛЕДНИЕ '+stats.runs+' ПОПЫТОК · ПОБЕД '+stats.wins+
+   ' · '+stats.winRate+'% · МЕДИАНА '+Math.floor(stats.medianSeconds/60)+':'+
+   String(Math.floor(stats.medianSeconds%60)).padStart(2,'0')):'ПОКА НЕТ ЗАВЕРШЁННЫХ ПОПЫТОК';
+ ui.archiveMetrics.append(summary);
+ for(const run of [...archive.history].slice(-4).reverse()){
+   const item=document.createElement('div');item.className='archive-record';
+   item.textContent=(run.victory?'ПОБЕДА':'ПОРАЖЕНИЕ')+' · '+Math.floor(run.elapsed/60)+':'+
+     String(run.elapsed%60).padStart(2,'0')+' · '+run.wave+'/5 · '+
+     run.kills+' УБ. · '+run.damageTaken+' УРОНА · '+run.protocol.toUpperCase();
+   ui.archiveMetrics.append(item);
+ }
 }
 function setMode(next){
   mode=next;
@@ -60,6 +130,8 @@ function setMode(next){
   ui.touch.hidden=next!=='playing'||!touch;
   ui.pauseBtn.hidden=next!=='playing'||mouseLocked;
   ui.cross.hidden=next!=='playing';
+  ui.guardian.hidden=next!=='playing';
+  ui.forkBtn.hidden=next!=='playing';
   if(next!=='playing'){shootHeld=false;keyFireHeld=false;gamepadFire=false;movement.x=movement.y=0;padMove.x=padMove.y=0;keys.clear();resetStick();accumulator=0;}
   if(next!=='playing'&&document.pointerLockElement===canvas)document.exitPointerLock?.();
   if(next==='menu'){
@@ -67,6 +139,7 @@ function setMode(next){
     ui.resume.hidden=!save;
     ui.record.textContent='РЕКОРД  '+Number(best.score||0).toLocaleString('ru-RU')+'  /  ВОЛНА '+(best.wave||0);
     ui.mutation.textContent=mutation?('ПОСЛЕДНИЙ ШРАМ: '+mutation.label):'ОРГАН ЕЩЁ НЕ ЗНАЕТ ТЕБЯ';
+    renderArchive();
   }
 }
 function newState(seed){
@@ -75,15 +148,21 @@ function newState(seed){
     weapon:0,level:0,damageBonus:0,cooldown:0,dashCooldown:0,dashTime:0,dashDirX:0,dashDirZ:0,
     invuln:0,score:0,kills:0,wave:0,elapsed:0,waveTime:0,toSpawn:0,spawnClock:0,
     enemies:[],pickups:[],projectiles:[],moving:0,sprinting:false,heartPhase:1,phase:0,
-    ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0,
-    grafts:[],biomass:0,pendingDraft:0,draftRevision:0};
+    ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0,immune:immuneDefaults(),
+    grafts:[],biomass:0,pendingDraft:0,draftRevision:0,
+    routeHistory:[],selectedRoute:'',routeId:'',routeWave:0,routeHazard:0,gene:null,
+    guardianPending:0,guardianDefeated:[],
+    protocol:'normal',damageTaken:0,stageTimes:[],combo:0,comboExpires:0,peakCombo:0,
+    pulse:1,pulseMax:3,pulseSpawned:0,organRuptureClaimed:false};
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
 function makeEnemy(type,x,z,hp){
-  const max=type==='heart'?310:type==='brute'?118:type==='spitter'?49:type==='leech'?72:61;
+  const max=Object.values({1:guardianForWave(1),3:guardianForWave(3),4:guardianForWave(4)}).find(g=>g?.type===type)?.hp||
+    (type==='heart'?310:type==='warden'?222:type==='brute'?118:type==='spitter'?49:type==='leech'?72:61);
   const id=nextId++;
-  return {id,type,x,z,hp:hp||max,maxHp:max,...initialEnemyIntent(type,id),
-    speed:type==='heart'?.8:type==='brute'?.86:type==='spitter'?1.14:type==='leech'?1.20:1.55,visual:world.makeEnemy(type,x,z)};
+  return {id,type,x,z,hp:hp??max,maxHp:max,...initialEnemyIntent(type,id),
+    facing:Math.atan2(state?.x-x||0,state?.z-z||0),
+    speed:type==='clot'?.82:type==='ossuary'?.74:type==='synapse'?1.07:type==='heart'?.8:type==='warden'?.76:type==='brute'?.86:type==='spitter'?1.14:type==='leech'?1.20:1.55,visual:world.makeEnemy(type,x,z)};
 }
 function snapshot(){
   if(!state||mode==='dead'||mode==='won')return;
@@ -95,11 +174,18 @@ function restore(raw){
   world.reset(s.seed,s.ruptured,s.wave);nextId=1;
   const base=newState(s.seed);
   state={...base,...s,enemies:[],pickups:[],projectiles:[]};
+  combatAudio.setBiome(state.wave);
   if(!world.isFloor(state.x,state.z)){state.x=base.x;state.z=base.z;}
   for(const e of s.enemies){
     if(!world.isFloor(e.x,e.z))continue;
-    state.enemies.push(makeEnemy(e.type,e.x,e.z,e.hp));
+    const mob=makeEnemy(e.type,e.x,e.z,e.hp);
+    if(Number.isFinite(e.facing))mob.facing=e.facing;
+    state.enemies.push(mob);
   }
+  world.setRouteMark?.(state.routeId);
+  world.setForkSites?.(state.pendingDraft||state.wave>=5?[]:
+    routeOptions(state.seed,state.wave+1).map(r=>r.id));
+  world.setForkSelection?.(state.selectedRoute);
   for(const p of s.pickups){
     if(world.isFloor(p.x,p.z))state.pickups.push({...p,visual:world.makePickup(p.x,p.z)});
   }
@@ -115,12 +201,15 @@ function begin(resume=false){
         if(mutation.key==='frail'){state.maxHp=82;state.hp=82;}
         if(mutation.key==='armed')state.level=1;
       }
+      if(archive.equipped)applyGene(state,archive.equipped);
+      applyProtocol(state,archive.protocol);
       startWave(1);
     }
     audioStart();sound('menu');
     if(state.pendingDraft){showDraft();}else setMode('playing');
     shotsFired=0;confirmedHits=0;wallHits=0;lastShotKind='none';telegraphsSeen=0;chargesDodged=0;attacksInterrupted=0;terrainEnemyHits=0;hitUntil=fireUntil=killUntil=0;gateHintShown=false;lastGateHitAt=-999;
     ui.cross.classList.remove('hit','firing','killed');
+    lastForkNearby='';
     last=performance.now();clock=0;waveBreak=0;lastSave=0;accumulator=0;lastPaint=0;
     setQuality(quality);paintCost=0;paintCoolDownUntil=0;
     world.nearChunks(state.x,state.z);
@@ -130,6 +219,11 @@ function begin(resume=false){
   }catch(error){fatal(error);}
 }
 function startWave(number){
+  if(state.wave>=1&&state.wave<number&&state.waveTime>0){
+    state.stageTimes=[...(state.stageTimes||[]).filter(t=>t.wave!==state.wave),
+      {wave:state.wave,seconds:Math.round(state.waveTime)}].slice(-5);
+  }
+  state.combo=0;state.comboExpires=0;
   if(world.getStage()!==number){
     // A new organ must be a real spatial transition, not just a tint:
     // its geometry, seed, hazards, drop positions and environment all change.
@@ -143,9 +237,21 @@ function startWave(number){
     world.nearChunks(spawn.x,spawn.z);
     navAt=0;gateHintShown=false;
   }
-  state.wave=number;state.waveTime=0;state.spawnClock=0;state.toSpawn=number===5?1:7+number*3;
+  state.wave=number;combatAudio.setBiome(number);state.waveTime=0;state.spawnClock=0;
+  state.pulse=1;state.pulseSpawned=0;state.organRuptureClaimed=false;
+  const first=state.pulseMax===3?pulsePlan(state.seed,number,1):null;
+  state.toSpawn=number===5?1:(first?.count??7+number*3)+
+    (first?extraEnemiesForPulse(state.protocol,state.pulseMax):0);
+  state.routeId='';state.routeWave=0;state.routeHazard=0;
+  // The guardian is only activated after the final contraction, never
+  // during the first minutes of a newly generated multi-pulse organ.
+  state.guardianPending=(state.pulseMax===3&&number<5)?0:(guardianForWave(number)?number:0);
+  world.setRouteMark?.('');
+  world.setForkSites?.(number<5?routeOptions(state.seed,number+1).map(r=>r.id):[]);
+  world.setForkSelection?.('');
+  if(number===2)state.immune.heat=Math.max(state.immune.heat,18);
   if(number===5){setNotice('НЕРВНЫЙ УЗЕЛ · СЕРДЦЕ ПРОСНУЛОСЬ',3);sound('heart');}
-  else {setNotice(biomeForWave(number).name+' · ВОЛНА '+number+'/05',2.8);sound('heart');}
+  else {setNotice(biomeForWave(number).name+' · '+(first?'ПУЛЬС 1/3 · '+first.name:'ВОЛНА '+number+'/05'),2.8);sound('heart');}
   snapshot();
 }
 function chooseSpawn(min=4,max=11){
@@ -161,10 +267,21 @@ function chooseSpawn(min=4,max=11){
   return choices[Math.floor(Math.random()*choices.length)];
 }
 function spawnUnit(type){
-  const p=chooseSpawn(type==='heart'?5:3,type==='heart'?9:11);
+  const p=chooseSpawn(type==='heart'||type==='warden'||isGuardian(type)?4.6:3,
+    type==='heart'||type==='warden'||isGuardian(type)?11:11);
   if(!p)return false;
   state.enemies.push(makeEnemy(type,p.x,p.z));
   return true;
+}
+function chooseWorldFork(){
+  if(mode!=='playing'||!state||state.wave>=5)return false;
+  const id=world.getNearbyFork?.(state.x,state.z);
+  if(!id||!routeOptions(state.seed,state.wave+1).some(r=>r.id===id))return false;
+  state.selectedRoute=id;
+  world.setForkSelection?.(id);
+  const selected=routeOptions(state.seed,state.wave+1).find(r=>r.id===id);
+  setNotice(selected.name+' · ПУТЬ ЗАПОМНЕН',2.3);
+  sound('switch');snapshot();return true;
 }
 function weaponSwitch(){
   if(!state||mode!=='playing')return;
@@ -202,7 +319,8 @@ function look(dx,dy,sensitivity=touch?.0049:.0023){
 }
 function harm(amount){
   if(!state||state.invuln>0||mode!=='playing')return;
-  state.hp=Math.max(0,state.hp-Math.ceil(incomingDamage(state,amount)));state.invuln=.55;damageFlash=1;recoil=Math.max(recoil,.65);
+  const applied=Math.ceil(incomingProtocolDamage(state,incomingDamage(state,amount)));
+  state.hp=Math.max(0,state.hp-applied);state.damageTaken=(state.damageTaken||0)+applied;state.invuln=.55;damageFlash=1;recoil=Math.max(recoil,.65);
   sound('pain');navigator.vibrate?.(40);
   if(state.hp<=0)finish(false);
 }
@@ -213,13 +331,24 @@ function dropAt(x,z){
   state.pickups.push({x,z,type,visual:world.makePickup(x,z)});
 }
 function defeatEnemy(e){
-  world.splatter(e.x,e.z,e.type==='heart'?55:16);
+  world.splatter(e.x,e.z,e.type==='heart'?55:isGuardian(e.type)?35:16);
   world.disposeVisual(e.visual);
   state.enemies.splice(state.enemies.indexOf(e),1);
-  state.kills++;state.score+=e.type==='heart'?2500:e.type==='brute'?160:e.type==='spitter'?110:e.type==='leech'?140:80;
+  state.kills++;
+  const chain=registerCombatChain(state);
+  if(chain.combo>=3){setNotice('ЦЕПНАЯ РЕАКЦИЯ ×'+chain.combo+' · +'+chain.bonus,1.1);}
+  state.score+=isGuardian(e.type)?guardianForWave(state.wave)?.score||800:e.type==='heart'?2500:e.type==='warden'?580:e.type==='brute'?160:e.type==='spitter'?110:e.type==='leech'?140:80;
   if(hasGraft(state,'blood_pump'))state.hp=Math.min(state.maxHp,state.hp+7);
+  if(e.type!=='heart')provokeImmune(state.immune,'kill',state.wave);
   killUntil=clock+.2;ui.cross.classList.add('killed');
   if(e.type==='heart'){finish(true);return;}
+  if(isGuardian(e.type)){
+    state.guardianDefeated=[...new Set([...(state.guardianDefeated||[]),state.wave])];
+    state.biomass=Math.min(99,(state.biomass||0)+2);
+    state.hp=Math.min(state.maxHp,state.hp+12);
+    setNotice('СТРАЖ ПОВЕРЖЕН · +2 БИОМАССЫ',2.5);
+    sound('heart');snapshot();return;
+  }
   if(Math.random()<.36)dropAt(e.x,e.z);
   sound('kill');
 }
@@ -242,7 +371,7 @@ function shoot(){
     if(result.kind==='flesh'){
       const enemy=result.enemy;
       hits++;confirmedHits++;
-      const shotDamage=gun.damage;
+      const shotDamage=guardianDamage(enemy,gun.damage,state.x,state.z);
       enemy.hp-=shotDamage;
       enemy.hitFlash=.18;
       const cancelled=interruptIntent(enemy,shotDamage,weapon);
@@ -267,7 +396,9 @@ function shoot(){
           z:result.point.z+direction.z*1.30};
         const second=hitRay(secondOrigin,direction,state.enemies.filter(e=>e!==enemy),world.isFloor,9,world.getTissueAt);
         if(second?.kind==='flesh'){
-          const victim=second.enemy;victim.hp-=gun.damage*.58;victim.hitFlash=.18;
+          const victim=second.enemy;
+          victim.hp-=guardianDamage(victim,gun.damage*.58,state.x,state.z);
+          victim.hitFlash=.18;
           victim.stagger=Math.max(victim.stagger||0,.12);
           world.fireTrace(secondOrigin,second.point,2);
           world.impact(second.point,direction,'flesh');confirmedHits++;hits++;
@@ -281,10 +412,20 @@ function shoot(){
       if(damage?.opened){
         state.ruptured.push(damage.id);state.ruptureCount++;
         state.score+=180;
+        if(state.pulseMax===3&&!state.organRuptureClaimed){
+          // A real optional exploration reward, once per organ; rupture
+          // already provokes immunity and changes corridor connectivity.
+          state.organRuptureClaimed=true;
+          state.biomass=Math.min(99,state.biomass+2);
+          state.score+=140;
+          setNotice('ТКАНЬ ИЗВЛЕЧЕНА · +2 БИОМАССЫ',2.3);
+        }
         const heal=biomeRuptureHeal(state.wave);
         if(heal)state.hp=Math.min(state.maxHp,state.hp+heal);
-        state.immuneHeat=Math.min(100,state.immuneHeat+immuneHeatGain(state,26));
-        state.immuneDelay=1.85;
+        provokeImmune(state.immune,'rupture',state.wave);
+        if(hasGraft(state,'rupture_gland'))state.immune.heat=Math.min(100,state.immune.heat+14);
+        state.immuneHeat=state.immune.heat;
+        state.immuneDelay=0;
         navAt=0;sound('heart');
         if(state.pickups.length<18)state.pickups.push({x:damage.x,z:damage.z,type:'fragment',visual:world.makePickup(damage.x,damage.z)});
         setNotice('ЗАТВОР РАЗОРВАН · ИММУННАЯ РЕАКЦИЯ',2.3);
@@ -309,7 +450,7 @@ function shoot(){
 }
 function createProjectile(e,angle=0){
   const toX=(e.intentX??state.x)-e.x,toZ=(e.intentZ??state.z)-e.z,theta=Math.atan2(toX,toZ)+angle;
-  const r=e.type==='heart'?.24:.16;
+  const r=e.type==='heart'?.24:e.type==='warden'?.22:.16;
   state.projectiles.push({x:e.x,z:e.z,vx:Math.sin(theta)*3.15,vz:Math.cos(theta)*3.15,ttl:4,r,visual:world.makeProjectile(e.x,e.z,r)});
 }
 function updateProjectiles(dt){
@@ -379,29 +520,44 @@ function updateEnemies(dt){
     if(!wasWinding&&result.action==='warn'&&e.windup>0){
       active++;telegraphsSeen++;
     }
+    const special=guardianAction(e.type,result.action,e,state);
+    if(special?.kind==='pulse'||special?.kind==='surge'){
+      // Pressure cannot damage a player behind an intact wall or membrane.
+      if(special.hit&&(special.kind!=='pulse'||world.visible(e,state)))harm(special.damage);
+      world.impact({x:special.kind==='surge'?e.intentX:e.x,y:.12,
+        z:special.kind==='surge'?e.intentZ:e.z},{x:0,y:1,z:0},'wall');
+      sound('heart');
+    }else if(special?.kind==='shards'){
+      for(const angle of special.angles)createProjectile(e,angle);
+      sound('heart');
+    }
     if(result.action==='shoot'){createProjectile(e);sound('heart');}
     else if(result.action==='volley'){for(let n=-2;n<=2;n++)createProjectile(e,n*.29);}
-    else if(result.action==='bite'){harm(e.type==='brute'?18:e.type==='heart'?21:10);}
+    else if(result.action==='bite'){harm(e.type==='warden'?21:e.type==='brute'?18:e.type==='heart'?21:10);}
     else if(result.action==='drain'){
       const before=state.hp;harm(10);
       if(state.hp<before){e.hp=Math.min(e.maxHp,e.hp+12);world.impact({x:e.x,y:.8,z:e.z},{x:0,y:1,z:0},'flesh');}
     }
-    else if(result.action==='charge'){e.chargeHit=false;setNotice('ТАРАН · УВЕРНИСЬ',.7);}
+    else if(result.action==='charge'){e.chargeHit=false;setNotice(e.type==='warden'?'СТРАЖ · ОБХОДИ ФЛАНГ':'ТАРАН · УВЕРНИСЬ',.7);}
     if(e.lunge>0){
       const before=Math.hypot(state.x-e.x,state.z-e.z);
       const step=8.2*dt*terrain.speed*(e.stagger>0?.45:1);
       const candidate=world.moveCircle(e.x,e.z,e.lungeX*step,e.lungeZ*step,.27);
       e.x=candidate.x;e.z=candidate.z;
       if(!e.chargeHit&&Math.hypot(state.x-e.x,state.z-e.z)<.91){
-        e.chargeHit=true;harm(19);
+        e.chargeHit=true;harm(e.type==='warden'?25:19);
       }
       if(before>1.1&&e.lunge<=dt&&!e.chargeHit){chargesDodged++;state.score+=25;}
       continue;
     }
-    if(e.windup>0&&(e.type==='brute'||e.type==='spitter'||e.type==='heart'||e.type==='leech'||e.windupKind==='bite'))continue;
+    if(e.type==='ossuary'){
+      const wanted=Math.atan2(state.x-e.x,state.z-e.z),difference=Math.atan2(Math.sin(wanted-e.facing),Math.cos(wanted-e.facing));
+      e.facing+=clamp(difference,-dt*.75,dt*.75);
+    }
+    if(e.windup>0&&(isGuardian(e.type)||e.type==='warden'||e.type==='brute'||e.type==='spitter'||e.type==='heart'||e.type==='leech'||e.windupKind==='bite'))continue;
     if(dist>.76){
       const modifier=mutation?.key==='faster'?1.18:1;
-      let pace=e.speed*modifier*dt*(e.type==='heart'?.78:1)*(e.stagger>0?.47:1)*terrain.speed;
+      let pace=e.speed*modifier*enemyProtocolSpeed(state)*dt*(e.type==='heart'?.78:1)*(e.stagger>0?.47:1)*terrain.speed;
       let vx=(tx-e.x)/(Math.hypot(tx-e.x,tz-e.z)||1),vz=(tz-e.z)/(Math.hypot(tx-e.x,tz-e.z)||1);
       // Crawlers weave into corridors instead of forming a single straight queue.
       if(e.type==='crawler'&&hasSight&&dist>2.1){
@@ -430,20 +586,29 @@ function update(dt){
   clock+=dt;
   if(mode!=='playing')return;
   state.elapsed+=dt;state.waveTime+=dt;
-  state.immuneHeat=Math.max(0,state.immuneHeat-dt*.53);
-  if(state.immuneDelay>0){
-    state.immuneDelay=Math.max(0,state.immuneDelay-dt);
-    if(state.immuneDelay===0&&state.enemies.length<18){
-      const response=state.immuneHeat>48?2:1;
-      for(let i=0;i<response;i++)spawnUnit(i===0?'spitter':'crawler');
-      if(state.enemies.length>0)setNotice('ИММУННАЯ СИСТЕМА ОТВЕТИЛА',1.4);
-    }
+  // Damage wakes immune sentinels only after an announced window; never spawn
+  // extra mobs into a lethal crowd or on top of an injured player.
+  const reaction=updateImmune(state.immune,dt,{wave:state.wave,enemies:state.enemies.length,
+    remaining:state.toSpawn,playerHp:state.hp});
+  state.immuneHeat=state.immune.heat;
+  if(reaction?.kind==='warning'&&state.immune.warning>1.47&&clock-(state.lastImmuneAlert||-999)>.95){
+    state.lastImmuneAlert=clock;
+    setNotice('ОРГАНИЗМ РЕАГИРУЕТ · '+IMMUNE_EVENTS[reaction.event].name,1.7);
+    sound('heart');
   }
+  if(reaction?.kind==='dispatch'){
+    let added=0;for(const type of reaction.units){
+      if(state.enemies.length>=16)break;
+      if(spawnUnit(type))added++;
+    }
+    if(added)setNotice('ИММУННАЯ АТАКА · '+IMMUNE_EVENTS[reaction.event].name,1.8);
+  }
+  world.setImmunePressure?.(immuneIntensity(state.immune));
   state.hazardCooldown=Math.max(0,(state.hazardCooldown||0)-dt);
   const terrain=world.getHazardAt(state.x,state.z);
   if(terrain&&state.hazardCooldown===0&&biomeDamage(terrain)>0){
     state.hazardCooldown=terrain==='charge'?1.4:1.1;
-    harm(biomeDamage(terrain));
+    harm(biomeDamage(terrain)+(state.routeWave===state.wave?state.routeHazard||0:0));
     if(mode!=='playing')return;
     setNotice(terrain==='acid'?'КИСЛОТА · ПОКИНЬ ЛУЖУ':'НЕРВНЫЙ РАЗРЯД · УЙДИ С УЗЛА',1);
   }
@@ -458,6 +623,12 @@ function update(dt){
   const speed=(state.dashTime>0?14:state.sprinting?4.8:3.4)*biomeSpeedFactor(terrain)*moveSpeed(state);
   const next=world.moveCircle(state.x,state.z,d.x*speed*dt,d.z*speed*dt,.22);
   state.x=next.x;state.z=next.z;
+  const nearby=world.getNearbyFork?.(state.x,state.z)||'';
+  if(nearby&&nearby!==lastForkNearby){
+    const route=routeOptions(state.seed,state.wave+1).find(r=>r.id===nearby);
+    if(route)setNotice('РАЗВИЛКА · '+route.name+' · X / КНОПКА ПУТЬ',1.9);
+  }
+  lastForkNearby=nearby;
   if(!gateHintShown){
     const lookAhead=world.getTissueAt(state.x-Math.sin(state.yaw)*2.0,state.z-Math.cos(state.yaw)*2.0);
     if(lookAhead){gateHintShown=true;setNotice('ПУЛЬСИРУЮЩИЙ ЗАТВОР · РАЗРУШЬ ОГНЁМ',2.5);}
@@ -466,19 +637,45 @@ function update(dt){
   if(state.toSpawn>0){
     state.spawnClock-=dt;
     if(state.spawnClock<=0&&state.enemies.length<20){
-      const type=chooseEnemyKind(state.wave,Math.random());
-      if(spawnUnit(type)){state.toSpawn--;state.spawnClock=state.wave===5?0:rng(.4,.9);}
+      const type=state.pulseMax===3&&state.wave<5?
+        pulseEnemyKind(state.seed,state.wave,state.pulse,state.pulseSpawned||0):
+        chooseEnemyKind(state.wave,Math.random());
+      if(spawnUnit(type)){state.toSpawn--;state.pulseSpawned=(state.pulseSpawned||0)+1;
+        state.spawnClock=state.wave===5?0:spawnCadence(state,Math.random());}
       else state.spawnClock=1.1;
     }
   }
   updateEnemies(dt);updateProjectiles(dt);updatePickups(dt);
+  if(mode==='playing'&&guardianReady(state)){
+    const kind=guardianForWave(state.wave);
+    if(guardianSpawnResolved(state,spawnUnit(kind.type))){
+      setNotice(kind.name+' · ПРИГОТОВЬСЯ',3);sound('heart');snapshot();
+    }
+  }
   if(mode!=='playing')return;
-  if(state.toSpawn===0&&state.enemies.length===0){
+  if(state.toSpawn===0&&state.enemies.length===0&&!state.guardianPending){
+    // Closing an organ is earned by clearing each contraction and its
+    // guardian, not by waiting through an artificial countdown.
+    if(state.pulseMax===3&&state.wave<5&&state.pulse<3){
+      waveBreak+=dt;
+      if(waveBreak>1.4){
+        const next=nextPulse(state);waveBreak=0;
+        if(next){
+          state.toSpawn=Math.min(40,state.toSpawn+extraEnemiesForPulse(state.protocol,state.pulseMax));setNotice(next.name+' · ПУЛЬС '+next.pulse+'/3',3);
+          sound('heart');snapshot();}
+      }
+    }else if(state.pulseMax===3&&guardianForWave(state.wave)&&
+       !(state.guardianDefeated||[]).includes(state.wave)){
+      state.guardianPending=state.wave;
+      waveBreak=0;
+      setNotice('ОРГАН СОБИРАЕТ СТРАЖА',2.4);snapshot();
+    }else{
     waveBreak+=dt;
     if(waveBreak>2.2){
       waveBreak=0;
       if(state.wave>=5)finish(true);
       else openDraft(state.wave+1);
+    }
     }
   }else waveBreak=0;
   if(clock-lastSave>5){lastSave=clock;snapshot();}
@@ -491,11 +688,25 @@ function update(dt){
 function syncHUD(){
   if(!state)return;
   ui.wave.textContent=String(state.wave).padStart(2,'0')+' / 05';
+  if(state.combo>1&&state.elapsed>state.comboExpires)state.combo=0;
+  ui.combo.textContent=state.combo>=2?'ЦЕПЬ ×'+state.combo:'';
+  ui.combo.hidden=state.combo<2;
+  ui.pulse.textContent=state.wave===5?'СЕРДЦЕ':
+    state.pulseMax===3?'ПУЛЬС '+state.pulse+'/3':'ЗАЧИСТКА';
   ui.zone.textContent=biomeForWave(state.wave).short;
   ui.hp.textContent=String(Math.ceil(state.hp)).padStart(3,'0');
   ui.healthFill.style.width=(state.hp/state.maxHp*100)+'%';
   ui.healthFill.style.background=state.hp<30?'#f83f39':'#dec09b';
-  ui.enemies.textContent=String(state.enemies.length+state.toSpawn).padStart(2,'0');
+  ui.enemies.textContent=String(state.enemies.length+state.toSpawn+(state.guardianPending?1:0)).padStart(2,'0');
+  const boss=state.enemies.find(e=>isGuardian(e.type)||e.type==='heart');
+  const fork=world.getNearbyFork?.(state.x,state.z);
+  ui.forkBtn.hidden=mode!=='playing'||!touch||!fork||state.wave>=5;
+  ui.guardian.hidden=mode!=='playing'||!boss;
+  if(boss){
+    const spec=guardianForWave(state.wave);
+    ui.guardianName.textContent=spec?.type===boss.type?spec.name:'СЕРДЦЕ ОРГАНА';
+    ui.guardianFill.style.width=clamp(boss.hp/boss.maxHp*100,0,100)+'%';
+  }
   ui.kills.textContent=String(state.kills).padStart(2,'0');
   ui.weapon.textContent=weaponBuild(state,state.weapon).name+'  LV.'+(state.level+1);
   ui.buildLabel.textContent=(state.grafts?.length||0)+' ПРИРАЩЕНИЯ';
@@ -508,8 +719,27 @@ function availableDraft(){
   if(!state?.pendingDraft)return [];
   return drawGrafts(state.seed,state.pendingDraft,state.grafts,state.draftRevision||0);
 }
+function renderRoutes(){
+  const choices=routeOptions(state.seed,state.pendingDraft);
+  if(!choices.some(c=>c.id===state.selectedRoute))state.selectedRoute=choices[0].id;
+  ui.routeFork.replaceChildren();
+  for(const route of choices){
+    const b=document.createElement('button');b.type='button';b.className='route-option';
+    b.dataset.route=route.id;b.setAttribute('aria-pressed',String(route.id===state.selectedRoute));
+    const name=document.createElement('strong');name.textContent=route.name;
+    const gain=document.createElement('span');gain.textContent=route.detail;
+    const cost=document.createElement('small');cost.textContent=route.cost;
+    b.append(name,gain,cost);
+    b.addEventListener('click',()=>{
+      if(mode!=='draft')return;
+      state.selectedRoute=route.id;world.setForkSelection?.(route.id);renderRoutes();snapshot();sound('switch');
+    });
+    ui.routeFork.append(b);
+  }
+}
 function renderDraft(){
   const options=availableDraft();
+  renderRoutes();
   ui.draftCount.textContent='ОРГАН '+state.wave+' / 5 → '+state.pendingDraft+' / 5';
   ui.draftMass.textContent='БИОМАССА '+(state.biomass||0);
   ui.draftCards.replaceChildren();
@@ -539,6 +769,9 @@ function showDraft(){
 }
 function openDraft(nextWave){
   state.pendingDraft=nextWave;state.draftRevision=0;
+  if(!routeOptions(state.seed,nextWave).some(r=>r.id===state.selectedRoute))
+    state.selectedRoute=routeOptions(state.seed,nextWave)[0].id;
+  world.setForkSites?.([]);
   state.enemies.forEach(e=>world.disposeVisual(e.visual));state.enemies=[];
   showDraft();sound('heart');
 }
@@ -547,11 +780,14 @@ function chooseGraft(id){
   if(!applyGraft(state,id))return;
   const chosen=graftForId(id);
   const next=state.pendingDraft;
+  const route=routeOptions(state.seed,next).some(r=>r.id===state.selectedRoute)?state.selectedRoute:routeOptions(state.seed,next)[0].id;
   state.pendingDraft=0;state.draftRevision=0;
   state.hp=Math.min(state.maxHp,state.hp+16);
   startWave(next);
+  if(!applyRoute(state,route,next))throw new Error('Не удалось выбрать путь: '+route);
+  world.setRouteMark?.(route);
   setMode('playing');last=performance.now();accumulator=0;lastPaint=0;
-  setNotice(chosen.name+' · ВСТРОЕНО',2.6);sound('pickup');
+  setNotice(chosen.name+' · ПУТЬ: '+state.routeId.toUpperCase(),2.6);sound('pickup');
   syncHUD();snapshot();
 }
 function rerollDraft(){
@@ -563,6 +799,8 @@ function finish(victory){
   if(mode!=='playing')return;
   snapshot();safeRemove('session');
   if(victory)state.score+=Math.max(0,Math.round(2500-state.elapsed*6));
+  const gained=earnEchoes(archive,state,victory);
+  recordFinishedRun(archive,state,victory);safeWrite('archive',archive);
   if(state.score>best.score){best={score:state.score,wave:state.wave,kills:state.kills};safeWrite('best',best);}
   const options=[
     {key:'strong',label:'УСИЛЕННЫЙ БОЛТЕР'},
@@ -573,7 +811,9 @@ function finish(victory){
   mutation=options[(state.seed+state.kills+state.wave)%options.length];
   safeWrite('mutation',mutation);
   ui.resultTitle.textContent=victory?'СЕРДЦЕ РАЗОРВАНО':'ТЫ ПЕРЕВАРЕН';
-  ui.resultBody.textContent='ОЧКИ '+state.score.toLocaleString('ru-RU')+' · УБИЙСТВ '+state.kills+'\nВОЛНА '+state.wave+'/5 · '+Math.floor(state.elapsed/60)+':'+String(Math.floor(state.elapsed%60)).padStart(2,'0')+'\nСЛЕДУЮЩАЯ МУТАЦИЯ: '+mutation.label;
+  ui.resultBody.textContent='ОЧКИ '+state.score.toLocaleString('ru-RU')+' · УБИЙСТВ '+state.kills+'\nВОЛНА '+state.wave+'/5 · '+Math.floor(state.elapsed/60)+':'+String(Math.floor(state.elapsed%60)).padStart(2,'0')+'\nСЛЕДУЮЩАЯ МУТАЦИЯ: '+mutation.label+'\nАРХИВ: +'+gained+' ЭХО · ВСЕГО '+archive.echoes+
+  '\nПОЛУЧЕНО УРОНА '+Math.round(state.damageTaken||0)+' · ЛУЧШАЯ ЦЕПЬ ×'+(state.peakCombo||0)+
+  '\nПРОТОКОЛ '+(PROTOCOLS.find(p=>p.id===state.protocol)?.name||'БАЗОВЫЙ');
   setMode(victory?'won':'dead');
   sound(victory?'pickup':'heart');
 }
@@ -608,6 +848,10 @@ function pollGamepad(dt){
   const buttons=Array.from(pad.buttons,b=>Boolean(b?.pressed));
   const pressed=i=>buttons[i]&&!prevPadButtons[i];
   if(mode==='draft'){
+    if(pressed(4)||pressed(5)){
+      const options=routeOptions(state.seed,state.pendingDraft);
+      state.selectedRoute=options[state.selectedRoute===options[0].id?1:0].id;renderRoutes();snapshot();
+    }
     if(pressed(14)||pressed(12))draftIndex=(draftIndex+2)%3;
     if(pressed(15)||pressed(13))draftIndex=(draftIndex+1)%3;
     if(pressed(0)){const option=availableDraft()[draftIndex];if(option)chooseGraft(option.id);}
@@ -623,7 +867,7 @@ function pollGamepad(dt){
     padMove={x:deadzone(pad.axes[0]||0),y:deadzone(pad.axes[1]||0)};
     look(deadzone(pad.axes[2]||0)*dt*620,deadzone(pad.axes[3]||0)*dt*620,.0023);
     gamepadFire=buttons[7]||(pad.buttons[7]?.value||0)>.25;
-    if(pressed(0))dash();if(pressed(1)||pressed(3))weaponSwitch();
+    if(pressed(0))dash();if(pressed(1)||pressed(3))weaponSwitch();if(pressed(2))chooseWorldFork();
   }else{padMove.x=padMove.y=0;gamepadFire=false;}
   prevPadButtons=buttons;
 }
@@ -673,6 +917,10 @@ document.addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(e.repeat&&['Escape','KeyQ','KeyE','KeyR'].includes(e.code))return;
   if(mode==='draft'){
+    if(e.code==='ArrowLeft'||e.code==='ArrowRight'){
+      const options=routeOptions(state.seed,state.pendingDraft);
+      state.selectedRoute=options[e.code==='ArrowLeft'?0:1].id;renderRoutes();snapshot();return;
+    }
     if(['Digit1','Digit2','Digit3'].includes(e.code)){const pick=availableDraft()[Number(e.code.slice(-1))-1];if(pick)chooseGraft(pick.id);return;}
     if(e.code==='KeyR'){rerollDraft();return;}
     if(e.code==='Escape'){menu();return;}
@@ -680,6 +928,7 @@ document.addEventListener('keydown',e=>{
   }
   if(e.code==='Escape'){if(!ui.confirm.hidden)ui.confirm.hidden=true;else if(mode==='playing')pause();else if(mode==='paused')resume();return;}
   if(e.code==='KeyQ'||e.code==='KeyE'){weaponSwitch();return;}
+  if(e.code==='KeyX'&&mode==='playing'){chooseWorldFork();return;}
   if(e.code==='KeyR'&&mode==='dead'){begin(false);return;}
   if(e.code==='KeyF'){if(mode==='playing'){keyFireHeld=true;shoot();}return;}
   keys.add(e.code);
@@ -695,6 +944,8 @@ $('startBtn').addEventListener('click',confirmNewRun);
 ui.resume.addEventListener('click',()=>begin(true));
 ui.pauseBtn.addEventListener('click',pause);
 ui.draftReroll.addEventListener('click',rerollDraft);
+ui.archiveToggle.addEventListener('click',()=>{archiveOpen=!archiveOpen;renderArchive();sound('switch');});
+ui.forkBtn.addEventListener('click',chooseWorldFork);
 $('draftExit').addEventListener('click',menu);
 ui.resumeBtn.addEventListener('click',resume);
 $('restartPause').addEventListener('click',confirmNewRun);
@@ -735,7 +986,7 @@ function frame(timestamp){
     // Frame-rate ceiling in manual Detail mode leaves CPU/GPU time for game input.
     // Let the browser service touch, mouse and pause events between expensive SW-WebGL frames.
     // Fast GPU systems keep the previous fast refresh rate.
-    const interval=world?.softwareRenderer?80:effectiveQuality==='high'?20:effectiveQuality==='low'?20:0;
+    const interval=world?.conservativeRenderer?80:effectiveQuality==='high'?20:effectiveQuality==='low'?20:0;
     const shouldPaint=mode==='playing'?(timestamp-lastPaint>=interval&&performance.now()>=paintCoolDownUntil):lastPaint===0;
     if(world&&!document.hidden&&shouldPaint){
       const elapsed=Math.min(dt,.045);lastPaint=timestamp;
@@ -753,9 +1004,16 @@ function frame(timestamp){
 }
 window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   x:state?.x??null,z:state?.z??null,yaw:state?.yaw??null,pitch:state?.pitch??null,hp:state?.hp??null,wave:state?.wave??null,
-  score:state?.score??null,enemies:state?.enemies?.length??0,biome:world?.getBiome()?.id??null,worldStage:world?.getStage()??null,hazard:state?world?.getHazardAt(state.x,state.z):null,
+  score:state?.score??null,enemies:state?.enemies?.length??0,
+  pacing:{pulse:state?.pulse||1,max:state?.pulseMax||1,spawned:state?.pulseSpawned||0,
+    remaining:state?.toSpawn||0,profile:state?.wave&&state.wave<5?pulsePlan(state.seed,state.wave,state.pulse):null,
+    organRuptureClaimed:Boolean(state?.organRuptureClaimed)},
+  biome:world?.getBiome()?.id??null,worldStage:world?.getStage()??null,hazard:state?world?.getHazardAt(state.x,state.z):null,
   softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
+  architecture:world?.getArchitectureSignature?.()??null,
+  atmosphere:world?.getAtmosphereSignature?.()??null,
   anatomy:{ruptures:state?.ruptureCount??0,immuneHeat:state?.immuneHeat??0,activeGates:state?world?.getTissueCount(Math.floor(state.x/8),Math.floor(state.z/8)):0},
+  immunity:{...state?.immune},
   ecology:{telegraphsSeen,chargesDodged,attacksInterrupted,terrainEnemyHits,
     pending:state?.enemies?.filter(e=>e.windup>0).length??0,
     enemies:state?.enemies?.slice(0,8).map(e=>({type:e.type,x:e.x,z:e.z,hp:e.hp,attack:e.attack,
@@ -763,6 +1021,17 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   builds:{grafts:state?.grafts||[],biomass:state?.biomass||0,pendingDraft:state?.pendingDraft||0,
     revision:state?.draftRevision||0,choices:availableDraft().map(g=>g.id),weaponCount:state?maxWeaponIndex(state)+1:2,
     damage:state?weaponBuild(state,state.weapon).damage:26},
+  guardians:{pending:state?.guardianPending||0,defeated:state?.guardianDefeated||[],
+    active:state?.enemies?.filter(e=>isGuardian(e.type)).map(e=>({type:e.type,hp:e.hp,maxHp:e.maxHp,
+      windup:e.windup,facing:e.facing}))||[]},
+  routes:{selected:state?.selectedRoute||null,active:state?.routeId||null,marker:world?.getRouteMark?.()||null,history:state?.routeHistory||[],
+    offers:state?.pendingDraft?routeOptions(state.seed,state.pendingDraft).map(r=>r.id):[],
+    forks:world?.getForkSites?.()||[],hazardExtra:state?.routeHazard||0},
+  archive:{echoes:archive.echoes,unlocked:archive.unlocked,equipped:archive.equipped,
+    protocol:archive.protocol,history:archive.history,runs:archive.runs},
+  calibration:{protocol:state?.protocol||'normal',damageTaken:state?.damageTaken||0,
+    combo:state?.combo||0,peakCombo:state?.peakCombo||0,stageTimes:state?.stageTimes||[],
+    elapsed:state?.elapsed||0,spawnCadence:state?spawnCadence(state,.5):null},
   combat:{shotsFired,confirmedHits,wallHits,lastShotKind,...(world?.getFxCounts?.()||{})}});
 
 try{

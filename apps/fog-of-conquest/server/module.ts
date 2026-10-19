@@ -1,7 +1,7 @@
 // PocketNet adaptation of the ORIGINAL Fog of Conquest, without rebalance.
 // Original unit/building definitions and complete generator are embedded verbatim.
 // Never broadcast raw state: enemies and fogged terrain remain private.
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=6;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=8;
 const TERRAIN={PLAIN:0,WATER:1,FOREST:2,HILL:3,MOUNTAIN:4};
 const TERR_COST=[1,2,2,2,999],TERR_DEF=[0,-1,1,2,0];
 const BASE_ROWS=20,BASE_COLS=30;
@@ -312,25 +312,10 @@ const inMap=(g,r,c)=>Number.isInteger(r)&&Number.isInteger(c)&&r>=0&&c>=0&&r<g.r
 const unitAt=(g,r,c)=>g.units.find(u=>u.r===r&&u.c===c);
 const buildingAt=(g,r,c)=>g.buildings.find(b=>b.r===r&&b.c===c);
 function los(g,r0,c0,r1,c1,forestBlock=true){
- let dx=abs(c1-c0),dy=abs(r1-r0),sx=c0<c1?1:-1,sy=r0<r1?1:-1,err=dx-dy,afterForest=forestBlock?-1:null;
- while(true){
-  if(g.map[r0][c0]===4&&(r0!==r1||c0!==c1))return false;
-  if(afterForest!==null){if(afterForest>=0)afterForest++;if(afterForest>1)return false;if(g.map[r0][c0]===2&&(r0!==r1||c0!==c1))afterForest=0;}
-  if(r0===r1&&c0===c1)break;
-  const e2=err*2;if(e2>-dy){err-=dy;c0+=sx}if(e2<dx){err+=dx;r0+=sy}
- }
- return true;
+ return FogRuleKernel.lineOfSight(g.map,r0,c0,r1,c1,forestBlock);
 }
 function visibility(g,side){
- const f=matrix(g,true);
- for(const o of [...g.buildings.filter(x=>x.owner===side),...g.units.filter(x=>x.owner===side)]){
-  const rad=g.map[o.r][o.c]===TERRAIN.FOREST?2:g.map[o.r][o.c]===TERRAIN.HILL?4:3;
-  for(let dr=-rad;dr<=rad;dr++)for(let dc=-rad;dc<=rad;dc++){
-   const r=o.r+dr,c=o.c+dc;
-   if(inMap(g,r,c)&&abs(dr)+abs(dc)<=rad&&los(g,o.r,o.c,r,c))f[r][c]=false;
-  }
- }
- return f;
+ return FogRuleKernel.fogForSide(g.map,g.units,g.buildings,side);
 }
 function refresh(g){
  g.state.lastSeen??={1:{},2:{}};
@@ -443,14 +428,77 @@ const FogRuleKernel=(function(){
     }
     return null;
   }
-  return Object.freeze({reach,unitDamage,buildingDamage,advanceTurn,evaluateVictory});
+  const manhattan=(a,b)=>Math.abs(a.r-b.r)+Math.abs(a.c-b.c);
+  function canHeal(caster,target,side,unitTypes){
+    return !!caster&&!!target&&caster.owner===side&&target.owner===side&&
+      caster.type==='mage'&&caster.mp>0&&manhattan(caster,target)<=1&&
+      target.hp<unitTypes[target.type].hpMax;
+  }
+  function canSpawn(map,units,buildings,state,building,unitType,point,unitTypes,buildTypes,beta){
+    const info=unitTypes[unitType];
+    const allowed=buildTypes[building?.type]?.spawn.includes(unitType)||
+      (beta&&unitType==='bog'&&building?.type==='base');
+    if(!building||!point||!info||building.owner!==state.currentPlayer||
+      !allowed||(unitType==='bog'&&!beta))return false;
+    if(!Number.isInteger(point.r)||!Number.isInteger(point.c)||
+      point.r<0||point.r>=map.length||point.c<0||point.c>=map[0].length||
+      manhattan(building,point)!==1||map[point.r][point.c]===4)return false;
+    return units.length<140&&state.gold[state.currentPlayer]>=info.cost&&
+      !units.some(u=>u.r===point.r&&u.c===point.c);
+  }
+  function capture(unit,building,buildTypes){
+    if(!unit||!building||unit.r!==building.r||unit.c!==building.c||
+      building.hp>0)return {valid:false,captured:false};
+    const captured=building.owner!==unit.owner;
+    building.owner=unit.owner;
+    building.hp=buildTypes[building.type].hpMax;
+    return {valid:true,captured};
+  }
+  function lineOfSight(map,r0,c0,r1,c1,forestBlock=true){
+    if(!map.length||r0<0||c0<0||r1<0||c1<0||
+      r0>=map.length||r1>=map.length||
+      c0>=map[0].length||c1>=map[0].length)return false;
+    let dx=Math.abs(c1-c0),dy=Math.abs(r1-r0),
+        sx=c0<c1?1:-1,sy=r0<r1?1:-1,err=dx-dy,
+        afterForest=forestBlock?-1:null;
+    while(true){
+      if(map[r0][c0]===4&&(r0!==r1||c0!==c1))return false;
+      if(afterForest!==null){
+        if(afterForest>=0)afterForest++;
+        if(afterForest>1)return false;
+        if(map[r0][c0]===2&&(r0!==r1||c0!==c1))afterForest=0;
+      }
+      if(r0===r1&&c0===c1)break;
+      const e2=err*2;
+      if(e2>-dy){err-=dy;c0+=sx;}
+      if(e2<dx){err+=dx;r0+=sy;}
+    }
+    return true;
+  }
+  function fogForSide(map,units,buildings,side){
+    if(!Array.isArray(map)||!map.length||!Array.isArray(map[0])||!map[0].length)
+      return [];
+    const rows=map.length,cols=map[0].length;
+    const f=Array.from({length:rows},()=>Array(cols).fill(true));
+    for(const o of [...buildings.filter(x=>x.owner===side),...units.filter(x=>x.owner===side)]){
+      if(o.r<0||o.r>=rows||o.c<0||o.c>=cols)continue;
+      const rad=map[o.r][o.c]===2?2:map[o.r][o.c]===3?4:3;
+      for(let dr=-rad;dr<=rad;dr++)for(let dc=-rad;dc<=rad;dc++){
+        const r=o.r+dr,c=o.c+dc;
+        if(r>=0&&r<rows&&c>=0&&c<cols&&Math.abs(dr)+Math.abs(dc)<=rad&&
+          lineOfSight(map,o.r,o.c,r,c,true))f[r][c]=false;
+      }
+    }
+    return f;
+  }
+  return Object.freeze({reach,unitDamage,buildingDamage,advanceTurn,evaluateVictory,
+    canHeal,canSpawn,capture,lineOfSight,fogForSide});
 })();
 function zones(g,u){return FogRuleKernel.reach(g.map,g.units,g.buildings,u,TERR_COST);}
 function woundBuilding(b,d=1){b.hp=Math.max(0,b.hp-d)}
 function capture(g,u,b){
- if(!b||u.r!==b.r||u.c!==b.c||b.hp>0)return;
- if(b.owner!==u.owner)log(g,u.owner,'Захвачено строение.');
- b.owner=u.owner;b.hp=BUILD_TYPES[b.type].hpMax;
+ const result=FogRuleKernel.capture(u,b,BUILD_TYPES);
+ if(result.captured)log(g,u.owner,'Захвачено строение.');
 }
 function victory(g,endedSide=null){
  if(g.phase==='finished')return;
@@ -483,7 +531,7 @@ export function originalAction(source,side,action){
  }else if(action.type==='attack'){
    if(!u||u.owner!==p||u.mp<=0||u.type==='mage'||!ok)return failure('Атака невозможна.');
    const enemy=target&&target.owner!==p?target:null;
-   const building=!enemy&&targetBuilding&&targetBuilding.owner!==p?targetBuilding:null;
+   const building=!target&&targetBuilding&&targetBuilding.owner!==p?targetBuilding:null;
    if(!enemy&&!building)return failure('Вражеская цель не найдена.');
    if(dist(u,action)>UNIT_TYPES[u.type].range||!los(g,u.r,u.c,action.r,action.c,false)||visibility(g,p)[action.r][action.c])return failure('Цель вне видимости.');
    if(g.map[u.r][u.c]===TERRAIN.WATER)return failure('Из воды нельзя атаковать.');
@@ -508,14 +556,19 @@ export function originalAction(source,side,action){
    }
    u.mp=0;
  }else if(action.type==='heal'){
-   if(!u||u.owner!==p||u.type!=='mage'||u.mp<=0||!target||target.owner!==p||dist(u,target)>1||target.hp>=UNIT_TYPES[target.type].hpMax)return failure('Цель не нуждается в лечении.');
+   if(!FogRuleKernel.canHeal(u,target,p,UNIT_TYPES))return failure('Цель не нуждается в лечении.');
    target.hp=Math.min(UNIT_TYPES[target.type].hpMax,target.hp+2);u.mp=0;log(g,p,'Отряд исцелён.');
  }else if(action.type==='spawn'){
    const b=g.buildings.find(b=>b.id===action.building),info=UNIT_TYPES[action.unitType];
-   if(!b||b.owner!==p||!info||!BUILD_TYPES[b.type]?.spawn.includes(action.unitType)||action.unitType==='bog'&&!g.modeBeta)return failure('Нельзя нанять такой отряд.');
+   const canProduce=BUILD_TYPES[b?.type]?.spawn.includes(action.unitType)||
+     (g.modeBeta&&action.unitType==='bog'&&b?.type==='base');
+   if(!b||b.owner!==p||!info||!canProduce||
+      action.unitType==='bog'&&!g.modeBeta)return failure('Нельзя нанять такой отряд.');
    if(g.state.gold[p]<info.cost)return failure('Недостаточно золота.');
-   if(!ok||dist(b,action)!==1||g.map[action.r][action.c]===TERRAIN.MOUNTAIN||target)return failure('Место для отряда недоступно.');
    if(g.units.length>=140)return failure('Армия слишком велика.');
+   if(!FogRuleKernel.canSpawn(g.map,g.units,g.buildings,g.state,b,action.unitType,
+       action,UNIT_TYPES,BUILD_TYPES,g.modeBeta))
+     return failure('Место для отряда недоступно.');
    g.state.gold[p]-=info.cost;g.units.push({id:g.nextUnitId++,r:action.r,c:action.c,owner:p,type:action.unitType,hp:info.hpMax,mp:0,startR:action.r,startC:action.c});
    log(g,p,'Отряд нанят.');
  }else return failure('Неизвестный приказ.');
