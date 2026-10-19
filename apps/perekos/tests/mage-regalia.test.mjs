@@ -71,7 +71,7 @@ test('account art remains an actual overlaid coat cameo, with parent MASKOT head
  assert.equal(ctx.depth,0);
  assert.ok(operations.some(op=>op[0]==='drawImage'&&op[1]===artCanvas),
   'profile drawing must still render on the coat');
- assert.ok(operations.some(op=>op[0]==='fillRect'&&op[5]==='#e2c078'),
+ assert.ok(operations.some(op=>op[0]==='set'&&op[1]==='fillStyle'&&op[2]==='#e2c078'),
   'official MASKOT crown should not disappear');
 });
 test('cast keyframing has distinct windup, follow-through and recovery per school',()=>{
