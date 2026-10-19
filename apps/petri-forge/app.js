@@ -48,6 +48,15 @@ function commitOperation(){
 }
 function setTile(x,y,val){
   if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=GRID_W||y>=GRID_H||!Number.isInteger(val)||val<0||val>4)return;
+  if(val===TILE.GOAL){
+    if(x===spawn[0]&&y===spawn[1]){statusEl.textContent='Цель нельзя поставить на старт';return;}
+    if(x===goal[0]&&y===goal[1])return;
+    if(env.grid[y][x]===TILE.WALL)setTile(x,y,TILE.EMPTY);
+    const op={kind:'goal',old:goal.slice(),val:[x,y]};
+    if(operation){if(!operation.has('goal'))operation.set('goal',op);else operation.get('goal').val=[x,y];}
+    else{undoStack.push([op]);redoStack.length=0;}
+    goal=[x,y];env.gx=x;env.gy=y;return;
+  }
   const old=env.grid[y][x];if(old===val)return;
   const op={x,y,old,val},key=y*GRID_W+x;
   if(operation){if(!operation.has(key))operation.set(key,op);else operation.get(key).val=val;}
@@ -69,13 +78,13 @@ function floodFill(x,y,target,repl){
 function undo(){
   if(training)return;
   commitOperation();stopReplay();const ops=undoStack.pop();if(!ops)return;
-  for(const op of ops)env.grid[op.y][op.x]=op.old;
+  for(const op of ops){if(op.kind==='goal')goal=op.old.slice();else env.grid[op.y][op.x]=op.old;}
   redoStack.push(ops);env.reset(spawn,goal);redraw();
 }
 function redo(){
   if(training)return;
   commitOperation();stopReplay();const ops=redoStack.pop();if(!ops)return;
-  for(const op of ops)env.grid[op.y][op.x]=op.val;
+  for(const op of ops){if(op.kind==='goal')goal=op.val.slice();else env.grid[op.y][op.x]=op.val;}
   undoStack.push(ops);env.reset(spawn,goal);redraw();
 }
 
@@ -268,7 +277,7 @@ window.addEventListener('pointerup', e=>{
     drawShape(startX,startY,t.x,t.y);
   }
   commitOperation();
-  if(dragSpawn||dragGoal){env.reset(spawn,goal);}
+  if(dragSpawn||dragGoal){if(env.grid[spawn[1]][spawn[0]]===TILE.WALL)setTile(spawn[0],spawn[1],TILE.EMPTY);if(env.grid[goal[1]][goal[0]]===TILE.WALL)setTile(goal[0],goal[1],TILE.EMPTY);env.reset(spawn,goal);}
   drawing=false;
   dragSpawn=false; dragGoal=false;
 });
