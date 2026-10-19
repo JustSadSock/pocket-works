@@ -6,6 +6,7 @@ import {biomeForWave,biomeHazard,stageSeed} from './biomes.js';
 import {gastricChamber} from './gastricArt.js';
 import {structuralChamber} from './structuralArt.js';
 import {atmosphereProfile,moteAt,organLight,materialProperties,enemyMotion,fxLimits} from './atmosphere.js';
+import {sanitizeScars,scarSignature,MAX_SCARS} from './scars.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const cellKey = (x,z) => x + ',' + z;
@@ -347,6 +348,18 @@ export function createWorld(canvas, initialSeed) {
   deathMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   deathMesh.frustumCulled=false;deathMesh.count=0;scene.add(deathMesh);
   const deathBits=[],deathTemp=new THREE.Object3D();
+  // Visual-only corroded tissue rings: one instance buffer, persistent per-run
+  // and per-organ, with no impact on collision or projectile rays.
+  const scarGeo=new THREE.RingGeometry(.12,.33,13).rotateX(-Math.PI/2);
+  const scarMat=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,
+    transparent:true,opacity:.70,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1});
+  const scarsMesh=new THREE.InstancedMesh(scarGeo,scarMat,MAX_SCARS);
+  scarsMesh.frustumCulled=false;scarsMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  scarsMesh.count=0;scene.add(scarsMesh);
+  const scarTmp=new THREE.Object3D();
+  let storedScars=[];
+  // A dying enemy remains recognisable while collapsing; bounded to six.
+  const dying=[],MAX_DYING=6;
   const source = new THREE.Group();
   scene.add(source);
   const chunks = new Map(), layouts = new Map(), tissueChunks = new Map(), tissueVisuals = new Map(), stains = [], droplets = [], streaks = [];
@@ -574,6 +587,8 @@ export function createWorld(canvas, initialSeed) {
     source.clear();routeSignRoot.clear();activeRouteMark='';forkSigns.clear();forkSites=[];forkSelection='';
     stains.length=0;droplets.length=0;particlesGeo.setDrawRange(0,0);
     deathBits.length=0;deathMesh.count=0;motesGeo.setDrawRange(0,0);
+    for(const d of dying)source.remove(d.visual);dying.length=0;
+    scarsMesh.count=0;storedScars=[];
     shotLight.visible=false;shotLight.intensity=0;
     kickPos=0;kickVel=0;muzzleTime=0;organPulse=0;
   }
@@ -849,6 +864,37 @@ export function createWorld(canvas, initialSeed) {
     if(layouts.size>120){for(const [k] of layouts){const [a,b]=k.split(',').map(Number);if(Math.abs(a-cx)>6||Math.abs(b-cz)>6)layouts.delete(k);}}
   }
   function moveCircle(x,z,dx,dz,r=.21){return sweepCircle(x,z,dx,dz,r,isFloor);}
+  function setScars(list){
+    storedScars=sanitizeScars(list);
+    let used=0;
+    for(const scar of storedScars){
+      if(scar.wave!==stage)continue;
+      scarTmp.position.set(scar.x,.049,scar.z);
+      scarTmp.rotation.set(0,(Math.abs(Math.floor(scar.x*31+scar.z*17))%12)*Math.PI/6,0);
+      const size=scar.kind==='rupture'?1.72:scar.kind==='burn'?.78:1.04;
+      scarTmp.scale.setScalar(size);scarTmp.updateMatrix();
+      scarsMesh.setMatrixAt(used,scarTmp.matrix);
+      const color=scar.kind==='rupture'?0x40242b:scar.kind==='burn'?0x342932:0x651c31;
+      scarsMesh.setColorAt(used,new THREE.Color(color));
+      used++;
+    }
+    scarsMesh.count=used;
+    if(used){scarsMesh.instanceMatrix.needsUpdate=true;
+      if(scarsMesh.instanceColor)scarsMesh.instanceColor.needsUpdate=true;}
+  }
+  function playDeath(visual,type,x,z){
+    if(!visual)return;
+    if(visual.userData?.marker)source.remove(visual.userData.marker);
+    if(dying.length>=MAX_DYING){
+      const old=dying.shift();source.remove(old.visual);
+    }
+    // No live gameplay enemy remains; only a collapsing 3D visual corpse.
+    visual.userData.tell&&(visual.userData.tell.visible=false);
+    visual.userData.wound&&(visual.userData.wound.visible=false);
+    const duration=type==='ossuary'||type==='brute'?.95:type==='synapse'?.88:.66;
+    dying.push({visual,type,x,z,time:0,duration,baseScale:visual.scale.x,
+      baseY:visual.position.y,baseRotation:visual.rotation.y});
+  }
   function makeEnemy(type,x,z){
     const g=new THREE.Group(), core=mobMats[type]||mobMats.crawler;
     const sizes={crawler:1,spitter:.90,brute:1.36,leech:.94,warden:1.67,heart:1.8,
@@ -1083,6 +1129,18 @@ export function createWorld(canvas, initialSeed) {
     }
     for(let i=0;i<droplets.length;i++){const p=droplets[i];particleArr[i*3]=p.x;particleArr[i*3+1]=p.y;particleArr[i*3+2]=p.z;}
     particlesGeo.attributes.position.needsUpdate=true;particlesGeo.setDrawRange(0,droplets.length);
+    for(let i=dying.length-1;i>=0;i--){
+      const d=dying[i];d.time+=dt;
+      const t=clamp(d.time/d.duration,0,1);
+      const collapse=Math.pow(t,1.35);
+      const heavy=d.type==='ossuary'||d.type==='brute'||d.type==='warden';
+      d.visual.position.set(d.x,d.baseY-collapse*(heavy?.23:.30),d.z);
+      d.visual.rotation.set(collapse*(d.type==='synapse'?1.10:.58),
+        d.baseRotation+collapse*.54,collapse*(heavy?.88:1.32));
+      d.visual.scale.set(d.baseScale*(1-collapse*.80),
+        d.baseScale*(1-collapse*.63),d.baseScale*(1-collapse*.80));
+      if(t>=1){source.remove(d.visual);dying.splice(i,1);}
+    }
     for(let i=deathBits.length-1;i>=0;i--){
       const bit=deathBits[i];bit.x+=bit.vx*dt;bit.z+=bit.vz*dt;
       bit.y=Math.max(.085,bit.y+bit.vy*dt);bit.vy-=10.5*dt;bit.life-=dt;
@@ -1229,9 +1287,11 @@ export function createWorld(canvas, initialSeed) {
   }
   function end(){
     clearChunks();motesGeo.dispose();motesMat.dispose();deathGeo.dispose();deathMat.dispose();
+    scarGeo.dispose();scarMat.dispose();
     for(const map of Object.values(roughnessMaps||{}))map?.dispose();
     renderer.dispose();
   }
+  function getScarSignature(){return scarSignature(storedScars,stage);}
   function getAtmosphereSignature(){
     const profile=atmosphereProfile(stage,quality,conservativeRenderer);
     return {biome:biome.id,stage,quality,motes:profile.count,deathFragments:deathMesh.count,
@@ -1246,8 +1306,8 @@ export function createWorld(canvas, initialSeed) {
       structuralChamber(cx,cz,seed,biome.id);
   }
   reset(initialSeed);resize();
-  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, setRouteMark, getRouteMark:()=>activeRouteMark,
+  return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, playDeath, setScars, getScarSignature, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, setRouteMark, getRouteMark:()=>activeRouteMark,
     setForkSites,setForkSelection,getNearbyFork,getForkSites:()=>forkSites.map(({id,x,z})=>({id,x,z})),getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, getAtmosphereSignature, softwareRenderer, conservativeRenderer, end,
     getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length,
-      motes:motesGeo.drawRange.count,deathFragments:deathBits.length}) };
+      motes:motesGeo.drawRange.count,deathFragments:deathBits.length,dying:dying.length,scars:scarsMesh.count}) };
 }
