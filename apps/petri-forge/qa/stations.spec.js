@@ -3,10 +3,11 @@ import {test,expect} from '@playwright/test';
 test('three laboratory modes switch without losing the grid',async({page})=>{
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
- await expect(page.locator('[data-world-mode]')).toHaveCount(3);
+ await expect(page.locator('[data-world-mode]')).toHaveCount(4);
  await expect(page.locator('#cv')).toBeVisible();
  await page.locator('[data-world-mode="combat"]').click();
  await expect(page.locator('#battleCanvas')).toBeVisible();
+ await page.locator('#hubTools').click();
  await expect(page.locator('#combatPanel')).toBeVisible();
  await expect(page.locator('#cv')).toBeHidden();
  await page.locator('#battleTest').click();
@@ -20,6 +21,7 @@ test('three laboratory modes switch without losing the grid',async({page})=>{
 test('combat policies differ by loadout and arena',async({page})=>{
  await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
  await page.locator('[data-world-mode="combat"]').click();
+ await page.locator('#hubTools').click();
  await page.locator('#battleArena').selectOption('open');
  await page.locator('#battleTeamSize').selectOption('1');
  await page.locator('#battleTest').click();
