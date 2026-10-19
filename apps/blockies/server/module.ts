@@ -637,7 +637,7 @@ function checkAllPlayersGameOver() {
  return {
  init(players){gameState.numPlayers=players.length;gameState.boardWidth=computeBoardWidth(players.length);gameState.board=createEmptyBoard();gameState.players=[];gameState.pieceBag=[];resetSharedStats();players.forEach((p,i)=>{const v=new Player(i,p.color,{},((i+1)/(players.length+1))*gameState.boardWidth);v.init();gameState.players.push(v);});},
  step(ms){for(let t=0;t<ms;t+=50)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(50,ms-t));},
- input(i,p){const v=gameState.players[i];if(!v||v.gameOver)return;if(p.action==='move'&&[-1,1].includes(p.direction))v.move(p.direction,{broadcast:false});else if(['rotate','drop','hardDrop'].includes(p.action))v[p.action]({broadcast:false});else throw Error('Некорректная команда');},
+ input(i,p){const v=gameState.players[i];if(!v||v.gameOver)return;if(p.action==='move'&&[-1,1].includes(p.direction))v.move(p.direction,{broadcast:false});else if(['rotate','drop','hardDrop','hold'].includes(p.action))v[p.action]({broadcast:false});else throw Error('Некорректная команда');},
  snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,pieceBag:gameState.pieceBag,players:gameState.players.map(p=>({...p}))};}
  };
 }
