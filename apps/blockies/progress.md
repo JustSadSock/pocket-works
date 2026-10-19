@@ -5,3 +5,5 @@ Source game retained. Extracted the original falling-block engine into an isolat
 2026-10-19: completed source restoration, app-specific mobile layout corrections, original artwork/icon and app-local design/reference documentation. Functional scenarios and inspected captures are recorded by the acceptance scripts. Remaining release work: offline/landscape acceptance, current capture provenance, CI and merge.
 
 Пользователь остановил дальнейшую полировку и разрешил перенос с известными проблемами. См. KNOWN_ISSUES.md; не тратить следующий запуск на повтор уже перечисленных проверок.
+
+2026-10-19 (v0.1.1 candidate): complete scoped static audit; fixes in game.js for RAF lifecycle, visible background pause, held-key release, online ownership of touch/gamepads, no phantom local online restart, server-authoritative lobby ready UI, HTML-safe nicknames and disconnect feedback. Added ROADMAP.md and Playwright regression scenarios. Server engine untouched. Browser/CI and true two-client validation remain release blockers.
