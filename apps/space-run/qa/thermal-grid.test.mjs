@@ -82,6 +82,7 @@ test('radiator operator overdrives cooling in exchange for ship energy',()=>{
   boost=send(boost,'occupyModule',{moduleId:id});
   normal.room.ship.modules[1].heat=96;boost.room.ship.modules[1].heat=96;
   normal=step(normal,200);
+  boost.room.players[0][1].input.space=true;
   boost.room.players[0][1].lastInputAt=Date.now();
   boost=step(boost,200,{space:true});
   const radiator=boost.snapshot.ship.modules.find(m=>m.type==='radiator');
