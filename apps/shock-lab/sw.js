@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'shock-lab-';
-const CACHE_NAME = 'shock-lab-v1.3.0';
-const APP_VERSION = '1.3.0';
+const CACHE_NAME = 'shock-lab-v1.4.0';
+const APP_VERSION = '1.4.0';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Угол атаки, расчёт подъёмной силы/сопротивления давления и момента тангажа, Cp по поверхности, сравнение четырёх опытов."];
+const RELEASE_NOTES = ["Порывы набегающего потока, вычисляемая завихрённость, меняемая кривизна и толщина крыла, график временных сил и CSV."];
 const APP_SHELL = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const APP_SHELL = [
   './app.js',
   './physics.js',
   './traces.js',
+  './load-history.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
