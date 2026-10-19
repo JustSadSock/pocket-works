@@ -179,7 +179,7 @@ function newState(seed){
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
 function makeEnemy(type,x,z,hp){
-  const max=Object.values({1:guardianForWave(1),3:guardianForWave(3),4:guardianForWave(4)}).find(g=>g?.type===type)?.hp||
+  const max=[1,2,3,4].map(guardianForWave).find(g=>g?.type===type)?.hp||
     (type==='heart'?310:type==='warden'?222:type==='brute'?118:type==='spitter'?49:type==='leech'?72:61);
   const id=nextId++;
   return {id,type,x,z,hp:hp??max,maxHp:max,...initialEnemyIntent(type,id),
@@ -1017,7 +1017,8 @@ function frame(timestamp){
       while(accumulator>=1/60&&steps<6&&mode==='playing'){
         update(1/60);accumulator-=1/60;steps++;
       }
-      fpsClock+=dt;fpsFrames++;
+      // Measured FPS is actual paint throughput, not animation callback frequency.
+      fpsClock+=dt;
       if(quality==='auto'&&fpsClock>4){
         const result=autoQualityWindow(autoMonitor,effectiveQuality,fpsFrames/fpsClock,
           fpsClock,world.conservativeRenderer);
@@ -1040,6 +1041,7 @@ function frame(timestamp){
       const cameraState=state||{x:3,z:3,yaw:1.4,pitch:0,moving:0,sprinting:false};
       const paintStart=performance.now();
       world.paint(cameraState,state?.enemies||[],state?.pickups||[],state?.elapsed||timestamp*.001,mode==='playing'?elapsed:0,recoil,damageFlash,state?.projectiles||[]);
+      if(mode==='playing')fpsFrames++;
       const cost=performance.now()-paintStart;
       paintCost=paintCost?paintCost*.65+cost*.35:cost;
       if(mode==='playing'&&paintCost>24)paintCoolDownUntil=performance.now()+Math.min(180,paintCost*2.4);
