@@ -1,9 +1,26 @@
 import './agent-hub-shell.mjs';
-import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer} from './agent-career.mjs';
+import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer} from './agent-career.mjs';
 import {listModels,loadModel} from './model-store.mjs';
 
 const $=id=>document.getElementById(id),runtime=()=>window.PetriForgeRuntime||{};
 const LAST='pocket-works:petri-forge:career-last-v1';
+async function migratePreviousAutosaves(c){
+ const legacy={grid:'autosave',combat:'combat-autosave',race:'race-autosave',perekos:'perekos-autosave'};
+ let restored=0;
+ for(const domain of DOMAINS){
+  try{
+   const saved=await loadModel(legacy[domain]);
+   if(!saved||saved.kind!==KINDS[domain]||!saved.snapshot)continue;
+   await writeBrain(c,domain,saved.snapshot);
+   c.branches[domain].imported=true;
+   c.branches[domain].history.push({at:Date.now(),units:0,outcome:'imported',
+     label:'Восстановлен мозг из предыдущей версии PetriForge. Можно продолжать обучение.',before:null,after:null});
+   restored++;
+  }catch{/* Damaged legacy saves must not prevent first launch. */}
+ }
+ if(restored)await writeCareer(c);
+ return restored;
+}
 const cfg={
  grid:{info:'Находит путь к цели на клеточной карте. За попытки получает награды и штрафы и запоминает полезные действия.',units:'эпизодов',counts:[100,400,1000,3000],variants:[['corridor','Первый маршрут'],['maze','Лабиринт'],['hazards','Опасная территория'],['rewards','Сбор наград'],['switchback','Обход барьеров'],['rooms','Комнаты'],['custom','Мой нарисованный мир']],first:'corridor'},
  combat:{info:'Учится побеждать в настоящих боях: выбирает дистанцию, оборону, способность и маршрут. Одно поколение — несколько боёв.',units:'поколений',counts:[8,16,32,64],variants:[['open','Чистое поле'],['cover','Укрытия'],['hazards','Опасная арена']],first:'cover'},
@@ -32,8 +49,8 @@ function refresh(){
  $('hubRuns').textContent=fmt(b.sessions);
  $('hubExperience').textContent=fmt(b.units)+' '+x.units;
  $('hubLifetime').textContent='Всего '+DOMAINS.reduce((n,d)=>n+active.branches[d].sessions,0)+' тренировок · '+(b.trainedAt?'последняя '+new Date(b.trainedAt).toLocaleDateString('ru-RU'):'здесь ещё не тренировался');
- $('hubTrainText').textContent=b.sessions?'Продолжить обучение':'Начать обучение';
- $('hubTrainSub').textContent=b.sessions?'Тот же мозг, новые навыки':'Первое занятие этого агента';
+ $('hubTrainText').textContent=b.sessions||b.imported?'Продолжить обучение':'Начать обучение';
+ $('hubTrainSub').textContent=b.sessions||b.imported?'Тот же мозг, новые навыки':'Первое занятие этого агента';
  $('hubLesson').textContent=x.units==='эпизодов'?'Каждый эпизод — отдельная попытка дойти до цели. Опыт и знания накапливаются.':
   mode==='race'?'Кандидат — ещё один способ вести автомобиль. Новое занятие продолжит улучшать этого водителя.':
   'Модель сравнивает стратегии и сохраняет удачные. Следующее занятие продолжит с текущих навыков.';
@@ -237,7 +254,10 @@ window.addEventListener('pagehide',()=>{if(active&&!busy&&!pending)void persist(
 async function start(){
  pending=true;lock();
  try{
-  careers=await listCareers();if(!careers.length)careers=[await createCareer('Искра')];
+  careers=await listCareers();
+  if(!careers.length){
+   const first=await createCareer('Искра');await migratePreviousAutosaves(first);careers=[first];
+  }
   active=careers.find(c=>c.id===localStorage.getItem(LAST))||careers[0];
   await restore(active,mode);profiles();choices();refresh();
  }catch(e){notify('Не удалось открыть агентов: '+e.message);}
