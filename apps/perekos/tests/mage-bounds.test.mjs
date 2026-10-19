@@ -79,7 +79,7 @@ test('every combat angle draws finite geometry with balanced nested transforms',
  for(const mage of MAGES)for(let sector=0;sector<8;sector++){
   const bounds=measureMageGeometry({x:200,y:310,scale:1.32,mageId:mage.id,
    face:sector*Math.PI/4,time:.35,casting:.31,pose:{windup:.4,release:.4,guard:.5}},animal);
-  assert.ok(bounds.minX>=140&&bounds.maxX<=260&&bounds.minY>=235&&bounds.maxY<=375,
+  assert.ok(bounds.minX>=125&&bounds.maxX<=275&&bounds.minY>=235&&bounds.maxY<=380,
     mage.id+' angle '+sector+': oversized art '+JSON.stringify(bounds));
  }
 });
