@@ -6,7 +6,8 @@
       "kind": "node-test",
       "tier": "smoke",
       "files": [
-        "physics.test.mjs"
+        "physics.test.mjs",
+        "coupling.test.mjs"
       ]
     },
     {
@@ -28,6 +29,13 @@
         },
         {
           "action": "click",
+          "selector": "[data-cloud='cluster']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
           "selector": "#launch"
         },
         {
@@ -40,6 +48,10 @@
         {
           "action": "click",
           "selector": "#pause"
+        },
+        {
+          "action": "click",
+          "selector": "#trace"
         },
         {
           "action": "screenshot"
