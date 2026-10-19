@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'space-run-';
-const CACHE_NAME = 'space-run-v0.4.0';
-const APP_VERSION = '0.4.0';
+const CACHE_NAME = 'space-run-v0.5.0';
+const APP_VERSION = '0.5.0';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Электрические автоматы, перегрузки, ручной приоритет питания.", "Новый модуль радиатора с форсажным охлаждением соседних систем.", "Отрыв поврежденных крайних секций корпуса, аварийное восстановление шины."];
+const RELEASE_NOTES = ["Обломки корпуса теперь имеют собственную скорость, вращение и столкновения.", "Цепные тепловые аварии и локальные повреждения при перегреве.", "Точная реакция корабля на силу и точку попадания, видимые ударные волны."];
 const APP_SHELL = [
 './assets/fonts/font-1.ttf',
 './assets/fonts/font-2.ttf',
