@@ -1,5 +1,6 @@
 import './agent-hub-shell.mjs';
 import {mountAgentCockpit} from './agent-cockpit.mjs';
+import {warmStartCombatFromWorld} from './agent-transfer.mjs';
 import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer} from './agent-career.mjs';
 import {listModels,loadModel} from './model-store.mjs';
 
@@ -95,9 +96,15 @@ async function persist(c,domain){
 }
 async function restore(c,domain){
  const r=runtime()[domain];if(!r)throw Error('Игровой движок пока не готов');
- const snapshot=await readBrain(c,domain);
+ let snapshot=await readBrain(c,domain);
+ let adapted=false;
+ if(domain==='combat'&&!snapshot){
+  const grid=await readBrain(c,'grid');
+  const transfer=warmStartCombatFromWorld(grid);
+  if(transfer){snapshot=transfer.policy;await writeBrain(c,'combat',snapshot);adapted=true;}
+ }
  await r.setModel(snapshot);
- notify(snapshot?'Загружен мозг '+c.name+' · '+TITLES[domain]:'Для '+TITLES[domain]+' создан чистый мозг');
+ notify(adapted?'Навыки обхода опасностей из мира перенесены в первую боевую стратегию.':snapshot?'Загружен мозг '+c.name+' · '+TITLES[domain]:'Для '+TITLES[domain]+' создан чистый мозг');
 }
 function advancedMode(value){
  advanced=value;document.body.classList.toggle('hub-advanced',value);
