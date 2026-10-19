@@ -163,6 +163,15 @@ function beginGesture(ev){
   if(ev.button!==0||!sim||!dialog.hidden)return;
   ev.preventDefault();clearHint();
   const pos=getPosition(ev);
+  if(armingSensor!==null){
+    if(sampleAt(pos).solid){toast('ДАТЧИК НЕЛЬЗЯ ПОСТАВИТЬ В СТЕНУ');return;}
+    trace.moveSensor(armingSensor,pos);
+    state.sensors=trace.sensors.map(p=>({...p}));
+    armingSensor=null;persist();refreshControls();updateMetrics();playSound('wall');
+    toast('ДАТЧИК ПЕРЕМЕЩЁН · ЗАПИСЬ ОЧИЩЕНА');
+    return;
+  }
+  if(state.tool==='pulse'&&tubeReady){toast('СНАЧАЛА РАЗОРВИТЕ МЕМБРАНУ');return;}
   try{display.setPointerCapture(ev.pointerId)}catch{}
   pointer={id:ev.pointerId,pos,at:performance.now(),points:[pos],tool:state.tool};
   if(state.tool==='pulse')addPulse(pos);
@@ -254,6 +263,28 @@ function drawOverlay(now){
   over.clearRect(0,0,paintW,paintH);
   const unitX=paintW/sim.nx,unitY=paintH/sim.ny;
   over.lineWidth=Math.max(1,dpr);
+  if(tubeReady){
+    const x=paintW*.42,y0=paintH*.20,y1=paintH*.80;
+    over.save();over.strokeStyle='#faf0d5';over.lineWidth=2*dpr;
+    over.setLineDash([7*dpr,5*dpr]);over.beginPath();over.moveTo(x,y0);over.lineTo(x,y1);over.stroke();
+    over.setLineDash([]);over.fillStyle='#f7e7bd';over.font=(11*dpr)+'px monospace';
+    over.fillText('МЕМБРАНА',x+7*dpr,y0+14*dpr);over.restore();
+  }
+  if(plotMode==='profile'){
+    over.save();over.setLineDash([5*dpr,6*dpr]);
+    over.strokeStyle='rgba(179,212,207,.55)';over.lineWidth=dpr;
+    over.beginPath();over.moveTo(0,paintH*.5);over.lineTo(paintW,paintH*.5);over.stroke();over.restore();
+  }
+  trace.sensors.forEach((p,i)=>{
+    const x=p.x*paintW,y=p.y*paintH,col=i===0?'#f6cc80':'#8ed8e3';
+    over.save();over.strokeStyle=col;over.fillStyle=col;over.lineWidth=1.5*dpr;
+    over.beginPath();over.arc(x,y,5*dpr,0,Math.PI*2);over.stroke();
+    over.beginPath();over.moveTo(x-10*dpr,y);over.lineTo(x-6*dpr,y);
+    over.moveTo(x+6*dpr,y);over.lineTo(x+10*dpr,y);
+    over.moveTo(x,y-10*dpr);over.lineTo(x,y-6*dpr);
+    over.moveTo(x,y+6*dpr);over.lineTo(x,y+10*dpr);over.stroke();
+    over.font=(12*dpr)+'px monospace';over.fillText(i===0?'А':'Б',x+10*dpr,y-9*dpr);over.restore();
+  });
   for(const r of ripples){
     const age=(now-r.time)/1000;
     if(age<0||age>.48)continue;
