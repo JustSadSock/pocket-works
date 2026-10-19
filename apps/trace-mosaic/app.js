@@ -583,45 +583,56 @@ function renderGame() {
 function renderResults() {
   const room = state.room;
   const score = room.game.score;
-  const players = [...room.players].sort((a, b) => (b.stats?.netFlow || 0) - (a.stats?.netFlow || 0));
+  const complete = score.completionPercent === 100;
+  const players = [...room.players].sort((a,b)=>(b.stats?.netFlow||0)-(a.stats?.netFlow||0));
   const isHost = room.hostId === state.selfId;
+  const picture = state.preparedGame?.previewUrl || room.game.image.path;
   return `
-    <main class="screen">
-      <section class="result-shell stack fade-in">
-        <div class="top-strip">
-          <div class="status-chip">Комната <strong>${room.roomId}</strong></div>
-          <div class="timer-chip">${score.completionPercent}%</div>
-          <div class="status-chip"><strong>${score.teamScore}</strong></div>
+    <main class="screen results-screen">
+      <section class="result-shell">
+        <div class="top-strip result-top">
+          <div class="eyebrow">TRACE / ARCHIVE</div>
+          <div class="status-chip">КОМНАТА ${escapeHtml(room.roomId)}</div>
+          <div class="eyebrow">№ ${escapeHtml(room.game.image.id)}</div>
         </div>
-
-        <div class="glass-card panel stack">
-          <div class="eyebrow">Итог</div>
-          <h2 style="margin:4px 0 0;">${score.completionPercent === 100 ? "Картина собрана" : "Время вышло"}</h2>
-          <p class="menu-subtitle" style="margin:0;">Остаток времени: ${score.timeLeftSec}с • Чем выше сборка и чем быстрее финиш, тем выше счет.</p>
+        <section class="result-exhibit">
+          <div class="exhibit-heading">
+            <span class="eyebrow">${complete ? 'РАБОТА ЗАВЕРШЕНА' : 'РАУНД ОКОНЧЕН'}</span>
+            <h2>${complete ? 'Картина\nвосстановлена.' : 'Не всё\nпотеряно.'}</h2>
+            <p>${complete ? 'Команда вернула картине её целостность.' : 'Время истекло. Следующая попытка — новая композиция.'}</p>
+          </div>
+          <div class="exhibit-art">
+            <img src="${escapeHtml(picture)}" alt="Исходное изображение ${escapeHtml(room.game.image.title)}" />
+            <span class="art-signature">${escapeHtml(room.game.image.title)}</span>
+          </div>
+          <div class="exhibit-metrics">
+            <div><span>СОБРАНО</span><strong>${score.completionPercent}%</strong></div>
+            <div><span>КОМАНДНЫЙ СЧЁТ</span><strong>${score.teamScore}</strong></div>
+            <div><span>СЕКУНД В ЗАПАСЕ</span><strong>${score.timeLeftSec}</strong></div>
+          </div>
+        </section>
+        <div class="result-caption"><span>УЧАСТНИКИ РЕСТАВРАЦИИ</span><span>ВКЛАД В РАБОТУ</span></div>
+        <div class="result-grid">
+          ${players.map((player,index)=>{
+            const stats = player.stats || {};
+            return `<div class="score-card">
+              <div class="score-name"><span class="score-position">${String(index+1).padStart(2,'0')}</span>
+                <span class="score-dot" style="--score-color:${player.color}"></span>
+                <strong>${escapeHtml(player.nickname)}</strong></div>
+              <div class="score-contribution">${describeFlow(stats.netFlow || 0)}</div>
+              <p>Точно: ${stats.correctDrops || 0} <span>·</span> Ошибок: ${stats.wrongDrops || 0}
+                  <span>·</span> Блокировок: ${stats.trailBlocksCaused || 0}</p>
+            </div>`;
+          }).join('')}
         </div>
-
-        <div class="glass-card panel result-grid">
-          ${players
-            .map((player) => {
-              const mood = describeFlow(player.stats?.netFlow || 0);
-              return `
-                <div class="score-card">
-                  <h3>${escapeHtml(player.nickname)}</h3>
-                  <p>${mood} • точных: ${player.stats?.correctDrops || 0} • лишних: ${player.stats?.wrongDrops || 0} • перекрыл: ${player.stats?.trailBlocksCaused || 0}</p>
-                </div>
-              `;
-            })
-            .join("")}
-        </div>
-
-        <div class="two-up">
-          ${isHost ? `<button data-native-press class="accent-button" data-action="play-again">Новый раунд</button>` : `<button data-native-press class="pill-button" disabled>Хост решает</button>`}
+        <div class="two-up result-actions">
+          ${isHost ? `<button data-native-press class="accent-button" data-action="play-again">Новая картина →</button>` :
+            `<div class="result-wait">Ожидаем новый раунд от ведущего</div>`}
           <button data-native-press class="ghost-button" data-action="leave-room">В меню</button>
         </div>
       </section>
       ${renderToasts()}
-    </main>
-  `;
+    </main>`;
 }
 
 function renderToasts() {
