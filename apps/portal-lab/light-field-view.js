@@ -4,7 +4,7 @@ import {
  chartPoint,sphereWires,coordinateConsistency
 } from './light-field.js';
 import {project3D} from './embedded-space.js';
-import {normalizeObserverPoint,chartObserverPosition,pointFromPhoton,inspectObserverRay} from './observer-bridge.js';
+import {normalizeObserverPoint,chartObserverPosition,pointFromPhoton,inspectObserverRay,cameraForRay} from './observer-bridge.js';
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const f=(n,d=2)=>Number.isFinite(n)?n.toFixed(d):'—';
@@ -150,12 +150,10 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
  function openObserver(){
   // The camera centre is the SAME local null direction as the inspector.
   // For inward rays use the inward branch; outward rays use the opposite.
-  const theta=state.probeAngle*Math.PI/180,side=Math.sign(state.observerPoint.l);
-  const outward=theta<=Math.PI/2;
-  const yaw=outward?theta:Math.PI-theta;
+  const theta=state.probeAngle*Math.PI/180;
   onOpenObserver?.({point:{...state.observerPoint},view:{
-   yaw,pitch:0,fov:80,mode:'combined',quality:'balanced',
-   facingSign:outward?-side:side,rayAngle:theta}
+   ...cameraForRay(state.observerPoint,theta),
+   fov:80,mode:'combined',quality:'balanced',rayAngle:theta
   });
  }
  function sceneCamera(w,h){
