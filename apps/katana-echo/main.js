@@ -42,13 +42,13 @@ function connect() {
     const msg = JSON.parse(event.data);
     if (msg.type === 'room') {
       playerId = msg.data.playerId;
-      roomInput.value=msg.data.roomCode;
+      roomInput.value=msg.data.roomCode;document.querySelector("#connection-panel").open=false;
       if (msg.data.map) world.map = msg.data.map;
       statusEl.textContent = `Room ${msg.data.roomCode} / you ${playerId}`;
     }
     if (msg.type === 'state') {
       world = msg.data;
-      statusEl.textContent=world.phase==='round-end'?'Раунд завершён · новая дуэль через мгновение':world.phase==='lobby'?'Ждём второго бойца · код '+(roomInput.value||'в комнате'):('Дуэль · '+world.mode);
+      statusEl.textContent=world.phase==='round-end'?'Раунд завершён · новая дуэль через мгновение':world.phase==='lobby'?'Ждём второго бойца · код '+(roomInput.value||'в комнате'):('Дуэль · '+world.mode+' · '+roomInput.value);
     }
     if (msg.type === 'event') {
       // future: add flashy feedback
@@ -148,6 +148,7 @@ function drawPlayers() {
     ctx.arc(0, 0, 0.45, 0, Math.PI * 2);
     ctx.fill();
 
+    ctx.strokeStyle="#e5ead4";ctx.lineWidth=.07;ctx.beginPath();ctx.moveTo(.25,0);ctx.lineTo(.85,0);ctx.stroke();
     if (p.state.attacking) {
       ctx.strokeStyle = 'rgba(255,255,255,0.8)';
       ctx.lineWidth = 0.08;
@@ -185,11 +186,12 @@ function resize(){const r=canvas.getBoundingClientRect(),dpr=Math.min(devicePixe
 new ResizeObserver(resize).observe(canvas);resize();
 for(const button of document.querySelectorAll('[data-key],[data-combat]')){
  const set=value=>{if(value && button.dataset.combat){const me=world.players.find(p=>p.id===playerId),enemy=world.players.find(p=>p.id!==playerId&&p.alive);if(me&&enemy)inputState.mouseAngle=Math.atan2(enemy.state.y-me.state.y,enemy.state.x-me.state.x);}if(button.dataset.key)inputState.keys[button.dataset.key]=value;else inputState[button.dataset.combat]=value;};
- button.onpointerdown=e=>{button.setPointerCapture(e.pointerId);set(true);e.preventDefault();};button.onpointerup=()=>set(false);button.onpointercancel=()=>set(false);button.onlostpointercapture=()=>set(false);
+ button.onpointerdown=e=>{button.setPointerCapture(e.pointerId);set(true);sendInput(true);e.preventDefault();};button.onpointerup=()=>{set(false);sendInput(true);};button.onpointercancel=()=>{set(false);sendInput(true);};button.onlostpointercapture=()=>set(false);
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden){inputState.keys={};inputState.lmb=false;inputState.rmb=false;sendInput(true);}});
 window.render_game_to_text=()=>JSON.stringify({coordinates:'world centered; x right, y down',phase:world.phase,mode:world.mode,playerId,map:world.map,players:world.players.map(p=>({id:p.id,alive:p.alive,state:p.state,ghostMode:p.ghostMode,ghostActor:p.ghostActor,ghost:{cooldown:p.ghost?.cooldown,energy:p.ghost?.energy,active:p.ghost?.active}}))});
 window.advanceTime=async ms=>{await new Promise(r=>setTimeout(r,Math.min(ms,1000)));};
 try{const saved=JSON.parse(sessionStorage.getItem('pocket-works:katana-echo:pocket-net:'+location.origin+'/pocketnet')||'null');if(saved?.roomId){roomInput.value=saved.roomId.slice(0,8).toUpperCase();globalThis.katanaCreate=false;connect();}}catch{}
+
 
 

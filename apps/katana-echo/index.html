@@ -13,7 +13,7 @@
       <h1>Katana Echo Duel</h1>
       <p class="subtitle">2D top-down PvP дуэль с призраком</p>
     </div>
-    <div class="controls">
+    <details id="connection-panel" open><summary>Комната и режим</summary><div class="controls">
       <label>Room code <input id="room" maxlength="8" placeholder="Код комнаты"></label>
       <label>Player name <input id="name" value="Ronin"></label>
       <label>Ghost mode
@@ -25,7 +25,7 @@
       </label>
       <button data-native-press id="create">Создать комнату</button><button data-native-press id="connect">Подключиться</button>
     </div>
-    <div id="status"></div>
+    </details><div id="status"></div>
   </div>
   <canvas id="view" width="960" height="540"></canvas>
   <aside class="duel-help">Удерживайте удар для заряда, отпустите для атаки. Щит парирует в начале поднятия. Эхо повторяет вашу историю. Для сетевой дуэли нужна связь.</aside><div id="touchDeck"><div><button data-native-press data-key="w">↑</button><button data-native-press data-key="a">←</button><button data-native-press data-key="s">↓</button><button data-native-press data-key="d">→</button></div><div><button data-native-press data-combat="lmb">Удар</button><button data-native-press data-combat="rmb">Щит</button><button data-native-press data-combat="dash">Рывок</button><button data-native-press data-combat="ghostToggle">Эхо</button></div></div></main><script type="module" src="./app.js"></script>
