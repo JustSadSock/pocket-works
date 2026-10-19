@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'trace-mosaic-';
-const CACHE_NAME = 'trace-mosaic-v0.1.0';
-const APP_VERSION = '0.1.0';
-const RELEASE_DATE = '2026-10-18';
+const CACHE_NAME = 'trace-mosaic-v0.1.1';
+const APP_VERSION = '0.1.1';
+const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Перенесена исходная игра с сохранением правил и отдельным хранением данных."];
+const RELEASE_NOTES = ["Исправлены управление фрагментами и производительность отрисовки.", "Перенесена исходная игра с сохранением правил."];
 const APP_SHELL = [
   "./",
   "./index.html",
