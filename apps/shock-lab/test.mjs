@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { ShockField } from './physics.js';
 import { TraceRecorder } from './traces.js';
+import { LoadHistory } from './load-history.js';
 
 function near(actual, expected, tolerance=1e-5){
   assert.ok(Math.abs(actual-expected)<tolerance,`expected ${actual} ≈ ${expected}`);
@@ -180,4 +181,62 @@ assert.ok(bodyOnly.aeroForces().cd>.3,'cylinder carries strong positive pressure
 bodyOnly.resetGas();
 assert.equal(bodyOnly.aeroForces(),null,'blast mode does not report wind tunnel coefficients');
 
-console.log('SHOCK: legacy solver, Mach inflow, rotated pressure bodies, lift/drag/moment and symmetry PASS');
+
+const wingThin=new ShockField(100,64),wingThick=new ShockField(100,64);
+wingThin.geometry('airfoil',0,{camber:0,thickness:6});
+wingThick.geometry('airfoil',0,{camber:0,thickness:19});
+const thinCount=wingThin.body.reduce((a,b)=>a+b,0);
+const thickCount=wingThick.body.reduce((a,b)=>a+b,0);
+assert.ok(thickCount>thinCount*2,'thickness slider changes actual solid cell count');
+const wingCurved=new ShockField(100,64);
+wingCurved.geometry('airfoil',0,{camber:5,thickness:11});
+assert.ok(wingCurved.body.some((v,i)=>v&&!wingThin.body[i]),'camber creates a distinct boundary');
+const wingMirror=new ShockField(100,64);
+wingMirror.geometry('airfoil',0,{camber:-5,thickness:11});
+assert.ok(wingCurved.body.some((v,i)=>v&&!wingMirror.body[i]),'positive/negative camber differ');
+const oldWing=new ShockField(100,64);
+oldWing.geometry('airfoil');
+assert.ok(oldWing.bodyBounds&&oldWing.bodyBounds.chord>35,'old saved shapes use stable defaults');
+const gustField=new ShockField(80,50);
+gustField.geometry('airfoil',4,{camber:3,thickness:14});
+gustField.setGust(9,4);
+gustField.startFlow(2);
+assert.ok(gustField.flowActive);
+let peaked=false,nonzeroWake=false,positive=false,negative=false;
+const gustRecorder=new LoadHistory();
+for(let i=0;i<300;i++){
+  gustField.step();gustRecorder.record(gustField);
+  const angle=gustField.gustAngle;
+  peaked=peaked||Math.abs(angle)>7.5;
+  positive=positive||angle>4;
+  negative=negative||angle< -4;
+  if(i%25===0){
+    const ω=gustField.wakeVorticity();
+    assert.ok(Number.isFinite(ω.rms)&&ω.rms>=0,'calculated curl remains finite');
+    nonzeroWake=nonzeroWake||ω.rms>.001;
+  }
+}
+assert.ok(peaked&&positive&&negative,'periodic inlet genuinely reverses transverse flow');
+assert.ok(nonzeroWake,'vorticity emerges from solved velocity gradients');
+const k=gustField.size*4,ghost=gustField.U;
+near(ghost[k],1,.00001);
+const u=ghost[k+1],v=ghost[k+2],E=ghost[k+3];
+near(Math.hypot(u,v),2*Math.sqrt(1.4),.0005);
+near(.4*(E-.5*(u*u+v*v)),1,.0005);
+assert.ok(gustRecorder.samples.length>40,'unsteady loads are recorded over solver time');
+const stats=gustRecorder.stats();
+assert.ok(stats.count>25&&stats.clRms>0&&stats.omegaRms>0,'RMS load and wake diagnostics contain actual variations');
+assert.ok(gustRecorder.samples.some(x=>x.gust>3)&&gustRecorder.samples.some(x=>x.gust< -3));
+assert.ok(gustRecorder.csv().startsWith('time,CL,CD_pressure,Cm_quarter_chord,wake_vorticity_rms,inlet_gust_degrees\n'));
+assert.equal(gustRecorder.csv().trim().split('\n').length,gustRecorder.samples.length+1);
+gustRecorder.clear();assert.equal(gustRecorder.samples.length,0);
+assert.equal(gustRecorder.stats(),null);
+gustField.setGust(0,6);
+gustField.step();near(gustField.gustAngle,0,.00001);
+const uniformGust=new ShockField(64,40);
+uniformGust.geometry('empty');uniformGust.setGust(0,7);uniformGust.startFlow(1.8);
+for(let i=0;i<45;i++)uniformGust.step();
+near(uniformGust.wakeVorticity().rms,0,.0001);
+near(uniformGust.sample(20,20).mach,1.8,.0002);
+
+console.log('SHOCK: legacy Euler, parametric profiles, gust cycle, real vorticity and load time series PASS');

@@ -26,32 +26,18 @@
         },
         {
           "action": "visible",
-          "selector": "#load-panel"
-        },
-        {
-          "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "[data-view='mach']"
-        },
-        {
-          "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "#record-load"
-        },
-        {
-          "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "[data-preset='wedge']"
+          "selector": "#shape-controls"
         },
         {
           "action": "visible",
-          "selector": "#moment-value"
+          "selector": "#load-scope"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-view='vorticity']"
         },
         {
           "action": "screenshot"
@@ -59,6 +45,17 @@
         {
           "action": "click",
           "selector": "[data-preset='cylinder']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-preset='tube']"
+        },
+        {
+          "action": "visible",
+          "selector": "#rupture"
         },
         {
           "action": "screenshot"

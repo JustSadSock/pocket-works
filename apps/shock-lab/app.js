@@ -2,6 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { ShockField } from './physics.js';
 import { TraceRecorder, DEFAULT_SENSORS } from './traces.js';
+import { LoadHistory } from './load-history.js';
 
 installMobileRuntime();
 
@@ -9,7 +10,7 @@ const KEY = 'shock-lab:experiment:v1';
 const PRESETS = ['reflector','slits','maze','channel','empty','tube','wedge','airfoil','cylinder','nozzle'];
 const FLOW_PRESETS = new Set(['wedge','airfoil','cylinder','nozzle']);
 const TITLES = {reflector:'ОТРАЖАТЕЛЬ',slits:'ДВОЙНАЯ ДИФРАКЦИЯ',maze:'ЛАБИРИНТ',channel:'СОПЛО / КАНАЛ',empty:'ЧИСТАЯ КАМЕРА',tube:'УДАРНАЯ ТРУБА',wedge:'КОСОЙ КЛИН',airfoil:'СВЕРХЗВУКОВОЕ КРЫЛО',cylinder:'ЦИЛИНДР / УДАРНАЯ ВОЛНА',nozzle:'СУЖЕНИЕ / РАСШИРЕНИЕ'};
-const DEFAULTS = () => ({preset:'reflector',tool:'pulse',view:'pressure',power:4.5,speed:2,ratio:8,flowMach:1.8,angle:0,records:[],streamlines:true,sound:false,sensors:DEFAULT_SENSORS.map(p=>({...p})),edits:{reflector:[],slits:[],maze:[],channel:[],empty:[],tube:[],wedge:[],airfoil:[],cylinder:[],nozzle:[]}});
+const DEFAULTS = () => ({preset:'reflector',tool:'pulse',view:'pressure',power:4.5,speed:2,ratio:8,flowMach:1.8,angle:0,camber:0,thickness:11,gustAmplitude:0,gustPeriod:6,records:[],streamlines:true,sound:false,sensors:DEFAULT_SENSORS.map(p=>({...p})),edits:{reflector:[],slits:[],maze:[],channel:[],empty:[],tube:[],wedge:[],airfoil:[],cylinder:[],nozzle:[]}});
 const $ = (id) => document.getElementById(id);
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const safeNumber = (v,a,b,fallback) => typeof v === 'number' && Number.isFinite(v) ? clamp(v,a,b) : fallback;
@@ -20,7 +21,7 @@ const raster=document.createElement('canvas'), rg=raster.getContext('2d',{alpha:
 const runBtn=$('run'), dialog=$('dialog'), scope=$('scope'), scopeG=scope.getContext('2d');
 let sim, image, pointer=null, probe=null, ripples=[],toastTimer=null, lastFrame=0, accumulator=0;
 let stageW=0,stageH=0, paintW=0,paintH=0,dpr=1, active=true, audioCtx=null,lastPulseSound=0, audioVoiceCount=0;
-let hintVisible=true, lastMetrics=0, lastDemoTime=0, tubeReady=false, armingSensor=null, plotMode='history', lastScope=0,compareIndex=-1,lastLoads=null;
+let hintVisible=true, lastMetrics=0, lastDemoTime=0, tubeReady=false, armingSensor=null, plotMode='history', lastScope=0,compareIndex=-1,lastLoads=null,shapePreviewDrag=null;
 
 function normalizeEdits(edits){
   const result={};
@@ -38,19 +39,23 @@ function applyData(input){
   if(!input||typeof input!=='object')return false;
   state.preset=PRESETS.includes(input.preset)?input.preset:'reflector';
   state.tool=['pulse','wall','erase','probe'].includes(input.tool)?input.tool:'pulse';
-  state.view=['pressure','density','schlieren','mach'].includes(input.view)?input.view:'pressure';
+  state.view=['pressure','density','schlieren','mach','vorticity'].includes(input.view)?input.view:'pressure';
   state.power=safeNumber(input.power,.7,10,4.5);
   state.speed=Math.round(safeNumber(input.speed,1,5,2));
   state.sound=!!input.sound;
   state.ratio=safeNumber(input.ratio,2,16,8);
   state.flowMach=safeNumber(input.flowMach,.3,3.2,1.8);
   state.angle=Math.round(safeNumber(input.angle,-14,14,0));
+  state.camber=Math.round(safeNumber(input.camber,-6,6,0));
+  state.thickness=Math.round(safeNumber(input.thickness,5,22,11));
+  state.gustAmplitude=Math.round(safeNumber(input.gustAmplitude,0,14,0));
+  state.gustPeriod=Math.round(safeNumber(input.gustPeriod,2,18,6));
   state.records=Array.isArray(input.records)?input.records.slice(-4).map(r=>{
     if(!r||!['airfoil','wedge','cylinder'].includes(r.type))return null;
     const finite=v=>typeof v==='number'&&Number.isFinite(v);
     if(!finite(r.cd)||!finite(r.cl)||!finite(r.mach)||!finite(r.time)||!Array.isArray(r.upper)||!Array.isArray(r.lower))return null;
     const curve=a=>a.slice(0,250).map(v=>finite(v)?Math.max(-20,Math.min(20,v)):null);
-    return {type:r.type,angle:Math.round(safeNumber(r.angle,-14,14,0)),mach:safeNumber(r.mach,.3,3.2,1.8),time:Math.max(0,r.time),cd:r.cd,cl:r.cl,cm:finite(r.cm)?r.cm:0,upper:curve(r.upper),lower:curve(r.lower)};
+    return {type:r.type,angle:Math.round(safeNumber(r.angle,-14,14,0)),mach:safeNumber(r.mach,.3,3.2,1.8),time:Math.max(0,r.time),cd:r.cd,cl:r.cl,cm:finite(r.cm)?r.cm:0,camber:Math.round(safeNumber(r.camber,-6,6,0)),thickness:Math.round(safeNumber(r.thickness,5,22,11)),upper:curve(r.upper),lower:curve(r.lower)};
   }).filter(Boolean):[];
   state.streamlines=input.streamlines!==false;
   state.sensors=Array.isArray(input.sensors)&&input.sensors.length===2?input.sensors.map((p,i)=>({x:safeNumber(p?.x,0,1,DEFAULT_SENSORS[i].x),y:safeNumber(p?.y,0,1,DEFAULT_SENSORS[i].y)})):DEFAULT_SENSORS.map(p=>({...p}));
@@ -59,8 +64,9 @@ function applyData(input){
 }
 try{const stored=JSON.parse(localStorage.getItem(KEY)||'null');if(stored)applyData(stored)}catch{/* private mode or corrupt data: use defaults */}
 const trace=new TraceRecorder(state.sensors);
+const loadHistory=new LoadHistory();
 function persist(){
-  try{localStorage.setItem(KEY,JSON.stringify({preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,angle:state.angle,records:state.records,streamlines:state.streamlines,sound:state.sound,sensors:trace.sensors,edits:state.edits}))}catch{/* unavailable quota; simulation stays usable */}
+  try{localStorage.setItem(KEY,JSON.stringify({preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,angle:state.angle,camber:state.camber,thickness:state.thickness,gustAmplitude:state.gustAmplitude,gustPeriod:state.gustPeriod,records:state.records,streamlines:state.streamlines,sound:state.sound,sensors:trace.sensors,edits:state.edits}))}catch{/* unavailable quota; simulation stays usable */}
 }
 function toast(message){
   const el=$('toast');el.textContent=message;el.classList.add('show');
@@ -87,6 +93,12 @@ function refreshControls(){
   $('angle-controls').hidden=!['airfoil','wedge'].includes(state.preset);
   $('attack-angle').value=String(state.angle);
   $('attack-angle-value').textContent=(state.angle>=0?'+':'')+state.angle+'°';
+  $('shape-controls').hidden=state.preset!=='airfoil';
+  $('camber').value=String(state.camber);
+  $('thickness').value=String(state.thickness);
+  $('camber-value').textContent=(state.camber>0?'+':'')+state.camber+'%';
+  $('thickness-value').textContent=state.thickness+'%';
+  refreshShapePreview();
   $('flow-panel').hidden=!isFlow;
   $('flow-metric').hidden=!isFlow;
   $('flow-mach').value=String(state.flowMach);
@@ -95,6 +107,10 @@ function refreshControls(){
   $('flow-chip').textContent='→ M '+state.flowMach.toFixed(1);
   $('regime').textContent=state.flowMach>=1?'СВЕРХЗВУК':'ДОЗВУК';
   $('flow-velocity').textContent=(state.flowMach*Math.sqrt(1.4)).toFixed(2);
+  $('gust-amplitude').value=String(state.gustAmplitude);
+  $('gust-period').value=String(state.gustPeriod);
+  $('gust-amplitude-value').textContent=state.gustAmplitude+'°';
+  $('gust-period-value').textContent=state.gustPeriod+' τ';
   $('clear-loads').disabled=state.records.length===0;
   $('stream-state').textContent=state.streamlines?'ВКЛ.':'ВЫКЛ.';
   $('streamlines').setAttribute('aria-pressed',String(state.streamlines));
@@ -106,10 +122,11 @@ function refreshControls(){
   $('sensor-hint').textContent=armingSensor!==null?('УКАЖИТЕ ТОЧКУ ДЛЯ ДАТЧИКА '+(armingSensor===0?'А':'Б')):'Нажмите А или Б, затем укажите новое место на поле';
   $('power-value').textContent=state.power.toFixed(1);$('speed-value').textContent=state.speed+'×';
   $('chamber-name').textContent=TITLES[state.preset];
-  $('view-short').textContent=({pressure:'ΔP',density:'ρ',schlieren:'∇ρ',mach:'M'})[state.view];
-  $('legend-low').textContent=state.view==='mach'?'ДОЗВУК':'РАЗРЕЖЕНИЕ';
-  $('legend-high').textContent=state.view==='mach'?'СВЕРХЗВУК':'СЖАТИЕ';
+  $('view-short').textContent=({pressure:'ΔP',density:'ρ',schlieren:'∇ρ',mach:'M',vorticity:'ω'})[state.view];
+  $('legend-low').textContent=state.view==='vorticity'?'↺ ПРОТИВ ЧАСОВОЙ':state.view==='mach'?'ДОЗВУК':'РАЗРЕЖЕНИЕ';
+  $('legend-high').textContent=state.view==='vorticity'?'↻ ПО ЧАСОВОЙ':state.view==='mach'?'СВЕРХЗВУК':'СЖАТИЕ';
   $('legend-ramp').classList.toggle('mach-ramp',state.view==='mach');
+  $('legend-ramp').classList.toggle('vorticity-ramp',state.view==='vorticity');
   $('sound').textContent=state.sound?'ЗВУК ВКЛ.':'ЗВУК ВЫКЛ.';
   $('sound').classList.toggle('on',state.sound);
   $('sound').setAttribute('aria-pressed',String(state.sound));
@@ -123,7 +140,7 @@ function refreshControls(){
 }
 function rebuildGeometry(){
   if(!sim)return;
-  sim.geometry(state.preset,state.angle);
+  sim.geometry(state.preset,state.angle,{camber:state.camber,thickness:state.thickness});
   for(const stroke of state.edits[state.preset]){
     const radius=brushRadius();
     for(let i=0;i<stroke.points.length;i++){
@@ -138,11 +155,12 @@ function resetGas(withStart=false){
   if(!sim)return;
   sim.resetGas();
   const flow=FLOW_PRESETS.has(state.preset);
-  if(flow)sim.startFlow(state.flowMach);
+  if(flow){sim.setGust(state.gustAmplitude,state.gustPeriod);sim.startFlow(state.flowMach);}
   tubeReady=state.preset==='tube';
   if(tubeReady){sim.loadTube(state.ratio);setActive(false);}
   else if(withStart || flow){setActive(true);}
   trace.clear();trace.record(sim,true);
+  loadHistory.clear();loadHistory.record(sim,.13,true);
   ripples=[];
   lastDemoTime=0;
   if(withStart&&!tubeReady&&!flow){
@@ -184,7 +202,7 @@ function resizeField(){
     // preserves a running experiment instead of silently resetting the gas.
     // Sensor histories are cleared because changing cell scale invalidates
     // the formerly measured arrival speeds.
-    if(oldField.flowActive)sim.startFlow(state.flowMach);
+    if(oldField.flowActive){sim.setGust(state.gustAmplitude,state.gustPeriod);sim.startFlow(state.flowMach);}
     for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){
       const i=y*nx+x;if(sim.solid[i])continue;
       const ox=Math.round(x*(oldField.nx-1)/Math.max(1,nx-1));
@@ -198,9 +216,10 @@ function resizeField(){
     sim.maxMach=oldField.maxMach;
     trace.clear();trace.record(sim,true);
   }
+  loadHistory.clear();loadHistory.record(sim,.13,true);
   refreshControls();updateMetrics();
   lastFrame=0;accumulator=0;
-  render();drawScope();
+  render();drawScope();drawLoadScope();
 }
 function getPosition(ev){
   const rect=display.getBoundingClientRect();
@@ -231,7 +250,15 @@ function beginGesture(ev){
     toast('ДАТЧИК ПЕРЕМЕЩЁН · ЗАПИСЬ ОЧИЩЕНА');
     return;
   }
-  if(state.tool==='pulse'&&tubeReady){toast('СНАЧАЛА РАЗОРВИТЕ МЕМБРАНУ');return;}
+  if(state.preset==='airfoil'&&state.tool==='pulse'&&sim.sample(pos.x*sim.nx,pos.y*sim.ny).solid){
+    const ix=Math.min(sim.nx-1,Math.floor(pos.x*sim.nx)),iy=Math.min(sim.ny-1,Math.floor(pos.y*sim.ny));
+    if(sim.body[iy*sim.nx+ix]){
+      try{display.setPointerCapture(ev.pointerId)}catch{}
+      pointer={id:ev.pointerId,pos,tool:'shape',initialY:pos.y,initialCamber:state.camber};
+      $('hint').textContent='ПЕРЕТАСКИВАЙТЕ КРЫЛО · МЕНЯЙТЕ КРИВИЗНУ';return;
+    }
+  }
+    if(state.tool==='pulse'&&tubeReady){toast('СНАЧАЛА РАЗОРВИТЕ МЕМБРАНУ');return;}
   try{display.setPointerCapture(ev.pointerId)}catch{}
   pointer={id:ev.pointerId,pos,at:performance.now(),points:[pos],tool:state.tool};
   if(state.tool==='pulse')addPulse(pos);
@@ -242,7 +269,11 @@ function moveGesture(ev){
   if(!pointer||pointer.id!==ev.pointerId||!sim)return;
   ev.preventDefault();
   const pos=getPosition(ev),old=pointer.pos;
-  if(pointer.tool==='wall'||pointer.tool==='erase'){
+  if(pointer.tool==='shape'){
+    const proposed=clamp(Math.round(pointer.initialCamber-(pos.y-pointer.initialY)*120),-6,6);
+    $('camber').value=String(proposed);$('camber-value').textContent=(proposed>0?'+':'')+proposed+'%';
+    refreshShapePreview(proposed);
+  }else if(pointer.tool==='wall'||pointer.tool==='erase'){
     sim.stroke(old.x*sim.nx,old.y*sim.ny,pos.x*sim.nx,pos.y*sim.ny,pointer.tool==='wall',brushRadius());
     if(Math.hypot(pos.x-old.x,pos.y-old.y)>.0025)pointer.points.push(pos);
   }else if(pointer.tool==='probe')probe=pos;
@@ -255,7 +286,13 @@ function moveGesture(ev){
 }
 function endGesture(ev){
   if(!pointer||ev.pointerId!==pointer.id)return;
-  if(pointer.tool==='wall'||pointer.tool==='erase'){
+  if(pointer.tool==='shape'){
+    const proposed=+$('camber').value;
+    if(proposed!==state.camber){
+      state.camber=proposed;persist();rebuildGeometry();resetGas(false);drawCpChart();drawLoadScope();
+      toast('ФОРМА КРЫЛА ИЗМЕНЕНА · НОВЫЙ РАСЧЁТ');
+    }else refreshControls();
+  }else if(pointer.tool==='wall'||pointer.tool==='erase'){
     const points=pointer.points.map(p=>[+p.x.toFixed(4),+p.y.toFixed(4)]);
     const tail=pointer.pos;
     const last=points[points.length-1];
@@ -297,6 +334,7 @@ function drawPhysics(){
       if(state.view==='pressure')value=p-1;
       else if(state.view==='density')value=(rho-1)*3;
       else if(state.view==='mach')value=Math.hypot(vx,vy)/Math.sqrt(1.4*p/rho);
+      else if(state.view==='vorticity')value=sim.vorticity(x,y);
       else {
         const il=(y*W+Math.max(0,x-1))*4,ir=(y*W+Math.min(W-1,x+1))*4;
         const it=(Math.max(0,y-1)*W+x)*4,ib=(Math.min(H-1,y+1)*W+x)*4;
@@ -304,7 +342,12 @@ function drawPhysics(){
         value=Math.min(7,grad*6) * (p>=1?1:-1);
       }
       let color;
-      if(state.view==='mach'){
+      if(state.view==='vorticity'){
+        const intensity=clamp(Math.asinh(Math.abs(value)*10)/Math.asinh(6),0,1);
+        const neg=[[19,36,41],[38,90,115],[64,173,198],[156,231,225]];
+        const pos=[[19,36,41],[107,65,45],[202,108,59],[252,211,120]];
+        color=palette(intensity,value<0?neg:pos);
+      }else if(state.view==='mach'){
         // Mach 1 is the visible transition: blue subsonic, amber supersonic.
         const sonic=[[24,55,71],[48,112,132],[83,177,179],[110,130,124]];
         const fast=[[110,130,124],[116,107,90],[163,91,64],[239,128,68],[255,227,169]];
@@ -532,7 +575,7 @@ function renderRecords() {
     button.setAttribute('aria-pressed',String(compareIndex===i));
     const label=document.createElement('span');
     const names={airfoil:'КРЫЛО',wedge:'КЛИН',cylinder:'ЦИЛИНДР'};
-    label.textContent=(names[r.type]||r.type)+' · '+(r.angle>=0?'+':'')+r.angle+'° · M '+r.mach.toFixed(1);
+    label.textContent=(names[r.type]||r.type)+' · '+(r.angle>=0?'+':'')+r.angle+'° · M '+r.mach.toFixed(1)+(r.type==='airfoil'?' · К '+r.camber+'% · Т '+r.thickness+'%':'');
     const vals=document.createElement('strong');vals.textContent='L '+formatLoad(r.cl)+' / D '+formatLoad(r.cd)+' / m '+formatLoad(r.cm);
     button.append(label,vals);host.append(button);
   });
@@ -589,24 +632,71 @@ function drawCpChart(){
   ctx.fillText('Cₚ',l+4,t+10);
 }
 
+
+function refreshShapePreview(camber=state.camber,thickness=state.thickness){
+ const p=$('shape-preview-path');if(!p)return;
+ const top=[],bottom=[];
+ for(let i=0;i<=26;i++){
+  const t=i/26,x=12+t*236,arch=camber*.86*4*t*(1-t),half=.53*thickness*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.85);
+  top.push([x,32-arch-half]);bottom.push([x,32-arch+half]);
+ }
+ p.setAttribute('d',[...top,...bottom.reverse()].map(([x,y],i)=>(i?'L':'M')+x.toFixed(2)+' '+y.toFixed(2)).join(' ')+' Z');
+}
+function drawLoadScope(){
+ const node=$('load-scope');if(node.closest('[hidden]'))return;
+ const rect=node.getBoundingClientRect();if(rect.width<30||rect.height<30)return;
+ const ratio=Math.min(devicePixelRatio||1,2),w=rect.width,h=rect.height;
+ if(node.width!==Math.round(w*ratio)||node.height!==Math.round(h*ratio)){node.width=Math.round(w*ratio);node.height=Math.round(h*ratio)}
+ const c=node.getContext('2d');c.setTransform(ratio,0,0,ratio,0,0);c.fillStyle='#0d2429';c.fillRect(0,0,w,h);
+ const l=39,r=w-10,t=14,b=h-20,ww=r-l,hh=b-t;
+ const all=loadHistory.samples,end=all.length?all[all.length-1].t:0,min=Math.max(0,end-16);
+ const selected=all.filter(x=>x.t>=min);
+ let peak=.25;for(const q of selected)peak=Math.max(peak,Math.abs(q.cl),Math.abs(q.cd));
+ peak=Math.min(20,peak*1.18);
+ const yy=v=>t+(peak-v)/(2*peak)*hh;
+ c.font='9px monospace';
+ for(let i=0;i<=4;i++){
+  const y=t+i*hh/4;c.strokeStyle=i===2?'#607875':'#2c4447';c.lineWidth=i===2?1.2:1;
+  c.beginPath();c.moveTo(l,y);c.lineTo(r,y);c.stroke();
+  c.fillStyle='#93aaa8';c.textAlign='right';c.fillText((peak-i*peak/2).toFixed(2),l-5,y+3);
+ }
+ for(let i=0;i<=4;i++){
+  const x=l+i*ww/4;c.strokeStyle='#2c4245';c.beginPath();c.moveTo(x,t);c.lineTo(x,b);c.stroke();
+  c.fillStyle='#8b9ea0';c.textAlign='center';c.fillText((min+i*Math.max(4,end-min)/4).toFixed(1),x,h-5);
+ }
+ const duration=Math.max(4,end-min);
+ function series(key,color,dashed=false,scale=1){
+  if(selected.length<2)return;c.strokeStyle=color;c.lineWidth=dashed?1:2;c.setLineDash(dashed?[4,4]:[]);c.beginPath();
+  for(let i=0;i<selected.length;i++){const q=selected[i],x=l+ww*(q.t-min)/duration,y=yy(q[key]*scale);if(!i)c.moveTo(x,y);else c.lineTo(x,y);}
+  c.stroke();c.setLineDash([]);
+ }
+ series('cl','#f3cb85');series('cd','#87ccd5');series('gust','#8499a4',true,.04);
+ c.fillStyle='#829b9a';c.textAlign='left';c.fillText('CL / CD · τ',l+4,t+10);
+}
 function render(now=performance.now()){if(!sim)return;drawPhysics();drawOverlay(now)}
 function updateMetrics(){
   if(!sim)return;
   $('time').textContent=sim.time.toFixed(2);
   $('flow-peak').textContent=sim.maxMach.toFixed(2);
   $('mach-peak').textContent=sim.maxMach.toFixed(2);
+  $('gust-live').textContent=(sim.gustAngle>=0?'+':'')+sim.gustAngle.toFixed(1)+'°';
   const loads=sim.aeroForces();lastLoads=loads;
   $('lift-value').textContent=loads?formatLoad(loads.cl):'—';
   $('drag-value').textContent=loads?formatLoad(loads.cd):'—';
   $('moment-value').textContent=loads?formatLoad(loads.cm):'—';
   const ref=state.records[compareIndex];
-  if(loads&&ref&&loads.type===ref.type&&Math.abs(loads.mach-ref.mach)<.11&&loads.incidence!==ref.angle&&sim.time>=4){
+  if(loads&&ref&&loads.type===ref.type&&Math.abs(loads.mach-ref.mach)<.11&&loads.incidence!==ref.angle&&sim.time>=4&&state.gustAmplitude===0&&(loads.type!=='airfoil'||(ref.camber===state.camber&&ref.thickness===state.thickness))){
     const slope=(loads.cm-ref.cm)/(loads.incidence-ref.angle);
     $('stability-line').textContent='ΔCm/Δα ≈ '+formatLoad(slope)+' / градус · '+(slope<-.0006?'ВОССТАНАВЛИВАЮЩАЯ ТЕНДЕНЦИЯ':slope>.0006?'РАСКАЧИВАЮЩАЯ ТЕНДЕНЦИЯ':'СЛАБАЯ РЕАКЦИЯ ПО МОМЕНТУ')+' (условно, без динамики)';
   }else{
-    $('stability-line').textContent='Для оценки тенденции сохраните опыт, измените угол и сравните Cm при том же числе Маха (не менее 4 единиц времени).';
+    $('stability-line').textContent='Для оценки тенденции сравните Cm при одинаковой форме и M, разных углах и выключенных порывах (≥4 τ).';
   }
   $('record-load').disabled=!loads || sim.time<.15;
+  const stats=loadHistory.stats();
+  $('cl-mean').textContent=stats?formatLoad(stats.clMean):'—';
+  $('cl-rms').textContent=stats?stats.clRms.toFixed(4):'—';
+  $('omega-rms').textContent=stats?stats.omegaRms.toFixed(4):'—';
+  $('loads-csv').disabled=loadHistory.samples.length<2;
   $('peak').innerHTML=sim.maxPressure.toFixed(2)+' <em>×P₀</em>';
   if(probe){const s=sampleAt(probe);$('probe').textContent=s.solid?'СТЕНА':s.pressure.toFixed(2)+' P₀';}
   else $('probe').textContent='—';
@@ -628,7 +718,7 @@ function loop(now){
   if(active){
     accumulator+=elapsed/16.667*state.speed;
     let executed=0;
-    while(accumulator>=1&&executed<9){sim.step();trace.record(sim);accumulator-=1;executed++;}
+    while(accumulator>=1&&executed<9){sim.step();trace.record(sim);loadHistory.record(sim);accumulator-=1;executed++;}
     if(executed===9)accumulator=0;
     if(hintVisible && !tubeReady && !FLOW_PRESETS.has(state.preset) && state.preset!=='tube' && sim.time-lastDemoTime>3.7){
       const x=sim.nx*.19,y=sim.ny*.5;
@@ -636,7 +726,7 @@ function loop(now){
       ripples.push({x,y,time:now});lastDemoTime=sim.time;
     }
   }
-  if(now-lastMetrics>110){updateMetrics();drawScope();drawCpChart();lastMetrics=now;}
+  if(now-lastMetrics>110){updateMetrics();drawScope();drawCpChart();drawLoadScope();lastMetrics=now;}
   render(now);
 }
 document.addEventListener('visibilitychange',()=>{lastFrame=0;accumulator=0;if(document.hidden&&audioCtx?.state==='running')audioCtx.suspend().catch(()=>{});});
@@ -722,7 +812,7 @@ $('attack-angle').addEventListener('change',e=>{
 $('record-load').addEventListener('click',()=>{
   const r=sim?.aeroForces();if(!r||sim.time<.15)return;
   state.records.push({type:r.type,angle:r.incidence,mach:r.mach,time:r.time,
-    cd:r.cd,cl:r.cl,cm:r.cm,upper:r.upper,lower:r.lower});
+    cd:r.cd,cl:r.cl,cm:r.cm,camber:state.camber,thickness:state.thickness,upper:r.upper,lower:r.lower});
   if(state.records.length>4)state.records.shift();
   compareIndex=state.records.length-1;
   persist();refreshControls();renderRecords();drawCpChart();
@@ -738,6 +828,37 @@ $('record-list').addEventListener('click',e=>{
   const index=Number(button.dataset.record);
   compareIndex=compareIndex===index?-1:index;
   renderRecords();drawCpChart();
+});
+
+for(const id of ['camber','thickness']){
+ const control=$(id),output=$(id+'-value');
+ control.addEventListener('input',()=>{
+  const v=+control.value;output.textContent=(id==='camber'&&v>0?'+':'')+v+'%';
+  refreshShapePreview(id==='camber'?v:state.camber,id==='thickness'?v:state.thickness);
+ });
+ control.addEventListener('change',()=>{
+  const v=+control.value;if(state[id]===v)return;
+  state[id]=v;persist();
+  if(state.preset==='airfoil'){rebuildGeometry();resetGas(false);drawCpChart();drawLoadScope();render();toast('ФОРМА ИЗМЕНЕНА · НОВАЯ ГАЗОДИНАМИКА');}
+  refreshControls();
+ });
+}
+for(const [id,key] of [['gust-amplitude','gustAmplitude'],['gust-period','gustPeriod']]){
+ const control=$(id),output=$(id+'-value');
+ control.addEventListener('input',()=>output.textContent=control.value+(key==='gustAmplitude'?'°':' τ'));
+ control.addEventListener('change',()=>{
+  state[key]=+control.value;persist();
+  if(sim?.flowActive)sim.setGust(state.gustAmplitude,state.gustPeriod);
+  refreshControls();toast(state.gustAmplitude?'ПОРЫВЫ ВКЛЮЧЕНЫ':'ПОТОК СНОВА ПОСТОЯННЫЙ');
+ });
+}
+$('loads-csv').addEventListener('click',()=>{
+ if(loadHistory.samples.length<2)return;
+ const url=URL.createObjectURL(new Blob([loadHistory.csv()],{type:'text/csv;charset=utf-8'}));
+ const a=document.createElement('a');a.href=url;
+ a.download='shock-unsteady-'+state.preset+'-'+new Date().toISOString().slice(0,10)+'.csv';
+ document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2200);
+ toast('ВРЕМЕННЫЕ ДАННЫЕ СОХРАНЕНЫ');
 });
 $('flow-restart').addEventListener('click',()=>{
   if(!FLOW_PRESETS.has(state.preset))return;
@@ -767,7 +888,7 @@ $('csv').addEventListener('click',()=>{
 });
 $('sound').addEventListener('click',()=>{state.sound=!state.sound;persist();refreshControls();if(state.sound)playSound('wall')});
 runBtn.addEventListener('click',()=>setActive(!active));
-$('step').addEventListener('click',()=>{if(tubeReady)releaseTube();setActive(false);if(sim){sim.step();trace.record(sim,true);}updateMetrics();drawScope();render();});
+$('step').addEventListener('click',()=>{if(tubeReady)releaseTube();setActive(false);if(sim){sim.step();trace.record(sim,true);loadHistory.record(sim,.13,true);}updateMetrics();drawScope();drawLoadScope();render();});
 $('clear').addEventListener('click',()=>{resetGas();drawScope();toast(state.preset==='tube'?'ТРУБА ЗАРЯЖЕНА · ОЖИДАНИЕ РАЗРЫВА':FLOW_PRESETS.has(state.preset)?'НАБЕГАЮЩИЙ ПОТОК ПЕРЕЗАПУЩЕН':'ДАВЛЕНИЕ СБРОШЕНО ДО P₀');});
 $('undo').addEventListener('click',()=>{
   if(!state.edits[state.preset].length)return;
@@ -780,7 +901,7 @@ $('confirm-remove').addEventListener('click',()=>{
   state.edits[state.preset]=[];dialog.hidden=true;rebuildGeometry();persist();toast('ПРАВКИ КАМЕРЫ УДАЛЕНЫ');
 });
 $('export').addEventListener('click',()=>{
-  const payload={format:'shock-lab-v1',exportedAt:new Date().toISOString(),experiment:{preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,angle:state.angle,records:state.records,streamlines:state.streamlines,sensors:trace.sensors,sound:state.sound,edits:state.edits}};
+  const payload={format:'shock-lab-v1',exportedAt:new Date().toISOString(),experiment:{preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,angle:state.angle,camber:state.camber,thickness:state.thickness,gustAmplitude:state.gustAmplitude,gustPeriod:state.gustPeriod,records:state.records,streamlines:state.streamlines,sensors:trace.sensors,sound:state.sound,edits:state.edits}};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='shock-'+state.preset+'-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
@@ -793,7 +914,7 @@ $('import-file').addEventListener('change',async e=>{
   try{
     const parsed=JSON.parse(await file.text());
     if(parsed.format!=='shock-lab-v1'||!parsed.experiment||!applyData(parsed.experiment))throw new Error('bad format');
-    trace.setSensors(state.sensors);compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);persist();drawScope();drawCpChart();renderRecords();toast('ЭКСПЕРИМЕНТ ВОССТАНОВЛЕН');
+    trace.setSensors(state.sensors);compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);persist();drawScope();drawCpChart();drawLoadScope();renderRecords();toast('ЭКСПЕРИМЕНТ ВОССТАНОВЛЕН');
   }catch{toast('НЕВЕРНЫЙ ФОРМАТ ФАЙЛА');}
 });
 document.addEventListener('keydown',ev=>{
@@ -807,11 +928,12 @@ document.addEventListener('keydown',ev=>{
   if(ev.key==='Enter'&&document.activeElement===canvas)addPulse({x:.22,y:.5});
 });
 createWorkshopMode({
-  appName:'SHOCK',version:'1.3.0',cachePrefix:'shock-lab-',storageNamespace:'pocket-works:shock-lab',
-  onReset(){try{localStorage.removeItem(KEY)}catch{}Object.assign(state,DEFAULTS());trace.setSensors(state.sensors);armingSensor=null;compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);drawScope();drawCpChart();renderRecords();toast('НАСТРОЙКИ И ПРАВКИ СБРОШЕНЫ');}
+  appName:'SHOCK',version:'1.4.0',cachePrefix:'shock-lab-',storageNamespace:'pocket-works:shock-lab',
+  onReset(){try{localStorage.removeItem(KEY)}catch{}Object.assign(state,DEFAULTS());trace.setSensors(state.sensors);armingSensor=null;compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);drawScope();drawCpChart();drawLoadScope();renderRecords();toast('НАСТРОЙКИ И ПРАВКИ СБРОШЕНЫ');}
 });
 refreshControls();
 resizeField();
 drawScope();
 renderRecords();
 drawCpChart();
+drawLoadScope();
