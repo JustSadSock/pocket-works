@@ -147,7 +147,8 @@
       "kind": "node-test",
       "files": [
         "qa/biobuilds.test.mjs",
-        "qa/routes.test.mjs"
+        "qa/routes.test.mjs",
+        "qa/tuning.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -156,7 +157,8 @@
       "kind": "playwright",
       "files": [
         "qa/biobuilds.spec.js",
-        "qa/routes.spec.js"
+        "qa/routes.spec.js",
+        "qa/tuning.spec.js"
       ],
       "tier": "smoke"
     },
