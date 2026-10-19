@@ -1,8 +1,11 @@
 const CACHE_PREFIX='meat-exe-';
-const CACHE_NAME='meat-exe-v1.9.1';
-const APP_VERSION='1.9.1';
+const CACHE_NAME='meat-exe-v1.9.2';
+const APP_VERSION='1.9.2';
 const RELEASE_DATE='2026-10-19';
 const RELEASE_NOTES=[
+'В попаданиях по стенам остаются настоящие вертикальные раны с глубиной и правильной нормалью стены.',
+'Здоровые мембраны затягивают повреждения после 5,5 секунд без стрельбы; уже разорванные остаются открыты.',
+'Положение ран, неполное повреждение и время заживления сохраняются вместе с забегом.',
 'Мир запоминает кровь, ожоги и разрывы тканей: до 96 физических следов остаются после паузы и перезагрузки.',
 'Враги теперь умирают объёмно: видимое тело падает и складывается, а затем удаляется из сцены.',
 'Переходы между органами получили анимацию сжатия живой диафрагмы; сниженная анимация уважается.',
@@ -24,7 +27,7 @@ const RELEASE_NOTES=[
 'Девять детерминированных архитектурных ориентиров вместо однотипных коридоров.',
 'Кислота, вязкий костный мозг и нервные разряды читаются по форме на полу.'
 ];
-const FILES=['./','./index.html','./app.config.json','./app.js','./scene.js','./organGen.js','./biomes.js','./ecology.js','./biobuilds.js','./runPaths.js','./runPacing.js','./atmosphere.js','./scars.js','./runTuning.js','./guardians.js','./immunity.js','./gastricArt.js','./structuralArt.js','./stability.js','./combat.js','./sound-forge.js','./three.module.js','./styles.css','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css'];
+const FILES=['./','./index.html','./app.config.json','./app.js','./scene.js','./organGen.js','./biomes.js','./ecology.js','./biobuilds.js','./runPaths.js','./runPacing.js','./atmosphere.js','./tissueLifecycle.js','./scars.js','./runTuning.js','./guardians.js','./immunity.js','./gastricArt.js','./structuralArt.js','./stability.js','./combat.js','./sound-forge.js','./three.module.js','./styles.css','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(FILES))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('message',event=>{
