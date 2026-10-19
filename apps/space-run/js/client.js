@@ -1073,6 +1073,32 @@ function drawShip(t) {
       ctx.fillRect(x, y, w, h);
     }
 
+    // Damage is carved into the physical module silhouette, not just a HUD bar.
+    if(hpN < .82){
+      const damage=1-hpN;
+      const lines=Math.ceil(damage*5);
+      ctx.save();
+      ctx.beginPath();ctx.rect(x+3,y+3,w-6,h-6);ctx.clip();
+      ctx.lineCap="round";
+      for(let i=0;i<lines;i++){
+        const seed=(m.id.length*17+i*37)%97/97;
+        const sx=x+w*(.22+seed*.57),sy=y+h*(.15+((i*31)%73)/100*.65);
+        const len=(6+damage*24)*(i%2===0?1:-1);
+        ctx.strokeStyle=i%3===0?"rgba(255,167,105,.74)":"rgba(4,12,23,.85)";
+        ctx.lineWidth=1+damage*1.5;ctx.beginPath();
+        ctx.moveTo(sx,sy);
+        ctx.lineTo(sx+len*.32,sy-len*.22);
+        ctx.lineTo(sx+len*.58,sy+len*.31);
+        ctx.stroke();
+      }
+      if(m.status!=="online"){
+        const pulse=.24+.18*Math.sin(performance.now()*.015+m.x);
+        ctx.fillStyle=`rgba(244,76,59,${pulse})`;
+        ctx.fillRect(x,y,Math.max(4,w*.12),Math.max(4,h*.12));
+      }
+      ctx.restore();
+    }
+
     ctx.strokeStyle = broken ? "rgba(255,130,145,0.9)" : "rgba(120,245,255,0.85)";
     ctx.lineWidth = 1.3;
     ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
@@ -1409,7 +1435,7 @@ function render(dt, t) {
   ctx.font = "12px Sora";
   const line1 = state.phase === "combat"
     ? `Role: ${mode}`
-    : `Garage | Rotation ${buildRotation}°${moveModuleId ? " | moving module" : ""}`;
+    : `Garage | Масса ${Math.round(state.ship.massProperties?.mass||0)} | Поворот ${buildRotation}°${moveModuleId ? " | перемещение" : ""}`;
   ctx.fillText(line1, 22, 33);
   ctx.fillStyle = "#9fd5e8";
   const line2 = state.phase === "combat"
