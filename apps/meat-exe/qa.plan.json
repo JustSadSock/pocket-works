@@ -120,7 +120,8 @@
       "kind": "playwright",
       "files": [
         "qa/biomes.spec.js",
-        "qa/pacing.spec.js"
+        "qa/pacing.spec.js",
+        "qa/atmosphere.spec.js"
       ],
       "tier": "smoke"
     },
@@ -168,7 +169,8 @@
       "files": [
         "qa/immunity.test.mjs",
         "qa/gastric.test.mjs",
-        "qa/structural.test.mjs"
+        "qa/structural.test.mjs",
+        "qa/atmosphere.test.mjs"
       ],
       "tier": "smoke"
     },
