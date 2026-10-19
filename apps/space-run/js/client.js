@@ -474,7 +474,8 @@ function renderRepairConsole() {
     target: target?.id, selected: pilot.repairTarget,
     breakers:state.ship.breakers,
     plates:damagedPlates().map(p=>[p.x,p.y,Math.round(p.hp)]),
-    energy:state.ship.energy>=12,stationPowered:station.powered,stationOverheated:station.overheated,stationStatus:station.status,
+    energy:state.ship.energy>=12,breakerEnergy:state.ship.energy>=5,
+    stationPowered:station.powered,stationOverheated:station.overheated,stationStatus:station.status,
     damaged: damaged.map(m => [m.id, m.status, Math.round(m.hp), m.malfunction?.kind,
       m.malfunction?.index, m.malfunction?.progress, m.malfunction?.bits, m.malfunction?.targetBits])
   });
