@@ -51,6 +51,7 @@ let renderPhysics = { x: 0, y: 0, a: 0, ready: false };
 let shake = { power: 0 };
 let particles = [];
 let debrisRender = new Map();
+let shockwaves = [];
 const spriteCache = new Map();
 const DROP_ICON_PATHS = {
   credits: "assets/ui/pickup_credits.png",
@@ -208,6 +209,8 @@ socket.on("state", (next) => {
         showToast(`Секция корпуса ${ev.x},${ev.y} оторвана!`,1700);
       }
       if(ev.type==="thermal-incident"){
+        shockwaves.push({x:ev.x,y:ev.y,t:0,life:ev.reactor?.65:.40,
+          radius:ev.reactor?130:64,color:ev.reactor?"#ffd18b":"#f87956"});
         addShake(ev.reactor?.50:.20);
         beep(ev.reactor?82:170,ev.reactor?.34:.16,"sawtooth",.30);
         showToast(ev.reactor?"АВАРИЯ РЕАКТОРА: повреждение соседних систем":
@@ -218,7 +221,11 @@ socket.on("state", (next) => {
             t:0,life:random(.3,.85),color:i%3===0?"#fff0b8":i%2===0?"#ff9a53":"#ee5940",r:random(1.5,4)});
         }
       }
-      if(ev.type==="impact-impulse")addShake(Math.min(.16,ev.strength*.003));
+      if(ev.type==="impact-impulse"){
+        addShake(Math.min(.16,ev.strength*.003));
+        shockwaves.push({x:ev.x,y:ev.y,t:0,life:.27,radius:Math.min(52,14+ev.strength),
+          color:"#e7dbb9"});
+      }
       if(ev.type==="debris-impact"){
         for(let i=0;i<6;i++){
           particles.push({x:ev.x,y:ev.y,vx:random(-90,90),vy:random(-90,90),
@@ -259,6 +266,7 @@ socket.on("state", (next) => {
   }
 
   if(particles.length>550)particles.splice(0,particles.length-550);
+  if(shockwaves.length>36)shockwaves.splice(0,shockwaves.length-36);
   const now=performance.now();
   if(now-lastUiStamp>120){
     renderUI();
@@ -1568,6 +1576,21 @@ function drawDebris(dt){
   for(const id of debrisRender.keys())if(!active.has(id))debrisRender.delete(id);
 }
 
+function drawShockwaves(dt){
+  for(let i=shockwaves.length-1;i>=0;i--){
+    const w=shockwaves[i];w.t+=dt;
+    if(w.t>=w.life){shockwaves.splice(i,1);continue;}
+    const ratio=w.t/w.life,pos=worldToScreen(w.x,w.y);
+    const radius=(6+w.radius*(1-Math.pow(1-ratio,2)))*camera.z;
+    ctx.save();
+    ctx.globalAlpha=(1-ratio)*.58;
+    ctx.lineWidth=(2.8-ratio*1.5)*camera.z;
+    ctx.strokeStyle=w.color;
+    ctx.beginPath();ctx.arc(pos.x,pos.y,radius,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+  }
+}
+
 function drawParticles(dt) {
   for (let i = particles.length - 1; i >= 0; i -= 1) {
     const p = particles[i];
@@ -1757,6 +1780,7 @@ function render(dt, t) {
   drawEnemies();
   drawProjectiles();
   drawDebris(dt);
+  drawShockwaves(dt);
   drawBuildGhost();
   drawParticles(dt);
   drawCombatCrosshair();
