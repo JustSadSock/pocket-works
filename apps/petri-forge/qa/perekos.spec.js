@@ -18,10 +18,11 @@ test('native Perekos training station plays, replays and saves brains',async({pa
  await page.locator('#pkSave').click();
  await expect(page.locator('#pkModels')).toContainText('QA Ruin Mage');
  await page.locator('#pkGenerations').selectOption('2');
+ await page.locator('#pkCurriculum').selectOption('balanced');
  await page.locator('#pkTrain').click();
  await expect(page.locator('#pkStop')).toBeEnabled();
  await expect(page.locator('#pkStop')).toBeDisabled({timeout:150000});
- await expect(page.locator('#pkValidation')).toContainText('Контроль:');
+ await expect(page.locator('#pkValidation')).toContainText('Независимая проверка:');
  await page.reload({waitUntil:'domcontentloaded'});
  await page.locator('[data-world-mode="perekos"]').click();
  await page.locator('#pkModels').selectOption({label:'QA Ruin Mage'});
