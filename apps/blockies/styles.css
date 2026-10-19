@@ -1931,3 +1931,6 @@ canvas {
 @media (prefers-reduced-motion: reduce) {
   #touch-controls .touch-btn { transition: none; }
 }
+
+/* Never visually display controls disabled by authoritative multiplayer. */
+#pause-btn[hidden] { display: none !important; }
