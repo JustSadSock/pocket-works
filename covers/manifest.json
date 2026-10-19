@@ -3743,20 +3743,20 @@
     "lastAttemptAt": "2026-10-19T10:16:36.235Z"
   },
   "trace-mosaic": {
-    "revision": "ed90547fc4f29645f3c20eb3a3043b10ac919bbe",
-    "qualityScore": 74,
+    "revision": "a9613de65f34616a9f8fe4fa75bf7425f4afa16f",
+    "qualityScore": 67,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "547bf92ed559f31bfee7295407279d6e14964bf8ffd48937cb163467276285b8",
+    "sha256": "81ed538122f2a43454628939693ba963c216768b6802a996925180747ef2de42",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "ed90547fc4f29645f3c20eb3a3043b10ac919bbe",
-    "lastAttemptAt": "2026-10-19T12:54:39.957Z",
+    "lastAttemptRevision": "a9613de65f34616a9f8fe4fa75bf7425f4afa16f",
+    "lastAttemptAt": "2026-10-19T13:00:17.109Z",
     "note": "existing cover rated higher"
   },
   "crown-laws": {
