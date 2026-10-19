@@ -19,15 +19,14 @@ const state = {
     maxPlayers: 3,
   },
   drag: null,
+  connection: 'connecting',
 };
 
 const app = document.querySelector("#app");
 
 function send(type, payload = {}) {
-  if (!state.socket || state.socket.readyState !== WebSocket.OPEN) {
-    return;
-  }
-  state.socket.send(JSON.stringify({ type, payload }));
+  if (!state.socket || state.socket.readyState !== WebSocket.OPEN) return false;
+  return state.socket.send(JSON.stringify({ type, payload }));
 }
 
 function pushToast(message, tone = "info") {
@@ -71,13 +70,21 @@ function connectSocket() {
 function handleMessage(type, payload) {
   switch (type) {
     case "boot":
+      // PocketNet automatically rejoins its saved room. The transport adapter
+      // handles invite links: issuing join twice would trigger already_in_room.
       state.selfId = payload.playerId;
-      {
-        const urlRoom = normalizeCode(new URLSearchParams(window.location.search).get("room") || "");
-        if (urlRoom) {
-          send("join_room", { roomId: urlRoom, nickname: state.nickname });
-        }
-      }
+      break;
+    case "connection_status":
+      state.connection = payload.status;
+      if (payload.status === 'reconnecting') state.drag = null;
+      break;
+    case "room_lost":
+      state.room = null;
+      state.drag = null;
+      state.preparedGame = null;
+      state.preparingKey = null;
+      window.history.replaceState({}, '', window.location.pathname);
+      pushToast(payload.reason || 'Комната недоступна', 'error');
       break;
     case "room_state":
       // Ignore identical lobby/results heartbeats: replacing focused controls would
@@ -95,7 +102,8 @@ function handleMessage(type, payload) {
         state.preparedGame = null;
         state.preparingKey = null;
       }
-      if (state.drag && payload?.phase !== "playing") {
+      if (state.drag && (payload?.phase !== "playing" ||
+          payload.game?.tileMeta?.[state.drag.tileId]?.ownerId !== state.selfId)) {
         state.drag = null;
       }
       break;
@@ -150,7 +158,19 @@ function render() {
     const replacement = document.getElementById(focusedControl);
     if (replacement && replacement !== document.activeElement) replacement.focus({ preventScroll: true });
   }
+  if (state.connection !== 'connected' && !state.room?.practice) {
+    app.querySelector('main.screen')?.insertAdjacentHTML('beforeend', renderConnectionBanner());
+  }
   state.lastRenderAt = Date.now();
+}
+
+function renderConnectionBanner() {
+  const connecting = state.connection === 'connecting' || state.connection === 'syncing';
+  const label = connecting ? 'Подключаемся к комнате…' : 'Связь потеряна. Ваше место сохранено, идёт переподключение.';
+  return `<div class="net-banner" role="status" aria-live="polite">
+    <span class="net-indicator"></span><span>${label}</span>
+    <button type="button" data-action="retry-connection">Повторить</button>
+  </div>`;
 }
 
 function renderMenu() {
@@ -506,6 +526,9 @@ app.addEventListener("click", async (event) => {
     return;
   }
   switch (action) {
+    case "retry-connection":
+      window.location.reload();
+      break;
     case "create-room":
       send("create_room", {
         nickname: state.nickname,
@@ -557,7 +580,8 @@ app.addEventListener("click", async (event) => {
 
 app.addEventListener("pointerdown", (event) => {
   const pieceButton = event.target.closest("[data-piece-id]");
-  if (!pieceButton || !state.room?.game || getPhase() !== "playing") {
+  if (!pieceButton || !state.room?.game || getPhase() !== "playing" ||
+      (!state.room.practice && state.connection !== 'connected')) {
     return;
   }
   const tileId = Number(pieceButton.dataset.pieceId);
@@ -851,3 +875,7 @@ render();
 requestAnimationFrame(animate);
 
 document.querySelector("#practiceBtn").onclick=()=>state.socket.practice(state.nickname);
+document.querySelector("#resetPracticeBtn").onclick=()=>{
+  if (!window.confirm('Начать новую соло-тренировку? Текущий прогресс будет удалён.')) return;
+  state.socket.resetPractice(state.nickname);
+};
