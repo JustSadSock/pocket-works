@@ -647,3 +647,9 @@ body:has(.board-grid) #resetPracticeBtn { display:none; }
   .net-banner { top: max(56px, calc(env(safe-area-inset-top) + 32px)); font-size: 12px; }
   .net-banner button { min-width: 70px; }
 }
+
+/* Keep offline entry inside the usable viewport, including short iPhones. */
+body[data-phase="menu"] .screen { overflow-y: auto; min-height: 100dvh; height: 100dvh; }
+.practice-actions { display:flex; flex-wrap:wrap; gap:10px; padding-bottom:12px; }
+.practice-actions button { margin:0 !important; flex: 1 1 160px; min-height:46px; }
+body[data-phase="menu"] .menu-footer { margin-top: 6px; padding-bottom: 20px; }
