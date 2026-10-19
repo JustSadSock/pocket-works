@@ -143,29 +143,60 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
   px(-7,-16,4,4,'#f0f1de');px(4,-16,4,4,'#f0f1de');
  }
  const skinTone=maskot?.animal==='frog'?'#93bb72':maskot?.animal==='rabbit'?'#ebd2ba':maskot?.animal==='cat'?'#d1ac91':'#d6b395';
- // High-contrast pixel face preserves MASKOT features but reads as a head,
- // with temple, cheek, nose and chin planes instead of one flat rectangle.
- px(-8,-15,16,13,'#55443a');px(-7,-17,14,16,skinTone);
- px(-7,-16,3,13,'#b58e76');px(5,-14,2,11,'#e9c7aa');
- px(-6,-17,11,3,'#eed1b1');px(-5,-3,10,2,'#b78e77');
- px(-8,-11,2,5,skinTone);px(7,-10,2,4,'#ab846d');
- const glance=Math.round((pose?.aimLift||0)*1.2);
- const shocked=hitFlinch>.3;
+ const glance=Math.round((pose?.aimLift||0)*1.2),shocked=hitFlinch>.3;
  const eyelid=(!pose?.still&&Math.sin(time*2.3+character.speed*17)>.996)?1:0;
- const brow=shocked?2:guardPose>.5?-1:0;
- px(-5,-13+brow,4,2,'#6e5042');px(2,-13+brow,4,2,'#6e5042');
- if(!eyelid){
-  px(-4,-11,3,3,'#233d37');px(3,-11,3,3,'#233d37');
-  px(-4+Math.max(-1,Math.min(1,glance)),-11,1,1,'#f1ead1');
-  px(3+Math.max(-1,Math.min(1,glance)),-11,1,1,'#f1ead1');
- }else{px(-5,-10,5,1,'#705747');px(2,-10,5,1,'#705747')}
- px(0,-9,2,4,'#f3d8ae');px(1,-6,2,1,'#aa806b');
- px(-4,-4,8,2,shocked?'#513b36':maskot?.animal==='frog'?'#547f55':'#9d6e5f');
- if(shocked)px(-1,-3,3,2,'#3b3935');
- if(maskot?.face==='glasses'||maskot?.face==='monocle'){
-  px(-7,-14,7,6,'#e6dec0');px(-6,-13,5,4,'#32433d');px(1,-14,7,6,trim);px(2,-13,5,4,'#32433d');px(-1,-12,2,2,trim);
+ if(viewing.isRear){
+  // The rear head is a *new view*, not a front face concealed by a rectangle:
+  // nape, hood seams, side locks and the rear of the inherited headgear.
+  px(-9,-17,18,17,'#1d342d');
+  px(-7,-18,14,14,skinTone);
+  px(-8,-18,4,15,shade);px(5,-18,3,15,shade);
+  px(-6,-19,12,5,coat);px(-8,-16,4,11,coat);px(5,-16,3,11,coat);
+  px(-5,-5,10,4,shade);px(-1,-9,3,7,trim);
+  if(maskot?.animal==='cat'){px(-6,-20,4,5,'#ae876c');px(4,-20,4,5,'#ae876c')}
+ }else if(viewing.isSide){
+  // Side profile has exactly one eye, raised nose and jutting chin. It
+  // turns naturally with the root mirror for western-facing actors.
+  px(-8,-17,14,16,'#453c35');
+  px(-7,-17,13,15,skinTone);px(5,-15,3,13,'#c99c81');
+  px(-7,-16,4,12,'#a97f6c');px(-6,-17,10,3,'#ead0af');
+  px(6,-10,4,4,skinTone);px(6,-7,5,2,'#b98a72');
+  px(-1,-13,5,2,'#745746');
+  if(!eyelid){px(1,-11,3,3,'#253c36');px(2,-11,1,1,'#e8e1cb')}
+  else px(0,-10,4,1,'#705747');
+  px(3,-4,5,2,shocked?'#503831':'#a27360');
+  if(shocked)px(4,-3,3,2,'#41342f');
+ }else{
+  // Frontal and quarter angles interpolate through the same center of the
+  // face, but a quarter view hides the far pupil behind the nose ridge.
+  const quarter=viewing.isQuarter;
+  const width=quarter?13:14,left=quarter?-6:-7;
+  px(left-1,-16,width+2,15,'#55443a');
+  px(left,-17,width,16,skinTone);
+  px(left,-16,3,13,'#b58e76');
+  px(left+width-2,-14,2,11,'#e9c7aa');
+  px(left+1,-17,width-3,3,'#eed1b1');
+  px(left+1,-4,width-3,2,'#b78e77');
+  const brow=shocked?2:guardPose>.5?-1:0;
+  px(-5,-13+brow,4,2,'#6e5042');
+  if(!quarter)px(2,-13+brow,4,2,'#6e5042');
+  if(!eyelid){
+   px(-4,-11,3,3,'#233d37');
+   if(!quarter)px(3,-11,3,3,'#233d37');
+   px(-4+Math.max(-1,Math.min(1,glance)),-11,1,1,'#f1ead1');
+   if(!quarter)px(3+Math.max(-1,Math.min(1,glance)),-11,1,1,'#f1ead1');
+  }else{px(-5,-10,4,1,'#705747');if(!quarter)px(2,-10,4,1,'#705747')}
+  px(quarter?2:0,-9,quarter?3:2,4,'#f3d8ae');
+  px(1,-6,2,1,'#aa806b');
+  px(-4,-4,8,2,shocked?'#513b36':maskot?.animal==='frog'?'#547f55':'#9d6e5f');
+  if(shocked)px(-1,-3,3,2,'#3b3935');
  }
- if(maskot?.face==='stars'){px(-9,-10,3,3,'#e8ca69');px(9,-10,3,3,'#e8ca69')}
+ if(!viewing.isRear&&(maskot?.face==='glasses'||maskot?.face==='monocle')){
+  if(viewing.isSide){px(0,-14,7,6,'#e6dec0');px(1,-13,5,4,'#32433d')}
+  else if(viewing.isQuarter){px(-7,-14,7,6,'#e6dec0');px(-6,-13,5,4,'#32433d')}
+  else{px(-7,-14,7,6,'#e6dec0');px(-6,-13,5,4,'#32433d');px(1,-14,7,6,trim);px(2,-13,5,4,'#32433d');px(-1,-12,2,2,trim)}
+ }
+ if(!viewing.isRear&&maskot?.face==='stars'){px(-9,-10,3,3,'#e8ca69');if(!viewing.isSide)px(9,-10,3,3,'#e8ca69')}
  // Wizard hat adapts to actual MASKOT hat rather than hiding it.
  if(maskot?.hat==='beret'){
   px(-14,-24,24,10,'#8f729d');px(-10,-30,18,8,'#8f729d');px(1,-33,3,6,trim);
