@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {atmosphereProfile,moteAt,organLight,materialProperties,enemyMotion,fxLimits,tissueFamily} from '../atmosphere.js';
+import {atmosphereProfile,moteAt,organLight,materialProperties,enemyMotion,fxLimits,tissueFamily,organAudio} from '../atmosphere.js';
 
 test('five stages have real and visibly distinct physical atmosphere presets',()=>{
  const kinds=new Set(),rough=new Set();
@@ -59,4 +59,16 @@ test('effect budgets are fixed by quality and conservative WebGL',()=>{
   assert.equal(p.motes,0);assert.equal(p.deaths,0);assert.equal(p.additionalLights,0);
   assert.ok(other.motes<=88);assert.ok(other.deaths<=5);assert.ok(other.additionalLights<=1);
  }
+});
+
+test('five biomes have short-lived distinct sound profiles and no unbounded gain',()=>{
+ const pairs=new Set();
+ for(let stage=1;stage<=5;stage++){
+  const audio=organAudio(stage);
+  assert.ok(audio.pitch>=.7&&audio.pitch<=1.3);
+  assert.ok(audio.brightness>=.65&&audio.brightness<=1.3);
+  assert.ok(audio.bass>=.8&&audio.bass<=1.3);
+  pairs.add(audio.pitch);
+ }
+ assert.equal(pairs.size,5);
 });
