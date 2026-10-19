@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Skyforge Relay Co-op</title>
+    <link rel="stylesheet" href="./styles.css" />
+  <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#111b24"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
+  <body>
+    <main id="app" data-app-shell><a class="pocket-exit" href="../../" data-app-control>Pocket Works</a>
+      <section id="menuPanel" class="panel">
+        <h1>Skyforge Relay</h1>
+        <p class="subtitle">Co-op raid: terminals, reactor, boss</p>
+        <label class="fieldLabel" for="nameInput">Callsign</label>
+        <input id="nameInput" maxlength="18" placeholder="Pilot" value="Pilot" />
+        <div class="buttons">
+          <button data-native-press id="practiceBtn">Одиночная практика</button><button data-native-press id="createBtn" class="primary">Create Room</button>
+        </div>
+        <div class="joinRow">
+          <input id="roomInput" maxlength="8" placeholder="Room code" />
+          <button data-native-press id="joinBtn">Join</button>
+        </div>
+        <p id="menuMessage" class="message"></p>
+        <p class="hint">
+          Controls: WASD/arrows move, Space pulse, LMB or J shoot, Shift dash, E interact/boost
+          terminal speed. Terminals also activate by standing in zone. Enter starts match (host),
+          F fullscreen, M mute.
+        </p>
+      </section>
+
+      <section id="topHud" class="hud hidden">
+        <div class="chip"><span>Room</span><strong id="roomLabel">-</strong></div>
+        <div class="chip">
+          <span>Energy</span><strong id="energyLabel">0 / 32</strong>
+        </div>
+        <div class="chip"><span>Integrity</span><strong id="integrityLabel">100%</strong></div>
+        <div class="chip"><span>Time</span><strong id="timeLabel">08:00</strong></div>
+        <div class="chip"><span>Phase</span><strong id="phaseLabel">Lobby</strong></div>
+        <div class="chip objective"><span>Objective</span><strong id="objectiveLabel">-</strong></div>
+      </section>
+
+      <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+      <section id="sideHud" class="hud hidden">
+        <h2>Crew</h2>
+        <ul id="playersList"></ul>
+        <div id="abilityPanel" class="abilityPanel">
+          <div><span>Pulse</span><strong id="pulseCdLabel">ready</strong></div>
+          <div><span>Dash</span><strong id="dashCdLabel">ready</strong></div>
+          <div><span>Beacon</span><strong id="beaconCdLabel">ready</strong></div>
+          <div><span>Boost</span><strong id="boostLabel">0.0s</strong></div>
+        </div>
+        <div class="controls">
+          <button data-native-press id="readyBtn">Ready</button>
+        </div>
+        <div id="hostControls" class="controls hidden">
+          <button data-native-press id="startBtn" class="primary">Start Mission</button>
+          <button data-native-press id="restartBtn">Back To Lobby</button>
+        </div>
+      </section>
+
+      <section id="endPanel" class="panel hidden">
+        <h2 id="endTitle">Mission Complete</h2>
+        <p id="endMessage"></p>
+        <button data-native-press id="backToLobbyBtn" class="primary">To Lobby</button>
+      </section>
+    <div id="touchDeck" aria-label="Управление"><div class="move-pad"><button data-flag="up">↑</button><button data-flag="left">←</button><button data-flag="down">↓</button><button data-flag="right">→</button></div><div class="ability-pad"><button data-flag="shoot">Огонь</button><button data-flag="pulse">Импульс</button><button data-flag="dash">Рывок</button><button data-flag="interact">Собрать</button></div></div></main>
+
+    
+    <script type="module" src="./app.js"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Skyforge Relay" data-app-version="0.1.0"></script></body>
+</html>

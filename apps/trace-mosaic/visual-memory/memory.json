@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "product": "trace-mosaic",
+  "captures": [
+    {
+      "id": "39ba89a5614be26b199f9e369dbb657321d1c01f5aab2abfa56ffcb037add2bc",
+      "recordedAt": "2026-10-19T09:56:16.512Z",
+      "commit": "b273a3339f6099e50da6fd282f7af2b459975bdd",
+      "viewport": [
+        390,
+        844
+      ],
+      "state": "initial, real input and settled game, then offline reload",
+      "engine": "Chromium",
+      "action": "Start recovered game, perform its real primary control and reload after the local HTTP transport stops accepting requests.",
+      "files": [
+        {
+          "path": "b3684a476a827d1c9a8b15c39dd0e1f12997125093b6e03a39e5e5c85a1f2563.png",
+          "sha256": "b3684a476a827d1c9a8b15c39dd0e1f12997125093b6e03a39e5e5c85a1f2563"
+        },
+        {
+          "path": "e474760703d832cc0bf236b247c1fa55f1df47697deef73b0f128470dfb0dde0.png",
+          "sha256": "e474760703d832cc0bf236b247c1fa55f1df47697deef73b0f128470dfb0dde0"
+        },
+        {
+          "path": "0c4a873e105234dc28d9f573db032cb56f029c367774a67ba7891da35e330b5e.png",
+          "sha256": "0c4a873e105234dc28d9f573db032cb56f029c367774a67ba7891da35e330b5e"
+        },
+        {
+          "path": "4a54b41ca027dc03db460d9ab9c3096b0571440f86658879c09d246d2e10f031.webm",
+          "sha256": "4a54b41ca027dc03db460d9ab9c3096b0571440f86658879c09d246d2e10f031"
+        },
+        {
+          "path": "f1b8830c3e8d0b1b9a07fe78f13c0206e0c7fd1ff878b5cd4136a4db6ee41e82.png",
+          "sha256": "f1b8830c3e8d0b1b9a07fe78f13c0206e0c7fd1ff878b5cd4136a4db6ee41e82"
+        }
+      ]
+    }
+  ],
+  "feedback": []
+}

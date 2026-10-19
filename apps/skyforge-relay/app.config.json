@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "skyforge-relay",
+  "name": "Skyforge Relay",
+  "shortName": "Skyforge Relay",
+  "description": "Совместный рейд: активируйте терминалы, заряжайте реактор и победите командный дрон.",
+  "version": "0.1.0",
+  "releaseDate": "2026-10-18",
+  "releaseDateTime": "2026-10-18T20:45:00Z",
+  "changelog": [
+    "Перенесена исходная игра с сохранением правил и отдельным хранением данных."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "accent": "#e6ac5b",
+  "backgroundColor": "#111b24",
+  "themeColor": "#111b24",
+  "orientation": "landscape",
+  "cacheName": "skyforge-relay-v0.1.0",
+  "storageNamespace": "pocket-works:skyforge-relay",
+  "tags": [
+    "game",
+    "offline"
+  ],
+  "order": 170
+}

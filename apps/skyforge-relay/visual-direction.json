@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "skyforge-relay",
+  "direction": {
+    "premise": "A crew carries energy across a hostile industrial arena to power terminals and defend a central reactor.",
+    "composition": "The world fills the viewport below compact reactor telemetry, with movement and ability pads at opposite lower corners.",
+    "shapeLanguage": "The recovered sprite reactor, terminal stations, astronauts, enemies and large cargo silhouettes define a spatial raid.",
+    "surfaceAndMaterial": "Original industrial floor sprites and illustrated machinery retain their worn mechanical panel surfaces.",
+    "paletteLogic": "Cyan energy and shields contrast with orange damage and enemy signals on blue-grey metal flooring.",
+    "typography": "Condensed source telemetry keeps energy, integrity, time and the current objective readable above the arena.",
+    "signature": "Stand on a terminal to power it, ferry energy to the reactor, then face the boss only after all three stations are online.",
+    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
+  },
+  "architecture": {
+    "spatialLayout": "full-bleed-world",
+    "controlLocation": "perimeter",
+    "navigation": "world-travel",
+    "chromeTopology": "layered-panels",
+    "dominantMotion": "sliding",
+    "primaryVerb": "Move through the arena, carry energy, power three stations and use shooting, pulse and dash to protect the reactor.",
+    "physicalFeedback": "Movement changes world position continuously; terminal progress accumulates, carried orbs move with the player and ability cooldowns remain visible.",
+    "spatialRationale": "The world fills the viewport below compact reactor telemetry, with movement and ability pads at opposite lower corners. This keeps the current game object and its real inputs spatially connected on a phone.",
+    "comparisons": [
+      {
+        "slug": "perekos",
+        "spatialDifference": "perekos uses full-bleed-world and layered-panels. Here: The world fills the viewport below compact reactor telemetry, with movement and ability pads at opposite lower corners.",
+        "interactionDifference": "perekos uses perimeter with overlay-list. This game's actual verb is: Move through the arena, carry energy, power three stations and use shooting, pulse and dash to protect the reactor."
+      },
+      {
+        "slug": "meat-exe",
+        "spatialDifference": "meat-exe uses full-bleed-world and layered-panels. Here: The world fills the viewport below compact reactor telemetry, with movement and ability pads at opposite lower corners.",
+        "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Move through the arena, carry energy, power three stations and use shooting, pulse and dash to protect the reactor."
+      },
+      {
+        "slug": "living-history",
+        "spatialDifference": "living-history uses full-bleed-world and unframed-scene. Here: The world fills the viewport below compact reactor telemetry, with movement and ability pads at opposite lower corners.",
+        "interactionDifference": "living-history uses bottom-deck with scene-zoom. This game's actual verb is: Move through the arena, carry energy, power three stations and use shooting, pulse and dash to protect the reactor."
+      },
+      {
+        "slug": "cavitation-lab",
+        "spatialDifference": "cavitation-lab uses split-workspace and framed-stage. Here: The world fills the viewport below compact reactor telemetry, with movement and ability pads at opposite lower corners.",
+        "interactionDifference": "cavitation-lab uses bottom-deck with none. This game's actual verb is: Move through the arena, carry energy, power three stations and use shooting, pulse and dash to protect the reactor."
+      },
+      {
+        "slug": "not-dead-yet",
+        "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: The world fills the viewport below compact reactor telemetry, with movement and ability pads at opposite lower corners.",
+        "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Move through the arena, carry energy, power three stations and use shooting, pulse and dash to protect the reactor."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Canvas sprite compositing keeps the recovered raid art and original server simulation while mobile CSS gives the arena a stable viewport.",
+    "focalAsset": "The original reactor, floor and astronaut sprites are preserved, with an authored relay-node SVG for the install icon."
+  },
+  "motion": {
+    "character": "The overhead camera eases across the industrial floor behind the player, while sprites move continuously in world coordinates.",
+    "action": "Move through the arena, carry energy, power three stations and use shooting, pulse and dash to protect the reactor.",
+    "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
+    "response": "The next visible state responds to the actual control: Stand on a terminal to power it, ferry energy to the reactor, then face the boss only after all three stations are online.",
+    "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
+    "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
+    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#practiceBtn"
+    },
+    "expectedChange": "An offline practice lobby opens using the same raid engine and the saved local practice state.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}

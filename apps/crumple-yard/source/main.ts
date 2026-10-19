@@ -6,12 +6,8 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 import { CrumpleGame } from './game';
 
-const VERSION = '1.0.0';
-const RELEASE_NOTES = [
-  'Rapier contact-force события и точка контакта питают накопительную модель повреждений вместо переключения готовых состояний.',
-  'Деформируемый кузов, отрыв панелей, колёса, подвеска, рулевое, двигатель, охлаждение, трансмиссия, свет и стекло связаны с одним физическим состоянием.',
-  'Три разных автомобиля, три пресета для каждого, компактный crash-test yard, движущийся трафик и портретное управление входят в первый играбельный релиз.'
-];
+const VERSION = '1.2.0';
+const RELEASE_NOTES = ["Фиксированное направление 3D-камеры по умолчанию; переключение погонной камеры в гараже и паузе сохраняется между запусками."];
 
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);

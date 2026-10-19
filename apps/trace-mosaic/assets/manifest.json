@@ -1,0 +1,338 @@
+[
+  {
+    "id": "puzzle-01",
+    "title": "Sky Loom",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-01.svg",
+    "palette": [
+      "#09131b",
+      "#4cd5ff",
+      "#ffe27a",
+      "#f37272"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "puzzle-02",
+    "title": "Petal Route",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-02.svg",
+    "palette": [
+      "#111827",
+      "#b8ff5d",
+      "#44c2ff",
+      "#f5a6ff"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "puzzle-03",
+    "title": "Neon Koi",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-03.svg",
+    "palette": [
+      "#140f1f",
+      "#ffcc57",
+      "#ff7b7b",
+      "#7ce7db"
+    ],
+    "difficulty": "spicy"
+  },
+  {
+    "id": "puzzle-04",
+    "title": "Sand Relay",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-04.svg",
+    "palette": [
+      "#07131a",
+      "#6cf0c2",
+      "#76a5ff",
+      "#f8f3d6"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "puzzle-05",
+    "title": "Moss Beacon",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-05.svg",
+    "palette": [
+      "#11131a",
+      "#f29e4c",
+      "#f1c453",
+      "#84dcc6"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "puzzle-06",
+    "title": "Prism Orchard",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-06.svg",
+    "palette": [
+      "#0c1621",
+      "#db5461",
+      "#ffd166",
+      "#3ec1d3"
+    ],
+    "difficulty": "spicy"
+  },
+  {
+    "id": "puzzle-07",
+    "title": "Nova Steps",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-07.svg",
+    "palette": [
+      "#09131b",
+      "#4cd5ff",
+      "#ffe27a",
+      "#f37272"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "puzzle-08",
+    "title": "Lagoon Pulse",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-08.svg",
+    "palette": [
+      "#111827",
+      "#b8ff5d",
+      "#44c2ff",
+      "#f5a6ff"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "puzzle-09",
+    "title": "Copper Bloom",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-09.svg",
+    "palette": [
+      "#140f1f",
+      "#ffcc57",
+      "#ff7b7b",
+      "#7ce7db"
+    ],
+    "difficulty": "spicy"
+  },
+  {
+    "id": "puzzle-10",
+    "title": "Echo Nest",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-10.svg",
+    "palette": [
+      "#07131a",
+      "#6cf0c2",
+      "#76a5ff",
+      "#f8f3d6"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "puzzle-11",
+    "title": "Glass Dunes",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-11.svg",
+    "palette": [
+      "#11131a",
+      "#f29e4c",
+      "#f1c453",
+      "#84dcc6"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "puzzle-12",
+    "title": "Solar Stitch",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-12.svg",
+    "palette": [
+      "#0c1621",
+      "#db5461",
+      "#ffd166",
+      "#3ec1d3"
+    ],
+    "difficulty": "spicy"
+  },
+  {
+    "id": "puzzle-13",
+    "title": "Mint Harbor",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-13.svg",
+    "palette": [
+      "#09131b",
+      "#4cd5ff",
+      "#ffe27a",
+      "#f37272"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "puzzle-14",
+    "title": "Amber Chorus",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-14.svg",
+    "palette": [
+      "#111827",
+      "#b8ff5d",
+      "#44c2ff",
+      "#f5a6ff"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "puzzle-15",
+    "title": "Fjord Signal",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-15.svg",
+    "palette": [
+      "#140f1f",
+      "#ffcc57",
+      "#ff7b7b",
+      "#7ce7db"
+    ],
+    "difficulty": "spicy"
+  },
+  {
+    "id": "puzzle-16",
+    "title": "Drift Atlas",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-16.svg",
+    "palette": [
+      "#07131a",
+      "#6cf0c2",
+      "#76a5ff",
+      "#f8f3d6"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "puzzle-17",
+    "title": "Ribbon Spring",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-17.svg",
+    "palette": [
+      "#11131a",
+      "#f29e4c",
+      "#f1c453",
+      "#84dcc6"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "puzzle-18",
+    "title": "Quiet Meteor",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-18.svg",
+    "palette": [
+      "#0c1621",
+      "#db5461",
+      "#ffd166",
+      "#3ec1d3"
+    ],
+    "difficulty": "spicy"
+  },
+  {
+    "id": "puzzle-19",
+    "title": "Golden Mural",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-19.svg",
+    "palette": [
+      "#09131b",
+      "#4cd5ff",
+      "#ffe27a",
+      "#f37272"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "puzzle-20",
+    "title": "Circuit Meadow",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-20.svg",
+    "palette": [
+      "#111827",
+      "#b8ff5d",
+      "#44c2ff",
+      "#f5a6ff"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "puzzle-21",
+    "title": "Velvet Tide",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-21.svg",
+    "palette": [
+      "#140f1f",
+      "#ffcc57",
+      "#ff7b7b",
+      "#7ce7db"
+    ],
+    "difficulty": "spicy"
+  },
+  {
+    "id": "puzzle-22",
+    "title": "Crimson Grove",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-22.svg",
+    "palette": [
+      "#07131a",
+      "#6cf0c2",
+      "#76a5ff",
+      "#f8f3d6"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "id": "puzzle-23",
+    "title": "Signal Fern",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-23.svg",
+    "palette": [
+      "#11131a",
+      "#f29e4c",
+      "#f1c453",
+      "#84dcc6"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "id": "puzzle-24",
+    "title": "Polar Bloom",
+    "width": 1600,
+    "height": 1200,
+    "path": "./assets/puzzles/puzzle-24.svg",
+    "palette": [
+      "#0c1621",
+      "#db5461",
+      "#ffd166",
+      "#3ec1d3"
+    ],
+    "difficulty": "spicy"
+  }
+]

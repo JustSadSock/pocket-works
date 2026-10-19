@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "trace-mosaic",
+  "direction": {
+    "premise": "A shared picture puzzle turns each drag path into a temporary obstacle for the other mosaic builders.",
+    "composition": "A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
+    "shapeLanguage": "Rounded picture tiles, a literal square cell grid and translucent colored trail cells expose ownership and blocked paths.",
+    "surfaceAndMaterial": "Recovered authored SVG puzzle illustrations are sliced into picture fragments; trails remain translucent overlays rather than decorative glow.",
+    "paletteLogic": "Each builder has a colored outline and path; the source picture colors remain intact so matching fragments is a spatial task.",
+    "typography": "Quiet source labels identify the tray and progress, with numerical room and timer chips kept separate from the illustration.",
+    "signature": "Dragging a fragment paints a visible path that blocks other players for thirty seconds, even after the piece lands.",
+    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
+  },
+  "architecture": {
+    "spatialLayout": "open-workbench",
+    "controlLocation": "direct-on-object",
+    "navigation": "none",
+    "chromeTopology": "single-surface",
+    "dominantMotion": "sliding",
+    "primaryVerb": "Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails.",
+    "physicalFeedback": "The held fragment follows the pointer, visited cells gain a colored trail and a correct drop raises shared completion.",
+    "spatialRationale": "A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row. This keeps the current game object and its real inputs spatially connected on a phone.",
+    "comparisons": [
+      {
+        "slug": "perekos",
+        "spatialDifference": "perekos uses full-bleed-world and layered-panels. Here: A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
+        "interactionDifference": "perekos uses perimeter with overlay-list. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
+      },
+      {
+        "slug": "meat-exe",
+        "spatialDifference": "meat-exe uses full-bleed-world and layered-panels. Here: A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
+        "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
+      },
+      {
+        "slug": "living-history",
+        "spatialDifference": "living-history uses full-bleed-world and unframed-scene. Here: A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
+        "interactionDifference": "living-history uses bottom-deck with scene-zoom. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
+      },
+      {
+        "slug": "cavitation-lab",
+        "spatialDifference": "cavitation-lab uses split-workspace and framed-stage. Here: A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
+        "interactionDifference": "cavitation-lab uses bottom-deck with none. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
+      },
+      {
+        "slug": "not-dead-yet",
+        "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
+        "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "DOM picture tiles cut from the recovered SVG art preserve crisp illustrations and direct pointer dragging on phones.",
+    "focalAsset": "The original SVG puzzle catalog is preserved and cut at runtime into square fragments; the authored mosaic SVG supplies install identity."
+  },
+  "motion": {
+    "character": "The held fragment follows the pointer, visited cells gain a colored trail and a correct drop raises shared completion.",
+    "action": "Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails.",
+    "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
+    "response": "The next visible state responds to the actual control: Dragging a fragment paints a visible path that blocks other players for thirty seconds, even after the piece lands.",
+    "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
+    "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
+    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#practiceBtn"
+    },
+    "expectedChange": "An offline solo puzzle lobby opens; starting it assigns every fragment to the local builder.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}

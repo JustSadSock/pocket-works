@@ -1,0 +1,20 @@
+{
+  "id": "/apps/mini-car-3d/",
+  "name": "Mini Car 3D",
+  "short_name": "Mini Car 3D",
+  "description": "Игрушечные машинки, физические столкновения и общая площадка до восьми водителей.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#182735",
+  "theme_color": "#182735",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

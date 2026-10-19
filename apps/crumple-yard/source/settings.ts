@@ -4,6 +4,7 @@ export type GameSettings = {
   vehicle: VehicleId;
   preset: number;
   sound: boolean;
+  camera: 'fixed' | 'chase';
   graphics: 'auto' | 'high' | 'balanced';
 };
 
@@ -13,6 +14,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   vehicle: 'meridian',
   preset: 0,
   sound: true,
+  camera: 'fixed',
   graphics: 'auto'
 };
 
@@ -23,6 +25,7 @@ export function loadSettings(): GameSettings {
       vehicle: parsed.vehicle === 'kestrel' || parsed.vehicle === 'meridian' || parsed.vehicle === 'bastion' ? parsed.vehicle : DEFAULT_SETTINGS.vehicle,
       preset: Number.isFinite(parsed.preset) ? Math.max(0, Math.min(2, Number(parsed.preset))) : 0,
       sound: parsed.sound !== false,
+      camera: parsed.camera === 'chase' ? 'chase' : 'fixed',
       graphics: parsed.graphics === 'high' || parsed.graphics === 'balanced' ? parsed.graphics : 'auto'
     };
   } catch {

@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "crown-laws",
+  "direction": {
+    "premise": "A duel of royal laws turns privately chosen decree cards into public changes on a shared board.",
+    "composition": "The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
+    "shapeLanguage": "Printed card rectangles, board cells, royal insignia and the recovered ornamental drawings carry the tabletop identity.",
+    "surfaceAndMaterial": "Source card and board artwork is retained as printed surfaces with muted parchment, ink and metal accents.",
+    "paletteLogic": "Parchment grounds the hand while faction and effect colors distinguish the consequences of each decree.",
+    "typography": "Original card typography keeps decree names above their concise rule effects; room controls use compact system labels.",
+    "signature": "Each player seals a private decree; neither opponent hand nor future deck appears in the other client before the reveal.",
+    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
+  },
+  "architecture": {
+    "spatialLayout": "document-spread",
+    "controlLocation": "direct-on-object",
+    "navigation": "overlay-list",
+    "chromeTopology": "framed-stage",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence.",
+    "physicalFeedback": "A selected card is marked immediately; after both choices the round advances and the new public state persists.",
+    "spatialRationale": "The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards. This keeps the current game object and its real inputs spatially connected on a phone.",
+    "comparisons": [
+      {
+        "slug": "perekos",
+        "spatialDifference": "perekos uses full-bleed-world and layered-panels. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
+        "interactionDifference": "perekos uses perimeter with overlay-list. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
+      },
+      {
+        "slug": "meat-exe",
+        "spatialDifference": "meat-exe uses full-bleed-world and layered-panels. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
+        "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
+      },
+      {
+        "slug": "living-history",
+        "spatialDifference": "living-history uses full-bleed-world and unframed-scene. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
+        "interactionDifference": "living-history uses bottom-deck with scene-zoom. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
+      },
+      {
+        "slug": "cavitation-lab",
+        "spatialDifference": "cavitation-lab uses split-workspace and framed-stage. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
+        "interactionDifference": "cavitation-lab uses bottom-deck with none. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
+      },
+      {
+        "slug": "not-dead-yet",
+        "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
+        "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "The original DOM board, card renderer and local authored artwork make individual rules readable without canvas text scaling.",
+    "focalAsset": "The retained decree illustrations and board provide the playable focal objects; the new crown-on-board SVG identifies the port."
+  },
+  "motion": {
+    "character": "A selected card is marked immediately; after both choices the round advances and the new public state persists.",
+    "action": "Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence.",
+    "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
+    "response": "The next visible state responds to the actual control: Each player seals a private decree; neither opponent hand nor future deck appears in the other client before the reveal.",
+    "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
+    "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
+    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "[data-action=open-online]"
+    },
+    "expectedChange": "The network room controls open while the retained local AI and hotseat choices remain available.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}

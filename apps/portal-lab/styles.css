@@ -205,3 +205,60 @@ body[data-lab-view="designer"] .design-panel>.design-legal{grid-column:1/-1}}
 body[data-lab-view="designer"] .canvas-frame{height:min(62dvh,590px);min-height:350px}
 body[data-lab-view="designer"] .canvas-hint{font-size:9px;bottom:5px}
 }
+
+/* v0.7 — paired scientific instruments, radial cartography and frame-dragging */
+body:not([data-lab-view="rotation"]) #rotation-panel{display:none}
+body[data-lab-view="rotation"] .instrument>:not(#rotation-panel):not(.range-field.last){display:none}
+body[data-lab-view="rotation"] .instrument{background:#e8e7df}
+body[data-lab-view="rotation"] .canvas-frame{background:#091b21}
+body[data-lab-view="rotation"] .readouts,body[data-lab-view="rotation"] .clocks{display:none}
+body[data-lab-view="rotation"] #space{cursor:default}
+body[data-lab-view="rotation"] #shoot:disabled{opacity:.54;cursor:default}
+body[data-lab-view="rotation"] .instrument>.range-field.last{margin-top:16px;padding-top:12px;border-top:1px solid #9faf9e}
+.rotation-panel{padding-bottom:14px;border-bottom:2px solid #8eaf9f}
+.rotation-description{font-size:11px;line-height:1.6;color:#667b70;margin:0 0 14px}
+.rotation-presets{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.rotation-presets button{background:transparent;color:#396758;border:1px solid #9daf9e;font-size:10px;font-weight:720;line-height:1.25;min-height:38px;padding:8px 7px}
+.rotation-presets button.selected{background:#315e52;color:#f0f3e9;border-color:#315e52}
+.rotation-presets button:last-child{grid-column:1/-1}
+.rotation-phase{font:700 10px/1.4 ui-monospace,Consolas,monospace;letter-spacing:.06em;color:#2b6555;background:#d4e4d7;border:1px solid #a6c0af;padding:10px 12px;margin:13px 0}
+.rotation-phase:before{display:inline-block;content:"";width:6px;height:6px;background:#53a17a;border-radius:50%;margin-right:9px}
+.rotation-panel .range-field{margin-top:15px}
+.rotation-panel .section-caption.second{margin-top:23px}
+.rotation-data{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #a6bdae;border-left:1px solid #a6bdae}
+.rotation-data>div{min-height:86px;padding:11px 8px;border-right:1px solid #a6bdae;border-bottom:1px solid #a6bdae}
+.rotation-data span{display:block;font-size:9px;color:#5b7369;line-height:1.5;min-height:25px}
+.rotation-data strong{display:block;font:700 20px/1.4 ui-monospace,Consolas,monospace;color:#285d50}
+.rotation-data strong[data-active="true"]{color:#b66f49;font-size:15px}
+.rotation-data strong[data-active="false"]{font-size:17px}
+.rotation-data small{display:block;color:#829486;font-size:9px;line-height:1.4}
+.rotation-outcomes{display:grid;grid-template-columns:1fr;gap:8px}
+.rotation-outcome{border-left:3px solid #6fa78c;padding:9px 11px;background:#d9e4d9}
+.rotation-outcome.blackhole{border-left-color:#bb896e;background:#e7dfd6}
+.rotation-outcome>span{font:700 9px ui-monospace,Consolas,monospace;letter-spacing:.08em;color:#617d72}
+.rotation-outcome strong{display:block;font:700 13px/2 ui-monospace,Consolas,monospace;color:#356a55}
+.rotation-outcome.blackhole strong{color:#9c684f}
+.rotation-outcome small{display:block;font:10px/1.65 ui-monospace,Consolas,monospace;color:#6b8175}
+.rotation-outcome b{color:#314f49}
+.rotation-time{margin:10px 0 3px;font:10px/1.5 ui-monospace,Consolas,monospace;color:#718378}
+.rotation-time b{color:#386a5b}
+.rotation-theory{font-size:11px;line-height:1.6;border-top:1px solid #becabe;margin-top:14px;padding-top:14px;color:#4b665e}
+.rotation-caveat{border-left:2px solid #bb9780;padding:3px 0 3px 11px;color:#859082;font-size:10px;line-height:1.6;margin-top:13px}
+@media(max-width:1100px){
+ body[data-lab-view="rotation"] .rotation-panel{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 15px}
+ body[data-lab-view="rotation"] .rotation-panel>.section-caption,
+ body[data-lab-view="rotation"] .rotation-panel>.rotation-description,
+ body[data-lab-view="rotation"] .rotation-panel>.rotation-presets,
+ body[data-lab-view="rotation"] .rotation-panel>.rotation-phase,
+ body[data-lab-view="rotation"] .rotation-panel>.rotation-data,
+ body[data-lab-view="rotation"] .rotation-panel>.rotation-outcomes,
+ body[data-lab-view="rotation"] .rotation-panel>.rotation-theory,
+ body[data-lab-view="rotation"] .rotation-panel>.rotation-caveat,
+ body[data-lab-view="rotation"] .rotation-panel>.rotation-time{grid-column:1/-1}
+}
+@media(max-width:690px){
+ body[data-lab-view="rotation"] .canvas-frame{min-height:460px;height:min(68dvh,720px)}
+ body[data-lab-view="rotation"] .canvas-hint{font-size:9px}
+ body[data-lab-view="rotation"] .rotation-outcome strong{font-size:12px}
+ .rotation-presets button{min-height:40px}
+}
