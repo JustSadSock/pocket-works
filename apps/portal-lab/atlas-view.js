@@ -76,6 +76,7 @@ export function createChronologyAtlas(canvas,{onOpen,onAction,onDirty}={}){
  function configure(){if(!result)recompute();}
  function setParams(p){
   const merged=atlasParams({...state,...p});
+  if('maxDistance' in p&&merged.distance>merged.maxDistance)merged.distance=merged.maxDistance;
   const remap=merged.duration!==state.duration||merged.throatTime!==state.throatTime||
    merged.maxDistance!==state.maxDistance;
   Object.assign(state,merged);
