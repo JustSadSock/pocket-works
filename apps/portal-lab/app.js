@@ -352,37 +352,80 @@ function drawMap(){
 function drawProfile(){
  background();
  const m=currentMetric(),cx=displayW*.5,cy=displayH*.52;
- // For the Ellis spatial equatorial metric the exact Euclidean embedding obeys:
- // R=sqrt(l²+a²), z=a*asinh(l/a). The 2D canvas uses an oblique projection.
- const scale=Math.min(displayW*.29/(Math.sqrt(17)*m.a),displayH*.35/(m.a*Math.asinh(4)));
+ const maxL=4,steps=240,dz=maxL/steps,zVals=new Float64Array(steps+1);
+ let valid=true,lastSlope=1;
+ for(let i=0;i<=steps;i++){
+  const g=geometry(i*dz*m.a,m),sq=1-g.Rp*g.Rp;
+  if(sq<-.000001)valid=false;
+  const slope=Math.sqrt(Math.max(0,sq));
+  if(i>0)zVals[i]=zVals[i-1]+.5*(slope+lastSlope)*dz*m.a;
+  lastSlope=slope;
+ }
+ if(!valid){
+  const left=displayW*.1,right=displayW*.9,top=displayH*.20,bottom=displayH*.75;
+  const rMax=geometry(4*m.a,m).R/m.a;
+  write('ЭТА МЕТРИКА НЕ ИМЕЕТ ПОЛНОГО ВЛОЖЕНИЯ В E³',cx,55,
+   {size:Math.min(14,displayW/43),color:'#efba9c',align:'center',weight:700});
+  write('|R′(l)| > 1 в части интервала. Показан истинный радиальный профиль.',cx,76,
+   {size:Math.min(11,displayW/51),color:'#c8ccba',align:'center'});
+  ctx.strokeStyle='#799b9277';ctx.lineWidth=1;ctx.strokeRect(left,top,right-left,bottom-top);
+  for(const sign of [-1,1]){
+   ctx.beginPath();
+   for(let i=0;i<=steps;i++){
+    const l=sign*maxL*i/steps,rr=geometry(l*m.a,m).R/m.a;
+    const x=left+(l+4)/8*(right-left);
+    const y=bottom-(rr-.85)/(Math.max(rMax,2)-.85)*(bottom-top);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+   }
+   ctx.strokeStyle=sign>0?'#8dd0ba':'#d5a086';ctx.lineWidth=2.3;ctx.stroke();
+  }
+  write('l/a',right,bottom+22,{size:11,color:'#a8c4b5',align:'right'});
+  write('R(l)/a',left,top-17,{size:11,color:'#a8c4b5'});
+  return;
+ }
+ function height(l){
+  const x=Math.min(steps,Math.abs(l)/m.a/dz),i=Math.min(steps-1,Math.floor(x)),t=x-i;
+  return Math.sign(l)*(zVals[i]*(1-t)+zVals[i+1]*t);
+ }
+ const maxR=geometry(4*m.a,m).R;
+ const scale=Math.min(displayW*.29/maxR,displayH*.35/Math.max(.2,zVals[steps]));
  const sx=scale,sy=scale*.95,depth=.28;
- function project(l,theta){const g=geometry(l,m);return{x:cx+sx*g.R*Math.cos(theta),y:cy-sy*g.z+sx*g.R*Math.sin(theta)*depth};}
+ function project(l,theta){
+  const g=geometry(l,m);
+  return {x:cx+sx*g.R*Math.cos(theta),y:cy-sy*height(l)+sx*g.R*Math.sin(theta)*depth};
+ }
  ctx.save();
- // Mesh with 2D projection of the embedded surface of revolution.
  for(const th of Array.from({length:28},(_,i)=>i*Math.PI/14)){
   ctx.beginPath();
   for(let k=0;k<=130;k++){
-   const l=(-4+8*k/130)*m.a,p=project(l,th);if(!k)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+   const l=(-4+8*k/130)*m.a,p=project(l,th);
+   if(!k)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
   }
   ctx.strokeStyle='#9bb6a34b';ctx.lineWidth=.85;ctx.stroke();
  }
  for(let q=-4;q<=4.01;q+=.5){
   const l=q*m.a;ctx.beginPath();
   for(let i=0;i<=120;i++){
-   const p=project(l,2*Math.PI*i/120);if(!i)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+   const p=project(l,2*Math.PI*i/120);
+   if(!i)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
   }
   ctx.strokeStyle=Math.abs(q)<.01?'#f0d7a2':q>0?'#8ac4af72':'#dca07975';
   ctx.lineWidth=Math.abs(q)<.01?3:Math.abs(q-Math.round(q))<.01?1.4:.7;ctx.stroke();
  }
  ctx.restore();
- write('ИЗОМЕТРИЧЕСКОЕ ВЛОЖЕНИЕ ПРОСТРАНСТВЕННОГО СРЕЗА',cx,36,{size:Math.min(12,displayW/42),color:'#c0d0bd',align:'center'});
- write('R(l) = √(l² + a²)',cx,62,{size:14,color:'#d5e7d5',align:'center'});
- write('z(l) = a · asinh(l/a)',cx,82,{size:13,color:'#a4bfb0',align:'center'});
- write('A · l > 0',cx,cy-Math.min(155,sy*1.5),{size:12,color:palette.A,align:'center',weight:700});
- write('B · l < 0',cx,cy+Math.min(165,sy*1.5),{size:12,color:palette.B,align:'center',weight:700});
+ write('ИЗОМЕТРИЧЕСКОЕ ВЛОЖЕНИЕ ПРОСТРАНСТВЕННОГО СРЕЗА',cx,36,
+  {size:Math.min(12,displayW/42),color:'#c0d0bd',align:'center'});
+ write('R(l) · ВЫЧИСЛЕНО ИЗ ВЫБРАННОЙ МЕТРИКИ',cx,61,
+  {size:Math.min(13,displayW/48),color:'#d5e7d5',align:'center'});
+ write('dz/dl = √(1 − R′(l)²)',cx,82,
+  {size:Math.min(13,displayW/48),color:'#a4bfb0',align:'center'});
+ write('A · l > 0',cx,cy-Math.min(155,sy*1.5),
+  {size:12,color:palette.A,align:'center',weight:700});
+ write('B · l < 0',cx,cy+Math.min(165,sy*1.5),
+  {size:12,color:palette.B,align:'center',weight:700});
  write('МИНИМАЛЬНЫЙ РАДИУС: a',cx,cy-15,{size:11,color:'#f6e2b2',align:'center'});
- write('Форма вложения отображает пространственную кривизну, не гравитационное поле.',cx,displayH-40,
- {size:Math.min(11,displayW/51),color:'#8da99a',align:'center'});
+ write('Вложение показывает геометрию среза, а не гравитационную силу.',cx,displayH-40,
+  {size:Math.min(11,displayW/51),color:'#8da99a',align:'center'});
 }
 function tick(t){
  if(!lastTime)lastTime=t;
