@@ -342,3 +342,29 @@ bright beige ceilings and an unnatural blue-green weapon barrel.
 The shader got restrained practical-light and flashlight intensities
 with a mild tone-mapping shoulder; the weapon iron/sleeve pigments
 were neutralized. A fresh screenshot A/B review is still required.
+
+### Confirmed 2.2.2/2.2.3 shader closure
+
+The new **CPU-precomputed light map** passed all six Playwright cases
+on [run 39232638773](https://github.com/JustSadSock/pocket-works/actions/runs/39232638773)
+with **6 passed / 0 failed** (1.7 minutes). Test coverage: five real
+v3 architecture seeds, lamp model correspondence, occupied cells and
+door-triggered changes to light visibility, across mobile Chromium,
+mobile WebKit and desktop Chromium.
+
+The shorter [four-viewport visual smoke run
+39232641393](https://github.com/JustSadSock/pocket-works/actions/runs/39232641393)
+also completed **successfully**: the game launched and screenshots were
+captured in mobile/desktop Chromium and WebKit without page JavaScript
+errors or overflow. The v2.2.2 CPU suite
+[39232633677](https://github.com/JustSadSock/pocket-works/actions/runs/39232633677)
+passed **101/101** tests.
+
+A screenshot contact sheet of the four viewport states was inspected.
+The lightmap preserves illuminated fixture regions and dark adjacent
+spaces, but the game's gun/hand topology and planar wall materials
+still need another dedicated art pass. Saturated ceiling highlights
+and barrel color were reduced in a subsequent exposure adjustment.
+
+Real device GPU p95, native mobile touch use and physically correct
+penumbra remain outstanding, not validated by virtualized CI.

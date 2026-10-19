@@ -149,7 +149,8 @@ button { border: 0; }
 }
 .preset-button[aria-pressed="true"] { outline: 3px solid var(--orange); outline-offset: 2px; }
 
-.menu-actions { display: grid; grid-template-columns: 82px 1fr; gap: 7px; }
+.menu-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.menu-actions .start-button { grid-column: 1/-1; }
 .utility-button, .start-button { min-height: 58px; border: 1px solid var(--ink); touch-action: manipulation; }
 .utility-button { background: transparent; font: 750 7px ui-monospace, monospace; letter-spacing: .06em; }
 .start-button { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 8px 13px; background: var(--orange); color: #16191b; text-align: left; }

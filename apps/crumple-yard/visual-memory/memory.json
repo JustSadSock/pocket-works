@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "product": "crumple-yard",
+  "captures": [
+    {
+      "id": "5bb964290db3d0c4bca90070591a27cbd89f5a00f9f1dd038d82a755a5efba2f",
+      "recordedAt": "2026-10-19T09:56:16.553Z",
+      "commit": "d758d15bca09bb61f12a6bcac9a74574cabf5e1a",
+      "viewport": [
+        844,
+        390
+      ],
+      "state": "initial, real input and settled game, then offline reload",
+      "engine": "Chromium",
+      "action": "Start recovered game, perform its real primary control and reload after the local HTTP transport stops accepting requests.",
+      "files": [
+        {
+          "path": "8578fa2ab0eb9dcc994736401230369d6ae3c5a8980139227e7d0ae68323bb5f.png",
+          "sha256": "8578fa2ab0eb9dcc994736401230369d6ae3c5a8980139227e7d0ae68323bb5f"
+        },
+        {
+          "path": "5ce7a2f4d9a2c8489cd93a24e0063826d48b494ac479437eb2a19ceea60a0648.png",
+          "sha256": "5ce7a2f4d9a2c8489cd93a24e0063826d48b494ac479437eb2a19ceea60a0648"
+        },
+        {
+          "path": "b4214b29cd30fe0fccbc569b61dc38941a5c0310b84c2457057c9c1cdfa0425d.png",
+          "sha256": "b4214b29cd30fe0fccbc569b61dc38941a5c0310b84c2457057c9c1cdfa0425d"
+        },
+        {
+          "path": "cde5523a9559e32b98e8ec227ee7f5b92ebd45af411862ac99fc1603f96a88c5.png",
+          "sha256": "cde5523a9559e32b98e8ec227ee7f5b92ebd45af411862ac99fc1603f96a88c5"
+        },
+        {
+          "path": "73297df1a65e7ee2ec388954b4fc492e2101ff4386b2f420577c73a8d1d4e772.webm",
+          "sha256": "73297df1a65e7ee2ec388954b4fc492e2101ff4386b2f420577c73a8d1d4e772"
+        }
+      ]
+    }
+  ],
+  "feedback": []
+}

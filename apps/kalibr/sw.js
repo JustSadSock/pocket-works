@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kalibr-v2.0.0';
+const CACHE_NAME = 'kalibr-v2.0.1';
 const CACHE_PREFIX = 'kalibr-';
 const APP_SHELL = [
   './', './index.html', './styles.css', './styles-core.css', './styles-menu.css', './styles-panels.css',
