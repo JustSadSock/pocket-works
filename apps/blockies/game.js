@@ -2059,7 +2059,7 @@ class UIManager {
         const isGameActive = this.screens.gameScreen.classList.contains('active') && gameState.players.length;
 
         if (code === 'Escape') {
-            if (isGameActive && !gameState.isGameOver) {
+            if (isGameActive && !gameState.isGameOver && !this.isOnlineMode) {
                 this.togglePause();
             }
             e.preventDefault();
@@ -2182,9 +2182,8 @@ class UIManager {
 
     restart() {
         if (this.isOnlineMode) {
-            // Until server-authoritative rematches exist, leave rather than desynchronize.
-            this.quitToMenu();
-            this.showOnlineLobby();
+            // The server tallies each surviving player's vote and starts the new board.
+            networkManager.requestRematch();
             return;
         }
         this.hideModal('pause');
@@ -2457,6 +2456,7 @@ class UIManager {
         });
 
         networkManager.on('snapshot', data => applyNetworkSnapshot(data));
+        networkManager.on('matchResults', room => this.updateRematchStatus(room));
         if (networkManager.connected) this.updateConnectionStatus('connected');
         else networkManager.connect();
     }
@@ -2629,6 +2629,8 @@ class UIManager {
     }
 
     startOnlineGame(data) {
+        this.hideModal('gameOver');
+        this.hideModal('pause');
         // Map network players to game players
         const numPlayers = data.players.length;
         
@@ -2707,6 +2709,25 @@ class UIManager {
                 }
             }
         });
+    }
+
+    updateRematchStatus(room) {
+        if (!this.isOnlineMode || room.phase !== 'results') return;
+        const surviving = room.players.filter(p => !p.departed);
+        const own = surviving.find(p => p.id === networkManager.socket.id);
+        const ready = surviving.filter(p => p.ready).length;
+        const action = document.getElementById('play-again-btn');
+        const text = document.getElementById('rematch-status');
+        if (action) {
+            action.disabled = !own || !networkManager.connected;
+            action.textContent = own?.ready
+                ? (currentLanguage === 'ru' ? 'Отменить готовность' : 'Cancel ready')
+                : (currentLanguage === 'ru' ? 'Сыграть ещё' : 'Play again');
+        }
+        if (text) text.textContent = currentLanguage === 'ru'
+            ? `Повторный матч: готовы ${ready} из ${surviving.length}`
+            : `Rematch: ${ready} of ${surviving.length} ready`;
+        if (!this.modals.gameOver.classList.contains('active')) this.showGameOver();
     }
 
     showStyledMessage(title, message, type = 'info') {
@@ -3152,7 +3173,13 @@ function applyNetworkSnapshot(s){
  if(!s||!Array.isArray(s.board)||!Array.isArray(s.players)||!s.sharedStats||!window.uiManager?.isOnlineMode)return;
  gameState.board=s.board;gameState.sharedStats=s.sharedStats;gameState.sharedStatsDirty=true;gameState.isGameOver=s.isGameOver;
  s.players.forEach((data,i)=>{const player=gameState.players[i];if(player){const keys=player.keys;Object.assign(player,data,{keys});}});
- window.uiManager.drawBoard();window.uiManager.updateTeamStatsIfNeeded();
+ window.uiManager.drawBoard();
+ window.uiManager.updateTeamStatsIfNeeded();
+ s.players.forEach((_,i)=>{
+   const player=gameState.players[i];
+   if(player){window.uiManager.updatePlayerInfo(player);window.uiManager.drawNextPiece(player);}
+ });
+ window.uiManager.refreshTouchStatus();
 }
 document.querySelector('#join-code-btn').onclick=()=>networkManager.joinRoom(document.querySelector('#join-code').value.trim());
 document.addEventListener('visibilitychange', () => {
