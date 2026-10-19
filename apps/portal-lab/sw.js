@@ -1,6 +1,6 @@
-const PREFIX='portal-lab-',CACHE='portal-lab-v0.8.0',VERSION='0.8.0',RELEASE='2026-10-19';
-const NOTES=['Два устья и причинность: релятивистские часы, световые сигналы и проверка замкнутой причинной петли'];
-const OWN=['./','./index.html','./styles.css','./app.js','./relativity.js','./optics.js','./tidal.js','./observatory.js','./material.js','./material-view.js','./waves.js','./wave-view.js','./spacetime.js','./designer.js','./rotation.js','./rotation-view.js','./causality.js','./causality-view.js','./audio.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg'];
+const PREFIX='portal-lab-',CACHE='portal-lab-v0.9.0',VERSION='0.9.0',RELEASE='2026-10-19';
+const NOTES=['Атлас причинности: карта скорости и расстояния, причинный порог, обратное решение, журнал опытов'];
+const OWN=['./','./index.html','./styles.css','./app.js','./relativity.js','./optics.js','./tidal.js','./observatory.js','./material.js','./material-view.js','./waves.js','./wave-view.js','./spacetime.js','./designer.js','./rotation.js','./rotation-view.js','./causality.js','./causality-view.js','./chronology.js','./atlas-view.js','./audio.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg'];
 const SCOPE=new URL('./',self.registration.scope);
 const ASSETS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(async c=>{
