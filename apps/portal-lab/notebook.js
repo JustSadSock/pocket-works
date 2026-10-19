@@ -9,7 +9,7 @@
 export const NOTEBOOK_SCHEMA="shov-experiments-v1";
 export const NOTEBOOK_MAX=32;
 export const MODE_LABELS=Object.freeze({
- observer:"Наблюдатель",matter:"Материя",wave:"Волны",designer:"Конструктор",
+ observer:"Наблюдатель",matter:"Материя",wave:"Волны",designer:"Конструктор",volume:"Объём",
  rotation:"Вращение",causality:"Причинность",atlas:"Атлас",
  map:"Топология",profile:"Профиль"
 });
