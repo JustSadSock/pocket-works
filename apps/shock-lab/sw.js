@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'shock-lab-';
-const CACHE_NAME = 'shock-lab-v1.1.0';
-const APP_VERSION = '1.1.0';
+const CACHE_NAME = 'shock-lab-v1.2.0';
+const APP_VERSION = '1.2.0';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Ударная труба с физическим разрывом мембраны, датчики давления A/Б, осциллограф и экспорт CSV."];
+const RELEASE_NOTES = ["Аэродинамическая труба: M 0.3–3.2, клин, крыло, цилиндр, сопло, физические линии тока и карта числа Маха."];
 const APP_SHELL = [
   './',
   './index.html',

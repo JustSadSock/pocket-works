@@ -12,16 +12,20 @@ export class ShockField {
     this.ny = ny;
     this.size = nx * ny;
     this.solid = new Uint8Array(this.size);
-    this.U = new Float32Array(this.size * 4);
-    this.V = new Float32Array(this.size * 4);
+    this.U = new Float32Array((this.size + 1) * 4);
+    this.V = new Float32Array((this.size + 1) * 4);
     this.fx = new Float32Array((nx + 1) * ny * 4);
     this.fy = new Float32Array(nx * (ny + 1) * 4);
     this.time = 0;
     this.maxPressure = 1;
+    this.maxMach = 0;
+    this.flowActive = false;
+    this.flowMach = 1.8;
     this.resetGas();
   }
 
   resetGas() {
+    this.flowActive = false;
     const a = this.U;
     for (let i = 0; i < this.size; i++) {
       const k = i * 4;
@@ -33,6 +37,38 @@ export class ShockField {
     this.V.set(a);
     this.time = 0;
     this.maxPressure = 1;
+    this.maxMach = 0;
+  }
+
+  // Uniform dimensionless freestream: rho=1, p=1, u=M sqrt(gamma).
+  // Inlet ghost state is held fixed at x=0, while the outlet and transverse
+  // boundaries extrapolate. Supersonic inlet is the best posed case; subsonic
+  // inlet is a simplified Dirichlet demonstration, not a stagnation plenum.
+  startFlow(mach = 1.8) {
+    this.resetGas();
+    this.flowActive = true;
+    this.flowMach = clamp(Number.isFinite(mach) ? mach : 1.8, .3, 3.2);
+    const u = this.flowMach * Math.sqrt(GAMMA);
+    const E = 1 / (GAMMA - 1) + .5 * u * u;
+    for (let i = 0; i <= this.size; i++) {
+      const k = i * 4;
+      this.U[k] = 1;
+      this.U[k + 1] = u;
+      this.U[k + 2] = 0;
+      this.U[k + 3] = E;
+    }
+    this.V.set(this.U);
+    this.maxMach = this.flowMach;
+    return this.flowMach;
+  }
+
+  setFlowInlet(mach = this.flowMach) {
+    this.flowMach = clamp(Number.isFinite(mach) ? mach : 1.8, .3, 3.2);
+    const u = this.flowMach * Math.sqrt(GAMMA), k = this.size * 4;
+    this.U[k] = this.V[k] = 1;
+    this.U[k+1] = this.V[k+1] = u;
+    this.U[k+2] = this.V[k+2] = 0;
+    this.U[k+3] = this.V[k+3] = 1/(GAMMA-1)+.5*u*u;
   }
 
   setWall(x, y, on = true, radius = 1.3) {
@@ -98,6 +134,30 @@ export class ShockField {
       line(0.055, 0.80, 0.945, 0.80, 1.6);
       line(0.055, 0.20, 0.055, 0.80, 1.6);
       line(0.945, 0.20, 0.945, 0.80, 1.6);
+    } else if (preset === 'wedge') {
+      // Diamond wedge. Oblique shocks develop from conservative flow around
+      // the actual impermeable raster faces rather than imposed rays.
+      this.fillPolygon([[.265,.5],[.66,.34],[.86,.5],[.66,.66]]);
+    } else if (preset === 'airfoil') {
+      // Thin double-wedge profile; angle changes as the flow wraps the body.
+      this.fillPolygon([[.23,.5],[.54,.435],[.89,.5],[.54,.565]]);
+    } else if (preset === 'cylinder') {
+      const radius = H * .135, cx = W*.50, cy = H*.50;
+      for (let y=0;y<H;y++)for(let x=0;x<W;x++) {
+        if ((x-cx)**2+(y-cy)**2 <= radius*radius) this.solid[y*W+x]=1;
+      }
+    } else if (preset === 'nozzle') {
+      // Convergent-divergent channel with raster-solid exterior; its exact
+      // response follows the prescribed inlet state, not an assumed nozzle law.
+      for(let x=0;x<W;x++){
+        const t=x/Math.max(1,W-1);
+        const half=t<.50 ? .335-(.335-.155)*(t/.50)
+          : .155+(.33-.155)*((t-.50)/.50);
+        for(let y=0;y<H;y++){
+          if(Math.abs(y/Math.max(1,H-1)-.5) > half)
+            this.solid[y*W+x]=1;
+        }
+      }
     } else if (preset === 'channel') {
       line(0.2, 0.26, 0.48, 0.26, 1.65);
       line(0.2, 0.74, 0.48, 0.74, 1.65);
@@ -105,6 +165,18 @@ export class ShockField {
       line(0.48, 0.74, 0.69, 0.56, 1.65);
       line(0.69, 0.44, 0.93, 0.28, 1.65);
       line(0.69, 0.56, 0.93, 0.72, 1.65);
+    }
+  }
+
+  fillPolygon(points) {
+    const pts = points.map(([x,y]) => [x*this.nx, y*this.ny]);
+    for(let y=0;y<this.ny;y++)for(let x=0;x<this.nx;x++){
+      let inside=false;
+      for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+        const ax=pts[i][0],ay=pts[i][1],bx=pts[j][0],by=pts[j][1];
+        if(((ay>y)!==(by>y)) && x < (bx-ax)*(y-ay)/(by-ay)+ax)inside=!inside;
+      }
+      if(inside)this.solid[y*this.nx+x]=1;
     }
   }
 
@@ -162,7 +234,7 @@ export class ShockField {
     const rho = Math.max(FLOOR, a[k]);
     const u = a[k + 1] / rho, v = a[k + 2] / rho;
     const p = Math.max(FLOOR, (GAMMA - 1) * (a[k + 3] - .5 * rho * (u*u + v*v)));
-    return {rho, pressure:p, mach:Math.hypot(u,v)/Math.sqrt(GAMMA * p / rho), solid:!!this.solid[i]};
+    return {rho, pressure:p, mach:Math.hypot(u,v)/Math.sqrt(GAMMA * p / rho), u, v, temperature:p/rho, solid:!!this.solid[i]};
   }
 
   // HLL is a conservative, approximate Riemann solver. The wall case applies
@@ -221,11 +293,13 @@ export class ShockField {
       maxRate=Math.max(maxRate,Math.abs(u)+Math.abs(v)+2*c);
     }
     const dt=0.35/maxRate;
+    if (this.flowActive) this.setFlowInlet();
     for(let y=0;y<H;y++){
       const row=y*W,off=y*(W+1);
       for(let x=0;x<=W;x++){
-        const l=row+Math.max(0,x-1),r=row+Math.min(W-1,x);
-        this.interfaceFlux(a,wall[l]?-1:l,wall[r]?-1:r,0,fx,(off+x)*4);
+        const l=x===0 && this.flowActive ? this.size : row+Math.max(0,x-1);
+        const r=row+Math.min(W-1,x);
+        this.interfaceFlux(a,(l<this.size&&wall[l])?-1:l,wall[r]?-1:r,0,fx,(off+x)*4);
       }
     }
     for(let y=0;y<=H;y++){
@@ -235,7 +309,7 @@ export class ShockField {
         this.interfaceFlux(a,wall[l]?-1:l,wall[r]?-1:r,1,fy,(y*W+x)*4);
       }
     }
-    let maxP=1;
+    let maxP=1,maxM=this.flowActive?this.flowMach:0;
     for(let y=0;y<H;y++){
       for(let x=0;x<W;x++){
         const i=y*W+x,k=i*4;
@@ -248,12 +322,15 @@ export class ShockField {
         b[k+3]=Math.max(b[k+3],ke+FLOOR/(GAMMA-1));
         const p=(GAMMA-1)*(b[k+3]-ke);
         if(p>maxP)maxP=p;
+        const mach=Math.hypot(b[k+1],b[k+2])/Math.sqrt(GAMMA*p*b[k]);
+        if(mach>maxM)maxM=mach;
       }
     }
     this.U=b;
     this.V=a;
     this.time+=dt;
     this.maxPressure=maxP;
+    this.maxMach=maxM;
     return dt;
   }
 

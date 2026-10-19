@@ -92,3 +92,46 @@ button{touch-action:manipulation}a{color:inherit;text-decoration:none}
  .rupture span{font-size:12px}.rupture small{font-size:8px}
 }
 @media(max-width:370px){.preset>span:last-child{font-size:7px}.scope-status{font-size:8px}.scope-tabs button{font-size:8px;padding:0 5px}}
+
+
+/* SHOCK 1.2 — wind tunnel instrumentation. */
+.preset-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+.preset{height:58px}
+.preset>span:last-child{font-size:7.8px}
+.viewstrip{grid-template-columns:repeat(4,minmax(0,1fr))}
+.view{font-size:8px;letter-spacing:.02em}
+.flow-panel{background:linear-gradient(115deg,#223a3b 0%,#192e34 72%);border-left:3px solid #deb77b}
+.flow-panel[hidden],.flow-metric[hidden]{display:none!important}
+.flow-caption{display:flex;justify-content:space-between;align-items:center;margin:-2px 0 14px;color:#a2c1bc;font:9px monospace;letter-spacing:.07em}
+.flow-caption strong{color:#e1b980;font-size:10px;font-family:system-ui,sans-serif}
+.flow-led{display:inline-block;height:7px;width:7px;border-radius:50%;background:#c4dfca;margin-right:6px;box-shadow:0 0 6px #b0d6bc77}
+.flow-gauges{margin:11px 0;display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.flow-gauges>div{padding:10px 9px;border:1px solid #49615d;background:#142a2f}
+.flow-gauges small{font:8px/1.4 monospace;color:#91b4b2;display:block;min-height:24px}
+.flow-gauges strong{display:block;font:22px monospace;color:#e7cd9e;letter-spacing:-.04em;margin-top:2px}
+.stream-toggle{width:100%;background:#203940;border:1px solid #4c6768;min-height:42px;color:#aac2c2;display:flex;align-items:center;gap:10px;padding:0 12px;font-size:10px;font-weight:850;letter-spacing:.045em}
+.stream-toggle .stream-icon{font:24px/1 Georgia,serif;color:#98b4b5}.stream-toggle strong{margin-left:auto;color:#6c9094;font:10px monospace}
+.stream-toggle.enabled{border-color:#b8aa83;color:#f1e6c8;background:#334544}.stream-toggle.enabled strong{color:#f0c888}
+.flow-reset{width:100%;margin-top:8px;min-height:40px;border:1px solid #9b835e;color:#e5c799;background:#2b3d3b;font-size:10px;font-weight:850;letter-spacing:.05em}
+.stream-toggle:active,.flow-reset:active{transform:translateY(1px)}
+.flow-note{margin:12px 0 0;color:#9cb4af;line-height:1.55;font-size:10px}
+.mach-ramp{background:linear-gradient(90deg,#1e3e4e,#4c9caa,#dcc087,#ef8155,#ffdeb0)!important}
+.shape-wedge{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 28'%3E%3Cpath d='M3 14L24 4L34 14L24 24Z' fill='%23b69a70' fill-opacity='.62' stroke='%23e5c18b' stroke-width='1.4'/%3E%3Cpath d='M0 4l7 6M0 24l7-6' stroke='%2390b7b6' stroke-width='1.4'/%3E%3C/svg%3E")}
+.shape-airfoil{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 28'%3E%3Cpath d='M2 14L16 9L35 14L16 19Z' fill='%23a68a66' stroke='%23e5c18b' stroke-width='1.5'/%3E%3Cpath d='M2 6h31M2 22h31' stroke='%2386b1b2' stroke-width='1' stroke-dasharray='2 3'/%3E%3C/svg%3E")}
+.shape-cylinder{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 28'%3E%3Ccircle cx='19' cy='14' r='10' fill='%23a68a66' stroke='%23e5c18b' stroke-width='1.6'/%3E%3Cpath d='M2 4v20' stroke='%2386b1b2' stroke-width='1.2'/%3E%3C/svg%3E")}
+.shape-nozzle{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 28'%3E%3Cpath d='M1 2L17 11L35 3 M1 26L17 17L35 25' fill='none' stroke='%23e5c18b' stroke-width='2.2'/%3E%3Cpath d='M2 14H33' stroke='%2386b1b2' stroke-width='1.3' stroke-dasharray='3 2'/%3E%3C/svg%3E")}
+@media(max-width:760px){
+  .preset-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .preset{height:54px}
+  .flow-panel{border-left-width:2px}
+  .flow-note{font-size:10px}
+  .flow-metric{flex:0.85}
+  .flow-metric small{font-size:7px}
+  .flow-metric strong{font-size:16px}
+}
+@media(max-width:370px){
+  .preset>span:last-child{font-size:7.1px}
+  .view{font-size:7.8px}
+}
+
+.chamber-live{margin-left:auto;display:flex;align-items:center;gap:15px}.flow-chip{font:12px/1 monospace;letter-spacing:.02em;color:#eec381;border:1px solid #716045;padding:7px 9px;background:#2a3937}.flow-chip[hidden]{display:none!important}@media(max-width:760px){.chamber-live{gap:7px}.flow-chip{font-size:10px;padding:6px 7px}}
