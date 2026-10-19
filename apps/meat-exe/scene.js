@@ -559,7 +559,10 @@ export function createWorld(canvas, initialSeed) {
       ring.position.y=.85+i*.92;ring.rotation.x=Math.PI/2;ring.scale.set(.85+i*.07,.84+i*.05,.9);
       group.add(ring);
     }
-    group.position.set(tissue.x,0,tissue.z);group.userData={flash:0};
+    const seam=new THREE.Mesh(valveRing,marrowDark);
+    seam.position.set(0,1.35,-.8);seam.scale.setScalar(.01);group.add(seam);
+    group.position.set(tissue.x,0,tissue.z);
+    group.userData={flash:0,tissue,seam};
     tissue.visual=group;tissueVisuals.set(tissue.id,group);
     return group;
   }
@@ -1233,8 +1236,14 @@ export function createWorld(canvas, initialSeed) {
     shotLight.visible=!conservativeRenderer&&quality!=='low'&&muzzleTime>0;
     shotLight.intensity=shotLight.visible?clamp(muzzleTime*38,0,5.2):0;
     hazardMat.emissiveIntensity=.48+Math.sin(time*(stage===4?6:2.5))*.17;
-    for(const root of tissueVisuals.values())if(root.visible){root.userData.flash=Math.max(0,root.userData.flash-dt);
-      root.scale.setScalar(1+Math.sin(time*3.4+root.position.x*.25)*.045+root.userData.flash*.4);
+    for(const root of tissueVisuals.values())if(root.visible){
+      root.userData.flash=Math.max(0,root.userData.flash-dt);
+      const tissue=root.userData.tissue,injury=clamp(1-(tissue?.hp??100)/100,0,1);
+      const healing=(tissue?.sealDelay??0)===0&&injury>0;
+      root.scale.setScalar((1-injury*.11)*(1+Math.sin(time*(healing?5.2:3.4)+root.position.x*.25)*.045+
+        root.userData.flash*.4));
+      const tear=root.userData.seam;
+      if(tear)tear.scale.setScalar(Math.max(.01,injury*(healing?.32:.52)));
     }
     membrane.emissiveIntensity=.23+physiology.beat*.14;
   }
