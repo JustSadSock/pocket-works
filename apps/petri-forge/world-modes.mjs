@@ -11,6 +11,7 @@ const combatDefaults=[['bolt','dash','mine'],['bolt','shield','heal']];
 let battlePolicy=makePolicy('aggressive',17),battleBusy=false,battleReplay=null,battleCursor=0,battleTimer=null;
 let racePolicy=null,raceReady=false,raceBusy=false,raceReplay=null;
 let raceReplayTimer=null,raceReplayCursor=0;
+let combatReplayRequested=false,raceReplayRequested=false;
 const framesInterval=95;
 const raceBridge='petri-shpilka-v1';
 const editor=mountCombatEditor({panel:document.getElementById('combatPanel'),canvas:document.getElementById('battleCanvas'),notify:status,onChange:()=>{
@@ -149,7 +150,7 @@ combatWorker.onmessage=async event=>{
       outcome:d.type==='combat-stopped'?'stopped':'completed',label:d.type==='combat-stopped'?'Тренировка остановлена. Текущие навыки сохранены.':
       'Контрольные бои: '+Math.round(100*(d.baseline?.winRate||0))+'% → '+Math.round(100*(d.validation?.winRate||0))+'% побед'}}}));
   }else if(d.type==='combat-tested'){
-   battlePolicy=d.policy;updateEval(null,d.validation);displayReplay(d.replay);status('Испытание завершено');window.dispatchEvent(new CustomEvent('petri:evaluated',{detail:{mode:'combat',text:$('battleSummary').textContent}}));
+   battlePolicy=d.policy;updateEval(null,d.validation);displayReplay(d.replay);if(combatReplayRequested){combatReplayRequested=false;$('battlePlay').click();}status('Испытание завершено');window.dispatchEvent(new CustomEvent('petri:evaluated',{detail:{mode:'combat',text:$('battleSummary').textContent}}));
   }else if(d.type==='combat-tournament'){
    $('battleLeaderboard').replaceChildren();
    for(const item of d.table){
@@ -272,7 +273,7 @@ window.addEventListener('message',async event=>{
       report:{units:d.complete||0,outcome:'stopped',label:'Тренировка остановлена · '+(d.complete||0)+' испытаний'}}}));
    status('Обучение гонщика остановлено');
   }else if(d.type==='tested'){
-   raceReplay=d.result;updateRaceReplay(d.result);
+   raceReplay=d.result;updateRaceReplay(d.result);if(raceReplayRequested){raceReplayRequested=false;playRaceReplay();}
    $('raceReport').textContent='Проверка · пройдено '+fmt(d.result.progress)+' м; кругов '+d.result.laps+'; вне дороги '+d.result.offroad+' шагов.';
    status('Проверка на гоночной трассе завершена');window.dispatchEvent(new CustomEvent('petri:evaluated',{detail:{mode:'race',text:$('raceReport').textContent}}));
   }else if(d.type==='loaded'){racePolicy=d.policy;status('Гоночная модель загружена');}
@@ -339,7 +340,7 @@ window.PetriForgeRuntime.combat={
  train:()=>{if(battleBusy)return false;$('battleTrain').click();return true;},
  test:()=>{if(battleBusy)return false;$('battleTest').click();return true;},
  stop:()=>{$('battleStop').click();},
- replay:()=>{if(battleReplay)$('battlePlay').click();else $('battleTest').click();},
+ replay:()=>{if(battleReplay)$('battlePlay').click();else{combatReplayRequested=true;$('battleTest').click();}},
  isBusy:()=>battleBusy,hasReplay:()=>!!battleReplay,
  configure:variant=>{$('battleArena').value=variant||'cover';},
  batch:count=>{$('battleIterations').value=String(count);}
@@ -350,7 +351,7 @@ window.PetriForgeRuntime.race={
  train:()=>{if(!raceReady||raceBusy)return false;$('raceTrain').click();return true;},
  test:()=>{if(!raceReady||raceBusy)return false;$('raceTest').click();return true;},
  stop:()=>{$('raceStop').click();},
- replay:()=>playRaceReplay(),
+ replay:()=>{if(raceReplay?.trace?.length)playRaceReplay();else{raceReplayRequested=true;$('raceTest').click();}},
  isBusy:()=>raceBusy,isReady:()=>raceReady,hasReplay:()=>!!raceReplay?.trace?.length,
  configure:seed=>{$('raceSeed').value=String(seed||41);},
  batch:count=>{$('raceIterations').value=String(count);}
