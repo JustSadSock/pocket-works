@@ -1409,6 +1409,7 @@ class UIManager {
     }
 
     startGame(numPlayers, seed = Date.now()) {
+        this.clearHeldInputs();
         if (this.gameFrame != null) {
             cancelAnimationFrame(this.gameFrame);
             this.gameFrame = null;
@@ -1545,6 +1546,7 @@ class UIManager {
     gameLoop(time) {
         this.gameFrame = null;
         if (gameState.isGameOver) {
+            this.clearHeldInputs();
             this.refreshTouchStatus();
             this.showGameOver();
             return;
@@ -2319,6 +2321,7 @@ class UIManager {
     }
 
     quitToMenu() {
+        this.clearHeldInputs();
         if (this.gameFrame != null) {
             cancelAnimationFrame(this.gameFrame);
             this.gameFrame = null;
