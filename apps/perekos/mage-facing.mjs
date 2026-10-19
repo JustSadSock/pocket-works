@@ -41,9 +41,14 @@ export function faceView(angle){
 // Weapon is authored pointing upward. Compute the grip rotation in *local*
 // sprite coordinates, compensating for the mirrored western-side body.
 // The resulting world-space weapon vector matches the true projectile ray.
-export function weaponRotation(angle){
- const a=normalizeFacing(angle);
- return normalizeFacing(Math.cos(a)<-.12?Math.PI*1.5-a:a+Math.PI/2);
+export function weaponRotation(angle,shoulderScale=1,torsoRoll=0){
+ const a=normalizeFacing(angle),mirror=Math.cos(a)<-.12?-1:1;
+ // Invert the visual body's nonuniform x-scale and torso lean *before*
+ // rotating the weapon. The outward shaft then lies on the actual shooting
+ // ray to floating-point precision in all eight directions.
+ const compress=clamp(Number.isFinite(shoulderScale)?shoulderScale:1,.5,1.5);
+ const localHeading=Math.atan2(Math.sin(a),Math.cos(a)/(mirror*compress));
+ return normalizeFacing(localHeading+Math.PI/2-torsoRoll);
 }
 export function signedTurn(from,to){
  return normalizeFacing(to-from);
