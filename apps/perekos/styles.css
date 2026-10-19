@@ -397,3 +397,51 @@
  #hero-preview{animation:none!important}
  .control-layer .spell-button{transition:none!important}
 }
+
+
+/* v0.13 — character-first selector: show the COSTUME, not a postage stamp. */
+.mage-options .mage-option{
+ min-height:81px;gap:12px;padding:7px 11px;
+ background:linear-gradient(120deg,#f5e6c6 0%,#dfcca8 100%);
+ border-left:4px solid #a27d54;
+ box-shadow:inset 0 2px #fff0d3,0 2px #90765b40;
+ transition:background .16s ease,filter .16s ease,transform .12s ease;
+}
+.mage-options .mage-option .mage-sprite{
+ flex:0 0 62px;width:62px;height:64px;object-fit:contain;
+ background:linear-gradient(140deg,#536752,#293e37);
+ border:2px solid #766e53;border-bottom:4px solid #ac9470;
+ image-rendering:pixelated;box-shadow:inset 2px 2px #8c9877,2px 3px #4c5746;
+}
+.mage-options .mage-storm .mage-sprite{background:linear-gradient(140deg,#536f71,#294750)}
+.mage-options .mage-stone .mage-sprite{background:linear-gradient(140deg,#657366,#34483e)}
+.mage-options .mage-option strong{
+ font-family:Georgia,serif;font-size:16px;font-variant:small-caps;color:#273c31;
+ letter-spacing:-.01em;
+}
+.mage-options .mage-option small{font-size:10px;line-height:1.35;color:#645e4d}
+.mage-options .mage-option.picked{
+ background:linear-gradient(120deg,#e6f0d8,#d7e4c9);
+ border:2px solid #47715d;border-left:4px solid #37674e;
+ box-shadow:inset 0 0 0 2px #abbf98,0 3px #314b3a;
+}
+@media(pointer:fine){
+ .mage-options .mage-option:hover{filter:brightness(1.035)}
+}
+@media(max-height:735px){
+ .mage-options .mage-option{min-height:68px;padding:5px 7px;gap:8px}
+ .mage-options .mage-option .mage-sprite{flex-basis:50px;width:50px;height:54px}
+ .mage-options .mage-option strong{font-size:13px}
+ .mage-options .mage-option small{font-size:9px}
+}
+@media(max-width:365px){
+ .mage-options .mage-option{gap:7px}
+ .mage-options .mage-option .mage-sprite{flex-basis:49px;width:49px;height:53px}
+}
+.net-mages .mage-option .mage-sprite{
+ flex-basis:32px;width:32px;height:34px;
+ border-width:1px;border-bottom-width:2px;
+}
+@media(prefers-reduced-motion:reduce){
+ .mage-options .mage-option{transition:none}
+}
