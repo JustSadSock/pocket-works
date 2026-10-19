@@ -29,7 +29,7 @@ function trainBatch(){
     }
     if(job.complete>=job.episodes){
       active=null;
-      emit('trained',{complete:job.complete,episodes:job.episodes,history:job.history,heat:job.heat,best:job.best,worst:job.worst,snapshot:agent.serialize()});
+      emit('trained',{complete:job.complete,episodes:job.episodes,success:job.successes/job.complete,average:job.totalReward/job.complete,steps:job.totalSteps/job.complete,history:job.history,heat:job.heat,best:job.best,worst:job.worst,snapshot:agent.serialize()});
     }else setTimeout(trainBatch,0);
   }catch(error){active=null;emit('error',{message:String(error.message||error)});}
 }
@@ -75,7 +75,7 @@ onmessage=event=>{
       emit('training',{episodes});
       setTimeout(trainBatch,0);
     }else if(type==='stop'){
-      if(active){const job=active;active=null;emit('stopped',{complete:job.complete,episodes:job.episodes,history:job.history,heat:job.heat,best:job.best,worst:job.worst,snapshot:agent.serialize()});}
+      if(active){const job=active;active=null;emit('stopped',{complete:job.complete,episodes:job.episodes,success:job.complete?job.successes/job.complete:0,average:job.complete?job.totalReward/job.complete:0,steps:job.complete?job.totalSteps/job.complete:0,history:job.history,heat:job.heat,best:job.best,worst:job.worst,snapshot:agent.serialize()});}
     }else if(type==='snapshot'){
       emit('snapshot',{snapshot:agent.serialize()});
     }else if(type==='evaluate'){
