@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "throne-three",
+  "direction": {
+    "premise": "A public court of three factions conceals two simultaneous political orders.",
+    "composition": "The court illustration and three seven-position faction tracks sit above a five-order control table.",
+    "shapeLanguage": "Pixel court portraits, seven square influence cells and small crown counters form a compact political instrument.",
+    "surfaceAndMaterial": "Warm bronze panels surround the original pixel court illustration and flat faction tracks.",
+    "paletteLogic": "Army red, treasury ochre and people green distinguish the three persistent influence tracks against violet court panels.",
+    "typography": "The original serif court headings and compact sans-serif action effects retain their hierarchy.",
+    "signature": "Two hidden political orders reveal together and push the three public faction tracks in different directions.",
+    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
+  },
+  "architecture": {
+    "spatialLayout": "map-table",
+    "controlLocation": "contextual",
+    "navigation": "none",
+    "chromeTopology": "tiled-grid",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent.",
+    "physicalFeedback": "Sealing an order locks that choice; both orders appear together and leave changed tracks, marks and history.",
+    "spatialRationale": "The court illustration and three seven-position faction tracks sit above a five-order control table. This keeps the current game object and its real inputs spatially connected on a phone.",
+    "comparisons": [
+      {
+        "slug": "perekos",
+        "spatialDifference": "perekos uses full-bleed-world and layered-panels. Here: The court illustration and three seven-position faction tracks sit above a five-order control table.",
+        "interactionDifference": "perekos uses perimeter with overlay-list. This game's actual verb is: Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent."
+      },
+      {
+        "slug": "meat-exe",
+        "spatialDifference": "meat-exe uses full-bleed-world and layered-panels. Here: The court illustration and three seven-position faction tracks sit above a five-order control table.",
+        "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent."
+      },
+      {
+        "slug": "living-history",
+        "spatialDifference": "living-history uses full-bleed-world and unframed-scene. Here: The court illustration and three seven-position faction tracks sit above a five-order control table.",
+        "interactionDifference": "living-history uses bottom-deck with scene-zoom. This game's actual verb is: Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent."
+      },
+      {
+        "slug": "cavitation-lab",
+        "spatialDifference": "cavitation-lab uses split-workspace and framed-stage. Here: The court illustration and three seven-position faction tracks sit above a five-order control table.",
+        "interactionDifference": "cavitation-lab uses bottom-deck with none. This game's actual verb is: Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent."
+      },
+      {
+        "slug": "not-dead-yet",
+        "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: The court illustration and three seven-position faction tracks sit above a five-order control table.",
+        "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "DOM faction cells and the source pixel court illustration preserve discrete influence values and legible action effects.",
+    "focalAsset": "The retained court illustration animates the relationship between the army, treasury and people; the authored throne icon shows their three colored pillars."
+  },
+  "motion": {
+    "character": "Sealing an order locks that choice; both orders appear together and leave changed tracks, marks and history.",
+    "action": "Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent.",
+    "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
+    "response": "The next visible state responds to the actual control: Two hidden political orders reveal together and push the three public faction tracks in different directions.",
+    "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
+    "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
+    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#start-btn"
+    },
+    "expectedChange": "A new political court opens with three neutral influence tracks and a required first public stance.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
