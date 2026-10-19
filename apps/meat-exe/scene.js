@@ -5,6 +5,7 @@ import {ENEMY_TELLS,telegraphSeverity} from './ecology.js';
 import {biomeForWave,biomeHazard,stageSeed} from './biomes.js';
 import {gastricChamber} from './gastricArt.js';
 import {structuralChamber} from './structuralArt.js';
+import {atmosphereProfile,moteAt,organLight,materialProperties,enemyMotion,fxLimits} from './atmosphere.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const cellKey = (x,z) => x + ',' + z;
@@ -40,6 +41,8 @@ export function createWorld(canvas, initialSeed) {
   scene.add(lamp);
   const pulseLamp = new THREE.PointLight(0xe32135, 8, 8, 1.5);
   scene.add(pulseLamp);
+  const shotLight=new THREE.PointLight(0xffc5a0,0,3.9,2);
+  shotLight.visible=false;scene.add(shotLight);
   const geometryFloor = new THREE.PlaneGeometry(1.03, 1.03, 6, 6).rotateX(-Math.PI/2);
   const floorPos = geometryFloor.attributes.position;
   for (let i=0;i<floorPos.count;i++) {
@@ -198,17 +201,46 @@ export function createWorld(canvas, initialSeed) {
     vascular:makeStructuralMaps('vascular'),marrow:makeStructuralMaps('marrow'),
     neural:makeStructuralMaps('neural')
   };
+  // Separate micro-roughness sampling from color: wet arteries reflect soft
+  // light, marrow scatters matte highlights, neural myelin has narrow glints.
+  function makeRoughness(kind){
+    const c=document.createElement('canvas');c.width=c.height=128;
+    const cx=c.getContext('2d');if(!cx)return null;
+    const pixels=cx.createImageData(128,128);
+    for(let y=0;y<128;y++)for(let x=0;x<128;x++){
+      const u=x/128,v=y/128;
+      const fold=kind==='vascular'?Math.sin(v*29+Math.sin(u*9)*2.2):
+        kind==='gastric'?Math.sin(u*31+v*12):
+        kind==='marrow'?Math.sin(u*45)*Math.sin(v*39):
+        Math.sin(u*58-v*28);
+      const variance=(rand(x,y,kind==='vascular'?631:kind==='gastric'?827:kind==='marrow'?1031:1207)-.5)*20;
+      const baseline=kind==='marrow'?232:kind==='gastric'?174:kind==='neural'?194:152;
+      const value=clamp(Math.round(baseline+fold*(kind==='marrow'?13:32)+variance),68,254);
+      const i=(y*128+x)*4;pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=value;pixels.data[i+3]=255;
+    }
+    cx.putImageData(pixels,0,0);
+    const map=new THREE.CanvasTexture(c);
+    map.wrapS=map.wrapT=THREE.RepeatWrapping;map.anisotropy=2;
+    return map;
+  }
+  const roughnessMaps=conservativeRenderer?null:{
+    vascular:makeRoughness('vascular'),gastric:makeRoughness('gastric'),
+    marrow:makeRoughness('marrow'),neural:makeRoughness('neural')
+  };
+  stomachWallMat.roughnessMap=roughnessMaps?.gastric||null;
+  gastricFoldMat.roughnessMap=roughnessMaps?.gastric||null;
   const structuralWallMats=Object.fromEntries(Object.entries(structuralMaps).map(([id,m])=>[
     id,new THREE.MeshStandardMaterial({color:0xffffff,map:m.color,bumpMap:m.bump,
-      bumpScale:id==='marrow'?.20:.12,roughness:id==='vascular'?.36:id==='marrow'?.88:.58,
+      bumpScale:id==='marrow'?.20:.12,roughnessMap:roughnessMaps?.[id]||null,
+      roughness:id==='vascular'?.55:id==='marrow'?.98:.69,
       emissive:id==='neural'?0x141025:id==='vascular'?0x28080c:0x1a1113,emissiveIntensity:.14})
   ]));
   const structuralAccents={
-    vascular:new THREE.MeshStandardMaterial({color:0xa43d4c,roughness:.34,
+    vascular:new THREE.MeshStandardMaterial({color:0xa43d4c,roughness:.55,roughnessMap:roughnessMaps?.vascular||null,
       map:structuralMaps.vascular.color,bumpMap:structuralMaps.vascular.bump,bumpScale:.11}),
-    marrow:new THREE.MeshStandardMaterial({color:0xe2d1b9,roughness:.87,
+    marrow:new THREE.MeshStandardMaterial({color:0xe2d1b9,roughness:.98,roughnessMap:roughnessMaps?.marrow||null,
       map:structuralMaps.marrow.color,bumpMap:structuralMaps.marrow.bump,bumpScale:.18}),
-    neural:new THREE.MeshStandardMaterial({color:0x9d93c2,roughness:.44,emissive:0x333056,
+    neural:new THREE.MeshStandardMaterial({color:0x9d93c2,roughness:.72,roughnessMap:roughnessMaps?.neural||null,emissive:0x333056,
       emissiveIntensity:.42,map:structuralMaps.neural.color,bumpMap:structuralMaps.neural.bump,bumpScale:.1})
   };
   // Software WebGL cannot afford the per-pixel bump shader for every wall,
@@ -220,8 +252,8 @@ export function createWorld(canvas, initialSeed) {
     }
   }
   const marrowDark=new THREE.MeshStandardMaterial({color:0x4f303a,roughness:.91});
-  const membrane = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap, roughness:.64, metalness:0, side:THREE.DoubleSide, emissive:0x230407, emissiveIntensity:.19});
-  const wallMat = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap, roughness:.66, metalness:0, emissive:0x280407, emissiveIntensity:.27});
+  const membrane = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap,roughnessMap:roughnessMaps?.vascular||null, roughness:.72, metalness:0, side:THREE.DoubleSide, emissive:0x230407, emissiveIntensity:.19});
+  const wallMat = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap,roughnessMap:roughnessMaps?.vascular||null, roughness:.76, metalness:0, emissive:0x280407, emissiveIntensity:.27});
   const boneMat = new THREE.MeshStandardMaterial({color:0xb3a087, roughness:.91, metalness:0});
   const bile = new THREE.MeshStandardMaterial({color:0x88b36e, roughness:.32, emissive:0x223b10, emissiveIntensity:.65});
   const bloodMat = new THREE.MeshBasicMaterial({color:0x9c0b19, transparent:true, opacity:.64, depthWrite:false, side:THREE.DoubleSide});
@@ -263,8 +295,17 @@ export function createWorld(canvas, initialSeed) {
   const mandibleGeo=new THREE.ConeGeometry(.25,.83,6);
   const spitterNeckGeo=new THREE.CylinderGeometry(.16,.38,.85,9);
   const shieldGeo=new THREE.IcosahedronGeometry(1,1);
-  for(const mat of Object.values(mobMats)){
-    mat.map=gastricMaps.color;mat.bumpMap=conservativeRenderer?null:gastricMaps.bump;mat.bumpScale=conservativeRenderer?0:.05;mat.needsUpdate=true;
+  // Enemy skin now tells species apart through its actual surface relief,
+  // not merely through a differently colored base material.
+  for(const [type,mat] of Object.entries(mobMats)){
+    const property=materialProperties(type);
+    const maps=property.family==='gastric'?gastricMaps:structuralMaps[property.family];
+    mat.map=maps.color;
+    mat.bumpMap=conservativeRenderer?null:maps.bump;
+    mat.bumpScale=conservativeRenderer?0:property.bumpScale;
+    mat.roughnessMap=roughnessMaps?.[property.family]||null;
+    mat.roughness=conservativeRenderer?property.roughness:clamp(property.roughness*1.32,.34,1);
+    mat.needsUpdate=true;
   }
   const vesselMat = new THREE.MeshStandardMaterial({color:0x7e2434,metalness:.06,roughness:.33,emissive:0x26050a,emissiveIntensity:.25});
   const vesselGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
