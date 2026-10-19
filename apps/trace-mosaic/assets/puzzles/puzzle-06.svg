@@ -1,20 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200">
-  <defs>
-    <linearGradient id="wash-5" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0c1621" />
-      <stop offset="55%" stop-color="#db5461" stop-opacity="0.34" />
-      <stop offset="100%" stop-color="#0c1621" />
-    </linearGradient>
-  </defs>
-  <rect width="1600" height="1200" fill="#0c1621" />
-  <rect width="1600" height="1200" fill="url(#wash-5)" />
-  <rect x="-60" y="80" width="180" height="920" rx="90" fill="#db5461" opacity="0.18" transform="rotate(6 30 540)" /><rect x="170" y="134" width="180" height="920" rx="90" fill="#ffd166" opacity="0.24" transform="rotate(4 260 540)" /><rect x="400" y="80" width="180" height="920" rx="90" fill="#db5461" opacity="0.30" transform="rotate(2 490 540)" /><rect x="630" y="134" width="180" height="920" rx="90" fill="#ffd166" opacity="0.36" transform="rotate(0 720 540)" /><rect x="860" y="80" width="180" height="920" rx="90" fill="#db5461" opacity="0.42" transform="rotate(-2 950 540)" /><rect x="1090" y="134" width="180" height="920" rx="90" fill="#ffd166" opacity="0.48" transform="rotate(-4 1180 540)" /><rect x="1320" y="80" width="180" height="920" rx="90" fill="#db5461" opacity="0.54" transform="rotate(-6 1410 540)" />
-  <circle cx="170" cy="120" r="62" fill="#db5461" opacity="0.26" /><circle cx="323" cy="317" r="81" fill="#ffd166" opacity="0.35" /><circle cx="476" cy="514" r="100" fill="#3ec1d3" opacity="0.44" /><circle cx="629" cy="711" r="63" fill="#db5461" opacity="0.53" /><circle cx="782" cy="908" r="82" fill="#ffd166" opacity="0.26" /><circle cx="935" cy="265" r="101" fill="#3ec1d3" opacity="0.35" /><circle cx="1088" cy="462" r="64" fill="#db5461" opacity="0.44" /><circle cx="1241" cy="659" r="83" fill="#ffd166" opacity="0.53" /><circle cx="214" cy="856" r="102" fill="#3ec1d3" opacity="0.26" />
-  <path d="M -50 170 C 240 60, 690 410, 1540 180" stroke="#3ec1d3" stroke-width="36" stroke-linecap="round" fill="none" opacity="0.45" /><path d="M 70 265 C 390 140, 780 442, 1530 300" stroke="#ffd166" stroke-width="32" stroke-linecap="round" fill="none" opacity="0.40" /><path d="M 190 360 C 540 220, 870 474, 1520 420" stroke="#db5461" stroke-width="28" stroke-linecap="round" fill="none" opacity="0.35" /><path d="M 310 455 C 690 300, 960 506, 1510 540" stroke="#3ec1d3" stroke-width="24" stroke-linecap="round" fill="none" opacity="0.30" /><path d="M 430 550 C 840 380, 1050 538, 1500 660" stroke="#ffd166" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.25" />
-  <rect x="60" y="120" width="132" height="132" rx="28" fill="none" stroke="#3ec1d3" stroke-width="10" opacity="0.34" /><rect x="248" y="380" width="132" height="132" rx="28" fill="none" stroke="#ffd166" stroke-width="10" opacity="0.34" /><rect x="436" y="640" width="132" height="132" rx="28" fill="none" stroke="#3ec1d3" stroke-width="10" opacity="0.34" /><rect x="624" y="120" width="132" height="132" rx="28" fill="none" stroke="#ffd166" stroke-width="10" opacity="0.34" /><rect x="812" y="380" width="132" height="132" rx="28" fill="none" stroke="#3ec1d3" stroke-width="10" opacity="0.34" /><rect x="1000" y="640" width="132" height="132" rx="28" fill="none" stroke="#ffd166" stroke-width="10" opacity="0.34" /><rect x="1188" y="120" width="132" height="132" rx="28" fill="none" stroke="#3ec1d3" stroke-width="10" opacity="0.34" /><rect x="1376" y="380" width="132" height="132" rx="28" fill="none" stroke="#ffd166" stroke-width="10" opacity="0.34" />
-  
-    <text x="98" y="1020" fill="rgba(255,255,255,0.92)" font-family="Trebuchet MS, Gill Sans, sans-serif" font-weight="700" font-size="92">Prism</text>
-    <text x="102" y="1110" fill="rgba(255,255,255,0.64)" font-family="Trebuchet MS, Gill Sans, sans-serif" font-weight="600" font-size="52">Orchard #06</text>
-  
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200">
+<defs></defs><rect width="1600" height="1200" fill="#262b4a"/>
+<circle cx="770" cy="400" r="450" fill="none" stroke="#f0dbb6" stroke-width="18" opacity=".3"/>
+<path d="M0 630Q350 410 780 630T1600 540V1200H0Z" fill="#3e5869"/>
+<path d="M0 840Q360 560 720 780T1600 710V1200H0Z" fill="#66837b"/>
+<path d="M0 1030Q540 850 870 960T1600 905V1200H0Z" fill="#a0a58c"/>
+<g opacity=".8" stroke="#eddbb9" stroke-width="7">
+<path d="M30 190L290 70 510 220 250 350Z" fill="#67979a"/>
+<path d="M530 100L810 30 1060 220 780 370Z" fill="#cca18c"/>
+<path d="M1120 130L1350 65 1570 245 1330 350Z" fill="#8ca99d"/>
+</g>
+<g transform="translate(325 570) scale(0.88)">
+<path d="M0 170V-180" stroke="#4c4156" stroke-width="31" stroke-linecap="round"/>
+<path d="M0-30Q-110-130-135-260M0-85Q95-150 142-270" stroke="#594962" stroke-width="17" fill="none"/>
+<g fill="#b6a7a4" stroke="#f0d7b1" stroke-width="6">
+<path d="M0-410Q145-350 145-205Q25-130 0-180Q-140-185-145-280Q-125-380 0-410Z"/>
+<path d="M0-410Q-34-320-10-205M0-410Q44-330 20-205" fill="none" opacity=".5"/>
+</g></g><g transform="translate(835 495) scale(1.15)">
+<path d="M0 170V-180" stroke="#4c4156" stroke-width="31" stroke-linecap="round"/>
+<path d="M0-30Q-110-130-135-260M0-85Q95-150 142-270" stroke="#594962" stroke-width="17" fill="none"/>
+<g fill="#7caab0" stroke="#f0d7b1" stroke-width="6">
+<path d="M0-410Q145-350 145-205Q25-130 0-180Q-140-185-145-280Q-125-380 0-410Z"/>
+<path d="M0-410Q-34-320-10-205M0-410Q44-330 20-205" fill="none" opacity=".5"/>
+</g></g><g transform="translate(1320 565) scale(0.92)">
+<path d="M0 170V-180" stroke="#4c4156" stroke-width="31" stroke-linecap="round"/>
+<path d="M0-30Q-110-130-135-260M0-85Q95-150 142-270" stroke="#594962" stroke-width="17" fill="none"/>
+<g fill="#d8a88b" stroke="#f0d7b1" stroke-width="6">
+<path d="M0-410Q145-350 145-205Q25-130 0-180Q-140-185-145-280Q-125-380 0-410Z"/>
+<path d="M0-410Q-34-320-10-205M0-410Q44-330 20-205" fill="none" opacity=".5"/>
+</g></g>
+<g fill="#d49a7d" stroke="#f4d8b0" stroke-width="10">
+<g><circle cx="245" cy="370" r="50" fill="#c98381"/><path d="M245 320q-8-20 14-31" fill="none" stroke="#566d56" stroke-width="9"/><path d="M255 307q22-38 52-25q-25 35-52 25Z" fill="#9fb592" stroke-width="4"/></g><g><circle cx="540" cy="250" r="36" fill="#d9c59c"/><path d="M540 214q-8-20 14-31" fill="none" stroke="#566d56" stroke-width="9"/><path d="M550 201q22-38 52-25q-25 35-52 25Z" fill="#9fb592" stroke-width="4"/></g><g><circle cx="920" cy="370" r="65" fill="#9da8b3"/><path d="M920 305q-8-20 14-31" fill="none" stroke="#566d56" stroke-width="9"/><path d="M930 292q22-38 52-25q-25 35-52 25Z" fill="#9fb592" stroke-width="4"/></g><g><circle cx="1195" cy="270" r="61" fill="#c98381"/><path d="M1195 209q-8-20 14-31" fill="none" stroke="#566d56" stroke-width="9"/><path d="M1205 196q22-38 52-25q-25 35-52 25Z" fill="#9fb592" stroke-width="4"/></g><g><circle cx="385" cy="735" r="45" fill="#d9c59c"/><path d="M385 690q-8-20 14-31" fill="none" stroke="#566d56" stroke-width="9"/><path d="M395 677q22-38 52-25q-25 35-52 25Z" fill="#9fb592" stroke-width="4"/></g><g><circle cx="735" cy="710" r="70" fill="#9da8b3"/><path d="M735 640q-8-20 14-31" fill="none" stroke="#566d56" stroke-width="9"/><path d="M745 627q22-38 52-25q-25 35-52 25Z" fill="#9fb592" stroke-width="4"/></g><g><circle cx="1085" cy="750" r="44" fill="#c98381"/><path d="M1085 706q-8-20 14-31" fill="none" stroke="#566d56" stroke-width="9"/><path d="M1095 693q22-38 52-25q-25 35-52 25Z" fill="#9fb592" stroke-width="4"/></g><g><circle cx="1410" cy="730" r="58" fill="#d9c59c"/><path d="M1410 672q-8-20 14-31" fill="none" stroke="#566d56" stroke-width="9"/><path d="M1420 659q22-38 52-25q-25 35-52 25Z" fill="#9fb592" stroke-width="4"/></g>
+</g>
+<g fill="none" stroke="#efdeb8" opacity=".42" stroke-width="7"><path d="M0 1040Q360 925 700 1060T1600 990"/><path d="M0 1065Q360 946 700 1080T1600 1011"/><path d="M0 1090Q360 967 700 1100T1600 1032"/><path d="M0 1115Q360 988 700 1120T1600 1053"/><path d="M0 1140Q360 1009 700 1140T1600 1074"/><path d="M0 1165Q360 1030 700 1160T1600 1095"/><path d="M0 1190Q360 1051 700 1180T1600 1116"/></g>
+<rect x="35" y="35" width="1530" height="1130" fill="none" stroke="#fff0cf" stroke-width="5" opacity=".29"/>
 </svg>
