@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'blockies-';
-const CACHE_NAME = 'blockies-v0.1.2';
-const APP_VERSION = '0.1.2';
+const CACHE_NAME = 'blockies-v0.1.3';
+const APP_VERSION = '0.1.3';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Сетевые партии сохраняются после выхода участника.", "Повторные матчи запускаются по общему голосованию.", "Исправлены управление, паузы и игровые циклы."];
+const RELEASE_NOTES = ["Новые вращения и призрачная проекция приземления.", "Плавное удержание сенсорных кнопок и геймпада.", "Улучшен отклик поля при приземлении фигур."];
 const APP_SHELL = [
   "./",
   "./index.html",
