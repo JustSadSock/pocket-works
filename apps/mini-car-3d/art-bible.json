@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "product": "mini-car-3d",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "fog-of-conquest",
+      "evidence": "covers/fog-of-conquest.jpg (inspected legacy cover, capture commit unknown)",
+      "lesson": "The geographic field and geographic orders belong to FOG; retain this source game’s specific object rather than copying its map presentation."
+    },
+    {
+      "slug": "zamazka",
+      "evidence": "covers/zamazka.jpg (inspected legacy cover, capture commit unknown)",
+      "lesson": "Painted restoration and the paper illustration are its central objects; this port keeps its recovered source art and its own playable control topology."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://www.beamng.com/game/",
+      "observation": "The developer separates vehicle behavior, world environments and physical crash consequences in its game overview.",
+      "principle": "Motion and contact outcomes need to remain observable on the same driven vehicle.",
+      "application": "Preserve physical car/prop contacts and keep this toy playground separate from CRUMPLE’s deforming car.",
+      "avoid": "Do not describe this rigid-body toy model as BeamNG-style soft-body deformation.",
+      "inspectedAt": "2026-10-19T09:25:00Z"
+    },
+    {
+      "url": "https://threejs.org/examples/",
+      "observation": "The engine’s official examples are individual interactive 3D scenes rather than a fixed dashboard layout.",
+      "principle": "The playable scene should own the viewport and its input mapping.",
+      "application": "Keep the recovered Three.js scene full-width with a small collapsible room control.",
+      "avoid": "Do not copy unrelated example art or expose engine debugging as player-facing UI.",
+      "inspectedAt": "2026-10-19T09:25:00Z"
+    },
+    {
+      "url": "https://rapier.rs/demos3d/index.html",
+      "observation": "The official Rapier 3D demo is an interactive physics surface; its HTML has no explanatory page text.",
+      "principle": "Keep physical behavior testable through actual rigid-body state and visible contact scenes.",
+      "application": "Bundle the same Rapier version for offline driving and authoritative shared playground physics.",
+      "avoid": "Do not claim a physics demo is evidence of this game’s final visual quality or damage model.",
+      "inspectedAt": "2026-10-19T09:25:00Z"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "retained-source",
+      "medium": "Three.js retains the recovered GLB model and source lighting; Rapier 0.12 simulates the local or server-owned rigid-body playground.",
+      "composition": "A third-person car and its nearby physical props fill the screen; a single joystick and small collapsible room control surround the world.",
+      "interaction": "Steer and accelerate a small model car with a joystick or keys, collide with physical props and optionally share the playground by room code.",
+      "motion": "Acceleration and braking change rigid-body velocity; steering turns the car, lamps react and the following camera settles behind it.",
+      "rationale": "Chosen for this restoration because the user requested the existing project and its recovered rules, content and recognizable scene."
+    },
+    {
+      "id": "tactile-miniature",
+      "medium": "A new WebGL miniature with raised physical pieces and a freely orbiting camera instead of the recovered scene renderer.",
+      "composition": "An oblique miniature sits in a circular tabletop with controls represented by surrounding physical tools.",
+      "interaction": "Orbit the miniature, inspect an object and manipulate it through projected three-dimensional handles.",
+      "motion": "Camera inertia, object weight and spring settling would replace the source input timing and discrete presentation.",
+      "rationale": "A future reinterpretation could make the object tactile, but would rebuild the renderer and make precise phone input less direct."
+    },
+    {
+      "id": "illustrated-sequence",
+      "medium": "An illustrated DOM folio with static authored state panels and short textual outcome cards.",
+      "composition": "A sequence of full-screen spreads isolates one choice and one outcome at a time, with no permanently visible playfield.",
+      "interaction": "Turn from a choice spread to a result spread and inspect a chronological illustrated history.",
+      "motion": "Page folds and a deliberate pause between choice and result would carry the rhythm of the interaction.",
+      "rationale": "A separate narrative version could explain rules slowly, but would conceal the continuously shared state needed by this recovered game."
+    }
+  ],
+  "selection": {
+    "concept": "retained-source",
+    "reason": "The requested work is restoration and integration of an existing game. Retaining its actual playable object, rules and recovered content serves that request with the least loss of identity.",
+    "rejected": [
+      {
+        "concept": "tactile-miniature",
+        "reason": "A new orbiting renderer would replace rather than restore the source presentation, introduce new assets and make the present direct controls less predictable."
+      },
+      {
+        "concept": "illustrated-sequence",
+        "reason": "A sequence of isolated spreads would hide simultaneous state and continuous interaction that define the source game’s playable loop."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "source-renderer-svg",
+      "availability": "available",
+      "reason": "The recovered browser renderer runs in local Chromium; app-local SVG install artwork is authored as editable vector geometry."
+    }
+  ],
+  "assets": [
+    {
+      "id": "install-identity",
+      "tool": "source-renderer-svg",
+      "source": "icons/source.svg",
+      "output": "icons/icon.svg",
+      "role": "Authored app-specific install identity accompanies the retained playable scene and appears in the page and PWA manifest.",
+      "acceptance": "Its concrete game motif remains distinguishable at small icon scale, without the temporary Forge monogram.",
+      "integration": "The PWA manifest and page icon load the local exported SVG without a CDN or network image dependency.",
+      "provenance": "App-specific SVG geometry authored for this restoration. Existing playable artwork remains the recovered user project content.",
+      "maxBytes": 8192
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Phone controls may obscure the playable object; review full-viewport captures after real input, not only canvas crops.",
+      "An online state update must not restart entry animations or conceal the resulting board or world state."
+    ],
+    "comparisons": [
+      "FOG geographic playfield versus this source game object at phone scale.",
+      "ZAMAZKA restoration controls versus this source game input and feedback loop."
+    ]
+  }
+}

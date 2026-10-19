@@ -4,7 +4,7 @@ import { createWorkshopMode } from '../../shared/workshop-mode.js';
 installMobileRuntime();
 createWorkshopMode({
   appName: 'КАЛИБР',
-  version: '2.0.0',
+  version: '2.0.1',
   cachePrefix: 'kalibr-',
   storageNamespace: 'pocket-works:kalibr'
 });

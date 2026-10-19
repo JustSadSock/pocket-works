@@ -1,0 +1,20 @@
+{
+  "id": "/apps/skyforge-relay/",
+  "name": "Skyforge Relay",
+  "short_name": "Skyforge Relay",
+  "description": "Совместный рейд: активируйте терминалы, заряжайте реактор и победите командный дрон.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#111b24",
+  "theme_color": "#111b24",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

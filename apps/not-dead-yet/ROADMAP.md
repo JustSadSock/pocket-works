@@ -395,9 +395,14 @@ decorative prototype. **No premature rework of the PocketWorks shell.**
       work to one texture sample per pixel rather than many ray samples.
       v2.2.2 Node CI passed 101/101; real 4-viewport browser visual smoke
       passed without JS errors.
-- [ ] Finish and inspect dedicated 2.2.2 CPU-precomputed lightmap
-      Playwright screenshots, compare the four-viewport capture against
-      baseline and profile real device FPS.
+- [x] Dedicated CPU-precomputed lighting Playwright
+      [39232638773](https://github.com/JustSadSock/pocket-works/actions/runs/39232638773)
+      passed 6/6 in mobile Chromium/WebKit and desktop Chromium;
+      four-viewport visual smoke
+      [39232641393](https://github.com/JustSadSock/pocket-works/actions/runs/39232641393)
+      also passed.
+- [ ] Measure p50/p95 on real phone GPUs and compare matched rooms under
+      the new tone-mapped illumination.
 - [ ] Profile shader ray-march cost on real lower-tier mobile GPUs, add
       device performance fallback if necessary.
 - [ ] Complete distinct large-scale connections between rooms and

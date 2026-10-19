@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Blockies - Team Puzzle Arcade</title>
+    <link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#121922"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
+<body>
+    <main class="container" data-app-shell><a class="pocket-exit" href="../../" data-app-control>Pocket Works</a>
+        <header>
+            <h1><span>Blockies</span> Arcade</h1>
+            <div class="menu-buttons">
+                <button data-native-press id="pause-btn" class="btn btn-secondary" style="display: none;">⏸ <span data-i18n="pause">Pause</span></button>
+                <button data-native-press id="quit-btn" class="btn btn-secondary" style="display: none;">🏠 <span data-i18n="menu">Menu</span></button>
+                <button data-native-press id="settings-btn" class="btn btn-secondary">⚙ <span data-i18n="settings">Settings</span></button>
+                <select id="language-selector" class="language-selector">
+                    <option value="en">EN</option>
+                    <option value="ru">РУ</option>
+                </select>
+                <div id="gamepad-status" class="gamepad-status"></div>
+            </div>
+        </header>
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="screen active">
+            <div class="game-info">
+                <h2 data-i18n="welcome">Welcome to Blockies!</h2>
+                <p data-i18n="tagline">Stack vibrant neon blocks in this modern take on the classic puzzle game. Play solo or team up with friends!</p>
+                <ul class="feature-list">
+                    <li>🎮 <span data-i18n="multipleGameModes">Multiple Game Modes</span></li>
+                    <li>👥 <span data-i18n="localAndOnlineMultiplayer">Local & Online Multiplayer</span></li>
+                    <li>⚡ <span data-i18n="fastPacedAction">Fast-Paced Action</span></li>
+                </ul>
+                <div class="mode-selection">
+                    <button data-native-press id="mode-single" class="mode-btn mode-btn-primary">
+                        <span class="mode-icon">🎯</span>
+                        <span class="mode-title" data-i18n="singlePlayer">Single Player</span>
+                        <span class="mode-desc" data-i18n="playSolo">Play solo</span>
+                    </button>
+                    <button data-native-press id="mode-local" class="mode-btn mode-btn-success">
+                        <span class="mode-icon">👥</span>
+                        <span class="mode-title" data-i18n="localCoop">Local Co-op</span>
+                        <span class="mode-desc" data-i18n="playTogether">Play together</span>
+                    </button>
+                    <button data-native-press id="mode-online" class="mode-btn mode-btn-info">
+                        <span class="mode-icon">🌐</span>
+                        <span class="mode-title" data-i18n="online">Online</span>
+                        <span class="mode-desc" data-i18n="playOverNetwork">Play over network</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Local Co-op Setup Screen -->
+        <div id="coop-setup-screen" class="screen">
+            <h2>🎮 <span data-i18n="localCoopSetup">Local Co-op Setup</span></h2>
+            <div class="coop-setup-container">
+                <div class="player-count-section">
+                    <h3 data-i18n="numberOfPlayers">Number of Players</h3>
+                    <div class="player-count-selector">
+                        <button data-native-press class="player-count-btn active" data-count="1">1</button>
+                        <button data-native-press class="player-count-btn" data-count="2">2</button>
+                        <button data-native-press class="player-count-btn" data-count="3">3</button>
+                        <button data-native-press class="player-count-btn" data-count="4">4</button>
+                    </div>
+                </div>
+                <div id="coop-players-config" class="coop-players-config">
+                    <!-- Player configurations will be dynamically added here -->
+                </div>
+                <div class="coop-setup-actions">
+                    <button data-native-press id="start-coop-btn" class="btn btn-primary btn-large">🚀 <span data-i18n="startGame">Start Game</span></button>
+                    <button data-native-press id="cancel-coop-btn" class="btn btn-secondary">← <span data-i18n="backToMenu">Back to Menu</span></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Online Lobby Screen -->
+        <div id="online-lobby-screen" class="screen">
+            <h2>🌐 Online Multiplayer</h2>
+            <div id="connection-status" class="connection-status">
+                <span class="status-indicator"></span>
+                <span class="status-text">Connecting to server...</span>
+            </div>
+            <div class="nickname-section">
+                <label for="nickname-input">Your Nickname:</label>
+                <input type="text" id="nickname-input" maxlength="20" placeholder="Enter your name...">
+            </div>
+            <div class="online-lobby-container">
+                <div class="rooms-section">
+                    <h3>Комната по коду</h3><label for="join-code">Код комнаты</label><input id="join-code" maxlength="8" autocomplete="off"><button id="join-code-btn" class="btn btn-primary">Подключиться</button>
+                    <div id="rooms-list" class="rooms-list">
+                        <!-- Rooms will be dynamically added here -->
+                    </div>
+                    <button data-native-press id="create-room-btn" class="btn btn-primary">Создать комнату</button>
+                </div>
+                <div id="room-view" class="room-view" style="display: none;">
+                    <div class="room-header">
+                        <h3 id="room-name">Комната</h3><output id="pocket-room-code"></output>
+                        <button data-native-press id="leave-room-btn" class="btn btn-secondary btn-small">← Leave Room</button>
+                    </div>
+                    <div class="room-players">
+                        <h4>Players in Room</h4>
+                        <div id="room-players-list" class="room-players-list">
+                            <!-- Players will be dynamically added here -->
+                        </div>
+                    </div>
+                    <div class="color-selector-section">
+                        <h4>Your Color</h4>
+                        <div id="color-options" class="color-options">
+                            <!-- Color options will be dynamically added here -->
+                        </div>
+                    </div>
+                    <button data-native-press id="ready-btn" class="btn btn-primary btn-large">✓ Ready</button>
+                    <div id="room-status" class="room-status">Waiting for players...</div>
+                </div>
+            </div>
+            <button data-native-press id="back-from-online-btn" class="btn btn-secondary">← Back to Menu</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div id="team-stats" class="team-stats">
+                <div id="team-score-card" class="team-score-card">
+                    <div class="score-card__label" data-i18n="teamScore">Team Score</div>
+                    <div id="team-score" class="score-card__value">0</div>
+                    <div class="score-card__meta">
+                        <span id="team-lines" class="score-card__meta-item">0 <span data-i18n="lines">lines</span></span>
+                    </div>
+                </div>
+                <div id="combo-indicator" class="combo-indicator" title="">
+                    <span id="combo-label" data-i18n="comboReady">Combo ready</span>
+                    <span id="combo-bonus"></span>
+                    <span class="combo-help">ℹ️</span>
+                </div>
+                <div id="clear-feed" class="clear-feed"></div>
+            </div>
+            <div id="next-pieces-preview" class="next-pieces-preview">
+                <!-- Next pieces will be dynamically created here -->
+            </div>
+            <div id="game-container">
+                <!-- Player boards will be dynamically created here -->
+            </div>
+            <div id="touch-controls" class="touch-controls">
+                <div id="touch-status" class="touch-status"></div>
+                <div class="touch-row">
+                    <button data-native-press class="touch-btn" data-action="left" data-i18n="left">Left</button>
+                    <button data-native-press class="touch-btn" data-action="down" data-i18n="down">Down</button>
+                    <button data-native-press class="touch-btn" data-action="right" data-i18n="right">Right</button>
+                </div>
+                <div class="touch-row">
+                    <button data-native-press class="touch-btn" data-action="rotate" data-i18n="rotate">Rotate</button>
+                    <button data-native-press class="touch-btn" data-action="drop" data-i18n="drop">Drop</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Screen -->
+        <div id="settings-screen" class="screen">
+            <h2 data-i18n="settings">Settings</h2>
+            <div id="settings-container">
+                <!-- Settings will be dynamically created here -->
+            </div>
+            <div class="settings-actions">
+                <button data-native-press id="save-settings-btn" class="btn btn-primary" data-i18n="saveSettings">Save Settings</button>
+                <button data-native-press id="reset-settings-btn" class="btn btn-warning" data-i18n="resetToDefault">Reset to Default</button>
+                <button data-native-press id="cancel-settings-btn" class="btn btn-secondary" data-i18n="cancel">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Pause Menu -->
+        <div id="pause-menu" class="modal">
+            <div class="modal-content">
+                <h2>Game Paused</h2>
+                <button data-native-press id="resume-btn" class="btn btn-primary">Resume</button>
+                <button data-native-press id="restart-btn" class="btn btn-secondary">Restart</button>
+                <button data-native-press id="quit-to-menu-btn" class="btn btn-secondary">Main Menu</button>
+            </div>
+        </div>
+
+        <!-- Game Over Menu -->
+        <div id="gameover-menu" class="modal">
+            <div class="modal-content">
+                <h2>Game Over!</h2>
+                <div id="final-scores"></div>
+                <button data-native-press id="play-again-btn" class="btn btn-primary">Play Again</button>
+                <button data-native-press id="menu-btn" class="btn btn-secondary">Main Menu</button>
+            </div>
+        </div>
+    </div>
+
+    </main><script type="module" src="./app.js"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Blockies" data-app-version="0.1.0"></script></body>
+</html>

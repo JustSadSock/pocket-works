@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "product": "blockies",
+  "captures": [
+    {
+      "id": "904c569174fa4a71d04eb464716a61a24ef867dcabf6f42a1a8e65f8326131b4",
+      "recordedAt": "2026-10-19T09:56:16.501Z",
+      "commit": "c36defa5e5bc5b175d746612066c910d2b6ba37a",
+      "viewport": [
+        390,
+        844
+      ],
+      "state": "initial, real input and settled game, then offline reload",
+      "engine": "Chromium",
+      "action": "Start recovered game, perform its real primary control and reload after the local HTTP transport stops accepting requests.",
+      "files": [
+        {
+          "path": "f9b14aab0ee845aaa8f0502534ca51d8b5d4284ee19cf8e3b7bdafc0c6f581fd.png",
+          "sha256": "f9b14aab0ee845aaa8f0502534ca51d8b5d4284ee19cf8e3b7bdafc0c6f581fd"
+        },
+        {
+          "path": "09cb751d13cb3d3e4e44e8da73d1f16d192eb1232a1f194acb64ff60df1d062a.png",
+          "sha256": "09cb751d13cb3d3e4e44e8da73d1f16d192eb1232a1f194acb64ff60df1d062a"
+        },
+        {
+          "path": "09cb751d13cb3d3e4e44e8da73d1f16d192eb1232a1f194acb64ff60df1d062a.png",
+          "sha256": "09cb751d13cb3d3e4e44e8da73d1f16d192eb1232a1f194acb64ff60df1d062a"
+        },
+        {
+          "path": "14d3e98027832252d798427562883106f55c1b87e9e6326aa91ca2845d2f9cac.webm",
+          "sha256": "14d3e98027832252d798427562883106f55c1b87e9e6326aa91ca2845d2f9cac"
+        },
+        {
+          "path": "e745be591860bdf3e233d409bdcba9127f6a9ae267a4cc534cf26037eca1fccc.png",
+          "sha256": "e745be591860bdf3e233d409bdcba9127f6a9ae267a4cc534cf26037eca1fccc"
+        }
+      ]
+    }
+  ],
+  "feedback": []
+}

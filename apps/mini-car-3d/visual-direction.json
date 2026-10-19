@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "mini-car-3d",
+  "direction": {
+    "premise": "Small physical cars and loose props share a toy driving playground without replacing the damage-focused driving game.",
+    "composition": "A third-person car and its nearby physical props fill the screen; a single joystick and small collapsible room control surround the world.",
+    "shapeLanguage": "The recovered GLB car has actual body, glass and wheel geometry, surrounded by cuboid and cylinder collision props.",
+    "surfaceAndMaterial": "Original toy-car body materials, animated wheels, head/rear lights and simple colored props preserve the source model presentation.",
+    "paletteLogic": "Colored cars and pale collision props stand apart from a dark striped ground; brake lamps remain red functional signals.",
+    "typography": "Small system labels name the room and solo state; the main world has no technical network debug overlay.",
+    "signature": "A driver pushes physical props in a common server-simulated playground while another driver sees the same objects and cars.",
+    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
+  },
+  "architecture": {
+    "spatialLayout": "full-bleed-world",
+    "controlLocation": "gesture-only",
+    "navigation": "world-travel",
+    "chromeTopology": "unframed-scene",
+    "dominantMotion": "rotational-inertia",
+    "primaryVerb": "Steer and accelerate a small model car with a joystick or keys, collide with physical props and optionally share the playground by room code.",
+    "physicalFeedback": "Acceleration and braking change rigid-body velocity; steering turns the car, lamps react and the following camera settles behind it.",
+    "spatialRationale": "A third-person car and its nearby physical props fill the screen; a single joystick and small collapsible room control surround the world. This keeps the current game object and its real inputs spatially connected on a phone.",
+    "comparisons": [
+      {
+        "slug": "perekos",
+        "spatialDifference": "perekos uses full-bleed-world and layered-panels. Here: A third-person car and its nearby physical props fill the screen; a single joystick and small collapsible room control surround the world.",
+        "interactionDifference": "perekos uses perimeter with overlay-list. This game's actual verb is: Steer and accelerate a small model car with a joystick or keys, collide with physical props and optionally share the playground by room code."
+      },
+      {
+        "slug": "meat-exe",
+        "spatialDifference": "meat-exe uses full-bleed-world and layered-panels. Here: A third-person car and its nearby physical props fill the screen; a single joystick and small collapsible room control surround the world.",
+        "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Steer and accelerate a small model car with a joystick or keys, collide with physical props and optionally share the playground by room code."
+      },
+      {
+        "slug": "living-history",
+        "spatialDifference": "living-history uses full-bleed-world and unframed-scene. Here: A third-person car and its nearby physical props fill the screen; a single joystick and small collapsible room control surround the world.",
+        "interactionDifference": "living-history uses bottom-deck with scene-zoom. This game's actual verb is: Steer and accelerate a small model car with a joystick or keys, collide with physical props and optionally share the playground by room code."
+      },
+      {
+        "slug": "cavitation-lab",
+        "spatialDifference": "cavitation-lab uses split-workspace and framed-stage. Here: A third-person car and its nearby physical props fill the screen; a single joystick and small collapsible room control surround the world.",
+        "interactionDifference": "cavitation-lab uses bottom-deck with none. This game's actual verb is: Steer and accelerate a small model car with a joystick or keys, collide with physical props and optionally share the playground by room code."
+      },
+      {
+        "slug": "not-dead-yet",
+        "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: A third-person car and its nearby physical props fill the screen; a single joystick and small collapsible room control surround the world.",
+        "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Steer and accelerate a small model car with a joystick or keys, collide with physical props and optionally share the playground by room code."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Three.js retains the recovered GLB model and source lighting; Rapier 0.12 simulates the local or server-owned rigid-body playground.",
+    "focalAsset": "NormalCar1.glb was recovered from the user’s Mini-car-3D repository; its model and materials are preserved in a local bundle."
+  },
+  "motion": {
+    "character": "Acceleration and braking change rigid-body velocity; steering turns the car, lamps react and the following camera settles behind it.",
+    "action": "Steer and accelerate a small model car with a joystick or keys, collide with physical props and optionally share the playground by room code.",
+    "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
+    "response": "The next visible state responds to the actual control: A driver pushes physical props in a common server-simulated playground while another driver sees the same objects and cars.",
+    "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
+    "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
+    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#menu summary"
+    },
+    "expectedChange": "The compact room control expands with explicit create, join and offline driving choices above the active 3D playground.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
