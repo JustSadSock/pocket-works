@@ -99,14 +99,22 @@ async function closeRoom(room) {
   log('room_closed', { roomId: room.id, gameId: room.gameId });
 }
 async function transition(room, action, player, payload = null) {
-  const result = await modules.call(room.handle, action, { state: room.state, player: { id: player.id, name: player.name }, payload, players: room.players });
+  const context = {state: room.state,
+    player: player ? {id:player.id,name:player.name} : null,
+    payload,players:room.players};
+  if(action==='tick')Object.assign(context,payload);
+  const result = await modules.call(room.handle, action, context);
   const encoded = JSON.stringify(result.state);
   if (Buffer.byteLength(encoded) > 256 * 1024) throw new Error('room_state_too_large');
   if (!Array.isArray(result.events) || result.events.length > 32) throw new Error('invalid_module_events');
   room.state = result.state;
   await saveRoom(room);
-  for (const event of result.events) {
-    if (typeof event?.type !== 'string' || event.type.length > 64) continue;
+  for (const original of result.events) {
+    if (typeof original?.type !== 'string' || original.type.length > 64) continue;
+    // Blockies room snapshots are public to the team. Project the actual
+    // authoritative state, not the module's empty state-change marker.
+    const event=room.gameId==='blockies' && original.type==='state'
+      ? {...original,payload:room.state} : original;
     if (event.to) {
       const target = sockets.get(event.to);
       if (room.players.some(p => p.id === event.to) && target?.roomId === room.id) send(target.ws, 'game_event', { roomId: room.id, event });
@@ -302,6 +310,14 @@ wss.on('connection', ws => {
   });
 });
 server.listen(port, host, () => log('server_listening', { host, port, maxRooms, maxConnections, restoredRooms: rooms.size }));
+setInterval(() => {
+  for (const room of rooms.values()) {
+    if(room.gameId!=='blockies'||room.state?.phase!=='playing')continue;
+    const onlineIds=activeRoomMembers(room).map(member=>member.id);
+    void enqueue(room,()=>transition(room,'tick',null,{now:Date.now(),onlineIds}));
+  }
+},1000).unref();
+
 setInterval(() => {
   for (const ws of wss.clients) {
     if (!ws.isAlive) { ws.terminate(); continue; }
