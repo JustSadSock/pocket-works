@@ -217,6 +217,10 @@ function renderMenu() {
           <button data-native-press class="ghost-button" data-action="join-room" ${disabled}>Войти по коду</button>
         </div>
 
+        <div class="practice-actions">
+          <button id="practiceBtn" data-native-press data-action="practice" class="ghost-button">Продолжить соло-практику</button>
+          <button id="resetPracticeBtn" data-native-press data-action="reset-practice" class="pill-button">Новая тренировка</button>
+        </div>
         <div class="menu-footer">Для команды нужна сеть. Соло-тренировка доступна без подключения.</div>
       </section>
       ${renderToasts()}
@@ -528,6 +532,14 @@ app.addEventListener("click", async (event) => {
   switch (action) {
     case "retry-connection":
       window.location.reload();
+      break;
+    case "practice":
+      state.socket?.practice(state.nickname);
+      break;
+    case "reset-practice":
+      if (window.confirm('Начать новую соло-тренировку? Текущий прогресс будет удалён.')) {
+        state.socket?.resetPractice(state.nickname);
+      }
       break;
     case "create-room":
       send("create_room", {
@@ -874,8 +886,4 @@ connectSocket();
 render();
 requestAnimationFrame(animate);
 
-document.querySelector("#practiceBtn").onclick=()=>state.socket.practice(state.nickname);
-document.querySelector("#resetPracticeBtn").onclick=()=>{
-  if (!window.confirm('Начать новую соло-тренировку? Текущий прогресс будет удалён.')) return;
-  state.socket.resetPractice(state.nickname);
-};
+
