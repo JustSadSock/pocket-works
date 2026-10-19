@@ -507,7 +507,9 @@ function getRoomScore(room) {
       teamScore: 0,
     };
   }
-  const timeLeftSec = Math.max(0, Math.ceil((room.game.endAt - Date.now()) / 1000));
+  // Freeze the speed bonus at completion; finished games must never decay.
+  const scoreTime = room.game.completedAt ?? Date.now();
+  const timeLeftSec = Math.max(0, Math.ceil((room.game.endAt - scoreTime) / 1000));
   const speedWeight = completion === 1 ? timeLeftSec / room.game.durationSec : (timeLeftSec / room.game.durationSec) * completion;
   const teamScore = Math.round(completion * 700 + speedWeight * 300);
   return {
