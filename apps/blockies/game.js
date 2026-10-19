@@ -2713,6 +2713,7 @@ class UIManager {
 
     updateRematchStatus(room) {
         if (!this.isOnlineMode || room.phase !== 'results') return;
+        if (!this.modals.gameOver.classList.contains('active')) this.showGameOver();
         const surviving = room.players.filter(p => !p.departed);
         const own = surviving.find(p => p.id === networkManager.socket.id);
         const ready = surviving.filter(p => p.ready).length;
@@ -2727,7 +2728,6 @@ class UIManager {
         if (text) text.textContent = currentLanguage === 'ru'
             ? `Повторный матч: готовы ${ready} из ${surviving.length}`
             : `Rematch: ${ready} of ${surviving.length} ready`;
-        if (!this.modals.gameOver.classList.contains('active')) this.showGameOver();
     }
 
     showStyledMessage(title, message, type = 'info') {
