@@ -97,7 +97,7 @@ export function createCausalityLab(canvas,{onAction}={}){
   const bg=ctx.createLinearGradient(0,0,w,h);
   bg.addColorStop(0,'#153431');bg.addColorStop(1,'#0a1b24');
   ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
-  const chart={x:pad+22,y:55,w:w-pad*2-34,h:Math.max(150,h*(small?.52:.60))};
+  const chart={x:pad+22,y:55,w:w-pad*2-34,h:Math.max(145,Math.min(h*(small?.48:.60),h-(small?273:295)))};
   const maxX=model.maximumDistance+Math.max(2,model.distance*.12);
   const ymax=Math.max(limit(),signal.departure+3,signal.firstArrival+3,signal.returnTime+3);
   const ymin=Math.min(0,signal.returnTime-2,signal.firstArrival-2);
