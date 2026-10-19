@@ -184,7 +184,14 @@ export class ContactTheater{
       [Math.cos(a)*d-3,Math.sin(a)*d*.8-6]],tint[(i+1)%3]);
     }
     drawPath(ctx,[[-reach*.8,4],[-4,0],[5,8],[reach*.65,3]],tint[3],3);
-   }else if(c.style==='arc'||c.style==='bolt'){
+   }else if(c.style==='arc'){
+    // Coil discharge leaves two offset conductive loops, unlike the single
+    // narrow line of a wire bolt. The footprint still starts at real contact.
+    for(const sign of [-1,1]){
+     arc(ctx,sign*4,0,reach*.58,tint[sign>0?0:1],2,-PI*.75,PI*.55);
+     drawPath(ctx,[[sign*4,0],[sign*9,-reach*.4],[sign*14,-reach*.6]],tint[1],1.5);
+    }
+   }else if(c.style==='bolt'){
     for(let i=0;i<(reduced?2:4);i++){
      const a=i*TAU/4+c.id*.16,dx=Math.cos(a)*reach,dy=Math.sin(a)*reach;
      drawPath(ctx,[[0,0],[dx*.55+dy*.19,dy*.55-dx*.19],[dx,dy]],tint[i%2],2);
