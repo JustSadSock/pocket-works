@@ -15,7 +15,7 @@ class Socket {
  practice(name){
   this.local=true;this.connected=false;this.pending.length=0;this.net.close();
   this.id='local';this.code='ПРАКТИКА';this.member={id:'local',name:name||'Пилот'};
-  const previous=localStorage.getItem(PRACTICE_KEY);
+  let previous=null;try{previous=localStorage.getItem(PRACTICE_KEY);}catch{}
   this.saved=loadPractice(localStorage);
   let recovered=Boolean(previous&&!this.saved);
   if(this.saved){
