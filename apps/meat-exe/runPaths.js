@@ -1,4 +1,5 @@
 // MEAT.EXE / v1.8: deterministic organ routes and earned epigenetic memory.
+import {sanitizeProtocol,sanitizeRunHistory,echoBonus} from './runTuning.js';
 // All effects are real simulation changes; UI is only a projection of this model.
 export const ROUTES=Object.freeze([
  Object.freeze({id:'bypass',name:'ТИХИЙ ОБХОД',detail:'На 2 врага меньше · +10 HP · иммунитет −12',cost:'Меньше трофеев и очков',group:'safe',enemies:-2,heal:10,heat:-12,biomass:0,damage:0,hazard:0}),
@@ -56,6 +57,7 @@ export function sanitizeArchive(value){
  const unlocked=Array.isArray(v.unlocked)?[...new Set(v.unlocked.filter(id=>geneMap.has(id)))]:[];
  return {echoes:Number.isInteger(v.echoes)?Math.max(0,Math.min(9999,v.echoes)):0,
   unlocked,equipped:unlocked.includes(v.equipped)?v.equipped:null,
+  protocol:sanitizeProtocol(v.protocol),history:sanitizeRunHistory(v.history),
   runs:Number.isInteger(v.runs)?Math.max(0,Math.min(99999,v.runs)):0};
 }
 export function unlockGene(archive,id){
@@ -76,7 +78,8 @@ export function applyGene(state,id){
 }
 export function earnEchoes(archive,run,victory){
  if(!run||!Number.isFinite(run.elapsed)||run.elapsed<0)return 0;
- const reward=Math.min(16,Math.max(1,Math.trunc(run.wave)||1)+Math.floor(Math.max(0,run.kills||0)/12)+(victory?5:0));
+ const base=Math.min(16,Math.max(1,Math.trunc(run.wave)||1)+Math.floor(Math.max(0,run.kills||0)/12)+(victory?5:0));
+ const reward=base+echoBonus(base,run,victory);
  archive.echoes=Math.min(9999,archive.echoes+reward);
  archive.runs=Math.min(99999,archive.runs+1);
  return reward;
