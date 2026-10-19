@@ -377,7 +377,8 @@ export class ShockField {
     const n=right-left+1;
     const upperSum=new Float64Array(n),lowerSum=new Float64Array(n);
     const upperCount=new Uint16Array(n),lowerCount=new Uint16Array(n);
-    let fx=0,fy=0,faces=0;
+    let fx=0,fy=0,moment=0,faces=0;
+    const cx=left+.25*chord,cy=(this.ny-1)*.5;
     const pressureAt=(i)=>{
       const k=i*4,a=this.U,rho=Math.max(FLOOR,a[k]);
       const kinetic=.5*(a[k+1]**2+a[k+2]**2)/rho;
@@ -386,14 +387,14 @@ export class ShockField {
     for(let y=0;y<H;y++)for(let x=0;x<W;x++){
       const i=y*W+x;if(!mask[i])continue;
       const xi=x-left;
-      if(x>0 && !solid[i-1]){fx+=pressureAt(i-1)-1;faces++;}
-      if(x<W-1 && !solid[i+1]){fx-=pressureAt(i+1)-1;faces++;}
+      if(x>0 && !solid[i-1]){const force=pressureAt(i-1)-1;fx+=force;moment-=(y-cy)*force;faces++;}
+      if(x<W-1 && !solid[i+1]){const force=1-pressureAt(i+1);fx+=force;moment-=(y-cy)*force;faces++;}
       if(y>0 && !solid[i-W]){
-        const p=pressureAt(i-W);fy+=p-1;faces++;
+        const p=pressureAt(i-W),force=p-1;fy+=force;moment+=(x-cx)*force;faces++;
         upperSum[xi]+=p;upperCount[xi]++;
       }
       if(y<H-1 && !solid[i+W]){
-        const p=pressureAt(i+W);fy-=p-1;faces++;
+        const p=pressureAt(i+W),force=1-p;fy+=force;moment+=(x-cx)*force;faces++;
         lowerSum[xi]+=p;lowerCount[xi]++;
       }
     }
@@ -401,7 +402,7 @@ export class ShockField {
     const upper=Array.from(upperSum,(v,i)=>upperCount[i]?(v/upperCount[i]-1)/q:null);
     const lower=Array.from(lowerSum,(v,i)=>lowerCount[i]?(v/lowerCount[i]-1)/q:null);
     return {
-      cd:fx/(q*chord),cl:-fy/(q*chord),
+      cd:fx/(q*chord),cl:-fy/(q*chord),cm:-moment/(q*chord*chord),
       fx,fy,q,chord,faces,upper,lower,
       incidence:this.incidence, mach:this.flowMach,
       type:this.bodyType,time:this.time,
