@@ -43,3 +43,13 @@ Next: resolve live-browser regressions, measure Shpilka parity/performance on re
 - V8 checks executed with authentic Perekos core and its rune/mage/element dependencies: 8400-step control match and 366 replay frames; Worker training end-to-end (1 and 2 generations) with valid snapshots, policy evaluation and measurable true combat damage. No reliable full-match victories in checked seeds: a remaining training-quality limitation, not a completed universal AI.
 - Added Node unit tests for tactical action legality, rune draft and deterministic trajectories; Playwright browser tests for full workflow, mobile rendering and transfer. **Full browser execution and deployed/mobile screenshot verification not run in this conversation.**
 - Next: stronger self-play/league, varied curricula, train/test comparison and better win-rate on full matches.
+
+
+2026-10-19 — **PetriForge 0.6.0 / Training quality and league** pushed to main:
+- Agent navigation and firing corrected for original mage projectile velocity/lifetime; closing distance and predictive interception improved without changing Perekos physics.
+- New perekos-training.mjs runs actual fixed-step rounds, two-round rune lessons and full matches with true damage/round/match records. No points awarded for draws.
+- Curriculum now includes dummy, charger, native built-in bot, aggressive/evasive policies and archived previous models. Evolution uses paired seed/opponent cases; training stage rotates, second rounds draft real runes. Full-match evaluation is held out from training; policy rolls back if independent round holdout clearly regresses.
+- UI: three curriculum programs, selectable test rival, learning-curve canvas, round wins/losses/draws and real full-match finish/win rate separately; independent comparison of transfer policy from Combat Forge before replacing a saved brain.
+- Verified in V8 with authentic Perekos core: 3 generations completed, 2 candidate mutations accepted during training, league populated, 3 opponent types + league exercised; independent holdout detected regression and original policy restored. A two-round scenario successfully recorded real rune drafting and two authentic wins against the stationary opponent. Test tournament, model comparison, and stopping during training all returned valid results. **No full-match wins against strong opponents were observed in this sample**.
+- Added deterministic curriculum/rune/self-play unit test coverage and browser journey updates, but complete Playwright + mobile/WebKit acceptance was not executed here.
+- Next: evaluate performance with stronger training curricula and actual full-match win rates instead of relying on proxy fitness.
