@@ -1036,7 +1036,7 @@ class UIManager {
             if (playerIndex === undefined) continue;
             
             const player = gameState.players[playerIndex];
-            if (!player || player.gameOver) continue;
+            if (!player || !this.isPlayerControllable(player)) continue;
             
             // Get or create button state for this gamepad
             if (!gameState.gamepads.buttonStates.has(i)) {
@@ -1212,6 +1212,12 @@ class UIManager {
             return null;
         }
 
+        // Online touch input must never control another participant's piece.
+        if (this.isOnlineMode) {
+            const local = gameState.players[this.localPlayerIndex];
+            return local && !local.gameOver ? local : null;
+        }
+
         const current = gameState.players[this.touchPlayerIndex];
         if (current && !current.gameOver) {
             return current;
@@ -1291,7 +1297,7 @@ class UIManager {
         const quitBtn = document.getElementById('quit-btn');
         if (pauseBtn && quitBtn) {
             if (screenName === 'gameScreen') {
-                pauseBtn.style.display = 'inline-flex';
+                pauseBtn.style.display = this.isOnlineMode ? 'none' : 'inline-flex';
                 quitBtn.style.display = 'inline-flex';
             } else {
                 pauseBtn.style.display = 'none';
@@ -1337,6 +1343,10 @@ class UIManager {
     }
 
     startGame(numPlayers, seed = Date.now()) {
+        if (this.gameFrame != null) {
+            cancelAnimationFrame(this.gameFrame);
+            this.gameFrame = null;
+        }
         setRandomSeed(seed);
         gameState.numPlayers = numPlayers;
         gameState.isPaused = false;
@@ -1422,7 +1432,7 @@ class UIManager {
         this.showScreen('gameScreen');
         this.refreshTouchStatus();
         this.scheduleBoardScaleUpdate();
-        requestAnimationFrame((time) => this.gameLoop(time));
+        this.gameFrame = requestAnimationFrame((time) => this.gameLoop(time));
     }
     
     createNextPiecePreview(player, container) {
@@ -1467,6 +1477,7 @@ class UIManager {
     }
 
     gameLoop(time) {
+        this.gameFrame = null;
         if (gameState.isGameOver) {
             this.refreshTouchStatus();
             this.showGameOver();
@@ -1508,7 +1519,7 @@ class UIManager {
             }
         }
 
-        requestAnimationFrame((time) => this.gameLoop(time));
+        this.gameFrame = requestAnimationFrame((time) => this.gameLoop(time));
     }
 
     drawBoard() {
@@ -2142,10 +2153,21 @@ class UIManager {
         }
     }
 
+    clearHeldInputs() {
+        for (const states of gameState.inputStates.values()) {
+            for (const state of Object.values(states)) {
+                state.active = false;
+                state.heldTime = 0;
+                state.hasFiredInitial = false;
+            }
+        }
+    }
+
     togglePause() {
-        if (gameState.isGameOver) return;
+        if (gameState.isGameOver || this.isOnlineMode) return;
 
         gameState.isPaused = !gameState.isPaused;
+        if (gameState.isPaused) this.clearHeldInputs();
         
         if (gameState.isPaused) {
             this.showModal('pause');
@@ -2156,12 +2178,23 @@ class UIManager {
     }
 
     restart() {
+        if (this.isOnlineMode) {
+            // Until server-authoritative rematches exist, leave rather than desynchronize.
+            this.quitToMenu();
+            this.showOnlineLobby();
+            return;
+        }
         this.hideModal('pause');
         this.hideModal('gameOver');
         this.startGame(gameState.numPlayers);
     }
 
     quitToMenu() {
+        if (this.gameFrame != null) {
+            cancelAnimationFrame(this.gameFrame);
+            this.gameFrame = null;
+        }
+        if (this.isOnlineMode && networkManager.currentRoom) networkManager.leaveRoom();
         this.hideModal('pause');
         this.hideModal('gameOver');
         gameState.isPaused = false;
@@ -2209,6 +2242,10 @@ class UIManager {
             scoresDiv.appendChild(scoreDiv);
         });
 
+        const again = document.getElementById('play-again-btn');
+        if (again) again.textContent = this.isOnlineMode
+            ? (currentLanguage === 'ru' ? 'К списку комнат' : 'Back to rooms')
+            : t('playAgain');
         this.showModal('gameOver');
     }
 
@@ -2412,7 +2449,8 @@ class UIManager {
         });
 
         networkManager.on('snapshot', data => applyNetworkSnapshot(data));
-        networkManager.connect();
+        if (networkManager.connected) this.updateConnectionStatus('connected');
+        else networkManager.connect();
     }
 
     updateConnectionStatus(status) {
@@ -2450,11 +2488,12 @@ class UIManager {
                 roomDiv.className = 'room-item';
                 roomDiv.innerHTML = `
                     <div class="room-info">
-                        <h4>${room.name}</h4>
+                        <h4></h4>
                         <p>${room.players}/${room.maxPlayers} players</p>
                     </div>
                     <button class="btn btn-primary btn-small">Join</button>
                 `;
+                roomDiv.querySelector('h4').textContent = String(room.name ?? '');
                 roomDiv.querySelector('.btn').addEventListener('click', () => this.joinRoom(room.id));
                 container.appendChild(roomDiv);
             });
@@ -2531,9 +2570,10 @@ class UIManager {
                 playerDiv.className = 'room-player-item';
                 playerDiv.innerHTML = `
                     <div class="room-player-color" style="background: ${player.color};"></div>
-                    <div class="room-player-name">${player.name}</div>
+                    <div class="room-player-name"></div>
                     <div class="room-player-status">${player.ready ? '✓ Ready' : 'Not Ready'}</div>
                 `;
+                playerDiv.querySelector('.room-player-name').textContent = String(player.name ?? '');
                 playersListEl.appendChild(playerDiv);
             });
         }
@@ -2604,6 +2644,8 @@ class UIManager {
         // Start the game with proper player count and shared seed
         const seed = normalizeSeed(data.seed ?? Date.now());
         this.startGame(numPlayers, seed);
+        this.touchPlayerIndex = this.localPlayerIndex;
+        this.refreshTouchStatus();
         
         // Set up online synchronization
         this.setupOnlineSync();
@@ -3100,13 +3142,19 @@ for(const [method,action] of [['move','move'],['rotate','rotate'],['drop','drop'
  Player.prototype[method]=function(...args){if(window.uiManager?.isOnlineMode){networkManager.sendPlayerInput({action,...(method==='move'?{direction:args[0]}:{})});return;}return original.apply(this,args);};
 }
 function applyNetworkSnapshot(s){
- if(!s||!window.uiManager?.isOnlineMode)return;
+ if(!s||!Array.isArray(s.board)||!Array.isArray(s.players)||!s.sharedStats||!window.uiManager?.isOnlineMode)return;
  gameState.board=s.board;gameState.sharedStats=s.sharedStats;gameState.sharedStatsDirty=true;gameState.isGameOver=s.isGameOver;
  s.players.forEach((data,i)=>{const player=gameState.players[i];if(player){const keys=player.keys;Object.assign(player,data,{keys});}});
  window.uiManager.drawBoard();window.uiManager.updateTeamStatsIfNeeded();
 }
 document.querySelector('#join-code-btn').onclick=()=>networkManager.joinRoom(document.querySelector('#join-code').value.trim());
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&!window.uiManager?.isOnlineMode)gameState.isPaused=true;});
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) return;
+    const ui = window.uiManager;
+    ui?.clearHeldInputs();
+    if (ui && !ui.isOnlineMode && ui.screens.gameScreen.classList.contains('active') && !gameState.isPaused && !gameState.isGameOver) ui.togglePause();
+});
+window.addEventListener('blur', () => window.uiManager?.clearHeldInputs());
 window.render_game_to_text=()=>JSON.stringify({coordinates:'cells, x right, y down, top-left origin',online:!!window.uiManager?.isOnlineMode,paused:gameState.isPaused,gameOver:gameState.isGameOver,board:gameState.board,score:gameState.sharedStats,players:gameState.players.map(p=>({id:p.id,position:p.position,piece:p.currentPiece,next:p.nextPiece,gameOver:p.gameOver}))});
 window.advanceTime=ms=>{if(window.uiManager&&!gameState.isPaused&&!window.uiManager.isOnlineMode){for(let t=0;t<ms;t+=16.667)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(16.667,ms-t));window.uiManager.drawBoard();}};
 
