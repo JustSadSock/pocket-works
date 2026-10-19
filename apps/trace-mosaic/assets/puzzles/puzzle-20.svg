@@ -1,20 +1,17 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200">
-  <defs>
-    <linearGradient id="wash-19" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#111827" />
-      <stop offset="55%" stop-color="#b8ff5d" stop-opacity="0.34" />
-      <stop offset="100%" stop-color="#111827" />
-    </linearGradient>
-  </defs>
-  <rect width="1600" height="1200" fill="#111827" />
-  <rect width="1600" height="1200" fill="url(#wash-19)" />
-  <rect x="-60" y="80" width="180" height="920" rx="90" fill="#b8ff5d" opacity="0.18" transform="rotate(6 30 540)" /><rect x="170" y="134" width="180" height="920" rx="90" fill="#44c2ff" opacity="0.24" transform="rotate(4 260 540)" /><rect x="400" y="80" width="180" height="920" rx="90" fill="#b8ff5d" opacity="0.30" transform="rotate(2 490 540)" /><rect x="630" y="134" width="180" height="920" rx="90" fill="#44c2ff" opacity="0.36" transform="rotate(0 720 540)" /><rect x="860" y="80" width="180" height="920" rx="90" fill="#b8ff5d" opacity="0.42" transform="rotate(-2 950 540)" /><rect x="1090" y="134" width="180" height="920" rx="90" fill="#44c2ff" opacity="0.48" transform="rotate(-4 1180 540)" /><rect x="1320" y="80" width="180" height="920" rx="90" fill="#b8ff5d" opacity="0.54" transform="rotate(-6 1410 540)" />
-  <circle cx="170" cy="120" r="62" fill="#b8ff5d" opacity="0.26" /><circle cx="323" cy="317" r="81" fill="#44c2ff" opacity="0.35" /><circle cx="476" cy="514" r="100" fill="#f5a6ff" opacity="0.44" /><circle cx="629" cy="711" r="63" fill="#b8ff5d" opacity="0.53" /><circle cx="782" cy="908" r="82" fill="#44c2ff" opacity="0.26" /><circle cx="935" cy="265" r="101" fill="#f5a6ff" opacity="0.35" /><circle cx="1088" cy="462" r="64" fill="#b8ff5d" opacity="0.44" /><circle cx="1241" cy="659" r="83" fill="#44c2ff" opacity="0.53" /><circle cx="214" cy="856" r="102" fill="#f5a6ff" opacity="0.26" />
-  <path d="M -50 170 C 240 60, 690 410, 1540 180" stroke="#f5a6ff" stroke-width="36" stroke-linecap="round" fill="none" opacity="0.45" /><path d="M 70 265 C 390 140, 780 442, 1530 300" stroke="#44c2ff" stroke-width="32" stroke-linecap="round" fill="none" opacity="0.40" /><path d="M 190 360 C 540 220, 870 474, 1520 420" stroke="#b8ff5d" stroke-width="28" stroke-linecap="round" fill="none" opacity="0.35" /><path d="M 310 455 C 690 300, 960 506, 1510 540" stroke="#f5a6ff" stroke-width="24" stroke-linecap="round" fill="none" opacity="0.30" /><path d="M 430 550 C 840 380, 1050 538, 1500 660" stroke="#44c2ff" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.25" />
-  <rect x="60" y="120" width="132" height="132" rx="28" fill="none" stroke="#f5a6ff" stroke-width="10" opacity="0.34" /><rect x="248" y="380" width="132" height="132" rx="28" fill="none" stroke="#44c2ff" stroke-width="10" opacity="0.34" /><rect x="436" y="640" width="132" height="132" rx="28" fill="none" stroke="#f5a6ff" stroke-width="10" opacity="0.34" /><rect x="624" y="120" width="132" height="132" rx="28" fill="none" stroke="#44c2ff" stroke-width="10" opacity="0.34" /><rect x="812" y="380" width="132" height="132" rx="28" fill="none" stroke="#f5a6ff" stroke-width="10" opacity="0.34" /><rect x="1000" y="640" width="132" height="132" rx="28" fill="none" stroke="#44c2ff" stroke-width="10" opacity="0.34" /><rect x="1188" y="120" width="132" height="132" rx="28" fill="none" stroke="#f5a6ff" stroke-width="10" opacity="0.34" /><rect x="1376" y="380" width="132" height="132" rx="28" fill="none" stroke="#44c2ff" stroke-width="10" opacity="0.34" />
-  
-    <text x="98" y="1020" fill="rgba(255,255,255,0.92)" font-family="Trebuchet MS, Gill Sans, sans-serif" font-weight="700" font-size="92">Circuit</text>
-    <text x="102" y="1110" fill="rgba(255,255,255,0.64)" font-family="Trebuchet MS, Gill Sans, sans-serif" font-weight="600" font-size="52">Meadow #20</text>
-  
-</svg>
+<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200"><defs><linearGradient id="bg" x2=".18" y2="1"><stop stop-color="#527b8b"/><stop offset=".55" stop-color="#a7b7b2"/><stop offset="1" stop-color="#dfbe96"/></linearGradient></defs><rect width="1600" height="1200" fill="url(#bg)"/><path d="M0 920Q310 820 590 955T1110 920T1600 950V1200H0Z" fill="#83a0a3"/><path d="M0 1100Q310 1000 590 1135T1110 1100T1600 1130V1200H0Z" fill="#506e78"/><g transform="translate(400 490) scale(1.05)"><path d="M0-270C-170-270-240-150-175 40Q-100 185 0 230Q100 185 175 40C240-150 170-270 0-270Z" fill="#c98480" stroke="#3a5968" stroke-width="15"/>
+<path d="M0-265Q-60-160-55 60Q-45 170 0 230Q45 170 55 60Q60-160 0-265Z" fill="#e6c38d" opacity=".75"/>
+<path d="M-155 0H155M-115 120H115" stroke="#f1d6a4" stroke-width="9"/>
+<path d="M-62 198L-34 285M62 198L34 285" stroke="#695a55" stroke-width="9"/>
+<rect x="-47" y="278" width="94" height="66" rx="5" fill="#806951" stroke="#d0ad7d" stroke-width="10"/></g><g transform="translate(1060 660) scale(0.85)"><path d="M0-270C-170-270-240-150-175 40Q-100 185 0 230Q100 185 175 40C240-150 170-270 0-270Z" fill="#8db9b0" stroke="#3a5968" stroke-width="15"/>
+<path d="M0-265Q-60-160-55 60Q-45 170 0 230Q45 170 55 60Q60-160 0-265Z" fill="#e6c38d" opacity=".75"/>
+<path d="M-155 0H155M-115 120H115" stroke="#f1d6a4" stroke-width="9"/>
+<path d="M-62 198L-34 285M62 198L34 285" stroke="#695a55" stroke-width="9"/>
+<rect x="-47" y="278" width="94" height="66" rx="5" fill="#806951" stroke="#d0ad7d" stroke-width="10"/></g><g transform="translate(1315 285) scale(0.38)"><path d="M0-270C-170-270-240-150-175 40Q-100 185 0 230Q100 185 175 40C240-150 170-270 0-270Z" fill="#e9bc78" stroke="#3a5968" stroke-width="15"/>
+<path d="M0-265Q-60-160-55 60Q-45 170 0 230Q45 170 55 60Q60-160 0-265Z" fill="#e6c38d" opacity=".75"/>
+<path d="M-155 0H155M-115 120H115" stroke="#f1d6a4" stroke-width="9"/>
+<path d="M-62 198L-34 285M62 198L34 285" stroke="#695a55" stroke-width="9"/>
+<rect x="-47" y="278" width="94" height="66" rx="5" fill="#806951" stroke="#d0ad7d" stroke-width="10"/></g><g transform="translate(725 145) scale(0.32)"><path d="M0-270C-170-270-240-150-175 40Q-100 185 0 230Q100 185 175 40C240-150 170-270 0-270Z" fill="#bb9aaf" stroke="#3a5968" stroke-width="15"/>
+<path d="M0-265Q-60-160-55 60Q-45 170 0 230Q45 170 55 60Q60-160 0-265Z" fill="#e6c38d" opacity=".75"/>
+<path d="M-155 0H155M-115 120H115" stroke="#f1d6a4" stroke-width="9"/>
+<path d="M-62 198L-34 285M62 198L34 285" stroke="#695a55" stroke-width="9"/>
+<rect x="-47" y="278" width="94" height="66" rx="5" fill="#806951" stroke="#d0ad7d" stroke-width="10"/></g><g fill="#f6dfb9" opacity=".83"><path d="M70 220q45-45 90 0q-45-20-90 0Z"/><path d="M250 380q45-45 90 0q-45-20-90 0Z"/><path d="M430 540q45-45 90 0q-45-20-90 0Z"/><path d="M610 220q45-45 90 0q-45-20-90 0Z"/><path d="M790 380q45-45 90 0q-45-20-90 0Z"/><path d="M970 540q45-45 90 0q-45-20-90 0Z"/><path d="M1150 220q45-45 90 0q-45-20-90 0Z"/><path d="M1330 380q45-45 90 0q-45-20-90 0Z"/><path d="M1510 540q45-45 90 0q-45-20-90 0Z"/></g><rect x="28" y="28" width="1544" height="1144" fill="none" stroke="#f4e3ba" stroke-width="4" opacity=".44"/></svg>
