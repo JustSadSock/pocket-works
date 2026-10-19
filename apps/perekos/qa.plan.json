@@ -13,6 +13,7 @@
         "tests/mage-motion.test.mjs",
         "tests/mage-regalia.test.mjs",
         "tests/mage-facing.test.mjs",
+        "tests/mage-bounds.test.mjs",
         "tests/court-materials.test.mjs",
         "tests/avatar.test.mjs",
         "tests/net.test.mjs",
