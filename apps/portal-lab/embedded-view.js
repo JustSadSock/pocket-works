@@ -1,3 +1,4 @@
+import {constraint} from './relativity.js';
 import {
  VOLUME_DEFAULTS,spatialEmbedding,surfacePoint,spatialMetricCheck,
  embeddedGrid,project3D,createSpatialBeam,stepSpatialBeam,spatialBeamStats
