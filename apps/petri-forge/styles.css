@@ -87,3 +87,31 @@ label.stack select,label.stack input{width:100%}
  .lab-group{padding:13px}
  .footnote{flex:0 0 auto}
 }
+
+
+/* PetriForge 0.3 — distinct experimental stations */
+[hidden]{display:none!important}
+.world-modes{display:flex;gap:7px;background:#172821;border-bottom:1px solid #3e5649;padding:8px 12px;overflow:auto;flex:0 0 auto}
+.world-modes button{min-height:36px;padding:7px 12px;border:1px solid #4c6556;background:#22372e;color:#b4c7b7;white-space:nowrap}
+.world-modes button.selected{color:#152820;background:#c3dea1;border-color:#c3dea1}
+.multi-arena,.race-station{min-height:0;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:15px;overflow:hidden;background:radial-gradient(ellipse at 45% 30%,#304036,#131e1b 75%)}
+#combatCanvas{width:100%;max-width:calc((var(--app-viewport-height,100dvh) - 190px)*1.65);max-height:calc(100% - 35px);height:auto;aspect-ratio:5/3;object-fit:contain;box-shadow:0 16px 50px #09120e,0 0 0 1px #506b57}
+.arena-caption{font-size:11px;color:#bed1bf;text-align:center;letter-spacing:.02em;min-height:20px}
+.race-station{background:#1f3029}
+#shpilkaFrame{width:min(100%,470px);height:calc(100% - 38px);min-height:240px;border:1px solid #69705e;box-shadow:0 18px 50px #071512;background:#d2c49d}
+#stationPanel{background:#1c2b26;border-left:1px solid #3f594b;overflow:auto;min-width:0;scrollbar-color:#567061 #1b2b26}
+.station-controls .lab-group{padding:15px}
+.station-controls .minor{font-size:12px;color:#afc5b0;line-height:1.5;margin-top:9px}
+.station-controls .lab-group>button{width:100%;margin-top:9px}
+.station-progress{background:#405848;height:5px;margin:10px 0;overflow:hidden}
+.station-progress i{display:block;background:#b9df8f;height:100%;width:0%;transition:width .2s}
+.station-controls input[type=range]{accent-color:#b9df8f;padding:0;min-height:20px}
+@media(max-width:700px){
+ .world-modes{padding:5px;gap:5px;position:relative}
+ .world-modes button{font-size:11px;min-height:37px}
+ .multi-arena{flex:0 0 auto;min-height:260px;height:clamp(270px,42dvh,410px);padding:9px}
+ #combatCanvas{max-width:100%;max-height:calc(100% - 30px)}
+ .race-station{flex:0 0 auto;height:clamp(350px,55dvh,620px);padding:7px}
+ #shpilkaFrame{min-height:280px;max-width:440px}
+ #stationPanel{border-left:0;border-top:1px solid #4b6454;overflow:visible}
+}

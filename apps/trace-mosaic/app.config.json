@@ -5,10 +5,11 @@
   "name": "Trace Mosaic",
   "shortName": "Trace Mosaic",
   "description": "Командная мозаика с распределёнными фрагментами и следами, временно блокирующими чужие пути.",
-  "version": "0.1.0",
-  "releaseDate": "2026-10-18",
-  "releaseDateTime": "2026-10-18T20:45:00Z",
+  "version": "0.1.1",
+  "releaseDate": "2026-10-19",
+  "releaseDateTime": "2026-10-19T11:30:00Z",
   "changelog": [
+    "Исправлены отмена перетаскивания, захват касаний, сохранение прокрутки лотка и избыточные перерисовки.",
     "Перенесена исходная игра с сохранением правил и отдельным хранением данных."
   ],
   "status": "experimental",
@@ -17,7 +18,7 @@
   "backgroundColor": "#13262c",
   "themeColor": "#13262c",
   "orientation": "portrait",
-  "cacheName": "trace-mosaic-v0.1.0",
+  "cacheName": "trace-mosaic-v0.1.1",
   "storageNamespace": "pocket-works:trace-mosaic",
   "tags": [
     "game",

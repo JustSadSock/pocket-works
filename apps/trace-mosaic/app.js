@@ -80,6 +80,12 @@ function handleMessage(type, payload) {
       }
       break;
     case "room_state":
+      // Ignore identical lobby/results heartbeats: replacing focused controls would
+      // dismiss mobile keyboards and reset selections every 750 ms.
+      if (state.room && payload.phase !== "playing" && payload.phase === state.room.phase &&
+          JSON.stringify(state.room) === JSON.stringify(payload)) {
+        return;
+      }
       state.room = payload;
       state.joinCode = payload.roomId || state.joinCode;
       if(!payload.practice)window.history.replaceState({}, "", `?room=${payload.roomId}`);
@@ -98,7 +104,8 @@ function handleMessage(type, payload) {
       break;
     case "drag_denied":
       if (state.drag && state.drag.tileId === payload.tileId) {
-        state.drag.visited = state.drag.visited.filter((cell) => cell !== payload.blockedCell);
+        const blockedIndex = state.drag.visited.indexOf(payload.blockedCell);
+        if (blockedIndex >= 0) state.drag.visited.length = blockedIndex;
         state.drag.hoveredCell = state.drag.visited.at(-1) ?? null;
       }
       pushToast("Чужой след перекрывает путь", "error");
@@ -122,6 +129,9 @@ function persistNickname() {
 
 function render() {
   trimToasts();
+  // PocketNet snapshots replace the game DOM; retain the user's tray position.
+  const inventoryScroll = app.querySelector(".inventory-shell")?.scrollTop || 0;
+  const focusedControl = document.activeElement?.id;
   const phase = getPhase();
   document.body.dataset.phase=phase;
   if (phase === "menu") {
@@ -132,6 +142,13 @@ function render() {
     app.innerHTML = renderGame();
   } else {
     app.innerHTML = renderResults();
+  }
+  const tray = app.querySelector(".inventory-shell");
+  if (tray) tray.scrollTop = inventoryScroll;
+  // Restore focus only when a rerender was unavoidable (e.g. a room update).
+  if (focusedControl && phase !== "playing") {
+    const replacement = document.getElementById(focusedControl);
+    if (replacement && replacement !== document.activeElement) replacement.focus({ preventScroll: true });
   }
   state.lastRenderAt = Date.now();
 }
@@ -562,11 +579,13 @@ app.addEventListener("pointerdown", (event) => {
     visited: sourceKind === "board" && Number.isInteger(location?.cell) ? [location.cell] : [],
   };
   event.preventDefault();
+  // Capture on a stable parent: the selected tile DOM is replaced by snapshots.
+  try { app.setPointerCapture(event.pointerId); } catch {}
   render();
 });
 
 window.addEventListener("pointermove", (event) => {
-  if (!state.drag) {
+  if (!state.drag || event.pointerId !== state.drag.pointerId) {
     return;
   }
   state.drag.x = event.clientX;
@@ -588,36 +607,35 @@ window.addEventListener("pointermove", (event) => {
       cells: state.drag.visited,
     });
   }
-  render();
+  updateTransientUI();
 });
 
 window.addEventListener("pointerup", (event) => {
-  if (!state.drag) {
-    return;
-  }
-  state.drag.x = event.clientX;
-  state.drag.y = event.clientY;
-  const targetCell = state.drag.hoveredCell ?? state.drag.sourceCell;
+  if (!state.drag || event.pointerId !== state.drag.pointerId) return;
+  // Dropping outside the board cancels instead of scoring the original cell.
+  const targetCell = getBoardCellFromPoint(event.clientX, event.clientY);
   send("drag_end", {
     tileId: state.drag.tileId,
-    targetCell,
-    cells: state.drag.visited,
+    targetCell: targetCell ?? -1,
+    cells: targetCell === null ? [] : state.drag.visited,
   });
   state.drag = null;
   render();
 });
 
-window.addEventListener("pointercancel", () => {
-  if (!state.drag) {
-    return;
-  }
-  send("drag_end", {
-    tileId: state.drag.tileId,
-    targetCell: state.drag.sourceCell,
-    cells: state.drag.visited,
-  });
+function cancelDrag() {
+  if (!state.drag) return;
+  // The legacy protocol supports an empty, invalid drop without creating a trail.
+  send("drag_end", { tileId: state.drag.tileId, targetCell: -1, cells: [] });
   state.drag = null;
   render();
+}
+
+window.addEventListener("pointercancel", (event) => {
+  if (state.drag && event.pointerId === state.drag.pointerId) cancelDrag();
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) cancelDrag();
 });
 
 function getBoardCellFromPoint(clientX, clientY) {
@@ -670,7 +688,16 @@ async function ensurePreparedGame(game) {
     return;
   }
   state.preparingKey = key;
-  const prepared = await preparePuzzleImage(game.image.path, game.grid);
+  let prepared;
+  try {
+    prepared = await preparePuzzleImage(game.image.path, game.grid);
+  } catch (error) {
+    if (state.preparingKey === key) {
+      state.preparingKey = null;
+      pushToast("Не удалось загрузить изображение. Перезапустите раунд.", "error");
+    }
+    return;
+  }
   if (state.preparingKey !== key) {
     return;
   }
@@ -770,12 +797,33 @@ window.advanceTime = (ms) => {
   render();
 };
 
+function updateTransientUI() {
+  if (getPhase() !== "playing") return;
+  const game = state.room?.game;
+  const timer = app.querySelector(".timer-chip");
+  if (timer && game) {
+    const time = formatTimer(Math.max(0, Math.ceil((game.endAt - state.now) / 1000)));
+    if (timer.textContent !== time) timer.textContent = time;
+  }
+  const ghost = app.querySelector(".drag-ghost");
+  if (ghost && state.drag) {
+    ghost.style.left = state.drag.x + "px";
+    ghost.style.top = state.drag.y + "px";
+  }
+  const currentlyHot = app.querySelector(".board-cell.hot");
+  const expected = state.drag?.hoveredCell;
+  if (currentlyHot && Number(currentlyHot.dataset.cell) !== expected) currentlyHot.classList.remove("hot");
+  if (expected != null && Number(currentlyHot?.dataset.cell) !== expected) {
+    app.querySelector(`.board-cell[data-cell="${expected}"]`)?.classList.add("hot");
+  }
+}
+
 function animate() {
   state.now = Date.now();
   const phase = getPhase();
-  if ((phase === "playing" || state.toasts.length) && Date.now() - state.lastRenderAt > 120) {
-    render();
-  }
+  if (phase === "playing") updateTransientUI();
+  // Do not reconstruct the entire board each animation frame.
+  if (state.toasts.length && Date.now() - state.lastRenderAt > 2700) render();
   requestAnimationFrame(animate);
 }
 

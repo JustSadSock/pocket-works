@@ -9,3 +9,6 @@ Pending: build, damage regression tests, Chromium/WebKit real driving and visual
 
 
 Пользователь остановил дальнейшую полировку и разрешил перенос с известными проблемами. См. KNOWN_ISSUES.md; не тратить следующий запуск на повтор уже перечисленных проверок.
+
+## 2026-10-19 — discoverability
+The launcher uses literal substring matching, so `Crumple Yard` did not match the branded `CRUMPLE // YARD` name. Added ordinary English and Russian spellings to app-owned search tags; kept branding, slug and existing driving games. Public deployment verification needs the user production URL.

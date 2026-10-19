@@ -590,3 +590,13 @@ body[data-phase="playing"] .inventory-shell{max-height:25dvh;overflow:auto;paddi
  body[data-phase="playing"] .inventory-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 
+
+/* Reliable touch dragging from either the board or the fragment tray. */
+body[data-phase="playing"] .board-shell,
+body[data-phase="playing"] .placed-piece[data-piece-id] { touch-action: none; }
+body[data-phase="playing"] .placed-piece[data-piece-id] { cursor: grab; }
+body[data-phase="playing"] .placed-piece[data-piece-id]:active { cursor: grabbing; }
+
+@media (prefers-reduced-motion: reduce) {
+  .trail-cell, .pill-button, .ghost-button, .accent-button { transition: none; }
+}

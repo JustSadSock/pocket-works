@@ -1,4 +1,5 @@
 // PEREKOS — The sunken dueling court. Static art, rendered once at 400×620.
+import {carveStoneFloor,carveButtressFace} from './court-materials.mjs';
 // No network, randomness from Math.random, or gameplay state is consulted.
 export const ART_WIDTH=400,ART_HEIGHT=620;
 const hash=n=>{let x=n>>>0;x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296};
@@ -133,7 +134,8 @@ export function createCourtBackdrop(walls=[]){
  const canvas=document.createElement('canvas');canvas.width=ART_WIDTH;canvas.height=ART_HEIGHT;
  const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
  mosaic(c);
- walls.forEach((w,i)=>buttress(c,w,i));
+ carveStoneFloor(c);
+ walls.forEach((w,i)=>{buttress(c,w,i);carveButtressFace(c,w,i)});
  [[57,83,-1],[349,98,1],[53,526,-1],[351,525,1]].forEach(([x,y,s])=>lantern(c,x,y,s));
  return canvas;
 }

@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'petri-forge-';
-const CACHE_NAME = 'petri-forge-v0.2.0';
-const APP_VERSION = '0.2.0';
+const CACHE_NAME = 'petri-forge-v0.3.0';
+const APP_VERSION = '0.3.0';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ['Эксперименты с многократным Q-learning обучением, сохранение моделей, повторы, график и независимая оценка.'];
+const RELEASE_NOTES = ['Боевые арены и эволюция агентов; первая интеграция с Шпилькой.'];
 const APP_SHELL = [
   './',
   './index.html',
@@ -13,6 +13,10 @@ const APP_SHELL = [
   './lab-core.mjs',
   './lab-worker.mjs',
   './model-store.mjs',
+  './multiworld.mjs',
+  './stations.html',
+  './combat-core.mjs',
+  './combat-worker.mjs',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',

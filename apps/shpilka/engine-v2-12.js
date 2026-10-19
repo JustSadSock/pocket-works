@@ -110,7 +110,7 @@ updateSoundLabels();
 showRaceUi(false);
 startScreen.hidden = true;
 resize();
-requestAnimationFrame(frame);
+if (!window.__petriHarness) requestAnimationFrame(frame);
 requestAnimationFrame(() => {
   setTimeout(() => {
     try {

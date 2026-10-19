@@ -56,7 +56,8 @@ export function createBattle({arena='cover',teamSize=1,seed=1,loadouts=['skirmis
  if(!ARENAS.some(x=>x.id===arena)||![1,2].includes(teamSize))throw Error('Некорректная арена');
  const rng=rand(seed),agents=[];
  for(let side=0;side<2;side++)for(let slot=0;slot<teamSize;slot++){
-  const id=side*teamSize+slot,loadout=LOADOUTS[loadouts[side]]||LOADOUTS.skirmisher;
+  const id=side*teamSize+slot,requested=loadouts[side],loadout=Array.isArray(requested)?requested.filter(x=>Object.hasOwn(SKILLS,x)).slice(0,4):(LOADOUTS[requested]||LOADOUTS.skirmisher);
+  if(!loadout.length)throw Error('У бойца должна быть хотя бы одна способность');
   agents.push({id,team:side,slot,x:side===0?110:690,y:teamSize===1?240:slot===0?163:317,
    vx:0,vy:0,face:side===0?0:Math.PI,hp:120,energy:100,shield:0,damage:0,kills:0,alive:true,
    loadout:loadout.slice(),cd:{bolt:0,dash:0,shield:0,strike:0,mine:0,heal:0},policy:validPolicy(policies?.[side])?policies[side]:makePolicy(side?'balanced':'aggressive',seed+id*13)});
