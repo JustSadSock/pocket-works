@@ -117,7 +117,7 @@ function mageCards(node,value,onPick,small=false){
   for(const m of MAGES.filter(m=>m.school===school.id)){
    const btn=document.createElement('button');btn.type='button';btn.dataset.mage=m.id;
    btn.className='mage-option'+(value===m.id?' picked':'');btn.setAttribute('aria-pressed',String(value===m.id));
-   const symbol=document.createElement('canvas');symbol.className='mage-sprite';symbol.width=80;symbol.height=82;const miniature=symbol.getContext('2d');miniature.imageSmoothingEnabled=false;drawMage(miniature,appearance,{x:40,y:60,scale:1.08,time:0,mageId:m.id,pose:{still:true}});
+   const symbol=document.createElement('canvas');symbol.className='mage-sprite';symbol.width=80;symbol.height=82;const miniature=symbol.getContext('2d');miniature.imageSmoothingEnabled=false;drawMage(miniature,appearance,{x:40,y:60,scale:1.08,time:0,mageId:m.id,face:Math.PI/4,pose:{still:true}});
    const label=document.createElement('span'),title=document.createElement('strong');title.textContent=m.name;label.append(title);
    if(!small){const detail=document.createElement('small');detail.textContent=m.description;label.append(detail)}
    btn.append(symbol,label);btn.addEventListener('click',()=>onPick(m.id));choices.append(btn);
