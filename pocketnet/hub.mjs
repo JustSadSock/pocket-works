@@ -279,9 +279,8 @@ export class PocketNetHub {
     // Only Blockies v6+ opts into sub-minute server simulation. Other modules retain
     // their existing low-frequency garbage-collection/achievement alarms.
     const waiting=this.sql('SELECT 1 FROM achievement_outbox LIMIT 1').toArray().length>0;
-    const live=this.sql("SELECT 1 FROM rooms WHERE game_id='blockies' AND json_extract(state,'$.phase')='playing' LIMIT 1").toArray()
-      .some(()=>this.sql("SELECT version FROM rooms WHERE game_id='blockies' AND json_extract(state,'$.phase')='playing'")
-        .toArray().some(row=>typeof this.module('blockies',row.version)?.onTick==='function'));
+    const live=this.sql("SELECT version FROM rooms WHERE game_id='blockies' AND json_extract(state,'$.phase')='playing'")
+      .toArray().some(row=>typeof this.module('blockies',row.version)?.onTick==='function');
     if(this.countRooms()||waiting){
       const delay=live?1_000:waiting?20_000:ROOM_TTL;
       this.ctx.storage.setAlarm(Date.now()+delay).catch(e=>console.error('pocketnet_alarm',String(e)));
