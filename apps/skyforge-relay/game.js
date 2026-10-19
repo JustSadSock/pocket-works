@@ -931,7 +931,8 @@ function resizeCanvas() {
   canvas.height = Math.max(500, Math.floor(rect.height * dpr));
 }
 
-function sendInput() {
+function sendInput(force=false) {
+  if(document.hidden&&!force)return;
   if (!state.roomCode) {
     return;
   }
@@ -1271,4 +1272,4 @@ for(const button of document.querySelectorAll('[data-flag]')){
  button.onpointerdown=e=>{button.setPointerCapture(e.pointerId);inputState[flag]=true;e.preventDefault();};
  const release=()=>{inputState[flag]=false;};button.onpointerup=release;button.onpointercancel=release;button.onlostpointercapture=release;
 }
-document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const flag of Object.keys(inputState))inputState[flag]=false;sendInput();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const flag of Object.keys(inputState))inputState[flag]=false;sendInput(true);}});
