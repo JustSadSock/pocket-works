@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'space-run-';
-const CACHE_NAME = 'space-run-v0.1.1';
-const APP_VERSION = '0.1.1';
+const CACHE_NAME = 'space-run-v0.2.0';
+const APP_VERSION = '0.2.0';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Интерактивный ремонт, проверка строительства и надёжные сохранения практики.", "Исправлены сенсорная стрельба и переключение станций."];
+const RELEASE_NOTES = ["Стрельба из реальных стволов турелей, прицел без сдвига и трассеры.", "Масса и инерция зависят от конструкции; боевые волны завершаются по таймеру.", "Ремонтная консоль и надёжные сохранения практики."];
 const APP_SHELL = [
 './assets/fonts/font-1.ttf',
 './assets/fonts/font-2.ttf',
