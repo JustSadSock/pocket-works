@@ -115,7 +115,8 @@ function rk4(v,fn,dt,keys){
 export function advanceRotating(v,m,dt=.035){
  if(v.status!=='flying')return v;
  if(!(dt>0&&dt<=.2*m.a))throw Error('Некорректный шаг');
- const n=Math.max(1,Math.ceil(dt/(.035*m.a))),h=dt/n;
+ const maxStep=.035*m.a/(1+2*m.omega*m.omega);
+ const n=Math.max(1,Math.ceil(dt/maxStep)),h=dt/n;
  for(let i=0;i<n&&v.status==='flying';i++){
   const previous=v.l,prev=v;
   const next=rk4(prev,w=>rotatingDerivative(w,m),h,['l','p','phi','t']);
