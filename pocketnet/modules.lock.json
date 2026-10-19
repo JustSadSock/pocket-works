@@ -201,5 +201,11 @@
     "versions": [
       "v1"
     ]
+  },
+  "blockies": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }

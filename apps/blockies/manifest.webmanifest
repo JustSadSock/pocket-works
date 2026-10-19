@@ -1,0 +1,20 @@
+{
+  "id": "/apps/blockies/",
+  "name": "Blockies",
+  "short_name": "Blockies",
+  "description": "Совместная аркада с падающими блоками, общим полем и серверными правилами.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#121922",
+  "theme_color": "#121922",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
