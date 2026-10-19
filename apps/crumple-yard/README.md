@@ -35,3 +35,5 @@ The lower-left steering surface is direct analog input. The right side has only 
 ## Persistence and QA
 
 The app saves the chosen car, trim, sound and graphics preference under pocket-works:crumple-yard. window.__CRUMPLE_TEST_STATE__ exposes runtime telemetry for automated mobile gameplay checks: speed, impact count, damaged zones, mechanical multipliers, physics quality, selected vehicle and boot state.
+
+Version 1.2.0 adds a fixed-world-azimuth follow camera by default. Toggle fixed/chase in the garage or pause sheet; the selected camera survives reload. This follows car translation and does not orbit with its heading. Existing Rapier contact damage and all other car apps are preserved. Tests include 20 Vitest cases, Chromium and WebKit touch-sized drive/turn/pause/camera/reload loops and a real frontal crash yielding nonzero shell deformation, debris and reduced engine/steering authority.
