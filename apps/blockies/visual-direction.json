@@ -61,11 +61,6 @@
         "slug": "petri-forge",
         "spatialDifference": "PETRIFORGE presents an editable simulation arena with terrain and autonomous agents; Blockies keeps a narrow shared falling-block well and compact score controls visible at once.",
         "interactionDifference": "PETRIFORGE experiments with agent behaviors and environment changes over simulated time; Blockies requires timed manual rotation, lateral positioning, and synchronous cooperative row clearing."
-      },
-      {
-        "slug": "petri-forge",
-        "spatialDifference": "PetriForge is an editable simulation laboratory with terrain and agent panels; Blockies has a fixed vertically framed shared well with at-a-glance ownership and falling-piece previews.",
-        "interactionDifference": "PetriForge configures agents and experiments, whereas Blockies relies on real-time direct movement, cooperative spatial decisions and immediate hard-drop feedback."
       }
     ]
   },
