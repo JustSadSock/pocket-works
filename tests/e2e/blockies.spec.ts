@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import {readFile} from 'node:fs/promises';
 
 async function openSolo(page: import('@playwright/test').Page) {
   await page.goto('/apps/blockies/', { waitUntil: 'domcontentloaded' });
@@ -402,6 +403,17 @@ test.describe('Blockies — solo/input/lifecycle smoke', () => {
     await expect(page.locator('#replay-viewer')).toBeVisible();
     const score=await page.locator('#replay-score').textContent();
     expect(score).toContain('Счёт');
+    // Export from the open viewer must contain that import, not another match.
+    const imported=JSON.parse(raw);
+    imported.seed=987654;
+    await page.locator('#replay-file').setInputFiles({
+      name:'other.json',mimeType:'application/json',
+      buffer:Buffer.from(JSON.stringify(imported))
+    });
+    const exported=page.waitForEvent('download');
+    await page.locator('#replay-export').click();
+    const exportedReplay=JSON.parse(await readFile(await (await exported).path(),'utf8'));
+    expect(exportedReplay.seed).toBe(987654);
     await page.locator('#replay-file').setInputFiles({
       name:'bad.json',mimeType:'application/json',
       buffer:Buffer.from('{"format":"blockies-replay-v1","frames":[]}')
