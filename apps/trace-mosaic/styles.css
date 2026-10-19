@@ -433,3 +433,60 @@ body[data-phase="playing"] .screen{
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
+
+/* Archive-grade end screen: the completed image is the trophy, not a KPI card. */
+.results-screen{overflow-y:auto}
+.result-top{margin-bottom:3px}
+.result-top .eyebrow:last-child{justify-self:end}
+.result-exhibit{
+ background:#e6d7b8;color:#25302b;padding:13px;
+ border:1px solid #b79b70;box-shadow:0 11px 28px #040e0d9c;
+ display:grid;gap:13px
+}
+.exhibit-heading .eyebrow{color:#9c6e3d}
+.exhibit-heading h2{
+ margin:9px 0 10px!important;
+ white-space:pre-line;font:400 39px/.94 Georgia,serif!important;
+ letter-spacing:-.05em;color:#25312c
+}
+.exhibit-heading p{margin:0;font-size:12px;line-height:1.35;color:#56625b}
+.exhibit-art{
+ position:relative;overflow:hidden;padding:7px;
+ background:#20302c;border:1px solid #6d674f;
+ box-shadow:inset 0 0 0 2px #9b8358
+}
+.exhibit-art img{width:100%;height:clamp(170px,29dvh,245px);object-fit:cover;display:block}
+.art-signature{
+ position:absolute;right:13px;bottom:13px;
+ font:700 10px monospace;letter-spacing:.09em;
+ padding:7px 10px;background:#192823dd;color:#f4d7ac
+}
+.exhibit-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-top:1px solid #b9ac90;padding-top:11px}
+.exhibit-metrics>div{display:grid;gap:6px;align-content:space-between}
+.exhibit-metrics span{font:750 9px/1.3 monospace;color:#747666;letter-spacing:.07em}
+.exhibit-metrics strong{font:500 clamp(20px,6vw,30px)/1 Georgia,serif;color:#2c352c}
+.result-caption{
+ display:flex;justify-content:space-between;gap:10px;color:#b5ae93;
+ font:700 10px monospace;letter-spacing:.12em;padding:6px 0 0
+}
+.score-card{
+ grid-template-columns:minmax(0,1fr) auto;align-items:center;row-gap:8px;
+ border:0;border-bottom:1px solid #536059;padding:12px 1px;background:transparent;border-radius:0
+}
+.score-name{display:flex;align-items:center;gap:9px;min-width:0}
+.score-name strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.score-dot{width:8px;height:8px;border-radius:2px;background:var(--score-color);flex:none}
+.score-position{font:700 10px monospace;color:#a8b5aa}
+.score-contribution{font:600 11px/1.2 Georgia,serif;font-style:italic;color:#ddb584;white-space:nowrap}
+.score-card p{grid-column:1/-1;font:600 11px/1.4 system-ui;color:#b9c6b9}
+.score-card p span{padding:0 4px;color:#987e5b}
+.result-actions{padding-top:10px}
+.result-wait{
+ display:flex;align-items:center;min-height:44px;
+ font-size:12px;line-height:1.3;color:#b7c4b4
+}
+@media(min-width:850px){
+ .result-shell{width:min(100%,640px)}
+ .result-exhibit{padding:19px;gap:17px}
+ .exhibit-heading h2{font-size:52px!important}
+}
