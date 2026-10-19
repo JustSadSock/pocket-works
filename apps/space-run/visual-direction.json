@@ -6,10 +6,10 @@
     "premise": "A modular spacecraft is both the shared construction surface and the crew’s fighting vehicle.",
     "composition": "The central ship grid is surrounded by explicit workshop and crew panels; on phones those panels slide over a full-width flight field.",
     "shapeLanguage": "Square hull cells and source illustrated engine, turret and reactor modules expose the playable ship architecture.",
-    "surfaceAndMaterial": "Illustrated metal module plates and raw grid sections, hand-authored radiator fins, bronze breaker toggle faces, amber heat strips and crisp cyan live-bus traces; damage changes real object shapes rather than decorative UI charts.",
+    "surfaceAndMaterial": "Wear-scored naval aerospace panels and glowing bus traces are joined by tumbling beveled metal shards, locally expanding pressure rings, hot slag and colored thermal eruptions rendered in the same 2D canvas world.",
     "paletteLogic": "Live conductor sections glow desaturated aquamarine, manual breakers use amber metal, open circuits use dull red, and true overheating is orange-red against a muted aerospace steel structure.",
     "typography": "Locally bundled Audiowide headings and Sora control labels preserve the original technical lettering offline.",
-    "signature": "A brass switch set directly into a single hull cell can darken an entire branch of the ship’s electrical skeleton, while neighboring radiator fins visibly cool hard-working gun and engine machinery.",
+    "signature": "The ship can literally shed metal into rotating, collidable fragments; an overheated reactor blows a local fireball across adjoining machines while the entire hull recoils from a weapon impact.",
     "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
   },
   "architecture": {
@@ -70,7 +70,7 @@
   },
   "motion": {
     "character": "A module snaps to hull cells during construction; occupied stations show their pilot and produce immediate shared movement or weapon fire.",
-    "action": "Turret recoil and off-axis thrust turn the physical hull; breaker toggles alter glowing shipboard bus routes, overheated modules pulse warm and radiator fins light up under active cooling.",
+    "action": "Asymmetric impacts impart translation and rotation; detached plates inherit angular momentum and tumble. Thermal incidents pulse out real shock rings and sparks from their world-space location.",
     "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
     "response": "The next visible state responds to the actual control: A crew member sits in the engine while another takes the turret; both actions affect the same ship and enemy wave.",
     "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
