@@ -1,20 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200">
-  <defs>
-    <linearGradient id="wash-4" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#11131a" />
-      <stop offset="55%" stop-color="#f29e4c" stop-opacity="0.34" />
-      <stop offset="100%" stop-color="#11131a" />
-    </linearGradient>
-  </defs>
-  <rect width="1600" height="1200" fill="#11131a" />
-  <rect width="1600" height="1200" fill="url(#wash-4)" />
-  <rect x="-60" y="80" width="180" height="920" rx="90" fill="#f29e4c" opacity="0.18" transform="rotate(6 30 540)" /><rect x="170" y="134" width="180" height="920" rx="90" fill="#f1c453" opacity="0.24" transform="rotate(4 260 540)" /><rect x="400" y="80" width="180" height="920" rx="90" fill="#f29e4c" opacity="0.30" transform="rotate(2 490 540)" /><rect x="630" y="134" width="180" height="920" rx="90" fill="#f1c453" opacity="0.36" transform="rotate(0 720 540)" /><rect x="860" y="80" width="180" height="920" rx="90" fill="#f29e4c" opacity="0.42" transform="rotate(-2 950 540)" /><rect x="1090" y="134" width="180" height="920" rx="90" fill="#f1c453" opacity="0.48" transform="rotate(-4 1180 540)" /><rect x="1320" y="80" width="180" height="920" rx="90" fill="#f29e4c" opacity="0.54" transform="rotate(-6 1410 540)" />
-  <circle cx="170" cy="120" r="62" fill="#f29e4c" opacity="0.26" /><circle cx="323" cy="317" r="81" fill="#f1c453" opacity="0.35" /><circle cx="476" cy="514" r="100" fill="#84dcc6" opacity="0.44" /><circle cx="629" cy="711" r="63" fill="#f29e4c" opacity="0.53" /><circle cx="782" cy="908" r="82" fill="#f1c453" opacity="0.26" /><circle cx="935" cy="265" r="101" fill="#84dcc6" opacity="0.35" /><circle cx="1088" cy="462" r="64" fill="#f29e4c" opacity="0.44" /><circle cx="1241" cy="659" r="83" fill="#f1c453" opacity="0.53" /><circle cx="214" cy="856" r="102" fill="#84dcc6" opacity="0.26" />
-  <path d="M -50 170 C 240 60, 690 410, 1540 180" stroke="#84dcc6" stroke-width="36" stroke-linecap="round" fill="none" opacity="0.45" /><path d="M 70 265 C 390 140, 780 442, 1530 300" stroke="#f1c453" stroke-width="32" stroke-linecap="round" fill="none" opacity="0.40" /><path d="M 190 360 C 540 220, 870 474, 1520 420" stroke="#f29e4c" stroke-width="28" stroke-linecap="round" fill="none" opacity="0.35" /><path d="M 310 455 C 690 300, 960 506, 1510 540" stroke="#84dcc6" stroke-width="24" stroke-linecap="round" fill="none" opacity="0.30" /><path d="M 430 550 C 840 380, 1050 538, 1500 660" stroke="#f1c453" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.25" />
-  <rect x="60" y="120" width="132" height="132" rx="28" fill="none" stroke="#84dcc6" stroke-width="10" opacity="0.34" /><rect x="248" y="380" width="132" height="132" rx="28" fill="none" stroke="#f1c453" stroke-width="10" opacity="0.34" /><rect x="436" y="640" width="132" height="132" rx="28" fill="none" stroke="#84dcc6" stroke-width="10" opacity="0.34" /><rect x="624" y="120" width="132" height="132" rx="28" fill="none" stroke="#f1c453" stroke-width="10" opacity="0.34" /><rect x="812" y="380" width="132" height="132" rx="28" fill="none" stroke="#84dcc6" stroke-width="10" opacity="0.34" /><rect x="1000" y="640" width="132" height="132" rx="28" fill="none" stroke="#f1c453" stroke-width="10" opacity="0.34" /><rect x="1188" y="120" width="132" height="132" rx="28" fill="none" stroke="#84dcc6" stroke-width="10" opacity="0.34" /><rect x="1376" y="380" width="132" height="132" rx="28" fill="none" stroke="#f1c453" stroke-width="10" opacity="0.34" />
-  
-    <text x="98" y="1020" fill="rgba(255,255,255,0.92)" font-family="Trebuchet MS, Gill Sans, sans-serif" font-weight="700" font-size="92">Moss</text>
-    <text x="102" y="1110" fill="rgba(255,255,255,0.64)" font-family="Trebuchet MS, Gill Sans, sans-serif" font-weight="600" font-size="52">Beacon #05</text>
-  
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200">
+<defs><linearGradient id="sky" x2="1" y2="1"><stop stop-color="#517980"/><stop offset="1" stop-color="#b2b7a0"/></linearGradient></defs><rect width="1600" height="1200" fill="#2a4b51"/>
+<rect y="570" width="1600" height="630" fill="#315b5c"/>
+<g transform="translate(365 185) scale(1.05)"><path d="M-240 20Q-175-70-95-40Q-65-125 28-100Q110-75 128-10Q216-49 251 30Q265 115 160 120H-175Q-280 97-240 20Z" fill="#d3d6b8" opacity=".8"/></g><g transform="translate(1200 140) scale(0.67)"><path d="M-240 20Q-175-70-95-40Q-65-125 28-100Q110-75 128-10Q216-49 251 30Q265 115 160 120H-175Q-280 97-240 20Z" fill="#d3d6b8" opacity=".8"/></g>
+<path d="M0 835Q400 740 740 850T1600 730V1200H0Z" fill="#76a59b"/>
+<path d="M0 955Q480 785 860 990T1600 920V1200H0Z" fill="#477d77"/>
+<path d="M-20 1190L-20 515Q210 440 420 720T840 780Q1050 600 1350 730T1600 700V1200Z" fill="#263f3c"/>
+<path d="M-20 1190L-20 740Q250 630 510 845T1040 885Q1350 790 1600 840V1200Z" fill="#466b4d"/>
+<path d="M-20 1190L-20 880Q240 745 520 950T1120 1020Q1390 855 1600 1000V1200Z" fill="#819466"/>
+<g transform="translate(950 580)">
+<path d="M-100 380L-58-230H58L100 380Z" fill="#d7caab" stroke="#233e40" stroke-width="20"/>
+<path d="M-59-230L-85-285Q0-350 85-285L59-230Z" fill="#b66f50"/>
+<path d="M-120-295L0-370 120-295Z" fill="#d2a66c" stroke="#293b38" stroke-width="15"/>
+<rect x="-73" y="-280" width="146" height="57" fill="#ecd6a0" stroke="#263c40" stroke-width="16"/>
+<path d="M-54-230L-45-80H45L54-230" fill="#d9bd8b" opacity=".55"/>
+<path d="M-65 10H65M-75 160H75M-90 300H90" stroke="#b68e6a" stroke-width="16"/>
+<path d="M-36 375V265Q0 185 36 265V375" fill="#263b39"/>
+<rect x="-25" y="-160" width="50" height="75" rx="7" fill="#355f61"/>
+<path d="M-25-160H25" stroke="#eac18e" stroke-width="12"/>
+</g>
+<path d="M950 268L90 0V535Z" fill="#f8de9b" opacity=".2"/>
+<path d="M950 268L1660 -70V560Z" fill="#f8df9b" opacity=".14"/>
+<g fill="none" stroke="#cedcc1" stroke-width="8" opacity=".5"><path d="M-30 840Q400 790 750 850T1650 830"/><path d="M-30 874Q400 819 750 881T1650 858"/><path d="M-30 908Q400 848 750 912T1650 886"/><path d="M-30 942Q400 877 750 943T1650 914"/><path d="M-30 976Q400 906 750 974T1650 942"/><path d="M-30 1010Q400 935 750 1005T1650 970"/><path d="M-30 1044Q400 964 750 1036T1650 998"/><path d="M-30 1078Q400 993 750 1067T1650 1026"/><path d="M-30 1112Q400 1022 750 1098T1650 1054"/><path d="M-30 1146Q400 1051 750 1129T1650 1082"/><path d="M-30 1180Q400 1080 750 1160T1650 1110"/><path d="M-30 1214Q400 1109 750 1191T1650 1138"/></g>
+<g fill="#a7b78a"><path d="M0 800q12-40 26-50q-5 29-26 50Z"/><path d="M103 937q12-40 26-50q-5 29-26 50Z"/><path d="M206 1074q12-40 26-50q-5 29-26 50Z"/><path d="M309 841q12-40 26-50q-5 29-26 50Z"/><path d="M412 978q12-40 26-50q-5 29-26 50Z"/><path d="M515 1115q12-40 26-50q-5 29-26 50Z"/><path d="M618 882q12-40 26-50q-5 29-26 50Z"/><path d="M721 1019q12-40 26-50q-5 29-26 50Z"/><path d="M824 1156q12-40 26-50q-5 29-26 50Z"/><path d="M927 923q12-40 26-50q-5 29-26 50Z"/><path d="M1030 1060q12-40 26-50q-5 29-26 50Z"/><path d="M1133 827q12-40 26-50q-5 29-26 50Z"/><path d="M1236 964q12-40 26-50q-5 29-26 50Z"/><path d="M1339 1101q12-40 26-50q-5 29-26 50Z"/><path d="M1442 868q12-40 26-50q-5 29-26 50Z"/><path d="M1545 1005q12-40 26-50q-5 29-26 50Z"/><path d="M48 1142q12-40 26-50q-5 29-26 50Z"/><path d="M151 909q12-40 26-50q-5 29-26 50Z"/><path d="M254 1046q12-40 26-50q-5 29-26 50Z"/><path d="M357 813q12-40 26-50q-5 29-26 50Z"/><path d="M460 950q12-40 26-50q-5 29-26 50Z"/><path d="M563 1087q12-40 26-50q-5 29-26 50Z"/><path d="M666 854q12-40 26-50q-5 29-26 50Z"/><path d="M769 991q12-40 26-50q-5 29-26 50Z"/><path d="M872 1128q12-40 26-50q-5 29-26 50Z"/><path d="M975 895q12-40 26-50q-5 29-26 50Z"/><path d="M1078 1032q12-40 26-50q-5 29-26 50Z"/><path d="M1181 1169q12-40 26-50q-5 29-26 50Z"/><path d="M1284 936q12-40 26-50q-5 29-26 50Z"/><path d="M1387 1073q12-40 26-50q-5 29-26 50Z"/><path d="M1490 840q12-40 26-50q-5 29-26 50Z"/><path d="M1593 977q12-40 26-50q-5 29-26 50Z"/><path d="M96 1114q12-40 26-50q-5 29-26 50Z"/><path d="M199 881q12-40 26-50q-5 29-26 50Z"/><path d="M302 1018q12-40 26-50q-5 29-26 50Z"/><path d="M405 1155q12-40 26-50q-5 29-26 50Z"/><path d="M508 922q12-40 26-50q-5 29-26 50Z"/><path d="M611 1059q12-40 26-50q-5 29-26 50Z"/><path d="M714 826q12-40 26-50q-5 29-26 50Z"/><path d="M817 963q12-40 26-50q-5 29-26 50Z"/></g>
+<rect x="35" y="35" width="1530" height="1130" fill="none" stroke="#fff0cf" stroke-width="5" opacity=".29"/>
 </svg>
