@@ -407,6 +407,16 @@ function renderRepairConsole() {
   const active = joined && station?.type === "repair";
   repairConsole.hidden = !active;
   if (!active) { repairSignature = null; return; }
+  if(station.status!=="online"||station.overheated||station.powered===false){
+    repairSignature=null;
+    clearNode(repairConsole);
+    const alert=document.createElement("h3");alert.textContent="ИНЖЕНЕРНЫЙ ПОСТ ОТКЛЮЧЁН";
+    const reason=document.createElement("p");
+    reason.textContent=station.overheated?"Перегрев: охлаждение происходит автоматически.":
+      station.powered===false?"Питание прервано: восстановите обшивку или запитайте участок от реактора.":
+      "Модуль повреждён: восстановите его перед ремонтом обшивки.";
+    repairConsole.append(alert,reason);return;
+  }
 
   const damaged = state.ship.modules.filter(m => m.status !== "online" || m.hp < m.maxHp);
   const target = damaged.find(m => m.id === pilot.repairTarget) || damaged[0];
