@@ -139,3 +139,39 @@ export function drawActorCues(ctx,a,x,y,isMine,time=0,reduced=false){
  }
  ctx.restore();
 }
+
+const LIGHT_RGB={fire:'255,172,98',storm:'157,231,214',stone:'206,212,159'};
+function spill(ctx,x,y,r,rgb,strength){
+ if(!finite(x)||!finite(y))return;
+ const g=ctx.createRadialGradient(x,y,2,x,y,r);
+ g.addColorStop(0,'rgba('+rgb+','+strength+')');
+ g.addColorStop(.31,'rgba('+rgb+','+(strength*.37)+')');
+ g.addColorStop(1,'rgba('+rgb+',0)');
+ ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);
+}
+// A small, real-time pass over the already painted stone. Every pool is
+// sourced from a visible active projectile, mine or actual actor status.
+export function drawSpellLighting(ctx,state,time=0,reduced=false){
+ if(!ctx||!state||state.phase!=='fight'||typeof ctx.createRadialGradient!=='function')return;
+ ctx.save();ctx.globalCompositeOperation='screen';
+ for(const q of (Array.isArray(state.shots)?state.shots:[]).slice(0,8)){
+  if(!finite(q.x)||!finite(q.y))continue;
+  const kind=['fire','storm','stone'].includes(q.element)?q.element:'fire';
+  const r=kind==='fire'?39:kind==='storm'?32:29;
+  spill(ctx,q.x,q.y,r,LIGHT_RGB[kind],reduced?.15:.16);
+ }
+ for(const m of (Array.isArray(state.mines)?state.mines:[]).slice(0,5)){
+  if(!finite(m.x)||!finite(m.y))continue;
+  const kind=['fire','storm','stone'].includes(m.element)?m.element:'fire';
+  spill(ctx,m.x,m.y,35,LIGHT_RGB[kind],reduced?.085:.08+.025*Math.sin(time*5+m.x)**2);
+ }
+ for(const a of (Array.isArray(state.actors)?state.actors:[]).slice(0,2)){
+  if(!finite(a.x)||!finite(a.y))continue;
+  if((Number(a.heat)||0)>=85)spill(ctx,a.x,a.y,43,LIGHT_RGB.fire,.105);
+  else if((Number(a.cast)||0)>.12){
+   const kind=a.mageId==='wire'||a.mageId==='coil'?'storm':a.mageId==='pebble'||a.mageId==='slate'?'stone':'fire';
+   spill(ctx,a.x,a.y,30,LIGHT_RGB[kind],.07);
+  }
+ }
+ ctx.restore();
+}
