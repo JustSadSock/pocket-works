@@ -416,3 +416,38 @@ body.combat-ui .controls-card {
 @media (max-height:520px) {
   #repair-console {bottom: 8px; max-height: 55dvh; width: min(310px, 48vw);}
 }
+
+
+/* Engineering telemetry is integrated with the ship, not a generic dashboard. */
+#systems-status{
+ position:absolute;z-index:7;right:12px;top:78px;
+ display:flex;flex-direction:column;gap:3px;align-items:flex-end;
+ font:700 11px "Sora",sans-serif;letter-spacing:.02em;
+ pointer-events:none;text-shadow:0 1px 4px #06131b;
+}
+#systems-status .system-line{padding:5px 8px;background:rgba(5,22,31,.80);
+ border-right:3px solid #7ac2c6;max-width:min(290px,60vw);}
+#systems-status .system-line.warning{border-right-color:#e8a05b;color:#ffdfab;}
+#systems-status .system-line.danger{border-right-color:#f66e74;color:#ffb4bd;}
+.engineering-card{border-left:3px solid #d7ad75;}
+#engineering-panel{display:grid;gap:9px;font:12px "Sora",system-ui,sans-serif;}
+.eng-summary{display:flex;justify-content:space-between;gap:6px;
+ padding:7px 0;border-bottom:1px solid rgba(159,212,211,.18);}
+.eng-plate,.eng-module{display:flex;align-items:center;justify-content:space-between;
+ gap:8px;padding:6px 0;border-bottom:1px solid rgba(159,212,211,.10);}
+.eng-plate .eng-label,.eng-module .eng-label{display:grid;gap:4px;flex:1;min-width:0;}
+.eng-plate .eng-label small,.eng-module .eng-label small{color:#accbd1;font:10px "Sora",sans-serif;}
+.eng-plate button{font-size:11px;min-height:38px;flex-shrink:0;background:#b77e43;color:#081821;font-weight:700;}
+.eng-plate button:disabled{opacity:.36;cursor:not-allowed;}
+.eng-meter{height:4px;background:#233a40;border-radius:2px;overflow:hidden;}
+.eng-meter>i{display:block;height:100%;background:#f3ba73;}
+.eng-meter.power>i{background:#86d8d7;}
+.eng-meter.heat>i{background:#ed7d50;}
+.eng-subtitle{font-size:11px;color:#ecc697;letter-spacing:.06em;font-weight:700;margin-top:5px;}
+.eng-empty{font-size:11px;color:#a3c0c6;line-height:1.4;}
+#repair-console .eng-plate{border-color:rgba(160,206,201,.22);}
+#repair-console .eng-plate button{min-height:40px;flex:0 0 auto;}
+@media(max-width:1024px){
+  #systems-status{top:14px;right:8px;font-size:10px;gap:2px}
+  #systems-status .system-line{padding:4px 6px;max-width:55vw}
+}
