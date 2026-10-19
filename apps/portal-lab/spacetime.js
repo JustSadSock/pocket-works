@@ -89,3 +89,16 @@ export function sampleEinstein(m,start=-4,end=4,count=241){
  }
  return out;
 }
+
+/** Limiting b=L/E for photons to cross from infinity to the opposite region.
+ * It is the minimum R(l)/N(l) along the radial optical path, which can be
+ * outside the throat in a user-defined metric with multiple photon spheres.
+ */
+export function criticalImpact(m){
+ let best=Infinity,at=0;
+ for(let i=0;i<=1200;i++){
+  const l=(i/100)*m.a,g=geometry(l,m),b=g.R/g.N;
+  if(b<best){best=b;at=l;}
+ }
+ return {b:best,at};
+}
