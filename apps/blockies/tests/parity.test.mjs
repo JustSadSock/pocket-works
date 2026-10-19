@@ -36,6 +36,7 @@ test('line-clear scoring remains byte-equivalent after excluding client-only eff
   const sanitize = source => segment(source,'    clearLines() {','    update(deltaTime) {')
     .replace(/^\s*\/\/.*$/gm,'')
     .replace(/\s*window\.uiManager\?\.signalImpact\(linesCleared\);/g,'')
+    .replace(/\s*window\.uiManager\?\.signalLineClear\(clearedRows\);/g,'')
     .replace(/\s+/g,'');
   assert.equal(sanitize(client),sanitize(server));
 });
