@@ -3,7 +3,7 @@ const CACHE_NAME = 'petri-forge-v0.3.0';
 const APP_VERSION = '0.3.0';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ['Боевые арены и эволюция агентов; первая интеграция с Шпилькой.'];
+const RELEASE_NOTES = ['Боевые арены 1×1/2×2 с настройкой навыков и турнирами; агент учится водить на настоящей физике Шпильки.'];
 const APP_SHELL = [
   './',
   './index.html',
@@ -13,6 +13,9 @@ const APP_SHELL = [
   './lab-core.mjs',
   './lab-worker.mjs',
   './model-store.mjs',
+  './mode-shell.mjs',
+  './world-modes.mjs',
+  './world-modes.css',
   './multiworld.mjs',
   './stations.html',
   './combat-core.mjs',
