@@ -20,7 +20,9 @@ export function autoQualityWindow(state,current,fps,seconds,conservative=false){
      s.lowSamples=0;s.secondsSinceSwitch=0;return {state:s,quality:'low'};
    }
  }else if(current==='low'){
-   s.fastSamples=fps>=57?s.fastSamples+1:0;s.lowSamples=0;
+   // Low mode intentionally paints no faster than 50 FPS. Recovery needs
+   // >=46 *presented* frames/s, not the impossible old >=57 threshold.
+   s.fastSamples=fps>=46?s.fastSamples+1:0;s.lowSamples=0;
    // A slow PC that manages low at 60 FPS should not oscillate
    // between low at 60 and medium at 35 every eight seconds.
    if(s.fastSamples>=4&&s.secondsSinceSwitch>=32){
