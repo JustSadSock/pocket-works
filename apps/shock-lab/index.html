@@ -43,6 +43,7 @@
         <canvas id="overlay" aria-hidden="true"></canvas>
         <div class="view-mark"><span id="view-short">ΔP</span><span class="view-unit">RELATIVE FIELD</span></div>
         <div class="hint" id="hint">Коснись камеры, чтобы создать ударную волну</div>
+        <button type="button" class="rupture" id="rupture" data-native-press hidden><span>РАЗОРВАТЬ МЕМБРАНУ</span><small>ВЫСОКОЕ ДАВЛЕНИЕ → НИЗКОЕ</small></button>
         <div class="axis-label axis-x">X →</div><div class="axis-label axis-y">Y →</div>
       </div>
       <div class="chamber-foot" data-ui>
@@ -75,6 +76,7 @@
           <button data-preset="maze" class="preset" data-native-press><span class="preset-shape shape-maze" aria-hidden="true"></span><span>ЛАБИРИНТ</span></button>
           <button data-preset="channel" class="preset" data-native-press><span class="preset-shape shape-channel" aria-hidden="true"></span><span>КАНАЛ</span></button>
           <button data-preset="empty" class="preset" data-native-press><span class="preset-shape shape-empty" aria-hidden="true"></span><span>ПУСТО</span></button>
+          <button data-preset="tube" class="preset" data-native-press><span class="preset-shape shape-tube" aria-hidden="true"></span><span>ТРУБА</span></button>
         </div>
       </div>
 
@@ -84,6 +86,11 @@
         <input type="range" id="power" min="0.7" max="10" step="0.1" value="4.5" aria-label="Энергия импульса">
         <div class="slider-line speed-line"><label for="speed">Скорость расчёта</label><output id="speed-value" for="speed">2×</output></div>
         <input type="range" id="speed" min="1" max="5" step="1" value="2" aria-label="Шагов симуляции на кадр">
+        <div id="tube-params" class="tube-params" hidden>
+          <div class="slider-line"><label for="ratio">Давление слева / справа</label><output id="ratio-value" for="ratio">8:1</output></div>
+          <input type="range" id="ratio" min="2" max="16" step="0.5" value="8" aria-label="Перепад давления в ударной трубе">
+          <p>Начальное состояние — два неподвижных газа. Разрыв мембраны запускает ударную волну, контактный разрыв и волну разрежения.</p>
+        </div>
       </div>
 
       <div class="control-section">
@@ -96,6 +103,19 @@
         <div class="legend" aria-hidden="true"><span>РАЗРЕЖЕНИЕ</span><div class="legend-ramp"></div><span>СЖАТИЕ</span></div>
       </div>
 
+      <section class="scope-section" aria-label="Регистратор давления">
+        <div class="section-title"><span>05</span><label>ОСЦИЛЛОГРАФ</label></div>
+        <div class="scope-top"><span class="scope-status"><i></i> ДВА ДАТЧИКА</span><div class="scope-tabs" role="group" aria-label="Режим графика"><button type="button" data-plot="history" class="selected">ВРЕМЯ</button><button type="button" data-plot="profile">ПРОФИЛЬ X</button></div></div>
+        <canvas id="scope" class="scope-canvas" role="img" aria-label="Измеренный график давления, вычисляемый по состоянию газа"></canvas>
+        <div class="sensor-row">
+          <button type="button" id="sensor-a" class="sensor-button" data-native-press>А <span id="reading-a">1.00</span></button>
+          <button type="button" id="sensor-b" class="sensor-button" data-native-press>Б <span id="reading-b">1.00</span></button>
+        </div>
+        <div class="sensor-hint" id="sensor-hint">Нажмите А или Б, затем укажите новое место на поле</div>
+        <div class="scope-stats"><span>Δt <strong id="lag">—</strong></span><span>V* <strong id="front-speed">—</strong></span><span id="samples">0 отсчётов</span></div>
+        <button id="csv" class="csv-button" type="button" data-native-press>ЭКСПОРТ ОСЦИЛЛОГРАММЫ · CSV</button>
+      </section>
+
       </div>
       <div class="control-bottom">
         <button type="button" class="run-button" id="run" data-native-press><span id="run-symbol">Ⅱ</span><span id="run-text">ПАУЗА</span></button>
@@ -107,7 +127,7 @@
         </div>
         <details class="data-drawer">
           <summary>ДАННЫЕ ЭКСПЕРИМЕНТА <span>⌄</span></summary>
-          <p>2D идеальный газ · γ = 1.4 · конечные объёмы / HLL. Края пропускают волны, стены отражают. Это численная модель, не расчёт промышленной взрывобезопасности.</p>
+          <p>2D идеальный газ · γ = 1.4 · конечные объёмы / HLL. Края области пропускают волны, стены отражают. Ударная труба задаёт начальный скачок давления, затем использует тот же численный решатель. V* — оценка скорости между датчиками в клетках за единицу времени решателя, корректна только при последовательном прохождении одного фронта. Это не инженерный расчёт взрывобезопасности.</p>
           <div class="data-buttons"><button id="export" type="button">ЭКСПОРТ JSON</button><button id="import" type="button">ИМПОРТ JSON</button><input id="import-file" type="file" accept="application/json,.json" hidden></div>
         </details>
       </div>
@@ -122,7 +142,7 @@
     </div>
   </div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="SHOCK" data-app-version="1.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="SHOCK" data-app-version="1.1.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

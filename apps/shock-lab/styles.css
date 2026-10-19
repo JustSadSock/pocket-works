@@ -53,3 +53,42 @@ button{touch-action:manipulation}a{color:inherit;text-decoration:none}
 @media(max-width:390px){.brand small{display:none}.workshop-btn{font-size:8px;padding:0 4px}.icon-control{font-size:8px;padding:0 4px}.chamber-title{gap:7px}.foot-metric strong{font-size:15px}.chamber{min-height:205px}.controls{flex-basis:42%}}
 @media(max-height:640px) and (max-width:760px){.topbar{min-height:48px}.chamber{min-height:170px}.chamber-foot{min-height:44px}.foot-metric strong{font-size:15px}.controls{min-height:170px;flex-basis:47%}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+
+/* SHOCK 1.1 — the oscilloscope is an actual sampled instrument, not a decoration. */
+.preset-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+.preset{height:65px}
+.preset>span:last-child{font-size:7.7px}
+.shape-tube{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='33' height='29' viewBox='0 0 33 29'%3E%3Cpath d='M2 7H31M2 23H31' stroke='%23cba66c' stroke-width='2.3'/%3E%3Cpath d='M13 7V23' stroke='%23f4dab0' stroke-width='2' stroke-dasharray='2 2'/%3E%3Crect x='3' y='9' width='10' height='12' fill='%23bf9257' fill-opacity='.72'/%3E%3Cpath d='M16 15h13' stroke='%237aadb2' stroke-width='1.5'/%3E%3C/svg%3E")}
+.tube-params{margin-top:16px;border-top:1px dashed #60716b;padding-top:13px}
+.tube-params[hidden]{display:none}
+.tube-params p{font-size:11px;line-height:1.55;color:#9bb0b0;margin:7px 0 0}
+.rupture{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:8;border:2px solid #f4d19b;background:#e9bf77;color:#17282c;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:15px 22px;min-width:min(284px,79%);min-height:74px;box-shadow:0 12px 22px #000b;text-align:center;gap:5px}
+.rupture span{font-size:14px;font-weight:950;letter-spacing:.06em}.rupture small{font-size:9px;font-weight:800;letter-spacing:.04em}
+.rupture:active{background:#f5d392;transform:translate(-50%,-49%)}
+.rupture[hidden]{display:none}
+.scope-section{padding:16px 20px 17px;border-bottom:1px solid #46585a;background:#18292d}
+.scope-top{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:10px}
+.scope-status{font:9px/1.2 monospace;color:#adc4be;white-space:nowrap}.scope-status i{display:inline-block;vertical-align:middle;width:5px;height:5px;border-radius:50%;margin-right:4px;background:#edc179}
+.scope-tabs{display:flex;gap:2px}.scope-tabs button{min-height:30px;border:1px solid #486367;background:#1c3239;color:#80999b;font-size:9px;font-weight:900;padding:0 8px}.scope-tabs button.selected{background:#4d5247;border-color:#bdb08e;color:#ffe0ac}
+.scope-canvas{width:100%;height:134px;display:block;background:#0d2026;border:1px solid #40585b;image-rendering:auto}
+.sensor-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}
+.sensor-button{min-height:43px;border:1px solid #54666b;background:#23373d;color:#e3d2aa;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-family:monospace;font-size:12px}
+.sensor-button:last-child{color:#95cad3}.sensor-button.arming{border-color:#f5cb83;background:#465244;box-shadow:inset 0 -3px 0 #eec87e}
+.sensor-button span{font-size:13px;font-variant-numeric:tabular-nums}
+.sensor-hint{font-size:9px;line-height:1.45;color:#8b9d9e;margin:9px 1px 10px;min-height:14px}
+.scope-stats{display:flex;flex-wrap:wrap;align-items:center;gap:11px;font:9px monospace;color:#8d9da0}
+.scope-stats strong{font:11px monospace;color:#e3c690;font-variant-numeric:tabular-nums}
+.scope-stats #samples{margin-left:auto}
+.csv-button{width:100%;margin-top:12px;min-height:39px;border:1px solid #586e70;background:#21373c;color:#b1cece;font-size:9px;letter-spacing:.06em;font-weight:850}
+.csv-button:disabled{opacity:.4}
+@media(max-width:1100px){.scope-section{padding-left:15px;padding-right:15px}}
+@media(max-width:760px){
+ .preset-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+ .preset{height:58px}.preset-shape{transform:scale(.85)}
+ .scope-section{padding:12px 14px}
+ .scope-canvas{height:124px}
+ .rupture{min-height:62px;padding:9px 12px;min-width:230px}
+ .rupture span{font-size:12px}.rupture small{font-size:8px}
+}
+@media(max-width:370px){.preset>span:last-child{font-size:7px}.scope-status{font-size:8px}.scope-tabs button{font-size:8px;padding:0 5px}}

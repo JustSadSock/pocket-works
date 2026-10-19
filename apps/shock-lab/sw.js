@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'shock-lab-';
-const CACHE_NAME = 'shock-lab-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'shock-lab-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Физическая лаборатория ударных волн: HLL, пять камер, рисование препятствий, датчик и экспорт."];
+const RELEASE_NOTES = ["Ударная труба с физическим разрывом мембраны, датчики давления A/Б, осциллограф и экспорт CSV."];
 const APP_SHELL = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const APP_SHELL = [
   './styles.css',
   './app.js',
   './physics.js',
+  './traces.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',

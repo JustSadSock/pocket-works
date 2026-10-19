@@ -91,6 +91,13 @@ export class ShockField {
       line(0.87, 0.36, 0.87, 1.0, 1.75);
       line(0.27, 0.68, 0.38, 0.68);
       line(0.58, 0.32, 0.69, 0.32);
+    } else if (preset === 'tube') {
+      // A sealed rectangular shock tube. Two initially separated states are
+      // initialized by loadTube; the UI holds the diaphragm until release.
+      line(0.055, 0.20, 0.945, 0.20, 1.6);
+      line(0.055, 0.80, 0.945, 0.80, 1.6);
+      line(0.055, 0.20, 0.055, 0.80, 1.6);
+      line(0.945, 0.20, 0.945, 0.80, 1.6);
     } else if (preset === 'channel') {
       line(0.2, 0.26, 0.48, 0.26, 1.65);
       line(0.2, 0.74, 0.48, 0.74, 1.65);
@@ -99,6 +106,32 @@ export class ShockField {
       line(0.69, 0.44, 0.93, 0.28, 1.65);
       line(0.69, 0.56, 0.93, 0.72, 1.65);
     }
+  }
+
+  // Riemann initial-value problem: initially isolated high/low pressure gas.
+  // No fictitious force or hand-animated travelling front is introduced.
+  // Both sides remain at rest until a real solver step opens the diaphragm.
+  loadTube(pressureRatio = 8, split = 0.42) {
+    this.resetGas();
+    const ratio = clamp(Number.isFinite(pressureRatio) ? pressureRatio : 8, 1.1, 25);
+    const xCut = Math.round(clamp(split, .15, .85) * this.nx);
+    const density = Math.pow(ratio, 1 / GAMMA);
+    for (let y = 0; y < this.ny; y++) {
+      for (let x = 0; x < xCut; x++) {
+        const i = y * this.nx + x;
+        if (this.solid[i]) continue;
+        // High pressure only in the sealed working region of the tube.
+        if (x < this.nx * .055 || y < this.ny * .20 || y > this.ny * .80) continue;
+        const k = i * 4;
+        this.U[k] = density;
+        this.U[k + 1] = 0;
+        this.U[k + 2] = 0;
+        this.U[k + 3] = ratio / (GAMMA - 1);
+      }
+    }
+    this.V.set(this.U);
+    this.maxPressure = ratio;
+    return ratio;
   }
 
   pulse(x, y, strength = 4.5, radius = 3.4) {
