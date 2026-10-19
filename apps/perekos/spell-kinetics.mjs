@@ -57,7 +57,11 @@ export function drawKineticProjectiles(ctx,state,time=0,{reduced=false}={}){
   painted++;
   const id=styleFor(q),part=SHAPE_FAMILIES[id],tones=palette[q.element]||palette.fire;
   const speed=Math.hypot(q.vx,q.vy),angle=Math.atan2(q.vy,q.vx);
-  const r=clamp(finite(q.r)?q.r:5,2,16),s=part.scale*clamp(r/5,.65,1.75);
+  // Keep each silhouette close to its real collision radius. Long tails
+  // indicate velocity; transverse width must not suggest an invented hitbox.
+  const nominal={orb:5,flame:5,bolt:3,arc:5,rock:8,wave:12,echo:4}[id];
+  const r=clamp(finite(q.r)?q.r:nominal,2,16);
+  const s=clamp((r+1)/(nominal+1),.72,1.85);
   const tick=reduced?0:time,phase=tick*(id==='bolt'||id==='arc'?32:9)+(q.owner||0)*1.7;
   ctx.save();ctx.translate(Math.round(q.x),Math.round(q.y));ctx.rotate(angle);
   // Shadow at a fixed floor-light offset, not a second glowing projectile.
