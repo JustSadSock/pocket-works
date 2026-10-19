@@ -99,6 +99,7 @@ function sync(){
  $('acceleration').textContent=staticAcceleration(m.a,m).toFixed(3);
  updateReadouts();
  designer.refresh();
+ if(settings.view==='rotation')$('model-warning').textContent='Вращение: заданная метрика типа Тео, источник материи не вычислен';
  dirty=true;
 }
 function resetData(prefill=false){
@@ -124,8 +125,8 @@ function emit(silent=false){
 }
 function updateReadouts(){
  const m=currentMetric();
- $('elapsed').textContent=settings.view==='wave'?(waveLab.diagnostics?.t.toFixed(2)??'0.00'):elapsed.toFixed(2);
- $('track-count').textContent=settings.view==='wave'?'801 узел · поле ψ':rays.length+' '+(rays.length===1?'траектория':'траекторий');
+ $('elapsed').textContent=settings.view==='rotation'?$('rotation-time').textContent:settings.view==='wave'?(waveLab.diagnostics?.t.toFixed(2)??'0.00'):elapsed.toFixed(2);
+ $('track-count').textContent=settings.view==='rotation'?'2 фотона · 2 метрики':settings.view==='wave'?'801 узел · поле ψ':rays.length+' '+(rays.length===1?'траектория':'траекторий');
  $('crossings').textContent=rays.reduce((s,r)=>s+r.crossings,0);
  let error=0;for(const r of rays)error=Math.max(error,Math.abs(constraint(r,m)));
  $('precision').textContent=error<.001?error.toExponential(1):error.toFixed(4);
@@ -134,7 +135,7 @@ function updateReadouts(){
  $('critical-value').textContent=criticalImpact(m).b.toFixed(3);
  $('clock-near').textContent=(elapsed*staticClockRate(.8*m.a,m)).toFixed(3);
  $('clock-far').textContent=(elapsed*staticClockRate(5*m.a,m)).toFixed(3);
- $('frame-state').textContent=settings.view==='wave'?'□Φ=0 · ℓ='+waveLab.state.j:settings.view==='map'?(settings.model==='ellis'?'N=1 · ELLIS':`η=${settings.eta.toFixed(2)} · N(l)`):'R² = l² + a²';
+ $('frame-state').textContent=settings.view==='rotation'?'ВРАЩЕНИЕ · gₜφ ≠ 0':settings.view==='wave'?'□Φ=0 · ℓ='+waveLab.state.j:settings.view==='map'?(settings.model==='ellis'?'N=1 · ELLIS':`η=${settings.eta.toFixed(2)} · N(l)`):'R² = l² + a²';
 }
 function changeMetric(){
  // The existing E and L belong to the old metric: discard them rather than
@@ -174,7 +175,7 @@ $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=p
 $('sound').addEventListener('click',()=>{sound.set(!sound.enabled);$('sound').classList.toggle('muted',!sound.enabled);$('sound').setAttribute('aria-label',sound.enabled?'Выключить звук':'Включить звук');});
 $('sound').classList.toggle('muted',!sound.enabled);
 $('export').addEventListener('click',()=>{
- const data={schema:'portal-lab-relativity-v7',description:'Geodesics in ds²=-N(l)²dt²+dl²+(l²+a²)dφ², c=G=1',metric:currentMetric(),assumptions:['equatorial test-particle approximation','no self gravity or backreaction','redshift metric is an ansatz'],elapsed,settings,observer:observatory.state,probe:observatory.probe,material:materialLab.snapshot,waves:waveLab.snapshot,designer:designer.snapshot,rotation:rotationLab.snapshot,rays};
+ const data={schema:'portal-lab-relativity-v7',description:'Geodesics, tidal physics, scalar waves, Einstein source, and stationary Teo-inspired vs Schwarzschild null-ray comparison in c=G=1',metric:currentMetric(),assumptions:['equatorial test-particle approximation','no self gravity or backreaction','custom and rotating metrics are prescribed ansatzes','Schwarzschild black hole is an exact vacuum solution','no computed Einstein matter tensor for rotating model'],elapsed,settings,observer:observatory.state,probe:observatory.probe,material:materialLab.snapshot,waves:waveLab.snapshot,designer:designer.snapshot,rotation:rotationLab.snapshot,rays};
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
  link.href=url;link.download='shov-relativity-experiment.json';document.body.append(link);link.click();link.remove();
  setTimeout(()=>URL.revokeObjectURL(url),1200);
