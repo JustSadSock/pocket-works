@@ -609,10 +609,10 @@ function renderUI() {
 
     const head = document.createElement("div");
     head.className = "icon-line";
-    const icon = document.createElement("img");
-    icon.className = "inv-icon";
-    icon.src = `./${(m.sprite || "").replace(/^\//, "")}`;
-    icon.alt = m.type;
+    const icon=document.createElement(m.sprite?"img":"span");
+    icon.className="inv-icon"+(m.sprite?"":" radiator-icon");
+    if(m.sprite){icon.src=`./${m.sprite.replace(/^\//,"")}`;icon.alt=m.type;}
+    else icon.setAttribute("aria-label",m.type);
     head.appendChild(icon);
     head.appendChild(Object.assign(document.createElement("span"), { textContent: `${m.type} (${m.id})` }));
     row.appendChild(head);
@@ -648,10 +648,10 @@ function renderUI() {
     row.className = "list-item";
     const top = document.createElement("div");
     top.className = "icon-line";
-    const icon = document.createElement("img");
-    icon.className = "inv-icon";
-    icon.src = `./${(lib?.sprite || "").replace(/^\//, "")}`;
-    icon.alt = templateId;
+    const icon=document.createElement(lib?.sprite?"img":"span");
+    icon.className="inv-icon"+(lib?.sprite?"":" radiator-icon");
+    if(lib?.sprite){icon.src=`./${lib.sprite.replace(/^\//,"")}`;icon.alt=templateId;}
+    else icon.setAttribute("aria-label",templateId);
     top.appendChild(icon);
     top.appendChild(Object.assign(document.createElement("span"), { textContent: `${lib?.name || templateId}` }));
     row.appendChild(top);
