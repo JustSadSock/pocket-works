@@ -17,7 +17,7 @@
 <section class="workspace" aria-label="Пространственная модель">
 <div class="stage-head">
 <div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1 id="lab-headline">Увидеть искривлённое пространство</h1></div>
-<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
+<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="causality" type="button" aria-pressed="false">Причинность</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
 </div>
 <div class="canvas-frame"><canvas id="space" role="img" aria-label="Трассировка света и карта геометрии кротовой норы"></canvas>
 <div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
@@ -29,6 +29,53 @@
 <div class="bottom-note"><span class="tiny-dot"></span><span>Свет, материя и скалярные волны рассчитываются на одной заданной геометрии пространства-времени.</span></div>
 </section>
 <aside class="instrument" aria-label="Параметры эксперимента">
+<section id="causality-panel" class="causality-panel" aria-label="Два устья и причинность">
+<div class="section-caption"><span>ДВА УСТЬЯ · ПРИЧИННОСТЬ</span><span>v0.8</span></div>
+<p class="causality-intro">Одно устье остаётся неподвижным, второе совершает плавный релятивистский рейс и возвращается. Проверьте, что произойдёт с часами и световым сигналом.</p>
+<div class="causality-presets" role="group" aria-label="Готовые опыты">
+<button type="button" data-causality-preset="synced">Синхронно</button>
+<button type="button" data-causality-preset="lag">Без петли</button>
+<button type="button" data-causality-preset="boundary">На пороге</button>
+<button type="button" data-causality-preset="loop">Петля</button>
+<button type="button" data-causality-preset="deep">Глубокая петля</button>
+</div>
+<div id="causality-status" class="causality-status" data-loop="false" aria-live="polite">РАСЧЁТ</div>
+<label class="range-field"><span>Расстояние между устьями <output id="causality-distance-value">3.0</output><small> световых секунд</small></span><input id="causality-distance" type="range" min=".3" max="12" step=".1" value="3"></label>
+<label class="range-field"><span>Максимальная скорость B <output id="causality-speed-value">0.85</output><small> c</small></span><input id="causality-speed" type="range" min="0" max=".98" step=".01" value=".85"></label>
+<label class="range-field"><span>Длительность рейса <output id="causality-duration-value">34.0</output><small> с</small></span><input id="causality-duration" type="range" min="4" max="160" step=".5" value="34"></label>
+<label class="range-field"><span>Внутренняя задержка <output id="causality-throat-value">0.55</output><small> с по часам устья</small></span><input id="causality-throat" type="range" min="0" max="5" step=".05" value=".55"></label>
+<div class="section-caption second"><span>ЧАСЫ И ПРОСТРАНСТВО</span><span>c = 1</span></div>
+<div class="causality-clock-grid">
+<div><span>СОБСТВЕННОЕ ВРЕМЯ A</span><strong id="causality-clock-a">0.00</strong><small>с</small></div>
+<div><span>СОБСТВЕННОЕ ВРЕМЯ B</span><strong id="causality-clock-b">0.00</strong><small>с</small></div>
+<div><span>СКОРОСТЬ B СЕЙЧАС</span><strong id="causality-v">0.000</strong><small>v/c</small></div>
+<div><span>КОМПОНЕНТА ПОЛОЖЕНИЯ B</span><strong id="causality-x">3.00</strong><small>световых секунд</small></div>
+</div>
+<label class="range-field causality-now"><span>Лабораторное время <output id="causality-time">0.00</output><small> с</small></span><input id="causality-scrub" type="range" min="0" max="60" step=".05" value="42"></label>
+<div class="section-caption second"><span>РАССОГЛАСОВАНИЕ ПОСЛЕ РЕЙСА</span><span>Δτ</span></div>
+<div class="causality-math">
+<div><span>ОТСТАВАНИЕ B · Δ</span><strong id="causality-lag">0.000</strong></div>
+<div><span>ВОЗРАСТ B ПОСЛЕ РЕЙСА</span><strong id="causality-age-b">0.000</strong></div>
+<div><span>ВНЕШНИЙ СВЕТОВОЙ ПУТЬ</span><strong id="causality-exterior">3.00</strong></div>
+<div><span>ПОРОГ · D + δ</span><strong id="causality-threshold">3.55</strong></div>
+<div class="causality-math-total"><span>ЗАПАС ПЕТЛИ · Δ − D − δ</span><strong id="causality-margin" data-loop="false">—</strong></div>
+</div>
+<div class="section-caption second"><span>ЭКСПЕРИМЕНТ СО СВЕТОВЫМ СИГНАЛОМ</span><span>t</span></div>
+<div class="causality-signal-options">
+<label class="field"><span>Отправитель</span><select id="causality-source"><option value="B">Устье B</option><option value="A">Устье A</option></select></label>
+<label class="field"><span>Первый путь</span><select id="causality-route"><option value="tunnel">Через нору</option><option value="exterior">Снаружи со скоростью c</option></select></label>
+</div>
+<button id="causality-send" class="causality-send" type="button">Отправить и вернуть сигнал <span aria-hidden="true">↗</span></button>
+<div class="causality-events">
+<div><span>ИСХОДНОЕ УСТЬЕ</span><strong id="causality-origin">B</strong></div>
+<div><span>ОТПРАВЛЕНИЕ · I</span><strong id="causality-depart">—</strong></div>
+<div><span>ПЕРВЫЙ ПРИЁМ · II</span><strong id="causality-portal-event">—</strong></div>
+<div><span>ВОЗВРАТ · III</span><strong id="causality-return">—</strong></div>
+<div><span>ВОЗВРАТ ДО ОТПРАВКИ</span><strong id="causality-event-margin">—</strong></div>
+</div>
+<div class="causality-message"><span id="causality-signal-tag" data-sent="false">ПРОГНОЗ</span><p id="causality-message"></p></div>
+<p class="causality-caveat">Часы B интегрируются из dτ=dt√(1−v²/c²) для плавного рейса. Внешний свет распространяется при c. <strong>Идентификация времени внутри кротовой норы задана как дополнительная гипотеза, а не выведена из уравнений Эйнштейна.</strong> Петля не доказывает возможности путешествий во времени: неизвестны устойчивость, источник и квантовая хронологическая защита.</p>
+</section>
 <section id="rotation-panel" class="rotation-panel" aria-label="Сравнительная лаборатория вращающихся кротовых нор и горизонтов">
 <div class="section-caption"><span>ВРАЩЕНИЕ И ГОРИЗОНТЫ</span><span>v0.7</span></div>
 <p class="rotation-description">Два фотона испускаются с одинаковым локальным углом и ареальным радиусом. Сравните геодезическую кротовой норы с точной чёрной дырой Шварцшильда.</p>

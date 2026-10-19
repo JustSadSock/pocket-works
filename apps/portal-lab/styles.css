@@ -262,3 +262,71 @@ body[data-lab-view="rotation"] .instrument>.range-field.last{margin-top:16px;pad
  body[data-lab-view="rotation"] .rotation-outcome strong{font-size:12px}
  .rotation-presets button{min-height:40px}
 }
+
+/* v0.8: spacetime chronology instrument */
+body:not([data-lab-view="causality"]) #causality-panel{display:none}
+body[data-lab-view="causality"] .instrument>:not(#causality-panel):not(.range-field.last){display:none}
+body[data-lab-view="causality"] .instrument{background:#e8e8de}
+body[data-lab-view="causality"] .canvas-frame{background:#0b1b22}
+body[data-lab-view="causality"] .readouts,body[data-lab-view="causality"] .clocks{display:none}
+body[data-lab-view="causality"] #shoot:disabled{opacity:.55;cursor:default}
+body[data-lab-view="causality"] #space{cursor:crosshair;touch-action:none}
+body[data-lab-view="causality"] .instrument>.range-field.last{margin-top:17px;border-top:1px solid #b3c4b6;padding-top:14px}
+.causality-panel{border-bottom:2px solid #7ba58c;padding-bottom:16px}
+.causality-intro{font:11px/1.65 system-ui,sans-serif;color:#62796e;margin:0 0 13px}
+.causality-presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:9px 0 14px}
+.causality-presets button{font-size:10px;font-weight:700;min-height:39px;padding:7px;border:1px solid #a9bfb0;background:transparent;color:#386a56}
+.causality-presets button.selected{background:#316958;color:#f2f5ed;border-color:#316958}
+.causality-presets button:last-child{grid-column:1/-1}
+.causality-status{border-left:3px solid #7ea98b;padding:12px 11px;background:#dce7db;color:#2b6755;font:700 11px/1.4 ui-monospace,Consolas,monospace}
+.causality-status[data-loop="true"]{background:#f1ddd3;color:#995d4a;border-left-color:#c68d71}
+.causality-panel .range-field{margin-top:15px}
+.causality-panel .section-caption.second{margin-top:22px}
+.causality-clock-grid{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #b0c5b4;border-left:1px solid #b0c5b4}
+.causality-clock-grid>div{padding:9px 8px;min-height:83px;border-right:1px solid #b0c5b4;border-bottom:1px solid #b0c5b4}
+.causality-clock-grid span,.causality-math span,.causality-events span{display:block;font:9px/1.55 ui-monospace,Consolas,monospace;color:#61786b;min-height:26px}
+.causality-clock-grid strong{color:#346958;font:700 23px/1.3 ui-monospace,Consolas,monospace;letter-spacing:-.05em}
+.causality-clock-grid small{display:block;color:#87988a;font-size:9px}
+.causality-now{margin-top:19px}
+.causality-math{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #aec1b2;border-left:1px solid #aec1b2}
+.causality-math>div{border-right:1px solid #aec1b2;border-bottom:1px solid #aec1b2;padding:9px 8px}
+.causality-math strong{color:#376b5c;font:700 17px/1.3 ui-monospace,Consolas,monospace}
+.causality-math .causality-math-total{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:12px;background:#d7e5d7}
+.causality-math-total span{min-height:auto}
+.causality-math-total strong[data-loop="true"]{color:#ab6d55}
+.causality-signal-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.causality-signal-options .field{min-width:0}
+.causality-signal-options select{margin-top:6px;max-width:100%}
+.causality-send{width:100%;border:0;background:#39685c;color:#f4f3e9;padding:12px 10px;font-weight:730;font-size:12px;text-align:center;min-height:44px}
+.causality-send span{margin-left:6px}
+.causality-send:active{transform:translateY(1px)}
+.causality-events{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:14px;border-top:1px solid #afc3b2;border-left:1px solid #afc3b2}
+.causality-events>div{border-right:1px solid #afc3b2;border-bottom:1px solid #afc3b2;min-height:62px;padding:8px}
+.causality-events strong{font:700 17px ui-monospace,Consolas,monospace;color:#456d5f}
+.causality-events>div:last-child{grid-column:1/-1;background:#dfe8dc}
+.causality-message{margin-top:10px;background:#dae4d9;padding:9px 11px}
+.causality-message span{font:700 9px ui-monospace,Consolas,monospace;color:#537b67;letter-spacing:.07em}
+.causality-message span[data-sent="true"]{color:#925a4e}
+.causality-message p{font-size:11px;color:#4e6d60;line-height:1.6;margin:5px 0 0}
+.causality-caveat{border-top:1px dashed #a1b7aa;margin:12px 0 0;padding-top:11px;font-size:10px;color:#819184;line-height:1.65}
+@media(max-width:1100px){
+body[data-lab-view="causality"] .causality-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:15px}
+body[data-lab-view="causality"] .causality-panel>.section-caption,
+body[data-lab-view="causality"] .causality-panel>.causality-intro,
+body[data-lab-view="causality"] .causality-panel>.causality-presets,
+body[data-lab-view="causality"] .causality-panel>.causality-status,
+body[data-lab-view="causality"] .causality-panel>.causality-clock-grid,
+body[data-lab-view="causality"] .causality-panel>.causality-now,
+body[data-lab-view="causality"] .causality-panel>.causality-math,
+body[data-lab-view="causality"] .causality-panel>.causality-signal-options,
+body[data-lab-view="causality"] .causality-panel>.causality-send,
+body[data-lab-view="causality"] .causality-panel>.causality-events,
+body[data-lab-view="causality"] .causality-panel>.causality-message,
+body[data-lab-view="causality"] .causality-panel>.causality-caveat{grid-column:1/-1}
+}
+@media(max-width:640px){
+body[data-lab-view="causality"] .canvas-frame{min-height:465px;height:min(70dvh,690px)}
+body[data-lab-view="causality"] .canvas-hint{font-size:9px}
+body[data-lab-view="causality"] .causality-clock-grid strong{font-size:21px}
+body[data-lab-view="causality"] .causality-signal-options select{font-size:12px}
+}
