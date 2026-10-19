@@ -675,7 +675,7 @@ export default {protocolVersion:1,
    if(p?.type==='rematch'){
     v.ready=!v.ready;
     if(active(state).every(x=>x.ready))startRound(state);
-   }else if(p?.type!=='sync')throw Error('Ожидается повторный матч');
+   }else if(!['sync','pulse','input'].includes(p?.type))throw Error('Ожидается повторный матч');
    return out(state);
   }
   if(p?.type==='nickname')v.name=String(p.name||'Игрок').slice(0,24);
