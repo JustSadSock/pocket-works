@@ -398,3 +398,76 @@ body[data-lab-view="atlas"] .canvas-frame{height:min(63dvh,650px);min-height:375
 body[data-lab-view="atlas"] .canvas-hint{font-size:9px}
 .atlas-metrics strong{font-size:17px}
 }
+
+/* SHOV v1.0 — archivist's physical notebook. Illustrated instruments,
+   unambiguous measurements, subdued paper and copper indexing. */
+body:not([data-lab-view="notebook"]) #notebook-panel{display:none}
+body[data-lab-view="notebook"] .instrument>:not(#notebook-panel){display:none}
+body[data-lab-view="notebook"] .instrument{background:#ecebe0}
+body[data-lab-view="notebook"] .readouts,body[data-lab-view="notebook"] .clocks,
+body[data-lab-view="notebook"] #pause,body[data-lab-view="notebook"] .transport-time{display:none}
+body[data-lab-view="notebook"] .canvas-frame{background:#0e2328}
+body[data-lab-view="notebook"] #space{cursor:default}
+body[data-lab-view="notebook"] .canvas-hint{font-size:10px;color:#b2d6c4c5}
+.save-experiment{background:#d5dfcd;color:#346452;border:1px solid #a1b6a7;padding:8px 12px;font-size:11px;font-weight:720;white-space:nowrap;cursor:pointer}
+.save-experiment:hover{background:#bdd5bf}
+.save-experiment:active{transform:translateY(1px)}
+.notebook-panel{padding-bottom:16px;border-bottom:2px solid #749a87}
+.notebook-intro{font-size:11px;line-height:1.65;color:#6a8073;margin:0 0 14px}
+.notebook-primary-tools{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.notebook-primary-tools button{min-height:40px;border:1px solid #9cb7a5;color:#3b6653;background:#e0e8d9;font-size:10px;font-weight:740;padding:7px}
+.notebook-primary-tools button:first-child{grid-column:1/-1;background:#326450;border-color:#326450;color:#f5f1dd;min-height:45px;font-size:12px}
+.notebook-primary-tools button:disabled,.notebook-detail-actions button:disabled,.notebook-clear:disabled{opacity:.45;cursor:default}
+.notebook-primary-tools button:active,.notebook-detail-actions button:active{transform:translateY(1px)}
+.notebook-notice{background:#d5e2d5;color:#446d5a;font-size:10px;line-height:1.5;padding:10px;margin:9px 0 12px;border-left:3px solid #83ab8a}
+.notebook-panel .section-caption.second{margin-top:19px}
+.notebook-field{display:block;font-size:10px;font-weight:650;color:#617968;margin-top:8px}
+.notebook-field input,.notebook-field select{display:block;width:100%;min-width:0;box-sizing:border-box;border:1px solid #adc3b0;border-radius:0;background:#f0f1e8;padding:9px 7px;font:11px ui-monospace,Consolas,monospace;color:#335e4a;margin-top:5px}
+.notebook-list{margin:12px 0;display:flex;flex-direction:column;gap:7px;max-height:420px;overflow:auto}
+.notebook-empty{background:#dbe5d9;min-height:105px;padding:16px;border:1px dashed #9cb6a4;display:flex;justify-content:center;flex-direction:column}
+.notebook-empty strong{font:700 14px ui-monospace,Consolas,monospace;color:#4a725d}
+.notebook-empty p{font-size:11px;line-height:1.65;color:#819286;max-width:320px}
+.notebook-entry{padding:11px;border:1px solid #b1c5b5;background:#e4e9dd;cursor:pointer}
+.notebook-entry.selected{border-left:4px solid #ac8468;padding-left:8px;background:#f0e9db}
+.notebook-entry-top{display:flex;justify-content:space-between;gap:10px;color:#779080;font:700 9px ui-monospace,Consolas,monospace;letter-spacing:.02em}
+.notebook-entry strong{color:#3b6650;font-size:12px;display:block;padding-top:6px}
+.notebook-entry-bottom{margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.notebook-entry-bottom span{font-size:10px;color:#7e897c;line-height:1.35}
+.notebook-entry-bottom button{border:1px solid #a5b7a3;background:transparent;padding:5px 8px;font-size:9px;color:#386652;min-height:28px}
+.notebook-date{font:10px ui-monospace,Consolas,monospace;color:#809587;margin:8px 0}
+.notebook-detail{background:#e3e9dd;border-top:2px solid #809d8b;padding:12px;margin-bottom:14px}
+.notebook-detail .section-caption.second{margin-top:0}
+.notebook-metrics{display:grid;grid-template-columns:1fr 1fr;border-left:1px solid #b5c8b4;border-top:1px solid #b5c8b4;margin:13px 0}
+.notebook-metrics>div{border-right:1px solid #b5c8b4;border-bottom:1px solid #b5c8b4;padding:8px;min-height:62px}
+.notebook-metrics span{display:block;min-height:22px;font-size:9px;line-height:1.4;color:#738576}
+.notebook-metrics strong{display:block;font:700 12px/1.5 ui-monospace,Consolas,monospace;color:#356b55;overflow-wrap:anywhere}
+.notebook-detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.notebook-detail-actions button{min-height:36px;padding:6px;border:1px solid #91ad9e;background:#d4e3d4;color:#39614d;font-size:10px;font-weight:750}
+.notebook-detail-actions button:first-child{grid-column:1/-1;background:#335f52;color:#f3f1e7}
+.notebook-detail-actions button:last-child{color:#9c6e55;border-color:#bfa796;background:#f0e2d6}
+.notebook-compare-picker{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}
+.notebook-comparison{border:1px solid #b6c8b5;background:#e0e8db;padding:8px;margin:11px 0}
+.notebook-compare-title{font:700 10px/1.6 ui-monospace,Consolas,monospace;color:#446b5a;margin-bottom:9px}
+.notebook-compare-captions,.notebook-comparison-row{display:grid;grid-template-columns:1.55fr .75fr .75fr .85fr;gap:4px;align-items:center}
+.notebook-compare-captions{font:700 8px ui-monospace,Consolas,monospace;color:#869684;padding:6px 0;border-bottom:2px solid #9eb6a5}
+.notebook-comparison-row{padding:9px 0;border-bottom:1px solid #bac7b4}
+.notebook-comparison-row span{font-size:9px;line-height:1.35;color:#637869}
+.notebook-comparison-row small{display:block;color:#8ca497}
+.notebook-comparison-row b{font:700 10px/1.4 ui-monospace,Consolas,monospace;color:#376453;overflow-wrap:anywhere}
+.notebook-comparison-note{font-size:10px;line-height:1.6;color:#718373;margin:10px 0}
+.notebook-clear{border:1px solid #b89a83;background:transparent;color:#9a6c53;padding:11px;width:100%;min-height:41px;font-size:11px;font-weight:680}
+.notebook-caveat{border-left:2px solid #baa28e;padding-left:10px;margin:14px 0;color:#809084;font-size:10px;line-height:1.65}
+@media(max-width:1100px){
+body[data-lab-view="notebook"] .notebook-panel{display:block;grid-column:1/-1}
+body[data-lab-view="notebook"] .notebook-list{max-height:290px}
+}
+@media(max-width:690px){
+body[data-lab-view="notebook"] .canvas-frame{min-height:340px;height:min(57dvh,570px)}
+body[data-lab-view="notebook"] .canvas-hint{font-size:9px}
+.save-experiment{padding:7px 8px;font-size:10px}
+.notebook-comparison-row b{font-size:9px}
+}
+@media(max-width:380px){
+.top-actions .save-experiment{font-size:9px;padding:6px}
+.notebook-metrics{grid-template-columns:1fr}
+}
