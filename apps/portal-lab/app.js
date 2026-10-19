@@ -259,6 +259,9 @@ function captureExperiment(){
   put('field-escaped-b',st.statistics?.escapedB??0,'Вышло в регион B','шт');
   put('field-residual',st.statistics?.worstResidual,'Максимальная невязка H=0','');
   put('field-time',st.statistics?.time/m.a,'Время эксперимента','a/c');
+  put('field-probe-impact',st.inspection?.impact/m.a,'Прицельный параметр проверочного луча','b/a');
+  put('field-probe-error',st.inspection?.impactError/m.a,'Разность прицельных параметров','b/a');
+  put('field-probe-passes',st.inspection?.passes,'Переходы проверочного луча','шт');
  }else if(mode==='volume'){
   const state=volumeLab.state,shot=volumeLab.snapshot;
   extras.volume={...state};
