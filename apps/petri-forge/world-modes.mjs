@@ -335,6 +335,7 @@ void refreshLibraries();
 
 window.PetriForgeRuntime=window.PetriForgeRuntime||{};
 window.PetriForgeRuntime.combat={
+ showExternalDuel:replay=>{if(battleBusy)throw Error('Боевая арена сейчас обучается');displayReplay(replay);return true;},
  getModel:async()=>structuredClone(battlePolicy),
  setModel:async snapshot=>{if(battleBusy)throw Error('Идёт тренировка');battlePolicy=snapshot&&validPolicy(snapshot)?structuredClone(snapshot):makePolicy('aggressive',17);sendCombat('combat-set',{policy:battlePolicy});},
  train:()=>{if(battleBusy)return false;$('battleTrain').click();return true;},
