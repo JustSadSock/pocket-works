@@ -4,12 +4,12 @@
   "product": "shock-lab",
   "direction": {
     "premise": "A tabletop supersonic-flow instrument, with a luminous compressible-gas chamber and a dark oxide-steel control console.",
-    "composition": "The same broad flow tank remains the focal experimental surface. Below the Mach control, a morphing-airfoil workbench shows an instantly updating section drawing and two pressure instruments; an industrial oscillogram makes time-varying forces measurable.",
+    "composition": "The gas chamber remains the main canvas. A compact instrument tray floats at its bottom; the right side shows exactly one task-specific tab rather than many simultaneously stacked metrics. A selected source glows with a measured ring and is editable from the constructor.",
     "shapeLanguage": "Hard square-cut aluminum geometry, paper-thin graduations, sharp instrument toggles and an uncaged central visualization.",
     "surfaceAndMaterial": "Opaque charcoal-blue oxided metal; brushed mineral wall inclusions; the gas field itself provides dynamic luminous volume. No glassmorphism or decorative gradients over UI components.",
-    "paletteLogic": "Green-blue versus muted amber encodes the actual sign of Euler vorticity, while paired brass and teal signal traces show force history and a thin slate dash records gust phase.",
+    "paletteLogic": "Brass accents indicate active tools and injectors; cool sea-glass encodes porous friction media, slate-blue the absorbing reservoir, and charcoal/ochre the hard reflecting barrier.",
     "typography": "Condensed utility labels with monospaced physical measurements; short Russian action labels remain readable on phones.",
-    "signature": "A laboratory airfoil is visibly reshaped under the user's finger; periodic computed inlet gusts alter the actual pressure wake while an oscilloscope records the changing resultant lift and signed vorticity.",
+    "signature": "A fixed tool tray lives directly over the physical gas chamber while a three-state industrial workbench focuses on Scene, Construct or Measure. Sources are visible active components rather than single-use effects.",
     "distinction": "Where PetriForge is a discrete editable microcosm, SHOCK shows continuous conservation-law fronts and reflective solid boundaries with industrial instrumentation."
   },
   "architecture": {
@@ -18,8 +18,8 @@
     "navigation": "editor-toolbox",
     "chromeTopology": "framed-stage",
     "dominantMotion": "immediate",
-    "primaryVerb": "Reshape the wing, apply periodic real inlet gusts, inspect signed vorticity, and compare true pressure-force time histories.",
-    "physicalFeedback": "Wing geometry is recalculated from a parametric, mask-rasterized section; finite-volume Euler fluxes respond to coherent unsteady inlet velocities. Curl is differentiated from solved velocity rather than painting vortex sprites.",
+    "primaryVerb": "Pick a wall medium or a persistent pressure source, place or paint it directly in the gas chamber, then switch to instruments to measure the result.",
+    "physicalFeedback": "Impermeable rigid walls apply slip flux; porous drag and absorbing sponge cells act as documented numerical material models; continuous emitters inject or remove actual conserved flow states during every solver step.",
     "spatialRationale": "Desktop shows a broad physical chamber and a right instrument console. On portrait phones a compact top bar, live upper canvas and internally scrollable bottom control deck form a header-stage-footer topology, distinct from the desktop split.",
     "comparisons": [
       {
@@ -76,9 +76,9 @@
     "entry": "./",
     "interaction": {
       "type": "click",
-      "selector": "[data-preset='airfoil']"
+      "selector": "[data-panel-tab='construct']"
     },
-    "expectedChange": "The airfoil morphology rig, load oscillogram and gust controls become usable while calculated wake, CL, and CD update over time.",
+    "expectedChange": "The side instrument bench displays only edit tools, explicit material choices, placement controls and the live list of permanent sources; physics remains visible in the large tank.",
     "capture": [
       "initial",
       "action",
