@@ -20,6 +20,7 @@ const state = {
   },
   drag: null,
   connection: 'connecting',
+  clockOffset: 0,
 };
 
 const app = document.querySelector("#app");
@@ -79,6 +80,7 @@ function handleMessage(type, payload) {
       if (payload.status === 'reconnecting') state.drag = null;
       break;
     case "room_lost":
+      state.connection = state.socket?.readyState === WebSocket.OPEN ? 'connected' : 'reconnecting';
       state.room = null;
       state.drag = null;
       state.preparedGame = null;
@@ -94,6 +96,7 @@ function handleMessage(type, payload) {
         return;
       }
       state.room = payload;
+      if (Number.isFinite(payload.serverNow)) state.clockOffset = payload.serverNow - Date.now();
       state.joinCode = payload.roomId || state.joinCode;
       if(!payload.practice)window.history.replaceState({}, "", `?room=${payload.roomId}`);
       if (payload?.game) {
@@ -874,7 +877,7 @@ function updateTransientUI() {
 }
 
 function animate() {
-  state.now = Date.now();
+  state.now = Date.now() + state.clockOffset;
   const phase = getPhase();
   if (phase === "playing") updateTransientUI();
   // Do not reconstruct the entire board each animation frame.
