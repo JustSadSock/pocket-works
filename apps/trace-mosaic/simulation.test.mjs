@@ -214,3 +214,12 @@ for (const size of [3, 5]) {
     assert.equal(view.game.board.every((id, cell) => id === cell), true);
   });
 }
+
+test('all room snapshots expose a bounded server clock for timer correction', () => {
+  const { act } = solo();
+  const before = Date.now();
+  const view = act('start_game');
+  const after = Date.now();
+  assert.equal(Number.isFinite(view.serverNow), true);
+  assert.equal(view.serverNow >= before && view.serverNow <= after, true);
+});
