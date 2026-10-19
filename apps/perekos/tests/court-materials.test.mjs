@@ -8,10 +8,10 @@ function surface(){
    if(key in obj)return obj[key];
    if(key==='createLinearGradient')return(...args)=>{
     operations.push(['gradient',...args]);
-    return{addColorStop:(...data)=>operations.push(['stop',...data])};
+    return{__testGradient:true,addColorStop:(...data)=>operations.push(['stop',...data])};
    };
    return(...args)=>{operations.push([String(key),...args])};
-  },set(obj,key,val){obj[key]=val;operations.push(['property',String(key),val]);return true}
+  },set(obj,key,val){obj[key]=val;operations.push(['property',String(key),val?.__testGradient?'linear-gradient':val]);return true}
  });
  return{c,operations};
 }
