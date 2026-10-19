@@ -249,7 +249,7 @@ $('pkImport').onchange=async e=>{
 };
 export function openPerekosLab(){
  openCount++;
- if(!replay&&!busy){paintIdle();$('pkTest').click();}
+ if(!replay&&!busy){paintIdle();if(!document.body.classList.contains('hub-on'))$('pkTest').click();}
  if(openCount===1)void refreshModels();
 }
 export function pausePerekosLab(){stopPlayback();}
