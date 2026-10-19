@@ -7,6 +7,7 @@ import {pulsePlan} from './runPacing.js';
 import {sanitizeProtocol} from './runTuning.js';
 import {sanitizeTissueDamage} from './tissueLifecycle.js';
 import {sanitizeScars} from './scars.js';
+import {sanitizeFieldTelemetry} from './fieldTelemetry.js';
 const num=(value,min,max,fallback=0)=>Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback;
 const kinds=new Set(['crawler','spitter','brute','heart','leech','warden',...GUARDIAN_TYPES]);
 const validPosition=e=>e&&Number.isFinite(e.x)&&Number.isFinite(e.z)&&Math.abs(e.x)<=10000&&Math.abs(e.z)<=10000;
@@ -19,6 +20,7 @@ export function validateRun(s){
     scars:sanitizeScars(s.scars),
     tissueIntegrity:sanitizeTissueDamage(s.tissueIntegrity,Number.isInteger(s.wave)?s.wave:1),
     protocol:sanitizeProtocol(s.protocol),
+    telemetry:sanitizeFieldTelemetry(s.telemetry),
     damageTaken:num(Math.floor(s.damageTaken),0,99999,0),
     combo:num(Math.floor(s.combo),0,12,0),
     peakCombo:num(Math.floor(s.peakCombo),0,12,0),

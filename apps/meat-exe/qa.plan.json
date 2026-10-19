@@ -112,7 +112,8 @@
       "files": [
         "qa/biomes.test.mjs",
         "qa/pacing.test.mjs",
-        "qa/runtime.test.mjs"
+        "qa/runtime.test.mjs",
+        "qa/fieldTelemetry.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -161,7 +162,8 @@
       "files": [
         "qa/biobuilds.spec.js",
         "qa/routes.spec.js",
-        "qa/tuning.spec.js"
+        "qa/tuning.spec.js",
+        "qa/fieldTelemetry.spec.js"
       ],
       "tier": "smoke"
     },
