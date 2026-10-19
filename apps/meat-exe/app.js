@@ -473,7 +473,7 @@ function shoot(){
             markScar(wall.x,wall.z,'burn',wall);
             if(scarSurfaceStats(state.scars,state.wave).wall>before)
               state.immune.heat=Math.min(100,state.immune.heat+2);
-          }else markScar(result.point.x,result.point.z,'burn');
+          } // Shots that hit floor/ceiling never counterfeit a vertical wall wound.
         }
       }
     }
