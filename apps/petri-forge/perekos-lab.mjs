@@ -209,10 +209,10 @@ worker.onmessage=async event=>{
    lock(false);$('pkTransferInfo').textContent='Сравнение на одинаковых контрольных раундах: ваш мозг '+fmt(d.mine.fitness)+' очков / урон '+fmt(d.mine.damageMargin)+'; переносимый '+fmt(d.other.fitness)+' очков / урон '+fmt(d.other.damageMargin)+'. Это не подтверждает преимущество в полных матчах.';
    notify('Сравнение переноса завершено');
   }else if(d.type==='perekos-loaded'){lock(false);policy=d.policy;notify('Мозг загружен');}
-  else if(d.type==='perekos-error'){lock(false);notify('Ошибка: '+d.message);}
+  else if(d.type==='perekos-error'){lock(false);notify('Ошибка: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'perekos',message:d.message}}));}
  }catch(e){lock(false);notify('Ошибка сохранения: '+e.message);}
 };
-worker.addEventListener('error',e=>{lock(false);notify('Ошибка вычислительного Worker: '+e.message);});
+worker.addEventListener('error',e=>{lock(false);notify('Ошибка вычислительного Worker: '+e.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'perekos',message:e.message}}));});
 $('pkTrain').onclick=()=>{try{const cfg=settings();stopPlayback();lock(true,true);$('pkProgress').style.width='0%';send('perekos-train',{...cfg,generations:Number($('pkGenerations').value),policy});notify('Идёт обучение на реальных матчах...');}catch(e){lock(false);notify(e.message);}};
 $('pkStop').onclick=()=>send('perekos-stop');
 $('pkTest').onclick=()=>{try{lock(true);send('perekos-test',{...settings(),rivalStyle:$('pkRivalStyle').value,policy});notify('Запущен реальный матч...');}catch(e){lock(false);notify(e.message);}};
