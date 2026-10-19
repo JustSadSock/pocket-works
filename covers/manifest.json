@@ -3348,24 +3348,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 39876,
-        "variance": 52.13021185705611,
-        "entropy": 2.0189285958216456,
-        "edgeDensity": 0.11793154761904762,
-        "colorfulness": 29.256103515625,
-        "centerDetail": 60.56440136675653,
-        "meanLight": 40.81091118164093
+        "bytes": 39866,
+        "variance": 52.188425753694055,
+        "entropy": 2.0166575768163892,
+        "edgeDensity": 0.11780753968253968,
+        "colorfulness": 29.231201171875,
+        "centerDetail": 60.64291044855936,
+        "meanLight": 40.6225006835941
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.9.1&pw_fp=a1eb344d07fad4c0b5daeafa"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.9.2&pw_fp=a3a7bba5288c3d24f6242928"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "ae69b87f2cacb3caa0a731e96ff91f7cf61ba8c7",
-    "lastAttemptAt": "2026-10-19T10:32:27.179Z"
+    "lastAttemptRevision": "68507a08ee5d5025ef22ab4585b0ec1610aa8439",
+    "lastAttemptAt": "2026-10-19T11:50:00.580Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3541,8 +3541,8 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "dbe507d346c222bf39f1f73a4e2cbde725f5c9a6",
-    "qualityScore": 61,
+    "revision": "b12fc8389e1bd52583182f9e9d2664a43b2e5dcc",
+    "qualityScore": 62,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3555,12 +3555,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "b51b61b2627132785e78b391c011e28e8becb3a1e382c13582d7cf844351611a",
+    "sha256": "cf19443c09c07df3b64d140202115935154f5f5fa2b9c6857e241fb3f44317c5",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "dbe507d346c222bf39f1f73a4e2cbde725f5c9a6",
-    "lastAttemptAt": "2026-10-19T11:42:46.245Z"
+    "lastAttemptRevision": "b12fc8389e1bd52583182f9e9d2664a43b2e5dcc",
+    "lastAttemptAt": "2026-10-19T11:50:12.515Z"
   },
   "portal-lab": {
     "note": "existing cover rated higher",
@@ -3600,16 +3600,16 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "4c80f620109e6d01eba65290c12e41523fd07620",
-    "lastAttemptAt": "2026-10-19T11:43:09.040Z",
-    "revision": "4c80f620109e6d01eba65290c12e41523fd07620",
-    "qualityScore": 55,
+    "lastAttemptRevision": "0e2bb88b1d71413c5cb879e83ae18d5ce00bcec4",
+    "lastAttemptAt": "2026-10-19T11:50:23.345Z",
+    "revision": "0e2bb88b1d71413c5cb879e83ae18d5ce00bcec4",
+    "qualityScore": 57,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "shot": 0,
-    "sha256": "7a29ce0d4f3924654b7535b90aca0ef3ba221a2361456635295f56f798c13389",
+    "sha256": "0c1ca7f71c22d3d54ec5e32fd311f4fa5b2d3666205c739682ff8156a2bdebca",
     "imageVersion": 2
   },
   "blockies": {
@@ -3743,7 +3743,7 @@
     "lastAttemptAt": "2026-10-19T10:16:36.235Z"
   },
   "trace-mosaic": {
-    "revision": "79840f5b366240cdc4458028f5c8f622ff465447",
+    "revision": "612dc3fc9c2b92332d83e7044e48ca9e2355422f",
     "qualityScore": 67,
     "visionScore": null,
     "prepared": false,
@@ -3757,12 +3757,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "f2b78b5b0a848725e7e7b376b1be27f711225d59f102a0acd7cdfd22c4a644b0",
+    "sha256": "bc5a841a49ecfa099fe6367400443e3b79699d2279ecac8f43b336bb5e5b0d56",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "79840f5b366240cdc4458028f5c8f622ff465447",
-    "lastAttemptAt": "2026-10-19T11:42:34.258Z"
+    "lastAttemptRevision": "612dc3fc9c2b92332d83e7044e48ca9e2355422f",
+    "lastAttemptAt": "2026-10-19T11:49:49.665Z"
   },
   "crown-laws": {
     "revision": "174f5b4a923933b319f4c6821a2d046bbcd43dc3",
