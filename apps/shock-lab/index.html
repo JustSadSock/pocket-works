@@ -119,8 +119,30 @@
         <p class="flow-note">Идеальный невязкий газ · γ = 1.4. Входное состояние фиксировано, выход свободный. Поток, скачки и зоны сжатия вычисляются — это не готовые анимации. В режиме M &lt; 1 граница приближённая.</p>
       </section>
 
+      <section class="load-panel" id="load-panel" hidden aria-label="Аэродинамические силы">
+        <div class="section-title"><span>06</span><label>НАГРУЗКИ НА ПРОФИЛЬ</label></div>
+        <div class="angle-controls" id="angle-controls">
+          <div class="slider-line"><label for="attack-angle">Угол атаки</label><output id="attack-angle-value" for="attack-angle">+0°</output></div>
+          <input type="range" id="attack-angle" min="-14" max="14" step="1" value="0" aria-label="Угол атаки крыла в градусах">
+          <div class="angle-marks"><span>−14°</span><span>0°</span><span>+14°</span></div>
+        </div>
+        <div class="loads-readout">
+          <div><small>C<sub>L</sub> · ПОДЪЁМНАЯ СИЛА</small><strong id="lift-value">—</strong></div>
+          <div><small>C<sub>D,p</sub> · СОПРОТИВЛЕНИЕ ДАВЛЕНИЯ</small><strong id="drag-value">—</strong></div>
+        </div>
+        <div class="load-heading"><span>РАСПРЕДЕЛЕНИЕ C<sub>p</sub> ПО ПОВЕРХНОСТИ</span><span>Δp / q∞</span></div>
+        <canvas id="cp-chart" class="cp-chart" role="img" aria-label="График коэффициента давления на верхней и нижней поверхности профиля"></canvas>
+        <div class="cp-legend"><span><i class="cp-upper"></i> ВЕРХ</span><span><i class="cp-lower"></i> НИЗ</span><span><i class="cp-reference"></i> СРАВНЕНИЕ</span></div>
+        <div class="record-actions">
+          <button type="button" id="record-load" class="record-load" data-native-press>+ СОХРАНИТЬ ЗАМЕР</button>
+          <button type="button" id="clear-loads" class="clear-loads" data-native-press disabled>ОЧИСТИТЬ</button>
+        </div>
+        <div class="record-list" id="record-list" aria-live="polite"><p>Замеров пока нет. Выберите угол атаки, дайте потоку развиться и сохраните результат.</p></div>
+        <p class="load-note">Силы получены интегрированием давления по границе твёрдого тела. Только давление, без вязкости. Коэффициенты безразмерны, зависят от разрешения и стадии развития потока; это экспериментальная оценка, не аэродинамический сертификат.</p>
+      </section>
+
       <section class="scope-section" aria-label="Регистратор давления">
-        <div class="section-title"><span>06</span><label>ОСЦИЛЛОГРАФ</label></div>
+        <div class="section-title"><span>07</span><label>ОСЦИЛЛОГРАФ</label></div>
         <div class="scope-top"><span class="scope-status"><i></i> ДВА ДАТЧИКА</span><div class="scope-tabs" role="group" aria-label="Режим графика"><button type="button" data-plot="history" class="selected">ВРЕМЯ</button><button type="button" data-plot="profile">ПРОФИЛЬ X</button></div></div>
         <canvas id="scope" class="scope-canvas" role="img" aria-label="Измеренный график давления, вычисляемый по состоянию газа"></canvas>
         <div class="sensor-row">
@@ -158,7 +180,7 @@
     </div>
   </div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="SHOCK" data-app-version="1.2.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="SHOCK" data-app-version="1.3.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
