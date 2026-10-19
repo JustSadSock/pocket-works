@@ -307,6 +307,64 @@ test.describe('Blockies — solo/input/lifecycle smoke', () => {
     expect(result).toEqual({modern:true,legacy:true});
   });
 
+  test('two browser tabs only issue inputs for their own online piece', async ({ page }) => {
+    const second=await page.context().newPage();
+    try {
+      await Promise.all([openSolo(page),openSolo(second)]);
+      const boot=async (tab: import('@playwright/test').Page,id: string)=>{
+        return tab.evaluate((playerId)=>{
+          const w=window as any,ui=w.uiManager,net=w.networkManager;
+          net.socket.id=playerId;
+          net.connected=true;
+          net.moduleVersion='v7';
+          net.phase='playing';
+          net.currentRound=1;
+          w.__commands=[];
+          net.send=(message:any)=>w.__commands.push(message);
+          ui.startOnlineGame({seed:12345,players:[
+            {id:'a',color:'#FF1493',ready:false},
+            {id:'b',color:'#00D9FF',ready:false}
+          ]});
+          ui.handleTouchAction('hold');
+          return {controlled:ui.localPlayerIndex,
+            localId:ui.getTouchPlayer()?.id,
+            input:w.__commands[0]};
+        },id);
+      };
+      const [a,b]=await Promise.all([boot(page,'a'),boot(second,'b')]);
+      expect(a.controlled).toBe(0);
+      expect(a.localId).toBe(0);
+      expect(b.controlled).toBe(1);
+      expect(b.localId).toBe(1);
+      expect(a.input).toMatchObject({type:'input',round:1,input:{action:'hold'}});
+      expect(b.input).toMatchObject({type:'input',round:1,input:{action:'hold'}});
+    } finally {
+      await second.close();
+    }
+  });
+
+  test('out-of-order room revisions and previous round packets cannot rewind the UI',async({page})=>{
+    await openSolo(page);
+    const result=await page.evaluate(()=>{
+      const w=window as any,net=w.networkManager;
+      net.inGameUI=true;net.started=true;net.phase='playing';
+      net.moduleVersion='v7';net.code='AABBCCDD';
+      let roomUpdates=0;
+      net.on('roomUpdate',()=>{roomUpdates++});
+      net.apply({phase:'playing',revision:10,round:3,
+        players:[{id:'a',color:'#FF1493'}]},false);
+      net.apply({phase:'playing',revision:9,round:2,
+        players:[{id:'a',color:'#FF1493'}]},false);
+      const messages:any[]=[];
+      net.send=p=>messages.push(p);
+      net.sendPlayerInput({action:'rotate'});
+      return {round:net.currentRound,revision:net.lastRevision,roomUpdates,
+        sent:messages[0]};
+    });
+    expect(result).toEqual({round:3,revision:10,roomUpdates:1,
+      sent:{type:'input',round:3,input:{action:'rotate'}}});
+  });
+
   test('online-touch ownership and mobile board bounds', async ({ page }) => {
     await page.goto('/apps/blockies/', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => Boolean((window as any).uiManager));
