@@ -7,6 +7,8 @@ const CELL = 32;
 const PLATE_MAX = 48;
 const PLATE_CONDUCTIVE = 9;
 const HULL_PATCH_COST = 16;
+const MAX_DEBRIS = 120;
+const THERMAL_CRITICAL = 112;
 const ROOM_IDLE_MS = 5 * 60 * 1000;
 
 const COLORS = ["#49e7ff", "#ffd24a", "#ff6f9f", "#7bff7a", "#ff9e45", "#8ea2ff", "#ff5f5f", "#7dffe4"];
@@ -189,7 +191,7 @@ function newRoom(code) {
     },
     physics: { x: 0, y: 0, vx: 0, vy: 0, a: 0, av: 0 },
     phase: "build", phaseTime: 0, wave: 0,
-    enemies: [], projectiles: [], drops: [], shields: [], events: [],
+    enemies: [], projectiles: [], debris: [], drops: [], shields: [], events: [],
     offers: shopOffers(0), malfunctionClock: 9,
     currentMission: "scout",
     simTime: 0,
@@ -343,6 +345,7 @@ function ensureEngineering(room){
     if(typeof m.powered!=="boolean")m.powered=true;
     if(!Number.isFinite(m.powerFactor))m.powerFactor=1;
     if(!Number.isInteger(m.powerPriority))m.powerPriority=MODULES[m.templateId]?.type==="repair"?3:2;
+    if(!Number.isFinite(m.lastThermalIncident))m.lastThermalIncident=-9999;
     m.powerPriority=clamp(m.powerPriority,0,3);
   }
 }
@@ -434,6 +437,7 @@ function propagateHeat(room,dt){
   }
   for(const m of mods){
     if(m.heat>=100&&!m.overheated){m.overheated=true;room.events.push({type:"overheat",moduleId:m.id});}
+    thermalIncident(room,m);
     if(m.overheated&&m.heat<52){m.overheated=false;room.events.push({type:"cooled",moduleId:m.id});}
   }
 }
@@ -508,6 +512,7 @@ function canDetachPlate(room,key){
   return visited.size===others.length;
 }
 function detachPlate(room,key,x,y){
+  spawnDebris(room,x,y,"plate",4);
   room.ship.cells.delete(key);
   delete room.ship.plates[key];
   delete room.ship.breakers[key];
@@ -517,6 +522,77 @@ function detachPlate(room,key,x,y){
   room.events.push({type:"hull-detached",x,y});
 }
 
+function spawnDebris(room,x,y,material="plate",count=3,impulse=110){
+  if(!Array.isArray(room.debris))room.debris=[];
+  const ph=room.physics,a=ph.a;
+  const centerX=(x+.5)*CELL,centerY=(y+.5)*CELL;
+  const worldX=ph.x+Math.cos(a)*centerX-Math.sin(a)*centerY;
+  const worldY=ph.y+Math.sin(a)*centerX+Math.cos(a)*centerY;
+  for(let i=0;i<Math.min(9,count);i++){
+    const dir=a+Math.atan2(centerY,centerX)+rand(-1.2,1.2),speed=impulse*rand(.55,1.45);
+    room.debris.push({
+      id:`d_${Math.random().toString(36).slice(2,10)}`,
+      x:worldX+rand(-6,6),y:worldY+rand(-6,6),
+      vx:ph.vx-Math.sin(a)*ph.av*centerX+Math.cos(a)*ph.av*centerY+Math.cos(dir)*speed,
+      vy:ph.vy+Math.cos(a)*ph.av*centerX+Math.sin(a)*ph.av*centerY+Math.sin(dir)*speed,
+      angle:dir,spin:rand(-4,4),life:rand(2.1,4.8),age:0,
+      size:rand(3,11),material,damage:material==="reactor"?16:7
+    });
+  }
+  if(room.debris.length>MAX_DEBRIS)room.debris.splice(0,room.debris.length-MAX_DEBRIS);
+}
+function updateDebris(room,dt){
+  if(!Array.isArray(room.debris))room.debris=[];
+  for(let i=room.debris.length-1;i>=0;i--){
+    const d=room.debris[i];
+    d.age+=dt;d.life-=dt;
+    d.x+=d.vx*dt;d.y+=d.vy*dt;d.angle+=d.spin*dt;
+    const drag=Math.pow(.985,dt*60);d.vx*=drag;d.vy*=drag;
+    if(d.life<=0 || !Number.isFinite(d.x)||!Number.isFinite(d.y)){
+      room.debris.splice(i,1);continue;
+    }
+    if(room.phase!=="combat"||d.age<.45)continue;
+    let collided=hitEnemy(room,{x:d.x,y:d.y,radius:d.size*.65,damage:d.damage});
+    if(!collided && d.age>.9 && Math.hypot(d.vx-room.physics.vx,d.vy-room.physics.vy)>95)
+      collided=hitShip(room,{x:d.x,y:d.y,radius:d.size*.65,damage:d.damage*.5});
+    if(collided){
+      room.events.push({type:"debris-impact",x:d.x,y:d.y,material:d.material});
+      room.debris.splice(i,1);
+    }
+  }
+}
+function thermalIncident(room,m){
+  if(room.phase!=="combat"||m.heat<THERMAL_CRITICAL||
+     room.simTime-m.lastThermalIncident<5)return;
+  m.lastThermalIncident=room.simTime;
+  const template=MODULES[m.templateId],reactor=template.type==="reactor";
+  const pos=moduleWorldPoint(room,m);
+  const blast=reactor?26:12;
+  m.hp=Math.max(0,m.hp-(reactor?19:8));
+  if(m.hp<=0){m.status="offline";m.overheated=true;}
+  room.ship.hull=Math.max(0,room.ship.hull-(reactor?14:4));
+  const fp=footprint(m);
+  // Incident scorches neighboring physical plates and heats adjacent machinery.
+  const footprintSet=new Set(fp.map(cell=>ckey(cell.x,cell.y)));
+  for(const cell of fp)for(const [dx,dy] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]]){
+    const key=ckey(cell.x+dx,cell.y+dy);
+    if(!room.ship.cells.has(key))continue;
+    const old=room.ship.plates[key]??PLATE_MAX;
+    const damage=dx===0&&dy===0?blast:blast*.28;
+    room.ship.plates[key]=Math.max(0,old-damage);
+    if(old>0&&room.ship.plates[key]===0)
+      room.events.push({type:"hull-breach",x:cell.x+dx,y:cell.y+dy,worldX:pos.x,worldY:pos.y});
+  }
+  for(const other of room.ship.modules){
+    if(other.id===m.id)continue;
+    const touching=footprint(other).some(cell=>
+      fp.some(f=>Math.abs(cell.x-f.x)+Math.abs(cell.y-f.y)<=1));
+    if(touching)addModuleHeat(room,other,reactor?25:12);
+  }
+  const first=fp[0];
+  spawnDebris(room,first.x,first.y,reactor?"reactor":"slag",reactor?7:4,reactor?150:85);
+  room.events.push({type:"thermal-incident",moduleId:m.id,x:pos.x,y:pos.y,reactor});
+}
 function addModuleHeat(room,m,amount){
   if(amount<=0)return;
   m.heat=clamp((m.heat||0)+amount,0,130);
@@ -761,6 +837,7 @@ function finishWave(room) {
 function shipDefeat(room, reason = "hull") {
   room.phase = "build"; room.phaseTime = 0;
   room.enemies.length = 0; room.projectiles.length = 0; room.shields.length = 0;
+  if(room.debris)room.debris.length=0;
   room.physics.a = 0;
   room.physics.av = 0;
   room.physics.vx = 0;
@@ -1103,6 +1180,17 @@ function hitShip(room, p) {
   const key=ckey(gx,gy),oldPlate=room.ship.plates[key];
   const m=moduleAtCell(room,gx,gy);
   const plateDamage=p.damage*(m?.52:1.35);
+  // Counterforce converts a close impact into a small linear and angular impulse.
+  const impulse=clamp(p.damage*.55,2,32);
+  const speed=Math.hypot(p.vx||0,p.vy||0);
+  const direction=speed>1?Math.atan2(p.vy,p.vx):Math.atan2(p.y-room.physics.y,p.x-room.physics.x);
+  const recoilX=Math.cos(direction)*impulse,recoilY=Math.sin(direction)*impulse;
+  const mass=shipMassProperties(room).mass;
+  room.physics.vx+=recoilX*clamp(50/mass,.2,1.8);
+  room.physics.vy+=recoilY*clamp(50/mass,.2,1.8);
+  const leverX=p.x-room.physics.x,leverY=p.y-room.physics.y;
+  room.physics.av=clamp(room.physics.av+(leverX*recoilY-leverY*recoilX)*.000015,-2.8,2.8);
+  room.events.push({type:"impact-impulse",x:p.x,y:p.y,strength:impulse});
   room.ship.plates[key]=Math.max(0,oldPlate-plateDamage);
   if(oldPlate===0&&room.ship.plates[key]===0){
     room.ship.fractures[key]=(room.ship.fractures[key]||0)+1;
@@ -1122,8 +1210,10 @@ function hitShip(room, p) {
       }
     }
   }
-  if(oldPlate>0&&room.ship.plates[key]===0)
+  if(oldPlate>0&&room.ship.plates[key]===0){
+    spawnDebris(room,gx,gy,"slag",3,60);
     room.events.push({type:"hull-breach",x:gx,y:gy,worldX:p.x,worldY:p.y});
+  }
   if (m) {
     m.hp = Math.max(0, m.hp - p.damage);
     room.events.push({ type: "module-hit", moduleId: m.id, x: p.x, y: p.y });
@@ -1233,6 +1323,7 @@ function updateRoom(room, dt) {
   }
 
   updateShip(room, dt);
+  updateDebris(room,dt);
   if (room.phase === "combat") {
     updateEnemies(room, dt);
     updateProjectiles(room, dt);
@@ -1265,6 +1356,7 @@ function serializeModule(room, m) {
     shotFlash: m.shotFlash || 0,
     recoil:m.recoil||0,
     heat:m.heat||0,overheated:Boolean(m.overheated),powered:m.powered!==false,powerFactor:m.powerFactor??1,
+    thermalIncidentAt:m.lastThermalIncident||-9999,
     powerPriority:m.powerPriority??2,powerState:m.powerState||"online",
     coolantBoost:m.coolantBoost||1,
     placement: placementEffect(room, m),
@@ -1307,6 +1399,8 @@ function serializeRoom(room) {
     physics: { ...room.physics },
     enemies: room.enemies.map((e) => ({ id: e.id, type: e.type, hp: e.hp, maxHp: e.maxHp, x: e.x, y: e.y, a: e.a, radius: e.radius, elite: Boolean(e.elite), sprite: e.sprite || ENEMIES[e.type].sprite })),
     projectiles: room.projectiles.map((p) => ({ id:p.id,x:p.x,y:p.y,vx:p.vx,vy:p.vy,radius:p.radius,friendly:p.friendly,color:p.color })),
+    debris:(room.debris||[]).map(d=>({id:d.id,x:d.x,y:d.y,vx:d.vx,vy:d.vy,angle:d.angle,
+      size:d.size,material:d.material,life:d.life,spin:d.spin})),
     drops: room.drops.map((d) => ({ id: d.id, kind: d.kind, value: d.value, x: d.x, y: d.y, ttl: d.ttl })),
     shields: room.shields,
     players: [...room.players.values()].map((p) => ({ id: p.id, name: p.name, color: p.color, moduleId: p.moduleId, connected: p.connected, repairTarget: p.repairTarget })),
