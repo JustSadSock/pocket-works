@@ -27,7 +27,7 @@ test('v0.11 art direction: six body rigs have different silhouettes across actua
    for(let j=0;j<poseStates.length;j++){
     const state=poseStates[j],tmp=document.createElement('canvas');tmp.width=120;tmp.height=104;
     const c=tmp.getContext('2d');c.imageSmoothingEnabled=false;
-    drawMage(c,undefined,{x:58,y:72,scale:1.23,time:.33,face:0,mageId:m.id,
+    drawMage(c,undefined,{x:58,y:69,scale:1.20,time:.33,face:0,mageId:m.id,
      pose:{...state.pose,style:rigSignature(m.id)},casting:state.cast,dashing:state.dash,
      shield:state.shield,flash:state.flash});
     const pixels=c.getImageData(0,0,120,104).data;
