@@ -246,3 +246,13 @@
 @keyframes organ-label{0%,32%,72%,100%{opacity:0}43%,60%{opacity:1}}
 @media(prefers-reduced-motion:reduce){.organ-transition,.organ-transition-active{visibility:hidden!important}
  .organ-transition-active *{animation:none!important}}
+
+/* v1.9.5 — actual measured performance, not a decorative analytics panel */
+.field-reading{padding:9px 5px 10px;margin-top:7px;border-top:1px solid rgba(235,172,139,.32);
+ color:#e8d1b9;font:700 10px/1.55 Arial,sans-serif;letter-spacing:.035em;
+ overflow-wrap:anywhere}
+.field-export{display:flex;justify-content:center;text-align:center;
+ border:1px solid rgba(230,166,128,.48);background:#37201e;color:#f7d0b2;
+ margin-top:3px;min-height:39px;width:100%;touch-action:manipulation}
+.field-export:focus-visible{outline:2px solid #edbd91;outline-offset:2px}
+@media(max-width:650px){.field-reading{font-size:10px}.field-export{min-height:45px}}
