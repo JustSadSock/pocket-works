@@ -16,8 +16,8 @@
     "spatialLayout": "open-workbench",
     "controlLocation": "perimeter",
     "navigation": "editor-toolbox",
-    "chromeTopology": "instrument-rail",
-    "dominantMotion": "propagating-front",
+    "chromeTopology": "framed-stage",
+    "dominantMotion": "immediate",
     "primaryVerb": "Place a high-pressure impulse, alter the wall shape and measure where the front reaches.",
     "physicalFeedback": "The actual HLL field changes on each step, a brief excitation circle identifies the contact source, and wall edits appear immediately as solid reflective cells.",
     "spatialRationale": "The physical chamber gets the majority of the viewport; on a phone the lower control board scrolls internally without moving the live wave display.",
@@ -31,6 +31,16 @@
         "slug": "zamazka",
         "spatialDifference": "No paper studio, no painterly cards; industrial short-text control board framing a computational gas tank.",
         "interactionDifference": "Direct injection and continuous waves replace turn-based drawing."
+      },
+      {
+        "slug": "crumple-yard",
+        "spatialDifference": "SHOCK uses a pressure-field instrument bay rather than the source project's discrete object geometry.",
+        "interactionDifference": "Gas impulse injection, boundary drawing and live pressure measurement have distinct controls and physical consequences."
+      },
+      {
+        "slug": "trace-mosaic",
+        "spatialDifference": "SHOCK uses a pressure-field instrument bay rather than the source project's discrete object geometry.",
+        "interactionDifference": "Gas impulse injection, boundary drawing and live pressure measurement have distinct controls and physical consequences."
       }
     ]
   },
