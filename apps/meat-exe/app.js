@@ -607,20 +607,18 @@ function update(dt){
         if(next){setNotice(next.name+' · ПУЛЬС '+next.pulse+'/3',3);
           sound('heart');snapshot();}
       }
-      return;
-    }
-    if(state.pulseMax===3&&guardianForWave(state.wave)&&
+    }else if(state.pulseMax===3&&guardianForWave(state.wave)&&
        !(state.guardianDefeated||[]).includes(state.wave)){
       state.guardianPending=state.wave;
       waveBreak=0;
       setNotice('ОРГАН СОБИРАЕТ СТРАЖА',2.4);snapshot();
-      return;
-    }
+    }else{
     waveBreak+=dt;
     if(waveBreak>2.2){
       waveBreak=0;
       if(state.wave>=5)finish(true);
       else openDraft(state.wave+1);
+    }
     }
   }else waveBreak=0;
   if(clock-lastSave>5){lastSave=clock;snapshot();}
