@@ -131,19 +131,24 @@ const updateEval=(old,newer)=>{
 combatWorker.onmessage=async event=>{
  const d=event.data||{};
  try{
-  if(d.type==='combat-started'){setBattleBusy(true);status('Обучение бойцов начато');}
+  if(d.type==='combat-started'){setBattleBusy(true);status('Обучение бойцов начато');window.dispatchEvent(new CustomEvent('petri:progress',{detail:{mode:'combat',busy:true,text:'Бойцы тренируют тактику'}}));}
   else if(d.type==='combat-progress'){
    $('battleProgress').style.width=(100*d.iteration/d.total)+'%';
    $('battleGenerations').textContent=d.iteration+' / '+d.total;
    $('battleAccepted').textContent=String(d.accepted);
    $('battleFitness').textContent=fmt(d.current?.score);
+   window.dispatchEvent(new CustomEvent('petri:progress',{detail:{mode:'combat',busy:true,done:d.iteration,total:d.total,text:'Поколение '+d.iteration+' из '+d.total}}));
   }else if(d.type==='combat-trained'||d.type==='combat-stopped'){
    setBattleBusy(false);battlePolicy=d.policy;
    if(d.type==='combat-trained'){updateEval(d.baseline,d.validation);displayReplay(d.replay);}
    status(d.type==='combat-trained'?'Боевой мозг обучен':'Обучение остановлено');
    await persistPolicy('combat-autosave','Автосохранение боя','combat-policy',battlePolicy);
+   window.dispatchEvent(new CustomEvent('petri:finished',{detail:{mode:'combat',snapshot:battlePolicy,
+    report:{units:d.history?.at(-1)?.episode||d.iteration||0,before:d.baseline?.winRate??null,after:d.validation?.winRate??null,
+      outcome:d.type==='combat-stopped'?'stopped':'completed',label:d.type==='combat-stopped'?'Тренировка остановлена. Текущие навыки сохранены.':
+      'Контрольные бои: '+Math.round(100*(d.baseline?.winRate||0))+'% → '+Math.round(100*(d.validation?.winRate||0))+'% побед'}}}));
   }else if(d.type==='combat-tested'){
-   battlePolicy=d.policy;updateEval(null,d.validation);displayReplay(d.replay);status('Испытание завершено');
+   battlePolicy=d.policy;updateEval(null,d.validation);displayReplay(d.replay);status('Испытание завершено');window.dispatchEvent(new CustomEvent('petri:evaluated',{detail:{mode:'combat',text:$('battleSummary').textContent}}));
   }else if(d.type==='combat-tournament'){
    $('battleLeaderboard').replaceChildren();
    for(const item of d.table){
@@ -235,7 +240,11 @@ window.addEventListener('message',async event=>{
  const d=event.data;
  try{
   if(d.type==='ready'){
-   raceReady=true;racePolicy=d.policy;raceLock(false);
+   raceReady=true;const defaultBrain=d.policy;
+   if(racePolicy&&Array.isArray(racePolicy))raceCommand('load',{policy:racePolicy});
+   else racePolicy=defaultBrain;
+   raceLock(false);
+   window.dispatchEvent(new CustomEvent('petri:ready',{detail:{mode:'race'}}));
    if(raceConnectTimer){clearTimeout(raceConnectTimer);raceConnectTimer=null;}
    $('raceConnect').textContent='Физика ШПИЛЬКИ · подключена';
    status('Настоящий гоночный движок готов');
@@ -245,20 +254,26 @@ window.addEventListener('message',async event=>{
    $('raceGenerations').textContent=d.complete+' / '+d.total;
    $('raceAccepted').textContent=String(d.accepted);
    $('raceFitness').textContent=fmt(d.bestFitness);
+   window.dispatchEvent(new CustomEvent('petri:progress',{detail:{mode:'race',busy:true,done:d.complete,total:d.total,text:'Испытано '+d.complete+' из '+d.total+' улучшений'}}));
    racePolicy=d.policy;
   }else if(d.type==='trained'){
    raceLock(false);racePolicy=d.policy;raceReplay=d.replay;
    $('raceReport').textContent='Контрольная физическая серия · начальная '+fmt(d.baseline?.score)+' → обученная '+fmt(d.validation?.score)+' очков. Прогресс на незнакомых seed: '+fmt(d.validation?.progress)+'.';
    updateRaceReplay(d.replay);status('Обучение гонщика завершено');
    await persistPolicy('race-autosave','Автосохранение гонщика','shpilka-evo',racePolicy);
+   window.dispatchEvent(new CustomEvent('petri:finished',{detail:{mode:'race',snapshot:racePolicy,
+    report:{units:d.replay?.trace?.length||d.complete||0,before:d.baseline?.score??null,after:d.validation?.score??null,
+      outcome:'completed',label:'Контрольный заезд: '+fmt(d.baseline?.score)+' → '+fmt(d.validation?.score)+' баллов'}}}));
   }else if(d.type==='stopped'){
    raceLock(false);racePolicy=d.policy;
    await persistPolicy('race-autosave','Автосохранение гонщика','shpilka-evo',racePolicy);
+   window.dispatchEvent(new CustomEvent('petri:finished',{detail:{mode:'race',snapshot:racePolicy,
+      report:{units:d.complete||0,outcome:'stopped',label:'Тренировка остановлена · '+(d.complete||0)+' испытаний'}}}));
    status('Обучение гонщика остановлено');
   }else if(d.type==='tested'){
    raceReplay=d.result;updateRaceReplay(d.result);
    $('raceReport').textContent='Проверка · пройдено '+fmt(d.result.progress)+' м; кругов '+d.result.laps+'; вне дороги '+d.result.offroad+' шагов.';
-   status('Проверка на гоночной трассе завершена');
+   status('Проверка на гоночной трассе завершена');window.dispatchEvent(new CustomEvent('petri:evaluated',{detail:{mode:'race',text:$('raceReport').textContent}}));
   }else if(d.type==='loaded'){racePolicy=d.policy;status('Гоночная модель загружена');}
   else if(d.type==='previewed'){$('raceFrameCount').textContent=(Number(d.frame)+1)+' / '+d.total;}
   else if(d.type==='error'){raceLock(false);status('Шпилька: '+d.message);}
@@ -291,6 +306,7 @@ function openMode(mode){
  if(!grid&&$('playPause').textContent.includes('Пауза'))$('playPause').click();
  if(combat&&!battleReplay&&!editor.isEditing())sendCombat('combat-test',{config:sceneConfig(),seed:41});
  if(mode==='perekos')openPerekosLab();else pausePerekosLab();
+ window.dispatchEvent(new CustomEvent('petri:mode',{detail:{mode}}));
  if(race&&!frame.src.includes('petri=1')){
   $('raceConnect').textContent='Подключение физики Шпильки...';
   connectRace();
@@ -299,3 +315,27 @@ function openMode(mode){
 for(const b of document.querySelectorAll('[data-world-mode]'))b.onclick=()=>openMode(b.dataset.worldMode);
 openMode('grid');raceLock(false);
 void refreshLibraries();
+
+window.PetriForgeRuntime=window.PetriForgeRuntime||{};
+window.PetriForgeRuntime.combat={
+ getModel:async()=>structuredClone(battlePolicy),
+ setModel:async snapshot=>{if(battleBusy)throw Error('Идёт тренировка');battlePolicy=snapshot&&validPolicy(snapshot)?structuredClone(snapshot):makePolicy('aggressive',17);sendCombat('combat-set',{policy:battlePolicy});},
+ train:()=>{if(battleBusy)return false;$('battleTrain').click();return true;},
+ test:()=>{if(battleBusy)return false;$('battleTest').click();return true;},
+ stop:()=>{$('battleStop').click();},
+ replay:()=>{if(battleReplay)$('battlePlay').click();else $('battleTest').click();},
+ isBusy:()=>battleBusy,hasReplay:()=>!!battleReplay,
+ configure:variant=>{$('battleArena').value=variant||'cover';},
+ batch:count=>{$('battleIterations').value=String(count);}
+};
+window.PetriForgeRuntime.race={
+ getModel:async()=>racePolicy?racePolicy.slice():null,
+ setModel:async snapshot=>{if(raceBusy)throw Error('Идёт тренировка');racePolicy=Array.isArray(snapshot)?snapshot.slice():[.95,.72,.95,.9,.7,.65,.75,.65,.7];if(raceReady)raceCommand('load',{policy:racePolicy});},
+ train:()=>{if(!raceReady||raceBusy)return false;$('raceTrain').click();return true;},
+ test:()=>{if(!raceReady||raceBusy)return false;$('raceTest').click();return true;},
+ stop:()=>{$('raceStop').click();},
+ replay:()=>{if(raceReplay?.trace?.length){$('raceSeek').value='0';raceCommand('preview',{frame:0});}},
+ isBusy:()=>raceBusy,isReady:()=>raceReady,hasReplay:()=>!!raceReplay?.trace?.length,
+ configure:seed=>{$('raceSeed').value=String(seed||41);},
+ batch:count=>{$('raceIterations').value=String(count);}
+};
