@@ -94,6 +94,11 @@ export function carveButtressFace(c,w,index=0){
    rect(c,xx+1,yy+3,2,2,'#d3c2987c');
   }
  }
+ // Tiny granular seams along the downward facing ledge.
+ for(let i=0;i<8;i++){
+  const gx=x+6+i*(width-16)/8;
+  rect(c,gx,y+height-9,3+i%3,2,i%3===0?'#b3b08a66':'#122d24b8');
+ }
  // Chipped shadowed corner and fallen block fragments define scale.
  rect(c,x+width-11,y+height-4,11,4,'#142922');
  for(let i=0;i<9;i++){

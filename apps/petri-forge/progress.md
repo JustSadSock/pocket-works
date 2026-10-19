@@ -13,3 +13,14 @@ Chromium and WebKit passed desktop, portrait and landscape: procedural rooms, to
 - Unit tests: deterministic scenarios, reward consumption, terminal behavior, learned Q-table, snapshot, traces and RNG; new Playwright smoke tests added.
 - Developer checks performed via independent JS/V8 executions: all six seeded courses improved to 94–100 successes in final 100 training runs after 550 episodes; Q serialization matched; static initialization/toolbar/train dispatch and UI progress received, with corrected keyboard-handler binding. Actual deployed browser / Playwright tests **not executed** in this session.
 - **Not shipped:** Shpilka game integration, Combat Forge arenas, Perekos adapter, DQN/PPO. Next stage = Shpilka headless parity + basic combat sandbox.
+
+2026-10-19 — 0.3.0 Combat Forge + first external game integration (pushed to main):
+- New pure deterministic 2D combat simulator with 3 arenas, 6 real abilities, 4 loadouts, team sizes 1×1/2×2, projectiles, hazards, resource/cooldown mechanics.
+- Combat Worker uses seed-paired evolutionary comparisons, side swapping and new-seed evaluation; exports replay frames and a learned 8-gene policy. V8 test: 7 iterations, 2 accepted mutations, valid checkpoint/replay, holdout score improved in that sample (not a guarantee).
+- Added fully interactive combat station (fight, pause, step, 1×/3× replay, evolve, stop, evaluate, save/load) and separate Shpilka station with training and saved policies.
+- Shpilka 2.9.1 Petri-only iframe bridge loads original physics code, overrides controls in isolation, drives actual updateSimulation and compares sampled 9-parameter driving policies; standard game frame loop stays unchanged outside the iframe.
+- Station files precached in Petri 0.3 SW; Shpilka bridge precached in Shpilka 2.9.1 SW; metadata updated and tests added.
+- 6 deterministic arena/team test scenarios passed in isolated V8. Combat worker 7-generation cycle and holdout test passed. Test files for Node and browser committed. **Actual Playwright/visual runs, Shpilka live browser verification, and high-speed Shpilka parity/performance benchmark remain unverified**. No claim of production visual acceptance.
+
+Next: resolve live-browser regressions, measure Shpilka parity/performance on real engine, then expand Combat Forge editor and add Perekos adapter.
+

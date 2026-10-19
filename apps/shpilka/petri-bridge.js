@@ -26,7 +26,7 @@
     return {speed,heading,offset,roadHalf:Math.max(28,roadHalf),futureCurve,slip:car.slip||0,
       yaw:car.yawRate||0,airborne:car.airborne,rivalDist,rivalSide,
       progress:car.progressDistance||0,completedLaps:car.completedLaps||0,offroad:Math.max(0,(car.distanceFromRoad||0)-roadHalf),
-      finished:car.finishTime!=null,seconds:raceElapsed,x:car.x,y:car.y};
+      finished:car.finishTime!=null,seconds:raceElapsed,x:car.x,y:car.y,angle:car.angle};
   }
   function decide(o,p){
     const steer=clamp(o.heading*(p[0]*2.5)+(-o.offset/o.roadHalf)*p[1]*1.8-o.yaw*p[2]*.2
@@ -47,7 +47,10 @@
   function resetEpisode(seed){
     prepareRoute(seed>>>0||1);
     setupRace();
-    mode='race';raceElapsed=0;
+    mode='paused';raceElapsed=0;
+    startScreen.hidden=true;pauseScreen.hidden=true;finishScreen.hidden=true;
+    document.querySelector('#loadingScreen')?.setAttribute('hidden','');
+    countdownNode.hidden=true;showRaceUi(true);
     countdownElapsed=0;
     lastFrame=performance.now();
     control={steer:0,throttle:0,brake:0};
@@ -57,9 +60,11 @@
     const trace=[],limit=Math.max(100,Math.min(steps,4500));
     let stuck=0,lastProgress=0,offroad=0,contacts=0;
     for(let i=0;i<limit;i++){
-      if(mode!=='race')break;
+      if(!player||player.finishTime!=null)break;
       if(i%8===0){const o=observe();if(!o)break;control=decide(o,p);if(record&&i%40===0)trace.push(o);}
-      updateSimulation(DT);if(!player||!Number.isFinite(player.x)||!Number.isFinite(player.y))break;
+      mode='race';
+      try{updateSimulation(DT);}finally{mode='paused';}
+      if(!player||!Number.isFinite(player.x)||!Number.isFinite(player.y))break;
       if(player.distanceFromRoad>roadHalf+15)offroad++;
       if(player.collisionCooldown>.14)contacts++;
       if(i%120===0){const progress=player.progressDistance||0;if(progress-lastProgress<16)stuck++;else stuck=0;lastProgress=progress;if(stuck>4)break;}
@@ -83,7 +88,7 @@
     if(!trace?.length)return;const o=trace[Math.min(index,trace.length-1)];
     if(!o||!player)return;
     // Render a historical path preview: interpolation does not pretend to be a re-simulated race.
-    player.x=o.x;player.y=o.y;player.vx=o.speed*Math.cos(player.angle);player.vy=o.speed*Math.sin(player.angle);
+    player.x=o.x;player.y=o.y;player.angle=o.angle;player.vx=o.speed*Math.cos(o.angle);player.vy=o.speed*Math.sin(o.angle);
     draw();
   }
   function trainingTick(){

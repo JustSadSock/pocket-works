@@ -890,22 +890,22 @@
   "crumple-yard": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "1d70c158a537508ed7ebb879f84da65493a89c34",
-    "lastAttemptAt": "2026-10-19T10:17:14.480Z",
+    "lastAttemptRevision": "65c571b064071eb27a4b9d0261d30c624c71f091",
+    "lastAttemptAt": "2026-10-19T11:42:22.402Z",
     "captureEngine": "safe-gameplay-v3",
     "diagnostic": {
-      "bestScore": 46,
+      "bestScore": 47,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 18304,
-        "variance": 28.769392183445426,
-        "entropy": 1.6354039831201599,
-        "edgeDensity": 0.08742559523809523,
-        "colorfulness": 11.9443359375,
-        "centerDetail": 13.988362010568013,
-        "meanLight": 134.80905356445825
+        "bytes": 18936,
+        "variance": 28.822676478323523,
+        "entropy": 1.656936862899003,
+        "edgeDensity": 0.0900297619047619,
+        "colorfulness": 12.40087890625,
+        "centerDetail": 13.935489917988516,
+        "meanLight": 134.56707675781743
       },
       "gameplayEntry": {
         "started": true,
@@ -917,7 +917,7 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/crumple-yard/?pw-cover=1&pw_release=1.2.0&pw_fp=4d0dba43c18dc71556723bca"
+      "url": "http://127.0.0.1:4173/apps/crumple-yard/?pw-cover=1&pw_release=1.2.1&pw_fp=6167884a898c4cd4a1f452fb"
     }
   },
   "formica-colony": {
@@ -2708,10 +2708,10 @@
   "shpilka": {
     "note": "No frame passed image-content checks",
     "status": "published",
-    "lastAttemptRevision": "c98a9ef2900092404f450341663f547af8bf1bcf",
-    "lastAttemptAt": "2026-10-19T11:34:03.071Z",
-    "revision": "c98a9ef2900092404f450341663f547af8bf1bcf",
-    "qualityScore": 77,
+    "lastAttemptRevision": "e0c0e40ed70944298ead0c6672d6ba166b92a879",
+    "lastAttemptAt": "2026-10-19T11:42:58.184Z",
+    "revision": "e0c0e40ed70944298ead0c6672d6ba166b92a879",
+    "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -2723,8 +2723,8 @@
       }
     ],
     "diagnostic": null,
-    "shot": 3,
-    "sha256": "e94f6c8fa7075229d92185d3d61eea83c92a1755fd7da2c44eacd7028c2cf446",
+    "shot": 0,
+    "sha256": "1a2d4c9bfd30aff0315e2f99e79ff9d5cf59432ba6d32414621cb6aeab80f427",
     "imageVersion": 2,
     "captureEngine": "safe-gameplay-v3"
   },
@@ -3541,7 +3541,7 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "7951f6100fc87263e8feb5936881aaacb67c5f83",
+    "revision": "dbe507d346c222bf39f1f73a4e2cbde725f5c9a6",
     "qualityScore": 61,
     "visionScore": null,
     "prepared": false,
@@ -3555,12 +3555,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "b213cced5e0e1d5b75316568254f992d5ccd7f062e900099eb605fe318f6485a",
+    "sha256": "b51b61b2627132785e78b391c011e28e8becb3a1e382c13582d7cf844351611a",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "7951f6100fc87263e8feb5936881aaacb67c5f83",
-    "lastAttemptAt": "2026-10-19T11:33:29.321Z"
+    "lastAttemptRevision": "dbe507d346c222bf39f1f73a4e2cbde725f5c9a6",
+    "lastAttemptAt": "2026-10-19T11:42:46.245Z"
   },
   "portal-lab": {
     "note": "existing cover rated higher",
@@ -3600,16 +3600,16 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "539e1af55fade4e75b641d9e4cbe946df3d9f84c",
-    "lastAttemptAt": "2026-10-19T11:33:40.163Z",
-    "revision": "539e1af55fade4e75b641d9e4cbe946df3d9f84c",
+    "lastAttemptRevision": "4c80f620109e6d01eba65290c12e41523fd07620",
+    "lastAttemptAt": "2026-10-19T11:43:09.040Z",
+    "revision": "4c80f620109e6d01eba65290c12e41523fd07620",
     "qualityScore": 55,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "shot": 0,
-    "sha256": "a6ce4a1c6dec38af97e83d381b0ffb8b46d4af0b66e09ef4f6ac94bc0e323ebe",
+    "sha256": "7a29ce0d4f3924654b7535b90aca0ef3ba221a2361456635295f56f798c13389",
     "imageVersion": 2
   },
   "blockies": {
@@ -3743,8 +3743,8 @@
     "lastAttemptAt": "2026-10-19T10:16:36.235Z"
   },
   "trace-mosaic": {
-    "revision": "926c369404b68908300504665837b0a9f8916c5e",
-    "qualityScore": 68,
+    "revision": "79840f5b366240cdc4458028f5c8f622ff465447",
+    "qualityScore": 67,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3757,12 +3757,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "bd0da1fd2a0bd0649022a6efcc03233307ae0c5f4792ea48935136f7ea750aa1",
+    "sha256": "f2b78b5b0a848725e7e7b376b1be27f711225d59f102a0acd7cdfd22c4a644b0",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "926c369404b68908300504665837b0a9f8916c5e",
-    "lastAttemptAt": "2026-10-19T10:16:48.006Z"
+    "lastAttemptRevision": "79840f5b366240cdc4458028f5c8f622ff465447",
+    "lastAttemptAt": "2026-10-19T11:42:34.258Z"
   },
   "crown-laws": {
     "revision": "174f5b4a923933b319f4c6821a2d046bbcd43dc3",
