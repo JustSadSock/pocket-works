@@ -4,7 +4,7 @@ import {createObservatory} from './observatory.js';
 import {createMaterialLab} from './material-view.js';
 import {createWaveLab} from './wave-view.js';
 import {createDesigner} from './designer.js';
-import {throatDiagnostics} from './spacetime.js';
+import {throatDiagnostics,criticalImpact} from './spacetime.js';
 const $=id=>document.getElementById(id),canvas=$('space'),ctx=canvas.getContext('2d',{alpha:false});
 const sound=new AudioBus(),observatory=createObservatory(canvas,{onAction:kind=>sound.play(kind)}),materialLab=createMaterialLab({onAction:kind=>sound.play(kind)}),waveLab=createWaveLab({onAction:kind=>sound.play(kind)}),designer=createDesigner(canvas,{getMetric:()=>currentMetric(),onEdit:changes=>applyDesign(changes),onAction:kind=>sound.play(kind)}),STORAGE='pocket-works:portal-lab:relativity-v2';
 const defaults={model:'ellis',a:1,eta:.45,shape:0,shapeWidth:1.45,lapseBump:0,lapseWidth:1.3,kind:'light',count:13,spread:32,speed:.7,timeScale:1,view:'observer',source:{l:3.15,phi:Math.PI,alpha:Math.PI}};
@@ -128,7 +128,7 @@ function updateReadouts(){
  $('precision').textContent=error<.001?error.toExponential(1):error.toFixed(4);
  const photon=rays.find(r=>r.k===0);
  $('impact').textContent=photon?Math.abs(photon.L/photon.E).toFixed(3):'—';
- $('critical-value').textContent=(m.a/geometry(0,m).N).toFixed(3);
+ $('critical-value').textContent=criticalImpact(m).b.toFixed(3);
  $('clock-near').textContent=(elapsed*staticClockRate(.8*m.a,m)).toFixed(3);
  $('clock-far').textContent=(elapsed*staticClockRate(5*m.a,m)).toFixed(3);
  $('frame-state').textContent=settings.view==='wave'?'□Φ=0 · ℓ='+waveLab.state.j:settings.view==='map'?(settings.model==='ellis'?'N=1 · ELLIS':`η=${settings.eta.toFixed(2)} · N(l)`):'R² = l² + a²';
@@ -158,9 +158,9 @@ $('shoot').addEventListener('click',()=>{if(settings.view==='observer')observato
 $('critical').addEventListener('click',()=>{
  const m=currentMetric(),src=settings.source;
  const R=geometry(src.l*m.a,m).R,N=geometry(src.l*m.a,m).N;
- const criticalImpact=m.a/geometry(0,m).N;
+ const criticalB=criticalImpact(m).b;
  // Subcritical rays wind around the unstable photon sphere before traversing.
- const argument=Math.min(.999,criticalImpact*.996*N/R);
+ const argument=Math.min(.999,criticalB*.996*N/R);
  settings.kind='light';settings.count=1;settings.spread=0;
  settings.source.alpha=Math.PI+Math.asin(argument);
  sync();emit();sound.play('mount');scheduleSave();
