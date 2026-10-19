@@ -4,7 +4,7 @@
 import {DEFAULT_APPEARANCE,cosmeticFeatures} from './avatar-profile.mjs';
 import {mage} from './mages.mjs';
 import {drawGarbBack,drawGarbFront} from './mage-regalia.mjs';
-import {faceView,directionalOcclusion} from './mage-facing.mjs';
+import {faceView,directionalOcclusion,weaponRotation} from './mage-facing.mjs';
 
 export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=1,scale=1,time=0,shield=0,flash=0,runes=[],mageId='kindle',casting=0,dashing=0,face=0,moving=0,pose=null}={}){
  if(!ctx)return;
@@ -123,7 +123,7 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
    move:stride,guard:guardPose,attack:release,phase:castPhase});
  // Real rear and three-quarter bodies have a different visible rear costume
  // plane, rather than the previous horizontal flip of a forward-facing mage.
- if(viewing.back>.2)directionalOcclusion(ctx,viewing,{trim,coat,shade,
+ if(viewing.back>.2&&!viewing.isRear)directionalOcclusion(ctx,viewing,{trim,coat,shade,
    cloth:pose?.scarf??capeSwing,school:character.school});
  // Neck pivots and head follows the shoulders with delayed motion.
  // Keep all MASKOT hat, face and crown artwork within this pivot.
@@ -229,12 +229,12 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
    default:px(3,-25,4,3,trim);
   }
  }
- if(p.source==='drawing'&&p.artCanvas){
+ if(p.source==='drawing'&&p.artCanvas&&viewing.showChest){
   // The owner's ACTUAL drawn image survives as a legible pixel cameo on the
   // coat, not an arbitrary color-only recolor. The full drawing is in HUD.
   ctx.save();ctx.imageSmoothingEnabled=false;px(-8,-1,16,14,'#1b3631');
   ctx.drawImage(p.artCanvas,-6,0,12,12);ctx.restore();
- }else if(!maskot) {
+ }else if(!maskot&&viewing.showChest) {
   px(-3,2,6,6,trim);px(-1,4,2,3,shade);
  }
  // Each mage has a signature *object* and casting gesture, not a
@@ -266,7 +266,10 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  px(handX-3,handY-2,8,7,flesh);
  px(handX-3,handY+2,8,3,trim);
  ctx.save();ctx.translate(handX,handY);
- ctx.rotate((pose?.weaponTilt||0)+aimRise*.13);
+ // Apply the exact eight-way weapon heading; recoil adds a cosmetic
+ // follow-through, never a new targeting direction.
+ ctx.rotate(weaponRotation(face)+(pose?.weaponTilt||0)*.28);
+ ctx.scale(1,.58+.14*Math.abs(Math.cos(face)));
  ctx.translate(-handX,-handY);
  const beam=(x0,y0,x1,y1,color,width=2)=>{ctx.strokeStyle=color;ctx.lineWidth=width;
   ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke()};
@@ -341,6 +344,8 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  // Broad cast gestures use a forearm and recoil rather than moving the
  // entire fighter sprite; position/hitbox remain owned by core.mjs.
  ctx.restore(); // weapon pivots with the caster's forearm
+ if(viewing.isRear)directionalOcclusion(ctx,viewing,{trim,coat,shade,
+   cloth:pose?.scarf??capeSwing,school:character.school});
  if(isCasting){px(handX-3,handY-1,4,4,'#ddbc96')}
  if(character.trait==='dash_haste'){px(-15,7,4,3,'#9de4c9');px(-19,9,3,3,'#90c2ba')}
  if(character.trait==='guard_extra'){px(-17,-9,7,5,'#c0c5a5')}
@@ -414,7 +419,7 @@ export function drawPortrait(ctx,appearance=DEFAULT_APPEARANCE,size=48){
   const pad=Math.max(2,Math.floor(size*.08));
   ctx.drawImage(appearance.artCanvas,pad,pad,size-2*pad,size-2*pad);
  }else{
-  const k=size/66;drawMage(ctx,appearance,{x:size/2,y:size*.74,scale:k,time:0});
+  const k=size/66;drawMage(ctx,appearance,{x:size/2,y:size*.74,scale:k,time:0,face:Math.PI/4});
  }
 }
 export function drawHero(ctx,appearance=DEFAULT_APPEARANCE,time=0,runes=[],mageId='kindle',reduced=false){
@@ -422,5 +427,5 @@ export function drawHero(ctx,appearance=DEFAULT_APPEARANCE,time=0,runes=[],mageI
  // An earthbound oval instead of another floating decorative stat panel.
  ctx.fillStyle='#30443b';ctx.beginPath();ctx.ellipse(63,133,48,10,0,0,Math.PI*2);ctx.fill();
  ctx.fillStyle='#8a8c6b';ctx.fillRect(22,137,83,3);
- drawMage(ctx,appearance,{x:64,y:110,scale:2.0,time,runes,shield:0,mageId,pose:reduced?{still:true}:null});
+ drawMage(ctx,appearance,{x:64,y:110,scale:2.0,time,runes,shield:0,mageId,face:Math.PI/4,pose:reduced?{still:true}:null});
 }
