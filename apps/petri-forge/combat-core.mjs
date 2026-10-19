@@ -157,7 +157,7 @@ export function stepBattle(s){
   a.vx+=((control.mx*v)-a.vx)*Math.min(1,DT*8);
   a.vy+=((control.my*v)-a.vy)*Math.min(1,DT*8);
   move(a,a.vx*DT,a.vy*DT,walls);
-  const zones=s.rules?.zones||(s.arena==='hazards'?[{x:400,y:240,r:84,dps:11}]:[]);
+  const zones=[...(s.arena==='hazards'?[{x:400,y:240,r:84,dps:11}]:[]),...(s.rules?.zones||[])];
   for(const z of zones){
     if(Math.hypot(a.x-z.x,a.y-z.y)<z.r){injure(s,a,z.dps*DT,null);s.hazardHits[a.team]++;}
   }
@@ -205,4 +205,4 @@ export function simulateBattle(options={},record=false){
  while(!s.done){stepBattle(s);if(record&&s.ticks%3===0&&frames.length<800)frames.push(snapshotBattle(s));}
  return {summary:battleSummary(s),frames};
 }
-export function snapshotBattle(s){return {time:s.time,agents:s.agents.map(a=>({id:a.id,team:a.team,x:a.x,y:a.y,hp:a.hp,maxHp:a.maxHp,shield:a.shield,energy:a.energy,alive:a.alive,face:a.face})),shots:s.shots.map(p=>({x:p.x,y:p.y,team:s.agents[p.owner].team})),mines:s.mines.map(m=>({x:m.x,y:m.y,team:s.agents[m.owner].team})),events:s.events.slice(),winner:s.winner,objectives:s.objectives.slice(),walls:battleWalls(s).map(w=>({...w})),zones:(s.rules?.zones||(s.arena==='hazards'?[{x:400,y:240,r:84,dps:11}]:[])).map(z=>({...z})),point:s.rules?.mode==='control'?{...s.rules.point}:null,maxHp:s.agents[0]?.maxHp||120};}
+export function snapshotBattle(s){return {time:s.time,agents:s.agents.map(a=>({id:a.id,team:a.team,x:a.x,y:a.y,hp:a.hp,maxHp:a.maxHp,shield:a.shield,energy:a.energy,alive:a.alive,face:a.face})),shots:s.shots.map(p=>({x:p.x,y:p.y,team:s.agents[p.owner].team})),mines:s.mines.map(m=>({x:m.x,y:m.y,team:s.agents[m.owner].team})),events:s.events.slice(),winner:s.winner,objectives:s.objectives.slice(),walls:battleWalls(s).map(w=>({...w})),zones:[...(s.arena==='hazards'?[{x:400,y:240,r:84,dps:11}]:[]),...(s.rules?.zones||[])].map(z=>({...z})),point:s.rules?.mode==='control'?{...s.rules.point}:null,maxHp:s.agents[0]?.maxHp||120};}
