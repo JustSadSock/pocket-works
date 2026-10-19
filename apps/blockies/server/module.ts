@@ -293,6 +293,8 @@ class Player {
         this.lines = 0;
         this.currentPiece = null;
         this.nextPiece = null;
+        this.heldPiece = null;
+        this.holdUsed = false;
         this.position = { x: 0, y: 0 };
         this.gameOver = false;
         this.dropCounter = 0;
@@ -313,6 +315,29 @@ class Player {
     spawnPiece() {
         this.currentPiece = this.nextPiece;
         this.nextPiece = this.randomPiece();
+        this.holdUsed = false;
+        this.placeSpawn();
+    }
+
+    hold({ broadcast = true } = {}) {
+        if (!this.currentPiece || this.gameOver || this.holdUsed) return false;
+        const outgoing = this.currentPiece;
+        if (this.heldPiece) {
+            this.currentPiece = this.heldPiece;
+        } else {
+            this.currentPiece = this.nextPiece;
+            this.nextPiece = this.randomPiece();
+        }
+        this.heldPiece = outgoing;
+        this.holdUsed = true;
+        this.placeSpawn();
+        if (broadcast && typeof networkManager !== 'undefined' && networkManager.connected && window.uiManager?.isOnlineMode) {
+            networkManager.sendPlayerInput({ action: 'hold' });
+        }
+        return true;
+    }
+
+    placeSpawn() {
         const pieceWidth = this.currentPiece[0].length;
         const boardWidth = getBoardWidth();
         const preferredX = Math.min(
