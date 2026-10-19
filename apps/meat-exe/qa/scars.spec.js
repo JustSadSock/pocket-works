@@ -17,14 +17,14 @@ test('persistent scars are physically rendered in the right organ after reloadin
  await expect(page.locator('#hud')).toBeVisible();
  const qa=await page.evaluate(()=>window.__MEAT_QA__());
  expect(qa.tissueMemory).toEqual({wave:3,count:2,blood:1,rupture:1,burn:0});
- expect(qa.fx.scars).toBe(2);
+ expect(qa.combat.scars).toBe(2);
  await test.info().attach('retained-marrow-scars',{body:await page.screenshot(),contentType:'image/png'});
  await page.keyboard.press('Escape');
  await page.locator('#menuPause').click();
  await page.reload();
  await page.locator('#resumeSaved').click();
  const again=await page.evaluate(()=>window.__MEAT_QA__());
- expect(again.fx.scars).toBe(2);
+ expect(again.combat.scars).toBe(2);
  expect(errors).toEqual([]);
 });
 test('organ transition mask exists, is noninteractive, and honors reduced-motion',async({page})=>{
