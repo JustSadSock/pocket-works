@@ -327,7 +327,9 @@ function appendPlateActions(container,combat=false){
     fill.style.width=`${100*p.hp/PLATE_MAX}%`;meter.append(fill);
     info.append(name,details,meter);
     const b=button(combat?"Залатать +18":"Залатать +26","",()=>socket.emit("patchHull",{x:p.x,y:p.y}));
-    b.disabled=combat ? state.ship.energy<12 : state.ship.credits<16;
+    const station=moduleByIdLocal(playerMe()?.moduleId);
+    const stationReady=station?.type==="repair"&&station.status==="online"&&!station.overheated&&station.powered!==false;
+    b.disabled=combat ? state.ship.energy<12||!stationReady : state.ship.credits<16;
     row.append(info,b);container.appendChild(row);
   }
   if(plates.length>8){
@@ -411,7 +413,8 @@ function renderRepairConsole() {
   const task = target?.malfunction;
   const signature = JSON.stringify({
     target: target?.id, selected: pilot.repairTarget,
-    plates:damagedPlates().map(p=>[p.x,p.y,Math.round(p.hp)]),energy:state.ship.energy>=12,
+    plates:damagedPlates().map(p=>[p.x,p.y,Math.round(p.hp)]),
+    energy:state.ship.energy>=12,stationPowered:station.powered,stationOverheated:station.overheated,stationStatus:station.status,
     damaged: damaged.map(m => [m.id, m.status, Math.round(m.hp), m.malfunction?.kind,
       m.malfunction?.index, m.malfunction?.progress, m.malfunction?.bits, m.malfunction?.targetBits])
   });
