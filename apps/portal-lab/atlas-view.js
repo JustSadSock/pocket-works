@@ -281,7 +281,7 @@ export function createChronologyAtlas(canvas,{onOpen,onAction,onDirty}={}){
  });
  return {state,setActive,configure,trigger:verify,reset,draw,update,
   get snapshot(){return {params:{...state},certified,selected:result,
-   curve:curve.map(p=>({...p})),log:comparePoints(log),
+   curve:curve.map(p=>({...p})),log:log.length?comparePoints(log):[],
    map:{width:grid.width,height:grid.height,positive:grid.positive,
     negative:grid.negative,minimum:grid.minimum,maximum:grid.maximum}};}
  };
