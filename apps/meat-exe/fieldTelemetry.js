@@ -2,6 +2,11 @@
 // No trackers, network requests, device fingerprinting or fabricated benchmarks.
 const bound=(x,lo,hi,otherwise=0)=>Number.isFinite(x)?Math.max(lo,Math.min(hi,x)):otherwise;
 const integer=(x,lo,hi,otherwise=0)=>Math.floor(bound(x,lo,hi,otherwise));
+// Rendering cadence must use actual elapsed wall time. Game physics is
+// separately capped to 0.1 s so hitch recovery does not tunnel entities.
+export function presentationDelta(ms){
+ return Number.isFinite(ms)?Math.max(0,Math.min(2000,ms))/1000:0;
+}
 export function emptyFieldTelemetry(){
  return {windows:0,seconds:0,weightedFps:0,minFps:null,slowWindows:0,
   peakGeometries:0,peakDrawCalls:0,peakInstances:0,budgetWarnings:0};
