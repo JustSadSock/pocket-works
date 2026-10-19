@@ -1104,7 +1104,10 @@ class UIManager {
         document.getElementById('cancel-coop-btn').addEventListener('click', () => this.showScreen('mainMenu'));
 
         // Online lobby
-        document.getElementById('back-from-online-btn').addEventListener('click', () => this.showScreen('mainMenu'));
+        document.getElementById('back-from-online-btn').addEventListener('click', () => {
+            if (networkManager.currentRoom) networkManager.leaveRoom();
+            this.showScreen('mainMenu');
+        });
         document.getElementById('create-room-btn').addEventListener('click', () => this.createRoom());
         const nicknameInput = document.getElementById('nickname-input');
         if (nicknameInput) {
@@ -2411,6 +2414,11 @@ class UIManager {
         networkManager.on('disconnect', () => {
             this.updateConnectionStatus('disconnected');
             this.showRoomsList([]);
+            if (this.isOnlineMode) this.showStyledMessage(
+                currentLanguage === 'ru' ? 'Соединение потеряно' : 'Connection lost',
+                currentLanguage === 'ru' ? 'Игра ожидает восстановления связи с PocketNet.' : 'Waiting for PocketNet to reconnect.',
+                'error'
+            );
         });
 
         networkManager.on('roomsList', (rooms) => {
@@ -2516,19 +2524,8 @@ class UIManager {
     }
 
     toggleReady() {
+        // PocketNet owns readiness. A local optimistic toggle can lie on rejection.
         networkManager.toggleReady();
-        const btn = document.getElementById('ready-btn');
-        if (btn) {
-            if (btn.textContent.includes('Ready')) {
-                btn.textContent = '⏳ Waiting...';
-                btn.classList.remove('btn-primary');
-                btn.classList.add('btn-secondary');
-            } else {
-                btn.textContent = '✓ Ready';
-                btn.classList.remove('btn-secondary');
-                btn.classList.add('btn-primary');
-            }
-        }
     }
 
     showRoomView(room) {
@@ -2604,6 +2601,16 @@ class UIManager {
                 
                 colorOptionsEl.appendChild(colorDiv);
             });
+        }
+
+        // Show confirmed PocketNet readiness, not a guessed local button state.
+        const local = room.players.find(p => p.id === networkManager.socket.id);
+        const readyButton = document.getElementById('ready-btn');
+        if (readyButton) {
+            readyButton.textContent = local?.ready
+                ? (currentLanguage === 'ru' ? 'Отменить готовность' : 'Unready')
+                : (currentLanguage === 'ru' ? 'Готов' : 'Ready');
+            readyButton.disabled = !local || room.gameStarted;
         }
 
         // Update status
