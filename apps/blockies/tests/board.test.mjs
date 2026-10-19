@@ -234,3 +234,41 @@ test('a timed-out player can rejoin the results vote after reconnecting',()=>{
  assert.equal(state.phase,'playing');
  assert.equal(state.players.length,2);
 });
+
+test('Durable Object tick advances gravity without any client input or pulse',()=>{
+ let state=start([a,b]);const now=Date.now();
+ state.lastTick=now-900;
+ const before=state.engine.players.map(p=>p.dropCounter);
+ state=game.onTick({state,onlineIds:[a.id,b.id],now}).state;
+ assert.equal(state.phase,'playing');
+ assert.ok(state.engine.players[0].dropCounter>before[0]);
+ assert.ok(state.engine.players[1].dropCounter>before[1]);
+ assert.equal(state.lastTick,now);
+});
+
+test('Durable Object tick freezes a disconnected piece while connected teammates keep falling',()=>{
+ let state=start([a,b]);const now=Date.now();
+ state.lastTick=now-900;
+ state.players[0].lastSeenAt=now-4000;
+ const before=state.engine.players[0];
+ const position=JSON.stringify(before.position);
+ state=game.onTick({state,onlineIds:[b.id],now}).state;
+ assert.equal(state.players[0].away,true);
+ assert.equal(state.engine.players[0].dropCounter,before.dropCounter);
+ assert.equal(JSON.stringify(state.engine.players[0].position),position);
+ assert.ok(state.engine.players[1].dropCounter>0);
+});
+
+test('no clients: authoritative clock expires abandoned pieces and reaches results by alarm',()=>{
+ let state=start([a,b]);const now=Date.now();
+ state.lastTick=now-1000;
+ state.players.forEach(p=>p.lastSeenAt=now-61000);
+ state=game.onTick({state,onlineIds:[],now}).state;
+ assert.equal(state.phase,'results');
+ assert.equal(state.started,false);
+ assert.equal(state.engine.isGameOver,true);
+ assert.ok(state.players.every(p=>p.timedOut));
+ assert.ok(state.engine.players.every(p=>p.gameOver));
+ const again=game.onTick({state,onlineIds:[],now:now+1000});
+ assert.equal(again.state.phase,'results');
+});
