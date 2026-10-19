@@ -23,14 +23,9 @@
     "spatialRationale": "A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row. This keeps the current game object and its real inputs spatially connected on a phone.",
     "comparisons": [
       {
-        "slug": "fog-of-conquest",
-        "spatialDifference": "fog-of-conquest uses full-bleed-world and diegetic-tools. Here: A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
-        "interactionDifference": "fog-of-conquest uses contextual with scene-zoom. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
-      },
-      {
-        "slug": "zamazka",
-        "spatialDifference": "zamazka uses open-workbench and diegetic-tools. Here: A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
-        "interactionDifference": "zamazka uses direct-on-object with world-travel. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
+        "slug": "perekos",
+        "spatialDifference": "perekos uses full-bleed-world and layered-panels. Here: A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
+        "interactionDifference": "perekos uses perimeter with overlay-list. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
       },
       {
         "slug": "meat-exe",
@@ -38,14 +33,19 @@
         "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
       },
       {
+        "slug": "living-history",
+        "spatialDifference": "living-history uses full-bleed-world and unframed-scene. Here: A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
+        "interactionDifference": "living-history uses bottom-deck with scene-zoom. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
+      },
+      {
+        "slug": "cavitation-lab",
+        "spatialDifference": "cavitation-lab uses split-workspace and framed-stage. Here: A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
+        "interactionDifference": "cavitation-lab uses bottom-deck with none. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
+      },
+      {
         "slug": "not-dead-yet",
         "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
         "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
-      },
-      {
-        "slug": "crossline-5x5",
-        "spatialDifference": "crossline-5x5 uses header-stage-footer and framed-stage. Here: A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
-        "interactionDifference": "crossline-5x5 uses bottom-deck with overlay-list. This game's actual verb is: Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails."
       }
     ]
   },
