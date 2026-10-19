@@ -79,6 +79,8 @@ function refreshControls(){
   $('flow-metric').hidden=!isFlow;
   $('flow-mach').value=String(state.flowMach);
   $('flow-mach-value').textContent=state.flowMach.toFixed(1)+' M';
+  $('flow-chip').hidden=!isFlow;
+  $('flow-chip').textContent='→ M '+state.flowMach.toFixed(1);
   $('regime').textContent=state.flowMach>=1?'СВЕРХЗВУК':'ДОЗВУК';
   $('flow-velocity').textContent=(state.flowMach*Math.sqrt(1.4)).toFixed(2);
   $('stream-state').textContent=state.streamlines?'ВКЛ.':'ВЫКЛ.';
