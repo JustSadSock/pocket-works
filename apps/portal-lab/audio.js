@@ -24,6 +24,12 @@ export class AudioBus{
   if(kind==='portal'){this.noise(c,t,.33,430*variation,.5,.09);this.noise(c,t+.05,.19,1750*variation,1.2,.038);this.tone(c,t,205*variation,.29,.026);}
   if(kind==='impact'){this.noise(c,t,.09,2400*variation,1.2,Math.min(.06,.011*intensity));this.tone(c,t,390*variation,.16,Math.min(.035,.007*intensity));}
   if(kind==='success'){this.noise(c,t,.35,930,.85,.046);for(let i=0;i<3;i++)this.tone(c,t+i*.065,[392,587,784][i],.3,.019);}
+  if(kind==='paradox'){
+   // Dislocated two-note clock response: audible event ordering, not an in-vacuum sound.
+   this.tone(c,t,510*variation,.21,.025,'sine');
+   this.tone(c,t+.085,260*variation,.32,.032,'triangle');
+   this.noise(c,t+.08,.22,780*variation,1.1,.016);
+  }
   if(kind==='fracture'){
    // Brittle edge-crack (high band), frame vibration (short low transient).
    this.noise(c,t,.095,2850*variation,1.9,.053);
