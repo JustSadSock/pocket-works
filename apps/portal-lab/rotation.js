@@ -22,7 +22,7 @@ export const SCHEMAS=Object.freeze({
  blackHole:'schwarzschild-exact-vacuum'
 });
 export function rotatingMetric(base,{omega=0.42}={}){
- if(!base||!(base.a>0)||!finite(omega)||Math.abs(omega)>.96)throw Error('Недопустимое вращение');
+ if(!base||!(base.a>0)||!finite(omega)||Math.abs(omega)>1.4)throw Error('Недопустимое вращение');
  return {...base,omega};
 }
 export function rotatingGeometry(l,m){
