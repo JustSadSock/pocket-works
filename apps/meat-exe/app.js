@@ -13,6 +13,7 @@ import {pulsePlan,pulseEnemyKind,nextPulse} from './runPacing.js';
 import {addScar,scarSignature,scarSurfaceStats,locateWallWound} from './scars.js';
 import {initialAutoQuality,autoQualityWindow,runtimeBudget} from './runtimeBudget.js';
 import {campaignReport} from './runReport.js';
+import {emptyFieldTelemetry,recordFieldWindow,fieldPerformance,observedBalance,buildFieldExport} from './fieldTelemetry.js';
 import {PROTOCOLS,sanitizeProtocol,applyProtocol,extraEnemiesForPulse,incomingProtocolDamage,
   enemyProtocolSpeed,spawnCadence,registerCombatChain,recordFinishedRun,observedRunStats} from './runTuning.js';
 
@@ -122,6 +123,33 @@ function renderProtocols(){
      run.kills+' УБ. · '+run.damageTaken+' УРОНА · '+run.protocol.toUpperCase();
    ui.archiveMetrics.append(item);
  }
+ const field=observedBalance(archive.history);
+ const detail=document.createElement('div');detail.className='field-reading';
+ const perf=field.medianObservedFps===null?'FPS: НЕТ ЗАМЕРОВ':'МЕДИАНА FPS: '+field.medianObservedFps;
+ detail.textContent=field.hasSufficientTimingData?
+   'ПОБЕДНЫЙ ЗАБЕГ (МЕДИАНА): '+Math.floor(field.medianVictorySeconds/60)+':'+
+   String(field.medianVictorySeconds%60).padStart(2,'0')+' · В ЦЕЛИ 15–25 МИН: '+field.targetShare+'% · '+perf:
+   'КАЛИБРОВКА: '+field.measuredWins+'/3 ПОБЕД · '+perf+
+   ' · ДАННЫХ ДЛЯ ВЫВОДОВ ПОКА МАЛО';
+ ui.archiveMetrics.append(detail);
+ const exportButton=document.createElement('button');
+ exportButton.type='button';exportButton.className='archive-option field-export';
+ exportButton.textContent='ЭКСПОРТ ПОЛЕВОГО ОТЧЁТА · JSON';
+ exportButton.addEventListener('click',()=>{
+   try{
+     const report=buildFieldExport(archive.history,state?.telemetry||null);
+     const file=new Blob([JSON.stringify(report,null,2)],{type:'application/json'});
+     const url=URL.createObjectURL(file),link=document.createElement('a');
+     link.href=url;link.download='meat-exe-field-report.json';
+     document.body.append(link);link.click();link.remove();
+     window.setTimeout(()=>URL.revokeObjectURL(url),2000);
+     exportButton.textContent='ОТЧЁТ СОЗДАН · JSON';sound('pickup');
+   }catch(error){
+     exportButton.textContent='ЭКСПОРТ НЕ УДАЛСЯ · ПОВТОРИТЬ';
+     console.warn('[MEAT.EXE] field report:',error);
+   }
+ });
+ ui.archiveMetrics.append(exportButton);
 }
 function setMode(next){
   mode=next;
@@ -175,7 +203,7 @@ function newState(seed){
     grafts:[],biomass:0,pendingDraft:0,draftRevision:0,
     routeHistory:[],selectedRoute:'',routeId:'',routeWave:0,routeHazard:0,gene:null,
     guardianPending:0,guardianDefeated:[],
-    protocol:'normal',damageTaken:0,stageTimes:[],combo:0,comboExpires:0,peakCombo:0,
+    protocol:'normal',damageTaken:0,stageTimes:[],telemetry:emptyFieldTelemetry(),combo:0,comboExpires:0,peakCombo:0,
     pulse:1,pulseMax:3,pulseSpawned:0,organRuptureClaimed:false};
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
@@ -1020,13 +1048,22 @@ function frame(timestamp){
       }
       // Measured FPS is actual paint throughput, not animation callback frequency.
       fpsClock+=dt;
-      if(quality==='auto'&&fpsClock>4){
-        const result=autoQualityWindow(autoMonitor,effectiveQuality,fpsFrames/fpsClock,
-          fpsClock,world.conservativeRenderer);
-        autoMonitor=result.state;
-        if(result.quality!==effectiveQuality){
-          effectiveQuality=result.quality;world.setQuality(effectiveQuality);
+      if(fpsClock>4){
+        const observedFps=fpsFrames/fpsClock;
+        const stats=world.getRuntimeStats?.();
+        if(state){
+          state.telemetry=recordFieldWindow(state.telemetry,observedFps,fpsClock,
+            {...stats,budgetOk:stats?runtimeBudget(stats).ok:undefined});
         }
+        if(quality==='auto'){
+          const result=autoQualityWindow(autoMonitor,effectiveQuality,observedFps,
+            fpsClock,world.conservativeRenderer);
+          autoMonitor=result.state;
+          if(result.quality!==effectiveQuality){
+            effectiveQuality=result.quality;world.setQuality(effectiveQuality);
+          }
+        }else autoMonitor={...autoMonitor,observedFps:Math.round(observedFps*10)/10,
+          samples:autoMonitor.samples+1};
         fpsClock=0;fpsFrames=0;
       }
     }else{accumulator=0;}
@@ -1087,7 +1124,8 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
     protocol:archive.protocol,history:archive.history,runs:archive.runs},
   calibration:{protocol:state?.protocol||'normal',damageTaken:state?.damageTaken||0,
     combo:state?.combo||0,peakCombo:state?.peakCombo||0,stageTimes:state?.stageTimes||[],
-    elapsed:state?.elapsed||0,spawnCadence:state?spawnCadence(state,.5):null},
+    elapsed:state?.elapsed||0,spawnCadence:state?spawnCadence(state,.5):null,
+    fieldPerformance:fieldPerformance(state?.telemetry),balance:observedBalance(archive.history)},
   combat:{shotsFired,confirmedHits,wallHits,lastShotKind,...(world?.getFxCounts?.()||{})}});
 
 try{
