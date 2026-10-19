@@ -116,6 +116,13 @@ function policyControl(s,a,t,walls){
  const spread=p[3]*90+55;
  if(d<spread)forward=-.8;
  let mx=ux*forward+(-uy)*orbit*.85*side,my=uy*forward+ux*orbit*.85*side;
+ if(s.rules?.mode==='control'){
+  const point=s.rules.point,px=point.x-a.x,py=point.y-a.y,pd=Math.hypot(px,py)||1;
+  const friendly=s.agents.some(b=>b.alive&&b.team===a.team&&Math.hypot(b.x-point.x,b.y-point.y)<point.r*.6);
+  // A capture objective changes policy decisions rather than only the final score.
+  if(pd>point.r*.54&&!friendly){mx=mx*.25+px/pd*.75;my=my*.25+py/pd*.75;}
+  else if(pd>point.r*.7){mx=mx*.5+px/pd*.5;my=my*.5+py/pd*.5;}
+ }
  const cw=walls.find(w=>Math.hypot(w.x+w.w/2-a.x,w.y+w.h/2-a.y)<145);
  if(cw&&lineBlocked(a,t,walls)){mx+=-uy*.5;my+=ux*.5;}
  const strength=p[2]*.3+.7;
