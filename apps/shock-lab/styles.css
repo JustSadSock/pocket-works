@@ -258,3 +258,22 @@ button{touch-action:manipulation}a{color:inherit;text-decoration:none}
  .toolstrip{grid-template-columns:repeat(3,minmax(0,1fr))}
  .hint{font-size:9px;padding:7px 8px}
 }
+
+
+/* Pinned playback and tabs on phones — only the selected instrument panel scrolls. */
+.constructor-storage .secondary-actions{display:flex;gap:7px;margin:0 0 10px}
+.constructor-storage .data-drawer{grid-column:auto;margin-top:8px}
+.constructor-storage .secondary-actions button{padding:0 5px}
+@media(max-width:760px){
+ .controls{display:flex;flex-direction:column;overflow:hidden;flex:0 1 43%;min-height:195px}
+ .controls-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-color:#52686c #1a2b31}
+ .panel-head,.workspace-tabs{flex:none}
+ .control-bottom{flex:none;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.65fr) minmax(0,.95fr);gap:4px;min-height:54px;padding:6px 8px 8px;margin:0;background:#142a2e;border-top:1px solid #63746a}
+ .control-bottom .run-button,.control-bottom .step-button,.control-bottom .clear-button{min-width:0;min-height:42px;height:42px;padding:0 5px;font-size:9px;grid-column:auto;letter-spacing:0}
+ .control-bottom .run-button{gap:5px}
+ .control-bottom .run-button #run-symbol{font-size:16px}
+ .control-bottom .clear-button{font-size:8px}
+}
+@media(max-width:370px){
+ .control-bottom{grid-template-columns:minmax(0,1fr) minmax(0,.55fr) minmax(0,1fr)}
+}
