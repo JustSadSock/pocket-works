@@ -49,8 +49,8 @@ test('non-critical saves without a debris array resume safely',()=>{
 test('heat above the threshold triggers a local event, hull damage and nearby heat',()=>{
   let s=fresh();
   s=active(s);
-  const engine=s.room.ship.modules.find(m=>m.type==='engine');
-  const turret=s.room.ship.modules.find(m=>m.type==='turret');
+  const engine=s.room.ship.modules.find(m=>m.templateId==='engine_mk1');
+  const turret=s.room.ship.modules.find(m=>m.templateId==='turret_mk1');
   engine.heat=129;engine.lastThermalIncident=-9999;
   const before={hp:engine.hp,hull:s.room.ship.hull,neighbor:turret.heat};
   s=tick(s);
@@ -62,7 +62,7 @@ test('heat above the threshold triggers a local event, hull damage and nearby he
 });
 test('accidents have a five-second cooldown even if heat remains critical',()=>{
   let s=fresh();s=active(s);
-  const m=s.room.ship.modules[0];m.heat=128;m.lastThermalIncident=-9999;
+  let m=s.room.ship.modules[0];m.heat=128;m.lastThermalIncident=-9999;
   s=tick(s);
   const first=s.snapshot.ship.modules[0].hp;
   m=s.room.ship.modules[0];m.heat=128;
@@ -80,8 +80,10 @@ test('projectile impact imparts momentum, including off-axis ship rotation',()=>
 });
 test('debris from a ruptured reactor uses the reactor material and larger blast',()=>{
   let s=fresh();
+  s.room.ship.inventoryShapes.push('block2');
+  s=send(s,'addHullShape',{shapeId:'block2',x:4,y:0});
   s.room.ship.inventoryModules.push('reactor_mk1');
-  s=send(s,'placeModule',{templateId:'reactor_mk1',x:-2,y:0});
+  s=send(s,'placeModule',{templateId:'reactor_mk1',x:4,y:0});
   const r=s.snapshot.ship.modules.find(m=>m.type==='reactor');
   assert.ok(r);
   s=active(s);
