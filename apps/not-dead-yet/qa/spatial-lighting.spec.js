@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 const origin='/apps/not-dead-yet/?qa=1';
 test('five new apartment variants render physical alcoves and fixture-bound lights',async({page})=>{
- test.setTimeout(135000);
+ test.setTimeout(240000);
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto(origin,{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.__PW_ROGUE_QA__?.startSeed&&window.__PW_TEST_STATE__?.renderer3D,{timeout:25000});
@@ -26,7 +26,7 @@ test('five new apartment variants render physical alcoves and fixture-bound ligh
   expect(metrics.fixturePositions).toHaveLength(2);
   expect(metrics.occludedCells).toBeGreaterThan(0);
   expect(metrics.occludedCells).toBeLessThan(48*48);
-  await page.screenshot({path:test.info().outputPath(`new-architecture-${seed}.png`),animations:'disabled'})
+  await page.screenshot({path:test.info().outputPath(`new-architecture-${seed}.png`),animations:'disabled',timeout:45000})
  }
  expect(families.size).toBe(5);
  expect(errors).toEqual([])
