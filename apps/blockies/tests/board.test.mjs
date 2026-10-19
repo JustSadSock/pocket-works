@@ -8,3 +8,68 @@ test('serialized shared board clears a complete line and awards team score',()=>
 test('two players share locked cells; foreign input cannot mutate the well',()=>{let state=start([a,b]);state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;assert.equal(state.engine.board.flat().filter(Boolean).length,4);assert.throws(()=>game.onMessage({state,player:{id:'intruder'},payload:{type:'input',input:{action:'hardDrop'}}}));assert.deepEqual(game.onJoin({state,player:b}).state.engine,state.engine);});
 test('blocked spawn reaches game over rather than continuing to accept pieces',()=>{let state=start();state.engine.board=state.engine.board.map((row,y)=>row.map((_,x)=>y<4&&x<row.length-1?1:0));state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;assert.equal(state.engine.isGameOver,true);});
 
+test('leaving a running shared well preserves occupied slots and lets teammates continue',()=>{
+ let state=start([a,b]);
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;
+ const locked=JSON.stringify(state.engine.board);
+ const width=state.engine.boardWidth;
+ state=game.onLeave({state,player:a,players:[b]}).state;
+ assert.equal(state.phase,'playing');
+ assert.equal(state.players.length,2,'old ownership slots must not be reindexed');
+ assert.equal(state.players[0].departed,true);
+ assert.equal(state.engine.players[0].gameOver,true);
+ assert.equal(state.engine.players[0].currentPiece,null);
+ assert.equal(state.engine.boardWidth,width);
+ assert.equal(JSON.stringify(state.engine.board),locked,'existing blocks remain in place');
+ assert.throws(()=>game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}));
+ state=game.onMessage({state,player:b,payload:{type:'input',input:{action:'hardDrop'}}}).state;
+ assert.equal(state.engine.board.flat().filter(Boolean).length,8);
+});
+
+test('game over permits unanimous server-side rematch with a new empty board',()=>{
+ let state=start([a,b]);
+ state.engine.isGameOver=true;
+ state=game.onMessage({state,player:a,payload:{type:'pulse'}}).state;
+ assert.equal(state.phase,'results');
+ assert.equal(state.started,false);
+ const previousRound=state.round;
+ state=game.onMessage({state,player:a,payload:{type:'rematch'}}).state;
+ assert.equal(state.phase,'results');
+ assert.equal(state.players[0].ready,true);
+ state=game.onMessage({state,player:b,payload:{type:'rematch'}}).state;
+ assert.equal(state.phase,'playing');
+ assert.equal(state.started,true);
+ assert.equal(state.round,previousRound+1);
+ assert.equal(state.engine.isGameOver,false);
+ assert.equal(state.engine.board.flat().filter(Boolean).length,0);
+ assert.ok(state.engine.players.every(player=>!player.gameOver));
+});
+
+test('the surviving teammate can rematch alone after another player departed',()=>{
+ let state=start([a,b]);
+ state=game.onLeave({state,player:a,players:[b]}).state;
+ const originalWidth=state.engine.boardWidth;
+ assert.equal(state.players.length,2);
+ state.engine.isGameOver=true;
+ state=game.onMessage({state,player:b,payload:{type:'pulse'}}).state;
+ assert.equal(state.phase,'results');
+ state=game.onMessage({state,player:b,payload:{type:'rematch'}}).state;
+ assert.equal(state.phase,'playing');
+ assert.equal(state.players.length,1);
+ assert.equal(state.players[0].id,b.id);
+ assert.equal(state.engine.players.length,1);
+ assert.ok(state.engine.boardWidth<originalWidth);
+ assert.equal(state.engine.board.flat().filter(Boolean).length,0);
+});
+
+test('players can reclaim a departed seat during results but cannot enter active rounds',()=>{
+ let state=start([a,b]);
+ state=game.onLeave({state,player:a,players:[b]}).state;
+ assert.throws(()=>game.onJoin({state,player:a}),/идёт/);
+ state.engine.isGameOver=true;
+ state=game.onMessage({state,player:b,payload:{type:'pulse'}}).state;
+ state=game.onJoin({state,player:a}).state;
+ assert.equal(state.players.length,2);
+ assert.equal(state.players[0].departed,false);
+ assert.equal(state.players[0].ready,false);
+});
