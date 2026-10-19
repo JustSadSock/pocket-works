@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {combatCues,drawGroundCues,drawActorCues} from '../combat-readability.mjs';
+import {combatCues,drawGroundCues,drawActorCues,drawSpellLighting} from '../combat-readability.mjs';
 
 const match=()=>({phase:'fight',actors:[{x:130,y:310,heat:88},{x:300,y:300,heat:20}],
  shots:[],mines:[],barriers:[]});
@@ -58,4 +58,28 @@ test('renderer does not change state, leaves canvas style and reduced motion sta
  drawActorCues(c,s.actors[1],300,300,false,2,true);
  assert.deepEqual(events,['save','restore','save','restore','save','restore']);
  assert.equal(JSON.stringify(s),original);
+});
+
+test('active magic casts bounded, real elemental light without touching gameplay',()=>{
+ const s=match();s.actors[0].heat=94;
+ s.shots=[{owner:0,x:140,y:300,element:'storm'}];
+ s.mines=[{owner:1,x:180,y:300,element:'stone'}];
+ const original=JSON.stringify(s),stops=[];
+ const ctx={save(){},restore(){},fillRect(){},createRadialGradient(){
+  return {addColorStop(at,color){stops.push([at,color])}};
+ }};
+ drawSpellLighting(ctx,s,1,false);
+ assert.equal(stops.length,9,'one projectile, one mine, one overheated actor');
+ assert.ok(stops.some(([,color])=>color.includes('157,231,214')));
+ assert.ok(stops.some(([,color])=>color.includes('206,212,159')));
+ assert.ok(stops.some(([,color])=>color.includes('255,172,98')));
+ assert.equal(JSON.stringify(s),original);
+});
+test('reduced motion lighting has no time-dependent flicker',()=>{
+ const s=match();s.mines=[{owner:1,x:180,y:300,element:'fire'}];
+ const light=t=>{const stops=[],ctx={save(){},restore(){},fillRect(){},
+  createRadialGradient(){return {addColorStop(at,c){stops.push([at,c])}}}};
+  drawSpellLighting(ctx,s,t,true);return stops;
+ };
+ assert.deepEqual(light(0),light(27));
 });
