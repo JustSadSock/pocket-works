@@ -4,7 +4,7 @@ import {panels} from './doors.mjs';
 import {rogueStaticMesh,roguePickupsMesh} from './rogue-scene.mjs';
 import {rogueDoorMesh} from './rogue-door-visual.mjs';
 import {RogueMeshCache} from './rogue-mesh-cache.mjs';
-import {LIGHT_GRID,selectPracticalLights,occupancyMask,lightingMaskKey} from './rogue-lighting.mjs';
+import {LIGHT_GRID,selectPracticalLights,occupancyMask,practicalLightMap,lightingMaskKey} from './rogue-lighting.mjs';
 // Offline WebGL1 geometric interior, atlas-free procedural material maps. Vertex: position/tint/normal/material.
 const VS=[
 'attribute vec3 position;attribute vec3 tint;attribute vec3 normal;attribute float material;',
@@ -19,23 +19,11 @@ const FS=[
 'uniform vec3 eye;uniform vec3 facing;uniform vec3 lampA;uniform vec3 lampB;',
 'uniform float torch;uniform mediump float time;uniform float hit;uniform float electrical;uniform float sight;',
 'uniform sampler2D paintedAtlas;uniform sampler2D structureMask;',
-'uniform vec2 structureOrigin;uniform float structureEnabled;uniform float occlusionSteps;',
-'float fixtureVisibility(vec3 source){',
-' if(structureEnabled<.5)return 1.0;',
-' vec2 line=p.xz-source.xz;',
-' if(length(line)<.6)return 1.0;',
-' float visible=1.0;',
-' for(int i=1;i<=12;i++){',
-'  if(float(i)>occlusionSteps)break;',
-'  vec2 point=source.xz+line*(float(i)/(occlusionSteps+1.0));',
-'  vec2 uv=(point-structureOrigin)/60.96;',
-'  if(uv.x<0.0||uv.y<0.0||uv.x>1.0||uv.y>1.0)continue;',
-'  if(texture2D(structureMask,uv).r<.5)visible=0.0;',
-' }',
-' return visible;',
-'}',
+'uniform vec2 structureOrigin;uniform float structureEnabled;',
 'void main(){',
 'vec3 norm=normalize(n);',
+'vec2 lightUv=(p.xz+vec2(norm.x,norm.z)*.065-structureOrigin)/60.96;',
+'vec2 lightVis=structureEnabled>.5?texture2D(structureMask,clamp(lightUv,vec2(.0),vec2(.9999))).rg:vec2(1.0);',
 'vec2 uv=abs(norm.y)>.6?p.xz:(abs(norm.x)>.6?p.zy:p.xy);',
 'float idx=clamp(floor(mat+.5)-1.0,0.0,15.0);',
 'vec2 tile=vec2(mod(idx,4.0),floor(idx/4.0));',
@@ -48,8 +36,8 @@ const FS=[
 'float flicker=.965+.018*sin(time*3.7)+.011*sin(time*11.1);',
 'float warmA=(1.0-smoothstep(.6,8.7,length(p-lampA)))*.95;',
 'float warmB=(1.0-smoothstep(.6,7.6,length(p-lampB)))*.68;',
-'if(warmA>.015)warmA*=fixtureVisibility(lampA);',
-'if(warmB>.015)warmB*=fixtureVisibility(lampB);',
+'warmA*=lightVis.r;',
+'warmB*=lightVis.g;',
 'float warm=(warmA+warmB)*flicker;',
 'float diffuse=.62+.38*max(dot(norm,normalize(vec3(-.4,.7,-.3))),0.0);',
 'warm*=electrical;',
@@ -651,7 +639,7 @@ export class Renderer{
   this.gl=gl;const program=gl.createProgram();gl.attachShader(program,shader(gl,gl.VERTEX_SHADER,VS));gl.attachShader(program,shader(gl,gl.FRAGMENT_SHADER,FS));gl.linkProgram(program);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
   this.program=program;gl.useProgram(program);this.attrs=['position','tint','normal','material'].map(name=>{const l=gl.getAttribLocation(program,name);if(l>=0)gl.enableVertexAttribArray(l);return l});
-  this.u=Object.fromEntries(['mvp','eye','facing','lampA','lampB','torch','time','hit','paintedAtlas','electrical','sight','structureMask','structureOrigin','structureEnabled','occlusionSteps'].map(x=>[x,gl.getUniformLocation(program,x)]));
+  this.u=Object.fromEntries(['mvp','eye','facing','lampA','lampB','torch','time','hit','paintedAtlas','electrical','sight','structureMask','structureOrigin','structureEnabled'].map(x=>[x,gl.getUniformLocation(program,x)]));
   const atlas=makeMaterialAtlas(1701);this.texture=gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,atlas.width,atlas.height,0,gl.RGBA,gl.UNSIGNED_BYTE,atlas.pixels);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
@@ -724,10 +712,11 @@ export class Renderer{
    if(this.structureKey!==key||this.structureWorld!==world){
     const x0=Math.floor(player.x)-LIGHT_GRID/2,z0=Math.floor(player.z)-LIGHT_GRID/2;
     const mask=occupancyMask(world,x0,z0);
-    gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.structureTexture);
-    gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,LIGHT_GRID,LIGHT_GRID,gl.RGBA,gl.UNSIGNED_BYTE,mask);
-    gl.activeTexture(gl.TEXTURE0);
     this.practicalLights=selectPracticalLights(world,player.x,player.z);
+    const lighting=practicalLightMap(x0,z0,mask,this.practicalLights);
+    gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.structureTexture);
+    gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,LIGHT_GRID,LIGHT_GRID,gl.RGBA,gl.UNSIGNED_BYTE,lighting);
+    gl.activeTexture(gl.TEXTURE0);
     this.structureKey=key;this.structureWorld=world;this.structureOrigin=[x0*SCALE,z0*SCALE];
     this.visualMetrics.lightMaskUploads=(this.visualMetrics.lightMaskUploads||0)+1;
     this.visualMetrics.occludedCells=LIGHT_GRID*LIGHT_GRID-mask.filter((x,i)=>i%4===0&&x===255).length;
@@ -738,7 +727,6 @@ export class Renderer{
   const lampA=rogue?this.practicalLights[0]:world.point('living'),
    lampB=rogue?this.practicalLights[1]:world.point('kitchen');
   gl.uniform1f(this.u.structureEnabled,rogue?1:0);
-  gl.uniform1f(this.u.occlusionSteps,this.canvas.width/this.canvas.height<.75?6:8);
   gl.uniformMatrix4fv(this.u.mvp,false,mvp);gl.uniform3fv(this.u.eye,eye);gl.uniform3fv(this.u.facing,dir);
   gl.uniform3fv(this.u.lampA,rogue?[lampA.x,lampA.y,lampA.z]:[lampA.x*SCALE,2.64,lampA.z*SCALE]);
   gl.uniform3fv(this.u.lampB,rogue?[lampB.x,lampB.y,lampB.z]:[lampB.x*SCALE,2.64,lampB.z*SCALE]);
