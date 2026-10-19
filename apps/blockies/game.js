@@ -1502,6 +1502,9 @@ class UIManager {
 
         this.drawBoard();
 
+        // The PocketNet simulation cannot be paused locally; hide an inert button.
+        const pauseButton = document.getElementById('pause-btn');
+        if (pauseButton) pauseButton.hidden = this.isOnlineMode;
         this.showScreen('gameScreen');
         this.refreshTouchStatus();
         this.scheduleBoardScaleUpdate();
@@ -2345,6 +2348,8 @@ class UIManager {
         this.isOnlineMode = false;
         this.networkPlayers = {};
         this.localPlayerIndex = -1;
+        const pauseButton = document.getElementById('pause-btn');
+        if (pauseButton) pauseButton.hidden = false;
         
         this.showScreen('mainMenu');
         this.refreshTouchStatus();
