@@ -3322,24 +3322,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 39903,
-        "variance": 52.50207615454381,
-        "entropy": 1.9888537498701038,
-        "edgeDensity": 0.11793154761904762,
-        "colorfulness": 28.8935546875,
-        "centerDetail": 60.92146355645503,
-        "meanLight": 39.75557460937526
+        "bytes": 39911,
+        "variance": 52.50332243382241,
+        "entropy": 1.9893348534419,
+        "edgeDensity": 0.11805555555555555,
+        "colorfulness": 28.894287109375,
+        "centerDetail": 60.921077004244005,
+        "meanLight": 39.75384604492215
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.8.2&pw_fp=3b314080c9e89a7676bb7332"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.8.3&pw_fp=b38f7a01220669f4c1aa5e97"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "383b01cbf093209c64d69613810aa65ec2d372bc",
-    "lastAttemptAt": "2026-10-18T23:23:03.212Z"
+    "lastAttemptRevision": "205aa9de4fa1e77ae13898f00ca167bdfc8a347a",
+    "lastAttemptAt": "2026-10-19T08:50:55.322Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
