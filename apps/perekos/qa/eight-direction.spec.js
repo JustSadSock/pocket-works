@@ -25,15 +25,19 @@ test('v0.14: screenshot 48 directional outfits and verify back/side/front faces'
     drawMage(t,undefined,{x:72,y:85,scale:1.33,time:.25,mageId:mage.id,
       face:bearing,pose:{still:true}});
     const d=t.getImageData(0,0,temp.width,temp.height).data;
-    let hash=2166136261,opaque=0;
+    let hash=2166136261,opaque=0,edgePixels=0;
     for(let j=0;j<d.length;j+=4){
      hash=Math.imul(hash^(d[j])^(d[j+1]<<8)^(d[j+2]<<16)^(d[j+3]<<24),16777619)>>>0;
-     if(d[j+3]>0)opaque++;
+     if(d[j+3]>0){
+      opaque++;
+      const index=j/4,x=index%temp.width,y=Math.floor(index/temp.width);
+      if(x<2||y<2||x>=temp.width-2||y>=temp.height-2)edgePixels++;
+     }
     }
     c.drawImage(temp,col*w+5,row*h+23);
     c.fillStyle='#ebdfb8';c.font='bold 12px monospace';
     c.fillText(mage.id.toUpperCase()+' / '+labels[row],col*w+8,row*h+16);
-    views.push({mage:mage.id,direction:labels[row],hash,opaque,
+    views.push({mage:mage.id,direction:labels[row],hash,opaque,edgePixels,
       view:faceView(bearing).label});
    }
   }
@@ -45,6 +49,7 @@ test('v0.14: screenshot 48 directional outfits and verify back/side/front faces'
   expect(a).toHaveLength(8);
   expect(new Set(a.map(x=>x.hash)).size).toBe(8);
   expect(a.every(x=>x.opaque>250)).toBe(true);
+  expect(a.every(x=>x.edgePixels===0)).toBe(true); // no clipped hat, cape, feet or weapon
  }
  expect(result.views.every(x=>x.direction===x.view)).toBe(true);
  await testInfo.attach('eight-direction-six-class-character-atlas',
