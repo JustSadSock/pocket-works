@@ -369,6 +369,7 @@ function engineeringPower(room){
     m.powerFactor=connected?clamp(1-Math.min(...ds)*.02,.66,1):0;
     if(prev!==m.powered)room.events.push({type:"power-grid",moduleId:m.id,powered:m.powered});
   }
+  room.ship.liveCells=[...live.keys()];
   return live;
 }
 function addModuleHeat(room,m,amount){
@@ -655,7 +656,6 @@ function updateShip(room, dt) {
   let sensor = 0;
   const massProperties = shipMassProperties(room);
   const liveCells=engineeringPower(room);
-  ship.liveCells=[...liveCells.keys()];
   const coreOnline=liveCells.has("0,0");
   const breaches=Object.values(ship.plates).filter(v=>v<=0).length;
   if(room.phase==="combat"&&breaches){
@@ -1100,8 +1100,9 @@ function serializeModule(room, m) {
 }
 
 function serializeRoom(room) {
-  ensureEngineering(room);
+  engineeringPower(room);
   const b=shipBounds(room.ship.cells);
+  const liveSet=new Set(room.ship.liveCells||[]);
   return {
     roomCode: room.code,
     phase: room.phase,
@@ -1121,7 +1122,7 @@ function serializeRoom(room) {
       inventoryShapes: [...room.ship.inventoryShapes],
       massProperties:shipMassProperties(room),
       plates:[...room.ship.cells].map(k=>{const {x,y}=parseKey(k);return {x,y,hp:room.ship.plates?.[k]??PLATE_MAX};}),
-      networkCells:[...room.ship.cells].filter(k=>(room.ship.plates?.[k]??PLATE_MAX)>PLATE_CONDUCTIVE && (room.ship.liveCells||[]).includes(k)).map(parseKey),
+      networkCells:[...room.ship.cells].filter(k=>(room.ship.plates?.[k]??PLATE_MAX)>PLATE_CONDUCTIVE && liveSet.has(k)).map(parseKey),
     },
     physics: { ...room.physics },
     enemies: room.enemies.map((e) => ({ id: e.id, type: e.type, hp: e.hp, maxHp: e.maxHp, x: e.x, y: e.y, a: e.a, radius: e.radius, elite: Boolean(e.elite), sprite: e.sprite || ENEMIES[e.type].sprite })),
