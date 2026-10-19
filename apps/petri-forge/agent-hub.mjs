@@ -28,11 +28,13 @@ const cfg={
  perekos:{info:'Учится управлять магом: прицел, уклонения, защитные умения и руны. Соперники постепенно усложняются.',units:'поколений',counts:[2,4,8,12],variants:[['balanced','Постепенно сложнее'],['offense','Атака и добивание'],['competitive','Сильные соперники']],first:'balanced'}
 };
 let mode='grid',active=null,careers=[],busy=false,pending=false,advanced=false,lastEval='',chain=Promise.resolve();
+const skillStrip=document.createElement('div');skillStrip.id='hubSkillStrip';skillStrip.className='hub-skillstrip';document.querySelector('#agentHub .hub-top').append(skillStrip);
 const fmt=n=>Number(n||0).toLocaleString('ru-RU');
 const notify=s=>$('hubSaveState').textContent=s;
 function lock(){
  for(const id of ['hubTrain','hubTest','hubReplay','hubAgents','hubManage','hubVariant','hubBatch','hubEdit','hubTools'])$(id).disabled=busy||pending;
  for(const b of document.querySelectorAll('[data-world-mode]'))b.disabled=busy||pending;
+ for(const chip of skillStrip.children)chip.disabled=busy||pending;
  $('hubTrain').hidden=busy;$('hubStop').hidden=!busy;$('hubProgressWrap').hidden=!busy;
 }
 function profiles(){
@@ -42,6 +44,18 @@ function profiles(){
 }
 function refresh(){
  if(!active)return;
+ skillStrip.replaceChildren();
+ for(const domain of DOMAINS){
+  const button=document.createElement('button');button.type='button';button.className='hub-skill-chip';
+  button.classList.toggle('current',domain===mode);button.disabled=busy||pending;
+  const name=document.createElement('span');name.textContent={grid:'Миры',combat:'Бой',race:'Гонки',perekos:'Магия'}[domain];
+  const value=document.createElement('strong');const branch=active.branches[domain];
+  value.textContent=branch.sessions?String(branch.sessions):branch.imported?'✓':'–';
+  button.append(name,value);button.title='Перейти к навыкам: '+TITLES[domain];
+  button.onclick=()=>{if(!busy&&!pending)document.querySelector('[data-world-mode="'+domain+'"]')?.click();};
+  skillStrip.append(button);
+ }
+
  const b=active.branches[mode],x=cfg[mode];
  $('hubWorldTitle').textContent=TITLES[mode];
  $('hubModeIndex').textContent=String(DOMAINS.indexOf(mode)+1).padStart(2,'0')+' / 04';
