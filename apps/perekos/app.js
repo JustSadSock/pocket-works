@@ -27,6 +27,7 @@ const spellChoreography=new SpellChoreography();
 const duelFeedback=new DuelFeedback();
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,aim:null},stick={pointer:null,x:0,y:0},touches=new Map();
+let tapAttackQueued=false,aimTouch=false,aimTouchStart=0,aimDragged=false;
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
 function put(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';
@@ -82,7 +83,7 @@ function sfx(type,school='fire'){
 function setAudio(){sound=!sound;remember();$('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');if(sound)audioContext()}
 $('menu-audio').addEventListener('click',setAudio);$('pause-audio').addEventListener('click',setAudio);
 $('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');
-function show(name){mode=name;for(const id of ['menu','mage-select','draft','build','books','book-delete','result','pause','confirm','online-lobby','net-wait'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=!active||['menu','mage-select','online-lobby','books','book-delete'].includes(name);if(name==='fight'||name==='menu')paused=false;if(name!=='fight')input.aim=null;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;updateHud()}
+function show(name){mode=name;tapAttackQueued=false;for(const id of ['menu','mage-select','draft','build','books','book-delete','result','pause','confirm','online-lobby','net-wait'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=!active||['menu','mage-select','online-lobby','books','book-delete'].includes(name);if(name==='fight'||name==='menu')paused=false;if(name!=='fight')input.aim=null;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;updateHud()}
 function mageCards(node,value,onPick,small=false){
  node.replaceChildren();
  for(const school of SCHOOLS){
@@ -290,20 +291,40 @@ stickEl.addEventListener('pointerup',releaseStick);stickEl.addEventListener('poi
 function binder(id,field){const b=$(id);b.addEventListener('pointerdown',e=>{if(mode!=='fight')return;e.preventDefault();b.setPointerCapture(e.pointerId);if(field==='attack')input.attack=true;else input[field]=true});const release=e=>{if(field==='attack')input.attack=false};b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release);b.addEventListener('click',()=>{if(mode==='fight'&&field!=='attack')input[field]=true})}
 binder('attack-btn','attack');binder('shield-btn','shield');binder('dash-btn','dash');
 const aimButton=$('attack-btn');let aimedPointer=null;
-aimButton.addEventListener('pointerdown',e=>{if(mode==='fight'){aimedPointer=e.pointerId;input.aim=null;aimButton.classList.add('aiming')}});
+// A touch drag must establish its heading BEFORE the first shot. A brief tap
+// still fires once; a deliberate hold fires repeatedly after the aim window.
+aimButton.addEventListener('pointerdown',e=>{
+ if(mode!=='fight')return;
+ aimedPointer=e.pointerId;aimTouch=e.pointerType!=='mouse';
+ aimTouchStart=performance.now();aimDragged=false;
+ if(aimTouch){input.aim=null;input.attack=false}
+ aimButton.classList.add('aiming');
+});
 aimButton.addEventListener('pointermove',e=>{
  if(mode!=='fight'||e.pointerId!==aimedPointer||!active)return;
  const r=aimButton.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
- if(Math.hypot(dx,dy)>11){const a=myActor(),d=Math.hypot(dx,dy);input.aim=courtAim(a,dx,dy,W,H);}
+ if(Math.hypot(dx,dy)>11){
+  const a=myActor();input.aim=courtAim(a,dx,dy,W,H);
+  aimDragged=true;input.attack=true;
+ }
 });
-const stopAim=e=>{if(e.pointerId!==aimedPointer)return;aimedPointer=null;aimButton.classList.remove('aiming');if(e.pointerType!=='mouse')input.aim=null};
+const stopAim=e=>{
+ if(e.pointerId!==aimedPointer)return;
+ if(aimTouch){
+  if(e.type==='pointerup'&&!aimDragged)tapAttackQueued=true;
+  input.aim=null;input.attack=false;
+ }
+ aimedPointer=null;aimTouch=false;aimDragged=false;aimButton.classList.remove('aiming');
+};
 aimButton.addEventListener('pointerup',stopAim);aimButton.addEventListener('pointercancel',stopAim);aimButton.addEventListener('lostpointercapture',stopAim);
 
 function canvasPoint(e){const r=canvas.getBoundingClientRect();return {x:Math.max(0,Math.min(W,(e.clientX-r.left)/r.width*W)),y:Math.max(0,Math.min(H,(e.clientY-r.top)/r.height*H))}}
 canvas.addEventListener('pointermove',e=>{if(mode==='fight'&&e.pointerType==='mouse')input.aim=canvasPoint(e)});
 canvas.addEventListener('pointerdown',e=>{if(mode!=='fight')return;input.aim=canvasPoint(e);if(e.pointerType==='mouse')input.attack=true});
 window.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')input.attack=false});
-function playerInput(){let x=stick.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),y=stick.y+(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0);const speed=Math.hypot(x,y);if(speed>1){x/=speed;y/=speed}const out={x,y,attack:input.attack||keys.has('Space'),shield:input.shield,dash:input.dash,aim:input.aim||{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y}};input.shield=false;input.dash=false;return out}
+function playerInput(){
+ if(aimedPointer!==null&&aimTouch&&!aimDragged&&performance.now()-aimTouchStart>260){aimDragged=true;input.attack=true}
+ let x=stick.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),y=stick.y+(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0);const speed=Math.hypot(x,y);if(speed>1){x/=speed;y/=speed}const out={x,y,attack:input.attack||tapAttackQueued||keys.has('Space'),shield:input.shield,dash:input.dash,aim:input.aim||{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y}};input.shield=false;input.dash=false;tapAttackQueued=false;return out}
 let bgCanvas;
 function rng(seed){let a=seed>>>0;return()=>((a=Math.imul(a,1664525)+1013904223>>>0)/4294967296)}
 function background(){return createCourtBackdrop(WALLS)}
