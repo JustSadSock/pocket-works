@@ -24,6 +24,15 @@ export function atmosphereProfile(stage,quality='medium',conservative=false){
  const max=conservative||quality==='low'?0:quality==='high'?spec.motes:Math.round(spec.motes*.56);
  return {...spec,count:max,quality,conservative:Boolean(conservative)};
 }
+export function organAudio(stage){
+ const id=(PHYSIOLOGY[stage]||PHYSIOLOGY[1]).id;
+ // One short voice at a time; distinct spectral palettes, no autoplay loop.
+ return id==='vascular'?{pitch:.84,brightness:.86,bass:1.12}:
+   id==='gastric'?{pitch:.72,brightness:.68,bass:1.08}:
+   id==='marrow'?{pitch:1.09,brightness:1.16,bass:.85}:
+   id==='neural'?{pitch:1.22,brightness:1.27,bass:.81}:
+   {pitch:.78,brightness:.94,bass:1.24};
+}
 export function organLight(stage,time,pressure=0,trauma=0){
  const spec=PHYSIOLOGY[stage]||PHYSIOLOGY[1];
  const t=Number.isFinite(time)?time:0;
