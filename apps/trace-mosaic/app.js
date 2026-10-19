@@ -21,6 +21,10 @@ const state = {
   drag: null,
   connection: 'connecting',
   clockOffset: 0,
+  soundEnabled: localStorage.getItem("pocket-works:trace-mosaic:sound") === "on",
+  referenceOpen: false,
+  lastTrailPaint: 0,
+  lastCorrectTile: null,
 };
 
 const app = document.querySelector("#app");
@@ -28,6 +32,30 @@ const app = document.querySelector("#app");
 function send(type, payload = {}) {
   if (!state.socket || state.socket.readyState !== WebSocket.OPEN) return false;
   return state.socket.send(JSON.stringify({ type, payload }));
+}
+
+let audioContext = null;
+function feedback(type) {
+  if (type !== "grab" && type !== "move") {
+    try { navigator.vibrate?.(type === "correct" ? [12, 30, 18] : type === "blocked" ? [26, 20, 26] : 8); } catch {}
+  }
+  if (!state.soundEnabled) return;
+  try {
+    audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+    const note = audioContext.createOscillator();
+    const volume = audioContext.createGain();
+    note.type = type === "blocked" ? "triangle" : "sine";
+    const freq = { grab: 330, move: 370, correct: 640, blocked: 155, release: 420 }[type] || 330;
+    const now = audioContext.currentTime;
+    note.frequency.setValueAtTime(freq, now);
+    if (type === "correct") note.frequency.exponentialRampToValueAtTime(920, now + 0.12);
+    volume.gain.setValueAtTime(0.0001, now);
+    volume.gain.exponentialRampToValueAtTime(0.028, now + 0.012);
+    volume.gain.exponentialRampToValueAtTime(0.0001, now + 0.17);
+    note.connect(volume); volume.connect(audioContext.destination);
+    note.start(now); note.stop(now + 0.18);
+  } catch {}
 }
 
 function pushToast(message, tone = "info") {
@@ -105,6 +133,7 @@ function handleMessage(type, payload) {
         state.preparedGame = null;
         state.preparingKey = null;
       }
+      if (payload?.phase !== 'playing') state.referenceOpen = false;
       if (state.drag && (payload?.phase !== "playing" ||
           payload.game?.tileMeta?.[state.drag.tileId]?.ownerId !== state.selfId)) {
         state.drag = null;
@@ -119,6 +148,7 @@ function handleMessage(type, payload) {
         if (blockedIndex >= 0) state.drag.visited.length = blockedIndex;
         state.drag.hoveredCell = state.drag.visited.at(-1) ?? null;
       }
+      feedback("blocked");
       pushToast("Чужой след перекрывает путь", "error");
       break;
     default:
@@ -138,34 +168,145 @@ function persistNickname() {
   localStorage.setItem("pocket-works:trace-mosaic:nickname", state.nickname);
 }
 
+function gameKey() {
+  const game = state.room?.game;
+  return game ? `${game.startedAt}:${game.image.id}:${game.grid.cols}x${game.grid.rows}` : '';
+}
+
 function render() {
   trimToasts();
-  // PocketNet snapshots replace the game DOM; retain the user's tray position.
-  const inventoryScroll = app.querySelector(".inventory-shell")?.scrollTop || 0;
-  const focusedControl = document.activeElement?.id;
   const phase = getPhase();
-  document.body.dataset.phase=phase;
-  if (phase === "menu") {
-    app.innerHTML = renderMenu();
-  } else if (phase === "lobby") {
-    app.innerHTML = renderLobby();
-  } else if (phase === "playing") {
-    app.innerHTML = renderGame();
+  const existing = app.querySelector('.game-shell');
+  const canPatch = phase === 'playing' && existing?.dataset.gameKey === gameKey();
+  document.body.dataset.phase = phase;
+  if (canPatch) {
+    patchGame();
   } else {
-    app.innerHTML = renderResults();
+    const inventoryScroll = app.querySelector('.inventory-shell')?.scrollTop || 0;
+    const focusedControl = document.activeElement?.id;
+    if (phase === 'menu') app.innerHTML = renderMenu();
+    else if (phase === 'lobby') app.innerHTML = renderLobby();
+    else if (phase === 'playing') app.innerHTML = renderGame();
+    else app.innerHTML = renderResults();
+    const tray = app.querySelector('.inventory-shell');
+    if (tray) tray.scrollTop = inventoryScroll;
+    if (focusedControl && phase !== 'playing') {
+      const replacement = document.getElementById(focusedControl);
+      if (replacement && replacement !== document.activeElement)
+        replacement.focus({ preventScroll: true });
+    }
   }
-  const tray = app.querySelector(".inventory-shell");
-  if (tray) tray.scrollTop = inventoryScroll;
-  // Restore focus only when a rerender was unavoidable (e.g. a room update).
-  if (focusedControl && phase !== "playing") {
-    const replacement = document.getElementById(focusedControl);
-    if (replacement && replacement !== document.activeElement) replacement.focus({ preventScroll: true });
-  }
+  const banner = app.querySelector('.net-banner');
   if (state.connection !== 'connected' && !state.room?.practice) {
-    app.querySelector('main.screen')?.insertAdjacentHTML('beforeend', renderConnectionBanner());
-  }
+    if (!banner) app.querySelector('main.screen')?.insertAdjacentHTML('beforeend', renderConnectionBanner());
+  } else banner?.remove();
   state.lastRenderAt = Date.now();
 }
+
+function patchGame() {
+  const root = app.querySelector('.game-shell');
+  const game = state.room?.game;
+  if (!root || !game) return;
+  const prepared = state.preparedGame;
+  const viewerColor = state.room.players.find(p => p.id === state.selfId)?.color || '#cb9460';
+  const correctCount = Math.round(game.score.completion * game.totalTiles);
+  const ring = root.querySelector('.progress-ring');
+  if (ring) {
+    ring.style.setProperty('--fill', String(game.score.completion));
+    ring.dataset.value = game.score.completionPercent + '%';
+  }
+  const score = root.querySelector('[data-team-score]');
+  if (score) score.textContent = String(game.score.teamScore);
+  const count = root.querySelector('[data-correct-count]');
+  if (count) count.textContent = String(correctCount).padStart(2, '0') + ' / ' + game.totalTiles;
+  const remaining = root.querySelector('[data-piece-count]');
+  if (remaining) remaining.textContent = game.assignments.filter(id => game.tileLocations[id]?.kind === 'inventory').length;
+  const boardPieces = root.querySelectorAll('.placed-piece');
+  boardPieces.forEach((el, cellIndex) => {
+    const tileId = game.board[cellIndex];
+    const absent = tileId == null || state.drag?.tileId === tileId;
+    const previous = el.dataset.currentTile || '';
+    const next = absent ? '' : String(tileId);
+    const asset = next ? prepared?.tiles[tileId]?.url : null;
+    if (previous !== next || (next && asset && el.dataset.artLoaded !== '1')) {
+      el.dataset.currentTile = next;
+      el.dataset.artLoaded = asset ? '1' : '0';
+      el.style.backgroundImage = asset ? `url("${asset}")` : '';
+      if (next && tileId === cellIndex && state.lastCorrectTile === tileId) {
+        el.classList.remove('snap-in');
+        void el.offsetWidth;
+        el.classList.add('snap-in');
+        feedback('correct');
+        state.lastCorrectTile = null;
+      }
+    }
+    const owner = next ? game.tileMeta[tileId]?.ownerId === state.selfId : false;
+    el.classList.toggle('empty', absent);
+    el.classList.toggle('correct', !absent && tileId === cellIndex);
+    el.classList.toggle('foreign', !absent && !owner);
+    if (owner) {
+      el.dataset.pieceId = next;
+      el.dataset.sourceKind = 'board';
+    } else { delete el.dataset.pieceId; delete el.dataset.sourceKind; }
+  });
+  const inventory = root.querySelector('.inventory-grid');
+  if (inventory && inventory.children.length !== game.assignments.length) {
+    inventory.innerHTML = game.assignments.map((_,i) =>
+      `<button type="button" class="inventory-piece" data-slot="${i}" aria-label="Фрагмент"></button>`).join('');
+  }
+  inventory?.querySelectorAll('[data-slot]').forEach((el, slot) => {
+    const tileId = game.assignments[slot];
+    const active = game.tileLocations[tileId]?.kind === 'inventory' && state.drag?.tileId !== tileId;
+    const desired = active ? String(tileId) : '';
+    const asset = active ? prepared?.tiles[tileId]?.url : null;
+    if (el.dataset.currentTile !== desired || (desired && asset && el.dataset.artLoaded !== '1')) {
+      el.dataset.currentTile = desired;
+      el.dataset.artLoaded = asset ? '1' : '0';
+      el.style.backgroundImage = asset ? `url("${asset}")` : '';
+    }
+    el.classList.toggle('empty', !active);
+    el.style.setProperty('--piece-owner', viewerColor);
+    if (active) {
+      el.dataset.pieceId = String(tileId);
+      el.dataset.sourceKind = 'inventory';
+      el.setAttribute('aria-label', 'Переместить фрагмент ' + (tileId + 1));
+      el.disabled = false;
+    } else {
+      delete el.dataset.pieceId; delete el.dataset.sourceKind;
+      el.disabled = true;
+    }
+  });
+  const trailKey = JSON.stringify([
+    game.trails.map(t => [t.id, t.cells, t.expiresAt]),
+    Object.values(game.activeDrags || {}).map(d => [d.playerId, d.tileId, d.cells])
+  ]);
+  const svg = root.querySelector('.trail-svg');
+  if (svg && svg.dataset.signature !== trailKey) {
+    svg.innerHTML = renderTrailPaths(game);
+    svg.dataset.signature = trailKey;
+  }
+  const trailCells = root.querySelectorAll('.trail-cell');
+  const trailMap = buildTrailMap(game);
+  trailCells.forEach((el, cellIndex) => {
+    const trail = trailMap.get(cellIndex);
+    el.style.backgroundColor = trail ? trail.color : '';
+    el.style.opacity = trail ? String(trail.opacity * .43) : '0';
+  });
+  const ghost = app.querySelector('.drag-ghost');
+  if (state.drag && !ghost) {
+    app.querySelector('main.screen')?.insertAdjacentHTML('beforeend', renderDragGhost());
+  } else if (!state.drag) ghost?.remove();
+  const overlay = app.querySelector('.reference-overlay');
+  if (state.referenceOpen && !overlay)
+    app.querySelector('main.screen')?.insertAdjacentHTML('beforeend', renderReferenceOverlay());
+  else if (!state.referenceOpen) overlay?.remove();
+  const oldToasts = app.querySelector('.toast-stack');
+  const newToasts = renderToasts();
+  if (oldToasts) oldToasts.outerHTML = newToasts;
+  else if (newToasts) app.querySelector('main.screen')?.insertAdjacentHTML('beforeend', newToasts);
+  updateTransientUI();
+}
+
 
 function renderConnectionBanner() {
   const connecting = state.connection === 'connecting' || state.connection === 'syncing';
@@ -183,9 +324,15 @@ function renderMenu() {
     <main class="screen">
       <section class="menu-shell stack fade-in">
         <div class="menu-header">
-          <div class="eyebrow">Trace Mosaic</div>
-          <h1 class="menu-title">Соберите картину, не перерезая следы</h1>
-          <p class="menu-subtitle">3-5 игроков одновременно тащат свои фрагменты на общее поле. Каждый маршрут оставляет тускнеющий цветной запрет на 30 секунд.</p>
+          <div class="eyebrow">ATELIER / 01 — TRACE MOSAIC</div>
+          <h1 class="menu-title">Искусство<br><em>оставлять след.</em></h1>
+          <p class="menu-subtitle">Собирайте общую картину, прокладывая маршруты между чужими следами. Каждый след закрывает проход на 30 секунд.</p>
+          <div class="menu-artwork" role="img" aria-label="Фрагменты цветной мозаики">
+            <img src="./assets/puzzles/puzzle-03.svg" alt="">
+            <span class="artwork-seam artwork-seam-a"></span>
+            <span class="artwork-seam artwork-seam-b"></span>
+            <div class="artwork-stamp">COLLECTIVE WORK / 3—5</div>
+          </div>
         </div>
 
         <div class="glass-card panel stack">
@@ -306,6 +453,46 @@ function renderLobby() {
   `;
 }
 
+function trailPath(cells, cols) {
+  if (!Array.isArray(cells) || !cells.length) return '';
+  const points = cells.filter(Number.isInteger).map(i =>
+    [i % cols + .5, Math.floor(i / cols) + .5]);
+  if (!points.length) return '';
+  return 'M ' + points.map(([x,y]) => x + ' ' + y).join(' L ') +
+    (points.length === 1 ? ' l .001 0' : '');
+}
+
+function renderTrailPaths(game) {
+  const entries = [
+    ...game.trails.map(t => ({ ...t, live: false })),
+    ...Object.values(game.activeDrags || {}).map(t =>
+      ({ ...t, expiresAt: null, live: true, cells: t.cells || [] }))
+  ];
+  return entries.map(trail => {
+    const d = trailPath(trail.cells, game.grid.cols);
+    if (!d) return '';
+    const color = /^#[0-9a-f]{3,8}$/i.test(trail.color) ? trail.color : '#d6a46b';
+    const attrs = trail.live ? 'data-live="true"' : `data-expires="${trail.expiresAt}"`;
+    return `<g class="trail-stroke" ${attrs} style="--trail-color:${color}">
+       <path class="trail-ribbon" d="${d}"/>
+       <path class="trail-centerline" d="${d}"/>
+      </g>`;
+  }).join('');
+}
+
+function renderReferenceOverlay() {
+  const image = state.room?.game?.image;
+  if (!image) return '';
+  return `<div class="reference-overlay" role="dialog" aria-modal="true" aria-label="Образец картины">
+    <div class="reference-frame">
+      <div class="reference-heading"><span>ОРИГИНАЛ / РЕФЕРЕНС</span>
+        <button data-action="close-reference" class="reference-close" aria-label="Закрыть образец">✕</button></div>
+      <img src="${escapeHtml(state.preparedGame?.previewUrl || image.path)}" alt="${escapeHtml(image.title)}">
+      <div class="reference-foot">Изучите композицию и вернитесь к сборке.</div>
+    </div>
+  </div>`;
+}
+
 function renderGame() {
   const room = state.room;
   const game = room.game;
@@ -313,119 +500,140 @@ function renderGame() {
   const score = game.score;
   const timeLeft = Math.max(0, Math.ceil((game.endAt - state.now) / 1000));
   const trailMap = buildTrailMap(game);
-  const viewerColor = room.players.find((player) => player.id === state.selfId)?.color || "#8bf2c7";
+  const viewerColor = room.players.find(p => p.id === state.selfId)?.color || "#cb9460";
   document.documentElement.style.setProperty("--cell-count-x", game.grid.cols);
   document.documentElement.style.setProperty("--cell-count-y", game.grid.rows);
-
-  const boardCells = Array.from({ length: game.totalTiles }, (_, cellIndex) => {
-    const hot = state.drag?.hoveredCell === cellIndex ? "hot" : "";
-    return `<div class="board-cell ${hot}" data-cell="${cellIndex}"></div>`;
-  }).join("");
-
-  const trailCells = Array.from({ length: game.totalTiles }, (_, cellIndex) => {
-    const trail = trailMap.get(cellIndex);
-    if (!trail) {
-      return `<div class="trail-cell" data-cell="${cellIndex}" style="opacity:0;"></div>`;
-    }
-    return `<div class="trail-cell" data-cell="${cellIndex}" style="background:${trail.color}; opacity:${trail.opacity.toFixed(3)};"></div>`;
-  }).join("");
-
-  const placedPieces = Array.from({ length: game.totalTiles }, (_, cellIndex) => {
-    const tileId = game.board[cellIndex];
-    if (tileId === null || tileId === undefined || (state.drag && state.drag.tileId === tileId)) {
-      return `<div class="placed-piece" data-cell="${cellIndex}" style="opacity:0;"></div>`;
-    }
-    const tile = game.tileMeta[tileId];
-    const piece = prepared?.tiles[tileId];
-    const correct = tile.correctCell === cellIndex ? "correct" : "";
-    const draggable = tile.ownerId === state.selfId ? "data-piece-id" : "data-piece-lock";
-    return `
-      <div class="placed-piece ${correct}" data-cell="${cellIndex}" ${tile.ownerId === state.selfId ? `data-piece-id="${tileId}" data-source-kind="board"` : `data-piece-lock="${tileId}"`} style="background-image:url('${piece?.url || ""}');"></div>
-    `;
-  }).join("");
-
-  const inventory = game.assignments.map((tileId) => {
-    const location = game.tileLocations[tileId];
-    if (!location || location.kind !== "inventory" || (state.drag && state.drag.tileId === tileId)) {
-      return `<div class="inventory-piece empty"></div>`;
-    }
-    const piece = prepared?.tiles[tileId];
-    return `<button data-native-press class="inventory-piece" data-piece-id="${tileId}" data-source-kind="inventory" style="background-image:url('${piece?.url || ""}'); border-color:${viewerColor};"></button>`;
-  }).join("");
-
+  const cells = Array.from({length:game.totalTiles},(_,i)=>
+    `<div class="board-cell" data-cell="${i}"></div>`).join('');
+  const trailCells = Array.from({length:game.totalTiles},(_,i)=>{
+    const trail = trailMap.get(i);
+    return `<div class="trail-cell" data-cell="${i}" style="background-color:${trail?.color || 'transparent'};opacity:${trail ? trail.opacity*.43 : 0}"></div>`;
+  }).join('');
+  const placed = Array.from({length:game.totalTiles},(_,i)=>{
+    const id = game.board[i], empty = id == null || state.drag?.tileId === id;
+    const own = !empty && game.tileMeta[id]?.ownerId === state.selfId;
+    return `<div class="placed-piece ${empty?'empty':id===i?'correct':''} ${!empty&&!own?'foreign':''}"
+      data-cell="${i}" data-current-tile="${empty?'':id}" data-art-loaded="${!empty&&prepared?.tiles[id]?.url?'1':'0'}"
+      ${own?`data-piece-id="${id}" data-source-kind="board"`:''}
+      style="background-image:${empty?'none':`url('${prepared?.tiles[id]?.url||''}')`};"></div>`;
+  }).join('');
+  const inventory = game.assignments.map((id,slot)=>{
+    const active = game.tileLocations[id]?.kind==='inventory' && state.drag?.tileId!==id;
+    return `<button type="button" data-native-press class="inventory-piece ${active?'':'empty'}"
+       data-slot="${slot}" data-current-tile="${active?id:''}" data-art-loaded="${active&&prepared?.tiles[id]?.url?'1':'0'}" ${active?`data-piece-id="${id}" data-source-kind="inventory"`:''}
+       ${active?'':'disabled'} aria-label="${active?'Переместить фрагмент '+(id+1):'Пустое место'}"
+       style="--piece-owner:${viewerColor};background-image:${active?`url('${prepared?.tiles[id]?.url||''}')`:'none'}"></button>`;
+  }).join('');
+  const available = game.assignments.filter(id => game.tileLocations[id]?.kind === 'inventory').length;
   return `
-    <main class="screen">
-      <section class="game-shell fade-in">
-        <div class="hud-row">
-          <div class="code-chip">#${room.roomId}</div>
-          <div class="timer-chip">${formatTimer(timeLeft)}</div>
+    <main class="screen mosaic-screen">
+      <section class="game-shell" data-game-key="${gameKey()}">
+        <header class="hud-row">
+          <div class="hud-identity">
+            <span class="microtype">TRACE / STUDIO</span>
+            <strong>${escapeHtml(game.image.title)}</strong>
+          </div>
+          <div class="hud-center">
+            <span class="microtype">ОСТАЛОСЬ</span>
+            <span class="timer-chip" aria-live="off">${formatTimer(timeLeft)}</span>
+          </div>
           <div class="score-stack">
-            <div class="progress-ring" style="--fill:${Math.max(0, Math.min(1, score.completion))};" data-value="${score.completionPercent}%"></div>
-            <div class="status-chip"><strong>${score.teamScore}</strong></div>
+            <span class="progress-ring" style="--fill:${score.completion}" data-value="${score.completionPercent}%"></span>
+            <span class="hud-points"><span class="microtype">ОЧКИ</span><strong data-team-score>${score.teamScore}</strong></span>
           </div>
-        </div>
-
+        </header>
         <div class="board-wrap">
-          <div class="board-shell glass-card">
-            <div class="board-grid">${boardCells}</div>
-            <div class="trail-layer">${trailCells}</div>
-            <div class="piece-layer">${placedPieces}</div>
+          <div class="board-surface">
+            <div class="board-annotation"><span>РАБОЧАЯ ПОВЕРХНОСТЬ</span>
+              <span data-correct-count>${Math.round(score.completion*game.totalTiles).toString().padStart(2,'0')} / ${game.totalTiles}</span></div>
+            <div class="board-shell" role="group" aria-label="Мозаика ${escapeHtml(game.image.title)}">
+              <div class="board-grid">${cells}</div>
+              <div class="trail-layer">${trailCells}</div>
+              <div class="piece-layer">${placed}</div>
+              <svg class="trail-svg" viewBox="0 0 ${game.grid.cols} ${game.grid.rows}"
+                   preserveAspectRatio="none" aria-hidden="true">${renderTrailPaths(game)}</svg>
+              <span class="board-rivet rivet-tl"></span><span class="board-rivet rivet-tr"></span>
+              <span class="board-rivet rivet-bl"></span><span class="board-rivet rivet-br"></span>
+            </div>
+            <div class="board-controls">
+              <span class="board-hint">ПРОВЕДИТЕ ФРАГМЕНТ ПО ПОЛЮ</span>
+              <div class="board-actions">
+                <button data-action="show-reference" aria-label="Посмотреть оригинал картины">Образец</button>
+                <button data-action="toggle-sound" aria-pressed="${state.soundEnabled}" aria-label="Звуковые эффекты">
+                  ${state.soundEnabled?'Звук · вкл':'Звук · выкл'}</button>
+              </div>
+            </div>
           </div>
         </div>
-
-        <aside class="inventory-shell">
-          <div class="mini-label">Ваши фрагменты</div>
+        <aside class="inventory-shell" aria-label="Лоток своих фрагментов">
+          <header class="tray-heading">
+            <div><span class="microtype">МАТЕРИАЛЫ / ${room.practice?'SOLO':escapeHtml(room.roomId)}</span>
+              <h2>Ваши фрагменты</h2></div>
+            <div class="tray-counter"><strong data-piece-count>${available}</strong><small>в лотке</small></div>
+          </header>
           <div class="inventory-grid">${inventory}</div>
+          <p class="tray-tip">Положите фрагмент на нужное место. Цветные дорожки других участников временно закрыты.</p>
         </aside>
       </section>
-      ${state.drag ? renderDragGhost() : ""}
+      ${state.drag?renderDragGhost():''}
+      ${state.referenceOpen?renderReferenceOverlay():''}
       ${renderToasts()}
-    </main>
-  `;
+    </main>`;
 }
 
 function renderResults() {
   const room = state.room;
   const score = room.game.score;
-  const players = [...room.players].sort((a, b) => (b.stats?.netFlow || 0) - (a.stats?.netFlow || 0));
+  const complete = score.completionPercent === 100;
+  const players = [...room.players].sort((a,b)=>(b.stats?.netFlow||0)-(a.stats?.netFlow||0));
   const isHost = room.hostId === state.selfId;
+  const picture = state.preparedGame?.previewUrl || room.game.image.path;
   return `
-    <main class="screen">
-      <section class="result-shell stack fade-in">
-        <div class="top-strip">
-          <div class="status-chip">Комната <strong>${room.roomId}</strong></div>
-          <div class="timer-chip">${score.completionPercent}%</div>
-          <div class="status-chip"><strong>${score.teamScore}</strong></div>
+    <main class="screen results-screen">
+      <section class="result-shell">
+        <div class="top-strip result-top">
+          <div class="eyebrow">TRACE / ARCHIVE</div>
+          <div class="status-chip">КОМНАТА ${escapeHtml(room.roomId)}</div>
+          <div class="eyebrow">№ ${escapeHtml(room.game.image.id)}</div>
         </div>
-
-        <div class="glass-card panel stack">
-          <div class="eyebrow">Итог</div>
-          <h2 style="margin:4px 0 0;">${score.completionPercent === 100 ? "Картина собрана" : "Время вышло"}</h2>
-          <p class="menu-subtitle" style="margin:0;">Остаток времени: ${score.timeLeftSec}с • Чем выше сборка и чем быстрее финиш, тем выше счет.</p>
+        <section class="result-exhibit">
+          <div class="exhibit-heading">
+            <span class="eyebrow">${complete ? 'РАБОТА ЗАВЕРШЕНА' : 'РАУНД ОКОНЧЕН'}</span>
+            <h2>${complete ? 'Картина\nвосстановлена.' : 'Не всё\nпотеряно.'}</h2>
+            <p>${complete ? 'Команда вернула картине её целостность.' : 'Время истекло. Следующая попытка — новая композиция.'}</p>
+          </div>
+          <div class="exhibit-art">
+            <img src="${escapeHtml(picture)}" alt="Исходное изображение ${escapeHtml(room.game.image.title)}" />
+            <span class="art-signature">${escapeHtml(room.game.image.title)}</span>
+          </div>
+          <div class="exhibit-metrics">
+            <div><span>СОБРАНО</span><strong>${score.completionPercent}%</strong></div>
+            <div><span>КОМАНДНЫЙ СЧЁТ</span><strong>${score.teamScore}</strong></div>
+            <div><span>СЕКУНД В ЗАПАСЕ</span><strong>${score.timeLeftSec}</strong></div>
+          </div>
+        </section>
+        <div class="result-caption"><span>УЧАСТНИКИ РЕСТАВРАЦИИ</span><span>ВКЛАД В РАБОТУ</span></div>
+        <div class="result-grid">
+          ${players.map((player,index)=>{
+            const stats = player.stats || {};
+            return `<div class="score-card">
+              <div class="score-name"><span class="score-position">${String(index+1).padStart(2,'0')}</span>
+                <span class="score-dot" style="--score-color:${player.color}"></span>
+                <strong>${escapeHtml(player.nickname)}</strong></div>
+              <div class="score-contribution">${describeFlow(stats.netFlow || 0)}</div>
+              <p>Точно: ${stats.correctDrops || 0} <span>·</span> Ошибок: ${stats.wrongDrops || 0}
+                  <span>·</span> Блокировок: ${stats.trailBlocksCaused || 0}</p>
+            </div>`;
+          }).join('')}
         </div>
-
-        <div class="glass-card panel result-grid">
-          ${players
-            .map((player) => {
-              const mood = describeFlow(player.stats?.netFlow || 0);
-              return `
-                <div class="score-card">
-                  <h3>${escapeHtml(player.nickname)}</h3>
-                  <p>${mood} • точных: ${player.stats?.correctDrops || 0} • лишних: ${player.stats?.wrongDrops || 0} • перекрыл: ${player.stats?.trailBlocksCaused || 0}</p>
-                </div>
-              `;
-            })
-            .join("")}
-        </div>
-
-        <div class="two-up">
-          ${isHost ? `<button data-native-press class="accent-button" data-action="play-again">Новый раунд</button>` : `<button data-native-press class="pill-button" disabled>Хост решает</button>`}
+        <div class="two-up result-actions">
+          ${isHost ? `<button data-native-press class="accent-button" data-action="play-again">Новая картина →</button>` :
+            `<div class="result-wait">Ожидаем новый раунд от ведущего</div>`}
           <button data-native-press class="ghost-button" data-action="leave-room">В меню</button>
         </div>
       </section>
       ${renderToasts()}
-    </main>
-  `;
+    </main>`;
 }
 
 function renderToasts() {
@@ -440,7 +648,8 @@ function renderToasts() {
 }
 
 function renderDragGhost() {
-  return `<div class="drag-ghost" style="left:${state.drag.x}px; top:${state.drag.y}px; background-image:url('${state.drag.url}');"></div>`;
+  const lift = state.drag.pointerType === 'touch' ? 66 : 14;
+  return `<div class="drag-ghost" style="left:${state.drag.x}px; top:${state.drag.y-lift}px; --piece-owner:${state.drag.color}; background-image:url('${state.drag.url}');"></div>`;
 }
 
 function escapeHtml(value) {
@@ -536,6 +745,15 @@ app.addEventListener("click", async (event) => {
     case "retry-connection":
       window.location.reload();
       break;
+    case "show-reference":
+      state.referenceOpen = true; render(); break;
+    case "close-reference":
+      state.referenceOpen = false; render(); break;
+    case "toggle-sound":
+      state.soundEnabled = !state.soundEnabled;
+      localStorage.setItem("pocket-works:trace-mosaic:sound", state.soundEnabled ? "on" : "off");
+      if (state.soundEnabled) feedback("grab");
+      render(); break;
     case "practice":
       state.socket?.practice(state.nickname);
       break;
@@ -606,11 +824,14 @@ app.addEventListener("pointerdown", (event) => {
     return;
   }
   const location = state.room.game.tileLocations[tileId];
+  const viewerColor = state.room.players.find(p=>p.id===state.selfId)?.color || '#cb9460';
   state.drag = {
     tileId,
     sourceKind,
     sourceCell: sourceKind === "board" ? location?.cell ?? null : null,
     pointerId: event.pointerId,
+    pointerType: event.pointerType,
+    color: viewerColor,
     url: piece.url,
     x: event.clientX,
     y: event.clientY,
@@ -620,6 +841,7 @@ app.addEventListener("pointerdown", (event) => {
   event.preventDefault();
   // Capture on a stable parent: the selected tile DOM is replaced by snapshots.
   try { app.setPointerCapture(event.pointerId); } catch {}
+  feedback("grab");
   render();
 });
 
@@ -672,11 +894,15 @@ window.addEventListener("pointerup", (event) => {
       cells: state.drag.visited,
     });
   }
+  const possibleSuccess = targetCell === state.drag.tileId &&
+      (state.room.game.board[targetCell] == null || state.room.game.board[targetCell] === state.drag.tileId);
+  state.lastCorrectTile = possibleSuccess ? state.drag.tileId : null;
   send("drag_end", {
     tileId: state.drag.tileId,
     targetCell,
     cells: state.drag.visited,
   });
+  if (!possibleSuccess) feedback("release");
   state.drag = null;
   render();
 });
@@ -686,6 +912,7 @@ function cancelDrag() {
   // The legacy protocol supports an empty, invalid drop without creating a trail.
   send("drag_end", { tileId: state.drag.tileId, targetCell: -1, cells: [] });
   state.drag = null;
+  state.lastCorrectTile = null;
   render();
 }
 
@@ -856,23 +1083,49 @@ window.advanceTime = (ms) => {
 };
 
 function updateTransientUI() {
-  if (getPhase() !== "playing") return;
+  if (getPhase() !== 'playing') return;
   const game = state.room?.game;
-  const timer = app.querySelector(".timer-chip");
-  if (timer && game) {
-    const time = formatTimer(Math.max(0, Math.ceil((game.endAt - state.now) / 1000)));
-    if (timer.textContent !== time) timer.textContent = time;
+  const root = app.querySelector('.game-shell');
+  if (!root || !game) return;
+  const timer = root.querySelector('.timer-chip');
+  if (timer) {
+    const t = formatTimer(Math.max(0, Math.ceil((game.endAt - state.now) / 1000)));
+    if (timer.textContent !== t) timer.textContent = t;
   }
-  const ghost = app.querySelector(".drag-ghost");
+  const ghost = app.querySelector('.drag-ghost');
   if (ghost && state.drag) {
-    ghost.style.left = state.drag.x + "px";
-    ghost.style.top = state.drag.y + "px";
+    ghost.style.left = state.drag.x + 'px';
+    ghost.style.top = (state.drag.y - (state.drag.pointerType === 'touch' ? 66 : 14)) + 'px';
   }
-  const currentlyHot = app.querySelector(".board-cell.hot");
-  const expected = state.drag?.hoveredCell;
-  if (currentlyHot && Number(currentlyHot.dataset.cell) !== expected) currentlyHot.classList.remove("hot");
-  if (expected != null && Number(currentlyHot?.dataset.cell) !== expected) {
-    app.querySelector(`.board-cell[data-cell="${expected}"]`)?.classList.add("hot");
+  const target = state.drag?.hoveredCell ?? null;
+  const board = game.board;
+  const blocked = target !== null && (
+    (board[target] != null && board[target] !== state.drag.tileId) ||
+    game.trails.some(t => t.playerId !== state.selfId &&
+      t.expiresAt > state.now && t.cells.includes(target)) ||
+    Object.values(game.activeDrags || {}).some(d => d.playerId !== state.selfId &&
+      d.cells.includes(target))
+  );
+  root.querySelectorAll('.board-cell.hot, .board-cell.blocked').forEach(node => {
+    if (Number(node.dataset.cell) !== target || (!blocked && node.classList.contains('blocked'))) {
+      node.classList.remove('hot','blocked');
+    }
+  });
+  if (target !== null) {
+    const el = root.querySelector(`.board-cell[data-cell="${target}"]`);
+    el?.classList.add(blocked ? 'blocked' : 'hot');
+  }
+  if (state.now - state.lastTrailPaint > 140) {
+    state.lastTrailPaint = state.now;
+    root.querySelectorAll('.trail-stroke[data-expires]').forEach(el => {
+      const expiry = Number(el.getAttribute('data-expires'));
+      el.style.opacity = String(Math.min(1,Math.max(0,(expiry-state.now)/30000)));
+    });
+    const trailMap = buildTrailMap(game);
+    root.querySelectorAll('.trail-cell').forEach((node,idx)=>{
+      const trail = trailMap.get(idx);
+      node.style.opacity = trail ? String(trail.opacity*.43) : '0';
+    });
   }
 }
 

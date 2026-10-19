@@ -1,1 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="80" fill="#13262c"/><g stroke="#13262c" stroke-width="12"><path d="M88 88h168v168H88z" fill="#f0a36b"/><path d="M256 88h168v168H256z" fill="#e8d1a5"/><path d="M88 256h168v168H88z" fill="#80b5a7"/><path d="M276 276h148v148H276z" fill="#6894ae"/></g><path d="M340 340 220 340 220 170" fill="none" stroke="#fff5d8" stroke-width="10" stroke-dasharray="12 9"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<title>Trace Mosaic — фрагмент картины и светящийся маршрут</title>
+<defs>
+ <linearGradient id="body" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#293a35"/><stop offset="1" stop-color="#142222"/></linearGradient>
+ <linearGradient id="tile" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#e9cb9a"/><stop offset="1" stop-color="#bc8d58"/></linearGradient>
+</defs>
+<rect width="512" height="512" rx="92" fill="#172424"/>
+<rect x="57" y="57" width="398" height="398" rx="24" fill="url(#body)" stroke="#b79a69" stroke-width="10"/>
+<rect x="84" y="84" width="344" height="344" rx="8" fill="#e6d9b5"/>
+<rect x="95" y="95" width="155" height="155" rx="3" fill="url(#tile)"/>
+<path d="M95 192c44-69 85-88 155-47v105H95z" fill="#aa6849"/>
+<path d="M94 204c49-31 92-35 156 9" fill="none" stroke="#f7e0b1" stroke-width="17"/>
+<rect x="260" y="95" width="157" height="155" rx="3" fill="#88a69b"/>
+<path d="M260 154c57 7 101-6 157-41v137H260z" fill="#49776b"/>
+<path d="M260 165c64-13 118-5 157 26" fill="none" stroke="#c7c5a0" stroke-width="16"/>
+<rect x="95" y="260" width="155" height="157" rx="3" fill="#d6bd8e"/>
+<path d="M95 357c58-27 105-34 155-18v78H95z" fill="#9c8e66"/>
+<path d="M109 285l35 42 40-33 35 45" fill="none" stroke="#fff2cc" stroke-width="11" stroke-linecap="round"/>
+<rect x="260" y="260" width="157" height="157" rx="3" fill="#31423b"/>
+<rect x="276" y="276" width="125" height="125" rx="2" fill="none" stroke="#d5c79e" stroke-width="5" stroke-dasharray="9 13" opacity=".55"/>
+<path d="M206 350C242 365 271 378 295 343S342 314 369 344" fill="none" stroke="#f5c27d" stroke-width="21" stroke-linecap="round"/>
+<path d="M206 350C242 365 271 378 295 343S342 314 369 344" fill="none" stroke="#fff2d0" stroke-width="5" stroke-dasharray="9 12" stroke-linecap="round"/>
+<circle cx="369" cy="344" r="18" fill="#fff0c3" stroke="#94724d" stroke-width="7"/>
+<g fill="#d8bb87" stroke="#3f463b" stroke-width="3"><circle cx="69" cy="69" r="7"/><circle cx="443" cy="69" r="7"/><circle cx="69" cy="443" r="7"/><circle cx="443" cy="443" r="7"/></g>
+</svg>

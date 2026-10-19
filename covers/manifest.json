@@ -3743,26 +3743,20 @@
     "lastAttemptAt": "2026-10-19T10:16:36.235Z"
   },
   "trace-mosaic": {
-    "revision": "7c500a68337995156b0384047b52e6c88697b352",
+    "revision": "a9613de65f34616a9f8fe4fa75bf7425f4afa16f",
     "qualityScore": 67,
     "visionScore": null,
     "prepared": false,
-    "started": true,
-    "gameplayEntry": [
-      {
-        "label": "Соло-тренировка без сети",
-        "id": "practiceBtn",
-        "score": 92
-      }
-    ],
+    "started": false,
+    "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "17c5e2586ef338ace432adbab76c9245924631c88643e61c74ad18156185af4e",
+    "sha256": "81ed538122f2a43454628939693ba963c216768b6802a996925180747ef2de42",
     "imageVersion": 2,
-    "status": "preserved",
+    "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "3c4103ddfef0bb0d6cddaaa41a6174836646ea83",
-    "lastAttemptAt": "2026-10-19T12:29:17.845Z",
+    "lastAttemptRevision": "a9613de65f34616a9f8fe4fa75bf7425f4afa16f",
+    "lastAttemptAt": "2026-10-19T13:00:17.109Z",
     "note": "existing cover rated higher"
   },
   "crown-laws": {

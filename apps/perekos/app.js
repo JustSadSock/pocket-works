@@ -359,7 +359,7 @@ function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0,moving=0,
  const runes=active?.actors?.[enemy?1-myIndex():myIndex()]?.runes||[];
  const a=active?.actors?.[enemy?1-myIndex():myIndex()];
  const pose=animate&&a?mageMotion.sample(a,{x,y},performance.now()/1000,active?.round||0,reducedMotion):null;
- drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1.18,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0,moving,pose});
+ drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1.32,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0,moving,pose});
 }
 function drawConstructs(s){
  for(const b of s.barriers){

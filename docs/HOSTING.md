@@ -24,9 +24,11 @@ push or squash merge to main
 → Wrangler publishes dist-site to the pocket-works Worker
 ```
 
-`npm run deploy:site` performs only production packaging:
+`npm run deploy:site` performs a read-only PocketNet snapshot preflight and production packaging:
 
 ```bash
+npm run pocketnet:check
+npm run build:enhanced
 npm run prepare:site
 npm run validate:site
 ```
