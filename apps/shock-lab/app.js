@@ -9,8 +9,10 @@ installMobileRuntime();
 const KEY = 'shock-lab:experiment:v1';
 const PRESETS = ['reflector','slits','maze','channel','empty','tube','wedge','airfoil','cylinder','nozzle'];
 const FLOW_PRESETS = new Set(['wedge','airfoil','cylinder','nozzle']);
+const EMITTER_TYPES=['pressure','suction','jet'];
+const MAX_EMITTERS=12;
 const TITLES = {reflector:'ОТРАЖАТЕЛЬ',slits:'ДВОЙНАЯ ДИФРАКЦИЯ',maze:'ЛАБИРИНТ',channel:'СОПЛО / КАНАЛ',empty:'ЧИСТАЯ КАМЕРА',tube:'УДАРНАЯ ТРУБА',wedge:'КОСОЙ КЛИН',airfoil:'СВЕРХЗВУКОВОЕ КРЫЛО',cylinder:'ЦИЛИНДР / УДАРНАЯ ВОЛНА',nozzle:'СУЖЕНИЕ / РАСШИРЕНИЕ'};
-const DEFAULTS = () => ({preset:'reflector',tool:'pulse',view:'pressure',power:4.5,speed:2,ratio:8,flowMach:1.8,angle:0,camber:0,thickness:11,gustAmplitude:0,gustPeriod:6,records:[],streamlines:true,sound:false,sensors:DEFAULT_SENSORS.map(p=>({...p})),edits:{reflector:[],slits:[],maze:[],channel:[],empty:[],tube:[],wedge:[],airfoil:[],cylinder:[],nozzle:[]}});
+const DEFAULTS = () => ({preset:'reflector',tool:'pulse',panel:'scene',materialType:1,emitterType:'pressure',sourceStrength:3,sourceAngle:0,flowMode:'auto',emitters:Object.fromEntries(PRESETS.map(p=>[p,[]])),view:'pressure',power:4.5,speed:2,ratio:8,flowMach:1.8,angle:0,camber:0,thickness:11,gustAmplitude:0,gustPeriod:6,records:[],streamlines:true,sound:false,sensors:DEFAULT_SENSORS.map(p=>({...p})),edits:{reflector:[],slits:[],maze:[],channel:[],empty:[],tube:[],wedge:[],airfoil:[],cylinder:[],nozzle:[]}});
 const $ = (id) => document.getElementById(id);
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const safeNumber = (v,a,b,fallback) => typeof v === 'number' && Number.isFinite(v) ? clamp(v,a,b) : fallback;
@@ -21,16 +23,16 @@ const raster=document.createElement('canvas'), rg=raster.getContext('2d',{alpha:
 const runBtn=$('run'), dialog=$('dialog'), scope=$('scope'), scopeG=scope.getContext('2d');
 let sim, image, pointer=null, probe=null, ripples=[],toastTimer=null, lastFrame=0, accumulator=0;
 let stageW=0,stageH=0, paintW=0,paintH=0,dpr=1, active=true, audioCtx=null,lastPulseSound=0, audioVoiceCount=0;
-let hintVisible=true, lastMetrics=0, lastDemoTime=0, tubeReady=false, armingSensor=null, plotMode='history', lastScope=0,compareIndex=-1,lastLoads=null,shapePreviewDrag=null;
+let hintVisible=true, lastMetrics=0, lastDemoTime=0, tubeReady=false, armingSensor=null, plotMode='history', lastScope=0,compareIndex=-1,lastLoads=null,shapePreviewDrag=null,selectedEmitter=-1;
 
 function normalizeEdits(edits){
   const result={};
   for(const preset of PRESETS){
     const list=Array.isArray(edits?.[preset])?edits[preset]:[];
     result[preset]=list.slice(-90).map((stroke)=>{
-      if(!stroke || !['wall','erase'].includes(stroke.tool) || !Array.isArray(stroke.points))return null;
+      if(!stroke || !['wall','material','erase'].includes(stroke.tool) || !Array.isArray(stroke.points))return null;
       const points=stroke.points.slice(0,400).filter(pt=>Array.isArray(pt)&&pt.length===2&&pt.every(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=1)).map(pt=>[+pt[0].toFixed(4),+pt[1].toFixed(4)]);
-      return points.length?{tool:stroke.tool,points}:null;
+      return points.length?{tool:stroke.tool,materialType:Math.round(safeNumber(stroke.materialType,1,3,1)),points}:null;
     }).filter(Boolean);
   }
   return result;
@@ -38,7 +40,13 @@ function normalizeEdits(edits){
 function applyData(input){
   if(!input||typeof input!=='object')return false;
   state.preset=PRESETS.includes(input.preset)?input.preset:'reflector';
-  state.tool=['pulse','wall','erase','probe'].includes(input.tool)?input.tool:'pulse';
+  state.tool=['pulse','wall','material','source','erase','probe'].includes(input.tool)?input.tool:'pulse';
+  state.panel=['scene','construct','measure'].includes(input.panel)?input.panel:'scene';
+  state.materialType=Math.round(safeNumber(input.materialType,1,3,1));
+  state.emitterType=EMITTER_TYPES.includes(input.emitterType)?input.emitterType:'pressure';
+  state.sourceStrength=safeNumber(input.sourceStrength,.5,8,3);
+  state.sourceAngle=safeNumber(input.sourceAngle,-180,180,0);
+  state.flowMode=['auto','on','off'].includes(input.flowMode)?input.flowMode:'auto';
   state.view=['pressure','density','schlieren','mach','vorticity'].includes(input.view)?input.view:'pressure';
   state.power=safeNumber(input.power,.7,10,4.5);
   state.speed=Math.round(safeNumber(input.speed,1,5,2));
@@ -60,13 +68,19 @@ function applyData(input){
   state.streamlines=input.streamlines!==false;
   state.sensors=Array.isArray(input.sensors)&&input.sensors.length===2?input.sensors.map((p,i)=>({x:safeNumber(p?.x,0,1,DEFAULT_SENSORS[i].x),y:safeNumber(p?.y,0,1,DEFAULT_SENSORS[i].y)})):DEFAULT_SENSORS.map(p=>({...p}));
   state.edits=normalizeEdits(input.edits);
+  const groups=input.emitters&&typeof input.emitters==='object'?input.emitters:{};
+  state.emitters=Object.fromEntries(PRESETS.map(p=>[p,Array.isArray(groups[p])?groups[p].slice(0,MAX_EMITTERS).map(e=>{
+    if(!e||!EMITTER_TYPES.includes(e.type))return null;
+    return {x:safeNumber(e.x,.02,.98,.5),y:safeNumber(e.y,.02,.98,.5),type:e.type,
+      strength:safeNumber(e.strength,.2,8,3),angle:safeNumber(e.angle,-180,180,0)};
+  }).filter(Boolean):[]]));
   return true;
 }
 try{const stored=JSON.parse(localStorage.getItem(KEY)||'null');if(stored)applyData(stored)}catch{/* private mode or corrupt data: use defaults */}
 const trace=new TraceRecorder(state.sensors);
 const loadHistory=new LoadHistory();
 function persist(){
-  try{localStorage.setItem(KEY,JSON.stringify({preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,angle:state.angle,camber:state.camber,thickness:state.thickness,gustAmplitude:state.gustAmplitude,gustPeriod:state.gustPeriod,records:state.records,streamlines:state.streamlines,sound:state.sound,sensors:trace.sensors,edits:state.edits}))}catch{/* unavailable quota; simulation stays usable */}
+  try{localStorage.setItem(KEY,JSON.stringify({preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,angle:state.angle,panel:state.panel,materialType:state.materialType,emitterType:state.emitterType,sourceStrength:state.sourceStrength,sourceAngle:state.sourceAngle,flowMode:state.flowMode,emitters:state.emitters,camber:state.camber,thickness:state.thickness,gustAmplitude:state.gustAmplitude,gustPeriod:state.gustPeriod,records:state.records,streamlines:state.streamlines,sound:state.sound,sensors:trace.sensors,edits:state.edits}))}catch{/* unavailable quota; simulation stays usable */}
 }
 function toast(message){
   const el=$('toast');el.textContent=message;el.classList.add('show');
@@ -81,6 +95,19 @@ function setActive(value){
   document.querySelector('.live-indicator').classList.toggle('paused',!active);
   runBtn.setAttribute('aria-pressed',String(!active));
 }
+const flowEnabled=()=>state.flowMode==='on'||(state.flowMode==='auto'&&FLOW_PRESETS.has(state.preset));
+function switchPanel(value){
+  if(!['scene','construct','measure'].includes(value))return;
+  state.panel=value;
+  document.querySelectorAll('[data-panel-tab]').forEach(b=>{
+    const yes=b.dataset.panelTab===value;b.classList.toggle('selected',yes);
+    b.setAttribute('aria-selected',String(yes));
+  });
+  document.querySelectorAll('.controls-scroll [data-panel]').forEach(el=>{
+    el.classList.toggle('panel-filtered',el.dataset.panel!==value);
+  });
+  const scroll=document.querySelector('.controls-scroll');if(scroll)scroll.scrollTop=0;
+}
 function refreshControls(){
   document.querySelectorAll('[data-tool]').forEach(b=>{const yes=b.dataset.tool===state.tool;b.classList.toggle('active',yes);b.setAttribute('aria-pressed',String(yes))});
   document.querySelectorAll('[data-preset]').forEach(b=>{const yes=b.dataset.preset===state.preset;b.classList.toggle('active',yes);b.setAttribute('aria-pressed',String(yes))});
@@ -88,7 +115,7 @@ function refreshControls(){
   $('power').value=String(state.power);$('speed').value=String(state.speed);
   $('ratio').value=String(state.ratio);$('ratio-value').textContent=state.ratio.toFixed(1)+':1';
   $('tube-params').hidden=state.preset!=='tube';$('rupture').hidden=!tubeReady;
-  const isFlow=FLOW_PRESETS.has(state.preset),hasBody=['airfoil','wedge','cylinder'].includes(state.preset);
+  const isFlow=flowEnabled(),hasBody=['airfoil','wedge','cylinder'].includes(state.preset);
   $('load-panel').hidden=!hasBody;
   $('angle-controls').hidden=!['airfoil','wedge'].includes(state.preset);
   $('attack-angle').value=String(state.angle);
@@ -100,6 +127,16 @@ function refreshControls(){
   $('thickness-value').textContent=state.thickness+'%';
   refreshShapePreview();
   $('flow-panel').hidden=!isFlow;
+  $('flow-mode').value=state.flowMode;
+  document.querySelectorAll('[data-material]').forEach(b=>b.classList.toggle('selected',+b.dataset.material===state.materialType));
+  document.querySelectorAll('[data-emitter-type]').forEach(b=>b.classList.toggle('selected',b.dataset.emitterType===state.emitterType));
+  $('source-strength').value=String(state.sourceStrength);
+  $('source-strength-value').textContent=state.sourceStrength.toFixed(1);
+  $('source-angle').value=String(state.sourceAngle);
+  $('source-angle-value').textContent=state.sourceAngle+'°';
+  $('source-angle').disabled=state.emitterType!=='jet';
+  $('emitter-count').textContent=state.emitters[state.preset].length+' / '+MAX_EMITTERS;
+  $('remove-emitter').disabled=selectedEmitter<0||selectedEmitter>=state.emitters[state.preset].length;
   $('flow-metric').hidden=!isFlow;
   $('flow-mach').value=String(state.flowMach);
   $('flow-mach-value').textContent=state.flowMach.toFixed(1)+' M';
@@ -137,6 +174,7 @@ function refreshControls(){
   $('remove-edits').disabled=!state.edits[state.preset].length;
   display.dataset.tool=state.tool;
   document.querySelectorAll('[data-plot]').forEach(b=>b.classList.toggle('selected',b.dataset.plot===plotMode));
+  switchPanel(state.panel);
 }
 function rebuildGeometry(){
   if(!sim)return;
@@ -145,17 +183,19 @@ function rebuildGeometry(){
     const radius=brushRadius();
     for(let i=0;i<stroke.points.length;i++){
       const a=stroke.points[Math.max(0,i-1)],b=stroke.points[i];
-      sim.stroke(a[0]*sim.nx,a[1]*sim.ny,b[0]*sim.nx,b[1]*sim.ny,stroke.tool==='wall',radius);
+      sim.paintMaterial(a[0]*sim.nx,a[1]*sim.ny,b[0]*sim.nx,b[1]*sim.ny,stroke.tool==='erase'?0:stroke.tool==='wall'?1:stroke.materialType,radius);
     }
   }
+  sim.setEmitters(state.emitters[state.preset]);
   refreshControls();
 }
 const brushRadius=()=>clamp(Math.min(sim.nx,sim.ny)*.021,1.4,2.9);
 function resetGas(withStart=false){
   if(!sim)return;
   sim.resetGas();
-  const flow=FLOW_PRESETS.has(state.preset);
+  const flow=flowEnabled();
   if(flow){sim.setGust(state.gustAmplitude,state.gustPeriod);sim.startFlow(state.flowMach);}
+  sim.setEmitters(state.emitters[state.preset]);
   tubeReady=state.preset==='tube';
   if(tubeReady){sim.loadTube(state.ratio);setActive(false);}
   else if(withStart || flow){setActive(true);}
@@ -203,6 +243,7 @@ function resizeField(){
     // Sensor histories are cleared because changing cell scale invalidates
     // the formerly measured arrival speeds.
     if(oldField.flowActive){sim.setGust(state.gustAmplitude,state.gustPeriod);sim.startFlow(state.flowMach);}
+    sim.setEmitters(state.emitters[state.preset]);
     for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){
       const i=y*nx+x;if(sim.solid[i])continue;
       const ox=Math.round(x*(oldField.nx-1)/Math.max(1,nx-1));
@@ -720,7 +761,7 @@ function loop(now){
     let executed=0;
     while(accumulator>=1&&executed<9){sim.step();trace.record(sim);loadHistory.record(sim);accumulator-=1;executed++;}
     if(executed===9)accumulator=0;
-    if(hintVisible && !tubeReady && !FLOW_PRESETS.has(state.preset) && state.preset!=='tube' && sim.time-lastDemoTime>3.7){
+    if(hintVisible && !tubeReady && !flowEnabled() && state.preset!=='tube' && sim.time-lastDemoTime>3.7){
       const x=sim.nx*.19,y=sim.ny*.5;
       sim.pulse(x,y,state.power*.85,clamp(Math.min(sim.nx,sim.ny)*.037,2.5,4.2));
       ripples.push({x,y,time:now});lastDemoTime=sim.time;
