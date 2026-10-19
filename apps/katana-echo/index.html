@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Katana Echo Duel</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#14191d"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
+<body><main data-app-shell><a class="pocket-exit" href="../../" data-app-control>Pocket Works</a>
+  <div id="hud">
+    <div>
+      <h1>Katana Echo Duel</h1>
+      <p class="subtitle">2D top-down PvP дуэль с призраком</p>
+    </div>
+    <div class="controls">
+      <label>Room code <input id="room" maxlength="8" placeholder="Код комнаты"></label>
+      <label>Player name <input id="name" value="Ronin"></label>
+      <label>Ghost mode
+        <select id="mode">
+          <option value="echo-trap">Echo Trap</option>
+          <option value="shadow-tail">Shadow Tail</option>
+          <option value="channel-echo">Channel Echo</option>
+        </select>
+      </label>
+      <button data-native-press id="create">Создать комнату</button><button data-native-press id="connect">Подключиться</button>
+    </div>
+    <div id="status"></div>
+  </div>
+  <canvas id="view" width="960" height="540"></canvas>
+  <aside class="duel-help">Удерживайте удар для заряда, отпустите для атаки. Щит парирует в начале поднятия. Эхо повторяет вашу историю. Для сетевой дуэли нужна связь.</aside><div id="touchDeck"><div><button data-native-press data-key="w">↑</button><button data-native-press data-key="a">←</button><button data-native-press data-key="s">↓</button><button data-native-press data-key="d">→</button></div><div><button data-native-press data-combat="lmb">Удар</button><button data-native-press data-combat="rmb">Щит</button><button data-native-press data-combat="dash">Рывок</button><button data-native-press data-combat="ghostToggle">Эхо</button></div></div></main><script type="module" src="./app.js"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Katana Echo" data-app-version="0.1.0"></script></body>
+</html>

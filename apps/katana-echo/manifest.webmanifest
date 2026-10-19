@@ -1,0 +1,20 @@
+{
+  "id": "/apps/katana-echo/",
+  "name": "Katana Echo",
+  "short_name": "Katana Echo",
+  "description": "Дуэль катан с парированием, заряжаемым ударом и тремя режимами боевого эха.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#14191d",
+  "theme_color": "#14191d",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
