@@ -4,13 +4,13 @@
   "product": "trace-mosaic",
   "direction": {
     "premise": "A shared picture puzzle turns each drag path into a temporary obstacle for the other mosaic builders.",
-    "composition": "A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row.",
-    "shapeLanguage": "Rounded picture tiles, a literal square cell grid and translucent colored trail cells expose ownership and blocked paths.",
-    "surfaceAndMaterial": "Recovered authored SVG puzzle illustrations are sliced into picture fragments; trails remain translucent overlays rather than decorative glow.",
-    "paletteLogic": "Each builder has a colored outline and path; the source picture colors remain intact so matching fragments is a spatial task.",
-    "typography": "Quiet source labels identify the tray and progress, with numerical room and timer chips kept separate from the illustration.",
-    "signature": "Dragging a fragment paints a visible path that blocks other players for thirty seconds, even after the piece lands.",
-    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
+    "composition": "An immersive restoration workbench: brass-framed luminous mosaic surface is the protagonist; compact archival HUD above and a shallow personal material tray below. On desktop, tray becomes a side rail.",
+    "shapeLanguage": "Precision squared ceramic-like tiles, thin seams, brass rivets, editorial rectangular workshop controls and sweeping continuous ribbon paths.",
+    "surfaceAndMaterial": "Mineral graphite workshop surrounds a matte ivory underlay and inset antique brass frame. Picture fragments retain original SVG artworks and acquire small edges, lift shadows and careful magnetic seating.",
+    "paletteLogic": "Warm ivory, graphite, aged copper and restrained pigment for the furniture. Player-specific path colors remain true to server palette to preserve path ownership.",
+    "typography": "Humanist interface combined with Georgia editorial exhibit headlines and technical monospaced micro-labels. Timer and score remain operational, not decorative.",
+    "signature": "A tile lifts above the finger and is guided around fading pigment ribbons on a shared lit conservation surface; a completed picture is unveiled as an archive exhibit.",
+    "distinction": "Unlike Zamazka's painted restoration, Trace Mosaic has physically located fragments and non-overlapping player-owned route paths. Unlike Perekos there is no arena/character UI."
   },
   "architecture": {
     "spatialLayout": "open-workbench",
@@ -19,7 +19,7 @@
     "chromeTopology": "single-surface",
     "dominantMotion": "sliding",
     "primaryVerb": "Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails.",
-    "physicalFeedback": "The held fragment follows the pointer, visited cells gain a colored trail and a correct drop raises shared completion.",
+    "physicalFeedback": "Offset lifted fragment, target-cell state, visible real trail geometry, snap-in arrival, optional haptic and subdued audio.",
     "spatialRationale": "A square picture grid stays above a compact tray of the viewer’s assigned fragments; room, time and completion sit in a single top row. This keeps the current game object and its real inputs spatially connected on a phone.",
     "comparisons": [
       {
@@ -50,17 +50,17 @@
     ]
   },
   "production": {
-    "renderer": "DOM picture tiles cut from the recovered SVG art preserve crisp illustrations and direct pointer dragging on phones.",
-    "focalAsset": "The original SVG puzzle catalog is preserved and cut at runtime into square fragments; the authored mosaic SVG supplies install identity."
+    "renderer": "Persistent DOM mosaic tiles, absolute SVG path overlay and CSS physical-material treatment. Network snapshots patch pieces/trays instead of rebuilding the input surface.",
+    "focalAsset": "The authored source SVG puzzle catalog and a bespoke inset-workbench app icon; no downloaded stock assets."
   },
   "motion": {
-    "character": "The held fragment follows the pointer, visited cells gain a colored trail and a correct drop raises shared completion.",
-    "action": "Drag only your assigned picture fragments to their correct cells while choosing routes around other players’ fading trails.",
-    "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
-    "response": "The next visible state responds to the actual control: Dragging a fragment paints a visible path that blocks other players for thirty seconds, even after the piece lands.",
-    "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
+    "character": "Subtle lifted ghost follows the pointer; a selected target glows, denied target is striped and a correct piece seats with an overshoot.",
+    "action": "Carry personal fragments across the board without crossing 30-second peer ribbons.",
+    "anticipation": "Personal tile lifts with directional offset above touch, enabling precision drop.",
+    "response": "Authoritative result drives on-board placement, quiet audio and haptic success.",
+    "followThrough": "Correctly placed tile remains visible with a short settling motion; server trails age visibly.",
     "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
-    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
+    "reducedMotion": "CSS animation and transitions are disabled through prefers-reduced-motion while trails and placement states remain legible."
   },
   "evidence": {
     "entry": "./",
