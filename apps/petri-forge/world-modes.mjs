@@ -187,7 +187,7 @@ async function refreshLibraries(){
   const records=await listModels();
   for(const [selector,kind] of [['battleModels','combat-policy'],['raceModels','shpilka-evo']]){
    const s=$(selector),previous=s.value;s.replaceChildren();
-   const matching=records.filter(r=>r.kind===kind);
+   const matching=records.filter(r=>r.kind===kind&&!r.id.startsWith('career-v1:'));
    if(!matching.length){const option=document.createElement('option');option.value='';option.textContent='Мозги ещё не сохранены';s.append(option);}
    for(const item of matching){const option=document.createElement('option');option.value=item.id;option.textContent=item.name;s.append(option);}
    if(matching.some(r=>r.id===previous))s.value=previous;
