@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "shock-lab",
+  "name": "SHOCK — лаборатория ударных волн",
+  "shortName": "SHOCK",
+  "description": "Физическая песочница ударных волн с решением уравнений газодинамики, препятствиями, зондами и измерениями.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-19",
+  "releaseDateTime": "2026-10-19T14:20:00+03:00",
+  "changelog": [
+    "Создана лаборатория сжатого газа с 2D решателем Эйлера и HLL-потоками.",
+    "Добавлены пять камер, рисование препятствий, отражение волн, зонды и визуализации.",
+    "Работают пауза, пошаговый расчёт, сохранение и экспорт экспериментов."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "accent": "#e8bd76",
+  "backgroundColor": "#101b21",
+  "themeColor": "#101b21",
+  "orientation": "any",
+  "cacheName": "shock-lab-v1.0.0",
+  "storageNamespace": "pocket-works:shock-lab",
+  "tags": [
+    "simulation",
+    "physics",
+    "shock waves",
+    "experiment",
+    "canvas",
+    "offline",
+    "science"
+  ],
+  "order": 120
+}

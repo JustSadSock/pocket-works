@@ -3541,8 +3541,8 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "b12fc8389e1bd52583182f9e9d2664a43b2e5dcc",
-    "qualityScore": 62,
+    "revision": "ee9827bbe47a4891ef0663235a6d419522064615",
+    "qualityScore": 61,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3555,12 +3555,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "cf19443c09c07df3b64d140202115935154f5f5fa2b9c6857e241fb3f44317c5",
+    "sha256": "5c178018378246a21c6a6bd36d6ca774adcfdbb85e149693f3180cb60169bdcc",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "b12fc8389e1bd52583182f9e9d2664a43b2e5dcc",
-    "lastAttemptAt": "2026-10-19T11:50:12.515Z"
+    "lastAttemptRevision": "ee9827bbe47a4891ef0663235a6d419522064615",
+    "lastAttemptAt": "2026-10-19T12:14:41.666Z"
   },
   "portal-lab": {
     "note": "existing cover rated higher",
@@ -3600,9 +3600,9 @@
     "diagnostic": null,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "83a73f39a4107d921733eca2bea2ec9436be5bf3",
-    "lastAttemptAt": "2026-10-19T11:58:38.822Z",
-    "revision": "83a73f39a4107d921733eca2bea2ec9436be5bf3",
+    "lastAttemptRevision": "96950a6bb63ee8b575d36b82f7e37bbd391cef5c",
+    "lastAttemptAt": "2026-10-19T12:06:39.892Z",
+    "revision": "96950a6bb63ee8b575d36b82f7e37bbd391cef5c",
     "qualityScore": 55,
     "visionScore": null,
     "prepared": false,
@@ -3743,8 +3743,8 @@
     "lastAttemptAt": "2026-10-19T10:16:36.235Z"
   },
   "trace-mosaic": {
-    "revision": "cf80d126a2bd36e0903e83f2595ddbdea3a4ed1e",
-    "qualityScore": 68,
+    "revision": "7c500a68337995156b0384047b52e6c88697b352",
+    "qualityScore": 67,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3757,12 +3757,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "c25687e9c5df295dc8b060c4be0392cf0b374e6ac0ec8dd27b1eeac7faf31d81",
+    "sha256": "17c5e2586ef338ace432adbab76c9245924631c88643e61c74ad18156185af4e",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "cf80d126a2bd36e0903e83f2595ddbdea3a4ed1e",
-    "lastAttemptAt": "2026-10-19T11:58:05.174Z"
+    "lastAttemptRevision": "7c500a68337995156b0384047b52e6c88697b352",
+    "lastAttemptAt": "2026-10-19T12:14:29.582Z"
   },
   "crown-laws": {
     "revision": "174f5b4a923933b319f4c6821a2d046bbcd43dc3",
@@ -3812,5 +3812,21 @@
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "0fdcf5c63e8f960a5dbc7626ea2f8472a2e8f741",
     "lastAttemptAt": "2026-10-19T10:17:26.292Z"
+  },
+  "shock-lab": {
+    "revision": "9bc4d683f877de8bc7acebd13ec663a85668975c",
+    "qualityScore": 62,
+    "visionScore": null,
+    "prepared": false,
+    "started": false,
+    "gameplayEntry": [],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "214e684aacb1862c4796ab3ec8283db243cc5b804fb99cd1da8e07d6bf4c00f7",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "9bc4d683f877de8bc7acebd13ec663a85668975c",
+    "lastAttemptAt": "2026-10-19T12:14:52.628Z"
   }
 }

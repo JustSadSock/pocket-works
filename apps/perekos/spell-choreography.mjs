@@ -232,11 +232,11 @@ export function drawSpellProjectiles(ctx,state,time=0,reduced=false){
   ctx.restore();
  }
 }
-export function drawSpellForeground(ctx,choreography,reduced=false){
+export function drawSpellForeground(ctx,choreography,reduced=false,{impacts=true}={}){
  if(!ctx||!choreography)return;
  for(const m of choreography.motifs){
   const t=clamp(m.age/m.life,0,1);
-  if(m.kind==='impact'){
+  if(m.kind==='impact'&&impacts){
    ctx.save();ctx.globalAlpha=(1-t)*.8;
    const n=reduced?3:6,kind=m.style;
    for(let i=0;i<n;i++){

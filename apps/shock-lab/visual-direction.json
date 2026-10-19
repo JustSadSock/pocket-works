@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "shock-lab",
+  "direction": {
+    "premise": "A tabletop supersonic-flow instrument, with a luminous compressible-gas chamber and a dark oxide-steel control console.",
+    "composition": "A single illuminated visualization tank dominates the screen. Compact mechanical lab instruments occupy a side console on desktop and a vertically scrollable lower console on narrow phones.",
+    "shapeLanguage": "Hard square-cut aluminum geometry, paper-thin graduations, sharp instrument toggles and an uncaged central visualization.",
+    "surfaceAndMaterial": "Opaque charcoal-blue oxided metal; brushed mineral wall inclusions; the gas field itself provides dynamic luminous volume. No glassmorphism or decorative gradients over UI components.",
+    "paletteLogic": "Cool sea-glass blue denotes rarefaction, warm sulfur amber denotes compression, gray-yellow denotes impermeable walls. Controls follow the chamber's material scale.",
+    "typography": "Condensed utility labels with monospaced physical measurements; short Russian action labels remain readable on phones.",
+    "signature": "A finger can draw a reflecting mirror directly into the gas in real time, and the computed shock splits and wraps around its geometry.",
+    "distinction": "Where PetriForge is a discrete editable microcosm, SHOCK shows continuous conservation-law fronts and reflective solid boundaries with industrial instrumentation."
+  },
+  "architecture": {
+    "spatialLayout": "header-stage-footer",
+    "controlLocation": "perimeter",
+    "navigation": "editor-toolbox",
+    "chromeTopology": "framed-stage",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Place a high-pressure impulse, alter the wall shape and measure where the front reaches.",
+    "physicalFeedback": "The actual HLL field changes on each step, a brief excitation circle identifies the contact source, and wall edits appear immediately as solid reflective cells.",
+    "spatialRationale": "Desktop shows a broad physical chamber and a right instrument console. On portrait phones a compact top bar, live upper canvas and internally scrollable bottom control deck form a header-stage-footer topology, distinct from the desktop split.",
+    "comparisons": [
+      {
+        "slug": "petri-forge",
+        "spatialDifference": "PetriForge's tiled Petri grid is replaced by an uncaged fluid image and side instrument console.",
+        "interactionDifference": "Free-hand gas obstacle drawing and physical impulse propagation replace discrete agent rewards."
+      },
+      {
+        "slug": "zamazka",
+        "spatialDifference": "No paper studio, no painterly cards; industrial short-text control board framing a computational gas tank.",
+        "interactionDifference": "Direct injection and continuous waves replace turn-based drawing."
+      },
+      {
+        "slug": "crumple-yard",
+        "spatialDifference": "SHOCK uses a pressure-field instrument bay rather than the source project's discrete object geometry.",
+        "interactionDifference": "Gas impulse injection, boundary drawing and live pressure measurement have distinct controls and physical consequences."
+      },
+      {
+        "slug": "trace-mosaic",
+        "spatialDifference": "SHOCK uses a pressure-field instrument bay rather than the source project's discrete object geometry.",
+        "interactionDifference": "Gas impulse injection, boundary drawing and live pressure measurement have distinct controls and physical consequences."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Plain Canvas 2D with an offscreen 2D gas raster driven by a JavaScript conservative HLL finite-volume solver; responsive cell resolution.",
+    "focalAsset": "Actual pressure, density and density-gradient fields, with a hand-authored pressure-trace SVG icon."
+  },
+  "motion": {
+    "character": "Physical concentric shocks and interference emerge from conservation equations; the UI provides only brief source registration.",
+    "action": "Immediate impulse and instantaneous solid raster stroke.",
+    "anticipation": "The selected input tool and canvas crosshair reveal the pending effect.",
+    "response": "The numerical field reacts during subsequent solver steps and the click adds a minimal source marker.",
+    "followThrough": "Shock paths refract, diffract and reflect while live time/pressure measurements advance.",
+    "interruption": "Touch cancellation finishes the active edit and does not leave captured gestures; hiding pauses calculations.",
+    "reducedMotion": "Animations outside the physical field are removed; physical calculation remains manually pausable."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#clear"
+    },
+    "expectedChange": "The computed gas pressure returns to ambient while walls remain visible.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}

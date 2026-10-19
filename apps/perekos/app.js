@@ -8,9 +8,10 @@ import {OnlineDuel,inviteCode,incomingCode} from './net-client.mjs';
 import {MAGES,SCHOOLS,mage,validMage} from './mages.mjs';
 import {ELEMENTS,reactionFor} from './elements.mjs';
 import {createCourtBackdrop,drawCourtAtmosphere} from './court-art.mjs';
-import {CombatPresentation,drawProjectileTrail} from './combat-presentation.mjs';
+import {CombatPresentation} from './combat-presentation.mjs';
 import {drawGroundCues,drawActorCues,drawSpellLighting} from './combat-readability.mjs';
-import {SpellChoreography,drawSpellGround,drawSpellActors,drawSpellProjectiles,drawSpellForeground} from './spell-choreography.mjs';
+import {SpellChoreography,drawSpellGround,drawSpellActors,drawSpellForeground} from './spell-choreography.mjs';
+import {drawKineticProjectiles,ContactTheater} from './spell-kinetics.mjs';
 import {DuelFeedback} from './duel-feedback.mjs';
 import {MageMotion} from './mage-motion.mjs';
 import {courtAim} from './aim-geometry.mjs';
@@ -25,6 +26,7 @@ let selectedMage='kindle',mageFrom='menu',selectionDraft='kindle';
 let sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null;
 const combatPresentation=new CombatPresentation();
 const spellChoreography=new SpellChoreography();
+const contactTheater=new ContactTheater();
 const duelFeedback=new DuelFeedback();
 const mageMotion=new MageMotion();
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -65,8 +67,26 @@ function sfx(type,school='fire'){
   if(school==='stone'){tone(165,53,.22,'triangle',.054);tone(80,39,.16,'sine',.034);grit(.10,300,.036)}
   else if(school==='storm'){tone(950,260,.11,'sawtooth',.017);tone(530,1030,.07,'square',.015);tone(280,112,.13,'triangle',.025)}
   else{tone(315,87,.19,'sawtooth',.032);tone(860,350,.085,'triangle',.026);grit(.055,1250,.019)}
- }else if(type==='hit'||type.startsWith('impact_')){
-  tone(140,52,.13,'triangle',.035);grit(.085,380,.028);
+ }else if(type.startsWith('impact_')){
+  // Only server-confirmed collision events generate the contact sound.
+  // Each material has a physically distinct envelope and mass.
+  const style=type.slice(7);
+  if(style==='rock'||style==='wave'){
+   tone(style==='rock'?148:105,style==='rock'?43:37,.2,'triangle',.039);
+   tone(68,36,.16,'sine',.018,.012);
+   grit(style==='rock'?.15:.12,style==='rock'?250:430,.024);
+  }else if(style==='bolt'||style==='arc'){
+   tone(style==='arc'?1050:1280,style==='arc'?170:300,.085,'sawtooth',.018);
+   tone(460,130,.12,'triangle',.016,.008);
+   grit(.042,2400,.012);
+  }else if(style==='flame'||style==='orb'){
+   tone(style==='flame'?360:270,65,.14,'triangle',.023);
+   grit(style==='flame'?.11:.065,style==='flame'?780:1050,.02);
+  }else{
+   tone(340,120,.08,'sine',.012);
+  }
+ }else if(type==='hit'){
+  tone(195,65,.08,'triangle',.015);
  }else if(type==='shield'){
   tone(270,550,.18,'sine',.023);tone(440,310,.25,'triangle',.018,.015);
  }else if(type==='dash'){
@@ -369,36 +389,6 @@ function drawConstructs(s){
   if(life<1)pixel(m.x-10,m.y-17+bob,20,2,'#ddb38e');
  }
 }
-function drawShots(s){
- for(const q of s.shots){
-  const x=Math.round(q.x),y=Math.round(q.y),style=q.style||'orb',friendly=q.owner===myIndex();
-  drawProjectileTrail(ctx,q,frame/60);
-  const backX=q.vx/(Math.hypot(q.vx,q.vy)||1),backY=q.vy/(Math.hypot(q.vx,q.vy)||1);
-  const element=ELEMENTS[q.element];if(element){circle(x,y,Math.max(4,q.r+3),element.color+'52');pixel(x-backX*13-2,y-backY*13-2,4,4,element.color)}
-  if(style==='bolt'||style==='arc'){
-   ctx.lineWidth=style==='arc'?4:2;ctx.strokeStyle=friendly?'#a6e6d7':'#eab7df';
-   ctx.beginPath();ctx.moveTo(x-backX*27,y-backY*27);ctx.lineTo(x-backX*11-backY*5,y-backY*11+backX*5);
-   ctx.lineTo(x,y);ctx.stroke();circle(x,y,style==='arc'?4:3,'#eafdf4');
-   pixel(x-backX*13-3,y-backY*13-3,3,3,'#b5e7d6');
-  }else if(style==='rock'){
-   const wob=Math.sin(frame*.32+q.owner*3)*2;
-   pixel(x-11,y-9+wob,21,17,'#293c3d');pixel(x-9,y-11+wob,17,17,'#8c9a7c');
-   pixel(x-7,y-9+wob,9,4,'#c4c5a1');pixel(x+3,y+wob,6,3,'#4f6760');
-   pixel(x-backX*16-2,y-backY*16-2,5,5,'#84937a');
-  }else if(style==='wave'){
-   ctx.strokeStyle=friendly?'#c9d4a4':'#d4b0a4';ctx.lineWidth=5;
-   ctx.beginPath();ctx.arc(x,y,10,Math.atan2(q.vy,q.vx)-1.1,Math.atan2(q.vy,q.vx)+1.1);ctx.stroke();
-   pixel(x-backX*16-4,y-backY*16-4,6,6,'#9aa68c');
-  }else if(style==='flame'){
-   circle(x,y,8,'#ee8651');pixel(x-5,y-5,10,10,'#ffbb70');
-   pixel(x-2,y-7,6,7,'#ffe4a2');
-   for(let i=0;i<3;i++){const t=(frame*.19+i*.37)%1;pixel(x-backX*(12+t*16)+Math.sin(frame*.22+i)*4,y-backY*(12+t*16)+Math.cos(frame*.22+i)*4,3,3,i%2?'#c85c44':'#edae69')}
-  }else{
-   circle(x,y,q.r+2,friendly?'#e6a568':'#c47b78');circle(x,y,Math.max(3,q.r-1),'#ffe2a2');
-   pixel(x-backX*12-2,y-backY*12-2,4,4,'#dda36e');
-  }
- }
-}
 // The stage-presentation layer now owns every confirmed combat burst.
 // Echoes remain world objects and preserve the player's actual PocketWorks avatar.
 function drawEffects(s){
@@ -422,8 +412,8 @@ function render(){
  if(!bgCanvas)bgCanvas=background();
  combatPresentation.ingest(active,reducedMotion);
  spellChoreography.ingest(active,reducedMotion);
- duelFeedback.ingest(active,reducedMotion);
- duelFeedback.advance(1/60,reducedMotion);
+ contactTheater.ingest(active,reducedMotion);
+ contactTheater.advance(1/60);
  combatPresentation.advance(1/60,reducedMotion);
  spellChoreography.advance(1/60);
  const offset=combatPresentation.offset(reducedMotion);
@@ -437,7 +427,6 @@ function render(){
   // mines only. No enemy hidden runes, damage estimates or artificial aim.
   drawGroundCues(ctx,active,myIndex(),frame/60,reducedMotion);
   drawSpellGround(ctx,spellChoreography,reducedMotion);
-  duelFeedback.ground(ctx,reducedMotion);
   combatPresentation.ground(ctx);
   drawConstructs(active);
   drawEffects(active);
@@ -458,10 +447,9 @@ function render(){
    }
   }
   duelFeedback.actors(ctx,active,frame/60,reducedMotion);
-  drawSpellProjectiles(ctx,active,frame/60,reducedMotion);
-  drawShots(active);
-  duelFeedback.air(ctx);
-  drawSpellForeground(ctx,spellChoreography,reducedMotion);
+  drawKineticProjectiles(ctx,active,frame/60,{reduced:reducedMotion});
+  contactTheater.draw(ctx,reducedMotion);
+  drawSpellForeground(ctx,spellChoreography,reducedMotion,{impacts:false});
   combatPresentation.foreground(ctx);
   if(mode==='fight'&&input.aim)duelFeedback.aim(ctx,active.actors[myIndex()],input.aim,{reduced:reducedMotion});
  }else{

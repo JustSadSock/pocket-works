@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "product": "shock-lab",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "petri-forge",
+      "evidence": "apps/petri-forge/visual-direction.json and its repository implementation",
+      "lesson": "Keep the same immediacy of world editing, but use a spatially continuous gas field instead of agent tiles."
+    },
+    {
+      "slug": "crumple-yard",
+      "evidence": "apps/crumple-yard/visual-direction.json from repository",
+      "lesson": "Avoid the source app's camera-following 3D crash yard; place the entire shock chamber under fixed measuring instruments."
+    },
+    {
+      "slug": "trace-mosaic",
+      "evidence": "apps/trace-mosaic/visual-direction.json from repository",
+      "lesson": "Avoid square-piece DOM puzzles and colored path trails; walls and paths must be solved from the pressure field."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://www.grc.nasa.gov/WWW/BGH/normal.html",
+      "observation": "NASA explains shock discontinuities as coupled changes in density, pressure and temperature in a calorically perfect gas.",
+      "principle": "Conserve gas mass, momentum and total energy rather than animating decorative rings.",
+      "application": "Use the ideal-gas equation of state with gamma 1.4 and numerical conservative fluxes.",
+      "avoid": "Do not claim detailed combustion chemistry or high-temperature real-gas equations.",
+      "inspectedAt": "2026-10-19T11:40:00Z"
+    },
+    {
+      "url": "https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/crossed-shock-waves/",
+      "observation": "NASA shows interacting shock fronts and surfaces with different geometries of wave crossing.",
+      "principle": "Let shape and boundary conditions change the pressure front's evolution.",
+      "application": "Include mirrors, slits, a maze and a channel with live editable wall segments.",
+      "avoid": "Do not copy precomputed images as a stand-in for field simulation.",
+      "inspectedAt": "2026-10-19T11:40:00Z"
+    },
+    {
+      "url": "https://www.grc.nasa.gov/www/k-12/airplane/tunvschlrn.html",
+      "observation": "NASA describes schlieren photography as a visualization of refraction by density gradients across shock waves.",
+      "principle": "Expose density gradients as a separate inspection visualization.",
+      "application": "Calculate local raster density gradient for a sharp Schlieren-inspired view.",
+      "avoid": "Do not label a direct gradient rendering a faithful optical ray tracing of schlieren optics.",
+      "inspectedAt": "2026-10-19T11:40:00Z"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "pressure-tank",
+      "medium": "Real-time CPU finite-volume fluid simulation rendered through low-resolution Canvas raster and supersampled measuring marks.",
+      "composition": "Dominant full viewport gas tank with fixed side instrument console and mobile bottom console.",
+      "interaction": "Freehand pressure pulses, raster obstacle painting and live spot measurements directly inside the same tank.",
+      "motion": "Computed compressible wavefronts move through actual conservative numerical steps; source identification fades rapidly.",
+      "rationale": "Lets users create meaningful experiments with a small offline physical solver and direct manipulation."
+    },
+    {
+      "id": "shock-cards",
+      "medium": "Static diagrams with separate computational previews for each educational case and a small readout.",
+      "composition": "A scrollable stack of independent experiment cards around miniature fixed-width plots.",
+      "interaction": "Preset selection and scalar sliders update each preselected case without freehand geometry editing.",
+      "motion": "Recorded frame loops and chart transitions illustrate known shock behaviors rather than solving fluid interactions live.",
+      "rationale": "Would teach fixed cases, but cannot support the user-directed open ended shock laboratory."
+    },
+    {
+      "id": "flow-tunnel",
+      "medium": "Three-dimensional volumetric gas display rendered by heavy WebGL raymarching and preauthored meshes.",
+      "composition": "Full-screen navigable flight wind tunnel with semi-transparent data volumes and diegetic controls.",
+      "interaction": "The camera orbits the tunnel and draggable 3D nozzle components define inlet flow.",
+      "motion": "Smoke and shader-based volumetric compression move independently from expensive three-dimensional fluid solves.",
+      "rationale": "A 3D camera would sacrifice tablet legibility and exact geometry manipulation; a proper 3D solver exceeds the mobile budget."
+    }
+  ],
+  "selection": {
+    "concept": "pressure-tank",
+    "reason": "A live HLL solver and immediate geometry painting are the shortest route to physically meaningful, repeatable experiments on a phone.",
+    "rejected": [
+      {
+        "concept": "shock-cards",
+        "reason": "Static cards cannot produce original reflections and refractions when the user sketches a new barrier."
+      },
+      {
+        "concept": "flow-tunnel",
+        "reason": "A volumetric third dimension greatly increases computation while obscuring the two-dimensional shock fronts."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "canvas-svg",
+      "availability": "available",
+      "reason": "Standard Canvas 2D image raster and hand-written SVG icon work with PocketWorks Quick PWA without extra dependencies."
+    }
+  ],
+  "assets": [
+    {
+      "id": "shock-identity",
+      "tool": "canvas-svg",
+      "source": "index.html",
+      "output": "icons/icon.svg",
+      "role": "A pulse trace engraved inside a radiating pressure field distinguishes the installable app.",
+      "acceptance": "Pulse amplitude and concentric shock rings remain legible in the mobile launcher icon.",
+      "integration": "Referenced directly by index.html and manifest.webmanifest and held in the owned offline cache.",
+      "provenance": "Author-written vector illustration with no copied art or third-party assets.",
+      "maxBytes": 4096
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "The chamber may become too short on a 320px-wide phone when an in-browser safe area is tall.",
+      "Continuous numerical stepping may become CPU bound on older phones, requiring fewer adaptive grid cells."
+    ],
+    "comparisons": [
+      "desktop initial reflective field and drawn-wall state",
+      "390x844 mobile initial state, controls scroll, and slit experiment"
+    ]
+  }
+}

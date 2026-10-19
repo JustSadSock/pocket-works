@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101b21">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SHOCK">
+  <title>SHOCK — лаборатория ударных волн</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main class="app-shell" data-app-shell data-fullscreen-app>
+  <header class="topbar" data-ui>
+    <a href="../../" class="backlink" data-app-control aria-label="Вернуться в PocketWorks"><span class="backarrow">‹</span><span>POCKET WORKS</span></a>
+    <div class="brand" aria-label="SHOCK">
+      <svg class="brand-glyph" width="33" height="33" viewBox="0 0 48 48" aria-hidden="true"><path d="M7 26h11l5-15 5 26 5-15h8" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square"/><path d="M6 41h36" stroke="currentColor" stroke-opacity=".32"/></svg>
+      <div><strong>SHOCK</strong><small>ЛАБОРАТОРИЯ ВОЛН</small></div>
+    </div>
+    <div class="top-actions">
+      <span class="solver-tag"><i></i> EULER · 2D</span>
+      <button class="icon-control" id="sound" type="button" aria-label="Включить звук" title="Звук" data-native-press>ЗВУК ВЫКЛ.</button>
+      <button class="workshop-btn" data-workshop-trigger type="button" data-native-press>WORKSHOP</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <section class="chamber" aria-label="Рабочее поле эксперимента">
+      <div class="chamber-head" data-ui>
+        <div class="chamber-title"><span class="serial">01 / GAS CHAMBER</span><strong id="chamber-name">ОТРАЖАТЕЛЬ</strong></div>
+        <div class="live-indicator"><span class="live-dot"></span><span id="sim-status">СИМУЛЯЦИЯ</span></div>
+      </div>
+      <div class="display" id="display" data-gesture-surface data-block-callout>
+        <div class="rule rule-top"></div><div class="rule rule-left"></div>
+        <canvas id="field" aria-label="Газовая симуляция. Коснитесь поля, чтобы создать волну" tabindex="0"></canvas>
+        <canvas id="overlay" aria-hidden="true"></canvas>
+        <div class="view-mark"><span id="view-short">ΔP</span><span class="view-unit">RELATIVE FIELD</span></div>
+        <div class="hint" id="hint">Коснись камеры, чтобы создать ударную волну</div>
+        <div class="axis-label axis-x">X →</div><div class="axis-label axis-y">Y →</div>
+      </div>
+      <div class="chamber-foot" data-ui>
+        <div class="foot-metric"><small>ВРЕМЯ</small><strong id="time">0.00</strong></div>
+        <div class="foot-metric"><small>ПИК ДАВЛЕНИЯ</small><strong id="peak">1.00 <em>×P₀</em></strong></div>
+        <div class="foot-metric"><small>В ТОЧКЕ</small><strong id="probe">—</strong></div>
+        <div class="foot-command"><span class="pulse-mark"></span><span id="mode-help">ТАП: ИМПУЛЬС · УДЕРЖАНИЕ: СЕРИЯ</span></div>
+      </div>
+    </section>
+
+    <aside class="controls" data-ui aria-label="Управление лабораторией">
+      <div class="panel-head"><span>ПУЛЬТ УПРАВЛЕНИЯ</span><span>EXP / 001</span></div>
+      <div class="controls-scroll">
+
+      <div class="control-section">
+        <div class="section-title"><span>01</span><label>ИНСТРУМЕНТ</label></div>
+        <div class="toolstrip" role="group" aria-label="Режим взаимодействия">
+          <button class="tool active" data-tool="pulse" data-native-press><span class="tool-icon">◎</span><span>ИМПУЛЬС</span></button>
+          <button class="tool" data-tool="wall" data-native-press><span class="tool-icon">╱</span><span>СТЕНА</span></button>
+          <button class="tool" data-tool="erase" data-native-press><span class="tool-icon">⌁</span><span>СТЕРЕТЬ</span></button>
+          <button class="tool" data-tool="probe" data-native-press><span class="tool-icon">⊕</span><span>ЗОНД</span></button>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <div class="section-title"><span>02</span><label>ГЕОМЕТРИЯ</label></div>
+        <div class="preset-grid" role="group" aria-label="Готовые камеры">
+          <button data-preset="reflector" class="preset active" data-native-press><span class="preset-shape shape-reflector" aria-hidden="true"></span><span>ЗЕРКАЛО</span></button>
+          <button data-preset="slits" class="preset" data-native-press><span class="preset-shape shape-slits" aria-hidden="true"></span><span>ЩЕЛИ</span></button>
+          <button data-preset="maze" class="preset" data-native-press><span class="preset-shape shape-maze" aria-hidden="true"></span><span>ЛАБИРИНТ</span></button>
+          <button data-preset="channel" class="preset" data-native-press><span class="preset-shape shape-channel" aria-hidden="true"></span><span>КАНАЛ</span></button>
+          <button data-preset="empty" class="preset" data-native-press><span class="preset-shape shape-empty" aria-hidden="true"></span><span>ПУСТО</span></button>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <div class="section-title"><span>03</span><label>ПАРАМЕТРЫ</label></div>
+        <div class="slider-line"><label for="power">Энергия импульса</label><output id="power-value" for="power">4.5</output></div>
+        <input type="range" id="power" min="0.7" max="10" step="0.1" value="4.5" aria-label="Энергия импульса">
+        <div class="slider-line speed-line"><label for="speed">Скорость расчёта</label><output id="speed-value" for="speed">2×</output></div>
+        <input type="range" id="speed" min="1" max="5" step="1" value="2" aria-label="Шагов симуляции на кадр">
+      </div>
+
+      <div class="control-section">
+        <div class="section-title"><span>04</span><label>ВИЗУАЛИЗАЦИЯ</label></div>
+        <div class="viewstrip" role="group" aria-label="Способ визуализации">
+          <button data-view="pressure" class="view active" data-native-press>ДАВЛЕНИЕ</button>
+          <button data-view="density" class="view" data-native-press>ПЛОТНОСТЬ</button>
+          <button data-view="schlieren" class="view" data-native-press>ГРАДИЕНТ</button>
+        </div>
+        <div class="legend" aria-hidden="true"><span>РАЗРЕЖЕНИЕ</span><div class="legend-ramp"></div><span>СЖАТИЕ</span></div>
+      </div>
+
+      </div>
+      <div class="control-bottom">
+        <button type="button" class="run-button" id="run" data-native-press><span id="run-symbol">Ⅱ</span><span id="run-text">ПАУЗА</span></button>
+        <button type="button" class="step-button" id="step" data-native-press title="Один шаг симуляции">ШАГ ›</button>
+        <button type="button" class="clear-button" id="clear" data-native-press>СБРОС ВОЛН</button>
+        <div class="secondary-actions">
+          <button id="undo" type="button" data-native-press>↶ ОТМЕНИТЬ ШТРИХ</button>
+          <button id="remove-edits" type="button" data-native-press>УДАЛИТЬ ПРАВКИ</button>
+        </div>
+        <details class="data-drawer">
+          <summary>ДАННЫЕ ЭКСПЕРИМЕНТА <span>⌄</span></summary>
+          <p>2D идеальный газ · γ = 1.4 · конечные объёмы / HLL. Края пропускают волны, стены отражают. Это численная модель, не расчёт промышленной взрывобезопасности.</p>
+          <div class="data-buttons"><button id="export" type="button">ЭКСПОРТ JSON</button><button id="import" type="button">ИМПОРТ JSON</button><input id="import-file" type="file" accept="application/json,.json" hidden></div>
+        </details>
+      </div>
+    </aside>
+  </div>
+  <div class="toast" role="status" aria-live="polite" id="toast"></div>
+  <div class="dialog-scrim" id="dialog" hidden>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+      <span class="dialog-eyebrow">ПОДТВЕРЖДЕНИЕ</span><h2 id="dialog-title">Удалить нарисованные стены?</h2>
+      <p>Правки текущей камеры будут удалены. Готовая геометрия сохранится.</p>
+      <div><button id="cancel-remove" type="button">ОТМЕНА</button><button id="confirm-remove" type="button">УДАЛИТЬ</button></div>
+    </div>
+  </div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="SHOCK" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

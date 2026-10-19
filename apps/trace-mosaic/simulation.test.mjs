@@ -20,7 +20,12 @@ function team(n) {
     state = game.onMessage({ state, player: players[playerIndex], payload: { type, payload } }).state;
     return game.viewForPlayer({ state, player: players[playerIndex] });
   }
-  return { players, act, view: i => game.viewForPlayer({ state, player: players[i] }) };
+  return {
+    players, act,
+    view: i => game.viewForPlayer({ state, player: players[i] }),
+    markStale: i => { state.room.players.find(p => p.id === players[i].id).lastSeenAt = Date.now() - 30000; },
+    leave: i => { state = game.onLeave({ state, player: players[i] }).state; }
+  };
 }
 
 test('solo round starts, places correctly, never farms a no-op', () => {
@@ -123,3 +128,89 @@ test('completed puzzle keeps its time bonus after the clock advances', () => {
     Date.now = originalNow;
   }
 });
+
+test('short disconnect does not transfer any fragments or host authority', () => {
+  const t = team(3);
+  t.act(1, 'toggle_ready');
+  t.act(2, 'toggle_ready');
+  const original = t.act(0, 'start_game');
+  const baseline = original.game.tileMeta.map(tile => tile.ownerId).join(',');
+  const time = Date.now;
+  try {
+    Date.now = () => time() + 12000;
+    const view = t.act(1, 'pulse');
+    assert.equal(view.hostId, t.players[0].id);
+    assert.equal(view.game.tileMeta.map(tile => tile.ownerId).join(','), baseline);
+  } finally { Date.now = time; }
+});
+
+for (const size of [3, 5]) {
+  test(size + ' players: stale host passes control and unfinished pieces without losses', () => {
+    const t = team(size);
+    for (let i = 1; i < size; i++) t.act(i, 'toggle_ready');
+    t.act(0, 'start_game');
+    // The first piece is complete. Its location must survive redistribution.
+    t.act(0, 'drag_update', { tileId: 0, cells: [0], targetCell: 0 });
+    t.act(0, 'drag_end', { tileId: 0, cells: [0], targetCell: 0 });
+    t.markStale(0);
+    const changed = t.act(1, 'pulse');
+    assert.equal(changed.hostId, t.players[1].id);
+    assert.equal(changed.game.board[0], 0);
+    assert.equal(changed.game.tileMeta.every(tile => tile.ownerId !== t.players[0].id || tile.id === 0), true);
+    assert.equal(changed.players.find(p => p.id === t.players[0].id).connected, false);
+    const assignments = changed.game.tileMeta.map(tile => tile.id);
+    assert.equal(new Set(assignments).size, changed.game.totalTiles);
+    for (const tile of changed.game.tileMeta) {
+      assert.equal(changed.game.tileLocations[tile.id].ownerId, tile.ownerId);
+    }
+    const back = t.act(0, 'pulse');
+    assert.equal(back.players.find(p => p.id === t.players[0].id).connected, true);
+    assert.equal(back.hostId, t.players[1].id);
+    assert.equal(back.game.assignments.length > 0, true);
+  });
+}
+
+test('explicit leave during play transfers host and remaining fragments', () => {
+  const t = team(3);
+  t.act(1, 'toggle_ready');
+  t.act(2, 'toggle_ready');
+  t.act(0, 'start_game');
+  t.leave(0);
+  const view = t.view(1);
+  assert.equal(view.hostId, t.players[1].id);
+  assert.equal(view.players.some(p => p.id === t.players[0].id), false);
+  assert.equal(view.game.tileMeta.every(tile => tile.ownerId !== t.players[0].id), true);
+});
+
+test('a live client settles the expired deadline even after all tabs slept', () => {
+  const t = team(3);
+  t.act(1, 'toggle_ready');
+  t.act(2, 'toggle_ready');
+  const playing = t.act(0, 'start_game');
+  const originalNow = Date.now;
+  try {
+    Date.now = () => playing.game.endAt + 1000;
+    const result = t.act(1, 'pulse');
+    assert.equal(result.phase, 'results');
+    assert.equal(result.game.score.timeLeftSec, 0);
+    const resultAgain = t.act(1, 'pulse');
+    assert.equal(resultAgain.game.score.teamScore, result.game.score.teamScore);
+  } finally { Date.now = originalNow; }
+});
+
+for (const size of [3, 5]) {
+  test(size + ' players can finish a complete authoritative online simulation', () => {
+    const t = team(size);
+    for (let i = 1; i < size; i++) t.act(i, 'toggle_ready');
+    let view = t.act(0, 'start_game');
+    for (let tileId = 0; tileId < view.game.totalTiles; tileId++) {
+      const owner = view.game.tileMeta[tileId].ownerId;
+      const playerIndex = t.players.findIndex(p => p.id === owner);
+      t.act(playerIndex, 'drag_update', { tileId, cells: [tileId], targetCell: tileId });
+      view = t.act(playerIndex, 'drag_end', { tileId, cells: [tileId], targetCell: tileId });
+    }
+    assert.equal(view.phase, 'results');
+    assert.equal(view.game.score.completionPercent, 100);
+    assert.equal(view.game.board.every((id, cell) => id === cell), true);
+  });
+}
