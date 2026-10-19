@@ -347,6 +347,29 @@ function placementEffect(room, mod) {
   return 1;
 }
 
+function shipMassProperties(room) {
+  const pts=[];
+  for(const cell of room.ship.cells){const {x,y}=parseKey(cell);pts.push({x:x+.5,y:y+.5,mass:1});}
+  for(const m of room.ship.modules){
+    const t=MODULES[m.templateId];if(!t)continue;
+    const [w,h]=dims(t,m.rotation);pts.push({x:m.x+w/2,y:m.y+h/2,mass:w*h*1.8});
+  }
+  let mass=0,cx=0,cy=0;
+  for(const p of pts){mass+=p.mass;cx+=p.x*p.mass;cy+=p.y*p.mass;}
+  mass=Math.max(1,mass);cx/=mass;cy/=mass;
+  let inertia=0;
+  for(const p of pts)inertia+=p.mass*((p.x-cx)**2+(p.y-cy)**2+.17)*CELL*CELL;
+  return {mass,centerX:cx*CELL,centerY:cy*CELL,inertia:Math.max(8000,inertia)};
+}
+function moduleWorldPoint(room,mod,forward=0,angle=room.physics.a){
+  const t=MODULES[mod.templateId],[w,h]=dims(t,mod.rotation);
+  const lx=(mod.x+w*.5)*CELL,ly=(mod.y+h*.5)*CELL;
+  const a=room.physics.a,c=Math.cos(a),s=Math.sin(a);
+  const dx=lx*c-ly*s,dy=lx*s+ly*c;
+  return {x:room.physics.x+dx+Math.cos(angle)*forward,
+          y:room.physics.y+dy+Math.sin(angle)*forward,dx,dy};
+}
+
 function worldToShip(room, wx, wy) {
   const dx = wx - room.physics.x, dy = wy - room.physics.y;
   const c = Math.cos(-room.physics.a), s = Math.sin(-room.physics.a);
@@ -493,7 +516,7 @@ function finishWave(room) {
   }
 }
 
-function shipDefeat(room) {
+function shipDefeat(room, reason = "hull") {
   room.phase = "build"; room.phaseTime = 0;
   room.enemies.length = 0; room.projectiles.length = 0; room.shields.length = 0;
   room.physics.a = 0;
@@ -504,7 +527,7 @@ function shipDefeat(room) {
   room.ship.energy = room.ship.energyMax * 0.75;
   room.ship.credits = Math.max(0, room.ship.credits - 150);
   room.ship.modules.forEach((m) => { m.hp = Math.max(m.maxHp * 0.6, m.hp); m.status = "online"; m.malfunction = null; });
-  room.events.push({ type: "defeat" });
+  room.events.push({ type: "defeat", reason });
 }
 
 function spawnProjectile(room, data) {
@@ -533,6 +556,7 @@ function updateShip(room, dt) {
   room.shields.length = 0;
   let regen = 10;
   let sensor = 0;
+  const massProperties = shipMassProperties(room);
 
   for (const m of ship.modules) {
     const t = MODULES[m.templateId];
@@ -567,11 +591,15 @@ function updateShip(room, dt) {
           ship.energy -= need;
           const a = ph.a + vec * 0.62;
           const thrust = t.thrust * 1.35 * eff * power * throttle;
-          ph.vx += Math.cos(a) * thrust * dt;
-          ph.vy += Math.sin(a) * thrust * dt;
-          const s = moduleStats(room, m);
-          ph.av += vec * t.torque * eff * dt * 2.1;
-          ph.av += (-s.cy / 8) * throttle * 0.0022 * t.thrust * dt;
+          const acceleration = thrust * clamp(54/massProperties.mass,0.22,1.75);
+          const fx=Math.cos(a)*acceleration,fy=Math.sin(a)*acceleration;
+          ph.vx+=fx*dt;ph.vy+=fy*dt;
+          const mount=moduleWorldPoint(room,m);
+          const massX=massProperties.centerX*Math.cos(ph.a)-massProperties.centerY*Math.sin(ph.a);
+          const massY=massProperties.centerX*Math.sin(ph.a)+massProperties.centerY*Math.cos(ph.a);
+          const leverX=mount.dx-massX,leverY=mount.dy-massY;
+          ph.av+=vec*t.torque*eff*dt*2.1;
+          ph.av+=(leverX*fy-leverY*fx)*(32/massProperties.inertia)*dt;
           m.thrustLevel = clamp(Math.max(m.thrustLevel || 0, Math.abs(throttle) + Math.abs(vec) * 0.35), 0, 2.2);
           room.events.push({ type: "engine", moduleId: m.id, thrust: Math.abs(throttle) });
         }
@@ -590,20 +618,23 @@ function updateShip(room, dt) {
           m.recoil = 1;
           const dir = m.aim;
           const speed = t.shotSpeed * clamp(eff, 0.7, 2.3);
-          const off = 14 + (t.w * CELL) / 2;
-          const crit = Math.random() < sensor;
+          const barrelLen=Math.max(...dims(t,m.rotation))*CELL*.42+12;
+          const muzzle=moduleWorldPoint(room,m,barrelLen,dir);
+          const crit=Math.random()<sensor;
           spawnProjectile(room, {
             friendly: true,
-            x: ph.x + Math.cos(dir) * off,
-            y: ph.y + Math.sin(dir) * off,
-            vx: ph.vx + Math.cos(dir) * speed,
-            vy: ph.vy + Math.sin(dir) * speed,
+            x:muzzle.x,
+            y:muzzle.y,
+            vx:ph.vx-ph.av*muzzle.dy+Math.cos(dir)*speed,
+            vy:ph.vy+ph.av*muzzle.dx+Math.sin(dir)*speed,
             damage: crit ? t.damage * 1.9 : t.damage,
             ttl: 2.2,
             radius: 4,
             color: crit ? "#f8f16f" : "#82f8ff",
           });
-          room.events.push({ type: "shot", moduleId: m.id, crit });
+          const kick=4.5*clamp(54/massProperties.mass,.22,1.75);
+          ph.vx-=Math.cos(dir)*kick;ph.vy-=Math.sin(dir)*kick;
+          room.events.push({ type: "shot", moduleId:m.id,x:muzzle.x,y:muzzle.y,angle:dir,crit });
         }
       }
     }
@@ -906,13 +937,14 @@ function updateRoom(room, dt) {
     updateProjectiles(room, dt);
     updateDrops(room, dt);
     updateMalfunctions(room, dt);
-    if (room.enemies.length === 0) finishWave(room);
+    if(room.enemies.length===0)finishWave(room);
+    else if(room.phaseTime<=0)shipDefeat(room,"timeout");
   } else {
     updateDrops(room, dt);
     updateMalfunctions(room, dt);
   }
 
-  if (room.ship.hull <= 0) shipDefeat(room);
+  if(room.ship.hull<=0)shipDefeat(room,"hull");
   room.ship.hull = clamp(room.ship.hull, 0, room.ship.hullMax);
   room.ship.energy = clamp(room.ship.energy, 0, room.ship.energyMax);
 
@@ -960,10 +992,11 @@ function serializeRoom(room) {
       modules: room.ship.modules.map((m) => serializeModule(room, m)),
       inventoryModules: [...room.ship.inventoryModules],
       inventoryShapes: [...room.ship.inventoryShapes],
+      massProperties:shipMassProperties(room),
     },
     physics: { ...room.physics },
     enemies: room.enemies.map((e) => ({ id: e.id, type: e.type, hp: e.hp, maxHp: e.maxHp, x: e.x, y: e.y, a: e.a, radius: e.radius, elite: Boolean(e.elite), sprite: e.sprite || ENEMIES[e.type].sprite })),
-    projectiles: room.projectiles.map((p) => ({ id: p.id, x: p.x, y: p.y, radius: p.radius, friendly: p.friendly, color: p.color })),
+    projectiles: room.projectiles.map((p) => ({ id:p.id,x:p.x,y:p.y,vx:p.vx,vy:p.vy,radius:p.radius,friendly:p.friendly,color:p.color })),
     drops: room.drops.map((d) => ({ id: d.id, kind: d.kind, value: d.value, x: d.x, y: d.y, ttl: d.ttl })),
     shields: room.shields,
     players: [...room.players.values()].map((p) => ({ id: p.id, name: p.name, color: p.color, moduleId: p.moduleId, connected: p.connected, repairTarget: p.repairTarget })),
