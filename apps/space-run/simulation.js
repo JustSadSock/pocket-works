@@ -414,7 +414,7 @@ function propagateHeat(room,dt){
   for(const radiator of mods.filter(m=>MODULES[m.templateId]?.type==="radiator"&&m.powered&&
     m.status==="online"&&!m.overheated)){
     const template=MODULES[radiator.templateId],eff=placementEffect(room,radiator);
-    const transfer=template.cooling*clamp(eff,.5,1.7)*dt;
+    const transfer=template.cooling*clamp(eff,.5,1.7)*(radiator.coolantBoost||1)*dt;
     const fp=footprint(radiator);
     const neighbors=mods.filter(m=>m!==radiator&&footprint(m).some(c=>
       fp.some(d=>Math.abs(c.x-d.x)+Math.abs(c.y-d.y)===1)));
@@ -452,9 +452,10 @@ function manageBreaker(room,playerId,data={}){
     if(!installed)return {ok:false,message:"Сначала установите автомат"};
     if(!garage){
       const p=playerById(room,playerId),station=moduleById(room,p?.moduleId);
+      const emergencyClose=ship.breakers[key]===false;
       if(room.phase!=="combat"||!station||MODULES[station.templateId]?.type!=="repair"||
-        station.status!=="online"||station.overheated||!station.powered)
-        return {ok:false,message:"Переключение в бою доступно инженеру на исправной станции"};
+        station.status!=="online"||station.overheated||(!station.powered&&!emergencyClose))
+        return {ok:false,message:"Нужен исправный инженерный пост (аварийное замыкание доступно без питания)"};
       if((p.nextBreakerAt||0)>room.simTime)return {ok:false,message:"Автомат ещё переключается"};
       if(ship.energy<5)return {ok:false,message:"Недостаточно энергии"};
       ship.energy-=5;p.nextBreakerAt=room.simTime+.75;
@@ -805,6 +806,7 @@ function updateShip(room, dt) {
     m.thrustLevel = Math.max(0, (m.thrustLevel || 0) - dt * 2.8);
     m.shotFlash = Math.max(0, (m.shotFlash || 0) - dt * 8.5);
     m.recoil = Math.max(0, (m.recoil || 0) - dt * 7.2);
+    m.coolantBoost=1;
     if(m.malfunction&&m.malfunction.kind==="timing")m.malfunction.phase=(m.malfunction.phase+dt*m.malfunction.speed)%1;
     const exposure=moduleStats(room,m).exposure;
     const cooling=room.phase==="combat" ? (4+exposure*10) : (11+exposure*13);
@@ -831,6 +833,15 @@ function updateShip(room, dt) {
     const power=hp*(m.status==="online"?1:.4)*m.powerFactor;
     if(!m.powered||m.overheated)continue;
 
+    if(t.type==="radiator"&&p.input.space){
+      const energyUse=20*dt;
+      if(ship.energy>=energyUse){
+        ship.energy-=energyUse;
+        m.coolantBoost=2.3;
+        addModuleHeat(room,m,4*dt);
+        room.events.push({type:"radiator-boost",moduleId:m.id});
+      }
+    }
     if (t.type === "engine") {
       const throttle = (p.input.up ? 1 : 0) - (p.input.down ? 0.55 : 0);
       const vec = (p.input.right ? 1 : 0) - (p.input.left ? 1 : 0);
@@ -1245,6 +1256,7 @@ function serializeModule(room, m) {
     recoil:m.recoil||0,
     heat:m.heat||0,overheated:Boolean(m.overheated),powered:m.powered!==false,powerFactor:m.powerFactor??1,
     powerPriority:m.powerPriority??2,powerState:m.powerState||"online",
+    coolantBoost:m.coolantBoost||1,
     placement: placementEffect(room, m),
     malfunction: m.malfunction ? {
       kind: m.malfunction.kind, progress: m.malfunction.progress, target: m.malfunction.target,
