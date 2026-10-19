@@ -36,25 +36,25 @@ function rivalInput(obs,op,step,mode){
 export function runPerekosEpisode(model,{seed=1,mage='kindle',opponent='pebble',rival='native',rivalPolicy=null,mode='round',limitTicks,record=false}={}){
  if(!validatePerekosPolicy(model))throw Error('Некорректная обучаемая политика');
  if(!RIVAL_TYPES.includes(rival))throw Error('Неизвестный тип соперника');
- if(!['round','match'].includes(mode))throw Error('Неизвестный формат эпизода');
+ if(!['round','skirmish','match'].includes(mode))throw Error('Неизвестный формат эпизода');
  const startSeed=(Number(seed)>>>0)||1;
  const env=new PerekosEnvironment({seed:startSeed,first:mage,second:opponent,limitTicks:10800});
  const enemyModel=rivalPolicy&&validatePerekosPolicy(rivalPolicy)?rivalPolicy:
   styles.has(rival)?createPerekosPolicy(startSeed+711,rival):createPerekosPolicy(startSeed+711,'balanced');
- const maxSteps=clamp(Math.round(limitTicks|| (mode==='round'?1550:9200)),100,10800);
+ const maxSteps=clamp(Math.round(limitTicks|| (mode==='round'?1550:mode==='skirmish'?3150:9200)),100,10800);
  const frames=[],draft=[],records=[];
  let dealt=0,received=0,fireTicks=0,shields=0,dashes=0;
  let lastAction=null,enemyAction=null,prevRound=1,previousPhase='fight';
  while(env.steps<maxSteps&&env.state.phase!=='result'){
   const o=env.observe(0),phase=o.phase;
   if(phase==='draft'){
-   if(mode==='round')break;
+   if(mode==='round'||mode==='skirmish'&&records.length>=2)break;
    const choice=choosePerekosRune(o,model);if(choice)draft.push(choice);
    env.step({draft:choice});
    if(record&&frames.length<510)frames.push(snapshot(env));
    continue;
   }
-  if(phase==='build'){if(mode==='round')break;env.step({});continue;}
+  if(phase==='build'){if(mode==='round'||mode==='skirmish'&&records.length>=2)break;env.step({});continue;}
   const player=perekosControl(o,model,0,env.steps);
   let second=null;
   if(rival!=='native')second=rivalInput(env.observe(1),enemyModel,env.steps,rival);
@@ -69,7 +69,7 @@ export function runPerekosEpisode(model,{seed=1,mage='kindle',opponent='pebble',
   }
   if(record&&(env.steps%24===0||env.state.phase!=='fight'||env.state.round!==prevRound)&&frames.length<510)frames.push(snapshot(env,player,second));
   prevRound=env.state.round;previousPhase=env.state.phase;
-  if(mode==='round'&&env.state.phase!=='fight')break;
+  if((mode==='round'||mode==='skirmish'&&records.length>=2)&&env.state.phase!=='fight')break;
  }
  const s=env.state,roundWin=s.score[0],roundLoss=s.score[1],roundDraw=s.draws;
  const complete=s.phase==='result',won=complete&&s.champion===0;
@@ -119,7 +119,7 @@ export function trainingCases(settings,generation,total,league=[]){
  return types.map((rival,i)=>({
   seed:(settings.seed+generation*7919+i*2351+119)>>>0,
   opponent:MAGE_CHOICES[(generation+i)%MAGE_CHOICES.length].id,
-  rival,mode:'round'
+  rival,mode:(generation%3===2&&i===0)?'skirmish':'round'
  }));
 }
 export function holdoutCases(settings,level='round'){
@@ -129,7 +129,7 @@ export function holdoutCases(settings,level='round'){
   seed:(740003+settings.seed*13+i*12011)>>>0,
   opponent:MAGE_CHOICES[(i+2)%MAGE_CHOICES.length].id,
   rival:rivals[i],
-  mode:level==='match'?'match':'round',
-  limitTicks:level==='match'?9000:1550
+  mode:level==='match'?'match':i===2||i===4?'skirmish':'round',
+  limitTicks:level==='match'?9000:i===2||i===4?3150:1550
  }));
 }
