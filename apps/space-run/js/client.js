@@ -201,6 +201,8 @@ socket.on("state", (next) => {
         }
       }
       if(ev.type==="defeat")showToast(ev.reason==="timeout"?"Время истекло — экспедиция сорвана":"Корабль потерян — возвращение в док",2600);
+      if(ev.type==="hull-detached")showToast(`Секция корпуса ${ev.x},${ev.y} оторвана!`,2400);
+      if(ev.type==="breaker")beep(ev.closed?530:290,.08,"triangle",.18);
       if(ev.type==="hull-breach")showToast(`Пробоина! Секция ${ev.x},${ev.y}`,1900);
       if(ev.type==="overheat")showToast(`Перегрев модуля ${ev.moduleId} — охлаждение`,2200);
       if(ev.type==="power-grid"&&!ev.powered)showToast(`Обрыв питания ${ev.moduleId}`,2000);
@@ -346,8 +348,9 @@ function renderEngineeringUI(){
   const breaches=plates.filter(p=>p.hp<=0).length;
   const connected=(state.ship.networkCells||[]).length;
   const total=state.ship.cells.length;
+  const gridLoad=Math.round(state.ship.gridLoad||0),gridCapacity=Math.round(state.ship.gridCapacity||44);
   const statusLines=[
-    {text:`Шина ${connected}/${total} · ${offline.length} отключено`,cls:offline.length?"danger":""},
+    {text:`Шина ${connected}/${total} · сеть ${gridLoad}/${gridCapacity}`,cls:offline.length?"danger":""},
     {text:`Корпус: ${breaches} пробоин · ${plates.length} повреждений`,cls:breaches?"danger":plates.length?"warning":""},
     {text:`Температура: ${heat.length} критических систем`,cls:heat.length?"warning":""}
   ];
@@ -357,9 +360,10 @@ function renderEngineeringUI(){
     item.className=`system-line ${entry.cls}`;
     item.textContent=entry.text;systemsStatus.appendChild(item);
   }
-  const sig=JSON.stringify({phase:state.phase,credits:state.ship.credits>=16,
+  const sig=JSON.stringify({phase:state.phase,credits:Math.floor(state.ship.credits),
+    breakers:state.ship.breakers,gridLoad,gridCapacity,buildMode:buildMode?.kind,
     plates:plates.map(p=>[p.x,p.y,Math.floor(p.hp)]),
-    modules:state.ship.modules.map(m=>[m.id,m.powered,m.overheated,Math.floor((m.heat||0)/10)])});
+    modules:state.ship.modules.map(m=>[m.id,m.powered,m.overheated,m.powerPriority,m.powerState,Math.floor((m.heat||0)/10)])});
   if(sig===engineeringSignature)return;
   engineeringSignature=sig;
   clearNode(engineeringPanel);
@@ -370,6 +374,34 @@ function renderEngineeringUI(){
   fault.textContent=breaches?`${breaches} ПРОБОИН`:"ШИНА РАБОТАЕТ";
   fault.style.color=breaches?"#ffb1a1":"#9be0ca";
   summary.append(live,fault);engineeringPanel.append(summary);
+  const powerInfo=document.createElement("div");
+  powerInfo.className="eng-empty";
+  powerInfo.textContent=`Нагрузка ${gridLoad}/${gridCapacity}. При перегрузе отключаются системы с низким приоритетом. Выключатели ставятся на целые клетки корпуса.`;
+  engineeringPanel.append(powerInfo);
+  const garage=state.phase!=="combat";
+  const install=button(buildMode?.kind==="breaker"?"Отмена монтажа":"Монтаж автомата · 22 кр.",buildMode?.kind==="breaker"?"selected":"",()=>{
+    buildMode=buildMode?.kind==="breaker"?null:{kind:"breaker"};
+    moveModuleId=null;closeModuleActions();engineeringSignature="";
+    showToast(buildMode?"Нажмите на клетку корпуса для монтажа автомата":"Монтаж отменён");
+    renderEngineeringUI();
+  });
+  install.disabled=!garage||state.ship.credits<22&&! (buildMode?.kind==="breaker");
+  engineeringPanel.append(install);
+  const breakers=state.ship.breakers||[];
+  if(breakers.length){
+    const bar=document.createElement("div");bar.className="eng-subtitle";bar.textContent="СЕКЦИОННЫЕ АВТОМАТЫ";
+    engineeringPanel.append(bar);
+    for(const b of breakers){
+      const row=document.createElement("div");row.className="eng-plate";
+      const label=document.createElement("span");label.textContent=`${b.x},${b.y} · ${b.closed?"ЗАМКНУТ":"РАЗОМКНУТ"}`;
+      const actions=document.createElement("div");actions.className="eng-mini-actions";
+      const toggle=button(b.closed?"Разомкнуть":"Замкнуть","",()=>socket.emit("breakerAction",{x:b.x,y:b.y,operation:"toggle"}));
+      const remove=button("×","",()=>socket.emit("breakerAction",{x:b.x,y:b.y,operation:"remove"}));
+      remove.disabled=!garage;
+      toggle.disabled=!garage;
+      actions.append(toggle,remove);row.append(label,actions);engineeringPanel.append(row);
+    }
+  }
   if(!appendPlateActions(engineeringPanel)){
     const empty=document.createElement("div");empty.className="eng-empty";
     empty.textContent="Обшивка целая. В бою попадания разрывают секции и питающие линии.";
@@ -384,14 +416,22 @@ function renderEngineeringUI(){
     const name=document.createElement("strong");
     name.textContent=`${m.name || m.type} · ${m.id}`;
     const small=document.createElement("small");
-    small.textContent=m.powered===false?"ШИНА ОБОРВАНА":m.overheated?"АВАРИЙНОЕ ОТКЛЮЧЕНИЕ":
+    small.textContent=m.powerState==="shed"?"ОТКЛЮЧЁН ПО ПРИОРИТЕТУ":m.powered===false?"ШИНА ОБОРВАНА":m.overheated?"АВАРИЙНОЕ ОТКЛЮЧЕНИЕ":
       `Температура ${Math.round(m.heat||0)}° · питание ${Math.round((m.powerFactor??1)*100)}%`;
     const meter=document.createElement("div");meter.className="eng-meter heat";
     const fill=document.createElement("i");
     fill.style.width=`${Math.min(100,m.heat||0)}%`;
     meter.appendChild(fill);
     info.append(name,small,meter);
-    row.append(info);engineeringPanel.append(row);
+    if(m.type==="radiator"){
+      const hint=document.createElement("small");
+      hint.textContent=m.coolantBoost>1?"ФОРСАЖ ОХЛАЖДЕНИЯ":"Займите радиатор и удерживайте Пробел для форсажа";
+      info.append(hint);
+    }
+    const priority=button(`П${m.powerPriority??2}`,"",()=>socket.emit("powerPriority",{moduleId:m.id,priority:((m.powerPriority??2)+1)%4}));
+    priority.title="Приоритет питания: нажмите для переключения 0–3";
+    priority.disabled=state.phase==="combat"||m.type==="reactor";
+    row.append(info,priority);engineeringPanel.append(row);
   }
 }
 
@@ -413,9 +453,18 @@ function renderRepairConsole() {
     const alert=document.createElement("h3");alert.textContent="ИНЖЕНЕРНЫЙ ПОСТ ОТКЛЮЧЁН";
     const reason=document.createElement("p");
     reason.textContent=station.overheated?"Перегрев: охлаждение происходит автоматически.":
-      station.powered===false?"Питание прервано: восстановите обшивку или запитайте участок от реактора.":
+      station.powered===false?"Питание прервано. Открытые автоматы можно аварийно замкнуть за 5 энергии.":
       "Модуль повреждён: восстановите его перед ремонтом обшивки.";
-    repairConsole.append(alert,reason);return;
+    repairConsole.append(alert,reason);
+    if(station.powered===false&&station.status==="online"&&!station.overheated){
+      for(const b of state.ship.breakers||[]){
+        if(b.closed)continue;
+        const btn=button(`Замкнуть ${b.x},${b.y} · 5 эн.`,"",()=>
+          socket.emit("breakerAction",{x:b.x,y:b.y,operation:"toggle"}));
+        btn.disabled=state.ship.energy<5;repairConsole.append(btn);
+      }
+    }
+    return;
   }
 
   const damaged = state.ship.modules.filter(m => m.status !== "online" || m.hp < m.maxHp);
@@ -423,8 +472,10 @@ function renderRepairConsole() {
   const task = target?.malfunction;
   const signature = JSON.stringify({
     target: target?.id, selected: pilot.repairTarget,
+    breakers:state.ship.breakers,
     plates:damagedPlates().map(p=>[p.x,p.y,Math.round(p.hp)]),
-    energy:state.ship.energy>=12,stationPowered:station.powered,stationOverheated:station.overheated,stationStatus:station.status,
+    energy:state.ship.energy>=12,breakerEnergy:state.ship.energy>=5,
+    stationPowered:station.powered,stationOverheated:station.overheated,stationStatus:station.status,
     damaged: damaged.map(m => [m.id, m.status, Math.round(m.hp), m.malfunction?.kind,
       m.malfunction?.index, m.malfunction?.progress, m.malfunction?.bits, m.malfunction?.targetBits])
   });
@@ -436,6 +487,17 @@ function renderRepairConsole() {
     title.textContent = "ИНЖЕНЕРНЫЙ ПОСТ";
     repairConsole.appendChild(title);
     const hasPlateDamage=appendPlateActions(repairConsole,true);
+    if(state.ship.breakers?.length){
+      const subtitle=document.createElement("div");subtitle.className="eng-subtitle";
+      subtitle.textContent="АВТОМАТЫ ПИТАНИЯ · 5 ЭНЕРГИИ";
+      repairConsole.append(subtitle);
+      for(const b of state.ship.breakers){
+        const toggle=button(`[${b.x},${b.y}] ${b.closed?"РАЗОМКНУТЬ":"ЗАМКНУТЬ"}`,"",()=>
+          socket.emit("breakerAction",{x:b.x,y:b.y,operation:"toggle"}));
+        toggle.disabled=state.ship.energy<5;
+        repairConsole.append(toggle);
+      }
+    }
 
     if (!target) {
       const allClear = document.createElement("p");
@@ -548,10 +610,10 @@ function renderUI() {
 
     const head = document.createElement("div");
     head.className = "icon-line";
-    const icon = document.createElement("img");
-    icon.className = "inv-icon";
-    icon.src = `./${(m.sprite || "").replace(/^\//, "")}`;
-    icon.alt = m.type;
+    const icon=document.createElement(m.sprite?"img":"span");
+    icon.className="inv-icon"+(m.sprite?"":" radiator-icon");
+    if(m.sprite){icon.src=`./${m.sprite.replace(/^\//,"")}`;icon.alt=m.type;}
+    else icon.setAttribute("aria-label",m.type);
     head.appendChild(icon);
     head.appendChild(Object.assign(document.createElement("span"), { textContent: `${m.type} (${m.id})` }));
     row.appendChild(head);
@@ -587,10 +649,10 @@ function renderUI() {
     row.className = "list-item";
     const top = document.createElement("div");
     top.className = "icon-line";
-    const icon = document.createElement("img");
-    icon.className = "inv-icon";
-    icon.src = `./${(lib?.sprite || "").replace(/^\//, "")}`;
-    icon.alt = templateId;
+    const icon=document.createElement(lib?.sprite?"img":"span");
+    icon.className="inv-icon"+(lib?.sprite?"":" radiator-icon");
+    if(lib?.sprite){icon.src=`./${lib.sprite.replace(/^\//,"")}`;icon.alt=templateId;}
+    else icon.setAttribute("aria-label",templateId);
     top.appendChild(icon);
     top.appendChild(Object.assign(document.createElement("span"), { textContent: `${lib?.name || templateId}` }));
     row.appendChild(top);
@@ -845,6 +907,16 @@ canvas.addEventListener("pointerdown", (e) => {
       return;
     }
 
+    if(buildMode?.kind==="breaker"){
+      const key=`${g.gx},${g.gy}`;
+      if(!state.ship.cells.some(c=>c.x===g.gx&&c.y===g.gy)){
+        showToast("Нужна клетка корпуса");return;
+      }
+      const hp=state.ship.plates.find(p=>p.x===g.gx&&p.y===g.gy)?.hp??48;
+      if(hp<=9){showToast("Сначала восстановите обшивку");return;}
+      socket.emit("breakerAction",{x:g.gx,y:g.gy,operation:"install"});
+      buildMode=null;engineeringSignature="";return;
+    }
     if (moveModuleId) {
       const failure = placementError(g);
       if (failure) { showToast(failure); return; }
@@ -862,7 +934,13 @@ canvas.addEventListener("pointerdown", (e) => {
       closeModuleActions();
       return;
     }
-    if (buildMode?.kind === "shape") {
+    if(buildMode?.kind==="breaker"){
+    if(!state.ship.cells.some(c=>c.x===grid.gx&&c.y===grid.gy))return "Вне корпуса";
+    if((state.ship.plates.find(p=>p.x===grid.gx&&p.y===grid.gy)?.hp??48)<=9)return "Обшивка разрушена";
+    if(state.ship.breakers?.some(b=>b.x===grid.gx&&b.y===grid.gy))return "Автомат уже есть";
+    return state.ship.credits>=22?null:"Недостаточно кредитов";
+  }
+  if (buildMode?.kind === "shape") {
       const failure = placementError(g);
       if (failure) { showToast(failure); return; }
       socket.emit("addHullShape", { shapeId: buildMode.shapeId, x: g.gx, y: g.gy, rotation: buildRotation });
@@ -1194,6 +1272,17 @@ function drawShip(t) {
       ctx.restore();
     }
   });
+  const breakerMap=state.ship.breakers||[];
+  for(const b of breakerMap){
+    const px=(b.x+.5)*csz,py=(b.y+.5)*csz;
+    ctx.save();ctx.translate(px,py);
+    ctx.fillStyle=b.closed?"#f7d58e":"#e48375";
+    ctx.strokeStyle="#172c31";ctx.lineWidth=2;
+    ctx.fillRect(-7,-7,14,14);ctx.strokeRect(-7,-7,14,14);
+    ctx.strokeStyle="#172c31";ctx.lineWidth=2.6;
+    ctx.beginPath();ctx.moveTo(-4,4);ctx.lineTo(b.closed?4:-2,b.closed?-4:-1);ctx.stroke();
+    ctx.restore();
+  }
   drawHullEdgeLines(csz);
   drawEngineExhaust(csz, t);
 
@@ -1208,7 +1297,18 @@ function drawShip(t) {
     const overheating=Boolean(m.overheated);
     const broken=m.status!=="online"||unpowered||overheating;
 
-    if (img) {
+    if(m.type==="radiator"){
+      // Authored procedural heat-sink, not an unrelated reused sprite.
+      ctx.save();ctx.fillStyle=broken?"#4c525a":"#306b70";ctx.fillRect(x+2,y+2,w-4,h-4);
+      const shimmer=.5+.5*Math.sin(t*.002+m.x);
+      for(let i=0;i<7;i++){
+        const fx=x+6+i*(w-12)/7;
+        ctx.fillStyle=`rgba(152,229,223,${broken?.17:.48+shimmer*.24})`;
+        ctx.fillRect(fx,y+5,3,h-10);
+      }
+      ctx.strokeStyle="#82b9ae";ctx.lineWidth=2;ctx.strokeRect(x+2,y+2,w-4,h-4);
+      ctx.restore();
+    } else if (img) {
       ctx.save();
       ctx.globalAlpha = broken ? 0.62 : 0.92;
       ctx.drawImage(img, x, y, w, h);
@@ -1510,6 +1610,11 @@ function drawBuildGhost() {
       ctx.strokeStyle = invalidReason ? "#ff536b" : "rgba(255,224,141,0.95)";
       ctx.strokeRect(g.gx * csz, g.gy * csz, current.w * csz, current.h * csz);
     }
+  } else if(buildMode.kind==="breaker"){
+    ctx.fillStyle=invalidReason?"rgba(225,79,75,.5)":"rgba(252,202,124,.55)";
+    ctx.fillRect(g.gx*csz,g.gy*csz,csz,csz);
+    ctx.strokeStyle=invalidReason?"#ff6471":"#ffd088";
+    ctx.strokeRect(g.gx*csz+3,g.gy*csz+3,csz-6,csz-6);
   } else if (buildMode.kind === "module") {
     const t = state.moduleLibrary[buildMode.templateId];
     if (t) {
