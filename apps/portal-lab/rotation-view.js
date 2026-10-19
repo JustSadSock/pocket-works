@@ -241,7 +241,13 @@ export function createRotationLab({getMetric,onAction}={}){
    m=rotatingMetric(getMetric(),{omega:state.omega});bh=schwarzschild(m.a/2);ergoInfo=ergoSummary(m);
    reset(true);save();onAction?.('mount');
   });
- return {state,configure,setActive,reset,trigger,tick,draw,update,
+ function applyParameters(p={}){
+  for(const [k,lo,hi] of [['omega',-1.3,1.3],['angle',-.65,.65],['arealRadius',4,8]]){
+   if(Number.isFinite(p[k]))state[k]=clamp(p[k],lo,hi);
+  }
+  configure(getMetric());save();
+ }
+ return {state,configure,applyParameters,setActive,reset,trigger,tick,draw,update,
   get status(){return {wormhole:wr?.status,blackHole:br?.status,hasRun};},
   get snapshot(){return {settings:{...state},m,schwarzschild:bh,
    ergo:ergoInfo,wormhole:wr?{...wr,path:wr.path.map(x=>({...x}))}:null,
