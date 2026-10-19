@@ -15,7 +15,7 @@ function dot(ctx,p,color,name){
  ctx.lineWidth=2;ctx.strokeStyle='#0b1b20';ctx.stroke();
  label(ctx,name,p.x,p.y-14,10,color,'center',true);
 }
-const PRESET_IDS=Object.keys(CAUSAL_PRESETS);
+const PRESETS=Object.fromEntries(Object.keys(CAUSAL_PRESETS).map(id=>[id,presetParameters(id)]));
 export function createCausalityLab(canvas,{onAction}={}){
  let saved={};try{saved=JSON.parse(localStorage.getItem(STORE)||'{}')||{};}catch{}
  const state={
@@ -82,7 +82,7 @@ export function createCausalityLab(canvas,{onAction}={}){
    :('Прогноз после рейса: '+(info.chronologyPossible?'существует причинный цикл.':'замкнутого пути нет.'));
   $('causality-signal-tag').textContent=signalSent?'ЗАПУЩЕННЫЙ СИГНАЛ':'ПРОГНОЗ';
   for(const b of document.querySelectorAll('[data-causality-preset]')){
-   const p=presetParameters(b.dataset.causalityPreset);
+   const p=PRESETS[b.dataset.causalityPreset];
    const yes=['distance','speed','duration','throatTime'].every(k=>Math.abs(p[k]-state[k])<.0005);
    b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',String(yes));
   }
@@ -115,7 +115,7 @@ export function createCausalityLab(canvas,{onAction}={}){
    const x=chart.x+i*chart.w/5;
    segment(ctx,{x,y:chart.y},{x,y:chart.y+chart.h},'#779a8b1c');
   }
-  const world=sampleWorldlines(model,241);
+  const world=sampleWorldlines(model,241,Math.max(limit(),signal.departure+3,signal.returnTime+3));
   for(const [mouth,col] of [['xa','#90dbc0'],['xb','#ebaf92']]){
    ctx.beginPath();
    world.forEach((p,i)=>{
@@ -207,7 +207,7 @@ export function createCausalityLab(canvas,{onAction}={}){
  $('causality-send').addEventListener('click',send);
  for(const btn of document.querySelectorAll('[data-causality-preset]'))
   btn.addEventListener('click',()=>{
-   Object.assign(state,presetParameters(btn.dataset.causalityPreset));rebuild();onAction?.('mount');
+   Object.assign(state,PRESETS[btn.dataset.causalityPreset]);rebuild();onAction?.('mount');
   });
  return {state,setActive,configure,trigger,reset,tick,draw,send,
   get running(){return running;},
