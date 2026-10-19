@@ -176,7 +176,15 @@ export function createMaterialLab(options={}){
  for(const [id,key] of [['matter-throat','logRadius'],['matter-size','length'],['matter-speed','speed']]){
   $(id).addEventListener('input',e=>{state[key]=Number(e.target.value);save();build();});
  }
-  return {state,configure,setActive,tick,draw,trigger,reset,get phase(){return phase;},
+ function applyParameters(p={}){
+  state.material=MATERIALS[p.material]?p.material:state.material;
+  state.axis=['radial','transverse'].includes(p.axis)?p.axis:state.axis;
+  for(const [k,lo,hi]of [['logRadius',2,8],['length',.25,4],['speed',.1,.95]]){
+   if(Number.isFinite(p[k]))state[k]=clamp(p[k],lo,hi);
+  }
+  save();build();
+ }
+  return {state,configure,applyParameters,setActive,tick,draw,trigger,reset,get phase(){return phase;},
   get snapshot(){return body?{
    config:{...state,aMeters:radiusMeters()},stats:specimenStats(body),
    history:body.history.slice(),nodes:body.nodes.map(n=>({...n})),
