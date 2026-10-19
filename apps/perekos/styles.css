@@ -224,3 +224,176 @@
  .menu h1{letter-spacing:-2px}
 }
 @media(prefers-reduced-motion:reduce){#hero-preview{animation:none}.control-layer .spell-button{transition:none}}
+
+
+/* v1.0 / THE DUELLIST'S ATLAS
+   One material system across menus, build table, scoreboard and instruments:
+   oxidized brass, ink-black stone, warm engraved vellum.
+   Every polygon is a cut piece of the same fictional apparatus. */
+:root{
+ --atlas-ink:#182b27;--atlas-deep:#0e1d1b;--atlas-paper:#ecdbb9;
+ --atlas-light:#f7e7c6;--atlas-brass:#c5945e;--atlas-copper:#b77350;
+ --atlas-moss:#8ba890;--atlas-line:#75684f;
+}
+.scene-panel{
+ background:linear-gradient(137deg,#0e2019e8,#273b2bdc 52%,#0b1915f0);
+ backdrop-filter:blur(5px) saturate(.78);
+}
+.scene-panel.menu{
+ background:
+  radial-gradient(ellipse 46% 32% at 50% 30%,#78937c30,transparent 90%),
+  repeating-linear-gradient(103deg,#0f1d1b00 0 34px,#baa67508 35px 36px),
+  linear-gradient(165deg,#182f27eb 0%,#101c19ef 53%,#0b1615f7 100%);
+}
+.menu-top{border-bottom:1px solid #c8a16c77;padding-bottom:7px}
+.menu-top a,.menu-top button{
+ color:#ebdabb;font-weight:800;letter-spacing:.06em;
+ border:1px solid transparent;border-bottom:1px solid #b79b6e88;
+ padding:7px 9px;
+}
+.menu-top a:hover,.menu-top button:hover{color:#fff3d3;border-bottom-color:#f4cb8d}
+.menu-composition{isolation:isolate}
+.menu-composition:before{
+ content:"";position:absolute;width:min(290px,69vw);height:3px;
+ top:clamp(110px,22vh,190px);left:50%;transform:translateX(-50%);
+ background:linear-gradient(90deg,transparent,#d1af72,transparent);
+ opacity:.8;z-index:-1;pointer-events:none;
+}
+#hero-preview{
+ width:clamp(104px,18vh,157px);
+ border-bottom:4px solid #e6ba78;
+ filter:drop-shadow(0 4px 0 #284235) drop-shadow(0 9px 0 #101d19);
+ animation:atlas-levitate 3.6s ease-in-out infinite;
+}
+@keyframes atlas-levitate{
+ 0%,100%{transform:translateY(0)}
+ 50%{transform:translateY(-4px)}
+}
+.menu h1{
+ color:var(--atlas-light);font-family:Georgia,"Times New Roman",serif;
+ font-size:clamp(46px,13.5vw,76px);font-variant:small-caps;
+ letter-spacing:-.055em;line-height:.92;
+ text-shadow:1px 1px #855f46,3px 4px #25443b,6px 7px #0d1a18;
+ margin:13px 0 1px;
+}
+.menu p{color:#dabd91;letter-spacing:.06em;font-size:11px;font-weight:750;text-transform:uppercase}
+.menu .play-block{max-width:324px;gap:9px}
+.menu .play-block>button:not(.big-button),.online-button,.mage-switch{
+ background:linear-gradient(135deg,#31473b,#1c312b 75%)!important;
+ border:1px solid #9f966f!important;
+ color:#f5e1b9!important;
+ box-shadow:inset 3px 0 #8b8d60,0 3px 0 #0a1715;
+ text-align:left;min-height:43px;letter-spacing:.02em;
+ clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%);
+}
+.menu .big-button,.sheet .big-button{
+ background:linear-gradient(135deg,#f1cf99 0%,#dca269 51%,#b9754c 100%)!important;
+ border:2px solid #694e39;color:#1b2b25;
+ box-shadow:inset 0 3px #fff1c5,inset -3px -3px #985e40,0 5px #0a1714!important;
+ clip-path:polygon(0 0,calc(100% - 15px) 0,100% 15px,100% 100%,15px 100%,0 calc(100% - 15px));
+ transition:filter .12s,transform .12s,box-shadow .12s;
+}
+.menu .big-button:hover,.sheet .big-button:hover{filter:brightness(1.07)}
+.menu .big-button:active,.sheet .big-button:active{
+ transform:translateY(3px);
+ box-shadow:inset 0 4px #a86841,0 1px #101b17!important;
+}
+.menu-bottom{border-top:1px solid #b89c6f55;padding-top:9px}
+.menu-bottom>span{font-family:ui-monospace,monospace;letter-spacing:.13em}
+.sheet{
+ background:
+  repeating-linear-gradient(0deg,#4c45370b 0 1px,transparent 1px 8px),
+  linear-gradient(118deg,#f1e1c3 0%,#e5cca2 76%,#d6b787 100%);
+ border:4px double #5d5a43;color:#252f29;
+ box-shadow:inset 0 0 0 3px #c2aa7e,0 0 0 3px #14261e,8px 12px 0 #0b1613;
+ clip-path:polygon(0 0,calc(100% - 15px) 0,100% 15px,100% 100%,15px 100%,0 calc(100% - 15px));
+}
+.sheet-kicker{
+ border-bottom:2px solid #866a4b;padding-bottom:10px;
+ color:#67533e;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+ font-size:10px;letter-spacing:.12em;
+}
+.sheet h2{font-family:Georgia,serif;color:#293d34;letter-spacing:-.035em;font-variant:small-caps}
+.sheet p{color:#5b5b49}
+.sheet button:not(.big-button){
+ background:#31493e;color:#f7e7ca;
+ border-left:3px solid #af8b56;box-shadow:inset 0 1px #65826e;
+}
+.sheet button:not(.big-button):active{filter:brightness(1.16)}
+.rune-choice{
+ background:#f5e4c3!important;border:2px solid #957958!important;
+ box-shadow:inset 4px 0 #bc865a,0 3px #aa9876!important;
+ clip-path:polygon(0 0,calc(100% - 11px) 0,100% 11px,100% 100%,0 100%);
+}
+.rune-choice:hover{background:#ffe9c7!important}
+.battle-hud{
+ padding:9px 10px 6px;top:calc(env(safe-area-inset-top) + 5px);
+ background:linear-gradient(180deg,#10241fe8,#132a24e0 82%,#1b3529b0);
+ border:1px solid #aa956b;border-top:3px solid #d2ad72;
+ box-shadow:inset 0 2px #3d5948,0 5px 0 #0c1b16ba;
+ clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%);
+ gap:6px;
+}
+.hud-block>span,.hud-block small,.round-clock span,.heat-row{
+ font-family:ui-monospace,monospace;letter-spacing:.07em;
+}
+.round-clock strong{color:#ffedc6;text-shadow:0 2px #775b40;font-family:Georgia,serif}
+.hp-track{
+ height:12px;border:1px solid #b6a17a;background:#121e1b;
+ box-shadow:inset 0 2px #080e0d,0 2px #253b30;
+}
+.hp-track i{
+ background:repeating-linear-gradient(90deg,#9ec8a0 0 10px,#85b48f 10px 12px);
+ box-shadow:inset 0 2px #c8e3ad;
+}
+.enemy .hp-track i{
+ background:repeating-linear-gradient(90deg,#de9c7b 0 10px,#bd735f 10px 12px);
+ box-shadow:inset 0 2px #f6bb93;
+}
+.heat-track{height:8px;border-color:#ad946e}
+.heat-track i{background:linear-gradient(90deg,#a8884d,#ffca7b)}
+.heat-track i.danger{background:linear-gradient(90deg,#df874d,#ff704f)}
+.score-row{border-top:1px solid #81765966;padding-top:5px}
+.control-layer{gap:10px}
+.joystick{
+ border:2px dashed #d9ba8285;
+ background:radial-gradient(circle at center,#d7c9a237 0 23%,#233f3380 58%,#1d332ac9);
+ box-shadow:inset 0 0 0 5px #10251d77,0 3px 0 #0b1514;
+}
+.joystick #stick-knob{
+ background:linear-gradient(138deg,#f6dfb3,#b2a17c 50%,#685b42);
+ border:2px solid #ddc296;box-shadow:inset 0 2px #fff0cd,inset 0 -6px #6b5945,0 4px #0d1915;
+}
+.control-layer .spell-button{
+ border-radius:0;clip-path:polygon(0 0,calc(100% - 11px) 0,100% 11px,100% 100%,0 100%);
+ background:linear-gradient(143deg,#3d594c,#223d36 70%);
+ border:2px solid #ad9c70;
+ box-shadow:inset 0 3px #718779,inset -4px -4px #142823,0 5px #0d1916;
+ transition:transform .11s,filter .11s;
+}
+.control-layer .spell-dash{border-color:#98ac9d}
+.control-layer .spell-ward{border-color:#a3d3bf;background:linear-gradient(135deg,#3a6556,#1c423b)}
+.control-layer .spell-attack{
+ background:linear-gradient(135deg,#ad7252,#753e36 78%);
+ border-color:#f3bc86;box-shadow:inset 0 4px #d99b75,inset -4px -4px #553132,0 5px #0b1715;
+}
+.spell-button small{font-family:ui-monospace,monospace;font-weight:800}
+.spell-attack .spell-icon{text-shadow:1px 2px #7b4733}
+.control-layer .spell-button:active{transform:translateY(3px) scale(.965);filter:brightness(1.2)}
+.control-layer .spell-button:focus-visible{outline-color:#fff3ca;outline-offset:3px}
+@media(pointer:fine){.control-layer{bottom:10px}.spellbar{opacity:.66}.spellbar:hover{opacity:1}}
+@media(max-width:370px){
+ .battle-hud{left:7px;right:7px;padding:6px 7px 5px}
+ .control-layer{padding:0 8px}.menu .play-block{gap:6px}
+ .sheet{padding:17px 13px}
+}
+@media(max-height:690px){
+ #hero-preview{width:clamp(88px,16vh,120px)}
+ .menu h1{font-size:51px}
+ .menu .big-button{min-height:45px}
+ .menu p{margin:5px 0 9px}
+}
+@media(prefers-reduced-motion:reduce){
+ #hero-preview{animation:none!important}
+ .control-layer .spell-button{transition:none!important}
+}
