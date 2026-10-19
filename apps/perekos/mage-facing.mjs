@@ -38,6 +38,13 @@ export function faceView(angle){
   showChest:back<.7,
  };
 }
+// Weapon is authored pointing upward. Compute the grip rotation in *local*
+// sprite coordinates, compensating for the mirrored western-side body.
+// The resulting world-space weapon vector matches the true projectile ray.
+export function weaponRotation(angle){
+ const a=normalizeFacing(angle);
+ return normalizeFacing(Math.cos(a)<-.12?Math.PI*1.5-a:a+Math.PI/2);
+}
 export function signedTurn(from,to){
  return normalizeFacing(to-from);
 }
