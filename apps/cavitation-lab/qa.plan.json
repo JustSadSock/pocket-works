@@ -7,7 +7,8 @@
       "tier": "smoke",
       "files": [
         "physics.test.mjs",
-        "coupling.test.mjs"
+        "coupling.test.mjs",
+        "constructor.test.mjs"
       ]
     },
     {
@@ -29,7 +30,14 @@
         },
         {
           "action": "click",
-          "selector": "[data-cloud='cluster']"
+          "selector": "[data-cloud='custom']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-layout='arc']"
         },
         {
           "action": "screenshot"
@@ -74,7 +82,8 @@
       "kind": "playwright",
       "tier": "smoke",
       "files": [
-        "qa/journey.spec.js"
+        "qa/journey.spec.js",
+        "qa/constructor.spec.js"
       ]
     }
   ]
