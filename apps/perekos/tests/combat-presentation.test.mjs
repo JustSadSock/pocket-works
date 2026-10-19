@@ -57,3 +57,6 @@ test('reduced motion never translates the world and generates fewer particles',(
 // The dedicated Perekos combat workflow lists this legacy entrypoint explicitly.
 // Run the additive visual-readability regressions in that same job.
 import './combat-readability.test.mjs';
+
+// The app-specific Perekos workflow runs this entrypoint directly.
+import './spell-choreography.test.mjs';

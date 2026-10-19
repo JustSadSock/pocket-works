@@ -5,7 +5,7 @@ import { pressureAt } from './coupling.js';
 
 const TAU=Math.PI*2,clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 let pressureBuffer=null;
-export const BUBBLE_COLORS=['#c6f6df','#e7c18b','#a6d6e3','#e4aea8','#bbbee2'];
+export const BUBBLE_COLORS=['#c6f6df','#e7c18b','#a6d6e3','#e4aea8','#bbbee2','#d4e99c','#9abafa'];
 
 export function cloudViewport(w,h,solution) {
  const {geometry,config}=solution;
@@ -102,6 +102,15 @@ export function renderCloudScene(ctx,w,h,solution,point,mode,selected=0,showPres
    drawCircle(ctx,item.x,item.y,r);ctx.stroke();
    ctx.beginPath();ctx.arc(item.x,item.y,r*.84,3.40,4.72);
    ctx.strokeStyle=isSelected?'#eeffe0b9':'#dafff08c';ctx.lineWidth=Math.max(1.2,r*.07);ctx.stroke();
+   if(isSelected&&solution.cloud.mode==='custom'&&mode==='ready'){
+      ctx.strokeStyle='#e8ad6fc2';ctx.lineWidth=1.2;ctx.setLineDash([3,4]);
+      drawCircle(ctx,item.x,item.y,r+14);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#f3d3aa';drawCircle(ctx,item.x+r+14,item.y,3.2);ctx.fill();
+      ctx.font='10px Arial';ctx.textAlign='left';ctx.fillStyle='#f8d5a5';
+      const hintRight=item.x+r+88<wallX;
+      ctx.textAlign=hintRight?'left':'right';
+      ctx.fillText('↔ ДВИГАТЬ',hintRight?item.x+r+20:item.x-r-20,item.y+3);
+   }
    if(isSelected){
      ctx.strokeStyle='#d4f9dd8c';ctx.lineWidth=1;
      const extent=r+8;
@@ -125,6 +134,11 @@ export function renderCloudScene(ctx,w,h,solution,point,mode,selected=0,showPres
      ctx.fillStyle='#b4cfc5a8';ctx.font='11px Georgia';ctx.textAlign='center';
      ctx.fillText(String(i+1),item.x,item.y+r+17);
    }
+ }
+ if(solution.cloud.mode==='custom'){
+   const count=solution.geometry.length;
+   ctx.textAlign='left';ctx.font='10px Arial';ctx.fillStyle='#c9e7d49c';
+   ctx.fillText('СХЕМА / '+count+' ПУЗЫРЬК'+(count===1?'':count<5?'А':'ОВ'),16,Math.min(91,h-121));
  }
  // Selected measurement uses a real radius and distinguishes bubbles graphically.
  const focus=view.bubbles[selected],q=point.bubbles[selected];

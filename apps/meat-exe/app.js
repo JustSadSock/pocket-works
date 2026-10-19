@@ -174,6 +174,7 @@ function restore(raw){
   world.reset(s.seed,s.ruptured,s.wave);nextId=1;
   const base=newState(s.seed);
   state={...base,...s,enemies:[],pickups:[],projectiles:[]};
+  combatAudio.setBiome(state.wave);
   if(!world.isFloor(state.x,state.z)){state.x=base.x;state.z=base.z;}
   for(const e of s.enemies){
     if(!world.isFloor(e.x,e.z))continue;
@@ -236,7 +237,7 @@ function startWave(number){
     world.nearChunks(spawn.x,spawn.z);
     navAt=0;gateHintShown=false;
   }
-  state.wave=number;state.waveTime=0;state.spawnClock=0;
+  state.wave=number;combatAudio.setBiome(number);state.waveTime=0;state.spawnClock=0;
   state.pulse=1;state.pulseSpawned=0;state.organRuptureClaimed=false;
   const first=state.pulseMax===3?pulsePlan(state.seed,number,1):null;
   state.toSpawn=number===5?1:(first?.count??7+number*3)+
@@ -1010,6 +1011,7 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   biome:world?.getBiome()?.id??null,worldStage:world?.getStage()??null,hazard:state?world?.getHazardAt(state.x,state.z):null,
   softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
   architecture:world?.getArchitectureSignature?.()??null,
+  atmosphere:world?.getAtmosphereSignature?.()??null,
   anatomy:{ruptures:state?.ruptureCount??0,immuneHeat:state?.immuneHeat??0,activeGates:state?world?.getTissueCount(Math.floor(state.x/8),Math.floor(state.z/8)):0},
   immunity:{...state?.immune},
   ecology:{telegraphsSeen,chargesDodged,attacksInterrupted,terrainEnemyHits,

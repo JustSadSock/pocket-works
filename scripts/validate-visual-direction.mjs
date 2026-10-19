@@ -24,8 +24,8 @@ export function visualChanges(files) {
   return byApp;
 }
 
-function changedFromGit(base, head) {
-  const result = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACMR', base, head], { encoding: 'utf8' });
+export function changedFromGit(base, head) {
+  const result = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACMR', `${base}...${head}`], { encoding: 'utf8' });
   if (result.status !== 0 || result.error) throw new Error(result.stderr || result.error?.message || 'git diff failed');
   return result.stdout.split(/\r?\n/).map(v => v.trim()).filter(Boolean);
 }

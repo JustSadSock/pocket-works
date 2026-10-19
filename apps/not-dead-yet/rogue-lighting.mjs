@@ -65,3 +65,38 @@ export function lightingMaskKey(world,x,z,size=LIGHT_GRID){
  const doors=[...world.doorStates].map(([id,state])=>id+':'+(state.angle<.84?'c':'o')).sort().join('|');
  return [sx,sz,world.terrainRevision,doors].join(':')
 }
+
+/**
+ * Compact per-cell practical-light visibility, generated only when the
+ * world tile, doors or layout changes. The WebGL1 fragment shader samples
+ * this map ONCE instead of ray-marching 12–24 shadow texels per pixel.
+ *
+ * R/G: visibility of actual lamp A/B. B: solid tile. A: opaque texture.
+ * O(48² + lit cells × ray length) per update, not per GPU fragment.
+ */
+export function practicalLightMap(x0,z0,walkMask,lights,size=LIGHT_GRID){
+ const result=new Uint8Array(size*size*4),sample=(x,z)=>{
+  const ix=Math.floor(x)-x0,iz=Math.floor(z)-z0;
+  return ix>=0&&iz>=0&&ix<size&&iz<size&&walkMask[(iz*size+ix)*4]>0
+ };
+ for(let z=0;z<size;z++)for(let x=0;x<size;x++){
+  const pixel=(z*size+x)*4,walk=walkMask[pixel]>0;
+  result[pixel+2]=walk?255:0;result[pixel+3]=255;
+  if(!walk)continue;
+  const tx=x0+x+.5,tz=z0+z+.5;
+  for(let k=0;k<2;k++){
+   const lamp=lights[k];if(!lamp)continue;
+   const sx=lamp.x/TILE,sz=lamp.z/TILE,dx=tx-sx,dz=tz-sz,d=Math.hypot(dx,dz);
+   const maxRange=(k===0?8.7:7.6)/TILE;
+   if(d>=maxRange)continue;
+   const n=Math.max(1,Math.ceil(d*2.4));
+   let visible=true;
+   for(let j=1;j<n;j++){
+    const t=j/n;
+    if(!sample(sx+dx*t,sz+dz*t)){visible=false;break}
+   }
+   result[pixel+k]=visible?255:0
+  }
+ }
+ return result
+}
