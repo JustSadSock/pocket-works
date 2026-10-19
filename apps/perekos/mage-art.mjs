@@ -17,12 +17,12 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  const recoil=casting>0?Math.pow(Math.max(0,1-castPhase*5),1.55)*(character.school==='stone'?6.2:character.school==='fire'?4.5:2.8):0;
  const lean=(dashing>0?4:Math.sin(time*11)*.8*stride)+(pose?.lean||0);
  const hitFlinch=pose?.impact||0,guardPose=pose?.guard||0;
- const shake=flash>0?Math.sin(time*65)*1.5:0;
+ const shake=flash>0&&!pose?.still?Math.sin(time*65)*1.5:0;
  const elementColor=character.school==='storm'?'#bcefe0':character.school==='stone'?'#d5d8aa':'#ffd29a';
  const px=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))};
  const arc=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()};
  ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
- ctx.translate(Math.round(x+shake-Math.cos(face)*recoil),Math.round(y-Math.sin(face)*recoil+Math.sin(time*(dashing>0?19:9)+(enemy?3:0))*(dashing>0?2.5:1.1)));
+ ctx.translate(Math.round(x+shake-Math.cos(face)*recoil),Math.round(y-Math.sin(face)*recoil+(pose?.still?0:Math.sin(time*(dashing>0?19:9)+(enemy?3:0))*(dashing>0?2.5:1.1))));
  const dir=Math.cos(face);ctx.scale((dir<-.12?-1:1)*scale,scale);ctx.translate(lean,0);
  // Tight shadow and feet establish a stable battle hitbox.
  ctx.fillStyle='#101c1eb8';ctx.beginPath();ctx.ellipse(0,12,17,6,0,0,Math.PI*2);ctx.fill();
@@ -329,7 +329,7 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
   }
  }
  // Very short-lived class wisps around the casting tip, with no persistent glow.
- if(isCasting){
+ if(isCasting&&!pose?.still){
   for(let i=0;i<3;i++){const angle=time*9+i*2.09,rx=20+Math.cos(angle)*8,ry=-44+Math.sin(angle)*7;
    px(rx,ry,2+(i%2),2,elementColor)}
  }
