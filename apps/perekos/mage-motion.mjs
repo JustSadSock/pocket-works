@@ -2,6 +2,7 @@
 // Client-only critically damped motion. No hitbox, velocity, aim or net packets
 // may be derived from these poses; authoritative combat is untouched.
 import {mage} from './mages.mjs';
+import {normalizeFacing,signedTurn} from './mage-facing.mjs';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const smooth=(now,old,speed,dt)=>old+(now-old)*(1-Math.exp(-speed*dt));
@@ -18,6 +19,7 @@ export function basePose(id='kindle'){
  return {move:0,step:0,lean:0,bodyBob:0,cloth:0,headTilt:0,
   footSpread:0,attack:0,guard:0,impact:0,dash:0,headBob:0,
   weight:RIGS[id]?.weight||1,style:RIGS[id]?.attack||'lunge',
+  look:0,aimFace:0,turning:0,
   windup:0,release:0,recover:0,weaponTilt:0,weaponRise:0,shoulderTurn:0,
   crouch:0,stance:0,breath:0,aimLift:0,scarf:0};
 }
@@ -33,7 +35,7 @@ export class MageMotion{
    m={time,x:position.x,y:position.y,mageId:actor.mageId,walk:0,
     speed:0,lean:0,cloth:0,wind:0,hit:0,guard:0,attack:0,castClock:2,scarf:0,
     lastCast:0,lastShield:actor.shield||0,lastFlash:0,
-    face:actor.face||0};
+    face:actor.face||0,look:normalizeFacing(actor.face||0)};
    this.entries.set(key,m);
   }
   const dt=clamp(time-m.time,0,1/15),dx=position.x-m.x,dy=position.y-m.y;
@@ -43,7 +45,12 @@ export class MageMotion{
   const targetSpeed=clamp(velocity/126,0,1);
   m.speed=smooth(targetSpeed,m.speed,12,dt);
   if(dt>0)m.walk+=dt*(7+8*m.speed)*config.gait;
-  const heading=actor.face||0;
+  const heading=normalizeFacing(actor.face||0);
+  // Small visual turning inertia. At most 0.18 rad (~10 degrees) behind the
+  // exact shooting ray; never writes back into the simulation actor.
+  const remaining=signedTurn(m.look,heading);
+  const lag=clamp(remaining,-.18,.18);
+  m.look=normalizeFacing(heading-lag*Math.exp(-dt*23));
   const forward=dt>.0001&&traveled<42?(dx*Math.cos(heading)+dy*Math.sin(heading))/dt:0;
   const cross=dt>.0001&&traveled<42?(dy*Math.cos(heading)-dx*Math.sin(heading))/dt:0;
   const attackNew=(actor.cast||0)>m.lastCast+.08;
@@ -93,6 +100,7 @@ export class MageMotion{
   const breath=Math.sin((reduced?0:time)*(stone?1.8:2.5)+key*1.1)*(stone?.5:.75);
   const pose={
    still:!!reduced,
+   look:reduced?heading:m.look,aimFace:heading,turning:Math.abs(signedTurn(m.look,heading)),
    move:m.speed,step:m.walk,lean:clamp(m.lean+dash*2-impact*2,-5,5),
    bodyBob:-Math.abs(gaitWave)*m.speed*config.step*1.9+impact*3.3+stun*3,
    cloth:clamp(m.cloth+(1-m.speed)*Math.sin(reduced?0:time*1.8)*.4,-8,8),
