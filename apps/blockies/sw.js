@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'blockies-';
-const CACHE_NAME = 'blockies-v0.1.3';
-const APP_VERSION = '0.1.3';
+const CACHE_NAME = 'blockies-v0.1.4';
+const APP_VERSION = '0.1.4';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Новые вращения и призрачная проекция приземления.", "Плавное удержание сенсорных кнопок и геймпада.", "Улучшен отклик поля при приземлении фигур."];
+const RELEASE_NOTES = ["Честное распределение тетромино 7-bag.", "Персональный запас фигуры для коопа и онлайна.", "Новые клавиши, сенсорная кнопка и предпросмотр запаса."];
 const APP_SHELL = [
   "./",
   "./index.html",
