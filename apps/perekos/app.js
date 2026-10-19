@@ -35,7 +35,50 @@ function forget(){try{localStorage.removeItem(saveKey)}catch{}}
 const resume=stored(saveKey);
 if(resume&&validState(resume))$('continue').hidden=false;
 function audioContext(){if(!sound)return null;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;if(!audio)audio=new C();if(audio.state==='suspended')audio.resume().catch(()=>{});return audio}catch{return null}}
-function sfx(type){const ac=audioContext();if(!ac)return;const now=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();const notes={overload:[96,440,.33,'sawtooth'],mine:[380,85,.22,'triangle'],shoot:[450,160,.085,'triangle'],hit:[120,55,.12,'square'],shield:[330,650,.2,'sine'],spark:[740,220,.09,'square'],heal:[480,700,.14,'sine'],dash:[230,520,.09,'triangle'],react_steam:[420,160,.23,'sine'],react_crack:[110,380,.19,'square'],react_slag:[150,85,.26,'sawtooth'],overtime:[95,160,.3,'sawtooth']};const [a,b,len,wave]=notes[type]||notes.shoot;o.type=wave;o.frequency.setValueAtTime(a,now);o.frequency.exponentialRampToValueAtTime(Math.max(20,b),now+len);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(type==='hit'?.045:.028,now+.01);g.gain.exponentialRampToValueAtTime(.0001,now+len);o.connect(g).connect(ac.destination);o.start(now);o.stop(now+len+.02)}
+function sfx(type,school='fire'){
+ const ac=audioContext();if(!ac)return;
+ const now=ac.currentTime;
+ const tone=(start,end,length,wave='triangle',vol=.022,delay=0)=>{
+  const o=ac.createOscillator(),g=ac.createGain(),at=now+delay;
+  o.type=wave;o.frequency.setValueAtTime(Math.max(20,start),at);
+  o.frequency.exponentialRampToValueAtTime(Math.max(20,end),at+length);
+  g.gain.setValueAtTime(.0001,at);
+  g.gain.exponentialRampToValueAtTime(vol,at+.006);
+  g.gain.exponentialRampToValueAtTime(.0001,at+length);
+  o.connect(g).connect(ac.destination);o.start(at);o.stop(at+length+.005);
+ };
+ const grit=(length,cutoff,vol=.017)=>{
+  const samples=Math.ceil(ac.sampleRate*length),buffer=ac.createBuffer(1,samples,ac.sampleRate);
+  const channel=buffer.getChannelData(0);
+  let seed=34363+Math.floor(now*1000);
+  for(let i=0;i<samples;i++){seed=(Math.imul(seed,1664525)+1013904223)|0;
+   channel[i]=((seed>>>1)/0x40000000-1)*Math.pow(1-i/samples,1.4)}
+  const src=ac.createBufferSource(),filter=ac.createBiquadFilter(),g=ac.createGain();
+  src.buffer=buffer;filter.type='highpass';filter.frequency.value=cutoff;
+  g.gain.setValueAtTime(vol,now);g.gain.exponentialRampToValueAtTime(.0001,now+length);
+  src.connect(filter).connect(g).connect(ac.destination);src.start(now);src.stop(now+length);
+ };
+ if(type==='shoot'){
+  if(school==='stone'){tone(165,53,.22,'triangle',.054);tone(80,39,.16,'sine',.034);grit(.10,300,.036)}
+  else if(school==='storm'){tone(950,260,.11,'sawtooth',.017);tone(530,1030,.07,'square',.015);tone(280,112,.13,'triangle',.025)}
+  else{tone(315,87,.19,'sawtooth',.032);tone(860,350,.085,'triangle',.026);grit(.055,1250,.019)}
+ }else if(type==='hit'||type.startsWith('impact_')){
+  tone(140,52,.13,'triangle',.035);grit(.085,380,.028);
+ }else if(type==='shield'){
+  tone(270,550,.18,'sine',.023);tone(440,310,.25,'triangle',.018,.015);
+ }else if(type==='dash'){
+  tone(130,490,.095,'triangle',.031);grit(.08,900,.012);
+ }else if(type==='overload'){
+  tone(84,380,.31,'sawtooth',.04);tone(520,90,.27,'triangle',.023,.03);grit(.18,450,.016);
+ }else if(type==='react_crack'||type==='react_slag'||type==='react_steam'){
+  tone(type==='react_crack'?220:650,75,.26,'sawtooth',.025);
+  grit(.095,900,.016);
+ }else if(type==='heal'){
+  tone(430,760,.17,'sine',.019);tone(660,960,.24,'sine',.012,.028);
+ }else if(type==='spark'){tone(950,330,.07,'square',.011)}
+ else if(type==='mine'){tone(440,75,.17,'triangle',.022)}
+ else if(type==='overtime'){tone(95,160,.31,'sawtooth',.022)}
+}
 function setAudio(){sound=!sound;remember();$('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');if(sound)audioContext()}
 $('menu-audio').addEventListener('click',setAudio);$('pause-audio').addEventListener('click',setAudio);
 $('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');
@@ -407,7 +450,7 @@ function render(){
  ctx.restore();
  combatPresentation.screen(ctx);
 }
-function handleEvents(){if(!active)return;let count=0;const played=new Set();for(const f of active.fx){if(f.id<=seen||count>=5||played.has(f.k))continue;sfx(f.k);played.add(f.k);count++}seen=active.serial}
+function handleEvents(){if(!active)return;let count=0;const played=new Set();for(const f of active.fx){if(f.id<=seen||count>=5||played.has(f.k))continue;sfx(f.k,active.actors.reduce((closest,a)=>!closest||Math.hypot(a.x-f.x,a.y-f.y)<Math.hypot(closest.x-f.x,closest.y-f.y)?a:closest,null)?.mageId?mage(active.actors.reduce((closest,a)=>!closest||Math.hypot(a.x-f.x,a.y-f.y)<Math.hypot(closest.x-f.x,closest.y-f.y)?a:closest,null).mageId).school:'fire');played.add(f.k);count++}seen=active.serial}
 function loop(now){const elapsed=Math.min(.13,(now-last)/1000||0);last=now;frame++;if(toastT>0){toastT-=elapsed;if(toastT<=0)$('toast').classList.remove('visible')}if(online?.active){if(active&&online.view?.phase==='fight'){online.sample(()=>mode==='fight'?playerInput():{x:0,y:0,aim:{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y},attack:false,shield:false,dash:false},active.round,now);handleEvents()}if(frame%5===0)updateHud();acc=0}else if(mode==='fight'&&active){acc+=elapsed;let steps=0;while(acc>=STEP&&steps<8){tick(active,playerInput());acc-=STEP;steps++;if(active.phase!=='fight')break}handleEvents();if(frame%5===0)updateHud();if(frame%120===0)remember();if(active.phase!=='fight')transition()}else acc=0;render();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 // The authenticated avatar is presentation only: never serialize art into a
