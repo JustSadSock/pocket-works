@@ -5,36 +5,32 @@ import {SHAPES,sevenBag,collision,rotateWithKick,chooseSpawn,clearCompletedRows,
 
 const client=await readFile(new URL('../game.js',import.meta.url),'utf8');
 const server=await readFile(new URL('../server/module.ts',import.meta.url),'utf8');
-const coreName='engine-core-v1.js';
-function segment(source,begin,end) {
- const start=source.indexOf(begin);
- assert.ok(start>=0,'missing '+begin);
- const finish=source.indexOf(end,start+begin.length);
- assert.ok(finish>start,'missing '+end);
- return source.slice(start,finish).trim();
-}
-test('browser and pinned server source share the same immutable core module',()=>{
- assert.match(client,/from '\.\/engine-core-v1\.js'/);
- assert.match(server,/from '\.\.\/\.\.\/\.\.\/apps\/blockies\/engine-core-v1\.js'/);
- assert.ok(client.includes('coreCollision(')&&server.includes('coreCollision('));
- for(const source of [client,server]) {
-  assert.ok(source.includes('rotateWithKick('));
-  assert.ok(source.includes('clearCompletedRows('));
-  assert.ok(source.includes('lineScore('));
-  assert.ok(source.includes('sevenBag('));
-  assert.ok(source.includes('chooseSpawn('));
+test('browser and server share the same immutable Player implementation',()=>{
+ assert.match(client,/import \{ createPlayerClass \} from '\.\/player-core-v1\.js'/);
+ assert.match(server,/import \{ createPlayerClass \} from '\.\.\/\.\.\/\.\.\/apps\/blockies\/player-core-v1\.js'/);
+ for(const source of [client,server]){
+  assert.match(source,/const Player = createPlayerClass\(/);
+  assert.ok(!source.includes('class Player {'),'no local Player implementation remains');
+  assert.match(source,/sevenBag\(/);
  }
 });
-for(const [name,start,end] of [
- ['collision','    checkCollision(','    move(dir,'],
- ['rotation','    rotate({ broadcast','    drop({ broadcast'],
- ['spawn','    placeSpawn()','    checkCollision('],
- ['seven bag','function nextBaggedPiece()','function formatKeyLabel(']
-]){
- test('client/server wrapper parity: '+name,()=>{
-  assert.equal(segment(client,start,end),segment(server,start,end));
- });
-}
+test('Player mutations are supplied through adapters in both runtimes',()=>{
+ for(const source of [client,server]){
+  for(const token of ['gameState, getBoardWidth, BOARD_HEIGHT, BASE_LINE_SCORE',
+     'nextBaggedPiece','soundManager, checkAllPlayersGameOver']){
+   assert.ok(source.includes(token),'missing player adapter '+token);
+  }
+ }
+});
+test('the shared Player owns movement, hold, merge, hard-drop and gravity',async()=>{
+ const source=await readFile(new URL('../player-core-v1.js',import.meta.url),'utf8');
+ for(const method of ['move(', 'rotate(', 'hold(', 'drop(', 'hardDrop(', 'clearLines(', 'update(']){
+  assert.ok(source.includes(method),'missing real shared Player operation '+method);
+ }
+ assert.ok(source.includes('coreCollision('));
+ assert.ok(source.includes('rotateWithKick('));
+ assert.ok(source.includes('clearCompletedRows('));
+});
 test('seven bag only emits valid independent tetromino copies',()=>{
  const state={pieceBag:[]},rand=()=>.325;
  const entries=[];
