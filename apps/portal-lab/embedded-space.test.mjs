@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {metric,geometry} from './spacetime.js';
 import {spatialEmbedding,surfacePoint,spatialMetricCheck,embeddedGrid,
  project3D,createSpatialBeam,stepSpatialBeam,spatialBeamStats,VOLUME_DEFAULTS} from './embedded-space.js';
-const eq=(a,b,tol=1e-7)=>assert.ok(Math.abs(a-b)<tol,\`Expected \${a} ≈ \${b} ± \${tol}\`);
+const eq=(a,b,tol=1e-7)=>assert.ok(Math.abs(a-b)<tol,'Expected '+a+' ≈ '+b+' ± '+tol);
 test('Ellis embedding gives analytically correct z=a asinh(l/a)',()=>{
  const m=metric({a:2,eta:0}),p=spatialEmbedding(m);
  assert.ok(p.valid);
