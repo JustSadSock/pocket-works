@@ -4,12 +4,12 @@
   "product": "shock-lab",
   "direction": {
     "premise": "A tabletop supersonic-flow instrument, with a luminous compressible-gas chamber and a dark oxide-steel control console.",
-    "composition": "An unobstructed compressible-flow chamber dominates, with a compact airfoil load bench below the Mach regulator, an experimental pressure-curve plot and selectable retained measurements; portrait phones use a scrollable lower laboratory console.",
+    "composition": "The same broad flow tank remains the focal experimental surface. Below the Mach control, a morphing-airfoil workbench shows an instantly updating section drawing and two pressure instruments; an industrial oscillogram makes time-varying forces measurable.",
     "shapeLanguage": "Hard square-cut aluminum geometry, paper-thin graduations, sharp instrument toggles and an uncaged central visualization.",
     "surfaceAndMaterial": "Opaque charcoal-blue oxided metal; brushed mineral wall inclusions; the gas field itself provides dynamic luminous volume. No glassmorphism or decorative gradients over UI components.",
-    "paletteLogic": "Steel instrument housing and paper-warm brass interaction controls; two restrained signal inks independently encode upper and lower surface pressure, while archived runs appear as hairline dashed traces.",
+    "paletteLogic": "Green-blue versus muted amber encodes the actual sign of Euler vorticity, while paired brass and teal signal traces show force history and a thin slate dash records gust phase.",
     "typography": "Condensed utility labels with monospaced physical measurements; short Russian action labels remain readable on phones.",
-    "signature": "A wind-tunnel rig lets the operator physically rotate a pixel-solid airfoil and watch computed pressure loads become lift, drag and pitch moments; four recorded test cards can overlay each surface-pressure curve.",
+    "signature": "A laboratory airfoil is visibly reshaped under the user's finger; periodic computed inlet gusts alter the actual pressure wake while an oscilloscope records the changing resultant lift and signed vorticity.",
     "distinction": "Where PetriForge is a discrete editable microcosm, SHOCK shows continuous conservation-law fronts and reflective solid boundaries with industrial instrumentation."
   },
   "architecture": {
@@ -18,8 +18,8 @@
     "navigation": "editor-toolbox",
     "chromeTopology": "framed-stage",
     "dominantMotion": "immediate",
-    "primaryVerb": "Tilt the airfoil, run a supersonic flow, read true pressure force and pitching moment, then overlay saved Cp curves to compare stability tendencies.",
-    "physicalFeedback": "Rotating the raster-solid profile causes a genuinely different gas-boundary Riemann solution and different pressure traction; saved runs retain coefficients and upper/lower distributions for replay-free comparison.",
+    "primaryVerb": "Reshape the wing, apply periodic real inlet gusts, inspect signed vorticity, and compare true pressure-force time histories.",
+    "physicalFeedback": "Wing geometry is recalculated from a parametric, mask-rasterized section; finite-volume Euler fluxes respond to coherent unsteady inlet velocities. Curl is differentiated from solved velocity rather than painting vortex sprites.",
     "spatialRationale": "Desktop shows a broad physical chamber and a right instrument console. On portrait phones a compact top bar, live upper canvas and internally scrollable bottom control deck form a header-stage-footer topology, distinct from the desktop split.",
     "comparisons": [
       {
@@ -78,7 +78,7 @@
       "type": "click",
       "selector": "[data-preset='airfoil']"
     },
-    "expectedChange": "A live pressure-load bench appears with computed lift, pressure drag, pitching moment, Cp surface plot and a meaningful Save measurement action.",
+    "expectedChange": "The airfoil morphology rig, load oscillogram and gust controls become usable while calculated wake, CL, and CD update over time.",
     "capture": [
       "initial",
       "action",
