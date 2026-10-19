@@ -440,7 +440,7 @@ function renderUI() {
     const seatedHere = mePlayer && mePlayer.moduleId === m.id;
     const occupiedByOther = Boolean(m.occupiedBy && m.occupiedBy !== me);
     const seatAction = () => {if(!occupiedByOther) socket.emit("occupyModule", { moduleId: m.id });};
-    const seatBtn = button(seatedHere ? "Leave" : occupiedByOther ? "Busy" : "Seat", seatedHere ? "danger" : "primary", () => {
+    const seatBtn = button(seatedHere ? "Встать" : occupiedByOther ? "Занято" : "Занять", seatedHere ? "danger" : "primary", () => {
       if (seatedHere) socket.emit("leaveModule");
       else seatAction();
     });
@@ -472,7 +472,7 @@ function renderUI() {
     row.appendChild(Object.assign(document.createElement("div"), { textContent: `${lib?.type || "?"} | ${lib?.w || 1}x${lib?.h || 1}` }));
     const actions = document.createElement("div");
     actions.className = "row";
-    actions.appendChild(button("Place", buildMode?.kind === "module" && buildMode?.index === idx ? "warn" : "primary", () => {
+    actions.appendChild(button("Разместить", buildMode?.kind === "module" && buildMode?.index === idx ? "warn" : "primary", () => {
       buildMode = { kind: "module", templateId, index: idx };
       moveModuleId = null;
       closeModuleActions();
@@ -491,7 +491,7 @@ function renderUI() {
     row.appendChild(Object.assign(document.createElement("div"), { textContent: `${sh?.cells?.length || 0} cells` }));
     const actions = document.createElement("div");
     actions.className = "row";
-    actions.appendChild(button("Place", buildMode?.kind === "shape" && buildMode?.index === idx ? "warn" : "primary", () => {
+    actions.appendChild(button("Разместить", buildMode?.kind === "shape" && buildMode?.index === idx ? "warn" : "primary", () => {
       buildMode = { kind: "shape", shapeId, index: idx };
       moveModuleId = null;
       closeModuleActions();
@@ -510,7 +510,7 @@ function renderUI() {
       row.appendChild(Object.assign(document.createElement("div"), { textContent: `${m.name} ${Math.round(m.hp)}/${m.maxHp}` }));
       const actions = document.createElement("div");
       actions.className = "row";
-      actions.appendChild(button("Set Target", "primary", () => socket.emit("setRepairTarget", { moduleId: m.id })));
+      actions.appendChild(button("Цель ремонта", "primary", () => socket.emit("setRepairTarget", { moduleId: m.id })));
       row.appendChild(actions);
       repairTargets.appendChild(row);
     });
@@ -523,7 +523,7 @@ function renderUI() {
     row.appendChild(Object.assign(document.createElement("div"), { textContent: `${o.description} | ${o.cost} cr` }));
     const actions = document.createElement("div");
     actions.className = "row";
-    const buyBtn = button("Buy", state.ship.credits >= o.cost ? "primary" : "", () => socket.emit("buyItem", { itemId: o.id }));
+    const buyBtn = button("Купить", state.ship.credits >= o.cost ? "primary" : "", () => socket.emit("buyItem", { itemId: o.id }));
     buyBtn.disabled = state.ship.credits < o.cost || state.phase === "combat";
     actions.appendChild(buyBtn);
     row.appendChild(actions);
@@ -764,7 +764,7 @@ canvas.addEventListener("pointerdown", (e) => {
 });
 
 canvas.addEventListener("pointerup", (e) => {
-  if (e.button === 0) mouse.downLeft = false;
+  if (e.button === 0) mouse.downLeft = touchFiring;
   if (e.button === 2) mouse.downRight = false;
 });
 
@@ -1438,7 +1438,7 @@ document.querySelector('#create-btn').onclick=()=>socket.create(nameInput.value)
 for(const b of document.querySelectorAll('[data-key]')){const key=b.dataset.key;b.onpointerdown=e=>{b.setPointerCapture(e.pointerId);keyState.add(key);e.preventDefault();};const release=()=>keyState.delete(key);b.onpointerup=release;b.onpointercancel=release;b.onlostpointercapture=release;}
 const fire=document.querySelector('#touch-fire');fire.onpointerdown=e=>{fire.setPointerCapture(e.pointerId);touchFiring=true;mouse.downLeft=true;e.preventDefault();};fire.onpointerup=fire.onpointercancel=fire.onlostpointercapture=()=>{touchFiring=false;mouse.downLeft=false;};
 document.querySelector('#touch-rotate').onclick=()=>{buildRotation=(buildRotation+90)%360;showToast('Поворот '+buildRotation+'°');};
-canvas.addEventListener('pointercancel',()=>{mouse.downLeft=false;mouse.downRight=false;});
+canvas.addEventListener('pointercancel',()=>{mouse.downLeft=touchFiring;mouse.downRight=false;});
 window.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'){mouse.downLeft=false;mouse.downRight=false;}});
 window.addEventListener('blur',()=>{keyState.clear();mouse.downLeft=false;mouse.downRight=false;touchFiring=false;if(joined&&state)socket.emit('playerInput',inputPayload());});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){keyState.clear();mouse.downLeft=false;mouse.downRight=false;touchFiring=false;if(joined&&state)socket.emit('playerInput',inputPayload());}});
