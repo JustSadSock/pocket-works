@@ -105,6 +105,7 @@
           <button data-view="density" class="view" data-native-press>ПЛОТНОСТЬ</button>
           <button data-view="schlieren" class="view" data-native-press>ГРАДИЕНТ</button>
           <button data-view="mach" class="view" data-native-press>МАХ</button>
+          <button data-view="vorticity" class="view" data-native-press>ВИХРИ</button>
         </div>
         <div class="legend" aria-hidden="true"><span id="legend-low">РАЗРЕЖЕНИЕ</span><div class="legend-ramp" id="legend-ramp"></div><span id="legend-high">СЖАТИЕ</span></div>
       </div>
@@ -115,6 +116,15 @@
         <input type="range" id="flow-mach" min=".3" max="3.2" step=".1" value="1.8" aria-label="Число Маха набегающего потока">
         <div class="flow-gauges"><div><small>СРАВНИТЕЛЬНАЯ СКОРОСТЬ</small><strong id="flow-velocity">2.13</strong></div><div><small>МАКСИМАЛЬНОЕ ЧИСЛО МАХА</small><strong id="flow-peak">1.8</strong></div></div>
         <button id="streamlines" type="button" class="stream-toggle" aria-pressed="true" data-native-press><span class="stream-icon">≋</span><span>ЛИНИИ ТОКА</span><strong id="stream-state">ВКЛ.</strong></button>
+        <section class="gust-rig" aria-label="Генератор порывов">
+          <div class="gust-head"><span>ГЕНЕРАТОР ПОРЫВОВ</span><output id="gust-live">0.0°</output></div>
+          <div class="slider-line"><label for="gust-amplitude">Амплитуда отклонения</label><output id="gust-amplitude-value">0°</output></div>
+          <input type="range" id="gust-amplitude" min="0" max="14" step="1" value="0" aria-label="Амплитуда периодических порывов в градусах">
+          <div class="slider-line"><label for="gust-period">Период порывов</label><output id="gust-period-value">6 τ</output></div>
+          <input type="range" id="gust-period" min="2" max="18" step="1" value="6" aria-label="Период порывов во времени симуляции">
+          <div class="gust-signal" aria-hidden="true"><svg viewBox="0 0 260 34" preserveAspectRatio="none"><path d="M0 17 Q16 -1 32 17 T64 17 T96 17 T128 17 T160 17 T192 17 T224 17 T256 17" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+          <p>Изменение направления входной скорости рассчитывается на каждом шаге; возмущение распространяется через газ, а не накладывается анимацией.</p>
+        </section>
         <button id="flow-restart" type="button" class="flow-reset" data-native-press>↻ ПЕРЕЗАПУСТИТЬ ПОТОК</button>
         <p class="flow-note">Идеальный невязкий газ · γ = 1.4. Входное состояние фиксировано, выход свободный. Поток, скачки и зоны сжатия вычисляются — это не готовые анимации. В режиме M &lt; 1 граница приближённая.</p>
       </section>
@@ -125,6 +135,15 @@
           <div class="slider-line"><label for="attack-angle">Угол атаки</label><output id="attack-angle-value" for="attack-angle">+0°</output></div>
           <input type="range" id="attack-angle" min="-14" max="14" step="1" value="0" aria-label="Угол атаки крыла в градусах">
           <div class="angle-marks"><span>−14°</span><span>0°</span><span>+14°</span></div>
+        </div>
+        <div class="shape-controls" id="shape-controls">
+          <div class="shape-head"><span>ГЕОМЕТРИЯ ПРОФИЛЯ</span><span>РЕДАКТИРУЕТСЯ В РЕАЛЬНОМ ВРЕМЕНИ</span></div>
+          <svg class="shape-preview" viewBox="0 0 260 64" preserveAspectRatio="none" aria-label="Текущий профиль крыла"><path id="shape-preview-path" d="M12 32 L130 26 L248 32 L130 38 Z" fill="currentColor" stroke="currentColor" stroke-width="1.7"/></svg>
+          <div class="slider-line"><label for="camber">Кривизна</label><output id="camber-value">0%</output></div>
+          <input type="range" id="camber" min="-6" max="6" step="1" value="0" aria-label="Кривизна центральной линии профиля">
+          <div class="slider-line"><label for="thickness">Толщина профиля</label><output id="thickness-value">11%</output></div>
+          <input type="range" id="thickness" min="5" max="22" step="1" value="11" aria-label="Толщина профиля">
+          <div class="shape-directions">Форма меняется при отпускании ползунка. Нажатие по крылу в камере позволяет перетащить профиль вверх или вниз.</div>
         </div>
         <div class="loads-readout">
           <div><small>C<sub>L</sub> · ПОДЪЁМНАЯ СИЛА</small><strong id="lift-value">—</strong></div>
@@ -140,6 +159,17 @@
           <button type="button" id="clear-loads" class="clear-loads" data-native-press disabled>ОЧИСТИТЬ</button>
         </div>
         <div class="record-list" id="record-list" aria-live="polite"><p>Замеров пока нет. Выберите угол атаки, дайте потоку развиться и сохраните результат.</p></div>
+        <section class="unsteady-section" aria-label="Нестационарные нагрузки">
+          <div class="unsteady-head"><span>КОЛЕБАНИЯ АЭРОДИНАМИЧЕСКИХ СИЛ</span><span>τ →</span></div>
+          <canvas id="load-scope" class="load-scope" role="img" aria-label="Временная история подъёмной силы и сопротивления давления"></canvas>
+          <div class="unsteady-legend"><span>━ CL</span><span>━ CD,p</span><span>··· порыв</span></div>
+          <div class="unsteady-stats">
+            <div><small>СРЕДНЕЕ CL</small><strong id="cl-mean">—</strong></div>
+            <div><small>КОЛЕБАНИЯ CL, RMS</small><strong id="cl-rms">—</strong></div>
+            <div><small>ЗАВИХРЁННОСТЬ, RMS</small><strong id="omega-rms">—</strong></div>
+          </div>
+          <button type="button" class="csv-button" id="loads-csv" disabled>ЭКСПОРТ ВРЕМЕННЫХ ДАННЫХ · CSV</button>
+        </section>
         <p class="load-note">Силы получены интегрированием давления по границе твёрдого тела. Только давление, без вязкости. Коэффициенты безразмерны, зависят от разрешения и стадии развития потока; это экспериментальная оценка, не аэродинамический сертификат.</p>
       </section>
 
@@ -182,7 +212,7 @@
     </div>
   </div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="SHOCK" data-app-version="1.3.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="SHOCK" data-app-version="1.4.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
