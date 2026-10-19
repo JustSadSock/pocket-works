@@ -280,6 +280,7 @@ function drawPhysics(){
       let value;
       if(state.view==='pressure')value=p-1;
       else if(state.view==='density')value=(rho-1)*3;
+      else if(state.view==='mach')value=Math.hypot(vx,vy)/Math.sqrt(1.4*p/rho);
       else {
         const il=(y*W+Math.max(0,x-1))*4,ir=(y*W+Math.min(W-1,x+1))*4;
         const it=(Math.max(0,y-1)*W+x)*4,ib=(Math.min(H-1,y+1)*W+x)*4;
@@ -287,7 +288,13 @@ function drawPhysics(){
         value=Math.min(7,grad*6) * (p>=1?1:-1);
       }
       let color;
-      if(value>=0){const range=state.preset==='tube'?Math.log1p(state.ratio*7.5):Math.log1p(4.5);const t=clamp(Math.log1p(Math.min(24,value)*2.5)/range,0,1);color=palette(t,hot);}
+      if(state.view==='mach'){
+        // Mach 1 is the visible transition: blue subsonic, amber supersonic.
+        const sonic=[[24,55,71],[48,112,132],[83,177,179],[220,187,112]];
+        const fast=[[220,187,112],[239,131,70],[242,93,64],[255,227,169]];
+        color=value<1?palette(clamp(value,0,1),sonic)
+          :palette(clamp((value-1)/2.2,0,1),fast);
+      }else if(value>=0){const range=state.preset==='tube'?Math.log1p(state.ratio*7.5):FLOW_PRESETS.has(state.preset)?Math.log1p(10):Math.log1p(4.5);const t=clamp(Math.log1p(Math.min(24,value)*2.5)/range,0,1);color=palette(t,hot);}
       else {const t=clamp(Math.sqrt(-value*1.6),0,1);color=palette(t,cold);}
       // Thin isolines follow the actual pressure field; no animated fake wavefront.
       if(state.view==='pressure'&&Math.abs(value)>.05){
@@ -302,11 +309,64 @@ function drawPhysics(){
   g.clearRect(0,0,paintW,paintH);
   g.drawImage(raster,0,0,paintW,paintH);
 }
+function drawStreamlines() {
+  if(!state.streamlines||!sim?.flowActive)return;
+  const px=paintW/sim.nx,py=paintH/sim.ny;
+  over.save();
+  // Deterministic streamline integral curves from current Euler velocity,
+  // not precomputed geometry or hand-drawn shock rays.
+  for(let lane=0;lane<19;lane++){
+    let x=1.3, y=sim.ny*(.055+lane*.049);
+    let visible=false;
+    over.beginPath();
+    for(let k=0;k<Math.ceil(sim.nx/1.8)+10;k++){
+      if(x>=sim.nx-1.5 || y<=1 || y>=sim.ny-2)break;
+      const p=sim.sample(x,y);
+      if(p.solid||p.u<=.04||!Number.isFinite(p.v))break;
+      const v=Math.hypot(p.u,p.v);
+      if(v<.04)break;
+      const xx=x*px,yy=y*py;
+      if(!visible){over.moveTo(xx,yy);visible=true;}else over.lineTo(xx,yy);
+      const dx=1.8*p.u/v,dy=1.8*p.v/v;
+      const middle=sim.sample(x+dx*.5,y+dy*.5);
+      if(middle.solid||middle.u<=.02)break;
+      const norm=Math.hypot(middle.u,middle.v);
+      if(norm<=.02)break;
+      x+=1.8*middle.u/norm;
+      y+=1.8*middle.v/norm;
+    }
+    if(visible){
+      over.lineWidth=(lane%3===0?.95:.65)*dpr;
+      over.strokeStyle=lane%3===0?'rgba(226,242,218,.36)':'rgba(166,204,204,.19)';
+      over.stroke();
+    }
+  }
+  // Direction indicators follow the same local measured velocity field.
+  for(let row=0;row<9;row++){
+    for(let col=1;col<5;col++){
+      const x=sim.nx*(col/5),y=sim.ny*(.09+row*.102);
+      const p=sim.sample(x,y);if(p.solid||p.u<=.1)continue;
+      const speed=Math.hypot(p.u,p.v);
+      const cx=x*px,cy=y*py,len=5*dpr;
+      const ux=p.u/speed,uy=p.v/speed;
+      over.strokeStyle='rgba(238,217,164,.46)';
+      over.lineWidth=.85*dpr;over.beginPath();
+      over.moveTo(cx-len*ux,cy-len*uy);over.lineTo(cx+len*ux,cy+len*uy);
+      over.lineTo(cx+len*ux-3*dpr*(ux+uy),cy+len*uy-3*dpr*(uy-ux));
+      over.moveTo(cx+len*ux,cy+len*uy);
+      over.lineTo(cx+len*ux-3*dpr*(ux-uy),cy+len*uy-3*dpr*(uy+ux));
+      over.stroke();
+    }
+  }
+  over.restore();
+}
+
 function drawOverlay(now){
   if(!sim)return;
   over.clearRect(0,0,paintW,paintH);
   const unitX=paintW/sim.nx,unitY=paintH/sim.ny;
   over.lineWidth=Math.max(1,dpr);
+  drawStreamlines();
   if(tubeReady){
     const x=paintW*.42,y0=paintH*.20,y1=paintH*.80;
     over.save();over.strokeStyle='#faf0d5';over.lineWidth=2*dpr;
@@ -341,7 +401,7 @@ function drawOverlay(now){
     const x=probe.x*paintW,y=probe.y*paintH;
     over.strokeStyle='#f7e7b7';over.fillStyle='#f7e7b7';over.lineWidth=1.2*dpr;
     over.beginPath();over.arc(x,y,10*dpr,0,Math.PI*2);over.moveTo(x-17*dpr,y);over.lineTo(x-6*dpr,y);over.moveTo(x+6*dpr,y);over.lineTo(x+17*dpr,y);over.moveTo(x,y-17*dpr);over.lineTo(x,y-6*dpr);over.moveTo(x,y+6*dpr);over.lineTo(x,y+17*dpr);over.stroke();
-    const s=sampleAt(probe),label=s.solid?'СТЕНА':'P '+s.pressure.toFixed(2)+' × P₀  ·  M '+s.mach.toFixed(2);
+    const s=sampleAt(probe),label=s.solid?'СТЕНА':'P '+s.pressure.toFixed(2)+' P₀ · M '+s.mach.toFixed(2)+' · ρ '+s.rho.toFixed(2);
     over.font=(10*dpr)+'px monospace';const tw=over.measureText(label).width;
     const left=clamp(x-tw*.5-7*dpr,4*dpr,paintW-tw-16*dpr),top=clamp(y-40*dpr,8*dpr,paintH-27*dpr);
     over.fillStyle='#101c20e6';over.fillRect(left,top,tw+14*dpr,23*dpr);
