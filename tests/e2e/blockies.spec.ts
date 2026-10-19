@@ -62,6 +62,42 @@ test.describe('Blockies — solo/input/lifecycle smoke', () => {
     expect(await page.evaluate(() => Boolean((window as any).__xss))).toBe(false);
   });
 
+  test('online results display authoritative team votes and rematch does not reset locally', async ({ page }) => {
+    await openSolo(page);
+    await page.evaluate(() => {
+      const win = window as any;
+      win.uiManager.isOnlineMode = true;
+      win.networkManager.socket.id = 'a';
+      win.networkManager.connected = true;
+      win.networkManager.phase = 'results';
+      win.__votes = 0;
+      win.networkManager.requestRematch = () => { win.__votes++; };
+      win.uiManager.updateRematchStatus({
+        phase: 'results',
+        players: [
+          { id: 'a', ready: false, departed: false },
+          { id: 'b', ready: true, departed: false }
+        ]
+      });
+    });
+    await expect(page.locator('#gameover-menu')).toHaveClass(/active/);
+    await expect(page.locator('#rematch-status')).toContainText('1 of 2');
+    await expect(page.locator('#play-again-btn')).toContainText('Play again');
+    const before = await page.evaluate(() => JSON.parse((window as any).render_game_to_text()));
+    await page.locator('#play-again-btn').click();
+    const after = await page.evaluate(() => JSON.parse((window as any).render_game_to_text()));
+    expect(after.board).toEqual(before.board);
+    expect(await page.evaluate(() => (window as any).__votes)).toBe(1);
+    await page.evaluate(() => (window as any).uiManager.updateRematchStatus({
+      phase: 'results',
+      players: [
+        { id: 'a', ready: true, departed: false },
+        { id: 'b', ready: true, departed: false }
+      ]
+    }));
+    await expect(page.locator('#play-again-btn')).toContainText('Cancel ready');
+  });
+
   test('online-touch ownership and mobile board bounds', async ({ page }) => {
     await page.goto('/apps/blockies/', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => Boolean((window as any).uiManager));
