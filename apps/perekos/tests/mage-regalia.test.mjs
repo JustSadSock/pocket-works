@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {MAGES} from '../mages.mjs';
 import {drawMage} from '../mage-art.mjs';
 import {MageMotion,basePose,RIGS} from '../mage-motion.mjs';
-import {drawGarbBack,drawGarbFront,garbSignature,GARB} from '../mage-regalia.mjs';
+import {drawGarbBack,drawGarbFront,drawClassHeadgear,garbSignature,GARB} from '../mage-regalia.mjs';
 
 function tracingCanvas(){
  const operations=[];let depth=0;
@@ -106,4 +106,25 @@ test('reduce motion removes kinetic choreography while retaining class distincti
   drawMage(c.ctx,guest,{x:100,y:110,mageId:m.id,pose,time:5});
   assert.equal(c.ctx.depth,0);
  }
+});
+
+
+test('guest headgear has six distinct class-specific silhouettes with finite geometry',()=>{
+ const signatures=[];
+ for(const m of MAGES){
+  const {ctx,operations}=tracingCanvas();
+  drawClassHeadgear(ctx,m.id);
+  assert.equal(ctx.depth,0);
+  assert.ok(operations.length>18,m.id+' must have authored head geometry');
+  signatures.push(JSON.stringify(operations));
+ }
+ assert.equal(new Set(signatures).size,6);
+});
+test('user MASKOT crown takes precedence over class-specific guest headwear',()=>{
+ const avatar={...guest,source:'maskot',mascot:{animal:'rabbit',hat:'crown',face:'glasses'}};
+ const custom=tracingCanvas();
+ drawMage(custom.ctx,avatar,{x:75,y:90,scale:1,mageId:'wire',face:Math.PI/4,pose:{still:true}});
+ const paints=custom.operations.filter(x=>x[0]==='set'&&x[1]==='fillStyle').map(x=>x[2]);
+ assert.ok(paints.includes('#e2c078'),'original crown must remain visible');
+ assert.ok(!paints.includes('#7bbab1'),'do not replace user crown with wire antenna');
 });
