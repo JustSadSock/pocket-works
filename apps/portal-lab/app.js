@@ -431,7 +431,7 @@ function tick(t){
  if(!lastTime)lastTime=t;
  const dt=Math.min(.05,(t-lastTime)/1000);lastTime=t;
  if(!document.hidden){
-  if(!paused){
+  if(!paused&&settings.view!=='designer'){
    const advanceTime=dt*settings.timeScale*2;
    elapsed+=advanceTime;
    const m=currentMetric();
@@ -452,7 +452,7 @@ function tick(t){
   if(settings.view==='observer'){observatory.draw(ctx,displayW,displayH);dirty=false;}
   else if(settings.view==='matter'){materialLab.draw(ctx,displayW,displayH);dirty=false;}
   else if(settings.view==='wave'){waveLab.draw(ctx,displayW,displayH);dirty=false;}
-  else if(settings.view==='designer'){designer.draw(ctx,displayW,displayH);dirty=false;}
+  else if(settings.view==='designer'&&dirty){designer.draw(ctx,displayW,displayH);dirty=false;}
   else if(dirty){if(layout){if(settings.view==='profile')drawProfile();else drawMap();}dirty=false;}
  }
  requestAnimationFrame(tick);
