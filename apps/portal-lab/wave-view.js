@@ -27,11 +27,16 @@ export function createWaveLab(options={}){
   amplitude:1
  };
  let metric={a:1,eta:0},wave=null,phase='ready',active=false;
+ const waterfallCanvas=document.createElement('canvas');
+ waterfallCanvas.width=201;waterfallCanvas.height=160;
+ const waterfallCtx=waterfallCanvas.getContext('2d',{alpha:false});
+ const waterfallImage=waterfallCtx.createImageData(201,160);
+ let cachedLastRow=null;
  const onAction=options.onAction||(()=>{});
  const save=()=>{try{localStorage.setItem(key,JSON.stringify(state));}catch{}};
  function rebuild(){
   wave=createWave({...state,eta:metric.eta});
-  phase='ready';update();save();
+  cachedLastRow=null;phase='ready';update();save();
  }
  function configure(m){metric={...m};rebuild();}
  function setActive(value){active=value;if(active){if(!wave)rebuild();update();}else{$('shoot').disabled=false;}}
@@ -92,20 +97,25 @@ export function createWaveLab(options={}){
   const waterfallY=topH+9,waterfallH=Math.max(55,Math.floor(h*.25));
   ctx.fillStyle='#091719';ctx.fillRect(pad,waterfallY,w-2*pad,waterfallH);
   const history=wave.waterfall,rows=history.length;
-  const colored=a=>{
-   const u=clamp(a,-1.6,1.6)/1.6;
-   return u>=0?'rgba(193,227,197,'+(.09+.74*u).toFixed(3)+')':'rgba(222,147,120,'+(.09-.74*u).toFixed(3)+')';
-  };
-  if(rows){
-   const step=(w-2*pad)/200;
-   const rowH=waterfallH/Math.max(75,rows);
-   for(let row=0;row<rows;row++){
-    const y=waterfallY+waterfallH-(rows-row)*rowH,values=history[row];
-    for(let i=0;i<values.length;i++){
-     ctx.fillStyle=colored(values[i]);ctx.fillRect(pad+i*step,y,step+1,rowH+1);
+  if(history.at(-1)!==cachedLastRow){
+   const pixels=waterfallImage.data;
+   for(let j=0;j<160;j++){
+    const p=history[j-(160-rows)];
+    for(let i=0;i<201;i++){
+     const u=p?clamp(p[i],-1.6,1.6)/1.6:0;
+     const o=(j*201+i)*4;
+     const opacity=p?(.09+.74*Math.abs(u)):0;
+     const rgb=u>=0?[193,227,197]:[222,147,120];
+     pixels[o]=9+(rgb[0]-9)*opacity;
+     pixels[o+1]=23+(rgb[1]-23)*opacity;
+     pixels[o+2]=25+(rgb[2]-25)*opacity;
+     pixels[o+3]=255;
     }
    }
+   waterfallCtx.putImageData(waterfallImage,0,0);
+   cachedLastRow=history.at(-1);
   }
+  ctx.drawImage(waterfallCanvas,pad,waterfallY,w-2*pad,waterfallH);
   const throatX=map(0);
   stroke(ctx,throatX,waterfallY-5,throatX,waterfallY+waterfallH+4,'#f1d6b873',1.5);
   const da=map(WAVE_DETECTOR),db=map(-WAVE_DETECTOR);
