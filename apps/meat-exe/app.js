@@ -11,6 +11,7 @@ import {GENES,routeOptions,applyRoute,sanitizeArchive,unlockGene,equipGene,apply
 import {guardianForWave,isGuardian,guardianReady,guardianSpawnResolved,guardianDamage,guardianAction} from './guardians.js';
 import {pulsePlan,pulseEnemyKind,nextPulse} from './runPacing.js';
 import {addScar,scarSignature,scarSurfaceStats,locateWallWound} from './scars.js';
+import {initialAutoQuality,autoQualityWindow,runtimeBudget} from './runtimeBudget.js';
 import {PROTOCOLS,sanitizeProtocol,applyProtocol,extraEnemiesForPulse,incomingProtocolDamage,
   enemyProtocolSpeed,spawnCadence,registerCombatChain,recordFinishedRun,observedRunStats} from './runTuning.js';
 
@@ -41,6 +42,7 @@ let save=validateRun(safeRead('session'));
 let quality=safeRead('quality');if(!['auto','speed','detail'].includes(quality))quality='auto';
 let effectiveQuality=quality==='speed'?'low':quality==='detail'?'high':'medium';
 let gamepadFire=false,padMove={x:0,y:0},prevPadButtons=[],accumulator=0,lastPaint=0,fpsClock=0,fpsFrames=0;
+let autoMonitor=initialAutoQuality();
 let paintCoolDownUntil=0,paintCost=0,draftIndex=0,lastForkNearby='',transitionRevision=0;
 const ui={
   menu:$('menu'),pause:$('pauseMenu'),result:$('result'),failure:$('failure'),hud:$('hud'),
@@ -879,7 +881,7 @@ function setQuality(value){
   world?.setQuality(effectiveQuality);
   const labels={auto:'АВТО',speed:'СКОРОСТЬ',detail:'ДЕТАЛИ'};
   ui.qualityMenu.textContent=ui.qualityPause.textContent='ГРАФИКА: '+labels[quality];
-  fpsClock=0;fpsFrames=0;
+  fpsClock=0;fpsFrames=0;autoMonitor=initialAutoQuality();
 }
 function cycleQuality(){setQuality(quality==='auto'?'speed':quality==='speed'?'detail':'auto');sound('menu');}
 function pollGamepad(dt){
@@ -1017,9 +1019,12 @@ function frame(timestamp){
       }
       fpsClock+=dt;fpsFrames++;
       if(quality==='auto'&&fpsClock>4){
-        const fps=fpsFrames/fpsClock;
-        const next=fps<42?'low':fps>54?'medium':effectiveQuality;
-        if(next!==effectiveQuality){effectiveQuality=next;world.setQuality(next);}
+        const result=autoQualityWindow(autoMonitor,effectiveQuality,fpsFrames/fpsClock,
+          fpsClock,world.conservativeRenderer);
+        autoMonitor=result.state;
+        if(result.quality!==effectiveQuality){
+          effectiveQuality=result.quality;world.setQuality(effectiveQuality);
+        }
         fpsClock=0;fpsFrames=0;
       }
     }else{accumulator=0;}
@@ -1051,6 +1056,11 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   biome:world?.getBiome()?.id??null,worldStage:world?.getStage()??null,hazard:state?world?.getHazardAt(state.x,state.z):null,
   softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
   architecture:world?.getArchitectureSignature?.()??null,
+  runtime:{...(world?.getRuntimeStats?.()||{}),
+    budget:world?.getRuntimeStats?runtimeBudget(world.getRuntimeStats()):null,
+    measuredFps:autoMonitor.observedFps,
+    qualitySwitchAge:autoMonitor.secondsSinceSwitch,
+    autoSamples:autoMonitor.samples},
   tissueMemory:state?scarSignature(state.scars,state.wave):null,
   woundSurfaces:state?scarSurfaceStats(state.scars,state.wave):null,
   membranes:world?.getTissueSignature?.()||null,
