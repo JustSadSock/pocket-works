@@ -16,8 +16,6 @@ const APP_SHELL = [
   './mode-shell.mjs',
   './world-modes.mjs',
   './world-modes.css',
-  './multiworld.mjs',
-  './stations.html',
   './combat-core.mjs',
   './combat-worker.mjs',
   './manifest.webmanifest',
