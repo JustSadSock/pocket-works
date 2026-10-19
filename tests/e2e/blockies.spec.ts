@@ -98,6 +98,84 @@ test.describe('Blockies — solo/input/lifecycle smoke', () => {
     await expect(page.locator('#play-again-btn')).toContainText('Cancel ready');
   });
 
+
+  test('ghost projection lands where hard drop locks and never mutates the live piece', async ({ page }) => {
+    await openSolo(page);
+    const before = await page.evaluate(() => {
+      const win = window as any;
+      const player = win.uiManager.getTouchPlayer();
+      const piece = player.currentPiece.map((row: number[]) => [...row]);
+      const original = { ...player.position };
+      const predicted = win.uiManager.projectLanding(player);
+      return { piece, original, predicted, id: player.id + 1 };
+    });
+    expect(before.predicted.y).toBeGreaterThan(before.original.y);
+    expect(before.predicted.x).toBe(before.original.x);
+    const still = await page.evaluate(() => {
+      const win = window as any;
+      return { ...win.uiManager.getTouchPlayer().position };
+    });
+    expect(still.x).toBe(before.original.x);
+    await page.keyboard.press('Space');
+    const after = await page.evaluate(() => JSON.parse((window as any).render_game_to_text()));
+    for (let y = 0; y < before.piece.length; y++) {
+      for (let x = 0; x < before.piece[y].length; x++) {
+        if (before.piece[y][x]) {
+          expect(after.board[before.predicted.y + y][before.predicted.x + x]).toBe(before.id);
+        }
+      }
+    }
+  });
+
+  test('pointer capture repeats a held direction and releases cleanly', async ({ page }) => {
+    await openSolo(page);
+    const first = await page.evaluate(() => {
+      const ui = (window as any).uiManager;
+      const button = document.querySelector('#touch-controls [data-action="right"]') as HTMLElement;
+      const start = ui.getTouchPlayer().position.x;
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 41 }));
+      return { start, moved: ui.getTouchPlayer().position.x, pressed: button.getAttribute('aria-pressed') };
+    });
+    expect(first.moved).toBe(first.start + 1);
+    expect(first.pressed).toBe('true');
+    await page.waitForTimeout(280);
+    const moved = await page.evaluate(() => (window as any).uiManager.getTouchPlayer().position.x);
+    expect(moved).toBeGreaterThanOrEqual(first.moved + 1);
+    await page.evaluate(() => {
+      const button = document.querySelector('#touch-controls [data-action="right"]') as HTMLElement;
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 41 }));
+    });
+    await expect(page.locator('#touch-controls [data-action="right"]')).toHaveAttribute('aria-pressed','false');
+    expect(await page.evaluate(() => (window as any).uiManager.getInputState(0,'right').active)).toBe(false);
+  });
+
+  test('releasing a keyboard key preserves another held touch pointer on the same action', async ({ page }) => {
+    await openSolo(page);
+    await page.keyboard.down('ArrowRight');
+    await page.evaluate(() => {
+      const button = document.querySelector('#touch-controls [data-action="right"]') as HTMLElement;
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 42 }));
+    });
+    await page.keyboard.up('ArrowRight');
+    expect(await page.evaluate(() => (window as any).uiManager.getInputState(0,'right').active)).toBe(true);
+    await page.evaluate(() => {
+      const button = document.querySelector('#touch-controls [data-action="right"]') as HTMLElement;
+      button.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 42 }));
+    });
+    expect(await page.evaluate(() => (window as any).uiManager.getInputState(0,'right').active)).toBe(false);
+  });
+
+  test('pause releases pointer holds before resuming the game', async ({ page }) => {
+    await openSolo(page);
+    await page.evaluate(() => {
+      const button = document.querySelector('#touch-controls [data-action="down"]') as HTMLElement;
+      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 43 }));
+    });
+    await page.locator('#pause-btn').click();
+    expect(await page.evaluate(() => (window as any).uiManager.getInputState(0,'down').active)).toBe(false);
+    await expect(page.locator('#touch-controls [data-action="down"]')).toHaveAttribute('aria-pressed','false');
+  });
+
   test('online-touch ownership and mobile board bounds', async ({ page }) => {
     await page.goto('/apps/blockies/', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => Boolean((window as any).uiManager));
