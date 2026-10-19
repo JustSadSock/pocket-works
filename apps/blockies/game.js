@@ -1,5 +1,10 @@
+import {ReplayArchive} from './replay-core-v1.js';
+import {ReplayViewer} from './replay-ui.js';
 import { createPlayerClass } from './player-core-v1.js';
 import { SHAPES, sevenBag, collision as coreCollision, rotateWithKick, chooseSpawn, clearCompletedRows, lineScore } from './engine-core-v1.js';
+const replayArchive = new ReplayArchive();
+let replayUI = null;
+
 // Localization
 const TRANSLATIONS = {
     en: {
@@ -1121,6 +1126,8 @@ class UIManager {
     }
 
     startGame(numPlayers, seed = Date.now()) {
+        replayArchive.finish();
+        replayUI?.close();
         this.clearHeldInputs();
         if (this.gameFrame != null) {
             cancelAnimationFrame(this.gameFrame);
@@ -1210,7 +1217,9 @@ class UIManager {
             playerInfoSidebar.classList.add('visible');
         }
 
+        replayArchive.start({seed,mode:this.isOnlineMode?'online':numPlayers>1?'local-coop':'solo'});
         this.drawBoard();
+        captureReplay(true);
 
         // The PocketNet simulation cannot be paused locally; hide an inert button.
         const pauseButton = document.getElementById('pause-btn');
@@ -1314,6 +1323,7 @@ class UIManager {
             });
 
             this.drawBoard();
+            captureReplay();
             this.updateTeamStatsIfNeeded();
 
             if (touchStatusNeedsUpdate) {
@@ -2112,6 +2122,10 @@ class UIManager {
     }
 
     quitToMenu() {
+        captureReplay(true);
+        replayArchive.finish();
+        replayUI?.close();
+        replayUI?.refreshButtons();
         this.clearHeldInputs();
         if (this.gameFrame != null) {
             cancelAnimationFrame(this.gameFrame);
@@ -2144,6 +2158,9 @@ class UIManager {
     }
 
     showGameOver() {
+        captureReplay(true);
+        replayArchive.finish();
+        replayUI?.refreshButtons();
         const scoresDiv = document.getElementById('final-scores');
         scoresDiv.innerHTML = '';
 
@@ -3090,6 +3107,8 @@ function init() {
 
     const ui = new UIManager();
     window.uiManager = ui;
+    replayUI = new ReplayViewer(replayArchive);
+    replayUI.attach();
 }
 
 // Start the game when the page loads
@@ -3102,6 +3121,10 @@ if (document.readyState === 'loading') {
 for(const [method,action] of [['move','move'],['rotate','rotate'],['drop','drop'],['hardDrop','hardDrop'],['hold','hold']]){
  const original=Player.prototype[method];
  Player.prototype[method]=function(...args){if(window.uiManager?.isOnlineMode){if(this.gameOver||(method==='hold'&&this.holdUsed))return;networkManager.sendPlayerInput({action,...(method==='move'?{direction:args[0]}:{})});return;}return original.apply(this,args);};
+}
+function captureReplay(force=false){
+ if(!replayArchive.active||!gameState.players.length||!gameState.board?.length)return;
+ replayArchive.record({board:gameState.board,players:gameState.players,score:gameState.sharedStats},Date.now(),force);
 }
 function applyNetworkSnapshot(s){
  if(!s||!Array.isArray(s.board)||!Array.isArray(s.players)||!s.sharedStats||!window.uiManager?.isOnlineMode)return;
@@ -3119,6 +3142,7 @@ function applyNetworkSnapshot(s){
    if(player){window.uiManager.updatePlayerInfo(player);window.uiManager.drawNextPiece(player);}
  });
  window.uiManager.refreshTouchStatus();
+ captureReplay();
 }
 document.querySelector('#join-code-btn').onclick=()=>networkManager.joinRoom(document.querySelector('#join-code').value.trim());
 document.addEventListener('visibilitychange', () => {
