@@ -41,6 +41,11 @@
         "slug": "trace-mosaic",
         "spatialDifference": "SHOCK uses a pressure-field instrument bay rather than the source project's discrete object geometry.",
         "interactionDifference": "Gas impulse injection, boundary drawing and live pressure measurement have distinct controls and physical consequences."
+      },
+      {
+        "slug": "meat-exe",
+        "spatialDifference": "MEAT.EXE fills the viewport with first-person corridors and an environmental combat HUD; SHOCK is a stationary transparent 2D computational gas chamber with laboratory instrumentation.",
+        "interactionDifference": "MEAT.EXE uses continuous exploration and embodied combat; SHOCK uses diaphragm initiation, quantitative sensors, time series and freehand reflective boundaries."
       }
     ]
   },
