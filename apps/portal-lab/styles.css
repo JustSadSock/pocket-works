@@ -482,3 +482,36 @@ body[data-lab-view="notebook"] .canvas-hint{font-size:9px}
  .topbar>.top-actions .save-experiment{min-width:0;min-height:37px}
  .topbar>.top-actions .export{min-width:0}
 }
+
+/* v1.1 — scientific optical instrumentation: the curves are geodesic
+   source-sky coordinates, never free-standing decorative lens flares. */
+.lens-survey-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:9px 0 13px}
+.lens-survey-modes button{background:#dae4d8;border:1px solid #a9bfae;color:#4f6f5e;padding:8px 4px;min-height:38px;font-size:9px;font-weight:730;line-height:1.3}
+.lens-survey-modes button.selected{background:#315e54;border-color:#315e54;color:#f3f1db}
+.lens-survey-switches{border-top:1px solid #b3c6b8;border-bottom:1px solid #b3c6b8;padding:9px 0;display:grid;gap:8px}
+.lens-toggle{display:flex;align-items:center;gap:9px;color:#40685a;font-weight:630;font-size:10px;line-height:1.4;cursor:pointer;min-height:30px}
+.lens-toggle input{accent-color:#3d7664;width:16px;height:16px;flex-shrink:0}
+.lens-comparison{margin-top:10px!important}
+.lens-comparison[hidden]{display:none}
+.lens-caption-line{display:flex;align-items:center;justify-content:space-between;gap:7px;margin:12px 0 9px;padding:10px 7px;background:#d5e2d9;font:700 9px/1.45 ui-monospace,Consolas,monospace;color:#58776a}
+.lens-caption-line span:last-child{color:#3b695a;text-align:right}
+.lens-camera-controls{margin:0;padding:0}
+.lens-camera-presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:9px 0}
+.lens-camera-presets button{min-height:35px;border:1px solid #adc2af;color:#3c705d;background:transparent;padding:6px 3px;font-size:10px;font-weight:720}
+.lens-camera-presets button:hover,.lens-navigator button:hover{background:#d2e0d3}
+.lens-camera-presets button:active,.lens-navigator button:active{transform:translateY(1px)}
+.lens-navigator{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:15px}
+.lens-navigator button{background:#d6e2d5;border:1px solid #b1c6b5;color:#3d6d5d;font-weight:760;font-size:16px;min-height:38px}
+.lens-quality{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#4a6e5e;font-size:11px;font-weight:650}
+.lens-quality select{min-height:37px;min-width:118px;background:#e4ebe1;border:1px solid #a0b8a5;color:#31594c;padding:8px;font:600 10px ui-monospace,Consolas,monospace}
+.lens-survey-caveat{border-left:2px solid #a3b7a8;padding-left:10px;margin:14px 0 18px;font-size:10px;line-height:1.55;color:#7b9381}
+body[data-lab-view="observer"] .canvas-frame{background:#06191c}
+@media(max-width:900px){
+.lens-camera-controls{grid-column:1/-1}
+.lens-camera-presets{grid-template-columns:repeat(4,minmax(0,1fr))}
+.lens-survey-modes,.lens-survey-switches,.lens-caption-line,.lens-comparison,.lens-quality,.lens-survey-caveat{grid-column:1/-1}
+}
+@media(max-width:540px){
+.lens-camera-presets{grid-template-columns:repeat(2,minmax(0,1fr))}
+.lens-survey-modes button{font-size:9px}
+}

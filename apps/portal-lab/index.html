@@ -302,6 +302,30 @@
 <div class="observer-region" id="lens-region">A · ВНЕШНИЙ РЕГИОН</div><div class="optical-diagnostics" id="lens-optical-read" aria-live="polite">Подготовка оптического поля</div>
 <label class="range-field"><span>Удаление от горловины <output id="lens-distance-value">2.10</output> <small>a</small></span><input id="lens-distance" type="range" min=".2" max="6" step=".1" value="2.1"></label>
 <label class="range-field"><span>Угол обзора <output id="lens-fov-value">80</output> <small>°</small></span><input id="lens-fov" type="range" min="50" max="110" step="2" value="80"></label>
+<div class="section-caption second"><span>НЕБЕСНАЯ СЪЁМКА</span><span>φ / θ</span></div>
+<div class="lens-survey-modes" role="group" aria-label="Способ отображения звёздного поля">
+<button type="button" data-lens-mode="stars">Звёзды</button>
+<button type="button" data-lens-mode="combined">Звёзды + сетка</button>
+<button type="button" data-lens-mode="coordinates">Угловая сетка</button>
+</div>
+<div class="lens-survey-switches">
+<label class="lens-toggle"><input type="checkbox" id="lens-compare"> Сравнить с неискажённым небом</label>
+<label class="lens-toggle"><input type="checkbox" id="lens-geometry" checked> Профиль горловины R(l)</label>
+</div>
+<label class="range-field lens-comparison" id="lens-comparison-group"><span>Граница сравнения <output id="lens-comparison-value">50</output><small> %</small></span><input id="lens-divider" type="range" min="8" max="92" step="1" value="50"></label>
+<div class="lens-caption-line"><span>ЗНАЧЕНИЯ НА ЭКРАНЕ</span><span id="lens-observed">A: — · B: —</span></div>
+<div class="lens-camera-controls">
+<div class="section-caption second"><span>ПОЛОЖЕНИЕ КАМЕРЫ</span><span>БЫСТРЫЙ ПОВОРОТ</span></div>
+<div class="lens-camera-presets" role="group" aria-label="Предустановки камеры">
+<button type="button" data-lens-preset="throat">На горловину</button>
+<button type="button" data-lens-preset="oblique">Под углом</button>
+<button type="button" data-lens-preset="wide">Широкий</button>
+<button type="button" data-lens-preset="away">От горловины</button>
+</div>
+<div class="lens-navigator"><button type="button" data-lens-turn="left" aria-label="Повернуть влево">←</button><button type="button" data-lens-turn="up" aria-label="Поднять камеру">↑</button><button type="button" data-lens-turn="down" aria-label="Опустить камеру">↓</button><button type="button" data-lens-turn="right" aria-label="Повернуть вправо">→</button></div>
+</div>
+<label class="lens-quality"><span>Точность трассировки</span><select id="lens-quality"><option value="balanced">Стандартная</option><option value="fine">Высокая</option></select></label>
+<p class="lens-survey-caveat">Сетка нанесена на обе фоновые небесные сферы и искривляется только рассчитанными световыми геодезическими. При сравнении слева показана исходная сфера текущего региона без гравитационной трассировки — это эталон направления, а не третий физический мир.</p>
 <div class="observer-actions"><button id="lens-flight" type="button">Пройти горловину</button><button id="lens-reset" type="button">Исходный вид</button></div>
 <div class="section-caption second"><span>ПРОБНАЯ МАТЕРИЯ</span><span>Jacobi</span></div>
 <button type="button" class="probe-launch" id="lens-probe">Отправить зонд <span>↗</span></button>

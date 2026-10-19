@@ -170,7 +170,16 @@ function captureExperiment(){
   put('observer-l',st.l,'Координата наблюдателя l/a','a');
   put('observer-fov',st.fov,'Угол обзора','°');
   put('observer-yaw',st.yaw,'Поворот камеры','рад');
-  put('observer-rays',info.rays,'Расчитанные угловые лучи','шт');
+  put('observer-rays',info.rays,'Рассчитанные угловые лучи','шт');
+  if(info.opticalStats){
+   put('observer-sky-a',info.opticalStats.regionA,'Доля изображения региона A','%');
+   put('observer-sky-b',info.opticalStats.regionB,'Доля изображения региона B','%');
+   put('observer-sky-unknown',info.opticalStats.unresolved,'Неразрешённые лучи','%');
+  }
+  if(info.selected){
+   put('observer-impact',info.selected.impact/m.a,'Прицельный параметр b/a','');
+   put('observer-winding',info.selected.winding,'Число оборотов луча','');
+  }
  }else if(mode==='wave'){
   extras.wave={...waveLab.state};
   const d=waveLab.diagnostics;
