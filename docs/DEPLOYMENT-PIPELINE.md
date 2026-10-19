@@ -20,9 +20,10 @@ npx wrangler deploy --assets ./dist-site/
 
 `wrangler.jsonc` owns the Worker name, compatibility date and static asset directory.
 
-`deploy:site` must remain limited to:
+`deploy:site` must remain limited to a fast read-only PocketNet preflight followed by:
 
 ```bash
+npm run pocketnet:check
 npm run build:enhanced
 npm run prepare:site
 npm run validate:site
@@ -43,6 +44,15 @@ npm run ci:full
 `ci:full` owns engine preparation, AI audits, Enhanced builds, all structural validators, unit tests and Forge smoke tests. Add new expensive safety checks here rather than to the Cloudflare production command.
 
 When hosted Actions minutes are temporarily unavailable, required status checks may be disabled at the repository ruleset level. This does not change application ownership boundaries or permit mixed app/platform PRs.
+
+## Release gates and commit hygiene
+
+- Every complete app release lands on `main` as one squash commit from an isolated PR. Intermediate work stays on the branch.
+- Cloudflare runs `pocketnet:check` **before** compiling Enhanced apps. The command does not create snapshots or modify generated files.
+- Server changes require `node scripts/build-pocketnet-modules.mjs --snapshot` on the working branch, with source, the new append-only pinned version and `modules.lock.json` committed atomically. Previously pinned versions are immutable.
+- `release-preflight` in GitHub Actions tests snapshot consistency before expensive validation jobs. App-only PRs may include only the matching game's PocketNet snapshot and lock update outside its app directory.
+- Cover/screenshot automation is daily/manual instead of triggering on each app push. Cloudflare still builds every commit that actually lands on `main`; eliminate redundant commits at the source.
+- To enforce *no direct push to main*, configure GitHub branch protection/rulesets to require PRs and relevant status checks; repository files alone cannot block an externally initiated direct push.
 
 ## Enhanced application releases
 

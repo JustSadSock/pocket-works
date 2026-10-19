@@ -13,9 +13,9 @@ Every application release is one coherent change set. Do not publish a half-fini
 7. Mirror version, date and notes in the application Service Worker.
 8. For an Enhanced application, run `npm run build:enhanced` and include its generated deployable files.
 9. Validate manifests with `npm run registry:check`; do not commit a root `apps.json`.
-10. Run the affected app checks and `npm run health` when the validation environment is available.
+10. Run `npm run pocketnet:check`, the affected app checks and `npm run health` when the validation environment is available. If server rules changed, run `node scripts/build-pocketnet-modules.mjs --snapshot` first and commit the new pinned version and lock atomically.
 11. Open a pull request that modifies only `apps/<slug>/**` unless it is explicitly a platform change.
-12. Squash-merge so `main` receives one release commit.
+12. Squash-merge so `main` receives one release commit. Never push intermediate development steps straight to `main`; use an expedited but tested PR for emergency fixes.
 13. Verify that Cloudflare Workers Builds publishes the exact squash SHA successfully.
 
 ## Deployment pipeline invariant

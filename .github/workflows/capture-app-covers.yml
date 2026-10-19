@@ -2,6 +2,7 @@ name: Capture Application Covers
 
 # Covers are real browser screenshots stored separately from apps. A failed capture
 # leaves the app's authored icon intact; it never substitutes generated AI scenery.
+# Daily/manual only: per-app pushes were generating extra main commits and deployments.
 on:
   workflow_dispatch:
     inputs:
@@ -13,15 +14,6 @@ on:
         description: 'Maximum screenshots per run (1–24)'
         required: false
         default: '12'
-  push:
-    branches: [main]
-    paths:
-      - 'apps/**'
-      - 'deck-shell.css'
-      - 'scripts/capture-covers.mjs'
-      - 'scripts/cover-intelligence.mjs'
-      - 'scripts/cover-gameplay-entry.mjs'
-      - '.github/workflows/capture-app-covers.yml'
   schedule:
     - cron: '17 3 * * *'
 
@@ -48,10 +40,9 @@ jobs:
         run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Synchronize game server snapshots for isolated preview
-        # Screenshot runs need a buildable site, but never publish snapshot
-        # changes back into the source repository.
-        run: node scripts/build-pocketnet-modules.mjs --snapshot
+      - name: Verify committed PocketNet snapshots before screenshot build
+        # Never silently repair release artifacts inside a screenshot workflow.
+        run: node scripts/build-pocketnet-modules.mjs --check
       - name: Assemble production-like site
         run: npm run build:quality-site
       - name: Check screenshot lifecycle tests and syntax
@@ -97,10 +88,7 @@ jobs:
           git config user.name 'pocket-works-cover-bot'
           git config user.email 'pocket-works-cover-bot@users.noreply.github.com'
           git commit -m 'chore(covers): refresh genuine app screenshots'
-          # Snapshot scaffolding was generated only for preview. Discard those
-          # local changes before rebasing our covers-only commit.
-          git reset --hard HEAD
-          git clean -fd pocketnet/module-versions/
+          # Keep the single daily/manual cover commit; never create snapshots.
           # Pocket Works changes frequently while the batch runs: integrate
           # newer main commits without ever force-pushing unrelated code.
           for attempt in 1 2 3 4 5; do

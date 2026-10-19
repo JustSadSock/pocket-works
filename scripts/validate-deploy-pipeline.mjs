@@ -20,9 +20,15 @@ const [packageSource, wranglerSource, workflow, godotWorkflow, prepareSite, vali
 const packageJson = JSON.parse(packageSource);
 const wrangler = JSON.parse(wranglerSource);
 const scripts = packageJson.scripts || {};
-const deployCommand = 'npm run build:enhanced && npm run prepare:site && npm run validate:site';
-const fullCiCommand = 'npm run prepare:sente-engine && npm run test:sente-ai && npm run health && npm run prepare:site && npm run validate:site';
+const deployCommand = 'npm run pocketnet:check && npm run build:enhanced && npm run prepare:site && npm run validate:site';
+const fullCiCommand = 'npm run pocketnet:check && npm run prepare:sente-engine && npm run test:sente-ai && npm run health && npm run prepare:site && npm run validate:site';
 
+if (scripts['pocketnet:check'] !== 'node scripts/build-pocketnet-modules.mjs --check') {
+  errors.push('PocketNet preflight must be read-only and fail before production builds start');
+}
+if (!scripts['validate:pipeline']?.includes('npm run test:pocketnet:release')) {
+  errors.push('Pipeline validation must execute PocketNet snapshot regression tests');
+}
 if (scripts['deploy:site'] !== deployCommand) {
   errors.push(`package.json deploy:site must build Enhanced apps before Cloudflare production assembly: ${deployCommand}`);
 }
