@@ -28,3 +28,8 @@
 - Проверить, что во время живого drag сетевые снимки не разрывают pointer capture; теперь игровое поле обновляется точечно, но браузерная приёмка обязательна.
 - При первом входе текстуры SVG режутся на canvas асинхронно; добавлена гидратация отложенных текстур без замены плитки. Проверено изолированным регрессионным тестом, не на физическом устройстве.
 - Короткий реплей и расширенный soundtrack ещё не реализованы; звук сейчас минималистичный и выключаемый, вибрация включается только там, где её предоставляет устройство.
+
+## v0.3.1 — real-browser QA instrumentation
+- Six first-puzzle SVGs replaced; all other puzzle artworks remain unchanged.
+- Browser script `qa/atelier-browser.mjs` records menu, board, reference, after first placement and final artwork in Chromium/WebKit, four viewports; checks 16/16 completion.
+- CI trigger: https://github.com/JustSadSock/pocket-works/issues/1042. Run completion and screenshot review must be verified independently; do not claim passed without run artifacts.
