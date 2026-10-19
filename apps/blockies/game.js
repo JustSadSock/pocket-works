@@ -609,7 +609,9 @@ function createActionState() {
     return {
         active: false,
         heldTime: 0,
-        hasFiredInitial: false
+        hasFiredInitial: false,
+        repeatStarted: false,
+        sources: new Set()
     };
 }
 
@@ -974,9 +976,10 @@ class UIManager {
         this.networkPlayers = {}; // Map of network player IDs to local indices
         this.localPlayerIndex = -1; // Local player index in online mode
 
-        this.moveRepeatInterval = 90;
+        this.moveInitialDelay = 170; // DAS: delay before first repeat
+        this.moveRepeatInterval = 65; // ARR after DAS
         this.softDropInitialDelay = 0;
-        this.softDropRepeatInterval = 55;
+        this.softDropRepeatInterval = 48;
 
         this.setupEventListeners();
         this.initTouchControls();
@@ -1011,6 +1014,11 @@ class UIManager {
             scanGamepads();
             this.updateGamepadStatus();
             // Remove assignments for this gamepad
+            for (const player of gameState.players) {
+                for (const action of ['left','right','down']) {
+                    this.releaseContinuousAction(player.id,action,'gamepad:'+e.gamepad.index);
+                }
+            }
             delete gameState.gamepads.assignments[e.gamepad.index];
             gameState.gamepads.buttonStates.delete(e.gamepad.index);
         });
@@ -1059,11 +1067,18 @@ class UIManager {
                 const wasPressed = buttonState[action].wasPressed;
                 buttonState[action].pressed = pressed;
                 
-                // Trigger on button press (not held) - similar to keyboard behavior
-                if (pressed && !wasPressed) {
+                if (action === 'left' || action === 'right' || action === 'down') {
+                    const source = 'gamepad:' + i;
+                    if (pressed && !wasPressed) {
+                        if (action === 'down') this.activateSoftDrop(player, source);
+                        else this.activateMovementAction(player, action, source);
+                    } else if (!pressed && wasPressed) {
+                        this.releaseContinuousAction(player.id, action, source);
+                    }
+                } else if (pressed && !wasPressed) {
                     this.handleGamepadAction(player, action);
                 }
-                
+
                 buttonState[action].wasPressed = pressed;
             }
         }
@@ -1976,39 +1991,38 @@ class UIManager {
         return states[action];
     }
 
-    activateMovementAction(player, action) {
+    activateMovementAction(player, action, source = 'keyboard') {
         const state = this.getInputState(player.id, action);
         if (!state) return false;
-
-        let moved = false;
-        if (!state.active) {
-            state.active = true;
-            state.heldTime = 0;
-            state.hasFiredInitial = true;
-            player.move(action === 'left' ? -1 : 1);
-            moved = true;
-        }
-
-        return moved;
+        state.sources.add(source);
+        if (state.active) return false;
+        state.active = true;
+        state.heldTime = 0;
+        state.repeatStarted = false;
+        state.hasFiredInitial = true;
+        player.move(action === 'left' ? -1 : 1);
+        return true;
     }
 
-    activateSoftDrop(player) {
+    activateSoftDrop(player, source = 'keyboard') {
         const state = this.getInputState(player.id, 'down');
         if (!state) return;
-
-        if (!state.active) {
-            state.active = true;
-            state.heldTime = 0;
-            state.hasFiredInitial = false;
-        }
+        state.sources.add(source);
+        if (state.active) return;
+        state.active = true;
+        state.heldTime = 0;
+        state.repeatStarted = false;
+        state.hasFiredInitial = false;
     }
 
-    releaseContinuousAction(playerId, action) {
+    releaseContinuousAction(playerId, action, source = 'keyboard') {
         const state = this.getInputState(playerId, action);
         if (!state) return;
-
+        state.sources.delete(source);
+        if (state.sources.size) return;
         state.active = false;
         state.heldTime = 0;
+        state.repeatStarted = false;
         state.hasFiredInitial = false;
     }
 
@@ -2036,9 +2050,14 @@ class UIManager {
                 return;
             }
 
-            if (state.heldTime >= moveRepeat) {
-                player.move(direction === 'left' ? -1 : 1);
-                state.heldTime = Math.max(0, state.heldTime - moveRepeat);
+            const threshold = state.repeatStarted ? moveRepeat : this.moveInitialDelay;
+            if (state.heldTime >= threshold) {
+                state.heldTime -= threshold;
+                state.repeatStarted = true;
+                // Catch up only a few frames, never teletransport after tab inactivity.
+                const steps = Math.min(3, 1 + Math.floor(state.heldTime / moveRepeat));
+                for (let i = 0; i < steps; i++) player.move(direction === 'left' ? -1 : 1);
+                state.heldTime %= moveRepeat;
             }
         });
 
@@ -2168,8 +2187,15 @@ class UIManager {
             for (const state of Object.values(states)) {
                 state.active = false;
                 state.heldTime = 0;
+                state.repeatStarted = false;
                 state.hasFiredInitial = false;
+                state.sources.clear();
             }
+        }
+        for (const [id, entry] of this.activeTouchPointers || []) {
+            entry.button.classList.remove('is-held');
+            entry.button.setAttribute('aria-pressed', 'false');
+            this.activeTouchPointers.delete(id);
         }
     }
 
