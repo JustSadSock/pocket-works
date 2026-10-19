@@ -1,0 +1,47 @@
+import {test,expect} from '@playwright/test';
+
+test('build custom arena, learn its rules and reload edited layout',async({page})=>{
+ test.setTimeout(90000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await page.locator('[data-world-mode="combat"]').click();
+ await expect(page.locator('#studioEdit')).toBeVisible();
+ page.once('dialog',dialog=>dialog.accept());
+ await page.locator('#studioPreset').selectOption('control');
+ await expect(page.locator('#studioMode')).toHaveValue('control');
+ await page.locator('#studioEdit').click();
+ await page.locator('#studioBrush').selectOption('wall');
+ await page.locator('#battleCanvas').click({position:{x:200,y:80}});
+ await expect(page.locator('#studioCount')).toContainText('1 стен');
+ await page.locator('#studioUndo').click();
+ await expect(page.locator('#studioCount')).toContainText('0 стен');
+ await page.locator('#studioRedo').click();
+ await expect(page.locator('#studioCount')).toContainText('1 стен');
+ await page.locator('#studioEdit').click();
+ await page.locator('#studioName').fill('Control QA');
+ await page.locator('#studioName').dispatchEvent('change');
+ await page.locator('#studioSave').click();
+ await expect(page.locator('#studioLibrary')).toContainText('Control QA');
+ await page.locator('#battleTest').click();
+ await expect(page.locator('#battleSummary')).toContainText('Победа:',{timeout:25000});
+ await page.locator('#battleIterations').selectOption('8');
+ await page.locator('#battleTrain').click();
+ await expect(page.locator('#battleStop')).toBeDisabled({timeout:90000});
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.locator('[data-world-mode="combat"]').click();
+ await expect(page.locator('#studioCount')).toContainText('1 стен');
+ await expect(page.locator('#studioMode')).toHaveValue('control');
+ expect(errors).toEqual([]);
+});
+test('combat stats, powers and objective win conditions are editable',async({page})=>{
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await page.locator('[data-world-mode="combat"]').click();
+ await page.locator('#studioMode').selectOption('score');
+ await expect(page.locator('#studioScoreWrap')).toBeVisible();
+ await page.locator('#studioScore').fill('40');
+ await page.locator('#studioScore').dispatchEvent('change');
+ await page.locator('#studioTime').fill('20');
+ await page.locator('#studioTime').dispatchEvent('change');
+ await page.locator('#battleTest').click();
+ await expect(page.locator('#battleSummary')).toContainText('Победа:',{timeout:15000});
+});
