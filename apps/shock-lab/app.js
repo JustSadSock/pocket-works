@@ -123,8 +123,8 @@ function refreshControls(){
   $('power-value').textContent=state.power.toFixed(1);$('speed-value').textContent=state.speed+'×';
   $('chamber-name').textContent=TITLES[state.preset];
   $('view-short').textContent=({pressure:'ΔP',density:'ρ',schlieren:'∇ρ',mach:'M',vorticity:'ω'})[state.view];
-  $('legend-low').textContent=state.view==='vorticity'?'↻ ПО ЧАСОВОЙ':state.view==='mach'?'ДОЗВУК':'РАЗРЕЖЕНИЕ';
-  $('legend-high').textContent=state.view==='vorticity'?'↺ ПРОТИВ ЧАСОВОЙ':state.view==='mach'?'СВЕРХЗВУК':'СЖАТИЕ';
+  $('legend-low').textContent=state.view==='vorticity'?'↺ ПРОТИВ ЧАСОВОЙ':state.view==='mach'?'ДОЗВУК':'РАЗРЕЖЕНИЕ';
+  $('legend-high').textContent=state.view==='vorticity'?'↻ ПО ЧАСОВОЙ':state.view==='mach'?'СВЕРХЗВУК':'СЖАТИЕ';
   $('legend-ramp').classList.toggle('mach-ramp',state.view==='mach');
   $('legend-ramp').classList.toggle('vorticity-ramp',state.view==='vorticity');
   $('sound').textContent=state.sound?'ЗВУК ВКЛ.':'ЗВУК ВЫКЛ.';
