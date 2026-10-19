@@ -400,25 +400,34 @@ function engineeringPower(room){
 
 function propagateHeat(room,dt){
   const mods=room.ship.modules,delta=new Map(mods.map(m=>[m.id,0]));
-  for(let i=0;i<mods.length;i++)for(let j=i+1;j<mods.length;j++){
-    const a=mods[i],b=mods[j],fa=footprint(a),fb=new Set(footprint(b).map(c=>ckey(c.x,c.y)));
-    let seams=0;
-    for(const c of fa)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])
-      if(fb.has(ckey(c.x+dx,c.y+dy)))seams++;
-    if(!seams)continue;
+  // Build physical seams in O(hull cells), not O(modules² * footprints).
+  const byCell=new Map(),byId=new Map(mods.map(m=>[m.id,m]));
+  for(const m of mods)for(const c of footprint(m))byCell.set(ckey(c.x,c.y),m.id);
+  const seamCount=new Map();
+  for(const [key,id] of byCell){
+    const {x,y}=parseKey(key);
+    for(const [dx,dy] of [[1,0],[0,1]]){
+      const other=byCell.get(ckey(x+dx,y+dy));
+      if(!other||other===id)continue;
+      const pair=id<other?`${id}|${other}`:`${other}|${id}`;
+      seamCount.set(pair,(seamCount.get(pair)||0)+1);
+    }
+  }
+  const neighbors=new Map(mods.map(m=>[m.id,new Set()]));
+  for(const [pair,seams] of seamCount){
+    const [ai,bi]=pair.split("|"),a=byId.get(ai),b=byId.get(bi);
+    neighbors.get(ai).add(bi);neighbors.get(bi).add(ai);
     const amount=(a.heat-b.heat)*Math.min(.27,seams*.055)*dt;
-    delta.set(a.id,delta.get(a.id)-amount);
-    delta.set(b.id,delta.get(b.id)+amount);
+    delta.set(ai,delta.get(ai)-amount);
+    delta.set(bi,delta.get(bi)+amount);
   }
   for(const m of mods)m.heat=clamp(m.heat+delta.get(m.id),0,130);
   for(const radiator of mods.filter(m=>MODULES[m.templateId]?.type==="radiator"&&m.powered&&
     m.status==="online"&&!m.overheated)){
     const template=MODULES[radiator.templateId],eff=placementEffect(room,radiator);
     const transfer=template.cooling*clamp(eff,.5,1.7)*(radiator.coolantBoost||1)*dt;
-    const fp=footprint(radiator);
-    const neighbors=mods.filter(m=>m!==radiator&&footprint(m).some(c=>
-      fp.some(d=>Math.abs(c.x-d.x)+Math.abs(c.y-d.y)===1)));
-    for(const m of neighbors)m.heat=Math.max(0,m.heat-transfer/Math.max(1,neighbors.length));
+    const adjacent=[...neighbors.get(radiator.id)].map(id=>byId.get(id));
+    for(const m of adjacent)m.heat=Math.max(0,m.heat-transfer/Math.max(1,adjacent.length));
     radiator.heat=Math.max(0,radiator.heat-transfer*.65);
   }
   for(const m of mods){
@@ -839,7 +848,6 @@ function updateShip(room, dt) {
         ship.energy-=energyUse;
         m.coolantBoost=2.3;
         addModuleHeat(room,m,4*dt);
-        room.events.push({type:"radiator-boost",moduleId:m.id});
       }
     }
     if (t.type === "engine") {
