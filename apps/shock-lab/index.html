@@ -234,11 +234,8 @@
         <button id="csv" class="csv-button" type="button" data-native-press>ЭКСПОРТ ОСЦИЛЛОГРАММЫ · CSV</button>
       </section>
 
-      </div>
-      <div class="control-bottom">
-        <button type="button" class="run-button" id="run" data-native-press><span id="run-symbol">Ⅱ</span><span id="run-text">ПАУЗА</span></button>
-        <button type="button" class="step-button" id="step" data-native-press title="Один шаг симуляции">ШАГ ›</button>
-        <button type="button" class="clear-button" id="clear" data-native-press>СБРОС ВОЛН</button>
+      <section class="control-section constructor-storage" data-panel="construct">
+        <div class="section-title"><span>04</span><label>ПРАВКИ И ФАЙЛЫ</label></div>
         <div class="secondary-actions">
           <button id="undo" type="button" data-native-press>↶ ОТМЕНИТЬ ШТРИХ</button>
           <button id="remove-edits" type="button" data-native-press>УДАЛИТЬ ПРАВКИ</button>
@@ -248,6 +245,13 @@
           <p>2D идеальный газ · γ = 1.4 · конечные объёмы / HLL. Края области пропускают волны, стены отражают. Ударная труба задаёт начальный скачок давления, затем использует тот же численный решатель. V* — оценка скорости между датчиками в клетках за единицу времени решателя, корректна только при последовательном прохождении одного фронта. Это не инженерный расчёт взрывобезопасности.</p>
           <div class="data-buttons"><button id="export" type="button">ЭКСПОРТ JSON</button><button id="import" type="button">ИМПОРТ JSON</button><input id="import-file" type="file" accept="application/json,.json" hidden></div>
         </details>
+      </section>
+      </div>
+      <div class="control-bottom">
+        <button type="button" class="run-button" id="run" data-native-press><span id="run-symbol">Ⅱ</span><span id="run-text">ПАУЗА</span></button>
+        <button type="button" class="step-button" id="step" data-native-press title="Один шаг симуляции">ШАГ ›</button>
+        <button type="button" class="clear-button" id="clear" data-native-press>СБРОС ВОЛН</button>
+
       </div>
     </aside>
   </div>
