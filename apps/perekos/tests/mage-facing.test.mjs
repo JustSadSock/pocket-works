@@ -42,14 +42,19 @@ test('all eight directions are mapped consistently across the 360-degree wrap',(
  assert.equal(faceView(0).isSide,true);
  assert.equal(faceView(Math.PI).isSide,true);
 });
-test('mirrored western weapon always rotates to its real world-space shot direction',()=>{
+test('mirrored western weapon always rotates precisely to the real shot ray, despite torso deformation',()=>{
  for(let i=0;i<128;i++){
-  const facing=-Math.PI+i*TAU/128,r=weaponRotation(facing);
-  // Original weapon shaft is (0,-1). Rotate it locally, then root-mirror.
-  const sx=Math.cos(facing)<-.12?-1:1;
-  const worldX=sx*Math.sin(r),worldY=-Math.cos(r);
-  assert.ok(close(worldX,Math.cos(facing),1e-8),'weapon x mismatch at '+facing);
-  assert.ok(close(worldY,Math.sin(facing),1e-8),'weapon y mismatch at '+facing);
+  const facing=-Math.PI+i*TAU/128;
+  for(const squash of [.77,.9,1]){
+   for(const roll of [-.22,0,.19]){
+    const r=weaponRotation(facing,squash,roll);
+    const sx=Math.cos(facing)<-.12?-1:1;
+    const worldX=sx*squash*Math.sin(r+roll),worldY=-Math.cos(r+roll);
+    const actual=Math.atan2(worldY,worldX);
+    assert.ok(close(signedTurn(actual,facing),0,1e-8),
+      'weapon / shot angle mismatch at '+facing+' (scale '+squash+')');
+   }
+  }
  }
 });
 test('front, profile, quarter and rear draw anatomically different faces',()=>{
