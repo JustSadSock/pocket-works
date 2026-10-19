@@ -53,6 +53,19 @@ test('dense volleys reject corrupt records and cap work at twenty-four actual pr
  assert.ok(ops.length<MAX_KINETIC_SHOTS*150,'performance must remain bounded');
  assert.equal(JSON.stringify(s),unchanged);
 });
+test('visual projectile diameter follows the authoritative style radius',()=>{
+ for(const style of ['orb','flame','bolt','arc','rock','wave','echo']){
+  const q=shot(style),s=state();s.shots=[q];
+  const view=fakeCanvas();drawKineticProjectiles(view.ctx,s,0,{reduced:true});
+  const transform=view.ops.find(o=>o[0]==='scale');
+  assert.ok(transform,'missing scale for '+style);
+  assert.equal(transform[1],1,'base hitbox should have baseline art size: '+style);
+ }
+ const bigger=shot('rock');bigger.r=12;
+ const s=state();s.shots=[bigger];
+ const view=fakeCanvas();drawKineticProjectiles(view.ctx,s,0,{reduced:true});
+ assert.ok(view.ops.find(o=>o[0]==='scale')[1]>1);
+});
 test('reduced motion renders a byte-stable picture independent of time',()=>{
  const s=state();s.shots=[shot('arc','storm'),shot('flame','fire',3)];
  const snap=time=>{const {ctx,ops}=fakeCanvas();drawKineticProjectiles(ctx,s,time,{reduced:true});return ops};
