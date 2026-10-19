@@ -250,7 +250,15 @@ function beginGesture(ev){
     toast('ДАТЧИК ПЕРЕМЕЩЁН · ЗАПИСЬ ОЧИЩЕНА');
     return;
   }
-  if(state.tool==='pulse'&&tubeReady){toast('СНАЧАЛА РАЗОРВИТЕ МЕМБРАНУ');return;}
+  if(state.preset==='airfoil'&&state.tool==='pulse'&&sim.sample(pos.x*sim.nx,pos.y*sim.ny).solid){
+    const ix=Math.min(sim.nx-1,Math.floor(pos.x*sim.nx)),iy=Math.min(sim.ny-1,Math.floor(pos.y*sim.ny));
+    if(sim.body[iy*sim.nx+ix]){
+      try{display.setPointerCapture(ev.pointerId)}catch{}
+      pointer={id:ev.pointerId,pos,tool:'shape',initialY:pos.y,initialCamber:state.camber};
+      $('hint').textContent='ПЕРЕТАСКИВАЙТЕ КРЫЛО · МЕНЯЙТЕ КРИВИЗНУ';return;
+    }
+  }
+    if(state.tool==='pulse'&&tubeReady){toast('СНАЧАЛА РАЗОРВИТЕ МЕМБРАНУ');return;}
   try{display.setPointerCapture(ev.pointerId)}catch{}
   pointer={id:ev.pointerId,pos,at:performance.now(),points:[pos],tool:state.tool};
   if(state.tool==='pulse')addPulse(pos);
@@ -261,7 +269,11 @@ function moveGesture(ev){
   if(!pointer||pointer.id!==ev.pointerId||!sim)return;
   ev.preventDefault();
   const pos=getPosition(ev),old=pointer.pos;
-  if(pointer.tool==='wall'||pointer.tool==='erase'){
+  if(pointer.tool==='shape'){
+    const proposed=clamp(Math.round(pointer.initialCamber-(pos.y-pointer.initialY)*120),-6,6);
+    $('camber').value=String(proposed);$('camber-value').textContent=(proposed>0?'+':'')+proposed+'%';
+    refreshShapePreview(proposed);
+  }else if(pointer.tool==='wall'||pointer.tool==='erase'){
     sim.stroke(old.x*sim.nx,old.y*sim.ny,pos.x*sim.nx,pos.y*sim.ny,pointer.tool==='wall',brushRadius());
     if(Math.hypot(pos.x-old.x,pos.y-old.y)>.0025)pointer.points.push(pos);
   }else if(pointer.tool==='probe')probe=pos;
@@ -274,7 +286,13 @@ function moveGesture(ev){
 }
 function endGesture(ev){
   if(!pointer||ev.pointerId!==pointer.id)return;
-  if(pointer.tool==='wall'||pointer.tool==='erase'){
+  if(pointer.tool==='shape'){
+    const proposed=+$('camber').value;
+    if(proposed!==state.camber){
+      state.camber=proposed;persist();rebuildGeometry();resetGas(false);drawCpChart();drawLoadScope();
+      toast('ФОРМА КРЫЛА ИЗМЕНЕНА · НОВЫЙ РАСЧЁТ');
+    }else refreshControls();
+  }else if(pointer.tool==='wall'||pointer.tool==='erase'){
     const points=pointer.points.map(p=>[+p.x.toFixed(4),+p.y.toFixed(4)]);
     const tail=pointer.pos;
     const last=points[points.length-1];
@@ -614,6 +632,47 @@ function drawCpChart(){
   ctx.fillText('Cₚ',l+4,t+10);
 }
 
+
+function refreshShapePreview(camber=state.camber,thickness=state.thickness){
+ const p=$('shape-preview-path');if(!p)return;
+ const top=[],bottom=[];
+ for(let i=0;i<=26;i++){
+  const t=i/26,x=12+t*236,arch=camber*.86*4*t*(1-t),half=.53*thickness*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.85);
+  top.push([x,32-arch-half]);bottom.push([x,32-arch+half]);
+ }
+ p.setAttribute('d',[...top,...bottom.reverse()].map(([x,y],i)=>(i?'L':'M')+x.toFixed(2)+' '+y.toFixed(2)).join(' ')+' Z');
+}
+function drawLoadScope(){
+ const node=$('load-scope');if(node.closest('[hidden]'))return;
+ const rect=node.getBoundingClientRect();if(rect.width<30||rect.height<30)return;
+ const ratio=Math.min(devicePixelRatio||1,2),w=rect.width,h=rect.height;
+ if(node.width!==Math.round(w*ratio)||node.height!==Math.round(h*ratio)){node.width=Math.round(w*ratio);node.height=Math.round(h*ratio)}
+ const c=node.getContext('2d');c.setTransform(ratio,0,0,ratio,0,0);c.fillStyle='#0d2429';c.fillRect(0,0,w,h);
+ const l=39,r=w-10,t=14,b=h-20,ww=r-l,hh=b-t;
+ const all=loadHistory.samples,end=all.length?all[all.length-1].t:0,min=Math.max(0,end-16);
+ const selected=all.filter(x=>x.t>=min);
+ let peak=.25;for(const q of selected)peak=Math.max(peak,Math.abs(q.cl),Math.abs(q.cd));
+ peak=Math.min(20,peak*1.18);
+ const yy=v=>t+(peak-v)/(2*peak)*hh;
+ c.font='9px monospace';
+ for(let i=0;i<=4;i++){
+  const y=t+i*hh/4;c.strokeStyle=i===2?'#607875':'#2c4447';c.lineWidth=i===2?1.2:1;
+  c.beginPath();c.moveTo(l,y);c.lineTo(r,y);c.stroke();
+  c.fillStyle='#93aaa8';c.textAlign='right';c.fillText((peak-i*peak/2).toFixed(2),l-5,y+3);
+ }
+ for(let i=0;i<=4;i++){
+  const x=l+i*ww/4;c.strokeStyle='#2c4245';c.beginPath();c.moveTo(x,t);c.lineTo(x,b);c.stroke();
+  c.fillStyle='#8b9ea0';c.textAlign='center';c.fillText((min+i*Math.max(4,end-min)/4).toFixed(1),x,h-5);
+ }
+ const duration=Math.max(4,end-min);
+ function series(key,color,dashed=false,scale=1){
+  if(selected.length<2)return;c.strokeStyle=color;c.lineWidth=dashed?1:2;c.setLineDash(dashed?[4,4]:[]);c.beginPath();
+  for(let i=0;i<selected.length;i++){const q=selected[i],x=l+ww*(q.t-min)/duration,y=yy(q[key]*scale);if(!i)c.moveTo(x,y);else c.lineTo(x,y);}
+  c.stroke();c.setLineDash([]);
+ }
+ series('cl','#f3cb85');series('cd','#87ccd5');series('gust','#8499a4',true,.04);
+ c.fillStyle='#829b9a';c.textAlign='left';c.fillText('CL / CD · τ',l+4,t+10);
+}
 function render(now=performance.now()){if(!sim)return;drawPhysics();drawOverlay(now)}
 function updateMetrics(){
   if(!sim)return;
@@ -769,6 +828,37 @@ $('record-list').addEventListener('click',e=>{
   const index=Number(button.dataset.record);
   compareIndex=compareIndex===index?-1:index;
   renderRecords();drawCpChart();
+});
+
+for(const id of ['camber','thickness']){
+ const control=$(id),output=$(id+'-value');
+ control.addEventListener('input',()=>{
+  const v=+control.value;output.textContent=(id==='camber'&&v>0?'+':'')+v+'%';
+  refreshShapePreview(id==='camber'?v:state.camber,id==='thickness'?v:state.thickness);
+ });
+ control.addEventListener('change',()=>{
+  const v=+control.value;if(state[id]===v)return;
+  state[id]=v;persist();
+  if(state.preset==='airfoil'){rebuildGeometry();resetGas(false);drawCpChart();drawLoadScope();render();toast('ФОРМА ИЗМЕНЕНА · НОВАЯ ГАЗОДИНАМИКА');}
+  refreshControls();
+ });
+}
+for(const [id,key] of [['gust-amplitude','gustAmplitude'],['gust-period','gustPeriod']]){
+ const control=$(id),output=$(id+'-value');
+ control.addEventListener('input',()=>output.textContent=control.value+(key==='gustAmplitude'?'°':' τ'));
+ control.addEventListener('change',()=>{
+  state[key]=+control.value;persist();
+  if(sim?.flowActive)sim.setGust(state.gustAmplitude,state.gustPeriod);
+  refreshControls();toast(state.gustAmplitude?'ПОРЫВЫ ВКЛЮЧЕНЫ':'ПОТОК СНОВА ПОСТОЯННЫЙ');
+ });
+}
+$('loads-csv').addEventListener('click',()=>{
+ if(loadHistory.samples.length<2)return;
+ const url=URL.createObjectURL(new Blob([loadHistory.csv()],{type:'text/csv;charset=utf-8'}));
+ const a=document.createElement('a');a.href=url;
+ a.download='shock-unsteady-'+state.preset+'-'+new Date().toISOString().slice(0,10)+'.csv';
+ document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2200);
+ toast('ВРЕМЕННЫЕ ДАННЫЕ СОХРАНЕНЫ');
 });
 $('flow-restart').addEventListener('click',()=>{
   if(!FLOW_PRESETS.has(state.preset))return;
