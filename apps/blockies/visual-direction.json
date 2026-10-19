@@ -56,6 +56,11 @@
         "slug": "trace-mosaic",
         "spatialDifference": "TRACE MOSAIC uses an open workbench with a square picture grid and movable fragment tray; Blockies uses a tall falling-block well flanked only by ownership and next-piece indicators.",
         "interactionDifference": "TRACE MOSAIC paints temporary drag-path barriers between other players; Blockies creates permanent shared stack geometry from locked pieces and rewards line clears."
+      },
+      {
+        "slug": "petri-forge",
+        "spatialDifference": "PETRIFORGE presents an editable simulation arena with terrain and autonomous agents; Blockies keeps a narrow shared falling-block well and compact score controls visible at once.",
+        "interactionDifference": "PETRIFORGE experiments with agent behaviors and environment changes over simulated time; Blockies requires timed manual rotation, lateral positioning, and synchronous cooperative row clearing."
       }
     ]
   },
