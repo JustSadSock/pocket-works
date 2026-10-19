@@ -3164,12 +3164,12 @@
       ],
       "metrics": {
         "bytes": 44292,
-        "variance": 44.69734188039632,
+        "variance": 44.69830451991263,
         "entropy": 1.3664226681637897,
         "edgeDensity": 0.16393849206349206,
-        "colorfulness": 39.812255859375,
-        "centerDetail": 53.15701933886045,
-        "meanLight": 57.26921035156283
+        "colorfulness": 39.8154296875,
+        "centerDetail": 53.160689036007604,
+        "meanLight": 57.26667246093781
       },
       "gameplayEntry": {
         "started": false,
@@ -3180,7 +3180,7 @@
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "f4ee9429e3a5afadc98ef5ab116a86babf6ea7d6",
-    "lastAttemptAt": "2026-10-17T12:28:46.537Z",
+    "lastAttemptAt": "2026-10-19T12:29:40.208Z",
     "revision": "ccb647535c08e0372ae72c39c19b1d9baba10c70",
     "qualityScore": 64,
     "visionScore": null,
@@ -3348,24 +3348,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 39866,
-        "variance": 52.188425753694055,
-        "entropy": 2.0166575768163892,
-        "edgeDensity": 0.11780753968253968,
-        "colorfulness": 29.231201171875,
-        "centerDetail": 60.64291044855936,
-        "meanLight": 40.6225006835941
+        "bytes": 39880,
+        "variance": 52.13993317829268,
+        "entropy": 2.024739026089781,
+        "edgeDensity": 0.11817956349206349,
+        "colorfulness": 29.249267578125,
+        "centerDetail": 60.585453287085336,
+        "meanLight": 40.76977949218779
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.9.2&pw_fp=a3a7bba5288c3d24f6242928"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.9.3&pw_fp=1bfeb7ace7e714f7a591096f"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "68507a08ee5d5025ef22ab4585b0ec1610aa8439",
-    "lastAttemptAt": "2026-10-19T11:50:00.580Z"
+    "lastAttemptRevision": "6fd45ed8ede246849a78ecbcc231834ca1cca8f7",
+    "lastAttemptAt": "2026-10-19T12:29:29.286Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3761,8 +3761,8 @@
     "imageVersion": 2,
     "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "3a88596385806e332ce85938622de81b088a26be",
-    "lastAttemptAt": "2026-10-19T12:22:27.833Z",
+    "lastAttemptRevision": "3c4103ddfef0bb0d6cddaaa41a6174836646ea83",
+    "lastAttemptAt": "2026-10-19T12:29:17.845Z",
     "note": "existing cover rated higher"
   },
   "crown-laws": {
