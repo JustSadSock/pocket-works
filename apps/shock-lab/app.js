@@ -383,6 +383,26 @@ function drawOverlay(now){
   const unitX=paintW/sim.nx,unitY=paintH/sim.ny;
   over.lineWidth=Math.max(1,dpr);
   drawStreamlines();
+  if(sim.flowActive&&sim.bodyBounds&&sim.time>.5){
+    const loads=sim.aeroForces(),bounds=sim.bodyBounds;
+    const cx=(bounds.left+bounds.right)*.5*unitX,cy=paintH*.5;
+    const fx=clamp(loads.cd*54*dpr,-61*dpr,61*dpr);
+    const fy=clamp(-loads.cl*54*dpr,-61*dpr,61*dpr);
+    const size=Math.hypot(fx,fy);
+    over.save();
+    if(size>4*dpr){
+      const ux=fx/size,uy=fy/size,head=7*dpr;
+      over.strokeStyle='#fbe0a7';over.fillStyle='#fbe0a7';
+      over.lineWidth=2.1*dpr;over.shadowColor='#e8be7588';over.shadowBlur=5*dpr;
+      over.beginPath();over.moveTo(cx,cy);over.lineTo(cx+fx,cy+fy);
+      over.moveTo(cx+fx,cy+fy);over.lineTo(cx+fx-head*(ux-uy*.5),cy+fy-head*(uy+ux*.5));
+      over.moveTo(cx+fx,cy+fy);over.lineTo(cx+fx-head*(ux+uy*.5),cy+fy-head*(uy-ux*.5));
+      over.stroke();over.shadowBlur=0;
+      over.font=(9*dpr)+'px monospace';over.fillText('Fₚ',cx+fx+4*dpr,cy+fy-8*dpr);
+    }
+    over.beginPath();over.fillStyle='#fff0c6';over.arc(cx,cy,2.5*dpr,0,Math.PI*2);over.fill();
+    over.restore();
+  }
   if(tubeReady){
     const x=paintW*.42,y0=paintH*.20,y1=paintH*.80;
     over.save();over.strokeStyle='#faf0d5';over.lineWidth=2*dpr;
@@ -538,8 +558,22 @@ function drawCpChart(){
     ctx.fillStyle='#8ba6a6';ctx.textAlign='right';ctx.fillText((lim-j*lim/2).toFixed(1),l-7,p+3);
   }
   for(let i=0;i<5;i++){const x=l+i*width/4;ctx.strokeStyle='#253d41';ctx.beginPath();ctx.moveTo(x,t);ctx.lineTo(x,b);ctx.stroke();ctx.fillStyle='#8ba6a6';ctx.textAlign='center';ctx.fillText((i*25)+'%',x,h-6);}
+  // Smooth the visual trace by a 3-cell moving window to reduce
+  // staircase aliasing; stored profiles and integrated forces stay raw.
+  function filtered(points){
+    if(!Array.isArray(points))return points;
+    return points.map((v,i)=>{
+      if(v===null||!Number.isFinite(v))return null;
+      let total=0,count=0;
+      for(let j=Math.max(0,i-2);j<=Math.min(points.length-1,i+2);j++){
+        if(points[j]!==null&&Number.isFinite(points[j])){total+=points[j];count++;}
+      }
+      return count?total/count:v;
+    });
+  }
   function series(points,color,dashed=false){
     if(!points?.length)return;
+    points=filtered(points);
     ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=dashed?1.3:2;
     ctx.setLineDash(dashed?[4,3]:[]);
     let moved=false;
