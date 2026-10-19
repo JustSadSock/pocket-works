@@ -169,3 +169,5 @@ button{touch-action:manipulation}a{color:inherit;text-decoration:none}
 @media(max-width:1100px){.load-panel{padding:14px 15px 16px}}
 @media(max-width:760px){.load-panel{padding:12px 14px 15px}.cp-chart{height:133px}.loads-readout strong{font-size:22px}}
 @media(max-width:360px){.loads-readout strong{font-size:20px}.load-panel{padding:12px 11px}}
+
+.loads-readout .moment-gauge{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;min-height:45px}.loads-readout .moment-gauge small{min-height:0}.loads-readout .moment-gauge strong{font-size:19px;margin:0;color:#dec1a0}.stability-line{margin:-6px 0 13px;color:#a7b9ac;font:10px/1.5 monospace;min-height:30px}
