@@ -102,7 +102,7 @@ export function mountAgentCockpit(api){
  };
  $('cpDuel').onclick=()=>{
   if(state().busy||state().pending)return;
-  profileOptions();$('cpDuelResult').replaceChildren();
+  profileOptions();
   const enough=state().careers.length>=2;
   $('cpFight').disabled=!enough;
   $('cpDuelInfo').textContent=enough?'Два настоящих боя со сменой сторон. Используются боевые навыки выбранных персонажей.':
@@ -140,7 +140,7 @@ export function mountAgentCockpit(api){
    await api.whenMode('combat');
    window.PetriForgeRuntime.combat.showExternalDuel({summary:result.legs[0].summary,frames:result.legs[0].frames});
    const canvasButton=document.querySelector('#battlePlay');if(canvasButton&&!canvasButton.disabled)canvasButton.click();
-   setStatus(a.name+' '+result.points[0]+' : '+result.points[1]+' '+b.name+' · просмотр боя');
+   api.setEvaluation(a.name+' '+result.points[0]+' : '+result.points[1]+' '+b.name+' · идёт повтор боя');
   }catch(e){$('cpDuelResult').textContent='Бой: '+e.message;}
   finally{fighting=false;$('cpFight').disabled=false;redraw();}
  };
