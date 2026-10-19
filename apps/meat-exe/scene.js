@@ -331,6 +331,22 @@ export function createWorld(canvas, initialSeed) {
   particlesGeo.setDrawRange(0,0);
   const particles = new THREE.Points(particlesGeo,new THREE.PointsMaterial({color:0xf3404c,size:.095,transparent:true,opacity:.9,depthWrite:false}));
   scene.add(particles);
+  // One bounded, depth-tested draw call: drifting blood, spores, bone dust or sparks.
+  const motesArray=new Float32Array(88*3);
+  const motesGeo=new THREE.BufferGeometry();
+  motesGeo.setAttribute('position',new THREE.BufferAttribute(motesArray,3).setUsage(THREE.DynamicDrawUsage));
+  motesGeo.setDrawRange(0,0);
+  const motesMat=new THREE.PointsMaterial({color:0xe0a9aa,size:.065,
+    transparent:true,opacity:.30,depthWrite:false,depthTest:true,sizeAttenuation:true});
+  const motes=new THREE.Points(motesGeo,motesMat);motes.frustumCulled=false;scene.add(motes);
+  // Pooled organic fragments keep dying enemies physically legible.
+  const deathGeo=new THREE.TetrahedronGeometry(.105,0);
+  const deathMat=new THREE.MeshStandardMaterial({color:0x9f5b65,roughness:.47,
+    emissive:0x2e0b12,emissiveIntensity:.35});
+  const deathMesh=new THREE.InstancedMesh(deathGeo,deathMat,24);
+  deathMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  deathMesh.frustumCulled=false;deathMesh.count=0;scene.add(deathMesh);
+  const deathBits=[],deathTemp=new THREE.Object3D();
   const source = new THREE.Group();
   scene.add(source);
   const chunks = new Map(), layouts = new Map(), tissueChunks = new Map(), tissueVisuals = new Map(), stains = [], droplets = [], streaks = [];
@@ -550,6 +566,8 @@ export function createWorld(canvas, initialSeed) {
     for(const line of streaks)line.obj.geometry.dispose();streaks.length=0;
     source.clear();routeSignRoot.clear();activeRouteMark='';forkSigns.clear();forkSites=[];forkSelection='';
     stains.length=0;droplets.length=0;particlesGeo.setDrawRange(0,0);
+    deathBits.length=0;deathMesh.count=0;motesGeo.setDrawRange(0,0);
+    shotLight.visible=false;shotLight.intensity=0;
     kickPos=0;kickVel=0;muzzleTime=0;organPulse=0;
   }
   function buildChunk(cx,cz){
@@ -1026,7 +1044,21 @@ export function createWorld(canvas, initialSeed) {
         life:.19+Math.random()*.5});
     }
   }
+  function spawnDeathScraps(x,z,count){
+    const limits=fxLimits(quality,conservativeRenderer);
+    if(!limits.deaths)return;
+    const n=Math.min(limits.deaths,Math.max(2,Math.floor(count/4)));
+    for(let i=0;i<n;i++){
+      if(deathBits.length>=24)deathBits.shift();
+      const a=rand(Math.floor(x*23),Math.floor(z*17),seed+i*173)*Math.PI*2;
+      const speed=1+rand(Math.floor(x*9),i,seed+39)*1.5;
+      deathBits.push({x,y:.55+rand(i,seed,9)*.3,z,vx:Math.cos(a)*speed,
+        vy:1.9+rand(i,seed,19)*1.8,vz:Math.sin(a)*speed,
+        angle:a,life:.55+rand(i,seed,67)*.55,size:.75+rand(i,seed,47)*.9});
+    }
+  }
   function splatter(x,z,count=13){
+    spawnDeathScraps(x,z,count);
     for(let i=0;i<count&&droplets.length<600;i++){
       const a=Math.random()*Math.PI*2,force=.8+Math.random()*3;
       droplets.push({x,y:.7+Math.random()*.6,z,vx:Math.cos(a)*force,vy:1.4+Math.random()*2,vz:Math.sin(a)*force,life:.35+Math.random()*.75});
