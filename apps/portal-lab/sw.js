@@ -1,6 +1,6 @@
-const PREFIX='portal-lab-',CACHE='portal-lab-v0.6.0',VERSION='0.6.0',RELEASE='2026-10-19';
-const NOTES=['Конструктор R(l), N(l), требуемый тензор Эйнштейна и аудит энергетических условий'];
-const OWN=['./','./index.html','./styles.css','./app.js','./relativity.js','./optics.js','./tidal.js','./observatory.js','./material.js','./material-view.js','./waves.js','./wave-view.js','./spacetime.js','./designer.js','./audio.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg'];
+const PREFIX='portal-lab-',CACHE='portal-lab-v0.7.0',VERSION='0.7.0',RELEASE='2026-10-19';
+const NOTES=['Сравнение вращающейся кротовой норы типа Тео и точного Шварцшильда: геодезические, эргорегион, горизонт'];
+const OWN=['./','./index.html','./styles.css','./app.js','./relativity.js','./optics.js','./tidal.js','./observatory.js','./material.js','./material-view.js','./waves.js','./wave-view.js','./spacetime.js','./designer.js','./rotation.js','./rotation-view.js','./audio.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg'];
 const SCOPE=new URL('./',self.registration.scope);
 const ASSETS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(async c=>{
