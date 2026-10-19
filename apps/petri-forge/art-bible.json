@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "product": "petri-forge",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "fog-of-conquest",
+      "evidence": "covers/fog-of-conquest.jpg (legacy capture, unknown commit)",
+      "lesson": "The geographic field and contextual orders differ from a literal editable culture; retain square simulation cells and an explicit tool bench."
+    },
+    {
+      "slug": "zamazka",
+      "evidence": "covers/zamazka.jpg (legacy capture, unknown commit)",
+      "lesson": "The restoration modal and paper illustration should not become a template for this permanently available cell editor."
+    },
+    {
+      "slug": "not-dead-yet",
+      "evidence": "covers/not-dead-yet.jpg (legacy capture, unknown commit)",
+      "lesson": "First-person depth and perimeter combat controls do not serve a discrete learning experiment."
+    },
+    {
+      "slug": "portal-lab",
+      "evidence": "catalog: no recorded evidence available",
+      "lesson": "Missing capture prevents a reliable image comparison; do not infer quality from the project name."
+    },
+    {
+      "slug": "meat-exe",
+      "evidence": "catalog: no recorded evidence available",
+      "lesson": "Missing capture is recorded honestly; the existing architectural profile is a full-bleed first-person world."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://playgameoflife.com/",
+      "observation": "The page places evolving cells and simulation rules around a cell field that remains the main object.",
+      "principle": "Keep simulation state visible in a literal cell representation.",
+      "application": "Preserve the source grid as the entire editable environment.",
+      "avoid": "Do not copy cellular birth and death rules into reinforcement learning.",
+      "inspectedAt": "2026-10-18T20:29:00Z"
+    },
+    {
+      "url": "https://www.redblobgames.com/pathfinding/a-star/introduction.html",
+      "observation": "Movable start and goal objects turn grid traversal into a directly editable experiment.",
+      "principle": "The same spatial diagram should explain and accept user input.",
+      "application": "Retain draggable start and goal and immediate obstacle painting.",
+      "avoid": "Do not imply that the Q-learning agent runs the A-star algorithm.",
+      "inspectedAt": "2026-10-18T20:29:00Z"
+    },
+    {
+      "url": "https://distill.pub/2020/growing-ca/",
+      "observation": "The article exposes evolving cellular states as experiments with observable intermediate results.",
+      "principle": "Let users inspect intermediate simulation steps rather than only final outcomes.",
+      "application": "Keep separate single-step, run and reset operations with numeric rewards.",
+      "avoid": "Do not present this simple tabular learner as a neural cellular automaton.",
+      "inspectedAt": "2026-10-18T20:29:00Z"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "culture-bench",
+      "medium": "Source Canvas 2D pigment cells and an authored vector dish icon.",
+      "composition": "A complete rectangular culture under a permanent wrapping instrument strip.",
+      "interaction": "Direct cell painting with draggable experiment endpoints and discrete stepping.",
+      "motion": "Cell state snaps immediately; no decorative interpolation masks transitions.",
+      "rationale": "Faithful to the recovered source and keeps editing and learning visible together."
+    },
+    {
+      "id": "specimen-cards",
+      "medium": "DOM specimen diagrams rendered as individual printed cards.",
+      "composition": "A vertical collection of separate prepared experiments and detail screens.",
+      "interaction": "Choose a prepared card and then edit it in a secondary experiment view.",
+      "motion": "Cards slide into a magnified inspector and return to the collection.",
+      "rationale": "Useful for a future library, but adds navigation before the current editor."
+    },
+    {
+      "id": "living-dish",
+      "medium": "WebGL raised laboratory tray with physical-looking colony markers.",
+      "composition": "A circular free-camera dish surrounded by in-world instrument controls.",
+      "interaction": "Orbit and zoom the dish, then place markers in a projected 3D field.",
+      "motion": "Camera inertia and elastic colony settling give continuous physical movement.",
+      "rationale": "Expressive but projection makes exact cell manipulation harder on phones."
+    }
+  ],
+  "selection": {
+    "concept": "culture-bench",
+    "reason": "The user asked to retain the existing project. Its cell editor and learning loop remain clear with a fitted Canvas bench.",
+    "rejected": [
+      {
+        "concept": "specimen-cards",
+        "reason": "A card library would introduce another navigation layer before the existing primary edit-and-step workflow."
+      },
+      {
+        "concept": "living-dish",
+        "reason": "A 3D camera would obscure discrete coordinates and add rendering cost to an otherwise small offline editor."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "canvas-svg",
+      "availability": "available",
+      "reason": "Canvas rendering ran in Chromium and the local SVG icon was inspected through the app."
+    }
+  ],
+  "assets": [
+    {
+      "id": "dish-icon",
+      "tool": "canvas-svg",
+      "source": "app.js",
+      "output": "icons/icon.svg",
+      "role": "Install identity depicts the simulation as a culture dish with a blue agent and green target.",
+      "acceptance": "Readable blue square and green destination remain distinct at app icon scale.",
+      "integration": "Manifest and page icon both reference the authored SVG dish.",
+      "provenance": "Hand-authored vector geometry for this port; no external illustration was copied.",
+      "maxBytes": 4096
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Tool strip must remain reachable on narrow portrait screens.",
+      "CSS fitting must preserve pointer-to-cell mapping."
+    ],
+    "comparisons": [
+      "fog-of-conquest legacy cover",
+      "zamazka legacy cover"
+    ]
+  }
+}
