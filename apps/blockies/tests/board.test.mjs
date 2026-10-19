@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-const {default:game}=await import('data:text/javascript;base64,'+Buffer.from(await fs.readFile(new URL('../server/module.ts',import.meta.url),'utf8')).toString('base64'));
+const source=(await fs.readFile(new URL('../server/module.ts',import.meta.url),'utf8'))
+ .replace('../../../apps/blockies/engine-core-v1.js',new URL('../engine-core-v1.js',import.meta.url).href);
+const {default:game}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const a={id:'a',name:'A'},b={id:'b',name:'B'};
 function start(players=[a]){let state=game.createRoom({player:players[0]}).state;for(const player of players.slice(1))state=game.onJoin({state,player}).state;for(const player of players)state=game.onMessage({state,player,payload:{type:'ready'}}).state;return state;}
 test('serialized shared board clears a complete line and awards team score',()=>{let state=start();const width=state.engine.boardWidth;state.engine.board=Array.from({length:20},()=>Array(width).fill(0));state.engine.board[19]=Array.from({length:width},(_,i)=>i<4?0:1);const p=state.engine.players[0];p.currentPiece=[[1,1,1,1]];p.position={x:0,y:0};state=game.onMessage({state:JSON.parse(JSON.stringify(state)),player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;assert.equal(state.engine.sharedStats.lines,1);assert.ok(state.engine.sharedStats.score>0);assert.equal(state.engine.sharedStats.lastClearDetail.rows.length,1);assert.equal(state.engine.sharedStats.lastClearDetail.rows[0].y,19);assert.equal(state.engine.sharedStats.lastClearDetail.rows[0].owners.length,width);assert.ok(state.engine.board.every(row=>row.every(v=>v===0)));});
