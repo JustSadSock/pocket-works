@@ -46,7 +46,11 @@ test('light mask changes when a physical door opens',async({page})=>{
  const status=await page.evaluate(d=>{
   const api=window.__PW_ROGUE_QA__,w=api.world(),c=w.chunk(0,0);
   const door=c.doors.find(item=>item.x===d.x&&item.z===d.z&&item.id===d.id);
-  return w.toggleDoor(door,[])
+  const result=w.toggleDoor(door,[]);
+  // Visual-QA mode freezes gameplay time for pixel reproducibility.
+  // Advance the same physical hinge model explicitly to its open threshold.
+  for(let i=0;i<9;i++)w.animateDoors(.12,[]);
+  return result
  },initial);
  expect(status.ok).toBe(true);
  await page.waitForFunction(old=>window.__PW_ROGUE_QA__.visual().renderer.lightMaskUploads>old,before,{timeout:10000});
