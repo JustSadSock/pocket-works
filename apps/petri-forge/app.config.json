@@ -4,12 +4,14 @@
   "slug": "petri-forge",
   "name": "PetriForge",
   "shortName": "PetriForge",
-  "description": "Редактор клеточных сред с обучаемым агентом, наградами и препятствиями.",
-  "version": "0.1.0",
-  "releaseDate": "2026-10-18",
-  "releaseDateTime": "2026-10-18T20:26:58.535Z",
+  "description": "Лаборатория обучаемых агентов: редактор миров, многократные эксперименты, повторы и библиотека моделей.",
+  "version": "0.2.0",
+  "releaseDate": "2026-10-19",
+  "releaseDateTime": "2026-10-19T13:00:00.000Z",
   "changelog": [
-    "Перенесена восстановленная облачная версия: редактор среды, Q-learning и случайный агент; сенсорное рисование и сохранение сцен."
+    "Новый детерминированный движок испытаний, 6 сценариев и пакетное Q-learning обучение.",
+    "Сохранение/загрузка мозга в IndexedDB, импорт/экспорт модели и сравнение на новых картах.",
+    "Тепловые карты, график успешности, повторы лучших и худших попыток, переработанный лабораторный интерфейс."
   ],
   "status": "experimental",
   "preset": "canvas",
@@ -17,7 +19,7 @@
   "backgroundColor": "#0f1719",
   "themeColor": "#0f1719",
   "orientation": "landscape",
-  "cacheName": "petri-forge-v0.1.0",
+  "cacheName": "petri-forge-v0.2.0",
   "storageNamespace": "pocket-works:petri-forge",
   "tags": [
     "simulation",
