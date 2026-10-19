@@ -44,3 +44,67 @@ New geometry is rendered only in a **9-cell proximity LOD** for walls, doors and
 - [ ] Check visible overlap / z-fighting / penetration in a complete walk through all six room types.
 - [ ] Validate safe margins for weapon/hands, camera FOV and mobile HUD.
 - [ ] Compare existing story-mode and endless-mode material continuity without modifying the PocketWorks shell.
+
+## Architecture after v2.1.1
+The earlier measurements remain a reproducible historical comparison.
+The new generator supports five different layouts and small WC/pantry
+spaces; new main rooms are at most 4×4 cells and furniture is positioned
+relative to doorway access. Old saved runs retain their prior layout.
+
+Isolated V8 static scene meshes at the start point (triangles): seed 222
+**17,328**; 413 **17,726**; 8787 **17,100**; 127 **18,171**; 91
+**15,875**. These are geometry counts, not GPU benchmarks.
+
+QA image seeds 222, 413, 8787, 4 and 14 collectively cover all five
+families. Their browser screenshots are not yet executed/reviewed.
+400 seeded/epoch combinations passed actual collision-graph tests for all
+rooms, doors and drops; that does not independently verify visual clipping.
+
+## v2.1.2 — interactive physical door pass
+The old static fake leaves were replaced by animated carved timber panels.
+The entire physical state is represented by an epoch-specific door key and
+one horizontal 2D segment. That *same segment* builds the visible WebGL
+triangles, stops player/monster movement, occludes flashlight/shots and
+drives safe opening/closing. Gameplay interactions show contextual E/touch
+text and invoke offline door acoustics. Open/close saves include the
+current animation angle. In contrast, legacy saves use no new door obstacle.
+
+A heuristic A* traversal replaced broad BFS for enemies to handle doors
+and furniture without flooding unrelated sectors. Closed doors may
+intentionally make a route impossible until a player opens them.
+22/22 combined source-level roguelike/floorplan/visual/door regression
+cases passed in an isolated JS runtime after implementing the doors.
+A separate integration harness exercised the actual game initialization
+and E-open animation, but it is *not a real WebGL browser run*.
+
+The mobile/browser screenshots, GPU timings and manual overlap inspection
+are still outstanding and must not be inferred from these test results.
+
+## v2.1.3 — Structural wall depth / geometry cache
+
+The wall renderer now extrudes **155 mm** dry wall and **190 mm**
+bathroom/toilet partitions into existing solid tiles (never into walkable
+corridors). It adds modeled skirting/cornices, repaired wallpaper patches,
+aged plaster, exposed cable fixings and shallow doorway returns. Five aged
+room palettes are deterministic; these are not full PBR normal/roughness
+materials.
+
+`RogueMeshCache` holds up to three static CPU meshes from stable 5-cell
+anchors. Returning across a previously visited grid cell does not
+regenerate its triangle mesh. Changes to `terrainRevision` or the run's
+world object invalidate cached entries; WebGL still uploads the reused
+Float32Array at region changes. New telemetry: `cacheHits`, `cacheMisses`,
+`cacheEntries`, `cacheBytes`.
+
+Isolated V8 mesh counts / build timings at camera anchor (7.5, 7.5):
+- Seed 222: 23,156 triangles (~41ms);
+- Seed 413: 24,000 triangles (~39ms);
+- Seed 8787: 23,566 triangles (~51ms);
+- Seed 4: 24,597 triangles (~64ms);
+- Seed 14: 21,735 triangles (~39ms).
+
+These are JS geometry samples, NOT browser frame times or GPU benchmarks.
+Three CPU meshes may cost ~7–10 MB, plus the current WebGL buffer.
+All 29 relevant deterministic suites passed in the isolated JavaScript
+harness. Real browser screenshots, Z-fighting inspection and GPU profiling
+are still outstanding.

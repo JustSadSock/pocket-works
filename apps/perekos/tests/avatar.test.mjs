@@ -64,7 +64,7 @@ test('rune outfit logic is cosmetic and deterministic',()=>{
 });
 test('portrait renderer composes visible custom features without throwing',()=>{
  const ops=[],ctx={
-  fillRect(...args){ops.push(['rect',...args])},beginPath(){},arc(){},ellipse(){},fill(){},
+  fillRect(...args){ops.push(['rect',...args])},beginPath(){},arc(){},ellipse(){},fill(){},moveTo(){},lineTo(){},closePath(){},
   setLineDash(){},stroke(){},save(){},restore(){},translate(){},scale(){},
   set fillStyle(v){this.color=v},get fillStyle(){return this.color},
   set globalAlpha(v){this.a=v},get globalAlpha(){return this.a??1},
