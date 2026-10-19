@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "solver",
+      "kind": "node",
+      "tier": "smoke",
+      "entry": "test.mjs"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#field",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-preset='slits']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-view='schlieren']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#run"
+        },
+        {
+          "action": "click",
+          "selector": "#step"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#clear"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}
