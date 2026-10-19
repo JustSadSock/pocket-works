@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'blockies-';
-const CACHE_NAME = 'blockies-v0.1.7';
-const APP_VERSION = '0.1.7';
+const CACHE_NAME = 'blockies-v0.1.8';
+const APP_VERSION = '0.1.8';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Единый Player для локальной и сетевой игры.", "Синхронизация раундов защищена от запоздалых команд.", "Проверки двух игроков и потери сети."];
+const RELEASE_NOTES = ["Повтор партии с перемоткой и экспортом JSON.", "Восстановление матча при потере связи.", "Дополнительные проверки реальных WebSocket-сессий."];
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -14,6 +14,8 @@ const APP_SHELL = [
   "./game.js",
   "./engine-core-v1.js",
   "./player-core-v1.js",
+  "./replay-core-v1.js",
+  "./replay-ui.js",
   "./network.js",
   "./styles.css",
   "./sw.js",
