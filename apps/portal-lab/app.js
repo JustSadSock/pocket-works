@@ -114,7 +114,7 @@ function updateReadouts(){
  $('critical-value').textContent=(m.a/geometry(0,m).N).toFixed(3);
  $('clock-near').textContent=(elapsed*staticClockRate(.8*m.a,m)).toFixed(3);
  $('clock-far').textContent=(elapsed*staticClockRate(5*m.a,m)).toFixed(3);
- $('frame-state').textContent=settings.view==='map'?settings.model==='ellis'?'N=1 · ELLIS':`η=${settings.eta.toFixed(2)} · N(l)`:'r² = l² + a²';
+ $('frame-state').textContent=settings.view==='wave'?'□Φ=0 · ℓ='+waveLab.state.j:settings.view==='map'?(settings.model==='ellis'?'N=1 · ELLIS':`η=${settings.eta.toFixed(2)} · N(l)`):'R² = l² + a²';
 }
 function changeMetric(){
  // The existing E and L belong to the old metric: discard them rather than
