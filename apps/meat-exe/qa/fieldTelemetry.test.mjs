@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyFieldTelemetry,recordFieldWindow,sanitizeFieldTelemetry,fieldPerformance,
+import {emptyFieldTelemetry,presentationDelta,recordFieldWindow,sanitizeFieldTelemetry,fieldPerformance,
  observedBalance,buildFieldExport} from '../fieldTelemetry.js';
 import {recordFinishedRun,sanitizeRunHistory} from '../runTuning.js';
 import {validateRun} from '../stability.js';
@@ -76,4 +76,16 @@ test('10000 realistic 4-second windows maintain fixed storage bounds',()=>{
  assert.equal(record.seconds,40000);
  assert.ok(JSON.stringify(record).length<250,'compact telemetry instead of storing 10000 per-frame samples');
  assert.deepEqual(sanitizeFieldTelemetry(record),record);
+});
+
+test('wall presentation time captures actual jank without destabilizing capped physics',()=>{
+ assert.equal(presentationDelta(16.666),.016666);
+ assert.equal(presentationDelta(550),.55);
+ assert.equal(presentationDelta(100000),2);
+ assert.equal(presentationDelta(-20),0);
+ assert.equal(presentationDelta(Infinity),0);
+ // A 550ms frame contributes 0.55s to FPS measurement, but the game
+ // still advances physics by at most 100ms.
+ const real=presentationDelta(550);
+ assert.equal(Math.min(.1,real),.1);
 });
