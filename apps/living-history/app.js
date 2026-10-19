@@ -11,7 +11,7 @@ createWorkshopMode({appName:'Живая история',version:'0.9.3',cachePre
 const $=s=>document.querySelector(s);
 const worldNode=$('#world'),canvas=$('#map'),ctx=canvas.getContext('2d',{alpha:false});
 const PX=8,W=SIZE*PX;
-let sim=null,mode='overview',selected=null,selectedPerson=null,economyOpen=false,speed=0,cam={x:0,y:0,z:1},drag=null,dirty=true,last=performance.now(),acc=0,lastStats=0,lastSavedDay=0,savePending=false,active=true,pointers=new Map(),pinch=null;
+let sim=null,mode='overview',selected=null,selectedPerson=null,selectedCase=null,economyOpen=false,speed=0,cam={x:0,y:0,z:1},drag=null,dirty=true,last=performance.now(),acc=0,lastStats=0,lastSavedDay=0,savePending=false,active=true,pointers=new Map(),pinch=null;
 const worldCanvas=document.createElement('canvas');worldCanvas.width=W;worldCanvas.height=W;const draw=worldCanvas.getContext('2d');
 let tenureMode=false,selectedPlot=null,tenureDirty=true,tenureCache=null;
 const tenureCanvas=document.createElement('canvas');tenureCanvas.width=W;tenureCanvas.height=W;const tenureDraw=tenureCanvas.getContext('2d');
@@ -222,6 +222,51 @@ function updateDayDial(){
 }
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function renderSheet(){if(!sim)return;const el=$('#sheet-content'),o=overview(sim);
+if(mode==='institutions'){
+ const registry=sim.institutions||{cases:[],officers:{},statistics:{}};
+ const available=(registry.cases||[]).slice().reverse();
+ const active=available.filter(c=>['filed','owed'].includes(c.stage)).length;
+ const hearings=registry.statistics?.courtHearings||sim.stats.courtHearings||0;
+ const role={ 'manorial-steward':'Сеньориальный распорядитель','village-reeve':'Выборный староста'};
+ const dispositions={restitution:'Возмещение травм',reconciliation:'Примирение и подтверждение межи',
+  'aid-dispatched':'Зерно отправлено','no-spare-grain':'Нет свободного зерна','ownership-changed':'Права изменились до заседания',
+  recovered:'Семья восстановила питание',unpaid:'Решение не исполнено','no-hearing':'Слушание не состоялось',
+  'petitioner-unavailable':'Проситель недоступен'};
+ const labels={filed:'Ожидает слушания',owed:'Остался долг',resolved:'Разрешено',
+  dismissed:'Отклонено',unenforced:'Не исполнено'};
+ const theCase=available.find(c=>c.id===selectedCase);
+ const rows=sim.communities.map(cm=>{
+  const officer=registry.officers?.[cm.id];
+  const p=officer&&sim.people.find(x=>x.id===officer.personId);
+  const pending=available.filter(c=>c.communityId===cm.id&&['filed','owed'].includes(c.stage)).length;
+  return `<div class="court-parish"><strong>${escapeHTML(cm.name)}</strong><span>${p?escapeHTML(p.name)+' · '+(role[officer.role]||'Распорядитель'):'Нет назначенного распорядителя'}<small>${pending} дел в ожидании · заседания через 14 дней по местному календарю</small></span></div>`;
+ }).join('');
+ if(theCase){
+  const a=sim.households.find(h=>h.id===theCase.claimantId);
+  const b=sim.households.find(h=>h.id===theCase.ownerId);
+  const steward=sim.people.find(p=>p.id===theCase.officerId);
+  const debts=(theCase.debts||[]).map(d=>`<div class="court-line"><span>Долг семьи #${d.payer} перед #${d.recipient}</span><b>${d.remaining} / ${d.amount} мон.</b></div>`).join('');
+  const shipment=theCase.shipmentId&&sim.shipments.find(t=>t.id===theCase.shipmentId);
+  el.innerHTML=`<div class="court-heading"><button data-case-back="1" class="court-back">← К реестру</button><small>ДЕЛО №${theCase.id} · ГОД ${Math.floor(theCase.filedDay/365)+1}</small><h2>${theCase.kind==='land'?'Спор о земельной меже':'Прошение о зерне'}</h2></div>
+    <div class="court-line"><span>Состояние</span><b>${escapeHTML(labels[theCase.stage]||theCase.stage)}</b></div>
+    <div class="court-line"><span>Податель</span><button data-court-house="${theCase.claimantId}">${escapeHTML(a?.name||'Семья')} #${theCase.claimantId} →</button></div>
+    ${b?`<div class="court-line"><span>Другая сторона</span><button data-court-house="${theCase.ownerId}">${escapeHTML(b.name||'Семья')} #${b.id} →</button></div>`:''}
+    <div class="court-line"><span>Слушание</span><b>${theCase.heardDay?'День '+theCase.heardDay:'Ещё не состоялось'}</b></div>
+    <div class="court-line"><span>Распорядитель</span><b>${steward?escapeHTML(steward.name)+' #'+steward.id:'Не назначен'}</b></div>
+    <div class="court-ruling"><small>РЕЗУЛЬТАТ</small><strong>${escapeHTML(dispositions[theCase.disposition]||labels[theCase.stage]||'Иск принят')}</strong><p>${escapeHTML(theCase.cause||'Решение ограничено людьми, доступным временем и имуществом общины.')}</p></div>
+    ${theCase.kind==='land'? `<div class="court-line"><span>Ранено: истец / владелец</span><b>${theCase.injuredClaimants} / ${theCase.injuredOwners}</b></div><div class="court-line"><span>Уже выплачено</span><b>${theCase.paidCoin||0} мон.</b></div>${debts}`:
+    `<div class="court-line"><span>Предписанный груз</span><b>${theCase.grainKg||0} кг</b></div><div class="court-line"><span>Доставка</span><b>${shipment?'В пути до дня '+shipment.day:theCase.shipmentId?'Завершена или возвращена':'Не назначалась'}</b></div>`}
+    <p class="court-note">Реестр содержит решения существующих жителей. Суд не создаёт монеты и зерно и не меняет владельца земли из-за победы в драке.</p>`;
+  return;
+ }
+ el.innerHTML=`<div class="court-heading"><small>ОБЩИННЫЙ РЕЕСТР · ${Math.floor(sim.day/365)+1}-Й ГОД</small><h2>Мир, межа и хлеб</h2><p>Решения принимают жители деревень. Они лично идут на слушания, тратят рабочий день и могут отказать, когда помочь нечем.</p></div>
+  <div class="court-totals"><div><small>Проведено слушаний</small><b>${hearings}</b></div><div><small>Открытых дел</small><b>${active}</b></div><div><small>Выдано общиной</small><b>${Math.round(sim.stats.courtReliefKg||0)} кг</b></div></div>
+  <div class="court-list-title">РАСПОРЯДИТЕЛИ ЧЕТЫРЁХ ОБЩИН</div>${rows}
+  <div class="court-list-title">СУДЕБНЫЕ ДЕЛА · ПОСЛЕДНИЕ 36</div>
+  ${available.length?available.slice(0,36).map(c=>`<button class="court-docket" data-case="${c.id}"><span><b>№${c.id} · ${c.kind==='land'?'Межа':'Хлеб'}</b><small>${escapeHTML(labels[c.stage]||c.stage)} · ${escapeHTML(dispositions[c.disposition]||'Обращение принято')} · день ${c.filedDay}</small></span><em>→</em></button>`).join(''):
+  '<p class="court-empty">Судебных прошений ещё не было. Деревни живут, работают и со временем могут столкнуться с голодом или земельным спором.</p>'}`;
+ return;
+}
 if(mode==='overview'){
  const names={normal:'Умеренная долина',drought:'Трёхлетняя засуха',isolated:'Изолированные общины',uplands:'Бедная горная земля'};
  const regionRows=sim.communities.map(c=>{const homes=sim.households.filter(h=>h.communityId===c.id);
@@ -254,7 +299,7 @@ if(mode==='household'){
  if(!h){el.innerHTML='<div class="house-name">Выберите дом на карте</div><p class="note">Приблизьте карту и коснитесь крыши.</p>';return;}
  const current=selectedPerson?sim.people.find(p=>p.id===selectedPerson):null;
  const originalPosition=el.scrollTop;
- const residents=h.people.map(p=>`<button class="member ${p.id===selectedPerson?'selected':''}" data-person="${p.id}"><b>${escapeHTML(p.name)}</b> ${Math.floor(p.age)} · ${p.job==='wood'?'лес':p.job==='farm'?'поля':p.job==='haul'?'в дороге':p.job==='build'?'стройка':p.job==='herd'?'пастбище':p.job==='hired'?'наём':p.job==='guard'?'земельный спор':'дом'}</button>`).join('')||'<span class="member">Дом пустует</span>';
+ const residents=h.people.map(p=>`<button class="member ${p.id===selectedPerson?'selected':''}" data-person="${p.id}"><b>${escapeHTML(p.name)}</b> ${Math.floor(p.age)} · ${p.job==='wood'?'лес':p.job==='farm'?'поля':p.job==='haul'?'в дороге':p.job==='build'?'стройка':p.job==='herd'?'пастбище':p.job==='hired'?'наём':p.job==='guard'?'земельный спор':p.job==='court'?'сельский суд':'дом'}</button>`).join('')||'<span class="member">Дом пустует</span>';
  const deceased=h.members.map(id=>sim.people.find(p=>p.id===id)).filter(p=>p&&!p.alive).slice(-5);
  let personInfo='';
  if(current&&h.members.includes(current.id)){
@@ -305,7 +350,7 @@ if(mode==='laboratory'){
 }
 if(mode==='chronicle'){el.innerHTML=sim.events.slice(-40).reverse().map(e=>`<button class="event" data-event="${e.id}"><time>${Math.floor(e.day/365)+1} г.</time><span class="body">${escapeHTML(e.message)}<small>${escapeHTML(e.cause)}</small></span></button>`).join('')||'<p class="note">Пока нет событий.</p>';return;}
 const a=audit(sim);el.innerHTML=`<button data-action="lab-open" class="lab-entry">Экономический срез <span>→</span></button><div class="tool-actions"><button data-action="save">Сохранить</button><button data-action="export">Экспорт JSON</button><button data-action="import">Импорт JSON</button><button data-action="reset" class="danger">Новый мир</button></div><div class="tool-foot">Seed ${sim.seed} · ${a.ok?'Проверка ресурсов и денег пройдена':escapeHTML(a.issues[0])} · IndexedDB, офлайн</div>`;}
-function setTab(m){mode=m;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===(m==='laboratory'?'tools':m)));renderSheet();}
+function setTab(m){if(m!=='institutions')selectedCase=null;mode=m;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===(m==='laboratory'?'tools':m)));renderSheet();}
 function findHouse(x,y){
  const xi=Math.floor(x),yi=Math.floor(y),cad=landCadastre(sim);
  if(xi>=0&&yi>=0&&xi<SIZE&&yi<SIZE){
@@ -352,7 +397,11 @@ document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',
   }
   speed=next;updateHUD();
  }));document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
-$('#sheet-content').addEventListener('click',e=>{const person=e.target.closest('[data-person]');if(person){selectedPerson=Number(person.dataset.person);renderSheet();return;}if(e.target.closest('[data-person-back]')){selectedPerson=null;renderSheet();return;}const eventButton=e.target.closest('[data-event]');if(eventButton){const item=sim.events.find(v=>v.id===Number(eventButton.dataset.event));const h=item?.subjects.map(id=>sim.households.find(x=>x.id===id)).find(Boolean);if(h){selected=h.id;selectedPlot=null;tenureDirty=true;selectedPerson=null;economyOpen=false;setTab('household');centerOn(h.x,h.y);}else if(item)toast(item.cause);return;}const b=e.target.closest('[data-action]');if(!b)return;switch(b.dataset.action){case'econ-detail':economyOpen=!economyOpen;renderSheet();break;case'lab-open':speed=0;setTab('laboratory');break;case'lab-back':setTab('tools');break;case'lab-export':exportLab();break;case'save':save().then(()=>toast('Мир записан в IndexedDB')).catch(err=>toast(err.message));break;case'export':exportSave();break;case'import':$('#import-file').click();break;case'reset':speed=0;$('#modal').hidden=false;break;}});
+$('#sheet-content').addEventListener('click',e=>{
+ const caseButton=e.target.closest('[data-case]');if(caseButton){selectedCase=Number(caseButton.dataset.case);renderSheet();return;}
+ if(e.target.closest('[data-case-back]')){selectedCase=null;renderSheet();return;}
+ const courtHouse=e.target.closest('[data-court-house]');if(courtHouse){const h=sim.households.find(x=>x.id===Number(courtHouse.dataset.courtHouse));if(h){selected=h.id;selectedPerson=null;economyOpen=false;setTab('household');centerOn(h.x,h.y);}return;}
+ const person=e.target.closest('[data-person]');if(person){selectedPerson=Number(person.dataset.person);renderSheet();return;}if(e.target.closest('[data-person-back]')){selectedPerson=null;renderSheet();return;}const eventButton=e.target.closest('[data-event]');if(eventButton){const item=sim.events.find(v=>v.id===Number(eventButton.dataset.event));const h=item?.subjects.map(id=>sim.households.find(x=>x.id===id)).find(Boolean);if(h){selected=h.id;selectedPlot=null;tenureDirty=true;selectedPerson=null;economyOpen=false;setTab('household');centerOn(h.x,h.y);}else if(item)toast(item.cause);return;}const b=e.target.closest('[data-action]');if(!b)return;switch(b.dataset.action){case'econ-detail':economyOpen=!economyOpen;renderSheet();break;case'lab-open':speed=0;setTab('laboratory');break;case'lab-back':setTab('tools');break;case'lab-export':exportLab();break;case'save':save().then(()=>toast('Мир записан в IndexedDB')).catch(err=>toast(err.message));break;case'export':exportSave();break;case'import':$('#import-file').click();break;case'reset':speed=0;$('#modal').hidden=false;break;}});
 $('#cancel-reset').addEventListener('click',()=>$('#modal').hidden=true);$('#confirm-reset').addEventListener('click',()=>{const seedText=$('#world-seed').value.trim();const seedNumber=seedText===''?((Date.now()&0xffffffff)>>>0):Number(seedText);if(!Number.isInteger(seedNumber)||seedNumber<0||seedNumber>4294967295){toast('Seed должен быть целым числом от 0 до 4294967295');return;}sim=createWorld(seedNumber,{scenario:$('#world-scenario').value,tuning:experimentPreset($('#world-experiment').value)});selected=null;selectedPlot=null;selectedPerson=null;economyOpen=false;tenureDirty=true;speed=0;acc=0;movementFraction=1;dayPlan=null;fastView=makeFastView();renderDetail='coarse';modeBlend=null;blendRemaining=0;dirty=true;fitView();lastSavedDay=-1;$('#modal').hidden=true;setTab('overview');save().then(()=>toast('Создана новая долина с выбранными условиями')).catch(err=>toast(err.message));});
 function centerOn(x,y){const r=worldNode.getBoundingClientRect();cam.z=Math.max(cam.z,1.28);cam.x=r.width/2-x*PX*cam.z;cam.y=r.height/2-y*PX*cam.z;}
 $('#import-file').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{const value=deserialize(await file.text());sim=value;speed=0;acc=0;movementFraction=1;selected=null;selectedPlot=null;tenureDirty=true;selectedPerson=null;dayPlan=null;fastView=makeFastView();renderDetail='coarse';modeBlend=null;blendRemaining=0;dirty=true;fitView();updateHUD();await save();toast('Мир успешно импортирован');}catch(err){toast(`Импорт не удался: ${err.message}`);}});
