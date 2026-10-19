@@ -333,7 +333,18 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  }
  if(shield>0){ctx.strokeStyle='#b6d9b4bb';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();ctx.arc(0,-7,27,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);px(-20,-17,3,6,'#f7e3b0');px(20,0,3,6,'#f7e3b0')}
  if(enemy){px(-11,17,22,3,'#a84b42');px(-8,20,16,2,'#e4a28a')}
- if(flash>0){ctx.globalAlpha=Math.min(.65,flash*3.1);px(-16,-35,32,53,'#fff2bf');ctx.globalAlpha=Math.max(0,Math.min(1,alpha))}
+ if(flash>0){
+  // Hurt reaction illuminates the costume's actual edges rather than masking
+  // the character with a flat 32x53 rectangle at the most important moment.
+  ctx.save();ctx.globalAlpha=Math.min(.85,flash*3.5);
+  ctx.strokeStyle='#fff1c3';ctx.lineWidth=2;ctx.lineJoin='bevel';
+  ctx.beginPath();ctx.moveTo(-17,-18);ctx.lineTo(-23,-12);
+  ctx.lineTo(-20,-2);ctx.lineTo(-18,9);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(16,-17);ctx.lineTo(23,-8);
+  ctx.lineTo(19,7);ctx.lineTo(13,13);ctx.stroke();
+  px(-7,-18,6,2,'#fff4d9');px(7,-13,3,5,'#ffe2ab');
+  ctx.restore();
+ }
  // Class-specific hem response at the end of an attack.
  if(activeStrike>.05){
   if(character.school==='stone'){
