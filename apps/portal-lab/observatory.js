@@ -258,8 +258,18 @@ export function createObservatory(canvas,options={}){
   fly=null;probe=null;probeRead=null;state.l=2.1;state.yaw=0;state.pitch=0;state.fov=80;state.facingSign=1;
   onAction('mount');updateControls();request();save();
  });
+ function applyParameters(p={}){
+  fly=null;probe=null;probeRead=null;
+  if(Number.isFinite(p.l))state.l=clamp(p.l,-6,6);
+  if(Math.abs(state.l)<.12)state.l=state.l>=0?.2:-.2;
+  if(Number.isFinite(p.yaw))state.yaw=clamp(p.yaw,-2.6,2.6);
+  if(Number.isFinite(p.pitch))state.pitch=clamp(p.pitch,-1.1,1.1);
+  if(Number.isFinite(p.fov))state.fov=clamp(p.fov,50,110);
+  state.facingSign=p.facingSign===-1?-1:1;
+  updateControls();request();save();
+ }
  return {
-  state,configure,setActive,draw,tick,request,updateControls,launchProbe,triggerFlight,
+  state,configure,applyParameters,setActive,draw,tick,request,updateControls,launchProbe,triggerFlight,
   get probe(){return probeRead;},
   get status(){return {stage,progress,region:state.l>=0?'A':'B',selected,flight:!!fly,rays:transfer?.length||0};}
  };
