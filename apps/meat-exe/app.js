@@ -364,6 +364,14 @@ function shoot(){
       if(damage?.opened){
         state.ruptured.push(damage.id);state.ruptureCount++;
         state.score+=180;
+        if(state.pulseMax===3&&!state.organRuptureClaimed){
+          // A real optional exploration reward, once per organ; rupture
+          // already provokes immunity and changes corridor connectivity.
+          state.organRuptureClaimed=true;
+          state.biomass=Math.min(99,state.biomass+2);
+          state.score+=140;
+          setNotice('ТКАНЬ ИЗВЛЕЧЕНА · +2 БИОМАССЫ',2.3);
+        }
         const heal=biomeRuptureHeal(state.wave);
         if(heal)state.hp=Math.min(state.maxHp,state.hp+heal);
         provokeImmune(state.immune,'rupture',state.wave);
