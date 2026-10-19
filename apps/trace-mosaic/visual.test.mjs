@@ -22,9 +22,9 @@ const fakeDocument={documentElement:{style:{setProperty(){}}}};
 const escapeHtml=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;')
   .replaceAll('>','&gt;').replaceAll('"','&quot;');
 const createViews = state => new Function('state','document','buildTrailMap','gameKey',
-  'formatTimer','escapeHtml','renderDragGhost','renderToasts',
+  'formatTimer','escapeHtml','renderDragGhost','renderToasts','describeFlow',
   rendererSource+'\nreturn {renderGame,renderResults,renderTrailPaths,renderReferenceOverlay};'
-)(state,fakeDocument,()=>new Map(),()=>'test-key',seconds=>String(seconds),escapeHtml,()=>'',()=>'');
+)(state,fakeDocument,()=>new Map(),()=>'test-key',seconds=>String(seconds),escapeHtml,()=>'',()=>'',()=> 'Участник');
 
 for(const count of [3,5]) {
   test('restoration workbench renders real '+count+'-player grid and assigned tray',()=>{
