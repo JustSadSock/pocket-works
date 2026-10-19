@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {initialAutoQuality,autoQualityWindow,runtimeBudget} from '../runtimeBudget.js';
 import {pulsePlan,pulseStats,pulseEnemyKind,nextPulse} from '../runPacing.js';
 import {guardianForWave,guardianReady,guardianSpawnResolved} from '../guardians.js';
+import {durationLabel,organTimings,campaignReport} from '../runReport.js';
 
 test('auto quality stops oscillating across realistic 4-second FPS windows',()=>{
  let q='medium',s=initialAutoQuality(),changes=0;
@@ -87,4 +88,23 @@ test('full campaign transition ledger cannot deadlock and guarantees three diffe
   simulated++;
  }
  assert.equal(simulated,750);
+});
+
+test('the endgame report contains measured organ time, identifies the slowest and never fabricates stages',()=>{
+ const win={elapsed:900,wave:5,waveTime:160,kills:120,damageTaken:194,peakCombo:9,
+  stageTimes:[{wave:1,seconds:138},{wave:2,seconds:235},
+    {wave:3,seconds:186},{wave:4,seconds:181}]};
+ assert.equal(durationLabel(900),'15:00');
+ assert.deepEqual(organTimings(win).map(t=>t.seconds),[138,235,186,181,160]);
+ const report=campaignReport(win,true);
+ assert.ok(report.includes('ЗАБЕГ ЗАВЕРШЁН'));
+ assert.ok(report.includes('ЖЕЛУДОК 3:55'));
+ assert.ok(report.includes('ДОЛЬШЕ ВСЕГО: ЖЕЛУДОК · 3:55'));
+ assert.ok(report.includes('СЕРДЦЕ 2:40'));
+ assert.ok(report.includes('УРОН 194'));
+ const loss=campaignReport({elapsed:180,wave:2,waveTime:80,
+  stageTimes:[{wave:1,seconds:100}],damageTaken:80,peakCombo:2},false);
+ assert.ok(loss.includes('ЭКСПЕДИЦИЯ ПРЕРВАНА'));
+ assert.ok(!loss.includes('НЕРВЫ'),'not-yet-visited organs never appear in report');
+ assert.ok(!loss.includes('СЕРДЦЕ'));
 });
