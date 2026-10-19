@@ -148,9 +148,14 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
   refresh();onAction?.('mount');return inspectResult;
  }
  function openObserver(){
+  // The camera centre is the SAME local null direction as the inspector.
+  // For inward rays use the inward branch; outward rays use the opposite.
+  const theta=state.probeAngle*Math.PI/180,side=Math.sign(state.observerPoint.l);
+  const outward=theta<=Math.PI/2;
+  const yaw=outward?theta:Math.PI-theta;
   onOpenObserver?.({point:{...state.observerPoint},view:{
-   yaw:0,pitch:0,fov:80,mode:'combined',quality:'balanced',
-   facingSign:Math.sign(state.observerPoint.l)}
+   yaw,pitch:0,fov:80,mode:'combined',quality:'balanced',
+   facingSign:outward?-side:side,rayAngle:theta}
   });
  }
  function sceneCamera(w,h){
@@ -378,7 +383,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
   get running(){return running},
   get snapshot(){return {
    parameters:{...state,observerPoint:{...state.observerPoint}},
-   statistics:stats(),
+   statistics:stats(),inspection:inspectResult?{...inspectResult}:null,
    coordinates:field?coordinateConsistency(field,metric):[],
    rays:field?lightFieldSamples(field,metric,{maxPoints:120}):[],
    assumptions:FIELD_ASSUMPTIONS.slice()
