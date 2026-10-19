@@ -127,7 +127,8 @@ export class ReplayViewer {
   this.score.textContent='Счёт '+frame.score.score+' · линии '+frame.score.lines+' · уровень '+frame.score.level;
  }
  download(){
-  const data=this.archive.active?.frames?.length?this.archive.active:this.archive.last();
+  const data=!this.root?.hidden&&this.replay?.frames?.length?this.replay:
+    this.archive.active?.frames?.length?this.archive.active:this.archive.last();
   if(!data){this.setStatus('Нет записанного повтора',true);return;}
   const json=JSON.stringify(data);
   if(json.length>2_000_000){this.setStatus('Повтор превышает допустимый размер',true);return;}
