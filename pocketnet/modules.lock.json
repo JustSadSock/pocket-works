@@ -189,5 +189,11 @@
       "v2",
       "v3"
     ]
+  },
+  "throne-three": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
