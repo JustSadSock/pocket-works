@@ -8,7 +8,12 @@
       "files": [
         "tests/core.test.mjs",
         "tests/avatar.test.mjs",
-        "tests/net.test.mjs"
+        "tests/net.test.mjs",
+        "tests/elements.test.mjs",
+        "tests/balance.test.mjs",
+        "tests/combat-presentation.test.mjs",
+        "tests/combat-readability.test.mjs",
+        "tests/spell-choreography.test.mjs"
       ]
     },
     {
@@ -59,7 +64,12 @@
       "files": [
         "qa/journey.spec.js",
         "qa/avatar.spec.js",
-        "qa/net.spec.js"
+        "qa/net.spec.js",
+        "qa/visual-review.spec.js",
+        "qa/elements.spec.js",
+        "qa/spectacle.spec.js",
+        "qa/readability.spec.js",
+        "qa/choreography.spec.js"
       ]
     }
   ]

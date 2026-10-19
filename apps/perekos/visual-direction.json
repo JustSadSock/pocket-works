@@ -4,12 +4,12 @@
   "product": "perekos",
   "direction": {
     "premise": "Two tiny, stubborn wizards have no idea how badly their own spell combinations will misbehave, but the duel still reads at a glance.",
-    "composition": "A pixel-art stone arena fills the phone. The player's movement thumb rests at the lower left and three spell buttons at the lower right; the top carries two slim health readings.",
-    "shapeLanguage": "Wizard silhouettes are large hats on tiny coats; masonry is made of offset broken rectangles and the runes live in compact paper pieces rather than generic glossy cards.",
-    "surfaceAndMaterial": "The courtyard remains hand-composed pixel stone; the mage is now a manually layered pixel costume with safe account-drawing cameo patches and MASKOT-dependent ears, helmets, hat and coat geometry.",
+    "composition": "A sunken hand-laid circular stone court beneath four burning lanterns; 3D stone obstacles and an inlaid mineral compass give the 400x620 fight a tangible place and readable focal region. Thumb controls remain on the outer edges.",
+    "shapeLanguage": "Six account-derived wizards with wide hats, class-specific equipment, individually swaying cloaks and articulated casting staves. Hand-laid asymmetrical flagstones, relief masonry, central compass, chipped stone and glowing torch wells.",
+    "surfaceAndMaterial": "Static court painter yields height-stacked stone blocks, chipped buttresses, moss, drains and warm lantern light. Bounded impact particles create soot/grit scars on the ground, fractured stone sparks, elemental shock rings and short physical screen kick.",
     "paletteLogic": "The arena uses muddy mineral greens and warm brown shadows to keep peach projectiles, gold sparks and a second reddish wizard distinguishable without electric neon.",
     "typography": "Headings use an old-book serif as a restrained signboard; interface text uses sturdy system sans, short Russian instructions and plain names such as Шар больнее.",
-    "signature": "A genuinely individual little pixel wizard carries the PocketWorks account's actual drawing or animal MASKOT, while a few spells add visible gear without replacing their identifying ears and coat.",
+    "signature": "A physical miniature dueling court that REMEMBERS the hits: staff motion and direction, attack trails, local impact chips and scorch marks, reacted runes and a momentary camera impulse all agree about the same real blow.",
     "distinction": "Unlike VENETS parchment political screens and MEAT.EXE first-person corridors, Perekos has an unframed bird's-eye arcade arena with bottom-corner direct spell buttons."
   },
   "architecture": {
@@ -18,9 +18,9 @@
     "navigation": "overlay-list",
     "chromeTopology": "layered-panels",
     "dominantMotion": "sliding",
-    "primaryVerb": "Keep one thumb on the movement circle and hold the other on the fire spell while avoiding incoming bolts.",
-    "physicalFeedback": "Projectiles appear instantly and strike with small bright pixel bursts; shield casts emit an expanding ring and the wizard dashes between positions.",
-    "spatialRationale": "The uninterrupted portrait battle canvas occupies the center, while health readings above and two thumb clusters below preserve visibility of attacks and cover.",
+    "primaryVerb": "Run with one thumb, aim a single class-specific spell with the other, and craft three independent reaction chains between rounds.",
+    "physicalFeedback": "Staged casting animation (turning, walking feet, fluttering cape, raised glowing staff), 3D masonry, warm light and material-specific impact rings. Confirmed combat events alone produce pooled debris and scar decals; camera shakes no more than a few logical pixels and reduced-motion setting disables it.",
+    "spatialRationale": "Borderless portrait arena, status on the top edge, left movement and right adjustable thumb aim; a character selector and three inset handwritten spell lanes replace the original single long build list.",
     "comparisons": [
       {
         "slug": "not-dead-yet",
@@ -46,12 +46,22 @@
         "slug": "chyepukha",
         "spatialDifference": "ЧЕПУХА размещает одно письмо на ровной письменной странице, а ПЕРЕКОС заполняет экран движущейся пиксельной каменной ареной и двумя персонажами с портретными значками.",
         "interactionDifference": "Набор текста и передача скрытых фрагментов ЧЕПУХИ противопоставлены реальному управлению магом, прицеливанию и сборке цепочки рун между дуэлями."
+      },
+      {
+        "slug": "zamazka",
+        "spatialDifference": "Замазка показывает центральный холст для рисования и компактные инструменты вокруг него; ПЕРЕКОС занимает всю доступную область непрерывным полем боя, а мастерская рун открывается между раундами вместо наложения на само действие.",
+        "interactionDifference": "Замазка опирается на точные штрихи, заливку и голосование за работы, тогда как ПЕРЕКОС — на непрерывное уклонение, направляемые пальцем атаки, выбор персонажа с трейтом и составление трёх независимых цепочек рун."
+      },
+      {
+        "slug": "cavitation-lab",
+        "spatialDifference": "Cavitation Lab is a fluid-physics instrumentation workspace organized around a tank and measurement readouts. Perekos is a hand-authored portrait dueling courtyard where two tiny wizard silhouettes and their physical spell traces own the frame, with sparse perimeter controls instead of experimental gauges.",
+        "interactionDifference": "Cavitation Lab focuses on adjusting physical parameters and observing fluid behavior. Perekos uses moment-to-moment two-thumb movement, directional casting, hits, and between-round rune chains; the new stone debris is visual feedback for server-confirmed hits, not a physics-simulation UI."
       }
     ]
   },
   "production": {
     "renderer": "Quick PWA uses a standalone 400x620 Canvas 2D low-resolution scene with deterministic pre-rendered masonry; simple DOM controls remain crisp and accessible.",
-    "focalAsset": "The hero object is an avatar-derived mage sprite authored with Canvas pixel rectangles: its species, hat, clothing, drawing cameo and signed-in portrait all come from validated account data, while rune effects add a removable final layer."
+    "focalAsset": "The physical sunken courtyard and distinct handheld wizards: aged masonry, inlaid compass, responsive clothing, weapon reach and fading impact scars. The real source is procedural authored Canvas 2D code, not external generated assets."
   },
   "motion": {
     "character": "Movement and spells are instant and snappy, while robe and hat gently bob to keep the character alive and distinguish standing still from a frozen sprite.",
@@ -68,7 +78,7 @@
       "type": "click",
       "selector": "#primary-action"
     },
-    "expectedChange": "Starting the duel reveals a personalized hero instead of a generic sprite, and a valid PocketWorks MASKOT is recognizable in the hero canvas, HUD portrait and the live battle.",
+    "expectedChange": "Screenshots must show non-repeating stone relief, clear six-sprite silhouettes, player-facing staff strike, real effects from an actual duel, meaningful contrast and no sideways scroll. All visual code leaves deterministic match snapshots untouched.",
     "capture": [
       "initial",
       "action",

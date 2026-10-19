@@ -113,3 +113,114 @@
 @media(max-height:710px){.online-button{min-height:45px;font-size:14px}.net-sheet{padding:15px 12px}.net-invite{padding:12px}#net-copy-code{font-size:26px!important}.net-wait-mark{font-size:42px}}
 
 .net-feedback{user-select:text;-webkit-user-select:text;overflow-wrap:anywhere}
+
+
+/* v0.5 — the handbound three-spell laboratory, and grounded silhouette selection */
+.mage-switch{width:100%;display:flex;align-items:center;justify-content:space-between;gap:7px;min-height:47px;padding:8px 11px;background:#283f35;border:1px solid #a88c5f;color:#e6d6ad;text-align:left;font-size:11px;font-weight:850}
+.mage-switch strong{margin-left:auto;font-size:16px;color:#fff0bf}.mage-switch span{font-size:10px;color:#aebaa6;white-space:nowrap}
+.mage-picker{width:min(430px,94vw);max-height:min(91dvh,780px);display:flex;flex-direction:column;padding:16px 14px;overflow:hidden}
+.mage-picker h2{font-size:28px;margin:4px 0 6px}.mage-picker>p{font-size:11px;line-height:1.45;margin:0 0 7px;color:#645940}
+.mage-options{overflow-y:auto;min-height:0;display:grid;gap:6px;scrollbar-width:thin;flex:1}
+.mage-family{background:#d4bb92;border-left:4px solid #9c755c;padding:7px}.mage-family.mage-storm{border-color:#577e79}.mage-family.mage-stone{border-color:#727d69}
+.mage-family h3{margin:0 0 5px;display:flex;align-items:center;gap:8px;font-size:13px;color:#35483b;font-weight:950}
+.mage-family h3 small{font-size:9px;color:#655b4a;font-weight:550;line-height:1.25}
+.mage-family-choices{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mage-option{display:flex;align-items:center;gap:7px;text-align:left;min-width:0;min-height:60px;padding:6px;background:#f1e3c5;border:1px solid #9b876f;color:#2d3f36}
+.mage-option.picked{border:2px solid #294e42;background:#e0f0d9;box-shadow:inset 0 0 0 2px #92b198}
+.mage-option i{font-style:normal;display:grid;place-items:center;width:27px;height:33px;flex-shrink:0;font-size:23px;color:#ac654c}
+.mage-storm .mage-option i{color:#578c90}.mage-stone .mage-option i{color:#657967}
+.mage-option span{min-width:0;display:grid;gap:3px}.mage-option strong{font-size:12px}.mage-option small{color:#68735e;font-size:9px;line-height:1.25}
+.mage-picker-actions{display:flex;gap:8px;flex-shrink:0;margin-top:9px}.mage-picker-actions button{margin:0!important;min-height:46px}.mage-picker-actions button:first-child{width:35%;background:#877258}.mage-picker-actions .big-button{width:65%;font-size:14px}
+.net-mage-area{display:grid;gap:6px;margin:10px 0;border-top:1px dashed #a58c66;padding-top:8px}
+.net-mage-area>small{font-size:10px;letter-spacing:1px;color:#574a39;font-weight:900}
+.net-mages{max-height:188px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.net-mages .mage-family{padding:4px;border-left-width:2px}.net-mages .mage-family h3{font-size:10px}.net-mages .mage-family-choices{grid-template-columns:1fr;gap:3px}
+.net-mages .mage-option{min-height:29px;padding:3px 2px}.net-mages .mage-option i{font-size:11px;width:12px;height:16px}
+.net-mages .mage-option strong{font-size:10px}
+.workbench .bench-slots{max-height:min(44dvh,398px);overflow-y:auto;scrollbar-width:thin;gap:8px;padding:3px}
+.spell-lane{border:1px solid #8a7f62;background:#c2b18e;padding:4px;display:grid;gap:3px;box-shadow:inset 0 1px #f0deb9}
+.spell-lane-head{font-size:10px;font-weight:950;letter-spacing:1.2px;color:#395746;padding:1px 5px 3px}
+.spell-lane:nth-child(2){border-left:3px solid #6b8e7c}
+.spell-lane:nth-child(3){border-left:3px solid #a27659}
+.spell-lane .bench-slot{min-height:38px}.spell-lane .slot-drag{padding-block:2px}.spell-lane .rune-icon{height:27px}
+.draft-outcome{display:inline-block;margin:4px 0 8px;font-weight:950;letter-spacing:.6px;font-size:11px;color:#805943}
+#attack-btn{touch-action:none;user-select:none}
+#attack-btn.aiming{box-shadow:inset 0 0 0 4px #f3dfaa,0 0 14px #e1c47f80;filter:brightness(1.12)}
+@media(max-height:735px){.mage-picker{max-height:90dvh;padding:10px}.mage-option{min-height:47px}.mage-option small{font-size:8px}.mage-switch{min-height:38px}.workbench .bench-slots{max-height:35dvh}.spell-lane .bench-slot{min-height:33px}}
+@media(max-width:365px){.mage-option{gap:3px;padding:4px}.mage-option i{width:20px}.mage-option strong{font-size:11px}.mage-family{padding:4px}.net-mages{gap:2px}}
+
+
+/* A genuine small fighter sprite replaces generic class glyphs in selection. */
+.mage-option .mage-sprite{display:block;flex:0 0 41px;width:41px;height:44px;background:#3c4a3b;border-bottom:3px solid #9c9671;image-rendering:pixelated}
+.mage-family.mage-storm .mage-sprite{background:#334b50}
+.mage-family.mage-stone .mage-sprite{background:#414a3f}
+.net-mages .mage-option .mage-sprite{flex-basis:27px;width:27px;height:27px}
+.net-sheet{max-height:90dvh;overflow-y:auto;scrollbar-width:thin}
+
+.spell-lane-empty{background:#d3c4a9;border-style:dashed;opacity:.82}
+.spell-lane-empty p{font-size:10px;color:#7b6d51;margin:0;padding:3px 6px 5px;line-height:1.3}
+
+
+.spell-index{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:5px 2px 7px}
+.spell-index-button{font-size:10px;font-weight:950;min-height:30px;letter-spacing:.3px;white-space:nowrap;background:#c5b18d;color:#425647;border:1px solid #998568}
+.spell-index-button.active{background:#33564a;color:#f3e0b9;border-color:#4c725f;box-shadow:inset 0 -3px #72947c}
+.workbench .bench-slots{position:relative;scrollbar-gutter:stable}
+
+
+/* The spell editor keeps the decisive action reachable even when the rune rack scrolls. */
+.spell-lane .rune-node strong{display:block;font-size:12px;line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spell-lane .rune-node small{display:block;font-size:9px;letter-spacing:.7px;font-weight:850;line-height:1.12;margin-top:3px;color:#826c52}
+.workbench .bench-actions{position:sticky;bottom:-16px;z-index:30;padding:9px 0 4px;margin-top:7px;background:linear-gradient(180deg,#dcc5a2,#d4bd99);border-top:2px solid #a58f6e;box-shadow:0 -5px 7px #d0b894aa}
+.workbench .bench-actions button{flex-shrink:0}
+
+
+/* Brief action hints must never obscure the enemy or extend past the phone. */
+.toast{top:auto;bottom:clamp(92px,13dvh,150px);max-width:min(320px,calc(100vw - 36px));width:max-content;white-space:normal;text-align:center;font-size:12px;line-height:1.3;padding:7px 11px;box-shadow:0 3px #352f28}
+
+
+/* Reaction note previews only combinations that the equipped character can cast. */
+.chemistry-preview{margin:6px 3px 9px;padding:7px 10px;background:#d5c6a6;color:#6b604d;border-left:3px solid #a38d70;font-size:10px;line-height:1.35;min-height:28px}
+.chemistry-preview.has-reaction{background:#dce2c7;border-left-color:#4a8678;color:#2c5548}
+@media(max-height:735px){.chemistry-preview{padding:5px 7px;margin:3px 2px 5px;font-size:9px}}
+
+
+/* v0.7 — the dueling court becomes the product. Full-bleed warm stone,
+   hand-sized deliberate controls and a real focal character, not UI confetti. */
+.arena{background:radial-gradient(ellipse at 50% 40%,#424f44 0%,#1c2a27 69%,#0d1918 100%)}
+.arena-shade{background:linear-gradient(180deg,#101b1eaa 0%,#15272216 21%,transparent 36%,transparent 67%,#12252226 78%,#0b1717b3 100%);mix-blend-mode:multiply}
+#world{filter:contrast(1.055) saturate(.97)}
+.scene-panel.menu{background:linear-gradient(180deg,#13211c9c 0%,#14292269 28%,#0d1f1bc2 68%,#0a1818f3 100%);backdrop-filter:none}
+.menu-composition{max-width:455px;position:relative;isolation:isolate}
+.menu-composition::before{
+ content:'';position:absolute;z-index:-1;top:clamp(-16px,-2vh,0px);
+ left:50%;transform:translateX(-50%);width:min(78vw,260px);height:min(78vw,260px);
+ border-radius:50%;
+ background:radial-gradient(circle,#c7b78226 0%,#957a5629 37%,#56634d29 45%,#15271c00 75%);
+ pointer-events:none
+}
+#hero-preview{
+ width:clamp(135px,21vh,198px);height:auto;max-width:64vw;
+ image-rendering:pixelated;filter:drop-shadow(5px 11px 0 #0e2019ac);
+ transform-origin:50% 84%;animation:mage-breathe 4.6s ease-in-out infinite
+}
+@keyframes mage-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.menu h1{font-size:clamp(46px,14vw,76px);letter-spacing:-2.8px;line-height:.93;text-shadow:0 4px 0 #283d32,0 7px 0 #17261f,0 13px 16px #0c1b1acb}
+.menu p{margin:11px 0 clamp(14px,2vh,30px);font-size:13px;letter-spacing:.14px}
+.menu .play-block{max-width:320px;gap:10px}
+.menu .big-button{background:#e1b47c;box-shadow:inset 0 4px #f8dba7,0 4px #292b26,0 8px 21px #0c1b1c91}
+.menu .big-button:active{box-shadow:inset 0 2px #b98b57,0 1px #292b26}
+.battle-hud{filter:drop-shadow(0 3px 3px #0c201fa3)}
+.control-layer .spell-button{transition:filter .09s linear,transform .09s linear}
+.control-layer .spell-button:active{filter:brightness(1.25) saturate(1.12)}
+@media(max-height:760px){
+ #hero-preview{width:clamp(96px,17.5vh,145px)}
+ .menu p{margin:6px 0 10px}
+ .menu .play-block{gap:7px}
+ .menu .big-button{min-height:49px}
+}
+@media(max-width:370px){
+ .menu-composition{margin-top:0}
+ .menu .play-block{gap:7px}
+ .menu h1{letter-spacing:-2px}
+}
+@media(prefers-reduced-motion:reduce){#hero-preview{animation:none}.control-layer .spell-button{transition:none}}

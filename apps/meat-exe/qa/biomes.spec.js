@@ -16,7 +16,8 @@ test('all four organ environments restore and have distinct zone labels',async (
   const state=await page.evaluate(()=>window.__MEAT_QA__());
   expect(state.worldStage).toBe(wave);expect(state.biome).toBe(id);
   expect(state.mode).toBe('playing');
-  await page.locator('#pauseBtn').click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#pauseMenu')).toBeVisible();
   await page.locator('#menuPause').click();
  }
  expect(errors).toEqual([]);
@@ -39,7 +40,8 @@ test('finishing a wave travels into an actual new anatomical world',async ({page
  await expect(page.locator('#zoneValue')).toHaveText('ЖЕЛУДОК');
  const s=await page.evaluate(()=>window.__MEAT_QA__());
  expect(s.wave).toBe(2);expect(s.biome).toBe('gastric');
- await page.locator('#pauseBtn').click();await page.locator('#menuPause').click();
+ await page.keyboard.press('Escape');await expect(page.locator('#pauseMenu')).toBeVisible();
+ await page.locator('#menuPause').click();
  await page.reload();await page.locator('#resumeSaved').click();
  const saved=await page.evaluate(()=>window.__MEAT_QA__());
  expect(saved.worldStage).toBe(2);

@@ -1,0 +1,258 @@
+:root{
+ color-scheme:dark;--deep:#13262b;--steel:#344b50;--sea:#7edfc9;
+ --orange:#e9a85a;--paper:#e8e8dd;--ink:#1c3135;
+ --safe-top:max(8px,var(--app-safe-top,env(safe-area-inset-top)));
+ --safe-bottom:max(8px,var(--app-safe-bottom,env(safe-area-inset-bottom)));
+ --workshop-bg:#e8e8dd;--workshop-fg:#1c3135;--workshop-muted:#586663;--workshop-accent:#94754c;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--deep);overflow:hidden}
+body{font:14px/1.3 "Arial Narrow","Helvetica Neue",Arial,sans-serif;color:var(--paper);-webkit-font-smoothing:antialiased}
+button,input,a{font:inherit}
+button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--orange);outline-offset:3px}
+button:disabled{opacity:.38;cursor:default}
+[hidden]{display:none!important}
+.app-shell{width:100%;height:var(--app-viewport-height,100dvh);min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:var(--deep);padding-top:var(--safe-top);padding-bottom:var(--safe-bottom)}
+.topbar{height:55px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(14px,2.2vw,32px);gap:12px;background:var(--deep);border-bottom:1px solid #31474a}
+.exit{text-decoration:none;color:#9fbdba;font-size:12px;min-height:44px;display:flex;align-items:center;white-space:nowrap}
+.exit:active{color:white}
+.wordmark{display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:17px;letter-spacing:.15em;color:#ecf1e9}
+.wordmark small{font-weight:500;letter-spacing:.14em;font-size:9px;color:#809a96;padding-left:5px;white-space:nowrap}
+.wordmark-icon{display:inline-block;width:18px;height:18px;border:2px solid #a4efe0;border-radius:50%;position:relative;box-shadow:inset -3px -2px 0 #2f5357}
+.wordmark-icon:after{content:'';position:absolute;width:6px;height:6px;right:-6px;top:-5px;border-top:1px solid #edb66d;border-right:1px solid #edb66d;transform:rotate(26deg)}
+.science{border:1px solid #517074;background:transparent;color:#c6d5cb;min-height:40px;padding:0 13px;border-radius:0;white-space:nowrap}
+.science:active{background:#294449}
+.workspace{min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(308px,345px);background:var(--deep)}
+.chamber{position:relative;min-height:0;overflow:hidden;background:#14313a;isolation:isolate}
+.chamber:after{content:'';pointer-events:none;position:absolute;inset:0;border:10px solid #243b40;box-shadow:inset 0 0 0 1px #6281873d}
+#field{width:100%;height:100%;display:block;touch-action:none}
+.field-top{position:absolute;left:clamp(22px,3vw,48px);right:clamp(22px,3vw,48px);top:24px;display:flex;justify-content:space-between;gap:10px;pointer-events:none}
+.readout{display:flex;flex-direction:column;gap:2px}
+.readout span{color:#b1c9c6;font-size:10px;letter-spacing:.18em}
+.readout strong{font-size:clamp(22px,3vw,36px);letter-spacing:-.04em;font-weight:400;font-variant-numeric:tabular-nums;font-family:Georgia,serif}
+.readout small{font:12px/1 Arial,sans-serif;color:#a7c4be;letter-spacing:0}
+.time-readout{text-align:right}
+.chamber-label{position:absolute;left:clamp(22px,3vw,48px);bottom:158px;display:flex;align-items:center;gap:8px;letter-spacing:.16em;color:#d3dfd4;font-size:10px;pointer-events:none;max-width:80%;text-shadow:0 1px 6px #0f2227}
+.chamber-label i{width:7px;height:7px;border-radius:50%;background:#82cbbc;box-shadow:0 0 14px #83cfac}
+.chamber-label i.impact{background:#edb469;box-shadow:0 0 14px #f8c276}
+.wall-instruction{position:absolute;right:26px;bottom:157px;color:#d3d4ba9b;font-size:9px;letter-spacing:.09em;pointer-events:none}
+.graph-shell{position:absolute;left:14px;right:14px;bottom:14px;height:125px;background:#0c1e24e8;border:1px solid #5471777d;padding:10px 14px 9px}
+.graph-head{display:flex;justify-content:space-between;align-items:center;color:#8fbeb5;font-size:10px;letter-spacing:.1em;gap:8px}
+.graph-head span:first-child{color:#e3e8da;font-family:Georgia,serif;font-size:16px;letter-spacing:0}
+#trace{display:block;width:100%;height:78px;touch-action:none}
+.console{color:var(--ink);background:var(--paper);min-height:0;display:flex;flex-direction:column;box-shadow:-5px 0 22px #0b1c2060}
+.console-head{height:72px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:22px 22px 14px;border-bottom:1px solid #b9c0b4}
+.serial{letter-spacing:.12em;font-size:12px;font-weight:800}.serial span{color:#aa9b81;padding:0 5px}
+.medium{font-family:Georgia,serif;font-size:14px;font-style:italic;color:#67807b}
+.console-main{display:flex;flex-direction:column;min-height:0;flex:1;padding:19px 22px 14px;gap:20px;overflow:auto;overscroll-behavior:contain}
+.presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;background:#c9cfbf;padding:3px}
+.preset{border:0;background:var(--paper);color:#4f6360;min-height:49px;padding:6px 4px;font-size:10px;line-height:1.16}
+.preset.active{background:var(--ink);color:#f2ede0}
+.preset:active{filter:brightness(.9)}
+.sliders{display:grid;gap:21px}
+.instrument{display:block}
+.instrument>span{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:9px;font-size:12px;font-weight:600;color:#384e4d}
+.instrument output{font-size:15px;color:#162f32;font-variant-numeric:tabular-nums;white-space:nowrap;font-family:Georgia,serif}
+.instrument input{width:100%;margin:0;height:17px;appearance:none;background:transparent;cursor:pointer;touch-action:pan-x}
+.instrument input::-webkit-slider-runnable-track{height:3px;background:linear-gradient(90deg,#6d9b8c,#bdcbc1);border-radius:0}
+.instrument input::-moz-range-track{height:3px;background:#91aea4}
+.instrument input::-webkit-slider-thumb{appearance:none;width:18px;height:18px;background:#1e3e42;border:4px solid #d7dace;box-shadow:0 0 0 1px #243e40;border-radius:0;transform:rotate(45deg);margin-top:-8px}
+.instrument input::-moz-range-thumb{width:12px;height:12px;border-radius:0;background:#1c3f42;border:3px solid #e9e8de;transform:rotate(45deg)}
+.result{border-top:1px solid #b6bfb4;border-bottom:1px solid #b6bfb4;padding:11px 0;display:grid;gap:9px}
+.result>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.result span{color:#637670;font-size:11px}
+.result b{color:#1e393c;font:600 14px Georgia,serif;white-space:nowrap}
+.actions{margin-top:auto;display:grid;grid-template-columns:minmax(0,1fr) 99px 45px;gap:5px}
+.launch{grid-column:1/-1;min-height:61px;background:#d38e4f;color:#152b2e;border:0;padding:0 16px;display:flex;align-items:center;gap:11px;justify-content:space-between;text-align:left;font-weight:800;font-size:13px;letter-spacing:.085em}
+.launch>span:last-child{font-size:21px}
+.launch:active{background:#f0b773;transform:translateY(1px)}
+.launch-symbol{font-size:20px;line-height:1}
+.pause,.speed{background:transparent;border:1px solid #b3bdaf;min-height:37px;color:#3f5754;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.pause{font-size:17px;font-weight:700}
+.pause{grid-column:2}.speed{grid-column:3}
+.pause:active,.speed:active{background:#c7d0c6}
+.console-foot{font-size:9px;letter-spacing:.1em;color:#72817c;text-align:center;padding-top:4px}
+.science-panel{position:fixed;inset:0;background:#061518bd;display:grid;place-items:center;z-index:40;padding:22px}
+.science-sheet{width:min(100%,530px);max-height:88dvh;overflow:auto;background:#e7e8dc;color:#203638;padding:22px 25px 24px;box-shadow:0 22px 100px #0009}
+.science-sheet header{display:flex;justify-content:space-between;align-items:center;gap:10px;font:600 21px/1.2 Georgia,serif;border-bottom:1px solid #a8b6ad;padding-bottom:13px}
+.science-sheet header button{font-size:27px;border:0;background:transparent;color:inherit;min-width:44px;min-height:44px}
+.science-sheet p{font-size:14px;line-height:1.6;color:#455b57}
+.science-sheet .source-label{font-size:10px;letter-spacing:.1em;color:#73847d}
+.science-close{min-height:48px;width:100%;border:0;background:#203b3e;color:white;margin-top:10px}
+@media(max-width:830px){
+ .topbar{height:46px;padding:0 13px}.wordmark{font-size:13px;letter-spacing:.08em}
+ .wordmark-icon{width:13px;height:13px}.wordmark small{display:none}
+ .science{min-height:37px;padding:0 9px;font-size:12px}.science span{display:none}
+ .exit{font-size:11px}
+ .workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(215px,1fr) minmax(254px,auto)}
+ .chamber:after{border:5px solid #273f43}
+ .field-top{top:15px;left:18px;right:18px}
+ .readout strong{font-size:25px}
+ .chamber-label{left:18px;bottom:114px;font-size:9px}
+ .wall-instruction{bottom:114px;right:17px;font-size:8px}
+ .graph-shell{height:97px;bottom:6px;left:6px;right:6px;padding:6px 10px}
+ .graph-head{font-size:8px}.graph-head span:first-child{font-size:13px}
+ #trace{height:64px}
+ .console{box-shadow:0 -3px 15px #050f1330;overflow:hidden}
+ .console-head{height:0;padding:0;border:0;overflow:hidden}
+ .console-main{padding:11px 14px max(9px,var(--safe-bottom));gap:10px}
+ .presets{gap:2px;padding:2px}.preset{min-height:37px;font-size:10px;padding:4px}
+ .sliders{gap:7px}
+ .instrument>span{margin-bottom:1px;font-size:11px}
+ .instrument output{font-size:12px}
+ .instrument input{height:13px}
+ .instrument input::-webkit-slider-thumb{width:14px;height:14px;margin-top:-6px}
+ .result{display:none}
+ .actions{margin-top:0;grid-template-columns:minmax(0,1fr) 102px 45px;gap:4px}
+ .launch{min-height:47px;padding:0 12px;font-size:12px}
+ .launch-symbol{font-size:16px}
+ .pause,.speed{min-height:34px}
+ .console-foot{display:none}
+}
+@media(max-width:830px) and (max-height:660px){
+ .workspace{grid-template-rows:minmax(188px,1fr) 231px}
+ .console-main{gap:5px;padding-top:7px}
+ .preset{min-height:31px;font-size:9px}.sliders{gap:2px}
+ .instrument>span{font-size:10px}.instrument input{height:12px}
+ .launch{min-height:41px}.pause,.speed{min-height:30px}
+}
+@media(min-width:831px) and (max-height:660px){
+ .console-head{height:53px;padding:9px 18px}
+ .console-main{padding:11px 18px;gap:10px}
+ .sliders{gap:10px}.preset{min-height:40px}.launch{min-height:50px}
+ .result{gap:5px;padding:7px 0}
+}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+
+/* 1.1: physical ensemble selector, deliberately integrated into instrument tray */
+.cloud-tools{display:flex;flex-direction:column;gap:5px;margin-top:-8px}
+.cloud-count{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;border-bottom:1px solid #b4c1b4;padding-bottom:5px}
+.cloud-mode{border:1px solid #bdc8bd;background:#eff0e6;color:#465952;min-height:37px;font-size:12px;font-weight:700;padding:4px 3px}
+.cloud-mode.active{border-color:#244349;background:#244349;color:#eff4e9}
+.cloud-mode:active{transform:translateY(1px)}
+.cloud-options{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.cloud-options button{min-width:0;border:1px solid #8ca39b;background:#dce4d9;color:#274d4e;min-height:30px;font-size:10px;padding:3px 4px}
+.cloud-options button[aria-pressed="false"]{background:#eae9e0;border-color:#c3cac1;color:#82928c}
+#field{cursor:crosshair}
+@media(max-width:830px){
+ .cloud-tools{gap:3px;margin-top:-3px}
+ .cloud-count{padding-bottom:3px;gap:3px}
+ .cloud-mode{min-height:31px;font-size:11px}
+ .cloud-options button{min-height:27px;font-size:9px}
+ .console-main{gap:7px}
+ .presets .preset{min-height:33px}
+ .instrument input{height:12px}
+ .console-foot{display:none}
+}
+@media(max-width:830px) and (max-height:660px){
+ .cloud-mode{min-height:27px}
+ .cloud-options button{min-height:24px}
+ .console-main{gap:3px}
+ .instrument input{height:11px}
+ .sliders{gap:1px}
+}
+
+.pressure-legend{position:absolute;top:95px;right:22px;pointer-events:none;color:#c9e0d6;font-size:10px;letter-spacing:.1em;opacity:.85}
+@media(max-width:830px){.pressure-legend{top:73px;right:12px;font-size:9px}}
+
+.pressure-legend{display:flex;gap:5px;align-items:center;letter-spacing:0}
+.pressure-legend i{width:9px;height:9px;display:inline-block;margin-left:7px}
+.pressure-legend i.cold{background:#58bbb5}.pressure-legend i.hot{background:#eead7b}
+
+/* The full instrument stack must fit in a standard 1366×768 desktop viewport.
+   Desktop primary action and pause are never hidden below the fold. */
+@media(min-width:831px) and (max-height:900px){
+ .console-head{height:58px;padding:10px 20px}
+ .console-main{padding:12px 20px 10px;gap:11px}
+ .preset{min-height:41px}
+ .cloud-tools{margin-top:0;gap:3px}
+ .cloud-mode{min-height:34px}
+ .cloud-options button{min-height:27px}
+ .sliders{gap:12px}
+ .instrument>span{margin-bottom:4px}
+ .result{padding:8px 0;gap:7px}
+ .launch{min-height:51px}
+ .pause,.speed{min-height:32px}
+ .console-foot{padding-top:0}
+}
+
+/* 1.2 — an instrument for drawing a physical arrangement, not a generic card stack. */
+.cloud-count{grid-template-columns:repeat(4,minmax(0,1fr))}
+.cloud-mode{font-size:11px}
+.app-shell.custom-mode .presets{display:none}
+.constructor-panel{display:grid;gap:5px;border-top:1px solid #a7b7ab;padding-top:8px}
+.constructor-panel[hidden]{display:none}
+.layout-chooser,.editing-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.layout-chooser button,.editing-row button{min-height:31px;padding:4px 3px;background:#e5e8dc;border:1px solid #adbdaf;font-size:10px;font-weight:650;color:#304b48}
+.layout-chooser button:active,.editing-row button:active{background:#b8cdbd}
+.editing-row button:first-child{background:#295052;color:#eff4e6;border-color:#295052}
+.editing-row button:disabled{opacity:.35}
+.edit-size{display:grid;gap:2px}
+.edit-size>span{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:650}
+.edit-size output{font-family:Georgia,serif;font-size:14px;color:#1b3b3e}
+.edit-size input{width:100%;appearance:none;height:13px;background:transparent;touch-action:pan-x}
+.edit-size input::-webkit-slider-runnable-track{height:3px;background:#92b2a8}
+.edit-size input::-webkit-slider-thumb{appearance:none;background:#e3ab67;border:2px solid #355457;width:16px;height:16px;border-radius:50%;margin-top:-7px}
+.edit-size input::-moz-range-track{height:3px;background:#92b2a8}
+.edit-size input::-moz-range-thumb{background:#e3ab67;border:2px solid #355457;width:12px;height:12px}
+.editor-message{font-size:10px;line-height:1.25;color:#657b72;min-height:13px}
+.editor-message.error{color:#994d31;font-weight:700}
+.cascade-summary{font-size:10px;font-variant-numeric:tabular-nums;letter-spacing:.02em;
+ border-top:1px solid #bbc7ba;padding:6px 0 0;color:#355653;font-weight:700;min-height:19px}
+.app-shell.custom-mode .actions{position:sticky;bottom:0;z-index:3;background:var(--paper);padding-top:3px}
+.app-shell.custom-mode #experiment-title{letter-spacing:.06em}
+@media(max-width:830px){
+ .app-shell.custom-mode .workspace{grid-template-rows:minmax(180px,1fr) minmax(270px,310px)}
+ .app-shell.custom-mode .console-main{padding:7px 12px max(7px,var(--safe-bottom));gap:4px}
+ .cloud-count{gap:2px}
+ .cloud-mode{font-size:10px;padding:3px 1px;min-height:32px}
+ .app-shell.custom-mode .cloud-tools{margin-top:0;gap:3px}
+ .app-shell.custom-mode .constructor-panel{padding-top:3px;gap:2px}
+ .app-shell.custom-mode .editing-row button,
+ .app-shell.custom-mode .layout-chooser button{min-height:27px;font-size:9px;padding:3px 2px}
+ .app-shell.custom-mode .edit-size>span{font-size:10px}
+ .app-shell.custom-mode .edit-size output{font-size:12px}
+ .app-shell.custom-mode .editor-message{font-size:9px}
+ .app-shell.custom-mode .cascade-summary{font-size:9px;padding-top:2px}
+ .app-shell.custom-mode .sliders{gap:0}
+ .app-shell.custom-mode .instrument>span{font-size:10px}
+ .app-shell.custom-mode .instrument output{font-size:11px}
+ .app-shell.custom-mode .cloud-options button{min-height:23px}
+ .app-shell.custom-mode .launch{min-height:42px}
+ .app-shell.custom-mode .pause,.app-shell.custom-mode .speed{min-height:27px}
+}
+@media(max-width:830px) and (max-height:620px){
+ .app-shell.custom-mode .workspace{grid-template-rows:minmax(150px,1fr) 263px}
+ .app-shell.custom-mode .console-main{padding:4px 10px;gap:2px}
+ .app-shell.custom-mode .layout-chooser button,
+ .app-shell.custom-mode .editing-row button{min-height:24px}
+ .app-shell.custom-mode .editor-message{display:none}
+ .app-shell.custom-mode .launch{min-height:36px}
+}
+@media(min-width:831px) and (max-height:800px){
+ .app-shell.custom-mode .console-main{gap:6px;padding:9px 15px}
+ .app-shell.custom-mode .cloud-tools{gap:4px}
+ .app-shell.custom-mode .sliders{gap:6px}
+ .app-shell.custom-mode .result{gap:3px;padding:5px 0}
+ .app-shell.custom-mode .console-foot{display:none}
+ .app-shell.custom-mode .cloud-mode{min-height:31px}
+ .app-shell.custom-mode .editing-row button,
+ .app-shell.custom-mode .layout-chooser button{min-height:27px}
+}
+
+/* Visual QA follow-up: full custom tools and global pressure controls fit at phone height. */
+@media(max-width:830px){
+ .app-shell.custom-mode .workspace{grid-template-rows:minmax(165px,1fr) minmax(325px,380px)}
+ .app-shell.custom-mode .wall-instruction{display:none}
+ .app-shell.custom-mode .console-main{gap:3px;padding-bottom:max(7px,var(--safe-bottom))}
+ .app-shell.custom-mode .instrument{margin-bottom:0}
+ .app-shell.custom-mode .instrument>span{margin-bottom:0}
+ .app-shell.custom-mode .actions{box-shadow:0 -5px 8px var(--paper)}
+}
+@media(max-width:830px) and (max-height:670px){
+ .app-shell.custom-mode .workspace{grid-template-rows:minmax(135px,1fr) minmax(292px,345px)}
+ .app-shell.custom-mode .console-main{gap:1px;padding-top:4px}
+ .app-shell.custom-mode .constructor-panel{gap:1px}
+ .app-shell.custom-mode .editor-message{display:none}
+}

@@ -130,3 +130,92 @@
  .surgery-footer>span{width:100%}
 }
 @media(prefers-reduced-motion:reduce){.graft-option{transition:none}}
+
+
+/* v1.8 / a two-branch incision between organs; precise hit areas, no dead UI. */
+.route-fork{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px;font-family:Arial,sans-serif}
+.route-option{border:1px solid #845b55;border-left:5px solid #916054;padding:10px 13px;
+ background:linear-gradient(90deg,#321c21,#201014);color:#eed2bb;text-align:left;
+ display:flex;flex-direction:column;gap:3px;min-height:66px;transition:transform .1s,border-color .12s,background .12s}
+.route-option strong{font:800 12px/1.2 Arial,sans-serif;letter-spacing:.07em}
+.route-option span{font:11px/1.35 Arial,sans-serif;color:#ddc5ad}
+.route-option small{font:10px/1.3 Arial,sans-serif;color:#d9958b}
+.route-option[aria-pressed="true"]{border-color:#f7d0a4;border-left-color:#f2c096;
+ background:linear-gradient(90deg,#6b3330,#291618);box-shadow:inset 0 0 0 1px #cf9368}
+.route-option[aria-pressed="true"] strong:after{content:" / ВЫБРАНО";color:#f2bb80}
+.route-option:active{transform:translateY(2px)}
+.gene-archive{width:min(395px,100%);margin-top:10px;flex:none}
+.archive-toggle{width:100%;min-height:34px;padding:6px 11px;border:1px solid #77534b;color:#e5c9af;
+ background:rgba(40,17,20,.9);display:flex;justify-content:space-between;align-items:center;
+ font:700 11px Arial,sans-serif;letter-spacing:.10em}
+.archive-toggle span{font-weight:500;color:#d1a793}
+.archive-panel{border:1px solid #76504a;border-top:0;background:rgba(17,9,11,.95);padding:8px}
+.archive-options{display:grid;gap:4px}
+.archive-option{display:flex;gap:7px;align-items:center;justify-content:space-between;padding:7px 9px;
+ width:100%;border:1px solid #5e3b38;text-align:left;background:#241417;color:#efd0b8;font:11px Arial,sans-serif}
+.archive-option strong{letter-spacing:.04em;font-size:11px}
+.archive-option small{display:block;color:#c6a292;font-size:10px;margin-top:3px}
+.archive-option b{white-space:nowrap;color:#edb68b;font-size:10px}
+.archive-option[aria-pressed="true"]{border-color:#eac49e;background:#59312c}
+.archive-option:not(:disabled):active{transform:translateY(1px)}
+@media (max-width:650px),(max-height:480px){
+ .route-fork{gap:5px;margin-top:6px}.route-option{padding:6px 8px;min-height:49px}
+ .route-option strong{font-size:10px}.route-option span,.route-option small{font-size:9px}
+ .surgery-heading{padding-bottom:5px}
+ .archive-toggle{min-height:31px}
+}
+@media(max-width:650px) and (orientation:portrait){
+ .menu-pane{justify-content:flex-start}
+ .route-fork{grid-template-columns:1fr 1fr}
+ .route-option{min-height:63px}
+}
+@media(prefers-reduced-motion:reduce){.route-option{transition:none}}
+
+
+/* v1.8.2: a single narrow boss marker anchored between the top readouts and sightline. */
+.guardian-status{position:absolute;z-index:4;top:calc(63px + env(safe-area-inset-top));
+ left:50%;transform:translateX(-50%);width:min(280px,45vw);pointer-events:none;
+ display:flex;flex-direction:column;gap:5px;text-align:center;
+ font:800 12px Arial,sans-serif;letter-spacing:.12em;color:#e9d5c2;
+ text-shadow:0 2px 5px #120407}
+.guardian-track{height:5px;width:100%;background:rgba(24,4,9,.80);
+ outline:1px solid rgba(232,192,163,.52)}
+.guardian-track i{display:block;height:100%;width:100%;background:#d8a397;
+ transition:width .14s linear}
+@media(max-width:620px){.guardian-status{top:calc(69px + env(safe-area-inset-top));
+ font-size:10px;width:min(210px,49vw);gap:3px}}
+@media(max-height:480px){.guardian-status{top:calc(38px + env(safe-area-inset-top));
+ width:min(230px,34vw);font-size:9px}.guardian-track{height:3px}}
+@media(prefers-reduced-motion:reduce){.guardian-track i{transition:none}}
+
+
+/* Route action appears only near a physical fork gate; it never covers fire. */
+.fork-control{position:absolute;left:50%;bottom:calc(97px + env(safe-area-inset-bottom));
+ transform:translateX(-50%);z-index:4;min-height:44px;min-width:122px;padding:8px 14px;
+ background:rgba(66,29,32,.93);color:#f4d9b8;border:1px solid #dfae8c;
+ font:700 11px Arial,sans-serif;letter-spacing:.07em;box-shadow:0 5px 20px #16080b;
+ touch-action:manipulation}
+.fork-control:active{background:#a14f43;transform:translateX(-50%) translateY(2px)}
+@media(max-height:480px){.fork-control{bottom:calc(18px + env(safe-area-inset-bottom));
+ left:49%;min-width:95px;font-size:9px;padding:7px}}
+
+/* Stage physiology lives in existing header, not another floating panel. */
+.hud-center .pulse-indicator{display:block;font:700 9px/1.15 Arial,sans-serif;font-style:normal;
+ letter-spacing:.14em;color:#d8ab91;margin:2px 0;white-space:nowrap}
+@media(max-height:480px){.hud-center .pulse-indicator{font-size:8px;margin:1px 0}}
+
+/* v1.8.4 / measured experiments, presented as a field log rather than fake stats. */
+.archive-panel{max-height:min(42vh,340px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.archive-subtitle{margin:12px 1px 6px;color:#eac2a0;letter-spacing:.13em;
+ font:800 10px/1.3 Arial,sans-serif}
+.protocol-option strong{font-size:11px}
+.protocol-option small{line-height:1.4}
+.archive-stats,.archive-record{font:10px/1.45 Arial,sans-serif;color:#d1ae9c;padding:6px 4px;
+ border-top:1px solid rgba(194,134,112,.24)}
+.archive-stats{color:#f2d0b2;font-weight:700}
+.combo-chip{display:block;font:900 10px/1.25 Arial,sans-serif;letter-spacing:.08em;
+ color:#f4c39b;margin-top:4px;text-shadow:0 0 8px rgba(220,84,55,.35);
+ animation:chain-pulse .3s ease-out}
+@keyframes chain-pulse{from{transform:scale(1.17);opacity:.55}to{transform:scale(1);opacity:1}}
+@media(max-width:650px){.archive-panel{max-height:34vh}.archive-subtitle{margin-top:9px}}
+@media(prefers-reduced-motion:reduce){.combo-chip{animation:none}}

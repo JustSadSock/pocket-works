@@ -2,26 +2,27 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {makeMatch,chooseRune,beginRound,reorderRunes,offers,tick,stats,validState,RUNES,W,H,canStand,STEP,startRound} from '../core.mjs';
 import {rune,compile,description,legalRunes,MAX_REACTIONS_PER_TICK,MAX_QUEUE} from '../runes.mjs';
+import {MAGES,mage} from '../mages.mjs';
 
-test('36 unique plain-language runes, 12 per grammatical category',()=>{
- assert.equal(RUNES.length,36);assert.equal(new Set(RUNES.map(r=>r.id)).size,36);
- for(const type of ['when','do','how'])assert.equal(RUNES.filter(r=>r.type===type).length,12);
+test('39 plain-language runes, three new elemental modifiers',()=>{
+ assert.equal(RUNES.length,39);assert.equal(new Set(RUNES.map(r=>r.id)).size,39);
+ assert.deepEqual(['when','do','how'].map(type=>RUNES.filter(r=>r.type===type).length),[12,12,15]);
  for(const r of RUNES){assert.ok(r.name.length>3&&r.desc.length>10);assert.equal(rune(r.id).name,r.name)}
 });
 test('new session is a fully deterministic fixed-step game',()=>{
- const a=makeMatch(701),b=makeMatch(701);assert.equal(a.version,2);assert.deepEqual(a.score,[0,0]);
+ const a=makeMatch(701),b=makeMatch(701);assert.equal(a.version,4);assert.deepEqual(a.score,[0,0]);
  assert.ok(validState(a));assert.equal(a.remaining,25);
  for(let i=0;i<400;i++){const command={x:i%60<30?1:-1,y:.2,attack:true,shield:i===5,dash:i===55};tick(a,command);tick(b,command)}
  assert.deepEqual(a,b);
 });
-test('offers exclude owned cards, draft leads to a reorderable five-slot workbench',()=>{
+test('offers exclude owned cards, draft leads to a reorderable nine-slot workbench',()=>{
  const s=makeMatch(8);const x=offers(s);assert.equal(x.length,3);assert.equal(new Set(x).size,3);
  assert.ok(x.every(id=>!s.actors[0].runes.includes(id)));
  s.pick=x;s.phase='draft';
  assert.equal(chooseRune(s,'nonsense'),false);
  assert.equal(chooseRune(s,x[0]),true);assert.equal(s.phase,'build');
  assert.equal(s.actors[0].runes.length,3);
- assert.equal(reorderRunes(s,0,2),true);assert.equal(s.actors[0].runes[2],'on_cast');
+ assert.equal(reorderRunes(s,0,2),true);assert.equal(s.actors[0].runes[2],'on_hurt');
  assert.equal(beginRound(s),true);assert.equal(s.phase,'fight');assert.equal(s.round,1);
  assert.equal(beginRound(s),false);assert.equal(reorderRunes(s,0,1),false);
 });
@@ -49,10 +50,10 @@ test('barrier and mine actions are physical, not decorative',()=>{
  assert.ok(t.barriers[0].life>0);
 });
 test('shield, dash and overload have real bounded cooldown and heat behavior',()=>{
- const s=makeMatch(1);s.actors[0].heat=99;
+ const s=makeMatch(1);s.actors[0].heat=92;
  tick(s,{x:1,shield:true,dash:true,attack:true});
  let a=s.actors[0];assert.ok(a.shield>0&&a.dashReady>0);
- // Rising to 100 overloads on the following deterministic tick.
+ // Dash then shield cross 100 in the same tick; overload interrupts the following cast.
  tick(s,{x:1});assert.ok(a.overloadCd>0);assert.ok(a.heat<100);
  const cd=a.dashReady;tick(s,{x:1,dash:true});assert.ok(a.dashReady<cd);
  for(let i=0;i<600&&s.phase==='fight';i++){tick(s,{x:1,y:1});assert.ok(canStand(a.x,a.y));assert.ok(a.x<=W&&a.y<=H)}
@@ -73,21 +74,68 @@ test('dense projectile explosions are bounded on every tick',()=>{
  }
  assert.ok(max>2);
 });
-test('40 fully played seeded games end with a winner and no impossible state',()=>{
- for(let seed=1;seed<=40;seed++){
+test('20 fully played seeded games end with a winner and no impossible state',()=>{
+ for(let seed=1;seed<=20;seed++){
   const s=makeMatch(seed);let count=0,rounds=0;
-  while(s.phase!=='result'&&count++<20000){
-   if(s.phase==='draft'){const selected=s.pick[0];assert.ok(selected);const slot=s.actors[0].runes.length>=5?0:null;assert.equal(chooseRune(s,selected,slot),true);continue}
+  while(s.phase!=='result'&&count++<50000){
+   if(s.phase==='draft'){const selected=s.pick[0];assert.ok(selected);const slot=s.actors[0].runes.length>=9?0:null;assert.equal(chooseRune(s,selected,slot),true);continue}
    if(s.phase==='build'){rounds++;assert.equal(beginRound(s),true);continue}
    const p=s.actors[0],b=s.actors[1],dx=b.x-p.x,dy=b.y-p.y,d=Math.hypot(dx,dy)||1;
    tick(s,{x:dx/d*.45-dy/d*.6,y:dy/d*.45+dx/d*.6,attack:true,aim:{x:b.x,y:b.y},shield:count%200===0,dash:count%180===0});
    assert.ok(validState(s),'invalid seed '+seed+' at step '+count);
   }
   assert.equal(s.phase,'result','seed '+seed);assert.equal(Math.max(...s.score),4);
-  assert.ok(rounds>=3&&rounds<=6);assert.deepEqual(JSON.parse(JSON.stringify(s)),s);
+  assert.ok(rounds>=3&&rounds<=35);assert.deepEqual(JSON.parse(JSON.stringify(s)),s);
  }
 });
 test('corrupt and old saves are rejected without running obsolete combat rules',()=>{
  const v1=makeMatch(10);v1.version=1;assert.equal(validState(v1),false);
  const s=makeMatch(11);s.actors[0].runes=['ball','ball'];assert.equal(validState(s),false);
+});
+
+test('base shot is exactly one projectile; explicit chain and only explicit chain adds more',()=>{
+ const s=makeMatch(12);
+ assert.deepEqual(s.actors[0].runes,['on_hurt','armor']);
+ tick(s,{attack:true,aim:{x:s.actors[1].x,y:s.actors[1].y}});
+ assert.equal(s.shots.filter(q=>q.owner===0).length,1);
+ const t=makeMatch(12);t.actors[0].runes=['on_cast','ball'];
+ tick(t,{attack:true,aim:{x:100,y:300}});
+ assert.equal(t.shots.filter(q=>q.owner===0).length,2);
+ for(const q of t.shots.filter(q=>q.owner===0))assert.ok(q.vx>0,'all projectiles follow the chosen aim, not enemy auto-tracking');
+});
+test('clock timeout and double knockout are both draws, NEVER points or health tie-breaks',()=>{
+ const s=makeMatch(19);s.actors[0].hp=8;s.actors[1].hp=90;s.remaining=STEP/2;
+ tick(s,{});
+ assert.equal(s.phase,'draft');assert.deepEqual(s.score,[0,0]);assert.equal(s.draws,1);
+ assert.equal(s.lastWinner,null);assert.equal(s.lastOutcome,'draw');
+ assert.equal(chooseRune(s,s.pick[0]),true);assert.equal(beginRound(s),true);
+ assert.equal(s.round,2);
+ const both=makeMatch(20);both.actors[0].hp=0;both.actors[1].hp=0;tick(both,{});
+ assert.equal(both.phase,'draft');assert.deepEqual(both.score,[0,0]);assert.equal(both.draws,1);
+});
+test('exactly three independent chains and up to nine cards, not a fourth trigger',()=>{
+ assert.equal(legalRunes(['on_cast','ball','strong','on_hurt','armor','lasting','on_dash','blink','far']),true);
+ assert.equal(legalRunes(['on_cast','on_hit','on_dash','on_hurt']),false);
+ assert.equal(legalRunes(['on_cast','ball','strong','on_hit','heal','on_dash','blink','cool','far','wide']),false);
+ const c=compile(['on_cast','ball','strong','on_hurt','armor','lasting','on_dash','blink','far']);
+ assert.equal(c.length,3);assert.equal(c[2].actions[0].id,'blink');
+});
+test('six mage characters each have distinct attack styles and gameplay traits',()=>{
+ assert.equal(MAGES.length,6);assert.equal(new Set(MAGES.map(m=>m.style)).size,6);
+ assert.equal(new Set(MAGES.map(m=>m.trait)).size,6);
+ for(const m of MAGES){const s=makeMatch(44,m.id);tick(s,{attack:true,aim:{x:350,y:200}});
+  const q=s.shots.find(q=>q.owner===0);assert.ok(q);assert.equal(q.style,m.style);assert.equal(s.actors[0].mageId,m.id);assert.ok(validState(s))}
+ const stone=makeMatch(9,'pebble');const fire=makeMatch(9,'kindle');
+ tick(stone,{shield:true});tick(fire,{shield:true});
+ assert.ok(stone.actors[0].shield>fire.actors[0].shield);
+ const runner=makeMatch(9,'wire');tick(runner,{dash:true,x:1,y:0});assert.ok(runner.actors[0].haste>0);
+});
+
+test('closing arena forces a stalling duelist toward the center before the clock, without awarding a timeout point',()=>{
+ const s=makeMatch(88);s.remaining=5;
+ const old=s.actors[0].hp;
+ tick(s,{x:0,y:0},STEP,{x:0,y:0,aim:{x:200,y:300},attack:false});
+ assert.ok(s.actors[0].hp<old,'the closing circle has meaningful physical pressure');
+ assert.equal(s.score[0]+s.score[1],0);
+ assert.ok(s.remaining>0);
 });

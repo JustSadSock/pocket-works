@@ -1,6 +1,6 @@
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
-const GAME='perekos',RULES=1;
+const GAME='perekos',RULES=3;
 const CODE=/^[0-9a-f]{8}$/i;
 const FULL=/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i;
 const scopedStorage={getItem:k=>{try{return localStorage.getItem('perekos-net:'+k)}catch{return null}},setItem:(k,v)=>{try{localStorage.setItem('perekos-net:'+k,v)}catch{}}};
@@ -74,6 +74,7 @@ export class OnlineDuel {
   return this.send({type:'input',seq:this.seq,round,control});
  }
  start(){return this.send({type:this.view?.phase==='result'?'rematch':'start'})}
+ chooseMage(mageId){return this.send({type:'mage',mageId})}
  pick(rune,replace){return this.send({type:'pick',rune,replace})}
  order(runes){return this.send({type:'order',runes})}
  ready(runes){return this.send({type:'ready',runes})}

@@ -60,7 +60,7 @@ jobs:
         with:
           node-version: '22'
       - name: Test planning and reporting infrastructure
-        run: node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs
+        run: node --test scripts/universal-qa/platform.test.mjs scripts/universal-qa/eta.test.mjs scripts/universal-qa/branch-diff.test.mjs
       - name: Prepare application QA matrix
         id: plan
         env:
