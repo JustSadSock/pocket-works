@@ -70,7 +70,7 @@ function record(s,c,kind,message,subjects,notify){
 function fileLandCases(s,notify){
  const reg=ensure(s);
  for(const dispute of s.conflicts||[]){
-  if(!Number.isInteger(dispute.resultDay)||dispute.courtCaseId)continue;
+  if(!Number.isInteger(dispute.resultDay)||dispute.courtCaseId||dispute.legacyPreCourt)continue;
   const claimant=home(s,dispute.claimantId),owner=home(s,dispute.ownerId);
   if(!claimant||!owner)continue;
   const c={id:s.nextId++,kind:'land',stage:'filed',filedDay:s.day,
