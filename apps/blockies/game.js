@@ -1848,6 +1848,16 @@ class UIManager {
         }
         const item = document.getElementById(`next-item-${player.id}`);
         if (item) item.classList.toggle('hold-exhausted',Boolean(player.holdUsed));
+        // Only the currently controlled touch player may use Hold.
+        if (this.getTouchPlayer()?.id === player.id) {
+            const holdButton = this.touchControls?.querySelector('[data-action="hold"]');
+            if (holdButton) {
+                holdButton.disabled = !!player.holdUsed || !!player.gameOver;
+                holdButton.title = player.holdUsed
+                    ? (currentLanguage === 'ru' ? 'Сначала зафиксируйте фигуру' : 'Lock the current piece first')
+                    : (currentLanguage === 'ru' ? 'Обменять фигуру с запасом' : 'Exchange piece with reserve');
+            }
+        }
     }
 
     updatePlayerInfo(player) {
@@ -3370,7 +3380,7 @@ if (document.readyState === 'loading') {
 
 for(const [method,action] of [['move','move'],['rotate','rotate'],['drop','drop'],['hardDrop','hardDrop'],['hold','hold']]){
  const original=Player.prototype[method];
- Player.prototype[method]=function(...args){if(window.uiManager?.isOnlineMode){networkManager.sendPlayerInput({action,...(method==='move'?{direction:args[0]}:{})});return;}return original.apply(this,args);};
+ Player.prototype[method]=function(...args){if(window.uiManager?.isOnlineMode){if(this.gameOver||(method==='hold'&&this.holdUsed))return;networkManager.sendPlayerInput({action,...(method==='move'?{direction:args[0]}:{})});return;}return original.apply(this,args);};
 }
 function applyNetworkSnapshot(s){
  if(!s||!Array.isArray(s.board)||!Array.isArray(s.players)||!s.sharedStats||!window.uiManager?.isOnlineMode)return;
