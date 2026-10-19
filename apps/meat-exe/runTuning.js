@@ -1,4 +1,5 @@
 // MEAT.EXE / v1.8.4: player-selected replay protocols and observed-run metrics.
+import {sanitizeFieldTelemetry} from './fieldTelemetry.js';
 // These are not decorative modifiers: combat, spawn load and rewards all read them.
 export const PROTOCOLS=Object.freeze([
  Object.freeze({id:'normal',name:'БЕЗ ПРОТОКОЛА',description:'Исходный организм · обычные награды',bonus:0}),
@@ -64,6 +65,7 @@ export function sanitizeRunHistory(value){
     score:Math.floor(finite(r.score,0,99999999)),
     damageTaken:Math.floor(finite(r.damageTaken,0,9999)),
     peakCombo:Math.floor(finite(r.peakCombo,0,12)),
+    telemetry:sanitizeFieldTelemetry(r.telemetry),
     protocol:sanitizeProtocol(r.protocol),
     victory:r.victory===true,
     stageTimes:Array.isArray(r.stageTimes)?r.stageTimes.slice(0,5).map(t=>Math.floor(finite(t,0,99999))):[]
@@ -82,6 +84,7 @@ export function recordFinishedRun(archive,run,victory){
    elapsed:Math.floor(finite(run.elapsed,0,99999)),wave:Math.floor(finite(run.wave,1,5,1)),
    kills:Math.floor(finite(run.kills,0,9999)),score:Math.floor(finite(run.score,0,99999999)),
    damageTaken:Math.floor(finite(run.damageTaken,0,9999)),peakCombo:Math.floor(finite(run.peakCombo,0,12)),
+   telemetry:sanitizeFieldTelemetry(run.telemetry),
    protocol:sanitizeProtocol(run.protocol),victory:Boolean(victory),stageTimes
  };
  archive.history=sanitizeRunHistory([...(archive.history||[]),entry]);
