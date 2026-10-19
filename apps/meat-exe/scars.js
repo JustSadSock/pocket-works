@@ -34,3 +34,19 @@ export function scarSignature(ledger,wave){
  for(const s of selected)counts[s.kind]++;
  return {wave,count:selected.length,...counts};
 }
+
+export function deathPose(type,elapsed,duration=0.8){
+ const t=Math.max(0,Math.min(1,(Number.isFinite(elapsed)?elapsed:0)/
+   Math.max(.001,Number.isFinite(duration)?duration:.8)));
+ const collapse=Math.pow(t,1.35);
+ const heavy=['ossuary','brute','warden'].includes(type);
+ return {
+  complete:t>=1,
+  fall:collapse*(heavy?.23:.30),
+  pitch:collapse*(type==='synapse'?1.10:.58),
+  yaw:collapse*.54,
+  roll:collapse*(heavy?.88:1.32),
+  horizontal:1-collapse*.80,
+  vertical:1-collapse*.63
+ };
+}
