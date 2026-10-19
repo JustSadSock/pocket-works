@@ -387,8 +387,17 @@ decorative prototype. **No premature rework of the PocketWorks shell.**
       tied to moving between tiles, memory rewrite and hinge animation.
 - [x] Fixed procedural cells, sector seams and old save versions verified
       in deterministic 240-seed generator checks and new GPU-test suite.
-- [ ] Validate shader compilation / scene quality in actual Chromium and
-      WebKit QA on desktop and phone (run links in the visual report).
+- [x] First physically located WebGL shader compiled in Chromium/WebKit;
+      the 2.2.1 test suite completed 6/6. The costly version caused a
+      software-rendered desktop click timeout, so the light occlusion
+      algorithm was redesigned in 2.2.2–2.2.3.
+- [x] 48×48 CPU lightmap caches concrete/door occlusion, reducing shader
+      work to one texture sample per pixel rather than many ray samples.
+      v2.2.2 Node CI passed 101/101; real 4-viewport browser visual smoke
+      passed without JS errors.
+- [ ] Finish and inspect dedicated 2.2.2 CPU-precomputed lightmap
+      Playwright screenshots, compare the four-viewport capture against
+      baseline and profile real device FPS.
 - [ ] Profile shader ray-march cost on real lower-tier mobile GPUs, add
       device performance fallback if necessary.
 - [ ] Complete distinct large-scale connections between rooms and
