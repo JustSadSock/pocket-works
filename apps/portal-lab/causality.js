@@ -45,6 +45,12 @@ function ageingFraction(beta){
  for(let i=1;i<GRID;i++)s+=(i%2?4:2)*clockFactor(i/GRID,beta);
  return s/(3*GRID);
 }
+/** Exact-for-this-discretization SR fractional age deficit after one smooth trip.
+ * Used by atlas analytical chronology boundary; no hypothetical wormhole rule. */
+export function ageDeficitFraction(beta){
+ valid(beta,0,.98,'скорость');
+ return 1-ageingFraction(beta);
+}
 export function presetParameters(name){
  const p=CAUSAL_PRESETS[name];
  if(!p)throw Error('Неизвестная причинная предустановка');
