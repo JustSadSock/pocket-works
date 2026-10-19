@@ -636,14 +636,16 @@ function checkAllPlayersGameOver() {
  gameState.rng=rng;
  return {
  init(players){gameState.numPlayers=players.length;gameState.boardWidth=computeBoardWidth(players.length);gameState.board=createEmptyBoard();gameState.players=[];gameState.pieceBag=[];resetSharedStats();players.forEach((p,i)=>{const v=new Player(i,p.color,{},((i+1)/(players.length+1))*gameState.boardWidth);v.init();gameState.players.push(v);});},
- step(ms){for(let t=0;t<ms;t+=50)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(50,ms-t));},
+ step(ms,awaySlots=[]){for(let t=0;t<ms;t+=50)for(const p of gameState.players)if(!p.gameOver&&!awaySlots.includes(p.id))p.update(Math.min(50,ms-t));},
  input(i,p){const v=gameState.players[i];if(!v||v.gameOver)return;if(p.action==='move'&&[-1,1].includes(p.direction))v.move(p.direction,{broadcast:false});else if(['rotate','drop','hardDrop','hold'].includes(p.action))v[p.action]({broadcast:false});else throw Error('Некорректная команда');},
  snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,pieceBag:gameState.pieceBag,players:gameState.players.map(p=>({...p}))};}
  };
 }
 const COLORS=['#FF1493','#00D9FF','#FFDB58','#39FF14'];
+const IDLE_GRACE_MS=3000;
+const SEAT_EXPIRY_MS=60000;
 const copy=s=>structuredClone(s),out=state=>({state,events:[{type:'state',payload:{}}]});
-function active(s){return s.players.filter(p=>!p.departed);}
+function active(s){return s.players.filter(p=>!p.departed&&!p.timedOut);}
 function add(s,p){
  const existing=s.players.find(v=>v.id===p.id);
  if(existing){
@@ -663,7 +665,7 @@ function startRound(s){
  if(!participants.length||!participants.every(p=>p.ready))throw Error('Не все игроки готовы');
  // The old stack is discarded only after explicit unanimous rematch readiness.
  // Reindex only at a round boundary: locked cells refer to stable player slots in an active round.
- s.players=participants.map(p=>({...p,ready:false,departed:false}));
+ s.players=participants.map(p=>({...p,ready:false,departed:false,away:false,timedOut:false,lastSeenAt:Date.now()}));
  s.seed=(Date.now()>>>0) || 1;
  s.phase='playing';s.started=true;s.lastTick=Date.now();s.round=(s.round||0)+1;
  const r=runtime(null,s.seed);r.init(s.players);s.engine=r.snapshot();
@@ -708,17 +710,38 @@ export default {protocolVersion:1,
   state=copy(state);
   const index=state.players.findIndex(v=>v.id===player.id&&!v.departed);
   if(index<0)throw Error('Игрок не в комнате');
-  const v=state.players[index];
+  const v=state.players[index],now=Date.now();
   if(state.phase==='playing'){
    if(p?.type!=='input'&&p?.type!=='pulse')throw Error('Игра уже началась');
+   // Messages from authenticated seats act as heartbeats, not proof of all other
+   // sockets being online. Grace prevents falling or locking a disconnected piece.
+   const previousTick=state.lastTick;
+   for(const seat of state.players){
+    if(seat.departed||seat.timedOut)continue;
+    const lastSeen=seat.lastSeenAt??previousTick;
+    const absence=now-lastSeen;
+    seat.away=absence>IDLE_GRACE_MS;
+    if(absence>SEAT_EXPIRY_MS){
+     seat.timedOut=true;
+     seat.ready=false;
+     const held=state.engine?.players?.[state.players.indexOf(seat)];
+     if(held){held.gameOver=true;held.currentPiece=null;}
+    }
+   }
+   v.lastSeenAt=now;
+   if(!v.timedOut)v.away=false;
    const r=runtime(state.engine,state.seed);
-   r.step(Math.min(250,Math.max(0,Date.now()-state.lastTick)));
-   if(p.type==='input')r.input(index,p.input||{});
-   state.engine=r.snapshot();state.lastTick=Date.now();
+   r.step(Math.min(250,Math.max(0,now-previousTick)),
+     state.players.flatMap((seat,i)=>seat.away||seat.timedOut||seat.departed?[i]:[]));
+   if(p.type==='input'&&!v.timedOut)r.input(index,p.input||{});
+   state.engine=r.snapshot();state.lastTick=now;
+   if(state.engine.players.every(seat=>seat.gameOver))state.engine.isGameOver=true;
    finishIfOver(state);
    return out(state);
   }
   if(state.phase==='results'){
+   // Expired players can rejoin in results and vote for the next round.
+   if(v.timedOut){v.timedOut=false;v.away=false;v.lastSeenAt=now;}
    if(p?.type==='rematch'){
     v.ready=!v.ready;
     if(active(state).every(x=>x.ready))startRound(state);
