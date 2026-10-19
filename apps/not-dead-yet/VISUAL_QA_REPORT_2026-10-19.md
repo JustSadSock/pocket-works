@@ -255,3 +255,25 @@ the same corridor layout with another pastel shade.
 - [ ] Improve corridor-specific domestic geometry, texture-scale variation,
       fixture placement and believable shadows; do not confuse a passing
       browser screenshot with visual realism.
+
+## v2.2.0 — Geometry and practical lighting experiments
+
+The preceding 2.1.7 checks apply to that release, not automatically
+to 2.2.0. The new layoutVersion 3 adds actual connected walkable
+corridor niches and high-up alcove structures while keeping original
+sector boundary portals intact. Legacy saves keep versions 1 or 2.
+
+Two closest relevant lights originate from actually modeled room shades
+and opal hall lights. The shader uses a 48×48 wall/hinge occupancy texture
+and twelve fixed intermediate samples per light ray, with
+`structureEnabled=0` for the separate story chapter and revolver
+viewmodel. This is an inexpensive WebGL1 occlusion approximation;
+full bounced lighting or PCF soft shadows are not claimed.
+
+Testing requested through universal PocketWorks QA:
+- [New 2.2.0 Node architecture regression](https://github.com/JustSadSock/pocket-works/issues/1010)
+- [New 2.2.0 visual/browser shader suite](https://github.com/JustSadSock/pocket-works/issues/1011)
+
+Individual conclusions must be recorded after the runs have actually
+finished. Isolated deterministic JavaScript validation passed 37
+focused tests on new and existing scene/door/lighting modules.
