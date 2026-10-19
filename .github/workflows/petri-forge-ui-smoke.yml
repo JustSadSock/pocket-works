@@ -1,0 +1,46 @@
+name: PetriForge UI Smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/petri-forge/**'
+      - '.github/workflows/petri-forge-ui-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: petri-forge-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Syntax and model tests
+        run: |
+          node --check apps/petri-forge/agent-hub.mjs
+          node --check apps/petri-forge/agent-cockpit.mjs
+          node --test apps/petri-forge/tests/agent-career.test.mjs
+      - name: Playwright cockpit smoke
+        run: npx playwright test --config apps/petri-forge/qa/playwright.config.mjs
+      - name: Failure screenshots and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: petri-forge-browser-failures
+          path: |
+            test-results
+            petri-forge-playwright-report
+          if-no-files-found: ignore
