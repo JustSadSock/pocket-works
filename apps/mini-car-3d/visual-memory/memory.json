@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "product": "mini-car-3d",
+  "captures": [
+    {
+      "id": "c1957a7a7b89624283c5a2532ef6eb3e1bb107f87acc05e46d123817b8c27cac",
+      "recordedAt": "2026-10-19T09:56:16.463Z",
+      "commit": "f4ff40a39f8ad06d44568ee03f84524cd88fe364",
+      "viewport": [
+        844,
+        390
+      ],
+      "state": "initial, real input and settled game, then offline reload",
+      "engine": "Chromium",
+      "action": "Start recovered game, perform its real primary control and reload after the local HTTP transport stops accepting requests.",
+      "files": [
+        {
+          "path": "15bd228b6021e1b1d086d7eade0bffd0e105250b0a7b5d90a18f73292de68dec.png",
+          "sha256": "15bd228b6021e1b1d086d7eade0bffd0e105250b0a7b5d90a18f73292de68dec"
+        },
+        {
+          "path": "85212271d56b2938b94f340473e2b2192098c49883049000ddb9165588c98ba6.png",
+          "sha256": "85212271d56b2938b94f340473e2b2192098c49883049000ddb9165588c98ba6"
+        },
+        {
+          "path": "0ba6d64d50fbf98ea6f37a072488f220c741b1ba4f7801a180354f97011b9866.png",
+          "sha256": "0ba6d64d50fbf98ea6f37a072488f220c741b1ba4f7801a180354f97011b9866"
+        },
+        {
+          "path": "195773d2058dfe91a70e9862c5128913f0b43070c6e1ba9a315d4ae0c64d9f2e.webm",
+          "sha256": "195773d2058dfe91a70e9862c5128913f0b43070c6e1ba9a315d4ae0c64d9f2e"
+        },
+        {
+          "path": "baeeb3b9b2c97e55610c8d7292d4e30510f48d33494ca2eb6e124816e8dbe9e9.png",
+          "sha256": "baeeb3b9b2c97e55610c8d7292d4e30510f48d33494ca2eb6e124816e8dbe9e9"
+        }
+      ]
+    }
+  ],
+  "feedback": []
+}
