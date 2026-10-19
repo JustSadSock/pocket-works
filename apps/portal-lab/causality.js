@@ -170,9 +170,9 @@ export function audit(s){
   exactRelativity:'special relativistic aging and null exterior signals',
   notModelled:'self-consistent Einstein solution, stability, quantum chronology protection, wormhole field source'};
 }
-export function sampleWorldlines(s,n=241){
+export function sampleWorldlines(s,n=241,end=s.duration+14){
  if(!Number.isInteger(n)||n<21||n>2001)throw Error('Неверная выборка');
- const max=s.duration+14,lines=[];
+ const max=valid(end,s.duration,s.duration+1000,'горизонт выборки'),lines=[];
  for(let i=0;i<n;i++){
   const t=i*max/(n-1),b=mouthB(s,t);
   lines.push({t,xa:0,xb:b.x,taua:t,taub:b.tau,
