@@ -309,6 +309,74 @@ function drawOverlay(now){
     over.beginPath();over.arc(x,y,brushRadius()*unitX,0,Math.PI*2);over.stroke();over.setLineDash([]);
   }
 }
+// Analog-style signal recorder: every stroke comes from actual solver samples.
+function drawScope() {
+  if(!sim)return;
+  const bounds=scope.getBoundingClientRect();
+  if(bounds.width<30||bounds.height<30)return;
+  const pixelRatio=Math.min(window.devicePixelRatio||1,2);
+  const cw=Math.max(1,Math.round(bounds.width*pixelRatio)),ch=Math.max(1,Math.round(bounds.height*pixelRatio));
+  if(scope.width!==cw||scope.height!==ch){scope.width=cw;scope.height=ch;}
+  const w=bounds.width,h=bounds.height,c=scopeG;
+  c.setTransform(pixelRatio,0,0,pixelRatio,0,0);
+  c.fillStyle='#0c2026';c.fillRect(0,0,w,h);
+  const l=36,r=w-10,t=12,b=h-22,pw=Math.max(1,r-l),ph=Math.max(1,b-t);
+  const history=plotMode==='history';
+  const recent=trace.samples;
+  const maxTime=recent.length?recent[recent.length-1].t:0;
+  const minTime=Math.max(0,maxTime-16);
+  const values=history?recent.filter(s=>s.t>=minTime).flatMap(s=>[s.a,s.b]):trace.profile(sim);
+  const finite=values.filter(v=>v!==null&&Number.isFinite(v));
+  const maxP=Math.min(30,Math.max(1.6,...finite)*1.08);
+  const minP=Math.max(0,Math.min(.75,...finite)-.1);
+  const toY=p=>b-clamp((p-minP)/Math.max(.001,maxP-minP),0,1)*ph;
+  c.lineWidth=1;
+  c.font='9px monospace';
+  c.textBaseline='middle';
+  for(let i=0;i<=4;i++){
+    const py=t+i*ph/4;
+    c.strokeStyle='#28464b';c.beginPath();c.moveTo(l,py);c.lineTo(r,py);c.stroke();
+    c.fillStyle='#79979b';c.textAlign='right';
+    c.fillText((maxP-(maxP-minP)*i/4).toFixed(1),l-6,py);
+  }
+  c.textBaseline='alphabetic';
+  for(let i=0;i<=4;i++){
+    const px=l+i*pw/4;
+    c.strokeStyle='#20393e';c.beginPath();c.moveTo(px,t);c.lineTo(px,b);c.stroke();
+    c.fillStyle='#809a9e';c.textAlign=i===0?'left':i===4?'right':'center';
+    c.fillText(history?(minTime+(maxTime>16?16:Math.max(4,maxTime))*i/4).toFixed(1):(100*i/4).toFixed(0)+'%',px,h-7);
+  }
+  function drawSeries(points,color){
+    if(points.length<2)return;
+    c.lineWidth=1.9;c.lineJoin='round';c.strokeStyle=color;
+    c.beginPath();let began=false;
+    for(const point of points){
+      if(point[1]===null||!Number.isFinite(point[1])){began=false;continue;}
+      const x=l+clamp(point[0],0,1)*pw,y=toY(point[1]);
+      if(!began){c.moveTo(x,y);began=true;}else c.lineTo(x,y);
+    }
+    c.stroke();
+  }
+  if(history){
+    const duration=Math.max(4,maxTime-minTime);
+    const points=recent.filter(s=>s.t>=minTime);
+    drawSeries(points.map(s=>[(s.t-minTime)/duration,s.a]),'#f2c47d');
+    drawSeries(points.map(s=>[(s.t-minTime)/duration,s.b]),'#83cdd9');
+    c.fillStyle='#718f96';c.textAlign='left';c.font='8px monospace';
+    c.fillText('P/P₀ · ВРЕМЯ τ',l+3,t+10);
+  }else{
+    const p=trace.profile(sim);
+    drawSeries(p.map((v,i)=>[i/Math.max(1,p.length-1),v]),'#f2c47d');
+    for(let i=0;i<2;i++){
+      const x=l+trace.sensors[i].x*pw,y=toY(trace.read(sim)[i].pressure);
+      c.fillStyle=i===0?'#f2c47d':'#83cdd9';
+      c.beginPath();c.arc(x,y,3,0,Math.PI*2);c.fill();
+    }
+    c.fillStyle='#718f96';c.textAlign='left';c.font='8px monospace';
+    c.fillText('P/P₀ · ЛИНИЯ Y=0.5',l+3,t+10);
+  }
+}
+
 function render(now=performance.now()){if(!sim)return;drawPhysics();drawOverlay(now)}
 function updateMetrics(){
   if(!sim)return;
@@ -316,6 +384,15 @@ function updateMetrics(){
   $('peak').innerHTML=sim.maxPressure.toFixed(2)+' <em>×P₀</em>';
   if(probe){const s=sampleAt(probe);$('probe').textContent=s.solid?'СТЕНА':s.pressure.toFixed(2)+' P₀';}
   else $('probe').textContent='—';
+  const readings=trace.read(sim);
+  $('reading-a').textContent=readings[0].solid?'—':readings[0].pressure.toFixed(2);
+  $('reading-b').textContent=readings[1].solid?'—':readings[1].pressure.toFixed(2);
+  const [ta,tb]=trace.arrival;
+  $('lag').textContent=ta!==null&&tb!==null?Math.abs(tb-ta).toFixed(2)+' τ':'—';
+  const velocity=trace.speed(sim);
+  $('front-speed').textContent=velocity!==null?velocity.toFixed(2):'—';
+  $('samples').textContent=trace.samples.length+' отсчётов';
+  $('csv').disabled=trace.samples.length<2;
 }
 function loop(now){
   requestAnimationFrame(loop);
@@ -325,15 +402,15 @@ function loop(now){
   if(active){
     accumulator+=elapsed/16.667*state.speed;
     let executed=0;
-    while(accumulator>=1&&executed<9){sim.step();accumulator-=1;executed++;}
+    while(accumulator>=1&&executed<9){sim.step();trace.record(sim);accumulator-=1;executed++;}
     if(executed===9)accumulator=0;
-    if(hintVisible && sim.time-lastDemoTime>3.7){
+    if(hintVisible && !tubeReady && state.preset!=='tube' && sim.time-lastDemoTime>3.7){
       const x=sim.nx*.19,y=sim.ny*.5;
       sim.pulse(x,y,state.power*.85,clamp(Math.min(sim.nx,sim.ny)*.037,2.5,4.2));
       ripples.push({x,y,time:now});lastDemoTime=sim.time;
     }
   }
-  if(now-lastMetrics>110){updateMetrics();lastMetrics=now;}
+  if(now-lastMetrics>110){updateMetrics();drawScope();lastMetrics=now;}
   render(now);
 }
 document.addEventListener('visibilitychange',()=>{lastFrame=0;accumulator=0;if(document.hidden&&audioCtx?.state==='running')audioCtx.suspend().catch(()=>{});});
