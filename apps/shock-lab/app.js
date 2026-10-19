@@ -324,6 +324,7 @@ function playSound(type){
   }catch{/* no audio permission; keep visual feedback */}
 }
 
+document.querySelector('.controls').addEventListener('pointerdown', clearHint, { once:true });
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{
   state.tool=b.dataset.tool;persist();refreshControls();toast('ИНСТРУМЕНТ: '+b.textContent.trim());
 }));
