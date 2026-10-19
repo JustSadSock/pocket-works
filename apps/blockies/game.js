@@ -1863,14 +1863,43 @@ class UIManager {
     updatePlayerInfo(player) {
         const statusEl = document.getElementById(`status-${player.id}`);
         if (!statusEl) return;
-
-        if (player.gameOver) {
-            statusEl.textContent = t('out');
-            statusEl.classList.add('is-out');
+        if (player.departed) {
+            statusEl.textContent = currentLanguage === 'ru' ? 'Покинул матч' : 'Left match';
+        } else if (player.timedOut) {
+            statusEl.textContent = currentLanguage === 'ru' ? 'Вышло время' : 'Timed out';
+        } else if (player.away) {
+            statusEl.textContent = currentLanguage === 'ru' ? 'Ожидаем подключения' : 'Reconnecting';
         } else {
-            statusEl.textContent = t('inPlay');
-            statusEl.classList.remove('is-out');
+            statusEl.textContent = player.gameOver ? t('out') : t('inPlay');
         }
+        statusEl.classList.toggle('is-out',!!(player.gameOver||player.timedOut||player.departed));
+        statusEl.classList.toggle('is-away',!!player.away&&!player.timedOut);
+    }
+
+    updateOnlinePresence(players) {
+        if (!this.isOnlineMode || !Array.isArray(players)) return;
+        players.forEach((entry,i) => {
+            const player = gameState.players[i];
+            if (!player) return;
+            player.away = !!entry.away;
+            player.timedOut = !!entry.timedOut;
+            player.departed = !!entry.departed;
+            this.updatePlayerInfo(player);
+        });
+        const local = gameState.players[this.localPlayerIndex];
+        if (local?.timedOut) this.showRecoveryNotice(
+            currentLanguage === 'ru'
+                ? 'Время ожидания истекло · вы сможете присоединиться к следующему матчу'
+                : 'Reconnection window expired · join the next round'
+        );
+        else if (networkManager.connected) this.showRecoveryNotice(null);
+    }
+
+    showRecoveryNotice(message) {
+        const notice = document.getElementById('recovery-notice');
+        if (!notice) return;
+        notice.hidden = !message;
+        notice.textContent = message || '';
     }
 
     updateTeamStats() {
@@ -2612,6 +2641,7 @@ class UIManager {
         // Setup network callbacks
         networkManager.on('connect', () => {
             this.updateConnectionStatus('connected');
+            this.showRecoveryNotice(null);
             
             // Send nickname if available
             const nicknameInput = document.getElementById('nickname-input');
@@ -2622,11 +2652,12 @@ class UIManager {
 
         networkManager.on('disconnect', () => {
             this.updateConnectionStatus('disconnected');
+            this.clearHeldInputs();
             this.showRoomsList([]);
-            if (this.isOnlineMode) this.showStyledMessage(
-                currentLanguage === 'ru' ? 'Соединение потеряно' : 'Connection lost',
-                currentLanguage === 'ru' ? 'Игра ожидает восстановления связи с PocketNet.' : 'Waiting for PocketNet to reconnect.',
-                'error'
+            if (this.isOnlineMode) this.showRecoveryNotice(
+                currentLanguage === 'ru'
+                    ? 'Связь прервана · автоматическое переподключение'
+                    : 'Connection lost · reconnecting automatically'
             );
         });
 
@@ -2666,6 +2697,7 @@ class UIManager {
         });
 
         networkManager.on('snapshot', data => applyNetworkSnapshot(data));
+        networkManager.on('presence', players => this.updateOnlinePresence(players));
         networkManager.on('matchResults', room => this.updateRematchStatus(room));
         if (networkManager.connected) this.updateConnectionStatus('connected');
         else networkManager.connect();
