@@ -58,7 +58,7 @@ export function createObservatory(canvas,options={}){
   geometryInset:saved.geometryInset!==false,
   quality:saved.quality==='fine'?'fine':'balanced',
   longitude:Number.isFinite(saved.longitude)?clamp(saved.longitude,-180,180):0,
-  latitude:Number.isFinite(saved.latitude)?clamp(saved.latitude,-85,85):0
+  latitude:Number.isFinite(saved.latitude)?clamp(saved.latitude,-90,90):0
  };
  if(Math.abs(state.l)<.12)state.l=2.1;
  let fly=null,probe=null,probeRead=null,metricNow=null;
@@ -128,7 +128,7 @@ export function createObservatory(canvas,options={}){
   const refCtx=refCanvas.getContext('2d',{willReadFrequently:true});
   const refImage=refCtx.createImageData(iw,ih),refPixels=refImage.data;
   const localBasis=cameraBasis(state.yaw,state.pitch,Math.sign(state.l)||1,state.facingSign);
-  const worldFrame=frameAt({l:state.l,longitude:state.longitude,latitude:state.latitude});
+  const worldFrame=frameAt({l:(Math.sign(state.l)||1)*clamp(Math.abs(state.l),.2,6),longitude:state.longitude,latitude:state.latitude});
   const cameraMode=state.mode,observerRegion=state.l>=0?0:1;
   const localA=skyA,localB=skyB;
   const count={regionA:0,regionB:0,unresolved:0},total=iw*ih;
@@ -392,7 +392,7 @@ export function createObservatory(canvas,options={}){
    updateControls();request();save();
   });
  }
- $('lens-open-field').addEventListener('click',()=>options.onOpenField?.({l:state.l,longitude:state.longitude,latitude:state.latitude}));
+ $('lens-open-field').addEventListener('click',()=>options.onOpenField?.({l:(Math.sign(state.l)||1)*clamp(Math.abs(state.l),.2,6),longitude:state.longitude,latitude:state.latitude}));
  $('lens-flight')?.addEventListener('click',triggerFlight);
  $('lens-probe')?.addEventListener('click',launchProbe);
  $('lens-reset')?.addEventListener('click',()=>{
@@ -413,7 +413,7 @@ export function createObservatory(canvas,options={}){
   if(typeof p.geometryInset==='boolean')state.geometryInset=p.geometryInset;
   if(p.quality==='fine'||p.quality==='balanced')state.quality=p.quality;
   if(Number.isFinite(p.longitude))state.longitude=clamp(p.longitude,-180,180);
-  if(Number.isFinite(p.latitude))state.latitude=clamp(p.latitude,-85,85);
+  if(Number.isFinite(p.latitude))state.latitude=clamp(p.latitude,-90,90);
   // The observer's local radial tetrad is attached to the selected 3D point.
   normalizeObserverPoint({l:state.l,longitude:state.longitude,latitude:state.latitude});
   updateControls();request();save();
