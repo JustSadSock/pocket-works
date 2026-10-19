@@ -396,18 +396,25 @@ class Player {
     }
 
     rotate({ broadcast = true } = {}) {
+        if (this.gameOver || !this.currentPiece) return false;
         const rotated = this.currentPiece[0].map((_, i) =>
             this.currentPiece.map(row => row[i]).reverse()
         );
-
-        if (!this.checkCollision(rotated).collides) {
+        // Stable, bounded kicks: nearby cells first; only one upward rescue.
+        // Every candidate respects locked blocks and other players' active pieces.
+        const kicks = [[0,0],[-1,0],[1,0],[-2,0],[2,0],[0,-1],[-1,-1],[1,-1]];
+        for (const [dx, dy] of kicks) {
+            const next = { x: this.position.x + dx, y: this.position.y + dy };
+            if (this.checkCollision(rotated, next).collides) continue;
             this.currentPiece = rotated;
+            this.position = next;
             soundManager.rotate();
-            // Send online update if in online game
             if (broadcast && typeof networkManager !== 'undefined' && networkManager.connected && window.uiManager?.isOnlineMode) {
                 networkManager.sendPlayerInput({ action: 'rotate' });
             }
+            return true;
         }
+        return false;
     }
 
     drop({ broadcast = true } = {}) {
