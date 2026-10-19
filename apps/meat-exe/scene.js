@@ -1076,14 +1076,36 @@ export function createWorld(canvas, initialSeed) {
     }
     for(let i=0;i<droplets.length;i++){const p=droplets[i];particleArr[i*3]=p.x;particleArr[i*3+1]=p.y;particleArr[i*3+2]=p.z;}
     particlesGeo.attributes.position.needsUpdate=true;particlesGeo.setDrawRange(0,droplets.length);
+    for(let i=deathBits.length-1;i>=0;i--){
+      const bit=deathBits[i];bit.x+=bit.vx*dt;bit.z+=bit.vz*dt;
+      bit.y=Math.max(.085,bit.y+bit.vy*dt);bit.vy-=10.5*dt;bit.life-=dt;
+      if(bit.life<=0)deathBits.splice(i,1);
+    }
+    for(let i=0;i<deathBits.length;i++){
+      const bit=deathBits[i];
+      deathTemp.position.set(bit.x,bit.y,bit.z);
+      deathTemp.rotation.set(bit.angle+time*4,bit.angle*.7+time*3,0);
+      deathTemp.scale.setScalar(bit.size*Math.min(1,bit.life*4));
+      deathTemp.updateMatrix();deathMesh.setMatrixAt(i,deathTemp.matrix);
+    }
+    deathMesh.count=deathBits.length;
+    if(deathBits.length)deathMesh.instanceMatrix.needsUpdate=true;
     organPulse=Math.max(0,organPulse-dt);
-    pulseLamp.intensity=6.5+Math.sin(time*(stage===4?5.2:stage===1?3.8:2.7))*2.6+organPulse*7+immunePressure*6;
-    if(stage===2)stomachWallMat.roughness=.49+Math.sin(time*1.6)*.025;
+    const physiology=organLight(stage,time,immunePressure,organPulse);
+    pulseLamp.intensity=physiology.light;
+    scene.fog.density=biome.fogDensity*physiology.fog;
+    if(stage===2)stomachWallMat.roughness=.67-physiology.beat*.035;
+    structuralAccents.vascular.roughness=.55-physiology.beat*.035;
+    structuralAccents.marrow.roughness=.98-physiology.beat*.012;
+    structuralAccents.neural.emissiveIntensity=.32+physiology.beat*.20;
+    stomachWallMat.emissiveIntensity=.12+physiology.beat*.06;
+    shotLight.visible=!conservativeRenderer&&quality!=='low'&&muzzleTime>0;
+    shotLight.intensity=shotLight.visible?clamp(muzzleTime*38,0,5.2):0;
     hazardMat.emissiveIntensity=.48+Math.sin(time*(stage===4?6:2.5))*.17;
     for(const root of tissueVisuals.values())if(root.visible){root.userData.flash=Math.max(0,root.userData.flash-dt);
       root.scale.setScalar(1+Math.sin(time*3.4+root.position.x*.25)*.045+root.userData.flash*.4);
     }
-    membrane.emissiveIntensity=.3+Math.sin(time*2.15)*.09;
+    membrane.emissiveIntensity=.23+physiology.beat*.14;
   }
   function setImmunePressure(value){immunePressure=clamp(Number(value)||0,0,1);}
   function reset(newSeed,ruptured=[],newStage=1){
@@ -1091,6 +1113,13 @@ export function createWorld(canvas, initialSeed) {
     biome=biomeForWave(stage);clearChunks();setSeed(stageSeed(seed,stage));
     openedTissues=new Set((Array.isArray(ruptured)?ruptured:[]).filter(id=>typeof id==='string'&&/^[1-5]:-?\d+,-?\d+$/.test(id)).slice(0,2000));
     scene.background.setHex(biome.background);scene.fog.color.setHex(biome.fog);scene.fog.density=biome.fogDensity;
+    if(roughnessMaps){
+      membrane.roughnessMap=roughnessMaps[biome.id]||roughnessMaps.vascular;
+      wallMat.roughnessMap=roughnessMaps[biome.id]||roughnessMaps.vascular;
+    }
+    const mistHue=stage===2?0xa1ac80:stage===3?0xc4b4ac:stage>=4?0xaba9f3:0xc86d78;
+    motesMat.color.setHex(mistHue);motesMat.opacity=stage===3?.36:.28;
+    shotLight.color.setHex(biome.light);deathMat.color.setHex(biome.vein);
     sky.color.setHex(biome.light);sky.groundColor.setHex(biome.background);
     lamp.color.setHex(biome.light);pulseLamp.color.setHex(biome.pulse);
     boneMat.color.setHex(biome.bone);vesselMat.color.setHex(biome.vein);
