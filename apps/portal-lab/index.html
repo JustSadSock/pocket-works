@@ -17,7 +17,7 @@
 <section class="workspace" aria-label="Пространственная модель">
 <div class="stage-head">
 <div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1 id="lab-headline">Увидеть искривлённое пространство</h1></div>
-<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
+<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
 </div>
 <div class="canvas-frame"><canvas id="space" role="img" aria-label="Трассировка света и карта геометрии кротовой норы"></canvas>
 <div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
@@ -26,9 +26,43 @@
 <div class="transport-left"><button type="button" id="shoot" class="primary">Пройти горловину <span aria-hidden="true">↗</span></button><button type="button" id="pause" class="secondary" aria-label="Приостановить симуляцию">Пауза</button><button type="button" id="clear" class="secondary" title="Очистить траектории">Очистить</button></div>
 <div class="transport-time"><span>ВРЕМЯ <b id="elapsed">0.00</b> <span class="unit">a/c</span></span><span id="track-count">0 траекторий</span></div>
 </div>
-<div class="bottom-note"><span class="tiny-dot"></span><span>Свет и материя вычисляются в одной метрике. Нагрузка образца — локальное приближение.</span></div>
+<div class="bottom-note"><span class="tiny-dot"></span><span>Свет, материя и скалярные волны рассчитываются на одной заданной геометрии пространства-времени.</span></div>
 </section>
 <aside class="instrument" aria-label="Параметры эксперимента">
+<section id="wave-panel" class="wave-panel" aria-label="Эксперименты с полем Клейна — Гордона">
+<div class="section-caption"><span>ВОЛНОВАЯ ЛАБОРАТОРИЯ</span><span>□Φ = 0</span></div>
+<div class="wave-intro">Безмассовое скалярное поле на фиксированной метрике кротовой норы. Реальное численное решение, а не эффект частиц.</div>
+<div class="wave-preset-grid" role="group" aria-label="Готовые волновые опыты">
+<button type="button" data-wave-preset="pass">Прохождение</button>
+<button type="button" data-wave-preset="barrier">Отражение</button>
+<button type="button" data-wave-preset="interfere">Интерференция</button>
+<button type="button" data-wave-preset="cancel">Противофаза</button>
+</div>
+<div id="wave-state" class="wave-state" aria-live="polite">ПАКЕТ ПОДГОТОВЛЕН</div>
+<div id="wave-wavekind" class="wave-kind">ОДНОСТОРОННИЙ ПАКЕТ · РАССЕЯНИЕ</div>
+<label class="field wave-selector"><span>Начальные источники</span>
+<select id="wave-source"><option value="single">Пакет из региона A</option><option value="double">Два встречных пакета</option></select></label>
+<label class="field wave-selector" id="wave-phase-group"><span>Относительная фаза</span>
+<select id="wave-phase"><option value="zero">Синфазно · 0</option><option value="pi">Противофаза · π</option></select></label>
+<label class="range-field"><span>Угловое число <output id="wave-harmonic-value">2</output> <small>ℓ</small></span>
+<input id="wave-harmonic" type="range" min="0" max="5" step="1" value="2"></label>
+<label class="range-field"><span>Длина волны <output id="wave-lambda-value">2.25</output> <small>λ/a</small></span>
+<input id="wave-lambda" type="range" min=".6" max="3.5" step=".05" value="2.25"></label>
+<label class="range-field"><span>Ширина пакета <output id="wave-width-value">1.25</output> <small>σ/a</small></span>
+<input id="wave-width" type="range" min=".7" max="2.5" step=".05" value="1.25"></label>
+<div class="section-caption second"><span>ДАТЧИКИ ЭНЕРГИИ</span><span>Tμν</span></div>
+<div class="wave-measures">
+<div><span>ОТРАЖЕНИЕ · A</span><strong id="wave-reflection">0.0</strong><small>% падающей энергии</small></div>
+<div><span>ПРОХОЖДЕНИЕ · B</span><strong id="wave-transmission">0.0</strong><small>% падающей энергии</small></div>
+<div><span>ЭНЕРГИЯ В ОБЛАСТИ</span><strong id="wave-energy">100.0</strong><small>% начальной</small></div>
+<div><span>ПОГЛОТИТЕЛЬ ГРАНИЦ</span><strong id="wave-loss">0.0</strong><small>% начальной</small></div>
+</div>
+<div class="wave-metrology"><span>БАЛАНС ВЫЧИСЛЕНИЙ</span><strong id="wave-budget">100.0</strong><small>% E + потери</small></div>
+<div class="wave-metrology"><span>БАРЬЕР В ГОРЛОВИНЕ</span><strong id="wave-potential">0.00</strong><small>U(0) a²</small></div>
+<div class="wave-metrology"><span>ВРЕМЯ</span><strong id="wave-time">0.00</strong><small>a/c</small></div>
+<p id="wave-meaning" class="wave-meaning">Проценты R/T рассчитываются после прохода сигналов через датчики.</p>
+<p class="wave-limit">Тестовое скалярное поле, не гравитационная или звуковая волна. Границы оснащены численным поглотителем; значение энергетического баланса показывает точность расчёта.</p>
+</section>
 <section id="matter-panel" class="matter-panel" aria-label="Физическое испытание образца">
 <div class="section-caption"><span>ИСПЫТАТЕЛЬНЫЙ СТЕНД</span><span>v0.4</span></div>
 <div class="matter-description">Образец свободно падает через горловину. Расчёт упругих сил и разрывов идёт в локальной системе Ферми.</div>

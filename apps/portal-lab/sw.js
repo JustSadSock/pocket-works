@@ -1,6 +1,6 @@
-const PREFIX='portal-lab-',CACHE='portal-lab-v0.4.0',VERSION='0.4.0',RELEASE='2026-10-19';
-const NOTES=['Вкладка Материя: приливные силы, упругие связи, разрушение и измерение напряжений'];
-const OWN=['./','./index.html','./styles.css','./app.js','./relativity.js','./optics.js','./tidal.js','./observatory.js','./material.js','./material-view.js','./audio.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg'];
+const PREFIX='portal-lab-',CACHE='portal-lab-v0.5.0',VERSION='0.5.0',RELEASE='2026-10-19';
+const NOTES=['Волновая лаборатория: скалярные волны, отражение, прохождение, интерференция и энергия'];
+const OWN=['./','./index.html','./styles.css','./app.js','./relativity.js','./optics.js','./tidal.js','./observatory.js','./material.js','./material-view.js','./waves.js','./wave-view.js','./audio.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg'];
 const SCOPE=new URL('./',self.registration.scope);
 const ASSETS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(async c=>{
