@@ -119,3 +119,14 @@ test('malformed breaker inputs do not charge or mutate room state',()=>{
     s=r.state;
   }
 });
+
+test('load-shed stations do not spam fake power-restored events on every simulation step',()=>{
+  let s=fresh();
+  for(let i=0;i<5;i++)s.room.ship.modules.push({...s.room.ship.modules[1],id:'shed'+i,
+    templateId:'shield_mk2',occupiedBy:'pilot',x:-2,y:-2,powerPriority:0});
+  s=step(s,90);
+  assert.ok(s.snapshot.ship.modules.some(m=>m.powerState==='shed'));
+  s=step(s,90);
+  assert.equal(s.snapshot.events.filter(e=>e.type==='power-grid'&&e.powered).length,0,
+    'final load-shed state is unchanged and must not trigger a transient restored event');
+});
