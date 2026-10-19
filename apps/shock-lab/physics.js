@@ -12,6 +12,8 @@ export class ShockField {
     this.ny = ny;
     this.size = nx * ny;
     this.solid = new Uint8Array(this.size);
+    this.material = new Uint8Array(this.size); // 0 fluid, 1 porous, 2 absorbing reservoir
+    this.emitters = [];
     this.body = new Uint8Array(this.size);
     this.bodyBounds = null;
     this.incidence = 0;
@@ -82,6 +84,25 @@ export class ShockField {
   // The cross-flow is a time-varying, energy-consistent Euler inlet boundary.
   // The resulting downstream vortical structures derive from conserved states.
   // It does not model real turbulence, skin friction, or viscous shedding.
+  // Combine a shock-tube pressure ratio with an already moving inlet.
+  // The uniform initial speed is deliberately separate from the pressure
+  // discontinuity; initial pressure and density stay unchanged.
+  superimposeFlow(mach=1.8){
+    this.flowActive=true;
+    this.flowMach=clamp(Number.isFinite(mach)?mach:1.8,.3,3.2);
+    const speed=this.flowMach*Math.sqrt(GAMMA);
+    for(let i=0;i<this.size;i++){
+      if(this.solid[i])continue;
+      const k=i*4,rho=this.U[k];
+      const prior=.5*(this.U[k+1]**2+this.U[k+2]**2)/rho;
+      this.U[k+1]=rho*speed;this.U[k+2]=0;
+      this.U[k+3]+= .5*rho*speed*speed-prior;
+    }
+    this.V.set(this.U);
+    this.setFlowInlet();
+    this.maxMach=this.flowMach;
+  }
+
   setFlowInlet(mach = this.flowMach) {
     this.flowMach = clamp(Number.isFinite(mach) ? mach : 1.8, .3, 3.2);
     const speed = this.flowMach * Math.sqrt(GAMMA), k = this.size * 4;
@@ -101,7 +122,10 @@ export class ShockField {
     for (let iy = Math.max(0, Math.floor(y - radius)); iy <= Math.min(this.ny - 1, Math.ceil(y + radius)); iy++) {
       for (let ix = Math.max(0, Math.floor(x - radius)); ix <= Math.min(this.nx - 1, Math.ceil(x + radius)); ix++) {
         if ((ix - x) ** 2 + (iy - y) ** 2 <= rr) {
-          this.solid[iy * this.nx + ix] = on ? 1 : 0;
+          const cell=iy * this.nx + ix;
+          if(this.body[cell])continue;
+          this.solid[cell] = on ? 1 : 0;
+          this.material[cell]=0;
         }
       }
     }
@@ -126,6 +150,7 @@ export class ShockField {
 
   geometry(preset, incidence = 0, shape = {}) {
     this.solid.fill(0);
+    this.material.fill(0);
     this.body.fill(0);
     this.bodyBounds = null;
     this.bodyType = null;
@@ -245,6 +270,75 @@ export class ShockField {
         if(((ay>y)!==(by>y)) && x < (bx-ax)*(y-ay)/(by-ay)+ax)inside=!inside;
       }
       if(inside)this.solid[y*this.nx+x]=1;
+    }
+  }
+
+  // Construction brush: rigid walls are impermeable; porous cells exert
+  // momentum drag and dissipate kinetic energy to heat; absorbing cells are
+  // relaxed toward a surrounding reservoir (non-conservative sponge layer).
+  // These are explicit idealised materials, NOT real metal/water simulation.
+  paintMaterial(x0,y0,x1,y1,type=1,radius=1.45){
+    const kind=Math.max(0,Math.min(3,Math.floor(type)));
+    const segments=Math.max(1,Math.ceil(Math.hypot(x1-x0,y1-y0)*1.8));
+    for(let j=0;j<=segments;j++){
+      const a=j/segments,px=x0+(x1-x0)*a,py=y0+(y1-y0)*a;
+      for(let y=Math.max(0,Math.floor(py-radius));y<=Math.min(this.ny-1,Math.ceil(py+radius));y++)
+        for(let x=Math.max(0,Math.floor(px-radius));x<=Math.min(this.nx-1,Math.ceil(px+radius));x++){
+          if((x-px)**2+(y-py)**2>radius*radius)continue;
+          const i=y*this.nx+x;
+          if(this.body[i])continue;
+          this.solid[i]=kind===1?1:0;
+          this.material[i]=kind===2?1:kind===3?2:0;
+          if(this.solid[i]){
+            const k=i*4;
+            this.U[k]=this.V[k]=1;
+            this.U[k+1]=this.V[k+1]=0;
+            this.U[k+2]=this.V[k+2]=0;
+            this.U[k+3]=this.V[k+3]=2.5;
+          }
+        }
+    }
+  }
+
+  setEmitters(items=[]){
+    if(!Array.isArray(items)){this.emitters=[];return;}
+    this.emitters=items.slice(0,16).map(item=>({
+      x:clamp(Number.isFinite(item.x)?item.x:.5,.02,.98),
+      y:clamp(Number.isFinite(item.y)?item.y:.5,.02,.98),
+      type:['pressure','suction','jet'].includes(item.type)?item.type:'pressure',
+      strength:clamp(Number.isFinite(item.strength)?item.strength:3,.2,8),
+      angle:clamp(Number.isFinite(item.angle)?item.angle:0,-180,180)
+    }));
+  }
+  applySources(dt){
+    const W=this.nx,H=this.ny,U=this.U;
+    for(const emitter of this.emitters){
+      const x0=emitter.x*(W-1),y0=emitter.y*(H-1);
+      const radius=Math.max(2,Math.min(W,H)*.03),rr=radius*radius;
+      const l=Math.max(1,Math.floor(x0-3*radius)),r=Math.min(W-2,Math.ceil(x0+3*radius));
+      const t=Math.max(1,Math.floor(y0-3*radius)),b=Math.min(H-2,Math.ceil(y0+3*radius));
+      const speed=1.5+emitter.strength*.35,angle=emitter.angle*Math.PI/180;
+      for(let y=t;y<=b;y++)for(let x=l;x<=r;x++){
+        const i=y*W+x;if(this.solid[i])continue;
+        const dist=(x-x0)**2+(y-y0)**2;if(dist>9*rr)continue;
+        const w=Math.exp(-dist/(2*rr));
+        const k=i*4;
+        if(emitter.type==='suction'){
+          const fraction=Math.min(.18,emitter.strength*.11*w*dt);
+          // Draw out the locally mixed gas, including momentum and total
+          // energy, so removal maintains its local specific thermodynamics.
+          const retain=Math.max(.05/U[k],1-fraction);
+          for(let j=0;j<4;j++)U[k+j]*=retain;
+        }else{
+          const dm=emitter.strength*.07*w*dt;
+          U[k]+=dm;
+          if(emitter.type==='jet'){
+            const mx=Math.cos(angle)*speed,my=Math.sin(angle)*speed;
+            U[k+1]+=dm*mx;U[k+2]+=dm*my;
+            U[k+3]+=dm*(1/(GAMMA-1)+.5*speed*speed);
+          }else U[k+3]+=dm*(1/(GAMMA-1)+emitter.strength*.35);
+        }
+      }
     }
   }
 
@@ -386,6 +480,16 @@ export class ShockField {
         const yt=(y*W+x)*4,yb=yt+W*4;
         for(let j=0;j<4;j++)b[k+j]=a[k+j]-dt*(fx[xr+j]-fx[xl+j]+fy[yb+j]-fy[yt+j]);
         b[k]=Math.max(FLOOR,b[k]);
+        if(this.material[i]===1){
+          const drag=Math.exp(-3.6*dt);
+          b[k+1]*=drag;b[k+2]*=drag;
+          // Total energy stays unchanged; momentum drag heats the gas.
+        }else if(this.material[i]===2){
+          const absorb=1-Math.exp(-4.0*dt);
+          b[k]+=(1-b[k])*absorb;
+          b[k+1]*=1-absorb;b[k+2]*=1-absorb;
+          b[k+3]+=(1/(GAMMA-1)-b[k+3])*absorb;
+        }
         const ke=.5*(b[k+1]*b[k+1]+b[k+2]*b[k+2])/b[k];
         b[k+3]=Math.max(b[k+3],ke+FLOOR/(GAMMA-1));
         const p=(GAMMA-1)*(b[k+3]-ke);
@@ -397,6 +501,7 @@ export class ShockField {
     this.U=b;
     this.V=a;
     this.time+=dt;
+    if(this.emitters.length)this.applySources(dt);
     this.maxPressure=maxP;
     this.maxMach=maxM;
     return dt;

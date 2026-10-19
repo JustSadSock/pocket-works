@@ -206,3 +206,74 @@ button{touch-action:manipulation}a{color:inherit;text-decoration:none}
 .unsteady-stats strong{font:14px monospace;letter-spacing:-.04em;color:#e6c695;display:block;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:760px){.view{font-size:7.6px}.gust-rig{padding:12px 11px}.shape-preview{height:56px}.load-scope{height:123px}}
 @media(max-width:360px){.unsteady-stats strong{font-size:12px}.view{font-size:7px}.gust-head,.shape-head{font-size:9px}}
+
+
+/* SHOCK 1.5 — a camera-first constructor, with only one control mode visible. */
+.workspace-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:52px;flex:none;background:#0e2026;border-bottom:1px solid #445755;gap:1px;padding:6px}
+.workspace-tab{min-width:0;border:1px solid transparent;background:#203238;color:#90a8a9;font:800 11px system-ui,sans-serif;letter-spacing:.07em}
+.workspace-tab.selected{border:1px solid #e1c48b;background:#4d4a3b;color:#ffe3ae}
+.controls-scroll [data-panel].panel-filtered{display:none!important}
+.stage-tools{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:7;display:flex;gap:2px;padding:4px;max-width:calc(100% - 30px);background:#102a30ee;border:1px solid #63746c;box-shadow:0 8px 18px #0008;overflow-x:auto;overscroll-behavior-inline:contain}
+.stage-tool{flex:none;min-height:40px;padding:0 9px;background:#22373b;color:#a8beb8;border:1px solid #34494b;display:flex;align-items:center;justify-content:center;gap:6px;font:17px Georgia,serif}
+.stage-tool span{font:800 9px system-ui,sans-serif;letter-spacing:.015em;white-space:nowrap}
+.stage-tool.active{background:#e5c27f;border-color:#f1d79f;color:#1b2929}
+.stage-tool:active{transform:translateY(1px)}
+.hint{bottom:68px;font-size:10px;max-width:min(92%,420px)}
+.toolstrip{grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}
+.tool{min-width:0;padding-inline:2px;font-size:8px}
+.constructor-choices{display:grid;gap:5px}
+.choice{background:#1b3338;border:1px solid #516663;min-height:56px;padding:9px 10px;color:#c8d7ce;display:grid;grid-template-columns:30px 1fr;grid-template-rows:18px 15px;gap:0 9px;text-align:left;align-items:center}
+.choice.selected{background:#454938;border-color:#f2cd87;color:#fbe5bf}
+.choice strong{font:850 11px system-ui,sans-serif;letter-spacing:.035em}
+.choice small{font:10px system-ui,sans-serif;color:#89a4a4}
+.choice-swatch{width:26px;height:26px;grid-row:1/3;display:block;border:1px solid #ffffff55}
+.choice-swatch.rigid{background:repeating-linear-gradient(135deg,#e1c58e 0px,#e1c58e 4px,#44534c 4px,#44534c 8px)}
+.choice-swatch.porous{background:radial-gradient(circle,#132d34 25%,transparent 28%) 0 0/7px 7px,#6b9f94}
+.choice-swatch.absorber{background:repeating-linear-gradient(0deg,#304859 0px,#304859 5px,#839fba 5px,#839fba 7px)}
+.choice-mark{grid-row:1/3;font:24px Georgia,serif;color:#e5c186;text-align:center}
+.builder-note{font:10px/1.55 system-ui,sans-serif;color:#97b1ad;margin:12px 0 0}
+.flow-mode-label{color:#9eb6b1;display:block;margin:8px 0;font:11px system-ui,sans-serif}
+#flow-mode{width:100%;height:44px;border:1px solid #5c706c;background:#263c40;color:#f1d6a4;font:800 11px system-ui,sans-serif;padding:0 9px}
+.emitter-list-head{display:flex;justify-content:space-between;margin:16px 0 8px;color:#a2b6ae;font:10px monospace}
+.emitter-list{display:grid;gap:5px}
+.emitter-list p{margin:3px 0;color:#8baba7;font-size:11px;line-height:1.5}
+.emitter-entry{background:#243a3e;border:1px solid #496565;padding:10px 9px;color:#b8d0ce;text-align:left;font:10px/1.4 monospace}
+.emitter-entry.chosen{border-color:#efc584;background:#4a4b3e;color:#ffe6b6}
+.remove-emitter{margin-top:8px;width:100%;min-height:39px;background:#43392f;color:#f1c694;border:1px solid #826b50;font:800 10px system-ui,sans-serif}
+.source-builder input[type=range]{width:100%}
+#source-strength,#source-angle{width:100%}
+@media(max-width:850px){
+ .stage-tools{bottom:7px;max-width:calc(100% - 14px)}
+ .stage-tool{min-height:37px;padding:0 7px;font-size:16px}
+ .stage-tool span{font-size:8px}
+ .hint{bottom:59px}
+ .workspace-tabs{height:48px;padding:4px}
+}
+@media(max-width:430px){
+ .stage-tool{padding:0 8px}
+ .stage-tool span{display:none}
+ .stage-tools{gap:4px;padding:4px}
+ .stage-tool{min-width:47px}
+ .workspace-tab{font-size:10px}
+ .toolstrip{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .hint{font-size:9px;padding:7px 8px}
+}
+
+
+/* Pinned playback and tabs on phones — only the selected instrument panel scrolls. */
+.constructor-storage .secondary-actions{display:flex;gap:7px;margin:0 0 10px}
+.constructor-storage .data-drawer{grid-column:auto;margin-top:8px}
+.constructor-storage .secondary-actions button{padding:0 5px}
+@media(max-width:760px){
+ .controls{display:flex;flex-direction:column;overflow:hidden;flex:0 1 43%;min-height:195px}
+ .controls-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-color:#52686c #1a2b31}
+ .panel-head,.workspace-tabs{flex:none}
+ .control-bottom{flex:none;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.65fr) minmax(0,.95fr);gap:4px;min-height:54px;padding:6px 8px 8px;margin:0;background:#142a2e;border-top:1px solid #63746a}
+ .control-bottom .run-button,.control-bottom .step-button,.control-bottom .clear-button{min-width:0;min-height:42px;height:42px;padding:0 5px;font-size:9px;grid-column:auto;letter-spacing:0}
+ .control-bottom .run-button{gap:5px}
+ .control-bottom .run-button #run-symbol{font-size:16px}
+ .control-bottom .clear-button{font-size:8px}
+}
+@media(max-width:370px){
+ .control-bottom{grid-template-columns:minmax(0,1fr) minmax(0,.55fr) minmax(0,1fr)}
+}
