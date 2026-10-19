@@ -888,7 +888,7 @@ $('csv').addEventListener('click',()=>{
 });
 $('sound').addEventListener('click',()=>{state.sound=!state.sound;persist();refreshControls();if(state.sound)playSound('wall')});
 runBtn.addEventListener('click',()=>setActive(!active));
-$('step').addEventListener('click',()=>{if(tubeReady)releaseTube();setActive(false);if(sim){sim.step();trace.record(sim,true);}updateMetrics();drawScope();render();});
+$('step').addEventListener('click',()=>{if(tubeReady)releaseTube();setActive(false);if(sim){sim.step();trace.record(sim,true);loadHistory.record(sim,.13,true);}updateMetrics();drawScope();drawLoadScope();render();});
 $('clear').addEventListener('click',()=>{resetGas();drawScope();toast(state.preset==='tube'?'ТРУБА ЗАРЯЖЕНА · ОЖИДАНИЕ РАЗРЫВА':FLOW_PRESETS.has(state.preset)?'НАБЕГАЮЩИЙ ПОТОК ПЕРЕЗАПУЩЕН':'ДАВЛЕНИЕ СБРОШЕНО ДО P₀');});
 $('undo').addEventListener('click',()=>{
   if(!state.edits[state.preset].length)return;
@@ -901,7 +901,7 @@ $('confirm-remove').addEventListener('click',()=>{
   state.edits[state.preset]=[];dialog.hidden=true;rebuildGeometry();persist();toast('ПРАВКИ КАМЕРЫ УДАЛЕНЫ');
 });
 $('export').addEventListener('click',()=>{
-  const payload={format:'shock-lab-v1',exportedAt:new Date().toISOString(),experiment:{preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,angle:state.angle,records:state.records,streamlines:state.streamlines,sensors:trace.sensors,sound:state.sound,edits:state.edits}};
+  const payload={format:'shock-lab-v1',exportedAt:new Date().toISOString(),experiment:{preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,angle:state.angle,camber:state.camber,thickness:state.thickness,gustAmplitude:state.gustAmplitude,gustPeriod:state.gustPeriod,records:state.records,streamlines:state.streamlines,sensors:trace.sensors,sound:state.sound,edits:state.edits}};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='shock-'+state.preset+'-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
@@ -914,7 +914,7 @@ $('import-file').addEventListener('change',async e=>{
   try{
     const parsed=JSON.parse(await file.text());
     if(parsed.format!=='shock-lab-v1'||!parsed.experiment||!applyData(parsed.experiment))throw new Error('bad format');
-    trace.setSensors(state.sensors);compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);persist();drawScope();drawCpChart();renderRecords();toast('ЭКСПЕРИМЕНТ ВОССТАНОВЛЕН');
+    trace.setSensors(state.sensors);compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);persist();drawScope();drawCpChart();drawLoadScope();renderRecords();toast('ЭКСПЕРИМЕНТ ВОССТАНОВЛЕН');
   }catch{toast('НЕВЕРНЫЙ ФОРМАТ ФАЙЛА');}
 });
 document.addEventListener('keydown',ev=>{
@@ -929,10 +929,11 @@ document.addEventListener('keydown',ev=>{
 });
 createWorkshopMode({
   appName:'SHOCK',version:'1.4.0',cachePrefix:'shock-lab-',storageNamespace:'pocket-works:shock-lab',
-  onReset(){try{localStorage.removeItem(KEY)}catch{}Object.assign(state,DEFAULTS());trace.setSensors(state.sensors);armingSensor=null;compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);drawScope();drawCpChart();renderRecords();toast('НАСТРОЙКИ И ПРАВКИ СБРОШЕНЫ');}
+  onReset(){try{localStorage.removeItem(KEY)}catch{}Object.assign(state,DEFAULTS());trace.setSensors(state.sensors);armingSensor=null;compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);drawScope();drawCpChart();drawLoadScope();renderRecords();toast('НАСТРОЙКИ И ПРАВКИ СБРОШЕНЫ');}
 });
 refreshControls();
 resizeField();
 drawScope();
 renderRecords();
 drawCpChart();
+drawLoadScope();
