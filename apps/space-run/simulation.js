@@ -427,6 +427,84 @@ function propagateHeat(room,dt){
   }
 }
 
+
+function manageBreaker(room,playerId,data={}){
+  const {x,y,operation}=data;
+  if(!Number.isInteger(x)||!Number.isInteger(y)||Math.abs(x)>500||Math.abs(y)>500)
+    return {ok:false,message:"Некорректная клетка"};
+  const key=ckey(x,y),ship=room.ship;
+  if(!ship.cells.has(key))return {ok:false,message:"Требуется секция корпуса"};
+  ensureEngineering(room);
+  if(ship.plates[key]<=PLATE_CONDUCTIVE)return {ok:false,message:"Повреждённая шина не проводит"};
+  if(!["install","toggle","remove"].includes(operation))return {ok:false,message:"Неизвестная операция"};
+  const installed=Object.prototype.hasOwnProperty.call(ship.breakers,key);
+  const garage=room.phase==="build"||room.phase==="shop";
+  if(operation==="install"){
+    if(!garage)return {ok:false,message:"Установка только в доке"};
+    if(installed)return {ok:false,message:"Автомат уже установлен"};
+    if(ship.credits<22)return {ok:false,message:"Нужно 22 кредита"};
+    ship.credits-=22;ship.breakers[key]=true;
+  }else if(operation==="remove"){
+    if(!garage)return {ok:false,message:"Демонтаж только в доке"};
+    if(!installed)return {ok:false,message:"Автомат не установлен"};
+    delete ship.breakers[key];ship.credits+=10;
+  }else{
+    if(!installed)return {ok:false,message:"Сначала установите автомат"};
+    if(!garage){
+      const p=playerById(room,playerId),station=moduleById(room,p?.moduleId);
+      if(room.phase!=="combat"||!station||MODULES[station.templateId]?.type!=="repair"||
+        station.status!=="online"||station.overheated||!station.powered)
+        return {ok:false,message:"Переключение в бою доступно инженеру на исправной станции"};
+      if((p.nextBreakerAt||0)>room.simTime)return {ok:false,message:"Автомат ещё переключается"};
+      if(ship.energy<5)return {ok:false,message:"Недостаточно энергии"};
+      ship.energy-=5;p.nextBreakerAt=room.simTime+.75;
+      addModuleHeat(room,station,2);
+    }
+    ship.breakers[key]=!ship.breakers[key];
+  }
+  engineeringPower(room);
+  room.events.push({type:"breaker",x,y,operation,closed:ship.breakers[key]??true});
+  return {ok:true};
+}
+function setPowerPriority(room,data={}){
+  if(room.phase==="combat")return {ok:false,message:"Приоритет меняют в мастерской"};
+  const m=moduleById(room,data.moduleId);
+  if(!m)return {ok:false,message:"Модуль отсутствует"};
+  if(!Number.isInteger(data.priority)||data.priority<0||data.priority>3)
+    return {ok:false,message:"Приоритет должен быть от 0 до 3"};
+  m.powerPriority=data.priority;
+  engineeringPower(room);
+  room.events.push({type:"priority",moduleId:m.id,priority:m.powerPriority});
+  return {ok:true};
+}
+function canDetachPlate(room,key){
+  if(key==="0,0")return false;
+  const {x,y}=parseKey(key);
+  if(moduleAtCell(room,x,y))return false;
+  const others=[...room.ship.cells].filter(k=>k!==key);
+  if(!others.length)return false;
+  const visited=new Set([others[0]]),queue=[others[0]];
+  for(let i=0;i<queue.length;i++){
+    const {x:gx,y:gy}=parseKey(queue[i]);
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const k=ckey(gx+dx,gy+dy);
+      if(k!==key&&room.ship.cells.has(k)&&!visited.has(k)){
+        visited.add(k);queue.push(k);
+      }
+    }
+  }
+  return visited.size===others.length;
+}
+function detachPlate(room,key,x,y){
+  room.ship.cells.delete(key);
+  delete room.ship.plates[key];
+  delete room.ship.breakers[key];
+  delete room.ship.fractures[key];
+  room.ship.hullMax=Math.max(60,room.ship.hullMax-18);
+  room.ship.hull=Math.max(0,room.ship.hull-12);
+  room.events.push({type:"hull-detached",x,y});
+}
+
 function addModuleHeat(room,m,amount){
   if(amount<=0)return;
   m.heat=clamp((m.heat||0)+amount,0,130);
@@ -459,6 +537,7 @@ function patchPlate(room,playerId,src={}){
     if(ship.credits<HULL_PATCH_COST)return {ok:false,message:"Для заплатки нужно 16 кредитов"};
     ship.credits-=HULL_PATCH_COST;ship.plates[key]=Math.min(PLATE_MAX,hp+26);
   }else return {ok:false,message:"Сейчас ремонт недоступен"};
+  if(ship.plates[key]>0)delete ship.fractures[key];
   room.events.push({type:"hull-patch",x,y,hp:ship.plates[key]});
   return {ok:true};
 }
@@ -1004,6 +1083,24 @@ function hitShip(room, p) {
   const m=moduleAtCell(room,gx,gy);
   const plateDamage=p.damage*(m?.52:1.35);
   room.ship.plates[key]=Math.max(0,oldPlate-plateDamage);
+  if(oldPlate===0&&room.ship.plates[key]===0){
+    room.ship.fractures[key]=(room.ship.fractures[key]||0)+1;
+    if(room.ship.fractures[key]>=2&&!m&&canDetachPlate(room,key)){
+      detachPlate(room,key,gx,gy);
+      return true;
+    }
+  }
+  if(p.damage>=20){
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const neighbor=ckey(gx+dx,gy+dy);
+      if(!room.ship.cells.has(neighbor))continue;
+      const previous=room.ship.plates[neighbor];
+      room.ship.plates[neighbor]=Math.max(0,previous-p.damage*.12);
+      if(previous>0&&room.ship.plates[neighbor]===0){
+        room.events.push({type:"hull-breach",x:gx+dx,y:gy+dy,worldX:p.x,worldY:p.y});
+      }
+    }
+  }
   if(oldPlate>0&&room.ship.plates[key]===0)
     room.events.push({type:"hull-breach",x:gx,y:gy,worldX:p.x,worldY:p.y});
   if (m) {
@@ -1353,6 +1450,20 @@ io.on("connection", (socket) => {
     emitState(room);
   });
 
+  socket.on("breakerAction", (payload={})=>{
+    const code=socket.data.roomCode;
+    if(!code||!rooms.has(code))return;
+    const room=rooms.get(code),result=manageBreaker(room,socket.id,payload);
+    if(!result.ok)socket.emit("actionError",{message:result.message});
+    emitState(room);
+  });
+  socket.on("powerPriority", (payload={})=>{
+    const code=socket.data.roomCode;
+    if(!code||!rooms.has(code))return;
+    const room=rooms.get(code),result=setPowerPriority(room,payload);
+    if(!result.ok)socket.emit("actionError",{message:result.message});
+    emitState(room);
+  });
   socket.on("patchHull", (payload = {}) => {
     const code=socket.data.roomCode;
     if(!code||!rooms.has(code))return;
