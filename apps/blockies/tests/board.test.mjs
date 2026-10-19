@@ -273,3 +273,26 @@ test('no clients: authoritative clock expires abandoned pieces and reaches resul
  const again=game.onTick({state,onlineIds:[],now:now+1000});
  assert.equal(again.state.phase,'results');
 });
+
+test('commands carrying an earlier round cannot mutate a freshly started match',()=>{
+ let state=start([a,b]),round=state.round;
+ const before=JSON.stringify({piece:state.engine.players[0].currentPiece,position:state.engine.players[0].position});
+ state=game.onMessage({state,player:a,payload:{type:'input',round:round-1,input:{action:'hold'}}}).state;
+ assert.equal(JSON.stringify({piece:state.engine.players[0].currentPiece,position:state.engine.players[0].position}),before);
+ assert.equal(state.engine.players[0].holdUsed,false);
+ state=game.onMessage({state,player:a,payload:{type:'input',round,input:{action:'hold'}}}).state;
+ assert.equal(state.engine.players[0].holdUsed,true);
+});
+
+test('authoritative room revisions strictly increase across joins, ticks and messages',()=>{
+ const first=game.createRoom({player:a}).state;
+ const joined=game.onJoin({state:first,player:b}).state;
+ assert.ok(joined.revision>first.revision);
+ let state=joined;
+ state=game.onMessage({state,player:a,payload:{type:'ready'}}).state;
+ state=game.onMessage({state,player:b,payload:{type:'ready'}}).state;
+ const beforeTick=state.revision;
+ state=game.onTick({state,onlineIds:[a.id,b.id],now:Date.now()+1000}).state;
+ assert.ok(state.revision>beforeTick);
+ assert.equal(state.phase,'playing');
+});
