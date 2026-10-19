@@ -38,6 +38,8 @@ function lock(){
  for(const b of document.querySelectorAll('[data-world-mode]'))b.disabled=busy||pending;
  for(const chip of skillStrip.children)chip.disabled=busy||pending;
  $('hubTrain').hidden=busy;$('hubStop').hidden=!busy;$('hubProgressWrap').hidden=!busy;
+ // The compact cockpit owns its own buttons. Every async transition must release its lock too.
+ window.dispatchEvent(new Event('petri:cockpit-sync'));
 }
 function profiles(){
  const select=$('hubAgents');select.replaceChildren();
