@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "product": "skyforge-relay",
+  "captures": [
+    {
+      "id": "b6bdca03565bb9c809f9eb66ae9249e2a0785116613814c3bc672f40362a3335",
+      "recordedAt": "2026-10-19T09:56:16.524Z",
+      "commit": "242b419fb01374eaf334b51d49b0ffe55fab8add",
+      "viewport": [
+        844,
+        390
+      ],
+      "state": "initial, real input and settled game, then offline reload",
+      "engine": "Chromium",
+      "action": "Start recovered game, perform its real primary control and reload after the local HTTP transport stops accepting requests.",
+      "files": [
+        {
+          "path": "a6f9fa8c06d19b39c9e3d89519ead2cd49351c6bd983daa8671c01d689cffb4e.png",
+          "sha256": "a6f9fa8c06d19b39c9e3d89519ead2cd49351c6bd983daa8671c01d689cffb4e"
+        },
+        {
+          "path": "19ae974b20b66d375d54914a049f1ac88e7ac2850a200ab6dc04debe2e1dc284.png",
+          "sha256": "19ae974b20b66d375d54914a049f1ac88e7ac2850a200ab6dc04debe2e1dc284"
+        },
+        {
+          "path": "19ae974b20b66d375d54914a049f1ac88e7ac2850a200ab6dc04debe2e1dc284.png",
+          "sha256": "19ae974b20b66d375d54914a049f1ac88e7ac2850a200ab6dc04debe2e1dc284"
+        },
+        {
+          "path": "7dd37be1d92c8a9fc7c0d373cde0939178f5e98caf958639f37f513eae1f1aca.webm",
+          "sha256": "7dd37be1d92c8a9fc7c0d373cde0939178f5e98caf958639f37f513eae1f1aca"
+        },
+        {
+          "path": "b7d4f35781f2db2090de234fbdc0f14664a5522635a01ea1820ebf27e4abb111.png",
+          "sha256": "b7d4f35781f2db2090de234fbdc0f14664a5522635a01ea1820ebf27e4abb111"
+        }
+      ]
+    }
+  ],
+  "feedback": []
+}
