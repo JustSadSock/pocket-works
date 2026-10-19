@@ -30,11 +30,26 @@ export function createCausalityLab(canvas,{onAction}={}){
  let model=createCausality(state),analysis=audit(model);
  let active=false,running=false,time=model.duration+8,signal=analysis.witness,signalSent=false,plot=null,drag=null;
  const save=()=>{try{localStorage.setItem(STORE,JSON.stringify(state));}catch{}};
- const limit=()=>model.duration+Math.max(18,model.maximumDistance+6);
+ const limit=()=>model.duration+Math.max(18,model.maximumDistance+22);
  function rebuild(){
   model=createCausality(state);analysis=audit(model);
   time=model.duration+8;running=false;signal=analysis.witness;signalSent=false;
   save();update();
+ }
+ /** Accept a verified point from the atlas, transferring ALL clocks, not a fake UI projection. */
+ function applyParameters(p,{showWitness=true}={}){
+  for(const key of ['distance','speed','duration','throatTime'])
+   if(key in p)state[key]=Number(p[key]);
+  createCausality(state); // validate before overwriting live model
+  state.origin='B';state.route='tunnel';
+  rebuild();
+  if(showWitness){
+   time=analysis.witness.departure;
+   signal=analysis.witness;
+   signalSent=true;
+   running=false;
+   update();
+  }
  }
  function configure(){update();}
  function setActive(on){active=on;if(active)update();else $('shoot').disabled=false;}
@@ -53,7 +68,7 @@ export function createCausalityLab(canvas,{onAction}={}){
  function update(){
   const b=mouthB(model,time),info=analysis;
   for(const [id,key,prec] of [
-   ['causality-distance','distance',1],['causality-speed','speed',2],
+   ['causality-distance','distance',1],['causality-speed','speed',4],
    ['causality-duration','duration',1],['causality-throat','throatTime',2]
   ]){
    $(id).value=state[key];$(id+'-value').textContent=fmt(state[key],prec);
@@ -210,7 +225,7 @@ export function createCausalityLab(canvas,{onAction}={}){
   btn.addEventListener('click',()=>{
    Object.assign(state,PRESETS[btn.dataset.causalityPreset]);rebuild();onAction?.('mount');
   });
- return {state,setActive,configure,trigger,reset,tick,draw,send,
+ return {state,setActive,configure,applyParameters,trigger,reset,tick,draw,send,
   get running(){return running;},
   get snapshot(){return {params:{...state},timeline:time,running,signalSent,
    signals:signal,analysis:{...analysis},worldlines:sampleWorldlines(model,321)}}};
