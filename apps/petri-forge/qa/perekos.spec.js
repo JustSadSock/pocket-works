@@ -4,7 +4,7 @@ test('native Perekos training station plays, replays and saves brains',async({pa
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
  await expect(page.locator('[data-world-mode]')).toHaveCount(4);
- await page.locator('[data-world-mode="perekos"]').click();
+ await page.locator('[data-cp-mode="perekos"]:visible, [data-world-mode="perekos"]:visible').first().click();
  await expect(page.locator('#pkCanvas')).toBeVisible();
  await page.locator('#hubTools').click();
  await expect(page.locator('#pkCurriculum')).toBeVisible();
@@ -28,7 +28,7 @@ test('native Perekos training station plays, replays and saves brains',async({pa
  await expect(page.locator('#pkStop')).toBeDisabled({timeout:150000});
  await expect(page.locator('#pkValidation')).toContainText('Независимая проверка:');
  await page.reload({waitUntil:'domcontentloaded'});
- await page.locator('[data-world-mode="perekos"]').click();
+ await page.locator('[data-cp-mode="perekos"]:visible, [data-world-mode="perekos"]:visible').first().click();
  await page.locator('#hubTools').click();
  await page.locator('#pkModels').selectOption({label:'QA Ruin Mage'});
  await page.locator('#pkLoad').click();
@@ -37,11 +37,11 @@ test('native Perekos training station plays, replays and saves brains',async({pa
 });
 test('cross-game combat policy can transfer as a Perekos heuristic',async({page})=>{
  await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
- await page.locator('[data-world-mode="combat"]').click();
+ await page.locator('[data-cp-mode="combat"]:visible, [data-world-mode="combat"]:visible').first().click();
  await page.locator('#hubTools').click();
  await page.locator('#battleName').fill('Transfer QA');
  await page.locator('#battleSave').click();
- await page.locator('[data-world-mode="perekos"]').click();
+ await page.locator('[data-cp-mode="perekos"]:visible, [data-world-mode="perekos"]:visible').first().click();
  await page.locator('#hubTools').click();
  await expect(page.locator('#pkTransferModels')).toContainText('Transfer QA');
  await page.locator('#pkTransferModels').selectOption({label:'Transfer QA'});
@@ -57,7 +57,7 @@ for(const viewport of [{width:390,height:844},{width:844,height:390},{width:1280
   const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
   try{
    await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
-   await page.locator('[data-world-mode="perekos"]').click();
+   await page.locator('[data-cp-mode="perekos"]:visible, [data-world-mode="perekos"]:visible').first().click();
    await expect(page.locator('#pkCanvas')).toBeVisible();
    await page.locator('#hubTrain').scrollIntoViewIfNeeded();
    const scrollWidth=await page.evaluate(()=>document.documentElement.scrollWidth);
