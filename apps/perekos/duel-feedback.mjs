@@ -25,7 +25,7 @@ export class DuelFeedback{
     const type=f.k.includes('rock')||f.k.includes('crack')?'stone':f.k.includes('arc')||f.k.includes('bolt')||f.k.includes('steam')?'storm':f.k.includes('flame')||f.k.includes('orb')||f.k.includes('slag')?'fire':mage(contact?.mageId).school;
     this.scars.push({x:f.x,y:f.y,age:0,life:f.k==='overload'?2.8:1.7,kind:type,seed:f.id});
    }
-   const n=reduced?0:f.k==='shoot'?11:impact?17:f.k==='dash'?8:f.k==='shield'?9:0;
+   const n=reduced?0:f.k==='shoot'?6:impact?10:f.k==='dash'?6:f.k==='shield'?5:0;
    for(let i=0;i<n;i++){
     const angle=TAU*hash(f.id*97+i*331),speed=(14+hash(f.id*541+i*37)*82)*(f.k==='shoot'?.65:1);
     const life=.22+hash(f.id+i*729)*.45;
@@ -34,7 +34,7 @@ export class DuelFeedback{
    }
   }
   this.last=Math.max(this.last,state.serial||0);
-  if(this.particles.length>100)this.particles.splice(0,this.particles.length-100);
+  if(this.particles.length>72)this.particles.splice(0,this.particles.length-72);
   if(this.scars.length>24)this.scars.splice(0,this.scars.length-24);
  }
  advance(dt,reduced=false){
