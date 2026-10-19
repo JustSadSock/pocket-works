@@ -34,15 +34,16 @@ const FS=[
 'float cone=smoothstep(.69,.96,dot(look,normalize(facing)));',
 'float beam=torch*cone*(1.0-smoothstep(6.0,23.0+sight*5.0,d));',
 'float flicker=.965+.018*sin(time*3.7)+.011*sin(time*11.1);',
-'float warmA=(1.0-smoothstep(.6,8.7,length(p-lampA)))*.95;',
-'float warmB=(1.0-smoothstep(.6,7.6,length(p-lampB)))*.68;',
+'float warmA=(1.0-smoothstep(.6,8.7,length(p-lampA)))*.78;',
+'float warmB=(1.0-smoothstep(.6,7.6,length(p-lampB)))*.48;',
 'warmA*=lightVis.r;',
 'warmB*=lightVis.g;',
 'float warm=(warmA+warmB)*flicker;',
 'float diffuse=.62+.38*max(dot(norm,normalize(vec3(-.4,.7,-.3))),0.0);',
 'warm*=electrical;',
-'vec3 color=c*(.57+.54*pigment)*(mix(.095,.30,electrical)+warm+beam*1.70)*diffuse;',
+'vec3 color=c*(.57+.54*pigment)*(mix(.095,.30,electrical)+warm+beam*1.13)*diffuse;',
 'color+=c*warm*vec3(.16,.10,.02);',
+'color=color/(vec3(1.0)+color*.24);',
 'float mist=smoothstep(14.0+sight*2.8,39.0+sight*5.0,d);color=mix(color,vec3(.057,.056,.051),mist*.82);',
 'color=mix(color,vec3(.65,.15,.11),hit*.24);',
 'gl_FragColor=vec4(color,1.0);',
@@ -534,7 +535,7 @@ function revolverBarrel(o,x,y,z,rx,ry,length,color,material=9,sides=12){
  }
 }
 function pistolMesh(){
- const o=[],steel=[.31,.32,.31],blue=[.18,.23,.24],wood=[.38,.23,.16],skin=[.57,.41,.31],shirt=[.33,.34,.30],brass=[.57,.48,.30];
+ const o=[],steel=[.28,.28,.27],blue=[.18,.19,.19],wood=[.38,.23,.16],skin=[.57,.41,.31],shirt=[.33,.30,.27],brass=[.57,.48,.30];
  // Sleeve, wrist, palm and knuckles. The worn revolver stays in the lower right.
  round(o,.49,-1.14,-1.12,.29,.38,.32,shirt,7);
  round(o,.49,-.91,-1.28,.205,.22,.19,skin,8);
