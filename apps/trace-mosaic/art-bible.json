@@ -124,7 +124,7 @@
       "ZAMAZKA restoration controls versus this source game input and feedback loop."
     ]
   },
-  "styleRevision": "conservation-atelier-v2",
+  "styleRevision": "conservation-atelier-v3",
   "executionNotes": {
     "objective": "A physically tangible mosaic restoration table; not glassmorphism, generic cards or neon.",
     "light": "Soft lateral museum illumination, warm ivory inset, restrained brass specular accents and credible lifted fragment shadows.",
@@ -150,6 +150,7 @@
       "do not change gameplay tile and trail semantics",
       "do not use generic unrelated icons",
       "preserve PocketNet immutable snapshots"
-    ]
+    ],
+    "artworkExpansion": "First six source SVGs fully reauthored as six distinct scene compositions: Sky Loom, Petal Route, Neon Koi, Sand Relay, Moss Beacon, Prism Orchard. Remaining catalog assets unchanged."
   }
 }
