@@ -8,6 +8,7 @@
       "files": [
         "tests/core.test.mjs",
         "tests/aim-precision.test.mjs",
+        "tests/duel-feedback.test.mjs",
         "tests/avatar.test.mjs",
         "tests/net.test.mjs",
         "tests/elements.test.mjs",
