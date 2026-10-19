@@ -522,7 +522,7 @@ $('heatToggle').onchange=redraw;
 async function refreshLibrary(){
   const select=$('modelSelect'),selected=select.value;
   try{
-    const records=await listModels();select.replaceChildren();
+    const records=(await listModels()).filter(record=>['qlearning','random'].includes(record.kind));select.replaceChildren();
     if(!records.length){const option=document.createElement('option');option.value='';option.textContent='Нет сохранённых моделей';select.append(option);}
     for(const item of records){const option=document.createElement('option');option.value=item.id;option.textContent=item.name+' · '+(item.states||0)+' состояний';select.append(option);}
     if(records.some(m=>m.id===selected))select.value=selected;
@@ -541,7 +541,7 @@ $('loadBrain').onclick=async()=>{
   if(training)return;
   const id=$('modelSelect').value;if(!id){status('Выберите сохранённую модель');return;}
   try{
-    const item=await loadModel(id);if(!item)throw Error('Модель не найдена');
+    const item=await loadModel(id);if(!item||!['qlearning','random'].includes(item.kind)||!['qlearning','random'].includes(item.snapshot?.type))throw Error('Эта модель предназначена для другой лаборатории');
     stopReplay();agentSelect.value=item.snapshot.type==='random'?'random':'qlearning';
     loadAgent(agentSelect.value,item.snapshot);$('modelName').value=item.name;
     status('Модель загружена: '+item.name);
