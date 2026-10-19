@@ -12,6 +12,7 @@ import {CombatPresentation,drawProjectileTrail} from './combat-presentation.mjs'
 import {drawGroundCues,drawActorCues,drawSpellLighting} from './combat-readability.mjs';
 import {SpellChoreography,drawSpellGround,drawSpellActors,drawSpellProjectiles,drawSpellForeground} from './spell-choreography.mjs';
 import {DuelFeedback} from './duel-feedback.mjs';
+import {MageMotion} from './mage-motion.mjs';
 import {courtAim} from './aim-geometry.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('world'),ctx=canvas.getContext('2d',{alpha:false});
@@ -25,6 +26,7 @@ let sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0
 const combatPresentation=new CombatPresentation();
 const spellChoreography=new SpellChoreography();
 const duelFeedback=new DuelFeedback();
+const mageMotion=new MageMotion();
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,aim:null},stick={pointer:null,x:0,y:0},touches=new Map();
 let tapAttackQueued=false,aimTouch=false,aimTouchStart=0,aimDragged=false,aimVector=null;
@@ -332,10 +334,12 @@ function background(){return createCourtBackdrop(WALLS)}
 function pixel(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))}
 function circle(x,y,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
 function line(x,y,a,b,color,width=2){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(a,b);ctx.stroke()}
-function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0,moving=0){
+function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0,moving=0,animate=false){
  const look=enemy?(online?.active?rivalAppearance:DEFAULT_APPEARANCE):appearance;
  const runes=active?.actors?.[enemy?1-myIndex():myIndex()]?.runes||[];
- const a=active?.actors?.[enemy?1-myIndex():myIndex()];drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1.18,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0,moving});
+ const a=active?.actors?.[enemy?1-myIndex():myIndex()];
+ const pose=animate&&a?mageMotion.sample(a,{x,y},ticktime,active?.round||0,reducedMotion):null;
+ drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1.18,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0,moving,pose});
 }
 function drawConstructs(s){
  for(const b of s.barriers){
@@ -444,7 +448,7 @@ function render(){
    const p=displayXY[i],oldX=p.x,oldY=p.y;
    if(online?.active){p.x+=(a.x-p.x)*.34;p.y+=(a.y-p.y)*.34}else{p.x=a.x;p.y=a.y}
    const moving=Math.min(1,Math.hypot(p.x-oldX,p.y-oldY)*.48);
-   wizard(p.x,p.y,a.face,frame/60,!mine,1,a.shield,a.flash,moving);
+   wizard(p.x,p.y,a.face,frame/60,!mine,1,a.shield,a.flash,moving,true);
    drawActorCues(ctx,a,p.x,p.y,mine,frame/60,reducedMotion);
    if(a.markLife>0&&ELEMENTS[a.mark]){
     const color=ELEMENTS[a.mark].color;
