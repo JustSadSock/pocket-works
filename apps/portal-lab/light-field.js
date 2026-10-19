@@ -133,7 +133,7 @@ export function lightFieldSamples(field,m,{maxPoints=270}={}){
   // with the real current phase-space position (no visual extrapolation).
   const current=chartPoint(m,r.ray.l,r.ray.phi,r.tangent);
   points.push(current);
-  return {index:r.index,points,current,
+  return {index:r.index,l:r.ray.l/m.a,phi:r.ray.phi,points,current,
    residual:Math.abs(constraint(r.ray,m)),L:r.ray.L,E:r.ray.E,crossings:r.ray.crossings};
  });
 }
