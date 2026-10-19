@@ -13,6 +13,11 @@ export function validateRun(s){
   if(hp<=0)return null;
   return {
     v:5,seed:s.seed>>>0,x:s.x,z:s.z,
+    // Missing pacing fields identify legacy saves: never triple their remaining run.
+    pulseMax:s.pulseMax===3?3:1,
+    pulse:s.pulseMax===3&&pulsePlan(s.seed,Math.floor(s.wave),Math.floor(s.pulse))?Math.floor(s.pulse):1,
+    pulseSpawned:num(Math.floor(s.pulseSpawned),0,40,0),
+    organRuptureClaimed:s.organRuptureClaimed===true,
     guardianDefeated:Array.isArray(s.guardianDefeated)?[...new Set(s.guardianDefeated.filter(v=>Number.isInteger(v)&&!!guardianForWave(v)))].sort():[],
     guardianPending:Array.isArray(s.guardianDefeated)&&s.guardianDefeated.includes(s.wave)?0:
       sanitizeGuardianPending(s.guardianPending,s.wave),
