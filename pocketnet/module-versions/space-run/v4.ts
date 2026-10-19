@@ -348,6 +348,7 @@ function ensureEngineering(room){
 }
 function engineeringPower(room){
   ensureEngineering(room);
+  const before=new Map(room.ship.modules.map(m=>[m.id,m.powered]));
   const cells=room.ship.cells, plates=room.ship.plates;
   const live=new Map(),queue=[];
   const seed=(key)=>{if(cells.has(key) && plates[key]>PLATE_CONDUCTIVE && room.ship.breakers[key]!==false && !live.has(key)){
@@ -372,11 +373,10 @@ function engineeringPower(room){
   for(const m of room.ship.modules){
     const ds=footprint(m).map(c=>live.get(ckey(c.x,c.y))).filter(Number.isFinite);
     const connected=ds.length>0;
-    const prev=m.powered;
     m.powered=connected;
     m.powerState=connected?"online":"isolated";
     m.powerFactor=connected?clamp(1-Math.min(...ds)*.02,.66,1):0;
-    if(prev!==m.powered)room.events.push({type:"power-grid",moduleId:m.id,powered:m.powered});
+
   }
   // Load shedding gives explicit priorities without bypassing damaged cables.
   const capacity=44+room.ship.modules.reduce((sum,m)=>sum+
@@ -394,6 +394,8 @@ function engineeringPower(room){
     }else load+=demand;
   }
   room.ship.gridLoad=load;room.ship.gridCapacity=capacity;
+  for(const m of room.ship.modules)if(before.get(m.id)!==m.powered)
+    room.events.push({type:"power-grid",moduleId:m.id,powered:m.powered,reason:m.powerState});
   room.ship.liveCells=[...live.keys()];
   return live;
 }
