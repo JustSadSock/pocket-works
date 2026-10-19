@@ -3,7 +3,7 @@
 // different hats/coats do not gain a gameplay silhouette advantage.
 import {DEFAULT_APPEARANCE,cosmeticFeatures} from './avatar-profile.mjs';
 import {mage} from './mages.mjs';
-import {drawGarbBack,drawGarbFront} from './mage-regalia.mjs';
+import {drawGarbBack,drawGarbFront,drawClassHeadgear} from './mage-regalia.mjs';
 import {faceView,directionalOcclusion,weaponRotation} from './mage-facing.mjs';
 
 export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=1,scale=1,time=0,shield=0,flash=0,runes=[],mageId='kindle',casting=0,dashing=0,face=0,moving=0,pose=null}={}){
@@ -206,7 +206,10 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
   px(-14,-24,24,10,'#8f729d');px(-10,-30,18,8,'#8f729d');px(1,-33,3,6,trim);
  }else if(maskot?.hat==='bascinet'||maskot?.hat==='helmet'){
   px(-11,-26,22,13,'#8398a3');px(-7,-30,15,6,'#b2c6bf');px(-12,-15,24,4,'#596b70');px(-8,-24,5,3,trim);px(4,-24,5,3,trim);
+ }else if(!maskot?.hat){
+  drawClassHeadgear(ctx,character.id,{trim,coat,shade});
  }else{
+  // Preserved official Pocket ID accessory is more important than a class hat.
   px(-13,-18,26,5,trim);px(-8,-26,16,11,coat);px(-4,-33,10,9,coat);px(4,-29,5,7,coat);px(-6,-22,15,3,shade);px(-9,-17,19,2,'#efe0aa');
  }
  if(maskot?.hat==='crown'){
