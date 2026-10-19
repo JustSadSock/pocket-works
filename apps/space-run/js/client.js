@@ -1016,8 +1016,8 @@ function drawHullEdgeLines(csz) {
 function drawEngineExhaust(csz, t) {
   const ts = t * 0.001;
   state.ship.modules.forEach((m) => {
-    if (m.type !== "engine") return;
-    const level = clamp(m.thrustLevel || 0, 0, 2.2);
+    if(m.type!=="engine"||m.powered===false||m.overheated)return;
+    const level=clamp(m.thrustLevel||0,0,2.2);
     if (level < 0.06) return;
 
     const rot = ((m.rotation || 0) % 360 + 360) % 360;
@@ -1141,16 +1141,44 @@ function drawShip(t) {
     ctx.fill();
   }
 
-  state.ship.cells.forEach((c) => {
-    const x = c.x * csz;
-    const y = c.y * csz;
-    const garage = isGarage();
-    const glow = 0.1 + Math.sin((c.x + c.y) * 0.9 + performance.now() * 0.002) * 0.03;
-    ctx.fillStyle = garage ? `rgba(60,140,170,${0.4 + glow})` : "rgba(34,80,104,0.82)";
-    ctx.fillRect(x, y, csz, csz);
-    if (garage) {
-      ctx.strokeStyle = "rgba(138,237,255,0.24)";
-      ctx.strokeRect(x + 0.5, y + 0.5, csz - 1, csz - 1);
+  const plateMap=new Map((state.ship.plates||[]).map(p=>[`${p.x},${p.y}`,p.hp]));
+  const liveBus=new Set((state.ship.networkCells||[]).map(p=>`${p.x},${p.y}`));
+  const garage=isGarage(), pulse=.48+.20*Math.sin(t*.005);
+  state.ship.cells.forEach(c=>{
+    const x=c.x*csz,y=c.y*csz,key=`${c.x},${c.y}`;
+    const hp=plateMap.get(key)??48, integrity=clamp(hp/48,0,1);
+    ctx.fillStyle=hp<=0?"#02080d":garage?`rgba(${Math.round(50+18*integrity)},${Math.round(83+55*integrity)},${Math.round(100+58*integrity)},.86)`:
+      `rgb(${Math.round(16+20*integrity)},${Math.round(26+54*integrity)},${Math.round(39+65*integrity)})`;
+    ctx.fillRect(x,y,csz,csz);
+    if(garage){
+      ctx.strokeStyle="rgba(138,237,255,.23)";
+      ctx.strokeRect(x+.5,y+.5,csz-1,csz-1);
+      if(liveBus.has(key)){
+        ctx.lineWidth=1.4;
+        ctx.strokeStyle=`rgba(88,236,202,${pulse*.54})`;
+        ctx.beginPath();ctx.moveTo(x+csz*.5,y+csz*.18);ctx.lineTo(x+csz*.5,y+csz*.82);
+        ctx.moveTo(x+csz*.18,y+csz*.5);ctx.lineTo(x+csz*.82,y+csz*.5);
+        ctx.stroke();
+      }
+    }
+    if(integrity<.75){
+      ctx.save();
+      ctx.strokeStyle=hp<=9?"rgba(254,115,98,.96)":"rgba(245,184,117,.75)";
+      ctx.lineWidth=hp<=9?2.1:1.2;
+      ctx.beginPath();
+      ctx.moveTo(x+3,y+csz*.27);
+      ctx.lineTo(x+csz*.39,y+csz*.52);
+      ctx.lineTo(x+csz*.26,y+csz*.83);
+      ctx.lineTo(x+csz*.7,y+csz*.92);
+      ctx.stroke();
+      if(hp<=0){
+        ctx.strokeStyle=`rgba(244,88,69,${pulse})`;
+        ctx.lineWidth=2.1;ctx.strokeRect(x+1.5,y+1.5,csz-3,csz-3);
+        ctx.fillStyle="rgba(234,85,76,.32)";
+        ctx.beginPath();ctx.moveTo(x+2,y+1);ctx.lineTo(x+csz-1,y+1);
+        ctx.lineTo(x+csz*.6,y+csz*.4);ctx.fill();
+      }
+      ctx.restore();
     }
   });
   drawHullEdgeLines(csz);
@@ -1163,7 +1191,9 @@ function drawShip(t) {
     const h = m.h * csz;
     const img = sprite(m.sprite);
     const hpN = clamp(m.hp / Math.max(1, m.maxHp), 0, 1);
-    const broken = m.status !== "online";
+    const unpowered=m.powered===false;
+    const overheating=Boolean(m.overheated);
+    const broken=m.status!=="online"||unpowered||overheating;
 
     if (img) {
       ctx.save();
@@ -1201,14 +1231,32 @@ function drawShip(t) {
       ctx.restore();
     }
 
-    ctx.strokeStyle = broken ? "rgba(255,130,145,0.9)" : "rgba(120,245,255,0.85)";
+    ctx.strokeStyle=unpowered?"rgba(140,150,159,.92)":overheating?"rgba(255,105,74,.98)":
+      broken?"rgba(255,130,145,.9)":"rgba(120,245,255,.85)";
     ctx.lineWidth = 1.3;
     ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
 
     ctx.fillStyle = "rgba(5,14,22,0.8)";
     ctx.fillRect(x + 3, y + h - 7, w - 6, 4);
     ctx.fillStyle = hpN > 0.45 ? "#6cf2a4" : hpN > 0.2 ? "#ffd56b" : "#ff7f8f";
-    ctx.fillRect(x + 3, y + h - 7, (w - 6) * hpN, 4);
+    ctx.fillRect(x+3,y+h-7,(w-6)*hpN,4);
+    const temperature=clamp((m.heat||0)/100,0,1);
+    if(temperature>.03){
+      ctx.fillStyle=temperature>.85?"#ff6a48":temperature>.55?"#ffae6f":"#d0a871";
+      ctx.fillRect(x+3,y+3,(w-6)*temperature,3);
+    }
+    if(unpowered){
+      ctx.save();ctx.globalAlpha=.66;
+      ctx.strokeStyle="#f1c178";ctx.lineWidth=1.6;
+      ctx.beginPath();ctx.moveTo(x+5,y+5);ctx.lineTo(x+w-5,y+h-10);
+      ctx.moveTo(x+w-5,y+5);ctx.lineTo(x+5,y+h-10);
+      ctx.stroke();ctx.restore();
+    }
+    if(overheating){
+      const intensity=.15+.1*Math.sin(t*.018+m.x);
+      ctx.fillStyle=`rgba(255,96,57,${intensity})`;
+      ctx.fillRect(x,y,w,h);
+    }
 
     if (m.occupiedBy) {
       ctx.fillStyle = "rgba(230,255,255,0.95)";
