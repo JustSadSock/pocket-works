@@ -3,8 +3,9 @@ import {test,expect} from '@playwright/test';
 test('headless learning trains, saves, evaluates and reopens a real brain',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#agentHub')).toBeVisible();
+ await page.locator('#hubTools').click();
  await expect(page.locator('#makeScenario')).toBeVisible();
- await expect(page.locator('#status')).toContainText('Первый маршрут');
  await page.locator('#episodeCount').selectOption('100');
  await page.locator('#trainBtn').click();
  await expect(page.locator('#trainState')).toContainText('Обучение');
@@ -18,6 +19,7 @@ test('headless learning trains, saves, evaluates and reopens a real brain',async
  await expect(page.locator('#replayInfo')).toContainText('кадров');
  const before=await page.evaluate(()=>window.render_game_to_text());
  await page.reload({waitUntil:'domcontentloaded'});
+ await page.locator('#hubTools').click();
  await expect(page.locator('#modelSelect option')).not.toHaveCount(1,{timeout:12000});
  await page.locator('#modelSelect').selectOption('autosave');
  await page.locator('#loadBrain').click();
@@ -28,6 +30,7 @@ test('headless learning trains, saves, evaluates and reopens a real brain',async
 });
 test('environment edits are transactional and survive reload',async({page})=>{
  await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await page.locator('#hubTools').click();
  const initial=JSON.parse(await page.evaluate(()=>window.render_game_to_text()));
  await page.locator('#scenarioSelect').selectOption('hazards');
  await page.locator('#makeScenario').click();
@@ -46,8 +49,8 @@ for(const viewport of [{width:390,height:844},{width:844,height:390},{width:1280
   try{
    await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
    await expect(page.locator('#cv')).toBeVisible();
-   await expect(page.locator('#trainBtn')).toBeVisible();
-   await page.locator('#trainBtn').scrollIntoViewIfNeeded();
+   await expect(page.locator('#hubTrain')).toBeVisible();
+   await page.locator('#hubTrain').scrollIntoViewIfNeeded();
    const width=await page.evaluate(()=>document.documentElement.scrollWidth);
    expect(width).toBeLessThanOrEqual(viewport.width+3);
    expect(errors).toEqual([]);
