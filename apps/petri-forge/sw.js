@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'petri-forge-';
-const CACHE_NAME = 'petri-forge-v0.7.0';
-const APP_VERSION = '0.7.0';
+const CACHE_NAME = 'petri-forge-v0.8.0';
+const APP_VERSION = '0.8.0';
 const RELEASE_DATE = '2026-10-19';
-const CACHE_PROTOCOL = 6;
-const RELEASE_NOTES = ['Единый Agent Studio: выбирайте персонажа, тренируйте его в разных лабораториях, продолжайте обучение с сохранённого мозга и смотрите понятные результаты.'];
+const CACHE_PROTOCOL = 7;
+const RELEASE_NOTES = ['Огромное поле, одна нижняя панель, единые агенты, полные экспортируемые профили и настоящие дуэли между обученными бойцами.'];
 const APP_SHELL = [
   './',
   './index.html',
@@ -17,6 +17,12 @@ const APP_SHELL = [
   './agent-hub-shell.mjs',
   './agent-hub.mjs',
   './agent-hub.css',
+  './agent-cockpit-shell.mjs',
+  './agent-cockpit.mjs',
+  './agent-cockpit.css',
+  './agent-portability.mjs',
+  './agent-duel-worker.mjs',
+  './agent-transfer.mjs',
   './mode-shell.mjs',
   './world-modes.mjs',
   './world-modes.css',
