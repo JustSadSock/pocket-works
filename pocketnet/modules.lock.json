@@ -189,5 +189,11 @@
       "v2",
       "v3"
     ]
+  },
+  "mini-car-3d": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
