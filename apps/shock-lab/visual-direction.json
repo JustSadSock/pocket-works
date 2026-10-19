@@ -51,6 +51,11 @@
         "slug": "space-run",
         "spatialDifference": "SPACE RUN uses a constructible spacecraft grid surrounded by crew and workshop panels; SHOCK uses one continuous computed pressure chamber and a thin stationary measurement bench.",
         "interactionDifference": "SPACE RUN's inertial piloting and physical construction differ from SHOCK's numeric Mach inlet, impermeable wall raster, live wave physics and sampled gas instrumentation."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "PEREKOS frames two visible combat magicians within a directional projectile battlefield, whereas SHOCK dedicates its main pane to cell-resolved pressure and Mach fields within a fixed measurement chamber.",
+        "interactionDifference": "PEREKOS composes spells and aims magical attacks in real time; SHOCK directly edits impermeable gas-flow obstacles, tunes a boundary Mach number and reads continuously sampled pressure transducers."
       }
     ]
   },
