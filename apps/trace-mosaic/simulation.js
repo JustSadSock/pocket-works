@@ -236,6 +236,7 @@ function leaveCurrentRoom(socket, notify = true) {
   }
   const player = room.players.get(socket.playerId);
   if (player) {
+    if (room.game?.activeDrags) delete room.game.activeDrags[player.id];
     player.connected = false;
     player.ready = false;
     player.socket = null;
@@ -350,111 +351,122 @@ function normalizeCellList(value, maxCells) {
     .slice(0, maxCells);
 }
 
+function areNeighborCells(a, b, cols) {
+  const dx = Math.abs(a % cols - b % cols);
+  const dy = Math.abs(Math.floor(a / cols) - Math.floor(b / cols));
+  return (dx > 0 || dy > 0) && dx <= 1 && dy <= 1;
+}
+
 function handleDragUpdate(socket, payload) {
   const room = rooms.get(socket.roomId);
-  if (!room || room.phase !== "playing" || !room.game) {
-    return;
-  }
+  if (!room || room.phase !== "playing" || !room.game) return;
   const player = room.players.get(socket.playerId);
-  if (!player) {
-    return;
-  }
+  if (!player || !player.connected) return;
   const { game } = room;
   const tileId = Number(payload?.tileId);
   const tile = game.tileMeta[tileId];
-  if (!tile || tile.ownerId !== socket.playerId) {
-    return;
-  }
+  const location = game.tileLocations[tileId];
+  if (!tile || tile.ownerId !== socket.playerId || location?.ownerId !== socket.playerId) return;
+  const active = game.activeDrags[socket.playerId];
+  if (active && active.tileId !== tileId) return;
+
+  // Treat client paths as proposals, never as authoritative block lists.
   const cells = normalizeCellList(payload?.cells, game.totalTiles);
-  const blockedCell = cells.find((cellIndex) => getTrailCellOwner(game, cellIndex, socket.playerId));
+  if (!Array.isArray(payload?.cells) || cells.length === 0 ||
+      cells.length !== payload.cells.length ||
+      cells.some((cell, i) => cell !== payload.cells[i])) return;
+  const oldCells = active?.cells || [];
+  if (cells.length < oldCells.length || oldCells.some((cell, i) => cells[i] !== cell)) return;
+  if (!active && location.kind === "board" && cells[0] !== location.cell) return;
+  // A pointer sweep across the entire board cannot trace a 25-cell snake in one packet.
+  if (cells.length - oldCells.length > Math.max(game.grid.cols, game.grid.rows) + 1) return;
+  for (let i = Math.max(1, oldCells.length); i < cells.length; i += 1) {
+    if (!areNeighborCells(cells[i - 1], cells[i], game.grid.cols)) return;
+  }
+  const targetCell = Number.isInteger(payload?.targetCell) ? payload.targetCell : -1;
+  if (!cells.includes(targetCell)) return;
+
+  const blockedCell = cells.find((cell) => getTrailCellOwner(game, cell, socket.playerId));
   if (blockedCell !== undefined) {
     const blockerId = getTrailCellOwner(game, blockedCell, socket.playerId);
-    const blocker = room.players.get(blockerId);
-    if (blocker) {
-      blocker.stats.trailBlocksCaused += 1;
-      blocker.stats.netFlow -= 1;
+    const blockedKey = blockerId + ":" + blockedCell;
+    if (active?.lastDenied !== blockedKey) {
+      const blocker = room.players.get(blockerId);
+      if (blocker) { blocker.stats.trailBlocksCaused += 1; blocker.stats.netFlow -= 1; }
+      player.stats.timesBlocked += 1;
+      player.stats.netFlow -= 1;
     }
-    player.stats.timesBlocked += 1;
-    player.stats.netFlow -= 1;
+    game.activeDrags[socket.playerId] = {
+      ...(active || { playerId: socket.playerId, color: player.color, tileId, cells: oldCells, targetCell: null }),
+      lastDenied: blockedKey, updatedAt: Date.now()
+    };
     send(socket, "drag_denied", { tileId, blockedCell, blockerId });
     return;
   }
+
   game.activeDrags[socket.playerId] = {
-    playerId: socket.playerId,
-    color: player.color,
-    tileId,
-    cells,
-    targetCell: Number.isInteger(payload?.targetCell) ? payload.targetCell : null,
-    updatedAt: Date.now(),
+    playerId: socket.playerId, color: player.color, tileId,
+    cells, targetCell, updatedAt: Date.now(), lastDenied: null
   };
   broadcastRoom(room);
 }
 
 function handleDragEnd(socket, payload) {
   const room = rooms.get(socket.roomId);
-  if (!room || room.phase !== "playing" || !room.game) {
-    return;
-  }
+  if (!room || room.phase !== "playing" || !room.game) return;
   const player = room.players.get(socket.playerId);
-  if (!player) {
-    return;
-  }
+  if (!player || !player.connected) return;
   const { game } = room;
   const active = game.activeDrags[socket.playerId];
-  if (!active) {
-    return;
-  }
-  delete game.activeDrags[socket.playerId];
   const tileId = Number(payload?.tileId);
   const tile = game.tileMeta[tileId];
-  if (!tile || tile.ownerId !== socket.playerId) {
+  if (!active || !tile || active.tileId !== tileId || tile.ownerId !== socket.playerId) return;
+  delete game.activeDrags[socket.playerId];
+
+  const destinationCell = Number.isInteger(payload?.targetCell) ? payload.targetCell : -1;
+  // An empty-path or out-of-board release is a cancellation, never a scored drop.
+  if (!Array.isArray(payload?.cells) || !payload.cells.length || destinationCell < 0 ||
+      !active.cells.length || !active.cells.includes(destinationCell)) {
     broadcastRoom(room);
     return;
   }
 
-  const destinationCell = Number.isInteger(payload?.targetCell) ? payload.targetCell : -1;
-  const pathCells = normalizeCellList(payload?.cells, game.totalTiles);
-  if (pathCells.length > 0) {
-    game.trails.push({
-      id: `${socket.playerId}-${Date.now()}`,
-      playerId: socket.playerId,
-      color: player.color,
-      cells: pathCells,
-      createdAt: Date.now(),
-      expiresAt: Date.now() + 30000,
-    });
-  }
+  const pathCells = active.cells; // trusted server-validated path, not payload.cells
+  const now = Date.now();
+  game.trails.push({
+    id: socket.playerId + "-" + now,
+    playerId: socket.playerId,
+    color: player.color,
+    cells: pathCells,
+    createdAt: now,
+    expiresAt: now + 30000
+  });
 
   const currentLocation = game.tileLocations[tileId];
   const canPlaceOnCell =
-    Number.isInteger(destinationCell) &&
-    destinationCell >= 0 &&
     destinationCell < game.totalTiles &&
     (game.board[destinationCell] === null || game.board[destinationCell] === tileId);
-
   if (canPlaceOnCell && getTrailCellOwner(game, destinationCell, socket.playerId) === null) {
-    if (currentLocation?.kind === "board" && Number.isInteger(currentLocation.cell) && currentLocation.cell !== destinationCell) {
-      game.board[currentLocation.cell] = null;
+    // Releasing in the same occupied cell is a no-op, not another correct placement.
+    const oldCell = currentLocation?.kind === "board" ? currentLocation.cell : null;
+    if (oldCell !== destinationCell) {
+      const wasCorrect = oldCell === tile.correctCell;
+      const isCorrect = destinationCell === tile.correctCell;
+      if (oldCell !== null && Number.isInteger(oldCell)) game.board[oldCell] = null;
+      game.board[destinationCell] = tileId;
+      game.tileLocations[tileId] = { ownerId: socket.playerId, kind: "board", cell: destinationCell };
+      player.stats.movedTiles += 1;
+      if (isCorrect && !wasCorrect) {
+        player.stats.netFlow += 3;
+        if (!tile.everCorrect) { player.stats.correctDrops += 1; tile.everCorrect = true; }
+      } else if (wasCorrect && !isCorrect) {
+        player.stats.wrongDrops += 1;
+        player.stats.netFlow -= 3;
+      } else if (!isCorrect) {
+        player.stats.wrongDrops += 1;
+        player.stats.netFlow -= 1;
+      }
     }
-    game.board[destinationCell] = tileId;
-    game.tileLocations[tileId] = { ownerId: socket.playerId, kind: "board", cell: destinationCell };
-    player.stats.movedTiles += 1;
-    if (tile.correctCell === destinationCell) {
-      player.stats.correctDrops += 1;
-      player.stats.netFlow += 3;
-    } else {
-      player.stats.wrongDrops += 1;
-      player.stats.netFlow -= 1;
-    }
-  } else if (!currentLocation) {
-    game.tileLocations[tileId] = { ownerId: socket.playerId, kind: "inventory", slot: (game.assignments[socket.playerId] || []).indexOf(tileId) };
-  } else if (currentLocation.kind === "inventory") {
-    game.tileLocations[tileId] = { ownerId: socket.playerId, kind: "inventory", slot: (game.assignments[socket.playerId] || []).indexOf(tileId) };
-  } else if (currentLocation.kind === "board" && Number.isInteger(currentLocation.cell)) {
-    if (game.board[currentLocation.cell] !== tileId) {
-      game.board[currentLocation.cell] = tileId;
-    }
-    game.tileLocations[tileId] = { ownerId: socket.playerId, kind: "board", cell: currentLocation.cell };
   }
   expireTrails(game);
   maybeFinishGame(room);
@@ -464,6 +476,9 @@ function handleDragEnd(socket, payload) {
 function expireTrails(game) {
   const now = Date.now();
   game.trails = game.trails.filter((trail) => trail.expiresAt > now);
+  for (const [playerId, drag] of Object.entries(game.activeDrags)) {
+    if (now - drag.updatedAt > 10000) delete game.activeDrags[playerId];
+  }
 }
 
 function getCompletion(room) {
