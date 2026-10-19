@@ -283,7 +283,13 @@ export class PocketNetHub {
       .toArray().some(row=>typeof this.module('blockies',row.version)?.onTick==='function');
     if(this.countRooms()||waiting){
       const delay=live?1_000:waiting?20_000:ROOM_TTL;
-      this.ctx.storage.setAlarm(Date.now()+delay).catch(e=>console.error('pocketnet_alarm',String(e)));
+      const target=Date.now()+delay;
+      // Never postpone an earlier alarm: rapid client pulses must not starve the
+      // authoritative one-second tick by resetting its deadline on each write.
+      this.ctx.storage.getAlarm().then(existing=>{
+        if(existing===null||existing>target)
+          return this.ctx.storage.setAlarm(target);
+      }).catch(e=>console.error('pocketnet_alarm',String(e)));
     }
   }
   recordZamazkaRewards(room, previous, next, events, actor) {
