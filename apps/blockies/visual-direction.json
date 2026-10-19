@@ -61,6 +61,11 @@
         "slug": "petri-forge",
         "spatialDifference": "PETRIFORGE presents an editable simulation arena with terrain and autonomous agents; Blockies keeps a narrow shared falling-block well and compact score controls visible at once.",
         "interactionDifference": "PETRIFORGE experiments with agent behaviors and environment changes over simulated time; Blockies requires timed manual rotation, lateral positioning, and synchronous cooperative row clearing."
+      },
+      {
+        "slug": "space-run",
+        "spatialDifference": "Space Run presents continuous forward motion through a side-scrolling obstacle corridor, while Blockies centers a fixed vertical cooperative stack with distinct player-owned blocks and stable piece previews.",
+        "interactionDifference": "Space Run asks for real-time trajectory and obstacle timing, whereas Blockies relies on discrete team-controlled tetromino rotations, wall kicks, hold swaps, and synchronized line clears."
       }
     ]
   },
