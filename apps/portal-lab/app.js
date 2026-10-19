@@ -4,9 +4,10 @@ import {createObservatory} from './observatory.js';
 import {createMaterialLab} from './material-view.js';
 import {createWaveLab} from './wave-view.js';
 import {createDesigner} from './designer.js';
+import {createRotationLab} from './rotation-view.js';
 import {throatDiagnostics,criticalImpact} from './spacetime.js';
 const $=id=>document.getElementById(id),canvas=$('space'),ctx=canvas.getContext('2d',{alpha:false});
-const sound=new AudioBus(),observatory=createObservatory(canvas,{onAction:kind=>sound.play(kind)}),materialLab=createMaterialLab({onAction:kind=>sound.play(kind)}),waveLab=createWaveLab({onAction:kind=>sound.play(kind)}),designer=createDesigner(canvas,{getMetric:()=>currentMetric(),onEdit:changes=>applyDesign(changes),onAction:kind=>sound.play(kind)}),STORAGE='pocket-works:portal-lab:relativity-v2';
+const sound=new AudioBus(),observatory=createObservatory(canvas,{onAction:kind=>sound.play(kind)}),materialLab=createMaterialLab({onAction:kind=>sound.play(kind)}),waveLab=createWaveLab({onAction:kind=>sound.play(kind)}),designer=createDesigner(canvas,{getMetric:()=>currentMetric(),onEdit:changes=>applyDesign(changes),onAction:kind=>sound.play(kind)}),rotationLab=createRotationLab({getMetric:()=>currentMetric(),onAction:kind=>sound.play(kind)}),STORAGE='pocket-works:portal-lab:relativity-v2';
 const defaults={model:'ellis',a:1,eta:.45,shape:0,shapeWidth:1.45,lapseBump:0,lapseWidth:1.3,kind:'light',count:13,spread:32,speed:.7,timeScale:1,view:'observer',source:{l:3.15,phi:Math.PI,alpha:Math.PI}};
 let settings=structuredClone(defaults);
 let rays=[],elapsed=0,paused=false,lastTime=0,accum=0,drag=null,displayW=800,displayH=600,layout=null,dirty=true,saveTimeout=0;
@@ -24,7 +25,7 @@ function load(){
   settings.kind=x.kind==='matter'?'matter':'light';
   settings.count=Math.round(clean(x.count,1,25,13));settings.spread=clean(x.spread,0,100,32);
   settings.speed=clean(x.speed,.05,.95,.7);settings.timeScale=clean(x.timeScale,.25,5,1);
-  settings.view=['profile','map','matter','wave','designer','observer'].includes(x.view)?x.view:'observer';
+  settings.view=['profile','map','matter','wave','designer','rotation','observer'].includes(x.view)?x.view:'observer';
   if(x.source&&[x.source.l,x.source.phi,x.source.alpha].every(Number.isFinite))
    settings.source={l:Math.max(-24,Math.min(24,x.source.l)),phi:x.source.phi,alpha:x.source.alpha};
   if(Array.isArray(value.rays)&&value.rays.length<=35&&Number.isFinite(value.elapsed)){
@@ -78,14 +79,16 @@ function sync(){
  document.querySelectorAll('[data-view]').forEach(b=>{const active=b.dataset.view===settings.view;b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));});
  document.body.dataset.labView=settings.view;
  designer.setActive(settings.view==='designer');
+ rotationLab.setActive(settings.view==='rotation');
  observatory.setActive(settings.view==='observer');
  materialLab.setActive(settings.view==='matter');
  waveLab.setActive(settings.view==='wave');
- $('lab-headline').textContent=settings.view==='designer'?'Спроектировать пространство-время':settings.view==='matter'?'Материя под нагрузкой':settings.view==='wave'?'Волновая геометрия':settings.view==='observer'?'Увидеть искривлённое пространство':'Два региона. Одна геометрия.';
- $('shoot').disabled=settings.view==='designer'||(settings.view==='matter'&&materialLab.phase==='running')||(settings.view==='wave'&&waveLab.phase==='running');
- $('shoot').innerHTML=settings.view==='observer'?'Пройти горловину <span aria-hidden="true">↗</span>':settings.view==='matter'?(materialLab.phase==='running'?'Эксперимент идёт':materialLab.phase==='completed'?'Повторить испытание':'Запустить образец')+' <span aria-hidden="true">↗</span>':settings.view==='wave'?(waveLab.phase==='running'?'Волна распространяется':waveLab.phase==='finished'?'Повторить опыт':'Запустить волну')+' <span aria-hidden="true">↗</span>':'Испустить лучи <span aria-hidden="true">↗</span>';
- $('clear').textContent=settings.view==='designer'?'Сбросить к Эллису':settings.view==='observer'?'Исходный вид':settings.view==='matter'?'Сброс опыта':settings.view==='wave'?'Сброс волны':'Очистить';
- $('canvas-hint').textContent=settings.view==='designer'?'Перетащите светлые точки профилей для изменения метрики.'
+ $('lab-headline').textContent=settings.view==='rotation'?'Вращение и горизонты':settings.view==='designer'?'Спроектировать пространство-время':settings.view==='matter'?'Материя под нагрузкой':settings.view==='wave'?'Волновая геометрия':settings.view==='observer'?'Увидеть искривлённое пространство':'Два региона. Одна геометрия.';
+ $('shoot').disabled=settings.view==='rotation'&&rotationLab.status.hasRun&&(rotationLab.status.wormhole==='flying'||rotationLab.status.blackHole==='flying')||settings.view==='designer'||(settings.view==='matter'&&materialLab.phase==='running')||(settings.view==='wave'&&waveLab.phase==='running');
+ $('shoot').innerHTML=settings.view==='observer'?'Пройти горловину <span aria-hidden="true">↗</span>':settings.view==='rotation'?(rotationLab.status.hasRun?'Повторить сравнение':'Запустить фотоны')+' <span aria-hidden="true">↗</span>':settings.view==='matter'?(materialLab.phase==='running'?'Эксперимент идёт':materialLab.phase==='completed'?'Повторить испытание':'Запустить образец')+' <span aria-hidden="true">↗</span>':settings.view==='wave'?(waveLab.phase==='running'?'Волна распространяется':waveLab.phase==='finished'?'Повторить опыт':'Запустить волну')+' <span aria-hidden="true">↗</span>':'Испустить лучи <span aria-hidden="true">↗</span>';
+ $('clear').textContent=settings.view==='rotation'?'Сброс лучей':settings.view==='designer'?'Сбросить к Эллису':settings.view==='observer'?'Исходный вид':settings.view==='matter'?'Сброс опыта':settings.view==='wave'?'Сброс волны':'Очистить';
+ $('canvas-hint').textContent=settings.view==='rotation'?'Две геодезические · одинаковые локальные параметры запуска · нелинейная шкала карты.'
+   :settings.view==='designer'?'Перетащите светлые точки профилей для изменения метрики.'
    :settings.view==='wave'?'Настоящее поле Клейна — Гордона: профиль, история и эффективный потенциал.'
    :settings.view==='matter'?'Свободное падение через горловину. Схема деформации в локальной системе отсчёта.'
    :settings.view==='observer'
@@ -140,6 +143,7 @@ function changeMetric(){
  observatory.configure(currentMetric());
  materialLab.configure(currentMetric());
  waveLab.configure(currentMetric());
+ rotationLab.configure(currentMetric());
  designer.refresh();
 }
 const bindings=[
@@ -154,7 +158,7 @@ for(const [id,key,rebuild]of bindings)$(id).addEventListener('input',e=>{
 $('model').addEventListener('change',e=>{settings.model=e.target.value;changeMetric();});
 for(const button of document.querySelectorAll('[data-kind]'))button.addEventListener('click',()=>{settings.kind=button.dataset.kind;sync();scheduleSave();});
 for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>{settings.view=button.dataset.view;sync();scheduleSave();});
-$('shoot').addEventListener('click',()=>{if(settings.view==='observer')observatory.triggerFlight();else if(settings.view==='matter')materialLab.trigger();else if(settings.view==='wave')waveLab.trigger();else if(settings.view!=='designer')emit();});
+$('shoot').addEventListener('click',()=>{if(settings.view==='observer')observatory.triggerFlight();else if(settings.view==='matter')materialLab.trigger();else if(settings.view==='rotation')rotationLab.trigger();else if(settings.view==='wave')waveLab.trigger();else if(settings.view==='rotation')rotationLab.trigger();else if(settings.view!=='designer')emit();});
 $('critical').addEventListener('click',()=>{
  const m=currentMetric(),src=settings.source;
  const R=geometry(src.l*m.a,m).R,N=geometry(src.l*m.a,m).N;
@@ -165,12 +169,12 @@ $('critical').addEventListener('click',()=>{
  settings.source.alpha=Math.PI+Math.asin(argument);
  sync();emit();sound.play('mount');scheduleSave();
 });
-$('clear').addEventListener('click',()=>{if(settings.view==='observer')$('lens-reset').click();else if(settings.view==='matter')materialLab.reset();else if(settings.view==='wave')waveLab.reset();else if(settings.view==='designer')applyDesign({shape:0,lapseBump:0,eta:0,shapeWidth:1.45,lapseWidth:1.3});else resetData();});
+$('clear').addEventListener('click',()=>{if(settings.view==='observer')$('lens-reset').click();else if(settings.view==='matter')materialLab.reset();else if(settings.view==='rotation')rotationLab.reset();else if(settings.view==='wave')waveLab.reset();else if(settings.view==='rotation')rotationLab.reset();else if(settings.view==='designer')applyDesign({shape:0,lapseBump:0,eta:0,shapeWidth:1.45,lapseWidth:1.3});else resetData();});
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Продолжить':'Пауза';$('pause').setAttribute('aria-label',paused?'Продолжить':'Приостановить симуляцию');});
 $('sound').addEventListener('click',()=>{sound.set(!sound.enabled);$('sound').classList.toggle('muted',!sound.enabled);$('sound').setAttribute('aria-label',sound.enabled?'Выключить звук':'Включить звук');});
 $('sound').classList.toggle('muted',!sound.enabled);
 $('export').addEventListener('click',()=>{
- const data={schema:'portal-lab-relativity-v6',description:'Geodesics in ds²=-N(l)²dt²+dl²+(l²+a²)dφ², c=G=1',metric:currentMetric(),assumptions:['equatorial test-particle approximation','no self gravity or backreaction','redshift metric is an ansatz'],elapsed,settings,observer:observatory.state,probe:observatory.probe,material:materialLab.snapshot,waves:waveLab.snapshot,designer:designer.snapshot,rays};
+ const data={schema:'portal-lab-relativity-v7',description:'Geodesics in ds²=-N(l)²dt²+dl²+(l²+a²)dφ², c=G=1',metric:currentMetric(),assumptions:['equatorial test-particle approximation','no self gravity or backreaction','redshift metric is an ansatz'],elapsed,settings,observer:observatory.state,probe:observatory.probe,material:materialLab.snapshot,waves:waveLab.snapshot,designer:designer.snapshot,rotation:rotationLab.snapshot,rays};
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
  link.href=url;link.download='shov-relativity-experiment.json';document.body.append(link);link.click();link.remove();
  setTimeout(()=>URL.revokeObjectURL(url),1200);
@@ -437,6 +441,8 @@ function tick(t){
    const m=currentMetric();
    if(settings.view==='observer'){
     observatory.tick(dt,settings.timeScale);
+   }else if(settings.view==='rotation'){
+    rotationLab.tick(dt,settings.timeScale);
    }else if(settings.view==='wave'){
     waveLab.tick(dt,settings.timeScale);
    }else if(settings.view==='matter'){
@@ -452,6 +458,7 @@ function tick(t){
   if(settings.view==='observer'){observatory.draw(ctx,displayW,displayH);dirty=false;}
   else if(settings.view==='matter'){materialLab.draw(ctx,displayW,displayH);dirty=false;}
   else if(settings.view==='wave'){waveLab.draw(ctx,displayW,displayH);dirty=false;}
+  else if(settings.view==='rotation'){rotationLab.draw(ctx,displayW,displayH);dirty=false;}
   else if(settings.view==='designer'&&dirty){designer.draw(ctx,displayW,displayH);dirty=false;}
   else if(dirty){if(layout){if(settings.view==='profile')drawProfile();else drawMap();}dirty=false;}
  }
@@ -462,10 +469,11 @@ settings.source.l=Math.sign(settings.source.l||1)*Math.min(4.25,Math.max(.3,Math
 observatory.configure(currentMetric());
 materialLab.configure(currentMetric());
 waveLab.configure(currentMetric());
+rotationLab.configure(currentMetric());
 sync();if(!rays.length)emit(true);
 requestAnimationFrame(tick);
 window.__SHOV__={snapshot:()=>({
- metric:currentMetric(),settings:structuredClone(settings),elapsed,observer:{...observatory.state},optics:observatory.status,tidal:observatory.probe,material:materialLab.snapshot,waves:waveLab.snapshot,designer:designer.snapshot,
+ metric:currentMetric(),settings:structuredClone(settings),elapsed,observer:{...observatory.state},optics:observatory.status,tidal:observatory.probe,material:materialLab.snapshot,waves:waveLab.snapshot,designer:designer.snapshot,rotation:rotationLab.snapshot,
  rays:rays.map(r=>({l:r.l,phi:r.phi,E:r.E,L:r.L,k:r.k,crossings:r.crossings,constraint:constraint(r,currentMetric())}))
  }),emit,clear:()=>resetData(),setModel:(model)=>{settings.model=model==='redshift'?'redshift':'ellis';changeMetric();}};
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
