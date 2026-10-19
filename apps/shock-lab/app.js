@@ -372,7 +372,7 @@ document.addEventListener('keydown',ev=>{
   if(ev.key==='Enter'&&document.activeElement===canvas)addPulse({x:.22,y:.5});
 });
 createWorkshopMode({
-  appName:'SHOCK',version:'1.0.0',cachePrefix:'shock-lab-',storageNamespace:'shock-lab-v1',
+  appName:'SHOCK',version:'1.0.0',cachePrefix:'shock-lab-',storageNamespace:'pocket-works:shock-lab',
   onReset(){try{localStorage.removeItem(KEY)}catch{}Object.assign(state,DEFAULTS());probe=null;refreshControls();rebuildGeometry();resetGas(true);toast('НАСТРОЙКИ И ПРАВКИ СБРОШЕНЫ');}
 });
 refreshControls();
