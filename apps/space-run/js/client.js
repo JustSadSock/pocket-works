@@ -50,6 +50,8 @@ let lastFrame = performance.now();
 let renderPhysics = { x: 0, y: 0, a: 0, ready: false };
 let shake = { power: 0 };
 let particles = [];
+let debrisRender = new Map();
+let shockwaves = [];
 const spriteCache = new Map();
 const DROP_ICON_PATHS = {
   credits: "assets/ui/pickup_credits.png",
@@ -201,7 +203,35 @@ socket.on("state", (next) => {
         }
       }
       if(ev.type==="defeat")showToast(ev.reason==="timeout"?"Время истекло — экспедиция сорвана":"Корабль потерян — возвращение в док",2600);
-      if(ev.type==="hull-detached")showToast(`Секция корпуса ${ev.x},${ev.y} оторвана!`,2400);
+      if(ev.type==="hull-detached"){
+        addShake(.32);
+        beep(92,.18,"sawtooth",.26);
+        showToast(`Секция корпуса ${ev.x},${ev.y} оторвана!`,1700);
+      }
+      if(ev.type==="thermal-incident"){
+        shockwaves.push({x:ev.x,y:ev.y,t:0,life:ev.reactor?.65:.40,
+          radius:ev.reactor?130:64,color:ev.reactor?"#ffd18b":"#f87956"});
+        addShake(ev.reactor?.50:.20);
+        beep(ev.reactor?82:170,ev.reactor?.34:.16,"sawtooth",.30);
+        showToast(ev.reactor?"АВАРИЯ РЕАКТОРА: повреждение соседних систем":
+          `Тепловой выброс: ${ev.moduleId}`,2200);
+        for(let i=0;i<(ev.reactor?42:20);i++){
+          const a=Math.PI*2*i/(ev.reactor?42:20)+random(-.13,.13),v=random(45,ev.reactor?250:150);
+          particles.push({x:ev.x,y:ev.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,
+            t:0,life:random(.3,.85),color:i%3===0?"#fff0b8":i%2===0?"#ff9a53":"#ee5940",r:random(1.5,4)});
+        }
+      }
+      if(ev.type==="impact-impulse"){
+        addShake(Math.min(.16,ev.strength*.003));
+        shockwaves.push({x:ev.x,y:ev.y,t:0,life:.27,radius:Math.min(52,14+ev.strength),
+          color:"#e7dbb9"});
+      }
+      if(ev.type==="debris-impact"){
+        for(let i=0;i<6;i++){
+          particles.push({x:ev.x,y:ev.y,vx:random(-90,90),vy:random(-90,90),
+            life:random(.15,.42),t:0,color:"#e5a67d",r:random(.7,2.2)});
+        }
+      }
       if(ev.type==="breaker")beep(ev.closed?530:290,.08,"triangle",.18);
       if(ev.type==="hull-breach")showToast(`Пробоина! Секция ${ev.x},${ev.y}`,1900);
       if(ev.type==="overheat")showToast(`Перегрев модуля ${ev.moduleId} — охлаждение`,2200);
@@ -236,6 +266,7 @@ socket.on("state", (next) => {
   }
 
   if(particles.length>550)particles.splice(0,particles.length-550);
+  if(shockwaves.length>36)shockwaves.splice(0,shockwaves.length-36);
   const now=performance.now();
   if(now-lastUiStamp>120){
     renderUI();
@@ -1500,6 +1531,66 @@ function drawDrops() {
   });
 }
 
+
+function drawDebris(dt){
+  const debris=state.debris||[];
+  const active=new Set();
+  for(const d of debris){
+    active.add(d.id);
+    let visual=debrisRender.get(d.id);
+    if(!visual){visual={x:d.x,y:d.y,angle:d.angle};debrisRender.set(d.id,visual);}
+    const t=clamp(dt*13,0,1);
+    visual.x+=(d.x-visual.x)*t;
+    visual.y+=(d.y-visual.y)*t;
+    visual.angle=normalizeAngle(visual.angle+normalizeAngle(d.angle-visual.angle)*t);
+    const at=worldToScreen(visual.x,visual.y);
+    const size=Math.max(2,d.size*camera.z);
+    ctx.save();
+    ctx.translate(at.x,at.y);ctx.rotate(visual.angle);
+    const metal=d.material==="plate",reactor=d.material==="reactor";
+    ctx.fillStyle=metal?"#68858b":reactor?"#ed9b65":"#a96b57";
+    ctx.strokeStyle=metal?"#a3cbd1":reactor?"#ffecab":"#ecaa79";
+    ctx.lineWidth=Math.max(.8,1.2*camera.z);
+    ctx.beginPath();
+    ctx.moveTo(-size*.55,-size*.7);
+    ctx.lineTo(size*.62,-size*.35);
+    ctx.lineTo(size*.46,size*.65);
+    ctx.lineTo(-size*.68,size*.4);
+    ctx.closePath();ctx.fill();ctx.stroke();
+    if(reactor){
+      ctx.fillStyle="rgba(255,159,61,.65)";
+      ctx.fillRect(-size*.18,-size*.35,size*.36,size*.7);
+    }
+    ctx.restore();
+    const speed=Math.hypot(d.vx||0,d.vy||0);
+    if(speed>60){
+      ctx.globalAlpha=.23;
+      ctx.strokeStyle=reactor?"#ffbc72":"#9eb8bd";
+      ctx.lineWidth=Math.max(.8,1.5*camera.z);
+      ctx.beginPath();ctx.moveTo(at.x,at.y);
+      ctx.lineTo(at.x-(d.vx/speed)*Math.min(29,speed*.08)*camera.z,
+                 at.y-(d.vy/speed)*Math.min(29,speed*.08)*camera.z);
+      ctx.stroke();ctx.globalAlpha=1;
+    }
+  }
+  for(const id of debrisRender.keys())if(!active.has(id))debrisRender.delete(id);
+}
+
+function drawShockwaves(dt){
+  for(let i=shockwaves.length-1;i>=0;i--){
+    const w=shockwaves[i];w.t+=dt;
+    if(w.t>=w.life){shockwaves.splice(i,1);continue;}
+    const ratio=w.t/w.life,pos=worldToScreen(w.x,w.y);
+    const radius=(6+w.radius*(1-Math.pow(1-ratio,2)))*camera.z;
+    ctx.save();
+    ctx.globalAlpha=(1-ratio)*.58;
+    ctx.lineWidth=(2.8-ratio*1.5)*camera.z;
+    ctx.strokeStyle=w.color;
+    ctx.beginPath();ctx.arc(pos.x,pos.y,radius,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+  }
+}
+
 function drawParticles(dt) {
   for (let i = particles.length - 1; i >= 0; i -= 1) {
     const p = particles[i];
@@ -1688,6 +1779,8 @@ function render(dt, t) {
   drawShip(t);
   drawEnemies();
   drawProjectiles();
+  drawDebris(dt);
+  drawShockwaves(dt);
   drawBuildGhost();
   drawParticles(dt);
   drawCombatCrosshair();
