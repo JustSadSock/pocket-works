@@ -118,7 +118,7 @@ export function perekosControl(o,p,player=0,tick=0){
   mx=mx*.25+cx*1.7;my=my*.25+cy*1.7;
  }
  const n=Math.max(1,Math.hypot(mx,my));mx/=n;my/=n;
- const lead=clamp(w[index.leadAim]*.12,0,.12);
+ const lead=clamp((distance/252)*w[index.leadAim]*.92,0,.75);
  const aimX=e.x*400+e.vx*lead,aimY=e.y*620+e.vy*lead;
  const jitter=Math.sin(tick*.041+player*3)*w[index.jitter]*20;
  const fire=e.hp>0&&!blockingWall&&s.cast<=.05&&s.heat<w[index.cooling]*.5+.49&&distance<(210+w[index.shotDiscipline]*290);
