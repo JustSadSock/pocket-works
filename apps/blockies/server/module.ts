@@ -526,10 +526,12 @@ class Player {
 
     clearLines() {
         let linesCleared = 0;
+        const clearedRows = [];
 
         const boardWidth = getBoardWidth();
         for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
             if (gameState.board[y].every(cell => cell !== 0)) {
+                clearedRows.push({ y, owners: gameState.board[y].slice() });
                 gameState.board.splice(y, 1);
                 gameState.board.unshift(Array(boardWidth).fill(0));
                 linesCleared++;
@@ -565,6 +567,7 @@ class Player {
         gameState.sharedStats.lastClearDetail = {
             linesCleared,
             totalScore: gained,
+            rows: clearedRows,
             perLineScore,
             basePerLine: BASE_LINE_SCORE,
             comboChain: gameState.sharedStats.comboChain,
