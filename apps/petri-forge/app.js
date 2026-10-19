@@ -165,8 +165,8 @@ function handleCtx(i){
   if(training)return;
   stopReplay();beginOperation();
   switch(i){
-    case 0: spawn=[ctxTile.x,ctxTile.y]; env.reset(spawn,goal); break;
-    case 1: goal=[ctxTile.x,ctxTile.y]; env.reset(spawn,goal); break;
+    case 0: spawn=[ctxTile.x,ctxTile.y]; setTile(spawn[0],spawn[1],TILE.EMPTY);env.reset(spawn,goal); break;
+    case 1: if(ctxTile.x!==spawn[0]||ctxTile.y!==spawn[1]){goal=[ctxTile.x,ctxTile.y];setTile(goal[0],goal[1],TILE.EMPTY);env.reset(spawn,goal);} break;
     case 2: setTile(ctxTile.x,ctxTile.y,TILE.EMPTY); break;
     case 3: generateNoise(); break;
     case 4: generateMaze(); break;
@@ -277,6 +277,7 @@ window.addEventListener('pointerup', e=>{
     drawShape(startX,startY,t.x,t.y);
   }
   commitOperation();
+  if(drawing&&tileSelect.value==='2')env.reset(spawn,goal);
   if(dragSpawn||dragGoal){if(env.grid[spawn[1]][spawn[0]]===TILE.WALL)setTile(spawn[0],spawn[1],TILE.EMPTY);if(env.grid[goal[1]][goal[0]]===TILE.WALL)setTile(goal[0],goal[1],TILE.EMPTY);env.reset(spawn,goal);}
   drawing=false;
   dragSpawn=false; dragGoal=false;
