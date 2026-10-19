@@ -226,9 +226,10 @@ $('hubTest').onclick=()=>{
  if(busy||pending)return;
  try{const r=runtime()[mode];
   if(r.isReady&&!r.isReady())throw Error('Сначала дождитесь загрузки физики');
+  pending=true;lock();
   if(r.test()===false)throw Error('Проверка недоступна');
-  notify('Контрольное испытание запущено');
- }catch(e){notify(e.message);}
+  notify('Проверяем навыки… Мозг останется без изменений.');
+ }catch(e){pending=false;lock();notify('Проверка: '+e.message);}
 };
 $('hubReplay').onclick=()=>{
  if(busy||pending)return;
@@ -258,12 +259,12 @@ window.addEventListener('petri:finished',e=>{
  });
 });
 window.addEventListener('petri:evaluated',e=>{
- if(e.detail?.mode!==mode)return;lastEval=e.detail.text||'';refresh();
+ if(e.detail?.mode!==mode)return;pending=false;lock();lastEval=e.detail.text||'';refresh();
 });
 window.addEventListener('petri:ready',e=>{
  if(e.detail?.mode==='race'&&mode==='race'){notify('Движок Шпильки подключён. Можно тренироваться.');lock();}
 });
-window.addEventListener('petri:error',e=>{busy=false;lock();notify('Ошибка: '+(e.detail?.message||'тренировка прервана'));});
+window.addEventListener('petri:error',e=>{busy=false;pending=false;lock();notify('Ошибка: '+(e.detail?.message||'тренировка прервана'));});
 window.addEventListener('pagehide',()=>{if(active&&!busy&&!pending)void persist(active,mode);});
 async function start(){
  pending=true;lock();
