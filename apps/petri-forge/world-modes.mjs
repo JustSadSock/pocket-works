@@ -1,4 +1,5 @@
 import './mode-shell.mjs';
+import {openPerekosLab,pausePerekosLab} from './perekos-lab.mjs';
 import {CW,CH,ARENAS,SKILLS,makePolicy,validPolicy,arenaWalls} from './combat-core.mjs';
 import {mountCombatEditor} from './combat-editor.mjs';
 import {listModels,loadModel,saveModel,deleteModel} from './model-store.mjs';
@@ -285,10 +286,11 @@ $('raceDelete').onclick=async()=>{const id=$('raceModels').value;if(!id)return;i
 frame.addEventListener('error',()=>{$('raceConnect').textContent='Ошибка загрузки Шпильки';status('Не удалось открыть гоночный движок');});
 function openMode(mode){
  const grid=mode==='grid',combat=mode==='combat',race=mode==='race';
- for(const [id,show] of [['worldPanel',grid],['labPanel',grid],['combatWorld',combat],['combatPanel',combat],['raceWorld',race],['racePanel',race]])$(id).hidden=!show;
+ for(const [id,show] of [['worldPanel',grid],['labPanel',grid],['combatWorld',combat],['combatPanel',combat],['raceWorld',race],['racePanel',race],['perekosWorld',mode==='perekos'],['perekosPanel',mode==='perekos']])$(id).hidden=!show;
  for(const button of document.querySelectorAll('[data-world-mode]')){button.classList.toggle('selected',button.dataset.worldMode===mode);button.setAttribute('aria-pressed',String(button.dataset.worldMode===mode));}
  if(!grid&&$('playPause').textContent.includes('Пауза'))$('playPause').click();
  if(combat&&!battleReplay&&!editor.isEditing())sendCombat('combat-test',{config:sceneConfig(),seed:41});
+ if(mode==='perekos')openPerekosLab();else pausePerekosLab();
  if(race&&!frame.src.includes('petri=1')){
   $('raceConnect').textContent='Подключение физики Шпильки...';
   connectRace();
