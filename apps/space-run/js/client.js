@@ -192,6 +192,15 @@ socket.on("state", (next) => {
   if (Array.isArray(next.events)) {
     next.events.forEach((ev) => {
       handleEventAudio(ev);
+      if(ev.type==="shot"&&Number.isFinite(ev.x)&&Number.isFinite(ev.y)){
+        addShake(ev.crit?.085:.035);
+        for(let i=0;i<5;i++){
+          const a=ev.angle+random(-.6,.6),speed=random(35,110);
+          particles.push({x:ev.x,y:ev.y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,
+            life:random(.10,.28),t:0,color:ev.crit?"#ffe8a1":"#b1f9ff",r:random(1,2.4)});
+        }
+      }
+      if(ev.type==="defeat")showToast(ev.reason==="timeout"?"Время истекло — экспедиция сорвана":"Корабль потерян — возвращение в док",2600);
       if (ev.type === "enemy-destroyed") {
         const count = ev.elite ? 34 : 16;
         for (let i = 0; i < count; i += 1) {
@@ -220,8 +229,9 @@ socket.on("state", (next) => {
     });
   }
 
-  const now = performance.now();
-  if (now - lastUiStamp > 120) {
+  if(particles.length>550)particles.splice(0,particles.length-550);
+  const now=performance.now();
+  if(now-lastUiStamp>120){
     renderUI();
     lastUiStamp = now;
   }
@@ -585,8 +595,8 @@ resize();
 
 function screenToWorld(sx, sy) {
   const rect = canvas.getBoundingClientRect();
-  const x = sx - rect.left;
-  const y = sy - rect.top;
+  const x = sx - rect.left - (camera.shakeX || 0);
+  const y = sy - rect.top - (camera.shakeY || 0);
   return {
     x: (x - rect.width / 2) / camera.z + camera.x,
     y: (y - rect.height / 2) / camera.z + camera.y,
@@ -814,13 +824,21 @@ window.addEventListener("keyup", (e) => {
 function inputPayload() {
   if (!state) return null;
   const ph = displayPhysics();
-  let aim = Math.atan2(mouse.worldY - ph.y, mouse.worldX - ph.x);
-  if (touchFiring && performance.now() - lastTouchAimAt > 3500 && state.enemies?.length) {
+  const pilot=playerMe(),mod=moduleByIdLocal(pilot?.moduleId);
+  let originX=ph.x,originY=ph.y;
+  if(mod?.type==="turret"){
+    const lx=(mod.x+mod.w*.5)*state.cellSize,ly=(mod.y+mod.h*.5)*state.cellSize;
+    originX+=Math.cos(ph.a)*lx-Math.sin(ph.a)*ly;
+    originY+=Math.sin(ph.a)*lx+Math.cos(ph.a)*ly;
+  }
+  const point=screenToWorld(mouse.x,mouse.y);
+  let aim=Math.atan2(point.y-originY,point.x-originX);
+  if(touchFiring && performance.now()-lastTouchAimAt>3500 && state.enemies?.length){
     // One finger fires; a second finger can manually aim on the canvas.
     const target = state.enemies.reduce((best, enemy) =>
-      !best || Math.hypot(enemy.x - ph.x, enemy.y - ph.y) < Math.hypot(best.x - ph.x, best.y - ph.y)
+      !best || Math.hypot(enemy.x-originX,enemy.y-originY) < Math.hypot(best.x-originX,best.y-originY)
         ? enemy : best, null);
-    if (target) aim = Math.atan2(target.y - ph.y, target.x - ph.x);
+    if(target)aim=Math.atan2(target.y-originY,target.x-originX);
   }
   return {
     up: keyState.has("KeyW"),
@@ -942,7 +960,7 @@ function drawTurretEffects(csz, shipAngle) {
     if (m.type !== "turret") return;
     const cx = (m.x + m.w * 0.5) * csz;
     const cy = (m.y + m.h * 0.5) * csz;
-    const localAim = normalizeAngle((m.aim || shipAngle) - shipAngle);
+    const localAim=normalizeAngle((Number.isFinite(m.aim)?m.aim:shipAngle)-shipAngle);
     const recoil = (m.recoil || 0) * 6;
     const barrelLen = Math.max(m.w, m.h) * csz * 0.42 + 12;
     const sx = cx + Math.cos(localAim) * (8 - recoil);
@@ -974,8 +992,8 @@ function drawTurretEffects(csz, shipAngle) {
     if ((m.shotFlash || 0) > 0.01) {
       const flash = clamp(m.shotFlash, 0, 1);
       const radius = 7 + flash * 9;
-      const mx = ex + Math.cos(localAim) * 2;
-      const my = ey + Math.sin(localAim) * 2;
+      const mx=cx+Math.cos(localAim)*barrelLen;
+      const my=cy+Math.sin(localAim)*barrelLen;
       const grad = ctx.createRadialGradient(mx, my, 0, mx, my, radius);
       grad.addColorStop(0, `rgba(255,250,196,${0.95 * flash})`);
       grad.addColorStop(0.45, `rgba(255,187,96,${0.8 * flash})`);
@@ -996,6 +1014,7 @@ function drawShip(t) {
   ctx.save();
   ctx.translate(shipPos.x, shipPos.y);
   ctx.rotate(ph.a);
+  ctx.scale(camera.z,camera.z);
 
   if (state.ship.bounds) {
     const b = state.ship.bounds;
@@ -1075,8 +1094,20 @@ function drawShip(t) {
       ctx.fillRect(x + 2, y + 2, (w - 4) * (m.malfunction.progress / Math.max(1, m.malfunction.target)), 3);
     }
   });
-  drawTurretEffects(csz, ph.a);
-
+  drawTurretEffects(csz,ph.a);
+  if(isGarage()&&state.ship.massProperties){
+    const mass=state.ship.massProperties;
+    ctx.save();ctx.setLineDash([3,4]);
+    ctx.strokeStyle="rgba(255,209,141,.85)";
+    ctx.lineWidth=1.4;ctx.beginPath();
+    ctx.arc(mass.centerX,mass.centerY,11,0,Math.PI*2);
+    ctx.moveTo(mass.centerX-17,mass.centerY);ctx.lineTo(mass.centerX+17,mass.centerY);
+    ctx.moveTo(mass.centerX,mass.centerY-17);ctx.lineTo(mass.centerX,mass.centerY+17);
+    ctx.stroke();ctx.setLineDash([]);
+    ctx.font="10px Sora";ctx.fillStyle="#ffe5ba";
+    ctx.fillText("ЦМ",mass.centerX+14,mass.centerY-10);
+    ctx.restore();
+  }
   ctx.restore();
 }
 
@@ -1123,8 +1154,18 @@ function drawEnemies() {
 function drawProjectiles() {
   if (!state) return;
   state.projectiles.forEach((p) => {
-    const pos = worldToScreen(p.x, p.y);
-    ctx.fillStyle = p.color || (p.friendly ? "#8ef7ff" : "#ff8d7b");
+    const pos=worldToScreen(p.x,p.y);
+    const color=p.color||(p.friendly?"#8ef7ff":"#ff8d7b");
+    if(Number.isFinite(p.vx)&&Number.isFinite(p.vy)){
+      const motion=Math.max(1,Math.hypot(p.vx,p.vy));
+      const trail=Math.min(25,motion*.035)*camera.z;
+      ctx.lineCap="round";ctx.lineWidth=(p.friendly?3.2:2.4)*camera.z;
+      ctx.globalAlpha=.48;ctx.strokeStyle=color;
+      ctx.beginPath();ctx.moveTo(pos.x,pos.y);
+      ctx.lineTo(pos.x-p.vx/motion*trail,pos.y-p.vy/motion*trail);
+      ctx.stroke();ctx.globalAlpha=1;
+    }
+    ctx.fillStyle=color;
     ctx.shadowBlur = 8;
     ctx.shadowColor = ctx.fillStyle;
     ctx.beginPath();
@@ -1270,6 +1311,7 @@ function drawBuildGhost() {
   ctx.save();
   ctx.translate(pos.x, pos.y);
   ctx.rotate(ph.a);
+  ctx.scale(camera.z,camera.z);
   ctx.globalAlpha = invalidReason ? 0.65 : 0.45;
   if (moveModuleId) {
     const current = moduleByIdLocal(moveModuleId);
