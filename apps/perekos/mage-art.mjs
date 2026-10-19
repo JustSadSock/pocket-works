@@ -83,7 +83,8 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  // Torso bends and head lags behind without shifting the feet or shadow.
  ctx.save();
  ctx.translate(0,(pose?.bodyBob||0)+(pose?.crouch||0)+(pose?.breath||0));
- ctx.rotate(Math.max(-.24,Math.min(.24,(lean+hitFlinch*-.9)*.016+(pose?.shoulderTurn||0))));
+ const torsoRoll=Math.max(-.24,Math.min(.24,(lean+hitFlinch*-.9)*.016+(pose?.shoulderTurn||0)));
+ ctx.rotate(torsoRoll);
  // Split layered coat, beveled collar, independent swinging hem and sash.
  px(-12,-5,24,18,'#162923');
  px(-12,-6,24,18,coat);px(-13,4,26,9,shade);
@@ -154,6 +155,9 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
   px(-6,-19,12,5,coat);px(-8,-16,4,11,coat);px(5,-16,3,11,coat);
   px(-5,-5,10,4,shade);px(-1,-9,3,7,trim);
   if(maskot?.animal==='cat'){px(-6,-20,4,5,'#ae876c');px(4,-20,4,5,'#ae876c')}
+  // Quarter-rear framing exposes one cheek/ear, while directly rear-facing
+  // hides both pupils completely.
+  if(viewing.quarter>.4){px(6,-13,3,8,skinTone);px(7,-10,2,2,'#684f44')}
  }else if(viewing.isSide){
   // Side profile has exactly one eye, raised nose and jutting chin. It
   // turns naturally with the root mirror for western-facing actors.
@@ -268,7 +272,7 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  ctx.save();ctx.translate(handX,handY);
  // Apply the exact eight-way weapon heading; recoil adds a cosmetic
  // follow-through, never a new targeting direction.
- ctx.rotate(weaponRotation(face)+(pose?.weaponTilt||0)*.28);
+ ctx.rotate(weaponRotation(face,viewing.shoulderScale,torsoRoll));
  ctx.scale(1,.58+.14*Math.abs(Math.cos(face)));
  ctx.translate(-handX,-handY);
  const beam=(x0,y0,x1,y1,color,width=2)=>{ctx.strokeStyle=color;ctx.lineWidth=width;
