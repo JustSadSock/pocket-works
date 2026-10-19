@@ -104,3 +104,103 @@ body.hub-on.hub-advanced #agentHub{display:none!important}
 @media(prefers-reduced-motion:reduce){#agentHub .cockpit *{transition:none!important}}
 
 #agentHub .cockpit [hidden]{display:none!important}
+
+
+/* 0.8.1 — usable workspace: 74% live field, 26% focused agent console.
+   Overrides the overly sparse 0.8 footer. No legacy laboratory clutter. */
+body.hub-on:not(.hub-advanced) #workspace {
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) clamp(292px,26vw,354px)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  padding-bottom:0!important;
+  overflow:hidden!important;
+}
+body.hub-on:not(.hub-advanced) #workspace>section:not([hidden]) {
+  grid-column:1!important;grid-row:1!important;
+  width:100%;height:100%;min-height:0;min-width:0;overflow:hidden;
+}
+body.hub-on:not(.hub-advanced) #agentHub {
+  grid-column:2!important;grid-row:1!important;
+  position:relative!important;inset:auto!important;
+  height:100%!important;min-height:0!important;width:100%;
+  display:block!important;overflow:auto!important;overscroll-behavior:contain;
+  background:#e9f0e6!important;border:0;border-left:1px solid #a4bca8;
+  box-shadow:-7px 0 22px #0b241e28;
+}
+#agentHub .cockpit {
+  display:flex;flex-direction:column;gap:0;
+  height:auto;min-height:100%;padding:0;background:#edf2e8;box-shadow:none;border:0;
+}
+#agentHub .cockpit-first {
+  height:auto;min-height:0;padding:15px 15px 11px;
+  display:flex;flex-direction:column;align-items:stretch;gap:11px;
+  background:#dce8d9;border-bottom:1px solid #b4c8b5;
+}
+#agentHub .cockpit-identity {width:100%;max-width:none;min-width:0;flex:auto}
+#agentHub #cpAgent{font-size:15px;height:40px;min-height:40px}
+#agentHub #cpProfile{width:39px;height:40px;min-height:40px}
+#agentHub .cockpit-worlds {width:100%;min-width:0;flex:0 0 auto;justify-content:space-between;gap:7px}
+#agentHub .cockpit-worlds>.cockpit-heading {display:none}
+#agentHub .cockpit-mode-pair {min-width:0;flex:1;justify-content:center}
+#agentHub .cockpit-mode-pair button{flex:1;padding:7px 4px;font-size:11px;min-height:34px;height:34px}
+#agentHub .cockpit-world-sep{display:none}
+#agentHub .cockpit-main {display:flex;flex-direction:column;flex:0 0 auto;gap:10px;padding:16px 15px 12px;min-height:0}
+#agentHub .cp-intro{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:800;letter-spacing:.12em;color:#62826d}
+#agentHub #cpGuide{border:1px solid #c2d5c4;border-radius:50%;height:25px;min-height:25px;width:25px;padding:0;font-size:13px;color:#537460;background:#f8faf4}
+#agentHub .cp-live-fields {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+#agentHub .cp-live-fields label{min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:5px;font-size:10px;color:#5d7868;font-weight:700}
+#agentHub .cp-live-fields select{
+ width:100%;min-width:0;max-width:none;color:#213d2c;background:#f9fcf6;
+ border:1px solid #b6cbb9;border-radius:6px;min-height:40px;
+ padding:6px;font-size:12px;font-weight:650;cursor:pointer;
+}
+#agentHub .cockpit-target{display:none}
+#agentHub .cockpit-train{width:100%;min-height:58px;flex:0 0 auto;font-size:15px;justify-content:center;border-radius:8px}
+#agentHub .cockpit-train small{display:block}
+#agentHub .cockpit-secondary{width:100%;min-height:42px;flex:0 0 auto;font-size:12px}
+#agentHub .cockpit-icon{align-self:flex-end;min-height:33px;height:33px;width:auto;font-size:12px}
+#agentHub .cockpit-icon::after{content:" Редактор";font-size:11px;font-weight:700}
+#agentHub .cp-insights{margin:2px 15px 10px;background:#dfeadf;border:1px solid #c2d4bf;border-left:3px solid #5fa16e;padding:12px;display:flex;flex-direction:column;gap:8px;color:#315840}
+#agentHub .cp-insights-label{font-size:10px;font-weight:800;letter-spacing:.1em;color:#75917b}
+#agentHub #cpTrainingCount{font-size:16px;font-weight:850;font-variant-numeric:tabular-nums}
+#agentHub #cpLastResult{font-size:12px;line-height:1.55;color:#516b58;overflow-wrap:anywhere}
+#agentHub .cockpit-last{margin-top:auto;padding:12px 15px 15px;border-top:1px solid #cadcc9;display:flex;align-items:center;gap:8px;min-height:55px;max-height:none;font-size:11px}
+#agentHub #cpState{white-space:normal;overflow:visible;line-height:1.35;min-width:0}
+#agentHub #cpDetails{align-self:center;white-space:nowrap;text-decoration:underline}
+#agentHub #cpBar{flex:0 0 58px;min-width:58px}
+body.hub-on:not(.hub-advanced) #stage{flex:1;min-height:0;overflow:hidden}
+body.hub-on:not(.hub-advanced) #cv{max-height:100%;max-width:100%;width:auto}
+body.hub-on:not(.hub-advanced) #worldPanel,
+body.hub-on:not(.hub-advanced) .extra-world{min-height:0!important;max-height:none!important}
+body.hub-on:not(.hub-advanced) .arena-canvas-wrap{height:auto;min-height:0!important}
+body.hub-on:not(.hub-advanced) .race-viewport{height:auto;min-height:0!important}
+
+@media (max-width:780px) and (orientation:portrait) {
+ body.hub-on:not(.hub-advanced) #workspace{
+  display:flex!important;flex-direction:column!important;grid-template-columns:none!important;
+ }
+ body.hub-on:not(.hub-advanced) #workspace>section:not([hidden]) {flex:1 1 0!important;height:0!important;min-height:165px!important}
+ body.hub-on:not(.hub-advanced) #agentHub{
+  flex:0 0 auto!important;width:100%!important;height:min(45dvh,390px)!important;
+  border-left:0;border-top:1px solid #a4bca8;overflow-y:auto!important;
+ }
+ #agentHub .cockpit-first{padding:8px 10px 7px;gap:6px}
+ #agentHub .cockpit-main{padding:9px 10px;gap:7px}
+ #agentHub .cp-live-fields{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ #agentHub .cockpit-train{min-height:48px}
+ #agentHub .cockpit-secondary{min-height:38px}
+ #agentHub .cp-insights{margin:5px 10px;padding:9px}
+ #agentHub .cockpit-last{padding:8px 10px;min-height:40px}
+ #agentHub .cockpit-worlds{flex:0 0 auto}
+}
+@media (max-width:780px) and (orientation:landscape) {
+ body.hub-on:not(.hub-advanced) #workspace{
+  display:grid!important;grid-template-columns:minmax(0,1fr) minmax(240px,33vw)!important;grid-template-rows:minmax(0,1fr)!important;
+ }
+ body.hub-on:not(.hub-advanced) #workspace>section:not([hidden]){flex:none!important;height:100%!important;min-height:0!important}
+ body.hub-on:not(.hub-advanced) #agentHub{height:100%!important;position:relative!important;overflow-y:auto!important}
+ #agentHub .cockpit-first{padding:7px 10px}
+ #agentHub .cockpit-main{padding:8px 10px;gap:6px}
+ #agentHub .cockpit-train{min-height:44px}
+ #agentHub .cp-insights{margin:5px 10px}
+}
