@@ -237,7 +237,7 @@ export function craftAudit(s){
  }
  for(const t of s.shipments)if(cargoGoods.includes(t.good)&&
   !(t.good==='wool'&&t.kind==='outside-export')&&
-  (t.kind!=='craft'||!Number.isFinite(t.cost)||t.cost<=0||!t.carrierId))
+  (t.kind!=='craft'||!Number.isFinite(t.cost)||t.cost<=0||(!t.carrierId&&!t.legacyCarrierUnknown)))
   errors.push('Недействительный ремесленный груз '+t.id);
  for(const name of ['craftWoodWaste','craftWoolWaste','craftWoodWear','craftWoolWear'])
   if(!Number.isFinite(s.stats[name]||0)||(s.stats[name]||0)<0)errors.push('Неверный ремесленный баланс '+name);
