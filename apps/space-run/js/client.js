@@ -38,6 +38,8 @@ let state = null;
 let camera = { x: 0, y: 0, z: 1 };
 let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, downLeft: false, downRight: false };
 let keyState = new Set();
+let touchFiring = false;
+let lastTouchAimAt = 0;
 let buildMode = null;
 let moveModuleId = null;
 let moduleAction = null;
@@ -436,11 +438,14 @@ function renderUI() {
     const actions = document.createElement("div");
     actions.className = "row";
     const seatedHere = mePlayer && mePlayer.moduleId === m.id;
-    const seatAction = () => socket.emit("occupyModule", { moduleId: m.id });
-    actions.appendChild(button(seatedHere ? "Leave" : "Seat", seatedHere ? "danger" : "primary", () => {
+    const occupiedByOther = Boolean(m.occupiedBy && m.occupiedBy !== me);
+    const seatAction = () => {if(!occupiedByOther) socket.emit("occupyModule", { moduleId: m.id });};
+    const seatBtn = button(seatedHere ? "Leave" : occupiedByOther ? "Busy" : "Seat", seatedHere ? "danger" : "primary", () => {
       if (seatedHere) socket.emit("leaveModule");
       else seatAction();
-    }));
+    });
+    seatBtn.disabled = occupiedByOther;
+    actions.appendChild(seatBtn);
     row.appendChild(actions);
     row.addEventListener("click", (ev) => {
       if (ev.target instanceof HTMLElement && ev.target.closest("button")) return;
@@ -518,7 +523,9 @@ function renderUI() {
     row.appendChild(Object.assign(document.createElement("div"), { textContent: `${o.description} | ${o.cost} cr` }));
     const actions = document.createElement("div");
     actions.className = "row";
-    actions.appendChild(button("Buy", state.ship.credits >= o.cost ? "primary" : "", () => socket.emit("buyItem", { itemId: o.id })));
+    const buyBtn = button("Buy", state.ship.credits >= o.cost ? "primary" : "", () => socket.emit("buyItem", { itemId: o.id }));
+    buyBtn.disabled = state.ship.credits < o.cost || state.phase === "combat";
+    actions.appendChild(buyBtn);
     row.appendChild(actions);
     shopList.appendChild(row);
   });
@@ -665,7 +672,7 @@ function pickModuleByPoint(wx, wy) {
 
 function cycleRole(step = 1) {
   if (!state?.ship?.modules?.length) return;
-  const modules = state.ship.modules.slice();
+  const modules = state.ship.modules.filter(m => !m.occupiedBy || m.occupiedBy === me);
   if (!modules.length) return;
   const mePlayer = playerMe();
   const currentId = mePlayer?.moduleId || null;
@@ -683,6 +690,7 @@ canvas.addEventListener("pointermove", (e) => {
   const w = screenToWorld(mouse.x, mouse.y);
   mouse.worldX = w.x;
   mouse.worldY = w.y;
+  if (e.pointerType === "touch") lastTouchAimAt = performance.now();
 });
 
 canvas.addEventListener("pointerdown", (e) => {
@@ -695,6 +703,11 @@ canvas.addEventListener("pointerdown", (e) => {
   const w = screenToWorld(e.clientX, e.clientY);
   const g = worldToShipGrid(w.x, w.y);
   const clickedModule = pickModuleByPoint(w.x, w.y);
+  if (e.pointerType === "touch") {
+    mouse.x = e.clientX; mouse.y = e.clientY;
+    mouse.worldX = w.x; mouse.worldY = w.y;
+    if (!clickedModule) lastTouchAimAt = performance.now();
+  }
 
   if (e.button === 0) {
     if (!isGarage()) {
@@ -750,7 +763,10 @@ canvas.addEventListener("pointerup", (e) => {
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
 window.addEventListener("keydown", (e) => {
-  if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "KeyR", "BracketLeft", "BracketRight", "Tab"].includes(e.code)) e.preventDefault();
+  const active = e.target;
+  if (active instanceof HTMLElement && (active.matches("input,textarea,select") || active.isContentEditable)) return;
+  if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "KeyR", "BracketLeft", "BracketRight", "Tab"].includes(e.code) && joined) e.preventDefault();
+  if (e.repeat && ["Enter", "Tab", "BracketLeft", "BracketRight", "Escape", "Space", "Digit1", "Digit2", "Digit3", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.code)) return;
   keyState.add(e.code);
 
   if (e.code === "BracketLeft") {
@@ -790,7 +806,14 @@ window.addEventListener("keyup", (e) => {
 function inputPayload() {
   if (!state) return null;
   const ph = displayPhysics();
-  const aim = Math.atan2(mouse.worldY - ph.y, mouse.worldX - ph.x);
+  let aim = Math.atan2(mouse.worldY - ph.y, mouse.worldX - ph.x);
+  if (touchFiring && performance.now() - lastTouchAimAt > 3500 && state.enemies?.length) {
+    // One finger fires; a second finger can manually aim on the canvas.
+    const target = state.enemies.reduce((best, enemy) =>
+      !best || Math.hypot(enemy.x - ph.x, enemy.y - ph.y) < Math.hypot(best.x - ph.x, best.y - ph.y)
+        ? enemy : best, null);
+    if (target) aim = Math.atan2(target.y - ph.y, target.x - ph.x);
+  }
   return {
     up: keyState.has("KeyW"),
     down: keyState.has("KeyS"),
@@ -1358,10 +1381,12 @@ window.advanceTime = async (ms) => {
 document.querySelector('#practice-btn').onclick=()=>socket.practice(nameInput.value);
 document.querySelector('#create-btn').onclick=()=>socket.create(nameInput.value);
 for(const b of document.querySelectorAll('[data-key]')){const key=b.dataset.key;b.onpointerdown=e=>{b.setPointerCapture(e.pointerId);keyState.add(key);e.preventDefault();};const release=()=>keyState.delete(key);b.onpointerup=release;b.onpointercancel=release;b.onlostpointercapture=release;}
-const fire=document.querySelector('#touch-fire');fire.onpointerdown=e=>{fire.setPointerCapture(e.pointerId);mouse.downLeft=true;e.preventDefault();};fire.onpointerup=fire.onpointercancel=fire.onlostpointercapture=()=>mouse.downLeft=false;
+const fire=document.querySelector('#touch-fire');fire.onpointerdown=e=>{fire.setPointerCapture(e.pointerId);touchFiring=true;mouse.downLeft=true;e.preventDefault();};fire.onpointerup=fire.onpointercancel=fire.onlostpointercapture=()=>{touchFiring=false;mouse.downLeft=false;};
 document.querySelector('#touch-rotate').onclick=()=>{buildRotation=(buildRotation+90)%360;showToast('Поворот '+buildRotation+'°');};
 canvas.addEventListener('pointercancel',()=>{mouse.downLeft=false;mouse.downRight=false;});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){keyState.clear();mouse.downLeft=false;mouse.downRight=false;if(joined)socket.emit('playerInput',inputPayload());}});
+window.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'){mouse.downLeft=false;mouse.downRight=false;}});
+window.addEventListener('blur',()=>{keyState.clear();mouse.downLeft=false;mouse.downRight=false;touchFiring=false;if(joined&&state)socket.emit('playerInput',inputPayload());});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){keyState.clear();mouse.downLeft=false;mouse.downRight=false;touchFiring=false;if(joined&&state)socket.emit('playerInput',inputPayload());}});
 
 
 for(const button of document.querySelectorAll('[data-panel]'))button.onclick=()=>{document.body.dataset.panel=document.body.dataset.panel===button.dataset.panel?'':button.dataset.panel;};
