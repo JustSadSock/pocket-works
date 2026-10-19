@@ -193,6 +193,41 @@ test.describe('Blockies — solo/input/lifecycle smoke', () => {
     await expect(page.locator('#pause-btn')).toBeVisible();
   });
 
+  test('the Hold key swaps once per piece and held/next previews are rendered', async ({ page }) => {
+    await openSolo(page);
+    const initial = await page.evaluate(() => JSON.parse((window as any).render_game_to_text()));
+    const current = initial.players[0].piece;
+    const next = initial.players[0].next;
+    await page.keyboard.press('KeyC');
+    const after = await page.evaluate(() => JSON.parse((window as any).render_game_to_text()));
+    expect(after.players[0].held).toEqual(current);
+    expect(after.players[0].piece).toEqual(next);
+    expect(after.players[0].holdUsed).toBe(true);
+    await expect(page.locator('#next-item-0')).toHaveClass(/hold-exhausted/);
+    await expect(page.locator('#held-0')).toBeVisible();
+
+    await page.keyboard.press('KeyC');
+    const blocked = await page.evaluate(() => JSON.parse((window as any).render_game_to_text()));
+    expect(blocked.players[0].piece).toEqual(after.players[0].piece);
+    expect(blocked.players[0].next).toEqual(after.players[0].next);
+    await page.keyboard.press('Space');
+    const locked = await page.evaluate(() => JSON.parse((window as any).render_game_to_text()));
+    expect(locked.players[0].holdUsed).toBe(false);
+    await page.keyboard.press('KeyC');
+    const returned = await page.evaluate(() => JSON.parse((window as any).render_game_to_text()));
+    expect(returned.players[0].piece).toEqual(current);
+  });
+
+  test('touch Hold button swaps a piece exactly once and updates its preview', async ({ page }) => {
+    await openSolo(page);
+    const start = await page.evaluate(() => JSON.parse((window as any).render_game_to_text()));
+    await page.locator('#touch-controls [data-action="hold"]').dispatchEvent('pointerdown', { pointerId: 71 });
+    const after = await page.evaluate(() => JSON.parse((window as any).render_game_to_text()));
+    expect(after.players[0].held).toEqual(start.players[0].piece);
+    expect(after.players[0].holdUsed).toBe(true);
+    await expect(page.locator('#next-item-0')).toHaveClass(/hold-exhausted/);
+  });
+
   test('online-touch ownership and mobile board bounds', async ({ page }) => {
     await page.goto('/apps/blockies/', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => Boolean((window as any).uiManager));
