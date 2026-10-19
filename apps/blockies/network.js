@@ -10,6 +10,7 @@ class NetworkManager {
     this.inGameUI=false;
     this.timer=null;
     this.phase='lobby';
+    this.moduleVersion=null;
     this.connecting=null;
   }
   on(type,fn){this.callbacks[type]=fn;}
@@ -33,6 +34,7 @@ class NetworkManager {
       this.trigger('connect');
     });
     this.net.on('room_joined',msg=>{
+      this.moduleVersion=msg.version||null;
       this.code=msg.roomId.slice(0,8).toUpperCase();
       this.apply(msg.state,true);
     });
@@ -56,6 +58,12 @@ class NetworkManager {
     this.timer=null;
   }
   startPulse(){
+    // v6+ advances on Durable Object alarms; client pulses only remain for
+    // pre-v6 rooms created before the upgrade.
+    if(Number(this.moduleVersion?.slice(1))>=6){
+      this.stopPulse();
+      return;
+    }
     if(this.timer!=null)return;
     this.timer=setInterval(()=>{
       if(!document.hidden&&this.connected&&this.started)this.send({type:'pulse'});
@@ -127,6 +135,7 @@ class NetworkManager {
     this.started=false;
     this.inGameUI=false;
     this.phase='lobby';
+    this.moduleVersion=null;
     try{this.net?.leaveRoom();}catch(error){this.trigger('error',error.message);}
     this.currentRoom=null;
     this.trigger('leftRoom');
