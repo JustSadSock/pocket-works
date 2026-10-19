@@ -1,0 +1,105 @@
+html, body {
+margin: 0;
+padding: 0;
+width: 100%;
+height: 100%;
+overflow: hidden;
+background: #0b0f16;
+touch-action: none;          /* no scroll/zoom */
+overscroll-behavior: none;   /* stop bounce */
+-webkit-user-select: none;
+user-select: none;
+}
+#wrap {
+position: fixed;
+inset: 0;
+width: 100vw;
+height: 100vh;
+overflow: hidden;
+touch-action: none;
+}
+canvas {
+display: block;
+width: 100%;
+height: 100%;
+touch-action: none;
+}
+
+/* Minimal UI */
+#hud {
+position: fixed;
+inset: 0;
+pointer-events: none;
+font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+color: rgba(255,255,255,0.9);
+}
+#netStatus {
+position: absolute;
+top: calc(env(safe-area-inset-top, 0px) + 12px);
+left: calc(env(safe-area-inset-left, 0px) + 12px);
+padding: 8px 12px;
+border-radius: 12px;
+background: rgba(8, 12, 18, 0.65);
+border: 1px solid rgba(255,255,255,0.08);
+box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+font-size: 12px;
+letter-spacing: 0.02em;
+pointer-events: none;
+backdrop-filter: blur(10px);
+}
+#netStatus.net-online { color: #a5ffb1; }
+#netStatus.net-offline { color: #ff9f9f; }
+#netDebug {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  right: calc(env(safe-area-inset-right, 0px) + 12px);
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(8, 12, 18, 0.55);
+  border: 1px solid rgba(255,255,255,0.06);
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.86);
+  min-width: 160px;
+}
+/* One joystick = minimum buttons */
+#joy {
+position: absolute;
+bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+left: 50%;
+transform: translateX(-50%);
+width: 150px;
+height: 150px;
+pointer-events: auto; /* only this accepts input */
+touch-action: none;
+}
+#joyBase {
+position: absolute;
+inset: 0;
+border-radius: 999px;
+background: rgba(255,255,255,0.06);
+border: 1px solid rgba(255,255,255,0.12);
+backdrop-filter: blur(10px);
+}
+#joyNub {
+position: absolute;
+left: 50%;
+top: 50%;
+width: 62px;
+height: 62px;
+transform: translate(-50%, -50%);
+border-radius: 999px;
+background: rgba(255,255,255,0.14);
+border: 1px solid rgba(255,255,255,0.18);
+box-shadow: 0 10px 22px rgba(0,0,0,0.35);
+}
+
+@media (orientation: landscape) {
+#joy {
+left: 24%;
+}
+}
+
+#wrap{height:var(--app-viewport-height,100dvh)}#netDebug{display:none}#menu{position:absolute;z-index:20;right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));display:flex;align-items:flex-start;gap:8px;pointer-events:auto}#menu a,#menu summary{display:block;min-height:44px;box-sizing:border-box;padding:12px;background:#203442;color:#edffab;text-decoration:none;font:600 13px system-ui;border:1px solid #6e8891}#menu details{width:170px;background:#162735ee;color:#f5f6e8}#menu p{padding:6px;font-size:12px}#menu button,#menu input{min-height:44px;width:100%;box-sizing:border-box;font:14px system-ui}#menu button{background:#d4f663;color:#182735;border:2px solid #203442}#menu label{display:block;font-size:12px;padding:4px}#room{display:block;padding:8px;overflow-wrap:anywhere}#help{position:absolute;left:12px;bottom:max(10px,env(safe-area-inset-bottom));font-size:11px;color:#fff;background:#182735b0;padding:6px}#netStatus{top:max(62px,calc(env(safe-area-inset-top) + 58px));max-width:50vw}@media(pointer:coarse){#help{bottom:max(160px,calc(env(safe-area-inset-bottom) + 150px));max-width:180px}}

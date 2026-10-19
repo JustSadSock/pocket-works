@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "throne-three",
+  "name": "Трон на троих",
+  "shortName": "Трон",
+  "description": "Политическая дуэль со скрытыми приказами, тремя фракциями и борьбой за трон.",
+  "version": "0.1.0",
+  "releaseDate": "2026-10-18",
+  "releaseDateTime": "2026-10-18T20:35:24.392Z",
+  "changelog": [
+    "Initial interactive preset release."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "accent": "#c38c63",
+  "backgroundColor": "#12101f",
+  "themeColor": "#12101f",
+  "orientation": "portrait",
+  "cacheName": "throne-three-v0.1.0",
+  "storageNamespace": "pocket-works:throne-three",
+  "tags": [
+    "interactive",
+    "gesture",
+    "offline"
+  ],
+  "order": 100
+}

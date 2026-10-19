@@ -7,6 +7,8 @@ export class ChaseCamera {
   private target = Vector3.Zero();
   private shake = 0;
   private shakePhase = 0;
+  mode: 'fixed' | 'chase' = 'fixed';
+  private readonly fixedOffset = new Vector3(10, 12, -13);
 
   constructor(
     scene: import('@babylonjs/core').Scene,
@@ -27,8 +29,8 @@ export class ChaseCamera {
     vehicle.syncVisual();
     const position = vehicle.root.position;
     const forward = vehicle.forward();
-    this.target = position.add(new Vector3(0, 0.65, 0)).add(forward.scale(2));
-    this.camera.position.copyFrom(position.add(new Vector3(0, 3.1, 0)).subtract(forward.scale(7.8)));
+    this.target = this.mode === 'fixed' ? position.add(new Vector3(0, 0.65, 0)) : position.add(new Vector3(0, 0.65, 0)).add(forward.scale(2));
+    this.camera.position.copyFrom(this.mode === 'fixed' ? position.add(this.fixedOffset) : position.add(new Vector3(0, 3.1, 0)).subtract(forward.scale(7.8)));
     this.camera.setTarget(this.target);
   }
 
@@ -36,10 +38,10 @@ export class ChaseCamera {
     const position = vehicle.root.position;
     const forward = vehicle.forward();
     const speedN = Math.min(1, vehicle.speedKmh() / 120);
-    const desiredTarget = position.add(new Vector3(0, 0.68, 0)).add(forward.scale(2.6 + speedN * 2.2));
+    const desiredTarget = this.mode === 'fixed' ? position.add(new Vector3(0, 0.68, 0)) : position.add(new Vector3(0, 0.68, 0)).add(forward.scale(2.6 + speedN * 2.2));
     const distance = 7.25 + speedN * 1.9;
     const height = 2.75 + speedN * 0.55;
-    let desired = position.add(new Vector3(0, height, 0)).subtract(forward.scale(distance));
+    let desired = this.mode === 'fixed' ? position.add(this.fixedOffset) : position.add(new Vector3(0, height, 0)).subtract(forward.scale(distance));
 
     const rayOrigin = desiredTarget;
     const vector = desired.subtract(rayOrigin);
@@ -71,13 +73,13 @@ export class ChaseCamera {
       const q = vehicle.root.rotationQuaternion ?? Quaternion.Identity();
       const rotation = Matrix.Zero();
       q.toRotationMatrix(rotation);
-      const right = Vector3.TransformNormal(Vector3.Right(), rotation).normalize();
+      const right = this.mode === 'fixed' ? new Vector3(0.793, 0, 0.61) : Vector3.TransformNormal(Vector3.Right(), rotation).normalize();
       this.camera.position.addInPlace(right.scale(Math.sin(this.shakePhase) * this.shake));
       this.camera.position.y += Math.sin(this.shakePhase * 1.37) * this.shake * 0.45;
     }
 
     this.camera.setTarget(this.target);
-    this.camera.fov += (0.75 + speedN * 0.1 - this.camera.fov) * (1 - Math.exp(-dt * 3));
+    this.camera.fov += ((this.mode === 'fixed' ? 0.68 : 0.75 + speedN * 0.1) - this.camera.fov) * (1 - Math.exp(-dt * 3));
   }
 
   distanceTo(vehicle: Vehicle) {

@@ -23,7 +23,7 @@ import { TrafficSystem, TRAFFIC_SPAWNS, trafficPreset } from './traffic';
 import { Vehicle } from './vehicle';
 
 const FIXED_DT = 1 / 90;
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 
 type QaState = {
   version: string;
@@ -55,6 +55,8 @@ type QaState = {
   physicsSubsteps: number;
   playerPosition: { x: number; y: number; z: number };
   cameraDistance: number;
+  cameraMode?: 'fixed' | 'chase';
+  cameraPosition?: { x: number; y: number; z: number };
   lastImpact: { zone: string; severity: number; relativeSpeed: number; label: string } | null;
   errors: string[];
 };
@@ -232,6 +234,14 @@ export class CrumpleGame {
     const testWindow = window as typeof window & { __CRUMPLE_TEST_STATE__?: QaState; __POCKET_WORKS_TEST_STATE__?: QaState };
     testWindow.__CRUMPLE_TEST_STATE__ = this.qa;
     testWindow.__POCKET_WORKS_TEST_STATE__ = this.qa;
+    Object.assign(window, {
+      render_game_to_text: () => JSON.stringify({ coordinates: 'world: x right, y up, z forward', ...this.qa }),
+      advanceTime: (ms: number) => {
+        const frames = Math.min(3600, Math.max(0, Math.round(ms / (1000 / 60))));
+        for (let i = 0; i < frames; i++) { this.stepPhysics(1 / 60); this.syncWorld(1 / 60); }
+        this.publishQa(); this.scene.render();
+      }
+    });
   }
 
   async boot() {
@@ -245,6 +255,7 @@ export class CrumpleGame {
       this.yard = new CrashYard(this.scene, this.world, this.registry);
       this.effects = new ImpactEffects(this.scene);
       this.camera = new ChaseCamera(this.scene, this.world);
+      this.camera.mode = this.settings.camera;
       this.traffic = new TrafficSystem(this.yard);
       this.collisions = new CollisionSystem(this.world, this.eventQueue, this.registry, (feedback) => this.onImpact(feedback));
       this.bindUi();
@@ -297,6 +308,19 @@ export class CrumpleGame {
   }
 
   private bindUi() {
+    const cameraButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-camera-toggle]'));
+    const syncCamera = () => cameraButtons.forEach(button => {
+      button.textContent = this.settings.camera === 'fixed' ? 'КАМЕРА · ФИКСИРОВАННАЯ' : 'КАМЕРА · ПОГОННАЯ';
+      button.setAttribute('aria-pressed', String(this.settings.camera === 'fixed'));
+    });
+    syncCamera();
+    cameraButtons.forEach(button => button.addEventListener('click', () => {
+      this.settings.camera = this.settings.camera === 'fixed' ? 'chase' : 'fixed';
+      this.camera.mode = this.settings.camera;
+      if (this.player) this.camera.snap(this.player);
+      saveSettings(this.settings);
+      syncCamera();
+    }));
     this.ui.carButtons.forEach((button) => {
       button.addEventListener('click', () => {
         const id = button.dataset.car as VehicleId;
@@ -611,7 +635,9 @@ export class CrumpleGame {
       activeParticles: this.effects.activeCount,
       physicsSubsteps: this.lastSubsteps,
       playerPosition: { x: Number(pos.x.toFixed(2)), y: Number(pos.y.toFixed(2)), z: Number(pos.z.toFixed(2)) },
-      cameraDistance: Number(this.camera.distanceTo(this.player).toFixed(2))
+      cameraDistance: Number(this.camera.distanceTo(this.player).toFixed(2)),
+      cameraMode: this.camera.mode,
+      cameraPosition: { x: this.camera.camera.position.x, y: this.camera.camera.position.y, z: this.camera.camera.position.z }
     });
   }
 
@@ -653,7 +679,7 @@ export class CrumpleGame {
   }
 
   resetAll() {
-    this.settings = { vehicle: 'meridian', preset: 0, sound: true, graphics: 'auto' };
+    this.settings = { vehicle: 'meridian', preset: 0, sound: true, graphics: 'auto', camera: 'fixed' };
     saveSettings(this.settings);
     location.reload();
   }

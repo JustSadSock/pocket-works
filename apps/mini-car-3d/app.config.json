@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "mini-car-3d",
+  "name": "Mini Car 3D",
+  "shortName": "Mini Car 3D",
+  "description": "Игрушечные машинки, физические столкновения и общая площадка до восьми водителей.",
+  "version": "0.1.0",
+  "releaseDate": "2026-10-18",
+  "releaseDateTime": "2026-10-18T20:45:00Z",
+  "changelog": [
+    "Перенесена исходная игра с сохранением правил и отдельным хранением данных."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "accent": "#d4f663",
+  "backgroundColor": "#182735",
+  "themeColor": "#182735",
+  "orientation": "landscape",
+  "cacheName": "mini-car-3d-v0.1.0",
+  "storageNamespace": "pocket-works:mini-car-3d",
+  "tags": [
+    "game",
+    "offline"
+  ],
+  "order": 170
+}

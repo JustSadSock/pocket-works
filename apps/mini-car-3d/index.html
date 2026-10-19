@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport"
+        content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Mini Car 3D</title>
+  <link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#182735"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
+
+<body data-app-shell data-fullscreen-app>
+  <div id="wrap" data-gesture-surface></div>
+
+  <div id="hud"><nav id="menu"><a href="../../" data-app-control>Pocket Works</a><details><summary>Комната</summary><p>Соло работает без сети. В комнате физика общая для всех водителей.</p><button id="create" data-native-press>Создать комнату</button><label>Код комнаты<input id="code" maxlength="8" autocomplete="off" aria-label="Код комнаты"></label><button id="join" data-native-press>Войти</button><button id="solo" data-native-press>Одиночная езда</button><output id="room"></output></details></nav><div id="help">WASD / стрелки — газ и руль · на телефоне — джойстик</div>
+    <div id="netStatus" class="net-offline">Offline режим</div>
+    <div id="joy" aria-label="joystick">
+      <div id="joyBase"></div>
+      <div id="joyNub"></div>
+    </div>
+  </div>
+
+  
+
+  <script type="module" src="./app.js"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Mini Car 3D" data-app-version="0.1.0"></script></body>
+</html>
