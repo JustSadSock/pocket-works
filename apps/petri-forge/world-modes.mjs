@@ -320,7 +320,7 @@ function openMode(mode){
  for(const [id,show] of [['worldPanel',grid],['labPanel',grid],['combatWorld',combat],['combatPanel',combat],['raceWorld',race],['racePanel',race],['perekosWorld',mode==='perekos'],['perekosPanel',mode==='perekos']])$(id).hidden=!show;
  for(const button of document.querySelectorAll('[data-world-mode]')){button.classList.toggle('selected',button.dataset.worldMode===mode);button.setAttribute('aria-pressed',String(button.dataset.worldMode===mode));}
  if(!grid&&$('playPause').textContent.includes('Пауза'))$('playPause').click();
- if(combat&&!battleReplay&&!editor.isEditing())sendCombat('combat-test',{config:sceneConfig(),seed:41});
+ if(combat&&!battleReplay&&!editor.isEditing()&&!document.body.classList.contains('hub-on'))sendCombat('combat-test',{config:sceneConfig(),seed:41});
  if(mode==='perekos')openPerekosLab();else pausePerekosLab();
  window.dispatchEvent(new CustomEvent('petri:mode',{detail:{mode}}));
  if(race&&!frame.src.includes('petri=1')){
