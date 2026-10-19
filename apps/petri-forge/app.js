@@ -34,6 +34,7 @@ env.reset(spawn,goal);
 
 // Each drawing gesture is a single reversible edit.
 let tool='brush',drawing=false,startX=0,startY=0,panStart=null;
+let heatData=[],replayData=null,replayIndex=0,replayTimer=null;
 let undoStack=[],redoStack=[],operation=null;
 let view={x:0,y:0,scale:1};
 toolSelect.onchange=()=>{tool=toolSelect.value;};
@@ -46,7 +47,7 @@ function commitOperation(){
   operation=null;
 }
 function setTile(x,y,val){
-  if(x<0||y<0||x>=GRID_W||y>=GRID_H||!Number.isInteger(val)||val<0||val>4)return;
+  if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=GRID_W||y>=GRID_H||!Number.isInteger(val)||val<0||val>4)return;
   const old=env.grid[y][x];if(old===val)return;
   const op={x,y,old,val},key=y*GRID_W+x;
   if(operation){if(!operation.has(key))operation.set(key,op);else operation.get(key).val=val;}
@@ -133,8 +134,8 @@ function generateRooms(){
   }
   for(let i=1;i<rooms.length;i++){
     const a=rooms[i-1], b=rooms[i];
-    for(let x=Math.min(a.x+b.w/2,b.x+b.w/2); x<=Math.max(a.x+a.w/2,b.x+b.w/2); x++) setTile(Math.floor(x), Math.floor(a.y+a.h/2), TILE.EMPTY);
-    for(let y=Math.min(a.y+a.h/2,b.y+b.h/2); y<=Math.max(a.y+a.h/2,b.y+b.h/2); y++) setTile(Math.floor(b.x+b.w/2), Math.floor(y), TILE.EMPTY);
+    for(let x=Math.floor(Math.min(a.x+a.w/2,b.x+b.w/2)); x<=Math.floor(Math.max(a.x+a.w/2,b.x+b.w/2)); x++) setTile(Math.floor(x), Math.floor(a.y+a.h/2), TILE.EMPTY);
+    for(let y=Math.floor(Math.min(a.y+a.h/2,b.y+b.h/2)); y<=Math.floor(Math.max(a.y+a.h/2,b.y+b.h/2)); y++) setTile(Math.floor(b.x+b.w/2), Math.floor(y), TILE.EMPTY);
   }
   redraw();
 }
@@ -462,8 +463,8 @@ window.render_game_to_text=()=>JSON.stringify({
 
 /* ===================== Asynchronous learning system ===================== */
 const worker=new Worker(new URL('./lab-worker.mjs',import.meta.url),{type:'module'});
-let running=false,pendingAction=false,training=false,replayData=null,replayIndex=0,replayTimer=null;
-let heatData=[],historyData=[],lastBest=null,lastWorst=null,snapshotRequest=null;
+let running=false,pendingAction=false,training=false;
+let historyData=[],lastBest=null,lastWorst=null,snapshotRequest=null;
 const $=id=>document.getElementById(id);
 const status=text=>{statusEl.textContent=text;};
 const sceneNow=()=>({grid:env.grid.map(row=>row.slice()),spawn:spawn.slice(),goal:goal.slice()});
