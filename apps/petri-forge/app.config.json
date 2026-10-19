@@ -4,14 +4,14 @@
   "slug": "petri-forge",
   "name": "PetriForge",
   "shortName": "PetriForge",
-  "description": "Лаборатория обучаемых агентов: клеточные миры, боевые арены, команды и гонщики в Шпильке.",
-  "version": "0.3.0",
+  "description": "Лаборатория обучаемых агентов: собственные боевые полигоны, эволюция стратегий и обучение на физике Шпильки.",
+  "version": "0.4.0",
   "releaseDate": "2026-10-19",
-  "releaseDateTime": "2026-10-19T11:18:00.000Z",
+  "releaseDateTime": "2026-10-19T12:55:00.000Z",
   "changelog": [
-    "Combat Forge: бои 1×1/2×2, три арены, четыре комплекта, шесть способностей и эволюция поведения.",
-    "Первая межигровая интеграция: агент управляет автомобилем внутри оригинального движка «Шпильки».",
-    "Запись боёв и заездов, сравнение на новых seed, библиотека гоночных и боевых мозгов."
+    "Combat Forge Studio: редактор препятствий, опасных зон, целей боя и характеристик команд.",
+    "Три режима победы, настройка силы шести способностей и обучение на пользовательских сценариях.",
+    "Сохранение и обмен боевыми картами; добавлен программный адаптер игрового ядра Перекоса."
   ],
   "status": "experimental",
   "preset": "canvas",
@@ -19,13 +19,18 @@
   "backgroundColor": "#0f1719",
   "themeColor": "#0f1719",
   "orientation": "landscape",
-  "cacheName": "petri-forge-v0.3.0",
+  "cacheName": "petri-forge-v0.4.0",
   "storageNamespace": "pocket-works:petri-forge",
   "tags": [
     "simulation",
     "editor",
     "AI",
-    "offline"
+    "offline",
+    "combat",
+    "agents",
+    "AI-training",
+    "arena-editor",
+    "reinforcement-learning"
   ],
   "order": 100
 }
