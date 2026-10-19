@@ -370,6 +370,32 @@ hiding simplistic assets.
 Each pass must deliver a visible playable difference and a test, not a
 decorative prototype. **No premature rework of the PocketWorks shell.**
 
+## 2.2.0 — Living architectural memory and spatial light (first implementation)
+
+- [x] New runs use versioned `layoutVersion: 3`, with 2–3 true carved
+      corridor alcoves per 18×18 sector, sometimes forming two-cell vestibules.
+      Old v1/v2 saves are frozen to their original map generators.
+- [x] Five types of room-family layout now receive extra architectural
+      silhouettes: lowered lintels, wood antresol cupboards, shallow service
+      hatches and overhead household rack details, all above player
+      collision height. Legacy corridors remain unmodified.
+- [x] Original physical room and corridor ceiling fixtures provide the
+      two near-field shader light sources; the light sources match the
+      actual offline 3D objects instead of arbitrary sector coordinates.
+- [x] 48×48 WebGL1 occupancy texture attenuates fixture light across
+      concrete partitions and closed physical doors. Mask updates are
+      tied to moving between tiles, memory rewrite and hinge animation.
+- [x] Fixed procedural cells, sector seams and old save versions verified
+      in deterministic 240-seed generator checks and new GPU-test suite.
+- [ ] Validate shader compilation / scene quality in actual Chromium and
+      WebKit QA on desktop and phone (run links in the visual report).
+- [ ] Profile shader ray-march cost on real lower-tier mobile GPUs, add
+      device performance fallback if necessary.
+- [ ] Complete distinct large-scale connections between rooms and
+      fixture-controlled on/off switching; current atmosphere changes
+      architecture and fixture visibility but does not implement full
+      global illumination or physically correct shadow maps.
+
 ## 2.2 — Roguelike combat identity
 - [ ] Add distinct silhouettes, e.g. ceiling-crawling figure, wardrobe-bound
       pursuer, false family member, with unique clear telegraphs.
