@@ -73,3 +73,39 @@ test('players can reclaim a departed seat during results but cannot enter active
  assert.equal(state.players[0].departed,false);
  assert.equal(state.players[0].ready,false);
 });
+
+test('wall kicks resolve an I tetromino against the right wall without clipping the well',()=>{
+ let state=start();const p=state.engine.players[0],width=state.engine.boardWidth;
+ p.currentPiece=[[1],[1],[1],[1]];p.position={x:width-1,y:6};
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'rotate'}}}).state;
+ const rotated=state.engine.players[0];
+ assert.deepEqual(rotated.currentPiece,[[1,1,1,1]]);
+ assert.equal(rotated.position.x,width-4);
+ assert.equal(rotated.position.y,6);
+ assert.equal(state.engine.board.flat().filter(Boolean).length,0);
+});
+
+test('a rotation fails if all legal wall kick locations are obstructed',()=>{
+ let state=start();const p=state.engine.players[0],w=state.engine.boardWidth;
+ p.currentPiece=[[1],[1],[1],[1]];p.position={x:w-1,y:6};
+ for(let y=0;y<9;y++) for(let x=0;x<w-1;x++) state.engine.board[y][x]=1;
+ const original=JSON.stringify({piece:p.currentPiece,position:p.position});
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'rotate'}}}).state;
+ assert.equal(JSON.stringify({
+  piece:state.engine.players[0].currentPiece,
+  position:state.engine.players[0].position
+ }),original);
+});
+
+test('rotation rejects other active tetrominoes in a shared well',()=>{
+ let state=start([a,b]);const one=state.engine.players[0],two=state.engine.players[1];
+ one.currentPiece=[[1],[1],[1],[1]];one.position={x:6,y:8};
+ two.currentPiece=[[1,1,1,1]];two.position={x:4,y:8};
+ // Every horizontal kick intersects the second player's active row, and vertical
+ // escape paths are blocked by fixed blocks in the next two rows.
+ for(let y=5;y<=7;y++) for(let x=3;x<10;x++)state.engine.board[y][x]=2;
+ const before=JSON.stringify({shape:one.currentPiece,pos:one.position});
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'rotate'}}}).state;
+ const after=state.engine.players[0];
+ assert.equal(JSON.stringify({shape:after.currentPiece,pos:after.position}),before);
+});
