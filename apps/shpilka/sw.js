@@ -1,5 +1,5 @@
 const CACHE_PREFIX='shpilka-';
-const CACHE_NAME='shpilka-v2.9.1-p1';
+const CACHE_NAME='shpilka-v2.9.1-p2';
 const APP_VERSION='2.9.1';
 const RELEASE_DATE='2026-10-19';
 const CACHE_PROTOCOL=1;
