@@ -22,7 +22,7 @@ test('v0.14: screenshot 48 directional outfits and verify back/side/front faces'
     c.strokeStyle='#8a927453';c.strokeRect(col*w+.5,row*h+.5,w-1,h-1);
     const temp=document.createElement('canvas');temp.width=145;temp.height=125;
     const t=temp.getContext('2d');t.imageSmoothingEnabled=false;
-    drawMage(t,undefined,{x:69,y:95,scale:1.46,time:.25,mageId:mage.id,
+    drawMage(t,undefined,{x:72,y:85,scale:1.33,time:.25,mageId:mage.id,
       face:bearing,pose:{still:true}});
     const d=t.getImageData(0,0,temp.width,temp.height).data;
     let hash=2166136261,opaque=0;
