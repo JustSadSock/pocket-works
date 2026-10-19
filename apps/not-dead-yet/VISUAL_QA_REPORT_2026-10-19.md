@@ -308,3 +308,37 @@ A separate [four-viewport smoke visual check #1013](https://github.com/JustSadSo
 tests startup and image capture. All follow-up outcomes need verification,
 and software-emulated rendering cannot stand in for physical device GPU p95.
 
+
+### v2.2.2 — resolving the software-GPU stall
+
+The first optimized *still ray-marching* shader subsequently passed
+[6/6 real Playwright lighting scenarios](https://github.com/JustSadSock/pocket-works/actions/runs/39231535622),
+but the four-viewport visual smoke check
+[39231023376](https://github.com/JustSadSock/pocket-works/actions/runs/39231023376)
+revealed a **desktop Chromium 7-second start-button click timeout**.
+In that report the app had loaded and JS errors were empty; the
+software GPU was consuming too much frame time for a dependable
+interactive test. This is a real responsiveness risk, not just a
+timeout threshold problem.
+
+The rendering design was therefore changed:
+- A CPU-computed 48×48 RGBA light-visibility texture is updated only
+  on player tile changes, door threshold changes or a memory rewrite.
+- The WebGL1 fragment shader makes **one texel lookup per fragment**
+  instead of walking 6–12 occlusion samples for each of two lamps.
+- Both practical lights are still attached to real 3D ceiling fixtures,
+  and walls/closed hinges still stop their illumination.
+- A single isolated V8 lightmap build took about 3 ms at seed 222.
+  This is a microbenchmark only, not mobile GPU frame rate.
+- [Real GitHub Node regression on 2.2.2](https://github.com/JustSadSock/pocket-works/actions/runs/39232633677)
+  passed **101/101** tests including additional CPU texture-visibility
+  checks across a closing/opening physical door.
+- [Post-redesign WebGL Playwright](https://github.com/JustSadSock/pocket-works/actions/runs/39232638773)
+  and [four-viewport visual smoke](https://github.com/JustSadSock/pocket-works/actions/runs/39232641393)
+  are the remaining shader performance validation gates.
+
+A review of actual early 2.2.0 phone screenshots also exposed overly
+bright beige ceilings and an unnatural blue-green weapon barrel.
+The shader got restrained practical-light and flashlight intensities
+with a mild tone-mapping shoulder; the weapon iron/sleeve pigments
+were neutralized. A fresh screenshot A/B review is still required.
