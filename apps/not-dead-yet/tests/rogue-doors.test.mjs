@@ -70,7 +70,7 @@ test('open angle, random world identity and door state survive save/reload',()=>
  const saved=copy.chunk(0,0).doors.find(x=>doorKey(x,copy.chunk(0,0).epoch)===doorKey(d,c.epoch));
  assert.ok(saved);
  assert.deepEqual(copy.doorState(saved),original);
- assert.equal(copy.layoutVersion,2);
+ assert.equal(copy.layoutVersion,3);
  settle(copy);
  assert.equal(copy.doorState(saved).angle,DOOR_SWING);
  const old=new RogueWorld(413,{epochs:[],visited:[],taken:[],changes:0,depth:0});

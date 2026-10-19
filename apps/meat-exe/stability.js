@@ -4,6 +4,7 @@ import {sanitizeImmune} from './immunity.js';
 import {ROUTES,GENES,routeOptions,sanitizeRouteHistory} from './runPaths.js';
 import {GUARDIAN_TYPES,guardianForWave,sanitizeGuardianPending} from './guardians.js';
 import {pulsePlan} from './runPacing.js';
+import {sanitizeProtocol} from './runTuning.js';
 const num=(value,min,max,fallback=0)=>Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback;
 const kinds=new Set(['crawler','spitter','brute','heart','leech','warden',...GUARDIAN_TYPES]);
 const validPosition=e=>e&&Number.isFinite(e.x)&&Number.isFinite(e.z)&&Math.abs(e.x)<=10000&&Math.abs(e.z)<=10000;
@@ -13,6 +14,14 @@ export function validateRun(s){
   if(hp<=0)return null;
   return {
     v:5,seed:s.seed>>>0,x:s.x,z:s.z,
+    protocol:sanitizeProtocol(s.protocol),
+    damageTaken:num(Math.floor(s.damageTaken),0,99999,0),
+    combo:num(Math.floor(s.combo),0,12,0),
+    peakCombo:num(Math.floor(s.peakCombo),0,12,0),
+    comboExpires:num(s.comboExpires,0,10000000,0),
+    stageTimes:(Array.isArray(s.stageTimes)?s.stageTimes:[])
+      .filter(t=>t&&Number.isInteger(t.wave)&&t.wave>=1&&t.wave<=5&&Number.isFinite(t.seconds))
+      .slice(0,5).map(t=>({wave:t.wave,seconds:num(Math.floor(t.seconds),0,99999,0)})),
     // Missing pacing fields identify legacy saves: never triple their remaining run.
     pulseMax:s.pulseMax===3?3:1,
     pulse:s.pulseMax===3&&pulsePlan(s.seed,Math.floor(s.wave),Math.floor(s.pulse))?Math.floor(s.pulse):1,

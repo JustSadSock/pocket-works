@@ -9,6 +9,8 @@ import {MAGES,SCHOOLS,mage,validMage} from './mages.mjs';
 import {ELEMENTS,reactionFor} from './elements.mjs';
 import {createCourtBackdrop,drawCourtAtmosphere} from './court-art.mjs';
 import {CombatPresentation,drawProjectileTrail} from './combat-presentation.mjs';
+import {drawGroundCues,drawActorCues,drawSpellLighting} from './combat-readability.mjs';
+import {SpellChoreography,drawSpellGround,drawSpellActors,drawSpellProjectiles,drawSpellForeground} from './spell-choreography.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('world'),ctx=canvas.getContext('2d',{alpha:false});
 ctx.imageSmoothingEnabled=false;
@@ -19,6 +21,7 @@ let rivalAppearance={...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ec
 let selectedMage='kindle',mageFrom='menu',selectionDraft='kindle';
 let sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null;
 const combatPresentation=new CombatPresentation();
+const spellChoreography=new SpellChoreography();
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,aim:null},stick={pointer:null,x:0,y:0},touches=new Map();
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
@@ -64,7 +67,7 @@ $('choose-mage').addEventListener('click',()=>{
 $('mage-cancel').addEventListener('click',()=>show('menu'));
 $('mage-confirm').addEventListener('click',()=>{selectedMage=selectionDraft;updateSelectedMage();remember();show('menu');toast('Выбран '+mage(selectedMage).name)});
 updateSelectedMage();
-function newMatch(){if(online?.active)online.leave();onlinePhase='';applyPendingAppearance();active=makeMatch((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff),selectedMage,MAGES[(MAGES.findIndex(m=>m.id===selectedMage)+3)%MAGES.length].id);fxParticles=[];combatPresentation.reset();seen=0;audioContext();show('fight');toast('Зажми атаку, веди пальцем для прицеливания');remember()}
+function newMatch(){if(online?.active)online.leave();onlinePhase='';applyPendingAppearance();active=makeMatch((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff),selectedMage,MAGES[(MAGES.findIndex(m=>m.id===selectedMage)+3)%MAGES.length].id);fxParticles=[];combatPresentation.reset();spellChoreography.reset();seen=0;audioContext();show('fight');toast('Зажми атаку, веди пальцем для прицеливания');remember()}
 $('primary-action').addEventListener('click',newMatch);$('again').addEventListener('click',()=>online?.active?online.start():newMatch());
 $('continue').addEventListener('click',()=>{const s=stored(saveKey);if(s&&validState(s)){active=s;if(s.phase!=='fight')applyPendingAppearance();show(s.phase);if(s.phase==='draft')renderDraft();if(s.phase==='build')renderWorkbench();if(s.phase==='result')renderResult()}else newMatch()});
 function pause(){if(mode!=='fight')return;paused=true;show('pause');$('pause-title').textContent=online?.active?'Сетевой матч':'Передышка';$('pause-online-note').hidden=!online?.active;remember()}
@@ -346,16 +349,24 @@ function render(){
  if(mode==='menu'&&frame%3===0)drawHero($('hero-preview').getContext('2d'),appearance,frame/60,[],selectedMage);
  if(!bgCanvas)bgCanvas=background();
  combatPresentation.ingest(active,reducedMotion);
+ spellChoreography.ingest(active,reducedMotion);
  combatPresentation.advance(1/60,reducedMotion);
+ spellChoreography.advance(1/60);
  const offset=combatPresentation.offset(reducedMotion);
  ctx.clearRect(0,0,W,H);ctx.fillStyle='#13201d';ctx.fillRect(0,0,W,H);
  ctx.save();ctx.translate(offset.x,offset.y);
  ctx.drawImage(bgCanvas,0,0);
  drawCourtAtmosphere(ctx,frame/60,reducedMotion);
  if(active){
+  drawSpellLighting(ctx,active,frame/60,reducedMotion);
+  // Telegraphs belong to the physical court: visible projectiles and placed
+  // mines only. No enemy hidden runes, damage estimates or artificial aim.
+  drawGroundCues(ctx,active,myIndex(),frame/60,reducedMotion);
+  drawSpellGround(ctx,spellChoreography,reducedMotion);
   combatPresentation.ground(ctx);
   drawConstructs(active);
   drawEffects(active);
+  drawSpellActors(ctx,active,frame/60,reducedMotion);
   for(let i=0;i<2;i++){
    const a=active.actors[i],mine=i===myIndex();
    if(!displayXY[i])displayXY[i]={x:a.x,y:a.y};
@@ -363,6 +374,7 @@ function render(){
    if(online?.active){p.x+=(a.x-p.x)*.34;p.y+=(a.y-p.y)*.34}else{p.x=a.x;p.y=a.y}
    const moving=Math.min(1,Math.hypot(p.x-oldX,p.y-oldY)*.48);
    wizard(p.x,p.y,a.face,frame/60,!mine,1,a.shield,a.flash,moving);
+   drawActorCues(ctx,a,p.x,p.y,mine,frame/60,reducedMotion);
    if(a.markLife>0&&ELEMENTS[a.mark]){
     const color=ELEMENTS[a.mark].color;
     ctx.strokeStyle=color;ctx.lineWidth=2;ctx.globalAlpha=.55+.2*Math.sin(frame*.09);
@@ -370,7 +382,9 @@ function render(){
     pixel(p.x-3,p.y-37,6,5,color);pixel(p.x-1,p.y-34,2,3,'#fff3cf');
    }
   }
+  drawSpellProjectiles(ctx,active,frame/60,reducedMotion);
   drawShots(active);
+  drawSpellForeground(ctx,spellChoreography,reducedMotion);
   combatPresentation.foreground(ctx);
   if(mode==='fight'&&input.aim){
    ctx.strokeStyle='#eee1b1a0';ctx.lineWidth=1.5;const{x,y}=input.aim;

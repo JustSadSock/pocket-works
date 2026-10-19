@@ -4,6 +4,7 @@ import {panels} from './doors.mjs';
 import {rogueStaticMesh,roguePickupsMesh} from './rogue-scene.mjs';
 import {rogueDoorMesh} from './rogue-door-visual.mjs';
 import {RogueMeshCache} from './rogue-mesh-cache.mjs';
+import {LIGHT_GRID,selectPracticalLights,occupancyMask,practicalLightMap,lightingMaskKey} from './rogue-lighting.mjs';
 // Offline WebGL1 geometric interior, atlas-free procedural material maps. Vertex: position/tint/normal/material.
 const VS=[
 'attribute vec3 position;attribute vec3 tint;attribute vec3 normal;attribute float material;',
@@ -17,9 +18,12 @@ const FS=[
 'varying vec3 p;varying vec3 c;varying vec3 n;varying float mat;',
 'uniform vec3 eye;uniform vec3 facing;uniform vec3 lampA;uniform vec3 lampB;',
 'uniform float torch;uniform mediump float time;uniform float hit;uniform float electrical;uniform float sight;',
-'uniform sampler2D paintedAtlas;',
+'uniform sampler2D paintedAtlas;uniform sampler2D structureMask;',
+'uniform vec2 structureOrigin;uniform float structureEnabled;',
 'void main(){',
 'vec3 norm=normalize(n);',
+'vec2 lightUv=(p.xz+vec2(norm.x,norm.z)*.065-structureOrigin)/60.96;',
+'vec2 lightVis=structureEnabled>.5?texture2D(structureMask,clamp(lightUv,vec2(.0),vec2(.9999))).rg:vec2(1.0);',
 'vec2 uv=abs(norm.y)>.6?p.xz:(abs(norm.x)>.6?p.zy:p.xy);',
 'float idx=clamp(floor(mat+.5)-1.0,0.0,15.0);',
 'vec2 tile=vec2(mod(idx,4.0),floor(idx/4.0));',
@@ -30,12 +34,16 @@ const FS=[
 'float cone=smoothstep(.69,.96,dot(look,normalize(facing)));',
 'float beam=torch*cone*(1.0-smoothstep(6.0,23.0+sight*5.0,d));',
 'float flicker=.965+.018*sin(time*3.7)+.011*sin(time*11.1);',
-'float warm=((1.0-smoothstep(1.0,11.0,length(p-lampA)))*.65+',
-'(1.0-smoothstep(1.0,10.0,length(p-lampB)))*.42)*flicker;',
+'float warmA=(1.0-smoothstep(.6,8.7,length(p-lampA)))*.78;',
+'float warmB=(1.0-smoothstep(.6,7.6,length(p-lampB)))*.48;',
+'warmA*=lightVis.r;',
+'warmB*=lightVis.g;',
+'float warm=(warmA+warmB)*flicker;',
 'float diffuse=.62+.38*max(dot(norm,normalize(vec3(-.4,.7,-.3))),0.0);',
 'warm*=electrical;',
-'vec3 color=c*(.57+.54*pigment)*(mix(.095,.30,electrical)+warm+beam*1.70)*diffuse;',
+'vec3 color=c*(.57+.54*pigment)*(mix(.095,.30,electrical)+warm+beam*1.13)*diffuse;',
 'color+=c*warm*vec3(.16,.10,.02);',
+'color=color/(vec3(1.0)+color*.24);',
 'float mist=smoothstep(14.0+sight*2.8,39.0+sight*5.0,d);color=mix(color,vec3(.057,.056,.051),mist*.82);',
 'color=mix(color,vec3(.65,.15,.11),hit*.24);',
 'gl_FragColor=vec4(color,1.0);',
@@ -527,7 +535,7 @@ function revolverBarrel(o,x,y,z,rx,ry,length,color,material=9,sides=12){
  }
 }
 function pistolMesh(){
- const o=[],steel=[.31,.32,.31],blue=[.18,.23,.24],wood=[.38,.23,.16],skin=[.57,.41,.31],shirt=[.33,.34,.30],brass=[.57,.48,.30];
+ const o=[],steel=[.28,.28,.27],blue=[.18,.19,.19],wood=[.38,.23,.16],skin=[.57,.41,.31],shirt=[.33,.30,.27],brass=[.57,.48,.30];
  // Sleeve, wrist, palm and knuckles. The worn revolver stays in the lower right.
  round(o,.49,-1.14,-1.12,.29,.38,.32,shirt,7);
  round(o,.49,-.91,-1.28,.205,.22,.19,skin,8);
@@ -632,12 +640,20 @@ export class Renderer{
   this.gl=gl;const program=gl.createProgram();gl.attachShader(program,shader(gl,gl.VERTEX_SHADER,VS));gl.attachShader(program,shader(gl,gl.FRAGMENT_SHADER,FS));gl.linkProgram(program);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
   this.program=program;gl.useProgram(program);this.attrs=['position','tint','normal','material'].map(name=>{const l=gl.getAttribLocation(program,name);if(l>=0)gl.enableVertexAttribArray(l);return l});
-  this.u=Object.fromEntries(['mvp','eye','facing','lampA','lampB','torch','time','hit','paintedAtlas','electrical','sight'].map(x=>[x,gl.getUniformLocation(program,x)]));
+  this.u=Object.fromEntries(['mvp','eye','facing','lampA','lampB','torch','time','hit','paintedAtlas','electrical','sight','structureMask','structureOrigin','structureEnabled'].map(x=>[x,gl.getUniformLocation(program,x)]));
   const atlas=makeMaterialAtlas(1701);this.texture=gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,atlas.width,atlas.height,0,gl.RGBA,gl.UNSIGNED_BYTE,atlas.pixels);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.uniform1i(this.u.paintedAtlas,0);this.textureBytes=atlas.pixels.byteLength;
+   this.structureTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.structureTexture);
+   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,LIGHT_GRID,LIGHT_GRID,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(LIGHT_GRID*LIGHT_GRID*4));
+   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+   gl.uniform1i(this.u.structureMask,1);gl.activeTexture(gl.TEXTURE0);
+   this.structureKey='';this.structureWorld=null;
   this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();this.weaponBuffer=gl.createBuffer();this.landingBuffer=gl.createBuffer();this.landingVersion=-1;this.landingCount=0;this.weapon=pistolMesh();this.staticRevision=-1;this.staticCount=0;this.staticWorld=null;this.rogueMeshCache=new RogueMeshCache({limit:3,grid:5});this.visualMetrics={staticTriangles:0,staticVertices:0,staticBytes:0,meshBuildMs:0,meshUploadMs:0,dynamicTriangles:0,drawCalls:0,textureBytes:0,cacheHits:0,cacheMisses:0,cacheEntries:0,cacheBytes:0};
   gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();this.lost=true});this.lost=false
@@ -661,13 +677,13 @@ export class Renderer{
   gl.uniform3fv(this.u.lampA,[-1.55,2.4,-2.9]);gl.uniform3fv(this.u.lampB,[0,3.05,-4.1]);
   gl.uniform1f(this.u.torch,0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,0);
   // Communal landing has its own light, even if the flat's electricity is out.
-  gl.uniform1f(this.u.electrical,.36);gl.uniform1f(this.u.sight,0);
+  gl.uniform1f(this.u.electrical,.36);gl.uniform1f(this.u.sight,0);gl.uniform1f(this.u.structureEnabled,0);
   this.bind(this.landingBuffer);gl.drawArrays(gl.TRIANGLES,0,this.landingCount)
  }
 
  bind(buffer){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);for(let i=0;i<4;i++)if(this.attrs[i]>=0)gl.vertexAttribPointer(this.attrs[i],i===3?1:3,gl.FLOAT,false,40,[0,12,24,36][i])}
  upload(buffer,values,kind){const gl=this.gl;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,values instanceof Float32Array?values:new Float32Array(values),kind)}
- resize(){const gl=this.gl,rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,rect.width<650?1.3:1.6),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;gl.viewport(0,0,w,h)}}
+ resize(){const gl=this.gl,rect=this.canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,rect.width<650?1.2:1.4),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(w!==this.canvas.width||h!==this.canvas.height){this.canvas.width=w;this.canvas.height=h;gl.viewport(0,0,w,h)}}
  draw(world,player,enemies,items,flash,t,damage=0,shot=0,reload=0){
   if(this.lost)return;this.resize();const gl=this.gl;gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.clearColor(.045,.044,.040,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);
   const rogue=world.endless===true;
@@ -692,10 +708,29 @@ export class Renderer{
   }
   const eye=[player.x*SCALE,1.54+(player.bob||0),player.z*SCALE],dir=[Math.sin(player.yaw)*Math.cos(player.pitch),-Math.sin(player.pitch),-Math.cos(player.yaw)*Math.cos(player.pitch)];
   const proj=projection(Math.PI*.50,this.canvas.width/this.canvas.height),mvp=multiply(proj,view(eye,dir));
-  const lampA=rogue?{x:Math.floor(player.x/18)*18+4.5,z:Math.floor(player.z/18)*18+4.5}:world.point('living'),
-   lampB=rogue?{x:Math.floor(player.x/18)*18+13.5,z:Math.floor(player.z/18)*18+13.5}:world.point('kitchen');
+  if(rogue){
+   const key=lightingMaskKey(world,player.x,player.z);
+   if(this.structureKey!==key||this.structureWorld!==world){
+    const x0=Math.floor(player.x)-LIGHT_GRID/2,z0=Math.floor(player.z)-LIGHT_GRID/2;
+    const mask=occupancyMask(world,x0,z0);
+    this.practicalLights=selectPracticalLights(world,player.x,player.z);
+    const lighting=practicalLightMap(x0,z0,mask,this.practicalLights);
+    gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.structureTexture);
+    gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,LIGHT_GRID,LIGHT_GRID,gl.RGBA,gl.UNSIGNED_BYTE,lighting);
+    gl.activeTexture(gl.TEXTURE0);
+    this.structureKey=key;this.structureWorld=world;this.structureOrigin=[x0*SCALE,z0*SCALE];
+    this.visualMetrics.lightMaskUploads=(this.visualMetrics.lightMaskUploads||0)+1;
+    this.visualMetrics.occludedCells=LIGHT_GRID*LIGHT_GRID-mask.filter((x,i)=>i%4===0&&x===255).length;
+    this.visualMetrics.fixturePositions=this.practicalLights.map(source=>({kind:source.kind,x:source.x,z:source.z}));
+   }
+   gl.uniform2fv(this.u.structureOrigin,this.structureOrigin);
+  }
+  const lampA=rogue?this.practicalLights[0]:world.point('living'),
+   lampB=rogue?this.practicalLights[1]:world.point('kitchen');
+  gl.uniform1f(this.u.structureEnabled,rogue?1:0);
   gl.uniformMatrix4fv(this.u.mvp,false,mvp);gl.uniform3fv(this.u.eye,eye);gl.uniform3fv(this.u.facing,dir);
-  gl.uniform3fv(this.u.lampA,[lampA.x*SCALE,2.64,lampA.z*SCALE]);gl.uniform3fv(this.u.lampB,[lampB.x*SCALE,2.64,lampB.z*SCALE]);
+  gl.uniform3fv(this.u.lampA,rogue?[lampA.x,lampA.y,lampA.z]:[lampA.x*SCALE,2.64,lampA.z*SCALE]);
+  gl.uniform3fv(this.u.lampB,rogue?[lampB.x,lampB.y,lampB.z]:[lampB.x*SCALE,2.64,lampB.z*SCALE]);
   this.visualMetrics.drawCalls=1;this.visualMetrics.dynamicTriangles=0;
   gl.uniform1f(this.u.torch,flash?1:0);gl.uniform1f(this.u.time,t);gl.uniform1f(this.u.hit,damage);gl.uniform1f(this.u.electrical,rogue?1:world.powerAvailable()?1:0);gl.uniform1f(this.u.sight,rogue?(player.sight||0):0);
   this.bind(this.staticBuffer);gl.drawArrays(gl.TRIANGLES,0,this.staticCount);
@@ -711,6 +746,6 @@ export class Renderer{
   if(dyn.length){this.upload(this.dynamicBuffer,dyn,gl.DYNAMIC_DRAW);this.bind(this.dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,dyn.length/10);this.visualMetrics.dynamicTriangles=dyn.length/30;this.visualMetrics.drawCalls++}
   // Proper viewmodel at the lower right: no world-space cyan marker below the camera.
   const gun=animateViewmodel(this.weapon,{time:t,recoil:shot,reload,movement:player.movement||0,reduceMotion:player.reduceMotion||false,aspect:this.canvas.width/this.canvas.height});
-  if(gun.length){gl.clear(gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(this.u.mvp,false,proj);gl.uniform3fv(this.u.eye,[0,0,0]);gl.uniform3fv(this.u.facing,[0,0,-1]);gl.uniform3fv(this.u.lampA,[0,0,-.6]);gl.uniform3fv(this.u.lampB,[1,-.1,-1]);gl.uniform1f(this.u.torch,shot>0?.5:1);gl.uniform1f(this.u.hit,Math.max(damage,shot*.6));gl.uniform1f(this.u.electrical,1);this.upload(this.weaponBuffer,gun,gl.DYNAMIC_DRAW);this.bind(this.weaponBuffer);gl.drawArrays(gl.TRIANGLES,0,gun.length/10);this.visualMetrics.drawCalls++}
+  if(gun.length){gl.clear(gl.DEPTH_BUFFER_BIT);gl.uniformMatrix4fv(this.u.mvp,false,proj);gl.uniform3fv(this.u.eye,[0,0,0]);gl.uniform3fv(this.u.facing,[0,0,-1]);gl.uniform3fv(this.u.lampA,[0,0,-.6]);gl.uniform3fv(this.u.lampB,[1,-.1,-1]);gl.uniform1f(this.u.torch,shot>0?.5:1);gl.uniform1f(this.u.hit,Math.max(damage,shot*.6));gl.uniform1f(this.u.electrical,1);gl.uniform1f(this.u.structureEnabled,0);this.upload(this.weaponBuffer,gun,gl.DYNAMIC_DRAW);this.bind(this.weaponBuffer);gl.drawArrays(gl.TRIANGLES,0,gun.length/10);this.visualMetrics.drawCalls++}
  }
 }

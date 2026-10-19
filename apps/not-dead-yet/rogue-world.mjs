@@ -1,6 +1,7 @@
 // NOT DEAD YET — infinite, deterministic Khrushchev flat sectors.
 // The layout is a graph of one-cell-wide halls and small rooms, never a scaled-up house.
 import {FLOORPLANS} from './rogue-floorplans.mjs';
+import {addAlcoves} from './rogue-spaces.mjs';
 import {DOOR_SWING,doorKey,doorSegment,leafBlocksPoint,leafIntersectsRay,advanceLeaf,sweptLeafSafe,defaultDoorOpen} from './rogue-doors.mjs';
 export const SECTOR=18;
 export const TILE=1.27;
@@ -185,10 +186,13 @@ function generateLegacySector(seed,cx,cz,epoch=0){
  }
  return{cx,cz,epoch,layout:-1,layoutName:'legacy-four-room',tiles,rooms,props,doors,drops,stamp:KEY(cx,cz)};
 }
+export function generateSectorV3(seed,cx,cz,epoch=0){
+ return addAlcoves(generateSector(seed,cx,cz,epoch),seed,HASH)
+}
 export class RogueWorld{
  constructor(seed=1,data=null){
   this.endless=true;this.seed=seed>>>0;this.chunks=new Map();
-   this.layoutVersion=data&&!('layoutVersion' in data)?1:data?.layoutVersion===1?1:2;
+   this.layoutVersion=data&&!('layoutVersion' in data)?1:data?.layoutVersion===1?1:data?.layoutVersion===2?2:3;
   this.epochs=new Map(Array.isArray(data?.epochs)?data.epochs:[]);
   // Door state uses epoch-specific IDs: a rewritten sector has new hinges.
   // A missing door map in a legacy save intentionally keeps all doors open.
@@ -204,7 +208,7 @@ export class RogueWorld{
   this.chunk(0,0)
  }
  chunk(cx,cz){const k=KEY(cx,cz);let c=this.chunks.get(k);
-  if(!c){c=(this.layoutVersion===1?generateLegacySector:generateSector)(this.seed,cx,cz,this.epochs.get(k)||0);this.chunks.set(k,c)}
+  if(!c){c=(this.layoutVersion===1?generateLegacySector:this.layoutVersion===2?generateSector:generateSectorV3)(this.seed,cx,cz,this.epochs.get(k)||0);this.chunks.set(k,c)}
   return c
  }
  cell(x,z){const cx=Math.floor(x/SECTOR),cz=Math.floor(z/SECTOR),c=this.chunk(cx,cz);
@@ -387,7 +391,7 @@ export class RogueWorld{
    });
    if(seen&&eligible&&!exposed){
     for(const key of this.doorStates.keys())if(key.startsWith(c.stamp+':'))this.doorStates.delete(key);
-    const next=c.epoch+1;this.epochs.set(k,next);this.chunks.set(k,(this.layoutVersion===1?generateLegacySector:generateSector)(this.seed,c.cx,c.cz,next));
+    const next=c.epoch+1;this.epochs.set(k,next);this.chunks.set(k,(this.layoutVersion===1?generateLegacySector:this.layoutVersion===2?generateSector:generateSectorV3)(this.seed,c.cx,c.cz,next));
     this.lastNear.delete(k);this.shifted.set(k,time);this.terrainRevision++;
     this.changes++;this.lastChange={cx:c.cx,cz:c.cz,time};changed=true
    }

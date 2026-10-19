@@ -6,23 +6,15 @@
  * η>0: phenomenological redshift metric ANSATZ, not the same matter solution.
  * The signed proper radial coordinate l runs continuously through l=0.
  */
+import {metric as spacetimeMetric,geometry as spacetimeGeometry,stressEnergy} from './spacetime.js';
 export const MAX_ETA=.85;
-export function metric({a=1,eta=0}={}){
- if(!Number.isFinite(a)||a<=0||!Number.isFinite(eta)||eta<0||eta>MAX_ETA)throw Error('Недопустимые параметры метрики');
- return {a,eta};
-}
-export function geometry(l,m){
- const r2=l*l+m.a*m.a,R=Math.sqrt(r2);
- const N=Math.exp(-m.eta*m.a/R);
- const dlogN=m.eta*m.a*l/(R*r2);
- return {R,N,dlogN,K:-m.a*m.a/(r2*r2),z:m.a*Math.asinh(l/m.a)};
-}
+export const metric=spacetimeMetric;
+export const geometry=spacetimeGeometry;
 export function staticAcceleration(l,m){return -geometry(l,m).dlogN;}
 export function staticClockRate(l,m){return geometry(l,m).N;}
 export function nullEnergyRadial(l,m){
- if(m.eta!==0)return null; // Only display Einstein tensor NEC formula for Ellis.
- const r2=l*l+m.a*m.a;
- return -2*m.a*m.a/(r2*r2); // 8πG (ρ + p_radial), c=G=1
+ if(m.eta!==0||(m.shape??0)!==0||(m.lapseBump??0)!==0)return null;
+ return 8*Math.PI*stressEnergy(l,m).radial;
 }
 export function launch(m,{l=3.2*m.a,phi=Math.PI,alpha=Math.PI,speed=.7,kind='light'}={}){
  if(!Number.isFinite(l)||!Number.isFinite(phi)||!Number.isFinite(alpha))throw Error('Положение источника некорректно');
@@ -52,7 +44,7 @@ function differential(q,s,m){
  return {
   l:q.p*scalar,
   phi:s.L*scalar/R2,
-  p:-s.E*g.dlogN+n2*s.L*s.L*q.l/(s.E*R2*R2),
+  p:-s.E*g.dlogN+n2*s.L*s.L*g.Rp/(s.E*R2*g.R),
   tau:s.k?scalar:0
  };
 }

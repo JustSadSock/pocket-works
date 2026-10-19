@@ -3,6 +3,7 @@
 import {SECTOR,TILE} from './rogue-world.mjs';
 import {appendPropDetails,appendRoomDetails,appendDoorDetails,appendHallFixtures} from './rogue-detail.mjs';
 import {architecturalWall,doorwayReturn} from './rogue-architecture.mjs';
+import {appendAlcoveSilhouette} from './rogue-silhouette.mjs';
 const S=TILE,HEIGHT=2.62;
 const C={
  living:[.49,.38,.30],kitchen:[.45,.52,.43],bedroom:[.46,.39,.32],
@@ -155,6 +156,12 @@ export function rogueStaticMesh(world,player){
   }
  }
  for(const c of world.nearby(player.x,player.z,17)){
+  // v3 alcoves are part of the floor map but bring distinct architectural
+  // volume above normal head-height, not repeated wallpaper alone.
+  for(const bay of c.alcoves||[]){
+   const px=c.cx*SECTOR+bay.x+.5,pz=c.cz*SECTOR+bay.z+.5;
+   if(Math.hypot(px-player.x,pz-player.z)<13)appendAlcoveSilhouette(out,c,bay)
+  }
   for(const p of c.props)if(Math.hypot(p.x-player.x,p.z-player.z)<17){propMesh(out,p);if(Math.hypot(p.x-player.x,p.z-player.z)<9)appendPropDetails(out,p)}
   for(const room of c.rooms){
    const rx=c.cx*SECTOR+(room.x0+room.x1)/2+0.5,rz=c.cz*SECTOR+(room.z0+room.z1)/2+.5;

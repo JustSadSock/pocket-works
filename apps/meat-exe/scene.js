@@ -5,6 +5,7 @@ import {ENEMY_TELLS,telegraphSeverity} from './ecology.js';
 import {biomeForWave,biomeHazard,stageSeed} from './biomes.js';
 import {gastricChamber} from './gastricArt.js';
 import {structuralChamber} from './structuralArt.js';
+import {atmosphereProfile,moteAt,organLight,materialProperties,enemyMotion,fxLimits} from './atmosphere.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const cellKey = (x,z) => x + ',' + z;
@@ -40,6 +41,8 @@ export function createWorld(canvas, initialSeed) {
   scene.add(lamp);
   const pulseLamp = new THREE.PointLight(0xe32135, 8, 8, 1.5);
   scene.add(pulseLamp);
+  const shotLight=new THREE.PointLight(0xffc5a0,0,3.9,2);
+  shotLight.visible=false;scene.add(shotLight);
   const geometryFloor = new THREE.PlaneGeometry(1.03, 1.03, 6, 6).rotateX(-Math.PI/2);
   const floorPos = geometryFloor.attributes.position;
   for (let i=0;i<floorPos.count;i++) {
@@ -198,17 +201,46 @@ export function createWorld(canvas, initialSeed) {
     vascular:makeStructuralMaps('vascular'),marrow:makeStructuralMaps('marrow'),
     neural:makeStructuralMaps('neural')
   };
+  // Separate micro-roughness sampling from color: wet arteries reflect soft
+  // light, marrow scatters matte highlights, neural myelin has narrow glints.
+  function makeRoughness(kind){
+    const c=document.createElement('canvas');c.width=c.height=128;
+    const cx=c.getContext('2d');if(!cx)return null;
+    const pixels=cx.createImageData(128,128);
+    for(let y=0;y<128;y++)for(let x=0;x<128;x++){
+      const u=x/128,v=y/128;
+      const fold=kind==='vascular'?Math.sin(v*29+Math.sin(u*9)*2.2):
+        kind==='gastric'?Math.sin(u*31+v*12):
+        kind==='marrow'?Math.sin(u*45)*Math.sin(v*39):
+        Math.sin(u*58-v*28);
+      const variance=(rand(x,y,kind==='vascular'?631:kind==='gastric'?827:kind==='marrow'?1031:1207)-.5)*20;
+      const baseline=kind==='marrow'?232:kind==='gastric'?174:kind==='neural'?194:152;
+      const value=clamp(Math.round(baseline+fold*(kind==='marrow'?13:32)+variance),68,254);
+      const i=(y*128+x)*4;pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=value;pixels.data[i+3]=255;
+    }
+    cx.putImageData(pixels,0,0);
+    const map=new THREE.CanvasTexture(c);
+    map.wrapS=map.wrapT=THREE.RepeatWrapping;map.anisotropy=2;
+    return map;
+  }
+  const roughnessMaps=conservativeRenderer?null:{
+    vascular:makeRoughness('vascular'),gastric:makeRoughness('gastric'),
+    marrow:makeRoughness('marrow'),neural:makeRoughness('neural')
+  };
+  stomachWallMat.roughnessMap=roughnessMaps?.gastric||null;
+  gastricFoldMat.roughnessMap=roughnessMaps?.gastric||null;
   const structuralWallMats=Object.fromEntries(Object.entries(structuralMaps).map(([id,m])=>[
     id,new THREE.MeshStandardMaterial({color:0xffffff,map:m.color,bumpMap:m.bump,
-      bumpScale:id==='marrow'?.20:.12,roughness:id==='vascular'?.36:id==='marrow'?.88:.58,
+      bumpScale:id==='marrow'?.20:.12,roughnessMap:roughnessMaps?.[id]||null,
+      roughness:id==='vascular'?.55:id==='marrow'?.98:.69,
       emissive:id==='neural'?0x141025:id==='vascular'?0x28080c:0x1a1113,emissiveIntensity:.14})
   ]));
   const structuralAccents={
-    vascular:new THREE.MeshStandardMaterial({color:0xa43d4c,roughness:.34,
+    vascular:new THREE.MeshStandardMaterial({color:0xa43d4c,roughness:.55,roughnessMap:roughnessMaps?.vascular||null,
       map:structuralMaps.vascular.color,bumpMap:structuralMaps.vascular.bump,bumpScale:.11}),
-    marrow:new THREE.MeshStandardMaterial({color:0xe2d1b9,roughness:.87,
+    marrow:new THREE.MeshStandardMaterial({color:0xe2d1b9,roughness:.98,roughnessMap:roughnessMaps?.marrow||null,
       map:structuralMaps.marrow.color,bumpMap:structuralMaps.marrow.bump,bumpScale:.18}),
-    neural:new THREE.MeshStandardMaterial({color:0x9d93c2,roughness:.44,emissive:0x333056,
+    neural:new THREE.MeshStandardMaterial({color:0x9d93c2,roughness:.72,roughnessMap:roughnessMaps?.neural||null,emissive:0x333056,
       emissiveIntensity:.42,map:structuralMaps.neural.color,bumpMap:structuralMaps.neural.bump,bumpScale:.1})
   };
   // Software WebGL cannot afford the per-pixel bump shader for every wall,
@@ -220,8 +252,8 @@ export function createWorld(canvas, initialSeed) {
     }
   }
   const marrowDark=new THREE.MeshStandardMaterial({color:0x4f303a,roughness:.91});
-  const membrane = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap, roughness:.64, metalness:0, side:THREE.DoubleSide, emissive:0x230407, emissiveIntensity:.19});
-  const wallMat = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap, roughness:.66, metalness:0, emissive:0x280407, emissiveIntensity:.27});
+  const membrane = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap,roughnessMap:roughnessMaps?.vascular||null, roughness:.72, metalness:0, side:THREE.DoubleSide, emissive:0x230407, emissiveIntensity:.19});
+  const wallMat = new THREE.MeshStandardMaterial({color:0xffffff, map:fleshMap,roughnessMap:roughnessMaps?.vascular||null, roughness:.76, metalness:0, emissive:0x280407, emissiveIntensity:.27});
   const boneMat = new THREE.MeshStandardMaterial({color:0xb3a087, roughness:.91, metalness:0});
   const bile = new THREE.MeshStandardMaterial({color:0x88b36e, roughness:.32, emissive:0x223b10, emissiveIntensity:.65});
   const bloodMat = new THREE.MeshBasicMaterial({color:0x9c0b19, transparent:true, opacity:.64, depthWrite:false, side:THREE.DoubleSide});
@@ -263,8 +295,17 @@ export function createWorld(canvas, initialSeed) {
   const mandibleGeo=new THREE.ConeGeometry(.25,.83,6);
   const spitterNeckGeo=new THREE.CylinderGeometry(.16,.38,.85,9);
   const shieldGeo=new THREE.IcosahedronGeometry(1,1);
-  for(const mat of Object.values(mobMats)){
-    mat.map=gastricMaps.color;mat.bumpMap=conservativeRenderer?null:gastricMaps.bump;mat.bumpScale=conservativeRenderer?0:.05;mat.needsUpdate=true;
+  // Enemy skin now tells species apart through its actual surface relief,
+  // not merely through a differently colored base material.
+  for(const [type,mat] of Object.entries(mobMats)){
+    const property=materialProperties(type);
+    const maps=property.family==='gastric'?gastricMaps:structuralMaps[property.family];
+    mat.map=maps.color;
+    mat.bumpMap=conservativeRenderer?null:maps.bump;
+    mat.bumpScale=conservativeRenderer?0:property.bumpScale;
+    mat.roughnessMap=roughnessMaps?.[property.family]||null;
+    mat.roughness=conservativeRenderer?property.roughness:clamp(property.roughness*1.32,.34,1);
+    mat.needsUpdate=true;
   }
   const vesselMat = new THREE.MeshStandardMaterial({color:0x7e2434,metalness:.06,roughness:.33,emissive:0x26050a,emissiveIntensity:.25});
   const vesselGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
@@ -290,6 +331,22 @@ export function createWorld(canvas, initialSeed) {
   particlesGeo.setDrawRange(0,0);
   const particles = new THREE.Points(particlesGeo,new THREE.PointsMaterial({color:0xf3404c,size:.095,transparent:true,opacity:.9,depthWrite:false}));
   scene.add(particles);
+  // One bounded, depth-tested draw call: drifting blood, spores, bone dust or sparks.
+  const motesArray=new Float32Array(88*3);
+  const motesGeo=new THREE.BufferGeometry();
+  motesGeo.setAttribute('position',new THREE.BufferAttribute(motesArray,3).setUsage(THREE.DynamicDrawUsage));
+  motesGeo.setDrawRange(0,0);
+  const motesMat=new THREE.PointsMaterial({color:0xe0a9aa,size:.065,
+    transparent:true,opacity:.30,depthWrite:false,depthTest:true,sizeAttenuation:true});
+  const motes=new THREE.Points(motesGeo,motesMat);motes.frustumCulled=false;scene.add(motes);
+  // Pooled organic fragments keep dying enemies physically legible.
+  const deathGeo=new THREE.TetrahedronGeometry(.105,0);
+  const deathMat=new THREE.MeshStandardMaterial({color:0x9f5b65,roughness:.47,
+    emissive:0x2e0b12,emissiveIntensity:.35});
+  const deathMesh=new THREE.InstancedMesh(deathGeo,deathMat,24);
+  deathMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  deathMesh.frustumCulled=false;deathMesh.count=0;scene.add(deathMesh);
+  const deathBits=[],deathTemp=new THREE.Object3D();
   const source = new THREE.Group();
   scene.add(source);
   const chunks = new Map(), layouts = new Map(), tissueChunks = new Map(), tissueVisuals = new Map(), stains = [], droplets = [], streaks = [];
@@ -346,7 +403,14 @@ export function createWorld(canvas, initialSeed) {
   let currentWidth=0,currentHeight=0,quality='medium',ratio=0;
   function setQuality(next){
     if(!['low','medium','high'].includes(next))return;
-    if(next!==quality){quality=next;currentWidth=0;lastChunk='';resize();}
+    if(next!==quality){
+      quality=next;currentWidth=0;lastChunk='';
+      if(next==='low'){
+        deathBits.length=0;deathMesh.count=0;
+        motesGeo.setDrawRange(0,0);shotLight.visible=false;shotLight.intensity=0;
+      }
+      resize();
+    }
   }
   function resize(){
     const w=Math.max(1,Math.round(canvas.clientWidth||window.innerWidth));
@@ -509,6 +573,8 @@ export function createWorld(canvas, initialSeed) {
     for(const line of streaks)line.obj.geometry.dispose();streaks.length=0;
     source.clear();routeSignRoot.clear();activeRouteMark='';forkSigns.clear();forkSites=[];forkSelection='';
     stains.length=0;droplets.length=0;particlesGeo.setDrawRange(0,0);
+    deathBits.length=0;deathMesh.count=0;motesGeo.setDrawRange(0,0);
+    shotLight.visible=false;shotLight.intensity=0;
     kickPos=0;kickVel=0;muzzleTime=0;organPulse=0;
   }
   function buildChunk(cx,cz){
@@ -985,7 +1051,21 @@ export function createWorld(canvas, initialSeed) {
         life:.19+Math.random()*.5});
     }
   }
+  function spawnDeathScraps(x,z,count){
+    const limits=fxLimits(quality,conservativeRenderer);
+    if(!limits.deaths)return;
+    const n=Math.min(limits.deaths,Math.max(2,Math.floor(count/4)));
+    for(let i=0;i<n;i++){
+      if(deathBits.length>=24)deathBits.shift();
+      const a=rand(Math.floor(x*23),Math.floor(z*17),seed+i*173)*Math.PI*2;
+      const speed=1+rand(Math.floor(x*9),i,seed+39)*1.5;
+      deathBits.push({x,y:.55+rand(i,seed,9)*.3,z,vx:Math.cos(a)*speed,
+        vy:1.9+rand(i,seed,19)*1.8,vz:Math.sin(a)*speed,
+        angle:a,life:.55+rand(i,seed,67)*.55,size:.75+rand(i,seed,47)*.9});
+    }
+  }
   function splatter(x,z,count=13){
+    spawnDeathScraps(x,z,count);
     for(let i=0;i<count&&droplets.length<600;i++){
       const a=Math.random()*Math.PI*2,force=.8+Math.random()*3;
       droplets.push({x,y:.7+Math.random()*.6,z,vx:Math.cos(a)*force,vy:1.4+Math.random()*2,vz:Math.sin(a)*force,life:.35+Math.random()*.75});
@@ -1003,14 +1083,36 @@ export function createWorld(canvas, initialSeed) {
     }
     for(let i=0;i<droplets.length;i++){const p=droplets[i];particleArr[i*3]=p.x;particleArr[i*3+1]=p.y;particleArr[i*3+2]=p.z;}
     particlesGeo.attributes.position.needsUpdate=true;particlesGeo.setDrawRange(0,droplets.length);
+    for(let i=deathBits.length-1;i>=0;i--){
+      const bit=deathBits[i];bit.x+=bit.vx*dt;bit.z+=bit.vz*dt;
+      bit.y=Math.max(.085,bit.y+bit.vy*dt);bit.vy-=10.5*dt;bit.life-=dt;
+      if(bit.life<=0)deathBits.splice(i,1);
+    }
+    for(let i=0;i<deathBits.length;i++){
+      const bit=deathBits[i];
+      deathTemp.position.set(bit.x,bit.y,bit.z);
+      deathTemp.rotation.set(bit.angle+time*4,bit.angle*.7+time*3,0);
+      deathTemp.scale.setScalar(bit.size*Math.min(1,bit.life*4));
+      deathTemp.updateMatrix();deathMesh.setMatrixAt(i,deathTemp.matrix);
+    }
+    deathMesh.count=deathBits.length;
+    if(deathBits.length)deathMesh.instanceMatrix.needsUpdate=true;
     organPulse=Math.max(0,organPulse-dt);
-    pulseLamp.intensity=6.5+Math.sin(time*(stage===4?5.2:stage===1?3.8:2.7))*2.6+organPulse*7+immunePressure*6;
-    if(stage===2)stomachWallMat.roughness=.49+Math.sin(time*1.6)*.025;
+    const physiology=organLight(stage,time,immunePressure,organPulse);
+    pulseLamp.intensity=physiology.light;
+    scene.fog.density=biome.fogDensity*physiology.fog;
+    if(stage===2)stomachWallMat.roughness=.67-physiology.beat*.035;
+    structuralAccents.vascular.roughness=.55-physiology.beat*.035;
+    structuralAccents.marrow.roughness=.98-physiology.beat*.012;
+    structuralAccents.neural.emissiveIntensity=.32+physiology.beat*.20;
+    stomachWallMat.emissiveIntensity=.12+physiology.beat*.06;
+    shotLight.visible=!conservativeRenderer&&quality!=='low'&&muzzleTime>0;
+    shotLight.intensity=shotLight.visible?clamp(muzzleTime*38,0,5.2):0;
     hazardMat.emissiveIntensity=.48+Math.sin(time*(stage===4?6:2.5))*.17;
     for(const root of tissueVisuals.values())if(root.visible){root.userData.flash=Math.max(0,root.userData.flash-dt);
       root.scale.setScalar(1+Math.sin(time*3.4+root.position.x*.25)*.045+root.userData.flash*.4);
     }
-    membrane.emissiveIntensity=.3+Math.sin(time*2.15)*.09;
+    membrane.emissiveIntensity=.23+physiology.beat*.14;
   }
   function setImmunePressure(value){immunePressure=clamp(Number(value)||0,0,1);}
   function reset(newSeed,ruptured=[],newStage=1){
@@ -1018,6 +1120,13 @@ export function createWorld(canvas, initialSeed) {
     biome=biomeForWave(stage);clearChunks();setSeed(stageSeed(seed,stage));
     openedTissues=new Set((Array.isArray(ruptured)?ruptured:[]).filter(id=>typeof id==='string'&&/^[1-5]:-?\d+,-?\d+$/.test(id)).slice(0,2000));
     scene.background.setHex(biome.background);scene.fog.color.setHex(biome.fog);scene.fog.density=biome.fogDensity;
+    if(roughnessMaps){
+      membrane.roughnessMap=roughnessMaps[biome.id]||roughnessMaps.vascular;
+      wallMat.roughnessMap=roughnessMaps[biome.id]||roughnessMaps.vascular;
+    }
+    const mistHue=stage===5?0xd65e75:stage===2?0xa1ac80:stage===3?0xc4b4ac:stage===4?0xaba9f3:0xc86d78;
+    motesMat.color.setHex(mistHue);motesMat.opacity=stage===3?.36:.28;
+    shotLight.color.setHex(stage===5?0xffa8a1:biome.light);deathMat.color.setHex(stage===5?0x9a2234:biome.vein);
     sky.color.setHex(biome.light);sky.groundColor.setHex(biome.background);
     lamp.color.setHex(biome.light);pulseLamp.color.setHex(biome.pulse);
     boneMat.color.setHex(biome.bone);vesselMat.color.setHex(biome.vein);
@@ -1033,7 +1142,18 @@ export function createWorld(canvas, initialSeed) {
     const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     camera.rotation.set(player.pitch+(reduced?0:Math.min(.016,kickPos*.03)),player.yaw,0,'YXZ');
     camera.fov=77+recoil*2.8+(player.sprinting?3:0);camera.updateProjectionMatrix();
-    lamp.position.set(player.x,1.7,player.z);pulseLamp.position.set(player.x,2.55,player.z-1.8);
+    lamp.position.set(player.x,1.7,player.z);
+    pulseLamp.position.set(player.x-Math.sin(player.yaw)*1.8,2.28,
+      player.z-Math.cos(player.yaw)*1.8);
+    shotLight.position.set(player.x-Math.sin(player.yaw)*.8,1.15,
+      player.z-Math.cos(player.yaw)*.8);
+    const haze=atmosphereProfile(stage,quality,conservativeRenderer);
+    for(let i=0;i<haze.count;i++){
+      const m=moteAt(seed,stage,i,time,player.x,player.z);
+      motesArray[i*3]=m.x;motesArray[i*3+1]=m.y;motesArray[i*3+2]=m.z;
+    }
+    motesGeo.setDrawRange(0,haze.count);
+    if(haze.count)motesGeo.attributes.position.needsUpdate=true;
     const w=player.weapon===2?2:player.weapon===1?1:0;
     bolter.visible=w===0;shredder.visible=w===1;stinger.visible=w===2;
     const portrait=canvas.clientHeight>canvas.clientWidth;
@@ -1050,14 +1170,19 @@ export function createWorld(canvas, initialSeed) {
     if(needleFlash.visible)needleFlash.scale.setScalar(.78+muzzleTime*2.1);
     for(const e of entities)if(e.visual){
       const hit=clamp((e.hitFlash||0)/.18,0,1);
-      e.visual.position.set(e.x,Math.sin(time*4+e.id)*.038-hit*.05,e.z);
+      const motion=enemyMotion(e.type,time,e.id,e.windup>0?1:0,hit,reduced);
+      e.visual.position.set(e.x,motion.bob,e.z);
       e.visual.rotation.y=(e.type==='ossuary'?(e.facing??0):Math.atan2(player.x-e.x,player.z-e.z))+Math.PI;
-      e.visual.rotation.z=(reduced?0:Math.sin(time*26+e.id)*hit*.075);
+      e.visual.rotation.z=motion.roll+Math.sin(time*26+e.id)*hit*.075;
+      e.visual.rotation.x=motion.pitch;
       e.visual.scale.setScalar((e.type==='heart'?1.8:e.type==='warden'?1.67:e.type==='ossuary'?1.42:
         e.type==='clot'?1.18:e.type==='synapse'?1.24:e.type==='brute'?1.36:e.type==='spitter'?.90:e.type==='leech'?.94:1)*
         (1+Math.sin(time*5+e.id)*.045-hit*.07));
-       if(e.visual.userData.body){const body=e.visual.userData.body;body.scale.y=e.visual.userData.bodyBaseY*(1+Math.sin(time*3+e.id)*.045);}
-       if(e.visual.userData.limbs&&!reduced){for(const limb of e.visual.userData.limbs){limb.joint.rotation.x=Math.sin(time*(e.type==='crawler'?10:6)+e.id+limb.index*2+limb.side)*(.15+(e.windup>0?.10:0));}}
+       if(e.visual.userData.body){const body=e.visual.userData.body;
+         body.scale.y=e.visual.userData.bodyBaseY*motion.breath;}
+       if(e.visual.userData.limbs&&!reduced){for(const limb of e.visual.userData.limbs){
+         limb.joint.rotation.x=Math.sin(time*motion.limb+e.id+limb.index*2+limb.side)*
+           (.15+(e.windup>0?.10:0));}}
       if(e.visual.userData.wound)e.visual.userData.wound.visible=hit>.1;
       const tell=e.visual.userData.tell;
       if(tell){
@@ -1102,7 +1227,19 @@ export function createWorld(canvas, initialSeed) {
     for(let i=1;i<steps;i++){const t=i/steps;if(!isFloor(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t))return false;}
     return true;
   }
-  function end(){clearChunks();renderer.dispose();}
+  function end(){
+    clearChunks();motesGeo.dispose();motesMat.dispose();deathGeo.dispose();deathMat.dispose();
+    for(const map of Object.values(roughnessMaps||{}))map?.dispose();
+    renderer.dispose();
+  }
+  function getAtmosphereSignature(){
+    const profile=atmosphereProfile(stage,quality,conservativeRenderer);
+    return {biome:biome.id,stage,quality,motes:profile.count,deathFragments:deathMesh.count,
+      wetMaps:roughnessMaps?Object.keys(roughnessMaps).length:0,
+      enemyTextureFamilies:[...new Set(Object.keys(mobMats).map(type=>materialProperties(type).family))],
+      shotLightActive:shotLight.visible?1:0,
+      maxAdditionalLights:fxLimits(quality,conservativeRenderer).additionalLights};
+  }
   function getArchitectureSignature(){
     const cx=0,cz=0;
     return stage===2?{biome:'gastric',...gastricChamber(cx,cz,seed)}:
@@ -1110,5 +1247,7 @@ export function createWorld(canvas, initialSeed) {
   }
   reset(initialSeed);resize();
   return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, setRouteMark, getRouteMark:()=>activeRouteMark,
-    setForkSites,setForkSelection,getNearbyFork,getForkSites:()=>forkSites.map(({id,x,z})=>({id,x,z})),getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, softwareRenderer, conservativeRenderer, end, getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length}) };
+    setForkSites,setForkSelection,getNearbyFork,getForkSites:()=>forkSites.map(({id,x,z})=>({id,x,z})),getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, getAtmosphereSignature, softwareRenderer, conservativeRenderer, end,
+    getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length,
+      motes:motesGeo.drawRange.count,deathFragments:deathBits.length}) };
 }

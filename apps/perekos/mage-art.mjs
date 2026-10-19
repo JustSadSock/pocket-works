@@ -129,10 +129,89 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  }else if(!maskot) {
   px(-3,2,6,6,trim);px(-1,4,2,3,shade);
  }
- // Personal item stays visible even as the spell build gets out of hand.
- px(11+(isCasting?4:0),-1-(isCasting?8:0),4,10,'#c7ae80');px(14+(isCasting?5:0),-20-(isCasting?9:0),3,27,'#856b4e');
- px(12+(isCasting?5:0),-23-(isCasting?9:0),7,7,character.school==='storm'?'#9bd7d4':character.school==='stone'?'#bdc8a8':features.frost?'#8fc6c9':trim);
- px(14+(isCasting?5:0),-27-(isCasting?9:0),4,5,character.school==='storm'?'#e6ffef':features.frost?'#d4f1e7':'#fff0bb');
+ // Each mage has a signature *object* and casting gesture, not a
+ // recolored copy of the same staff. Account-derived coat/face stay unobscured.
+ const thrust=isCasting?castPower:0;
+ const handX=14+thrust*9,handY=-5-thrust*10;
+ const topY=handY-24-thrust*5,shaft='#9a7958';
+ px(7+thrust*4,handY-1,9,6,coat);
+ px(handX-2,handY,6,5,trim);
+ const beam=(x0,y0,x1,y1,color,width=2)=>{ctx.strokeStyle=color;ctx.lineWidth=width;
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke()};
+ switch(character.id){
+ case 'kindle':{
+  // Split brass wand cradles a permanent blue-white flame.
+  beam(handX,handY+9,handX+2,topY-2,shaft,3);
+  beam(handX-4,topY+4,handX-4,topY-8,'#dca66e',3);
+  beam(handX+7,topY+4,handX+7,topY-8,'#dca66e',3);
+  px(handX-2,topY-12,6,9,'#f6a15b');
+  px(handX,topY-16,3,7,'#ffe6a1');
+  if(isCasting){beam(handX+3,topY-19,handX+6+thrust*5,topY-24,'#fbcb83',2);
+   px(handX-8,topY-13,3,4,'#dd7950')}
+  break;
+ }
+ case 'cinder':{
+  // Incense censer on a short chain; ash and embers fly on release.
+  beam(handX,handY+6,handX+5,topY+4,'#a6a099',2);
+  for(let j=0;j<4;j++)px(handX+5+j%2,topY+5+j*5,2,3,'#d2ba92');
+  px(handX+1,topY+23,14,10,'#594e46');px(handX+3,topY+21,10,4,'#a57559');
+  px(handX+5,topY+25,6,4,'#ef9a65');
+  if(isCasting){px(handX+10+thrust*4,topY+10,4,5,'#f4c48e');
+   px(handX+1,topY+6-thrust*5,3,3,'#c1b4a0')}
+  break;
+ }
+ case 'wire':{
+  // Thin bifurcated conductor; twin needle antennas spark at different angles.
+  beam(handX,handY+9,handX+1,topY+7,'#679f9f',3);
+  beam(handX+1,topY+7,handX-8-thrust*3,topY-7,'#9bd9d3',3);
+  beam(handX+1,topY+7,handX+10+thrust*4,topY-11,'#9bd9d3',3);
+  px(handX-11-thrust*3,topY-11,5,5,'#f0f9d7');
+  px(handX+8+thrust*4,topY-14,5,5,'#f0f9d7');
+  if(isCasting)beam(handX-6,topY-16,handX+8,topY-21,'#f2f8e2',2);
+  break;
+ }
+ case 'coil':{
+  // Distinct double copper helix, oscillating separately around its central rod.
+  beam(handX,handY+9,handX+1,topY-6,'#c28e64',3);
+  for(let j=0;j<4;j++){
+   const rise=topY-5+j*8;
+   beam(handX-6,rise,handX+7,rise-2,'#e8b689',3);
+   px(handX-7,rise-3,4,4,'#96d2ca');
+  }
+  px(handX-2,topY-13,7,7,'#daf8e1');
+  if(isCasting){ctx.strokeStyle='#e3f5e1';ctx.lineWidth=2;ctx.beginPath();
+   ctx.arc(handX,topY-4,10+thrust*3,-1.4,1.4);ctx.stroke()}
+  break;
+ }
+ case 'pebble':{
+  // Worn chisel-mallet, with a broad and uneven heavy head.
+  beam(handX,handY+10,handX+4,topY+2,'#998767',5);
+  px(handX-8,topY-13,28,13,'#667d70');
+  px(handX-10,topY-17,25,6,'#bac2a0');
+  px(handX+12,topY-8,7,7,'#324e43');
+  px(handX-6,topY-8,5,4,'#e2ddb4');
+  if(isCasting)px(handX+18,topY-15,4,3,'#cdd7a8');
+  break;
+ }
+ case 'slate':{
+  // A shield-sized upright stone blade, heavy enough to displace the air.
+  beam(handX,handY+9,handX+3,topY+5,'#8c7b66',5);
+  ctx.fillStyle='#657a6a';ctx.beginPath();
+  ctx.moveTo(handX-9,topY+4);ctx.lineTo(handX-7,topY-20);
+  ctx.lineTo(handX+9,topY-27);ctx.lineTo(handX+19,topY-6);
+  ctx.lineTo(handX+12,topY+6);ctx.closePath();ctx.fill();
+  beam(handX-7,topY-19,handX+9,topY-25,'#c3cbaa',3);
+  beam(handX+9,topY-25,handX+13,topY+2,'#364e42',2);
+  if(isCasting)beam(handX+8,topY-15,handX-2,topY-4,'#e3dfb0',2);
+  break;
+ }
+ }
+ // Broad cast gestures use a forearm and recoil rather than moving the
+ // entire fighter sprite; position/hitbox remain owned by core.mjs.
+ if(isCasting){
+  px(8+thrust*4,-8-thrust*4,6,5,coat);
+  px(handX-3,handY-1,4,4,'#ddbc96');
+ }
  if(character.trait==='dash_haste'){px(-15,7,4,3,'#9de4c9');px(-19,9,3,3,'#90c2ba')}
  if(character.trait==='guard_extra'){px(-17,-9,7,5,'#c0c5a5')}
  if(character.trait==='hit_push'){px(10,9,7,4,'#95a186')}
