@@ -291,7 +291,7 @@ function checkAllPlayersGameOver() {
 const COLORS=['#FF1493','#00D9FF','#FFDB58','#39FF14'];
 const IDLE_GRACE_MS=3000;
 const SEAT_EXPIRY_MS=60000;
-const copy=s=>structuredClone(s),out=state=>({state,events:[{type:'state',payload:{}}]});
+const copy=s=>structuredClone(s),out=state=>{state.revision=(state.revision||0)+1;return {state,events:[{type:'state',payload:{}}]};};
 function active(s){return s.players.filter(p=>!p.departed&&!p.timedOut);}
 function add(s,p){
  const existing=s.players.find(v=>v.id===p.id);
@@ -326,7 +326,7 @@ function finishIfOver(s){
 export default {protocolVersion:1,
  createRoom({player}) {
   const s={phase:'lobby',hostId:player.id,players:[],started:false,seed:Date.now()>>>0,
-    engine:null,lastTick:Date.now(),round:0};
+    engine:null,lastTick:Date.now(),round:0,revision:0};
   add(s,player);return out(s);
  },
  onJoin({state,player}){
@@ -380,7 +380,9 @@ export default {protocolVersion:1,
    const r=runtime(state.engine,state.seed);
    r.step(Math.min(250,Math.max(0,now-previousTick)),
      state.players.flatMap((seat,i)=>seat.away||seat.timedOut||seat.departed?[i]:[]));
-   if(p.type==='input'&&!v.timedOut)r.input(index,p.input||{});
+   // Inputs from an earlier round must never touch a freshly rematched board.
+   if(p.type==='input'&&!v.timedOut&&(p.round==null||p.round===state.round))
+     r.input(index,p.input||{});
    state.engine=r.snapshot();state.lastTick=now;
    if(state.engine.players.every(seat=>seat.gameOver))state.engine.isGameOver=true;
    finishIfOver(state);
