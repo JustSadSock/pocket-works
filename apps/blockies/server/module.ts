@@ -596,12 +596,89 @@ function checkAllPlayersGameOver() {
 }
 const COLORS=['#FF1493','#00D9FF','#FFDB58','#39FF14'];
 const copy=s=>structuredClone(s),out=state=>({state,events:[{type:'state',payload:{}}]});
-function add(s,p){if(s.players.some(v=>v.id===p.id))return;if(s.started||s.players.length>=4)throw Error('Комната заполнена или игра уже началась');s.players.push({id:p.id,name:String(p.name||'Игрок').slice(0,24),color:COLORS.find(c=>!s.players.some(v=>v.color===c)),ready:false});}
+function active(s){return s.players.filter(p=>!p.departed);}
+function add(s,p){
+ if(s.players.some(v=>v.id===p.id))return;
+ if(s.phase==='playing'||active(s).length>=4)throw Error('Комната заполнена или игра уже началась');
+ s.players.push({id:p.id,name:String(p.name||'Игрок').slice(0,24),
+  color:COLORS.find(c=>!active(s).some(v=>v.color===c)),ready:false,departed:false});
+}
+function startRound(s){
+ const participants=active(s);
+ if(!participants.length||!participants.every(p=>p.ready))throw Error('Не все игроки готовы');
+ // The old stack is discarded only after explicit unanimous rematch readiness.
+ // Reindex only at a round boundary: locked cells refer to stable player slots in an active round.
+ s.players=participants.map(p=>({...p,ready:false,departed:false}));
+ s.seed=(Date.now()>>>0) || 1;
+ s.phase='playing';s.started=true;s.lastTick=Date.now();s.round=(s.round||0)+1;
+ const r=runtime(null,s.seed);r.init(s.players);s.engine=r.snapshot();
+}
+function finishIfOver(s){
+ if(s.engine?.isGameOver){
+  s.phase='results';s.started=false;
+  s.players.forEach(p=>p.ready=false);
+ }
+}
 export default {protocolVersion:1,
-createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,seed:Date.now()>>>0,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
-onJoin({state,player}){state=copy(state);add(state,player);return out(state);},
-onLeave({state,player}){state=copy(state);state.players=state.players.filter(p=>p.id!==player.id);state.hostId=state.players[0]?.id||null;state.started=false;state.phase='lobby';state.engine=null;state.players.forEach(p=>p.ready=false);return out(state);},
-onMessage({state,player,payload:p}){state=copy(state);const index=state.players.findIndex(v=>v.id===player.id);if(index<0)throw Error('Игрок не в комнате');const v=state.players[index];
- if(state.started){const r=runtime(state.engine,state.seed);r.step(Math.min(250,Math.max(0,Date.now()-state.lastTick)));if(p?.type==='input')r.input(index,p.input||{});else if(p?.type!=='pulse')throw Error('Игра уже началась');state.engine=r.snapshot();state.lastTick=Date.now();return out(state);}
- if(p?.type==='nickname'){v.name=String(p.name||'Игрок').slice(0,24);}else if(p?.type==='color'){if(!COLORS.includes(p.color)||state.players.some(x=>x.id!==v.id&&x.color===p.color))throw Error('Цвет занят');v.color=p.color;}else if(p?.type==='ready'){v.ready=!v.ready;if(state.players.every(p=>p.ready)){state.started=true;state.phase='playing';state.lastTick=Date.now();const r=runtime(null,state.seed);r.init(state.players);state.engine=r.snapshot();}}else if(p?.type!=='sync')throw Error('Неизвестная команда');return out(state);
-},viewForPlayer({state}){return state;}};
+ createRoom({player}) {
+  const s={phase:'lobby',hostId:player.id,players:[],started:false,seed:Date.now()>>>0,
+    engine:null,lastTick:Date.now(),round:0};
+  add(s,player);return out(s);
+ },
+ onJoin({state,player}){
+  state=copy(state);add(state,player);return out(state);
+ },
+ onLeave({state,player,players=[]}){
+  state=copy(state);
+  const slot=state.players.findIndex(p=>p.id===player.id);
+  if(slot===-1)return out(state);
+  state.hostId=players[0]?.id||active(state).find(p=>p.id!==player.id)?.id||null;
+  if(state.phase==='playing'||state.phase==='results'){
+   // Do not splice playing-round slots: all locked cells and active pieces use those indices.
+   state.players[slot].departed=true;state.players[slot].ready=false;
+   if(state.engine?.players?.[slot]){
+    state.engine.players[slot].gameOver=true;
+    state.engine.players[slot].currentPiece=null;
+   }
+   if(state.phase==='playing'&&state.engine){
+    if(state.engine.players.every(p=>p.gameOver))state.engine.isGameOver=true;
+    finishIfOver(state);
+   }
+  }else{
+   state.players=state.players.filter(p=>p.id!==player.id);
+  }
+  return out(state);
+ },
+ onMessage({state,player,payload:p}){
+  state=copy(state);
+  const index=state.players.findIndex(v=>v.id===player.id&&!v.departed);
+  if(index<0)throw Error('Игрок не в комнате');
+  const v=state.players[index];
+  if(state.phase==='playing'){
+   if(p?.type!=='input'&&p?.type!=='pulse')throw Error('Игра уже началась');
+   const r=runtime(state.engine,state.seed);
+   r.step(Math.min(250,Math.max(0,Date.now()-state.lastTick)));
+   if(p.type==='input')r.input(index,p.input||{});
+   state.engine=r.snapshot();state.lastTick=Date.now();
+   finishIfOver(state);
+   return out(state);
+  }
+  if(state.phase==='results'){
+   if(p?.type==='rematch'){
+    v.ready=!v.ready;
+    if(active(state).every(x=>x.ready))startRound(state);
+   }else if(p?.type!=='sync')throw Error('Ожидается повторный матч');
+   return out(state);
+  }
+  if(p?.type==='nickname')v.name=String(p.name||'Игрок').slice(0,24);
+  else if(p?.type==='color'){
+   if(!COLORS.includes(p.color)||active(state).some(x=>x.id!==v.id&&x.color===p.color))throw Error('Цвет занят');
+   v.color=p.color;
+  }else if(p?.type==='ready'){
+   v.ready=!v.ready;
+   if(active(state).every(x=>x.ready))startRound(state);
+  }else if(p?.type!=='sync')throw Error('Неизвестная команда');
+  return out(state);
+ },
+ viewForPlayer({state}){return state;}
+};
