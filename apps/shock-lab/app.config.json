@@ -20,7 +20,7 @@
   "themeColor": "#101b21",
   "orientation": "any",
   "cacheName": "shock-lab-v1.0.0",
-  "storageNamespace": "shock-lab-v1",
+  "storageNamespace": "pocket-works:shock-lab",
   "tags": [
     "simulation",
     "physics",
