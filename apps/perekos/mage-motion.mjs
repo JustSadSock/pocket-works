@@ -72,7 +72,7 @@ export class MageMotion{
   // Primary key poses are real attack lifecycle intervals, not a perpetual
   // sinusoid. Wire snaps fast; the granite classes require a longer follow
   // through. These only move artwork, never the authoritative attack time.
-  const tempo=config.weight>1.4?.78:config.weight<.6?1.55:1;
+  const tempo=clamp(1.75/(.7+config.weight*.87)*(1+(.9-config.flourish)*.07),.62,1.75);
   const phase=clamp(m.castClock*tempo/.36,0,1);
   const windup=ease(phase/.23)*(1-ease((phase-.24)/.20));
   const release=ease((phase-.16)/.22)*(1-ease((phase-.58)/.34));
