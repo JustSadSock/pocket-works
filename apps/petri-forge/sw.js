@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'petri-forge-';
-const CACHE_NAME = 'petri-forge-v0.3.0';
-const APP_VERSION = '0.3.0';
+const CACHE_NAME = 'petri-forge-v0.4.0';
+const APP_VERSION = '0.4.0';
 const RELEASE_DATE = '2026-10-19';
-const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ['Боевые арены 1×1/2×2 с настройкой навыков и турнирами; агент учится водить на настоящей физике Шпильки.'];
+const CACHE_PROTOCOL = 3;
+const RELEASE_NOTES = ['Combat Forge Studio: строить собственные арены, изменять способности, здоровье, скорости и условия победы, сохранять сценарии.', 'Подготовлен адаптер Перекоса к реальной игровой симуляции.'];
 const APP_SHELL = [
   './',
   './index.html',
@@ -18,6 +18,9 @@ const APP_SHELL = [
   './world-modes.css',
   './combat-core.mjs',
   './combat-worker.mjs',
+  './combat-rules.mjs',
+  './combat-editor.mjs',
+  './combat-studio.css',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
