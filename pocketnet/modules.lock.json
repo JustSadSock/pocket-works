@@ -189,5 +189,11 @@
       "v2",
       "v3"
     ]
+  },
+  "space-run": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
