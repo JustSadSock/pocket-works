@@ -198,3 +198,8 @@
 .fork-control:active{background:#a14f43;transform:translateX(-50%) translateY(2px)}
 @media(max-height:480px){.fork-control{bottom:calc(18px + env(safe-area-inset-bottom));
  left:49%;min-width:95px;font-size:9px;padding:7px}}
+
+/* Stage physiology lives in existing header, not another floating panel. */
+.hud-center .pulse-indicator{display:block;font:700 9px/1.15 Arial,sans-serif;font-style:normal;
+ letter-spacing:.14em;color:#d8ab91;margin:2px 0;white-space:nowrap}
+@media(max-height:480px){.hud-center .pulse-indicator{font-size:8px;margin:1px 0}}
