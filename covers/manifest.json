@@ -3348,24 +3348,24 @@
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 39863,
-        "variance": 52.13988866889285,
-        "entropy": 2.023370600985355,
-        "edgeDensity": 0.11805555555555555,
-        "colorfulness": 29.265380859375,
-        "centerDetail": 60.5806960183846,
-        "meanLight": 40.767028808594006
+        "bytes": 39876,
+        "variance": 52.13021185705611,
+        "entropy": 2.0189285958216456,
+        "edgeDensity": 0.11793154761904762,
+        "colorfulness": 29.256103515625,
+        "centerDetail": 60.56440136675653,
+        "meanLight": 40.81091118164093
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.9.0&pw_fp=19a7b4808485bd8c0fad8348"
+      "url": "http://127.0.0.1:4173/apps/meat-exe/?pw-cover=1&pw_release=1.9.1&pw_fp=a1eb344d07fad4c0b5daeafa"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "8498873aff9edcdd95af18f1467c546ac17c780e",
-    "lastAttemptAt": "2026-10-19T10:15:10.458Z"
+    "lastAttemptRevision": "ae69b87f2cacb3caa0a731e96ff91f7cf61ba8c7",
+    "lastAttemptAt": "2026-10-19T10:32:27.179Z"
   },
   "tyaga-duel": {
     "note": "No frame passed image-content checks",
@@ -3541,8 +3541,8 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "9d8c0930d8d3ead35d9e8ca4bfb86a17029fa78f",
-    "qualityScore": 60,
+    "revision": "c97fc62baa0ba210342fac089be736eccff0376c",
+    "qualityScore": 61,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3555,20 +3555,20 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "ffaa0023066f3f85f33231ce224b71d1ce50940fb712edb478b3dbf05d02f547",
+    "sha256": "d2936e16e20594ea7808913d546fdbf03c7c6e1ebf95690be79a451cc7617b51",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "9d8c0930d8d3ead35d9e8ca4bfb86a17029fa78f",
-    "lastAttemptAt": "2026-10-19T10:14:37.318Z"
+    "lastAttemptRevision": "c97fc62baa0ba210342fac089be736eccff0376c",
+    "lastAttemptAt": "2026-10-19T10:32:15.710Z"
   },
   "portal-lab": {
     "note": "existing cover rated higher",
     "diagnostic": null,
     "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "90cd40c612be780e6deaf1c1e1fbe9c4d0ce52f7",
-    "lastAttemptAt": "2026-10-19T10:14:59.068Z",
+    "lastAttemptRevision": "3b32159c543653d672577082a364041bd80ba882",
+    "lastAttemptAt": "2026-10-19T10:32:38.172Z",
     "revision": "a2672a9600b739fdd5af458623b881c308430c7c",
     "qualityScore": 76,
     "visionScore": null,
@@ -3598,29 +3598,29 @@
   "petri-forge": {
     "note": "No frame passed image-content checks",
     "diagnostic": {
-      "bestScore": 38,
+      "bestScore": 51,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 23384,
-        "variance": 22.9054978453002,
-        "entropy": 1.6611523109675774,
-        "edgeDensity": 0.07155257936507936,
-        "colorfulness": 13.431884765625,
-        "centerDetail": 17.6839768317013,
-        "meanLight": 35.00391015625099
+        "bytes": 40805,
+        "variance": 31.604872187293765,
+        "entropy": 1.9324725680886332,
+        "edgeDensity": 0.11098710317460317,
+        "colorfulness": 15.26611328125,
+        "centerDetail": 29.488783027825324,
+        "meanLight": 42.679733691405744
       },
       "gameplayEntry": {
         "started": false,
         "actions": []
       },
-      "url": "http://127.0.0.1:4173/apps/petri-forge/?pw-cover=1&pw_release=0.1.0&pw_fp=80bdbdb17d748228fd74792d"
+      "url": "http://127.0.0.1:4173/apps/petri-forge/?pw-cover=1&pw_release=0.1.0&pw_fp=86df29b402ccd025514afd61"
     },
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "0a4ccb7b86030b37639f3746f8ce55aaa37bf761",
-    "lastAttemptAt": "2026-10-19T09:30:43.044Z"
+    "lastAttemptRevision": "f5daddaed4b26848db4be82beefe3144c70565cf",
+    "lastAttemptAt": "2026-10-19T10:32:48.977Z"
   },
   "blockies": {
     "revision": "afa8ad7dfe3fbfb2179e007e6529bb1005b349fc",
