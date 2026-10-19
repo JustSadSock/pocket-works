@@ -26,14 +26,11 @@ export const MATERIALS=Object.freeze({
 });
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 export function tidalFrame(center,m){
- const l=center.l,a=m.a,r2=l*l+a*a,R=Math.sqrt(r2);
- const q=m.eta*a*l/(r2*R);
- const qp=m.eta*a*(a*a-2*l*l)/(r2*r2*R);
- const N=Math.exp(-m.eta*a/R),gamma=center.E/N;
+ const l=center.l,g=geometry(l,m),N=g.N,gamma=center.E/N;
  const beta2=clamp(1-1/(gamma*gamma),0,.999999999);
- const radial=-(qp+q*q);
- const transverse=gamma*gamma*(beta2*a*a/(r2*r2)-q*l/r2);
- return {radial,transverse,beta:Math.sqrt(beta2),gamma,N,l,R};
+ const radial=-g.NppOverN;
+ const transverse=gamma*gamma*(beta2*g.Rpp/g.R-g.dlogN*g.Rp/g.R);
+ return {radial,transverse,beta:Math.sqrt(beta2),gamma,N,l,R:g.R};
 }
 function materialProps(id){
  const mat=MATERIALS[id];if(!mat)throw Error('Неизвестный материал');
