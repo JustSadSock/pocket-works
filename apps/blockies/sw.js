@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'blockies-';
-const CACHE_NAME = 'blockies-v0.1.6';
-const APP_VERSION = '0.1.6';
+const CACHE_NAME = 'blockies-v0.1.7';
+const APP_VERSION = '0.1.7';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Единая математика фигур и столкновений для соло и сети.", "Серверное время больше не зависит от действий игроков.", "Устойчивое восстановление партии после длительного отключения."];
+const RELEASE_NOTES = ["Единый Player для локальной и сетевой игры.", "Синхронизация раундов защищена от запоздалых команд.", "Проверки двух игроков и потери сети."];
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -13,6 +13,7 @@ const APP_SHELL = [
   "./art-bible.json",
   "./game.js",
   "./engine-core-v1.js",
+  "./player-core-v1.js",
   "./network.js",
   "./styles.css",
   "./sw.js",
