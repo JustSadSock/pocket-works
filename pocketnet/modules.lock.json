@@ -185,5 +185,11 @@
     "versions": [
       "v1"
     ]
+  },
+  "crown-laws": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
