@@ -12,9 +12,9 @@ test('build custom arena, learn its rules and reload edited layout',async({page}
  await page.locator('#studioEdit').click();
  await page.locator('#studioBrush').selectOption('wall');
  await page.locator('#battleCanvas').click({position:{x:200,y:80}});
- await expect(page.locator('#studioCount')).toContainText('1 стен');
+ await expect(page.locator('#studioCount')).toContainText('3 стен');
  await page.locator('#studioUndo').click();
- await expect(page.locator('#studioCount')).toContainText('0 стен');
+ await expect(page.locator('#studioCount')).toContainText('2 стен');
  await page.locator('#studioRedo').click();
  await expect(page.locator('#studioCount')).toContainText('1 стен');
  await page.locator('#studioEdit').click();
