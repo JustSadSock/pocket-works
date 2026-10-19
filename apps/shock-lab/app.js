@@ -458,21 +458,43 @@ function playSound(type){
 
 document.querySelector('.controls').addEventListener('pointerdown', clearHint, { once:true });
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{
-  state.tool=b.dataset.tool;persist();refreshControls();toast('ИНСТРУМЕНТ: '+b.textContent.trim());
+  state.tool=b.dataset.tool;armingSensor=null;persist();refreshControls();toast('ИНСТРУМЕНТ: '+b.textContent.trim());
 }));
 document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{
   if(state.preset===b.dataset.preset)return;
-  state.preset=b.dataset.preset;probe=null;rebuildGeometry();resetGas(true);persist();refreshControls();toast('КАМЕРА: '+TITLES[state.preset]);
+  state.preset=b.dataset.preset;probe=null;armingSensor=null;rebuildGeometry();resetGas(true);persist();refreshControls();drawScope();toast('КАМЕРА: '+TITLES[state.preset]);
 }));
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{
   state.view=b.dataset.view;persist();refreshControls();
 }));
 $('power').addEventListener('input',e=>{state.power=+e.target.value;$('power-value').textContent=state.power.toFixed(1);persist()});
 $('speed').addEventListener('input',e=>{state.speed=+e.target.value;$('speed-value').textContent=state.speed+'×';persist()});
+$('ratio').addEventListener('input',e=>{
+  state.ratio=+e.target.value;persist();
+  if(state.preset==='tube'){resetGas();drawScope();}
+  refreshControls();
+});
+$('rupture').addEventListener('pointerdown',e=>e.stopPropagation());
+$('rupture').addEventListener('click',e=>{e.stopPropagation();if(!tubeReady)return;setActive(true);refreshControls();});
+document.querySelectorAll('[data-plot]').forEach(button=>button.addEventListener('click',()=>{
+  plotMode=button.dataset.plot;refreshControls();drawScope();
+}));
+for(const index of [0,1])$('sensor-'+(index===0?'a':'b')).addEventListener('click',()=>{
+  armingSensor=armingSensor===index?null:index;refreshControls();
+  toast(armingSensor===null?'РАЗМЕЩЕНИЕ ОТМЕНЕНО':'КОСНИТЕСЬ КАМЕРЫ ДЛЯ ДАТЧИКА '+(index===0?'А':'Б'));
+});
+$('csv').addEventListener('click',()=>{
+  if(trace.samples.length<2)return;
+  const blob=new Blob([trace.csv()],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='shock-pressure-'+state.preset+'-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2500);
+  toast('ОСЦИЛЛОГРАММА СОХРАНЕНА · CSV');
+});
 $('sound').addEventListener('click',()=>{state.sound=!state.sound;persist();refreshControls();if(state.sound)playSound('wall')});
 runBtn.addEventListener('click',()=>setActive(!active));
-$('step').addEventListener('click',()=>{setActive(false);if(sim)sim.step();updateMetrics();render();});
-$('clear').addEventListener('click',()=>{resetGas();toast('ДАВЛЕНИЕ СБРОШЕНО ДО P₀');});
+$('step').addEventListener('click',()=>{if(tubeReady)releaseTube();setActive(false);if(sim){sim.step();trace.record(sim,true);}updateMetrics();drawScope();render();});
+$('clear').addEventListener('click',()=>{resetGas();drawScope();toast(state.preset==='tube'?'ТРУБА ЗАРЯЖЕНА · ОЖИДАНИЕ РАЗРЫВА':'ДАВЛЕНИЕ СБРОШЕНО ДО P₀');});
 $('undo').addEventListener('click',()=>{
   if(!state.edits[state.preset].length)return;
   state.edits[state.preset].pop();rebuildGeometry();persist();toast('ПОСЛЕДНИЙ ШТРИХ ОТМЕНЁН');
@@ -484,7 +506,7 @@ $('confirm-remove').addEventListener('click',()=>{
   state.edits[state.preset]=[];dialog.hidden=true;rebuildGeometry();persist();toast('ПРАВКИ КАМЕРЫ УДАЛЕНЫ');
 });
 $('export').addEventListener('click',()=>{
-  const payload={format:'shock-lab-v1',exportedAt:new Date().toISOString(),experiment:{preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,sound:state.sound,edits:state.edits}};
+  const payload={format:'shock-lab-v1',exportedAt:new Date().toISOString(),experiment:{preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,sensors:trace.sensors,sound:state.sound,edits:state.edits}};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='shock-'+state.preset+'-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
@@ -497,7 +519,7 @@ $('import-file').addEventListener('change',async e=>{
   try{
     const parsed=JSON.parse(await file.text());
     if(parsed.format!=='shock-lab-v1'||!parsed.experiment||!applyData(parsed.experiment))throw new Error('bad format');
-    probe=null;refreshControls();rebuildGeometry();resetGas(true);persist();toast('ЭКСПЕРИМЕНТ ВОССТАНОВЛЕН');
+    trace.setSensors(state.sensors);probe=null;refreshControls();rebuildGeometry();resetGas(true);persist();drawScope();toast('ЭКСПЕРИМЕНТ ВОССТАНОВЛЕН');
   }catch{toast('НЕВЕРНЫЙ ФОРМАТ ФАЙЛА');}
 });
 document.addEventListener('keydown',ev=>{
@@ -507,12 +529,13 @@ document.addEventListener('keydown',ev=>{
   if(!dialog.hidden)return;
   if(ev.code==='Space'){ev.preventDefault();setActive(!active);}
   if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='z'){$('undo').click();ev.preventDefault();}
-  if(['1','2','3','4'].includes(ev.key)){state.tool=['pulse','wall','erase','probe'][Number(ev.key)-1];persist();refreshControls();}
+  if(['1','2','3','4'].includes(ev.key)){state.tool=['pulse','wall','erase','probe'][Number(ev.key)-1];armingSensor=null;persist();refreshControls();}
   if(ev.key==='Enter'&&document.activeElement===canvas)addPulse({x:.22,y:.5});
 });
 createWorkshopMode({
-  appName:'SHOCK',version:'1.0.0',cachePrefix:'shock-lab-',storageNamespace:'pocket-works:shock-lab',
-  onReset(){try{localStorage.removeItem(KEY)}catch{}Object.assign(state,DEFAULTS());probe=null;refreshControls();rebuildGeometry();resetGas(true);toast('НАСТРОЙКИ И ПРАВКИ СБРОШЕНЫ');}
+  appName:'SHOCK',version:'1.1.0',cachePrefix:'shock-lab-',storageNamespace:'pocket-works:shock-lab',
+  onReset(){try{localStorage.removeItem(KEY)}catch{}Object.assign(state,DEFAULTS());trace.setSensors(state.sensors);armingSensor=null;probe=null;refreshControls();rebuildGeometry();resetGas(true);drawScope();toast('НАСТРОЙКИ И ПРАВКИ СБРОШЕНЫ');}
 });
 refreshControls();
 resizeField();
+drawScope();
