@@ -100,11 +100,11 @@ test('a rotation fails if all legal wall kick locations are obstructed',()=>{
 test('rotation rejects other active tetrominoes in a shared well',()=>{
  let state=start([a,b]);const one=state.engine.players[0],two=state.engine.players[1];
  one.currentPiece=[[1],[1],[1],[1]];one.position={x:6,y:8};
- two.currentPiece=[[1,1,1,1]];two.position={x:4,y:8};
+ two.currentPiece=[[1,1,1,1]];two.position={x:2,y:8};
  // Every horizontal kick intersects the second player's active row, and vertical
  // escape paths are blocked by fixed blocks in the next two rows.
  for(let y=5;y<=7;y++) for(let x=3;x<14;x++)state.engine.board[y][x]=2;
- for(let x=8;x<14;x++) state.engine.board[8][x]=2;
+ for(let x=7;x<14;x++) state.engine.board[8][x]=2;
  const before=JSON.stringify({shape:one.currentPiece,pos:one.position});
  state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'rotate'}}}).state;
  const after=state.engine.players[0];
