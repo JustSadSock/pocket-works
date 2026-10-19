@@ -1950,3 +1950,31 @@ canvas {
   flex-shrink:0; max-width:calc(100vw - 28px); margin:0 auto; }
 .recovery-notice[hidden]{display:none!important}
 .preview-status.is-away{color:#f3c37e}
+
+/* Row destruction happens over the actual well coordinates, not in the HUD. */
+#clear-effects{
+  position:absolute;inset:var(--board-padding,10px);
+  border-radius:2px;pointer-events:none;overflow:hidden;z-index:3;
+}
+.clear-line-stripe{
+  position:absolute;left:0;width:100%;pointer-events:none;
+  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.42) 35%,rgba(255,255,255,.96) 50%,rgba(255,255,255,.42) 65%,transparent 100%);
+  transform-origin:50% 50%;animation:blockies-line-break .34s ease-out both;
+}
+.clear-line-spark{
+  position:absolute;width:5px;height:5px;margin:-2.5px;
+  border:1px solid rgba(255,255,255,.66);pointer-events:none;
+  animation:blockies-fragment .35s cubic-bezier(.15,.5,.4,1) both;
+}
+@keyframes blockies-line-break{
+  0%{opacity:.9;transform:scaleX(.18) scaleY(.8)}
+  40%{opacity:.95;transform:scaleX(1) scaleY(1.05)}
+  100%{opacity:0;transform:scaleX(1) scaleY(.05)}
+}
+@keyframes blockies-fragment{
+  0%{opacity:1;transform:translate(0,0) rotate(0deg)}
+  100%{opacity:0;transform:translate(var(--throw-x,8px),var(--throw-y,-12px)) rotate(75deg)}
+}
+@media(prefers-reduced-motion:reduce){
+  .clear-line-stripe,.clear-line-spark{animation:none;display:none}
+}
