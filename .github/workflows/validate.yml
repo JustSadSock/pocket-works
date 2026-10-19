@@ -16,6 +16,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  release-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify pinned PocketNet snapshots before expensive builds
+        run: |
+          npm run pocketnet:check
+          npm run test:pocketnet:release
+
   creative-direction:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -57,6 +69,7 @@ jobs:
           node scripts/test-publish-policy.mjs
 
   production-packaging:
+    needs: release-preflight
     if: github.event_name == 'pull_request' && (startsWith(github.head_ref, 'platform/') || contains(github.event.pull_request.labels.*.name, 'platform-change'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -113,6 +126,7 @@ jobs:
         run: npm run validate:scope
 
   health:
+    needs: release-preflight
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -220,6 +234,7 @@ jobs:
         run: npm run validate:site
 
   enhanced-presets:
+    needs: release-preflight
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

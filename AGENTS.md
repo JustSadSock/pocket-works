@@ -29,6 +29,9 @@ Cloudflare Workers Builds is the only production hosting path.
 - Production source of truth: the latest successful Cloudflare deployment from `main`.
 - Application agents must not add, configure, reference or depend on alternative hosting providers.
 - Hosting changes are platform work and must not be bundled into an application PR.
+- Do not push intermediate app revisions or test-only commits to `main`. Use an isolated branch and one squash-merge per validated release. Emergency fixes may use an expedited PR but never bypass the PocketNet release preflight.
+- Any changed `apps/<slug>/server/module.ts` must ship with the new immutable `pocketnet/module-versions/<slug>/vN.ts` and an updated `pocketnet/modules.lock.json`. Run `npm run pocketnet:check` before opening the PR; never edit or delete an old pinned version.
+- Automated screenshot/covers maintenance runs nightly or manually; it must not trigger an extra commit for every application push. Keep cover metadata updates consolidated.
 
 ## 3. Self-registration contract
 
