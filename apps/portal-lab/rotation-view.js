@@ -111,11 +111,11 @@ export function createRotationLab({getMetric,onAction}={}){
   angle:clamp(Number(persisted.angle??.08),-.65,.65),
   arealRadius:clamp(Number(persisted.arealRadius??6),4,8)
  };
- let m=null,bh=null,wr=null,br=null,active=false,hasRun=false,lastStatus='',error='';
+ let m=null,bh=null,wr=null,br=null,ergoInfo=null,active=false,hasRun=false,lastStatus='',error='';
  const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify(state));}catch{}};
  function configure(base){
   const checked=rotatingMetric(base,{omega:state.omega});
-  m=checked;bh=schwarzschild(checked.a/2);
+  m=checked;bh=schwarzschild(checked.a/2);ergoInfo=ergoSummary(m);
   reset(true);
  }
  function setActive(v){
@@ -124,14 +124,14 @@ export function createRotationLab({getMetric,onAction}={}){
   else $('shoot').disabled=false;
  }
  function reset(silent=false){
-  if(!m){m=rotatingMetric(getMetric(),{omega:state.omega});bh=schwarzschild(m.a/2);}
+  if(!m){m=rotatingMetric(getMetric(),{omega:state.omega});bh=schwarzschild(m.a/2);ergoInfo=ergoSummary(m);}
   wr=launchRotating(m,{angle:state.angle,arealRadius:state.arealRadius});
   br=launchSchwarzschild(bh,{angle:state.angle,arealRadius:state.arealRadius});
   hasRun=false;error='';lastStatus='';update();
   if(!silent)onAction?.('mount');
  }
  function update(){
-  const erg=ergoSummary(m),geo=rotatingGeometry(0,m);
+  const erg=ergoInfo,geo=rotatingGeometry(0,m);
   $('rotation-spin').value=state.omega;$('rotation-spin-value').textContent=f(state.omega,2);
   $('rotation-angle').value=state.angle;$('rotation-angle-value').textContent=f(state.angle*180/Math.PI,1);
   $('rotation-radius').value=state.arealRadius;$('rotation-radius-value').textContent=f(state.arealRadius,1);
@@ -140,7 +140,7 @@ export function createRotationLab({getMetric,onAction}={}){
   $('rotation-ergo').textContent=erg.present?'ЕСТЬ · ±'+f(erg.extent,2)+' a':'НЕТ';
   $('rotation-ergo').dataset.active=String(erg.present);
   $('rotation-redshift').textContent=f(geo.N,3);
-  $('rotation-clock').textContent=f(schwarzschildClock(state.arealRadius*bh.horizon,bh.M),3);
+  $('rotation-clock').textContent=f(schwarzschildClock(br.r,bh.M),3);
   $('rotation-wormhole-state').textContent=wr?nameStatus(wr.status):'ГОТОВО';
   $('rotation-hole-state').textContent=br?nameStatus(br.status):'ГОТОВО';
   $('rotation-wormhole-phi').textContent=wr?f(wr.phi,3):'0.000';
@@ -196,7 +196,7 @@ export function createRotationLab({getMetric,onAction}={}){
    {x:pad,y:34,w:(w-3*pad)/2,h:h-65},
    {x:2*pad+(w-3*pad)/2,y:34,w:(w-3*pad)/2,h:h-65}
   ];
-  const erg=ergoSummary(m);
+  const erg=ergoInfo;
   for(let i=0;i<2;i++){
    const p=panels[i],kind=i?'black':'wormhole',
      radius=Math.min(p.w*.44,p.h*.36),cx=p.x+p.w*.5,cy=p.y+p.h*.53,
@@ -231,20 +231,20 @@ export function createRotationLab({getMetric,onAction}={}){
  ]){
   $(id).addEventListener('input',e=>{
    state[key]=clamp(Number(e.target.value),minimum,maximum);
-   m=rotatingMetric(getMetric(),{omega:state.omega});bh=schwarzschild(m.a/2);
+   m=rotatingMetric(getMetric(),{omega:state.omega});bh=schwarzschild(m.a/2);ergoInfo=ergoSummary(m);
    reset(true);save();
   });
  }
  for(const btn of document.querySelectorAll('[data-rotation-preset]'))
   btn.addEventListener('click',()=>{
    Object.assign(state,PRESETS[btn.dataset.rotationPreset]);
-   m=rotatingMetric(getMetric(),{omega:state.omega});bh=schwarzschild(m.a/2);
+   m=rotatingMetric(getMetric(),{omega:state.omega});bh=schwarzschild(m.a/2);ergoInfo=ergoSummary(m);
    reset(true);save();onAction?.('mount');
   });
  return {state,configure,setActive,reset,trigger,tick,draw,update,
   get status(){return {wormhole:wr?.status,blackHole:br?.status,hasRun};},
   get snapshot(){return {settings:{...state},m,schwarzschild:bh,
-   ergo:ergoSummary(m),wormhole:wr?{...wr,path:wr.path.map(x=>({...x}))}:null,
+   ergo:ergoInfo,wormhole:wr?{...wr,path:wr.path.map(x=>({...x}))}:null,
    blackHole:br?{...br,path:br.path.map(x=>({...x}))}:null};}
  };
 }
