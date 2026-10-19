@@ -7,6 +7,7 @@
       "tier": "smoke",
       "files": [
         "tests/core.test.mjs",
+        "tests/aim-precision.test.mjs",
         "tests/avatar.test.mjs",
         "tests/net.test.mjs",
         "tests/elements.test.mjs",
@@ -69,7 +70,8 @@
         "qa/elements.spec.js",
         "qa/spectacle.spec.js",
         "qa/readability.spec.js",
-        "qa/choreography.spec.js"
+        "qa/choreography.spec.js",
+        "qa/aim-precision.spec.js"
       ]
     }
   ]
