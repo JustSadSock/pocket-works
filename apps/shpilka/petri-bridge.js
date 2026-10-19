@@ -50,7 +50,9 @@
     mode='paused';raceElapsed=0;
     startScreen.hidden=true;pauseScreen.hidden=true;finishScreen.hidden=true;
     document.querySelector('#loadingScreen')?.setAttribute('hidden','');
-    countdownNode.hidden=true;showRaceUi(true);
+    countdownNode.hidden=true;showRaceUi(false);
+    hud.hidden=false;speedCluster.hidden=false;controls.hidden=true;
+    document.querySelector('#pauseButton')?.setAttribute('disabled','');
     countdownElapsed=0;
     lastFrame=performance.now();
     control={steer:0,throttle:0,brake:0};
