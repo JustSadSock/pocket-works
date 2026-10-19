@@ -4,11 +4,13 @@
 import {DEFAULT_APPEARANCE,cosmeticFeatures} from './avatar-profile.mjs';
 import {mage} from './mages.mjs';
 import {drawGarbBack,drawGarbFront} from './mage-regalia.mjs';
+import {faceView,directionalOcclusion} from './mage-facing.mjs';
 
 export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=1,scale=1,time=0,shield=0,flash=0,runes=[],mageId='kindle',casting=0,dashing=0,face=0,moving=0,pose=null}={}){
  if(!ctx)return;
  const p=enemy&&(!look||look.source==='guest')?{...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']}:(look||DEFAULT_APPEARANCE);
  const [coat,trim,shade]=p.colors,maskot=p.mascot,features=cosmeticFeatures(runes),character=mage(mageId),isCasting=casting>.06;
+ const viewing=faceView(pose?.look??face);
  const stride=Math.min(1,Math.max(0,pose?.move??moving));
  const gaitPhase=pose?.step??time*16,walk=Math.sin(gaitPhase)*stride;
  const footSpread=pose?.footSpread||0,weight=pose?.weight||1;
@@ -25,7 +27,11 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  const arc=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()};
  ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
  ctx.translate(Math.round(x+shake-Math.cos(face)*recoil),Math.round(y-Math.sin(face)*recoil+(pose?.still?0:Math.sin(time*(dashing>0?19:9)+(enemy?3:0))*(dashing>0?2.5:1.1))));
- const dir=Math.cos(face);ctx.scale((dir<-.12?-1:1)*scale,scale);ctx.translate(lean,0);
+ // Root mirror has no effect on world-facing heading or projectile velocity.
+ const dir=Math.cos(viewing.heading);
+ ctx.scale((dir<-.12?-1:1)*scale,scale);
+ ctx.translate(lean,0);
+ ctx.scale(viewing.shoulderScale,1);
  // Tight shadow and feet establish a stable battle hitbox.
  ctx.fillStyle='#0c1c1ab7';ctx.beginPath();
  ctx.ellipse(0,13,17+(pose?.dash||0)*3,5-(pose?.dash||0),0,0,Math.PI*2);ctx.fill();
@@ -115,10 +121,14 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  }
  drawGarbFront(ctx,character.id,{coat,trim,shade,cloth:pose?.scarf??capeSwing,
    move:stride,guard:guardPose,attack:release,phase:castPhase});
+ // Real rear and three-quarter bodies have a different visible rear costume
+ // plane, rather than the previous horizontal flip of a forward-facing mage.
+ if(viewing.back>.2)directionalOcclusion(ctx,viewing,{trim,coat,shade,
+   cloth:pose?.scarf??capeSwing,school:character.school});
  // Neck pivots and head follows the shoulders with delayed motion.
  // Keep all MASKOT hat, face and crown artwork within this pivot.
  ctx.save();
- ctx.translate(hitFlinch*1.8+(pose?.aimLift||0)*.9,-(pose?.headBob||0));
+ ctx.translate(hitFlinch*1.8+(pose?.aimLift||0)*.9+viewing.headOffset,-(pose?.headBob||0));
  ctx.rotate((pose?.headTilt||0)+(pose?.aimLift||0)*.04);
  // The family silhouette from an official MASKOT remains visible: ears/domes
  // protrude from the wizard hat and do not compete with spells or collision.
@@ -207,12 +217,12 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
   :character.id==='pebble'?-activeStrike*4
   :character.id==='slate'?-activeStrike*7:activeStrike*5;
  const lift=(character.school==='stone'?thrust*8:thrust*11)+(pose?.weaponRise||0)*.45;
- const handX=14+thrust*6+handSwing+release*(character.school==='stone'?3:7);
+ const handX=9+viewing.profile*5+thrust*6+handSwing+release*(character.school==='stone'?3:7);
  const handY=-5-lift+aimRise*3;
  const topY=handY-24-thrust*(character.school==='stone'?4:7),shaft='#9a7958';
  // Articulated casting arm. A real shoulder, elbow, wrist and glove replace
  // the previously floating hand. The weapon rotates around the held grip.
- const shoulderX=10,shoulderY=-5;
+ const shoulderX=7+viewing.profile*3,shoulderY=-5;
  const elbowX=13+windup*2-release*3,elbowY=-2-windup*7+release*5;
  const flesh=maskot?.animal==='frog'?'#93bb72':'#d6b395';
  ctx.fillStyle=shade;ctx.beginPath();ctx.moveTo(shoulderX,shoulderY-4);
