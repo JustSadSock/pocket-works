@@ -46,6 +46,11 @@
         "slug": "meat-exe",
         "spatialDifference": "MEAT.EXE fills the viewport with first-person corridors and an environmental combat HUD; SHOCK is a stationary transparent 2D computational gas chamber with laboratory instrumentation.",
         "interactionDifference": "MEAT.EXE uses continuous exploration and embodied combat; SHOCK uses diaphragm initiation, quantitative sensors, time series and freehand reflective boundaries."
+      },
+      {
+        "slug": "space-run",
+        "spatialDifference": "SPACE RUN uses a constructible spacecraft grid surrounded by crew and workshop panels; SHOCK uses one continuous computed pressure chamber and a thin stationary measurement bench.",
+        "interactionDifference": "SPACE RUN's inertial piloting and physical construction differ from SHOCK's numeric Mach inlet, impermeable wall raster, live wave physics and sampled gas instrumentation."
       }
     ]
   },
