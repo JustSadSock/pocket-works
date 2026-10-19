@@ -193,6 +193,9 @@ function captureExperiment(){
  if(mode==='observer'){
   const st=observatory.state,info=observatory.status;
   extras.camera={...st};
+  put('position-l',st.l,'Положение камеры l/a','a');
+  put('position-longitude',st.longitude,'Долгота камеры','°');
+  put('position-latitude',st.latitude,'Широта камеры','°');
   put('observer-l',st.l,'Координата наблюдателя l/a','a');
   put('observer-fov',st.fov,'Угол обзора','°');
   put('observer-yaw',st.yaw,'Поворот камеры','рад');
@@ -245,7 +248,11 @@ function captureExperiment(){
   put('causal-t',snapshot.signals.returnTime,'Время возврата сигнала','с');
  }else if(mode==='field3d'){
   const st=fieldLab.snapshot;
-  extras.field3d={...fieldLab.state};
+  extras.field3d={...fieldLab.state,observerPoint:{...fieldLab.state.observerPoint}};
+  const location=fieldLab.state.observerPoint;
+  put('position-l',location.l,'Положение камеры l/a','a');
+  put('position-longitude',location.longitude,'Долгота камеры','°');
+  put('position-latitude',location.latitude,'Широта камеры','°');
   put('field-photons',st.statistics?.photons??0,'Фотонов в 3D-пучке','шт');
   put('field-planes',st.statistics?.distinctOrbitalPlanes??0,'Плоскостей фотонных орбит','шт');
   put('field-crossings',st.statistics?.crossings??0,'Переходы через горловину','шт');
