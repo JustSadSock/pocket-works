@@ -65,3 +65,36 @@
 .land-overview b{font-weight:700;color:#263e31}
 .parcel-detail{font:11px/1.5 system-ui;color:#4c4739;background:#e9ddbf;border-left:3px solid #a78e5f;padding:6px 8px;margin:7px 0}
 .scene-actions button:last-child{border-radius:0 0 7px 7px}
+
+/* The court is a ruled parchment register, not an interchangeable dashboard. */
+.court-heading{padding:12px 10px 14px;border-top:4px double #92764e;border-bottom:2px solid #96835f;margin-bottom:12px;background:repeating-linear-gradient(0deg,transparent 0px,transparent 25px,rgba(119,98,62,.075) 26px)}
+.court-heading small{font:700 9px/1.5 system-ui;letter-spacing:.2em;color:#77694e}
+.court-heading h2{margin:3px 0 7px;font:600 24px/1.1 Georgia,serif;color:#3b4335;letter-spacing:-.02em}
+.court-heading p{margin:0;color:#675d4b;font:12px/1.5 system-ui}
+.court-back{display:block;min-height:34px;margin-bottom:8px;padding:5px 7px;border:1px solid #b8a783;background:#e9ddc1;color:#425441;font:700 11px system-ui}
+.court-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:#b9a983;border-top:1px solid #b9a983;border-bottom:1px solid #b9a983;margin:0 0 15px}
+.court-totals>div{background:#f1e6ce;min-height:67px;padding:9px 7px;display:flex;flex-direction:column;justify-content:space-between;gap:5px}
+.court-totals small{font:600 10px/1.3 system-ui;color:#777058}
+.court-totals b{font:600 19px Georgia,serif;color:#354936}
+.court-list-title{font:800 9px/1.2 system-ui;letter-spacing:.18em;color:#866c41;padding:10px 0 6px}
+.court-parish{display:flex;align-items:flex-start;gap:9px;border-bottom:1px solid #cdbd9c;padding:10px 1px;color:#344335}
+.court-parish strong{font:600 13px/1.3 Georgia,serif;max-width:42%;flex:0 0 42%}
+.court-parish span{display:flex;flex-direction:column;gap:3px;font:11px/1.35 system-ui;color:#695d49;flex:1;min-width:0}
+.court-parish small{font:10px/1.35 system-ui;color:#86785f}
+.court-docket{display:flex;justify-content:space-between;align-items:center;text-align:left;width:100%;gap:10px;padding:11px 3px;border:0;border-bottom:1px solid #cdbd9c;background:transparent;color:#3c4a3b;min-height:52px}
+.court-docket span{display:flex;flex-direction:column;gap:5px;min-width:0}
+.court-docket b{font:600 14px Georgia,serif}
+.court-docket small{font:10px/1.3 system-ui;color:#7b6d55}
+.court-docket em{font:18px Georgia,serif;color:#8e7549;font-style:normal}
+.court-docket:active,.court-docket:focus-visible{background:#e6d7b6;outline-offset:0}
+.court-line{border-bottom:1px solid #ccbd9a;display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:10px 2px;color:#665944;font:12px/1.4 system-ui}
+.court-line>span{max-width:52%}
+.court-line b{color:#384b37;text-align:right;font:600 12px/1.4 system-ui}
+.court-line button{background:transparent;border:0;border-bottom:1px solid #a48c62;padding:3px 0;color:#36513c;text-align:right;font:600 12px system-ui}
+.court-ruling{margin-top:15px;background:#e2d3ad;border-left:3px solid #776747;padding:12px 13px;color:#4f513e}
+.court-ruling small{font:800 9px system-ui;letter-spacing:.16em;color:#846b46}
+.court-ruling strong{display:block;margin:5px 0;font:600 19px/1.2 Georgia,serif;color:#3f4e3b}
+.court-ruling p{font:12px/1.55 system-ui;color:#6c604b;margin:5px 0 0}
+.court-empty,.court-note{font:11px/1.6 system-ui;color:#786b57;margin:13px 3px}
+@media(max-width:420px){.tabs button{font-size:11px;padding:9px 3px;min-width:0}.court-heading h2{font-size:21px}.court-totals b{font-size:17px}}
+@media(prefers-reduced-motion:no-preference){.court-docket{transition:background .16s ease}.court-ruling{animation:court-enter .24s ease-out}@keyframes court-enter{from{opacity:.65;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}}
