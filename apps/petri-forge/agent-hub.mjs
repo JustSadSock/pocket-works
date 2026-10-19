@@ -233,8 +233,12 @@ $('hubTest').onclick=()=>{
 };
 $('hubReplay').onclick=()=>{
  if(busy||pending)return;
- try{runtime()[mode]?.replay();notify('Запись показана на игровом поле');}
- catch(e){notify('Повтор: '+e.message);}
+ try{
+  const r=runtime()[mode];if(!r)throw Error('Игровая среда не загружена');
+  const has=!!r.hasReplay?.();
+  if(!has){pending=true;lock();}
+  r.replay();notify(has?'Воспроизведение на игровом поле':'Готовим запись контрольной попытки…');
+ }catch(e){pending=false;lock();notify('Повтор: '+e.message);}
 };
 window.addEventListener('petri:mode',e=>{
  const next=e.detail?.mode;if(!DOMAINS.includes(next))return;
