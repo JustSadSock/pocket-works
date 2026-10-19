@@ -11,7 +11,8 @@ test('source grid lines are tied to actual celestial longitude and latitude',()=
  const az=15*Math.PI/180;
  eq(sourceGrid([1,0,0]),1);
  eq(sourceGrid([Math.cos(az),Math.sin(az),0]),1,1e-9);
- eq(sourceGrid([Math.cos(az/2),Math.sin(az/2),0]),0,1e-9);
+ const lat=7.5*Math.PI/180;
+ eq(sourceGrid([Math.cos(lat)*Math.cos(az/2),Math.cos(lat)*Math.sin(az/2),Math.sin(lat)]),0,1e-9);
 });
 test('source grid does not depend on camera field of view or screen resolution',()=>{
  const dir=[.65,.72,.24],v=sourceGrid(dir);
