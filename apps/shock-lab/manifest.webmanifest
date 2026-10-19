@@ -1,0 +1,25 @@
+{
+  "id": "/apps/shock-lab/",
+  "name": "SHOCK — лаборатория ударных волн",
+  "short_name": "SHOCK",
+  "description": "Физическая песочница ударных волн с решением уравнений газодинамики, препятствиями, зондами и измерениями.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#101b21",
+  "theme_color": "#101b21",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
