@@ -1,7 +1,7 @@
 import {
  FIELD_DEFAULTS,FIELD_CENTRES,FIELD_ASSUMPTIONS,
  newLightField,advanceLightField,fieldStatistics,lightFieldSamples,
- sphereWires,coordinateConsistency
+ chartPoint,sphereWires,coordinateConsistency
 } from './light-field.js';
 import {project3D} from './embedded-space.js';
 const $=id=>document.getElementById(id);
@@ -118,7 +118,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
   const lines=[];
   for(const side of ['A','B']){
    const center=FIELD_CENTRES[side];
-   for(const radius of [1,2.05,3.3]){
+   for(const radius of state.showGrid?[1,2.05,3.3]:[1]){
     const loops=sphereWires({radius,center,longitudes:radius===1?10:8,latitudes:radius===1?5:4,steps:32});
     for(const poly of loops){
      const points=poly.map(P);
@@ -172,8 +172,8 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
    }
   }else if(!field){
    // The initial source location is a coordinate marker, not a fake photon.
-   const r=metric?metric.a:1,source=state.source;
-   const p=project3D([FIELD_CENTRES.A[0]+Math.sqrt(1+source*source),0,0],
+   const source=state.source;
+   const p=project3D(chartPoint(metric,source*metric.a,0,[0,1,0]).position,
     state,w,h);
    ctx.fillStyle='#f0e7bc';ctx.beginPath();ctx.arc(p.x,p.y,4.3,0,Math.PI*2);ctx.fill();
   }
