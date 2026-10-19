@@ -2,7 +2,8 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 
 installMobileRuntime();
 
-const VERSION = '2.9.0';
+const VERSION = '2.9.1';
+window.__petriHarness = new URLSearchParams(location.search).get('petri') === '1' && window.parent !== window;
 const gameParts = [
   ...Array.from({ length: 11 }, (_, index) => `./engine-v2-${String(index + 1).padStart(2, '0')}.js`),
   './engine-v2-stability.js',
@@ -37,7 +38,8 @@ const gameParts = [
   './engine-v2-29-scenery.js',
   './engine-v2-29-navigation.js',
   './engine-v2-29-ui.js',
-  './engine-v2-12.js'
+  './engine-v2-12.js',
+  './petri-bridge.js'
 ];
 
 const loadingProgress = document.querySelector('#loadingProgress');
