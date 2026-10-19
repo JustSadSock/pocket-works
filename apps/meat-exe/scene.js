@@ -395,6 +395,23 @@ export function createWorld(canvas, initialSeed) {
   const source = new THREE.Group();
   scene.add(source);
   const chunks = new Map(), layouts = new Map(), tissueChunks = new Map(), tissueVisuals = new Map(), stains = [], droplets = [], streaks = [];
+  const gpuLifetimes={created:0,released:0,peak:0,chunkBuilds:0,chunkUnloads:0};
+  // InstancedMesh owns a GPU-side instanceMatrix/instanceColor buffer even
+  // when its geometry and material are shared. Disposing shared geometry
+  // would break all other chunks. Dispose only the instanced *object*.
+  function releaseChunk(group){
+    group.traverse(object=>{
+      if(object.isInstancedMesh&&typeof object.dispose==='function'){
+        object.dispose();gpuLifetimes.released++;
+      }
+    });
+    scene.remove(group);gpuLifetimes.chunkUnloads++;
+  }
+  function registerChunk(group){
+    group.traverse(object=>{if(object.isInstancedMesh)gpuLifetimes.created++;});
+    gpuLifetimes.chunkBuilds++;
+    gpuLifetimes.peak=Math.max(gpuLifetimes.peak,gpuLifetimes.created-gpuLifetimes.released);
+  }
   const damagedTissues=new Map();
   let openedTissues=new Set(),organPulse=0,stage=1,biome=biomeForWave(1),immunePressure=0;
   const valveSkin=new THREE.MeshStandardMaterial({color:0x9d3c4d,roughness:.48,emissive:0x631822,emissiveIntensity:.65});
@@ -645,7 +662,7 @@ export function createWorld(canvas, initialSeed) {
     }
   }
   function clearChunks() {
-    for(const obj of chunks.values()) scene.remove(obj);
+    for(const obj of chunks.values())releaseChunk(obj);
     chunks.clear();layouts.clear();tissueChunks.clear();tissueVisuals.clear();lastChunk='';
     for(const line of streaks)line.obj.geometry.dispose();streaks.length=0;
     source.clear();routeSignRoot.clear();activeRouteMark='';forkSigns.clear();forkSites=[];forkSelection='';
@@ -902,7 +919,7 @@ export function createWorld(canvas, initialSeed) {
       }
     }
     chunks.set(cellKey(cx,cz),group);
-    scene.add(group);
+    registerChunk(group);scene.add(group);
   }
   function nearChunks(x,z) {
     const cx=Math.floor(Math.round(x)/CELLS_PER_CHUNK),cz=Math.floor(Math.round(z)/CELLS_PER_CHUNK);
@@ -922,7 +939,7 @@ export function createWorld(canvas, initialSeed) {
       if(!chunks.has(k))buildChunk(cx+dx,cz+dz);
     }
     for(const [k,m] of chunks)if(!keep.has(k)){
-      scene.remove(m);chunks.delete(k);
+      releaseChunk(m);chunks.delete(k);
       const [a,b]=k.split(',').map(Number);
       for(const t of getTissues(a,b)){t.visual=null;tissueVisuals.delete(t.id);}
     }
@@ -1373,6 +1390,17 @@ export function createWorld(canvas, initialSeed) {
     const nodes=[...tissueChunks.values()].flat();
     return {...livingMembraneSignature(nodes),damaged:damagedTissues.size};
   }
+  function getRuntimeStats(){
+    return {visibleChunks:chunks.size,layoutCache:layouts.size,tissueCache:tissueChunks.size,
+      instancedLive:gpuLifetimes.created-gpuLifetimes.released,
+      instancedPeak:gpuLifetimes.peak,instancedCreated:gpuLifetimes.created,
+      instancedReleased:gpuLifetimes.released,chunkBuilds:gpuLifetimes.chunkBuilds,
+      chunkUnloads:gpuLifetimes.chunkUnloads,
+      gpuGeometries:renderer.info.memory.geometries,
+      gpuTextures:renderer.info.memory.textures,
+      drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
+      sceneObjects:scene.children.length};
+  }
   function getAtmosphereSignature(){
     const profile=atmosphereProfile(stage,quality,conservativeRenderer);
     return {biome:biome.id,stage,quality,motes:profile.count,deathFragments:deathMesh.count,
@@ -1389,7 +1417,7 @@ export function createWorld(canvas, initialSeed) {
   reset(initialSeed);resize();
   return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, playDeath, setScars, getScarSignature,
     setTissueDamage,getTissueDamage,getTissueHealth,getTissueSignature,tickTissues, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, setRouteMark, getRouteMark:()=>activeRouteMark,
-    setForkSites,setForkSelection,getNearbyFork,getForkSites:()=>forkSites.map(({id,x,z})=>({id,x,z})),getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, getAtmosphereSignature, softwareRenderer, conservativeRenderer, end,
+    setForkSites,setForkSelection,getNearbyFork,getForkSites:()=>forkSites.map(({id,x,z})=>({id,x,z})),getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, getAtmosphereSignature, getRuntimeStats, softwareRenderer, conservativeRenderer, end,
     getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length,
       motes:motesGeo.drawRange.count,deathFragments:deathBits.length,dying:dying.length,
       scars:Object.values(scarMeshes).reduce((sum,mesh)=>sum+mesh.count,0)+wallWoundMesh.count,
