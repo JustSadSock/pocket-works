@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "katana-echo",
+  "direction": {
+    "premise": "A minimal sword duel lets each fighter weaponize a delayed recording of their own movement and attacks.",
+    "composition": "An unobstructed arena occupies the main screen; compact room status sits above it and two input pads sit at the bottom.",
+    "shapeLanguage": "Cyan and rose circular fighters have visible sword bearings; translucent echo actors repeat the same geometry among rectangular walls.",
+    "surfaceAndMaterial": "Flat opaque fighters and low-contrast arena walls keep the live sword, shield arc and recorded ghost distinguishable.",
+    "paletteLogic": "Cyan identifies the local fighter, rose the opponent and translucent blue the delayed actor; pale arcs show weapon direction.",
+    "typography": "Small system labels name room, mode and four combat verbs without decorative combat text in the world.",
+    "signature": "A translucent copy replays real recorded inputs while the live fighter can charge a different attack or raise a parrying shield.",
+    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
+  },
+  "architecture": {
+    "spatialLayout": "full-bleed-world",
+    "controlLocation": "bottom-deck",
+    "navigation": "overlay-list",
+    "chromeTopology": "single-surface",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Approach an opponent, charge and release a sword strike, parry incoming attacks and trigger one of three recorded-echo behaviors.",
+    "physicalFeedback": "Sword charge changes attack power; a fresh shield can stagger an attacker, while a lethal hit fades the actual fighter before the next round.",
+    "spatialRationale": "An unobstructed arena occupies the main screen; compact room status sits above it and two input pads sit at the bottom. This keeps the current game object and its real inputs spatially connected on a phone.",
+    "comparisons": [
+      {
+        "slug": "fog-of-conquest",
+        "spatialDifference": "fog-of-conquest uses full-bleed-world and diegetic-tools. Here: An unobstructed arena occupies the main screen; compact room status sits above it and two input pads sit at the bottom.",
+        "interactionDifference": "fog-of-conquest uses contextual with scene-zoom. This game's actual verb is: Approach an opponent, charge and release a sword strike, parry incoming attacks and trigger one of three recorded-echo behaviors."
+      },
+      {
+        "slug": "zamazka",
+        "spatialDifference": "zamazka uses open-workbench and diegetic-tools. Here: An unobstructed arena occupies the main screen; compact room status sits above it and two input pads sit at the bottom.",
+        "interactionDifference": "zamazka uses direct-on-object with world-travel. This game's actual verb is: Approach an opponent, charge and release a sword strike, parry incoming attacks and trigger one of three recorded-echo behaviors."
+      },
+      {
+        "slug": "meat-exe",
+        "spatialDifference": "meat-exe uses full-bleed-world and layered-panels. Here: An unobstructed arena occupies the main screen; compact room status sits above it and two input pads sit at the bottom.",
+        "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Approach an opponent, charge and release a sword strike, parry incoming attacks and trigger one of three recorded-echo behaviors."
+      },
+      {
+        "slug": "not-dead-yet",
+        "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: An unobstructed arena occupies the main screen; compact room status sits above it and two input pads sit at the bottom.",
+        "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Approach an opponent, charge and release a sword strike, parry incoming attacks and trigger one of three recorded-echo behaviors."
+      },
+      {
+        "slug": "crossline-5x5",
+        "spatialDifference": "crossline-5x5 uses header-stage-footer and framed-stage. Here: An unobstructed arena occupies the main screen; compact room status sits above it and two input pads sit at the bottom.",
+        "interactionDifference": "crossline-5x5 uses bottom-deck with overlay-list. This game's actual verb is: Approach an opponent, charge and release a sword strike, parry incoming attacks and trigger one of three recorded-echo behaviors."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Canvas 2D retains the abstract original duel geometry and keeps ghost history independent from the authoritative live actor.",
+    "focalAsset": "Live and ghost actor silhouettes are rendered from the original engine; the authored crossed-blade icon identifies the three-mode duel."
+  },
+  "motion": {
+    "character": "Sword charge changes attack power; a fresh shield can stagger an attacker, while a lethal hit fades the actual fighter before the next round.",
+    "action": "Approach an opponent, charge and release a sword strike, parry incoming attacks and trigger one of three recorded-echo behaviors.",
+    "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
+    "response": "The next visible state responds to the actual control: A translucent copy replays real recorded inputs while the live fighter can charge a different attack or raise a parrying shield.",
+    "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
+    "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
+    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#create"
+    },
+    "expectedChange": "A private duel room opens with one live fighter and its generated wall map, waiting for the second player.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}

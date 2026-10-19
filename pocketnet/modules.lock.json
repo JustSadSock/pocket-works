@@ -219,5 +219,11 @@
     "versions": [
       "v1"
     ]
+  },
+  "katana-echo": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
