@@ -718,20 +718,24 @@ export class Renderer{
   }
   const eye=[player.x*SCALE,1.54+(player.bob||0),player.z*SCALE],dir=[Math.sin(player.yaw)*Math.cos(player.pitch),-Math.sin(player.pitch),-Math.cos(player.yaw)*Math.cos(player.pitch)];
   const proj=projection(Math.PI*.50,this.canvas.width/this.canvas.height),mvp=multiply(proj,view(eye,dir));
-  const actual=rogue?selectPracticalLights(world,player.x,player.z):null;
-  const lampA=rogue?actual[0]:world.point('living'),lampB=rogue?actual[1]:world.point('kitchen');
   if(rogue){
    const key=lightingMaskKey(world,player.x,player.z);
    if(this.structureKey!==key||this.structureWorld!==world){
     const x0=Math.floor(player.x)-LIGHT_GRID/2,z0=Math.floor(player.z)-LIGHT_GRID/2;
+    const mask=occupancyMask(world,x0,z0);
     gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.structureTexture);
-    gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,LIGHT_GRID,LIGHT_GRID,gl.RGBA,gl.UNSIGNED_BYTE,
-     occupancyMask(world,x0,z0));
+    gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,LIGHT_GRID,LIGHT_GRID,gl.RGBA,gl.UNSIGNED_BYTE,mask);
     gl.activeTexture(gl.TEXTURE0);
+    this.practicalLights=selectPracticalLights(world,player.x,player.z);
     this.structureKey=key;this.structureWorld=world;this.structureOrigin=[x0*SCALE,z0*SCALE];
+    this.visualMetrics.lightMaskUploads=(this.visualMetrics.lightMaskUploads||0)+1;
+    this.visualMetrics.occludedCells=LIGHT_GRID*LIGHT_GRID-mask.filter((x,i)=>i%4===0&&x===255).length;
+    this.visualMetrics.fixturePositions=this.practicalLights.map(source=>({kind:source.kind,x:source.x,z:source.z}));
    }
    gl.uniform2fv(this.u.structureOrigin,this.structureOrigin);
   }
+  const lampA=rogue?this.practicalLights[0]:world.point('living'),
+   lampB=rogue?this.practicalLights[1]:world.point('kitchen');
   gl.uniform1f(this.u.structureEnabled,rogue?1:0);
   gl.uniformMatrix4fv(this.u.mvp,false,mvp);gl.uniform3fv(this.u.eye,eye);gl.uniform3fv(this.u.facing,dir);
   gl.uniform3fv(this.u.lampA,rogue?[lampA.x,lampA.y,lampA.z]:[lampA.x*SCALE,2.64,lampA.z*SCALE]);
