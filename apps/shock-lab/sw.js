@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'shock-lab-';
-const CACHE_NAME = 'shock-lab-v1.4.0';
-const APP_VERSION = '1.4.0';
+const CACHE_NAME = 'shock-lab-v1.5.0';
+const APP_VERSION = '1.5.0';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Порывы набегающего потока, вычисляемая завихрённость, меняемая кривизна и толщина крыла, график временных сил и CSV."];
+const RELEASE_NOTES = ["Новый конструктор: три вкладки вместо длинного пульта, быстрые инструменты, материалы, источники давления и свободный постоянный поток."];
 const APP_SHELL = [
   './',
   './index.html',
