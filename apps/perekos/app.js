@@ -12,7 +12,7 @@ import {CombatPresentation,drawProjectileTrail} from './combat-presentation.mjs'
 import {drawGroundCues,drawActorCues,drawSpellLighting} from './combat-readability.mjs';
 import {SpellChoreography,drawSpellGround,drawSpellActors,drawSpellProjectiles,drawSpellForeground} from './spell-choreography.mjs';
 import {DuelFeedback} from './duel-feedback.mjs';
-import {directionalAim} from './aim-geometry.mjs';
+import {courtAim} from './aim-geometry.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('world'),ctx=canvas.getContext('2d',{alpha:false});
 ctx.imageSmoothingEnabled=false;
@@ -294,7 +294,7 @@ aimButton.addEventListener('pointerdown',e=>{if(mode==='fight'){aimedPointer=e.p
 aimButton.addEventListener('pointermove',e=>{
  if(mode!=='fight'||e.pointerId!==aimedPointer||!active)return;
  const r=aimButton.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
- if(Math.hypot(dx,dy)>11){const a=myActor(),d=Math.hypot(dx,dy);input.aim=directionalAim(a,dx,dy);}
+ if(Math.hypot(dx,dy)>11){const a=myActor(),d=Math.hypot(dx,dy);input.aim=courtAim(a,dx,dy,W,H);}
 });
 const stopAim=e=>{if(e.pointerId!==aimedPointer)return;aimedPointer=null;aimButton.classList.remove('aiming');if(e.pointerType!=='mouse')input.aim=null};
 aimButton.addEventListener('pointerup',stopAim);aimButton.addEventListener('pointercancel',stopAim);aimButton.addEventListener('lostpointercapture',stopAim);
