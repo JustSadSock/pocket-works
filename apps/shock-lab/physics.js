@@ -12,6 +12,10 @@ export class ShockField {
     this.ny = ny;
     this.size = nx * ny;
     this.solid = new Uint8Array(this.size);
+    this.body = new Uint8Array(this.size);
+    this.bodyBounds = null;
+    this.incidence = 0;
+    this.bodyType = null;
     this.U = new Float32Array((this.size + 1) * 4);
     this.V = new Float32Array((this.size + 1) * 4);
     this.fx = new Float32Array((nx + 1) * ny * 4);
@@ -99,8 +103,12 @@ export class ShockField {
     }
   }
 
-  geometry(preset) {
+  geometry(preset, incidence = 0) {
     this.solid.fill(0);
+    this.body.fill(0);
+    this.bodyBounds = null;
+    this.bodyType = null;
+    this.incidence = clamp(Number.isFinite(incidence) ? incidence : 0,-14,14);
     const W = this.nx, H = this.ny;
     const line = (x0, y0, x1, y1, r = 1.35) =>
       this.stroke(x0 * W, y0 * H, x1 * W, y1 * H, true, r);
@@ -135,13 +143,13 @@ export class ShockField {
       line(0.055, 0.20, 0.055, 0.80, 1.6);
       line(0.945, 0.20, 0.945, 0.80, 1.6);
     } else if (preset === 'wedge') {
-      // Diamond wedge. Oblique shocks develop from conservative flow around
-      // the actual impermeable raster faces rather than imposed rays.
-      this.fillPolygon([[.265,.5],[.66,.34],[.86,.5],[.66,.66]]);
+      this.fillPolygon(this.rotateProfile([[.265,.5],[.66,.34],[.86,.5],[.66,.66]],this.incidence));
+      this.bodyType = 'wedge';
     } else if (preset === 'airfoil') {
-      // Thin double-wedge profile; angle changes as the flow wraps the body.
-      this.fillPolygon([[.23,.5],[.54,.435],[.89,.5],[.54,.565]]);
+      this.fillPolygon(this.rotateProfile([[.23,.5],[.54,.435],[.89,.5],[.54,.565]],this.incidence));
+      this.bodyType = 'airfoil';
     } else if (preset === 'cylinder') {
+      this.bodyType = 'cylinder';
       const radius = H * .135, cx = W*.50, cy = H*.50;
       for (let y=0;y<H;y++)for(let x=0;x<W;x++) {
         if ((x-cx)**2+(y-cy)**2 <= radius*radius) this.solid[y*W+x]=1;
@@ -166,6 +174,27 @@ export class ShockField {
       line(0.69, 0.44, 0.93, 0.28, 1.65);
       line(0.69, 0.56, 0.93, 0.72, 1.65);
     }
+    if(this.bodyType){
+      this.body.set(this.solid);
+      let left=W,right=0,top=H,bottom=0;
+      for(let i=0;i<this.size;i++)if(this.body[i]){
+        const x=i%W,y=(i/W)|0;
+        left=Math.min(left,x);right=Math.max(right,x);
+        top=Math.min(top,y);bottom=Math.max(bottom,y);
+      }
+      this.bodyBounds={left,right,top,bottom,chord:Math.max(1,right-left+1)};
+    }
+  }
+
+  rotateProfile(points,angle) {
+    const radians=angle*Math.PI/180;
+    const c=Math.cos(radians),s=Math.sin(radians);
+    // Screen-space Y points downward: positive incidence raises the nose
+    // (left-most vertex). Rotation occurs around the physical centre.
+    return points.map(([x,y])=>{
+      const dx=x-.55,dy=y-.5;
+      return [.55+dx*c-dy*s,.5+dx*s+dy*c];
+    });
   }
 
   fillPolygon(points) {
@@ -332,6 +361,53 @@ export class ShockField {
     this.maxPressure=maxP;
     this.maxMach=maxM;
     return dt;
+  }
+
+  // Pressure traction integrated over the staircase body mask. Each
+  // face of a solid body cell bordering a fluid cell contributes p*n*ds.
+  // Body mask excludes user-drawn walls, avoiding fabricated wing loads.
+  // Fx positive downstream (pressure drag), Fy positive downward.
+  // Lift is -Fy; coefficients are based on freestream dynamic pressure
+  // and projected body chord in grid-cell units. These are approximate,
+  // grid-sensitive PRESSURE loads: viscous skin-friction is absent.
+  aeroForces() {
+    if(!this.flowActive || !this.bodyBounds)return null;
+    const W=this.nx,H=this.ny,mask=this.body,solid=this.solid;
+    const {left,right,chord}=this.bodyBounds;
+    const n=right-left+1;
+    const upperSum=new Float64Array(n),lowerSum=new Float64Array(n);
+    const upperCount=new Uint16Array(n),lowerCount=new Uint16Array(n);
+    let fx=0,fy=0,moment=0,faces=0;
+    const cx=left+.25*chord,cy=(this.ny-1)*.5;
+    const pressureAt=(i)=>{
+      const k=i*4,a=this.U,rho=Math.max(FLOOR,a[k]);
+      const kinetic=.5*(a[k+1]**2+a[k+2]**2)/rho;
+      return Math.max(FLOOR,(GAMMA-1)*(a[k+3]-kinetic));
+    };
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+      const i=y*W+x;if(!mask[i])continue;
+      const xi=x-left;
+      if(x>0 && !solid[i-1]){const force=pressureAt(i-1)-1;fx+=force;moment-=(y-cy)*force;faces++;}
+      if(x<W-1 && !solid[i+1]){const force=1-pressureAt(i+1);fx+=force;moment-=(y-cy)*force;faces++;}
+      if(y>0 && !solid[i-W]){
+        const p=pressureAt(i-W),force=p-1;fy+=force;moment+=(x-cx)*force;faces++;
+        upperSum[xi]+=p;upperCount[xi]++;
+      }
+      if(y<H-1 && !solid[i+W]){
+        const p=pressureAt(i+W),force=1-p;fy+=force;moment+=(x-cx)*force;faces++;
+        lowerSum[xi]+=p;lowerCount[xi]++;
+      }
+    }
+    const q=.5*GAMMA*this.flowMach*this.flowMach; // rho∞=p∞=1
+    const upper=Array.from(upperSum,(v,i)=>upperCount[i]?(v/upperCount[i]-1)/q:null);
+    const lower=Array.from(lowerSum,(v,i)=>lowerCount[i]?(v/lowerCount[i]-1)/q:null);
+    return {
+      cd:fx/(q*chord),cl:-fy/(q*chord),cm:-moment/(q*chord*chord),
+      fx,fy,q,chord,faces,upper,lower,
+      incidence:this.incidence, mach:this.flowMach,
+      type:this.bodyType,time:this.time,
+      resolution:[W,H],
+    };
   }
 
   scan() {

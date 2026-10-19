@@ -22,7 +22,11 @@
         },
         {
           "action": "click",
-          "selector": "[data-preset='wedge']"
+          "selector": "[data-preset='airfoil']"
+        },
+        {
+          "action": "visible",
+          "selector": "#load-panel"
         },
         {
           "action": "screenshot"
@@ -36,32 +40,25 @@
         },
         {
           "action": "click",
-          "selector": "#streamlines"
+          "selector": "#record-load"
         },
         {
           "action": "screenshot"
         },
         {
           "action": "click",
-          "selector": "[data-preset='nozzle']"
+          "selector": "[data-preset='wedge']"
+        },
+        {
+          "action": "visible",
+          "selector": "#moment-value"
         },
         {
           "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "#flow-restart"
         },
         {
           "action": "click",
           "selector": "[data-preset='cylinder']"
-        },
-        {
-          "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "[data-plot='profile']"
         },
         {
           "action": "screenshot"

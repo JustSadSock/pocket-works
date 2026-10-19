@@ -4,12 +4,12 @@
   "product": "shock-lab",
   "direction": {
     "premise": "A tabletop supersonic-flow instrument, with a luminous compressible-gas chamber and a dark oxide-steel control console.",
-    "composition": "A pressure visualization chamber takes the main plane while a compact instrument bay supports flow Mach, thermodynamic views, probe telemetry and an oscilloscope; on phones the controls scroll beneath the uninterrupted field.",
+    "composition": "An unobstructed compressible-flow chamber dominates, with a compact airfoil load bench below the Mach regulator, an experimental pressure-curve plot and selectable retained measurements; portrait phones use a scrollable lower laboratory console.",
     "shapeLanguage": "Hard square-cut aluminum geometry, paper-thin graduations, sharp instrument toggles and an uncaged central visualization.",
     "surfaceAndMaterial": "Opaque charcoal-blue oxided metal; brushed mineral wall inclusions; the gas field itself provides dynamic luminous volume. No glassmorphism or decorative gradients over UI components.",
-    "paletteLogic": "Neutral oxidized steel instruments frame cool-to-hot pressure and Mach maps. Blue/teal is subsonic and orange/cream shows locally supersonic speeds; physically integrated streamline traces stay thin and understated.",
+    "paletteLogic": "Steel instrument housing and paper-warm brass interaction controls; two restrained signal inks independently encode upper and lower surface pressure, while archived runs appear as hairline dashed traces.",
     "typography": "Condensed utility labels with monospaced physical measurements; short Russian action labels remain readable on phones.",
-    "signature": "A single gesture switches from an explosive gas chamber into a continuous supersonic wind tunnel; genuine compressible shocks wrap around rasterized wings and become visible as sonic-color transitions and measured streamlines.",
+    "signature": "A wind-tunnel rig lets the operator physically rotate a pixel-solid airfoil and watch computed pressure loads become lift, drag and pitch moments; four recorded test cards can overlay each surface-pressure curve.",
     "distinction": "Where PetriForge is a discrete editable microcosm, SHOCK shows continuous conservation-law fronts and reflective solid boundaries with industrial instrumentation."
   },
   "architecture": {
@@ -18,8 +18,8 @@
     "navigation": "editor-toolbox",
     "chromeTopology": "framed-stage",
     "dominantMotion": "immediate",
-    "primaryVerb": "Choose an obstacle, set inlet Mach, compare pressure and local Mach, then draw and erase walls while the compressible freestream continues to solve.",
-    "physicalFeedback": "Euler/HLL fluxes across finite volumes create deflection, shocks, compression and expanding wakes; streamline curves integrate current local momentum rather than reusing a fixed shader template.",
+    "primaryVerb": "Tilt the airfoil, run a supersonic flow, read true pressure force and pitching moment, then overlay saved Cp curves to compare stability tendencies.",
+    "physicalFeedback": "Rotating the raster-solid profile causes a genuinely different gas-boundary Riemann solution and different pressure traction; saved runs retain coefficients and upper/lower distributions for replay-free comparison.",
     "spatialRationale": "Desktop shows a broad physical chamber and a right instrument console. On portrait phones a compact top bar, live upper canvas and internally scrollable bottom control deck form a header-stage-footer topology, distinct from the desktop split.",
     "comparisons": [
       {
@@ -76,9 +76,9 @@
     "entry": "./",
     "interaction": {
       "type": "click",
-      "selector": "[data-preset='wedge']"
+      "selector": "[data-preset='airfoil']"
     },
-    "expectedChange": "The same chamber becomes a continuous wind tunnel around a real solid double wedge; the Mach panel appears, numerical flow launches and probe values update.",
+    "expectedChange": "A live pressure-load bench appears with computed lift, pressure drag, pitching moment, Cp surface plot and a meaningful Save measurement action.",
     "capture": [
       "initial",
       "action",

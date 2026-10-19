@@ -9,7 +9,7 @@ const KEY = 'shock-lab:experiment:v1';
 const PRESETS = ['reflector','slits','maze','channel','empty','tube','wedge','airfoil','cylinder','nozzle'];
 const FLOW_PRESETS = new Set(['wedge','airfoil','cylinder','nozzle']);
 const TITLES = {reflector:'ОТРАЖАТЕЛЬ',slits:'ДВОЙНАЯ ДИФРАКЦИЯ',maze:'ЛАБИРИНТ',channel:'СОПЛО / КАНАЛ',empty:'ЧИСТАЯ КАМЕРА',tube:'УДАРНАЯ ТРУБА',wedge:'КОСОЙ КЛИН',airfoil:'СВЕРХЗВУКОВОЕ КРЫЛО',cylinder:'ЦИЛИНДР / УДАРНАЯ ВОЛНА',nozzle:'СУЖЕНИЕ / РАСШИРЕНИЕ'};
-const DEFAULTS = () => ({preset:'reflector',tool:'pulse',view:'pressure',power:4.5,speed:2,ratio:8,flowMach:1.8,streamlines:true,sound:false,sensors:DEFAULT_SENSORS.map(p=>({...p})),edits:{reflector:[],slits:[],maze:[],channel:[],empty:[],tube:[],wedge:[],airfoil:[],cylinder:[],nozzle:[]}});
+const DEFAULTS = () => ({preset:'reflector',tool:'pulse',view:'pressure',power:4.5,speed:2,ratio:8,flowMach:1.8,angle:0,records:[],streamlines:true,sound:false,sensors:DEFAULT_SENSORS.map(p=>({...p})),edits:{reflector:[],slits:[],maze:[],channel:[],empty:[],tube:[],wedge:[],airfoil:[],cylinder:[],nozzle:[]}});
 const $ = (id) => document.getElementById(id);
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const safeNumber = (v,a,b,fallback) => typeof v === 'number' && Number.isFinite(v) ? clamp(v,a,b) : fallback;
@@ -20,7 +20,7 @@ const raster=document.createElement('canvas'), rg=raster.getContext('2d',{alpha:
 const runBtn=$('run'), dialog=$('dialog'), scope=$('scope'), scopeG=scope.getContext('2d');
 let sim, image, pointer=null, probe=null, ripples=[],toastTimer=null, lastFrame=0, accumulator=0;
 let stageW=0,stageH=0, paintW=0,paintH=0,dpr=1, active=true, audioCtx=null,lastPulseSound=0, audioVoiceCount=0;
-let hintVisible=true, lastMetrics=0, lastDemoTime=0, tubeReady=false, armingSensor=null, plotMode='history', lastScope=0;
+let hintVisible=true, lastMetrics=0, lastDemoTime=0, tubeReady=false, armingSensor=null, plotMode='history', lastScope=0,compareIndex=-1,lastLoads=null;
 
 function normalizeEdits(edits){
   const result={};
@@ -44,6 +44,14 @@ function applyData(input){
   state.sound=!!input.sound;
   state.ratio=safeNumber(input.ratio,2,16,8);
   state.flowMach=safeNumber(input.flowMach,.3,3.2,1.8);
+  state.angle=Math.round(safeNumber(input.angle,-14,14,0));
+  state.records=Array.isArray(input.records)?input.records.slice(-4).map(r=>{
+    if(!r||!['airfoil','wedge','cylinder'].includes(r.type))return null;
+    const finite=v=>typeof v==='number'&&Number.isFinite(v);
+    if(!finite(r.cd)||!finite(r.cl)||!finite(r.mach)||!finite(r.time)||!Array.isArray(r.upper)||!Array.isArray(r.lower))return null;
+    const curve=a=>a.slice(0,250).map(v=>finite(v)?Math.max(-20,Math.min(20,v)):null);
+    return {type:r.type,angle:Math.round(safeNumber(r.angle,-14,14,0)),mach:safeNumber(r.mach,.3,3.2,1.8),time:Math.max(0,r.time),cd:r.cd,cl:r.cl,cm:finite(r.cm)?r.cm:0,upper:curve(r.upper),lower:curve(r.lower)};
+  }).filter(Boolean):[];
   state.streamlines=input.streamlines!==false;
   state.sensors=Array.isArray(input.sensors)&&input.sensors.length===2?input.sensors.map((p,i)=>({x:safeNumber(p?.x,0,1,DEFAULT_SENSORS[i].x),y:safeNumber(p?.y,0,1,DEFAULT_SENSORS[i].y)})):DEFAULT_SENSORS.map(p=>({...p}));
   state.edits=normalizeEdits(input.edits);
@@ -52,7 +60,7 @@ function applyData(input){
 try{const stored=JSON.parse(localStorage.getItem(KEY)||'null');if(stored)applyData(stored)}catch{/* private mode or corrupt data: use defaults */}
 const trace=new TraceRecorder(state.sensors);
 function persist(){
-  try{localStorage.setItem(KEY,JSON.stringify({preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,streamlines:state.streamlines,sound:state.sound,sensors:trace.sensors,edits:state.edits}))}catch{/* unavailable quota; simulation stays usable */}
+  try{localStorage.setItem(KEY,JSON.stringify({preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,angle:state.angle,records:state.records,streamlines:state.streamlines,sound:state.sound,sensors:trace.sensors,edits:state.edits}))}catch{/* unavailable quota; simulation stays usable */}
 }
 function toast(message){
   const el=$('toast');el.textContent=message;el.classList.add('show');
@@ -74,7 +82,11 @@ function refreshControls(){
   $('power').value=String(state.power);$('speed').value=String(state.speed);
   $('ratio').value=String(state.ratio);$('ratio-value').textContent=state.ratio.toFixed(1)+':1';
   $('tube-params').hidden=state.preset!=='tube';$('rupture').hidden=!tubeReady;
-  const isFlow=FLOW_PRESETS.has(state.preset);
+  const isFlow=FLOW_PRESETS.has(state.preset),hasBody=['airfoil','wedge','cylinder'].includes(state.preset);
+  $('load-panel').hidden=!hasBody;
+  $('angle-controls').hidden=!['airfoil','wedge'].includes(state.preset);
+  $('attack-angle').value=String(state.angle);
+  $('attack-angle-value').textContent=(state.angle>=0?'+':'')+state.angle+'°';
   $('flow-panel').hidden=!isFlow;
   $('flow-metric').hidden=!isFlow;
   $('flow-mach').value=String(state.flowMach);
@@ -83,6 +95,7 @@ function refreshControls(){
   $('flow-chip').textContent='→ M '+state.flowMach.toFixed(1);
   $('regime').textContent=state.flowMach>=1?'СВЕРХЗВУК':'ДОЗВУК';
   $('flow-velocity').textContent=(state.flowMach*Math.sqrt(1.4)).toFixed(2);
+  $('clear-loads').disabled=state.records.length===0;
   $('stream-state').textContent=state.streamlines?'ВКЛ.':'ВЫКЛ.';
   $('streamlines').setAttribute('aria-pressed',String(state.streamlines));
   $('streamlines').classList.toggle('enabled',state.streamlines);
@@ -110,7 +123,7 @@ function refreshControls(){
 }
 function rebuildGeometry(){
   if(!sim)return;
-  sim.geometry(state.preset);
+  sim.geometry(state.preset,state.angle);
   for(const stroke of state.edits[state.preset]){
     const radius=brushRadius();
     for(let i=0;i<stroke.points.length;i++){
@@ -370,6 +383,26 @@ function drawOverlay(now){
   const unitX=paintW/sim.nx,unitY=paintH/sim.ny;
   over.lineWidth=Math.max(1,dpr);
   drawStreamlines();
+  if(sim.flowActive&&sim.bodyBounds&&sim.time>.5&&lastLoads){
+    const loads=lastLoads,bounds=sim.bodyBounds;
+    const cx=(bounds.left+bounds.right)*.5*unitX,cy=paintH*.5;
+    const fx=clamp(loads.cd*54*dpr,-61*dpr,61*dpr);
+    const fy=clamp(-loads.cl*54*dpr,-61*dpr,61*dpr);
+    const size=Math.hypot(fx,fy);
+    over.save();
+    if(size>4*dpr){
+      const ux=fx/size,uy=fy/size,head=7*dpr;
+      over.strokeStyle='#fbe0a7';over.fillStyle='#fbe0a7';
+      over.lineWidth=2.1*dpr;over.shadowColor='#e8be7588';over.shadowBlur=5*dpr;
+      over.beginPath();over.moveTo(cx,cy);over.lineTo(cx+fx,cy+fy);
+      over.moveTo(cx+fx,cy+fy);over.lineTo(cx+fx-head*(ux-uy*.5),cy+fy-head*(uy+ux*.5));
+      over.moveTo(cx+fx,cy+fy);over.lineTo(cx+fx-head*(ux+uy*.5),cy+fy-head*(uy-ux*.5));
+      over.stroke();over.shadowBlur=0;
+      over.font=(9*dpr)+'px monospace';over.fillText('Fₚ',cx+fx+4*dpr,cy+fy-8*dpr);
+    }
+    over.beginPath();over.fillStyle='#fff0c6';over.arc(cx,cy,2.5*dpr,0,Math.PI*2);over.fill();
+    over.restore();
+  }
   if(tubeReady){
     const x=paintW*.42,y0=paintH*.20,y1=paintH*.80;
     over.save();over.strokeStyle='#faf0d5';over.lineWidth=2*dpr;
@@ -484,12 +517,96 @@ function drawScope() {
   }
 }
 
+function formatLoad(v){return Number.isFinite(v)?(v>=0?'+':'')+v.toFixed(3):'—';}
+
+function renderRecords() {
+  const host=$('record-list');host.replaceChildren();
+  if(!state.records.length){
+    const p=document.createElement('p');p.textContent='Замеров пока нет. Выберите угол атаки, дайте потоку развиться и сохраните результат.';
+    host.append(p);return;
+  }
+  state.records.forEach((r,i)=>{
+    const button=document.createElement('button');
+    button.type='button';button.dataset.record=String(i);button.className='stored-run';
+    button.classList.toggle('selected',compareIndex===i);
+    button.setAttribute('aria-pressed',String(compareIndex===i));
+    const label=document.createElement('span');
+    const names={airfoil:'КРЫЛО',wedge:'КЛИН',cylinder:'ЦИЛИНДР'};
+    label.textContent=(names[r.type]||r.type)+' · '+(r.angle>=0?'+':'')+r.angle+'° · M '+r.mach.toFixed(1);
+    const vals=document.createElement('strong');vals.textContent='L '+formatLoad(r.cl)+' / D '+formatLoad(r.cd)+' / m '+formatLoad(r.cm);
+    button.append(label,vals);host.append(button);
+  });
+}
+function drawCpChart(){
+  if(!sim)return;
+  const canvas=$('cp-chart');if(canvas.closest('[hidden]'))return;
+  const rect=canvas.getBoundingClientRect();if(rect.width<30||rect.height<30)return;
+  const ratio=Math.min(window.devicePixelRatio||1,2),w=rect.width,h=rect.height;
+  const iw=Math.round(w*ratio),ih=Math.round(h*ratio);
+  if(canvas.width!==iw||canvas.height!==ih){canvas.width=iw;canvas.height=ih;}
+  const ctx=canvas.getContext('2d');ctx.setTransform(ratio,0,0,ratio,0,0);
+  ctx.fillStyle='#11252b';ctx.fillRect(0,0,w,h);
+  const l=39,r=w-11,t=16,b=h-22;const width=r-l,height=b-t;
+  const current=lastLoads;
+  const reference=state.records[compareIndex];
+  const values=[...(current?.upper||[]),...(current?.lower||[]),...(reference?.upper||[]),...(reference?.lower||[])].filter(v=>v!==null&&Number.isFinite(v));
+  const lim=Math.max(.5,...values.map(v=>Math.abs(v)))*1.15;
+  const toY=v=>t+(lim-v)/(2*lim)*height;
+  ctx.font='10px monospace';ctx.lineWidth=1;
+  for(let j=0;j<5;j++){
+    const p=t+j*height/4;ctx.strokeStyle='#2a4549';ctx.beginPath();ctx.moveTo(l,p);ctx.lineTo(r,p);ctx.stroke();
+    ctx.fillStyle='#8ba6a6';ctx.textAlign='right';ctx.fillText((lim-j*lim/2).toFixed(1),l-7,p+3);
+  }
+  for(let i=0;i<5;i++){const x=l+i*width/4;ctx.strokeStyle='#253d41';ctx.beginPath();ctx.moveTo(x,t);ctx.lineTo(x,b);ctx.stroke();ctx.fillStyle='#8ba6a6';ctx.textAlign='center';ctx.fillText((i*25)+'%',x,h-6);}
+  // Smooth the visual trace by a 3-cell moving window to reduce
+  // staircase aliasing; stored profiles and integrated forces stay raw.
+  function filtered(points){
+    if(!Array.isArray(points))return points;
+    return points.map((v,i)=>{
+      if(v===null||!Number.isFinite(v))return null;
+      let total=0,count=0;
+      for(let j=Math.max(0,i-2);j<=Math.min(points.length-1,i+2);j++){
+        if(points[j]!==null&&Number.isFinite(points[j])){total+=points[j];count++;}
+      }
+      return count?total/count:v;
+    });
+  }
+  function series(points,color,dashed=false){
+    if(!points?.length)return;
+    points=filtered(points);
+    ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=dashed?1.3:2;
+    ctx.setLineDash(dashed?[4,3]:[]);
+    let moved=false;
+    points.forEach((v,i)=>{
+      if(v===null||!Number.isFinite(v)){moved=false;return;}
+      const x=l+i/Math.max(1,points.length-1)*width,y=toY(v);
+      if(!moved){ctx.moveTo(x,y);moved=true;}else ctx.lineTo(x,y);
+    });ctx.stroke();ctx.setLineDash([]);
+  }
+  if(reference){series(reference.upper,'#ebbe77',true);series(reference.lower,'#83cbd5',true);}
+  if(current){series(current.upper,'#f2c982');series(current.lower,'#8bd4d8');}
+  ctx.textAlign='left';ctx.fillStyle='#a7b9b0';ctx.font='9px monospace';
+  ctx.fillText('Cₚ',l+4,t+10);
+}
+
 function render(now=performance.now()){if(!sim)return;drawPhysics();drawOverlay(now)}
 function updateMetrics(){
   if(!sim)return;
   $('time').textContent=sim.time.toFixed(2);
   $('flow-peak').textContent=sim.maxMach.toFixed(2);
   $('mach-peak').textContent=sim.maxMach.toFixed(2);
+  const loads=sim.aeroForces();lastLoads=loads;
+  $('lift-value').textContent=loads?formatLoad(loads.cl):'—';
+  $('drag-value').textContent=loads?formatLoad(loads.cd):'—';
+  $('moment-value').textContent=loads?formatLoad(loads.cm):'—';
+  const ref=state.records[compareIndex];
+  if(loads&&ref&&loads.type===ref.type&&Math.abs(loads.mach-ref.mach)<.11&&loads.incidence!==ref.angle&&sim.time>=4){
+    const slope=(loads.cm-ref.cm)/(loads.incidence-ref.angle);
+    $('stability-line').textContent='ΔCm/Δα ≈ '+formatLoad(slope)+' / градус · '+(slope<-.0006?'ВОССТАНАВЛИВАЮЩАЯ ТЕНДЕНЦИЯ':slope>.0006?'РАСКАЧИВАЮЩАЯ ТЕНДЕНЦИЯ':'СЛАБАЯ РЕАКЦИЯ ПО МОМЕНТУ')+' (условно, без динамики)';
+  }else{
+    $('stability-line').textContent='Для оценки тенденции сохраните опыт, измените угол и сравните Cm при том же числе Маха (не менее 4 единиц времени).';
+  }
+  $('record-load').disabled=!loads || sim.time<.15;
   $('peak').innerHTML=sim.maxPressure.toFixed(2)+' <em>×P₀</em>';
   if(probe){const s=sampleAt(probe);$('probe').textContent=s.solid?'СТЕНА':s.pressure.toFixed(2)+' P₀';}
   else $('probe').textContent='—';
@@ -519,7 +636,7 @@ function loop(now){
       ripples.push({x,y,time:now});lastDemoTime=sim.time;
     }
   }
-  if(now-lastMetrics>110){updateMetrics();drawScope();lastMetrics=now;}
+  if(now-lastMetrics>110){updateMetrics();drawScope();drawCpChart();lastMetrics=now;}
   render(now);
 }
 document.addEventListener('visibilitychange',()=>{lastFrame=0;accumulator=0;if(document.hidden&&audioCtx?.state==='running')audioCtx.suspend().catch(()=>{});});
@@ -571,7 +688,7 @@ document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',(
 }));
 document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{
   if(state.preset===b.dataset.preset)return;
-  state.preset=b.dataset.preset;probe=null;armingSensor=null;rebuildGeometry();resetGas(true);persist();refreshControls();drawScope();toast('КАМЕРА: '+TITLES[state.preset]);
+  state.preset=b.dataset.preset;probe=null;armingSensor=null;compareIndex=-1;rebuildGeometry();resetGas(true);persist();refreshControls();drawScope();drawCpChart();renderRecords();toast('КАМЕРА: '+TITLES[state.preset]);
 }));
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{
   state.view=b.dataset.view;persist();refreshControls();drawScope();
@@ -591,6 +708,36 @@ $('flow-mach').addEventListener('change',e=>{
 });
 $('streamlines').addEventListener('click',()=>{
   state.streamlines=!state.streamlines;persist();refreshControls();render();
+});
+$('attack-angle').addEventListener('input',e=>{
+  const degrees=+e.target.value;
+  $('attack-angle-value').textContent=(degrees>=0?'+':'')+degrees+'°';
+});
+$('attack-angle').addEventListener('change',e=>{
+  state.angle=Math.round(+e.target.value);persist();
+  if(!['airfoil','wedge'].includes(state.preset))return;
+  rebuildGeometry();resetGas(false);refreshControls();drawCpChart();render();
+  toast('УГОЛ АТАКИ: '+(state.angle>=0?'+':'')+state.angle+'° · НОВЫЙ ПРОГОН');
+});
+$('record-load').addEventListener('click',()=>{
+  const r=sim?.aeroForces();if(!r||sim.time<.15)return;
+  state.records.push({type:r.type,angle:r.incidence,mach:r.mach,time:r.time,
+    cd:r.cd,cl:r.cl,cm:r.cm,upper:r.upper,lower:r.lower});
+  if(state.records.length>4)state.records.shift();
+  compareIndex=state.records.length-1;
+  persist();refreshControls();renderRecords();drawCpChart();
+  toast('ЗАМЕР СОХРАНЁН · '+state.records.length+'/4');
+});
+$('clear-loads').addEventListener('click',()=>{
+  if(!state.records.length)return;
+  if(!window.confirm('Удалить все сохранённые замеры аэродинамики?'))return;
+  state.records=[];compareIndex=-1;persist();refreshControls();renderRecords();drawCpChart();toast('СОХРАНЁННЫЕ ЗАМЕРЫ ОЧИЩЕНЫ');
+});
+$('record-list').addEventListener('click',e=>{
+  const button=e.target.closest('button[data-record]');if(!button)return;
+  const index=Number(button.dataset.record);
+  compareIndex=compareIndex===index?-1:index;
+  renderRecords();drawCpChart();
 });
 $('flow-restart').addEventListener('click',()=>{
   if(!FLOW_PRESETS.has(state.preset))return;
@@ -633,7 +780,7 @@ $('confirm-remove').addEventListener('click',()=>{
   state.edits[state.preset]=[];dialog.hidden=true;rebuildGeometry();persist();toast('ПРАВКИ КАМЕРЫ УДАЛЕНЫ');
 });
 $('export').addEventListener('click',()=>{
-  const payload={format:'shock-lab-v1',exportedAt:new Date().toISOString(),experiment:{preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,streamlines:state.streamlines,sensors:trace.sensors,sound:state.sound,edits:state.edits}};
+  const payload={format:'shock-lab-v1',exportedAt:new Date().toISOString(),experiment:{preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,flowMach:state.flowMach,angle:state.angle,records:state.records,streamlines:state.streamlines,sensors:trace.sensors,sound:state.sound,edits:state.edits}};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='shock-'+state.preset+'-'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
@@ -646,7 +793,7 @@ $('import-file').addEventListener('change',async e=>{
   try{
     const parsed=JSON.parse(await file.text());
     if(parsed.format!=='shock-lab-v1'||!parsed.experiment||!applyData(parsed.experiment))throw new Error('bad format');
-    trace.setSensors(state.sensors);probe=null;refreshControls();rebuildGeometry();resetGas(true);persist();drawScope();toast('ЭКСПЕРИМЕНТ ВОССТАНОВЛЕН');
+    trace.setSensors(state.sensors);compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);persist();drawScope();drawCpChart();renderRecords();toast('ЭКСПЕРИМЕНТ ВОССТАНОВЛЕН');
   }catch{toast('НЕВЕРНЫЙ ФОРМАТ ФАЙЛА');}
 });
 document.addEventListener('keydown',ev=>{
@@ -660,9 +807,11 @@ document.addEventListener('keydown',ev=>{
   if(ev.key==='Enter'&&document.activeElement===canvas)addPulse({x:.22,y:.5});
 });
 createWorkshopMode({
-  appName:'SHOCK',version:'1.2.0',cachePrefix:'shock-lab-',storageNamespace:'pocket-works:shock-lab',
-  onReset(){try{localStorage.removeItem(KEY)}catch{}Object.assign(state,DEFAULTS());trace.setSensors(state.sensors);armingSensor=null;probe=null;refreshControls();rebuildGeometry();resetGas(true);drawScope();toast('НАСТРОЙКИ И ПРАВКИ СБРОШЕНЫ');}
+  appName:'SHOCK',version:'1.3.0',cachePrefix:'shock-lab-',storageNamespace:'pocket-works:shock-lab',
+  onReset(){try{localStorage.removeItem(KEY)}catch{}Object.assign(state,DEFAULTS());trace.setSensors(state.sensors);armingSensor=null;compareIndex=-1;probe=null;refreshControls();rebuildGeometry();resetGas(true);drawScope();drawCpChart();renderRecords();toast('НАСТРОЙКИ И ПРАВКИ СБРОШЕНЫ');}
 });
 refreshControls();
 resizeField();
 drawScope();
+renderRecords();
+drawCpChart();
