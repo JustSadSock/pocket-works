@@ -279,7 +279,6 @@ export function createChronologyAtlas(canvas,{onOpen,onAction,onDirty}={}){
   if(!clearArmed){clearArmed=true;update();return;}
   log=[];clearArmed=false;save();update();onAction?.('mount');
  });
- recompute();
  return {state,setActive,configure,trigger:verify,reset,draw,update,
   get snapshot(){return {params:{...state},certified,selected:result,
    curve:curve.map(p=>({...p})),log:comparePoints(log),
