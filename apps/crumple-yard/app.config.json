@@ -4,11 +4,11 @@
   "name": "CRUMPLE // YARD",
   "shortName": "CRUMPLE",
   "description": "Портретная 3D-игра о физически рассчитываемых автомобильных авариях: Rapier-контакты, накопительные повреждения, деформация кузова и механические отказы.",
-  "version": "1.2.0",
-  "releaseDate": "2026-10-18",
-  "releaseDateTime": "2026-10-18T20:38:00Z",
+  "version": "1.2.1",
+  "releaseDate": "2026-10-19",
+  "releaseDateTime": "2026-10-19T11:31:06Z",
   "changelog": [
-    "Фиксированное направление 3D-камеры по умолчанию; переключение погонной камеры в гараже и паузе сохраняется между запусками."
+    "Игра находится в каталоге по обычному запросу Crumple Yard без символов //; добавлены русские поисковые названия."
   ],
   "status": "active",
   "preset": "vite",
@@ -17,7 +17,7 @@
   "backgroundColor": "#c9c6bb",
   "themeColor": "#c9c6bb",
   "orientation": "portrait",
-  "cacheName": "crumple-yard-v1.2.0",
+  "cacheName": "crumple-yard-v1.2.1",
   "storageNamespace": "pocket-works:crumple-yard",
   "tags": [
     "PWA",
@@ -33,7 +33,10 @@
     "portrait",
     "mobile",
     "traffic",
-    "adaptive-quality"
+    "adaptive-quality",
+    "Crumple Yard",
+    "Крампл Ярд",
+    "Крампл"
   ],
   "order": 166
 }
