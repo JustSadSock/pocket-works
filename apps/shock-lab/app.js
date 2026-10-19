@@ -18,7 +18,7 @@ const raster=document.createElement('canvas'), rg=raster.getContext('2d',{alpha:
 const runBtn=$('run'), dialog=$('dialog');
 let sim, image, pointer=null, probe=null, ripples=[],toastTimer=null, lastFrame=0, accumulator=0;
 let stageW=0,stageH=0, paintW=0,paintH=0,dpr=1, active=true, audioCtx=null,lastPulseSound=0, audioVoiceCount=0;
-let hintVisible=true, lastMetrics=0;
+let hintVisible=true, lastMetrics=0, lastDemoTime=0;
 
 function normalizeEdits(edits){
   const result={};
@@ -93,6 +93,7 @@ function resetGas(withStart=false){
   if(!sim)return;
   sim.resetGas();
   ripples=[];
+  lastDemoTime=0;
   if(withStart){
     const x=state.preset==='reflector'?.18:state.preset==='slits'?.17:state.preset==='channel'?.18:.13;
     sim.pulse(sim.nx*x,sim.ny*.50,state.power,clamp(Math.min(sim.nx,sim.ny)*.037,2.3,4.0));
@@ -188,14 +189,14 @@ function palette(t,points){
 function drawPhysics(){
   if(!sim)return;
   const W=sim.nx,H=sim.ny,solid=sim.solid,U=sim.U,d=image.data;
-  const hot=[[17,34,40],[75,61,48],[162,95,47],[247,176,89],[255,238,174]];
-  const cold=[[18,34,40],[27,77,100],[51,147,176],[132,205,214]];
+  const hot=[[17,34,40],[109,72,44],[198,114,50],[255,185,94],[255,242,183]];
+  const cold=[[18,34,40],[34,107,132],[73,184,201],[156,231,232]];
   for(let y=0;y<H;y++){
     for(let x=0;x<W;x++){
       const i=y*W+x,k=i*4,r=k;
       if(solid[i]){
         const edge=x===0||x===W-1||y===0||y===H-1||!solid[i-1]||!solid[i+1]||!solid[i-W]||!solid[i+W];
-        d[r]=edge?205:54;d[r+1]=edge?180:76;d[r+2]=edge?132:78;d[r+3]=255;continue;
+        d[r]=edge?180:52;d[r+1]=edge?158:78;d[r+2]=edge?124:80;d[r+3]=255;continue;
       }
       const rho=Math.max(.025,U[k]),vx=U[k+1]/rho,vy=U[k+2]/rho;
       const p=Math.max(.025,.4*(U[k+3]-.5*rho*(vx*vx+vy*vy)));
@@ -209,8 +210,8 @@ function drawPhysics(){
         value=Math.min(7,grad*6) * (p>=1?1:-1);
       }
       let color;
-      if(value>=0){const t=Math.log1p(Math.min(24,value)*1.8)/Math.log1p(24*1.8);color=palette(t,hot);}
-      else {const t=clamp(-value*1.4,0,1);color=palette(t,cold);}
+      if(value>=0){const t=clamp(Math.log1p(Math.min(24,value)*2.5)/Math.log1p(4.5),0,1);color=palette(t,hot);}
+      else {const t=clamp(Math.sqrt(-value*1.6),0,1);color=palette(t,cold);}
       // Thin isolines follow the actual pressure field; no animated fake wavefront.
       if(state.view==='pressure'&&Math.abs(value)>.05){
         const contour=Math.abs((Math.log1p(Math.abs(value))*7)%1-.5);
@@ -271,6 +272,11 @@ function loop(now){
     let executed=0;
     while(accumulator>=1&&executed<9){sim.step();accumulator-=1;executed++;}
     if(executed===9)accumulator=0;
+    if(hintVisible && sim.time-lastDemoTime>3.7){
+      const x=sim.nx*.19,y=sim.ny*.5;
+      sim.pulse(x,y,state.power*.85,clamp(Math.min(sim.nx,sim.ny)*.037,2.5,4.2));
+      ripples.push({x,y,time:now});lastDemoTime=sim.time;
+    }
   }
   if(now-lastMetrics>110){updateMetrics();lastMetrics=now;}
   render(now);
