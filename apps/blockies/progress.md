@@ -7,3 +7,5 @@ Source game retained. Extracted the original falling-block engine into an isolat
 Пользователь остановил дальнейшую полировку и разрешил перенос с известными проблемами. См. KNOWN_ISSUES.md; не тратить следующий запуск на повтор уже перечисленных проверок.
 
 2026-10-19 (v0.1.1 candidate): complete scoped static audit; fixes in game.js for RAF lifecycle, visible background pause, held-key release, online ownership of touch/gamepads, no phantom local online restart, server-authoritative lobby ready UI, HTML-safe nicknames and disconnect feedback. Added ROADMAP.md and Playwright regression scenarios. Server engine untouched. Browser/CI and true two-client validation remain release blockers.
+
+2026-10-19 (v0.1.2 candidate): PocketNet v2 stable ownership slots while the round is active, explicit unanimous server-side rematch state machine, preserving teammates' locked blocks after deliberate leave, reconnect seat retention through PocketNet, and UI vote progress. New board tests and Playwright result/vote regression added. Still pending: browser CI, true multi-browser resilience under latency, autonomous server tick and disconnected-seat grace.
