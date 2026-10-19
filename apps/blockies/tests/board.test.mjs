@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 const source=(await fs.readFile(new URL('../server/module.ts',import.meta.url),'utf8'))
- .replace('../../../apps/blockies/engine-core-v1.js',new URL('../engine-core-v1.js',import.meta.url).href);
+ .replace('../../../apps/blockies/engine-core-v1.js',new URL('../engine-core-v1.js',import.meta.url).href)
+ .replace('../../../apps/blockies/player-core-v1.js',new URL('../player-core-v1.js',import.meta.url).href);
 const {default:game}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const a={id:'a',name:'A'},b={id:'b',name:'B'};
 function start(players=[a]){let state=game.createRoom({player:players[0]}).state;for(const player of players.slice(1))state=game.onJoin({state,player}).state;for(const player of players)state=game.onMessage({state,player,payload:{type:'ready'}}).state;return state;}
