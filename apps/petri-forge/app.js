@@ -316,134 +316,7 @@ document.addEventListener('keydown', e=>{
     else if(k==='y'){ e.preventDefault(); redo(); }
     else if(k==='s'){ e.preventDefault(); saveBtn.onclick(); }
     else if(k==='l'){ e.preventDefault(); 
-/* ===================== Experiment controls ===================== */
-$('makeScenario').onclick=()=>{
-  if(training)return;
-  stopReplay();commitOperation();
-  const chosen=$('scenarioSelect').value;
-  if(chosen==='custom'){status('Нарисованный мир сохранён в редакторе');return;}
-  const generated=createScenario(chosen,Number($('worldSeed').value)||41);
-  env.setScene(generated);spawn=generated.spawn;goal=generated.goal;
-  undoStack=[];redoStack=[];heatData=[];lastBest=null;lastWorst=null;
-  $('bestReplay').disabled=true;$('worstReplay').disabled=true;
-  view={x:0,y:0,scale:1};zoomSel.value='1';redraw();
-  status('Испытание построено: '+$('scenarioSelect').selectedOptions[0].textContent);
-};
-$('trainBtn').onclick=()=>{
-  if(training)return;
-  stopReplay();running=false;pendingAction=false;
-  playBtn.textContent='▶ Наблюдать';
-  if(agentSelect.value==='random'){status('Для обучения выберите Q-learning');return;}
-  try{
-    const scene=validateScene(sceneNow()),episodes=Number($('episodeCount').value);
-    $('metricEpisodes').textContent='0';$('metricSuccess').textContent='—';$('metricReward').textContent='—';$('progressFill').style.width='0%';
-    historyData=[];heatData=[];drawLearningChart();lastBest=null;lastWorst=null;
-    $('bestReplay').disabled=true;$('worstReplay').disabled=true;
-    controlsEnabled(true);
-    worker.postMessage({type:'train',payload:{scene,episodes,seed:Number($('worldSeed').value)||41,maxSteps:320}});
-  }catch(error){controlsEnabled(false);status('Нельзя обучать: '+error.message);}
-};
-$('stopTrain').onclick=()=>{if(training)worker.postMessage({type:'stop'});};
-$('evaluateBtn').onclick=()=>{
-  if(training)return;
-  try{
-    const scene=validateScene(sceneNow());
-    status('Идёт независимая оценка...');
-    worker.postMessage({type:'evaluate',payload:{scene,seed:9101,scenarioId:$('scenarioSelect').value==='custom'?'corridor':$('scenarioSelect').value}});
-  }catch(error){status('Ошибка проверки: '+error.message);}
-};
-function beginReplay(candidate){
-  if(training||!candidate?.trace?.length)return;
-  stopReplay();running=false;playBtn.textContent='▶ Наблюдать';
-  replayData=candidate;replayIndex=0;redraw();
-  $('replayInfo').textContent='Эпизод '+(candidate.episode||'тест')+' · '+candidate.trace.length+' кадров · '+(candidate.success?'Цель достигнута':'Цель не достигнута')+'. Нажмите ещё раз для остановки.';
-  replayTimer=setInterval(()=>{
-    if(!replayData)return;
-    replayIndex=Math.min(replayData.trace.length-1,replayIndex+1);
-    redraw();
-    if(replayIndex>=replayData.trace.length-1){clearInterval(replayTimer);replayTimer=null;status('Повтор завершён');}
-  },45);
-}
-$('bestReplay').onclick=()=>{if(replayTimer!==null){stopReplay();redraw();}else beginReplay(lastBest);};
-$('worstReplay').onclick=()=>{if(replayTimer!==null){stopReplay();redraw();}else beginReplay(lastWorst);};
-$('heatToggle').onchange=redraw;
-async function refreshLibrary(){
-  const select=$('modelSelect'),selected=select.value;
-  try{
-    const records=await listModels();select.replaceChildren();
-    if(!records.length){const option=document.createElement('option');option.value='';option.textContent='Нет сохранённых моделей';select.append(option);}
-    for(const item of records){const option=document.createElement('option');option.value=item.id;option.textContent=item.name+' · '+(item.states||0)+' состояний';select.append(option);}
-    if(records.some(m=>m.id===selected))select.value=selected;
-  }catch(error){status('Библиотека недоступна: '+error.message);}
-}
-const askSnapshot=handler=>{
-  if(snapshotRequest||training){status('Мозг занят; завершите текущую операцию');return;}
-  snapshotRequest=handler;worker.postMessage({type:'snapshot'});
-};
-$('saveBrain').onclick=()=>askSnapshot(async snapshot=>{
-  const name=$('modelName').value.trim()||'Мой агент',id='model-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6);
-  try{await saveModel({id,name,kind:snapshot.type,snapshot,states:snapshot.q?.length||0});await refreshLibrary();$('modelSelect').value=id;status('Мозг сохранён: '+name);}
-  catch(error){status('Не удалось сохранить: '+error.message);}
-});
-$('loadBrain').onclick=async()=>{
-  if(training)return;
-  const id=$('modelSelect').value;if(!id){status('Выберите сохранённую модель');return;}
-  try{
-    const item=await loadModel(id);if(!item)throw Error('Модель не найдена');
-    stopReplay();agentSelect.value=item.snapshot.type==='random'?'random':'qlearning';
-    loadAgent(agentSelect.value,item.snapshot);$('modelName').value=item.name;
-    status('Модель загружена: '+item.name);
-  }catch(error){status('Не удалось загрузить: '+error.message);}
-};
-$('deleteBrain').onclick=async()=>{
-  const id=$('modelSelect').value;if(!id)return;
-  const option=$('modelSelect').selectedOptions[0];
-  if(!confirm('Удалить модель «'+option.textContent+'» без возможности восстановления?'))return;
-  try{await deleteModel(id);await refreshLibrary();status('Модель удалена');}catch(error){status('Не удалось удалить: '+error.message);}
-};
-$('exportBrain').onclick=()=>askSnapshot(snapshot=>{
-  try{
-    const data={format:'petri-forge-agent',version:1,name:$('modelName').value.slice(0,64),snapshot};
-    const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
-    const link=document.createElement('a');link.href=url;link.download='petri-forge-agent.json';document.body.append(link);link.click();link.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1000);status('Модель экспортирована');
-  }catch(error){status('Ошибка экспорта: '+error.message);}
-});
-$('importBrain').onchange=async event=>{
-  const file=event.target.files?.[0];event.target.value='';if(!file)return;
-  if(file.size>10_000_000){status('Файл слишком большой (макс. 10 МБ)');return;}
-  try{
-    const data=JSON.parse(await file.text());
-    if(data?.format!=='petri-forge-agent'||data.version!==1||!data.snapshot)throw Error('Несовместимый файл');
-    const kind=data.snapshot.type;
-    if(!['qlearning','random'].includes(kind))throw Error('Алгоритм не поддерживается');
-    if(kind==='qlearning'){const validator=new QAgent(1);validator.load(data.snapshot);}
-    else if(data.snapshot.version!==1)throw Error('Версия модели не поддерживается');
-    const name=String(data.name||'Импортированный мозг').slice(0,64);
-    // Validate the checkpoint in the Worker before saving it.
-    stopReplay();agentSelect.value=kind;loadAgent(kind,data.snapshot);
-    const id='import-'+Date.now().toString(36);
-    await saveModel({id,name,kind,snapshot:data.snapshot,states:data.snapshot.q?.length||0});
-    await refreshLibrary();$('modelSelect').value=id;$('modelName').value=name;status('Модель импортирована: '+name);
-  }catch(error){status('Не удалось импортировать: '+error.message);}
-};
-drawLearningChart();
-try{
-  if(localStorage.getItem('pocket-works:petri-forge:scene'))loadBtn.onclick();
-  else{
-    const initial=createScenario('corridor',41);
-    env.setScene(initial);spawn=initial.spawn;goal=initial.goal;
-    $('scenarioSelect').value='corridor';redraw();
-    status('Первый маршрут готов. Запустите обучение.');
-  }
-}catch(error){status('Ошибка открытия сцены: '+error.message);}
-void refreshLibrary();
-window.render_game_to_text=()=>JSON.stringify({
-  coordinates:'origin top-left; x right, y down; cells',
-  running,training,done:env.done,agent:{x:env.ax,y:env.ay,algorithm:agentSelect.value},
-  spawn,goal,steps:env.steps,reward:env.totalReward,
-  history:historyData.slice(-6),replay:replayData?{cursor:replayIndex,total:replayData.trace.length}:null,grid:env.grid
-});
+loadBtn.onclick();
  }
     return;
   }
@@ -584,4 +457,132 @@ document.querySelector('#generate').onchange=e=>{const v=e.target.value;if(v)han
 document.addEventListener('visibilitychange',()=>{if(document.hidden){running=false;playBtn.textContent='▶ Наблюдать';stopReplay();}});
 window.render_game_to_text=()=>JSON.stringify({coordinates:'origin top-left; x right, y down; cells',running,done:env.done,agent:{x:env.ax,y:env.ay,algorithm:agentSelect.value},spawn,goal,steps:env.steps,reward:env.totalReward,tool,grid:env.grid});
 window.advanceTime=async(ms)=>{for(let i=0;i<Math.min(120,Math.round(ms/16.667));i++){if(!running)break;requestAction();await new Promise(r=>setTimeout(r,0));}redraw();};
-loadBtn.onclick();
+
+/* ===================== Experiment controls ===================== */
+$('makeScenario').onclick=()=>{
+  if(training)return;
+  stopReplay();commitOperation();
+  const chosen=$('scenarioSelect').value;
+  if(chosen==='custom'){status('Нарисованный мир сохранён в редакторе');return;}
+  const generated=createScenario(chosen,Number($('worldSeed').value)||41);
+  env.setScene(generated);spawn=generated.spawn;goal=generated.goal;
+  undoStack=[];redoStack=[];heatData=[];lastBest=null;lastWorst=null;
+  $('bestReplay').disabled=true;$('worstReplay').disabled=true;
+  view={x:0,y:0,scale:1};zoomSel.value='1';redraw();
+  status('Испытание построено: '+$('scenarioSelect').selectedOptions[0].textContent);
+};
+$('trainBtn').onclick=()=>{
+  if(training)return;
+  stopReplay();running=false;pendingAction=false;
+  playBtn.textContent='▶ Наблюдать';
+  if(agentSelect.value==='random'){status('Для обучения выберите Q-learning');return;}
+  try{
+    const scene=validateScene(sceneNow()),episodes=Number($('episodeCount').value);
+    $('metricEpisodes').textContent='0';$('metricSuccess').textContent='—';$('metricReward').textContent='—';$('progressFill').style.width='0%';
+    historyData=[];heatData=[];drawLearningChart();lastBest=null;lastWorst=null;
+    $('bestReplay').disabled=true;$('worstReplay').disabled=true;
+    controlsEnabled(true);
+    worker.postMessage({type:'train',payload:{scene,episodes,seed:Number($('worldSeed').value)||41,maxSteps:320}});
+  }catch(error){controlsEnabled(false);status('Нельзя обучать: '+error.message);}
+};
+$('stopTrain').onclick=()=>{if(training)worker.postMessage({type:'stop'});};
+$('evaluateBtn').onclick=()=>{
+  if(training)return;
+  try{
+    const scene=validateScene(sceneNow());
+    status('Идёт независимая оценка...');
+    worker.postMessage({type:'evaluate',payload:{scene,seed:9101,scenarioId:$('scenarioSelect').value==='custom'?'corridor':$('scenarioSelect').value}});
+  }catch(error){status('Ошибка проверки: '+error.message);}
+};
+function beginReplay(candidate){
+  if(training||!candidate?.trace?.length)return;
+  stopReplay();running=false;playBtn.textContent='▶ Наблюдать';
+  replayData=candidate;replayIndex=0;redraw();
+  $('replayInfo').textContent='Эпизод '+(candidate.episode||'тест')+' · '+candidate.trace.length+' кадров · '+(candidate.success?'Цель достигнута':'Цель не достигнута')+'. Нажмите ещё раз для остановки.';
+  replayTimer=setInterval(()=>{
+    if(!replayData)return;
+    replayIndex=Math.min(replayData.trace.length-1,replayIndex+1);
+    redraw();
+    if(replayIndex>=replayData.trace.length-1){clearInterval(replayTimer);replayTimer=null;status('Повтор завершён');}
+  },45);
+}
+$('bestReplay').onclick=()=>{if(replayTimer!==null){stopReplay();redraw();}else beginReplay(lastBest);};
+$('worstReplay').onclick=()=>{if(replayTimer!==null){stopReplay();redraw();}else beginReplay(lastWorst);};
+$('heatToggle').onchange=redraw;
+async function refreshLibrary(){
+  const select=$('modelSelect'),selected=select.value;
+  try{
+    const records=await listModels();select.replaceChildren();
+    if(!records.length){const option=document.createElement('option');option.value='';option.textContent='Нет сохранённых моделей';select.append(option);}
+    for(const item of records){const option=document.createElement('option');option.value=item.id;option.textContent=item.name+' · '+(item.states||0)+' состояний';select.append(option);}
+    if(records.some(m=>m.id===selected))select.value=selected;
+  }catch(error){status('Библиотека недоступна: '+error.message);}
+}
+const askSnapshot=handler=>{
+  if(snapshotRequest||training){status('Мозг занят; завершите текущую операцию');return;}
+  snapshotRequest=handler;worker.postMessage({type:'snapshot'});
+};
+$('saveBrain').onclick=()=>askSnapshot(async snapshot=>{
+  const name=$('modelName').value.trim()||'Мой агент',id='model-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6);
+  try{await saveModel({id,name,kind:snapshot.type,snapshot,states:snapshot.q?.length||0});await refreshLibrary();$('modelSelect').value=id;status('Мозг сохранён: '+name);}
+  catch(error){status('Не удалось сохранить: '+error.message);}
+});
+$('loadBrain').onclick=async()=>{
+  if(training)return;
+  const id=$('modelSelect').value;if(!id){status('Выберите сохранённую модель');return;}
+  try{
+    const item=await loadModel(id);if(!item)throw Error('Модель не найдена');
+    stopReplay();agentSelect.value=item.snapshot.type==='random'?'random':'qlearning';
+    loadAgent(agentSelect.value,item.snapshot);$('modelName').value=item.name;
+    status('Модель загружена: '+item.name);
+  }catch(error){status('Не удалось загрузить: '+error.message);}
+};
+$('deleteBrain').onclick=async()=>{
+  const id=$('modelSelect').value;if(!id)return;
+  const option=$('modelSelect').selectedOptions[0];
+  if(!confirm('Удалить модель «'+option.textContent+'» без возможности восстановления?'))return;
+  try{await deleteModel(id);await refreshLibrary();status('Модель удалена');}catch(error){status('Не удалось удалить: '+error.message);}
+};
+$('exportBrain').onclick=()=>askSnapshot(snapshot=>{
+  try{
+    const data={format:'petri-forge-agent',version:1,name:$('modelName').value.slice(0,64),snapshot};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
+    const link=document.createElement('a');link.href=url;link.download='petri-forge-agent.json';document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);status('Модель экспортирована');
+  }catch(error){status('Ошибка экспорта: '+error.message);}
+});
+$('importBrain').onchange=async event=>{
+  const file=event.target.files?.[0];event.target.value='';if(!file)return;
+  if(file.size>10_000_000){status('Файл слишком большой (макс. 10 МБ)');return;}
+  try{
+    const data=JSON.parse(await file.text());
+    if(data?.format!=='petri-forge-agent'||data.version!==1||!data.snapshot)throw Error('Несовместимый файл');
+    const kind=data.snapshot.type;
+    if(!['qlearning','random'].includes(kind))throw Error('Алгоритм не поддерживается');
+    if(kind==='qlearning'){const validator=new QAgent(1);validator.load(data.snapshot);}
+    else if(data.snapshot.version!==1)throw Error('Версия модели не поддерживается');
+    const name=String(data.name||'Импортированный мозг').slice(0,64);
+    // Validate the checkpoint in the Worker before saving it.
+    stopReplay();agentSelect.value=kind;loadAgent(kind,data.snapshot);
+    const id='import-'+Date.now().toString(36);
+    await saveModel({id,name,kind,snapshot:data.snapshot,states:data.snapshot.q?.length||0});
+    await refreshLibrary();$('modelSelect').value=id;$('modelName').value=name;status('Модель импортирована: '+name);
+  }catch(error){status('Не удалось импортировать: '+error.message);}
+};
+drawLearningChart();
+try{
+  if(localStorage.getItem('pocket-works:petri-forge:scene'))loadBtn.onclick();
+  else{
+    const initial=createScenario('corridor',41);
+    env.setScene(initial);spawn=initial.spawn;goal=initial.goal;
+    $('scenarioSelect').value='corridor';redraw();
+    status('Первый маршрут готов. Запустите обучение.');
+  }
+}catch(error){status('Ошибка открытия сцены: '+error.message);}
+void refreshLibrary();
+window.render_game_to_text=()=>JSON.stringify({
+  coordinates:'origin top-left; x right, y down; cells',
+  running,training,done:env.done,agent:{x:env.ax,y:env.ay,algorithm:agentSelect.value},
+  spawn,goal,steps:env.steps,reward:env.totalReward,
+  history:historyData.slice(-6),replay:replayData?{cursor:replayIndex,total:replayData.trace.length}:null,grid:env.grid
+});
