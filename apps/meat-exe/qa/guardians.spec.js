@@ -106,3 +106,30 @@ test('walking up to a physical fork and pressing X presets the actual surgery ro
  expect(saved.routes.active).toBe(destination.id);
  expect(saved.routes.marker).toBe(destination.id);
 });
+
+
+test('gastric organ now culminates in its real Warden, with telegraphed charge and saved boss state',async({page})=>{
+ test.setTimeout(95000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/meat-exe/');
+ await page.evaluate(key=>localStorage.setItem(key,JSON.stringify({
+   v:5,seed:413,x:3,z:3,wave:2,hp:100,maxHp:100,
+   pulseMax:3,pulse:3,pulseSpawned:10,toSpawn:0,spawnClock:30,
+   guardianPending:2,guardianDefeated:[1],enemies:[],pickups:[],ruptured:[],
+   immune:{heat:0,cooldown:30,warning:0,pending:'',responses:0,guardianStages:[],quiet:0}
+ })),SESSION);
+ await page.reload();await page.locator('#resumeSaved').click();
+ await expect.poll(()=>page.evaluate(()=>window.__MEAT_QA__().guardians.active[0]?.type),
+  {timeout:25000}).toBe('warden');
+ const qa=await page.evaluate(()=>window.__MEAT_QA__());
+ expect(qa.guardians.active[0].maxHp).toBe(245);
+ expect(qa.guardians.pending).toBe(0);
+ await expect(page.locator('#guardianName')).toHaveText('ЖЕЛЧНЫЙ ПРИВРАТНИК');
+ await test.info().attach('gastric-warden',{body:await page.screenshot(),contentType:'image/png'});
+ await page.keyboard.press('Escape');await expect(page.locator('#pauseMenu')).toBeVisible();
+ await page.locator('#menuPause').click();await page.reload();await page.locator('#resumeSaved').click();
+ const restored=await page.evaluate(()=>window.__MEAT_QA__());
+ expect(restored.guardians.active[0].type).toBe('warden');
+ expect(restored.guardians.active[0].hp).toBeGreaterThan(0);
+ expect(errors).toEqual([]);
+});

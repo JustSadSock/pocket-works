@@ -4,11 +4,11 @@ import {GUARDIAN_TYPES,guardianForWave,isGuardian,guardianReady,guardianSpawnRes
  guardianDamage,guardianAction,sanitizeGuardianPending} from '../guardians.js';
 import {initialEnemyIntent,advanceEnemyIntent,interruptIntent} from '../ecology.js';
 import {validateRun} from '../stability.js';
-test('three mutually distinct organ guardians and no duplicate wave spawns',()=>{
- assert.deepEqual([1,3,4].map(w=>guardianForWave(w).type),['clot','ossuary','synapse']);
- assert.equal(new Set(GUARDIAN_TYPES).size,3);
- assert.equal(guardianForWave(2),null);assert.equal(guardianForWave(5),null);
- for(const w of [1,3,4]){
+test('all four organs have distinct mandatory guardians, without duplicate spawns',()=>{
+ assert.deepEqual([1,2,3,4].map(w=>guardianForWave(w).type),['clot','warden','ossuary','synapse']);
+ assert.equal(new Set(GUARDIAN_TYPES).size,4);
+ assert.equal(guardianForWave(2).hp,245);assert.equal(guardianForWave(5),null);
+ for(const w of [1,2,3,4]){
   const state={wave:w,guardianPending:w,toSpawn:0,enemies:[]};
   assert.ok(guardianReady(state));
   assert.equal(guardianSpawnResolved(state,false),false);
@@ -58,8 +58,8 @@ test('old saves remain unchanged; v1.8.2 guardian queue and boss types survive m
  assert.equal(validateRun({...original,guardianDefeated:[3]}).guardianPending,0);
  assert.equal(validateRun({...original,guardianPending:999}).guardianPending,0);
  assert.equal(sanitizeGuardianPending(3,3),3);
- assert.equal(sanitizeGuardianPending(2,2),0);
+ assert.equal(sanitizeGuardianPending(2,2),2);
  const old=validateRun({v:4,seed:413,x:3,z:3,wave:3,hp:100});
  assert.equal(old.guardianPending,0);assert.deepEqual(old.guardianDefeated,[]);
- assert.equal(isGuardian('warden'),false);
+ assert.equal(isGuardian('warden'),true);
 });
