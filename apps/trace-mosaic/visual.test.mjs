@@ -83,3 +83,35 @@ test('same-round network updates patch the table rather than replacing the whole
   assert.ok(!renderPart.slice(renderPart.indexOf('function patchGame()')).includes('app.innerHTML = renderGame()'));
   assert.match(renderPart,/el\.dataset\.artLoaded !== '1'/);
 });
+
+test('late artwork preparation hydrates existing tile nodes without rebuilding',()=>{
+  const room=roomFor(3);
+  room.game.board[0]=0;
+  room.game.tileLocations[0]={ownerId:'p0',kind:'board',cell:0};
+  const state={room,selfId:'p0',now:Date.now(),drag:null,soundEnabled:false,referenceOpen:false,preparedGame:null};
+  const node=(id='')=>({dataset:{currentTile:id,artLoaded:'0'},style:{backgroundImage:'url("")',setProperty(){}},
+    classList:{toggle(){},remove(){},add(){}},setAttribute(){}});
+  const pieces=Array.from({length:room.game.totalTiles},(_,i)=>node(i===0?'0':''));
+  const slots=room.game.assignments.map(id=>node(String(id)));
+  const inventory={children:slots,querySelectorAll:()=>slots};
+  const trails=pieces.map(()=>node());
+  const root={
+    querySelector:s=>s==='.inventory-grid'?inventory:s==='.trail-svg'?{dataset:{},innerHTML:''}:node(),
+    querySelectorAll:s=>s==='.placed-piece'?pieces:s==='.trail-cell'?trails:[]
+  };
+  const app={querySelector:s=>s==='.game-shell'?root:s==='main.screen'?{insertAdjacentHTML(){}}:null};
+  const from=appSource.indexOf('function patchGame() {');
+  const to=appSource.indexOf('\nfunction renderConnectionBanner()',from);
+  const patch=new Function('state','app','buildTrailMap','renderTrailPaths','renderDragGhost',
+    'renderReferenceOverlay','renderToasts','updateTransientUI','feedback',
+    appSource.slice(from,to)+';return patchGame;'
+  )(state,app,()=>new Map(),()=>'',()=>'',()=>'',()=>'',()=>{},()=>{});
+  const sameElement=pieces[0];
+  patch();
+  assert.equal(sameElement.dataset.artLoaded,'0');
+  state.preparedGame={tiles:Array.from({length:room.game.totalTiles},(_,id)=>({url:'data:image/png;base64,P'+id}))};
+  patch();
+  assert.equal(pieces[0],sameElement);
+  assert.equal(sameElement.dataset.artLoaded,'1');
+  assert.ok(sameElement.style.backgroundImage.includes('data:image/png;base64,P0'));
+});
