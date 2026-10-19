@@ -117,7 +117,23 @@ function showReplay(next){
  $('pkSeek').max=String(Math.max(0,frames.length-1));$('pkSeek').value='0';
  $('pkSeek').disabled=frames.length===0;$('pkPlay').disabled=frames.length===0;
  $('pkOutcome').textContent=next.finished?'ИТОГ '+(next.winner===0?'ПОБЕДА':next.winner===1?'ПОРАЖЕНИЕ':'НИЧЬЯ'):'ЛИМИТ ВРЕМЕНИ · НЕ ЗАВЕРШЁН';
- if(frames.length)paintFrame(frames[0]);else paintIdle();drawLearning();
+ if(frames.length)paintFrame(frames[0]);else window.PetriForgeRuntime=window.PetriForgeRuntime||{};
+window.PetriForgeRuntime.perekos={
+ getModel:async()=>structuredClone(policy),
+ setModel:async snapshot=>{
+  if(busy)throw Error('Завершите обучение перед сменой мага');
+  policy=snapshot&&validatePerekosPolicy(snapshot)?structuredClone(snapshot):createPerekosPolicy(41);
+  send('perekos-load',{policy});
+ },
+ train:()=>{if(busy)return false;$('pkTrain').click();return true;},
+ test:()=>{if(busy)return false;$('pkTest').click();return true;},
+ stop:()=>{$('pkStop').click();},
+ replay:()=>{if(replay?.frames?.length)$('pkPlay').click();else $('pkTest').click();},
+ isBusy:()=>busy,hasReplay:()=>!!replay?.frames?.length,
+ configure:variant=>{$('pkCurriculum').value=variant||'balanced';},
+ batch:count=>{$('pkGenerations').value=String(count);}
+};
+paintIdle();drawLearning();
 }
 function seek(n){
  if(!replay?.frames.length)return;
@@ -156,7 +172,7 @@ async function store(name='Автосохранение',id='perekos-autosave'){
 worker.onmessage=async event=>{
  const d=event.data||{};
  try{
-  if(d.type==='perekos-started'){lock(true,true);learningHistory=[];drawLearning();notify('Тренировка: '+(d.curriculum==='balanced'?'от простого к сложному':d.curriculum==='offense'?'атака':'сильные соперники'));}
+  if(d.type==='perekos-started'){lock(true,true);learningHistory=[];drawLearning();notify('Тренировка: '+(d.curriculum==='balanced'?'от простого к сложному':d.curriculum==='offense'?'атака':'сильные соперники'));window.dispatchEvent(new CustomEvent('petri:progress',{detail:{mode:'perekos',busy:true,text:'Учится выбирать руны и сражаться'}}));}
   else if(d.type==='perekos-progress'){
    $('pkComplete').textContent=d.complete+' / '+d.total;
    $('pkAccepted').textContent=String(d.accepted);
@@ -165,6 +181,7 @@ worker.onmessage=async event=>{
    learningHistory=d.history||[];drawLearning();
    $('pkRoundStats').textContent='Тренировочные победы в раундах: '+Math.round(100*d.roundWinRate)+'%';
    $('pkLeagueSize').textContent='Текущая пара: '+d.rival+' · разница нанесённого урона '+fmt(d.damageMargin);
+   window.dispatchEvent(new CustomEvent('petri:progress',{detail:{mode:'perekos',busy:true,done:d.complete,total:d.total,text:'Бой '+d.complete+' из '+d.total+' поколений'}}));
   }else if(d.type==='perekos-trained'){
    lock(false);policy=d.policy;
    $('pkValidation').textContent='Независимая проверка: '+fmt(d.roundBaseline.fitness)+' → '+fmt(d.roundValidation.fitness)+' очков на раундах. '+(d.rolledBack?'Кандидат ухудшил контрольную оценку — восстановлен исходный мозг.':'Контрольная серия завершена.') ;
@@ -172,13 +189,18 @@ worker.onmessage=async event=>{
    $('pkMatchStats').textContent='Полные матчи: '+d.validation.matchWins+'/'+d.validation.count+' побед, завершено '+Math.round(d.validation.finishRate*100)+'%';
    $('pkLeagueSize').textContent='Архив политик: '+d.leagueSize+' · принятые мутации: '+d.accepted;
    showReplay(d.replay);await store();notify(d.rolledBack?'Контроль обнаружил регрессию; исходный мозг восстановлен':'Обучение завершено. Принято изменений: '+d.accepted);
+   window.dispatchEvent(new CustomEvent('petri:finished',{detail:{mode:'perekos',snapshot:policy,
+    report:{units:d.history?.length||0,before:d.roundBaseline?.fitness??null,after:d.roundValidation?.fitness??null,
+     outcome:d.rolledBack?'reverted':'completed',label:(d.rolledBack?'Откат: контроль обнаружил ухудшение. ':'')+'Раунды: '+d.roundValidation.roundWins+' побед / '+d.roundValidation.roundDraws+' ничьих. Полные матчи: '+d.validation.matchWins+' из '+d.validation.count}}}));
   }else if(d.type==='perekos-stopped'){
    lock(false);policy=d.policy;await store();notify('Тренировка остановлена после '+d.complete+' поколений');
+   window.dispatchEvent(new CustomEvent('petri:finished',{detail:{mode:'perekos',snapshot:policy,
+     report:{units:d.complete||0,outcome:'stopped',label:'Остановлено после '+d.complete+' поколений'}}}));
   }else if(d.type==='perekos-tested'){
    lock(false);policy=d.policy;showReplay(d.replay);
    $('pkValidation').textContent='Контрольный матч: '+d.replay.rounds+' раундов, счёт '+d.replay.score+', руны '+(d.replay.draft.join(' · ')||'нет')+'. '+(d.replay.finished?'Матч завершён.':'Достигнут лимит симуляции.'); 
    $('pkMatchStats').textContent='Матч: '+(d.replay.won?'победа':d.replay.finished?'поражение':'незавершён')+' · нанесено '+fmt(d.replay.dealt)+' · получено '+fmt(d.replay.received);
-   notify('Контрольный бой завершён');
+   notify('Контрольный бой завершён');window.dispatchEvent(new CustomEvent('petri:evaluated',{detail:{mode:'perekos',text:$('pkValidation').textContent}}));
   }else if(d.type==='perekos-tournament'){
    lock(false);$('pkTourney').replaceChildren();
    for(const x of d.table){const row=document.createElement('div');row.className='leader-row';row.textContent=x.style+' · раунды: '+x.wins+' побед, '+x.losses+' поражений, '+x.draws+' ничьих · урон '+fmt(x.damageMargin);$('pkTourney').append(row);}
