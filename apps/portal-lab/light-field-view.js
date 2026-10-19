@@ -99,6 +99,29 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
    if(typeof p[key]==='boolean')state[key]=p[key];
   configure(getMetric());save();
  }
+ function sceneCamera(w,h){
+  // Camera-fit the two finite coordinate domains, not a physical distortion.
+  // At zoom=1 both exteriors fit on portrait phones and wide displays.
+  const base={yaw:state.yaw,pitch:state.pitch,zoom:1};
+  let ex=0,ey=0;
+  for(const name of ['A','B']){
+   const c=FIELD_CENTRES[name];
+   for(const angle of [0,Math.PI/4,Math.PI/2,3*Math.PI/4,Math.PI,5*Math.PI/4,3*Math.PI/2,7*Math.PI/4]){
+    for(const elevation of [-Math.PI/3,0,Math.PI/3]){
+     const r=3.35,point=[
+      c[0]+r*Math.cos(elevation)*Math.cos(angle),
+      c[1]+r*Math.cos(elevation)*Math.sin(angle),
+      c[2]+r*Math.sin(elevation)
+     ];
+     const p=project3D(point,base,w,h);
+     ex=Math.max(ex,Math.abs(p.x-w*.5));
+     ey=Math.max(ey,Math.abs(p.y-h*.51));
+    }
+   }
+  }
+  const fit=Math.min(1.10,(w*.46)/Math.max(ex,1),(h*.40)/Math.max(ey,1));
+  return {yaw:state.yaw,pitch:state.pitch,zoom:state.zoom*fit};
+ }
  function cacheStatic(ctx,w,h){
   const key=[w,h,state.yaw.toFixed(4),state.pitch.toFixed(4),state.zoom.toFixed(4),state.showGrid,state.showConnections,metric.a,metric.shape,metric.shapeWidth].join('|');
   if(staticLayer.key===key&&staticLayer.canvas)return staticLayer.canvas;
@@ -106,7 +129,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
   image.width=Math.ceil(w);image.height=Math.ceil(h);
   const g=image.getContext('2d');
   if(!g){return null}
-  const cam={yaw:state.yaw,pitch:state.pitch,zoom:state.zoom};
+  const cam=sceneCamera(w,h);
   const P=p=>project3D(p,cam,w,h);
   // Concentric spherical areal-coordinate reference shells, each on an
   // INDEPENDENT chart (not a globally embedded spatial manifold).
@@ -155,7 +178,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
   // are deliberately BROKEN at the chart boundary (the visual gap is not a
   // real length or travel time).
   if(field&&state.showRays){
-   const camera={yaw:state.yaw,pitch:state.pitch,zoom:state.zoom};
+   const camera=sceneCamera(w,h);
    for(const item of lightFieldSamples(field,metric,{maxPoints:250})){
     const col=colors[item.index%colors.length];
     let points=[],oldRegion=null;
@@ -174,7 +197,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction}={}){
    // The initial source location is a coordinate marker, not a fake photon.
    const source=state.source;
    const p=project3D(chartPoint(metric,source*metric.a,0,[0,1,0]).position,
-    state,w,h);
+    sceneCamera(w,h),w,h);
    ctx.fillStyle='#f0e7bc';ctx.beginPath();ctx.arc(p.x,p.y,4.3,0,Math.PI*2);ctx.fill();
   }
   label(ctx,'ШОВ / СВЕТОВОЕ ПОЛЕ · 3D',14,24,w<520?10:14,'#e9e7c6','left',760);
