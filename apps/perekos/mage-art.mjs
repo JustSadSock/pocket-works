@@ -27,7 +27,9 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  ctx.translate(Math.round(x+shake-Math.cos(face)*recoil),Math.round(y-Math.sin(face)*recoil+(pose?.still?0:Math.sin(time*(dashing>0?19:9)+(enemy?3:0))*(dashing>0?2.5:1.1))));
  const dir=Math.cos(face);ctx.scale((dir<-.12?-1:1)*scale,scale);ctx.translate(lean,0);
  // Tight shadow and feet establish a stable battle hitbox.
- ctx.fillStyle='#101c1eb8';ctx.beginPath();ctx.ellipse(0,12,17,6,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#0c1c1ab7';ctx.beginPath();
+ ctx.ellipse(0,13,17+(pose?.dash||0)*3,5-(pose?.dash||0),0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#82967c33';ctx.beginPath();ctx.ellipse(-3,12,11,2.5,0,0,Math.PI*2);ctx.fill();
  // Feet stay planted in the world; the torso compresses separately.
  // The heavy stone schools stomp slowly, while the wire family scissoring
  // has a faster gait. These motions NEVER move the authoritative hitbox.
@@ -40,6 +42,18 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  px(leftX,leftY,7,12,'#32463a');px(rightX,rightY,7,12,'#32463a');
  px(leftX-1,leftY+10,9,5,'#1c2a28');px(rightX-1,rightY+10,9,5,'#1c2a28');
  px(leftX-2,leftY+13,11,3,trim);px(rightX-2,rightY+13,11,3,trim);
+ // Boots carry the material of the class instead of universal rectangular
+ // legs. Ground-contact stays fixed even while the shoulders are recoiling.
+ const bootLight=character.school==='stone'?'#9eaf95':character.school==='storm'?'#78beb7':'#b78b69';
+ const bootDark=character.school==='stone'?'#344b3e':character.school==='storm'?'#275c5b':'#583c33';
+ px(leftX-2,leftY+8,10,3,bootDark);px(rightX-1,rightY+8,9,3,bootDark);
+ px(leftX-1,leftY+11,4,2,bootLight);px(rightX+3,rightY+11,4,2,bootLight);
+ if(character.school==='stone'){
+  px(leftX-3,leftY+1,11,4,'#546e5b');px(rightX-2,rightY+1,11,4,'#637c65');
+  px(leftX-2,leftY,6,2,'#b5c09e');px(rightX-1,rightY,6,2,'#bec9a8');
+ }else if(character.school==='storm'){
+  px(leftX-2,leftY+3,3,7,'#67a6a2');px(rightX+7,rightY+3,3,7,'#67aaa7');
+ }
  if(stride>.23){
   px(leftX+2,leftY+2,2,4,'#718071');px(rightX+2,rightY+2,2,4,'#718071');
  }
@@ -119,8 +133,25 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
   px(-7,-16,4,4,'#f0f1de');px(4,-16,4,4,'#f0f1de');
  }
  const skinTone=maskot?.animal==='frog'?'#93bb72':maskot?.animal==='rabbit'?'#ebd2ba':maskot?.animal==='cat'?'#d1ac91':'#d6b395';
- px(-7,-16,14,15,skinTone);
- px(-5,-12,3,3,'#273c34');px(3,-12,3,3,'#273c34');px(-4,-5,8,2,maskot?.animal==='frog'?'#547f55':'#ae7c69');
+ // High-contrast pixel face preserves MASKOT features but reads as a head,
+ // with temple, cheek, nose and chin planes instead of one flat rectangle.
+ px(-8,-15,16,13,'#55443a');px(-7,-17,14,16,skinTone);
+ px(-7,-16,3,13,'#b58e76');px(5,-14,2,11,'#e9c7aa');
+ px(-6,-17,11,3,'#eed1b1');px(-5,-3,10,2,'#b78e77');
+ px(-8,-11,2,5,skinTone);px(7,-10,2,4,'#ab846d');
+ const glance=Math.round((pose?.aimLift||0)*1.2);
+ const shocked=hitFlinch>.3;
+ const eyelid=(!pose?.still&&Math.sin(time*2.3+character.speed*17)>.996)?1:0;
+ const brow=shocked?2:guardPose>.5?-1:0;
+ px(-5,-13+brow,4,2,'#6e5042');px(2,-13+brow,4,2,'#6e5042');
+ if(!eyelid){
+  px(-4,-11,3,3,'#233d37');px(3,-11,3,3,'#233d37');
+  px(-4+Math.max(-1,Math.min(1,glance)),-11,1,1,'#f1ead1');
+  px(3+Math.max(-1,Math.min(1,glance)),-11,1,1,'#f1ead1');
+ }else{px(-5,-10,5,1,'#705747');px(2,-10,5,1,'#705747')}
+ px(0,-9,2,4,'#f3d8ae');px(1,-6,2,1,'#aa806b');
+ px(-4,-4,8,2,shocked?'#513b36':maskot?.animal==='frog'?'#547f55':'#9d6e5f');
+ if(shocked)px(-1,-3,3,2,'#3b3935');
  if(maskot?.face==='glasses'||maskot?.face==='monocle'){
   px(-7,-14,7,6,'#e6dec0');px(-6,-13,5,4,'#32433d');px(1,-14,7,6,trim);px(2,-13,5,4,'#32433d');px(-1,-12,2,2,trim);
  }
