@@ -1,13 +1,14 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { ShockField } from './physics.js';
+import { TraceRecorder, DEFAULT_SENSORS } from './traces.js';
 
 installMobileRuntime();
 
 const KEY = 'shock-lab:experiment:v1';
-const PRESETS = ['reflector','slits','maze','channel','empty'];
-const TITLES = {reflector:'ОТРАЖАТЕЛЬ',slits:'ДВОЙНАЯ ДИФРАКЦИЯ',maze:'ЛАБИРИНТ',channel:'СОПЛО / КАНАЛ',empty:'ЧИСТАЯ КАМЕРА'};
-const DEFAULTS = () => ({preset:'reflector',tool:'pulse',view:'pressure',power:4.5,speed:2,sound:false,edits:{reflector:[],slits:[],maze:[],channel:[],empty:[]}});
+const PRESETS = ['reflector','slits','maze','channel','empty','tube'];
+const TITLES = {reflector:'ОТРАЖАТЕЛЬ',slits:'ДВОЙНАЯ ДИФРАКЦИЯ',maze:'ЛАБИРИНТ',channel:'СОПЛО / КАНАЛ',empty:'ЧИСТАЯ КАМЕРА',tube:'УДАРНАЯ ТРУБА'};
+const DEFAULTS = () => ({preset:'reflector',tool:'pulse',view:'pressure',power:4.5,speed:2,ratio:8,sound:false,sensors:DEFAULT_SENSORS.map(p=>({...p})),edits:{reflector:[],slits:[],maze:[],channel:[],empty:[],tube:[]}});
 const $ = (id) => document.getElementById(id);
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const safeNumber = (v,a,b,fallback) => typeof v === 'number' && Number.isFinite(v) ? clamp(v,a,b) : fallback;
@@ -15,10 +16,10 @@ const state = DEFAULTS();
 const display=$('display'), canvas=$('field'), overlay=$('overlay');
 const g=canvas.getContext('2d',{alpha:false}), over=overlay.getContext('2d');
 const raster=document.createElement('canvas'), rg=raster.getContext('2d',{alpha:false});
-const runBtn=$('run'), dialog=$('dialog');
+const runBtn=$('run'), dialog=$('dialog'), scope=$('scope'), scopeG=scope.getContext('2d');
 let sim, image, pointer=null, probe=null, ripples=[],toastTimer=null, lastFrame=0, accumulator=0;
 let stageW=0,stageH=0, paintW=0,paintH=0,dpr=1, active=true, audioCtx=null,lastPulseSound=0, audioVoiceCount=0;
-let hintVisible=true, lastMetrics=0, lastDemoTime=0;
+let hintVisible=true, lastMetrics=0, lastDemoTime=0, tubeReady=false, armingSensor=null, plotMode='history', lastScope=0;
 
 function normalizeEdits(edits){
   const result={};
@@ -40,21 +41,25 @@ function applyData(input){
   state.power=safeNumber(input.power,.7,10,4.5);
   state.speed=Math.round(safeNumber(input.speed,1,5,2));
   state.sound=!!input.sound;
+  state.ratio=safeNumber(input.ratio,2,16,8);
+  state.sensors=Array.isArray(input.sensors)&&input.sensors.length===2?input.sensors.map((p,i)=>({x:safeNumber(p?.x,0,1,DEFAULT_SENSORS[i].x),y:safeNumber(p?.y,0,1,DEFAULT_SENSORS[i].y)})):DEFAULT_SENSORS.map(p=>({...p}));
   state.edits=normalizeEdits(input.edits);
   return true;
 }
 try{const stored=JSON.parse(localStorage.getItem(KEY)||'null');if(stored)applyData(stored)}catch{/* private mode or corrupt data: use defaults */}
+const trace=new TraceRecorder(state.sensors);
 function persist(){
-  try{localStorage.setItem(KEY,JSON.stringify({preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,sound:state.sound,edits:state.edits}))}catch{/* unavailable quota; simulation stays usable */}
+  try{localStorage.setItem(KEY,JSON.stringify({preset:state.preset,tool:state.tool,view:state.view,power:state.power,speed:state.speed,ratio:state.ratio,sound:state.sound,sensors:trace.sensors,edits:state.edits}))}catch{/* unavailable quota; simulation stays usable */}
 }
 function toast(message){
   const el=$('toast');el.textContent=message;el.classList.add('show');
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),1800);
 }
 function setActive(value){
+  if(value&&tubeReady)releaseTube();
   active=value;
   $('run-symbol').textContent=active?'Ⅱ':'▷';
-  $('run-text').textContent=active?'ПАУЗА':'ПРОДОЛЖИТЬ';
+  $('run-text').textContent=tubeReady?'ПУСК':(active?'ПАУЗА':'ПРОДОЛЖИТЬ');
   $('sim-status').textContent=active?'СИМУЛЯЦИЯ':'ПАУЗА';
   document.querySelector('.live-indicator').classList.toggle('paused',!active);
   runBtn.setAttribute('aria-pressed',String(!active));
@@ -64,6 +69,13 @@ function refreshControls(){
   document.querySelectorAll('[data-preset]').forEach(b=>{const yes=b.dataset.preset===state.preset;b.classList.toggle('active',yes);b.setAttribute('aria-pressed',String(yes))});
   document.querySelectorAll('[data-view]').forEach(b=>{const yes=b.dataset.view===state.view;b.classList.toggle('active',yes);b.setAttribute('aria-pressed',String(yes))});
   $('power').value=String(state.power);$('speed').value=String(state.speed);
+  $('ratio').value=String(state.ratio);$('ratio-value').textContent=state.ratio.toFixed(1)+':1';
+  $('tube-params').hidden=state.preset!=='tube';$('rupture').hidden=!tubeReady;
+  $('clear').textContent=state.preset==='tube'?'ПЕРЕЗАПУСК ТРУБЫ':'СБРОС ВОЛН';
+  $('run-text').textContent=tubeReady?'ПУСК':(active?'ПАУЗА':'ПРОДОЛЖИТЬ');
+  $('sensor-a').classList.toggle('arming',armingSensor===0);
+  $('sensor-b').classList.toggle('arming',armingSensor===1);
+  $('sensor-hint').textContent=armingSensor!==null?('УКАЖИТЕ ТОЧКУ ДЛЯ ДАТЧИКА '+(armingSensor===0?'А':'Б')):'Нажмите А или Б, затем укажите новое место на поле';
   $('power-value').textContent=state.power.toFixed(1);$('speed-value').textContent=state.speed+'×';
   $('chamber-name').textContent=TITLES[state.preset];
   $('view-short').textContent=({pressure:'ΔP',density:'ρ',schlieren:'∇ρ'})[state.view];
@@ -75,6 +87,7 @@ function refreshControls(){
   $('undo').disabled=!state.edits[state.preset].length;
   $('remove-edits').disabled=!state.edits[state.preset].length;
   display.dataset.tool=state.tool;
+  document.querySelectorAll('[data-plot]').forEach(b=>b.classList.toggle('selected',b.dataset.plot===plotMode));
 }
 function rebuildGeometry(){
   if(!sim)return;
@@ -92,15 +105,26 @@ const brushRadius=()=>clamp(Math.min(sim.nx,sim.ny)*.021,1.4,2.9);
 function resetGas(withStart=false){
   if(!sim)return;
   sim.resetGas();
+  tubeReady=state.preset==='tube';
+  if(tubeReady){sim.loadTube(state.ratio);setActive(false);}
+  else if(withStart){setActive(true);}
+  trace.clear();trace.record(sim,true);
   ripples=[];
   lastDemoTime=0;
-  if(withStart){
+  if(withStart&&!tubeReady){
     const x=state.preset==='reflector'?.18:state.preset==='slits'?.17:state.preset==='channel'?.18:.13;
     sim.pulse(sim.nx*x,sim.ny*.50,state.power,clamp(Math.min(sim.nx,sim.ny)*.037,2.3,4.0));
     for(let k=0;k<7;k++)sim.step();
     ripples.push({x:x*sim.nx,y:sim.ny*.5,time:performance.now(),start:true});
   }
-  updateMetrics();
+  refreshControls();updateMetrics();
+}
+function releaseTube(){
+  if(!tubeReady)return;
+  tubeReady=false;
+  trace.clear();trace.record(sim,true);
+  $('rupture').hidden=true;clearHint();playSound('pulse');
+  toast('ДИАФРАГМА ОТКРЫТА · ВОЛНА ЗАПУЩЕНА');
 }
 function resizeField(){
   const rect=display.getBoundingClientRect();
