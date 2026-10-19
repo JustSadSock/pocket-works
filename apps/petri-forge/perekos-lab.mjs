@@ -158,7 +158,7 @@ async function refreshModels(){
   const all=await listModels();
   for(const [id,kind] of [['pkModels','perekos-policy'],['pkTransferModels','combat-policy']]){
    const select=$(id),old=select.value;select.replaceChildren();
-   const list=all.filter(x=>x.kind===kind);
+   const list=all.filter(x=>x.kind===kind&&!x.id.startsWith('career-v1:'));
    if(!list.length){const option=document.createElement('option');option.value='';option.textContent='Нет сохранённых моделей';select.append(option);}
    for(const item of list){const opt=document.createElement('option');opt.value=item.id;opt.textContent=item.name;select.append(opt);}
    if(list.some(x=>x.id===old))select.value=old;
