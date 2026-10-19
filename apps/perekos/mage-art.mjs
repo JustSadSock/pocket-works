@@ -8,13 +8,17 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  if(!ctx)return;
  const p=enemy&&(!look||look.source==='guest')?{...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']}:(look||DEFAULT_APPEARANCE);
  const [coat,trim,shade]=p.colors,maskot=p.mascot,features=cosmeticFeatures(runes),character=mage(mageId),isCasting=casting>.06;
- const stride=Math.min(1,Math.max(0,moving)),walk=Math.sin(time*16)*stride,castPower=casting>0?Math.max(0,Math.sin((1-Math.min(1,casting/.68))*Math.PI)):.0;
+ const stride=Math.min(1,Math.max(0,moving)),walk=Math.sin(time*16)*stride;
+ const castDuration=.56*character.reload;
+ const castPhase=casting>0?Math.max(0,1-casting/castDuration):1;
+ const castPower=casting>0?Math.max(0,Math.sin((.15+.85*castPhase)*Math.PI)):0;
+ const recoil=casting>0?Math.pow(Math.max(0,1-castPhase*5),1.55)*(character.school==='stone'?6.2:character.school==='fire'?4.5:2.8):0;
  const lean=(dashing>0?4:Math.sin(time*11)*.8*stride),shake=flash>0?Math.sin(time*65)*1.5:0;
  const elementColor=character.school==='storm'?'#bcefe0':character.school==='stone'?'#d5d8aa':'#ffd29a';
  const px=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))};
  const arc=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()};
  ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
- ctx.translate(Math.round(x+shake),Math.round(y+Math.sin(time*(dashing>0?19:9)+(enemy?3:0))*(dashing>0?2.5:1.1)));
+ ctx.translate(Math.round(x+shake-Math.cos(face)*recoil),Math.round(y-Math.sin(face)*recoil+Math.sin(time*(dashing>0?19:9)+(enemy?3:0))*(dashing>0?2.5:1.1)));
  const dir=Math.cos(face);ctx.scale((dir<-.12?-1:1)*scale,scale);ctx.translate(lean,0);
  // Tight shadow and feet establish a stable battle hitbox.
  ctx.fillStyle='#101c1eb8';ctx.beginPath();ctx.ellipse(0,12,17,6,0,0,Math.PI*2);ctx.fill();
