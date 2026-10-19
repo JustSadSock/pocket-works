@@ -200,7 +200,7 @@ function resetGas(withStart=false){
   if(flow){sim.setGust(state.gustAmplitude,state.gustPeriod);sim.startFlow(state.flowMach);}
   sim.setEmitters(state.emitters[state.preset]);
   tubeReady=state.preset==='tube';
-  if(tubeReady){sim.loadTube(state.ratio);setActive(false);}
+  if(tubeReady){sim.loadTube(state.ratio);if(flow)sim.superimposeFlow(state.flowMach);setActive(false);}
   else if(withStart || flow){setActive(true);}
   trace.clear();trace.record(sim,true);
   loadHistory.clear();loadHistory.record(sim,.13,true);
@@ -238,6 +238,7 @@ function resizeField(){
   if(!oldField)resetGas(true);
   else if(oldTubeReady){
     sim.loadTube(state.ratio);
+    if(flowEnabled()){sim.setGust(state.gustAmplitude,state.gustPeriod);sim.superimposeFlow(state.flowMach);}
     tubeReady=true;setActive(false);
     trace.clear();trace.record(sim,true);
   }else{
