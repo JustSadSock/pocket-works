@@ -1,48 +1,74 @@
 {
   "schemaVersion": 2,
-  "status": "draft",
+  "status": "ready",
   "product": "throne-three",
   "direction": {
-    "premise": "TODO — What should Трон на троих feel like, beyond its genre?",
-    "composition": "TODO — Describe the dominant spatial layout and focal point on a phone",
-    "shapeLanguage": "TODO — Name distinctive silhouettes, edges, proportions and negative space",
-    "surfaceAndMaterial": "TODO — Describe material response, texture or illustration method",
-    "paletteLogic": "TODO — Describe value hierarchy and why the chosen colors belong to this world",
-    "typography": "TODO — Describe type character and hierarchy, including in-game functional text",
-    "signature": "TODO — One unique visual or interactive behavior recognizable without a logo",
-    "distinction": "TODO — Which nearby Pocket Works apps look similar and how will this differ?"
+    "premise": "A public court of three factions conceals two simultaneous political orders.",
+    "composition": "The court illustration and three seven-position faction tracks sit above a five-order control table.",
+    "shapeLanguage": "Pixel court portraits, seven square influence cells and small crown counters form a compact political instrument.",
+    "surfaceAndMaterial": "Warm bronze panels surround the original pixel court illustration and flat faction tracks.",
+    "paletteLogic": "Army red, treasury ochre and people green distinguish the three persistent influence tracks against violet court panels.",
+    "typography": "The original serif court headings and compact sans-serif action effects retain their hierarchy.",
+    "signature": "Two hidden political orders reveal together and push the three public faction tracks in different directions.",
+    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
   },
   "architecture": {
-    "spatialLayout": "TODO — choose the actual phone layout",
-    "controlLocation": "TODO — place controls by the core verbs",
-    "navigation": "TODO — define how navigation works in the product",
-    "chromeTopology": "TODO — decide which permanent frames or surfaces exist",
-    "dominantMotion": "TODO — choose a physical timing model",
-    "primaryVerb": "TODO — name a real action that a player performs with the object",
-    "physicalFeedback": "TODO — describe response, inertia, friction, sound and cancellation",
-    "spatialRationale": "TODO — explain why this composition is optimal on a phone",
-    "comparisons": []
+    "spatialLayout": "map-table",
+    "controlLocation": "contextual",
+    "navigation": "none",
+    "chromeTopology": "tiled-grid",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent.",
+    "physicalFeedback": "Sealing an order locks that choice; both orders appear together and leave changed tracks, marks and history.",
+    "spatialRationale": "The court illustration and three seven-position faction tracks sit above a five-order control table. This keeps the current game object and its real inputs spatially connected on a phone.",
+    "comparisons": [
+      {
+        "slug": "fog-of-conquest",
+        "spatialDifference": "fog-of-conquest uses full-bleed-world and diegetic-tools. Here: The court illustration and three seven-position faction tracks sit above a five-order control table.",
+        "interactionDifference": "fog-of-conquest uses contextual with scene-zoom. This game's actual verb is: Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent."
+      },
+      {
+        "slug": "zamazka",
+        "spatialDifference": "zamazka uses open-workbench and diegetic-tools. Here: The court illustration and three seven-position faction tracks sit above a five-order control table.",
+        "interactionDifference": "zamazka uses direct-on-object with world-travel. This game's actual verb is: Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent."
+      },
+      {
+        "slug": "meat-exe",
+        "spatialDifference": "meat-exe uses full-bleed-world and layered-panels. Here: The court illustration and three seven-position faction tracks sit above a five-order control table.",
+        "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent."
+      },
+      {
+        "slug": "not-dead-yet",
+        "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: The court illustration and three seven-position faction tracks sit above a five-order control table.",
+        "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent."
+      },
+      {
+        "slug": "crossline-5x5",
+        "spatialDifference": "crossline-5x5 uses header-stage-footer and framed-stage. Here: The court illustration and three seven-position faction tracks sit above a five-order control table.",
+        "interactionDifference": "crossline-5x5 uses bottom-deck with overlay-list. This game's actual verb is: Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent."
+      }
+    ]
   },
   "production": {
-    "renderer": "TODO — Why DOM/CSS, sprites, Canvas, WebGL, or authored 3D is appropriate",
-    "focalAsset": "TODO — What is the hero object and how will its visual asset be authored?"
+    "renderer": "DOM faction cells and the source pixel court illustration preserve discrete influence values and legible action effects.",
+    "focalAsset": "The retained court illustration animates the relationship between the army, treasury and people; the authored throne icon shows their three colored pillars."
   },
   "motion": {
-    "character": "TODO — Heavy, elastic, precise, organic, mechanical, etc; give reasons",
-    "action": "TODO — Identify the user action whose motion must feel distinctive",
-    "anticipation": "TODO — What moves BEFORE the action and why?",
-    "response": "TODO — What visually reacts on the first frame of input?",
-    "followThrough": "TODO — What settles, lags, rebounds, or remains changed afterward?",
-    "interruption": "TODO — How rapid repeat input redirects motion without queued delay",
-    "reducedMotion": "TODO — What remains legible when motion is reduced"
+    "character": "Sealing an order locks that choice; both orders appear together and leave changed tracks, marks and history.",
+    "action": "Choose a public stance, seal one of five political orders, then inspect its simultaneous resolution against the opponent.",
+    "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
+    "response": "The next visible state responds to the actual control: Two hidden political orders reveal together and push the three public faction tracks in different directions.",
+    "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
+    "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
+    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
   },
   "evidence": {
     "entry": "./",
     "interaction": {
       "type": "click",
-      "selector": "#primary-action"
+      "selector": "#start-btn"
     },
-    "expectedChange": "TODO — What should an observer see after performing this real action?",
+    "expectedChange": "A new political court opens with three neutral influence tracks and a required first public stance.",
     "capture": [
       "initial",
       "action",

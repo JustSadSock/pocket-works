@@ -114,6 +114,9 @@
     bindOnline();
     bindSettings();
     bindDebug();
+    const saved=readSolo();
+    $("#continue-btn").hidden=!saved;
+    $("#continue-btn").onclick=()=>{const s=readSolo();if(!s)return;Object.assign(app,{mode:'solo',role:'p1',state:s.state,hiddenPersona:s.persona,aiPersona:s.persona,pending:{p1:false,p2:false},connected:{p1:true,p2:true}});showScreen('game');};
     renderActionGrid();
     renderStatementGrid();
 
@@ -126,6 +129,16 @@
     window.render_game_to_text = renderGameToText;
     window.advanceTime = advanceTime;
     window.__throneApp = app;
+    try{const s=JSON.parse(sessionStorage.getItem('pocket-works:throne-three:pocket-net:'+location.origin+'/pocketnet')||'null');if(s?.roomId)getNetwork().connect().catch(()=>{});}catch{}
+  }
+
+  function readSolo(){
+    try{const saved=JSON.parse(localStorage.getItem('pocket-works:throne-three:solo')||'null');const s=saved?.state;
+      if(s?.version!==1||!Number.isInteger(s.turn)||s.turn<1||!s.players?.p1||!s.players?.p2||!s.factions)return null;
+      if(!['army','treasury','people'].every(k=>Number.isInteger(s.factions[k])&&Math.abs(s.factions[k])<=3))return null;
+      for(const p of Object.values(s.players))if(!Array.isArray(p.history)||!p.marks||!Number.isFinite(p.crowns))return null;
+      if(typeof saved.persona!=='string')return null;return saved;
+    }catch{return null;}
   }
 
   function bindNavigation() {
@@ -350,6 +363,8 @@
 
   function renderGame() {
     if (!app.state) return;
+
+    if(app.mode==='solo'){try{localStorage.setItem('pocket-works:throne-three:solo',JSON.stringify({state:app.state,persona:app.hiddenPersona}));$("#continue-btn").hidden=false;}catch{}}
 
     const state = app.state;
     els.turnPill.textContent =
