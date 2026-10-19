@@ -1910,3 +1910,7 @@ canvas {
 .container:has(#game-screen.active) .menu-buttons .btn{padding:6px 8px;min-width:0;font-size:10px}
 .container:has(#game-screen.active) .language-selector{min-height:44px;padding:4px;margin:0;width:48px}
 #game-screen.active{overflow:hidden}#game-container{padding:4px;overflow:hidden;min-height:60px}#shared-board{flex-shrink:0;max-height:100%;box-sizing:border-box}#touch-controls{padding:6px;gap:4px;flex-shrink:0}#touch-controls .touch-btn{min-height:44px;padding:6px}.touch-status{padding:4px!important;min-height:0!important}.touch-row{gap:4px!important}#touch-status{font-size:10px}
+
+.rematch-status{min-height:0;margin:10px auto 6px;text-align:center;color:#bcebe0;font:600 13px/1.5 system-ui;letter-spacing:.02em}
+.rematch-status:empty{display:none}
+#gameover-menu .btn:disabled{opacity:.5;cursor:not-allowed}
