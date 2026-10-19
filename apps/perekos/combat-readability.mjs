@@ -1,8 +1,9 @@
 // PEREKOS v0.8 — tactical warnings from public, authoritative combat state.
 // No prediction changes hitboxes or exposes runes, hidden inputs, or queued events.
+import {W as WIDTH,H as HEIGHT,WALLS} from './core.mjs';
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
 const finite=n=>typeof n==='number'&&Number.isFinite(n);
-const WIDTH=400,HEIGHT=620,MAX_SHOTS=12,MAX_MINES=6;
+const MAX_SHOTS=12,MAX_MINES=6;
 const EPS=.00001;
 function hitBox(x,y,vx,vy,horizon,{x:rx,y:ry,w,h},r=0){
  const left=rx-r,right=rx+w+r,top=ry-r,bottom=ry+h+r;
@@ -26,7 +27,7 @@ function hitCircle(x,y,vx,vy,horizon,cx,cy,r){
 function travelUntilBlocked(q,state,horizon){
  const r=clamp(Number(q.r)||4,2,18);
  let t=horizon;
- for(const wall of [{x:102,y:180,w:64,h:54},{x:232,y:385,w:66,h:56}]){
+ for(const wall of WALLS){
   t=Math.min(t,hitBox(q.x,q.y,q.vx,q.vy,t,wall,r));
  }
  for(const b of (state.barriers||[]).slice(0,10)){
