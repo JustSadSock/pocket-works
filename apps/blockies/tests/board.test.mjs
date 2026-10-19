@@ -145,3 +145,35 @@ test('serialized server state preserves bag order after repeated hard drops',()=
  }
  assert.deepEqual(outcomes[0],outcomes[1]);
 });
+
+test('hold consumes exactly one swap per placed piece and resets after locking',()=>{
+ let state=start();
+ const initial=state.engine.players[0];
+ const first=JSON.stringify(initial.currentPiece),second=JSON.stringify(initial.nextPiece);
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hold'}}}).state;
+ const held=state.engine.players[0];
+ assert.equal(JSON.stringify(held.heldPiece),first);
+ assert.equal(JSON.stringify(held.currentPiece),second);
+ assert.equal(held.holdUsed,true);
+ const bag=JSON.stringify(state.engine.pieceBag);
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hold'}}}).state;
+ assert.equal(JSON.stringify(state.engine.pieceBag),bag,'second hold must not advance the bag');
+ assert.equal(JSON.stringify(state.engine.players[0].currentPiece),second);
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;
+ assert.equal(state.engine.players[0].holdUsed,false);
+ const newPiece=JSON.stringify(state.engine.players[0].currentPiece);
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hold'}}}).state;
+ assert.equal(JSON.stringify(state.engine.players[0].currentPiece),first,'stored piece must be restored');
+ assert.equal(JSON.stringify(state.engine.players[0].heldPiece),newPiece);
+ assert.equal(state.engine.players[0].holdUsed,true);
+});
+
+test('hold on one player does not displace or control the other player',()=>{
+ let state=start([a,b]);
+ const ally=JSON.stringify(state.engine.players[1]);
+ const board=JSON.stringify(state.engine.board);
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hold'}}}).state;
+ assert.equal(JSON.stringify(state.engine.players[1]),ally);
+ assert.equal(JSON.stringify(state.engine.board),board);
+ assert.equal(state.engine.players[0].holdUsed,true);
+});
