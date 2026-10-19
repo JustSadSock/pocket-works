@@ -4,16 +4,20 @@
 import {DEFAULT_APPEARANCE,cosmeticFeatures} from './avatar-profile.mjs';
 import {mage} from './mages.mjs';
 
-export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=1,scale=1,time=0,shield=0,flash=0,runes=[],mageId='kindle',casting=0,dashing=0,face=0,moving=0}={}){
+export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=1,scale=1,time=0,shield=0,flash=0,runes=[],mageId='kindle',casting=0,dashing=0,face=0,moving=0,pose=null}={}){
  if(!ctx)return;
  const p=enemy&&(!look||look.source==='guest')?{...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']}:(look||DEFAULT_APPEARANCE);
  const [coat,trim,shade]=p.colors,maskot=p.mascot,features=cosmeticFeatures(runes),character=mage(mageId),isCasting=casting>.06;
- const stride=Math.min(1,Math.max(0,moving)),walk=Math.sin(time*16)*stride;
+ const stride=Math.min(1,Math.max(0,pose?.move??moving));
+ const gaitPhase=pose?.step??time*16,walk=Math.sin(gaitPhase)*stride;
+ const footSpread=pose?.footSpread||0,weight=pose?.weight||1;
  const castDuration=.56*character.reload;
  const castPhase=casting>0?Math.max(0,1-casting/castDuration):1;
  const castPower=casting>0?Math.max(0,Math.sin((.15+.85*castPhase)*Math.PI)):0;
  const recoil=casting>0?Math.pow(Math.max(0,1-castPhase*5),1.55)*(character.school==='stone'?6.2:character.school==='fire'?4.5:2.8):0;
- const lean=(dashing>0?4:Math.sin(time*11)*.8*stride),shake=flash>0?Math.sin(time*65)*1.5:0;
+ const lean=(dashing>0?4:Math.sin(time*11)*.8*stride)+(pose?.lean||0);
+ const hitFlinch=pose?.impact||0,guardPose=pose?.guard||0;
+ const shake=flash>0?Math.sin(time*65)*1.5:0;
  const elementColor=character.school==='storm'?'#bcefe0':character.school==='stone'?'#d5d8aa':'#ffd29a';
  const px=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))};
  const arc=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()};
@@ -22,16 +26,58 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  const dir=Math.cos(face);ctx.scale((dir<-.12?-1:1)*scale,scale);ctx.translate(lean,0);
  // Tight shadow and feet establish a stable battle hitbox.
  ctx.fillStyle='#101c1eb8';ctx.beginPath();ctx.ellipse(0,12,17,6,0,0,Math.PI*2);ctx.fill();
- // Individual footsteps and short knee bends create motion rather than bobbing a static doll.
- px(-9,6+walk,6,12,'#23332d');px(5,6-walk,6,12,'#23332d');px(-9,13+walk,6,3,trim);px(5,13-walk,6,3,trim);
+ // Feet stay planted in the world; the torso compresses separately.
+ // The heavy stone schools stomp slowly, while the wire family scissoring
+ // has a faster gait. These motions NEVER move the authoritative hitbox.
+ const stepSize=2.8/Math.sqrt(weight);
+ const leftX=-9-footSpread*.55-Math.sin(gaitPhase)*stepSize*stride;
+ const rightX=5+footSpread*.55+Math.sin(gaitPhase)*stepSize*stride;
+ const leftY=6+Math.max(0,walk)*1.7, rightY=6+Math.max(0,-walk)*1.7;
+ px(leftX-1,leftY+2,9,11,'#132a27');
+ px(rightX-1,rightY+2,9,11,'#132a27');
+ px(leftX,leftY,7,12,'#32463a');px(rightX,rightY,7,12,'#32463a');
+ px(leftX-1,leftY+10,9,5,'#1c2a28');px(rightX-1,rightY+10,9,5,'#1c2a28');
+ px(leftX-2,leftY+13,11,3,trim);px(rightX-2,rightY+13,11,3,trim);
+ if(stride>.23){
+  px(leftX+2,leftY+2,2,4,'#718071');px(rightX+2,rightY+2,2,4,'#718071');
+ }
+
  // Cape material flares under sprint; folds settle while standing still.
- const capeSwing=(dashing>0?9:stride*4)+Math.sin(time*9)*1.5;
- px(-17-capeSwing*.5,-3,9+capeSwing*.4,24,shade);
- px(-18-capeSwing*.65,11,11+capeSwing*.45,5,'#263d35');
- px(-15-capeSwing*.35,2,3,15,trim);
- // A split coat, sleeves, sash, and permanent palette from account avatar.
- px(-12,-5,24,18,coat);px(-13,3,26,10,shade);
+ const capeSwing=(dashing>0?9:stride*4)+(pose?.cloth||0);
+ // Volumetric stitched cape with two loose tails, an anchored shoulder and
+ // a dark underside: cloth bends late compared with body acceleration.
+ ctx.fillStyle='#162d28';ctx.beginPath();
+ ctx.moveTo(-12,-5);ctx.lineTo(-21-capeSwing*.8,6);
+ ctx.lineTo(-25-capeSwing*1.5,20);ctx.lineTo(-14-capeSwing*.5,16);
+ ctx.lineTo(-8,5);ctx.closePath();ctx.fill();
+ ctx.fillStyle=shade;ctx.beginPath();
+ ctx.moveTo(-12,-5);ctx.lineTo(-20-capeSwing*.6,4);
+ ctx.lineTo(-23-capeSwing*1.3,16);ctx.lineTo(-14-capeSwing*.45,14);
+ ctx.lineTo(-8,0);ctx.closePath();ctx.fill();
+ px(-18-capeSwing*.7,11,6,3,trim);
+ px(-16-capeSwing*.4,-1,2,14,'#b3ab864f');
+ // Torso bends and head lags behind without shifting the feet or shadow.
+ ctx.save();
+ ctx.translate(0,pose?.bodyBob||0);
+ ctx.rotate(Math.max(-.13,Math.min(.13,(lean+hitFlinch*-.9)*.016)));
+ // Split layered coat, beveled collar, independent swinging hem and sash.
+ px(-12,-5,24,18,'#162923');
+ px(-12,-6,24,18,coat);px(-13,4,26,9,shade);
  px(-10,7,20,6,coat);px(-12,-4,5,11,trim);px(8,-4,5,11,trim);
+ ctx.fillStyle=shade;ctx.beginPath();
+ ctx.moveTo(-12,9);ctx.lineTo(-10,18);ctx.lineTo(-2,16);
+ ctx.lineTo(-1,9);ctx.closePath();ctx.fill();
+ ctx.fillStyle=coat;ctx.beginPath();
+ ctx.moveTo(2,9);ctx.lineTo(2,16);ctx.lineTo(11,18);
+ ctx.lineTo(12,8);ctx.closePath();ctx.fill();
+ px(-11,10,3,6,'#101f1ba6');px(9,10,2,6,'#14251f9e');
+ px(-9,-5,18,2,trim);px(-7,-2,3,9,'#fff4c92b');
+ px(-8,5,16,3,trim);px(-1,5,2,4,'#2b4137');
+ // Opposing arm counterbalances the striking hand; block folds inward.
+ const offHandY=-6+(guardPose>0?-5*guardPose:Math.sin(gaitPhase+Math.PI)*stride*2);
+ px(-16,offHandY-1,6,12,shade);
+ px(-17,offHandY+7,8,4,trim);
+ px(-18,offHandY+10,5,4,'#d5b698');
  // Each class has its own material rather than six recolored fireballs.
  if(character.school==='storm'){px(-11,-2,4,13,'#80ada6');px(7,-2,4,13,'#89c5c0');px(-5,9,10,2,'#b3ddd0')}
  if(character.school==='stone'){px(-15,-2,6,13,'#7c8f81');px(10,-2,6,13,'#7c8f81');px(-13,9,26,3,'#a5af8d')}
@@ -49,6 +95,11 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  if(maskot?.clothes==='spacesuit'||maskot?.clothes==='wedding'){
   px(-12,-5,24,12,'#ddd9d0');px(-7,6,15,6,coat);
  }
+ // Neck pivots and head follows the shoulders with delayed motion.
+ // Keep all MASKOT hat, face and crown artwork within this pivot.
+ ctx.save();
+ ctx.translate(hitFlinch*1.8, -(pose?.headBob||0));
+ ctx.rotate(pose?.headTilt||0);
  // The family silhouette from an official MASKOT remains visible: ears/domes
  // protrude from the wizard hat and do not compete with spells or collision.
  if(maskot?.animal==='cat'){
@@ -84,6 +135,7 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  }
  if(maskot?.hat==='brush'){px(10,-36,3,18,'#bb8c62');px(9,-40,5,6,'#334f62')}
  if(maskot?.hat==='veil'){px(-13,-27,4,33,'#e9d5d9');px(10,-27,4,33,'#e9d5d9')}
+ ctx.restore();
  // Readable class silhouettes are equipment, not replacements for the Pocket ID face or hat.
  // Every fighter has a different silhouette even when all six use the same avatar.
  switch(character.id){
@@ -135,9 +187,16 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  }
  // Each mage has a signature *object* and casting gesture, not a
  // recolored copy of the same staff. Account-derived coat/face stay unobscured.
+ const activeStrike=pose?.attack||0;
  const thrust=isCasting?castPower:0;
- const handX=14+thrust*9,handY=-5-thrust*10;
- const topY=handY-24-thrust*5,shaft='#9a7958';
+ const handSwing=character.id==='cinder'?Math.sin(castPhase*Math.PI)*7
+  :character.id==='wire'?activeStrike*9
+  :character.id==='coil'?Math.sin(castPhase*12)*thrust*3
+  :character.id==='pebble'?-activeStrike*4
+  :character.id==='slate'?-activeStrike*7:activeStrike*5;
+ const lift=character.school==='stone'?thrust*9:thrust*12;
+ const handX=14+thrust*8+handSwing,handY=-5-lift;
+ const topY=handY-24-thrust*(character.school==='stone'?4:7),shaft='#9a7958';
  px(7+thrust*4,handY-1,9,6,coat);
  px(handX-2,handY,6,5,trim);
  const beam=(x0,y0,x1,y1,color,width=2)=>{ctx.strokeStyle=color;ctx.lineWidth=width;
@@ -244,15 +303,38 @@ export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=
  if(features.frost){px(-7,-20,5,2,'#8cc8ca');px(3,-21,5,2,'#8cc8ca')}
  if(features.spark){px(-15,-35,3,3,'#fbdc99');px(14,-32,3,3,'#fbdc99')}
  if(features.haste){px(-12,11,6,2,'#e0c599');px(8,11,7,2,'#e0c599')}
+ if(guardPose>.24){
+  // This pose braces the off-hand and the coat, even before the shield
+  // fades: guard has a clear bodily action instead of only a glowing ring.
+  px(-17,-10-guardPose*4,6,7,shade);
+  px(-20,-13-guardPose*4,6,4,trim);
+  ctx.strokeStyle='#e1dbacaa';ctx.lineWidth=2;ctx.beginPath();
+  ctx.arc(-12,-8,10+guardPose*5,-2.3,-.8);ctx.stroke();
+ }
+ if(hitFlinch>.08){
+  px(-12,-5,4+hitFlinch*6,3,'#e3c49e');
+  px(9,-13,4,3,'#fff2d0');
+ }
  if(shield>0){ctx.strokeStyle='#b6d9b4bb';ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();ctx.arc(0,-7,27,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);px(-20,-17,3,6,'#f7e3b0');px(20,0,3,6,'#f7e3b0')}
  if(enemy){px(-11,17,22,3,'#a84b42');px(-8,20,16,2,'#e4a28a')}
  if(flash>0){ctx.globalAlpha=Math.min(.65,flash*3.1);px(-16,-35,32,53,'#fff2bf');ctx.globalAlpha=Math.max(0,Math.min(1,alpha))}
+ // Class-specific hem response at the end of an attack.
+ if(activeStrike>.05){
+  if(character.school==='stone'){
+   px(-17,11,9,3,'#b0b69a');px(-23,13,7,2,'#879586');
+  }else if(character.school==='storm'){
+   px(-21,-4,9,2,'#8cd0c5');px(-27,2,7,2,'#537e80');
+  }else{
+   px(-18,11,7,3,'#ac6750');px(-21,14,5,2,'#de9869');
+  }
+ }
  // Very short-lived class wisps around the casting tip, with no persistent glow.
  if(isCasting){
   for(let i=0;i<3;i++){const angle=time*9+i*2.09,rx=20+Math.cos(angle)*8,ry=-44+Math.sin(angle)*7;
    px(rx,ry,2+(i%2),2,elementColor)}
  }
- ctx.restore();
+ ctx.restore(); // torso pose
+ ctx.restore(); // actor root
 }
 export function drawPortrait(ctx,appearance=DEFAULT_APPEARANCE,size=48){
  ctx.clearRect(0,0,size,size);ctx.imageSmoothingEnabled=false;
