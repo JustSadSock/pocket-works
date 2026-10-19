@@ -24,6 +24,12 @@ export class AudioBus{
   if(kind==='portal'){this.noise(c,t,.33,430*variation,.5,.09);this.noise(c,t+.05,.19,1750*variation,1.2,.038);this.tone(c,t,205*variation,.29,.026);}
   if(kind==='impact'){this.noise(c,t,.09,2400*variation,1.2,Math.min(.06,.011*intensity));this.tone(c,t,390*variation,.16,Math.min(.035,.007*intensity));}
   if(kind==='success'){this.noise(c,t,.35,930,.85,.046);for(let i=0;i<3;i++)this.tone(c,t+i*.065,[392,587,784][i],.3,.019);}
+  if(kind==='fracture'){
+   // Brittle edge-crack (high band), frame vibration (short low transient).
+   this.noise(c,t,.095,2850*variation,1.9,.053);
+   this.noise(c,t+.018,.13,790*variation,1.2,.021);
+   this.tone(c,t,455*variation,.1,.025,'triangle');
+  }
   if(kind==='mount'){this.noise(c,t,.13,1200,1.7,.044);this.tone(c,t,260,.12,.022);}
   if(kind==='error'){this.noise(c,t,.11,380,1.6,.036);}
  }

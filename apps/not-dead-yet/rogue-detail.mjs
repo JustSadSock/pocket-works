@@ -2,6 +2,7 @@
 // Compact offline meshes share renderer.mjs's 10-float vertex ABI.
 // Decorative geometry never changes traversability or adds invisible collision.
 import {SECTOR,TILE} from './rogue-world.mjs';
+import {hallFixtureHash,hallHasLamp} from './rogue-lighting.mjs';
 const S=TILE,H=2.62;
 const wood=[.39,.25,.14],aged=[.57,.50,.37],metal=[.59,.55,.47],enamel=[.75,.72,.61];
 function q(o,a,b,c,d,col,n,m=6){for(const p of [a,b,c,a,c,d])o.push(...p,...col,...n,m)}
@@ -87,6 +88,11 @@ export function appendPropDetails(o,p){
   round(o,x-w*.31,.78,z-d*.31,.044,.08,metal,9,8);
   box(o,x-w*.31,.85,z-d*.24,.034,.03,.22,metal,9)
  }
+ if(p.type==='toilet'){
+  round(o,x,.51,z+.09,.21,.046,[.88,.84,.74],8,12);
+  round(o,x,.567,z+.09,.154,.012,[.36,.40,.40],10,12);
+  box(o,x,.82,z-d*.29,.10,.055,.09,[.66,.61,.51],9);
+ }
  if(p.type==='sink'){
   round(o,x,.79,z,.20,.05,[.83,.81,.72],8,12);
   round(o,x,.846,z,.14,.019,[.32,.38,.38],10,12);
@@ -154,11 +160,86 @@ export function appendWallDetails(o,{x,z,px,pz,dx,dz,room}){
  }
 }
 export function appendDoorDetails(o,d){
+ // Frame, threshold and hinged leaf share the same middle-of-tile plane.
+ // The moving timber leaf lives in rogue-door-visual.mjs.
  const x=(d.x+.5)*S,z=(d.z+.5)*S;
- // Architrave and a properly visible door handle. No collision-affecting leaf.
- for(const t of [-1,1])box(o,x+.05,.04,z+t*.53,.038,2.43,.14,[.51,.35,.21],6);
- box(o,x+.05,2.42,z,.052,.09,1.14,[.48,.32,.19],6);
- round(o,x+.52,1.10,z+.53,.036,.035,[.65,.50,.28],9,9);
- box(o,x+.51,1.14,z+.55,.18,.026,.038,[.65,.50,.28],9);
- box(o,x+.04,2.20,z+.52,.13,.13,.012,[.67,.55,.36],9)
+ const brown=[.42,.27,.17],edge=[.57,.38,.23],brass=[.67,.50,.29];
+ const horizontal=d.side==='left'||d.side==='right';
+ if(horizontal){
+  const plane=(d.x+.5)*S;
+  for(const sign of [-1,1]){
+   box(o,plane,.01,z+sign*.568,.16,2.25,.11,brown,6);
+   box(o,plane+(d.side==='left'?.07:-.07),.01,z+sign*.565,.034,2.26,.060,edge,6);
+   for(const y of [.35,1.74])box(o,plane+.086,y,z+sign*.557,.042,.092,.026,brass,9)
+  }
+  box(o,plane,2.23,z,.16,.14,1.25,edge,6);
+  box(o,plane,.009,z,.15,.019,1.035,[.38,.29,.20],6);
+  // Light-switch plate belongs to the solid adjacent wall, not the opening.
+  box(o,plane+(d.side==='left'?.065:-.065),1.14,z+.78,.018,.14,.10,[.69,.62,.48],8)
+ }else{
+  const plane=(d.z+.5)*S;
+  for(const sign of [-1,1]){
+   box(o,x+sign*.568,.01,plane,.11,2.25,.16,brown,6);
+   box(o,x+sign*.565,.01,plane+(d.side==='south'?.07:-.07),.060,2.26,.034,edge,6);
+   for(const y of [.35,1.74])box(o,x+sign*.557,y,plane+.086,.026,.092,.042,brass,9)
+  }
+  box(o,x,2.23,plane,1.25,.14,.16,edge,6);
+  box(o,x,.009,plane,1.035,.019,.15,[.38,.29,.20],6);
+  box(o,x+.78,1.14,plane+(d.side==='south'?.06:-.06),.10,.14,.018,[.69,.62,.48],8)
+ }
+}
+
+
+// Sparse shared-corridor fixtures. These are actual three-dimensional meshes
+// fastened to the plaster, never imaginary full-height corridor furniture.
+// Their visual footprint is at most 8 cm into an already walkable tile.
+export function appendHallFixtures(out,{x,z,px,pz,seed=0,epoch=0,walls=[],tile=S}){
+ const a=hallFixtureHash(x,z,seed,epoch);
+ const cx=px+tile*.5,cz=pz+tile*.5;
+ // Old opal glass ceiling lantern: porcelain fitting, stained shade,
+ // exposed fixing and hanging glass. Rare enough to make lighting rhythmic.
+ if(hallHasLamp(x,z,seed,epoch)){
+  round(out,cx,2.485,cz,.15,.065,[.29,.27,.23],9,12);
+  round(out,cx,2.39,cz,.18,.105,[.66,.61,.48],8,12);
+  round(out,cx,2.36,cz,.125,.036,[.76,.68,.50],8,12);
+  for(const sign of [-1,1])box(out,cx+sign*.09,2.51,cz,.025,.027,.12,[.36,.32,.27],9)
+ }
+ if(!walls.length)return;
+ // Each detail belongs to a true wall in an actual corridor tile.
+ const [dx,dz]=walls[a%walls.length],axisX=dx!==0;
+ const face=axisX?(dx>0?px+tile:px):(dz>0?pz+tile:pz);
+ const mount=face-(dx||dz)*.051;
+ const plank=(y,w,h,depth,col,m=6,offset=0)=>{
+  if(axisX)box(out,mount,y,cz+offset,depth,h,w,col,m);
+  else box(out,cx+offset,y,mount,w,h,depth,col,m)
+ };
+ const r=a%37;
+ if(r===0||r===1){
+  // Mains junction box / black bakelite switches over enamel backing.
+  plank(1.31,.30,.39,.068,[.39,.34,.29],9);
+  plank(1.36,.245,.28,.075,[.67,.64,.55],8);
+  for(let i=-1;i<=1;i++){
+   plank(1.46,.036,.07,.09,[.21,.24,.24],9,i*.065);
+   plank(1.31,.036,.065,.09,[.35,.31,.27],9,i*.065)
+  }
+  plank(1.76,.018,.43,.029,[.43,.42,.38],9,-.13);
+ }else if(r===2||r===3){
+  // Plain hall peg rail, curved steel hooks and one faded coat.
+  plank(1.93,.57,.115,.095,[.40,.25,.17],6);
+  for(let i=-1;i<=1;i++){
+   plank(1.78,.026,.22,.055,[.42,.42,.39],9,i*.20);
+   plank(1.78,.096,.026,.10,[.55,.52,.47],9,i*.20)
+  }
+  if(r===3){
+   // Hanging fabric does not touch the floor or become a collision obstacle.
+   plank(.99,.38,.67,.12,[.38,.35,.30],7,-.18);
+   plank(.91,.22,.11,.13,[.28,.26,.23],7,-.18)
+  }
+ }else if(r===4){
+  // Weathered room-number enamel plate with a separate shallow doorbell.
+  plank(1.67,.35,.19,.055,[.57,.55,.47],8);
+  plank(1.695,.24,.065,.061,[.21,.22,.21],9);
+  plank(1.43,.09,.11,.076,[.49,.43,.32],9,.20);
+  plank(1.47,.038,.032,.086,[.67,.57,.40],8,.20)
+ }
 }
