@@ -50,6 +50,7 @@
         <div class="foot-metric"><small>ВРЕМЯ</small><strong id="time">0.00</strong></div>
         <div class="foot-metric"><small>ПИК ДАВЛЕНИЯ</small><strong id="peak">1.00 <em>×P₀</em></strong></div>
         <div class="foot-metric"><small>В ТОЧКЕ</small><strong id="probe">—</strong></div>
+        <div class="foot-metric flow-metric" id="flow-metric" hidden><small>MAX MACH</small><strong id="mach-peak">—</strong></div>
         <div class="foot-command"><span class="pulse-mark"></span><span id="mode-help">ТАП: ИМПУЛЬС · УДЕРЖАНИЕ: СЕРИЯ</span></div>
       </div>
     </section>
@@ -77,6 +78,10 @@
           <button data-preset="channel" class="preset" data-native-press><span class="preset-shape shape-channel" aria-hidden="true"></span><span>КАНАЛ</span></button>
           <button data-preset="empty" class="preset" data-native-press><span class="preset-shape shape-empty" aria-hidden="true"></span><span>ПУСТО</span></button>
           <button data-preset="tube" class="preset" data-native-press><span class="preset-shape shape-tube" aria-hidden="true"></span><span>ТРУБА</span></button>
+          <button data-preset="wedge" class="preset" data-native-press><span class="preset-shape shape-wedge" aria-hidden="true"></span><span>КЛИН</span></button>
+          <button data-preset="airfoil" class="preset" data-native-press><span class="preset-shape shape-airfoil" aria-hidden="true"></span><span>КРЫЛО</span></button>
+          <button data-preset="cylinder" class="preset" data-native-press><span class="preset-shape shape-cylinder" aria-hidden="true"></span><span>ЦИЛИНДР</span></button>
+          <button data-preset="nozzle" class="preset" data-native-press><span class="preset-shape shape-nozzle" aria-hidden="true"></span><span>СОПЛО</span></button>
         </div>
       </div>
 
@@ -99,12 +104,23 @@
           <button data-view="pressure" class="view active" data-native-press>ДАВЛЕНИЕ</button>
           <button data-view="density" class="view" data-native-press>ПЛОТНОСТЬ</button>
           <button data-view="schlieren" class="view" data-native-press>ГРАДИЕНТ</button>
+          <button data-view="mach" class="view" data-native-press>МАХ</button>
         </div>
-        <div class="legend" aria-hidden="true"><span>РАЗРЕЖЕНИЕ</span><div class="legend-ramp"></div><span>СЖАТИЕ</span></div>
+        <div class="legend" aria-hidden="true"><span id="legend-low">РАЗРЕЖЕНИЕ</span><div class="legend-ramp" id="legend-ramp"></div><span id="legend-high">СЖАТИЕ</span></div>
+      </div>
+      <section class="control-section flow-panel" id="flow-panel" hidden aria-label="Настройка аэродинамической трубы">
+        <div class="section-title"><span>05</span><label>СВЕРХЗВУКОВОЙ ПОТОК</label></div>
+        <div class="flow-caption"><span><i class="flow-led"></i> ВХОД → ВЫХОД</span><strong id="regime">СВЕРХЗВУК</strong></div>
+        <div class="slider-line"><label for="flow-mach">Число Маха на входе</label><output id="flow-mach-value" for="flow-mach">1.8 M</output></div>
+        <input type="range" id="flow-mach" min=".3" max="3.2" step=".1" value="1.8" aria-label="Число Маха набегающего потока">
+        <div class="flow-gauges"><div><small>СРАВНИТЕЛЬНАЯ СКОРОСТЬ</small><strong id="flow-velocity">2.13</strong></div><div><small>МАКСИМАЛЬНОЕ ЧИСЛО МАХА</small><strong id="flow-peak">1.8</strong></div></div>
+        <button id="streamlines" type="button" class="stream-toggle" aria-pressed="true" data-native-press><span class="stream-icon">≋</span><span>ЛИНИИ ТОКА</span><strong id="stream-state">ВКЛ.</strong></button>
+        <button id="flow-restart" type="button" class="flow-reset" data-native-press>↻ ПЕРЕЗАПУСТИТЬ ПОТОК</button>
+        <p class="flow-note">Идеальный невязкий газ · γ = 1.4. Входное состояние фиксировано, выход свободный. Поток, скачки и зоны сжатия вычисляются — это не готовые анимации. В режиме M &lt; 1 граница приближённая.</p>
       </div>
 
       <section class="scope-section" aria-label="Регистратор давления">
-        <div class="section-title"><span>05</span><label>ОСЦИЛЛОГРАФ</label></div>
+        <div class="section-title"><span>06</span><label>ОСЦИЛЛОГРАФ</label></div>
         <div class="scope-top"><span class="scope-status"><i></i> ДВА ДАТЧИКА</span><div class="scope-tabs" role="group" aria-label="Режим графика"><button type="button" data-plot="history" class="selected">ВРЕМЯ</button><button type="button" data-plot="profile">ПРОФИЛЬ X</button></div></div>
         <canvas id="scope" class="scope-canvas" role="img" aria-label="Измеренный график давления, вычисляемый по состоянию газа"></canvas>
         <div class="sensor-row">
@@ -142,7 +158,7 @@
     </div>
   </div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="SHOCK" data-app-version="1.1.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="SHOCK" data-app-version="1.2.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
