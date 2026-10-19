@@ -219,3 +219,30 @@
 @keyframes chain-pulse{from{transform:scale(1.17);opacity:.55}to{transform:scale(1);opacity:1}}
 @media(max-width:650px){.archive-panel{max-height:34vh}.archive-subtitle{margin-top:9px}}
 @media(prefers-reduced-motion:reduce){.combo-chip{animation:none}}
+
+/* A noninteractive living diaphragm closes and reopens when anatomy changes.
+   The shutter is an actual transition, not a fullscreen loading blocker. */
+.organ-transition{position:absolute;inset:0;z-index:9;pointer-events:none;overflow:hidden;
+ visibility:hidden;contain:layout paint}
+.organ-iris-left,.organ-iris-right{position:absolute;top:-5%;bottom:-5%;width:53%;
+ background:radial-gradient(ellipse at 90% 50%,#6a222d 0%,#341017 62%,#16070b 95%);
+ border-radius:20% 42% 37% 17%/12% 24% 22% 10%;
+ transform:translateX(-104%);will-change:transform;
+ box-shadow:inset -14px 0 28px #9e384052}
+.organ-iris-left{left:-3%}
+.organ-iris-right{right:-3%;transform:translateX(104%) scaleX(-1)}
+.organ-iris-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.93);
+ font:800 clamp(13px,2.3vw,22px)/1.25 Arial,sans-serif;letter-spacing:.2em;
+ text-align:center;max-width:70vw;color:#f5d3b9;text-shadow:0 1px 12px #150408;
+ white-space:normal;opacity:0}
+.organ-transition-active{visibility:visible}
+.organ-transition-active .organ-iris-left{animation:organ-close-left 1.24s cubic-bezier(.58,.01,.32,1) both}
+.organ-transition-active .organ-iris-right{animation:organ-close-right 1.24s cubic-bezier(.58,.01,.32,1) both}
+.organ-transition-active .organ-iris-title{animation:organ-label 1.24s ease-in-out both}
+@keyframes organ-close-left{0%,100%{transform:translateX(-104%)}
+ 36%,63%{transform:translateX(0)}}
+@keyframes organ-close-right{0%,100%{transform:translateX(104%) scaleX(-1)}
+ 36%,63%{transform:translateX(0) scaleX(-1)}}
+@keyframes organ-label{0%,32%,72%,100%{opacity:0}43%,60%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.organ-transition,.organ-transition-active{visibility:hidden!important}
+ .organ-transition-active *{animation:none!important}}
