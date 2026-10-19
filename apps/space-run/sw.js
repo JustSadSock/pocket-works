@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'space-run-';
-const CACHE_NAME = 'space-run-v0.1.0';
-const APP_VERSION = '0.1.0';
-const RELEASE_DATE = '2026-10-18';
+const CACHE_NAME = 'space-run-v0.1.1';
+const APP_VERSION = '0.1.1';
+const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Перенесена исходная игра с сохранением правил и отдельным хранением данных."];
+const RELEASE_NOTES = ["Интерактивный ремонт, проверка строительства и надёжные сохранения практики.", "Исправлены сенсорная стрельба и переключение станций."];
 const APP_SHELL = [
 './assets/fonts/font-1.ttf',
 './assets/fonts/font-2.ttf',
@@ -17,6 +17,7 @@ const APP_SHELL = [
   "./app.js",
   "./art-bible.json",
   "./network.js",
+  "./practice-state.js",
   "./simulation.js",
   "./styles.css",
   "./sw.js",
