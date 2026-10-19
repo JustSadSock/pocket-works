@@ -10,6 +10,7 @@ import {drawGrafts,applyGraft,graftForId,weaponBuild,dashCooldown,moveSpeed,inco
 import {GENES,routeOptions,applyRoute,sanitizeArchive,unlockGene,equipGene,applyGene,earnEchoes} from './runPaths.js';
 import {guardianForWave,isGuardian,guardianReady,guardianSpawnResolved,guardianDamage,guardianAction} from './guardians.js';
 import {pulsePlan,pulseEnemyKind,nextPulse} from './runPacing.js';
+import {addScar,scarSignature} from './scars.js';
 import {PROTOCOLS,sanitizeProtocol,applyProtocol,extraEnemiesForPulse,incomingProtocolDamage,
   enemyProtocolSpeed,spawnCadence,registerCombatChain,recordFinishedRun,observedRunStats} from './runTuning.js';
 
@@ -40,14 +41,14 @@ let save=validateRun(safeRead('session'));
 let quality=safeRead('quality');if(!['auto','speed','detail'].includes(quality))quality='auto';
 let effectiveQuality=quality==='speed'?'low':quality==='detail'?'high':'medium';
 let gamepadFire=false,padMove={x:0,y:0},prevPadButtons=[],accumulator=0,lastPaint=0,fpsClock=0,fpsFrames=0;
-let paintCoolDownUntil=0,paintCost=0,draftIndex=0,lastForkNearby='';
+let paintCoolDownUntil=0,paintCost=0,draftIndex=0,lastForkNearby='',transitionRevision=0;
 const ui={
   menu:$('menu'),pause:$('pauseMenu'),result:$('result'),failure:$('failure'),hud:$('hud'),
   touch:$('touchControls'),cross:$('crosshair'),pauseBtn:$('pauseBtn'),wave:$('waveValue'),
   hp:$('healthValue'),healthFill:$('healthFill'),enemies:$('enemyValue'),kills:$('killValue'),pulse:$('pulseValue'),combo:$('comboValue'),
   weapon:$('weaponValue'),score:$('scoreValue'),seed:$('seedValue'),intro:$('introSubtitle'),
   resume:$('resumeSaved'),record:$('record'),mutation:$('scar'),resultTitle:$('resultTitle'),
-  resultBody:$('resultBody'),note:$('notice'),damage:$('damageOverlay'),
+  resultBody:$('resultBody'),note:$('notice'),damage:$('damageOverlay'),organIris:$('organIris'),organIrisName:$('organIrisName'),
   mute:$('soundMenu'),pauseMute:$('soundPause'),resumeBtn:$('resumeBtn'),
   qualityMenu:$('qualityMenu'),qualityPause:$('qualityPause'),confirm:$('confirmRestart'),zone:$('zoneValue'),
   draft:$('graftDraft'),draftCards:$('graftCards'),draftReroll:$('draftReroll'),draftCount:$('draftCount'),draftMass:$('draftMass'),buildLabel:$('buildLabel'),
@@ -142,13 +143,32 @@ function setMode(next){
     renderArchive();
   }
 }
+function markScar(x,z,kind){
+ if(!state||!Number.isFinite(x)||!Number.isFinite(z))return;
+ state.scars=addScar(state.scars,state.wave,x,z,kind);
+ world.setScars?.(state.scars);
+}
+function showOrganTransition(wave){
+ const layer=ui.organIris;
+ if(!layer)return;
+ if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+ ui.organIrisName.textContent=biomeForWave(wave).name;
+ layer.classList.remove('organ-transition-active');
+ // Restart both iris halves if a future stage is entered quickly.
+ void layer.offsetWidth;
+ layer.classList.add('organ-transition-active');
+ const signal=++transitionRevision;
+ window.setTimeout(()=>{
+   if(transitionRevision===signal)layer.classList.remove('organ-transition-active');
+ },1300);
+}
 function newState(seed){
   const start=world.getStart();
   return {v:5,seed,x:start.x,z:start.z,yaw:findOpenFacing(start.x,start.z,world.isFloor),pitch:0,hp:100,maxHp:100,heat:0,
     weapon:0,level:0,damageBonus:0,cooldown:0,dashCooldown:0,dashTime:0,dashDirX:0,dashDirZ:0,
     invuln:0,score:0,kills:0,wave:0,elapsed:0,waveTime:0,toSpawn:0,spawnClock:0,
     enemies:[],pickups:[],projectiles:[],moving:0,sprinting:false,heartPhase:1,phase:0,
-    ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0,immune:immuneDefaults(),
+    ruptured:[],scars:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0,immune:immuneDefaults(),
     grafts:[],biomass:0,pendingDraft:0,draftRevision:0,
     routeHistory:[],selectedRoute:'',routeId:'',routeWave:0,routeHazard:0,gene:null,
     guardianPending:0,guardianDefeated:[],
@@ -175,6 +195,7 @@ function restore(raw){
   const base=newState(s.seed);
   state={...base,...s,enemies:[],pickups:[],projectiles:[]};
   combatAudio.setBiome(state.wave);
+  world.setScars?.(state.scars);
   if(!world.isFloor(state.x,state.z)){state.x=base.x;state.z=base.z;}
   for(const e of s.enemies){
     if(!world.isFloor(e.x,e.z))continue;
@@ -219,6 +240,7 @@ function begin(resume=false){
   }catch(error){fatal(error);}
 }
 function startWave(number){
+  const previous=state.wave;
   if(state.wave>=1&&state.wave<number&&state.waveTime>0){
     state.stageTimes=[...(state.stageTimes||[]).filter(t=>t.wave!==state.wave),
       {wave:state.wave,seconds:Math.round(state.waveTime)}].slice(-5);
@@ -238,6 +260,8 @@ function startWave(number){
     navAt=0;gateHintShown=false;
   }
   state.wave=number;combatAudio.setBiome(number);state.waveTime=0;state.spawnClock=0;
+  world.setScars?.(state.scars);
+  if(previous>0&&number!==previous)showOrganTransition(number);
   state.pulse=1;state.pulseSpawned=0;state.organRuptureClaimed=false;
   const first=state.pulseMax===3?pulsePlan(state.seed,number,1):null;
   state.toSpawn=number===5?1:(first?.count??7+number*3)+
@@ -331,8 +355,10 @@ function dropAt(x,z){
   state.pickups.push({x,z,type,visual:world.makePickup(x,z)});
 }
 function defeatEnemy(e){
+  markScar(e.x,e.z,'blood');
   world.splatter(e.x,e.z,e.type==='heart'?55:isGuardian(e.type)?35:16);
-  world.disposeVisual(e.visual);
+  if(world.playDeath)world.playDeath(e.visual,e.type,e.x,e.z);
+  else world.disposeVisual(e.visual);
   state.enemies.splice(state.enemies.indexOf(e),1);
   state.kills++;
   const chain=registerCombatChain(state);
@@ -411,6 +437,7 @@ function shoot(){
       const damage=world.damageTissue(result.tissue.id,membraneDamage(state,gun.damage*(weapon===1?.75:1.3)));
       if(damage?.opened){
         state.ruptured.push(damage.id);state.ruptureCount++;
+        markScar(damage.x,damage.z,'rupture');
         state.score+=180;
         if(state.pulseMax===3&&!state.organRuptureClaimed){
           // A real optional exploration reward, once per organ; rupture
@@ -436,7 +463,10 @@ function shoot(){
       }
     }else if(result.kind==='wall'){
       walls++;wallHits++;
-      if(pellet===0||pellet===3)world.impact(result.point,direction,'wall');
+      if(pellet===0||pellet===3){
+        world.impact(result.point,direction,'wall');
+        if(pellet===0)markScar(result.point.x,result.point.z,'burn');
+      }
     }
     if(mode!=='playing')break;
   }
@@ -1011,6 +1041,7 @@ window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   biome:world?.getBiome()?.id??null,worldStage:world?.getStage()??null,hazard:state?world?.getHazardAt(state.x,state.z):null,
   softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
   architecture:world?.getArchitectureSignature?.()??null,
+  tissueMemory:state?scarSignature(state.scars,state.wave):null,
   atmosphere:world?.getAtmosphereSignature?.()??null,
   anatomy:{ruptures:state?.ruptureCount??0,immuneHeat:state?.immuneHeat??0,activeGates:state?world?.getTissueCount(Math.floor(state.x/8),Math.floor(state.z/8)):0},
   immunity:{...state?.immune},
