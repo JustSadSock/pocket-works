@@ -27,7 +27,7 @@ const spellChoreography=new SpellChoreography();
 const duelFeedback=new DuelFeedback();
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,aim:null},stick={pointer:null,x:0,y:0},touches=new Map();
-let tapAttackQueued=false,aimTouch=false,aimTouchStart=0,aimDragged=false;
+let tapAttackQueued=false,aimTouch=false,aimTouchStart=0,aimDragged=false,aimVector=null;
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
 function put(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';
@@ -296,7 +296,7 @@ const aimButton=$('attack-btn');let aimedPointer=null;
 aimButton.addEventListener('pointerdown',e=>{
  if(mode!=='fight')return;
  aimedPointer=e.pointerId;aimTouch=e.pointerType!=='mouse';
- aimTouchStart=performance.now();aimDragged=false;
+ aimTouchStart=performance.now();aimDragged=false;aimVector=null;
  if(aimTouch){input.aim=null;input.attack=false}
  aimButton.classList.add('aiming');
 });
@@ -304,7 +304,7 @@ aimButton.addEventListener('pointermove',e=>{
  if(mode!=='fight'||e.pointerId!==aimedPointer||!active)return;
  const r=aimButton.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
  if(Math.hypot(dx,dy)>11){
-  const a=myActor();input.aim=courtAim(a,dx,dy,W,H);
+  const a=myActor();aimVector={dx,dy};input.aim=courtAim(a,dx,dy,W,H);
   aimDragged=true;input.attack=true;
  }
 });
@@ -314,7 +314,7 @@ const stopAim=e=>{
   if(e.type==='pointerup'&&!aimDragged)tapAttackQueued=true;
   input.aim=null;input.attack=false;
  }
- aimedPointer=null;aimTouch=false;aimDragged=false;aimButton.classList.remove('aiming');
+ aimedPointer=null;aimTouch=false;aimDragged=false;aimVector=null;aimButton.classList.remove('aiming');
 };
 aimButton.addEventListener('pointerup',stopAim);aimButton.addEventListener('pointercancel',stopAim);aimButton.addEventListener('lostpointercapture',stopAim);
 
@@ -324,6 +324,7 @@ canvas.addEventListener('pointerdown',e=>{if(mode!=='fight')return;input.aim=can
 window.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')input.attack=false});
 function playerInput(){
  if(aimedPointer!==null&&aimTouch&&!aimDragged&&performance.now()-aimTouchStart>260){aimDragged=true;input.attack=true}
+ if(aimedPointer!==null&&aimTouch&&aimVector&&active)input.aim=courtAim(myActor(),aimVector.dx,aimVector.dy,W,H);
  let x=stick.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),y=stick.y+(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0);const speed=Math.hypot(x,y);if(speed>1){x/=speed;y/=speed}const out={x,y,attack:input.attack||tapAttackQueued||keys.has('Space'),shield:input.shield,dash:input.dash,aim:input.aim||{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y}};input.shield=false;input.dash=false;tapAttackQueued=false;return out}
 let bgCanvas;
 function rng(seed){let a=seed>>>0;return()=>((a=Math.imul(a,1664525)+1013904223>>>0)/4294967296)}
