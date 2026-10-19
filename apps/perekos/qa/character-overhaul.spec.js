@@ -35,7 +35,7 @@ test('v0.13: full-resolution cast, movement and damage contact sheet for six hum
     const mini=document.createElement('canvas');
     mini.width=160;mini.height=138;
     const brush=mini.getContext('2d');brush.imageSmoothingEnabled=false;
-    drawMage(brush,undefined,{x:80,y:110,scale:1.53,time:.28,
+    drawMage(brush,undefined,{x:80,y:95,scale:1.35,time:.28,
       mageId:mage.id,pose:s.pose,casting:s.cast,shield:s.guard,flash:s.hit,face:0});
     c.drawImage(mini,x+6,y+24);
     const bytes=brush.getImageData(0,0,160,138).data;
