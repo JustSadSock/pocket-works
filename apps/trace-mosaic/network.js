@@ -47,7 +47,10 @@ export class PocketSocket extends EventTarget {
     });
     this.net.on('room_joined', packet => {
       if (this.local || packet.gameId !== 'trace-mosaic') {
-        if (packet.gameId !== 'trace-mosaic') this.message('room_lost', { reason: 'Этот код относится к другой игре' });
+        if (!this.local && packet.gameId !== 'trace-mosaic') {
+          try { this.net.leaveRoom(); } catch {}
+          this.message('room_lost', { reason: 'Этот код относится к другой игре' });
+        }
         return;
       }
       this.code = prefix(packet.roomId);
@@ -114,7 +117,12 @@ export class PocketSocket extends EventTarget {
     if (this.code && this.readyState === 1) this.send(JSON.stringify({ type: 'pulse' }));
   }
   practice(name, fresh = false) {
-    if (!this.local) this.net.close();
+    if (!this.local) {
+      this.net.roomId = null;
+      this.net.persist();
+      this.net.close();
+    }
+    history.replaceState({}, '', location.pathname);
     this.local = true;
     this.code = 'СОЛО';
     this.readyState = 1;
@@ -139,7 +147,12 @@ export class PocketSocket extends EventTarget {
     try { packet = JSON.parse(text); } catch { return false; }
     if (this.local) {
       if (!this.code) return false;
-      if (packet.type === 'leave_room') { this.code = null; return true; }
+      if (packet.type === 'leave_room') {
+        this.code = null;
+        history.replaceState({}, '', location.pathname);
+        location.reload();
+        return true;
+      }
       try {
         const result = game.onMessage({ state: this.saved, player: this.member, payload: packet });
         this.saved = result.state;
