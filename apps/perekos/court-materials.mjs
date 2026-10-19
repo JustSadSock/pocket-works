@@ -75,6 +75,10 @@ export function carveButtressFace(c,w,index=0){
   rect(c,x+width*.66-off*.25,yy+3,2,Math.max(3,(height-19)/3-8),'#1c342b98');
   rect(c,x+15+off,yy+4,8+row*2,1,'#c6c69a50');
  }
+ // Two descending veins follow the masonry's physical bevel rather than
+ // painting a flat grid over the entire obstacle.
+ path(c,[[x+11,y+13],[x+14,y+25],[x+11,y+36]],'#8f9d7c67',1);
+ path(c,[[x+width-16,y+16],[x+width-13,y+29],[x+width-17,y+height-6]],'#142f29a6',2);
  // Narrow geological strata cross the vertical face, chipped at corners.
  for(let i=0;i<9;i++){
   const xx=x+9+h(i*11+index*73)*(width-20);
