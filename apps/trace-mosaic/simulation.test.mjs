@@ -102,3 +102,24 @@ test('cancelled or moved-away correct piece cannot generate infinite net flow', 
   assert.equal(view.players[0].stats.netFlow, 3);
   assert.equal(view.players[0].stats.correctDrops, 1);
 });
+
+test('completed puzzle keeps its time bonus after the clock advances', () => {
+  const { act } = solo();
+  let view = act('start_game');
+  for (let tileId = 0; tileId < view.game.totalTiles; tileId++) {
+    act('drag_update', { tileId, cells: [tileId], targetCell: tileId });
+    view = act('drag_end', { tileId, cells: [tileId], targetCell: tileId });
+  }
+  assert.equal(view.phase, 'results');
+  assert.equal(view.game.score.completionPercent, 100);
+  const finalScore = view.game.score.teamScore;
+  const originalNow = Date.now;
+  try {
+    const future = originalNow() + 45000;
+    Date.now = () => future;
+    view = act('pulse');
+    assert.equal(view.game.score.teamScore, finalScore);
+  } finally {
+    Date.now = originalNow;
+  }
+});
