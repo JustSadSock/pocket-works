@@ -110,7 +110,8 @@
       "id": "biomes",
       "kind": "node-test",
       "files": [
-        "qa/biomes.test.mjs"
+        "qa/biomes.test.mjs",
+        "qa/pacing.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -118,7 +119,8 @@
       "id": "biomes-browser",
       "kind": "playwright",
       "files": [
-        "qa/biomes.spec.js"
+        "qa/biomes.spec.js",
+        "qa/pacing.spec.js"
       ],
       "tier": "smoke"
     },

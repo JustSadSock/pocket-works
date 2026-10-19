@@ -9,6 +9,7 @@ import {biomeForWave,biomeSpeedFactor,biomeDamage,biomeRuptureHeal} from './biom
 import {drawGrafts,applyGraft,graftForId,weaponBuild,dashCooldown,moveSpeed,incomingDamage,membraneDamage,immuneHeatGain,hasGraft,maxWeaponIndex} from './biobuilds.js';
 import {GENES,routeOptions,applyRoute,sanitizeArchive,unlockGene,equipGene,applyGene,earnEchoes} from './runPaths.js';
 import {guardianForWave,isGuardian,guardianReady,guardianSpawnResolved,guardianDamage,guardianAction} from './guardians.js';
+import {pulsePlan,pulseEnemyKind,nextPulse} from './runPacing.js';
 
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -41,7 +42,7 @@ let paintCoolDownUntil=0,paintCost=0,draftIndex=0,lastForkNearby='';
 const ui={
   menu:$('menu'),pause:$('pauseMenu'),result:$('result'),failure:$('failure'),hud:$('hud'),
   touch:$('touchControls'),cross:$('crosshair'),pauseBtn:$('pauseBtn'),wave:$('waveValue'),
-  hp:$('healthValue'),healthFill:$('healthFill'),enemies:$('enemyValue'),kills:$('killValue'),
+  hp:$('healthValue'),healthFill:$('healthFill'),enemies:$('enemyValue'),kills:$('killValue'),pulse:$('pulseValue'),
   weapon:$('weaponValue'),score:$('scoreValue'),seed:$('seedValue'),intro:$('introSubtitle'),
   resume:$('resumeSaved'),record:$('record'),mutation:$('scar'),resultTitle:$('resultTitle'),
   resultBody:$('resultBody'),note:$('notice'),damage:$('damageOverlay'),
@@ -114,7 +115,8 @@ function newState(seed){
     ruptured:[],ruptureCount:0,immuneHeat:0,immuneDelay:0,hazardCooldown:0,immune:immuneDefaults(),
     grafts:[],biomass:0,pendingDraft:0,draftRevision:0,
     routeHistory:[],selectedRoute:'',routeId:'',routeWave:0,routeHazard:0,gene:null,
-    guardianPending:0,guardianDefeated:[]};
+    guardianPending:0,guardianDefeated:[],
+    pulse:1,pulseMax:3,pulseSpawned:0,organRuptureClaimed:false};
 }
 function getSeed(){return ((Date.now() ^ Math.floor(Math.random()*0xffffffff))>>>0);}
 function makeEnemy(type,x,z,hp){
@@ -191,15 +193,20 @@ function startWave(number){
     world.nearChunks(spawn.x,spawn.z);
     navAt=0;gateHintShown=false;
   }
-  state.wave=number;state.waveTime=0;state.spawnClock=0;state.toSpawn=number===5?1:7+number*3;
+  state.wave=number;state.waveTime=0;state.spawnClock=0;
+  state.pulse=1;state.pulseSpawned=0;state.organRuptureClaimed=false;
+  const first=state.pulseMax===3?pulsePlan(state.seed,number,1):null;
+  state.toSpawn=number===5?1:first?.count??7+number*3;
   state.routeId='';state.routeWave=0;state.routeHazard=0;
-  state.guardianPending=guardianForWave(number)?number:0;
+  // The guardian is only activated after the final contraction, never
+  // during the first minutes of a newly generated multi-pulse organ.
+  state.guardianPending=(state.pulseMax===3&&number<5)?0:(guardianForWave(number)?number:0);
   world.setRouteMark?.('');
   world.setForkSites?.(number<5?routeOptions(state.seed,number+1).map(r=>r.id):[]);
   world.setForkSelection?.('');
   if(number===2)state.immune.heat=Math.max(state.immune.heat,18);
   if(number===5){setNotice('НЕРВНЫЙ УЗЕЛ · СЕРДЦЕ ПРОСНУЛОСЬ',3);sound('heart');}
-  else {setNotice(biomeForWave(number).name+' · ВОЛНА '+number+'/05',2.8);sound('heart');}
+  else {setNotice(biomeForWave(number).name+' · '+(first?'ПУЛЬС 1/3 · '+first.name:'ВОЛНА '+number+'/05'),2.8);sound('heart');}
   snapshot();
 }
 function chooseSpawn(min=4,max=11){
@@ -356,6 +363,14 @@ function shoot(){
       if(damage?.opened){
         state.ruptured.push(damage.id);state.ruptureCount++;
         state.score+=180;
+        if(state.pulseMax===3&&!state.organRuptureClaimed){
+          // A real optional exploration reward, once per organ; rupture
+          // already provokes immunity and changes corridor connectivity.
+          state.organRuptureClaimed=true;
+          state.biomass=Math.min(99,state.biomass+2);
+          state.score+=140;
+          setNotice('ТКАНЬ ИЗВЛЕЧЕНА · +2 БИОМАССЫ',2.3);
+        }
         const heal=biomeRuptureHeal(state.wave);
         if(heal)state.hp=Math.min(state.maxHp,state.hp+heal);
         provokeImmune(state.immune,'rupture',state.wave);
@@ -573,8 +588,11 @@ function update(dt){
   if(state.toSpawn>0){
     state.spawnClock-=dt;
     if(state.spawnClock<=0&&state.enemies.length<20){
-      const type=chooseEnemyKind(state.wave,Math.random());
-      if(spawnUnit(type)){state.toSpawn--;state.spawnClock=state.wave===5?0:rng(.4,.9);}
+      const type=state.pulseMax===3&&state.wave<5?
+        pulseEnemyKind(state.seed,state.wave,state.pulse,state.pulseSpawned||0):
+        chooseEnemyKind(state.wave,Math.random());
+      if(spawnUnit(type)){state.toSpawn--;state.pulseSpawned=(state.pulseSpawned||0)+1;
+        state.spawnClock=state.wave===5?0:rng(.46,.90);}
       else state.spawnClock=1.1;
     }
   }
@@ -587,11 +605,27 @@ function update(dt){
   }
   if(mode!=='playing')return;
   if(state.toSpawn===0&&state.enemies.length===0&&!state.guardianPending){
+    // Closing an organ is earned by clearing each contraction and its
+    // guardian, not by waiting through an artificial countdown.
+    if(state.pulseMax===3&&state.wave<5&&state.pulse<3){
+      waveBreak+=dt;
+      if(waveBreak>1.4){
+        const next=nextPulse(state);waveBreak=0;
+        if(next){setNotice(next.name+' · ПУЛЬС '+next.pulse+'/3',3);
+          sound('heart');snapshot();}
+      }
+    }else if(state.pulseMax===3&&guardianForWave(state.wave)&&
+       !(state.guardianDefeated||[]).includes(state.wave)){
+      state.guardianPending=state.wave;
+      waveBreak=0;
+      setNotice('ОРГАН СОБИРАЕТ СТРАЖА',2.4);snapshot();
+    }else{
     waveBreak+=dt;
     if(waveBreak>2.2){
       waveBreak=0;
       if(state.wave>=5)finish(true);
       else openDraft(state.wave+1);
+    }
     }
   }else waveBreak=0;
   if(clock-lastSave>5){lastSave=clock;snapshot();}
@@ -604,6 +638,8 @@ function update(dt){
 function syncHUD(){
   if(!state)return;
   ui.wave.textContent=String(state.wave).padStart(2,'0')+' / 05';
+  ui.pulse.textContent=state.wave===5?'СЕРДЦЕ':
+    state.pulseMax===3?'ПУЛЬС '+state.pulse+'/3':'ЗАЧИСТКА';
   ui.zone.textContent=biomeForWave(state.wave).short;
   ui.hp.textContent=String(Math.ceil(state.hp)).padStart(3,'0');
   ui.healthFill.style.width=(state.hp/state.maxHp*100)+'%';
@@ -912,7 +948,11 @@ function frame(timestamp){
 }
 window.__MEAT_QA__=()=>({mode,quality,effectiveQuality,seed:state?.seed||null,
   x:state?.x??null,z:state?.z??null,yaw:state?.yaw??null,pitch:state?.pitch??null,hp:state?.hp??null,wave:state?.wave??null,
-  score:state?.score??null,enemies:state?.enemies?.length??0,biome:world?.getBiome()?.id??null,worldStage:world?.getStage()??null,hazard:state?world?.getHazardAt(state.x,state.z):null,
+  score:state?.score??null,enemies:state?.enemies?.length??0,
+  pacing:{pulse:state?.pulse||1,max:state?.pulseMax||1,spawned:state?.pulseSpawned||0,
+    remaining:state?.toSpawn||0,profile:state?.wave&&state.wave<5?pulsePlan(state.seed,state.wave,state.pulse):null,
+    organRuptureClaimed:Boolean(state?.organRuptureClaimed)},
+  biome:world?.getBiome()?.id??null,worldStage:world?.getStage()??null,hazard:state?world?.getHazardAt(state.x,state.z):null,
   softwareRenderer:Boolean(world?.softwareRenderer),saved:Boolean(validateRun(safeRead('session'))),
   architecture:world?.getArchitectureSignature?.()??null,
   anatomy:{ruptures:state?.ruptureCount??0,immuneHeat:state?.immuneHeat??0,activeGates:state?world?.getTissueCount(Math.floor(state.x/8),Math.floor(state.z/8)):0},
