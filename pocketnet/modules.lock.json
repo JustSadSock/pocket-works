@@ -207,5 +207,11 @@
     "versions": [
       "v1"
     ]
+  },
+  "skyforge-relay": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
