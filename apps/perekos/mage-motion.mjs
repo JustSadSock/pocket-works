@@ -5,6 +5,7 @@ import {mage} from './mages.mjs';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const smooth=(now,old,speed,dt)=>old+(now-old)*(1-Math.exp(-speed*dt));
+const ease=t=>{const x=clamp(t,0,1);return x*x*(3-2*x)};
 export const RIGS=Object.freeze({
  kindle:Object.freeze({gait:1.07,step:1,weight:.76,coat:.92,flourish:1.0,attack:'lunge'}),
  cinder:Object.freeze({gait:.92,step:.83,weight:1.04,coat:1.28,flourish:1.28,attack:'swing'}),
@@ -16,7 +17,9 @@ export const RIGS=Object.freeze({
 export function basePose(id='kindle'){
  return {move:0,step:0,lean:0,bodyBob:0,cloth:0,headTilt:0,
   footSpread:0,attack:0,guard:0,impact:0,dash:0,headBob:0,
-  weight:RIGS[id]?.weight||1,style:RIGS[id]?.attack||'lunge'};
+  weight:RIGS[id]?.weight||1,style:RIGS[id]?.attack||'lunge',
+  windup:0,release:0,recover:0,weaponTilt:0,weaponRise:0,shoulderTurn:0,
+  crouch:0,stance:0,breath:0,aimLift:0,scarf:0};
 }
 export class MageMotion{
  constructor(){this.entries=new Map();this.round=null}
@@ -28,7 +31,7 @@ export class MageMotion{
   let m=this.entries.get(key);
   if(!m||m.mageId!==actor.mageId||!Number.isFinite(m.time)||time<m.time||time-m.time>1){
    m={time,x:position.x,y:position.y,mageId:actor.mageId,walk:0,
-    speed:0,lean:0,cloth:0,wind:0,hit:0,guard:0,attack:0,
+    speed:0,lean:0,cloth:0,wind:0,hit:0,guard:0,attack:0,castClock:2,scarf:0,
     lastCast:0,lastShield:actor.shield||0,lastFlash:0,
     face:actor.face||0};
    this.entries.set(key,m);
@@ -46,10 +49,11 @@ export class MageMotion{
   const attackNew=(actor.cast||0)>m.lastCast+.08;
   const guardNew=(actor.shield||0)>m.lastShield+4;
   const hitNew=(actor.flash||0)>m.lastFlash+.035;
-  if(attackNew)m.attack=1;
+  if(attackNew){m.attack=1;m.castClock=0;}
   if(guardNew)m.guard=1;
   if(hitNew)m.hit=1;
   m.attack=Math.max(0,m.attack-dt*3.8);
+  m.castClock=Math.min(2,m.castClock+dt);
   m.guard=Math.max(0,m.guard-dt*2.1);
   m.hit=Math.max(0,m.hit-dt*6);
   const dash=clamp((actor.dash||0)/.17,0,1);
@@ -59,11 +63,34 @@ export class MageMotion{
   const wind=clamp(-cross/36,-6,6)-dash*3;
   m.wind=smooth(wind,m.wind,6/(config.weight*.65+.35),dt);
   m.cloth=smooth(m.wind,m.cloth,5/config.coat,dt);
+  m.scarf=smooth(m.cloth*1.5+m.wind*.4,m.scarf,4.2/(config.coat*.55+.5),dt);
   m.time=time;m.x=position.x;m.y=position.y;m.face=heading;
   m.lastCast=actor.cast||0;m.lastShield=actor.shield||0;m.lastFlash=actor.flash||0;
   const gaitWave=Math.sin(m.walk),swing=Math.cos(m.walk);
   const impact=m.hit,guard=Math.max(m.guard,(actor.shield||0)>0?.15:0);
   const stun=clamp((actor.stun||0)/.2,0,1);
+  // Primary key poses are real attack lifecycle intervals, not a perpetual
+  // sinusoid. Wire snaps fast; the granite classes require a longer follow
+  // through. These only move artwork, never the authoritative attack time.
+  const tempo=config.weight>1.4?.78:config.weight<.6?1.55:1;
+  const phase=clamp(m.castClock*tempo/.36,0,1);
+  const windup=ease(phase/.23)*(1-ease((phase-.24)/.20));
+  const release=ease((phase-.16)/.22)*(1-ease((phase-.58)/.34));
+  const recover=ease((phase-.46)/.28)*(1-ease((phase-.94)/.1));
+  const stepDir=Math.sin(m.walk);
+  const flank=clamp(cross/120,-1,1);
+  const stone=config.weight>1.4,quick=config.weight<.65;
+  const sign=Math.cos(heading)<0?-1:1;
+  const aimLift=clamp(-Math.sin(heading),-1,1);
+  const weaponTilt=(quick?-.43:stone?-.55:-.30)*windup+
+     (stone?.65:quick?.23:.43)*release+
+     (config.attack==='swing'?.22:config.attack==='coil'?-.18:0)*release;
+  const weaponRise=(stone?7:quick?13:10)*windup-
+    (stone?11:quick?6:8)*release+aimLift*5;
+  const shoulderTurn=(stone?-.12:-.20)*windup+(stone?.16:.12)*release;
+  const crouch=(stone?4.5:quick?1.8:2.8)*windup-
+    (stone?1.3:quick?1.4:1.8)*release+stun*4;
+  const breath=Math.sin((reduced?0:time)*(stone?1.8:2.5)+key*1.1)*(stone?.5:.75);
   const pose={
    still:!!reduced,
    move:m.speed,step:m.walk,lean:clamp(m.lean+dash*2-impact*2,-5,5),
@@ -73,12 +100,18 @@ export class MageMotion{
    headBob:Math.abs(gaitWave)*m.speed*config.step,
    footSpread:clamp(m.speed*config.step*3+guard*1.5+dash*2,0,7),
    attack:m.attack,guard,impact,dash,
-   weight:config.weight,style:config.attack
+   weight:config.weight,style:config.attack,
+   windup,release,recover,weaponTilt,weaponRise,shoulderTurn,
+   crouch,stance:stepDir*m.speed,breath,aimLift,
+   scarf:clamp(m.scarf,-10,10)
   };
   if(reduced){
    pose.step=0;pose.move=0;pose.lean=0;pose.bodyBob=0;pose.cloth=0;
    pose.headTilt=0;pose.headBob=0;pose.footSpread=0;
    pose.attack=0;pose.impact=0;pose.dash=0;
+   pose.windup=0;pose.release=0;pose.recover=0;
+   pose.weaponTilt=0;pose.weaponRise=0;pose.shoulderTurn=0;
+   pose.crouch=0;pose.stance=0;pose.breath=0;pose.aimLift=0;pose.scarf=0;
   }
   return pose;
  }
