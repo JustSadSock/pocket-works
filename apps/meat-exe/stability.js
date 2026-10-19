@@ -5,6 +5,7 @@ import {ROUTES,GENES,routeOptions,sanitizeRouteHistory} from './runPaths.js';
 import {GUARDIAN_TYPES,guardianForWave,sanitizeGuardianPending} from './guardians.js';
 import {pulsePlan} from './runPacing.js';
 import {sanitizeProtocol} from './runTuning.js';
+import {sanitizeScars} from './scars.js';
 const num=(value,min,max,fallback=0)=>Number.isFinite(value)?Math.min(max,Math.max(min,value)):fallback;
 const kinds=new Set(['crawler','spitter','brute','heart','leech','warden',...GUARDIAN_TYPES]);
 const validPosition=e=>e&&Number.isFinite(e.x)&&Number.isFinite(e.z)&&Math.abs(e.x)<=10000&&Math.abs(e.z)<=10000;
@@ -14,6 +15,7 @@ export function validateRun(s){
   if(hp<=0)return null;
   return {
     v:5,seed:s.seed>>>0,x:s.x,z:s.z,
+    scars:sanitizeScars(s.scars),
     protocol:sanitizeProtocol(s.protocol),
     damageTaken:num(Math.floor(s.damageTaken),0,99999,0),
     combo:num(Math.floor(s.combo),0,12,0),
