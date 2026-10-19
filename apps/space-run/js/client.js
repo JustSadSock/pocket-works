@@ -423,9 +423,14 @@ function renderEngineeringUI(){
     fill.style.width=`${Math.min(100,m.heat||0)}%`;
     meter.appendChild(fill);
     info.append(name,small,meter);
+    if(m.type==="radiator"){
+      const hint=document.createElement("small");
+      hint.textContent=m.coolantBoost>1?"ФОРСАЖ ОХЛАЖДЕНИЯ":"Займите радиатор и удерживайте Пробел для форсажа";
+      info.append(hint);
+    }
     const priority=button(`П${m.powerPriority??2}`,"",()=>socket.emit("powerPriority",{moduleId:m.id,priority:((m.powerPriority??2)+1)%4}));
     priority.title="Приоритет питания: нажмите для переключения 0–3";
-    priority.disabled=state.phase==="combat";
+    priority.disabled=state.phase==="combat"||m.type==="reactor";
     row.append(info,priority);engineeringPanel.append(row);
   }
 }
@@ -448,9 +453,18 @@ function renderRepairConsole() {
     const alert=document.createElement("h3");alert.textContent="ИНЖЕНЕРНЫЙ ПОСТ ОТКЛЮЧЁН";
     const reason=document.createElement("p");
     reason.textContent=station.overheated?"Перегрев: охлаждение происходит автоматически.":
-      station.powered===false?"Питание прервано: восстановите обшивку или запитайте участок от реактора.":
+      station.powered===false?"Питание прервано. Открытые автоматы можно аварийно замкнуть за 5 энергии.":
       "Модуль повреждён: восстановите его перед ремонтом обшивки.";
-    repairConsole.append(alert,reason);return;
+    repairConsole.append(alert,reason);
+    if(station.powered===false&&station.status==="online"&&!station.overheated){
+      for(const b of state.ship.breakers||[]){
+        if(b.closed)continue;
+        const btn=button(`Замкнуть ${b.x},${b.y} · 5 эн.`,"",()=>
+          socket.emit("breakerAction",{x:b.x,y:b.y,operation:"toggle"}));
+        btn.disabled=state.ship.energy<5;repairConsole.append(btn);
+      }
+    }
+    return;
   }
 
   const damaged = state.ship.modules.filter(m => m.status !== "online" || m.hp < m.maxHp);
