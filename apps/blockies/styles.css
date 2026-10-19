@@ -1914,3 +1914,20 @@ canvas {
 .rematch-status{min-height:0;margin:10px auto 6px;text-align:center;color:#bcebe0;font:600 13px/1.5 system-ui;letter-spacing:.02em}
 .rematch-status:empty{display:none}
 #gameover-menu .btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Physical, inclusive controls: pointer capture and visual hold state. */
+#touch-controls .touch-btn {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 80ms ease-out, filter 80ms ease-out, box-shadow 80ms ease-out;
+}
+#touch-controls .touch-btn.is-held {
+  transform: translateY(2px) scale(.965);
+  filter: brightness(1.23);
+  box-shadow: inset 0 3px 10px rgba(0,0,0,.35), 0 0 0 2px rgba(255,255,255,.20);
+}
+@media (prefers-reduced-motion: reduce) {
+  #touch-controls .touch-btn { transition: none; }
+}
