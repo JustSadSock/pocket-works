@@ -19,14 +19,15 @@ const FS=[
 'uniform vec3 eye;uniform vec3 facing;uniform vec3 lampA;uniform vec3 lampB;',
 'uniform float torch;uniform mediump float time;uniform float hit;uniform float electrical;uniform float sight;',
 'uniform sampler2D paintedAtlas;uniform sampler2D structureMask;',
-'uniform vec2 structureOrigin;uniform float structureEnabled;',
+'uniform vec2 structureOrigin;uniform float structureEnabled;uniform float occlusionSteps;',
 'float fixtureVisibility(vec3 source){',
 ' if(structureEnabled<.5)return 1.0;',
 ' vec2 line=p.xz-source.xz;',
 ' if(length(line)<.6)return 1.0;',
 ' float visible=1.0;',
 ' for(int i=1;i<=12;i++){',
-'  vec2 point=source.xz+line*(float(i)/13.0);',
+'  if(float(i)>occlusionSteps)break;',
+'  vec2 point=source.xz+line*(float(i)/(occlusionSteps+1.0));',
 '  vec2 uv=(point-structureOrigin)/60.96;',
 '  if(uv.x<0.0||uv.y<0.0||uv.x>1.0||uv.y>1.0)continue;',
 '  if(texture2D(structureMask,uv).r<.5)visible=0.0;',
@@ -650,7 +651,7 @@ export class Renderer{
   this.gl=gl;const program=gl.createProgram();gl.attachShader(program,shader(gl,gl.VERTEX_SHADER,VS));gl.attachShader(program,shader(gl,gl.FRAGMENT_SHADER,FS));gl.linkProgram(program);
   if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
   this.program=program;gl.useProgram(program);this.attrs=['position','tint','normal','material'].map(name=>{const l=gl.getAttribLocation(program,name);if(l>=0)gl.enableVertexAttribArray(l);return l});
-  this.u=Object.fromEntries(['mvp','eye','facing','lampA','lampB','torch','time','hit','paintedAtlas','electrical','sight','structureMask','structureOrigin','structureEnabled'].map(x=>[x,gl.getUniformLocation(program,x)]));
+  this.u=Object.fromEntries(['mvp','eye','facing','lampA','lampB','torch','time','hit','paintedAtlas','electrical','sight','structureMask','structureOrigin','structureEnabled','occlusionSteps'].map(x=>[x,gl.getUniformLocation(program,x)]));
   const atlas=makeMaterialAtlas(1701);this.texture=gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,atlas.width,atlas.height,0,gl.RGBA,gl.UNSIGNED_BYTE,atlas.pixels);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
@@ -737,6 +738,7 @@ export class Renderer{
   const lampA=rogue?this.practicalLights[0]:world.point('living'),
    lampB=rogue?this.practicalLights[1]:world.point('kitchen');
   gl.uniform1f(this.u.structureEnabled,rogue?1:0);
+  gl.uniform1f(this.u.occlusionSteps,this.canvas.width/this.canvas.height<.75?7:10);
   gl.uniformMatrix4fv(this.u.mvp,false,mvp);gl.uniform3fv(this.u.eye,eye);gl.uniform3fv(this.u.facing,dir);
   gl.uniform3fv(this.u.lampA,rogue?[lampA.x,lampA.y,lampA.z]:[lampA.x*SCALE,2.64,lampA.z*SCALE]);
   gl.uniform3fv(this.u.lampB,rogue?[lampB.x,lampB.y,lampB.z]:[lampB.x*SCALE,2.64,lampB.z*SCALE]);
