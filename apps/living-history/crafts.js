@@ -6,9 +6,17 @@ import {scheduleWork,commitWork} from './work-time.js';
 
 const round=n=>Math.round((n+Number.EPSILON)*100)/100;
 const living=(s,h)=>h.members.map(id=>s.people.find(p=>p.id===id)).filter(p=>p?.alive);
+const requiredForCourt=(s,p)=>{
+ const registry=s.institutions;
+ if(!registry||!p)return false;
+ return registry.cases.some(c=>['filed','owed'].includes(c.stage)&&(
+  c.claimantId===p.houseId||c.ownerId===p.houseId||
+  registry.officers?.[c.communityId]?.personId===p.id));
+};
 const workReady=(s,p)=>p?.alive&&p.age>=15&&p.health>28&&
  (!p.travel||p.travel.end<=s.day)&&p.hiredDay!==s.day&&
- p.combatDutyDay!==s.day&&p.dailyShift?.day!==s.day;
+ p.combatDutyDay!==s.day&&p.dailyShift?.day!==s.day&&
+ !requiredForCourt(s,p);
 const aliveHome=(s,h)=>living(s,h).length>0;
 export const CRAFT_GOODS=Object.freeze({
  boards:{label:'тёсаных досок',price:3.2,material:'wood'},
