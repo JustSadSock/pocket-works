@@ -110,3 +110,38 @@ test('rotation rejects other active tetrominoes in a shared well',()=>{
  const after=state.engine.players[0];
  assert.equal(JSON.stringify({shape:after.currentPiece,pos:after.position}),before);
 });
+
+test('each run of seven shared pieces contains every tetromino exactly once',()=>{
+ let state=start();const names={
+  I:[[1,1,1,1]],O:[[1,1],[1,1]],T:[[0,1,0],[1,1,1]],
+  S:[[0,1,1],[1,1,0]],Z:[[1,1,0],[0,1,1]],
+  J:[[1,0,0],[1,1,1]],L:[[0,0,1],[1,1,1]]
+ };
+ const seen=[];
+ for(let index=0;index<14;index++){
+  const piece=state.engine.players[0].currentPiece;
+  const entry=Object.entries(names).find(([,shape])=>JSON.stringify(piece)===JSON.stringify(shape));
+  assert.ok(entry,'the bag must return a legal tetromino');
+  seen.push(entry[0]);
+  state.engine.board=state.engine.board.map(row=>row.map(()=>0));
+  state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;
+ }
+ assert.equal(new Set(seen.slice(0,7)).size,7);
+ assert.equal(new Set(seen.slice(7,14)).size,7);
+});
+
+test('serialized server state preserves bag order after repeated hard drops',()=>{
+ let state=start();
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;
+ const checkpoint=JSON.parse(JSON.stringify(state));
+ const outcomes=[];
+ for(let replay=0;replay<2;replay++){
+  let run=JSON.parse(JSON.stringify(checkpoint));
+  for(let n=0;n<6;n++){
+   run.engine.board=run.engine.board.map(row=>row.map(()=>0));
+   run=game.onMessage({state:run,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;
+  }
+  outcomes.push({current:run.engine.players[0].currentPiece,next:run.engine.players[0].nextPiece,bag:run.engine.pieceBag,rngState:run.engine.rngState});
+ }
+ assert.deepEqual(outcomes[0],outcomes[1]);
+});
