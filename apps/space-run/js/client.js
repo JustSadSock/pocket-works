@@ -84,7 +84,7 @@ function showToast(msg, ms = 1600) {
 
 function ensureAudio() {
   if (sounds.ctx) return;
-  sounds.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  try{sounds.ctx = new (window.AudioContext || window.webkitAudioContext)();}catch{return;}
   sounds.master = sounds.ctx.createGain();
   sounds.master.gain.value = 0.08;
   sounds.master.connect(sounds.ctx.destination);
@@ -145,7 +145,7 @@ function sprite(path) {
 }
 
 function sendJoin() {
-  const roomCode = roomInput.value.trim().toUpperCase() || "ALPHA";
+  const roomCode = roomInput.value.trim().toUpperCase();
   const name = nameInput.value.trim() || "Pilot";
   socket.emit("joinRoom", { roomCode, name });
 }
@@ -269,7 +269,7 @@ function openModuleActions(moduleId, clientX, clientY) {
 
 function button(label, cls, onClick) {
   const b = document.createElement("button");
-  b.textContent = label;
+  b.textContent = label; b.dataset.nativePress="";
   if (cls) b.className = cls;
   b.addEventListener("click", onClick);
   return b;
@@ -279,6 +279,7 @@ function clearNode(node) {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
 
+let lastPanelSignature=null;
 function renderUI() {
   if (!state) return;
   document.body.classList.toggle("combat-ui", state.phase === "combat");
@@ -293,6 +294,9 @@ function renderUI() {
   hud.hull.textContent = `${Math.round(state.ship.hull || 0)}/${Math.round(state.ship.hullMax || 0)}`;
   hud.energy.textContent = `${Math.round(state.ship.energy || 0)}/${Math.round(state.ship.energyMax || 0)}`;
 
+  const panelSignature=JSON.stringify({phase:state.phase,players:state.players.map(p=>[p.id,p.name,p.moduleId]),modules:state.ship.modules.map(m=>[m.id,m.occupiedBy,m.status,Math.round(m.hp),m.x,m.y,m.rotation]),inventory:state.ship.inventoryModules,shapes:state.ship.inventoryShapes,offers:state.offers,affordable:state.offers.map(o=>state.ship.credits>=o.cost),missions:state.missionOptions,buildMode});
+  if(panelSignature===lastPanelSignature)return;
+  lastPanelSignature=panelSignature;
   clearNode(playerList);
   state.players.forEach((p) => {
     const row = document.createElement("div");
@@ -1261,4 +1265,9 @@ const fire=document.querySelector('#touch-fire');fire.onpointerdown=e=>{fire.set
 document.querySelector('#touch-rotate').onclick=()=>{buildRotation=(buildRotation+90)%360;showToast('Поворот '+buildRotation+'°');};
 canvas.addEventListener('pointercancel',()=>{mouse.downLeft=false;mouse.downRight=false;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){keyState.clear();mouse.downLeft=false;mouse.downRight=false;if(joined)socket.emit('playerInput',inputPayload());}});
+
+
+for(const button of document.querySelectorAll('[data-panel]'))button.onclick=()=>{document.body.dataset.panel=document.body.dataset.panel===button.dataset.panel?'':button.dataset.panel;};
+
+
 

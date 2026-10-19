@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="./styles.css" />
 <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#081a26"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
 <body>
-  <div id="app" data-app-shell><a class="pocket-exit" href="../../" data-app-control>Pocket Works</a>
+  <nav id="mobile-tabs"><button data-native-press data-panel="crew">Экипаж</button><button data-native-press data-panel="build">Мастерская</button></nav><div id="app" data-app-shell><a class="pocket-exit" href="../../" data-app-control>Pocket Works</a>
     <aside class="panel panel-left">
       <h1>Space Run</h1>
       <div class="card stat-card">
@@ -84,3 +84,4 @@
   <div id="touchDeck"><div><button data-key="KeyW">↑</button><button data-key="KeyA">←</button><button data-key="KeyS">↓</button><button data-key="KeyD">→</button></div><div><button data-key="Space">Щит</button><button data-key="KeyR">Ремонт</button><button id="touch-fire">Огонь</button><button id="touch-rotate">Поворот</button></div></div><script type="module" src="./app.js"></script>
 <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Space Run" data-app-version="0.1.0"></script></body>
 </html>
+
