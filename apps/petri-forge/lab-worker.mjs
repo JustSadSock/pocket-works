@@ -56,7 +56,7 @@ onmessage=event=>{
       kind=payload.name==='random'?'random':'qlearning';
       agent=makeAgent(kind,Number(payload.seed)||17);
       if(payload.snapshot&&kind==='qlearning')agent.load(payload.snapshot);
-      emit('loaded',{kind,states:agent.q?.size||0});
+      emit('loaded',{kind,states:agent.q?.size||0,requestId:payload.requestId??null});
     }else if(type==='act'){
       if(active)return;
       const action=agent.act(payload.obs,false);
