@@ -10,6 +10,7 @@ const combatWorker=new Worker(new URL('./combat-worker.mjs',import.meta.url),{ty
 const combatDefaults=[['bolt','dash','mine'],['bolt','shield','heal']];
 let battlePolicy=makePolicy('aggressive',17),battleBusy=false,battleReplay=null,battleCursor=0,battleTimer=null;
 let racePolicy=null,raceReady=false,raceBusy=false,raceReplay=null;
+let raceReplayTimer=null,raceReplayCursor=0;
 const framesInterval=95;
 const raceBridge='petri-shpilka-v1';
 const editor=mountCombatEditor({panel:document.getElementById('combatPanel'),canvas:document.getElementById('battleCanvas'),notify:status,onChange:()=>{
@@ -262,7 +263,7 @@ window.addEventListener('message',async event=>{
    updateRaceReplay(d.replay);status('Обучение гонщика завершено');
    await persistPolicy('race-autosave','Автосохранение гонщика','shpilka-evo',racePolicy);
    window.dispatchEvent(new CustomEvent('petri:finished',{detail:{mode:'race',snapshot:racePolicy,
-    report:{units:d.replay?.trace?.length||d.complete||0,before:d.baseline?.score??null,after:d.validation?.score??null,
+    report:{units:d.complete||0,before:d.baseline?.score??null,after:d.validation?.score??null,
       outcome:'completed',label:'Контрольный заезд: '+fmt(d.baseline?.score)+' → '+fmt(d.validation?.score)+' баллов'}}}));
   }else if(d.type==='stopped'){
    raceLock(false);racePolicy=d.policy;
@@ -279,13 +280,27 @@ window.addEventListener('message',async event=>{
   else if(d.type==='error'){raceLock(false);status('Шпилька: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'race',message:d.message}}));}
  }catch(e){notifyError(e);}
 });
+function stopRacePlayback(){if(raceReplayTimer!==null){clearInterval(raceReplayTimer);raceReplayTimer=null;}}
+function playRaceReplay(){
+ if(!raceReplay?.trace?.length){$('raceTest').click();return;}
+ if(raceReplayTimer!==null){stopRacePlayback();return;}
+ if(raceReplayCursor>=raceReplay.trace.length-1)raceReplayCursor=0;
+ const step=()=>{
+  if(!raceReady||raceBusy||raceReplayCursor>=raceReplay.trace.length){stopRacePlayback();return;}
+  raceCommand('preview',{frame:raceReplayCursor});
+  $('raceSeek').value=String(raceReplayCursor);
+  raceReplayCursor++;
+ };
+ step();raceReplayTimer=setInterval(step,125);
+}
 function updateRaceReplay(replay){
+ stopRacePlayback();raceReplayCursor=0;
  const max=Math.max(0,(replay?.trace?.length||0)-1);
  $('raceSeek').disabled=max===0;$('raceSeek').max=String(max);$('raceSeek').value='0';
  $('raceFrameCount').textContent= max?('1 / '+(max+1)):'Нет записи';
  if(max)raceCommand('preview',{frame:0});
 }
-$('raceSeek').oninput=e=>raceCommand('preview',{frame:Number(e.target.value)});
+$('raceSeek').oninput=e=>{stopRacePlayback();raceReplayCursor=Number(e.target.value);raceCommand('preview',{frame:raceReplayCursor});};
 $('raceTrain').onclick=()=>{if(raceCommand('train',{iterations:Number($('raceIterations').value),seed:Number($('raceSeed').value),policy:racePolicy})){raceLock(true);status('Гонщик тренируется...');}};
 $('raceStop').onclick=()=>raceCommand('stop');
 $('raceTest').onclick=()=>raceCommand('test',{seed:Number($('raceSeed').value)+150001});
@@ -300,6 +315,7 @@ $('raceLoad').onclick=async()=>{
 $('raceDelete').onclick=async()=>{const id=$('raceModels').value;if(!id)return;if(!confirm('Удалить сохранённого гонщика?'))return;try{await deleteModel(id);await refreshLibraries();status('Гонщик удалён');}catch(e){notifyError(e);}};
 frame.addEventListener('error',()=>{$('raceConnect').textContent='Ошибка загрузки Шпильки';status('Не удалось открыть гоночный движок');});
 function openMode(mode){
+ if(mode!=='race')stopRacePlayback();
  const grid=mode==='grid',combat=mode==='combat',race=mode==='race';
  for(const [id,show] of [['worldPanel',grid],['labPanel',grid],['combatWorld',combat],['combatPanel',combat],['raceWorld',race],['racePanel',race],['perekosWorld',mode==='perekos'],['perekosPanel',mode==='perekos']])$(id).hidden=!show;
  for(const button of document.querySelectorAll('[data-world-mode]')){button.classList.toggle('selected',button.dataset.worldMode===mode);button.setAttribute('aria-pressed',String(button.dataset.worldMode===mode));}
@@ -334,7 +350,7 @@ window.PetriForgeRuntime.race={
  train:()=>{if(!raceReady||raceBusy)return false;$('raceTrain').click();return true;},
  test:()=>{if(!raceReady||raceBusy)return false;$('raceTest').click();return true;},
  stop:()=>{$('raceStop').click();},
- replay:()=>{if(raceReplay?.trace?.length){$('raceSeek').value='0';raceCommand('preview',{frame:0});}},
+ replay:()=>playRaceReplay(),
  isBusy:()=>raceBusy,isReady:()=>raceReady,hasReplay:()=>!!raceReplay?.trace?.length,
  configure:seed=>{$('raceSeed').value=String(seed||41);},
  batch:count=>{$('raceIterations').value=String(count);}
