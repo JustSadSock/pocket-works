@@ -17,7 +17,7 @@
 <section class="workspace" aria-label="Пространственная модель">
 <div class="stage-head">
 <div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1 id="lab-headline">Увидеть искривлённое пространство</h1></div>
-<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="causality" type="button" aria-pressed="false">Причинность</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
+<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="causality" type="button" aria-pressed="false">Причинность</button><button data-view="atlas" type="button" aria-pressed="false">Атлас</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
 </div>
 <div class="canvas-frame"><canvas id="space" role="img" aria-label="Трассировка света и карта геометрии кротовой норы"></canvas>
 <div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
@@ -29,6 +29,52 @@
 <div class="bottom-note"><span class="tiny-dot"></span><span>Свет, материя и скалярные волны рассчитываются на одной заданной геометрии пространства-времени.</span></div>
 </section>
 <aside class="instrument" aria-label="Параметры эксперимента">
+
+<section id="atlas-panel" class="atlas-panel" aria-label="Атлас причинности двух устьев">
+<div class="section-caption"><span>АТЛАС ПРИЧИННОСТИ</span><span>β × D</span></div>
+<p class="atlas-intro">Исследуйте множество возможных рейсов. Цвет на карте рассчитывается из релятивистского рассогласования часов и полного маршрута светового сигнала — без визуальных допущений.</p>
+<div class="atlas-presets" role="group" aria-label="Готовые причинные конфигурации">
+<button type="button" data-atlas-preset="safe">Нет петли</button>
+<button type="button" data-atlas-preset="threshold">На границе</button>
+<button type="button" data-atlas-preset="loop">Есть петля</button>
+<button type="button" data-atlas-preset="impossible">Недостижимо</button>
+</div>
+<div class="atlas-verdict" id="atlas-verdict" data-outcome="safe" aria-live="polite">РЕЖИМ ОЖИДАНИЯ</div>
+<div class="atlas-description" id="atlas-explanation">Нажмите на карту: горизонтальная ось — расстояние D, вертикальная — максимальная скорость β.</div>
+<label class="range-field"><span>Расстояние между устьями <output id="atlas-distance-value">3.00</output><small> свет. сек.</small></span>
+<input id="atlas-distance" type="range" min=".3" max="12" step=".01" value="3"></label>
+<label class="range-field"><span>Пиковая скорость B <output id="atlas-speed-value">0.8500</output><small> c</small></span>
+<input id="atlas-speed" type="range" min="0" max=".98" step=".0001" value=".85"></label>
+<div class="section-caption second"><span>ФИКСИРОВАННЫЕ ПАРАМЕТРЫ КАРТЫ</span><span>T, δ</span></div>
+<label class="range-field"><span>Длительность рейса <output id="atlas-duration-value">34.0</output><small> с</small></span>
+<input id="atlas-duration" type="range" min="4" max="160" step=".01" value="34"></label>
+<label class="range-field"><span>Задержка внутри устьев <output id="atlas-throat-value">0.55</output><small> с</small></span>
+<input id="atlas-throat" type="range" min="0" max="5" step=".01" value=".55"></label>
+<label class="range-field"><span>Правая граница D на карте <output id="atlas-max-value">9.0</output><small> свет. сек.</small></span>
+<input id="atlas-max" type="range" min="1" max="12" step=".5" value="9"></label>
+<div class="section-caption second"><span>ИЗМЕРЕНИЯ В ВЫБРАННОЙ ТОЧКЕ</span><span>Δ − D − δ</span></div>
+<div class="atlas-metrics">
+<div><span>ОТСТАВАНИЕ ЧАСОВ · Δ</span><strong id="atlas-lag">—</strong><small>секунд</small></div>
+<div><span>ВНЕШНИЙ МАРШРУТ + ПРОХОД · D+δ</span><strong id="atlas-total">—</strong><small>секунд</small></div>
+<div class="atlas-metric-focus"><span>ЗАПАС ПРИЧИННОЙ ПЕТЛИ</span><strong id="atlas-margin">—</strong><small>секунд</small></div>
+<div><span>КРИТИЧЕСКАЯ СКОРОСТЬ β*</span><strong id="atlas-critical-speed">—</strong><small>c, при текущем T</small></div>
+<div><span>МИНИМАЛЬНАЯ ДЛИТЕЛЬНОСТЬ T*</span><strong id="atlas-critical-duration">—</strong><small>секунд при текущей β</small></div>
+<div><span>ВОЗВРАТ СИГНАЛА</span><strong id="atlas-witness">—</strong><small>относительно отправления</small></div>
+</div>
+<div class="atlas-tools">
+<button type="button" id="atlas-set-speed">Установить β*</button>
+<button type="button" id="atlas-set-duration">Установить T*</button>
+</div>
+<p id="atlas-solver-note" class="atlas-solver-note">Критическая точка определяется численно с точностью лучше 10⁻⁸.</p>
+<button id="atlas-experiment" class="atlas-experiment" type="button">Открыть маршрут сигнала <span aria-hidden="true">↗</span></button>
+<div class="section-caption second"><span>СРАВНЕНИЕ ЭКСПЕРИМЕНТОВ</span><span>ЖУРНАЛ</span></div>
+<div class="atlas-log-controls">
+<button type="button" id="atlas-capture">Сохранить точку</button>
+<button type="button" id="atlas-clear-log">Очистить журнал</button>
+</div>
+<div id="atlas-log" class="atlas-log" aria-live="polite"><p>Пока нет записей. Сохраните точку карты, чтобы сравнить её с другими условиями.</p></div>
+<p class="atlas-limit">Это фазовая диаграмма <strong>заданной гипотетической склейки устьев</strong>. Расчёт замедления часов и распространения света опирается на специальную теорию относительности, но само соединение событий кротовой норой не выведено из уравнений Эйнштейна. Наличие окрашенной области не является доказательством физической реализуемости машины времени.</p>
+</section>
 <section id="causality-panel" class="causality-panel" aria-label="Два устья и причинность">
 <div class="section-caption"><span>ДВА УСТЬЯ · ПРИЧИННОСТЬ</span><span>v0.8</span></div>
 <p class="causality-intro">Одно устье остаётся неподвижным, второе совершает плавный релятивистский рейс и возвращается. Проверьте, что произойдёт с часами и световым сигналом.</p>
