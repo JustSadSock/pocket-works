@@ -176,6 +176,23 @@ test.describe('Blockies — solo/input/lifecycle smoke', () => {
     await expect(page.locator('#touch-controls [data-action="down"]')).toHaveAttribute('aria-pressed','false');
   });
 
+  test('online removes the impossible local pause action and restores it for solo', async ({ page }) => {
+    await openSolo(page);
+    await expect(page.locator('#pause-btn')).toBeVisible();
+    await page.evaluate(() => {
+      const ui = (window as any).uiManager;
+      ui.isOnlineMode = true;
+      ui.startGame(2, 123);
+    });
+    await expect(page.locator('#pause-btn')).toBeHidden();
+    await page.evaluate(() => {
+      const ui = (window as any).uiManager;
+      ui.isOnlineMode = false;
+      ui.startGame(1, 123);
+    });
+    await expect(page.locator('#pause-btn')).toBeVisible();
+  });
+
   test('online-touch ownership and mobile board bounds', async ({ page }) => {
     await page.goto('/apps/blockies/', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => Boolean((window as any).uiManager));
