@@ -55,7 +55,7 @@ function applyData(input){
     const finite=v=>typeof v==='number'&&Number.isFinite(v);
     if(!finite(r.cd)||!finite(r.cl)||!finite(r.mach)||!finite(r.time)||!Array.isArray(r.upper)||!Array.isArray(r.lower))return null;
     const curve=a=>a.slice(0,250).map(v=>finite(v)?Math.max(-20,Math.min(20,v)):null);
-    return {type:r.type,angle:Math.round(safeNumber(r.angle,-14,14,0)),mach:safeNumber(r.mach,.3,3.2,1.8),time:Math.max(0,r.time),cd:r.cd,cl:r.cl,cm:finite(r.cm)?r.cm:0,upper:curve(r.upper),lower:curve(r.lower)};
+    return {type:r.type,angle:Math.round(safeNumber(r.angle,-14,14,0)),mach:safeNumber(r.mach,.3,3.2,1.8),time:Math.max(0,r.time),cd:r.cd,cl:r.cl,cm:finite(r.cm)?r.cm:0,camber:Math.round(safeNumber(r.camber,-6,6,0)),thickness:Math.round(safeNumber(r.thickness,5,22,11)),upper:curve(r.upper),lower:curve(r.lower)};
   }).filter(Boolean):[];
   state.streamlines=input.streamlines!==false;
   state.sensors=Array.isArray(input.sensors)&&input.sensors.length===2?input.sensors.map((p,i)=>({x:safeNumber(p?.x,0,1,DEFAULT_SENSORS[i].x),y:safeNumber(p?.y,0,1,DEFAULT_SENSORS[i].y)})):DEFAULT_SENSORS.map(p=>({...p}));
@@ -575,7 +575,7 @@ function renderRecords() {
     button.setAttribute('aria-pressed',String(compareIndex===i));
     const label=document.createElement('span');
     const names={airfoil:'КРЫЛО',wedge:'КЛИН',cylinder:'ЦИЛИНДР'};
-    label.textContent=(names[r.type]||r.type)+' · '+(r.angle>=0?'+':'')+r.angle+'° · M '+r.mach.toFixed(1);
+    label.textContent=(names[r.type]||r.type)+' · '+(r.angle>=0?'+':'')+r.angle+'° · M '+r.mach.toFixed(1)+(r.type==='airfoil'?' · К '+r.camber+'% · Т '+r.thickness+'%':'');
     const vals=document.createElement('strong');vals.textContent='L '+formatLoad(r.cl)+' / D '+formatLoad(r.cd)+' / m '+formatLoad(r.cm);
     button.append(label,vals);host.append(button);
   });
@@ -685,11 +685,11 @@ function updateMetrics(){
   $('drag-value').textContent=loads?formatLoad(loads.cd):'—';
   $('moment-value').textContent=loads?formatLoad(loads.cm):'—';
   const ref=state.records[compareIndex];
-  if(loads&&ref&&loads.type===ref.type&&Math.abs(loads.mach-ref.mach)<.11&&loads.incidence!==ref.angle&&sim.time>=4){
+  if(loads&&ref&&loads.type===ref.type&&Math.abs(loads.mach-ref.mach)<.11&&loads.incidence!==ref.angle&&sim.time>=4&&state.gustAmplitude===0&&(loads.type!=='airfoil'||(ref.camber===state.camber&&ref.thickness===state.thickness))){
     const slope=(loads.cm-ref.cm)/(loads.incidence-ref.angle);
     $('stability-line').textContent='ΔCm/Δα ≈ '+formatLoad(slope)+' / градус · '+(slope<-.0006?'ВОССТАНАВЛИВАЮЩАЯ ТЕНДЕНЦИЯ':slope>.0006?'РАСКАЧИВАЮЩАЯ ТЕНДЕНЦИЯ':'СЛАБАЯ РЕАКЦИЯ ПО МОМЕНТУ')+' (условно, без динамики)';
   }else{
-    $('stability-line').textContent='Для оценки тенденции сохраните опыт, измените угол и сравните Cm при том же числе Маха (не менее 4 единиц времени).';
+    $('stability-line').textContent='Для оценки тенденции сравните Cm при одинаковой форме и M, разных углах и выключенных порывах (≥4 τ).';
   }
   $('record-load').disabled=!loads || sim.time<.15;
   const stats=loadHistory.stats();
@@ -812,7 +812,7 @@ $('attack-angle').addEventListener('change',e=>{
 $('record-load').addEventListener('click',()=>{
   const r=sim?.aeroForces();if(!r||sim.time<.15)return;
   state.records.push({type:r.type,angle:r.incidence,mach:r.mach,time:r.time,
-    cd:r.cd,cl:r.cl,cm:r.cm,upper:r.upper,lower:r.lower});
+    cd:r.cd,cl:r.cl,cm:r.cm,camber:state.camber,thickness:state.thickness,upper:r.upper,lower:r.lower});
   if(state.records.length>4)state.records.shift();
   compareIndex=state.records.length-1;
   persist();refreshControls();renderRecords();drawCpChart();
