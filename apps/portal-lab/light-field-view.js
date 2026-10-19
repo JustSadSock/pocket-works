@@ -154,7 +154,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
   onOpenObserver?.({point:{...state.observerPoint},view:{
    ...cameraForRay(state.observerPoint,theta),
    fov:80,mode:'combined',quality:'balanced',rayAngle:theta
-  });
+  }});
  }
  function sceneCamera(w,h){
   // Camera-fit the two finite coordinate domains, not a physical distortion.
