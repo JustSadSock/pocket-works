@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'shock-lab-';
-const CACHE_NAME = 'shock-lab-v1.2.0';
-const APP_VERSION = '1.2.0';
+const CACHE_NAME = 'shock-lab-v1.3.0';
+const APP_VERSION = '1.3.0';
 const RELEASE_DATE = '2026-10-19';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Аэродинамическая труба: M 0.3–3.2, клин, крыло, цилиндр, сопло, физические линии тока и карта числа Маха."];
+const RELEASE_NOTES = ["Угол атаки, расчёт подъёмной силы/сопротивления давления и момента тангажа, Cp по поверхности, сравнение четырёх опытов."];
 const APP_SHELL = [
   './',
   './index.html',
