@@ -139,4 +139,45 @@ nozzle.resetGas();
 assert.equal(nozzle.flowActive,false,'switching to blast mode clears inflow BC');
 near(nozzle.sample(5,24).mach,0,.00001);
 
-console.log('SHOCK solver: Euler equilibrium, shock tube, measured fronts, Mach inlet, wind-tunnel shocks and numerical stability PASS');
+
+const angleTests=[];
+for(const incidence of [-10,0,10]){
+  const wing=new ShockField(84,52);
+  wing.geometry('airfoil',incidence);
+  assert.ok(wing.body.some(Boolean),'airfoil mask contains real solid cells');
+  wing.startFlow(2);
+  for(let i=0;i<130;i++)wing.step();
+  const loads=wing.aeroForces();
+  assert.ok(loads && loads.faces>20,'pressure surface has measured boundary faces');
+  assert.ok(Number.isFinite(loads.cl)&&Number.isFinite(loads.cd)&&Number.isFinite(loads.cm));
+  assert.ok(loads.cd>.02,'positive pressure drag');
+  assert.equal(loads.type,'airfoil');
+  assert.equal(loads.incidence,incidence);
+  assert.ok(loads.upper.filter(v=>v!==null).length>30);
+  assert.ok(loads.lower.filter(v=>v!==null).length>30);
+  assert.ok(loads.chord>20&&loads.q>1);
+  angleTests.push(loads);
+}
+assert.ok(angleTests[0].cl<-.06,'negative angle yields negative lift');
+assert.ok(angleTests[2].cl>.06,'positive angle yields positive lift');
+assert.ok(Math.abs(angleTests[1].cl)<.01,'symmetric profile at zero angle has near-zero lift');
+assert.ok(Math.abs(angleTests[1].cm)<.03,'symmetric profile has near-zero pitching moment');
+assert.ok(Math.abs(angleTests[0].cl+angleTests[2].cl)<.03,'lift mirrors for symmetric incidence');
+assert.ok(Math.abs(angleTests[0].cm+angleTests[2].cm)<.03,'pitch moment mirrors for symmetric incidence');
+
+const bodyOnly=new ShockField(84,52);
+bodyOnly.geometry('airfoil',6);
+const countBefore=bodyOnly.body.reduce((sum,v)=>sum+v,0);
+bodyOnly.stroke(12,11,24,11,true,2);
+assert.equal(bodyOnly.body.reduce((sum,v)=>sum+v,0),countBefore,'custom wall is not counted as wing surface');
+bodyOnly.startFlow(2);for(let i=0;i<15;i++)bodyOnly.step();
+assert.ok(Number.isFinite(bodyOnly.aeroForces().cl));
+bodyOnly.geometry('nozzle');
+assert.equal(bodyOnly.aeroForces(),null,'no fictitious wing forces on nozzle walls');
+bodyOnly.geometry('cylinder');bodyOnly.startFlow(2);
+for(let i=0;i<120;i++)bodyOnly.step();
+assert.ok(bodyOnly.aeroForces().cd>.3,'cylinder carries strong positive pressure drag');
+bodyOnly.resetGas();
+assert.equal(bodyOnly.aeroForces(),null,'blast mode does not report wind tunnel coefficients');
+
+console.log('SHOCK: legacy solver, Mach inflow, rotated pressure bodies, lift/drag/moment and symmetry PASS');
