@@ -68,7 +68,7 @@ onmessage=({data})=>{
   }else if(type==='perekos-load'){
    if(job)throw Error('Нельзя менять модель во время обучения');
    if(!validatePerekosPolicy(payload.policy))throw Error('Некорректный мозг Перекоса');
-   policy=clone(payload.policy);emit('perekos-loaded',{policy});
+   policy=clone(payload.policy);emit('perekos-loaded',{policy,requestId:payload.requestId??null});
   }else if(type==='perekos-reset'){
    if(job)throw Error('Остановите обучение');
    policy=createPerekosPolicy(41);emit('perekos-loaded',{policy});
