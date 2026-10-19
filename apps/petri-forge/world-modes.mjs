@@ -1,3 +1,4 @@
+import './mode-shell.mjs';
 import {CW,CH,ARENAS,SKILLS,makePolicy,validPolicy,arenaWalls} from './combat-core.mjs';
 import {listModels,loadModel,saveModel,deleteModel} from './model-store.mjs';
 
