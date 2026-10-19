@@ -96,7 +96,7 @@ test('face turns stay close to aim with no state mutation or shot angle offsets'
    tick(s,{x:0,y:0,attack:true,aim},STEP,no);
    const q=s.shots.find(x=>x.owner===0);
    assert.ok(q);
-   assert.ok(close(Math.atan2(q.vy,q.vx),normalizeFacing(angle),1e-7),
+   assert.ok(close(signedTurn(Math.atan2(q.vy,q.vx),normalizeFacing(angle)),0,1e-7),
      m.id+' wrong projectile heading '+angle);
    assert.equal(JSON.stringify(aim),copy,'cannot rewrite aim');
   }
