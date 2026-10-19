@@ -22,6 +22,7 @@ const MODULES = {
   reactor_mk2: { id: "reactor_mk2", name: "Core Reactor", type: "reactor", w: 3, h: 3, maxHp: 320, regen: 50, cost: 300, sprite: "assets/modules/reactor_mk2_1.png" },
   repair_bay_mk1: { id: "repair_bay_mk1", name: "Repair Bay", type: "repair", w: 2, h: 2, maxHp: 170, cost: 115, sprite: "assets/modules/repair_bay_mk1_1.png" },
   sensor_mk1: { id: "sensor_mk1", name: "Target Sensor", type: "sensor", w: 2, h: 1, maxHp: 130, critBoost: 0.08, cost: 110, sprite: "assets/modules/sensor_mk1_1.png" },
+  radiator_mk1: { id:"radiator_mk1", name:"Thermal Radiator", type:"radiator", w:2, h:1, maxHp:135, cooling:26, cost:105, sprite:null },
 };
 
 const SHAPES = {
@@ -157,6 +158,7 @@ function shopOffers(wave) {
     { id: "s_engine1", kind: "module", ref: "engine_mk1", cost: 120 },
     { id: "s_turret1", kind: "module", ref: "turret_mk1", cost: 140 },
     { id: "s_block2", kind: "shape", ref: "block2", cost: 70 },
+    { id:"s_radiator", kind:"module", ref:"radiator_mk1", cost:105 },
     { id: "s_line4", kind: "shape", ref: "line4", cost: 80 },
   ];
   const mods = Object.values(MODULES).filter((m) => !/mk2/.test(m.id) || wave >= 2).map((m) => m.id);
@@ -179,10 +181,11 @@ function newRoom(code) {
     players: new Map(),
     ship: {
       cells: initialHull(), modules: [], nextId: 1,
-      inventoryModules: [],
+      inventoryModules: ["radiator_mk1"],
       inventoryShapes: [],
       credits: 180, hullMax: 560, hull: 560, energyMax: 130, energy: 130,
       plates: Object.fromEntries([...initialHull()].map(k=>[k,PLATE_MAX])),
+      breakers:{},fractures:{},
     },
     physics: { x: 0, y: 0, vx: 0, vy: 0, a: 0, av: 0 },
     phase: "build", phaseTime: 0, wave: 0,
@@ -237,6 +240,7 @@ function installModule(room, templateId, x, y, rotation = 0, consumeInventory = 
     thrustLevel: 0,
     shotFlash: 0,
     recoil: 0,
+    powerPriority:t.type==="repair"?3:t.type==="engine"?2:1,
     heat: 0,
     overheated: false,
     powered: true,
@@ -325,6 +329,8 @@ function addHullShape(room, shapeId, x, y, rotation = 0, consume = true) {
 
 
 function ensureEngineering(room){
+  if(!room.ship.breakers||typeof room.ship.breakers!=="object"||Array.isArray(room.ship.breakers))room.ship.breakers={};
+  if(!room.ship.fractures||typeof room.ship.fractures!=="object"||Array.isArray(room.ship.fractures))room.ship.fractures={};
   if(!room.ship.plates || typeof room.ship.plates!=="object" || Array.isArray(room.ship.plates))room.ship.plates={};
   for(const k of room.ship.cells){
     if(!Number.isFinite(room.ship.plates[k]))room.ship.plates[k]=PLATE_MAX;
@@ -336,13 +342,15 @@ function ensureEngineering(room){
     if(typeof m.overheated!=="boolean")m.overheated=false;
     if(typeof m.powered!=="boolean")m.powered=true;
     if(!Number.isFinite(m.powerFactor))m.powerFactor=1;
+    if(!Number.isInteger(m.powerPriority))m.powerPriority=MODULES[m.templateId]?.type==="repair"?3:2;
+    m.powerPriority=clamp(m.powerPriority,0,3);
   }
 }
 function engineeringPower(room){
   ensureEngineering(room);
   const cells=room.ship.cells, plates=room.ship.plates;
   const live=new Map(),queue=[];
-  const seed=(key)=>{if(cells.has(key) && plates[key]>PLATE_CONDUCTIVE && !live.has(key)){
+  const seed=(key)=>{if(cells.has(key) && plates[key]>PLATE_CONDUCTIVE && room.ship.breakers[key]!==false && !live.has(key)){
     live.set(key,0);queue.push(key);
   }};
   // Emergency bus of the starter hull: its breakable position is fixed.
@@ -356,7 +364,7 @@ function engineeringPower(room){
     const current=queue[at],d=live.get(current),{x,y}=parseKey(current);
     for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
       const key=ckey(x+dx,y+dy);
-      if(cells.has(key)&&plates[key]>PLATE_CONDUCTIVE&&!live.has(key)){
+      if(cells.has(key)&&plates[key]>PLATE_CONDUCTIVE&&room.ship.breakers[key]!==false&&!live.has(key)){
         live.set(key,d+1);queue.push(key);
       }
     }
@@ -366,12 +374,59 @@ function engineeringPower(room){
     const connected=ds.length>0;
     const prev=m.powered;
     m.powered=connected;
+    m.powerState=connected?"online":"isolated";
     m.powerFactor=connected?clamp(1-Math.min(...ds)*.02,.66,1):0;
     if(prev!==m.powered)room.events.push({type:"power-grid",moduleId:m.id,powered:m.powered});
   }
+  // Load shedding gives explicit priorities without bypassing damaged cables.
+  const capacity=44+room.ship.modules.reduce((sum,m)=>sum+
+    (MODULES[m.templateId]?.type==="reactor"&&m.powered&&!m.overheated&&m.status==="online"?
+      MODULES[m.templateId].regen*1.2:0),0);
+  const consumers=room.ship.modules.filter(m=>m.powered&&MODULES[m.templateId]?.type!=="reactor")
+    .sort((a,b)=>b.powerPriority-a.powerPriority||a.id.localeCompare(b.id));
+  let load=0;
+  for(const m of consumers){
+    const t=MODULES[m.templateId],active=m.occupiedBy&&room.players.has(m.occupiedBy);
+    const demand=t.type==="radiator"?11:active?
+      (t.energyUse??t.drain??(t.type==="repair"?12:t.type==="sensor"?9:5)):3;
+    if(load+demand>capacity){
+      m.powered=false;m.powerState="shed";m.powerFactor=0;
+    }else load+=demand;
+  }
+  room.ship.gridLoad=load;room.ship.gridCapacity=capacity;
   room.ship.liveCells=[...live.keys()];
   return live;
 }
+
+function propagateHeat(room,dt){
+  const mods=room.ship.modules,delta=new Map(mods.map(m=>[m.id,0]));
+  for(let i=0;i<mods.length;i++)for(let j=i+1;j<mods.length;j++){
+    const a=mods[i],b=mods[j],fa=footprint(a),fb=new Set(footprint(b).map(c=>ckey(c.x,c.y)));
+    let seams=0;
+    for(const c of fa)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])
+      if(fb.has(ckey(c.x+dx,c.y+dy)))seams++;
+    if(!seams)continue;
+    const amount=(a.heat-b.heat)*Math.min(.27,seams*.055)*dt;
+    delta.set(a.id,delta.get(a.id)-amount);
+    delta.set(b.id,delta.get(b.id)+amount);
+  }
+  for(const m of mods)m.heat=clamp(m.heat+delta.get(m.id),0,130);
+  for(const radiator of mods.filter(m=>MODULES[m.templateId]?.type==="radiator"&&m.powered&&
+    m.status==="online"&&!m.overheated)){
+    const template=MODULES[radiator.templateId],eff=placementEffect(room,radiator);
+    const transfer=template.cooling*clamp(eff,.5,1.7)*dt;
+    const fp=footprint(radiator);
+    const neighbors=mods.filter(m=>m!==radiator&&footprint(m).some(c=>
+      fp.some(d=>Math.abs(c.x-d.x)+Math.abs(c.y-d.y)===1)));
+    for(const m of neighbors)m.heat=Math.max(0,m.heat-transfer/Math.max(1,neighbors.length));
+    radiator.heat=Math.max(0,radiator.heat-transfer*.65);
+  }
+  for(const m of mods){
+    if(m.heat>=100&&!m.overheated){m.overheated=true;room.events.push({type:"overheat",moduleId:m.id});}
+    if(m.overheated&&m.heat<52){m.overheated=false;room.events.push({type:"cooled",moduleId:m.id});}
+  }
+}
+
 function addModuleHeat(room,m,amount){
   if(amount<=0)return;
   m.heat=clamp((m.heat||0)+amount,0,130);
@@ -786,6 +841,7 @@ function updateShip(room, dt) {
     }
   }
 
+  propagateHeat(room,dt);
   const combat = room.phase === "combat";
   const drag = Math.pow(combat ? 0.9968 : 0.9, dt * 60);
   const adrag = Math.pow(combat ? 0.972 : 0.84, dt * 60);
@@ -1091,6 +1147,7 @@ function serializeModule(room, m) {
     shotFlash: m.shotFlash || 0,
     recoil:m.recoil||0,
     heat:m.heat||0,overheated:Boolean(m.overheated),powered:m.powered!==false,powerFactor:m.powerFactor??1,
+    powerPriority:m.powerPriority??2,powerState:m.powerState||"online",
     placement: placementEffect(room, m),
     malfunction: m.malfunction ? {
       kind: m.malfunction.kind, progress: m.malfunction.progress, target: m.malfunction.target,
@@ -1125,6 +1182,8 @@ function serializeRoom(room) {
       massProperties:shipMassProperties(room),
       plates:[...room.ship.cells].map(k=>{const {x,y}=parseKey(k);return {x,y,hp:room.ship.plates?.[k]??PLATE_MAX};}),
       networkCells:[...room.ship.cells].filter(k=>(room.ship.plates?.[k]??PLATE_MAX)>PLATE_CONDUCTIVE && liveSet.has(k)).map(parseKey),
+      breakers:Object.entries(room.ship.breakers||{}).filter(([k])=>room.ship.cells.has(k)).map(([k,closed])=>({...parseKey(k),closed})),
+      gridLoad:room.ship.gridLoad||0,gridCapacity:room.ship.gridCapacity||44,
     },
     physics: { ...room.physics },
     enemies: room.enemies.map((e) => ({ id: e.id, type: e.type, hp: e.hp, maxHp: e.maxHp, x: e.x, y: e.y, a: e.a, radius: e.radius, elite: Boolean(e.elite), sprite: e.sprite || ENEMIES[e.type].sprite })),
