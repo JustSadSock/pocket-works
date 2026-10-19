@@ -6,7 +6,7 @@ import {biomeForWave,biomeHazard,stageSeed} from './biomes.js';
 import {gastricChamber} from './gastricArt.js';
 import {structuralChamber} from './structuralArt.js';
 import {atmosphereProfile,moteAt,organLight,materialProperties,enemyMotion,fxLimits} from './atmosphere.js';
-import {sanitizeScars,scarSignature,MAX_SCARS} from './scars.js';
+import {sanitizeScars,scarSignature,MAX_SCARS,deathPose} from './scars.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const cellKey = (x,z) => x + ',' + z;
@@ -1131,15 +1131,12 @@ export function createWorld(canvas, initialSeed) {
     particlesGeo.attributes.position.needsUpdate=true;particlesGeo.setDrawRange(0,droplets.length);
     for(let i=dying.length-1;i>=0;i--){
       const d=dying[i];d.time+=dt;
-      const t=clamp(d.time/d.duration,0,1);
-      const collapse=Math.pow(t,1.35);
-      const heavy=d.type==='ossuary'||d.type==='brute'||d.type==='warden';
-      d.visual.position.set(d.x,d.baseY-collapse*(heavy?.23:.30),d.z);
-      d.visual.rotation.set(collapse*(d.type==='synapse'?1.10:.58),
-        d.baseRotation+collapse*.54,collapse*(heavy?.88:1.32));
-      d.visual.scale.set(d.baseScale*(1-collapse*.80),
-        d.baseScale*(1-collapse*.63),d.baseScale*(1-collapse*.80));
-      if(t>=1){source.remove(d.visual);dying.splice(i,1);}
+      const pose=deathPose(d.type,d.time,d.duration);
+      d.visual.position.set(d.x,d.baseY-pose.fall,d.z);
+      d.visual.rotation.set(pose.pitch,d.baseRotation+pose.yaw,pose.roll);
+      d.visual.scale.set(d.baseScale*pose.horizontal,d.baseScale*pose.vertical,
+        d.baseScale*pose.horizontal);
+      if(pose.complete){source.remove(d.visual);dying.splice(i,1);}
     }
     for(let i=deathBits.length-1;i>=0;i--){
       const bit=deathBits[i];bit.x+=bit.vx*dt;bit.z+=bit.vz*dt;
