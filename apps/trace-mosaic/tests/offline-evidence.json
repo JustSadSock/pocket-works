@@ -1,0 +1,11 @@
+{
+  "commit": "b273a3339f6099e50da6fd282f7af2b459975bdd",
+  "engine": "Chromium",
+  "viewport": [
+    390,
+    844
+  ],
+  "scenario": "Start recovered game, perform its real primary control and reload after the local HTTP transport stops accepting requests.",
+  "transportFailure": "The app-scoped HTTP server destroys requests before offline reload.",
+  "passed": true
+}

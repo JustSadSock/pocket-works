@@ -225,5 +225,11 @@
     "versions": [
       "v1"
     ]
+  },
+  "trace-mosaic": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }

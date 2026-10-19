@@ -1,0 +1,20 @@
+{
+  "id": "/apps/trace-mosaic/",
+  "name": "Trace Mosaic",
+  "short_name": "Trace Mosaic",
+  "description": "Командная мозаика с распределёнными фрагментами и следами, временно блокирующими чужие пути.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#13262c",
+  "theme_color": "#13262c",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
