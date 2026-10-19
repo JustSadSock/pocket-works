@@ -175,8 +175,9 @@ socket.on("joinError", (payload) => {
 });
 
 socket.on("actionError", (payload) => {
-  showToast(payload.message || "Action failed", 1700);
+  showToast(payload.message || "Action failed", 2200);
 });
+socket.on("connectionStatus", (payload) => showToast(payload.message || "Connection lost", 3000));
 
 socket.on("state", (next) => {
   const prevPhase = state?.phase;
@@ -279,6 +280,101 @@ function clearNode(node) {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
 
+
+const repairConsole = document.getElementById("repair-console");
+let repairSignature = null;
+
+function repairActionButton(label, action) {
+  return button(label, "", () => socket.emit("repairAction", { action }));
+}
+
+function renderRepairConsole() {
+  const pilot = playerMe();
+  const station = moduleByIdLocal(pilot?.moduleId);
+  const active = joined && station?.type === "repair";
+  repairConsole.hidden = !active;
+  if (!active) { repairSignature = null; return; }
+
+  const damaged = state.ship.modules.filter(m => m.status !== "online" || m.hp < m.maxHp);
+  const target = damaged.find(m => m.id === pilot.repairTarget) || damaged[0];
+  const task = target?.malfunction;
+  const signature = JSON.stringify({
+    target: target?.id, selected: pilot.repairTarget,
+    damaged: damaged.map(m => [m.id, m.status, Math.round(m.hp), m.malfunction?.kind,
+      m.malfunction?.index, m.malfunction?.progress, m.malfunction?.bits, m.malfunction?.targetBits])
+  });
+
+  if (signature !== repairSignature) {
+    repairSignature = signature;
+    clearNode(repairConsole);
+    const title = document.createElement("h3");
+    title.textContent = "ИНЖЕНЕРНЫЙ ПОСТ";
+    repairConsole.appendChild(title);
+
+    if (!target) {
+      const allClear = document.createElement("p");
+      allClear.textContent = "Системы исправны. Ожидайте повреждений или смените станцию (Tab).";
+      repairConsole.appendChild(allClear);
+      return;
+    }
+
+    const prompt = document.createElement("p");
+    prompt.textContent = "Выберите систему для ремонта:";
+    repairConsole.appendChild(prompt);
+    const targetList = document.createElement("div");
+    targetList.className = "repair-target-list";
+    damaged.forEach(m => {
+      const b = button(`${m.type} · ${Math.round(m.hp)}/${Math.round(m.maxHp)}`,
+        m.id === target.id ? "selected" : "", () => socket.emit("setRepairTarget", { moduleId: m.id }));
+      targetList.appendChild(b);
+    });
+    repairConsole.appendChild(targetList);
+
+    const progress = document.createElement("p");
+    progress.className = "repair-task-progress";
+    if (!task) {
+      progress.textContent = "Повреждение корпуса: удерживайте R / «Ремонт» для восстановления прочности.";
+      repairConsole.appendChild(progress);
+      return;
+    }
+    progress.textContent = `Сбой: ${task.kind} · ${task.progress}/${task.target} · удерживайте R для восстановления HP`;
+    repairConsole.appendChild(progress);
+
+    const actions = document.createElement("div");
+    actions.className = "repair-actions";
+    if (task.kind === "sequence") {
+      const expected = {left:"←", right:"→", up:"↑", down:"↓"};
+      const next = document.createElement("p");
+      next.textContent = `Команда ${Math.min(task.index + 1, task.sequence.length)}/${task.sequence.length}: ${expected[task.sequence[task.index]] || "—"}`;
+      repairConsole.appendChild(next);
+      for (const [dir, glyph] of Object.entries(expected)) actions.appendChild(repairActionButton(glyph, dir));
+    } else if (task.kind === "timing") {
+      const explain = document.createElement("p");
+      explain.textContent = "Нажмите в зелёной зоне шкалы. Клавиша: Пробел.";
+      repairConsole.appendChild(explain);
+      const track = document.createElement("div");
+      track.className = "repair-timing-track";
+      const one = document.createElement("span"); one.className = "repair-timing-zone one";
+      const two = document.createElement("span"); two.className = "repair-timing-zone two";
+      const marker = document.createElement("span"); marker.className = "repair-timing-marker";
+      track.append(one, two, marker); repairConsole.appendChild(track);
+      actions.appendChild(repairActionButton("ЗАФИКСИРОВАТЬ", "hit"));
+    } else if (task.kind === "circuit") {
+      const reference = document.createElement("p");
+      reference.className = "repair-circuit-target";
+      reference.textContent = `Образец: ${task.targetBits.join(" ")} · схема: ${task.bits.join(" ")}`;
+      repairConsole.appendChild(reference);
+      task.bits.forEach((bit, i) => actions.appendChild(repairActionButton(
+        `Контакт ${i+1}: ${bit}`, `toggle_${i}`)));
+    }
+    repairConsole.appendChild(actions);
+  }
+  if (task?.kind === "timing") {
+    const marker = repairConsole.querySelector(".repair-timing-marker");
+    if (marker) marker.style.left = `${(task.phase * 100).toFixed(2)}%`;
+  }
+}
+
 let lastPanelSignature=null;
 function renderUI() {
   if (!state) return;
@@ -293,6 +389,7 @@ function renderUI() {
   hud.credits.textContent = String(Math.round(state.ship.credits || 0));
   hud.hull.textContent = `${Math.round(state.ship.hull || 0)}/${Math.round(state.ship.hullMax || 0)}`;
   hud.energy.textContent = `${Math.round(state.ship.energy || 0)}/${Math.round(state.ship.energyMax || 0)}`;
+  renderRepairConsole();
 
   const panelSignature=JSON.stringify({phase:state.phase,players:state.players.map(p=>[p.id,p.name,p.moduleId]),modules:state.ship.modules.map(m=>[m.id,m.occupiedBy,m.status,Math.round(m.hp),m.x,m.y,m.rotation]),inventory:state.ship.inventoryModules,shapes:state.ship.inventoryShapes,offers:state.offers,affordable:state.offers.map(o=>state.ship.credits>=o.cost),missions:state.missionOptions,buildMode});
   if(panelSignature===lastPanelSignature)return;
