@@ -1,4 +1,6 @@
 import {defineConfig} from '@playwright/test';
+import {fileURLToPath} from 'node:url';
+const repositoryRoot=fileURLToPath(new URL('../../../',import.meta.url));
 
 export default defineConfig({
  testDir:'.',
@@ -21,6 +23,7 @@ export default defineConfig({
  },
  webServer:{
   command:'POCKET_WORKS_SITE_ROOT=. node scripts/serve-site.mjs',
+  cwd:repositoryRoot,
   url:'http://127.0.0.1:4173/apps/petri-forge/',
   timeout:30_000,
   reuseExistingServer:!process.env.CI
