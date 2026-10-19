@@ -16,6 +16,7 @@ const compareButton=document.createElement('button');compareButton.id='pkCompare
 
 const worker=new Worker(new URL('./perekos-worker-v06.mjs',import.meta.url),{type:'module'});
 let policy=createPerekosPolicy(41),busy=false,training=false,replay=null,cursor=0,timer=null,openCount=0,learningHistory=[];
+let mageAck=null,mageAckId=0;
 let autoplayNextReplay=false;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const fmt=n=>Number.isFinite(n)?Number(n).toFixed(1):'—';
@@ -122,9 +123,15 @@ function showReplay(next){
 window.PetriForgeRuntime.perekos={
  getModel:async()=>structuredClone(policy),
  setModel:async snapshot=>{
-  if(busy)throw Error('Завершите обучение перед сменой мага');
-  policy=snapshot&&validatePerekosPolicy(snapshot)?structuredClone(snapshot):createPerekosPolicy(41);
-  send('perekos-load',{policy});
+  if(busy||mageAck)throw Error('Боевой маг ещё занят');
+  const next=snapshot&&validatePerekosPolicy(snapshot)?structuredClone(snapshot):createPerekosPolicy(41);
+  const id=++mageAckId;
+  await new Promise((resolve,reject)=>{
+   const timeout=setTimeout(()=>{if(mageAck?.id===id){mageAck=null;reject(Error('Не удалось загрузить мозг мага'));}},8000);
+   mageAck={id,resolve:()=>{clearTimeout(timeout);resolve();},reject:e=>{clearTimeout(timeout);reject(e);}};
+   send('perekos-load',{policy:next,requestId:id});
+  });
+  policy=next;
  },
  train:()=>{if(busy)return false;$('pkTrain').click();return true;},
  test:()=>{if(busy)return false;$('pkTest').click();return true;},
@@ -209,8 +216,8 @@ worker.onmessage=async event=>{
   }else if(d.type==='perekos-compared'){
    lock(false);$('pkTransferInfo').textContent='Сравнение на одинаковых контрольных раундах: ваш мозг '+fmt(d.mine.fitness)+' очков / урон '+fmt(d.mine.damageMargin)+'; переносимый '+fmt(d.other.fitness)+' очков / урон '+fmt(d.other.damageMargin)+'. Это не подтверждает преимущество в полных матчах.';
    notify('Сравнение переноса завершено');
-  }else if(d.type==='perekos-loaded'){lock(false);policy=d.policy;notify('Мозг загружен');}
-  else if(d.type==='perekos-error'){lock(false);notify('Ошибка: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'perekos',message:d.message}}));}
+  }else if(d.type==='perekos-loaded'){lock(false);policy=d.policy;notify('Мозг загружен');if(mageAck&&d.requestId===mageAck.id){const ack=mageAck;mageAck=null;ack.resolve();}}
+  else if(d.type==='perekos-error'){if(mageAck){const ack=mageAck;mageAck=null;ack.reject(Error(d.message));}lock(false);notify('Ошибка: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'perekos',message:d.message}}));}
  }catch(e){lock(false);notify('Ошибка сохранения: '+e.message);}
 };
 worker.addEventListener('error',e=>{lock(false);notify('Ошибка вычислительного Worker: '+e.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'perekos',message:e.message}}));});
