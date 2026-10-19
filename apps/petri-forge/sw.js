@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'petri-forge-';
-const CACHE_NAME = 'petri-forge-v0.6.0';
-const APP_VERSION = '0.6.0';
+const CACHE_NAME = 'petri-forge-v0.7.0';
+const APP_VERSION = '0.7.0';
 const RELEASE_DATE = '2026-10-19';
-const CACHE_PROTOCOL = 5;
-const RELEASE_NOTES = ['Перекос 0.6: поэтапная подготовка магов, обучающие раунды, self-play против прежних поколений и независимая проверка полных матчей.'];
+const CACHE_PROTOCOL = 6;
+const RELEASE_NOTES = ['Единый Agent Studio: выбирайте персонажа, тренируйте его в разных лабораториях, продолжайте обучение с сохранённого мозга и смотрите понятные результаты.'];
 const APP_SHELL = [
   './',
   './index.html',
@@ -13,6 +13,10 @@ const APP_SHELL = [
   './lab-core.mjs',
   './lab-worker.mjs',
   './model-store.mjs',
+  './agent-career.mjs',
+  './agent-hub-shell.mjs',
+  './agent-hub.mjs',
+  './agent-hub.css',
   './mode-shell.mjs',
   './world-modes.mjs',
   './world-modes.css',
