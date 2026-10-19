@@ -9,6 +9,7 @@ const status=text=>{const el=$('modeStatus');if(el)el.textContent=text;};
 const combatWorker=new Worker(new URL('./combat-worker.mjs',import.meta.url),{type:'module'});
 const combatDefaults=[['bolt','dash','mine'],['bolt','shield','heal']];
 let battlePolicy=makePolicy('aggressive',17),battleBusy=false,battleReplay=null,battleCursor=0,battleTimer=null;
+let combatAck=null,combatAckId=0,raceAck=null,raceAckId=0;
 let racePolicy=null,raceReady=false,raceBusy=false,raceReplay=null;
 let raceReplayTimer=null,raceReplayCursor=0;
 let combatReplayRequested=false,raceReplayRequested=false;
@@ -159,8 +160,8 @@ combatWorker.onmessage=async event=>{
     $('battleLeaderboard').append(row);
    }
    status('Турнир завершён');
-  }else if(d.type==='combat-set-done'){battlePolicy=d.policy;status('Боевой мозг загружен');}
-  else if(d.type==='combat-error'){setBattleBusy(false);status('Ошибка боя: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'combat',message:d.message}}));}
+  }else if(d.type==='combat-set-done'){battlePolicy=d.policy;status('Боевой мозг загружен');if(combatAck&&d.requestId===combatAck.id){const ack=combatAck;combatAck=null;ack.resolve();}}
+  else if(d.type==='combat-error'){if(combatAck){const ack=combatAck;combatAck=null;ack.reject(Error(d.message));}setBattleBusy(false);status('Ошибка боя: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'combat',message:d.message}}));}
  }catch(e){notifyError(e);}
 };
 combatWorker.addEventListener('error',()=>{setBattleBusy(false);status('Ошибка боевого Worker');window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'combat',message:'Боевой вычислительный модуль не отвечает'}}));});
@@ -276,9 +277,9 @@ window.addEventListener('message',async event=>{
    raceReplay=d.result;updateRaceReplay(d.result);if(raceReplayRequested){raceReplayRequested=false;playRaceReplay();}
    $('raceReport').textContent='Проверка · пройдено '+fmt(d.result.progress)+' м; кругов '+d.result.laps+'; вне дороги '+d.result.offroad+' шагов.';
    status('Проверка на гоночной трассе завершена');window.dispatchEvent(new CustomEvent('petri:evaluated',{detail:{mode:'race',text:$('raceReport').textContent}}));
-  }else if(d.type==='loaded'){racePolicy=d.policy;status('Гоночная модель загружена');}
+  }else if(d.type==='loaded'){racePolicy=d.policy;status('Гоночная модель загружена');if(raceAck&&d.requestId===raceAck.id){const ack=raceAck;raceAck=null;ack.resolve();}}
   else if(d.type==='previewed'){$('raceFrameCount').textContent=(Number(d.frame)+1)+' / '+d.total;}
-  else if(d.type==='error'){raceLock(false);status('Шпилька: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'race',message:d.message}}));}
+  else if(d.type==='error'){if(raceAck){const ack=raceAck;raceAck=null;ack.reject(Error(d.message));}raceLock(false);status('Шпилька: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'race',message:d.message}}));}
  }catch(e){notifyError(e);}
 });
 function stopRacePlayback(){if(raceReplayTimer!==null){clearInterval(raceReplayTimer);raceReplayTimer=null;}}
@@ -337,7 +338,17 @@ window.PetriForgeRuntime=window.PetriForgeRuntime||{};
 window.PetriForgeRuntime.combat={
  showExternalDuel:replay=>{if(battleBusy)throw Error('Боевая арена сейчас обучается');displayReplay(replay);return true;},
  getModel:async()=>structuredClone(battlePolicy),
- setModel:async snapshot=>{if(battleBusy)throw Error('Идёт тренировка');battlePolicy=snapshot&&validPolicy(snapshot)?structuredClone(snapshot):makePolicy('aggressive',17);sendCombat('combat-set',{policy:battlePolicy});},
+ setModel:async snapshot=>{
+  if(battleBusy||combatAck)throw Error('Боевая модель занята');
+  const next=snapshot&&validPolicy(snapshot)?structuredClone(snapshot):makePolicy('aggressive',17);
+  const id=++combatAckId;
+  await new Promise((resolve,reject)=>{
+   const timeout=setTimeout(()=>{if(combatAck?.id===id){combatAck=null;reject(Error('Боевая модель не загрузилась вовремя'));}},7000);
+   combatAck={id,resolve:()=>{clearTimeout(timeout);resolve();},reject:e=>{clearTimeout(timeout);reject(e);}};
+   sendCombat('combat-set',{policy:next,requestId:id});
+  });
+  battlePolicy=next;
+ },
  train:()=>{if(battleBusy)return false;$('battleTrain').click();return true;},
  test:()=>{if(battleBusy)return false;$('battleTest').click();return true;},
  stop:()=>{$('battleStop').click();},
@@ -348,7 +359,18 @@ window.PetriForgeRuntime.combat={
 };
 window.PetriForgeRuntime.race={
  getModel:async()=>racePolicy?racePolicy.slice():null,
- setModel:async snapshot=>{if(raceBusy)throw Error('Идёт тренировка');racePolicy=Array.isArray(snapshot)?snapshot.slice():[.95,.72,.95,.9,.7,.65,.75,.65,.7];if(raceReady)raceCommand('load',{policy:racePolicy});},
+ setModel:async snapshot=>{
+  if(raceBusy||raceAck)throw Error('Гоночная модель занята');
+  const next=Array.isArray(snapshot)?snapshot.slice():[.95,.72,.95,.9,.7,.65,.75,.65,.7];
+  if(!raceReady){racePolicy=next;return;}
+  const id=++raceAckId;
+  await new Promise((resolve,reject)=>{
+   const timeout=setTimeout(()=>{if(raceAck?.id===id){raceAck=null;reject(Error('Гонщик не подтвердил загрузку'));}},10000);
+   raceAck={id,resolve:()=>{clearTimeout(timeout);resolve();},reject:e=>{clearTimeout(timeout);reject(e);}};
+   if(!raceCommand('load',{policy:next,requestId:id})){raceAck=null;clearTimeout(timeout);reject(Error('Движок недоступен'));}
+  });
+  racePolicy=next;
+ },
  train:()=>{if(!raceReady||raceBusy)return false;$('raceTrain').click();return true;},
  test:()=>{if(!raceReady||raceBusy)return false;$('raceTest').click();return true;},
  stop:()=>{$('raceStop').click();},
