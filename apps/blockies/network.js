@@ -72,8 +72,9 @@ class NetworkManager {
     this.currentRoom=room;
     const code=document.querySelector('#pocket-room-code');
     if(code)code.textContent=this.code||'';
-    if(joined)this.trigger(this.creating?'roomCreated':'roomJoined',room);
-    else this.trigger('roomUpdate',room);
+    // Reconnecting into an active match must never move the player to the lobby.
+    if(joined&&phase==='lobby')this.trigger(this.creating?'roomCreated':'roomJoined',room);
+    else if(!joined)this.trigger('roomUpdate',room);
 
     if(phase==='playing'){
       if(!this.started||!this.inGameUI){
@@ -84,6 +85,7 @@ class NetworkManager {
       this.started=true;
       this.startPulse();
       if(room.engine)this.trigger('snapshot',room.engine);
+      this.trigger('presence',room.players);
       return;
     }
 
@@ -96,6 +98,7 @@ class NetworkManager {
         this.trigger('gameStart',{players:room.players,seed:room.seed});
       }
       if(room.engine)this.trigger('snapshot',room.engine);
+      this.trigger('presence',room.players);
       this.trigger('matchResults',room);
     }else if(this.inGameUI){
       this.inGameUI=false;
