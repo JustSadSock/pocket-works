@@ -353,14 +353,33 @@ export function createWorld(canvas, initialSeed) {
   deathMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   deathMesh.frustumCulled=false;deathMesh.count=0;scene.add(deathMesh);
   const deathBits=[],deathTemp=new THREE.Object3D();
-  // Visual-only corroded tissue rings: one instance buffer, persistent per-run
-  // and per-organ, with no impact on collision or projectile rays.
-  const scarGeo=new THREE.RingGeometry(.12,.33,13).rotateX(-Math.PI/2);
-  const scarMat=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,
-    transparent:true,opacity:.70,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1});
-  const scarsMesh=new THREE.InstancedMesh(scarGeo,scarMat,MAX_SCARS);
-  scarsMesh.frustumCulled=false;scarsMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  scarsMesh.count=0;scene.add(scarsMesh);
+  // Actual different wound silhouettes, pooled by anatomy in only three
+  // draw calls. Blood is a puddle, burn is a serrated cautery ring, rupture
+  // is a split tear. Each type shares one geometry and material forever.
+  const bloodScarGeo=new THREE.CircleGeometry(.27,15).rotateX(-Math.PI/2);
+  const burnScarGeo=new THREE.RingGeometry(.15,.30,13).rotateX(-Math.PI/2);
+  const splitShape=new THREE.Shape();
+  splitShape.moveTo(-.42,-.06);splitShape.lineTo(-.21,.035);
+  splitShape.lineTo(-.08,-.04);splitShape.lineTo(.06,.085);
+  splitShape.lineTo(.20,.018);splitShape.lineTo(.42,.06);
+  splitShape.lineTo(.25,-.052);splitShape.lineTo(.075,-.004);
+  splitShape.lineTo(-.08,-.11);splitShape.lineTo(-.23,-.025);splitShape.closePath();
+  const ruptureScarGeo=new THREE.ShapeGeometry(splitShape).rotateX(-Math.PI/2);
+  const scarKinds={
+    blood:{geo:bloodScarGeo,mat:new THREE.MeshBasicMaterial({color:0x641329,
+      transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false})},
+    burn:{geo:burnScarGeo,mat:new THREE.MeshBasicMaterial({color:0x2b171e,
+      transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false})},
+    rupture:{geo:ruptureScarGeo,mat:new THREE.MeshBasicMaterial({color:0x3e1a2a,
+      transparent:true,opacity:.86,side:THREE.DoubleSide,depthWrite:false})}
+  };
+  const scarMeshes=Object.fromEntries(Object.entries(scarKinds).map(([kind,{geo,mat}])=>{
+    const mesh=new THREE.InstancedMesh(geo,mat,MAX_SCARS);
+    mesh.frustumCulled=false;
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    mesh.count=0;scene.add(mesh);
+    return [kind,mesh];
+  }));
   const scarTmp=new THREE.Object3D();
   let storedScars=[];
   // A dying enemy remains recognisable while collapsing; bounded to six.
@@ -593,7 +612,8 @@ export function createWorld(canvas, initialSeed) {
     stains.length=0;droplets.length=0;particlesGeo.setDrawRange(0,0);
     deathBits.length=0;deathMesh.count=0;motesGeo.setDrawRange(0,0);
     for(const d of dying)source.remove(d.visual);dying.length=0;
-    scarsMesh.count=0;storedScars=[];
+    for(const mesh of Object.values(scarMeshes))mesh.count=0;
+    storedScars=[];
     shotLight.visible=false;shotLight.intensity=0;
     kickPos=0;kickVel=0;muzzleTime=0;organPulse=0;
   }
@@ -871,21 +891,19 @@ export function createWorld(canvas, initialSeed) {
   function moveCircle(x,z,dx,dz,r=.21){return sweepCircle(x,z,dx,dz,r,isFloor);}
   function setScars(list){
     storedScars=sanitizeScars(list);
-    let used=0;
+    const counts={blood:0,burn:0,rupture:0};
     for(const scar of storedScars){
       if(scar.wave!==stage)continue;
-      scarTmp.position.set(scar.x,.049,scar.z);
+      scarTmp.position.set(scar.x,.096,scar.z);
       scarTmp.rotation.set(0,(Math.abs(Math.floor(scar.x*31+scar.z*17))%12)*Math.PI/6,0);
-      const size=scar.kind==='rupture'?1.72:scar.kind==='burn'?.78:1.04;
-      scarTmp.scale.setScalar(size);scarTmp.updateMatrix();
-      scarsMesh.setMatrixAt(used,scarTmp.matrix);
-      const color=scar.kind==='rupture'?0x40242b:scar.kind==='burn'?0x342932:0x651c31;
-      scarsMesh.setColorAt(used,new THREE.Color(color));
-      used++;
+      scarTmp.scale.setScalar(scar.kind==='rupture'?1.20:scar.kind==='burn'?.85:1.04);
+      scarTmp.updateMatrix();
+      scarMeshes[scar.kind].setMatrixAt(counts[scar.kind]++,scarTmp.matrix);
     }
-    scarsMesh.count=used;
-    if(used){scarsMesh.instanceMatrix.needsUpdate=true;
-      if(scarsMesh.instanceColor)scarsMesh.instanceColor.needsUpdate=true;}
+    for(const [type,mesh] of Object.entries(scarMeshes)){
+      mesh.count=counts[type];
+      if(mesh.count)mesh.instanceMatrix.needsUpdate=true;
+    }
   }
   function playDeath(visual,type,x,z){
     if(!visual)return;
@@ -1289,7 +1307,7 @@ export function createWorld(canvas, initialSeed) {
   }
   function end(){
     clearChunks();motesGeo.dispose();motesMat.dispose();deathGeo.dispose();deathMat.dispose();
-    scarGeo.dispose();scarMat.dispose();
+    for(const {geo,mat} of Object.values(scarKinds)){geo.dispose();mat.dispose();}
     for(const geo of [spitterNozzleGeo,leechMouthGeo,pickupShellGeo,pickupRingGeo])geo.dispose();
     for(const map of Object.values(roughnessMaps||{}))map?.dispose();
     renderer.dispose();
@@ -1312,5 +1330,6 @@ export function createWorld(canvas, initialSeed) {
   return { THREE, camera, scene, isFloor, moveCircle, nearChunks, getOpenCells, getStart, visible, makeEnemy, makePickup, makeProjectile, disposeVisual, playDeath, setScars, getScarSignature, splatter, paint, reset, resize, setQuality, firePulse, fireTrace, impact, getTissueAt, damageTissue, getTissueCount, setImmunePressure, setRouteMark, getRouteMark:()=>activeRouteMark,
     setForkSites,setForkSelection,getNearbyFork,getForkSites:()=>forkSites.map(({id,x,z})=>({id,x,z})),getHazardAt, getBiome:()=>biome, getStage:()=>stage, getArchitectureSignature, getAtmosphereSignature, softwareRenderer, conservativeRenderer, end,
     getFxCounts:()=>({streaks:streaks.length,decals:stains.length,particles:droplets.length,
-      motes:motesGeo.drawRange.count,deathFragments:deathBits.length,dying:dying.length,scars:scarsMesh.count}) };
+      motes:motesGeo.drawRange.count,deathFragments:deathBits.length,dying:dying.length,
+      scars:Object.values(scarMeshes).reduce((sum,mesh)=>sum+mesh.count,0)}) };
 }
