@@ -8,7 +8,8 @@
       "files": [
         "simulation.test.mjs",
         "network.test.mjs",
-        "visual.test.mjs"
+        "visual.test.mjs",
+        "artwork.test.mjs"
       ]
     },
     {
