@@ -22,18 +22,39 @@
         },
         {
           "action": "click",
-          "selector": "[data-preset='tube']"
-        },
-        {
-          "action": "visible",
-          "selector": "#rupture"
+          "selector": "[data-preset='wedge']"
         },
         {
           "action": "screenshot"
         },
         {
           "action": "click",
-          "selector": "#rupture"
+          "selector": "[data-view='mach']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#streamlines"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-preset='nozzle']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#flow-restart"
+        },
+        {
+          "action": "click",
+          "selector": "[data-preset='cylinder']"
         },
         {
           "action": "screenshot"
@@ -41,28 +62,6 @@
         {
           "action": "click",
           "selector": "[data-plot='profile']"
-        },
-        {
-          "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "[data-plot='history']"
-        },
-        {
-          "action": "click",
-          "selector": "#step"
-        },
-        {
-          "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "#clear"
-        },
-        {
-          "action": "visible",
-          "selector": "#rupture"
         },
         {
           "action": "screenshot"
