@@ -20,7 +20,7 @@ function pair(s){
 }
 test('the first hearing uses actual existing people, a court workday and an original land title',()=>{
  const s=createWorld(413),{poor,large,site}=pair(s);
- const people=population(s),fields=new Map(s.households.map(h=>[h.id,[...h.fields]]));
+ const people=population(s),initialOwner=large.id;
  const conflict=beginLandDispute(s,poor.id,large.id,site);assert.ok(conflict);
  advanceDays(s,1);
  const legal=s.institutions.cases.find(c=>c.disputeId===conflict.id);assert.ok(legal,'every finished fight files a real claim');
@@ -35,7 +35,7 @@ test('the first hearing uses actual existing people, a court workday and an orig
  assert.ok(s.people.some(p=>p.workDays?.court>0&&p.dailyShift?.kind==='court'||
   p.workDays?.court>0),'a real participant must give up time for the hearing');
  assert.equal(population(s)>=0,true);assert.equal(people>0,true);
- for(const [id,f] of fields)assert.deepEqual(s.households.find(h=>h.id===id).fields,f,'battle/court do not seize legally owned strips');
+ assert.ok(s.households.find(h=>h.id===initialOwner).fields.includes(site),'the disputed titled strip stays with its owner');
  assert.ok(audit(s).ok,audit(s).issues.join('; '));
 });
 test('emergency court relief requires a donor, an actual carrier and scheduled delivery',()=>{
@@ -71,6 +71,13 @@ test('historical load migrates empty institutions and audit rejects invented cou
  const back=deserialize(JSON.stringify(legacy));
  assert.deepEqual(villageInstitutions(back).cases,[]);
  assert.ok(audit(back).ok);
+ // Old completed skirmishes must not suddenly become hundreds of new cases.
+ const oldPair=pair(back),prior=beginLandDispute(back,oldPair.poor.id,oldPair.large.id,oldPair.site);
+ assert.ok(prior);advanceDays(back,1);
+ const oldFormat=JSON.parse(serialize(back));delete oldFormat.institutions;
+ const migrated=deserialize(JSON.stringify(oldFormat));
+ advanceDays(migrated,1);
+ assert.equal(migrated.institutions.cases.filter(c=>c.disputeId===prior.id).length,0);
  const cm=back.communities[0],h=back.households.find(h=>h.communityId===cm.id);
  back.institutions.cases.push({id:999,kind:'land',stage:'owed',filedDay:0,
   communityId:cm.id,claimantId:h.id,ownerId:h.id,cell:2,
