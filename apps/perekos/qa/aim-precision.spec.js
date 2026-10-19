@@ -19,7 +19,8 @@ test('six-class aiming: touch-style drag preserves the ray near the arena corner
  });
  expect(value.aim).toBeTruthy();
  expect(Math.atan2(value.aim.y-value.a.y,value.aim.x-value.a.x)).toBeCloseTo(Math.atan2(-54,42),5);
- expect(value.aim.x).toBeGreaterThan(400); // valid: far-field direction, not clipped world coordinate
+ expect(value.aim.x).toBeGreaterThan(360);
+ expect(value.aim.x).toBeLessThanOrEqual(400); // PocketNet accepts the court intersection
  await page.mouse.up();
  expect(errors).toEqual([]);
 });
