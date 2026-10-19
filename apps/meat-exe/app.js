@@ -205,9 +205,8 @@ function startWave(number){
   world.setForkSites?.(number<5?routeOptions(state.seed,number+1).map(r=>r.id):[]);
   world.setForkSelection?.('');
   if(number===2)state.immune.heat=Math.max(state.immune.heat,18);
-  if(first)setNotice(first.name+' · 1/3',2.2);
   if(number===5){setNotice('НЕРВНЫЙ УЗЕЛ · СЕРДЦЕ ПРОСНУЛОСЬ',3);sound('heart');}
-  else {setNotice(biomeForWave(number).name+' · ВОЛНА '+number+'/05',2.8);sound('heart');}
+  else {setNotice(biomeForWave(number).name+' · '+(first?'ПУЛЬС 1/3 · '+first.name:'ВОЛНА '+number+'/05'),2.8);sound('heart');}
   snapshot();
 }
 function chooseSpawn(min=4,max=11){
