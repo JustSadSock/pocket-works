@@ -179,3 +179,56 @@ test('hold on one player does not displace or control the other player',()=>{
  assert.equal(JSON.stringify(state.engine.board),board);
  assert.equal(state.engine.players[0].holdUsed,true);
 });
+
+test('disconnect grace freezes only the idle teammate without moving any blocks',()=>{
+ let state=start([a,b]);
+ const prior=state.engine.players[0];
+ const anchor=JSON.stringify({piece:prior.currentPiece,position:prior.position,locked:state.engine.board});
+ state.players[0].lastSeenAt=Date.now()-4000;
+ state.lastTick=Date.now()-250;
+ state=game.onMessage({state,player:b,payload:{type:'pulse'}}).state;
+ assert.equal(state.players[0].away,true);
+ assert.equal(state.players[0].timedOut,false);
+ const stopped=state.engine.players[0];
+ assert.deepEqual({piece:stopped.currentPiece,position:stopped.position,locked:state.engine.board},JSON.parse(anchor));
+ assert.equal(stopped.dropCounter,prior.dropCounter);
+ assert.ok(state.engine.players[1].dropCounter>0,'connected teammate keeps their gravity');
+ state=game.onMessage({state,player:a,payload:{type:'pulse'}}).state;
+ assert.equal(state.players[0].away,false);
+ assert.equal(state.engine.players[0].gameOver,false);
+});
+
+test('minute-long absence releases active piece without erasing established cells',()=>{
+ let state=start([a,b]);
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;
+ const before=JSON.stringify(state.engine.board);
+ state.players[0].lastSeenAt=Date.now()-62000;
+ state.lastTick=Date.now()-200;
+ state=game.onMessage({state,player:b,payload:{type:'pulse'}}).state;
+ assert.equal(state.players[0].timedOut,true);
+ assert.equal(state.engine.players[0].gameOver,true);
+ assert.equal(state.engine.players[0].currentPiece,null);
+ assert.equal(JSON.stringify(state.engine.board),before);
+ state.engine.isGameOver=true;
+ state=game.onMessage({state,player:b,payload:{type:'pulse'}}).state;
+ assert.equal(state.phase,'results');
+ state=game.onMessage({state,player:b,payload:{type:'rematch'}}).state;
+ assert.equal(state.phase,'playing');
+ assert.equal(state.players.length,1);
+});
+
+test('a timed-out player can rejoin the results vote after reconnecting',()=>{
+ let state=start([a,b]);
+ state.players[0].lastSeenAt=Date.now()-62000;
+ state=game.onMessage({state,player:b,payload:{type:'pulse'}}).state;
+ state.engine.isGameOver=true;
+ state=game.onMessage({state,player:b,payload:{type:'pulse'}}).state;
+ assert.equal(state.phase,'results');
+ state=game.onMessage({state,player:a,payload:{type:'pulse'}}).state;
+ assert.equal(state.players[0].timedOut,false);
+ state=game.onMessage({state,player:b,payload:{type:'rematch'}}).state;
+ assert.equal(state.phase,'results');
+ state=game.onMessage({state,player:a,payload:{type:'rematch'}}).state;
+ assert.equal(state.phase,'playing');
+ assert.equal(state.players.length,2);
+});
