@@ -72,3 +72,6 @@ test('v0.8 danger guides are visible and align with existing projectile hitboxes
  });
  expect(data.isDanger).toBe(true);expect(data.painted).toBe(true);
 });
+
+// Existing app-specific browser CI executes this file directly.
+import './choreography.spec.js';
