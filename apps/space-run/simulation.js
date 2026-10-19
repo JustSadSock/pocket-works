@@ -4,6 +4,9 @@ const MAX_PLAYERS = 8;
 const TICK_HZ = 45;
 const SNAP_HZ = 30;
 const CELL = 32;
+const PLATE_MAX = 48;
+const PLATE_CONDUCTIVE = 9;
+const HULL_PATCH_COST = 16;
 const ROOM_IDLE_MS = 5 * 60 * 1000;
 
 const COLORS = ["#49e7ff", "#ffd24a", "#ff6f9f", "#7bff7a", "#ff9e45", "#8ea2ff", "#ff5f5f", "#7dffe4"];
@@ -179,6 +182,7 @@ function newRoom(code) {
       inventoryModules: [],
       inventoryShapes: [],
       credits: 180, hullMax: 560, hull: 560, energyMax: 130, energy: 130,
+      plates: Object.fromEntries([...initialHull()].map(k=>[k,PLATE_MAX])),
     },
     physics: { x: 0, y: 0, vx: 0, vy: 0, a: 0, av: 0 },
     phase: "build", phaseTime: 0, wave: 0,
@@ -233,6 +237,10 @@ function installModule(room, templateId, x, y, rotation = 0, consumeInventory = 
     thrustLevel: 0,
     shotFlash: 0,
     recoil: 0,
+    heat: 0,
+    overheated: false,
+    powered: true,
+    powerFactor: 1,
     sprite: pickSkin(MODULE_SKINS[templateId], t.sprite),
   };
   const check = validatePlacement(room.ship, mod);
@@ -308,11 +316,95 @@ function addHullShape(room, shapeId, x, y, rotation = 0, consume = true) {
     if (consume) room.ship.inventoryShapes.push(shapeId);
     return { ok: false, message: "New shape must touch ship" };
   }
-  cells.forEach((c) => room.ship.cells.add(ckey(c.x, c.y)));
+  cells.forEach((c) => {const key=ckey(c.x,c.y);room.ship.cells.add(key);ensureEngineering(room);room.ship.plates[key]=PLATE_MAX;});
   room.ship.hullMax += cells.length * 18;
   room.ship.hull += cells.length * 18;
   room.events.push({ type: "hull-added", shapeId, count: cells.length });
   return { ok: true };
+}
+
+
+function ensureEngineering(room){
+  if(!room.ship.plates || typeof room.ship.plates!=="object" || Array.isArray(room.ship.plates))room.ship.plates={};
+  for(const k of room.ship.cells){
+    if(!Number.isFinite(room.ship.plates[k]))room.ship.plates[k]=PLATE_MAX;
+    room.ship.plates[k]=clamp(room.ship.plates[k],0,PLATE_MAX);
+  }
+  for(const m of room.ship.modules){
+    if(!Number.isFinite(m.heat))m.heat=0;
+    m.heat=clamp(m.heat,0,130);
+    if(typeof m.overheated!=="boolean")m.overheated=false;
+    if(typeof m.powered!=="boolean")m.powered=true;
+    if(!Number.isFinite(m.powerFactor))m.powerFactor=1;
+  }
+}
+function engineeringPower(room){
+  ensureEngineering(room);
+  const cells=room.ship.cells, plates=room.ship.plates;
+  const live=new Map(),queue=[];
+  const seed=(key)=>{if(cells.has(key) && plates[key]>PLATE_CONDUCTIVE && !live.has(key)){
+    live.set(key,0);queue.push(key);
+  }};
+  // Emergency bus of the starter hull: its breakable position is fixed.
+  seed("0,0");
+  // Healthy reactor cells are independent generation sources and can restore isolated wings.
+  for(const m of room.ship.modules){
+    if(MODULES[m.templateId]?.type!=="reactor"||m.hp<=0||m.status!=="online"||m.overheated)continue;
+    for(const c of footprint(m))seed(ckey(c.x,c.y));
+  }
+  for(let at=0;at<queue.length;at++){
+    const current=queue[at],d=live.get(current),{x,y}=parseKey(current);
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const key=ckey(x+dx,y+dy);
+      if(cells.has(key)&&plates[key]>PLATE_CONDUCTIVE&&!live.has(key)){
+        live.set(key,d+1);queue.push(key);
+      }
+    }
+  }
+  for(const m of room.ship.modules){
+    const ds=footprint(m).map(c=>live.get(ckey(c.x,c.y))).filter(Number.isFinite);
+    const connected=ds.length>0;
+    const prev=m.powered;
+    m.powered=connected;
+    m.powerFactor=connected?clamp(1-Math.min(...ds)*.02,.66,1):0;
+    if(prev!==m.powered)room.events.push({type:"power-grid",moduleId:m.id,powered:m.powered});
+  }
+  return live;
+}
+function addModuleHeat(room,m,amount){
+  if(amount<=0)return;
+  m.heat=clamp((m.heat||0)+amount,0,130);
+  if(m.heat>=100&&!m.overheated){
+    m.overheated=true;
+    room.events.push({type:"overheat",moduleId:m.id,x:room.physics.x,y:room.physics.y});
+  }
+}
+function patchPlate(room,playerId,src={}){
+  const x=Number(src.x),y=Number(src.y);
+  if(!Number.isInteger(x)||!Number.isInteger(y)||Math.abs(x)>500||Math.abs(y)>500)
+    return {ok:false,message:"Неверные координаты секции"};
+  const key=ckey(x,y),ship=room.ship;
+  if(!ship.cells.has(key))return {ok:false,message:"Секции корпуса нет"};
+  ensureEngineering(room);
+  const hp=ship.plates[key];
+  if(hp>=PLATE_MAX-.01)return {ok:false,message:"Эта секция уже целая"};
+  const p=playerById(room,playerId);
+  if(room.phase==="combat"){
+    const station=moduleById(room,p?.moduleId);
+    if(!station||MODULES[station.templateId].type!=="repair"||station.status!=="online"||
+       station.overheated||!station.powered)
+      return {ok:false,message:"В бою корпус латает только работающий ремонтный отсек"};
+    if((p.nextPatchAt||0)>room.simTime)return {ok:false,message:"Ремонтный инструмент перезаряжается"};
+    if(ship.energy<12)return {ok:false,message:"Недостаточно энергии для аварийной заплатки"};
+    ship.energy-=12;p.nextPatchAt=room.simTime+1.25;
+    ship.plates[key]=Math.min(PLATE_MAX,hp+18);
+    addModuleHeat(room,station,7);
+  }else if(room.phase==="build"||room.phase==="shop"){
+    if(ship.credits<HULL_PATCH_COST)return {ok:false,message:"Для заплатки нужно 16 кредитов"};
+    ship.credits-=HULL_PATCH_COST;ship.plates[key]=Math.min(PLATE_MAX,hp+26);
+  }else return {ok:false,message:"Сейчас ремонт недоступен"};
+  room.events.push({type:"hull-patch",x,y,hp:ship.plates[key]});
+  return {ok:true};
 }
 
 function moduleStats(room, mod) {
@@ -482,6 +574,7 @@ function spawnWave(room, wave, mission) {
 }
 
 function startWave(room, missionId = "scout") {
+  ensureEngineering(room);
   if (room.phase === "combat") return;
   const mission = missionById(missionId);
   room.currentMission = mission.id;
@@ -502,6 +595,8 @@ function finishWave(room) {
   room.ship.credits += reward;
   room.offers = shopOffers(room.wave);
   room.ship.hull = clamp(room.ship.hull + 110, 0, room.ship.hullMax);
+  ensureEngineering(room);
+  for(const k of room.ship.cells)room.ship.plates[k]=Math.min(PLATE_MAX,room.ship.plates[k]+7);
   room.ship.energy = clamp(room.ship.energy + 70, 0, room.ship.energyMax);
   room.events.push({ type: "phase", phase: "shop", reward, wave: room.wave });
   if (Math.random() < 0.65) {
@@ -526,6 +621,8 @@ function shipDefeat(room, reason = "hull") {
   room.ship.hull = room.ship.hullMax * 0.72;
   room.ship.energy = room.ship.energyMax * 0.75;
   room.ship.credits = Math.max(0, room.ship.credits - 150);
+  ensureEngineering(room);
+  for(const k of room.ship.cells)room.ship.plates[k]=Math.max(PLATE_MAX*.4,room.ship.plates[k]);
   room.ship.modules.forEach((m) => { m.hp = Math.max(m.maxHp * 0.6, m.hp); m.status = "online"; m.malfunction = null; });
   room.events.push({ type: "defeat", reason });
 }
@@ -557,6 +654,14 @@ function updateShip(room, dt) {
   let regen = 10;
   let sensor = 0;
   const massProperties = shipMassProperties(room);
+  const liveCells=engineeringPower(room);
+  ship.liveCells=[...liveCells.keys()];
+  const coreOnline=liveCells.has("0,0");
+  const breaches=Object.values(ship.plates).filter(v=>v<=0).length;
+  if(room.phase==="combat"&&breaches){
+    ship.hull-=breaches*.38*dt;
+    ship.energy=Math.max(0,ship.energy-breaches*.7*dt);
+  }
 
   for (const m of ship.modules) {
     const t = MODULES[m.templateId];
@@ -566,12 +671,21 @@ function updateShip(room, dt) {
     m.thrustLevel = Math.max(0, (m.thrustLevel || 0) - dt * 2.8);
     m.shotFlash = Math.max(0, (m.shotFlash || 0) - dt * 8.5);
     m.recoil = Math.max(0, (m.recoil || 0) - dt * 7.2);
-    if (m.malfunction && m.malfunction.kind === "timing") m.malfunction.phase = (m.malfunction.phase + dt * m.malfunction.speed) % 1;
-    if (t.type === "reactor" && m.status === "online") regen += t.regen * eff * hp * (m.occupiedBy ? 1 : 0.72);
-    if (t.type === "sensor" && m.status === "online") sensor += t.critBoost * eff * hp * (m.occupiedBy ? 1 : 0.45);
+    if(m.malfunction&&m.malfunction.kind==="timing")m.malfunction.phase=(m.malfunction.phase+dt*m.malfunction.speed)%1;
+    const exposure=moduleStats(room,m).exposure;
+    const cooling=room.phase==="combat" ? (4+exposure*10) : (11+exposure*13);
+    m.heat=Math.max(0,m.heat-cooling*dt);
+    if(m.overheated&&m.heat<52){m.overheated=false;room.events.push({type:"cooled",moduleId:m.id});}
+    if(t.type==="reactor"&&m.status==="online"&&m.powered&&!m.overheated){
+      regen+=t.regen*eff*hp*m.powerFactor*(m.occupiedBy?1:.72);
+      addModuleHeat(room,m,dt*7);
+    }
+    if(t.type==="sensor"&&m.status==="online"&&m.powered&&!m.overheated)
+      sensor+=t.critBoost*eff*hp*(m.occupiedBy?1:.45);
   }
 
-  ship.energy = clamp(ship.energy + regen * dt, 0, ship.energyMax);
+  regen=coreOnline?regen:Math.max(0,regen-8);
+  ship.energy=clamp(ship.energy+regen*dt,0,ship.energyMax);
 
   for (const m of ship.modules) {
     const p = m.occupiedBy ? room.players.get(m.occupiedBy) : null;
@@ -580,7 +694,8 @@ function updateShip(room, dt) {
     const t = MODULES[m.templateId];
     const hp = clamp(m.hp / m.maxHp, 0, 1);
     const eff = placementEffect(room, m);
-    const power = hp * (m.status === "online" ? 1 : 0.4);
+    const power=hp*(m.status==="online"?1:.4)*m.powerFactor;
+    if(!m.powered||m.overheated)continue;
 
     if (t.type === "engine") {
       const throttle = (p.input.up ? 1 : 0) - (p.input.down ? 0.55 : 0);
@@ -600,7 +715,8 @@ function updateShip(room, dt) {
           const leverX=mount.dx-massX,leverY=mount.dy-massY;
           ph.av+=vec*t.torque*eff*dt*2.1;
           ph.av+=(leverX*fy-leverY*fx)*(32/massProperties.inertia)*dt;
-          m.thrustLevel = clamp(Math.max(m.thrustLevel || 0, Math.abs(throttle) + Math.abs(vec) * 0.35), 0, 2.2);
+          m.thrustLevel=clamp(Math.max(m.thrustLevel||0,Math.abs(throttle)+Math.abs(vec)*.35),0,2.2);
+          addModuleHeat(room,m,dt*(9+Math.abs(throttle)*8+Math.abs(vec)*3));
           room.events.push({ type: "engine", moduleId: m.id, thrust: Math.abs(throttle) });
         }
       }
@@ -615,7 +731,8 @@ function updateShip(room, dt) {
           ship.energy -= need;
           m.cooldown = t.fireInterval / clamp(eff, 0.55, 2.2);
           m.shotFlash = 1;
-          m.recoil = 1;
+          m.recoil=1;
+          addModuleHeat(room,m,m.templateId==="turret_mk2"?6.5:4.2);
           const dir = m.aim;
           const speed = t.shotSpeed * clamp(eff, 0.7, 2.3);
           const barrelLen=Math.max(...dims(t,m.rotation))*CELL*.42+12;
@@ -645,6 +762,7 @@ function updateShip(room, dt) {
         const drain = t.drain * dt;
         if (ship.energy >= drain) {
           ship.energy -= drain;
+          addModuleHeat(room,m,dt*12);
           room.shields.push({
             moduleId: m.id,
             x: ph.x,
@@ -661,7 +779,8 @@ function updateShip(room, dt) {
     if (t.type === "repair" && p.input.repairHold) {
       const target = moduleById(room, p.repairTarget) || room.ship.modules.find((x) => x.status !== "online");
       if (target) {
-        target.hp = clamp(target.hp + dt * 14 * placementEffect(room, m), 0, target.maxHp);
+        target.hp=clamp(target.hp+dt*14*placementEffect(room,m),0,target.maxHp);
+        addModuleHeat(room,m,dt*8);
         if (target.hp > target.maxHp * 0.42 && !target.malfunction) target.status = "online";
       }
     }
@@ -824,7 +943,13 @@ function hitShip(room, p) {
   const l = worldToShip(room, p.x, p.y);
   const gx = Math.floor(l.x / CELL), gy = Math.floor(l.y / CELL);
   if (!room.ship.cells.has(ckey(gx, gy))) return false;
-  const m = moduleAtCell(room, gx, gy);
+  ensureEngineering(room);
+  const key=ckey(gx,gy),oldPlate=room.ship.plates[key];
+  const m=moduleAtCell(room,gx,gy);
+  const plateDamage=p.damage*(m?.52:1.35);
+  room.ship.plates[key]=Math.max(0,oldPlate-plateDamage);
+  if(oldPlate>0&&room.ship.plates[key]===0)
+    room.events.push({type:"hull-breach",x:gx,y:gy,worldX:p.x,worldY:p.y});
   if (m) {
     m.hp = Math.max(0, m.hp - p.damage);
     room.events.push({ type: "module-hit", moduleId: m.id, x: p.x, y: p.y });
@@ -837,7 +962,7 @@ function hitShip(room, p) {
       room.events.push({ type: "malfunction", moduleId: m.id, kind: m.malfunction.kind });
     }
   } else {
-    room.ship.hull -= p.damage * 0.72;
+    room.ship.hull-=p.damage*.72;
     room.events.push({ type: "hull-hit", x: p.x, y: p.y });
   }
   return true;
@@ -863,7 +988,7 @@ function updateMalfunctions(room, dt) {
     }
   }
   room.ship.modules.forEach((m) => {
-    if (m.hp <= 0) m.status = "offline";
+    if(m.hp<=0)m.status="offline";
     if (m.status !== "online" && m.hp > m.maxHp * 0.55 && !m.malfunction) m.status = "online";
   });
 }
@@ -948,7 +1073,7 @@ function updateRoom(room, dt) {
   room.ship.hull = clamp(room.ship.hull, 0, room.ship.hullMax);
   room.ship.energy = clamp(room.ship.energy, 0, room.ship.energyMax);
 
-  room.snapAcc += dt;
+  room.snapAcc+=dt;
   room.snapAcc=0;
 }
 
@@ -962,7 +1087,8 @@ function serializeModule(room, m) {
     aim: m.aim,
     thrustLevel: m.thrustLevel || 0,
     shotFlash: m.shotFlash || 0,
-    recoil: m.recoil || 0,
+    recoil:m.recoil||0,
+    heat:m.heat||0,overheated:Boolean(m.overheated),powered:m.powered!==false,powerFactor:m.powerFactor??1,
     placement: placementEffect(room, m),
     malfunction: m.malfunction ? {
       kind: m.malfunction.kind, progress: m.malfunction.progress, target: m.malfunction.target,
@@ -974,7 +1100,8 @@ function serializeModule(room, m) {
 }
 
 function serializeRoom(room) {
-  const b = shipBounds(room.ship.cells);
+  ensureEngineering(room);
+  const b=shipBounds(room.ship.cells);
   return {
     roomCode: room.code,
     phase: room.phase,
@@ -993,6 +1120,8 @@ function serializeRoom(room) {
       inventoryModules: [...room.ship.inventoryModules],
       inventoryShapes: [...room.ship.inventoryShapes],
       massProperties:shipMassProperties(room),
+      plates:[...room.ship.cells].map(k=>{const {x,y}=parseKey(k);return {x,y,hp:room.ship.plates?.[k]??PLATE_MAX};}),
+      networkCells:[...room.ship.cells].filter(k=>(room.ship.plates?.[k]??PLATE_MAX)>PLATE_CONDUCTIVE && (room.ship.liveCells||[]).includes(k)).map(parseKey),
     },
     physics: { ...room.physics },
     enemies: room.enemies.map((e) => ({ id: e.id, type: e.type, hp: e.hp, maxHp: e.maxHp, x: e.x, y: e.y, a: e.a, radius: e.radius, elite: Boolean(e.elite), sprite: e.sprite || ENEMIES[e.type].sprite })),
@@ -1162,6 +1291,15 @@ io.on("connection", (socket) => {
     emitState(room);
   });
 
+  socket.on("patchHull", (payload = {}) => {
+    const code=socket.data.roomCode;
+    if(!code||!rooms.has(code))return;
+    const room=rooms.get(code);
+    const outcome=patchPlate(room,socket.id,payload);
+    if(!outcome.ok)socket.emit("actionError",{message:outcome.message});
+    emitState(room);
+  });
+
   socket.on("setRepairTarget", (payload = {}) => {
     const code = socket.data.roomCode;
     if (!code || !rooms.has(code)) return;
@@ -1195,7 +1333,7 @@ io.on("connection", (socket) => {
 
 
  let room=null;
- if(saved){room={...structuredClone(saved.room),players:new Map(saved.room.players),ship:{...structuredClone(saved.room.ship),cells:new Set(saved.room.ship.cells)}};rooms.set(room.code,room);}
+ if(saved){room={...structuredClone(saved.room),players:new Map(saved.room.players),ship:{...structuredClone(saved.room.ship),cells:new Set(saved.room.ship.cells)}};ensureEngineering(room);rooms.set(room.code,room);}
  function socket(member){const handlers=new Map();const s={id:member.id,data:{roomCode:room?.code||null},on(e,f){handlers.set(e,f);},emit(event,payload){events.push({type:'legacy',to:member.id,payload:{event,payload}});},join(){},leave(){}};connection(s);return {s,send(e,p){const fn=handlers.get(e);if(!fn)throw Error('Неизвестная команда');fn(p);}};}
  function pack(r){const snapshot=serializeRoom(r);const data={...r,players:[...r.players],ship:{...r.ship,cells:[...r.ship.cells]},events:[]};return {room:structuredClone(data),snapshot,lastTick:Date.now()};}
  return {room,events,pack,socket,get(code){return rooms.get(code);},step(dt){for(let t=0;t<dt;t+=1/45)updateRoom(room,Math.min(1/45,dt-t));}};
