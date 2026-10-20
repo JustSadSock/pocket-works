@@ -74,7 +74,7 @@ button { border: 0; }
   gap: 12px;
   padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
   background:
-    linear-gradient(180deg, rgba(201,198,187,.985) 0%, rgba(201,198,187,.93) 54%, rgba(201,198,187,.82) 100%);
+    linear-gradient(180deg, rgba(201,198,187,.54) 0%, rgba(201,198,187,.08) 25%, rgba(201,198,187,.12) 44%, rgba(201,198,187,.92) 60%, rgba(201,198,187,.99) 78%);
   overflow: auto;
   overscroll-behavior: none;
 }
@@ -91,10 +91,10 @@ button { border: 0; }
 .menu-rail a { text-decoration: none; min-height: 34px; display: flex; align-items: center; }
 .menu-rail span { color: var(--muted); }
 
-.menu-copy { align-self: end; padding: min(4vh, 28px) 2px 2px; }
+.menu-copy { align-self: start; padding: 4px 2px 0; position: relative; z-index: 2; pointer-events: none; }
 .kicker { margin: 0 0 7px; color: #9b3b17; font: 800 7px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .17em; }
-.menu-copy h1 { margin: 0; font: 900 clamp(42px, 16vw, 82px)/.78 system-ui, sans-serif; letter-spacing: -.075em; }
-.menu-copy > p:last-child { margin: 12px 0 0; max-width: 540px; color: #4d4d48; font: 600 10.5px/1.42 system-ui, sans-serif; }
+.menu-copy h1 { margin: 0; font: 900 clamp(39px, 13vw, 62px)/.9 system-ui, sans-serif; letter-spacing: -.075em; }
+.menu-copy > p:last-child { margin: 6px 0 0; max-width: 315px; color: #40413e; font: 650 9px/1.28 system-ui, sans-serif; }
 
 .car-selector {
   display: grid;
@@ -342,4 +342,36 @@ button { border: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* Inspect the live deformable model, rather than a static car illustration. */
+.garage-orbit {
+  position: absolute;
+  z-index: 1;
+  left: var(--safe-left);
+  right: var(--safe-right);
+  top: clamp(135px, 23vh, 196px);
+  bottom: clamp(291px, 43vh, 365px);
+  min-height: 60px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.garage-orbit span {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 9px;
+  color: #333c3d;
+  background: rgba(218,217,207,.7);
+  border-block: 1px solid rgba(47,51,51,.26);
+  font: 800 8px/1.1 ui-monospace, Menlo, monospace;
+  white-space: nowrap;
+  letter-spacing: .08em;
+  pointer-events: none;
+}
+.car-selector, .preset-row, .menu-actions { position: relative; z-index: 2; }
+@media (max-height: 620px) {
+  .garage-orbit { top: 108px; bottom: 282px; }
+  .garage-orbit span { font-size: 7px; }
 }
