@@ -12,7 +12,7 @@ const index=JSON.parse(readFileSync(join(dir,'assets/forge-index.json')));
 test('Universal Art Forge v2 declares authentic palette pixel source and immutable runtime exports',()=>{
  assert.equal(manifest.version,2);
  assert.equal(manifest.runtimeRoot,'.');
- assert.equal(manifest.jobs.length,1);
+ assert.equal(manifest.jobs.length,3);
  assert.equal(manifest.jobs[0].adapter,'pixel');
  assert.equal(manifest.jobs[0].source,'asset-forge/mages.json');
  assert.equal(manifest.jobs[0].outputs.image,'assets/mages.png');
