@@ -115,13 +115,84 @@ function updateHud(a=world.players.find(p=>p.id===playerId),b=world.players.find
  }
  $('round-label').textContent=world.phase==='round-end'?'Конец раунда':world.phase==='lobby'?'Ожидание':session==='training'?'СПАРРИНГ':'ДУЭЛЬ';
 }
+
+function botSteer(s,t){
+ const walls=world.map?.walls||[];
+ const free=(x,y)=>walls.every(w=>Math.abs(x-w.x)>=w.w/2+.56||Math.abs(y-w.y)>=w.h/2+.56);
+ const dx=t.x-s.x,dy=t.y-s.y,d=Math.hypot(dx,dy);
+ if(d<.001)return [0,0];
+ // Direct pursuit only when the whole corridor is traversable, not just the target point.
+ let clear=true;
+ for(let i=1;i<=Math.ceil(d/.35);i++){
+  const f=i/Math.ceil(d/.35);
+  if(!free(s.x+dx*f,s.y+dy*f)){clear=false;break;}
+ }
+ if(clear)return [dx/d,dy/d];
+ const bounds=world.map?.bounds||{w:22,h:14};
+ const cell=.55,nx=Math.ceil(bounds.w/cell),ny=Math.ceil(bounds.h/cell),ox=-bounds.w/2,oy=-bounds.h/2;
+ const gx=x=>Math.max(0,Math.min(nx-1,Math.floor((x-ox)/cell)));
+ const gy=y=>Math.max(0,Math.min(ny-1,Math.floor((y-oy)/cell)));
+ const index=(x,y)=>y*nx+x,position=(x,y)=>[ox+(x+.5)*cell,oy+(y+.5)*cell];
+ const blocked=new Uint8Array(nx*ny);
+ for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){
+  const p=position(x,y);blocked[index(x,y)]=free(p[0],p[1])?0:1;
+ }
+ const sx=gx(s.x),sy=gy(s.y),tx=gx(t.x),ty=gy(t.y);
+ // Flood from the target so every candidate neighbor tells us whether it advances.
+ const dst=new Int16Array(nx*ny);dst.fill(-1);
+ const queue=new Int32Array(nx*ny),goal=index(tx,ty);
+ let front=0,back=0;
+ if(!blocked[goal]){queue[back++]=goal;dst[goal]=0;}
+ else{
+  for(let y=Math.max(0,ty-2);y<=Math.min(ny-1,ty+2);y++)
+  for(let x=Math.max(0,tx-2);x<=Math.min(nx-1,tx+2);x++){
+   const n=index(x,y);if(!blocked[n]){dst[n]=0;queue[back++]=n;}
+  }
+ }
+ const sides=[[1,0],[-1,0],[0,1],[0,-1]];
+ while(front<back){
+  const n=queue[front++],x=n%nx,y=(n/nx)|0;
+  for(const [dx,dy] of sides){
+   const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=nx||yy>=ny)continue;
+   const ni=index(xx,yy);if(blocked[ni]||dst[ni]>=0)continue;
+   dst[ni]=dst[n]+1;queue[back++]=ni;
+  }
+ }
+ let ix=sx,iy=sy;
+ if(dst[index(ix,iy)]<0){
+  let nearest=null,best=Infinity;
+  for(let y=Math.max(0,sy-3);y<=Math.min(ny-1,sy+3);y++)
+  for(let x=Math.max(0,sx-3);x<=Math.min(nx-1,sx+3);x++){
+   const n=index(x,y),p=position(x,y);
+   const cost=Math.hypot(p[0]-s.x,p[1]-s.y);
+   if(dst[n]>=0&&cost<best){best=cost;nearest=[x,y];}
+  }
+  if(!nearest)return [dx/d,dy/d];
+  [ix,iy]=nearest;
+ }
+ // Look ahead across several cells; prevents grid-edge zigzag.
+ for(let step=0;step<4;step++){
+  const current=dst[index(ix,iy)];let next=null,best=current;
+  for(const [ddx,ddy] of sides){
+   const xx=ix+ddx,yy=iy+ddy;if(xx<0||yy<0||xx>=nx||yy>=ny)continue;
+   const n=index(xx,yy);
+   if(dst[n]>=0&&dst[n]<best){best=dst[n];next=[xx,yy];}
+  }
+  if(!next)break;
+  [ix,iy]=next;
+ }
+ const [wx,wy]=position(ix,iy),nd=Math.hypot(wx-s.x,wy-s.y)||1;
+ return [(wx-s.x)/nd,(wy-s.y)/nd];
+}
+
 function botInput(){
  const bot=world.players.find(p=>p.id==='bot'),me=world.players.find(p=>p.id===playerId);
  if(!bot||!me||!bot.alive||!me.alive)return {keys:{}};
  const s=bot.state,t=me.state,dx=t.x-s.x,dy=t.y-s.y,d=Math.hypot(dx,dy)||.001,ang=Math.atan2(dy,dx),now=performance.now();
  const lateral=Math.sin(now*.0011)>0?1:-1;
- const vx=(d>2.3?dx/d:d<1.2?-dx/d*.65:0)+(-dy/d)*lateral*.65;
- const vy=(d>2.3?dy/d:d<1.2?-dy/d*.65:0)+(dx/d)*lateral*.65;
+ const [navX,navY]=botSteer(s,t);
+ const vx=(d>2.3?navX:d<1.2?-dx/d*.65:0)+(-dy/d)*lateral*(d>2.3?.12:.62);
+ const vy=(d>2.3?navY:d<1.2?-dy/d*.65:0)+(dx/d)*lateral*(d>2.3?.12:.62);
  const shield=d<2.45&&t.attacking&&s.shieldCooldown<=0&&Math.sin(now*.009)>.15;
  const chargePhase=now%1800;
  const keys={w:vy<-.28,s:vy>.28,a:vx<-.28,d:vx>.28};
@@ -144,7 +215,7 @@ function sendInput(force=false){
   try{ws.send(JSON.stringify({type:'input',payload}));}catch(e){changeStatus('Нет связи · восстанавливаем',true);}
  }
 }
-setInterval(()=>sendInput(),1000/30);
+setInterval(()=>sendInput(),1000/24);
 async function practice(){
  stop();showMenu(true);changeStatus('Загружаем тренировку…');$('practice').disabled=true;
  try{
