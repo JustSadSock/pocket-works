@@ -157,9 +157,9 @@
       "tool": "universal-art-forge-arena",
       "source": "asset-forge/court-tiles.json",
       "output": "assets/court-tiles.png",
-      "role": "12 authored 32px materials for masonry, wall relief, compass inlay, two living brazier frames",
-      "acceptance": "Native nearest-pixel scene at 400×620 with both true collision obstacles readable, no gradients in world backdrop",
-      "integration": "forge-court.mjs loads committed offline exports; court-art.mjs switches from former raster procedural fallback upon asset decode",
+      "role": "12 hand-authored 32px source frames for ivory limestone, moss, engraved border stones, carved dual-obstacle panels and ivy flower details",
+      "acceptance": "Live 400×620 scene visibly reproduces selected overgrown rune garden through pixel rows plus manual pixel geometry, not a full-scene image; game collisions are unchanged.",
+      "integration": "forge-court.mjs composes the 12 frame atlas and integer stepped central diamond/rune paths into the arena; the old procedural art is only a loading fallback.",
       "provenance": "Original author-created layered pixel grid",
       "maxBytes": 300000
     },

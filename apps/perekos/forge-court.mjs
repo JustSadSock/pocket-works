@@ -1,110 +1,212 @@
-// PEREKOS / Universal Art Forge architectural tile renderer.
-// A coherent 32px hand-authored masonry material replaces gradients,
-// ellipses, procedural brush noise and fake perspective texture.
+// PEREKOS / the first selected rune-garden battlefield, built by hand.
+// The reference image is NOT shipped or sampled. Stone, borders, ivy,
+// inlays and obstacle plaques are authored tiles + integer Canvas pixels.
+// Game logic, projectiles, wall rectangles and arena coordinates are untouched.
 export const COURT_TILE=32;
 export const COURT_SIZE=Object.freeze({width:400,height:620});
-export const COURT_TILE_NAMES=Object.freeze(['paver-0','paver-1','paver-2','paver-3','paver-4','paver-5',
-  'inlay','edge','buttress-face','buttress-cap','brazier-0','brazier-1']);
-const TORCHES=Object.freeze([[57,83],[349,98],[53,526],[351,525]]);
-let sheet=null,loadStatus='loading';
-let finish;const ready=new Promise(resolve=>{finish=resolve});
+export const COURT_TILE_NAMES=Object.freeze([
+ 'paver-0','paver-1','paver-2','paver-3','paver-4','paver-5',
+ 'inlay','edge','buttress-face','buttress-cap','brazier-0','brazier-1'
+]);
+const C=Object.freeze({
+ void:'#172b28',seam:'#2d4941',deep:'#294a42',river:'#3a6557',
+ riverLite:'#507b67',pale:'#b4b9a4',ivory:'#d0d0b5',
+ edge:'#84977f',line:'#819986',moss:'#65944b',leaf:'#9fbc70',
+ bright:'#f2efd0'
+});
+let sheet=null,loadStatus='loading',resolveReady;
+const ready=new Promise(resolve=>{resolveReady=resolve});
 if(typeof Image!=='undefined'){
- const sprite=new Image();sprite.decoding='async';
- sprite.onload=()=>{
-  if(sprite.naturalWidth===COURT_TILE*COURT_TILE_NAMES.length&&sprite.naturalHeight===COURT_TILE){
-   sheet=sprite;loadStatus='ready';
-  }else loadStatus='invalid';
-  finish(!!sheet);
+ const image=new Image();image.decoding='async';
+ image.onload=()=>{
+  if(image.naturalWidth===384&&image.naturalHeight===32){sheet=image;loadStatus='ready'}
+  else loadStatus='invalid';
+  resolveReady(!!sheet);
  };
- sprite.onerror=()=>{loadStatus='error';finish(false)};
- sprite.src=new URL('./assets/court-tiles.png',import.meta.url).href;
-}else{loadStatus='unavailable';finish(false)}
+ image.onerror=()=>{loadStatus='error';resolveReady(false)};
+ image.src=new URL('./assets/court-tiles.png',import.meta.url).href;
+}else{loadStatus='unavailable';resolveReady(false)}
 export const forgeCourtReady=()=>ready;
 export const forgeCourtStatus=()=>loadStatus;
-function stamp(ctx,index,x,y,w=32,h=32){
- ctx.drawImage(sheet,index*32,0,32,32,Math.round(x),Math.round(y),Math.round(w),Math.round(h));
+const rect=(c,x,y,w,h,color)=>{
+ c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));
+};
+// Legacy temporary barrier/mine painter shares the same integer-pixel primitive.
+const block=rect;
+function stamp(c,index,x,y){
+ c.drawImage(sheet,index*32,0,32,32,Math.round(x),Math.round(y),32,32);
 }
-const block=(ctx,x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))};
-const noise=(n)=>{let x=n|0;x^=x<<13;x^=x>>>17;x^=x<<5;return x>>>0};
-function stoneWall(ctx,w,index){
+const hash=n=>{let k=n|0;k^=k<<13;k^=k>>>17;k^=k<<5;return k>>>0};
+function carvedDiamond(c,x,y,r,color,step=2){
+ // Square pixels and stepped diagonal edges; no antialiasing or path strokes.
+ for(let dy=-r;dy<=r;dy+=step){
+  const w=r-Math.abs(dy),ww=Math.max(1,Math.round(w));
+  rect(c,x-ww,y+dy,ww*2+1,step,color);
+ }
+}
+function inlaidDiamond(c,x,y,large=false){
+ if(large){
+  carvedDiamond(c,x+2,y+3,54,C.void);
+  carvedDiamond(c,x,y,52,C.ivory);
+  carvedDiamond(c,x,y,48,C.deep);
+  carvedDiamond(c,x,y,43,C.riverLite);
+  carvedDiamond(c,x,y,39,C.deep);
+  carvedDiamond(c,x,y,29,C.ivory);
+  carvedDiamond(c,x,y,25,C.deep);
+  carvedDiamond(c,x,y,12,C.river);
+  carvedDiamond(c,x,y,9,C.ivory);
+  carvedDiamond(c,x,y,5,C.deep);
+  rect(c,x-2,y-2,4,4,C.pale);
+ }else{
+  carvedDiamond(c,x+1,y+2,13,C.void);
+  carvedDiamond(c,x,y,12,C.ivory);
+  carvedDiamond(c,x,y,9,C.deep);
+  carvedDiamond(c,x,y,7,C.edge);
+  carvedDiamond(c,x,y,4,C.deep);
+ }
+}
+function masonFloor(c){
+ // Floor tiles follow one 32x32 atlas grid; seam lines and moss are in the source.
+ rect(c,0,0,400,620,C.void);
+ rect(c,6,6,388,608,C.seam);
+ rect(c,15,16,370,588,C.riverLite);
+ rect(c,31,23,338,574,C.deep);
+ c.save();c.beginPath();c.rect(34,25,332,570);c.clip();
+ for(let row=0;row<19;row++)for(let col=0;col<11;col++){
+  const seed=hash(row*957+col*371+69);
+  const mix=seed%20;
+  const tile=mix<4?1:mix<7?2:mix<10?4:mix<12?5:mix<15?3:0;
+  stamp(c,tile,34+col*32,25+row*32);
+ }
+ c.restore();
+ // Engraved side rails, separate from collision boundaries.
+ for(const left of [true,false]){
+  const x=left?9:367;
+  rect(c,x,22,24,576,C.deep);
+  rect(c,x+2,22,2,576,C.edge);
+  rect(c,x+20,22,3,576,C.void);
+  rect(c,x+5,23,15,574,C.river);
+  for(let yy=45;yy<574;yy+=53){
+   inlaidDiamond(c,x+12,yy,false);
+   rect(c,x+10,yy+19,4,3,C.edge);
+   rect(c,x+11,yy+23,2,3,C.ivory);
+  }
+ }
+ // Continuous geometric green watercourse, not a wall or actual hazard.
+ rect(c,177,25,46,572,C.deep);
+ rect(c,181,25,3,572,C.edge);
+ rect(c,217,25,3,572,C.void);
+ rect(c,187,25,27,572,C.river);
+ rect(c,190,25,2,572,C.riverLite);
+ rect(c,34,296,332,29,C.deep);
+ rect(c,34,299,332,3,C.edge);
+ rect(c,34,319,332,3,C.void);
+ rect(c,34,303,332,12,C.river);
+ // Diagonal connector is ornament, not geometry. Four arrowhead nodes.
+ for(const [x,y,vertical] of [[200,112,true],[200,175,true],[200,445,true],[200,507,true],
+                               [66,310,false],[334,310,false]])inlaidDiamond(c,x,y);
+ inlaidDiamond(c,200,310,true);
+ // The small diamond motifs in the four wings are just floor decoration.
+ for(const [x,y] of [[100,310],[300,310],[200,60],[200,560]]){
+  rect(c,x-4,y,8,2,C.ivory);
+  rect(c,x-1,y-3,2,8,C.edge);
+ }
+}
+function border(c){
+ // Calm light lip with four architectural corner posts, mirroring the concept.
+ for(const y of [8,593]){
+  rect(c,26,y,348,18,C.void);
+  rect(c,28,y+2,344,13,C.pale);
+  rect(c,30,y+2,340,3,C.ivory);
+  rect(c,30,y+12,340,2,C.edge);
+  for(let x=36;x<366;x+=32)rect(c,x,y+2,2,13,C.deep);
+ }
+ for(const x of [6,369]){
+  rect(c,x,11,25,598,C.void);
+  rect(c,x+3,22,20,576,C.deep);
+  rect(c,x+4,22,2,576,C.edge);
+  rect(c,x+21,22,2,576,C.void);
+ }
+ // Restore runic strips over the perpendicular frame.
+ for(const x of [11,369])for(let y=61;y<571;y+=56){
+  rect(c,x+3,y,14,1,C.edge);
+  inlaidDiamond(c,x+10,y+14);
+ }
+ for(const x of [4,364])for(const y of [4,580]){
+  rect(c,x+3,y+3,31,34,C.void);
+  rect(c,x,y,32,32,C.edge);
+  rect(c,x+3,y+3,26,26,C.pale);
+  rect(c,x+5,y+5,22,22,C.river);
+  rect(c,x+7,y+7,18,18,C.edge);
+  inlaidDiamond(c,x+16,y+16);
+ }
+ // Moss is concentrated along wet joins, not smeared across combat lanes.
+ for(let i=0;i<28;i++){
+  const side=i%2===0;
+  const x=side?6:357, y=20+(hash(i*71+21)%565);
+  stamp(c,i%5===0?11:10,x,y);
+ }
+ for(let i=0;i<7;i++){const x=25+(hash(i*59+117)%325),top=i%2===0;
+  stamp(c,i%3?10:11,x,top?4:568);
+ }
+}
+function reliefWall(c,w,index){
  if(!w||![w.x,w.y,w.w,w.h].every(Number.isFinite)||w.w<1||w.h<1)return;
  const x=Math.round(w.x),y=Math.round(w.y),width=Math.round(w.w),height=Math.round(w.h);
- // The exact collision wall is authoritative. This is only the backdrop.
- block(ctx,x+4,y+7,width+5,height+6,'#152a24');
- ctx.save();ctx.beginPath();ctx.rect(x,y,width,height);ctx.clip();
- for(let xx=0;xx<width;xx+=32)for(let yy=0;yy<height;yy+=32)
-  stamp(ctx,8,x+xx,y+yy);
- ctx.restore();
- block(ctx,x-4,y-7,width+8,15,'#172620');
- ctx.save();ctx.beginPath();ctx.rect(x-4,y-7,width+8,15);ctx.clip();
- for(let dx=0;dx<width+8;dx+=32)stamp(ctx,9,x-4+dx,y-8,32,32);
- ctx.restore();
- block(ctx,x-4,y+6,width+8,2,'#1f3128');
- for(let j=0;j<Math.floor(width/15);j++){
-  const at=x+4+j*15;
-  block(ctx,at,y+7,2,Math.max(4,height-10),'#293d33');
+ const artX=x-7,artY=y-9;
+ // Exact gameplay collider is untouched; relief is outside/inside it visually.
+ rect(c,artX+7,artY+15,width+13,height+1,C.void);
+ rect(c,artX+2,artY+5,width+12,height+1,C.deep);
+ rect(c,artX,artY+2,width+12,height+3,C.seam);
+ rect(c,artX+5,artY+12,width+2,height-1,C.deep);
+ rect(c,artX+7,artY+15,width-2,height-7,C.void);
+ c.save();c.beginPath();c.rect(artX+4,artY+17,width+4,height-17);c.clip();
+ for(let dx=0;dx<width;dx+=32)stamp(c,8,artX+4+dx,artY+16);
+ c.restore();
+ // Two carved panels strongly echo the supplied first design.
+ for(const off of [0,32]){
+  const xx=artX+7+off;
+  rect(c,xx,artY+15,28,26,C.void);
+  rect(c,xx+2,artY+17,24,22,C.river);
+  carvedDiamond(c,xx+14,artY+27,9,C.ivory,1);
+  carvedDiamond(c,xx+14,artY+27,6,C.deep,1);
+  carvedDiamond(c,xx+14,artY+27,3,C.pale,1);
  }
- // Rare asymmetrical broken corners, snapped to the same logical grid.
- if(index%2===0){block(ctx,x+width-10,y-7,8,3,'#405644');block(ctx,x+width-7,y-4,5,2,'#7b886b')}
+ // Massive horizontal crown, cut from a handmade 32px Forge tile.
+ c.save();c.beginPath();c.rect(artX,artY-3,width+13,17);c.clip();
+ for(let dx=0;dx<width+20;dx+=32)stamp(c,9,artX+dx,artY-5);
+ c.restore();
+ rect(c,artX-1,artY-4,width+13,3,C.ivory);
+ rect(c,artX-1,artY+8,width+13,3,C.deep);
+ rect(c,artX+4,artY+40,width+3,4,C.void);
+ // Ivy wraps the upper lip, the base of the block stays collision-readable.
+ stamp(c,10,artX-8,artY+1);
+ stamp(c,11,artX+width-11,artY-8);
+ if(index===0)stamp(c,10,artX+width-27,artY+10);
+ else stamp(c,11,artX+5,artY+19);
 }
 export function renderForgeCourt(walls=[]){
  if(!sheet||typeof document==='undefined')return null;
  const canvas=document.createElement('canvas');canvas.width=400;canvas.height=620;
  const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
- // Outer ruins with a readable, dark negative-space perimeter.
- block(c,0,0,400,620,'#111f1c');
- block(c,9,9,382,602,'#1a2b26');
- block(c,15,15,370,590,'#718067');
- block(c,19,19,362,582,'#25392e');
- block(c,23,23,354,574,'#1b2c28');
- c.save();c.beginPath();c.rect(24,24,352,572);c.clip();
- for(let row=0;row<18;row++)for(let col=0;col<11;col++){
-  const seed=noise(row*119+col*73+15);
-  const idx=seed%6;
-  stamp(c,idx,24+col*32,24+row*32);
- }
- // Miniature mineral compass: a sparse inlay, not a huge ring covering
- // the duel and competing with the small 24px playable characters.
- stamp(c,6,184,296);
- for(const [x,y] of [[88,168],[280,424],[56,456],[312,104]])
-  if((x+y)%2===0){block(c,x,y,7,2,'#8c9678');block(c,x+3,y+2,2,4,'#53694d')}
- c.restore();
- // Architectural boundary uses one-pixel block seams, never antialiased strokes.
- block(c,23,22,354,3,'#a1a88a');
- block(c,23,596,354,4,'#131f1c');
- block(c,19,20,4,580,'#5f7860');block(c,377,20,4,580,'#405849');
- for(let y=30;y<596;y+=32){
-  block(c,18,y,5,3,'#1a2b25');block(c,377,y+12,5,3,'#1a2b25');
- }
- for(let x=24;x<375;x+=32){
-  block(c,x,20,3,3,'#324738');block(c,x+16,596,4,3,'#8c9c7b');
- }
- // Real two-wall geometry stays exact, drawn over the carved paver field.
- walls.forEach((w,i)=>stoneWall(c,w,i));
- for(const [x,y] of TORCHES)stamp(c,10,x-16,y-25);
+ masonFloor(c);border(c);
+ // Redraw the central cross and diamond inside the frame, after the perimeter.
+ // This keeps the middle landmark at the same world coordinate (200,310).
+ walls.forEach((w,i)=>reliefWall(c,w,i));
  return canvas;
 }
 export function drawForgeCourtAtmosphere(ctx,time=0,reduced=false){
  if(!sheet||!ctx?.drawImage)return false;
+ // Deliberately restrained: no flame torches in this peaceful overgrown garden.
+ if(reduced)return true;
  ctx.save();ctx.imageSmoothingEnabled=false;
- for(let j=0;j<TORCHES.length;j++){
-  const [x,y]=TORCHES[j];
-  const phase=reduced?0:Math.floor(time*7+j)%2;
-  stamp(ctx,10+phase,x-16,y-25);
-  if(!reduced)for(let i=0;i<2;i++){
-   const xx=x-3+((i*7+j*3)%9),yy=y-30-((Math.floor(time*12)+i*17+j*8)%24);
-   block(ctx,xx,yy,2,2,i===0?'#ffc576':'#e6ac65');
-  }
+ for(let i=0;i<7;i++){
+  const x=(i%2?352:35)+(hash(i*37)%11)-5;
+  const y=31+((hash(i*97)%534+Math.floor(time*(i%3+1)))%534);
+  rect(ctx,x,y,2,2,i%3===0?C.bright:C.leaf);
  }
- // Dust is sparse, subdued and moves only by entire native pixel steps.
- if(!reduced)for(let i=0;i<12;i++){
-  const x=34+(noise(i*53+71)%327),y=37+((noise(i*97+119)%544+Math.floor(time*(1+i%3)))%544);
-  block(ctx,x,y,1,1,'#aab998');
- }
- ctx.restore();
- return true;
+ ctx.restore();return true;
 }
-
 export function drawForgeConstructs(ctx,state,time=0,reduced=false){
  if(!sheet||!ctx?.drawImage)return false;
  ctx.save();ctx.imageSmoothingEnabled=false;

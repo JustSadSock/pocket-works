@@ -33,18 +33,18 @@
       "adapter": "pixel",
       "id": "court-tiles",
       "inputs": {
-        "asset-forge/court-tiles.json": "8de05604f663c9358410459bf7c6777e4cd0034877f51ea682b4052da9c9dcb0"
+        "asset-forge/court-tiles.json": "ca1511194ed8c968a5755bb7cc2129719c6cb0a1123bb55858e8d2c55ffd1a09"
       },
       "outputs": {
         "atlas": {
-          "bytes": 2576,
-          "sha256": "a897d4abfa8849e404af487678901869a2789cee0546a558f98ef3693165f397",
+          "bytes": 2570,
+          "sha256": "ce6d1450d9d566ca490c5d7417cb0490956cf1f3872756538aa18ad4a7f50179",
           "url": "assets/court-tiles.json"
         },
         "image": {
-          "bytes": 1442,
+          "bytes": 12464,
           "height": 32,
-          "sha256": "aad0b8de4330d2a9f17a4e69330fadfb3ea6f2837b52611a58f8d48c5aa6a715",
+          "sha256": "95955c7e972f94b35634631885d53a8d57c5f89565a84b0421b4ca80858326ba",
           "url": "assets/court-tiles.png",
           "width": 384
         }

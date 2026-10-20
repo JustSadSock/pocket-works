@@ -4,12 +4,12 @@
   "product": "perekos",
   "direction": {
     "premise": "Two tiny, stubborn wizards have no idea how badly their own spell combinations will misbehave, but the duel still reads at a glance.",
-    "composition": "A quiet miniature sunken stone yard tiled with authored 32px stonework; crisp compact 24px fighters and very legible 24px elemental pixel silhouettes. Spell marks are local, never vast ornamental rings.",
+    "composition": "A bright hand-drawn mossy rune garden in the exact 400×620 duel rectangle, with symmetrical emerald masonry channels, a nested central diamond, two carved double-rune blocks and light worn pavers. The small mages and vivid spell attacks remain high-contrast.",
     "shapeLanguage": "Universal Art Forge palette-locked architecture, block-cut square edges, six distinctive small magicians and seven pixel spell forms. No antialiased curved projectile sculptures or ornamental granular stone noise.",
-    "surfaceAndMaterial": "A handful of authored paver/cap/wall/brass brazier tiles and real pixel frames give visual material. Three school palettes retain projectile brightness. Confirmed contacts animate from genuine events, not fake hazard drawings.",
-    "paletteLogic": "The arena uses muddy mineral greens and warm brown shadows to keep peach projectiles, gold sparks and a second reddish wizard distinguishable without electric neon.",
+    "surfaceAndMaterial": "Layered ivory limestone and moss pixels, restrained white flowering ivy on the stone perimeter, deeply engraved dark teal channels and crisp square chiseled diamond plaques. Everything is authored in editable Forge pixel rows and code-drawn fixed integer shapes, never an imported scene image.",
+    "paletteLogic": "Light sage and cream stone provide calm negative space; muted emerald and slate-green geometry emphasize the two raised carved cover blocks; spell bolts and compact fighters contrast without making the environment darker.",
     "typography": "Headings use an old-book serif as a restrained signboard; interface text uses sturdy system sans, short Russian instructions and plain names such as Шар больнее.",
-    "signature": "A unified pixel diorama: little sorcerers fight across a deeply carved tiny courtyard; flames and spell strikes share the same authored pixel grid, and every visible impact is causally tied to the simulation.",
+    "signature": "A bespoke botanical rune court: a central nested stone diamond and cross-channel connects four carved stones, while ivy grows around the perimeter and two raised engraved rune barriers.",
     "distinction": "Unlike VENETS parchment political screens and MEAT.EXE first-person corridors, Perekos has an unframed bird's-eye arcade arena with bottom-corner direct spell buttons."
   },
   "architecture": {
@@ -19,7 +19,7 @@
     "chromeTopology": "layered-panels",
     "dominantMotion": "sliding",
     "primaryVerb": "Run with one thumb, aim a single class-specific spell with the other, and craft three independent reaction chains between rounds.",
-    "physicalFeedback": "Snap-rendered 24px projectiles, 24px impact atlas frames and small character-specific casting glyphs replace world-space circles/gradients. Stone face pixels, compact torch flame cycles and physically valid temporary walls maintain real arena collision bounds.",
+    "physicalFeedback": "Crisp 24px spell silhouettes and confirmed impact frames on a luminous 32px hand-cut limestone courtyard, with two unchanged server-authoritative stone collision barriers dressed in engraved panels and moss.",
     "spatialRationale": "Borderless portrait arena, status on the top edge, left movement and right adjustable thumb aim; a character selector and three inset handwritten spell lanes replace the original single long build list.",
     "comparisons": [
       {
@@ -71,7 +71,7 @@
   },
   "production": {
     "renderer": "Quick PWA 400x620 Canvas; real Universal Art Forge 32px court atlas, 24px spell atlas, 24x32 mage atlas, all indexed with source hashes and offline precache. Nearest pixel sampling, no runtime smoothing of geometric sprites.",
-    "focalAsset": "Hand-authored 32px court tile system (pavers, compass and block-faced walls) plus 154 authored 24px spell frames for projectiles/casts/impacts/reactions. Six 24x32 fighters already share the same visual grid."
+    "focalAsset": "Hand-authored lime-stone and creeping-ivy source frames in Universal Art Forge; the single central nested diamond and symmetrical channels are assembled as pixel-exact logical shapes in forge-court.mjs, not captured from the selected reference PNG."
   },
   "motion": {
     "character": "Movement and spells are instant and snappy, while robe and hat gently bob to keep the character alive and distinguish standing still from a frozen sprite.",
@@ -88,7 +88,7 @@
       "type": "click",
       "selector": "#primary-action"
     },
-    "expectedChange": "On live iPhone-sized fight and desktop, authored paver and wall pixels, brazier flames and seven readable spell families form a coherent whole with all six compact magicians. Browser screenshots validate atlas loads, source-of-truth shot trajectories and no clipping or web dependency.",
+    "expectedChange": "In mobile and desktop screenshots, the court should match the selected pale green garden concept (ivory pavers, mossy edge, central vertical/horizontal green rune channels, nested central diamond and two engraved obstacles) rather than the old dark green checker floor. The scene must remain sharp at 400×620 and preserve all controls.",
     "capture": [
       "initial",
       "action",
