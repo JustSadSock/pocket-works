@@ -1,5 +1,6 @@
 import sim from './game/sim.cjs';
 const {GameRoom}=sim;
+
 const copy=v=>structuredClone(v);
 function packFrame(f){const i=f.input,s=f.state;return [f.timestamp,[i.keys?.w?1:0,i.keys?.a?1:0,i.keys?.s?1:0,i.keys?.d?1:0,i.mouseAngle||0,!!i.lmb,!!i.rmb,!!i.dash,!!i.ghostToggle],STATE_KEYS.map(k=>s[k])];}
 const STATE_KEYS=['x','y','vx','vy','facing','speed','dashCooldown','attacking','attackTimer','attackPower','charge','shieldUp','shieldStrength','shieldCooldown','parryWindow','stagger'];
@@ -15,7 +16,7 @@ onLeave({state,player}){const room=decode(state);room.removePlayer(player.id);re
 onMessage({state,player,payload:m}){const room=decode(state),p=room.players.get(player.id);if(!p)throw Error('Игрок не в комнате');
  let elapsed=Math.min(250,Math.max(0,Date.now()-state.lastTick));for(const v of room.players.values())if(Date.now()-(v.lastInputAt||0)>500)v.inputState={keys:{},lmb:false,rmb:false,mouseAngle:v.state.facing};
  while(elapsed>0){const step=Math.min(1000/60,elapsed);room.step(step);elapsed-=step;}
- if(m?.type==='input'){const i=m.payload||{};room.handleInput(player.id,{keys:Object.fromEntries(['w','a','s','d'].map(k=>[k,!!i.keys?.[k]])),mouseAngle:Number.isFinite(i.mouseAngle)?i.mouseAngle:0,lmb:!!i.lmb,rmb:!!i.rmb,dash:!!i.dash,ghostToggle:!!i.ghostToggle});p.lastInputAt=Date.now();}
+ if(m?.type==='input'){const i=m.payload||{};room.handleInput(player.id,{keys:Object.fromEntries(['w','a','s','d'].map(k=>[k,!!i.keys?.[k]])),mouseAngle:Number.isFinite(i.mouseAngle)?i.mouseAngle:0,seq:Number.isSafeInteger(i.seq)?i.seq:0,lmb:!!i.lmb,rmb:!!i.rmb,dash:!!i.dash,ghostToggle:!!i.ghostToggle});p.lastInputAt=Date.now();}
  else if(m?.type==='ready')room.markReady(player.id);else if(m?.type!=='sync')throw Error('Неизвестная команда');return output(room);
-},viewForPlayer({state}){const room=decode(state);return {phase:room.players.size<2?'lobby':room.roundResetAt?'round-end':'playing',room:room.id,map:room.map,mode:room.mode,players:[...room.players.values()].map(p=>({id:p.id,name:p.name,alive:p.alive,state:p.state,ghostMode:p.ghostMode,ghost:{cooldown:p.ghost.cooldown,energy:p.ghost.energy,active:p.ghost.active},ghostActor:p.ghostActor,events:p.events.slice(-8)}))};}};
+},viewForPlayer({state}){const room=decode(state);return {phase:room.players.size<2?'lobby':room.roundResetAt?'round-end':'playing',room:room.id,map:room.map,mode:room.mode,players:[...room.players.values()].map(p=>({id:p.id,name:p.name,alive:p.alive,score:p.score||0,state:p.state,ghostMode:p.ghostMode,ghost:{cooldown:p.ghost.cooldown,energy:p.ghost.energy,active:p.ghost.active},ghostActor:p.ghostActor,events:p.events.slice(-8)}))};}};
 

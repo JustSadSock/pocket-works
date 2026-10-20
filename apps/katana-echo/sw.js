@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'katana-echo-';
-const CACHE_NAME = 'katana-echo-v0.1.0';
-const APP_VERSION = '0.1.0';
-const RELEASE_DATE = '2026-10-18';
+const CACHE_NAME = 'katana-echo-v0.2.0';
+const APP_VERSION = '0.2.0';
+const RELEASE_DATE = '2026-10-21';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Перенесена исходная игра с сохранением правил и отдельным хранением данных."];
+const RELEASE_NOTES = ["Спарринг с ИИ без сети, переработанная боевая физика, додзё, визуальные эффекты и новое управление."];
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -14,6 +14,8 @@ const APP_SHELL = [
   "./config.js",
   "./main.js",
   "./network.js",
+  "./scene.js",
+  "./training-engine.js",
   "./package-lock.json",
   "./package.json",
   "./styles.css",

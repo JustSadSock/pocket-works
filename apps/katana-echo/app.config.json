@@ -5,23 +5,27 @@
   "name": "Katana Echo",
   "shortName": "Katana Echo",
   "description": "Дуэль катан с парированием, заряжаемым ударом и тремя режимами боевого эха.",
-  "version": "0.1.0",
-  "releaseDate": "2026-10-18",
-  "releaseDateTime": "2026-10-18T20:45:00Z",
+  "version": "0.2.0",
+  "releaseDate": "2026-10-21",
+  "releaseDateTime": "2026-10-21T00:15:00+03:00",
   "changelog": [
-    "Перенесена исходная игра с сохранением правил и отдельным хранением данных."
+    "Добавлен одиночный спарринг с ИИ без PocketNet, на тех же правилах, что и онлайн-бои.",
+    "Переработаны направленные удары, парирование, уклонение и столкновения со стенами.",
+    "Новый визуальный стиль додзё, бойцы-самураи, анимации клинков, Эха и попаданий.",
+    "Новый адаптивный интерфейс для телефона и компьютера, раздельные настройки и код комнаты."
   ],
   "status": "experimental",
   "preset": "canvas",
-  "accent": "#77c9c0",
-  "backgroundColor": "#14191d",
-  "themeColor": "#14191d",
+  "accent": "#d9b783",
+  "backgroundColor": "#121f20",
+  "themeColor": "#121f20",
   "orientation": "landscape",
-  "cacheName": "katana-echo-v0.1.0",
+  "cacheName": "katana-echo-v0.2.0",
   "storageNamespace": "pocket-works:katana-echo",
   "tags": [
     "game",
-    "offline"
+    "offline",
+    "multiplayer"
   ],
   "order": 170
 }

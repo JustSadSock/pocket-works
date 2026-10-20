@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "engine",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "tests/engine.test.mjs"
+      ],
+      "install": true
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#view",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#practice"
+        },
+        {
+          "action": "visible",
+          "selector": "#training-label"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}

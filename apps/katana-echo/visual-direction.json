@@ -3,13 +3,13 @@
   "status": "ready",
   "product": "katana-echo",
   "direction": {
-    "premise": "A minimal sword duel lets each fighter weaponize a delayed recording of their own movement and attacks.",
-    "composition": "An unobstructed arena occupies the main screen; compact room status sits above it and two input pads sit at the bottom.",
-    "shapeLanguage": "Cyan and rose circular fighters have visible sword bearings; translucent echo actors repeat the same geometry among rectangular walls.",
-    "surfaceAndMaterial": "Flat opaque fighters and low-contrast arena walls keep the live sword, shield arc and recorded ghost distinguishable.",
-    "paletteLogic": "Cyan identifies the local fighter, rose the opponent and translucent blue the delayed actor; pale arcs show weapon direction.",
-    "typography": "Small system labels name room, mode and four combat verbs without decorative combat text in the world.",
-    "signature": "A translucent copy replays real recorded inputs while the live fighter can charge a different attack or raise a parrying shield.",
+    "premise": "An arcade sword duel in a timber dojo where a warrior confronts an opponent aided by a delayed shadow of their own past. Solo offline sparring or PocketNet duels.",
+    "composition": "The dojo dominates the viewport. Minimal score and match status are pinned to the top edge, responsive combat controls live at the perimeter, and the game mode menu overlays the stage.",
+    "shapeLanguage": "Small readable samurai silhouettes in hakama and cloak, distinct blades/guards, brass-lined timber obstacles and a restrained central training ring; ghosts replay the same silhouettes semi-transparently.",
+    "surfaceAndMaterial": "Deep timber boards, lacquered armor, dull brass trims, matte stone walls, and pale blade edges. Collision walls read as solid raised volumes rather than generic rectangles.",
+    "paletteLogic": "Verdigris/jade reads the local fighter, muted persimmon reads the opponent; warm brass signals blade charge/parry. The arena uses low-saturation green charcoal and timber.",
+    "typography": "Condensed all-caps fight lettering for outcomes/names, neutral sans for room and settings text; compact, high-contrast and practical.",
+    "signature": "Delayed replaying sword ghosts and a training mode running the exact authoritative game logic; blade sectors and timed parries are expressed through spatial swoosh arcs and sharp feedback.",
     "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
   },
   "architecture": {
@@ -46,29 +46,39 @@
         "slug": "crossline-5x5",
         "spatialDifference": "crossline-5x5 uses header-stage-footer and framed-stage. Here: An unobstructed arena occupies the main screen; compact room status sits above it and two input pads sit at the bottom.",
         "interactionDifference": "crossline-5x5 uses bottom-deck with overlay-list. This game's actual verb is: Approach an opponent, charge and release a sword strike, parry incoming attacks and trigger one of three recorded-echo behaviors."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "Perekos is a pixel-art arena with visible spell trajectories and large magician silhouettes; Katana Echo uses an engraved full-field timber dojo with uninterrupted duelling lanes and a compact lacquer HUD anchored to the top edge.",
+        "interactionDifference": "Perekos is projectile magic against opponents. Katana Echo requires physical melee reach, defensive parry timing, movement inertia and replayed input history for a second active sword."
+      },
+      {
+        "slug": "petri-forge",
+        "spatialDifference": "Petri Forge presents a procedural simulation grid with agent and world controls; Katana Echo is a single purposeful melee stage with walls, a centered sparring arena and touch controls placed at its perimeter.",
+        "interactionDifference": "Petri Forge selects and simulates agents over episodes. Katana Echo uses continuous direct movement, aiming and precisely timed sword releases and echo deployment."
       }
     ]
   },
   "production": {
-    "renderer": "Canvas 2D retains the abstract original duel geometry and keeps ghost history independent from the authoritative live actor.",
-    "focalAsset": "Live and ghost actor silhouettes are rendered from the original engine; the authored crossed-blade icon identifies the three-mode duel."
+    "renderer": "Layered high-DPI Canvas 2D with deterministic floorboards, raised hard-surface obstacles, authored geometric samurai bodies, directional katana trails, shadow actors and brief event-driven impact FX.",
+    "focalAsset": "Original blade emblem and clearly readable twin fighters are the focal subjects, with hard-edge brass dojo trim providing material depth."
   },
   "motion": {
-    "character": "Sword charge changes attack power; a fresh shield can stagger an attacker, while a lethal hit fades the actual fighter before the next round.",
+    "character": "A short charge arcs into a directional slash, parry turns warm-brass and knocks back attackers, ghost summon emits one outward ring, death leaves a brief fading silhouette.",
     "action": "Approach an opponent, charge and release a sword strike, parry incoming attacks and trigger one of three recorded-echo behaviors.",
     "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
-    "response": "The next visible state responds to the actual control: A translucent copy replays real recorded inputs while the live fighter can charge a different attack or raise a parrying shield.",
+    "response": "Combat feedback derives from authoritative attack/parry/kill events and state changes rather than ornamental idle animation.",
     "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
     "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
-    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
+    "reducedMotion": "Suppress optional repeated visual FX and CSS transitions while retaining authoritative motion and visibly readable hit/parry states."
   },
   "evidence": {
     "entry": "./",
     "interaction": {
       "type": "click",
-      "selector": "#create"
+      "selector": "#practice"
     },
-    "expectedChange": "A private duel room opens with one live fighter and its generated wall map, waiting for the second player.",
+    "expectedChange": "The training overlay closes and the authoritative engine simulates a 2-fighter sparring battle with on-screen scores, movement, wall collision and time-delayed ghosts.",
     "capture": [
       "initial",
       "action",
