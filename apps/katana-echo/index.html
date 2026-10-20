@@ -1,33 +1,77 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Katana Echo Duel</title>
-  <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="styles.css">
-<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#14191d"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
-<body><main data-app-shell><a class="pocket-exit" href="../../" data-app-control>Pocket Works</a>
-  <div id="hud">
-    <div>
-      <h1>Katana Echo Duel</h1>
-      <p class="subtitle">2D top-down PvP дуэль с призраком</p>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="theme-color" content="#121f20">
+ <meta name="description" content="Katana Echo — дуэль двух клинков, в которой твоё прошлое сражается рядом с тобой.">
+ <title>Katana Echo · Pocket Works</title>
+ <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+ <link rel="manifest" href="./manifest.webmanifest">
+ <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+ <link rel="stylesheet" href="../../shared/update-manager.css">
+ <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+ <main id="app" data-app-shell>
+  <header id="topbar">
+   <a class="pocket-exit" href="../../" data-app-control aria-label="Назад в Pocket Works">← <span>Pocket Works</span></a>
+   <div id="brand"><img src="./icons/icon.svg" alt=""><span>KATANA <em>/</em> ECHO</span></div>
+   <div id="status" role="status" aria-live="polite">Выбери режим</div>
+   <button id="sound" type="button" aria-pressed="false" title="Включить или выключить звук">Звук: выкл</button>
+   <button id="menu-toggle" type="button" aria-label="Открыть меню">Меню</button>
+  </header>
+  <section id="stage" aria-label="Арена Katana Echo">
+   <canvas id="view" aria-label="Арена дуэли двух самураев"></canvas>
+   <div id="fight-hud" aria-live="off">
+    <div class="fighter fighter-local"><div class="fighter-line"><strong id="left-name">РОНИН</strong><b id="left-score">0</b></div><div class="charge-track"><i id="left-charge"></i></div></div>
+    <div id="center-hud"><span id="round-label">ДУЭЛЬ</span><b id="phase"></b></div>
+    <div class="fighter fighter-opponent"><div class="fighter-line"><b id="right-score">0</b><strong id="right-name">СОПЕРНИК</strong></div><div class="charge-track"><i id="right-charge"></i></div></div>
+   </div>
+   <div id="room-panel" hidden><span>КОД ДУЭЛИ</span><strong id="room-code"></strong><button id="room-copy" type="button" title="Скопировать код">Копировать</button></div>
+   <div id="training-label" hidden>СПАРРИНГ · ИИ-СОПЕРНИК</div>
+   <div id="feedback" role="status" aria-live="polite"></div>
+   <div id="touchDeck" aria-label="Игровые кнопки">
+    <div class="move-pad" aria-label="Движение">
+     <button data-native-press data-key="w" class="north" aria-label="Вперёд">↑</button>
+     <button data-native-press data-key="a" class="west" aria-label="Влево">←</button>
+     <button data-native-press data-key="s" class="south" aria-label="Назад">↓</button>
+     <button data-native-press data-key="d" class="east" aria-label="Вправо">→</button>
     </div>
-    <details id="connection-panel" open><summary>Комната и режим</summary><div class="controls">
-      <label>Room code <input id="room" maxlength="8" placeholder="Код комнаты"></label>
-      <label>Player name <input id="name" value="Ronin"></label>
-      <label>Ghost mode
-        <select id="mode">
-          <option value="echo-trap">Echo Trap</option>
-          <option value="shadow-tail">Shadow Tail</option>
-          <option value="channel-echo">Channel Echo</option>
-        </select>
-      </label>
-      <button data-native-press id="create">Создать комнату</button><button data-native-press id="connect">Подключиться</button>
+    <div class="combat-pad" aria-label="Боевые действия">
+     <button data-native-press data-combat="lmb" class="attack">УДАР</button>
+     <button data-native-press data-combat="rmb" class="shield">ЩИТ</button>
+     <button data-native-press data-combat="dash" class="dash">РЫВОК</button>
+     <button data-native-press data-combat="ghostToggle" id="echo-btn" class="echo">ЭХО</button>
     </div>
-    </details><div id="status"></div>
-  </div>
-  <canvas id="view" width="960" height="540"></canvas>
-  <aside class="duel-help">Удерживайте удар для заряда, отпустите для атаки. Щит парирует в начале поднятия. Эхо повторяет вашу историю. Для сетевой дуэли нужна связь.</aside><div id="touchDeck"><div><button data-native-press data-key="w">↑</button><button data-native-press data-key="a">←</button><button data-native-press data-key="s">↓</button><button data-native-press data-key="d">→</button></div><div><button data-native-press data-combat="lmb">Удар</button><button data-native-press data-combat="rmb">Щит</button><button data-native-press data-combat="dash">Рывок</button><button data-native-press data-combat="ghostToggle">Эхо</button></div></div></main><script type="module" src="./app.js"></script>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Katana Echo" data-app-version="0.1.0"></script></body>
-</html>
+   </div>
+   <section id="start-screen" aria-label="Меню игры">
+    <div class="menu-inner">
+     <div class="eyebrow"><span class="eyebrow-line"></span> THE ECHO DUEL <span class="eyebrow-line"></span></div>
+     <h1>Второй клинок —<br><em>твоё прошлое.</em></h1>
+     <p class="lead">Заряжай удар, парируй в последний момент и призывай эхо своих движений.</p>
+     <div class="play-actions">
+      <button id="practice" type="button"><strong>Тренировка с ИИ</strong><span>Начать без подключения к сети →</span></button>
+      <button id="create" type="button"><strong>Создать дуэль</strong><span>Сыграть с другом по коду →</span></button>
+     </div>
+     <details id="join-details"><summary>Войти в комнату по коду <span>⌄</span></summary>
+      <div class="join-controls"><input id="room" autocomplete="off" spellcheck="false" inputmode="text" maxlength="8" placeholder="8 символов" aria-label="Код комнаты"><button type="button" id="connect">Войти</button></div>
+     </details>
+     <div class="preferences">
+      <label>БОЕВОЕ ЭХО<select id="mode">
+        <option value="echo-trap">Ловушка · призыв копии</option>
+        <option value="shadow-tail">Тень · повтор через 5 сек.</option>
+        <option value="channel-echo">Канал · управляемое эхо</option>
+      </select></label>
+      <label>ИМЯ БОЙЦА<input id="name" maxlength="22" autocomplete="nickname" value="Ронин" aria-label="Имя бойца"></label>
+     </div>
+     <div class="menu-bottom"><span>WASD — идти · Мышь — прицел · ЛКМ — удар · ПКМ — парирование · Пробел — рывок · E — эхо</span></div>
+     <div class="menu-exit"><button id="resume" type="button" hidden>Вернуться в бой</button><button id="leave" type="button" hidden>Покинуть дуэль</button></div>
+    </div>
+   </section>
+  </section>
+  <div id="desktop-help" aria-hidden="true"><span>W A S D · ДВИЖЕНИЕ</span><span>МЫШЬ · ПРИЦЕЛ</span><span>ЛКМ · УДАР</span><span>ПКМ / K · ПАРИРОВАТЬ</span><span>SPACE · РЫВОК</span><span>E · ЭХО</span></div>
+ </main>
+ <script type="module" src="./app.js"></script>
+ <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Katana Echo" data-app-version="0.2.0"></script>
+</body></html>
