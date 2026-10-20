@@ -104,3 +104,29 @@ export function drawForgeCourtAtmosphere(ctx,time=0,reduced=false){
  ctx.restore();
  return true;
 }
+
+export function drawForgeConstructs(ctx,state,time=0,reduced=false){
+ if(!sheet||!ctx?.drawImage)return false;
+ ctx.save();ctx.imageSmoothingEnabled=false;
+ for(const wall of (state?.barriers||[]).slice(0,20)){
+  if(!Number.isFinite(wall.x)||!Number.isFinite(wall.y)||!Number.isFinite(wall.r))continue;
+  const r=Math.round(Math.max(5,Math.min(40,wall.r))),x=Math.round(wall.x)-r,y=Math.round(wall.y)-r;
+  const size=r*2;
+  block(ctx,x+3,y+5,size,size,'#142922');
+  ctx.save();ctx.beginPath();ctx.rect(x,y,size,size);ctx.clip();
+  for(let dx=0;dx<size;dx+=32)for(let dy=0;dy<size;dy+=32)stamp(ctx,8,x+dx,y+dy);
+  ctx.restore();
+  block(ctx,x-2,y-4,size+4,6,'#9aa381');block(ctx,x,y+2,size,2,'#20382d');
+  block(ctx,x+size-3,y+7,3,size-8,'#213529');
+ }
+ for(const mine of (state?.mines||[]).slice(0,20)){
+  if(!Number.isFinite(mine.x)||!Number.isFinite(mine.y))continue;
+  const x=Math.round(mine.x),y=Math.round(mine.y);
+  block(ctx,x-7,y+5,14,3,'#142820');
+  block(ctx,x-7,y-7,14,12,'#172823');
+  block(ctx,x-5,y-7,10,4,'#ae8257');block(ctx,x-4,y-2,8,5,'#59493a');
+  block(ctx,x-2,y-8,4,6,'#efb978');
+  if(!reduced&&Math.floor(time*7+mine.x)%2===0)block(ctx,x-1,y-11,2,3,'#fff0bd');
+ }
+ ctx.restore();return true;
+}
