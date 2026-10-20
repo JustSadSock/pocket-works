@@ -113,12 +113,25 @@ function drawEffect(ctx,e,t){
   }
   ctx.restore();
 }
+
+export function cameraFor(world,width,height){
+  const portrait=height>width*1.3&&width<=650;
+  if(!portrait||!world.players?.length)return {scale:Math.min(width/25.6,height/17.7),x:width/2,y:height/2};
+  const alive=world.players.filter(p=>p.alive&&p.state).map(p=>p.state);
+  const actors=alive.length?alive:world.players.filter(p=>p.state).map(p=>p.state);
+  if(!actors.length)return {scale:Math.min(width/25.6,height/17.7),x:width/2,y:height/2};
+  const xs=actors.map(a=>a.x),ys=actors.map(a=>a.y);
+  const cx=(Math.max(...xs)+Math.min(...xs))/2,cy=(Math.max(...ys)+Math.min(...ys))/2;
+  const spread=Math.max(...xs)-Math.min(...xs),rise=Math.max(...ys)-Math.min(...ys);
+  const scale=Math.min(width/Math.max(11.8,spread+5.8),height/Math.max(13.2,rise+9));
+  return {scale,x:width/2-cx*scale,y:height*.42-cy*scale};
+}
 export function renderScene(ctx,world,localId,t,width,height,effects=[],smoothing=null){
   ctx.clearRect(0,0,width,height);
   const bg=ctx.createLinearGradient(0,0,0,height);bg.addColorStop(0,'#101a1b');bg.addColorStop(1,'#071112');
   ctx.fillStyle=bg;ctx.fillRect(0,0,width,height);
-  const scale=Math.min(width/25.6,height/17.7);
-  ctx.save();ctx.translate(width/2,height/2);ctx.scale(scale,scale);
+  const camera=cameraFor(world,width,height);
+  ctx.save();ctx.translate(camera.x,camera.y);ctx.scale(camera.scale,camera.scale);
   const map=world.map||{bounds:{w:22,h:14},walls:[]};
   floorboards(ctx,map,t);
   for(const wall of map.walls||[])drawWall(ctx,wall);
