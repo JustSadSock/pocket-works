@@ -47,8 +47,9 @@ function sampleSky(im,dir){
 }
 function fmt(n){return Number.isFinite(n)?n.toFixed(2):'—';}
 export function createObservatory(canvas,options={}){
+ const storageKey=options.storageKey||STORAGE;
  let saved={};
- try{saved=JSON.parse(localStorage.getItem(STORAGE)||'{}')||{};}catch{}
+ try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch{}
  const state={
   l:clamp(Number(saved.l)||2.1,-6,6),yaw:clamp(Number(saved.yaw)||0,-2.6,2.6),
   pitch:clamp(Number(saved.pitch)||0,-1.1,1.1),fov:clamp(Number(saved.fov)||80,50,110),
@@ -65,7 +66,7 @@ export function createObservatory(canvas,options={}){
  let active=false,w=0,h=0,run=0,stage='ready',progress=0,warning='';
  let skyA=null,skyB=null,picture=null,reference=null,basis=null,transfer=null,opticalStats=null,renderedAt=0;
  let lastRender=0,flightRender=0,needsRender=true,mouse=null,selected=null,pending=0;
- const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify({l:state.l,yaw:state.yaw,pitch:state.pitch,fov:state.fov,facingSign:state.facingSign,mode:state.mode,compare:state.compare,divider:state.divider,geometryInset:state.geometryInset,quality:state.quality,longitude:state.longitude,latitude:state.latitude}));}catch{}};
+ const save=()=>{try{localStorage.setItem(storageKey,JSON.stringify({l:state.l,yaw:state.yaw,pitch:state.pitch,fov:state.fov,facingSign:state.facingSign,mode:state.mode,compare:state.compare,divider:state.divider,geometryInset:state.geometryInset,quality:state.quality,longitude:state.longitude,latitude:state.latitude}));}catch{}};
  const onProgress=options.onProgress||(()=>{}),onAction=options.onAction||(()=>{});
  function updateControls(){
   const d=$('lens-distance');
@@ -350,6 +351,7 @@ export function createObservatory(canvas,options={}){
  });
  canvas.addEventListener('pointercancel',()=>{mouse=null;});
  canvas.addEventListener('lostpointercapture',()=>{mouse=null;});
+ if(options.bindControls!==false){
  $('lens-distance')?.addEventListener('input',e=>setDistance(Number(e.target.value)));
  $('lens-fov')?.addEventListener('input',e=>{state.fov=Number(e.target.value);updateControls();request();save();});
  for(const btn of document.querySelectorAll('[data-lens-mode]')){
@@ -399,6 +401,7 @@ export function createObservatory(canvas,options={}){
   fly=null;probe=null;probeRead=null;state.l=2.1;state.yaw=0;state.pitch=0;state.fov=80;state.facingSign=1;state.compare=false;state.mode='combined';
   onAction('mount');updateControls();request();save();
  });
+ }
  function applyParameters(p={}){
   fly=null;probe=null;probeRead=null;
   if(Number.isFinite(p.l))state.l=clamp(p.l,-6,6);
