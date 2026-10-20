@@ -69,7 +69,7 @@ test('same optical calculation and local centre pixel share the exact inward ang
  const basis=cameraBasis(c.yaw,c.pitch,1,c.facingSign);
  const d=pixelDirection(0,0,basis,80,1);
  const angle=Math.acos(Math.max(-1,Math.min(1,dot(basis.radial,d))));
- const a=inspectObserverRay(m,p,angle),b=inspectSharedCamera(m,p,c);
+ const a=inspectObserverRay(m,p,angle,{step:.09,outer:22,maxTime:145}),b=inspectSharedCamera(m,p,c);
  near(a.impact,b.physical.impact,1e-9);
  near(a.winding,b.physical.winding,1e-9);
  assert.equal(a.exit,b.physical.exit);
