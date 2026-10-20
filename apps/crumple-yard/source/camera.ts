@@ -8,7 +8,7 @@ export class ChaseCamera {
   private shake = 0;
   private shakePhase = 0;
   mode: 'fixed' | 'chase' = 'fixed';
-  garage = true;
+  garage = false;
   private readonly fixedOffset = new Vector3(10, 12, -13);
 
   constructor(
