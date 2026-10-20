@@ -16,6 +16,24 @@
         },
         {
           "action": "click",
+          "selector": "[data-car='kestrel']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-car='bastion']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-car='meridian']"
+        },
+        {
+          "action": "click",
           "selector": "#startButton"
         },
         {
