@@ -1,5 +1,5 @@
 import {PocketSocket} from './network.js';
-import {renderScene} from './scene.js';
+import {renderScene,cameraFor} from './scene.js';
 const $=id=>document.getElementById(id);
 const canvas=$('view'),ctx=canvas.getContext('2d',{alpha:false});
 const stage=$('stage'),overlay=$('start-screen'),status=$('status'),modeSelect=$('mode'),nameInput=$('name'),roomInput=$('room');
@@ -208,8 +208,8 @@ $('room-copy').addEventListener('click',async()=>{
 });
 function aim(e){
  const r=canvas.getBoundingClientRect();
- const scale=Math.min(r.width/25.6,r.height/17.7);
- const x=(e.clientX-r.left-r.width/2)/scale,y=(e.clientY-r.top-r.height/2)/scale;
+ const camera=cameraFor(world,r.width,r.height);
+ const x=(e.clientX-r.left-camera.x)/camera.scale,y=(e.clientY-r.top-camera.y)/camera.scale;
  const me=world.players.find(p=>p.id===playerId);
  if(me)input.mouseAngle=Math.atan2(y-me.state.y,x-me.state.x);
 }
