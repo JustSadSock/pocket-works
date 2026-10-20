@@ -1,7 +1,6 @@
 import {
   Color3,
   Mesh,
-  MeshBuilder,
   Matrix,
   PBRMaterial,
   Quaternion,
@@ -24,6 +23,7 @@ import {
   type ImpactInput
 } from './damage';
 import { DeformableShell, quaternionFromRapier } from './deformable-shell';
+import { buildVehicleArt } from './vehicle-art';
 import type { CollisionRegistry, DynamicProp } from './physics-types';
 
 const WHEEL_NAMES = ['FL', 'FR', 'RL', 'RR'] as const;
@@ -60,7 +60,6 @@ export class Vehicle {
   readonly preset: VisualPreset;
 
   private trimMaterial: PBRMaterial;
-  private wheelMaterial: PBRMaterial;
   private glassMaterial: PBRMaterial;
   private lampOn: PBRMaterial;
   private lampOff: PBRMaterial;
@@ -94,7 +93,6 @@ export class Vehicle {
     this.root.rotationQuaternion = Quaternion.Identity();
     this.shell = new DeformableShell(scene, this.root, spec, preset);
     this.trimMaterial = material(scene, spec.id + '-trim', preset.trim, 0.45, 0.42);
-    this.wheelMaterial = material(scene, spec.id + '-wheel', preset.wheel, 0.7, 0.32);
     this.glassMaterial = material(scene, spec.id + '-glass', '#67858c', 0.08, 0.13);
     this.glassMaterial.alpha = 0.58;
     this.glassMaterial.transparencyMode = 2;
@@ -106,8 +104,13 @@ export class Vehicle {
     this.tailOn.emissiveColor = new Color3(0.78, 0.03, 0.01);
     this.tailOff = material(scene, spec.id + '-tail-off', '#5d2926', 0.05, 0.55);
 
-    this.buildDetails();
-    this.windshield = this.buildGlass('windshield', new Vector3(0, spec.cabinHeight * 0.56, spec.length * 0.19), new Vector3(spec.width * 0.73, 0.035, spec.length * 0.24), -0.27);
+    const art = buildVehicleArt(scene, this.root, spec, preset,
+      this.shell.mesh.material as PBRMaterial, this.trimMaterial, this.glassMaterial, this.lampOn, this.tailOn);
+    for (const [name, panel] of art.panels) this.panels.set(name, panel);
+    this.headlights.push(...art.headlights);
+    this.taillights.push(...art.taillights);
+    this.wheels.push(...art.wheels);
+    this.windshield = art.windshield;
 
     const rotation = Quaternion.RotationAxis(Vector3.Up(), yaw);
     this.body = world.createRigidBody(
@@ -145,73 +148,6 @@ export class Vehicle {
     this.controller.setIndexForwardAxis = 2;
     this.configureWheels();
     this.syncVisual();
-  }
-
-  private buildDetails() {
-    const spec = this.spec;
-    const bumper = (name: string, z: number) => {
-      const mesh = MeshBuilder.CreateBox(name, { width: spec.width * 0.91, height: 0.18, depth: 0.18 }, this.scene);
-      mesh.parent = this.root;
-      mesh.position.set(0, -spec.bodyHeight * 0.13, z);
-      mesh.material = this.trimMaterial;
-      this.panels.set(name, mesh);
-    };
-    bumper('front-bumper', spec.length * 0.47);
-    bumper('rear-bumper', -spec.length * 0.47);
-
-    const panel = (name: string, position: Vector3, size: Vector3, rotation = Vector3.Zero()) => {
-      const mesh = MeshBuilder.CreateBox(name, { width: size.x, height: size.y, depth: size.z }, this.scene);
-      mesh.parent = this.root;
-      mesh.position.copyFrom(position);
-      mesh.rotation.copyFrom(rotation);
-      mesh.material = this.shell.mesh.material;
-      mesh.receiveShadows = true;
-      this.panels.set(name, mesh);
-      return mesh;
-    };
-    panel('hood', new Vector3(0, spec.bodyHeight * 0.43, spec.length * 0.31), new Vector3(spec.width * 0.72, 0.055, spec.length * 0.31), new Vector3(-0.06, 0, 0));
-    panel('trunk', new Vector3(0, spec.bodyHeight * 0.37, -spec.length * 0.35), new Vector3(spec.width * 0.72, 0.055, spec.length * 0.24), new Vector3(0.04, 0, 0));
-    panel('door-left', new Vector3(-spec.width * 0.492, spec.bodyHeight * 0.13, -spec.length * 0.02), new Vector3(0.055, spec.bodyHeight * 0.78, spec.length * 0.34));
-    panel('door-right', new Vector3(spec.width * 0.492, spec.bodyHeight * 0.13, -spec.length * 0.02), new Vector3(0.055, spec.bodyHeight * 0.78, spec.length * 0.34));
-
-    this.buildGlass('side-glass-left', new Vector3(-spec.width * 0.47, spec.cabinHeight * 0.58, -spec.length * 0.03), new Vector3(0.025, spec.cabinHeight * 0.36, spec.length * 0.3));
-    this.buildGlass('side-glass-right', new Vector3(spec.width * 0.47, spec.cabinHeight * 0.58, -spec.length * 0.03), new Vector3(0.025, spec.cabinHeight * 0.36, spec.length * 0.3));
-
-    const lamp = (name: string, x: number, y: number, z: number, front: boolean) => {
-      const mesh = MeshBuilder.CreateBox(name, { width: spec.width * 0.19, height: 0.13, depth: 0.045 }, this.scene);
-      mesh.parent = this.root;
-      mesh.position.set(x, y, z);
-      mesh.material = front ? this.lampOn : this.tailOn;
-      if (front) this.headlights.push(mesh);
-      else this.taillights.push(mesh);
-    };
-    lamp('headlight-left', -spec.width * 0.27, spec.bodyHeight * 0.11, spec.length * 0.496, true);
-    lamp('headlight-right', spec.width * 0.27, spec.bodyHeight * 0.11, spec.length * 0.496, true);
-    lamp('taillight-left', -spec.width * 0.28, spec.bodyHeight * 0.12, -spec.length * 0.496, false);
-    lamp('taillight-right', spec.width * 0.28, spec.bodyHeight * 0.12, -spec.length * 0.496, false);
-
-    for (let i = 0; i < 4; i += 1) {
-      const wheel = MeshBuilder.CreateCylinder(spec.id + '-wheel-' + WHEEL_NAMES[i], {
-        diameter: spec.wheelRadius * 2,
-        height: spec.wheelWidth,
-        tessellation: 20
-      }, this.scene);
-      wheel.parent = this.root;
-      wheel.material = this.wheelMaterial;
-      wheel.rotationQuaternion = Quaternion.RotationAxis(Vector3.Forward(), Math.PI / 2);
-      wheel.receiveShadows = true;
-      this.wheels.push(wheel);
-    }
-  }
-
-  private buildGlass(name: string, position: Vector3, size: Vector3, pitch = 0) {
-    const glass = MeshBuilder.CreateBox(name, { width: size.x, height: size.y, depth: size.z }, this.scene);
-    glass.parent = this.root;
-    glass.position.copyFrom(position);
-    glass.rotation.x = pitch;
-    glass.material = this.glassMaterial;
-    glass.isPickable = false;
-    return glass;
   }
 
   private configureWheels() {
