@@ -10,7 +10,8 @@ const read=path=>JSON.parse(readFileSync(root+path,'utf8'));
 const court=read('asset-forge/court-tiles.json'),spells=read('asset-forge/spell-frames.json'),
  manifest=read('asset-forge/manifest.json'),index=read('assets/forge-index.json');
 function sig(frame){
- const pixels=Array.from({length:frame.rows?.length||24},()=>Array(24).fill('.'));
+ const width=frame.layers[0].rows[0].length,height=frame.layers[0].rows.length;
+ const pixels=Array.from({length:height},()=>Array(width).fill('.'));
  const lines=frame.layers[0].rows;
  for(let y=0;y<lines.length;y++)for(let x=0;x<lines[y].length;x++)pixels[y][x]=lines[y][x];
  for(const layer of frame.layers.slice(1))for(let y=0;y<layer.rows.length;y++)
