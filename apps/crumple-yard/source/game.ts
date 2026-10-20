@@ -4,6 +4,7 @@ import {
   DirectionalLight,
   Engine,
   HemisphericLight,
+  Quaternion,
   Scene,
   ShadowGenerator,
   Vector3
@@ -188,6 +189,7 @@ export class CrumpleGame {
   private lastImpactUi = 0;
   private terminalTimer = 0;
   private skidCooldown = 0;
+  private garageYaw = 0;
   private qa: QaState;
   private lastSubsteps = 0;
 
@@ -309,6 +311,30 @@ export class CrumpleGame {
   }
 
   private bindUi() {
+    // A hands-on turntable in the garage. It only affects the stationary
+    // preview; a drive always launches with the original forward heading.
+    const orbit = document.querySelector<HTMLElement>('#garageOrbit');
+    if (orbit) {
+      let pointer: number | null = null;
+      let lastX = 0;
+      orbit.addEventListener('pointerdown', event => {
+        pointer = event.pointerId;
+        lastX = event.clientX;
+        orbit.setPointerCapture(event.pointerId);
+      });
+      orbit.addEventListener('pointermove', event => {
+        if (pointer !== event.pointerId || this.running || !this.player) return;
+        this.garageYaw += (event.clientX - lastX) * 0.011;
+        lastX = event.clientX;
+        const q = Quaternion.RotationAxis(Vector3.Up(), this.garageYaw);
+        this.player.body.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }, true);
+        this.player.syncVisual();
+      });
+      const release = (event: PointerEvent) => { if (pointer === event.pointerId) pointer = null; };
+      orbit.addEventListener('pointerup', release);
+      orbit.addEventListener('pointercancel', release);
+      orbit.addEventListener('lostpointercapture', release);
+    }
     const cameraButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-camera-toggle]'));
     const syncCamera = () => cameraButtons.forEach(button => {
       button.textContent = this.settings.camera === 'fixed' ? 'КАМЕРА · ФИКСИРОВАННАЯ' : 'КАМЕРА · ПОГОННАЯ';
@@ -424,6 +450,7 @@ export class CrumpleGame {
     if (this.player) this.player.dispose();
     const spec = VEHICLE_BY_ID[this.settings.vehicle];
     const preset = spec.presets[this.settings.preset] ?? spec.presets[0];
+    this.garageYaw = 0;
     this.player = new Vehicle(this.scene, this.world, this.registry, spec, preset, new Vector3(0, 1.18, -24), 0, true);
     this.addShadows(this.player);
     if (this.camera) this.camera.snap(this.player);
@@ -455,6 +482,11 @@ export class CrumpleGame {
     if (!this.player || this.running) return;
     await this.audio.unlock();
     this.audio.setMuted(!this.settings.sound);
+    // The garage spinner is inspection only, not a hidden steering input.
+    const straight = Quaternion.Identity();
+    this.player.body.setRotation({ x: straight.x, y: straight.y, z: straight.z, w: straight.w }, true);
+    this.player.syncVisual();
+    this.garageYaw = 0;
     this.createTraffic();
     this.running = true;
     this.paused = false;
