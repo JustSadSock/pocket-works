@@ -59,6 +59,25 @@ export class ImpactEffects {
     }
   }
 
+  skid(point: Vector3, direction: Vector3, intensity: number) {
+    // Brief wheel smoke/dust, pooled and capped like the collision fragments.
+    const count = Math.min(4, Math.max(1, Math.round(intensity * 3)));
+    for (let i = 0; i < count; i++) {
+      const particle = this.pool.find(entry => entry.life <= 0);
+      if (!particle) return;
+      particle.kind = 'dust';
+      particle.life = particle.maxLife = 0.25 + Math.min(0.36, intensity * 0.14);
+      particle.mesh.material = this.dustMaterial;
+      particle.mesh.scaling.setAll(2.2 + intensity * 1.1);
+      particle.mesh.position.copyFrom(point);
+      const angle = (i + 1) * 2.4;
+      particle.velocity = direction.scale(0.45 + intensity * 0.25)
+        .add(new Vector3(Math.cos(angle) * 0.4, 0.65 + i * 0.09, Math.sin(angle) * 0.4));
+      particle.mesh.visibility = 0.72;
+      particle.mesh.setEnabled(true);
+    }
+  }
+
   update(dt: number) {
     for (const particle of this.pool) {
       if (particle.life <= 0) continue;

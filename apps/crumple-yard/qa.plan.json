@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#menuScreen:not([hidden])",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-car='kestrel']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-car='bastion']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-car='meridian']"
+        },
+        {
+          "action": "click",
+          "selector": "#startButton"
+        },
+        {
+          "action": "visible",
+          "selector": "#hud"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#pauseButton"
+        },
+        {
+          "action": "visible",
+          "selector": "#pauseLayer"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}

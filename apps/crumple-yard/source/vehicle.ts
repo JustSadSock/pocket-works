@@ -1,7 +1,6 @@
 import {
   Color3,
   Mesh,
-  MeshBuilder,
   Matrix,
   PBRMaterial,
   Quaternion,
@@ -24,6 +23,8 @@ import {
   type ImpactInput
 } from './damage';
 import { DeformableShell, quaternionFromRapier } from './deformable-shell';
+import { buildVehicleArt } from './vehicle-art';
+import { longitudinalIntent } from './drivetrain';
 import type { CollisionRegistry, DynamicProp } from './physics-types';
 
 const WHEEL_NAMES = ['FL', 'FR', 'RL', 'RR'] as const;
@@ -54,13 +55,13 @@ export class Vehicle {
   readonly controller: RAPIER.DynamicRayCastVehicleController;
   readonly damage: DamageState = createDamageState();
   readonly detached: DynamicProp[] = [];
+  private readonly detachedColliderHandles: number[] = [];
   readonly wheels: Mesh[] = [];
   readonly panels = new Map<string, Mesh>();
   readonly spec: VehicleSpec;
   readonly preset: VisualPreset;
 
   private trimMaterial: PBRMaterial;
-  private wheelMaterial: PBRMaterial;
   private glassMaterial: PBRMaterial;
   private lampOn: PBRMaterial;
   private lampOff: PBRMaterial;
@@ -70,6 +71,7 @@ export class Vehicle {
   private taillights: Mesh[] = [];
   private windshield: Mesh;
   private lastSteer = 0;
+  private selectedGear: 'drive' | 'reverse' = 'drive';
   private steeringSlack = 0;
   private powerPulse = 0;
   private panelDetached = new Set<string>();
@@ -94,7 +96,6 @@ export class Vehicle {
     this.root.rotationQuaternion = Quaternion.Identity();
     this.shell = new DeformableShell(scene, this.root, spec, preset);
     this.trimMaterial = material(scene, spec.id + '-trim', preset.trim, 0.45, 0.42);
-    this.wheelMaterial = material(scene, spec.id + '-wheel', preset.wheel, 0.7, 0.32);
     this.glassMaterial = material(scene, spec.id + '-glass', '#67858c', 0.08, 0.13);
     this.glassMaterial.alpha = 0.58;
     this.glassMaterial.transparencyMode = 2;
@@ -106,8 +107,14 @@ export class Vehicle {
     this.tailOn.emissiveColor = new Color3(0.78, 0.03, 0.01);
     this.tailOff = material(scene, spec.id + '-tail-off', '#5d2926', 0.05, 0.55);
 
-    this.buildDetails();
-    this.windshield = this.buildGlass('windshield', new Vector3(0, spec.cabinHeight * 0.56, spec.length * 0.19), new Vector3(spec.width * 0.73, 0.035, spec.length * 0.24), -0.27);
+    const art = buildVehicleArt(scene, this.root, spec, preset,
+      this.shell.mesh.material as PBRMaterial, this.trimMaterial, this.glassMaterial, this.lampOn, this.tailOn);
+    for (const [name, panel] of art.panels) this.panels.set(name, panel);
+    this.headlights.push(...art.headlights);
+    this.taillights.push(...art.taillights);
+    this.wheels.push(...art.wheels);
+    this.windshield = art.windshield;
+    this.windshield.material = this.glassMaterial.clone(spec.id + '-windscreen-damage');
 
     const rotation = Quaternion.RotationAxis(Vector3.Up(), yaw);
     this.body = world.createRigidBody(
@@ -145,73 +152,6 @@ export class Vehicle {
     this.controller.setIndexForwardAxis = 2;
     this.configureWheels();
     this.syncVisual();
-  }
-
-  private buildDetails() {
-    const spec = this.spec;
-    const bumper = (name: string, z: number) => {
-      const mesh = MeshBuilder.CreateBox(name, { width: spec.width * 0.91, height: 0.18, depth: 0.18 }, this.scene);
-      mesh.parent = this.root;
-      mesh.position.set(0, -spec.bodyHeight * 0.13, z);
-      mesh.material = this.trimMaterial;
-      this.panels.set(name, mesh);
-    };
-    bumper('front-bumper', spec.length * 0.47);
-    bumper('rear-bumper', -spec.length * 0.47);
-
-    const panel = (name: string, position: Vector3, size: Vector3, rotation = Vector3.Zero()) => {
-      const mesh = MeshBuilder.CreateBox(name, { width: size.x, height: size.y, depth: size.z }, this.scene);
-      mesh.parent = this.root;
-      mesh.position.copyFrom(position);
-      mesh.rotation.copyFrom(rotation);
-      mesh.material = this.shell.mesh.material;
-      mesh.receiveShadows = true;
-      this.panels.set(name, mesh);
-      return mesh;
-    };
-    panel('hood', new Vector3(0, spec.bodyHeight * 0.43, spec.length * 0.31), new Vector3(spec.width * 0.72, 0.055, spec.length * 0.31), new Vector3(-0.06, 0, 0));
-    panel('trunk', new Vector3(0, spec.bodyHeight * 0.37, -spec.length * 0.35), new Vector3(spec.width * 0.72, 0.055, spec.length * 0.24), new Vector3(0.04, 0, 0));
-    panel('door-left', new Vector3(-spec.width * 0.492, spec.bodyHeight * 0.13, -spec.length * 0.02), new Vector3(0.055, spec.bodyHeight * 0.78, spec.length * 0.34));
-    panel('door-right', new Vector3(spec.width * 0.492, spec.bodyHeight * 0.13, -spec.length * 0.02), new Vector3(0.055, spec.bodyHeight * 0.78, spec.length * 0.34));
-
-    this.buildGlass('side-glass-left', new Vector3(-spec.width * 0.47, spec.cabinHeight * 0.58, -spec.length * 0.03), new Vector3(0.025, spec.cabinHeight * 0.36, spec.length * 0.3));
-    this.buildGlass('side-glass-right', new Vector3(spec.width * 0.47, spec.cabinHeight * 0.58, -spec.length * 0.03), new Vector3(0.025, spec.cabinHeight * 0.36, spec.length * 0.3));
-
-    const lamp = (name: string, x: number, y: number, z: number, front: boolean) => {
-      const mesh = MeshBuilder.CreateBox(name, { width: spec.width * 0.19, height: 0.13, depth: 0.045 }, this.scene);
-      mesh.parent = this.root;
-      mesh.position.set(x, y, z);
-      mesh.material = front ? this.lampOn : this.tailOn;
-      if (front) this.headlights.push(mesh);
-      else this.taillights.push(mesh);
-    };
-    lamp('headlight-left', -spec.width * 0.27, spec.bodyHeight * 0.11, spec.length * 0.496, true);
-    lamp('headlight-right', spec.width * 0.27, spec.bodyHeight * 0.11, spec.length * 0.496, true);
-    lamp('taillight-left', -spec.width * 0.28, spec.bodyHeight * 0.12, -spec.length * 0.496, false);
-    lamp('taillight-right', spec.width * 0.28, spec.bodyHeight * 0.12, -spec.length * 0.496, false);
-
-    for (let i = 0; i < 4; i += 1) {
-      const wheel = MeshBuilder.CreateCylinder(spec.id + '-wheel-' + WHEEL_NAMES[i], {
-        diameter: spec.wheelRadius * 2,
-        height: spec.wheelWidth,
-        tessellation: 20
-      }, this.scene);
-      wheel.parent = this.root;
-      wheel.material = this.wheelMaterial;
-      wheel.rotationQuaternion = Quaternion.RotationAxis(Vector3.Forward(), Math.PI / 2);
-      wheel.receiveShadows = true;
-      this.wheels.push(wheel);
-    }
-  }
-
-  private buildGlass(name: string, position: Vector3, size: Vector3, pitch = 0) {
-    const glass = MeshBuilder.CreateBox(name, { width: size.x, height: size.y, depth: size.z }, this.scene);
-    glass.parent = this.root;
-    glass.position.copyFrom(position);
-    glass.rotation.x = pitch;
-    glass.material = this.glassMaterial;
-    glass.isPickable = false;
-    return glass;
   }
 
   private configureWheels() {
@@ -255,12 +195,12 @@ export class Vehicle {
     const effects = deriveDamageEffects(this.damage);
     const speed = this.controller.currentVehicleSpeed();
     const speedAbs = Math.abs(speed);
-    let reverse = 0;
-    let brake = input.brake;
-    if (input.brake > 0.5 && speedAbs < 1.2 && input.throttle < 0.2) {
-      reverse = 0.52;
-      brake = 0;
-    }
+    // A single pedal serves brake -> reverse, but reverse must remain engaged
+    // as the car gains speed. The former speedAbs guard cancelled reverse
+    // immediately above 1.2 m/s and made reversing pulse in place.
+    const drive = longitudinalIntent(this.selectedGear, speedAbs, input.throttle, input.brake);
+    this.selectedGear = drive.gear;
+    const reverse = drive.reverse, brake = drive.brake;
 
     const requestedSteer = input.steer + effects.steeringPull;
     const deadband = effects.steeringPlay * 0.55;
@@ -268,7 +208,10 @@ export class Vehicle {
       ? 0
       : Math.sign(requestedSteer) * (Math.abs(requestedSteer) - deadband) / Math.max(0.15, 1 - deadband);
     this.steeringSlack += (rackInput - this.steeringSlack) * (1 - Math.exp(-dt * (4.2 + effects.steeringAuthority * 6)));
-    const steerTarget = this.steeringSlack * this.spec.steerMax * effects.steeringAuthority;
+    // Progressive rack, inspired by Mini Car's speed-aware steering response;
+    // the actual turn still comes from Rapier's independent front wheels.
+    const speedSteer = 1 / (1 + Math.max(0, speedAbs - 9) * 0.022);
+    const steerTarget = this.steeringSlack * this.spec.steerMax * effects.steeringAuthority * speedSteer;
     const steerResponse = 1 - Math.exp(-dt * (speedAbs > 17 ? 5.4 : 8.8));
     this.lastSteer += (steerTarget - this.lastSteer) * steerResponse;
     this.controller.setWheelSteering(0, this.lastSteer + effects.wheelAlignment[0].toe);
@@ -427,6 +370,13 @@ export class Vehicle {
       if (trunk && !this.panelDetached.has('trunk')) trunk.rotation.x = 0.04 + zoneDamage * 0.27;
       if (zoneDamage > 0.78) this.detachPanel('rear-bumper', new Vector3(0, 0, -1));
       if (zoneDamage > 0.94) this.detachPanel('trunk', new Vector3(0, 0.35, -0.7));
+    } else if (zone === 'roof') {
+      const roof = this.panels.get('roof');
+      if (roof && !this.panelDetached.has('roof')) {
+        roof.position.y -= severity * 0.07;
+        roof.rotation.z += severity * 0.045;
+      }
+      if (zoneDamage > 0.94) this.detachPanel('roof', new Vector3(0, 0.75, 0));
     } else if (zone === 'left') {
       const door = this.panels.get('door-left');
       if (door && !this.panelDetached.has('door-left')) door.rotation.z = zoneDamage * 0.08;
@@ -478,6 +428,7 @@ export class Vehicle {
       mass: 18,
       label: 'detached-wheel-' + WHEEL_NAMES[index]
     });
+    this.detachedColliderHandles.push(collider.handle);
     this.detached.push({ body, mesh: wheel });
   }
 
@@ -522,6 +473,7 @@ export class Vehicle {
       mass: 9,
       label: name
     });
+    this.detachedColliderHandles.push(collider.handle);
     this.detached.push({ body, mesh: panel });
   }
 
@@ -532,6 +484,15 @@ export class Vehicle {
       prop.mesh.position.set(p.x, p.y, p.z);
       prop.mesh.rotationQuaternion = new Quaternion(q.x, q.y, q.z, q.w);
     }
+  }
+
+  lateralSlipMps() {
+    const q = this.root.rotationQuaternion ?? Quaternion.Identity();
+    const rotation = Matrix.Zero();
+    q.toRotationMatrix(rotation);
+    const right = Vector3.TransformNormal(Vector3.Right(), rotation).normalize();
+    const v = this.body.linvel();
+    return Vector3.Dot(right, new Vector3(v.x, v.y, v.z));
   }
 
   speedMps() {
@@ -553,12 +514,18 @@ export class Vehicle {
     return deriveDamageEffects(this.damage);
   }
 
+  get gear(): 'drive' | 'reverse' {
+    return this.selectedGear;
+  }
+
   get throttle() {
     return this.lastInput.throttle;
   }
 
   dispose() {
     this.registry.delete(this.collider.handle);
+    for (const handle of this.detachedColliderHandles) this.registry.delete(handle);
+    this.detachedColliderHandles.length = 0;
     this.controller.free();
     this.world.removeRigidBody(this.body);
     for (const prop of this.detached) {

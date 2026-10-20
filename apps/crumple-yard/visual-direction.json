@@ -4,12 +4,12 @@
   "product": "crumple-yard",
   "direction": {
     "premise": "A compact crash-test yard where accumulated dents and mechanical failures remain on the driven car.",
-    "composition": "The car stays near the center of a full-screen oblique 3D yard. Fixed world azimuth allows the player to read turns and collision geometry without camera rotation.",
-    "shapeLanguage": "The existing segmented low-poly vehicle shell provides deformable surfaces and detachable panels; concrete blocks and orange striped barriers mark collision targets.",
-    "surfaceAndMaterial": "Opaque dusty metal, muted concrete and simple glass preserve the existing authored procedural vehicle construction.",
-    "paletteLogic": "The pale concrete ground separates the oxide car and orange collision objects; damage telemetry uses a restrained orange warning accent.",
+    "composition": "A large readable damaged vehicle in a garage inspection stage (side-aligned controls on desktop, vehicle above bottom controls on phones), then an independent fixed-angle or chasing 3D physical crash course.",
+    "shapeLanguage": "Each car class has a purpose-built continuous crushable shell, independent damageable roof, furnished glazing, detailed alloy-and-rubber wheels; collision obstacles use industrial form and hazard geometry.",
+    "surfaceAndMaterial": "Automotive enamel with accumulating scuffed vertex color, dark rubber, machined aluminum, blue-tinted glazing, chipped concrete and yellow industrial safety signage.",
+    "paletteLogic": "Muted daylight concrete is the field; vivid automotive paint makes local deformation visible. Yellow collision warnings contrast with dark galvanized crash structures.",
     "typography": "Existing compact instrument labels remain around the perimeter. New camera switches have explicit Russian labels in the garage and pause sheet.",
-    "signature": "A frontal impact leaves visible dents and detached parts while engine and steering multipliers change in the same physical state.",
+    "signature": "Switch from an indexed garage test plinth to a physics obstacle field. Wheel motion, force measurements, dents, and a persistent reverse gear all derive from real simulated objects.",
     "distinction": "FOG exposes geographical strategy and MEAT.EXE uses first-person navigation; this camera frames a third-person deforming vehicle in a fixed world direction."
   },
   "architecture": {
@@ -46,12 +46,27 @@
         "slug": "crossline-5x5",
         "spatialDifference": "crossline-5x5 uses header-stage-footer with framed-stage; CRUMPLE centers a vehicle in a freely traversable three-dimensional industrial yard.",
         "interactionDifference": "crossline-5x5 uses overlay-list and sliding; here the driver continuously modulates steering and gas while contacts permanently change the same vehicle."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "Perekos stages compact 2D duels with pixel sprites; CRUMPLE features a full-screen freely driven 3D industrial collision range and dimensional cars.",
+        "interactionDifference": "Perekos emphasizes precision projectile combat; CRUMPLE responds to continuous wheel input and accumulates contact-based physical deformation."
+      },
+      {
+        "slug": "petri-forge",
+        "spatialDifference": "PetriForge presents agent lab boards and trajectory analysis; CRUMPLE centers a deformable third-person vehicle within a rigid-body test yard.",
+        "interactionDifference": "PetriForge controls training and agent experiments; CRUMPLE is an immediately controllable car with post-impact drivability changes."
+      },
+      {
+        "slug": "katana-echo",
+        "spatialDifference": "Katana Echo is a timber sword-fighting dojo dominated by a 2D-like melee duel lane; CRUMPLE is a physically traversable Babylon test yard, with a separate inspection plinth and a large 3D car that can rotate.",
+        "interactionDifference": "Katana Echo is direct sword slashes, guarded movement and replayed shadows; CRUMPLE is analog throttle/steering, Rapier suspension forces and contact-dependent long-lived structural damage."
       }
     ]
   },
   "production": {
     "renderer": "Babylon WebGL renders the existing segmented car meshes while Rapier solves rigid-body contacts and the damage system updates shell vertices.",
-    "focalAsset": "The original procedural vehicle shell is retained because its individually deformable sections and detachable panels are part of the physical damage mechanic."
+    "focalAsset": "Dense, car-specific deformable shell rings maintain cumulative deformation; a separately constructed non-colliding detail kit adds wheel arches, five-spoke alloys, framing, exterior trim and unique body variants."
   },
   "motion": {
     "character": "Heavy translation and vehicle rotation carry the sense of mass; the fixed camera follows position with exponential settling.",

@@ -4,6 +4,7 @@ import {
   DirectionalLight,
   Engine,
   HemisphericLight,
+  Quaternion,
   Scene,
   ShadowGenerator,
   Vector3
@@ -23,7 +24,7 @@ import { TrafficSystem, TRAFFIC_SPAWNS, trafficPreset } from './traffic';
 import { Vehicle } from './vehicle';
 
 const FIXED_DT = 1 / 90;
-const VERSION = '1.2.0';
+const VERSION = '1.4.0';
 
 type QaState = {
   version: string;
@@ -31,6 +32,7 @@ type QaState = {
   selectedVehicle: VehicleId;
   preset: number;
   speedKmh: number;
+  gear: 'drive' | 'reverse';
   fps: number;
   quality: number;
   impactCount: number;
@@ -187,6 +189,8 @@ export class CrumpleGame {
   private lastHud = 0;
   private lastImpactUi = 0;
   private terminalTimer = 0;
+  private skidCooldown = 0;
+  private garageYaw = 0;
   private qa: QaState;
   private lastSubsteps = 0;
 
@@ -204,6 +208,7 @@ export class CrumpleGame {
       selectedVehicle: this.settings.vehicle,
       preset: this.settings.preset,
       speedKmh: 0,
+      gear: 'drive',
       fps: 60,
       quality: 1,
       impactCount: 0,
@@ -256,6 +261,8 @@ export class CrumpleGame {
       this.effects = new ImpactEffects(this.scene);
       this.camera = new ChaseCamera(this.scene, this.world);
       this.camera.mode = this.settings.camera;
+      this.camera.garage = true;
+      this.yard.setGarage(true);
       this.traffic = new TrafficSystem(this.yard);
       this.collisions = new CollisionSystem(this.world, this.eventQueue, this.registry, (feedback) => this.onImpact(feedback));
       this.bindUi();
@@ -308,6 +315,30 @@ export class CrumpleGame {
   }
 
   private bindUi() {
+    // A hands-on turntable in the garage. It only affects the stationary
+    // preview; a drive always launches with the original forward heading.
+    const orbit = document.querySelector<HTMLElement>('#garageOrbit');
+    if (orbit) {
+      let pointer: number | null = null;
+      let lastX = 0;
+      orbit.addEventListener('pointerdown', event => {
+        pointer = event.pointerId;
+        lastX = event.clientX;
+        orbit.setPointerCapture(event.pointerId);
+      });
+      orbit.addEventListener('pointermove', event => {
+        if (pointer !== event.pointerId || this.running || !this.player) return;
+        this.garageYaw += (event.clientX - lastX) * 0.011;
+        lastX = event.clientX;
+        const q = Quaternion.RotationAxis(Vector3.Up(), this.garageYaw);
+        this.player.body.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }, true);
+        this.player.syncVisual();
+      });
+      const release = (event: PointerEvent) => { if (pointer === event.pointerId) pointer = null; };
+      orbit.addEventListener('pointerup', release);
+      orbit.addEventListener('pointercancel', release);
+      orbit.addEventListener('lostpointercapture', release);
+    }
     const cameraButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-camera-toggle]'));
     const syncCamera = () => cameraButtons.forEach(button => {
       button.textContent = this.settings.camera === 'fixed' ? 'КАМЕРА · ФИКСИРОВАННАЯ' : 'КАМЕРА · ПОГОННАЯ';
@@ -415,14 +446,39 @@ export class CrumpleGame {
   }
 
   private addShadows(vehicle: Vehicle) {
-    for (const mesh of vehicle.root.getChildMeshes()) this.shadow.addShadowCaster(mesh, false);
+    // The added manufacturing details are rendered by regular lighting.
+    // Only major masses cast dynamic shadows, keeping traffic manageable
+    // on the mobile 512px shadow atlas.
+    for (const mesh of vehicle.root.getChildMeshes()) {
+      if (mesh === vehicle.shell.mesh ||
+          /-(tyre-|hood$|trunk$|door-left$|door-right$|front-bumper$|rear-bumper$|roof-rail-)/.test(mesh.name)) {
+        this.shadow.addShadowCaster(mesh, false);
+      }
+    }
+  }
+
+  private removeShadows(vehicle: Vehicle) {
+    for (const mesh of [...vehicle.root.getChildMeshes(), ...vehicle.detached.map(prop => prop.mesh)]) {
+      if (mesh.getClassName() !== 'TransformNode') {
+        this.shadow.removeShadowCaster(mesh as import('@babylonjs/core').AbstractMesh, false);
+      }
+    }
+  }
+
+  private clearTraffic() {
+    for (const agent of this.traffic.agents) this.removeShadows(agent.vehicle);
+    this.traffic.dispose();
   }
 
   private rebuildPlayer() {
     if (!this.world) return;
-    if (this.player) this.player.dispose();
+    if (this.player) {
+      this.removeShadows(this.player);
+      this.player.dispose();
+    }
     const spec = VEHICLE_BY_ID[this.settings.vehicle];
     const preset = spec.presets[this.settings.preset] ?? spec.presets[0];
+    this.garageYaw = 0;
     this.player = new Vehicle(this.scene, this.world, this.registry, spec, preset, new Vector3(0, 1.18, -24), 0, true);
     this.addShadows(this.player);
     if (this.camera) this.camera.snap(this.player);
@@ -431,7 +487,7 @@ export class CrumpleGame {
   }
 
   private createTraffic() {
-    this.traffic.dispose();
+    this.clearTraffic();
     const specs = [VEHICLE_BY_ID.kestrel, VEHICLE_BY_ID.meridian, VEHICLE_BY_ID.bastion];
     TRAFFIC_SPAWNS.forEach((spawn, index) => {
       const spec = specs[index % specs.length];
@@ -454,6 +510,14 @@ export class CrumpleGame {
     if (!this.player || this.running) return;
     await this.audio.unlock();
     this.audio.setMuted(!this.settings.sound);
+    // The garage spinner is inspection only, not a hidden steering input.
+    const straight = Quaternion.Identity();
+    this.player.body.setRotation({ x: straight.x, y: straight.y, z: straight.z, w: straight.w }, true);
+    this.player.syncVisual();
+    this.garageYaw = 0;
+    this.camera.garage = false;
+    this.yard.setGarage(false);
+    this.yard.resetDynamics();
     this.createTraffic();
     this.running = true;
     this.paused = false;
@@ -478,7 +542,9 @@ export class CrumpleGame {
       const worst = mostDamagedComponents(this.player.damage, 2)
         .map(([name, health]) => name + ' ' + Math.round(health * 100) + '%')
         .join(' · ');
-      this.ui.pauseSummary.textContent = 'Структура ' + Math.round(effects.structuralIntegrity * 100) + '% · ' + worst;
+      this.ui.pauseSummary.textContent =
+        this.player.damage.impactCount + ' ударов · прочность кузова ' +
+        Math.round(effects.structuralIntegrity * 100) + '% · ' + worst;
     }
     this.qa.boot = 'paused';
   }
@@ -503,7 +569,9 @@ export class CrumpleGame {
     this.paused = true;
     this.running = false;
     this.input.reset();
-    this.traffic.dispose();
+    this.clearTraffic();
+    this.camera.garage = true;
+    this.yard.setGarage(true);
     this.ui.pause.hidden = true;
     this.ui.immobile.hidden = true;
     this.ui.hud.hidden = true;
@@ -526,7 +594,8 @@ export class CrumpleGame {
       };
       const labels: Record<string, string> = { front: 'ПЕРЕД', rear: 'ЗАД', left: 'ЛЕВЫЙ БОРТ', right: 'ПРАВЫЙ БОРТ', roof: 'КРЫША', chassis: 'ШАССИ' };
       this.ui.impactZone.textContent = labels[feedback.result.zone] + ' · ' + Math.round(feedback.result.severity * 100) + '%';
-      this.ui.impactInfo.textContent = feedback.label + ' · Δv ' + (feedback.relativeSpeed * 3.6).toFixed(0) + ' км/ч';
+      const impactKN = Math.max(0, feedback.force / 1000);
+      this.ui.impactInfo.textContent = impactKN.toFixed(1) + ' кН · ' + (feedback.relativeSpeed * 3.6).toFixed(0) + ' км/ч сближения';
       this.ui.impactReadout.classList.add('is-hot');
       this.lastImpactUi = performance.now();
     }
@@ -558,6 +627,16 @@ export class CrumpleGame {
     this.traffic.sync();
     this.yard.sync();
     this.effects.update(dt);
+    this.skidCooldown = Math.max(0, this.skidCooldown - dt);
+    if (this.running && !this.paused && this.skidCooldown <= 0) {
+      const slip = Math.abs(this.player.lateralSlipMps());
+      if (slip > 2.5 && this.player.speedKmh() > 15) {
+        const rear = this.player.root.position.subtract(this.player.forward().scale(this.player.spec.wheelBase * 0.44));
+        rear.y = Math.max(0.04, rear.y - this.player.spec.bodyHeight * 0.7);
+        this.effects.skid(rear, this.player.forward().scale(-1), Math.min(2.5, (slip - 2) * 0.4));
+        this.skidCooldown = 0.085;
+      }
+    }
     this.camera.update(this.player, dt);
     const effects = this.player.effects();
     this.audio.update(this.player.speedMps(), this.player.throttle, effects.enginePower, this.player.damage.temperature);
@@ -612,6 +691,7 @@ export class CrumpleGame {
       selectedVehicle: this.settings.vehicle,
       preset: this.settings.preset,
       speedKmh: Number(this.player.speedKmh().toFixed(1)),
+      gear: this.player.gear,
       fps: Number(this.fpsEma.toFixed(1)),
       quality: Number(this.quality.toFixed(2)),
       impactCount: this.player.damage.impactCount,

@@ -6,8 +6,8 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 import { CrumpleGame } from './game';
 
-const VERSION = '1.2.1';
-const RELEASE_NOTES = ["Фиксированное направление 3D-камеры по умолчанию; переключение погонной камеры в гараже и паузе сохраняется между запусками."];
+const VERSION = '1.4.0';
+const RELEASE_NOTES = ["Раздельная витрина гаража и живой осмотр трёх детализированных моделей с салонами и деформируемыми крышами.","Новые ударные бочки и ящики рядом со стартом; двор возвращается в исходное состояние для нового заезда.","Точнее показания силы ударов, читаемая телеметрия, исправления повторных заездов и проверенная логика реверса."];
 
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);

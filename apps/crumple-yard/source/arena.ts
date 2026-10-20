@@ -1,5 +1,6 @@
 import {
   Color3,
+  Mesh,
   MeshBuilder,
   PBRMaterial,
   Quaternion,
@@ -36,6 +37,8 @@ function toRapierQuaternion(rotation: Vector3) {
 
 export class CrashYard {
   readonly dynamicProps: DynamicProp[] = [];
+  private showroom: TransformNode | null = null;
+  private readonly initialProps = new Map<number, Vector3>();
   readonly trafficWaypoints = [
     new Vector3(-14, 0.2, 24),
     new Vector3(13, 0.2, 24),
@@ -49,6 +52,9 @@ export class CrashYard {
   private steel: PBRMaterial;
   private orange: PBRMaterial;
   private paint: PBRMaterial;
+  private rubber: PBRMaterial;
+  private warning: PBRMaterial;
+  private metalLight: PBRMaterial;
 
   constructor(
     private scene: Scene,
@@ -60,6 +66,9 @@ export class CrashYard {
     this.steel = pbr(scene, 'yard-steel', new Color3(0.25, 0.27, 0.275), 0.46, 0.62);
     this.orange = pbr(scene, 'yard-orange', new Color3(0.92, 0.26, 0.055), 0.72, 0.06);
     this.paint = pbr(scene, 'yard-paint', new Color3(0.78, 0.77, 0.68), 0.86);
+    this.rubber = pbr(scene, 'yard-rubber', new Color3(0.07, 0.08, 0.077), 0.99);
+    this.warning = pbr(scene, 'yard-safety-yellow', new Color3(0.98, 0.64, 0.12), 0.82);
+    this.metalLight = pbr(scene, 'yard-galvanized', new Color3(0.44, 0.48, 0.49), 0.53, 0.67);
     this.build();
   }
 
@@ -102,7 +111,84 @@ export class CrashYard {
     mesh.material = config.material === 'steel' ? this.steel : config.color ? pbr(this.scene, config.name + '-mat', config.color) : this.concrete;
     mesh.receiveShadows = true;
     mesh.isPickable = false;
+    this.decorateObstacle(config, mesh);
     return { mesh, body, collider };
+  }
+
+  private surfaceBox(name: string, parent: Mesh | TransformNode, position: Vector3, size: Vector3, material: PBRMaterial) {
+    const detail = MeshBuilder.CreateBox(name, { width: size.x, height: size.y, depth: size.z }, this.scene);
+    detail.parent = parent;
+    detail.position.copyFrom(position);
+    detail.material = material;
+    detail.isPickable = false;
+    return detail;
+  }
+
+  // Rendered dressing follows each existing rigid collider. Decorative geometry
+  // never creates hidden collision or changes contact severity.
+  private decorateObstacle(config: BoxObstacle, mesh: Mesh) {
+    const { x: w, y: h, z: d } = config.size;
+    const isJersey = config.name.startsWith('jersey-');
+    const isRamp = config.name === 'test-ramp';
+    const impact = config.name === 'impact-wall';
+    if (config.name.endsWith('-wall') || impact) {
+      const faceZ = d / 2 + 0.012;
+      this.surfaceBox(config.name + '-footing', mesh,
+        new Vector3(0, -h * 0.43, faceZ),
+        new Vector3(w * 0.98, 0.045, 0.045), this.steel);
+      const seamCount = Math.max(1, Math.floor(w / 4));
+      for (let i = 1; i < seamCount; i++) {
+        this.surfaceBox(config.name + '-joint-' + i, mesh,
+          new Vector3(-w / 2 + i * w / seamCount, 0, faceZ),
+          new Vector3(0.027, h * 0.84, 0.026), this.steel);
+      }
+    }
+    if (impact) {
+      // Very visible impact target, visually distinct from the yard boundaries.
+      this.surfaceBox('impact-top-beam', mesh, new Vector3(0, h * 0.46, 0),
+        new Vector3(w * 1.035, 0.15, d * 1.08), this.metalLight);
+      this.surfaceBox('impact-base-beam', mesh, new Vector3(0, -h * 0.42, 0),
+        new Vector3(w * 1.04, 0.14, d * 1.08), this.steel);
+      for (let i = 0; i < 18; i++) {
+        const stripe = this.surfaceBox('impact-chevron-' + i, mesh,
+          new Vector3(-w * 0.46 + i * w * 0.054, -h * 0.25, d * 0.51),
+          new Vector3(w * 0.036, h * 0.28, 0.022), i % 2 ? this.rubber : this.warning);
+        stripe.rotation.z = -0.47;
+      }
+      for (const x of [-w * 0.32, 0, w * 0.32]) {
+        this.surfaceBox('impact-strike-pad', mesh, new Vector3(x, h * 0.07, d * 0.51),
+          new Vector3(w * 0.12, h * 0.4, 0.06), this.metalLight);
+        this.surfaceBox('impact-strike-dark', mesh, new Vector3(x, h * 0.07, d * 0.55),
+          new Vector3(w * 0.06, h * 0.26, 0.03), this.steel);
+      }
+    } else if (isJersey) {
+      // Trapezoid-looking modular concrete barriers; full rigid shape unchanged.
+      this.surfaceBox(config.name + '-top-rib', mesh, new Vector3(0, h * 0.45, 0),
+        new Vector3(w * 0.86, 0.06, d * 0.66), this.concrete);
+      for (const side of [-1, 1]) {
+        this.surfaceBox(config.name + '-toe', mesh, new Vector3(0, -h * 0.40, side * d * 0.45),
+          new Vector3(w, 0.13, 0.11), this.metalLight);
+        this.surfaceBox(config.name + '-reflector', mesh, new Vector3(0, h * 0.22, side * d * 0.515),
+          new Vector3(w * 0.62, 0.11, 0.026), this.warning);
+      }
+    } else if (isRamp) {
+      for (const side of [-1, 1]) {
+        this.surfaceBox('ramp-guard-' + side, mesh,
+          new Vector3(side * w * 0.48, 0.18, 0),
+          new Vector3(0.11, 0.25, d * 0.99), this.warning);
+      }
+      for (let i = -4; i <= 4; i++) {
+        this.surfaceBox('ramp-grip-' + i, mesh,
+          new Vector3(0, h * 0.54, i * d * 0.098),
+          new Vector3(w * 0.88, 0.024, 0.06), this.metalLight);
+      }
+    } else if (config.material === 'steel') {
+      for (const side of [-1, 1]) {
+        this.surfaceBox('steel-rim-' + config.name + side, mesh,
+          new Vector3(side * w * 0.49, h * 0.35, 0),
+          new Vector3(0.06, 0.07, d), this.metalLight);
+      }
+    }
   }
 
   private pole(name: string, position: Vector3, radius = 0.19, height = 3.8) {
@@ -120,6 +206,14 @@ export class CrashYard {
     mesh.position.copyFrom(position);
     mesh.material = this.steel;
     mesh.receiveShadows = true;
+    const base = MeshBuilder.CreateCylinder(name + '-base', { diameter: radius * 4.5, height: 0.17, tessellation: 12 }, this.scene);
+    base.position.set(position.x, 0.085, position.z); base.material = this.steel;
+    const cap = MeshBuilder.CreateCylinder(name + '-cap', { diameter: radius * 2.2, height: 0.21, tessellation: 12 }, this.scene);
+    cap.position.set(position.x, height - 0.08, position.z); cap.material = this.metalLight;
+    for (const y of [0.68, 1.45]) {
+      const band = MeshBuilder.CreateCylinder(name + '-band', { diameter: radius * 2.09, height: 0.16, tessellation: 12 }, this.scene);
+      band.position.set(position.x, y, position.z); band.material = this.warning;
+    }
   }
 
   private crate(name: string, position: Vector3, size = 0.78) {
@@ -148,7 +242,85 @@ export class CrashYard {
     const band = MeshBuilder.CreateBox(name + '-band', { width: size * 1.02, height: size * 0.14, depth: size * 1.02 }, this.scene);
     band.parent = root;
     band.material = this.steel;
+    for (const side of [-1, 1]) {
+      this.surfaceBox(name + '-brace-x-' + side, root, new Vector3(side * size * 0.505, 0, 0),
+        new Vector3(0.035, size * 0.76, size * 0.09), this.metalLight);
+      this.surfaceBox(name + '-brace-z-' + side, root, new Vector3(0, 0, side * size * 0.505),
+        new Vector3(size * 0.72, size * 0.09, 0.035), this.metalLight);
+    }
+    this.surfaceBox(name + '-top-panel', root, new Vector3(0, size * 0.505, 0),
+      new Vector3(size * 0.75, 0.02, size * 0.75), this.warning);
     this.dynamicProps.push({ body, mesh: root });
+    this.initialProps.set(body.handle, position.clone());
+  }
+
+  private barrel(name: string, position: Vector3) {
+    const radius = 0.34, height = 0.87;
+    const body = this.world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic().setTranslation(position.x, position.y, position.z)
+        .setLinearDamping(0.23).setAngularDamping(0.2).setCanSleep(true)
+    );
+    const collider = this.world.createCollider(
+      RAPIER.ColliderDesc.cylinder(height / 2, radius)
+        .setMass(62).setFriction(0.7).setRestitution(0.08)
+        .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS)
+        .setContactForceEventThreshold(650), body
+    );
+    this.register(collider, { stiffness: 0.48, area: 0.3, mass: 62, material: 'soft', label: name, kind: 'prop' });
+    const root = new TransformNode(name + '-root', this.scene);
+    const drum = MeshBuilder.CreateCylinder(name, { height, diameter: radius * 2, tessellation: 18 }, this.scene);
+    drum.parent = root;
+    drum.material = this.orange;
+    for (const y of [-0.36, -0.19, 0.19, 0.36]) {
+      const band = MeshBuilder.CreateCylinder(name + '-rib', { height: 0.055, diameter: radius * 2.06, tessellation: 18 }, this.scene);
+      band.parent = root; band.position.y = y; band.material = this.steel;
+    }
+    const lid = MeshBuilder.CreateCylinder(name + '-lid', { height: 0.03, diameter: radius * 1.75, tessellation: 18 }, this.scene);
+    lid.parent = root; lid.position.y = height / 2 + 0.017; lid.material = this.metalLight;
+    this.dynamicProps.push({ body, mesh: root });
+    this.initialProps.set(body.handle, position.clone());
+  }
+
+  private makeShowroom() {
+    const root = new TransformNode('garage-rotary-test-plinth', this.scene);
+    root.position.set(0, 0, -24);
+    this.showroom = root;
+    const deck = MeshBuilder.CreateCylinder('garage-deck', { height: 0.35, diameter: 10.3, tessellation: 60 }, this.scene);
+    deck.position.y = 0.35; deck.parent = root; deck.material = this.steel;
+    const surface = MeshBuilder.CreateCylinder('garage-surface', { height: 0.04, diameter: 10.1, tessellation: 60 }, this.scene);
+    surface.position.y = 0.53; surface.parent = root; surface.material = this.metalLight;
+    const groove = MeshBuilder.CreateTorus('garage-index-ring', { diameter: 9.2, thickness: 0.09, tessellation: 64 }, this.scene);
+    groove.position.y = 0.565; groove.parent = root; groove.material = this.warning;
+    for (let index = 0; index < 20; index++) {
+      const angle = index * Math.PI / 10;
+      const mark = MeshBuilder.CreateBox('garage-degree-mark-' + index, {
+        width: index % 5 === 0 ? 0.22 : 0.10, height: 0.025,
+        depth: index % 5 === 0 ? 0.63 : 0.3
+      }, this.scene);
+      mark.parent = root;
+      mark.position.set(Math.sin(angle) * 4.0, 0.567, Math.cos(angle) * 4.0);
+      mark.rotation.y = angle;
+      mark.material = index % 5 === 0 ? this.warning : this.paint;
+    }
+    const center = MeshBuilder.CreateBox('garage-spine', { width: 0.11, height: 0.024, depth: 6.7 }, this.scene);
+    center.parent = root; center.position.y = 0.57; center.material = this.warning;
+    center.visibility = 0.6;
+  }
+
+  setGarage(visible: boolean) {
+    this.showroom?.setEnabled(visible);
+  }
+
+  resetDynamics() {
+    for (const prop of this.dynamicProps) {
+      const position = this.initialProps.get(prop.body.handle);
+      if (!position || !prop.body.isValid()) continue;
+      prop.body.setTranslation({ x: position.x, y: position.y, z: position.z }, true);
+      prop.body.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+      prop.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      prop.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    }
+    this.sync();
   }
 
   private build() {
@@ -160,6 +332,21 @@ export class CrashYard {
     ground.material = this.asphalt;
     ground.receiveShadows = true;
 
+    // Deterministic tire-worn paving: each zone communicates direction and scale.
+    for (let i = 0; i < 31; i++) {
+      const x = Math.sin(i * 8.29) * 29;
+      const z = Math.cos(i * 5.13) * 29;
+      const patch = MeshBuilder.CreateBox('surface-wear-' + i, {
+        width: 0.26 + (i % 3) * 0.19, height: 0.006,
+        depth: 1.1 + (i % 5) * 0.65
+      }, this.scene);
+      patch.position.set(x, 0.007, z);
+      patch.rotation.y = Math.sin(i * 1.75) * 0.3;
+      patch.material = i % 4 ? this.steel : this.concrete;
+      patch.visibility = 0.17;
+      patch.isPickable = false;
+    }
+
     const boundary: BoxObstacle[] = [
       { name: 'north-wall', position: new Vector3(0, 1.2, 35), size: new Vector3(70, 2.4, 0.8) },
       { name: 'south-wall', position: new Vector3(0, 1.2, -35), size: new Vector3(70, 2.4, 0.8) },
@@ -167,6 +354,7 @@ export class CrashYard {
       { name: 'west-wall', position: new Vector3(-35, 1.2, 0), size: new Vector3(0.8, 2.4, 70) }
     ];
     boundary.forEach((entry) => this.fixedBox(entry));
+    this.makeShowroom();
 
     this.fixedBox({ name: 'impact-wall', position: new Vector3(0, 1.05, 28), size: new Vector3(15, 2.1, 1.4), stiffness: 2.05, area: 1.6 });
     this.fixedBox({ name: 'offset-wall-left', position: new Vector3(-11.5, 0.75, 12), size: new Vector3(6.5, 1.5, 0.9), stiffness: 1.9, area: 1.15 });
@@ -175,6 +363,14 @@ export class CrashYard {
     this.pole('pole-a', new Vector3(-5.5, 1.9, 15));
     this.pole('pole-b', new Vector3(7.2, 1.9, 18));
     this.pole('pole-c', new Vector3(20, 1.9, -9), 0.23);
+
+    // Immediate impact choices without forcing a 50-metre empty run-up.
+    for (const [index, x, z] of [
+      [0, -4.2, -11], [1, -3.4, -11.3], [2, 4.4, -11],
+      [3, 5.2, -11.3], [4, -0.4, -4.5], [5, 0.4, -4.5]
+    ]) this.barrel('impact-drum-' + index, new Vector3(x, 0.55, z));
+    this.crate('trial-box-a', new Vector3(-2.0, 0.55, -7), 0.88);
+    this.crate('trial-box-b', new Vector3(2.0, 0.55, -7), 0.88);
 
     for (let i = 0; i < 5; i += 1) {
       this.fixedBox({
