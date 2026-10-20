@@ -58,19 +58,20 @@ test('ultra-short taps survive network packets with zero time between press and 
   assert.ok(state.players.find(p=>p.id==='a').state.charge>=95,'tap is captured on pointerdown');
   now+=1000/60;send(3,{});
   assert.equal(module.viewForPlayer({state}).players.find(p=>p.id==='a').state.attacking,true,'released tap produces an attack');
-  now+=1000/60;send(4,{rmb:true});send(5,{rmb:false});
-  now+=1000/60;send(6,{});
+  now+=250;send(4,{}); // previous sword swing has finished
+  send(5,{rmb:true});send(6,{rmb:false});
+  now+=1000/60;send(7,{});
   const guard=module.viewForPlayer({state}).players.find(p=>p.id==='a').state;
   assert.equal(guard.shieldUp,true,'quick shield remains raised to offer a parry window');
   assert.ok(guard.parryWindow>0,'parry window survives sub-frame input');
-  now+=210;send(7,{});
+  now+=210;send(8,{});
   assert.equal(module.viewForPlayer({state}).players.find(p=>p.id==='a').state.shieldUp,false,'tap guard expires');
-  send(8,{dash:true});send(9,{dash:false});
-  now+=1000/60;send(10,{});
+  send(9,{dash:true});send(10,{dash:false});
+  now+=1000/60;send(11,{});
   const dash=module.viewForPlayer({state}).players.find(p=>p.id==='a').state;
   assert.ok(dash.dashCooldown>0,'one-shot dash was not dropped');
   const before=JSON.stringify(module.viewForPlayer({state}).players.find(p=>p.id==='a').state);
-  send(9,{lmb:true}); // stale sequence must never resurrect an action
+  send(10,{lmb:true}); // stale sequence must never resurrect an action
   const after=JSON.stringify(module.viewForPlayer({state}).players.find(p=>p.id==='a').state);
   assert.equal(before,after,'stale input ignored');
  }finally{Date.now=actual;}
@@ -113,7 +114,7 @@ test('event identifiers advance monotonically and survive serialization',()=>{
  room.map.walls=[];
  const a=room.addPlayer(null,'A'),b=room.addPlayer(null,'B');
  a.state.x=0;a.state.y=0;b.state.x=1;b.state.y=0;a.state.facing=0;
- a.state.attacking=true;a.state.attackPower=300;
+ a.state.attacking=true;a.state.attackTimer=230;a.state.attackPower=300;
  room.step(16.67);
  const ids=[...a.events,...b.events].map(e=>e.id);
  assert.ok(ids.length>0&&ids.every(Number.isSafeInteger));
