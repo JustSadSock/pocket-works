@@ -126,11 +126,18 @@ function updateHud(a=world.players.find(p=>p.id===playerId),b=world.players.find
  $('right-score').textContent=String(b?.score||0);
  $('left-charge').style.width=((a?.state?.charge||0)/1800*100)+'%';
  $('right-charge').style.width=((b?.state?.charge||0)/1800*100)+'%';
+ const dashCd=a?.state?.dashCooldown||0;
+ const dashButton=document.querySelector('[data-combat="dash"]');
+ if(dashButton){
+  dashButton.disabled=!!a&&dashCd>25;
+  dashButton.textContent=dashCd>25?'Рывок '+(dashCd/1000).toFixed(1)+'с':'РЫВОК';
+  dashButton.title=dashCd>25?'Перезарядка рывка':'Пробел — рывок';
+ }
  const cd=a?.ghost?.cooldown||0,en=a?.ghost?.energy;
  if(world.mode==='shadow-tail'){echoBtn.disabled=true;echoBtn.textContent='Эхо: авто';echoBtn.title='Тень повторяет движения автоматически через пять секунд';}
  else{
-  echoBtn.disabled=cd>0;
-  echoBtn.textContent=cd>0?'Эхо '+Math.ceil(cd/1000)+'с':en!==undefined?'Эхо '+Math.round(en*100)+'%':'Призвать эхо';
+  echoBtn.disabled=cd>0||(en!==undefined&&en<.05&&!a?.ghost?.active);
+  echoBtn.textContent=cd>0?'Эхо '+Math.ceil(cd/1000)+'с':en!==undefined?(a?.ghost?.active?'Завершить эхо':'Эхо '+Math.round(en*100)+'%'):'Призвать эхо';
   echoBtn.title=cd>0?'Перезарядка':'E — активировать боевое эхо';
  }
  $('round-label').textContent=world.phase==='round-end'?'Конец раунда':world.phase==='lobby'?'Ожидание':session==='training'?'СПАРРИНГ':'ДУЭЛЬ';
