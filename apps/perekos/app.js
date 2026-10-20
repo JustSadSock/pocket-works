@@ -117,7 +117,7 @@ function mageCards(node,value,onPick,small=false){
   for(const m of MAGES.filter(m=>m.school===school.id)){
    const btn=document.createElement('button');btn.type='button';btn.dataset.mage=m.id;
    btn.className='mage-option'+(value===m.id?' picked':'');btn.setAttribute('aria-pressed',String(value===m.id));
-   const symbol=document.createElement('canvas');symbol.className='mage-sprite';symbol.width=80;symbol.height=82;const miniature=symbol.getContext('2d');miniature.imageSmoothingEnabled=false;drawMage(miniature,appearance,{x:40,y:54,scale:.95,time:0,mageId:m.id,face:Math.PI/4,pose:{still:true}});
+   const symbol=document.createElement('canvas');symbol.className='mage-sprite';symbol.width=80;symbol.height=82;const miniature=symbol.getContext('2d');miniature.imageSmoothingEnabled=false;drawMage(miniature,appearance,{x:40,y:54,scale:2,time:0,mageId:m.id,face:Math.PI/4,pose:{still:true}});
    const label=document.createElement('span'),title=document.createElement('strong');title.textContent=m.name;label.append(title);
    if(!small){const detail=document.createElement('small');detail.textContent=m.description;label.append(detail)}
    btn.append(symbol,label);btn.addEventListener('click',()=>onPick(m.id));choices.append(btn);
@@ -193,7 +193,7 @@ function reorderOnBench(from,to){if(online?.active){const list=onlinePreviewRune
 function renderWorkbench(){
  if(!active)return;const slots=online?.active?(onlinePreviewRunes||[...myActor().runes]):myActor().runes;
  const preview=$('bench-mage'),mini=preview.getContext('2d');mini.clearRect(0,0,64,80);
- drawMage(mini,appearance,{x:32,y:57,scale:1.25,time:0,runes:slots,mageId:myActor().mageId});
+ drawMage(mini,appearance,{x:32,y:57,scale:2,time:0,runes:slots,mageId:myActor().mageId});
  $('bench-count').textContent=slots.length+' / 9';const rack=$('bench-slots'),previousScroll=rack.scrollTop;rack.replaceChildren();let lane=null,laneNumber=0;
  const info=description(slots);
  const available=new Set([mage(myActor().mageId).school]);
@@ -362,7 +362,7 @@ function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0,moving=0,
  const runes=active?.actors?.[enemy?1-myIndex():myIndex()]?.runes||[];
  const a=active?.actors?.[enemy?1-myIndex():myIndex()];
  const pose=animate&&a?mageMotion.sample(a,{x,y},performance.now()/1000,active?.round||0,reducedMotion):null;
- drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1.32,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0,moving,pose});
+ drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0,moving,pose});
 }
 function drawConstructs(s){
  for(const b of s.barriers){
