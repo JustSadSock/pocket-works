@@ -30,7 +30,7 @@ export class PocketSocket extends EventTarget{
   if(this.closed)return;
   const code=e?.code||'',message=errors[code]||e?.message||code||'Ошибка сети';
   const transient=new Set(['rate_limited','server_at_capacity']);
-  this.dispatchEvent(new CustomEvent('error',{detail:{message,code,fatal:!transient.has(code)}}));
+  this.dispatchEvent(new CustomEvent('error',{detail:{message,code,fatal:!transient.has(code)||!this.joined}}));
  }
  message(value){this.dispatchEvent(new MessageEvent('message',{data:JSON.stringify(value)}))}
  apply(v){this.message({type:'state',data:v})}
