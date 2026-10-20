@@ -12,44 +12,29 @@ import {
 } from '@babylonjs/core';
 import type { DamageZone } from './damage';
 import type { VehicleSpec, VisualPreset } from './config';
+import { bodySections, type BodySection } from './body-profile';
 
-type Section = { z: number; halfWidth: number; floorY: number; shoulderY: number; roofY: number };
-
-function hex(value: string) {
-  return Color3.FromHexString(value);
-}
-
-function sectionProfile(spec: VehicleSpec): Section[] {
-  const l = spec.length;
-  const h = spec.bodyHeight;
-  const cabin = spec.cabinHeight;
-  return [
-    { z: l * 0.50, halfWidth: spec.width * 0.24, floorY: -h * 0.34, shoulderY: h * 0.03, roofY: h * 0.15 },
-    { z: l * 0.43, halfWidth: spec.width * 0.45, floorY: -h * 0.39, shoulderY: h * 0.20, roofY: h * 0.31 },
-    { z: l * 0.28, halfWidth: spec.width * 0.49, floorY: -h * 0.42, shoulderY: h * 0.36, roofY: cabin * 0.56 },
-    { z: l * 0.10, halfWidth: spec.width * 0.50, floorY: -h * 0.43, shoulderY: h * 0.42, roofY: cabin * 0.72 },
-    { z: -l * 0.12, halfWidth: spec.width * 0.50, floorY: -h * 0.43, shoulderY: h * 0.43, roofY: cabin * 0.73 },
-    { z: -l * 0.30, halfWidth: spec.width * 0.49, floorY: -h * 0.41, shoulderY: h * 0.35, roofY: cabin * 0.55 },
-    { z: -l * 0.44, halfWidth: spec.width * 0.44, floorY: -h * 0.37, shoulderY: h * 0.19, roofY: h * 0.30 },
-    { z: -l * 0.50, halfWidth: spec.width * 0.28, floorY: -h * 0.30, shoulderY: h * 0.02, roofY: h * 0.12 }
-  ];
-}
-
-function ring(section: Section) {
+function ring(section: BodySection) {
   const w = section.halfWidth;
+  const roofX = w * section.roofHalf;
   const shoulder = section.shoulderY;
-  const roof = section.roofY;
+  const crown = section.crownY;
+  const z = section.z;
   return [
-    new Vector3(-w * 0.72, section.floorY, section.z),
-    new Vector3(-w, section.floorY * 0.18, section.z),
-    new Vector3(-w * 0.96, shoulder, section.z),
-    new Vector3(-w * 0.58, roof, section.z),
-    new Vector3(0, roof * 1.035, section.z),
-    new Vector3(w * 0.58, roof, section.z),
-    new Vector3(w * 0.96, shoulder, section.z),
-    new Vector3(w, section.floorY * 0.18, section.z),
-    new Vector3(w * 0.72, section.floorY, section.z),
-    new Vector3(0, section.floorY * 1.08, section.z)
+    new Vector3(-w * 0.8, section.floorY, z),
+    new Vector3(-w * 0.98, section.floorY * 0.42, z),
+    new Vector3(-w, shoulder * 0.65, z),
+    new Vector3(-w * 0.98, shoulder, z),
+    new Vector3(-roofX, crown * 0.965, z),
+    new Vector3(-roofX * 0.53, crown, z),
+    new Vector3(0, crown * 1.01, z),
+    new Vector3(roofX * 0.53, crown, z),
+    new Vector3(roofX, crown * 0.965, z),
+    new Vector3(w * 0.98, shoulder, z),
+    new Vector3(w, shoulder * 0.65, z),
+    new Vector3(w * 0.98, section.floorY * 0.42, z),
+    new Vector3(w * 0.8, section.floorY, z),
+    new Vector3(0, section.floorY * 1.04, z)
   ];
 }
 
@@ -61,11 +46,12 @@ export class DeformableShell {
   readonly indices: number[];
   readonly normals: number[];
   readonly vertexCrush: Float32Array;
+  private vertexColors: Float32Array;
   private inverse = Matrix.Identity();
 
   constructor(scene: Scene, root: TransformNode, spec: VehicleSpec, preset: VisualPreset) {
     this.root = root;
-    const sections = sectionProfile(spec);
+    const sections = bodySections(spec, 3);
     const rings = sections.map(ring);
     const ringSize = rings[0].length;
     const positions: number[] = [];
@@ -107,6 +93,9 @@ export class DeformableShell {
     data.positions = positions;
     data.indices = indices;
     data.normals = normals;
+    const vertexColors = new Float32Array(positions.length / 3 * 4);
+    vertexColors.fill(1);
+    data.colors = vertexColors;
     data.applyToMesh(mesh, true);
     mesh.parent = root;
     mesh.isPickable = false;
@@ -125,6 +114,7 @@ export class DeformableShell {
     this.indices = indices;
     this.normals = normals;
     this.vertexCrush = new Float32Array(positions.length / 3);
+    this.vertexColors = vertexColors;
   }
 
   setPaint(paint: string) {
@@ -145,7 +135,7 @@ export class DeformableShell {
     if (localNormal.lengthSquared() < 0.001) localNormal = new Vector3(0, 0, 1);
     localNormal.normalize();
 
-    const radius = 0.38 + Math.min(0.78, severity * 0.92);
+    const radius = 0.47 + Math.min(0.88, severity * 0.87);
     const radius2 = radius * radius;
     const centerPull = localPoint.lengthSquared() > 0.01 ? localPoint.normalizeToNew().scale(-1) : localNormal.scale(-1);
     const crushDirection = Vector3.Lerp(localNormal.scale(-1), centerPull, 0.64).normalize();
@@ -175,6 +165,11 @@ export class DeformableShell {
       this.positions[i + 1] += crushDirection.y * amount;
       this.positions[i + 2] += crushDirection.z * amount;
       this.vertexCrush[vertex] = Math.min(0.52, existing + amount);
+      const distress = this.vertexCrush[vertex] / 0.52;
+      const colorIndex = vertex * 4;
+      this.vertexColors[colorIndex] = 1 - distress * 0.48;
+      this.vertexColors[colorIndex + 1] = 1 - distress * 0.43;
+      this.vertexColors[colorIndex + 2] = 1 - distress * 0.35;
       moved = Math.max(moved, amount);
     }
 
@@ -182,6 +177,7 @@ export class DeformableShell {
       VertexData.ComputeNormals(this.positions, this.indices, this.normals);
       this.mesh.updateVerticesData(VertexBuffer.PositionKind, this.positions, false, false);
       this.mesh.updateVerticesData(VertexBuffer.NormalKind, this.normals, false, false);
+      this.mesh.updateVerticesData(VertexBuffer.ColorKind, this.vertexColors, false, false);
       this.mesh.refreshBoundingInfo();
     }
     return moved;
