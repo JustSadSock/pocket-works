@@ -50,7 +50,7 @@ function showMenu(show){
   if(session==='online')sendInput(true);
  }
  overlay.hidden=!show;stage.classList.toggle('menu-open',show);
- $('resume').hidden=session==='menu';$('leave').hidden=session==='menu';
+ $('resume').hidden=session==='menu'||(session==='online'&&!playerId);$('leave').hidden=session==='menu';
  if(!show)canvas.focus({preventScroll:true});
 }
 function clearInput(){
@@ -310,8 +310,8 @@ function online(create){
   const details=event.detail||{},message=details.message||'Ошибка подключения';
   changeStatus(message,true);note(message,'error');
   if(details.fatal){
-   createPending=false;connected=false;roomPanel.hidden=true;
-   target.close();ws=null;showMenu(true);
+   target.close();if(ws===target)ws=null;
+   stop();changeStatus(message,true);note(message,'error');
   }
  });
  target.addEventListener('close',()=>{
