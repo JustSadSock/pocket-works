@@ -1481,7 +1481,7 @@ var entry_default = {
     }
     if (m?.type === "input") {
       const i = m.payload || {};
-      room.handleInput(player.id, { keys: Object.fromEntries(["w", "a", "s", "d"].map((k) => [k, !!i.keys?.[k]])), mouseAngle: Number.isFinite(i.mouseAngle) ? i.mouseAngle : 0, seq: Number.isSafeInteger(i.seq) ? i.seq : 0, lmb: !!i.lmb, rmb: !!i.rmb, dash: !!i.dash, ghostToggle: !!i.ghostToggle });
+      room.handleInput(player.id, { keys: Object.fromEntries(["w", "a", "s", "d"].map((k) => [k, !!i.keys?.[k]])), mouseAngle: Number.isFinite(i.mouseAngle) ? i.mouseAngle : 0, seq: Number.isSafeInteger(i.seq) ? i.seq : 0, stream: Number.isSafeInteger(i.stream) ? i.stream : 0, lmb: !!i.lmb, rmb: !!i.rmb, dash: !!i.dash, ghostToggle: !!i.ghostToggle });
       p.lastInputAt = Date.now();
     } else if (m?.type === "ready") room.markReady(player.id);
     else if (m?.type !== "sync") throw Error("\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u0430");
