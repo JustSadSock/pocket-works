@@ -23,7 +23,7 @@ import { TrafficSystem, TRAFFIC_SPAWNS, trafficPreset } from './traffic';
 import { Vehicle } from './vehicle';
 
 const FIXED_DT = 1 / 90;
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 
 type QaState = {
   version: string;
@@ -187,6 +187,7 @@ export class CrumpleGame {
   private lastHud = 0;
   private lastImpactUi = 0;
   private terminalTimer = 0;
+  private skidCooldown = 0;
   private qa: QaState;
   private lastSubsteps = 0;
 
@@ -558,6 +559,16 @@ export class CrumpleGame {
     this.traffic.sync();
     this.yard.sync();
     this.effects.update(dt);
+    this.skidCooldown = Math.max(0, this.skidCooldown - dt);
+    if (this.running && !this.paused && this.skidCooldown <= 0) {
+      const slip = Math.abs(this.player.lateralSlipMps());
+      if (slip > 2.5 && this.player.speedKmh() > 15) {
+        const rear = this.player.root.position.subtract(this.player.forward().scale(this.player.spec.wheelBase * 0.44));
+        rear.y = Math.max(0.04, rear.y - this.player.spec.bodyHeight * 0.7);
+        this.effects.skid(rear, this.player.forward().scale(-1), Math.min(2.5, (slip - 2) * 0.4));
+        this.skidCooldown = 0.085;
+      }
+    }
     this.camera.update(this.player, dt);
     const effects = this.player.effects();
     this.audio.update(this.player.speedMps(), this.player.throttle, effects.enginePower, this.player.damage.temperature);
