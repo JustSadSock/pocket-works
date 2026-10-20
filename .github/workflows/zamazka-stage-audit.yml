@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'apps/zamazka/visual-critique-147.css'
+      - 'apps/zamazka/exhibition-ui.js'
       - 'apps/zamazka/finale-ui.js'
       - 'apps/zamazka/app.js'
       - 'apps/zamazka/qa/visual-stage-regression.mjs'
@@ -14,6 +15,7 @@ on:
     branches: [main]
     paths:
       - 'apps/zamazka/visual-critique-147.css'
+      - 'apps/zamazka/exhibition-ui.js'
       - 'apps/zamazka/finale-ui.js'
       - 'apps/zamazka/app.js'
       - 'apps/zamazka/qa/visual-stage-regression.mjs'
@@ -44,4 +46,14 @@ jobs:
           ln -s "$RUNNER_TEMP/zamazka-playwright/node_modules/@playwright/test" node_modules/@playwright/test
           "$RUNNER_TEMP/zamazka-playwright/node_modules/.bin/playwright" install --with-deps chromium
       - name: Verify geometry on real phase markup
+        env:
+          ZAMAZKA_QA_ARTIFACT_DIR: ${{ runner.temp }}/zamazka-visual-audit
         run: node apps/zamazka/qa/visual-stage-regression.mjs
+      - name: Preserve real-browser phase screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zamazka-visual-stage-${{ github.sha }}
+          path: ${{ runner.temp }}/zamazka-visual-audit
+          if-no-files-found: warn
+          retention-days: 7
