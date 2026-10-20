@@ -382,6 +382,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
  return {
   state,configure,setActive,trigger,reset,tick,draw,refresh,applyParameters,setObserverPoint,takePhoton,checkRay,openObserver,
   get running(){return running},
+  get statistics(){return stats()},
   get snapshot(){return {
    parameters:{...state,observerPoint:{...state.observerPoint}},
    statistics:stats(),inspection:inspectResult?{...inspectResult}:null,
