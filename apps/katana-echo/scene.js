@@ -9,6 +9,37 @@ function line(ctx,points,color,width){
   ctx.beginPath();ctx.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)ctx.lineTo(points[i][0],points[i][1]);
   ctx.lineWidth=width;ctx.strokeStyle=color;ctx.stroke();
 }
+function drawCourtyard(ctx,map){
+ // The arena is a finite fighting surface, but the courtyard continues beyond it.
+ // This makes portrait framing intentional rather than leaving unused black bands.
+ const w=map.bounds?.w||22,h=map.bounds?.h||14;
+ ctx.fillStyle='#1b2929';ctx.fillRect(-36,-42,72,84);
+ for(let y=-42;y<42;y+=1.6){
+  const row=Math.round((y+42)/1.6);
+  ctx.fillStyle=row%2?'#1c2929':'#202d2b';ctx.fillRect(-36,y,72,1.6);
+  ctx.strokeStyle='#2f4140';ctx.lineWidth=.038;
+  ctx.beginPath();ctx.moveTo(-36,y);ctx.lineTo(36,y);ctx.stroke();
+  const offset=row%2?2.2:0;
+  for(let x=-36+offset;x<36;x+=4.4){
+   ctx.beginPath();ctx.moveTo(x,y+.07);ctx.lineTo(x,y+1.52);ctx.stroke();
+  }
+ }
+ // Two raised perimeter thresholds: solid outer architecture, not phantom walls.
+ for(const sign of [-1,1]){
+  const y=sign*(h/2+1.35);
+  ctx.fillStyle='#0d1a1b';ctx.fillRect(-w/2-1.2,y-.72,w+2.4,1.44);
+  ctx.fillStyle='#42534a';ctx.fillRect(-w/2-.55,y-.51,w+1.1,1.02);
+  ctx.fillStyle='#161f1e';ctx.fillRect(-w/2-.45,y-.38,w+.9,.76);
+  ctx.fillStyle='#8c7551';ctx.fillRect(-w/2-.45,y-(sign>0?.42:.39),w+.9,.065);
+  ctx.fillRect(-w/2-.45,y+(sign>0?.36:.39),w+.9,.065);
+  for(let x=-w/2+1;x<w/2;x+=2){
+   ctx.fillStyle='#6b6350';ctx.fillRect(x,y-.23,.065,.46);
+  }
+ }
+ ctx.fillStyle='#141f1e';ctx.fillRect(-w/2-.42,-h/2-.42,w+.84,h+.84);
+ ctx.strokeStyle='#725b40';ctx.lineWidth=.16;ctx.strokeRect(-w/2-.42,-h/2-.42,w+.84,h+.84);
+}
+
 function floorboards(ctx,map,t){
   const w=map.bounds?.w||22,h=map.bounds?.h||14;
   ctx.fillStyle=floor;ctx.fillRect(-w/2,-h/2,w,h);
@@ -133,6 +164,7 @@ export function renderScene(ctx,world,localId,t,width,height,effects=[],smoothin
   const camera=cameraFor(world,width,height);
   ctx.save();ctx.translate(camera.x,camera.y);ctx.scale(camera.scale,camera.scale);
   const map=world.map||{bounds:{w:22,h:14},walls:[]};
+  drawCourtyard(ctx,map);
   floorboards(ctx,map,t);
   for(const wall of map.walls||[])drawWall(ctx,wall);
   for(const p of world.players||[]){
