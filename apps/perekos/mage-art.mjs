@@ -5,9 +5,11 @@ import {DEFAULT_APPEARANCE,cosmeticFeatures} from './avatar-profile.mjs';
 import {mage} from './mages.mjs';
 import {drawGarbBack,drawGarbFront,drawClassHeadgear} from './mage-regalia.mjs';
 import {faceView,directionalOcclusion,weaponRotation} from './mage-facing.mjs';
+import {renderForgeMage} from './mage-pixel.mjs';
 
 export function drawMage(ctx,look=DEFAULT_APPEARANCE,{x=0,y=0,enemy=false,alpha=1,scale=1,time=0,shield=0,flash=0,runes=[],mageId='kindle',casting=0,dashing=0,face=0,moving=0,pose=null}={}){
  if(!ctx)return;
+ if(renderForgeMage(ctx,look,{x,y,enemy,alpha,scale,time,shield,flash,runes,mageId,casting,dashing,face,moving,pose}))return;
  const p=enemy&&(!look||look.source==='guest')?{...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']}:(look||DEFAULT_APPEARANCE);
  const [coat,trim,shade]=p.colors,maskot=p.mascot,features=cosmeticFeatures(runes),character=mage(mageId),isCasting=casting>.06;
  const viewing=faceView(pose?.look??face);

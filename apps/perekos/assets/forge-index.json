@@ -1,0 +1,35 @@
+{
+  "assets": [
+    {
+      "adapter": "pixel",
+      "id": "compact-mages",
+      "inputs": {
+        "asset-forge/mages.json": "37ec32b98ca156beb34a9517986773b800bb3fdca8931506d0d34323a15d40bb"
+      },
+      "outputs": {
+        "atlas": {
+          "bytes": 31622,
+          "sha256": "2b80080cc77b3d3888db372f98e812bd5e0f85705e218e829fb58fbae99c87e7",
+          "url": "assets/mages.json"
+        },
+        "image": {
+          "bytes": 110781,
+          "height": 32,
+          "sha256": "c87c3b4520a94875815600bd07852cbf925f02f70989a8fbe2108d0565278fdf",
+          "url": "assets/mages.png",
+          "width": 3456
+        }
+      },
+      "parameters": {},
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original authored 24x32 multi-layer silhouettes and animation frames for Perekos"
+      },
+      "seed": 20261020,
+      "tool": "10.2.0"
+    }
+  ],
+  "manifestSha256": "07c4ef9a3f3e7aa783b4ea4756ef3d47ef777f4dd0203b4c71c35b5ed1959147",
+  "version": 1
+}
