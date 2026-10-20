@@ -8,7 +8,8 @@
 import {createLightFieldLab} from './light-field-view.js';
 import {createObservatory} from './observatory.js';
 import {cameraBasis,pixelDirection,dot} from './optics.js';
-import {cameraForRay,inspectObserverRay,normalizeObserverPoint} from './observer-bridge.js';
+import {cameraForRay,inspectObserverRay,normalizeObserverPoint,frameAt,worldDirection,chartObserverPosition} from './observer-bridge.js';
+import {project3D} from './embedded-space.js';
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const format=(v,d=1)=>Number.isFinite(v)?v.toFixed(d):'—';
@@ -21,6 +22,16 @@ export function inspectSharedCamera(m,point,observerState){
  const angle=Math.acos(clamp(dot(basis.radial,view),-1,1));
  const physical=inspectObserverRay(m,p,angle,{step:.09,outer:22,maxTime:145});
  return {point:p,gazeAngle:angle*RADIANS,physical};
+}
+export function sightAxis(m,point,camera,length=.85){
+ const p=normalizeObserverPoint(point),frame=frameAt(p),
+  basis=cameraBasis(camera.yaw,camera.pitch,Math.sign(p.l),camera.facingSign),
+  forward=pixelDirection(0,0,basis,camera.fov||80,1),
+  direction=worldDirection(forward,frame),
+  source=chartObserverPosition(m,p).xyz;
+ if(!Number.isFinite(length)||length<=0||length>3)throw Error('Некорректная длина индикатора направления');
+ return {source,tip:source.map((v,k)=>v+direction[k]*length),direction,
+  note:'Chart annotation: arrow has arbitrary visual length, not a geodesic segment'};
 }
 export function createDualObservatory({getMetric,onDirty,onAction,onView3D,onViewSky,fieldCanvas,skyCanvas}={}){
  const canvas3D=fieldCanvas||$('split-field-canvas'),canvasSky=skyCanvas||$('split-sky-canvas');
@@ -138,7 +149,23 @@ export function createDualObservatory({getMetric,onDirty,onAction,onView3D,onVie
  function draw(){
   if(!active)return;
   const left=resizeCanvas(canvas3D),right=resizeCanvas(canvasSky);
-  if(left){field.draw(left.ctx,left.w,left.h);drawCount++;}
+  if(left){
+   field.draw(left.ctx,left.w,left.h);
+   const axis=sightAxis(metric(),position(),observer.state);
+   const projection=field.cameraForCanvas(left.w,left.h);
+   const a=project3D(axis.source,projection,left.w,left.h),
+    b=project3D(axis.tip,projection,left.w,left.h);
+   const g=left.ctx,dx=b.x-a.x,dy=b.y-a.y,n=Math.hypot(dx,dy)||1,
+    ux=dx/n,uy=dy/n;
+   g.save();
+   g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);
+   g.strokeStyle='#ffe6ae';g.lineWidth=2.5;g.stroke();
+   g.beginPath();g.moveTo(b.x,b.y);
+   g.lineTo(b.x-uy*5-ux*10,b.y+ux*5-uy*10);
+   g.lineTo(b.x+uy*5-ux*10,b.y-ux*5-uy*10);
+   g.closePath();g.fillStyle='#ffe6ae';g.fill();
+   g.restore();drawCount++;
+  }
   if(right){observer.draw(right.ctx,right.w,right.h);drawCount++;}
  }
  function tick(dt,speed=1,paused=false){
