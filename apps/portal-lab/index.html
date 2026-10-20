@@ -17,9 +17,19 @@
 <section class="workspace" aria-label="Пространственная модель">
 <div class="stage-head">
 <div class="stage-copy"><span class="micro">МОДЕЛЬ ПРОСТРАНСТВА-ВРЕМЕНИ <span id="model-kind">01 / ЭЛЛИС</span></span><h1 id="lab-headline">Увидеть искривлённое пространство</h1></div>
-<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="causality" type="button" aria-pressed="false">Причинность</button><button data-view="atlas" type="button" aria-pressed="false">Атлас</button><button data-view="notebook" type="button" aria-pressed="false">Журнал</button><button data-view="volume" type="button" aria-pressed="false">Объём</button><button data-view="field3d" type="button" aria-pressed="false">Свет 3D</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
+<div class="views" role="group" aria-label="Способ отображения"><button data-view="observer" class="selected" type="button" aria-pressed="true">Наблюдатель</button><button data-view="split" type="button" aria-pressed="false">Синхронно</button><button data-view="matter" type="button" aria-pressed="false">Материя</button><button data-view="wave" type="button" aria-pressed="false">Волны</button><button data-view="designer" type="button" aria-pressed="false">Конструктор</button><button data-view="rotation" type="button" aria-pressed="false">Вращение</button><button data-view="causality" type="button" aria-pressed="false">Причинность</button><button data-view="atlas" type="button" aria-pressed="false">Атлас</button><button data-view="notebook" type="button" aria-pressed="false">Журнал</button><button data-view="volume" type="button" aria-pressed="false">Объём</button><button data-view="field3d" type="button" aria-pressed="false">Свет 3D</button><button data-view="map" type="button" aria-pressed="false">Топология</button><button data-view="profile" type="button" aria-pressed="false">Профиль</button></div>
 </div>
 <div class="canvas-frame"><canvas id="space" role="img" aria-label="Трассировка света и карта геометрии кротовой норы"></canvas>
+<div class="split-stage" id="split-stage" hidden>
+ <div class="split-pane split-map-pane">
+  <div class="split-pane-title"><strong>01 / КАРТА ФОТОНОВ</strong><span id="split-field-status">ГОТОВ К ЗАПУСКУ</span></div>
+  <canvas id="split-field-canvas" aria-label="Трёхмерная карта фотонных геодезических и положение камеры"></canvas>
+ </div>
+ <div class="split-pane split-sky-pane">
+  <div class="split-pane-title"><strong>02 / ВИД НАБЛЮДАТЕЛЯ</strong><span id="split-sky-status">ТРАССИРОВКА СВЕТА</span></div>
+  <canvas id="split-sky-canvas" aria-label="Рассчитанное гравитационно линзированное звёздное небо из отмеченной точки"></canvas>
+ </div>
+</div>
 <div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
 </div>
 <div class="transport">
@@ -30,6 +40,35 @@
 </section>
 <aside class="instrument" aria-label="Параметры эксперимента">
 
+<section id="split-panel" class="split-panel" aria-label="Синхронный просмотр 3D карты и оптической камеры">
+<div class="section-caption"><span>ДВЕ КАМЕРЫ · ОДНА МЕТРИКА</span><span>v1.5</span></div>
+<div class="split-intro"><strong>Где находится наблюдатель — и что он видит?</strong><p>Слева фотонные орбиты, справа искривлённое небо. Переместите камеру — оба вида останутся в одной физической точке.</p></div>
+<div class="split-readout" id="split-readout" aria-live="polite">A · l/a 3.10 · λ 0° · φ 0°</div>
+<div class="section-caption second"><span>ПОЛОЖЕНИЕ КАМЕРЫ</span><span>ДВА РЕГИОНА</span></div>
+<label class="split-select-label" for="split-region">Регион <select id="split-region"><option value="A">A · l > 0</option><option value="B">B · l < 0</option></select></label>
+<label class="range-field"><span>Расстояние от горловины <output id="split-distance-value">3.10a</output></span><input type="range" id="split-distance" min=".2" max="6" value="3.1" step=".05"></label>
+<label class="range-field"><span>Долгота <output id="split-longitude-value">0°</output></span><input type="range" id="split-longitude" min="-180" max="180" value="0" step="1"></label>
+<label class="range-field"><span>Широта <output id="split-latitude-value">0°</output></span><input type="range" id="split-latitude" min="-90" max="90" value="0" step="1"></label>
+<div class="section-caption second"><span>КУДА СМОТРЕТЬ</span><span>NULL H=0</span></div>
+<label class="range-field"><span>Угол к наружной радиали <output id="split-angle-value">170°</output></span><input type="range" id="split-angle" min="0" max="180" value="170" step="1"></label>
+<label class="range-field"><span>Угол обзора <output id="split-fov-value">80°</output></span><input type="range" id="split-fov" min="50" max="110" value="80" step="2"></label>
+<div id="split-sky-regions" class="split-sky-regions">Свет рассчитывается…</div>
+<div class="section-caption second"><span>ПУЧОК ФОТОНОВ</span><span>1–25</span></div>
+<label class="range-field"><span>Количество фотонов <output id="split-count-value">13</output></span><input type="range" id="split-count" min="1" max="25" step="1" value="13"></label>
+<label class="range-field"><span>Конус раскрытия <output id="split-cone-value">24°</output></span><input type="range" id="split-cone" min="0" max="65" step="1" value="24"></label>
+<div class="split-buttons">
+<button id="split-launch" type="button" class="split-primary">Запустить фотонный пучок</button>
+<div class="split-selection"><label for="split-photon-index">Фотон <output id="split-photon-index-value">1 / 0</output></label><input type="range" id="split-photon-index" min="1" max="25" step="1" value="1"></div>
+<button id="split-photon" type="button">Камера к выбранному фотону</button>
+<button id="split-test" type="button">Проверить центральный луч</button>
+</div>
+<div id="split-ray-check" class="split-ray-check">Центральный луч проходит по нулевой геодезической.</div>
+<div class="split-open-views">
+<button type="button" id="split-view-3d">Открыть карту отдельно ↗</button>
+<button type="button" id="split-view-sky">Открыть небо отдельно ↗</button>
+</div>
+<p class="split-footnote">Карта 3D показывает две условно разнесённые координатные области и не является изометрическим вложением всего пространства. Изображение неба независимо рассчитывается из нулевых геодезических; это не скриншот 3D-сцены. Сферы источников искусственные.</p>
+</section>
 <section id="field-panel" class="field-panel" aria-label="Трёхмерная геодезическая оптика">
 <div class="section-caption"><span>3D / КООРДИНАТНЫЙ АТЛАС</span><span>v1.3</span></div>
 <p class="field-intro">Один и тот же световой пучок в разных направлениях. Два внешних региона показаны отдельно: их расстояние на схеме условно. Фотоны следуют геодезическим, а не декоративным кривым.</p>
@@ -143,7 +182,7 @@
 <label class="notebook-field">Режим
 <select id="notebook-filter">
 <option value="all">Все эксперименты</option>
-<option value="observer">Наблюдатель</option><option value="volume">Объём</option><option value="field3d">Свет 3D</option>
+<option value="observer">Наблюдатель</option><option value="volume">Объём</option><option value="field3d">Свет 3D</option><option value="split">Синхронно</option>
 <option value="matter">Материя</option>
 <option value="wave">Волны</option>
 <option value="designer">Конструктор</option>
