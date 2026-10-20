@@ -14,6 +14,10 @@ import type { DamageZone } from './damage';
 import type { VehicleSpec, VisualPreset } from './config';
 import { bodySections, type BodySection } from './body-profile';
 
+function hex(value: string): Color3 {
+  return Color3.FromHexString(value);
+}
+
 function ring(section: BodySection) {
   const w = section.halfWidth;
   const roofX = w * section.roofHalf;
