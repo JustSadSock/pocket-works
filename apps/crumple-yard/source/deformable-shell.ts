@@ -64,8 +64,24 @@ export class DeformableShell {
     for (const points of rings) {
       for (const point of points) positions.push(point.x, point.y, point.z);
     }
+    // The structural hull is solid steel below the beltline, but the
+    // greenhouse has genuine apertures. Do not skin glass surfaces with the
+    // painted hull: a two-sided hull otherwise produces an opaque orange wedge.
+    // The separately modeled tinted panes and cabin are visible in these cuts.
+    const hatch = spec.id === 'kestrel';
+    const suv = spec.id === 'bastion';
+    const windshieldBase = spec.length * (suv ? 0.245 : hatch ? 0.21 : 0.165);
+    const windshieldTop = spec.length * (suv ? 0.185 : hatch ? 0.075 : 0.06);
+    const rearWindowTop = -spec.length * (suv ? 0.285 : hatch ? 0.205 : 0.21);
+    const rearWindowBase = -spec.length * (suv ? 0.37 : hatch ? 0.415 : 0.325);
     for (let s = 0; s < rings.length - 1; s += 1) {
+      const z = (rings[s][0].z + rings[s + 1][0].z) * 0.5;
+      const windshield = z <= windshieldBase && z >= windshieldTop;
+      const backlight = z <= rearWindowTop && z >= rearWindowBase;
+      const sideGlass = z < windshieldTop && z > rearWindowTop;
       for (let i = 0; i < ringSize; i += 1) {
+        if ((windshield || backlight) && i >= 3 && i <= 8) continue;
+        if (sideGlass && (i === 3 || i === 8)) continue;
         const next = (i + 1) % ringSize;
         const a = s * ringSize + i;
         const b = s * ringSize + next;
