@@ -21,7 +21,8 @@
         "tests/balance.test.mjs",
         "tests/combat-presentation.test.mjs",
         "tests/combat-readability.test.mjs",
-        "tests/spell-choreography.test.mjs"
+        "tests/spell-choreography.test.mjs",
+        "tests/forge-pixel.test.mjs"
       ]
     },
     {
@@ -79,10 +80,18 @@
         "qa/readability.spec.js",
         "qa/choreography.spec.js",
         "qa/aim-precision.spec.js",
-        "qa/art-direction.spec.js",
-        "qa/kinetics.spec.js",
+        "qa/kinetics.spec.js"
+      ]
+    },
+    {
+      "id": "pixel-art",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
         "qa/character-overhaul.spec.js",
-        "qa/eight-direction.spec.js"
+        "qa/eight-direction.spec.js",
+        "qa/art-direction.spec.js",
+        "qa/forge-pixel.spec.js"
       ]
     }
   ]
