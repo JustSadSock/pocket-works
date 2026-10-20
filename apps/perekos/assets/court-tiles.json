@@ -1,0 +1,187 @@
+{
+  "frames": [
+    {
+      "durationMs": 1000,
+      "name": "paver-0",
+      "pivot": [
+        16,
+        16
+      ],
+      "rect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "tag": "paver"
+    },
+    {
+      "durationMs": 1000,
+      "name": "paver-1",
+      "pivot": [
+        16,
+        16
+      ],
+      "rect": [
+        32,
+        0,
+        32,
+        32
+      ],
+      "tag": "paver"
+    },
+    {
+      "durationMs": 1000,
+      "name": "paver-2",
+      "pivot": [
+        16,
+        16
+      ],
+      "rect": [
+        64,
+        0,
+        32,
+        32
+      ],
+      "tag": "paver"
+    },
+    {
+      "durationMs": 1000,
+      "name": "paver-3",
+      "pivot": [
+        16,
+        16
+      ],
+      "rect": [
+        96,
+        0,
+        32,
+        32
+      ],
+      "tag": "paver"
+    },
+    {
+      "durationMs": 1000,
+      "name": "paver-4",
+      "pivot": [
+        16,
+        16
+      ],
+      "rect": [
+        128,
+        0,
+        32,
+        32
+      ],
+      "tag": "paver"
+    },
+    {
+      "durationMs": 1000,
+      "name": "paver-5",
+      "pivot": [
+        16,
+        16
+      ],
+      "rect": [
+        160,
+        0,
+        32,
+        32
+      ],
+      "tag": "paver"
+    },
+    {
+      "durationMs": 1000,
+      "name": "inlay",
+      "pivot": [
+        16,
+        16
+      ],
+      "rect": [
+        192,
+        0,
+        32,
+        32
+      ],
+      "tag": "inlay"
+    },
+    {
+      "durationMs": 1000,
+      "name": "edge",
+      "pivot": [
+        16,
+        16
+      ],
+      "rect": [
+        224,
+        0,
+        32,
+        32
+      ],
+      "tag": "edge"
+    },
+    {
+      "durationMs": 1000,
+      "name": "buttress-face",
+      "pivot": [
+        16,
+        16
+      ],
+      "rect": [
+        256,
+        0,
+        32,
+        32
+      ],
+      "tag": "buttress"
+    },
+    {
+      "durationMs": 1000,
+      "name": "buttress-cap",
+      "pivot": [
+        16,
+        16
+      ],
+      "rect": [
+        288,
+        0,
+        32,
+        32
+      ],
+      "tag": "buttress"
+    },
+    {
+      "durationMs": 180,
+      "name": "brazier-0",
+      "pivot": [
+        16,
+        16
+      ],
+      "rect": [
+        320,
+        0,
+        32,
+        32
+      ],
+      "tag": "brazier"
+    },
+    {
+      "durationMs": 150,
+      "name": "brazier-1",
+      "pivot": [
+        16,
+        16
+      ],
+      "rect": [
+        352,
+        0,
+        32,
+        32
+      ],
+      "tag": "brazier"
+    }
+  ],
+  "image": "court-tiles.png",
+  "sampling": "nearest",
+  "version": 1
+}

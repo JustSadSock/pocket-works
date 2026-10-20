@@ -28,8 +28,66 @@
       },
       "seed": 20261020,
       "tool": "10.2.0"
+    },
+    {
+      "adapter": "pixel",
+      "id": "court-tiles",
+      "inputs": {
+        "asset-forge/court-tiles.json": "8de05604f663c9358410459bf7c6777e4cd0034877f51ea682b4052da9c9dcb0"
+      },
+      "outputs": {
+        "atlas": {
+          "bytes": 2576,
+          "sha256": "a897d4abfa8849e404af487678901869a2789cee0546a558f98ef3693165f397",
+          "url": "court-tiles.json"
+        },
+        "image": {
+          "bytes": 12464,
+          "height": 32,
+          "sha256": "ae05ad914eec63d476f7e8ff91c5f47c59d26a3e04c2e628517cf4912e87d5a1",
+          "url": "court-tiles.png",
+          "width": 384
+        }
+      },
+      "parameters": {},
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Layered hand-authored pixel masonry, inlays, buttress faces and animated braziers"
+      },
+      "seed": 2106,
+      "tool": "12.3.0"
+    },
+    {
+      "adapter": "pixel",
+      "id": "spell-frames",
+      "inputs": {
+        "asset-forge/spell-frames.json": "28da8bde5f1e27c39213fff5634c4dacb8a778cc4f99348d1f1df246dde77acf"
+      },
+      "outputs": {
+        "atlas": {
+          "bytes": 33156,
+          "sha256": "333582b7770cf159fb8575b268fc79f2cd5cf03e2c638d2d6ff9ff64f631f1c6",
+          "url": "spell-frames.json"
+        },
+        "image": {
+          "bytes": 88865,
+          "height": 24,
+          "sha256": "479c22ad032cb1f527e95d0150ce4239e25af189eec4eafad187a44735fceba5",
+          "url": "spell-frames.png",
+          "width": 3696
+        }
+      },
+      "parameters": {},
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original pixel spell shapes, eight bearings, casts, confirmed impacts and elemental reactions"
+      },
+      "seed": 2159,
+      "tool": "12.3.0"
     }
   ],
-  "manifestSha256": "07c4ef9a3f3e7aa783b4ea4756ef3d47ef777f4dd0203b4c71c35b5ed1959147",
+  "manifestSha256": "477b3d9cc131f89c38bd22ba0f53cf7b9fa0bcfa35aec12d61c7a732f335ac7d",
   "version": 1
 }
