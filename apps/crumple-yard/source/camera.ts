@@ -8,6 +8,7 @@ export class ChaseCamera {
   private shake = 0;
   private shakePhase = 0;
   mode: 'fixed' | 'chase' = 'fixed';
+  garage = true;
   private readonly fixedOffset = new Vector3(10, 12, -13);
 
   constructor(
@@ -29,13 +30,29 @@ export class ChaseCamera {
     vehicle.syncVisual();
     const position = vehicle.root.position;
     const forward = vehicle.forward();
-    this.target = this.mode === 'fixed' ? position.add(new Vector3(0, 0.65, 0)) : position.add(new Vector3(0, 0.65, 0)).add(forward.scale(2));
-    this.camera.position.copyFrom(this.mode === 'fixed' ? position.add(this.fixedOffset) : position.add(new Vector3(0, 3.1, 0)).subtract(forward.scale(7.8)));
+    if (this.garage) {
+      this.target = position.add(new Vector3(0, -1.85, 0));
+      this.camera.position.copyFrom(position.add(new Vector3(8.4, 7.5, -9.8)));
+      this.camera.fov = 0.72;
+    } else {
+      this.target = this.mode === 'fixed' ? position.add(new Vector3(0, 0.65, 0)) : position.add(new Vector3(0, 0.65, 0)).add(forward.scale(2));
+      this.camera.position.copyFrom(this.mode === 'fixed' ? position.add(this.fixedOffset) : position.add(new Vector3(0, 3.1, 0)).subtract(forward.scale(7.8)));
+    }
     this.camera.setTarget(this.target);
   }
 
   update(vehicle: Vehicle, dt: number) {
     const position = vehicle.root.position;
+    if (this.garage) {
+      const desired = position.add(new Vector3(8.4, 7.5, -9.8));
+      const focus = position.add(new Vector3(0, -1.85, 0));
+      const t = 1 - Math.exp(-dt * 5.5);
+      this.camera.position = Vector3.Lerp(this.camera.position, desired, t);
+      this.target = Vector3.Lerp(this.target, focus, t);
+      this.camera.setTarget(this.target);
+      this.camera.fov += (0.72 - this.camera.fov) * t;
+      return;
+    }
     const forward = vehicle.forward();
     const speedN = Math.min(1, vehicle.speedKmh() / 120);
     const desiredTarget = this.mode === 'fixed' ? position.add(new Vector3(0, 0.68, 0)) : position.add(new Vector3(0, 0.68, 0)).add(forward.scale(2.6 + speedN * 2.2));
