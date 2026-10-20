@@ -188,7 +188,6 @@ export function buildVehicleArt(
     }, scene);
     wheel.parent = root;
     wheel.material = tire;
-    wheel.rotationQuaternion = undefined;
     wheel.receiveShadows = true;
     wheel.isPickable = false;
     const hub = MeshBuilder.CreateCylinder(spec.id + '-alloy-' + i, {
