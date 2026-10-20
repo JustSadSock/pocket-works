@@ -92,3 +92,41 @@ test('all seven pixel spells distinguish direction and element and do not alter 
  expect(result.nonempty).toBeGreaterThan(20);
  await info.attach('v017-forged-spell-catalog',{body:await page.screenshot(),contentType:'image/png'});
 });
+
+test('chosen overgrown rune garden is a real, authored, bright pixel battlefield with unchanged collisions',async({page},info)=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ const sample=await page.evaluate(async()=>{
+  const {forgeCourtReady,renderForgeCourt}=await import('/apps/perekos/forge-court.mjs');
+  const {WALLS}=await import('/apps/perekos/core.mjs');
+  await forgeCourtReady();
+  const original=JSON.stringify(WALLS);
+  const canvas=renderForgeCourt(WALLS),ctx=canvas.getContext('2d');
+  const rgb=(x,y)=>Array.from(ctx.getImageData(x,y,1,1).data);
+  const mean=v=>(v[0]+v[1]+v[2])/3;
+  const lightSamples=[[75,90],[114,100],[270,90],[315,245],[83,462],[293,515]].map(([x,y])=>mean(rgb(x,y)));
+  const channelSamples=[[200,244],[200,377],[88,310],[318,310]].map(([x,y])=>mean(rgb(x,y)));
+  let pale=0,green=0;
+  for(let y=44;y<582;y+=9)for(let x=44;x<356;x+=9){
+   const [r,g,b]=rgb(x,y);
+   if(r>130&&g>130&&b>105)pale++;
+   if(g>r*1.12&&g>b*1.00)green++;
+  }
+  const local=(x,y)=>Array.from(ctx.getImageData(x,y,24,24).data);
+  const before=local(107,187),after=local(240,394),ground=local(68,350);
+  const signature=a=>a.filter((_,i)=>i%4!==3).reduce((h,v)=>Math.imul(h^v,16777619)>>>0,2166136261);
+  return {width:canvas.width,height:canvas.height,pale,green,lightSamples,channelSamples,
+   pre:original,post:JSON.stringify(WALLS),barriers:[signature(before),signature(after)],floor:signature(ground)};
+ });
+ expect([sample.width,sample.height]).toEqual([400,620]);
+ expect(sample.pre).toBe(sample.post);
+ expect(sample.pale).toBeGreaterThan(400);
+ expect(sample.green).toBeGreaterThan(40);
+ expect(sample.lightSamples.filter(x=>x>115).length).toBeGreaterThanOrEqual(4);
+ expect(sample.channelSamples.filter(x=>x<120).length).toBeGreaterThanOrEqual(3);
+ expect(sample.barriers[0]).not.toBe(sample.floor);
+ expect(sample.barriers[1]).not.toBe(sample.floor);
+ await page.locator('#primary-action').click();
+ await expect(page.locator('#controls')).toBeVisible();
+ await info.attach('selected-rune-garden-live',{body:await page.screenshot(),contentType:'image/png'});
+});
