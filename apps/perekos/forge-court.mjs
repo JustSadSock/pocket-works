@@ -31,6 +31,8 @@ export const forgeCourtStatus=()=>loadStatus;
 const rect=(c,x,y,w,h,color)=>{
  c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));
 };
+// Legacy temporary barrier/mine painter shares the same integer-pixel primitive.
+const block=rect;
 function stamp(c,index,x,y){
  c.drawImage(sheet,index*32,0,32,32,Math.round(x),Math.round(y),32,32);
 }
