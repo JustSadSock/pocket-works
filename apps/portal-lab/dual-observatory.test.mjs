@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {metric,geometry} from './spacetime.js';
 import {cameraBasis,pixelDirection,dot} from './optics.js';
 import {cameraForRay,frameAt,worldDirection,chartObserverPosition,inspectObserverRay} from './observer-bridge.js';
-import {inspectSharedCamera} from './dual-observatory.js';
+import {inspectSharedCamera,sightAxis} from './dual-observatory.js';
 const near=(a,b,tol=1e-8)=>assert.ok(Math.abs(a-b)<=tol,'Expected '+a+' ≈ '+b);
 const pos=(l=2.8,longitude=0,latitude=0)=>({l,longitude,latitude});
 function pose(point,theta){
@@ -121,4 +121,27 @@ test('dual 3D and sky computations agree on which side the observer occupies',()
   assert.equal(e.chart,l>0?'A':'B');
   assert.equal(s.physical.sourceRegion,e.chart);
  }
+});
+
+test('3D orientation arrow exactly represents the central optical pixel',()=>{
+ const m=metric({a:1.3});
+ for(const l of [-3,3])for(const theta of [0,25,67,110,175,180]){
+  const p=pos(l,73,40),c=pose(p,theta),line=sightAxis(m,p,c);
+  const f=frameAt(p),b=cameraBasis(c.yaw,c.pitch,Math.sign(l),c.facingSign);
+  const optical=worldDirection(pixelDirection(0,0,b,c.fov,1),f);
+  for(let k=0;k<3;k++)near(line.direction[k],optical[k],1e-12);
+  near(Math.hypot(...line.tip.map((v,k)=>v-line.source[k])),.85,1e-10);
+ }
+});
+test('3D sight axis follows the same chart region as camera position',()=>{
+ const m=metric({a:1});
+ const a=sightAxis(m,pos(2.5,10,20),pose(pos(2.5),145)),
+  b=sightAxis(m,pos(-2.5,10,20),pose(pos(-2.5),145));
+ assert.ok(Math.abs(a.source[0]-b.source[0])>6);
+});
+test('visual direction arrow is explicitly an annotation, not a physical null geodesic',()=>{
+ const m=metric({a:1}),p=pos(3);
+ const a=sightAxis(m,p,pose(p,150));
+ assert.ok(a.note.includes('not a geodesic'));
+ assert.throws(()=>sightAxis(m,p,pose(p,150),-2));
 });
