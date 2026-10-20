@@ -259,6 +259,8 @@ export class CrumpleGame {
       this.effects = new ImpactEffects(this.scene);
       this.camera = new ChaseCamera(this.scene, this.world);
       this.camera.mode = this.settings.camera;
+      this.camera.garage = true;
+      this.yard.setGarage(true);
       this.traffic = new TrafficSystem(this.yard);
       this.collisions = new CollisionSystem(this.world, this.eventQueue, this.registry, (feedback) => this.onImpact(feedback));
       this.bindUi();
@@ -453,9 +455,25 @@ export class CrumpleGame {
     }
   }
 
+  private removeShadows(vehicle: Vehicle) {
+    for (const mesh of [...vehicle.root.getChildMeshes(), ...vehicle.detached.map(prop => prop.mesh)]) {
+      if (mesh.getClassName() !== 'TransformNode') {
+        this.shadow.removeShadowCaster(mesh as import('@babylonjs/core').AbstractMesh, false);
+      }
+    }
+  }
+
+  private clearTraffic() {
+    for (const agent of this.traffic.agents) this.removeShadows(agent.vehicle);
+    this.traffic.dispose();
+  }
+
   private rebuildPlayer() {
     if (!this.world) return;
-    if (this.player) this.player.dispose();
+    if (this.player) {
+      this.removeShadows(this.player);
+      this.player.dispose();
+    }
     const spec = VEHICLE_BY_ID[this.settings.vehicle];
     const preset = spec.presets[this.settings.preset] ?? spec.presets[0];
     this.garageYaw = 0;
@@ -467,7 +485,7 @@ export class CrumpleGame {
   }
 
   private createTraffic() {
-    this.traffic.dispose();
+    this.clearTraffic();
     const specs = [VEHICLE_BY_ID.kestrel, VEHICLE_BY_ID.meridian, VEHICLE_BY_ID.bastion];
     TRAFFIC_SPAWNS.forEach((spawn, index) => {
       const spec = specs[index % specs.length];
@@ -495,6 +513,8 @@ export class CrumpleGame {
     this.player.body.setRotation({ x: straight.x, y: straight.y, z: straight.z, w: straight.w }, true);
     this.player.syncVisual();
     this.garageYaw = 0;
+    this.camera.garage = false;
+    this.yard.setGarage(false);
     this.createTraffic();
     this.running = true;
     this.paused = false;
@@ -544,7 +564,9 @@ export class CrumpleGame {
     this.paused = true;
     this.running = false;
     this.input.reset();
-    this.traffic.dispose();
+    this.clearTraffic();
+    this.camera.garage = true;
+    this.yard.setGarage(true);
     this.ui.pause.hidden = true;
     this.ui.immobile.hidden = true;
     this.ui.hud.hidden = true;
