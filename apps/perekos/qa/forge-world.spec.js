@@ -19,7 +19,7 @@ test('Forge arena and spells are real online/offline-owned pixel assets',async({
    colors.add(opaque(x,y).join(','));
   return {both,loaded,court:forgeCourtStatus(),spells:forgeSpellsStatus(),
    size:[b.width,b.height],center:opaque(200,310),edge:opaque(4,310),
-   paver:opaque(76,330),wall:opaque(125,200),colors:colors.size};
+   paver:opaque(76,330),wall:opaque(125,200),wallPattern:Array.from(paint.getImageData(106,182,28,24).data),paverPattern:Array.from(paint.getImageData(202,338,28,24).data),colors:colors.size};
  });
  expect(data.both).toEqual([true,true]);
  expect(data.court).toBe('ready');expect(data.spells).toBe('ready');
@@ -28,7 +28,7 @@ test('Forge arena and spells are real online/offline-owned pixel assets',async({
  expect(data.center[3]).toBe(255);
  expect(data.edge[3]).toBe(255);
  expect(data.colors).toBeGreaterThanOrEqual(11);
- expect(data.wall).not.toEqual(data.paver);
+ expect(data.wallPattern).not.toEqual(data.paverPattern);
  await page.locator('#primary-action').click();
  await expect(page.locator('#controls')).toBeVisible();
  await page.evaluate(()=>new Promise(requestAnimationFrame));
