@@ -66,6 +66,10 @@ export function mountExhibitFrames(root){
     rim.style.setProperty('--frame-width',chrome+'px');
     rim.style.width=(width+chrome*2)+'px';
     rim.style.height=(height+chrome*2)+'px';
+    // Legacy mobile selectors use height:auto!important and aspect-ratio:4/3.
+    // The fitted size must win so the physical rim matches the source artwork.
+    rim.style.setProperty('width',(width+chrome*2)+'px','important');
+    rim.style.setProperty('height',(height+chrome*2)+'px','important');
     // A replaced IMG and the 600x450 restoration CANVAS must occupy
     // precisely the same content box. Never let intrinsic bitmap dimensions
     // create a different silhouette for the forged painting.
