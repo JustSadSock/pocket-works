@@ -511,6 +511,10 @@ export class Vehicle {
     return deriveDamageEffects(this.damage);
   }
 
+  get gear(): 'drive' | 'reverse' {
+    return this.selectedGear;
+  }
+
   get throttle() {
     return this.lastInput.throttle;
   }
