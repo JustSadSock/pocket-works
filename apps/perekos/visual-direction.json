@@ -5,7 +5,7 @@
   "direction": {
     "premise": "Two tiny, stubborn wizards have no idea how badly their own spell combinations will misbehave, but the duel still reads at a glance.",
     "composition": "A sunken hand-laid circular stone court beneath four burning lanterns; 3D stone obstacles and an inlaid mineral compass give the 400x620 fight a tangible place and readable focal region. Thumb controls remain on the outer edges.",
-    "shapeLanguage": "Six account-derived wizards with wide hats, class-specific equipment, individually swaying cloaks and articulated casting staves. Hand-laid asymmetrical flagstones, relief masonry, central compass, chipped stone and glowing torch wells.",
+    "shapeLanguage": "24×32 actual pixel silhouettes: six distinct heads and weapons with one restrained 15-entry palette and three Forge-authored motions per 8-way orientation. Account colors and one tiny MASKOT motif are visibly inherited without large accessories or oversized coats.",
     "surfaceAndMaterial": "Static court painter yields height-stacked stone blocks, chipped buttresses, moss, drains and warm lantern light. Bounded impact particles create soot/grit scars on the ground, fractured stone sparks, elemental shock rings and short physical screen kick.",
     "paletteLogic": "The arena uses muddy mineral greens and warm brown shadows to keep peach projectiles, gold sparks and a second reddish wizard distinguishable without electric neon.",
     "typography": "Headings use an old-book serif as a restrained signboard; interface text uses sturdy system sans, short Russian instructions and plain names such as Шар больнее.",
@@ -19,7 +19,7 @@
     "chromeTopology": "layered-panels",
     "dominantMotion": "sliding",
     "primaryVerb": "Run with one thumb, aim a single class-specific spell with the other, and craft three independent reaction chains between rounds.",
-    "physicalFeedback": "Staged casting animation (turning, walking feet, fluttering cape, raised glowing staff), 3D masonry, warm light and material-specific impact rings. Confirmed combat events alone produce pooled debris and scar decals; camera shakes no more than a few logical pixels and reduced-motion setting disables it.",
+    "physicalFeedback": "Compact pixel stances and one-to-three-pixel accents reveal shots, casts and blocks without expanding the fighters; the courtyard, camera shake and confirmed impact debris remain fixed-step client-only presentation.",
     "spatialRationale": "Borderless portrait arena, status on the top edge, left movement and right adjustable thumb aim; a character selector and three inset handwritten spell lanes replace the original single long build list.",
     "comparisons": [
       {
@@ -56,12 +56,22 @@
         "slug": "cavitation-lab",
         "spatialDifference": "Cavitation Lab is a fluid-physics instrumentation workspace organized around a tank and measurement readouts. Perekos is a hand-authored portrait dueling courtyard where two tiny wizard silhouettes and their physical spell traces own the frame, with sparse perimeter controls instead of experimental gauges.",
         "interactionDifference": "Cavitation Lab focuses on adjusting physical parameters and observing fluid behavior. Perekos uses moment-to-moment two-thumb movement, directional casting, hits, and between-round rune chains; the new stone debris is visual feedback for server-confirmed hits, not a physics-simulation UI."
+      },
+      {
+        "slug": "petri-forge",
+        "spatialDifference": "PetriForge gives a laboratory workspace to a large editable experiment grid with sidebar tools, whereas Perekos uses an immersive vertical duel arena with two 24x32 authored pixel combatants and controls on its perimeter.",
+        "interactionDifference": "Training policy agents and moving their goals in PetriForge differs from real-time thumb steering, aiming and arranging spell reaction runes between match rounds."
+      },
+      {
+        "slug": "shock-lab",
+        "spatialDifference": "Shock Lab builds physical bodies, flow sources, pipes and pressure traces in a material-construction canvas; Perekos presents a close-up enclosed fantasy duel court whose light UI exposes only immediate combat choices.",
+        "interactionDifference": "Shock Lab explores material response and boundary conditions through repeatable experiments. Perekos needs fast reactions to enemy spells and rune-driven tactics rather than editing continuous fluid sources and measurement probes."
       }
     ]
   },
   "production": {
-    "renderer": "Quick PWA uses a standalone 400x620 Canvas 2D low-resolution scene with deterministic pre-rendered masonry; simple DOM controls remain crisp and accessible.",
-    "focalAsset": "The physical sunken courtyard and distinct handheld wizards: aged masonry, inlaid compass, responsive clothing, weapon reach and fading impact scars. The real source is procedural authored Canvas 2D code, not external generated assets."
+    "renderer": "Quick PWA: authored 24x32 Universal Art Forge pixel sprites with nearest-neighbour Canvas composition at integer sprite scale, over a 400x620 deterministic masonry stage. DOM inputs stay crisp; Forge PNG, atlas metadata and index are offline-preloaded.",
+    "focalAsset": "The six 24×32 authored fighters and compact 15-color pixel atlas from app-owned Universal Art Forge source (asset-forge/mages.json) plus the hand-authored masonry arena. Palette-swapped personal avatar colors and restrained MASKOT insignia preserve identity without resorting to oversized procedural ornament."
   },
   "motion": {
     "character": "Movement and spells are instant and snappy, while robe and hat gently bob to keep the character alive and distinguish standing still from a frozen sprite.",
@@ -78,7 +88,7 @@
       "type": "click",
       "selector": "#primary-action"
     },
-    "expectedChange": "Screenshots must show non-repeating stone relief, clear six-sprite silhouettes, player-facing staff strike, real effects from an actual duel, meaningful contrast and no sideways scroll. All visual code leaves deterministic match snapshots untouched.",
+    "expectedChange": "Real 390x844 and desktop screenshots must show six tiny clean class silhouettes; 8 face directions and cast/walk frames without smoothing, existing arena and user portrait identity, real hit responses, readable projectiles and no clipping.",
     "capture": [
       "initial",
       "action",
