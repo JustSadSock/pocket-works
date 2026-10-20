@@ -24,7 +24,7 @@ import { TrafficSystem, TRAFFIC_SPAWNS, trafficPreset } from './traffic';
 import { Vehicle } from './vehicle';
 
 const FIXED_DT = 1 / 90;
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 
 type QaState = {
   version: string;
