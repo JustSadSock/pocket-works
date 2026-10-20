@@ -151,7 +151,7 @@
       "tag": "buttress"
     },
     {
-      "durationMs": 180,
+      "durationMs": 1000,
       "name": "brazier-0",
       "pivot": [
         16,
@@ -163,10 +163,10 @@
         32,
         32
       ],
-      "tag": "brazier"
+      "tag": "ivy"
     },
     {
-      "durationMs": 150,
+      "durationMs": 1000,
       "name": "brazier-1",
       "pivot": [
         16,
@@ -178,7 +178,7 @@
         32,
         32
       ],
-      "tag": "brazier"
+      "tag": "ivy"
     }
   ],
   "image": "court-tiles.png",
