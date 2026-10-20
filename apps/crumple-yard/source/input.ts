@@ -100,6 +100,9 @@ export class MobileDriveInput {
     this.state.throttle = 0;
     this.state.brake = 0;
     this.steerPointer = null;
+    // Browser blur/visibility changes can swallow keyup; stale key state
+    // must never restart the car's throttle after resuming a paused game.
+    this.keys.clear();
     this.elements.drivePedal.classList.remove('is-pressed');
     this.elements.brakePedal.classList.remove('is-pressed');
     this.paintSteer();
