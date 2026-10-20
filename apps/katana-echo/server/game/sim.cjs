@@ -376,6 +376,8 @@ function improveKatanaCombat(GameRoom) {
   const originalStep = proto.step;
   const originalKill = proto.killPlayer;
   const originalHandle = proto.handleInput;
+  const originalUpdatePlayer = proto.updatePlayer;
+  const originalAddPlayer = proto.addPlayer;
   const RADIUS = 0.48;
   const owner = e => e.isGhost ? e.ownerId : e.id;
   const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
@@ -397,17 +399,61 @@ function improveKatanaCombat(GameRoom) {
     }
     return false;
   };
+  proto.addPlayer=function(ws,name){
+    const p=originalAddPlayer.call(this,ws,name);
+    if(this.players.size>1){p.state.facing=Math.PI;p.inputState.mouseAngle=Math.PI;}
+    return p;
+  };
+  // A pressed-and-released button may arrive between simulation ticks.
+  // Preserve its edge on the authoritative state instead of dropping the action.
   proto.handleInput=function(id,payload){
     const p=this.players.get(id);
-    if(!p)return;
+    if(!p||!p.alive)return;
+    const stream=Number(payload?.stream)||0;
+    if(stream>0&&Number.isSafeInteger(stream)){
+      if(stream<(p.inputStream||0))return;
+      if(stream>(p.inputStream||0)){p.inputStream=stream;p.lastSequence=0;}
+    }else if(p.inputStream)return;
     const sequence=Number(payload?.seq)||0;
     if(sequence&&sequence<=(p.lastSequence||0))return;
     if(sequence)p.lastSequence=sequence;
+    const old=p.inputState||{};
+    if(payload?.lmb&&!old.lmb&&!p.state.attacking){
+      p.state.charge=Math.max(p.state.charge,95);
+    }
+    if(payload?.rmb&&!old.rmb&&p.state.shieldCooldown<=0&&!p.state.attacking){
+      p.state.shieldUp=true;
+      p.state.parryWindow=170;
+      p.state.shieldStrength=3;
+      p.state.shieldTap=165;
+    }
+    if(payload?.dash&&!old.dash)p.pendingDash=true;
     originalHandle.call(this,id,payload);
+  };
+  proto.updatePlayer=function(p,ms){
+    if(!p.alive)return;
+    if(p.pendingDash&&!p.inputState.dash)p.inputState={...p.inputState,dash:true};
+    originalUpdatePlayer.call(this,p,ms);
+    if(p.pendingDash){p.pendingDash=false;p.inputState.dash=false;}
   };
   proto.step=function(ms){
     if(this.players.size<2){this.clock+=ms;return;}
+    const wasReset=!!this.roundResetAt;
     originalStep.call(this,ms);
+    if(wasReset&&!this.roundResetAt){
+      let i=0;
+      for(const p of this.players.values()){
+        const facing=i++===0?0:Math.PI;
+        p.state.facing=facing;p.inputState={keys:{},lmb:false,rmb:false,dash:false,ghostToggle:false,mouseAngle:facing};
+        p.triggers={spawnGhost:false,toggleGhost:false};p.pendingDash=false;
+      }
+    }
+    if(!Number.isSafeInteger(this.eventSerial))this.eventSerial=0;
+    for(const p of this.players.values()){
+      for(const event of p.events){
+        if(!Number.isSafeInteger(event.id))event.id=++this.eventSerial;
+      }
+    }
   };
   proto.constrainToBounds=function(s){
     const bounds=this.map?.bounds||{w:22,h:14};
@@ -458,10 +504,14 @@ function improveKatanaCombat(GameRoom) {
     if(input.rmb&&!s.shieldUp&&s.shieldCooldown<=0&&!s.attacking){
       s.shieldUp=true;s.parryWindow=170;s.shieldStrength=3;
     }
-    if(!input.rmb&&s.shieldUp){s.shieldUp=false;s.parryWindow=0;}
+    s.shieldTap=Math.max(0,(s.shieldTap||0)-ms);
+    if(!input.rmb&&s.shieldUp&&s.shieldTap<=0){s.shieldUp=false;s.parryWindow=0;}
     if(input.lmb&&!s.shieldUp&&!s.attacking)s.charge=Math.min(1800,Math.max(80,s.charge+ms));
     else if(!input.lmb&&s.charge>0){
-      s.attacking=true;s.attackTimer=200;s.attackPower=s.charge;s.charge=0;
+      if(!s.shieldUp&&!s.attacking){
+        s.attacking=true;s.attackTimer=200;s.attackPower=s.charge;
+      }
+      s.charge=0;
     }
     if(s.attacking){s.attackTimer-=ms;if(s.attackTimer<=0){s.attacking=false;s.attackPower=0;}}
   };

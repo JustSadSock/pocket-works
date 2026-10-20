@@ -64,7 +64,13 @@
         <option value="channel-echo">Канал · управляемое эхо</option>
       </select></label>
       <label>ИМЯ БОЙЦА<input id="name" maxlength="22" autocomplete="nickname" value="Ронин" aria-label="Имя бойца"></label>
+      <label class="difficulty-option">СЛОЖНОСТЬ ТРЕНИРОВКИ<select id="difficulty" aria-label="Сложность ИИ-соперника">
+       <option value="easy">Ученик · спокойный темп</option>
+       <option value="normal" selected>Боец · сбалансированный</option>
+       <option value="hard">Мастер · агрессивный</option>
+      </select></label>
      </div>
+     <p id="training-record" aria-live="polite">Тренировка · победы 0 / поражения 0</p>
      <div class="menu-bottom"><span>WASD — идти · Мышь — прицел · ЛКМ — удар · ПКМ — парирование · Пробел — рывок · E — эхо</span></div>
      <div class="menu-exit"><button id="resume" type="button" hidden>Вернуться в бой</button><button id="leave" type="button" hidden>Покинуть дуэль</button></div>
     </div>
@@ -73,5 +79,5 @@
   <div id="desktop-help" aria-hidden="true"><span>W A S D · ДВИЖЕНИЕ</span><span>МЫШЬ · ПРИЦЕЛ</span><span>ЛКМ · УДАР</span><span>ПКМ / K · ПАРИРОВАТЬ</span><span>SPACE · РЫВОК</span><span>E · ЭХО</span></div>
  </main>
  <script type="module" src="./app.js"></script>
- <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Katana Echo" data-app-version="0.2.0"></script>
+ <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Katana Echo" data-app-version="0.3.0"></script>
 </body></html>

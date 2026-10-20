@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'katana-echo-';
-const CACHE_NAME = 'katana-echo-v0.2.0';
-const APP_VERSION = '0.2.0';
+const CACHE_NAME = 'katana-echo-v0.3.0';
+const APP_VERSION = '0.3.0';
 const RELEASE_DATE = '2026-10-21';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Спарринг с ИИ без сети, переработанная боевая физика, додзё, визуальные эффекты и новое управление."];
+const RELEASE_NOTES = ["Надёжное восстановление сети, короткие нажатия, три сложности ИИ, счёт тренировок и новая портретная сцена."];
 const APP_SHELL = [
   "./",
   "./index.html",
