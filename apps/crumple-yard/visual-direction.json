@@ -4,12 +4,12 @@
   "product": "crumple-yard",
   "direction": {
     "premise": "A compact crash-test yard where accumulated dents and mechanical failures remain on the driven car.",
-    "composition": "The car stays near the center of a full-screen oblique 3D yard. Fixed world azimuth allows the player to read turns and collision geometry without camera rotation.",
-    "shapeLanguage": "Three authored silhouettes with continuous crushable panels; independent glazing, rim and tyre construction, differing hatch/sedan/SUV rooflines and detailed crash obstacles.",
+    "composition": "A large readable damaged vehicle in a garage inspection stage (side-aligned controls on desktop, vehicle above bottom controls on phones), then an independent fixed-angle or chasing 3D physical crash course.",
+    "shapeLanguage": "Each car class has a purpose-built continuous crushable shell, independent damageable roof, furnished glazing, detailed alloy-and-rubber wheels; collision obstacles use industrial form and hazard geometry.",
     "surfaceAndMaterial": "Automotive enamel with accumulating scuffed vertex color, dark rubber, machined aluminum, blue-tinted glazing, chipped concrete and yellow industrial safety signage.",
     "paletteLogic": "Muted daylight concrete is the field; vivid automotive paint makes local deformation visible. Yellow collision warnings contrast with dark galvanized crash structures.",
     "typography": "Existing compact instrument labels remain around the perimeter. New camera switches have explicit Russian labels in the garage and pause sheet.",
-    "signature": "Interactive garage car turntable leads directly to realistic heavy impacts and permanently scuffed dent vertices, detaching parts and degrading mechanical handling.",
+    "signature": "Switch from an indexed garage test plinth to a physics obstacle field. Wheel motion, force measurements, dents, and a persistent reverse gear all derive from real simulated objects.",
     "distinction": "FOG exposes geographical strategy and MEAT.EXE uses first-person navigation; this camera frames a third-person deforming vehicle in a fixed world direction."
   },
   "architecture": {
@@ -56,6 +56,11 @@
         "slug": "petri-forge",
         "spatialDifference": "PetriForge presents agent lab boards and trajectory analysis; CRUMPLE centers a deformable third-person vehicle within a rigid-body test yard.",
         "interactionDifference": "PetriForge controls training and agent experiments; CRUMPLE is an immediately controllable car with post-impact drivability changes."
+      },
+      {
+        "slug": "katana-echo",
+        "spatialDifference": "Katana Echo is a timber sword-fighting dojo dominated by a 2D-like melee duel lane; CRUMPLE is a physically traversable Babylon test yard, with a separate inspection plinth and a large 3D car that can rotate.",
+        "interactionDifference": "Katana Echo is direct sword slashes, guarded movement and replayed shadows; CRUMPLE is analog throttle/steering, Rapier suspension forces and contact-dependent long-lived structural damage."
       }
     ]
   },
