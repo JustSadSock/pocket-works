@@ -1220,6 +1220,148 @@ var require_sim = __commonJS({
 // apps/katana-echo/server/entry.js
 var import_sim = __toESM(require_sim(), 1);
 var { GameRoom } = import_sim.default;
+
+/* Katana Echo v0.2: authoritative combat, collision and responsive movement.
+   Kept alongside the existing simulation for older serialized rooms. */
+function improveKatanaCombat(GameRoom) {
+  const proto = GameRoom.prototype;
+  const originalStep = proto.step;
+  const originalKill = proto.killPlayer;
+  const originalHandle = proto.handleInput;
+  const RADIUS = 0.48;
+  const owner = e => e.isGhost ? e.ownerId : e.id;
+  const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
+  const faceDot = (a,b) => {
+    const d=Math.max(0.00001,distance(a,b));
+    return ((b.x-a.x)*Math.cos(a.facing)+(b.y-a.y)*Math.sin(a.facing))/d;
+  };
+  const betweenWalls = (map,a,b) => {
+    for(const w of map.walls||[]){
+      const left=w.x-w.w/2-.035,right=w.x+w.w/2+.035,top=w.y-w.h/2-.035,bottom=w.y+w.h/2+.035;
+      let t0=0,t1=1;
+      const dx=b.x-a.x,dy=b.y-a.y;
+      for(const [p,q] of [[-dx,a.x-left],[dx,right-a.x],[-dy,a.y-top],[dy,bottom-a.y]]){
+        if(Math.abs(p)<1e-9){if(q<0){t0=2;break;}continue;}
+        const t=q/p;
+        if(p<0)t0=Math.max(t0,t);else t1=Math.min(t1,t);
+      }
+      if(t0<=t1&&t0<=1&&t1>=0)return true;
+    }
+    return false;
+  };
+  proto.handleInput=function(id,payload){
+    const p=this.players.get(id);
+    if(!p)return;
+    const sequence=Number(payload?.seq)||0;
+    if(sequence&&sequence<=(p.lastSequence||0))return;
+    if(sequence)p.lastSequence=sequence;
+    originalHandle.call(this,id,payload);
+  };
+  proto.step=function(ms){
+    if(this.players.size<2){this.clock+=ms;return;}
+    originalStep.call(this,ms);
+  };
+  proto.constrainToBounds=function(s){
+    const bounds=this.map?.bounds||{w:22,h:14};
+    s.x=Math.max(-bounds.w/2+RADIUS,Math.min(bounds.w/2-RADIUS,s.x));
+    s.y=Math.max(-bounds.h/2+RADIUS,Math.min(bounds.h/2-RADIUS,s.y));
+    for(let pass=0;pass<3;pass++){
+      let hit=false;
+      for(const w of this.map?.walls||[]){
+        const lx=w.x-w.w/2,rx=w.x+w.w/2,ty=w.y-w.h/2,by=w.y+w.h/2;
+        const nx=Math.max(lx,Math.min(rx,s.x)),ny=Math.max(ty,Math.min(by,s.y));
+        const dx=s.x-nx,dy=s.y-ny,d2=dx*dx+dy*dy;
+        if(d2>=RADIUS*RADIUS)continue;
+        hit=true;
+        if(d2>1e-8){const k=(RADIUS-Math.sqrt(d2))/Math.sqrt(d2);s.x+=dx*k;s.y+=dy*k;}
+        else {
+          const edges=[[Math.abs(s.x-lx),lx-RADIUS,'x'],[Math.abs(rx-s.x),rx+RADIUS,'x'],[Math.abs(s.y-ty),ty-RADIUS,'y'],[Math.abs(by-s.y),by+RADIUS,'y']];
+          edges.sort((a,b)=>a[0]-b[0]);s[edges[0][2]]=edges[0][1];
+        }
+        s.vx*=.55;s.vy*=.55;
+      }
+      s.x=Math.max(-bounds.w/2+RADIUS,Math.min(bounds.w/2-RADIUS,s.x));
+      s.y=Math.max(-bounds.h/2+RADIUS,Math.min(bounds.h/2-RADIUS,s.y));
+      if(!hit)break;
+    }
+  };
+  proto.applyInputToActor=function(s,input,ms){
+    const dt=Math.min(.05,Math.max(0,ms)/1000), k=input.keys||{};
+    let mx=Number(!!k.d)-Number(!!k.a),my=Number(!!k.s)-Number(!!k.w);
+    const mag=Math.hypot(mx,my);if(mag){mx/=mag;my/=mag;}
+    if(Number.isFinite(input.mouseAngle))s.facing=Math.atan2(Math.sin(input.mouseAngle),Math.cos(input.mouseAngle));
+    s.dashCooldown=Math.max(0,s.dashCooldown-ms);
+    s.shieldCooldown=Math.max(0,s.shieldCooldown-ms);
+    s.parryWindow=Math.max(0,s.parryWindow-ms);
+    s.stagger=Math.max(0,s.stagger-ms);
+    if(input.dash&&s.dashCooldown<=0&&s.stagger<=0){
+      const dx=mag?mx:Math.cos(s.facing),dy=mag?my:Math.sin(s.facing);
+      s.vx=dx*15;s.vy=dy*15;s.dashCooldown=750;
+    }
+    const dashing=s.dashCooldown>565;
+    s.vx+=mx*(s.stagger?12:57)*dt;
+    s.vy+=my*(s.stagger?12:57)*dt;
+    const friction=Math.pow(dashing?.975:.85,dt*60);
+    s.vx*=friction;s.vy*=friction;
+    const speed=Math.hypot(s.vx,s.vy),max=dashing?15:(s.speed||7);
+    if(speed>max){s.vx*=max/speed;s.vy*=max/speed;}
+    s.x+=s.vx*dt;s.y+=s.vy*dt;
+    this.constrainToBounds(s);
+    if(input.rmb&&!s.shieldUp&&s.shieldCooldown<=0&&!s.attacking){
+      s.shieldUp=true;s.parryWindow=170;s.shieldStrength=3;
+    }
+    if(!input.rmb&&s.shieldUp){s.shieldUp=false;s.parryWindow=0;}
+    if(input.lmb&&!s.shieldUp&&!s.attacking)s.charge=Math.min(1800,Math.max(80,s.charge+ms));
+    else if(!input.lmb&&s.charge>0){
+      s.attacking=true;s.attackTimer=200;s.attackPower=s.charge;s.charge=0;
+    }
+    if(s.attacking){s.attackTimer-=ms;if(s.attackTimer<=0){s.attacking=false;s.attackPower=0;}}
+  };
+  proto.resolvePair=function(a,b){
+    if(owner(a)===owner(b))return;
+    const canHit=(from,to)=>{
+      const s=from.state,t=to.state;
+      const range=1.5+Math.min(1800,s.attackPower||0)/2400;
+      return from.alive&&to.alive&&s.attacking&&distance(s,t)<=range+RADIUS
+        &&faceDot(s,t)>.40&&!betweenWalls(this.map,s,t);
+    };
+    const ah=canHit(a,b),bh=canHit(b,a);
+    if(ah&&bh){this.emitEvent('clash',[a,b]);a.state.attacking=false;b.state.attacking=false;
+      a.state.stagger=Math.max(a.state.stagger,170);b.state.stagger=Math.max(b.state.stagger,170);return;}
+    if(ah)this.tryHit(a,b);
+    else if(bh)this.tryHit(b,a);
+  };
+  proto.tryHit=function(a,b){
+    if(owner(a)===owner(b)||!a.alive||!b.alive||!a.state.attacking)return;
+    const s=a.state,t=b.state;
+    const range=1.5+Math.min(1800,s.attackPower||0)/2400;
+    if(distance(s,t)>range+RADIUS||faceDot(s,t)<=.40||betweenWalls(this.map,s,t))return;
+    s.attacking=false;
+    if(t.shieldUp&&faceDot(t,s)>.15){
+      if(t.parryWindow>0){
+        s.stagger=460;t.shieldUp=false;t.shieldCooldown=320;t.parryWindow=0;
+        if(b.events)b.events.push({type:'parry',target:a.id});
+        if(a.events)a.events.push({type:'parried',target:b.id});
+      }else{
+        t.shieldStrength-=s.attackPower>=1200?2:1;
+        if(t.shieldStrength<=0){t.shieldUp=false;t.shieldCooldown=1400;}
+        if(b.events)b.events.push({type:'block',target:a.id});
+      }
+      return;
+    }
+    if(b.isGhost){b.alive=false;if(a.events)a.events.push({type:'ghostBreak',target:b.id});return;}
+    this.killPlayer(b,a);
+  };
+  proto.killPlayer=function(player,killer){
+    if(!player.alive)return;
+    const id=owner(killer||{id:''});
+    const champion=this.players.get(id);
+    if(champion&&champion.id!==player.id)champion.score=(champion.score||0)+1;
+    originalKill.call(this,player,killer);
+  };
+}
+improveKatanaCombat(GameRoom);
+
 var copy = (v) => structuredClone(v);
 function packFrame(f) {
   const i = f.input, s = f.state;
@@ -1289,7 +1431,7 @@ var entry_default = {
     }
     if (m?.type === "input") {
       const i = m.payload || {};
-      room.handleInput(player.id, { keys: Object.fromEntries(["w", "a", "s", "d"].map((k) => [k, !!i.keys?.[k]])), mouseAngle: Number.isFinite(i.mouseAngle) ? i.mouseAngle : 0, lmb: !!i.lmb, rmb: !!i.rmb, dash: !!i.dash, ghostToggle: !!i.ghostToggle });
+      room.handleInput(player.id, { keys: Object.fromEntries(["w", "a", "s", "d"].map((k) => [k, !!i.keys?.[k]])), mouseAngle: Number.isFinite(i.mouseAngle) ? i.mouseAngle : 0, seq: Number.isSafeInteger(i.seq) ? i.seq : 0, lmb: !!i.lmb, rmb: !!i.rmb, dash: !!i.dash, ghostToggle: !!i.ghostToggle });
       p.lastInputAt = Date.now();
     } else if (m?.type === "ready") room.markReady(player.id);
     else if (m?.type !== "sync") throw Error("\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u0430");
@@ -1297,7 +1439,7 @@ var entry_default = {
   },
   viewForPlayer({ state }) {
     const room = decode(state);
-    return { phase: room.players.size < 2 ? "lobby" : room.roundResetAt ? "round-end" : "playing", room: room.id, map: room.map, mode: room.mode, players: [...room.players.values()].map((p) => ({ id: p.id, name: p.name, alive: p.alive, state: p.state, ghostMode: p.ghostMode, ghost: { cooldown: p.ghost.cooldown, energy: p.ghost.energy, active: p.ghost.active }, ghostActor: p.ghostActor, events: p.events.slice(-8) })) };
+    return { phase: room.players.size < 2 ? "lobby" : room.roundResetAt ? "round-end" : "playing", room: room.id, map: room.map, mode: room.mode, players: [...room.players.values()].map((p) => ({ id: p.id, name: p.name, alive: p.alive, score: p.score || 0, state: p.state, ghostMode: p.ghostMode, ghost: { cooldown: p.ghost.cooldown, energy: p.ghost.energy, active: p.ghost.active }, ghostActor: p.ghostActor, events: p.events.slice(-8) })) };
   }
 };
 export {
