@@ -1,3 +1,4 @@
+import {drawForgeVolley,drawForgeContacts} from './forge-spells.mjs';
 // PEREKOS / Tangible spell silhouettes, v0.12
 // A single renderer replaces the three overlaid legacy projectile renderers.
 // Every projectile comes from state.shots. Every impact is a confirmed FX id.
@@ -48,6 +49,8 @@ function rectifiable(q){
 }
 export function drawKineticProjectiles(ctx,state,time=0,{reduced=false}={}){
  if(!ctx||state?.phase!=='fight'||!Array.isArray(state.shots))return 0;
+ const forged=drawForgeVolley(ctx,state,time,{reduced});
+ if(forged!==null)return forged;
  let painted=0;
  // Prefer recent list ordering exactly as submitted by the simulation;
  // don't sort or mutate it, even in dense rune builds.
@@ -171,6 +174,7 @@ export class ContactTheater{
  }
  draw(ctx,reduced=false){
   if(!ctx)return;
+  if(drawForgeContacts(ctx,this.contacts,reduced))return;
   for(const c of this.contacts){
    const t=clamp(c.age/c.life,0,1),fade=1-t,reach=8+27*(1-(1-t)**2),heavy=c.style==='rock'||c.style==='wave';
    ctx.save();ctx.translate(c.x,c.y);ctx.globalAlpha=.72*fade;
