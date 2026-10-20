@@ -46,3 +46,78 @@ test('training engine mirrors PocketNet rules without a network connection',asyn
  assert.equal(view.players.length,2);assert.equal(view.phase,'playing');
  assert.ok(view.players.every(p=>typeof p.score==='number'),'score in view');
 });
+
+test('ultra-short taps survive network packets with zero time between press and release',()=>{
+ const actual=Date.now;let now=1_000_000;Date.now=()=>now;
+ try{
+  let state=module.createRoom({player:{id:'a',name:'A'},payload:{mode:'echo-trap'}}).state;
+  state=module.onJoin({state,player:{id:'b',name:'B'}}).state;
+  // Test all buttons without relying on a long-held browser pointer.
+  const send=(seq,payload)=>{state=module.onMessage({state,player:{id:'a'},payload:{type:'input',payload:{seq,keys:{},mouseAngle:0,...payload}}}).state;};
+  send(1,{lmb:true});send(2,{lmb:false});
+  assert.ok(state.players.find(p=>p.id==='a').state.charge>=95,'tap is captured on pointerdown');
+  now+=1000/60;send(3,{});
+  assert.equal(module.viewForPlayer({state}).players.find(p=>p.id==='a').state.attacking,true,'released tap produces an attack');
+  now+=1000/60;send(4,{rmb:true});send(5,{rmb:false});
+  now+=1000/60;send(6,{});
+  const guard=module.viewForPlayer({state}).players.find(p=>p.id==='a').state;
+  assert.equal(guard.shieldUp,true,'quick shield remains raised to offer a parry window');
+  assert.ok(guard.parryWindow>0,'parry window survives sub-frame input');
+  now+=210;send(7,{});
+  assert.equal(module.viewForPlayer({state}).players.find(p=>p.id==='a').state.shieldUp,false,'tap guard expires');
+  send(8,{dash:true});send(9,{dash:false});
+  now+=1000/60;send(10,{});
+  const dash=module.viewForPlayer({state}).players.find(p=>p.id==='a').state;
+  assert.ok(dash.dashCooldown>0,'one-shot dash was not dropped');
+  const before=JSON.stringify(module.viewForPlayer({state}).players.find(p=>p.id==='a').state);
+  send(9,{lmb:true}); // stale sequence must never resurrect an action
+  const after=JSON.stringify(module.viewForPlayer({state}).players.find(p=>p.id==='a').state);
+  assert.equal(before,after,'stale input ignored');
+ }finally{Date.now=actual;}
+});
+test('new round clears held input and faces both duelists towards each other',()=>{
+ const room=new GameRoom('neutral-reset','echo-trap',()=>{});
+ room.map.walls=[];
+ const a=room.addPlayer(null,'A'),b=room.addPlayer(null,'B');
+ assert.ok(Math.abs(b.state.facing-Math.PI)<0.01);
+ room.handleInput(a.id,{keys:{d:true},lmb:true,dash:true,rmb:true});
+ room.handleInput(b.id,{keys:{w:true},lmb:true,ghostToggle:true});
+ a.state.x=0;a.state.y=0;b.state.x=1;b.state.y=0;
+ a.state.attacking=true;a.state.attackPower=400;a.state.facing=0;
+ room.tryHit(a,b);assert.equal(b.alive,false);
+ room.step(600);
+ assert.equal(a.inputState.lmb,false);
+ assert.equal(b.inputState.lmb,false);
+ assert.equal(a.inputState.dash,false);
+ assert.deepEqual(a.inputState.keys,{});
+ assert.equal(a.state.facing,0);
+ assert.equal(b.state.facing,Math.PI);
+ assert.equal(a.pendingDash,false);
+ assert.equal(a.triggers.spawnGhost,false);
+});
+test('version 3 rules remain immutable and shared exactly with offline practice',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const {fileURLToPath}=await import('node:url');
+ const {dirname,resolve}=await import('node:path');
+ const dir=dirname(fileURLToPath(import.meta.url));
+ const read=path=>readFileSync(resolve(dir,'..',path),'utf8');
+ const bundled=read('server/module.ts');
+ assert.equal(read('training-engine.js'),bundled);
+ assert.equal(read('../../pocketnet/module-versions/katana-echo/v3.ts'),bundled);
+ const lock=JSON.parse(read('../../pocketnet/modules.lock.json'));
+ assert.equal(lock['katana-echo'].current,'v3');
+ assert.deepEqual(lock['katana-echo'].versions,['v1','v2','v3']);
+});
+test('event identifiers advance monotonically and survive serialization',()=>{
+ const room=new GameRoom('events','echo-trap',()=>{});
+ room.map.walls=[];
+ const a=room.addPlayer(null,'A'),b=room.addPlayer(null,'B');
+ a.state.x=0;a.state.y=0;b.state.x=1;b.state.y=0;a.state.facing=0;
+ a.state.attacking=true;a.state.attackPower=300;
+ room.step(16.67);
+ const ids=[...a.events,...b.events].map(e=>e.id);
+ assert.ok(ids.length>0&&ids.every(Number.isSafeInteger));
+ assert.equal(new Set(ids).size,ids.length);
+ room.step(16.67);
+ assert.equal(room.eventSerial,ids.length);
+});
