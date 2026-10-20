@@ -1,5 +1,6 @@
 // PEREKOS — The sunken dueling court. Static art, rendered once at 400×620.
 import {carveStoneFloor,carveButtressFace} from './court-materials.mjs';
+import {renderForgeCourt,drawForgeCourtAtmosphere} from './forge-court.mjs';
 // No network, randomness from Math.random, or gameplay state is consulted.
 export const ART_WIDTH=400,ART_HEIGHT=620;
 const hash=n=>{let x=n>>>0;x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296};
@@ -131,6 +132,8 @@ function lantern(c,x,y,side){
  px(c,x-2,y+5,4,5,'#a09c72');
 }
 export function createCourtBackdrop(walls=[]){
+ const forged=renderForgeCourt(walls);
+ if(forged)return forged;
  const canvas=document.createElement('canvas');canvas.width=ART_WIDTH;canvas.height=ART_HEIGHT;
  const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
  mosaic(c);
@@ -140,6 +143,7 @@ export function createCourtBackdrop(walls=[]){
  return canvas;
 }
 export function drawCourtAtmosphere(ctx,time,reduced=false){
+ if(drawForgeCourtAtmosphere(ctx,time,reduced))return;
  // Low-cost animated torch pools & motes; combat characters stay high contrast.
  ctx.save();
  const t=reduced?0:time;
