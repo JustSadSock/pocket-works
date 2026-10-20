@@ -13,9 +13,9 @@
           "url": "assets/mages.json"
         },
         "image": {
-          "bytes": 110781,
+          "bytes": 7470,
           "height": 32,
-          "sha256": "606b7293dafdcb334018eb4b1b1de298fae7261e9075bb5faa0fb7c5afcb1bd1",
+          "sha256": "fd6a96df71f7c95678bdd3d5be080081d074acfe1a412e451e368e64fbcc6d00",
           "url": "assets/mages.png",
           "width": 3456
         }
@@ -27,7 +27,7 @@
         "origin": "Original authored 24x32 multi-layer silhouettes and animation frames for Perekos"
       },
       "seed": 20261020,
-      "tool": "12.3.0"
+      "tool": "10.2.0"
     }
   ],
   "manifestSha256": "07c4ef9a3f3e7aa783b4ea4756ef3d47ef777f4dd0203b4c71c35b5ed1959147",
