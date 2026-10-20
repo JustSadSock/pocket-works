@@ -47,3 +47,12 @@ Version 1.2.0 adds a fixed-world-azimuth follow camera by default. Toggle fixed/
 - A dedicated application smoke visual suite captures garage, active driving and pause states on phone and desktop.
 
 Mini Car 3D remains a separate app: no shared modules, linked save games or runtime dependencies were introduced.
+
+## Version 1.4 — inspection, gameplay loop and source review
+
+- Garage mode now frames the vehicle separately from driving, with a physical-looking indexed inspection platform. On desktop the car is the main stage and the console is arranged to the left; on phones the preview is framed above the selection buttons.
+- A roof insert, dashboard, seats, rear seats, headrests and steering wheel make the glazing show an occupied cabin rather than a hollow cage. Roof panel and windshield have independent damage reactions.
+- Crash barrels and crates are close to the spawn. Their Rapier rigid bodies, collision categories and contact materials are real, not decorative obstacles. The initial positions are restored when starting a new driving session from the garage.
+- The HUD reports measured force (kN) and relative closing speed (km/h) rather than incorrectly identifying closing speed as delta-v.
+- Brake/reverse gear transitions are independently regression-tested; hidden-key stale state and teardown collider/shadow bookkeeping have been repaired.
+- The new automated screenshot sequence records Kestrel, Bastion and Meridian, driving, and pause states in Chromium and WebKit on mobile and desktop. Real visual approval still requires reviewing those screenshots.
