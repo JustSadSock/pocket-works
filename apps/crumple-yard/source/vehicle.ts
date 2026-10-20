@@ -24,6 +24,7 @@ import {
 } from './damage';
 import { DeformableShell, quaternionFromRapier } from './deformable-shell';
 import { buildVehicleArt } from './vehicle-art';
+import { longitudinalIntent } from './drivetrain';
 import type { CollisionRegistry, DynamicProp } from './physics-types';
 
 const WHEEL_NAMES = ['FL', 'FR', 'RL', 'RR'] as const;
@@ -196,11 +197,9 @@ export class Vehicle {
     // A single pedal serves brake -> reverse, but reverse must remain engaged
     // as the car gains speed. The former speedAbs guard cancelled reverse
     // immediately above 1.2 m/s and made reversing pulse in place.
-    if (input.throttle > 0.15) this.selectedGear = 'drive';
-    if (input.throttle < 0.15 && input.brake > 0.5 && speedAbs < 1.2) this.selectedGear = 'reverse';
-    const reversing = this.selectedGear === 'reverse' && input.throttle < 0.15 && input.brake > 0.1;
-    const reverse = reversing ? input.brake * 0.65 : 0;
-    const brake = reversing ? 0 : input.brake;
+    const drive = longitudinalIntent(this.selectedGear, speedAbs, input.throttle, input.brake);
+    this.selectedGear = drive.gear;
+    const reverse = drive.reverse, brake = drive.brake;
 
     const requestedSteer = input.steer + effects.steeringPull;
     const deadband = effects.steeringPlay * 0.55;
