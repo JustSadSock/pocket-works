@@ -37,6 +37,7 @@ function toRapierQuaternion(rotation: Vector3) {
 
 export class CrashYard {
   readonly dynamicProps: DynamicProp[] = [];
+  private showroom: TransformNode | null = null;
   readonly trafficWaypoints = [
     new Vector3(-14, 0.2, 24),
     new Vector3(13, 0.2, 24),
@@ -251,6 +252,62 @@ export class CrashYard {
     this.dynamicProps.push({ body, mesh: root });
   }
 
+  private barrel(name: string, position: Vector3) {
+    const radius = 0.34, height = 0.87;
+    const body = this.world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic().setTranslation(position.x, position.y, position.z)
+        .setLinearDamping(0.23).setAngularDamping(0.2).setCanSleep(true)
+    );
+    const collider = this.world.createCollider(
+      RAPIER.ColliderDesc.cylinder(height / 2, radius)
+        .setMass(62).setFriction(0.7).setRestitution(0.08)
+        .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS)
+        .setContactForceEventThreshold(650), body
+    );
+    this.register(collider, { stiffness: 0.48, area: 0.3, mass: 62, material: 'soft', label: name, kind: 'prop' });
+    const root = new TransformNode(name + '-root', this.scene);
+    const drum = MeshBuilder.CreateCylinder(name, { height, diameter: radius * 2, tessellation: 18 }, this.scene);
+    drum.parent = root;
+    drum.material = this.orange;
+    for (const y of [-0.36, -0.19, 0.19, 0.36]) {
+      const band = MeshBuilder.CreateCylinder(name + '-rib', { height: 0.055, diameter: radius * 2.06, tessellation: 18 }, this.scene);
+      band.parent = root; band.position.y = y; band.material = this.steel;
+    }
+    const lid = MeshBuilder.CreateCylinder(name + '-lid', { height: 0.03, diameter: radius * 1.75, tessellation: 18 }, this.scene);
+    lid.parent = root; lid.position.y = height / 2 + 0.017; lid.material = this.metalLight;
+    this.dynamicProps.push({ body, mesh: root });
+  }
+
+  private makeShowroom() {
+    const root = new TransformNode('garage-rotary-test-plinth', this.scene);
+    root.position.set(0, 0, -24);
+    this.showroom = root;
+    const deck = MeshBuilder.CreateCylinder('garage-deck', { height: 0.35, diameter: 10.3, tessellation: 60 }, this.scene);
+    deck.position.y = 0.35; deck.parent = root; deck.material = this.steel;
+    const surface = MeshBuilder.CreateCylinder('garage-surface', { height: 0.04, diameter: 10.1, tessellation: 60 }, this.scene);
+    surface.position.y = 0.53; surface.parent = root; surface.material = this.metalLight;
+    const groove = MeshBuilder.CreateTorus('garage-index-ring', { diameter: 9.2, thickness: 0.09, tessellation: 64 }, this.scene);
+    groove.position.y = 0.565; groove.parent = root; groove.material = this.warning;
+    for (let index = 0; index < 20; index++) {
+      const angle = index * Math.PI / 10;
+      const mark = MeshBuilder.CreateBox('garage-degree-mark-' + index, {
+        width: index % 5 === 0 ? 0.22 : 0.10, height: 0.025,
+        depth: index % 5 === 0 ? 0.63 : 0.3
+      }, this.scene);
+      mark.parent = root;
+      mark.position.set(Math.sin(angle) * 4.0, 0.567, Math.cos(angle) * 4.0);
+      mark.rotation.y = angle;
+      mark.material = index % 5 === 0 ? this.warning : this.paint;
+    }
+    const center = MeshBuilder.CreateBox('garage-spine', { width: 0.11, height: 0.024, depth: 6.7 }, this.scene);
+    center.parent = root; center.position.y = 0.57; center.material = this.warning;
+    center.visibility = 0.6;
+  }
+
+  setGarage(visible: boolean) {
+    this.showroom?.setEnabled(visible);
+  }
+
   private build() {
     const groundBody = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.22, 0));
     const groundCollider = this.world.createCollider(RAPIER.ColliderDesc.cuboid(38, 0.2, 38).setFriction(1.16).setRestitution(0.01), groundBody);
@@ -282,6 +339,7 @@ export class CrashYard {
       { name: 'west-wall', position: new Vector3(-35, 1.2, 0), size: new Vector3(0.8, 2.4, 70) }
     ];
     boundary.forEach((entry) => this.fixedBox(entry));
+    this.makeShowroom();
 
     this.fixedBox({ name: 'impact-wall', position: new Vector3(0, 1.05, 28), size: new Vector3(15, 2.1, 1.4), stiffness: 2.05, area: 1.6 });
     this.fixedBox({ name: 'offset-wall-left', position: new Vector3(-11.5, 0.75, 12), size: new Vector3(6.5, 1.5, 0.9), stiffness: 1.9, area: 1.15 });
@@ -290,6 +348,14 @@ export class CrashYard {
     this.pole('pole-a', new Vector3(-5.5, 1.9, 15));
     this.pole('pole-b', new Vector3(7.2, 1.9, 18));
     this.pole('pole-c', new Vector3(20, 1.9, -9), 0.23);
+
+    // Immediate impact choices without forcing a 50-metre empty run-up.
+    for (const [index, x, z] of [
+      [0, -4.2, -11], [1, -3.4, -11.3], [2, 4.4, -11],
+      [3, 5.2, -11.3], [4, -0.4, -4.5], [5, 0.4, -4.5]
+    ]) this.barrel('impact-drum-' + index, new Vector3(x, 0.55, z));
+    this.crate('trial-box-a', new Vector3(-2.0, 0.55, -7), 0.88);
+    this.crate('trial-box-b', new Vector3(2.0, 0.55, -7), 0.88);
 
     for (let i = 0; i < 5; i += 1) {
       this.fixedBox({
