@@ -1,6 +1,7 @@
 // PEREKOS v0.8 — tactical warnings from public, authoritative combat state.
 // No prediction changes hitboxes or exposes runes, hidden inputs, or queued events.
 import {W as WIDTH,H as HEIGHT,WALLS} from './core.mjs';
+import {forgeSpellsStatus} from './forge-spells.mjs';
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
 const finite=n=>typeof n==='number'&&Number.isFinite(n);
 const MAX_SHOTS=12,MAX_MINES=6;
@@ -153,6 +154,17 @@ function spill(ctx,x,y,r,rgb,strength){
 // sourced from a visible active projectile, mine or actual actor status.
 export function drawSpellLighting(ctx,state,time=0,reduced=false){
  if(!ctx||!state||state.phase!=='fight'||typeof ctx.createRadialGradient!=='function')return;
+ if(forgeSpellsStatus()==='ready'){
+  // One-pixel bounced light instead of a screen-blended radial gradient.
+  for(const q of (state.shots||[]).slice(0,12)){
+   if(!finite(q.x)||!finite(q.y))continue;
+   const col=q.element==='storm'?'#73ada0':q.element==='stone'?'#9fbb8a':'#bd8152';
+   ctx.fillStyle=col;ctx.globalAlpha=.28;
+   ctx.fillRect(Math.round(q.x)-6,Math.round(q.y)+4,12,1);
+   ctx.fillRect(Math.round(q.x)-2,Math.round(q.y)+6,4,1);
+  }
+  ctx.globalAlpha=1;return;
+ }
  ctx.save();ctx.globalCompositeOperation='screen';
  for(const q of (Array.isArray(state.shots)?state.shots:[]).slice(0,8)){
   if(!finite(q.x)||!finite(q.y))continue;

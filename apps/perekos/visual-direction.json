@@ -4,12 +4,12 @@
   "product": "perekos",
   "direction": {
     "premise": "Two tiny, stubborn wizards have no idea how badly their own spell combinations will misbehave, but the duel still reads at a glance.",
-    "composition": "A sunken hand-laid circular stone court beneath four burning lanterns; 3D stone obstacles and an inlaid mineral compass give the 400x620 fight a tangible place and readable focal region. Thumb controls remain on the outer edges.",
-    "shapeLanguage": "24×32 actual pixel silhouettes: six distinct heads and weapons with one restrained 15-entry palette and three Forge-authored motions per 8-way orientation. Account colors and one tiny MASKOT motif are visibly inherited without large accessories or oversized coats.",
-    "surfaceAndMaterial": "Static court painter yields height-stacked stone blocks, chipped buttresses, moss, drains and warm lantern light. Bounded impact particles create soot/grit scars on the ground, fractured stone sparks, elemental shock rings and short physical screen kick.",
+    "composition": "A quiet miniature sunken stone yard tiled with authored 32px stonework; crisp compact 24px fighters and very legible 24px elemental pixel silhouettes. Spell marks are local, never vast ornamental rings.",
+    "shapeLanguage": "Universal Art Forge palette-locked architecture, block-cut square edges, six distinctive small magicians and seven pixel spell forms. No antialiased curved projectile sculptures or ornamental granular stone noise.",
+    "surfaceAndMaterial": "A handful of authored paver/cap/wall/brass brazier tiles and real pixel frames give visual material. Three school palettes retain projectile brightness. Confirmed contacts animate from genuine events, not fake hazard drawings.",
     "paletteLogic": "The arena uses muddy mineral greens and warm brown shadows to keep peach projectiles, gold sparks and a second reddish wizard distinguishable without electric neon.",
     "typography": "Headings use an old-book serif as a restrained signboard; interface text uses sturdy system sans, short Russian instructions and plain names such as Шар больнее.",
-    "signature": "A physical miniature dueling court that REMEMBERS the hits: staff motion and direction, attack trails, local impact chips and scorch marks, reacted runes and a momentary camera impulse all agree about the same real blow.",
+    "signature": "A unified pixel diorama: little sorcerers fight across a deeply carved tiny courtyard; flames and spell strikes share the same authored pixel grid, and every visible impact is causally tied to the simulation.",
     "distinction": "Unlike VENETS parchment political screens and MEAT.EXE first-person corridors, Perekos has an unframed bird's-eye arcade arena with bottom-corner direct spell buttons."
   },
   "architecture": {
@@ -19,7 +19,7 @@
     "chromeTopology": "layered-panels",
     "dominantMotion": "sliding",
     "primaryVerb": "Run with one thumb, aim a single class-specific spell with the other, and craft three independent reaction chains between rounds.",
-    "physicalFeedback": "Compact pixel stances and one-to-three-pixel accents reveal shots, casts and blocks without expanding the fighters; the courtyard, camera shake and confirmed impact debris remain fixed-step client-only presentation.",
+    "physicalFeedback": "Snap-rendered 24px projectiles, 24px impact atlas frames and small character-specific casting glyphs replace world-space circles/gradients. Stone face pixels, compact torch flame cycles and physically valid temporary walls maintain real arena collision bounds.",
     "spatialRationale": "Borderless portrait arena, status on the top edge, left movement and right adjustable thumb aim; a character selector and three inset handwritten spell lanes replace the original single long build list.",
     "comparisons": [
       {
@@ -70,8 +70,8 @@
     ]
   },
   "production": {
-    "renderer": "Quick PWA: authored 24x32 Universal Art Forge pixel sprites with nearest-neighbour Canvas composition at integer sprite scale, over a 400x620 deterministic masonry stage. DOM inputs stay crisp; Forge PNG, atlas metadata and index are offline-preloaded.",
-    "focalAsset": "The six 24×32 authored fighters and compact 15-color pixel atlas from app-owned Universal Art Forge source (asset-forge/mages.json) plus the hand-authored masonry arena. Palette-swapped personal avatar colors and restrained MASKOT insignia preserve identity without resorting to oversized procedural ornament."
+    "renderer": "Quick PWA 400x620 Canvas; real Universal Art Forge 32px court atlas, 24px spell atlas, 24x32 mage atlas, all indexed with source hashes and offline precache. Nearest pixel sampling, no runtime smoothing of geometric sprites.",
+    "focalAsset": "Hand-authored 32px court tile system (pavers, compass and block-faced walls) plus 154 authored 24px spell frames for projectiles/casts/impacts/reactions. Six 24x32 fighters already share the same visual grid."
   },
   "motion": {
     "character": "Movement and spells are instant and snappy, while robe and hat gently bob to keep the character alive and distinguish standing still from a frozen sprite.",
@@ -88,7 +88,7 @@
       "type": "click",
       "selector": "#primary-action"
     },
-    "expectedChange": "Real 390x844 and desktop screenshots must show six tiny clean class silhouettes; 8 face directions and cast/walk frames without smoothing, existing arena and user portrait identity, real hit responses, readable projectiles and no clipping.",
+    "expectedChange": "On live iPhone-sized fight and desktop, authored paver and wall pixels, brazier flames and seven readable spell families form a coherent whole with all six compact magicians. Browser screenshots validate atlas loads, source-of-truth shot trajectories and no clipping or web dependency.",
     "capture": [
       "initial",
       "action",

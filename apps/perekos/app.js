@@ -8,6 +8,7 @@ import {OnlineDuel,inviteCode,incomingCode} from './net-client.mjs';
 import {MAGES,SCHOOLS,mage,validMage} from './mages.mjs';
 import {ELEMENTS,reactionFor} from './elements.mjs';
 import {createCourtBackdrop,drawCourtAtmosphere} from './court-art.mjs';
+import {forgeCourtReady,drawForgeConstructs} from './forge-court.mjs';
 import {CombatPresentation} from './combat-presentation.mjs';
 import {drawGroundCues,drawActorCues,drawSpellLighting} from './combat-readability.mjs';
 import {SpellChoreography,drawSpellGround,drawSpellActors,drawSpellForeground} from './spell-choreography.mjs';
@@ -352,6 +353,8 @@ function playerInput(){
  if(aimedPointer!==null&&aimTouch&&aimVector&&active)input.aim=courtAim(myActor(),aimVector.dx,aimVector.dy,W,H);
  let x=stick.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),y=stick.y+(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0);const speed=Math.hypot(x,y);if(speed>1){x/=speed;y/=speed}const out={x,y,attack:input.attack||tapAttackQueued||keys.has('Space'),shield:input.shield,dash:input.dash,aim:input.aim||{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y}};input.shield=false;input.dash=false;tapAttackQueued=false;return out}
 let bgCanvas;
+// When Forge assets decode, swap the previously rendered fallback stage once.
+void forgeCourtReady().then(ok=>{if(ok)bgCanvas=null});
 function rng(seed){let a=seed>>>0;return()=>((a=Math.imul(a,1664525)+1013904223>>>0)/4294967296)}
 function background(){return createCourtBackdrop(WALLS)}
 function pixel(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))}
@@ -365,6 +368,7 @@ function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0,moving=0,
  drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0,moving,pose});
 }
 function drawConstructs(s){
+ if(drawForgeConstructs(ctx,s,frame/60,reducedMotion))return;
  for(const b of s.barriers){
   const wob=Math.sin(frame*.09+b.x*.13),r=b.r,life=Math.min(1,b.life/.5);
   ctx.save();ctx.globalAlpha=.7+.3*life;
@@ -397,8 +401,9 @@ function drawConstructs(s){
 function drawEffects(s){
  for(const e of s.echoes){
   wizard(e.x,e.y,0,frame/60,e.owner!==myIndex(),Math.min(.48,e.life/4),0,0);
-  ctx.strokeStyle='#b6e1cd66';ctx.lineWidth=2;
-  ctx.beginPath();ctx.arc(e.x,e.y,21+Math.sin(frame*.12+e.x)*2,-Math.PI*.5,Math.PI*.55);ctx.stroke();
+  ctx.globalAlpha=.56;
+  for(let i=0;i<5;i++)pixel(e.x-15+i*7,e.y-18+((i+Math.floor(frame/5))%3)*6,2,2,'#9cd0ba');
+  ctx.globalAlpha=1;
  }
 }
 function drawOverlay(s){
@@ -444,9 +449,8 @@ function render(){
    drawActorCues(ctx,a,p.x,p.y,mine,frame/60,reducedMotion);
    if(a.markLife>0&&ELEMENTS[a.mark]){
     const color=ELEMENTS[a.mark].color;
-    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.globalAlpha=.55+.2*Math.sin(frame*.09);
-    ctx.beginPath();ctx.arc(p.x,p.y-5,23+Math.sin(frame*.09)*2,-.95*Math.PI,.2*Math.PI);ctx.stroke();ctx.globalAlpha=1;
     pixel(p.x-3,p.y-37,6,5,color);pixel(p.x-1,p.y-34,2,3,'#fff3cf');
+    for(let j=0;j<3;j++)pixel(p.x-14+j*14,p.y-20+(j===1?-3:2),2,2,color);
    }
   }
   duelFeedback.actors(ctx,active,frame/60,reducedMotion);

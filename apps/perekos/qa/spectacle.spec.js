@@ -13,7 +13,8 @@ test('art pass: stage geometry, animated sprites, effects and mobile bounds',asy
   return {size:[canvas.width,canvas.height],distinct:colors.size,edge:sample(4,305),court:sample(193,304)};
  });
  expect(snapshot.size).toEqual([400,620]);
- expect(snapshot.distinct).toBeGreaterThan(35);
+ // A controlled 13-tone authored palette replaces 35+ noisy procedural shades.
+ expect(snapshot.distinct).toBeGreaterThan(10);
  expect(snapshot.edge).not.toEqual(snapshot.court);
  await info.attach('sunken-stone-menu',{body:await page.screenshot(),contentType:'image/png'});
  await page.locator('#primary-action').click();

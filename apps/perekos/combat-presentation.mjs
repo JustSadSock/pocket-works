@@ -1,3 +1,4 @@
+import {forgeSpellsStatus} from './forge-spells.mjs';
 // PEREKOS combat theater — purely presentational, never mutates combat state.
 // Particle lifetimes, particles per event and decals are bounded for mobile.
 const ELEMENT_TONES={fire:['#ffcf85','#f28b5a','#974b43'],storm:['#e5f4dc','#8cdad0','#4b8c92'],stone:['#d6d0a3','#92a48a','#576d60']};
@@ -98,7 +99,8 @@ export class CombatPresentation{
   }
  }
  foreground(c){
-  for(const r of this.rings){
+  // Confirmed Forge contact frames own visible impact forms in the browser.
+  if(forgeSpellsStatus()!=='ready')for(const r of this.rings){
    const t=r.age/r.life,a=(1-t);
    c.save();c.globalAlpha=a*.85;
    const tone=ELEMENT_TONES[r.kind]?.[1]||'#d4ccad';

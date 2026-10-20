@@ -1,3 +1,4 @@
+import {drawForgeGround,drawForgeActors,drawForgeForeground} from './forge-spells.mjs';
 // PEREKOS v0.9: hand-authored pixel spell choreography. Rendering only.
 // All cues originate from a confirmed FX event, current fighter status, or
 // a visible projectile. No new targeting, collision, hit timing or damage.
@@ -137,6 +138,7 @@ function drawSigil(c,x,y,r,style,element,t,seed,reduced=false){
 }
 export function drawSpellGround(ctx,choreography,reduced=false){
  if(!ctx||!choreography)return;
+ if(drawForgeGround(ctx,choreography.motifs,reduced))return;
  for(const m of choreography.motifs){
   const t=clamp(m.age/m.life,0,1);
   if(m.kind==='cast')drawSigil(ctx,m.x,m.y+8,18,m.style,m.element,t,m.id,reduced);
@@ -172,6 +174,7 @@ export function drawSpellGround(ctx,choreography,reduced=false){
 }
 export function drawSpellActors(ctx,state,time=0,reduced=false){
  if(!ctx||state?.phase!=='fight')return;
+ if(drawForgeActors(ctx,state,reduced))return;
  for(const a of (state.actors||[]).slice(0,2)){
   if(!finite(a.x)||!finite(a.y)||!finite(a.cast)||a.cast<=.08)continue;
   const style=MAGE_SIGNS.includes(a.mageId)?a.mageId:'kindle';
@@ -234,6 +237,7 @@ export function drawSpellProjectiles(ctx,state,time=0,reduced=false){
 }
 export function drawSpellForeground(ctx,choreography,reduced=false,{impacts=true}={}){
  if(!ctx||!choreography)return;
+ if(drawForgeForeground(ctx,choreography.motifs,reduced,{impacts}))return;
  for(const m of choreography.motifs){
   const t=clamp(m.age/m.life,0,1);
   if(m.kind==='impact'&&impacts){

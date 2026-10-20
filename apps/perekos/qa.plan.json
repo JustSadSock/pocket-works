@@ -22,7 +22,8 @@
         "tests/combat-presentation.test.mjs",
         "tests/combat-readability.test.mjs",
         "tests/spell-choreography.test.mjs",
-        "tests/forge-pixel.test.mjs"
+        "tests/forge-pixel.test.mjs",
+        "tests/forge-world.test.mjs"
       ]
     },
     {
@@ -92,6 +93,14 @@
         "qa/eight-direction.spec.js",
         "qa/art-direction.spec.js",
         "qa/forge-pixel.spec.js"
+      ]
+    },
+    {
+      "id": "forge-world",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/forge-world.spec.js"
       ]
     }
   ]

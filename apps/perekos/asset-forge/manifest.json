@@ -22,6 +22,50 @@
       },
       "seed": 20261020,
       "source": "asset-forge/mages.json"
+    },
+    {
+      "adapter": "pixel",
+      "budget": {
+        "maxBytes": 300000,
+        "maxHeight": 64,
+        "maxWidth": 512
+      },
+      "dependsOn": [],
+      "id": "court-tiles",
+      "outputs": {
+        "atlas": "assets/court-tiles.json",
+        "image": "assets/court-tiles.png"
+      },
+      "parameters": {},
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Layered hand-authored pixel masonry, inlays, buttress faces and animated braziers"
+      },
+      "seed": 2106,
+      "source": "asset-forge/court-tiles.json"
+    },
+    {
+      "adapter": "pixel",
+      "budget": {
+        "maxBytes": 850000,
+        "maxHeight": 64,
+        "maxWidth": 4096
+      },
+      "dependsOn": [],
+      "id": "spell-frames",
+      "outputs": {
+        "atlas": "assets/spell-frames.json",
+        "image": "assets/spell-frames.png"
+      },
+      "parameters": {},
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original pixel spell shapes, eight bearings, casts, confirmed impacts and elemental reactions"
+      },
+      "seed": 2159,
+      "source": "asset-forge/spell-frames.json"
     }
   ],
   "runtimeRoot": ".",

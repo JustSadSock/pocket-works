@@ -13,9 +13,9 @@
           "url": "assets/mages.json"
         },
         "image": {
-          "bytes": 110781,
+          "bytes": 7491,
           "height": 32,
-          "sha256": "c87c3b4520a94875815600bd07852cbf925f02f70989a8fbe2108d0565278fdf",
+          "sha256": "f2ac82af6cdc1abb9f18f4a7c9442c3921545c3153c56ad0685eeea07a0e9e92",
           "url": "assets/mages.png",
           "width": 3456
         }
@@ -28,8 +28,66 @@
       },
       "seed": 20261020,
       "tool": "10.2.0"
+    },
+    {
+      "adapter": "pixel",
+      "id": "court-tiles",
+      "inputs": {
+        "asset-forge/court-tiles.json": "8de05604f663c9358410459bf7c6777e4cd0034877f51ea682b4052da9c9dcb0"
+      },
+      "outputs": {
+        "atlas": {
+          "bytes": 2576,
+          "sha256": "a897d4abfa8849e404af487678901869a2789cee0546a558f98ef3693165f397",
+          "url": "assets/court-tiles.json"
+        },
+        "image": {
+          "bytes": 1442,
+          "height": 32,
+          "sha256": "aad0b8de4330d2a9f17a4e69330fadfb3ea6f2837b52611a58f8d48c5aa6a715",
+          "url": "assets/court-tiles.png",
+          "width": 384
+        }
+      },
+      "parameters": {},
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Layered hand-authored pixel masonry, inlays, buttress faces and animated braziers"
+      },
+      "seed": 2106,
+      "tool": "10.2.0"
+    },
+    {
+      "adapter": "pixel",
+      "id": "spell-frames",
+      "inputs": {
+        "asset-forge/spell-frames.json": "28da8bde5f1e27c39213fff5634c4dacb8a778cc4f99348d1f1df246dde77acf"
+      },
+      "outputs": {
+        "atlas": {
+          "bytes": 33156,
+          "sha256": "333582b7770cf159fb8575b268fc79f2cd5cf03e2c638d2d6ff9ff64f631f1c6",
+          "url": "assets/spell-frames.json"
+        },
+        "image": {
+          "bytes": 10160,
+          "height": 24,
+          "sha256": "ffeaef11c84edadbcc7f9738caa0f26b903eda0fef34300a3cdea528cc1cfdaa",
+          "url": "assets/spell-frames.png",
+          "width": 3696
+        }
+      },
+      "parameters": {},
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original pixel spell shapes, eight bearings, casts, confirmed impacts and elemental reactions"
+      },
+      "seed": 2159,
+      "tool": "10.2.0"
     }
   ],
-  "manifestSha256": "07c4ef9a3f3e7aa783b4ea4756ef3d47ef777f4dd0203b4c71c35b5ed1959147",
+  "manifestSha256": "477b3d9cc131f89c38bd22ba0f53cf7b9fa0bcfa35aec12d61c7a732f335ac7d",
   "version": 1
 }
