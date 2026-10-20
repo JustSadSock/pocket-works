@@ -110,6 +110,10 @@ export class DeformableShell {
     material.metallic = 0.32;
     material.roughness = 0.3;
     material.environmentIntensity = 0.72;
+    // A crushed or flipped car must not lose its painted faces to backface
+    // culling as individual triangles cross their original plane.
+    material.backFaceCulling = false;
+    material.twoSidedLighting = true;
     mesh.material = material;
 
     this.mesh = mesh;
