@@ -33,14 +33,17 @@ export function mountExhibitFrames(root){
     Number.parseFloat(rim.style.getPropertyValue('--art-aspect'));
    const ratio=natural||styled||4/3;
    const width=stage.clientWidth;
-   const gallery=stage.closest?.('.stake-gallery,.round-review-grid,.exhibition-grid');
+   const gallery=stage.closest?.('.stake-gallery,.round-review-grid,.exhibition-grid,.finale-ballot-grid');
    const bounds=gallery||stage.parentElement;
    const outerWidth=bounds?.clientWidth||width,outerHeight=bounds?.clientHeight||stage.clientHeight;
    const previous=stableRoom.get(stage);
    const sameRoom=previous&&Math.abs(outerWidth-previous.outerWidth)<2&&
     Math.abs(outerHeight-previous.outerHeight)<2&&Math.abs(width-previous.width)<2;
    const availableHeight=stage.clientHeight;
-   const freeHeight=sameRoom?Math.max(availableHeight,previous.freeHeight):availableHeight;
+   // Ballot cards have fixed space above their coin shelves. An old larger
+   // height after a resize would push the wooden rims out of bounds.
+   const freeHeight=stage.closest?.('.finale-ballot-card')?availableHeight:
+    (sameRoom?Math.max(availableHeight,previous.freeHeight):availableHeight);
    stableRoom.set(stage,{outerWidth,outerHeight,width,freeHeight});
    const height=freeHeight-
     (stage.querySelector('.zam-exhibit-plaque')?.offsetHeight||0)-
