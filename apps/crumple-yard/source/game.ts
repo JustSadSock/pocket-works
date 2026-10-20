@@ -442,7 +442,15 @@ export class CrumpleGame {
   }
 
   private addShadows(vehicle: Vehicle) {
-    for (const mesh of vehicle.root.getChildMeshes()) this.shadow.addShadowCaster(mesh, false);
+    // The added manufacturing details are rendered by regular lighting.
+    // Only major masses cast dynamic shadows, keeping traffic manageable
+    // on the mobile 512px shadow atlas.
+    for (const mesh of vehicle.root.getChildMeshes()) {
+      if (mesh === vehicle.shell.mesh ||
+          /-(tyre-|hood$|trunk$|door-left$|door-right$|front-bumper$|rear-bumper$|roof-rail-)/.test(mesh.name)) {
+        this.shadow.addShadowCaster(mesh, false);
+      }
+    }
   }
 
   private rebuildPlayer() {
