@@ -6,7 +6,8 @@
       "kind": "node-test",
       "tier": "smoke",
       "files": [
-        "tests/engine.test.mjs"
+        "tests/engine.test.mjs",
+        "tests/network.test.mjs"
       ],
       "install": true
     },
