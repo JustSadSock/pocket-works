@@ -6,8 +6,8 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 import { CrumpleGame } from './game';
 
-const VERSION = '1.2.1';
-const RELEASE_NOTES = ["Фиксированное направление 3D-камеры по умолчанию; переключение погонной камеры в гараже и паузе сохраняется между запусками."];
+const VERSION = '1.3.0';
+const RELEASE_NOTES = ["Три автомобиля получили разные деформируемые силуэты, составные колёса, окна и кузовные детали.","Перестроен испытательный двор: промаркированные барьеры, металлические стойки, рампа и подвижные ящики.","Исправлен задний ход, добавлены заносы и вращение машины для осмотра в гараже."];
 
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
