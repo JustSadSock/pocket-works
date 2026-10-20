@@ -1261,6 +1261,11 @@ function improveKatanaCombat(GameRoom) {
   proto.handleInput=function(id,payload){
     const p=this.players.get(id);
     if(!p||!p.alive)return;
+    const stream=Number(payload?.stream)||0;
+    if(stream>0&&Number.isSafeInteger(stream)){
+      if(stream<(p.inputStream||0))return;
+      if(stream>(p.inputStream||0)){p.inputStream=stream;p.lastSequence=0;}
+    }else if(p.inputStream)return;
     const sequence=Number(payload?.seq)||0;
     if(sequence&&sequence<=(p.lastSequence||0))return;
     if(sequence)p.lastSequence=sequence;
@@ -1355,7 +1360,10 @@ function improveKatanaCombat(GameRoom) {
     if(!input.rmb&&s.shieldUp&&s.shieldTap<=0){s.shieldUp=false;s.parryWindow=0;}
     if(input.lmb&&!s.shieldUp&&!s.attacking)s.charge=Math.min(1800,Math.max(80,s.charge+ms));
     else if(!input.lmb&&s.charge>0){
-      s.attacking=true;s.attackTimer=200;s.attackPower=s.charge;s.charge=0;
+      if(!s.shieldUp&&!s.attacking){
+        s.attacking=true;s.attackTimer=200;s.attackPower=s.charge;
+      }
+      s.charge=0;
     }
     if(s.attacking){s.attackTimer-=ms;if(s.attackTimer<=0){s.attacking=false;s.attackPower=0;}}
   };

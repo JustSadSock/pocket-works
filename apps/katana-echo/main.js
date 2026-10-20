@@ -9,6 +9,7 @@ const motionReduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const WS_OPEN=PocketSocket.OPEN;
 const STORE='pocket-works:katana-echo:settings';
 let ws=null,engine=null,offlineState=null,session='menu',playerId=null,world={players:[],map:null,phase:'menu'};
+const inputStream=Date.now(); // monotonic per page lifetime, permits reconnect/reload sequence resets
 let createPending=false,connected=false,seq=0,lastSend=performance.now(),lastPaint=performance.now(),lastFeedback=0;
 let drawWidth=1,drawHeight=1,dpr=1;
 let prevPlayers=new Map(),smoothing=new Map(),effects=[],previousPhase='',botNextEchoAt=0,botNavTime=0,botNav=null;
@@ -242,7 +243,7 @@ function botInput(){
 }
 function sendInput(force=false){
  if(document.hidden&&!force||session==='menu'||overlay.hidden===false)return;
- const now=performance.now(),payload={seq:++seq,dt:Math.min(250,now-lastSend),
+ const now=performance.now(),payload={seq:++seq,stream:inputStream,dt:Math.min(250,now-lastSend),
   keys:{...input.keys},mouseAngle:input.mouseAngle,lmb:input.lmb,rmb:input.rmb,dash:input.dash,ghostToggle:input.ghostToggle};
  lastSend=now;input.dash=false;input.ghostToggle=false;
  if(session==='training'&&engine&&offlineState){
