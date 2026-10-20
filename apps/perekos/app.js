@@ -8,6 +8,7 @@ import {OnlineDuel,inviteCode,incomingCode} from './net-client.mjs';
 import {MAGES,SCHOOLS,mage,validMage} from './mages.mjs';
 import {ELEMENTS,reactionFor} from './elements.mjs';
 import {createCourtBackdrop,drawCourtAtmosphere} from './court-art.mjs';
+import {forgeCourtReady,drawForgeConstructs} from './forge-court.mjs';
 import {CombatPresentation} from './combat-presentation.mjs';
 import {drawGroundCues,drawActorCues,drawSpellLighting} from './combat-readability.mjs';
 import {SpellChoreography,drawSpellGround,drawSpellActors,drawSpellForeground} from './spell-choreography.mjs';
@@ -352,6 +353,8 @@ function playerInput(){
  if(aimedPointer!==null&&aimTouch&&aimVector&&active)input.aim=courtAim(myActor(),aimVector.dx,aimVector.dy,W,H);
  let x=stick.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),y=stick.y+(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0);const speed=Math.hypot(x,y);if(speed>1){x/=speed;y/=speed}const out={x,y,attack:input.attack||tapAttackQueued||keys.has('Space'),shield:input.shield,dash:input.dash,aim:input.aim||{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y}};input.shield=false;input.dash=false;tapAttackQueued=false;return out}
 let bgCanvas;
+// When Forge assets decode, swap the previously rendered fallback stage once.
+void forgeCourtReady().then(ok=>{if(ok)bgCanvas=null});
 function rng(seed){let a=seed>>>0;return()=>((a=Math.imul(a,1664525)+1013904223>>>0)/4294967296)}
 function background(){return createCourtBackdrop(WALLS)}
 function pixel(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))}
@@ -365,6 +368,7 @@ function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0,moving=0,
  drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0,moving,pose});
 }
 function drawConstructs(s){
+ if(drawForgeConstructs(ctx,s,frame/60,reducedMotion))return;
  for(const b of s.barriers){
   const wob=Math.sin(frame*.09+b.x*.13),r=b.r,life=Math.min(1,b.life/.5);
   ctx.save();ctx.globalAlpha=.7+.3*life;
