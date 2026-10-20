@@ -151,7 +151,7 @@ export function createDualObservatory({getMetric,onDirty,onAction,onView3D,onVie
   if(lastInfo>.17){update();lastInfo=0;}
  }
  function update(){
-  const here=position(),os=observer.state,st=field.snapshot.statistics,status=observer.status;
+  const here=position(),os=observer.state,st=field.statistics,status=observer.status;
   $('split-region').value=here.l<0?'B':'A';
   $('split-distance').value=Math.abs(here.l);
   $('split-distance-value').textContent=format(Math.abs(here.l),2)+'a';
@@ -199,8 +199,8 @@ export function createDualObservatory({getMetric,onDirty,onAction,onView3D,onVie
   ['split-latitude',v=>field.setObserverPoint({...position(),latitude:v})],
   ['split-angle',orientFromAngle],
   ['split-fov',v=>{observer.applyParameters({...observer.state,fov:v,compare:false,geometryInset:false});update();}],
-  ['split-count',v=>{field.state.count=Math.round(clamp(v,1,25));field.reset();started=false;update();}],
-  ['split-cone',v=>{field.state.cone=clamp(v,0,65);field.reset();started=false;update();}],
+  ['split-count',v=>{field.applyParameters({...field.state,count:Math.round(clamp(v,1,25))});started=false;update();}],
+  ['split-cone',v=>{field.applyParameters({...field.state,cone:clamp(v,0,65)});started=false;update();}],
   ['split-photon-index',v=>{field.state.selectedPhoton=Math.max(0,Math.round(v)-1);update();}]
  ]){
   $(id).addEventListener('input',e=>call(Number(e.target.value)));
@@ -219,6 +219,7 @@ export function createDualObservatory({getMetric,onDirty,onAction,onView3D,onVie
  return {enter,setActive,configure:resetMetric,trigger:start,reset,tick,draw,
   align,orientFromAngle,setDistance,setRegion,takePhoton,check,applyParameters,update,
   get active(){return active},
+  get quickStats(){return field.statistics},
   get field(){return field},
   get observer(){return observer},
   get snapshot(){return {observerPoint:position(),camera:{...observer.state},
