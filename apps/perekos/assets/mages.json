@@ -1,0 +1,2167 @@
+{
+  "frames": [
+    {
+      "durationMs": 240,
+      "name": "kindle-E-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        0,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/E/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "kindle-E-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        24,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/E/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "kindle-E-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        48,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/E/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "kindle-SE-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        72,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/SE/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "kindle-SE-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        96,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/SE/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "kindle-SE-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        120,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/SE/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "kindle-S-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        144,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/S/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "kindle-S-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        168,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/S/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "kindle-S-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        192,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/S/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "kindle-SW-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        216,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/SW/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "kindle-SW-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        240,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/SW/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "kindle-SW-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        264,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/SW/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "kindle-W-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        288,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/W/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "kindle-W-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        312,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/W/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "kindle-W-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        336,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/W/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "kindle-NW-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        360,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/NW/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "kindle-NW-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        384,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/NW/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "kindle-NW-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        408,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/NW/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "kindle-N-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        432,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/N/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "kindle-N-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        456,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/N/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "kindle-N-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        480,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/N/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "kindle-NE-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        504,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/NE/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "kindle-NE-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        528,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/NE/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "kindle-NE-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        552,
+        0,
+        24,
+        32
+      ],
+      "tag": "kindle/NE/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "cinder-E-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        576,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/E/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "cinder-E-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        600,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/E/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "cinder-E-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        624,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/E/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "cinder-SE-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        648,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/SE/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "cinder-SE-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        672,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/SE/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "cinder-SE-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        696,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/SE/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "cinder-S-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        720,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/S/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "cinder-S-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        744,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/S/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "cinder-S-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        768,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/S/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "cinder-SW-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        792,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/SW/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "cinder-SW-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        816,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/SW/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "cinder-SW-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        840,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/SW/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "cinder-W-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        864,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/W/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "cinder-W-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        888,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/W/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "cinder-W-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        912,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/W/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "cinder-NW-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        936,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/NW/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "cinder-NW-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        960,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/NW/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "cinder-NW-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        984,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/NW/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "cinder-N-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1008,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/N/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "cinder-N-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1032,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/N/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "cinder-N-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1056,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/N/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "cinder-NE-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1080,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/NE/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "cinder-NE-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1104,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/NE/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "cinder-NE-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1128,
+        0,
+        24,
+        32
+      ],
+      "tag": "cinder/NE/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "wire-E-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1152,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/E/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "wire-E-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1176,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/E/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "wire-E-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1200,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/E/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "wire-SE-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1224,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/SE/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "wire-SE-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1248,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/SE/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "wire-SE-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1272,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/SE/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "wire-S-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1296,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/S/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "wire-S-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1320,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/S/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "wire-S-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1344,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/S/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "wire-SW-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1368,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/SW/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "wire-SW-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1392,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/SW/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "wire-SW-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1416,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/SW/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "wire-W-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1440,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/W/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "wire-W-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1464,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/W/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "wire-W-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1488,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/W/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "wire-NW-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1512,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/NW/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "wire-NW-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1536,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/NW/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "wire-NW-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1560,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/NW/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "wire-N-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1584,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/N/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "wire-N-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1608,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/N/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "wire-N-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1632,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/N/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "wire-NE-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1656,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/NE/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "wire-NE-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1680,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/NE/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "wire-NE-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1704,
+        0,
+        24,
+        32
+      ],
+      "tag": "wire/NE/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "coil-E-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1728,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/E/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "coil-E-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1752,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/E/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "coil-E-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1776,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/E/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "coil-SE-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1800,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/SE/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "coil-SE-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1824,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/SE/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "coil-SE-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1848,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/SE/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "coil-S-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1872,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/S/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "coil-S-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1896,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/S/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "coil-S-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1920,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/S/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "coil-SW-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1944,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/SW/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "coil-SW-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1968,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/SW/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "coil-SW-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        1992,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/SW/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "coil-W-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2016,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/W/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "coil-W-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2040,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/W/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "coil-W-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2064,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/W/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "coil-NW-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2088,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/NW/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "coil-NW-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2112,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/NW/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "coil-NW-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2136,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/NW/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "coil-N-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2160,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/N/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "coil-N-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2184,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/N/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "coil-N-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2208,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/N/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "coil-NE-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2232,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/NE/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "coil-NE-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2256,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/NE/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "coil-NE-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2280,
+        0,
+        24,
+        32
+      ],
+      "tag": "coil/NE/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "pebble-E-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2304,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/E/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "pebble-E-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2328,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/E/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "pebble-E-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2352,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/E/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "pebble-SE-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2376,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/SE/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "pebble-SE-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2400,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/SE/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "pebble-SE-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2424,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/SE/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "pebble-S-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2448,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/S/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "pebble-S-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2472,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/S/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "pebble-S-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2496,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/S/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "pebble-SW-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2520,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/SW/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "pebble-SW-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2544,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/SW/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "pebble-SW-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2568,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/SW/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "pebble-W-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2592,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/W/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "pebble-W-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2616,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/W/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "pebble-W-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2640,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/W/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "pebble-NW-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2664,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/NW/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "pebble-NW-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2688,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/NW/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "pebble-NW-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2712,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/NW/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "pebble-N-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2736,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/N/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "pebble-N-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2760,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/N/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "pebble-N-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2784,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/N/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "pebble-NE-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2808,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/NE/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "pebble-NE-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2832,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/NE/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "pebble-NE-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2856,
+        0,
+        24,
+        32
+      ],
+      "tag": "pebble/NE/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "slate-E-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2880,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/E/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "slate-E-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2904,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/E/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "slate-E-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2928,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/E/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "slate-SE-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2952,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/SE/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "slate-SE-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        2976,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/SE/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "slate-SE-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3000,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/SE/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "slate-S-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3024,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/S/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "slate-S-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3048,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/S/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "slate-S-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3072,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/S/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "slate-SW-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3096,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/SW/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "slate-SW-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3120,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/SW/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "slate-SW-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3144,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/SW/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "slate-W-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3168,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/W/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "slate-W-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3192,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/W/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "slate-W-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3216,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/W/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "slate-NW-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3240,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/NW/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "slate-NW-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3264,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/NW/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "slate-NW-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3288,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/NW/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "slate-N-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3312,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/N/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "slate-N-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3336,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/N/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "slate-N-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3360,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/N/cast"
+    },
+    {
+      "durationMs": 240,
+      "name": "slate-NE-idle",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3384,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/NE/idle"
+    },
+    {
+      "durationMs": 140,
+      "name": "slate-NE-walk",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3408,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/NE/walk"
+    },
+    {
+      "durationMs": 120,
+      "name": "slate-NE-cast",
+      "pivot": [
+        12,
+        23
+      ],
+      "rect": [
+        3432,
+        0,
+        24,
+        32
+      ],
+      "tag": "slate/NE/cast"
+    }
+  ],
+  "image": "mages.png",
+  "sampling": "nearest",
+  "version": 1
+}

@@ -1,0 +1,29 @@
+{
+  "index": "assets/forge-index.json",
+  "jobs": [
+    {
+      "adapter": "pixel",
+      "budget": {
+        "maxBytes": 750000,
+        "maxHeight": 64,
+        "maxWidth": 4096
+      },
+      "dependsOn": [],
+      "id": "compact-mages",
+      "outputs": {
+        "atlas": "assets/mages.json",
+        "image": "assets/mages.png"
+      },
+      "parameters": {},
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original authored 24x32 multi-layer silhouettes and animation frames for Perekos"
+      },
+      "seed": 20261020,
+      "source": "asset-forge/mages.json"
+    }
+  ],
+  "runtimeRoot": ".",
+  "version": 2
+}
