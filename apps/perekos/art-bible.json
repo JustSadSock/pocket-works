@@ -100,6 +100,11 @@
       "id": "universal-art-forge-pixel",
       "availability": "available",
       "reason": "Native pixel adapter exports palette-locked layered JSON source into pixel-perfect sprite PNG and atlas JSON, committed per app."
+    },
+    {
+      "id": "universal-art-forge-arena",
+      "availability": "available",
+      "reason": "Pocket Works v2 pixel adapter builds 32px environment tile atlases and 24px directional spell art from original layered JSON frames with deterministic output hashes."
     }
   ],
   "assets": [
@@ -146,6 +151,28 @@
       "integration": "mage-pixel.mjs renders the Forge atlas as real sprites, with app-owned offline precache and no gameplay state mutation",
       "provenance": "Author-authored layered pixel source in this app",
       "maxBytes": 750000
+    },
+    {
+      "id": "stone-court-tiles",
+      "tool": "universal-art-forge-arena",
+      "source": "asset-forge/court-tiles.json",
+      "output": "assets/court-tiles.png",
+      "role": "12 authored 32px materials for masonry, wall relief, compass inlay, two living brazier frames",
+      "acceptance": "Native nearest-pixel scene at 400×620 with both true collision obstacles readable, no gradients in world backdrop",
+      "integration": "forge-court.mjs loads committed offline exports; court-art.mjs switches from former raster procedural fallback upon asset decode",
+      "provenance": "Original author-created layered pixel grid",
+      "maxBytes": 300000
+    },
+    {
+      "id": "true-pixel-spells",
+      "tool": "universal-art-forge-arena",
+      "source": "asset-forge/spell-frames.json",
+      "output": "assets/spell-frames.png",
+      "role": "Seven directional spells, seven real hit families, six casting sigils and three two-element reactions",
+      "acceptance": "154 independent authored sprite frames remain pixel-locked with visible class, element and angle difference at phone resolution; server-authoritative shots only",
+      "integration": "forge-spells.mjs supplies pixel frames to kinetic, choreography and contact renderers, palette swapped for elements, never altering any simulation",
+      "provenance": "Original authored layered frame rows; no filtered digital painting",
+      "maxBytes": 850000
     }
   ],
   "constraints": {
