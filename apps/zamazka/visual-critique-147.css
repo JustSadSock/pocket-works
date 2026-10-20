@@ -303,7 +303,13 @@
  #screen>.verdict-phase .finale-ballot-card:nth-child(4){grid-column:2/span 2!important}
  #screen>.verdict-phase .finale-ballot-card:nth-child(5){grid-column:4/span 2!important}
  #screen>.verdict-phase .finale-ballot-card.is-featured{
-  grid-row:auto!important;order:0!important;
+  grid-column:span 2!important;grid-row:auto!important;order:0!important;
+ }
+ #screen>.verdict-phase .finale-ballot-card.is-featured:nth-child(4){
+  grid-column:2/span 2!important;
+ }
+ #screen>.verdict-phase .finale-ballot-card.is-featured:nth-child(5){
+  grid-column:4/span 2!important;
  }
 }
 @media(max-width:700px){
