@@ -401,8 +401,9 @@ function drawConstructs(s){
 function drawEffects(s){
  for(const e of s.echoes){
   wizard(e.x,e.y,0,frame/60,e.owner!==myIndex(),Math.min(.48,e.life/4),0,0);
-  ctx.strokeStyle='#b6e1cd66';ctx.lineWidth=2;
-  ctx.beginPath();ctx.arc(e.x,e.y,21+Math.sin(frame*.12+e.x)*2,-Math.PI*.5,Math.PI*.55);ctx.stroke();
+  ctx.globalAlpha=.56;
+  for(let i=0;i<5;i++)pixel(e.x-15+i*7,e.y-18+((i+Math.floor(frame/5))%3)*6,2,2,'#9cd0ba');
+  ctx.globalAlpha=1;
  }
 }
 function drawOverlay(s){
@@ -448,9 +449,8 @@ function render(){
    drawActorCues(ctx,a,p.x,p.y,mine,frame/60,reducedMotion);
    if(a.markLife>0&&ELEMENTS[a.mark]){
     const color=ELEMENTS[a.mark].color;
-    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.globalAlpha=.55+.2*Math.sin(frame*.09);
-    ctx.beginPath();ctx.arc(p.x,p.y-5,23+Math.sin(frame*.09)*2,-.95*Math.PI,.2*Math.PI);ctx.stroke();ctx.globalAlpha=1;
     pixel(p.x-3,p.y-37,6,5,color);pixel(p.x-1,p.y-34,2,3,'#fff3cf');
+    for(let j=0;j<3;j++)pixel(p.x-14+j*14,p.y-20+(j===1?-3:2),2,2,color);
    }
   }
   duelFeedback.actors(ctx,active,frame/60,reducedMotion);

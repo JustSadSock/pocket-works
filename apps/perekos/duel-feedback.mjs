@@ -1,3 +1,4 @@
+import {forgeSpellsStatus} from './forge-spells.mjs';
 // PEREKOS — kinetic ink, grit and directional spell language.
 // Cosmetic only. All marks originate in actual shots, hit events or casts.
 import {mage} from './mages.mjs';
@@ -70,6 +71,7 @@ export class DuelFeedback{
  }
  actors(ctx,state,time=0,reduced=false){
   if(!ctx||state?.phase!=='fight')return;
+  if(forgeSpellsStatus()==='ready')return; // Native cast glyphs replace duplicate beams.
   ctx.save();
   for(const a of state.actors){
    if(!a||a.cast<=0)continue;
