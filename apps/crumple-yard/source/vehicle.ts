@@ -112,6 +112,7 @@ export class Vehicle {
     this.taillights.push(...art.taillights);
     this.wheels.push(...art.wheels);
     this.windshield = art.windshield;
+    this.windshield.material = this.glassMaterial.clone(spec.id + '-windscreen-damage');
 
     const rotation = Quaternion.RotationAxis(Vector3.Up(), yaw);
     this.body = world.createRigidBody(
@@ -369,6 +370,13 @@ export class Vehicle {
       if (trunk && !this.panelDetached.has('trunk')) trunk.rotation.x = 0.04 + zoneDamage * 0.27;
       if (zoneDamage > 0.78) this.detachPanel('rear-bumper', new Vector3(0, 0, -1));
       if (zoneDamage > 0.94) this.detachPanel('trunk', new Vector3(0, 0.35, -0.7));
+    } else if (zone === 'roof') {
+      const roof = this.panels.get('roof');
+      if (roof && !this.panelDetached.has('roof')) {
+        roof.position.y -= severity * 0.07;
+        roof.rotation.z += severity * 0.045;
+      }
+      if (zoneDamage > 0.94) this.detachPanel('roof', new Vector3(0, 0.75, 0));
     } else if (zone === 'left') {
       const door = this.panels.get('door-left');
       if (door && !this.panelDetached.has('door-left')) door.rotation.z = zoneDamage * 0.08;
