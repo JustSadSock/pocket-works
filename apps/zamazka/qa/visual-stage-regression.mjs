@@ -106,7 +106,25 @@ try{
   assert.equal(heights.length,5);
   for(const h of heights)assert(h.frame>90&&h.photo>70&&h.stage>100,
    'protocol has cropped/zero-height paintings '+JSON.stringify(heights));
-  passed+=5;
+  const fitBoxes=await child.locator('.finale-ballot-card').evaluateAll(cards=>cards.map(card=>{
+   const outer=card.getBoundingClientRect(),frame=card.querySelector('.verdict-image')?.getBoundingClientRect();
+   const art=card.querySelector('.verdict-image img'),img=art?.getBoundingClientRect();
+   const votes=card.querySelector('.finale-ballot-votes')?.getBoundingClientRect();
+   const natural=art?.naturalWidth&&art?.naturalHeight?art.naturalWidth/art.naturalHeight:null;
+   return {cardW:outer.width,cardH:outer.height,frameW:frame?.width,frameH:frame?.height,
+    top:frame?.top,cardTop:outer.top,bottom:frame?.bottom,votesTop:votes?.top,
+    left:frame?.left,cardLeft:outer.left,right:frame?.right,cardRight:outer.right,
+    natural,rendered:img?.width&&img?.height?img.width/img.height:null};
+  }));
+  assert.equal(fitBoxes.length,5);
+  for(const f of fitBoxes){
+   assert(f.frameW>45&&f.frameH>90,'ballot picture too small '+size.label+' '+JSON.stringify(f));
+   assert(f.left>=f.cardLeft-3&&f.right<=f.cardRight+3,'wood rim spills sideways '+size.label+' '+JSON.stringify(f));
+   assert(f.top>=f.cardTop-3&&f.bottom<=f.votesTop+3,'wood rim overlaps coin shelf '+size.label+' '+JSON.stringify(f));
+   if(f.natural)assert(Math.abs(f.rendered-f.natural)/f.natural<.04,'picture aspect distorted '+size.label+' '+JSON.stringify(f));
+  }
+  await child.locator('.verdict-phase').screenshot({path:join(output,size.label+'-verdict.png')});
+  passed+=fitBoxes.length*3;
   await preview('round-review');
   const exhibition=await child.locator('.round-review-grid').evaluate(el=>({
    display:getComputedStyle(el).display,overflowX:getComputedStyle(el).overflowX,
