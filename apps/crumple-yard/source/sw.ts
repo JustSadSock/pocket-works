@@ -6,10 +6,10 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 
 const CACHE_PREFIX = 'crumple-yard-';
-const CACHE_NAME = 'crumple-yard-v1.2.1';
-const APP_VERSION = '1.2.1';
-const RELEASE_DATE = '2026-10-19';
-const RELEASE_NOTES = ["Фиксированное направление 3D-камеры по умолчанию; переключение погонной камеры в гараже и паузе сохраняется между запусками."];
+const CACHE_NAME = 'crumple-yard-v1.3.0';
+const APP_VERSION = '1.3.0';
+const RELEASE_DATE = '2026-10-21';
+const RELEASE_NOTES = ["Три автомобиля получили разные деформируемые силуэты, составные колёса, окна и кузовные детали.","Перестроен испытательный двор: промаркированные барьеры, металлические стойки, рампа и подвижные ящики.","Исправлен задний ход, добавлены заносы и вращение машины для осмотра в гараже."];
 
 setCacheNameDetails({ prefix: 'crumple-yard', suffix: 'v' + APP_VERSION, precache: 'precache', runtime: 'runtime' });
 precacheAndRoute(self.__WB_MANIFEST);
