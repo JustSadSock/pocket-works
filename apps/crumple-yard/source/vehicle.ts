@@ -55,6 +55,7 @@ export class Vehicle {
   readonly controller: RAPIER.DynamicRayCastVehicleController;
   readonly damage: DamageState = createDamageState();
   readonly detached: DynamicProp[] = [];
+  private readonly detachedColliderHandles: number[] = [];
   readonly wheels: Mesh[] = [];
   readonly panels = new Map<string, Mesh>();
   readonly spec: VehicleSpec;
@@ -427,6 +428,7 @@ export class Vehicle {
       mass: 18,
       label: 'detached-wheel-' + WHEEL_NAMES[index]
     });
+    this.detachedColliderHandles.push(collider.handle);
     this.detached.push({ body, mesh: wheel });
   }
 
@@ -471,6 +473,7 @@ export class Vehicle {
       mass: 9,
       label: name
     });
+    this.detachedColliderHandles.push(collider.handle);
     this.detached.push({ body, mesh: panel });
   }
 
@@ -521,6 +524,8 @@ export class Vehicle {
 
   dispose() {
     this.registry.delete(this.collider.handle);
+    for (const handle of this.detachedColliderHandles) this.registry.delete(handle);
+    this.detachedColliderHandles.length = 0;
     this.controller.free();
     this.world.removeRigidBody(this.body);
     for (const prop of this.detached) {
