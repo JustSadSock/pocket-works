@@ -1,7 +1,6 @@
 import {
   Color3,
   Mesh,
-  VertexData,
   MeshBuilder,
   PBRMaterial,
   Quaternion,
