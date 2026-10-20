@@ -3,9 +3,9 @@ const {GameRoom}=sim;
 
 const copy=v=>structuredClone(v);
 function packFrame(f){const i=f.input,s=f.state;return [f.timestamp,[i.keys?.w?1:0,i.keys?.a?1:0,i.keys?.s?1:0,i.keys?.d?1:0,i.mouseAngle||0,!!i.lmb,!!i.rmb,!!i.dash,!!i.ghostToggle],STATE_KEYS.map(k=>s[k])];}
-const STATE_KEYS=['x','y','vx','vy','facing','speed','dashCooldown','attacking','attackTimer','attackPower','charge','shieldUp','shieldStrength','shieldCooldown','parryWindow','stagger'];
+const STATE_KEYS=['x','y','vx','vy','facing','speed','dashCooldown','attacking','attackTimer','attackPower','charge','shieldUp','shieldStrength','shieldCooldown','parryWindow','stagger','shieldTap'];
 function unpackFrame(f){return {timestamp:f[0],input:{keys:{w:!!f[1][0],a:!!f[1][1],s:!!f[1][2],d:!!f[1][3]},mouseAngle:f[1][4],lmb:f[1][5],rmb:f[1][6],dash:f[1][7],ghostToggle:f[1][8]},state:Object.fromEntries(STATE_KEYS.map((k,i)=>[k,f[2][i]]))};}
-function encode(room){return {id:room.id,mode:room.mode,map:room.map,clock:room.clock,roundResetAt:room.roundResetAt,lastTick:Date.now(),players:[...room.players.values()].map(p=>({...p,events:p.events.slice(-12),ws:null,ghost:{...p.ghost,buffer:p.ghost.buffer.map(packFrame),...(p.ghost.playback?{playback:p.ghost.playback.map(packFrame)}:{})}}))};}
+function encode(room){return {id:room.id,mode:room.mode,map:room.map,clock:room.clock,roundResetAt:room.roundResetAt,eventSerial:room.eventSerial||0,lastTick:Date.now(),players:[...room.players.values()].map(p=>({...p,events:p.events.slice(-12),ws:null,ghost:{...p.ghost,buffer:p.ghost.buffer.map(packFrame),...(p.ghost.playback?{playback:p.ghost.playback.map(packFrame)}:{})}}))};}
 function decode(s){const room=Object.create(GameRoom.prototype);Object.assign(room,s);room.broadcast=()=>{};room.players=new Map(s.players.map(p=>{p=copy(p);p.ghost.buffer=p.ghost.buffer.map(unpackFrame);if(p.ghost.playback)p.ghost.playback=p.ghost.playback.map(unpackFrame);return[p.id,p];}));return room;}
 function add(room,member){if(room.players.has(member.id))return;if(room.players.size>=2)throw Error('Комната заполнена');const p=room.addPlayer(null,member.name);room.players.delete(p.id);p.id=member.id;p.ghostActor.id=member.id+'-g';p.ghostActor.ownerId=member.id;room.players.set(p.id,p);}
 function output(room){return {state:encode(room),events:[{type:'state',payload:{}}]};}

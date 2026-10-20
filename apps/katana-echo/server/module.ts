@@ -1228,6 +1228,8 @@ function improveKatanaCombat(GameRoom) {
   const originalStep = proto.step;
   const originalKill = proto.killPlayer;
   const originalHandle = proto.handleInput;
+  const originalUpdatePlayer = proto.updatePlayer;
+  const originalAddPlayer = proto.addPlayer;
   const RADIUS = 0.48;
   const owner = e => e.isGhost ? e.ownerId : e.id;
   const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
@@ -1249,17 +1251,55 @@ function improveKatanaCombat(GameRoom) {
     }
     return false;
   };
+  proto.addPlayer=function(ws,name){
+    const p=originalAddPlayer.call(this,ws,name);
+    if(this.players.size>1){p.state.facing=Math.PI;p.inputState.mouseAngle=Math.PI;}
+    return p;
+  };
+  // A pressed-and-released button may arrive between simulation ticks.
+  // Preserve its edge on the authoritative state instead of dropping the action.
   proto.handleInput=function(id,payload){
     const p=this.players.get(id);
-    if(!p)return;
+    if(!p||!p.alive)return;
     const sequence=Number(payload?.seq)||0;
     if(sequence&&sequence<=(p.lastSequence||0))return;
     if(sequence)p.lastSequence=sequence;
+    const old=p.inputState||{};
+    if(payload?.lmb&&!old.lmb&&!p.state.attacking){
+      p.state.charge=Math.max(p.state.charge,95);
+    }
+    if(payload?.rmb&&!old.rmb&&p.state.shieldCooldown<=0&&!p.state.attacking){
+      p.state.shieldUp=true;
+      p.state.parryWindow=170;
+      p.state.shieldStrength=3;
+      p.state.shieldTap=165;
+    }
+    if(payload?.dash&&!old.dash)p.pendingDash=true;
     originalHandle.call(this,id,payload);
+  };
+  proto.updatePlayer=function(p,ms){
+    if(!p.alive)return;
+    if(p.pendingDash&&!p.inputState.dash)p.inputState={...p.inputState,dash:true};
+    originalUpdatePlayer.call(this,p,ms);
+    if(p.pendingDash){p.pendingDash=false;p.inputState.dash=false;}
   };
   proto.step=function(ms){
     if(this.players.size<2){this.clock+=ms;return;}
+    const wasReset=!!this.roundResetAt;
     originalStep.call(this,ms);
+    if(wasReset&&!this.roundResetAt){
+      let i=0;
+      for(const p of this.players.values()){
+        const facing=i++===0?0:Math.PI;
+        p.state.facing=facing;p.inputState={keys:{},lmb:false,rmb:false,dash:false,ghostToggle:false,mouseAngle:facing};
+        p.triggers={spawnGhost:false,toggleGhost:false};p.pendingDash=false;
+      }
+    }
+    for(const p of this.players.values()){
+      for(const event of p.events){
+        if(!Number.isSafeInteger(event.id))event.id=++this.eventSerial;
+      }
+    }
   };
   proto.constrainToBounds=function(s){
     const bounds=this.map?.bounds||{w:22,h:14};
@@ -1310,7 +1350,8 @@ function improveKatanaCombat(GameRoom) {
     if(input.rmb&&!s.shieldUp&&s.shieldCooldown<=0&&!s.attacking){
       s.shieldUp=true;s.parryWindow=170;s.shieldStrength=3;
     }
-    if(!input.rmb&&s.shieldUp){s.shieldUp=false;s.parryWindow=0;}
+    s.shieldTap=Math.max(0,(s.shieldTap||0)-ms);
+    if(!input.rmb&&s.shieldUp&&s.shieldTap<=0){s.shieldUp=false;s.parryWindow=0;}
     if(input.lmb&&!s.shieldUp&&!s.attacking)s.charge=Math.min(1800,Math.max(80,s.charge+ms));
     else if(!input.lmb&&s.charge>0){
       s.attacking=true;s.attackTimer=200;s.attackPower=s.charge;s.charge=0;
@@ -1367,12 +1408,12 @@ function packFrame(f) {
   const i = f.input, s = f.state;
   return [f.timestamp, [i.keys?.w ? 1 : 0, i.keys?.a ? 1 : 0, i.keys?.s ? 1 : 0, i.keys?.d ? 1 : 0, i.mouseAngle || 0, !!i.lmb, !!i.rmb, !!i.dash, !!i.ghostToggle], STATE_KEYS.map((k) => s[k])];
 }
-var STATE_KEYS = ["x", "y", "vx", "vy", "facing", "speed", "dashCooldown", "attacking", "attackTimer", "attackPower", "charge", "shieldUp", "shieldStrength", "shieldCooldown", "parryWindow", "stagger"];
+var STATE_KEYS = ["x", "y", "vx", "vy", "facing", "speed", "dashCooldown", "attacking", "attackTimer", "attackPower", "charge", "shieldUp", "shieldStrength", "shieldCooldown", "parryWindow", "stagger", "shieldTap"];
 function unpackFrame(f) {
   return { timestamp: f[0], input: { keys: { w: !!f[1][0], a: !!f[1][1], s: !!f[1][2], d: !!f[1][3] }, mouseAngle: f[1][4], lmb: f[1][5], rmb: f[1][6], dash: f[1][7], ghostToggle: f[1][8] }, state: Object.fromEntries(STATE_KEYS.map((k, i) => [k, f[2][i]])) };
 }
 function encode(room) {
-  return { id: room.id, mode: room.mode, map: room.map, clock: room.clock, roundResetAt: room.roundResetAt, lastTick: Date.now(), players: [...room.players.values()].map((p) => ({ ...p, events: p.events.slice(-12), ws: null, ghost: { ...p.ghost, buffer: p.ghost.buffer.map(packFrame), ...p.ghost.playback ? { playback: p.ghost.playback.map(packFrame) } : {} } })) };
+  return { id: room.id, mode: room.mode, map: room.map, clock: room.clock, roundResetAt: room.roundResetAt, eventSerial: room.eventSerial || 0, lastTick: Date.now(), players: [...room.players.values()].map((p) => ({ ...p, events: p.events.slice(-12), ws: null, ghost: { ...p.ghost, buffer: p.ghost.buffer.map(packFrame), ...p.ghost.playback ? { playback: p.ghost.playback.map(packFrame) } : {} } })) };
 }
 function decode(s) {
   const room = Object.create(GameRoom.prototype);
