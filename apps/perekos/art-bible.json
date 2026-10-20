@@ -95,6 +95,11 @@
       "id": "webaudio",
       "availability": "available",
       "reason": "Web Audio provides tiny user-unlocked feedback tones that remain under user sound settings and offline operation."
+    },
+    {
+      "id": "universal-art-forge-pixel",
+      "availability": "available",
+      "reason": "Native pixel adapter exports palette-locked layered JSON source into pixel-perfect sprite PNG and atlas JSON, committed per app."
     }
   ],
   "assets": [
@@ -130,6 +135,17 @@
       "integration": "Linked from HTML, webmanifest and PocketWorks app configuration for the standalone application.",
       "provenance": "Original vector geometry, no downloaded artwork, fonts or licensing dependency.",
       "maxBytes": 15000
+    },
+    {
+      "id": "compact-mages-24x32",
+      "tool": "universal-art-forge-pixel",
+      "source": "asset-forge/mages.json",
+      "output": "assets/mages.png",
+      "role": "24x32 strict pixel fighters, 6 classes x 8 facings x 3 poses",
+      "acceptance": "144 palette-locked frames loaded from committed PNG at integer scaling; 8 visual directions and unique cast/walk, no filtering; original avatar colors remain recognisable",
+      "integration": "mage-pixel.mjs renders the Forge atlas as real sprites, with app-owned offline precache and no gameplay state mutation",
+      "provenance": "Author-authored layered pixel source in this app",
+      "maxBytes": 750000
     }
   ],
   "constraints": {
