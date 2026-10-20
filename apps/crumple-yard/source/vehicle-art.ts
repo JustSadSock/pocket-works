@@ -108,6 +108,37 @@ export function buildVehicleArt(
     new Vector3(-glassWidth, sill, rearBase),
     new Vector3(glassWidth, sill, rearBase)
   ]);
+  // Non-structural cabin furnishings give the tinted greenhouse genuine depth,
+  // rather than transparent windows revealing an empty rectangular chassis.
+  const cabinFloor = mat('cabin-floor', '#222729', 0.05, 0.96);
+  const upholstery = mat('upholstery', suv ? '#393a38' : hatch ? '#4b4943' : '#4d4a44', 0.02, 0.92);
+  const upholsteryEdge = mat('seat-stitch', '#737068', 0, 0.93);
+  box('interior-tub', [0, sill - 0.14, -l * 0.055], [w * 0.81, 0.11, l * 0.43], cabinFloor);
+  box('dash', [0, sill + 0.012, frontBase - 0.14], [w * 0.78, 0.17, 0.35], cabinFloor);
+  box('dash-instruments', [-w * 0.235, sill + 0.104, frontBase - 0.17], [0.33, 0.035, 0.17], seams);
+  box('center-console', [0, sill - 0.02, -l * 0.01], [0.16, 0.15, l * 0.29], trim);
+  for (const z of [-l * 0.16, l * 0.048]) {
+    for (const side of [-1, 1]) {
+      const x = side * w * 0.215;
+      const base = box('seat-cushion-' + side + z, [x, sill - 0.035, z],
+        [w * 0.32, 0.115, l * 0.135], upholstery);
+      base.rotation.x = -0.025;
+      const back = box('seat-back-' + side + z, [x, sill + 0.17, z - l * 0.055],
+        [w * 0.30, 0.43, 0.105], upholstery);
+      back.rotation.x = 0.14;
+      box('seat-piping-' + side + z, [x, sill + 0.20, z - l * 0.009],
+        [w * 0.25, 0.028, 0.018], upholsteryEdge);
+      box('seat-headrest-' + side + z, [x, sill + 0.44, z - l * 0.081],
+        [w * 0.21, 0.16, 0.105], upholstery);
+    }
+  }
+  const steeringWheel = MeshBuilder.CreateTorus(spec.id + '-steering-wheel', {
+    diameter: 0.38, thickness: 0.044, tessellation: 18
+  }, scene);
+  steeringWheel.parent = root;
+  steeringWheel.position.set(-w * 0.235, sill + 0.18, frontBase - 0.34);
+  steeringWheel.rotation.x = -0.35;
+  steeringWheel.material = trim;
   const pillarZ = frontTop + (rearTop - frontTop) * (hatch ? 0.53 : 0.48);
   for (const side of [-1, 1]) {
     const x = side * glassWidth * 1.025;
@@ -148,6 +179,9 @@ export function buildVehicleArt(
   }
 
   // The body panels remain independently detachable Rapier objects.
+  // A structural roof insert remains an independently damageable panel.
+  panel('roof', [0, roof * 0.985, (frontTop + rearTop) * 0.5],
+    [w * (suv ? 0.76 : 0.70), 0.055, Math.abs(frontTop - rearTop) * 0.94], paint);
   panel('hood', [0, h * 0.455, l * 0.342], [w * 0.76, 0.046, l * (suv ? 0.205 : hatch ? 0.22 : 0.3)], paint);
   panel('trunk', [0, h * 0.45, -l * (hatch ? 0.425 : 0.395)], [w * 0.77, 0.046, l * (hatch ? 0.11 : 0.205)], paint);
   panel('door-left', [-w * 0.491, h * 0.07, -l * 0.045], [0.041, h * 0.53, l * 0.30], paint);
