@@ -1295,6 +1295,7 @@ function improveKatanaCombat(GameRoom) {
         p.triggers={spawnGhost:false,toggleGhost:false};p.pendingDash=false;
       }
     }
+    if(!Number.isSafeInteger(this.eventSerial))this.eventSerial=0;
     for(const p of this.players.values()){
       for(const event of p.events){
         if(!Number.isSafeInteger(event.id))event.id=++this.eventSerial;
