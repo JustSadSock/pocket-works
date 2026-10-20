@@ -4,7 +4,7 @@
       "adapter": "pixel",
       "id": "compact-mages",
       "inputs": {
-        "asset-forge/mages.json": "3e9f6289bab2653963a15052035c7b13ad0633bd61f3b9d7692e5e1ae28532a1"
+        "asset-forge/mages.json": "37ec32b98ca156beb34a9517986773b800bb3fdca8931506d0d34323a15d40bb"
       },
       "outputs": {
         "atlas": {
@@ -13,9 +13,9 @@
           "url": "assets/mages.json"
         },
         "image": {
-          "bytes": 7470,
+          "bytes": 110781,
           "height": 32,
-          "sha256": "fd6a96df71f7c95678bdd3d5be080081d074acfe1a412e451e368e64fbcc6d00",
+          "sha256": "c87c3b4520a94875815600bd07852cbf925f02f70989a8fbe2108d0565278fdf",
           "url": "assets/mages.png",
           "width": 3456
         }
