@@ -38,6 +38,7 @@ function toRapierQuaternion(rotation: Vector3) {
 export class CrashYard {
   readonly dynamicProps: DynamicProp[] = [];
   private showroom: TransformNode | null = null;
+  private readonly initialProps = new Map<number, Vector3>();
   readonly trafficWaypoints = [
     new Vector3(-14, 0.2, 24),
     new Vector3(13, 0.2, 24),
@@ -250,6 +251,7 @@ export class CrashYard {
     this.surfaceBox(name + '-top-panel', root, new Vector3(0, size * 0.505, 0),
       new Vector3(size * 0.75, 0.02, size * 0.75), this.warning);
     this.dynamicProps.push({ body, mesh: root });
+    this.initialProps.set(body.handle, position.clone());
   }
 
   private barrel(name: string, position: Vector3) {
@@ -276,6 +278,7 @@ export class CrashYard {
     const lid = MeshBuilder.CreateCylinder(name + '-lid', { height: 0.03, diameter: radius * 1.75, tessellation: 18 }, this.scene);
     lid.parent = root; lid.position.y = height / 2 + 0.017; lid.material = this.metalLight;
     this.dynamicProps.push({ body, mesh: root });
+    this.initialProps.set(body.handle, position.clone());
   }
 
   private makeShowroom() {
@@ -306,6 +309,18 @@ export class CrashYard {
 
   setGarage(visible: boolean) {
     this.showroom?.setEnabled(visible);
+  }
+
+  resetDynamics() {
+    for (const prop of this.dynamicProps) {
+      const position = this.initialProps.get(prop.body.handle);
+      if (!position || !prop.body.isValid()) continue;
+      prop.body.setTranslation({ x: position.x, y: position.y, z: position.z }, true);
+      prop.body.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+      prop.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      prop.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    }
+    this.sync();
   }
 
   private build() {
