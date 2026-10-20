@@ -25,8 +25,8 @@ function polygon(ctx,pts,color,width=1){
  for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
  ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();
 }
-export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObserver}={}){
- let saved={};try{saved=JSON.parse(localStorage.getItem(STORAGE)||'null')||{}}catch{}
+export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObserver,onPointChange,bindControls=true,storageKey=STORAGE}={}){
+ let saved={};try{saved=JSON.parse(localStorage.getItem(storageKey)||'null')||{}}catch{}
  const state={};
  for(const [key,a,b]of [
   ['polar',0,75],['azimuth',0,360],['cone',0,65],['count',1,25],
@@ -44,7 +44,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
  let inspectResult=null,positionNotice='';
  let metric=null,field=null,active=false,running=false,lastStatus=0;
  const touches=new Map(),pressStart=new Map();let pinch=null,staticLayer={key:'',canvas:null};
- const save=()=>{try{localStorage.setItem(STORAGE,JSON.stringify(state))}catch{}};
+ const save=()=>{try{localStorage.setItem(storageKey,JSON.stringify(state))}catch{}};
  const changed=()=>onDirty?.();
  const stats=()=>field&&metric?fieldStatistics(field,metric):null;
  function configure(m){
@@ -132,6 +132,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
  function setObserverPoint(value,notice=''){
   const next=normalizeObserverPoint(value);
   state.observerPoint=next;positionNotice=notice;inspectResult=null;
+  onPointChange?.({...next});
   refresh();save();changed();
  }
  function takePhoton(index=state.selectedPhoton){
@@ -318,6 +319,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
   if(!active)return;e.preventDefault();state.zoom=clamp(state.zoom*(e.deltaY>0?.92:1.08),.55,1.65);
   save();refresh();changed();
  },{passive:false});
+ if(bindControls){
  const settings=[
   ['polar',Number],['azimuth',Number],['cone',Number],['count',Number],
   ['source',Number],['zoom',Number]
@@ -376,6 +378,7 @@ export function createLightFieldLab(canvas,{getMetric,onDirty,onAction,onOpenObs
  $('field-open-observer').addEventListener('click',openObserver);
  $('field-start').addEventListener('click',trigger);
  $('field-reset').addEventListener('click',reset);
+ }
  return {
   state,configure,setActive,trigger,reset,tick,draw,refresh,applyParameters,setObserverPoint,takePhoton,checkRay,openObserver,
   get running(){return running},
