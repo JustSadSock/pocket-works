@@ -32,6 +32,7 @@ type QaState = {
   selectedVehicle: VehicleId;
   preset: number;
   speedKmh: number;
+  gear: 'drive' | 'reverse';
   fps: number;
   quality: number;
   impactCount: number;
@@ -207,6 +208,7 @@ export class CrumpleGame {
       selectedVehicle: this.settings.vehicle,
       preset: this.settings.preset,
       speedKmh: 0,
+      gear: 'drive',
       fps: 60,
       quality: 1,
       impactCount: 0,
@@ -515,6 +517,7 @@ export class CrumpleGame {
     this.garageYaw = 0;
     this.camera.garage = false;
     this.yard.setGarage(false);
+    this.yard.resetDynamics();
     this.createTraffic();
     this.running = true;
     this.paused = false;
@@ -539,7 +542,9 @@ export class CrumpleGame {
       const worst = mostDamagedComponents(this.player.damage, 2)
         .map(([name, health]) => name + ' ' + Math.round(health * 100) + '%')
         .join(' · ');
-      this.ui.pauseSummary.textContent = 'Структура ' + Math.round(effects.structuralIntegrity * 100) + '% · ' + worst;
+      this.ui.pauseSummary.textContent =
+        this.player.damage.impactCount + ' ударов · прочность кузова ' +
+        Math.round(effects.structuralIntegrity * 100) + '% · ' + worst;
     }
     this.qa.boot = 'paused';
   }
@@ -589,7 +594,8 @@ export class CrumpleGame {
       };
       const labels: Record<string, string> = { front: 'ПЕРЕД', rear: 'ЗАД', left: 'ЛЕВЫЙ БОРТ', right: 'ПРАВЫЙ БОРТ', roof: 'КРЫША', chassis: 'ШАССИ' };
       this.ui.impactZone.textContent = labels[feedback.result.zone] + ' · ' + Math.round(feedback.result.severity * 100) + '%';
-      this.ui.impactInfo.textContent = feedback.label + ' · Δv ' + (feedback.relativeSpeed * 3.6).toFixed(0) + ' км/ч';
+      const impactKN = Math.max(0, feedback.force / 1000);
+      this.ui.impactInfo.textContent = impactKN.toFixed(1) + ' кН · ' + (feedback.relativeSpeed * 3.6).toFixed(0) + ' км/ч сближения';
       this.ui.impactReadout.classList.add('is-hot');
       this.lastImpactUi = performance.now();
     }
@@ -685,6 +691,7 @@ export class CrumpleGame {
       selectedVehicle: this.settings.vehicle,
       preset: this.settings.preset,
       speedKmh: Number(this.player.speedKmh().toFixed(1)),
+      gear: this.player.gear,
       fps: Number(this.fpsEma.toFixed(1)),
       quality: Number(this.quality.toFixed(2)),
       impactCount: this.player.damage.impactCount,
