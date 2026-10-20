@@ -116,6 +116,7 @@ try{
     left:frame?.left,cardLeft:outer.left,right:frame?.right,cardRight:outer.right,
     natural,rendered:img?.width&&img?.height?img.width/img.height:null};
   }));
+  await child.locator('.verdict-phase').screenshot({path:join(output,size.label+'-verdict.png')});
   assert.equal(fitBoxes.length,5);
   for(const f of fitBoxes){
    assert(f.frameW>45&&f.frameH>90,'ballot picture too small '+size.label+' '+JSON.stringify(f));
@@ -123,7 +124,6 @@ try{
    assert(f.top>=f.cardTop-3&&f.bottom<=f.votesTop+3,'wood rim overlaps coin shelf '+size.label+' '+JSON.stringify(f));
    if(f.natural)assert(Math.abs(f.rendered-f.natural)/f.natural<.04,'picture aspect distorted '+size.label+' '+JSON.stringify(f));
   }
-  await child.locator('.verdict-phase').screenshot({path:join(output,size.label+'-verdict.png')});
   passed+=fitBoxes.length*3;
   await preview('round-review');
   const exhibition=await child.locator('.round-review-grid').evaluate(el=>({
