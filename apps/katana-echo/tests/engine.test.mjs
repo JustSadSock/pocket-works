@@ -122,3 +122,31 @@ test('event identifiers advance monotonically and survive serialization',()=>{
  room.step(16.67);
  assert.equal(room.eventSerial,ids.length);
 });
+
+
+test('reloaded client accepts fresh input sequence but rejects packets from older input epochs',()=>{
+ const actual=Date.now;Date.now=()=>1_000_000;
+ try{
+  let state=module.createRoom({player:{id:'a',name:'A'},payload:{mode:'echo-trap'}}).state;
+  state=module.onJoin({state,player:{id:'b',name:'B'}}).state;
+  const send=(stream,seq,lmb)=>{
+   state=module.onMessage({state,player:{id:'a'},payload:{type:'input',payload:{stream,seq,keys:{},mouseAngle:0,lmb}}}).state;
+  };
+  send(1000,57,true);
+  send(1000,56,false);
+  assert.equal(state.players.find(p=>p.id==='a').inputState.lmb,true,'out-of-order same stream is ignored');
+  send(1001,1,false);
+  assert.equal(state.players.find(p=>p.id==='a').inputState.lmb,false,'new stream resets sequence');
+  send(1000,58,true);
+  assert.equal(state.players.find(p=>p.id==='a').inputState.lmb,false,'old page cannot overwrite new input stream');
+ }finally{Date.now=actual;}
+});
+test('charged sword cannot strike through an actively raised shield',()=>{
+ const room=new GameRoom('guard-balance','echo-trap',()=>{});
+ room.map.walls=[];
+ const s=room.addPlayer(null,'Guard').state;
+ s.charge=800;s.shieldUp=true;s.shieldStrength=3;
+ room.applyInputToActor(s,{keys:{},mouseAngle:0,lmb:false,rmb:true},16.67);
+ assert.equal(s.attacking,false);
+ assert.equal(s.charge,0,'charge is cancelled rather than stored during guard');
+});
