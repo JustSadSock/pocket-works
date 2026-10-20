@@ -2,7 +2,8 @@ import {PocketSocket} from './network.js';
 import {renderScene,cameraFor} from './scene.js';
 const $=id=>document.getElementById(id);
 const canvas=$('view'),ctx=canvas.getContext('2d',{alpha:false});
-const stage=$('stage'),overlay=$('start-screen'),status=$('status'),modeSelect=$('mode'),nameInput=$('name'),roomInput=$('room');
+const stage=$('stage'),overlay=$('start-screen'),status=$('status'),modeSelect=$('mode'),difficultySelect=$('difficulty'),nameInput=$('name'),roomInput=$('room');
+canvas.tabIndex=0;canvas.setAttribute('role','application');
 const roomPanel=$('room-panel'),phaseEl=$('phase'),feedback=$('feedback'),soundBtn=$('sound'),echoBtn=$('echo-btn');
 const motionReduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const WS_OPEN=PocketSocket.OPEN;
@@ -10,15 +11,19 @@ const STORE='pocket-works:katana-echo:settings';
 let ws=null,engine=null,offlineState=null,session='menu',playerId=null,world={players:[],map:null,phase:'menu'};
 let createPending=false,connected=false,seq=0,lastSend=performance.now(),lastPaint=performance.now(),lastFeedback=0;
 let drawWidth=1,drawHeight=1,dpr=1;
-let prevPlayers=new Map(),smoothing=new Map(),effects=[],roundsShown=0,previousPhase='';
+let prevPlayers=new Map(),smoothing=new Map(),effects=[],previousPhase='',botNextEchoAt=0,botNavTime=0,botNav=null;
 let soundOn=false,audio=null;
 const input={keys:{w:false,a:false,s:false,d:false},lmb:false,rmb:false,dash:false,ghostToggle:false,mouseAngle:0};
 const storageRead=()=>{try{return JSON.parse(localStorage.getItem(STORE)||'{}')}catch{return {}}};
 const saved=storageRead();
 if(saved.name)nameInput.value=saved.name;if(saved.mode)modeSelect.value=saved.mode;
+if(['easy','normal','hard'].includes(saved.difficulty))difficultySelect.value=saved.difficulty;
 soundOn=!!saved.sound;soundBtn.setAttribute('aria-pressed',String(soundOn));soundBtn.textContent=soundOn?'Звук: вкл':'Звук: выкл';
-const persist=()=>{try{localStorage.setItem(STORE,JSON.stringify({name:nameInput.value.slice(0,22),mode:modeSelect.value,sound:soundOn}))}catch{}};
-nameInput.addEventListener('change',persist);modeSelect.addEventListener('change',persist);
+const stats=Object.assign({wins:0,losses:0},saved.stats||{});
+const updateRecord=()=>{$('training-record').textContent='Тренировка · победы '+stats.wins+' / поражения '+stats.losses;};
+updateRecord();
+const persist=()=>{try{localStorage.setItem(STORE,JSON.stringify({name:nameInput.value.slice(0,22),mode:modeSelect.value,difficulty:difficultySelect.value,sound:soundOn,stats}))}catch{}};
+nameInput.addEventListener('change',persist);modeSelect.addEventListener('change',persist);difficultySelect.addEventListener('change',persist);
 function tone(kind){
  if(!soundOn)return;
  try{
@@ -39,7 +44,15 @@ function note(message,type='info'){
  lastFeedback=performance.now()+3000;
 }
 function changeStatus(text,critical=false){status.textContent=text;status.dataset.problem=String(critical)}
-function showMenu(show){overlay.hidden=!show;stage.classList.toggle('menu-open',show);$('resume').hidden=session==='menu';$('leave').hidden=session==='menu';}
+function showMenu(show){
+ if(show&&overlay.hidden&&session!=='menu'){
+  clearInput();
+  if(session==='online')sendInput(true);
+ }
+ overlay.hidden=!show;stage.classList.toggle('menu-open',show);
+ $('resume').hidden=session==='menu';$('leave').hidden=session==='menu';
+ if(!show)canvas.focus({preventScroll:true});
+}
 function clearInput(){
  Object.assign(input,{lmb:false,rmb:false,dash:false,ghostToggle:false});
  for(const k of Object.keys(input.keys))input.keys[k]=false;
@@ -50,7 +63,7 @@ function stop(){
  if(ws){try{ws.leave?.()}catch{}ws.close();ws=null;}
  engine=null;offlineState=null;connected=false;session='menu';playerId=null;
  world={players:[],map:null,phase:'menu'};prevPlayers.clear();smoothing.clear();effects.length=0;
- createPending=false;roomPanel.hidden=true;changeStatus('Выбери режим');phaseEl.textContent='';
+ createPending=false;previousPhase='';botNextEchoAt=0;botNav=null;botNavTime=0;roomPanel.hidden=true;changeStatus('Выбери режим');phaseEl.textContent='';
  $('training-label').hidden=true;showMenu(true);updateHud();
 }
 function resize(){
@@ -75,12 +88,12 @@ function receive(next){
    if(old.alive&&!p.alive)emitEffect('death',p);
    if(!old.attacking&&p.state?.attacking)emitEffect('swing',p);
    if(!old.ghost&&p.ghostActor?.alive)emitEffect('ghost',p);
-   if((p.events||[]).length>(old.events||0)){
-    const extra=p.events.slice(old.events||0);
-    if(extra.some(x=>x.type==='parry'||x.type==='clash'||x.type==='block'))emitEffect('parry',p);
-   }
+   const extra=(p.events||[]).filter(event=>Number.isSafeInteger(event.id)&&event.id>(old.lastEvent||0));
+   if(extra.some(x=>x.type==='parry'||x.type==='parried')){emitEffect('parry',p);if(p.id===playerId)note('Парирование!');}
+   else if(extra.some(x=>x.type==='clash'||x.type==='block'))emitEffect('parry',p);
+   else if(extra.some(x=>x.type==='ghostBreak'))emitEffect('ghost',p);
   }
-  fresh.set(p.id,{alive:p.alive,attacking:p.state?.attacking,ghost:p.ghostActor?.alive,events:p.events?.length||0});
+  fresh.set(p.id,{alive:p.alive,attacking:p.state?.attacking,ghost:p.ghostActor?.alive,lastEvent:Math.max(old?.lastEvent||0,...(p.events||[]).map(e=>e.id||0))});
   if(!smoothing.has(p.id))smoothing.set(p.id,{x:p.state.x,y:p.state.y});
  }
  prevPlayers=fresh;world=next;
@@ -90,7 +103,14 @@ function receive(next){
   changeStatus('Комната '+(roomInput.value||'')+' · ждём второго игрока');
  }else if(next.phase==='round-end'){
   phaseEl.textContent=local&&!local.alive?'ПОРАЖЕНИЕ':'ПОБЕДА';
-  if(previousPhase!=='round-end')note('Раунд завершён. Новая схватка начнётся автоматически.');
+  if(previousPhase!=='round-end'){
+   if(session==='training'&&local&&enemy){
+    if(local.alive&&!enemy.alive)stats.wins++;
+    if(enemy.alive&&!local.alive)stats.losses++;
+    updateRecord();persist();
+   }
+   note(local?.alive?'Точный удар · раунд за тобой!':'Раунд проигран · готовься к реваншу');
+  }
  }else if(next.phase==='playing'){
   phaseEl.textContent='БОЙ';
   if(previousPhase==='round-end')note('Новый раунд');
@@ -190,15 +210,28 @@ function botInput(){
  if(!bot||!me||!bot.alive||!me.alive)return {keys:{}};
  const s=bot.state,t=me.state,dx=t.x-s.x,dy=t.y-s.y,d=Math.hypot(dx,dy)||.001,ang=Math.atan2(dy,dx),now=performance.now();
  const lateral=Math.sin(now*.0011)>0?1:-1;
- const [navX,navY]=botSteer(s,t);
+ const difficulty=difficultySelect.value;
+ if(!botNav||now-botNavTime>(difficulty==='hard'?90:175)){
+  botNav=botSteer(s,t);botNavTime=now;
+ }
+ const [navX,navY]=botNav;
  const vx=(d>2.3?navX:d<1.2?-dx/d*.65:0)+(-dy/d)*lateral*(d>2.3?.12:.62);
  const vy=(d>2.3?navY:d<1.2?-dy/d*.65:0)+(dx/d)*lateral*(d>2.3?.12:.62);
- const shield=d<2.45&&t.attacking&&s.shieldCooldown<=0&&Math.sin(now*.009)>.15;
- const chargePhase=now%1800;
+ const shieldRange=difficulty==='hard'?2.85:difficulty==='easy'?1.65:2.45;
+ const shield=d<shieldRange&&t.attacking&&s.shieldCooldown<=0&&(difficulty==='hard'||Math.sin(now*.009)>(difficulty==='easy'?.82:.15));
+ const chargePhase=now%(difficulty==='hard'?1480:difficulty==='easy'?2200:1800);
+ const releaseAt=difficulty==='hard'?880:difficulty==='easy'?340:610;
  const keys={w:vy<-.28,s:vy>.28,a:vx<-.28,d:vx>.28};
- return {keys,mouseAngle:ang,lmb:chargePhase<610&&!shield,rmb:shield,
-  dash:d>5.5&&s.dashCooldown<=0&&Math.sin(now*.003)>.8,
-  ghostToggle:world.mode==='echo-trap'&&bot.ghost?.cooldown===0&&now%9500<35};
+ let ghostToggle=false;
+ if(now>=botNextEchoAt){
+  const active=!!bot.ghost?.active;
+  ghostToggle=world.mode==='channel-echo'?active||bot.ghost?.energy>.5:
+   world.mode==='echo-trap'&&bot.ghost?.cooldown===0;
+  botNextEchoAt=now+(active?3600:difficulty==='easy'?13000:8300);
+ }
+ return {keys,mouseAngle:ang,lmb:chargePhase<releaseAt&&!shield,rmb:shield,
+  dash:d>(difficulty==='hard'?3.5:6)&&s.dashCooldown<=0&&Math.sin(now*.003)>(difficulty==='hard'?.12:.8),
+  ghostToggle};
 }
 function sendInput(force=false){
  if(document.hidden&&!force||session==='menu'||overlay.hidden===false)return;
@@ -224,7 +257,7 @@ async function practice(){
   const you={id:'local',name:nameInput.value.trim().slice(0,22)||'Ронин'};
   const first=engine.createRoom({player:you,payload:{mode:modeSelect.value}}).state;
   offlineState=engine.onJoin({state:first,player:{id:'bot',name:'Тень мастера'}}).state;
-  playerId=you.id;session='training';connected=true;previousPhase='';
+  playerId=you.id;session='training';connected=true;previousPhase='';botNextEchoAt=0;botNav=null;botNavTime=0;
   roomInput.value='';roomPanel.hidden=true;$('training-label').hidden=false;
   receive(engine.viewForPlayer({state:offlineState,player:you}));
   persist();showMenu(false);note('Тренировка началась · E — эхо, пробел — рывок');
@@ -238,9 +271,10 @@ function online(create){
  globalThis.katanaCreate=create;
  ws=new PocketSocket('');
  const target=ws;
+ let keepPaused=false;
  target.addEventListener('open',()=>{
   if(target!==ws)return;
-  connected=true;changeStatus('Соединение установлено · вход в комнату');
+  changeStatus('Соединение установлено · вход в комнату');
   target.send(JSON.stringify({type:'join',roomCode:roomInput.value.trim(),name:nameInput.value.trim()||'Ронин',mode:modeSelect.value}));
  });
  target.addEventListener('message',event=>{
@@ -248,19 +282,34 @@ function online(create){
   let msg;try{msg=JSON.parse(event.data)}catch{return;}
   if(msg.type==='room'){
    playerId=msg.data.playerId;roomInput.value=msg.data.roomCode;
-   createPending=false;roomPanel.hidden=false;
+   const firstJoin=createPending;
+   createPending=false;connected=true;roomPanel.hidden=false;
    $('room-code').textContent=msg.data.roomCode;
-   $('training-label').hidden=true;showMenu(false);
-   changeStatus('Комната '+msg.data.roomCode);note('Код '+msg.data.roomCode+' · пригласи второго бойца');
+   $('training-label').hidden=true;
+   if(firstJoin||!keepPaused)showMenu(false);
+   keepPaused=false;
+   changeStatus('Комната '+msg.data.roomCode);
+   note(firstJoin?'Код '+msg.data.roomCode+' · пригласи второго бойца':'Связь с дуэлью восстановлена');
   }
   if(msg.type==='state')receive(msg.data);
  });
+ target.addEventListener('reconnected',()=>{
+  if(target!==ws)return;
+  connected=false;keepPaused=!overlay.hidden;
+  changeStatus('Повторный вход в дуэль…');
+ });
  target.addEventListener('error',event=>{
   if(target!==ws)return;
-  createPending=false;const message=event.detail?.message||'Ошибка подключения';
-  changeStatus(message,true);note(message,'error');showMenu(true);
+  const details=event.detail||{},message=details.message||'Ошибка подключения';
+  changeStatus(message,true);note(message,'error');
+  if(details.fatal){
+   createPending=false;connected=false;roomPanel.hidden=true;
+   target.close();ws=null;showMenu(true);
+  }
  });
- target.addEventListener('close',()=>{if(target===ws){connected=false;changeStatus('Сеть отключена · восстановление',true)}});
+ target.addEventListener('close',()=>{
+  if(target===ws){connected=false;changeStatus('Связь прервана · переподключаемся',true);}
+ });
 }
 $('practice').addEventListener('click',practice);
 $('create').addEventListener('click',()=>online(true));
@@ -298,19 +347,21 @@ canvas.addEventListener('lostpointercapture',()=>{input.lmb=false;input.rmb=fals
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 const moveKey={KeyW:'w',ArrowUp:'w',KeyA:'a',ArrowLeft:'a',KeyS:'s',ArrowDown:'s',KeyD:'d',ArrowRight:'d'};
 window.addEventListener('keydown',e=>{
- if(e.target instanceof HTMLElement&&e.target.closest('input,select,textarea,button,[contenteditable]'))return;
+ if(e.code==='Escape'&&session!=='menu'){
+  showMenu(overlay.hidden);e.preventDefault();return;
+ }
+ if(e.target instanceof HTMLElement&&e.target.closest('input,select,textarea,[contenteditable]'))return;
  if(session==='menu'||!overlay.hidden)return;
  if(moveKey[e.code]){input.keys[moveKey[e.code]]=true;e.preventDefault();}
  if(!e.repeat&&(e.code==='Space'||e.code==='ShiftLeft'||e.code==='ShiftRight')){input.dash=true;sendInput(true);e.preventDefault();}
  if(!e.repeat&&e.code==='KeyE'){input.ghostToggle=true;sendInput(true);e.preventDefault();}
- if(e.code==='KeyJ'){input.lmb=true;e.preventDefault();}
- if(e.code==='KeyK'){input.rmb=true;e.preventDefault();}
- if(e.code==='Escape'){showMenu(true);e.preventDefault();}
+ if(e.code==='KeyJ'){if(!input.lmb){input.lmb=true;sendInput(true)}e.preventDefault();}
+ if(e.code==='KeyK'){if(!input.rmb){input.rmb=true;sendInput(true)}e.preventDefault();}
 });
 window.addEventListener('keyup',e=>{
  if(moveKey[e.code])input.keys[moveKey[e.code]]=false;
- if(e.code==='KeyJ')input.lmb=false;
- if(e.code==='KeyK')input.rmb=false;
+ if(e.code==='KeyJ'){input.lmb=false;sendInput(true);}
+ if(e.code==='KeyK'){input.rmb=false;sendInput(true);}
 });
 for(const button of document.querySelectorAll('[data-key],[data-combat]')){
  const set=down=>{
@@ -332,7 +383,9 @@ for(const button of document.querySelectorAll('[data-key],[data-combat]')){
  button.addEventListener('pointercancel',()=>set(false));
  button.addEventListener('lostpointercapture',()=>set(false));
 }
-document.addEventListener('visibilitychange',()=>{if(document.hidden){clearInput();if(session==='online')sendInput(true)}});
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden){clearInput();if(session==='online')sendInput(true);}
+});
 window.addEventListener('blur',()=>{clearInput();if(session==='online')sendInput(true)});
 function render(t){
  const elapsed=Math.min(60,t-lastPaint);lastPaint=t;
