@@ -42,9 +42,9 @@
           "url": "assets/court-tiles.json"
         },
         "image": {
-          "bytes": 2076,
+          "bytes": 12464,
           "height": 32,
-          "sha256": "5acc5f0b77a21520cadfbdac885d3eaad7a4e39eab2951b8191d45a5238fa185",
+          "sha256": "95955c7e972f94b35634631885d53a8d57c5f89565a84b0421b4ca80858326ba",
           "url": "assets/court-tiles.png",
           "width": 384
         }
