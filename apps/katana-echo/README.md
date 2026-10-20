@@ -1,3 +1,21 @@
-# Katana Echo
+# Katana Echo — версия 0.2.0
 
-Recovered cloud duel with the original echo-trap, shadow-tail and channel-echo mechanics, charged strikes, shield/parry, dash and replaying ghost actors. PocketNet owns the 60Hz simulation, with compact persisted history and projected snapshots. Round restart uses serialized time instead of a process-local timer. Movement and attack/guard/dash/ghost touch controls are added. Internet PvP requires a connection; the app shell and rules remain available offline.
+Дуэль катан на одной арене. Можно тренироваться против ИИ **без интернета** или играть вдвоём через PocketNet с восьмизначным кодом. Сетевая симуляция выполняется сервером; офлайн-тренировка использует тот же скомпилированный движок, зафиксированный для v2.
+
+## Правила
+- WASD/стрелки — движение. Мышь — направление катаны. ЛКМ или J — зарядка удара (отпустить, чтобы ударить). ПКМ/K — щит; первые 170 мс — окно парирования.
+- Пробел/Shift — рывок по направлению движения или взгляда, перезарядка 750 мс.
+- E — боевое эхо: **Ловушка** создаёт запись движений; **Тень** автоматически следует с задержкой 5 сек; **Канал** управляет воспроизведением с ограниченной энергией.
+- Попасть можно только перед собой в пределах дистанции и при отсутствии препятствий. Стены и границы физически непроходимы. Свое эхо не является врагом.
+- Победы считаются по количеству побеждённых настоящих противников. Через 600 мс после исхода раунд начинается заново.
+- На телефоне: слева крестовина, справа удар/щит/рывок/эхо. При боевых кнопках прицел автоматически поворачивается к оппоненту.
+
+## Архитектура
+- \`main.js\`: UI, ввод, тренировка/онлайн, состояние и обратная связь.
+- \`scene.js\`: Canvas-рендеринг стилизованного додзё.
+- \`training-engine.js\`: идентичный \`server/module.ts\` снимок правил v2, импортируется по требованию.
+- \`network.js\`: адаптер PocketNet и обработка отказов.
+- \`server/game/sim.cjs\`: исходная симуляция с патчем боя; \`server/entry.js\` — сериализация.
+- \`pocketnet/module-versions/katana-echo/v2.ts\`: **immutable** новая версия правил для новых комнат.
+
+Известные ограничения и дальнейшее QA: \`KNOWN_ISSUES.md\`.
