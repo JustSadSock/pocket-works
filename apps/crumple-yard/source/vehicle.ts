@@ -69,6 +69,7 @@ export class Vehicle {
   private taillights: Mesh[] = [];
   private windshield: Mesh;
   private lastSteer = 0;
+  private selectedGear: 'drive' | 'reverse' = 'drive';
   private steeringSlack = 0;
   private powerPulse = 0;
   private panelDetached = new Set<string>();
@@ -191,12 +192,14 @@ export class Vehicle {
     const effects = deriveDamageEffects(this.damage);
     const speed = this.controller.currentVehicleSpeed();
     const speedAbs = Math.abs(speed);
-    let reverse = 0;
-    let brake = input.brake;
-    if (input.brake > 0.5 && speedAbs < 1.2 && input.throttle < 0.2) {
-      reverse = 0.52;
-      brake = 0;
-    }
+    // A single pedal serves brake -> reverse, but reverse must remain engaged
+    // as the car gains speed. The former speedAbs guard cancelled reverse
+    // immediately above 1.2 m/s and made reversing pulse in place.
+    if (input.throttle > 0.15) this.selectedGear = 'drive';
+    if (input.throttle < 0.15 && input.brake > 0.5 && speedAbs < 1.2) this.selectedGear = 'reverse';
+    const reversing = this.selectedGear === 'reverse' && input.throttle < 0.15 && input.brake > 0.1;
+    const reverse = reversing ? input.brake * 0.65 : 0;
+    const brake = reversing ? 0 : input.brake;
 
     const requestedSteer = input.steer + effects.steeringPull;
     const deadband = effects.steeringPlay * 0.55;
@@ -204,7 +207,10 @@ export class Vehicle {
       ? 0
       : Math.sign(requestedSteer) * (Math.abs(requestedSteer) - deadband) / Math.max(0.15, 1 - deadband);
     this.steeringSlack += (rackInput - this.steeringSlack) * (1 - Math.exp(-dt * (4.2 + effects.steeringAuthority * 6)));
-    const steerTarget = this.steeringSlack * this.spec.steerMax * effects.steeringAuthority;
+    // Progressive rack, inspired by Mini Car's speed-aware steering response;
+    // the actual turn still comes from Rapier's independent front wheels.
+    const speedSteer = 1 / (1 + Math.max(0, speedAbs - 9) * 0.022);
+    const steerTarget = this.steeringSlack * this.spec.steerMax * effects.steeringAuthority * speedSteer;
     const steerResponse = 1 - Math.exp(-dt * (speedAbs > 17 ? 5.4 : 8.8));
     this.lastSteer += (steerTarget - this.lastSteer) * steerResponse;
     this.controller.setWheelSteering(0, this.lastSteer + effects.wheelAlignment[0].toe);
@@ -468,6 +474,15 @@ export class Vehicle {
       prop.mesh.position.set(p.x, p.y, p.z);
       prop.mesh.rotationQuaternion = new Quaternion(q.x, q.y, q.z, q.w);
     }
+  }
+
+  lateralSlipMps() {
+    const q = this.root.rotationQuaternion ?? Quaternion.Identity();
+    const rotation = Matrix.Zero();
+    q.toRotationMatrix(rotation);
+    const right = Vector3.TransformNormal(Vector3.Right(), rotation).normalize();
+    const v = this.body.linvel();
+    return Vector3.Dot(right, new Vector3(v.x, v.y, v.z));
   }
 
   speedMps() {
