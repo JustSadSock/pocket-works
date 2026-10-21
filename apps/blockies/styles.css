@@ -255,6 +255,31 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
  .gesture-hint{font-size:9px;margin-top:3px}
  .online-network-status{grid-area:board;font-size:11px}
 }
+/* Shared multiplayer wells have 14–22 columns, so give them the entire phone width. */
+@media(max-width:760px) and (orientation:portrait){
+ #game-screen.active.wide-well{
+   grid-template-areas:"stats" "next" "board" "controls";
+   grid-template-columns:minmax(0,1fr);
+   grid-template-rows:auto auto minmax(0,1fr) auto;
+ }
+ #game-screen.active.wide-well .next-pieces-preview{
+   flex-direction:row;align-items:center;justify-content:center;gap:5px;overflow:hidden;
+ }
+ #game-screen.active.wide-well .next-pieces-preview:before{
+   flex:none;margin:0 7px 0 0;font-size:8px;max-width:54px;
+ }
+ #game-screen.active.wide-well .next-piece-item{
+   flex:0 1 auto;min-width:0;flex-direction:row;gap:3px;padding:2px 5px;
+   background:transparent;border:1px solid var(--line);min-height:34px;
+ }
+ #game-screen.active.wide-well .next-piece-item canvas{
+   width:30px;height:30px;min-width:0;
+ }
+ #game-screen.active.wide-well .next-piece-label{font-size:9px}
+}
+.container:has(#game-screen.active) #settings-btn{display:none}
+.room-status[data-state="ready"]{background:#e3f3e6;color:#165a4a;padding:11px 12px;border-radius:8px}
+.room-status[data-state="waiting"]{background:#f0f1e9;padding:11px 12px;border-radius:8px}
 @media(max-width:390px) and (orientation:portrait){
  .app-topbar{gap:4px}.brand{font-size:19px}.brand-blocks{display:none}
  .top-action{font-size:10px;padding-inline:6px}
