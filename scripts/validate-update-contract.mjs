@@ -27,7 +27,16 @@ validateFresh(rootWorker,'root sw.js',{passThroughApps:true});
 
 const templateWorker=await read('apps/_template/sw.js');requireIncludes(templateWorker,['GET_UPDATE_INFO','SKIP_WAITING'],'apps/_template/sw.js');validateFresh(templateWorker,'apps/_template/sw.js');
 const configs=await collectAppConfigs(root);
-for(const config of configs){const directory=`apps/${config.slug}`,runtime=runtimeForConfig(config);if(runtime==='enhanced'){const main=await read(`${directory}/source/main.ts`),worker=await read(`${directory}/source/sw.ts`);requireIncludes(main,['registerEnhancedUpdate',`version: '${config.version}'`],`${directory}/source/main.ts`);validateEnhanced(worker,`${directory}/source/sw.ts`,config)}else if(runtime==='godot'){const workerPath=`${directory}/web/sw.js`;if(await exists(workerPath)){const worker=await read(workerPath);validateQuickWorker(worker,workerPath,config)}}else{const index=await read(`${directory}/index.html`),worker=await read(`${directory}/sw.js`);if(config.slug==='blazon'){requireIncludes(index,['../../shared/update-manager.css'],`${directory}/index.html`);validateCoherentWorker(worker,`${directory}/sw.js`,config)}else{requireIncludes(index,['../../shared/update-manager.js','data-update-manager',`data-app-version="${config.version}"`],`${directory}/index.html`);validateQuickWorker(worker,`${directory}/sw.js`,config)}}}
+for(const config of configs){const directory=`apps/${config.slug}`,runtime=runtimeForConfig(config);if(runtime==='enhanced'){const main=await read(`${directory}/source/main.ts`),worker=await read(`${directory}/source/sw.ts`);
+ // The Enhanced entry may delegate to the existing authored JavaScript file.
+ // Only follow the exact imported ./main.js, never unrelated source text.
+ const delegated=main.includes("import './main.js'")?await read(`${directory}/source/main.js`):'';
+ const entry=main+'\n'+delegated;
+ requireIncludes(entry,['registerEnhancedUpdate'],`${directory}/source/main.ts`);
+ const literal=entry.includes(`version: '${config.version}'`)||entry.includes(`version:'${config.version}'`)||entry.includes(`version: "${config.version}"`);
+ const constant=entry.match(/\bconst\s+VERSION\s*=\s*['"]([^'"]+)['"]/);
+ const pinned=constant?.[1]===config.version&&/\bversion\s*:\s*VERSION\b/.test(entry);
+ if(!literal&&!pinned)fail(`${directory}/source/main.ts must include version: '${config.version}'`);validateEnhanced(worker,`${directory}/source/sw.ts`,config)}else if(runtime==='godot'){const workerPath=`${directory}/web/sw.js`;if(await exists(workerPath)){const worker=await read(workerPath);validateQuickWorker(worker,workerPath,config)}}else{const index=await read(`${directory}/index.html`),worker=await read(`${directory}/sw.js`);if(config.slug==='blazon'){requireIncludes(index,['../../shared/update-manager.css'],`${directory}/index.html`);validateCoherentWorker(worker,`${directory}/sw.js`,config)}else{requireIncludes(index,['../../shared/update-manager.js','data-update-manager',`data-app-version="${config.version}"`],`${directory}/index.html`);validateQuickWorker(worker,`${directory}/sw.js`,config)}}}
 const regressions = reportValidationDebt('updates',errors,root);
 if(regressions.length){console.error(`Update contract validation failed with ${errors.length} issue(s):`);regressions.forEach(error=>console.error(`- ${error}`));process.exit(1)}
 console.log(`Managed update contract passed for ${configs.length} application releases.`);
