@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "journey",
+      "kind": "browser-node",
+      "entry": "qa/journey.mjs",
+      "tier": "smoke"
+    }
+  ]
+}

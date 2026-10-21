@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "product": "rivals-field-notes",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "perekos",
+      "evidence": "apps/perekos/visual-direction.json; rendered captures absent from sparse source catalog, not visually rated",
+      "lesson": "Reviewed authored composition and interaction metadata; preserve this report as a reading document instead of importing an arena or instrument control layout."
+    },
+    {
+      "slug": "katana-echo",
+      "evidence": "apps/katana-echo/visual-direction.json; rendered captures absent from sparse source catalog, not visually rated",
+      "lesson": "Reviewed authored composition and interaction metadata; preserve this report as a reading document instead of importing an arena or instrument control layout."
+    },
+    {
+      "slug": "crumple-yard",
+      "evidence": "apps/crumple-yard/visual-direction.json; rendered captures absent from sparse source catalog, not visually rated",
+      "lesson": "Reviewed authored composition and interaction metadata; preserve this report as a reading document instead of importing an arena or instrument control layout."
+    },
+    {
+      "slug": "petri-forge",
+      "evidence": "apps/petri-forge/visual-direction.json; rendered captures absent from sparse source catalog, not visually rated",
+      "lesson": "Reviewed authored composition and interaction metadata; preserve this report as a reading document instead of importing an arena or instrument control layout."
+    },
+    {
+      "slug": "shock-lab",
+      "evidence": "apps/shock-lab/visual-direction.json; rendered captures absent from sparse source catalog, not visually rated",
+      "lesson": "Reviewed authored composition and interaction metadata; preserve this report as a reading document instead of importing an arena or instrument control layout."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://rivalsmeta.com/player/1480038980?tab=heroes",
+      "inspectedAt": "2026-10-21",
+      "observation": "The inspected public hero table exposes seasons, mode switches, matches and per-minute statistics rather than a single overall strength score.",
+      "principle": "Keep quantitative context and sample size next to every conclusion.",
+      "application": "Retain separated ranked and quick-play selectors and label the season on each plotted result.",
+      "avoid": "Do not copy external branding or portray a public table as a certified measurement of hidden tactical impact."
+    },
+    {
+      "url": "https://rivalsmeta.com/player/1689724361",
+      "inspectedAt": "2026-10-21",
+      "observation": "The second profile has a distinct hero pool, so switching accounts must visibly change the evidence and mechanical interpretation.",
+      "principle": "A shared reading shell can retain separate player identity and evidence.",
+      "application": "Use a persistent account selector and retain the same chapter during switches.",
+      "avoid": "Do not copy external branding or portray a public table as a certified measurement of hidden tactical impact."
+    },
+    {
+      "url": "https://rivals-field-notes-sadsock-hioydfts.sadsock.chatgpt.site",
+      "inspectedAt": "2026-10-21",
+      "observation": "The existing user-reviewed report uses cream paper, dark chapter navigation, lime evidence highlights and selectable hero analysis.",
+      "principle": "Port the approved information hierarchy and visual language without introducing a new decorative theme.",
+      "application": "Keep the original ten chapters, dossier block, evidence tables and seasonal dot chart in the standalone app.",
+      "avoid": "Do not copy external branding or portray a public table as a certified measurement of hidden tactical impact."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "notebook",
+      "medium": "DOM reading document with inline SVG evidence plots.",
+      "composition": "Chapter rail and full-height scrollable editorial dossier.",
+      "interaction": "Account switching and contextual seasonal table filtering.",
+      "motion": "Immediate data replacement with optional smooth chapter scrolling.",
+      "rationale": "Selected because this is an existing approved analytical report with dense text and real table inspection."
+    },
+    {
+      "id": "timeline",
+      "medium": "Canvas chronological map of a career with zoomable match nodes.",
+      "composition": "An uninterrupted horizontal career field with floating detail lenses.",
+      "interaction": "Pinch and drag through seasons before opening individual nodes.",
+      "motion": "Spatial pan inertia and animated semantic zoom between seasons.",
+      "rationale": "Rejected because map-first exploration makes long explanations and precise sample boundaries harder to read on phones."
+    },
+    {
+      "id": "cards",
+      "medium": "Paged SVG poster deck of hero scouting illustrations.",
+      "composition": "One hero fills a portrait page with a minimal bottom index.",
+      "interaction": "Swipe between individual hero posters and flip to evidence.",
+      "motion": "Directional page folding and card flipping between summaries.",
+      "rationale": "Rejected because hiding evidence on card backs slows the explicit comparison of season and mode context."
+    }
+  ],
+  "selection": {
+    "concept": "notebook",
+    "reason": "Preserve the report the user already reviewed while making the whole analysis independently installable and readable offline.",
+    "rejected": [
+      {
+        "concept": "timeline",
+        "reason": "Rejected because map-first exploration makes long explanations and precise sample boundaries harder to read on phones."
+      },
+      {
+        "concept": "cards",
+        "reason": "Rejected because hiding evidence on card backs slows the explicit comparison of season and mode context."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "svg-dom",
+      "availability": "available",
+      "reason": "The existing app uses browser DOM and inline SVG; the icon is an editable SVG source exported directly for installation."
+    }
+  ],
+  "assets": [
+    {
+      "id": "notebook-mark",
+      "tool": "svg-dom",
+      "source": "assets/notebook-mark.svg",
+      "output": "icons/icon.svg",
+      "role": "Original installation mark for the personal scouting notebook.",
+      "acceptance": "Recognizable R-and-slash silhouette at small home-screen icon sizes, no generated Forge monogram.",
+      "integration": "Referenced by the app manifest, favicon and Apple touch icon.",
+      "provenance": "Original vector paths authored for this report; no third-party art is redistributed.",
+      "maxBytes": 4000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Dense numeric tables must scroll internally without expanding the phone viewport.",
+      "Optional remote portraits can disappear offline without hiding evidence or controls."
+    ],
+    "comparisons": [
+      "Desktop first frame versus phone first frame of the same report.",
+      "Hero progression with data versus a genuinely empty search or seasonal slice."
+    ]
+  }
+}

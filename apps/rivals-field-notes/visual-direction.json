@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "rivals-field-notes",
+  "direction": {
+    "premise": "A personal scouting notebook for two friends who want to understand years of shared matches, with measured evidence rather than competitive ranking between them.",
+    "composition": "Cream reading surface and a dark chapter rail; on phones the rail becomes a horizontally scrolling chapter index above the account switch and evidence-led document.",
+    "shapeLanguage": "Square evidence tables, thin ruled dividers, open editorial whitespace and an acid-green cut-corner player dossier distinguish observations from narrative.",
+    "surfaceAndMaterial": "Flat printed-paper surfaces and ink-colored text; hero portraits are small secondary identifiers, not decorative background art.",
+    "paletteLogic": "Cream supports extended reading, dark green groups navigation, lime marks selected context, muted rust marks a small sample rather than a losing player.",
+    "typography": "Large tight headings introduce chapters, compact sans-serif tables use tabular numeric context, and small uppercase source labels separate claims from qualifications.",
+    "signature": "Changing the selected hero redraws an eight-season dot-and-line evidence strip; missing seasons remain visibly disconnected and small samples have hollow points.",
+    "distinction": "Perekos and Katana Echo center combat arenas; this product centers a readable evolving dossier, with chapter navigation and filterable evidence rather than thumb combat controls."
+  },
+  "architecture": {
+    "spatialLayout": "document-spread",
+    "controlLocation": "contextual",
+    "navigation": "page-turn",
+    "chromeTopology": "single-surface",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Inspect a hero or shared pairing, then change season or mode to test whether the conclusion survives a narrower evidence slice.",
+    "physicalFeedback": "The active tab changes immediately and the evidence table and plot redraw synchronously; repeat input replaces the current selection without delayed motion.",
+    "spatialRationale": "A long-form analytical document genuinely needs vertical reading; compact horizontal chapter tabs preserve phone width while controls remain next to the evidence they alter.",
+    "comparisons": [
+      {
+        "slug": "perekos",
+        "spatialDifference": "Perekos fills the phone with a top-down duel and perimeter health; this notebook gives most pixels to readable evidence columns and ruled chapter content.",
+        "interactionDifference": "Hero selection and table filtering replace two-thumb movement, spell aiming and real-time projectile avoidance."
+      },
+      {
+        "slug": "crumple-yard",
+        "spatialDifference": "Crumple Yard centers a third-person deforming vehicle and crash course; this notebook has an editorial document and scrollable numeric evidence.",
+        "interactionDifference": "Selecting an account and inspecting historical seasons has no continuous steering or garage-to-world camera transitions."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "DOM and CSS retain selectable long-form analysis, accessible tables and responsive controls; inline SVG renders numeric seasonal plots without a raster chart dependency.",
+    "focalAsset": "The focal asset is the actual evidence document. An original SVG R-and-slash notebook mark is authored locally for installation; external portraits are optional source-linked identifiers."
+  },
+  "motion": {
+    "character": "Precise and immediate context changes keep repeated analytical filtering comfortable and avoid presenting animation as statistical significance.",
+    "action": "Choose the second account in the persistent account switch and observe the entire document adopt that player context.",
+    "anticipation": "Button press darkens in the first frame; there is no artificial delay before changing a data context.",
+    "response": "The pressed account becomes dark and the headline, dossier name and hero pool change together.",
+    "followThrough": "The selected account stays visibly marked while the reader moves through chapters; graphs keep their axis and sample annotations.",
+    "interruption": "Rapid chapter or account changes overwrite the current render immediately rather than queuing transitions.",
+    "reducedMotion": "Reduced-motion disables smooth scrolling and transitions; the same selection, account state and evidence remain visible."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "[data-account=\"b\"]"
+    },
+    "expectedChange": "The active player switches from JustSadSock to Hioydfts and the dossier headline, hero portraits and statistics reflect the second public account.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}

@@ -1,0 +1,77 @@
+import assert from 'node:assert/strict';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { chromium, webkit } from 'playwright';
+
+const base=process.env.PW_QA_BASE_URL||process.env.BASE_URL||'http://127.0.0.1:8765';
+const output=process.env.PW_QA_OUTPUT_DIR||'quality-artifacts/rivals-field-notes';
+await mkdir(output,{recursive:true});
+const chapters=['brief','heroes','progression','duo','level','impact','maps','future','lab','sources'];
+const results=[];
+for(const [name,engine] of Object.entries({chromium,webkit})){
+ const browser=await engine.launch({headless:true});
+ for(const viewport of [{width:390,height:844},{width:1366,height:768},...(name==='chromium'?[{width:320,height:568}]:[])]){
+  const context=await browser.newContext({viewport,isMobile:viewport.width<600,hasTouch:viewport.width<600,recordVideo:{dir:path.join(output,'video'),size:viewport}});
+  const page=await context.newPage(),errors=[],critical=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  page.on('response',r=>{if(r.url().startsWith(base)&&r.status()>=400)critical.push(`${r.status()} ${r.url()}`)});
+  await page.goto(`${base}/apps/rivals-field-notes/`,{waitUntil:'networkidle'});
+  await page.locator('.identity').waitFor();
+  const prefix=`${name}-${viewport.width}`;
+  await page.screenshot({path:path.join(output,`${prefix}-initial.png`)});
+  await page.locator('[data-account="b"]').click();
+  await page.screenshot({path:path.join(output,`${prefix}-action.png`)});
+  assert.match(await page.locator('.identity').innerText(),/Hioydfts/);
+  await page.screenshot({path:path.join(output,`${prefix}-settled.png`)});
+  for(const account of ['a','b']){
+   await page.locator(`[data-account="${account}"]`).click();
+   for(const chapter of chapters){
+    await page.locator(`#nav [data-go="${chapter}"]`).click();
+    assert.ok((await page.locator('#main').innerText()).length>100,`${account}/${chapter} content`);
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),`${account}/${chapter} horizontal overflow`);
+   }
+  }
+  await page.locator('[data-account="a"]').click();
+  await page.locator('#nav [data-go="future"]').click();
+  assert.ok(await page.locator('#development-verdict').isVisible());
+  await page.screenshot({path:path.join(output,`${prefix}-recommendation.png`)});
+  await page.locator('#nav [data-go="progression"]').click();
+  await page.locator('#progressHero').selectOption({label:'Peni Parker'});
+  assert.match(await page.locator('#progressBody').innerText(),/Peni Parker/);
+  await page.screenshot({path:path.join(output,`${prefix}-progression.png`)});
+  await page.locator('#nav [data-go="duo"]').click();
+  await page.locator('#duoMin').selectOption('5');
+  assert.match(await page.locator('#duoBoard').innerText(),/Gambit/);
+  await page.screenshot({path:path.join(output,`${prefix}-duo.png`)});
+  await page.locator('#nav [data-go="heroes"]').click();
+  await page.locator('#search').fill('NoSuchHero');
+  assert.equal(await page.locator('[data-hero]').count(),0);
+  await page.screenshot({path:path.join(output,`${prefix}-empty.png`)});
+  await page.locator('#search').fill('Loki');
+  await page.locator('[data-hero="Loki"]').first().click();
+  assert.ok(await page.locator('#heroDialog').isVisible());
+  await page.screenshot({path:path.join(output,`${prefix}-modal.png`)});
+  await page.locator('#heroDialog .close').click();
+  await page.locator('#nav [data-go="lab"]').click();
+  const box=page.locator('input[data-check]').first();
+  await box.check();const key=await box.getAttribute('data-check');
+  await page.reload({waitUntil:'networkidle'});
+  assert.ok(await page.locator(`input[data-check="${key}"]`).isChecked());
+  if(name==='chromium'){
+   await page.evaluate(()=>navigator.serviceWorker.ready);
+   await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
+   await context.setOffline(true);
+   await page.reload({waitUntil:'load'});
+   await page.locator('#nav [data-go="progression"]').click();
+   assert.ok((await page.locator('#progressBody').innerText()).length>100);
+   await context.setOffline(false);
+  }
+  assert.deepEqual(errors,[],`page errors ${prefix}`);
+  assert.deepEqual(critical,[],`critical requests ${prefix}`);
+  results.push({engine:name,viewport,status:'passed',chapters:20,persistence:true,offline:name==='chromium'});
+  await context.close();
+ }
+ await browser.close();
+}
+await writeFile(path.join(output,'result.json'),JSON.stringify(results,null,2));
+console.log(JSON.stringify(results,null,2));
