@@ -581,3 +581,43 @@
  .pws-studio__controls{overflow-y:auto;min-height:0;padding:2px 3px 4px;overscroll-behavior:contain}
  .pws-studio__header strong{font-size:16px}
 }
+
+/* Blockies achievement profile material: actual owned background and portrait frame. */
+.pws-card[data-background=stack-grid]{
+  background-color:#133a3a;
+  background-image:linear-gradient(#83dfcf19 1px,transparent 1px),
+    linear-gradient(90deg,#83dfcf19 1px,transparent 1px),
+    linear-gradient(135deg,#195f5e,#112c30);
+  background-size:20px 20px,20px 20px,100% 100%;
+  color:#eafaf0;--pws-accent:#b4eedb;--pws-ink:#b4eedb
+}
+.pws-card[data-background=stack-grid]::before{
+  content:'';position:absolute;right:13px;bottom:27px;width:66px;height:68px;
+  border:0;box-shadow:none;opacity:.62;
+  background:linear-gradient(#66d9ea,#66d9ea) 0 48px/17px 17px no-repeat,
+    linear-gradient(#66d9ea,#66d9ea) 17px 48px/17px 17px no-repeat,
+    linear-gradient(#f5cd68,#f5cd68) 34px 48px/17px 17px no-repeat,
+    linear-gradient(#f5cd68,#f5cd68) 34px 31px/17px 17px no-repeat,
+    linear-gradient(#f177a5,#f177a5) 0 31px/17px 17px no-repeat,
+    linear-gradient(#f177a5,#f177a5) 17px 31px/17px 17px no-repeat,
+    linear-gradient(#acdf8b,#acdf8b) 17px 14px/17px 17px no-repeat,
+    linear-gradient(#acdf8b,#acdf8b) 34px 14px/17px 17px no-repeat;
+  pointer-events:none
+}
+.pws-person[data-background=stack-grid]{
+  background:repeating-linear-gradient(0deg,#65d9ed14 0 1px,transparent 1px 17px),
+    linear-gradient(110deg,#164b49,#1a353a);
+  --pws-accent:#65d9ed;--pws-ink:#c8eee3
+}
+.pws-portrait[data-portrait-frame=circuit]{
+ border:7px solid #236f65;background:#e1f1e8;
+ box-shadow:inset 0 0 0 2px #86d5ba,0 0 0 2px #9acbb9,0 3px 14px #0a242653
+}
+.pws-portrait[data-portrait-frame=circuit]::before{
+ content:'';position:absolute;inset:-5px;pointer-events:none;
+ border:3px dashed #f5cd68;z-index:2;opacity:.9
+}
+.pws-portrait-sample[data-portrait-frame=circuit]{
+ border:7px solid #236f65;background:#e1f1e8;
+ box-shadow:inset 0 0 0 2px #86d5ba
+}
