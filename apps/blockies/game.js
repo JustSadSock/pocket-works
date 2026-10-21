@@ -1063,6 +1063,7 @@ class UIManager {
     }
 
     handleGamepadAction(player, action) {
+        if (gameState.isPaused || !this.isPlayerControllable(player)) return;
         switch (action) {
             case 'left':
                 player.move(-1);
@@ -1104,7 +1105,7 @@ class UIManager {
         document.getElementById('cancel-coop-btn').addEventListener('click', () => this.showScreen('mainMenu'));
 
         // Online lobby
-        document.getElementById('back-from-online-btn').addEventListener('click', () => this.showScreen('mainMenu'));
+        document.getElementById('back-from-online-btn').addEventListener('click', () => { if (networkManager.currentRoom) networkManager.leaveRoom(); this.showScreen('mainMenu'); });
         document.getElementById('create-room-btn').addEventListener('click', () => this.createRoom());
         const nicknameInput = document.getElementById('nickname-input');
         if (nicknameInput) {
@@ -1159,35 +1160,57 @@ class UIManager {
 
     initTouchControls() {
         if (!this.touchControls) return;
-
-        const buttons = this.touchControls.querySelectorAll('[data-action]');
-        buttons.forEach(button => {
-            const action = button.dataset.action;
-            if (!action) return;
-
-            const handler = (event) => {
-                event.preventDefault();
-                this.handleTouchAction(action);
-            };
-
-            if (window.PointerEvent) {
-                button.addEventListener('pointerdown', handler);
-            } else {
-                button.addEventListener('touchstart', handler, { passive: false });
-                button.addEventListener('mousedown', handler);
-            }
-
-            button.addEventListener('click', (event) => {
-                if (event.detail === 0) {
-                    handler(event);
+        this.touchPresses = new Map();
+        const press = (button, action, event) => {
+            if (event.button != null && event.button !== 0) return;
+            event.preventDefault();
+            const player = this.getTouchPlayer();
+            if (!player || gameState.isPaused || gameState.isGameOver) return;
+            if (['left','right','down'].includes(action)) {
+                if (action === 'down') {
+                    this.activateSoftDrop(player);
+                    player.drop();
+                    const state = this.getInputState(player.id, 'down');
+                    if (state) { state.hasFiredInitial = true; state.heldTime = 0; }
+                } else this.activateMovementAction(player, action);
+                this.touchPresses.set(event.pointerId ?? 'fallback', {playerId:player.id, action});
+                if (event.pointerId != null && button.setPointerCapture) {
+                    try { button.setPointerCapture(event.pointerId); } catch {}
                 }
-            });
-            button.addEventListener('contextmenu', (event) => event.preventDefault());
+                this.drawBoard();
+            } else this.handleTouchAction(action);
+        };
+        const release = event => {
+            const key = event.pointerId ?? 'fallback';
+            const pressed = this.touchPresses.get(key);
+            if (!pressed) return;
+            this.releaseContinuousAction(pressed.playerId, pressed.action);
+            this.touchPresses.delete(key);
+        };
+        this.releaseTouchControls = () => {
+            for (const pressed of this.touchPresses.values()) {
+                this.releaseContinuousAction(pressed.playerId, pressed.action);
+            }
+            this.touchPresses.clear();
+        };
+        this.touchControls.querySelectorAll('[data-action]').forEach(button => {
+            const action = button.dataset.action;
+            if (window.PointerEvent) {
+                button.addEventListener('pointerdown', event => press(button, action, event));
+                for (const type of ['pointerup','pointercancel','lostpointercapture']) button.addEventListener(type, release);
+            } else {
+                button.addEventListener('touchstart', event => press(button, action, event), {passive:false});
+                button.addEventListener('touchend', release);
+                button.addEventListener('touchcancel', release);
+                button.addEventListener('mousedown', event => press(button, action, event));
+                window.addEventListener('mouseup', release);
+            }
+            button.addEventListener('click', event => { if (event.detail === 0) this.handleTouchAction(action); });
+            button.addEventListener('contextmenu', event => event.preventDefault());
         });
-
-        if (this.touchStatus) {
-            this.touchStatus.textContent = t('startGameForTouch');
-        }
+        window.addEventListener('blur', () => this.releaseTouchControls());
+        document.addEventListener('visibilitychange', () => { if (document.hidden) this.releaseTouchControls(); });
+        if (this.touchStatus) this.touchStatus.textContent = t('startGameForTouch');
     }
 
     refreshTouchStatus() {
@@ -1208,6 +1231,10 @@ class UIManager {
     }
 
     getTouchPlayer() {
+        if (this.isOnlineMode) {
+            const mine = gameState.players[this.localPlayerIndex];
+            return mine && !mine.gameOver ? mine : null;
+        }
         if (!gameState.players.length) {
             return null;
         }
@@ -1422,7 +1449,9 @@ class UIManager {
         this.showScreen('gameScreen');
         this.refreshTouchStatus();
         this.scheduleBoardScaleUpdate();
-        requestAnimationFrame((time) => this.gameLoop(time));
+        this.gameLoopRun = (this.gameLoopRun || 0) + 1;
+        const run = this.gameLoopRun;
+        requestAnimationFrame((time) => this.gameLoop(time, run));
     }
     
     createNextPiecePreview(player, container) {
@@ -1466,7 +1495,8 @@ class UIManager {
         container.appendChild(preview);
     }
 
-    gameLoop(time) {
+    gameLoop(time, run) {
+        if (run !== this.gameLoopRun) return;
         if (gameState.isGameOver) {
             this.refreshTouchStatus();
             this.showGameOver();
@@ -1474,7 +1504,7 @@ class UIManager {
         }
 
         if (!gameState.isPaused) {
-            const deltaTime = time - (gameState.lastTime || time);
+            const deltaTime = Math.min(50, Math.max(0, time - (gameState.lastTime || time)));
             gameState.lastTime = time;
 
             // Poll gamepads
@@ -1508,7 +1538,7 @@ class UIManager {
             }
         }
 
-        requestAnimationFrame((time) => this.gameLoop(time));
+        requestAnimationFrame((time) => this.gameLoop(time, run));
     }
 
     drawBoard() {
@@ -1922,12 +1952,9 @@ class UIManager {
         usedHeight += gapSegments * gapY;
 
         let availableHeight = window.innerHeight - usedHeight;
-        if (!Number.isFinite(availableHeight) || availableHeight <= 0) {
-            availableHeight = window.innerHeight * 0.35;
-        }
-
-        const minimumBoardSlot = 60;
-        availableHeight = Math.max(60,parentRect?.height ? parentRect.height-24 : availableHeight);
+        if (!Number.isFinite(availableHeight) || availableHeight <= 0) availableHeight = window.innerHeight * 0.35;
+        if (parentRect?.height > 0) availableHeight = Math.min(availableHeight, parentRect.height - 12);
+        availableHeight = Math.max(48, availableHeight);
 
         const widthScale = availableWidth / boardWidth;
         const heightScale = availableHeight / boardHeight;
@@ -2144,7 +2171,10 @@ class UIManager {
 
     togglePause() {
         if (gameState.isGameOver) return;
-
+        if (this.isOnlineMode) {
+            if (networkManager.hostId === networkManager.socket.id) networkManager.togglePause();
+            return;
+        }
         gameState.isPaused = !gameState.isPaused;
         
         if (gameState.isPaused) {
@@ -2156,12 +2186,20 @@ class UIManager {
     }
 
     restart() {
+        if (this.isOnlineMode) {
+            if (networkManager.hostId === networkManager.socket.id) networkManager.requestRematch();
+            return;
+        }
         this.hideModal('pause');
         this.hideModal('gameOver');
         this.startGame(gameState.numPlayers);
     }
 
     quitToMenu() {
+        if (this.isOnlineMode && !window.confirm('Покинуть сетевую комнату? Остальные смогут продолжить игру.')) return;
+        if (this.isOnlineMode) networkManager.leaveRoom();
+        this.releaseTouchControls?.();
+        this.gameLoopRun = (this.gameLoopRun || 0) + 1;
         this.hideModal('pause');
         this.hideModal('gameOver');
         gameState.isPaused = false;
@@ -2199,6 +2237,12 @@ class UIManager {
         `;
         scoresDiv.appendChild(teamSummary);
 
+        const again = document.getElementById('play-again-btn');
+        if (again) {
+            const allowed = !this.isOnlineMode || networkManager.hostId === networkManager.socket.id;
+            again.disabled = !allowed;
+            again.textContent = this.isOnlineMode ? (allowed ? 'Новый раунд' : 'Новый раунд начинает ведущий') : 'Play Again';
+        }
         gameState.players.forEach(player => {
             const scoreDiv = document.createElement('div');
             scoreDiv.className = 'player-score';
@@ -2373,7 +2417,6 @@ class UIManager {
 
         networkManager.on('disconnect', () => {
             this.updateConnectionStatus('disconnected');
-            this.showRoomsList([]);
         });
 
         networkManager.on('roomsList', (rooms) => {
@@ -2412,7 +2455,27 @@ class UIManager {
         });
 
         networkManager.on('snapshot', data => applyNetworkSnapshot(data));
-        networkManager.connect();
+        networkManager.on('onlinePause', ({paused,isHost}) => {
+            const pause = document.getElementById('pause-btn');
+            const resume = document.getElementById('resume-btn');
+            if (pause) {pause.disabled = !isHost;pause.title = isHost ? 'Пауза для всей комнаты' : 'Паузой управляет ведущий';}
+            if (resume) resume.disabled = !isHost;
+            if (this.isOnlineMode && this.screens.gameScreen.classList.contains('active') && !gameState.isGameOver) {
+                gameState.isPaused = paused;
+                document.querySelector('#pause-menu h2').textContent = paused ? 'Игра на паузе' : 'Пауза';
+                if (paused) this.showModal('pause');
+                else {this.hideModal('pause');gameState.lastTime = performance.now();}
+            }
+        });
+        networkManager.on('backToLobby', room => {
+            this.releaseTouchControls?.();
+            this.isOnlineMode = false;
+            this.hideModal('pause');
+            this.hideModal('gameOver');
+            this.showScreen('onlineLobby');
+            this.showRoomView(room);
+        });
+        networkManager.connect().then(() => this.updateConnectionStatus('connected')).catch(() => this.updateConnectionStatus('disconnected'));
     }
 
     updateConnectionStatus(status) {
@@ -2478,18 +2541,6 @@ class UIManager {
 
     toggleReady() {
         networkManager.toggleReady();
-        const btn = document.getElementById('ready-btn');
-        if (btn) {
-            if (btn.textContent.includes('Ready')) {
-                btn.textContent = '⏳ Waiting...';
-                btn.classList.remove('btn-primary');
-                btn.classList.add('btn-secondary');
-            } else {
-                btn.textContent = '✓ Ready';
-                btn.classList.remove('btn-secondary');
-                btn.classList.add('btn-primary');
-            }
-        }
     }
 
     showRoomView(room) {
@@ -2529,11 +2580,16 @@ class UIManager {
             room.players.forEach(player => {
                 const playerDiv = document.createElement('div');
                 playerDiv.className = 'room-player-item';
-                playerDiv.innerHTML = `
-                    <div class="room-player-color" style="background: ${player.color};"></div>
-                    <div class="room-player-name">${player.name}</div>
-                    <div class="room-player-status">${player.ready ? '✓ Ready' : 'Not Ready'}</div>
-                `;
+                const color = document.createElement('div');
+                color.className = 'room-player-color';
+                color.style.background = player.color;
+                const name = document.createElement('div');
+                name.className = 'room-player-name';
+                name.textContent = player.name;
+                const status = document.createElement('div');
+                status.className = 'room-player-status';
+                status.textContent = player.ready ? 'Готов' : 'Не готов';
+                playerDiv.append(color,name,status);
                 playersListEl.appendChild(playerDiv);
             });
         }
@@ -2566,6 +2622,12 @@ class UIManager {
             });
         }
 
+        const readyButton = document.getElementById('ready-btn');
+        if (readyButton) {
+            const own = room.players.find(p => p.id === networkManager.socket.id);
+            readyButton.textContent = own?.ready ? 'Отменить готовность' : 'Готов';
+            readyButton.disabled = !own;
+        }
         // Update status
         if (statusEl) {
             const readyCount = room.players.filter(p => p.ready).length;
@@ -2582,6 +2644,9 @@ class UIManager {
     }
 
     startOnlineGame(data) {
+        this.hideModal('gameOver');
+        this.hideModal('pause');
+        this.releaseTouchControls?.();
         // Map network players to game players
         const numPlayers = data.players.length;
         
@@ -3086,6 +3151,8 @@ function init() {
 
     const ui = new UIManager();
     window.uiManager = ui;
+    const invite = new URLSearchParams(location.search).get('room');
+    if(invite){document.querySelector('#join-code').value=invite;ui.showOnlineLobby();networkManager.joinRoom(invite);}
 }
 
 // Start the game when the page loads
@@ -3106,6 +3173,13 @@ function applyNetworkSnapshot(s){
  window.uiManager.drawBoard();window.uiManager.updateTeamStatsIfNeeded();
 }
 document.querySelector('#join-code-btn').onclick=()=>networkManager.joinRoom(document.querySelector('#join-code').value.trim());
+document.querySelector('#copy-room-code')?.addEventListener('click',async()=>{
+ const code=networkManager.code;
+ if(!code)return;
+ const link=new URL(location.href);link.searchParams.set('room',code);
+ try{await navigator.clipboard.writeText(link.href);document.querySelector('#copy-room-code').textContent='Ссылка скопирована';setTimeout(()=>{const b=document.querySelector('#copy-room-code');if(b)b.textContent='Пригласить';},1800);}
+ catch{window.prompt('Ссылка на комнату',link.href);}
+});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!window.uiManager?.isOnlineMode)gameState.isPaused=true;});
 window.render_game_to_text=()=>JSON.stringify({coordinates:'cells, x right, y down, top-left origin',online:!!window.uiManager?.isOnlineMode,paused:gameState.isPaused,gameOver:gameState.isGameOver,board:gameState.board,score:gameState.sharedStats,players:gameState.players.map(p=>({id:p.id,position:p.position,piece:p.currentPiece,next:p.nextPiece,gameOver:p.gameOver}))});
 window.advanceTime=ms=>{if(window.uiManager&&!gameState.isPaused&&!window.uiManager.isOnlineMode){for(let t=0;t<ms;t+=16.667)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(16.667,ms-t));window.uiManager.drawBoard();}};

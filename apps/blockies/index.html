@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Blockies - Team Puzzle Arcade</title>
     <link rel="stylesheet" href="styles.css">
 <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><meta name="theme-color" content="#121922"><link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"></head>
@@ -96,7 +96,7 @@
                 </div>
                 <div id="room-view" class="room-view" style="display: none;">
                     <div class="room-header">
-                        <h3 id="room-name">Комната</h3><output id="pocket-room-code"></output>
+                        <h3 id="room-name">Комната</h3><output id="pocket-room-code" aria-label="Код комнаты"></output><button data-native-press id="copy-room-code" class="btn btn-primary btn-small" type="button">Пригласить</button>
                         <button data-native-press id="leave-room-btn" class="btn btn-secondary btn-small">← Leave Room</button>
                     </div>
                     <div class="room-players">
@@ -144,9 +144,9 @@
             <div id="touch-controls" class="touch-controls">
                 <div id="touch-status" class="touch-status"></div>
                 <div class="touch-row">
-                    <button data-native-press class="touch-btn" data-action="left" data-i18n="left">Left</button>
+                    <button data-native-press class="touch-btn" data-action="left" data-i18n="left" aria-label="Двигать фигуру влево, удерживать для повтора">Left</button>
                     <button data-native-press class="touch-btn" data-action="down" data-i18n="down">Down</button>
-                    <button data-native-press class="touch-btn" data-action="right" data-i18n="right">Right</button>
+                    <button data-native-press class="touch-btn" data-action="right" data-i18n="right" aria-label="Двигать фигуру вправо, удерживать для повтора">Right</button>
                 </div>
                 <div class="touch-row">
                     <button data-native-press class="touch-btn" data-action="rotate" data-i18n="rotate">Rotate</button>
@@ -190,5 +190,5 @@
     </div>
 
     </main><script type="module" src="./app.js"></script>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Blockies" data-app-version="0.1.0"></script></body>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Blockies" data-app-version="0.2.0"></script></body>
 </html>

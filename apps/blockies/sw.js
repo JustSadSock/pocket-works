@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'blockies-';
-const CACHE_NAME = 'blockies-v0.1.0';
-const APP_VERSION = '0.1.0';
-const RELEASE_DATE = '2026-10-18';
+const CACHE_NAME = 'blockies-v0.2.0';
+const APP_VERSION = '0.2.0';
+const RELEASE_DATE = '2026-10-21';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Перенесена исходная игра с сохранением правил и отдельным хранением данных."];
+const RELEASE_NOTES = ["Сетевой кооператив: новая партия, общая пауза, сохранение комнаты при выходе игрока.","Управление удержанием на телефоне и планшете, адаптивный ландшафтный интерфейс.","Приглашения по ссылке и восстановление подключения."];
 const APP_SHELL = [
   "./",
   "./index.html",

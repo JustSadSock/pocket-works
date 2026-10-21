@@ -5,23 +5,27 @@
   "name": "Blockies",
   "shortName": "Blockies",
   "description": "Совместная аркада с падающими блоками, общим полем и серверными правилами.",
-  "version": "0.1.0",
-  "releaseDate": "2026-10-18",
-  "releaseDateTime": "2026-10-18T20:45:00Z",
+  "version": "0.2.0",
+  "releaseDate": "2026-10-21",
+  "releaseDateTime": "2026-10-21T20:20:00Z",
   "changelog": [
-    "Перенесена исходная игра с сохранением правил и отдельным хранением данных."
+    "Сетевой кооператив: новая партия, общая пауза, сохранение комнаты при выходе игрока.",
+    "Управление удержанием на телефоне и планшете, адаптивный ландшафтный интерфейс.",
+    "Приглашения по ссылке и восстановление подключения."
   ],
-  "status": "experimental",
+  "status": "active",
   "preset": "canvas",
   "accent": "#22d3bc",
   "backgroundColor": "#121922",
   "themeColor": "#121922",
-  "orientation": "portrait",
-  "cacheName": "blockies-v0.1.0",
+  "orientation": "any",
+  "cacheName": "blockies-v0.2.0",
   "storageNamespace": "pocket-works:blockies",
   "tags": [
     "game",
-    "offline"
+    "offline",
+    "multiplayer",
+    "online"
   ],
   "order": 170
 }
