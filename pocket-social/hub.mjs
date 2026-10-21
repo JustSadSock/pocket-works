@@ -1,18 +1,21 @@
 import {zamazkaAchievements,zamazkaAwardById,ownedAchievementItem} from '../shared/capabilities/zamazka-achievements.js';
+import {blockiesAchievements,blockiesAwardById} from '../shared/capabilities/blockies-achievements.js';
+const profileAwards=[...zamazkaAchievements,...blockiesAchievements];
+const ownedProfileItem=(slot,item,unlocked)=>profileAwards.some(a=>a.slot===slot&&a.item===item&&unlocked.includes(a.id));
 // Pocket Social. Only trusted Worker headers identify users; room checks stay in PocketNet.
 const HEAD={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const reply=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:HEAD});
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const backgrounds=new Set(['forest','clay','lilac','ocean','night','paper','gallery']);
+const backgrounds=new Set(['forest','clay','lilac','ocean','night','paper','gallery','stack-grid']);
 const frames=new Set(['clean','double','corners','stamp']);
 const backgroundModes=new Set(['preset','drawing']);
-const portraitFrames=new Set(['none','wood','gilt','worn-gilt']);
+const portraitFrames=new Set(['none','wood','gilt','worn-gilt','circuit']);
 const maskotAnimals=new Set(['cat','black-cat','fox','rabbit','frog']);
-const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush','stage-pin']);
-const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard','restorer','groom','stage-hanbok']);
-const maskotFaces=new Set(['none','glasses','stars','monocle']);
+const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush','stage-pin','block-cap']);
+const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard','restorer','groom','stage-hanbok','block-jacket']);
+const maskotFaces=new Set(['none','glasses','stars','monocle','pixel-visor']);
 const maskotAccessories=new Set(['none','shoulder-dragon']);
-const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок']);
+const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса',...profileAwards.filter(a=>a.slot==='title').map(a=>a.item)]);
 const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding'],['VIGIL-1347','knight'],['HERALD-1415','herald'],['GROOM-2026','groom'],['SEOUL-MOONLIGHT','seoul-artist'],['DRAGON-EMBER','dragon-keeper']]);
 function validMaskot(value,unlocked){
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -25,7 +28,7 @@ function validMaskot(value,unlocked){
   if((value.hat==='stage-pin'||value.clothes==='stage-hanbok')&&!unlocked.includes('seoul-artist'))return false;
   if(value.accessory==='shoulder-dragon'&&!unlocked.includes('dragon-keeper'))return false;
   for(const category of ['hat','clothes','face'])
-    if(zamazkaAchievements.some(a=>a.slot===category&&a.item===value[category])&&!ownedAchievementItem(value[category],unlocked))return false;
+    if(profileAwards.some(a=>a.slot===category&&a.item===value[category])&&!ownedProfileItem(category,value[category],unlocked))return false;
   return true;
 }
 const goodArt=x=>typeof x==='string'&&(x===''||x.length<=24000&&/^data:image\/(?:png|webp);base64,[a-zA-Z0-9+/]+={0,2}$/.test(x));
@@ -176,8 +179,8 @@ export class PocketSocial {
       if(request.method!=='POST'||request.headers.get('x-pw-internal')!=='1')return reply({error:'forbidden'},403);
       const body=await bodyJson(request);
       if(!body||!uuid.test(body.accountId||'')||!uuid.test(body.roomId||'')||
-         !uuid.test(body.matchId||'')||body.gameId!=='zamazka'||
-         !zamazkaAwardById.has(body.achievementId)||typeof body.nickname!=='string'||!body.nickname||
+         !uuid.test(body.matchId||'')||!(body.gameId==='zamazka'&&zamazkaAwardById.has(body.achievementId) ||
+           body.gameId==='blockies'&&blockiesAwardById.has(body.achievementId))||typeof body.nickname!=='string'||!body.nickname||
          body.nickname.length>20)return reply({error:'invalid_award'},400);
       const current=this.one('SELECT id FROM profiles WHERE id=?',body.accountId);
       if(!current)this.seed({id:body.accountId,nickname:body.nickname,avatar:body.avatar||'clay'});
@@ -314,9 +317,9 @@ export class PocketSocial {
         }
         if(maskot!==null&&!validMaskot(maskot,unlocked))return reply({error:'invalid_profile'},400);
         if(body.title!==undefined&&(!maskotTitles.has(body.title)||
-           (zamazkaAchievements.some(a=>a.slot==='title'&&a.item===body.title)&&!ownedAchievementItem(body.title,unlocked))))return reply({error:'invalid_profile'},400);
-        if(background==='gallery'&&!ownedAchievementItem('gallery',unlocked))return reply({error:'invalid_profile'},400);
-        if(body.portraitFrame==='worn-gilt'&&!ownedAchievementItem('worn-gilt',unlocked))return reply({error:'invalid_profile'},400);
+           (profileAwards.some(a=>a.slot==='title'&&a.item===body.title)&&!ownedProfileItem('title',body.title,unlocked))))return reply({error:'invalid_profile'},400);
+        if(profileAwards.some(a=>a.slot==='background'&&a.item===background)&&!ownedProfileItem('background',background,unlocked))return reply({error:'invalid_profile'},400);
+        if(profileAwards.some(a=>a.slot==='portraitFrame'&&a.item===body.portraitFrame)&&!ownedProfileItem('portraitFrame',body.portraitFrame,unlocked))return reply({error:'invalid_profile'},400);
         if(body.backgroundMode!==undefined&&!backgroundModes.has(body.backgroundMode))return reply({error:'invalid_profile'},400);
         if(body.portraitFrame!==undefined&&!portraitFrames.has(body.portraitFrame))return reply({error:'invalid_profile'},400);
         // Older clients keep the new cosmetics untouched. New clients store only validated IDs.
