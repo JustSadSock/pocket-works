@@ -220,7 +220,11 @@ export class Vehicle {
     this.powerPulse += dt * (9 + speedAbs * 0.12);
     const misfire = 1 - effects.engineRoughness * (0.08 + 0.11 * (0.5 + 0.5 * Math.sin(this.powerPulse * 2.7)));
     const gearboxLurch = 1 - effects.transmissionShock * (0.04 + 0.08 * Math.max(0, Math.sin(this.powerPulse * 0.73)));
-    const power = (input.throttle - reverse) * this.spec.engineForce * effects.enginePower * effects.transmissionEfficiency * misfire * gearboxLurch;
+    // Wheel forces come from a speed-dependent torque curve. The previous low
+    // flat force felt like an ageing city car and limited useful crash tests.
+    const targetSpeed = reverse > 0 ? 42 / 3.6 : this.spec.topSpeedKmh / 3.6;
+    const torqueCurve = Math.max(0.04, 1 - Math.pow(speedAbs / targetSpeed, 2.1));
+    const power = (input.throttle - reverse) * this.spec.engineForce * torqueCurve * effects.enginePower * effects.transmissionEfficiency * misfire * gearboxLurch;
     const drivetrain = this.spec.id === 'kestrel' ? [0, 1] : this.spec.id === 'meridian' ? [2, 3] : [0, 1, 2, 3];
     for (let i = 0; i < 4; i += 1) {
       const driveShare = drivetrain.includes(i) ? 1 / drivetrain.length : 0;
@@ -327,31 +331,42 @@ export class Vehicle {
     const longitudinal = Math.min(1, Math.abs(local.z) / Math.max(0.1, this.spec.length * 0.5));
     const c = this.damage.components;
     const hit = (name: keyof typeof c, weight: number) => {
-      c[name] = clamp(c[name] - severity * weight);
+      if (weight > 0) c[name] = clamp(c[name] - severity * weight);
     };
 
+    // Wheels are exposed near their actual axles, not at the very nose or
+    // tail. A centered bumper impact should crumple the bumper, NOT tilt all
+    // four wheels. Severe off-center intrusion can still reach one axle.
+    const axleDistance = Math.abs(Math.abs(local.z) - this.spec.wheelBase * 0.5);
+    const wheelArch = clamp(1 - axleDistance / (this.spec.wheelRadius + 0.52));
+    const sideExposure = clamp((lateral - 0.46) / 0.54);
+    const directWheel = wheelArch * sideExposure;
+    const intrusion = Math.max(0, severity - 0.43) * sideExposure * 0.78;
+    const wheelLoad = clamp(directWheel + intrusion);
+    const frontAxle = local.z >= 0;
+    const nearLeft = local.x < 0;
+    const suspension = ('suspension' + (frontAxle ? 'F' : 'R') + (nearLeft ? 'L' : 'R')) as keyof typeof c;
+    const wheel = ('wheel' + (frontAxle ? 'F' : 'R') + (nearLeft ? 'L' : 'R')) as keyof typeof c;
+
     if (zone === 'front') {
-      const left = local.x < 0;
-      hit(left ? 'suspensionFL' : 'suspensionFR', 0.24 * (0.45 + lateral));
-      hit(left ? 'wheelFL' : 'wheelFR', 0.2 * (0.35 + lateral));
-      hit(left ? 'headlightL' : 'headlightR', 0.28 * (0.4 + lateral));
-      if (Math.abs(local.x) < this.spec.width * 0.2) {
+      hit(nearLeft ? 'headlightL' : 'headlightR', 0.28 * (0.4 + lateral));
+      if (lateral < 0.4) {
         hit('cooling', 0.12);
         hit('engine', 0.08);
       }
+      hit(suspension, 0.33 * wheelLoad);
+      hit(wheel, 0.27 * wheelLoad);
     } else if (zone === 'rear') {
-      const left = local.x < 0;
-      hit(left ? 'suspensionRL' : 'suspensionRR', 0.2 * (0.45 + lateral));
-      hit(left ? 'wheelRL' : 'wheelRR', 0.17 * (0.35 + lateral));
-      hit(left ? 'taillightL' : 'taillightR', 0.26 * (0.4 + lateral));
+      hit(nearLeft ? 'taillightL' : 'taillightR', 0.26 * (0.4 + lateral));
+      hit(suspension, 0.31 * wheelLoad);
+      hit(wheel, 0.25 * wheelLoad);
     } else if (zone === 'left' || zone === 'right') {
-      const front = local.z > 0;
-      const side = zone === 'left' ? 'L' : 'R';
-      const suspension = ('suspension' + (front ? 'F' : 'R') + side) as keyof typeof c;
-      const wheel = ('wheel' + (front ? 'F' : 'R') + side) as keyof typeof c;
-      hit(suspension, 0.23 * (0.55 + longitudinal));
-      hit(wheel, 0.19 * (0.45 + longitudinal));
+      hit(suspension, 0.42 * wheelLoad);
+      hit(wheel, 0.39 * wheelLoad);
       hit('chassis', 0.055 * (0.4 + longitudinal));
+    } else if (zone === 'chassis' && directWheel > 0.55) {
+      hit(suspension, 0.3 * directWheel);
+      hit(wheel, 0.26 * directWheel);
     }
   }
 
