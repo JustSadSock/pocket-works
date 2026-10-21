@@ -17,6 +17,20 @@ let lastPhase='',lastAuthor='',pendingSend=0,toastTimer=0,confirmAction=null,req
 let soundEnabled=true;
 let activeFrame=0,paletteCategory='Все',paletteQuery='',lexiconImported=false;
 let draftAnswer=[null,null,null,null,null],answerSending=false;
+const GROUPS={
+ 'Герои':'human king queen knight wizard thief child guard robot ghost',
+ 'Животные':'cat bird fish dragon dog horse fox rabbit frog snake wolf bear bee owl spider turtle',
+ 'Вещи':'key crown heart book flower clock sword door boat apple bread cheese cup bottle potion coin gift cake bag map shield bow hammer axe lantern rope ladder chest mirror ring hat boots wheel cart flag compass lock',
+ 'Места':'house tree mountain cloud sun moon star wave rain fire castle tower bridge cave shop school hospital garden forest island river road gate well tent volcano desert',
+ 'Чувства':'eye smile cry anger sleep music idea fear surprise thought speech footprint lightning',
+ 'Знаки':'arrow question hand not swap loop path mask spark'
+};
+function groupOf(id){return Object.entries(GROUPS).find(([,ids])=>ids.split(' ').includes(id))?.[0]||'Знаки';}
+function visibleGlyphs(){return GLYPHS.filter(g=>(!state?.palette?.length||state.palette.includes(g[0]))&&(paletteCategory==='Все'||groupOf(g[0])===paletteCategory)&&(!paletteQuery||g[1].toLowerCase().includes(paletteQuery)||g[0].includes(paletteQuery)));}
+function glyphButtons(){return visibleGlyphs().map(g=>'<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(g[1])+'" aria-label="Добавить: '+esc(g[1])+'">'+glyphSVG(g[0])+'</button>').join('')||'<div class="palette-empty">Ничего не найдено</div>';}
+function refreshGlyphs(){const el=document.querySelector('#glyphPalette');if(el)el.innerHTML=glyphButtons();document.querySelectorAll('[data-category]').forEach(b=>b.classList.toggle('active',b.dataset.category===paletteCategory));const hint=document.querySelector('#glyphHint');if(hint)hint.textContent=visibleGlyphs().length+' ЗНАКОВ';}
+function lexiconHtml(compact=false){const a=state?.lexicon||[];if(!a.length)return compact?'':'<div class="lexicon-empty">После разгадки автор сможет сохранить удачную композицию.</div>';return '<div class="lexicon-list">'+a.slice(-8).reverse().map((v,i)=>'<div class="lexicon-entry"><b>'+esc(v.prompt)+'</b><small>'+esc(v.name)+'</small>'+(compact?'<button class="btn quiet slim" data-lexicon-use="'+(a.length-1-i)+'">Взять как основу</button>':'')+'</div>').join('')+'</div>';}
+
 try{savedName=localStorage.getItem(STORE+'name')||savedName;soundEnabled=localStorage.getItem(STORE+'sound')!=='off';}catch{}
 const memory=new Map();
 const adapter={
@@ -104,7 +118,7 @@ function renderMenu(){
   '<h1>ПИК<b>ТО</b></h1><div class="hero-demo">'+glyphSVG('bird')+'</div>'+
   '<p>Ни одного слова на холсте. Сколько угодно способов понять друг друга.</p></div>'+
   '<div class="menu-pane"><div class="micro">PICK / PLACE / GUESS</div><h2>Собери смысл.<br>Пусть угадают.</h2>'+
-  '<p class="small-note">2–8 друзей · 5 частей фразы · ограниченный набор знаков.</p>'+
+  '<p class="small-note">2–8 друзей · истории в символах · 112 знаков.</p>'+
   '<div><label class="label" for="playerName">Твоё имя</label><input class="field" id="playerName" maxlength="22" autocomplete="nickname" value="'+esc(named)+'" '+(profile?'disabled':'')+'></div>'+profileLine+
   '<button class="btn primary full" data-action="create">Создать комнату ↗</button><div class="rule"></div>'+
   '<div><label class="label" for="roomCode">Код комнаты друга</label><input class="field field-code" id="roomCode" maxlength="36" placeholder="A17D0C9E" autocomplete="off" spellcheck="false" value="'+esc(typedCode)+'"></div>'+
@@ -120,6 +134,7 @@ function renderLobby(){
   '<div class="room-grid"><div class="ticket"><span class="micro">КОД-ПРИГЛАШЕНИЕ</span><div class="ticket-code" data-selectable>'+esc(code||'········')+'</div>'+
   '<div class="ticket-actions"><button class="btn slim" data-action="copy-code">Скопировать код</button><button class="btn slim" data-action="copy-link">Ссылка другу</button></div>'+
   '<div class="rule"></div><p class="small-note">Покажи друзьям ссылку: они зайдут через свой браузер. Без отдельного приложения и настройки сервера.</p></div>'+playerList()+'</div>'+
+  (state.semanticVersion===4?'<div class="lexicon-room"><strong>Язык компании · '+(state.lexicon?.length||0)+'/24</strong>'+lexiconHtml()+'</div>':'')+
   '<div class="room-footer"><button class="btn primary" data-action="start" '+(!host||count<2||!connected?'disabled':'')+'>'+(host?'Начать игру':'Ждём ведущего')+' →</button><button class="btn quiet" data-action="leave">Покинуть комнату</button></div></section>';
 }
 function phaseTop(title,subtitle){
@@ -132,21 +147,21 @@ function renderCompose(){
  const items=author?draft:state.board;
  const prompt=author?(state.prompt||'Получаем фразу…'):'Смотри, как рождается сообщение';
  const promptBar='<div class="prompt-strip"><div><span class="micro">'+(author?'ТВОЯ СЕКРЕТНАЯ ФРАЗА':'РАБОТАЕТ '+esc(authorName))+'</span><br><b>'+esc(prompt)+'</b></div>'+
-  (author?'<span class="micro">НЕ ВСЕ ЗНАКИ ДОСТУПНЫ</span>':'<span class="micro">НАБЛЮДАЙ</span>')+'</div>';
+  (author?'<span class="micro">'+(state.semanticVersion===4?'ИСТОРИЯ В '+state.frames+' КАДРАХ':'НЕ ВСЕ ЗНАКИ ДОСТУПНЫ')+'</span>':'<span class="micro">НАБЛЮДАЙ</span>')+'</div>';
  const available=GLYPHS.filter(g=>!state.palette?.length||state.palette.includes(g[0]));
- const palette=available.map(g=>'<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(g[1])+'" aria-label="Добавить: '+esc(g[1])+'">'+glyphSVG(g[0])+'</button>').join('');
+ const palette=state.semanticVersion===4?glyphButtons():available.map(g=>'<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(g[1])+'" aria-label="Добавить: '+esc(g[1])+'">'+glyphSVG(g[0])+'</button>').join('');
  const blocked=GLYPHS.filter(g=>state.blocked?.includes(g[0]));
  const blockedHTML=blocked.length?'<div class="blocked-strip"><span>ЗАПРЕЩЕНО</span>'+
   blocked.map(g=>'<span class="blocked-glyph" title="'+esc(g[1])+'">'+glyphSVG(g[0])+'</span>').join('')+'</div>':'';
  const toolbox=author?'<aside class="toolbox"><div class="toolbox-head"><span>АЛФАВИТ РАУНДА</span><span id="glyphHint">'+available.length+' ЗНАКОВ</span></div>'+
-  blockedHTML+'<div class="palette">'+palette+'</div><div class="tools-row">'+
+  blockedHTML+(state.semanticVersion===4?'<div class="category-tabs">'+['Все',...Object.keys(GROUPS)].map(c=>'<button class="category-btn '+(paletteCategory===c?'active':'')+'" data-category="'+c+'">'+c+'</button>').join('')+'</div><input class="glyph-search" id="glyphSearch" placeholder="Найти знак…" aria-label="Поиск знаков" value="'+esc(paletteQuery)+'">':'')+'<div class="palette" id="glyphPalette">'+palette+'</div><div class="tools-row">'+
   '<button class="btn" data-action="rotate-left" title="Повернуть влево" aria-label="Повернуть влево" '+(selected<0?'disabled':'')+'>↶</button>'+
   '<button class="btn" data-action="rotate-right" title="Повернуть вправо" aria-label="Повернуть вправо" '+(selected<0?'disabled':'')+'>↷</button>'+
   '<button class="btn" data-action="shrink" title="Уменьшить" aria-label="Уменьшить" '+(selected<0?'disabled':'')+'>−</button>'+
   '<button class="btn" data-action="grow" title="Увеличить" aria-label="Увеличить" '+(selected<0?'disabled':'')+'>＋</button></div>'+
   '<div class="toolbox-actions"><button class="btn quiet slim" data-action="undo" '+(!undo.length?'disabled':'')+'>Отменить</button>'+
   '<button class="btn quiet slim" data-action="delete" '+(selected<0?'disabled':'')+'>Убрать знак</button>'+
-  '<button class="btn primary slim" data-action="publish" '+(!draft.length||!connected?'disabled':'')+'>Показать друзьям ↗</button></div></aside>':
+  '<button class="btn primary slim" data-action="publish" '+(!draft.length||!connected?'disabled':'')+'>Показать друзьям ↗</button></div>'+(state.semanticVersion===4&&state.lexicon?.length?'<div class="lexicon-compact"><strong>Язык компании</strong>'+lexiconHtml(true)+'</div>':'')+'</aside>':
   '<aside class="toolbox"><div class="micro">СООБЩЕНИЕ В ПРОЦЕССЕ</div><p>Автор собирает картину из ограниченного набора знаков.</p>'+
   '<div class="wait-box">Автор: <b>'+esc(authorName)+'</b><br>Знаков сейчас: <b>'+items.length+'</b></div>'+
   '<button class="btn quiet slim" data-action="leave">Покинуть игру</button></aside>';
