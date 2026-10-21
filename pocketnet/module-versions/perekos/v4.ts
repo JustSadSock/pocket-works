@@ -220,8 +220,8 @@ function insideCone(a,b,angle,reach,halfAngle){
  return r<=reach+12&&Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-angle),Math.cos(Math.atan2(dy,dx)-angle)))<=halfAngle;
 }
 function flame(s,a,target){
- const angle=Math.atan2(target.y-a.y,target.x-a.x),reach=mastery(a,'lasting')?132:114;
- const length=beamLength(s,a.x,a.y,angle,reach),width=mastery(a,'wide')?24:17;
+ const angle=Math.atan2(target.y-a.y,target.x-a.x),reach=mastery(a,'far')?235:202;
+ const length=beamLength(s,a.x,a.y,angle,reach),width=mastery(a,'wide')?43:32;
  a.face=angle;
  if(a.stun>0)return false;
  s.streams.push({owner:a.id,x:a.x,y:a.y,angle,length,width});
@@ -229,8 +229,8 @@ function flame(s,a,target){
  a.cast=mastery(a,'quick')?.105:.14;
  const other=s.actors[1-a.id],dx=other.x-a.x,dy=other.y-a.y;
  const forward=dx*Math.cos(angle)+dy*Math.sin(angle),side=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
- if(forward>0&&forward<length+10&&side<width*.35+9){
-  const dealt=harm(s,other,mastery(a,'strong')?2.9:2.2,a.id);
+ if(forward>0&&forward<length+10&&side<width*(.25+forward/Math.max(1,length)*.18)+9){
+  const dealt=harm(s,other,mastery(a,'strong')?4.8:3.65,a.id);
   if(dealt>0){markTarget(s,other,'fire',a.id);other.burn=Math.max(other.burn,mastery(a,'lasting')?2.3:1.2);other.burnSource=a.id;emit(s,'on_hit',a.id)}
  }
  addHeat(s,a,mastery(a,'cheap')?1:2.4);fx(s,'flame',a.x+Math.cos(angle)*20,a.y+Math.sin(angle)*20);
@@ -243,7 +243,7 @@ function thunder(s,a){
  const other=s.actors[1-a.id],dx=other.x-a.x,dy=other.y-a.y,
   along=dx*Math.cos(a.face)+dy*Math.sin(a.face),side=Math.abs(-dx*Math.sin(a.face)+dy*Math.cos(a.face));
  if(along>0&&along<len+10&&side<15){
-  other.shield=Math.max(0,other.shield-(mastery(a,'strong')?13:7));
+  other.shield=Math.max(0,other.shield-(mastery(a,'strong')?13:7));other.slow=Math.max(other.slow,.32);
   const dealt=harm(s,other,mastery(a,'strong')?11:8.8,a.id);
   if(dealt>0){markTarget(s,other,'storm',a.id);other.slow=Math.max(other.slow,.65);emit(s,'on_hit',a.id)}
   fx(s,'impact_arc',other.x,other.y);
