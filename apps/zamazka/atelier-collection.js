@@ -8,6 +8,10 @@ const medalMarks={
  'zamazka.three-rounds':'<path d="M23 66V37l12 7 13-21 13 21 12-7v29l-25 9-25-9Z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M35 59 48 48 61 59M48 48v20" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="48" cy="33" r="4" fill="currentColor"/>',
  'zamazka.five-works':'<path d="M17 29h29v28H17zM50 29h29v28H50zM34 51h29v28H34z" fill="none" stroke="currentColor" stroke-width="3"/><path d="m23 48 7-10 10 10m17-4 6-8 9 13" fill="none" stroke="currentColor" stroke-width="2"/>',
  'zamazka.perfect-forgery':'<path d="M20 27h56v48H20z" fill="none" stroke="currentColor" stroke-width="4"/><path d="M27 34h42v34H27z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M33 58 44 44l8 8 12-13M55 61l9 2" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="m70 20 7-7m-7 0 7 7" stroke="currentColor" stroke-width="2"/>',
+ 'zamazka.duo-detectives':'<path d="M27 40 46 27 65 40 65 63 46 76 27 63Z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M44 47Q48 41 53 47M39 58 46 64 55 54" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M16 50H27M65 50H80" stroke="currentColor" stroke-width="3"/>',
+ 'zamazka.ghost-brush':'<path d="M31 74Q18 36 53 23Q75 46 56 69L43 76Z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M36 69Q48 48 54 31M30 54 47 57M41 40 54 45M43 77 34 85" fill="none" stroke="currentColor" stroke-width="2.8"/><circle cx="68" cy="30" r="3" fill="currentColor"/>',
+ 'zamazka.eagle-eye':'<path d="M16 47Q48 17 80 47Q49 80 16 47Z" stroke="currentColor" stroke-width="3" fill="none"/><circle cx="48" cy="47" r="13" stroke="currentColor" stroke-width="3" fill="none"/><path d="M48 31 53 42 65 46 53 51 48 63 43 51 31 46 43 42Z" fill="currentColor"/><path d="M46 21V13M23 28l-7-6M73 28l7-6" stroke="currentColor" stroke-width="2.5"/>',
+ 'zamazka.three-theories':'<path d="M15 27H81V72H15Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="32" cy="45" r="7" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="48" cy="57" r="7" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="65" cy="45" r="7" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="m25 26 23-9 23 9" stroke="currentColor" stroke-width="3" fill="none"/>',
  'zamazka.maestro':'<path d="m16 39 13 10 18-22 18 22 15-10-7 31H23L16 39Z" fill="none" stroke="currentColor" stroke-width="3.5"/><path d="M27 70v7h44v-7M32 56l16-12 16 12" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="48" cy="28" r="4" fill="currentColor"/>'
 };
 export function medalSVG(id,earned=false){
@@ -22,13 +26,23 @@ export function cabinetMarkup(catalogue,earned=[],{status='ready',error='',guest
  const owned=new Set(earned),known=status==='ready'&&!guest;
  const selected=catalogue.find(a=>a.id===selectedId)||catalogue.find(a=>owned.has(a.id))||catalogue[0];
  const sum=catalogue.filter(a=>owned.has(a.id)).length;
- const tiles=catalogue.map((a,i)=>{
-  const active=selected?.id===a.id,unlocked=known&&owned.has(a.id);
-  return '<button type="button" class="cabinet-medal'+(active?' is-selected':'')+(unlocked?' is-owned':'')+
-   '" data-achievement-select="'+esc(a.id)+'" aria-pressed="'+active+'" style="--medal-order:'+i+'">'+
-   '<span class="cabinet-medal-figure">'+medalSVG(a.id,unlocked)+'</span>'+
-   '<span class="cabinet-medal-name">'+esc(a.name)+'</span>'+
-   '<span class="cabinet-medal-state">'+(known?(unlocked?'Получено':'Не открыто'):guest?'Pocket ID':'Не проверено')+'</span></button>';
+ const levels=['Лёгкое','Среднее','Сложное','Легендарное'];
+ const tiles=levels.map((tier,idx)=>{
+  const matches=catalogue.filter(a=>a.tier===tier);
+  if(!matches.length)return '';
+  const unlockedCount=matches.filter(a=>owned.has(a.id)).length;
+  const medals=matches.map((a,i)=>{
+   const active=selected?.id===a.id,unlocked=known&&owned.has(a.id);
+   return '<button type="button" class="cabinet-medal'+(active?' is-selected':'')+(unlocked?' is-owned':'')+
+    '" data-tier="'+esc(tier)+'" data-achievement-select="'+esc(a.id)+'" aria-pressed="'+active+'" style="--medal-order:'+(idx*3+i)+'">'+
+    '<span class="cabinet-medal-figure">'+medalSVG(a.id,unlocked)+'</span>'+
+    '<span class="cabinet-medal-name">'+esc(a.name)+'</span>'+
+    '<span class="cabinet-medal-state">'+(known?(unlocked?'Получено':'Не открыто'):guest?'Pocket ID':'Не проверено')+'</span></button>';
+  }).join('');
+  return '<section class="cabinet-tier" data-tier="'+esc(tier)+'">'+
+   '<header class="cabinet-tier-head"><strong>'+esc(tier)+'</strong>'+
+   '<span>'+(known?unlockedCount+' / '+matches.length:matches.length+' наград')+'</span></header>'+
+   '<div class="cabinet-tier-medals">'+medals+'</div></section>';
  }).join('');
  let notice='';
  if(status==='loading')notice='<div class="cabinet-notice" role="status">Проверяем награды Pocket ID…</div>';
