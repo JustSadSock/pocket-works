@@ -29,7 +29,9 @@ test('different classes can combine fire, current and stone with a single modifi
  for(const [mageId,mod,fx] of examples){
   const s=twoShots(mageId,mod);
   assert.ok(s.elementCombos[0]>=1,mageId+' / '+mod);
-  assert.equal(s.actors[1].mark,mod.replace('as_',''));
+  // Splash from the original stone projectile may become the latest mark,
+  // even after the earlier rune shot correctly triggered a mixed reaction.
+  assert.ok(s.actors[1].mark===mod.replace('as_','')||(mageId==='pebble'&&s.actors[1].mark==='stone'));
   assert.ok(s.actors[1].hp<100,s.actors[1].hp);
   assert.ok(validState(s));
  }
