@@ -115,3 +115,40 @@
  .home-edition .slip h3{margin:3px 0 7px}
 }
 @media(prefers-reduced-motion:reduce){.home-edition .home-sketch svg{animation:none!important}}
+
+
+/* Four-author progress stays readable on phones even when the desktop sidebar is hidden. */
+.turn-progress{display:flex;align-items:center;gap:12px;width:100%;min-width:0;margin:10px 0 6px;padding:8px 0;border-block:1px dashed #bca784;color:#2d4439}
+.turn-progress-count{display:flex;flex-direction:column;align-items:center;gap:1px;flex:none;min-width:52px}
+.turn-progress-count strong{font:800 15px/1.15 'DM Sans',sans-serif;white-space:nowrap}
+.turn-progress-count>span{font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.turn-progress-authors{min-width:0;flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.turn-progress-author{display:flex;align-items:center;justify-content:flex-start;gap:5px;min-width:0;padding:6px 5px;background:#d9c8a8;font-size:11px;font-weight:700;color:#776b57}
+.turn-progress-author i{display:grid;place-items:center;flex:none;width:17px;height:17px;border:1px solid #9a8d74;font:700 12px/1 sans-serif;font-style:normal}
+.turn-progress-author>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.turn-progress-author.is-ready{color:#294a36;background:#b9c9aa}
+.turn-progress-author.is-ready i{border-color:#6b8c73;background:#6b8c73;color:white}
+.waiting .turn-progress{max-width:470px;margin:16px auto}
+.story-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:11px;max-width:310px}
+.story-pager strong{font:800 12px/1.3 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.045em}
+.story-pager button{display:grid;place-items:center;border:1px solid #7d8873;background:#d5dfc5;color:#294333;width:40px;height:40px;flex:none;font:600 22px/1 sans-serif;touch-action:manipulation;transition:background .15s,transform .15s}
+.story-pager button:hover{background:#b5cca7}
+.story-pager button:active{transform:translateY(2px)}
+.story-pager button:focus-visible{outline:2px solid #365946;outline-offset:3px}
+@media(max-width:760px){
+ .turn-progress{gap:7px;margin:6px 0;padding:6px 0}
+ .turn-progress-count{min-width:36px}
+ .turn-progress-count strong{font-size:13px}
+ .turn-progress-count>span{font-size:8px}
+ .turn-progress-authors{gap:3px}
+ .turn-progress-author{padding:5px 3px;gap:3px;font-size:10px}
+ .turn-progress-author i{width:15px;height:15px;font-size:10px}
+ .waiting .turn-progress{margin:12px auto}
+ .story-pager{width:100%;max-width:none;margin-top:8px}
+ .story-pager button{width:44px;height:40px}
+}
+@media(max-width:360px){
+ .turn-progress-author{flex-direction:column;gap:2px;padding:4px 2px}
+ .turn-progress-author>span{max-width:100%;font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){.story-pager button{transition:none}}
