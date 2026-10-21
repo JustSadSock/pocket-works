@@ -260,6 +260,7 @@ assert.equal((await call(0,'profile',{...aliceCard,portraitFrame:'circuit'})).ht
 assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,face:'pixel-visor'}})).httpStatus,400);
 assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'block-cap'}})).httpStatus,400);
 assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,clothes:'block-jacket'}})).httpStatus,400);
+const existingBeforeBlockies=(await call(0,'achievements')).achievements.length;
 const awardBlockies=async achievementId=> {
  const request=new Request('https://example.com/pocket-social/award',{method:'POST',
    headers:{'content-type':'application/json','x-pw-internal':'1'},
@@ -273,7 +274,7 @@ for(const id of ['first-lock','first-line','ten-locks','double','duo','quartet',
  assert.equal((await awardBlockies('blockies.'+id)).ok,true);
 assert.equal((await awardBlockies('blockies.first-lock')).already,true,'repeated delivery is idempotent');
 const owned=await call(0,'me');
-assert.equal(owned.profile.achievements.length,15);
+assert.equal(owned.profile.achievements.length,existingBeforeBlockies+8);
 assert.equal((await call(1,'user?id='+users[0].id)).profile.unlocked,undefined);
 assert.equal((await call(0,'profile',{...aliceCard,background:'stack-grid',portraitFrame:'circuit',
   title:'Архитектор блоков',maskot:{...plainMaskot,hat:'block-cap',face:'pixel-visor',clothes:'block-jacket'}})).ok,true);
