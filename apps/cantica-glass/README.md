@@ -109,3 +109,5 @@ QA:
 Note: achievements depend on connected Pocket ID. Guest and offline-only
 play still save the core puzzle locally but cannot mint profile entitlements
 without an authenticated, server-verified completion.
+
+The shared profile implementation retains existing ZAMAZKA medal groups and cosmetics; CANTICA rewards are appended as a separate collectible chapter.
