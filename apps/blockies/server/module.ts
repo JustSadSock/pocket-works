@@ -596,12 +596,85 @@ function checkAllPlayersGameOver() {
 }
 const COLORS=['#FF1493','#00D9FF','#FFDB58','#39FF14'];
 const copy=s=>structuredClone(s),out=state=>({state,events:[{type:'state',payload:{}}]});
-function add(s,p){if(s.players.some(v=>v.id===p.id))return;if(s.started||s.players.length>=4)throw Error('Комната заполнена или игра уже началась');s.players.push({id:p.id,name:String(p.name||'Игрок').slice(0,24),color:COLORS.find(c=>!s.players.some(v=>v.color===c)),ready:false});}
+function add(s,p){
+ const existing=s.players.find(v=>v.id===p.id);
+ if(existing){existing.left=false;return;}
+ if(s.started||s.players.length>=4)throw Error('Комната заполнена или игра уже началась');
+ s.players.push({id:p.id,name:String(p.name||'Игрок').slice(0,24),color:COLORS.find(c=>!s.players.some(v=>v.color===c)),ready:false,left:false});
+}
+function newMatch(state){
+ state.seed=Date.now()>>>0;
+ state.round=(state.round||0)+1;
+ state.paused=false;
+ state.started=true;
+ state.phase='playing';
+ state.lastTick=Date.now();
+ const r=runtime(null,state.seed);
+ r.init(state.players);
+ state.engine=r.snapshot();
+}
 export default {protocolVersion:1,
-createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,seed:Date.now()>>>0,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
-onJoin({state,player}){state=copy(state);add(state,player);return out(state);},
-onLeave({state,player}){state=copy(state);state.players=state.players.filter(p=>p.id!==player.id);state.hostId=state.players[0]?.id||null;state.started=false;state.phase='lobby';state.engine=null;state.players.forEach(p=>p.ready=false);return out(state);},
-onMessage({state,player,payload:p}){state=copy(state);const index=state.players.findIndex(v=>v.id===player.id);if(index<0)throw Error('Игрок не в комнате');const v=state.players[index];
- if(state.started){const r=runtime(state.engine,state.seed);r.step(Math.min(250,Math.max(0,Date.now()-state.lastTick)));if(p?.type==='input')r.input(index,p.input||{});else if(p?.type!=='pulse')throw Error('Игра уже началась');state.engine=r.snapshot();state.lastTick=Date.now();return out(state);}
- if(p?.type==='nickname'){v.name=String(p.name||'Игрок').slice(0,24);}else if(p?.type==='color'){if(!COLORS.includes(p.color)||state.players.some(x=>x.id!==v.id&&x.color===p.color))throw Error('Цвет занят');v.color=p.color;}else if(p?.type==='ready'){v.ready=!v.ready;if(state.players.every(p=>p.ready)){state.started=true;state.phase='playing';state.lastTick=Date.now();const r=runtime(null,state.seed);r.init(state.players);state.engine=r.snapshot();}}else if(p?.type!=='sync')throw Error('Неизвестная команда');return out(state);
-},viewForPlayer({state}){return state;}};
+ createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
+ onJoin({state,player}){state=copy(state);add(state,player);return out(state);},
+ onLeave({state,player}){
+  state=copy(state);
+  const index=state.players.findIndex(p=>p.id===player.id);
+  if(state.started&&state.engine){
+   if(index>=0){
+    state.players[index].left=true;
+    state.players[index].ready=false;
+    const piece=state.engine.players[index];
+    if(piece){piece.gameOver=true;piece.currentPiece=null;}
+   }
+   state.hostId=state.players.find(p=>!p.left)?.id||null;
+   if(state.players.every(p=>p.left)){state.started=false;state.phase='lobby';state.engine=null;}
+   return out(state);
+  }
+  state.players=state.players.filter(p=>p.id!==player.id);
+  state.hostId=state.players[0]?.id||null;
+  state.players.forEach(p=>p.ready=false);
+  return out(state);
+ },
+ onMessage({state,player,payload:p}){
+  state=copy(state);
+  const index=state.players.findIndex(v=>v.id===player.id&& !v.left);
+  if(index<0)throw Error('Игрок не в комнате');
+  const v=state.players[index];
+  if(state.started){
+   if(p?.type==='rematch'){
+    if(player.id!==state.hostId||!state.engine?.isGameOver)throw Error('Только ведущий может начать новый раунд после завершения');
+    state.players=state.players.filter(p=>!p.left);
+    state.players.forEach(p=>p.ready=true);
+    newMatch(state);
+    return out(state);
+   }
+   if(p?.type==='pause'){
+    if(player.id!==state.hostId||state.engine?.isGameOver)throw Error('Пауза доступна ведущему во время игры');
+    state.paused=!state.paused;
+    state.lastTick=Date.now();
+    return out(state);
+   }
+   if(!state.paused&&!state.engine?.isGameOver){
+    const now=Date.now(),elapsed=Math.max(0,now-state.lastTick);
+    const r=runtime(state.engine,state.seed);
+    r.step(Math.min(350,elapsed));
+    if(p?.type==='input')r.input(index,p.input||{});
+    else if(p?.type!=='pulse')throw Error('Игра уже началась');
+    state.engine=r.snapshot();
+    state.lastTick=now;
+    if(state.engine.isGameOver)state.phase='finished';
+   }else if(p?.type!=='pulse')throw Error('Игра приостановлена или завершена');
+   return out(state);
+  }
+  if(p?.type==='nickname')v.name=String(p.name||'Игрок').slice(0,24);
+  else if(p?.type==='color'){
+   if(!COLORS.includes(p.color)||state.players.some(x=>x.id!==v.id&&x.color===p.color))throw Error('Цвет занят');
+   v.color=p.color;
+  }else if(p?.type==='ready'){
+   v.ready=!v.ready;
+   if(state.players.length && state.players.every(p=>p.ready))newMatch(state);
+  }else if(p?.type!=='sync')throw Error('Неизвестная команда');
+  return out(state);
+ },
+ viewForPlayer({state}){return state;}
+};
