@@ -15,6 +15,7 @@ assert.equal(safeMascot({animal:'cat',hat:'helmet',clothes:'spacesuit',face:'non
 assert.equal(safeMascot({animal:'cat',hat:'veil',clothes:'wedding',face:'none'},['wedding']).hat,'veil');
 assert.equal(safeMascot({animal:'fox',hat:'stage-pin',clothes:'stage-hanbok',face:'none',accessory:'shoulder-dragon'}).hat,'none');
 assert.equal(safeMascot({animal:'fox',hat:'stage-pin',clothes:'stage-hanbok',face:'none',accessory:'shoulder-dragon'}).accessory,'none');
+assert.equal(safeMascot({animal:'fox',hat:'none',clothes:'tunic',face:'none',accessory:'brush'},['zamazka.shared-canvas']).accessory,'none','earned hat cannot masquerade as shoulder accessory');
 assert.deepEqual(safeMascot({animal:'black-cat'}),{animal:'black-cat',hat:'none',clothes:'tunic',face:'none',accessory:'none'});
 assert.equal(safeMascot({animal:'fox',hat:'stage-pin',clothes:'stage-hanbok',face:'none',accessory:'shoulder-dragon'},
   ['seoul-artist','dragon-keeper']).accessory,'shoulder-dragon');
