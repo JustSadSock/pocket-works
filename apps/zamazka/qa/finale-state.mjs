@@ -37,3 +37,8 @@ console.log('ZAMAZKA finale: actual totals, 5 artworks, 8 players, tie, host, gu
 import './passage-state.mjs';
 
 import './atelier-state.mjs';
+
+// Run all new cross-phase regressions in the standalone finale QA gate.
+import './clock-soundscape.mjs';
+import './damage-area-balance.mjs';
+import '../../../scripts/test-zamazka-achievements.mjs';
