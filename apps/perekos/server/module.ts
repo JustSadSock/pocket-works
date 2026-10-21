@@ -9,7 +9,7 @@ const SCHOOLS=Object.freeze([
  {id:'stone',name:'Камень',explain:'Осколочные валуны или фронт ударной волны.'}
 ]);
 const MAGES=Object.freeze([
- mageEntry('kindle','fire','Искра','burn','Шар поджигает врага. «Дольше» продлевает горение.','orb',1,1,1.04,.94),
+ mageEntry('kindle','fire','Искра','burn','Шар поджигает врага. «Дольше» продлевает горение.','orb',1,.95,1.04,.94),
  mageEntry('cinder','fire','Уголёк','miss_cool','Зажми атаку: непрерывный огненный поток на близкой дистанции.','flame',1.05,.92,.9,.9),
  mageEntry('wire','storm','Провод','dash_haste','Сквозь щиты пробивает быстрый болт, рывок ускоряет.','bolt',1.07,.86,1.04,.88),
  mageEntry('coil','storm','Катушка','guard_slow','Короткое накопление энергии, затем мгновенная молния и пробой щита.','arc',1.03,.98,.97,.96),
@@ -298,7 +298,7 @@ function thunder(s,a){
   along=dx*Math.cos(a.face)+dy*Math.sin(a.face),side=Math.abs(-dx*Math.sin(a.face)+dy*Math.cos(a.face));
  if(along>0&&along<len+10&&side<15){
   other.shield=Math.max(0,other.shield-(mastery(a,'strong')?13:7));other.slow=Math.max(other.slow,.32);
-  const dealt=harm(s,other,mastery(a,'strong')?11:8.8,a.id);
+  const dealt=harm(s,other,mastery(a,'strong')?13:10.5,a.id);
   if(dealt>0){markTarget(s,other,'storm',a.id);other.slow=Math.max(other.slow,.65);emit(s,'on_hit',a.id)}
   fx(s,'impact_arc',other.x,other.y);
  }
