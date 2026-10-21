@@ -68,7 +68,7 @@ test('Pocket Social verifies CANTICA progression, grants genuine locked profile 
  assert.equal((await api(0,'profile',{...card,maskot:{...maskot,hat:'solar-circlet',accessory:'sun-crystal'}})).ok,true);
  assert.equal((await api(1,'profile',{...card,maskot:{...maskot,hat:'solar-circlet'}})).status,400);
  // Simulate previously confirmed unique windows without replaying them 448 more times in this fixture.
- for(let i=50;i<500;i++)if(i!==305&&i!==360)
+ for(let i=50;i<500;i++)if(i!==305&&i!==360&&i!==499)
   sql.exec('INSERT INTO cantica_completions(account_id,level,best_moves,completed_at) VALUES(?,?,?,?)',players[0].id,i,100,Date.now());
  const finale=await api(0,'cantica/complete',solve(499));
  assert.ok(finale.awarded.includes('cantica.complete'));
