@@ -52,7 +52,7 @@ for(const [name,engine] of Object.entries({chromium,webkit})){
   await page.locator('#strengthMode').selectOption('ranked');
   await page.locator('#strengthMinimum').selectOption('20');
   await page.locator('[data-strength-hero="Gambit"]').click();
-  assert.match(await page.locator('#heroDetail').innerText(),/Карьера ranked/);
+  assert.match(await page.locator('#heroDetail').innerText(),/Карьера ranked/i);
   await page.locator('[data-defense-details]').click();
   assert.match(await page.locator('#defense-panel').innerText(),/14.?147.?870/);
   await page.screenshot({path:path.join(output,`${prefix}-defense.png`)});
