@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "otves",
+  "direction": {
+    "premise": "A silent glass-and-ceramic laboratory instrument where the phone itself becomes a maze under a rolling glass marble, driven by its actual tilt sensor.",
+    "composition": "The playable maze fills the physical glass edge of the viewport, with only three small instrument readouts around the perimeter and a separate brass-like control plate on pause.",
+    "shapeLanguage": "Straight ceramic border walls and narrow chamfered maze corners organize the space; the rolling sphere, recessed brass goal and sparse instrument marks create the recognizable silhouette.",
+    "surfaceAndMaterial": "A physically shaded WebGL2 glass marble refracts and reflects ceramic barriers, with synthetic contact shadows and a Canvas 2D fallback preserving navigation on limited GPUs.",
+    "paletteLogic": "Deep green-black surrounds restrained cream ceramic and aged brass. Small luminous highlights identify the real transparent sphere and goal, without colorful HUD rectangles over the maze.",
+    "typography": "Narrow spaced instrument legends and tabular numerical stopwatch digits signal measured motion, while menu typography uses large serif lettering as an engraved instrument plate.",
+    "signature": "The maze touches the device bezel and the glass marble responds to the phone's actual tilt, with calibrated sensor controls and a live physical glass resonance following the motion.",
+    "distinction": "Unlike top-down Perekos combat and Rivals Field Notes statistics, ОТВЕС is one physical instrument without a virtual thumbstick or a scrolling chapter interface."
+  },
+  "architecture": {
+    "spatialLayout": "single-instrument",
+    "controlLocation": "gesture-only",
+    "navigation": "overlay-list",
+    "chromeTopology": "single-surface",
+    "dominantMotion": "rotational-inertia",
+    "primaryVerb": "Tilt the actual phone or drag its maze surface to roll the glass marble around obstacles and into the recessed goal hole while preserving progress on rotation.",
+    "physicalFeedback": "Acceleration integrates the calibrated tilt into marble velocity and rolling orientation; physical wall contact triggers a short glass resonance and vibrations, and the goal locks the final falling animation.",
+    "spatialRationale": "The maze covers the usable portrait or landscape screen while safe-area-aware time, pause and calibration controls stay at the edges; the play field retains full touch area and camera safe-fit prevents cropping when rotating an existing run.",
+    "comparisons": [
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "Rivals Field Notes is an editorial document with permanent chapter navigation and evidence tables; ОТВЕС uses a single edge-to-edge ceramic maze with only a tiny time readout and an overlay pause plate.",
+        "interactionDifference": "Rivals Field Notes filters static season records, while ОТВЕС applies accelerometer or pointer tilt to inertial marble physics and responds to impacts."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "Perekos places two visible spellcasters and two touch decks on a pixel-art arena; ОТВЕС has one glass marble and a closed ceramic maze that reaches the screen bezel without combat HUDs.",
+        "interactionDifference": "Perekos synchronizes competitive movement and casts timed spells; ОТВЕС calibrates physical tilt, rolls a sphere into the brass goal and records completion time."
+      },
+      {
+        "slug": "crumple-yard",
+        "spatialDifference": "Crumple Yard centers damageable vehicles in a driving ground environment with pedal controls; ОТВЕС fills the device with a compact static ceramic maze and hides all virtual driving decks.",
+        "interactionDifference": "Crumple Yard accelerates vehicles into impact damage, while ОТВЕС manipulates gravitational tilt and resolves marble contact and a timed goal capture."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "A separate WebGL2 canvas shades 3D glass, ceramics and the goal with bounded optical buffers, while Canvas 2D on the original input surface remains an always-playable fallback.",
+    "focalAsset": "The highly transparent rolling marble inside a nearly bezel-to-bezel ceramic maze is the central interactive object, generated as deterministic geometry with a recessed goal."
+  },
+  "motion": {
+    "character": "The sphere exhibits inertial rolling and collisions instead of spring animation, with gentle visual tilt changing reflections but never artificially shaking the camera.",
+    "action": "Tilt the phone to move the marble through a narrow corridor and release the input before the recessed brass finish hole.",
+    "anticipation": "The live sensor status and the visible upcoming wall signal what acceleration will do; the marble remains motionless until an actual tilt or touch input arrives.",
+    "response": "The marble begins accelerating under the recalibrated gravity component on the next physics tick and its rotational shading changes with rolling velocity.",
+    "followThrough": "After finger release the marble keeps its inertial velocity, slows from friction, collides with walls and falls visibly into the goal when captured.",
+    "interruption": "A reverse tilt or rapid finger change immediately changes acceleration while preserving inertia; pause freezes the physics and re-calibration moves the neutral tilt reference.",
+    "reducedMotion": "Reduced motion removes decorative menu animation while the stopwatch, visible wall contact, marble positions and full maze still convey physical motion and progress."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#continueButton"
+    },
+    "expectedChange": "Pressing the start control hides the instrument title plate and reveals the full working WebGL or Canvas maze, running timer and moving physical marble.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
