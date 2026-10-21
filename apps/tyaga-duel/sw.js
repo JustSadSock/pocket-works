@@ -9,7 +9,7 @@ self.addEventListener("activate", event => {
 });
 self.addEventListener("message", event => {
   if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
-  if (event.data?.type === "GET_UPDATE_INFO") event.ports?.[0]?.postMessage({version:"1.1.0",releaseDate:"2026-10-18",releaseNotes:["Нарастающая гравитация и контрудар; ускоряющие ворота, рикошетные связки и улучшенные эффекты."],cacheName:CACHE,cacheProtocol:2});
+  if (event.data?.type === "GET_UPDATE_INFO") event.ports?.[0]?.postMessage({version:"1.1.0",releaseDate:"2026-10-18",releaseNotes:["Сила гравитации нарастает при удержании; чем дольше владеете шаром, тем мощнее ответный перехват соперника.","На аренах «Рикошет» и «Маятник» появились кинетические ускорители, формирующие связки с отражателями.","Новый визуальный индикатор перегрузки, звуки отражателей и ускорителей, тактические решения ИИ."],cacheName:CACHE,cacheProtocol:2});
 });
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
