@@ -9,7 +9,11 @@ const TRANSLATIONS = {
         singlePlayer: "Single Player",
         localCoop: "Local Co-op",
         online: "Online",
-        playSolo: "Play solo",
+        playSolo: "Start a new solo game",
+        resumeSoloGame: "Continue saved game",
+        recoveryOffline: "Connection lost. Reconnecting…",
+        recoveryRestoring: "Restoring the online match…",
+        recoveryStalled: "Server is not responding. Waiting for synchronization…",
         playTogether: "Play together",
         playOverNetwork: "Play over network",
         
@@ -122,7 +126,11 @@ const TRANSLATIONS = {
         singlePlayer: "Одиночная игра",
         localCoop: "Локальный кооп",
         online: "Онлайн",
-        playSolo: "Играть в одиночку",
+        playSolo: "Начать новую партию",
+        resumeSoloGame: "Продолжить партию",
+        recoveryOffline: "Нет подключения. Переподключаемся…",
+        recoveryRestoring: "Восстанавливаем сетевую партию…",
+        recoveryStalled: "Сервер не отвечает. Ожидаем синхронизацию…",
         playTogether: "Играть вместе",
         playOverNetwork: "Играть по сети",
         
@@ -1320,7 +1328,9 @@ class UIManager {
         button.hidden = !checkpoint;
         if (checkpoint) {
             button.querySelector('.resume-detail').textContent =
-                `Уровень ${checkpoint.sharedStats.level} · ${checkpoint.sharedStats.lines} линий`;
+                currentLanguage === 'ru'
+                  ? `Уровень ${checkpoint.sharedStats.level} · ${checkpoint.sharedStats.lines} линий`
+                  : `Level ${checkpoint.sharedStats.level} · ${checkpoint.sharedStats.lines} lines`;
         }
     }
 
@@ -2576,9 +2586,9 @@ class UIManager {
             const banner=document.getElementById('online-network-status');
             if (!banner) return;
             banner.hidden = status === 'online' || !this.isOnlineMode;
-            banner.textContent = status === 'offline' ? 'Нет подключения. Переподключаемся…' :
-                status === 'recovering' ? 'Восстанавливаем сетевую партию…' :
-                status === 'stalled' ? 'Сервер не отвечает. Ожидаем синхронизацию…' : '';
+            banner.textContent = status === 'offline' ? t('recoveryOffline') :
+                status === 'recovering' ? t('recoveryRestoring') :
+                status === 'stalled' ? t('recoveryStalled') : '';
             if (status !== 'online') this.releaseTouchControls?.();
             this.refreshTouchStatus();
         });
