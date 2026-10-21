@@ -18,7 +18,7 @@
   "accent": "#22d3bc",
   "backgroundColor": "#121922",
   "themeColor": "#121922",
-  "orientation": "portrait",
+  "orientation": "any",
   "cacheName": "blockies-v0.2.0",
   "storageNamespace": "pocket-works:blockies",
   "tags": [
