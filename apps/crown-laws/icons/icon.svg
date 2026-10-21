@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Pocket Works launcher compatibility adapter; the authored icon is the PNG bitmap. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <image x="0" y="0" width="96" height="96" href="./icon.png"/>
+</svg>
