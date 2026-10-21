@@ -66,6 +66,16 @@
         "slug": "shock-lab",
         "spatialDifference": "Shock Lab builds physical bodies, flow sources, pipes and pressure traces in a material-construction canvas; Perekos presents a close-up enclosed fantasy duel court whose light UI exposes only immediate combat choices.",
         "interactionDifference": "Shock Lab explores material response and boundary conditions through repeatable experiments. Perekos needs fast reactions to enemy spells and rune-driven tactics rather than editing continuous fluid sources and measurement probes."
+      },
+      {
+        "slug": "crumple-yard",
+        "spatialDifference": "Crumple Yard centers a large physically driven vehicle among obstacles and destruction props; Perekos instead keeps two small character silhouettes and discrete authored spell silhouettes on an overhead 400×620 hand-cut stone courtyard.",
+        "interactionDifference": "Crumple Yard is about steering, suspension, velocity and visible crash deformation. Perekos is about two-thumb dodging, readable class-dependent pre-cast telegraphs, ballistic spell landings and rune chains chosen between duels."
+      },
+      {
+        "slug": "katana-echo",
+        "spatialDifference": "Katana Echo foregrounds blade sweeps and close-quarters character trails within a side-view sword-fighting composition; Perekos separates two miniature wizards across a top-down architectural courtyard whose whole floor and spell landing cues remain visible.",
+        "interactionDifference": "Katana Echo emphasizes timed melee swings, dashes and sword contact; Perekos telegraphs long-range elemental cast windups, held flame cones and falling rock impacts that can be dodged, then opens a deliberate three-chain rune workshop between rounds."
       }
     ]
   },
@@ -76,10 +86,10 @@
   "motion": {
     "character": "Movement and spells are instant and snappy, while robe and hat gently bob to keep the character alive and distinguish standing still from a frozen sprite.",
     "action": "A player touches the fire button while moving and aiming away from the opponent to direct a sequence of small magic bolts.",
-    "anticipation": "The spell action has intentionally almost no wind-up for responsiveness; the hand-held staff is already posed toward the enemy.",
-    "response": "The spell appears in the same simulated tick, and a small gold muzzle bloom plus a short synthesized sound makes firing unambiguous.",
-    "followThrough": "The bolt leaves a short luminous trail and a tiny pixel burst on masonry or the enemy; the shield ring expands briefly before settling.",
-    "interruption": "Dash, shield and attack inputs are sampled in a fixed update loop; release or new direction cancels ongoing continuous casting without queued commands.",
+    "anticipation": "Short charges distinguish powerful signature spells: Pebble assembles a visible boulder before a ballistic throw, Coil gathers lightning before a direct beam, and Slate prepares a ground quake. Kindle and Wire fire instantly for contrast.",
+    "response": "The result depends on class: held flames build reach, the stone projectile travels in an arc with a ground shadow and damages only on landing, lightning flashes after its windup, and stone shockwaves expand from the caster.",
+    "followThrough": "Pixel flashes and sounds match server-confirmed impacts. The boulder uses a Forge 24px authored stone sprite, a separate projected shadow, a landing target outline and fractured debris on grounded collision.",
+    "interruption": "Dash interrupts a queued heavy cast before release; the beam aim is locked from charge start. A held flame continues only while the user is attacking; active projectiles are not retroactively steered.",
     "reducedMotion": "Reduced-motion mode retains hit blocks, ring outlines, projectile positions and score/health changes without CSS transitions and excess movement."
   },
   "evidence": {
