@@ -583,7 +583,7 @@ canvas.addEventListener('pointercancel',cancelPointer);
 canvas.addEventListener('lostpointercapture',cancelPointer);
 canvas.addEventListener('contextmenu',event=>{
   event.preventDefault();
-  if(!$('scrim').hidden||!$('manuscript').hidden)return;
+  if((event.pointerType&&event.pointerType!=='mouse')||!$('scrim').hidden||!$('manuscript').hidden)return;
   const point=pointerPosition(event);
   const hit=hitChapel(inputView(),point.x,point.y,'mouse');
   if(hit?.kind==='tile')turnTile(hit.index,-1);
