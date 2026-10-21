@@ -193,3 +193,13 @@
 @media (prefers-reduced-motion:reduce){
   .ignition,.pedal,.corner-cue{transition:none}
 }
+
+/* Compact landscape devices: the large title must not force the two-column
+   menu wider than the physical phone; retain the real controls and safe areas. */
+@media (orientation:landscape) and (max-width:900px){
+ .menu{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);padding-inline:max(18px,env(safe-area-inset-left)) max(18px,env(safe-area-inset-right))}
+ .menu-copy,.menu-rig{min-width:0}
+ .menu-copy h1{font-size:clamp(46px,8vw,74px);overflow-wrap:anywhere}
+ .menu-rig{width:100%}
+ .hud .telemetry{min-width:0}
+}
