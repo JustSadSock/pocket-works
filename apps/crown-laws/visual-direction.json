@@ -46,6 +46,16 @@
         "slug": "not-dead-yet",
         "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
         "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
+      },
+      {
+        "slug": "blockies",
+        "spatialDifference": "Blockies distributes pieces across an arcade play area; Crown Laws centers an immovable tall stone board within a legal ledger.",
+        "interactionDifference": "Blockies uses direct spatial actions on tiles; Crown Laws commits a private rule from a separate decree hand and watches actors resolve."
+      },
+      {
+        "slug": "cantica-glass",
+        "spatialDifference": "Cantica Glass organizes the experience as a linear framed stage with footer controls; Crown Laws pairs a long board with legislation.",
+        "interactionDifference": "Cantica Glass navigates sequential glasswork gestures, but Crown Laws seals simultaneous hidden commands before automatic resolution."
       }
     ]
   },
@@ -70,9 +80,9 @@
     },
     "expectedChange": "An autonomous board and a five-card hand appear",
     "capture": [
-      "menu",
-      "game",
-      "choice"
+      "initial",
+      "action",
+      "settled"
     ]
   }
 }
