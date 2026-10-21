@@ -3,14 +3,14 @@
   "status": "ready",
   "product": "crown-laws",
   "direction": {
-    "premise": "A duel of royal laws turns privately chosen decree cards into public changes on a shared board.",
-    "composition": "The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
-    "shapeLanguage": "Printed card rectangles, board cells, royal insignia and the recovered ornamental drawings carry the tabletop identity.",
-    "surfaceAndMaterial": "Source card and board artwork is retained as printed surfaces with muted parchment, ink and metal accents.",
-    "paletteLogic": "Parchment grounds the hand while faction and effect colors distinguish the consequences of each decree.",
-    "typography": "Original card typography keeps decree names above their concise rule effects; room controls use compact system labels.",
-    "signature": "Each player seals a private decree; neither opponent hand nor future deck appears in the other client before the reveal.",
-    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
+    "premise": "Players secretly legislate how autonomous game pieces act around one royal throne.",
+    "composition": "A two-column stone council on desktop: carved board and law ledger, with the active hand underneath. Mobile prioritizes board and own cards, then ledger.",
+    "shapeLanguage": "Architectural cuts, carved borders, engraved counters, parchment rectangle decrees and slender bronze rules; every object is DOM/CSS.",
+    "surfaceAndMaterial": "Layered CSS gradients imply weathered limestone and paper without imported illustrations or sprites.",
+    "paletteLogic": "Blue North and red South champion counters, bronze high priority actions, neutral slate/ivory text.",
+    "typography": "Cormorant-style medieval serif headings with readable sans-serif rules and statuses, falling back to installed fonts offline.",
+    "signature": "Large grid throne with stamped Cyrillic role counters; read law description beneath an immediately selectable decree.",
+    "distinction": "Focused royal ledger and stamped law cards rather than generic floating cards, neon or game screenshots."
   },
   "architecture": {
     "spatialLayout": "document-spread",
@@ -46,29 +46,39 @@
         "slug": "not-dead-yet",
         "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
         "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence."
+      },
+      {
+        "slug": "blockies",
+        "spatialDifference": "Blockies distributes pieces across an arcade play area; Crown Laws centers an immovable tall stone board within a legal ledger.",
+        "interactionDifference": "Blockies uses direct spatial actions on tiles; Crown Laws commits a private rule from a separate decree hand and watches actors resolve."
+      },
+      {
+        "slug": "cantica-glass",
+        "spatialDifference": "Cantica Glass organizes the experience as a linear framed stage with footer controls; Crown Laws pairs a long board with legislation.",
+        "interactionDifference": "Cantica Glass navigates sequential glasswork gestures, but Crown Laws seals simultaneous hidden commands before automatic resolution."
       }
     ]
   },
   "production": {
-    "renderer": "The original DOM board, card renderer and local authored artwork make individual rules readable without canvas text scaling.",
-    "focalAsset": "The retained decree illustrations and board provide the playable focal objects; the new crown-on-board SVG identifies the port."
+    "renderer": "HTML/CSS only for gameplay; no PNG sprites, SVG icons or canvas art.",
+    "focalAsset": "Code-drawn board. Separately authored 96x96 PNG icon serves only the shell/PWA."
   },
   "motion": {
-    "character": "A selected card is marked immediately; after both choices the round advances and the new public state persists.",
-    "action": "Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence.",
-    "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
-    "response": "The next visible state responds to the actual control: Each player seals a private decree; neither opponent hand nor future deck appears in the other client before the reveal.",
-    "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
-    "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
-    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
+    "character": "Selected decrees lift and brighten; active tokens travel using correct per-cell pixel deltas.",
+    "action": "Touch a card, read its rule in the preview, confirm law.",
+    "anticipation": "Selection is explicit; the confirmation stays disabled until a card is chosen.",
+    "response": "Turn progression remains controlled by the same game engine and PocketNet.",
+    "followThrough": "New turn and logs remain in view.",
+    "interruption": "Reduced-motion keeps the board static and preserves state.",
+    "reducedMotion": "Respect prefers-reduced-motion and app setting."
   },
   "evidence": {
     "entry": "./",
     "interaction": {
       "type": "click",
-      "selector": "[data-action=open-online]"
+      "selector": "[data-action=start-ai]"
     },
-    "expectedChange": "The network room controls open while the retained local AI and hotseat choices remain available.",
+    "expectedChange": "An autonomous board and a five-card hand appear",
     "capture": [
       "initial",
       "action",

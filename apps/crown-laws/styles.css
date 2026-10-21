@@ -1,3 +1,6 @@
 @import './client/styles.css';
-.hero-card--menu .menu-card{min-height:70px;padding:14px 16px}.hero-card--menu .menu-grid{gap:8px}.hero-card--menu{padding:22px 20px}.hero-card--menu h1{font-size:clamp(30px,8vw,48px)}.hero-card--menu .menu-card__title{font-size:18px}.hero-card--menu .menu-card__text{font-size:12px;line-height:1.35}
-.pocket-exit{position:fixed;z-index:30;right:12px;top:max(8px,env(safe-area-inset-top));padding:12px;background:#242a31;color:#f4e7cf;text-decoration:none;border:1px solid #807252;font:600 12px system-ui}#network-error{position:fixed;bottom:20px;left:16px;right:16px;z-index:60;padding:14px;background:#3d2526;color:#ffe2cc;border:1px solid #ae6558}button:active{filter:brightness(1.2)}
+.pocket-exit{position:fixed;z-index:55;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));display:inline-flex;align-items:center;padding:7px 9px;background:#222b25;color:#d8cbaa;text-decoration:none;border:1px solid #777057;box-shadow:0 3px 7px #10150f;font:700 11px 'PT Sans',system-ui,sans-serif}
+.pocket-exit:hover{background:#384336;color:#fff1cf}
+#network-error{position:fixed;bottom:max(12px,env(safe-area-inset-bottom));left:16px;right:16px;z-index:120;padding:12px;background:#492c29;color:#fff0dc;border:1px solid #bd8771;font:600 13px system-ui}
+#network-error[hidden]{display:none}
+@media(max-width:760px){.topbar__left{padding-right:90px}.pocket-exit{font-size:10px;padding:6px}}

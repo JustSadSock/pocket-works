@@ -1,7 +1,1 @@
-Original prompt: Добавить Законы Короны в PocketWorks.
-
-Original art, rules and UI retained. App-local transport facade routes old protocol to PocketNet. Server authority validates hand membership and hides enemy cards. Browser/module/visual acceptance pending.
-
-2026-10-19: completed source restoration, app-specific mobile layout corrections, original artwork/icon and app-local design/reference documentation. Functional scenarios and inspected captures are recorded by the acceptance scripts. Remaining release work: offline/landscape acceptance, current capture provenance, CI and merge.
-
-Пользователь остановил дальнейшую полировку и разрешил перенос с известными проблемами. См. KNOWN_ISSUES.md; не тратить следующий запуск на повтор уже перечисленных проверок.
+2026-10-22 — Stone Council v0.2.0: прежняя визуальная система удалена и переписана; каменная доска, жетоны, карточки и меню собраны CSS, отдельно нарисована новая PNG-иконка для PWA. Удалены SVG и три исходных изображения игрового оформления, старые визуальные свидетельства. Не затронуты игровой движок, ИИ и PocketNet. Изолированная проверка AI, hot-seat, меню и модалок прошла; браузерная приёмка остаётся отдельной задачей.
