@@ -922,10 +922,6 @@ export class Editor{
     this.canvas.addEventListener('pointermove',this.move);
     this.canvas.addEventListener('pointerup',this.up);
     this.canvas.addEventListener('pointercancel',this.up);
-    // Safari/WebKit can release stylus capture without delivering pointerup.
-    // Recover synchronously, otherwise a stale pointer permanently blocks ink.
-    this.lostCanvasCapture=e=>{if(this.pointers.has(e.pointerId))this.up(e)};
-    this.canvas.addEventListener('lostpointercapture',this.lostCanvasCapture);
     this.frameDown=e=>{if(e.target===this.viewport&&e.pointerType==='mouse'&&(e.button===1||e.button===2))this.down(e)};
     this.frameMove=e=>{if(this.viewportCapturedPointer===e.pointerId)this.move(e);else if(e.target===this.viewport&&(e.pointerType==='mouse'||e.pointerType==='pen'))this.showCursor(e)};
     this.frameUp=e=>{if(this.viewportCapturedPointer===e.pointerId)this.up(e)};
@@ -933,8 +929,6 @@ export class Editor{
     this.viewport.addEventListener('pointermove',this.frameMove);
     this.viewport.addEventListener('pointerup',this.frameUp);
     this.viewport.addEventListener('pointercancel',this.frameUp);
-    this.lostViewportCapture=e=>{if(this.pointers.has(e.pointerId))this.up(e)};
-    this.viewport.addEventListener('lostpointercapture',this.lostViewportCapture);
     this.cursorLeave=e=>{if(!this.pointers.size&&(e.pointerType==='mouse'||e.pointerType==='pen')){this.lastCursor=null;this.hideCursor();this.hidePickerPreview()}};
     this.viewport.addEventListener('pointerleave',this.cursorLeave);
     // Two-finger precision: the resting finger only aims; the other must
@@ -1064,7 +1058,7 @@ export class Editor{
       // Browsers may drop captured pointers when focus changes or touch scrolling
       // is interrupted. A stale pointer would leave the studio in pinch mode.
       this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;
-      this.pointers.clear();this.pinch=null;this.panStart=null;this.sizeDrag=null;
+      this.pointers.clear();this.activePenPointer=null;this.pinch=null;this.panStart=null;this.sizeDrag=null;
       this.cursor?.classList?.remove?.('is-sizing');
       this.aimPointer=null;this.aim=null;this.viewportCapturedPointer=null;
       this.viewport.classList.remove('is-panning');
