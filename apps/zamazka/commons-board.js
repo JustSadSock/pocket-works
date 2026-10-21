@@ -44,7 +44,7 @@ export function createCommonsBoard(host,{send,onError,canClear,snapshot}){
  const schedule=()=>{if(timer===null)timer=setTimeout(flush,42)};
  function reset(board){
    if(!board||!Number.isInteger(board.revision)||!Array.isArray(board.segments))return;
-   revision=board.revision;pointer=null;active=null;last=null;pending=[];full=board.segments.length>=1200;clearTimer();
+   revision=board.revision;pointer=null;active=null;last=null;pending=[];full=board.full===true||board.segments.length>=1200;clearTimer();
    canvas.getContext('2d')?.clearRect(0,0,960,600);
    for(const packet of board.segments)paintBoardDelta(canvas,{...packet,revision});
  }
