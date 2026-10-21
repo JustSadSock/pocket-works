@@ -1,5 +1,6 @@
 import { Color3, Mesh, MeshBuilder, PBRMaterial, Scene, TransformNode, Vector3, VertexData } from '@babylonjs/core';
 import type { VehicleSpec, VisualPreset } from './config';
+import type { DetailZone } from './detail-crush';
 
 /**
  * Authored, dimensionally driven trim. All decorations are children of the
@@ -12,6 +13,13 @@ export type VehicleArt = {
   headlights: Mesh[];
   taillights: Mesh[];
   windshield: Mesh;
+  rearWindow: Mesh;
+  sideWindows: [Mesh[], Mesh[]];
+  glassCracks: Map<Mesh, Mesh>;
+  crushDetails: Array<{ mesh: Mesh; zone: DetailZone }>;
+  frontSignatures: Mesh[];
+  rearSignatures: Mesh[];
+  rearLightBar: Mesh;
 };
 
 export function buildVehicleArt(
@@ -29,6 +37,11 @@ export function buildVehicleArt(
   const wheels: Mesh[] = [];
   const headlights: Mesh[] = [];
   const taillights: Mesh[] = [];
+  const sideWindows: [Mesh[], Mesh[]] = [[], []];
+  const glassCracks = new Map<Mesh, Mesh>();
+  const crushDetails: Array<{ mesh: Mesh; zone: DetailZone }> = [];
+  const frontSignatures: Mesh[] = [];
+  const rearSignatures: Mesh[] = [];
   const w = spec.width, l = spec.length, h = spec.bodyHeight;
   const suv = spec.id === 'bastion';
   const hatch = spec.id === 'kestrel';
@@ -53,13 +66,23 @@ export function buildVehicleArt(
   redLed.emissiveColor = new Color3(0.8, 0.025, 0.012);
   glass.backFaceCulling = false;
 
+  function damageZone(name: string): DetailZone | null {
+    if (/^(hood$|front-|grille-|headlight|skid-plate|led-drl-true|lamp-border-true)/.test(name)) return 'front';
+    if (/^(trunk$|rear-|taillight|boot-lip|led-drl-false|lamp-border-false)/.test(name)) return 'rear';
+    if (/^(door-left$|mirror-housing--1|mirror-glass--1|side-aero-skirt--1)/.test(name)) return 'left';
+    if (/^(door-right$|mirror-housing-1|mirror-glass-1|side-aero-skirt-1)/.test(name)) return 'right';
+    if (name === 'roof') return 'roof';
+    return null;
+  }
   const box = (name: string, pos: [number, number, number], dim: [number, number, number], material: PBRMaterial, parent: TransformNode | Mesh = root) => {
-    const mesh = MeshBuilder.CreateBox(spec.id + '-' + name, { width: dim[0], height: dim[1], depth: dim[2] }, scene);
+    const zone = parent === root ? damageZone(name) : null;
+    const mesh = MeshBuilder.CreateBox(spec.id + '-' + name, { width: dim[0], height: dim[1], depth: dim[2], updatable: Boolean(zone) }, scene);
     mesh.parent = parent;
     mesh.position.set(...pos);
     mesh.material = material;
     mesh.receiveShadows = true;
     mesh.isPickable = false;
+    if (zone) crushDetails.push({ mesh, zone });
     return mesh;
   };
   const panel = (name: string, pos: [number, number, number], dim: [number, number, number], material: PBRMaterial) => {
@@ -89,6 +112,36 @@ export function buildVehicleArt(
     mesh.material = glass;
     mesh.isPickable = false;
     corners.forEach((v, i) => frame(name + '-seal-' + i, v, corners[(i + 1) % 4], 0.034));
+    // A fixed, deterministic radial fracture motif is invisible until that
+    // pane's health falls. Both side windows have their OWN damage state.
+    const edge1 = corners[1].subtract(corners[0]);
+    const edge2 = corners[3].subtract(corners[0]);
+    const offset = Vector3.Cross(edge1, edge2).normalize().scale(0.022);
+    const uvPoint = (u: number, v: number) =>
+      Vector3.Lerp(
+        Vector3.Lerp(corners[0], corners[1], u),
+        Vector3.Lerp(corners[3], corners[2], u), v
+      ).add(offset);
+    const rays: Vector3[][] = [];
+    for (let i = 0; i < 9; i++) {
+      const a = i * Math.PI * 2 / 9;
+      const u = Math.min(0.97, Math.max(0.03, 0.47 + Math.cos(a) * 0.48));
+      const v = Math.min(0.97, Math.max(0.03, 0.52 + Math.sin(a) * 0.46));
+      rays.push([
+        uvPoint(0.47, 0.52),
+        uvPoint(0.47 + (u - 0.47) * 0.34, 0.52 + (v - 0.52) * 0.28),
+        uvPoint(0.47 + (u - 0.47) * 0.69 + Math.sin(i * 3.1) * 0.042,
+          0.52 + (v - 0.52) * 0.68),
+        uvPoint(u, v)
+      ]);
+    }
+    const fractures = MeshBuilder.CreateLineSystem(spec.id + '-' + name + '-fractures', { lines: rays }, scene);
+    fractures.parent = root;
+    fractures.color = new Color3(0.78, 0.87, 0.88);
+    fractures.alpha = 0.72;
+    fractures.isVisible = false;
+    fractures.isPickable = false;
+    glassCracks.set(mesh, fractures);
     return mesh;
   }
 
@@ -106,7 +159,7 @@ export function buildVehicleArt(
     new Vector3(glassWidth * 0.9, roof, frontTop),
     new Vector3(-glassWidth * 0.9, roof, frontTop)
   ]);
-  pane('rear-window', [
+  const rearWindow = pane('rear-window', [
     new Vector3(glassWidth * 0.89, roof, rearTop),
     new Vector3(-glassWidth * 0.89, roof, rearTop),
     new Vector3(-glassWidth, sill, rearBase),
@@ -147,18 +200,19 @@ export function buildVehicleArt(
   for (const side of [-1, 1]) {
     const x = side * glassWidth * 1.025;
     const xRoof = side * glassWidth * 0.91;
-    pane('front-quarter-' + side, [
+    const paneFront = pane('front-quarter-' + side, [
       new Vector3(x, sill, frontBase - 0.045),
       new Vector3(xRoof, roof - 0.018, frontTop - 0.03),
       new Vector3(xRoof, roof - 0.018, pillarZ + 0.035),
       new Vector3(x, sill, pillarZ + 0.035)
     ]);
-    pane('rear-quarter-' + side, [
+    const paneRear = pane('rear-quarter-' + side, [
       new Vector3(x, sill, pillarZ - 0.035),
       new Vector3(xRoof, roof - 0.018, pillarZ - 0.035),
       new Vector3(xRoof, roof - 0.018, rearTop + 0.03),
       new Vector3(x, sill, rearBase + 0.03)
     ]);
+    sideWindows[side === -1 ? 0 : 1].push(paneFront, paneRear);
     // A readable dark door cut, handles, rocker and side marker.
     box('door-cut-' + side, [side * w * 0.502, h * 0.055, -l * 0.075], [0.012, h * 0.64, 0.022], seams);
     box('rocker-' + side, [side * w * 0.49, -h * 0.305, -l * 0.01], [0.074, 0.105, l * 0.47], trim);
@@ -205,6 +259,7 @@ export function buildVehicleArt(
   for (let i = -2; i <= 2; i++) {
     box('grille-fin-' + i, [0, h * 0.08 + i * h * 0.041, l * 0.527], [w * 0.35, 0.015, 0.02], trim);
   }
+  let rearLightBar!: Mesh;
   for (const front of [true, false]) {
     const z = (front ? 1 : -1) * l * 0.501;
     for (const side of [-1, 1]) {
@@ -214,9 +269,10 @@ export function buildVehicleArt(
         front ? lampOn : tailOn);
       (front ? headlights : taillights).push(lamp);
       box('lamp-border-' + front + side, [side * w * 0.305, h * 0.175, z + (front ? -0.012 : 0.012)], [w * 0.23, 0.025, 0.05], black);
-      box('led-drl-' + front + side, [side * w * 0.305, h * 0.305, z + (front ? 0.035 : -0.035)], [w * 0.203, 0.019, 0.026], front ? led : redLed);
+      const signature = box('led-drl-' + front + side, [side * w * 0.305, h * 0.305, z + (front ? 0.035 : -0.035)], [w * 0.203, 0.019, 0.026], front ? led : redLed);
+      (front ? frontSignatures : rearSignatures).push(signature);
     }
-    if (!front) box('rear-signature-bar', [0, h * 0.285, z - 0.028], [w * 0.38, 0.014, 0.024], redLed);
+    if (!front) rearLightBar = box('rear-signature-bar', [0, h * 0.285, z - 0.028], [w * 0.38, 0.014, 0.024], redLed);
     box('plate-' + front, [0, -h * 0.125, z * 1.018], [0.47, 0.13, 0.026], plate);
     box('plate-line-' + front, [0, -h * 0.12, z * 1.024], [0.35, 0.017, 0.01], seams);
   }
@@ -263,5 +319,5 @@ export function buildVehicleArt(
     lip.parent = wheel; lip.position.y = -spec.wheelWidth * 0.61; lip.material = wheelPaint;
     wheels.push(wheel);
   }
-  return { panels, wheels, headlights, taillights, windshield };
+  return { panels, wheels, headlights, taillights, windshield, rearWindow, sideWindows, glassCracks, crushDetails, frontSignatures, rearSignatures, rearLightBar };
 }

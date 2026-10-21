@@ -27,6 +27,7 @@ import { buildVehicleArt } from './vehicle-art';
 import { longitudinalIntent } from './drivetrain';
 import { wheelContactLoad } from './impact-geometry';
 import { wheelPose } from './wheel-pose';
+import { DetailCrushSystem } from './detail-crush';
 import type { CollisionRegistry, DynamicProp } from './physics-types';
 
 const WHEEL_NAMES = ['FL', 'FR', 'RL', 'RR'] as const;
@@ -72,6 +73,13 @@ export class Vehicle {
   private headlights: Mesh[] = [];
   private taillights: Mesh[] = [];
   private windshield: Mesh;
+  private rearWindow: Mesh;
+  private sideWindows: [Mesh[], Mesh[]];
+  private glassCracks: Map<Mesh, Mesh>;
+  private detailCrush = new DetailCrushSystem();
+  private frontSignatures: Mesh[];
+  private rearSignatures: Mesh[];
+  private rearLightBar: Mesh;
   private lastSteer = 0;
   private selectedGear: 'drive' | 'reverse' = 'drive';
   private steeringSlack = 0;
@@ -116,7 +124,19 @@ export class Vehicle {
     this.taillights.push(...art.taillights);
     this.wheels.push(...art.wheels);
     this.windshield = art.windshield;
+    this.rearWindow = art.rearWindow;
+    this.sideWindows = art.sideWindows;
+    this.glassCracks = art.glassCracks;
+    this.frontSignatures = art.frontSignatures;
+    this.rearSignatures = art.rearSignatures;
+    this.rearLightBar = art.rearLightBar;
     this.windshield.material = this.glassMaterial.clone(spec.id + '-windscreen-damage');
+    this.rearWindow.material = this.glassMaterial.clone(spec.id + '-rear-glass-damage');
+    for (let side = 0; side < 2; side++) {
+      const localGlass = this.glassMaterial.clone(spec.id + '-side-glass-' + side);
+      for (const pane of this.sideWindows[side]) pane.material = localGlass;
+    }
+    for (const detail of art.crushDetails) this.detailCrush.register(detail.mesh, detail.zone);
 
     const rotation = Quaternion.RotationAxis(Vector3.Up(), yaw);
     this.body = world.createRigidBody(
@@ -286,9 +306,29 @@ export class Vehicle {
     this.taillights[0].material = this.damage.components.taillightL > 0.18 ? this.tailOn : this.tailOff;
     this.taillights[1].material = this.damage.components.taillightR > 0.18 ? this.tailOn : this.tailOff;
 
-    const windshieldHealth = this.damage.components.windshield;
-    const glass = this.windshield.material as PBRMaterial;
-    glass.alpha = Math.max(0.13, 0.58 * windshieldHealth);
+    const glassState = (panes: Mesh[], health: number) => {
+      for (const pane of panes) {
+        const paneMat = pane.material as PBRMaterial;
+        paneMat.alpha = Math.max(0.08, 0.58 * Math.pow(health, 0.7));
+        const cracks = this.glassCracks.get(pane);
+        if (cracks) {
+          cracks.isVisible = health < 0.83;
+          cracks.visibility = Math.min(0.85, Math.max(0, (0.83 - health) * 1.7));
+        }
+      }
+    };
+    glassState([this.windshield], this.damage.components.windshield);
+    glassState([this.rearWindow], this.damage.components.rearStructure);
+    glassState(this.sideWindows[0], this.damage.components.sideGlassL);
+    glassState(this.sideWindows[1], this.damage.components.sideGlassR);
+    for (let side = 0; side < 2; side++) {
+      const prefix = side === 0 ? 'L' : 'R';
+      const headHealth = this.damage.components[prefix === 'L' ? 'headlightL' : 'headlightR'];
+      const tailHealth = this.damage.components[prefix === 'L' ? 'taillightL' : 'taillightR'];
+      this.frontSignatures[side].isVisible = headHealth > 0.18;
+      this.rearSignatures[side].isVisible = tailHealth > 0.18;
+    }
+    this.rearLightBar.isVisible = (this.damage.components.taillightL + this.damage.components.taillightR) > 0.85;
   }
 
   zoneAt(worldPoint: Vector3): DamageZone {
@@ -304,6 +344,12 @@ export class Vehicle {
   }
 
   applyCollision(worldPoint: Vector3, worldNormal: Vector3, input: Omit<ImpactInput, 'zone' | 'ownMass' | 'crushResistance'>): VehicleImpactResult {
+    // The contact callback runs before the next render synchronization.
+    // Align the art root to Rapier's resolved pose before world-to-local dents.
+    const position = this.body.translation();
+    const rotation = this.body.rotation();
+    this.root.position.set(position.x, position.y, position.z);
+    this.root.rotationQuaternion = quaternionFromRapier(rotation);
     const zone = this.zoneAt(worldPoint);
     const severity = applyImpact(this.damage, {
       ...input,
@@ -315,6 +361,7 @@ export class Vehicle {
     if (severity <= 0) return { severity: 0, zone, glass: false };
 
     this.shell.deform(worldPoint, worldNormal, severity, zone);
+    this.detailCrush.deform(this.root, worldPoint, severity, zone);
     this.applyPanelState(zone, severity);
 
     const glass =
@@ -370,20 +417,20 @@ export class Vehicle {
     if (zone === 'front') {
       const hood = this.panels.get('hood');
       if (hood && !this.panelDetached.has('hood')) {
-        hood.rotation.x = -0.06 - zoneDamage * 0.34;
-        hood.position.y += severity * 0.016;
+        hood.rotation.x = -zoneDamage * 0.12;
+        hood.position.y += severity * 0.006;
       }
       if (zoneDamage > 0.76) this.detachPanel('front-bumper', new Vector3(0, 0, 1));
       if (zoneDamage > 0.9) this.detachPanel('hood', new Vector3(0, 0.4, 0.7));
     } else if (zone === 'rear') {
       const trunk = this.panels.get('trunk');
-      if (trunk && !this.panelDetached.has('trunk')) trunk.rotation.x = 0.04 + zoneDamage * 0.27;
+      if (trunk && !this.panelDetached.has('trunk')) trunk.rotation.x = zoneDamage * 0.12;
       if (zoneDamage > 0.78) this.detachPanel('rear-bumper', new Vector3(0, 0, -1));
       if (zoneDamage > 0.94) this.detachPanel('trunk', new Vector3(0, 0.35, -0.7));
     } else if (zone === 'roof') {
       const roof = this.panels.get('roof');
       if (roof && !this.panelDetached.has('roof')) {
-        roof.position.y -= severity * 0.07;
+        roof.position.y -= severity * 0.025;
         roof.rotation.z += severity * 0.045;
       }
       if (zoneDamage > 0.94) this.detachPanel('roof', new Vector3(0, 0.75, 0));

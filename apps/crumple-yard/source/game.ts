@@ -24,7 +24,7 @@ import { TrafficSystem, TRAFFIC_SPAWNS, trafficPreset } from './traffic';
 import { Vehicle } from './vehicle';
 
 const FIXED_DT = 1 / 90;
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 
 type QaState = {
   version: string;
@@ -518,6 +518,7 @@ export class CrumpleGame {
     this.camera.garage = false;
     this.yard.setGarage(false);
     this.yard.resetDynamics();
+    this.effects.clearTracks();
     this.createTraffic();
     this.running = true;
     this.paused = false;
@@ -570,6 +571,7 @@ export class CrumpleGame {
     this.running = false;
     this.input.reset();
     this.clearTraffic();
+    this.effects.clearTracks();
     this.camera.garage = true;
     this.yard.setGarage(true);
     this.ui.pause.hidden = true;
@@ -632,9 +634,20 @@ export class CrumpleGame {
     if (this.running && !this.paused && this.skidCooldown <= 0) {
       const slip = Math.abs(this.player.lateralSlipMps());
       if (slip > 2.5 && this.player.speedKmh() > 15) {
-        const rear = this.player.root.position.subtract(this.player.forward().scale(this.player.spec.wheelBase * 0.44));
+        const forward = this.player.forward();
+        const rear = this.player.root.position.subtract(forward.scale(this.player.spec.wheelBase * 0.48));
         rear.y = Math.max(0.04, rear.y - this.player.spec.bodyHeight * 0.7);
-        this.effects.skid(rear, this.player.forward().scale(-1), Math.min(2.5, (slip - 2) * 0.4));
+        const intensity = Math.min(2.5, (slip - 2) * 0.4);
+        this.effects.skid(rear, forward.scale(-1), intensity);
+        // Real tire contact is represented by the ray-cast vehicle wheels.
+        // Leave two dark, fading traces on asphalt rather than flying smoke alone.
+        if (this.player.root.position.y < 2.0) {
+          const right = Vector3.Cross(Vector3.Up(), forward).normalize();
+          for (const side of [-1, 1]) {
+            const mark = rear.add(right.scale(side * this.player.spec.track * 0.5));
+            this.effects.markTire(mark, forward, intensity);
+          }
+        }
         this.skidCooldown = 0.085;
       }
     }
