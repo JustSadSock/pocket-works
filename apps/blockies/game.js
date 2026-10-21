@@ -1,4 +1,6 @@
 // Localization
+import {loadSolo,saveSolo,clearSolo} from './solo-save.js';
+
 const TRANSLATIONS = {
     en: {
         // Main Menu
@@ -418,15 +420,17 @@ const DEFAULT_KEYS = [
 ];
 
 // Deterministic PRNG for synchronized multiplayer (Mulberry32)
-function createPrng(seed) {
-    let t = seed + 0x6D2B79F5;
-    return function() {
+function createPrng(seed, restoredState) {
+    let t = restoredState === undefined ? seed + 0x6D2B79F5 : restoredState;
+    const next = function() {
         t |= 0;
         t = t + 0x6D2B79F5 | 0;
         let r = Math.imul(t ^ t >>> 15, 1 | t);
         r = r + Math.imul(r ^ r >>> 7, 61 | r) ^ r;
         return ((r ^ r >>> 14) >>> 0) / 4294967296;
     };
+    next.getState = () => t >>> 0;
+    return next;
 }
 
 function normalizeSeed(seed) {
@@ -971,8 +975,10 @@ class UIManager {
         this.softDropInitialDelay = 0;
         this.softDropRepeatInterval = 55;
 
+        this.lastSoloSaveAt = 0;
         this.setupEventListeners();
         this.initTouchControls();
+        this.refreshSoloResume();
         this.initGamepads();
         window.addEventListener('resize', () => this.handleResize());
     }
@@ -1094,6 +1100,7 @@ class UIManager {
         
         // Mode selection - new menu structure
         document.getElementById('mode-single').addEventListener('click', () => this.startGame(1));
+        document.getElementById('resume-solo')?.addEventListener('click', () => this.resumeSolo());
         document.getElementById('mode-local').addEventListener('click', () => this.showCoopSetup());
         document.getElementById('mode-online').addEventListener('click', () => this.showOnlineLobby());
 
@@ -1301,6 +1308,69 @@ class UIManager {
         }
     }
 
+    refreshSoloResume() {
+        const button = document.getElementById('resume-solo');
+        if (!button) return;
+        const checkpoint = loadSolo();
+        button.hidden = !checkpoint;
+        if (checkpoint) {
+            button.querySelector('.resume-detail').textContent =
+                `Уровень ${checkpoint.sharedStats.level} · ${checkpoint.sharedStats.lines} линий`;
+        }
+    }
+
+    saveSoloCheckpoint(force = false) {
+        if (this.isOnlineMode || gameState.numPlayers !== 1 || gameState.isGameOver ||
+            !gameState.players.length || !this.screens.gameScreen.classList.contains('active')) return;
+        const now = performance.now();
+        if (!force && now - this.lastSoloSaveAt < 1500) return;
+        const p = gameState.players[0];
+        if (!p?.currentPiece || !p.nextPiece) return;
+        const checkpoint = {
+            version: 1, updatedAt: Date.now(),
+            randomSeed: gameState.randomSeed, rngState: gameState.rng.getState(),
+            board: gameState.board, sharedStats: gameState.sharedStats,
+            player: {
+                currentPiece: p.currentPiece, nextPiece: p.nextPiece,
+                position: p.position, dropCounter: p.dropCounter,
+                dropInterval: p.dropInterval, spawnAnchor: p.spawnAnchor
+            }
+        };
+        if (saveSolo(checkpoint)) this.lastSoloSaveAt = now;
+    }
+
+    resumeSolo() {
+        const checkpoint = loadSolo();
+        if (!checkpoint) {
+            this.refreshSoloResume();
+            this.showStyledMessage('Нет сохранения', 'Сохранённая партия отсутствует или повреждена.', 'error');
+            return;
+        }
+        this.isOnlineMode = false;
+        this.startGame(1, checkpoint.randomSeed);
+        const player = gameState.players[0];
+        gameState.board = checkpoint.board;
+        gameState.sharedStats = checkpoint.sharedStats;
+        gameState.sharedStatsDirty = true;
+        gameState.rng = createPrng(checkpoint.randomSeed, checkpoint.rngState);
+        player.currentPiece = checkpoint.player.currentPiece;
+        player.nextPiece = checkpoint.player.nextPiece;
+        player.position = checkpoint.player.position;
+        player.dropCounter = checkpoint.player.dropCounter;
+        player.dropInterval = checkpoint.player.dropInterval;
+        player.spawnAnchor = checkpoint.player.spawnAnchor;
+        player.score = checkpoint.sharedStats.score;
+        player.lines = checkpoint.sharedStats.lines;
+        player.level = checkpoint.sharedStats.level;
+        this.lastSoloSaveAt = 0;
+        this.drawBoard();
+        this.drawNextPiece(player);
+        this.updatePlayerInfo(player);
+        this.updateTeamStatsIfNeeded();
+        this.refreshTouchStatus();
+        this.saveSoloCheckpoint(true);
+    }
+
     showScreen(screenName) {
         // Track previous screen for settings navigation
         const currentScreen = Object.keys(this.screens).find(key => 
@@ -1312,6 +1382,7 @@ class UIManager {
         
         Object.values(this.screens).forEach(screen => screen.classList.remove('active'));
         this.screens[screenName].classList.add('active');
+        if (screenName === 'mainMenu') this.refreshSoloResume();
 
         // Show/hide header buttons based on screen
         const pauseBtn = document.getElementById('pause-btn');
@@ -1364,6 +1435,7 @@ class UIManager {
     }
 
     startGame(numPlayers, seed = Date.now()) {
+        if (!this.isOnlineMode && numPlayers === 1) clearSolo();
         setRandomSeed(seed);
         gameState.numPlayers = numPlayers;
         gameState.isPaused = false;
@@ -1532,6 +1604,7 @@ class UIManager {
 
             this.drawBoard();
             this.updateTeamStatsIfNeeded();
+            if (!this.isOnlineMode) this.saveSoloCheckpoint();
 
             if (touchStatusNeedsUpdate) {
                 this.refreshTouchStatus();
@@ -2171,6 +2244,7 @@ class UIManager {
 
     togglePause() {
         if (gameState.isGameOver) return;
+        if (!this.isOnlineMode && !gameState.isPaused) this.saveSoloCheckpoint(true);
         if (this.isOnlineMode) {
             if (networkManager.hostId === networkManager.socket.id) networkManager.togglePause();
             return;
@@ -2196,6 +2270,7 @@ class UIManager {
     }
 
     quitToMenu() {
+        if (!this.isOnlineMode) this.saveSoloCheckpoint(true);
         if (this.isOnlineMode && !window.confirm('Покинуть сетевую комнату? Остальные смогут продолжить игру.')) return;
         if (this.isOnlineMode) networkManager.leaveRoom();
         this.releaseTouchControls?.();
@@ -2224,6 +2299,7 @@ class UIManager {
     }
 
     showGameOver() {
+        if (!this.isOnlineMode && gameState.numPlayers === 1) clearSolo();
         const scoresDiv = document.getElementById('final-scores');
         scoresDiv.innerHTML = '';
 
@@ -3180,7 +3256,16 @@ document.querySelector('#copy-room-code')?.addEventListener('click',async()=>{
  try{await navigator.clipboard.writeText(link.href);document.querySelector('#copy-room-code').textContent='Ссылка скопирована';setTimeout(()=>{const b=document.querySelector('#copy-room-code');if(b)b.textContent='Пригласить';},1800);}
  catch{window.prompt('Ссылка на комнату',link.href);}
 });
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&!window.uiManager?.isOnlineMode)gameState.isPaused=true;});
+document.addEventListener('visibilitychange',()=>{
+  const ui=window.uiManager;
+  if(!ui || ui.isOnlineMode)return;
+  if(document.hidden && !gameState.isPaused){
+    ui.saveSoloCheckpoint(true);
+    gameState.isPaused=true;
+    if(ui.screens.gameScreen.classList.contains('active')) ui.showModal('pause');
+  }
+});
+window.addEventListener('pagehide',()=>window.uiManager?.saveSoloCheckpoint(true));
 window.render_game_to_text=()=>JSON.stringify({coordinates:'cells, x right, y down, top-left origin',online:!!window.uiManager?.isOnlineMode,paused:gameState.isPaused,gameOver:gameState.isGameOver,board:gameState.board,score:gameState.sharedStats,players:gameState.players.map(p=>({id:p.id,position:p.position,piece:p.currentPiece,next:p.nextPiece,gameOver:p.gameOver}))});
 window.advanceTime=ms=>{if(window.uiManager&&!gameState.isPaused&&!window.uiManager.isOnlineMode){for(let t=0;t<ms;t+=16.667)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(16.667,ms-t));window.uiManager.drawBoard();}};
 
