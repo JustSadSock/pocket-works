@@ -99,7 +99,7 @@ test('face turns stay close to aim with no state mutation or shot angle offsets'
    const aim={x:200+Math.cos(angle)*125,y:310+Math.sin(angle)*125};
    const copy=JSON.stringify(aim);
    tick(s,{x:0,y:0,attack:true,aim},STEP,no);
-   const q=s.shots.find(x=>x.owner===0)||s.streams[0]||s.beams[0]||s.waves[0];
+   const q=s.shots.find(x=>x.owner===0)||s.streams[0]||s.beams[0]||s.waves[0]||s.actors[0].windup;
    assert.ok(q);
    const shotAngle=Number.isFinite(q.angle)?q.angle:Math.atan2(q.vy,q.vx);
    assert.ok(close(signedTurn(shotAngle,normalizeFacing(angle)),0,1e-7),
