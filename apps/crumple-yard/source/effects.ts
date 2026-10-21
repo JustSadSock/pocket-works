@@ -1,5 +1,7 @@
 import { Color3, Mesh, MeshBuilder, PBRMaterial, Scene, Vector3 } from '@babylonjs/core';
 
+type SkidMark = { mesh: Mesh; remaining: number; maxLife: number };
+
 type Particle = {
   mesh: Mesh;
   velocity: Vector3;
@@ -13,6 +15,8 @@ export class ImpactEffects {
   private sparkMaterial: PBRMaterial;
   private dustMaterial: PBRMaterial;
   private glassMaterial: PBRMaterial;
+  private markPool: SkidMark[] = [];
+  private markCursor = 0;
 
   constructor(private scene: Scene, size = 48) {
     this.sparkMaterial = new PBRMaterial('impact-spark', scene);
@@ -30,6 +34,19 @@ export class ImpactEffects {
     this.glassMaterial.alpha = 0.66;
     this.glassMaterial.metallic = 0.08;
     this.glassMaterial.roughness = 0.18;
+
+    const tread = new PBRMaterial('ground-rubber-trail', scene);
+    tread.albedoColor = new Color3(0.027, 0.03, 0.03);
+    tread.roughness = 1;
+    tread.alpha = 0.47;
+    tread.transparencyMode = 2;
+    for (let i = 0; i < 80; i++) {
+      const mesh = MeshBuilder.CreateGround('skid-trail-' + i, { width: 0.16, height: 0.58 }, scene);
+      mesh.material = tread;
+      mesh.isPickable = false;
+      mesh.setEnabled(false);
+      this.markPool.push({ mesh, remaining: 0, maxLife: 1 });
+    }
 
     for (let i = 0; i < size; i += 1) {
       const mesh = MeshBuilder.CreateBox('impact-bit-' + i, { size: 0.035 }, scene);
@@ -78,7 +95,37 @@ export class ImpactEffects {
     }
   }
 
+  markTire(point: Vector3, forward: Vector3, intensity: number) {
+    if (intensity < 0.15) return;
+    const mark = this.markPool[this.markCursor];
+    this.markCursor = (this.markCursor + 1) % this.markPool.length;
+    mark.mesh.position.set(point.x, 0.018, point.z);
+    mark.mesh.rotation.y = Math.atan2(forward.x, forward.z);
+    mark.mesh.scaling.x = 0.84 + Math.min(0.5, intensity * 0.22);
+    mark.remaining = mark.maxLife = 9 + Math.min(5, intensity * 1.5);
+    mark.mesh.visibility = Math.min(0.85, 0.24 + intensity * 0.2);
+    mark.mesh.setEnabled(true);
+  }
+
+  clearTracks() {
+    for (const mark of this.markPool) {
+      mark.remaining = 0;
+      mark.mesh.setEnabled(false);
+    }
+    this.markCursor = 0;
+  }
+
   update(dt: number) {
+    for (const mark of this.markPool) {
+      if (mark.remaining <= 0) continue;
+      mark.remaining -= dt;
+      if (mark.remaining <= 0) {
+        mark.mesh.setEnabled(false);
+      } else {
+        const fade = Math.min(1, mark.remaining / 2.8);
+        mark.mesh.visibility = 0.42 * fade;
+      }
+    }
     for (const particle of this.pool) {
       if (particle.life <= 0) continue;
       particle.life -= dt;
