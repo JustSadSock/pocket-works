@@ -304,3 +304,52 @@
  #dialog .atelier-settings-panel .atelier-preferences-group input[type="range"]{min-height:22px}
  #dialog .atelier-settings-panel .atelier-settings-note{font-size:9px!important}
 }
+
+/* A proper curatorial catalogue: grouped shelves replace the legacy 7-slot
+   static tray; all eleven achievements remain reachable at every viewport. */
+#screen>.cabinet-scene .cabinet-tray{
+ display:flex!important;flex-direction:column!important;justify-content:flex-start!important;
+ grid-template-columns:none!important;grid-template-rows:none!important;
+ gap:12px!important;overflow-y:auto!important;overflow-x:hidden!important;
+ overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#a68a60 #312920;
+}
+#screen>.cabinet-scene .cabinet-tier{display:block;flex:none;min-width:0;--tier-accent:#a6b5ac}
+#screen>.cabinet-scene .cabinet-tier[data-tier="Лёгкое"]{--tier-accent:#86a999}
+#screen>.cabinet-scene .cabinet-tier[data-tier="Среднее"]{--tier-accent:#bba078}
+#screen>.cabinet-scene .cabinet-tier[data-tier="Сложное"]{--tier-accent:#cb8f71}
+#screen>.cabinet-scene .cabinet-tier[data-tier="Легендарное"]{--tier-accent:#e4c576}
+#screen>.cabinet-scene .cabinet-tier-head{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;
+ color:var(--tier-accent);border-bottom:1px solid color-mix(in srgb,var(--tier-accent) 65%,transparent);
+ border-left:4px solid var(--tier-accent);padding:5px 8px 8px;margin:0 0 8px;
+ background:#1a1b1b50;
+}
+#screen>.cabinet-scene .cabinet-tier-head strong{
+ font:600 clamp(16px,1.6vw,21px)/1.15 Georgia,serif;letter-spacing:0;
+}
+#screen>.cabinet-scene .cabinet-tier-head span{font:600 11px/1.2 system-ui;color:#d0c5b1;white-space:nowrap}
+#screen>.cabinet-scene .cabinet-tier-medals{
+ display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+ gap:clamp(6px,.8vw,12px)!important;min-width:0;
+}
+#screen>.cabinet-scene .cabinet-tier-medals .cabinet-medal{
+ grid-column:auto!important;min-height:clamp(103px,17vh,150px)!important;
+ border-top:3px solid var(--tier-accent)!important;
+ padding:clamp(5px,.6vw,10px)!important;
+}
+#screen>.cabinet-scene .cabinet-tier-medals .cabinet-medal.is-selected{
+ outline:2px solid var(--tier-accent);outline-offset:-1px;
+}
+#screen>.cabinet-scene .cabinet-tier-medals .cabinet-medal-svg{max-height:clamp(48px,9vh,95px)}
+@media(max-width:1000px){
+ #screen>.cabinet-scene .cabinet-tier-medals{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:700px){
+ #screen>.cabinet-scene .cabinet-tray{gap:9px!important;padding:8px!important;min-height:0}
+ #screen>.cabinet-scene .cabinet-tier-head{padding:3px 6px 6px;margin-bottom:6px}
+ #screen>.cabinet-scene .cabinet-tier-head strong{font-size:15px}
+ #screen>.cabinet-scene .cabinet-tier-head span{font-size:10px}
+ #screen>.cabinet-scene .cabinet-tier-medals{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important}
+ #screen>.cabinet-scene .cabinet-tier-medals .cabinet-medal{min-height:79px!important;padding:3px!important}
+ #screen>.cabinet-scene .cabinet-tier-medals .cabinet-medal-svg{max-height:clamp(27px,8vh,60px)}
+}
