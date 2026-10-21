@@ -2,7 +2,7 @@ const CACHE_PREFIX='flotiliya-';
 const CACHE_NAME='flotiliya-v0.6.0';
 const APP_VERSION='0.6.0';
 const RELEASE_DATE='2026-10-15';
-const NOTES=['Акватория стала на 20% больше по высоте и на 18% по ширине.','Корабли идут по обоим маршрутам непрерывно все 4,5 секунды.','Компактнее панель команд, больше видно морское поле.'];
+const NOTES=["Море увеличено по ширине и высоте: более длинные маршруты, больше места для тактики и манёвров.","Два набора приказов теперь исполняют один непрерывный маршрут за 4,5 секунды без остановки в середине.","Очки движения определяют пройденный путь и фактическую скорость за одинаковое время хода.","На телефонах расширено поле боя, свёрнуты второстепенные параметры корабля — их можно открыть отдельно.","Добавлены регрессионные и браузерные проверки непрерывного движения на обеих стадиях."];
 const SHELL=['./','./index.html','./app.config.json','./styles.css','./app.js','./sea-art.js','./turn-budget.js','./naval-combat.js','./squadron-plan.js','./course-motion.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 const scope=new URL('./',self.registration.scope);
 self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE_NAME);await Promise.all(SHELL.map(async entry=>{const url=new URL(entry,scope);try{const resp=await fetch(url.href,{cache:'reload'});if(resp.ok)await cache.put(url.href,resp);}catch{}}));await self.skipWaiting();})()));
