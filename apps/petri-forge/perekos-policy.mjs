@@ -98,7 +98,11 @@ export function perekosControl(o,p,player=0,tick=0){
  const shotLifetime=shotSpeed<=205?1.32:shotSpeed>=350?.96:1.15;
  const effectiveRange=shotSpeed*shotLifetime-25;
  // Stay inside practical projectile lifetime, not the theoretical maximum map range.
- const target=Math.min(90+w[index.preferredRange]*155,effectiveRange-65);
+ // Aggressive policies should close the gap before sustained fire. At maximum
+ // flame/projectile range too many moving shots expire or clip obstacles while
+ // a stationary training target can be defeated by the closing ring alone.
+ const baseTarget=Math.min(90+w[index.preferredRange]*155,effectiveRange-65);
+ const target=w[index.pressure]>.78?Math.min(baseTarget,145):baseTarget;
  const distBias=distance>target+12?1:distance<target-43?-1:.15;
  const pressure=.75+w[index.pressure]*.7;
  let mx=nx*distBias*pressure-ny*(w[index.orbit]*1.9-.95)*side;
