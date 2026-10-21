@@ -96,6 +96,11 @@
         "slug": "space-run",
         "spatialDifference": "Space Run использует внешнюю камеру с широкими полосами космического коридора, силуэтами кораблей и читаемыми препятствиями на открытом фоне; MEAT.EXE располагает камеру внутри тесного живого органа, где сосудистые своды, костные крипты и нервные переправы окружают игрока в полном 3D, а приборы собраны в компактной нижней зоне.",
         "interactionDifference": "В Space Run важно управлять траекторией корабля, уклоняясь от движущихся препятствий и сохраняя скорость; в MEAT.EXE одновременно требуется прицельная стрельба по девяти классам противников, чтение замахов четырёх стражей, использование рывка, вскрытие физических мембран и принятие решений о маршруте между органами. Полевой FPS-журнал измеряет именно этот непрерывный бой, не превращая игру в диспетчерскую панель."
+      },
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "Rivals Field Notes is a scrollable evidence report with compact charts and filters; Meat.exe is a full-viewport first-person fleshy corridor with a tactile weapon dashboard.",
+        "interactionDifference": "Rivals Field Notes browses stored season samples, while Meat.exe requires continuous analog motion, weapon fire and evasive timing against enemies and environmental threats."
       }
     ]
   },
