@@ -8,7 +8,7 @@ const colors={
 const r=(c,x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(Math.round(x/2)*2,Math.round(y/2)*2,w,h)};
 const clip=(n,low,high)=>Math.max(low,Math.min(high,n));
 function flame(c,f,t,reduced){
- const tone=colors.fire,dx=Math.cos(f.angle),dy=Math.sin(f.angle),len=clip(f.length,0,140);
+ const tone=colors.fire,dx=Math.cos(f.angle),dy=Math.sin(f.angle),len=clip(f.length,0,242);
  if(len<4)return;
  // Parallel rows fan out from the caster: a connected flame, not a stream of bullets.
  for(let d=4;d<len;d+=5){
