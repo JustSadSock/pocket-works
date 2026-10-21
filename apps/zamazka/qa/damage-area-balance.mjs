@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
-import {ARTS,zoneFor,freshZoneVariation,BALANCED_ZONE_OFFSET,W,H} from '../artworks.js';
+import {ARTS,zoneFor,freshZoneVariation,BALANCED_ZONE_OFFSET,SHAPE_CORRECTED_ZONE_OFFSET,W,H} from '../artworks.js';
 
 const signedArea=points=>Math.abs(points.reduce((sum,[x,y],i)=>{
  const [nx,ny]=points[(i+1)%points.length];return sum+x*ny-nx*y;
@@ -41,7 +41,23 @@ assert.equal(count,ARTS.length*300);
 assert.deepEqual([...shapes].sort(),['burst','diamond','oval','round','star','torn']);
 for(let i=0;i<32;i++){
  const v=freshZoneVariation();
- assert(Number.isSafeInteger(v)&&v>=BALANCED_ZONE_OFFSET&&v<BALANCED_ZONE_OFFSET*2);
+ assert(Number.isSafeInteger(v)&&v>=SHAPE_CORRECTED_ZONE_OFFSET&&v<SHAPE_CORRECTED_ZONE_OFFSET+BALANCED_ZONE_OFFSET);
+}
+// Compare physical geometry across portrait, square and panorama.
+for(const art of [0,1,18,35,80,115,135]){
+ for(const seed of [0,1,1007,99887,0xabcdef01]){
+  const variation=SHAPE_CORRECTED_ZONE_OFFSET+seed;
+  for(const aspect of [.35,.5,.8,1,4/3,2,3.5]){
+   const z=zoneFor(art,variation,aspect),fraction=signedArea(z.points)/(W*H);
+   assert(Math.abs(fraction-.03)<.0001,'3% damage area survives aspect correction');
+   assert(z.points.every(([x,y])=>x>=2&&x<=W-2&&y>=2&&y<=H-2),'no mask clipping');
+   assert.deepEqual(z,zoneFor(art,variation,aspect),'new mask deterministic');
+   if(z.kind==='round'){
+    const physicalWidth=z.w*aspect/(W/H);
+    assert(physicalWidth/z.h>.72&&physicalWidth/z.h<1.35,'round mask stretched: '+aspect);
+   }
+  }
+ }
 }
 console.log('ZAMAZKA damage balance: '+count+' new masks at '+(min*100).toFixed(4)+'–'+(max*100).toFixed(4)+'%, six contour families, zero clipping, legacy contours preserved');
 
@@ -56,7 +72,7 @@ const players=[{id:'host',name:'H'},{id:'guest',name:'G'}];
 function startRoom(legacy=false){
  const state=server.createRoom({player:players[0]}).state;
  assert.equal(state.balancedDamage,true,'new room must opt in');
- if(legacy)delete state.balancedDamage;
+ if(legacy){delete state.balancedDamage;delete state.shapeCorrected;}
  server.onJoin({state,player:players[1],players});
  server.onMessage({state,player:players[0],players,payload:{type:'start',rounds:1,drawingSeconds:160}});
  assert.equal(state.phase,'preview');
@@ -64,8 +80,18 @@ function startRoom(legacy=false){
   const variation=state.assignments[p.id].variation;
   assert(Number.isSafeInteger(variation));
   if(legacy)assert(variation<BALANCED_ZONE_OFFSET,'existing room changed mask after update');
-  else assert(variation>=BALANCED_ZONE_OFFSET,'new room still uses unfair mask');
+  else assert(variation>=SHAPE_CORRECTED_ZONE_OFFSET,'new room must use proportional masks');
  }
 }
 startRoom(false);startRoom(true);
+{
+ const state=server.createRoom({player:players[0]}).state;
+ delete state.shapeCorrected;
+ server.onJoin({state,player:players[1],players});
+ server.onMessage({state,player:players[0],players,payload:{type:'start',rounds:1,drawingSeconds:160}});
+ for(const p of players){
+  const v=state.assignments[p.id].variation;
+  assert(v>=BALANCED_ZONE_OFFSET&&v<SHAPE_CORRECTED_ZONE_OFFSET,'v29 room geometry must survive');
+ }
+}
 console.log('ZAMAZKA multiplayer: new rooms normalized, old persistent rooms unchanged; new solo seeds normalized');

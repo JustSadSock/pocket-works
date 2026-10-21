@@ -72,7 +72,7 @@ assert.notEqual(state.assignments.a.variation,undefined);
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const css=readFileSync(new URL('../restoration-17.css',import.meta.url),'utf8');
 assert.match(app,/voteScreenToken===view\.round\+':'\+view\.turn/,'vote state patches live DOM instead of recreating gallery');
-assert.match(app,/oldBallot=page==='vote'&&which==='reveal'/,'time expiry preserves painted ballot during reveal');
+assert.match(app,/oldBallot=page==='vote'&&which==='verdict'/,'time expiry preserves painted ballot while public vote dossier mounts');
 assert.match(app,/finishVoteTransition\(\)/,'outgoing ballot cleared after replacement canvas is ready');
 assert.match(css,/\.vote-transition-layer/,'phase transition layer fades without redrawing original cards');
 assert.match(readFileSync(new URL('../editor.js',import.meta.url),'utf8'),/canvas\.clientWidth\|\|canvas\.parentElement/,'zoom does not trigger layout-based raster reallocations');

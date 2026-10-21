@@ -32,7 +32,7 @@ import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.24',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.25',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -301,6 +301,7 @@ function home(skipLeave=false){
  if(q.has('room')||q.has('server'))history.replaceState(null,'',location.pathname+location.hash);
  if(!IS_DEBUG_FRAME)clearTabGuest();
  if(net){if(!skipLeave)try{net.leaveRoom()}catch{}net.close();net=null}
+ clearTimeout(legacyDossierTimer);legacyDossierActive='';legacyDossiers.clear();
  view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';preparedRound='';preparingError='';loadedRound='';pendingVote=null;if(!IS_DEBUG_FRAME)persistVote();connectionStatus('off');
  change('<section class="museum-home">'+
   
@@ -855,12 +856,31 @@ function resumePractice(){try{const p=JSON.parse(sessionStorage.getItem(PRACTICE
 function practiceStep(){if(!practice)return;if(practice.phase==='preview'){practice.phase='drawing';practice.deadline=practice.drawingSeconds===0?0:Date.now()+practice.drawingSeconds*1000;persistPractice();drawing(true)}else if(practice.phase==='drawing')finishPractice()}
 function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;try{localStorage.removeItem(PRACTICE_KEY)}catch{}try{sessionStorage.removeItem(PRACTICE_KEY)}catch{}storedPractice=null;void zamazkaStore.remove('practice').catch(()=>{});reveal(true)}
 let previousVisualPhase='',lastPhaseCue='',voteScreenToken='',voteTransitionLayer=null,voteTransitionTimeout=null;
+const legacyDossiers=new Set();
+let legacyDossierActive='',legacyDossierTimer=null;
+function legacyDossierToken(v){return roomId+':'+v.round+':'+v.turn}
+function legacyVerdict(){
+ const token=legacyDossierToken(view);
+ if(legacyDossierActive===token)return;
+ legacyDossiers.add(token);legacyDossierActive=token;
+ const dossierView={...view,deadline:networkNow()+6500};
+ change(finaleVerdictMarkup({view:dossierView,artworks:ARTS,artworkURL,escapeText:esc,head,chipDots,hostId:me?.id,readOnly:true}),'verdict');
+ exhibitFitter=mountExhibitFrames(screen);
+ clearTimeout(legacyDossierTimer);
+ legacyDossierTimer=setTimeout(()=>{
+  if(legacyDossierActive===token&&page==='verdict'&&view?.phase==='reveal'&&legacyDossierToken(view)===token){
+   legacyDossierActive='';
+   reveal();
+  }
+ },6500);
+}
 function renderView(){
  if(!view)return;
  const phaseToken=view.round+':'+view.phase;
  if(previousVisualPhase&&previousVisualPhase!==phaseToken&&lastPhaseCue!==phaseToken){
    lastPhaseCue=phaseToken;
    if(view.phase==='voting')sound('paper');
+   else if(view.phase==='verdict')sound('paper');
    else if(view.phase==='reveal')sound('reveal');
    else if(view.phase==='round-review')sound('confirm');
  }
@@ -881,6 +901,15 @@ function renderView(){
  }
  if(page==='preview'&&view.phase==='preview'&&key===lastUiKey)return; // Do not reset the player's mobile swipe position on server updates.
  if(page==='round-review'&&view.phase==='round-review'&&key===lastUiKey)return;
+ // Earlier pinned rooms (v28 and older) jump from voting into reveal.
+ // Their authoritative ballot exists, so interpose the genuine vote dossier
+ // locally without altering their scoring, deadlines or session data.
+ if(Number(roomModuleVersion.slice(1))<29&&view.phase==='reveal'&&view.gallery?.[view.turn]){
+  const token=legacyDossierToken(view);
+  if(legacyDossierActive===token)return;
+  if(!legacyDossiers.has(token)){lastUiKey=key;legacyVerdict();return}
+ }
+
  // The server broadcasts repeat snapshots; retain the revealed image and slider.
  if(['verdict','reveal','results'].includes(page)&&view.phase===page&&
     lastUiKey.startsWith(view.phase+':'+view.round+':'+view.turn+':'))return;
@@ -1423,7 +1452,7 @@ function tick(){
   clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
   clock.classList.toggle('urgent',s<=10);
   const key=(practice?'practice':roomId)+':'+v.round+':'+v.phase+':'+v.deadline;
-  const plan=stepClockSound(clockSoundState,key,remaining);
+  const plan=stepClockSound(clockSoundState,key,remaining,{phase:v.phase,totalSeconds:v.drawingSeconds||0});
   clockSoundState=plan.state;
   if(plan.ticking)museumAudio.syncCountdown(key,v.deadline,now);
   else museumAudio.stopCountdown();
@@ -1435,6 +1464,15 @@ function tick(){
    const s=Math.max(0,Math.ceil((v.deadline-now)/1000));
    clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
    clock.classList.remove('urgent');
+  }
+ }
+ // The host cannot advance the real verdict until six seconds have passed.
+ if(page==='verdict'&&view?.phase==='verdict'){
+  const advance=screen.querySelector('.verdict-phase [data-action="advance"]');
+  if(advance){
+   const wait=Math.max(0,Math.ceil((view.deadline-4000-networkNow())/1000));
+   advance.disabled=wait>0;
+   advance.textContent=wait>0?'Вскрыть через '+wait+' с':'Вскрыть полотно →';
   }
  }
  // Sound the zero cue before changing the screen or submitting the final stroke.

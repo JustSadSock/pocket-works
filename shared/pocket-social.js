@@ -222,7 +222,7 @@ function editor(){
     ...(unlocks.includes('zamazka.maestro')?[['restorer','Мантия великого реставратора']]:[])];
   const secretAccessories=[...mascotAccessories,...(unlocks.includes('dragon-keeper')?[['shoulder-dragon','Изумрудный дракон на плече']]:[])];
   const rewardFace=[...mascotFaces,...(unlocks.includes('zamazka.sharp-eye')?[['monocle','Монокль']]:[])];
-  const rewardTitles=mascotTitles.filter(t=>!['Подмастерье','Знаток подделок'].includes(t)||
+  const rewardTitles=mascotTitles.filter(t=>!zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t)||
     zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id)));
   const rewardBg=backgrounds.filter(([id])=>id!=='gallery'||unlocks.includes('zamazka.five-works'));
   const rewardFrames=portraitFrames.filter(([id])=>id!=='worn-gilt'||unlocks.includes('zamazka.perfect-forgery'));

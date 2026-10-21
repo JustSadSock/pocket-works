@@ -8,7 +8,7 @@ export const mascotHats=[['none','Без'],['crown','Корона'],['beret','Б
 export const mascotClothes=[['tunic','Туника'],['vest','Жилет'],['mantle','Мантия']];
 export const mascotAccessories=[['none','Без аксессуара']];
 export const mascotFaces=[['none','Без'],['glasses','Очки'],['stars','Звёздочки']];
-export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок'];
+export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Призрачная кисть','Всевидящий','Авантюрист'];
 export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'},groom:{clothes:'groom'},'seoul-artist':{hat:'stage-pin',clothes:'stage-hanbok'},'dragon-keeper':{accessory:'shoulder-dragon'}};
 const one=(rows,id,fallback)=>rows.some(x=>x[0]===id)?id:fallback;
 export function safeMascot(input,unlocks=[]){

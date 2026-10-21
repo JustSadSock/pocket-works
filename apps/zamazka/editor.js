@@ -1,4 +1,4 @@
-import {W,H,zoneFor,damagePath,insideDamage,loadArtwork,drawArtwork,setArtworkFrame,artworkAspect} from './artworks.js';
+import {W,H,zoneFor,SHAPE_CORRECTED_ZONE_OFFSET,damagePath,insideDamage,loadArtwork,drawArtwork,setArtworkFrame,artworkAspect} from './artworks.js';
 import {zamazkaStore} from './storage.js';
 import {floodFillRaster,fillMatchingColorRaster} from './fill-core.js';
 import {enclosingContourAt,fillEscapedContour} from './fill-contours.js';
@@ -257,7 +257,7 @@ export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=f
   // Re-rasterizing the entire original into CANVAS was making the forgery visibly softer.
   if(!overlayOnly)drawArtwork(ctx,image,id,legacyFrame);
  if(damaged){
-  const z=zoneFor(id,variation),overlay=document.createElement('canvas');
+  const z=zoneFor(id,variation,legacyFrame?W/H:artworkAspect(image)),overlay=document.createElement('canvas');
   overlay.width=canvas.width;overlay.height=canvas.height;
   const paint=overlay.getContext('2d');
   paint.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);
@@ -781,6 +781,7 @@ export class Editor{
   }
   attach(){
     this.down=e=>{
+      if(this.variation>=SHAPE_CORRECTED_ZONE_OFFSET&&!this.nativeFrameReady)return;
       // Tablet palm rejection: an incidental hand contact must never convert
       // an active stylus stroke into a two-finger pinch, silently cancelling ink.
       if(isTabletPalmContact(e.pointerType,this.activePenPointer))return;
@@ -1219,6 +1220,7 @@ export class Editor{
    if(!img||this.closed)return;
    if(this.artRetryAfter){this.artRetryAfter=0;clearTimeout(this.artRetryTimer);this.artRetryTimer=null;this.updateDrawingTip()}
    if(!this.nativeFrameReady){
+     if(this.variation>=SHAPE_CORRECTED_ZONE_OFFSET)this.zone=zoneFor(this.id,this.variation,artworkAspect(img));
      this.nativeFrameReady=true;
      setArtworkFrame(this.canvas,img);
      this.frameAspect=artworkAspect(img);

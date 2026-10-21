@@ -63,13 +63,13 @@ for(const [edition,oldId,expectedId] of [
 ])assert.equal(normalizeArchiveEntry({art:oldId,edition}).art,expectedId, 'migration '+edition+'/'+oldId);
 assert.equal(normalizeArchiveEntry({art:108,edition:6}).art,108,'new original not migrated');
 const server=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
-const pinned=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v29.ts',import.meta.url),'utf8');
+const pinned=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v30.ts',import.meta.url),'utf8');
 assert.equal(server,pinned,'new immutable PocketNet snapshot must match module source');
 assert.match(server,/const CATALOG_COUNT=136;/);
 assert.match(server,/const EXCLUDED_PAINTINGS=new Set\(\[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115\]\)/);
 const lock=JSON.parse(readFileSync(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
-assert.equal(lock.zamazka.current,'v29');
-assert.ok(lock.zamazka.versions.includes('v26')&&lock.zamazka.versions.includes('v27'));
+assert.equal(lock.zamazka.current,'v30');
+assert.ok(lock.zamazka.versions.includes('v26')&&lock.zamazka.versions.includes('v27')&&lock.zamazka.versions.includes('v29')&&lock.zamazka.versions.includes('v30'));
 const manifest=JSON.parse(readFileSync(new URL('../app.config.json',import.meta.url),'utf8'));
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');

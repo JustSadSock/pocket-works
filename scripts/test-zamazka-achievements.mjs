@@ -39,8 +39,8 @@ for(let round=1;round<=5;round++){
  else all.push(...update(completed,{...completed,phase:'results'}));
 }
 const earned=new Set(all.map(x=>x.split(':').slice(1).join(':')));
-assert.equal(earned.size,7,'all seven achievements are reachable by genuine server states');
-for(const a of ZAMAZKA_ACHIEVEMENTS)assert.ok(earned.has(a.id),a.id+' not awarded');
+assert(earned.size>=7,'all original achievements remain reachable by genuine server states');
+for(const id of ['first-stroke','sharp-eye','shared-canvas','three-rounds','five-works','perfect-forgery','maestro'])assert.ok(earned.has('zamazka.'+id),id+' not awarded');
 assert.equal(all.some(x=>x.startsWith('p0:zamazka.maestro')),true);
 assert.equal(all.some(x=>x.startsWith('p0:zamazka.sharp-eye')),true);
 const noGuests=assessZamazkaAwards(base,{...base,phase:'preview',round:1},[],null,null,matchId);
@@ -53,4 +53,47 @@ for(const animal of ['cat','black-cat','fox','rabbit','frog']){
  assert.match(svg,/<svg/);assert.match(svg,/painter's brush/);assert.match(svg,/master's coat/);
  assert.doesNotMatch(svg,/<script|foreignObject|onload=/i);
 }
-console.log('Zamazka achievements: all seven server-authoritative conditions and cosmetics passed.');
+
+function awardPhase(participantCount,round,mode,original=null){
+ const people=Array.from({length:participantCount},(_,i)=>({id:'member'+i,name:'Участник '+i}));
+ const pids=people.map(p=>p.id),selected=[0,1,2,3,4];
+ const assignments=Object.fromEntries(people.map((p,i)=>[p.id,{art:i%5,strokes:Array(4).fill({c:'#123456',s:4,p:[[4,5]]})}]));
+ const votes=Object.fromEntries(people.map((target,i)=>[target.id,Object.fromEntries(
+  people.filter(v=>v.id!==target.id).map(voter=>{
+   const ballot=[0,0,0,0,0],correct=i%5;
+   if(mode==='wrong')ballot[(correct+1)%5]=3;
+   else if(mode==='split'&&voter.id===people[0].id&&i===1){
+    for(const idx of [0,1,2])ballot[idx]=1;
+   }else ballot[correct]=1;
+   return [voter.id,ballot];
+  })
+ )]));
+ const last={phase:'reveal',round,rounds:3,participants:people,scores:{},selected,assignments,votes};
+ const next={...last,phase:'round-review'};
+ const awarded=assessZamazkaAwards(last,next,[],pids[0],original||{matchId,board:{},rounds:{},done:false},matchId);
+ return {awarded:awarded.awards,stats:awarded.data,participants:people};
+}
+const duo=awardPhase(2,1,'correct');
+assert.equal(duo.awarded.filter(x=>x.achievementId==='zamazka.duo-detectives').length,2,'both duo players must detect each other');
+for(const count of [2,3,4,8]){
+ const blank=awardPhase(count,1,'wrong');
+ assert.equal(blank.awarded.filter(x=>x.achievementId==='zamazka.ghost-brush').length,count,
+  'fully fooled juries from '+count+' players are valid');
+ const r1=awardPhase(count,1,'correct'),r2=awardPhase(count,2,'correct',r1.stats);
+ assert.equal(r2.awarded.filter(x=>x.achievementId==='zamazka.eagle-eye').length,count,
+  'two complete clean rounds qualify at '+count+' players');
+ const split=awardPhase(count,1,'split');
+ assert(split.awarded.some(x=>x.playerId==='member0'&&x.achievementId==='zamazka.three-theories'),
+  'three different painted choices include one correct at '+count+' players');
+}
+const noVotes={phase:'reveal',round:1,participants:[{id:'a'},{id:'b'}],selected:[0,1,2,3,4],
+ assignments:{a:{art:0,strokes:[{p:[1]},{p:[2]},{p:[3]},{p:[4]}]},b:{art:1,strokes:[]}},
+ votes:{a:{},b:{}},scores:{}};
+const emptyAward=assessZamazkaAwards(noVotes,{...noVotes,phase:'round-review'},[],null,
+ {matchId,rounds:{},board:{},done:false},matchId);
+assert(!emptyAward.awards.some(a=>a.achievementId==='zamazka.ghost-brush'),
+ 'no votes must never award phantom deception');
+for(const x of ['duo-detectives','ghost-brush','eagle-eye','three-theories'])
+ assert(ZAMAZKA_ACHIEVEMENTS.some(a=>a.id==='zamazka.'+x),'server catalogue has '+x);
+console.log('Zamazka achievements: old 7 and 4 new authenticated achievements verified for 2, 3, 4 and 8 players.');
+

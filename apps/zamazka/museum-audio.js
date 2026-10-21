@@ -3,11 +3,11 @@
 // All cues follow the one global user sound switch and master volume.
 export const MUSEUM_SOUND_EVENTS=Object.freeze([
  'press','frame','paper','tool','brush','fill','token','undo','confirm','reveal','door',
- 'warning','final-warning','clock-tick','watch-warning','watch-five','time-up','error'
+ 'warning','final-warning','clock-tick','watch-half','watch-minute','watch-warning','watch-five','time-up','error'
 ]);
 const cooldown={press:220,frame:420,paper:370,tool:230,brush:1050,fill:360,token:110,undo:240,
  confirm:190,reveal:230,door:520,warning:450,'final-warning':450,'clock-tick':650,
- 'watch-warning':1500,'watch-five':1500,'time-up':1500,error:190};
+ 'watch-half':1500,'watch-minute':1500,'watch-warning':1500,'watch-five':1500,'time-up':1500,error:190};
 const vary=(n,range=.036)=>n*(1+(Math.random()*2-1)*range);
 export class MuseumAudio{
  constructor(enabled=true){
@@ -224,6 +224,14 @@ export class MuseumAudio{
      this.wood(at+.43,166,.11);
      break;
     case 'clock-tick':this.clockBeat(at,false,this.master);break;
+    // A soft two-tone hourglass for the halfway point, and a distinct
+    // restrained clock chime for the final minute of a long restoration.
+    case 'watch-half':
+     this.grain(at,.09,850,.034,.7);this.chime(at+.025,490,.62,.068);
+     this.chime(at+.20,620,.49,.045);break;
+    case 'watch-minute':
+     this.wood(at,176,.050);this.chime(at+.09,600,.90,.105);
+     this.chime(at+.34,745,.68,.075);break;
     // Clockmaker A: short mechanical tap and a small metallic watch chime.
     case 'watch-warning':
      this.grain(at,.045,1620,.070,1.1);

@@ -81,6 +81,8 @@ export function artworkFallbackURL(id,failedUrl){
 }
 const MAX_DECODED_IMAGES=8;
 const pending=new Map();
+const decodedRatios=new Map();
+export const cachedArtworkAspect=id=>decodedRatios.get(id)||W/H;
 async function imageSource(id){
  if(!ARTS[id].isReal)return artworkURL(id);
  const cache=typeof caches==='undefined'?null:await caches.open(ART_CACHE).catch(()=>null);
@@ -110,7 +112,7 @@ export function loadArtwork(id){
    const image=new Image();
    if(ARTS[id].isReal)image.crossOrigin='anonymous';
    image.decoding='async';
-   image.onload=()=>{if(src.startsWith('blob:'))URL.revokeObjectURL(src);resolve(image)};
+   image.onload=()=>{decodedRatios.set(id,artworkAspect(image));if(src.startsWith('blob:'))URL.revokeObjectURL(src);resolve(image)};
    image.onerror=()=>{if(src.startsWith('blob:'))URL.revokeObjectURL(src);reject(Error('Изображение недоступно. Подключи интернет для первого просмотра.'))};
    image.src=src;
  })).catch(error=>{pending.delete(id);throw error});
@@ -140,7 +142,7 @@ export function setArtworkFrame(canvas,image,legacyFrame=false){
    canvas.style.aspectRatio=String(ratio);
    canvas.style.setProperty?.('--art-aspect',String(ratio));
  }
- const parent=canvas?.closest?.('.viewport,.unveil-frame,.round-view-window,.round-art-image,.stake-frame,.reveal-option-image,.picture-image,.verdict-image,.compare');
+ const parent=canvas?.closest?.('.viewport,.unveil-frame,.round-view-window,.round-art-image,.stake-frame,.reveal-option-image,.picture-image,.verdict-image,.compare,.finale-laureate-art');
  parent?.style?.setProperty?.('--art-aspect',String(ratio));
  return ratio;
 }
@@ -166,10 +168,11 @@ const SHAPES=['round','oval','star','torn','diamond','burst'];
 // identify the balanced-area geometry without invalidating old matches,
 // downloaded drafts or archive entries whose exact masks must remain stable.
 export const BALANCED_ZONE_OFFSET=0x100000000;
+export const SHAPE_CORRECTED_ZONE_OFFSET=0x200000000;
 export function freshZoneVariation(){
- return BALANCED_ZONE_OFFSET+Math.floor(Math.random()*0x100000000);
+ return SHAPE_CORRECTED_ZONE_OFFSET+Math.floor(Math.random()*0x100000000);
 }
-export function zoneFor(id,variation=0){
+export function zoneFor(id,variation=0,sourceAspect=cachedArtworkAspect(id)){
  const seed=(Math.imul((id+11)>>>0,2654435761)^(Number(variation)>>>0)^0x5195afd3)>>>0;
  const r=rand(seed);
  const kind=SHAPES[Math.floor(r()*SHAPES.length)];
@@ -207,6 +210,16 @@ export function zoneFor(id,variation=0){
    for(const p of points){
     p[0]=cx+(p[0]-cx)*scale;
     p[1]=cy+(p[1]-cy)*scale;
+   }
+   if(variation>=SHAPE_CORRECTED_ZONE_OFFSET){
+    // Inverse of the display's non-uniform X/Y pixel scale. Its determinant
+    // is 1: every shape remains 3% of the artwork and circles stay circular.
+    const aspect=Number.isFinite(sourceAspect)&&sourceAspect>0?sourceAspect:W/H;
+    const factor=Math.sqrt((W/H)/Math.max(.25,Math.min(5,aspect)));
+    for(const p of points){
+     p[0]=cx+(p[0]-cx)*factor;
+     p[1]=cy+(p[1]-cy)/factor;
+    }
    }
    // Shifting (never clipping) keeps the entire 3% mask inside the source
    // image, including very narrow portrait or star-shaped damage.

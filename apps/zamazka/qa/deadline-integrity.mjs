@@ -86,7 +86,7 @@ assert.match(app,/pendingSubmit=\{token,room:roomId/);
 assert.match(app,/const retryMs=view\.deadline&&networkNow\(\)>=view\.deadline\?3500:15000/);
 const clock=app.slice(app.indexOf('let clockSoundState=null;'),app.indexOf('let museumSwipe=null;'));
 assert.match(clock,/page==='preview'\|\|page==='drawing'/);
-assert.match(clock,/stepClockSound\(clockSoundState,key,remaining\)/);
+assert.match(clock,/stepClockSound\(clockSoundState,key,remaining,/);
 assert.match(clock,/museumAudio\.syncCountdown\(key,v\.deadline,now\)/);
 assert.match(clock,/if\(plan\.cue\)sound\(plan\.cue\)/);
 assert.doesNotMatch(clock,/sound\('warning'\)/);

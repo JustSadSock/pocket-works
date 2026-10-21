@@ -450,3 +450,36 @@
 @media(prefers-reduced-motion:reduce){
  #screen>.round-review-phase .round-art-card{transition:none!important}
 }
+
+/* 1.40.25: connecting screen is an uninterrupted wall, not the generic
+   bordered paper page. Both old side strips and any shadow seams are removed. */
+#screen>.page.connecting-room.passage-connection{
+ border-left:0!important;border-right:0!important;
+ box-shadow:none!important;
+ background:radial-gradient(ellipse at center,#695d4d,#25221f 75%)!important;
+ background-image:radial-gradient(ellipse at center,#695d4d,#25221f 75%)!important;
+}
+#screen>.page.connecting-room.passage-connection::before,
+#screen>.page.connecting-room.passage-connection::after{
+ content:none!important;display:none!important
+}
+/* Winner is displayed at the natural artwork ratio rather than the default
+   600×450 raster shape; the wood frame belongs to the resulting rectangle. */
+#screen>.finale-results .finale-laureate-art{
+ --art-aspect:1.333333;
+ width:min(100%,260px)!important;max-height:min(29dvh,245px)!important;
+}
+#screen>.finale-results .finale-laureate-art #winnerRestoration{
+ box-sizing:border-box;
+ width:min(100%,calc(195px * var(--art-aspect,1.333333)))!important;
+ height:auto!important;max-height:195px!important;
+ aspect-ratio:var(--art-aspect,1.333333)!important;
+ object-fit:fill!important;
+}
+@media(max-width:700px){
+ #screen>.finale-results .finale-laureate-art{width:56px!important;max-height:88px!important}
+ #screen>.finale-results .finale-laureate-art #winnerRestoration{
+  width:min(100%,calc(68px * var(--art-aspect,1.333333)))!important;
+  height:auto!important;max-height:68px!important;
+ }
+}
