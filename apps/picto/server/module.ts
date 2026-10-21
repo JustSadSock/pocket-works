@@ -270,11 +270,12 @@ const module:PocketModule<State>={
   if(raw.type==='edit'){
    if(state.phase!=='compose'||state.author!==id)return {state,events:notice(id,'Сейчас нельзя редактировать композицию.')};
    const board=sanitized(raw.glyphs,state.palette);
-   if(!board)return {state,events:notice(id,'Знак недоступен в этом раунде или имеет недопустимые параметры.')};
+   if(!board||board.some(g=>(g.frame??0)>=state.frames))return {state,events:notice(id,'Некорректный знак или номер кадра.')};
    state.board=board;state.revision++;return {state,events:emit(state)};
   }
   if(raw.type==='publish'){
    if(state.phase!=='compose'||state.author!==id)return {state,events:notice(id,'Отправить сообщение может только автор.')};
+   if(!Array.from({length:state.frames},(_,frame)=>state.board.some(g=>(g.frame??0)===frame)).every(Boolean))return {state,events:notice(id,'Добавь хотя бы один знак в каждый кадр.')};
    advance(state);return {state,events:emit(state)};
   }
   if(raw.type==='answer'){
