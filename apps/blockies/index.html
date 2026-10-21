@@ -32,6 +32,10 @@
                     <li>👥 <span data-i18n="localAndOnlineMultiplayer">Local & Online Multiplayer</span></li>
                     <li>⚡ <span data-i18n="fastPacedAction">Fast-Paced Action</span></li>
                 </ul>
+                <button id="resume-solo" class="resume-solo" type="button" hidden>
+                    <span class="resume-main"><span aria-hidden="true">▶</span> Продолжить партию</span>
+                    <span class="resume-detail"></span>
+                </button>
                 <div class="mode-selection">
                     <button data-native-press id="mode-single" class="mode-btn mode-btn-primary">
                         <span class="mode-icon">🎯</span>
@@ -120,6 +124,7 @@
 
         <!-- Game Screen -->
         <div id="game-screen" class="screen">
+            <div id="online-network-status" class="online-network-status" role="status" aria-live="polite" hidden></div>
             <div id="team-stats" class="team-stats">
                 <div id="team-score-card" class="team-score-card">
                     <div class="score-card__label" data-i18n="teamScore">Team Score</div>
@@ -190,5 +195,5 @@
     </div>
 
     </main><script type="module" src="./app.js"></script>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Blockies" data-app-version="0.2.0"></script></body>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Blockies" data-app-version="0.3.0"></script></body>
 </html>
