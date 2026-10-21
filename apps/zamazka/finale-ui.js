@@ -4,7 +4,7 @@ import {exhibitFacets} from './exhibition-ui.js';
 export const FINALE_REVISION='1.39.0';
 const safe=(escapeText,value)=>escapeText(String(value??''));
 const totalFor=(score)=>Math.max(0,Number(score?.mask)||0)+Math.max(0,Number(score?.eye)||0);
-export function finaleVerdictMarkup({view:v,artworks,artworkURL,escapeText,head,chipDots,hostId}){
+export function finaleVerdictMarkup({view:v,artworks,artworkURL,escapeText,head,chipDots,hostId,readOnly=false}){
  const g=v.gallery?.[v.turn],players=v.participants||[];
  if(!g)return '';
  const balloters=players.filter(p=>p.id!==g.id);
@@ -28,7 +28,7 @@ export function finaleVerdictMarkup({view:v,artworks,artworkURL,escapeText,head,
   '<div class="finale-ledger" aria-label="Всего поставлено фишек"><span>ЗАРЕГИСТРИРОВАНО</span><strong>'+count+'</strong><small>фишек</small></div></div>'+
   '<div class="verdict-gallery finale-ballot-grid">'+cards+'</div>'+
   '<footer class="verdict-footer finale-verdict-footer"><span><i class="finale-live-dot"></i> Протокол составлен. Следом — разоблачение.</span>'+
-  (v.host===hostId?'<button class="btn primary" data-action="advance">Вскрыть полотно <span aria-hidden="true">→</span></button>':'<div class="finale-wait-label"><span class="busy" aria-hidden="true"></span> Ожидаем организатора</div>')+'</footer></div></section>';
+  (readOnly?'<div class="finale-wait-label">Протокол открыт · далее разоблачение</div>':v.host===hostId?'<button class="btn primary" data-action="advance" disabled>Вскрыть полотно <span aria-hidden="true">→</span></button>':'<div class="finale-wait-label"><span class="busy" aria-hidden="true"></span> Ожидаем организатора</div>')+'</footer></div></section>';
 }
 export function finaleResultsMarkup({view:v,escapeText,memberSeal,pocketPlayerBadge,hostId}){
  const label=s=>safe(escapeText,s);
