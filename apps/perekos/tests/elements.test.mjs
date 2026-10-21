@@ -10,7 +10,7 @@ function twoShots(first,mod,defender='coil'){
  const a=s.actors[0],b=s.actors[1];
  a.x=165;a.y=320;b.x=230;b.y=320;
  a.runes=['on_cast','ball',mod];
- for(let i=0;i<35;i++)tick(s,{...neutral(b.x,b.y),attack:true},STEP,neutral(a.x,a.y));
+ for(let i=0;i<95;i++)tick(s,{...neutral(b.x,b.y),attack:true},STEP,neutral(a.x,a.y));
  return s;
 }
 test('39 runes include exactly three additive elemental modifiers',()=>{
