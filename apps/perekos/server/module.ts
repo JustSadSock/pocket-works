@@ -208,6 +208,7 @@ function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
 
 /* Each mage has a distinct physical attack. All hit-tests use the fixed-step
    court geometry; these forms are state, not client-only cosmetic guesses. */
+function mastery(a,id){return compile(a.runes).some(chain=>chain.actions.some(action=>action.mods.includes(id)))}
 function beamLength(s,x,y,angle,range){
  const dx=Math.cos(angle),dy=Math.sin(angle);
  for(let d=8;d<=range;d+=6)if(distWall(x+dx*d,y+dy*d,3)||blocking(s,x+dx*d,y+dy*d,3)
@@ -219,40 +220,41 @@ function insideCone(a,b,angle,reach,halfAngle){
  return r<=reach+12&&Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-angle),Math.cos(Math.atan2(dy,dx)-angle)))<=halfAngle;
 }
 function flame(s,a,target){
- const angle=Math.atan2(target.y-a.y,target.x-a.x),reach=has(a,'lasting')?132:114;
- const length=beamLength(s,a.x,a.y,angle,reach),width=has(a,'wide')?24:17;
+ const angle=Math.atan2(target.y-a.y,target.x-a.x),reach=mastery(a,'lasting')?132:114;
+ const length=beamLength(s,a.x,a.y,angle,reach),width=mastery(a,'wide')?24:17;
  a.face=angle;
+ if(a.stun>0)return false;
  s.streams.push({owner:a.id,x:a.x,y:a.y,angle,length,width});
  if(a.cast>0||a.stun>0)return false;
- a.cast=has(a,'quick')?.105:.14;
+ a.cast=mastery(a,'quick')?.105:.14;
  const other=s.actors[1-a.id],dx=other.x-a.x,dy=other.y-a.y;
  const forward=dx*Math.cos(angle)+dy*Math.sin(angle),side=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
  if(forward>0&&forward<length+10&&side<width*.35+9){
-  const dealt=harm(s,other,has(a,'strong')?2.9:2.2,a.id);
-  if(dealt>0){markTarget(s,other,'fire',a.id);other.burn=Math.max(other.burn,has(a,'lasting')?2.3:1.2);other.burnSource=a.id;emit(s,'on_hit',a.id)}
+  const dealt=harm(s,other,mastery(a,'strong')?2.9:2.2,a.id);
+  if(dealt>0){markTarget(s,other,'fire',a.id);other.burn=Math.max(other.burn,mastery(a,'lasting')?2.3:1.2);other.burnSource=a.id;emit(s,'on_hit',a.id)}
  }
- addHeat(s,a,has(a,'cheap')?1:2.4);fx(s,'flame',a.x+Math.cos(angle)*20,a.y+Math.sin(angle)*20);
+ addHeat(s,a,mastery(a,'cheap')?1:2.4);fx(s,'flame',a.x+Math.cos(angle)*20,a.y+Math.sin(angle)*20);
  emit(s,'on_cast',a.id);return true;
 }
 function thunder(s,a){
- const reach=has(a,'far')?290:242,len=beamLength(s,a.x,a.y,a.face,reach);
- a.cast=stats(a).reload*(has(a,'quick')?.78:1);
+ const reach=mastery(a,'far')?290:242,len=beamLength(s,a.x,a.y,a.face,reach);
+ a.cast=stats(a).reload*(mastery(a,'quick')?.78:1);
  s.beams.push({owner:a.id,x:a.x,y:a.y,angle:a.face,length:len,life:.24,style:'coil'});
  const other=s.actors[1-a.id],dx=other.x-a.x,dy=other.y-a.y,
   along=dx*Math.cos(a.face)+dy*Math.sin(a.face),side=Math.abs(-dx*Math.sin(a.face)+dy*Math.cos(a.face));
  if(along>0&&along<len+10&&side<15){
-  other.shield=Math.max(0,other.shield-(has(a,'strong')?13:7));
-  const dealt=harm(s,other,has(a,'strong')?11:8.8,a.id);
+  other.shield=Math.max(0,other.shield-(mastery(a,'strong')?13:7));
+  const dealt=harm(s,other,mastery(a,'strong')?11:8.8,a.id);
   if(dealt>0){markTarget(s,other,'storm',a.id);other.slow=Math.max(other.slow,.65);emit(s,'on_hit',a.id)}
   fx(s,'impact_arc',other.x,other.y);
  }
- addHeat(s,a,has(a,'cheap')?5:10);fx(s,'thunder',a.x,a.y);emit(s,'on_cast',a.id);
+ addHeat(s,a,mastery(a,'cheap')?5:10);fx(s,'thunder',a.x,a.y);emit(s,'on_cast',a.id);
 }
 function slateWave(s,a){
- const reach=has(a,'far')?119:96;
- s.waves.push({owner:a.id,x:a.x,y:a.y,angle:a.face,range:reach,reach:0,halfAngle:has(a,'wide')?.75:.53,life:.3,hit:false});
- a.cast=stats(a).reload*(has(a,'quick')?.82:1);
- addHeat(s,a,has(a,'cheap')?4:8);fx(s,'quake',a.x,a.y);emit(s,'on_cast',a.id);
+ const reach=mastery(a,'far')?119:96;
+ s.waves.push({owner:a.id,x:a.x,y:a.y,angle:a.face,range:reach,reach:0,halfAngle:mastery(a,'wide')?.75:.53,life:.3,hit:false});
+ a.cast=stats(a).reload*(mastery(a,'quick')?.82:1);
+ addHeat(s,a,mastery(a,'cheap')?4:8);fx(s,'quake',a.x,a.y);emit(s,'on_cast',a.id);
 }
 function processWave(s,w){
  const other=s.actors[1-w.owner];w.life-=STEP;w.reach=Math.min(w.range,w.reach+w.range*STEP/.23);
@@ -260,7 +262,7 @@ function processWave(s,w){
  const d=Math.hypot(other.x-w.x,other.y-w.y);
  if(d>beamLength(s,w.x,w.y,Math.atan2(other.y-w.y,other.x-w.x),d+3)+6)return;
  w.hit=true;
- const attacker=s.actors[w.owner],dealt=harm(s,other,has(attacker,'strong')?16:12.5,w.owner);
+ const attacker=s.actors[w.owner],dealt=harm(s,other,mastery(attacker,'strong')?16:12.5,w.owner);
  const k=mag(other.x-w.x,other.y-w.y);
  move(other,(other.x-w.x)/k*18,(other.y-w.y)/k*18);
  if(dealt>0){markTarget(s,other,'stone',w.owner);other.slow=Math.max(other.slow,.45);emit(s,'on_hit',w.owner)}
@@ -269,8 +271,8 @@ function processWave(s,w){
 function rockFracture(s,q,x,y){
  if(q.style!=='rock')return;
  const target=s.actors[1-q.owner],d=Math.hypot(x-target.x,y-target.y);
- if(d< (has(s.actors[q.owner],'wide')?49:37)){
-  const dealt=harm(s,target,has(s.actors[q.owner],'strong')?4:2.5,q.owner,q.depth);
+ if(d< (mastery(s.actors[q.owner],'wide')?49:37)){
+  const dealt=harm(s,target,mastery(s.actors[q.owner],'strong')?4:2.5,q.owner,q.depth);
   if(dealt>0){markTarget(s,target,'stone',q.owner,q.depth);target.slow=Math.max(target.slow,.55);emit(s,'on_hit',q.owner,{},q.depth)}
  }
  fx(s,'fracture',x,y);
@@ -282,10 +284,10 @@ function attack(s,a,target){
  a.face=Math.atan2(target.y-a.y,target.x-a.x);
  if(a.mageId==='coil'){thunder(s,a);return true}
  if(a.mageId==='slate'){slateWave(s,a);return true}
- a.cast=stats(a).reload*(has(a,'quick')?.88:1);
- spawnShot(s,a,a.face,a.x,a.y,{strong:has(a,'strong'),wide:has(a,'wide')&&a.mageId==='pebble',
-  bounce:has(a,'bounce')&&a.mageId==='wire',far:has(a,'far')});
- addHeat(s,a,has(a,'cheap')?3:7);emit(s,'on_cast',a.id);return true;
+ a.cast=stats(a).reload*(mastery(a,'quick')?.88:1);
+ spawnShot(s,a,a.face,a.x,a.y,{strong:mastery(a,'strong'),wide:mastery(a,'wide')&&a.mageId==='pebble',
+  bounce:mastery(a,'bounce')&&a.mageId==='wire',far:mastery(a,'far')});
+ addHeat(s,a,mastery(a,'cheap')?3:7);emit(s,'on_cast',a.id);return true;
 }
 function guard(s,a){
  if(a.shieldReady>0||a.stun>0)return false;
