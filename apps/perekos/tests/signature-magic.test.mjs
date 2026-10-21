@@ -7,7 +7,7 @@ const stop={x:0,y:0,attack:false,dash:false,shield:false};
 function setup(id,{ax=100,ay=310,bx=178,by=310}={}){
  const s=makeMatch(492,id,'kindle');
  Object.assign(s.actors[0],{x:ax,y:ay});
- Object.assign(s.actors[1],{x:bx,y:by});
+ Object.assign(s.actors[1],{x:bx,y:by,runes:[]}); // Isolate base attacks from reactive armor runes.
  return s;
 }
 function advance(s,n=60){
