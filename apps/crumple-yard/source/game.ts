@@ -24,7 +24,7 @@ import { TrafficSystem, TRAFFIC_SPAWNS, trafficPreset } from './traffic';
 import { Vehicle } from './vehicle';
 
 const FIXED_DT = 1 / 90;
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 
 type QaState = {
   version: string;
@@ -593,9 +593,9 @@ export class CrumpleGame {
         label: feedback.label
       };
       const labels: Record<string, string> = { front: 'ПЕРЕД', rear: 'ЗАД', left: 'ЛЕВЫЙ БОРТ', right: 'ПРАВЫЙ БОРТ', roof: 'КРЫША', chassis: 'ШАССИ' };
-      this.ui.impactZone.textContent = labels[feedback.result.zone] + ' · ' + Math.round(feedback.result.severity * 100) + '%';
+      this.ui.impactZone.textContent = labels[feedback.result.zone] + ' · ' + Math.round(feedback.result.severity * 100) + '% УДАР';
       const impactKN = Math.max(0, feedback.force / 1000);
-      this.ui.impactInfo.textContent = impactKN.toFixed(1) + ' кН · ' + (feedback.relativeSpeed * 3.6).toFixed(0) + ' км/ч сближения';
+      this.ui.impactInfo.textContent = impactKN.toFixed(0) + ' кН · ' + Math.round(feedback.relativeSpeed * 3.6) + ' км/ч ДО УДАРА';
       this.ui.impactReadout.classList.add('is-hot');
       this.lastImpactUi = performance.now();
     }
@@ -612,6 +612,7 @@ export class CrumpleGame {
       this.player.preStep(this.input.state, FIXED_DT);
       this.traffic.preStep(FIXED_DT);
       this.world.timestep = FIXED_DT;
+      this.collisions.captureBeforeStep();
       this.world.step(this.eventQueue);
       this.collisions.drain(FIXED_DT);
       this.accumulator -= FIXED_DT;
