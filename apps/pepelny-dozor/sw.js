@@ -1,6 +1,6 @@
 const CACHE_NAME='pepelny-dozor-v1.0.1';
 const VERSION='1.0.1',PREFIX='pepelny-dozor-';
-const FILES=['./','./index.html','./app.js','./styles.css','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg','./assets/creatures.png','./assets/creatures.json','./assets/abbey-emblem.png','./assets/abbey-emblem.svg','./assets/forge-index.json'];
+const FILES=['./','./index.html','./app.js','./styles.css','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.js','../../shared/update-manager.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','./assets/creatures.png','./assets/creatures.json','./assets/abbey-emblem.png','./assets/abbey-emblem.svg','./assets/forge-index.json'];
 const APPROOT=new URL('./',self.registration.scope);
 const LIST=new Map(FILES.map(path=>{const u=new URL(path,APPROOT);return[u.pathname,u.href]}));
 self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE_NAME);const failed=[];for(const url of new Set(LIST.values())){try{const response=await fetch(url,{cache:'reload'});if(!response.ok)throw Error(String(response.status));await cache.put(url,response)}catch(err){failed.push(url)}}if(failed.length)throw Error('Precache missing: '+failed.join(','));})()));
