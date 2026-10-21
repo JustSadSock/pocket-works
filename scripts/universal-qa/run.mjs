@@ -1,6 +1,6 @@
 // Execute exactly one task emitted by plan.mjs. Shell expansion is never used.
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ROOT, loadSuites, resolveTasks, safeApp } from './plan.mjs';
@@ -59,8 +59,41 @@ function execute(command, args, { output, task, timeoutMs }) {
   });
 }
 
+async function runBatch(batch) {
+  if (!/^batch-(?:cpu|browser)-[0-9]{3}$/.test(batch.key) ||
+      !Array.isArray(batch.tasks) || batch.tasks.length<1 || batch.tasks.length>8) {
+    throw Error('Invalid bounded QA batch');
+  }
+  const expectedKind=batch.key.startsWith('batch-cpu-')?'cpu':'browser';
+  const groupDir=join(outputRoot,batch.key);
+  mkdirSync(groupDir,{recursive:true});
+  const keys=new Set();let failed=false;
+  for(const task of batch.tasks){
+    if(!task || typeof task.key!=='string' || keys.has(task.key))throw Error('Duplicate/invalid QA case');
+    keys.add(task.key);
+    const expected=resolveTasks(ROOT,{apps:[task.app],suite:task.suite,profile:'deep',maxTasks:32})
+      .find(item=>item.key===task.key&&item.kind===task.kind&&item.seed===task.seed);
+    if(!expected || JSON.stringify(expected)!==JSON.stringify(task))throw Error('QA case not in allowed manifest: '+task.key);
+    if((['node','node-test'].includes(task.kind)?'cpu':'browser')!==expectedKind)throw Error('Mixed QA batch kinds');
+    const exit=await new Promise(resolve=>{
+      const child=spawn(process.execPath,[fileURLToPath(import.meta.url)],{
+        cwd:ROOT,shell:false,windowsHide:true,stdio:'inherit',
+        env:{...process.env,PW_QA_TASK:JSON.stringify(task)}
+      });
+      child.once('error',()=>resolve(-1));
+      child.once('close',(code,signal)=>resolve(signal?-1:code));
+    });
+    const src=join(outputRoot,task.key);
+    if(!existsSync(join(src,'result.json')))throw Error('QA case produced no evidence: '+task.key);
+    cpSync(src,join(groupDir,task.key),{recursive:true});
+    if(exit!==0)failed=true;
+  }
+  if(failed)process.exitCode=1;
+}
+
 async function main() {
   const task = JSON.parse(process.env.PW_QA_TASK || '');
+  if (Array.isArray(task.tasks)) return runBatch(task);
   // Reconstruct the plan from checked-in, app-owned files; no arbitrary command payloads.
   const expected = resolveTasks(ROOT, { apps: [task.app], suite: task.suite, profile: 'deep' })
     .find(s => s.key === task.key && s.kind === task.kind && s.seed === task.seed);
