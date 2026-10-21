@@ -14,7 +14,7 @@
   },
   "architecture": {
     "spatialLayout": "full-bleed-world",
-    "controlLocation": "perimeter",
+    "controlLocation": "bottom-deck",
     "navigation": "overlay-list",
     "chromeTopology": "layered-panels",
     "dominantMotion": "sliding",
