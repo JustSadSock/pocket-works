@@ -1105,7 +1105,7 @@ class UIManager {
         document.getElementById('cancel-coop-btn').addEventListener('click', () => this.showScreen('mainMenu'));
 
         // Online lobby
-        document.getElementById('back-from-online-btn').addEventListener('click', () => this.showScreen('mainMenu'));
+        document.getElementById('back-from-online-btn').addEventListener('click', () => { if (networkManager.currentRoom) networkManager.leaveRoom(); this.showScreen('mainMenu'); });
         document.getElementById('create-room-btn').addEventListener('click', () => this.createRoom());
         const nicknameInput = document.getElementById('nickname-input');
         if (nicknameInput) {
@@ -2171,7 +2171,10 @@ class UIManager {
 
     togglePause() {
         if (gameState.isGameOver) return;
-
+        if (this.isOnlineMode) {
+            if (networkManager.hostId === networkManager.socket.id) networkManager.togglePause();
+            return;
+        }
         gameState.isPaused = !gameState.isPaused;
         
         if (gameState.isPaused) {
@@ -2183,12 +2186,20 @@ class UIManager {
     }
 
     restart() {
+        if (this.isOnlineMode) {
+            if (networkManager.hostId === networkManager.socket.id) networkManager.requestRematch();
+            return;
+        }
         this.hideModal('pause');
         this.hideModal('gameOver');
         this.startGame(gameState.numPlayers);
     }
 
     quitToMenu() {
+        if (this.isOnlineMode && !window.confirm('Покинуть сетевую комнату? Остальные смогут продолжить игру.')) return;
+        if (this.isOnlineMode) networkManager.leaveRoom();
+        this.releaseTouchControls?.();
+        this.gameLoopRun = (this.gameLoopRun || 0) + 1;
         this.hideModal('pause');
         this.hideModal('gameOver');
         gameState.isPaused = false;
@@ -2226,6 +2237,12 @@ class UIManager {
         `;
         scoresDiv.appendChild(teamSummary);
 
+        const again = document.getElementById('play-again-btn');
+        if (again) {
+            const allowed = !this.isOnlineMode || networkManager.hostId === networkManager.socket.id;
+            again.disabled = !allowed;
+            again.textContent = this.isOnlineMode ? (allowed ? 'Новый раунд' : 'Новый раунд начинает ведущий') : 'Play Again';
+        }
         gameState.players.forEach(player => {
             const scoreDiv = document.createElement('div');
             scoreDiv.className = 'player-score';
@@ -2400,7 +2417,6 @@ class UIManager {
 
         networkManager.on('disconnect', () => {
             this.updateConnectionStatus('disconnected');
-            this.showRoomsList([]);
         });
 
         networkManager.on('roomsList', (rooms) => {
@@ -2439,7 +2455,27 @@ class UIManager {
         });
 
         networkManager.on('snapshot', data => applyNetworkSnapshot(data));
-        networkManager.connect();
+        networkManager.on('onlinePause', ({paused,isHost}) => {
+            const pause = document.getElementById('pause-btn');
+            const resume = document.getElementById('resume-btn');
+            if (pause) {pause.disabled = !isHost;pause.title = isHost ? 'Пауза для всей комнаты' : 'Паузой управляет ведущий';}
+            if (resume) resume.disabled = !isHost;
+            if (this.isOnlineMode && this.screens.gameScreen.classList.contains('active') && !gameState.isGameOver) {
+                gameState.isPaused = paused;
+                document.querySelector('#pause-menu h2').textContent = paused ? 'Игра на паузе' : 'Пауза';
+                if (paused) this.showModal('pause');
+                else {this.hideModal('pause');gameState.lastTime = performance.now();}
+            }
+        });
+        networkManager.on('backToLobby', room => {
+            this.releaseTouchControls?.();
+            this.isOnlineMode = false;
+            this.hideModal('pause');
+            this.hideModal('gameOver');
+            this.showScreen('onlineLobby');
+            this.showRoomView(room);
+        });
+        networkManager.connect().then(() => this.updateConnectionStatus('connected')).catch(() => this.updateConnectionStatus('disconnected'));
     }
 
     updateConnectionStatus(status) {
@@ -2505,18 +2541,6 @@ class UIManager {
 
     toggleReady() {
         networkManager.toggleReady();
-        const btn = document.getElementById('ready-btn');
-        if (btn) {
-            if (btn.textContent.includes('Ready')) {
-                btn.textContent = '⏳ Waiting...';
-                btn.classList.remove('btn-primary');
-                btn.classList.add('btn-secondary');
-            } else {
-                btn.textContent = '✓ Ready';
-                btn.classList.remove('btn-secondary');
-                btn.classList.add('btn-primary');
-            }
-        }
     }
 
     showRoomView(room) {
@@ -2556,11 +2580,16 @@ class UIManager {
             room.players.forEach(player => {
                 const playerDiv = document.createElement('div');
                 playerDiv.className = 'room-player-item';
-                playerDiv.innerHTML = `
-                    <div class="room-player-color" style="background: ${player.color};"></div>
-                    <div class="room-player-name">${player.name}</div>
-                    <div class="room-player-status">${player.ready ? '✓ Ready' : 'Not Ready'}</div>
-                `;
+                const color = document.createElement('div');
+                color.className = 'room-player-color';
+                color.style.background = player.color;
+                const name = document.createElement('div');
+                name.className = 'room-player-name';
+                name.textContent = player.name;
+                const status = document.createElement('div');
+                status.className = 'room-player-status';
+                status.textContent = player.ready ? 'Готов' : 'Не готов';
+                playerDiv.append(color,name,status);
                 playersListEl.appendChild(playerDiv);
             });
         }
@@ -2593,6 +2622,12 @@ class UIManager {
             });
         }
 
+        const readyButton = document.getElementById('ready-btn');
+        if (readyButton) {
+            const own = room.players.find(p => p.id === networkManager.socket.id);
+            readyButton.textContent = own?.ready ? 'Отменить готовность' : 'Готов';
+            readyButton.disabled = !own;
+        }
         // Update status
         if (statusEl) {
             const readyCount = room.players.filter(p => p.ready).length;
@@ -2609,6 +2644,9 @@ class UIManager {
     }
 
     startOnlineGame(data) {
+        this.hideModal('gameOver');
+        this.hideModal('pause');
+        this.releaseTouchControls?.();
         // Map network players to game players
         const numPlayers = data.players.length;
         
@@ -3113,6 +3151,8 @@ function init() {
 
     const ui = new UIManager();
     window.uiManager = ui;
+    const invite = new URLSearchParams(location.search).get('room');
+    if(invite){document.querySelector('#join-code').value=invite;ui.showOnlineLobby();networkManager.joinRoom(invite);}
 }
 
 // Start the game when the page loads
@@ -3133,6 +3173,13 @@ function applyNetworkSnapshot(s){
  window.uiManager.drawBoard();window.uiManager.updateTeamStatsIfNeeded();
 }
 document.querySelector('#join-code-btn').onclick=()=>networkManager.joinRoom(document.querySelector('#join-code').value.trim());
+document.querySelector('#copy-room-code')?.addEventListener('click',async()=>{
+ const code=networkManager.code;
+ if(!code)return;
+ const link=new URL(location.href);link.searchParams.set('room',code);
+ try{await navigator.clipboard.writeText(link.href);document.querySelector('#copy-room-code').textContent='Ссылка скопирована';setTimeout(()=>{const b=document.querySelector('#copy-room-code');if(b)b.textContent='Пригласить';},1800);}
+ catch{window.prompt('Ссылка на комнату',link.href);}
+});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!window.uiManager?.isOnlineMode)gameState.isPaused=true;});
 window.render_game_to_text=()=>JSON.stringify({coordinates:'cells, x right, y down, top-left origin',online:!!window.uiManager?.isOnlineMode,paused:gameState.isPaused,gameOver:gameState.isGameOver,board:gameState.board,score:gameState.sharedStats,players:gameState.players.map(p=>({id:p.id,position:p.position,piece:p.currentPiece,next:p.nextPiece,gameOver:p.gameOver}))});
 window.advanceTime=ms=>{if(window.uiManager&&!gameState.isPaused&&!window.uiManager.isOnlineMode){for(let t=0;t<ms;t+=16.667)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(16.667,ms-t));window.uiManager.drawBoard();}};
