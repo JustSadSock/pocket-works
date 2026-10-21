@@ -26,6 +26,7 @@ import { DeformableShell, quaternionFromRapier } from './deformable-shell';
 import { buildVehicleArt } from './vehicle-art';
 import { longitudinalIntent } from './drivetrain';
 import { wheelContactLoad } from './impact-geometry';
+import { wheelPose } from './wheel-pose';
 import type { CollisionRegistry, DynamicProp } from './physics-types';
 
 const WHEEL_NAMES = ['FL', 'FR', 'RL', 'RR'] as const;
@@ -273,11 +274,8 @@ export class Vehicle {
         y - suspension + this.spec.suspensionRest - collapse + archIntrusion,
         zPositions[i]
       );
-      this.wheels[i].rotationQuaternion = Quaternion.RotationYawPitchRoll(
-        (i < 2 ? (this.controller.wheelSteering(i) ?? 0) : 0) + alignment.toe,
-        this.controller.wheelRotation(i) ?? 0,
-        Math.PI / 2 + alignment.camber
-      );
+      const heading = i < 2 ? (this.controller.wheelSteering(i) ?? this.lastSteer) : alignment.toe;
+      this.wheels[i].rotationQuaternion = wheelPose(heading, alignment.camber, this.controller.wheelRotation(i) ?? 0);
       this.wheels[i].setEnabled(true);
       const wheelHealth = [this.damage.components.wheelFL, this.damage.components.wheelFR, this.damage.components.wheelRL, this.damage.components.wheelRR][i];
       if (wheelHealth < 0.035) this.detachWheel(i);
