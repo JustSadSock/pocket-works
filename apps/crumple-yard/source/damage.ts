@@ -114,26 +114,26 @@ export function computeImpactSeverity(input: ImpactInput, state: DamageState) {
   const stiffness = clamp(input.obstacleStiffness, 0.45, 2.6);
   const previous = state.zoneDamage[input.zone];
   const fatigue = 1 + previous * 1.15 + previous * previous * 0.75;
-  const raw = (energy / 82000 + impulse / 26000) * 0.52;
+  const raw = (energy / 69000 + impulse / 26000) * 0.52;
   return clamp(raw * concentration * angle * stiffness * fatigue / Math.max(0.55, input.crushResistance), 0, 1.2);
 }
 
 const zoneComponents: Record<DamageZone, Array<[ComponentName, number]>> = {
   front: [
-    ['frontStructure', 1], ['engine', 0.74], ['cooling', 0.86], ['steering', 0.35],
-    ['suspensionFL', 0.32], ['suspensionFR', 0.32], ['wheelFL', 0.14], ['wheelFR', 0.14], ['headlightL', 0.62], ['headlightR', 0.62], ['windshield', 0.18], ['chassis', 0.16]
+    ['frontStructure', 1], ['engine', 0.74], ['cooling', 0.86], ['steering', 0.14],
+    ['headlightL', 0.62], ['headlightR', 0.62], ['windshield', 0.18], ['chassis', 0.16]
   ],
   rear: [
-    ['rearStructure', 1], ['transmission', 0.24], ['suspensionRL', 0.27], ['suspensionRR', 0.27], ['wheelRL', 0.12], ['wheelRR', 0.12],
+    ['rearStructure', 1], ['transmission', 0.24],
     ['taillightL', 0.72], ['taillightR', 0.72], ['chassis', 0.14]
   ],
   left: [
-    ['leftStructure', 1], ['chassis', 0.22], ['suspensionFL', 0.3], ['suspensionRL', 0.3],
-    ['wheelFL', 0.25], ['wheelRL', 0.25], ['sideGlassL', 0.65], ['steering', 0.16]
+    ['leftStructure', 1], ['chassis', 0.22],
+    ['sideGlassL', 0.65], ['steering', 0.16]
   ],
   right: [
-    ['rightStructure', 1], ['chassis', 0.22], ['suspensionFR', 0.3], ['suspensionRR', 0.3],
-    ['wheelFR', 0.25], ['wheelRR', 0.25], ['sideGlassR', 0.65], ['steering', 0.16]
+    ['rightStructure', 1], ['chassis', 0.22],
+    ['sideGlassR', 0.65], ['steering', 0.16]
   ],
   roof: [['chassis', 0.45], ['windshield', 0.74], ['sideGlassL', 0.44], ['sideGlassR', 0.44], ['leftStructure', 0.22], ['rightStructure', 0.22]],
   chassis: [['chassis', 1], ['frontStructure', 0.25], ['rearStructure', 0.25], ['leftStructure', 0.25], ['rightStructure', 0.25], ['transmission', 0.2]]
@@ -146,12 +146,12 @@ export function applyImpact(state: DamageState, input: ImpactInput) {
   state.impactCount += 1;
   state.peakImpact = Math.max(state.peakImpact, severity);
   const oldZone = state.zoneDamage[input.zone];
-  state.zoneDamage[input.zone] = clamp(oldZone + severity * (0.35 + oldZone * 0.3));
+  state.zoneDamage[input.zone] = clamp(oldZone + severity * (0.66 + oldZone * 0.32));
 
   for (const [component, weight] of zoneComponents[input.zone]) {
     const oldHealth = state.components[component];
     const weak = 1 + (1 - oldHealth) * 0.8;
-    const delta = severity * weight * 0.58 * weak;
+    const delta = severity * weight * (component.endsWith('Structure') ? 0.82 : 0.58) * weak;
     state.components[component] = clamp(oldHealth - delta);
   }
 
