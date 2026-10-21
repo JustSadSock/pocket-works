@@ -581,3 +581,69 @@
  .pws-studio__controls{overflow-y:auto;min-height:0;padding:2px 3px 4px;overscroll-behavior:contain}
  .pws-studio__header strong{font-size:16px}
 }
+
+
+/* Pocket ID collection: browsing earned cosmetics is separate from choosing a
+   mascot part. The visual metaphor is a compact printed reward register. */
+.pws-editor-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:9px;background:#122024;border-bottom:1px solid #3a4e50}
+.pws-editor-modes button{min-width:0;min-height:44px;padding:9px 5px;background:transparent;border:1px solid transparent;border-radius:6px;color:#b4c9c2;font:750 12px/1.2 system-ui;cursor:pointer}
+.pws-editor-modes button[aria-pressed=true]{background:#e7b58f;color:#1e2b2e;border-color:#f4d2ab}
+.pws-editor-modes button:focus-visible,.pws-collection button:focus-visible{outline:2px solid #f3cc9e;outline-offset:2px}
+.pws-editor-modes+.pws-maskot-tabs{padding-top:7px;padding-bottom:7px}
+.pws-collection{min-width:0;display:grid;gap:14px;padding-bottom:16px}
+.pws-collection__overview{display:flex;align-items:center;gap:20px;padding:8px 2px 16px;border-bottom:1px solid #465653}
+.pws-collection__overview>div:first-child{display:flex;flex-direction:column;flex:none}
+.pws-collection__overview strong{font:800 29px/1 ui-monospace,monospace;letter-spacing:-.06em;color:#e7c49a}
+.pws-collection__overview strong span{font-size:16px;letter-spacing:0;color:#9baea7}
+.pws-collection__overview small{font-size:11px;color:#acbdb3;margin-top:5px}
+.pws-collection__meter{height:7px;flex:1;min-width:55px;background:#152528;border:1px solid #4b5d59;overflow:hidden;border-radius:2px}
+.pws-collection__meter span{display:block;height:100%;background:linear-gradient(90deg,#8ea99d,#efc08b);transition:width .2s ease}
+.pws-collection__games{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;padding:1px 1px 8px;scrollbar-width:thin;scroll-snap-type:x proximity}
+.pws-collection__games button{flex:0 0 auto;min-height:44px;display:flex;align-items:center;gap:10px;scroll-snap-align:start;white-space:nowrap;padding:9px 11px;border:1px solid #4b615d;background:#24383b;color:#d5e4db;border-radius:5px;font:750 12px system-ui;cursor:pointer}
+.pws-collection__games button[aria-pressed=true]{border-color:#e6bc8f;background:#38554b;color:#ffe5c7}
+.pws-collection__games small{font:700 11px ui-monospace,monospace;color:#b6c7b9}
+.pws-collection__filters{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.pws-collection__filters button{min-height:38px;padding:8px 11px;background:transparent;border:0;border-bottom:2px solid transparent;color:#a7bcb3;font-size:11px;font-weight:750;cursor:pointer}
+.pws-collection__filters button[aria-pressed=true]{border-bottom-color:#e7b58f;color:#f9e5d1}
+.pws-collection__group{min-width:0}
+.pws-collection__heading{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid #425956}
+.pws-collection__heading strong{font-size:15px;letter-spacing:-.01em;color:#e7ede3}
+.pws-collection__heading span{font:700 11px ui-monospace,monospace;color:#a8bcb1}
+.pws-collection__entries{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.pws-collection__entry{--award-mark:#667a76;position:relative;display:flex;flex-direction:column;min-width:0;gap:9px;padding:12px 13px 12px 15px;border:1px solid #475e5d;border-left:3px solid var(--award-mark);background:#203235;border-radius:3px 7px 7px 3px;opacity:.78}
+.pws-collection__entry[data-owned=true]{opacity:1;background:#2a3c3b;--award-mark:#d8b67a;border-color:#61766b;border-left-color:var(--award-mark)}
+.pws-collection__entry[data-tier="Среднее"]{--award-mark:#9cbbab}
+.pws-collection__entry[data-tier="Сложное"]{--award-mark:#c78e79}
+.pws-collection__entry[data-tier="Легендарное"]{--award-mark:#e3c174;background-image:linear-gradient(140deg,#3e3c31,#283a3a)}
+.pws-collection__entry[data-owned=false]{filter:saturate(.7)}
+.pws-collection__entry-head{display:flex;justify-content:space-between;gap:8px;font-size:10px}
+.pws-collection__status{color:#a5b7ad;font-weight:750}
+.pws-collection__entry[data-owned=true] .pws-collection__status{color:#bfe0b8}
+.pws-collection__tier{color:#dec5a6;font-weight:750;white-space:nowrap}
+.pws-collection__entry>strong{color:#f2e7d8;font-size:14px;line-height:1.3}
+.pws-collection__entry>p{margin:0;color:#bbcbc1;font-size:12px;line-height:1.4;flex:1}
+.pws-collection__reward{display:grid;gap:3px;border-top:1px solid #4d615b;padding-top:8px}
+.pws-collection__reward span{font:800 9px ui-monospace,monospace;letter-spacing:.13em;color:#afbea9}
+.pws-collection__reward b{font-size:12px;line-height:1.3;color:#e1cdab}
+.pws-collection__entry>button{width:100%;min-height:44px;padding:8px 10px;margin-top:2px;background:#ddb58c;color:#253236;border:1px solid #f1d0a8;border-radius:5px;font:800 12px system-ui;cursor:pointer}
+.pws-collection__entry>button[aria-pressed=true]{background:#354f45;color:#b7dcc2;border:1px solid #6b937d}
+.pws-collection__entry>button:disabled{opacity:1;cursor:default}
+.pws-collection__unknown{color:#a9b7b0;font-size:11px;line-height:1.3}
+.pws-collection__redeem{display:grid;gap:7px;border-top:1px solid #445653;padding-top:15px}
+.pws-collection__redeem label{font-weight:750;font-size:12px;color:#f0d9b5}
+.pws-collection__redeem input{min-height:44px;border:1px solid #60736b;border-radius:5px;background:#122428;color:#fff;padding:8px 11px;font:600 12px system-ui;flex:1}
+.pws-collection__redeem .pws-btn{min-width:114px}
+@media(max-width:920px){.pws-collection__entries{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:700px){
+ .pws-editor-modes{padding:5px;gap:3px}
+ .pws-editor-modes button{font-size:11px;min-height:44px}
+ .pws-maskot-editor__work:has(.pws-collection) .pws-maskot-editor__picker{padding:11px}
+ .pws-collection__games{margin-right:-4px}
+ .pws-collection__entries{grid-template-columns:minmax(0,1fr)}
+ .pws-collection__entry{padding:12px 13px 12px 15px}
+ .pws-collection__filters{flex-wrap:nowrap}
+ .pws-collection__filters button{padding-inline:9px;white-space:nowrap}
+ .pws-collection__redeem .pws-maskot-redeem__row{flex-wrap:wrap}
+ .pws-collection__redeem .pws-btn{flex:1}
+}
+@media(prefers-reduced-motion:reduce){.pws-collection__meter span{transition:none}}
