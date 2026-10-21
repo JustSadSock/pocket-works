@@ -20,7 +20,7 @@ type ScoreAudit={byVoter:Record<string,{eye:number;base:number;speed:number;corr
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[];full?:boolean};
 type DraftAssembly={revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
-type State={resumable?:boolean;balancedDamage?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type State={resumable?:boolean;balancedDamage?:boolean;shapeCorrected?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
@@ -44,7 +44,7 @@ function choose(s:State){
  // Two players may receive one painting but different damaged fragments.
  s.assignments={};s.drafts={};s.draftAssemblies={};s.votes={};s.voteDrafts={};s.voteTiming={};s.turn=0;s.revealed=false;
  members(s).forEach(p=>s.assignments[p.id]={art:s.selected[Math.floor(Math.random()*s.selected.length)],
-  variation:s.balancedDamage?0x100000000+Math.floor(Math.random()*0x100000000):Math.floor(Math.random()*0xffffffff),strokes:null});
+  variation:s.shapeCorrected?0x200000000+Math.floor(Math.random()*0x100000000):s.balancedDamage?0x100000000+Math.floor(Math.random()*0x100000000):Math.floor(Math.random()*0xffffffff),strokes:null});
  s.readyPlayers=[];s.phase=s.artPreparationEnabled?'preparing':'preview';s.deadline=now()+(s.artPreparationEnabled?15000:25000);
 }
 const VOTE_WINDOW_MS=25500;
@@ -222,7 +222,7 @@ function boardSegment(raw:Record<string,unknown>,u:string):BoardSegment|null{
 }
 const module: PocketModule<State>={
  protocolVersion:1,
- createRoom({player}){return {state:{resumable:true,balancedDamage:true,timedScoring:true,board:{revision:0,segments:[]},emblems:{},host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},voteTiming:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
+ createRoom({player}){return {state:{resumable:true,balancedDamage:true,shapeCorrected:true,timedScoring:true,board:{revision:0,segments:[]},emblems:{},host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},voteTiming:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
  onJoin({state,player}){
    if(state.phase==='lobby'&&!state.participants.some(p=>p.id===player.id)){
      state.participants.push(player);state.scores[player.id]={mask:0,eye:0};
@@ -431,8 +431,10 @@ const module: PocketModule<State>={
      return {state,events:[...emit(state),{type:'vote_saved',to:id,payload:{round:state.round,turn:acceptedTurn}}]};
    }else if(a.type==='advance'&&id===state.host&&(state.phase==='verdict'||state.phase==='reveal')){
      // Prevent accidental double-clicks from skipping two artworks.
-     const phaseMs=19000;
-     if(now()>state.deadline-phaseMs+2800)step(state);
+     const phaseMs=state.phase==='verdict'?10000:19000;
+     // The jury's published ballots remain readable for at least six seconds.
+     const earliest=state.phase==='verdict'?6000:2800;
+     if(now()>=state.deadline-phaseMs+earliest)step(state);
    }else if(a.type==='continue'&&state.phase==='round-review'){
      if(id!==state.host)return {state,events:notice(id,'Продолжить может только организатор комнаты.')};
      if(state.round<state.rounds){state.round++;choose(state);}
