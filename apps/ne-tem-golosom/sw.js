@@ -2,7 +2,7 @@ const CACHE_PREFIX='ne-tem-golosom-';
 const CACHE='ne-tem-golosom-v1.1.0';
 const APP_VERSION='1.1.0';
 const RELEASE_DATE='2026-10-15';
-const RELEASE_NOTES=['Локальная видеомастерская: обрезка, качество и предпросмотр после обработки','До 96 МиБ видео для комнат и до 512 МиБ исходного файла','Фрагментарная озвучка и монтаж на киноленте; улучшенная кооперативная премьера','Фрагментарная запись на мобильных устройствах и компьютерах','PocketNet-комнаты, прямой обмен файлами, локальные черновики'];
+const RELEASE_NOTES=["Встроенная видеомастерская: обрезка, качество, разрешение, обработка на устройстве и просмотр итогового файла.","Предел видео для многопользовательской комнаты увеличен с 32 до 96 МиБ; исходный файл до 512 МиБ.","Сцена из обработанного фрагмента запускается непосредственно в комнате, без внешнего редактора.","Исправлена отмена дубля и перезапись пересекающихся фрагментов.","Добавлены сцены Sprite Fright, реальные кадры и атрибуция авторов."];
 const OWN=['./','./index.html','./app.js','./media-lab.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/capabilities/net.js','../../shared/capabilities/identity.js'];
 const SCOPE=new URL('./',self.registration.scope);
 const URLS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
