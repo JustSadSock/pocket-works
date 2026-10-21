@@ -259,13 +259,21 @@ function paint(t){
  requestAnimationFrame(paint)
 }
 function moveStick(e){const b=$('joystick').getBoundingClientRect(),x=e.clientX-b.left-b.width*.5,y=e.clientY-b.top-b.height*.5,rad=b.width*.38,d=Math.max(.01,Math.hypot(x,y)),scale=Math.min(1,rad/d);stick.x=x*scale/rad;stick.y=-y*scale/rad;$('knob').style.transform='translate('+(x*scale)+'px,'+(y*scale)+'px)'}
+function capturePointerSafely(element,event){
+ // A virtual mobile tap can remove or hide its target between dispatch and
+ // capture. The gesture must still start without an uncaught DOMException.
+ if(!element.isConnected||!element.setPointerCapture)return;
+ try{element.setPointerCapture(event.pointerId)}catch(error){
+  if(error?.name!=='InvalidStateError')throw error;
+ }
+}
 const joy=$('joystick');
-joy.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();joystickPointer=e.pointerId;joy.setPointerCapture(e.pointerId);moveStick(e)});
+joy.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();joystickPointer=e.pointerId;capturePointerSafely(joy,e);moveStick(e)});
 joy.addEventListener('pointermove',e=>{if(joystickPointer===e.pointerId)moveStick(e)});
 for(const kind of ['pointerup','pointercancel','lostpointercapture'])joy.addEventListener(kind,e=>{if(joystickPointer===e.pointerId)clearStick()});
 const look=$('touchLook');
 const turn=(dx,dy)=>{if(phase!=='play'||peeking)return;player.yaw+=dx*.004;player.pitch=clamp(player.pitch+dy*.004,-1.14,1.14)};
-look.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();lookPointer=e.pointerId;lastLook=[e.clientX,e.clientY];look.setPointerCapture(e.pointerId)});
+look.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();lookPointer=e.pointerId;lastLook=[e.clientX,e.clientY];capturePointerSafely(look,e)});
 look.addEventListener('pointermove',e=>{if(lookPointer!==e.pointerId||!lastLook)return;turn(e.clientX-lastLook[0],e.clientY-lastLook[1]);lastLook=[e.clientX,e.clientY]});
 for(const kind of ['pointerup','pointercancel','lostpointercapture'])look.addEventListener(kind,e=>{if(lookPointer===e.pointerId){lookPointer=null;lastLook=null}});
 document.addEventListener('mousemove',e=>{if(phase==='play'&&!peeking&&document.pointerLockElement===$('view')){player.yaw+=e.movementX*.0024;player.pitch=clamp(player.pitch+e.movementY*.0024,-1.14,1.14)}});
@@ -281,7 +289,7 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>keys.delete(PHYSICAL_KEYS[e.code]||String(e.key||'').toLowerCase()));
 window.addEventListener('blur',()=>{keys.clear();clearStick();sprintHeld=false});
  document.addEventListener('pointerlockchange',()=>{if(phase==='play'&&document.pointerLockElement!==$('view'))pause()});
-const run=$('run');run.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();sprintHeld=true;run.setPointerCapture(e.pointerId);run.classList.add('held')});
+const run=$('run');run.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();sprintHeld=true;capturePointerSafely(run,e);run.classList.add('held')});
 for(const ev of ['pointercancel','pointerup','lostpointercapture'])run.addEventListener(ev,()=>{sprintHeld=false;run.classList.remove('held')});
 $('torch').addEventListener('click',toggleTorch);$('fire').addEventListener('click',shoot);$('interact').addEventListener('click',interact);$('reload').addEventListener('click',reload);$('pack').addEventListener('click',showInventory);
 $('pause').addEventListener('click',pause);$('resume').addEventListener('click',resume);$('closePack').addEventListener('click',resume);
