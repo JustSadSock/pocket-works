@@ -57,6 +57,66 @@
           "sha256": "9162e74b80dfc12820cddd6af8e93b3da14615fb8e13b01b0c8491481cc9fa6e"
         }
       ]
+    },
+    {
+      "id": "82585456538fe09048310c5b74ae44d7c91464d786038dd903b3145ccef02e18",
+      "recordedAt": "2026-10-21T17:27:40.957Z",
+      "commit": "47feb44139e4000bab60ee156a3905503148f094",
+      "viewport": [
+        390,
+        844
+      ],
+      "state": "initial/action/settled/defense",
+      "engine": "chromium",
+      "action": "Switch accounts, inspect explicit hero verdicts, filter cohorts and open defense evidence",
+      "files": [
+        {
+          "path": "07de93edbb9e84d6656340a4dd04cf71575753b8262b402820244ab4c6739af0.png",
+          "sha256": "07de93edbb9e84d6656340a4dd04cf71575753b8262b402820244ab4c6739af0"
+        },
+        {
+          "path": "6acc8dedb4159149e1fc1fa8a2a5394db9eff880983b78bcb6775cd71fdf6bf2.png",
+          "sha256": "6acc8dedb4159149e1fc1fa8a2a5394db9eff880983b78bcb6775cd71fdf6bf2"
+        },
+        {
+          "path": "6acc8dedb4159149e1fc1fa8a2a5394db9eff880983b78bcb6775cd71fdf6bf2.png",
+          "sha256": "6acc8dedb4159149e1fc1fa8a2a5394db9eff880983b78bcb6775cd71fdf6bf2"
+        },
+        {
+          "path": "3e06c3dc97b3653abd80efc650860bea226230238c930d572c148527661584e9.png",
+          "sha256": "3e06c3dc97b3653abd80efc650860bea226230238c930d572c148527661584e9"
+        },
+        {
+          "path": "554674cdcfe6591fe7ab88c3e71e34d4885ff92b2847caccdd90ac18f8045bb9.webm",
+          "sha256": "554674cdcfe6591fe7ab88c3e71e34d4885ff92b2847caccdd90ac18f8045bb9"
+        }
+      ]
+    },
+    {
+      "id": "a5a4c7c7d1396977c62f74071f3012815c1afdf448e457299101691f1c4a55d7",
+      "recordedAt": "2026-10-21T17:28:22.006Z",
+      "commit": "47feb44139e4000bab60ee156a3905503148f094",
+      "viewport": [
+        1366,
+        768
+      ],
+      "state": "initial/defense/relative",
+      "engine": "chromium",
+      "action": "Inspect direct hero verdicts, the three contribution axes and same-hero benchmark table",
+      "files": [
+        {
+          "path": "bf841b4d350fc727d484150afbff81df52a9254ed3bd427029a40abd309b02e9.png",
+          "sha256": "bf841b4d350fc727d484150afbff81df52a9254ed3bd427029a40abd309b02e9"
+        },
+        {
+          "path": "bde0311d7b5b914d112b06619bb0050573fea2ab944d12f34163ea3323a69f3b.png",
+          "sha256": "bde0311d7b5b914d112b06619bb0050573fea2ab944d12f34163ea3323a69f3b"
+        },
+        {
+          "path": "319988b5baf529fdd24890083402d33a81c40ef70aa8b0ebb2838e3645122ec2.png",
+          "sha256": "319988b5baf529fdd24890083402d33a81c40ef70aa8b0ebb2838e3645122ec2"
+        }
+      ]
     }
   ],
   "feedback": []
