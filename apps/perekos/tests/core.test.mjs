@@ -124,7 +124,10 @@ test('six mage characters each have distinct attack styles and gameplay traits',
  assert.equal(MAGES.length,6);assert.equal(new Set(MAGES.map(m=>m.style)).size,6);
  assert.equal(new Set(MAGES.map(m=>m.trait)).size,6);
  for(const m of MAGES){const s=makeMatch(44,m.id);tick(s,{attack:true,aim:{x:350,y:200}});
-  const q=s.shots.find(q=>q.owner===0);assert.ok(q);assert.equal(q.style,m.style);assert.equal(s.actors[0].mageId,m.id);assert.ok(validState(s))}
+  const special={cinder:s.streams,coil:s.beams,slate:s.waves}[m.id];
+  if(special){assert.equal(special.length,1,m.id+' should create its signature physical form')}
+  else{const q=s.shots.find(q=>q.owner===0);assert.ok(q);assert.equal(q.style,m.style)}
+  assert.equal(s.actors[0].mageId,m.id);assert.ok(validState(s))}
  const stone=makeMatch(9,'pebble');const fire=makeMatch(9,'kindle');
  tick(stone,{shield:true});tick(fire,{shield:true});
  assert.ok(stone.actors[0].shield>fire.actors[0].shield);
