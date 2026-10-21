@@ -1,20 +1,22 @@
 import {zamazkaAchievements} from './zamazka-achievements.js';
+import {canticaAchievements} from './cantica-achievements.js';
 // Pocket Works MASKOT — original, hand-drawn, composable SVG geometry.
 // Asset IDs (not arbitrary markup) are the only user-controlled input.
 // Public profile renders are already server-validated; these IDs are visual decoding rights, not ownership grants.
-export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom','seoul-artist','dragon-keeper',...zamazkaAchievements.map(a=>a.id)];
+export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom','seoul-artist','dragon-keeper',...zamazkaAchievements.map(a=>a.id),...canticaAchievements.map(a=>a.id)];
 export const mascotAnimals=[['cat','Кот'],['black-cat','Чёрный кот'],['fox','Лиса'],['rabbit','Кролик'],['frog','Лягушка']];
 export const mascotHats=[['none','Без'],['crown','Корона'],['beret','Берет'],['flower','Цветок']];
 export const mascotClothes=[['tunic','Туника'],['vest','Жилет'],['mantle','Мантия']];
 export const mascotAccessories=[['none','Без аксессуара']];
 export const mascotFaces=[['none','Без'],['glasses','Очки'],['stars','Звёздочки']];
-export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Призрачная кисть','Всевидящий','Авантюрист'];
+export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Призрачная кисть','Всевидящий','Авантюрист',...canticaAchievements.filter(a=>a.slot==='title').map(a=>a.item)];
 export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'},groom:{clothes:'groom'},'seoul-artist':{hat:'stage-pin',clothes:'stage-hanbok'},'dragon-keeper':{accessory:'shoulder-dragon'}};
 const one=(rows,id,fallback)=>rows.some(x=>x[0]===id)?id:fallback;
 export function safeMascot(input,unlocks=[]){
   const u=Array.isArray(unlocks)?unlocks:[];
   const valid=(item,category,standard)=>typeof item==='string'&&(standard.some(x=>x[0]===item)||
     zamazkaAchievements.some(a=>a.slot===category&&a.item===item&&u.includes(a.id))||
+    canticaAchievements.some(a=>a.slot===category&&a.item===item&&u.includes(a.id))||
     Object.entries(mascotSecret).some(([key,x])=>u.includes(key)&&x[category]===item));
   const src=input&&typeof input==='object'?input:{};
   return {
@@ -158,6 +160,15 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
 <g fill="#f8f1e9" stroke="#b7a49c" stroke-width="1.8"><circle cx="169" cy="203" r="5.5"/><circle cx="179" cy="203" r="5.5"/><circle cx="174" cy="196" r="5.5"/><circle cx="174" cy="209" r="5.5"/></g>
 <circle cx="174" cy="203" r="4" fill="#dfc17d"/>
 `,
+    illuminator:`<!-- Cathedral illuminator: layered ivory and ultramarine robe -->
+<path d="M18 255Q23 201 51 184L108 168 128 194 149 168 207 184Q234 200 240 255Z" fill="#172f56" stroke="#34434a" stroke-width="6"/>
+<path d="M27 237Q33 209 59 191M226 237Q218 209 198 191" fill="none" stroke="#94a9bb" stroke-width="5"/>
+<path d="M75 176 128 213 182 176 190 255H67Z" fill="#efe1b6" stroke="#34434a" stroke-width="4"/>
+<path d="M80 184 114 211 103 254H57Z M176 184 143 211 153 254H198Z" fill="#365b79" stroke="#34434a" stroke-width="3"/>
+<path d="M121 210H135V255H121Z" fill="#b9a06a"/>
+<path d="M74 240Q126 225 182 240M68 253Q130 240 188 253" fill="none" stroke="#ddb974" stroke-width="4"/>
+<path d="M111 227 128 214 145 227 128 243Z" fill="#9f4858" stroke="#d7b777" stroke-width="3"/>
+<path d="M113 230H143M128 218V241" stroke="#f4d795" stroke-width="3"/>`,
     wedding:`<path d="M44 254Q49 177 102 171L128 190 154 171Q208 177 212 254Z" fill="#fff9f6" stroke="#34434a" stroke-width="5"/><path d="M99 178 127 213 156 178" fill="none" stroke="#e4bed1" stroke-width="7"/><path d="M128 213V253" stroke="#e4bed1" stroke-width="4"/><circle cx="128" cy="201" r="8" fill="#f4d98c" stroke="#34434a" stroke-width="2"/><path d="M80 243Q128 231 177 243" fill="none" stroke="#eadbe3" stroke-width="4"/>`
   };
   const hats={
@@ -203,6 +214,11 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
 <path d="M195 51 206 55" stroke="#d3a659" stroke-width="8" stroke-linecap="round"/>
 <path d="M187 77 198 81" stroke="#8e5a47" stroke-width="4" stroke-linecap="round"/>
 `,
+    'solar-circlet':`<!-- Gilt arched rose crown framing species ears and eyes -->
+<path d="M70 81Q84 52 105 67L128 43 152 67Q174 52 187 81L176 92Q129 82 79 92Z" fill="#c6a366" stroke="#34434a" stroke-width="4.5"/>
+<path d="M78 82 89 70 108 82 128 56 148 82 168 70 178 82" fill="none" stroke="#fbe0a0" stroke-width="3.5"/>
+<circle cx="128" cy="74" r="10" fill="#f7d69c" stroke="#7d4651" stroke-width="3"/>
+<path d="M128 63V86M118 74H138M121 67 135 81M135 67 121 81" stroke="#a9554e" stroke-width="2.3"/>`,
     veil:`<path d="M67 74Q128 27 189 74L204 202Q171 222 128 219Q85 221 51 202Z" fill="#fff" fill-opacity=".35" stroke="#efdae5" stroke-width="4"/><path d="M85 72Q128 50 171 72" fill="none" stroke="#f8f6f1" stroke-width="10" stroke-linecap="round"/><circle cx="128" cy="61" r="7" fill="#e9bf6d" stroke="#34434a" stroke-width="2"/>`
   };
   const accessories={
@@ -213,6 +229,10 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
 <path d="M210 199 198 191M216 185 201 179M221 171 208 166M209 204 222 205" fill="none" stroke="#e9f8e9" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
 <path d="M202 222 189 240" fill="none" stroke="#bd9478" stroke-width="3.5" stroke-linecap="round"/>
 <circle cx="192" cy="166" r="3" fill="#d7f3d9"/><circle cx="244" cy="171" r="2.5" fill="#d7f3d9"/><circle cx="239" cy="212" r="2" fill="#d7f3d9"/>`,
+    'sun-crystal':`<!-- Faceted sun relic pinned to the left shoulder -->
+<path d="M42 207 34 197 50 196 56 181 64 195 80 199 68 209 70 225 55 216 42 224Z" fill="#c6a66d" stroke="#37464b" stroke-width="3"/>
+<path d="M55 187 68 204 56 219 44 204Z" fill="#a9d2d0" stroke="#e5d6a7" stroke-width="3"/>
+<path d="M55 190V217M46 205H66" stroke="#fff4cf" stroke-width="2"/>`,
     'shoulder-dragon':`<!-- Tiny shoulder dragon: coiled tail, leathery wings, golden horns, jade scales -->
 <path d="M195 232Q225 252 242 234Q253 221 239 210" fill="none" stroke="#2b4651" stroke-width="10" stroke-linecap="round"/>
 <path d="M195 232Q226 246 239 230" fill="none" stroke="#80ae96" stroke-width="6" stroke-linecap="round"/>
