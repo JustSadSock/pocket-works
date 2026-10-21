@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "petlya-17",
+  "direction": {
+    "premise": "A focused cockpit-view simcade racing game along a coastal dock road, where every near-wall corner and overtaking maneuver must be read directly through the windshield.",
+    "composition": "The playable 3D road fills the horizontal screen; a thin top telemetry rail, tiny track minimap and separate pedals flank the lower central speed gauge without obscuring the horizon.",
+    "shapeLanguage": "Long hard roadway ribbons, bold angular racecars, striped dockside barriers and mechanically square telemetry units distinguish the world from cards or puzzle grids.",
+    "surfaceAndMaterial": "Babylon.js procedural 3D meshes render a coastal asphalt circuit and working cockpit. Matte military-green control panels and industrial orange gauge accents avoid decorative glass UI.",
+    "paletteLogic": "Low-saturation dark asphalt and coastal scenery keep the road readable; orange highlights measured speed, selected actions and braking cues, while parchment text stays legible in motion.",
+    "typography": "Compressed heavy monospaced race numbers, compact section labels and large high-contrast cockpit speed digits distinguish driver information from configuration screens.",
+    "signature": "The road moves under a fixed cockpit with five opponent cars while a physical speedometer and road map change together as the player steers and completes three laps.",
+    "distinction": "Unlike the overhead dueling mages of Perekos or the written scouting chapters of Rivals Field Notes, Petlya 17 is a constant first-person 3D motor-racing cockpit."
+  },
+  "architecture": {
+    "spatialLayout": "full-bleed-world",
+    "controlLocation": "perimeter",
+    "navigation": "overlay-list",
+    "chromeTopology": "layered-panels",
+    "dominantMotion": "sliding",
+    "primaryVerb": "Steer and accelerate a racing car around three laps of the dockside course, braking for corners and overtaking five live AI rivals while watching the speed and gear.",
+    "physicalFeedback": "Pressing gas raises engine speed and visible road motion, braking changes speed and downshift readouts, while dragging the steering surface changes the road heading relative to the cockpit.",
+    "spatialRationale": "Landscape mode protects a broad horizon for corner reading, places left brake and right gas at opposite touch edges and keeps the speed/gauge in the unobstructed gap between them.",
+    "comparisons": [
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "Rivals Field Notes is a vertically scrolled evidence document with chapter tabs and data tables; Petlya 17 uses a full-width Babylon.js driving horizon and two physical pedals at the bottom screen corners.",
+        "interactionDifference": "Rivals Field Notes changes read-only hero-season filters; Petlya 17 captures real-time steering, throttle, braking, lap progress and vehicle collisions."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "Perekos is a top-down 2D mage arena with free movement and spell UI; Petlya 17 fixes the view in a racing cockpit on a physically curved 3D coastal track with a minimal speed readout.",
+        "interactionDifference": "Perekos casts spells and strafes enemies using combat cooldowns; Petlya 17 controls wheel angle and speed to take corners and pass five vehicles across three timed laps."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Babylon.js WebGL 3D physically places vehicles, cockpit geometry, race track and coastal props, while DOM/CSS overlays keep gauges and touch pedals sharp on mobile.",
+    "focalAsset": "The reconstructed racing cockpit and continuously curved dockside circuit are the central authored meshes, with responsive braking, steering and vehicle silhouettes in the playable 3D scene."
+  },
+  "motion": {
+    "character": "Vehicle motion is restrained and momentum-based rather than springy UI transitions, matching simcade cornering, rolling wheels and camera travel through the road.",
+    "action": "The player holds right throttle, eases the left brake for a coastal corner and moves the touch steering strip to avoid a slower car.",
+    "anticipation": "Approaching a curve exposes a visible roadside barrier and minimap bend while the live speed readout gives useful braking context before input.",
+    "response": "Accelerating changes road translation and live speed digits; steering shifts the cockpit-facing track centerline on the next rendered race frames.",
+    "followThrough": "Inertia carries the car through the curve after steering changes, and completed lap timing and current position remain available in the race telemetry.",
+    "interruption": "The current pedal and wheel state override previous touch inputs immediately, releasing a pedal stops that input and pausing freezes active race progression.",
+    "reducedMotion": "Race telemetry, map position, speed and car orientation continue to indicate motion and race outcomes even with reduced nonessential HUD animations."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#start"
+    },
+    "expectedChange": "After pressing НА ТРАССУ, the menu disappears and a controllable real 3D cockpit, speed gauge, lap counter, opponents and pedals appear.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
