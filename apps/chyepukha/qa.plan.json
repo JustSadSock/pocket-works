@@ -7,6 +7,7 @@
       "tier": "smoke",
       "files": [
         "tests/server.test.mjs",
+        "tests/four-players.test.mjs",
         "tests/hardening.test.mjs",
         "tests/tab-session.test.mjs",
         "tests/story-library.test.mjs"
@@ -19,7 +20,8 @@
       "files": [
         "qa/inspector.spec.ts",
         "qa/account.spec.ts",
-        "qa/network.spec.ts"
+        "qa/network.spec.ts",
+        "qa/four-player-ux.spec.ts"
       ]
     }
   ]
