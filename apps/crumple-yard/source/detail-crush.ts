@@ -1,4 +1,4 @@
-import { Matrix, Mesh, Vector3, VertexBuffer } from '@babylonjs/core';
+import { Mesh, Vector3, VertexBuffer, VertexData } from '@babylonjs/core';
 import type { DamageZone } from './damage';
 
 export type DetailZone = 'front' | 'rear' | 'left' | 'right' | 'roof';
@@ -72,6 +72,7 @@ export class DetailCrushSystem {
 
   deform(root: import('@babylonjs/core').TransformNode, worldPoint: Vector3, severity: number, zone: DamageZone) {
     if (severity < 0.025) return;
+    root.computeWorldMatrix(true);
     const rootInverse = root.getWorldMatrix().clone().invert();
     const contactRoot = Vector3.TransformCoordinates(worldPoint, rootInverse);
     const radius = 0.73 + Math.min(1.22, severity * 1.53);
@@ -86,6 +87,12 @@ export class DetailCrushSystem {
       const moved = dentVertices(detail.vertices, detail.crush, localContact, direction, radius, severity);
       if (moved > 0) {
         detail.mesh.updateVerticesData(VertexBuffer.PositionKind, detail.vertices, true, false);
+        const indices = detail.mesh.getIndices();
+        if (indices?.length) {
+          const normals = new Float32Array(detail.vertices.length);
+          VertexData.ComputeNormals(detail.vertices, indices, normals);
+          detail.mesh.updateVerticesData(VertexBuffer.NormalKind, normals, false, false);
+        }
         detail.mesh.refreshBoundingInfo();
       }
     }
