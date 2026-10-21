@@ -18,7 +18,7 @@ type Chips=number[];
 type VoteTiming=Record<string,Record<string,number[][]>>;
 type ScoreAudit={byVoter:Record<string,{eye:number;base:number;speed:number;correct:number}>;mask:number;base:number;delay:number;late:number;undetected:number;correct:number;wrong:number};
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
-type CommonsBoard={revision:number;segments:BoardSegment[]};
+type CommonsBoard={revision:number;segments:BoardSegment[];full?:boolean};
 type DraftAssembly={revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
 type State={resumable?:boolean;balancedDamage?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
@@ -203,6 +203,8 @@ function sanitizeEmblem(value:unknown):string|null|undefined{
 }
 // Preserve accepted marks; never silently remove early artwork at capacity.
 const BOARD_LIMIT=1200;
+// The whole PocketNet room record must remain below 256 KiB.
+const BOARD_BYTE_BUDGET=176*1024;
 function boardSegment(raw:Record<string,unknown>,u:string):BoardSegment|null{
  const id=raw.k;
  if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,20}$/.test(id))return null;
@@ -301,15 +303,18 @@ const module: PocketModule<State>={
      if(a.revision!==board.revision)return {state,events:[{type:'board_reset',to:id,payload:board}]};
      const segment=boardSegment(a,id);
      if(!segment)return {state,events:notice(id,'Недопустимый мазок на общем холсте.')};
-     if(board.segments.length>=BOARD_LIMIT)
-        return {state,events:[{type:'board_full',to:id,payload:{limit:BOARD_LIMIT}}]};
-       board.segments.push(segment);
+     const overBudget=JSON.stringify(board.segments).length+JSON.stringify(segment).length>BOARD_BYTE_BUDGET;
+     if(board.full||board.segments.length>=BOARD_LIMIT||overBudget){
+      board.full=true;
+      return {state,events:[{type:'board_full',to:id,payload:{limit:BOARD_LIMIT}}]};
+     }
+     board.segments.push(segment);
      return {state,events:[{type:'board_delta',payload:{...segment,revision:board.revision}}]};
    }
    if(a.type==='board_clear'&&state.phase==='lobby'){
      if(state.host!==id)return {state,events:notice(id,'Очистить общий холст может только куратор.')};
      const board=state.board ||= {revision:0,segments:[]};
-     board.segments=[];board.revision++;
+     board.segments=[];board.full=false;board.revision++;
      return {state,events:[{type:'board_reset',payload:board}]};
    }
    if(a.type==='emblem'){
