@@ -10,6 +10,15 @@ const TRANSLATIONS = {
         localCoop: "Local Co-op",
         online: "Online",
         playSolo: "Start a new solo game",
+        heroLine1: "Room", heroLine2: "for every", heroLine3: "block.",
+        homeDescription: "One shared stack for every player. Build lines together or go at your own pace.",
+        localDescription: "Pick players and controls. Every piece lands in the same shared well.",
+        onlineDescription: "Create a room and share the link. Play on one shared board.",
+        roomCode: "Room code",joinRoom:"Join",orCreate:"OR CREATE YOUR OWN",
+        inviteCode:"INVITE CODE",invite:"Share invite",linesLabel:"Lines",
+        sharedBoard:"SHARED WELL",moveHint:"MOVE",actionsHint:"ACTIONS",
+        gestureHint:"On the board: tap to rotate · swipe to move",
+        pauseDescription:"Your pieces stay right where you left them.",
         resumeSoloGame: "Continue saved game",
         recoveryOffline: "Connection lost. Reconnecting…",
         recoveryRestoring: "Restoring the online match…",
@@ -127,6 +136,15 @@ const TRANSLATIONS = {
         localCoop: "Локальный кооп",
         online: "Онлайн",
         playSolo: "Начать новую партию",
+        heroLine1: "Место", heroLine2: "каждому", heroLine3: "блоку.",
+        homeDescription: "Общее поле для всех. Собирайте линии вместе или играйте в своём темпе.",
+        localDescription: "Выберите игроков и клавиши. Все фигуры складываются в одно поле.",
+        onlineDescription: "Создайте комнату и отправьте ссылку. Все фигуры окажутся на одной доске.",
+        roomCode: "Код комнаты",joinRoom:"Войти",orCreate:"ИЛИ СОЗДАЙТЕ СВОЮ",
+        inviteCode:"КОД ПРИГЛАШЕНИЯ",invite:"Поделиться",linesLabel:"Линии",
+        sharedBoard:"ОБЩЕЕ ПОЛЕ",moveHint:"ДВИЖЕНИЕ",actionsHint:"ДЕЙСТВИЯ",
+        gestureHint:"На поле: касание — поворот, свайп — движение",
+        pauseDescription:"Фигуры останутся на своих местах.",
         resumeSoloGame: "Продолжить партию",
         recoveryOffline: "Нет подключения. Переподключаемся…",
         recoveryRestoring: "Восстанавливаем сетевую партию…",
@@ -238,7 +256,7 @@ const TRANSLATIONS = {
     }
 };
 
-let currentLanguage = 'en';
+let currentLanguage = 'ru';
 
 function t(key) {
     return TRANSLATIONS[currentLanguage]?.[key] || TRANSLATIONS.en[key] || key;
@@ -249,6 +267,8 @@ function setLanguage(lang) {
     currentLanguage = lang;
     localStorage.setItem('pocket-works:blockies:language', lang);
     updateUILanguage();
+    window.uiManager?.refreshSoloResume?.();
+    window.uiManager?.refreshTouchStatus?.();
 }
 
 function updateUILanguage() {
@@ -982,7 +1002,7 @@ class UIManager {
         this.networkPlayers = {}; // Map of network player IDs to local indices
         this.localPlayerIndex = -1; // Local player index in online mode
 
-        this.moveRepeatInterval = 90;
+        this.moveRepeatInterval = 105;
         this.softDropInitialDelay = 0;
         this.softDropRepeatInterval = 55;
 
@@ -1111,7 +1131,10 @@ class UIManager {
         }
         
         // Mode selection - new menu structure
-        document.getElementById('mode-single').addEventListener('click', () => this.startGame(1));
+        document.getElementById('mode-single').addEventListener('click', () => {
+            this.isOnlineMode = false;
+            this.startGame(1);
+        });
         document.getElementById('resume-solo')?.addEventListener('click', () => this.resumeSolo());
         document.getElementById('mode-local').addEventListener('click', () => this.showCoopSetup());
         document.getElementById('mode-online').addEventListener('click', () => this.showOnlineLobby());
@@ -1211,12 +1234,23 @@ class UIManager {
                 this.releaseContinuousAction(pressed.playerId, pressed.action);
             }
             this.touchPresses.clear();
+            this.touchControls.querySelectorAll('.touch-btn').forEach(btn=>btn.classList.remove('is-pressed'));
         };
         this.touchControls.querySelectorAll('[data-action]').forEach(button => {
             const action = button.dataset.action;
+            const lightPress = event => {
+                button.classList.add('is-pressed');
+                if(event.pointerId != null && button.setPointerCapture){
+                    try{button.setPointerCapture(event.pointerId);}catch{}
+                }
+            };
+            const lightRelease = () => button.classList.remove('is-pressed');
             if (window.PointerEvent) {
-                button.addEventListener('pointerdown', event => press(button, action, event));
-                for (const type of ['pointerup','pointercancel','lostpointercapture']) button.addEventListener(type, release);
+                button.addEventListener('pointerdown', event => {
+                    lightPress(event);
+                    press(button, action, event);
+                });
+                for (const type of ['pointerup','pointercancel','lostpointercapture']) button.addEventListener(type, event => { release(event); lightRelease(); });
             } else {
                 button.addEventListener('touchstart', event => press(button, action, event), {passive:false});
                 button.addEventListener('touchend', release);
@@ -1237,9 +1271,9 @@ class UIManager {
 
         const activePlayer = this.getTouchPlayer();
         if (activePlayer && !gameState.isGameOver) {
-            this.touchStatus.textContent = currentLanguage === 'ru' 
-                ? `Сенсорное управление: Игрок ${activePlayer.id + 1}`
-                : `Touch controls: Player ${activePlayer.id + 1}`;
+            this.touchStatus.textContent = currentLanguage === 'ru'
+                ? `Управляете фигурой · Игрок ${activePlayer.id + 1}`
+                : `Controlling piece · Player ${activePlayer.id + 1}`;
         } else if (gameState.players.length && gameState.players.every(player => player.gameOver)) {
             this.touchStatus.textContent = currentLanguage === 'ru'
                 ? 'Все игроки завершили игру'
@@ -1443,6 +1477,10 @@ class UIManager {
     }
 
     showModal(modalName) {
+        if (modalName === 'pause') {
+            const restart=document.getElementById('restart-btn');
+            if(restart)restart.hidden=this.isOnlineMode;
+        }
         this.modals[modalName].classList.add('active');
     }
 
@@ -1457,6 +1495,7 @@ class UIManager {
         gameState.numPlayers = numPlayers;
         gameState.isPaused = false;
         gameState.isGameOver = false;
+        this.boardGesture=null;
         gameState.players = [];
         gameState.boardWidth = computeBoardWidth(numPlayers);
         gameState.board = createEmptyBoard(gameState.boardWidth, BOARD_HEIGHT);
@@ -1466,7 +1505,7 @@ class UIManager {
         resetSharedStats();
 
         const container = document.getElementById('game-container');
-        container.innerHTML = '';
+        container.querySelector('#shared-board')?.remove();
         
         const nextPiecesPreview = document.getElementById('next-pieces-preview');
         if (nextPiecesPreview) {
@@ -1494,8 +1533,9 @@ class UIManager {
         canvas.style.width = '100%';
         canvas.style.height = 'auto';
         canvas.style.maxWidth = `${canvas.width}px`;
-        canvas.style.maxHeight = `${canvas.height}px`;
+        canvas.style.maxHeight = 'none';
         boardWrapper.style.setProperty('--board-max-width', `${canvas.width}px`);
+        this.installBoardGestures(canvas);
         boardWrapper.appendChild(canvas);
 
         container.appendChild(boardWrapper);
@@ -1556,7 +1596,11 @@ class UIManager {
         nextCanvas.width = PREVIEW_SIZE * BLOCK_SIZE;
         nextCanvas.height = PREVIEW_SIZE * BLOCK_SIZE;
         item.appendChild(nextCanvas);
-        
+        const label=document.createElement('span');
+        label.className='next-piece-label';
+        label.textContent=gameState.numPlayers===1?(currentLanguage==='ru'?'Далее':'Next'):`P${player.id+1}`;
+        item.prepend(label);
+        if(this.isOnlineMode&&player.id===this.localPlayerIndex)item.classList.add('is-mine');
         container.appendChild(item);
     }
 
@@ -1572,7 +1616,7 @@ class UIManager {
         header.style.setProperty('--player-color', player.color);
         header.innerHTML = `
             <span class="preview-badge" style="background:${player.color}"></span>
-            Player ${player.id + 1}
+            ${t('player')} ${player.id + 1}
         `;
 
         const status = document.createElement('div');
@@ -2378,7 +2422,7 @@ class UIManager {
 
     showCoopSetup() {
         this.showScreen('coopSetup');
-        this.updateCoopPlayerConfig(1); // Default to 1 player
+        this.updateCoopPlayerConfig(2); // Local co-op begins with two players
     }
 
     selectPlayerCount(btn) {
