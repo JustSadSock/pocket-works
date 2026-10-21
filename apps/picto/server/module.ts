@@ -1,6 +1,6 @@
 import type { PocketModule } from '../../../pocket-server/module-contract.js';
 export const MIN_PLAYERS = 2;
-export const RULESET_VERSION = 3;
+export const RULESET_VERSION = 4;
 
 
 const WORDS = {
@@ -84,42 +84,34 @@ const ACTORS:Word[]=['cat','bird','fish','dragon','human','sun','moon','star','t
 const PLACES:Word[]=['house','tree','mountain','boat','door','cloud','moon','book','flower','sun','clock','cat','bird','dragon'];
 const GOODS:Word[]=['key','crown','heart','book','flower','clock','star','sword','moon','fish'];
 const placeFor=(index:number,a:Word,b:Word):Word=>PLACES.find((p,i)=>i>index%PLACES.length&&p!==a&&p!==b)||PLACES.find(p=>p!==a&&p!==b)!;
-const SCENES:Scene[]=[
- ...actionPairs.map(([a,b],i)=>({kind:'action' as Kind,subject:a,object:b,place:placeFor(i,a,b)})),
- ...spacePairs.map(([a,b],i)=>({kind:'space' as Kind,subject:ACTORS[i%ACTORS.length],object:a,place:b})),
- ...rolePairs.map(([a,b],i)=>({kind:'roles' as Kind,subject:a,object:b,place:placeFor(i+5,a,b)})),
- ...changePairs.map(([a,b],i)=>({kind:'change' as Kind,subject:a,object:b,place:placeFor(i+9,a,b)})),
- ...journeyTriples.map(([a,b,c])=>({kind:'journey' as Kind,subject:a,object:b,place:c})),
- ...exchangeTriples.map(([a,b,c])=>({kind:'exchange' as Kind,subject:a,object:b,place:c}))
-];
-export const SCENE_COUNT=SCENES.length;
+// Curated causal story arcs: verbs, consequences and settings are not random.
+type Story={kind:Kind;subject:Word;verb:string;object:Word;next:string;location:string};
+const STORY_ROWS="action|cat|крадёт|key|открывает запертую дверь|в башне\naction|dragon|крадёт|crown|прячет добычу|в пещере\naction|bird|крадёт|book|улетает от погони|над мостом\naction|human|крадёт|clock|подменяет пропажу|в магазине\naction|cat|крадёт|flower|дарит добычу другу|в саду\naction|human|крадёт|sword|защищается от стражи|у ворот\naction|dragon|крадёт|key|запирает хозяина|в замке\naction|bird|крадёт|crown|строит тайник|на дереве\naction|cat|находит|crown|притворяется королём|в замке\naction|human|находит|book|читает заклинание|в башне\naction|bird|находит|key|открывает тайник|под деревом\naction|dragon|находит|heart|возвращает находку|в деревне\naction|human|ищет|sword|вызывает врага на бой|у ворот\naction|cat|ищет|fish|устраивает засаду|на берегу\naction|dragon|ищет|crown|пугает свидетеля|в пещере\naction|bird|ищет|flower|несёт подарок домой|в лесу\nroles|human|спасает|cat|уносит от опасности|из пещеры\nroles|dragon|спасает|bird|защищает от охотника|в лесу\nroles|cat|спасает|fish|отпускает на свободу|у реки\nroles|bird|спасает|human|зовёт на помощь|в горах\nroles|human|прячет|dragon|обманывает преследователя|в башне\nroles|cat|прячет|bird|отвлекает охранника|в саду\nroles|dragon|прячет|fish|устраивает ловушку|в пещере\nroles|human|кормит|bird|завоёвывает доверие|в саду\nroles|cat|пугает|bird|занимает чужой дом|на дереве\nroles|dragon|пугает|human|требует выкуп|у ворот\nroles|human|обманывает|dragon|забирает сокровище|в пещере\nroles|bird|обманывает|cat|освобождает пленника|в башне\nchange|human|чинит|clock|успевает к празднику|на площади\nchange|cat|ломает|clock|останавливает соревнование|в башне\nchange|dragon|ломает|door|освобождает пленника|в замке\nchange|human|чинит|boat|отправляется в путешествие|на берегу\nchange|dragon|превращает|flower|дарит необычный подарок|в саду\nchange|human|превращает|key|прячет волшебство|в башне\nchange|bird|ломает|crown|свергает самозванца|на площади\nchange|cat|рисует|dragon|пугает посетителей|в школе\nchange|human|рисует|door|создаёт тайный проход|в башне\nchange|dragon|уничтожает|book|скрывает опасный секрет|в пещере\nchange|human|создаёт|key|открывает волшебный сундук|в мастерской\nchange|cat|портит|flower|пытается всё исправить|в саду\njourney|human|несёт|book|передаёт секретный приказ|в замке\njourney|cat|несёт|key|теряет дорогу домой|в лесу\njourney|dragon|несёт|crown|отдаёт её королю|у ворот\njourney|bird|несёт|flower|готовит сюрприз|на мосту\njourney|human|несёт|heart|прячется от врага|в башне\njourney|cat|ведёт|bird|показывает тайную тропу|в лесу\njourney|dragon|ведёт|human|показывает своё убежище|в пещере\njourney|human|везёт|crown|прячется от разбойников|на мосту\njourney|bird|несёт|key|спасает пленного друга|в замке\njourney|human|теряет|book|ищет помощь|в пустыне\nexchange|human|дарит|flower|получает благодарность|в саду\nexchange|cat|дарит|key|освобождает друга|у ворот\nexchange|dragon|дарит|crown|заключает мир|в замке\nexchange|bird|дарит|book|раскрывает старую тайну|в башне\nexchange|human|отдаёт|sword|сдаётся победителю|на мосту\nexchange|cat|отдаёт|fish|спасается от погони|у реки\nexchange|human|меняет|book|получает волшебный ключ|в магазине\nexchange|dragon|меняет|crown|получает лекарство|в замке\nexchange|bird|отдаёт|flower|мирится с другом|в саду\nexchange|human|возвращает|key|получает награду|у ворот\nspace|human|прячет|key|возвращается за находкой|под мостом\nspace|cat|прячет|fish|защищает запас от вора|под деревом\nspace|dragon|охраняет|crown|отгоняет грабителя|в пещере\nspace|bird|охраняет|book|отвлекает незнакомца|в башне\nspace|human|прячет|heart|запутывает следы|в лесу\nspace|cat|охраняет|door|не пускает чужака|в доме\nspace|human|теряет|key|оказывается взаперти|в башне\nspace|bird|теряет|flower|возвращается за подарком|над мостом\nspace|dragon|охраняет|sword|проверяет смелость героя|в замке\nspace|human|находит|clock|узнаёт тайну прошлого|в пещере".trim().split('\n');
+const STORIES:Story[]=STORY_ROWS.map(row=>{const [kind,subject,verb,object,next,location]=row.split('|');return {kind:kind as Kind,subject:subject as Word,verb,object:object as Word,next,location};});
+export const SCENE_COUNT=STORIES.length;
 export const TOTAL_TASKS=SCENE_COUNT;
-const VERBS:Record<Kind,string[]>={
- action:['ищет','прячет','охраняет','крадёт','теряет','находит','несёт','ломает','рисует','роняет'],
- space:['оставляет','кладёт','роняет','находит','держит','прячет','теряет','берёт','ищет','таскает'],
- roles:['спасает','преследует','обнимает','пугает','замечает','обманывает','зовёт','защищает','догоняет','встречает'],
- change:['превращает','раскрашивает','уменьшает','увеличивает','заменяет','создаёт','уничтожает','чинит','портит','оживляет'],
- journey:['несёт','везёт','тащит','ведёт','отправляет','прячет','роняет','теряет','находит','ловит'],
- exchange:['дарит','крадёт','отдаёт','забирает','передаёт','возвращает','меняет','прячет','роняет','ищет']
-};
-const RELATIONS:{label:string;form:number}[]=[
- {label:'под',form:4},{label:'над',form:4},{label:'за',form:4},{label:'перед',form:4},
- {label:'возле',form:2},{label:'около',form:2},{label:'у',form:2},{label:'к',form:3}
-];
+const ACTIONS=[...new Set(STORIES.map(v=>v.verb))];
+const CONSEQUENCES=[...new Set(STORIES.map(v=>v.next))];
+const LOCATIONS=[...new Set(STORIES.map(v=>v.location))];
+const KINDS:Kind[]=['action','space','roles','change','journey','exchange'];
+const ACTORS:Word[]=['cat','bird','fish','dragon','human','sun','moon','star','tree','flower'];
 const shuffle=<T>(xs:T[]):T[]=>{const result=[...xs];for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;};
 const rand=(n:number)=>Math.floor(Math.random()*n);
 const SYMBOLS=new Set([
  'sun','moon','star','cloud','rain','wave','fire','tree','flower','bird','fish','cat','human','eye',
  'heart','key','crown','house','door','boat','mountain','arrow','clock','question','hand','book','sword','dragon',
- 'not','swap','loop','path','mask','spark'
+ 'not','swap','loop','path','mask','spark',
+ 'king','queen','knight','wizard','thief','child','guard','robot','ghost','dog','horse','fox','rabbit','frog','snake','wolf','bear','bee','owl','spider','turtle','apple','bread','cheese','cup','bottle','potion','coin','gift','cake','bag','map','shield','bow','hammer','axe','lantern','rope','ladder','chest','mirror','ring','hat','boots','wheel','cart','flag','compass','lock','castle','tower','bridge','cave','shop','school','hospital','garden','forest','island','river','road','gate','well','tent','volcano','desert','smile','cry','anger','sleep','music','idea','fear','surprise','thought','speech','footprint','lightning'
 ]);
 type Player={id:string;name:string};
-type Glyph={id:string;x:number;y:number;r:number;s:number};
+type Glyph={id:string;x:number;y:number;r:number;s:number;frame?:number};
+type LexiconEntry={name:string;prompt:string;board:Glyph[]};
 type Answer=(number|null)[];
 type Archive={author:string;name:string;prompt:string;board:Glyph[];correct:number;total:number;points:number};
 type State={
  host:string;players:Player[];phase:'lobby'|'compose'|'guess'|'reveal'|'results';
  round:number;maxRounds:number;author:string;deadline:number;choices:string[][];locationForms:string[][];
+ frames:number;semanticVersion:number;story:string;lexicon:LexiconEntry[];
  target:number[];solution:string[];prompt:string;palette:string[];blocked:string[];
  board:Glyph[];answers:Record<string,Answer>;history:Archive[];score:number;wordsFound:number;attempts:number;
  revision:number;usedScenes:number[];kind:Kind;modeDeck:Kind[]
@@ -130,36 +122,27 @@ function pool<T>(all:T[],required:T,size:number):T[]{
 function puzzle(s:State){
  if(!s.modeDeck.length)s.modeDeck=shuffle(KINDS);
  const kind=s.modeDeck.pop()!;
- const candidates=SCENES.map((scene,i)=>scene.kind===kind&&!s.usedScenes.includes(i)?i:-1).filter(i=>i>=0);
- if(!candidates.length)throw Error('scene_bank_exhausted');
- const index=candidates[rand(candidates.length)],scene=SCENES[index];
+ const candidates=STORIES.map((v,i)=>v.kind===kind&&!s.usedScenes.includes(i)?i:-1).filter(i=>i>=0);
+ if(!candidates.length)throw Error('story_bank_exhausted');
+ const index=candidates[rand(candidates.length)],story=STORIES[index];
  s.usedScenes.push(index);
- const subjects=pool(ACTORS,scene.subject,10);
- const objects=pool(Object.keys(WORDS) as Word[],scene.object,10);
- const locations=pool(Object.keys(WORDS) as Word[],scene.place,10);
- const verbs=shuffle(VERBS[kind]);
- const preps=shuffle(RELATIONS);
- const chosenVerb=VERBS[kind][rand(VERBS[kind].length)];
- const chosenPrep=RELATIONS[rand(RELATIONS.length)];
- const locationForms=preps.map(prep=>locations.map(id=>w(id,prep.form)));
- const target=[
-  subjects.indexOf(scene.subject),verbs.indexOf(chosenVerb),objects.indexOf(scene.object),
-  preps.findIndex(prep=>prep.label===chosenPrep.label),locations.indexOf(scene.place)
+ s.choices=[
+  pool(ACTORS,story.subject,10).map(W),
+  pool(ACTIONS,story.verb,10),
+  pool(Object.keys(WORDS) as Word[],story.object,10).map(id=>w(id,1)),
+  pool(CONSEQUENCES,story.next,10),
+  pool(LOCATIONS,story.location,10)
  ];
- const choices=[subjects.map(W),verbs,objects.map(id=>w(id,1)),preps.map(p=>p.label),locationForms[0]];
- const solution=target.map((pos,i)=>i===4?locationForms[target[3]][pos]:choices[i][pos]);
- const nouns=[scene.subject,scene.object,scene.place].filter((id,i,a)=>a.indexOf(id)===i);
- const blocks=shuffle(nouns).slice(0,Math.min(nouns.length-1,1+rand(2)));
- const toolbox=shuffle(['arrow','not','swap','hand','question','mask','path','spark']).slice(0,4);
- const candidatesGlyph=shuffle([...SYMBOLS].filter(id=>!blocks.includes(id as Word)));
- const mustKeep=nouns.filter(id=>!blocks.includes(id));
- const palette=[...new Set([...mustKeep,...toolbox,...candidatesGlyph])].slice(0,18);
- s.kind=kind;s.choices=choices;s.locationForms=locationForms;s.target=target;s.solution=solution;
- s.prompt=solution.join(' ')+'.';s.palette=palette;s.blocked=blocks;
+ s.target=[s.choices[0].indexOf(W(story.subject)),s.choices[1].indexOf(story.verb),
+   s.choices[2].indexOf(w(story.object,1)),s.choices[3].indexOf(story.next),s.choices[4].indexOf(story.location)];
+ s.solution=s.target.map((n,i)=>s.choices[i][n]);
+ s.prompt=W(story.subject)+' '+story.verb+' '+w(story.object,1)+', затем '+story.next+' '+story.location+'.';
+ s.story=s.prompt;s.kind=kind;s.locationForms=[];s.frames=s.round%3===0?3:2;s.semanticVersion=4;
+ s.palette=[...SYMBOLS];s.blocked=[];
 }
 function fresh(s:State){
  puzzle(s);
- s.board=[];s.answers={};s.phase='compose';s.deadline=Date.now()+100000;s.revision++;
+ s.board=[];s.answers={};s.phase='compose';s.deadline=Date.now()+145000;s.revision++;
  s.author=s.players[(s.round-1)%s.players.length]?.id||'';
 }
 function start(s:State){
@@ -181,7 +164,7 @@ function reveal(s:State){
  s.phase='reveal';s.deadline=Date.now()+14000;s.revision++;
 }
 function advance(s:State){
- if(s.phase==='compose'){s.phase='guess';s.deadline=Date.now()+65000;s.revision++;}
+ if(s.phase==='compose'){s.phase='guess';s.deadline=Date.now()+80000;s.revision++;}
  else if(s.phase==='guess')reveal(s);
  else if(s.phase==='reveal'){
   if(s.round>=s.maxRounds||s.players.length<2){s.phase='results';s.deadline=0;s.revision++;}
@@ -192,7 +175,7 @@ function step(s:State){
  let loops=0;while(s.deadline&&Date.now()>=s.deadline&&loops++<2&&s.phase!=='results')advance(s);
 }
 function sanitized(glyphs:unknown,palette:string[]):Glyph[]|null{
- if(!Array.isArray(glyphs)||glyphs.length>26)return null;
+ if(!Array.isArray(glyphs)||glyphs.length>48)return null;
  const output:Glyph[]=[];
  for(const v of glyphs){
   if(!v||typeof v!=='object'||Array.isArray(v))return null;
@@ -200,22 +183,25 @@ function sanitized(glyphs:unknown,palette:string[]):Glyph[]|null{
   if(!SYMBOLS.has(String(g.id))||!palette.includes(String(g.id)))return null;
   for(const k of ['x','y','r','s'])if(typeof g[k]!=='number'||!Number.isFinite(g[k]))return null;
   if(Number(g.x)<4||Number(g.x)>96||Number(g.y)<5||Number(g.y)>95||Number(g.r)<-180||Number(g.r)>180||Number(g.s)<0.55||Number(g.s)>2.2)return null;
-  output.push({id:String(g.id),x:Math.round(Number(g.x)*10)/10,y:Math.round(Number(g.y)*10)/10,r:Math.round(Number(g.r)),s:Math.round(Number(g.s)*100)/100});
+  const frame=g.frame===undefined?0:Number(g.frame);
+  if(!Number.isInteger(frame)||frame<0||frame>2)return null;
+  output.push({id:String(g.id),x:Math.round(Number(g.x)*10)/10,y:Math.round(Number(g.y)*10)/10,r:Math.round(Number(g.r)),s:Math.round(Number(g.s)*100)/100,frame});
  }
  return output;
 }
-function validAnswer(raw:unknown):raw is Answer{
- return Array.isArray(raw)&&raw.length===5&&raw.every((v,i)=>v===null||(typeof v==='number'&&Number.isInteger(v)&&v>=0&&Number(v)<(i===3?8:10)));
+function validAnswer(raw:unknown,s:State):raw is Answer{
+ return Array.isArray(raw)&&raw.length===5&&raw.every((v,i)=>v===null||(typeof v==='number'&&Number.isInteger(v)&&v>=0&&Number(v)<(s.choices[i]?.length||0)));
 }
 const strip=(s:State,id:string)=>({
  host:s.host,players:s.players,phase:s.phase,round:s.round,maxRounds:s.maxRounds,author:s.author,deadline:s.deadline,
- board:s.board,revision:s.revision,kind:s.kind,
+ board:s.board,revision:s.revision,kind:s.kind,frames:s.frames,semanticVersion:s.semanticVersion,lexicon:s.lexicon,
  palette:id===s.author&&s.phase==='compose'?s.palette:[],
  blocked:id===s.author&&s.phase==='compose'?s.blocked:[],
  choices:s.phase==='guess'||s.phase==='reveal'?s.choices:[],
  locationForms:s.phase==='guess'||s.phase==='reveal'?s.locationForms:[],
  solution:s.phase==='reveal'||s.phase==='results'?s.solution:[],
  prompt:id===s.author&&s.phase==='compose'?s.prompt:null,
+ story:(id===s.author&&s.phase==='compose')||s.phase==='reveal'||s.phase==='results'?s.story:null,
  answered:Object.keys(s.answers),myAnswer:s.answers[id]??null,
  answers:s.phase==='reveal'?s.answers:{},
  history:s.phase==='results'||s.phase==='reveal'?s.history:[],
@@ -229,7 +215,7 @@ const module:PocketModule<State>={
  createRoom({player}){
   return {state:{host:player.id,players:[player],phase:'lobby',round:0,maxRounds:0,author:'',deadline:0,
    choices:[],locationForms:[],target:[],solution:[],prompt:'',palette:[],blocked:[],board:[],answers:{},
-   history:[],score:0,wordsFound:0,attempts:0,revision:0,usedScenes:[],modeDeck:[],kind:'action'}};
+   history:[],score:0,wordsFound:0,attempts:0,revision:0,usedScenes:[],modeDeck:[],kind:'action',frames:2,semanticVersion:4,story:'',lexicon:[]}};
  },
  onJoin({state,player,players}){
   if(state.phase!=='lobby')throw Error('match_in_progress');
@@ -253,6 +239,28 @@ const module:PocketModule<State>={
   if(!received(state,id))return {state,events:notice(id,'Ты не участник этой комнаты.')};
   const before=state.revision;step(state);
   if(raw.type==='pulse')return {state,events:before===state.revision?[]:emit(state)};
+  if(raw.type==='lexicon-import'){
+   if(state.phase!=='lobby'||state.host!==id||!Array.isArray(raw.entries))return {state,events:notice(id,'Словарь восстанавливает ведущий до игры.')};
+   for(const item of raw.entries.slice(0,24)){
+    if(!item||typeof item!=='object')continue;
+    const entry=item as Record<string,unknown>;
+    if(typeof entry.prompt!=='string'||!entry.prompt||entry.prompt.length>240||typeof entry.name!=='string'||entry.name.length>32)continue;
+    const board=sanitized(entry.board,[...SYMBOLS]);
+    if(!board||!board.length)continue;
+    if(state.lexicon.length>=24)break;
+    if(!state.lexicon.some(v=>v.prompt===entry.prompt))state.lexicon.push({name:entry.name,prompt:entry.prompt,board});
+   }
+   state.revision++;return {state,events:emit(state)};
+  }
+  if(raw.type==='save-word'){
+   if(state.phase!=='reveal'||state.author!==id)return {state,events:notice(id,'Добавить в словарь может автор после раскрытия.')};
+   const last=state.history.at(-1);
+   if(!last||!last.board.length)return {state,events:notice(id,'Композиция пуста.')};
+   if(state.lexicon.some(v=>v.prompt===last.prompt))return {state,events:notice(id,'Это уже в словаре.')};
+   if(state.lexicon.length>=24)return {state,events:notice(id,'Словарь заполнен.')};
+   state.lexicon.push({name:last.name,prompt:last.prompt,board:last.board.map(g=>({...g}))});
+   state.revision++;return {state,events:emit(state)};
+  }
   if(raw.type==='start'){
    if(state.host!==id||state.phase!=='lobby'||state.players.length<MIN_PLAYERS)return {state,events:notice(id,'Создатель может начать после подключения хотя бы двух игроков.')};
    start(state);return {state,events:emit(state)};
@@ -273,7 +281,7 @@ const module:PocketModule<State>={
   }
   if(raw.type==='answer'){
    if(state.phase!=='guess'||state.author===id||id in state.answers)return {state,events:notice(id,'Ответ сейчас недоступен.')};
-   if(!validAnswer(raw.cells)||!raw.cells.some(v=>v!==null))return {state,events:notice(id,'Заполни хотя бы одну ячейку. Остальные можно пропустить.')};
+   if(!validAnswer(raw.cells,state)||!raw.cells.some(v=>v!==null))return {state,events:notice(id,'Заполни хотя бы одну ячейку. Остальные можно пропустить.')};
    state.answers[id]=raw.cells.slice();state.revision++;
    if(Object.keys(state.answers).length>=state.players.length-1)reveal(state);
    return {state,events:emit(state)};
