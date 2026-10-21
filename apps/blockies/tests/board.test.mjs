@@ -296,6 +296,7 @@ test('Blockies achievement UI fetches from Pocket Social without client-side awa
  assert.match(net,/achievement_awarded/);
  assert.match(net,/message\.event\.to===this\.socket\.id/);
  assert.match(sw,/\.\/achievements\.js/);
+ assert.match(sw,/\.\.\/\.\.\/shared\/capabilities\/blockies-achievements\.js/);
  const lock=JSON.parse(await fs.readFile(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
  assert.equal(lock.blockies.current,'v3');
  assert.deepEqual(lock.blockies.versions,['v1','v2','v3']);
