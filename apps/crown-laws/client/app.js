@@ -441,53 +441,9 @@ function crownRow(player, title) {
 }
 
 function pieceGlyph(piece) {
-  const colors = {
-    champion_p1: ["#ecd1a0", "#7cb6d8"],
-    champion_p2: ["#f0cc9c", "#d68a8f"],
-    guard: ["#e6dfd4", "#8a7f73"],
-    beast: ["#edaa54", "#4a2817"],
-    priest: ["#e8dcc7", "#6c95c7"],
-    thief: ["#d8c3f4", "#46255b"]
-  }[piece.id];
-
-  const glyph = {
-    champion: `<path d="M50 12l11 16-6 8 7 26-12 14-12-14 7-26-6-8z"/><path d="M28 76h44l8 8H20z"/><circle cx="50" cy="20" r="8"/>`,
-    guard: `<path d="M50 10l10 18-6 6h8l-14 32H38l10-24h-8l10-18-6-14z"/><rect x="20" y="76" width="60" height="8" rx="4"/>`,
-    beast: `<path d="M18 62l10-20 12-6 8-14 14 8 14 2-4 16-12 12-18 8-18-2z"/><path d="M26 38l-8-10 12 4zM66 34l10-8-2 12z"/>`,
-    priest: `<circle cx="50" cy="20" r="8"/><path d="M38 32h24l10 36H28z"/><rect x="48" y="22" width="4" height="46" rx="2"/><rect x="38" y="42" width="24" height="4" rx="2"/>`,
-    thief: `<path d="M24 76l8-34 18-20 18 20 8 34z"/><path d="M38 42c8-10 16-10 24 0v18H38z"/>`
-  }[piece.kind];
-
-  return `
-    <svg viewBox="0 0 100 100" aria-hidden="true">
-      <defs>
-        <linearGradient id="piece-metal-${piece.id}" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="${colors[0]}"></stop>
-          <stop offset="100%" stop-color="${colors[1]}"></stop>
-        </linearGradient>
-        <radialGradient id="piece-core-${piece.id}" cx="45%" cy="28%" r="70%">
-          <stop offset="0%" stop-color="rgba(255,255,255,.34)"></stop>
-          <stop offset="55%" stop-color="rgba(255,255,255,.02)"></stop>
-          <stop offset="100%" stop-color="rgba(0,0,0,.16)"></stop>
-        </radialGradient>
-      </defs>
-      <ellipse cx="50" cy="84" rx="28" ry="7" fill="rgba(0,0,0,.32)"></ellipse>
-      <path d="M20 82h60l-8 8H28z" fill="rgba(21,14,11,.74)"></path>
-      <g fill="url(#piece-metal-${piece.id})">${glyph}</g>
-      <path d="M16 82h68v2H16z" fill="rgba(255,231,193,.14)"></path>
-      <circle cx="50" cy="46" r="30" fill="url(#piece-core-${piece.id})"></circle>
-    </svg>
-  `;
-}
-
-function cardBackPosition(slot) {
-  return {
-    champion: "0%",
-    guard: "25%",
-    beast: "50%",
-    priest: "75%",
-    thief: "100%"
-  }[slot];
+  // Carved typographic counters: no raster sprites or SVG.
+  const marks = { champion: "К", guard: "С", beast: "З", priest: "Ж", thief: "В" };
+  return '<span class="piece__sigil" aria-hidden="true">' + (marks[piece.kind] || "·") + '</span>';
 }
 
 function effectsHTML() {
@@ -521,6 +477,7 @@ function boardHTML(state) {
       const classes = [
         "piece",
         `piece--${piece.kind}`,
+        piece.id === "champion_p1" ? "piece--p1" : piece.id === "champion_p2" ? "piece--p2" : "",
         piece.shield ? "piece--shielded" : "",
         piece.stun ? "piece--stunned" : "",
         piece.carryingSeal ? "piece--sealed" : ""
@@ -543,15 +500,15 @@ function boardHTML(state) {
   return `
     <section class="board-panel">
       <div class="board-caption">
-        <span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)}</span>
-        <span class="board-pill">Ход ${state.turn}</span>
+        <span class="board-caption__title">Королевский двор</span>
+        <span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span>
       </div>
-      <div class="board">
+      <div class="board-surround"><div class="board">
         <div class="board-grid">${cells.join("")}</div>
         <div class="board-glow"></div>
         <div class="board-effects">${effectsHTML()}</div>
         ${pieces}
-      </div>
+      </div></div>
     </section>
   `;
 }
@@ -570,8 +527,8 @@ function lawSlotsHTML(state) {
           const isBase = !state.slots[slot].activeCardId;
           const detailId = isBase ? BASE_LAWS[slot].id : active.id;
           return `
-            <button data-native-press class="law-slot ${app.lastConflictSlots.includes(slot) ? "law-slot--conflict" : ""}" style="--slot-color:${SLOT_COLORS[slot]};--slot-art:${cardBackPosition(slot)}" data-focus-card="${detailId}">
-              <span class="law-slot__slot">${slot}</span>
+            <button data-native-press class="law-slot ${app.lastConflictSlots.includes(slot) ? "law-slot--conflict" : ""}" style="--slot-color:${SLOT_COLORS[slot]}" data-slot="${slot}" data-focus-card="${detailId}" aria-label="Действующий закон ${SLOT_LABELS[slot]}: ${active.name}">
+              <span class="law-slot__slot">${SLOT_LABELS[slot].replace("Закон ", "")}</span>
               <span class="law-slot__name">${active.name}</span>
               <span class="law-slot__mode">${isBase ? "База" : "Активный"}</span>
             </button>
@@ -617,8 +574,8 @@ function handHTML(state) {
   return `
     <section class="hand-panel ${locked ? "hand-panel--locked" : ""}">
       <div class="panel-head">
-        <h3>${viewer === "p1" ? "Север" : "Юг"}</h3>
-        <span>${locked ? "Запечатано" : "Выберите закон"}</span>
+        <h3>Рука · ${viewer === "p1" ? "Север" : "Юг"}</h3>
+        <span>${locked ? "Выбор принят" : "Указ на следующий ход"}</span>
       </div>
       <div class="hand">
         ${currentHand()
@@ -627,12 +584,12 @@ function handHTML(state) {
             return `
               <button
                 class="law-card ${app.selectedCardId === cardId ? "law-card--selected" : ""}"
-                style="--card-color:${SLOT_COLORS[card.slot]};--card-art:${cardBackPosition(card.slot)}"
+                style="--card-color:${SLOT_COLORS[card.slot]}" aria-pressed="${app.selectedCardId === cardId}"
                 draggable="true"
                 data-card-id="${cardId}"
                 data-focus-card="${cardId}"
               >
-                <span class="law-card__slot">${SLOT_LABELS[card.slot]}</span>
+                <span class="law-card__slot">${SLOT_LABELS[card.slot].replace("Закон ", "")}</span>
                 <span class="law-card__title">${card.name}</span>
                 <span class="law-card__body">${card.description}</span>
               </button>
@@ -640,8 +597,11 @@ function handHTML(state) {
           })
           .join("")}
       </div>
+      <div class="hand-preview" role="status">
+        ${app.selectedCardId ? `<strong>${cardById(app.selectedCardId).name}</strong><span>${cardById(app.selectedCardId).description}</span>` : locked ? "Закон запечатан. Ожидайте второго игрока." : "Коснитесь карты — прочитайте действие и подтвердите выбор."}
+      </div>
       <div class="hand-actions">
-        <button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId || locked ? "disabled" : ""}>Запечатать ход</button>
+        <button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId || locked ? "disabled" : ""}>Утвердить закон</button>
         <button data-native-press class="ghost-btn" data-action="toggle-rules">Свод</button>
       </div>
     </section>
@@ -1117,6 +1077,10 @@ root.addEventListener("click", (event) => {
   }
 
   const card = event.target.closest("[data-card-id]");
+  if (focus && !card) {
+    render();
+    return;
+  }
   if (card) {
     const cardId = card.dataset.cardId;
     app.selectedCardId = app.selectedCardId === cardId ? null : cardId;
@@ -1154,6 +1118,8 @@ root.addEventListener("click", (event) => {
     render();
   }
 });
+
+root.addEventListener("input", (event) => { if (event.target.matches("[data-input=room-code]")) app.online.codeInput = event.target.value.toUpperCase(); });
 
 root.addEventListener("change", (event) => {
   if (event.target.matches("[data-input='room-code']")) {
@@ -1193,10 +1159,8 @@ root.addEventListener("drop", (event) => {
     return;
   }
   event.preventDefault();
-  const focusedLaw = app.focusCardId;
-  const slot = Object.values(BASE_LAWS).find((law) => law.id === focusedLaw)?.slot || null;
   const dragged = cardById(app.dragCardId);
-  if (!slot || dragged.slot === slot || slotNode.textContent.includes(SLOT_LABELS[dragged.slot])) {
+  if (dragged.slot === slotNode.dataset.slot) {
     app.selectedCardId = app.dragCardId;
     render();
   }
@@ -1207,7 +1171,7 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && app.modal) {
     closeModal();
   }
-  if (event.key.toLowerCase() === "r" && app.screen === "game" && app.local.state) {
+  if (event.key.toLowerCase() === "r" && event.altKey && app.screen === "game" && app.local.state) {
     app.local.state = applyDebugAction(app.local.state, { type: "restart" });
     render();
   }
