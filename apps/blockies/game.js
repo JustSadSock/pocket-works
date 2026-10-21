@@ -1451,6 +1451,7 @@ class UIManager {
     }
 
     startGame(numPlayers, seed = Date.now()) {
+        this.lastSoloSaveAt = 0;
         if (!this.isOnlineMode && numPlayers === 1) clearSolo();
         setRandomSeed(seed);
         gameState.numPlayers = numPlayers;
@@ -1535,6 +1536,7 @@ class UIManager {
         this.drawBoard();
 
         this.showScreen('gameScreen');
+        if (!this.isOnlineMode && numPlayers === 1) this.saveSoloCheckpoint(true);
         this.refreshTouchStatus();
         this.scheduleBoardScaleUpdate();
         this.gameLoopRun = (this.gameLoopRun || 0) + 1;
