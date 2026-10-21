@@ -896,6 +896,7 @@ export class Editor{
       this.finishStroke();this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;this.lastGesturePoint=null;
       if(this.aimPointer===e.pointerId){this.aimPointer=null;this.aim=null}
       this.panStart=null;this.viewport.classList.remove('is-panning');
+      if(!this.pointers.size&&this.pendingViewportFit)this.resize();
       if(e.pointerType==='touch'||e.type==='pointercancel'||
          !Number.isFinite(e.clientX)||!Number.isFinite(e.clientY)){
         this.lastCursor=null;
@@ -1113,14 +1114,39 @@ export class Editor{
       if(this.lastCursor)this.showCursor(this.lastCursor);
     };
     this.root.addEventListener('input',this.slider);
+    this.retryArtworkOnOnline=()=>{
+      if(this.closed||!this.artRetryAfter)return;
+      this.artRetryAfter=0;clearTimeout(this.artRetryTimer);this.artRetryTimer=null;
+      void this.render();
+    };
+    window.addEventListener('online',this.retryArtworkOnOnline);
     this.globalPointerUp=e=>{if(this.pointers.has(e.pointerId)||this.sizeDrag?.pointerId===e.pointerId)this.up(e)};
     window.addEventListener('pointerup',this.globalPointerUp);
     window.addEventListener('pointercancel',this.globalPointerUp);
-    this.resize=()=>{if(!this.pointers.size){this.fitViewport();this.center()}};
+    this.resize=()=>{
+      if(this.closed)return;
+      if(this.pointers.size){this.pendingViewportFit=true;return}
+      this.pendingViewportFit=false;
+      if(this.fitViewport())this.center();
+    };
+    this.orientationChanged=()=>{
+      if(this.closed)return;
+      // A tablet rotation can discard pointerup and leave the editor in a
+      // stale pinch/painting gesture. Finish that stroke before refitting.
+      this.keyboardBlur();
+      this.resize();
+      clearTimeout(this.orientationFitTimer);
+      this.orientationFitTimer=setTimeout(()=>this.resize(),280);
+    };
     window.addEventListener('resize',this.resize);
+    window.addEventListener('orientationchange',this.orientationChanged);
+    window.visualViewport?.addEventListener('resize',this.resize);
+    screen.orientation?.addEventListener?.('change',this.orientationChanged);
     if(typeof ResizeObserver!=='undefined'){
       this.frameObserver=new ResizeObserver(()=>{
-        if(!this.closed&&this.frameAspect&&!this.pointers.size&&this.fitViewport())this.center();
+        if(this.closed||!this.frameAspect)return;
+        if(this.pointers.size){this.pendingViewportFit=true;return}
+        if(this.fitViewport())this.center();
       });
       const stage=this.root.querySelector('.work-stage');
       if(stage)this.frameObserver.observe(stage);
@@ -1160,9 +1186,23 @@ export class Editor{
  // and old strokes never rerun 120 times/second while the mouse is moving.
  async render(){
    if(this.closed)return;
-   this.artPromise ||= loadArtwork(this.id).catch(()=>null);
+   if(!this.artPromise){
+     if(this.artRetryAfter&&Date.now()<this.artRetryAfter)return;
+     this.artPromise=loadArtwork(this.id).catch(()=>{
+       // A failed image request must never poison this Editor for its lifetime.
+       this.artPromise=null;
+       if(this.closed)return null;
+       this.artRetryAfter=Date.now()+3200;
+       const tip=this.root.querySelector('#drawingTip');
+       if(tip)tip.textContent='Картина загружается повторно · рисунок сохранён';
+       clearTimeout(this.artRetryTimer);
+       this.artRetryTimer=setTimeout(()=>{this.artRetryTimer=null;if(!this.closed)void this.render()},3300);
+       return null;
+     });
+   }
    const img=await this.artPromise;
    if(!img||this.closed)return;
+   if(this.artRetryAfter){this.artRetryAfter=0;clearTimeout(this.artRetryTimer);this.artRetryTimer=null;this.updateDrawingTip()}
    if(!this.nativeFrameReady){
      this.nativeFrameReady=true;
      setArtworkFrame(this.canvas,img);
@@ -1173,7 +1213,11 @@ export class Editor{
    return new Promise(resolve=>{
      (this.paintWaiters ||= []).push(resolve);
      if(this.paintFrameId)return;
-     const frame=()=>{this.paintFrameId=null;this.paintCachedFrame(img);for(const cb of this.paintWaiters.splice(0))cb()};
+     const frame=()=>{
+      this.paintFrameId=null;
+      try{if(!this.closed)this.paintCachedFrame(img)}
+      finally{for(const cb of this.paintWaiters.splice(0))cb()}
+    };
      this.paintFrameId=typeof requestAnimationFrame==='function'?requestAnimationFrame(frame):setTimeout(frame,16);
    });
  }
@@ -1264,7 +1308,7 @@ export class Editor{
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){try{localStorage.removeItem(this.draftKey)}catch{}try{sessionStorage.removeItem(this.draftKey)}catch{}void zamazkaStore.remove('draft:'+this.draftKey).catch(()=>{})}
- dispose(){this.flushPersistence();this.closed=true;clearTimeout(this.sizeStepDelay);clearInterval(this.sizeStepInterval);for(const button of this.sizeStepButtons||[]){button.removeEventListener('pointerdown',this.sizeStepPress);button.removeEventListener('click',this.sizeStepKeyboardClick);button.removeEventListener('lostpointercapture',this.sizeStepRelease);}window.removeEventListener('pointerup',this.sizeStepRelease);window.removeEventListener('pointercancel',this.sizeStepRelease);document.removeEventListener?.('visibilitychange',this.persistOnHide);clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
+ dispose(){this.flushPersistence();this.closed=true;clearTimeout(this.artRetryTimer);clearTimeout(this.orientationFitTimer);window.removeEventListener('online',this.retryArtworkOnOnline);window.removeEventListener('orientationchange',this.orientationChanged);window.visualViewport?.removeEventListener('resize',this.resize);screen.orientation?.removeEventListener?.('change',this.orientationChanged);clearTimeout(this.sizeStepDelay);clearInterval(this.sizeStepInterval);for(const button of this.sizeStepButtons||[]){button.removeEventListener('pointerdown',this.sizeStepPress);button.removeEventListener('click',this.sizeStepKeyboardClick);button.removeEventListener('lostpointercapture',this.sizeStepRelease);}window.removeEventListener('pointerup',this.sizeStepRelease);window.removeEventListener('pointercancel',this.sizeStepRelease);document.removeEventListener?.('visibilitychange',this.persistOnHide);clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
    this.paintFrameId=null;
