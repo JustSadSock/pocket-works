@@ -40,5 +40,5 @@ import './atelier-state.mjs';
 
 // Run all new cross-phase regressions in the standalone finale QA gate.
 import './clock-soundscape.mjs';
-import './damage-area-balance.mjs';
+import './damage-shape-aspect.mjs';
 import '../../../scripts/test-zamazka-achievements.mjs';
