@@ -56,6 +56,16 @@
         "slug": "rivals-field-notes",
         "spatialDifference": "The rivals-field-notes layout differs from Blockies: warm outer shell, full-width shared grid on phones, tiny numeric strip and two-thumb input deck.",
         "interactionDifference": "Blockies requires cell-precise hold, canvas swipe and fast hard drop, with PocketNet authoritative shared state instead of rivals-field-notes interaction."
+      },
+      {
+        "slug": "crown-laws",
+        "spatialDifference": "Unlike crown-laws, Blockies has a single high-contrast 20-row precision stack, an achievement collection and a responsive two-thumb control deck, not a medieval decree desk or a glass music board.",
+        "interactionDifference": "crown-laws centers its own choice or audiovisual instrument, while Blockies requires cell-accurate piece movement, hard drop, and server-verified joint achievements that unlock real Pocket ID cosmetics."
+      },
+      {
+        "slug": "cantica-glass",
+        "spatialDifference": "Unlike cantica-glass, Blockies has a single high-contrast 20-row precision stack, an achievement collection and a responsive two-thumb control deck, not a medieval decree desk or a glass music board.",
+        "interactionDifference": "cantica-glass centers its own choice or audiovisual instrument, while Blockies requires cell-accurate piece movement, hard drop, and server-verified joint achievements that unlock real Pocket ID cosmetics."
       }
     ]
   },
