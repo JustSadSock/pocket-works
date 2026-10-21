@@ -238,6 +238,37 @@ assert.equal((await call(0,'profile',{...aliceCard,background:'gallery',maskot:{
 assert.equal((await call(0,'me')).profile.background,'gallery');
 assert.equal((await call(1,'profile',{...aliceCard,background:'gallery'})).httpStatus,400);
 assert.equal((await call(0,'me')).profile.achievements.length,7);
+// Blockies cosmetics must only unlock after a trusted PocketNet-originated award.
+assert.equal((await call(0,'profile',{...aliceCard,title:'Укладчик'})).httpStatus,400);
+assert.equal((await call(0,'profile',{...aliceCard,background:'stack-grid'})).httpStatus,400);
+assert.equal((await call(0,'profile',{...aliceCard,portraitFrame:'circuit'})).httpStatus,400);
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,face:'pixel-visor'}})).httpStatus,400);
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'block-cap'}})).httpStatus,400);
+assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,clothes:'block-jacket'}})).httpStatus,400);
+const awardBlockies=async achievementId=> {
+ const request=new Request('https://example.com/pocket-social/award',{method:'POST',
+   headers:{'content-type':'application/json','x-pw-internal':'1'},
+   body:JSON.stringify({accountId:users[0].id,nickname:'Alice',avatar:'clay',
+     achievementId,gameId:'blockies',roomId:room,matchId:room})});
+ const res=await hub.fetch(request),data=await res.json();return {httpStatus:res.status,...data};
+};
+assert.equal((await awardBlockies('zamazka.first-stroke')).httpStatus,400,'game ID cannot cross-mint another game');
+assert.equal((await awardBlockies('blockies.unknown')).httpStatus,400,'unknown awards are rejected');
+for(const id of ['first-lock','first-line','ten-locks','double','duo','quartet','steadfast','master'])
+ assert.equal((await awardBlockies('blockies.'+id)).ok,true);
+assert.equal((await awardBlockies('blockies.first-lock')).already,true,'repeated delivery is idempotent');
+const owned=await call(0,'me');
+assert.equal(owned.profile.achievements.length,15);
+assert.equal((await call(1,'user?id='+users[0].id)).profile.unlocked,undefined);
+assert.equal((await call(0,'profile',{...aliceCard,background:'stack-grid',portraitFrame:'circuit',
+  title:'Архитектор блоков',maskot:{...plainMaskot,hat:'block-cap',face:'pixel-visor',clothes:'block-jacket'}})).ok,true);
+const publicBlockies=(await call(1,'user?id='+users[0].id)).profile;
+assert.equal(publicBlockies.title,'Архитектор блоков');
+assert.equal(publicBlockies.background,'stack-grid');
+assert.equal(publicBlockies.portraitFrame,'circuit');
+assert.equal(publicBlockies.maskot.hat,'block-cap');
+assert.equal(publicBlockies.maskot.face,'pixel-visor');
+assert.equal(publicBlockies.maskot.clothes,'block-jacket');
 // Fast sync returns only a revision and changes when relationships or cosmetics change.
 const revisionBefore=await call(0,'sync');
 assert.match(revisionBefore.revision,/^[0-9a-z]+:\d+$/);
