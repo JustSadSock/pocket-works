@@ -3,7 +3,7 @@ const CACHE_NAME='cavitation-lab-v1.3.0';
 const APP_VERSION='1.3.0';
 const RELEASE_DATE='2026-10-19';
 const CACHE_PROTOCOL=2;
-const RELEASE_NOTES=['Potential-flow interface deformation, directed liquid-tongue precursor, shape magnification and vector flow.'];
+const RELEASE_NOTES=["Добавлена кинематическая модель несферической формы по угловым модам 2-го и 3-го порядка, полученным из потенциальных скоростей воды.","Жидкий язык ориентируется по рассчитанному интегральному потоку соседних пузырьков и отражённых источников стенки; это предвестник микроструи, не CFD расчёт удара.","Новый прибор показывает амплитуду деформации и направление течения для выбранного пузырька.","Переключаемые форма и оптическое увеличение (×1 или ×3) не изменяют физический расчёт; настройки сохраняются.","Визуализация направленных векторов течения и сохранение сценариев версии 1.2."];
 const APP_SHELL=[
  './','./index.html','./styles.css','./app.js','./render.js','./cloud-render.js','./physics.js','./coupling.js','./constructor.js','./surface-flow.js','./surface-render.js','./app.config.json',
  './manifest.webmanifest','./icons/icon.svg',
