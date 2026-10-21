@@ -66,6 +66,19 @@ function stamp(ctx,index,x,y,element='fire',alpha=1,scale=1){
  ctx.restore();
 }
 const styleIndex=q=>Math.max(0,FORGE_SPELL_STYLES.indexOf(q?.style==='echo'||q?.clone?'echo':q?.style));
+// Ballistic pebbles reuse hand-authored Forge rock frames, never a blurred SVG
+// or interpolated image. Their positions/altitude come only from server state.
+export function drawForgeBallistic(ctx,lobs,time=0,reduced=false){
+ if(!isCanvas(ctx))return false;
+ for(const q of (lobs||[]).slice(0,12)){
+  if(![q.x,q.y,q.height,q.progress].every(Number.isFinite))continue;
+  const angle=Math.atan2(q.ty-q.sy,q.tx-q.sx);
+  const frame=forgeProjectileFrame({style:'rock',vx:Math.cos(angle),vy:Math.sin(angle),owner:q.owner},time,reduced);
+  const scale=q.height>24?2:1;
+  stamp(ctx,frame,q.x,q.y-q.height,'stone',1,scale);
+ }
+ return true;
+}
 export function forgeProjectileFrame(q,time=0,reduced=false){
  const i=styleIndex(q),angle=Math.atan2(q?.vy??0,q?.vx??1);
  const sector=((Math.round(angle/(Math.PI/4))%8)+8)%8;
