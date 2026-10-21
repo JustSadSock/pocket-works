@@ -9,6 +9,23 @@ const url = process.env.POCKET_SERVER_URL?.replace(/\/$/, '');
 const token = process.env.POCKET_DEPLOY_TOKEN;
 const publishing = process.argv.includes('--publish');
 if (publishing && (!url || !/^https:\/\//.test(url) && !/^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(url) || !token)) throw new Error('POCKET_SERVER_URL (HTTPS, or local HTTP) and POCKET_DEPLOY_TOKEN are required');
+// Rapier's vendored glue calls new WebAssembly.Instance(wasmModule, imports),
+// which requires a compiled WebAssembly.Module rather than a Uint8Array.
+// Embed the immutable binary in the standalone server module so published
+// bundles never depend on a runner-local .wasm path.
+const embeddedWasm = {
+  name: 'embedded-node-wasm-module',
+  setup(builder) {
+    builder.onLoad({ filter: /\.wasm$/ }, async ({ path: wasmPath }) => {
+      const bytes = await readFile(wasmPath);
+      return {
+        contents: `export default new WebAssembly.Module(Buffer.from(${JSON.stringify(bytes.toString('base64'))}, 'base64'));`,
+        loader: 'js'
+      };
+    });
+  }
+};
+
 let count = 0;
 for (const entry of await readdir(apps, { withFileTypes: true })) {
   if (!entry.isDirectory() || entry.name.startsWith('_')) continue;
@@ -18,7 +35,7 @@ for (const entry of await readdir(apps, { withFileTypes: true })) {
   try { config = JSON.parse(await readFile(path.join(folder, 'module.json'), 'utf8')); }
   catch (error) { if (error.code === 'ENOENT') continue; throw error; }
   if (config.protocolVersion !== 1 || config.gameId !== gameId || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(gameId)) throw new Error(`Invalid module config: ${gameId}`);
-  const output = await build({ entryPoints: [path.join(folder, 'module.ts')], bundle: true, platform: 'node', target: 'node22', format: 'esm', write: false, minify: true, logLevel: 'silent' });
+  const output = await build({ entryPoints: [path.join(folder, 'module.ts')], bundle: true, platform: 'node', target: 'node22', format: 'esm', plugins: [embeddedWasm], write: false, minify: true, logLevel: 'silent' });
   const bundle = output.outputFiles[0].text;
   const sha256 = createHash('sha256').update(bundle).digest('hex');
   console.log(`${gameId}@${sha256}`);
