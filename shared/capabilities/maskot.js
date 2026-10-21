@@ -166,28 +166,26 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
     beret:`<path d="M72 76Q79 40 135 40Q182 40 187 76Q150 93 102 85L75 92Z" fill="#82738e" stroke="#34434a" stroke-width="5"/><path d="M128 41Q134 25 141 34" stroke="#34434a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M92 66Q122 54 160 63" stroke="#b6a1c4" stroke-width="5" fill="none" stroke-linecap="round"/>`,
     flower:`<path d="M183 72Q201 58 204 81" fill="none" stroke="#567f62" stroke-width="5"/><g fill="#f6efe9" stroke="#34434a" stroke-width="2.4"><circle cx="184" cy="60" r="12"/><circle cx="206" cy="61" r="12"/><circle cx="195" cy="47" r="12"/><circle cx="195" cy="72" r="12"/></g><circle cx="195" cy="60" r="9" fill="#e9c36c" stroke="#34434a" stroke-width="2"/>`,
     helmet:`<ellipse cx="128" cy="120" rx="94" ry="100" fill="#cfecf3" fill-opacity=".18" stroke="#6f9da9" stroke-width="7"/><path d="M49 174Q128 200 207 174L213 192Q128 218 42 192Z" fill="#d4eaf0" stroke="#34434a" stroke-width="5"/><ellipse cx="91" cy="71" rx="24" ry="11" fill="#fff" opacity=".4"/><circle cx="66" cy="189" r="5" fill="#e3c371"/><circle cx="190" cy="189" r="5" fill="#e3c371"/>`,
-    bascinet:`<!-- A full-size raised-visor bascinet. Opaque shell and aventail FRAME the face, no tiny hat floating above it. -->
-<!-- Wide steel skull cap: 211px width. -->
-<path d="M28 110Q23 46 78 20Q99 10 128 7Q170 9 195 30Q230 64 227 113
- L201 118Q198 70 171 58Q130 40 87 58Q57 78 54 121Z"
- fill="#839aa3" stroke="#34434a" stroke-width="6.5" stroke-linejoin="round"/>
-<path d="M43 89Q44 51 80 34Q103 20 130 21Q178 24 201 63" fill="none" stroke="#d6e4e2" stroke-width="10" stroke-linecap="round" opacity=".75"/>
-<path d="M125 17Q131 24 129 49" stroke="#576b74" stroke-width="4.5" stroke-linecap="round"/>
-<!-- Raised visor (over forehead) with articulation and seven breathing slots. -->
-<path d="M53 83Q122 54 203 82L204 106Q131 92 51 109Z" fill="#b1c4c6" stroke="#34434a" stroke-width="5.5" stroke-linejoin="round"/>
-<path d="M61 88Q124 69 195 89" fill="none" stroke="#f1f5df" stroke-width="5.5" stroke-linecap="round" opacity=".9"/>
-<g stroke="#5a6d70" stroke-width="3.5" stroke-linecap="round"><path d="M76 98 83 96M95 94 102 93M115 91 122 90M136 90 143 91M156 92 163 93M176 95 183 97"/></g>
-<!-- Solid cheek guards broaden to the animal cheeks; gaps stay between eyes and central muzzle. -->
-<path d="M38 99Q31 139 41 172L58 198 82 191Q69 160 78 130L67 112Z" fill="#8da1a8" stroke="#34434a" stroke-width="5.5" stroke-linejoin="round"/>
-<path d="M218 99Q225 139 215 172L198 198 174 191Q187 160 178 130L189 112Z" fill="#8da1a8" stroke="#34434a" stroke-width="5.5" stroke-linejoin="round"/>
-<!-- Aventail chain rings have a deliberate matte-metal rhythm. -->
-<path d="M44 135 51 143 44 150 51 157 44 164M61 147 68 154 61 162 68 170 61 177M212 135 205 143 212 150 205 157 212 164M195 147 188 154 195 162 188 170 195 177" fill="none" stroke="#d9e4dd" stroke-width="3.3" stroke-linecap="round" opacity=".85"/>
-<path d="M48 119 65 125M208 119 191 125" stroke="#435864" stroke-width="7" stroke-linecap="round"/>
-<circle cx="53" cy="114" r="8" fill="#d9b679" stroke="#34434a" stroke-width="3"/>
-<circle cx="203" cy="114" r="8" fill="#d9b679" stroke="#34434a" stroke-width="3"/>
-<circle cx="53" cy="114" r="2.8" fill="#fff2c0"/><circle cx="203" cy="114" r="2.8" fill="#fff2c0"/>
-<path d="M91 51Q129 29 166 51" fill="none" stroke="#edf3de" stroke-width="4" opacity=".5" stroke-linecap="round"/>
-`,
+    bascinet:`<!-- Bascinet of the guard: compact pointed skull, hinged brow, and light cheek lames; expressive eyes and muzzle stay visible. -->
+<path d="M67 94Q65 61 83 40Q103 20 128 10Q152 21 174 43Q190 64 188 94L177 100Q163 78 128 74Q96 78 78 100Z" fill="#879aa0" stroke="#34434a" stroke-width="4.7" stroke-linejoin="round"/>
+<path d="M86 51Q101 30 126 23Q150 31 168 51" fill="none" stroke="#d9e3db" stroke-width="5.5" stroke-linecap="round" opacity=".85"/>
+<path d="M128 19V71" fill="none" stroke="#4a616b" stroke-width="3.4"/>
+<path d="M72 87Q128 67 184 87L184 103Q128 93 72 103Z" fill="#afbec0" stroke="#34434a" stroke-width="4.3" stroke-linejoin="round"/>
+<path d="M79 87Q128 73 176 87" fill="none" stroke="#eff1e5" stroke-width="3.2" opacity=".8" stroke-linecap="round"/>
+<path d="M72 98Q60 122 66 149L79 159 88 152Q77 132 84 111Z" fill="#768f98" stroke="#34434a" stroke-width="4" stroke-linejoin="round"/>
+<path d="M184 98Q196 122 190 149L177 159 168 152Q179 132 172 111Z" fill="#768f98" stroke="#34434a" stroke-width="4" stroke-linejoin="round"/>
+<path d="M69 116 80 119M70 136 80 139M187 116 176 119M186 136 176 139" stroke="#d4dfd7" stroke-width="2.8" stroke-linecap="round"/>
+<path d="M78 163 88 170M178 163 168 170" stroke="#748b8c" stroke-width="3.5" stroke-linecap="round"/>
+<circle cx="78" cy="103" r="4.5" fill="#d3af76" stroke="#34434a" stroke-width="2"/>
+<circle cx="178" cy="103" r="4.5" fill="#d3af76" stroke="#34434a" stroke-width="2"/>`,
+    'seer-diadem':`<!-- Diadem of insight: slender antique-brass circlet, raised eye-like faceted teal stone -->
+<path d="M76 91Q128 78 181 91" fill="none" stroke="#34434a" stroke-width="11" stroke-linecap="round"/>
+<path d="M77 88Q128 76 180 88" fill="none" stroke="#dbb46e" stroke-width="6.5" stroke-linecap="round"/>
+<path d="M89 87 99 80 107 84M169 87 157 80 149 84" fill="none" stroke="#f3d997" stroke-width="3" stroke-linecap="round"/>
+<path d="M111 76Q119 64 128 59Q137 64 145 76L128 93Z" fill="#335e60" stroke="#d7bc7f" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M118 76 128 66 138 76 128 85Z" fill="#a2d4b1" stroke="#354d55" stroke-width="1.6"/>
+<circle cx="83" cy="90" r="3.5" fill="#f5e5ba"/>
+<circle cx="174" cy="90" r="3.5" fill="#f5e5ba"/>`,
     'stage-pin':`<!-- Moonstage headpiece: lacquered ornament, jade crescent and dramatic silk tassel -->
 <path d="M70 83Q127 67 185 82" fill="none" stroke="#253f4c" stroke-width="13" stroke-linecap="round"/>
 <path d="M73 79Q126 65 181 78" fill="none" stroke="#d8b26f" stroke-width="4" stroke-linecap="round"/>
@@ -209,6 +207,12 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
   };
   const accessories={
     none:'',
+    'spectral-quill':`<!-- Spectral feather floats just above the shoulder, never hiding the animal's face -->
+<path d="M202 222Q238 190 232 141Q212 147 199 169Q187 193 202 222Z" fill="#9ed5c6" opacity=".6" stroke="#497c79" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M203 218Q222 184 230 148" fill="none" stroke="#edf7dc" stroke-width="3.7" stroke-linecap="round"/>
+<path d="M210 199 198 191M216 185 201 179M221 171 208 166M209 204 222 205" fill="none" stroke="#e9f8e9" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
+<path d="M202 222 189 240" fill="none" stroke="#bd9478" stroke-width="3.5" stroke-linecap="round"/>
+<circle cx="192" cy="166" r="3" fill="#d7f3d9"/><circle cx="244" cy="171" r="2.5" fill="#d7f3d9"/><circle cx="239" cy="212" r="2" fill="#d7f3d9"/>`,
     'shoulder-dragon':`<!-- Tiny shoulder dragon: coiled tail, leathery wings, golden horns, jade scales -->
 <path d="M195 232Q225 252 242 234Q253 221 239 210" fill="none" stroke="#2b4651" stroke-width="10" stroke-linecap="round"/>
 <path d="M195 232Q226 246 239 230" fill="none" stroke="#80ae96" stroke-width="6" stroke-linecap="round"/>
@@ -232,8 +236,20 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
     monocle:`<circle cx="164" cy="124" r="24" fill="#e6f7f1" fill-opacity=".12" stroke="#ca9b4d" stroke-width="5"/><circle cx="164" cy="124" r="20" fill="none" stroke="#fff0ba" stroke-width="1.7"/><path d="M182 141Q197 159 178 186Q168 200 173 211" stroke="#cb9d4f" stroke-width="3.5" fill="none" stroke-linecap="round"/><circle cx="173" cy="212" r="4" fill="#d5b070" stroke="#34434a" stroke-width="1.5"/>`,
     stars:`<path d="M75 143 79 152 88 153 81 160 82 169 75 165 67 169 68 160 61 153 71 152ZM183 143 187 152 195 153 189 160 190 169 183 165 175 169 176 160 169 153 179 152Z" fill="#e9c36c" stroke="#34434a" stroke-width="2"/>`
   };
-  // Helmet uses species-specific openings so rabbit ears and frog eye domes remain recognizable.
-  const equippedHat=m.hat==='bascinet'&&m.animal==='frog'?"<!-- Frog-fitted tournament bascinet; leaves raised eye domes visible. -->\n<path d=\"M32 110Q25 73 47 36Q76 8 127 5Q182 8 209 36Q230 76 224 110\n L198 120Q194 90 184 78Q166 55 149 51L128 54L106 51Q85 56 73 79Q62 91 57 120Z\"\n fill=\"#91a5a9\" stroke=\"#34434a\" stroke-width=\"6\" fill-rule=\"evenodd\"/>\n<!-- Helmet has open raised eye ports so amphibian eye silhouette is not swallowed. -->\n<path d=\"M53 78Q59 48 93 43Q117 43 124 67Q128 40 151 43Q188 46 197 78\" fill=\"none\" stroke=\"#354b51\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<path d=\"M64 68Q77 47 101 54M154 54Q180 47 191 69\" fill=\"none\" stroke=\"#edf5e4\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n<path d=\"M119 48Q128 36 137 48L147 102Q128 110 109 102Z\" fill=\"#aabdc0\" stroke=\"#34434a\" stroke-width=\"4.5\"/>\n<path d=\"M115 85H141M117 94H139\" stroke=\"#5b6e72\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M39 103Q30 144 41 177L61 198 82 184Q70 154 74 129L66 106Z\" fill=\"#8ea3aa\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M216 103Q225 144 214 177L194 198 173 184Q185 154 181 129L189 106Z\" fill=\"#8ea3aa\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M44 143 51 150 44 158 51 167M211 143 204 150 211 158 204 167\" stroke=\"#e2e8df\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/>\n<circle cx=\"53\" cy=\"113\" r=\"8\" fill=\"#dbb87b\" stroke=\"#34434a\" stroke-width=\"3\"/>\n<circle cx=\"203\" cy=\"113\" r=\"8\" fill=\"#dbb87b\" stroke=\"#34434a\" stroke-width=\"3\"/>\n":
-    m.hat==='bascinet'&&m.animal==='rabbit'?"<!-- Rabbit-fitted helm: tall ears pass through two visible slotted openings. -->\n<path d=\"M24 118Q21 71 62 40Q87 22 128 20Q177 21 201 46Q237 78 231 118\n L199 117Q197 91 180 75L173 67 167 86Q149 99 128 99Q106 99 89 85L82 67 75 75Q57 91 55 117Z\"\n fill=\"#8fa5ab\" stroke=\"#34434a\" stroke-width=\"6\" stroke-linejoin=\"round\"/>\n<path d=\"M55 67Q82 38 100 45M156 45Q178 36 203 68\" fill=\"none\" stroke=\"#e0eee7\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<path d=\"M70 85Q128 106 186 85L193 107Q126 116 63 108Z\" fill=\"#adc2c4\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M78 96Q127 107 178 96\" stroke=\"#f6f2d9\" stroke-width=\"4.5\" fill=\"none\" stroke-linecap=\"round\"/>\n<path d=\"M38 102Q27 140 42 169L60 193 84 185 69 145 71 119Z\" fill=\"#8c9fa8\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M218 102Q229 140 214 169L196 193 172 185 187 145 185 119Z\" fill=\"#8c9fa8\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M45 140 54 147 46 154 57 162M211 140 202 147 210 154 199 162\" fill=\"none\" stroke=\"#d6e3db\" stroke-width=\"3.5\"/>\n<circle cx=\"63\" cy=\"119\" r=\"7\" fill=\"#eacb8a\" stroke=\"#34434a\" stroke-width=\"3\"/>\n<circle cx=\"193\" cy=\"119\" r=\"7\" fill=\"#eacb8a\" stroke=\"#34434a\" stroke-width=\"3\"/>\n":hats[m.hat];
+  // Frog-fitted tournament bascinet: open eye domes, narrow central ridge.
+  // The rabbit and other species use the fitted steel crown without losing
+  // ears or facial expression.
+  const frogHelm=`<!-- Frog-fitted tournament bascinet with open eye domes -->
+<path d="M112 85 112 37Q117 17 128 12Q140 18 144 37L144 85 134 91 122 91Z" fill="#8c9fa6" stroke="#34434a" stroke-width="4.5" stroke-linejoin="round"/>
+<path d="M128 23 128 80" stroke="#dbe6df" stroke-width="3.5" stroke-linecap="round"/>
+<path d="M61 101Q53 91 54 78L63 59Q70 46 81 46" fill="none" stroke="#819aa2" stroke-width="11" stroke-linecap="round"/>
+<path d="M195 101Q203 91 202 78L193 59Q186 46 175 46" fill="none" stroke="#819aa2" stroke-width="11" stroke-linecap="round"/>
+<path d="M56 104Q49 128 61 152L77 160 85 150 76 133 77 110Z" fill="#80959a" stroke="#34434a" stroke-width="4"/>
+<path d="M200 104Q207 128 195 152L179 160 171 150 180 133 179 110Z" fill="#80959a" stroke="#34434a" stroke-width="4"/>
+<path d="M67 123 76 125M189 123 180 125" stroke="#dbe2d9" stroke-width="3.4"/>
+<circle cx="66" cy="106" r="4.5" fill="#c7a66e" stroke="#34434a" stroke-width="2"/>
+<circle cx="190" cy="106" r="4.5" fill="#c7a66e" stroke="#34434a" stroke-width="2"/>`;
+  const equippedHat=m.hat==='bascinet'&&m.animal==='frog'?frogHelm:
+    m.hat==='bascinet'&&m.animal==='rabbit'?'<!-- Rabbit-fitted helm: tall ears remain visible beside the narrow crown. -->'+hats.bascinet:hats[m.hat];
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="'+s+'" height="'+s+'" class="pws-maskot-svg" aria-hidden="true"><defs><linearGradient id="fur" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#ffdea1"/><stop offset="1" stop-color="#d78b5b"/></linearGradient><linearGradient id="green"><stop stop-color="#a9d77f"/><stop offset="1" stop-color="#5b9f61"/></linearGradient><linearGradient id="nightFur"><stop stop-color="#3b4553"/><stop offset="1" stop-color="#171d27"/></linearGradient><linearGradient id="foxFur"><stop stop-color="#f2a451"/><stop offset="1" stop-color="#c55c35"/></linearGradient><linearGradient id="cloth"><stop stop-color="#709ba0"/><stop offset="1" stop-color="#365c69"/></linearGradient></defs>'+outfits[m.clothes]+paths[m.animal]+faces[m.face]+equippedHat+accessories[m.accessory]+'</svg>';
 }
