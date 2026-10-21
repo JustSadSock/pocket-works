@@ -388,7 +388,7 @@
  box-sizing:border-box!important;flex:1 1 0!important;
  display:grid!important;
  grid-template-columns:repeat(var(--review-columns,4),minmax(0,1fr))!important;
- grid-auto-rows:minmax(min(36dvh,320px),1fr)!important;
+ grid-auto-rows:minmax(max(270px,min(40dvh,360px)),1fr)!important;
  gap:clamp(12px,1.4vw,24px)!important;
  width:100%!important;height:100%!important;min-height:0!important;
  padding:clamp(10px,2vh,24px) clamp(8px,.8vw,15px)!important;
