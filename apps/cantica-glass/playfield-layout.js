@@ -7,7 +7,7 @@ export function fitChapel(width,height,size,entryCol){
   const side=Math.max(21,Math.min(27,w*.056));
   const crown=Math.max(58,Math.min(97,h*.204));
   const foot=Math.max(34,Math.min(48,h*.095));
-  const tile=Math.max(0,Math.min(96,(w-side*2)/size,(h-crown-foot)/size));
+  const tile=Math.max(0,Math.min(120,(w-side*2)/size,(h-crown-foot)/size));
   const gridWidth=size*tile;
   const remaining=Math.max(0,h-crown-foot-gridWidth);
   const boardX=(w-gridWidth)/2;

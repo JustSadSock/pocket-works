@@ -3,6 +3,7 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {LEVELS,LEVEL_COUNT,DIRECTIONS,createBoard,restoreTurns,traceLight,maskOf,neededTurns} from './logic.js';
 import {createManuscript} from './manuscript.js';
 import {fitChapel} from './playfield-layout.js';
+import {hitChapel,dragSunAngle} from './input.js';
 
 installMobileRuntime();
 
@@ -59,7 +60,7 @@ function updateCopy(){
   $('progressText').textContent=state.unlocked+' / 500';
   $('moves').textContent=toneNumber(state.moves);
   $('flames').textContent=light.lit.filter(Boolean).length+' / '+level.exits.length;
-  $('status').textContent=state.solved?'Все реликвии озарены':light.lit.some(Boolean)?'Свет дошёл до алтаря':'Стекло — повернуть · солнце — потянуть';
+  $('status').textContent=state.solved?'Все реликвии озарены':light.lit.some(Boolean)?'Свет дошёл до алтаря':'Поверни стекло, чтобы соединить свет';
   $('soundBtn').textContent=state.sound?'Звук вкл.':'Звук выкл.';
   $('soundBtn').setAttribute('aria-pressed',String(state.sound));
   canvas.setAttribute('aria-label','Витраж '+level.size+' на '+level.size+'. Нажмите на фрагмент для поворота, стрелки и Enter — управление с клавиатуры.');
@@ -71,12 +72,12 @@ function startLevel(index,variant=0){
   state.moves=0;state.hints=0;state.solved=false;state.highlight=-1;state.selected=Math.floor(state.board.length/2);
   measure();updateCopy();save();closeModal();chime(500,'turn');
 }
-function turnTile(index){
+function turnTile(index,direction=1){
   if(state.solved){showVictory();return;}
   if(index<0||index>=state.board.length)return;
   const tile=state.board[index];
-  tile.turns=(tile.turns+1)%4;
-  tile.targetAngle+=Math.PI/2;
+  tile.turns=(tile.turns+4+direction)%4;
+  tile.targetAngle+=Math.PI/2*direction;
   if(reduced.matches)tile.angle=tile.targetAngle;
   state.moves++;state.selected=index;
   state.highlight=-1;state.highlightUntil=0;
@@ -541,48 +542,67 @@ function wake(){
   if(animation)cancelAnimationFrame(animation);
   if(!document.hidden)animation=requestAnimationFrame(render);
 }
+function pointerPosition(event){
+  const rect=canvas.getBoundingClientRect();
+  return {x:event.clientX-rect.left,y:event.clientY-rect.top};
+}
+function inputView(){return {...view,sunAngle:state.sunAngle};}
 function onTouchEnd(event){
   if(!press||press.id!==event.pointerId)return;
-  const initial=press;press=null;state.pressedIndex=-1;
-  try{canvas.releasePointerCapture(event.pointerId);}catch{}
-  if(initial.sun){save();updateCopy();return;}
-  const rect=canvas.getBoundingClientRect();
-  const dx=event.clientX-initial.x,dy=event.clientY-initial.y;
-  if(Math.hypot(dx,dy)>13)return;
-  const x=event.clientX-rect.left,y=event.clientY-rect.top;
-  const col=Math.floor((x-view.boardX)/view.tile),row=Math.floor((y-view.boardY)/view.tile);
-  if(row<0||row>=N()||col<0||col>=N())return;
-  turnTile(row*N()+col);
+  const initial=press;
+  press=null;state.pressedIndex=-1;
+  try{if(canvas.hasPointerCapture(event.pointerId))canvas.releasePointerCapture(event.pointerId);}catch{}
+  if(initial.kind==='sun'){save();updateCopy();return;}
+  if(Math.hypot(event.clientX-initial.x,event.clientY-initial.y)>Math.max(13,Math.min(20,view.tile*.22)))return;
+  const point=pointerPosition(event);
+  const hit=hitChapel(inputView(),point.x,point.y,event.pointerType);
+  // Release must remain on the original piece. A drag must never rotate a neighbour.
+  if(hit?.kind==='tile'&&hit.index===initial.index)turnTile(initial.index);
 }
 canvas.addEventListener('pointerdown',event=>{
-  if(!$('scrim').hidden||event.button!==0)return;
-  const rect=canvas.getBoundingClientRect(),lx=event.clientX-rect.left,ly=event.clientY-rect.top;
-  const sunlightX=view.roseX+Math.sin(state.sunAngle)*view.roseRadius*.19;
-  const sunlightY=view.roseY;
-  const sun=Math.hypot(lx-sunlightX,ly-sunlightY)<Math.max(20,view.roseRadius*.7);
-  const col=Math.floor((lx-view.boardX)/view.tile),row=Math.floor((ly-view.boardY)/view.tile);
-  state.pressedIndex=!sun&&col>=0&&col<N()&&row>=0&&row<N()?row*N()+col:-1;
-  press={id:event.pointerId,x:event.clientX,y:event.clientY,sun,sunAngleAtPress:state.sunAngle};
+  if(!$('scrim').hidden||!$('manuscript').hidden||
+     event.button!==0||event.isPrimary===false||press)return;
+  const point=pointerPosition(event);
+  const hit=hitChapel(inputView(),point.x,point.y,event.pointerType);
+  if(!hit)return;
+  state.pressedIndex=hit.kind==='tile'?hit.index:-1;
+  press={id:event.pointerId,x:event.clientX,y:event.clientY,kind:hit.kind,
+    index:hit.index??-1,sunAngleAtPress:state.sunAngle};
   try{canvas.setPointerCapture(event.pointerId);}catch{}
 });
 canvas.addEventListener('pointermove',event=>{
-  if(!press||!press.sun||press.id!==event.pointerId)return;
-  state.sunAngle=Math.max(-.8,Math.min(.8,(event.clientX-press.x)/105+press.sunAngleAtPress));
-  $('status').textContent='Солнечный луч меняет угол и преломление';
+  if(!press||press.id!==event.pointerId||press.kind!=='sun')return;
+  state.sunAngle=dragSunAngle(press.sunAngleAtPress,event.clientX-press.x,view.gridWidth);
+  $('status').textContent='Солнечная роза меняет направление бликов';
 });
 canvas.addEventListener('pointerup',onTouchEnd);
-canvas.addEventListener('pointercancel',()=>{press=null;state.pressedIndex=-1;});
-canvas.addEventListener('lostpointercapture',()=>{press=null;state.pressedIndex=-1;});
+function cancelPointer(event){
+  if(press&&press.id===event.pointerId){press=null;state.pressedIndex=-1;}
+}
+canvas.addEventListener('pointercancel',cancelPointer);
+canvas.addEventListener('lostpointercapture',cancelPointer);
+canvas.addEventListener('contextmenu',event=>{
+  event.preventDefault();
+  if((event.pointerType&&event.pointerType!=='mouse')||!$('scrim').hidden||!$('manuscript').hidden)return;
+  const point=pointerPosition(event);
+  const hit=hitChapel(inputView(),point.x,point.y,'mouse');
+  if(hit?.kind==='tile')turnTile(hit.index,-1);
+});
 canvas.addEventListener('keydown',event=>{
-  if(event.key==='Enter'||event.key===' '){event.preventDefault();turnTile(state.selected);return;}
-  const arrows={ArrowUp:-N(),ArrowDown:N(),ArrowLeft:-1,ArrowRight:1};
-  if(!(event.key in arrows))return;
+  if(event.key==='Enter'||event.key===' '){
+    event.preventDefault();turnTile(state.selected,event.shiftKey?-1:1);return;
+  }
+  const dir={
+    ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',
+    w:'up',W:'up',s:'down',S:'down',a:'left',A:'left',d:'right',D:'right'
+  }[event.key];
+  if(!dir)return;
   event.preventDefault();
   const row=Math.floor(state.selected/N()),col=state.selected%N();
-  if(event.key==='ArrowUp'&&row>0)state.selected-=N();
-  if(event.key==='ArrowDown'&&row<N()-1)state.selected+=N();
-  if(event.key==='ArrowLeft'&&col>0)state.selected-=1;
-  if(event.key==='ArrowRight'&&col<N()-1)state.selected+=1;
+  if(dir==='up'&&row>0)state.selected-=N();
+  if(dir==='down'&&row<N()-1)state.selected+=N();
+  if(dir==='left'&&col>0)state.selected--;
+  if(dir==='right'&&col<N()-1)state.selected++;
 });
 $('hintBtn').addEventListener('click',hint);
 $('chaptersBtn').addEventListener('click',()=>showChapters());
@@ -606,7 +626,7 @@ const manuscript=createManuscript({
   onPageTurn:pageRustle,
   reduceMotion:()=>reduced.matches
 });
-createWorkshopMode({appName:'CANTICA — Песнь света',version:'3.1.0',cachePrefix:'cantica-glass-',storageNamespace:'pocket-works:cantica-glass',onReset:resetApp});
+createWorkshopMode({appName:'CANTICA — Песнь света',version:'3.2.0',cachePrefix:'cantica-glass-',storageNamespace:'pocket-works:cantica-glass',onReset:resetApp});
 hydrate();
 measure();wake();
 if(state.solved)window.setTimeout(showVictory,120);

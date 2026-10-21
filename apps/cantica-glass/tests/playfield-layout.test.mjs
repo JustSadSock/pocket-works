@@ -45,3 +45,17 @@ test('taller devices increase panel space instead of leaving a misplaced arch',(
    assert.ok(tall.archTipY>=8,'Tall crown clipped');
  }
 });
+
+test('tablets and desktops use available area without clipping architectural geometry',()=>{
+  const viewports=[[600,680],[768,760],[840,640],[1080,680],[1360,900],[1800,1100]];
+  for(const [w,h] of viewports)for(let n=4;n<=7;n++){
+    const g=fitChapel(w,h,n,Math.floor(n/2));
+    assert.ok(g.tile>0&&g.tile<=120);
+    assert.ok(g.boardX>=0&&g.boardY>=0);
+    assert.ok(g.gridBottom<h&&g.sillY<h);
+    assert.ok(g.archLeft-10>=0&&g.archRight+10<=w);
+    assert.ok(g.roseY-g.roseRadius-6>=0);
+    assert.ok(g.relicY+Math.min(16,g.tile*.25)+3<h);
+  }
+  assert.ok(fitChapel(768,860,4,2).tile>96,'Tablet tiles should grow beyond phone cap');
+});
