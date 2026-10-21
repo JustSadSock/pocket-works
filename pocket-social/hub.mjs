@@ -313,8 +313,11 @@ export class PocketSocial {
             maskot={...maskot,accessory:oldMaskot.accessory};
         }
         if(maskot!==null&&!validMaskot(maskot,unlocked))return reply({error:'invalid_profile'},400);
+        // Keep previously earned title strings after their achievement's new wearable reward.
+        const retiredTitles={'Призрачная кисть':'zamazka.ghost-brush','Всевидящий':'zamazka.eagle-eye'};
         if(body.title!==undefined&&(!maskotTitles.has(body.title)||
-           (zamazkaAchievements.some(a=>a.slot==='title'&&a.item===body.title)&&!ownedAchievementItem(body.title,unlocked))))return reply({error:'invalid_profile'},400);
+           (zamazkaAchievements.some(a=>a.slot==='title'&&a.item===body.title)&&!ownedAchievementItem(body.title,unlocked))||
+           (retiredTitles[body.title]&&!unlocked.includes(retiredTitles[body.title]))))return reply({error:'invalid_profile'},400);
         if(background==='gallery'&&!ownedAchievementItem('gallery',unlocked))return reply({error:'invalid_profile'},400);
         if(body.portraitFrame==='worn-gilt'&&!ownedAchievementItem('worn-gilt',unlocked))return reply({error:'invalid_profile'},400);
         if(body.backgroundMode!==undefined&&!backgroundModes.has(body.backgroundMode))return reply({error:'invalid_profile'},400);
