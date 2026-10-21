@@ -91,6 +91,16 @@
         "slug": "trafficity",
         "spatialDifference": "AXIS PALS — тесный игрушечный склад с разделённым управлением осями двух роботов, Trafficity — вытянутая картографическая миниатюра города со связной сетью дорог и мостов.",
         "interactionDifference": "В AXIS PALS кооперативные действия определяют движение по разным осям; в Trafficity два курьера планируют независимые маршруты и соревнуются за общие доставки."
+      },
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "Rivals Field Notes scrolls through analytical chapter tables; Axis Pals dedicates nearly all space to a warehouse grid and two symmetric controls at the bottom.",
+        "interactionDifference": "Rivals Field Notes filters historical hero statistics, while Axis Pals sends simultaneous discrete vertical and horizontal robot moves to a shared puzzle."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "Perekos displays two free-roaming mages on a battlefield; Axis Pals displays two robots constrained to a small fixed warehouse puzzle grid.",
+        "interactionDifference": "Perekos processes continuous aiming, dashes, and spells; Axis Pals constrains two participants to distinct movement axes and steps the shared board one move at a time."
       }
     ]
   },
