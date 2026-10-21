@@ -365,6 +365,7 @@ export function strokeTouchesPoint(stroke,point,aspect=W/H){
 export const MIN_BRUSH_SIZE=.25,MAX_EDITOR_ZOOM=8;
 // Upper bounds match multipart transport and authoritative server validation.
 export const MAX_STROKES=768,MAX_STROKE_POINTS=96,MAX_TOTAL_POINTS=24000;
+export const isTabletPalmContact=(pointerType,penId)=>pointerType==='touch'&&penId!==null;
 
 // Reject truncated or corrupt autosaves BEFORE they reach Canvas2D and render.
 // Both tab-local restoration and IndexedDB migration use the same bounds.
@@ -782,7 +783,7 @@ export class Editor{
     this.down=e=>{
       // Tablet palm rejection: an incidental hand contact must never convert
       // an active stylus stroke into a two-finger pinch, silently cancelling ink.
-      if(e.pointerType==='touch'&&this.activePenPointer!==null)return;
+      if(isTabletPalmContact(e.pointerType,this.activePenPointer))return;
       if(e.pointerType==='pen'){
         if(this.activePenPointer!==null&&this.activePenPointer!==e.pointerId)
           this.up({pointerId:this.activePenPointer,pointerType:'pen',type:'pointercancel'});
