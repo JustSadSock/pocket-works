@@ -1,4 +1,4 @@
-import {ownedAchievementItem,zamazkaAchievements} from './zamazka-achievements.js';
+import {zamazkaAchievements} from './zamazka-achievements.js';
 // Pocket Works MASKOT — original, hand-drawn, composable SVG geometry.
 // Asset IDs (not arbitrary markup) are the only user-controlled input.
 // Public profile renders are already server-validated; these IDs are visual decoding rights, not ownership grants.
@@ -13,7 +13,8 @@ export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:
 const one=(rows,id,fallback)=>rows.some(x=>x[0]===id)?id:fallback;
 export function safeMascot(input,unlocks=[]){
   const u=Array.isArray(unlocks)?unlocks:[];
-  const valid=(item,category,standard)=>typeof item==='string'&&(standard.some(x=>x[0]===item)||ownedAchievementItem(item,u)||
+  const valid=(item,category,standard)=>typeof item==='string'&&(standard.some(x=>x[0]===item)||
+    zamazkaAchievements.some(a=>a.slot===category&&a.item===item&&u.includes(a.id))||
     Object.entries(mascotSecret).some(([key,x])=>u.includes(key)&&x[category]===item));
   const src=input&&typeof input==='object'?input:{};
   return {
