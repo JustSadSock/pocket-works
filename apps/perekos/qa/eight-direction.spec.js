@@ -78,7 +78,12 @@ test('v0.14: physical projectile rays remain accurate after sprite direction cha
    const aim={x:200+Math.cos(theta)*122,y:310+Math.sin(theta)*122};
    tick(s,{x:0,y:0,attack:true,aim},STEP,empty);
    const shot=s.shots.find(q=>q.owner===0);
-   const heading=Math.atan2(shot.vy,shot.vx);
+   // Not every mage throws a projectile. Windups, flame streams and
+   // non-projectile signatures still preserve the cursor-exact heading.
+   const form=s.streams.find(q=>q.owner===0)||s.beams.find(q=>q.owner===0)
+    ||s.waves.find(q=>q.owner===0)||s.actors[0].windup;
+   const heading=shot?Math.atan2(shot.vy,shot.vx):form?.angle;
+   if(!Number.isFinite(heading))throw Error(mage.id+' has no observable signature aim');
    const view=faceView(theta),r=weaponRotation(theta,view.shoulderScale,.15);
    const mirror=Math.cos(theta)<-.12?-1:1;
    const artAngle=Math.atan2(-Math.cos(r+.15),
