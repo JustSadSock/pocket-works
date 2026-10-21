@@ -39,7 +39,7 @@ assert.ok(again.events.some(e=>e.type==='vote_saved'&&e.to==='b'),'retry receive
 assert.equal(Object.keys(state.votes.host).length,1,'retry never counts twice');
 const final=send(c,ballot);
 assert.ok(final.events.some(e=>e.type==='vote_saved'&&e.to==='c'&&e.payload.turn===0));
-assert.equal(state.phase,'reveal');
+assert.equal(state.phase,'verdict','voters see the tally before the answer');
 const old=game.createRoom({player:host}).state;
 game.onJoin({state:old,player:b,players:[host,b]});
 game.onMessage({state:old,player:host,players:[host,b],payload:{type:'start',rounds:1}});
@@ -83,3 +83,6 @@ import './timed-scoring.mjs';
 
 // Convex time awards, audited at seven exact clock fractions per outcome.
 import './quadratic-rewards.mjs';
+
+// Regression: no FIFO painting loss and server-shown post-vote tally.
+import './lobby-cap-verdict.mjs';

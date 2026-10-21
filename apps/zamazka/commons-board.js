@@ -18,7 +18,7 @@ export function paintBoardDelta(canvas,packet){
 export function createCommonsBoard(host,{send,onError,canClear,snapshot}){
  const canvas=host.querySelector('canvas'),palette=host.querySelector('.commons-palette'),size=host.querySelector('#commonsSize');
  let revision=0,pointer=null,active=null,last=null,pending=[],color=COMMONS_COLORS[0],weight=9,timer=null;
- let strokeNumber=0,seq=0,disposed=false;
+ let strokeNumber=0,seq=0,disposed=false,full=false;
  const point=event=>{
    const rect=canvas.getBoundingClientRect();
    // Map the actual canvas bitmap, not a letterboxed object-fit frame.
@@ -33,7 +33,7 @@ export function createCommonsBoard(host,{send,onError,canClear,snapshot}){
  const clearTimer=()=>{if(timer!==null){clearTimeout(timer);timer=null}};
  function flush(){
    clearTimer();
-   if(!active||!pending.length)return;
+   if(!active||!pending.length||full)return;
    const chunk=pending.splice(0,18);
    const p=last?[last,...chunk]:chunk;
    const packet={type:'board_delta',k:active,q:seq++,c:color,s:weight,p,revision};
@@ -44,7 +44,7 @@ export function createCommonsBoard(host,{send,onError,canClear,snapshot}){
  const schedule=()=>{if(timer===null)timer=setTimeout(flush,42)};
  function reset(board){
    if(!board||!Number.isInteger(board.revision)||!Array.isArray(board.segments))return;
-   revision=board.revision;pointer=null;active=null;last=null;pending=[];clearTimer();
+   revision=board.revision;pointer=null;active=null;last=null;pending=[];full=board.full===true||board.segments.length>=1200;clearTimer();
    canvas.getContext('2d')?.clearRect(0,0,960,600);
    for(const packet of board.segments)paintBoardDelta(canvas,{...packet,revision});
  }
@@ -54,6 +54,7 @@ export function createCommonsBoard(host,{send,onError,canClear,snapshot}){
  }
  function down(event){
    if(disposed||pointer!==null||event.button>0)return;
+   if(full){onError('Общий холст заполнен. Старые мазки сохранены; ведущий может очистить холст.');return;}
    event.preventDefault();pointer=event.pointerId;try{canvas.setPointerCapture(pointer)}catch{}
    active='s'+Date.now().toString(36).slice(-7)+(strokeNumber++).toString(36);
    seq=0;last=null;pending=[];const pt=point(event);pending.push(pt);
@@ -87,5 +88,5 @@ export function createCommonsBoard(host,{send,onError,canClear,snapshot}){
  size.addEventListener('input',()=>{weight=Number(size.value)});
  if(!canClear)host.querySelector('[data-action="board-clear"]')?.remove();
  reset(snapshot);
- return {accept,reset,get revision(){return revision},dispose(){disposed=true;clearTimer();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);canvas.removeEventListener('lostpointercapture',lost);window.removeEventListener('pointerup',release);window.removeEventListener('pointercancel',release)}};
+ return {accept,reset,setFull(value=true){full=Boolean(value);if(full){pending=[];clearTimer();}},get revision(){return revision},dispose(){disposed=true;clearTimer();canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);canvas.removeEventListener('lostpointercapture',lost);window.removeEventListener('pointerup',release);window.removeEventListener('pointercancel',release)}};
 }

@@ -40,6 +40,8 @@ for(const seconds of [60,90,120,160,240,300,600]){
  assert.equal(state.phase,'voting');
  for(let i=0;i<players.length;i++){
   current=state.deadline+1;message(host,{type:'pulse'});
+  assert.equal(state.phase,'verdict');
+  current=state.deadline+1;message(host,{type:'pulse'});
   assert.equal(state.phase,'reveal');
   current=state.deadline+1;message(host,{type:'pulse'});
  }
@@ -83,6 +85,7 @@ assert.equal(U.phase,'voting','last confirmed submission advances immediately');
 for(let i=0;i<players.length;i++){
  current=U.deadline+1;M(host,{type:'pulse'});
  current=U.deadline+1;M(host,{type:'pulse'});
+  current=U.deadline+1;M(host,{type:'pulse'});
 }
 assert.equal(U.phase,'round-review');
 M(host,{type:'continue'});

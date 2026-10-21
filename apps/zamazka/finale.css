@@ -444,3 +444,19 @@
  #screen>.verdict-phase .finale-ballot-card{
   flex-basis:clamp(245px,82vw,355px)!important;width:clamp(245px,82vw,355px)!important}
 }
+
+/* Show the winner's complete Pocket ID only when it fits the presentation. */
+.zam-full-player-profile{width:min(100%,520px);margin:0 auto;max-height:min(68dvh,570px);overflow:auto}
+.zam-full-player-profile .zam-pocket-card{width:100%;box-sizing:border-box}
+.finale-winner-profile{display:none}
+@media(min-width:1100px) and (min-height:800px){
+ #screen>.finale-results .finale-laureate.has-pocket-card .finale-laureate-person{display:none}
+ #screen>.finale-results .finale-winner-profile:not([hidden]){display:block;max-width:min(100%,340px);width:100%;flex:0 1 auto;min-height:0;margin:6px auto}
+ #screen>.finale-results .finale-winner-profile .pws-card{box-sizing:border-box;width:100%;min-height:0;padding:9px 13px;border-width:2px;box-shadow:none}
+ #screen>.finale-results .finale-winner-profile .pws-portrait{width:92px;aspect-ratio:1;border-width:5px;padding:4px}
+ #screen>.finale-results .finale-winner-profile .pws-avatar{width:100%;height:100%}
+ #screen>.finale-results .finale-winner-profile .pws-card__name{font-size:clamp(17px,1.6vw,24px);margin-top:5px}
+ #screen>.finale-results .finale-winner-profile .pws-card__id{font-size:8px}
+ #screen>.finale-results .finale-winner-profile .pws-card__foot{font-size:9px}
+ #screen>.finale-results .finale-winner-profile .pws-card__title{margin-top:1px}
+}

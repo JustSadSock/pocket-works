@@ -26,6 +26,8 @@ function completeRound(){
  for(let i=0;i<2;i++){
   const author=state.participants[state.turn],voter=author.id===host.id?guest:host;
   send(voter,{type:'vote',chips:[3,0,0,0,0]});
+  assert.equal(state.phase,'verdict','vote distribution must precede reveal');
+  clock=state.deadline+1;send(host,{type:'pulse'});
   assert.equal(state.phase,'reveal');
   clock=state.deadline+1;send(host,{type:'pulse'});
  }

@@ -37,7 +37,8 @@ function finishRound(match){
  while(state.phase!=='round-review'){
   if(state.phase==='voting'){
    now=state.deadline+1;send(players[0],{type:'pulse'});
-  }else if(state.phase==='reveal')nextAfterReveal(match);
+  }else if(state.phase==='verdict'){now=state.deadline+1;send(players[0],{type:'pulse'});}
+  else if(state.phase==='reveal')nextAfterReveal(match);
   else throw Error('Unexpected phase '+state.phase);
  }
 }
@@ -74,7 +75,7 @@ function finishRound(match){
  assert.deepEqual(Array.from(state.votes[author.id][players[1].id]),pick(truth,2));
  checks++;
  now=state.deadline+1;send(players[0],{type:'pulse'});
- assert.equal(state.phase,'reveal','unconfirmed two-coin draft counted at the deadline');
+ assert.equal(state.phase,'verdict','unconfirmed two-coin draft counted at the deadline and tally shown');
  assert.deepEqual(Array.from(state.votes[author.id][players[2].id]),different(truth,2));
  checks++;
  const view=send(players[1],{type:'sync'}).events[0].payload;

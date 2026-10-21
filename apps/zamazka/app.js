@@ -2,6 +2,7 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketPlayerBadge,pocketAvatarMarkup,pocketIdProfileUrl} from '../../shared/capabilities/identity.js';
 import {zamazkaAchievements} from '../../shared/capabilities/zamazka-achievements.js';
+import {mascotSvg,mascotPublicUnlocks} from '../../shared/capabilities/maskot.js';
 import {inviteCode,parseRoomInput} from './room-code.js';
 import {tabGuestName,tabStorage,rememberTabName,prepareTabGuest,markTabGuest,clearTabGuest} from './tab-guests.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
@@ -31,7 +32,7 @@ import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.20',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.24',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -266,7 +267,7 @@ function change(html,which){
  museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;exhibitFitter?.dispose();exhibitFitter=null;stopEditor();
  // Keep the complete, already painted ballot visible until the reveal's
  // heavy restoration canvases finish rendering. Never flash an empty gallery.
- const oldBallot=page==='vote'&&which==='reveal'?screen.firstElementChild:null;
+ const oldBallot=page==='vote'&&which==='verdict'?screen.firstElementChild:null;
  if(voteTransitionLayer)finishVoteTransition();
  if(oldBallot)oldBallot.remove();
  const previousRoom=screen.dataset.museumRoom;
@@ -726,6 +727,16 @@ function roundReview(){
 function results(){
  if(!view?.participants||!view?.scores)return;
  change(finaleResultsMarkup({view,escapeText:esc,memberSeal,pocketPlayerBadge,hostId:me?.id}),'results');
+ const champion=[...view.participants].sort((a,b)=>((view.scores?.[b.id]?.mask||0)+(view.scores?.[b.id]?.eye||0))-((view.scores?.[a.id]?.mask||0)+(view.scores?.[a.id]?.eye||0)))[0];
+ const championCard=screen.querySelector('#finaleWinnerProfile');
+ if(!IS_DEBUG_FRAME&&champion?.verified&&champion.accountId&&championCard)
+   void loadPublicPlayerProfile(champion.accountId).then(profile=>{
+     if(!profile||!championCard.isConnected)return;
+     championCard.innerHTML=pocketCardMarkup(profile,champion.name);
+     championCard.hidden=false;
+     championCard.closest('.finale-laureate')?.classList.add('has-pocket-card');
+   }).catch(()=>{});
+
  const painting=screen.querySelector('#winnerRestoration');
  if(painting){
   const total=p=>(Number(view.scores?.[p.id]?.mask)||0)+(Number(view.scores?.[p.id]?.eye)||0);
@@ -1008,6 +1019,10 @@ async function connect(mode){
      }
      else if(event?.type==='board_delta'){if(page==='lobby'&&event.payload?.u!==me?.id)commonsBoard?.accept(event.payload)}
      else if(event?.type==='board_reset'){if(page==='lobby')commonsBoard?.reset(event.payload)}
+      else if(event?.type==='board_full'){
+        if(page==='lobby'){commonsBoard?.setFull();boardResync=true;net?.sendGame({type:'sync'})}
+        notify('Общий холст заполнен. Старые мазки сохранены; ведущий может очистить холст.');
+      }
      else if(event?.type==='notice'){lastDraftSentAt=0;lastDraftAckRevision='';notify(String(event.payload||'Не удалось выполнить действие'))}
    });
    client.on('presence',data=>{
@@ -1232,26 +1247,44 @@ function openPocketProfile(){
  if(window.PocketSocial?.open)void window.PocketSocial.open();
  else notify('Профиль Pocket ID пока загружается. Попробуй ещё раз.');
 }
-async function showPlayerProfile(accountId){
- const player=view?.participants?.find(p=>p.accountId===accountId&&p.verified);
- if(!player)return;
- modal('Профиль игрока','<div class="public-player-card" id="publicPlayerCard" role="status">Загружаем профиль…</div>',[['Закрыть',closeDialog,'primary']]);
- const card=dialog.querySelector('#publicPlayerCard');
- try{
-  const reply=await fetch('/pocket-social/user?id='+encodeURIComponent(accountId),{
-   credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(6000)});
-  if(!reply.ok)throw Error('profile_unavailable');
-  const profile=(await reply.json()).profile;
+// Compose the native Pocket Social card with validated public profile data.
+function pocketCardMarkup(profile,fallbackName='Игрок'){
+  const bg=['forest','clay','lilac','ocean','night','paper','gallery'].includes(profile.background)?profile.background:'forest';
+  const frame=['clean','double','corners','stamp'].includes(profile.frame)?profile.frame:'clean';
+  const portrait=['none','wood','gilt','worn-gilt'].includes(profile.portraitFrame)?profile.portraitFrame:'wood';
+  const painted=profile.backgroundMode==='drawing'&&typeof profile.artwork==='string'&&
+    /^data:image\/(?:png|webp);base64,[a-zA-Z0-9+/]+={0,2}$/.test(profile.artwork);
+  const avatar=profile.maskot?mascotSvg(profile.maskot,{unlocks:mascotPublicUnlocks}):
+    pocketAvatarMarkup(profile.avatar,{accountId:profile.id});
+  return '<article class="pws-card zam-pocket-card" data-background="'+(painted?'drawing':bg)+'" data-frame="'+frame+'">'+
+    (painted?'<img class="pws-card__paint" alt="" src="'+esc(profile.artwork)+'">':'')+
+    '<div class="pws-card__top"><div class="pws-portrait" data-portrait-frame="'+portrait+'"><div class="pws-avatar">'+avatar+'</div></div>'+
+    '<div class="pws-card__id">POCKET / ID<br>PLAYER CARD</div></div>'+
+    '<div class="pws-card__name">'+esc(profile.nickname||fallbackName)+'</div>'+
+    (profile.title?'<div class="pws-card__title">'+esc(profile.title)+'</div>':'')+
+    '<div class="pws-card__foot"><span>'+esc(profile.favoriteGame?'Любимая игра: '+profile.favoriteGame:'Участник PocketWorks')+'</span><span>✓ Pocket ID</span></div></article>';
+}
+async function loadPublicPlayerProfile(accountId){
+  const response=await fetch('/pocket-social/user?id='+encodeURIComponent(accountId),{
+    credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(6000)});
+  if(!response.ok)throw Error('profile_unavailable');
+  const profile=(await response.json()).profile;
   if(profile?.id!==accountId)throw Error('profile_unavailable');
-  if(!card?.isConnected)return;
-  card.removeAttribute('role');
-  card.innerHTML=pocketAvatarMarkup(profile.avatar,{accountId})+
-   '<div class="public-player-copy"><strong>'+esc(profile.nickname||player.name)+'</strong>'+
-   '<span>Подтверждённый Pocket ID</span>'+
-   (profile.title?'<small>'+esc(profile.title)+'</small>':'')+'</div>';
- }catch{
-  if(card?.isConnected)card.textContent='Не удалось загрузить профиль. Проверь соединение.';
- }
+  return profile;
+}
+async function showPlayerProfile(accountId){
+  const player=view?.participants?.find(p=>p.accountId===accountId&&p.verified);
+  if(!player)return;
+  modal('Профиль игрока','<div class="zam-full-player-profile" id="publicPlayerCard" role="status">Загружаем профиль…</div>',[['Закрыть',closeDialog,'primary']]);
+  const card=dialog.querySelector('#publicPlayerCard');
+  try{
+    const profile=await loadPublicPlayerProfile(accountId);
+    if(!card?.isConnected)return;
+    card.removeAttribute('role');
+    card.innerHTML=pocketCardMarkup(profile,player.name);
+  }catch{
+    if(card?.isConnected)card.textContent='Не удалось загрузить профиль. Проверь соединение.';
+  }
 }
 document.querySelector('#profileBtn')?.addEventListener('click',openPocketProfile);
 document.querySelector('#settingsBtn').addEventListener('click',settings);
