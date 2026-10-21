@@ -10,6 +10,15 @@ const TRANSLATIONS = {
         localCoop: "Local Co-op",
         online: "Online",
         playSolo: "Start a new solo game",
+        heroLine1: "Room", heroLine2: "for every", heroLine3: "block.",
+        homeDescription: "One shared stack for every player. Build lines together or go at your own pace.",
+        localDescription: "Pick players and controls. Every piece lands in the same shared well.",
+        onlineDescription: "Create a room and share the link. Play on one shared board.",
+        roomCode: "Room code",joinRoom:"Join",orCreate:"OR CREATE YOUR OWN",
+        inviteCode:"INVITE CODE",invite:"Share invite",linesLabel:"Lines",
+        sharedBoard:"SHARED WELL",moveHint:"MOVE",actionsHint:"ACTIONS",
+        gestureHint:"On the board: tap to rotate · swipe to move",
+        pauseDescription:"Your pieces stay right where you left them.",
         resumeSoloGame: "Continue saved game",
         recoveryOffline: "Connection lost. Reconnecting…",
         recoveryRestoring: "Restoring the online match…",
@@ -127,6 +136,15 @@ const TRANSLATIONS = {
         localCoop: "Локальный кооп",
         online: "Онлайн",
         playSolo: "Начать новую партию",
+        heroLine1: "Место", heroLine2: "каждому", heroLine3: "блоку.",
+        homeDescription: "Общее поле для всех. Собирайте линии вместе или играйте в своём темпе.",
+        localDescription: "Выберите игроков и клавиши. Все фигуры складываются в одно поле.",
+        onlineDescription: "Создайте комнату и отправьте ссылку. Все фигуры окажутся на одной доске.",
+        roomCode: "Код комнаты",joinRoom:"Войти",orCreate:"ИЛИ СОЗДАЙТЕ СВОЮ",
+        inviteCode:"КОД ПРИГЛАШЕНИЯ",invite:"Поделиться",linesLabel:"Линии",
+        sharedBoard:"ОБЩЕЕ ПОЛЕ",moveHint:"ДВИЖЕНИЕ",actionsHint:"ДЕЙСТВИЯ",
+        gestureHint:"На поле: касание — поворот, свайп — движение",
+        pauseDescription:"Фигуры останутся на своих местах.",
         resumeSoloGame: "Продолжить партию",
         recoveryOffline: "Нет подключения. Переподключаемся…",
         recoveryRestoring: "Восстанавливаем сетевую партию…",
@@ -238,7 +256,7 @@ const TRANSLATIONS = {
     }
 };
 
-let currentLanguage = 'en';
+let currentLanguage = 'ru';
 
 function t(key) {
     return TRANSLATIONS[currentLanguage]?.[key] || TRANSLATIONS.en[key] || key;
@@ -249,6 +267,8 @@ function setLanguage(lang) {
     currentLanguage = lang;
     localStorage.setItem('pocket-works:blockies:language', lang);
     updateUILanguage();
+    window.uiManager?.refreshSoloResume?.();
+    window.uiManager?.refreshTouchStatus?.();
 }
 
 function updateUILanguage() {
@@ -982,7 +1002,7 @@ class UIManager {
         this.networkPlayers = {}; // Map of network player IDs to local indices
         this.localPlayerIndex = -1; // Local player index in online mode
 
-        this.moveRepeatInterval = 90;
+        this.moveRepeatInterval = 105;
         this.softDropInitialDelay = 0;
         this.softDropRepeatInterval = 55;
 
@@ -1111,7 +1131,10 @@ class UIManager {
         }
         
         // Mode selection - new menu structure
-        document.getElementById('mode-single').addEventListener('click', () => this.startGame(1));
+        document.getElementById('mode-single').addEventListener('click', () => {
+            this.isOnlineMode = false;
+            this.startGame(1);
+        });
         document.getElementById('resume-solo')?.addEventListener('click', () => this.resumeSolo());
         document.getElementById('mode-local').addEventListener('click', () => this.showCoopSetup());
         document.getElementById('mode-online').addEventListener('click', () => this.showOnlineLobby());
@@ -1211,12 +1234,23 @@ class UIManager {
                 this.releaseContinuousAction(pressed.playerId, pressed.action);
             }
             this.touchPresses.clear();
+            this.touchControls.querySelectorAll('.touch-btn').forEach(btn=>btn.classList.remove('is-pressed'));
         };
         this.touchControls.querySelectorAll('[data-action]').forEach(button => {
             const action = button.dataset.action;
+            const lightPress = event => {
+                button.classList.add('is-pressed');
+                if(event.pointerId != null && button.setPointerCapture){
+                    try{button.setPointerCapture(event.pointerId);}catch{}
+                }
+            };
+            const lightRelease = () => button.classList.remove('is-pressed');
             if (window.PointerEvent) {
-                button.addEventListener('pointerdown', event => press(button, action, event));
-                for (const type of ['pointerup','pointercancel','lostpointercapture']) button.addEventListener(type, release);
+                button.addEventListener('pointerdown', event => {
+                    lightPress(event);
+                    press(button, action, event);
+                });
+                for (const type of ['pointerup','pointercancel','lostpointercapture']) button.addEventListener(type, event => { release(event); lightRelease(); });
             } else {
                 button.addEventListener('touchstart', event => press(button, action, event), {passive:false});
                 button.addEventListener('touchend', release);
@@ -1237,9 +1271,9 @@ class UIManager {
 
         const activePlayer = this.getTouchPlayer();
         if (activePlayer && !gameState.isGameOver) {
-            this.touchStatus.textContent = currentLanguage === 'ru' 
-                ? `Сенсорное управление: Игрок ${activePlayer.id + 1}`
-                : `Touch controls: Player ${activePlayer.id + 1}`;
+            this.touchStatus.textContent = currentLanguage === 'ru'
+                ? `Управляете фигурой · Игрок ${activePlayer.id + 1}`
+                : `Controlling piece · Player ${activePlayer.id + 1}`;
         } else if (gameState.players.length && gameState.players.every(player => player.gameOver)) {
             this.touchStatus.textContent = currentLanguage === 'ru'
                 ? 'Все игроки завершили игру'
@@ -1443,6 +1477,10 @@ class UIManager {
     }
 
     showModal(modalName) {
+        if (modalName === 'pause') {
+            const restart=document.getElementById('restart-btn');
+            if(restart)restart.hidden=this.isOnlineMode;
+        }
         this.modals[modalName].classList.add('active');
     }
 
@@ -1455,10 +1493,14 @@ class UIManager {
         if (!this.isOnlineMode && numPlayers === 1) clearSolo();
         setRandomSeed(seed);
         gameState.numPlayers = numPlayers;
+        this.screens.gameScreen.classList.toggle('wide-well',numPlayers>1);
         gameState.isPaused = false;
         gameState.isGameOver = false;
+        this.boardGesture=null;
         gameState.players = [];
         gameState.boardWidth = computeBoardWidth(numPlayers);
+        const stageSize=document.getElementById('stage-mode');
+        if(stageSize)stageSize.textContent=gameState.boardWidth+' × '+BOARD_HEIGHT;
         gameState.board = createEmptyBoard(gameState.boardWidth, BOARD_HEIGHT);
         gameState.lastTime = 0;
         this.touchPlayerIndex = 0;
@@ -1466,7 +1508,7 @@ class UIManager {
         resetSharedStats();
 
         const container = document.getElementById('game-container');
-        container.innerHTML = '';
+        container.querySelector('#shared-board')?.remove();
         
         const nextPiecesPreview = document.getElementById('next-pieces-preview');
         if (nextPiecesPreview) {
@@ -1494,8 +1536,9 @@ class UIManager {
         canvas.style.width = '100%';
         canvas.style.height = 'auto';
         canvas.style.maxWidth = `${canvas.width}px`;
-        canvas.style.maxHeight = `${canvas.height}px`;
+        canvas.style.maxHeight = 'none';
         boardWrapper.style.setProperty('--board-max-width', `${canvas.width}px`);
+        this.installBoardGestures(canvas);
         boardWrapper.appendChild(canvas);
 
         container.appendChild(boardWrapper);
@@ -1556,7 +1599,11 @@ class UIManager {
         nextCanvas.width = PREVIEW_SIZE * BLOCK_SIZE;
         nextCanvas.height = PREVIEW_SIZE * BLOCK_SIZE;
         item.appendChild(nextCanvas);
-        
+        const label=document.createElement('span');
+        label.className='next-piece-label';
+        label.textContent=gameState.numPlayers===1?(currentLanguage==='ru'?'Далее':'Next'):`P${player.id+1}`;
+        item.prepend(label);
+        if(this.isOnlineMode&&player.id===this.localPlayerIndex)item.classList.add('is-mine');
         container.appendChild(item);
     }
 
@@ -1572,7 +1619,7 @@ class UIManager {
         header.style.setProperty('--player-color', player.color);
         header.innerHTML = `
             <span class="preview-badge" style="background:${player.color}"></span>
-            Player ${player.id + 1}
+            ${t('player')} ${player.id + 1}
         `;
 
         const status = document.createElement('div');
@@ -1632,111 +1679,74 @@ class UIManager {
         requestAnimationFrame((time) => this.gameLoop(time, run));
     }
 
+    paintBlock(ctx,x,y,color,active=false) {
+        const left=x*BLOCK_SIZE,top=y*BLOCK_SIZE;
+        ctx.fillStyle=color;
+        ctx.fillRect(left+1,top+1,BLOCK_SIZE-2,BLOCK_SIZE-2);
+        ctx.fillStyle=active?'#ffffff63':'#ffffff34';
+        ctx.fillRect(left+3,top+3,BLOCK_SIZE-6,3);
+        ctx.strokeStyle=active?'#ffffff8a':'#051e1c36';
+        ctx.lineWidth=1;
+        ctx.strokeRect(left+1.5,top+1.5,BLOCK_SIZE-3,BLOCK_SIZE-3);
+    }
+
     drawBoard() {
-        const canvas = document.getElementById('game-canvas');
-        if (!canvas) return;
+        const canvas=document.getElementById('game-canvas');
+        if(!canvas)return;
+        const ctx=canvas.getContext('2d');
+        const boardWidth=getBoardWidth();
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle='#142629';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.strokeStyle='#ffffff0d';
+        ctx.lineWidth=1;
+        ctx.beginPath();
+        for(let x=1;x<boardWidth;x++){
+            ctx.moveTo(x*BLOCK_SIZE+.5,0);
+            ctx.lineTo(x*BLOCK_SIZE+.5,canvas.height);
+        }
+        for(let y=1;y<BOARD_HEIGHT;y++){
+            ctx.moveTo(0,y*BLOCK_SIZE+.5);
+            ctx.lineTo(canvas.width,y*BLOCK_SIZE+.5);
+        }
+        ctx.stroke();
 
-        const ctx = canvas.getContext('2d');
-        const boardWidth = getBoardWidth();
-        
-        // Dark background with subtle grid
-        ctx.fillStyle = '#0a0515';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Draw locked blocks with retro styling
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
-            for (let x = 0; x < boardWidth; x++) {
-                const occupant = gameState.board[y][x];
-                if (occupant) {
-                    const player = gameState.players[occupant - 1];
-                    const color = player ? player.color : '#333';
-                    
-                    // Main block with gradient
-                    const gradient = ctx.createLinearGradient(
-                        x * BLOCK_SIZE, y * BLOCK_SIZE,
-                        x * BLOCK_SIZE, (y + 1) * BLOCK_SIZE
-                    );
-                    gradient.addColorStop(0, color);
-                    gradient.addColorStop(1, this.darkenColor(color, 0.3));
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-
-                    // Highlight
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                    ctx.fillRect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 6, 3);
-                    
-                    // Border
-                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-                }
+        for(let y=0;y<BOARD_HEIGHT;y++){
+            for(let x=0;x<boardWidth;x++){
+                const occupant=gameState.board[y]?.[x];
+                if(!occupant)continue;
+                const player=gameState.players[occupant-1];
+                this.paintBlock(ctx,x,y,player?.color||'#92a5a1');
             }
         }
-
-        // Landing projection uses the same collision test as the server-side drop.
-        // It is presentation-only; no input or board cells are mutated.
-        gameState.players.forEach(player => {
-            if (!player.currentPiece || player.gameOver) return;
-            let ghostY = player.position.y;
-            while (ghostY < BOARD_HEIGHT && !player.checkCollision(
-                player.currentPiece, {x:player.position.x,y:ghostY+1}
-            ).collides) ghostY++;
-            if (ghostY <= player.position.y) return;
+        // Each active piece gets a matching landing outline.
+        for(const player of gameState.players){
+            if(!player.currentPiece||player.gameOver)continue;
+            let landingY=player.position.y;
+            while(landingY<BOARD_HEIGHT&&!player.checkCollision(
+                player.currentPiece,{x:player.position.x,y:landingY+1}
+            ).collides)landingY++;
+            if(landingY<=player.position.y)continue;
             ctx.save();
-            ctx.globalAlpha = 0.35;
-            ctx.strokeStyle = player.color;
-            ctx.lineWidth = 2;
-            for (let y=0; y<player.currentPiece.length; y++) {
-                for (let x=0; x<player.currentPiece[y].length; x++) {
-                    if (!player.currentPiece[y][x]) continue;
-                    const px=(player.position.x+x)*BLOCK_SIZE;
-                    const py=(ghostY+y)*BLOCK_SIZE;
-                    ctx.strokeRect(px+3,py+3,BLOCK_SIZE-6,BLOCK_SIZE-6);
-                }
+            ctx.strokeStyle=player.color;
+            ctx.globalAlpha=.52;ctx.lineWidth=1.7;
+            for(let y=0;y<player.currentPiece.length;y++)for(let x=0;x<player.currentPiece[y].length;x++){
+                if(!player.currentPiece[y][x])continue;
+                const left=(player.position.x+x)*BLOCK_SIZE;
+                const top=(landingY+y)*BLOCK_SIZE;
+                ctx.strokeRect(left+4,top+4,BLOCK_SIZE-8,BLOCK_SIZE-8);
             }
             ctx.restore();
-        });
-
-        // Draw active pieces with glow
-        gameState.players.forEach(player => {
-            if (!player.currentPiece || player.gameOver) return;
-
-            for (let y = 0; y < player.currentPiece.length; y++) {
-                for (let x = 0; x < player.currentPiece[y].length; x++) {
-                    if (player.currentPiece[y][x]) {
-                        const drawX = (player.position.x + x) * BLOCK_SIZE;
-                        const drawY = (player.position.y + y) * BLOCK_SIZE;
-                        
-                        // Glow effect
-                        ctx.shadowColor = player.color;
-                        ctx.shadowBlur = 8;
-                        
-                        // Main block with gradient
-                        const gradient = ctx.createLinearGradient(
-                            drawX, drawY,
-                            drawX, drawY + BLOCK_SIZE
-                        );
-                        gradient.addColorStop(0, player.color);
-                        gradient.addColorStop(1, this.darkenColor(player.color, 0.3));
-                        ctx.fillStyle = gradient;
-                        ctx.fillRect(drawX, drawY, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-                        
-                        ctx.shadowBlur = 0;
-
-                        // Highlight
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-                        ctx.fillRect(drawX + 2, drawY + 2, BLOCK_SIZE - 6, 3);
-                        
-                        // Border
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(drawX, drawY, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-                    }
-                }
+        }
+        for(const player of gameState.players){
+            if(!player.currentPiece||player.gameOver)continue;
+            for(let y=0;y<player.currentPiece.length;y++)for(let x=0;x<player.currentPiece[y].length;x++){
+                if(player.currentPiece[y][x])
+                    this.paintBlock(ctx,player.position.x+x,player.position.y+y,player.color,true);
             }
-        });
+        }
     }
-    
+
     darkenColor(color, amount) {
         // Parse hex color and darken it
         if (!color || typeof color !== 'string' || !color.startsWith('#')) {
@@ -1759,49 +1769,16 @@ class UIManager {
     }
 
     drawNextPiece(player) {
-        const nextCanvas = document.getElementById(`next-${player.id}`);
-        if (!nextCanvas) return;
-
-        const nextCtx = nextCanvas.getContext('2d');
-        nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-
-        if (player.nextPiece) {
-            const offsetX = Math.floor((PREVIEW_SIZE - player.nextPiece[0].length) / 2);
-            const offsetY = Math.floor((PREVIEW_SIZE - player.nextPiece.length) / 2);
-
-            for (let y = 0; y < player.nextPiece.length; y++) {
-                for (let x = 0; x < player.nextPiece[y].length; x++) {
-                    if (player.nextPiece[y][x]) {
-                        const drawX = (offsetX + x) * BLOCK_SIZE;
-                        const drawY = (offsetY + y) * BLOCK_SIZE;
-                        
-                        // Glow effect
-                        nextCtx.shadowColor = player.color;
-                        nextCtx.shadowBlur = 6;
-                        
-                        // Main block with gradient
-                        const gradient = nextCtx.createLinearGradient(
-                            drawX, drawY,
-                            drawX, drawY + BLOCK_SIZE
-                        );
-                        gradient.addColorStop(0, player.color);
-                        gradient.addColorStop(1, this.darkenColor(player.color, 0.3));
-                        nextCtx.fillStyle = gradient;
-                        nextCtx.fillRect(drawX, drawY, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-                        
-                        nextCtx.shadowBlur = 0;
-
-                        // Highlight
-                        nextCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-                        nextCtx.fillRect(drawX + 2, drawY + 2, BLOCK_SIZE - 6, 3);
-                        
-                        // Border
-                        nextCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-                        nextCtx.lineWidth = 2;
-                        nextCtx.strokeRect(drawX, drawY, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-                    }
-                }
-            }
+        const canvas=document.getElementById(`next-${player.id}`);
+        if(!canvas)return;
+        const ctx=canvas.getContext('2d');
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        const piece=player.nextPiece;
+        if(!piece)return;
+        const offsetX=Math.floor((PREVIEW_SIZE-piece[0].length)/2);
+        const offsetY=Math.floor((PREVIEW_SIZE-piece.length)/2);
+        for(let y=0;y<piece.length;y++)for(let x=0;x<piece[y].length;x++){
+            if(piece[y][x])this.paintBlock(ctx,offsetX+x,offsetY+y,player.color,true);
         }
     }
 
@@ -1824,7 +1801,7 @@ class UIManager {
         const linesEl = document.getElementById('team-lines');
 
         if (scoreEl) scoreEl.textContent = formatNumber(score);
-        if (linesEl) linesEl.textContent = `${formatNumber(lines)} ${t('lines')}`;
+        if (linesEl) linesEl.textContent = formatNumber(lines);
 
         this.updateComboIndicator();
         this.scheduleBoardScaleUpdate();
@@ -1835,7 +1812,7 @@ class UIManager {
         const linesEl = document.getElementById('team-lines');
 
         if (scoreEl) scoreEl.textContent = '0';
-        if (linesEl) linesEl.textContent = `0 ${t('lines')}`;
+        if (linesEl) linesEl.textContent = '0';
 
         if (this.comboIndicator) {
             this.comboIndicator.classList.remove('visible');
@@ -2016,73 +1993,87 @@ class UIManager {
     }
 
     updateBoardScale() {
-        const canvas = document.getElementById('game-canvas');
-        const boardWrapper = document.getElementById('shared-board');
-        if (!canvas || !boardWrapper) {
-            return;
-        }
+        const canvas=document.getElementById('game-canvas');
+        const stage=document.getElementById('game-container');
+        const wrapper=document.getElementById('shared-board');
+        if(!canvas||!stage||!wrapper||!this.screens.gameScreen.classList.contains('active'))return;
 
-        const boardWidth = canvas.width;
-        const boardHeight = canvas.height;
+        // The CSS grid owns the layout. Fit the playable area within its actual stage,
+        // not by subtracting siblings that can sit beside it in landscape/tablet mode.
+        const rect=stage.getBoundingClientRect();
+        const head=stage.querySelector('.stage-head');
+        const stageStyles=getComputedStyle(stage);
+        const boxStyles=getComputedStyle(wrapper);
+        const padX=(parseFloat(stageStyles.paddingLeft)||0)+(parseFloat(stageStyles.paddingRight)||0);
+        const padY=(parseFloat(stageStyles.paddingTop)||0)+(parseFloat(stageStyles.paddingBottom)||0);
+        const frameX=(parseFloat(boxStyles.borderLeftWidth)||0)+(parseFloat(boxStyles.borderRightWidth)||0);
+        const frameY=(parseFloat(boxStyles.borderTopWidth)||0)+(parseFloat(boxStyles.borderBottomWidth)||0);
+        const gap=parseFloat(stageStyles.gap)||0;
+        const maxWidth=Math.max(1,rect.width-padX-frameX-2);
+        const maxHeight=Math.max(1,rect.height-padY-frameY-(head?.getBoundingClientRect().height||0)-gap-2);
+        const ratio=Math.max(.05,Math.min(1.6,maxWidth/canvas.width,maxHeight/canvas.height));
+        const width=Math.floor(canvas.width*ratio);
+        const height=Math.floor(canvas.height*ratio);
+        canvas.style.width=width+'px';
+        canvas.style.height=height+'px';
+        canvas.style.maxWidth='none';
+        canvas.style.maxHeight='none';
+        wrapper.style.width=(width+frameX)+'px';
+        wrapper.style.height=(height+frameY)+'px';
+    }
 
-        const parentRect = boardWrapper.parentElement ? boardWrapper.parentElement.getBoundingClientRect() : null;
-        const gameScreenRect = this.screens.gameScreen ? this.screens.gameScreen.getBoundingClientRect() : null;
-        const bodyStyles = window.getComputedStyle(document.body);
-        const horizontalPadding = parseFloat(bodyStyles.paddingLeft) + parseFloat(bodyStyles.paddingRight);
-        const verticalPadding = parseFloat(bodyStyles.paddingTop) + parseFloat(bodyStyles.paddingBottom);
-        const layoutWidth = parentRect ? parentRect.width : (gameScreenRect ? gameScreenRect.width : window.innerWidth);
-        const viewportWidth = window.innerWidth - horizontalPadding;
-        const constrainedViewport = Math.max(160, viewportWidth);
-        const availableWidth = Math.min(layoutWidth, constrainedViewport);
-
-        let usedHeight = verticalPadding;
-        const header = document.querySelector('header');
-        if (header) {
-            usedHeight += header.getBoundingClientRect().height;
-        }
-        const screenStyles = this.screens.gameScreen ? window.getComputedStyle(this.screens.gameScreen) : null;
-        const paddingTop = screenStyles ? parseFloat(screenStyles.paddingTop) : 0;
-        const paddingBottom = screenStyles ? parseFloat(screenStyles.paddingBottom) : 0;
-        const gapY = screenStyles ? parseFloat(screenStyles.rowGap || screenStyles.gap || 0) : 0;
-
-        usedHeight += paddingTop + paddingBottom;
-
-        let gapSegments = 0;
-
-        if (this.teamStats && this.teamStats.classList.contains('visible')) {
-            usedHeight += this.teamStats.getBoundingClientRect().height;
-            gapSegments += 1;
-        }
-
-        if (this.gameControls) {
-            usedHeight += this.gameControls.getBoundingClientRect().height;
-            gapSegments += 1;
-        }
-
-        if (this.touchControls && this.touchControls.classList.contains('visible')) {
-            usedHeight += this.touchControls.getBoundingClientRect().height;
-            gapSegments += 1;
-        }
-
-        usedHeight += gapSegments * gapY;
-
-        let availableHeight = window.innerHeight - usedHeight;
-        if (!Number.isFinite(availableHeight) || availableHeight <= 0) availableHeight = window.innerHeight * 0.35;
-        if (parentRect?.height > 0) availableHeight = Math.min(availableHeight, parentRect.height - 12);
-        availableHeight = Math.max(48, availableHeight);
-
-        const widthScale = availableWidth / boardWidth;
-        const heightScale = availableHeight / boardHeight;
-        const scale = Math.min(1, widthScale, heightScale);
-
-        const displayWidth = Math.max(1, Math.floor(boardWidth * scale));
-        const displayHeight = Math.max(1, Math.floor(boardHeight * scale));
-
-        boardWrapper.style.setProperty('--board-max-width', `${displayWidth}px`);
-        canvas.style.width = `${displayWidth}px`;
-        canvas.style.height = `${displayHeight}px`;
-        canvas.style.maxWidth = `${boardWidth}px`;
-        canvas.style.maxHeight = `${boardHeight}px`;
+    installBoardGestures(canvas) {
+        // Optional direct gestures supplement the thumb buttons, not replace them.
+        // Horizontal/vertical motion snaps to whole cells; tapping rotates.
+        const begin=event=>{
+            if(event.pointerType==='mouse'||this.boardGesture||gameState.isPaused||gameState.isGameOver)return;
+            if(!this.getTouchPlayer())return;
+            event.preventDefault();
+            this.boardGesture={id:event.pointerId,x:event.clientX,y:event.clientY,
+                lastX:event.clientX,lastY:event.clientY,travel:0,started:performance.now()};
+            try{canvas.setPointerCapture(event.pointerId);}catch{}
+        };
+        const move=event=>{
+            const gesture=this.boardGesture;
+            if(!gesture||gesture.id!==event.pointerId||gameState.isPaused)return;
+            const player=this.getTouchPlayer();
+            if(!player)return;
+            event.preventDefault();
+            const cell=Math.max(15,canvas.getBoundingClientRect().width/gameState.boardWidth*.85);
+            // Move in the axis that was deliberately dragged; no accidental hard drops.
+            let dx=event.clientX-gesture.lastX,dy=event.clientY-gesture.lastY;
+            gesture.travel=Math.max(gesture.travel,Math.hypot(event.clientX-gesture.x,event.clientY-gesture.y));
+            if(Math.abs(dx)>=cell&&Math.abs(event.clientX-gesture.x)>Math.abs(event.clientY-gesture.y)*.9){
+                const steps=Math.max(-8,Math.min(8,Math.trunc(dx/cell)));
+                for(let n=0;n<Math.abs(steps);n++)player.move(Math.sign(steps));
+                gesture.lastX+=steps*cell;
+                this.drawBoard();
+            }else if(dy>=cell&&event.clientY-gesture.y>Math.abs(event.clientX-gesture.x)*1.1){
+                const steps=Math.min(8,Math.trunc(dy/cell));
+                for(let n=0;n<steps;n++)player.drop();
+                gesture.lastY+=steps*cell;
+                this.drawBoard();
+                this.updateTeamStatsIfNeeded();
+                this.updatePlayerInfo(player);
+                this.drawNextPiece(player);
+            }
+        };
+        const finish=(event,cancelled=false)=>{
+            const gesture=this.boardGesture;
+            if(!gesture||gesture.id!==event.pointerId)return;
+            this.boardGesture=null;
+            const player=this.getTouchPlayer();
+            if(!cancelled&&player&&!gameState.isPaused&&!gameState.isGameOver&&
+                gesture.travel<12&&performance.now()-gesture.started<450){
+                player.rotate();
+                this.drawBoard();
+            }
+        };
+        canvas.addEventListener('pointerdown',begin);
+        canvas.addEventListener('pointermove',move);
+        canvas.addEventListener('pointerup',event=>finish(event));
+        canvas.addEventListener('pointercancel',event=>finish(event,true));
+        canvas.addEventListener('lostpointercapture',event=>finish(event,true));
     }
 
     getActionForCode(player, code) {
@@ -2302,6 +2293,8 @@ class UIManager {
     }
 
     restart() {
+        if (!this.isOnlineMode && !gameState.isGameOver &&
+            !window.confirm(currentLanguage==='ru'?'Начать новую партию? Текущий прогресс будет потерян.':'Start a new match? Current progress will be lost.')) return;
         if (this.isOnlineMode) {
             if (networkManager.hostId === networkManager.socket.id) networkManager.requestRematch();
             return;
@@ -2351,25 +2344,26 @@ class UIManager {
 
         const teamSummary = document.createElement('div');
         teamSummary.className = 'player-score team-total';
-        teamSummary.innerHTML = `
-            <strong>Team Score:</strong> ${score} points<br>
-            <span>Level ${level} • ${lines} lines cleared</span>
-        `;
+        teamSummary.textContent = currentLanguage==='ru'
+          ? `Счёт ${formatNumber(score)} · Уровень ${level} · Линий ${lines}`
+          : `Score ${formatNumber(score)} · Level ${level} · Lines ${lines}`;
         scoresDiv.appendChild(teamSummary);
 
         const again = document.getElementById('play-again-btn');
         if (again) {
             const allowed = !this.isOnlineMode || networkManager.hostId === networkManager.socket.id;
             again.disabled = !allowed;
-            again.textContent = this.isOnlineMode ? (allowed ? 'Новый раунд' : 'Новый раунд начинает ведущий') : 'Play Again';
+            again.textContent = this.isOnlineMode
+              ? (allowed ? (currentLanguage==='ru'?'Новый раунд':'New round') :
+                  (currentLanguage==='ru'?'Раунд начинает ведущий':'Host starts next round'))
+              : t('playAgain');
         }
         gameState.players.forEach(player => {
             const scoreDiv = document.createElement('div');
             scoreDiv.className = 'player-score';
-            scoreDiv.style.background = player.color;
-            scoreDiv.style.color = 'white';
-            const status = player.gameOver ? 'Eliminated' : 'Survived';
-            scoreDiv.innerHTML = `Player ${player.id + 1}: ${status}`;
+            scoreDiv.style.borderLeft = `4px solid ${player.color}`;
+            const status = player.gameOver ? t('out') : t('inPlay');
+            scoreDiv.textContent = `${t('player')} ${player.id + 1} · ${status}`;
             scoresDiv.appendChild(scoreDiv);
         });
 
@@ -2378,7 +2372,7 @@ class UIManager {
 
     showCoopSetup() {
         this.showScreen('coopSetup');
-        this.updateCoopPlayerConfig(1); // Default to 1 player
+        this.updateCoopPlayerConfig(2); // Local co-op begins with two players
     }
 
     selectPlayerCount(btn) {
@@ -2404,35 +2398,35 @@ class UIManager {
             card.innerHTML = `
                 <h4>
                     <span class="player-color-badge" style="background: ${color};"></span>
-                    Player ${i + 1}
+                    ${t('player')} ${i + 1}
                 </h4>
                 <div class="color-picker">
-                    <label>Block Color:</label>
+                    <label>${t('blockColor')}</label>
                     <input type="color" id="coop-color-${i}" value="${color}">
                 </div>
                 <div class="key-bindings">
                     <div class="key-binding">
-                        <label>Left:</label>
+                        <label>${t('left')}:</label>
                         <input type="text" id="coop-key-${i}-left" value="${formatKeyLabel(keys.left)}" 
                                data-key-code="${keys.left}" readonly>
                     </div>
                     <div class="key-binding">
-                        <label>Right:</label>
+                        <label>${t('right')}:</label>
                         <input type="text" id="coop-key-${i}-right" value="${formatKeyLabel(keys.right)}" 
                                data-key-code="${keys.right}" readonly>
                     </div>
                     <div class="key-binding">
-                        <label>Down:</label>
+                        <label>${t('down')}:</label>
                         <input type="text" id="coop-key-${i}-down" value="${formatKeyLabel(keys.down)}" 
                                data-key-code="${keys.down}" readonly>
                     </div>
                     <div class="key-binding">
-                        <label>Rotate:</label>
+                        <label>${t('rotate')}:</label>
                         <input type="text" id="coop-key-${i}-rotate" value="${formatKeyLabel(keys.rotate)}" 
                                data-key-code="${keys.rotate}" readonly>
                     </div>
                     <div class="key-binding">
-                        <label>Drop:</label>
+                        <label>${t('drop')}:</label>
                         <input type="text" id="coop-key-${i}-drop" value="${formatKeyLabel(keys.drop)}" 
                                data-key-code="${keys.drop}" readonly>
                     </div>
@@ -2768,20 +2762,22 @@ class UIManager {
         const readyButton = document.getElementById('ready-btn');
         if (readyButton) {
             const own = room.players.find(p => p.id === networkManager.socket.id);
-            readyButton.textContent = own?.ready ? 'Отменить готовность' : 'Готов';
+            readyButton.textContent = own?.ready
+              ? (currentLanguage==='ru'?'Отменить готовность':'Not ready')
+              : t('ready');
             readyButton.disabled = !own;
         }
         // Update status
         if (statusEl) {
             const readyCount = room.players.filter(p => p.ready).length;
             if (readyCount === room.players.length && room.players.length > 0) {
-                statusEl.textContent = 'Starting game...';
-                statusEl.style.background = 'rgba(46, 213, 115, 0.15)';
-                statusEl.style.borderColor = 'rgba(46, 213, 115, 0.3)';
+                statusEl.textContent = currentLanguage==='ru'?'Начинаем игру…':'Starting game…';
+                statusEl.dataset.state='ready';
             } else {
-                statusEl.textContent = `${readyCount}/${room.players.length} players ready`;
-                statusEl.style.background = 'rgba(255, 219, 88, 0.15)';
-                statusEl.style.borderColor = 'rgba(255, 219, 88, 0.3)';
+                statusEl.textContent = currentLanguage==='ru'
+                  ? `Готовы: ${readyCount} из ${room.players.length}`
+                  : `Ready: ${readyCount} of ${room.players.length}`;
+                statusEl.dataset.state='waiting';
             }
         }
     }

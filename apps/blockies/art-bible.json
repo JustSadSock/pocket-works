@@ -43,11 +43,11 @@
   "concepts": [
     {
       "id": "retained-source",
-      "medium": "Canvas 2D preserves the source block renderer and original collision, scoring and line-clear engine on the server.",
-      "composition": "A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
-      "interaction": "Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player.",
-      "motion": "Touch movement changes a piece immediately in local play; online actions resolve into the same complete board snapshot for all peers.",
-      "rationale": "Chosen for this restoration because the user requested the existing project and its recovered rules, content and recognizable scene."
+      "medium": "Rebuilt Canvas 2D stacks with crisp square tiles and ghost projections; source rules and PocketNet authoritative simulation retained.",
+      "composition": "A single deep-green well framed by a warm editorial shell. On phones a tiny stats strip and thumb deck surround the playable object; wide co-op wells claim the full width.",
+      "interaction": "Press and hold dedicated arrows for controlled movement, tap the canvas to rotate, swipe for cellwise translation, or hit the high-contrast hard drop key.",
+      "motion": "Buttons move physically by 3px on contact; gravity and score obey deterministic grid mechanics, with slight score feedback outside the board.",
+      "rationale": "The original neon arcade cabinet obscured the grid at phone scale. Rebuilding the complete UI around the actual board, touch deck and network room increases legibility without replacing the working physics."
     },
     {
       "id": "tactile-miniature",
@@ -68,7 +68,7 @@
   ],
   "selection": {
     "concept": "retained-source",
-    "reason": "The requested work is restoration and integration of an existing game. Retaining its actual playable object, rules and recovered content serves that request with the least loss of identity.",
+    "reason": "Retain the existing server game and core shared board while replacing its chrome and rendering style, focused on direct touch and no scrolling during play.",
     "rejected": [
       {
         "concept": "tactile-miniature",
@@ -116,12 +116,13 @@
       "settled"
     ],
     "risks": [
-      "Phone controls may obscure the playable object; review full-viewport captures after real input, not only canvas crops.",
-      "An online state update must not restart entry animations or conceal the resulting board or world state."
+      "Shared 22-column online field must fit narrow portrait without clipping adjacent controls or top iOS safe area.",
+      "Swipe gestures must never hard-drop accidentally; only the explicit hard-drop key immediately locks a piece.",
+      "On network reconnect, authoritative snapshots must not reposition the UI or lose button ownership."
     ],
     "comparisons": [
-      "FOG geographic playfield versus this source game object at phone scale.",
-      "ZAMAZKA restoration controls versus this source game input and feedback loop."
+      "The bright paper shell and precision shared well distinguish this from FOG's geographic simulation.",
+      "Zamazka's expressive painting canvas differs from Blockies' square grid, held directional pad and read-only authoritative snapshots."
     ]
   }
 }

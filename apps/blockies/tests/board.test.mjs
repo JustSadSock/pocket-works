@@ -173,3 +173,49 @@ test('network distinguishes disconnection and blocks stale player inputs',()=>{
  assert.equal(outgoing.length,1);
  assert.deepEqual(outgoing[0],{type:'input',input:{action:'rotate'}});
 });
+
+
+test('full interface keeps all core navigation targets unique and actionable',async()=>{
+ const html=await fs.readFile(new URL('../index.html',import.meta.url),'utf8');
+ const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
+ assert.equal(ids.length,new Set(ids).size,'duplicate element ids would break game listeners');
+ const required=['main-menu','coop-setup-screen','online-lobby-screen','game-screen','settings-screen',
+  'pause-menu','gameover-menu','mode-single','mode-local','mode-online','resume-solo',
+  'nickname-input','join-code','join-code-btn','copy-room-code','create-room-btn','ready-btn',
+  'game-container','team-score','team-lines','next-pieces-preview','player-info-sidebar',
+  'touch-controls','pause-btn','quit-btn','settings-btn','language-selector',
+  'resume-btn','restart-btn','play-again-btn','menu-btn','online-network-status'];
+ for(const id of required)assert.ok(ids.includes(id),'missing functional target: '+id);
+ const actions=[...html.matchAll(/\bdata-action="([^"]+)"/g)].map(x=>x[1]);
+ assert.deepEqual(actions.sort(),['down','drop','left','right','rotate'].sort());
+ assert.match(html,/viewport-fit=cover/);
+});
+test('new control deck fits both phone orientations and expands wide shared wells',async()=>{
+ const css=await fs.readFile(new URL('../styles.css',import.meta.url),'utf8');
+ const script=await fs.readFile(new URL('../game.js',import.meta.url),'utf8');
+ assert.match(css,/orientation:portrait/);
+ assert.match(css,/orientation:landscape/);
+ assert.match(css,/\.wide-well/);
+ assert.match(css,/\.touch-deck/);
+ assert.match(css,/touch-action:none/);
+ assert.match(script,/installBoardGestures\(canvas\)/);
+ assert.match(script,/rect\.width-padX-frameX/);
+ assert.match(script,/classList\.toggle\('wide-well',numPlayers>1\)/);
+ assert.match(script,/player\.rotate\(\);/);
+});
+test('PWA release matches interface, new icon and built-in Pocket Works shell',async()=>{
+ const html=await fs.readFile(new URL('../index.html',import.meta.url),'utf8');
+ const config=JSON.parse(await fs.readFile(new URL('../app.config.json',import.meta.url),'utf8'));
+ const manifest=JSON.parse(await fs.readFile(new URL('../manifest.webmanifest',import.meta.url),'utf8'));
+ const sw=await fs.readFile(new URL('../sw.js',import.meta.url),'utf8');
+ const icon=await fs.readFile(new URL('../icons/icon.svg',import.meta.url),'utf8');
+ assert.equal(config.version,'0.4.0');
+ assert.match(html,/data-app-version="0\.4\.0"/);
+ assert.match(sw,/blockies-v0\.4\.0/);
+ assert.equal(config.orientation,'any');
+ assert.equal(manifest.orientation,'any');
+ assert.equal(manifest.theme_color,'#f4f1e9');
+ assert.match(html,/data-app-shell/);
+ assert.match(html,/class="pocket-exit"/);
+ assert.match(icon,/viewBox="0 0 512 512"/);
+});
