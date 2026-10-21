@@ -431,6 +431,9 @@ async function copyText(value){
 }
 root.addEventListener('click',e=>{
  const glyph=e.target.closest('[data-glyph]');if(glyph&&!glyph.disabled){addSymbol(glyph.dataset.glyph);return;}
+ const cat=e.target.closest('[data-category]');if(cat){paletteCategory=cat.dataset.category;refreshGlyphs();return;}
+ const frame=e.target.closest('[data-frame]');if(frame){activeFrame=Number(frame.dataset.frame);selected=-1;document.querySelectorAll('[data-frame]').forEach(b=>{b.classList.toggle('active',Number(b.dataset.frame)===activeFrame);b.setAttribute('aria-pressed',String(Number(b.dataset.frame)===activeFrame));});paintBoard();return;}
+ const word=e.target.closest('[data-lexicon-use]');if(word&&state?.phase==='compose'&&state.author===me?.id){const entry=state.lexicon?.[Number(word.dataset.lexiconUse)];if(!entry)return;const apply=()=>{remember();draft=entry.board.filter(g=>(g.frame??0)<(state.frames||1)&&state.palette.includes(g.id)).slice(0,48).map(g=>({...g}));selected=-1;activeFrame=0;paintBoard();queueBoard();notify('Композиция из словаря загружена.');};if(draft.length)confirmBox('Заменить композицию?','Знаки можно вернуть кнопкой отмены.',apply);else apply();return;}
  
  const option=e.target.closest('[data-choice]');
  if(option&&!option.disabled){
@@ -446,6 +449,7 @@ root.addEventListener('click',e=>{
  if(action==='copy-link'){copyText(new URL(location.pathname+'?room='+encodeURIComponent(code),location.origin).href);return;}
  if(action==='start'||action==='again'||action==='next'){send({type:action});playTone(700);return;}
  if(action==='publish'){flushBoard();if(draft.length)send({type:'publish'});return;}
+ if(action==='save-word'){send({type:'save-word'});return;}
   if(action==='submit-guess'){
    if(state?.phase!=='guess'||state.author===me?.id||answerSending||draftAnswer.every(v=>v===null))return;
    if(send({type:'answer',cells:[...draftAnswer]})){answerSending=true;updateGuessDraft();playTone(740);}return;
@@ -456,6 +460,7 @@ root.addEventListener('click',e=>{
 });
 root.addEventListener('input',e=>{
  if(e.target?.id==='roomCode'){typedCode=e.target.value=e.target.value.toUpperCase().replace(/\s/g,'');}
+ if(e.target?.id==='glyphSearch'){paletteQuery=e.target.value.toLowerCase().trim();refreshGlyphs();}
 });
 root.addEventListener('change',e=>{
  const el=e.target.closest('[data-guess-slot]');
