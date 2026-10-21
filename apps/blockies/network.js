@@ -4,6 +4,8 @@ class NetworkManager {
   constructor(){
     this.callbacks={};
     this.connected=false;
+    this.stale=false;
+    this.lastStateAt=0;
     this.currentRoom=null;
     this.socket={id:null};
     this.started=false;
@@ -29,6 +31,10 @@ class NetworkManager {
       this.net.on('connected',message=>{
         this.socket.id=message.player.id;
         this.connected=true;
+        if(this.started){
+          this.stale=true;
+          this.trigger('connectionHealth',{status:'recovering'});
+        }
         this.trigger('connect');
       });
       this.net.on('room_joined',message=>{
@@ -44,7 +50,9 @@ class NetworkManager {
       });
       this.net.on('disconnected',()=>{
         this.connected=false;
+        this.stale=true;
         this.stopClock();
+        this.trigger('connectionHealth',{status:'offline'});
         this.trigger('disconnect');
       });
       for(const event of ['room_closed','room_kicked']){
@@ -65,8 +73,13 @@ class NetworkManager {
   startClock(){
     if(this.timer)return;
     this.timer=setInterval(()=>{
-      if(this.connected&&this.started&&!document.hidden)this.send({type:'pulse'},true);
-    },150);
+      if(!this.connected||!this.started||document.hidden)return;
+      if(!this.stale && performance.now()-this.lastStateAt>5000){
+        this.stale=true;
+        this.trigger('connectionHealth',{status:'stalled'});
+      }
+      this.send({type:'pulse'},true);
+    },220);
   }
   resetRoom(){
     this.stopClock();
@@ -75,9 +88,16 @@ class NetworkManager {
     this.activeRound=0;
     this.hostId=null;
     this.code='';
+    this.stale=false;
+    this.lastStateAt=0;
   }
   apply(state,joined=false){
     if(!state||!Array.isArray(state.players))return;
+    this.lastStateAt=performance.now();
+    if(this.stale){
+      this.stale=false;
+      this.trigger('connectionHealth',{status:'online'});
+    }
     const players=state.players.filter(player=>!player.left);
     const room={
       ...state,players,id:this.code,name:'Blockies · '+this.code,maxPlayers:4,
@@ -141,7 +161,7 @@ class NetworkManager {
     if(this.currentRoom&&!this.started)this.send({type:'nickname',name});
   }
   sendPlayerInput(input){
-    if(this.started)this.send({type:'input',input},true);
+    if(this.started&&this.connected&&!this.stale)this.send({type:'input',input},true);
   }
   togglePause(){this.send({type:'pause'});}
   requestRematch(){this.send({type:'rematch'});}
