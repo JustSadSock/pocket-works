@@ -14,13 +14,13 @@
   },
   "architecture": {
     "spatialLayout": "full-bleed-world",
-    "controlLocation": "bottom-deck",
+    "controlLocation": "perimeter",
     "navigation": "overlay-list",
     "chromeTopology": "layered-panels",
     "dominantMotion": "rotational-inertia",
     "primaryVerb": "Steer and accelerate a racing car around three laps of the dockside course, braking for corners and overtaking five live AI rivals while watching the speed and gear.",
     "physicalFeedback": "Pressing gas accelerates the car and scrolling road, braking changes speed and downshift readouts, and steering rotates the vehicle through a turn with physical inertia instead of sliding a flat stage.",
-    "spatialRationale": "Landscape mode protects a broad horizon for corner reading, places left brake and right gas at opposite touch edges and keeps the speed/gauge in the unobstructed gap between them.",
+    "spatialRationale": "The racing circuit requires a wide clear horizon; separate pedal controls attach to the outer left and right edges, while the speed gauge stays in the empty central lower slot and steering sits between the two physical pedals.",
     "comparisons": [
       {
         "slug": "rivals-field-notes",
