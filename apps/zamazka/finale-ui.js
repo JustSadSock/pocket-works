@@ -55,6 +55,7 @@ export function finaleResultsMarkup({view:v,escapeText,memberSeal,pocketPlayerBa
   '<div class="finale-results-main"><div class="finale-laureate"><span class="finale-laureate-hatch" aria-hidden="true"></span>'+
    (winnerWork?'<figure class="finale-laureate-art"><canvas id="winnerRestoration" aria-label="Реставрация победителя"></canvas><figcaption>'+label(winnerWork.name||winner.person.name)+'</figcaption></figure>':'<div class="finale-laureate-seal" aria-hidden="true"><span>❦</span><i>Ⅰ</i></div>')+'<div class="finale-laureate-label">'+(ties>1?'ПЕРВОЕ МЕСТО РАЗДЕЛИЛИ':'ЛАУРЕАТ ВЫСТАВКИ')+'</div>'+
    '<div class="finale-laureate-person">'+memberSeal(winner.person)+'<div><h3>'+label(winner.person.name)+'</h3><p>'+(ties>1?'Лидеров с равным счётом: '+ties:'Первое место в каталоге')+'</p></div></div>'+
+    '<div class="finale-winner-profile" id="finaleWinnerProfile" hidden aria-label="Карточка Pocket ID победителя"></div>'+
    '<div class="finale-laureate-total"><strong>'+total(winner)+'</strong><span>ОЧКОВ</span></div>'+
    '<div class="finale-laureate-split"><div><span>МАСКИРОВКА</span><b>'+winner.mask+'</b></div><div><span>ЭКСПЕРТИЗА</span><b>'+winner.eye+'</b></div></div>'+ 
    (v.timedScoring?'<p class="finale-time-scoring">Скорость: до +40 за раннюю верную монету. Выдержка: до +80 за позднюю ошибку и до +30 за позднее разоблачение.</p>':'')+
