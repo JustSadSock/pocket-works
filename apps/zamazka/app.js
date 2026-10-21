@@ -933,9 +933,10 @@ async function connect(mode){
    net=client;
    if(mode!=='resume'){client.roomId=null;client.persist()}
    if(mode==='resume'&&!client.roomId)throw Error('Предыдущая сессия завершена');
-   client.on('connected',data=>{if(client.closed)return;connectionLost=false;lastTimePongAt=Date.now();me=data.player;connectionStatus('ok');markTabGuest(POCKETNET_URL,client.token);setConnectionStep(screen,3,'Открываем зал…')});
+   client.on('connected',data=>{if(client.closed)return;lastTimePongAt=Date.now();me=data.player;connectionStatus('connecting');markTabGuest(POCKETNET_URL,client.token);setConnectionStep(screen,3,'Открываем зал…')});
    client.on('room_joined',msg=>{
      if(client.closed)return;
+     connectionLost=false;connectionStatus('ok');
      roomId=msg.roomId;
      roomModuleVersion=msg.version||'v1';
      boardResync=true;
