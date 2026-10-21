@@ -13,7 +13,7 @@ export function assessBlockiesAwards(previous,next,matchId) {
     oldLines:metric(earlier?.players?.[i],'linesClearedByMe')??0
   }));
   if(members.some(p=>p.pieces===null||p.hardDrops===null||p.lines===null))return [];
-  const active=members.filter(p=>!p.left),noLeavers=active.length===members.length;
+  const active=members.filter(p=>!p.left),noLeavers=!next.everLeft&&active.length===members.length;
   const totalLines=metric(engine.sharedStats,'lines')??0,awards=[],unique=new Set();
   const add=(p,short)=>{
     if(!p||p.left)return;
