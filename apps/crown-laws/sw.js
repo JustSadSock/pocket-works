@@ -18,6 +18,7 @@ const APP_SHELL = [
   "./client/network.js",
   "./client/styles.css",
   "./icons/icon.png",
+  "./icons/icon.svg",
   "./shared/ai.js",
   "./shared/game-data.js",
   "./shared/game-engine.js",
