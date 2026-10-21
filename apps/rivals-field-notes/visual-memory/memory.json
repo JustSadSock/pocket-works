@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "product": "rivals-field-notes",
+  "captures": [
+    {
+      "id": "bdff7e0e89c7c7dfb6c5151e461c84fee867f8b29f395f9c29fa10bdad8cb417",
+      "recordedAt": "2026-10-21T11:08:57.798Z",
+      "commit": "b74795eb518e0d83fddf9ce3ca035baedded6179",
+      "viewport": [
+        390,
+        844
+      ],
+      "state": "initial/action/settled",
+      "engine": "chromium",
+      "action": "Click Hioydfts account and verify the dossier changes",
+      "files": [
+        {
+          "path": "6352e7b9eb335af82d74dc66c5b71917959c3ccfe89f00697d3ad9b34bb194f5.png",
+          "sha256": "6352e7b9eb335af82d74dc66c5b71917959c3ccfe89f00697d3ad9b34bb194f5"
+        },
+        {
+          "path": "df130ee54a7a7e540b45414d7e0b9e941f6ec4c210d8bb4edb2e8cae96cc7af9.png",
+          "sha256": "df130ee54a7a7e540b45414d7e0b9e941f6ec4c210d8bb4edb2e8cae96cc7af9"
+        },
+        {
+          "path": "8d7d53deaed61a20ba47b001a2509a74279429b7c69bcbadfc369baa3f460e68.png",
+          "sha256": "8d7d53deaed61a20ba47b001a2509a74279429b7c69bcbadfc369baa3f460e68"
+        },
+        {
+          "path": "3d179829db391352081ee9ab6264e689bc04d496cf389b4f747c831fe9cb6f8f.webm",
+          "sha256": "3d179829db391352081ee9ab6264e689bc04d496cf389b4f747c831fe9cb6f8f"
+        }
+      ]
+    },
+    {
+      "id": "4838b39d3db19a8a4f7aaffb313d007fef485e8037b58b91b2dad8b1487be34c",
+      "recordedAt": "2026-10-21T11:09:49.762Z",
+      "commit": "b74795eb518e0d83fddf9ce3ca035baedded6179",
+      "viewport": [
+        1366,
+        768
+      ],
+      "state": "initial/modal/duo",
+      "engine": "chromium",
+      "action": "Open the Loki modal and inspect the matched duo table",
+      "files": [
+        {
+          "path": "768e60116ba465d069337228151ab8a52150909ec378253538e0d48fb19daa5c.png",
+          "sha256": "768e60116ba465d069337228151ab8a52150909ec378253538e0d48fb19daa5c"
+        },
+        {
+          "path": "42b4d791ff5222cc4703c850f3fb499af99f17c72bbe265d1e3a918cfb834b43.png",
+          "sha256": "42b4d791ff5222cc4703c850f3fb499af99f17c72bbe265d1e3a918cfb834b43"
+        },
+        {
+          "path": "9162e74b80dfc12820cddd6af8e93b3da14615fb8e13b01b0c8491481cc9fa6e.png",
+          "sha256": "9162e74b80dfc12820cddd6af8e93b3da14615fb8e13b01b0c8491481cc9fa6e"
+        }
+      ]
+    }
+  ],
+  "feedback": []
+}
