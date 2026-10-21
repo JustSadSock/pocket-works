@@ -123,3 +123,53 @@ test('checkpoint gracefully handles storage failures and discards arbitrary fiel
  assert.ok(valid);
  assert.equal(Object.hasOwn(valid,'unexpected'),false);
 });
+
+
+import {NetworkManager} from '../network.js';
+test('network round snapshots initialize once and subsequent snapshots refresh the field',()=>{
+ const originalDocument=globalThis.document;
+ globalThis.document={querySelector:()=>null};
+ const net=new NetworkManager();
+ net.connected=true;
+ net.socket.id='a';
+ net.code='TESTCODE';
+ let starts=0,snapshots=0,health=0;
+ net.on('gameStart',()=>starts++);
+ net.on('snapshot',()=>snapshots++);
+ net.on('connectionHealth',({status})=>{if(status==='online')health++;});
+ const state={started:true,round:1,seed:123,hostId:'a',players:[{id:'a',color:'#FF1493'}],
+  paused:false,engine:{isGameOver:false,board:[],players:[]}};
+ try {
+  net.apply(state,true);
+  net.apply(state);
+  assert.equal(starts,1);
+  assert.equal(snapshots,2);
+  assert.ok(net.timer);
+  net.stale=true;
+  net.apply(state);
+  assert.equal(health,1);
+  assert.equal(net.stale,false);
+  net.apply({...state,round:2});
+  assert.equal(starts,2);
+  net.apply({...state,round:2,engine:{isGameOver:true}});
+  assert.equal(net.timer,null,'game-over should not waste PocketNet pulses');
+ }finally{
+  net.stopClock();
+  globalThis.document=originalDocument;
+ }
+});
+test('network distinguishes disconnection and blocks stale player inputs',()=>{
+ const net=new NetworkManager();
+ const outgoing=[];
+ net.started=true;
+ net.connected=true;
+ net.net={sendGame:payload=>outgoing.push(payload)};
+ net.sendPlayerInput({action:'rotate'});
+ net.stale=true;
+ net.sendPlayerInput({action:'hardDrop'});
+ net.connected=false;
+ net.stale=false;
+ net.sendPlayerInput({action:'move',direction:1});
+ assert.equal(outgoing.length,1);
+ assert.deepEqual(outgoing[0],{type:'input',input:{action:'rotate'}});
+});
