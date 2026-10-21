@@ -11,7 +11,7 @@ const DRAWING_TIMES=[0,60,90,120,160,240,300,600];
 const DEFAULT_DRAWING_SECONDS=160;
 // At 0:00 freeze client painting, then accept in-flight multipart submissions.
 // This is transport grace, not extra drawing time; never expose early results.
-export const FINAL_SUBMISSION_GRACE_MS=12000;
+export const FINAL_SUBMISSION_GRACE_MS=25000;
 type Stroke={c:string;s:number;t:string;p:number[][]};
 type Assignment={art:number;variation:number;strokes:Stroke[]|null};
 type Chips=number[];
@@ -34,7 +34,7 @@ const strip=(s:State,id:string)=>({
  mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation,strokes:s.assignments[id].strokes,draft:s.drafts?.[id]??null}:null,
  author:members(s)[s.turn]||null,
  candidate:s.phase==='voting'?s.assignments[members(s)[s.turn]?.id]||null:null,
- gallery:(s.phase==='reveal'||s.phase==='round-review'||s.phase==='results')?members(s).map((p,i)=>s.phase!=='reveal'||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{},scoreAudit:s.timedScoring?scoreTurn(s,p.id):undefined}):null):null
+ gallery:(s.phase==='verdict'||s.phase==='reveal'||s.phase==='round-review'||s.phase==='results')?members(s).map((p,i)=>s.phase!=='reveal'||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{},scoreAudit:s.timedScoring?scoreTurn(s,p.id):undefined}):null):null
 });
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
 function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]}
@@ -160,7 +160,9 @@ function step(s:State){
       }
     }
   }
-  // Every completed vote is immediately followed by its own answer.
+  // Let everyone see the server-confirmed coin distribution before the answer.
+  s.phase='verdict';s.deadline=now()+10000;
+ }else if(s.phase==='verdict'){
   s.phase='reveal';s.deadline=now()+19000;
  }else if(s.phase==='reveal'){
   if(s.turn<members(s).length-1){s.turn++;s.phase='voting';s.deadline=now()+VOTE_WINDOW_MS;}
@@ -173,7 +175,7 @@ function step(s:State){
 }
 function eligible(s:State,target:string,connected:string[]){return members(s).filter(p=>p.id!==target&&connected.includes(p.id))}
 function normalize(raw:unknown):Stroke[]|null{
- if(!Array.isArray(raw)||raw.length>400)return null;
+ if(!Array.isArray(raw)||raw.length>768)return null;
  let total=0;const out:Stroke[]=[];
  for(const item of raw){
    if(!item||typeof item!=='object')return null;
@@ -185,7 +187,7 @@ function normalize(raw:unknown):Stroke[]|null{
      if(!Array.isArray(point)||point.length!==2||point.some(v=>!Number.isFinite(v))||point[0]<0||point[0]>600||point[1]<0||point[1]>450)return null;
      points.push([Math.round(point[0]*10)/10,Math.round(point[1]*10)/10]);
    }
-   total+=points.length;if(total>12000)return null;
+   total+=points.length;if(total>24000)return null;
    out.push({c:String(o.c),s:Number(o.s),t:String(o.t),p:points});
  }
  return out;
@@ -199,7 +201,8 @@ function sanitizeEmblem(value:unknown):string|null|undefined{
  if(value.startsWith('data:image/webp;base64,')&&!value.slice(23).startsWith('UklGR'))return undefined;
  return value;
 }
-const BOARD_LIMIT=400;
+// Preserve accepted marks; never silently remove early artwork at capacity.
+const BOARD_LIMIT=1200;
 function boardSegment(raw:Record<string,unknown>,u:string):BoardSegment|null{
  const id=raw.k;
  if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,20}$/.test(id))return null;
@@ -298,8 +301,9 @@ const module: PocketModule<State>={
      if(a.revision!==board.revision)return {state,events:[{type:'board_reset',to:id,payload:board}]};
      const segment=boardSegment(a,id);
      if(!segment)return {state,events:notice(id,'Недопустимый мазок на общем холсте.')};
-     board.segments.push(segment);
-     if(board.segments.length>BOARD_LIMIT)board.segments.splice(0,board.segments.length-BOARD_LIMIT);
+     if(board.segments.length>=BOARD_LIMIT)
+        return {state,events:[{type:'board_full',to:id,payload:{limit:BOARD_LIMIT}}]};
+       board.segments.push(segment);
      return {state,events:[{type:'board_delta',payload:{...segment,revision:board.revision}}]};
    }
    if(a.type==='board_clear'&&state.phase==='lobby'){
@@ -328,7 +332,7 @@ const module: PocketModule<State>={
      if(!item||item.strokes!==null||a.round!==state.round||a.art!==item.art||a.variation!==item.variation)
        return {state,events:notice(id,'Этот рисунок уже завершён или относится к другому раунду.')};
      if(typeof a.revision!=='string'||!/^r[a-z0-9-]{1,30}$/.test(a.revision)||
-        !Number.isInteger(a.parts)||a.parts<1||a.parts>64||
+        !Number.isInteger(a.parts)||a.parts<1||a.parts>160||
         !Number.isInteger(a.index)||a.index<0||a.index>=a.parts||
         !Array.isArray(a.strokes)||a.strokes.length>8)
        return {state,events:notice(id,'Некорректная часть рисунка.')};
@@ -357,7 +361,7 @@ const module: PocketModule<State>={
      const totalStrokes=assembling.prefix+assembling.strokes.length;
      const totalPoints=previous.slice(0,assembling.prefix).reduce((n,stroke)=>n+stroke.p.length,0)+
        assembling.strokes.reduce((n,stroke)=>n+stroke.p.length,0);
-     if(totalStrokes>400||totalPoints>12000){
+     if(totalStrokes>768||totalPoints>24000){
        delete state.draftAssemblies[id];
        return {state,events:notice(id,'Превышен лимит линий или точек.')};
      }
@@ -420,7 +424,7 @@ const module: PocketModule<State>={
      const acceptedTurn=state.turn;
      if(eligible(state,target,players.map(p=>p.id)).every(p=>p.id in state.votes[target]))step(state);
      return {state,events:[...emit(state),{type:'vote_saved',to:id,payload:{round:state.round,turn:acceptedTurn}}]};
-   }else if(a.type==='advance'&&id===state.host&&state.phase==='reveal'){
+   }else if(a.type==='advance'&&id===state.host&&(state.phase==='verdict'||state.phase==='reveal')){
      // Prevent accidental double-clicks from skipping two artworks.
      const phaseMs=19000;
      if(now()>state.deadline-phaseMs+2800)step(state);
