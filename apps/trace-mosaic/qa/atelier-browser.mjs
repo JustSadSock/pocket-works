@@ -65,7 +65,15 @@ async function drag(page, id) {
   await page.mouse.up();
   await page.waitForFunction(index => {
     const placed=document.querySelector('.placed-piece[data-cell="'+index+'"]');
-    return placed?.dataset.currentTile===String(index);
+    // On the final correct drop the real game immediately replaces the board
+    // with the completed exhibit. That is success, not a missing drag.
+    if(placed?.dataset.currentTile===String(index)) return true;
+    if(index===15){
+      const exhibit=document.querySelector('.result-exhibit');
+      const score=exhibit?.textContent||'';
+      return Boolean(exhibit&&/100%/.test(score));
+    }
+    return false;
   },id,{timeout:9000});
 }
 const browsers=[];

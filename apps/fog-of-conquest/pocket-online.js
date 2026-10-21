@@ -1,4 +1,6 @@
+import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
+installMobileRuntime();
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
 
 // The only network transport is PocketNet. All actions are intents, validated

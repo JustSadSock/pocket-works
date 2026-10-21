@@ -135,7 +135,5 @@
   <button id="soundMenu" class="menu-sound" type="button" data-native-press>ЗВУК: ВКЛ</button>
 </main>
 <script type="module" src="./app.js"></script>
-<script type="module">
-if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{}));
-</script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="MEAT" data-app-version="1.9.5"></script>
 </body></html>

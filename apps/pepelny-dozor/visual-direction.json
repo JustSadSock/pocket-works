@@ -110,6 +110,16 @@
         "slug": "moss-marble",
         "spatialDifference": "Cyclic stone arena instead of an irregular putting course.",
         "interactionDifference": "Light damage over time replaces ball strike physics."
+      },
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "Rivals Field Notes arranges scrollable evidence tables and chapter navigation on an editorial paper surface; Pepelny Dozor reserves a portrait combat arena for a fixed lantern and a single bell control.",
+        "interactionDifference": "Rivals Field Notes filters hero statistics through contextual selectors; Pepelny Dozor makes the player sweep a continuous lantern beam across attacking shadows and trigger a timed shockwave."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "Perekos uses a full-bleed 1v1 mage battlefield with perimeter combat indicators and directional mobility; Pepelny Dozor keeps the hero stationary at the center of a portrait stone floor with a dedicated bell console.",
+        "interactionDifference": "Perekos combines independent movement, aim and varied spell casting against another human; Pepelny Dozor uses one continuous light-angle gesture and cooldown-based bell against procedural waves."
       }
     ]
   }

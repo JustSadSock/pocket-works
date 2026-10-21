@@ -46,6 +46,11 @@
         "slug": "not-dead-yet",
         "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
         "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player."
+      },
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "Rivals Field Notes uses a scrollable editorial document with evidence tables and chapter navigation; Blockies keeps a bounded falling-block well and touch controls visible together without document scrolling.",
+        "interactionDifference": "Rivals Field Notes filters hero evidence and seasons through contextual tabs; Blockies requires immediate movement, rotation and hard-drop actions on falling pieces in a shared real-time stack."
       }
     ]
   },

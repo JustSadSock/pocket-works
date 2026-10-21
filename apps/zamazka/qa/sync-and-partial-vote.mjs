@@ -43,7 +43,7 @@ try{
  const gallery={clientWidth:850,clientHeight:420};
  const plaque={offsetHeight:51},locked={offsetHeight:21};
  const stage={clientWidth:250,clientHeight:340,isConnected:true,
-  closest:()=>gallery,parentElement:gallery,
+  closest:selector=>selector.includes('.stake-gallery')?gallery:null,parentElement:gallery,
   querySelector:q=>q==='.zam-exhibit-rim'?rim:q==='.zam-exhibit-plaque'?plaque:
     q==='.stake-actions,.stake-locked'?locked:null};
  const root={querySelectorAll:()=>[stage]};

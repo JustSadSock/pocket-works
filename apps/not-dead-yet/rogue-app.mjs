@@ -288,13 +288,21 @@ function onMoveStick(e){
  stick.x=x*scale/max;stick.y=-y*scale/max;
  $('knob').style.transform='translate('+(x*scale)+'px,'+(y*scale)+'px)'
 }
+function capturePointerSafely(element,event){
+ // A virtual mobile tap can remove or hide its target between dispatch and
+ // capture. The gesture must still start without an uncaught DOMException.
+ if(!element.isConnected||!element.setPointerCapture)return;
+ try{element.setPointerCapture(event.pointerId)}catch(error){
+  if(error?.name!=='InvalidStateError')throw error;
+ }
+}
 function wireInputs(){
  const joy=$('joystick');
- joy.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();joystickPointer=e.pointerId;joy.setPointerCapture(e.pointerId);onMoveStick(e)});
+ joy.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();joystickPointer=e.pointerId;capturePointerSafely(joy,e);onMoveStick(e)});
  joy.addEventListener('pointermove',e=>{if(joystickPointer===e.pointerId)onMoveStick(e)});
  for(const name of ['pointerup','pointercancel','lostpointercapture'])joy.addEventListener(name,()=>clearStick());
  const look=$('touchLook');
- look.addEventListener('pointerdown',e=>{if(phase!=='play')return;lookPointer=e.pointerId;lastLook={x:e.clientX,y:e.clientY};look.setPointerCapture(e.pointerId)});
+ look.addEventListener('pointerdown',e=>{if(phase!=='play')return;lookPointer=e.pointerId;lastLook={x:e.clientX,y:e.clientY};capturePointerSafely(look,e)});
  look.addEventListener('pointermove',e=>{
   if(e.pointerId!==lookPointer||phase!=='play'||!lastLook)return;
   applyLook(e.clientX-lastLook.x,e.clientY-lastLook.y,.004);
@@ -358,7 +366,7 @@ function wireInputs(){
  document.addEventListener('keyup',e=>keyboard.up(e));
  window.addEventListener('blur',()=>{clearInputs();if(phase==='play')pause()});
  const run=$('run');
- run.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();sprintHeld=true;run.classList.add('held');run.setPointerCapture(e.pointerId)});
+ run.addEventListener('pointerdown',e=>{if(phase!=='play')return;e.preventDefault();sprintHeld=true;run.classList.add('held');capturePointerSafely(run,e)});
  for(const ev of ['pointerup','pointercancel','lostpointercapture'])run.addEventListener(ev,()=>{sprintHeld=false;run.classList.remove('held')});
  $('interact').addEventListener('click',interact);$('fire').addEventListener('click',shoot);
  $('reload').addEventListener('click',reload);$('torch').addEventListener('click',torchToggle);

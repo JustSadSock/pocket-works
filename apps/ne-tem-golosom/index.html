@@ -61,4 +61,5 @@
   <section id="screen-premiere" class="screen premiere hidden"><header class="topbar"><button class="nav-back" data-back="home">←</button><h2>Премьера</h2><span class="small-cap">03 / 03</span></header><div class="premiere-viewport"><video id="premiere-video" playsinline preload="auto"></video><div id="premiere-loading" class="premiere-loading">Сводим дорожки…</div></div><div class="premiere-credits" id="premiere-credits"></div><input id="premiere-scrub" type="range" min="0" max="600" value="0" aria-label="Перемотка премьеры"><div class="premiere-buttons"><button id="premiere-play" class="action main-action">▶ Смотреть премьеру</button><button id="premiere-repeat" class="action secondary-action">↺ С начала</button></div><button id="premiere-back" class="quiet-button">Вернуться к проекту</button></section>
 </main><div id="toast" role="status" aria-live="polite"></div>
 <script type="module" src="./app.js"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ДУБЛЬ" data-app-version="1.1.0"></script>
 </body></html>

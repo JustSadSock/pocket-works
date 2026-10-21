@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import WebSocket from '../../pocket-server/node_modules/ws/index.js';
+import { readFileSync } from 'node:fs';
 
 const base = process.env.POCKETNET_TEST_URL || 'http://127.0.0.1:8787';
 const origin = base;
+const expectedVersion = JSON.parse(readFileSync(new URL('../modules.lock.json', import.meta.url), 'utf8')).perekos?.current;
+assert.match(expectedVersion, /^v[1-9]\d*$/, 'Perekos module must have a pinned version');
 async function token(name) {
   const response = await fetch(base + '/pocketnet/session', {
     method: 'POST', headers: { 'content-type': 'application/json', origin },
@@ -63,9 +66,9 @@ const receive=(who,phase)=>who.next('game_event',m=>m.event.type==='state'&&m.ev
 try{
  host.send('create_room',{gameId:'perekos'});
  const opened=await host.next('room_joined');const room=opened.roomId,code=room.slice(0,8);
- assert.equal(opened.version,'v3');assert.equal(opened.state.phase,'lobby');assert.equal(opened.state.me,0);
+ assert.equal(opened.version,expectedVersion,'Room must load the pinned Perekos ruleset');assert.equal(opened.state.phase,'lobby');assert.equal(opened.state.me,0);
  guest.send('join_room',{roomId:code.toUpperCase()});
- const joined=await guest.next('room_joined');assert.equal(joined.state.me,1);assert.equal(joined.roomId,room);
+ const joined=await guest.next('room_joined');assert.equal(joined.version,expectedVersion);assert.equal(joined.state.me,1);assert.equal(joined.roomId,room);
  assert.equal(joined.state.players.length,2);
  third.send('join_room',{roomId:code});assert.equal((await third.next('error')).code,'room_full');
  guest.send('game_message',{payload:{type:'start'}});

@@ -6,8 +6,9 @@
 <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon.svg">
 <link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="./styles.css">
-</head><body><div class="shell">
+</head><body><div class="shell" data-app-shell>
 <header class="topbar">
 <a class="back" href="../../" aria-label="Вернуться в PocketWorks"><span aria-hidden="true">←</span><span class="back-label">PocketWorks</span></a>
 <div class="identity"><span class="mark" aria-hidden="true"><span></span></span><div><strong>ШОВ</strong><small>РЕЛЯТИВИСТСКАЯ ЛАБОРАТОРИЯ</small></div></div>
@@ -33,7 +34,7 @@
 <div class="canvas-hint" id="canvas-hint">Перетащи для поворота камеры. Коснись изображения для данных фотона.</div><div class="canvas-label" id="frame-state" aria-live="polite"></div>
 </div>
 <div class="transport">
-<div class="transport-left"><button type="button" id="shoot" class="primary">Пройти горловину <span aria-hidden="true">↗</span></button><button type="button" id="pause" class="secondary" aria-label="Приостановить симуляцию">Пауза</button><button type="button" id="clear" class="secondary" title="Очистить траектории">Очистить</button></div>
+<div class="transport-left"><button type="button" id="shoot" class="primary" data-native-press>Пройти горловину <span aria-hidden="true">↗</span></button><button type="button" id="pause" class="secondary" aria-label="Приостановить симуляцию">Пауза</button><button type="button" id="clear" class="secondary" title="Очистить траектории">Очистить</button></div>
 <div class="transport-time"><span>ВРЕМЯ <b id="elapsed">0.00</b> <span class="unit">a/c</span></span><span id="track-count">0 траекторий</span></div>
 </div>
 <div class="bottom-note"><span class="tiny-dot"></span><span>Свет, материя и скалярные волны рассчитываются на одной заданной геометрии пространства-времени.</span></div>
@@ -502,4 +503,5 @@
 </aside>
 </main>
 <footer class="foot"><span>c = G = 1 · пробные тела · экваториальный срез 3+1D метрики</span><span id="model-warning">Проходимые кротовые норы не обнаружены экспериментально</span></footer>
-</div><script type="module" src="./app.js"></script></body></html>
+</div><script type="module" src="./app.js"></script><script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ШОВ" data-app-version="1.5.0"></script>
+</body></html>

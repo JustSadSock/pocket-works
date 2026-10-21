@@ -136,6 +136,16 @@
         "slug": "oskolki",
         "spatialDifference": "ОСКОЛКИ превращает предложения в отдельные переставляемые элементы памяти; НЕ ТЕМ ГОЛОСОМ оставляет цельную видеосцену на экране и располагает звук на синхронной временной дорожке.",
         "interactionDifference": "В ОСКОЛКАХ игрок составляет исходный текст из перемешанных фрагментов; здесь участники независимо озвучивают временные отрезки и собирают общий дубляж на премьере, а локальный монтаж готовит видеоматериал."
+      },
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "Rivals Field Notes displays a paper-like editorial chapter with evidence tables, whereas Ne Tem Golosom centers a video projector and synchronized recorded audio strips in a dark edit suite.",
+        "interactionDifference": "Rivals Field Notes changes which season's historical data is visible; Ne Tem Golosom actually records microphone takes against media timestamps and edits individual clips."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "Perekos is an unbroken 2D battle arena with HUD and touch combat control; Ne Tem Golosom presents a large movie screen and timeline tools in a split editing workbench.",
+        "interactionDifference": "Perekos moves and casts spells in network rounds, while Ne Tem Golosom scrubs a film, cues a countdown and captures synchronized voice recordings."
       }
     ]
   },

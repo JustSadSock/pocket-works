@@ -6,8 +6,17 @@ import { resolve, join } from 'node:path';
 export function summarize(dir, expected) {
   const results = [];
   const missing = [];
+  // A platform PR may run multiple real test cases per bounded GitHub job.
+  // Keep every expected case mandatory, including cases from failed shards.
+  const batches=existsSync(dir)?readdirSync(dir,{withFileTypes:true})
+    .filter(item=>item.isDirectory()&&/^qa-batch-(?:cpu|browser)-[0-9]{3}$/.test(item.name))
+    .map(item=>item.name):[];
   for (const key of expected) {
-    const file = join(dir, 'qa-' + key, 'result.json');
+    const direct=join(dir,'qa-'+key,'result.json');
+    const candidates=[direct,...batches.map(name=>join(dir,name,key,'result.json'))]
+      .filter(file=>existsSync(file));
+    if(candidates.length>1){missing.push(key+' (duplicate evidence)');continue;}
+    const file=candidates[0]||direct;
     // In upload-artifact v4, an artifact contains its own root qa-artifacts/<key>.
     if (!existsSync(file)) {
       missing.push(key);

@@ -1,3 +1,4 @@
+const APP_VERSION = '1.1.0';
 const PREFIX = "tyaga-duel-";
 const CACHE = "tyaga-duel-v1.1.0";
 const FILES = ["./","./index.html","./app.config.json","./app.js","./physics.js","./styles.css","./manifest.webmanifest","./icons/icon.svg","../../shared/mobile-runtime.css","../../shared/mobile-runtime.js","../../shared/update-manager.css","../../shared/update-manager.js","../../shared/workshop-mode.css","../../shared/workshop-mode.js"];
@@ -9,7 +10,7 @@ self.addEventListener("activate", event => {
 });
 self.addEventListener("message", event => {
   if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
-  if (event.data?.type === "GET_UPDATE_INFO") event.ports?.[0]?.postMessage({version:"1.1.0",releaseDate:"2026-10-18",releaseNotes:["Нарастающая гравитация и контрудар; ускоряющие ворота, рикошетные связки и улучшенные эффекты."],cacheName:CACHE,cacheProtocol:2});
+  if (event.data?.type === "GET_UPDATE_INFO") event.ports?.[0]?.postMessage({version:"1.1.0",releaseDate:"2026-10-18",releaseNotes:["Сила гравитации нарастает при удержании; чем дольше владеете шаром, тем мощнее ответный перехват соперника.","На аренах «Рикошет» и «Маятник» появились кинетические ускорители, формирующие связки с отражателями.","Новый визуальный индикатор перегрузки, звуки отражателей и ускорителей, тактические решения ИИ."],cacheName:CACHE,cacheProtocol:2});
 });
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;

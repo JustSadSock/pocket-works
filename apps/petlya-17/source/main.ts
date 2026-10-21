@@ -25,7 +25,7 @@ import { createVersionedStore } from '../../../shared/capabilities/storage.js';
 import { lockOrientation, unlockOrientation, watchOrientation } from '../../../shared/capabilities/device.js';
 import { catmullRomClosed, clamp, lerp, signedWrappedDelta, speedFeel, wrap, type Vec3Tuple } from './core';
 
-const VERSION = '3.0.0';
+const VERSION = '3.2.1';
 const APP_NAME = 'ПЕТЛЯ 17';
 const NS = 'pocket-works:petlya-17';
 const LAPS = 3;
@@ -38,13 +38,7 @@ installMobileRuntime();
 registerEnhancedUpdate({
   appName: APP_NAME,
   version: VERSION,
-  releaseNotes: [
-    'Старый псевдо-3D Canvas-рендер полностью удалён и заменён настоящей Babylon.js-сценой с перспективной камерой внутри кокпита.',
-    'Трасса теперь является объёмной замкнутой геометрией с высотами, виражами, кербами, ограждениями, портовыми конструкциями и реальным ближним параллаксом.',
-    'Пять соперников получили полноценные 3D-болиды, тени, разные траектории, борьбу за позицию и корректную относительную скорость при обгонах.',
-    'Кокпит, руль, halo, зеркала, нос машины, свет, туман, частицы, динамический FOV и процедурный звук работают в одной трёхмерной системе координат.',
-    'Приложение переведено на Enhanced runtime с TypeScript, Vite, Workbox, офлайн-сборкой и автоматическим снижением качества при падении FPS.'
-  ]
+  releaseNotes: ["Исправлена критическая ошибка запуска VertexData is not defined: восстановлен импорт Babylon.js для генерации кузовов.","Проверка TypeScript теперь обязательна перед сборкой, чтобы незаявленные идентификаторы не попадали в релиз.","Прибрежный автодром полностью пересобран: асфальт, разметка, поребрики, барьеры, пейзаж и портовые сооружения.","Созданы новые 3D-болиды и кокпит, освобождающий обзор дороги."]
 });
 
 const $ = <T extends HTMLElement>(selector: string): T => {

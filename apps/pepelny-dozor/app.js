@@ -1,5 +1,8 @@
 (() => {
 'use strict';
+// This classic-script game keeps its synchronous startup; the shared touch
+// and safe-area handlers are installed independently after the module loads.
+void import('../../shared/mobile-runtime.js').then(({installMobileRuntime})=>installMobileRuntime()).catch(error=>console.error('Mobile runtime initialization failed',error));
 const $=id=>document.getElementById(id);
 const canvas=$('world'),stage=$('stage'),ctx=canvas.getContext('2d',{alpha:false});
 const panel=$('panel'),primary=$('primary'),secondary=$('secondary'),choices=$('choices');

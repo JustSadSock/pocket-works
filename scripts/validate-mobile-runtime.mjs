@@ -1,7 +1,8 @@
 import { reportValidationDebt } from './validation-debt.mjs';
-import { readFile } from 'node:fs/promises';
+import { readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { buildRegistryEntries } from './app-config.mjs';
+import { entrySources } from './pwa-entrypoints.mjs';
 
 const root = process.cwd();
 const errors = [];
@@ -78,12 +79,20 @@ const quickTargets = [
 for (const target of quickTargets) {
   const directory = `apps/${target.slug}`;
   const html = await read(`${directory}/index.html`);
-  const appJs = await read(`${directory}/app.js`);
+  const primary = path.join(root, directory, 'app.js');
+  const hasPrimary = await access(primary).then(() => true, () => false);
+  // Some original games have a classic-script engine and module entrypoints
+  // but no app.js. Validate their reachable real scripts, not a fake stub.
+  const appJs = hasPrimary ? await read(`${directory}/app.js`) : await entrySources(path.join(root, directory), html);
+  const entryLabel = hasPrimary ? `${directory}/app.js` : `${directory} script entrypoints`;
   const serviceWorker = await read(`${directory}/sw.js`);
   requireIncludes(html, ['../../shared/mobile-runtime.css', 'data-app-shell'], `${directory}/index.html`);
-  requireIncludes(appJs, ['../../shared/mobile-runtime.js', 'installMobileRuntime'], `${directory}/app.js`);
+  requireIncludes(appJs, ['../../shared/mobile-runtime.js', 'installMobileRuntime'], entryLabel);
   requireIncludes(serviceWorker, ['../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js'], `${directory}/sw.js`);
-  if (target.registered && !html.includes('data-native-press')) fail(`${directory}/index.html must expose at least one immediate press-feedback control`);
+  // The first screen may be mounted from a script (for example, a duel's
+  // dynamic lobby). Check rendered-control source as well as static markup.
+  if (target.registered && !html.includes('data-native-press') && !appJs.includes('data-native-press'))
+    fail(`${directory}/index.html must expose at least one immediate press-feedback control`);
 }
 
 const enhancedTargets = [

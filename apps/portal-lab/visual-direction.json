@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "portal-lab",
+  "direction": {
+    "premise": "ШОВ is an interactive physics laboratory for exploring traversable wormhole metrics and understanding how the same observer sees curved space and lensed light.",
+    "composition": "A large central experiment canvas remains the primary instrument; a compact mode rail spans its top while a separate parameter panel controls the metric and the twin synchronous optics views.",
+    "shapeLanguage": "Precise orbit arcs and wireframe coordinate lines meet restrained instrument frames, aligned scales and circular photon markers; equations occupy small measurement panels rather than floating decorative tags.",
+    "surfaceAndMaterial": "Flat light technical-paper surfaces surround independent Canvas-rendered metric trajectories; the spatial atlas renders wireframe curves while the sky instrument rasterizes calculated optical geodesics.",
+    "paletteLogic": "A subdued pale background keeps dense numerical controls readable; turquoise highlights selected physics readings, while dark geodesic strokes and bright source markers separate measurement from control.",
+    "typography": "Compact instrument captions and tabular readouts contrast with one large experiment heading; numerical units such as l/a, H=0 and degrees remain visually adjacent to the controls that generate them.",
+    "signature": "In the synchronous view, moving the observer relocates the camera marker and simultaneously changes the independently traced gravitationally lensed sky rather than merely rotating a screenshot of 3D.",
+    "distinction": "Perekos centers live combat aiming in an uninterrupted battlefield, while Rivals Field Notes scrolls through evidence tables; ШОВ keeps the interactive optical measurement and metric model side by side."
+  },
+  "architecture": {
+    "spatialLayout": "split-workspace",
+    "controlLocation": "perimeter",
+    "navigation": "overlay-list",
+    "chromeTopology": "framed-stage",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Change the wormhole metric or observer location, launch photon trajectories and compare a 3D coordinate atlas with the corresponding gravitational lensing view.",
+    "physicalFeedback": "Adjusting distance or angle immediately updates displayed numeric readouts and marks the current laboratory state dirty for a new trace; firing the beam adds physically integrated geodesic paths.",
+    "spatialRationale": "One large primary experiment stays visible while dense secondary controls occupy a dedicated parameter panel; on narrow phones the two synchronous canvases stack so both instruments retain readable widths.",
+    "comparisons": [
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "Rivals Field Notes uses vertically scrolled editorial chapters, filtering and ruled evidence tables; ШОВ uses fixed-height physics canvases and adjacent controls for continuous 3D and optical measurements.",
+        "interactionDifference": "Rivals Field Notes switches hero/season evidence; ШОВ drags a camera, changes real metric parameters and traces new null geodesics in response."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "Perekos uses a full-bleed combat stage with perimeter health and movement controls; ШОВ uses a light instrument workbench and two measurable scientific panes beneath a view selector.",
+        "interactionDifference": "Perekos resolves realtime player movement, dodge and spells against an opponent; ШОВ launches photon beams, checks H=0 residuals and records repeatable experiments."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Canvas 2D visualizations calculate and display null geodesics directly, while native HTML controls expose metric parameters without recreating numeric precision in a game texture.",
+    "focalAsset": "The paired 3D geodesic atlas and optically lensed sky are the focal instruments, each regenerated from one shared observer state and explicit metric configuration."
+  },
+  "motion": {
+    "character": "Scientific feedback is immediate and anchored to an instrument coordinate system, not springy or character-driven; photons advance along numerical trajectories rather than arbitrary easing curves.",
+    "action": "A photon-launch button starts a physically integrated bundle whose paths appear on the atlas while the observer window reflects the same starting event.",
+    "anticipation": "Before a run the selected mode, observer coordinates, beam count and angular spread are already visible next to the action, so the initial conditions can be inspected.",
+    "response": "The trace count and drawn geodesic paths change when photons are launched; altering the observer changes the location marker and the sampled optical sky.",
+    "followThrough": "Completed paths and residual checks stay visible until the experiment is cleared; changing view modes preserves the current source settings and recorded experiment conditions.",
+    "interruption": "Further control changes affect the next generated trace from the current state, while pause and clear commands stop or reset the ongoing experiment without deferred interaction queues.",
+    "reducedMotion": "Numerical observer coordinates, invariant readings and stopped trajectories remain accessible when animated photon advancement is paused, preserving the scientific conclusions."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#shoot"
+    },
+    "expectedChange": "Clicking the launch control adds a photon trajectory from the configured metric and advances the on-screen elapsed time and trajectory count.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}

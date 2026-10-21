@@ -14,7 +14,7 @@
  <div class="feature-divider"></div>
  <div class="summary prior"><small>НОВЫЕ УТВЕРЖДЁННЫЕ</small><strong>64</strong><span>36 из первого выпуска и 28 из второго сохранены в архиве</span></div>
  <div class="summary current"><small>НА УДАЛЕНИЕ</small><strong id="shortCount">0</strong><span id="shortNumbers">Пока пусто — ничего не удалять</span></div>
- <div class="short-actions"><button class="action-primary" type="button" id="copySelection">Скопировать на удаление ↗</button><button class="action-secondary" type="button" id="downloadSelection">Экспорт TXT ↓</button></div>
+ <div class="short-actions"><button class="action-primary" type="button" id="copySelection" data-native-press>Скопировать на удаление ↗</button><button class="action-secondary" type="button" id="downloadSelection">Экспорт TXT ↓</button></div>
  <p class="aside-foot">Отметки — только предложения на удаление. Картотека ничего не удаляет из игры автоматически.</p>
 </aside>
 <section class="collection" aria-label="Каталог картин">
@@ -54,4 +54,5 @@
 </main>
 <script>(function(){function report(){if(document.documentElement.dataset.artCabinetReady==='3')return;const node=document.getElementById('notice');if(node){node.hidden=false;node.textContent='Каталог не запустился. Обновите страницу или проверьте подключение.'}}window.addEventListener('error',report);window.setTimeout(report,9000)})();</script>
 <script type="module" src="./app.js"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Картотека" data-app-version="1.2.1"></script>
 </body></html>
