@@ -71,7 +71,7 @@ assert.equal(server,snapshot,'new rooms must use the exact immutable v30 copy');
 const earlier=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v24.ts',import.meta.url),'utf8');
 assert.doesNotMatch(earlier,/balancedDamage/,'pinned v24 room logic must remain unmodified');
 assert.match(earlier,/variation:Math.floor\(Math.random\(\)\*0xffffffff\)/,'legacy v24 assignment unchanged');
-assert.match(snapshot,/variation:s.balancedDamage/,'new room masks have explicit per-room compatibility flag');
+assert.match(snapshot,/variation:s.shapeCorrected\?0x200000000/,'new room masks have versioned physical proportions');
 assert.match(snapshot,/timedScoring:true/,'new v28 rooms keep timed scoring');
 const oldTimed=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v26.ts',import.meta.url),'utf8');
 assert.match(oldTimed,/RATE_DECOY_DELAY=20/,'ongoing v26 rooms must retain their old linear scoring');
