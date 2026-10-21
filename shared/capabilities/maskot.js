@@ -1,20 +1,22 @@
 import {zamazkaAchievements} from './zamazka-achievements.js';
+import {blockiesAchievements} from './blockies-achievements.js';
+const achievementItems=[...zamazkaAchievements,...blockiesAchievements];
 // Pocket Works MASKOT — original, hand-drawn, composable SVG geometry.
 // Asset IDs (not arbitrary markup) are the only user-controlled input.
 // Public profile renders are already server-validated; these IDs are visual decoding rights, not ownership grants.
-export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom','seoul-artist','dragon-keeper',...zamazkaAchievements.map(a=>a.id)];
+export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom','seoul-artist','dragon-keeper',...achievementItems.map(a=>a.id)];
 export const mascotAnimals=[['cat','Кот'],['black-cat','Чёрный кот'],['fox','Лиса'],['rabbit','Кролик'],['frog','Лягушка']];
 export const mascotHats=[['none','Без'],['crown','Корона'],['beret','Берет'],['flower','Цветок']];
 export const mascotClothes=[['tunic','Туника'],['vest','Жилет'],['mantle','Мантия']];
 export const mascotAccessories=[['none','Без аксессуара']];
 export const mascotFaces=[['none','Без'],['glasses','Очки'],['stars','Звёздочки']];
-export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Призрачная кисть','Всевидящий','Авантюрист'];
+export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Призрачная кисть','Всевидящий','Авантюрист',...blockiesAchievements.filter(a=>a.slot==='title').map(a=>a.item)];
 export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'},groom:{clothes:'groom'},'seoul-artist':{hat:'stage-pin',clothes:'stage-hanbok'},'dragon-keeper':{accessory:'shoulder-dragon'}};
 const one=(rows,id,fallback)=>rows.some(x=>x[0]===id)?id:fallback;
 export function safeMascot(input,unlocks=[]){
   const u=Array.isArray(unlocks)?unlocks:[];
   const valid=(item,category,standard)=>typeof item==='string'&&(standard.some(x=>x[0]===item)||
-    zamazkaAchievements.some(a=>a.slot===category&&a.item===item&&u.includes(a.id))||
+    achievementItems.some(a=>a.slot===category&&a.item===item&&u.includes(a.id))||
     Object.entries(mascotSecret).some(([key,x])=>u.includes(key)&&x[category]===item));
   const src=input&&typeof input==='object'?input:{};
   return {
@@ -80,6 +82,14 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
 `
   };
   const outfits={
+    'block-jacket':`<!-- Blockies builder jacket, seam accents and pixel chest badge -->
+<path d="M24 255Q27 202 59 182L103 171 128 192 153 171 198 182Q231 205 233 255Z" fill="#286e68" stroke="#34434a" stroke-width="5"/>
+<path d="M56 185 101 174 122 211 107 255H44Z" fill="#38968a" stroke="#34434a" stroke-width="4"/>
+<path d="M201 185 156 174 134 211 150 255H212Z" fill="#38968a" stroke="#34434a" stroke-width="4"/>
+<path d="M104 174 127 194 151 174 142 203 128 211 114 203Z" fill="#eef2d1" stroke="#34434a" stroke-width="3"/>
+<rect x="96" y="217" width="20" height="20" rx="2" fill="#f1c567"/><rect x="116" y="217" width="20" height="20" rx="2" fill="#65d9ed"/><rect x="116" y="237" width="20" height="18" rx="2" fill="#f177a5"/>
+<path d="M60 220 60 251M194 219 194 251" stroke="#a3d9bb" stroke-width="6"/>
+<path d="M115 214 128 226 141 214" fill="none" stroke="#203f40" stroke-width="3"/>`,
     tunic:`<path d="M47 254Q49 182 106 173L127 190 150 173Q208 182 209 254Z" fill="url(#cloth)" stroke="#34434a" stroke-width="5"/><path d="M102 179Q113 193 128 195Q143 193 153 179" fill="none" stroke="#fff2d8" stroke-width="9" stroke-linecap="round"/><circle cx="128" cy="197" r="7" fill="#e9bf68" stroke="#34434a" stroke-width="2.5"/>`,
     vest:`<!-- Wide-cut waistcoat with full shoulders, replacing the entire base garment rather than floating over it -->
 <path d="M24 255Q26 199 58 183Q81 171 102 170L128 190 154 170Q194 175 218 194Q232 220 234 255Z" fill="#e5d5bd" stroke="#34434a" stroke-width="5" stroke-linejoin="round"/>
@@ -161,6 +171,14 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
     wedding:`<path d="M44 254Q49 177 102 171L128 190 154 171Q208 177 212 254Z" fill="#fff9f6" stroke="#34434a" stroke-width="5"/><path d="M99 178 127 213 156 178" fill="none" stroke="#e4bed1" stroke-width="7"/><path d="M128 213V253" stroke="#e4bed1" stroke-width="4"/><circle cx="128" cy="201" r="8" fill="#f4d98c" stroke="#34434a" stroke-width="2"/><path d="M80 243Q128 231 177 243" fill="none" stroke="#eadbe3" stroke-width="4"/>`
   };
   const hats={
+    'block-cap':`<!-- Blockies tetromino cap with a raised interlocking emblem -->
+<path d="M48 91Q51 38 105 36Q146 26 186 54L207 93Q167 80 129 79Q88 81 48 91Z" fill="#207c75" stroke="#34434a" stroke-width="5"/>
+<path d="M35 95Q116 70 217 94L205 111Q135 103 57 113Z" fill="#c8efe0" stroke="#34434a" stroke-width="4"/>
+<rect x="106" y="47" width="15" height="15" rx="2" fill="#f3cc73"/>
+<rect x="123" y="47" width="15" height="15" rx="2" fill="#f3cc73"/>
+<rect x="123" y="64" width="15" height="15" rx="2" fill="#f3cc73"/>
+<rect x="140" y="64" width="15" height="15" rx="2" fill="#f3cc73"/>
+<path d="M48 90Q127 64 207 93" fill="none" stroke="#85cfc0" stroke-width="3"/>`,
     none:'',
     crown:`<path d="M74 81 66 44 98 61 127 22 157 61 188 44 179 81Q129 89 74 81Z" fill="#e9c06c" stroke="#34434a" stroke-width="5" stroke-linejoin="round"/><path d="M78 78Q128 88 177 78" fill="none" stroke="#bc6e5d" stroke-width="10" stroke-linecap="round"/><path d="M127 45 137 59 127 70 117 59Z" fill="#4e8390" stroke="#34434a" stroke-width="2"/>`,
     beret:`<path d="M72 76Q79 40 135 40Q182 40 187 76Q150 93 102 85L75 92Z" fill="#82738e" stroke="#34434a" stroke-width="5"/><path d="M128 41Q134 25 141 34" stroke="#34434a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M92 66Q122 54 160 63" stroke="#b6a1c4" stroke-width="5" fill="none" stroke-linecap="round"/>`,
@@ -227,6 +245,11 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
 <path d="M193 220 204 227 204 220" fill="#d5bd80"/>`
   };
   const faces={
+    'pixel-visor':`<!-- Shaded pixel visor across the eyes, with luminous grid corners -->
+<path d="M65 107H190L199 139 182 145 170 132H88L75 145 57 137Z" fill="#183c40" stroke="#34434a" stroke-width="4" stroke-linejoin="round"/>
+<path d="M74 116H182L187 127H70Z" fill="#65d9ed" fill-opacity=".58"/>
+<path d="M85 117V134M103 117V134M121 117V134M139 117V134M157 117V134M175 117V134" stroke="#b9f0e2" stroke-width="2"/>
+<path d="M80 137H94M160 137H174" stroke="#f6d078" stroke-width="3"/>`,
     none:'',
     glasses:`<g fill="none" stroke="#34434a" stroke-width="4"><circle cx="93" cy="123" r="21"/><circle cx="163" cy="123" r="21"/><path d="M114 120Q128 112 142 120M73 121 59 117M183 121 198 117"/></g>`,
     monocle:`<circle cx="164" cy="124" r="24" fill="#e6f7f1" fill-opacity=".12" stroke="#ca9b4d" stroke-width="5"/><circle cx="164" cy="124" r="20" fill="none" stroke="#fff0ba" stroke-width="1.7"/><path d="M182 141Q197 159 178 186Q168 200 173 211" stroke="#cb9d4f" stroke-width="3.5" fill="none" stroke-linecap="round"/><circle cx="173" cy="212" r="4" fill="#d5b070" stroke="#34434a" stroke-width="1.5"/>`,
