@@ -63,5 +63,5 @@ assert.equal(isRuntimeWiringOnly(['index.html'],()=>originalHtml,()=>mobileHtml)
 assert.equal(isRuntimeWiringOnly(['index.html'],()=>originalHtml,()=>mobileHtml.replace('Start','Launch')),false);
 assert.equal(isRuntimeWiringOnly(['styles.css'],()=>'.app{color:red}',()=>'.app{color:blue}'),false);
 assert.equal(isRuntimeWiringOnly(['app.js'],()=>"const a=1;",()=>"const a=2;"),false);
-assert.equal(isRuntimeWiringOnly(['index.html','app.js'],p=>p==='index.html'?originalHtml:'',p=>p==='index.html'?mobileHtml:"import {installMobileRuntime} from '../../shared/mobile-runtime.js';\\ninstallMobileRuntime();\\n"),true);
+assert.equal(isRuntimeWiringOnly(['index.html','app.js'],p=>p==='index.html'?originalHtml:'',p=>p==='index.html'?mobileHtml:"import {installMobileRuntime} from '../../shared/mobile-runtime.js';\ninstallMobileRuntime();\n"),true);
 console.log('Creative brief, generic-copy rejection, template detection and changed-app scope passed.');

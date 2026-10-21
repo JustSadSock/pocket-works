@@ -24,14 +24,14 @@ export function normalizeMobileWiring(relative, source) {
     .replaceAll(/<link rel="stylesheet" href="\.\.\/\.\.\/shared\/mobile-runtime\.css">\s*/g, '')
     .replaceAll(/<script type="module" src="\.\/app\.js"><\/script>\s*/g, '');
   if (relative === 'app.js') return source
-    .replaceAll("import {installMobileRuntime} from '../../shared/mobile-runtime.js';\\ninstallMobileRuntime();\\n", '')
+    .replaceAll("import {installMobileRuntime} from '../../shared/mobile-runtime.js';\ninstallMobileRuntime();\n", '')
     .replaceAll(CLASSIC_MOBILE_BOOTSTRAP, '')
-    .replaceAll("// Fog keeps its original classic and module entrypoints. This independent\\n// bootstrap adds the shared mobile lifecycle without changing combat code.\\n", '')
-    .replaceAll("import {installMobileRuntime} from '../../shared/mobile-runtime.js';\\n", '')
-    .replaceAll('installMobileRuntime();\\n', '');
+    .replaceAll("// Fog keeps its original classic and module entrypoints. This independent\n// bootstrap adds the shared mobile lifecycle without changing combat code.\n", '')
+    .replaceAll("import {installMobileRuntime} from '../../shared/mobile-runtime.js';\n", '')
+    .replaceAll('installMobileRuntime();\n', '');
   if (relative === 'sw.js') return source
     .replaceAll(",'../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'", '')
-    .replaceAll('  "./app.js",\\n', '');
+    .replaceAll('  "./app.js",\n', '');
   return source;
 }
 export function isRuntimeWiringOnly(changed, readOriginal, readCurrent) {
