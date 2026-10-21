@@ -324,3 +324,53 @@
   height:100%!important;align-self:stretch!important;
  }
 }
+
+/* Tablet restoration: work stays canvas-first in both orientations.
+   The compact landscape editing rail scrolls independently from the canvas. */
+@media (orientation:landscape) and (min-width:700px) and (min-height:520px) and (any-pointer:coarse){
+ #screen.screen:has(>.restore){overflow:hidden!important}
+ #screen>.restore{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) clamp(244px,29vw,318px)!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  height:100%!important;min-height:0!important;overflow:hidden!important
+ }
+ #screen>.restore>.rest-head{grid-column:1/-1!important;grid-row:1!important;min-width:0}
+ #screen>.restore>.work-area{
+  grid-column:1!important;grid-row:2!important;min-width:0;min-height:0!important;
+  padding:6px 9px!important;overflow:hidden
+ }
+ #screen>.restore .work-stage{width:100%;min-width:0;min-height:0!important;overflow:hidden}
+ #screen>.restore>.work-tools{
+  grid-column:2!important;grid-row:2!important;align-self:stretch;
+  min-width:0;min-height:0;max-height:none!important;overflow-x:hidden!important;
+  overflow-y:auto!important;overscroll-behavior:contain;
+  display:flex!important;flex-direction:column!important;gap:6px!important;
+  padding:8px 8px max(8px,env(safe-area-inset-bottom))!important
+ }
+ #screen>.restore .tools{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:5px!important;overflow:visible!important;flex:none
+ }
+ #screen>.restore .tools .tool{width:100%!important;min-width:0!important;min-height:43px!important;height:43px!important}
+ #screen>.restore .tools .tool span{display:none!important}
+ #screen>.restore .colors{
+  display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  align-items:center;justify-items:center;gap:5px!important;
+  height:auto!important;min-height:0!important;padding:3px 0!important;flex:none
+ }
+ #screen>.restore .colors .swatch{width:31px!important;min-width:0!important;height:31px!important}
+ #screen>.restore .colors .color-input{grid-column:span 2;width:38px!important;height:34px!important}
+ #screen>.restore .adjust{display:flex!important;flex-wrap:wrap!important;gap:5px!important;flex:none}
+ #screen>.restore .adjust label{flex:1 0 100%;font-size:11px!important}
+ #screen>.restore .adjust .brush-size-control{flex:1 0 100%;width:100%;min-width:0}
+ #screen>.restore .adjust-actions{display:flex!important;justify-content:space-between;width:100%;gap:6px}
+ #screen>.restore .adjust-actions .tool,#screen>.restore .adjust-actions .mode-switch{
+  width:44px!important;min-width:44px!important;min-height:42px!important;height:42px!important
+ }
+ #screen>.restore .work-foot{flex-direction:column!important;align-items:stretch!important;gap:5px!important;padding-top:0!important}
+ #screen>.restore .work-save-info{flex:0 0 auto!important;max-width:100%!important}
+ #screen>.restore .work-foot .btn{flex:none!important;width:100%;min-height:43px!important}
+ #screen>.restore .viewport{max-width:100%!important;max-height:100%!important}
+ #screen>.restore .zoom-actions{top:6px!important;right:6px!important}
+}
