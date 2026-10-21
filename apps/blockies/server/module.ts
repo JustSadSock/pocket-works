@@ -280,6 +280,9 @@ class Player {
         this.gameOver = false;
         this.dropCounter = 0;
         this.dropInterval = 1000;
+        this.piecesLocked = 0;
+        this.hardDrops = 0;
+        this.linesClearedByMe = 0;
         this.lastTime = 0;
         this.spawnAnchor = typeof spawnAnchor === 'number' ? spawnAnchor : getBoardWidth() / 2;
     }
@@ -451,6 +454,7 @@ class Player {
         }
 
         if (landedOnLocked) {
+            this.hardDrops++;
             this.merge();
             soundManager.drop();
             this.clearLines();
@@ -464,6 +468,7 @@ class Player {
     }
 
     merge() {
+        this.piecesLocked++;
         for (let y = 0; y < this.currentPiece.length; y++) {
             for (let x = 0; x < this.currentPiece[y].length; x++) {
                 if (this.currentPiece[y][x]) {
@@ -511,6 +516,7 @@ class Player {
         const streakBonusPercent = Math.round((comboMultiplier - 1) * 100);
         const multiBonusPercent = Math.round((multiMultiplier - 1) * 100);
 
+        this.linesClearedByMe += linesCleared;
         gameState.sharedStats.lines += linesCleared;
         gameState.sharedStats.score += gained;
         gameState.sharedStats.level = Math.floor(gameState.sharedStats.lines / 10) + 1;
@@ -606,6 +612,7 @@ function newMatch(state){
  state.seed=Date.now()>>>0;
  state.round=(state.round||0)+1;
  state.paused=false;
+ state.everLeft=false;
  state.started=true;
  state.phase='playing';
  state.lastTick=Date.now();
@@ -614,13 +621,14 @@ function newMatch(state){
  state.engine=r.snapshot();
 }
 export default {protocolVersion:1,
- createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
+ createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,everLeft:false,round:0,seed:0,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
  onJoin({state,player}){state=copy(state);add(state,player);return out(state);},
  onLeave({state,player}){
   state=copy(state);
   const index=state.players.findIndex(p=>p.id===player.id);
   if(state.started&&state.engine){
    if(index>=0){
+    state.everLeft=true;
     state.players[index].left=true;
     state.players[index].ready=false;
     const piece=state.engine.players[index];

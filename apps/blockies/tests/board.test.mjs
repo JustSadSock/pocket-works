@@ -184,7 +184,9 @@ test('full interface keeps all core navigation targets unique and actionable',as
   'nickname-input','join-code','join-code-btn','copy-room-code','create-room-btn','ready-btn',
   'game-container','team-score','team-lines','next-pieces-preview','player-info-sidebar',
   'touch-controls','pause-btn','quit-btn','settings-btn','language-selector',
-  'resume-btn','restart-btn','play-again-btn','menu-btn','online-network-status'];
+  'resume-btn','restart-btn','play-again-btn','menu-btn','online-network-status',
+  'achievements-btn','achievements-screen','achievements-progress','achievements-grid',
+  'achievements-profile','achievements-retry','achievements-back','achievement-toast'];
  for(const id of required)assert.ok(ids.includes(id),'missing functional target: '+id);
  const actions=[...html.matchAll(/\bdata-action="([^"]+)"/g)].map(x=>x[1]);
  assert.deepEqual(actions.sort(),['down','drop','left','right','rotate'].sort());
@@ -209,13 +211,96 @@ test('PWA release matches interface, new icon and built-in Pocket Works shell',a
  const manifest=JSON.parse(await fs.readFile(new URL('../manifest.webmanifest',import.meta.url),'utf8'));
  const sw=await fs.readFile(new URL('../sw.js',import.meta.url),'utf8');
  const icon=await fs.readFile(new URL('../icons/icon.svg',import.meta.url),'utf8');
- assert.equal(config.version,'0.4.0');
- assert.match(html,/data-app-version="0\.4\.0"/);
- assert.match(sw,/blockies-v0\.4\.0/);
+ assert.equal(config.version,'0.5.0');
+ assert.match(html,/data-app-version="0\.5\.0"/);
+ assert.match(sw,/blockies-v0\.5\.0/);
  assert.equal(config.orientation,'any');
  assert.equal(manifest.orientation,'any');
  assert.equal(manifest.theme_color,'#f4f1e9');
  assert.match(html,/data-app-shell/);
  assert.match(html,/class="pocket-exit"/);
  assert.match(icon,/viewBox="0 0 512 512"/);
+});
+
+
+import {assessBlockiesAwards} from '../../../pocketnet/blockies-awards.mjs';
+import {blockiesAchievements} from '../../../shared/capabilities/blockies-achievements.js';
+const match='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+function verifiedRound(metrics,lines=0,round=1){
+ const players=metrics.map((p,i)=>({id:String.fromCharCode(97+i),left:!!p.left}));
+ return {started:true,round,players,engine:{board:[],isGameOver:false,
+   sharedStats:{score:lines*100,lines},
+   players:metrics.map(p=>({piecesLocked:p.pieces??0,hardDrops:p.drops??0,
+     linesClearedByMe:p.lines??0}))}};
+}
+const byId=awards=>new Set(awards.map(a=>a.achievementId));
+test('server counts confirmed pieces and hard drops, not button presses alone',()=>{
+ let state=start();
+ assert.equal(state.engine.players[0].piecesLocked,0);
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'rotate'}}}).state;
+ assert.equal(state.engine.players[0].piecesLocked,0);
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;
+ assert.equal(state.engine.players[0].piecesLocked,1);
+ assert.equal(state.engine.players[0].hardDrops,1);
+ assert.equal(state.engine.players[0].linesClearedByMe,0);
+});
+test('verified Blockies catalog has eight unique ID/slot/item pairs',()=>{
+ assert.equal(blockiesAchievements.length,8);
+ assert.equal(new Set(blockiesAchievements.map(a=>a.id)).size,8);
+ for(const item of blockiesAchievements){
+   assert.equal(item.id.startsWith('blockies.'),true);
+   assert.ok(['title','face','hat','clothes','background','portraitFrame'].includes(item.slot));
+ }
+});
+test('server awards first lock, player-scored line, ten hard drops and double line',()=>{
+ const prev=verifiedRound([{pieces:9,drops:9,lines:0}],0);
+ const next=verifiedRound([{pieces:10,drops:10,lines:2}],2);
+ assert.deepEqual(byId(assessBlockiesAwards(prev,next,match)),
+   new Set(['blockies.first-lock','blockies.first-line','blockies.ten-locks','blockies.double']));
+ const again=assessBlockiesAwards(next,next,match);
+ assert.equal(byId(again).has('blockies.double'),false,'double lines requires one confirmed transition');
+});
+test('team achievements require real shared contributions, quorum and no leavers',()=>{
+ const both=verifiedRound([{pieces:10,drops:10,lines:12},{pieces:10,drops:10,lines:8}],40);
+ const earned=assessBlockiesAwards(null,both,match);
+ for(const name of ['blockies.duo','blockies.steadfast','blockies.master'])
+   assert.equal(earned.filter(a=>a.achievementId===name).length,2,name);
+ const lone=verifiedRound([{pieces:40,drops:40,lines:40}],40);
+ assert.equal(byId(assessBlockiesAwards(null,lone,match)).has('blockies.master'),false);
+ const leaver=verifiedRound([{pieces:10,drops:10,lines:12},{pieces:10,drops:10,lines:8,left:true}],40);
+ const gone=byId(assessBlockiesAwards(null,leaver,match));
+ assert.equal(gone.has('blockies.duo'),false);
+ const rejoined={...both,everLeft:true};
+ assert.equal(byId(assessBlockiesAwards(null,rejoined,match)).has('blockies.master'),false,'rejoining cannot wash away past leave');
+ assert.equal(gone.has('blockies.master'),false);
+ const quartet=verifiedRound(Array.from({length:4},()=>({pieces:3,drops:2,lines:2})),6);
+ assert.equal(assessBlockiesAwards(null,quartet,match).filter(a=>a.achievementId==='blockies.quartet').length,4);
+ const missing=verifiedRound([{pieces:3},{pieces:3},{pieces:3},{pieces:1}],6);
+ assert.equal(byId(assessBlockiesAwards(null,missing,match)).has('blockies.quartet'),false);
+});
+test('v2 and tampered missing metrics never receive server-v3 awards',()=>{
+ const before=verifiedRound([{pieces:5}],1);
+ const after=structuredClone(before);
+ delete after.engine.players[0].piecesLocked;
+ assert.deepEqual(assessBlockiesAwards(before,after,match),[]);
+ assert.deepEqual(assessBlockiesAwards(null,{...before,started:false},match),[]);
+});
+
+test('Blockies achievement UI fetches from Pocket Social without client-side award actions',async()=>{
+ const catalog=await fs.readFile(new URL('../achievements.js',import.meta.url),'utf8');
+ const net=await fs.readFile(new URL('../network.js',import.meta.url),'utf8');
+ const sw=await fs.readFile(new URL('../sw.js',import.meta.url),'utf8');
+ assert.match(catalog,/\/pocket-social\/achievements/);
+ assert.match(catalog,/response\.status===401/);
+ assert.doesNotMatch(catalog,/\/pocket-social\/award/);
+ assert.match(net,/achievement_awarded/);
+ assert.match(net,/message\.event\.to===this\.socket\.id/);
+ assert.match(sw,/\.\/achievements\.js/);
+ assert.match(sw,/\.\.\/\.\.\/shared\/capabilities\/blockies-achievements\.js/);
+ const lock=JSON.parse(await fs.readFile(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
+ assert.equal(lock.blockies.current,'v3');
+ assert.deepEqual(lock.blockies.versions,['v1','v2','v3']);
+ const pinned=await fs.readFile(new URL('../../../pocketnet/module-versions/blockies/v3.ts',import.meta.url),'utf8');
+ const source=await fs.readFile(new URL('../server/module.ts',import.meta.url),'utf8');
+ assert.equal(pinned,source);
 });

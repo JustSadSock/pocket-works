@@ -1,5 +1,6 @@
 // Localization
 import {loadSolo,saveSolo,clearSolo} from './solo-save.js';
+import {initBlockiesAchievements,showBlockiesAchievementToast} from './achievements.js';
 
 const TRANSLATIONS = {
     en: {
@@ -973,7 +974,8 @@ class UIManager {
             coopSetup: document.getElementById('coop-setup-screen'),
             onlineLobby: document.getElementById('online-lobby-screen'),
             gameScreen: document.getElementById('game-screen'),
-            settingsScreen: document.getElementById('settings-screen')
+            settingsScreen: document.getElementById('settings-screen'),
+            achievementsScreen: document.getElementById('achievements-screen')
         };
 
         this.modals = {
@@ -1009,6 +1011,7 @@ class UIManager {
         this.lastSoloSaveAt = 0;
         this.setupEventListeners();
         this.initTouchControls();
+        initBlockiesAchievements(this);
         this.refreshSoloResume();
         this.initGamepads();
         window.addEventListener('resize', () => this.handleResize());
@@ -2578,6 +2581,7 @@ class UIManager {
         });
 
         networkManager.on('snapshot', data => applyNetworkSnapshot(data));
+        networkManager.on('achievement', id => showBlockiesAchievementToast(id));
         networkManager.on('connectionHealth', ({status}) => {
             const banner=document.getElementById('online-network-status');
             if (!banner) return;
