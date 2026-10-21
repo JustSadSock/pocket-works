@@ -35,7 +35,7 @@ assert.equal(state.board.segments.length,0,'host clears all marks explicitly');
 const crowded=Array.from({length:20},(_,i)=>[i*11%950,100+i*12]);
 let didFill=false;
 for(let n=0;n<1200;n++){
- const reply=send(guest,{...original,k:'heavy'+n,q:n,p:crowded});
+ const reply=send(guest,{...original,revision:state.board.revision,k:'heavy'+n,q:n,p:crowded});
  if(reply.events[0].type==='board_full'){didFill=true;break}
 }
 assert(didFill,'large packets must reach the byte budget');
@@ -43,7 +43,7 @@ assert.equal(state.board.full,true,'full status survives room snapshots');
 assert(state.board.segments.length<1200,'byte budget stopped ahead of segment count');
 assert(JSON.stringify(state.board).length<200*1024,'large lobby art leaves room for participant metadata');
 const firstLarge=JSON.stringify(state.board.segments[0]);
-assert.equal(send(host,{...original,k:'late'}).events[0].type,'board_full');
+assert.equal(send(host,{...original,revision:state.board.revision,k:'late'}).events[0].type,'board_full');
 assert.equal(JSON.stringify(state.board.segments[0]),firstLarge,'large board keeps its earliest accepted stroke');
 send(host,{type:'board_clear'});
 assert.equal(state.board.full,false,'host reopens a byte-limited full board');
