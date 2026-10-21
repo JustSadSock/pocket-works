@@ -1,6 +1,6 @@
 import {PocketNet} from '../../shared/capabilities/net.js';
 
-class NetworkManager {
+export class NetworkManager {
   constructor(){
     this.callbacks={};
     this.connected=false;
@@ -119,7 +119,8 @@ class NetworkManager {
       if(newRound)this.trigger('gameStart',{players:state.players,seed:state.seed});
       if(state.engine)this.trigger('snapshot',state.engine);
       this.trigger('onlinePause',{paused:!!state.paused,isHost:state.hostId===this.socket.id});
-      this.startClock();
+      if(state.engine?.isGameOver)this.stopClock();
+      else this.startClock();
     }else{
       this.stopClock();
       if(this.started){
