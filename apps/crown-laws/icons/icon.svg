@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Pocket Works launcher compatibility adapter; the authored icon is the PNG bitmap. -->
+<!-- Pocket Works launcher requires icons/icon.svg; gameplay and PWA use no SVG artwork. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
-  <image x="0" y="0" width="96" height="96" href="./icon.png"/>
+  <rect width="96" height="96" fill="#19241e"/>
+  <rect x="8" y="8" width="80" height="80" fill="#303a32" stroke="#857450" stroke-width="2"/>
+  <rect x="14" y="14" width="68" height="68" fill="none" stroke="#67634f" stroke-width="1"/>
+  <path d="M20 35 30 47 39 26 48 44 57 26 66 47 76 35 72 68H24Z" fill="#c2a467" stroke="#ecdaaf" stroke-width="1.5"/>
+  <path d="M21 69H75V75H21Z" fill="#dbbb78"/>
+  <path d="M26 77H70" stroke="#796241" stroke-width="3"/>
 </svg>
