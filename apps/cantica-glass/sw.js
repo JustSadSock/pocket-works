@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'cantica-glass-';
-const CACHE_NAME = 'cantica-glass-v3.2.0';
-const APP_VERSION = '3.2.0';
+const CACHE_NAME = 'cantica-glass-v3.3.0';
+const APP_VERSION = '3.3.0';
 const RELEASE_DATE = '2026-10-22';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["На широких экранах витраж и действия расположены рядом, на телефонах сохраняется вертикальный экран.","Увеличены фрагменты стекла на планшетах, поддержана горизонтальная ориентация без обрезания.","Улучшены касания и отмена жестов, добавлены обратный поворот и WASD."];
+const RELEASE_NOTES = ["Правая панель ПК — теперь летопись прохождения с живыми целями вместо инструкции.","Девять серверно проверяемых достижений открывают реальные титулы и элементы профиля Pocket ID.","Добавлены звуки стекла, света, книги, подсказок, победы и наград с сохранением переключателя звука."];
 const APP_SHELL = [
   './',
   './index.html',
@@ -13,6 +13,9 @@ const APP_SHELL = [
   './logic.js',
   './playfield-layout.js',
   './input.js',
+  './soundscape.js',
+  './rewards.js',
+  '../../shared/capabilities/cantica-achievements.js',
   './manuscript.js',
   './ornaments.svg',
   './manifest.webmanifest',
