@@ -582,6 +582,15 @@
  .pws-studio__header strong{font-size:16px}
 }
 
+/* Pocket ID's collection uses the same difficulty hierarchy as ZAMAZKA's museum. */
+.pws-achievement-tier{margin:9px 0 13px;padding:0 0 3px;border-left:3px solid var(--achievement-accent,#afaa95);min-width:0}
+.pws-achievement-tier[data-tier="Лёгкое"]{--achievement-accent:#83a999}
+.pws-achievement-tier[data-tier="Среднее"]{--achievement-accent:#c0a774}
+.pws-achievement-tier[data-tier="Сложное"]{--achievement-accent:#cf957c}
+.pws-achievement-tier[data-tier="Легендарное"]{--achievement-accent:#e3c57e}
+.pws-achievement-tier>h4{margin:0 0 8px!important;padding:7px 10px;font:650 14px/1.2 system-ui;color:var(--achievement-accent);background:#13282938;border-bottom:1px solid var(--achievement-accent)}
+.pws-achievement-tier .pws-achievement{margin:0 0 6px 7px!important}
+.pws-achievement-tier .pws-achievement__head>span{color:var(--achievement-accent)}
 
 /* Pocket ID collection: browsing earned cosmetics is separate from choosing a
    mascot part. The visual metaphor is a compact printed reward register. */

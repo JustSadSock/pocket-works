@@ -207,7 +207,6 @@ function paintingStudio(){
     '<button type="button" data-paint-clear>Очистить</button></div>'+
     '<div class="pws-studio__message" role="status" aria-live="polite"></div></div></div></section>';
 }
-
 function rewardCollection(unlocks,draft){
   const groups=collectProfileRewards(unlocks,state.catalog);
   const total=groups.reduce((sum,g)=>sum+g.total,0);
@@ -261,17 +260,21 @@ function editor(){
     ...(unlocks.includes('wedding')?[['veil','Фата']]:[]),
     ...(unlocks.includes('knight')?[['bascinet','Бацинет стража']]:[]),
      ...(unlocks.includes('seoul-artist')?[['stage-pin','Лунная шпилька артиста']]:[]),
-    ...(unlocks.includes('zamazka.shared-canvas')?[['brush','Кисть за ухом']]:[])];
+    ...(unlocks.includes('zamazka.shared-canvas')?[['brush','Кисть за ухом']]:[]),
+     ...(unlocks.includes('zamazka.eagle-eye')?[['seer-diadem','Диадема проницательности']]:[])];
   const secretClothes=[...(unlocks.includes('astronaut')?[['spacesuit','Скафандр']]:[]),
     ...(unlocks.includes('wedding')?[['wedding','Свадебный наряд']]:[]),
     ...(unlocks.includes('herald')?[['tabard','Накидка герольда']]:[]),
     ...(unlocks.includes('groom')?[['groom','Свадебный мужской костюм']]:[]),
      ...(unlocks.includes('seoul-artist')?[['stage-hanbok','Сценический ханбок']]:[]),
     ...(unlocks.includes('zamazka.maestro')?[['restorer','Мантия великого реставратора']]:[])];
-  const secretAccessories=[...mascotAccessories,...(unlocks.includes('dragon-keeper')?[['shoulder-dragon','Изумрудный дракон на плече']]:[])];
+  const secretAccessories=[...mascotAccessories,...(unlocks.includes('dragon-keeper')?[['shoulder-dragon','Изумрудный дракон на плече']]:[]),
+     ...(unlocks.includes('zamazka.ghost-brush')?[['spectral-quill','Призрачное перо']]:[])];
   const rewardFace=[...mascotFaces,...(unlocks.includes('zamazka.sharp-eye')?[['monocle','Монокль']]:[])];
-  const rewardTitles=mascotTitles.filter(t=>!zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t)||
-    zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id)));
+  const retiredTitles={'Призрачная кисть':'zamazka.ghost-brush','Всевидящий':'zamazka.eagle-eye'};
+  const rewardTitles=mascotTitles.filter(t=>(!zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t)||
+    zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id)))&&
+    (!retiredTitles[t]||unlocks.includes(retiredTitles[t])));
   const rewardBg=backgrounds.filter(([id])=>id!=='gallery'||unlocks.includes('zamazka.five-works'));
   const rewardFrames=portraitFrames.filter(([id])=>id!=='worn-gilt'||unlocks.includes('zamazka.perfect-forgery'));
   const category=state.editorSection==='data'?'account':state.editorTab;

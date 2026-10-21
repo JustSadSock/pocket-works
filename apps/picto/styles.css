@@ -150,3 +150,58 @@ body{overflow:hidden}button,input{font:inherit}button{cursor:pointer}button:disa
  .guess-select{min-height:38px}
  .guess-intro small{display:none}
 }
+
+
+/* Picto v4 — the visual language atlas and storyboard. */
+.frame-tabs{display:flex;gap:5px;flex-wrap:wrap}
+.frame-tab{flex:1;border:1.5px solid var(--ink);background:#e6d9bd;font-size:12px;font-weight:900;padding:8px 6px;cursor:pointer;min-height:34px}
+.frame-tab.active{background:var(--blue);color:white;box-shadow:2px 2px 0 var(--ink)}
+.frame-tab:focus-visible,.category-btn:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.story-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));height:100%;width:100%;gap:8px;min-height:0}
+.story-grid.frames-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.story-panel{min-width:0;min-height:0;display:flex;flex-direction:column;gap:4px}
+.story-panel>span{font-size:10px;color:var(--blue);font-weight:950;letter-spacing:.11em}
+.story-panel .stage{min-height:125px;flex:1;border:1px solid #cfc0a8;background-size:18px 18px}
+.story-panel .stage .stamp{width:clamp(24px,6vw,55px);height:clamp(24px,6vw,55px)}
+.story-panel .stage:empty:after{content:"КАДР ПУСТ";font-size:9px;letter-spacing:.06em}
+.category-tabs{display:flex;gap:5px;min-height:32px;overflow-x:auto;flex-shrink:0;scrollbar-width:thin}
+.category-btn{white-space:nowrap;font-weight:850;font-size:11px;border:1px solid #bcae98;background:#fff7e8;min-height:29px;padding:4px 10px;cursor:pointer}
+.category-btn.active{color:white;background:var(--ink);border-color:var(--ink)}
+.glyph-search{width:100%;min-height:35px;flex-shrink:0;border:1.5px solid #ae9f87;background:#fffaf0;padding:6px 9px;font-size:13px;color:var(--ink)}
+.glyph-search:focus-visible{outline:2px solid var(--blue)}
+.palette-empty{grid-column:1/-1;font-size:12px;padding:15px;color:var(--muted)}
+.lexicon-room{margin-top:18px;border:2px solid var(--ink);background:#ece4d5;padding:12px}
+.lexicon-room>strong,.lexicon-compact>strong{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.lexicon-compact{border-top:1px solid var(--line);padding-top:8px;min-height:0;max-height:130px;overflow-y:auto}
+.lexicon-list{display:grid;gap:6px;min-height:0}
+.lexicon-entry{border-left:3px solid var(--orange);background:#fff9ee;padding:7px 9px;display:flex;flex-wrap:wrap;align-items:center;gap:5px 8px}
+.lexicon-entry b{font-size:12px;font-weight:750;overflow-wrap:anywhere;flex:1 1 170px}
+.lexicon-entry small{font-size:10px;color:var(--muted)}
+.lexicon-entry button{margin-left:auto}
+.lexicon-empty{color:var(--muted);font-size:12px}
+.gallery-story{display:flex;gap:3px;margin-top:5px;min-width:0}
+.gallery-story>.stage{flex:1;min-width:0;height:95px;min-height:95px;border:1px solid var(--line);background-size:12px 12px}
+.gallery-story>.stage .stamp{width:28px;height:28px}
+.gallery-story>.stage:empty:after{content:"—";font-size:13px}
+@media(max-width:720px){
+ .frame-tabs{gap:4px}
+ .frame-tab{font-size:11px;min-height:32px}
+ .story-grid{gap:5px}
+ .story-panel>span{font-size:8px}
+ .story-panel .stage .stamp{width:clamp(25px,7vw,43px);height:clamp(25px,7vw,43px)}
+ .story-panel .stage{min-height:100px}
+ .story-grid.frames-3 .stage .stamp{width:clamp(21px,6vw,34px);height:clamp(21px,6vw,34px)}
+ .toolbox{overflow-y:auto;overscroll-behavior:contain}
+ .category-tabs{min-height:32px}
+ .glyph-search{min-height:34px}
+ .lexicon-compact{max-height:76px}
+ .gallery-story>.stage{height:70px;min-height:70px}
+ .gallery-story>.stage .stamp{width:21px;height:21px}
+}
+@media(max-height:670px) and (max-width:720px){
+ .category-tabs{min-height:28px}
+ .category-btn{min-height:26px;padding:2px 8px}
+ .glyph-search{min-height:30px}
+ .toolbox{max-height:220px}
+ .story-panel .stage{min-height:80px}
+}

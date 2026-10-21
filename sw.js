@@ -1,10 +1,11 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.13.2';
-const APP_VERSION = '0.13.2';
+const CACHE_NAME = 'pocket-works-launcher-v0.13.3';
+const APP_VERSION = '0.13.3';
 const RELEASE_DATE = '2026-10-22';
 const CACHE_PROTOCOL = 8;
 const RELEASE_NOTES = [
-  'Pocket ID: отдельная коллекция наград по играм, примерка косметики и фильтры получения.',
+  'Pocket ID: коллекция игровых наград отдельно от оформления, фильтры и примерка на карточке.',
+  'MASKOT: компактный бацинет стража и два новых визуальных трофея Замазки — диадема и призрачное перо.',
   'MASKOT: black cat and fox species, Seoul Moonstage performer costume and dragon shoulder companion unlock codes.',
   'Понятные социальные меню, компактные списки друзей и приглашений, защита черновиков и единые подтверждения.',
   'Настройки по разделам, явные размеры подборок и согласованные действия с избранным.',
