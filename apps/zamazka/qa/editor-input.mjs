@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {Editor,MAX_STROKES,MAX_STROKE_POINTS,MAX_TOTAL_POINTS} from '../editor.js';
+import {Editor,MAX_STROKES,MAX_STROKE_POINTS,MAX_TOTAL_POINTS,isTabletPalmContact} from '../editor.js';
 
 function editor(){
  const target=Object.create(Editor.prototype);
@@ -38,6 +38,17 @@ assert.ok(budget.strokes.length<=MAX_STROKES,'expanded stroke cap');
 assert.ok(budget.strokes.every(s=>s.p.length<=MAX_STROKE_POINTS),'network point cap');
 assert.ok(budget.strokes.reduce((n,s)=>n+s.p.length,0)<=MAX_TOTAL_POINTS,'expanded point cap');
 
+assert.equal(isTabletPalmContact('touch',7),true,'a palm must not interrupt an active stylus');
+assert.equal(isTabletPalmContact('touch',null),false,'finger gestures remain enabled without a pen');
+assert.equal(isTabletPalmContact('pen',7),false,'the stylus still draws normally');
+const dense=editor();
+for(let i=0;i<MAX_STROKES;i++){dense.beginStroke([i%590,5+Math.floor(i/590)]);dense.finishStroke();}
+assert.equal(dense.strokes.length,MAX_STROKES,'long tablet drawings fit the expanded cap');
+const first=JSON.stringify(dense.strokes[0]);
+dense.beginStroke([350,130]);dense.finishStroke();
+assert.equal(dense.strokes.length,MAX_STROKES,'full canvas does not evict the first line');
+assert.equal(JSON.stringify(dense.strokes[0]),first,'previous geometry survives a full brush budget');
+assert.equal(dense.notice,-1,'capacity is reported instead of silent deletion');
 const aim=editor();
 aim.inputMode='precision';aim.hand='right';
 assert.deepEqual(aim.tip({clientX:120,clientY:140,pointerType:'touch'}),{clientX:102,clientY:90,pointerType:'touch'});
@@ -52,6 +63,8 @@ const liveCanvas=editorSource.split(' paintCachedFrame(img){')[1]?.split(' getDa
 assert.ok(liveCanvas,'editor must retain its painting render path');
 assert.doesNotMatch(liveCanvas,/setLineDash|damagePath\(ctx,this\.zone\);ctx\.stroke\(\)/,'no dashed damage guide on active canvas');
 assert.match(liveCanvas,/clipZone\(ctx,this\.zone\)/,'brush and fill remain clipped to damaged geometry');
+assert.match(editorSource,/lostpointercapture/,'WebKit pointer capture can be recovered');
+assert.match(editorSource,/this\.activePenPointer=null;this\.pinch=null/,'blur clears stylus ownership');
 console.log('ZAMAZKA stable drawing, network budgets and precision input: OK');
 
 // Includes a real 320-stroke paced upload and near-border paint hit testing.
