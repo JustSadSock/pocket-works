@@ -533,7 +533,20 @@ export class Editor{
     this.updateSizeSample();
     if(this.lastCursor)this.showCursor(this.lastCursor);
   }
+  stepBrushSize(direction){
+    const size=this.size;
+    const step=direction>0
+      ?size<2?.25:size<5?.5:size<16?1:size<32?2:4
+      :size<=2?.25:size<=5?.5:size<=16?1:size<=32?2:4;
+    this.setBrushSize(size+(direction>0?step:-step));
+  }
   updateSizeSample(){
+    const slider=this.root.querySelector('#brushSize');
+    const minimum=Number(slider?.min)||.25;
+    const down=this.root.querySelector('[data-cmd="size-down"]');
+    const up=this.root.querySelector('[data-cmd="size-up"]');
+    if(down)down.disabled=this.size<=minimum;
+    if(up)up.disabled=this.size>=48;
     const sample=this.root.querySelector('#sizeSample');
     if(sample){
       const d=Math.max(3,Math.min(26,this.size));
@@ -968,6 +981,10 @@ export class Editor{
     this.viewport.addEventListener('wheel',this.wheel,{passive:false});
     this.actions=e=>{
       const b=e.target.closest('[data-tool],[data-cmd],[data-color]');if(!b)return;
+      if(b.dataset.cmd==='size-up'||b.dataset.cmd==='size-down'){
+        if(this.sizeStepRepeatFired)this.sizeStepRepeatFired=false;
+        else this.stepBrushSize(b.dataset.cmd==='size-up'?1:-1);
+      }
       if(b.dataset.tool)this.setTool(b.dataset.tool);
       if(b.dataset.color){this.onSound?.('tool');this.color=b.dataset.color;this.root.querySelectorAll('[data-color]').forEach(x=>x.classList.toggle('active',x===b));this.cursorDip();if(this.lastCursor)this.showCursor(this.lastCursor)}
       if(b.dataset.cmd==='precision')this.setMode(this.inputMode==='precision'?'direct':'precision');
@@ -1044,6 +1061,37 @@ export class Editor{
     window.addEventListener('keydown',this.keyboardDown);
     window.addEventListener('keyup',this.keyboardUp);
     this.root.addEventListener('click',this.actions);
+    // Tap for an adaptive step; hold to repeat without dragging the slider.
+    this.sizeStepPress=e=>{
+      if(e.button!==0||e.currentTarget.disabled)return;
+      this.sizeStepRepeatFired=false;
+      this.sizeStepPointer=e.pointerId;
+      this.sizeStepButton=e.currentTarget;
+      clearTimeout(this.sizeStepDelay);
+      clearInterval(this.sizeStepInterval);
+      this.sizeStepDelay=setTimeout(()=>{
+        this.sizeStepRepeatFired=true;
+        const direction=this.sizeStepButton?.dataset.cmd==='size-up'?1:-1;
+        this.stepBrushSize(direction);
+        this.sizeStepInterval=setInterval(()=>{
+          if(!this.sizeStepButton||this.sizeStepButton.disabled){
+            clearInterval(this.sizeStepInterval);this.sizeStepInterval=null;return;
+          }
+          this.stepBrushSize(direction);
+        },110);
+      },420);
+    };
+    this.sizeStepRelease=e=>{
+      if(this.sizeStepPointer!==e.pointerId)return;
+      clearTimeout(this.sizeStepDelay);
+      clearInterval(this.sizeStepInterval);
+      this.sizeStepDelay=null;this.sizeStepInterval=null;
+      this.sizeStepPointer=null;this.sizeStepButton=null;
+    };
+    this.sizeStepButtons=[...this.root.querySelectorAll('.brush-size-control .size-step')];
+    for(const button of this.sizeStepButtons)button.addEventListener('pointerdown',this.sizeStepPress);
+    window.addEventListener('pointerup',this.sizeStepRelease);
+    window.addEventListener('pointercancel',this.sizeStepRelease);
     this.slider=e=>{
       if(e.target.id==='brushSize'){
         const value=Number(e.target.value),min=Number(e.target.min)||1;
@@ -1210,7 +1258,7 @@ export class Editor{
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){try{localStorage.removeItem(this.draftKey)}catch{}try{sessionStorage.removeItem(this.draftKey)}catch{}void zamazkaStore.remove('draft:'+this.draftKey).catch(()=>{})}
- dispose(){this.flushPersistence();this.closed=true;document.removeEventListener?.('visibilitychange',this.persistOnHide);clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
+ dispose(){this.flushPersistence();this.closed=true;clearTimeout(this.sizeStepDelay);clearInterval(this.sizeStepInterval);for(const button of this.sizeStepButtons||[])button.removeEventListener('pointerdown',this.sizeStepPress);window.removeEventListener('pointerup',this.sizeStepRelease);window.removeEventListener('pointercancel',this.sizeStepRelease);document.removeEventListener?.('visibilitychange',this.persistOnHide);clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
    this.paintFrameId=null;
