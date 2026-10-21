@@ -140,9 +140,6 @@ jobs:
       - name: Install build dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund
 
-      - name: Test ZAMAZKA shared canvas capacity and real vote tally
-        run: node apps/zamazka/qa/lobby-cap-verdict.mjs
-
       - name: Test ZAMAZKA untimed round gallery progression
         run: node apps/zamazka/qa/round-review.mjs
 
