@@ -10,7 +10,6 @@ self.addEventListener('install',e=>e.waitUntil((async()=>{
   if(!response.ok)throw Error('precache: '+url);
   await cache.put(url,response);
  }));
- await self.skipWaiting();
 })()));
 self.addEventListener('activate',e=>e.waitUntil((async()=>{
  const names=await caches.keys();
@@ -19,7 +18,7 @@ self.addEventListener('activate',e=>e.waitUntil((async()=>{
 })()));
 self.addEventListener('message',e=>{
  if(e.data?.type==='GET_UPDATE_INFO')e.ports?.[0]?.postMessage({
-  version:VERSION,releaseDate:'2026-10-13',releaseNotes:['Тактическая дуэль с одним игровым тиком в секунду.'],cacheProtocol:1,cacheName:CACHE_NAME
+  version:VERSION,releaseDate:'2026-10-13',releaseNotes:["Первый релиз: онлайн-комнаты PocketNet на двух игроков, приглашение по коду и ссылке.","Строго один авторитетный игровой тик в секунду: шаг, прыжок, толчок, разрушение плит и матч до трёх побед.","Локальная тренировка против бота, управление с клавиатуры и телефона, локальные звук и статистика."],cacheProtocol:1,cacheName:CACHE_NAME
  });
  if(e.data?.type==='SKIP_WAITING')self.skipWaiting();
 });
