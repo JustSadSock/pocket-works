@@ -13,6 +13,7 @@ import {CombatPresentation} from './combat-presentation.mjs';
 import {drawGroundCues,drawActorCues,drawSpellLighting} from './combat-readability.mjs';
 import {SpellChoreography,drawSpellGround,drawSpellActors,drawSpellForeground} from './spell-choreography.mjs';
 import {drawKineticProjectiles,ContactTheater} from './spell-kinetics.mjs';
+import {drawSignatureGround,drawSignatureForeground} from './signature-art.mjs';
 import {DuelFeedback} from './duel-feedback.mjs';
 import {MageMotion} from './mage-motion.mjs';
 import {courtAim} from './aim-geometry.mjs';
@@ -31,6 +32,7 @@ const contactTheater=new ContactTheater();
 const duelFeedback=new DuelFeedback();
 const mageMotion=new MageMotion();
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ATTACK_NAMES={kindle:'ПОДЖОГ',cinder:'ОГНЕМЁТ',wire:'ПРОБОЙ',coil:'МОЛНИЯ',pebble:'ОСКОЛКИ',slate:'ВОЛНА'};
 const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,aim:null},stick={pointer:null,x:0,y:0},touches=new Map();
 let tapAttackQueued=false,aimTouch=false,aimTouchStart=0,aimDragged=false,aimVector=null;
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
@@ -86,6 +88,22 @@ function sfx(type,school='fire'){
   }else{
    tone(340,120,.08,'sine',.012);
   }
+ }else if(type==='charge_pebble'){
+  tone(90,180,.20,'triangle',.024);grit(.075,220,.014);
+ }else if(type==='charge_coil'){
+  tone(420,990,.17,'sine',.015);tone(650,1200,.11,'triangle',.014,.03);
+ }else if(type==='charge_slate'){
+  tone(110,56,.16,'triangle',.024);
+ }else if(type==='hurl'){
+  tone(240,67,.23,'triangle',.045);grit(.15,320,.022);
+ }else if(type==='thunder'){
+  tone(1270,180,.15,'sawtooth',.022);tone(610,80,.19,'triangle',.016);
+ }else if(type==='quake'){
+  tone(115,36,.22,'triangle',.046);grit(.12,180,.026);
+ }else if(type==='flame'){
+  tone(210,75,.065,'sawtooth',.013);grit(.05,850,.01);
+ }else if(type==='fracture'){
+  tone(180,43,.11,'triangle',.023);grit(.11,360,.021);
  }else if(type==='hit'){
   tone(195,65,.08,'triangle',.015);
  }else if(type==='shield'){
@@ -127,7 +145,7 @@ function mageCards(node,value,onPick,small=false){
 }
 function updateSelectedMage(){
  $('chosen-mage-name').textContent=mage(selectedMage).name;drawHero($('hero-preview').getContext('2d'),appearance,0,[],selectedMage,reducedMotion);
- $('attack-name').textContent={fire:'ЖАР',storm:'РАЗРЯД',stone:'КАМЕНЬ'}[mage(selectedMage).school];
+ $('attack-name').textContent=ATTACK_NAMES[selectedMage];
 }
 $('choose-mage').addEventListener('click',()=>{
  mageFrom='menu';selectionDraft=selectedMage;show('mage-select');
@@ -152,7 +170,7 @@ function myIndex(){return online?.active?online.me:0}
 function myActor(){return active?.actors?.[myIndex()]}
 function updateHud(){if(!active)return;const side=myIndex(),a=active.actors[side],b=active.actors[1-side];const am=stats(a),bm=stats(b);$('my-hp').style.width=Math.max(0,100*a.hp/am.max)+'%';$('bot-hp').style.width=Math.max(0,100*b.hp/bm.max)+'%';$('my-hp-text').textContent=Math.ceil(a.hp)+' / '+am.max;$('bot-hp-text').textContent=Math.ceil(b.hp)+' / '+bm.max;$('clock').textContent=Math.ceil(active.remaining);$('clock').style.color=active.overtime?'#f3a27c':'#f7edce';$('round-number').textContent=active.remaining<=10?'10 С ДО КОНЦА':'РАУНД '+active.round;$('score-me').textContent='● '.repeat(active.score[side])+'○ '.repeat(4-active.score[side]);$('score-bot').textContent='● '.repeat(active.score[1-side])+'○ '.repeat(4-active.score[1-side]);$('heat-fill').style.width=Math.round(a.heat)+'%';$('heat-value').textContent=Math.round(a.heat)+'%';
 $('heat-fill').classList.toggle('danger',a.heat>=78);
-$('dash-cooldown').style.height=100*Math.min(1,a.dashReady/2.5)+'%';$('shield-cooldown').style.height=100*Math.min(1,a.shieldReady/5)+'%';$('attack-cooldown').style.height=100*Math.min(1,a.cast/stats(a).reload)+'%';$('attack-name').textContent={fire:'ЖАР',storm:'РАЗРЯД',stone:'КАМЕНЬ'}[mage(a.mageId).school]}
+$('dash-cooldown').style.height=100*Math.min(1,a.dashReady/2.5)+'%';$('shield-cooldown').style.height=100*Math.min(1,a.shieldReady/5)+'%';$('attack-cooldown').style.height=100*Math.min(1,a.cast/stats(a).reload)+'%';$('attack-name').textContent=ATTACK_NAMES[a.mageId]}
 const icons={when:'⌁',do:'✷',how:'↗'};
 function typeName(type){return TYPES[type]||type}
 function drawRuneNode(r,compact=false){
@@ -201,7 +219,8 @@ function renderWorkbench(){
  for(const chain of info.chains)for(const action of chain.actions)if(['ball','blast','mine'].includes(action.id))available.add(chosenElement(action.mods,mage(myActor().mageId).school));
  const recipes=[];for(const first of available)for(const second of available)if(first<second){const reaction=reactionFor(first,second);if(reaction)recipes.push(reaction.label)}
  const recipeNode=$('chemistry-preview');recipeNode.classList.toggle('has-reaction',recipes.length>0);
- recipeNode.textContent=recipes.length?'Можно получить: '+recipes.join(' · ')+'. Попади двумя разными видами магии подряд.':'Для реакции добавь к шару руну «Дать разряд», «Сделать горячим» или «Добавить камень».';
+ recipeNode.textContent=(recipes.length?'Реакции: '+recipes.join(' · ')+'. ':'')+
+ 'Фирменная атака: '+ATTACK_NAMES[myActor().mageId]+'. Руны «КАК» в собранных цепочках усиливают её: сила, ширина, дальность и темп. Эффект зависит от класса.';
  slots.forEach((id,i)=>{
   const r=rune(id);if(!r)return;
   if(r.type==='when'||!lane){laneNumber++;lane=document.createElement('div');lane.className='spell-lane';const head=document.createElement('div');head.className='spell-lane-head';head.textContent='ПРИЁМ '+Math.min(3,laneNumber);lane.append(head);rack.append(lane)}
@@ -365,7 +384,7 @@ function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0,moving=0,
  const runes=active?.actors?.[enemy?1-myIndex():myIndex()]?.runes||[];
  const a=active?.actors?.[enemy?1-myIndex():myIndex()];
  const pose=animate&&a?mageMotion.sample(a,{x,y},performance.now()/1000,active?.round||0,reducedMotion):null;
- drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0,moving,pose});
+ drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.windup?.remaining>0?a.windup.remaining*2.7:a?.cast||0,dashing:a?.dash||0,moving,pose});
 }
 function drawConstructs(s){
  if(drawForgeConstructs(ctx,s,frame/60,reducedMotion))return;
@@ -435,6 +454,7 @@ function render(){
   // mines only. No enemy hidden runes, damage estimates or artificial aim.
   drawGroundCues(ctx,active,myIndex(),frame/60,reducedMotion);
   drawSpellGround(ctx,spellChoreography,reducedMotion);
+  drawSignatureGround(ctx,active,frame,reducedMotion);
   combatPresentation.ground(ctx);
   drawConstructs(active);
   drawEffects(active);
@@ -455,6 +475,7 @@ function render(){
   }
   duelFeedback.actors(ctx,active,frame/60,reducedMotion);
   drawKineticProjectiles(ctx,active,frame/60,{reduced:reducedMotion});
+  drawSignatureForeground(ctx,active,frame,reducedMotion);
   contactTheater.draw(ctx,reducedMotion);
   drawSpellForeground(ctx,spellChoreography,reducedMotion,{impacts:false});
   combatPresentation.foreground(ctx);

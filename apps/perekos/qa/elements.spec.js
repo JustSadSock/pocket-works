@@ -9,10 +9,13 @@ test('real fire + electric projectile reaction renders a readable combat burst',
   const a=s.actors[0],b=s.actors[1];a.x=165;a.y=320;b.x=230;b.y=320;
   a.runes=['on_cast','ball','as_storm'];
   for(let i=0;i<35;i++)tick(s,{x:0,y:0,attack:true,aim:{x:b.x,y:b.y}},STEP,{x:0,y:0,attack:false,aim:{x:a.x,y:a.y}});
-  return {count:s.elementCombos[0],mark:b.mark,life:b.markLife,health:b.hp};
+  return {count:s.elementCombos[0],reactions:a.reactionsDone,mark:b.mark,life:b.markLife,health:b.hp};
  });
  expect(summary.count).toBeGreaterThan(0);
- expect(summary.mark).toBe('storm');
+ // Subsequent fire hits legitimately replace the latest elemental mark.
+ // Assert a confirmed combined reaction instead of the transient last-hit tag.
+ expect(summary.reactions).toBeGreaterThan(0);
+ expect(['fire','storm']).toContain(summary.mark);
  expect(summary.health).toBeLessThan(100);
  await expect(page.locator('#world')).toBeVisible();
  await info.attach('fire-electric-reaction',{body:await page.screenshot(),contentType:'image/png'});

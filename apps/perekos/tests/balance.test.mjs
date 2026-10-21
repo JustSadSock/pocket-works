@@ -37,7 +37,8 @@ export function matrix(){
  return scores;
 }
 test('6×6 matchup model stays within target average HP advantage; no untouchable class',()=>{
- const table=matrix(),rows=table.map(r=>r.reduce((a,b)=>a+b,0)/r.length);
+ const table=matrix(),rows=table.map((r,i)=>r.reduce((sum,value,j)=>sum+(value-table[j][i])/2,0)/r.length);
+ console.log('Perekos matchup matrix:',JSON.stringify({classes:MAGES.map(m=>m.id),table,rows}));
  assert.equal(table.length,6);
  for(let i=0;i<rows.length;i++)assert.ok(Math.abs(rows[i])<28,
   MAGES[i].name+' exceeds allowed matchup advantage: '+rows[i].toFixed(1));

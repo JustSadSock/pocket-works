@@ -67,7 +67,7 @@ function mosaic(c){
   for(let i=0;i<21;i++){
    const yy=27+i*27,stagger=i%2?5:0;
    px(c,side-7,yy+stagger,8,3,'#25342f');
-   if(hash(i+n*33)>.57)px(c,side+(n?-2:1),yy+7,3,7,'#617a57');
+   if(hash(i+n*33)>.57)px(c,side+(n?-2:1),yy+7,3,7,'#6c8275');
   }
  }
  for(let side of [21,597]){
@@ -86,7 +86,7 @@ function mosaic(c){
   const x=29+hash(i*47+301)*342,y=32+hash(i*211+94)*556;
   const edge=Math.min(x-29,371-x,y-32,589-y);
   if(hash(i*13+31)>(edge<33?.29:.92)){
-   px(c,x,y,2+hash(i*71)*4,1+hash(i*15)*2,hash(i*7)>.5?'#6c7b50b0':'#8992608c');
+   px(c,x,y,2+hash(i*71)*4,1+hash(i*15)*2,hash(i*7)>.5?'#627668b0':'#9cae968c');
   }
  }
  // A second layer of rare chips avoids the noisy tiled texture appearance.

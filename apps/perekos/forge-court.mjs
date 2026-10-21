@@ -11,7 +11,7 @@ export const COURT_TILE_NAMES=Object.freeze([
 const C=Object.freeze({
  void:'#172b28',seam:'#2d4941',deep:'#294a42',river:'#3a6557',
  riverLite:'#507b67',pale:'#b4b9a4',ivory:'#d0d0b5',
- edge:'#84977f',line:'#819986',moss:'#65944b',leaf:'#9fbc70',
+ edge:'#84977f',line:'#819986',moss:'#657e70',leaf:'#9aa998',
  bright:'#f2efd0'
 });
 let sheet=null,loadStatus='loading',resolveReady;
@@ -19,7 +19,23 @@ const ready=new Promise(resolve=>{resolveReady=resolve});
 if(typeof Image!=='undefined'){
  const image=new Image();image.decoding='async';
  image.onload=()=>{
-  if(image.naturalWidth===384&&image.naturalHeight===32){sheet=image;loadStatus='ready'}
+  if(image.naturalWidth===384&&image.naturalHeight===32){
+   // Permanent atlas recolor: turn acidic green moss into weathered sage,
+   // leaving original individual pixels and tile layout intact.
+   const canvas=document.createElement('canvas');canvas.width=384;canvas.height=32;
+   const c=canvas.getContext('2d',{willReadFrequently:true});c.imageSmoothingEnabled=false;
+   c.drawImage(image,0,0);
+   const data=c.getImageData(0,0,384,32);
+   for(let i=0;i<data.data.length;i+=4){
+    const a=data.data[i+3],red=data.data[i],green=data.data[i+1],blue=data.data[i+2];
+    if(a&&green>105&&green>red*1.21&&green>blue*1.09){
+     data.data[i]=Math.min(255,red*.8+blue*.2+10);
+     data.data[i+1]=Math.min(255,green*.62+red*.38);
+     data.data[i+2]=Math.min(255,blue*.65+green*.35);
+    }
+   }
+   c.putImageData(data,0,0);sheet=canvas;loadStatus='ready';
+  }
   else loadStatus='invalid';
   resolveReady(!!sheet);
  };
