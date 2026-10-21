@@ -51,6 +51,7 @@
               <span class="mode-index">03</span><span class="mode-copy"><span class="mode-title" data-i18n="localCoop">На одном экране</span><span class="mode-desc" data-i18n="playTogether">От двух до четырёх игроков</span></span><span class="mode-arrow" aria-hidden="true">↗</span>
             </button>
           </div>
+          <button id="achievements-btn" type="button" class="achievements-entry"><span>НАГРАДЫ / BLOCKIES</span><strong>Достижения и титулы <span aria-hidden="true">↗</span></strong></button>
         </div>
         <div class="home-visual" aria-hidden="true">
           <div class="hero-board">
@@ -144,6 +145,24 @@
         <p class="gesture-hint" data-i18n="gestureHint">На поле: касание — поворот, свайп — движение</p>
       </div>
     </section>
+
+    <section id="achievements-screen" class="screen setup-screen" aria-label="Достижения Blockies">
+      <div class="page-head"><span class="eyebrow">BLOCKIES / COLLECTION</span>
+        <h2>Достижения</h2><p>Укладывайте фигуры в сетевых матчах и открывайте оформления для своего Pocket ID.</p>
+      </div>
+      <div class="achievements-layout">
+        <div class="achievements-progress" id="achievements-progress" role="status" aria-live="polite">Получение наград…</div>
+        <div id="achievements-grid" class="achievements-grid" aria-live="polite"></div>
+        <div class="achievements-actions">
+          <a class="btn btn-primary" id="achievements-profile" href="/?pocket-id=profile">Оформить профиль ↗</a>
+          <button class="btn btn-secondary" id="achievements-retry" type="button">Обновить</button>
+          <button class="btn btn-quiet" id="achievements-back" type="button">Назад</button>
+        </div>
+        <p class="achievements-note">Награды подтверждает сервер PocketNet. В одиночной офлайн-игре достижения для профиля не выдаются.</p>
+      </div>
+    </section>
+
+    <div id="achievement-toast" class="achievement-toast" role="status" aria-live="polite" hidden></div>
 
     <section id="settings-screen" class="screen setup-screen" aria-label="Настройки">
       <div class="page-head"><span class="eyebrow">PREFERENCES</span><h2 data-i18n="settings">Настройки</h2></div>
