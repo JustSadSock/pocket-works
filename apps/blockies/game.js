@@ -311,6 +311,9 @@ class SoundManager {
 
     playTone(frequency, duration, volume = 0.1) {
         if (!this.enabled || !this.audioContext) return;
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume().catch(() => {});
+        }
 
         const oscillator = this.audioContext.createOscillator();
         const gainNode = this.audioContext.createGain();
@@ -1335,7 +1338,7 @@ class UIManager {
             player: {
                 currentPiece: p.currentPiece, nextPiece: p.nextPiece,
                 position: p.position, dropCounter: p.dropCounter,
-                dropInterval: p.dropInterval, spawnAnchor: p.spawnAnchor
+                dropInterval: p.dropInterval, spawnAnchor: p.spawnAnchor, color: p.color
             }
         };
         if (saveSolo(checkpoint)) this.lastSoloSaveAt = now;
@@ -1361,6 +1364,7 @@ class UIManager {
         player.dropCounter = checkpoint.player.dropCounter;
         player.dropInterval = checkpoint.player.dropInterval;
         player.spawnAnchor = checkpoint.player.spawnAnchor;
+        player.color = checkpoint.player.color;
         player.score = checkpoint.sharedStats.score;
         player.lines = checkpoint.sharedStats.lines;
         player.level = checkpoint.sharedStats.level;
