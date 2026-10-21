@@ -236,8 +236,21 @@ assert.equal((await call(0,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'b
 assert.equal((await call(0,'profile',{...aliceCard,background:'gallery',maskot:{...plainMaskot,hat:'brush',face:'monocle',clothes:'restorer'},
   title:'Знаток подделок',backgroundMode:'preset',portraitFrame:'worn-gilt'})).ok,true);
 assert.equal((await call(0,'me')).profile.background,'gallery');
+// These additional server-issued titles are in the same collection as the
+// original ones and must be persistable, but never equippable before earning.
+for(const [id,title] of [
+  ['duo-detectives','Двойной агент'],['ghost-brush','Призрачная кисть'],
+  ['eagle-eye','Всевидящий'],['three-theories','Авантюрист']
+]){
+  assert.equal((await call(0,'profile',{...aliceCard,title})).httpStatus,400,
+    'not earned yet: '+title);
+  assert.equal((await grant('zamazka.'+id)).ok,true);
+  assert.equal((await call(0,'profile',{...aliceCard,title})).ok,true,
+    'earned title must be valid: '+title);
+  assert.equal((await call(0,'me')).profile.title,title);
+}
 assert.equal((await call(1,'profile',{...aliceCard,background:'gallery'})).httpStatus,400);
-assert.equal((await call(0,'me')).profile.achievements.length,7);
+assert.equal((await call(0,'me')).profile.achievements.length,11);
 // Fast sync returns only a revision and changes when relationships or cosmetics change.
 const revisionBefore=await call(0,'sync');
 assert.match(revisionBefore.revision,/^[0-9a-z]+:\d+$/);
