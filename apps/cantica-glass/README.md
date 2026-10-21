@@ -69,3 +69,43 @@ Additional regression coverage:
 Responsive design targets: 320×568 / 390×844 portrait phones, 667×375
 landscape phone, 768×1024 portrait tablet, 1024×768 landscape tablet, and
 1440×900 desktop. These are code/test targets, not manual screenshot-QA results.
+
+## 3.3.0 — The stained-glass journal, real rewards and new soundscape
+
+The static desktop tutorial was removed: the side rail is an actual journal
+of server-confirmed completed windows, the next progression milestone and
+earned profile collectibles. On phones the four main actions are levels,
+hint, rewards and restart; the full-screen illuminated reward manuscript
+is always reachable without permanently shrinking the window.
+
+CANTICA now has nine genuine Pocket ID achievement entitlements: four
+collectible titles (including the legendary one), the lunar chapel card
+background, rose-window portrait frame, solar circlet, shoulder crystal and
+illuminator robe. Those items are rendered and equipable in the shared
+PocketWorks MASKOT/profile editor. Server profile writes reject locked IDs.
+
+Solo achievements use a replay receipt: the client records the sequence
+of pane rotations with level and layout variant, Pocket Social independently
+generates the deterministic puzzle and replays every move until the
+solution is achieved, then records unique levels and mints account-bound
+items. A repeated receipt cannot double-count a window. The client queues
+receipts from an authenticated session for later sync if connectivity
+drops. Older incomplete saves without a rotation history remain playable
+but cannot produce a retrospective server-verifiable receipt for that
+attempt; restart a window to build a fresh receipt.
+
+Original WebAudio effects include glass/metal rotation, reverse, newly
+lit relics, sun drag, vellum page rustle, hint bells, restart, victory
+chord and a separate achievement flourish. Existing sound preference is
+preserved; newly installed local saves default to sound enabled and can
+be muted at any time.
+
+QA:
+- `node --test apps/cantica-glass/tests/*.test.mjs`
+- `node --test scripts/test-pocket-social.mjs`
+- `node --check apps/cantica-glass/{app,rewards,soundscape}.js`
+- `node scripts/validate-visual-direction.mjs --app=cantica-glass`
+
+Note: achievements depend on connected Pocket ID. Guest and offline-only
+play still save the core puzzle locally but cannot mint profile entitlements
+without an authenticated, server-verified completion.
