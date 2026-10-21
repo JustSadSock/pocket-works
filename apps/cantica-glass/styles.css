@@ -746,3 +746,20 @@ button:focus-visible,a:focus-visible,canvas:focus-visible{outline:2px solid #ead
  .ledger-open{min-height:37px;font-size:12px}
  .ledger-sync{font-size:10px;margin:6px 0 0}
 }
+
+@media(min-width:850px) and (min-height:736px){
+  .ledger-windows{border-top:1px solid #bca77f54;padding:12px 0 3px}
+  .ledger-window-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:9px}
+  .ledger-window{
+    border:1px solid #ad91685b;background:#111f20;color:#e3cda7;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;
+    min-width:0;min-height:56px;font:18px Georgia,serif;
+  }
+  .ledger-window small{font:11px Georgia,serif;color:#bdac8d}
+  .ledger-window.is-current{border-color:#f0ce8c;background:#544333;color:#ffefc9}
+  .ledger-window:disabled:not(.is-current){opacity:.43}
+  .ledger-window:active:not(:disabled){transform:translateY(2px)}
+}
+@media(min-width:850px) and (min-height:560px) and (max-height:735px){
+  .ledger-windows{display:none}
+}
