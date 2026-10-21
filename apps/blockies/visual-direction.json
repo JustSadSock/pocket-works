@@ -3,14 +3,14 @@
   "status": "ready",
   "product": "blockies",
   "direction": {
-    "premise": "Several falling pieces occupy one shared stack rather than separate competitive wells.",
-    "composition": "A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
-    "shapeLanguage": "Square bevelled blocks, block previews and chunky rectangular arcade buttons retain the source arcade silhouette.",
-    "surfaceAndMaterial": "Opaque pink and cyan bevels sit on the dark stack field; purple cabinet chrome remains outside the falling grid.",
-    "paletteLogic": "Each player owns a fixed vivid piece color, so active and locked cells remain attributable on the shared board.",
-    "typography": "The recovered arcade monospace labels distinguish score, piece actions and room state with short text.",
-    "signature": "Two colored active pieces share one authoritative well; a hard drop becomes the same locked cells on every connected screen.",
-    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted restoration fragments; this port retains its source game object and the specific input loop described here."
+    "premise": "A cooperative falling-block arcade rebuilt around a legible single shared well, even on narrow phones.",
+    "composition": "A light editorial entry becomes a high-contrast centered well with compact score to the side or above, next pieces on a rail, and an ergonomic two-thumb control deck.",
+    "shapeLanguage": "Crisp square stack cells, quiet linear menu rows, pill-free directional keys and one heavy color-filled hard-drop key.",
+    "surfaceAndMaterial": "Warm paper shell and sage hardware borders surround a dark deep-green playing well; no glass overlays, purple gradients or neon chromed cabinet.",
+    "paletteLogic": "A neutral matte shell yields attention to player-owned cyan, pink, yellow and green cells; the hard-drop key is deep green.",
+    "typography": "Humanist sans for mode choices, tightly-spaced monospace for score and technical status; labels stay concise.",
+    "signature": "The multiplayer phone well expands to full width automatically, while the two-thumb deck supports both precise hold controls and direct canvas swipe rotation.",
+    "distinction": "Distinct from ZAMAZKA's art paper and FOG's tactical maps: this is a fitted precision arcade well within a restrained editorial instrument, not a decorative game cabinet."
   },
   "architecture": {
     "spatialLayout": "single-instrument",
@@ -18,59 +18,59 @@
     "navigation": "overlay-list",
     "chromeTopology": "framed-stage",
     "dominantMotion": "immediate",
-    "primaryVerb": "Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player.",
-    "physicalFeedback": "Touch movement changes a piece immediately in local play; online actions resolve into the same complete board snapshot for all peers.",
-    "spatialRationale": "A fitted vertical falling-block well sits between the small team score and two large rows of touch commands. This keeps the current game object and its real inputs spatially connected on a phone.",
+    "primaryVerb": "Place falling pieces into the one shared well: hold horizontal movement or soft-drop, rotate with a tap, swipe in whole-cell steps, or hard-drop.",
+    "physicalFeedback": "Two-thumb buttons depress by 3px on pointer contact, local gestures resolve immediately, online snapshots reconcile to the authoritative well.",
+    "spatialRationale": "The smallest screen reserves the most area for its current 20-row field, shifts wide shared wells to full-width play, and keeps two control groups at thumb reach; landscape moves controls left of the well.",
     "comparisons": [
       {
         "slug": "perekos",
-        "spatialDifference": "perekos uses full-bleed-world and layered-panels. Here: A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
-        "interactionDifference": "perekos uses perimeter with overlay-list. This game's actual verb is: Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player."
+        "spatialDifference": "The perekos layout differs from Blockies: warm outer shell, full-width shared grid on phones, tiny numeric strip and two-thumb input deck.",
+        "interactionDifference": "Blockies requires cell-precise hold, canvas swipe and fast hard drop, with PocketNet authoritative shared state instead of perekos interaction."
       },
       {
         "slug": "meat-exe",
-        "spatialDifference": "meat-exe uses full-bleed-world and layered-panels. Here: A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
-        "interactionDifference": "meat-exe uses bottom-deck with world-travel. This game's actual verb is: Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player."
+        "spatialDifference": "The meat-exe layout differs from Blockies: warm outer shell, full-width shared grid on phones, tiny numeric strip and two-thumb input deck.",
+        "interactionDifference": "Blockies requires cell-precise hold, canvas swipe and fast hard drop, with PocketNet authoritative shared state instead of meat-exe interaction."
       },
       {
         "slug": "living-history",
-        "spatialDifference": "living-history uses full-bleed-world and unframed-scene. Here: A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
-        "interactionDifference": "living-history uses bottom-deck with scene-zoom. This game's actual verb is: Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player."
+        "spatialDifference": "The living-history layout differs from Blockies: warm outer shell, full-width shared grid on phones, tiny numeric strip and two-thumb input deck.",
+        "interactionDifference": "Blockies requires cell-precise hold, canvas swipe and fast hard drop, with PocketNet authoritative shared state instead of living-history interaction."
       },
       {
         "slug": "cavitation-lab",
-        "spatialDifference": "cavitation-lab uses split-workspace and framed-stage. Here: A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
-        "interactionDifference": "cavitation-lab uses bottom-deck with none. This game's actual verb is: Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player."
+        "spatialDifference": "The cavitation-lab layout differs from Blockies: warm outer shell, full-width shared grid on phones, tiny numeric strip and two-thumb input deck.",
+        "interactionDifference": "Blockies requires cell-precise hold, canvas swipe and fast hard drop, with PocketNet authoritative shared state instead of cavitation-lab interaction."
       },
       {
         "slug": "not-dead-yet",
-        "spatialDifference": "not-dead-yet uses full-bleed-world and unframed-scene. Here: A fitted vertical falling-block well sits between the small team score and two large rows of touch commands.",
-        "interactionDifference": "not-dead-yet uses perimeter with world-travel. This game's actual verb is: Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player."
+        "spatialDifference": "The not-dead-yet layout differs from Blockies: warm outer shell, full-width shared grid on phones, tiny numeric strip and two-thumb input deck.",
+        "interactionDifference": "Blockies requires cell-precise hold, canvas swipe and fast hard drop, with PocketNet authoritative shared state instead of not-dead-yet interaction."
       },
       {
         "slug": "zamazka",
-        "spatialDifference": "Zamazka frames a painting workspace and art tools around a mutable illustration; Blockies centers a narrow, grid-aligned shared falling-block field with compact score and movement deck.",
-        "interactionDifference": "Zamazka has freehand brush input, color tools and round-based drawing; Blockies uses bounded directional steps, gravity and server-ordered tetromino drops."
+        "spatialDifference": "Zamazka's painting sheet differs from Blockies: warm outer shell, full-width shared grid on phones, tiny numeric strip and two-thumb input deck.",
+        "interactionDifference": "Blockies requires cell-precise hold, canvas swipe and fast hard drop, with PocketNet authoritative shared state instead of zamazka interaction."
       },
       {
         "slug": "rivals-field-notes",
-        "spatialDifference": "Rivals Field Notes is an information and analysis interface with text-heavy comparison panels; Blockies dedicates its viewport to a playable 20-row well and compresses stats to a small strip.",
-        "interactionDifference": "Rivals Field Notes is for browsing, reading and comparisons, whereas Blockies is a live, latency-aware touch arcade with press-and-hold movement."
+        "spatialDifference": "The rivals-field-notes layout differs from Blockies: warm outer shell, full-width shared grid on phones, tiny numeric strip and two-thumb input deck.",
+        "interactionDifference": "Blockies requires cell-precise hold, canvas swipe and fast hard drop, with PocketNet authoritative shared state instead of rivals-field-notes interaction."
       }
     ]
   },
   "production": {
-    "renderer": "Canvas 2D preserves the source block renderer and original collision, scoring and line-clear engine on the server.",
-    "focalAsset": "The original bevelled block stack is the main rendered object; the authored interlocking-block SVG supplies the install identity."
+    "renderer": "Canvas 2D paints crisp, flat tiles with light rims and ghost landings; source collision, scoring, seeded pieces and server-authoritative online rules are preserved.",
+    "focalAsset": "Dark 20-row well and shared bright tetromino silhouettes; matte stack-shaped SVG install identity matches the new shell."
   },
   "motion": {
-    "character": "Grid movement snaps one cell at a time; the original gravity timer drops pieces discretely rather than interpolating their falling positions.",
+    "character": "Gravity, directional repeat and swipe displacement use visible cell-by-cell changes, never interpolation that misrepresents landing coordinates.",
     "action": "Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player.",
-    "anticipation": "The current selection, room state and available control labels expose the pending operation before the player activates it.",
-    "response": "The next visible state responds to the actual control: Two colored active pieces share one authoritative well; a hard drop becomes the same locked cells on every connected screen.",
-    "followThrough": "The resulting world, board or round state remains visible until a later explicit action changes it; no decorative transition hides the outcome.",
-    "interruption": "Repeated input uses the current state; pointer cancellation releases held controls and hidden tabs stop transmitting held actions.",
-    "reducedMotion": "The complete play state remains legible without decorative entry animations; spatial gameplay and authoritative outcomes retain their original timing."
+    "anticipation": "A ghost silhouette, next piece rail and legible room ready indicators prepare the next exact move.",
+    "response": "A key depresses on touch, then the piece moves or rotates; hard drop snaps to the ghost position; server snapshots remain authoritative.",
+    "followThrough": "Line-clear bonuses enter the compact feed without covering the well; score updates pulse once.",
+    "interruption": "Pointer cancel, disconnect and app background release held controls; room rejoin restores authoritative state.",
+    "reducedMotion": "Prefer-reduced-motion strips UI transitions without affecting Tetris gravity or button/input semantics."
   },
   "evidence": {
     "entry": "./",
@@ -78,7 +78,7 @@
       "type": "click",
       "selector": "#mode-single"
     },
-    "expectedChange": "The solo stack opens with one controllable falling piece, a next-piece preview and fitted touch controls.",
+    "expectedChange": "Mode selection opens the 20-row shared board with crisp cells, a next-piece rail and independent direction/rotation/hard-drop controls fitted to the viewport.",
     "capture": [
       "initial",
       "action",
