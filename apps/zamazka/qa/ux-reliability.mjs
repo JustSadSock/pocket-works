@@ -83,3 +83,6 @@ import './timed-scoring.mjs';
 
 // Convex time awards, audited at seven exact clock fractions per outcome.
 import './quadratic-rewards.mjs';
+
+// Regression: no FIFO painting loss and server-shown post-vote tally.
+import './lobby-cap-verdict.mjs';
