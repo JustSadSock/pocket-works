@@ -56,6 +56,23 @@ function hydrate(){
   state.selected=Math.floor(state.board.length/2);
   updateCopy();save();
 }
+function renderLedger(){
+  const host=$('ledgerStages');if(!host)return;
+  host.replaceChildren();
+  const start=Math.max(0,Math.min(LEVEL_COUNT-5,state.level-2));
+  for(let i=start;i<Math.min(LEVEL_COUNT,start+5);i++){
+    const unlocked=i<state.unlocked,active=i===state.level;
+    const button=document.createElement('button');
+    button.type='button';button.className='ledger-window'+(active?' is-current':'');
+    button.disabled=!unlocked||active;
+    button.setAttribute('aria-label','Окно '+(i+1)+': '+(unlocked?(active?'открыто сейчас':(state.best[i]?'решено':'доступно')):'закрыто'));
+    const label=document.createElement('span');label.textContent=String(i+1);
+    const icon=document.createElement('small');icon.textContent=!unlocked?'◆':state.best[i]?'✦':active?'●':'↗';
+    button.append(label,icon);
+    if(unlocked&&!active)button.addEventListener('click',()=>startLevel(i));
+    host.append(button);
+  }
+}
 function updateCopy(){
   const level=LEVELS[state.level],light=traceLight(state.board,state.level);
   $('levelName').textContent=level.name;
@@ -70,6 +87,7 @@ function updateCopy(){
   $('soundBtn').setAttribute('aria-pressed',String(state.sound));
   canvas.setAttribute('aria-label','Витраж '+level.size+' на '+level.size+'. Нажмите на фрагмент для поворота, стрелки и Enter — управление с клавиатуры.');
   document.title='CANTICA · '+level.name;
+  renderLedger();
 }
 function startLevel(index,variant=0){
   if(index<0||index>=state.unlocked)return;
