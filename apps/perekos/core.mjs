@@ -90,7 +90,7 @@ function insideCone(a,b,angle,reach,halfAngle){
  return r<=reach+12&&Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-angle),Math.cos(Math.atan2(dy,dx)-angle)))<=halfAngle;
 }
 function flame(s,a,target){
- const angle=Math.atan2(target.y-a.y,target.x-a.x),reach=mastery(a,'far')?235:202;
+ const angle=Math.atan2(target.y-a.y,target.x-a.x),reach=mastery(a,'far')?239:210;
  const length=beamLength(s,a.x,a.y,angle,reach),width=mastery(a,'wide')?43:32;
  a.face=angle;
  if(a.stun>0)return false;
@@ -100,7 +100,7 @@ function flame(s,a,target){
  const other=s.actors[1-a.id],dx=other.x-a.x,dy=other.y-a.y;
  const forward=dx*Math.cos(angle)+dy*Math.sin(angle),side=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
  if(forward>0&&forward<length+10&&side<width*(.25+forward/Math.max(1,length)*.18)+9){
-  const dealt=harm(s,other,mastery(a,'strong')?4.8:3.65,a.id);
+  const dealt=harm(s,other,mastery(a,'strong')?5.2:4.05,a.id);
   if(dealt>0){markTarget(s,other,'fire',a.id);other.burn=Math.max(other.burn,mastery(a,'lasting')?2.3:1.2);other.burnSource=a.id;emit(s,'on_hit',a.id)}
  }
  addHeat(s,a,mastery(a,'cheap')?1:2.4);fx(s,'flame',a.x+Math.cos(angle)*20,a.y+Math.sin(angle)*20);
@@ -121,7 +121,7 @@ function thunder(s,a){
  addHeat(s,a,mastery(a,'cheap')?5:10);fx(s,'thunder',a.x,a.y);emit(s,'on_cast',a.id);
 }
 function slateWave(s,a){
- const reach=mastery(a,'far')?119:96;
+ const reach=mastery(a,'far')?133:112;
  s.waves.push({owner:a.id,x:a.x,y:a.y,angle:a.face,range:reach,reach:0,halfAngle:mastery(a,'wide')?.75:.53,life:.3,hit:false});
  a.cast=stats(a).reload*(mastery(a,'quick')?.82:1);
  addHeat(s,a,mastery(a,'cheap')?4:8);fx(s,'quake',a.x,a.y);emit(s,'on_cast',a.id);
@@ -132,7 +132,7 @@ function processWave(s,w){
  const d=Math.hypot(other.x-w.x,other.y-w.y);
  if(d>beamLength(s,w.x,w.y,Math.atan2(other.y-w.y,other.x-w.x),d+3)+6)return;
  w.hit=true;
- const attacker=s.actors[w.owner],dealt=harm(s,other,mastery(attacker,'strong')?16:12.5,w.owner);
+ const attacker=s.actors[w.owner],dealt=harm(s,other,mastery(attacker,'strong')?18:15,w.owner);
  const k=mag(other.x-w.x,other.y-w.y);
  move(other,(other.x-w.x)/k*18,(other.y-w.y)/k*18);
  if(dealt>0){markTarget(s,other,'stone',w.owner);other.slow=Math.max(other.slow,.45);emit(s,'on_hit',w.owner)}
@@ -252,7 +252,7 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
  for(let j=s.waves.length-1;j>=0;j--){const w=s.waves[j];processWave(s,w);if(w.life<=0)s.waves.splice(j,1)}
  for(let j=s.shots.length-1;j>=0;j--){const q=s.shots[j],a=s.actors[1-q.owner];const nx=q.x+q.vx*dt,ny=q.y+q.vy*dt;q.life-=dt;
 if(Math.hypot(nx-a.x,ny-a.y)<12+q.r){
- if(q.style==='bolt')a.shield=Math.max(0,a.shield-5);
+ if(q.style==='bolt')a.shield=Math.max(0,a.shield-3);
  const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){markTarget(s,a,q.element||mage(s.actors[q.owner].mageId).school,q.owner,q.depth);const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn'){a.burn=Math.max(a.burn||0,has(attacker,'lasting')?2.4:1.55);a.burnSource=q.owner;}if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
  if(q.style==='rock')rockFracture(s,q,nx,ny);
  fx(s,'impact_'+(q.style||'orb'),nx,ny);s.shots.splice(j,1);continue
