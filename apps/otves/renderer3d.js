@@ -308,6 +308,9 @@ export class SpatialMazeRenderer {
     this.canvas.dataset.renderProfile = this.profile.level;
     this.canvas.dataset.opticalRefraction = String(Boolean(this.targets && this.profile.refraction));
     gl.viewport(0,0,w,h);
+    // Orientation changes must update the existing level's camera even when
+    // the render loop is throttled, rather than leaving a stale full-bleed fit.
+    if(this.maze) this.configureCamera(this.maze);
   }
 
   clearMeshes() {
