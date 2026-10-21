@@ -1,14 +1,15 @@
 import {askUnsaved,confirmShell} from './shell-dialogs.js';
 import {pocketAvatarMarkup} from './capabilities/identity.js';
 import {zamazkaAchievements} from './capabilities/zamazka-achievements.js';
+import {canticaAchievements} from './capabilities/cantica-achievements.js';
 import {mountCardCanvas} from './capabilities/card-studio.js';
 import {mascotSvg,safeMascot,mascotPublicUnlocks,mascotAnimals,mascotHats,mascotClothes,mascotAccessories,mascotFaces,mascotTitles} from './capabilities/maskot.js';
 // Pocket Social shared UI. No dependency on a specific app runtime or framework.
 const q=(s,root=document)=>root.querySelector(s);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const backgrounds=[['forest','Лес','#426c60'],['clay','Терракота','#965545'],['lilac','Сирень','#776185'],['ocean','Океан','#347e8c'],['night','Ночь','#252d39'],['paper','Бумага','#d6bea1'],['gallery','Галерея при свечах','#846142']];
+const backgrounds=[['forest','Лес','#426c60'],['clay','Терракота','#965545'],['lilac','Сирень','#776185'],['ocean','Океан','#347e8c'],['night','Ночь','#252d39'],['paper','Бумага','#d6bea1'],['gallery','Галерея при свечах','#846142'],['chapel','Лунная часовня','#254c62']];
 const frames=[['clean','Чистая'],['double','Двойная'],['corners','Углы'],['stamp','Марка']];
-const portraitFrames=[['none','Без рамки'],['wood','Резное дерево'],['gilt','Позолоченная'],['worn-gilt','Потёртая позолота']];
+const portraitFrames=[['none','Без рамки'],['wood','Резное дерево'],['gilt','Позолоченная'],['worn-gilt','Потёртая позолота'],['rose-window','Роза собора']];
 const colors=['#273d46','#fff8e6','#d75e55','#f2ad6c','#f2d478','#82aa73','#478d8c','#6092bd','#8865a3','#c87eac','#8a604d','#101c29'];
 const errors={party_full:'В компании уже три друга.',invalid_code:'Неверный код.',sign_in_required:'Войди в Pocket ID, чтобы пользоваться друзьями.',identity_unavailable:'Не удалось проверить аккаунт Pocket ID.',rate_limited:'Слишком много запросов. Попробуй позже.',not_room_member:'Сначала войди в игровую комнату.',room_unavailable:'Комната уже закрыта, заполнена или игра началась.',invite_expired:'Приглашение уже недействительно.',blocked:'Запрос недоступен для этого игрока.',invites_disabled:'Игрок отключил приглашения.',friends_only:'Приглашать можно только друзей.',already_requested:'Заявка уже отправлена.',already_friends:'Вы уже друзья.',user_not_found:'Игрок не найден.',invalid_profile:'Проверь выбранное оформление.',network:'Нет подключения к серверу PocketWorks.'};
 const button=(name,label,kind='quiet',extra='')=>'<button type="button" class="pws-btn pws-btn--'+kind+'" data-pws="'+name+'" '+extra+'>'+label+'</button>';
@@ -214,22 +215,26 @@ function editor(){
     ...(unlocks.includes('knight')?[['bascinet','Бацинет стража']]:[]),
      ...(unlocks.includes('seoul-artist')?[['stage-pin','Лунная шпилька артиста']]:[]),
     ...(unlocks.includes('zamazka.shared-canvas')?[['brush','Кисть за ухом']]:[]),
-     ...(unlocks.includes('zamazka.eagle-eye')?[['seer-diadem','Диадема проницательности']]:[])];
+     ...(unlocks.includes('zamazka.eagle-eye')?[['seer-diadem','Диадема проницательности']]:[]),
+     ...(unlocks.includes('cantica.seven')?[['solar-circlet','Солнечная роза']]:[])];
   const secretClothes=[...(unlocks.includes('astronaut')?[['spacesuit','Скафандр']]:[]),
     ...(unlocks.includes('wedding')?[['wedding','Свадебный наряд']]:[]),
     ...(unlocks.includes('herald')?[['tabard','Накидка герольда']]:[]),
     ...(unlocks.includes('groom')?[['groom','Свадебный мужской костюм']]:[]),
      ...(unlocks.includes('seoul-artist')?[['stage-hanbok','Сценический ханбок']]:[]),
-    ...(unlocks.includes('zamazka.maestro')?[['restorer','Мантия великого реставратора']]:[])];
+    ...(unlocks.includes('zamazka.maestro')?[['restorer','Мантия великого реставратора']]:[]),
+    ...(unlocks.includes('cantica.complete')?[['illuminator','Мантия иллюминатора']]:[])];
   const secretAccessories=[...mascotAccessories,...(unlocks.includes('dragon-keeper')?[['shoulder-dragon','Изумрудный дракон на плече']]:[]),
-     ...(unlocks.includes('zamazka.ghost-brush')?[['spectral-quill','Призрачное перо']]:[])];
+     ...(unlocks.includes('zamazka.ghost-brush')?[['spectral-quill','Призрачное перо']]:[]),
+    ...(unlocks.includes('cantica.four-altars')?[['sun-crystal','Солнечный кристалл']]:[])];
   const rewardFace=[...mascotFaces,...(unlocks.includes('zamazka.sharp-eye')?[['monocle','Монокль']]:[])];
   const retiredTitles={'Призрачная кисть':'zamazka.ghost-brush','Всевидящий':'zamazka.eagle-eye'};
   const rewardTitles=mascotTitles.filter(t=>(!zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t)||
     zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id)))&&
-    (!retiredTitles[t]||unlocks.includes(retiredTitles[t])));
-  const rewardBg=backgrounds.filter(([id])=>id!=='gallery'||unlocks.includes('zamazka.five-works'));
-  const rewardFrames=portraitFrames.filter(([id])=>id!=='worn-gilt'||unlocks.includes('zamazka.perfect-forgery'));
+    (!retiredTitles[t]||unlocks.includes(retiredTitles[t]))&&
+    (!canticaAchievements.some(a=>a.slot==='title'&&a.item===t)||canticaAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id))));
+  const rewardBg=backgrounds.filter(([id])=>(id!=='gallery'||unlocks.includes('zamazka.five-works'))&&(id!=='chapel'||unlocks.includes('cantica.twenty-five')));
+  const rewardFrames=portraitFrames.filter(([id])=>(id!=='worn-gilt'||unlocks.includes('zamazka.perfect-forgery'))&&(id!=='rose-window'||unlocks.includes('cantica.fifty')));
   const category=state.editorSection==='data'?'account':state.editorTab;
   const options=(rows,field)=>'<div class="pws-maskot-options">'+rows.map(([id,label])=>
     '<button type="button" data-pws="maskot-item" data-field="'+field+'" data-value="'+id+
@@ -262,7 +267,7 @@ function editor(){
     category==='portrait'?frameOptions:
     category==='background'?backgroundControls:
     category==='achievements'?'<div class="pws-achievement-list"><div class="pws-achievement-count">'+
-    zamazkaAchievements.filter(a=>unlocks.includes(a.id)).length+' / '+zamazkaAchievements.length+' получено</div>'+
+    [...zamazkaAchievements,...canticaAchievements].filter(a=>unlocks.includes(a.id)).length+' / '+(zamazkaAchievements.length+canticaAchievements.length)+' получено</div>'+
     ['Лёгкое','Среднее','Сложное','Легендарное'].map(tier=>'<section class="pws-achievement-tier" data-tier="'+tier+'">'+
       '<h4>'+tier+' · '+zamazkaAchievements.filter(a=>a.tier===tier).length+'</h4>'+
       zamazkaAchievements.filter(a=>a.tier===tier).map(a=>{
@@ -270,7 +275,14 @@ function editor(){
         return '<div class="pws-achievement" data-earned="'+earned+'"><div class="pws-achievement__head"><b>'+esc(a.name)+'</b><span>'+esc(a.tier)+'</span></div>'+
           '<p>'+esc(a.detail)+'</p><small>'+esc(a.reward)+'</small>'+
           (earned?'<button type="button" data-pws="equip-achievement" data-value="'+a.id+'">Примерить</button>':'')+'</div>';
-      }).join('')+'</section>').join('')+'</div>':
+      }).join('')+'</section>').join('')+
+      '<section class="pws-achievement-tier" data-tier="Кантика"><h4>Кантика · '+canticaAchievements.length+'</h4>'+
+      canticaAchievements.map(a=>{
+        const earned=unlocks.includes(a.id);
+        return '<div class="pws-achievement" data-earned="'+earned+'"><div class="pws-achievement__head"><b>'+esc(a.name)+'</b><span>'+esc(a.tier)+'</span></div>'+
+          '<p>'+esc(a.detail)+'</p><small>'+esc(a.reward)+'</small>'+
+          (earned?'<button type="button" data-pws="equip-achievement" data-value="'+a.id+'">Примерить</button>':'')+'</div>';
+      }).join('')+'</section></div>':
       '<div class="pws-field"><label for="pws-nickname">Никнейм</label>'+
       '<input id="pws-nickname" type="text" maxlength="20" minlength="3" value="'+esc(d.nickname)+'"></div>'+
       '<div class="pws-field"><label for="pws-title">Титул</label><select id="pws-title">'+rewardTitles.map(t=>
@@ -834,9 +846,9 @@ function install(){
     if(action==='maskot-tab'){state.editorTab=target.dataset.value;render();return}
     if(action==='portrait-frame'){state.draft.portraitFrame=target.dataset.value;render();return}
     if(action==='equip-achievement'){
-      const item=zamazkaAchievements.find(a=>a.id===target.dataset.value);
+      const item=[...zamazkaAchievements,...canticaAchievements].find(a=>a.id===target.dataset.value);
       if(!item||!(state.me.profile.unlocked||[]).includes(item.id))return;
-      if(['hat','clothes','face'].includes(item.slot))state.draft.maskot={...state.draft.maskot,[item.slot]:item.item};
+      if(['hat','clothes','face','accessory'].includes(item.slot))state.draft.maskot={...state.draft.maskot,[item.slot]:item.item};
       else if(item.slot==='title')state.draft.title=item.item;
       else if(item.slot==='background'){state.draft.background=item.item;state.draft.backgroundMode='preset'}
       else if(item.slot==='portraitFrame')state.draft.portraitFrame=item.item;

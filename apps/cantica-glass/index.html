@@ -62,19 +62,34 @@
       <span class="seal-inner"><span class="button-rune" aria-hidden="true">✶</span></span>
       <span class="wax-caption">Подсказка</span>
     </button>
+    <button id="rewardsBtn" class="edge-action rewards-open rewards-control" data-native-press type="button" aria-label="Открыть достижения и награды">
+      <span class="reward-rune" id="rewardMedal" aria-hidden="true">✧</span><span>Награды</span>
+    </button>
     <button id="restartBtn" class="edge-action reset-control" data-native-press type="button" aria-label="Начать окно заново">
       <svg class="control-symbol" viewBox="0 0 42 33" aria-hidden="true"><path d="M13 11a13 13 0 1 1-3 12M13 5v11H3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><span>Заново</span>
     </button>
   </footer>
 
-  <aside class="control-guide" data-ui aria-label="Как управлять витражом">
-    <span class="guide-kicker">МАСТЕРСКАЯ СВЕТА</span>
-    <h2>Соедини лучи в витраже</h2>
-    <p>Поворачивай цветные фрагменты, пока солнечный свет не достигнет всех реликвариев.</p>
-    <div class="guide-rule"><strong>Палец / левая кнопка</strong><span>Поворот стекла</span></div>
-    <div class="guide-rule"><strong>Правая кнопка</strong><span>Обратный поворот</span></div>
-    <div class="guide-rule"><strong>Стрелки / WASD</strong><span>Выбор; Enter / Shift+Enter — поворот</span></div>
-    <div class="guide-note">Не получается? Воспользуйся подсказкой. Прогресс сохраняется автоматически.</div>
+  <aside class="control-guide" data-ui aria-label="Журнал прохождения">
+    <div class="ledger-heading"><span class="guide-kicker">ЛЕТОПИСЬ ВИТРАЖЕЙ</span><span class="ledger-seal" aria-hidden="true">✠</span></div>
+    <h2>Твой путь к свету</h2>
+    <div class="ledger-total"><strong id="rewardVerified">0 / 500</strong><span>окон подтверждено</span></div>
+    <div class="ledger-next">
+      <span class="guide-kicker">СЛЕДУЮЩАЯ ЦЕЛЬ</span>
+      <strong id="rewardGoal">Первый луч</strong>
+      <span id="rewardGoalValue">0 / 1</span>
+      <div class="ledger-track"><i id="rewardGoalFill"></i></div>
+    </div>
+    <div class="ledger-awards">
+      <span class="guide-kicker">РЕЛИКВИИ ПРОФИЛЯ</span>
+      <strong id="rewardCount">0 / 9</strong>
+    </div>
+    <button type="button" class="ledger-open rewards-open" data-native-press>Открыть достижения <span aria-hidden="true">›</span></button>
+    <div class="ledger-windows">
+      <span class="guide-kicker">БЛИЖАЙШИЕ ОКНА</span>
+      <div class="ledger-window-grid" id="ledgerStages"></div>
+    </div>
+    <p class="ledger-sync" id="rewardSync" role="status">Синхронизация Pocket ID…</p>
   </aside>
 
   <button class="workshop-access" type="button" data-workshop-trigger data-native-press aria-label="Открыть мастерскую и диагностику">⚙</button>
@@ -115,6 +130,22 @@
     </div>
   </section>
 
+  <div id="achievementToast" class="achievement-toast" role="status" aria-live="polite" hidden></div>
+  <section class="reward-shelf" id="rewardShelf" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Достижения Кантики">
+    <div class="reward-book">
+      <header class="reward-head">
+        <div><span>CODEX PRAEMIORUM</span><h2>Реликвии света</h2><p id="shelfCount">0 / 9</p></div>
+        <button id="rewardClose" type="button" aria-label="Закрыть достижения">×</button>
+      </header>
+      <div class="reward-scroll" id="rewardCards"></div>
+      <footer class="reward-foot">
+        <p id="shelfNotice" role="status"></p>
+        <div class="reward-foot-actions"><button id="rewardRefresh" type="button">Обновить</button>
+        <a href="../../?pocket-id=profile">Примерить в Pocket ID ↗</a></div>
+      </footer>
+    </div>
+  </section>
+
   <div class="scrim" id="scrim" hidden>
     <section class="illumination" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <button class="modal-close" id="modalClose" type="button" aria-label="Закрыть окно">×</button>
@@ -131,7 +162,7 @@
     </section>
   </div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="CANTICA" data-app-version="3.2.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="CANTICA" data-app-version="3.3.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

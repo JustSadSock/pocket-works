@@ -591,3 +591,24 @@
 .pws-achievement-tier>h4{margin:0 0 8px!important;padding:7px 10px;font:650 14px/1.2 system-ui;color:var(--achievement-accent);background:#13282938;border-bottom:1px solid var(--achievement-accent)}
 .pws-achievement-tier .pws-achievement{margin:0 0 6px 7px!important}
 .pws-achievement-tier .pws-achievement__head>span{color:var(--achievement-accent)}
+
+/* CANTICA collectible profile decorations: genuine Pocket ID entitlements. */
+.pws-card[data-background="chapel"]{
+ background:radial-gradient(ellipse 54% 44% at 50% 28%,#a8baca52 0,transparent 92%),
+ repeating-linear-gradient(90deg,transparent 0 20%,#d6b87516 20.2% 20.8%,transparent 21% 24%),
+ linear-gradient(160deg,#132d3e,#31536b 42%,#162b42 100%);
+ color:#f6e8c6;
+}
+.pws-card[data-background="chapel"]::before{
+ content:"";position:absolute;inset:6% 18% 13%;pointer-events:none;
+ border:4px double #d1b27b8b;
+ border-radius:48% 48% 8% 8% / 35% 35% 4% 4%;
+ box-shadow:inset 0 0 30px #f7d79a20,0 0 12px #09131a66;
+}
+.pws-portrait[data-portrait-frame="rose-window"],
+.pws-portrait-sample[data-portrait-frame="rose-window"]{
+ border:7px ridge #d5b06b;
+ border-radius:43% 43% 16% 16%;
+ background:linear-gradient(140deg,#2c4858,#774f60);
+ box-shadow:inset 0 0 0 3px #f4dba6,0 0 0 2px #82613e,0 5px 12px #071a237a;
+}

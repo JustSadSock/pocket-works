@@ -4,6 +4,8 @@ import {LEVELS,LEVEL_COUNT,DIRECTIONS,createBoard,restoreTurns,traceLight,maskOf
 import {createManuscript} from './manuscript.js';
 import {fitChapel} from './playfield-layout.js';
 import {hitChapel,dragSunAngle} from './input.js';
+import {createCanticaSoundscape} from './soundscape.js';
+import {createCanticaRewards} from './rewards.js';
 
 installMobileRuntime();
 
@@ -14,9 +16,10 @@ const SAVE_KEY='pocket-works:cantica-glass:save-v2';
 const LEGACY_KEY='pocket-works:cantica-glass:save-v1';
 const colors=['#296987','#a33c50','#c18b42','#3d7869','#784e82','#c2a56c','#385b71','#963e48'];
 const glyphs=['✣','✦','✤','✧'];
-const state={level:0,variant:0,board:[],moves:0,hints:0,unlocked:1,best:{},solved:false,sound:false,highlight:-1,highlightUntil:0,selected:0,pressedIndex:-1,sunAngle:0};
+const state={level:0,variant:0,board:[],moves:0,hints:0,unlocked:1,best:{},solved:false,sound:true,history:[],proofValid:true,highlight:-1,highlightUntil:0,selected:0,pressedIndex:-1,sunAngle:0};
 let animation=0,lastFrame=0,view={...fitChapel(320,450,4,1),dpr:1};
-let audio=null,press=null,modalFocus=null;
+let press=null,modalFocus=null;
+const soundscape=createCanticaSoundscape(()=>state.sound);
 const toneNumber=n=>String(n).padStart(2,'0');
 const windowNumber=n=>String(n).padStart(3,'0');
 const currentLevel=()=>LEVELS[state.level];
@@ -27,7 +30,7 @@ function safeRead(){
   catch{return null;}
 }
 function save(){
-  try{localStorage.setItem(SAVE_KEY,JSON.stringify({level:state.level,variant:state.variant,turns:state.board.map(t=>t.turns),moves:state.moves,hints:state.hints,unlocked:state.unlocked,best:state.best,solved:state.solved,sound:state.sound,sunAngle:state.sunAngle}));}catch{}
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify({level:state.level,variant:state.variant,turns:state.board.map(t=>t.turns),moves:state.moves,hints:state.hints,unlocked:state.unlocked,best:state.best,solved:state.solved,sound:state.sound,sunAngle:state.sunAngle,history:state.history,proofValid:state.proofValid}));}catch{}
 }
 function hydrate(){
   const old=safeRead();
@@ -39,17 +42,36 @@ function hydrate(){
     state.hints=!old.__legacy&&Number.isInteger(old.hints)?Math.max(0,Math.min(99999,old.hints)):0;
     state.sunAngle=Number.isFinite(old.sunAngle)?Math.max(-.8,Math.min(.8,old.sunAngle)):0;
     state.sound=old.sound===true;
+    state.history=Array.isArray(old.history)&&old.history.length<=512&&old.history.every(m=>Array.isArray(m)&&m.length===2&&Number.isInteger(m[0])&&(m[1]===1||m[1]===-1))?old.history:[];
+    state.proofValid=old.proofValid!==false&&state.history.length===state.moves;
     if(!old.__legacy&&old.best&&typeof old.best==='object'&&!Array.isArray(old.best))
       for(const [key,value] of Object.entries(old.best))
         if(/^(?:[0-9]|[1-9][0-9]|[1-4][0-9]{2})$/.test(key)&&Number.isInteger(value)&&value>0&&value<99999)state.best[key]=value;
     state.board=createBoard(state.level,state.variant);
     if(old.__legacy||!restoreTurns(state.board,old.turns)){
-      state.board=createBoard(state.level,state.variant);state.moves=0;state.hints=0;
+      state.board=createBoard(state.level,state.variant);state.moves=0;state.hints=0;state.history=[];state.proofValid=true;
     }
     state.solved=Boolean(old.solved)&&traceLight(state.board,state.level).complete;
   }else state.board=createBoard(0,0);
   state.selected=Math.floor(state.board.length/2);
   updateCopy();save();
+}
+function renderLedger(){
+  const host=$('ledgerStages');if(!host)return;
+  host.replaceChildren();
+  const start=Math.max(0,Math.min(LEVEL_COUNT-5,state.level-2));
+  for(let i=start;i<Math.min(LEVEL_COUNT,start+5);i++){
+    const unlocked=i<state.unlocked,active=i===state.level;
+    const button=document.createElement('button');
+    button.type='button';button.className='ledger-window'+(active?' is-current':'');
+    button.disabled=!unlocked||active;
+    button.setAttribute('aria-label','Окно '+(i+1)+': '+(unlocked?(active?'открыто сейчас':(state.best[i]?'решено':'доступно')):'закрыто'));
+    const label=document.createElement('span');label.textContent=String(i+1);
+    const icon=document.createElement('small');icon.textContent=!unlocked?'◆':state.best[i]?'✦':active?'●':'↗';
+    button.append(label,icon);
+    if(unlocked&&!active)button.addEventListener('click',()=>startLevel(i));
+    host.append(button);
+  }
 }
 function updateCopy(){
   const level=LEVELS[state.level],light=traceLight(state.board,state.level);
@@ -65,53 +87,39 @@ function updateCopy(){
   $('soundBtn').setAttribute('aria-pressed',String(state.sound));
   canvas.setAttribute('aria-label','Витраж '+level.size+' на '+level.size+'. Нажмите на фрагмент для поворота, стрелки и Enter — управление с клавиатуры.');
   document.title='CANTICA · '+level.name;
+  renderLedger();
 }
 function startLevel(index,variant=0){
   if(index<0||index>=state.unlocked)return;
   state.level=index;state.variant=variant;state.board=createBoard(index,variant);
-  state.moves=0;state.hints=0;state.solved=false;state.highlight=-1;state.selected=Math.floor(state.board.length/2);
-  measure();updateCopy();save();closeModal();chime(500,'turn');
+  state.moves=0;state.hints=0;state.history=[];state.proofValid=true;state.solved=false;state.highlight=-1;state.selected=Math.floor(state.board.length/2);
+  measure();updateCopy();save();closeModal();soundscape.play('page');
 }
 function turnTile(index,direction=1){
   if(state.solved){showVictory();return;}
   if(index<0||index>=state.board.length)return;
+  const litBefore=traceLight(state.board,state.level).lit.filter(Boolean).length;
   const tile=state.board[index];
   tile.turns=(tile.turns+4+direction)%4;
   tile.targetAngle+=Math.PI/2*direction;
   if(reduced.matches)tile.angle=tile.targetAngle;
-  state.moves++;state.selected=index;
+  state.moves++;state.history.push([index,direction]);
+  if(state.history.length>512)state.proofValid=false;
+  state.selected=index;
   state.highlight=-1;state.highlightUntil=0;
   const result=traceLight(state.board,state.level);
-  chime(result.lit.some(Boolean)?640:370,'turn');
+  soundscape.play(direction<0?'reverse':'rotate');
+  if(result.lit.filter(Boolean).length>litBefore)soundscape.play('light');
   if(result.complete) {
     state.solved=true;
     const prev=state.best[state.level];
     if(!prev||state.moves<prev)state.best[state.level]=state.moves;
     state.unlocked=Math.max(state.unlocked,Math.min(LEVELS.length,state.level+2));
-    updateCopy();save();chime(780,'success');
+    updateCopy();save();soundscape.play('success');
+    if(state.proofValid&&state.history.length===state.moves&&state.history.length<=512)
+      rewards.complete({level:state.level,variant:state.variant,turns:state.history.slice()});
     window.setTimeout(()=>{if(state.solved&&!document.hidden)showVictory();},500);
   }else{updateCopy();save();}
-}
-function chime(frequency,kind){
-  if(!state.sound)return;
-  try{
-    const Audio=window.AudioContext||window.webkitAudioContext;
-    if(!Audio)return;
-    if(!audio)audio=new Audio();
-    if(audio.state==='suspended')audio.resume().catch(()=>{});
-    const now=audio.currentTime;
-    for(let i=0;i<(kind==='success'?3:2);i++){
-      const oscillator=audio.createOscillator(),gain=audio.createGain();
-      oscillator.type='sine';
-      oscillator.frequency.setValueAtTime(frequency*(i===0?1:i===1?1.5:2),now+i*.085);
-      oscillator.frequency.exponentialRampToValueAtTime(frequency*(i===0?1.004:i===1?1.495:1.98),now+i*.085+.24);
-      gain.gain.setValueAtTime(.0001,now+i*.085);
-      gain.gain.exponentialRampToValueAtTime(kind==='success'?.065:.027,now+i*.085+.014);
-      gain.gain.exponentialRampToValueAtTime(.0001,now+i*.085+.32);
-      oscillator.connect(gain);gain.connect(audio.destination);
-      oscillator.start(now+i*.085);oscillator.stop(now+i*.085+.34);
-    }
-  }catch{}
 }
 function closeModal(){
   if($('scrim').hidden)return;
@@ -172,30 +180,13 @@ function hint(){
   const row=next.row+1,col=next.col+1;
   $('status').textContent='Строка '+row+', столбец '+col+': повернуть '+next.clockwise+' р.';
   canvas.focus({preventScroll:true});
-  chime(660,'turn');save();
+  soundscape.play('hint');save();
 }
-function pageRustle(){
-  if(!state.sound)return;
-  try{
-    const Audio=window.AudioContext||window.webkitAudioContext;
-    if(!Audio)return;
-    if(!audio)audio=new Audio();
-    if(audio.state==='suspended')audio.resume().catch(()=>{});
-    const frames=Math.floor(audio.sampleRate*.14),buffer=audio.createBuffer(1,frames,audio.sampleRate);
-    const samples=buffer.getChannelData(0);
-    for(let i=0;i<frames;i++){
-      const envelope=Math.pow(Math.sin(Math.PI*i/frames),1.2);
-      samples[i]=(Math.random()*2-1)*envelope;
-    }
-    const src=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();
-    src.buffer=buffer;filter.type='bandpass';filter.frequency.value=1180;filter.Q.value=.7;
-    gain.gain.value=.022;src.connect(filter);filter.connect(gain);gain.connect(audio.destination);src.start();
-  }catch{}
-}
+function pageRustle(){soundscape.play('page');}
 function resetApp(){
   try{localStorage.removeItem(SAVE_KEY);}catch{}
   state.level=0;state.variant=0;state.unlocked=1;state.best={};state.moves=0;state.hints=0;state.solved=false;
-  state.board=createBoard(0,0);state.sunAngle=0;state.selected=Math.floor(state.board.length/2);measure();updateCopy();save();closeModal();
+  state.board=createBoard(0,0);state.history=[];state.proofValid=true;state.sunAngle=0;state.selected=Math.floor(state.board.length/2);measure();updateCopy();save();closeModal();
 }
 function hash(n){let t=(Math.imul(n^0x7f4a7c15,0x27d4eb2d)>>>0);t=Math.imul(t^(t>>>15),0x85ebca6b)>>>0;return(t^(t>>>13))>>>0;}
 function rand(n){return(hash(n)%10000)/10000;}
@@ -552,7 +543,7 @@ function onTouchEnd(event){
   const initial=press;
   press=null;state.pressedIndex=-1;
   try{if(canvas.hasPointerCapture(event.pointerId))canvas.releasePointerCapture(event.pointerId);}catch{}
-  if(initial.kind==='sun'){save();updateCopy();return;}
+  if(initial.kind==='sun'){if(Math.abs(state.sunAngle-initial.sunAngleAtPress)>.04)soundscape.play('sun');save();updateCopy();return;}
   if(Math.hypot(event.clientX-initial.x,event.clientY-initial.y)>Math.max(13,Math.min(20,view.tile*.22)))return;
   const point=pointerPosition(event);
   const hit=hitChapel(inputView(),point.x,point.y,event.pointerType);
@@ -607,7 +598,7 @@ canvas.addEventListener('keydown',event=>{
 $('hintBtn').addEventListener('click',hint);
 $('chaptersBtn').addEventListener('click',()=>showChapters());
 $('restartBtn').addEventListener('click',showRestart);
-$('soundBtn').addEventListener('click',()=>{state.sound=!state.sound;updateCopy();save();if(state.sound)chime(570,'turn');});
+$('soundBtn').addEventListener('click',()=>{state.sound=!state.sound;updateCopy();save();if(state.sound)soundscape.play('light');});
 $('modalClose').addEventListener('click',closeModal);
 $('scrim').addEventListener('pointerdown',event=>{if(event.target===$('scrim'))closeModal();});
 document.addEventListener('keydown',event=>{
@@ -626,7 +617,16 @@ const manuscript=createManuscript({
   onPageTurn:pageRustle,
   reduceMotion:()=>reduced.matches
 });
-createWorkshopMode({appName:'CANTICA — Песнь света',version:'3.2.0',cachePrefix:'cantica-glass-',storageNamespace:'pocket-works:cantica-glass',onReset:resetApp});
+createWorkshopMode({appName:'CANTICA — Песнь света',version:'3.3.0',cachePrefix:'cantica-glass-',storageNamespace:'pocket-works:cantica-glass',onReset:resetApp});
+const rewards=createCanticaRewards({onAward:award=>{
+  soundscape.play('award');
+  const toast=$('achievementToast');
+  if(toast){
+    toast.textContent='Достижение: '+award.name+' · '+award.reward;
+    toast.hidden=false;clearTimeout(window.__canticaToastTimer);
+    window.__canticaToastTimer=setTimeout(()=>{toast.hidden=true},4500);
+  }
+}});
 hydrate();
 measure();wake();
 if(state.solved)window.setTimeout(showVictory,120);

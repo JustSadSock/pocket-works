@@ -1,18 +1,20 @@
 import {zamazkaAchievements,zamazkaAwardById,ownedAchievementItem} from '../shared/capabilities/zamazka-achievements.js';
+import {canticaAchievements,canticaOwns} from '../shared/capabilities/cantica-achievements.js';
+import {verifyCanticaProof,canticaEligible} from './cantica-proof.mjs';
 // Pocket Social. Only trusted Worker headers identify users; room checks stay in PocketNet.
 const HEAD={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const reply=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:HEAD});
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const backgrounds=new Set(['forest','clay','lilac','ocean','night','paper','gallery']);
+const backgrounds=new Set(['forest','clay','lilac','ocean','night','paper','gallery','chapel']);
 const frames=new Set(['clean','double','corners','stamp']);
 const backgroundModes=new Set(['preset','drawing']);
-const portraitFrames=new Set(['none','wood','gilt','worn-gilt']);
+const portraitFrames=new Set(['none','wood','gilt','worn-gilt','rose-window']);
 const maskotAnimals=new Set(['cat','black-cat','fox','rabbit','frog']);
-const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush','stage-pin','seer-diadem']);
-const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard','restorer','groom','stage-hanbok']);
+const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush','stage-pin','seer-diadem','solar-circlet']);
+const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard','restorer','groom','stage-hanbok','illuminator']);
 const maskotFaces=new Set(['none','glasses','stars','monocle']);
-const maskotAccessories=new Set(['none','shoulder-dragon','spectral-quill']);
-const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Авантюрист','Призрачная кисть','Всевидящий']);
+const maskotAccessories=new Set(['none','shoulder-dragon','spectral-quill','sun-crystal']);
+const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Авантюрист','Призрачная кисть','Всевидящий',...canticaAchievements.filter(a=>a.slot==='title').map(a=>a.item)]);
 const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding'],['VIGIL-1347','knight'],['HERALD-1415','herald'],['GROOM-2026','groom'],['SEOUL-MOONLIGHT','seoul-artist'],['DRAGON-EMBER','dragon-keeper']]);
 function validMaskot(value,unlocked){
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -24,8 +26,10 @@ function validMaskot(value,unlocked){
   if(value.clothes==='groom'&&!unlocked.includes('groom'))return false;
   if((value.hat==='stage-pin'||value.clothes==='stage-hanbok')&&!unlocked.includes('seoul-artist'))return false;
   if(value.accessory==='shoulder-dragon'&&!unlocked.includes('dragon-keeper'))return false;
-  for(const category of ['hat','clothes','face','accessory'])
+  for(const category of ['hat','clothes','face','accessory']){
     if(zamazkaAchievements.some(a=>a.slot===category&&a.item===value[category])&&!ownedAchievementItem(value[category],unlocked))return false;
+    if(canticaAchievements.some(a=>a.slot===category&&a.item===value[category])&&!canticaOwns(value[category],category,unlocked))return false;
+  }
   return true;
 }
 const goodArt=x=>typeof x==='string'&&(x===''||x.length<=24000&&/^data:image\/(?:png|webp);base64,[a-zA-Z0-9+/]+={0,2}$/.test(x));
@@ -58,6 +62,8 @@ export class PocketSocial {
     this.sql.exec("CREATE TABLE IF NOT EXISTS social_party(owner_id TEXT NOT NULL,friend_id TEXT NOT NULL,added_at INTEGER NOT NULL,PRIMARY KEY(owner_id,friend_id))");
     this.sql.exec("CREATE TABLE IF NOT EXISTS achievements(account_id TEXT NOT NULL,achievement_id TEXT NOT NULL,game_id TEXT NOT NULL,room_id TEXT NOT NULL,match_id TEXT NOT NULL,earned_at INTEGER NOT NULL,PRIMARY KEY(account_id,achievement_id))");
     this.sql.exec("CREATE INDEX IF NOT EXISTS achievements_by_account ON achievements(account_id,earned_at)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS cantica_completions(account_id TEXT NOT NULL,level INTEGER NOT NULL,best_moves INTEGER NOT NULL,completed_at INTEGER NOT NULL,PRIMARY KEY(account_id,level))");
+    this.sql.exec("CREATE INDEX IF NOT EXISTS cantica_by_account ON cantica_completions(account_id,completed_at)");
   }
   rows(sql,...args){return this.sql.exec(sql,...args).toArray()}
   one(sql,...args){return this.rows(sql,...args)[0]||null}
@@ -200,6 +206,12 @@ export class PocketSocial {
       this.lastCleanup=Date.now();
     }
     try{
+      if(path==='/pocket-social/cantica/progress'&&request.method==='GET'){
+        const total=this.one('SELECT COUNT(*) AS n FROM cantica_completions WHERE account_id=?',id)?.n||0;
+        const best=this.rows('SELECT level,best_moves AS moves FROM cantica_completions WHERE account_id=? ORDER BY level LIMIT 500',id);
+        const earned=this.rows("SELECT achievement_id AS id,earned_at AS earnedAt FROM achievements WHERE account_id=? AND game_id='cantica-glass' ORDER BY earned_at",id);
+        return reply({completed:total,best,achievements:earned,accountId:id});
+      }
       if(path==='/pocket-social/achievements'&&request.method==='GET')
         return reply({achievements:this.rows('SELECT achievement_id AS id,earned_at AS earnedAt FROM achievements WHERE account_id=? ORDER BY earned_at DESC',id)});
       if(path==='/pocket-social/sync'&&request.method==='GET')
@@ -244,6 +256,29 @@ export class PocketSocial {
       if(request.method!=='POST')return reply({error:'not_found'},404);
       const body=await bodyJson(request);
       if(!body||typeof body!=='object')return reply({error:'invalid_request'},400);
+      if(path==='/pocket-social/cantica/complete'){
+        if(!this.rate(id,'cantica-proof',120,60000))return reply({error:'rate_limited'},429);
+        const verified=verifyCanticaProof(body);
+        if(!verified)return reply({error:'invalid_proof'},400);
+        const existing=this.one('SELECT best_moves FROM cantica_completions WHERE account_id=? AND level=?',id,verified.level);
+        if(existing){
+          if(verified.moves<existing.best_moves)
+            this.sql.exec('UPDATE cantica_completions SET best_moves=? WHERE account_id=? AND level=?',verified.moves,id,verified.level);
+        }else{
+          this.sql.exec('INSERT INTO cantica_completions(account_id,level,best_moves,completed_at) VALUES(?,?,?,?)',
+            id,verified.level,verified.moves,Date.now());
+        }
+        const completed=this.one('SELECT COUNT(*) AS n FROM cantica_completions WHERE account_id=?',id)?.n||0;
+        const awarded=[];
+        for(const achievementId of canticaEligible(verified,completed)){
+          const owned=this.one('SELECT 1 FROM achievements WHERE account_id=? AND achievement_id=?',id,achievementId);
+          if(owned)continue;
+          this.sql.exec('INSERT OR IGNORE INTO achievements(account_id,achievement_id,game_id,room_id,match_id,earned_at) VALUES(?,?,?,?,?,?)',
+            id,achievementId,'cantica-glass','solo-verified','level-'+verified.level,Date.now());
+          awarded.push(achievementId);
+        }
+        return reply({ok:true,completed,already:!!existing,awarded,level:verified.level,bestMoves:Math.min(existing?.best_moves??Infinity,verified.moves)});
+      }
       if(path==='/pocket-social/join-friend'){
         const other=body.id;
         if(!uuid.test(other||'')||!this.isFriend(id,other))return reply({error:'friends_only'},403);
@@ -317,9 +352,12 @@ export class PocketSocial {
         const retiredTitles={'Призрачная кисть':'zamazka.ghost-brush','Всевидящий':'zamazka.eagle-eye'};
         if(body.title!==undefined&&(!maskotTitles.has(body.title)||
            (zamazkaAchievements.some(a=>a.slot==='title'&&a.item===body.title)&&!ownedAchievementItem(body.title,unlocked))||
-           (retiredTitles[body.title]&&!unlocked.includes(retiredTitles[body.title]))))return reply({error:'invalid_profile'},400);
+           (retiredTitles[body.title]&&!unlocked.includes(retiredTitles[body.title]))||
+           (canticaAchievements.some(a=>a.slot==='title'&&a.item===body.title)&&!canticaOwns(body.title,'title',unlocked))))return reply({error:'invalid_profile'},400);
         if(background==='gallery'&&!ownedAchievementItem('gallery',unlocked))return reply({error:'invalid_profile'},400);
+        if(background==='chapel'&&!canticaOwns('chapel','background',unlocked))return reply({error:'invalid_profile'},400);
         if(body.portraitFrame==='worn-gilt'&&!ownedAchievementItem('worn-gilt',unlocked))return reply({error:'invalid_profile'},400);
+        if(body.portraitFrame==='rose-window'&&!canticaOwns('rose-window','portraitFrame',unlocked))return reply({error:'invalid_profile'},400);
         if(body.backgroundMode!==undefined&&!backgroundModes.has(body.backgroundMode))return reply({error:'invalid_profile'},400);
         if(body.portraitFrame!==undefined&&!portraitFrames.has(body.portraitFrame))return reply({error:'invalid_profile'},400);
         // Older clients keep the new cosmetics untouched. New clients store only validated IDs.
