@@ -14,6 +14,8 @@ const deg=x=>x*Math.PI/180,clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 const norm=v=>Math.hypot(...v);
+// Signed zero has no spatial meaning and must not change serialized frames.
+const canonicalZero=v=>v===0?0:v;
 const unit=v=>{const n=norm(v);if(n<1e-12)throw Error('Вырожденный пространственный базис');return v.map(k=>k/n)};
 export function normalizeObserverPoint(input={}){
  const {l,longitude,latitude}=input;
@@ -27,7 +29,7 @@ export function frameAt(point){
  const p=normalizeObserverPoint(point),lon=deg(p.longitude),lat=deg(p.latitude);
  const r=[Math.cos(lat)*Math.cos(lon),Math.cos(lat)*Math.sin(lon),Math.sin(lat)];
  const east=[-Math.sin(lon),Math.cos(lon),0],side=Math.sign(p.l);
- const x=r.map(v=>v*side),y=east,z=unit(cross(x,y));
+ const x=r.map(v=>canonicalZero(v*side)),y=east.map(canonicalZero),z=unit(cross(x,y)).map(canonicalZero);
  return {x,y,z,radial:r,side,position:p};
 }
 export function worldDirection(local,frame){
