@@ -986,6 +986,7 @@ class UIManager {
     // Helper method to check if a player can be controlled locally
     isPlayerControllable(player) {
         if (player.gameOver) return false;
+        if (this.isOnlineMode && (!networkManager.connected || networkManager.stale)) return false;
         // In online mode, only allow local player to be controlled
         if (this.isOnlineMode && player.id !== this.localPlayerIndex) {
             return false;
@@ -1239,6 +1240,7 @@ class UIManager {
 
     getTouchPlayer() {
         if (this.isOnlineMode) {
+            if (!networkManager.connected || networkManager.stale) return null;
             const mine = gameState.players[this.localPlayerIndex];
             return mine && !mine.gameOver ? mine : null;
         }
@@ -2270,6 +2272,8 @@ class UIManager {
     }
 
     quitToMenu() {
+        const banner=document.getElementById('online-network-status');
+        if(banner)banner.hidden=true;
         if (!this.isOnlineMode) this.saveSoloCheckpoint(true);
         if (this.isOnlineMode && !window.confirm('Покинуть сетевую комнату? Остальные смогут продолжить игру.')) return;
         if (this.isOnlineMode) networkManager.leaveRoom();
@@ -2513,6 +2517,15 @@ class UIManager {
 
         networkManager.on('leftRoom', () => {
             this.hideRoomView();
+            if(this.isOnlineMode){
+                this.releaseTouchControls?.();
+                this.gameLoopRun=(this.gameLoopRun||0)+1;
+                this.isOnlineMode=false;
+                gameState.players=[];
+                this.hideModal('gameOver');
+                this.hideModal('pause');
+                this.showScreen('onlineLobby');
+            }
         });
 
         networkManager.on('gameStart', (data) => {
@@ -2531,16 +2544,30 @@ class UIManager {
         });
 
         networkManager.on('snapshot', data => applyNetworkSnapshot(data));
+        networkManager.on('connectionHealth', ({status}) => {
+            const banner=document.getElementById('online-network-status');
+            if (!banner) return;
+            banner.hidden = status === 'online' || !this.isOnlineMode;
+            banner.textContent = status === 'offline' ? 'Нет подключения. Переподключаемся…' :
+                status === 'recovering' ? 'Восстанавливаем сетевую партию…' :
+                status === 'stalled' ? 'Сервер не отвечает. Ожидаем синхронизацию…' : '';
+            if (status !== 'online') this.releaseTouchControls?.();
+            this.refreshTouchStatus();
+        });
         networkManager.on('onlinePause', ({paused,isHost}) => {
             const pause = document.getElementById('pause-btn');
             const resume = document.getElementById('resume-btn');
             if (pause) {pause.disabled = !isHost;pause.title = isHost ? 'Пауза для всей комнаты' : 'Паузой управляет ведущий';}
             if (resume) resume.disabled = !isHost;
             if (this.isOnlineMode && this.screens.gameScreen.classList.contains('active') && !gameState.isGameOver) {
+                const changed = gameState.isPaused !== paused;
                 gameState.isPaused = paused;
                 document.querySelector('#pause-menu h2').textContent = paused ? 'Игра на паузе' : 'Пауза';
                 if (paused) this.showModal('pause');
-                else {this.hideModal('pause');gameState.lastTime = performance.now();}
+                else {
+                    this.hideModal('pause');
+                    if (changed) gameState.lastTime = performance.now();
+                }
             }
         });
         networkManager.on('backToLobby', room => {
@@ -2720,6 +2747,8 @@ class UIManager {
     }
 
     startOnlineGame(data) {
+        const banner=document.getElementById('online-network-status');
+        if(banner)banner.hidden=true;
         this.hideModal('gameOver');
         this.hideModal('pause');
         this.releaseTouchControls?.();
