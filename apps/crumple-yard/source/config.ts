@@ -27,6 +27,7 @@ export type VehicleSpec = {
   suspensionDamping: number;
   maxSuspensionForce: number;
   engineForce: number;
+  topSpeedKmh: number;
   brakeForce: number;
   steerMax: number;
   tireGrip: number;
@@ -55,7 +56,8 @@ export const VEHICLES: VehicleSpec[] = [
     suspensionStiffness: 31,
     suspensionDamping: 5.4,
     maxSuspensionForce: 9800,
-    engineForce: 3500,
+    engineForce: 6800,
+    topSpeedKmh: 148,
     brakeForce: 58,
     steerMax: 0.52,
     tireGrip: 2.65,
@@ -86,7 +88,8 @@ export const VEHICLES: VehicleSpec[] = [
     suspensionStiffness: 36,
     suspensionDamping: 6.2,
     maxSuspensionForce: 12800,
-    engineForce: 4400,
+    engineForce: 8350,
+    topSpeedKmh: 164,
     brakeForce: 68,
     steerMax: 0.45,
     tireGrip: 2.9,
@@ -117,7 +120,8 @@ export const VEHICLES: VehicleSpec[] = [
     suspensionStiffness: 43,
     suspensionDamping: 7.4,
     maxSuspensionForce: 17800,
-    engineForce: 5700,
+    engineForce: 10900,
+    topSpeedKmh: 152,
     brakeForce: 82,
     steerMax: 0.39,
     tireGrip: 3.0,
