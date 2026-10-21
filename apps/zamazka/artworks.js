@@ -142,7 +142,7 @@ export function setArtworkFrame(canvas,image,legacyFrame=false){
    canvas.style.aspectRatio=String(ratio);
    canvas.style.setProperty?.('--art-aspect',String(ratio));
  }
- const parent=canvas?.closest?.('.viewport,.unveil-frame,.round-view-window,.round-art-image,.stake-frame,.reveal-option-image,.picture-image,.verdict-image,.compare');
+ const parent=canvas?.closest?.('.viewport,.unveil-frame,.round-view-window,.round-art-image,.stake-frame,.reveal-option-image,.picture-image,.verdict-image,.compare,.finale-laureate-art');
  parent?.style?.setProperty?.('--art-aspect',String(ratio));
  return ratio;
 }
