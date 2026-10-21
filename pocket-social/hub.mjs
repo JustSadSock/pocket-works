@@ -7,20 +7,23 @@ const backgrounds=new Set(['forest','clay','lilac','ocean','night','paper','gall
 const frames=new Set(['clean','double','corners','stamp']);
 const backgroundModes=new Set(['preset','drawing']);
 const portraitFrames=new Set(['none','wood','gilt','worn-gilt']);
-const maskotAnimals=new Set(['cat','rabbit','frog']);
-const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush']);
-const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard','restorer','groom']);
+const maskotAnimals=new Set(['cat','black-cat','fox','rabbit','frog']);
+const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush','stage-pin']);
+const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard','restorer','groom','stage-hanbok']);
 const maskotFaces=new Set(['none','glasses','stars','monocle']);
+const maskotAccessories=new Set(['none','shoulder-dragon']);
 const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок']);
-const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding'],['VIGIL-1347','knight'],['HERALD-1415','herald'],['GROOM-2026','groom']]);
+const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding'],['VIGIL-1347','knight'],['HERALD-1415','herald'],['GROOM-2026','groom'],['SEOUL-MOONLIGHT','seoul-artist'],['DRAGON-EMBER','dragon-keeper']]);
 function validMaskot(value,unlocked){
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
-  if(!maskotAnimals.has(value.animal)||!maskotHats.has(value.hat)||!maskotClothes.has(value.clothes)||!maskotFaces.has(value.face))return false;
+  if(!maskotAnimals.has(value.animal)||!maskotHats.has(value.hat)||!maskotClothes.has(value.clothes)||!maskotFaces.has(value.face)||!maskotAccessories.has(value.accessory??'none'))return false;
   if((value.hat==='helmet'||value.clothes==='spacesuit')&&!unlocked.includes('astronaut'))return false;
   if((value.hat==='veil'||value.clothes==='wedding')&&!unlocked.includes('wedding'))return false;
   if(value.hat==='bascinet'&&!unlocked.includes('knight'))return false;
   if(value.clothes==='tabard'&&!unlocked.includes('herald'))return false;
   if(value.clothes==='groom'&&!unlocked.includes('groom'))return false;
+  if((value.hat==='stage-pin'||value.clothes==='stage-hanbok')&&!unlocked.includes('seoul-artist'))return false;
+  if(value.accessory==='shoulder-dragon'&&!unlocked.includes('dragon-keeper'))return false;
   for(const category of ['hat','clothes','face'])
     if(zamazkaAchievements.some(a=>a.slot===category&&a.item===value[category])&&!ownedAchievementItem(value[category],unlocked))return false;
   return true;
@@ -301,7 +304,14 @@ export class PocketSocial {
         let unlocked=[];try{unlocked=JSON.parse(this.one('SELECT unlocked FROM profiles WHERE id=?',id)?.unlocked||'[]')}catch{}
         if(!Array.isArray(unlocked))unlocked=[];
         unlocked=[...unlocked,...this.rows('SELECT achievement_id FROM achievements WHERE account_id=?',id).map(x=>x.achievement_id)];
-        const maskot=body.maskot===undefined?null:body.maskot;
+        let maskot=body.maskot===undefined?null:body.maskot;
+        // Older clients do not know the accessory slot. Preserve equipped shoulder cosmetics.
+        if(maskot&&maskot.accessory===undefined){
+          let oldMaskot=null;
+          try{oldMaskot=JSON.parse(this.one('SELECT maskot FROM profiles WHERE id=?',id)?.maskot||'null')}catch{}
+          if(oldMaskot?.accessory&&oldMaskot.accessory!=='none')
+            maskot={...maskot,accessory:oldMaskot.accessory};
+        }
         if(maskot!==null&&!validMaskot(maskot,unlocked))return reply({error:'invalid_profile'},400);
         if(body.title!==undefined&&(!maskotTitles.has(body.title)||
            (zamazkaAchievements.some(a=>a.slot==='title'&&a.item===body.title)&&!ownedAchievementItem(body.title,unlocked))))return reply({error:'invalid_profile'},400);
