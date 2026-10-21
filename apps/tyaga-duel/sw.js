@@ -1,3 +1,4 @@
+const APP_VERSION = '1.1.0';
 const PREFIX = "tyaga-duel-";
 const CACHE = "tyaga-duel-v1.1.0";
 const FILES = ["./","./index.html","./app.config.json","./app.js","./physics.js","./styles.css","./manifest.webmanifest","./icons/icon.svg","../../shared/mobile-runtime.css","../../shared/mobile-runtime.js","../../shared/update-manager.css","../../shared/update-manager.js","../../shared/workshop-mode.css","../../shared/workshop-mode.js"];
