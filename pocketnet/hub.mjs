@@ -50,7 +50,7 @@ export class PocketNetHub {
     if (!sessionColumns.has('account_id')) ctx.storage.sql.exec('ALTER TABLE sessions ADD COLUMN account_id TEXT');
     if (!sessionColumns.has('avatar')) ctx.storage.sql.exec('ALTER TABLE sessions ADD COLUMN avatar TEXT');
     ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS zamazka_award_stats(room_id TEXT PRIMARY KEY, data TEXT NOT NULL)");
-    ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS blockies_award_stats(room_id TEXT PRIMARY KEY, round INTEGER NOT NULL, match_id TEXT NOT NULL)");
+    ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS blockies_award_stats(room_id TEXT PRIMARY KEY, round INTEGER NOT NULL, match_id TEXT NOT NULL, awarded TEXT NOT NULL DEFAULT '[]')");
     // Large paintings live outside the 256 KiB room metadata snapshot.
     // SQLite's transactionSync commits artwork and phase atomically.
     ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS zamazka_art_payloads(room_id TEXT NOT NULL, pkey TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(room_id,pkey))");
@@ -298,6 +298,8 @@ export class PocketNetHub {
     for(const award of awards){
       const member=room.players.find(p=>p.id===award.playerId&&p.accountId&&uuid.test(p.accountId));
       if(!member)continue; // Guest sessions cannot earn account cosmetics.
+      const proof=member.accountId+':'+award.achievementId;
+      if(awarded.has(proof))continue;
       const key=[room.id,award.matchId,member.accountId,award.achievementId].join(':');
       this.sql('INSERT OR IGNORE INTO achievement_outbox(key,account_id,player_id,achievement_id,game_id,room_id,match_id,nickname,avatar) VALUES(?,?,?,?,?,?,?,?,?)',
         key,member.accountId,member.id,award.achievementId,'zamazka',room.id,award.matchId,member.name,member.avatar||'clay');
@@ -306,20 +308,29 @@ export class PocketNetHub {
   }
   recordBlockiesRewards(room, previous, next) {
     if(room.gameId!=='blockies'||room.version!=='v3'||!next?.started||!next?.engine)return;
-    let row=this.sql('SELECT round,match_id FROM blockies_award_stats WHERE room_id=?',room.id).toArray()[0];
+    let row=this.sql('SELECT round,match_id,awarded FROM blockies_award_stats WHERE room_id=?',room.id).toArray()[0];
     if(!row||row.round!==next.round){
-      row={round:next.round,match_id:crypto.randomUUID()};
-      this.sql('INSERT INTO blockies_award_stats(room_id,round,match_id) VALUES(?,?,?) ON CONFLICT(room_id) DO UPDATE SET round=excluded.round,match_id=excluded.match_id',room.id,row.round,row.match_id);
+      row={round:next.round,match_id:crypto.randomUUID(),awarded:'[]'};
+      this.sql('INSERT INTO blockies_award_stats(room_id,round,match_id,awarded) VALUES(?,?,?,?) ON CONFLICT(room_id) DO UPDATE SET round=excluded.round,match_id=excluded.match_id,awarded=excluded.awarded',room.id,row.round,row.match_id,row.awarded);
     }
     const awards=assessBlockiesAwards(previous,next,row.match_id);
+    let already=[];
+    try{already=JSON.parse(row.awarded||'[]')}catch{}
+    if(!Array.isArray(already))already=[];
+    const awarded=new Set(already);
+    let changed=false;
     for(const award of awards){
       const member=room.players.find(p=>p.id===award.playerId&&p.accountId&&uuid.test(p.accountId));
       if(!member)continue;
       const key=[room.id,award.matchId,member.accountId,award.achievementId].join(':');
       this.sql('INSERT OR IGNORE INTO achievement_outbox(key,account_id,player_id,achievement_id,game_id,room_id,match_id,nickname,avatar) VALUES(?,?,?,?,?,?,?,?,?)',
         key,member.accountId,member.id,award.achievementId,'blockies',room.id,award.matchId,member.name,member.avatar||'clay');
+      awarded.add(proof);changed=true;
     }
-    if(awards.length)this.ensureAlarm();
+    if(changed){
+      this.sql('UPDATE blockies_award_stats SET awarded=? WHERE room_id=?',JSON.stringify([...awarded]),room.id);
+      this.ensureAlarm();
+    }
   }
   async flushAwards(){
     if(!this.env?.POCKET_SOCIAL)return;
