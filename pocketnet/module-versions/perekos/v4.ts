@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Perekos PocketNet v3: authoritative elemental status and reactions. Immutable snapshot.
+// Perekos PocketNet v4: authoritative elemental status and reactions. Immutable snapshot.
 // Six mechanically distinct fighters in three plain-language magic families.
 // This data is frozen into the matching server ruleset version.
 const mageEntry=(id,school,name,trait,description,style,speed,power,reload,shield)=>({id,school,name,trait,description,style,speed,power,reload,shield});
@@ -425,7 +425,7 @@ function validState(s){
  &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&n<=4);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=3;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=4;
 const ZERO={x:0,y:0,aim:{x:200,y:310},attack:false,shield:false,dash:false};
 const clock=()=>Date.now(),updates=()=>[{type:'state',payload:null}],warn=(to,msg)=>[{type:'notice',to,payload:msg}];
 const side=(s,id)=>s.seats.indexOf(id);
