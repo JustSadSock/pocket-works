@@ -27,9 +27,9 @@ test('all signature attacks align precisely to cursor heading',()=>{
    const target=directionalAim(a,dx,dy);
    tick(s,{x:0,y:0,attack:true,aim:target},STEP,other);
    const shots=s.shots.filter(q=>q.owner===0);
-   const area=['cinder','coil','slate'].includes(m.id);
+   const area=['cinder','coil','slate','pebble'].includes(m.id);
    assert.equal(shots.length,area?0:1,m.id+' must issue one signature attack');
-   const fx=area?form(s):shots[0];
+   const fx=area?(form(s)||a.windup):shots[0];
    assert.ok(fx,m.id+' missing real attack form');
    const angle=area?fx.angle:Math.atan2(fx.vy,fx.vx);
    assert.ok(near(angle,Math.atan2(dy,dx)),m.id+' inaccurate signature heading');
@@ -44,8 +44,10 @@ test('multi-shot rune chains keep the same heading for all real projectiles',()=
   s.actors[0].runes=['on_cast','ball','double','fastshot'];
   const aim=directionalAim(s.actors[0],-7,3);
   tick(s,{attack:true,aim},STEP,other);
+  if(['coil','slate','pebble'].includes(m.id))
+   for(let i=0;i<21;i++)tick(s,{attack:false,aim},STEP,other);
   const shots=s.shots.filter(q=>q.owner===0);
-  assert.equal(shots.length,['cinder','coil','slate'].includes(m.id)?2:3);
+  assert.equal(shots.length,['cinder','coil','slate','pebble'].includes(m.id)?2:3);
   for(const q of shots)assert.ok(near(Math.atan2(q.vy,q.vx),aimHeading(s.actors[0],aim)));
  }
 });
