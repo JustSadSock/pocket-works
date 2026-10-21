@@ -582,3 +582,167 @@ button:focus-visible,a:focus-visible,canvas:focus-visible{outline:2px solid #ead
   .window-stage{flex:0 0 355px;min-height:355px}
   .manuscript,.scrim{position:fixed;inset:0}
 }
+
+/* CANTICA 3.3: the right rail is a real progress ledger, never a tutorial. */
+.pedestal{
+ grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:2px;
+}
+.pedestal .reward-rune{
+ font:400 29px/1 Georgia,serif;
+ color:#ead09d;text-shadow:0 2px 4px #090f12;
+}
+.pedestal .edge-action{min-width:0}
+.reward-shelf[hidden],.achievement-toast[hidden]{display:none!important}
+.achievement-toast{
+ position:fixed;z-index:70;top:max(68px,calc(env(safe-area-inset-top) + 65px));
+ left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 30px);
+ background:#f0dcae;color:#49342d;border:3px double #9b6d46;
+ padding:13px 21px;box-shadow:0 10px 35px #020c0ed8;
+ font-size:14px;text-align:center;pointer-events:none;
+ animation:ink-reveal .25s ease-out;
+}
+.reward-shelf{
+ position:fixed;inset:0;z-index:60;
+ display:grid;place-items:center;
+ padding:max(12px,env(safe-area-inset-top)) max(9px,env(safe-area-inset-right))
+ max(12px,env(safe-area-inset-bottom)) max(9px,env(safe-area-inset-left));
+ background:#081314eb;backdrop-filter:blur(5px);
+}
+.reward-book{
+ width:min(100%,800px);max-height:100%;height:min(760px,100%);
+ display:flex;flex-direction:column;min-height:0;
+ background:linear-gradient(110deg,#cfba94,#f0e1bd 6%,#e3cea4 90%,#c1a57b);
+ border:8px ridge #786249;color:#382f29;
+ box-shadow:inset 0 0 0 3px #e2cda5,0 14px 44px #02090c;
+}
+.reward-head{
+ flex:none;display:flex;justify-content:space-between;align-items:center;
+ padding:clamp(14px,3vw,26px) clamp(16px,3vw,31px) 10px;
+ border-bottom:3px double #a98758;
+}
+.reward-head span{font-size:10px;letter-spacing:.17em;color:#824a3e}
+.reward-head h2{margin:5px 0;font:400 clamp(28px,5vw,43px)/1 Georgia,serif;color:#49332c}
+.reward-head p{margin:0;color:#745c46;font-size:12px}
+#rewardClose{
+ width:48px;height:48px;border:1px solid #a78560;background:#ead8b1;
+ color:#5b4135;font:32px Georgia,serif;flex:none;
+}
+.reward-scroll{
+ min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ align-content:start;gap:10px;padding:17px clamp(12px,3vw,30px);
+ scrollbar-color:#9e8060 transparent;
+}
+.reward-entry{
+ display:flex;gap:12px;min-width:0;min-height:130px;
+ padding:15px 11px;
+ background:linear-gradient(130deg,#e8d8b9,#dac49c);
+ border:1px solid #aa916d;box-shadow:inset 0 0 0 2px #f0e5cd66;
+ opacity:.73;
+}
+.reward-entry.is-earned{
+ opacity:1;background:linear-gradient(130deg,#d9c498,#efdfb7);
+ border-color:#966b48;
+}
+.reward-glyph{
+ flex:0 0 43px;width:43px;height:52px;
+ display:grid;place-items:center;color:#6d655a;font-size:29px;
+ border:2px solid #a88d68;background:#c3b395;
+ clip-path:polygon(50% 0,96% 25%,96% 77%,50% 100%,4% 77%,4% 25%);
+}
+.reward-entry.is-earned .reward-glyph{
+ background:#815549;color:#ffdf95;border-color:#dbbe80;
+ text-shadow:0 0 11px #ffdc7a;
+}
+.reward-entry-copy{display:flex;flex-direction:column;min-width:0;gap:4px}
+.reward-entry-copy strong{font-size:17px;font-weight:400;color:#51352c;line-height:1.13}
+.reward-entry-copy small{font-size:10px;letter-spacing:.04em;color:#8c6044}
+.reward-entry-copy p{font-size:12px;line-height:1.35;margin:2px 0;color:#5f5346}
+.reward-entry-copy em{font-size:12px;color:#694c35;font-style:normal;font-weight:600;margin-top:auto}
+.reward-foot{
+ flex:none;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;
+ align-items:center;border-top:3px double #a98758;
+ padding:10px clamp(14px,3vw,26px);
+}
+.reward-foot p{font-size:11px;color:#5f5245;margin:0;line-height:1.35}
+.reward-foot-actions{display:flex;align-items:center;gap:9px}
+.reward-foot-actions button,.reward-foot-actions a{
+ display:inline-flex;align-items:center;justify-content:center;
+ text-align:center;min-height:44px;padding:0 12px;
+ background:#705647;color:#f6e9cd;text-decoration:none;
+ border:1px solid #8e6a47;font-size:12px;
+}
+.reward-foot-actions button{background:#e1cfaa;color:#554638}
+@media(max-width:620px){
+ .reward-scroll{grid-template-columns:1fr}
+ .reward-book{height:100%;border-width:5px}
+ .reward-head{padding:12px 14px 9px}
+ .reward-entry{min-height:96px;padding:11px}
+ .reward-foot{display:flex;flex-direction:column;align-items:stretch;padding:10px 12px}
+ .reward-foot-actions>*{flex:1;min-height:44px}
+ .pedestal{padding-inline:2px}
+ .pedestal button{gap:4px;font-size:11px}
+ .pedestal .reward-rune{font-size:25px}
+ .seal-inner{width:42px;height:42px}
+ .control-symbol{width:27px;height:25px}
+}
+@media(max-width:370px){
+ .pedestal{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .pedestal .edge-action{font-size:10px;letter-spacing:0}
+ .edge-action::before{inset:5px 2px}
+ .wax-caption{font-size:10px}
+}
+@media(min-width:850px) and (min-height:560px){
+ .control-guide{
+   margin-top:clamp(10px,2vh,23px);
+   padding:clamp(14px,2.4vw,25px);
+   gap:0;
+ }
+ .control-guide h2{font-size:clamp(22px,2.1vw,30px);margin:6px 0 12px}
+ .ledger-heading{display:flex;justify-content:space-between;align-items:center}
+ .ledger-seal{font:23px Georgia,serif;color:#d6b277}
+ .ledger-total{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
+ .ledger-total strong{font:400 clamp(24px,2.9vw,40px)/1.1 Georgia,serif;color:#f3dda7}
+ .ledger-total span{font-size:12px;color:#bba984}
+ .ledger-next{
+   display:grid;grid-template-columns:1fr auto;gap:6px 10px;
+   padding:13px 0 14px;
+   border-top:1px solid #cbb08350;
+   border-bottom:1px solid #cbb08350;
+ }
+ .ledger-next .guide-kicker{grid-column:1/-1}
+ .ledger-next strong{font-size:18px;color:#f2dfbb;font-weight:400}
+ .ledger-next #rewardGoalValue{font-size:12px;color:#c3ae87;align-self:end}
+ .ledger-track{grid-column:1/-1;height:5px;background:#0e1b1c;overflow:hidden}
+ .ledger-track i{display:block;height:100%;width:0;background:linear-gradient(90deg,#866f4b,#f5d692);transition:width .45s ease}
+ .ledger-awards{display:flex;justify-content:space-between;align-items:center;margin:13px 0}
+ .ledger-awards strong{color:#f6dfb7;font:23px Georgia,serif}
+ .ledger-open{
+   display:flex;justify-content:space-between;align-items:center;min-height:49px;width:100%;
+   padding:0 13px;
+   background:#835a48;border:1px solid #c39864;color:#fff0c8;
+   text-align:left;font-size:14px;transition:background .17s,transform .12s;
+ }
+ .ledger-open:active{transform:translateY(2px)}
+ .ledger-open:hover{background:#9d6b51}
+ .ledger-open span{font-size:23px}
+ .ledger-sync{font-size:11px;line-height:1.25;color:#a9ac98;margin:11px 0 0}
+ .pedestal{grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;padding-inline:2px}
+ .pedestal button{min-height:68px}
+ .pedestal .edge-action{font-size:11px}
+ .pedestal .reward-rune{font-size:25px}
+ .seal-inner{width:44px;height:44px}
+ .control-symbol{width:29px;height:25px}
+}
+@media(min-width:850px) and (min-height:560px) and (max-height:735px){
+ .control-guide{margin-top:8px;padding:10px 14px}
+ .control-guide h2{font-size:19px;margin:2px 0 7px}
+ .ledger-total strong{font-size:26px}
+ .ledger-next{padding:6px 0 7px;gap:3px}
+ .ledger-next strong{font-size:14px}
+ .ledger-awards{margin:6px 0}
+ .ledger-awards strong{font-size:18px}
+ .ledger-open{min-height:37px;font-size:12px}
+ .ledger-sync{font-size:10px;margin:6px 0 0}
+}
