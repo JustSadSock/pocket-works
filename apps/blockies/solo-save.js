@@ -35,7 +35,8 @@ export function validateSoloSnapshot(value,now = Date.now()) {
       player:{currentPiece:p.currentPiece.map(row=>row.slice()),
         nextPiece:p.nextPiece.map(row=>row.slice()),
         position:{x:p.position.x,y:p.position.y},
-        dropCounter:p.dropCounter,dropInterval:p.dropInterval,spawnAnchor:p.spawnAnchor}
+        dropCounter:p.dropCounter,dropInterval:p.dropInterval,spawnAnchor:p.spawnAnchor,
+        color:/^#[0-9a-f]{6}$/i.test(p.color) ? p.color : '#FF1493'}
     };
 }
 export function loadSolo(storage) {
