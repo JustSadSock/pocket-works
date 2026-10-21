@@ -313,7 +313,7 @@
   .pws-maskot-editor__actions{gap:6px}
   .pws-maskot-editor__actions .pws-btn{min-height:35px;padding:6px 12px}
   .pws-maskot-editor__work{flex:1;min-height:0}
-  .pws-maskot-tabs{grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;padding:5px}
+  .pws-maskot-tabs{grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:5px}
   .pws-maskot-tabs button{font-size:10px;padding:7px 2px;min-height:35px}
   .pws-maskot-editor__picker{max-height:none;padding:8px;overflow-y:auto}
   .pws-maskot-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
@@ -562,7 +562,7 @@
  .pws-person[data-background] .pws-person__avatar{width:44px;height:44px}
  .pws-person__actions,.pws-person[data-new=true] .pws-person__actions{grid-column:2;grid-row:auto;justify-content:flex-start;max-width:none}
  .pws-person__new{grid-row:auto;margin:0}.pws-maskot-editor__preview .pws-card{max-height:24dvh}
- .pws-content .pws-maskot-tabs button{font-size:12px;padding:9px 11px}.pws-maskot-editor__work h3{margin:0 5px 6px}
+ .pws-content .pws-maskot-tabs button{font-size:11px;padding:8px 4px}.pws-maskot-editor__work h3{margin:0 5px 6px}
  .pws-maskot-editor__preview .pws-card__foot{display:none}
 }
 .pws-person__actions .pws-btn{flex:0 0 auto;white-space:normal;max-width:100%}
