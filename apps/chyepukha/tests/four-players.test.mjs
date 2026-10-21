@@ -27,13 +27,13 @@ function playFour(game,{custom=false}={}){
   state=game.onJoin({state,players:players.slice(0,count)}).state;
   assert.equal(state.players.length,count);
  }
- assert.throws(()=>game.onJoin({state:structuredClone(state),players:[...players,{id:'fifth',name:'П'ятий'}]}),/room_full/);
+ assert.throws(()=>game.onJoin({state:structuredClone(state),players:[...players,{id:'fifth',name:'П’ятий'}]}),/room_full/);
  assert.equal(send(game,state,players[1],{type:'start'}).events[0].type,'notice');
  state=send(game,state,players[0],{type:'start'}).state;
  assert.equal(state.phase,'writing');
  assert.equal(state.total,questionCount);
  assert.equal(state.sheets.length,4);
- assert.throws(()=>game.onJoin({state:structuredClone(state),players:[...players,{id:'fifth',name:'П'ятий'}]}),/match_in_progress/);
+ assert.throws(()=>game.onJoin({state:structuredClone(state),players:[...players,{id:'fifth',name:'П’ятий'}]}),/match_in_progress/);
  const expected=new Map();
  for(let round=0;round<questionCount;round++){
   assert.equal(state.round,round);
