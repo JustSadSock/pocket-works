@@ -433,9 +433,9 @@ function crownRow(player, title, side = "north") {
     <div class="crown-bar crown-bar--${side}">
       <span class="crown-bar__label">${title}</span>
       <div class="crown-bar__icons">
-        <span class="crown crown--active"><i></i>${player.activeCrowns}</span>
-        <span class="crown crown--sealed"><i></i>${player.sealedCrowns}</span>
-        <span class="crown crown--lost"><i></i>${player.lostCrowns}</span>
+        <span class="crown crown--active" title="Активные короны" aria-label="Активные короны: ${player.activeCrowns}"><i></i>${player.activeCrowns}</span>
+        <span class="crown crown--sealed" title="Запечатанные короны" aria-label="Запечатанные короны: ${player.sealedCrowns}"><i></i>${player.sealedCrowns}</span>
+        <span class="crown crown--lost" title="Потерянные короны" aria-label="Потерянные короны: ${player.lostCrowns}"><i></i>${player.lostCrowns}</span>
       </div>
     </div>
   `;
@@ -967,32 +967,23 @@ function restoreLocal() {
 
 function animateBoard() {
   const state = currentState();
-  if (!state || app.settings.reducedMotion) {
-    return;
+  if (!state) return;
+  const nextPositions = Object.fromEntries(Object.values(state.pieces).map(piece => [piece.id, {x:piece.x,y:piece.y}]));
+  const board = root.querySelector('.board');
+  const rect = board?.getBoundingClientRect();
+  if (rect && !app.settings.reducedMotion) {
+    root.querySelectorAll('.piece').forEach(node => {
+      const prev = app.lastBoardPositions[node.dataset.pieceId];
+      const next = nextPositions[node.dataset.pieceId];
+      if (!prev || !next || (prev.x === next.x && prev.y === next.y)) return;
+      const dx = (prev.x - next.x) * rect.width / 5;
+      const dy = (prev.y - next.y) * rect.height / 7;
+      node.animate([
+        {transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.93)`},
+        {transform: 'translate(-50%, -50%) scale(1)'}
+      ], {duration: 360,easing:'cubic-bezier(.2,.75,.2,1)'});
+    });
   }
-  const nextPositions = Object.fromEntries(Object.values(state.pieces).map((piece) => [piece.id, { x: piece.x, y: piece.y }]));
-  root.querySelectorAll(".piece").forEach((node) => {
-    const pieceId = node.dataset.pieceId;
-    const prev = app.lastBoardPositions[pieceId];
-    const next = nextPositions[pieceId];
-    if (!prev || !next) {
-      return;
-    }
-    const dx = (prev.x - next.x) * (100 / 5);
-    const dy = (prev.y - next.y) * (100 / 7);
-    if (dx || dy) {
-      node.animate(
-        [
-          { transform: `translate(${dx}%, ${dy}%) scale(0.98)` },
-          { transform: "translate(0, 0) scale(1)" }
-        ],
-        {
-          duration: 420,
-          easing: "cubic-bezier(.22,.8,.2,1)"
-        }
-      );
-    }
-  });
   app.lastBoardPositions = nextPositions;
 }
 
