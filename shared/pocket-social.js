@@ -838,9 +838,9 @@ function install(){
     if(action==='maskot-tab'){state.editorTab=target.dataset.value;render();return}
     if(action==='portrait-frame'){state.draft.portraitFrame=target.dataset.value;render();return}
     if(action==='equip-achievement'){
-      const item=zamazkaAchievements.find(a=>a.id===target.dataset.value);
+      const item=[...zamazkaAchievements,...canticaAchievements].find(a=>a.id===target.dataset.value);
       if(!item||!(state.me.profile.unlocked||[]).includes(item.id))return;
-      if(['hat','clothes','face'].includes(item.slot))state.draft.maskot={...state.draft.maskot,[item.slot]:item.item};
+      if(['hat','clothes','face','accessory'].includes(item.slot))state.draft.maskot={...state.draft.maskot,[item.slot]:item.item};
       else if(item.slot==='title')state.draft.title=item.item;
       else if(item.slot==='background'){state.draft.background=item.item;state.draft.backgroundMode='preset'}
       else if(item.slot==='portraitFrame')state.draft.portraitFrame=item.item;
