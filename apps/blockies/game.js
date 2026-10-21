@@ -1661,6 +1661,30 @@ class UIManager {
             }
         }
 
+        // Landing projection uses the same collision test as the server-side drop.
+        // It is presentation-only; no input or board cells are mutated.
+        gameState.players.forEach(player => {
+            if (!player.currentPiece || player.gameOver) return;
+            let ghostY = player.position.y;
+            while (ghostY < BOARD_HEIGHT && !player.checkCollision(
+                player.currentPiece, {x:player.position.x,y:ghostY+1}
+            ).collides) ghostY++;
+            if (ghostY <= player.position.y) return;
+            ctx.save();
+            ctx.globalAlpha = 0.35;
+            ctx.strokeStyle = player.color;
+            ctx.lineWidth = 2;
+            for (let y=0; y<player.currentPiece.length; y++) {
+                for (let x=0; x<player.currentPiece[y].length; x++) {
+                    if (!player.currentPiece[y][x]) continue;
+                    const px=(player.position.x+x)*BLOCK_SIZE;
+                    const py=(ghostY+y)*BLOCK_SIZE;
+                    ctx.strokeRect(px+3,py+3,BLOCK_SIZE-6,BLOCK_SIZE-6);
+                }
+            }
+            ctx.restore();
+        });
+
         // Draw active pieces with glow
         gameState.players.forEach(player => {
             if (!player.currentPiece || player.gameOver) return;
