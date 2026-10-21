@@ -1676,111 +1676,74 @@ class UIManager {
         requestAnimationFrame((time) => this.gameLoop(time, run));
     }
 
+    paintBlock(ctx,x,y,color,active=false) {
+        const left=x*BLOCK_SIZE,top=y*BLOCK_SIZE;
+        ctx.fillStyle=color;
+        ctx.fillRect(left+1,top+1,BLOCK_SIZE-2,BLOCK_SIZE-2);
+        ctx.fillStyle=active?'#ffffff63':'#ffffff34';
+        ctx.fillRect(left+3,top+3,BLOCK_SIZE-6,3);
+        ctx.strokeStyle=active?'#ffffff8a':'#051e1c36';
+        ctx.lineWidth=1;
+        ctx.strokeRect(left+1.5,top+1.5,BLOCK_SIZE-3,BLOCK_SIZE-3);
+    }
+
     drawBoard() {
-        const canvas = document.getElementById('game-canvas');
-        if (!canvas) return;
+        const canvas=document.getElementById('game-canvas');
+        if(!canvas)return;
+        const ctx=canvas.getContext('2d');
+        const boardWidth=getBoardWidth();
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle='#142629';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.strokeStyle='#ffffff0d';
+        ctx.lineWidth=1;
+        ctx.beginPath();
+        for(let x=1;x<boardWidth;x++){
+            ctx.moveTo(x*BLOCK_SIZE+.5,0);
+            ctx.lineTo(x*BLOCK_SIZE+.5,canvas.height);
+        }
+        for(let y=1;y<BOARD_HEIGHT;y++){
+            ctx.moveTo(0,y*BLOCK_SIZE+.5);
+            ctx.lineTo(canvas.width,y*BLOCK_SIZE+.5);
+        }
+        ctx.stroke();
 
-        const ctx = canvas.getContext('2d');
-        const boardWidth = getBoardWidth();
-        
-        // Dark background with subtle grid
-        ctx.fillStyle = '#0a0515';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Draw locked blocks with retro styling
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
-            for (let x = 0; x < boardWidth; x++) {
-                const occupant = gameState.board[y][x];
-                if (occupant) {
-                    const player = gameState.players[occupant - 1];
-                    const color = player ? player.color : '#333';
-                    
-                    // Main block with gradient
-                    const gradient = ctx.createLinearGradient(
-                        x * BLOCK_SIZE, y * BLOCK_SIZE,
-                        x * BLOCK_SIZE, (y + 1) * BLOCK_SIZE
-                    );
-                    gradient.addColorStop(0, color);
-                    gradient.addColorStop(1, this.darkenColor(color, 0.3));
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-
-                    // Highlight
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                    ctx.fillRect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 6, 3);
-                    
-                    // Border
-                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-                }
+        for(let y=0;y<BOARD_HEIGHT;y++){
+            for(let x=0;x<boardWidth;x++){
+                const occupant=gameState.board[y]?.[x];
+                if(!occupant)continue;
+                const player=gameState.players[occupant-1];
+                this.paintBlock(ctx,x,y,player?.color||'#92a5a1');
             }
         }
-
-        // Landing projection uses the same collision test as the server-side drop.
-        // It is presentation-only; no input or board cells are mutated.
-        gameState.players.forEach(player => {
-            if (!player.currentPiece || player.gameOver) return;
-            let ghostY = player.position.y;
-            while (ghostY < BOARD_HEIGHT && !player.checkCollision(
-                player.currentPiece, {x:player.position.x,y:ghostY+1}
-            ).collides) ghostY++;
-            if (ghostY <= player.position.y) return;
+        // Each active piece gets a matching landing outline.
+        for(const player of gameState.players){
+            if(!player.currentPiece||player.gameOver)continue;
+            let landingY=player.position.y;
+            while(landingY<BOARD_HEIGHT&&!player.checkCollision(
+                player.currentPiece,{x:player.position.x,y:landingY+1}
+            ).collides)landingY++;
+            if(landingY<=player.position.y)continue;
             ctx.save();
-            ctx.globalAlpha = 0.35;
-            ctx.strokeStyle = player.color;
-            ctx.lineWidth = 2;
-            for (let y=0; y<player.currentPiece.length; y++) {
-                for (let x=0; x<player.currentPiece[y].length; x++) {
-                    if (!player.currentPiece[y][x]) continue;
-                    const px=(player.position.x+x)*BLOCK_SIZE;
-                    const py=(ghostY+y)*BLOCK_SIZE;
-                    ctx.strokeRect(px+3,py+3,BLOCK_SIZE-6,BLOCK_SIZE-6);
-                }
+            ctx.strokeStyle=player.color;
+            ctx.globalAlpha=.52;ctx.lineWidth=1.7;
+            for(let y=0;y<player.currentPiece.length;y++)for(let x=0;x<player.currentPiece[y].length;x++){
+                if(!player.currentPiece[y][x])continue;
+                const left=(player.position.x+x)*BLOCK_SIZE;
+                const top=(landingY+y)*BLOCK_SIZE;
+                ctx.strokeRect(left+4,top+4,BLOCK_SIZE-8,BLOCK_SIZE-8);
             }
             ctx.restore();
-        });
-
-        // Draw active pieces with glow
-        gameState.players.forEach(player => {
-            if (!player.currentPiece || player.gameOver) return;
-
-            for (let y = 0; y < player.currentPiece.length; y++) {
-                for (let x = 0; x < player.currentPiece[y].length; x++) {
-                    if (player.currentPiece[y][x]) {
-                        const drawX = (player.position.x + x) * BLOCK_SIZE;
-                        const drawY = (player.position.y + y) * BLOCK_SIZE;
-                        
-                        // Glow effect
-                        ctx.shadowColor = player.color;
-                        ctx.shadowBlur = 8;
-                        
-                        // Main block with gradient
-                        const gradient = ctx.createLinearGradient(
-                            drawX, drawY,
-                            drawX, drawY + BLOCK_SIZE
-                        );
-                        gradient.addColorStop(0, player.color);
-                        gradient.addColorStop(1, this.darkenColor(player.color, 0.3));
-                        ctx.fillStyle = gradient;
-                        ctx.fillRect(drawX, drawY, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-                        
-                        ctx.shadowBlur = 0;
-
-                        // Highlight
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-                        ctx.fillRect(drawX + 2, drawY + 2, BLOCK_SIZE - 6, 3);
-                        
-                        // Border
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(drawX, drawY, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-                    }
-                }
+        }
+        for(const player of gameState.players){
+            if(!player.currentPiece||player.gameOver)continue;
+            for(let y=0;y<player.currentPiece.length;y++)for(let x=0;x<player.currentPiece[y].length;x++){
+                if(player.currentPiece[y][x])
+                    this.paintBlock(ctx,player.position.x+x,player.position.y+y,player.color,true);
             }
-        });
+        }
     }
-    
+
     darkenColor(color, amount) {
         // Parse hex color and darken it
         if (!color || typeof color !== 'string' || !color.startsWith('#')) {
@@ -1803,49 +1766,16 @@ class UIManager {
     }
 
     drawNextPiece(player) {
-        const nextCanvas = document.getElementById(`next-${player.id}`);
-        if (!nextCanvas) return;
-
-        const nextCtx = nextCanvas.getContext('2d');
-        nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-
-        if (player.nextPiece) {
-            const offsetX = Math.floor((PREVIEW_SIZE - player.nextPiece[0].length) / 2);
-            const offsetY = Math.floor((PREVIEW_SIZE - player.nextPiece.length) / 2);
-
-            for (let y = 0; y < player.nextPiece.length; y++) {
-                for (let x = 0; x < player.nextPiece[y].length; x++) {
-                    if (player.nextPiece[y][x]) {
-                        const drawX = (offsetX + x) * BLOCK_SIZE;
-                        const drawY = (offsetY + y) * BLOCK_SIZE;
-                        
-                        // Glow effect
-                        nextCtx.shadowColor = player.color;
-                        nextCtx.shadowBlur = 6;
-                        
-                        // Main block with gradient
-                        const gradient = nextCtx.createLinearGradient(
-                            drawX, drawY,
-                            drawX, drawY + BLOCK_SIZE
-                        );
-                        gradient.addColorStop(0, player.color);
-                        gradient.addColorStop(1, this.darkenColor(player.color, 0.3));
-                        nextCtx.fillStyle = gradient;
-                        nextCtx.fillRect(drawX, drawY, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-                        
-                        nextCtx.shadowBlur = 0;
-
-                        // Highlight
-                        nextCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-                        nextCtx.fillRect(drawX + 2, drawY + 2, BLOCK_SIZE - 6, 3);
-                        
-                        // Border
-                        nextCtx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-                        nextCtx.lineWidth = 2;
-                        nextCtx.strokeRect(drawX, drawY, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
-                    }
-                }
-            }
+        const canvas=document.getElementById(`next-${player.id}`);
+        if(!canvas)return;
+        const ctx=canvas.getContext('2d');
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        const piece=player.nextPiece;
+        if(!piece)return;
+        const offsetX=Math.floor((PREVIEW_SIZE-piece[0].length)/2);
+        const offsetY=Math.floor((PREVIEW_SIZE-piece.length)/2);
+        for(let y=0;y<piece.length;y++)for(let x=0;x<piece[y].length;x++){
+            if(piece[y][x])this.paintBlock(ctx,offsetX+x,offsetY+y,player.color,true);
         }
     }
 
