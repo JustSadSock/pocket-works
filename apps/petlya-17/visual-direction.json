@@ -15,10 +15,10 @@
   "architecture": {
     "spatialLayout": "full-bleed-world",
     "controlLocation": "perimeter",
-    "navigation": "overlay-list",
+    "navigation": "world-travel",
     "chromeTopology": "layered-panels",
     "dominantMotion": "rotational-inertia",
-    "primaryVerb": "Steer and accelerate a racing car around three laps of the dockside course, braking for corners and overtaking five live AI rivals while watching the speed and gear.",
+    "primaryVerb": "Drive directly along the racing circuit in first person, steering, braking and overtaking five cars; the road itself supplies forward navigation, while pause and settings are secondary overlays.",
     "physicalFeedback": "Pressing gas accelerates the car and scrolling road, braking changes speed and downshift readouts, and steering rotates the vehicle through a turn with physical inertia instead of sliding a flat stage.",
     "spatialRationale": "The racing circuit requires a wide clear horizon; separate pedal controls attach to the outer left and right edges, while the speed gauge stays in the empty central lower slot and steering sits between the two physical pedals.",
     "comparisons": [
