@@ -1964,3 +1964,31 @@ button:disabled { opacity:.52; cursor:not-allowed; filter:grayscale(.3); }
     #touch-controls .touch-status {display:none;}
 }
 @media (prefers-reduced-motion:reduce){#touch-controls .touch-btn {transition:none;}}
+
+/* Checkpoint and PocketNet reliability UI: clear status, no overlay over buttons. */
+.resume-solo {
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:min(100%,650px);margin-inline:auto;
+  padding:13px 18px;min-height:64px;
+  border:2px solid #1c988f;border-radius:11px;
+  background:#d9fff0;color:#123b37;
+  box-shadow:0 3px 0 #18645e4d;
+  font:700 16px/1.25 system-ui;
+}
+.resume-solo[hidden],#online-network-status[hidden] {display:none!important;}
+.resume-solo:active{transform:translateY(2px);}
+.resume-solo .resume-main{display:flex;align-items:center;gap:10px;}
+.resume-solo .resume-detail{font-weight:600;font-size:12px;color:#2e6660;}
+.online-network-status{
+  position:absolute;inset-inline:6px;top:4px;z-index:20;
+  padding:8px 12px;border-radius:8px;border:1px solid #e4a849;
+  background:#241e1bed;color:#ffe8a9;
+  font:700 13px/1.3 system-ui;text-align:center;
+  box-shadow:0 3px 14px #0005;pointer-events:none;
+}
+#game-screen {position:relative;}
+@media (max-width:640px){
+  .resume-solo{min-height:52px;padding:9px 12px;flex-wrap:wrap;gap:4px;font-size:15px;}
+  .resume-solo .resume-detail{margin-left:auto;}
+  .online-network-status{font-size:12px;}
+}

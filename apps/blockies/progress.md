@@ -5,3 +5,5 @@ Source game retained. Extracted the original falling-block engine into an isolat
 2026-10-19: completed source restoration, app-specific mobile layout corrections, original artwork/icon and app-local design/reference documentation. Functional scenarios and inspected captures are recorded by the acceptance scripts. Remaining release work: offline/landscape acceptance, current capture provenance, CI and merge.
 
 Пользователь остановил дальнейшую полировку и разрешил перенос с известными проблемами. См. KNOWN_ISSUES.md; не тратить следующий запуск на повтор уже перечисленных проверок.
+
+2026-10-22: 0.3 checkpoint & resilience release. Added validated offline solo persistence including RNG restoration and a main-menu resume entry; added visible network recovery, stalled snapshot detection, no lost inputs, and regression tests for persistence/network flow. UI release bumped with offline shell pre-caching the new module; still requires physical iOS/Android long-session QA.

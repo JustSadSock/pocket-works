@@ -1,3 +1,11 @@
-# Blockies
+# Blockies 0.3
 
-Recovered cloud game with solo, local co-op, configurable controls, touch controls and online shared-board co-op. Internet rooms use PocketNet codes. The original Player collision/line-clear/score engine now runs on the server; online clients send actions and receive complete board snapshots. This fixes the original relay-based shared-board drift. Offline local play retains the original engine.
+Совместный тетрис в Pocket Works: одно поле с общей статистикой, отдельными цветами и фигурами игроков.
+
+**Режимы:** одиночный, локальный кооператив до четырёх игроков и онлайн-комнаты PocketNet до четырёх игроков. Онлайн-состояние рассчитывается на сервере; браузеры отображают одинаковую доску. Комната по коду или ссылке, совместная пауза, повторный раунд и продолжение игры при выходе участника.
+
+**Одиночная игра:** автосохранение через localStorage с восстановлением поля, позиции, следующей фигуры, счёта, скорости и состояния PRNG. У повреждённого сохранения не отображается кнопка продолжения.
+
+**Телефон и планшет:** большие кнопки, удержание для повторяющегося движения/ускоренного падения, портретная и ландшафтная компоновки, блокировка случайных команд при сетевом обрыве.
+
+**Проверка:** `node --test apps/blockies/tests/board.test.mjs`; `npm run pocketnet:check`. Серверный источник: `server/module.ts`, неизменяемая закреплённая версия: `pocketnet/module-versions/blockies/v2.ts`. Действия в других играх не затрагиваются.
