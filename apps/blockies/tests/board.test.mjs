@@ -270,6 +270,8 @@ test('team achievements require real shared contributions, quorum and no leavers
  const leaver=verifiedRound([{pieces:10,drops:10,lines:12},{pieces:10,drops:10,lines:8,left:true}],40);
  const gone=byId(assessBlockiesAwards(null,leaver,match));
  assert.equal(gone.has('blockies.duo'),false);
+ const rejoined={...both,everLeft:true};
+ assert.equal(byId(assessBlockiesAwards(null,rejoined,match)).has('blockies.master'),false,'rejoining cannot wash away past leave');
  assert.equal(gone.has('blockies.master'),false);
  const quartet=verifiedRound(Array.from({length:4},()=>({pieces:3,drops:2,lines:2})),6);
  assert.equal(assessBlockiesAwards(null,quartet,match).filter(a=>a.achievementId==='blockies.quartet').length,4);
