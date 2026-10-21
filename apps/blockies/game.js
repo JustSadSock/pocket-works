@@ -1493,6 +1493,7 @@ class UIManager {
         if (!this.isOnlineMode && numPlayers === 1) clearSolo();
         setRandomSeed(seed);
         gameState.numPlayers = numPlayers;
+        this.screens.gameScreen.classList.toggle('wide-well',numPlayers>1);
         gameState.isPaused = false;
         gameState.isGameOver = false;
         this.boardGesture=null;
@@ -1798,7 +1799,7 @@ class UIManager {
         const linesEl = document.getElementById('team-lines');
 
         if (scoreEl) scoreEl.textContent = formatNumber(score);
-        if (linesEl) linesEl.textContent = `${formatNumber(lines)} ${t('lines')}`;
+        if (linesEl) linesEl.textContent = formatNumber(lines);
 
         this.updateComboIndicator();
         this.scheduleBoardScaleUpdate();
@@ -1809,7 +1810,7 @@ class UIManager {
         const linesEl = document.getElementById('team-lines');
 
         if (scoreEl) scoreEl.textContent = '0';
-        if (linesEl) linesEl.textContent = `0 ${t('lines')}`;
+        if (linesEl) linesEl.textContent = '0';
 
         if (this.comboIndicator) {
             this.comboIndicator.classList.remove('visible');
@@ -2290,6 +2291,8 @@ class UIManager {
     }
 
     restart() {
+        if (!this.isOnlineMode && !gameState.isGameOver &&
+            !window.confirm(currentLanguage==='ru'?'Начать новую партию? Текущий прогресс будет потерян.':'Start a new match? Current progress will be lost.')) return;
         if (this.isOnlineMode) {
             if (networkManager.hostId === networkManager.socket.id) networkManager.requestRematch();
             return;
@@ -2339,10 +2342,9 @@ class UIManager {
 
         const teamSummary = document.createElement('div');
         teamSummary.className = 'player-score team-total';
-        teamSummary.innerHTML = `
-            <strong>Team Score:</strong> ${score} points<br>
-            <span>Level ${level} • ${lines} lines cleared</span>
-        `;
+        teamSummary.textContent = currentLanguage==='ru'
+          ? `Счёт ${formatNumber(score)} · Уровень ${level} · Линий ${lines}`
+          : `Score ${formatNumber(score)} · Level ${level} · Lines ${lines}`;
         scoresDiv.appendChild(teamSummary);
 
         const again = document.getElementById('play-again-btn');
@@ -2354,10 +2356,9 @@ class UIManager {
         gameState.players.forEach(player => {
             const scoreDiv = document.createElement('div');
             scoreDiv.className = 'player-score';
-            scoreDiv.style.background = player.color;
-            scoreDiv.style.color = 'white';
-            const status = player.gameOver ? 'Eliminated' : 'Survived';
-            scoreDiv.innerHTML = `Player ${player.id + 1}: ${status}`;
+            scoreDiv.style.borderLeft = `4px solid ${player.color}`;
+            const status = player.gameOver ? t('out') : t('inPlay');
+            scoreDiv.textContent = `${t('player')} ${player.id + 1} · ${status}`;
             scoresDiv.appendChild(scoreDiv);
         });
 
@@ -2763,13 +2764,13 @@ class UIManager {
         if (statusEl) {
             const readyCount = room.players.filter(p => p.ready).length;
             if (readyCount === room.players.length && room.players.length > 0) {
-                statusEl.textContent = 'Starting game...';
-                statusEl.style.background = 'rgba(46, 213, 115, 0.15)';
-                statusEl.style.borderColor = 'rgba(46, 213, 115, 0.3)';
+                statusEl.textContent = currentLanguage==='ru'?'Начинаем игру…':'Starting game…';
+                statusEl.dataset.state='ready';
             } else {
-                statusEl.textContent = `${readyCount}/${room.players.length} players ready`;
-                statusEl.style.background = 'rgba(255, 219, 88, 0.15)';
-                statusEl.style.borderColor = 'rgba(255, 219, 88, 0.3)';
+                statusEl.textContent = currentLanguage==='ru'
+                  ? `Готовы: ${readyCount} из ${room.players.length}`
+                  : `Ready: ${readyCount} of ${room.players.length}`;
+                statusEl.dataset.state='waiting';
             }
         }
     }
