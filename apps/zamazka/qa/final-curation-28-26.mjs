@@ -66,8 +66,8 @@ for(const [edition,stored,expected] of [
 assert.equal(ARTS[136].isReal,false,'archived original synthetic image remains at 136');
 assert.equal(ARTS[185].isReal,false,'archived last synthetic image remains in order');
 const server=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
-const snapshot=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v29.ts',import.meta.url),'utf8');
-assert.equal(server,snapshot,'new rooms must use the exact immutable v29 copy');
+const snapshot=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v30.ts',import.meta.url),'utf8');
+assert.equal(server,snapshot,'new rooms must use the exact immutable v30 copy');
 const earlier=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v24.ts',import.meta.url),'utf8');
 assert.doesNotMatch(earlier,/balancedDamage/,'pinned v24 room logic must remain unmodified');
 assert.match(earlier,/variation:Math.floor\(Math.random\(\)\*0xffffffff\)/,'legacy v24 assignment unchanged');
@@ -84,8 +84,8 @@ assert.match(server,/RULESET_VERSION=21/);
 assert.match(server,/const CATALOG_COUNT=136/);
 assert.match(server,/EXCLUDED_PAINTINGS=new Set\(\[2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115\]\)/);
 const lock=JSON.parse(readFileSync(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
-assert.equal(lock.zamazka.current,'v29');
-assert.ok(lock.zamazka.versions.includes('v26')&&lock.zamazka.versions.includes('v27')&&lock.zamazka.versions.includes('v28')&&lock.zamazka.versions.includes('v29'));
+assert.equal(lock.zamazka.current,'v30');
+assert.ok(lock.zamazka.versions.includes('v26')&&lock.zamazka.versions.includes('v27')&&lock.zamazka.versions.includes('v28')&&lock.zamazka.versions.includes('v29')&&lock.zamazka.versions.includes('v30'));
 const config=JSON.parse(readFileSync(new URL('../app.config.json',import.meta.url),'utf8'));
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
@@ -93,4 +93,4 @@ assert.ok(/^1[.]40[.]\d+$/.test(config.version),'ZAMAZKA remains in the 1.40 rel
 assert.ok(html.includes('data-app-version="'+config.version+'"'),'HTML version matches manifest');
 assert.ok(sw.includes("APP_VERSION = '"+config.version+"'"),'service worker version matches manifest');
 assert.match(sw,/museum-approved-second-2026\.js/);
-console.log('ZAMAZKA curation: 27 rejected originals excluded, 28 approved originals added, 108 playable, archive editions 1-6 safe, server v29 OK');
+console.log('ZAMAZKA curation: 27 rejected originals excluded, 28 approved originals added, 108 playable, archive editions 1-6 safe, server v30 OK');
