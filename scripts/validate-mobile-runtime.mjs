@@ -83,7 +83,10 @@ for (const target of quickTargets) {
   requireIncludes(html, ['../../shared/mobile-runtime.css', 'data-app-shell'], `${directory}/index.html`);
   requireIncludes(appJs, ['../../shared/mobile-runtime.js', 'installMobileRuntime'], `${directory}/app.js`);
   requireIncludes(serviceWorker, ['../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js'], `${directory}/sw.js`);
-  if (target.registered && !html.includes('data-native-press')) fail(`${directory}/index.html must expose at least one immediate press-feedback control`);
+  // The first screen may be mounted from a script (for example, a duel's
+  // dynamic lobby). Check rendered-control source as well as static markup.
+  if (target.registered && !html.includes('data-native-press') && !appJs.includes('data-native-press'))
+    fail(`${directory}/index.html must expose at least one immediate press-feedback control`);
 }
 
 const enhancedTargets = [
