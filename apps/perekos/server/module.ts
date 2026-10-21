@@ -141,9 +141,9 @@ const mag=(x,y)=>Math.hypot(x,y)||1;
 function random(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296}
 function has(a,k){return a.runes.includes(k)}
 function stats(a){const m=mage(a.mageId);return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power,reload:.56*m.reload,shield:34*m.shield}}
-function actor(id,x,y,runes,mageId='kindle'){return {id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0}}
+function actor(id,x,y,runes,mageId='kindle'){return {id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0,burn:0,burnTick:0,burnSource:null}}
 function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId);o.hp=stats(o).max;return o}
-function makeMatch(seed=0x718abc,first='kindle',second='pebble'){const s={version:4,seed:seed>>>0||1,phase:'fight',round:1,remaining:ROUND_SECONDS,overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first),actor(1,336,134,['on_hurt','armor'],second)],shots:[],echoes:[],mines:[],barriers:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
+function makeMatch(seed=0x718abc,first='kindle',second='pebble'){const s={version:4,seed:seed>>>0||1,phase:'fight',round:1,remaining:ROUND_SECONDS,overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first),actor(1,336,134,['on_hurt','armor'],second)],shots:[],streams:[],beams:[],waves:[],echoes:[],mines:[],barriers:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
 function offers(s){return eligibleOffers(s)}
 // Choosing a rune opens the working table. Players may reorder before returning to battle.
 function chooseRune(s,id,replaceIndex=null){
@@ -163,7 +163,7 @@ function reorderRunes(s,from,to){
 function beginRound(s){if(s.phase!=='build')return false;startRound(s);return true}
 function startRound(s){
  s.phase='fight';s.round=s.score[0]+s.score[1]+s.draws+1;s.remaining=ROUND_SECONDS;s.overtime=0;
- s.actors=s.actors.map(freshActor);s.shots=[];s.echoes=[];s.mines=[];s.barriers=[];s.eventQueue=[];s.pick=[];s.fx=[];s.ticks=0;s.reactions=0;
+ s.actors=s.actors.map(freshActor);s.shots=[];s.streams=[];s.beams=[];s.waves=[];s.echoes=[];s.mines=[];s.barriers=[];s.eventQueue=[];s.pick=[];s.fx=[];s.ticks=0;s.reactions=0;
 }
 function retryMatch(s){return makeMatch((s.seed+0x9e3779b9)>>>0)}
 function distWall(x,y,r=0){return WALLS.some(w=>x+r>w.x&&x-r<w.x+w.w&&y+r>w.y&&y-r<w.y+w.h)}
@@ -205,10 +205,87 @@ function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
   bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?10:style==='wave'?12:style==='rock'?8:style==='bolt'?3:options.clone?4:5,depth:options.depth||0});
  fx(s,'shoot',x,y);return true;
 }
-function attack(s,a,target){
+
+/* Each mage has a distinct physical attack. All hit-tests use the fixed-step
+   court geometry; these forms are state, not client-only cosmetic guesses. */
+function beamLength(s,x,y,angle,range){
+ const dx=Math.cos(angle),dy=Math.sin(angle);
+ for(let d=8;d<=range;d+=6)if(distWall(x+dx*d,y+dy*d,3)||blocking(s,x+dx*d,y+dy*d,3)
+  ||x+dx*d<22||x+dx*d>W-22||y+dy*d<24||y+dy*d>H-24)return Math.max(0,d-6);
+ return range;
+}
+function insideCone(a,b,angle,reach,halfAngle){
+ const dx=b.x-a.x,dy=b.y-a.y,r=Math.hypot(dx,dy);
+ return r<=reach+12&&Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-angle),Math.cos(Math.atan2(dy,dx)-angle)))<=halfAngle;
+}
+function flame(s,a,target){
+ const angle=Math.atan2(target.y-a.y,target.x-a.x),reach=has(a,'lasting')?132:114;
+ const length=beamLength(s,a.x,a.y,angle,reach),width=has(a,'wide')?24:17;
+ a.face=angle;
+ s.streams.push({owner:a.id,x:a.x,y:a.y,angle,length,width});
  if(a.cast>0||a.stun>0)return false;
- a.face=Math.atan2(target.y-a.y,target.x-a.x);a.cast=stats(a).reload;
- spawnShot(s,a,a.face);addHeat(s,a,7);emit(s,'on_cast',a.id);return true;
+ a.cast=has(a,'quick')?.105:.14;
+ const other=s.actors[1-a.id],dx=other.x-a.x,dy=other.y-a.y;
+ const forward=dx*Math.cos(angle)+dy*Math.sin(angle),side=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
+ if(forward>0&&forward<length+10&&side<width*.35+9){
+  const dealt=harm(s,other,has(a,'strong')?2.9:2.2,a.id);
+  if(dealt>0){markTarget(s,other,'fire',a.id);other.burn=Math.max(other.burn,has(a,'lasting')?2.3:1.2);other.burnSource=a.id;emit(s,'on_hit',a.id)}
+ }
+ addHeat(s,a,has(a,'cheap')?1:2.4);fx(s,'flame',a.x+Math.cos(angle)*20,a.y+Math.sin(angle)*20);
+ emit(s,'on_cast',a.id);return true;
+}
+function thunder(s,a){
+ const reach=has(a,'far')?290:242,len=beamLength(s,a.x,a.y,a.face,reach);
+ a.cast=stats(a).reload*(has(a,'quick')?.78:1);
+ s.beams.push({owner:a.id,x:a.x,y:a.y,angle:a.face,length:len,life:.24,style:'coil'});
+ const other=s.actors[1-a.id],dx=other.x-a.x,dy=other.y-a.y,
+  along=dx*Math.cos(a.face)+dy*Math.sin(a.face),side=Math.abs(-dx*Math.sin(a.face)+dy*Math.cos(a.face));
+ if(along>0&&along<len+10&&side<15){
+  other.shield=Math.max(0,other.shield-(has(a,'strong')?13:7));
+  const dealt=harm(s,other,has(a,'strong')?11:8.8,a.id);
+  if(dealt>0){markTarget(s,other,'storm',a.id);other.slow=Math.max(other.slow,.65);emit(s,'on_hit',a.id)}
+  fx(s,'impact_arc',other.x,other.y);
+ }
+ addHeat(s,a,has(a,'cheap')?5:10);fx(s,'thunder',a.x,a.y);emit(s,'on_cast',a.id);
+}
+function slateWave(s,a){
+ const reach=has(a,'far')?119:96;
+ s.waves.push({owner:a.id,x:a.x,y:a.y,angle:a.face,range:reach,reach:0,halfAngle:has(a,'wide')?.75:.53,life:.3,hit:false});
+ a.cast=stats(a).reload*(has(a,'quick')?.82:1);
+ addHeat(s,a,has(a,'cheap')?4:8);fx(s,'quake',a.x,a.y);emit(s,'on_cast',a.id);
+}
+function processWave(s,w){
+ const other=s.actors[1-w.owner];w.life-=STEP;w.reach=Math.min(w.range,w.reach+w.range*STEP/.23);
+ if(w.hit||!insideCone(w,other,w.angle,w.reach,w.halfAngle))return;
+ const d=Math.hypot(other.x-w.x,other.y-w.y);
+ if(d>beamLength(s,w.x,w.y,Math.atan2(other.y-w.y,other.x-w.x),d+3)+6)return;
+ w.hit=true;
+ const attacker=s.actors[w.owner],dealt=harm(s,other,has(attacker,'strong')?16:12.5,w.owner);
+ const k=mag(other.x-w.x,other.y-w.y);
+ move(other,(other.x-w.x)/k*18,(other.y-w.y)/k*18);
+ if(dealt>0){markTarget(s,other,'stone',w.owner);other.slow=Math.max(other.slow,.45);emit(s,'on_hit',w.owner)}
+ fx(s,'impact_wave',other.x,other.y);
+}
+function rockFracture(s,q,x,y){
+ if(q.style!=='rock')return;
+ const target=s.actors[1-q.owner],d=Math.hypot(x-target.x,y-target.y);
+ if(d< (has(s.actors[q.owner],'wide')?49:37)){
+  const dealt=harm(s,target,has(s.actors[q.owner],'strong')?4:2.5,q.owner,q.depth);
+  if(dealt>0){markTarget(s,target,'stone',q.owner,q.depth);target.slow=Math.max(target.slow,.55);emit(s,'on_hit',q.owner,{},q.depth)}
+ }
+ fx(s,'fracture',x,y);
+}
+
+function attack(s,a,target){
+ if(a.mageId==='cinder')return flame(s,a,target);
+ if(a.cast>0||a.stun>0)return false;
+ a.face=Math.atan2(target.y-a.y,target.x-a.x);
+ if(a.mageId==='coil'){thunder(s,a);return true}
+ if(a.mageId==='slate'){slateWave(s,a);return true}
+ a.cast=stats(a).reload*(has(a,'quick')?.88:1);
+ spawnShot(s,a,a.face,a.x,a.y,{strong:has(a,'strong'),wide:has(a,'wide')&&a.mageId==='pebble',
+  bounce:has(a,'bounce')&&a.mageId==='wire',far:has(a,'far')});
+ addHeat(s,a,has(a,'cheap')?3:7);emit(s,'on_cast',a.id);return true;
 }
 function guard(s,a){
  if(a.shieldReady>0||a.stun>0)return false;
@@ -278,8 +355,13 @@ if(b.shieldReady<=0&&b.hp<55&&random(s)<.009)guard(s,b);
 return {x,y,attack:false,shield:false,dash:false,aim:{x:p.x,y:p.y}}}
 function tick(s,input={},dt=STEP,otherInput=null){
  if(s.phase!=='fight')return s;dt=STEP;safeWorld=s;s.ticks++;s.remaining=Math.max(0,s.remaining-dt);
+ s.streams=[];s.beams=s.beams||[];s.waves=s.waves||[];
  for(const a of s.actors){
   a.heat=Math.max(0,a.heat-7*dt);a.overloadCd=Math.max(0,a.overloadCd-dt);
+  a.burn=Math.max(0,(a.burn||0)-dt);
+  if(a.burn>0){a.burnTick=(a.burnTick||0)+dt;
+   if(a.burnTick>=.33){a.burnTick=0;harm(s,a,1.25,a.burnSource);fx(s,'ember',a.x,a.y)}}
+  else a.burnTick=0;
   a.haste=Math.max(0,a.haste-dt);a.slow=Math.max(0,a.slow-dt);a.markLife=Math.max(0,a.markLife-dt);a.reactionCd=Math.max(0,a.reactionCd-dt);if(a.markLife===0)a.mark='';
   if(s.ticks%120===0)emit(s,'on_clock',a.id);
   if(s.ticks%60===0&&Math.hypot(a.x-s.actors[1-a.id].x,a.y-s.actors[1-a.id].y)<78)emit(s,'on_close',a.id);
@@ -294,13 +376,17 @@ if(c.dash)dash(s,a,{x:Number(c.x)||Math.cos(a.face),y:Number(c.y)||Math.sin(a.fa
 if(c.shield)guard(s,a);
 if(c.attack)attack(s,a,c.aim||other);
 if(s.ticks%60===0&&a.heat>=HEAT_LIMIT)addHeat(s,a,0)}
-for(let j=s.shots.length-1;j>=0;j--){const q=s.shots[j],a=s.actors[1-q.owner];const nx=q.x+q.vx*dt,ny=q.y+q.vy*dt;q.life-=dt;
+for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s.beams.splice(j,1)}
+ for(let j=s.waves.length-1;j>=0;j--){const w=s.waves[j];processWave(s,w);if(w.life<=0)s.waves.splice(j,1)}
+ for(let j=s.shots.length-1;j>=0;j--){const q=s.shots[j],a=s.actors[1-q.owner];const nx=q.x+q.vx*dt,ny=q.y+q.vy*dt;q.life-=dt;
 if(Math.hypot(nx-a.x,ny-a.y)<12+q.r){
- const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){markTarget(s,a,q.element||mage(s.actors[q.owner].mageId).school,q.owner,q.depth);const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn')a.heat=Math.min(100,a.heat+2);if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
+ if(q.style==='bolt')a.shield=Math.max(0,a.shield-5);
+ const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){markTarget(s,a,q.element||mage(s.actors[q.owner].mageId).school,q.owner,q.depth);const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn'){a.burn=Math.max(a.burn||0,has(attacker,'lasting')?2.4:1.55);a.burnSource=q.owner;}if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
+ if(q.style==='rock')rockFracture(s,q,nx,ny);
  fx(s,'impact_'+(q.style||'orb'),nx,ny);s.shots.splice(j,1);continue
 }
 const wall=distWall(nx,ny,q.r)||blocking(s,nx,ny,q.r),edge=nx<19||nx>W-19||ny<21||ny>H-21;
-if(wall||edge){if(q.bounces>0){q.bounces--;const wallX=distWall(nx,q.y,q.r)||blocking(s,nx,q.y,q.r)||nx<19||nx>W-19;if(wallX)q.vx*=-1;else q.vy*=-1;q.x+=q.vx*dt;q.y+=q.vy*dt;fx(s,'spark',q.x,q.y);emit(s,'on_bounce',q.owner,{},q.depth)}else{s.shots.splice(j,1);fx(s,'spark',q.x,q.y);emit(s,'on_expire',q.owner,{},q.depth)}continue}
+if(wall||edge){if(q.bounces>0){q.bounces--;const wallX=distWall(nx,q.y,q.r)||blocking(s,nx,q.y,q.r)||nx<19||nx>W-19;if(wallX)q.vx*=-1;else q.vy*=-1;q.x+=q.vx*dt;q.y+=q.vy*dt;fx(s,'spark',q.x,q.y);emit(s,'on_bounce',q.owner,{},q.depth)}else{if(q.style==='rock')rockFracture(s,q,q.x,q.y);s.shots.splice(j,1);fx(s,'spark',q.x,q.y);emit(s,'on_expire',q.owner,{},q.depth)}continue}
 if(q.life<=0){s.shots.splice(j,1);if(mage(s.actors[q.owner].mageId).trait==='miss_cool')s.actors[q.owner].heat=Math.max(0,s.actors[q.owner].heat-6);emit(s,'on_expire',q.owner,{},q.depth);continue}q.x=nx;q.y=ny}
 for(let j=s.echoes.length-1;j>=0;j--){const e=s.echoes[j];e.life-=dt;e.cast-=dt;const source=s.actors[e.owner];if(e.cast<=0){e.cast=.76;const target=s.actors[1-e.owner];spawnShot(s,source,Math.atan2(target.y-e.y,target.x-e.x),e.x,e.y,{clone:true,strong:!!e.extra});e.shots=(e.shots??2)-1}if(e.life<=0||e.shots<=0)s.echoes.splice(j,1)}
 for(let j=s.mines.length-1;j>=0;j--){
@@ -333,7 +419,7 @@ return s}
 function validState(s){
  return !!s&&s.version===4&&['fight','draft','build','result'].includes(s.phase)
  &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&typeof a.mark==='string'&&Number.isFinite(a.markLife)&&a.markLife>=0&&Number.isFinite(a.reactionCd)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&a.runeTimers&&typeof a.runeTimers==='object')
- &&Array.isArray(s.shots)&&Array.isArray(s.echoes)&&Array.isArray(s.mines)&&Array.isArray(s.barriers)&&Array.isArray(s.eventQueue)
+ &&Array.isArray(s.shots)&&(!s.streams||Array.isArray(s.streams))&&(!s.beams||Array.isArray(s.beams))&&(!s.waves||Array.isArray(s.waves))&&Array.isArray(s.echoes)&&Array.isArray(s.mines)&&Array.isArray(s.barriers)&&Array.isArray(s.eventQueue)
  &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&n<=4);
 }
 
