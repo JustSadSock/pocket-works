@@ -46,6 +46,16 @@
         "slug": "crossline-5x5",
         "spatialDifference": "crossline-5x5 uses header-stage-footer and framed-stage; this port shows a fitted rectangular laboratory grid with an explicit tool strip.",
         "interactionDifference": "crossline-5x5 uses overlay-list navigation; PetriForge exposes cell brushes, undo, procedural maps and a separately stepped learning worker."
+      },
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "Rivals Field Notes dedicates vertical space to editorial paragraphs, season tables and chapter rail; PetriForge keeps an addressable 30×20 cell grid in a bounded laboratory workbench with a compact instrument strip.",
+        "interactionDifference": "Rivals Field Notes changes evidence filters without altering the source data; PetriForge paints individual physical cells, edits walls and rewards, and advances an agent against the new world."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "Perekos dedicates the viewport to an animated combat arena with character positions and overlaid spell readouts; PetriForge dedicates its stage to square, editable simulation cells and secondary learning counters.",
+        "interactionDifference": "Perekos captures continuous thumb movement and aiming for live duel simulation; PetriForge uses discrete brush actions and single-step or running agent transitions with undo."
       }
     ]
   },
