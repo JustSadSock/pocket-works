@@ -45,7 +45,7 @@ for(let session=0;session<25;session++){
   assert.deepEqual(guest.solution,[]);
   assert.deepEqual(guest.palette,[]);
   assert.equal(guest.story,null,'No leaked secret story before reveal');
-  assert.equal(guest.lexicon.length,1);
+  assert.equal(guest.lexicon.length,round===0?1:2);
   assert.ok(!('target' in guest),'Target indices must not leak through player events');
   const artist=module.onMessage({state,player:author,players,payload:{type:'sync'}}).events[0].payload;
   assert.equal(artist.prompt,state.prompt);
