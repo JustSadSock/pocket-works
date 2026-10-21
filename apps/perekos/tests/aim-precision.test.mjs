@@ -17,7 +17,8 @@ test('mobile drag preserves the angle at court edges instead of clamping axes in
   assert.ok(near(aimHeading(from,sight),aimHeading(from,target)));
  }
 });
-test('each of six mage styles fires precisely through the provided cursor heading',()=>{
+const form=s=>s.streams[0]||s.beams[0]||s.waves[0];
+test('all signature attacks align precisely to cursor heading',()=>{
  const directions=[[1,0],[0,1],[-1,0],[0,-1],[3,-4],[-6,7],[.1,.9]];
  for(const m of MAGES){
   for(const [dx,dy] of directions){
@@ -26,11 +27,14 @@ test('each of six mage styles fires precisely through the provided cursor headin
    const target=directionalAim(a,dx,dy);
    tick(s,{x:0,y:0,attack:true,aim:target},STEP,other);
    const shots=s.shots.filter(q=>q.owner===0);
-   assert.equal(shots.length,1,m.id+' must produce only the requested base shot');
-   const q=shots[0],angle=Math.atan2(q.vy,q.vx);
-   assert.ok(near(angle,Math.atan2(dy,dx)),m.id+' inaccurate projectile heading');
-   assert.ok(near(aimHeading(a,target),a.face),m.id+' visual facing must follow shot');
-   assert.equal(q.style,m.style);
+   const area=['cinder','coil','slate'].includes(m.id);
+   assert.equal(shots.length,area?0:1,m.id+' must issue one signature attack');
+   const fx=area?form(s):shots[0];
+   assert.ok(fx,m.id+' missing real attack form');
+   const angle=area?fx.angle:Math.atan2(fx.vy,fx.vx);
+   assert.ok(near(angle,Math.atan2(dy,dx)),m.id+' inaccurate signature heading');
+   assert.ok(near(aimHeading(a,target),a.face),m.id+' visual facing must follow attack');
+   if(!area)assert.equal(fx.style,m.style);
   }
  }
 });
@@ -41,7 +45,7 @@ test('multi-shot rune chains keep the same heading for all real projectiles',()=
   const aim=directionalAim(s.actors[0],-7,3);
   tick(s,{attack:true,aim},STEP,other);
   const shots=s.shots.filter(q=>q.owner===0);
-  assert.equal(shots.length,3);
+  assert.equal(shots.length,['cinder','coil','slate'].includes(m.id)?2:3);
   for(const q of shots)assert.ok(near(Math.atan2(q.vy,q.vx),aimHeading(s.actors[0],aim)));
  }
 });
