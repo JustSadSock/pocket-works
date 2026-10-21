@@ -12,6 +12,7 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const IDENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_TASKS = 20;
 const MAX_PLATFORM_PR_TASKS = 32;
+const MAX_PLATFORM_PR_CASES = 160;
 
 export function safeApp(root, app) {
   if (typeof app !== 'string' || !SLUG.test(app)) throw Error('Invalid application slug');
@@ -117,7 +118,7 @@ export function maxTasksForRequest(eventName, event) {
     ? MAX_PLATFORM_PR_TASKS : MAX_TASKS;
 }
 
-export function resolveTasks(root, { apps, suite = 'all', profile = 'smoke', maxTasks = MAX_TASKS }) {
+export function resolveTasks(root, { apps, suite = 'all', profile = 'smoke', maxTasks = MAX_TASKS, batchForPlatform = false }) {
   if (!Number.isInteger(maxTasks) || maxTasks < 1 || maxTasks > MAX_PLATFORM_PR_TASKS)
     throw Error('Invalid QA task budget');
   if (!['smoke', 'deep'].includes(profile)) throw Error('Invalid QA profile');
@@ -136,9 +137,32 @@ export function resolveTasks(root, { apps, suite = 'all', profile = 'smoke', max
       }
     }
   }
-  if (tasks.length > maxTasks) throw Error('Too many QA jobs (' + tasks.length + ' > ' + maxTasks + '); request one suite/app');
+  if (tasks.length > (batchForPlatform ? MAX_PLATFORM_PR_CASES : maxTasks))
+    throw Error('Too many QA cases (' + tasks.length + ' > ' + (batchForPlatform ? MAX_PLATFORM_PR_CASES : maxTasks) + '); request one suite/app');
   if (new Set(tasks.map(t => t.key)).size !== tasks.length) throw Error('Duplicate task keys');
   return tasks;
+}
+
+// A platform repair can touch dozens of apps. Preserve EVERY planned case,
+// but run them in bounded sequential shards instead of exceeding GitHub's
+// matrix limit. Each case still emits its own evidence and summary verdict.
+export function boundedPartition(tasks, maxJobs = MAX_PLATFORM_PR_TASKS) {
+  if (!Number.isInteger(maxJobs) || maxJobs < 1 || maxJobs > MAX_PLATFORM_PR_TASKS) throw Error('Invalid QA job budget');
+  const original = partition(tasks);
+  if (tasks.length <= maxJobs) return original;
+  const groupSize = Math.ceil(tasks.length / maxJobs);
+  const group = (list, kind) => {
+    const include=[];
+    for(let offset=0;offset<list.length;offset+=groupSize){
+      const members=list.slice(offset,offset+groupSize);
+      include.push({key:`batch-${kind}-${String(include.length).padStart(3,'0')}`,tasks:members,
+        install:members.some(task=>task.install)});
+    }
+    return {include};
+  };
+  const result={cpu:group(original.cpu.include,'cpu'),browser:group(original.browser.include,'browser')};
+  if (result.cpu.include.length+result.browser.include.length>maxJobs) throw Error('Unable to batch QA without losing cases');
+  return result;
 }
 
 export function requestFromEvent(event, eventName, actor) {
@@ -191,9 +215,12 @@ async function main() {
   } else if (request.app === 'all') {
     apps = readdirSync(join(ROOT, 'apps')).filter(slug => SLUG.test(slug) && existsSync(join(ROOT, 'apps', slug, 'app.config.json')));
   } else apps = [request.app];
+  const platformRepair = eventName === 'pull_request' &&
+    event.pull_request?.labels?.some(label=>label?.name === 'platform-change');
+  const taskBudget = maxTasksForRequest(eventName, event);
   const tasks = resolveTasks(ROOT, { apps, suite: request.suite, profile: request.profile,
-    maxTasks: maxTasksForRequest(eventName, event) });
-  const matrices = partition(tasks);
+    maxTasks: taskBudget, batchForPlatform: platformRepair });
+  const matrices = platformRepair ? boundedPartition(tasks, taskBudget) : partition(tasks);
   const output = [
     'cpu_matrix=' + JSON.stringify(matrices.cpu),
     'browser_matrix=' + JSON.stringify(matrices.browser),
