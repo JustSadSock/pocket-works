@@ -120,3 +120,31 @@
  .restore .rest-head .art-head-context{font-size:9px;gap:1px 8px;margin-top:3px}
  .restore .rest-head .phase-head>div:first-child{max-width:calc(100% - 65px)}
 }
+
+
+/* Dedicated, touch-friendly brush size controls; no extra toolbar row. */
+.restore .adjust .brush-size-control{display:flex;align-items:center;gap:5px;flex:1 1 auto;min-width:0}
+.restore .adjust .brush-size-control input[type="range"]{flex:1 1 0;width:100%;min-width:0;margin:0}
+.restore .brush-size-control .size-step{
+ display:grid;place-items:center;flex:none;width:40px;min-width:40px;height:42px;min-height:42px;
+ padding:0;border:1px solid #b5a489;border-radius:5px;
+ background:#f9f4e9;color:#314a3e;font:700 24px/1 system-ui,sans-serif;
+ touch-action:manipulation;user-select:none;-webkit-user-select:none;
+ transition:background .12s,transform .12s;
+}
+.restore .brush-size-control .size-step:active{background:#dfe6d6;transform:scale(.95)}
+.restore .brush-size-control .size-step:disabled{opacity:.38;cursor:default}
+@media(max-width:1049px){
+ .restore .adjust .brush-size-control{flex:1 1 0;gap:4px}
+ .restore .brush-size-control .size-step{height:44px;min-height:44px}
+}
+@media(max-width:470px){
+ .restore .adjust .brush-size-control{gap:2px}
+ .restore .brush-size-control .size-step{width:32px;min-width:32px;height:38px;min-height:38px}
+}
+@media(min-width:1050px){
+ .restore .adjust .brush-size-control{flex:1 0 100%;width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+ .restore .brush-size-control .size-step{transition:none}
+}
