@@ -178,6 +178,14 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
 <path d="M78 163 88 170M178 163 168 170" stroke="#748b8c" stroke-width="3.5" stroke-linecap="round"/>
 <circle cx="78" cy="103" r="4.5" fill="#d3af76" stroke="#34434a" stroke-width="2"/>
 <circle cx="178" cy="103" r="4.5" fill="#d3af76" stroke="#34434a" stroke-width="2"/>`,
+    'seer-diadem':`<!-- Diadem of insight: slender antique-brass circlet, raised eye-like faceted teal stone -->
+<path d="M76 91Q128 78 181 91" fill="none" stroke="#34434a" stroke-width="11" stroke-linecap="round"/>
+<path d="M77 88Q128 76 180 88" fill="none" stroke="#dbb46e" stroke-width="6.5" stroke-linecap="round"/>
+<path d="M89 87 99 80 107 84M169 87 157 80 149 84" fill="none" stroke="#f3d997" stroke-width="3" stroke-linecap="round"/>
+<path d="M111 76Q119 64 128 59Q137 64 145 76L128 93Z" fill="#335e60" stroke="#d7bc7f" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M118 76 128 66 138 76 128 85Z" fill="#a2d4b1" stroke="#354d55" stroke-width="1.6"/>
+<circle cx="83" cy="90" r="3.5" fill="#f5e5ba"/>
+<circle cx="174" cy="90" r="3.5" fill="#f5e5ba"/>`,
     'stage-pin':`<!-- Moonstage headpiece: lacquered ornament, jade crescent and dramatic silk tassel -->
 <path d="M70 83Q127 67 185 82" fill="none" stroke="#253f4c" stroke-width="13" stroke-linecap="round"/>
 <path d="M73 79Q126 65 181 78" fill="none" stroke="#d8b26f" stroke-width="4" stroke-linecap="round"/>
@@ -199,6 +207,12 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
   };
   const accessories={
     none:'',
+    'spectral-quill':`<!-- Spectral feather floats just above the shoulder, never hiding the animal's face -->
+<path d="M202 222Q238 190 232 141Q212 147 199 169Q187 193 202 222Z" fill="#9ed5c6" opacity=".6" stroke="#497c79" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M203 218Q222 184 230 148" fill="none" stroke="#edf7dc" stroke-width="3.7" stroke-linecap="round"/>
+<path d="M210 199 198 191M216 185 201 179M221 171 208 166M209 204 222 205" fill="none" stroke="#e9f8e9" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
+<path d="M202 222 189 240" fill="none" stroke="#bd9478" stroke-width="3.5" stroke-linecap="round"/>
+<circle cx="192" cy="166" r="3" fill="#d7f3d9"/><circle cx="244" cy="171" r="2.5" fill="#d7f3d9"/><circle cx="239" cy="212" r="2" fill="#d7f3d9"/>`,
     'shoulder-dragon':`<!-- Tiny shoulder dragon: coiled tail, leathery wings, golden horns, jade scales -->
 <path d="M195 232Q225 252 242 234Q253 221 239 210" fill="none" stroke="#2b4651" stroke-width="10" stroke-linecap="round"/>
 <path d="M195 232Q226 246 239 230" fill="none" stroke="#80ae96" stroke-width="6" stroke-linecap="round"/>
