@@ -48,3 +48,24 @@ The puzzle artwork itself remains intact: this release rebuilds the architecture
 ### Geometry regression
 
 Run `node --test apps/cantica-glass/tests/playfield-layout.test.mjs` to check 396 viewport/level-size combinations and 500 generated layouts. The other two existing suites continue to cover puzzle routes and manuscript navigation.
+
+## 3.2.0 — adaptive chapel workbench
+
+The same glass puzzle now has a two-column chapel workspace for landscape
+tablets and desktops, a wider portrait tablet experience, and a scroll-safe
+landscape phone layout. The app/PWA now permits both screen orientations.
+Larger stage areas allow tiles up to 120 CSS pixels (previously 96).
+
+Pointer hit testing uses the same `fitChapel` layout as the renderer. Touch
+up must land on the initially pressed tile; interrupted gestures and a second
+finger do not rotate the wrong glass. Mouse right click turns anticlockwise;
+WASD and arrow keys select panes, Enter and Shift+Enter rotate them.
+
+Additional regression coverage:
+- `node --test apps/cantica-glass/tests/*.test.mjs`
+- `node --check apps/cantica-glass/app.js`
+- `node --check apps/cantica-glass/input.js`
+
+Responsive design targets: 320×568 / 390×844 portrait phones, 667×375
+landscape phone, 768×1024 portrait tablet, 1024×768 landscape tablet, and
+1440×900 desktop. These are code/test targets, not manual screenshot-QA results.
