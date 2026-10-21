@@ -2,6 +2,14 @@
   "schema": 1,
   "suites": [
     {
+      "id": "strength",
+      "kind": "node-test",
+      "files": [
+        "qa/strength.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
       "id": "journey",
       "kind": "browser-node",
       "entry": "qa/journey.mjs",
