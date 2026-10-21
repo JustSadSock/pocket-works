@@ -612,6 +612,7 @@ function newMatch(state){
  state.seed=Date.now()>>>0;
  state.round=(state.round||0)+1;
  state.paused=false;
+ state.everLeft=false;
  state.started=true;
  state.phase='playing';
  state.lastTick=Date.now();
@@ -620,13 +621,14 @@ function newMatch(state){
  state.engine=r.snapshot();
 }
 export default {protocolVersion:1,
- createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
+ createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,everLeft:false,round:0,seed:0,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
  onJoin({state,player}){state=copy(state);add(state,player);return out(state);},
  onLeave({state,player}){
   state=copy(state);
   const index=state.players.findIndex(p=>p.id===player.id);
   if(state.started&&state.engine){
    if(index>=0){
+    state.everLeft=true;
     state.players[index].left=true;
     state.players[index].ready=false;
     const piece=state.engine.players[index];
