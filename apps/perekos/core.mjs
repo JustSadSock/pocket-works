@@ -97,7 +97,7 @@ function startWindup(s,a,target,kind){
  const angle=Math.atan2(target.y-a.y,target.x-a.x);
  a.face=angle;
  a.windup={kind,angle,remaining:duration,total:duration,
-  x:clamp(Number(target.x)||a.x,24,W-24),y:clamp(Number(target.y)||a.y,25,H-25)};
+  x:clamp(Number.isFinite(target.x)?target.x:a.x,24,W-24),y:clamp(Number.isFinite(target.y)?target.y:a.y,25,H-25)};
  a.cast=stats(a).reload*(mastery(a,'quick')?.88:1)+duration;
  fx(s,'charge_'+kind,a.x,a.y);
  return true;
@@ -294,7 +294,7 @@ export function tick(s,input={},dt=STEP,otherInput=null){
 const control=[input,otherInput===null?botInput(s,dt):otherInput];
 for(let i=0;i<2;i++){const a=s.actors[i],c=control[i],other=s.actors[1-i];a.cast=Math.max(0,a.cast-dt);a.shieldReady=Math.max(0,a.shieldReady-dt);a.dashReady=Math.max(0,a.dashReady-dt);a.stun=Math.max(0,a.stun-dt);a.flash=Math.max(0,a.flash-dt);a.invuln=Math.max(0,a.invuln-dt);
 if(!c.attack)a.flameCharge=Math.max(0,(a.flameCharge||0)-dt*5);
-if(a.windup&&a.stun>0)a.windup=null;
+if(a.windup&&(a.stun>0||c.dash))a.windup=null;
 if(a.windup){a.windup.remaining-=dt;
  if(a.windup.remaining<=0){const w=a.windup;a.windup=null;releaseWindup(s,a,w)}
 }
