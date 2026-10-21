@@ -34,6 +34,26 @@ assert.equal(take('drawing',-150).cue,'time-up');
 assert.equal(take('drawing',-900).cue,null);
 assert.equal(stepClockSound(null,'late-room',300).cue,null,'do not ring for newly entered already-expired stage');
 
+// Halfway and last-minute cues apply only to timed drawing, not memorization,
+// are de-duplicated and do not replay when a sleeping tab resumes late.
+for(const duration of [60,90,120,160,300,600]){
+ let state=null;const at=Math.floor(duration/2);
+ const milestones=[];
+ for(let s=duration;s>=0;s--){
+  const result=stepClockSound(state,'paint-'+duration,s*1000,{phase:'drawing',totalSeconds:duration});
+  state=result.state;if(result.cue)milestones.push([s,result.cue]);
+ }
+ const minute=milestones.filter(([s,event])=>event==='watch-minute');
+ const half=milestones.filter(([s,event])=>event==='watch-half');
+ assert.equal(minute.length,duration>60?1:0,'minute cue '+duration);
+ assert.equal(half.length,at===60?0:1,'half cue '+duration);
+ if(minute.length)assert.equal(minute[0][0],60);
+ if(half.length)assert.equal(half[0][0],at);
+ assert.equal(stepClockSound(state,'paint-'+duration,0,{phase:'drawing',totalSeconds:duration}).cue,null);
+}
+assert.equal(stepClockSound(null,'preview-160',60000,{phase:'preview',totalSeconds:160}).cue,null);
+for(const id of ['watch-half','watch-minute'])assert(MUSEUM_SOUND_EVENTS.includes(id));
+
 const silent=new MuseumAudio(false);
 assert.equal(silent.play('watch-warning',true),false);
 assert.equal(silent.syncCountdown('preview',15000,0),false,'muted countdown must not make an audio context');
