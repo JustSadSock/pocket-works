@@ -1063,6 +1063,7 @@ class UIManager {
     }
 
     handleGamepadAction(player, action) {
+        if (gameState.isPaused || !this.isPlayerControllable(player)) return;
         switch (action) {
             case 'left':
                 player.move(-1);
@@ -1159,35 +1160,57 @@ class UIManager {
 
     initTouchControls() {
         if (!this.touchControls) return;
-
-        const buttons = this.touchControls.querySelectorAll('[data-action]');
-        buttons.forEach(button => {
-            const action = button.dataset.action;
-            if (!action) return;
-
-            const handler = (event) => {
-                event.preventDefault();
-                this.handleTouchAction(action);
-            };
-
-            if (window.PointerEvent) {
-                button.addEventListener('pointerdown', handler);
-            } else {
-                button.addEventListener('touchstart', handler, { passive: false });
-                button.addEventListener('mousedown', handler);
-            }
-
-            button.addEventListener('click', (event) => {
-                if (event.detail === 0) {
-                    handler(event);
+        this.touchPresses = new Map();
+        const press = (button, action, event) => {
+            if (event.button != null && event.button !== 0) return;
+            event.preventDefault();
+            const player = this.getTouchPlayer();
+            if (!player || gameState.isPaused || gameState.isGameOver) return;
+            if (['left','right','down'].includes(action)) {
+                if (action === 'down') {
+                    this.activateSoftDrop(player);
+                    player.drop();
+                    const state = this.getInputState(player.id, 'down');
+                    if (state) { state.hasFiredInitial = true; state.heldTime = 0; }
+                } else this.activateMovementAction(player, action);
+                this.touchPresses.set(event.pointerId ?? 'fallback', {playerId:player.id, action});
+                if (event.pointerId != null && button.setPointerCapture) {
+                    try { button.setPointerCapture(event.pointerId); } catch {}
                 }
-            });
-            button.addEventListener('contextmenu', (event) => event.preventDefault());
+                this.drawBoard();
+            } else this.handleTouchAction(action);
+        };
+        const release = event => {
+            const key = event.pointerId ?? 'fallback';
+            const pressed = this.touchPresses.get(key);
+            if (!pressed) return;
+            this.releaseContinuousAction(pressed.playerId, pressed.action);
+            this.touchPresses.delete(key);
+        };
+        this.releaseTouchControls = () => {
+            for (const pressed of this.touchPresses.values()) {
+                this.releaseContinuousAction(pressed.playerId, pressed.action);
+            }
+            this.touchPresses.clear();
+        };
+        this.touchControls.querySelectorAll('[data-action]').forEach(button => {
+            const action = button.dataset.action;
+            if (window.PointerEvent) {
+                button.addEventListener('pointerdown', event => press(button, action, event));
+                for (const type of ['pointerup','pointercancel','lostpointercapture']) button.addEventListener(type, release);
+            } else {
+                button.addEventListener('touchstart', event => press(button, action, event), {passive:false});
+                button.addEventListener('touchend', release);
+                button.addEventListener('touchcancel', release);
+                button.addEventListener('mousedown', event => press(button, action, event));
+                window.addEventListener('mouseup', release);
+            }
+            button.addEventListener('click', event => { if (event.detail === 0) this.handleTouchAction(action); });
+            button.addEventListener('contextmenu', event => event.preventDefault());
         });
-
-        if (this.touchStatus) {
-            this.touchStatus.textContent = t('startGameForTouch');
-        }
+        window.addEventListener('blur', () => this.releaseTouchControls());
+        document.addEventListener('visibilitychange', () => { if (document.hidden) this.releaseTouchControls(); });
+        if (this.touchStatus) this.touchStatus.textContent = t('startGameForTouch');
     }
 
     refreshTouchStatus() {
@@ -1208,6 +1231,10 @@ class UIManager {
     }
 
     getTouchPlayer() {
+        if (this.isOnlineMode) {
+            const mine = gameState.players[this.localPlayerIndex];
+            return mine && !mine.gameOver ? mine : null;
+        }
         if (!gameState.players.length) {
             return null;
         }
@@ -1422,7 +1449,9 @@ class UIManager {
         this.showScreen('gameScreen');
         this.refreshTouchStatus();
         this.scheduleBoardScaleUpdate();
-        requestAnimationFrame((time) => this.gameLoop(time));
+        this.gameLoopRun = (this.gameLoopRun || 0) + 1;
+        const run = this.gameLoopRun;
+        requestAnimationFrame((time) => this.gameLoop(time, run));
     }
     
     createNextPiecePreview(player, container) {
@@ -1466,7 +1495,8 @@ class UIManager {
         container.appendChild(preview);
     }
 
-    gameLoop(time) {
+    gameLoop(time, run) {
+        if (run !== this.gameLoopRun) return;
         if (gameState.isGameOver) {
             this.refreshTouchStatus();
             this.showGameOver();
@@ -1474,7 +1504,7 @@ class UIManager {
         }
 
         if (!gameState.isPaused) {
-            const deltaTime = time - (gameState.lastTime || time);
+            const deltaTime = Math.min(50, Math.max(0, time - (gameState.lastTime || time)));
             gameState.lastTime = time;
 
             // Poll gamepads
@@ -1508,7 +1538,7 @@ class UIManager {
             }
         }
 
-        requestAnimationFrame((time) => this.gameLoop(time));
+        requestAnimationFrame((time) => this.gameLoop(time, run));
     }
 
     drawBoard() {
@@ -1922,12 +1952,9 @@ class UIManager {
         usedHeight += gapSegments * gapY;
 
         let availableHeight = window.innerHeight - usedHeight;
-        if (!Number.isFinite(availableHeight) || availableHeight <= 0) {
-            availableHeight = window.innerHeight * 0.35;
-        }
-
-        const minimumBoardSlot = 60;
-        availableHeight = Math.max(60,parentRect?.height ? parentRect.height-24 : availableHeight);
+        if (!Number.isFinite(availableHeight) || availableHeight <= 0) availableHeight = window.innerHeight * 0.35;
+        if (parentRect?.height > 0) availableHeight = Math.min(availableHeight, parentRect.height - 12);
+        availableHeight = Math.max(48, availableHeight);
 
         const widthScale = availableWidth / boardWidth;
         const heightScale = availableHeight / boardHeight;
