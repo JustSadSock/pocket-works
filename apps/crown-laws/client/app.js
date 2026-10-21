@@ -127,8 +127,9 @@ function playTone(kind = "tap") {
 function profileOptions() {
   return `
     <button data-native-press id="start-btn" class="menu-card menu-card--hero" data-action="start-ai">
-      <span class="menu-card__title">Играть против ИИ</span>
-      <span class="menu-card__text">Быстрая дуэль у трона без лишних настроек.</span>
+      <span class="menu-card__index">I</span>
+      <span class="menu-card__copy"><span class="menu-card__title">Против ИИ</span><span class="menu-card__text">Начать немедленно, без ожидания</span></span>
+      <span class="menu-card__arrow" aria-hidden="true">→</span>
     </button>
   `;
 }
@@ -427,67 +428,23 @@ function activeLaws(state) {
   return activeLawSummary(state);
 }
 
-function crownRow(player, title) {
+function crownRow(player, title, side = "north") {
   return `
-    <div class="crown-bar">
+    <div class="crown-bar crown-bar--${side}">
       <span class="crown-bar__label">${title}</span>
       <div class="crown-bar__icons">
-        <span class="crown crown--active"><i></i>${player.activeCrowns}</span>
-        <span class="crown crown--sealed"><i></i>${player.sealedCrowns}</span>
-        <span class="crown crown--lost"><i></i>${player.lostCrowns}</span>
+        <span class="crown crown--active" title="Активные короны" aria-label="Активные короны: ${player.activeCrowns}"><i></i>${player.activeCrowns}</span>
+        <span class="crown crown--sealed" title="Запечатанные короны" aria-label="Запечатанные короны: ${player.sealedCrowns}"><i></i>${player.sealedCrowns}</span>
+        <span class="crown crown--lost" title="Потерянные короны" aria-label="Потерянные короны: ${player.lostCrowns}"><i></i>${player.lostCrowns}</span>
       </div>
     </div>
   `;
 }
 
 function pieceGlyph(piece) {
-  const colors = {
-    champion_p1: ["#ecd1a0", "#7cb6d8"],
-    champion_p2: ["#f0cc9c", "#d68a8f"],
-    guard: ["#e6dfd4", "#8a7f73"],
-    beast: ["#edaa54", "#4a2817"],
-    priest: ["#e8dcc7", "#6c95c7"],
-    thief: ["#d8c3f4", "#46255b"]
-  }[piece.id];
-
-  const glyph = {
-    champion: `<path d="M50 12l11 16-6 8 7 26-12 14-12-14 7-26-6-8z"/><path d="M28 76h44l8 8H20z"/><circle cx="50" cy="20" r="8"/>`,
-    guard: `<path d="M50 10l10 18-6 6h8l-14 32H38l10-24h-8l10-18-6-14z"/><rect x="20" y="76" width="60" height="8" rx="4"/>`,
-    beast: `<path d="M18 62l10-20 12-6 8-14 14 8 14 2-4 16-12 12-18 8-18-2z"/><path d="M26 38l-8-10 12 4zM66 34l10-8-2 12z"/>`,
-    priest: `<circle cx="50" cy="20" r="8"/><path d="M38 32h24l10 36H28z"/><rect x="48" y="22" width="4" height="46" rx="2"/><rect x="38" y="42" width="24" height="4" rx="2"/>`,
-    thief: `<path d="M24 76l8-34 18-20 18 20 8 34z"/><path d="M38 42c8-10 16-10 24 0v18H38z"/>`
-  }[piece.kind];
-
-  return `
-    <svg viewBox="0 0 100 100" aria-hidden="true">
-      <defs>
-        <linearGradient id="piece-metal-${piece.id}" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="${colors[0]}"></stop>
-          <stop offset="100%" stop-color="${colors[1]}"></stop>
-        </linearGradient>
-        <radialGradient id="piece-core-${piece.id}" cx="45%" cy="28%" r="70%">
-          <stop offset="0%" stop-color="rgba(255,255,255,.34)"></stop>
-          <stop offset="55%" stop-color="rgba(255,255,255,.02)"></stop>
-          <stop offset="100%" stop-color="rgba(0,0,0,.16)"></stop>
-        </radialGradient>
-      </defs>
-      <ellipse cx="50" cy="84" rx="28" ry="7" fill="rgba(0,0,0,.32)"></ellipse>
-      <path d="M20 82h60l-8 8H28z" fill="rgba(21,14,11,.74)"></path>
-      <g fill="url(#piece-metal-${piece.id})">${glyph}</g>
-      <path d="M16 82h68v2H16z" fill="rgba(255,231,193,.14)"></path>
-      <circle cx="50" cy="46" r="30" fill="url(#piece-core-${piece.id})"></circle>
-    </svg>
-  `;
-}
-
-function cardBackPosition(slot) {
-  return {
-    champion: "0%",
-    guard: "25%",
-    beast: "50%",
-    priest: "75%",
-    thief: "100%"
-  }[slot];
+  // Carved typographic counters: no raster sprites or SVG.
+  const marks = { champion: "К", guard: "С", beast: "З", priest: "Ж", thief: "В" };
+  return '<span class="piece__sigil" aria-hidden="true">' + (marks[piece.kind] || "·") + '</span>';
 }
 
 function effectsHTML() {
@@ -521,6 +478,7 @@ function boardHTML(state) {
       const classes = [
         "piece",
         `piece--${piece.kind}`,
+        piece.id === "champion_p1" ? "piece--p1" : piece.id === "champion_p2" ? "piece--p2" : "",
         piece.shield ? "piece--shielded" : "",
         piece.stun ? "piece--stunned" : "",
         piece.carryingSeal ? "piece--sealed" : ""
@@ -543,15 +501,15 @@ function boardHTML(state) {
   return `
     <section class="board-panel">
       <div class="board-caption">
-        <span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)}</span>
-        <span class="board-pill">Ход ${state.turn}</span>
+        <span class="board-caption__title">Королевский двор</span>
+        <span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span>
       </div>
-      <div class="board">
+      <div class="board-surround"><div class="board">
         <div class="board-grid">${cells.join("")}</div>
         <div class="board-glow"></div>
         <div class="board-effects">${effectsHTML()}</div>
         ${pieces}
-      </div>
+      </div></div>
     </section>
   `;
 }
@@ -570,8 +528,8 @@ function lawSlotsHTML(state) {
           const isBase = !state.slots[slot].activeCardId;
           const detailId = isBase ? BASE_LAWS[slot].id : active.id;
           return `
-            <button data-native-press class="law-slot ${app.lastConflictSlots.includes(slot) ? "law-slot--conflict" : ""}" style="--slot-color:${SLOT_COLORS[slot]};--slot-art:${cardBackPosition(slot)}" data-focus-card="${detailId}">
-              <span class="law-slot__slot">${slot}</span>
+            <button data-native-press class="law-slot ${app.lastConflictSlots.includes(slot) ? "law-slot--conflict" : ""}" style="--slot-color:${SLOT_COLORS[slot]}" data-slot="${slot}" data-focus-card="${detailId}" aria-label="Действующий закон ${SLOT_LABELS[slot]}: ${active.name}">
+              <span class="law-slot__slot">${SLOT_LABELS[slot].replace("Закон ", "")}</span>
               <span class="law-slot__name">${active.name}</span>
               <span class="law-slot__mode">${isBase ? "База" : "Активный"}</span>
             </button>
@@ -617,8 +575,8 @@ function handHTML(state) {
   return `
     <section class="hand-panel ${locked ? "hand-panel--locked" : ""}">
       <div class="panel-head">
-        <h3>${viewer === "p1" ? "Север" : "Юг"}</h3>
-        <span>${locked ? "Запечатано" : "Выберите закон"}</span>
+        <h3>Рука · ${viewer === "p1" ? "Север" : "Юг"}</h3>
+        <span>${locked ? "Выбор принят" : "Указ на следующий ход"}</span>
       </div>
       <div class="hand">
         ${currentHand()
@@ -627,12 +585,12 @@ function handHTML(state) {
             return `
               <button
                 class="law-card ${app.selectedCardId === cardId ? "law-card--selected" : ""}"
-                style="--card-color:${SLOT_COLORS[card.slot]};--card-art:${cardBackPosition(card.slot)}"
+                style="--card-color:${SLOT_COLORS[card.slot]}" aria-pressed="${app.selectedCardId === cardId}"
                 draggable="true"
                 data-card-id="${cardId}"
                 data-focus-card="${cardId}"
               >
-                <span class="law-card__slot">${SLOT_LABELS[card.slot]}</span>
+                <span class="law-card__slot">${SLOT_LABELS[card.slot].replace("Закон ", "")}</span>
                 <span class="law-card__title">${card.name}</span>
                 <span class="law-card__body">${card.description}</span>
               </button>
@@ -640,8 +598,11 @@ function handHTML(state) {
           })
           .join("")}
       </div>
+      <div class="hand-preview" role="status">
+        ${app.selectedCardId ? `<strong>${cardById(app.selectedCardId).name}</strong><span>${cardById(app.selectedCardId).description}</span>` : locked ? "Закон запечатан. Ожидайте второго игрока." : "Коснитесь карты — прочитайте действие и подтвердите выбор."}
+      </div>
       <div class="hand-actions">
-        <button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId || locked ? "disabled" : ""}>Запечатать ход</button>
+        <button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId || locked ? "disabled" : ""}>Утвердить закон</button>
         <button data-native-press class="ghost-btn" data-action="toggle-rules">Свод</button>
       </div>
     </section>
@@ -776,7 +737,7 @@ function roomHTML() {
         <section class="menu-shell">
           <div class="hero-card">
             <span class="eyebrow">Онлайн 1v1</span>
-            <h1>Комната ${app.online.roomCode}</h1>
+            <h1>Ждём соперника</h1>
             <p>Север уже в зале. Поделитесь кодом с соперником и дождитесь, пока он войдет в комнату с другого устройства.</p>
             <div class="room-wait-card">
               <div class="room-wait-card__code">${app.online.roomCode}</div>
@@ -797,8 +758,8 @@ function roomHTML() {
       <section class="menu-shell">
         <div class="hero-card">
           <span class="eyebrow">Онлайн 1v1</span>
-          <h1>Комнаты и скрытые законы</h1>
-          <p>Создайте комнату или подключитесь по коду. Локальный сервер уже работает на порту 3000 и готов к Cloudflare Tunnel.</p>
+          <h1>Зал совета</h1>
+          <p>Создайте зал совета и пригласите второго игрока по коду. Указы выбираются скрытно.</p>
           <div class="room-actions">
             <button data-native-press class="primary-btn" data-action="create-room">Создать комнату</button>
             <div class="join-box">
@@ -817,45 +778,42 @@ function roomHTML() {
 
 function gameHTML(state, eyebrow) {
   const viewer = getViewerPlayer();
-  const enemy = viewer === "p1" ? "p2" : "p1";
-  const chooserLabel = app.local.mode === "hotseat" ? (viewer === "p1" ? "Север выбирает скрытый закон" : "Юг выбирает скрытый закон") : eyebrow;
+  const chooserLabel = app.local.mode === "hotseat" ? (viewer === "p1" ? "Север выбирает указ" : "Юг выбирает указ") : eyebrow;
   return `
     <div class="game-shell">
       <div class="game-shell__frame">
-      <header class="topbar">
-        <div class="topbar__left">
-          <span class="eyebrow">${chooserLabel || "Законы Короны"}</span>
-          <h1>Законы Короны</h1>
-        </div>
-        <div class="topbar__right">
-          ${crownRow(state.players[viewer], viewer === "p1" ? "Вы" : "Вы")}
-          ${crownRow(state.players[enemy], viewer === "p1" ? "Соперник" : "Соперник")}
-          <div class="hud-actions">
-            <button data-native-press class="text-btn" data-action="toggle-rules">Свод</button>
-            <button data-native-press class="text-btn" data-action="toggle-settings">Опции</button>
-            <button data-native-press class="text-btn" data-action="back-menu">Выход</button>
+        <header class="topbar">
+          <div class="topbar__left">
+            <span class="eyebrow">${chooserLabel || "Двор престола"}</span>
+            <h1>Законы короны</h1>
           </div>
-        </div>
-      </header>
-      <main class="game-layout">
-        <div class="game-layout__main">
-          ${boardHTML(state)}
-          ${handHTML(state)}
-        </div>
-        <aside class="game-layout__side game-layout__side--info">
-          ${lawSlotsHTML(state)}
-          ${detailCard()}
-          ${logHTML(state)}
-          ${debugHTML(state)}
-        </aside>
-      </main>
+          <div class="topbar__right">
+            ${crownRow(state.players.p1, viewer === "p1" ? "Север · вы" : "Север · соперник", "north")}
+            ${crownRow(state.players.p2, viewer === "p2" ? "Юг · вы" : "Юг · соперник", "south")}
+            <div class="hud-actions">
+              <button data-native-press class="text-btn" data-action="toggle-rules">Правила</button>
+              <button data-native-press class="text-btn" data-action="toggle-settings">Звук</button>
+              <button data-native-press class="text-btn" data-action="back-menu">Меню</button>
+            </div>
+          </div>
+        </header>
+        <main class="game-layout">
+          <div class="game-layout__main">${boardHTML(state)}</div>
+          <aside class="game-layout__side">
+            ${lawSlotsHTML(state)}
+            ${detailCard()}
+            ${logHTML(state)}
+            ${debugHTML(state)}
+          </aside>
+          <div class="game-layout__hand">${handHTML(state)}</div>
+        </main>
       </div>
       ${app.local.mode === "hotseat" && app.local.passScreen ? `
         <div class="pass-overlay">
           <div class="pass-card">
-            <span class="eyebrow">Скрытый выбор</span>
+            <span class="eyebrow">Тайное голосование</span>
             <h2>Передайте устройство</h2>
-            <p>Первый закон уже запечатан. Пусть второй игрок возьмет устройство и подготовит ответ.</p>
+            <p>Первый указ запечатан. Пусть второй игрок выберет свой закон.</p>
             <button data-native-press class="primary-btn" data-action="continue-hotseat">Продолжить</button>
           </div>
         </div>
@@ -870,29 +828,31 @@ function menuHTML() {
     <section class="menu-shell">
       <div class="hero-card hero-card--menu">
         <div class="hero-card__content">
-          <span class="eyebrow">Crown Duel</span>
-          <h1>Законы Короны</h1>
-          <p>Тактическая дуэль у трона, где ходом становится не шаг фигуры, а новый закон мира.</p>
+          <span class="eyebrow">Состязание за престол</span>
+          <h1><span class="title-line">Законы</span><span class="title-line">короны</span></h1>
+          <p class="hero-card__lede">Два претендента, один трон. Вы не двигаете фигуры — вы переписываете законы, которым они подчиняются.</p>
+          <div class="hero-card__crest" aria-hidden="true">ЗК</div>
+        </div>
+        <nav class="menu-navigation" aria-label="Режим игры">
+          <span class="menu-navigation__label">Начать заседание</span>
           <div class="menu-grid">
             ${profileOptions()}
-            <button data-native-press class="menu-card menu-card--plain" data-action="open-online">
-              <span class="menu-card__title">Онлайн 1v1</span>
-              <span class="menu-card__text">Закрытая комната и дуэль с телефона.</span>
+            <button data-native-press class="menu-card" data-action="open-online">
+              <span class="menu-card__index">II</span>
+              <span class="menu-card__copy"><span class="menu-card__title">Играть онлайн</span><span class="menu-card__text">Приватная комната на двоих</span></span>
+              <span class="menu-card__arrow" aria-hidden="true">→</span>
             </button>
-            <button data-native-press class="menu-card menu-card--plain" data-action="start-hotseat">
-              <span class="menu-card__title">Hot-seat</span>
-              <span class="menu-card__text">Одна доска, два игрока.</span>
-            </button>
-            <button data-native-press class="menu-card menu-card--plain" data-action="toggle-rules">
-              <span class="menu-card__title">Правила</span>
-              <span class="menu-card__text">Трон, щиты, печати, конфликты.</span>
-            </button>
-            <button data-native-press class="menu-card menu-card--plain" data-action="toggle-settings">
-              <span class="menu-card__title">Настройки</span>
-              <span class="menu-card__text">Звук и анимация.</span>
+            <button data-native-press class="menu-card" data-action="start-hotseat">
+              <span class="menu-card__index">III</span>
+              <span class="menu-card__copy"><span class="menu-card__title">На одном устройстве</span><span class="menu-card__text">Передавайте устройство после тайного выбора</span></span>
+              <span class="menu-card__arrow" aria-hidden="true">→</span>
             </button>
           </div>
-        </div>
+          <div class="menu-secondary">
+            <button data-native-press class="ghost-btn" data-action="toggle-rules">Как играть</button>
+            <button data-native-press class="ghost-btn" data-action="toggle-settings">Настройки</button>
+          </div>
+        </nav>
       </div>
     </section>
   `;
@@ -967,10 +927,6 @@ function modalHTML() {
           <input type="checkbox" data-setting="sound" ${app.settings.sound ? "checked" : ""} />
         </label>
         <label class="setting-row">
-          <span>Фоновая музыка</span>
-          <input type="checkbox" data-setting="music" ${app.settings.music ? "checked" : ""} />
-        </label>
-        <label class="setting-row">
           <span>Снизить анимации</span>
           <input type="checkbox" data-setting="reducedMotion" ${app.settings.reducedMotion ? "checked" : ""} />
         </label>
@@ -1011,32 +967,23 @@ function restoreLocal() {
 
 function animateBoard() {
   const state = currentState();
-  if (!state || app.settings.reducedMotion) {
-    return;
+  if (!state) return;
+  const nextPositions = Object.fromEntries(Object.values(state.pieces).map(piece => [piece.id, {x:piece.x,y:piece.y}]));
+  const board = root.querySelector('.board');
+  const rect = board?.getBoundingClientRect();
+  if (rect && !app.settings.reducedMotion) {
+    root.querySelectorAll('.piece').forEach(node => {
+      const prev = app.lastBoardPositions[node.dataset.pieceId];
+      const next = nextPositions[node.dataset.pieceId];
+      if (!prev || !next || (prev.x === next.x && prev.y === next.y)) return;
+      const dx = (prev.x - next.x) * rect.width / 5;
+      const dy = (prev.y - next.y) * rect.height / 7;
+      node.animate([
+        {transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.93)`},
+        {transform: 'translate(-50%, -50%) scale(1)'}
+      ], {duration: 360,easing:'cubic-bezier(.2,.75,.2,1)'});
+    });
   }
-  const nextPositions = Object.fromEntries(Object.values(state.pieces).map((piece) => [piece.id, { x: piece.x, y: piece.y }]));
-  root.querySelectorAll(".piece").forEach((node) => {
-    const pieceId = node.dataset.pieceId;
-    const prev = app.lastBoardPositions[pieceId];
-    const next = nextPositions[pieceId];
-    if (!prev || !next) {
-      return;
-    }
-    const dx = (prev.x - next.x) * (100 / 5);
-    const dy = (prev.y - next.y) * (100 / 7);
-    if (dx || dy) {
-      node.animate(
-        [
-          { transform: `translate(${dx}%, ${dy}%) scale(0.98)` },
-          { transform: "translate(0, 0) scale(1)" }
-        ],
-        {
-          duration: 420,
-          easing: "cubic-bezier(.22,.8,.2,1)"
-        }
-      );
-    }
-  });
   app.lastBoardPositions = nextPositions;
 }
 
@@ -1117,6 +1064,10 @@ root.addEventListener("click", (event) => {
   }
 
   const card = event.target.closest("[data-card-id]");
+  if (focus && !card) {
+    render();
+    return;
+  }
   if (card) {
     const cardId = card.dataset.cardId;
     app.selectedCardId = app.selectedCardId === cardId ? null : cardId;
@@ -1154,6 +1105,8 @@ root.addEventListener("click", (event) => {
     render();
   }
 });
+
+root.addEventListener("input", (event) => { if (event.target.matches("[data-input=room-code]")) app.online.codeInput = event.target.value.toUpperCase(); });
 
 root.addEventListener("change", (event) => {
   if (event.target.matches("[data-input='room-code']")) {
@@ -1193,10 +1146,8 @@ root.addEventListener("drop", (event) => {
     return;
   }
   event.preventDefault();
-  const focusedLaw = app.focusCardId;
-  const slot = Object.values(BASE_LAWS).find((law) => law.id === focusedLaw)?.slot || null;
   const dragged = cardById(app.dragCardId);
-  if (!slot || dragged.slot === slot || slotNode.textContent.includes(SLOT_LABELS[dragged.slot])) {
+  if (dragged.slot === slotNode.dataset.slot) {
     app.selectedCardId = app.dragCardId;
     render();
   }
@@ -1207,7 +1158,7 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && app.modal) {
     closeModal();
   }
-  if (event.key.toLowerCase() === "r" && app.screen === "game" && app.local.state) {
+  if (event.key.toLowerCase() === "r" && event.altKey && app.screen === "game" && app.local.state) {
     app.local.state = applyDebugAction(app.local.state, { type: "restart" });
     render();
   }

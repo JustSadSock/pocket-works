@@ -215,17 +215,21 @@ function editor(){
     ...(unlocks.includes('wedding')?[['veil','Фата']]:[]),
     ...(unlocks.includes('knight')?[['bascinet','Бацинет стража']]:[]),
      ...(unlocks.includes('seoul-artist')?[['stage-pin','Лунная шпилька артиста']]:[]),
-    ...(unlocks.includes('zamazka.shared-canvas')?[['brush','Кисть за ухом']]:[])];
+    ...(unlocks.includes('zamazka.shared-canvas')?[['brush','Кисть за ухом']]:[]),
+     ...(unlocks.includes('zamazka.eagle-eye')?[['seer-diadem','Диадема проницательности']]:[])];
   const secretClothes=[...(unlocks.includes('blockies.steadfast')?[['block-jacket','Куртка сборщика']]:[]),...(unlocks.includes('astronaut')?[['spacesuit','Скафандр']]:[]),
     ...(unlocks.includes('wedding')?[['wedding','Свадебный наряд']]:[]),
     ...(unlocks.includes('herald')?[['tabard','Накидка герольда']]:[]),
     ...(unlocks.includes('groom')?[['groom','Свадебный мужской костюм']]:[]),
      ...(unlocks.includes('seoul-artist')?[['stage-hanbok','Сценический ханбок']]:[]),
     ...(unlocks.includes('zamazka.maestro')?[['restorer','Мантия великого реставратора']]:[])];
-  const secretAccessories=[...mascotAccessories,...(unlocks.includes('dragon-keeper')?[['shoulder-dragon','Изумрудный дракон на плече']]:[])];
+  const secretAccessories=[...mascotAccessories,...(unlocks.includes('dragon-keeper')?[['shoulder-dragon','Изумрудный дракон на плече']]:[]),
+     ...(unlocks.includes('zamazka.ghost-brush')?[['spectral-quill','Призрачное перо']]:[])];
   const rewardFace=[...mascotFaces,...(unlocks.includes('zamazka.sharp-eye')?[['monocle','Монокль']]:[]),...(unlocks.includes('blockies.ten-locks')?[['pixel-visor','Пиксельный визор']]:[])];
-  const rewardTitles=mascotTitles.filter(t=>!profileAchievements.some(a=>a.slot==='title'&&a.item===t)||
-    profileAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id)));
+  const retiredTitles={'Призрачная кисть':'zamazka.ghost-brush','Всевидящий':'zamazka.eagle-eye'};
+  const rewardTitles=mascotTitles.filter(t=>(!profileAchievements.some(a=>a.slot==='title'&&a.item===t)||
+    profileAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id)))&&
+    (!retiredTitles[t]||unlocks.includes(retiredTitles[t])));
   const rewardBg=backgrounds.filter(([id])=>(!profileAchievements.some(a=>a.slot==='background'&&a.item===id)||profileAchievements.some(a=>a.slot==='background'&&a.item===id&&unlocks.includes(a.id))));
   const rewardFrames=portraitFrames.filter(([id])=>(!profileAchievements.some(a=>a.slot==='portraitFrame'&&a.item===id)||profileAchievements.some(a=>a.slot==='portraitFrame'&&a.item===id&&unlocks.includes(a.id))));
   const category=state.editorSection==='data'?'account':state.editorTab;
@@ -261,12 +265,14 @@ function editor(){
     category==='background'?backgroundControls:
     category==='achievements'?'<div class="pws-achievement-list"><div class="pws-achievement-count">'+
     profileAchievements.filter(a=>unlocks.includes(a.id)).length+' / '+profileAchievements.length+' получено</div>'+
-    profileAchievements.map(a=>{
-      const earned=unlocks.includes(a.id);
-      return '<div class="pws-achievement" data-earned="'+earned+'"><div class="pws-achievement__head"><b>'+esc(a.name)+'</b><span>'+esc(a.tier)+'</span></div>'+
-        '<p>'+esc(a.detail)+'</p><small>'+esc(a.reward)+'</small>'+
-        (earned?'<button type="button" data-pws="equip-achievement" data-value="'+a.id+'">Примерить</button>':'')+'</div>';
-    }).join('')+'</div>':
+    ['Лёгкое','Среднее','Сложное','Легендарное'].map(tier=>'<section class="pws-achievement-tier" data-tier="'+tier+'">'+
+      '<h4>'+tier+' · '+profileAchievements.filter(a=>a.tier===tier).length+'</h4>'+
+      profileAchievements.filter(a=>a.tier===tier).map(a=>{
+        const earned=unlocks.includes(a.id);
+        return '<div class="pws-achievement" data-earned="'+earned+'"><div class="pws-achievement__head"><b>'+esc(a.name)+'</b><span>'+esc(a.tier)+'</span></div>'+
+          '<p>'+esc(a.detail)+'</p><small>'+esc(a.reward)+'</small>'+
+          (earned?'<button type="button" data-pws="equip-achievement" data-value="'+a.id+'">Примерить</button>':'')+'</div>';
+      }).join('')+'</section>').join('')+'</div>':
       '<div class="pws-field"><label for="pws-nickname">Никнейм</label>'+
       '<input id="pws-nickname" type="text" maxlength="20" minlength="3" value="'+esc(d.nickname)+'"></div>'+
       '<div class="pws-field"><label for="pws-title">Титул</label><select id="pws-title">'+rewardTitles.map(t=>

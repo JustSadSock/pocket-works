@@ -177,7 +177,7 @@ for(const animal of ['cat','rabbit','frog']){
   assert.match(rendered,/M16 255/,'tabard has full-width lower robe, not tiny overlay');
   if(animal==='rabbit')assert.match(rendered,/Rabbit-fitted helm/,'rabbit ears stay visible');
   else if(animal==='frog')assert.match(rendered,/Frog-fitted tournament bascinet/,'frog protruding eyes stay visible');
-  else assert.match(rendered,/full-size raised-visor bascinet/,'wide bascinet on cat');
+  else assert.match(rendered,/Bascinet of the guard/,'compact forged bascinet on cat');
   assert.doesNotMatch(rendered,/undefined|<script|foreignObject|onload=/i);
   const tux=mascotSvg({animal,hat:'none',clothes:'groom',face:'none'},{unlocks:['groom']});
   assert.match(tux,/Formal groom/,'new authored tuxedo layer');
@@ -238,6 +238,21 @@ assert.equal((await call(0,'profile',{...aliceCard,background:'gallery',maskot:{
 assert.equal((await call(0,'me')).profile.background,'gallery');
 assert.equal((await call(1,'profile',{...aliceCard,background:'gallery'})).httpStatus,400);
 assert.equal((await call(0,'me')).profile.achievements.length,7);
+const wearingNew={...plainMaskot,hat:'seer-diadem',accessory:'spectral-quill'};
+assert.equal(safeMascot(wearingNew,[]).hat,'none','unearned seer circlet remains locked');
+assert.equal(safeMascot(wearingNew,[]).accessory,'none','unearned spectral quill remains locked');
+assert.equal((await call(0,'profile',{...aliceCard,maskot:wearingNew})).httpStatus,400,'no preview spoofing before earning');
+assert.equal((await call(0,'profile',{...aliceCard,title:'Всевидящий'})).httpStatus,400,'retired title also requires award');
+assert.equal((await grant('zamazka.ghost-brush')).ok,true);
+assert.equal((await grant('zamazka.eagle-eye')).ok,true);
+assert.equal(safeMascot(wearingNew,['zamazka.ghost-brush','zamazka.eagle-eye']).hat,'seer-diadem');
+assert.equal(safeMascot(wearingNew,['zamazka.ghost-brush','zamazka.eagle-eye']).accessory,'spectral-quill');
+assert.equal((await call(0,'profile',{...aliceCard,maskot:wearingNew,title:'Всевидящий'})).ok,true,
+ 'existing owners may keep retired earned titles with the new wearables');
+assert.equal((await call(1,'profile',{...aliceCard,maskot:wearingNew})).httpStatus,400,'new cosmetics cannot be equipped by strangers');
+assert.match(mascotSvg(wearingNew,{unlocks:['zamazka.ghost-brush','zamazka.eagle-eye']}),/Diadem of insight/);
+assert.match(mascotSvg(wearingNew,{unlocks:['zamazka.ghost-brush','zamazka.eagle-eye']}),/Spectral feather/);
+
 // Blockies cosmetics must only unlock after a trusted PocketNet-originated award.
 assert.equal((await call(0,'profile',{...aliceCard,title:'Укладчик'})).httpStatus,400);
 assert.equal((await call(0,'profile',{...aliceCard,background:'stack-grid'})).httpStatus,400);

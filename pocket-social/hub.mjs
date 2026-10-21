@@ -11,11 +11,11 @@ const frames=new Set(['clean','double','corners','stamp']);
 const backgroundModes=new Set(['preset','drawing']);
 const portraitFrames=new Set(['none','wood','gilt','worn-gilt','circuit']);
 const maskotAnimals=new Set(['cat','black-cat','fox','rabbit','frog']);
-const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush','stage-pin','block-cap']);
+const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush','stage-pin','seer-diadem','block-cap']);
 const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard','restorer','groom','stage-hanbok','block-jacket']);
 const maskotFaces=new Set(['none','glasses','stars','monocle','pixel-visor']);
-const maskotAccessories=new Set(['none','shoulder-dragon']);
-const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса',...profileAwards.filter(a=>a.slot==='title').map(a=>a.item)]);
+const maskotAccessories=new Set(['none','shoulder-dragon','spectral-quill']);
+const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Авантюрист','Призрачная кисть','Всевидящий',...blockiesAchievements.filter(a=>a.slot==='title').map(a=>a.item)]);
 const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding'],['VIGIL-1347','knight'],['HERALD-1415','herald'],['GROOM-2026','groom'],['SEOUL-MOONLIGHT','seoul-artist'],['DRAGON-EMBER','dragon-keeper']]);
 function validMaskot(value,unlocked){
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -27,7 +27,7 @@ function validMaskot(value,unlocked){
   if(value.clothes==='groom'&&!unlocked.includes('groom'))return false;
   if((value.hat==='stage-pin'||value.clothes==='stage-hanbok')&&!unlocked.includes('seoul-artist'))return false;
   if(value.accessory==='shoulder-dragon'&&!unlocked.includes('dragon-keeper'))return false;
-  for(const category of ['hat','clothes','face'])
+  for(const category of ['hat','clothes','face','accessory'])
     if(profileAwards.some(a=>a.slot===category&&a.item===value[category])&&!ownedProfileItem(category,value[category],unlocked))return false;
   return true;
 }
@@ -316,8 +316,11 @@ export class PocketSocial {
             maskot={...maskot,accessory:oldMaskot.accessory};
         }
         if(maskot!==null&&!validMaskot(maskot,unlocked))return reply({error:'invalid_profile'},400);
+        // Keep previously earned title strings after their achievement's new wearable reward.
+        const retiredTitles={'Призрачная кисть':'zamazka.ghost-brush','Всевидящий':'zamazka.eagle-eye'};
         if(body.title!==undefined&&(!maskotTitles.has(body.title)||
-           (profileAwards.some(a=>a.slot==='title'&&a.item===body.title)&&!ownedProfileItem('title',body.title,unlocked))))return reply({error:'invalid_profile'},400);
+           (profileAwards.some(a=>a.slot==='title'&&a.item===body.title)&&!ownedProfileItem('title',body.title,unlocked))||
+           (retiredTitles[body.title]&&!unlocked.includes(retiredTitles[body.title]))))return reply({error:'invalid_profile'},400);
         if(profileAwards.some(a=>a.slot==='background'&&a.item===background)&&!ownedProfileItem('background',background,unlocked))return reply({error:'invalid_profile'},400);
         if(profileAwards.some(a=>a.slot==='portraitFrame'&&a.item===body.portraitFrame)&&!ownedProfileItem('portraitFrame',body.portraitFrame,unlocked))return reply({error:'invalid_profile'},400);
         if(body.backgroundMode!==undefined&&!backgroundModes.has(body.backgroundMode))return reply({error:'invalid_profile'},400);

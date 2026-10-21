@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'crown-laws-';
-const CACHE_NAME = 'crown-laws-v0.1.0';
-const APP_VERSION = '0.1.0';
-const RELEASE_DATE = '2026-10-18';
+const CACHE_NAME = 'crown-laws-v0.2.0';
+const APP_VERSION = '0.2.0';
+const RELEASE_DATE = '2026-10-22';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Перенесена исходная игра с сохранением правил и отдельным хранением данных."];
+const RELEASE_NOTES = ["Полностью новый каменный интерфейс: двор, новые жетоны и адаптивные указы."];
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -17,14 +17,11 @@ const APP_SHELL = [
   "./client/app.js",
   "./client/network.js",
   "./client/styles.css",
+  "./icons/icon.png",
   "./icons/icon.svg",
-  "./icons/source.svg",
   "./shared/ai.js",
   "./shared/game-data.js",
   "./shared/game-engine.js",
-  "./client/assets/board-throne.png",
-  "./client/assets/law-backs.png",
-  "./client/assets/miniatures-sheet.png",
   "../../shared/mobile-runtime.css",
   "../../shared/mobile-runtime.js",
   "../../shared/update-manager.js",

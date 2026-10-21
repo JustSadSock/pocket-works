@@ -6,14 +6,13 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#171a21",
-  "theme_color": "#171a21",
+  "background_color": "#1c2421",
+  "theme_color": "#1c2421",
   "icons": [
     {
-      "src": "./icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "./icons/icon.png",
+      "sizes": "96x96",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

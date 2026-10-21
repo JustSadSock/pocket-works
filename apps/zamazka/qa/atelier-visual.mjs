@@ -59,11 +59,14 @@ try{
     return {scroll:root.scrollHeight-root.clientHeight,scene:view.scrollHeight-view.clientHeight,
      detail:d,tray:t,close:box(view.querySelector('[data-action="achievements-back"]')),
      tiles:view.querySelectorAll('[data-achievement-select]').length,selected:view.querySelectorAll('.cabinet-medal.is-selected').length,
+      tiers:[...view.querySelectorAll('.cabinet-tier')].map(e=>e.dataset.tier),lastVisible:tray.scrollHeight>=tray.clientHeight,
      buttons:[...view.querySelectorAll('button')].filter(b=>{const s=getComputedStyle(b);return s.visibility!=='hidden'&&s.display!=='none'}).map(box),root:r};
    });
    assert(metrics.scroll<=7&&metrics.scene<=7,name+' '+scene+' document scroll '+JSON.stringify(metrics));
    assert(metrics.detail.w>=100&&metrics.detail.h>=70,name+' '+scene+' tiny detail '+JSON.stringify(metrics));
-   assert.equal(metrics.tiles,7);assert.equal(metrics.selected,1);
+   assert.equal(metrics.tiles,11,'all eleven medals remain selectable');assert.equal(metrics.selected,1);
+    assert.deepEqual(metrics.tiers,['Лёгкое','Среднее','Сложное','Легендарное'],'difficulty tiers must be ordered');
+    assert(metrics.lastVisible,'medal tray must be allowed to scroll');
    const b=metrics.close;assert(b.bottom<=metrics.root.bottom+2&&b.right<=metrics.root.right+2,name+' '+scene+' Back clipped');
    await page.screenshot({path:join(dir,name+'-cabinet-'+scene+'.png'),fullPage:false});
    console.log(name+' cabinet '+scene+' '+Math.round(metrics.detail.w)+'x'+Math.round(metrics.detail.h));

@@ -5,99 +5,104 @@
   "memoryReview": [
     {
       "slug": "fog-of-conquest",
-      "evidence": "covers/fog-of-conquest.jpg (inspected legacy cover, capture commit unknown)",
-      "lesson": "The geographic field and geographic orders belong to FOG; retain this source game’s specific object rather than copying its map presentation."
+      "evidence": "covers/fog-of-conquest.jpg (legacy capture, direct image review unverified in this revision)",
+      "lesson": "Its geographic field is the entire strategic object; Crown Laws instead keeps one bounded 5×7 stone tabletop and a fixed hand of decrees."
     },
     {
       "slug": "zamazka",
-      "evidence": "covers/zamazka.jpg (inspected legacy cover, capture commit unknown)",
-      "lesson": "Painted restoration and the paper illustration are its central objects; this port keeps its recovered source art and its own playable control topology."
+      "evidence": "covers/zamazka.jpg (legacy capture, direct image review unverified in this revision)",
+      "lesson": "Painting and canvas tools dominate ZAMAZKA; Crown Laws must show legal decisions before tools or flourishes, with pieces moving automatically."
     }
   ],
   "references": [
     {
-      "url": "https://www.webdiplomacy.net/",
-      "observation": "The source page places its Diplomacy map and simultaneous-order rules beside supply-center explanations.",
-      "principle": "Make the public board explain the consequences of privately selected orders.",
-      "application": "Keep public faction state visible while each opponent seals a private political choice.",
-      "avoid": "Do not import territory movement or Diplomacy’s negotiation rules into this duel.",
-      "inspectedAt": "2026-10-19T09:25:00Z"
+      "url": "https://www.metmuseum.org/essays/the-art-of-the-book-in-the-middle-ages",
+      "inspectedAt": "2026-10-22",
+      "observation": "The Met documents medieval book covers using precious materials and strong geometric surfaces rather than floating interface ornaments.",
+      "principle": "Use compact material boundaries to distinguish the legal decree object from its surrounding stone institution.",
+      "application": "Rectangular parchment law cards use ink-like text and a thin stamped faction strip instead of illustrated backgrounds.",
+      "avoid": "Do not reproduce specific manuscript pages, monograms, protected imagery or decorative initial drawings."
     },
     {
-      "url": "https://en.boardgamearena.com/gamepanel?game=sevenwondersduel",
-      "observation": "The official hosted game page introduces a two-player civilization duel through its shared card and victory systems.",
-      "principle": "A duel needs a legible shared consequence for each individual card choice.",
-      "application": "Keep the revealed round and persistent victory counters together on the political board.",
-      "avoid": "Do not copy another game’s card artwork, symbols or three victory rules.",
-      "inspectedAt": "2026-10-19T09:25:00Z"
+      "url": "https://www.vam.ac.uk/collections/gothic",
+      "inspectedAt": "2026-10-22",
+      "observation": "V&A discusses Gothic objects crossing from architecture to three-dimensional sculpture with distinct material edges.",
+      "principle": "A frame should behave like carved physical support around the royal game, not a generic translucent card.",
+      "application": "The playfield uses a thick bevelled stone surround, measured cells and strong unbroken rectangular panel edges.",
+      "avoid": "Avoid building an illegible ornamental cathedral facade over the usable interactive board."
     },
     {
-      "url": "https://ledergames.com/products/root-a-game-of-woodland-might-and-right",
-      "observation": "The publisher presents distinct illustrated woodland factions and an asymmetric struggle on one common board.",
-      "principle": "Give factions recognizable identities while retaining a common public state.",
-      "application": "Preserve the source faction colors and court illustrations as the stable political vocabulary.",
-      "avoid": "Do not reproduce Root characters, woodland setting or asymmetric faction rules.",
-      "inspectedAt": "2026-10-19T09:25:00Z"
+      "url": "https://searcharchives.bl.uk/catalog/040-002075122",
+      "inspectedAt": "2026-10-22",
+      "observation": "The British Library records the Lansdowne Psalter with framed miniatures and deliberate gold, orange and blue distinctions.",
+      "principle": "Restrained colored detail can communicate function while retaining the seriousness of medieval record keeping.",
+      "application": "The North and South counters have separate blue and red material rings; bronze focuses primary decree confirmation.",
+      "avoid": "Do not borrow actual manuscript miniatures or treat decorative colors as interchangeable game-state labels."
     }
   ],
   "concepts": [
     {
-      "id": "retained-source",
-      "medium": "The original DOM board, card renderer and local authored artwork make individual rules readable without canvas text scaling.",
-      "composition": "The shared royal board is followed by the current laws and a hand of selectable illustrated decree cards.",
-      "interaction": "Select an illustrated decree from your own hand, seal it, then read the combined law and shared board consequence.",
-      "motion": "A selected card is marked immediately; after both choices the round advances and the new public state persists.",
-      "rationale": "Chosen for this restoration because the user requested the existing project and its recovered rules, content and recognizable scene."
+      "id": "stone-council",
+      "medium": "HTML/CSS geometric stone slab, paper legal cards and code-drawn stamped counters with no runtime image atlas.",
+      "composition": "The board and live law ledger form a two-column council on desktop; a compact hand follows the board on phone.",
+      "interaction": "Choose a decree tile, see the complete description directly below the hand, then confirm the hidden law choice.",
+      "motion": "Measured selected-card lift and per-cell linear token travel; short highlights punctuate clashes rather than covering the grid.",
+      "rationale": "This preserves the simultaneous hidden decree mechanic while replacing old decorative clutter with a spatially stable interface."
     },
     {
-      "id": "tactile-miniature",
-      "medium": "A new WebGL miniature with raised physical pieces and a freely orbiting camera instead of the recovered scene renderer.",
-      "composition": "An oblique miniature sits in a circular tabletop with controls represented by surrounding physical tools.",
-      "interaction": "Orbit the miniature, inspect an object and manipulate it through projected three-dimensional handles.",
-      "motion": "Camera inertia, object weight and spring settling would replace the source input timing and discrete presentation.",
-      "rationale": "A future reinterpretation could make the object tactile, but would rebuild the renderer and make precise phone input less direct."
+      "id": "cathedral-relief",
+      "medium": "A bespoke canvas renderer with hand-placed sculptural pseudo-relief and carved ornamental individual miniatures.",
+      "composition": "The battlefield fills the scene as one altar stone while tiny side plaques hide available current laws and cards.",
+      "interaction": "Players drag embossed coins from an arc surrounding the board into a central slot to submit hidden commands.",
+      "motion": "Heavily eased rotations and carved-piece swells would make each resolution ceremonial and comparatively slow.",
+      "rationale": "Its strong theatrical model introduces gesture-dependent controls that would bury readable decrees on a small screen."
     },
     {
-      "id": "illustrated-sequence",
-      "medium": "An illustrated DOM folio with static authored state panels and short textual outcome cards.",
-      "composition": "A sequence of full-screen spreads isolates one choice and one outcome at a time, with no permanently visible playfield.",
-      "interaction": "Turn from a choice spread to a result spread and inspect a chronological illustrated history.",
-      "motion": "Page folds and a deliberate pause between choice and result would carry the rhythm of the interaction.",
-      "rationale": "A separate narrative version could explain rules slowly, but would conceal the continuously shared state needed by this recovered game."
+      "id": "royal-codex",
+      "medium": "Multi-page CSS folio instrument with stitched side margins, codex gutters and text-first ink panels.",
+      "composition": "Each gameplay layer is a separate full-screen folio: board page, law book page, decree page and chronicle page.",
+      "interaction": "Users flip between folios to examine individual acts and apply a decree from a compact bottom page tab.",
+      "motion": "A page-turn sequence and layered parchment scroll would organize navigation around document transitions.",
+      "rationale": "It makes room for long legal prose but repeatedly obscures the shared board precisely when laws are being evaluated."
     }
   ],
   "selection": {
-    "concept": "retained-source",
-    "reason": "The requested work is restoration and integration of an existing game. Retaining its actual playable object, rules and recovered content serves that request with the least loss of identity.",
+    "concept": "stone-council",
+    "reason": "The royal board, current legal code and selectable hand stay spatially connected; the game remains readable and tappable without illustrations.",
     "rejected": [
       {
-        "concept": "tactile-miniature",
-        "reason": "A new orbiting renderer would replace rather than restore the source presentation, introduce new assets and make the present direct controls less predictable."
+        "concept": "cathedral-relief",
+        "reason": "A fully pictorial relief requires authored sprite assets, complicated gestures and obscures individual rule text on narrow phones."
       },
       {
-        "concept": "illustrated-sequence",
-        "reason": "A sequence of isolated spreads would hide simultaneous state and continuous interaction that define the source game’s playable loop."
+        "concept": "royal-codex",
+        "reason": "Turning pages between the board and hand hides turn consequences and introduces navigation overhead during each law choice."
       }
     ]
   },
   "tools": [
     {
-      "id": "source-renderer-svg",
+      "id": "html-css",
       "availability": "available",
-      "reason": "The recovered browser renderer runs in local Chromium; app-local SVG install artwork is authored as editable vector geometry."
+      "reason": "Original browser HTML and CSS provide all board, token, material and feedback geometry without generated SVG or picture tiles."
+    },
+    {
+      "id": "node-icon-raster",
+      "availability": "available",
+      "reason": "A deterministic Node image routine draws the product crown onto an isolated pixel buffer and serializes one PNG for the app icon."
     }
   ],
   "assets": [
     {
-      "id": "install-identity",
-      "tool": "source-renderer-svg",
-      "source": "icons/source.svg",
-      "output": "icons/icon.svg",
-      "role": "Authored app-specific install identity accompanies the retained playable scene and appears in the page and PWA manifest.",
-      "acceptance": "Its concrete game motif remains distinguishable at small icon scale, without the temporary Forge monogram.",
-      "integration": "The PWA manifest and page icon load the local exported SVG without a CDN or network image dependency.",
-      "provenance": "App-specific SVG geometry authored for this restoration. Existing playable artwork remains the recovered user project content.",
-      "maxBytes": 8192
+      "id": "installation-icon",
+      "tool": "node-icon-raster",
+      "source": "tools/draw-icon.mjs",
+      "output": "icons/icon.png",
+      "role": "Unique app launch emblem combining rough cut stone and a high contrast gold crown for the Pocket Works launcher.",
+      "acceptance": "The new icon remains recognizable at 48 pixels and the old SVG install graphics are absent from the application tree.",
+      "integration": "Manifest and HTML reference only the local icon PNG; service worker caches exactly the new standalone icon and no gameplay textures.",
+      "provenance": "Pixels are drawn by an original project-local deterministic raster script rather than sourced illustration or downloaded sprite.",
+      "maxBytes": 70000
     }
   ],
   "constraints": {
@@ -105,7 +110,7 @@
       390,
       844
     ],
-    "textureBytes": 0,
+    "textureBytes": 37028,
     "triangles": 0,
     "targetFps": 60
   },
@@ -116,12 +121,12 @@
       "settled"
     ],
     "risks": [
-      "Phone controls may obscure the playable object; review full-viewport captures after real input, not only canvas crops.",
-      "An online state update must not restart entry animations or conceal the resulting board or world state."
+      "At 390 pixel widths the hand needs to remain accessible without the current law ledger hiding board controls.",
+      "At tablet landscape sizes the side ledger and board must not obstruct the confirmation action."
     ],
     "comparisons": [
-      "FOG geographic playfield versus this source game object at phone scale.",
-      "ZAMAZKA restoration controls versus this source game input and feedback loop."
+      "Capture initial menu and compare type/edges to former hero layout to verify absence of recovered assets.",
+      "Capture settled board and chosen decree and compare with prior sprite sheet render for readability and dimensional correctness."
     ]
   }
 }

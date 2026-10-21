@@ -10,6 +10,16 @@ assert.equal((ready.match(/class="cabinet-medal is-owned/g)||[]).length,1); // s
 assert.equal((ready.match(/ is-owned"/g)||[]).length,2);
 assert.match(ready,/<strong>2<\/strong><span>из 11/);
 assert.match(ready,/aria-pressed="true"/);
+for(const tier of ['Лёгкое','Среднее','Сложное','Легендарное']){
+ assert(ready.includes('class="cabinet-tier" data-tier="'+tier+'"'),'difficulty shelf '+tier);
+ assert.equal((ready.match(new RegExp('class="cabinet-tier" data-tier="'+tier+'"','g'))||[]).length,1);
+}
+assert.equal((ready.match(/class="cabinet-tier-medals"/g)||[]).length,4,'all four real difficulty sections');
+assert(!ready.includes('Неизвестная сложность'));
+const ghost=zamazkaAchievements.find(a=>a.id==='zamazka.ghost-brush');
+const seer=zamazkaAchievements.find(a=>a.id==='zamazka.eagle-eye');
+assert.equal(ghost.slot,'accessory');assert.equal(ghost.item,'spectral-quill');
+assert.equal(seer.slot,'hat');assert.equal(seer.item,'seer-diadem');
 assert.match(ready,/Титул «Подмастерье»/);
 const other=cabinetMarkup(zamazkaAchievements,own,{status:'ready',selectedId:zamazkaAchievements[3].id});
 assert.match(other,/Трижды прозорливый/);
