@@ -49,7 +49,7 @@ const museumAudio=new MuseumAudio(beepEnabled);
 let soundDemoTimer=null,connectionLost=false;
 const serverClock=new ServerClock();
 const networkNow=()=>serverClock.now();
-let lastTimePingAt=0;
+let lastTimePingAt=0,lastTimePongAt=0;
 const SOUND_VOLUME_KEY=NS+'sound-volume';
 let soundVolume=Math.max(0,Math.min(100,Number(localStorage.getItem(SOUND_VOLUME_KEY)??55)||0));
 museumAudio.setVolume(soundVolume/100);
@@ -915,7 +915,7 @@ async function connect(mode){
  rememberTabName(name);
  const epoch=++connectionEpoch;
  connectionStatus('connecting');
- me=null;view=null;roomId='';serverClock.reset();lastTimePingAt=0;
+ me=null;view=null;roomId='';serverClock.reset();lastTimePingAt=0;lastTimePongAt=0;
  change(connectionMarkup({mode,artURL:artworkURL(0)}),'connecting');
  try{
    const response=await fetch(POCKETNET_URL+'/health',{cache:'no-store',signal:AbortSignal.timeout(8000)});
@@ -933,14 +933,14 @@ async function connect(mode){
    net=client;
    if(mode!=='resume'){client.roomId=null;client.persist()}
    if(mode==='resume'&&!client.roomId)throw Error('Предыдущая сессия завершена');
-   client.on('connected',data=>{if(client.closed)return;connectionLost=false;me=data.player;connectionStatus('ok');markTabGuest(POCKETNET_URL,client.token);setConnectionStep(screen,3,'Открываем зал…')});
+   client.on('connected',data=>{if(client.closed)return;connectionLost=false;lastTimePongAt=Date.now();me=data.player;connectionStatus('ok');markTabGuest(POCKETNET_URL,client.token);setConnectionStep(screen,3,'Открываем зал…')});
    client.on('room_joined',msg=>{
      if(client.closed)return;
      roomId=msg.roomId;
      roomModuleVersion=msg.version||'v1';
      boardResync=true;
      client.sendGame({type:'sync'});
-     if(Number(roomModuleVersion.slice(1))>=24){lastTimePingAt=Date.now();client.sendGame({type:'time_ping',stamp:lastTimePingAt})}
+     if(Number(roomModuleVersion.slice(1))>=24){lastTimePongAt=Date.now();lastTimePingAt=Date.now();client.sendGame({type:'time_ping',stamp:lastTimePingAt})}
      if(page==='drawing'&&!pendingSubmit)backupDraft(true);
      // Legacy room emblems are read only for backwards compatibility; Pocket ID is the visible identity.
      if(view)renderView();
@@ -987,6 +987,7 @@ async function connect(mode){
        }
      }
      else if(event?.type==='time_pong'){
+       lastTimePongAt=Date.now();
        serverClock.observeEcho(event.payload?.stamp,event.payload?.serverNow);
       }
       else if(event?.type==='submission_saved'){
@@ -1016,7 +1017,7 @@ async function connect(mode){
    client.on('room_kicked',()=>{if(net!==client||client.closed)return;home(true);notify('Куратор исключил тебя из комнаты')});
    client.on('room_closed',()=>{if(client.closed)return;home();notify('Комната закрыта')});
    client.on('disconnected',()=>{
-     if(client.closed)return;connectionLost=true;museumAudio.stopCountdown();connectionStatus('offline');
+     if(client.closed)return;connectionLost=true;lastTimePongAt=0;museumAudio.stopCountdown();connectionStatus('offline');
      activeDraftTransfer?.abort();activeDraftTransfer=null;
      activeSubmitTransfer?.abort();activeSubmitTransfer=null;
      lastDraftSentAt=0;lastDraftAckRevision='';autoSubmitted='';
@@ -1408,6 +1409,15 @@ function tick(){
  if(!practice&&view?.phase==='voting'&&!view.paused&&!connectionLost&&
     view.author?.id!==me?.id&&!view.voted?.includes(me?.id)&&
     networkNow()>=view.deadline&&chips.some(Boolean)&&!pendingVote)submitVote(true);
+ // A half-open socket can stay OPEN on sleeping tablets even though the
+ // server no longer receives drafts. Force PocketNet's normal reconnect path.
+ if(net&&roomId&&!connectionLost&&!document.hidden&&
+    Number(roomModuleVersion.slice(1))>=24&&lastTimePongAt&&
+    Date.now()-lastTimePongAt>30000&&
+    net.socket?.readyState===WebSocket.OPEN){
+   lastTimePongAt=Date.now();
+   try{net.socket.close()}catch{}
+ }
  if(net&&roomId&&!connectionLost&&Number(roomModuleVersion.slice(1))>=24&&
     Date.now()-lastTimePingAt>5000){
   lastTimePingAt=Date.now();
@@ -1431,7 +1441,7 @@ if(!IS_DEBUG_FRAME)setInterval(()=>{
  if(pendingSubmit?.room===roomId&&pendingSubmit.round===view?.round)attemptSubmission();
  else backupDraft();
 },3600);
-if(!IS_DEBUG_FRAME)document.addEventListener('visibilitychange',()=>{if(page==='drawing')backupDraft(true);if(!document.hidden)tick()});
+if(!IS_DEBUG_FRAME)document.addEventListener('visibilitychange',()=>{if(page==='drawing')backupDraft(true);if(!document.hidden){lastTimePongAt=Date.now();tick()}});
 if(!IS_DEBUG_FRAME)window.addEventListener('pagehide',()=>{if(page==='drawing')backupDraft(true)});
 async function refreshPocketBadge(){
  const prior=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
