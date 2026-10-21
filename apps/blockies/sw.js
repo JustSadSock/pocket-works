@@ -24,7 +24,8 @@ const APP_SHELL = [
   "../../shared/mobile-runtime.js",
   "../../shared/update-manager.js",
   "../../shared/update-manager.css",
-  "../../shared/capabilities/net.js"
+  "../../shared/capabilities/net.js",
+  "../../shared/capabilities/blockies-achievements.js"
 ];
 
 const SCOPE_URL = new URL('./', self.registration.scope);
