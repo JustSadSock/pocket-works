@@ -64,3 +64,62 @@ test('reconnect preserves the room and cannot introduce a fifth player',()=>{
  assert.equal(state.players.length,2);
  assert.throws(()=>game.onJoin({state,player:{id:'c',name:'C'}}),/уже началась/);
 });
+
+
+import {saveSolo,loadSolo,clearSolo,validateSoloSnapshot,SOLO_KEY} from '../solo-save.js';
+function checkpoint(){
+ return {version:1,updatedAt:Date.now(),randomSeed:0x12345678,rngState:0x97654321,
+  board:Array.from({length:20},()=>Array(10).fill(0)),
+  sharedStats:{score:450,lines:2,level:1,comboChain:0,lastClearDetail:null},
+  player:{currentPiece:[[0,1,0],[1,1,1]],nextPiece:[[1,1],[1,1]],
+   position:{x:4,y:5},dropCounter:320,dropInterval:910,spawnAnchor:5,color:'#00D9FF'}};
+}
+function memoryStorage(){
+ const map=new Map();
+ return {getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,v),
+  removeItem:k=>map.delete(k)};
+}
+test('a checkpoint preserves exact board, piece positions, color and RNG sequence',()=>{
+ const storage=memoryStorage(),input=checkpoint();
+ input.board[18][3]=1;
+ assert.equal(saveSolo(input,storage),true);
+ const loaded=loadSolo(storage);
+ assert.deepEqual(loaded.board,input.board);
+ assert.deepEqual(loaded.player.currentPiece,input.player.currentPiece);
+ assert.deepEqual(loaded.player.nextPiece,input.player.nextPiece);
+ assert.deepEqual(loaded.player.position,input.player.position);
+ assert.equal(loaded.player.color,'#00D9FF');
+ assert.equal(loaded.rngState,input.rngState);
+ input.board[18][3]=0;
+ assert.equal(loaded.board[18][3],1,'saved data is copied independently');
+ clearSolo(storage);
+ assert.equal(loadSolo(storage),null);
+});
+test('corrupt, stale and incompatible checkpoints cannot overwrite the playfield',()=>{
+ const storage=memoryStorage();
+ const invalid=[{...checkpoint(),board:[[1]]},
+   {...checkpoint(),updatedAt:Date.now()-31*24*3600*1000},
+   {...checkpoint(),rngState:'bad'},
+   {...checkpoint(),player:{...checkpoint().player,position:{x:9,y:19}}},
+   {...checkpoint(),board:Array.from({length:20},()=>Array(10).fill(5))}];
+ for(const item of invalid){
+  assert.equal(validateSoloSnapshot(item),null);
+  storage.setItem(SOLO_KEY,JSON.stringify(item));
+  assert.equal(loadSolo(storage),null);
+  assert.equal(storage.getItem(SOLO_KEY),null);
+ }
+ storage.setItem(SOLO_KEY,'{');
+ assert.equal(loadSolo(storage),null);
+});
+test('checkpoint gracefully handles storage failures and discards arbitrary fields',()=>{
+ const data=checkpoint(),storage={
+  getItem(){throw Error('Access denied');},
+  setItem(){throw Error('Quota exceeded');},
+  removeItem(){throw Error('Access denied');}
+ };
+ assert.equal(saveSolo(data,storage),false);
+ assert.equal(loadSolo(storage),null);
+ const valid=validateSoloSnapshot({...data,unexpected:{secret:'ignored'}});
+ assert.ok(valid);
+ assert.equal(Object.hasOwn(valid,'unexpected'),false);
+});
