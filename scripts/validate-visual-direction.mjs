@@ -9,6 +9,40 @@ const root = process.cwd();
 const visualFile = /\.(?:css|html|svg|png|jpe?g|webp|avif|glb|gltf|blend\d*|aseprite|gdshader|tscn)$/i;
 const visualSourceFile = /(?:^|\/)(?:visual|render|animation|motion|scene|art|sprite|ui)[\w-]*\.(?:js|ts|gd)$/i;
 
+// A runtime-only repair must not be mistaken for a new visual composition.
+// Only these exact integration tokens can be ignored. Changed styles,
+// renderers, layout structure, text or unrelated app code still trigger QA.
+const RUNTIME_WIRING_FILES = new Set(['index.html', 'app.js', 'sw.js']);
+const CLASSIC_MOBILE_BOOTSTRAP = `// This classic-script game keeps its synchronous startup; the shared touch
+// and safe-area handlers are installed independently after the module loads.
+void import('../../shared/mobile-runtime.js').then(({installMobileRuntime})=>installMobileRuntime()).catch(error=>console.error('Mobile runtime initialization failed',error));
+`;
+export function normalizeMobileWiring(relative, source) {
+  if (relative === 'index.html') return source
+    .replaceAll(' data-native-press', '')
+    .replaceAll(' data-app-shell', '')
+    .replaceAll(/<link rel="stylesheet" href="\.\.\/\.\.\/shared\/mobile-runtime\.css">\s*/g, '')
+    .replaceAll(/<script type="module" src="\.\/app\.js"><\/script>\s*/g, '');
+  if (relative === 'app.js') return source
+    .replaceAll("import {installMobileRuntime} from '../../shared/mobile-runtime.js';\\ninstallMobileRuntime();\\n", '')
+    .replaceAll(CLASSIC_MOBILE_BOOTSTRAP, '')
+    .replaceAll("// Fog keeps its original classic and module entrypoints. This independent\\n// bootstrap adds the shared mobile lifecycle without changing combat code.\\n", '')
+    .replaceAll("import {installMobileRuntime} from '../../shared/mobile-runtime.js';\\n", '')
+    .replaceAll('installMobileRuntime();\\n', '');
+  if (relative === 'sw.js') return source
+    .replaceAll(",'../../shared/mobile-runtime.css','../../shared/mobile-runtime.js'", '')
+    .replaceAll('  "./app.js",\\n', '');
+  return source;
+}
+export function isRuntimeWiringOnly(changed, readOriginal, readCurrent) {
+  return changed.length > 0 && changed.every(relative => {
+    if (!RUNTIME_WIRING_FILES.has(relative)) return false;
+    const before = readOriginal(relative), after = readCurrent(relative);
+    return before != null && after != null && after.length >= before.length &&
+      normalizeMobileWiring(relative, before) === normalizeMobileWiring(relative, after);
+  });
+}
+
 export function visualChanges(files) {
   const byApp = new Map();
   for (const filename of files) {
@@ -109,6 +143,24 @@ async function main() {
     for (const [slug, metadata] of changedApps) {
       const isNew = spawnSync('git', ['cat-file','-e',`${base}:apps/${slug}/app.config.json`], {encoding:'utf8'}).status !== 0;
       const existingDirection = await fileExists(path.join(root,'apps',slug,'visual-direction.json'));
+      // Read the exact base revision, not heuristic filename checks. New
+      // controls, rewritten layouts or actual styling cannot be exempted.
+      const originals = new Map();
+      for (const relative of metadata.files) {
+        const key = `apps/${slug}/${relative}`;
+        const old = spawnSync('git', ['show', `${base}:${key}`], {encoding:'utf8'});
+        originals.set(relative,old.status===0?old.stdout:old.stderr.includes('does not exist')?'':null);
+      }
+      const current = new Map();
+      for (const relative of metadata.files) {
+        try {current.set(relative,await readFile(path.join(root,'apps',slug,relative),'utf8'))}
+        catch {current.set(relative,null)}
+      }
+      const wiringOnly = !isNew && isRuntimeWiringOnly(metadata.files, x=>originals.get(x), x=>current.get(x));
+      if (wiringOnly) {
+        console.log(`Mobile runtime-only change: ${slug}; no visual composition changed.`);
+        continue;
+      }
       if (isNew || metadata.visual || existingDirection) targets.set(slug, { newApp: isNew, visual: metadata.visual });
     }
   } else throw new Error('Use --app=<slug> or --changed');

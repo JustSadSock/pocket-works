@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { draftVisualDirection, validateVisualDirection } from './visual-direction.mjs';
 import { compareArchitecture, validateArchitecturalDiversity, LEGACY_PROFILES } from './visual-architecture.mjs';
-import { retainedScaffoldShare, visualChanges } from './validate-visual-direction.mjs';
+import { retainedScaffoldShare, visualChanges, isRuntimeWiringOnly } from './validate-visual-direction.mjs';
 
 const slug = 'new-visual-app';
 const draft = draftVisualDirection(slug, 'New Visual App');
@@ -55,4 +55,13 @@ const changeSet = visualChanges([
 assert.equal(changeSet.get('new-visual-app').visual, true);
 assert.equal(changeSet.get('other-game').visual, false);
 assert.equal(changeSet.has('_template'), false);
+// Runtime wiring is not visual redesign. Prove that actual styling, content,
+// and unrelated source edits are NOT exempted from the creative gate.
+const originalHtml='<main><button type="button">Start</button></main>';
+const mobileHtml='<link rel="stylesheet" href="../../shared/mobile-runtime.css">'+originalHtml.replace('type="button"','type="button" data-native-press');
+assert.equal(isRuntimeWiringOnly(['index.html'],()=>originalHtml,()=>mobileHtml),true);
+assert.equal(isRuntimeWiringOnly(['index.html'],()=>originalHtml,()=>mobileHtml.replace('Start','Launch')),false);
+assert.equal(isRuntimeWiringOnly(['styles.css'],()=>'.app{color:red}',()=>'.app{color:blue}'),false);
+assert.equal(isRuntimeWiringOnly(['app.js'],()=>"const a=1;",()=>"const a=2;"),false);
+assert.equal(isRuntimeWiringOnly(['index.html','app.js'],p=>p==='index.html'?originalHtml:'',p=>p==='index.html'?mobileHtml:"import {installMobileRuntime} from '../../shared/mobile-runtime.js';\\ninstallMobileRuntime();\\n"),true);
 console.log('Creative brief, generic-copy rejection, template detection and changed-app scope passed.');
