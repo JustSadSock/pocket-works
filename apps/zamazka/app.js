@@ -1253,7 +1253,7 @@ function pocketCardMarkup(profile,fallbackName='Игрок'){
   const frame=['clean','double','corners','stamp'].includes(profile.frame)?profile.frame:'clean';
   const portrait=['none','wood','gilt','worn-gilt'].includes(profile.portraitFrame)?profile.portraitFrame:'wood';
   const painted=profile.backgroundMode==='drawing'&&typeof profile.artwork==='string'&&
-    /^data:image\\/(?:png|webp);base64,[a-zA-Z0-9+/]+={0,2}$/.test(profile.artwork);
+    /^data:image\/(?:png|webp);base64,[a-zA-Z0-9+/]+={0,2}$/.test(profile.artwork);
   const avatar=profile.maskot?mascotSvg(profile.maskot,{unlocks:mascotPublicUnlocks}):
     pocketAvatarMarkup(profile.avatar,{accountId:profile.id});
   return '<article class="pws-card zam-pocket-card" data-background="'+(painted?'drawing':bg)+'" data-frame="'+frame+'">'+
