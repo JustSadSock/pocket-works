@@ -60,7 +60,7 @@ describe('crash scenario matrix', () => {
     applyImpact(centered, { ...base, relativeSpeed: 15, force: 26000, zone: 'front', contactArea: 1.1 });
     applyImpact(offset, { ...base, relativeSpeed: 15, force: 26000, zone: 'left', contactArea: 0.38, angleCos: 0.72 });
     expect(centered.components.engine).toBeLessThan(1);
-    expect(offset.components.suspensionFL).toBeLessThan(1);
+    expect(offset.components.leftStructure).toBeLessThan(1);
     expect(offset.components.sideGlassL).toBeLessThan(1);
     expect(offset.components.suspensionFR).toBe(1);
   });
@@ -71,7 +71,7 @@ describe('crash scenario matrix', () => {
     applyImpact(side, { ...base, zone: 'right', relativeSpeed: 13, force: 22000, angleCos: 0.55, contactArea: 0.62 });
     applyImpact(rear, { ...base, zone: 'rear', relativeSpeed: 13, force: 22000, angleCos: 1, contactArea: 0.9 });
     expect(side.components.sideGlassR).toBeLessThan(1);
-    expect(side.components.suspensionFR).toBeLessThan(1);
+    expect(side.components.rightStructure).toBeLessThan(1);
     expect(rear.components.taillightL).toBeLessThan(1);
     expect(rear.components.rearStructure).toBeLessThan(side.components.rearStructure);
   });
