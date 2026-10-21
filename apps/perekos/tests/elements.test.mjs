@@ -29,9 +29,9 @@ test('different classes can combine fire, current and stone with a single modifi
  for(const [mageId,mod,fx] of examples){
   const s=twoShots(mageId,mod);
   assert.ok(s.elementCombos[0]>=1,mageId+' / '+mod);
-  // Splash from the original stone projectile may become the latest mark,
-  // even after the earlier rune shot correctly triggered a mixed reaction.
-  // Delayed projectiles can overwrite or expire the last mark after the reaction.\n  assert.ok(s.elementCombos[0]>=1,'verified genuine paired-element reaction');
+  // The last mark may expire or be replaced by a delayed falling boulder.
+  // Elemental combo accounting only increases on an actual hit reaction.
+  assert.ok(s.elementCombos[0]>=1,'verified genuine paired-element reaction');
   assert.ok(s.actors[1].hp<100,s.actors[1].hp);
   assert.ok(validState(s));
  }
