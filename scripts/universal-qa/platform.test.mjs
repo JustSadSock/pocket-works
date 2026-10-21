@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { requestFromEvent, requestFromInputs, loadSuites, resolveTasks, partition, maxTasksForRequest, ISSUE_TITLE } from './plan.mjs';
+import { requestFromEvent, requestFromInputs, loadSuites, resolveTasks, partition, boundedPartition, maxTasksForRequest, ISSUE_TITLE } from './plan.mjs';
 import { summarize, reportMarkdown } from './aggregate.mjs';
 
 const createFixture = () => {
@@ -106,4 +106,35 @@ test('aggregate fails closed when reports are missing or failed', () => {
     writeFileSync(join(good, 'result.json'), '{"app":"test-app","suite":"visual","success":false}');
     assert.equal(summarize(f.root, ['x']).success, false);
   } finally { f.cleanup(); }
+});
+
+
+test('platform PR groups 117 real QA cases without dropping one or exceeding 32 jobs',()=>{
+ const tasks=Array.from({length:117},(_,i)=>({key:'app-case-'+i,app:'test-app',suite:'regression',
+   kind:i%3===0?'node-test':'visual',seed:null,install:false}));
+ const grouped=boundedPartition(tasks,32);
+ const shards=[...grouped.cpu.include,...grouped.browser.include];
+ assert(shards.length<=32);
+ assert(shards.every(shard=>shard.tasks?.length>0&&shard.tasks.length<=8));
+ assert.equal(new Set(shards.map(shard=>shard.key)).size,shards.length);
+ const recovered=shards.flatMap(shard=>shard.tasks);
+ assert.equal(recovered.length,tasks.length);
+ assert.deepEqual(new Set(recovered.map(t=>t.key)),new Set(tasks.map(t=>t.key)));
+ assert.equal(boundedPartition(tasks.slice(0,20),20).cpu.include.length+
+   boundedPartition(tasks.slice(0,20),20).browser.include.length,20);
+});
+
+test('aggregator requires individual evidence inside grouped GitHub artifacts',()=>{
+ const f=createFixture();
+ try{
+  const group=join(f.root,'qa-batch-browser-000','case-1');
+  mkdirSync(group,{recursive:true});
+  writeFileSync(join(group,'result.json'),JSON.stringify({app:'test-app',suite:'visual',success:true}));
+  assert.equal(summarize(f.root,['case-1']).success,true);
+  assert.deepEqual(summarize(f.root,['case-1','case-2']).missing,['case-2']);
+  const second=join(f.root,'qa-batch-browser-001','case-1');
+  mkdirSync(second,{recursive:true});
+  writeFileSync(join(second,'result.json'),JSON.stringify({success:true}));
+  assert.equal(summarize(f.root,['case-1']).success,false,'duplicate evidence must be rejected');
+ }finally{f.cleanup()}
 });
