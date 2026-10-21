@@ -184,7 +184,9 @@ test('full interface keeps all core navigation targets unique and actionable',as
   'nickname-input','join-code','join-code-btn','copy-room-code','create-room-btn','ready-btn',
   'game-container','team-score','team-lines','next-pieces-preview','player-info-sidebar',
   'touch-controls','pause-btn','quit-btn','settings-btn','language-selector',
-  'resume-btn','restart-btn','play-again-btn','menu-btn','online-network-status'];
+  'resume-btn','restart-btn','play-again-btn','menu-btn','online-network-status',
+  'achievements-btn','achievements-screen','achievements-progress','achievements-grid',
+  'achievements-profile','achievements-retry','achievements-back','achievement-toast'];
  for(const id of required)assert.ok(ids.includes(id),'missing functional target: '+id);
  const actions=[...html.matchAll(/\bdata-action="([^"]+)"/g)].map(x=>x[1]);
  assert.deepEqual(actions.sort(),['down','drop','left','right','rotate'].sort());
@@ -209,7 +211,7 @@ test('PWA release matches interface, new icon and built-in Pocket Works shell',a
  const manifest=JSON.parse(await fs.readFile(new URL('../manifest.webmanifest',import.meta.url),'utf8'));
  const sw=await fs.readFile(new URL('../sw.js',import.meta.url),'utf8');
  const icon=await fs.readFile(new URL('../icons/icon.svg',import.meta.url),'utf8');
- assert.equal(config.version,'0.4.0');
+ assert.equal(config.version,'0.5.0');
  assert.match(html,/data-app-version="0\.4\.0"/);
  assert.match(sw,/blockies-v0\.4\.0/);
  assert.equal(config.orientation,'any');
@@ -280,4 +282,22 @@ test('v2 and tampered missing metrics never receive server-v3 awards',()=>{
  delete after.engine.players[0].piecesLocked;
  assert.deepEqual(assessBlockiesAwards(before,after,match),[]);
  assert.deepEqual(assessBlockiesAwards(null,{...before,started:false},match),[]);
+});
+
+test('Blockies achievement UI fetches from Pocket Social without client-side award actions',async()=>{
+ const catalog=await fs.readFile(new URL('../achievements.js',import.meta.url),'utf8');
+ const net=await fs.readFile(new URL('../network.js',import.meta.url),'utf8');
+ const sw=await fs.readFile(new URL('../sw.js',import.meta.url),'utf8');
+ assert.match(catalog,/\/pocket-social\/achievements/);
+ assert.match(catalog,/response\.status===401/);
+ assert.doesNotMatch(catalog,/\/pocket-social\/award/);
+ assert.match(net,/achievement_awarded/);
+ assert.match(net,/message\.event\.to===this\.socket\.id/);
+ assert.match(sw,/\.\/achievements\.js/);
+ const lock=JSON.parse(await fs.readFile(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
+ assert.equal(lock.blockies.current,'v3');
+ assert.deepEqual(lock.blockies.versions,['v1','v2','v3']);
+ const pinned=await fs.readFile(new URL('../../../pocketnet/module-versions/blockies/v3.ts',import.meta.url),'utf8');
+ const source=await fs.readFile(new URL('../server/module.ts',import.meta.url),'utf8');
+ assert.equal(pinned,source);
 });
