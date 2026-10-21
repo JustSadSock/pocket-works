@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "revision": "c3c43a000a2299e9f4d0fa1ccce7a6c57e97cd65",
+    "revision": "0c52e5facb9b8332bcd093e5efc5964cefceae4c",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
@@ -8,8 +8,8 @@
     "sha256": "9f1e1ab1cfcffe9f296fa8b5f929e33c2a26e13f970c1bb57da5424561fd9d9e",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "c3c43a000a2299e9f4d0fa1ccce7a6c57e97cd65",
-    "lastAttemptAt": "2026-10-18T20:47:33.815Z",
+    "lastAttemptRevision": "0c52e5facb9b8332bcd093e5efc5964cefceae4c",
+    "lastAttemptAt": "2026-10-21T08:43:18.985Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -65,7 +65,7 @@
     "note": "existing cover rated higher",
     "status": "preserved",
     "lastAttemptRevision": "12252b96c0defcbbd8df4fdec54f00ee336c4928",
-    "lastAttemptAt": "2026-10-18T18:46:38.375Z",
+    "lastAttemptAt": "2026-10-21T08:43:58.430Z",
     "captureEngine": "safe-gameplay-v3"
   },
   "lipki": {
@@ -890,22 +890,22 @@
   "crumple-yard": {
     "note": "No frame passed image-content checks",
     "status": "failed",
-    "lastAttemptRevision": "65c571b064071eb27a4b9d0261d30c624c71f091",
-    "lastAttemptAt": "2026-10-19T11:42:22.402Z",
+    "lastAttemptRevision": "d3beac394f8460e1662b3ca32c7e0a2a0033b014",
+    "lastAttemptAt": "2026-10-21T08:42:30.499Z",
     "captureEngine": "safe-gameplay-v3",
     "diagnostic": {
-      "bestScore": 47,
+      "bestScore": 49,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 18936,
-        "variance": 28.822676478323523,
-        "entropy": 1.656936862899003,
-        "edgeDensity": 0.0900297619047619,
-        "colorfulness": 12.40087890625,
-        "centerDetail": 13.935489917988516,
-        "meanLight": 134.56707675781743
+        "bytes": 23378,
+        "variance": 30.9917985071198,
+        "entropy": 1.7613457299890602,
+        "edgeDensity": 0.10962301587301587,
+        "colorfulness": 12.65869140625,
+        "centerDetail": 14.26245999497304,
+        "meanLight": 133.29909023438012
       },
       "gameplayEntry": {
         "started": true,
@@ -917,7 +917,7 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/crumple-yard/?pw-cover=1&pw_release=1.2.1&pw_fp=6167884a898c4cd4a1f452fb"
+      "url": "http://127.0.0.1:4173/apps/crumple-yard/?pw-cover=1&pw_release=1.4.0&pw_fp=5ff4d43817e1c7971d28caaa"
     }
   },
   "formica-colony": {
@@ -2996,22 +2996,22 @@
     "imageVersion": 2,
     "status": "failed",
     "lastAttemptRevision": "f6fd0f4d109b2be072d840f66063fb41e809ef28",
-    "lastAttemptAt": "2026-10-18T15:40:27.471Z",
+    "lastAttemptAt": "2026-10-21T08:43:36.478Z",
     "note": "No frame passed image-content checks",
     "captureEngine": "safe-gameplay-v3",
     "diagnostic": {
-      "bestScore": 39,
+      "bestScore": 37,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 25526,
-        "variance": 18.45171269277457,
-        "entropy": 1.518801335182809,
-        "edgeDensity": 0.08444940476190477,
-        "colorfulness": 15.603271484375,
-        "centerDetail": 8.0082507437235,
-        "meanLight": 104.73540937500545
+        "bytes": 25356,
+        "variance": 18.22394508204922,
+        "entropy": 1.495201859020887,
+        "edgeDensity": 0.0767609126984127,
+        "colorfulness": 15.59912109375,
+        "centerDetail": 8.496245964841501,
+        "meanLight": 104.9034163574274
       },
       "gameplayEntry": {
         "started": true,
@@ -3265,7 +3265,7 @@
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "b14fa3951b3d9643e465e3659cf50d872da937b4",
-    "lastAttemptAt": "2026-10-19T08:40:09.797Z"
+    "lastAttemptAt": "2026-10-21T08:43:47.519Z"
   },
   "oskolki": {
     "revision": "5bd6b125d60059beca391659370485e7681bb4a4",
@@ -3482,7 +3482,7 @@
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
     "lastAttemptRevision": "361d0d59fb00d0c5564c3b445652b6ada7b811a8",
-    "lastAttemptAt": "2026-10-18T21:20:16.286Z",
+    "lastAttemptAt": "2026-10-21T08:43:07.153Z",
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
@@ -3541,8 +3541,8 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "1b71131c70e5df8016f34ba710c9e041b2b543d9",
-    "qualityScore": 59,
+    "revision": "0e733299b5919d4e78fd088454c174b52b0197b8",
+    "qualityScore": 81,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3555,12 +3555,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "c618e52cf718b9f19bef519f5c1ada12fc63c3108942f83eba6c6a063f5034ae",
+    "sha256": "1a6c96345e29fbad6e827f84fe9b2a96764226f87f95237ce92d14275e77ca8d",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "1b71131c70e5df8016f34ba710c9e041b2b543d9",
-    "lastAttemptAt": "2026-10-20T08:42:25.193Z"
+    "lastAttemptRevision": "0e733299b5919d4e78fd088454c174b52b0197b8",
+    "lastAttemptAt": "2026-10-21T08:42:54.446Z"
   },
   "portal-lab": {
     "note": "existing cover rated higher",
@@ -3636,30 +3636,26 @@
   },
   "katana-echo": {
     "note": "No frame passed image-content checks",
-    "diagnostic": {
-      "bestScore": 35,
-      "qualityReasons": [
-        "low visual detail"
-      ],
-      "metrics": {
-        "bytes": 22561,
-        "variance": 20.980421924556257,
-        "entropy": 1.660495552585128,
-        "edgeDensity": 0.06708829365079365,
-        "colorfulness": 13.821533203125,
-        "centerDetail": 13.905562179040514,
-        "meanLight": 25.74503154296872
-      },
-      "gameplayEntry": {
-        "started": false,
-        "actions": []
-      },
-      "url": "http://127.0.0.1:4173/apps/katana-echo/?pw-cover=1&pw_release=0.1.0&pw_fp=289ffc71adbe7f93a7933429"
-    },
-    "status": "failed",
+    "diagnostic": null,
+    "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "75f18ab0e9e2c8b143418203c4ee4e9f2807df96",
-    "lastAttemptAt": "2026-10-19T10:15:54.402Z"
+    "lastAttemptRevision": "107ee6af5d94a6bce9e721b36b0861da669ff9ab",
+    "lastAttemptAt": "2026-10-21T08:42:42.472Z",
+    "revision": "107ee6af5d94a6bce9e721b36b0861da669ff9ab",
+    "qualityScore": 53,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Тренировка Против ИИ · без сети →",
+        "id": "practice",
+        "score": 92
+      }
+    ],
+    "shot": 1,
+    "sha256": "c1fcffb13ecbeea905f60cdf0bbcd1cdb0cb6cedfa71a3e31b452e25ce5b7cff",
+    "imageVersion": 2
   },
   "mini-car-3d": {
     "note": "No frame passed image-content checks",
