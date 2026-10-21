@@ -168,7 +168,7 @@ function thunder(s,a){
   along=dx*Math.cos(a.face)+dy*Math.sin(a.face),side=Math.abs(-dx*Math.sin(a.face)+dy*Math.cos(a.face));
  if(along>0&&along<len+10&&side<15){
   other.shield=Math.max(0,other.shield-(mastery(a,'strong')?13:7));other.slow=Math.max(other.slow,.32);
-  const dealt=harm(s,other,mastery(a,'strong')?11:8.8,a.id);
+  const dealt=harm(s,other,mastery(a,'strong')?13:10.5,a.id);
   if(dealt>0){markTarget(s,other,'storm',a.id);other.slow=Math.max(other.slow,.65);emit(s,'on_hit',a.id)}
   fx(s,'impact_arc',other.x,other.y);
  }
