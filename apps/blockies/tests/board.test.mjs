@@ -219,3 +219,65 @@ test('PWA release matches interface, new icon and built-in Pocket Works shell',a
  assert.match(html,/class="pocket-exit"/);
  assert.match(icon,/viewBox="0 0 512 512"/);
 });
+
+
+import {assessBlockiesAwards} from '../../../pocketnet/blockies-awards.mjs';
+import {blockiesAchievements} from '../../../shared/capabilities/blockies-achievements.js';
+const match='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+function verifiedRound(metrics,lines=0,round=1){
+ const players=metrics.map((p,i)=>({id:String.fromCharCode(97+i),left:!!p.left}));
+ return {started:true,round,players,engine:{board:[],isGameOver:false,
+   sharedStats:{score:lines*100,lines},
+   players:metrics.map(p=>({piecesLocked:p.pieces??0,hardDrops:p.drops??0,
+     linesClearedByMe:p.lines??0}))}};
+}
+const byId=awards=>new Set(awards.map(a=>a.achievementId));
+test('server counts confirmed pieces and hard drops, not button presses alone',()=>{
+ let state=start();
+ assert.equal(state.engine.players[0].piecesLocked,0);
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'rotate'}}}).state;
+ assert.equal(state.engine.players[0].piecesLocked,0);
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;
+ assert.equal(state.engine.players[0].piecesLocked,1);
+ assert.equal(state.engine.players[0].hardDrops,1);
+ assert.equal(state.engine.players[0].linesClearedByMe,0);
+});
+test('verified Blockies catalog has eight unique ID/slot/item pairs',()=>{
+ assert.equal(blockiesAchievements.length,8);
+ assert.equal(new Set(blockiesAchievements.map(a=>a.id)).size,8);
+ for(const item of blockiesAchievements){
+   assert.equal(item.id.startsWith('blockies.'),true);
+   assert.ok(['title','face','hat','clothes','background','portraitFrame'].includes(item.slot));
+ }
+});
+test('server awards first lock, player-scored line, ten hard drops and double line',()=>{
+ const prev=verifiedRound([{pieces:9,drops:9,lines:0}],0);
+ const next=verifiedRound([{pieces:10,drops:10,lines:2}],2);
+ assert.deepEqual(byId(assessBlockiesAwards(prev,next,match)),
+   new Set(['blockies.first-lock','blockies.first-line','blockies.ten-locks','blockies.double']));
+ const again=assessBlockiesAwards(next,next,match);
+ assert.equal(byId(again).has('blockies.double'),false,'double lines requires one confirmed transition');
+});
+test('team achievements require real shared contributions, quorum and no leavers',()=>{
+ const both=verifiedRound([{pieces:10,drops:10,lines:12},{pieces:10,drops:10,lines:8}],40);
+ const earned=assessBlockiesAwards(null,both,match);
+ for(const name of ['blockies.duo','blockies.steadfast','blockies.master'])
+   assert.equal(earned.filter(a=>a.achievementId===name).length,2,name);
+ const lone=verifiedRound([{pieces:40,drops:40,lines:40}],40);
+ assert.equal(byId(assessBlockiesAwards(null,lone,match)).has('blockies.master'),false);
+ const leaver=verifiedRound([{pieces:10,drops:10,lines:12},{pieces:10,drops:10,lines:8,left:true}],40);
+ const gone=byId(assessBlockiesAwards(null,leaver,match));
+ assert.equal(gone.has('blockies.duo'),false);
+ assert.equal(gone.has('blockies.master'),false);
+ const quartet=verifiedRound(Array.from({length:4},()=>({pieces:3,drops:2,lines:2})),6);
+ assert.equal(assessBlockiesAwards(null,quartet,match).filter(a=>a.achievementId==='blockies.quartet').length,4);
+ const missing=verifiedRound([{pieces:3},{pieces:3},{pieces:3},{pieces:1}],6);
+ assert.equal(byId(assessBlockiesAwards(null,missing,match)).has('blockies.quartet'),false);
+});
+test('v2 and tampered missing metrics never receive server-v3 awards',()=>{
+ const before=verifiedRound([{pieces:5}],1);
+ const after=structuredClone(before);
+ delete after.engine.players[0].piecesLocked;
+ assert.deepEqual(assessBlockiesAwards(before,after,match),[]);
+ assert.deepEqual(assessBlockiesAwards(null,{...before,started:false},match),[]);
+});
