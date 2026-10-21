@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { chromium, webkit } from 'playwright';
@@ -60,6 +60,11 @@ for(const [name,engine] of Object.entries({chromium,webkit})){
   await page.locator('#relativeMetric').selectOption('dpmTop');
   assert.match(await page.locator('#relativeTable tbody tr').first().innerText(),/Doctor Strange/);
   await page.screenshot({path:path.join(output,`${prefix}-relative.png`)});
+  await page.locator('#nav [data-go="sources"]').click();
+  const [download]=await Promise.all([page.waitForEvent('download'),page.locator('#download').click()]);
+  const exported=JSON.parse(await readFile(await download.path(),'utf8'));
+  assert.equal(exported.defenseEvidence.a.blocked,14147870);
+  assert.equal(exported.defenseEvidence.heroBreakdown,false);
   await page.locator('#nav [data-go="future"]').click();
   assert.ok(await page.locator('#development-verdict').isVisible());
   await page.locator('#development-verdict').scrollIntoViewIfNeeded();
