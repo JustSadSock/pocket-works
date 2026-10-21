@@ -93,8 +93,6 @@ export const TOTAL_TASKS=SCENE_COUNT;
 const ACTIONS=[...new Set(STORIES.map(v=>v.verb))];
 const CONSEQUENCES=[...new Set(STORIES.map(v=>v.next))];
 const LOCATIONS=[...new Set(STORIES.map(v=>v.location))];
-const KINDS:Kind[]=['action','space','roles','change','journey','exchange'];
-const ACTORS:Word[]=['cat','bird','fish','dragon','human','sun','moon','star','tree','flower'];
 const shuffle=<T>(xs:T[]):T[]=>{const result=[...xs];for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;};
 const rand=(n:number)=>Math.floor(Math.random()*n);
 const SYMBOLS=new Set([
