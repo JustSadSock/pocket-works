@@ -15,6 +15,7 @@ let savedName='Гость',profile=null,net=null,me=null,state=null,roomId='',co
 let connected=false,health=null,connecting=false,draft=[],selected=-1,undo=[],drag=null;
 let lastPhase='',lastAuthor='',pendingSend=0,toastTimer=0,confirmAction=null,requestSerial=0;
 let soundEnabled=true;
+let activeFrame=0,paletteCategory='Все',paletteQuery='',lexiconImported=false;
 let draftAnswer=[null,null,null,null,null],answerSending=false;
 try{savedName=localStorage.getItem(STORE+'name')||savedName;soundEnabled=localStorage.getItem(STORE+'sound')!=='off';}catch{}
 const memory=new Map();
@@ -77,11 +78,14 @@ function stampHTML(g,i,active=false){
  const selectedClass=active&&selected===i?' selected':'';
  return '<span class="stamp'+selectedClass+'" data-stamp="'+i+'" style="left:'+g.x+'%;top:'+g.y+'%;transform:translate(-50%,-50%) rotate('+g.r+'deg) scale('+g.s+')">'+glyphSVG(g.id)+'</span>';
 }
-function boardHTML(items,interactive=false,stageId='liveStage'){
- return '<div class="stage'+(interactive?'':' readonly')+'" id="'+stageId+'" '+(interactive?'data-gesture-surface data-block-callout':'')+' aria-label="Композиция из пиктограмм">'+items.map((g,i)=>stampHTML(g,i,interactive)).join('')+'</div>';
+function boardHTML(items,interactive=false,stageId='liveStage',frame=0){
+ return '<div class="stage'+(interactive?'':' readonly')+'" id="'+stageId+'" '+(interactive?'data-gesture-surface data-block-callout':'')+' aria-label="Композиция из пиктограмм">'+items.map((g,i)=>(g.frame??0)===frame?stampHTML(g,i,interactive):'').join('')+'</div>';
 }
 function boardPanel(items,interactive){
- return '<div class="board-panel"><div class="stage-frame">'+boardHTML(items,interactive)+'</div><div class="board-foot"><span>СТУДИЯ / 01</span><span>'+items.length+' / 26 ЗНАКОВ</span></div></div>';
+ const frames=Math.max(1,Math.min(3,state?.frames||1)),legacy=frames===1;
+ const tabs=interactive&&!legacy?'<div class="frame-tabs">'+Array.from({length:frames},(_,i)=>'<button class="frame-tab '+(i===activeFrame?'active':'')+'" data-frame="'+i+'" aria-pressed="'+(i===activeFrame)+'">Кадр '+(i+1)+'</button>').join('')+'</div>':'';
+ const stages=!interactive&&!legacy?'<div class="story-grid frames-'+frames+'">'+Array.from({length:frames},(_,i)=>'<div class="story-panel"><span>0'+(i+1)+' · '+(i===0?'НАЧАЛО':i===frames-1?'ИТОГ':'СОБЫТИЕ')+'</span>'+boardHTML(items,false,'scene-'+i,i)+'</div>').join('')+'</div>':boardHTML(items,interactive);
+ return '<div class="board-panel">'+tabs+'<div class="stage-frame">'+stages+'</div><div class="board-foot"><span>'+(legacy?'СТУДИЯ / 01':frames+' КАДРА · ИСТОРИЯ')+'</span><span>'+items.length+' / '+(legacy?'26':'48')+' ЗНАКОВ</span></div></div>';
 }
 function playerList(){
  const players=state?.players||[];
@@ -150,15 +154,16 @@ function renderCompose(){
   '<div class="editor-layout">'+boardPanel(items,author)+toolbox+'</div></section>';
  updateClock();
 }
-const SLOT_LABELS=['Кто','Что делает','Что','Как / где','С чем / где'];
+const SLOT_LABELS=['Кто','Что делает','С кем / чем','Что потом','Где происходит'];
+const slotNames=()=>state?.semanticVersion===4?SLOT_LABELS:['Кто','Что делает','Что','Как / где','С чем / где'];
 function guessWords(slot,cells){
- if(slot===4)return state.locationForms?.[cells[3]??0]||state.choices?.[4]||[];
+ if(slot===4&&state.semanticVersion!==4)return state.locationForms?.[cells[3]??0]||state.choices?.[4]||[];
  return state.choices?.[slot]||[];
 }
 function renderSlot(slot,cells,locked){
  const selected=cells[slot];
  const options=guessWords(slot,cells);
- return '<label class="guess-cell"><span class="guess-cell-label"><b>'+String(slot+1).padStart(2,'0')+'</b> '+SLOT_LABELS[slot]+'</span>'+
+ return '<label class="guess-cell"><span class="guess-cell-label"><b>'+String(slot+1).padStart(2,'0')+'</b> '+slotNames()[slot]+'</span>'+
   '<select class="guess-select '+(selected!==null?'filled':'')+'" data-guess-slot="'+slot+'" '+(locked||!connected?'disabled':'')+'>'+
   '<option value="">— оставить пустым —</option>'+
   options.map((word,i)=>'<option value="'+i+'" '+(selected===i?'selected':'')+'>'+esc(word)+'</option>').join('')+
@@ -179,7 +184,7 @@ function renderGuess(){
  const cells=did&&state.myAnswer?state.myAnswer:draftAnswer;
  const panel=author?'<div class="wait-box">Ты передал сообщение. Друзья составляют свою расшифровку из пяти частей.</div>':
   '<div class="guess-card"><div class="guess-intro"><strong>Собери смысл по частям</strong><small>Укажи только то, в чём уверен. Пустые ячейки не штрафуются.</small></div>'+
-  '<div class="guess-cells">'+SLOT_LABELS.map((_,i)=>renderSlot(i,cells,did)).join('')+'</div>'+
+  '<div class="guess-cells">'+slotNames().map((_,i)=>renderSlot(i,cells,did)).join('')+'</div>'+
   '<div class="guess-submit"><span class="micro" id="guessProgress">'+cells.filter(v=>v!==null).length+' / 5 ВЫБРАНО</span>'+
   '<button class="btn primary" data-action="submit-guess" '+(did||!connected||answerSending||cells.every(v=>v===null)?'disabled':'')+'>'+(did?'Ответ принят ✓':'Отправить версию ↗')+'</button></div></div>';
  root.innerHTML='<section class="game-shell">'+phaseTop('Расшифруй картину','ПЯТЬ ЯЧЕЕК')+
@@ -205,7 +210,7 @@ function renderReveal(){
  const review=solution.map((word,i)=>{
   const selected=mine[i],own=i===4?state.locationForms?.[mine[3]??0]?.[selected]:originalChoices[i]?.[selected];
   const right=i===4?state.locationForms?.[targetPrep]?.[selected]===word:own===word;
-  return '<div class="review-cell"><span>'+SLOT_LABELS[i]+'</span><strong>'+esc(word)+'</strong>'+
+  return '<div class="review-cell"><span>'+slotNames()[i]+'</span><strong>'+esc(word)+'</strong>'+
     (state.author!==me?.id&&selected!==null?'<small class="'+(right?'hit':'miss')+'">'+(right?'✓ ':'✕ ')+esc(own||'—')+'</small>':'')+'</div>';
  }).join('');
  root.innerHTML='<section class="game-shell">'+phaseTop('Вот что было загадано','РАСКРЫТИЕ')+
@@ -361,8 +366,8 @@ function queueBoard(){
 function remember(){undo.push(draft.map(g=>({...g})));if(undo.length>30)undo.shift();}
 function paintBoard(){
  const stage=document.querySelector('#liveStage');
- if(stage)stage.innerHTML=draft.map((g,i)=>stampHTML(g,i,true)).join('');
- const count=document.querySelector('.board-foot span:last-child');if(count)count.textContent=draft.length+' / 26 ЗНАКОВ';
+ if(stage)stage.innerHTML=draft.map((g,i)=>(g.frame??0)===activeFrame?stampHTML(g,i,true):'').join('');
+ const count=document.querySelector('.board-foot span:last-child');if(count)count.textContent=draft.length+' / '+(state.semanticVersion===4?'48':'26')+' ЗНАКОВ';
  document.querySelectorAll('[data-action="rotate-left"],[data-action="rotate-right"],[data-action="shrink"],[data-action="grow"],[data-action="delete"]').forEach(b=>b.disabled=selected<0);
  const undoBtn=document.querySelector('[data-action="undo"]');if(undoBtn)undoBtn.disabled=!undo.length;
  const publish=document.querySelector('[data-action="publish"]');if(publish)publish.disabled=!draft.length||!connected;
@@ -370,10 +375,10 @@ function paintBoard(){
 function addSymbol(id){
  if(state?.phase!=='compose'||state.author!==me?.id)return;
  if(state.palette?.length&&!state.palette.includes(id)){notify('Этот знак недоступен в раунде.');return;}
- if(draft.length>=26){notify('На доске может быть не больше 26 знаков.');return;}
+ if(draft.length>=(state.semanticVersion===4?48:26)){notify('На доске закончилось место для знаков.');return;}
  remember();
  const offset=(draft.length%7-3)*4;
- draft.push({id,x:Math.max(8,Math.min(92,50+offset)),y:Math.max(10,Math.min(90,50+(Math.floor(draft.length/7)-1)*9)),r:0,s:1});
+ draft.push({id,x:Math.max(8,Math.min(92,50+offset)),y:Math.max(10,Math.min(90,50+(Math.floor(draft.length/7)-1)*9)),r:0,s:1,...(state.semanticVersion===4?{frame:activeFrame}:{})});
  selected=draft.length-1;paintBoard();const hint=document.querySelector('#glyphHint');if(hint)hint.textContent=GLYPHS.find(g=>g[0]===id)?.[1]||'ЗНАК';queueBoard();playTone(620);
 }
 function transform(type){
@@ -383,7 +388,7 @@ function transform(type){
  if(type==='rotate-right')g.r=g.r>=150?g.r-315:g.r+45;
  if(type==='shrink')g.s=Math.max(.55,Math.round((g.s-.15)*100)/100);
  if(type==='grow')g.s=Math.min(2.2,Math.round((g.s+.15)*100)/100);
- if(type==='delete'){draft.splice(selected,1);selected=Math.min(selected,draft.length-1);}
+ if(type==='delete'){draft.splice(selected,1);selected=-1;}
  paintBoard();queueBoard();playTone(490);
 }
 function confirmBox(title,body,callback){
