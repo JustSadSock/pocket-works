@@ -1452,7 +1452,7 @@ function tick(){
   clock.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
   clock.classList.toggle('urgent',s<=10);
   const key=(practice?'practice':roomId)+':'+v.round+':'+v.phase+':'+v.deadline;
-  const plan=stepClockSound(clockSoundState,key,remaining);
+  const plan=stepClockSound(clockSoundState,key,remaining,{phase:v.phase,totalSeconds:v.drawingSeconds||0});
   clockSoundState=plan.state;
   if(plan.ticking)museumAudio.syncCountdown(key,v.deadline,now);
   else museumAudio.stopCountdown();
