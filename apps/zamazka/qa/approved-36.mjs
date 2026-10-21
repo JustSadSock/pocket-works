@@ -73,7 +73,7 @@ assert.ok(lock.zamazka.versions.includes('v26')&&lock.zamazka.versions.includes(
 const manifest=JSON.parse(readFileSync(new URL('../app.config.json',import.meta.url),'utf8'));
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
-assert.match(manifest.version,/^1\\.40\\.\\d+$/);
+assert.match(manifest.version,/^1\.40\.\d+$/);
 assert.ok(html.includes('data-app-version="'+manifest.version+'"'));
 assert.ok(sw.includes("const APP_VERSION = '"+manifest.version+"'"));
 assert.match(sw,/\.\/museum-approved-2026\.js/);
