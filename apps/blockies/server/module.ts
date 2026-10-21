@@ -280,6 +280,9 @@ class Player {
         this.gameOver = false;
         this.dropCounter = 0;
         this.dropInterval = 1000;
+        this.piecesLocked = 0;
+        this.hardDrops = 0;
+        this.linesClearedByMe = 0;
         this.lastTime = 0;
         this.spawnAnchor = typeof spawnAnchor === 'number' ? spawnAnchor : getBoardWidth() / 2;
     }
@@ -451,6 +454,7 @@ class Player {
         }
 
         if (landedOnLocked) {
+            this.hardDrops++;
             this.merge();
             soundManager.drop();
             this.clearLines();
@@ -464,6 +468,7 @@ class Player {
     }
 
     merge() {
+        this.piecesLocked++;
         for (let y = 0; y < this.currentPiece.length; y++) {
             for (let x = 0; x < this.currentPiece[y].length; x++) {
                 if (this.currentPiece[y][x]) {
@@ -511,6 +516,7 @@ class Player {
         const streakBonusPercent = Math.round((comboMultiplier - 1) * 100);
         const multiBonusPercent = Math.round((multiMultiplier - 1) * 100);
 
+        this.linesClearedByMe += linesCleared;
         gameState.sharedStats.lines += linesCleared;
         gameState.sharedStats.score += gained;
         gameState.sharedStats.level = Math.floor(gameState.sharedStats.lines / 10) + 1;
