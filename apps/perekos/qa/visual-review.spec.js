@@ -15,7 +15,7 @@ test('visual audit: six mages, own silhouette, different projectile and three-ru
  await page.locator('#primary-action').click();
  await expect(page.locator('#controls')).toBeVisible();
  expect(await page.evaluate(()=>window.__perekosTest.state.actors[0].mageId)).toBe('wire');
- await expect(page.locator('#attack-name')).toHaveText('РАЗРЯД');
+ await expect(page.locator('#attack-name')).toHaveText('ПРОБОЙ');
  const fire=await page.locator('#attack-btn').boundingBox();expect(fire).toBeTruthy();
  await page.mouse.move(fire.x+fire.width/2,fire.y+fire.height/2);
  await page.mouse.down();
