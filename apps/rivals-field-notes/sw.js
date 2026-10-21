@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'rivals-field-notes-';
-const CACHE_NAME = 'rivals-field-notes-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'rivals-field-notes-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-10-21';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Полный доклад о двух аккаунтах: карьера, сезоны, дуэты, карты, вклад и рекомендации.", "Добавлены итоговый выбор Гамбит / Локи / Адам, установка и офлайн-доступ."];
+const RELEASE_NOTES = ["Первый экран теперь прямо называет лидеров по результату и относительно игроков на том же герое.", "Добавлены отдельная метрика Damage Blocked, её источник и ограничения; защита больше не теряется за уроном и лечением."];
 const APP_SHELL = [
   './',
   './index.html',
@@ -19,6 +19,8 @@ const APP_SHELL = [
   './extended.css',
   './pocket.css',
   './verdict.js',
+  './strength.js',
+  './strength.css',
 
   './manifest.webmanifest',
   './icons/icon.svg',

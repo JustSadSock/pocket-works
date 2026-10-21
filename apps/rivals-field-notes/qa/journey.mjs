@@ -27,11 +27,13 @@ for(const [name,engine] of Object.entries({chromium,webkit})){
   page.on('response',r=>{if(r.url().startsWith(base)&&r.status()>=400)critical.push(`${r.status()} ${r.url()}`)});
   await page.goto(`${base}/apps/rivals-field-notes/`,{waitUntil:'networkidle'});
   await page.locator('.identity').waitFor();
+  assert.match(await page.locator('#strength-title').innerText(),/Гамбит/);
   const prefix=`${name}-${viewport.width}`;
   await page.screenshot({path:path.join(output,`${prefix}-initial.png`)});
   await page.locator('[data-account="b"]').click();
   await page.screenshot({path:path.join(output,`${prefix}-action.png`)});
   assert.match(await page.locator('.identity').innerText(),/Hioydfts/);
+  assert.match(await page.locator('#strength-title').innerText(),/C&D/);
   await page.screenshot({path:path.join(output,`${prefix}-settled.png`)});
   for(const account of ['a','b']){
    await page.locator(`[data-account="${account}"]`).click();
@@ -42,6 +44,22 @@ for(const [name,engine] of Object.entries({chromium,webkit})){
    }
   }
   await page.locator('[data-account="a"]').click();
+  await page.locator('#nav [data-go="brief"]').click();
+  await page.getByText('Посмотреть рейтинг своих героев и изменить порог',{exact:true}).click();
+  await page.locator('#strengthMode').selectOption('all');
+  await page.locator('#strengthMinimum').selectOption('50');
+  assert.match(await page.locator('#outcomeTable tbody tr').first().innerText(),/Adam Warlock/);
+  await page.locator('#strengthMode').selectOption('ranked');
+  await page.locator('#strengthMinimum').selectOption('20');
+  await page.locator('[data-strength-hero="Gambit"]').click();
+  assert.match(await page.locator('#heroDetail').innerText(),/Карьера ranked/);
+  await page.locator('[data-defense-details]').click();
+  assert.match(await page.locator('#defense-panel').innerText(),/14.?147.?870/);
+  await page.screenshot({path:path.join(output,`${prefix}-defense.png`)});
+  await page.locator('#nav [data-go="level"]').click();
+  await page.locator('#relativeMetric').selectOption('dpmTop');
+  assert.match(await page.locator('#relativeTable tbody tr').first().innerText(),/Doctor Strange/);
+  await page.screenshot({path:path.join(output,`${prefix}-relative.png`)});
   await page.locator('#nav [data-go="future"]').click();
   assert.ok(await page.locator('#development-verdict').isVisible());
   await page.locator('#development-verdict').scrollIntoViewIfNeeded();

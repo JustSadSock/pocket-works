@@ -4,12 +4,12 @@
   "product": "rivals-field-notes",
   "direction": {
     "premise": "A personal scouting notebook for two friends who want to understand years of shared matches, with measured evidence rather than competitive ranking between them.",
-    "composition": "Cream reading surface and a dark chapter rail; on phones the rail becomes a horizontally scrolling chapter index above the account switch and evidence-led document.",
+    "composition": "The first phone view names the selected player's strongest ranked result before three contextual evidence verdicts. A cream reading surface and chapter rail retain the existing document layout; detailed metrics stay in disclosures and adjacent controls.",
     "shapeLanguage": "Square evidence tables, thin ruled dividers, open editorial whitespace and an acid-green cut-corner player dossier distinguish observations from narrative.",
     "surfaceAndMaterial": "Flat printed-paper surfaces and ink-colored text; hero portraits are small secondary identifiers, not decorative background art.",
     "paletteLogic": "Cream supports extended reading, dark green groups navigation, lime marks selected context, muted rust marks a small sample rather than a losing player.",
     "typography": "Large tight headings introduce chapters, compact sans-serif tables use tabular numeric context, and small uppercase source labels separate claims from qualifications.",
-    "signature": "Changing the selected hero redraws an eight-season dot-and-line evidence strip; missing seasons remain visibly disconnected and small samples have hollow points.",
+    "signature": "A direct first-screen verdict distinguishes the ranked winner, career winner and same-hero benchmark; changing a sample threshold redraws the explanatory ranking instead of inventing an impact score.",
     "distinction": "Perekos and Katana Echo center combat arenas; this product centers a readable evolving dossier, with chapter navigation and filterable evidence rather than thumb combat controls."
   },
   "architecture": {
@@ -53,7 +53,7 @@
       "type": "click",
       "selector": "[data-account=\"b\"]"
     },
-    "expectedChange": "The active player switches from JustSadSock to Hioydfts and the dossier headline, hero portraits and statistics reflect the second public account.",
+    "expectedChange": "The selected player changes from JustSadSock to Hioydfts: the first-screen ranked verdict changes from Gambit to Cloak & Dagger and the career and benchmark explanations update together.",
     "capture": [
       "initial",
       "action",
