@@ -133,7 +133,21 @@ try{
   assert.equal(exhibition.display,'grid');
   assert.equal(exhibition.cards,5);
   assert(exhibition.scrollWidth<=exhibition.clientWidth+3,
-   'restoration exhibition must not scroll sideways '+JSON.stringify(exhibition));passed+=3;
+   'restoration exhibition must not scroll sideways '+JSON.stringify(exhibition));
+  // Detect the previous collapsed exhibition with tiny artwork and an empty wall.
+  const exhibitFrames=await child.locator('.round-art-card').evaluateAll(cards=>cards.map(card=>{
+   const stage=card.querySelector('.zam-exhibit-stage')?.getBoundingClientRect();
+   const rim=card.querySelector('.round-art-image')?.getBoundingClientRect();
+   return {cardHeight:card.getBoundingClientRect().height,stageHeight:stage?.height,
+    frameWidth:rim?.width,frameHeight:rim?.height};
+  }));
+  for(const frame of exhibitFrames){
+   assert(frame.cardHeight>=260&&frame.stageHeight>=245,
+    'restoration gallery collapsed into a top thumbnail '+size.label+' '+JSON.stringify(frame));
+   assert(frame.frameWidth>45&&frame.frameHeight>90,
+    'restoration painting is too small '+size.label+' '+JSON.stringify(frame));
+  }
+  passed+=3+exhibitFrames.length;
   await preview('results');
   assert.equal(await child.locator('.finale-time-scoring').count(),1);
   const winner=await child.locator('#winnerRestoration').evaluate(el=>({
