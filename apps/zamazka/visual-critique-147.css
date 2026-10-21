@@ -374,3 +374,79 @@
  #screen>.restore .viewport{max-width:100%!important;max-height:100%!important}
  #screen>.restore .zoom-actions{top:6px!important;right:6px!important}
 }
+
+
+/* Exhibition geometry: allocate the real wall height to every row.
+   Content-sized tracks previously stranded 70px pictures at the top. */
+#screen>.round-review-phase>.round-review-body{
+ display:flex!important;flex-direction:column!important;
+ min-width:0!important;min-height:0!important;
+ padding:clamp(8px,1.3vh,17px) clamp(12px,1.7vw,29px)!important;
+ overflow:hidden!important
+}
+#screen>.round-review-phase .round-review-grid{
+ box-sizing:border-box!important;flex:1 1 0!important;
+ display:grid!important;
+ grid-template-columns:repeat(var(--review-columns,4),minmax(0,1fr))!important;
+ grid-auto-rows:minmax(min(36dvh,320px),1fr)!important;
+ gap:clamp(12px,1.4vw,24px)!important;
+ width:100%!important;height:100%!important;min-height:0!important;
+ padding:clamp(10px,2vh,24px) clamp(8px,.8vw,15px)!important;
+ align-items:stretch!important;align-content:stretch!important;
+ overflow-x:hidden!important;overflow-y:auto!important;
+ overscroll-behavior-y:contain!important;scrollbar-width:thin
+}
+#screen>.round-review-phase .round-art-card{
+ box-sizing:border-box!important;display:flex!important;flex-direction:column!important;
+ width:100%!important;max-width:none!important;
+ height:100%!important;min-height:0!important;max-height:none!important;
+ align-self:stretch!important;justify-content:center!important;
+ padding:6px!important;overflow:visible!important
+}
+#screen>.round-review-phase .round-art-card .zam-exhibit-stage{
+ box-sizing:border-box!important;display:flex!important;flex-direction:column!important;
+ align-items:center!important;justify-content:center!important;
+ flex:1 1 auto!important;width:100%!important;height:100%!important;
+ min-height:0!important;max-height:100%!important;overflow:visible!important
+}
+#screen>.round-review-phase .round-art-image{
+ flex:none!important;max-height:none!important;max-width:100%!important;min-height:0!important
+}
+#screen>.round-review-phase .round-art-card .zam-exhibit-plaque{
+ flex:none!important;max-width:min(100%,320px)!important
+}
+#screen>.round-review-phase .round-art-card:hover:not(:active){
+ transform:translateY(-2px)
+}
+@media(min-width:700px) and (max-width:1099px){
+ #screen>.round-review-phase .round-review-grid{
+  grid-template-columns:repeat(var(--review-columns-tablet,3),minmax(0,1fr))!important;
+  grid-auto-rows:minmax(min(41dvh,300px),1fr)!important;
+  gap:clamp(9px,1.2vw,17px)!important
+ }
+}
+@media(max-width:699px){
+ #screen>.round-review-phase .round-review-grid{
+  grid-template-columns:repeat(1,minmax(0,1fr))!important;
+  grid-auto-rows:minmax(min(56dvh,450px),auto)!important;
+  align-content:start!important;gap:14px!important;
+  padding:10px 13px 18px!important;
+  overflow-x:hidden!important;overflow-y:auto!important;
+  touch-action:pan-y!important
+ }
+ #screen>.round-review-phase .round-art-card{
+  height:min(56dvh,450px)!important;min-height:270px!important;
+  padding:6px 0!important
+ }
+ #screen>.round-review-phase .round-art-card .zam-exhibit-stage{
+  min-height:0!important;height:100%!important
+ }
+ #screen>.round-review-phase .round-art-image{max-height:none!important}
+}
+@media(max-width:699px) and (max-height:580px){
+ #screen>.round-review-phase .round-art-card{height:330px!important;min-height:330px!important}
+ #screen>.round-review-phase .round-review-grid{grid-auto-rows:330px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #screen>.round-review-phase .round-art-card{transition:none!important}
+}
