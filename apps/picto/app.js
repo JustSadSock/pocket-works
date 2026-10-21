@@ -218,21 +218,21 @@ function renderReveal(){
  const targetPrep=originalChoices[3]?.indexOf(solution[3])??0;
  const peers=state.players.filter(p=>p.id!==state.author).map(p=>{
   const answer=state.answers[p.id];
-  const count=answer?answer.filter((n,i)=>n!==null&&(i===4?
-   state.locationForms?.[targetPrep]?.[n]===solution[4]:originalChoices[i]?.[n]===solution[i])).length:0;
+  const count=answer?answer.filter((n,i)=>n!==null&&(state.semanticVersion===4?originalChoices[i]?.[n]===solution[i]:(i===4?state.locationForms?.[targetPrep]?.[n]===solution[4]:originalChoices[i]?.[n]===solution[i]))).length:0;
   return '<span class="answer-pill '+(!answer?'':count>=3?'yes':'no')+'">'+esc(p.name)+': '+(answer?count+' / 5':'не ответил')+'</span>';
  }).join('');
  const review=solution.map((word,i)=>{
-  const selected=mine[i],own=i===4?state.locationForms?.[mine[3]??0]?.[selected]:originalChoices[i]?.[selected];
-  const right=i===4?state.locationForms?.[targetPrep]?.[selected]===word:own===word;
+  const selected=mine[i],own=i===4&&state.semanticVersion!==4?state.locationForms?.[mine[3]??0]?.[selected]:originalChoices[i]?.[selected];
+  const right=state.semanticVersion===4?own===word:(i===4?state.locationForms?.[targetPrep]?.[selected]===word:own===word);
   return '<div class="review-cell"><span>'+slotNames()[i]+'</span><strong>'+esc(word)+'</strong>'+
     (state.author!==me?.id&&selected!==null?'<small class="'+(right?'hit':'miss')+'">'+(right?'✓ ':'✕ ')+esc(own||'—')+'</small>':'')+'</div>';
  }).join('');
  root.innerHTML='<section class="game-shell">'+phaseTop('Вот что было загадано','РАСКРЫТИЕ')+
-  '<div class="reveal-head"><div><span class="micro">ИСХОДНАЯ ФРАЗА</span><h2>'+esc(solution.join(' '))+'.</h2></div><strong>'+Number(result?.correct||0)+' / '+Number(result?.total||0)+' слов</strong></div>'+
+  '<div class="reveal-head"><div><span class="micro">ИСХОДНАЯ ИСТОРИЯ</span><h2>'+esc(state.semanticVersion===4?state.story:solution.join(' ')+'.')+'</h2></div><strong>'+Number(result?.correct||0)+' / '+Number(result?.total||0)+' слов</strong></div>'+
   '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+
   '<div class="review-grid">'+review+'</div><div class="reveal-peers">'+peers+'</div>'+
-  '<p class="small-note">+2 за точное слово, −1 за ошибку, 0 за пропуск. Раунд: '+(result?.points||0)+' очков.</p>'+
+  '<p class="small-note">+2 за точный смысл, −1 за ошибку, 0 за пропуск. Раунд: '+(result?.points||0)+' очков.</p>'+
+  (state.semanticVersion===4&&state.author===me?.id?'<button class="btn blue" data-action="save-word" '+(state.lexicon?.some(v=>v.prompt===result?.prompt)||state.lexicon?.length>=24?'disabled':'')+'>'+(state.lexicon?.some(v=>v.prompt===result?.prompt)?'Уже в словаре ✓':'В словарь компании +')+'</button>':'')+
   (state.host===me?.id?'<button class="btn primary" data-action="next">Следующий этап →</button>':'<p class="small-note">Следующий этап начнётся автоматически.</p>')+
   '</div></div></section>';
  updateClock();
@@ -267,7 +267,7 @@ function renderLegacyReveal(){
 
 function renderResults(){
  const gallery=(state.history||[]).map((g,i)=>'<article class="gallery-card"><span class="micro">№ '+String(i+1).padStart(2,'0')+'</span>'+
-  boardHTML(g.board,false,'gallery-'+i)+'<h3>'+esc(g.prompt)+'</h3><small>'+esc(g.name)+' · '+g.correct+'/'+g.total+
+  (state.semanticVersion===4?'<div class="gallery-story">'+Array.from({length:(i+1)%3===0?3:2},(_,f)=>boardHTML(g.board,false,'gallery-'+i+'-'+f,f)).join('')+'</div>':boardHTML(g.board,false,'gallery-'+i))+'<h3>'+esc(g.prompt)+'</h3><small>'+esc(g.name)+' · '+g.correct+'/'+g.total+
   (Number.isFinite(g.points)?' слов · '+g.points+' очков':' поняли')+'</small></article>').join('');
  const score=Number.isFinite(state.wordsFound)?
   'Угадано слов: '+state.wordsFound+' из '+state.attempts+' · '+state.score+' очков':
@@ -275,7 +275,7 @@ function renderResults(){
  root.innerHTML='<section class="screen finish"><span class="micro">АРХИВ / СЕАНС ЗАВЕРШЁН</span>'+
   '<h1>Поняли.<br>Почти.</h1><div class="finish-score">'+score+'</div>'+
   '<p>Все композиции одной партии. Можно рассмотреть чужие расшифровки и начать новую игру.</p>'+
-  '<div class="gallery">'+gallery+'</div><div class="room-footer">'+
+  '<div class="gallery">'+gallery+'</div>'+(state.semanticVersion===4?'<div class="lexicon-room"><strong>Язык компании · '+(state.lexicon?.length||0)+'/24</strong>'+lexiconHtml()+'</div>':'')+'<div class="room-footer">'+
   '<button class="btn primary" data-action="again" '+(state.host!==me?.id||!connected?'disabled':'')+'>'+(state.host===me?.id?'Играть ещё ↗':'Ждём ведущего')+'</button>'+
   '<button class="btn quiet" data-action="leave">Покинуть комнату</button></div></section>';
 }
@@ -298,7 +298,9 @@ function setState(next){
  const changed=state?.phase!==next.phase||state?.author!==next.author||state?.round!==next.round||state?.prompt!==next.prompt;
  const wasAnswered=state?.answered?.includes(me?.id)||false;
  state=next;
- if(changed){hideConfirm();selected=-1;undo=[];draft=(next.board||[]).map(g=>({...g}));draftAnswer=[null,null,null,null,null];answerSending=false;drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
+ if(next.semanticVersion===4&&next.lexicon?.length){try{localStorage.setItem(STORE+'lexicon',JSON.stringify(next.lexicon));}catch{}}
+ if(next.semanticVersion===4&&next.phase==='lobby'&&next.host===me?.id&&!lexiconImported){lexiconImported=true;try{const entries=JSON.parse(localStorage.getItem(STORE+'lexicon')||'[]');if(Array.isArray(entries)&&entries.length)send({type:'lexicon-import',entries});}catch{}}
+ if(changed){hideConfirm();selected=-1;activeFrame=0;undo=[];draft=(next.board||[]).map(g=>({...g}));draftAnswer=[null,null,null,null,null];answerSending=false;drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
  if(next.phase==='guess'&&!changed&&state.answered.includes(me?.id)===wasAnswered){
   const counter=document.querySelector('.prompt-strip .micro');
   if(counter)counter.textContent=state.answered.length+' / '+(state.players.length-1)+' ОТВЕТОВ';
@@ -312,12 +314,12 @@ function setState(next){
 }
 function syncRoom(message){
  roomId=message.roomId;code=message.roomId?.slice(0,8).toUpperCase()||code;
- state=null;root.innerHTML='<section class="loading">Синхронизируем комнату…</section>';
+ state=null;lexiconImported=false;root.innerHTML='<section class="loading">Синхронизируем комнату…</section>';
  try{net.sendGame({type:'sync'});}catch{notify('Не удалось синхронизировать комнату.');}
  const address=new URL(location.href);address.searchParams.set('room',code);history.replaceState(null,'',address.pathname+address.search);
 }
 function stop(leave=true){
- requestSerial++;clearTimeout(pendingSend);pendingSend=0;drag=null;
+ requestSerial++;clearTimeout(pendingSend);pendingSend=0;drag=null;lexiconImported=false;
  if(net){if(leave&&state)try{net.leaveRoom();}catch{}net.close();}
  net=null;activeToken=null;me=null;state=null;roomId='';code='';connecting=false;connected=false;
  if(leave)adapter.removeItem('pocket-net:'+SERVER);
@@ -460,7 +462,7 @@ root.addEventListener('change',e=>{
  if(!el||state?.phase!=='guess'||state.author===me?.id||answerSending||state.answered.includes(me?.id))return;
  const slot=Number(el.dataset.guessSlot);
  draftAnswer[slot]=el.value===''?null:Number(el.value);
- if(slot===3){
+ if(slot===3&&state.semanticVersion!==4){
   const place=document.querySelector('[data-guess-slot="4"]');
   if(place){
    const selected=draftAnswer[4],words=guessWords(4,draftAnswer);
