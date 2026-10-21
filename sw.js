@@ -1,9 +1,10 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.13.0';
-const APP_VERSION = '0.13.0';
-const RELEASE_DATE = '2026-10-16';
+const CACHE_NAME = 'pocket-works-launcher-v0.13.1';
+const APP_VERSION = '0.13.1';
+const RELEASE_DATE = '2026-10-21';
 const CACHE_PROTOCOL = 8;
 const RELEASE_NOTES = [
+  'MASKOT: black cat and fox species, Seoul Moonstage performer costume and dragon shoulder companion unlock codes.',
   'Понятные социальные меню, компактные списки друзей и приглашений, защита черновиков и единые подтверждения.',
   'Настройки по разделам, явные размеры подборок и согласованные действия с избранным.',
   'Каталог с узнаваемыми иконками, единая главная для телефона и компьютера, согласованные окна и быстрый запуск.',
