@@ -127,8 +127,9 @@ function playTone(kind = "tap") {
 function profileOptions() {
   return `
     <button data-native-press id="start-btn" class="menu-card menu-card--hero" data-action="start-ai">
-      <span class="menu-card__title">Играть против ИИ</span>
-      <span class="menu-card__text">Быстрая дуэль у трона без лишних настроек.</span>
+      <span class="menu-card__index">I</span>
+      <span class="menu-card__copy"><span class="menu-card__title">Против ИИ</span><span class="menu-card__text">Начать немедленно, без ожидания</span></span>
+      <span class="menu-card__arrow" aria-hidden="true">→</span>
     </button>
   `;
 }
@@ -427,9 +428,9 @@ function activeLaws(state) {
   return activeLawSummary(state);
 }
 
-function crownRow(player, title) {
+function crownRow(player, title, side = "north") {
   return `
-    <div class="crown-bar">
+    <div class="crown-bar crown-bar--${side}">
       <span class="crown-bar__label">${title}</span>
       <div class="crown-bar__icons">
         <span class="crown crown--active"><i></i>${player.activeCrowns}</span>
@@ -736,7 +737,7 @@ function roomHTML() {
         <section class="menu-shell">
           <div class="hero-card">
             <span class="eyebrow">Онлайн 1v1</span>
-            <h1>Комната ${app.online.roomCode}</h1>
+            <h1>Ждём соперника</h1>
             <p>Север уже в зале. Поделитесь кодом с соперником и дождитесь, пока он войдет в комнату с другого устройства.</p>
             <div class="room-wait-card">
               <div class="room-wait-card__code">${app.online.roomCode}</div>
@@ -757,8 +758,8 @@ function roomHTML() {
       <section class="menu-shell">
         <div class="hero-card">
           <span class="eyebrow">Онлайн 1v1</span>
-          <h1>Комнаты и скрытые законы</h1>
-          <p>Создайте комнату или подключитесь по коду. Локальный сервер уже работает на порту 3000 и готов к Cloudflare Tunnel.</p>
+          <h1>Зал совета</h1>
+          <p>Создайте зал совета и пригласите второго игрока по коду. Указы выбираются скрытно.</p>
           <div class="room-actions">
             <button data-native-press class="primary-btn" data-action="create-room">Создать комнату</button>
             <div class="join-box">
@@ -777,45 +778,42 @@ function roomHTML() {
 
 function gameHTML(state, eyebrow) {
   const viewer = getViewerPlayer();
-  const enemy = viewer === "p1" ? "p2" : "p1";
-  const chooserLabel = app.local.mode === "hotseat" ? (viewer === "p1" ? "Север выбирает скрытый закон" : "Юг выбирает скрытый закон") : eyebrow;
+  const chooserLabel = app.local.mode === "hotseat" ? (viewer === "p1" ? "Север выбирает указ" : "Юг выбирает указ") : eyebrow;
   return `
     <div class="game-shell">
       <div class="game-shell__frame">
-      <header class="topbar">
-        <div class="topbar__left">
-          <span class="eyebrow">${chooserLabel || "Законы Короны"}</span>
-          <h1>Законы Короны</h1>
-        </div>
-        <div class="topbar__right">
-          ${crownRow(state.players[viewer], viewer === "p1" ? "Вы" : "Вы")}
-          ${crownRow(state.players[enemy], viewer === "p1" ? "Соперник" : "Соперник")}
-          <div class="hud-actions">
-            <button data-native-press class="text-btn" data-action="toggle-rules">Свод</button>
-            <button data-native-press class="text-btn" data-action="toggle-settings">Опции</button>
-            <button data-native-press class="text-btn" data-action="back-menu">Выход</button>
+        <header class="topbar">
+          <div class="topbar__left">
+            <span class="eyebrow">${chooserLabel || "Двор престола"}</span>
+            <h1>Законы короны</h1>
           </div>
-        </div>
-      </header>
-      <main class="game-layout">
-        <div class="game-layout__main">
-          ${boardHTML(state)}
-          ${handHTML(state)}
-        </div>
-        <aside class="game-layout__side game-layout__side--info">
-          ${lawSlotsHTML(state)}
-          ${detailCard()}
-          ${logHTML(state)}
-          ${debugHTML(state)}
-        </aside>
-      </main>
+          <div class="topbar__right">
+            ${crownRow(state.players.p1, viewer === "p1" ? "Север · вы" : "Север · соперник", "north")}
+            ${crownRow(state.players.p2, viewer === "p2" ? "Юг · вы" : "Юг · соперник", "south")}
+            <div class="hud-actions">
+              <button data-native-press class="text-btn" data-action="toggle-rules">Правила</button>
+              <button data-native-press class="text-btn" data-action="toggle-settings">Звук</button>
+              <button data-native-press class="text-btn" data-action="back-menu">Меню</button>
+            </div>
+          </div>
+        </header>
+        <main class="game-layout">
+          <div class="game-layout__main">${boardHTML(state)}</div>
+          <aside class="game-layout__side">
+            ${lawSlotsHTML(state)}
+            ${detailCard()}
+            ${logHTML(state)}
+            ${debugHTML(state)}
+          </aside>
+          <div class="game-layout__hand">${handHTML(state)}</div>
+        </main>
       </div>
       ${app.local.mode === "hotseat" && app.local.passScreen ? `
         <div class="pass-overlay">
           <div class="pass-card">
-            <span class="eyebrow">Скрытый выбор</span>
+            <span class="eyebrow">Тайное голосование</span>
             <h2>Передайте устройство</h2>
-            <p>Первый закон уже запечатан. Пусть второй игрок возьмет устройство и подготовит ответ.</p>
+            <p>Первый указ запечатан. Пусть второй игрок выберет свой закон.</p>
             <button data-native-press class="primary-btn" data-action="continue-hotseat">Продолжить</button>
           </div>
         </div>
@@ -830,29 +828,31 @@ function menuHTML() {
     <section class="menu-shell">
       <div class="hero-card hero-card--menu">
         <div class="hero-card__content">
-          <span class="eyebrow">Crown Duel</span>
-          <h1>Законы Короны</h1>
-          <p>Тактическая дуэль у трона, где ходом становится не шаг фигуры, а новый закон мира.</p>
+          <span class="eyebrow">Состязание за престол</span>
+          <h1><span class="title-line">Законы</span><span class="title-line">короны</span></h1>
+          <p class="hero-card__lede">Два претендента, один трон. Вы не двигаете фигуры — вы переписываете законы, которым они подчиняются.</p>
+          <div class="hero-card__crest" aria-hidden="true">ЗК</div>
+        </div>
+        <nav class="menu-navigation" aria-label="Режим игры">
+          <span class="menu-navigation__label">Начать заседание</span>
           <div class="menu-grid">
             ${profileOptions()}
-            <button data-native-press class="menu-card menu-card--plain" data-action="open-online">
-              <span class="menu-card__title">Онлайн 1v1</span>
-              <span class="menu-card__text">Закрытая комната и дуэль с телефона.</span>
+            <button data-native-press class="menu-card" data-action="open-online">
+              <span class="menu-card__index">II</span>
+              <span class="menu-card__copy"><span class="menu-card__title">Играть онлайн</span><span class="menu-card__text">Приватная комната на двоих</span></span>
+              <span class="menu-card__arrow" aria-hidden="true">→</span>
             </button>
-            <button data-native-press class="menu-card menu-card--plain" data-action="start-hotseat">
-              <span class="menu-card__title">Hot-seat</span>
-              <span class="menu-card__text">Одна доска, два игрока.</span>
-            </button>
-            <button data-native-press class="menu-card menu-card--plain" data-action="toggle-rules">
-              <span class="menu-card__title">Правила</span>
-              <span class="menu-card__text">Трон, щиты, печати, конфликты.</span>
-            </button>
-            <button data-native-press class="menu-card menu-card--plain" data-action="toggle-settings">
-              <span class="menu-card__title">Настройки</span>
-              <span class="menu-card__text">Звук и анимация.</span>
+            <button data-native-press class="menu-card" data-action="start-hotseat">
+              <span class="menu-card__index">III</span>
+              <span class="menu-card__copy"><span class="menu-card__title">На одном устройстве</span><span class="menu-card__text">Передавайте устройство после тайного выбора</span></span>
+              <span class="menu-card__arrow" aria-hidden="true">→</span>
             </button>
           </div>
-        </div>
+          <div class="menu-secondary">
+            <button data-native-press class="ghost-btn" data-action="toggle-rules">Как играть</button>
+            <button data-native-press class="ghost-btn" data-action="toggle-settings">Настройки</button>
+          </div>
+        </nav>
       </div>
     </section>
   `;
@@ -925,10 +925,6 @@ function modalHTML() {
         <label class="setting-row">
           <span>Звук эффектов</span>
           <input type="checkbox" data-setting="sound" ${app.settings.sound ? "checked" : ""} />
-        </label>
-        <label class="setting-row">
-          <span>Фоновая музыка</span>
-          <input type="checkbox" data-setting="music" ${app.settings.music ? "checked" : ""} />
         </label>
         <label class="setting-row">
           <span>Снизить анимации</span>
