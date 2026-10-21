@@ -1499,6 +1499,8 @@ class UIManager {
         this.boardGesture=null;
         gameState.players = [];
         gameState.boardWidth = computeBoardWidth(numPlayers);
+        const stageSize=document.getElementById('stage-mode');
+        if(stageSize)stageSize.textContent=gameState.boardWidth+' × '+BOARD_HEIGHT;
         gameState.board = createEmptyBoard(gameState.boardWidth, BOARD_HEIGHT);
         gameState.lastTime = 0;
         this.touchPlayerIndex = 0;
@@ -2351,7 +2353,10 @@ class UIManager {
         if (again) {
             const allowed = !this.isOnlineMode || networkManager.hostId === networkManager.socket.id;
             again.disabled = !allowed;
-            again.textContent = this.isOnlineMode ? (allowed ? 'Новый раунд' : 'Новый раунд начинает ведущий') : 'Play Again';
+            again.textContent = this.isOnlineMode
+              ? (allowed ? (currentLanguage==='ru'?'Новый раунд':'New round') :
+                  (currentLanguage==='ru'?'Раунд начинает ведущий':'Host starts next round'))
+              : t('playAgain');
         }
         gameState.players.forEach(player => {
             const scoreDiv = document.createElement('div');
@@ -2393,35 +2398,35 @@ class UIManager {
             card.innerHTML = `
                 <h4>
                     <span class="player-color-badge" style="background: ${color};"></span>
-                    Player ${i + 1}
+                    ${t('player')} ${i + 1}
                 </h4>
                 <div class="color-picker">
-                    <label>Block Color:</label>
+                    <label>${t('blockColor')}</label>
                     <input type="color" id="coop-color-${i}" value="${color}">
                 </div>
                 <div class="key-bindings">
                     <div class="key-binding">
-                        <label>Left:</label>
+                        <label>${t('left')}:</label>
                         <input type="text" id="coop-key-${i}-left" value="${formatKeyLabel(keys.left)}" 
                                data-key-code="${keys.left}" readonly>
                     </div>
                     <div class="key-binding">
-                        <label>Right:</label>
+                        <label>${t('right')}:</label>
                         <input type="text" id="coop-key-${i}-right" value="${formatKeyLabel(keys.right)}" 
                                data-key-code="${keys.right}" readonly>
                     </div>
                     <div class="key-binding">
-                        <label>Down:</label>
+                        <label>${t('down')}:</label>
                         <input type="text" id="coop-key-${i}-down" value="${formatKeyLabel(keys.down)}" 
                                data-key-code="${keys.down}" readonly>
                     </div>
                     <div class="key-binding">
-                        <label>Rotate:</label>
+                        <label>${t('rotate')}:</label>
                         <input type="text" id="coop-key-${i}-rotate" value="${formatKeyLabel(keys.rotate)}" 
                                data-key-code="${keys.rotate}" readonly>
                     </div>
                     <div class="key-binding">
-                        <label>Drop:</label>
+                        <label>${t('drop')}:</label>
                         <input type="text" id="coop-key-${i}-drop" value="${formatKeyLabel(keys.drop)}" 
                                data-key-code="${keys.drop}" readonly>
                     </div>
@@ -2757,7 +2762,9 @@ class UIManager {
         const readyButton = document.getElementById('ready-btn');
         if (readyButton) {
             const own = room.players.find(p => p.id === networkManager.socket.id);
-            readyButton.textContent = own?.ready ? 'Отменить готовность' : 'Готов';
+            readyButton.textContent = own?.ready
+              ? (currentLanguage==='ru'?'Отменить готовность':'Not ready')
+              : t('ready');
             readyButton.disabled = !own;
         }
         // Update status
