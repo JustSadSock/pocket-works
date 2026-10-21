@@ -13,14 +13,14 @@
     "distinction": "В отличие от многопользовательской «Замазки» здесь не рисуют и не голосуют: это тихая читательская галерея, в которой объектом действия служит сама репродукция, а архив утверждённых работ отделён от новой сотни."
   },
   "architecture": {
-    "spatialLayout": "document-spread",
+    "spatialLayout": "split-workspace",
     "controlLocation": "contextual",
     "navigation": "overlay-list",
-    "chromeTopology": "single-surface",
+    "chromeTopology": "tiled-grid",
     "dominantMotion": "immediate",
     "primaryVerb": "Пользователь листает 72 исходные картины, ставит минус рядом с ненужной работой, видит счётчик на удаление и экспортирует строго игровые ID 0–71, не удаляя сами файлы игры.",
     "physicalFeedback": "Касание минуса отмечает картину на удаление медной рамкой и крестом, сразу меняет число выбранных и сохраняет список; второй тап отменяет отметку без необратимых действий.",
-    "spatialRationale": "На телефоне стандартная вертикальная прокрутка всего документа работает при любом количестве картин и не конфликтует с прокруткой горизонтальной ленты фильтров; боковая опись остаётся только на широком экране.",
+    "spatialRationale": "On desktop an always-visible curation rail occupies the left 27 percent, while the right workspace displays a separately scrolling two-column grid of artwork tiles, filters and local selectors. On portrait phones the rail and artwork grid stack, preserving the same distinct selection and browsing zones.",
     "comparisons": [
       {
         "slug": "zamazka",
@@ -41,6 +41,16 @@
         "slug": "folio",
         "spatialDifference": "Вместо типографского произведения с наборным текстом каталог строится вокруг натурального размера и пропорций изображений, а подписи намеренно сведены к минимуму.",
         "interactionDifference": "Вместо чтения и перелистывания текста пользователь выбирает произведения искусства для последующего добавления в отдельную игру и получает экспортированную опись."
+      },
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "Rivals Field Notes is a long-form editorial notebook with continuous ruled tables and chapter navigation; the Art Cabinet has a fixed two-column gallery workbench and a separate dark inventory rail on desktop, collapsing into a scrollable artwork grid on mobile.",
+        "interactionDifference": "Rivals Field Notes switches seasons and hero metrics inside evidence tables; Art Cabinet selects original paintings by stable numeric IDs, opens provenance reproductions, and exports a reversible curation list."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "Perekos presents a realtime full-bleed mage arena and perimeter combat bars; Art Cabinet displays two tall stacks of museum reproductions with individual selection controls and a summary rail.",
+        "interactionDifference": "Perekos directs moving spellcasters against an opponent; Art Cabinet taps paintings to flag removals and copies artwork IDs without any game round or collision handling."
       }
     ]
   },
