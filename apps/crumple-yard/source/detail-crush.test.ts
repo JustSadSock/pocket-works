@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Vector3 } from '@babylonjs/core';
-import { dentVertices, impactDirection } from './detail-crush';
+import { MeshBuilder, NullEngine, Scene, TransformNode, Vector3, VertexBuffer } from '@babylonjs/core';
+import { dentVertices, impactDirection, DetailCrushSystem } from './detail-crush';
 
 describe('localized visual damage on authored trim', () => {
   it('dents only vertices close to the contact, not the opposite side', () => {
@@ -25,5 +25,25 @@ describe('localized visual damage on authored trim', () => {
     expect(impactDirection('left',Vector3.Zero()).x).toBeGreaterThan(0.9);
     expect(impactDirection('right',Vector3.Zero()).x).toBeLessThan(-0.9);
     expect(impactDirection('roof',Vector3.Zero()).y).toBeLessThan(-0.9);
+  });
+  it('bends a Babylon hood mesh and preserves an unhit rear piece', () => {
+    const engine = new NullEngine();
+    const scene = new Scene(engine);
+    const root = new TransformNode('car', scene);
+    const hood = MeshBuilder.CreateBox('hood', {width:1.3,height:0.08,depth:0.9,updatable:true},scene);
+    const trunk = MeshBuilder.CreateBox('trunk', {width:1.3,height:0.08,depth:0.9,updatable:true},scene);
+    hood.parent = root;
+    trunk.parent = root;
+    hood.position.z = 1.65;
+    trunk.position.z = -1.65;
+    const detail = new DetailCrushSystem();
+    detail.register(hood,'front');
+    detail.register(trunk,'rear');
+    const beforeHood = hood.getVerticesData(VertexBuffer.PositionKind)!.slice();
+    const beforeTrunk = trunk.getVerticesData(VertexBuffer.PositionKind)!.slice();
+    detail.deform(root,new Vector3(0,0,2),0.8,'front');
+    expect(hood.getVerticesData(VertexBuffer.PositionKind)).not.toEqual(beforeHood);
+    expect(trunk.getVerticesData(VertexBuffer.PositionKind)).toEqual(beforeTrunk);
+    engine.dispose();
   });
 });
