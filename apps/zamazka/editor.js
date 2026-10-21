@@ -1156,7 +1156,7 @@ export class Editor{
     window.addEventListener('resize',this.resize);
     window.addEventListener('orientationchange',this.orientationChanged);
     window.visualViewport?.addEventListener('resize',this.resize);
-    screen.orientation?.addEventListener?.('change',this.orientationChanged);
+    globalThis.screen?.orientation?.addEventListener?.('change',this.orientationChanged);
     if(typeof ResizeObserver!=='undefined'){
       this.frameObserver=new ResizeObserver(()=>{
         if(this.closed||!this.frameAspect)return;
@@ -1323,7 +1323,7 @@ export class Editor{
  }
  getData(){this.finishStroke();return this.strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p}))}
  clearDraft(){try{localStorage.removeItem(this.draftKey)}catch{}try{sessionStorage.removeItem(this.draftKey)}catch{}void zamazkaStore.remove('draft:'+this.draftKey).catch(()=>{})}
- dispose(){this.flushPersistence();this.closed=true;clearTimeout(this.artRetryTimer);clearTimeout(this.orientationFitTimer);window.removeEventListener('online',this.retryArtworkOnOnline);window.removeEventListener('orientationchange',this.orientationChanged);window.visualViewport?.removeEventListener('resize',this.resize);screen.orientation?.removeEventListener?.('change',this.orientationChanged);clearTimeout(this.sizeStepDelay);clearInterval(this.sizeStepInterval);for(const button of this.sizeStepButtons||[]){button.removeEventListener('pointerdown',this.sizeStepPress);button.removeEventListener('click',this.sizeStepKeyboardClick);button.removeEventListener('lostpointercapture',this.sizeStepRelease);}window.removeEventListener('pointerup',this.sizeStepRelease);window.removeEventListener('pointercancel',this.sizeStepRelease);document.removeEventListener?.('visibilitychange',this.persistOnHide);clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
+ dispose(){this.flushPersistence();this.closed=true;clearTimeout(this.artRetryTimer);clearTimeout(this.orientationFitTimer);window.removeEventListener('online',this.retryArtworkOnOnline);window.removeEventListener('orientationchange',this.orientationChanged);window.visualViewport?.removeEventListener('resize',this.resize);globalThis.screen?.orientation?.removeEventListener?.('change',this.orientationChanged);clearTimeout(this.sizeStepDelay);clearInterval(this.sizeStepInterval);for(const button of this.sizeStepButtons||[]){button.removeEventListener('pointerdown',this.sizeStepPress);button.removeEventListener('click',this.sizeStepKeyboardClick);button.removeEventListener('lostpointercapture',this.sizeStepRelease);}window.removeEventListener('pointerup',this.sizeStepRelease);window.removeEventListener('pointercancel',this.sizeStepRelease);document.removeEventListener?.('visibilitychange',this.persistOnHide);clearTimeout(this.cursorIdleTimer);clearTimeout(this.cursorLiftTimer);this.frameObserver?.disconnect();clearTimeout(this.recenterTimer);
  if(this.paintFrameId){
    if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(this.paintFrameId);else clearTimeout(this.paintFrameId);
    this.paintFrameId=null;
