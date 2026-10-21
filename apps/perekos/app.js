@@ -88,6 +88,14 @@ function sfx(type,school='fire'){
   }else{
    tone(340,120,.08,'sine',.012);
   }
+ }else if(type==='charge_pebble'){
+  tone(90,180,.20,'triangle',.024);grit(.075,220,.014);
+ }else if(type==='charge_coil'){
+  tone(420,990,.17,'sine',.015);tone(650,1200,.11,'triangle',.014,.03);
+ }else if(type==='charge_slate'){
+  tone(110,56,.16,'triangle',.024);
+ }else if(type==='hurl'){
+  tone(240,67,.23,'triangle',.045);grit(.15,320,.022);
  }else if(type==='thunder'){
   tone(1270,180,.15,'sawtooth',.022);tone(610,80,.19,'triangle',.016);
  }else if(type==='quake'){
@@ -376,7 +384,7 @@ function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0,moving=0,
  const runes=active?.actors?.[enemy?1-myIndex():myIndex()]?.runes||[];
  const a=active?.actors?.[enemy?1-myIndex():myIndex()];
  const pose=animate&&a?mageMotion.sample(a,{x,y},performance.now()/1000,active?.round||0,reducedMotion):null;
- drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.cast||0,dashing:a?.dash||0,moving,pose});
+ drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.windup?.remaining>0?a.windup.remaining*2.7:a?.cast||0,dashing:a?.dash||0,moving,pose});
 }
 function drawConstructs(s){
  if(drawForgeConstructs(ctx,s,frame/60,reducedMotion))return;
