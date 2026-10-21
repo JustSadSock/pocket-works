@@ -11,6 +11,7 @@ export const ISSUE_TITLE = '[qa] pocket-works';
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const IDENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_TASKS = 20;
+const MAX_PLATFORM_PR_TASKS = 32;
 
 export function safeApp(root, app) {
   if (typeof app !== 'string' || !SLUG.test(app)) throw Error('Invalid application slug');
@@ -108,7 +109,17 @@ export function loadSuites(root, slug) {
   return checked;
 }
 
-export function resolveTasks(root, { apps, suite = 'all', profile = 'smoke' }) {
+export function maxTasksForRequest(eventName, event) {
+  // Cross-application CI repair PRs explicitly labeled by the repository
+  // maintainer need a bounded larger matrix. All ordinary PRs, dispatches
+  // and issue-triggered runs retain the strict 20-task budget.
+  return eventName === 'pull_request' && event.pull_request?.labels?.some(label=>label?.name === 'platform-change')
+    ? MAX_PLATFORM_PR_TASKS : MAX_TASKS;
+}
+
+export function resolveTasks(root, { apps, suite = 'all', profile = 'smoke', maxTasks = MAX_TASKS }) {
+  if (!Number.isInteger(maxTasks) || maxTasks < 1 || maxTasks > MAX_PLATFORM_PR_TASKS)
+    throw Error('Invalid QA task budget');
   if (!['smoke', 'deep'].includes(profile)) throw Error('Invalid QA profile');
   if (suite !== 'all' && !IDENT.test(suite)) throw Error('Invalid QA suite selector');
   const tasks = [];
@@ -125,7 +136,7 @@ export function resolveTasks(root, { apps, suite = 'all', profile = 'smoke' }) {
       }
     }
   }
-  if (tasks.length > MAX_TASKS) throw Error('Too many QA jobs (' + tasks.length + ' > ' + MAX_TASKS + '); request one suite/app');
+  if (tasks.length > maxTasks) throw Error('Too many QA jobs (' + tasks.length + ' > ' + maxTasks + '); request one suite/app');
   if (new Set(tasks.map(t => t.key)).size !== tasks.length) throw Error('Duplicate task keys');
   return tasks;
 }
@@ -180,7 +191,8 @@ async function main() {
   } else if (request.app === 'all') {
     apps = readdirSync(join(ROOT, 'apps')).filter(slug => SLUG.test(slug) && existsSync(join(ROOT, 'apps', slug, 'app.config.json')));
   } else apps = [request.app];
-  const tasks = resolveTasks(ROOT, { apps, suite: request.suite, profile: request.profile });
+  const tasks = resolveTasks(ROOT, { apps, suite: request.suite, profile: request.profile,
+    maxTasks: maxTasksForRequest(eventName, event) });
   const matrices = partition(tasks);
   const output = [
     'cpu_matrix=' + JSON.stringify(matrices.cpu),

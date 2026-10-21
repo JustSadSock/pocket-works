@@ -149,7 +149,11 @@ async function main() {
       for (const relative of metadata.files) {
         const key = `apps/${slug}/${relative}`;
         const old = spawnSync('git', ['show', `${base}:${key}`], {encoding:'utf8'});
-        originals.set(relative,old.status===0?old.stdout:old.stderr.includes('does not exist')?'':null);
+        // git show reports "exists on disk but not in revision" for newly
+        // added files. Only an explicit added-file diff permits an empty base.
+        const status = spawnSync('git', ['diff','--name-status',`${base}...${head}`,'--',key], {encoding:'utf8'});
+        const added = status.status === 0 && status.stdout.startsWith('A\t');
+        originals.set(relative,old.status===0?old.stdout:added?'':null);
       }
       const current = new Map();
       for (const relative of metadata.files) {

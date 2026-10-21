@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { requestFromEvent, requestFromInputs, loadSuites, resolveTasks, partition, ISSUE_TITLE } from './plan.mjs';
+import { requestFromEvent, requestFromInputs, loadSuites, resolveTasks, partition, maxTasksForRequest, ISSUE_TITLE } from './plan.mjs';
 import { summarize, reportMarkdown } from './aggregate.mjs';
 
 const createFixture = () => {
@@ -68,6 +68,17 @@ test('rejects path escapes and runaway matrix size', () => {
     assert.throws(() => loadSuites(f.root, 'test-app'), /max 20/);
     assert.throws(() => resolveTasks(f.root, { apps: ['../test-app'] }), /Invalid/);
   } finally { f.cleanup(); }
+});
+
+test('only intentionally labeled platform PRs can expand the bounded QA matrix', () => {
+  assert.equal(maxTasksForRequest('pull_request', {pull_request:{labels:[{name:'platform-change'}]}}),32);
+  assert.equal(maxTasksForRequest('pull_request', {pull_request:{labels:[{name:'bug'}]}}),20);
+  assert.equal(maxTasksForRequest('workflow_dispatch', {inputs:{app:'all'}}),20);
+  const f=createFixture();
+  try {
+    assert.throws(()=>resolveTasks(f.root,{apps:['test-app'],maxTasks:50}),/Invalid QA task budget/);
+    assert.equal(resolveTasks(f.root,{apps:['test-app'],maxTasks:32}).length,2);
+  }finally{f.cleanup()}
 });
 
 test('only owner-issued requests may start agent dispatch', () => {
