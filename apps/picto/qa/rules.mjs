@@ -61,6 +61,11 @@ for(let session=0;session<25;session++){
   state=module.onMessage({state,player:peer,players,payload:{type:'edit',glyphs:[]}}).state;
   assert.equal(state.board.length,1,'Only author can edit');
   state=module.onMessage({state,player:author,players,payload:{type:'publish'}}).state;
+  assert.equal(state.phase,'compose','Empty storyboard panels must block publishing');
+  const fullBoard=[glyph,...Array.from({length:state.frames-1},(_,i)=>({...glyph,x:60+i*7,frame:i}))];
+  state=module.onMessage({state,player:author,players,payload:{type:'edit',glyphs:fullBoard}}).state;
+  assert.equal(state.board.length,state.frames);
+  state=module.onMessage({state,player:author,players,payload:{type:'publish'}}).state;
   assert.equal(state.phase,'guess');
   const bystander=module.onMessage({state,player:peer,players,payload:{type:'sync'}}).events[0].payload;
   assert.deepEqual(bystander.choices,state.choices);
