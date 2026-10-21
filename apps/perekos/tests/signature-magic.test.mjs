@@ -33,6 +33,9 @@ test('lightning is an instant real shield-stripping contact with no flying bolt'
  const s=setup('coil');s.actors[1].shield=25;
  tick(s,{...stop,attack:true,aim:{x:178,y:310}},STEP,stop);
  assert.equal(s.shots.length,0);
+ assert.equal(s.actors[0].windup?.kind,'coil');
+ assert.equal(s.beams.length,0);
+ for(let i=0;i<15;i++)tick(s,{...stop,aim:{x:100,y:310}},STEP,stop);
  assert.equal(s.beams.length,1);
  assert.ok(s.actors[1].shield<25);
  assert.ok(s.actors[1].slow>0||s.actors[1].hp<100);
@@ -50,7 +53,10 @@ test('connected HOW runes alter signature combat; unconnected HOW runes cannot',
  const bare=setup('coil'),dormant=setup('coil'),mastered=setup('coil');
  for(const s of [dormant,mastered])s.actors[0].runes=['on_cast','heal','strong'];
  dormant.actors[0].runes=['strong','on_cast','heal'];
- for(const s of [bare,dormant,mastered])tick(s,{...stop,attack:true,aim:{x:178,y:310}},STEP,stop);
+ for(const s of [bare,dormant,mastered]){
+  tick(s,{...stop,attack:true,aim:{x:178,y:310}},STEP,stop);
+  for(let i=0;i<15;i++)tick(s,{...stop,aim:{x:100,y:310}},STEP,stop);
+ }
  assert.equal(bare.actors[1].hp,dormant.actors[1].hp);
  assert.ok(mastered.actors[1].hp<bare.actors[1].hp);
 });
