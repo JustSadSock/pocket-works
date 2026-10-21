@@ -257,7 +257,7 @@ export class PocketSocial {
       const body=await bodyJson(request);
       if(!body||typeof body!=='object')return reply({error:'invalid_request'},400);
       if(path==='/pocket-social/cantica/complete'){
-        if(!this.rate(id,'cantica-proof',45,60000))return reply({error:'rate_limited'},429);
+        if(!this.rate(id,'cantica-proof',120,60000))return reply({error:'rate_limited'},429);
         const verified=verifyCanticaProof(body);
         if(!verified)return reply({error:'invalid_proof'},400);
         const existing=this.one('SELECT best_moves FROM cantica_completions WHERE account_id=? AND level=?',id,verified.level);
