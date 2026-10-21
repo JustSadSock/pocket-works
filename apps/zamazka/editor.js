@@ -363,7 +363,8 @@ export function strokeTouchesPoint(stroke,point,aspect=W/H){
  return false;
 }
 export const MIN_BRUSH_SIZE=.25,MAX_EDITOR_ZOOM=8;
-export const MAX_STROKES=400,MAX_STROKE_POINTS=96,MAX_TOTAL_POINTS=12000;
+// Upper bounds match multipart transport and authoritative server validation.
+export const MAX_STROKES=768,MAX_STROKE_POINTS=96,MAX_TOTAL_POINTS=24000;
 
 // Reject truncated or corrupt autosaves BEFORE they reach Canvas2D and render.
 // Both tab-local restoration and IndexedDB migration use the same bounds.
@@ -392,7 +393,7 @@ export class Editor{
  constructor(root,{id,variation=0,round=1,onChange=()=>{},onSound=()=>{},onPersistenceError=()=>{},onPersistenceStatus=()=>{}}){
    this.root=root;this.id=id;this.variation=variation;this.round=round;this.onChange=onChange;this.onSound=onSound;this.onPersistenceError=onPersistenceError;this.onPersistenceStatus=onPersistenceStatus;this.saveGeneration=0;this.persistenceWarned=false;this.zone=zoneFor(id,variation);
    this.canvas=root.querySelector('#paintCanvas');this.viewport=root.querySelector('.viewport');
-   this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;this.pointers=new Map();this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
+   this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;this.pointers=new Map();this.activePenPointer=null;this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
     this.inputMode=(sessionStorage.getItem('pocket-works:zamazka:input-mode')||localStorage.getItem('pocket-works:zamazka:input-mode'))==='precision'?'precision':'direct';
     this.hand=(sessionStorage.getItem('pocket-works:zamazka:precision-hand')||localStorage.getItem('pocket-works:zamazka:precision-hand'))==='left'?'left':'right';
     this.aimPointer=null;this.aim=null;this.armed=false;this.armPointer=null;this.lastCursor=null;this.lastMousePoint=null;this.spaceTool=null;this.spacePicked=false;this.limitWarned=false;
@@ -779,6 +780,18 @@ export class Editor{
   }
   attach(){
     this.down=e=>{
+      // Tablet palm rejection: an incidental hand contact must never convert
+      // an active stylus stroke into a two-finger pinch, silently cancelling ink.
+      if(e.pointerType==='touch'&&this.activePenPointer!==null)return;
+      if(e.pointerType==='pen'){
+        if(this.activePenPointer!==null&&this.activePenPointer!==e.pointerId)
+          this.up({pointerId:this.activePenPointer,pointerType:'pen',type:'pointercancel'});
+        if(this.pointers.size){
+          this.finishStroke();this.pointers.clear();this.pinch=null;this.panStart=null;
+          this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;
+        }
+        this.activePenPointer=e.pointerId;
+      }
       if(e.pointerType==='mouse'||e.pointerType==='pen')this.lastMousePoint={clientX:e.clientX,clientY:e.clientY,pointerType:e.pointerType};
       if(e.pointerType==='mouse'&&e.button!==0&&e.button!==1&&e.button!==2)return;
       e.preventDefault();
@@ -880,6 +893,7 @@ export class Editor{
       }
     };
     this.up=e=>{
+      if(this.activePenPointer===e.pointerId)this.activePenPointer=null;
       if(this.sizeDrag?.pointerId===e.pointerId){
         this.sizeDrag=null;
         if(this.viewportCapturedPointer===e.pointerId)this.viewportCapturedPointer=null;
@@ -908,6 +922,10 @@ export class Editor{
     this.canvas.addEventListener('pointermove',this.move);
     this.canvas.addEventListener('pointerup',this.up);
     this.canvas.addEventListener('pointercancel',this.up);
+    // Safari/WebKit can release stylus capture without delivering pointerup.
+    // Recover synchronously, otherwise a stale pointer permanently blocks ink.
+    this.lostCanvasCapture=e=>{if(this.pointers.has(e.pointerId))this.up(e)};
+    this.canvas.addEventListener('lostpointercapture',this.lostCanvasCapture);
     this.frameDown=e=>{if(e.target===this.viewport&&e.pointerType==='mouse'&&(e.button===1||e.button===2))this.down(e)};
     this.frameMove=e=>{if(this.viewportCapturedPointer===e.pointerId)this.move(e);else if(e.target===this.viewport&&(e.pointerType==='mouse'||e.pointerType==='pen'))this.showCursor(e)};
     this.frameUp=e=>{if(this.viewportCapturedPointer===e.pointerId)this.up(e)};
@@ -915,6 +933,8 @@ export class Editor{
     this.viewport.addEventListener('pointermove',this.frameMove);
     this.viewport.addEventListener('pointerup',this.frameUp);
     this.viewport.addEventListener('pointercancel',this.frameUp);
+    this.lostViewportCapture=e=>{if(this.pointers.has(e.pointerId))this.up(e)};
+    this.viewport.addEventListener('lostpointercapture',this.lostViewportCapture);
     this.cursorLeave=e=>{if(!this.pointers.size&&(e.pointerType==='mouse'||e.pointerType==='pen')){this.lastCursor=null;this.hideCursor();this.hidePickerPreview()}};
     this.viewport.addEventListener('pointerleave',this.cursorLeave);
     // Two-finger precision: the resting finger only aims; the other must
@@ -1120,7 +1140,7 @@ export class Editor{
       void this.render();
     };
     window.addEventListener('online',this.retryArtworkOnOnline);
-    this.globalPointerUp=e=>{if(this.pointers.has(e.pointerId)||this.sizeDrag?.pointerId===e.pointerId)this.up(e)};
+    this.globalPointerUp=e=>{if(this.pointers.has(e.pointerId)||this.sizeDrag?.pointerId===e.pointerId||this.activePenPointer===e.pointerId)this.up(e)};
     window.addEventListener('pointerup',this.globalPointerUp);
     window.addEventListener('pointercancel',this.globalPointerUp);
     this.resize=()=>{
