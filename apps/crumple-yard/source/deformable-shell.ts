@@ -159,7 +159,7 @@ export class DeformableShell {
     if (localNormal.lengthSquared() < 0.001) localNormal = new Vector3(0, 0, 1);
     localNormal.normalize();
 
-    const radius = 0.47 + Math.min(0.88, severity * 0.87);
+    const radius = 0.57 + Math.min(1.06, severity * 1.03);
     const radius2 = radius * radius;
     const centerPull = localPoint.lengthSquared() > 0.01 ? localPoint.normalizeToNew().scale(-1) : localNormal.scale(-1);
     const crushDirection = Vector3.Lerp(localNormal.scale(-1), centerPull, 0.64).normalize();
@@ -181,15 +181,15 @@ export class DeformableShell {
       const t = 1 - distance / radius;
       const falloff = t * t * (3 - 2 * t);
       const existing = this.vertexCrush[vertex];
-      const capacity = Math.max(0, 1 - existing / 0.52);
+      const capacity = Math.max(0, 1 - existing / 0.72);
       if (capacity <= 0.02) continue;
 
-      const amount = Math.min(0.17, severity * 0.22) * falloff * zoneFactor * (0.38 + 0.62 * capacity);
+      const amount = Math.min(0.28, severity * 0.36) * falloff * zoneFactor * (0.38 + 0.62 * capacity);
       this.positions[i] += crushDirection.x * amount;
       this.positions[i + 1] += crushDirection.y * amount;
       this.positions[i + 2] += crushDirection.z * amount;
-      this.vertexCrush[vertex] = Math.min(0.52, existing + amount);
-      const distress = this.vertexCrush[vertex] / 0.52;
+      this.vertexCrush[vertex] = Math.min(0.72, existing + amount);
+      const distress = this.vertexCrush[vertex] / 0.72;
       const colorIndex = vertex * 4;
       this.vertexColors[colorIndex] = 1 - distress * 0.48;
       this.vertexColors[colorIndex + 1] = 1 - distress * 0.43;
