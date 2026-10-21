@@ -266,7 +266,7 @@ function change(html,which){
  museumMotion?.dispose();museumMotion=null;commonsBoard?.dispose();commonsBoard=null;exhibitFitter?.dispose();exhibitFitter=null;stopEditor();
  // Keep the complete, already painted ballot visible until the reveal's
  // heavy restoration canvases finish rendering. Never flash an empty gallery.
- const oldBallot=page==='vote'&&which==='reveal'?screen.firstElementChild:null;
+ const oldBallot=page==='vote'&&which==='verdict'?screen.firstElementChild:null;
  if(voteTransitionLayer)finishVoteTransition();
  if(oldBallot)oldBallot.remove();
  const previousRoom=screen.dataset.museumRoom;
@@ -1008,6 +1008,10 @@ async function connect(mode){
      }
      else if(event?.type==='board_delta'){if(page==='lobby'&&event.payload?.u!==me?.id)commonsBoard?.accept(event.payload)}
      else if(event?.type==='board_reset'){if(page==='lobby')commonsBoard?.reset(event.payload)}
+      else if(event?.type==='board_full'){
+        if(page==='lobby'){commonsBoard?.setFull();boardResync=true;net?.sendGame({type:'sync'})}
+        notify('Общий холст заполнен. Старые мазки сохранены; ведущий может очистить холст.');
+      }
      else if(event?.type==='notice'){lastDraftSentAt=0;lastDraftAckRevision='';notify(String(event.payload||'Не удалось выполнить действие'))}
    });
    client.on('presence',data=>{
