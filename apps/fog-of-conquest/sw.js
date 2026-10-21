@@ -12,7 +12,6 @@ const APP_SHELL = [
   "./css/style.css",
   "./pocket-adapter.css",
   "./pocket-adapter.js",
-  "./app.js",
   "./pocket-map.js",
   "./pocket-map.css",
   "./pocket-online.js",
