@@ -25,6 +25,7 @@ import {
 import { DeformableShell, quaternionFromRapier } from './deformable-shell';
 import { buildVehicleArt } from './vehicle-art';
 import { longitudinalIntent } from './drivetrain';
+import { wheelContactLoad } from './impact-geometry';
 import type { CollisionRegistry, DynamicProp } from './physics-types';
 
 const WHEEL_NAMES = ['FL', 'FR', 'RL', 'RR'] as const;
@@ -337,12 +338,8 @@ export class Vehicle {
     // Wheels are exposed near their actual axles, not at the very nose or
     // tail. A centered bumper impact should crumple the bumper, NOT tilt all
     // four wheels. Severe off-center intrusion can still reach one axle.
-    const axleDistance = Math.abs(Math.abs(local.z) - this.spec.wheelBase * 0.5);
-    const wheelArch = clamp(1 - axleDistance / (this.spec.wheelRadius + 0.52));
-    const sideExposure = clamp((lateral - 0.46) / 0.54);
-    const directWheel = wheelArch * sideExposure;
-    const intrusion = Math.max(0, severity - 0.43) * sideExposure * 0.78;
-    const wheelLoad = clamp(directWheel + intrusion);
+    const wheelLoad = wheelContactLoad(local, this.spec, severity);
+    const directWheel = wheelContactLoad(local, this.spec, 0);
     const frontAxle = local.z >= 0;
     const nearLeft = local.x < 0;
     const suspension = ('suspension' + (frontAxle ? 'F' : 'R') + (nearLeft ? 'L' : 'R')) as keyof typeof c;
