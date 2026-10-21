@@ -2060,73 +2060,87 @@ class UIManager {
     }
 
     updateBoardScale() {
-        const canvas = document.getElementById('game-canvas');
-        const boardWrapper = document.getElementById('shared-board');
-        if (!canvas || !boardWrapper) {
-            return;
-        }
+        const canvas=document.getElementById('game-canvas');
+        const stage=document.getElementById('game-container');
+        const wrapper=document.getElementById('shared-board');
+        if(!canvas||!stage||!wrapper||!this.screens.gameScreen.classList.contains('active'))return;
 
-        const boardWidth = canvas.width;
-        const boardHeight = canvas.height;
+        // The CSS grid owns the layout. Fit the playable area within its actual stage,
+        // not by subtracting siblings that can sit beside it in landscape/tablet mode.
+        const rect=stage.getBoundingClientRect();
+        const head=stage.querySelector('.stage-head');
+        const stageStyles=getComputedStyle(stage);
+        const boxStyles=getComputedStyle(wrapper);
+        const padX=(parseFloat(stageStyles.paddingLeft)||0)+(parseFloat(stageStyles.paddingRight)||0);
+        const padY=(parseFloat(stageStyles.paddingTop)||0)+(parseFloat(stageStyles.paddingBottom)||0);
+        const frameX=(parseFloat(boxStyles.borderLeftWidth)||0)+(parseFloat(boxStyles.borderRightWidth)||0);
+        const frameY=(parseFloat(boxStyles.borderTopWidth)||0)+(parseFloat(boxStyles.borderBottomWidth)||0);
+        const gap=parseFloat(stageStyles.gap)||0;
+        const maxWidth=Math.max(1,rect.width-padX-frameX-2);
+        const maxHeight=Math.max(1,rect.height-padY-frameY-(head?.getBoundingClientRect().height||0)-gap-2);
+        const ratio=Math.max(.05,Math.min(1.6,maxWidth/canvas.width,maxHeight/canvas.height));
+        const width=Math.floor(canvas.width*ratio);
+        const height=Math.floor(canvas.height*ratio);
+        canvas.style.width=width+'px';
+        canvas.style.height=height+'px';
+        canvas.style.maxWidth='none';
+        canvas.style.maxHeight='none';
+        wrapper.style.width=(width+frameX)+'px';
+        wrapper.style.height=(height+frameY)+'px';
+    }
 
-        const parentRect = boardWrapper.parentElement ? boardWrapper.parentElement.getBoundingClientRect() : null;
-        const gameScreenRect = this.screens.gameScreen ? this.screens.gameScreen.getBoundingClientRect() : null;
-        const bodyStyles = window.getComputedStyle(document.body);
-        const horizontalPadding = parseFloat(bodyStyles.paddingLeft) + parseFloat(bodyStyles.paddingRight);
-        const verticalPadding = parseFloat(bodyStyles.paddingTop) + parseFloat(bodyStyles.paddingBottom);
-        const layoutWidth = parentRect ? parentRect.width : (gameScreenRect ? gameScreenRect.width : window.innerWidth);
-        const viewportWidth = window.innerWidth - horizontalPadding;
-        const constrainedViewport = Math.max(160, viewportWidth);
-        const availableWidth = Math.min(layoutWidth, constrainedViewport);
-
-        let usedHeight = verticalPadding;
-        const header = document.querySelector('header');
-        if (header) {
-            usedHeight += header.getBoundingClientRect().height;
-        }
-        const screenStyles = this.screens.gameScreen ? window.getComputedStyle(this.screens.gameScreen) : null;
-        const paddingTop = screenStyles ? parseFloat(screenStyles.paddingTop) : 0;
-        const paddingBottom = screenStyles ? parseFloat(screenStyles.paddingBottom) : 0;
-        const gapY = screenStyles ? parseFloat(screenStyles.rowGap || screenStyles.gap || 0) : 0;
-
-        usedHeight += paddingTop + paddingBottom;
-
-        let gapSegments = 0;
-
-        if (this.teamStats && this.teamStats.classList.contains('visible')) {
-            usedHeight += this.teamStats.getBoundingClientRect().height;
-            gapSegments += 1;
-        }
-
-        if (this.gameControls) {
-            usedHeight += this.gameControls.getBoundingClientRect().height;
-            gapSegments += 1;
-        }
-
-        if (this.touchControls && this.touchControls.classList.contains('visible')) {
-            usedHeight += this.touchControls.getBoundingClientRect().height;
-            gapSegments += 1;
-        }
-
-        usedHeight += gapSegments * gapY;
-
-        let availableHeight = window.innerHeight - usedHeight;
-        if (!Number.isFinite(availableHeight) || availableHeight <= 0) availableHeight = window.innerHeight * 0.35;
-        if (parentRect?.height > 0) availableHeight = Math.min(availableHeight, parentRect.height - 12);
-        availableHeight = Math.max(48, availableHeight);
-
-        const widthScale = availableWidth / boardWidth;
-        const heightScale = availableHeight / boardHeight;
-        const scale = Math.min(1, widthScale, heightScale);
-
-        const displayWidth = Math.max(1, Math.floor(boardWidth * scale));
-        const displayHeight = Math.max(1, Math.floor(boardHeight * scale));
-
-        boardWrapper.style.setProperty('--board-max-width', `${displayWidth}px`);
-        canvas.style.width = `${displayWidth}px`;
-        canvas.style.height = `${displayHeight}px`;
-        canvas.style.maxWidth = `${boardWidth}px`;
-        canvas.style.maxHeight = `${boardHeight}px`;
+    installBoardGestures(canvas) {
+        // Optional direct gestures supplement the thumb buttons, not replace them.
+        // Horizontal/vertical motion snaps to whole cells; tapping rotates.
+        const begin=event=>{
+            if(event.pointerType==='mouse'||this.boardGesture||gameState.isPaused||gameState.isGameOver)return;
+            if(!this.getTouchPlayer())return;
+            event.preventDefault();
+            this.boardGesture={id:event.pointerId,x:event.clientX,y:event.clientY,
+                lastX:event.clientX,lastY:event.clientY,travel:0,started:performance.now()};
+            try{canvas.setPointerCapture(event.pointerId);}catch{}
+        };
+        const move=event=>{
+            const gesture=this.boardGesture;
+            if(!gesture||gesture.id!==event.pointerId||gameState.isPaused)return;
+            const player=this.getTouchPlayer();
+            if(!player)return;
+            event.preventDefault();
+            const cell=Math.max(15,canvas.getBoundingClientRect().width/gameState.boardWidth*.85);
+            // Move in the axis that was deliberately dragged; no accidental hard drops.
+            let dx=event.clientX-gesture.lastX,dy=event.clientY-gesture.lastY;
+            gesture.travel=Math.max(gesture.travel,Math.hypot(event.clientX-gesture.x,event.clientY-gesture.y));
+            if(Math.abs(dx)>=cell&&Math.abs(event.clientX-gesture.x)>Math.abs(event.clientY-gesture.y)*.9){
+                const steps=Math.max(-8,Math.min(8,Math.trunc(dx/cell)));
+                for(let n=0;n<Math.abs(steps);n++)player.move(Math.sign(steps));
+                gesture.lastX+=steps*cell;
+                this.drawBoard();
+            }else if(dy>=cell&&event.clientY-gesture.y>Math.abs(event.clientX-gesture.x)*1.1){
+                const steps=Math.min(8,Math.trunc(dy/cell));
+                for(let n=0;n<steps;n++)player.drop();
+                gesture.lastY+=steps*cell;
+                this.drawBoard();
+                this.updateTeamStatsIfNeeded();
+                this.updatePlayerInfo(player);
+                this.drawNextPiece(player);
+            }
+        };
+        const finish=(event,cancelled=false)=>{
+            const gesture=this.boardGesture;
+            if(!gesture||gesture.id!==event.pointerId)return;
+            this.boardGesture=null;
+            const player=this.getTouchPlayer();
+            if(!cancelled&&player&&!gameState.isPaused&&!gameState.isGameOver&&
+                gesture.travel<12&&performance.now()-gesture.started<450){
+                player.rotate();
+                this.drawBoard();
+            }
+        };
+        canvas.addEventListener('pointerdown',begin);
+        canvas.addEventListener('pointermove',move);
+        canvas.addEventListener('pointerup',event=>finish(event));
+        canvas.addEventListener('pointercancel',event=>finish(event,true));
+        canvas.addEventListener('lostpointercapture',event=>finish(event,true));
     }
 
     getActionForCode(player, code) {
