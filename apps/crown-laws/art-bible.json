@@ -2,33 +2,107 @@
   "schemaVersion": 1,
   "product": "crown-laws",
   "status": "ready",
-  "memoryReview": [],
-  "references": [],
+  "memoryReview": [
+    {
+      "slug": "fog-of-conquest",
+      "evidence": "covers/fog-of-conquest.jpg (legacy capture, direct image review unverified in this revision)",
+      "lesson": "Its geographic field is the entire strategic object; Crown Laws instead keeps one bounded 5×7 stone tabletop and a fixed hand of decrees."
+    },
+    {
+      "slug": "zamazka",
+      "evidence": "covers/zamazka.jpg (legacy capture, direct image review unverified in this revision)",
+      "lesson": "Painting and canvas tools dominate ZAMAZKA; Crown Laws must show legal decisions before tools or flourishes, with pieces moving automatically."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://www.metmuseum.org/essays/the-art-of-the-book-in-the-middle-ages",
+      "inspectedAt": "2026-10-22",
+      "observation": "The Met documents medieval book covers using precious materials and strong geometric surfaces rather than floating interface ornaments.",
+      "principle": "Use compact material boundaries to distinguish the legal decree object from its surrounding stone institution.",
+      "application": "Rectangular parchment law cards use ink-like text and a thin stamped faction strip instead of illustrated backgrounds.",
+      "avoid": "Do not reproduce specific manuscript pages, monograms, protected imagery or decorative initial drawings."
+    },
+    {
+      "url": "https://www.vam.ac.uk/collections/gothic",
+      "inspectedAt": "2026-10-22",
+      "observation": "V&A discusses Gothic objects crossing from architecture to three-dimensional sculpture with distinct material edges.",
+      "principle": "A frame should behave like carved physical support around the royal game, not a generic translucent card.",
+      "application": "The playfield uses a thick bevelled stone surround, measured cells and strong unbroken rectangular panel edges.",
+      "avoid": "Avoid building an illegible ornamental cathedral facade over the usable interactive board."
+    },
+    {
+      "url": "https://searcharchives.bl.uk/catalog/040-002075122",
+      "inspectedAt": "2026-10-22",
+      "observation": "The British Library records the Lansdowne Psalter with framed miniatures and deliberate gold, orange and blue distinctions.",
+      "principle": "Restrained colored detail can communicate function while retaining the seriousness of medieval record keeping.",
+      "application": "The North and South counters have separate blue and red material rings; bronze focuses primary decree confirmation.",
+      "avoid": "Do not borrow actual manuscript miniatures or treat decorative colors as interchangeable game-state labels."
+    }
+  ],
   "concepts": [
     {
       "id": "stone-council",
-      "name": "Stone Council",
-      "description": "CSS-cut limestone table, royal ledger, stamped counters and decree cards. All game visuals drawn in code; no atlas, illustration, SVG or ready-made texture."
+      "medium": "HTML/CSS geometric stone slab, paper legal cards and code-drawn stamped counters with no runtime image atlas.",
+      "composition": "The board and live law ledger form a two-column council on desktop; a compact hand follows the board on phone.",
+      "interaction": "Choose a decree tile, see the complete description directly below the hand, then confirm the hidden law choice.",
+      "motion": "Measured selected-card lift and per-cell linear token travel; short highlights punctuate clashes rather than covering the grid.",
+      "rationale": "This preserves the simultaneous hidden decree mechanic while replacing old decorative clutter with a spatially stable interface."
+    },
+    {
+      "id": "cathedral-relief",
+      "medium": "A bespoke canvas renderer with hand-placed sculptural pseudo-relief and carved ornamental individual miniatures.",
+      "composition": "The battlefield fills the scene as one altar stone while tiny side plaques hide available current laws and cards.",
+      "interaction": "Players drag embossed coins from an arc surrounding the board into a central slot to submit hidden commands.",
+      "motion": "Heavily eased rotations and carved-piece swells would make each resolution ceremonial and comparatively slow.",
+      "rationale": "Its strong theatrical model introduces gesture-dependent controls that would bury readable decrees on a small screen."
+    },
+    {
+      "id": "royal-codex",
+      "medium": "Multi-page CSS folio instrument with stitched side margins, codex gutters and text-first ink panels.",
+      "composition": "Each gameplay layer is a separate full-screen folio: board page, law book page, decree page and chronicle page.",
+      "interaction": "Users flip between folios to examine individual acts and apply a decree from a compact bottom page tab.",
+      "motion": "A page-turn sequence and layered parchment scroll would organize navigation around document transitions.",
+      "rationale": "It makes room for long legal prose but repeatedly obscures the shared board precisely when laws are being evaluated."
     }
   ],
   "selection": {
-    "chosen": "stone-council",
-    "reason": "The selected law becomes the centre of interaction; board and hand stay immediately visible."
+    "concept": "stone-council",
+    "reason": "The royal board, current legal code and selectable hand stay spatially connected; the game remains readable and tappable without illustrations.",
+    "rejected": [
+      {
+        "concept": "cathedral-relief",
+        "reason": "A fully pictorial relief requires authored sprite assets, complicated gestures and obscures individual rule text on narrow phones."
+      },
+      {
+        "concept": "royal-codex",
+        "reason": "Turning pages between the board and hand hides turn consequences and introduces navigation overhead during each law choice."
+      }
+    ]
   },
   "tools": [
     {
       "id": "html-css",
       "availability": "available",
-      "reason": "All visible gameplay geometry, effects, typography, card papers and board cells authored in CSS."
+      "reason": "Original browser HTML and CSS provide all board, token, material and feedback geometry without generated SVG or picture tiles."
+    },
+    {
+      "id": "node-icon-raster",
+      "availability": "available",
+      "reason": "A deterministic Node image routine draws the product crown onto an isolated pixel buffer and serializes one PNG for the app icon."
     }
   ],
   "assets": [
     {
-      "id": "app-icon",
-      "source": "programmatic drawing",
+      "id": "installation-icon",
+      "tool": "node-icon-raster",
+      "source": "tools/draw-icon.mjs",
       "output": "icons/icon.png",
-      "role": "Original small bitmap for PWA/OS icon only",
-      "maxBytes": 50000
+      "role": "Unique app launch emblem combining rough cut stone and a high contrast gold crown for the Pocket Works launcher.",
+      "acceptance": "The new icon remains recognizable at 48 pixels and the old SVG install graphics are absent from the application tree.",
+      "integration": "Manifest and HTML reference only the local icon PNG; service worker caches exactly the new standalone icon and no gameplay textures.",
+      "provenance": "Pixels are drawn by an original project-local deterministic raster script rather than sourced illustration or downloaded sprite.",
+      "maxBytes": 70000
     }
   ],
   "constraints": {
@@ -36,19 +110,23 @@
       390,
       844
     ],
-    "rasterGameAssets": 0,
-    "svgGameAssets": 0
+    "textureBytes": 37028,
+    "triangles": 0,
+    "targetFps": 60
   },
   "verification": {
     "states": [
-      "menu",
-      "game",
-      "choice",
-      "hotseat",
-      "online"
+      "initial",
+      "action",
+      "settled"
     ],
     "risks": [
-      "Visual browser capture and touch-safe-area acceptance must be run in CI."
+      "At 390 pixel widths the hand needs to remain accessible without the current law ledger hiding board controls.",
+      "At tablet landscape sizes the side ledger and board must not obstruct the confirmation action."
+    ],
+    "comparisons": [
+      "Capture initial menu and compare type/edges to former hero layout to verify absence of recovered assets.",
+      "Capture settled board and chosen decree and compare with prior sprite sheet render for readability and dimensional correctness."
     ]
   }
 }
