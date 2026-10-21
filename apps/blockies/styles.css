@@ -1910,3 +1910,57 @@ canvas {
 .container:has(#game-screen.active) .menu-buttons .btn{padding:6px 8px;min-width:0;font-size:10px}
 .container:has(#game-screen.active) .language-selector{min-height:44px;padding:4px;margin:0;width:48px}
 #game-screen.active{overflow:hidden}#game-container{padding:4px;overflow:hidden;min-height:60px}#shared-board{flex-shrink:0;max-height:100%;box-sizing:border-box}#touch-controls{padding:6px;gap:4px;flex-shrink:0}#touch-controls .touch-btn{min-height:44px;padding:6px}.touch-status{padding:4px!important;min-height:0!important}.touch-row{gap:4px!important}#touch-status{font-size:10px}
+
+/* Blockies 0.2 — game-first touch geometry, tablet and landscape support. */
+#game-screen.active { justify-content: flex-start; }
+#game-container { min-height:0; min-width:0; overflow:hidden; }
+#shared-board { box-sizing:border-box; min-width:0; max-height:100%; }
+#game-canvas { display:block; aspect-ratio:auto; image-rendering:auto; }
+#touch-controls .touch-btn {
+    touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+    min-height:48px; padding:10px 8px; border-width:2px;
+}
+#touch-controls .touch-btn:focus-visible { outline:3px solid #17446a; outline-offset:2px; }
+button:disabled { opacity:.52; cursor:not-allowed; filter:grayscale(.3); }
+#copy-room-code { white-space:nowrap; min-height:44px; }
+#online-lobby-screen.active { align-items:stretch; justify-content:flex-start; overflow-y:auto; }
+#room-view { min-width:0; width:100%; }
+#pocket-room-code { overflow-wrap:anywhere; }
+@media (max-width:700px) {
+    .container:has(#game-screen.active) header {padding:2px 5px; min-height:42px;}
+    .container:has(#game-screen.active) .pocket-exit {min-height:40px; padding:6px;}
+    .container:has(#game-screen.active) .menu-buttons .btn {min-height:40px;}
+    #game-screen.active {gap:3px; padding:3px 5px; }
+    #game-container {padding:2px; flex:1 1 auto;}
+    #shared-board {--board-padding:3px; border-width:2px; border-radius:8px;}
+    #next-pieces-preview {padding:0; gap:7px; flex:0 0 auto;}
+    #next-pieces-preview .next-piece-item canvas {width:38px;height:38px;}
+    #touch-controls {padding:4px;gap:4px; border-width:1px; border-radius:10px; max-width:430px;}
+    #touch-controls .touch-status {display:none;}
+    #touch-controls .touch-row {gap:6px!important;}
+    #touch-controls .touch-btn {min-height:50px; font-size:clamp(14px,3vw,17px); padding:7px 4px;}
+    #team-stats {flex:0 0 auto; padding:2px 4px;}
+    .feature-list {display:none;}
+}
+@media (orientation: landscape) and (hover:none) and (pointer:coarse) and (max-height:650px) {
+    .container:has(#game-screen.active) header {min-height:36px;padding:0 6px;}
+    #game-screen.active {
+        display:grid; grid-template-areas:"score board control" "next board control";
+        grid-template-columns:minmax(100px,1fr) minmax(0,1.4fr) minmax(145px,1fr);
+        grid-template-rows:auto minmax(0,1fr);
+        width:100%; height:100%; align-items:stretch;justify-content:stretch;
+        padding:3px; gap:4px;
+    }
+    #team-stats {grid-area:score; display:flex; flex-direction:column; min-width:0; width:100%;overflow:hidden;}
+    #team-score-card {min-width:0;width:100%;}
+    #combo-indicator,#clear-feed {display:none;}
+    #next-pieces-preview {grid-area:next;align-content:center;align-items:center;justify-content:center;max-width:100%;min-width:0;overflow:hidden;}
+    #next-pieces-preview .next-piece-item canvas {width:31px;height:31px;}
+    #game-container {grid-area:board;max-height:100%;height:100%;width:100%;padding:0;min-height:0;}
+    #shared-board {--board-padding:2px;}
+    #touch-controls.visible {grid-area:control;display:flex;height:100%;max-width:none;width:100%;padding:3px;gap:3px;align-self:stretch;justify-content:center;}
+    #touch-controls .touch-row {flex:1;min-height:0;gap:3px!important;}
+    #touch-controls .touch-btn {min-height:42px; padding:2px; font-size:12px;flex:1;}
+    #touch-controls .touch-status {display:none;}
+}
+@media (prefers-reduced-motion:reduce){#touch-controls .touch-btn {transition:none;}}
