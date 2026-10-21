@@ -3328,10 +3328,11 @@ document.querySelector('#copy-room-code')?.addEventListener('click',async()=>{
 document.addEventListener('visibilitychange',()=>{
   const ui=window.uiManager;
   if(!ui || ui.isOnlineMode)return;
-  if(document.hidden && !gameState.isPaused){
+  if(document.hidden && !gameState.isPaused && !gameState.isGameOver &&
+    ui.screens.gameScreen.classList.contains('active') && gameState.players.length){
     ui.saveSoloCheckpoint(true);
     gameState.isPaused=true;
-    if(ui.screens.gameScreen.classList.contains('active')) ui.showModal('pause');
+    ui.showModal('pause');
   }
 });
 window.addEventListener('pagehide',()=>window.uiManager?.saveSoloCheckpoint(true));
