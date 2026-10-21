@@ -593,7 +593,7 @@ export class CrumpleGame {
         label: feedback.label
       };
       const labels: Record<string, string> = { front: 'ПЕРЕД', rear: 'ЗАД', left: 'ЛЕВЫЙ БОРТ', right: 'ПРАВЫЙ БОРТ', roof: 'КРЫША', chassis: 'ШАССИ' };
-      this.ui.impactZone.textContent = labels[feedback.result.zone] + ' · ' + Math.round(feedback.result.severity * 100) + '% УДАР';
+      this.ui.impactZone.textContent = labels[feedback.result.zone] + ' · ' + Math.round(feedback.vehicle.damage.zoneDamage[feedback.result.zone] * 100) + '% ДЕФОРМАЦИИ';
       const impactKN = Math.max(0, feedback.force / 1000);
       this.ui.impactInfo.textContent = impactKN.toFixed(0) + ' кН · ' + Math.round(feedback.relativeSpeed * 3.6) + ' км/ч ДО УДАРА';
       this.ui.impactReadout.classList.add('is-hot');
