@@ -124,7 +124,7 @@ test('six mage characters each have distinct attack styles and gameplay traits',
  assert.equal(MAGES.length,6);assert.equal(new Set(MAGES.map(m=>m.style)).size,6);
  assert.equal(new Set(MAGES.map(m=>m.trait)).size,6);
  for(const m of MAGES){const s=makeMatch(44,m.id);tick(s,{attack:true,aim:{x:350,y:200}});
-  const special={cinder:s.streams,coil:s.beams,slate:s.waves}[m.id];
+  const special={cinder:s.streams,coil:s.beams,slate:s.waves,pebble:s.lobs}[m.id];
   if(special){if(m.id==='cinder')assert.equal(special.length,1);else assert.equal(s.actors[0].windup?.kind,m.id)}
   else{const q=s.shots.find(q=>q.owner===0);assert.ok(q);assert.equal(q.style,m.style)}
   assert.equal(s.actors[0].mageId,m.id);assert.ok(validState(s))}
