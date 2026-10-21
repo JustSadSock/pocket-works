@@ -9,7 +9,7 @@ const SCHOOLS=Object.freeze([
  {id:'stone',name:'Камень',explain:'Осколочные валуны или фронт ударной волны.'}
 ]);
 const MAGES=Object.freeze([
- mageEntry('kindle','fire','Искра','burn','Шар поджигает врага. «Дольше» продлевает горение.','orb',1,1,.98,.94),
+ mageEntry('kindle','fire','Искра','burn','Шар поджигает врага. «Дольше» продлевает горение.','orb',1,1,1.04,.94),
  mageEntry('cinder','fire','Уголёк','miss_cool','Зажми атаку: непрерывный огненный поток на близкой дистанции.','flame',1.05,.92,.9,.9),
  mageEntry('wire','storm','Провод','dash_haste','Сквозь щиты пробивает быстрый болт, рывок ускоряет.','bolt',1.07,.86,1.04,.88),
  mageEntry('coil','storm','Катушка','guard_slow','Короткое накопление энергии, затем мгновенная молния и пробой щита.','arc',1.03,.98,.97,.96),
@@ -201,7 +201,7 @@ function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
  if(s.shots.length>=80)return false;
  const base=mage(a.mageId),style=options.clone?'echo':options.style||base.style,element=options.element||base.school;const v=(options.signature&&a.mageId==='kindle'?174:options.signature&&a.mageId==='wire'?480:style==='bolt'||style==='arc'?365:style==='rock'?198:style==='wave'?205:style==='flame'?260:252)*(options.fastshot?1.35:1),speed=Number.isFinite(v)?v:252;
  s.shots.push({x,y,vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,owner:a.id,
-  style,element,accel:options.signature&&(a.mageId==='kindle'?490:a.mageId==='wire'?-380:0),
+  style,element,accel:options.signature?(a.mageId==='kindle'?490:a.mageId==='wire'?-380:0):0,
   minSpeed:options.signature&&a.mageId==='kindle'?310:options.signature&&a.mageId==='wire'?300:0,
   damage:options.clone?6:stats(a).damage*(options.strong?1.6:1),life:(options.far?1.8:1.15)*(style==='arc'?.84:style==='rock'?1.2:style==='wave'?.65:1),
   bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?10:style==='wave'?12:style==='rock'?8:style==='bolt'?3:options.clone?4:5,depth:options.depth||0});
@@ -258,7 +258,7 @@ function updateLobs(s,dt){
   const p=q.age/q.duration;q.progress=p;
   // Ease-in kinetic advance, then rapid groundward descent. Ground projection
   // and shadow use identical authoritative coordinates.
-  const advance=p*p*(2-p);
+  const advance=p*p;
   q.x=q.sx+(q.tx-q.sx)*advance;q.y=q.sy+(q.ty-q.sy)*advance;
   q.height=q.apex*4*p*(1-p);
   if(p<1)continue;
