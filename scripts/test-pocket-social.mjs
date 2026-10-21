@@ -4,7 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {PocketSocial} from '../pocket-social/hub.mjs';
 import {mascotSvg,safeMascot,mascotPublicUnlocks} from '../shared/capabilities/maskot.js';
 
-for(const animal of ['cat','rabbit','frog']){
+for(const animal of ['cat','black-cat','fox','rabbit','frog']){
   for(const outfit of ['tunic','vest','mantle']){
     const art=mascotSvg({animal,hat:'crown',clothes:outfit,face:'glasses'});
     assert.match(art,/<svg /);assert.match(art,/<path /);
@@ -13,6 +13,12 @@ for(const animal of ['cat','rabbit','frog']){
 }
 assert.equal(safeMascot({animal:'cat',hat:'helmet',clothes:'spacesuit',face:'none'}).hat,'none');
 assert.equal(safeMascot({animal:'cat',hat:'veil',clothes:'wedding',face:'none'},['wedding']).hat,'veil');
+assert.equal(safeMascot({animal:'fox',hat:'stage-pin',clothes:'stage-hanbok',face:'none',accessory:'shoulder-dragon'}).hat,'none');
+assert.equal(safeMascot({animal:'fox',hat:'stage-pin',clothes:'stage-hanbok',face:'none',accessory:'shoulder-dragon'}).accessory,'none');
+assert.equal(safeMascot({animal:'fox',hat:'none',clothes:'tunic',face:'none',accessory:'brush'},['zamazka.shared-canvas']).accessory,'none','earned hat cannot masquerade as shoulder accessory');
+assert.deepEqual(safeMascot({animal:'black-cat'}),{animal:'black-cat',hat:'none',clothes:'tunic',face:'none',accessory:'none'});
+assert.equal(safeMascot({animal:'fox',hat:'stage-pin',clothes:'stage-hanbok',face:'none',accessory:'shoulder-dragon'},
+  ['seoul-artist','dragon-keeper']).accessory,'shoulder-dragon');
 const rootHtml=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const rootSw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const rootVersion=rootHtml.match(/<meta name="pocket-works-build" content="([^"]+)"/)?.[1];
@@ -131,6 +137,39 @@ assert.equal((await call(0,'me')).profile.maskot.clothes,'groom');
 assert.equal((await call(1,'profile',{...aliceCard,maskot:{...plainMaskot,clothes:'groom'}})).httpStatus,400,'groom cosmetic cannot be used by another account');
 assert.equal((await call(1,'user?id='+users[0].id)).profile.maskot.clothes,'groom','other users can see validated wedding tuxedo');
 assert.ok(mascotPublicUnlocks.includes('groom'),'public portrait renderer must preserve verified groom garment');
+// Gift codes are account-bound: locked gear is rejected even if a client forges IDs.
+for(const animal of ['black-cat','fox']){
+  assert.equal((await call(2,'profile',{...aliceCard,maskot:{...plainMaskot,animal}})).ok,true);
+  assert.equal((await call(2,'me')).profile.maskot.animal,animal);
+}
+assert.equal((await call(2,'profile',{...aliceCard,maskot:{...plainMaskot,hat:'stage-pin'}})).httpStatus,400);
+assert.equal((await call(2,'profile',{...aliceCard,maskot:{...plainMaskot,clothes:'stage-hanbok'}})).httpStatus,400);
+assert.equal((await call(2,'profile',{...aliceCard,maskot:{...plainMaskot,accessory:'shoulder-dragon'}})).httpStatus,400);
+assert.equal((await call(2,'redeem',{code:'SEOUL-INVALID'})).httpStatus,400);
+assert.equal((await call(2,'redeem',{code:'seoul-moonlight'})).reward,'seoul-artist');
+assert.equal((await call(2,'redeem',{code:'SEOUL-MOONLIGHT'})).already,true);
+assert.equal((await call(2,'redeem',{code:'DRAGON-EMBER'})).reward,'dragon-keeper');
+assert.equal((await call(2,'redeem',{code:'DRAGON-EMBER'})).already,true);
+const stageDragon={animal:'black-cat',hat:'stage-pin',clothes:'stage-hanbok',face:'stars',accessory:'shoulder-dragon'};
+assert.equal((await call(2,'profile',{...aliceCard,maskot:stageDragon})).ok,true);
+assert.deepEqual((await call(2,'me')).profile.maskot,stageDragon);
+assert.equal((await call(1,'user?id='+users[2].id)).profile.maskot.accessory,'shoulder-dragon');
+assert.equal((await call(1,'user?id='+users[2].id)).profile.unlocked,undefined);
+assert.equal((await call(1,'profile',{...aliceCard,maskot:{...plainMaskot,accessory:'shoulder-dragon'}})).httpStatus,400);
+assert.equal((await call(2,'profile',{...aliceCard,maskot:{...plainMaskot,animal:'fox'}})).ok,true,
+  'old clients can change animals without deleting equipped shoulder cosmetics');
+assert.equal((await call(2,'me')).profile.maskot.accessory,'shoulder-dragon');
+for(const animal of ['cat','black-cat','fox','rabbit','frog']){
+  const rendered=mascotSvg({animal,hat:'stage-pin',clothes:'stage-hanbok',face:'stars',accessory:'shoulder-dragon'},
+    {unlocks:['seoul-artist','dragon-keeper']});
+  assert.match(rendered,/Seoul Moonstage/);
+  assert.match(rendered,/Tiny shoulder dragon/);
+  assert.doesNotMatch(rendered,/undefined|<script|foreignObject|onload=/i);
+  assert.equal(safeMascot({animal,hat:'stage-pin',clothes:'stage-hanbok',face:'none',accessory:'shoulder-dragon'},[]).accessory,'none');
+}
+assert.ok(mascotPublicUnlocks.includes('seoul-artist'));
+assert.ok(mascotPublicUnlocks.includes('dragon-keeper'));
+
 for(const animal of ['cat','rabbit','frog']){
   const equipped={animal,hat:'bascinet',clothes:'tabard',face:'none'};
   const rendered=mascotSvg(equipped,{unlocks:['knight','herald']});

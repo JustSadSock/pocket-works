@@ -2,7 +2,7 @@ import {askUnsaved,confirmShell} from './shell-dialogs.js';
 import {pocketAvatarMarkup} from './capabilities/identity.js';
 import {zamazkaAchievements} from './capabilities/zamazka-achievements.js';
 import {mountCardCanvas} from './capabilities/card-studio.js';
-import {mascotSvg,safeMascot,mascotPublicUnlocks,mascotAnimals,mascotHats,mascotClothes,mascotFaces,mascotTitles} from './capabilities/maskot.js';
+import {mascotSvg,safeMascot,mascotPublicUnlocks,mascotAnimals,mascotHats,mascotClothes,mascotAccessories,mascotFaces,mascotTitles} from './capabilities/maskot.js';
 // Pocket Social shared UI. No dependency on a specific app runtime or framework.
 const q=(s,root=document)=>root.querySelector(s);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -183,7 +183,7 @@ async function loadCloudUsage(){
  }
 }
 const maskotCategories=[
-  ['animal','Зверь'],['hat','Голова'],['clothes','Одежда'],['face','Лицо'],
+  ['animal','Зверь'],['hat','Голова'],['clothes','Одежда'],['face','Лицо'],['accessory','Плечо'],
   ['portrait','Рамка'],['background','Фон'],['achievements','Награды']
 ];
 function paintingStudio(){
@@ -212,12 +212,15 @@ function editor(){
   const secretHats=[...(unlocks.includes('astronaut')?[['helmet','Шлем космонавта']]:[]),
     ...(unlocks.includes('wedding')?[['veil','Фата']]:[]),
     ...(unlocks.includes('knight')?[['bascinet','Бацинет стража']]:[]),
+     ...(unlocks.includes('seoul-artist')?[['stage-pin','Лунная шпилька артиста']]:[]),
     ...(unlocks.includes('zamazka.shared-canvas')?[['brush','Кисть за ухом']]:[])];
   const secretClothes=[...(unlocks.includes('astronaut')?[['spacesuit','Скафандр']]:[]),
     ...(unlocks.includes('wedding')?[['wedding','Свадебный наряд']]:[]),
     ...(unlocks.includes('herald')?[['tabard','Накидка герольда']]:[]),
     ...(unlocks.includes('groom')?[['groom','Свадебный мужской костюм']]:[]),
+     ...(unlocks.includes('seoul-artist')?[['stage-hanbok','Сценический ханбок']]:[]),
     ...(unlocks.includes('zamazka.maestro')?[['restorer','Мантия великого реставратора']]:[])];
+  const secretAccessories=[...mascotAccessories,...(unlocks.includes('dragon-keeper')?[['shoulder-dragon','Изумрудный дракон на плече']]:[])];
   const rewardFace=[...mascotFaces,...(unlocks.includes('zamazka.sharp-eye')?[['monocle','Монокль']]:[])];
   const rewardTitles=mascotTitles.filter(t=>!['Подмастерье','Знаток подделок'].includes(t)||
     zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id)));
@@ -251,6 +254,7 @@ function editor(){
     category==='hat'?options([...mascotHats,...secretHats],'hat'):
     category==='clothes'?options([...mascotClothes,...secretClothes],'clothes'):
     category==='face'?options(rewardFace,'face'):
+    category==='accessory'?options(secretAccessories,'accessory'):
     category==='portrait'?frameOptions:
     category==='background'?backgroundControls:
     category==='achievements'?'<div class="pws-achievement-list"><div class="pws-achievement-count">'+
@@ -279,7 +283,7 @@ function editor(){
     '<div class="pws-maskot-editor__picker">'+appearance+'</div></div></div>'+
     (state.reward?'<div class="pws-reward-shade"><div class="pws-reward" role="dialog" aria-label="Косметика получена">'+
       '<div class="pws-reward__gift"><div class="pws-reward__lid"></div><div class="pws-reward__bow"></div></div>'+
-      '<h3>Новая косметика!</h3><p>'+esc(({astronaut:'Шлем и скафандр',wedding:'Фата и свадебный наряд',knight:'Бацинет стража',herald:'Гербовая накидка герольда',groom:'Свадебный мужской костюм'})[state.reward]||'Награда получена')+
+      '<h3>Новая косметика!</h3><p>'+esc(({astronaut:'Шлем и скафандр',wedding:'Фата и свадебный наряд',knight:'Бацинет стража',herald:'Гербовая накидка герольда',groom:'Свадебный мужской костюм','seoul-artist':'Лунная шпилька и сценический ханбок','dragon-keeper':'Изумрудный дракон на плече'})[state.reward]||'Награда получена')+
       '</p>'+button('reward-close','Примерить','primary')+'</div></div>':'');
 }
 function profilePanel(){
@@ -848,7 +852,7 @@ function install(){
       state.paintOpen=false;paintSession=null;render();return;
     }
     if(action==='maskot-item'){
-      if(!['animal','hat','clothes','face'].includes(target.dataset.field))return;
+      if(!['animal','hat','clothes','face','accessory'].includes(target.dataset.field))return;
       state.draft.maskot={...state.draft.maskot,[target.dataset.field]:target.dataset.value};
       render();return;
     }
@@ -868,7 +872,9 @@ function install(){
             wedding:{hat:'veil',clothes:'wedding'},
             knight:{hat:'bascinet'},
             herald:{clothes:'tabard'},
-            groom:{clothes:'groom'}
+            groom:{clothes:'groom'},
+            'seoul-artist':{hat:'stage-pin',clothes:'stage-hanbok'},
+            'dragon-keeper':{accessory:'shoulder-dragon'}
           };
           state.draft.maskot={...state.draft.maskot,...(claims[response.reward]||{})};
         }else state.notice='Награда уже получена.';

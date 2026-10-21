@@ -45,10 +45,10 @@ assert.equal(all.some(x=>x.startsWith('p0:zamazka.maestro')),true);
 assert.equal(all.some(x=>x.startsWith('p0:zamazka.sharp-eye')),true);
 const noGuests=assessZamazkaAwards(base,{...base,phase:'preview',round:1},[],null,null,matchId);
 assert.deepEqual(noGuests.awards,[]);
-for(const animal of ['cat','rabbit','frog']){
+for(const animal of ['cat','black-cat','fox','rabbit','frog']){
  const m={animal,hat:'brush',clothes:'restorer',face:'monocle'};
  assert.equal(safeMascot(m,[]).hat,'none');
- assert.deepEqual(safeMascot(m,['zamazka.shared-canvas','zamazka.maestro','zamazka.sharp-eye']),m);
+ assert.deepEqual(safeMascot(m,['zamazka.shared-canvas','zamazka.maestro','zamazka.sharp-eye']),{...m,accessory:'none'});
  const svg=mascotSvg(m,{unlocks:['zamazka.shared-canvas','zamazka.maestro','zamazka.sharp-eye']});
  assert.match(svg,/<svg/);assert.match(svg,/painter's brush/);assert.match(svg,/master's coat/);
  assert.doesNotMatch(svg,/<script|foreignObject|onload=/i);

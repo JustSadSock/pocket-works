@@ -1,32 +1,60 @@
-import {ownedAchievementItem,zamazkaAchievements} from './zamazka-achievements.js';
+import {zamazkaAchievements} from './zamazka-achievements.js';
 // Pocket Works MASKOT — original, hand-drawn, composable SVG geometry.
 // Asset IDs (not arbitrary markup) are the only user-controlled input.
 // Public profile renders are already server-validated; these IDs are visual decoding rights, not ownership grants.
-export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom',...zamazkaAchievements.map(a=>a.id)];
-export const mascotAnimals=[['cat','Кот'],['rabbit','Кролик'],['frog','Лягушка']];
+export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom','seoul-artist','dragon-keeper',...zamazkaAchievements.map(a=>a.id)];
+export const mascotAnimals=[['cat','Кот'],['black-cat','Чёрный кот'],['fox','Лиса'],['rabbit','Кролик'],['frog','Лягушка']];
 export const mascotHats=[['none','Без'],['crown','Корона'],['beret','Берет'],['flower','Цветок']];
 export const mascotClothes=[['tunic','Туника'],['vest','Жилет'],['mantle','Мантия']];
+export const mascotAccessories=[['none','Без аксессуара']];
 export const mascotFaces=[['none','Без'],['glasses','Очки'],['stars','Звёздочки']];
 export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок'];
-export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'},groom:{clothes:'groom'}};
+export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'},groom:{clothes:'groom'},'seoul-artist':{hat:'stage-pin',clothes:'stage-hanbok'},'dragon-keeper':{accessory:'shoulder-dragon'}};
 const one=(rows,id,fallback)=>rows.some(x=>x[0]===id)?id:fallback;
 export function safeMascot(input,unlocks=[]){
   const u=Array.isArray(unlocks)?unlocks:[];
-  const valid=(item,category,standard)=>typeof item==='string'&&(standard.some(x=>x[0]===item)||ownedAchievementItem(item,u)||
-    ((category==='hat'?Object.values(mascotSecret).map(x=>x.hat):Object.values(mascotSecret).map(x=>x.clothes))
-      .includes(item)&&Object.entries(mascotSecret).some(([key,x])=>u.includes(key)&&x[category]===item)));
+  const valid=(item,category,standard)=>typeof item==='string'&&(standard.some(x=>x[0]===item)||
+    zamazkaAchievements.some(a=>a.slot===category&&a.item===item&&u.includes(a.id))||
+    Object.entries(mascotSecret).some(([key,x])=>u.includes(key)&&x[category]===item));
   const src=input&&typeof input==='object'?input:{};
   return {
     animal:one(mascotAnimals,src.animal,'cat'),
     hat:valid(src.hat,'hat',mascotHats)?src.hat:'none',
     clothes:valid(src.clothes,'clothes',mascotClothes)?src.clothes:'tunic',
-    face:valid(src.face,'face',mascotFaces)?src.face:'none'
+    face:valid(src.face,'face',mascotFaces)?src.face:'none',
+    accessory:valid(src.accessory,'accessory',mascotAccessories)?src.accessory:'none'
   };
 }
 export function mascotSvg(raw,{unlocks=[],size=256}={}){
   const m=safeMascot(raw,unlocks),s=String(size);
   const paths={
     cat:`<path d="M63 96 58 27Q59 17 68 24L102 55 155 55 187 24Q196 17 197 29L191 96" fill="url(#fur)" stroke="#34434a" stroke-width="5" stroke-linejoin="round"/><path d="M74 59 69 38 94 60M170 60 187 37 181 65" fill="#f0ada6"/><path d="M51 99Q56 57 127 56Q198 57 204 101L197 143Q182 185 128 186Q72 185 56 143Z" fill="url(#fur)" stroke="#34434a" stroke-width="5"/><path d="M60 133Q79 111 103 137L127 151 151 137Q177 112 196 132Q188 178 128 182Q68 178 60 133" fill="#fff0d5"/><path d="M80 110Q91 101 101 109M155 109Q165 101 176 109" stroke="#664941" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="92" cy="122" rx="7" ry="10" fill="#313e40"/><ellipse cx="164" cy="122" rx="7" ry="10" fill="#313e40"/><circle cx="90" cy="118" r="2.8" fill="#fff"/><circle cx="162" cy="118" r="2.8" fill="#fff"/><path d="M118 151 137 151 127 162Z" fill="#665054"/><path d="M127 162Q122 171 115 167M128 162Q134 171 141 167" stroke="#795a50" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M78 143 61 138M78 150 59 151M177 142 195 138M177 150 196 150" stroke="#c89275" stroke-width="2.5" stroke-linecap="round"/>`,
+    'black-cat':`<!-- Midnight cat: charcoal silhouette, ink tufts, amber eyes and silver whiskers -->
+<path d="M54 98 48 24Q51 13 62 20L102 56H153L194 20Q205 13 207 27L199 101" fill="#212a35" stroke="#303943" stroke-width="5" stroke-linejoin="round"/>
+<path d="M66 65 60 35 91 62M169 62 193 34 188 68" fill="#815c76"/>
+<path d="M49 106Q48 65 97 58Q125 48 155 58Q209 64 208 112L197 153Q180 190 127 190Q75 188 54 151Z" fill="url(#nightFur)" stroke="#303943" stroke-width="5"/>
+<path d="M61 154Q85 177 127 179Q171 177 197 152Q188 185 128 190Q73 186 61 154" fill="#384650"/>
+<path d="M70 112Q88 101 104 111M149 111Q169 99 187 110" fill="none" stroke="#7c8d87" stroke-width="5" stroke-linecap="round"/>
+<ellipse cx="91" cy="128" rx="11" ry="12" fill="#e9b965"/><ellipse cx="164" cy="128" rx="11" ry="12" fill="#e9b965"/>
+<ellipse cx="93" cy="129" rx="3.3" ry="9" fill="#202a31"/><ellipse cx="162" cy="129" rx="3.3" ry="9" fill="#202a31"/>
+<circle cx="87" cy="123" r="3.1" fill="#fff6da"/><circle cx="160" cy="123" r="3.1" fill="#fff6da"/>
+<path d="M117 157 139 157 128 167Z" fill="#d18d96"/>
+<path d="M128 166Q119 174 112 169M128 166Q136 174 143 169" stroke="#a8acac" stroke-width="2.7" fill="none" stroke-linecap="round"/>
+<path d="M82 153 58 149M80 160 55 164M175 153 199 149M177 160 202 164" stroke="#b8c2c1" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M108 83Q127 75 145 83" stroke="#64717b" stroke-width="3.5" opacity=".5" fill="none"/>`,
+    fox:`<!-- Red fox: tall swept ears, white mask and pointed narrow muzzle -->
+<path d="M53 111 40 24Q41 9 53 18L102 59H151L200 17Q212 9 212 27L202 112" fill="#b95735" stroke="#553e39" stroke-width="5" stroke-linejoin="round"/>
+<path d="M57 69 51 37 94 66M165 66 200 37 196 70" fill="#f8ba9e"/>
+<path d="M51 115Q53 71 105 60Q127 53 151 60Q204 71 206 115L196 144Q181 183 129 192Q75 184 58 146Z" fill="url(#foxFur)" stroke="#553e39" stroke-width="5"/>
+<path d="M59 135Q81 119 106 138L128 150Q150 134 173 122L198 134Q183 176 128 186Q75 175 59 135" fill="#fff0d4"/>
+<path d="M82 111Q93 104 107 110M149 110Q165 103 176 110" stroke="#7c4632" stroke-width="5" stroke-linecap="round" fill="none"/>
+<path d="M79 123Q93 116 105 126M151 126Q165 116 179 123" fill="none" stroke="#39383a" stroke-width="4" stroke-linecap="round"/>
+<ellipse cx="94" cy="126" rx="5.6" ry="8" fill="#2a383a"/><ellipse cx="162" cy="126" rx="5.6" ry="8" fill="#2a383a"/>
+<circle cx="92" cy="123" r="2.3" fill="#fff8e3"/><circle cx="160" cy="123" r="2.3" fill="#fff8e3"/>
+<path d="M96 151Q127 135 160 151L138 171Q129 179 119 171Z" fill="#fff8e9" stroke="#d7bba2" stroke-width="2"/>
+<path d="M116 159 140 159 128 170Z" fill="#3c3c3d"/>
+<path d="M128 171Q122 178 116 175M128 171Q134 178 141 175" stroke="#7f5947" stroke-width="2" fill="none"/>
+<path d="M79 151 61 145M178 151 196 145" stroke="#fcead3" stroke-width="3" stroke-linecap="round"/>`,
     rabbit:`<path d="M87 94 87 18Q90 -4 106 20L116 73 138 73 149 20Q166 -4 168 18L169 94" fill="#e3cfbd" stroke="#34434a" stroke-width="5"/><path d="M99 64 98 25 109 64M156 64 157 25 145 64" fill="#e8abae"/><path d="M55 102Q61 56 127 58Q193 57 200 103L193 150Q178 187 128 187Q77 187 61 150Z" fill="#ead8c6" stroke="#34434a" stroke-width="5"/><path d="M70 139Q93 119 108 142Q128 158 148 142Q165 119 186 140Q178 178 128 179Q80 178 70 139" fill="#fff5e6"/><path d="M81 112Q90 105 102 111M153 111Q164 105 174 112" stroke="#77665b" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="93" cy="126" rx="7" ry="10" fill="#384447"/><ellipse cx="161" cy="126" rx="7" ry="10" fill="#384447"/><circle cx="91" cy="122" r="3" fill="#fff"/><circle cx="159" cy="122" r="3" fill="#fff"/><ellipse cx="128" cy="154" rx="9" ry="6" fill="#d99e9d"/><path d="M128 160Q122 171 114 166M128 160Q135 171 143 166" stroke="#77655d" stroke-width="2.5" fill="none" stroke-linecap="round"/><ellipse cx="79" cy="144" rx="9" ry="5" fill="#efc3bd"/><ellipse cx="177" cy="144" rx="9" ry="5" fill="#efc3bd"/>`,
     frog:`<!-- round frog face with protruding eye domes, short cheeks, no reptile muzzle -->
 <path d="M64 109Q62 80 77 62Q92 46 112 57L143 60Q171 41 190 69Q202 86 194 111" fill="url(#green)" stroke="#34434a" stroke-width="5"/>
@@ -94,6 +122,20 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
 <path d="M113 243L128 250 142 243" fill="none" stroke="#ae3d52" stroke-width="4" stroke-linecap="round"/>
 <path d="M72 247 70 254M184 247 186 254" stroke="#f8edcd" stroke-width="6"/>
 `,
+    'stage-hanbok':`<!-- Seoul Moonstage: modern performance hanbok, split silk panels, jade stitching and gold fan -->
+<path d="M14 255Q20 207 53 185Q77 173 106 170L128 191 150 170Q182 174 207 187Q235 209 243 255Z" fill="#192d40" stroke="#32424e" stroke-width="6" stroke-linejoin="round"/>
+<path d="M27 243Q37 204 68 187L94 178 110 207 99 255H16Z" fill="#264b60" stroke="#32424e" stroke-width="4"/>
+<path d="M227 243Q218 204 188 187L163 178 145 207 157 255H240Z" fill="#264b60" stroke="#32424e" stroke-width="4"/>
+<path d="M78 179Q103 183 128 209Q152 183 176 179L192 255H64Z" fill="#f1e4d1" stroke="#32424e" stroke-width="3.5"/>
+<path d="M80 181 112 197 146 255H61ZM176 181 144 197 110 255H196Z" fill="#344b72" stroke="#35404c" stroke-width="3.5"/>
+<path d="M91 180 129 216 112 235 73 198Z" fill="#c25a64" stroke="#f0c48a" stroke-width="3"/>
+<path d="M165 180 128 216 145 235 183 198Z" fill="#315d60" stroke="#88b5a6" stroke-width="3"/>
+<path d="M68 223Q128 235 188 221L189 237Q127 249 67 239Z" fill="#e2b76d" stroke="#6f6a55" stroke-width="2.5"/>
+<path d="M66 239 91 242 87 255H65ZM191 239 164 243 166 255H192Z" fill="#b44e5d"/>
+<path d="M117 235Q128 227 141 235L138 247Q127 251 119 247Z" fill="#224b5e" stroke="#d7b56f" stroke-width="2"/>
+<path d="M101 239 102 254M154 238 155 254" stroke="#c7dfd0" stroke-width="2.5"/>
+<path d="M44 225 49 217 54 225 62 228 54 232 50 240 46 232 38 228Z" fill="#dec178"/>
+<path d="M202 220 210 207 220 220 210 234Z" fill="#b2d8c4"/>`,
     groom:`<!-- Formal groom's tuxedo, broad tailored shoulders, ivory shirt, velvet lapels and boutonniere -->
 <path d="M14 255Q19 207 47 186Q67 174 104 170L128 191 152 170Q189 174 210 185Q238 207 242 255Z" fill="#263747" stroke="#34434a" stroke-width="6" stroke-linejoin="round"/>
 <path d="M24 246Q27 210 59 191M232 246Q229 210 197 191" stroke="#577080" stroke-width="5" fill="none" stroke-linecap="round"/>
@@ -146,6 +188,16 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
 <circle cx="53" cy="114" r="2.8" fill="#fff2c0"/><circle cx="203" cy="114" r="2.8" fill="#fff2c0"/>
 <path d="M91 51Q129 29 166 51" fill="none" stroke="#edf3de" stroke-width="4" opacity=".5" stroke-linecap="round"/>
 `,
+    'stage-pin':`<!-- Moonstage headpiece: lacquered ornament, jade crescent and dramatic silk tassel -->
+<path d="M70 83Q127 67 185 82" fill="none" stroke="#253f4c" stroke-width="13" stroke-linecap="round"/>
+<path d="M73 79Q126 65 181 78" fill="none" stroke="#d8b26f" stroke-width="4" stroke-linecap="round"/>
+<path d="M102 66Q118 34 127 33Q137 49 154 66Q126 82 102 66Z" fill="#294b63" stroke="#e0c17b" stroke-width="3"/>
+<path d="M118 58Q123 44 127 41Q131 49 140 57Q128 64 118 58Z" fill="#b2d8ca"/>
+<path d="M88 66Q71 44 81 29Q98 27 110 51Q94 46 88 66Z" fill="#c85a68" stroke="#e5b985" stroke-width="3"/>
+<path d="M166 69Q184 43 177 28Q157 30 148 53Q162 48 166 69Z" fill="#c85a68" stroke="#e5b985" stroke-width="3"/>
+<path d="M175 74Q197 93 192 118" fill="none" stroke="#d3a861" stroke-width="3"/>
+<path d="M190 118 184 136 198 136Z" fill="#c55966" stroke="#e3bb83" stroke-width="2"/>
+<circle cx="80" cy="77" r="5" fill="#eee2c5"/><circle cx="175" cy="75" r="5" fill="#eee2c5"/>`,
     brush:`<!-- A miniature lacquered painter's brush clipped behind one ear -->
 <path d="M181 90 207 29" stroke="#604238" stroke-width="8" stroke-linecap="round"/>
 <path d="M181 90 207 29" stroke="#ceac78" stroke-width="3" stroke-linecap="round"/>
@@ -154,6 +206,25 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
 <path d="M187 77 198 81" stroke="#8e5a47" stroke-width="4" stroke-linecap="round"/>
 `,
     veil:`<path d="M67 74Q128 27 189 74L204 202Q171 222 128 219Q85 221 51 202Z" fill="#fff" fill-opacity=".35" stroke="#efdae5" stroke-width="4"/><path d="M85 72Q128 50 171 72" fill="none" stroke="#f8f6f1" stroke-width="10" stroke-linecap="round"/><circle cx="128" cy="61" r="7" fill="#e9bf6d" stroke="#34434a" stroke-width="2"/>`
+  };
+  const accessories={
+    none:'',
+    'shoulder-dragon':`<!-- Tiny shoulder dragon: coiled tail, leathery wings, golden horns, jade scales -->
+<path d="M195 232Q225 252 242 234Q253 221 239 210" fill="none" stroke="#2b4651" stroke-width="10" stroke-linecap="round"/>
+<path d="M195 232Q226 246 239 230" fill="none" stroke="#80ae96" stroke-width="6" stroke-linecap="round"/>
+<path d="M191 195Q184 171 196 147L214 175Q233 154 242 156L235 190 224 205Z" fill="#376e68" stroke="#273c48" stroke-width="4" stroke-linejoin="round"/>
+<path d="M197 185 198 155 210 186M216 187 236 164" fill="none" stroke="#87b4a2" stroke-width="3" opacity=".8"/>
+<path d="M183 226Q173 207 190 194Q205 181 225 199L231 221Q218 232 205 226L193 237Z" fill="#488778" stroke="#304652" stroke-width="4.5"/>
+<path d="M188 224Q208 229 226 215" fill="none" stroke="#acd6a0" stroke-width="5" stroke-linecap="round"/>
+<path d="M198 193 201 184 207 195 213 185 220 198" fill="#e0b66d" stroke="#4b635d" stroke-width="2"/>
+<path d="M193 209Q170 193 165 178Q164 164 182 163L194 153 203 166Q212 166 214 183L205 199Z" fill="#4f9280" stroke="#304652" stroke-width="4.5" stroke-linejoin="round"/>
+<path d="M173 169 169 151 182 161M194 162 201 149 205 170" fill="#d7b97d" stroke="#304652" stroke-width="3" stroke-linejoin="round"/>
+<path d="M167 185 151 184 167 193 185 194" fill="#376c68" stroke="#304652" stroke-width="3"/>
+<path d="M171 179 182 176" stroke="#203c40" stroke-width="3.5" stroke-linecap="round"/>
+<circle cx="177" cy="176" r="2.6" fill="#f4d477"/><circle cx="178" cy="175" r="0.9" fill="#fff8cc"/>
+<path d="M154 185 151 181M156 187 150 189" stroke="#a9c9b9" stroke-width="1.8" stroke-linecap="round"/>
+<path d="M206 223 202 231M220 222 223 231" stroke="#283e46" stroke-width="4" stroke-linecap="round"/>
+<path d="M193 220 204 227 204 220" fill="#d5bd80"/>`
   };
   const faces={
     none:'',
@@ -164,5 +235,5 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
   // Helmet uses species-specific openings so rabbit ears and frog eye domes remain recognizable.
   const equippedHat=m.hat==='bascinet'&&m.animal==='frog'?"<!-- Frog-fitted tournament bascinet; leaves raised eye domes visible. -->\n<path d=\"M32 110Q25 73 47 36Q76 8 127 5Q182 8 209 36Q230 76 224 110\n L198 120Q194 90 184 78Q166 55 149 51L128 54L106 51Q85 56 73 79Q62 91 57 120Z\"\n fill=\"#91a5a9\" stroke=\"#34434a\" stroke-width=\"6\" fill-rule=\"evenodd\"/>\n<!-- Helmet has open raised eye ports so amphibian eye silhouette is not swallowed. -->\n<path d=\"M53 78Q59 48 93 43Q117 43 124 67Q128 40 151 43Q188 46 197 78\" fill=\"none\" stroke=\"#354b51\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<path d=\"M64 68Q77 47 101 54M154 54Q180 47 191 69\" fill=\"none\" stroke=\"#edf5e4\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n<path d=\"M119 48Q128 36 137 48L147 102Q128 110 109 102Z\" fill=\"#aabdc0\" stroke=\"#34434a\" stroke-width=\"4.5\"/>\n<path d=\"M115 85H141M117 94H139\" stroke=\"#5b6e72\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M39 103Q30 144 41 177L61 198 82 184Q70 154 74 129L66 106Z\" fill=\"#8ea3aa\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M216 103Q225 144 214 177L194 198 173 184Q185 154 181 129L189 106Z\" fill=\"#8ea3aa\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M44 143 51 150 44 158 51 167M211 143 204 150 211 158 204 167\" stroke=\"#e2e8df\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/>\n<circle cx=\"53\" cy=\"113\" r=\"8\" fill=\"#dbb87b\" stroke=\"#34434a\" stroke-width=\"3\"/>\n<circle cx=\"203\" cy=\"113\" r=\"8\" fill=\"#dbb87b\" stroke=\"#34434a\" stroke-width=\"3\"/>\n":
     m.hat==='bascinet'&&m.animal==='rabbit'?"<!-- Rabbit-fitted helm: tall ears pass through two visible slotted openings. -->\n<path d=\"M24 118Q21 71 62 40Q87 22 128 20Q177 21 201 46Q237 78 231 118\n L199 117Q197 91 180 75L173 67 167 86Q149 99 128 99Q106 99 89 85L82 67 75 75Q57 91 55 117Z\"\n fill=\"#8fa5ab\" stroke=\"#34434a\" stroke-width=\"6\" stroke-linejoin=\"round\"/>\n<path d=\"M55 67Q82 38 100 45M156 45Q178 36 203 68\" fill=\"none\" stroke=\"#e0eee7\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<path d=\"M70 85Q128 106 186 85L193 107Q126 116 63 108Z\" fill=\"#adc2c4\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M78 96Q127 107 178 96\" stroke=\"#f6f2d9\" stroke-width=\"4.5\" fill=\"none\" stroke-linecap=\"round\"/>\n<path d=\"M38 102Q27 140 42 169L60 193 84 185 69 145 71 119Z\" fill=\"#8c9fa8\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M218 102Q229 140 214 169L196 193 172 185 187 145 185 119Z\" fill=\"#8c9fa8\" stroke=\"#34434a\" stroke-width=\"5\"/>\n<path d=\"M45 140 54 147 46 154 57 162M211 140 202 147 210 154 199 162\" fill=\"none\" stroke=\"#d6e3db\" stroke-width=\"3.5\"/>\n<circle cx=\"63\" cy=\"119\" r=\"7\" fill=\"#eacb8a\" stroke=\"#34434a\" stroke-width=\"3\"/>\n<circle cx=\"193\" cy=\"119\" r=\"7\" fill=\"#eacb8a\" stroke=\"#34434a\" stroke-width=\"3\"/>\n":hats[m.hat];
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="'+s+'" height="'+s+'" class="pws-maskot-svg" aria-hidden="true"><defs><linearGradient id="fur" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#ffdea1"/><stop offset="1" stop-color="#d78b5b"/></linearGradient><linearGradient id="green"><stop stop-color="#a9d77f"/><stop offset="1" stop-color="#5b9f61"/></linearGradient><linearGradient id="cloth"><stop stop-color="#709ba0"/><stop offset="1" stop-color="#365c69"/></linearGradient></defs>'+outfits[m.clothes]+paths[m.animal]+faces[m.face]+equippedHat+'</svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="'+s+'" height="'+s+'" class="pws-maskot-svg" aria-hidden="true"><defs><linearGradient id="fur" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#ffdea1"/><stop offset="1" stop-color="#d78b5b"/></linearGradient><linearGradient id="green"><stop stop-color="#a9d77f"/><stop offset="1" stop-color="#5b9f61"/></linearGradient><linearGradient id="nightFur"><stop stop-color="#3b4553"/><stop offset="1" stop-color="#171d27"/></linearGradient><linearGradient id="foxFur"><stop stop-color="#f2a451"/><stop offset="1" stop-color="#c55c35"/></linearGradient><linearGradient id="cloth"><stop stop-color="#709ba0"/><stop offset="1" stop-color="#365c69"/></linearGradient></defs>'+outfits[m.clothes]+paths[m.animal]+faces[m.face]+equippedHat+accessories[m.accessory]+'</svg>';
 }
