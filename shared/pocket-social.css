@@ -647,3 +647,11 @@
  .pws-collection__redeem .pws-btn{flex:1}
 }
 @media(prefers-reduced-motion:reduce){.pws-collection__meter span{transition:none}}
+
+@media(min-width:701px){
+ .pws-maskot-editor:has(.pws-collection){grid-template-columns:minmax(220px,.64fr) minmax(410px,1.36fr)}
+ .pws-maskot-editor:has(.pws-collection) .pws-collection__entries{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(min-width:701px) and (max-width:900px){
+ .pws-maskot-editor:has(.pws-collection) .pws-collection__entries{grid-template-columns:minmax(0,1fr)}
+}
