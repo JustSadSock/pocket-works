@@ -632,14 +632,16 @@ test('Server authoritative deadline skips stalled players without spending their
  const {state}=makeRoom(3);
  const active=state.contestants[state.turnIndex],before=active.resources.gold;
  assert.ok(state.deadlineAt>Date.now());
- const now=state.deadlineAt+5;
- const res=game.onTick({state,now});
+ // Another connected participant may drive the check without the active player.
+ state.deadlineAt=Date.now()-1;
+ const bystander=state.contestants[1];
+ const res=act(state,bystander.id,{type:'tick'});
  assert.equal(res.events[0].type,'state');
  assert.equal(state.turnIndex,1);
  assert.equal(active.resources.gold,before);
  assert.ok(state.deadlineAt>Date.now());
- const noChange=game.onTick({state,now:Date.now()});
- assert.equal(noChange,null);
+ const noChange=act(state,bystander.id,{type:'tick'});
+ assert.equal(noChange.events.length,0);
  const next=state.contestants[state.turnIndex],turn=state.turnIndex;
  state.deadlineAt=Date.now()-1;
  const sent=act(state,next.id,{type:'work',resource:'gold'});
