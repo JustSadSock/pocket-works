@@ -558,7 +558,7 @@ function renderPlay(){
   return '<button type="button" class="'+(reason?'item-dormant':'')+'" data-action="open-item" data-kind="inventory" data-id="'+esc(item.id)+
   '" aria-label="'+esc(item.name)+(reason?' — '+esc(reason):'')+'" title="'+esc(reason||item.name)+'">'+
   artifactSVG(item.name,item.rarity)+'<span>'+esc(item.name)+'</span>'+
-  (reason?'<small class="inactive-tag">Не работает</small>':'')+'</button>';
+  (reason?'<small class="inactive-tag">'+esc(reason.replace('Не хватает ','Нет '))+'</small>':'')+'</button>';
  }).join('');
  const sections=[
  ['actions','box','Мой ход'],['market','gavel','Торги'],
