@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import module, { SCENE_COUNT, TOTAL_TASKS, RULESET_VERSION } from '../server/module.ts';
 
-assert.equal(RULESET_VERSION,4);
+assert.equal(RULESET_VERSION,5);
 assert.equal(SCENE_COUNT,70);
 assert.equal(TOTAL_TASKS,70);
 const players=Array.from({length:8},(_,i)=>({id:'player-'+i,name:'Игрок '+i}));
@@ -30,9 +30,9 @@ for(let session=0;session<25;session++){
   assert.equal(new Set(state.choices[2]).size,10);
   assert.equal(new Set(state.choices[4]).size,10);
   assert.equal(state.prompt,state.story);
-  assert.ok(/затем/.test(state.prompt),'Each puzzle has a causal continuation');
+  assert.ok(/(затем|чтобы)/.test(state.prompt),'Each puzzle has a causal continuation');
   assert.ok(state.frames===2||state.frames===3);
-  assert.equal(state.semanticVersion,4);
+  assert.equal(state.semanticVersion,5);
   assert.ok(state.target.every((v,i)=>Number.isInteger(v)&&v>=0&&v<state.choices[i].length));
   assert.equal(state.palette.length,112,'Full semantic alphabet is available');
   assert.equal(new Set(state.palette).size,state.palette.length);
@@ -49,6 +49,12 @@ for(let session=0;session<25;session++){
   assert.ok(!('target' in guest),'Target indices must not leak through player events');
   const artist=module.onMessage({state,player:author,players,payload:{type:'sync'}}).events[0].payload;
   assert.equal(artist.prompt,state.prompt);
+  assert.ok(Math.abs(artist.serverNow-Date.now())<2000,'Server time travels in snapshots');
+  const sentAt=Date.now();
+  const clock=module.onMessage({state,player:author,players,payload:{type:'pulse',clientSentAt:sentAt}}).events[0];
+  assert.equal(clock.type,'clock');
+  assert.equal(clock.payload.echo,sentAt);
+  assert.ok(Math.abs(clock.payload.serverNow-Date.now())<2000);
   assert.deepEqual(artist.palette,state.palette);
   assert.deepEqual(artist.blocked,state.blocked);
   assert.deepEqual(artist.solution,[]);
@@ -60,13 +66,12 @@ for(let session=0;session<25;session++){
   assert.equal(state.board[0].frame,state.frames-1,'Board keeps the chosen story panel');
   state=module.onMessage({state,player:peer,players,payload:{type:'edit',glyphs:[]}}).state;
   assert.equal(state.board.length,1,'Only author can edit');
-  state=module.onMessage({state,player:author,players,payload:{type:'publish'}}).state;
-  assert.equal(state.phase,'compose','Empty storyboard panels must block publishing');
-  const fullBoard=[glyph,...Array.from({length:state.frames-1},(_,i)=>({...glyph,x:60+i*7,frame:i}))];
-  state=module.onMessage({state,player:author,players,payload:{type:'edit',glyphs:fullBoard}}).state;
-  assert.equal(state.board.length,state.frames);
-  state=module.onMessage({state,player:author,players,payload:{type:'publish'}}).state;
-  assert.equal(state.phase,'guess');
+  state=module.onMessage({state,player:author,players,payload:{type:'publish',glyphs:[]}}).state;
+  assert.equal(state.phase,'compose','Fully empty stories cannot be submitted');
+  state=module.onMessage({state,player:author,players,payload:{type:'publish',glyphs:[{...glyph,x:73}]}}).state;
+  assert.equal(state.phase,'guess','One filled panel is enough');
+  assert.equal(state.board.length,1,'Publish includes the latest draft in the same message');
+  assert.equal(state.board[0].x,73);
   const bystander=module.onMessage({state,player:peer,players,payload:{type:'sync'}}).events[0].payload;
   assert.deepEqual(bystander.choices,state.choices);
   assert.deepEqual(bystander.locationForms,[]);
@@ -105,4 +110,11 @@ for(let session=0;session<25;session++){
  assert.equal(state.lexicon.length,2,'Phrasebook survives a completed match');
 }
 assert.equal(kinds.size,6);
-console.log('PICTO v4 rules OK: 70 curated causal stories, 112 glyphs, 2–3 frames, 5 semantic slots, shared lexicon, 25 complete 8-player matches.');
+let timeout=module.createRoom({player:players[0],players:[players[0]]}).state;
+timeout=module.onJoin({state:timeout,player:players[1],players:players.slice(0,2)}).state;
+timeout=module.onMessage({state:timeout,player:players[0],players:players.slice(0,2),payload:{type:'start'}}).state;
+timeout.deadline=Date.now()-1;
+timeout=module.onMessage({state:timeout,player:players[1],players:players.slice(0,2),payload:{type:'pulse'}}).state;
+assert.equal(timeout.phase,'reveal','No guessing an empty message');
+assert.equal(timeout.history.at(-1).total,0);
+console.log('PICTO v5 rules OK: 70 intent-rich stories, atomic publish, sparse frames, synced clocks, 25 full matches.');
