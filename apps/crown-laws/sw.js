@@ -3,7 +3,7 @@ const CACHE_NAME = 'crown-laws-v0.2.0';
 const APP_VERSION = '0.2.0';
 const RELEASE_DATE = '2026-10-22';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Полностью новый каменный интерфейс: двор, новые жетоны и адаптивные указы."];
+const RELEASE_NOTES = ["Полностью новый каменный интерфейс без старых спрайтов и SVG.","Мобильная компоновка доски и руки; заново собранное меню."];
 const APP_SHELL = [
   "./",
   "./index.html",
