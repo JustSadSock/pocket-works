@@ -1,0 +1,107 @@
+{
+  "version": 2,
+  "runtimeRoot": ".",
+  "index": "assets/forge-index.json",
+  "jobs": [
+    {
+      "id": "figures",
+      "adapter": "vector",
+      "source": "asset-forge/figures.svg",
+      "dependsOn": [],
+      "seed": 2745,
+      "parameters": {
+        "width": 960,
+        "height": 160
+      },
+      "outputs": {
+        "image": "assets/figures.png",
+        "vector": "assets/figures.svg"
+      },
+      "budget": {
+        "maxBytes": 450000,
+        "maxWidth": 960,
+        "maxHeight": 160
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Hand-authored Crown Laws manuscript vector set, October 2026"
+      }
+    },
+    {
+      "id": "law-seals",
+      "adapter": "vector",
+      "source": "asset-forge/law-seals.svg",
+      "dependsOn": [],
+      "seed": 2746,
+      "parameters": {
+        "width": 640,
+        "height": 128
+      },
+      "outputs": {
+        "image": "assets/law-seals.png",
+        "vector": "assets/law-seals.svg"
+      },
+      "budget": {
+        "maxBytes": 450000,
+        "maxWidth": 640,
+        "maxHeight": 128
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Hand-authored Crown Laws manuscript vector set, October 2026"
+      }
+    },
+    {
+      "id": "royal-hall",
+      "adapter": "vector",
+      "source": "asset-forge/royal-hall.svg",
+      "dependsOn": [],
+      "seed": 2747,
+      "parameters": {
+        "width": 960,
+        "height": 540
+      },
+      "outputs": {
+        "image": "assets/royal-hall.png",
+        "vector": "assets/royal-hall.svg"
+      },
+      "budget": {
+        "maxBytes": 450000,
+        "maxWidth": 960,
+        "maxHeight": 540
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Hand-authored Crown Laws manuscript vector set, October 2026"
+      }
+    },
+    {
+      "id": "victory-crown",
+      "adapter": "vector",
+      "source": "asset-forge/victory-crown.svg",
+      "dependsOn": [],
+      "seed": 2748,
+      "parameters": {
+        "width": 480,
+        "height": 330
+      },
+      "outputs": {
+        "image": "assets/victory-crown.png",
+        "vector": "assets/victory-crown.svg"
+      },
+      "budget": {
+        "maxBytes": 450000,
+        "maxWidth": 480,
+        "maxHeight": 330
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Hand-authored Crown Laws manuscript vector set, October 2026"
+      }
+    }
+  ]
+}
