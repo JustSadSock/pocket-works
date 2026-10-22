@@ -2461,6 +2461,9 @@ class UIManager {
     }
 
     updateCoopPlayerConfig(numPlayers) {
+        let names=[];
+        try{names=JSON.parse(localStorage.getItem('pocket-works:blockies:coop-names')||'[]');}
+        catch{}
         const container = document.getElementById('coop-players-config');
         container.innerHTML = '';
 
@@ -2476,6 +2479,9 @@ class UIManager {
                     <span class="player-color-badge" style="background: ${color};"></span>
                     ${t('player')} ${i + 1}
                 </h4>
+                <label class="coop-name-label">Ник игрока
+                    <input type="text" class="coop-name-input" id="coop-nickname-${i}" maxlength="20" autocomplete="off" placeholder="Игрок ${i+1}">
+                </label>
                 <div class="color-picker">
                     <label>${t('blockColor')}</label>
                     <input type="color" id="coop-color-${i}" value="${color}">
@@ -2510,6 +2516,8 @@ class UIManager {
             `;
             
             container.appendChild(card);
+            const nickname=card.querySelector('.coop-name-input');
+            if(nickname)nickname.value=String(names[i]||'').slice(0,20);
 
             // Add event listener for key binding inputs
             const actions = ['left', 'right', 'down', 'rotate', 'drop'];
@@ -2583,6 +2591,9 @@ class UIManager {
             }
         }
         
+        this.localPlayerNames=Array.from({length:numPlayers},(_,i)=>
+            document.getElementById(`coop-nickname-${i}`)?.value.trim().slice(0,20)||`Игрок ${i+1}`);
+        localStorage.setItem('pocket-works:blockies:coop-names',JSON.stringify(this.localPlayerNames));
         // Save to localStorage
         localStorage.setItem('pocket-works:blockies:settings', JSON.stringify(gameState.settings));
         
@@ -2874,6 +2885,7 @@ class UIManager {
         this.networkPlayers = {};
         this.localPlayerIndex = -1;
         this.isOnlineMode = true; // Flag to indicate online mode
+        this.onlineParticipantNames=data.players.map(p=>p.name);
         
         // Update game state with player colors from network and map IDs
         data.players.forEach((netPlayer, index) => {
@@ -3389,7 +3401,10 @@ for(const [method,action] of [['move','move'],['rotate','rotate'],['drop','drop'
 function applyNetworkSnapshot(s){
  if(!s||!window.uiManager?.isOnlineMode)return;
  gameState.board=s.board;gameState.sharedStats=s.sharedStats;gameState.sharedStatsDirty=true;gameState.isGameOver=s.isGameOver;
- s.players.forEach((data,i)=>{const player=gameState.players[i];if(player){const keys=player.keys;Object.assign(player,data,{keys});}});
+ s.players.forEach((data,i)=>{const player=gameState.players[i];if(player){
+   const keys=player.keys;Object.assign(player,data,{keys});
+   window.uiManager.updatePlayerInfo(player);window.uiManager.drawNextPiece(player);
+  }});
  window.uiManager.drawBoard();window.uiManager.updateTeamStatsIfNeeded();
 }
 document.querySelector('#join-code-btn').onclick=()=>networkManager.joinRoom(document.querySelector('#join-code').value.trim());
