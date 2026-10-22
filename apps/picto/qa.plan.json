@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "multiplayer-v5",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "qa/rules.mjs"
+      ]
+    },
+    {
+      "id": "responsive-entry",
+      "kind": "visual",
+      "tier": "smoke",
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "[data-action='create']",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-action='join']"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}
