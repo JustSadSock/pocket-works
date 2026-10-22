@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "product": "crown-laws",
-  "status": "ready",
+  "status": "v0.4 illustrated council",
   "memoryReview": [
     {
       "slug": "fog-of-conquest",
@@ -64,19 +64,23 @@
       "interaction": "Users flip between folios to examine individual acts and apply a decree from a compact bottom page tab.",
       "motion": "A page-turn sequence and layered parchment scroll would organize navigation around document transitions.",
       "rationale": "It makes room for long legal prose but repeatedly obscures the shared board precisely when laws are being evaluated."
+    },
+    {
+      "id": "illustrated-council",
+      "medium": "Original hand-authored SVG vector portrait sheet, law seals and two ceremonial illustrations; editable sources live in asset-forge/ and published SVG files in assets/.",
+      "composition": "Hall illustration anchors the menu; six illustrated actor tokens animate on a flat 5x7 field; five color-locked heraldic seals tag laws; a victory insignia replaces text-only end-state.",
+      "interaction": "All cards and laws are actionable. Debug screen preview offers read-only state interaction. Conditional turn forecast comes from pure engine simulation.",
+      "motion": "Brief wax seal, crown highlights, board move and victory reveal, all reducible.",
+      "rationale": "Distinct vector silhouette vocabulary corrects the geometric-only placeholder look without sacrificing rules legibility."
     }
   ],
   "selection": {
-    "concept": "stone-council",
-    "reason": "The royal board, current legal code and selectable hand stay spatially connected; the game remains readable and tappable without illustrations.",
+    "concept": "illustrated-council",
+    "reason": "Original manuscript vector plates depict actors and ceremony, while keeping board and law mechanics directly accessible.",
     "rejected": [
       {
         "concept": "cathedral-relief",
-        "reason": "A fully pictorial relief requires authored sprite assets, complicated gestures and obscures individual rule text on narrow phones."
-      },
-      {
-        "concept": "royal-codex",
-        "reason": "Turning pages between the board and hand hides turn consequences and introduces navigation overhead during each law choice."
+        "reason": "Full sculptural 2.5D view deferred; field remains flat and legible."
       }
     ]
   },
@@ -90,6 +94,11 @@
       "id": "node-icon-raster",
       "availability": "available",
       "reason": "A deterministic Node image routine draws the product crown onto an isolated pixel buffer and serializes one PNG for the app icon."
+    },
+    {
+      "id": "universal-art-forge-vector",
+      "availability": "source-authored; raster/index build pending",
+      "reason": "Four editable SVG sources and matching publishable SVG vectors are checked in, alongside an Art Forge v2 vector production plan. Do not activate manifest.json until required Inkscape PNG exports and hash index are built and committed."
     }
   ],
   "assets": [
@@ -103,6 +112,50 @@
       "integration": "Manifest and HTML reference only the local icon PNG; service worker caches exactly the new standalone icon and no gameplay textures.",
       "provenance": "Pixels are drawn by an original project-local deterministic raster script rather than sourced illustration or downloaded sprite.",
       "maxBytes": 70000
+    },
+    {
+      "id": "figures",
+      "tool": "universal-art-forge-vector",
+      "source": "asset-forge/figures.svg",
+      "output": "assets/figures.svg",
+      "role": "Six original portrait plates for champion North/South and neutral actors",
+      "acceptance": "Self-contained, deterministic, offline SVG; real Inkscape-exported PNG and forge index remain pending",
+      "integration": "Local SVG used by CSS as an offline runtime asset",
+      "provenance": "Original hand-authored vector paths for Crown Laws",
+      "maxBytes": 120000
+    },
+    {
+      "id": "law-seals",
+      "tool": "universal-art-forge-vector",
+      "source": "asset-forge/law-seals.svg",
+      "output": "assets/law-seals.svg",
+      "role": "Five heraldic law marks",
+      "acceptance": "Self-contained, deterministic, offline SVG; real Inkscape-exported PNG and forge index remain pending",
+      "integration": "Local SVG used by CSS as an offline runtime asset",
+      "provenance": "Original hand-authored vector paths for Crown Laws",
+      "maxBytes": 120000
+    },
+    {
+      "id": "royal-hall",
+      "tool": "universal-art-forge-vector",
+      "source": "asset-forge/royal-hall.svg",
+      "output": "assets/royal-hall.svg",
+      "role": "Illustrated game entrance",
+      "acceptance": "Self-contained, deterministic, offline SVG; real Inkscape-exported PNG and forge index remain pending",
+      "integration": "Local SVG used by CSS as an offline runtime asset",
+      "provenance": "Original hand-authored vector paths for Crown Laws",
+      "maxBytes": 120000
+    },
+    {
+      "id": "victory-crown",
+      "tool": "universal-art-forge-vector",
+      "source": "asset-forge/victory-crown.svg",
+      "output": "assets/victory-crown.svg",
+      "role": "Victorious crown composition",
+      "acceptance": "Self-contained, deterministic, offline SVG; real Inkscape-exported PNG and forge index remain pending",
+      "integration": "Local SVG used by CSS as an offline runtime asset",
+      "provenance": "Original hand-authored vector paths for Crown Laws",
+      "maxBytes": 120000
     }
   ],
   "constraints": {
@@ -122,7 +175,8 @@
     ],
     "risks": [
       "At 390 pixel widths the hand needs to remain accessible without the current law ledger hiding board controls.",
-      "At tablet landscape sizes the side ledger and board must not obstruct the confirmation action."
+      "At tablet landscape sizes the side ledger and board must not obstruct the confirmation action.",
+      "The full Art Forge 2D PNG/index rebuild is pending. The build manifest must not be activated with missing files."
     ],
     "comparisons": [
       "Capture initial menu and compare type/edges to former hero layout to verify absence of recovered assets.",
