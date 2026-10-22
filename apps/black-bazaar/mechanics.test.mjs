@@ -544,6 +544,7 @@ test('Black market sealed bid can be inspected, accepted and processed exactly o
  assert.equal(ok.events[0].type,'state');
  assert.equal(state.blackLots.length,0);
  assert.ok(buyer.items.some(i=>i.id===item.id));
+ assert.equal(buyer.items.find(i=>i.id===item.id).history.at(-1),'Анонимный рынок');
  assert.equal(seller.resources.gold,before+81);
  assert.equal(buyer.resources.gold,285-(seller.negativeTarget===buyer.id?20:0));
  assert.equal(game.viewForPlayer({state,player:{id:buyer.id}}).you.items.some(i=>i.id===item.id&&!!i.positive),true);
