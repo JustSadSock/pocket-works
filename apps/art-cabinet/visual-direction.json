@@ -51,6 +51,11 @@
         "slug": "blockies",
         "spatialDifference": "Blockies presents an interactive block-placement arena with player pieces; the Art Cabinet displays a scrollable museum catalog of image cards and a selection ledger.",
         "interactionDifference": "Blockies moves physical game pieces as part of a match, whereas the Art Cabinet simply selects, inspects and exports artworks without changing any game state in Zamazka."
+      },
+      {
+        "slug": "picto",
+        "spatialDifference": "Picto organizes a storyboard canvas and semantic glyph toolbox for collaborative drawings; Art Cabinet uses a rigid museum catalog with artwork reproductions, filters and a removal-review ledger.",
+        "interactionDifference": "Picto players compose and decode multi-frame stories with pictograms through PocketNet, while Art Cabinet privately flags original paintings for review and exports an ID list without removing them from the game."
       }
     ]
   },
