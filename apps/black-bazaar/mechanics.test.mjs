@@ -792,3 +792,22 @@ test('Market lens discounts both forms of inspection, with private prices',()=>{
  assert.equal(inspection.events[0].type,'state');
  assert.equal(buyer.resources.gold,again-15);
 });
+
+
+test('Anonymous echo bonus credits the seller without leaking their identity to the public journal',()=>{
+ const {state}=makeRoom(3);
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const [seller,buyer]=state.contestants;
+ const mirror=forceArtifact(seller.items[0],'mirror');
+ const original=seller.resources.crystals;
+ buyer.resources.gold=400;
+ act(state,seller.id,{type:'black_post',itemId:mirror.id,ask:{gold:30}});
+ const lot=state.blackLots[0];
+ act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:30}});
+ const bid=state.blackLots[0].bids[0];
+ const sale=act(state,seller.id,{type:'black_accept',lotId:lot.id,bidId:bid.id});
+ assert.equal(sale.events[0].type,'state');
+ assert.equal(seller.resources.crystals,original+3);
+ assert.equal(mirror.tradeUsedRound,2);
+ assert.equal(state.log.some(message=>message.includes('Эхо перепродажи')&&message.includes(seller.character)),false);
+});
