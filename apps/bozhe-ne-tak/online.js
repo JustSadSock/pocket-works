@@ -1,7 +1,7 @@
 
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
-import {ITEMS,TREATMENTS,getItem,getDoctrine,MAX_ROUNDS} from './engine.js';
+import {ITEMS,TREATMENTS,VOWS,getItem,getDoctrine,MAX_ROUNDS} from './engine.js';
 import {offeringArt,godArt,treatmentArt,incidentArt} from './art.js';
 
 const K='pocket-works:bozhe-ne-tak:online:';
@@ -29,8 +29,8 @@ const EXPLAIN={
 const safeAction=()=>({itemId:null,treatment:null,bell:1,height:'low'});
 const FILTERS=[['all','Все'],['living','Живое'],['food','Еда'],['relic','Реликвии'],['regalia','Регалии'],['tool','Инструменты']];
 export function createOnline(onChange,onExit){
- let offeringFilter='all';
- let draftItem='',draftTreatment='',clockOffset=0,client=null,view=null,ownId='',roomId='',name=store.getItem('nickname')||'',code=new URL(location.href).searchParams.get('room')||'',status='intro',error='',notice='',lastMode='',epoch=0,sequence=0;
+ let offeringFilter='all',draftVow='steady';
+ let draftItem='',draftTreatment'',clockOffset=0,client=null,view=null,ownId='',roomId='',name=store.getItem('nickname')||'',code=new URL(location.href).searchParams.get('room')||'',status='intro',error='',notice='',lastMode='',epoch=0,sequence=0;
  const show=()=>onChange();
  const isLive=()=>client?.socket?.readyState===WebSocket.OPEN&&status==='room';
  const message=s=>{notice=s;show()};
@@ -39,7 +39,7 @@ export function createOnline(onChange,onExit){
   if(!s||!Array.isArray(s.players)||typeof s.phase!=='string')return;
   if(view&&Number.isInteger(s.revision)&&s.revision<view.revision)return;
   const old=view;view=s;if(Number.isFinite(s.serverNow))clockOffset=s.serverNow-Date.now();sequence=Math.max(sequence,s.ownSeq||0);
-  if(old?.phaseId!==s.phaseId){notice='';draftItem='';draftTreatment='';}
+  if(old?.phaseId!==s.phaseId){notice='';draftItem='';draftTreatment='';draftVow='steady';}
   status='room';show();
  };
  const bind=(net,id)=>{
@@ -165,12 +165,14 @@ export function createOnline(onChange,onExit){
   }else if(task==='offering'){
    const item=draftItem||view.altar?.itemId||'';
    const treatment=draftTreatment||view.altar?.treatment||'';
+   const vow=draftVow!=='steady'?draftVow:(view.altar?.vow||'steady');
    controls='<div class="offer-filter net-offer-filter">'+FILTERS.map(([id,label])=>'<button type="button" data-role-filter="'+id+'" aria-pressed="'+(offeringFilter===id)+'">'+label+'</button>').join('')+'</div>'+
     '<div class="net-offerings">'+ITEMS.filter(x=>offeringFilter==='all'||x.kind===offeringFilter).map(x=>'<button type="button" class="net-offering '+(item===x.id?'chosen':'')+
     '" data-role-item="'+x.id+'" aria-pressed="'+(item===x.id)+'" '+(locked?'disabled':'')+'>'+offeringArt(x.id,48)+
     '<b>'+escape(x.name)+'</b></button>').join('')+'</div><div class="net-tool-row">'+TREATMENTS.map(x=>
     '<button type="button" class="net-tool '+(treatment===x.id?'chosen':'')+'" data-role-treatment="'+x.id+
     '" aria-pressed="'+(treatment===x.id)+'" '+(locked?'disabled':'')+'>'+treatmentArt(x.id,19)+escape(x.name)+'</button>').join('')+'</div>'+
+    '<div class="section-label net-vow-label">ОБЕТ ПЕРЕД СУДОМ</div><div class="vow-options net-vow-options">'+VOWS.map(x=>'<button type="button" data-role-vow="'+x.id+'" class="vow-option '+(vow===x.id?'chosen':'')+'" aria-pressed="'+(vow===x.id)+'" '+(locked?'disabled':'')+'><strong>'+escape(x.name)+'</strong><small>'+escape(x.detail)+'</small></button>').join('')+'</div>'+
     '<span class="net-role-small">'+(done?'Дар поставлен. Можно изменить до печати.':
       'Укажите предмет и подготовку — выбранное сразу появится на общем алтаре.')+'</span>';
   }else if(task==='bell'){
@@ -223,7 +225,7 @@ export function createOnline(onChange,onExit){
   const item=getItem(j.selected);
   return '<section class="net-verdict">'+sharedHeader()+'<div class="net-verdict-head">'+
    '<div class="net-mask verdict-'+j.verdict+'">'+godArt()+'</div><div><span class="chapter">СУД НАД ОБЩИМ ДАРОМ</span>'+
-   '<h1>'+verdict+'</h1><p>'+escape(j.miracleText)+'</p>'+
+   '<h1>'+verdict+'</h1><p>'+escape(j.miracleText)+'</p><p class="net-vow-result">'+escape(VOWS.find(v=>v.id===j.vow)?.name||'Обычный обряд')+'</p>'+
    '<strong>Оценка '+j.score+' · Милость '+(j.faithDelta>0?'+':'')+j.faithDelta+'</strong></div></div>'+
    '<div class="section-label">ОГО ПРОВЕРИЛ</div><div class="net-score-list">'+
    '<div><span>Общее подношение: '+escape(item?.name||'Каравай')+'</span><strong>'+j.score+'</strong></div>'+
@@ -286,7 +288,7 @@ export function createOnline(onChange,onExit){
  }
 
  function action(event){
-  const el=event.target.closest('[data-net],[data-net-vote],[data-role-reveal],[data-role-item],[data-role-treatment],[data-role-bell],[data-role-height],[data-role-call],[data-role-filter]');
+  const el=event.target.closest('[data-net],[data-net-vote],[data-role-reveal],[data-role-item],[data-role-treatment],[data-role-vow],[data-role-bell],[data-role-height],[data-role-call],[data-role-filter]');
   if(!el)return false;
   const own=view?.ownTasks||[],sealed=!!view?.locked?.[ownId];
   if(el.hasAttribute('data-role-filter')){offeringFilter=el.dataset.roleFilter;show();return true;}
@@ -296,11 +298,13 @@ export function createOnline(onChange,onExit){
    const task=el.dataset.roleReveal;
    if(!sealed&&own.includes(task))command('reveal',{task});return true;
   }
-  if(el.hasAttribute('data-role-item')||el.hasAttribute('data-role-treatment')){
+  if(el.hasAttribute('data-role-item')||el.hasAttribute('data-role-treatment')||el.hasAttribute('data-role-vow')){
    if(sealed||!own.includes('offering'))return true;
    if(el.hasAttribute('data-role-item'))draftItem=el.dataset.roleItem;
-   else draftTreatment=el.dataset.roleTreatment;
-   if(draftItem&&draftTreatment)command('set',{task:'offering',itemId:draftItem,treatment:draftTreatment});
+   else if(el.hasAttribute('data-role-treatment'))draftTreatment=el.dataset.roleTreatment;
+   else draftVow=el.dataset.roleVow;
+   const item=draftItem||view?.altar?.itemId,treatment=draftTreatment||view?.altar?.treatment;
+   if(item&&treatment)command('set',{task:'offering',itemId:item,treatment,vow:draftVow});
    show();return true;
   }
   if(el.hasAttribute('data-role-bell')){if(!sealed&&own.includes('bell'))command('set',{task:'bell',value:Number(el.dataset.roleBell)});return true}
