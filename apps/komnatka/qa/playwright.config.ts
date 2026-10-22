@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 // Run from repository root: npx playwright test --config apps/komnatka/qa/playwright.config.ts
 export default defineConfig({
   testDir: '.',
-  testMatch: 'header-layout.spec.ts',
+  testMatch: ['header-layout.spec.ts','finish-layout.spec.ts'],
   timeout: 45_000,
   expect: { timeout: 10_000 },
   workers: 1,
