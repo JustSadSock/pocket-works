@@ -11,7 +11,8 @@
         "diorama.test.mjs",
         "feedback.test.mjs",
         "life.test.mjs",
-        "themes.test.mjs"
+        "themes.test.mjs",
+        "online-flow.test.mjs"
       ]
     },
     {

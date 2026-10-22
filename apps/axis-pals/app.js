@@ -6,6 +6,7 @@ import {drawRobot,describeMove,bumpMotion,poseFor} from './actors.js';
 import {drawDiorama,sceneFingerprint} from './diorama.js';
 import {drawAxisImpulse,drawContactEffects,axisOf} from './feedback.js';
 import {createSoundPlayer,soundForMove} from './sound.js';
+import {isFreshOnlineRound,wonStageToken} from './online-flow.js';
 import {makeReaction,reactionFrame,idleMoment,drawReactions} from './life.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id),NET=location.origin+'/pocketnet',PREFIX='pocket-works:axis-pals:';
@@ -21,6 +22,8 @@ let profile=null,name=local('name','Игрок'),sound=local('sound','on')!=='of
 if(!['easy','medium','hard'].includes(difficulty))difficulty='medium';
 let mode='menu',screen='menu',net=null,me=null,server=null,roomId='',connected=false,busy=false,offline=null;
 let paused=false,overlayMode='',visual=null,lifeReaction=null,lastAction=performance.now(),toastTimer=0,previousKey='',lastAttempt='';
+let autoAdvanceTimer=0,autoAdvanceKey='';
+const AUTO_NEXT_DELAY=3200;
 const soundPlayer=createSoundPlayer(()=>window.AudioContext||window.webkitAudioContext);
 const pressTimers=new WeakMap();let axisTimer=0;
 const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
@@ -105,16 +108,29 @@ function next(){
 }
 function restart(){
  const g=getGame();if(!g)return;
- if(mode==='online'){if(g.host!==me?.id){notify('Перезапускает ведущий');return}send({type:'restart'});hideOverlay();return}
+ if(mode==='online'){if(g.host!==me?.id){notify('Перезапускает ведущий');return}send({type:'restart'});return}
  playLocal(g.kind,g.index);
 }
 function hideOverlay(){overlayMode='';$('overlay').classList.add('hidden');paused=false}
+function stopAutoAdvance(){
+ clearTimeout(autoAdvanceTimer);autoAdvanceTimer=0;autoAdvanceKey='';
+}
+function scheduleAutoAdvance(snapshot=server){
+ const token=wonStageToken(snapshot);
+ if(!token||mode!=='online'||!connected||me?.id!==snapshot.host){stopAutoAdvance();return}
+ if(token===autoAdvanceKey)return; // PocketNet sync/reconnect packets must not restart the countdown.
+ stopAutoAdvance();autoAdvanceKey=token;
+ autoAdvanceTimer=setTimeout(()=>{
+  autoAdvanceTimer=0;
+  if(mode==='online'&&connected&&me?.id===server?.host&&wonStageToken(server)===token)send({type:'next'});
+ },AUTO_NEXT_DELAY);
+}
 function openOverlay(kind){
  overlayMode=kind;paused=true;$('overlay').classList.remove('hidden');
  $('overlayRestart').classList.remove('hidden');$('overlayMain').disabled=false;
  const g=getGame(),leader=mode!=='online'||g?.host===me?.id;
  if(kind==='pause'){$('overlayEyebrow').textContent='ПЕРЕРЫВ';$('overlayTitle').textContent='Смена на паузе';$('overlayText').textContent=mode==='online'?'Пауза только на этом устройстве. Партнёр остаётся в комнате.':'Маршрут сохранён до выхода в меню.';$('overlayMain').textContent='Продолжить';$('overlayRestart').disabled=!leader;}
- else if(kind==='won'){$('overlayEyebrow').textContent='ЗАКАЗ ВЫПОЛНЕН';$('overlayTitle').textContent='На своих местах.';$('overlayText').textContent='Оба груза доставлены за '+g.steps+' ходов. Оптимум: '+g.level.optimal+'.';$('overlayMain').textContent=mode==='online'&&!leader?'Ожидаем ведущего':'Следующий маршрут';$('overlayMain').disabled=!leader;$('overlayRestart').disabled=!leader;}
+ else if(kind==='won'){$('overlayEyebrow').textContent='ЗАКАЗ ВЫПОЛНЕН';$('overlayTitle').textContent='На своих местах.';$('overlayText').textContent='Оба груза доставлены за '+g.steps+' ходов. Оптимум: '+g.level.optimal+'.'+(mode==='online'?' Следующий маршрут начнётся автоматически.':'');$('overlayMain').textContent=mode==='online'?(leader?'Перейти сейчас':'Переход автоматически'):'Следующий маршрут';$('overlayMain').disabled=!leader;$('overlayRestart').disabled=!leader;}
  else if(kind==='lost'){$('overlayEyebrow').textContent='ЛИМИТ ИСЧЕРПАН';$('overlayTitle').textContent='Маршрут сорван';$('overlayText').textContent='Попробуйте иначе — используйте стены, чтобы разделять движения.';$('overlayMain').textContent=leader?'Попробовать снова':'Ожидаем ведущего';$('overlayMain').disabled=!leader;$('overlayRestart').classList.add('hidden');}
  else {$('overlayEyebrow').textContent='КАМПАНИЯ ЗАКРЫТА';$('overlayTitle').textContent='Склад покорён';$('overlayText').textContent='Все двенадцать маршрутов пройдены. Можно начать новую смену.';$('overlayMain').textContent=leader?'Начать заново':'Ожидаем ведущего';$('overlayMain').disabled=!leader;$('overlayRestart').classList.add('hidden')}
 }
@@ -150,10 +166,12 @@ function showLobby(){
 }
 function consume(next){
  if(!next||typeof next!=='object'||!['lobby','play','won','lost','complete'].includes(next.phase))return;
- const old=server;server=next;
- if(next.phase==='lobby'){lifeReaction=null;visual=null;hideOverlay();showLobby();return}
+ const old=server,roundChanged=isFreshOnlineRound(old,next);server=next;
+ if(next.phase==='lobby'){stopAutoAdvance();lifeReaction=null;visual=null;hideOverlay();showLobby();return}
  if(!next.level)return;
  if(screen!=='play'){hideOverlay();show('play')}
+ else if(roundChanged)hideOverlay(); // Guest can already see the new board behind the old result modal.
+ if(next.phase!=='won')stopAutoAdvance();
  if(old?.level&&old.revision!==next.revision&&old.level.seed===next.level.seed&&old.positions?.length===2&&next.positions?.length===2){
   visual=describeMove(old.positions,next.positions,performance.now());
   lifeReaction=makeReaction(visual,next.level,next.phase,visual?.at);
@@ -164,18 +182,19 @@ function consume(next){
  const key=next.phase+':'+next.index;
  if(['won','lost','complete'].includes(next.phase)&&key!==previousKey){previousKey=key;if(next.phase==='won'||next.phase==='complete')noise('win');setTimeout(()=>finishOverlay(),next.phase==='lost'?1050:1500)}
  if(next.phase==='play')previousKey='';
+ if(next.phase==='won')scheduleAutoAdvance(next);
 }
 function send(v){if(!net||!connected){notify('PocketNet отключён');return false}try{net.sendGame(v);return true}catch{notify('Нет соединения');return false}}
 function closeNet(navigate=true){
- const active=net;net=null;if(active){try{if(connected&&active.roomId)active.leaveRoom()}catch{}active.close()}
+ stopAutoAdvance();const active=net;net=null;if(active){try{if(connected&&active.roomId)active.leaveRoom()}catch{}active.close()}
  server=null;me=null;roomId='';connected=false;busy=false;if(navigate){mode='menu';show('menu');refreshProgress()}
 }
 function wire(client){
- client.on('connected',e=>{if(net!==client)return;connected=true;me=e.player;status('POCKETNET · В СЕТИ');if(screen==='lobby')showLobby()});
+ client.on('connected',e=>{if(net!==client)return;connected=true;me=e.player;status('POCKETNET · В СЕТИ');if(screen==='lobby')showLobby();if(server?.phase==='won')scheduleAutoAdvance()});
  client.on('room_joined',e=>{if(net!==client)return;roomId=e.roomId;busy=false;consume(e.state);send({type:'sync'})});
  client.on('game_event',e=>{if(net!==client)return;if(e.event?.type==='state')consume(e.event.payload);if(e.event?.type==='notice'){if(String(e.event.payload).includes('Оба пути перекрыты')&&server?.positions?.length===2){visual=bumpMotion(server.positions,performance.now(),lastAttempt);lifeReaction=makeReaction(visual,server.level,server.phase,visual.at);lastAction=visual.at;noise('blocked');vibrate(14)}notify(e.event.payload)}});
  client.on('presence',()=>{if(net===client)send({type:'sync'})});
- client.on('disconnected',()=>{if(net===client){connected=false;status('POCKETNET · ПЕРЕПОДКЛЮЧЕНИЕ',true);renderHUD()}});
+ client.on('disconnected',()=>{if(net===client){connected=false;stopAutoAdvance();status('POCKETNET · ПЕРЕПОДКЛЮЧЕНИЕ',true);renderHUD()}});
  client.on('room_closed',()=>{if(net===client){closeNet();notify('Комната закрылась')}});
  client.on('error',e=>{if(net!==client)return;busy=false;const why={room_full:'В комнате уже два игрока',room_not_found:'Комната не найдена',match_in_progress:'Игра уже идёт',game_unavailable:'Сервер игры пока не опубликован'};notify(why[e.code]||'Ошибка PocketNet');if(screen==='lobby')showLobby()});
 }
@@ -270,8 +289,8 @@ $('start').onclick=()=>send({type:'start'});
 document.querySelectorAll('[data-move]').forEach(b=>b.addEventListener('click',()=>takeMove(b.dataset.move)));
 $('hint').onclick=tip;$('undo').onclick=undo;
 $('pause').onclick=()=>{if(overlayMode)return;openOverlay('pause')};
-$('overlayMain').onclick=()=>{const kind=overlayMode;hideOverlay();if(kind==='won'||kind==='complete')next();else if(kind==='lost')restart();else renderHUD()};
-$('overlayRestart').onclick=()=>{hideOverlay();restart()};
+$('overlayMain').onclick=()=>{const kind=overlayMode;if(kind==='pause'){hideOverlay();renderHUD();return}if(mode!=='online')hideOverlay();if(kind==='won'||kind==='complete')next();else if(kind==='lost')restart()};
+$('overlayRestart').onclick=()=>{if(mode!=='online')hideOverlay();restart()};
 $('overlayMenu').onclick=()=>{if(mode==='online')closeNet();else{offline=null;mode='menu';show('menu');refreshProgress()}};
 document.addEventListener('keydown',e=>{
  if(screen!=='play'||e.repeat||['INPUT','TEXTAREA'].includes(document.activeElement?.tagName))return;
