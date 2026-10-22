@@ -201,3 +201,185 @@ p{line-height:1.5}
 @media(max-height:720px) and (min-width:761px){.game-layout{grid-template-areas:'board side' 'hand hand'}.board{width:min(100%,min(53dvh,380px))}.game-layout__side .log-panel{display:none}.law-card{min-height:100px}.hand-panel{padding:8px}.law-card__body{-webkit-line-clamp:2}}
 @media(max-height:530px) and (orientation:landscape){.game-layout{display:grid;grid-template-columns:minmax(270px,.8fr) minmax(250px,1fr);grid-template-areas:'board hand' 'side side';gap:8px}.game-layout__main,.game-layout__hand,.game-layout__side{width:100%}.game-layout__side{display:grid;grid-template-columns:1fr 1fr}.board{width:min(100%,min(77dvh,330px))}.hand{flex-wrap:wrap;max-height:200px;overflow:auto}.law-card{flex:1 0 100px}.hero-card--menu{display:grid;grid-template-columns:1fr 1.2fr}.hero-card__content{margin:0}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+
+/* Council layout 0.3: state first, decision second. The board stays a flat carved board. */
+:root{--night:#171d1b;--stone:#313735;--stone-hi:#444944;--ivory:#f0e7d8;--faded:#c0b7a5;--gold:#be9c65;--paper:#e3d4b2;--line:rgba(215,192,145,.22)}
+.game-shell{min-height:100dvh;background:radial-gradient(ellipse at 52% -18%,#49483d 0%,#252e29 42%,#151c1a 100%)}
+.game-shell__frame{max-width:1480px}
+.topbar{padding:6px 108px 12px 0;margin-bottom:10px;gap:8px}
+.topbar h1{font-size:clamp(24px,2.2vw,34px)}
+.topbar__left .eyebrow{color:#c7aa7f;max-width:none}
+.topbar__right{flex-wrap:nowrap;gap:8px}
+.crown-bar{border-color:var(--score-color);background:rgba(5,9,8,.15);padding:6px 10px}
+.crown-bar__label{font-size:12px}
+.crown-bar__icons{gap:12px}
+.hud-actions .text-btn{min-height:36px}
+.game-layout{display:grid;grid-template-columns:minmax(215px,270px) minmax(280px,1fr) minmax(275px,335px);grid-template-areas:"side board hand" "foot foot foot";gap:12px;align-items:start}
+.game-layout__side{grid-area:side;display:block;min-width:0}
+.game-layout__main{grid-area:board;min-width:0;display:grid;justify-items:center}
+.game-layout__hand{grid-area:hand;min-width:0}
+.game-layout__foot{grid-area:foot;min-width:0}
+.board-panel{border:0;background:transparent;box-shadow:none;width:100%;padding:0;display:flex;flex-direction:column;align-items:center}
+.board-caption{width:100%;max-width:560px;margin-bottom:8px;padding:0 5px}
+.board-caption__title{font-size:22px}
+.board-surround{width:100%;padding:6px 0 8px;background:radial-gradient(ellipse at center,rgba(193,163,111,.10),transparent 65%);overflow:visible}
+.board{width:min(100%,560px,calc((100dvh - 185px)*5/7));border:6px solid #8c7e60;outline:1px solid #101613;box-shadow:inset 0 0 0 2px #2e2e29,inset 0 12px 24px #191d1a80,0 14px 27px #090d0b88}
+.board::before{inset:-5px}
+.board-cell--throne::after{font-size:clamp(10px,1.1vw,17px);letter-spacing:.1em}
+.piece{pointer-events:auto;background:none;padding:0;border:0;appearance:none;cursor:pointer;touch-action:manipulation}
+.piece:focus-visible .piece__token,.piece--focused .piece__token{outline:2px solid #e7d4a8;outline-offset:3px}
+.piece__token{width:min(87%,68px);transition:filter .12s,box-shadow .14s}
+.piece:hover .piece__token{filter:brightness(1.15)}
+.board-effect{pointer-events:none}
+.law-panel,.hand-panel,.log-panel{background:linear-gradient(145deg,#343b36,#272f2a);border:1px solid rgba(207,186,138,.25);box-shadow:inset 0 1px #f8ebbe10,0 6px 16px #0c120e40}
+.law-panel{padding:15px 12px}
+.law-panel .panel-head,.hand-panel .panel-head{display:block;margin:0 0 13px}
+.law-panel .panel-head h3,.hand-panel .panel-head h3{font-size:27px}
+.law-panel .panel-head span,.hand-panel .panel-head span{display:block;text-align:left;margin-top:3px;font-size:11px;color:#c7bca6}
+.law-slots{display:grid;grid-template-columns:1fr;gap:7px}
+.law-slot{display:grid;grid-template-columns:1fr;gap:3px;text-align:left;min-height:70px;padding:10px 12px 9px 14px;background:#29312e;border:1px solid #50574e;border-left:4px solid var(--slot-color);transition:background .15s,border-color .15s,transform .15s}
+.law-slot:hover,.law-slot--focused{background:#414940;border-color:var(--gold);border-left-color:var(--slot-color)}
+.law-slot:active{transform:translateY(1px)}
+.law-slot__short{font-size:10px;letter-spacing:.11em;text-transform:uppercase;font-weight:700;color:#c7b994}
+.law-slot__copy{display:flex;align-items:baseline;justify-content:space-between;gap:5px;min-width:0}
+.law-slot__name{font-size:20px;line-height:1.08;overflow-wrap:anywhere;color:#f0e5cd}
+.law-slot__mode{font-size:9px;white-space:nowrap;color:#aaa696}
+.hand-panel{padding:15px 12px;max-height:calc(100dvh - 170px);overflow-y:auto;scrollbar-width:thin}
+.hand{display:grid;grid-template-columns:1fr;overflow:visible;gap:7px;padding:1px 3px 4px;scroll-snap-type:none;max-height:none}
+.law-card{display:grid;grid-template-columns:1fr;gap:3px;flex:auto;min-height:56px;text-align:left;padding:10px 11px 9px 16px;background:linear-gradient(125deg,#e9ddc0,#c7b593);border:1px solid #aa9068;box-shadow:inset 0 1px #fffaee6b}
+.law-card::before{width:4px}
+.law-card__title{font-size:21px;line-height:1.04;font-weight:700}
+.law-card__slot{font-size:10px;line-height:1.1;letter-spacing:.07em}
+.law-card--selected{transform:translateX(-3px);background:#f5e8c5;border-color:#edd19b;outline:2px solid #d6b47c;outline-offset:0}
+.law-card:disabled{opacity:.38;pointer-events:none}
+.hand-panel--locked .law-card{opacity:.4}
+.sealed-notice{margin:0 0 10px;padding:11px;background:#273d39;border:1px solid #8eaa99;color:#e3e8d7;font-size:13px;line-height:1.4}
+.detail-card{margin:11px 0 0;padding:13px;border:1px solid #86795d;border-left:3px solid var(--detail-color);background:linear-gradient(145deg,#242d28,#303a32);box-shadow:inset 0 1px #ffffff12}
+.detail-card__heading{display:flex;align-items:center;justify-content:space-between;gap:6px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:#c9b38c;font-size:10px}
+.detail-card__heading .text-btn{font-size:24px;padding:0 7px;line-height:1}
+.detail-card__title,.law-comparison strong{display:block;font:700 21px/1.15 'Cormorant Garamond',Georgia,serif;color:#f1e4c9}
+.detail-card__title{margin-top:6px}
+.detail-card p{font-size:12px;line-height:1.45;margin:6px 0}
+.law-comparison{display:grid;gap:9px;margin-top:7px}
+.law-comparison>div{padding-left:10px;border-left:2px solid #7d826f}
+.law-comparison__new{border-left-color:#d1b477!important}
+.law-comparison small{display:block;margin-bottom:2px;color:#b3b0a2;font-size:10px;letter-spacing:.03em}
+.detail-card .detail-note{border-top:1px solid #ffffff1a;padding-top:8px;color:#baa98b;margin-top:10px}
+.hand-actions{position:sticky;bottom:-15px;margin-top:12px;padding:9px 0 11px;background:linear-gradient(0deg,#292f2b 85%,#292f2b00);z-index:2}
+.hand-actions .primary-btn{width:100%;min-height:46px;font-size:14px}
+.primary-btn:disabled{opacity:.44;box-shadow:none;cursor:not-allowed}
+.log-panel{padding:8px 12px;min-height:44px}
+.log-panel__summary{display:flex;align-items:center;gap:12px;min-width:0}
+.log-panel__phase{font-size:11px;color:#d6bc8e;white-space:nowrap}
+.log-panel__recent{font-size:12px;color:#dfd7c6;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-panel__summary button{font-size:11px;white-space:nowrap;padding:7px 10px}
+.log-panel .log-list{max-height:180px;overflow:auto;border-top:1px solid #ffffff21;margin-top:9px;padding-top:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.replay-ribbon{font-size:12px;letter-spacing:.08em;color:#f4d69a;text-align:center;border-top:1px solid #817458;padding-top:6px}
+.menu-card:focus-visible,.law-slot:focus-visible,.law-card:focus-visible,.primary-btn:focus-visible{outline:3px solid #f2d38e;outline-offset:2px}
+@media(max-width:1120px) and (min-width:761px){
+ .game-layout{grid-template-columns:minmax(175px,220px) minmax(240px,1fr) minmax(235px,290px)}
+ .law-panel,.hand-panel{padding:10px}
+ .law-slot{padding:8px 9px;min-height:65px}
+ .law-slot__name{font-size:18px}
+ .law-slot__copy{display:block}
+ .law-slot__mode{display:block;font-size:9px;margin-top:1px}
+ .topbar__right{gap:4px}
+ .hud-actions{gap:0}
+ .hud-actions .text-btn{padding:6px}
+}
+@media(max-width:760px){
+ .game-shell{min-height:100dvh;padding:calc(6px + env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+ .topbar{padding:2px 88px 5px 0;gap:4px;display:flex;flex-wrap:wrap;margin-bottom:5px}
+ .topbar__left .eyebrow{font-size:9px}
+ .topbar h1{font-size:22px}
+ .topbar__right{width:100%;flex:1 1 100%;gap:2px;justify-content:space-between}
+ .crown-bar{padding:2px 5px;min-width:0;flex:1}
+ .crown-bar__label{font-size:9px}
+ .crown-bar__icons{gap:5px;font-size:11px}
+ .hud-actions{padding-left:1px}
+ .hud-actions .text-btn{font-size:10px;padding:5px;min-height:30px}
+ .game-layout{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"board" "side" "hand" "foot";gap:7px}
+ .game-layout__main,.game-layout__side,.game-layout__hand,.game-layout__foot{width:100%}
+ .board-panel{padding:0}
+ .board-caption{margin:0 0 3px;max-width:460px}
+ .board-caption__title{font-size:15px}
+ .board-surround{padding:0;background:transparent}
+ .board{width:min(100%,370px,calc((100dvh - 342px)*5/7));border-width:4px}
+ .board::before{inset:-3px}
+ .piece__sigil{font-size:clamp(15px,5vw,26px)}
+ .law-panel{padding:4px 5px 6px}
+ .law-panel .panel-head{display:none}
+ .law-slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+ .law-slot{display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:43px;padding:4px 1px 3px;border:1px solid #5b6051;border-bottom:3px solid var(--slot-color);text-align:center;overflow:hidden}
+ .law-slot__short{font-size:clamp(8px,2.1vw,10px);letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+ .law-slot__copy{display:none}
+ .hand-panel{max-height:none;overflow:visible;padding:7px 8px}
+ .hand-panel .panel-head{margin:0 0 7px;display:flex;align-items:baseline}
+ .hand-panel .panel-head h3{font-size:19px}
+ .hand-panel .panel-head span{margin:0}
+ .hand{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none;scroll-snap-type:x mandatory}
+ .law-card{display:flex;flex:0 0 124px;min-height:69px;padding:7px 8px 7px 12px;scroll-snap-align:start}
+ .law-card__title{font-size:18px}
+ .law-card__slot{font-size:9px}
+ .law-card--selected{transform:translateY(-2px)}
+ .detail-card{margin-top:6px;padding:9px 10px}
+ .detail-card p{font-size:11px;margin:4px 0}
+ .law-comparison{grid-template-columns:1fr 1fr;gap:7px}
+ .law-comparison strong{font-size:17px}
+ .hand-actions{padding:5px 0;margin-top:2px;bottom:0}
+ .hand-actions .primary-btn{min-height:43px}
+ .log-panel{padding:5px 8px}
+ .log-panel__summary{gap:5px;flex-wrap:wrap}
+ .log-panel__phase{font-size:10px}
+ .log-panel__recent{font-size:10px;flex:1}
+ .log-panel .log-list{grid-template-columns:1fr}
+}
+@media(max-width:360px){
+ .board{width:min(100%,calc((100dvh - 345px)*5/7))}
+ .topbar h1{font-size:20px}
+ .law-card{flex-basis:115px}
+ .law-comparison{grid-template-columns:1fr}
+}
+@media(max-height:600px) and (min-width:761px){
+ .game-layout{grid-template-columns:180px minmax(240px,1fr) 250px;grid-template-areas:"side board hand" "foot foot foot"}
+ .board{width:min(100%,calc((100dvh - 155px)*5/7))}
+ .law-slot{min-height:42px;padding:4px 8px}
+ .hand-panel{max-height:calc(100dvh - 132px)}
+}
+/* Keyboard-only test laboratory; genuine templates are rendered inert as preview. */
+.debug-scene{width:calc(100% - 335px);height:100dvh;overflow:auto;position:relative;background:#151d1a}
+.debug-scene__content{zoom:.85}
+.debug-scene__label{position:fixed;left:10px;bottom:10px;z-index:150;padding:5px 9px;background:#2a322e;color:#d9c5a5;font-size:10px;letter-spacing:.07em;border:1px solid #6d6047;pointer-events:none}
+.debug-workshop{position:fixed;top:0;right:0;bottom:0;z-index:190;width:335px;padding:20px 16px calc(18px + env(safe-area-inset-bottom));overflow:auto;border-left:2px solid #b49a68;background:#222c28;color:#eae0c9;box-shadow:-16px 0 36px #080d0b9c}
+.debug-workshop__top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.debug-workshop__top small{font-size:10px;letter-spacing:.14em;color:#c4b28f;text-transform:uppercase}
+.debug-workshop__top h2{font:700 34px/1 'Cormorant Garamond',serif;margin:4px 0 10px}
+.debug-workshop__top .ghost-btn{font-size:24px;padding:2px 10px}
+.debug-workshop__tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin:8px 0 14px}
+.debug-workshop button{cursor:pointer}
+.debug-workshop__tabs button,.debug-workshop__items button{border:1px solid #657063;background:#303a34;color:#e7dbc7;padding:10px;font:600 12px 'PT Sans',system-ui;text-align:left}
+.debug-workshop__tabs button.is-active,.debug-workshop__items button.is-active{background:#8f7952;border-color:#e5c891;color:#fff8e6}
+.debug-workshop__items{display:grid;grid-template-columns:1fr;gap:6px}
+.debug-workshop__items button:hover,.debug-workshop__tabs button:hover{border-color:#dfc38a}
+.debug-workshop p{font-size:12px;line-height:1.45;color:#d0c5af;margin:10px 0}
+.debug-workshop__foot{font-size:11px;color:#afaa99;margin-top:17px;border-top:1px solid #77745a;padding-top:11px}
+.debug-workshop kbd{font:700 12px monospace;background:#40483f;padding:2px 5px;border:1px solid #747b68}
+.debug-workshop .debug-panel{margin-top:10px;padding:10px;box-shadow:none;overflow:visible}
+.debug-workshop .debug-panel h3{font-size:21px;margin:0}
+.debug-workshop .debug-grid{grid-template-columns:1fr 1fr}
+.debug-workshop .debug-grid button{font-size:11px;padding:7px 4px}
+.debug-workshop .debug-state{font-size:10px}
+.debug-scene--anim-move .piece--p1{animation:dev-piece-move 1.15s ease-in-out}
+.debug-scene--anim-card .law-card:first-child{animation:dev-card-select 1.15s ease-in-out}
+@keyframes dev-piece-move{0%{transform:translate(calc(-50% - 35px),calc(-50% + 35px)) scale(.88)}65%{transform:translate(-50%,-50%) scale(1.12)}100%{transform:translate(-50%,-50%) scale(1)}}
+@keyframes dev-card-select{0%{transform:translateY(0);outline:0 solid transparent}55%{transform:translateY(-7px);outline:3px solid #ffe2a5}100%{transform:translateY(0);outline:0 solid transparent}}
+@media(max-width:760px){
+ .debug-scene{width:100%;height:44dvh;overflow:auto}
+ .debug-scene__content{zoom:.73}
+ .debug-scene__label{bottom:56dvh;font-size:9px}
+ .debug-workshop{top:auto;bottom:0;left:0;width:100%;height:56dvh;padding:10px 12px calc(12px + env(safe-area-inset-bottom));border-left:0;border-top:2px solid #b49a68;box-shadow:0 -12px 24px #080d0b9c}
+ .debug-workshop__tabs{grid-template-columns:repeat(4,1fr);gap:3px}
+ .debug-workshop__tabs button{font-size:10px;padding:9px 5px;text-align:center}
+ .debug-workshop__items{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
