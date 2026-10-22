@@ -948,7 +948,7 @@ function render() {
     root.innerHTML = `${gameHTML(state, app.local.mode === "ai" ? AI_PROFILES[app.local.aiProfile].name : "Локальная партия")}${modalHTML()}`;
   }
   if(app.debug.open)root.innerHTML=debugSceneHTML(app.debug.scene)+debugWorkshopHTML();
-  animateBoard();
+  if(!app.debug.open)animateBoard();
   syncExports();
   persistLocal();
 }
@@ -1043,7 +1043,7 @@ root.addEventListener("click", (event) => {
         playTone("tap");
         break;
       case "confirm-choice":
-        confirmSelection();
+        if(!app.replayActive)confirmSelection();
         break;
       case "toggle-rules":
         openModal("rules");
@@ -1093,12 +1093,14 @@ root.addEventListener("click", (event) => {
   if (focus && !event.target.closest("[data-card-id]")) {
     app.focusCardId=focus.dataset.focusCard;
     app.inspectedSlot=focus.dataset.slot||null;
+    if(app.inspectedSlot)app.selectedCardId=null;
   }
 
   const piece=event.target.closest("[data-piece-kind]");
   if(piece){
     app.inspectedSlot=piece.dataset.pieceKind;
     app.focusCardId=activeLaws(currentState())[app.inspectedSlot]?.id||null;
+    app.selectedCardId=null;
     render();return;
   }
   const card = event.target.closest("[data-card-id]");
