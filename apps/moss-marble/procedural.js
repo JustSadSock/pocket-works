@@ -130,11 +130,11 @@ function addObjectBypass(blueprint, random, t, side) {
 }
 
 function addGate(blueprint, random, t, difficulty) {
-  const gap = clamp(.20 - difficulty * .004, .11, .20);
+  const gap = clamp(.30 - difficulty * .0025, .24, .30);
   const material = random() > .62 ? 'stone' : 'wood';
   blueprint.barriers.push(
-    { material, width: material === 'stone' ? 20 : 18, height: material === 'stone' ? 30 : 27, points: [{ t, side: -.68 }, { t, side: -gap }] },
-    { material, width: material === 'stone' ? 20 : 18, height: material === 'stone' ? 30 : 27, points: [{ t, side: gap }, { t, side: .68 }] }
+    { material, width: material === 'stone' ? 20 : 18, height: material === 'stone' ? 30 : 27, minCenterClearance: 78, points: [{ t, side: -.68 }, { t, side: -gap }] },
+    { material, width: material === 'stone' ? 20 : 18, height: material === 'stone' ? 30 : 27, minCenterClearance: 78, points: [{ t, side: gap }, { t, side: .68 }] }
   );
   blueprint.tags.push('gate');
 }
@@ -147,8 +147,8 @@ function addWaterCauseway(blueprint, random, t, difficulty) {
   }
   blueprint.landforms.push({ kind: 'ridge', a: { t: t - .11, side: 0 }, b: { t: t + .12, side: 0 }, width: 142, height: 8, falloff: 2.2 });
   blueprint.barriers.push(
-    { material: 'stone', width: 18, height: 30, points: [{ t: t - .12, side: -.16 }, { t, side: -.15 }, { t: t + .12, side: -.14 }] },
-    { material: 'stone', width: 18, height: 30, points: [{ t: t - .12, side: .16 }, { t, side: .15 }, { t: t + .12, side: .14 }] }
+    { material: 'stone', width: 18, height: 30, minCenterClearance: 74, points: [{ t: t - .12, side: -.16 }, { t, side: -.15 }, { t: t + .12, side: -.14 }] },
+    { material: 'stone', width: 18, height: 30, minCenterClearance: 74, points: [{ t: t - .12, side: .16 }, { t, side: .15 }, { t: t + .12, side: .14 }] }
   );
   blueprint.tags.push('water');
 }
@@ -199,8 +199,8 @@ function addFinalFunnel(blueprint, random, t) {
   const spread = .58 + random() * .05;
   const neck = .22;
   blueprint.barriers.push(
-    { material: 'wood', width: 17, height: 26, points: [{ t: t - .09, side: -spread }, { t: t - .025, side: -.38 }, { t: t + .035, side: -neck }] },
-    { material: 'wood', width: 17, height: 26, points: [{ t: t - .09, side: spread }, { t: t - .025, side: .38 }, { t: t + .035, side: neck }] }
+    { material: 'wood', width: 17, height: 26, minCenterClearance: 73, points: [{ t: t - .09, side: -spread }, { t: t - .025, side: -.38 }, { t: t + .035, side: -neck }] },
+    { material: 'wood', width: 17, height: 26, minCenterClearance: 73, points: [{ t: t - .09, side: spread }, { t: t - .025, side: .38 }, { t: t + .035, side: neck }] }
   );
   blueprint.landforms.push({ kind: 'mound', t: t - .06, side: (random() - .5) * .18, length: 240, width: 180, height: 8 + random() * 5, asymmetry: (random() - .5) * .45, falloff: 1.75 });
   blueprint.tags.push('funnel');
