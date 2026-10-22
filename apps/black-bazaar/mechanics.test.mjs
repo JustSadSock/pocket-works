@@ -660,3 +660,154 @@ test('Leaving during market escrow returns the seller item and removes stranded 
  assert.equal(leaving.items.some(i=>i.id===owned.id),true);
  assert.equal(leaving.bankrupt,true);
 });
+
+
+function forceArtifact(item,key){
+ item.key=key;item.variant=0;
+ if(key==='frog'||key==='hourglass'){
+  item.curseDueRound=3;item.curseResolved=false;
+ }else{
+  delete item.curseDueRound;delete item.curseResolved;
+ }
+ if(key==='amulet')item.wardCharges=1;
+ return item;
+}
+
+test('Delayed curse follows the physical frog across public trading and activates once',()=>{
+ const {state}=makeRoom(2);
+ const [seller,buyer]=state.contestants;
+ const cursed=forceArtifact(seller.items[0],'frog');
+ seller.items=[cursed];buyer.items=[];
+ act(state,seller.id,{type:'post',itemId:cursed.id,ask:{gold:15}});
+ act(state,buyer.id,{type:'bid',offer:{gold:15}});
+ const sold=act(state,seller.id,{type:'accept',buyer:buyer.id});
+ assert.equal(sold.events[0].type,'state');
+ assert.equal(buyer.items[0].curseDueRound,3);
+ assert.equal(buyer.items[0].curseResolved,false);
+ const first=game.viewForPlayer({state,player:{id:buyer.id}}).you.items[0];
+ assert.equal(first.special.kind,'curse');
+ assert.equal(first.special.dueRound,3);
+ const other=game.viewForPlayer({state,player:{id:seller.id}}).players.find(p=>p.id===buyer.id).inventory[0];
+ assert.equal('special' in other,false);
+ while(state.round<3)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ buyer.resources.gold=1000;
+ // Suppress unrelated urgent contracts: isolate delayed upkeep math.
+ // Round 3 upkeep: -18% (180), delayed curse then -30% (246).
+ while(state.round===3){
+   const current=state.contestants[state.turnIndex];current.urgent=null;
+   act(state,current.id,{type:'end'});
+ }
+ assert.equal(buyer.resources.gold,574);
+ assert.equal(cursed.curseResolved,true);
+ const resolved=game.viewForPlayer({state,player:{id:buyer.id}}).you.items.find(i=>i.id===cursed.id);
+ assert.equal(resolved.special.resolved,true);
+ buyer.resources.gold=1000;
+ while(state.round===4)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ assert.equal(buyer.resources.gold,820,'curse must never fire twice');
+});
+test('Hourglass curse persists through black escrow, transfers to buyer, then consumes two parts once',()=>{
+ const {state}=makeRoom(2);
+ const [seller,buyer]=state.contestants;
+ const hourglass=forceArtifact(seller.items[0],'hourglass');
+ hourglass.curseDueRound=2;
+ seller.items=[hourglass];buyer.items=[];
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ act(state,seller.id,{type:'black_post',itemId:hourglass.id,ask:{gold:5}});
+ const lot=state.blackLots[0];
+ const inspect=act(state,buyer.id,{type:'black_inspect',lotId:lot.id});
+ assert.equal(inspect.events[0].type,'state');
+ const info=game.viewForPlayer({state,player:{id:buyer.id}}).blackLots[0].inspection;
+ assert.equal(info.curse.dueRound,2);
+ act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:5}});
+ const bid=state.blackLots[0].bids[0];
+ act(state,seller.id,{type:'black_accept',lotId:lot.id,bidId:bid.id});
+ assert.ok(buyer.items.some(i=>i.id===hourglass.id));
+ buyer.resources.parts=10;
+ while(state.round===2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ // Hourglass upkeep: -6 crystals, delayed one-time -2 parts.
+ assert.equal(buyer.resources.parts,8);
+ assert.equal(hourglass.curseResolved,true);
+ buyer.resources.parts=10;
+ while(state.round===3){
+   const current=state.contestants[state.turnIndex];current.urgent=null;
+   act(state,current.id,{type:'end'});
+ }
+ assert.equal(buyer.resources.parts,10);
+});
+test('One-use amulet prevents failed urgent order once and keeps spent state across rounds',()=>{
+ const {state}=makeRoom(2);const protectedPlayer=state.contestants[0];
+ protectedPlayer.items=[forceArtifact(protectedPlayer.items[0],'amulet')];
+ while(state.round<3)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ protectedPlayer.resources={gold:0,crystals:0,parts:0};
+ protectedPlayer.urgent={needs:{gold:100,crystals:0,parts:0},status:'pending'};
+ act(state,protectedPlayer.id,{type:'end'});
+ assert.equal(protectedPlayer.strikes,0);
+ assert.equal(protectedPlayer.urgent.status,'shielded');
+ assert.equal(protectedPlayer.items[0].wardCharges,0);
+ assert.equal(game.viewForPlayer({state,player:{id:protectedPlayer.id}}).you.items[0].special.charges,0);
+ while(state.round<6)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ protectedPlayer.resources={gold:0,crystals:0,parts:0};
+ protectedPlayer.urgent={needs:{gold:100,crystals:0,parts:0},status:'pending'};
+ act(state,protectedPlayer.id,{type:'end'});
+ assert.equal(protectedPlayer.strikes,1);
+ assert.equal(protectedPlayer.urgent.status,'failed');
+});
+test('Mirror bonus triggers for completed sales only and does not mint repeatedly in one round',()=>{
+ const {state}=makeRoom(3);const [seller,buyer,other]=state.contestants;
+ const mirror=forceArtifact(seller.items[0],'mirror');
+ seller.items=[mirror];buyer.items=[];other.items=[];
+ const start=seller.resources.crystals;
+ act(state,seller.id,{type:'post',itemId:mirror.id,ask:{gold:10}});
+ act(state,buyer.id,{type:'bid',offer:{gold:10}});
+ act(state,seller.id,{type:'accept',buyer:buyer.id});
+ assert.equal(seller.resources.crystals,start+3);
+ assert.equal(mirror.tradeUsedRound,1);
+ // The item can't be resold in the same round.
+ const invalid=act(state,buyer.id,{type:'deal_propose',to:other.id,giveItemId:mirror.id,give:{},want:{gold:1}});
+ assert.equal(invalid.events[0].type,'notice');
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const before=buyer.resources.crystals;
+ act(state,buyer.id,{type:'deal_propose',to:other.id,giveItemId:mirror.id,give:{},want:{gold:8}});
+ const offer=state.deals.find(d=>d.from===buyer.id);
+ assert.ok(offer);
+ act(state,other.id,{type:'deal_accept',dealId:offer.id});
+ assert.equal(buyer.resources.crystals,before+3);
+ assert.equal(mirror.tradeUsedRound,2);
+});
+test('Market lens discounts both forms of inspection, with private prices',()=>{
+ const {state}=makeRoom(3);const [seller,buyer]=state.contestants;
+ const lens=forceArtifact(buyer.items[0],'lens');
+ const item=seller.items[0];
+ const personal=game.viewForPlayer({state,player:{id:buyer.id}});
+ assert.deepEqual(personal.you.inspectionPrices,{public:8,black:15});
+ assert.deepEqual(game.viewForPlayer({state,player:{id:seller.id}}).you.inspectionPrices,{public:15,black:25});
+ act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:20}});
+ const before=buyer.resources.gold;
+ act(state,buyer.id,{type:'inspect'});
+ assert.equal(buyer.resources.gold,before-8);
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ act(state,seller.id,{type:'black_post',itemId:item.id,ask:{gold:20}});
+ const lot=state.blackLots[0],again=buyer.resources.gold;
+ const inspection=act(state,buyer.id,{type:'black_inspect',lotId:lot.id});
+ assert.equal(inspection.events[0].type,'state');
+ assert.equal(buyer.resources.gold,again-15);
+});
+
+
+test('Anonymous echo bonus credits the seller without leaking their identity to the public journal',()=>{
+ const {state}=makeRoom(3);
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const [seller,buyer]=state.contestants;
+ const mirror=forceArtifact(seller.items[0],'mirror');
+ const original=seller.resources.crystals;
+ buyer.resources.gold=400;
+ act(state,seller.id,{type:'black_post',itemId:mirror.id,ask:{gold:30}});
+ const lot=state.blackLots[0];
+ act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:30}});
+ const bid=state.blackLots[0].bids[0];
+ const sale=act(state,seller.id,{type:'black_accept',lotId:lot.id,bidId:bid.id});
+ assert.equal(sale.events[0].type,'state');
+ assert.equal(seller.resources.crystals,original+3);
+ assert.equal(mirror.tradeUsedRound,2);
+ assert.equal(state.log.some(message=>message.includes('Эхо перепродажи')&&message.includes(seller.character)),false);
+});

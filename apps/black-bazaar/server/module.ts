@@ -67,6 +67,39 @@ const GOODS = [
   ]}
 ];
 // Each pair is [positive effect, upkeep]. The second entry is ALWAYS a cost.
+// Extra hidden traits belong to VARIANT ZERO of selected kinds; they persist
+// on the artifact instance across public sales, private barter and escrow.
+const TRAITS = {
+  frog:{kind:'curse',title:'Алчность жабы',effect:{type:'goldPercent',value:30},delay:2},
+  hourglass:{kind:'curse',title:'Последний песок',effect:{type:'parts',value:2},delay:2},
+  amulet:{kind:'ward',title:'Печать отсрочки',charges:1},
+  mirror:{kind:'sellerBonus',title:'Эхо перепродажи',effect:{type:'crystals',value:3}},
+  lens:{kind:'appraisal',title:'Зоркий торговец',publicCost:8,blackCost:15}
+};
+function trait(item){return item.variant===0?TRAITS[item.key]||null:null;}
+function inspectCurse(item){
+  const t=trait(item);
+  return t?.kind==='curse'?{
+    title:t.title,effect:{...t.effect},dueRound:item.curseDueRound??null,
+    resolved:item.curseResolved===true
+  }:null;
+}
+function privateTrait(item){
+  const t=trait(item);
+  if(!t)return null;
+  if(t.kind==='curse')return {kind:'curse',...inspectCurse(item)};
+  if(t.kind==='ward')return {kind:'ward',title:t.title,charges:item.wardCharges??1};
+  if(t.kind==='sellerBonus')return {kind:'sellerBonus',title:t.title,effect:{...t.effect},lastRound:item.tradeUsedRound||0};
+  return {kind:'appraisal',title:t.title,publicCost:t.publicCost,blackCost:t.blackCost};
+}
+function inspectionCost(p,black=false){
+  const haveLens=p.items.some(i=>trait(i)?.kind==='appraisal');
+  return haveLens?(black?TRAITS.lens.blackCost:TRAITS.lens.publicCost):
+    (black?BLACK_INSPECTION_GOLD:15);
+}
+// Each item starts with a full two-round delayed fuse. Buying or disguising
+// it never changes the due round. No second activation after it fires.
+
 const MAX_ITEMS = 4;
 const BLACK_ROUNDS = [2,5,8];
 const DISGUISES = ['Талисман достатка','Забытый сувенир','Тёмная реликвия','Дар неизвестного'];
@@ -95,7 +128,11 @@ const add = (p,w,mult=1) => {for(const k of RESOURCES)p.resources[k]=Math.max(0,
 function issue(s,message){s.log.unshift(message);s.log=s.log.slice(0,18);}
 function newItem(s){
   const kind=sample(GOODS),variant=Math.floor(Math.random()*kind.variants.length);
-  return {id:'item-'+(++s.serial),key:kind.key,variant,acquiredRound:0,history:[]};
+  const item={id:'item-'+(++s.serial),key:kind.key,variant,acquiredRound:0,history:[]};
+  const t=trait(item);
+  if(t?.kind==='curse'){item.curseDueRound=(s.round||1)+t.delay;item.curseResolved=false;}
+  if(t?.kind==='ward')item.wardCharges=t.charges;
+  return item;
 }
 function spec(item){
   const def=GOODS.find(x=>x.key===item.key);
@@ -103,7 +140,7 @@ function spec(item){
   return {name:def.name,rarity:def.rarity,positive:pair[0],negative:pair[1]};
 }
 function publicItem(item){const d=spec(item);return {id:item.id,name:item.alias||d.name,rarity:d.rarity};}
-function privateItem(item){return {...publicItem(item),originalName:spec(item).name,disguised:!!item.alias,positive:spec(item).positive,negative:spec(item).negative,acquiredRound:item.acquiredRound,history:item.history};}
+function privateItem(item){return {...publicItem(item),originalName:spec(item).name,disguised:!!item.alias,positive:spec(item).positive,negative:spec(item).negative,special:privateTrait(item),acquiredRound:item.acquiredRound,history:item.history};}
 function balance(p){
   return RESOURCES.reduce((sum,k)=>sum+Math.min(1,p.resources[k]/p.quota[k]),0)/3;
 }
@@ -169,6 +206,15 @@ function resolveUrgent(s,p){
     add(p,needed,-1);p.resources.gold+=35;p.urgent.status='success';
     issue(s,p.character+' выполнил срочный заказ.');
   }else{
+    // An unspent amulet charge protects the entire urgent failure once.
+    // The quota resources are NOT collected, and the urgent reward is NOT paid.
+    const guard=p.items.find(i=>trait(i)?.kind==='ward'&&(i.wardCharges??1)>0);
+    if(guard){
+      guard.wardCharges=(guard.wardCharges??1)-1;
+      p.urgent.status='shielded';
+      issue(s,p.character+' избежал штрафа по срочному заказу: защитная печать разряжена.');
+      return;
+    }
     p.strikes++;p.urgent.status='failed';
     if(p.strikes===1)p.resources.gold-=Math.floor(p.resources.gold*.15);
     else if(p.strikes===2){if(p.items.length)p.items.splice(Math.floor(Math.random()*p.items.length),1);else p.resources.parts=Math.max(0,p.resources.parts-1);}
@@ -185,9 +231,17 @@ function applyEffect(p,fx,sign){
 function roundIncome(s){
   for(const p of s.contestants){
     if(p.bankrupt)continue;
-    // Positive effects first, then upkeep; order is stable for reproducibility.
+    // Positive effects first, then upkeep; one-time curses last.
     for(const item of p.items)applyEffect(p,spec(item).positive,+1);
     for(const item of p.items)applyEffect(p,spec(item).negative,-1);
+    for(const item of p.items){
+      const t=trait(item);
+      if(t?.kind==='curse'&&!item.curseResolved&&s.round>=(item.curseDueRound??Infinity)){
+        applyEffect(p,t.effect,-1);
+        item.curseResolved=true;
+        issue(s,'Проклятие «'+t.title+'» ударило по '+p.character+'.');
+      }
+    }
   }
   issue(s,'Итоги раунда '+s.round+': свойства предметов сработали.');
 }
@@ -220,6 +274,15 @@ function applyRelationship(s,seller,buyer){
     buyer.resources.gold=Math.max(0,buyer.resources.gold-20);seller.negativeUsed=s.round;
   }
 }
+function awardSaleTrait(s,seller,item,anonymous=false){
+  const t=trait(item);
+  if(t?.kind==='sellerBonus'&&item.tradeUsedRound!==s.round){
+    add(seller,{gold:0,crystals:t.effect.value,parts:0});
+    item.tradeUsedRound=s.round;
+    // An anonymous sale must not identify its seller through the public log.
+    if(!anonymous)issue(s,'Эхо перепродажи принесло '+seller.character+' +'+t.effect.value+' кристалла.');
+  }
+}
 function transferItem(s,seller,buyer,item){
   const index=seller.items.findIndex(x=>x.id===item.id);
   if(index<0)return false;
@@ -227,6 +290,7 @@ function transferItem(s,seller,buyer,item){
   item.history.push(seller.id);item.acquiredRound=s.round;buyer.items.push(item);
   // Offers referencing a transferred item are no longer valid.
   s.deals=s.deals.filter(d=>d.giveItemId!==item.id&&d.wantItemId!==item.id);
+  awardSaleTrait(s,seller,item);
   applyRelationship(s,seller,buyer);
   return true;
 }
@@ -328,12 +392,14 @@ function action(s,id,v){
   }
   if(v.type==='black_inspect'){
     const lot=s.blackLots.find(l=>l.id===v.lotId);
-    if(!lot||lot.seller===id||me.resources.gold<BLACK_INSPECTION_GOLD)
-      return failure(s,id,'Экспертиза чужого предмета стоит 25 золота.');
+    const cost=inspectionCost(me,true);
+    if(!lot||lot.seller===id||me.resources.gold<cost)
+      return failure(s,id,'Недостаточно золота для экспертизы этого лота.');
     if(me.blackInspections.some(i=>i.itemId===lot.item.id))
       return failure(s,id,'Этот экземпляр уже проверен.');
-    me.resources.gold-=BLACK_INSPECTION_GOLD;
-    me.blackInspections.push({itemId:lot.item.id,originalName:spec(lot.item).name,negative:spec(lot.item).negative});
+    me.resources.gold-=cost;
+    me.blackInspections.push({itemId:lot.item.id,originalName:spec(lot.item).name,
+      negative:spec(lot.item).negative,curse:inspectCurse(lot.item)});
     issue(s,'Покупатель оплатил независимую экспертизу.');
     return success(s);
   }
@@ -351,7 +417,9 @@ function action(s,id,v){
     const item=lot.item;
     // The buyer sees an anonymized provenance hop, never the intermediary's seller ID.
     item.history.push('Анонимный рынок');item.acquiredRound=s.round;
-    buyer.items.push(item);applyRelationship(s,me,buyer);
+    buyer.items.push(item);
+    awardSaleTrait(s,me,item,true);
+    applyRelationship(s,me,buyer);
     s.blackLots=s.blackLots.filter(l=>l.id!==lot.id);
     issue(s,'Анонимный лот продан. Посредник удержал 10% комиссии.');
     return success(s);
@@ -415,11 +483,13 @@ function action(s,id,v){
   }
   if(v.type==='inspect'){
     const listing=s.listing;
-    if(!listing||listing.seller===id||me.resources.gold<15)return failure(s,id,'Для проверки чужого лота нужно 15 золота.');
+    const cost=inspectionCost(me);
+    if(!listing||listing.seller===id||me.resources.gold<cost)return failure(s,id,'Недостаточно золота для проверки чужого лота.');
     if(me.inspections.some(i=>i.itemId===listing.itemId))return failure(s,id,'Этот экземпляр уже проверен.');
     const seller=getPlayer(s,listing.seller),item=seller?.items.find(i=>i.id===listing.itemId);
     if(!item)return failure(s,id,'Лот недоступен.');
-    me.resources.gold-=15;me.inspections.push({itemId:item.id,negative:spec(item).negative});
+    me.resources.gold-=cost;me.inspections.push({itemId:item.id,negative:spec(item).negative,
+      curse:inspectCurse(item)});
     return success(s);
   }
   if(!isTurn)return failure(s,id,'Не ваш ход. Можно принимать прямые сделки, предлагать обмен и делать ставки.');
@@ -533,6 +603,7 @@ function viewForPlayer({state,player}){
       negativeTarget:me.negativeTarget,legendary:me.legendary,
       urgent:me.urgent,worked:me.worked,usedPawn:me.usedPawn,marketDeals:me.marketDeals,
       inspections:me.inspections.filter(i=>i.itemId===s.listing?.itemId),
+      inspectionPrices:{public:inspectionCost(me),black:inspectionCost(me,true)},
       disguises:DISGUISES,blackListedRound:me.blackListedRound,
       escrowItems:(s.blackLots||[]).filter(l=>l.seller===me.id).map(l=>privateItem(l.item))}:null};
 }
