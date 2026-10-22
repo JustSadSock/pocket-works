@@ -1,7 +1,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ШОВ',version:'1.5.0',cachePrefix:'portal-lab-',storageNamespace:'pocket-works:portal-lab'});
+createWorkshopMode({appName:'ШОВ',version:'1.5.0',cachePrefix: 'portal-lab-',storageNamespace: 'pocket-works:portal-lab'});
 import {metric,geometry,launch,advance,constraint,collectBeam,staticAcceleration,staticClockRate,nullEnergyRadial,localSpeed} from './relativity.js';
 import {AudioBus} from './audio.js';
 import {createObservatory} from './observatory.js';
