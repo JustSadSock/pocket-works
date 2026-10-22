@@ -46,7 +46,7 @@ function renderLobby(){
 function scoreBox(){
   return '<div class="panel"><h2>Участники</h2><table class="table"><thead><tr><th>Игрок</th><th>Ресурсы</th><th>Предметы</th><th>Штрафы</th></tr></thead><tbody>'+
   state.players.map(p=>'<tr><td><strong>'+esc(p.character)+'</strong><br><small>'+esc(p.name)+(p.id===state.turnId?' · ходит':'')+'</small></td>'+
-    '<td>'+esc(amounts(p.resources))+'</td><td>'+p.items+'</td><td>'+p.strikes+'/3'+(p.bankrupt?' · банкрот':'')+'</td></tr>').join('')+
+    '<td>'+(p.resources?esc(amounts(p.resources)):'Скрыто')+'</td><td>'+(p.items??'Скрыто')+'</td><td>'+p.strikes+'/3'+(p.bankrupt?' · банкрот':'')+'</td></tr>').join('')+
     '</tbody></table></div>';
 }
 function inventoryBlock(you){
@@ -159,6 +159,58 @@ function tradePanel(you){
  }
  return html+'</div>';
 }
+
+function blackMarketBlock(you){
+ if(!state.blackMarket)return '';
+ let out='<div class="panel"><h2>Анонимный чёрный рынок · раунд '+state.round+'</h2>'+
+ '<p class="muted">Лоты хранятся у посредника до продажи. Ставки закрытые, имена участников неизвестны. По завершении раунда непроданные предметы возвращаются.</p>'+
+ '<p class="muted">Пока рынок открыт, чужие балансы и инвентари временно скрыты. Посредник удерживает 10% с каждого полученного ресурса.</p>';
+ for(const lot of state.blackLots||[]){
+  const inspected=lot.inspection;
+  out+='<section class="offer"><h3>'+esc(lot.item.name)+' · '+esc(lot.id)+'</h3>'+
+   '<p>Запрошено: '+esc(amounts(lot.ask))+' · Закрытых ставок: '+lot.bidCount+'</p>';
+  if(inspected)out+='<p class="success">Экспертиза: '+esc(inspected.originalName)+
+    '; содержание '+esc(formatEffect(inspected.negative,true))+'</p>';
+  if(lot.mine){
+   out+='<p><strong>Твой анонимный лот</strong></p>'+
+    (lot.bids.length?lot.bids.map(b=>'<div class="row"><span>Ставка '+esc(amounts(b.offer))+'</span>'+
+      '<button type="button" data-action="black-accept" data-id="'+esc(lot.id)+
+      '" data-bid="'+esc(b.id)+'">Продать по ставке</button></div>').join(''):
+      '<p class="muted">Пока предложений нет.</p>')+
+    '<button type="button" data-action="black-cancel" data-id="'+esc(lot.id)+'">Снять с рынка</button>';
+  }else if(!you.bankrupt){
+   if(!inspected)out+='<button type="button" data-action="black-inspect" data-id="'+esc(lot.id)+
+     '" '+(you.resources.gold<25?'disabled':'')+'>Экспертиза (25 золота)</button>';
+   out+='<form data-form="black-bid" data-lot-id="'+esc(lot.id)+'" class="stack">'+
+     '<p>Твоя закрытая ставка:</p>'+resourceFields('offer',lot.myBid||lot.ask)+
+     '<button type="submit" class="primary">Отправить закрытую ставку</button></form>';
+   if(lot.myBid)out+='<button type="button" data-action="black-withdraw" data-id="'+esc(lot.id)+'">Отозвать свою ставку</button>';
+  }
+  out+='</section>';
+ }
+ if(!(state.blackLots||[]).length)out+='<p class="muted">Анонимных лотов пока нет.</p>';
+ if(!you.bankrupt&&you.blackListedRound!==state.round){
+  const options=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
+  if(options.length)out+='<form class="stack" data-form="black-post">'+
+   '<h3>Выставить анонимный предмет</h3>'+
+   '<label>Предмет<select name="itemId">'+options.map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label>'+
+   '<p>Ожидаемая цена:</p>'+resourceFields('ask',{gold:90})+
+   '<button type="submit" class="primary">Передать лот посреднику</button></form>';
+  else out+='<p>Нет старых свободных предметов для анонимного размещения.</p>';
+ }else if(you.blackListedRound===state.round)out+='<p class="muted">Ты уже выставлял предмет на этой торговой волне.</p>';
+ return out+'</div>';
+}
+function repackBlock(you){
+ const options=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
+ if(!options.length||you.bankrupt)return '';
+ return '<div class="panel"><h2>Перепаковка предмета</h2>'+
+ '<p class="muted">За 20 золота и 1 деталь можно поменять видимое торговое название экземпляра. Эффекты не изменятся. Экспертиза сможет установить оригинал.</p>'+
+ '<form class="stack" data-form="repack">'+
+ '<label>Предмет<select name="itemId">'+options.map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label>'+
+ '<label>Новая этикетка<select name="aliasIndex">'+you.disguises.map((n,i)=>'<option value="'+i+'">'+esc(n)+'</option>').join('')+'</select></label>'+
+ '<button type="submit" '+(you.resources.gold<20||you.resources.parts<1?'disabled':'')+'>Перепаковать</button>'+
+ '</form></div>';
+}
 function actionsBlock(you){
  let html='<div class="panel"><h2>Мой ход: операции</h2>';
  if(you.bankrupt)return html+'<p>Ты обанкротился. Можно наблюдать за ходом партии.</p><button data-action="end">Пропустить ход</button></div>';
@@ -193,7 +245,7 @@ function actionsBlock(you){
 function collectDrafts(){
  const current={};
  for(const form of app.querySelectorAll('form[data-form]')){
-  const id=form.dataset.form+':'+(form.dataset.dealId||'');
+  const id=form.dataset.form+':'+(form.dataset.dealId||form.dataset.lotId||'');
   current[id]=Object.fromEntries(new FormData(form).entries());
   if(form.dataset.form==='counter')current[id].expanded=form.closest('details')?.open;
  }
@@ -201,7 +253,7 @@ function collectDrafts(){
 }
 function restoreDrafts(drafts){
  for(const form of app.querySelectorAll('form[data-form]')){
-  const vals=drafts[form.dataset.form+':'+(form.dataset.dealId||'')];
+  const vals=drafts[form.dataset.form+':'+(form.dataset.dealId||form.dataset.lotId||'')];
   if(!vals)continue;
   if(form.dataset.form==='counter'&&vals.expanded)form.closest('details').open=true;
   if(form.dataset.form==='deal'&&vals.to){
@@ -226,7 +278,7 @@ function renderPlay(){
  '<button type="button" data-action="leave">Выйти из комнаты</button></div>'+
  '<div class="panel"><h2>'+esc(you.character)+'</h2><p>Запасы: <strong>'+esc(amounts(you.resources))+'</strong>. Провалы срочных заказов: '+state.players.find(p=>p.id===me.id)?.strikes+'/3.</p></div>'+
  '<div class="layout"><div>'+secretBlock(you)+urgentBlock(you)+inventoryBlock(you)+'</div>'+
- '<div>'+tradePanel(you)+marketBlock(you,active)+(active?actionsBlock(you):'<div class="panel"><p>Пока другой игрок продаёт товар, можно предложить ставку на его лот или прямой обмен.</p></div>')+'</div>'+
+ '<div>'+blackMarketBlock(you)+tradePanel(you)+marketBlock(you,active)+repackBlock(you)+(active?actionsBlock(you):'<div class="panel"><p>Пока другой игрок продаёт товар, можно предложить ставку на его лот или прямой обмен.</p></div>')+'</div>'+
  '<div class="wide">'+scoreBox()+'<div class="panel"><h2>Журнал событий</h2><ol>'+state.log.map(entry=>'<li>'+esc(entry)+'</li>').join('')+'</ol></div></div></div>';
  restoreDrafts(drafts);
 }
@@ -303,6 +355,16 @@ app.addEventListener('click',event=>{
   return;
  }
  if(action==='deal-cancel')return request({type:'deal_cancel',dealId:btn.dataset.id});
+ if(action==='black-accept'){
+  if(confirm('Принять закрытую ставку? Посредник удержит 10% комиссии.'))request({type:'black_accept',lotId:btn.dataset.id,bidId:btn.dataset.bid});
+  return;
+ }
+ if(action==='black-cancel'){
+  if(confirm('Вернуть товар из анонимного рынка? Новый лот до следующей торговой волны недоступен.'))request({type:'black_cancel',lotId:btn.dataset.id});
+  return;
+ }
+ if(action==='black-inspect')return request({type:'black_inspect',lotId:btn.dataset.id});
+ if(action==='black-withdraw')return request({type:'black_withdraw',lotId:btn.dataset.id});
  if(action==='broker-buy')return request({type:'broker_buy'});
  if(action==='start')return request({type:'start'});
  if(action==='inspect')return request({type:'inspect'});
@@ -333,6 +395,9 @@ app.addEventListener('submit',event=>{
    give:wallet('give'),want:wallet('want'),
    giveItemId:data.get('giveItemId')||null,wantItemId:data.get('wantItemId')||null
  });
+ if(type==='black-post')return request({type:'black_post',itemId:data.get('itemId'),ask:wallet('ask')});
+ if(type==='black-bid')return request({type:'black_bid',lotId:form.dataset.lotId,offer:wallet('offer')});
+ if(type==='repack')return request({type:'repack',itemId:data.get('itemId'),aliasIndex:Number(data.get('aliasIndex'))});
  if(type==='deal')return request({type:'deal_propose',
    to:data.get('to'),give:wallet('give'),want:wallet('want'),
    giveItemId:data.get('giveItemId')||null,wantItemId:data.get('wantItemId')||null
