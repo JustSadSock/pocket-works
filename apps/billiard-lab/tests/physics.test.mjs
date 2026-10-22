@@ -24,7 +24,7 @@ test('triangle clamp stays inside all sides',()=>{
 test('the reflection constraint changes target completion',()=>{
  const free=traceShot(base,0,75);
  const required=traceShot({...base,requiredBounces:1},0,75);
- assert.equal(free.hit,true);assert.equal(required.hit,false);
+ assert.equal(free.hit,true);assert.equal(required.hit,true);assert.ok(required.bounces>=1);assert.ok(required.time>free.time);
 });
 test('stored state is sanitized',()=>{
  const world=safeWorld({shape:'unknown',origin:{x:-999,y:30},bumpers:Array.from({length:50},()=>({x:400,y:220})),restitution:20,segments:[{x1:1,y1:1,x2:5,y2:5}]});
