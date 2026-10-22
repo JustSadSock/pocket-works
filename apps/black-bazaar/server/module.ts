@@ -171,13 +171,16 @@ function roundIncome(s){
   issue(s,'Итоги раунда '+s.round+': свойства предметов сработали.');
 }
 function nextTurn(s){
-  const p=s.contestants[s.turnIndex];resolveUrgent(s,p);
+  const p=s.contestants[s.turnIndex];
+  if(!p.bankrupt)resolveUrgent(s,p);
   s.listing=null;s.bids=[];
   s.turnIndex++;
   if(s.turnIndex===s.contestants.length){
     roundIncome(s);s.turnIndex=0;s.round++;s.deals=[];
   }
   startTurn(s);
+  // Forfeited/bankrupt seats must never block the remaining players.
+  if(s.phase==='play'&&s.contestants[s.turnIndex].bankrupt)nextTurn(s);
 }
 function applyRelationship(s,seller,buyer){
   if(buyer.positiveTarget===seller.id && buyer.positiveUsed!==s.round){
@@ -192,6 +195,8 @@ function transferItem(s,seller,buyer,item){
   if(index<0)return false;
   seller.items.splice(index,1);
   item.history.push(seller.id);item.acquiredRound=s.round;buyer.items.push(item);
+  // Offers referencing a transferred item are no longer valid.
+  s.deals=s.deals.filter(d=>d.giveItemId!==item.id&&d.wantItemId!==item.id);
   applyRelationship(s,seller,buyer);
   return true;
 }
@@ -316,7 +321,9 @@ function action(s,id,v){
     const index=me.items.findIndex(i=>i.id===v.itemId);
     if(index<0)return failure(s,id,'Предмет не найден.');
     if(s.listing?.itemId===v.itemId){s.listing=null;s.bids=[];}
-    me.items.splice(index,1);me.resources.gold+=45;me.usedPawn=true;issue(s,me.character+' сдал предмет в ломбард.');return success(s);
+    me.items.splice(index,1);
+    s.deals=s.deals.filter(d=>d.giveItemId!==v.itemId&&d.wantItemId!==v.itemId);
+    me.resources.gold+=45;me.usedPawn=true;issue(s,me.character+' сдал предмет в ломбард.');return success(s);
   }
   if(v.type==='exchange'){
     if(me.usedPawn)return failure(s,id,'Одна операция с ломбардом за ход.');
@@ -350,8 +357,8 @@ function viewForPlayer({state,player}){
     listing:listed?{...publicItem(listed),seller:s.listing.seller,ask:s.listing.ask}:null,
     bids:s.bids.map(b=>({buyer:b.buyer,offer:b.offer})),
     deals:me?s.deals.filter(d=>d.from===me.id||d.to===me.id).map(d=>({
-      ...d,giveItem:d.giveItemId?publicItem(getPlayer(s,d.from).items.find(x=>x.id===d.giveItemId)):null,
-      wantItem:d.wantItemId?publicItem(getPlayer(s,d.to).items.find(x=>x.id===d.wantItemId)):null
+      ...d,giveItem:d.giveItemId&&dealItem(getPlayer(s,d.from),d.giveItemId)?publicItem(dealItem(getPlayer(s,d.from),d.giveItemId)):null,
+      wantItem:d.wantItemId&&dealItem(getPlayer(s,d.to),d.wantItemId)?publicItem(dealItem(getPlayer(s,d.to),d.wantItemId)):null
     })):[],
     log:s.log,ranking:s.phase==='done'?s.ranking:undefined,
     you:me?{id:me.id,character:me.character,resources:{...me.resources},quota:{...me.quota},
@@ -372,13 +379,16 @@ const game={
     state.players=players.map(p=>({id:p.id,name:p.name}));
     state.revision++;return {state,events:stateEvent()};
   },
-  onLeave({state,players}){
+  onLeave({state,player,players}){
     state.players=players.map(p=>({id:p.id,name:p.name}));
     if(!state.players.some(p=>p.id===state.host))state.host=state.players[0]?.id||state.host;
     if(state.phase==='lobby')state.contestants=[];
     state.deals=state.deals.filter(d=>state.players.some(p=>p.id===d.from)&&state.players.some(p=>p.id===d.to));
-    // Departure forfeits a turn, but the account can rejoin during a match.
-    if(state.phase==='play'&&state.contestants[state.turnIndex]&&!state.players.some(p=>p.id===state.contestants[state.turnIndex].id))nextTurn(state);
+    if(state.phase==='play'){
+      const departed=state.contestants.find(p=>p.id===player.id);
+      if(departed){departed.bankrupt=true;departed.urgent=null;issue(state,departed.character+' покинул партию и выбыл.');}
+      if(state.contestants[state.turnIndex]?.id===player.id)nextTurn(state);
+    }
     state.revision++;return {state,events:stateEvent()};
   },
   onMessage({state,player,payload}){
