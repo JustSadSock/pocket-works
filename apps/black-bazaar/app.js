@@ -99,6 +99,51 @@ function marketBlock(you,canAct){
 function resourceFields(prefix,defaults={}){
  return '<div class="row">'+keys.map(k=>'<label>'+names[k]+'<input type="number" min="0" max="2000" step="1" name="'+prefix+'_'+k+'" value="'+(defaults[k]||0)+'" required></label>').join('')+'</div>';
 }
+function dealDescription(d){
+  const one=(w,item)=>esc(amounts(w))+(item?' и «'+esc(item.name)+'»':'');
+  const a=label(d.from),b=label(d.to);
+  return '<strong>'+esc(a)+'</strong> отдаёт '+one(d.give,d.giveItem)+
+    '; <strong>'+esc(b)+'</strong> отдаёт '+one(d.want,d.wantItem)+'.';
+}
+function itemOptions(items){
+ return '<option value="">Без предмета</option>'+
+   items.map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('');
+}
+function tradePanel(you){
+ const deals=state.deals||[];
+ const inbox=deals.filter(d=>d.to===you.id);
+ const outbox=deals.filter(d=>d.from===you.id);
+ let html='<div class="panel"><h2>Прямой обмен с игроками</h2>'+
+ '<p class="muted">Предложить можно даже во время чужого хода. Сделка проводится только после согласия обеих сторон. Разрешены подарки, обмен ресурсами и предметами.</p>';
+ if(inbox.length){
+  html+='<h3>Предложения тебе</h3>'+inbox.map(d=>'<div class="offer"><p>'+dealDescription(d)+'</p>'+
+    '<div class="row"><button type="button" class="primary" data-action="deal-accept" data-id="'+esc(d.id)+'">Принять обмен</button>'+
+    '<button type="button" data-action="deal-cancel" data-id="'+esc(d.id)+'">Отклонить</button></div></div>').join('');
+ }
+ if(outbox.length){
+  html+='<h3>Твоё предложение</h3>'+outbox.map(d=>'<div class="offer"><p>'+dealDescription(d)+'</p>'+
+    '<button type="button" data-action="deal-cancel" data-id="'+esc(d.id)+'">Отозвать</button></div>').join('');
+ }
+ const recipients=state.players.filter(p=>p.id!==you.id&&!p.bankrupt&&p.connected);
+ if(!you.bankrupt&&recipients.length){
+  const first=recipients[0];
+  const giveItems=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
+  const wantItems=first.inventory.filter(i=>i.id!==state.listing?.id);
+  html+='<form data-form="deal" class="stack">'+
+    '<h3>Новое предложение</h3>'+
+    '<label>Кому<select name="to" id="dealTarget">'+recipients.map(p=>
+      '<option value="'+esc(p.id)+'">'+esc(p.character)+'</option>').join('')+'</select></label>'+
+    '<label>Какой предмет отдаёшь<select name="giveItemId">'+itemOptions(giveItems)+'</select></label>'+
+    '<p>Отдаёшь ресурсы:</p>'+resourceFields('give')+
+    '<label>Какой предмет хочешь получить<select name="wantItemId" id="dealWantItem">'+itemOptions(wantItems)+'</select></label>'+
+    '<p>Просишь ресурсы:</p>'+resourceFields('want')+
+    '<button type="submit" class="primary">Предложить обмен</button>'+
+    '<small>Новое предложение заменяет твоё предыдущее. Неисполненные предложения исчезают в конце раунда. Предметы, купленные в этом раунде, нельзя передать снова.</small></form>';
+ }else if(!inbox.length&&!outbox.length){
+  html+='<p class="muted">Сейчас нет доступных торговых партнёров.</p>';
+ }
+ return html+'</div>';
+}
 function actionsBlock(you){
  let html='<div class="panel"><h2>Мой ход: операции</h2>';
  if(you.bankrupt)return html+'<p>Ты обанкротился. Можно наблюдать за ходом партии.</p><button data-action="end">Пропустить ход</button></div>';
@@ -127,7 +172,7 @@ function renderPlay(){
  '<button type="button" data-action="leave">Выйти из комнаты</button></div>'+
  '<div class="panel"><h2>'+esc(you.character)+'</h2><p>Запасы: <strong>'+esc(amounts(you.resources))+'</strong>. Провалы срочных заказов: '+state.players.find(p=>p.id===me.id)?.strikes+'/3.</p></div>'+
  '<div class="layout"><div>'+secretBlock(you)+urgentBlock(you)+inventoryBlock(you)+'</div>'+
- '<div>'+marketBlock(you,active)+(active?actionsBlock(you):'<div class="panel"><p>Пока другой игрок продаёт товар, можно предложить ставку на его лот.</p></div>')+'</div>'+
+ '<div>'+tradePanel(you)+marketBlock(you,active)+(active?actionsBlock(you):'<div class="panel"><p>Пока другой игрок продаёт товар, можно предложить ставку на его лот или прямой обмен.</p></div>')+'</div>'+
  '<div class="wide">'+scoreBox()+'<div class="panel"><h2>Журнал событий</h2><ol>'+state.log.map(entry=>'<li>'+esc(entry)+'</li>').join('')+'</ol></div></div></div>';
 }
 function renderDone(){
@@ -196,6 +241,13 @@ app.addEventListener('click',event=>{
   if(state?.phase==='play'&&!confirm('Покинуть текущую партию?'))return;
   closeRoom();return;
  }
+ if(action==='deal-accept'){
+  const d=(state.deals||[]).find(x=>x.id===btn.dataset.id);
+  if(d&&confirm('Подтвердить прямой обмен? '+label(d.from)+' отдаёт '+amounts(d.give)+'; '+label(d.to)+' отдаёт '+amounts(d.want)+'.'))
+    request({type:'deal_accept',dealId:btn.dataset.id});
+  return;
+ }
+ if(action==='deal-cancel')return request({type:'deal_cancel',dealId:btn.dataset.id});
  if(action==='start')return request({type:'start'});
  if(action==='inspect')return request({type:'inspect'});
  if(action==='withdraw')return request({type:'withdraw_bid'});
@@ -211,10 +263,20 @@ app.addEventListener('click',event=>{
   return request({type:'end'});
  }
 });
+app.addEventListener('change',event=>{
+ if(event.target.id!=='dealTarget')return;
+ const target=state?.players?.find(p=>p.id===event.target.value);
+ const dropdown=document.querySelector('#dealWantItem');
+ if(dropdown&&target)dropdown.innerHTML=itemOptions(target.inventory.filter(i=>i.id!==state.listing?.id));
+});
 app.addEventListener('submit',event=>{
  const form=event.target.closest('form[data-form]');if(!form)return;
  event.preventDefault();const data=new FormData(form),type=form.dataset.form;
  const wallet=prefix=>Object.fromEntries(keys.map(k=>[k,Number(data.get(prefix+'_'+k)||0)]));
+ if(type==='deal')return request({type:'deal_propose',
+   to:data.get('to'),give:wallet('give'),want:wallet('want'),
+   giveItemId:data.get('giveItemId')||null,wantItemId:data.get('wantItemId')||null
+ });
  if(type==='post')return request({type:'post',itemId:data.get('itemId'),ask:wallet('ask')});
  if(type==='bid')return request({type:'bid',offer:wallet('offer')});
  if(type==='work')return request({type:'work',resource:data.get('resource')});
