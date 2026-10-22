@@ -318,7 +318,9 @@ test('Every player gets one urgency challenge in each resource, with equal work-
  }
 });
 test('Simulated 2–6 person complete matches preserve invariants through barter, auction and deadlines',()=>{
- const stats={matches:0,deals:0,auctions:0,contractsSuccess:0,contractsFailed:0,quotasMet:0,bankrupt:0};
+ const stats={matches:0,deals:0,auctions:0,contractsSuccess:0,contractsFailed:0,quotasMet:0,bankrupt:0,
+   thresholds:{'50%':0,'60%':0,'70%':0,'80%':0,'90%':0,'100%':0},
+   meanRatios:{gold:0,crystals:0,parts:0},players:0,bySize:{}};
  for(const size of [2,3,4,5,6]){
   for(let caseNo=0;caseNo<24;caseNo++){
    const {state}=makeRoom(size);let steps=0;
@@ -368,6 +370,14 @@ test('Simulated 2–6 person complete matches preserve invariants through barter
      stats.contractsFailed+=p.strikes;
      stats.contractsSuccess+=3-p.strikes;
      stats.bankrupt+=Number(p.bankrupt);
+     stats.players++;
+     for(const key of ['gold','crystals','parts'])stats.meanRatios[key]+=p.resources[key]/p.quota[key];
+     for(const pct of [50,60,70,80,90,100]){
+       if(['gold','crystals','parts'].every(key=>p.resources[key]>=p.quota[key]*pct/100))
+         stats.thresholds[pct+'%']++;
+     }
+     (stats.bySize[size]??={players:0,met:0}).players++;
+     stats.bySize[size].met+=Number(['gold','crystals','parts'].every(key=>p.resources[key]>=p.quota[key]));
    }
    stats.quotasMet+=state.ranking.filter(p=>p.complete&&!p.bankrupt).length;
    stats.matches++;
@@ -375,5 +385,6 @@ test('Simulated 2–6 person complete matches preserve invariants through barter
  }
  assert.equal(stats.matches,120);
  assert.ok(stats.deals>0&&stats.auctions>0);
+ for(const key of ['gold','crystals','parts'])stats.meanRatios[key]=Math.round(stats.meanRatios[key]/stats.players*100)/100;
  console.log('Black Bazaar economy smoke simulation:',JSON.stringify(stats));
 });
