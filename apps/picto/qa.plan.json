@@ -8,6 +8,12 @@
       "entry": "qa/rules.mjs"
     },
     {
+      "id": "online-two-players",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/online-flow.mjs"
+    },
+    {
       "id": "responsive-entry",
       "kind": "visual",
       "tier": "smoke",
