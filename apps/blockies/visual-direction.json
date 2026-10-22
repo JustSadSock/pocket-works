@@ -71,6 +71,11 @@
         "slug": "bozhe-ne-tak",
         "spatialDifference": "Bozhe Ne Tak dedicates its split workspace to a carved god altar, tribute shelf and ritual props; Blockies keeps an uninterrupted pixel-accurate falling-block well and a narrow score rail with controls below.",
         "interactionDifference": "Bozhe Ne Tak resolves discrete ritual offerings and deity judgments; Blockies is continuous real-time co-op, with repeat-on-hold motion and PocketNet snapshots synchronized for every falling piece."
+      },
+      {
+        "slug": "axis-pals",
+        "spatialDifference": "Axis Pals uses a partnership puzzle workspace built around coordinating choices, while Blockies gives its one uninterrupted falling-block well a cell-aligned gantry of individual next-piece and spawn entrances.",
+        "interactionDifference": "The discrete joint decisions of Axis Pals differ from Blockies' repeat-on-hold movement and hard-drop physics, with independently blocked player entrances and server-authoritative board synchronization."
       }
     ]
   },
