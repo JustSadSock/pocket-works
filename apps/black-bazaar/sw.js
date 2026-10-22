@@ -1,13 +1,17 @@
-const VERSION='0.7.0';
-const NOTES=['Анонимный чёрный рынок и перепаковка с экспертизой; серверный таймер хода.'];
+const APP_VERSION='0.7.0';
+const VERSION=APP_VERSION;
+const RELEASE_DATE='2026-10-22';
+const RELEASE_NOTES = ["Анонимный рынок с закрытыми ставками, хранилищем посредника и комиссией.","Перепаковка предметов и платная проверка оригинала без раскрытия владельца.","Серверные таймеры ходов и автовыполнение дедлайна без браузера."];
+const NOTES=RELEASE_NOTES;
 const CACHE='black-bazaar-v0.7.0';
+const CACHE_NAME='black-bazaar-v0.7.0';
 const PREFIX='black-bazaar-v';
 const FILES=[
  './','./index.html','./app.js','./styles.css','./app.config.json',
  './manifest.webmanifest','./icons/icon.svg',
  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
  '../../shared/update-manager.css','../../shared/update-manager.js',
- '../../shared/capabilities/net.js'
+ '../../shared/capabilities/net.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'
 ];
 const ROOT=new URL('./',self.registration.scope);
 const ENTRIES=new Map(FILES.map(x=>{const url=new URL(x,ROOT);return [url.pathname,url.href];}));
@@ -23,9 +27,9 @@ self.addEventListener('activate',e=>e.waitUntil((async()=>{
  await Promise.all((await caches.keys()).filter(k=>k.startsWith(PREFIX)&&k!==CACHE).map(k=>caches.delete(k)));
  await self.clients.claim();
 })()));
-self.addEventListener('message',e=>{
+self.addEventListener('message',event=>{const e=event;
  if(e.data?.type==='SKIP_WAITING')self.skipWaiting();
- if(e.data?.type==='GET_UPDATE_INFO')e.ports?.[0]?.postMessage({
+ if(e.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({
    version:VERSION,releaseDate:'2026-10-22',releaseNotes:NOTES,
    cacheProtocol:1,cacheName:CACHE
  });
