@@ -162,7 +162,14 @@ function tradePanel(you){
 function actionsBlock(you){
  let html='<div class="panel"><h2>Мой ход: операции</h2>';
  if(you.bankrupt)return html+'<p>Ты обанкротился. Можно наблюдать за ходом партии.</p><button data-action="end">Пропустить ход</button></div>';
- html+='<p>Можно заработать на подработке, сделать до двух продаж и выполнить одну операцию с ломбардом за ход.</p>';
+ html+='<p>Можно подработать, купить запечатанный товар, провести торги и выполнить одну операцию с ломбардом или разбором.</p>';
+ if(state.broker){
+  const stock=state.broker;
+  html+='<section><h3>Брокер: '+esc(stock.name)+'</h3>'+
+    '<p>Цена: 75 золота. До покупки свойства неизвестны. Купленный предмет нельзя продать или разобрать в этом раунде.</p>'+
+    '<button type="button" data-action="broker-buy" '+(you.resources.gold<75||you.items.length>=4?'disabled':'')+
+    '>Купить запечатанный предмет</button></section>';
+ }
  if(!you.worked)html+='<form class="row" data-form="work"><label>Подработка<select name="resource"><option value="gold">+35 золота</option><option value="crystals">+4 кристалла</option><option value="parts">+1 деталь</option></select></label><button type="submit">Подработать</button></form>';
  else html+='<p class="success">Подработка выполнена.</p>';
  const resell=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
@@ -176,6 +183,10 @@ function actionsBlock(you){
     '<option value="sell_crystals">6 кристаллов → 25 золота</option><option value="sell_parts">1 деталь → 40 золота</option>'+
     '</select></label><button type="submit">Обменять</button></form>';
   if(you.items.length)html+='<form data-form="pawn" class="row"><label>Продать за 45 золота<select name="itemId">'+you.items.map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label><button type="submit">Сдать предмет</button></form>';
+  const dismantle=you.items.filter(i=>i.acquiredRound!==state.round);
+  if(dismantle.length)html+='<form data-form="salvage" class="row"><label>Разобрать за 2 детали<select name="itemId">'+dismantle.map(i=>
+     '<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label>'+
+     '<button type="submit">Разобрать предмет</button></form>';
  }else html+='<p class="muted">Ломбард использован в этом ходу.</p>';
  return html+'<button type="button" class="primary" data-action="end">Завершить ход →</button></div>';
 }
@@ -292,6 +303,7 @@ app.addEventListener('click',event=>{
   return;
  }
  if(action==='deal-cancel')return request({type:'deal_cancel',dealId:btn.dataset.id});
+ if(action==='broker-buy')return request({type:'broker_buy'});
  if(action==='start')return request({type:'start'});
  if(action==='inspect')return request({type:'inspect'});
  if(action==='withdraw')return request({type:'withdraw_bid'});
@@ -330,6 +342,10 @@ app.addEventListener('submit',event=>{
  if(type==='work')return request({type:'work',resource:data.get('resource')});
  if(type==='pawn'){
   if(confirm('Безвозвратно сдать предмет в ломбард за 45 золота?'))request({type:'pawn',itemId:data.get('itemId')});
+  return;
+ }
+ if(type==='salvage'){
+  if(confirm('Безвозвратно разобрать предмет на 2 детали?'))request({type:'salvage',itemId:data.get('itemId')});
   return;
  }
  if(type==='exchange')return request({type:'exchange',mode:data.get('mode')});
