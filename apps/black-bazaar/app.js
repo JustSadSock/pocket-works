@@ -105,9 +105,10 @@ function dealDescription(d){
   return '<strong>'+esc(a)+'</strong> отдаёт '+one(d.give,d.giveItem)+
     '; <strong>'+esc(b)+'</strong> отдаёт '+one(d.want,d.wantItem)+'.';
 }
-function itemOptions(items){
+function itemOptions(items,selected=null){
  return '<option value="">Без предмета</option>'+
-   items.map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('');
+   items.map(i=>'<option value="'+esc(i.id)+'"'+(selected===i.id?' selected':'')+'>'+
+   esc(i.name)+'</option>').join('');
 }
 function tradePanel(you){
  const deals=state.deals||[];
@@ -116,9 +117,23 @@ function tradePanel(you){
  let html='<div class="panel"><h2>Прямой обмен с игроками</h2>'+
  '<p class="muted">Предложить можно даже во время чужого хода. Сделка проводится только после согласия обеих сторон. Разрешены подарки, обмен ресурсами и предметами.</p>';
  if(inbox.length){
-  html+='<h3>Предложения тебе</h3>'+inbox.map(d=>'<div class="offer"><p>'+dealDescription(d)+'</p>'+
-    '<div class="row"><button type="button" class="primary" data-action="deal-accept" data-id="'+esc(d.id)+'">Принять обмен</button>'+
-    '<button type="button" data-action="deal-cancel" data-id="'+esc(d.id)+'">Отклонить</button></div></div>').join('');
+  html+='<h3>Предложения тебе</h3>'+inbox.map(d=>{
+    const partner=state.players.find(p=>p.id===d.from);
+    const mine=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
+    const theirs=(partner?.inventory||[]).filter(i=>i.tradable);
+    const depth=d.depth||0;
+    return '<div class="offer"><p>'+dealDescription(d)+'</p>'+
+      '<div class="row"><button type="button" class="primary" data-action="deal-accept" data-id="'+esc(d.id)+'">Принять обмен</button>'+
+      '<button type="button" data-action="deal-cancel" data-id="'+esc(d.id)+'">Отклонить</button></div>'+
+      (depth>=6?'<p class="muted">Лимит раундов переговоров достигнут.</p>':
+        '<details><summary>Предложить другие условия ('+depth+'/6)</summary>'+
+        '<form class="stack" data-form="counter" data-deal-id="'+esc(d.id)+'">'+
+        '<label>Я отдаю предмет<select name="giveItemId">'+itemOptions(mine,d.wantItemId)+'</select></label>'+
+        '<p>Я отдаю ресурсы:</p>'+resourceFields('give',d.want)+
+        '<label>Я прошу предмет<select name="wantItemId">'+itemOptions(theirs,d.giveItemId)+'</select></label>'+
+        '<p>Я прошу ресурсы:</p>'+resourceFields('want',d.give)+
+        '<button type="submit">Отправить контрпредложение</button></form></details>')+'</div>';
+  }).join('');
  }
  if(outbox.length){
   html+='<h3>Твоё предложение</h3>'+outbox.map(d=>'<div class="offer"><p>'+dealDescription(d)+'</p>'+
@@ -128,7 +143,7 @@ function tradePanel(you){
  if(!you.bankrupt&&recipients.length){
   const first=recipients[0];
   const giveItems=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
-  const wantItems=first.inventory.filter(i=>i.id!==state.listing?.id);
+  const wantItems=first.inventory.filter(i=>i.tradable);
   html+='<form data-form="deal" class="stack">'+
     '<h3>Новое предложение</h3>'+
     '<label>Кому<select name="to" id="dealTarget">'+recipients.map(p=>
@@ -167,18 +182,21 @@ function actionsBlock(you){
 function collectDrafts(){
  const current={};
  for(const form of app.querySelectorAll('form[data-form]')){
-  current[form.dataset.form]=Object.fromEntries(new FormData(form).entries());
+  const id=form.dataset.form+':'+(form.dataset.dealId||'');
+  current[id]=Object.fromEntries(new FormData(form).entries());
+  if(form.dataset.form==='counter')current[id].expanded=form.closest('details')?.open;
  }
  return current;
 }
 function restoreDrafts(drafts){
  for(const form of app.querySelectorAll('form[data-form]')){
-  const vals=drafts[form.dataset.form];
+  const vals=drafts[form.dataset.form+':'+(form.dataset.dealId||'')];
   if(!vals)continue;
+  if(form.dataset.form==='counter'&&vals.expanded)form.closest('details').open=true;
   if(form.dataset.form==='deal'&&vals.to){
    const target=state?.players?.find(p=>p.id===vals.to);
    const requested=form.querySelector('#dealWantItem');
-   if(target&&requested)requested.innerHTML=itemOptions(target.inventory.filter(i=>i.id!==state.listing?.id));
+   if(target&&requested)requested.innerHTML=itemOptions(target.inventory.filter(i=>i.tradable));
   }
   for(const field of Array.from(form.elements)){
    if(!field.name||vals[field.name]===undefined)continue;
@@ -293,12 +311,16 @@ app.addEventListener('change',event=>{
  if(event.target.id!=='dealTarget')return;
  const target=state?.players?.find(p=>p.id===event.target.value);
  const dropdown=document.querySelector('#dealWantItem');
- if(dropdown&&target)dropdown.innerHTML=itemOptions(target.inventory.filter(i=>i.id!==state.listing?.id));
+ if(dropdown&&target)dropdown.innerHTML=itemOptions(target.inventory.filter(i=>i.tradable));
 });
 app.addEventListener('submit',event=>{
  const form=event.target.closest('form[data-form]');if(!form)return;
  event.preventDefault();const data=new FormData(form),type=form.dataset.form;
  const wallet=prefix=>Object.fromEntries(keys.map(k=>[k,Number(data.get(prefix+'_'+k)||0)]));
+ if(type==='counter')return request({type:'deal_counter',dealId:form.dataset.dealId,
+   give:wallet('give'),want:wallet('want'),
+   giveItemId:data.get('giveItemId')||null,wantItemId:data.get('wantItemId')||null
+ });
  if(type==='deal')return request({type:'deal_propose',
    to:data.get('to'),give:wallet('give'),want:wallet('want'),
    giveItemId:data.get('giveItemId')||null,wantItemId:data.get('wantItemId')||null
