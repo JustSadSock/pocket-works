@@ -197,6 +197,9 @@ test('An urgent personal task can be completed using resources traded during ano
  const onDuty=state.contestants[state.turnIndex],friend=state.contestants.find(p=>p.id!==onDuty.id);
  onDuty.urgent={needs:{gold:0,crystals:3,parts:0},status:'pending'};
  onDuty.resources.crystals=0;
+ // Ensure this test exercises negotiation rather than a random empty wallet.
+ onDuty.resources.gold=Math.max(10,onDuty.resources.gold);
+ friend.resources.crystals=Math.max(10,friend.resources.crystals);
  const before=friend.resources.crystals;
  act(state,onDuty.id,{type:'deal_propose',to:friend.id,give:{gold:1},want:{crystals:3}});
  const id=state.deals[0].id;
@@ -320,6 +323,8 @@ test('Every player gets one urgency challenge in each resource, with equal work-
 test('Simulated 2–6 person complete matches preserve invariants through barter, auction and deadlines',()=>{
  const stats={matches:0,deals:0,auctions:0,contractsSuccess:0,contractsFailed:0,quotasMet:0,bankrupt:0,
    thresholds:{'50%':0,'60%':0,'70%':0,'80%':0,'90%':0,'100%':0},
+   alternatives:{'gold100_crystal85_parts60':0,'gold95_crystal85_parts60':0,
+     'gold100_crystal85_parts50':0,'gold90_crystal80_parts50':0},
    meanRatios:{gold:0,crystals:0,parts:0},players:0,bySize:{}};
  for(const size of [2,3,4,5,6]){
   for(let caseNo=0;caseNo<24;caseNo++){
@@ -376,6 +381,13 @@ test('Simulated 2–6 person complete matches preserve invariants through barter
        if(['gold','crystals','parts'].every(key=>p.resources[key]>=p.quota[key]*pct/100))
          stats.thresholds[pct+'%']++;
      }
+     for(const [scenario,g,c,r] of [
+       ['gold100_crystal85_parts60',1,.85,.6],
+       ['gold95_crystal85_parts60',.95,.85,.6],
+       ['gold100_crystal85_parts50',1,.85,.5],
+       ['gold90_crystal80_parts50',.9,.8,.5]
+     ])if(p.resources.gold>=p.quota.gold*g&&p.resources.crystals>=p.quota.crystals*c&&p.resources.parts>=p.quota.parts*r)
+       stats.alternatives[scenario]++;
      (stats.bySize[size]??={players:0,met:0}).players++;
      stats.bySize[size].met+=Number(['gold','crystals','parts'].every(key=>p.resources[key]>=p.quota[key]));
    }
