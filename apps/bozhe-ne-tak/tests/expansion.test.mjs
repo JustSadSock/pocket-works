@@ -1,10 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {ITEMS,TREATMENTS,RITES,DOCTRINES,VOWS,PATRONS,INCIDENTS} from '../content.js';
+import {PATRONS,INCIDENTS} from '../content.js';
 import {ITEMS as INVENTORY,TREATMENTS as METHODS,RITES as SIGNS,DOCTRINES as LAWS,
- createGame,setAction,getRite,getIncident,evaluateRite,getBestPossible,commitRite,
- continueFromJudgment,chooseDoctrine,loadGame} from '../engine.js';
+ createGame,getRite,getIncident,evaluateRite,getBestPossible,loadGame,VOWS} from '../engine.js';
 import {offeringArt,godArt,treatmentArt,incidentArt} from '../art.js';
 
 const source=await readFile(new URL('../server/module.ts',import.meta.url),'utf8');
