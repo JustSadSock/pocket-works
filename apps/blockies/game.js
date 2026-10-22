@@ -2176,7 +2176,7 @@ class UIManager {
         const maxHeight=Math.max(1,rect.height-padY-frameY-(head?.getBoundingClientRect().height||0)-gap-2);
         const rail=document.getElementById('spawn-rail');
         const railExtra=rail?4*BLOCK_SIZE:0;
-        const labelExtra=rail?16:0;
+        const labelExtra=rail?20:0;
         const ratio=Math.max(.05,Math.min(1.6,maxWidth/canvas.width,
             Math.max(1,maxHeight-labelExtra)/(canvas.height+railExtra)));
         const width=Math.floor(canvas.width*ratio);
@@ -2519,35 +2519,110 @@ class UIManager {
     showGameOver() {
         if (!this.isOnlineMode && gameState.numPlayers === 1) clearSolo();
         const scoresDiv = document.getElementById('final-scores');
-        scoresDiv.innerHTML = '';
+        scoresDiv.replaceChildren();
+        const ru = currentLanguage === 'ru';
+        const {score,level,lines} = gameState.sharedStats;
+        const board = gameState.board || [];
+        const locked = board.reduce((sum,row)=>sum+row.filter(Boolean).length,0);
+        const boardArea = getBoardWidth()*BOARD_HEIGHT;
+        const occupancy = boardArea ? Math.round(locked/boardArea*100) : 0;
+        const isCoop = gameState.numPlayers > 1;
+        const mode = this.isOnlineMode ? (ru?'Онлайн-команда':'Online team') :
+            isCoop ? (ru?'Локальная команда':'Local team') : (ru?'Одиночная партия':'Solo run');
 
-        const { score, level, lines } = gameState.sharedStats;
+        const overview=document.createElement('div');
+        overview.className='result-score';
+        const label=document.createElement('span');
+        label.className='result-score__label';
+        label.textContent=ru?'ОБЩИЙ СЧЁТ':'TEAM SCORE';
+        const value=document.createElement('strong');
+        value.className='result-score__value';
+        value.textContent=formatNumber(score);
+        const context=document.createElement('span');
+        context.className='result-score__context';
+        context.textContent=mode+' · '+gameState.numPlayers+' '+(ru?'игр.':'player(s)');
+        overview.append(label,value,context);
+        scoresDiv.append(overview);
 
-        const teamSummary = document.createElement('div');
-        teamSummary.className = 'player-score team-total';
-        teamSummary.textContent = currentLanguage==='ru'
-          ? `Счёт ${formatNumber(score)} · Уровень ${level} · Линий ${lines}`
-          : `Score ${formatNumber(score)} · Level ${level} · Lines ${lines}`;
-        scoresDiv.appendChild(teamSummary);
-
-        const again = document.getElementById('play-again-btn');
-        if (again) {
-            const allowed = !this.isOnlineMode || networkManager.hostId === networkManager.socket.id;
-            again.disabled = !allowed;
-            again.textContent = this.isOnlineMode
-              ? (allowed ? (currentLanguage==='ru'?'Новый раунд':'New round') :
-                  (currentLanguage==='ru'?'Раунд начинает ведущий':'Host starts next round'))
-              : t('playAgain');
+        const metrics=document.createElement('div');
+        metrics.className='result-metrics';
+        const metricItems=[
+            [formatNumber(lines),ru?'Линий собрано':'Lines cleared'],
+            [String(level),ru?'Уровень':'Level'],
+            [occupancy+'%',ru?'Поле занято':'Board occupied']
+        ];
+        for(const [metricValue,metricLabel] of metricItems){
+            const tile=document.createElement('div');
+            tile.className='result-metric';
+            const number=document.createElement('strong');
+            number.textContent=metricValue;
+            const caption=document.createElement('span');
+            caption.textContent=metricLabel;
+            tile.append(number,caption);
+            metrics.append(tile);
         }
-        gameState.players.forEach(player => {
-            const scoreDiv = document.createElement('div');
-            scoreDiv.className = 'player-score';
-            scoreDiv.style.borderLeft = `4px solid ${player.color}`;
-            const status = player.gameOver ? t('out') : t('inPlay');
-            scoreDiv.textContent = `${t('player')} ${player.id + 1} · ${status}`;
-            scoresDiv.appendChild(scoreDiv);
-        });
+        scoresDiv.append(metrics);
 
+        const details=document.createElement('div');
+        details.className='result-lower';
+        const team=document.createElement('section');
+        team.className='result-players';
+        const teamTitle=document.createElement('h3');
+        teamTitle.textContent=ru?'УЧАСТНИКИ':'PLAYERS';
+        team.append(teamTitle);
+        for(const player of gameState.players){
+            const entry=document.createElement('div');
+            entry.className='result-player';
+            entry.style.setProperty('--player-color',player.color);
+            const swatch=document.createElement('span');
+            swatch.className='result-player__swatch';
+            const name=document.createElement('span');
+            name.className='result-player__name';
+            name.textContent=player.name||((ru?'Игрок ':'Player ')+(player.id+1));
+            const status=document.createElement('span');
+            status.className='result-player__status';
+            status.textContent=player.gameOver?(ru?'Выбыл':'Out'):(ru?'На поле':'Playing');
+            entry.append(swatch,name,status);
+            team.append(entry);
+        }
+        details.append(team);
+        const boardSection=document.createElement('section');
+        boardSection.className='result-board';
+        const boardTitle=document.createElement('h3');
+        boardTitle.textContent=ru?'ПОЛЕ НА ФИНИШЕ':'FINAL BOARD';
+        const canvas=document.createElement('canvas');
+        canvas.className='result-board__canvas';
+        const cell=8;
+        const width=getBoardWidth();
+        canvas.width=width*cell;
+        canvas.height=BOARD_HEIGHT*cell;
+        const ctx=canvas.getContext('2d');
+        if(ctx){
+            ctx.fillStyle='#142629';ctx.fillRect(0,0,canvas.width,canvas.height);
+            for(let y=0;y<BOARD_HEIGHT;y++){
+                for(let x=0;x<width;x++){
+                    const owner=board[y]?.[x];
+                    if(!owner)continue;
+                    ctx.fillStyle=gameState.players[owner-1]?.color||'#9daea6';
+                    ctx.fillRect(x*cell+1,y*cell+1,cell-2,cell-2);
+                }
+            }
+        }
+        const legend=document.createElement('p');
+        legend.className='result-board__description';
+        legend.textContent=ru?`${locked} занятых клеток`:`${locked} filled cells`;
+        boardSection.append(boardTitle,canvas,legend);
+        details.append(boardSection);
+        scoresDiv.append(details);
+
+        const again=document.getElementById('play-again-btn');
+        if(again){
+            const allowed=!this.isOnlineMode||networkManager.hostId===networkManager.socket.id;
+            again.disabled=!allowed;
+            again.textContent=this.isOnlineMode
+                ?(allowed?(ru?'Новый раунд':'New round'):(ru?'Раунд начинает ведущий':'Host starts next round'))
+                :t('playAgain');
+        }
         this.showModal('gameOver');
     }
 

@@ -4,8 +4,8 @@
   "product": "blockies",
   "direction": {
     "premise": "A cooperative falling-block arcade rebuilt around a legible single shared well, even on narrow phones.",
-    "composition": "An editorial start screen leads to a shared crisp falling-block well. On cooperative games a colored multi-gate gantry anchors each player exactly above their four-cell entrance, while touch controls sit at thumb reach.",
-    "shapeLanguage": "Crisp square stack cells, quiet linear menu rows, pill-free directional keys and one heavy color-filled hard-drop key.",
+    "composition": "An editorial start screen leads to a shared crisp falling-block well. On cooperative games a colored multi-gate gantry anchors each player exactly above their four-cell entrance, while touch controls sit at thumb reach. An automatically dark evening palette maintains low luminance on every setup and result screen; desktop forms use broad two-column structures.",
+    "shapeLanguage": "Crisp square stack cells, quiet linear menu rows, pill-free directional keys and one heavy color-filled hard-drop key. The top gate is one contiguous industrial inlet instead of floating separate preview boxes.",
     "surfaceAndMaterial": "Warm paper shell and sage hardware borders surround a dark deep-green playing well; no glass overlays, purple gradients or neon chromed cabinet.",
     "paletteLogic": "A neutral matte shell yields attention to player-owned cyan, pink, yellow and green cells; the hard-drop key is deep green.",
     "typography": "Humanist sans for mode choices, tightly-spaced monospace for score and technical status; labels stay concise.",
@@ -76,6 +76,11 @@
         "slug": "axis-pals",
         "spatialDifference": "Axis Pals uses a partnership puzzle workspace built around coordinating choices, while Blockies gives its one uninterrupted falling-block well a cell-aligned gantry of individual next-piece and spawn entrances.",
         "interactionDifference": "The discrete joint decisions of Axis Pals differ from Blockies' repeat-on-hold movement and hard-drop physics, with independently blocked player entrances and server-authoritative board synchronization."
+      },
+      {
+        "slug": "crown-laws",
+        "spatialDifference": "Crown Laws is a medieval council interface with document-like law choices and political consequences. Blockies instead keeps a narrow central pixel-grid arcade board and a coherent four-cell spawn gantry; large setup columns are for configuring physical controls, not storytelling.",
+        "interactionDifference": "Council decisions in Crown Laws advance political turns, whereas Blockies uses simultaneous real-time tetromino actions, live PocketNet snapshots, player-specific entry points and a compact data-backed post-round field recap."
       }
     ]
   },
@@ -88,7 +93,7 @@
     "action": "Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player.",
     "anticipation": "Each player's named colored 4×2 bay previews their next piece directly above the exact spawn entrance. An obstructed entrance visibly closes for that player alone.",
     "response": "A key depresses on touch, then the piece moves or rotates; hard drop snaps to the ghost position; server snapshots remain authoritative.",
-    "followThrough": "A filled personal entrance stops only its own player's pieces, with a visible blocked gate; the remaining teammates keep clearing the shared field.",
+    "followThrough": "A filled personal entrance stops only its own player's pieces, with a visible blocked gate; the remaining teammates keep clearing the shared field. A scored match finishes with actual board-cell occupancy, teammate states and a final miniature stack, not decorative statistics.",
     "interruption": "Pointer cancel, disconnect and app background release held controls; room rejoin restores authoritative state.",
     "reducedMotion": "Prefer-reduced-motion strips UI transitions without affecting Tetris gravity or button/input semantics."
   },
