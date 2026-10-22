@@ -83,10 +83,10 @@ for (const target of quickTargets) {
   let entrypoint='app.js';
   try { await access(path.join(root,directory,'app.js')); }
   catch {
-    const scripts=[...html.matchAll(/<script\\b[^>]*>/g)].map(m=>m[0]);
+    const scripts=[...html.matchAll(/<script\b[^>]*>/g)].map(m=>m[0]);
     for(const tag of scripts) {
-      if(!/\\btype=["']module["']/.test(tag))continue;
-      const match=/\\bsrc=["']\\.\\/([^"']+\\.js)["']/.exec(tag);
+      if(!/\btype=["']module["']/.test(tag))continue;
+      const match=/\bsrc=["']\.\/([^"']+\.js)["']/.exec(tag);
       if(!match||match[1].includes('/'))continue;
       let code='';
       try { code=await readFile(path.join(root,directory,match[1]),'utf8'); } catch { continue; }
