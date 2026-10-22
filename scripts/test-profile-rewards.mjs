@@ -3,12 +3,14 @@ import {collectProfileRewards,profileRewardSources,rewardIsEquipped,equipProfile
 const empty=collectProfileRewards();
 assert.equal(empty.find(x=>x.id==='zamazka').earned,0);
 assert.equal(empty.find(x=>x.id==='zamazka').total,11);
+assert.equal(empty.find(x=>x.id==='cantica').total,9);
 assert.equal(empty.find(x=>x.id==='pocketworks').total,7);
-assert.equal(profileRewardSources.reduce((n,x)=>n+x.rewards.length,0),18);
-const owned=collectProfileRewards(['zamazka.shared-canvas','zamazka.first-stroke','astronaut','tetris.quick-win'],
+assert.equal(profileRewardSources.reduce((n,x)=>n+x.rewards.length,0),27);
+const owned=collectProfileRewards(['zamazka.shared-canvas','zamazka.first-stroke','astronaut','cantica.first-light','cantica.seven','tetris.quick-win'],
   [{slug:'tetris',name:'Тетрис'}]);
 assert.equal(owned.find(x=>x.id==='zamazka').earned,2);
 assert.equal(owned.find(x=>x.id==='pocketworks').earned,1);
+assert.equal(owned.find(x=>x.id==='cantica').earned,2);
 assert.equal(owned.find(x=>x.id==='tetris').name,'Тетрис');
 assert.equal(owned.find(x=>x.id==='tetris').rewards.length,1);
 assert.equal(owned.find(x=>x.id==='tetris').rewards[0].unknown,true);
@@ -26,4 +28,8 @@ const painted=equipProfileReward(backdrop,base);
 assert.equal(painted.background,'gallery');
 assert.equal(painted.backgroundMode,'preset');
 assert.equal(equipProfileReward(owned.find(x=>x.id==='tetris').rewards[0],base),base);
+
+const canticaCrown=owned.find(x=>x.id==='cantica').rewards.find(x=>x.id==='cantica.seven');
+assert.equal(equipProfileReward(canticaCrown,base).maskot.hat,'solar-circlet');
+assert.equal(owned.find(x=>x.id==='cantica').rewards.find(x=>x.id==='cantica.first-light').items[0].slot,'title');
 console.log('PocketWorks profile reward catalogue OK');

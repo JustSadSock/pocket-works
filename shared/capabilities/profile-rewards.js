@@ -1,4 +1,5 @@
 import {zamazkaAchievements} from './zamazka-achievements.js';
+import {canticaAchievements} from './cantica-achievements.js';
 
 // The collection describes real entitlements; it never grants them. Ownership
 // is always the list returned by Pocket Social, not local UI state.
@@ -13,6 +14,9 @@ const codeRewards=[
 ];
 export const profileRewardSources=[
   {id:'zamazka',name:'Замазка',kind:'game',rewards:zamazkaAchievements.map(a=>({
+    id:a.id,name:a.name,detail:a.detail,tier:a.tier,reward:a.reward,items:[{slot:a.slot,item:a.item}]
+  }))},
+  {id:'cantica',name:'Cantica',kind:'game',rewards:canticaAchievements.map(a=>({
     id:a.id,name:a.name,detail:a.detail,tier:a.tier,reward:a.reward,items:[{slot:a.slot,item:a.item}]
   }))},
   {id:'pocketworks',name:'PocketWorks',kind:'system',rewards:codeRewards.map(a=>({...a,tier:'Код'}))}
