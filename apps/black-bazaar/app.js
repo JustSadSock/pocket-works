@@ -375,7 +375,7 @@ function artifactDetailBlock(you){
    artifactFacts(item,{showPositive:true,showNegative:true})+
    '<div class="detail-actions">'+
    (free?'<button type="button" data-action="detail-trade" data-id="'+esc(item.id)+'">'+svgIcon('trade')+' Обмен</button>':'')+
-   (free&&active&&you.marketDeals<2?
+   (free&&active&&you.marketDeals<2&&!state.listing?
     '<form class="detail-offer-form" data-form="detail-post"><input type="hidden" name="itemId" value="'+esc(item.id)+'">'+
      '<strong>Выставить на торги</strong>'+resourceFields('ask',{gold:100})+
      '<button type="submit" class="primary">'+svgIcon('gavel')+' Выставить</button></form>':'')+
@@ -421,10 +421,11 @@ function artifactDetailBlock(you){
   if(!lot)return '<div class="panel">Этот лот уже недоступен.<p><button type="button" data-action="open-sheet" data-sheet="market">К рынку</button></p></div>';
   item=lot.item;
   const inspected=lot.inspection;
-  body=itemCard(item.name,item.rarity,'Анонимный продавец')+
+  const ownEscrow=lot.mine&&you.escrowItems?.length===1?you.escrowItems[0]:null;
+  body=itemCard(item.name,item.rarity,lot.mine?'Твой анонимный лот':'Анонимный продавец')+
    '<div class="detail-ask"><small>Запрошено</small><strong>'+esc(amounts(lot.ask))+'</strong></div>'+
    (inspected?'<p class="detail-inspected">Оригинал: '+esc(inspected.originalName)+'</p>':'')+
-   artifactFacts(inspected||{},{showNegative:!!inspected,inspection:true})+
+   artifactFacts(ownEscrow||inspected||{},{showPositive:!!ownEscrow,showNegative:!!(ownEscrow||inspected),inspection:!ownEscrow})+
    '<div class="detail-actions">'+
    (lot.mine?
      (lot.bids?.length?lot.bids.map(b=>'<div class="detail-bid"><span>'+esc(amounts(b.offer))+'</span>'+
@@ -450,7 +451,7 @@ function openSheet(sheetName,focus=false,targetId=''){
  if(sheetName&&!Object.prototype.hasOwnProperty.call(sheetTitles,sheetName))return;
  activeSheet=sheetName;
  const sheet=document.querySelector('#bazaarSheet'),backdrop=document.querySelector('#sheetBackdrop');
- if(sheetName==='detail'&&state?.you){
+ if(sheetName==='detail'&&state?.you&&focus){
   const detailPage=sheet.querySelector('[data-sheet-page="detail"]');
   if(detailPage)detailPage.innerHTML=artifactDetailBlock(state.you);
  }
