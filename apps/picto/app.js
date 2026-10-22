@@ -1,9 +1,9 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
-import {GLYPHS,glyphSVG} from './symbols.js';
+import {GLYPHS,GLYPH_MEANINGS,glyphSVG} from './symbols.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ПИКТО',version:'1.3.0',cachePrefix: 'picto-',storageNamespace: 'pocket-works:picto'});
+createWorkshopMode({appName:'ПИКТО',version:'1.4.0',cachePrefix: 'picto-',storageNamespace: 'pocket-works:picto'});
 
 const root=document.querySelector('#view');
 const indicator=document.querySelector('#connection');
@@ -19,6 +19,40 @@ let lastPhase='',lastAuthor='',pendingSend=0,toastTimer=0,confirmAction=null,req
 let soundEnabled=true;
 let activeFrame=0,paletteCategory='Все',paletteQuery='',lexiconImported=false;
 let draftAnswer=[null,null,null,null,null],answerSending=false;
+let serverClockOffset=0,clockCalibrated=false;
+function calibrateClock(payload){
+ const serverNow=Number(payload?.serverNow);
+ if(!Number.isFinite(serverNow)||serverNow<=0)return;
+ const now=Date.now();
+ const echo=Number(payload?.echo);
+ // For heartbeat replies estimate the midpoint of the request/response. Initial snapshots use receipt time.
+ const lag=Number.isFinite(echo)&&echo>0&&echo<=now?Math.min(5000,now-echo)/2:0;
+ const estimate=serverNow-now+lag;
+ serverClockOffset=clockCalibrated&&Math.abs(estimate-serverClockOffset)<1000
+  ?Math.round(serverClockOffset*.75+estimate*.25):estimate;
+ clockCalibrated=true;
+ updateClock();
+}
+function draftKey(s=state){
+ if(!roomId||!s||s.phase!=='compose'||s.author!==me?.id||!s.prompt)return '';
+ return STORE+'draft:'+roomId+':'+s.round+':'+s.prompt;
+}
+function storeDraft(){
+ const key=draftKey();
+ if(key)try{sessionStorage.setItem(key,JSON.stringify(draft));}catch{}
+}
+function restoreDraft(s){
+ const key=draftKey(s);
+ if(!key)return;
+ try{
+  const saved=JSON.parse(sessionStorage.getItem(key)||'null');
+  if(Array.isArray(saved)&&saved.length<=48&&saved.length>=draft.length&&saved.every(g=>
+   g&&s.palette.includes(g.id)&&Number.isFinite(g.x)&&Number.isFinite(g.y)
+   &&Number.isFinite(g.r)&&Number.isFinite(g.s)&&(g.frame??0)<s.frames)){
+   draft=saved.map(g=>({...g}));
+  }
+ }catch{}
+}
 const GROUPS={
  'Герои':'human king queen knight wizard thief child guard robot ghost',
  'Животные':'cat bird fish dragon dog horse fox rabbit frog snake wolf bear bee owl spider turtle',
@@ -28,8 +62,8 @@ const GROUPS={
  'Знаки':'arrow question hand not swap loop path mask spark'
 };
 function groupOf(id){return Object.entries(GROUPS).find(([,ids])=>ids.split(' ').includes(id))?.[0]||'Знаки';}
-function visibleGlyphs(){return GLYPHS.filter(g=>(!state?.palette?.length||state.palette.includes(g[0]))&&(paletteCategory==='Все'||groupOf(g[0])===paletteCategory)&&(!paletteQuery||g[1].toLowerCase().includes(paletteQuery)||g[0].includes(paletteQuery)));}
-function glyphButtons(){return visibleGlyphs().map(g=>'<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(g[1])+'" aria-label="Добавить: '+esc(g[1])+'">'+glyphSVG(g[0])+'</button>').join('')||'<div class="palette-empty">Ничего не найдено</div>';}
+function visibleGlyphs(){return GLYPHS.filter(g=>(!state?.palette?.length||state.palette.includes(g[0]))&&(paletteCategory==='Все'||groupOf(g[0])===paletteCategory)&&(!paletteQuery||(g[1]+' '+(GLYPH_MEANINGS[g[0]]||'')).toLowerCase().includes(paletteQuery)||g[0].includes(paletteQuery)));}
+function glyphButtons(){return visibleGlyphs().map(g=>{const meaning=g[1]+(GLYPH_MEANINGS[g[0]]?' · '+GLYPH_MEANINGS[g[0]]:'');return '<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(meaning)+'" aria-label="Добавить: '+esc(meaning)+'">'+glyphSVG(g[0])+'</button>';}).join('')||'<div class="palette-empty">Ничего не найдено</div>';}
 function refreshGlyphs(){const el=document.querySelector('#glyphPalette');if(el)el.innerHTML=glyphButtons();document.querySelectorAll('[data-category]').forEach(b=>b.classList.toggle('active',b.dataset.category===paletteCategory));const hint=document.querySelector('#glyphHint');if(hint)hint.textContent=visibleGlyphs().length+' ЗНАКОВ';}
 function lexiconHtml(compact=false){const a=state?.lexicon||[];if(!a.length)return compact?'':'<div class="lexicon-empty">После разгадки автор сможет сохранить удачную композицию.</div>';return '<div class="lexicon-list">'+a.slice(-8).reverse().map((v,i)=>'<div class="lexicon-entry"><b>'+esc(v.prompt)+'</b><small>'+esc(v.name)+'</small>'+(compact?'<button class="btn quiet slim" data-lexicon-use="'+(a.length-1-i)+'">Взять как основу</button>':'')+'</div>').join('')+'</div>';}
 
@@ -136,7 +170,7 @@ function renderLobby(){
   '<div class="room-grid"><div class="ticket"><span class="micro">КОД-ПРИГЛАШЕНИЕ</span><div class="ticket-code" data-selectable>'+esc(code||'········')+'</div>'+
   '<div class="ticket-actions"><button class="btn slim" data-action="copy-code">Скопировать код</button><button class="btn slim" data-action="copy-link">Ссылка другу</button></div>'+
   '<div class="rule"></div><p class="small-note">Покажи друзьям ссылку: они зайдут через свой браузер. Без отдельного приложения и настройки сервера.</p></div>'+playerList()+'</div>'+
-  (state.semanticVersion===4?'<div class="lexicon-room"><strong>Язык компании · '+(state.lexicon?.length||0)+'/24</strong>'+lexiconHtml()+'</div>':'')+
+  (state.semanticVersion>=4?'<div class="lexicon-room"><strong>Язык компании · '+(state.lexicon?.length||0)+'/24</strong>'+lexiconHtml()+'</div>':'')+
   '<div class="room-footer"><button class="btn primary" data-action="start" '+(!host||count<2||!connected?'disabled':'')+'>'+(host?'Начать игру':'Ждём ведущего')+' →</button><button class="btn quiet" data-action="leave">Покинуть комнату</button></div></section>';
 }
 function phaseTop(title,subtitle){
@@ -149,21 +183,21 @@ function renderCompose(){
  const items=author?draft:state.board;
  const prompt=author?(state.prompt||'Получаем фразу…'):'Смотри, как рождается сообщение';
  const promptBar='<div class="prompt-strip"><div><span class="micro">'+(author?'ТВОЯ СЕКРЕТНАЯ ФРАЗА':'РАБОТАЕТ '+esc(authorName))+'</span><br><b>'+esc(prompt)+'</b></div>'+
-  (author?'<span class="micro">'+(state.semanticVersion===4?'ИСТОРИЯ В '+state.frames+' КАДРАХ':'НЕ ВСЕ ЗНАКИ ДОСТУПНЫ')+'</span>':'<span class="micro">НАБЛЮДАЙ</span>')+'</div>';
+  (author?'<span class="micro">'+(state.semanticVersion>=5?'ПУСТЫЕ КАДРЫ ДОПУСТИМЫ':state.semanticVersion>=4?'ИСТОРИЯ В '+state.frames+' КАДРАХ':'НЕ ВСЕ ЗНАКИ ДОСТУПНЫ')+'</span>':'<span class="micro">НАБЛЮДАЙ</span>')+'</div>';
  const available=GLYPHS.filter(g=>!state.palette?.length||state.palette.includes(g[0]));
- const palette=state.semanticVersion===4?glyphButtons():available.map(g=>'<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(g[1])+'" aria-label="Добавить: '+esc(g[1])+'">'+glyphSVG(g[0])+'</button>').join('');
+ const palette=state.semanticVersion>=4?glyphButtons():available.map(g=>'<button class="glyph-btn" type="button" data-glyph="'+g[0]+'" title="'+esc(g[1])+'" aria-label="Добавить: '+esc(g[1])+'">'+glyphSVG(g[0])+'</button>').join('');
  const blocked=GLYPHS.filter(g=>state.blocked?.includes(g[0]));
  const blockedHTML=blocked.length?'<div class="blocked-strip"><span>ЗАПРЕЩЕНО</span>'+
   blocked.map(g=>'<span class="blocked-glyph" title="'+esc(g[1])+'">'+glyphSVG(g[0])+'</span>').join('')+'</div>':'';
  const toolbox=author?'<aside class="toolbox"><div class="toolbox-head"><span>АЛФАВИТ РАУНДА</span><span id="glyphHint">'+available.length+' ЗНАКОВ</span></div>'+
-  blockedHTML+(state.semanticVersion===4?'<div class="category-tabs">'+['Все',...Object.keys(GROUPS)].map(c=>'<button class="category-btn '+(paletteCategory===c?'active':'')+'" data-category="'+c+'">'+c+'</button>').join('')+'</div><input class="glyph-search" id="glyphSearch" placeholder="Найти знак…" aria-label="Поиск знаков" value="'+esc(paletteQuery)+'">':'')+'<div class="palette" id="glyphPalette">'+palette+'</div><div class="tools-row">'+
+  blockedHTML+(state.semanticVersion>=4?'<div class="category-tabs">'+['Все',...Object.keys(GROUPS)].map(c=>'<button class="category-btn '+(paletteCategory===c?'active':'')+'" data-category="'+c+'">'+c+'</button>').join('')+'</div><input class="glyph-search" id="glyphSearch" placeholder="Найти знак…" aria-label="Поиск знаков" value="'+esc(paletteQuery)+'">':'')+'<div class="palette" id="glyphPalette">'+palette+'</div><div class="tools-row">'+
   '<button class="btn" data-action="rotate-left" title="Повернуть влево" aria-label="Повернуть влево" '+(selected<0?'disabled':'')+'>↶</button>'+
   '<button class="btn" data-action="rotate-right" title="Повернуть вправо" aria-label="Повернуть вправо" '+(selected<0?'disabled':'')+'>↷</button>'+
   '<button class="btn" data-action="shrink" title="Уменьшить" aria-label="Уменьшить" '+(selected<0?'disabled':'')+'>−</button>'+
   '<button class="btn" data-action="grow" title="Увеличить" aria-label="Увеличить" '+(selected<0?'disabled':'')+'>＋</button></div>'+
   '<div class="toolbox-actions"><button class="btn quiet slim" data-action="undo" '+(!undo.length?'disabled':'')+'>Отменить</button>'+
   '<button class="btn quiet slim" data-action="delete" '+(selected<0?'disabled':'')+'>Убрать знак</button>'+
-  '<button class="btn primary slim" data-action="publish" '+(!draft.length||!connected?'disabled':'')+'>Показать друзьям ↗</button></div>'+(state.semanticVersion===4&&state.lexicon?.length?'<div class="lexicon-compact"><strong>Язык компании</strong>'+lexiconHtml(true)+'</div>':'')+'</aside>':
+  '<button class="btn primary slim" data-action="publish" '+(!draft.length||!connected?'disabled':'')+'>Показать друзьям ↗</button></div>'+(state.semanticVersion>=4&&state.lexicon?.length?'<div class="lexicon-compact"><strong>Язык компании</strong>'+lexiconHtml(true)+'</div>':'')+'</aside>':
   '<aside class="toolbox"><div class="micro">СООБЩЕНИЕ В ПРОЦЕССЕ</div><p>Автор собирает картину из ограниченного набора знаков.</p>'+
   '<div class="wait-box">Автор: <b>'+esc(authorName)+'</b><br>Знаков сейчас: <b>'+items.length+'</b></div>'+
   '<button class="btn quiet slim" data-action="leave">Покинуть игру</button></aside>';
@@ -171,10 +205,10 @@ function renderCompose(){
   '<div class="editor-layout">'+boardPanel(items,author)+toolbox+'</div></section>';
  updateClock();
 }
-const SLOT_LABELS=['Кто','Что делает','С кем / чем','Что потом','Где происходит'];
-const slotNames=()=>state?.semanticVersion===4?SLOT_LABELS:['Кто','Что делает','Что','Как / где','С чем / где'];
+const SLOT_LABELS=['Кто','Что делает','С кем / чем','Зачем / что потом','Где происходит'];
+const slotNames=()=>state?.semanticVersion>=4?SLOT_LABELS:['Кто','Что делает','Что','Как / где','С чем / где'];
 function guessWords(slot,cells){
- if(slot===4&&state.semanticVersion!==4)return state.locationForms?.[cells[3]??0]||state.choices?.[4]||[];
+ if(slot===4&&state.semanticVersion<4)return state.locationForms?.[cells[3]??0]||state.choices?.[4]||[];
  return state.choices?.[slot]||[];
 }
 function renderSlot(slot,cells,locked){
@@ -220,21 +254,21 @@ function renderReveal(){
  const targetPrep=originalChoices[3]?.indexOf(solution[3])??0;
  const peers=state.players.filter(p=>p.id!==state.author).map(p=>{
   const answer=state.answers[p.id];
-  const count=answer?answer.filter((n,i)=>n!==null&&(state.semanticVersion===4?originalChoices[i]?.[n]===solution[i]:(i===4?state.locationForms?.[targetPrep]?.[n]===solution[4]:originalChoices[i]?.[n]===solution[i]))).length:0;
+  const count=answer?answer.filter((n,i)=>n!==null&&(state.semanticVersion>=4?originalChoices[i]?.[n]===solution[i]:(i===4?state.locationForms?.[targetPrep]?.[n]===solution[4]:originalChoices[i]?.[n]===solution[i]))).length:0;
   return '<span class="answer-pill '+(!answer?'':count>=3?'yes':'no')+'">'+esc(p.name)+': '+(answer?count+' / 5':'не ответил')+'</span>';
  }).join('');
  const review=solution.map((word,i)=>{
-  const selected=mine[i],own=i===4&&state.semanticVersion!==4?state.locationForms?.[mine[3]??0]?.[selected]:originalChoices[i]?.[selected];
-  const right=state.semanticVersion===4?own===word:(i===4?state.locationForms?.[targetPrep]?.[selected]===word:own===word);
+  const selected=mine[i],own=i===4&&state.semanticVersion<4?state.locationForms?.[mine[3]??0]?.[selected]:originalChoices[i]?.[selected];
+  const right=state.semanticVersion>=4?own===word:(i===4?state.locationForms?.[targetPrep]?.[selected]===word:own===word);
   return '<div class="review-cell"><span>'+slotNames()[i]+'</span><strong>'+esc(word)+'</strong>'+
     (state.author!==me?.id&&selected!==null?'<small class="'+(right?'hit':'miss')+'">'+(right?'✓ ':'✕ ')+esc(own||'—')+'</small>':'')+'</div>';
  }).join('');
  root.innerHTML='<section class="game-shell">'+phaseTop('Вот что было загадано','РАСКРЫТИЕ')+
-  '<div class="reveal-head"><div><span class="micro">ИСХОДНАЯ ИСТОРИЯ</span><h2>'+esc(state.semanticVersion===4?state.story:solution.join(' ')+'.')+'</h2></div><strong>'+Number(result?.correct||0)+' / '+Number(result?.total||0)+' слов</strong></div>'+
+  '<div class="reveal-head"><div><span class="micro">ИСХОДНАЯ ИСТОРИЯ</span><h2>'+esc(state.semanticVersion>=4?state.story:solution.join(' ')+'.')+'</h2></div><strong>'+Number(result?.correct||0)+' / '+Number(result?.total||0)+' слов</strong></div>'+
   '<div class="guess-layout">'+boardPanel(state.board,false)+'<div class="guess-options">'+
   '<div class="review-grid">'+review+'</div><div class="reveal-peers">'+peers+'</div>'+
   '<p class="small-note">+2 за точный смысл, −1 за ошибку, 0 за пропуск. Раунд: '+(result?.points||0)+' очков.</p>'+
-  (state.semanticVersion===4&&state.author===me?.id?'<button class="btn blue" data-action="save-word" '+(state.lexicon?.some(v=>v.prompt===result?.prompt)||state.lexicon?.length>=24?'disabled':'')+'>'+(state.lexicon?.some(v=>v.prompt===result?.prompt)?'Уже в словаре ✓':'В словарь компании +')+'</button>':'')+
+  (state.semanticVersion>=4&&state.author===me?.id?'<button class="btn blue" data-action="save-word" '+(state.lexicon?.some(v=>v.prompt===result?.prompt)||state.lexicon?.length>=24?'disabled':'')+'>'+(state.lexicon?.some(v=>v.prompt===result?.prompt)?'Уже в словаре ✓':'В словарь компании +')+'</button>':'')+
   (state.host===me?.id?'<button class="btn primary" data-action="next">Следующий этап →</button>':'<p class="small-note">Следующий этап начнётся автоматически.</p>')+
   '</div></div></section>';
  updateClock();
@@ -269,7 +303,7 @@ function renderLegacyReveal(){
 
 function renderResults(){
  const gallery=(state.history||[]).map((g,i)=>'<article class="gallery-card"><span class="micro">№ '+String(i+1).padStart(2,'0')+'</span>'+
-  (state.semanticVersion===4?'<div class="gallery-story">'+Array.from({length:(i+1)%3===0?3:2},(_,f)=>boardHTML(g.board,false,'gallery-'+i+'-'+f,f)).join('')+'</div>':boardHTML(g.board,false,'gallery-'+i))+'<h3>'+esc(g.prompt)+'</h3><small>'+esc(g.name)+' · '+g.correct+'/'+g.total+
+  (state.semanticVersion>=4?'<div class="gallery-story">'+Array.from({length:(i+1)%3===0?3:2},(_,f)=>boardHTML(g.board,false,'gallery-'+i+'-'+f,f)).join('')+'</div>':boardHTML(g.board,false,'gallery-'+i))+'<h3>'+esc(g.prompt)+'</h3><small>'+esc(g.name)+' · '+g.correct+'/'+g.total+
   (Number.isFinite(g.points)?' слов · '+g.points+' очков':' поняли')+'</small></article>').join('');
  const score=Number.isFinite(state.wordsFound)?
   'Угадано слов: '+state.wordsFound+' из '+state.attempts+' · '+state.score+' очков':
@@ -277,7 +311,7 @@ function renderResults(){
  root.innerHTML='<section class="screen finish"><span class="micro">АРХИВ / СЕАНС ЗАВЕРШЁН</span>'+
   '<h1>Поняли.<br>Почти.</h1><div class="finish-score">'+score+'</div>'+
   '<p>Все композиции одной партии. Можно рассмотреть чужие расшифровки и начать новую игру.</p>'+
-  '<div class="gallery">'+gallery+'</div>'+(state.semanticVersion===4?'<div class="lexicon-room"><strong>Язык компании · '+(state.lexicon?.length||0)+'/24</strong>'+lexiconHtml()+'</div>':'')+'<div class="room-footer">'+
+  '<div class="gallery">'+gallery+'</div>'+(state.semanticVersion>=4?'<div class="lexicon-room"><strong>Язык компании · '+(state.lexicon?.length||0)+'/24</strong>'+lexiconHtml()+'</div>':'')+'<div class="room-footer">'+
   '<button class="btn primary" data-action="again" '+(state.host!==me?.id||!connected?'disabled':'')+'>'+(state.host===me?.id?'Играть ещё ↗':'Ждём ведущего')+'</button>'+
   '<button class="btn quiet" data-action="leave">Покинуть комнату</button></div></section>';
 }
@@ -292,17 +326,19 @@ function render(){
 function updateClock(){
  const el=document.querySelector('#timer');
  if(!el)return;
- const remaining=Math.max(0,Math.ceil(((state?.deadline||0)-Date.now())/1000));
+ const remaining=Math.max(0,Math.ceil(((state?.deadline||0)-(Date.now()+(clockCalibrated?serverClockOffset:0)))/1000));
  el.textContent=String(Math.floor(remaining/60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
 }
 function setState(next){
  if(!next||!Array.isArray(next.players)||!next.phase)return;
+ if(state&&Number.isFinite(next.revision)&&Number.isFinite(state.revision)&&next.revision<state.revision)return;
+ calibrateClock(next);
  const changed=state?.phase!==next.phase||state?.author!==next.author||state?.round!==next.round||state?.prompt!==next.prompt;
  const wasAnswered=state?.answered?.includes(me?.id)||false;
  state=next;
- if(next.semanticVersion===4&&next.lexicon?.length){try{localStorage.setItem(STORE+'lexicon',JSON.stringify(next.lexicon));}catch{}}
- if(next.semanticVersion===4&&next.phase==='lobby'&&next.host===me?.id&&!lexiconImported){lexiconImported=true;try{const entries=JSON.parse(localStorage.getItem(STORE+'lexicon')||'[]');if(Array.isArray(entries)&&entries.length)send({type:'lexicon-import',entries});}catch{}}
- if(changed){hideConfirm();selected=-1;activeFrame=0;undo=[];draft=(next.board||[]).map(g=>({...g}));draftAnswer=[null,null,null,null,null];answerSending=false;drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
+ if(next.semanticVersion>=4&&next.lexicon?.length){try{localStorage.setItem(STORE+'lexicon',JSON.stringify(next.lexicon));}catch{}}
+ if(next.semanticVersion>=4&&next.phase==='lobby'&&next.host===me?.id&&!lexiconImported){lexiconImported=true;try{const entries=JSON.parse(localStorage.getItem(STORE+'lexicon')||'[]');if(Array.isArray(entries)&&entries.length)send({type:'lexicon-import',entries});}catch{}}
+ if(changed){hideConfirm();selected=-1;activeFrame=0;undo=[];draft=(next.board||[]).map(g=>({...g}));restoreDraft(next);draftAnswer=[null,null,null,null,null];answerSending=false;drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
  if(next.phase==='guess'&&!changed&&state.answered.includes(me?.id)===wasAnswered){
   const counter=document.querySelector('.prompt-strip .micro');
   if(counter)counter.textContent=state.answered.length+' / '+(state.players.length-1)+' ОТВЕТОВ';
@@ -316,12 +352,12 @@ function setState(next){
 }
 function syncRoom(message){
  roomId=message.roomId;code=message.roomId?.slice(0,8).toUpperCase()||code;
- state=null;lexiconImported=false;root.innerHTML='<section class="loading">Синхронизируем комнату…</section>';
+ state=null;clockCalibrated=false;serverClockOffset=0;lexiconImported=false;root.innerHTML='<section class="loading">Синхронизируем комнату…</section>';
  try{net.sendGame({type:'sync'});}catch{notify('Не удалось синхронизировать комнату.');}
  const address=new URL(location.href);address.searchParams.set('room',code);history.replaceState(null,'',address.pathname+address.search);
 }
 function stop(leave=true){
- requestSerial++;clearTimeout(pendingSend);pendingSend=0;drag=null;lexiconImported=false;
+ requestSerial++;clearTimeout(pendingSend);pendingSend=0;drag=null;lexiconImported=false;clockCalibrated=false;serverClockOffset=0;
  if(net){if(leave&&state)try{net.leaveRoom();}catch{}net.close();}
  net=null;activeToken=null;me=null;state=null;roomId='';code='';connecting=false;connected=false;
  if(leave)adapter.removeItem('pocket-net:'+SERVER);
@@ -354,7 +390,19 @@ async function connect(mode){
   net=client;
   client.on('connected',info=>{if(net!==client)return;me=info.player;connected=true;activeToken=client.token;status('В сети','ok');if(state)render();});
   client.on('room_joined',info=>{if(net!==client)return;connecting=false;syncRoom(info);});
-  client.on('game_event',packet=>{if(net!==client)return;if(packet.event?.type==='state')setState(packet.event.payload);else if(packet.event?.type==='notice'){answerSending=false;notify(String(packet.event.payload));if(state?.phase==='guess')render();}});
+  client.on('game_event',packet=>{
+    if(net!==client)return;
+    if(packet.event?.type==='state')setState(packet.event.payload);
+    else if(packet.event?.type==='clock')calibrateClock(packet.event.payload);
+    else if(packet.event?.type==='notice'){
+     answerSending=false;notify(String(packet.event.payload));
+     if(state?.phase==='guess')render();
+     else if(state?.phase==='compose'&&state.author===me?.id){
+      const publish=document.querySelector('[data-action="publish"]');
+      if(publish){publish.textContent='Показать друзьям ↗';publish.disabled=!draft.length||!connected;}
+     }
+    }
+   });
   client.on('presence',()=>{if(net===client&&state)try{client.sendGame({type:'sync'});}catch{}});
   client.on('disconnected',()=>{if(net!==client)return;connected=false;answerSending=false;status('Переподключение','bad');if(state)render();});
   client.on('room_closed',()=>{if(net!==client)return;stop(false);notify('Комната закрыта. Можно создать новую.');});
@@ -379,6 +427,7 @@ function flushBoard(){
  send({type:'edit',glyphs:draft});
 }
 function queueBoard(){
+ storeDraft();
  clearTimeout(pendingSend);
  pendingSend=setTimeout(flushBoard,130);
 }
@@ -386,7 +435,7 @@ function remember(){undo.push(draft.map(g=>({...g})));if(undo.length>30)undo.shi
 function paintBoard(){
  const stage=document.querySelector('#liveStage');
  if(stage)stage.innerHTML=draft.map((g,i)=>(g.frame??0)===activeFrame?stampHTML(g,i,true):'').join('');
- const count=document.querySelector('.board-foot span:last-child');if(count)count.textContent=draft.length+' / '+(state.semanticVersion===4?'48':'26')+' ЗНАКОВ';
+ const count=document.querySelector('.board-foot span:last-child');if(count)count.textContent=draft.length+' / '+(state.semanticVersion>=4?'48':'26')+' ЗНАКОВ';
  document.querySelectorAll('[data-action="rotate-left"],[data-action="rotate-right"],[data-action="shrink"],[data-action="grow"],[data-action="delete"]').forEach(b=>b.disabled=selected<0);
  const undoBtn=document.querySelector('[data-action="undo"]');if(undoBtn)undoBtn.disabled=!undo.length;
  const publish=document.querySelector('[data-action="publish"]');if(publish)publish.disabled=!draft.length||!connected;
@@ -394,11 +443,11 @@ function paintBoard(){
 function addSymbol(id){
  if(state?.phase!=='compose'||state.author!==me?.id)return;
  if(state.palette?.length&&!state.palette.includes(id)){notify('Этот знак недоступен в раунде.');return;}
- if(draft.length>=(state.semanticVersion===4?48:26)){notify('На доске закончилось место для знаков.');return;}
+ if(draft.length>=(state.semanticVersion>=4?48:26)){notify('На доске закончилось место для знаков.');return;}
  remember();
  const offset=(draft.length%7-3)*4;
- draft.push({id,x:Math.max(8,Math.min(92,50+offset)),y:Math.max(10,Math.min(90,50+(Math.floor(draft.length/7)-1)*9)),r:0,s:1,...(state.semanticVersion===4?{frame:activeFrame}:{})});
- selected=draft.length-1;paintBoard();const hint=document.querySelector('#glyphHint');if(hint)hint.textContent=GLYPHS.find(g=>g[0]===id)?.[1]||'ЗНАК';queueBoard();playTone(620);
+ draft.push({id,x:Math.max(8,Math.min(92,50+offset)),y:Math.max(10,Math.min(90,50+(Math.floor(draft.length/7)-1)*9)),r:0,s:1,...(state.semanticVersion>=4?{frame:activeFrame}:{})});
+ selected=draft.length-1;paintBoard();const hint=document.querySelector('#glyphHint');if(hint)hint.textContent=(GLYPHS.find(g=>g[0]===id)?.[1]||'ЗНАК')+(GLYPH_MEANINGS[id]?' · '+GLYPH_MEANINGS[id]:'');queueBoard();playTone(620);
 }
 function transform(type){
  if(selected<0||!draft[selected])return;
@@ -450,7 +499,18 @@ root.addEventListener('click',e=>{
  if(action==='copy-code'){copyText(code);return;}
  if(action==='copy-link'){copyText(new URL(location.pathname+'?room='+encodeURIComponent(code),location.origin).href);return;}
  if(action==='start'||action==='again'||action==='next'){send({type:action});playTone(700);return;}
- if(action==='publish'){flushBoard();if(draft.length)send({type:'publish'});return;}
+ if(action==='publish'){
+   if(!draft.length)return;
+   if(state?.semanticVersion>=5){
+    clearTimeout(pendingSend);pendingSend=0;storeDraft();
+    if(send({type:'publish',glyphs:draft.map(g=>({...g}))})){
+     btn.disabled=true;btn.textContent='Отправляем…';
+    }
+   }else{
+    flushBoard();send({type:'publish'}); // Compatibility with rooms pinned to older rulesets.
+   }
+   return;
+  }
  if(action==='save-word'){send({type:'save-word'});return;}
   if(action==='submit-guess'){
    if(state?.phase!=='guess'||state.author===me?.id||answerSending||draftAnswer.every(v=>v===null))return;
@@ -469,7 +529,7 @@ root.addEventListener('change',e=>{
  if(!el||state?.phase!=='guess'||state.author===me?.id||answerSending||state.answered.includes(me?.id))return;
  const slot=Number(el.dataset.guessSlot);
  draftAnswer[slot]=el.value===''?null:Number(el.value);
- if(slot===3&&state.semanticVersion!==4){
+ if(slot===3&&state.semanticVersion<4){
   const place=document.querySelector('[data-guess-slot="4"]');
   if(place){
    const selected=draftAnswer[4],words=guessWords(4,draftAnswer);
@@ -514,7 +574,7 @@ window.addEventListener('pagehide',()=>{activeToken=null;clearTimeout(pendingSen
 window.addEventListener('focus',async()=>{if(state)return;await loadProfile();render();});
 setInterval(()=>{
  if(state?.deadline)updateClock();
- if(connected&&net&&state&&!['lobby','results'].includes(state.phase))try{net.sendGame({type:'pulse'});}catch{}
+ if(connected&&net&&state&&!['lobby','results'].includes(state.phase))try{net.sendGame({type:'pulse',clientSentAt:Date.now()});}catch{}
 },1900);
 setInterval(updateClock,350);
 render();
