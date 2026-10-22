@@ -167,6 +167,15 @@ try{
  await host.page.locator('[data-action="publish"]').click();
  await host.page.locator('.guess-card').count().then(n=>assert.equal(n,0));
  await guest.page.locator('.guess-card').waitFor();
+ const mobileStoryboard=await guest.page.evaluate(()=>{
+  const rect=document.querySelector('.guess-layout .stage-frame').getBoundingClientRect();
+  const canvases=[...document.querySelectorAll('.guess-layout .story-panel .stage')].map(el=>el.getBoundingClientRect());
+  const guess=document.querySelector('.guess-card').getBoundingClientRect();
+  return {frameHeight:rect.height,inside:canvases.every(c=>c.top>=rect.top-1&&c.bottom<=rect.bottom+1),
+   noOverlap:rect.bottom<=guess.top+2};
+ });
+ assert.ok(mobileStoryboard.frameHeight>=130&&mobileStoryboard.inside&&mobileStoryboard.noOverlap,
+  'Mobile storyboard must contain both panels without overlapping controls: '+JSON.stringify(mobileStoryboard));
  assert.equal(room.state.phase,'guess');
  assert.equal(room.state.board.length,2);
  await shot(guest.page,'guest-guess-mobile.png');
