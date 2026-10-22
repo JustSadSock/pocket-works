@@ -240,7 +240,7 @@ body{overflow:hidden}button,input{font:inherit}button{cursor:pointer}button:disa
  .editor-layout .palette{min-height:48px}
  .guess-layout{grid-template-rows:auto minmax(0,1fr)}
  .guess-layout .board-panel{height:auto;min-height:0}
- .guess-layout .stage-frame{flex:0 0 auto;height:auto;min-height:0}
+ .guess-layout .stage-frame{flex:0 0 auto;height:auto;min-height:0;container-type:normal}
  .guess-layout .story-grid{height:auto;max-height:none;align-self:center;align-items:start}
  .guess-layout .story-panel{container-type:normal}
  .guess-layout .story-panel .stage{width:100%;height:auto;min-height:0;flex:none;margin:0}
