@@ -21,7 +21,7 @@ function optimal(s){
  for(const item of ITEMS)for(const treatment of TREATMENTS)for(const bell of [1,2,3])
   for(const height of ['low','high']){
    const a={itemId:item.id,treatment:treatment.id,bell,height};
-   const score=evaluateRite(rite,a,s.match.doctrines,getIncident(s.match)).score;
+   const score=evaluateRite(rite,a,s.match.doctrines,getIncident(s.match),s.match.patronId).score;
    if(!best||score>best.score)best={...a,score};
   }
  return best;
