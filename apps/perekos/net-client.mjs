@@ -7,7 +7,7 @@ const scopedStorage={getItem:k=>{try{return localStorage.getItem('perekos-net:'+
 export class OnlineDuel {
  constructor({onView,onStatus,onError,onRoom,onPresence}){
   this.onView=onView;this.onStatus=onStatus;this.onError=onError;this.onRoom=onRoom;this.onPresence=onPresence;
-  this.client=null;this.room=null;this.view=null;this.seq=0;this.lastSent=0;this.connected=false;this.intent=null;
+  this.client=null;this.room=null;this.view=null;this.seq=0;this.lastSent=0;this.connected=false;this.intent=null;this.desiredMode=null;
  }
  get active(){return !!this.room}
  get me(){return this.view?.me??0}
@@ -15,7 +15,7 @@ export class OnlineDuel {
   if(!['create','join','resume'].includes(kind))throw Error('bad_intent');
   if(kind==='join'&&!CODE.test(code)&&!FULL.test(code))throw Error('Введите код из восьми символов.');
   if(this.client){this.client.close();this.client=null}
-  this.room=null;this.view=null;this.connected=false;this.intent=kind;
+  this.room=null;this.view=null;this.connected=false;this.intent=kind;this.desiredMode=null;
   this.onStatus('Подключаемся к PocketNet…');
   const profile=await getPocketIdentity().catch(()=>null);
   const name=profile?.complete?profile.nickname||'Маг':'Гость · Маг';
@@ -73,9 +73,9 @@ export class OnlineDuel {
   const control=typeof ctl==='function'?ctl():ctl;
   return this.send({type:'input',seq:this.seq,round,control});
  }
- start(){return this.send({type:this.view?.phase==='result'?'rematch':'start'})}
+ start(){return this.send({type:this.view?.phase==='result'?'rematch':'start',gameMode:this.desiredMode||this.view?.gameMode||'rupture'})}
  chooseMage(mageId){return this.send({type:'mage',mageId})}
-  chooseMode(gameMode){return this.send({type:'mode',gameMode})}
+  chooseMode(gameMode){if(!['duel','rupture'].includes(gameMode))return false;const sent=this.send({type:'mode',gameMode});if(sent)this.desiredMode=gameMode;return sent}
  pick(rune,replace){return this.send({type:'pick',rune,replace})}
  order(runes){return this.send({type:'order',runes})}
  ready(runes){return this.send({type:'ready',runes})}

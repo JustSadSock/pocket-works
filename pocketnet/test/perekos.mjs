@@ -70,9 +70,12 @@ try{
  third.send('join_room',{roomId:code});assert.equal((await third.next('error')).code,'room_full');
  guest.send('game_message',{payload:{type:'start'}});
  assert.match((await guest.next('game_event',m=>m.event.type==='notice')).event.payload,/создатель/i);
- host.send('game_message',{payload:{type:'start'}});
+ host.send('game_message',{payload:{type:'mode',gameMode:'duel'}});
+ const selectedMode=(await host.next('game_event',m=>m.event.type==='state'&&m.event.payload?.gameMode==='duel')).event.payload;
+ assert.equal(selectedMode.gameMode,'duel');
+ host.send('game_message',{payload:{type:'start',gameMode:'duel'}});
  const started=(await receive(host,'fight')).event.payload;
- assert.equal(started.rulesVersion,5);assert.equal(started.match.version,4);assert.equal(started.match.round,1);assert.deepEqual(started.match.score,[0,0]);
+ assert.equal(started.rulesVersion,5);assert.equal(started.match.gameMode,'duel');assert.equal(started.match.version,4);assert.equal(started.match.round,1);assert.deepEqual(started.match.score,[0,0]);
  const startX=started.match.actors[0].x;
  const ctl=(x=0)=>({x,y:0,aim:{x:320,y:140},attack:false,shield:false,dash:false});
  host.send('game_message',{payload:{type:'input',seq:0,round:1,control:ctl(999)}});

@@ -592,6 +592,7 @@ const module={
    if(s.host!==player.id)return out(warn(player.id,'Матч запускает создатель комнаты.'));
    if(s.seats.length!==2||!s.seats.every(Boolean))return out(warn(player.id,'Нужны два игрока.'));
    if((p.type==='start'&&s.phase!=='lobby')||(p.type==='rematch'&&s.phase!=='result'))return out([]);
+   if(['duel','rupture'].includes(p.gameMode))s.gameMode=p.gameMode;
    beginNet(s);return out();
   }
   if(p.type==='mode'){if(s.phase!=='lobby'||s.host!==player.id||!['duel','rupture'].includes(p.gameMode))return out(warn(player.id,'Режим выбирает создатель до начала матча.'));s.gameMode=p.gameMode;s.revision++;return out()}
