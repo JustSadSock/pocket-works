@@ -51,7 +51,7 @@ try{
     const r=e.getRite(s);let best=null;
     for(const item of e.ITEMS)for(const treatment of e.TREATMENTS)for(const bell of [1,2,3])for(const height of ['low','high']){
      const a={itemId:item.id,treatment:treatment.id,bell,height};
-     const score=e.evaluateRite(r,a,s.doctrines).score;
+     const score=e.evaluateRite(r,a,s.doctrines,e.getIncident(s),s.patronId).score;
      if(!best||score>best.score)best={...a,score};
     }
     return best;
