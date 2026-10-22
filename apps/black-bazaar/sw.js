@@ -1,13 +1,13 @@
-const APP_VERSION='0.9.1';
+const APP_VERSION='0.10.0';
 const VERSION=APP_VERSION;
 const RELEASE_DATE='2026-10-22';
-const RELEASE_NOTES = ["Устранено переполнение кошелька при награде за срочное задание, ломбарде и тайной связи.","Добавлены 750 стресс-партий к 120 базовым симуляциям, проверка сериализации и ограничений инвентаря.","Расширены проверки мошеннических команд, двойного списания, выхода ведущего и просроченных ходов."];
+const RELEASE_NOTES = ["Новый лесной торговый стол, нарисованные SVG-артефакты и узнаваемые материалы интерфейса.","Рабочие боковые вкладки заданий, инвентаря, обменов и участников; существующие сделки сохранены.","Крупные действия, понятные ресурсы и адаптация под телефон и планшет."];
 const NOTES=RELEASE_NOTES;
-const CACHE='black-bazaar-v0.9.1';
-const CACHE_NAME='black-bazaar-v0.9.1';
+const CACHE='black-bazaar-v0.10.0';
+const CACHE_NAME='black-bazaar-v0.10.0';
 const PREFIX='black-bazaar-v';
 const FILES=[
- './','./index.html','./app.js','./styles.css','./app.config.json',
+ './','./index.html','./app.js','./art.js','./styles.css','./app.config.json',
  './manifest.webmanifest','./icons/icon.svg',
  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
  '../../shared/update-manager.css','../../shared/update-manager.js',

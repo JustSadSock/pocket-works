@@ -1,7 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-<rect width="512" height="512" rx="100" fill="#f4f3ef"/>
-<path d="M116 160h280v245H116z" fill="none" stroke="#343432" stroke-width="24"/>
-<path d="M96 160l36-61h248l36 61H96z" fill="#716b60"/>
-<path d="M174 240h164v99H174z" fill="none" stroke="#343432" stroke-width="20"/>
-<circle cx="256" cy="286" r="26" fill="#716b60"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Чёрная барахолка">
+<defs><linearGradient id="wood" x2=".2" y2="1"><stop stop-color="#b57a48"/><stop offset="1" stop-color="#60351f"/></linearGradient><linearGradient id="leaf" x2="1" y2="1"><stop stop-color="#79916c"/><stop offset="1" stop-color="#274939"/></linearGradient></defs>
+<rect width="512" height="512" rx="104" fill="#1f382e"/><path d="M28 353q90-106 212-6t244-8v148H28Z" fill="url(#leaf)"/>
+<circle cx="390" cy="102" r="46" fill="#f6c36e" opacity=".2"/><circle cx="390" cy="102" r="20" fill="#ffda86"/>
+<path d="M114 151Q249 62 400 151l-20 218q-131 83-240 0L114 151Z" fill="#d9a46a" stroke="#33231b" stroke-width="21"/>
+<path d="M153 173h211l-10 168q-107 70-190 0L153 173Z" fill="url(#wood)" stroke="#42281b" stroke-width="12"/>
+<path d="m210 242 45-71 45 71-20 79h-51l-19-79Z" fill="#e4ad51" stroke="#39251c" stroke-width="12" stroke-linejoin="round"/>
+<circle cx="232" cy="255" r="12" fill="#281b14"/><circle cx="276" cy="255" r="12" fill="#281b14"/><path d="M233 291q21 29 45 0" fill="none" stroke="#291c17" stroke-linecap="round" stroke-width="11"/>
+<path d="m256 55 16 31 33-9-16 33 21 26-39-5-15 34-15-34-39 5 21-26-16-33 33 9 16-31Z" fill="#e4b45a" stroke="#3b281c" stroke-width="10" stroke-linejoin="round"/>
+<path d="m150 399-33 49m245-49 33 49" stroke="#e3bd82" stroke-width="19" stroke-linecap="round"/>
+<path d="M71 275q-27-53-15-100m385 131q32-43 26-92" fill="none" stroke="#698762" stroke-width="17" stroke-linecap="round"/>
 </svg>
