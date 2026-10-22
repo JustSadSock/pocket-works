@@ -449,5 +449,12 @@ app.addEventListener('submit',event=>{
  if(type==='exchange')return request({type:'exchange',mode:data.get('mode')});
 });
 renderHome();
-setInterval(updateTurnClock,1000);
+let lastHeartbeat=0;
+setInterval(()=>{
+ updateTurnClock();
+ if(connected&&state?.phase==='play'&&net&&Date.now()-lastHeartbeat>8000){
+  lastHeartbeat=Date.now();
+  try{net.sendGame({type:'tick'});}catch{}
+ }
+},1000);
 try{const saved=JSON.parse(netStorage.getItem('pocket-net:'+ORIGIN)||'null');if(saved?.roomId)connect('resume');}catch{}
