@@ -1,3 +1,9 @@
+export const PATRONS=Object.freeze([
+ {id:'ogo',name:'ОГО',title:'Владыка недоразумений',rule:'Живые дары +1 к суду.',field:'kind',value:'living',blessing:'ОГО одобрил живого свидетеля обряда.'},
+ {id:'krak',name:'КРАК',title:'Владыка громких обещаний',rule:'Три звона +1 к суду.',field:'bell',value:3,blessing:'КРАК услышал достаточно грома.'},
+ {id:'sivilla',name:'СИВИЛЛА',title:'Хранительница печатей',rule:'Бумажные дары +1 к суду.',field:'material',value:'paper',blessing:'СИВИЛЛА поставила небесную печать.'}
+]);
+
 // One authored catalog for both the local rules and the pinned PocketNet module.
 // Every incident has an actual scoring effect. No random text-only "events".
 export const EXTRA_ITEMS=Object.freeze([
