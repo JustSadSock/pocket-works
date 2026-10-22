@@ -7,10 +7,10 @@ const cap=(a,b,c)=>Math.max(b,Math.min(c,a));
 const rnd=(seed,i)=>{let n=((seed*1664525+i*1013904223)>>>0);n^=n<<13;n^=n>>>17;n^=n<<5;return (n>>>0)/4294967296};
 const mark=(c,x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h))};
 const ring=(c,x,y,r,col,width=2,start=0,end=Math.PI*2)=>{c.strokeStyle=col;c.lineWidth=width;c.beginPath();c.arc(x,y,Math.max(1,r),start,end);c.stroke()};
-const SCENE_EVENT_WEIGHT={hit:12,overload:22,react_steam:18,react_crack:22,react_slag:21,impact_rock:11,impact_wave:8,impact_bolt:8,impact_arc:11};
+const SCENE_EVENT_WEIGHT={hit:20,overload:26,react_steam:18,react_crack:25,react_slag:24,impact_rock:18,impact_wave:16,impact_bolt:14,impact_arc:18};
 export class CombatPresentation{
- constructor(){this.particles=[];this.scars=[];this.rings=[];this.words=[];this.shake=0;this.flash=0;this.lastSeen=0;this.round=-1;this.lastTicks=-1;this.seed=0;this.issued=0;}
- reset(){this.particles.length=0;this.scars.length=0;this.rings.length=0;this.words.length=0;this.shake=0;this.flash=0;this.lastSeen=0;this.round=-1;this.lastTicks=-1;this.issued=0;}
+ constructor(){this.particles=[];this.scars=[];this.rings=[];this.words=[];this.damageNumbers=[];this.shocks=[];this.shake=0;this.flash=0;this.hold=0;this.hpSnapshot=null;this.lastSeen=0;this.round=-1;this.lastTicks=-1;this.seed=0;this.issued=0;}
+ reset(){this.particles.length=0;this.scars.length=0;this.rings.length=0;this.words.length=0;this.damageNumbers.length=0;this.shocks.length=0;this.shake=0;this.flash=0;this.hold=0;this.hpSnapshot=null;this.lastSeen=0;this.round=-1;this.lastTicks=-1;this.issued=0;}
  spawn(event,reduced=false){
   const k=event.k||'',id=Number(event.id)||0;
   const x=cap(Number(event.x)||200,18,382),y=cap(Number(event.y)||310,19,602);
@@ -45,7 +45,7 @@ export class CombatPresentation{
    });
   }
   if(this.particles.length>210)this.particles.splice(0,this.particles.length-210);
-  this.shake=Math.min(7.2,Math.max(this.shake,SCENE_EVENT_WEIGHT[k]?(SCENE_EVENT_WEIGHT[k]*.17):k==='dash'?1.1:.4));
+  this.shake=Math.min(reduced?0:9,Math.max(this.shake,SCENE_EVENT_WEIGHT[k]?(SCENE_EVENT_WEIGHT[k]*.21):k==='dash'?1.1:.4));
   if(big)this.flash=Math.max(this.flash,reduced?0:.13);
  }
  ingest(state,reduced=false){
@@ -60,6 +60,23 @@ export class CombatPresentation{
    this.spawn(event,reduced);
   }
   this.lastSeen=Math.max(this.lastSeen,Number(state.serial)||0);
+  // Only confirmed health losses produce damage numbers and heavy contact.
+  const hp=state.actors?.map(a=>Number(a?.hp)||0)||[];
+  if(state.phase==='fight'&&this.hpSnapshot&&this.hpSnapshot.length===hp.length){
+   hp.forEach((value,i)=>{
+    const target=state.actors[i],loss=Math.max(0,this.hpSnapshot[i]-value);
+    if(loss<1.1||!Number.isFinite(loss))return;
+    const cx=cap(target.x,20,380),cy=cap(target.y,22,598),large=loss>=13;
+    this.damageNumbers.push({x:cx,y:cy-27,age:0,life:large?1:.8,value:Math.ceil(loss),large});
+    this.shocks.push({x:cx,y:cy,age:0,life:large?.38:.26,power:cap(loss/16,.5,2.3),id:state.serial+i*117});
+    this.shake=reduced?0:Math.min(12.5,Math.max(this.shake,2.4+loss*.32));
+    this.flash=reduced?0:Math.max(this.flash,large?.24:.12);
+    this.hold=reduced?0:Math.max(this.hold,Math.min(.075,.026+loss*.002));
+   });
+  }
+  this.hpSnapshot=hp;
+  if(this.damageNumbers.length>12)this.damageNumbers.splice(0,this.damageNumbers.length-12);
+  if(this.shocks.length>14)this.shocks.splice(0,this.shocks.length-14);
  }
  advance(dt,reduced=false){
   const d=cap(dt,0,.05);
@@ -76,7 +93,12 @@ export class CombatPresentation{
   this.rings=this.rings.filter(r=>r.age<r.life);
   for(const word of this.words)word.age+=d;
   this.words=this.words.filter(w=>w.age<w.life);
-  this.shake=Math.max(0,this.shake-d*(reduced?180:26));
+  for(const n of this.damageNumbers)n.age+=d;
+  this.damageNumbers=this.damageNumbers.filter(n=>n.age<n.life);
+  for(const impact of this.shocks)impact.age+=d;
+  this.shocks=this.shocks.filter(impact=>impact.age<impact.life);
+  this.hold=Math.max(0,this.hold-d);
+  this.shake=Math.max(0,this.shake-d*(reduced?180:33));
   this.flash=Math.max(0,this.flash-d*1.45);
  }
  offset(reduced=false){
@@ -99,6 +121,23 @@ export class CombatPresentation{
   }
  }
  foreground(c){
+  // Shockwaves are driven by authoritative health changes, not inferred hits.
+  for(const impact of this.shocks){
+   const t=impact.age/impact.life,energy=Math.max(0,1-t),r=8+(28+impact.power*21)*(1-Math.pow(1-t,2));
+   c.save();c.globalAlpha=energy*.9;
+   ring(c,impact.x,impact.y,r,'#fff2d3',2+impact.power*1.7);
+   ring(c,impact.x,impact.y,r*.66,'#df996a',1.5+impact.power);
+   const count=impact.power>1?12:8;
+   for(let i=0;i<count;i++){
+    const angle=Math.PI*2*i/count+rnd(impact.id,i)*.24;
+    const inner=r*.62,outer=r+(6+impact.power*17)*energy;
+    c.strokeStyle=i%3===0?'#fff7df':i%3===1?'#d2f4ce':'#e9a97c';c.lineWidth=Math.max(1,3*energy);
+    c.beginPath();c.moveTo(impact.x+Math.cos(angle)*inner,impact.y+Math.sin(angle)*inner);
+    c.lineTo(impact.x+Math.cos(angle)*outer,impact.y+Math.sin(angle)*outer);c.stroke();
+   }
+   c.globalAlpha=energy*.45;c.fillStyle='#fff5ce';c.beginPath();c.arc(impact.x,impact.y,6*energy+impact.power*2,0,Math.PI*2);c.fill();
+   c.restore();
+  }
   // Confirmed Forge contact frames own visible impact forms in the browser.
   if(forgeSpellsStatus()!=='ready')for(const r of this.rings){
    const t=r.age/r.life,a=(1-t);
@@ -131,6 +170,14 @@ export class CombatPresentation{
    }
    c.restore();
   }
+  for(const n of this.damageNumbers){
+   const t=n.age/n.life,y=n.y-19*t;
+   c.save();c.globalAlpha=Math.min(1,(1-t)*3);
+   c.textAlign='center';c.textBaseline='middle';c.font=(n.large?'900 24px':'900 17px')+' ui-monospace,monospace';
+   c.lineJoin='round';c.lineWidth=4;c.strokeStyle='#13201e';
+   c.strokeText('-'+n.value,n.x,y);c.fillStyle=n.large?'#ffe29a':'#fff4d6';c.fillText('-'+n.value,n.x,y);
+   c.restore();
+  }
   for(const word of this.words){
    const t=word.age/word.life;
    c.save();c.globalAlpha=Math.min(1,(1-t)*2);
@@ -142,7 +189,7 @@ export class CombatPresentation{
   }
  }
  screen(c){
-  if(this.flash>.01){c.save();c.globalAlpha=Math.min(.13,this.flash*.6);c.fillStyle='#ffdbb0';c.fillRect(0,0,400,620);c.restore();}
+  if(this.flash>.01){c.save();c.globalAlpha=Math.min(.18,this.flash*.8);c.fillStyle='#ffdbb0';c.fillRect(0,0,400,620);c.restore();}
  }
 }
 export function drawProjectileTrail(c,q,time=0){

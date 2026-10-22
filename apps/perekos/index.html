@@ -46,7 +46,7 @@
 <div class="menu-composition"><canvas id="hero-preview" width="128" height="156" aria-label="Ваш маг в пиксельном мире"></canvas>
 <h1>ПЕРЕКОС</h1><p>Три стихии. Шесть магов. Двор, который не переживёт дуэль.</p>
 <div class="play-block"><button id="choose-mage" class="mage-switch" type="button" data-native-press>Мой маг <strong id="chosen-mage-name">Искра</strong><span>Сменить ↗</span></button><button id="primary-action" class="big-button" type="button" data-native-press>Начать дуэль <span>↗</span></button><button id="continue" type="button" hidden data-native-press>Продолжить матч</button><button id="online-open" class="online-button" type="button" data-native-press>Дуэль с другом <span>↗</span></button><button id="open-grimoire" type="button" data-native-press>Мои сборки</button><small>До 4 побед · ничьи не дают очков</small></div>
-</div><div class="menu-bottom"><span>v0.21.0 · МАГИЧЕСКИЙ РАЗЛОМ</span><a class="identity-card" id="profile-link" href="../../?pocket-id=profile" data-app-control><canvas id="menu-portrait" width="42" height="42" aria-hidden="true"></canvas><span><strong id="identity">Гостевой маг</strong><small id="identity-kind">Открой профиль PocketWorks</small></span><span aria-hidden="true">↗</span></a></div></section>
+</div><div class="menu-bottom"><span>v0.22.0 · КУЗНИЦА РУН</span><a class="identity-card" id="profile-link" href="../../?pocket-id=profile" data-app-control><canvas id="menu-portrait" width="42" height="42" aria-hidden="true"></canvas><span><strong id="identity">Гостевой маг</strong><small id="identity-kind">Открой профиль PocketWorks</small></span><span aria-hidden="true">↗</span></a></div></section>
 <section id="mage-select" class="scene-panel mage-select" hidden data-ui><div class="sheet mage-picker"><div class="sheet-kicker">МОЙ МАГ · ХАРАКТЕР</div><h2>Выбери своего</h2><p>Три вида магии, шесть персонажей. У каждого свой способ атаковать: поток огня, молния, волна и другие приёмы. Внешность из PocketWorks сохраняется.</p><div id="mage-options" class="mage-options"></div><div class="mage-picker-actions"><button id="mage-cancel" type="button" data-native-press>Назад</button><button id="mage-confirm" class="big-button" type="button" data-native-press>Выбрать <span>↗</span></button></div></div></section>
 <section id="online-lobby" class="scene-panel online-lobby" hidden data-ui>
 <div class="sheet net-sheet">
@@ -70,13 +70,13 @@
 <section id="net-wait" class="scene-panel net-wait" hidden data-ui>
 <div class="sheet"><div class="sheet-kicker">НАСТРОЙКА МАГИИ</div><h2>Руна готова.</h2><p>Второй маг ещё собирает свои правила. Бой начнётся, когда оба будут готовы.</p><div class="net-wait-mark" aria-hidden="true">✷</div><button id="net-wait-leave" type="button" data-native-press>Выйти из комнаты</button></div></section>
 <section id="draft" class="scene-panel draft" hidden data-ui>
-<div class="sheet"><div class="sheet-kicker">ПОСЛЕ РАУНДА <span id="draft-score"></span></div><h2 id="draft-title">Выбери руну</h2><span id="draft-outcome" class="draft-outcome"></span><p>Что поменяем в твоём маге?</p><div id="rune-cards" class="rune-cards"></div><div id="replace-zone" class="replace-zone" hidden><strong>Что заменить?</strong><div id="replace-list"></div><button id="replace-cancel" type="button">Другую руну</button></div><div class="loadout" id="loadout"></div></div>
+<div class="sheet rune-draft-sheet"><div class="sheet-kicker">МАГИЧЕСКИЙ ОТБОР <span id="draft-score"></span></div><h2 id="draft-title">Выбери руну</h2><span id="draft-outcome" class="draft-outcome"></span><p class="draft-instruction">Одна печать изменит следующий раунд. Выбери, какую силу вплести в сборку.</p><div id="rune-cards" class="rune-cards"></div><div id="replace-zone" class="replace-zone" hidden><strong>Что заменить?</strong><div id="replace-list"></div><button id="replace-cancel" type="button">Другую руну</button></div><div class="loadout" id="loadout"></div></div>
 </section>
 <section id="build" class="scene-panel build" hidden data-ui>
 <div class="sheet workbench">
-<div class="sheet-kicker">ТРИ ЦЕПОЧКИ МАГИИ <span id="bench-count">2 / 9</span></div><canvas id="bench-mage" width="64" height="80" aria-label="Вид мага с текущими рунами"></canvas>
-<h2>Собери свои приёмы</h2>
-<p class="bench-explain">Три независимых приёма: «когда → что → как». У каждого свой запуск. Переставляй руны стрелками или пальцем.</p>
+<div class="sheet-kicker">МАСТЕРСКАЯ ЗАКЛИНАНИЙ <span id="bench-count">2 / 9</span></div><canvas id="bench-mage" width="64" height="80" aria-label="Вид мага с текущими рунами"></canvas>
+<h2>Сплети заклинание</h2>
+<p class="bench-explain">Печати читаются сверху вниз: <strong>условие → действие → мутация</strong>. Перетаскивай их или пользуйся стрелками: перестановка меняет то, как работает магия.</p>
 <div id="chemistry-preview" class="chemistry-preview" role="status" aria-live="polite"></div><nav id="spell-index" class="spell-index" aria-label="Перейти к одному из трёх приёмов"></nav><div id="bench-slots" class="bench-slots" aria-label="Три цепочки, девять мест для рун"></div>
 <div class="bench-result">
 <strong>ЧТО ПОЛУЧИТСЯ</strong><div id="chain-preview" class="chain-preview"></div>
@@ -104,6 +104,6 @@
 <section id="confirm" class="scene-panel confirm" hidden data-ui><div class="sheet"><h2>Закончить матч?</h2><p id="quit-warning">Прогресс текущей серии будет потерян.</p><button id="quit-yes" type="button" class="big-button" data-native-press>Да, закончить</button><button id="quit-no" type="button" data-native-press>Отмена</button></div></section>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЕРЕКОС" data-app-version="0.21.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЕРЕКОС" data-app-version="0.22.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>

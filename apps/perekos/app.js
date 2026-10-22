@@ -1,5 +1,6 @@
 import {W,H,STEP,WALLS,RUNES,makeMatch,validState,tick,chooseRune,beginRound,reorderRunes,startRound,ringRadius,has,stats} from './core.mjs';
 import {rune,description,compile,TYPES,legalRunes,chosenElement} from './runes.mjs';
+import {runeSeal} from './rune-seals.mjs';
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {DEFAULT_APPEARANCE,COLORSETS,normalizeAppearance,decodeAppearance} from './avatar-profile.mjs';
@@ -25,7 +26,7 @@ let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,l
 let online=null,onlinePreviewRunes=null,onlinePhase='',displayXY=[null,null];
 let rivalAppearance={...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']},pendingRival=null,rivalKey='',rivalRequest=0;
 let selectedMage='kindle',mageFrom='menu',selectionDraft='kindle';
-let desktopPanelsVisible=true,lastTacticRunes='',sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null;
+let desktopPanelsVisible=true,lastTacticRunes='',sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null,debugSession=null;
 const combatPresentation=new CombatPresentation();
 const spellChoreography=new SpellChoreography();
 const contactTheater=new ContactTheater();
@@ -38,8 +39,8 @@ let tapAttackQueued=false,aimTouch=false,aimTouchStart=0,aimDragged=false,aimVec
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
 function put(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;desktopPanelsVisible=savedPrefs?.desktopPanels!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';
-function remember(){put(prefsKey,{sound,mage:selectedMage,desktopPanels:desktopPanelsVisible});if(!online?.active&&active&&validState(active))put(saveKey,active)}
-function forget(){try{localStorage.removeItem(saveKey)}catch{}}
+function remember(){put(prefsKey,{sound,mage:selectedMage,desktopPanels:desktopPanelsVisible});if(!debugSession&&!online?.active&&active&&validState(active))put(saveKey,active)}
+function forget(){if(debugSession)return;try{localStorage.removeItem(saveKey)}catch{}}
 const resume=stored(saveKey);
 if(resume&&validState(resume))$('continue').hidden=false;
 function audioContext(){if(!sound)return null;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;if(!audio)audio=new C();if(audio.state==='suspended')audio.resume().catch(()=>{});return audio}catch{return null}}
@@ -75,15 +76,15 @@ function sfx(type,school='fire'){
   // Each material has a physically distinct envelope and mass.
   const style=type.slice(7);
   if(style==='rock'||style==='wave'){
-   tone(style==='rock'?148:105,style==='rock'?43:37,.2,'triangle',.039);
-   tone(68,36,.16,'sine',.018,.012);
+   tone(style==='rock'?148:105,style==='rock'?43:37,.24,'triangle',.051);
+   tone(68,36,.19,'sine',.034,.012);
    grit(style==='rock'?.15:.12,style==='rock'?250:430,.024);
   }else if(style==='bolt'||style==='arc'){
-   tone(style==='arc'?1050:1280,style==='arc'?170:300,.085,'sawtooth',.018);
+   tone(style==='arc'?1050:1280,style==='arc'?170:300,.085,'sawtooth',.023);tone(165,49,.19,'triangle',.032,.008);
    tone(460,130,.12,'triangle',.016,.008);
    grit(.042,2400,.012);
   }else if(style==='flame'||style==='orb'){
-   tone(style==='flame'?360:270,65,.14,'triangle',.023);
+   tone(style==='flame'?360:270,65,.18,'triangle',.037);
    grit(style==='flame'?.11:.065,style==='flame'?780:1050,.02);
   }else{
    tone(340,120,.08,'sine',.012);
@@ -105,7 +106,7 @@ function sfx(type,school='fire'){
  }else if(type==='fracture'){
   tone(180,43,.11,'triangle',.023);grit(.11,360,.021);
  }else if(type==='hit'){
-  tone(195,65,.08,'triangle',.015);
+  tone(210,42,.18,'triangle',.046);tone(78,31,.14,'sine',.028,.015);grit(.075,620,.026);
  }else if(type==='shield'){
   tone(270,550,.18,'sine',.023);tone(440,310,.25,'triangle',.018,.015);
  }else if(type==='dash'){
@@ -173,7 +174,7 @@ $('quit-no').addEventListener('click',()=>{quitPrompt=false;show('pause')});
 $('quit-yes').addEventListener('click',()=>{if(online?.active)online.leave();onlinePhase='';active=null;forget();$('continue').hidden=true;show('menu')});
 let toastT=0;
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');toastT=1.9}
-function myIndex(){return online?.active?online.me:0}
+function myIndex(){return debugSession?0:online?.active?online.me:0}
 function myActor(){return active?.actors?.[myIndex()]}
 function renderTacticalRunes(a){
  const runes=Array.isArray(a?.runes)?a.runes:[],key=runes.join('|'),list=$('tactic-runes');
@@ -206,18 +207,17 @@ function updateTacticalHud(a){
 function updateHud(){if(!active)return;const side=myIndex(),a=active.actors[side],b=active.actors[1-side];const am=stats(a),bm=stats(b);$('my-hp').style.width=Math.max(0,100*a.hp/am.max)+'%';$('bot-hp').style.width=Math.max(0,100*b.hp/bm.max)+'%';$('my-hp-text').textContent=Math.ceil(a.hp)+' / '+am.max;$('bot-hp-text').textContent=Math.ceil(b.hp)+' / '+bm.max;$('clock').textContent=Math.ceil(active.remaining);$('clock').style.color=active.overtime?'#f3a27c':'#f7edce';$('round-number').textContent=active.remaining<=10?'10 С ДО КОНЦА':'РАУНД '+active.round;$('score-me').textContent='● '.repeat(active.score[side])+'○ '.repeat(4-active.score[side]);$('score-bot').textContent='● '.repeat(active.score[1-side])+'○ '.repeat(4-active.score[1-side]);$('heat-fill').style.width=Math.round(a.heat)+'%';$('heat-value').textContent=Math.round(a.heat)+'%';
 $('heat-fill').classList.toggle('danger',a.heat>=78);
 $('dash-cooldown').style.height=100*Math.min(1,a.dashReady/2.5)+'%';$('shield-cooldown').style.height=100*Math.min(1,a.shieldReady/5)+'%';$('attack-cooldown').style.height=100*Math.min(1,a.cast/stats(a).reload)+'%';$('attack-name').textContent=ATTACK_NAMES[a.mageId];if(!$('desktop-dashboard').hidden)updateTacticalHud(a)}
-const icons={when:'⌁',do:'✷',how:'↗'};
 function typeName(type){return TYPES[type]||type}
 function drawRuneNode(r,compact=false){
  const row=document.createElement('span');row.className='rune-node rune-'+r.type;
- const ic=document.createElement('span');ic.className='rune-icon';ic.textContent=icons[r.type];
+ const ic=document.createElement('span');ic.className='rune-icon';ic.append(runeSeal(r));
  const text=document.createElement('span'),title=document.createElement('strong');title.textContent=r.name;
- const detail=document.createElement('small');detail.textContent=compact?typeName(r.type):typeName(r.type)+' · '+r.desc;
+ const detail=document.createElement('small');detail.textContent=compact?typeName(r.type):r.desc;
  text.append(title,detail);row.append(ic,text);return row;
 }
 function drawOwned(){
  $('loadout').replaceChildren();
- for(const id of myActor().runes){const r=rune(id);if(!r)continue;const b=document.createElement('b');b.textContent=r.name;$('loadout').append(b)}
+ for(const id of myActor().runes){const r=rune(id);if(!r)continue;const b=document.createElement('b');b.className='owned-rune rune-'+r.type;b.append(runeSeal(r));const label=document.createElement('span');label.textContent=r.name;b.append(label);$('loadout').append(b)}
 }
 function finishPick(id,slot=null){
  if(online?.active){if(!online.pick(id,slot))return false;pendingRune=null;$('replace-zone').hidden=true;toast('Руна выбрана.');return true}
@@ -227,7 +227,7 @@ function finishPick(id,slot=null){
 function renderReplacement(id){
  pendingRune=id;$('replace-zone').hidden=false;$('rune-cards').hidden=true;const list=$('replace-list');list.replaceChildren();
  const slots=myActor().runes;
- slots.forEach((owned,i)=>{const r=rune(owned),btn=document.createElement('button');btn.type='button';btn.className='replacement';btn.textContent=(i+1)+'. '+r.name;btn.addEventListener('click',()=>finishPick(id,i));list.append(btn)});
+ slots.forEach((owned,i)=>{const r=rune(owned),btn=document.createElement('button');btn.type='button';btn.className='replacement rune-'+r.type;btn.append(runeSeal(r));const label=document.createElement('span');label.textContent=(i+1)+'. '+r.name;btn.append(label);btn.addEventListener('click',()=>finishPick(id,i));list.append(btn)});
 }
 $('replace-cancel').addEventListener('click',()=>{pendingRune=null;$('replace-zone').hidden=true;$('rune-cards').hidden=false});
 function renderDraft(){
@@ -237,15 +237,15 @@ function renderDraft(){
  $('draft-title').textContent=active.lastOutcome==='draw'?'Ничья. Очки не меняются. Возьми руну.':active.lastWinner===myIndex()?'Хороший раунд. Возьми руну.':'Проиграли раунд. Возьми руну.';
  $('rune-cards').hidden=false;$('replace-zone').hidden=true;pendingRune=null;
  const list=$('rune-cards');list.replaceChildren();
- for(const id of (online?.active?online.view?.offers||[]:active.pick)){
-  const r=rune(id);if(!r)continue;const btn=document.createElement('button');btn.className='rune-choice';btn.type='button';btn.append(drawRuneNode(r));
+ for(const id of (debugSession?active.pick:online?.active?online.view?.offers||[]:active.pick)){
+  const r=rune(id);if(!r)continue;const btn=document.createElement('button');btn.className='rune-choice rune-choice-'+r.type;btn.type='button';const number=document.createElement('span');number.className='rune-offer-number';number.textContent='0'+(list.children.length+1);const accept=document.createElement('span');accept.className='rune-accept';accept.textContent='ВЗЯТЬ ↗';btn.append(number,drawRuneNode(r),accept);
   btn.addEventListener('click',()=>{if(myActor().runes.length>=9)renderReplacement(id);else finishPick(id)});list.append(btn);
  }
  drawOwned();
 }
 function reorderOnBench(from,to){if(online?.active){const list=onlinePreviewRunes;if(!Array.isArray(list)||from<0||to<0||from>=list.length||to>=list.length)return false;const [id]=list.splice(from,1);list.splice(to,0,id);return true}return reorderRunes(active,from,to)}
 function renderWorkbench(){
- if(!active)return;const slots=online?.active?(onlinePreviewRunes||[...myActor().runes]):myActor().runes;
+ if(!active)return;const slots=debugSession?myActor().runes:online?.active?(onlinePreviewRunes||[...myActor().runes]):myActor().runes;
  const preview=$('bench-mage'),mini=preview.getContext('2d');mini.clearRect(0,0,64,80);
  drawMage(mini,appearance,{x:32,y:57,scale:2,time:0,runes:slots,mageId:myActor().mageId});
  $('bench-count').textContent=slots.length+' / 9';const rack=$('bench-slots'),previousScroll=rack.scrollTop;rack.replaceChildren();let lane=null,laneNumber=0;
@@ -258,9 +258,10 @@ function renderWorkbench(){
  'Фирменная атака: '+ATTACK_NAMES[myActor().mageId]+'. Руны «КАК» в собранных цепочках усиливают её: сила, ширина, дальность и темп. Эффект зависит от класса.';
  slots.forEach((id,i)=>{
   const r=rune(id);if(!r)return;
-  if(r.type==='when'||!lane){laneNumber++;lane=document.createElement('div');lane.className='spell-lane';const head=document.createElement('div');head.className='spell-lane-head';head.textContent='ПРИЁМ '+Math.min(3,laneNumber);lane.append(head);rack.append(lane)}
+  if(r.type==='when'||!lane){laneNumber++;lane=document.createElement('div');lane.className='spell-lane';const head=document.createElement('div');head.className='spell-lane-head';const title=document.createElement('strong');title.textContent='ПРИЁМ '+Math.min(3,laneNumber);const subtitle=document.createElement('small');subtitle.textContent='Цепочка '+laneNumber;head.append(title,subtitle);lane.append(head);rack.append(lane)}
   const row=document.createElement('div');row.className='bench-slot '+(info.dormant.includes(id)?'is-dormant':'');
   row.dataset.slot=String(i);
+  const role=document.createElement('span');role.className='rune-stage';role.textContent=r.type==='when'?'01 / УСЛОВИЕ':r.type==='do'?'02 / ДЕЙСТВИЕ':'03 / МУТАЦИЯ';row.append(role);
   const drag=document.createElement('div');drag.className='slot-drag';drag.setAttribute('role','button');drag.setAttribute('tabindex','0');
   drag.setAttribute('aria-label','Перетащить руну '+r.name);drag.append(drawRuneNode(r,true));
   const moves=document.createElement('div');moves.className='slot-move';
@@ -273,11 +274,11 @@ function renderWorkbench(){
   drag.addEventListener('keydown',e=>{if(e.code==='ArrowUp'||e.code==='ArrowDown'){e.preventDefault();const to=i+(e.code==='ArrowUp'?-1:1);if(reorderOnBench(i,to)){remember();renderWorkbench()}}});
   drag.addEventListener('pointerdown',e=>{
    if(e.button!==0)return;
-   const origin=e.clientY;let moved=false;drag.setPointerCapture(e.pointerId);drag.classList.add('dragging');
-   const onMove=ev=>{if(ev.pointerId!==e.pointerId)return;const delta=ev.clientY-origin;if(Math.abs(delta)>5)moved=true;drag.style.transform='translateY('+delta+'px)'};
+   const origin={x:e.clientX,y:e.clientY};let moved=false;drag.setPointerCapture(e.pointerId);drag.classList.add('dragging');
+   const onMove=ev=>{if(ev.pointerId!==e.pointerId)return;const dx=ev.clientX-origin.x,dy=ev.clientY-origin.y;if(Math.hypot(dx,dy)>5)moved=true;drag.style.transform='translate('+dx+'px,'+dy+'px)'};
    const onEnd=ev=>{if(ev.pointerId!==e.pointerId)return;drag.removeEventListener('pointermove',onMove);drag.removeEventListener('pointerup',onEnd);drag.removeEventListener('pointercancel',onEnd);drag.style.transform='';drag.classList.remove('dragging');
     if(ev.type==='pointercancel'||!moved)return;const rows=[...rack.querySelectorAll('.bench-slot')];let index=i,nearest=Infinity;
-    for(let j=0;j<rows.length;j++){const box=rows[j].getBoundingClientRect(),dist=Math.abs(ev.clientY-(box.top+box.height/2));if(dist<nearest){nearest=dist;index=j}}
+    for(let j=0;j<rows.length;j++){const box=rows[j].getBoundingClientRect(),dist=Math.hypot(ev.clientX-(box.left+box.width/2),ev.clientY-(box.top+box.height/2));if(dist<nearest){nearest=dist;index=j}}
     if(reorderOnBench(i,index)){remember();renderWorkbench();sfx('dash')}
    };
    drag.addEventListener('pointermove',onMove);drag.addEventListener('pointerup',onEnd);drag.addEventListener('pointercancel',onEnd);
@@ -323,7 +324,7 @@ function drawBenchSample(ids){
  else{p.fillRect(171,26,13,13);p.fillStyle='#e59e65';p.fillRect(177,20,3,6);p.fillRect(181,33,8,4)}
 }
 $('bench-fight').addEventListener('click',()=>{if(online?.active){if(online.ready(onlinePreviewRunes||myActor().runes)){if(online.view?.phase==='draft'){show('net-wait');toast('Ждём второго мага')}}return}if(active&&beginRound(active)){applyPendingAppearance();sfx('shield');remember();show('fight');toast('Сборка готова')}});
-function renderResult(){drawPortrait($('result-portrait').getContext('2d'),appearance,56);const won=active.champion===myIndex();$('result-title').textContent=won?'Ты выиграл.':'Ты проиграл.';$('result-copy').textContent=won?'Сборка выдержала проверку. А может, просто повезло.':'В следующий раз собери что-нибудь похуже для врага.';$('result-score').textContent=active.score[myIndex()]+' : '+active.score[1-myIndex()];if(online?.active){$('again').hidden=online.view?.host!==online.view?.seats?.[myIndex()];$('again').firstChild.textContent='Реванш ';$('net-result-leave').hidden=false}else{$('again').hidden=false;$('again').firstChild.textContent='Ещё один матч ';$('net-result-leave').hidden=true;forget();$('continue').hidden=true}}
+function renderResult(){drawPortrait($('result-portrait').getContext('2d'),appearance,56);const won=active.champion===myIndex();$('result-title').textContent=won?'Ты выиграл.':'Ты проиграл.';$('result-copy').textContent=won?'Сборка выдержала проверку. А может, просто повезло.':'В следующий раз собери что-нибудь похуже для врага.';$('result-score').textContent=active.score[myIndex()]+' : '+active.score[1-myIndex()];if(online?.active&&!debugSession){$('again').hidden=online.view?.host!==online.view?.seats?.[myIndex()];$('again').firstChild.textContent='Реванш ';$('net-result-leave').hidden=false}else{$('again').hidden=false;$('again').firstChild.textContent='Ещё один матч ';$('net-result-leave').hidden=true;forget();$('continue').hidden=true}}
 function transition(){if(!active)return;if(active.phase==='draft'){void refreshAppearance();show('draft');renderDraft();remember();sfx('shield')}else if(active.phase==='build'){show('build');renderWorkbench();remember()}else if(active.phase==='result'){show('result');renderResult();sfx('overtime')}}
 function savedBooks(){const books=stored(booksKey);return Array.isArray(books)?books.filter(b=>b&&legalRunes(b.runes)&&b.runes.length>=2).slice(0,12):[]}
 function saveBuild(){
@@ -354,10 +355,71 @@ $('open-grimoire').addEventListener('click',()=>{show('books');renderBooks()});
 $('books-close').addEventListener('click',()=>show('menu'));
 $('book-delete-no').addEventListener('click',()=>{bookToDelete=null;show('books');renderBooks()});
 $('book-delete-yes').addEventListener('click',()=>{put(booksKey,savedBooks().filter(b=>b.id!==bookToDelete));bookToDelete=null;show('books');renderBooks();toast('Сборка удалена')});
-document.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='Escape'){if(mode==='fight')pause();else if(mode==='pause')$('resume').click();else if(mode==='confirm')$('quit-no').click();else if(mode==='books')$('books-close').click();else if(mode==='book-delete')$('book-delete-no').click()}if(mode!=='fight')return;if(['KeyQ','KeyE'].includes(e.code))input.shield=true;if(['ShiftLeft','ShiftRight','KeyF'].includes(e.code))input.dash=true;if(e.code==='Space')input.attack=true});
+
+/* Screen atlas. Previewing never simulates turns, saves, or sends network actions. */
+const DEV_SCENES=[
+ ['menu','Главное меню'],['mage-select','Выбор мага'],['online-lobby','PocketNet / комната'],
+ ['net-wait','Ожидание друга'],['fight','Бой'],['draft','Выбор руны'],
+ ['build','Мастерская'],['result','Итог матча'],['pause','Пауза'],
+ ['confirm','Подтверждение'],['books','Мои сборки'],['book-delete','Удаление сборки']
+];
+const atlas=document.createElement('aside');atlas.id='debug-atlas';atlas.hidden=true;
+atlas.setAttribute('aria-label','Просмотр экранов Перекоса');
+const atlasTop=document.createElement('div');atlasTop.className='debug-atlas-top';
+const atlasTitle=document.createElement('strong');atlasTitle.textContent='АТЛАС ЭКРАНОВ';
+const atlasClose=document.createElement('button');atlasClose.type='button';atlasClose.textContent='Закрыть ×';atlasClose.addEventListener('click',toggleDebug);
+atlasTop.append(atlasTitle,atlasClose);
+const atlasButtons=document.createElement('nav');atlasButtons.className='debug-atlas-pages';atlas.append(atlasTop,atlasButtons);
+const atlasMessage=document.createElement('p');atlasMessage.textContent='Предпросмотр. Действия игры отключены; матч и сохранение останутся прежними.';
+atlas.append(atlasMessage);$('app').append(atlas);
+function debugFixture(){
+ const mock=makeMatch(0x5012,selectedMage,MAGES[(MAGES.findIndex(m=>m.id===selectedMage)+2)%MAGES.length].id);
+ mock.actors[0].runes=['on_cast','ball','wide','on_hit','blast','strong'];
+ mock.actors[1].runes=['on_dash','mine','fastshot'];mock.pick=['on_guard','clone','as_storm'];
+ mock.lastWinner=0;mock.lastOutcome='win';mock.score=[2,1];mock.round=4;mock.remaining=17;mock.champion=0;
+ return mock;
+}
+function previewDebug(name){
+ if(!debugSession)return;
+ const fixture=debugSession.fixture;active=fixture;
+ fixture.phase=name==='draft'?'draft':name==='build'?'build':name==='result'?'result':'fight';
+ show(name);
+ if(name==='draft')renderDraft();
+ else if(name==='build')renderWorkbench();
+ else if(name==='result')renderResult();
+ else if(name==='books')renderBooks();
+ else if(name==='mage-select')mageCards($('mage-options'),selectedMage,()=>{});
+ atlasButtons.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.scene===name)));
+ atlas.dataset.scene=name;
+}
+function toggleDebug(){
+ if(debugSession){
+  const prev=debugSession;debugSession=null;atlas.hidden=true;
+  active=prev.active;onlinePreviewRunes=prev.onlinePreviewRunes;paused=prev.paused;displayXY=prev.displayXY;$('continue').hidden=prev.continueHidden;
+  lastTacticRunes='';combatPresentation.reset();spellChoreography.reset();seen=active?.serial||0;
+  if(online?.active&&online.view){onlinePhase='';onlineView(online.view)}
+  else{show(prev.mode);if(prev.mode==='draft')renderDraft();else if(prev.mode==='build')renderWorkbench();else if(prev.mode==='result')renderResult();else if(prev.mode==='books')renderBooks()}
+  last=performance.now();return;
+ }
+ debugSession={active,mode,paused,onlinePreviewRunes,displayXY,continueHidden:$('continue').hidden,fixture:debugFixture()};
+ keys.clear();input.attack=false;input.shield=false;input.dash=false;tapAttackQueued=false;
+ atlas.hidden=false;previewDebug(mode==='fight'?'fight':'menu');
+}
+for(const [name,label] of DEV_SCENES){
+ const button=document.createElement('button');button.type='button';button.dataset.scene=name;button.textContent=label;
+ button.addEventListener('click',()=>previewDebug(name));atlasButtons.append(button);
+}
+document.addEventListener('pointerdown',event=>{
+ if(debugSession&&!event.target.closest('#debug-atlas')){event.preventDefault();event.stopImmediatePropagation()}
+},true);
+document.addEventListener('click',event=>{
+ if(debugSession&&!event.target.closest('#debug-atlas')){event.preventDefault();event.stopImmediatePropagation()}
+},true);
+
+document.addEventListener('keydown',e=>{if(e.code==='Backquote'){e.preventDefault();if(!e.repeat)toggleDebug();return}if(debugSession){e.preventDefault();if(e.code==='Escape')toggleDebug();return}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='Escape'){if(mode==='fight')pause();else if(mode==='pause')$('resume').click();else if(mode==='confirm')$('quit-no').click();else if(mode==='books')$('books-close').click();else if(mode==='book-delete')$('book-delete-no').click()}if(mode!=='fight')return;if(['KeyQ','KeyE'].includes(e.code))input.shield=true;if(['ShiftLeft','ShiftRight','KeyF'].includes(e.code))input.dash=true;if(e.code==='Space')input.attack=true});
 document.addEventListener('keyup',e=>{keys.delete(e.code);if(e.code==='Space')input.attack=false});
-window.addEventListener('blur',()=>{keys.clear();input.attack=false;if(mode==='fight')pause()});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){if(mode==='fight')pause();remember();last=performance.now()}else last=performance.now()});
+window.addEventListener('blur',()=>{keys.clear();input.attack=false;if(mode==='fight'&&!debugSession)pause()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(mode==='fight'&&!debugSession)pause();remember();last=performance.now()}else last=performance.now()});
 window.addEventListener('pagehide',remember);
 const stickEl=$('stick'),knob=$('stick-knob');
 function stickFrom(e){const rect=stickEl.getBoundingClientRect();let x=(e.clientX-rect.left-rect.width/2)/(rect.width*.31),y=(e.clientY-rect.top-rect.height/2)/(rect.height*.31);const d=Math.hypot(x,y);if(d>1){x/=d;y/=d}stick.x=x;stick.y=y;knob.style.transform='translate('+Math.round(x*rect.width*.31)+'px,'+Math.round(y*rect.height*.31)+'px)'}
@@ -498,7 +560,7 @@ function render(){
    const a=active.actors[i],mine=i===myIndex();
    if(!displayXY[i])displayXY[i]={x:a.x,y:a.y};
    const p=displayXY[i],oldX=p.x,oldY=p.y;
-   if(online?.active){p.x+=(a.x-p.x)*.34;p.y+=(a.y-p.y)*.34}else{p.x=a.x;p.y=a.y}
+   if(combatPresentation.hold<=0){if(online?.active){p.x+=(a.x-p.x)*.34;p.y+=(a.y-p.y)*.34}else{p.x=a.x;p.y=a.y}}
    const moving=Math.min(1,Math.hypot(p.x-oldX,p.y-oldY)*.48);
    wizard(p.x,p.y,a.face,frame/60,!mine,1,a.shield,a.flash,moving,true);
    drawActorCues(ctx,a,p.x,p.y,mine,frame/60,reducedMotion);
@@ -528,7 +590,7 @@ function render(){
  combatPresentation.screen(ctx);
 }
 function handleEvents(){if(!active)return;let count=0;const played=new Set();for(const f of active.fx){if(f.id<=seen||count>=5||played.has(f.k))continue;sfx(f.k,active.actors.reduce((closest,a)=>!closest||Math.hypot(a.x-f.x,a.y-f.y)<Math.hypot(closest.x-f.x,closest.y-f.y)?a:closest,null)?.mageId?mage(active.actors.reduce((closest,a)=>!closest||Math.hypot(a.x-f.x,a.y-f.y)<Math.hypot(closest.x-f.x,closest.y-f.y)?a:closest,null).mageId).school:'fire');played.add(f.k);count++}seen=active.serial}
-function loop(now){const elapsed=Math.min(.13,(now-last)/1000||0);last=now;frame++;if(toastT>0){toastT-=elapsed;if(toastT<=0)$('toast').classList.remove('visible')}if(online?.active){if(active&&online.view?.phase==='fight'){online.sample(()=>mode==='fight'?playerInput():{x:0,y:0,aim:{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y},attack:false,shield:false,dash:false},active.round,now);handleEvents()}if(frame%5===0)updateHud();acc=0}else if(mode==='fight'&&active){acc+=elapsed;let steps=0;while(acc>=STEP&&steps<8){tick(active,playerInput());acc-=STEP;steps++;if(active.phase!=='fight')break}handleEvents();if(frame%5===0)updateHud();if(frame%120===0)remember();if(active.phase!=='fight')transition()}else acc=0;render();requestAnimationFrame(loop)}
+function loop(now){const elapsed=Math.min(.13,(now-last)/1000||0);last=now;frame++;if(toastT>0){toastT-=elapsed;if(toastT<=0)$('toast').classList.remove('visible')}if(online?.active){if(!debugSession&&active&&online.view?.phase==='fight'){online.sample(()=>mode==='fight'?playerInput():{x:0,y:0,aim:{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y},attack:false,shield:false,dash:false},active.round,now);handleEvents()}if(frame%5===0)updateHud();acc=0}else if(mode==='fight'&&active&&!debugSession){acc+=elapsed;let steps=0;while(acc>=STEP&&steps<8){tick(active,playerInput());acc-=STEP;steps++;if(active.phase!=='fight')break}handleEvents();if(frame%5===0)updateHud();if(frame%120===0)remember();if(active.phase!=='fight')transition()}else acc=0;render();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 // The authenticated avatar is presentation only: never serialize art into a
 // combat save. Switching profiles does not change the sprite mid-round.
@@ -624,6 +686,7 @@ function roomInfo(roomId){
 }
 function onlineView(view){
  if(!online?.active||!view)return;
+ if(debugSession){online.view=view;return}
  void refreshRival(view);
  online.view=view;active=view.match||null;
  const stamp=[view.phase,active?.round??0,view.picked,view.ready].join(':');
