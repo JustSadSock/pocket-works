@@ -44,8 +44,9 @@ test('Seller lists an item, buyer can inspect its hidden downside and place a bi
  act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:100,crystals:0,parts:0}});
  assert.equal(state.listing.itemId,item.id);
  const before=buyer.resources.gold;
+ const cost=game.viewForPlayer({state,player:{id:buyer.id}}).you.inspectionPrices.public;
  act(state,buyer.id,{type:'inspect'});
- assert.equal(buyer.resources.gold,before-15);
+ assert.equal(buyer.resources.gold,before-cost);
  assert.equal(buyer.inspections[0].itemId,item.id);
  act(state,buyer.id,{type:'bid',offer:{gold:65,crystals:1,parts:0}});
  assert.equal(state.bids.length,1);
