@@ -53,7 +53,7 @@ export const VOWS=Object.freeze([
  {id:'bold',name:'Дерзкий обет',detail:'Благословение +3 милости, сомнение −1, гнев −3.'},
  {id:'shelter',name:'Обет осторожности',detail:'Благословение +1, сомнение +1, гнев −1.'}
 ]);
-const MAX_ROUNDS=5;
+export const MAX_ROUNDS=5;
 export const START_FAITH=6;
 export const MAX_FAITH=10;
 const validItem=id=>ITEMS.some(x=>x.id===id);
