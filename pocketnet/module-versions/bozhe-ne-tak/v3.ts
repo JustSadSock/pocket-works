@@ -210,7 +210,14 @@ function evaluateRite(rite,action,doctrines=[],incident=null){
   {name:'Высота',score:action.height===rite.height?1:0,max:1},
   ...(incident?[{name:'Событие: '+incident.title,score:incidentScore,max:1}]:[])
  ];
- const doctrineResults=doctrines.map(id=>({id,...doctrineEffect(id,action)}));
+ // One conflicting doctrine can object per ceremony; extra objections cancel each other out.
+ // Without this cap three contradictory dogmas plus an incident can make perfect rites unwinnable.
+ let opposition=0;
+ const doctrineResults=doctrines.map(id=>{
+  const result={id,...doctrineEffect(id,action)};
+  if(result.delta<0&&opposition++>0)return {...result,delta:0,text:'Возражение поглощено спором догматов.'};
+  return result;
+ });
  const score=criteria.reduce((n,c)=>n+c.score,0)+doctrineResults.reduce((n,d)=>n+d.delta,0);
  const verdict=score>=4?'bless':score>=3?'doubt':'wrath';
  const vow=VOWS.some(v=>v.id===action.vow)?action.vow:'steady';
