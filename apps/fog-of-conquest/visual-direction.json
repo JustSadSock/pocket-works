@@ -166,6 +166,11 @@
         "slug": "perekos",
         "spatialDifference": "В отличие от компактной каменной арены ПЕРЕКОСА с двумя движущимися пиксельными магами здесь стратегический обзор сверху охватывает процедурную топографию, несколько крепостей, отряды и большой разведывательный туман.",
         "interactionDifference": "Вместо двухпальцевого перемещения и непрерывного выпуска заклинаний в реальном времени игрок пошагово выбирает войска, размещение, допустимую клетку и передачу хода по экономическим правилам."
+      },
+      {
+        "slug": "black-bazaar",
+        "spatialDifference": "Black Bazaar is a trading ledger with bids and inventories in distinct form panels; Fog of Conquest retains a continuous illustrated world map with unit figures, fogged territories and tactical controls.",
+        "interactionDifference": "Black Bazaar trades via hidden commitments and timed offers. Fog of Conquest issues turn-based tactical unit commands over a map while server-authoritative fog-of-war determines visibility."
       }
     ]
   },
