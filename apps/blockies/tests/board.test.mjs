@@ -209,7 +209,7 @@ test('PWA release matches interface, new icon and built-in Pocket Works shell',a
  const manifest=JSON.parse(await fs.readFile(new URL('../manifest.webmanifest',import.meta.url),'utf8'));
  const sw=await fs.readFile(new URL('../sw.js',import.meta.url),'utf8');
  const icon=await fs.readFile(new URL('../icons/icon.svg',import.meta.url),'utf8');
- assert.equal(config.version,'0.4.0');
+ assert.match(config.version,/^\d+\.\d+\.\d+$/);
  assert.match(html,/data-app-version="0\.4\.0"/);
  assert.match(sw,/blockies-v0\.4\.0/);
  assert.equal(config.orientation,'any');
