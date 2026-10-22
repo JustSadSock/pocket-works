@@ -1,5 +1,5 @@
 
-import {EXTRA_ITEMS,EXTRA_TREATMENTS,EXTRA_RITES,EXTRA_DOCTRINES,INCIDENTS} from './content.js';
+import {EXTRA_ITEMS,EXTRA_TREATMENTS,EXTRA_RITES,EXTRA_DOCTRINES,INCIDENTS,PATRONS} from './content.js';
 
 /* BNT v0.2 - deterministic, dependency-free local ritual engine.
    The pure transition functions are deliberately reusable by a future PocketNet server. */
@@ -62,6 +62,7 @@ const doctrineSet=idSet(DOCTRINES);
 const treatSet=idSet(TREATMENTS);
 export const getItem=id=>ITEMS.find(x=>x.id===id)||null;
 export const getDoctrine=id=>DOCTRINES.find(x=>x.id===id)||null;
+export const getPatron=id=>PATRONS.find(x=>x.id===id)||PATRONS[0];
 export const getRite=s=>RITES[s.order[s.round]];
 export const getIncident=state=>{
  const seed=(state.seed^0x7b39cf81)>>>0,random=random32(seed);
@@ -76,7 +77,7 @@ export function createGame(seed=0x6ab52d19) {
  const number=Number.isInteger(seed)?(seed>>>0):0x6ab52d19;
  const rand=random32(number);const order=RITES.map((_,i)=>i);
  for(let i=order.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
- return {schema:2,seed:number,order:order.slice(0,MAX_ROUNDS),round:0,faith:START_FAITH,
+ return {schema:2,seed:number,patronId:PATRONS[number%PATRONS.length].id,order:order.slice(0,MAX_ROUNDS),round:0,faith:START_FAITH,
  phase:'play',actions:defaultAction(),doctrines:[],history:[],judgment:null,offers:[],councilUsed:false};
 }
 export function setAction(state,patch){
@@ -108,10 +109,12 @@ export function doctrineEffect(id,action){
  const good=!!pass(),d=getDoctrine(id);
  return {delta:good?(id==='goose'?2:1):-1,text:good?d.positive:d.negative};
 }
-export function evaluateRite(rite,action,doctrines=[],incident=null){
+export function evaluateRite(rite,action,doctrines=[],incident=null,patronId='ogo'){
  const item=getItem(action.itemId);if(!item)throw Error('Missing offering');
  const matches=(field,value)=>item[field]===value;
  const taboo=['material','kind','color','shape'].some(field=>item[field]===rite.taboo);
+ const patron=getPatron(patronId);
+ const patronScore=(['bell','height','treatment'].includes(patron.field)?action[patron.field]:item[patron.field])===patron.value?1:0;
  const incidentScore=incident&&((incident.field==='bell'||incident.field==='height'||incident.field==='treatment')?
   action[incident.field]===incident.value:item[incident.field]===incident.value)?incident.delta:0;
  const criteria=[
@@ -120,6 +123,7 @@ export function evaluateRite(rite,action,doctrines=[],incident=null){
   {name:'Подготовка',score:action.treatment===rite.treatment?1:0,max:1},
   {name:'Звон',score:action.bell===rite.bell?1:0,max:1},
   {name:'Высота',score:action.height===rite.height?1:0,max:1},
+  {name:'Каприз: '+patron.name,score:patronScore,max:1},
   ...(incident?[{name:'Событие: '+incident.title,score:incidentScore,max:1}]:[])
  ];
  // One conflicting doctrine can object per ceremony; extra objections cancel each other out.
@@ -165,7 +169,7 @@ export function evaluateRite(rite,action,doctrines=[],incident=null){
   potato:'Картошка пустила росток. Церковь объявила это первым земным пророчеством.'
  }[miracleId];
  return {score,criteria,doctrineResults,verdict,faithDelta:delta,vow,selected:item.id,miracleId,miracleText,
-  incidentId:incident?.id||null,incidentText:incident?incident.story:null,incidentScore};
+  incidentId:incident?.id||null,incidentText:incident?incident.story:null,incidentScore,patronId};
 }
 function makeOffers(state,judgment){
  const item=getItem(state.actions.itemId),incident=getIncident(state);
@@ -188,7 +192,7 @@ function makeOffers(state,judgment){
 export function commitRite(state){
  if(state.phase!=='play'||!getItem(state.actions.itemId))return state;
  const rite=getRite(state);
- const judgment=evaluateRite(rite,state.actions,state.doctrines,getIncident(state));
+ const judgment=evaluateRite(rite,state.actions,state.doctrines,getIncident(state),state.patronId);
  const faith=Math.max(0,Math.min(MAX_FAITH,state.faith+judgment.faithDelta));
  const event={round:state.round+1,riteId:rite.id,riteTitle:rite.title,itemId:state.actions.itemId,
   actions:{...state.actions},...judgment,faithAfter:faith,adopted:null};
@@ -214,7 +218,7 @@ export function conveneCouncil(state){
 export function getBestPossible(state){
  const rite=getRite(state),incident=getIncident(state);let best=-999;
  for(const item of ITEMS)for(const treatment of TREATMENTS)for(const bell of [1,2,3])for(const height of ['low','high']){
-  best=Math.max(best,evaluateRite(rite,{itemId:item.id,treatment:treatment.id,bell,height},state.doctrines,incident).score);
+  best=Math.max(best,evaluateRite(rite,{itemId:item.id,treatment:treatment.id,bell,height},state.doctrines,incident,state.patronId).score);
  }
  return best;
 }
@@ -238,7 +242,7 @@ export function loadGame(raw){
   clean.vow=raw.actions.vow||'steady';
   if(raw.history.length!==raw.round+(raw.phase==='play'?0:1) && !(raw.phase==='end'&&raw.faith===0))return null;
   if(raw.history.some(x=>!x||!RITES.some(r=>r.id===x.riteId)||!validItem(x.itemId)))return null;
-  return {...raw,actions:clean,councilUsed:raw.councilUsed===true,
+  return {...raw,patronId:getPatron(raw.patronId).id,actions:clean,councilUsed:raw.councilUsed===true,
    offers:Array.isArray(raw.offers)?raw.offers.filter(id=>doctrineSet.has(id)).slice(0,2):[]};
  }catch{return null}
 }
