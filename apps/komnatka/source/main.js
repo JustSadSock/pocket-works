@@ -65,7 +65,15 @@ function status(message='Сохранено'){
  saveMessage=message;
  ui.status.textContent=online?.active?'Общая комната':saveMessage;
 }
+function closeToolMenu(){
+ const secondary=$('toolbarMore'),toggle=$('toolsMoreBtn');
+ const wasOpen=secondary.classList.contains('is-open');
+ secondary.classList.remove('is-open');
+ toggle.setAttribute('aria-expanded','false');
+ return wasOpen;
+}
 function hideHome(){
+ closeToolMenu();
  $('homeScreen').hidden=true;
  $('menuBtn').setAttribute('aria-label','Открыть главное меню');
 }
@@ -105,6 +113,7 @@ function updateHomePreview(){
  }
 }
 function showHome(){
+ closeToolMenu();
  if(online?.active){online.open();return;}
  if(pending)cancelPending(false);
  selectedId=null;hideSelection();
@@ -729,6 +738,21 @@ function switchDollhouseLighting(){
  if(online?.active)online.send({type:'decorate',patch:{evening:state.evening}});
 }
 function addEvents(){
+ const toolToggle=$('toolsMoreBtn'),toolPanel=$('toolbarMore');
+ toolToggle.addEventListener('click',()=>{
+  const open=!toolPanel.classList.contains('is-open');
+  toolPanel.classList.toggle('is-open',open);
+  toolToggle.setAttribute('aria-expanded',String(open));
+ });
+ toolPanel.addEventListener('click',ev=>{
+  if(ev.target.closest('button'))closeToolMenu();
+ });
+ document.addEventListener('pointerdown',ev=>{
+  if(!ev.target.closest('.quick-tools'))closeToolMenu();
+ });
+ window.addEventListener('resize',()=>{
+  if(window.innerWidth>600)closeToolMenu();
+ });
  document.addEventListener('pointermove',catalogPointerMove);
   document.addEventListener('pointerup',catalogPointerUp);
   document.addEventListener('pointercancel',catalogPointerCancel);
@@ -773,6 +797,7 @@ function addEvents(){
  $('previewRotate').addEventListener('click',rotatePlacement);
  document.addEventListener('keydown',ev=>{
   if(ev.key==='Escape'){
+   if(closeToolMenu())return;
    if(online?.active&&$('onlineLayer')?.hidden===false){online.close();return;}if(!$('resetDialog').hidden)$('resetDialog').hidden=true;else if(pending)cancelPending(false);else{selectedId=null;hideSelection();}}
   if(ev.target instanceof HTMLInputElement)return;
   if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='z'){ev.preventDefault();ev.shiftKey?redo():undo();}
