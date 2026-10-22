@@ -8,9 +8,9 @@ import {mascotSvg,safeMascot,mascotPublicUnlocks,mascotAnimals,mascotHats,mascot
 // Pocket Social shared UI. No dependency on a specific app runtime or framework.
 const q=(s,root=document)=>root.querySelector(s);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const backgrounds=[['forest','Лес','#426c60'],['clay','Терракота','#965545'],['lilac','Сирень','#776185'],['ocean','Океан','#347e8c'],['night','Ночь','#252d39'],['paper','Бумага','#d6bea1'],['gallery','Галерея при свечах','#846142'],['chapel','Лунная часовня','#254c62']];
+const backgrounds=[['forest','Лес','#426c60'],['clay','Терракота','#965545'],['lilac','Сирень','#776185'],['ocean','Океан','#347e8c'],['night','Ночь','#252d39'],['paper','Бумага','#d6bea1'],['gallery','Галерея при свечах','#846142'],['chapel','Лунная часовня','#254c62'],['block-grid','Блочная сетка','#205b69']];
 const frames=[['clean','Чистая'],['double','Двойная'],['corners','Углы'],['stamp','Марка']];
-const portraitFrames=[['none','Без рамки'],['wood','Резное дерево'],['gilt','Позолоченная'],['worn-gilt','Потёртая позолота'],['rose-window','Роза собора']];
+const portraitFrames=[['none','Без рамки'],['wood','Резное дерево'],['gilt','Позолоченная'],['worn-gilt','Потёртая позолота'],['rose-window','Роза собора'],['tetromino','Тетрамино']];
 const colors=['#273d46','#fff8e6','#d75e55','#f2ad6c','#f2d478','#82aa73','#478d8c','#6092bd','#8865a3','#c87eac','#8a604d','#101c29'];
 const errors={party_full:'В компании уже три друга.',invalid_code:'Неверный код.',sign_in_required:'Войди в Pocket ID, чтобы пользоваться друзьями.',identity_unavailable:'Не удалось проверить аккаунт Pocket ID.',rate_limited:'Слишком много запросов. Попробуй позже.',not_room_member:'Сначала войди в игровую комнату.',room_unavailable:'Комната уже закрыта, заполнена или игра началась.',invite_expired:'Приглашение уже недействительно.',blocked:'Запрос недоступен для этого игрока.',invites_disabled:'Игрок отключил приглашения.',friends_only:'Приглашать можно только друзей.',already_requested:'Заявка уже отправлена.',already_friends:'Вы уже друзья.',user_not_found:'Игрок не найден.',invalid_profile:'Проверь выбранное оформление.',network:'Нет подключения к серверу PocketWorks.'};
 const button=(name,label,kind='quiet',extra='')=>'<button type="button" class="pws-btn pws-btn--'+kind+'" data-pws="'+name+'" '+extra+'>'+label+'</button>';
@@ -279,9 +279,10 @@ function editor(){
   const rewardTitles=mascotTitles.filter(t=>(!zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t)||
     zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id)))&&
     (!retiredTitles[t]||unlocks.includes(retiredTitles[t]))&&
-    (!canticaAchievements.some(a=>a.slot==='title'&&a.item===t)||canticaAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id))));
-  const rewardBg=backgrounds.filter(([id])=>(id!=='gallery'||unlocks.includes('zamazka.five-works'))&&(id!=='chapel'||unlocks.includes('cantica.twenty-five')));
-  const rewardFrames=portraitFrames.filter(([id])=>(id!=='worn-gilt'||unlocks.includes('zamazka.perfect-forgery'))&&(id!=='rose-window'||unlocks.includes('cantica.fifty')));
+    (!canticaAchievements.some(a=>a.slot==='title'&&a.item===t)||canticaAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id)))&&
+    (!blockiesAchievements.some(a=>a.slot==='title'&&a.item===t)||blockiesAchievements.some(a=>a.slot==='title'&&a.item===t&&unlocks.includes(a.id))));
+  const rewardBg=backgrounds.filter(([id])=>(id!=='gallery'||unlocks.includes('zamazka.five-works'))&&(id!=='chapel'||unlocks.includes('cantica.twenty-five'))&&(id!=='block-grid'||unlocks.includes('blockies.ten-lines')));
+  const rewardFrames=portraitFrames.filter(([id])=>(id!=='worn-gilt'||unlocks.includes('zamazka.perfect-forgery'))&&(id!=='rose-window'||unlocks.includes('cantica.fifty'))&&(id!=='tetromino'||unlocks.includes('blockies.four-lines')));
   const category=state.editorSection==='data'?'account':state.editorTab;
   const options=(rows,field)=>'<div class="pws-maskot-options">'+rows.map(([id,label])=>
     '<button type="button" data-pws="maskot-item" data-field="'+field+'" data-value="'+id+
@@ -1028,3 +1029,4 @@ function install(){
 }
 window.PocketSocial=Object.freeze({open:(room='',gameId='zamazka')=>open(room,false,gameId),openEditor:()=>open('',true)});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+\nimport {blockiesAchievements} from './capabilities/blockies-achievements.js';
