@@ -110,6 +110,16 @@
         "slug": "moss-marble",
         "spatialDifference": "Cyclic stone arena instead of an irregular putting course.",
         "interactionDifference": "Light damage over time replaces ball strike physics."
+      },
+      {
+        "slug": "black-bazaar",
+        "spatialDifference": "Black Bazaar arranges bid forms and hidden trading balances in an inventory workspace; Pepelny Dozor displays a single full-height circular stone arena with physically controlled flame.",
+        "interactionDifference": "Black Bazaar participants submit market orders with protected inventory, Pepelny Dozor rotates light and rings a defensive bell against real-time shadow attackers."
+      },
+      {
+        "slug": "picto",
+        "spatialDifference": "Picto uses light paper with semantic stamp panels and a story composition strip; Pepelny Dozor presents pixel-art enemies, an abbey floor and a luminous directional beam.",
+        "interactionDifference": "Picto players draw and guess symbol stories asynchronously by turn; Pepelny Dozor directly aims a damage-causing light cone in an active wave."
       }
     ]
   }

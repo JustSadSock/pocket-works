@@ -1,5 +1,10 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 installMobileRuntime();
+createWorkshopMode({
+ appName:'ПЕПЕЛЬНЫЙ ДОЗОР',version:'1.0.1',
+ cachePrefix: 'pepelny-dozor-',storageNamespace: 'pocket-works:pepelny-dozor'
+});
 (() => {
 'use strict';
 const $=id=>document.getElementById(id);
@@ -296,6 +301,8 @@ document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();
 bell.addEventListener('click',bellAction);
 sound.addEventListener('click',()=>{soundOn=!soundOn;setAudio();tone(680,.09);persist()});
 pause.addEventListener('click',togglePause);
+// A diagnostics overlay must never let a live wave injure the player unseen.
+window.addEventListener('workshopopen',()=>{if(phase==='play')togglePause();});
 function togglePause(){
  if(phase==='play'){phase='paused';prevPhase='play';panel.hidden=false;showPanel('ПЕРЕДЫШКА','ДОЗОР ПРИОСТАНОВЛЕН','Огонь продолжит гореть, когда ты вернёшься.','ПРОДОЛЖИТЬ',()=>{phase='play';panel.hidden=true});secondary.hidden=false;secondary.textContent='ВЫЙТИ К МЕНЮ';secondary.onclick=()=>{persist();showMenu()};pause.textContent='▶';persist()}
  else if(phase==='paused'){phase='play';panel.hidden=true;pause.textContent='Ⅱ'}
@@ -304,5 +311,5 @@ document.addEventListener('visibilitychange',()=>{last=performance.now();if(docu
 window.addEventListener('pagehide',()=>persist());
 window.__DOZOR_QA__={get state(){return {phase,wave,health,kills,spawned,enemies:enemies.length,bellRemaining,ready,loadFailed}},aim(angle){aim=angle},ring:bellAction,advance(ms){const n=Math.ceil(ms/16);for(let i=0;i<n;i++)update(ms/n/1000);draw()}};
 read();setAudio();buff=freshBuff();art();anim=requestAnimationFrame(run);
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}
+// Service worker activation is deferred to the shared update manager.
 })();
