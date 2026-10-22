@@ -1,6 +1,6 @@
-const VERSION='0.2.0';
-const NOTES=['Механический альфа-прототип: двусторонние приватные обмены, серверная проверка и улучшенные тесты.'];
-const CACHE='black-bazaar-v0.2.0';
+const VERSION='0.3.0';
+const NOTES=['Контрпредложения, три равносложные волны срочных контрактов и проверка приватности квот.'];
+const CACHE='black-bazaar-v0.3.0';
 const PREFIX='black-bazaar-v';
 const FILES=[
  './','./index.html','./app.js','./styles.css','./app.config.json',
