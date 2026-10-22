@@ -406,7 +406,8 @@ function matchView(m){
  return m?{phase:m.phase,round:m.round,faith:m.faith,doctrines:[...m.doctrines],
   offers:[...m.offers],incident:getIncident(m),judgment:m.judgment,history:m.history.map(h=>({
    round:h.round,riteTitle:h.riteTitle,itemId:h.itemId,score:h.score,verdict:h.verdict,
-   miracleText:h.miracleText,adopted:h.adopted,faithAfter:h.faithAfter,unfinished:h.unfinished||[]
+   miracleText:h.miracleText,incidentId:h.incidentId,incidentScore:h.incidentScore,
+   vow:h.vow||'steady',adopted:h.adopted,faithAfter:h.faithAfter,unfinished:h.unfinished||[]
   }))}:null;
 }
 const game={
