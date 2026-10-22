@@ -30,7 +30,7 @@ for (const entry of await readdir(apps, { withFileTypes: true })) {
     plugins: [{
       name: 'pocket-server-embedded-wasm',
       setup(build) {
-        build.onLoad({filter: /\\.wasm$/}, async ({path: filename}) => {
+        build.onLoad({filter: /\.wasm$/}, async ({path: filename}) => {
           const zipped = gzipSync(await readFile(filename), {level: 9, mtime: 0});
           const encoded = JSON.stringify(zipped.toString('base64'));
           return {
