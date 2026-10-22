@@ -248,8 +248,9 @@ test('Private counteroffer reverses parties, swaps items safely, and original of
  assert.equal(state.deals.length,0);
  assert.equal(a.items.some(i=>i.id===second.id),true);
  assert.equal(b.items.some(i=>i.id===first.id),true);
- assert.equal(a.resources.gold,225);
- assert.equal(b.resources.gold,275);
+ // Item transfers trigger secret target penalties, unlike plain resource swaps.
+ assert.equal(a.resources.gold,225-(b.negativeTarget===a.id?20:0));
+ assert.equal(b.resources.gold,275-(a.negativeTarget===b.id?20:0));
 });
 test('Counteroffers are validated against inventory and resources and have a finite negotiation depth',()=>{
  const {state}=makeRoom(2),[a,b]=state.contestants;
