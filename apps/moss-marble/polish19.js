@@ -255,6 +255,25 @@ export class CoursePolishLayer {
       ctx.stroke();
     }
 
+    // These contours follow real terrain heights, making playable slopes readable
+    // without introducing separate fake hill sprites.
+    for (const landform of field.landforms || []) {
+      if (!['mound', 'ridge', 'depression'].includes(landform.kind)) continue;
+      if (Math.abs(Number(landform.height || 0)) < 8) continue;
+      const depression = landform.kind === 'depression';
+      const outer = maskWorldPoints(landform, .82, 42);
+      const inner = maskWorldPoints(landform, .54, 42);
+      ctx.globalAlpha = 1;
+      this.pathWorld(outer, field, .55);
+      ctx.strokeStyle = depression ? 'rgba(41,29,15,.23)' : 'rgba(23,53,29,.30)';
+      ctx.lineWidth = 1.65;
+      ctx.stroke();
+      this.pathWorld(inner, field, .68);
+      ctx.strokeStyle = depression ? 'rgba(237,218,152,.20)' : 'rgba(231,234,173,.26)';
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+    }
+
     for (let maskIndex = 0; maskIndex < cache.waterMasks.length; maskIndex += 1) {
       const mask = cache.waterMasks[maskIndex];
       for (let ring = 0; ring < 2; ring += 1) {
