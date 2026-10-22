@@ -1,5 +1,19 @@
 import {PocketNet} from '../../shared/capabilities/net.js';
 
+const ROOM_ID=/^(?:[0-9a-f]{8}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$/i;
+export function normalizeRoomId(input){
+  let value=String(input||'').trim();
+  if(/^https?:\/\//i.test(value)){
+    try{
+      const url=new URL(value);
+      if(url.origin!==globalThis.location?.origin||!/^\/apps\/blockies\/?$/.test(url.pathname))return null;
+      value=url.searchParams.get('room')||'';
+    }catch{return null;}
+  }
+  return ROOM_ID.test(value)?value.toLowerCase():null;
+}
+const sameRoom=(a,b)=>!!a&&!!b&&a.slice(0,8).toLowerCase()===b.slice(0,8).toLowerCase();
+
 export class NetworkManager {
   constructor(){
     this.callbacks={};
@@ -11,6 +25,7 @@ export class NetworkManager {
     this.started=false;
     this.activeRound=0;
     this.code='';
+    this.roomId=null;
     this.hostId=null;
     this.timer=null;
     this.net=null;
@@ -18,9 +33,8 @@ export class NetworkManager {
   }
   on(type,callback){this.callbacks[type]=callback;}
   trigger(type,payload){this.callbacks[type]?.(payload);}
-  async connect(){
+  async connect(preferredRoom=null){
     if(this.connected)return;
-    if(this.connecting)return this.connecting;
     if(!this.net){
       const storage={
         getItem:key=>{try{return sessionStorage.getItem('pocket-works:blockies:'+key);}catch{return null;}},
@@ -38,8 +52,17 @@ export class NetworkManager {
         this.trigger('connect');
       });
       this.net.on('room_joined',message=>{
+        if(message.gameId&&message.gameId!=='blockies'){
+          this.net.leaveRoom();
+          this.resetRoom();
+          this.trigger('error','Это комната другой игры');
+          return;
+        }
+        this.roomId=message.roomId;
         this.code=(message.roomId||'').slice(0,8).toUpperCase();
         this.apply(message.state,true);
+        const button=document.getElementById('invite-friends-btn');
+        if(button){button.hidden=!this.net.accountId;button.dataset.roomId=message.roomId;}
       });
       this.net.on('game_event',message=>{
         if(message.event?.type==='state')this.apply(message.event.payload);
@@ -66,6 +89,12 @@ export class NetworkManager {
         });
       }
     }
+    // New invite takes precedence over saved session before authentication.
+    if(preferredRoom&&this.net.roomId&&!sameRoom(this.net.roomId,preferredRoom)){
+      this.net.roomId=null;
+      this.net.persist();
+    }
+    if(this.connecting)return this.connecting;
     this.connecting=this.net.connect().catch(error=>{
       this.trigger('error',error.message||String(error));
       throw error;
@@ -91,6 +120,9 @@ export class NetworkManager {
     this.activeRound=0;
     this.hostId=null;
     this.code='';
+    this.roomId=null;
+    const button=globalThis.document?.getElementById('invite-friends-btn');
+    if(button){button.hidden=true;delete button.dataset.roomId;}
     this.stale=false;
     this.lastStateAt=0;
   }
@@ -144,14 +176,48 @@ export class NetworkManager {
     }
   }
   async createRoom(){
-    try{await this.connect();this.creating=true;this.net.createRoom('blockies',{});}
-    catch(error){this.trigger('error',error.message||String(error));}
+    try{
+      await this.connect();
+      if(this.net.roomId){this.net.leaveRoom();this.resetRoom();}
+      this.creating=true;
+      this.net.createRoom('blockies',{});
+    }catch(error){this.trigger('error',error.message||String(error));}
   }
   async joinRoom(raw){
-    const code=String(raw||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
-    if(!/^[A-Z0-9]{4,8}$/.test(code)){this.trigger('error','Введите действительный код комнаты');return;}
-    try{await this.connect();this.creating=false;this.net.joinRoom(code);}
-    catch(error){this.trigger('error',error.message||String(error));}
+    const id=normalizeRoomId(raw);
+    if(!id){this.trigger('error','Введите 8-значный код комнаты или откройте ссылку-приглашение');return;}
+    try{
+      this.creating=false;
+      if(this.net?.roomId&&!sameRoom(this.net.roomId,id)){
+        if(this.connected)this.net.leaveRoom();
+        else{this.net.roomId=null;this.net.persist();}
+        if(this.currentRoom){this.resetRoom();this.trigger('leftRoom');}
+      }
+      await this.connect(id);
+      // A reconnect can already be joining this exact room.
+      if(sameRoom(this.net.roomId,id))return;
+      this.net.joinRoom(id);
+    }catch(error){this.trigger('error',error.message||String(error));}
+  }
+  async inviteFriends(){
+    if(!this.currentRoom||!this.net?.roomId){this.trigger('error','Сначала войдите в комнату');return;}
+    if(!this.net.accountId){
+      this.trigger('error','Для приглашения друзей нужен Pocket ID. Ссылкой можно поделиться без входа.');
+      return;
+    }
+    try{
+      if(!window.PocketSocial){
+        for(const file of ['../../shared/capabilities/identity.css','../../shared/pocket-id.css','../../shared/pocket-social.css']){
+          const href=new URL(file,import.meta.url).href;
+          if(![...document.querySelectorAll('link[rel=stylesheet]')].some(link=>link.href===href)){
+            const link=document.createElement('link');
+            link.rel='stylesheet';link.href=href;document.head.append(link);
+          }
+        }
+        await import('../../shared/pocket-social.js');
+      }
+      window.PocketSocial.open(this.net.roomId,'blockies');
+    }catch(error){this.trigger('error','Не удалось открыть друзей: '+(error.message||String(error)));}
   }
   leaveRoom(){
     try{if(this.connected&&this.currentRoom)this.net.leaveRoom();}

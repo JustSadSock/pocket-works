@@ -90,13 +90,13 @@
       <div class="online-lobby-container">
         <div class="connection-status" id="connection-status" role="status"><span class="status-indicator"></span><span class="status-text" data-i18n="connectingToServer">Подключение к серверу…</span></div>
         <div class="nickname-section"><label for="nickname-input" data-i18n="yourNickname">Ваш ник</label><input type="text" id="nickname-input" maxlength="20" autocomplete="nickname" data-i18n-placeholder="enterYourName" placeholder="Как вас зовут?"></div>
-        <div class="rooms-section"><div class="join-group"><label for="join-code" data-i18n="roomCode">Код комнаты</label><div class="join-row"><input id="join-code" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC123"><button data-native-press id="join-code-btn" class="btn btn-secondary" type="button" data-i18n="joinRoom">Войти</button></div></div>
+        <div class="rooms-section"><div class="join-group"><label for="join-code" data-i18n="roomCode">Код комнаты</label><div class="join-row"><input id="join-code" maxlength="36" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="A1B2C3D4"><button data-native-press id="join-code-btn" class="btn btn-secondary" type="button" data-i18n="joinRoom">Войти</button></div></div>
           <div id="rooms-list" class="rooms-list"></div>
           <div class="or-divider" data-i18n="orCreate">ИЛИ СОЗДАЙТЕ СВОЮ</div>
           <button data-native-press id="create-room-btn" class="btn btn-primary btn-large" type="button"><span data-i18n="createNewRoom">Создать комнату</span><span aria-hidden="true">↗</span></button>
         </div>
         <div id="room-view" class="room-view" style="display:none">
-          <div class="room-header"><div><small data-i18n="inviteCode">КОД ПРИГЛАШЕНИЯ</small><output id="pocket-room-code" aria-label="Код комнаты"></output><h3 id="room-name">Комната</h3></div><button data-native-press id="copy-room-code" class="btn btn-secondary btn-small" type="button" data-i18n="invite">Поделиться ссылкой</button></div>
+          <div class="room-header"><div><small data-i18n="inviteCode">КОД ПРИГЛАШЕНИЯ</small><output id="pocket-room-code" aria-label="Код комнаты"></output><h3 id="room-name">Комната</h3></div><div class="room-invite-actions"><button data-native-press id="invite-friends-btn" class="btn btn-primary btn-small" type="button" data-social-invite data-game-id="blockies" hidden>Позвать друзей</button><button data-native-press id="copy-room-code" class="btn btn-secondary btn-small" type="button" data-i18n="invite">Поделиться ссылкой</button></div></div>
           <div class="room-players"><h4 data-i18n="playersInRoom">Игроки</h4><div id="room-players-list" class="room-players-list"></div></div>
           <div class="color-selector-section"><h4 data-i18n="yourColor">Цвет фигуры</h4><div id="color-options" class="color-options"></div></div>
           <div id="room-status" class="room-status" aria-live="polite" data-i18n="waitingForPlayers">Ожидаем игроков…</div>
@@ -178,6 +178,6 @@
     </div>
   </main>
   <script type="module" src="./app.js"></script>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Blockies" data-app-version="0.4.1"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Blockies" data-app-version="0.4.2"></script>
 </body>
 </html>

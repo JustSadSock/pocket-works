@@ -1149,6 +1149,10 @@ class UIManager {
         // Online lobby
         document.getElementById('back-from-online-btn').addEventListener('click', () => { if (networkManager.currentRoom) networkManager.leaveRoom(); this.showScreen('mainMenu'); });
         document.getElementById('create-room-btn').addEventListener('click', () => this.createRoom());
+        document.getElementById('invite-friends-btn')?.addEventListener('click',event=>{
+            event.stopPropagation();
+            void networkManager.inviteFriends();
+        });
         const nicknameInput = document.getElementById('nickname-input');
         if (nicknameInput) {
             // Load saved nickname
@@ -2514,7 +2518,7 @@ class UIManager {
         this.startGame(numPlayers);
     }
 
-    showOnlineLobby() {
+    showOnlineLobby(inviteRoom=null) {
         this.showScreen('onlineLobby');
         this.updateConnectionStatus('connecting');
         
@@ -2612,7 +2616,10 @@ class UIManager {
             this.showScreen('onlineLobby');
             this.showRoomView(room);
         });
-        networkManager.connect().then(() => this.updateConnectionStatus('connected')).catch(() => this.updateConnectionStatus('disconnected'));
+        if(networkManager.currentRoom)this.showRoomView(networkManager.currentRoom);
+        const connection=inviteRoom?networkManager.joinRoom(inviteRoom):networkManager.connect();
+        connection.then(()=>this.updateConnectionStatus(networkManager.connected?'connected':'disconnected'))
+          .catch(()=>this.updateConnectionStatus('disconnected'));
     }
 
     updateConnectionStatus(status) {
@@ -3293,7 +3300,7 @@ function init() {
     const ui = new UIManager();
     window.uiManager = ui;
     const invite = new URLSearchParams(location.search).get('room');
-    if(invite){document.querySelector('#join-code').value=invite;ui.showOnlineLobby();networkManager.joinRoom(invite);}
+    if(invite){document.querySelector('#join-code').value=invite;ui.showOnlineLobby(invite);}
 }
 
 // Start the game when the page loads
@@ -3317,9 +3324,15 @@ document.querySelector('#join-code-btn').onclick=()=>networkManager.joinRoom(doc
 document.querySelector('#copy-room-code')?.addEventListener('click',async()=>{
  const code=networkManager.code;
  if(!code)return;
- const link=new URL(location.href);link.searchParams.set('room',code);
+ const link=new URL(location.href);link.searchParams.set('room',networkManager.roomId||code);
  try{await navigator.clipboard.writeText(link.href);document.querySelector('#copy-room-code').textContent='Ссылка скопирована';setTimeout(()=>{const b=document.querySelector('#copy-room-code');if(b)b.textContent='Пригласить';},1800);}
- catch{window.prompt('Ссылка на комнату',link.href);}
+ catch{
+    if(navigator.share){
+      try{await navigator.share({title:'Blockies',url:link.href});return;}
+      catch(error){if(error.name==='AbortError')return;}
+    }
+    window.uiManager?.showStyledMessage('Ссылка на комнату',link.href,'info');
+  }
 });
 document.addEventListener('visibilitychange',()=>{
   const ui=window.uiManager;
