@@ -60,3 +60,31 @@ import './combat-readability.test.mjs';
 
 // The app-specific Perekos workflow runs this entrypoint directly.
 import './spell-choreography.test.mjs';
+
+
+test('only actual HP damage creates hit-stop and damage numbers, without changing simulation',()=>{
+ const p=new CombatPresentation();
+ const base={round:1,serial:0,ticks:100,phase:'fight',fx:[],actors:[{hp:100,x:110,y:170},{hp:100,x:285,y:380}]};
+ p.ingest(base);
+ assert.equal(p.damageNumbers.length,0);
+ const hurt={...base,ticks:101,actors:[base.actors[0],{...base.actors[1],hp:83.5}]};
+ const original=JSON.stringify(hurt);
+ p.ingest(hurt);
+ assert.equal(p.damageNumbers.length,1);
+ assert.equal(p.damageNumbers[0].value,17);
+ assert.ok(p.shocks.length===1&&p.hold>0&&p.shake>0);
+ assert.equal(JSON.stringify(hurt),original);
+ p.ingest(hurt);
+ assert.equal(p.damageNumbers.length,1,'same frame cannot double count damage');
+ for(let i=0;i<55;i++)p.advance(1/60);
+ assert.equal(p.shocks.length,0);
+ assert.equal(p.damageNumbers.length,0);
+});
+test('reduced motion disables impact hit-stop and camera displacement',()=>{
+ const p=new CombatPresentation();
+ const base={round:2,serial:0,ticks:1,phase:'fight',fx:[],actors:[{hp:100,x:130,y:130},{hp:100,x:285,y:380}]};
+ p.ingest(base,true);
+ p.ingest({...base,ticks:2,actors:[{...base.actors[0],hp:75},base.actors[1]]},true);
+ assert.equal(p.hold,0);
+ assert.deepEqual(p.offset(true),{x:0,y:0});
+});
