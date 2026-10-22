@@ -776,6 +776,8 @@ test('Mirror bonus triggers for completed sales only and does not mint repeatedl
 });
 test('Market lens discounts both forms of inspection, with private prices',()=>{
  const {state}=makeRoom(3);const [seller,buyer]=state.contestants;
+ // No accidental lens on the other player: this test isolates exact prices.
+ seller.items.forEach(item=>{item.key='pig';item.variant=1;});
  const lens=forceArtifact(buyer.items[0],'lens');
  const item=seller.items[0];
  const personal=game.viewForPlayer({state,player:{id:buyer.id}});
