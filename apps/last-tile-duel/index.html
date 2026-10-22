@@ -11,6 +11,8 @@
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icons/icon.svg">
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -18,6 +20,7 @@
     <header class="topbar">
       <a class="exit-link" href="../../" data-app-control data-native-press>← Pocket Works</a>
       <div class="identity" aria-label="Последняя плита">ПЛИТА<span class="brand-mark"></span></div>
+      <button type="button" class="tool-button" data-workshop-trigger data-native-press aria-label="Диагностика игры" title="Диагностика">⋯</button>
       <button id="sound" class="tool-button" type="button" aria-label="Отключить звук" data-native-press>ЗВУК: ВКЛ</button>
     </header>
     <section class="stage" id="stage">
