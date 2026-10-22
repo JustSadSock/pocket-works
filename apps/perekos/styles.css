@@ -445,3 +445,87 @@
 @media(prefers-reduced-motion:reduce){
  .mage-options .mage-option{transition:none}
 }
+
+
+/* 0.21 — MAGICAL RIFT. The desktop gets an arena, not enlarged mobile controls.
+   Dossiers are optional; the portrait battlefield keeps its original geometry. */
+:root{--rift-amber:#f2bd79;--rift-frost:#8ed9ce;--rift-ink:#102421}
+#menu .menu-composition{position:relative}
+#menu .play-block>small{font-size:11px;font-weight:600;letter-spacing:.02em;opacity:.85}
+#menu .mage-switch{border-left:3px solid var(--rift-frost)!important}
+#menu .online-button{border-left:3px solid #79b8af!important}
+#menu .big-button{letter-spacing:.015em}
+#menu .menu-top{position:relative;z-index:2}
+#menu .menu-bottom{position:relative;z-index:2}
+#menu .menu-top button{background:#233b33bb;padding:9px 13px;border:1px solid #8f947577}
+#menu .menu-composition p{max-width:340px;line-height:1.45}
+#menu .menu-top a:hover,#menu .menu-top button:hover{background:#3b5847}
+@media (min-width:950px) and (min-height:630px){
+ #menu{background:radial-gradient(ellipse 37% 70% at 27% 56%,#a45f342a,transparent 75%),radial-gradient(ellipse 38% 65% at 73% 44%,#49847b24,transparent 81%),linear-gradient(104deg,#122824ed,#0b1917f8)}
+ #menu::before{content:"";position:absolute;inset:-10% auto -10% 44%;width:13%;transform:skew(-25deg);background:linear-gradient(90deg,transparent,#eaba7740 47%,#93dbc12f 53%,transparent);filter:blur(35px);pointer-events:none}
+ #menu .menu-composition{max-width:min(1030px,calc(100vw - 100px));width:100%;display:grid;grid-template-columns:minmax(285px,1fr) minmax(340px,.88fr);grid-template-rows:min-content min-content min-content;column-gap:clamp(30px,5vw,88px);align-content:center;align-items:center;text-align:left;margin:0;isolation:isolate}
+ #menu .menu-composition::before{content:"";position:absolute;z-index:-1;left:5%;top:2%;width:41%;height:92%;transform:none;border-radius:50%;background:radial-gradient(ellipse,#e99e5730 0%,#c2874340 35%,#5689781f 56%,transparent 76%);opacity:1;pointer-events:none}
+ #menu .menu-composition::after{content:"";position:absolute;z-index:-1;left:8%;top:18%;height:68%;width:32%;border-radius:50%;border:1px solid #c5a76e80;box-shadow:0 0 0 19px #f0c4770a,0 0 0 45px #87bfaa0a,inset 0 0 38px #f3bc6340;transform:rotate(-20deg);pointer-events:none}
+ #menu #hero-preview{grid-column:1;grid-row:1 / span 3;width:min(78%,300px);max-width:100%;align-self:center;justify-self:center;border:0;aspect-ratio:128/156;filter:drop-shadow(12px 14px 0 #091d1a9c) drop-shadow(0 0 26px #ef9b5b66)}
+ #menu h1{grid-column:2;grid-row:1;font-size:clamp(64px,7.4vw,112px);line-height:.86;letter-spacing:-.075em;margin:0;max-width:100%;text-shadow:1px 2px #ae724b,5px 8px #132d26}
+ #menu .menu-composition>p{grid-column:2;grid-row:2;margin:16px 0 25px;color:#e8d3b5;font-size:12px;font-weight:750;letter-spacing:.07em}
+ #menu .play-block{grid-column:2;grid-row:3;max-width:390px;gap:10px}
+ #menu .play-block .big-button{min-height:67px;font-size:20px;padding-inline:23px}
+ #menu .menu-top,#menu .menu-bottom{max-width:1120px;margin-inline:auto}
+ #menu .menu-bottom>span{font-size:11px}
+}
+@media (min-width:950px) and (max-height:730px){
+ #menu .menu-composition #hero-preview{width:min(59%,235px)}
+ #menu h1{font-size:clamp(60px,6.1vw,88px)}
+ #menu .menu-composition>p{margin:10px 0 14px}
+ #menu .play-block{gap:7px}
+ #menu .play-block .big-button{min-height:53px}
+}
+/* Fine-pointer desktop: no touch spell buttons or invisible joystick hitboxes. */
+@media (hover:hover) and (pointer:fine) and (min-width:900px){
+ #controls.control-layer:not([hidden]){display:none}
+}
+.desktop-dashboard{position:absolute;inset:0;z-index:3;pointer-events:none}
+.desktop-panels-toggle,.desktop-aside{pointer-events:auto}
+.desktop-panels-toggle{position:absolute;top:calc(env(safe-area-inset-top) + 18px);right:clamp(16px,2vw,32px);z-index:2;background:#142723c9;color:#e6ceab;border:1px solid #b19769aa;letter-spacing:.06em;font-size:11px;font-weight:800;padding:8px 12px;box-shadow:0 3px #0b1b18;transition:background .15s}
+.desktop-panels-toggle:hover{background:#385347}
+.desktop-panels-toggle span{margin-left:12px;font-size:14px}
+.desktop-dashboard[data-open="false"] .desktop-aside{display:none}
+.desktop-aside{position:absolute;top:clamp(115px,17dvh,185px);width:clamp(195px,20vw,275px);max-height:calc(100dvh - 230px);overflow:auto;scrollbar-width:thin;padding:20px 19px 17px;border-top:2px solid #c6a174;border-bottom:1px solid #a08b68aa;background:linear-gradient(155deg,#152c26ef,#0c211deb 73%,#0b1a1ae0);box-shadow:0 16px 28px #09171588,inset 0 1px #6e786050;color:#e8dfc6}
+.desktop-dossier{left:clamp(14px,2.3vw,40px);border-left:1px solid #967c55a0}
+.desktop-grimoire{right:clamp(14px,2.3vw,40px);border-right:1px solid #967c55a0}
+.aside-heading{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #b69a6255;padding-bottom:11px;margin-bottom:15px}
+.aside-number,.aside-marker{font:750 10px/1.2 ui-monospace,monospace;letter-spacing:.16em;color:#c9ae83}
+.aside-marker{font-size:15px;color:#acd6bd}
+.desktop-aside h2{font:700 clamp(21px,2.2vw,31px)/1.07 Georgia,serif;letter-spacing:-.035em;color:#ffedc7;margin:5px 0 4px}
+.desktop-aside p{margin:0;color:#afbcb0;font-size:11px;line-height:1.5}
+.desktop-aside .dossier-class{font:800 10px/1.3 ui-monospace,monospace;letter-spacing:.16em;color:#cbaa79}
+.desktop-aside .aside-rule{height:1px;background:#b69a6255;margin:17px 0 14px}
+.desktop-aside .aside-caption{text-transform:uppercase;font:800 10px/1.4 ui-monospace,monospace;letter-spacing:.08em;color:#aaaf9b;margin-bottom:8px}
+.desktop-aside .dossier-attack{display:block;font:700 19px Georgia,serif;color:var(--rift-amber);line-height:1.2}
+.ability-state{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:8px;row-gap:5px;margin:12px 0 15px}
+.ability-state>span{grid-column:1/3;font:800 10px/1.2 ui-monospace,monospace;letter-spacing:.06em;display:flex;align-items:center;justify-content:space-between;color:#e8dcc2}
+.ability-state kbd{font:700 9px/1.3 ui-monospace,monospace;color:#a7c8b6;background:#2d4b3f;border:1px solid #66897777;padding:3px 5px}
+.ability-track{height:6px;background:#35443d;border:1px solid #596a54;overflow:hidden}
+.ability-track i{display:block;background:var(--rift-frost);height:100%;width:100%;transition:width .12s linear}
+.ability-state small{min-width:50px;text-align:right;font:800 9px/1.3 ui-monospace,monospace;color:#b4d7c6}
+.desktop-aside .dossier-foot,.desktop-aside .grimoire-foot{margin-top:23px;padding-top:12px;border-top:1px solid #aa8b614b;font-size:10px;color:#afaa95}
+.dossier-foot span{color:#d09f65}
+.tactic-runes{display:grid;gap:10px;margin-top:17px}
+.tactic-runes .rune-chain{border-left:2px solid #aa8a62;padding:5px 0 5px 11px;background:#283f331f}
+.tactic-runes .rune-chain strong{font:800 10px/1.2 ui-monospace,monospace;color:#f1ba7b;letter-spacing:.1em}
+.tactic-runes .rune-chain p{margin:5px 0 0;font-size:12px;color:#ebddbb;line-height:1.42;overflow-wrap:anywhere}
+.tactic-runes .rune-chain.inactive{opacity:.54;border-color:#688174}
+@media (max-height:750px){.desktop-aside{top:108px;max-height:calc(100dvh - 160px);padding:13px 14px}.desktop-aside .aside-rule{margin:9px 0}.ability-state{margin:8px 0}.desktop-aside .dossier-foot,.desktop-aside .grimoire-foot{margin-top:12px}}
+/* Side panels deliberately disappear before they crowd the vertical battlefield. */
+@media (min-width:1100px) and (min-aspect-ratio:1.45) and (hover:hover) and (pointer:fine){
+ #desktop-dashboard:not([hidden]){display:block}
+}
+@media (max-width:1099px), (max-aspect-ratio:1.449), (hover:none), (pointer:coarse){
+ #desktop-dashboard{display:none!important}
+}
+@media (max-width:949px){
+ #menu .menu-composition{max-width:420px}
+ #menu .menu-composition>p{text-transform:none;letter-spacing:.02em;font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){.desktop-panels-toggle,.ability-track i{transition:none}}
