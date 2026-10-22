@@ -24,6 +24,31 @@ export function visualChanges(files) {
   return byApp;
 }
 
+// Mobile contract migrations may add only a shared runtime import, native
+// press feedback or the actual shell marker. They are not visual redesigns.
+// Compare complete HTML contents rather than exempting whole filenames.
+export function mobileOnlyHtmlChange(before, after) {
+  const normalise = (source, original) => {
+    let text = source;
+    if (!original.includes('src="./app.js"')) {
+      text = text.replace(/\\s*<script type="module" src="\\.\\/app\\.js"><\\/script>/g, '');
+    }
+    text = text
+      .replace(/\\sdata-native-press(?=[\\s>])/g, '')
+      .replace(/\\sdata-app-shell(?=[\\s>])/g, '')
+      .replace(/\\s*<link rel="stylesheet" href="\\.\\.\\/\\.\\.\\/shared\\/mobile-runtime\\.css"\\s*\\/?>/g, '')
+      .replace(/<script type="module" src="\\.\\/app\\.js"><\\/script>/g, '<script src="./app.js" defer></script>')
+      .replace(/>\\s+</g, '><').trim();
+    return text;
+  };
+  return normalise(before,before)===normalise(after,before);
+}
+
+function fileFromGit(ref, filename) {
+  const r=spawnSync('git',['show',ref+':'+filename],{encoding:'utf8',maxBuffer:16*1024*1024});
+  return r.status===0?r.stdout:null;
+}
+
 export function changedFromGit(base, head) {
   const result = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACMR', `${base}...${head}`], { encoding: 'utf8' });
   if (result.status !== 0 || result.error) throw new Error(result.stderr || result.error?.message || 'git diff failed');
@@ -107,6 +132,21 @@ async function main() {
     const files = changedFromGit(base, head);
     const changedApps = visualChanges(files);
     for (const [slug, metadata] of changedApps) {
+      if (metadata.visual) {
+        // Keep every visual file except a proven markup-only infrastructure
+        // migration under the existing creative gate.
+        const visibleFiles=metadata.files.filter(file=>
+          visualFile.test(file)||visualSourceFile.test(file));
+        let realVisualWork=false;
+        for (const relative of visibleFiles) {
+          if (relative!=='index.html') {realVisualWork=true;break;}
+          const filename='apps/'+slug+'/'+relative;
+          const before=fileFromGit(base,filename);
+          const after=await readFile(path.join(root,filename),'utf8');
+          if(before===null||!mobileOnlyHtmlChange(before,after)){realVisualWork=true;break;}
+        }
+        metadata.visual=realVisualWork;
+      }
       const isNew = spawnSync('git', ['cat-file','-e',`${base}:apps/${slug}/app.config.json`], {encoding:'utf8'}).status !== 0;
       const existingDirection = await fileExists(path.join(root,'apps',slug,'visual-direction.json'));
       if (isNew || metadata.visual || existingDirection) targets.set(slug, { newApp: isNew, visual: metadata.visual });
