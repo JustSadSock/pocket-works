@@ -1,4 +1,5 @@
 import { reportValidationDebt } from './validation-debt.mjs';
+import {staticString} from './pwa-static-metadata.mjs';
 import { access, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
@@ -7,7 +8,7 @@ const fail=message=>errors.push(message);
 async function exists(relative){try{await access(path.join(root,relative));return true}catch{return false}}
 async function read(relative){try{return await readFile(path.join(root,relative),'utf8')}catch(error){fail(`${relative} could not be read: ${error.message}`);return''}}
 function requireIncludes(source,fragments,label){for(const fragment of fragments)if(!source.includes(fragment))fail(`${label} must include ${fragment}`)}
-function staticString(source,name){return source.match(new RegExp(String.raw`(?:const|let)\s+${name}\s*=\s*['"]([^'"]+)['"]`))?.[1]||null}
+
 function staticArray(source,name){const match=source.match(new RegExp(String.raw`(?:const|let)\s+${name}\s*=\s*(\[[\s\S]*?\]);`));if(!match)return null;try{return Function(`"use strict";return(${match[1]})`)()}catch{return null}}
 function eventBlock(source,name){const start=source.search(new RegExp(String.raw`(?:self\.)?addEventListener\(\s*['"]${name}['"]`));if(start<0)return'';const next=/(?:self\.)?addEventListener\(\s*['"][^'"]+['"]/g;next.lastIndex=start+1;return source.slice(start,next.exec(source)?.index??source.length)}
 function workerVersion(source){return staticString(source,'APP_VERSION')||staticString(source,'BUILD')}
