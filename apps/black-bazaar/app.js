@@ -450,6 +450,10 @@ function openSheet(sheetName,focus=false,targetId=''){
  if(sheetName&&!Object.prototype.hasOwnProperty.call(sheetTitles,sheetName))return;
  activeSheet=sheetName;
  const sheet=document.querySelector('#bazaarSheet'),backdrop=document.querySelector('#sheetBackdrop');
+ if(sheetName==='detail'&&state?.you){
+  const detailPage=sheet.querySelector('[data-sheet-page="detail"]');
+  if(detailPage)detailPage.innerHTML=artifactDetailBlock(state.you);
+ }
  sheet.hidden=!sheetName;backdrop.hidden=!sheetName;
  document.body.classList.toggle('sheet-open',Boolean(sheetName));
  for(const page of sheet.querySelectorAll('[data-sheet-page]'))page.hidden=page.dataset.sheetPage!==sheetName;
