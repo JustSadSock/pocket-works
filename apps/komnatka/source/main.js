@@ -968,7 +968,12 @@ if(new URLSearchParams(location.search).get('qa')==='1'){
     return {x:rect.x+position.x*rect.width/ui.canvas.width,y:rect.y+position.y*rect.height/ui.canvas.height};
    },
   get lighting(){return room?.lightingDiagnostics()??null;},
-  get purpose(){return state.purpose;},get materials(){return state.items.map(i=>({type:i.type,material:i.material}));},
+  get purpose(){return state.purpose;},
+  get savedRooms(){return roomList().map(r=>({id:r.id,name:r.name,purpose:r.purpose}));},
+  get activeRoom(){return currentRoomId;},
+  get finishState(){return {wallColor:state.wallColor,wallColorLeft:state.wallColorLeft,pattern:state.pattern,patternLeft:state.patternLeft,floor:state.floor,layout:state.layout};},
+  get renderedWallpaper(){return {back:room?.back?.material?.name||'',left:room?.left?.material?.name||''};},
+  get materials(){return state.items.map(i=>({type:i.type,material:i.material}));},
   get quality(){return {scale:engine?.getHardwareScalingLevel(),dpr:devicePixelRatio,pixels:[ui.canvas.width,ui.canvas.height],preview:$('homeRoomImage').dataset.source||null};},
   item(id){return state.items.find(x=>x.id===id)?{...state.items.find(x=>x.id===id)}:null;},
   point(id){
