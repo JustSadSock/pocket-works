@@ -29,7 +29,7 @@
 </aside>
 <header class="battle-hud" id="hud" hidden data-ui>
 <div class="hud-block me"><span class="my-identity"><canvas id="my-portrait" width="40" height="40" aria-hidden="true"></canvas><span id="my-name">ТЫ</span></span><div class="hp-track"><i id="my-hp"></i></div><small id="my-hp-text">100 / 100</small></div>
-<div class="round-clock"><strong id="clock">25</strong><span id="round-number">РАУНД 1</span></div>
+<div class="round-clock"><strong id="clock">25</strong><span id="round-number">РАУНД 1</span><span id="core-indicator" class="core-indicator" hidden></span></div>
 <div class="hud-block enemy"><span>СОПЕРНИК</span><div class="hp-track"><i id="bot-hp"></i></div><small id="bot-hp-text">100 / 100</small></div>
 <div class="heat-row"><span>ПЕРЕГРУЗКА</span><div class="heat-track"><i id="heat-fill"></i></div><b id="heat-value">0%</b></div>
 <div class="score-row"><span id="score-me">● ○ ○ ○</span><button id="pause-btn" type="button" data-native-press aria-label="Пауза">Ⅱ</button><span id="score-bot">○ ○ ○ ○</span></div>
@@ -45,8 +45,8 @@
 <div class="menu-top"><a href="../../" data-app-control>← В PocketWorks</a><button id="menu-audio" type="button" data-native-press>Звук: вкл.</button></div>
 <div class="menu-composition"><canvas id="hero-preview" width="128" height="156" aria-label="Ваш маг в пиксельном мире"></canvas>
 <h1>ПЕРЕКОС</h1><p>Три стихии. Шесть магов. Двор, который не переживёт дуэль.</p>
-<div class="play-block"><button id="choose-mage" class="mage-switch" type="button" data-native-press>Мой маг <strong id="chosen-mage-name">Искра</strong><span>Сменить ↗</span></button><button id="primary-action" class="big-button" type="button" data-native-press>Начать дуэль <span>↗</span></button><button id="continue" type="button" hidden data-native-press>Продолжить матч</button><button id="online-open" class="online-button" type="button" data-native-press>Дуэль с другом <span>↗</span></button><button id="open-grimoire" type="button" data-native-press>Мои сборки</button><small>До 4 побед · ничьи не дают очков</small></div>
-</div><div class="menu-bottom"><span>v0.22.0 · КУЗНИЦА РУН</span><a class="identity-card" id="profile-link" href="../../?pocket-id=profile" data-app-control><canvas id="menu-portrait" width="42" height="42" aria-hidden="true"></canvas><span><strong id="identity">Гостевой маг</strong><small id="identity-kind">Открой профиль PocketWorks</small></span><span aria-hidden="true">↗</span></a></div></section>
+<div class="play-block"><button id="choose-mage" class="mage-switch" type="button" data-native-press>Мой маг <strong id="chosen-mage-name">Искра</strong><span>Сменить ↗</span></button><div class="mode-selector" role="group" aria-label="Режим игры"><button id="mode-rupture" class="mode-option" type="button" aria-pressed="true"><strong>РАЗЛОМ</strong><small>10 минут · эволюция</small></button><button id="mode-duel" class="mode-option" type="button" aria-pressed="false"><strong>БЫСТРАЯ ДУЭЛЬ</strong><small>До 4 побед</small></button></div><button id="primary-action" class="big-button" type="button" data-native-press>Начать Разлом <span>↗</span></button><button id="continue" type="button" hidden data-native-press>Продолжить матч</button><button id="online-open" class="online-button" type="button" data-native-press>Дуэль с другом <span>↗</span></button><button id="open-grimoire" type="button" data-native-press>Мои сборки</button><small>Разлом: очки за убийства и контроль ядра · новые руны каждую минуту</small></div>
+</div><div class="menu-bottom"><span>v0.23.0 · РАЗЛОМ</span><a class="identity-card" id="profile-link" href="../../?pocket-id=profile" data-app-control><canvas id="menu-portrait" width="42" height="42" aria-hidden="true"></canvas><span><strong id="identity">Гостевой маг</strong><small id="identity-kind">Открой профиль PocketWorks</small></span><span aria-hidden="true">↗</span></a></div></section>
 <section id="mage-select" class="scene-panel mage-select" hidden data-ui><div class="sheet mage-picker"><div class="sheet-kicker">МОЙ МАГ · ХАРАКТЕР</div><h2>Выбери своего</h2><p>Три вида магии, шесть персонажей. У каждого свой способ атаковать: поток огня, молния, волна и другие приёмы. Внешность из PocketWorks сохраняется.</p><div id="mage-options" class="mage-options"></div><div class="mage-picker-actions"><button id="mage-cancel" type="button" data-native-press>Назад</button><button id="mage-confirm" class="big-button" type="button" data-native-press>Выбрать <span>↗</span></button></div></div></section>
 <section id="online-lobby" class="scene-panel online-lobby" hidden data-ui>
 <div class="sheet net-sheet">
@@ -61,8 +61,8 @@
 </div>
 <div id="net-room-info" hidden>
 <div class="net-invite"><small>КОД КОМНАТЫ</small><button id="net-copy-code" type="button" data-native-press>--------</button><button id="net-copy-link" type="button" data-native-press>Скопировать приглашение</button></div>
-<div id="net-players" class="net-players"></div><div class="net-mage-area"><small>МОЙ МАГ В ЭТОЙ КОМНАТЕ</small><div id="net-mages" class="net-mages"></div></div>
-<button id="net-start" type="button" class="big-button" data-native-press hidden>Начать дуэль <span>↗</span></button>
+<div class="net-mode-selector mode-selector" role="group" aria-label="Режим сетевого матча"><button id="net-mode-rupture" class="mode-option" type="button" aria-pressed="true"><strong>РАЗЛОМ</strong><small>10 минут</small></button><button id="net-mode-duel" class="mode-option" type="button" aria-pressed="false"><strong>ДУЭЛЬ</strong><small>До 4 побед</small></button></div><div id="net-players" class="net-players"></div><div class="net-mage-area"><small>МОЙ МАГ В ЭТОЙ КОМНАТЕ</small><div id="net-mages" class="net-mages"></div></div>
+<button id="net-start" type="button" class="big-button" data-native-press hidden>Начать Разлом <span>↗</span></button>
 </div>
 <p id="net-feedback" class="net-feedback" role="status" aria-live="polite">Создай комнату или введи код.</p>
 <button id="net-back" type="button" data-native-press>← Назад</button>
@@ -70,7 +70,7 @@
 <section id="net-wait" class="scene-panel net-wait" hidden data-ui>
 <div class="sheet"><div class="sheet-kicker">НАСТРОЙКА МАГИИ</div><h2>Руна готова.</h2><p>Второй маг ещё собирает свои правила. Бой начнётся, когда оба будут готовы.</p><div class="net-wait-mark" aria-hidden="true">✷</div><button id="net-wait-leave" type="button" data-native-press>Выйти из комнаты</button></div></section>
 <section id="draft" class="scene-panel draft" hidden data-ui>
-<div class="sheet rune-draft-sheet"><div class="sheet-kicker">МАГИЧЕСКИЙ ОТБОР <span id="draft-score"></span></div><h2 id="draft-title">Выбери руну</h2><span id="draft-outcome" class="draft-outcome"></span><p class="draft-instruction">Одна печать изменит следующий раунд. Выбери, какую силу вплести в сборку.</p><div id="rune-cards" class="rune-cards"></div><div id="replace-zone" class="replace-zone" hidden><strong>Что заменить?</strong><div id="replace-list"></div><button id="replace-cancel" type="button">Другую руну</button></div><div class="loadout" id="loadout"></div></div>
+<div class="sheet rune-draft-sheet"><div class="sheet-kicker">МАГИЧЕСКИЙ ОТБОР <span id="draft-score"></span></div><h2 id="draft-title">Выбери руну</h2><span id="draft-outcome" class="draft-outcome"></span><p class="draft-instruction">Выбери, какую силу вплести в сборку. В Разломе очки и время сохраняются между эволюциями.</p><div id="rune-cards" class="rune-cards"></div><div id="replace-zone" class="replace-zone" hidden><strong>Что заменить?</strong><div id="replace-list"></div><button id="replace-cancel" type="button">Другую руну</button></div><div class="loadout" id="loadout"></div></div>
 </section>
 <section id="build" class="scene-panel build" hidden data-ui>
 <div class="sheet workbench">
@@ -104,6 +104,6 @@
 <section id="confirm" class="scene-panel confirm" hidden data-ui><div class="sheet"><h2>Закончить матч?</h2><p id="quit-warning">Прогресс текущей серии будет потерян.</p><button id="quit-yes" type="button" class="big-button" data-native-press>Да, закончить</button><button id="quit-no" type="button" data-native-press>Отмена</button></div></section>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЕРЕКОС" data-app-version="0.22.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЕРЕКОС" data-app-version="0.23.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
