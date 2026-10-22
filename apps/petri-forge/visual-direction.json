@@ -46,6 +46,16 @@
         "slug": "crossline-5x5",
         "spatialDifference": "crossline-5x5 uses header-stage-footer and framed-stage; this port shows a fitted rectangular laboratory grid with an explicit tool strip.",
         "interactionDifference": "crossline-5x5 uses overlay-list navigation; PetriForge exposes cell brushes, undo, procedural maps and a separately stepped learning worker."
+      },
+      {
+        "slug": "black-bazaar",
+        "spatialDifference": "Black Bazaar presents commerce and hidden objectives in a market-facing negotiation table; PetriForge gives the majority of the viewport to an editable square-cell arena and simulation meters.",
+        "interactionDifference": "In Black Bazaar participants make economic decisions. PetriForge draws map geometry then runs a live learning agent, with optional diagnostics outside the simulation."
+      },
+      {
+        "slug": "blockies",
+        "spatialDifference": "Blockies is organized around a compact cooperative block-placement board and hand controls. PetriForge centers on a large grid laboratory, instrument strip and analytical side rail.",
+        "interactionDifference": "Blockies places and moves blocks during a party match; PetriForge edits a world, steps agent simulation and observes training results."
       }
     ]
   },
