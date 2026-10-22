@@ -96,6 +96,11 @@
         "slug": "turniket",
         "spatialDifference": "В центре ПОСЛЕДНЕЙ ПЛИТЫ только одна квадратная шахматоподобная арена 7×7 с глубокой сеткой каменных элементов.",
         "interactionDifference": "Здесь выбирают направление для секундного дискретного тика, а не рисуют, таскают предметы или управляют в реальном времени."
+      },
+      {
+        "slug": "black-bazaar",
+        "spatialDifference": "Black Bazaar is a multi-column barter and inventory interface with private offers; Last Tile Duel focuses on a single crumbling 7×7 stone arena with two large movement controls at the bottom.",
+        "interactionDifference": "Black Bazaar conducts private bids and anonymous trades across timed rounds, whereas Last Tile Duel commits one movement simultaneously each second and destroys the floor beneath the players."
       }
     ]
   },
