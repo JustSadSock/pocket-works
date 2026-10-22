@@ -102,3 +102,119 @@ test('Rare legendary destiny can claim second, never first, when linked player w
  // The link is honored only if the linked player survives all urgent waves.
  if(!linked.bankrupt)assert.equal(state.ranking[1].id,linked.id);
 });
+
+
+test('Direct deals support resource swaps across turns; only parties can inspect terms',()=>{
+ const {state}=makeRoom(4);
+ const [a,b,c]=state.contestants;
+ const give={gold:25,crystals:0,parts:0},want={gold:0,crystals:5,parts:0};
+ const beforeA={...a.resources},beforeB={...b.resources};
+ act(state,a.id,{type:'deal_propose',to:b.id,give,want});
+ assert.equal(state.deals.length,1);
+ const id=state.deals[0].id;
+ const own=game.viewForPlayer({state,player:{id:a.id}});
+ const recipient=game.viewForPlayer({state,player:{id:b.id}});
+ const stranger=game.viewForPlayer({state,player:{id:c.id}});
+ assert.equal(own.deals.length,1);
+ assert.equal(recipient.deals.length,1);
+ assert.equal(stranger.deals.length,0);
+ assert.equal(stranger.players[0].inventory.every(item=>!('positive' in item)&&!('negative' in item)),true);
+ assert.equal(own.players.some(p=>'quota' in p||'positiveTarget' in p),false);
+ const malicious=act(state,c.id,{type:'deal_accept',dealId:id});
+ assert.equal(malicious.events[0].type,'notice');
+ assert.equal(state.deals.length,1);
+ act(state,b.id,{type:'deal_accept',dealId:id});
+ assert.equal(state.deals.length,0);
+ assert.equal(a.resources.gold,beforeA.gold-25);
+ assert.equal(a.resources.crystals,beforeA.crystals+5);
+ assert.equal(b.resources.gold,beforeB.gold+25);
+ assert.equal(b.resources.crystals,beforeB.crystals-5);
+ const replay=act(state,b.id,{type:'deal_accept',dealId:id});
+ assert.equal(replay.events[0].type,'notice');
+});
+test('Private barter moves both owned items, reveals private attributes to new owners, and enforces resale cooldown',()=>{
+ const {state}=makeRoom(2);
+ const [a,b]=state.contestants;
+ const first=a.items[0],second=b.items[0];
+ act(state,a.id,{type:'deal_propose',to:b.id,
+   give:{gold:0},want:{crystals:0},giveItemId:first.id,wantItemId:second.id
+ });
+ assert.equal(state.deals.length,1);
+ const id=state.deals[0].id;
+ act(state,b.id,{type:'deal_accept',dealId:id});
+ assert.ok(b.items.some(item=>item.id===first.id));
+ assert.ok(a.items.some(item=>item.id===second.id));
+ assert.equal(first.acquiredRound,state.round);
+ assert.equal(second.acquiredRound,state.round);
+ const view=game.viewForPlayer({state,player:{id:b.id}});
+ assert.ok(view.you.items.some(item=>item.id===first.id&&item.positive&&item.negative));
+ const fail=act(state,b.id,{type:'deal_propose',to:a.id,give:{gold:0},want:{gold:1},giveItemId:first.id});
+ assert.equal(fail.events[0].type,'notice');
+ assert.equal(state.deals.length,0);
+});
+test('Private proposals cannot spend counterfeit balances and expire when their items are sold',()=>{
+ const {state}=makeRoom(3);
+ const [a,b]=state.contestants;
+ const rejected=act(state,a.id,{type:'deal_propose',to:b.id,give:{gold:3000},want:{gold:1}});
+ assert.equal(rejected.events[0].type,'notice');
+ assert.equal(state.deals.length,0);
+ const item=a.items[0];
+ act(state,a.id,{type:'deal_propose',to:b.id,give:{gold:1},want:{gold:2},giveItemId:item.id});
+ assert.equal(state.deals.length,1);
+ act(state,a.id,{type:'post',itemId:item.id,ask:{gold:20}});
+ const stale=act(state,b.id,{type:'deal_accept',dealId:state.deals[0].id});
+ assert.equal(stale.events[0].type,'notice');
+ assert.equal(a.items.some(x=>x.id===item.id),true);
+ act(state,b.id,{type:'bid',offer:{gold:20}});
+ act(state,a.id,{type:'accept',buyer:b.id});
+ assert.equal(state.deals.length,0);
+});
+test('Two simultaneous proposals cannot double-spend the same funds',()=>{
+ const {state}=makeRoom(3);
+ const [a,b,c]=state.contestants;
+ // Both recipients promise resources, but the origin has only 250 gold.
+ for(const target of [b,c])act(state,target.id,{type:'deal_propose',to:a.id,
+   give:{gold:1},want:{gold:200}});
+ assert.equal(state.deals.length,2);
+ const idB=state.deals.find(d=>d.from===b.id).id;
+ const idC=state.deals.find(d=>d.from===c.id).id;
+ act(state,a.id,{type:'deal_accept',dealId:idB});
+ assert.equal(a.resources.gold,51);
+ const reply=act(state,a.id,{type:'deal_accept',dealId:idC});
+ assert.equal(reply.events[0].type,'notice');
+ assert.equal(a.resources.gold,51);
+ assert.equal(b.resources.gold,449);
+ assert.equal(c.resources.gold,250);
+});
+test('An urgent personal task can be completed using resources traded during another player turn',()=>{
+ const {state}=makeRoom(2);
+ const [a,b]=state.contestants;
+ // Move to the third round, and stop on the first player's urgent task.
+ while(state.round<3){const turn=state.contestants[state.turnIndex];act(state,turn.id,{type:'end'});}
+ const onDuty=state.contestants[state.turnIndex],friend=state.contestants.find(p=>p.id!==onDuty.id);
+ onDuty.urgent={needs:{gold:0,crystals:3,parts:0},status:'pending'};
+ onDuty.resources.crystals=0;
+ const before=friend.resources.crystals;
+ act(state,onDuty.id,{type:'deal_propose',to:friend.id,give:{gold:1},want:{crystals:3}});
+ const id=state.deals[0].id;
+ act(state,friend.id,{type:'deal_accept',dealId:id});
+ assert.equal(friend.resources.crystals,before-3);
+ act(state,onDuty.id,{type:'end'});
+ assert.equal(onDuty.urgent.status,'success');
+ assert.equal(onDuty.strikes,0);
+});
+test('Leaving player forfeits; remaining players finish without stalled bankrupt turns',()=>{
+ const {state,players}=makeRoom(3);
+ const quitter=state.contestants[1];
+ const remaining=state.players.filter(p=>p.id!==quitter.id);
+ game.onLeave({state,player:{id:quitter.id},players:remaining});
+ assert.equal(quitter.bankrupt,true);
+ let guard=0;
+ while(state.phase==='play'&&guard++<100){
+  const turn=state.contestants[state.turnIndex];
+  assert.notEqual(turn.id,quitter.id);
+  act(state,turn.id,{type:'end'});
+ }
+ assert.equal(state.phase,'done');
+ assert.ok(guard<100);
+});
