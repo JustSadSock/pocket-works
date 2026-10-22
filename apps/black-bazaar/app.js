@@ -269,18 +269,27 @@ function restoreDrafts(drafts){
   }
  }
 }
+function updateTurnClock(){
+ const node=document.querySelector('#turnClock');
+ if(!node||!state?.deadlineAt)return;
+ const left=Math.max(0,Math.ceil((state.deadlineAt-Date.now())/1000));
+ node.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');
+ node.setAttribute('aria-label','До конца хода '+left+' секунд');
+}
 function renderPlay(){
  const drafts=mode==='play'?collectDrafts():{};
  mode='play';const you=state.you;
  if(!you){app.innerHTML='<p>Синхронизация личного состояния…</p>';return;}
  const active=state.turnId===me?.id;
  app.innerHTML='<div class="row"><h1>Раунд '+state.round+' / '+state.rounds+'</h1><span class="chip">'+(active?'Твой ход':'Ход: '+esc(label(state.turnId)))+'</span>'+
+ '<span class="chip">Осталось: <strong id="turnClock" role="timer">—</strong></span>'+
  '<button type="button" data-action="leave">Выйти из комнаты</button></div>'+
  '<div class="panel"><h2>'+esc(you.character)+'</h2><p>Запасы: <strong>'+esc(amounts(you.resources))+'</strong>. Провалы срочных заказов: '+state.players.find(p=>p.id===me.id)?.strikes+'/3.</p></div>'+
  '<div class="layout"><div>'+secretBlock(you)+urgentBlock(you)+inventoryBlock(you)+'</div>'+
  '<div>'+blackMarketBlock(you)+tradePanel(you)+marketBlock(you,active)+repackBlock(you)+(active?actionsBlock(you):'<div class="panel"><p>Пока другой игрок продаёт товар, можно предложить ставку на его лот или прямой обмен.</p></div>')+'</div>'+
  '<div class="wide">'+scoreBox()+'<div class="panel"><h2>Журнал событий</h2><ol>'+state.log.map(entry=>'<li>'+esc(entry)+'</li>').join('')+'</ol></div></div></div>';
  restoreDrafts(drafts);
+ updateTurnClock();
 }
 function renderDone(){
  mode='done';
@@ -416,4 +425,5 @@ app.addEventListener('submit',event=>{
  if(type==='exchange')return request({type:'exchange',mode:data.get('mode')});
 });
 renderHome();
+setInterval(updateTurnClock,1000);
 try{const saved=JSON.parse(sessionStorage.getItem('pocket-net:'+ORIGIN)||'null');if(saved?.roomId)connect('resume');}catch{}
