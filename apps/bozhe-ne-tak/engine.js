@@ -48,7 +48,7 @@ export const DOCTRINES=Object.freeze([
  {id:'food',name:'Съедобная истина',desc:'Пища +1. Иное —1.',positive:'Вера поддерживается пищей.',negative:'Жрецы забыли кормить веру.'}
  ,...EXTRA_DOCTRINES
 ]);
-export export const VOWS=Object.freeze([
+export const VOWS=Object.freeze([
  {id:'steady',name:'Обычный обряд',detail:'Без дополнительного риска.'},
  {id:'bold',name:'Дерзкий обет',detail:'Благословение +3 милости, сомнение −1, гнев −3.'},
  {id:'shelter',name:'Обет осторожности',detail:'Благословение +1, сомнение +1, гнев −1.'}
