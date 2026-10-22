@@ -5,8 +5,12 @@ import {svgIcon,brandEmblem} from './art.js';
 import {artifactSVG} from './art/artifacts.js';
 import {classifyFeedback,createAudioFeedback} from './feedback.js';
 import {roleCharacter,characterMarkup,applyCharacterArt,loadCharacterArt} from './art/characters.js';
+import {createBazaarDebug} from './debug-console.js';
+import {createDebugState,debugSetItem,debugCommand} from './debug-state.js';
+
+const debugPreview=new URLSearchParams(location.search).has('debugPreview');
 installMobileRuntime();
-createWorkshopMode({appName:'Чёрная барахолка',version:'0.13.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.14.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -61,7 +65,7 @@ let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
 const decorativeGuests=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
 let notice='';
 let activeSheet=null,lastSheetTrigger=null,selectedArtifact=null;
-const sound=createAudioFeedback();
+const sound=createAudioFeedback(debugPreview?{storage:{getItem:()=>null,setItem(){}}}:{});
 let cueTimer=null;
 function message(m,isError=false){notice=m;status.textContent=m;status.className=isError?'error':'muted';}
 function soundToggle(){
@@ -72,7 +76,7 @@ function soundToggle(){
 }
 const cueIcons={curse:'eye',ward:'star',warning:'eye',reward:'gem',deal:'trade',
  craft:'parts',inspect:'eye',bid:'coin',reveal:'bag',round:'scroll',turn:'gavel',finish:'star'};
-function showConfirmedCue(cue){
+function showConfirmedCue(cue,playAudio=true){
  if(!cue||mode!=='play'&&mode!=='done')return;
  clearTimeout(cueTimer);
  const root=app.querySelector('.play-screen')||app;
@@ -94,9 +98,9 @@ function showConfirmedCue(cue){
   scene.appendChild(burst);
   cueTimer=setTimeout(()=>{banner.remove();burst.remove()},1450);
  }else cueTimer=setTimeout(()=>banner.remove(),1450);
- sound.play(cue.kind);
+ if(playAudio)sound.play(cue.kind);
 }
-function localStore(){const node=document.querySelector('#nickname');if(node)name=(node.value.trim()||'Игрок').slice(0,22);try{localStorage.setItem('black-bazaar:name',name);}catch{}}
+function localStore(){const node=document.querySelector('#nickname');if(node)name=(node.value.trim()||'Игрок').slice(0,22);if(!debugPreview)try{localStorage.setItem('black-bazaar:name',name);}catch{}}
 function renderHome(){
  mode='home';activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
  app.innerHTML='<div class="entry-screen">'+
@@ -636,6 +640,10 @@ function wire(client){
  client.on('room_closed',()=>{if(net!==client)return;closeRoom();message('Комната закрылась.',true);});
 }
 async function connect(kind,code=''){
+ if(debugPreview){
+  state=createDebugState('lobby');me={id:'debug-0',name:'Алиса'};roomId='DBGLOCAL';
+  render();return;
+ }
  if(connecting)return;
  connecting=true;state=null;roomId='';renderHome();message('Подключение к PocketNet…');
  try{
@@ -651,6 +659,16 @@ async function connect(kind,code=''){
  }catch(e){connecting=false;message('Нет соединения: '+e.message,true);if(net){net.close();net=null;}}
 }
 function request(payload){
+ if(debugPreview){
+  const before=structuredClone(state);
+  const result=debugCommand(state,payload);
+  if(result.error){message(result.error,true);return;}
+  state=result.state;
+  const cue=classifyFeedback(before,state,me?.id);
+  render();message('');
+  if(cue)showConfirmedCue(cue);
+  return;
+ }
  if(!net||!connected){message('Нет соединения с комнатой.',true);return;}
  try{net.sendGame(payload);message('');}catch(e){message('Не удалось отправить: '+e.message,true);}
 }
@@ -815,6 +833,7 @@ app.addEventListener('submit',event=>{
  if(type==='exchange')return request({type:'exchange',mode:data.get('mode')});
 });
 renderHome();
+if(!debugPreview)createBazaarDebug();
 loadCharacterArt().catch(error=>{console.warn('Unable to load character art:',error);message('Иллюстрации недоступны — игра продолжает работать.',true);});
 let lastHeartbeat=0;
 setInterval(()=>{
@@ -824,4 +843,54 @@ setInterval(()=>{
   try{net.sendGame({type:'tick'});}catch{}
  }
 },1000);
-try{const saved=JSON.parse(netStorage.getItem('pocket-net:'+ORIGIN)||'null');if(saved?.roomId)connect('resume');}catch{}
+if(!debugPreview)try{const saved=JSON.parse(netStorage.getItem('pocket-net:'+ORIGIN)||'null');if(saved?.roomId)connect('resume');}catch{}
+if(debugPreview){
+ const emit=(type,extra={})=>window.parent?.postMessage({source:'bazaar-debug-preview',type,...extra},location.origin);
+ const showScene=id=>{
+  state=createDebugState(id);me={id:'debug-0',name:'Алиса'};roomId='DBGLOCAL';
+  selectedArtifact=null;activeSheet=null;render();
+  emit('status',{message:'Сцена: '+id+' · тестовые данные'});
+ };
+ const audit=()=>{
+  const width=document.documentElement.clientWidth;
+  const overflow=Math.max(0,document.documentElement.scrollWidth-width);
+  const visible=[...document.querySelectorAll('#app button:not([hidden]):not(:disabled),#app input:not(:disabled),#app select:not(:disabled)')]
+   .filter(el=>!el.closest('[hidden]')&&getComputedStyle(el).display!=='none');
+  const small=visible.filter(el=>{const box=el.getBoundingClientRect();return box.width>0&&box.height>0&&
+   (box.width<38||box.height<38)}).map(el=>({text:(el.getAttribute('aria-label')||el.textContent||'').trim().slice(0,38),
+     width:Math.round(el.getBoundingClientRect().width),height:Math.round(el.getBoundingClientRect().height)}));
+  const issues=[];
+  if(overflow>2)issues.push('Горизонтальное переполнение: '+overflow+'px');
+  if(small.length)issues.push('Мелкие элементы: '+small.length);
+  if(!document.querySelector('#app button')&&state?.phase==='play')issues.push('Игровые действия отсутствуют');
+  emit('audit',{report:{viewport:width+' × '+document.documentElement.clientHeight,
+   horizontalOverflow:overflow,actionable:visible.length,smallTargets:small.slice(0,12),issues}});
+ };
+ window.addEventListener('message',event=>{
+  if(event.origin!==location.origin||event.source!==window.parent||event.data?.source!=='bazaar-debug-console')return;
+  const d=event.data;
+  if(d.type==='scene')return showScene(d.id);
+  if(d.type==='item'){
+   if(!state||state.phase!=='play')showScene('four');
+   debugSetItem(state,Number(d.index),d.kind);
+   const id=d.kind==='inventory'?'debug-selected-'+d.index:d.kind==='black'?'selected-black':d.kind==='broker'?'debug-selected-'+d.index:'debug-selected-'+d.index;
+   selectedArtifact={kind:d.kind,id};
+   renderPlay();openSheet('detail',true);
+   emit('status',{message:'Предмет: '+(state.listing?.name||state.you?.items?.[0]?.name||'открыт')});
+   return;
+  }
+  if(d.type==='sheet'){
+   if(!state||state.phase!=='play')showScene('four');
+   if(d.name==='detail'&&!selectedArtifact)selectedArtifact={kind:'inventory',id:state.you.items[0]?.id};
+   renderPlay();openSheet(d.name,true);
+   emit('status',{message:'Раздел: '+d.name});return;
+  }
+  if(d.type==='effect'){
+   showConfirmedCue({kind:d.kind,label:d.label},false);
+   emit('status',{message:'Эффект: '+d.label});return;
+  }
+  if(d.type==='audit')return audit();
+ });
+ document.querySelector('[data-preview-exit]')?.addEventListener('click',e=>{e.preventDefault();window.parent?.postMessage({source:'bazaar-debug-preview',type:'status',message:'Закрой мастерскую кнопкой ×'},location.origin)});
+ emit('ready');
+}

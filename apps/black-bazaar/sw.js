@@ -1,13 +1,13 @@
-const APP_VERSION='0.13.0';
+const APP_VERSION='0.14.0';
 const VERSION=APP_VERSION;
 const RELEASE_DATE='2026-10-22';
-const RELEASE_NOTES = ["Короткие анимации карточек, лотов и подтверждённых сделок.","События проклятий, экспертизы и ставок получили отдельные визуальные реакции.","Локальные звуки можно отключить; настройки сохраняются."];
+const RELEASE_NOTES = ["Мастерская с просмотром всех экранов, предметов, персонажей, звуков и анимаций.","Изолированная игровая симуляция и пять размеров предпросмотра: телефон, планшет, ПК.","Проверка адаптивности, кнопок и переполнения прямо в мастерской."];
 const NOTES=RELEASE_NOTES;
-const CACHE='black-bazaar-v0.13.0';
-const CACHE_NAME='black-bazaar-v0.13.0';
+const CACHE='black-bazaar-v0.14.0';
+const CACHE_NAME='black-bazaar-v0.14.0';
 const PREFIX='black-bazaar-v';
 const FILES=[
- './','./index.html','./app.js','./art.js','./art/characters.js','./art/artifacts.js','./feedback.js','./art/forest.svg','./art/table.svg','./styles.css','./app.config.json',
+ './','./index.html','./preview.html','./app.js','./debug-console.js','./debug-state.js','./art.js','./art/characters.js','./art/artifacts.js','./feedback.js','./art/forest.svg','./art/table.svg','./styles.css','./app.config.json',
  './manifest.webmanifest','./icons/icon.svg',
  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
  '../../shared/update-manager.css','../../shared/update-manager.js',
@@ -39,7 +39,7 @@ self.addEventListener('fetch',e=>{
  const url=new URL(e.request.url);
  if(url.origin!==location.origin||url.pathname.startsWith('/pocketnet/'))return;
  if(e.request.mode!=='navigate'&&!ENTRIES.has(url.pathname))return;
- const fallback=e.request.mode==='navigate'?ROOT.href:ENTRIES.get(url.pathname);
+ const fallback=e.request.mode==='navigate'?(ENTRIES.get(url.pathname)||ROOT.href):ENTRIES.get(url.pathname);
  e.respondWith((async()=>{
    try{
      const response=await fetch(e.request);

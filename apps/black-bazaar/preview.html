@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#20392f">
+<title>Black Bazaar · изолированный просмотр</title>
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body class="bazaar-preview">
+<main class="app-shell" data-app-shell data-keyboard-aware>
+<header><a class="header-back" href="#" data-preview-exit aria-label="Режим просмотра">←</a>
+<div class="header-title"><img src="./icons/icon.svg" alt="" width="36" height="36"><strong>Чёрная барахолка</strong></div>
+<span class="preview-indicator">ПРОСМОТР</span></header>
+<div id="status" role="status" aria-live="polite"></div>
+<section id="app" aria-live="off"><p>Подготовка сцены…</p></section>
+</main>
+<script type="module" src="./app.js"></script>
+</body></html>
