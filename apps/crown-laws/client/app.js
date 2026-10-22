@@ -887,6 +887,57 @@ function modalHTML() {
   `;
 }
 
+function debugSceneHTML(scene) {
+  const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,replay:app.replay,replayActive:app.replayActive};
+  let markup="";
+  try {
+    const state=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
+    app.screen="game";
+    app.local={...app.local,mode:"ai",state,waitingAi:false,passScreen:false,hotseatChooser:"p1"};
+    app.online={...app.online,roomState:null,roomCode:"",ready:{p1:false,p2:false},you:"p1"};
+    app.modal=null;
+    app.effects=[];app.lastConflictSlots=[];
+    app.selectedCardId=null;app.focusCardId=null;app.inspectedSlot=null;
+    app.replay=null;app.replayActive=false;
+    if(scene==="menu")markup=menuHTML();
+    else if(scene==="join"||scene==="waiting"){
+      app.screen="online";
+      if(scene==="waiting")app.online.roomCode="DEMO1";
+      markup=roomHTML();
+    }else{
+      if(scene==="ready"){app.screen="online";app.online.roomState=state;app.online.ready.p1=true;}
+      if(scene==="hotseat"){app.local.mode="hotseat";app.local.passScreen=true;app.local.hotseatChooser="p2";}
+      if(scene==="victory"){state.winner="p1";state.players.p1.activeCrowns=3;}
+      if(scene==="rules"||scene==="settings"||scene==="simulation"){
+        app.modal=scene;
+        if(scene==="simulation")app.simulationReport={turnsPlayed:20,turnsRequested:20,crowns:{p1:2,p2:1},conflicts:3,throneStands:{p1:3,p2:2},crownBlocked:2,averageDistance:{p1:1.8,p2:2.1}};
+      }
+      const anim=app.debug.animation;
+      if(anim==="crown"||anim==="shield")app.effects=[{kind:anim,x:2,y:3}];
+      if(anim==="beast-dash"||anim==="seal-trail")app.effects=[{kind:anim,from:{x:2,y:4},to:{x:3,y:2}}];
+      if(anim==="conflict")app.lastConflictSlots=["guard"];
+      markup=gameHTML(state,scene==="ready"?"Ожидание соперника":"Демонстрационная партия");
+      if(app.modal)markup+=modalHTML();
+    }
+  }finally{Object.assign(app,saved);}
+  return `<div class="debug-scene ${app.debug.animation?`debug-scene--anim-${app.debug.animation}`:""}"><div class="debug-scene__content" inert>${markup}</div><span class="debug-scene__label">ПРЕДПРОСМОТР · ${scene}</span></div>`;
+}
+
+function debugWorkshopHTML() {
+  const scenes=[["menu","Главное меню"],["game","Игровая партия"],["join","Создание / вход"],["waiting","Ожидание гостя"],["ready","Выбор запечатан"],["hotseat","Передача устройства"],["victory","Экран победы"],["rules","Правила"],["settings","Настройки"],["simulation","Отчёт симуляции"]];
+  const animations=[["move","Перемещение фишки"],["crown","Получение короны"],["shield","Защитный щит"],["beast-dash","Рывок зверя"],["seal-trail","Похищение печати"],["conflict","Конфликт законов"],["card","Выбор карты"]];
+  const sounds=[["tap","Выбор карты"],["ready","Утверждение"],["move","Перемещение"],["conflict","Конфликт"],["crown","Корона"]];
+  return `<aside class="debug-workshop" role="dialog" aria-label="Мастерская разработчика">
+    <header class="debug-workshop__top"><div><small>Тильда · Backquote</small><h2>Мастерская</h2></div><button type="button" data-debug-close class="ghost-btn" aria-label="Закрыть">×</button></header>
+    <nav class="debug-workshop__tabs" aria-label="Разделы отладки">${[["screens","Экраны"],["animations","Анимации"],["sounds","Звуки"],["balance","Баланс"]].map(([id,label])=>`<button type="button" class="${app.debug.tab===id?"is-active":""}" data-debug-tab="${id}">${label}</button>`).join("")}</nav>
+    ${app.debug.tab==="screens"?`<p>Настоящие игровые шаблоны с демонстрационными данными. Партия не изменяется.</p><div class="debug-workshop__items">${scenes.map(([id,label])=>`<button type="button" class="${app.debug.scene===id?"is-active":""}" data-debug-scene="${id}">${label}</button>`).join("")}</div>`:""}
+    ${app.debug.tab==="animations"?`<p>Выберите эффект — он запустится прямо на поле предпросмотра.</p><div class="debug-workshop__items">${animations.map(([id,label])=>`<button type="button" data-demo-animation="${id}">${label} ↗</button>`).join("")}</div>`:""}
+    ${app.debug.tab==="sounds"?`<p>Звуки можно прослушать даже при выключенных игровых эффектах.</p><div class="debug-workshop__items">${sounds.map(([id,label])=>`<button type="button" data-demo-sound="${id}">${label} ▶</button>`).join("")}</div>`:""}
+    ${app.debug.tab==="balance"?(app.local.state&&app.screen==="game"?`<p>Изменения применяются к текущей локальной партии.</p>${debugHTML(app.local.state)}`:"<p>Изменение баланса доступно в локальной партии с ИИ или на одном устройстве.</p>"):""}
+    <footer class="debug-workshop__foot">Закрыть: <kbd>~</kbd> или <kbd>Esc</kbd></footer>
+  </aside>`;
+}
+
 function render() {
   const state = currentState();
   if (app.screen === "menu") {
@@ -896,6 +947,7 @@ function render() {
   } else if (app.screen === "game" && state) {
     root.innerHTML = `${gameHTML(state, app.local.mode === "ai" ? AI_PROFILES[app.local.aiProfile].name : "Локальная партия")}${modalHTML()}`;
   }
+  if(app.debug.open)root.innerHTML=debugSceneHTML(app.debug.scene)+debugWorkshopHTML();
   animateBoard();
   syncExports();
   persistLocal();
@@ -948,6 +1000,19 @@ function syncExports() {
 }
 
 root.addEventListener("click", (event) => {
+  const dev=event.target.closest("[data-debug-close],[data-debug-tab],[data-debug-scene],[data-demo-animation],[data-demo-sound]");
+  if(dev){
+    if(dev.hasAttribute("data-debug-close"))app.debug.open=false;
+    if(dev.dataset.debugTab){app.debug.tab=dev.dataset.debugTab;if(app.debug.tab==="animations")app.debug.scene="game";}
+    if(dev.dataset.debugScene){app.debug.scene=dev.dataset.debugScene;app.debug.animation=null;}
+    if(dev.dataset.demoSound){playTone(dev.dataset.demoSound,true);return;}
+    if(dev.dataset.demoAnimation){
+      const name=dev.dataset.demoAnimation;
+      app.debug.scene="game";app.debug.animation=name;
+      window.setTimeout(()=>{if(app.debug.animation===name){app.debug.animation=null;if(app.debug.open)render();}},1300);
+    }
+    render();return;
+  }
   const stop = event.target.closest("[data-stop-click]");
   if (stop) {
     return;
@@ -1130,6 +1195,10 @@ root.addEventListener("drop", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
+  if((event.code==="Backquote"||event.key==="~"||event.key==="`")&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||"")){
+    event.preventDefault();app.debug.open=!app.debug.open;app.debug.animation=null;render();return;
+  }
+  if(event.key==="Escape"&&app.debug.open){app.debug.open=false;render();return;}
   if (event.key === "Escape" && app.modal) {
     closeModal();
   }
