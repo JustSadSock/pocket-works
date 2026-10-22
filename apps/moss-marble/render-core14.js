@@ -813,8 +813,8 @@ class WebGLDiorama {
   resize() {
     const rect = this.canvas.getBoundingClientRect();
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.width = Math.max(320, rect.width || window.innerWidth);
-    this.height = Math.max(480, rect.height || window.innerHeight);
+    this.width = Math.max(1, rect.width || this.canvas.clientWidth || window.innerWidth);
+    this.height = Math.max(1, rect.height || this.canvas.clientHeight || window.innerHeight);
     const pixelWidth = Math.round(this.width * this.dpr);
     const pixelHeight = Math.round(this.height * this.dpr);
     if (this.canvas.width !== pixelWidth || this.canvas.height !== pixelHeight) {
@@ -1182,8 +1182,8 @@ class CanvasFallback {
   resize() {
     const rect = this.canvas.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.width = Math.max(320, rect.width || window.innerWidth);
-    this.height = Math.max(480, rect.height || window.innerHeight);
+    this.width = Math.max(1, rect.width || this.canvas.clientWidth || window.innerWidth);
+    this.height = Math.max(1, rect.height || this.canvas.clientHeight || window.innerHeight);
     this.canvas.width = Math.round(this.width * dpr);
     this.canvas.height = Math.round(this.height * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
