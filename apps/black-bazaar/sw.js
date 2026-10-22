@@ -1,13 +1,13 @@
-const APP_VERSION='0.12.0';
+const APP_VERSION='0.13.0';
 const VERSION=APP_VERSION;
 const RELEASE_DATE='2026-10-22';
-const RELEASE_NOTES = ["Двенадцать индивидуальных SVG-артефактов: улучшенные силуэты, детали, материалы и тени.","Нажатие на предмет открывает подробную карточку с реальными действиями: торг, экспертиза, обмен, продажа.","Скрытые свойства не раскрываются рисунками; сохранены ставки при обновлении состояния."];
+const RELEASE_NOTES = ["Короткие анимации карточек, лотов и подтверждённых сделок.","События проклятий, экспертизы и ставок получили отдельные визуальные реакции.","Локальные звуки можно отключить; настройки сохраняются."];
 const NOTES=RELEASE_NOTES;
-const CACHE='black-bazaar-v0.12.0';
-const CACHE_NAME='black-bazaar-v0.12.0';
+const CACHE='black-bazaar-v0.13.0';
+const CACHE_NAME='black-bazaar-v0.13.0';
 const PREFIX='black-bazaar-v';
 const FILES=[
- './','./index.html','./app.js','./art.js','./art/characters.js','./art/artifacts.js','./art/forest.svg','./art/table.svg','./styles.css','./app.config.json',
+ './','./index.html','./app.js','./art.js','./art/characters.js','./art/artifacts.js','./feedback.js','./art/forest.svg','./art/table.svg','./styles.css','./app.config.json',
  './manifest.webmanifest','./icons/icon.svg',
  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
  '../../shared/update-manager.css','../../shared/update-manager.js',
