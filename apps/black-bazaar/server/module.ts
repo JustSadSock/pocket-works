@@ -117,7 +117,7 @@ const EVENT_CARDS={
 const eventId=s=>s.eventSchedule?.[s.round]||null;
 const eventIs=(s,id)=>eventId(s)===id;
 const eventCard=s=>{const id=eventId(s);return id?{id,...EVENT_CARDS[id]}:null;};
-const blackFee=s=>eventIs(s,'smuggler_holiday')?.05:MARKET_COMMISSION;
+const blackFee=s=>eventIs(s,'smuggler_holiday') ? 0.05 : MARKET_COMMISSION;
 const salvageYield=s=>eventIs(s,'salvage_boom')?3:2;
 const repackPrice=s=>eventIs(s,'mask_festival')?{gold:10,parts:0}:{gold:REPACK_GOLD,parts:REPACK_PARTS};
 const increment=(s,key)=>{if(s.metrics)s.metrics[key]=(s.metrics[key]||0)+1;};
