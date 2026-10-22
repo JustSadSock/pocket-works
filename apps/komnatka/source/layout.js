@@ -1,5 +1,7 @@
 // Canonical walkable footprints shared by placement, presentation and tests.
 // Old saved scenes without a layout remain classic.
+// All wall-mounted catalog objects must share the same footprint rules.
+const WALL_TYPES=new Set(['frame','window','mirror','clock','starwall','curtains']);
 export const LAYOUTS=[
  {id:'classic',name:'Классическая',description:'Знакомая квадратная комнатка'},
  {id:'narrow',name:'Узкая',description:'Маленькая и уютная'},
@@ -15,8 +17,10 @@ export function containsPoint(id,x,z,margin=0){
  return true;
 }
 export function fitsLayout(id,item,width,depth){
- if(item.wall==='back'&&['frame','window','mirror','clock'].includes(item.type))return id!=='narrow'||Math.abs(item.x)+width/2<2.88;
- if(item.wall==='left'&&['frame','window','mirror','clock'].includes(item.type))return true;
+ if(WALL_TYPES.has(item.type)){
+  if(item.wall==='back')return id!=='narrow'||Math.abs(item.x)+width/2<2.88;
+  if(item.wall==='left')return true;
+ }
  // Each corner of the item's footprint must sit on a real piece of floor.
  const hw=width/2,hd=depth/2;
  return [[-hw,-hd],[hw,-hd],[-hw,hd],[hw,hd]].every(([dx,dz])=>containsPoint(id,item.x+dx,item.z+dz));
