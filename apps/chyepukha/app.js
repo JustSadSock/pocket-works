@@ -186,7 +186,7 @@ async function connect(how,settings){
   c.on('room_joined',v=>{
    if(net!==c)return;
    clearRoomTimeout();
-   if(v.gameId!=='chyepukha'||!['v1','v2','v3'].includes(v.version)||v.state?.protocol!==1){
+   if(v.gameId!=='chyepukha'||!['v1','v2','v3','v4'].includes(v.version)||v.state?.protocol!==1){
     notice='Несумісна версія кімнати. Створи нову.';try{c.leaveRoom()}catch{}
     room='';view=null;render();return;
    }
