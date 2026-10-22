@@ -17,6 +17,7 @@ import {
   coordLabel,
   createInitialState,
   resolveTurn,
+  forecastTurn,
   serializeTextState
 } from "../shared/game-engine.js";
 import { chooseAiCard } from "../shared/ai.js";
@@ -36,12 +37,14 @@ const app = {
   simulationReport: null,
   inspectedSlot: null,
   historyExpanded: false,
+  forecast: null,
+  forecastReview: false,
   replay: null,
   preResolutionState: null,
   replayActive: false,
   replayStage: "after",
   replayTimer: null,
-  debug: { open: false, tab: "screens", scene: "game", animation: null },
+  debug: { open: false, tab: "screens", scene: "game", animation: null, selectedCardId: null, focusCardId: null, inspectedSlot: null, forecast: null, forecastReview: false },
   debugSelects: Object.fromEntries(SLOT_TYPES.map((slot) => [slot, "base"])),
   settings: {
     sound: true,
@@ -262,6 +265,8 @@ function startLocalGame(mode, aiProfile = "contender") {
   app.replayActive = false;
   app.inspectedSlot = null;
   app.historyExpanded = false;
+  app.forecast = null;
+  app.forecastReview = false;
   app.selectedCardId = null;
   app.focusCardId = null;
   app.lastConflictSlots = [];
@@ -448,23 +453,18 @@ function activeLaws(state) {
   return activeLawSummary(state);
 }
 
-function crownRow(player, title, side = "north") {
-  return `
-    <div class="crown-bar crown-bar--${side}">
-      <span class="crown-bar__label">${title}</span>
-      <div class="crown-bar__icons">
-        <span class="crown crown--active" title="Активные короны" aria-label="Активные короны: ${player.activeCrowns}"><i></i>${player.activeCrowns}</span>
-        <span class="crown crown--sealed" title="Запечатанные короны" aria-label="Запечатанные короны: ${player.sealedCrowns}"><i></i>${player.sealedCrowns}</span>
-        <span class="crown crown--lost" title="Потерянные короны" aria-label="Потерянные короны: ${player.lostCrowns}"><i></i>${player.lostCrowns}</span>
-      </div>
-    </div>
-  `;
+function crownRow(player,title,side="north") {
+  const lit=Math.max(0,Math.min(3,player.activeCrowns));
+  return `<div class="crown-bar crown-bar--${side}" aria-label="${title}: ${lit} из 3 корон">
+    <div class="crown-bar__identity"><span class="crown-bar__portrait sprite-figure sprite-figure--${side}" aria-hidden="true"></span><span class="crown-bar__label">${title}</span></div>
+    <div class="crown-bar__icons crown-row" role="img" aria-label="Получено корон: ${lit} из 3">
+      ${Array.from({length:3},(_,i)=>`<span class="crown-mark ${i<lit?"is-earned":"is-empty"}" aria-hidden="true"><svg viewBox="0 0 48 40"><path d="M5 33L2 11l12 10L24 4l10 17 12-10-3 22-5 4H10Z"/><path d="M9 29h30" fill="none" stroke-width="3"/></svg></span>`).join("")}
+    </div></div>`;
 }
 
 function pieceGlyph(piece) {
-  // Carved typographic counters: no raster sprites or SVG.
-  const marks = { champion: "К", guard: "С", beast: "З", priest: "Ж", thief: "В" };
-  return '<span class="piece__sigil" aria-hidden="true">' + (marks[piece.kind] || "·") + '</span>';
+  const key=piece.kind==="champion"?(piece.owner==="p1"?"north":"south"):piece.kind;
+  return `<span class="piece__portrait sprite-figure sprite-figure--${key}" aria-hidden="true"></span>`;
 }
 
 function effectsHTML() {
@@ -482,56 +482,13 @@ function effectsHTML() {
 }
 
 function boardHTML(state) {
-  const cells = [];
-  for (let y = 0; y < 7; y += 1) {
-    for (let x = 0; x < 5; x += 1) {
-      cells.push(`
-        <div class="board-cell ${x === THRONE.x && y === THRONE.y ? "board-cell--throne" : ""}">
-          <span>${String.fromCharCode(65 + x)}${y + 1}</span>
-        </div>
-      `);
-    }
-  }
-
-  const pieces = Object.values(state.pieces)
-    .map((piece) => {
-      const classes = [
-        "piece",
-        `piece--${piece.kind}`,
-        piece.id === "champion_p1" ? "piece--p1" : piece.id === "champion_p2" ? "piece--p2" : "",
-        piece.shield ? "piece--shielded" : "",
-        piece.stun ? "piece--stunned" : "",
-        piece.carryingSeal ? "piece--sealed" : ""
-      ]
-        .filter(Boolean)
-        .join(" ");
-      return `
-        <button type="button" class="${classes} ${app.inspectedSlot === piece.kind ? "piece--focused" : ""}" data-piece-kind="${piece.kind}" data-piece-id="${piece.id}" aria-label="${piece.kind === "champion" ? (piece.owner === "p1" ? "Чемпион Севера" : "Чемпион Юга") : SLOT_LABELS[piece.kind]}" style="--x:${piece.x};--y:${piece.y}">
-          <div class="piece__token">
-            ${pieceGlyph(piece)}
-            ${piece.shield ? `<span class="status-chip status-chip--shield">Щит</span>` : ""}
-            ${piece.stun ? `<span class="status-chip status-chip--stun">Оглушен</span>` : ""}
-            ${piece.carryingSeal ? `<span class="status-chip status-chip--seal">Печать</span>` : ""}
-          </div>
-        </button>
-      `;
-    })
-    .join("");
-
-  return `
-    <section class="board-panel">
-      <div class="board-caption">
-        <span class="board-caption__title">Королевский двор</span>
-        <span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span>
-      </div>
-      <div class="board-surround"><div class="board">
-        <div class="board-grid">${cells.join("")}</div>
-        <div class="board-glow"></div>
-        <div class="board-effects">${effectsHTML()}</div>
-        ${pieces}
-      </div></div>
-    </section>
-  `;
+ const cells=[];
+ for(let y=0;y<7;y++)for(let x=0;x<5;x++)cells.push(`<div class="board-cell ${x===THRONE.x&&y===THRONE.y?"board-cell--throne":""}"><span>${String.fromCharCode(65+x)}${y+1}</span></div>`);
+ const pieces=Object.values(state.pieces).map(piece=>{
+  const cls=["piece",`piece--${piece.kind}`,piece.owner==="p1"?"piece--p1":piece.owner==="p2"?"piece--p2":"",piece.shield?"piece--shielded":"",piece.stun?"piece--stunned":"",piece.carryingSeal?"piece--sealed":"",app.inspectedSlot===piece.kind?"piece--focused":""].filter(Boolean).join(" ");
+  return `<button type="button" class="${cls}" data-piece-kind="${piece.kind}" data-piece-id="${piece.id}" title="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" aria-label="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" style="--x:${piece.x};--y:${piece.y}"><span class="piece__token">${pieceGlyph(piece)}${piece.shield?'<span class="piece__status piece__status--shield" title="Щит">✦</span>':""}${piece.stun?'<span class="piece__status piece__status--stun" title="Оглушение">✕</span>':""}${piece.carryingSeal?'<span class="piece__status piece__status--seal" title="Похищенная печать">◇</span>':""}</span></button>`;
+ }).join("");
+ return `<section class="board-panel"><div class="board-caption"><span class="board-caption__title">Королевский двор</span><span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span></div><div class="board-surround"><div class="board"><div class="board-grid">${cells.join("")}</div><div class="board-glow"></div><div class="board-effects">${effectsHTML()}</div>${pieces}</div></div></section>`;
 }
 
 function lawSlotsHTML(state) {
@@ -543,7 +500,7 @@ function lawSlotsHTML(state) {
       const law=laws[slot],base=!state.slots[slot].activeCardId;
       const id=base?BASE_LAWS[slot].id:law.id;
       return `<button type="button" data-native-press class="law-slot ${app.inspectedSlot===slot?"law-slot--focused":""} ${app.lastConflictSlots.includes(slot)?"law-slot--conflict":""}" style="--slot-color:${SLOT_COLORS[slot]}" data-slot="${slot}" data-focus-card="${id}" title="${law.name}" aria-pressed="${app.inspectedSlot===slot}">
-        <span class="law-slot__short">${short[slot]}</span><span class="law-slot__copy"><span class="law-slot__name">${law.name}</span><span class="law-slot__mode">${base?"Каменный закон":"Новый указ"}</span></span>
+        <span class="law-slot__sigil sprite-seal sprite-seal--${slot}" aria-hidden="true"></span><span class="law-slot__short">${short[slot]}</span><span class="law-slot__copy"><span class="law-slot__name">${law.name}</span><span class="law-slot__mode">${base?"Каменный закон":"Новый указ"}</span></span>
       </button>`;
     }).join("")}</div></section>`;
 }
@@ -561,19 +518,24 @@ function detailCard(state) {
   </section>`;
 }
 
+function forecastControlsHTML(){
+ if(!app.forecast)return "";
+ return `<div class="forecast-control" role="status"><span class="forecast-control__symbol">◈</span><div><strong>Условный ход · ${app.forecastReview?"после":"до"}</strong><span>${app.forecast.cardId?"Соперник не меняет закон":"Оба сохраняют законы"}</span></div><button type="button" class="ghost-btn" data-action="forecast-toggle">${app.forecastReview?"↶ Начало":"→ Результат"}</button><button type="button" class="text-btn" data-action="forecast-close" aria-label="Закрыть прогноз">×</button></div>`;
+}
+
 function handHTML(state) {
   const viewer=getViewerPlayer();
   const locked=(app.screen==="online"&&app.online.ready[viewer])||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
   return `<section class="hand-panel ${locked?"hand-panel--locked":""}">
     <div class="panel-head"><h3>Ваши указы</h3><span>${viewer==="p1"?"Север":"Юг"} · ${currentHand().length} карт</span></div>
-    ${locked?`<p class="sealed-notice">Ваш указ принят и запечатан. ${app.screen==="online"?"Ожидаем соперника.":"Идёт разрешение хода."}</p>`:""}
+    ${locked?`<div class="sealed-notice" role="status"><div class="sealed-notice__wax" aria-hidden="true"><span>✦</span></div><div class="sealed-notice__copy"><strong>Указ запечатан</strong><span>${app.screen==="online"?"Ход соперника":"Разыгрывание хода"}</span></div><span class="sealed-notice__pulse" aria-hidden="true"><i></i><i></i><i></i></span></div>`:""}
     <div class="hand" role="group" aria-label="Выбор одного указа">${currentHand().map(cardId=>{
       const card=cardById(cardId);
       return `<button type="button" class="law-card ${app.selectedCardId===cardId?"law-card--selected":""}" style="--card-color:${SLOT_COLORS[card.slot]}" aria-pressed="${app.selectedCardId===cardId}" ${locked?"disabled":""} draggable="${!locked}" data-card-id="${cardId}" data-focus-card="${cardId}">
-        <span class="law-card__slot">${SLOT_LABELS[card.slot].replace("Закон ","")}</span><strong class="law-card__title">${card.name}</strong></button>`;
+        <span class="law-card__sigil sprite-seal sprite-seal--${card.slot}" aria-hidden="true"></span><span class="law-card__copy"><span class="law-card__slot">${SLOT_LABELS[card.slot].replace("Закон ","")}</span><strong class="law-card__title">${card.name}</strong></span></button>`;
     }).join("")}</div>
     ${detailCard(state)}
-    <div class="hand-actions"><button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId||locked?"disabled":""}>${locked?"Указ запечатан":"Утвердить закон"}</button></div>
+    <div class="hand-actions"><button data-native-press class="ghost-btn forecast-btn" data-action="forecast-open" ${locked?"disabled":""} aria-label="Условный предпросмотр следующего хода">◈ Предпросмотр</button><button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId||locked?"disabled":""}>${locked?"◆ Указ отправлен":"◆ Утвердить"}</button></div>
   </section>`;
 }
 
@@ -751,8 +713,8 @@ function gameHTML(state, eyebrow) {
             </div>
           </div>
         </header>
-        <main class="game-layout">
-          <div class="game-layout__main">${boardHTML(app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : state)}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
+        ${forecastControlsHTML()}<main class="game-layout">
+          <div class="game-layout__main">${boardHTML(app.forecast ? (app.forecastReview ? app.forecast.after : app.forecast.before) : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : state))}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
           <aside class="game-layout__side">
             ${lawSlotsHTML(state)}
           </aside>
