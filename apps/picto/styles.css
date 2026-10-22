@@ -205,3 +205,7 @@ body{overflow:hidden}button,input{font:inherit}button{cursor:pointer}button:disa
  .toolbox{max-height:220px}
  .story-panel .stage{min-height:80px}
 }
+
+/* Workshop diagnostics remain secondary to the Picto story canvas. */
+.top .workshop-trigger{flex:0 0 auto;display:grid;place-items:center;min-width:36px;min-height:36px;padding:0 8px;border:1px solid var(--line);background:var(--paper2);color:var(--ink);border-radius:4px;font-size:23px;line-height:1;touch-action:manipulation}
+.top .workshop-trigger.is-pressed{transform:translateY(1px);background:#e4d6bd}
