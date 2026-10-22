@@ -610,8 +610,8 @@ function closeRoom(){
  net=null;me=null;state=null;roomId='';connected=false;connecting=false;message('');renderHome();
 }
 function wire(client){
- client.on('connected',data=>{if(net!==client)return;me=data.player;connected=true;message('PocketNet подключён.');});
- client.on('room_joined',data=>{if(net!==client)return;roomId=data.roomId;state=data.state;connecting=false;message('Комната подключена.');render();});
+ client.on('connected',data=>{if(net!==client)return;me=data.player;connected=true;message('');});
+ client.on('room_joined',data=>{if(net!==client)return;roomId=data.roomId;state=data.state;connecting=false;message('');render();});
  client.on('game_event',data=>{
   if(net!==client)return;
   if(data.event?.type==='state'){
@@ -652,7 +652,7 @@ async function connect(kind,code=''){
 }
 function request(payload){
  if(!net||!connected){message('Нет соединения с комнатой.',true);return;}
- try{net.sendGame(payload);message('Команда отправлена.');}catch(e){message('Не удалось отправить: '+e.message,true);}
+ try{net.sendGame(payload);message('');}catch(e){message('Не удалось отправить: '+e.message,true);}
 }
 async function copy(value){
  try{await navigator.clipboard.writeText(value);message('Скопировано.');}
