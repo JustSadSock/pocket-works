@@ -15,7 +15,7 @@ test('safety adaptation is an instruction to output a standalone revised prompt,
  const text=buildComicPrompt(story,{adapt:true});
  assert.match(text,/НЕ ГЕНЕРИРУЙ КАРТИНКИ/);
  assert.match(text,/для НОВОГО ЧАТА/);
- assert.match(text,/действительно допустимым/);
+ assert.match(text,/самостоятельный безопасный сценарий|безопасный сценарий|допустимые комедийные/);
  assert.match(text,/ПОЛНЫЙ ИСХОДНЫЙ ТЕКСТ/);
 });
 test('malformed or empty manuscripts are handled without synthetic scenes',()=>{
