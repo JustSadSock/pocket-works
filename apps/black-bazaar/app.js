@@ -3,7 +3,7 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {svgIcon,artifactSVG,brandEmblem} from './art.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Чёрная барахолка',version:'0.9.1',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+createWorkshopMode({appName:'Чёрная барахолка',version:'0.10.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
