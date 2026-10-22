@@ -56,6 +56,16 @@
         "slug": "rivals-field-notes",
         "spatialDifference": "The rivals-field-notes layout differs from Blockies: warm outer shell, full-width shared grid on phones, tiny numeric strip and two-thumb input deck.",
         "interactionDifference": "Blockies requires cell-precise hold, canvas swipe and fast hard drop, with PocketNet authoritative shared state instead of rivals-field-notes interaction."
+      },
+      {
+        "slug": "black-bazaar",
+        "spatialDifference": "Black Bazaar emphasizes collections and marketplace information panels; Blockies retains one unbroken, center-weighted 20-row play well, a slim score rail, and a thumb-reachable control deck.",
+        "interactionDifference": "Trade decisions and inventory inspection do not translate into the one-cell, continuous gravity-based movement, rotation and instant hard drop required by Blockies."
+      },
+      {
+        "slug": "picto",
+        "spatialDifference": "Picto arranges communal symbol and clue slots for group interpretation, while Blockies gives the falling board priority and moves its reward register into an optional overlay away from active play.",
+        "interactionDifference": "Picto's deliberate simultaneous symbol choices differ from Blockies' real-time movement with repeat-on-hold controls and server-verified collaborative line clears."
       }
     ]
   },
