@@ -1,10 +1,10 @@
-const APP_VERSION='0.7.0';
+const APP_VERSION='0.8.0';
 const VERSION=APP_VERSION;
 const RELEASE_DATE='2026-10-22';
-const RELEASE_NOTES = ["Анонимный рынок с закрытыми ставками, хранилищем посредника и комиссией.","Перепаковка предметов и платная проверка оригинала без раскрытия владельца.","Серверные таймеры ходов и автовыполнение дедлайна без браузера."];
+const RELEASE_NOTES = ["Отложенные проклятия с сохранением сроков после смены владельца.","Амулет защищает от одного провала срочного заказа; зеркало приносит прибыль при продаже.","Особая линза даёт скидку на экспертизу."];
 const NOTES=RELEASE_NOTES;
-const CACHE='black-bazaar-v0.7.0';
-const CACHE_NAME='black-bazaar-v0.7.0';
+const CACHE='black-bazaar-v0.8.0';
+const CACHE_NAME='black-bazaar-v0.8.0';
 const PREFIX='black-bazaar-v';
 const FILES=[
  './','./index.html','./app.js','./styles.css','./app.config.json',
