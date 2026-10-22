@@ -811,3 +811,162 @@ test('Anonymous echo bonus credits the seller without leaking their identity to 
  assert.equal(mirror.tradeUsedRound,2);
  assert.equal(state.log.some(message=>message.includes('Эхо перепродажи')&&message.includes(seller.character)),false);
 });
+
+
+test('Economic events are publicly announced only in rounds 4/6/8 with identical rules for every player',()=>{
+ for(const seats of [2,3,4,5,6]){
+  const {state}=makeRoom(seats);
+  assert.equal(Object.keys(state.eventSchedule).join(','),'4,6,8');
+  assert.deepEqual(new Set([state.eventSchedule[4],state.eventSchedule[6]]),
+    new Set(['salvage_boom','mask_festival']));
+  assert.ok(['smuggler_holiday','audit_fair'].includes(state.eventSchedule[8]));
+  for(let i=0;i<seats;i++){
+   const view=game.viewForPlayer({state,player:{id:state.contestants[i].id}});
+   assert.equal(view.event,null);
+   assert.equal('eventSchedule' in view,false,'future events must not leak before announced');
+  }
+  let guard=0;
+  while(state.phase==='play'&&guard++<100){
+   const turn=state.contestants[state.turnIndex];
+   const event=game.viewForPlayer({state,player:{id:turn.id}}).event;
+   if([4,6,8].includes(state.round)){
+     assert.equal(event.id,state.eventSchedule[state.round]);
+     for(const p of state.contestants){
+       assert.deepEqual(game.viewForPlayer({state,player:{id:p.id}}).event,event);
+     }
+   }else assert.equal(event,null);
+   act(state,turn.id,{type:'end'});
+  }
+  assert.equal(state.phase,'done');
+  assert.ok(guard<=100);
+  const report=game.viewForPlayer({state,player:{id:state.contestants[0].id}}).report;
+  assert.deepEqual(report.events,state.eventSchedule);
+ }
+});
+
+test('Salvage boom yields three actual parts; event changes only live eligible round',()=>{
+ const {state}=makeRoom(2);
+ state.eventSchedule={4:'salvage_boom',6:'mask_festival',8:'smuggler_holiday'};
+ while(state.round<4)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const player=state.contestants[state.turnIndex],item=player.items[0];
+ player.resources.parts=10;
+ assert.equal(game.viewForPlayer({state,player:{id:player.id}}).salvageParts,3);
+ const result=act(state,player.id,{type:'salvage',itemId:item.id});
+ assert.equal(result.events[0].type,'state');
+ assert.equal(player.resources.parts,13);
+ assert.equal(state.metrics.salvage,1);
+ const rejected=act(state,player.id,{type:'salvage',itemId:player.items[0]?.id});
+ assert.equal(rejected.events[0].type,'notice');
+ while(state.round===4)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ assert.equal(game.viewForPlayer({state,player:{id:player.id}}).salvageParts,2);
+});
+
+test('Mask festival removes the parts cost for repackaging but consumes ten gold',()=>{
+ const {state}=makeRoom(2);
+ state.eventSchedule={4:'salvage_boom',6:'mask_festival',8:'smuggler_holiday'};
+ while(state.round<6)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const actor=state.contestants[state.turnIndex],item=actor.items[0];
+ actor.resources.gold=30;actor.resources.parts=0;
+ assert.deepEqual(game.viewForPlayer({state,player:{id:actor.id}}).repackCost,{gold:10,parts:0});
+ const ok=act(state,actor.id,{type:'repack',itemId:item.id,aliasIndex:2});
+ assert.equal(ok.events[0].type,'state');
+ assert.equal(actor.resources.gold,20);
+ assert.equal(actor.resources.parts,0);
+ assert.equal(item.alias,'Тёмная реликвия');
+ assert.equal(state.metrics.repack,1);
+});
+
+test('Contraband event applies reduced exact fee, without revealing the anonymous seller',()=>{
+ const {state}=makeRoom(3);
+ state.eventSchedule={4:'salvage_boom',6:'mask_festival',8:'smuggler_holiday'};
+ while(state.round<8)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const [seller,buyer]=state.contestants;
+ seller.items=[{id:'item-9991',key:'pig',variant:1,acquiredRound:1,history:[]}];
+ buyer.items=[];seller.resources={gold:0,crystals:0,parts:0};
+ buyer.resources.gold=300;
+ assert.equal(game.viewForPlayer({state,player:{id:buyer.id}}).marketFeePercent,5);
+ act(state,seller.id,{type:'black_post',itemId:'item-9991',ask:{gold:100}});
+ const lot=state.blackLots[0];
+ act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:100}});
+ const accepted=act(state,seller.id,{type:'black_accept',lotId:lot.id,bidId:state.blackLots[0].bids[0].id});
+ assert.equal(accepted.events[0].type,'state');
+ assert.equal(seller.resources.gold,95);
+ assert.equal(state.metrics.blackSales,1);
+ assert.equal(game.viewForPlayer({state,player:{id:buyer.id}}).blackLots.length,0);
+ assert.equal(state.log.some(message=>message.includes('5% комиссии')),true);
+});
+
+test('Expert fair halves actual costs, with lens discount applied before halving',()=>{
+ const {state}=makeRoom(3);
+ state.eventSchedule={4:'salvage_boom',6:'mask_festival',8:'audit_fair'};
+ while(state.round<8)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const [seller,buyer,ordinary]=state.contestants;
+ seller.items=[{id:'item-9992',key:'pig',variant:1,acquiredRound:1,history:[]}];
+ buyer.items=[{id:'item-9993',key:'lens',variant:0,acquiredRound:1,history:[]}];
+ ordinary.items=[];
+ buyer.resources.gold=100;ordinary.resources.gold=100;
+ assert.deepEqual(game.viewForPlayer({state,player:{id:buyer.id}}).you.inspectionPrices,{public:4,black:8});
+ assert.deepEqual(game.viewForPlayer({state,player:{id:ordinary.id}}).you.inspectionPrices,{public:8,black:13});
+ act(state,seller.id,{type:'black_post',itemId:'item-9992',ask:{gold:12}});
+ const lot=state.blackLots[0];
+ act(state,buyer.id,{type:'black_inspect',lotId:lot.id});
+ act(state,ordinary.id,{type:'black_inspect',lotId:lot.id});
+ assert.equal(buyer.resources.gold,92);
+ assert.equal(ordinary.resources.gold,87);
+ assert.equal(state.metrics.inspections,2);
+});
+
+test('Final playtest metrics reflect only successful operations and hide live totals',()=>{
+ const {state}=makeRoom(4);
+ const [seller,buyer]=state.contestants;
+ assert.equal(game.viewForPlayer({state,player:{id:seller.id}}).report,null);
+ const item=seller.items[0];
+ act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:20}});
+ const bogus=act(state,buyer.id,{type:'bid',offer:{gold:1000000}});
+ assert.equal(bogus.events[0].type,'notice');
+ assert.equal(state.metrics.publicSales,0);
+ act(state,buyer.id,{type:'bid',offer:{gold:20}});
+ act(state,seller.id,{type:'accept',buyer:buyer.id});
+ assert.equal(state.metrics.publicSales,1);
+ let limit=0;
+ while(state.phase==='play'&&limit++<50){
+  const p=state.contestants[state.turnIndex];
+  act(state,p.id,{type:'end'});
+ }
+ assert.equal(state.phase,'done');
+ const publicReport=game.viewForPlayer({state,player:{id:buyer.id}}).report;
+ assert.equal(publicReport.publicSales,1);
+ assert.equal(publicReport.privateDeals,0);
+ assert.equal(publicReport.blackSales,0);
+ assert.ok(publicReport.urgentMet+publicReport.urgentMissed+publicReport.wardUsed<=12);
+});
+
+test('Independent four-player client projections converge after complete simulated online game',()=>{
+ const {state}=makeRoom(4);
+ const names=state.contestants.map(p=>p.id);
+ const snapshots=id=>game.viewForPlayer({state,player:{id}});
+ const getFull=()=>names.map(snapshots);
+ const views=getFull();
+ assert.ok(views.every(v=>v.phase==='play'&&v.players.length===4));
+ assert.equal(new Set(views.map(v=>v.you.id)).size,4);
+ assert.equal(views.every(v=>v.players.every(x=>!('quota' in x))),true);
+ let steps=0;
+ while(state.phase==='play'&&steps++<45){
+  const actor=state.contestants[state.turnIndex];
+  // Model each connected client as a distinct network receiver and actor.
+  const before=getFull();
+  const round=state.round,revision=state.revision;
+  if(!actor.bankrupt)act(state,actor.id,{type:'work',resource:'gold'});
+  act(state,actor.id,{type:'end'});
+  const after=getFull();
+  assert.ok(state.revision>revision);
+  assert.ok(after.every(v=>v.round>=round&&v.revision===state.revision));
+  for(const view of after)assert.equal(view.players.some(x=>'quota' in x),false);
+  for(const view of before)assert.equal(view.you.items.every(x=>'positive' in x),true);
+ }
+ assert.equal(state.phase,'done');
+ const done=getFull();
+ assert.ok(done.every(v=>JSON.stringify(v.ranking)===JSON.stringify(done[0].ranking)));
+ assert.ok(done.every(v=>JSON.stringify(v.report)===JSON.stringify(done[0].report)));
+ assert.equal(done[0].ranking.length,4);
+});
