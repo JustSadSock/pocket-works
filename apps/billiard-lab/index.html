@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#242d30">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="РИКОШЕТ">
+  <meta name="description" content="Математический бильярд: решай задачи и экспериментируй с геометрией траекторий.">
+  <title>РИКОШЕТ — Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+  <main class="app-shell" data-app-shell>
+    <header class="masthead" data-ui>
+      <div class="identity"><span class="brand-mark" aria-hidden="true"><i></i><b></b></span><div><h1>РИКОШЕТ<span class="title-dot">.</span></h1><p>Математический бильярд</p></div></div>
+      <div class="header-right"><span class="progress-meta" id="headerMeta">Лабораторный журнал / 01</span><a href="../../" class="shell-exit" data-app-control data-native-press>← В Pocket Works</a></div>
+    </header>
+    <nav class="mode-switch" data-ui aria-label="Режим">
+      <button type="button" class="mode-button active" id="challengeTab" aria-pressed="true" data-native-press><span class="mode-index">01</span> Задачи</button>
+      <button type="button" class="mode-button" id="labTab" aria-pressed="false" data-native-press><span class="mode-index">02</span> Лаборатория</button>
+      <span class="mode-tail">Угол падения = углу отражения</span>
+    </nav>
+    <div class="workspace">
+      <section class="arena-zone" aria-label="Игровой стол">
+        <div class="arena-heading" data-ui>
+          <div><span class="section-kicker" id="sceneKicker">ЗАДАЧА 01 / 08</span><strong id="sceneTitle">Прямая</strong></div>
+          <div class="record-line"><span class="record-chip" id="recordChip">0 / 8 решено</span><span class="scene-clock" id="shotState">ГОТОВ</span></div>
+        </div>
+        <div class="canvas-wrap" id="canvasWrap">
+          <canvas id="board" width="900" height="540" aria-label="Поле математического бильярда. Потяните от шара в направлении выстрела." data-gesture-surface data-block-callout tabindex="0"></canvas>
+          <div class="canvas-overlay canvas-top" data-ui><span id="simHint">ПОТЯНИ ОТ ШАРА · ОТПУСТИ</span><span id="reflectionDisplay">α 0°</span></div>
+          <div class="canvas-overlay canvas-bottom" data-ui><span id="trajectoryHint">Траектория рассчитана</span><span class="canvas-coordinate" id="positionDisplay">X 140 · Y 270</span></div>
+        </div>
+        <div class="command-deck" data-ui>
+          <button class="launch-btn" id="launchBtn" type="button" data-native-press><span class="launch-icon">↗</span><span id="launchLabel">ПУСК</span></button>
+          <button class="deck-btn" id="resetBtn" type="button" data-native-press>↺ <span>Возврат</span></button>
+          <button class="deck-btn" id="undoBtn" type="button" data-native-press hidden>↶ <span>Отменить</span></button>
+          <button class="deck-btn" id="fanBtn" type="button" data-native-press hidden aria-pressed="false">≋ <span>Веер</span></button>
+          <button class="deck-btn icon-deck" id="soundBtn" type="button" data-native-press aria-pressed="true" aria-label="Выключить звук">♪</button>
+          <div class="run-readout" id="runReadout">Выбери направление. Затем отпусти шар.</div>
+        </div>
+      </section>
+      <aside class="control-panel" data-ui>
+        <section id="challengePanel" class="panel-content">
+          <div class="panel-heading"><span class="section-kicker">КУРС / ВОСЕМЬ ОПЫТОВ</span><h2>Журнал задач</h2></div>
+          <div class="level-grid" id="levelGrid" aria-label="Выбор задачи"></div>
+          <div class="objective"><span class="objective-symbol">◎</span><div><strong id="goalTitle">Попади в датчик</strong><p id="goalText">Достигни светлого кольца на столе.</p></div></div>
+          <div class="dual-readout"><div><small>ПОПЫТКИ</small><b id="attemptCount">0</b></div><div><small>РЕКОРД</small><b id="bestCount">—</b></div></div>
+          <div class="lesson-copy" id="lessonCopy">Прямая линия — простейшая траектория.</div>
+        </section>
+        <section id="labPanel" class="panel-content" hidden>
+          <div class="panel-heading"><span class="section-kicker">СВОБОДНЫЙ ЭКСПЕРИМЕНТ</span><h2>Конструктор</h2></div>
+          <div class="tool-grid" id="toolGrid" aria-label="Инструменты"><button type="button" data-tool="aim" class="tool active" data-native-press>↗ <span>Прицел</span></button><button type="button" data-tool="mirror" class="tool" data-native-press>╱ <span>Зеркало</span></button><button type="button" data-tool="bumper" class="tool" data-native-press>◉ <span>Бампер</span></button><button type="button" data-tool="erase" class="tool" data-native-press>⌫ <span>Стереть</span></button><button type="button" data-tool="origin" class="tool" data-native-press>● <span>Шар</span></button><button type="button" data-tool="target" class="tool" data-native-press>◎ <span>Датчик</span></button></div>
+          <label class="control-label">Форма стола<select id="shapeSelect" aria-label="Форма стола"><option value="rectangle">Прямоугольник</option><option value="circle">Круг</option><option value="stadium">Стадион</option><option value="triangle">Треугольник</option></select></label>
+          <div class="presets"><span class="control-label-text">Установки</span><div><button type="button" data-preset="clear" data-native-press>Чистый</button><button type="button" data-preset="maze" data-native-press>Лабиринт</button><button type="button" data-preset="chaos" data-native-press>Хаос</button></div></div>
+          <div class="range-pair lab-physics"><label>Гравитация <output id="gravityValue">0</output><input id="gravityRange" type="range" min="0" max="400" step="20" value="0"></label><label>Отскок <output id="elasticityValue">98%</output><input id="elasticityRange" type="range" min="55" max="100" step="1" value="98"></label></div>
+          <button class="clear-btn" id="clearBtn" type="button" data-native-press>Очистить препятствия</button>
+        </section>
+        <section class="angle-panel">
+          <div class="panel-heading small"><span class="section-kicker">ПАРАМЕТРЫ УДАРА</span><strong id="statsTitle">Траектория</strong></div>
+          <div class="range-pair aim-pair"><label>Угол <output id="angleValue">0°</output><input id="angleRange" type="range" min="0" max="359" step="1" value="0"></label><label>Сила <output id="powerValue">70%</output><input id="powerRange" type="range" min="10" max="100" step="1" value="70"></label></div>
+          <div class="math-strip"><div><span>ОТРАЖЕНИЯ</span><strong id="bounceStat">0</strong></div><div><span>ДЛИНА</span><strong id="lengthStat">0 м</strong></div><div><span>ВРЕМЯ</span><strong id="timeStat">0 с</strong></div></div>
+        </section>
+      </aside>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite" data-ui></div>
+    <div class="dialog-backdrop" id="resultOverlay" hidden data-ui><section class="dialog result-dialog" role="dialog" aria-modal="true" aria-labelledby="resultTitle"><span class="section-kicker" id="resultKicker">ЭКСПЕРИМЕНТ ЗАВЕРШЁН</span><div class="result-orbit">◎</div><h2 id="resultTitle">Точное попадание</h2><p id="resultDescription">Шар достиг датчика.</p><div class="result-badges" id="resultBadges">★ ★ ★</div><button type="button" class="dialog-primary" id="nextBtn" data-native-press>Следующая задача →</button><button type="button" class="dialog-secondary" id="retryBtn" data-native-press>Повторить эксперимент</button><a class="dialog-home" href="../../" data-app-control data-native-press>В Pocket Works</a></section></div>
+    <div class="dialog-backdrop" id="confirmOverlay" hidden data-ui><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><span class="section-kicker">ЛАБОРАТОРНЫЙ ЖУРНАЛ</span><h2 id="confirmTitle">Очистить стол?</h2><p>Все установленные препятствия будут удалены. Вернуть их можно будет только по новой установке.</p><button type="button" class="dialog-primary" id="clearAcceptBtn" data-native-press>Очистить</button><button type="button" class="dialog-secondary" id="clearCancelBtn" data-native-press>Оставить</button></section></div>
+    <button type="button" id="workshopTrigger" data-workshop-trigger data-native-press hidden>Workshop</button>
+  </main>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="РИКОШЕТ" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
