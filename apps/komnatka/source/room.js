@@ -120,6 +120,28 @@ function wall(scene,mat,w,h,d,x,y,z,name) {
  mesh.isPickable=true;mesh.metadata={wall:name};return mesh;
 }
 export function createRoom(scene) {
+ // Preview the real procedural wallpaper surface used by Babylon, not a
+ // decorative CSS approximation that could disagree with the rendered room.
+ const wallpaperPreviews=new Map();
+ function wallpaperThumbnail(color,pattern){
+  if(pattern==='plain')return '';
+  const key=color+'/'+pattern;
+  if(wallpaperPreviews.has(key))return wallpaperPreviews.get(key);
+  try{
+   const texture=wallpaper(scene,color,pattern).diffuseTexture;
+   const source=texture?.getContext()?.canvas;
+   if(!source)return '';
+   const canvas=document.createElement('canvas');
+   canvas.width=96;canvas.height=72;
+   canvas.getContext('2d').drawImage(source,0,0,96,72);
+   const image=canvas.toDataURL('image/jpeg',.76);
+   wallpaperPreviews.set(key,image);
+   return image;
+  }catch(error){
+   console.warn('Wallpaper swatch unavailable',error);
+   return '';
+  }
+ }
  // Two always-on studio lights leave real shader slots for miniature lamps.
  // Day: peach daylight on hand-painted toy furniture. Night: blueberry
  // moonlight with distinctly warm pools from the individual lamps.
@@ -363,5 +385,5 @@ export function createRoom(scene) {
     floorVisibility:f.floor.visibility,wallVisibility:f.wall.visibility
    }))};
  }
- return {floor,back,left,setFinish,setEvening,tickLighting,syncPracticalLights,setShadowCasters,lightingDiagnostics};
+ return {floor,back,left,setFinish,setEvening,tickLighting,syncPracticalLights,setShadowCasters,lightingDiagnostics,wallpaperThumbnail};
 }

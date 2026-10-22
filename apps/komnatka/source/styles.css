@@ -627,3 +627,124 @@
 @media(prefers-reduced-motion:reduce){
   .topbar .quick-tools > .toolbar-secondary{transition:none}
 }
+
+
+/* The room and its surfaces are first-class destinations, not hidden settings.
+   Keep the current room switcher visible over the 3D scene on every screen. */
+.scene-context{
+ position:absolute;z-index:7;top:18px;left:clamp(12px,2vw,29px);
+ right:12px;display:flex;align-items:center;gap:8px;pointer-events:none;
+}
+.scene-context button{
+ pointer-events:auto;display:inline-flex;align-items:center;justify-content:center;
+ gap:7px;min-height:37px;border-radius:10px;padding:7px 11px;
+ background:#fff9ede9;color:#795c4b;border:1px solid #dcc6ac;
+ box-shadow:0 3px 13px #6b4e3423;font-size:12px;font-weight:900;
+ transition:background .15s,transform .13s;
+}
+.scene-context button:hover{background:#fff6e6}
+.scene-context button:active{transform:scale(.96)}
+.scene-room-switch{max-width:min(42vw,275px);min-width:0}
+.scene-room-switch #activeRoomLabel{
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;
+}
+.scene-room-switch small{font-size:10px;flex:0 0 auto;color:#a0836c}
+.scene-context .room-switch-icon{font-size:18px;line-height:1;color:#b58e71}
+.scene-context .scene-wallpaper-shortcut{background:#e9d6bcf2;flex:0 0 auto}
+
+/* The eight purposeful editor destinations fit in two visible rows on desktop. */
+.catalog-dock .category-strip{grid-template-columns:repeat(4,minmax(0,1fr))}
+.catalog-dock .category-strip button{min-height:35px;padding:6px 3px;font-size:10.5px}
+
+/* Wallpaper samples are captures of the same procedural materials as the walls.
+   Color and pattern remain independent controls for both physical surfaces. */
+.catalog-dock .finish-items{
+ min-height:0;overflow-y:auto;white-space:normal;overscroll-behavior:contain;
+ scrollbar-width:thin;scrollbar-color:#d9c5b1 transparent;
+}
+.catalog-dock .finish-row{display:block;white-space:normal;margin:0 0 17px}
+.catalog-dock .finish-row h3{
+ margin:0 0 9px;color:#795b49;font-size:14px;line-height:1.2;font-weight:950;
+}
+.catalog-dock .finish-row .color-row{gap:7px;margin-bottom:10px}
+.wallpaper-grid,.floor-palette{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:8px;min-width:0;
+}
+.wallpaper-option,.floor-sample{
+ display:flex;flex-direction:column;align-items:center;gap:6px;
+ background:#f5ece0;border:2px solid transparent;border-radius:11px;
+ min-width:0;padding:6px 5px 7px;color:#7d6350;
+ font-size:11px;line-height:1.2;font-weight:850;
+ transition:background .14s,transform .14s,border-color .14s;
+}
+.wallpaper-option:active,.floor-sample:active{transform:scale(.96)}
+.wallpaper-option.picked,.floor-sample.picked{border-color:#a17d62;background:#ecdbc9}
+.wallpaper-option .wallpaper-picture{
+ display:block;width:100%;height:52px;overflow:hidden;
+ border-radius:7px;border:1px solid #cdb9a4;
+ box-shadow:inset 0 0 0 1px #fff8;
+}
+.wallpaper-picture img{display:block;width:100%;height:100%;object-fit:cover}
+.floor-sample .floor-thumb{
+ width:100%;height:52px;border:1px solid #cbb49e;border-radius:7px;
+ background-size:20px 20px;
+}
+.floor-honey{background:repeating-linear-gradient(0deg,#caa981 0 16px,#ac8966 16px 17px,#d5b48e 17px 31px)}
+.floor-walnut{background:repeating-linear-gradient(0deg,#8a674d 0 15px,#6f4e3b 15px 17px,#9b795d 17px 30px)}
+.floor-painted{background:repeating-linear-gradient(0deg,#ded0b7 0 17px,#bfaf94 17px 18px)}
+.floor-tile{background:conic-gradient(#d8d9ca 25%,#e6dece 0 50%,#d8d9ca 0 75%,#e6dece 0)}
+.floor-blush{background:repeating-linear-gradient(0deg,#d8b6ac 0 17px,#bfa098 17px 18px)}
+.floor-cherry{background:repeating-linear-gradient(0deg,#b58a72 0 17px,#976c57 17px 18px)}
+.floor-herringbone{background:repeating-linear-gradient(45deg,#b99474 0 9px,#d4b18b 9px 14px,#ae8567 14px 21px)}
+.floor-terrazzo{background:radial-gradient(circle at 15% 20%,#9eafa5 0 4px,transparent 5px),radial-gradient(circle at 70% 70%,#c7ab91 0 4px,transparent 5px),#e0d9ca}
+.open-room-gallery{
+ display:flex;justify-content:space-between;align-items:center;gap:8px;
+ width:100%;min-height:48px;background:#e2d1bc;color:#674b3c;
+ border:1px solid #cbae8f;border-radius:11px;padding:10px 12px;
+ font-weight:900;font-size:12px;text-align:left;
+}
+.open-room-gallery span{font-size:18px}
+.finish-note{margin:0;color:#978172;font-size:12px;line-height:1.4}
+@media(max-width:840px){
+ .scene-context{left:10px;top:8px;gap:5px}
+ .scene-context button{min-height:32px;padding:5px 8px;font-size:11px;border-radius:9px}
+ .scene-room-switch{max-width:min(54vw,250px)}
+ .scene-room-switch small{font-size:9px}
+ .catalog-dock .category-strip{display:flex;grid-template-columns:none;gap:5px;overflow-x:auto}
+ .catalog-dock .category-strip button{font-size:11px;min-height:32px;padding:7px 12px}
+ .catalog-dock .finish-items{padding:2px 3px;overflow-y:auto;white-space:normal}
+ .catalog-dock .finish-row{display:block;margin:0 0 13px}
+ .catalog-dock .finish-row h3{font-size:12px;margin-bottom:6px}
+ .catalog-dock .finish-row .color-row{flex-wrap:nowrap;gap:6px;padding:2px;margin-bottom:7px}
+ .catalog-dock .finish-row .paint-chip{width:26px;height:26px;flex:0 0 26px}
+ .wallpaper-grid,.floor-palette{
+  display:flex;gap:7px;overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x proximity;padding-bottom:5px;
+  scrollbar-width:thin;scrollbar-color:#d8c2aa transparent;
+ }
+ .wallpaper-option,.floor-sample{
+  min-width:91px;width:91px;flex:0 0 91px;scroll-snap-align:start;
+  padding:4px 5px 5px;font-size:10px;
+ }
+ .wallpaper-option .wallpaper-picture,.floor-sample .floor-thumb{height:39px}
+}
+@media(max-width:840px) and (orientation:landscape) and (max-height:540px){
+ .scene-context{top:8px;left:10px}
+ .catalog-dock .wallpaper-option,.catalog-dock .floor-sample{min-width:80px;flex-basis:80px;width:80px}
+}
+@media(prefers-reduced-motion:reduce){
+ .scene-context button,.wallpaper-option,.floor-sample{transition:none}
+}
+
+/* The day/night control is an immediate action, not a buried preference. */
+.topbar .quick-tools > .evening-top-button{
+ display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;
+ border-radius:10px;
+}
+@media(max-width:840px){
+ .topbar .quick-tools > .evening-top-button{width:34px;flex-basis:34px}
+}
+@media(max-width:375px){
+ .topbar .quick-tools > .evening-top-button{width:31px;flex-basis:31px}
+}
