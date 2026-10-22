@@ -74,6 +74,7 @@ const MARKET_COMMISSION = .10;
 const BLACK_INSPECTION_GOLD = 25;
 const REPACK_GOLD = 20;
 const REPACK_PARTS = 1;
+const turnDurationMs = seats => seats<=2?90_000:seats<=4?80_000:65_000;
 const isBlackRound = s => s.phase==='play' && BLACK_ROUNDS.includes(s.round);
 const itemLocked = (s,id) => s.blackLots?.some(l=>l.item.id===id) || s.listing?.itemId===id;
 
@@ -134,8 +135,9 @@ function urgentFor(round,player){
   };
 }
 function startTurn(s){
-  if(s.round> TOTAL_ROUNDS){s.phase='done';s.ranking=rankPlayers(s);issue(s,'Партия окончена. Итоги подсчитаны.');return;}
+  if(s.round> TOTAL_ROUNDS){s.phase='done';s.deadlineAt=null;s.ranking=rankPlayers(s);issue(s,'Партия окончена. Итоги подсчитаны.');return;}
   const p=s.contestants[s.turnIndex];
+  s.deadlineAt=Date.now()+turnDurationMs(s.contestants.length);
   p.worked=false;p.usedPawn=false;p.marketDeals=0;
   s.listing=null;s.bids=[];
   s.brokerOffer=newItem(s);
@@ -497,7 +499,7 @@ function viewForPlayer({state,player}){
   // Hide other wallets and inventory while anonymity could be defeated by a visible change.
   // Direct resource trades remain possible, but choosing an unknown stranger's item is suspended.
   const veil=isBlackRound(s);
-  return {phase:s.phase,host:s.host,revision:s.revision,round:s.round,rounds:TOTAL_ROUNDS,
+  return {phase:s.phase,host:s.host,revision:s.revision,round:s.round,rounds:TOTAL_ROUNDS,deadlineAt:s.deadlineAt||null,
     turnId:turn?.id||null,players:s.contestants.map(p=>({
       id:p.id,name:p.name,character:p.character,
       items:veil&&p.id!==me?.id?null:p.items.length,
@@ -534,9 +536,16 @@ function viewForPlayer({state,player}){
 }
 const game={
   protocolVersion:1,viewForPlayer,
+  onTick({state,now}){
+    if(state.phase!=='play'||!state.deadlineAt||now<state.deadlineAt)return null;
+    const active=state.contestants[state.turnIndex];
+    issue(state,'Лимит времени истёк. Ход «'+active.character+'» завершён автоматически.');
+    nextTurn(state);
+    return success(state);
+  },
   createRoom({player}){return {state:{
     host:player.id,players:[{id:player.id,name:player.name}],contestants:[],
-    phase:'lobby',revision:0,round:0,turnIndex:0,listing:null,bids:[],brokerOffer:null,deals:[],dealSerial:0,blackLots:[],blackSeq:0,log:[],ranking:[],serial:0
+    phase:'lobby',revision:0,round:0,turnIndex:0,deadlineAt:null,listing:null,bids:[],brokerOffer:null,deals:[],dealSerial:0,blackLots:[],blackSeq:0,log:[],ranking:[],serial:0
   }};},
   onJoin({state,players}){
     if(state.phase!=='lobby'&&!state.contestants.some(p=>p.id===players.at(-1)?.id))throw Error('match_in_progress');
@@ -558,7 +567,14 @@ const game={
   },
   onMessage({state,player,payload}){
     const v=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
-    if(v.type==='sync')return {state,events:[{type:'state',to:player.id,payload:{}}]};
+    if(v.type==='sync'&&!(state.phase==='play'&&state.deadlineAt&&Date.now()>=state.deadlineAt))
+      return {state,events:[{type:'state',to:player.id,payload:{}}]};
+    if(state.phase==='play'&&state.deadlineAt&&Date.now()>=state.deadlineAt){
+      const timed=state.contestants[state.turnIndex];
+      issue(state,'Лимит времени истёк. Ход «'+timed.character+'» завершён автоматически.');
+      nextTurn(state);
+      return success(state);
+    }
     if(v.type==='start'&&player.id===state.host&&(state.phase==='lobby'||state.phase==='done')){
       if(state.players.length<MIN_PLAYERS)return failure(state,player.id,'Нужно минимум два игрока.');
       state.players=shuffled(state.players);openGame(state);return success(state);
