@@ -269,7 +269,9 @@ function sprite(type){
 }
 function activateGroup(group){
  if(pending)cancelPending(false);
+ const changed=group!==activeGroup;
  activeGroup=group;
+ if(changed)ui.finish.scrollTop=0;
  showCatalog();
  sound('select');
 }
