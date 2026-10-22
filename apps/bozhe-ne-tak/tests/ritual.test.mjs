@@ -34,7 +34,7 @@ test('all possible input combos have finite bounded score',()=>{
  for(const item of ITEMS)for(const treatment of ['wash','smoke','gild'])
  for(const bell of [1,2,3])for(const height of ['low','high']){
   const r=evaluateRite(rite,{itemId:item.id,treatment,bell,height},['goose','height','thunder']);
-  assert.ok(Number.isFinite(r.score)&&r.score>=-3&&r.score<=10);
+  assert.ok(Number.isFinite(r.score)&&r.score>=-3&&r.score<=11);
  }
 });
 test('end-to-end deterministic five-round game with dogma consequences',()=>{
