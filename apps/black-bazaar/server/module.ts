@@ -92,10 +92,11 @@ function privateTrait(item){
   if(t.kind==='sellerBonus')return {kind:'sellerBonus',title:t.title,effect:{...t.effect},lastRound:item.tradeUsedRound||0};
   return {kind:'appraisal',title:t.title,publicCost:t.publicCost,blackCost:t.blackCost};
 }
-function inspectionCost(p,black=false){
+function inspectionCost(p,black=false,s=null){
   const haveLens=p.items.some(i=>trait(i)?.kind==='appraisal');
-  return haveLens?(black?TRAITS.lens.blackCost:TRAITS.lens.publicCost):
+  const normal=haveLens?(black?TRAITS.lens.blackCost:TRAITS.lens.publicCost):
     (black?BLACK_INSPECTION_GOLD:15);
+  return s&&eventIs(s,'audit_fair')?Math.ceil(normal/2):normal;
 }
 // Each item starts with a full two-round delayed fuse. Buying or disguising
 // it never changes the due round. No second activation after it fires.
@@ -104,6 +105,23 @@ const MAX_ITEMS = 4;
 const BLACK_ROUNDS = [2,5,8];
 const DISGUISES = ['Талисман достатка','Забытый сувенир','Тёмная реликвия','Дар неизвестного'];
 const MARKET_COMMISSION = .10;
+// A public event lasts a whole round, so it affects all seats equally.
+// Event assignment is decided once when a match starts and never changes
+// on reconnect, turn expiry, or a module reload.
+const EVENT_CARDS={
+  salvage_boom:{title:'Ярмарка запчастей',description:'Разбор старого предмета приносит 3 детали вместо 2.'},
+  mask_festival:{title:'Бал масок',description:'Перепаковка стоит 10 золота и не требует деталей.'},
+  smuggler_holiday:{title:'Ночь контрабандистов',description:'Комиссия анонимного рынка снижена с 10% до 5%.'},
+  audit_fair:{title:'День экспертов',description:'Экспертиза стоит вдвое меньше (округление вверх).'}
+};
+const eventId=s=>s.eventSchedule?.[s.round]||null;
+const eventIs=(s,id)=>eventId(s)===id;
+const eventCard=s=>{const id=eventId(s);return id?{id,...EVENT_CARDS[id]}:null;};
+const blackFee=s=>eventIs(s,'smuggler_holiday') ? 0.05 : MARKET_COMMISSION;
+const salvageYield=s=>eventIs(s,'salvage_boom')?3:2;
+const repackPrice=s=>eventIs(s,'mask_festival')?{gold:10,parts:0}:{gold:REPACK_GOLD,parts:REPACK_PARTS};
+const increment=(s,key)=>{if(s.metrics)s.metrics[key]=(s.metrics[key]||0)+1;};
+
 const BLACK_INSPECTION_GOLD = 25;
 const REPACK_GOLD = 20;
 const REPACK_PARTS = 1;
@@ -180,10 +198,15 @@ function startTurn(s){
   s.listing=null;s.bids=[];
   s.brokerOffer=newItem(s);
   p.urgent=(s.round%3===0&&!p.bankrupt)?{needs:urgentFor(s.round,p),status:'pending'}:null;
+  if(s.turnIndex===0&&eventCard(s))issue(s,'Событие раунда: '+eventCard(s).title+'. '+eventCard(s).description);
   issue(s,'Раунд '+s.round+': ход игрока '+p.character+'.');
 }
 function openGame(s){
   s.phase='play';s.round=1;s.turnIndex=0;s.serial=0;s.ranking=[];
+  const middle=shuffled(['salvage_boom','mask_festival']);
+  s.eventSchedule={4:middle[0],6:middle[1],8:sample(['smuggler_holiday','audit_fair'])};
+  s.metrics={publicSales:0,privateDeals:0,blackSales:0,inspections:0,brokerSales:0,
+    salvage:0,repack:0,urgentMet:0,urgentMissed:0,wardUsed:0,curseFired:0};
   s.contestants=s.players.map((p,i)=>{
     const targets=s.players.filter(x=>x.id!==p.id).map(x=>x.id);
     const plus=sample(targets),minus=sample(targets);
@@ -203,19 +226,19 @@ function resolveUrgent(s,p){
   if(!p.urgent)return;
   const needed=p.urgent.needs;
   if(has(p,needed)){
-    add(p,needed,-1);p.resources.gold+=35;p.urgent.status='success';
+    add(p,needed,-1);p.resources.gold+=35;p.urgent.status='success';increment(s,'urgentMet');
     issue(s,p.character+' выполнил срочный заказ.');
   }else{
     // An unspent amulet charge protects the entire urgent failure once.
     // The quota resources are NOT collected, and the urgent reward is NOT paid.
     const guard=p.items.find(i=>trait(i)?.kind==='ward'&&(i.wardCharges??1)>0);
     if(guard){
-      guard.wardCharges=(guard.wardCharges??1)-1;
+      guard.wardCharges=(guard.wardCharges??1)-1;increment(s,'wardUsed');
       p.urgent.status='shielded';
       issue(s,p.character+' избежал штрафа по срочному заказу: защитная печать разряжена.');
       return;
     }
-    p.strikes++;p.urgent.status='failed';
+    p.strikes++;p.urgent.status='failed';increment(s,'urgentMissed');
     if(p.strikes===1)p.resources.gold-=Math.floor(p.resources.gold*.15);
     else if(p.strikes===2){if(p.items.length)p.items.splice(Math.floor(Math.random()*p.items.length),1);else p.resources.parts=Math.max(0,p.resources.parts-1);}
     else p.bankrupt=true;
@@ -238,7 +261,7 @@ function roundIncome(s){
       const t=trait(item);
       if(t?.kind==='curse'&&!item.curseResolved&&s.round>=(item.curseDueRound??Infinity)){
         applyEffect(p,t.effect,-1);
-        item.curseResolved=true;
+        item.curseResolved=true;increment(s,'curseFired');
         issue(s,'Проклятие «'+t.title+'» ударило по '+p.character+'.');
       }
     }
@@ -299,7 +322,7 @@ function onTrade(s,seller,buyer,item,price){
   if(!seller.items.some(x=>x.id===item.id))return false;
   add(buyer,price,-1);add(seller,price,+1);
   transferItem(s,seller,buyer,item);
-  seller.marketDeals++;
+  seller.marketDeals++;increment(s,'publicSales');
   // The first public sale pays one reusable spare part: trading generates
   // supply, rather than leaving parts dependent only on grinding a work action.
   if(seller.marketDeals===1)seller.resources.parts=Math.min(9999,seller.resources.parts+1);
@@ -342,7 +365,7 @@ function acceptDeal(s,deal){
   add(to,deal.give);add(from,deal.want);
   if(a)transferItem(s,from,to,a);
   if(b)transferItem(s,to,from,b);
-  s.deals=s.deals.filter(d=>d.id!==deal.id);
+  s.deals=s.deals.filter(d=>d.id!==deal.id);increment(s,'privateDeals');
   issue(s,'Прямая сделка между '+from.character+' и '+to.character+' заключена.');
   return true;
 }
@@ -392,12 +415,12 @@ function action(s,id,v){
   }
   if(v.type==='black_inspect'){
     const lot=s.blackLots.find(l=>l.id===v.lotId);
-    const cost=inspectionCost(me,true);
+    const cost=inspectionCost(me,true,s);
     if(!lot||lot.seller===id||me.resources.gold<cost)
       return failure(s,id,'Недостаточно золота для экспертизы этого лота.');
     if(me.blackInspections.some(i=>i.itemId===lot.item.id))
       return failure(s,id,'Этот экземпляр уже проверен.');
-    me.resources.gold-=cost;
+    me.resources.gold-=cost;increment(s,'inspections');
     me.blackInspections.push({itemId:lot.item.id,originalName:spec(lot.item).name,
       negative:spec(lot.item).negative,curse:inspectCurse(lot.item)});
     issue(s,'Покупатель оплатил независимую экспертизу.');
@@ -412,7 +435,7 @@ function action(s,id,v){
       return failure(s,id,'Ставка устарела либо у покупателя нет ресурсов.');
     add(buyer,bid.offer,-1);
     const net={gold:0,crystals:0,parts:0};
-    for(const k of RESOURCES)net[k]=bid.offer[k]-Math.ceil(bid.offer[k]*MARKET_COMMISSION);
+    for(const k of RESOURCES)net[k]=bid.offer[k]-Math.ceil(bid.offer[k]*blackFee(s));
     add(me,net);
     const item=lot.item;
     // The buyer sees an anonymized provenance hop, never the intermediary's seller ID.
@@ -420,8 +443,8 @@ function action(s,id,v){
     buyer.items.push(item);
     awardSaleTrait(s,me,item,true);
     applyRelationship(s,me,buyer);
-    s.blackLots=s.blackLots.filter(l=>l.id!==lot.id);
-    issue(s,'Анонимный лот продан. Посредник удержал 10% комиссии.');
+    s.blackLots=s.blackLots.filter(l=>l.id!==lot.id);increment(s,'blackSales');
+    issue(s,'Анонимный лот продан. Посредник удержал '+Math.round(blackFee(s)*100)+'% комиссии.');
     return success(s);
   }
   if(v.type==='repack'){
@@ -430,9 +453,10 @@ function action(s,id,v){
       return failure(s,id,'Предмет должен быть у вас, свободен и куплен раньше этого раунда.');
     if(!Number.isInteger(v.aliasIndex)||v.aliasIndex<0||v.aliasIndex>=DISGUISES.length)
       return failure(s,id,'Недопустимое название упаковки.');
-    if(me.resources.gold<REPACK_GOLD||me.resources.parts<REPACK_PARTS)
-      return failure(s,id,'Перепаковка стоит 20 золота и 1 деталь.');
-    me.resources.gold-=REPACK_GOLD;me.resources.parts-=REPACK_PARTS;
+    const price=repackPrice(s);
+    if(me.resources.gold<price.gold||me.resources.parts<price.parts)
+      return failure(s,id,'Недостаточно ресурсов для перепаковки.');
+    me.resources.gold-=price.gold;me.resources.parts-=price.parts;increment(s,'repack');
     item.alias=DISGUISES[v.aliasIndex];
     issue(s,me.character+' перепаковал один предмет.');
     return success(s);
@@ -483,12 +507,12 @@ function action(s,id,v){
   }
   if(v.type==='inspect'){
     const listing=s.listing;
-    const cost=inspectionCost(me);
+    const cost=inspectionCost(me,false,s);
     if(!listing||listing.seller===id||me.resources.gold<cost)return failure(s,id,'Недостаточно золота для проверки чужого лота.');
     if(me.inspections.some(i=>i.itemId===listing.itemId))return failure(s,id,'Этот экземпляр уже проверен.');
     const seller=getPlayer(s,listing.seller),item=seller?.items.find(i=>i.id===listing.itemId);
     if(!item)return failure(s,id,'Лот недоступен.');
-    me.resources.gold-=cost;me.inspections.push({itemId:item.id,negative:spec(item).negative,
+    me.resources.gold-=cost;increment(s,'inspections');me.inspections.push({itemId:item.id,negative:spec(item).negative,
       curse:inspectCurse(item)});
     return success(s);
   }
@@ -500,7 +524,7 @@ function action(s,id,v){
     me.resources.gold-=75;
     const item=s.brokerOffer;
     item.acquiredRound=s.round;
-    me.items.push(item);s.brokerOffer=null;
+    me.items.push(item);s.brokerOffer=null;increment(s,'brokerSales');
     issue(s,me.character+' купил запечатанный предмет у брокера.');
     return success(s);
   }
@@ -511,8 +535,9 @@ function action(s,id,v){
     const [item]=me.items.splice(index,1);
     if(s.listing?.itemId===item.id){s.listing=null;s.bids=[];}
     s.deals=s.deals.filter(d=>d.giveItemId!==item.id&&d.wantItemId!==item.id);
-    me.resources.parts=Math.min(9999,me.resources.parts+2);me.usedPawn=true;
-    issue(s,me.character+' разобрал предмет и получил две детали.');
+    const yieldParts=salvageYield(s);
+    me.resources.parts=Math.min(9999,me.resources.parts+yieldParts);me.usedPawn=true;increment(s,'salvage');
+    issue(s,me.character+' разобрал предмет и получил '+yieldParts+' детали.');
     return success(s);
   }
   if(v.type==='work'){
@@ -584,6 +609,9 @@ function viewForPlayer({state,player}){
     })),
     listing:listed?{...publicItem(listed),seller:s.listing.seller,ask:s.listing.ask}:null,
     broker:s.brokerOffer?{...publicItem(s.brokerOffer),price:{gold:75,crystals:0,parts:0}}:null,
+    event:eventCard(s),marketFeePercent:Math.round(blackFee(s)*100),
+    salvageParts:salvageYield(s),repackCost:repackPrice(s),
+    report:s.phase==='done'?{...s.metrics,events:{...s.eventSchedule}}:null,
     bids:s.bids.map(b=>({buyer:b.buyer,offer:b.offer})),
     blackMarket:veil,
     blackLots:(s.blackLots||[]).map(l=>({
@@ -603,7 +631,7 @@ function viewForPlayer({state,player}){
       negativeTarget:me.negativeTarget,legendary:me.legendary,
       urgent:me.urgent,worked:me.worked,usedPawn:me.usedPawn,marketDeals:me.marketDeals,
       inspections:me.inspections.filter(i=>i.itemId===s.listing?.itemId),
-      inspectionPrices:{public:inspectionCost(me),black:inspectionCost(me,true)},
+      inspectionPrices:{public:inspectionCost(me,false,s),black:inspectionCost(me,true,s)},
       disguises:DISGUISES,blackListedRound:me.blackListedRound,
       escrowItems:(s.blackLots||[]).filter(l=>l.seller===me.id).map(l=>privateItem(l.item))}:null};
 }
@@ -611,7 +639,8 @@ const game={
   protocolVersion:1,viewForPlayer,
   createRoom({player}){return {state:{
     host:player.id,players:[{id:player.id,name:player.name}],contestants:[],
-    phase:'lobby',revision:0,round:0,turnIndex:0,deadlineAt:null,listing:null,bids:[],brokerOffer:null,deals:[],dealSerial:0,blackLots:[],blackSeq:0,log:[],ranking:[],serial:0
+    phase:'lobby',revision:0,round:0,turnIndex:0,deadlineAt:null,listing:null,
+    eventSchedule:{},metrics:null,bids:[],brokerOffer:null,deals:[],dealSerial:0,blackLots:[],blackSeq:0,log:[],ranking:[],serial:0
   }};},
   onJoin({state,players}){
     if(state.phase!=='lobby'&&!state.contestants.some(p=>p.id===players.at(-1)?.id))throw Error('match_in_progress');
