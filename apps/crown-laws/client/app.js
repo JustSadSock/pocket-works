@@ -312,6 +312,17 @@ function recordResolution(resolution, isOnline = false) {
   }
 }
 
+function openForecast(){
+ const state=currentState();
+ if(!state||app.replayActive||state.winner)return;
+ const viewer=getViewerPlayer();
+ const cardId=app.selectedCardId||null;
+ const result=forecastTurn(state,cardId?viewer:null,cardId);
+ app.forecast={before:structuredClone(state),after:result.state,logs:result.logs,cardId};
+ app.forecastReview=true;
+ render();
+}
+
 function confirmSelection() {
   const state = currentState();
   if (!state || !app.selectedCardId) {
@@ -815,7 +826,7 @@ function modalHTML() {
 }
 
 function debugSceneHTML(scene) {
-  const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,replay:app.replay,replayActive:app.replayActive};
+  const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,replay:app.replay,replayActive:app.replayActive,forecast:app.forecast,forecastReview:app.forecastReview};
   let markup="";
   try {
     const state=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
@@ -824,8 +835,8 @@ function debugSceneHTML(scene) {
     app.online={...app.online,roomState:null,roomCode:"",ready:{p1:false,p2:false},you:"p1"};
     app.modal=null;
     app.effects=[];app.lastConflictSlots=[];
-    app.selectedCardId=null;app.focusCardId=null;app.inspectedSlot=null;
-    app.replay=null;app.replayActive=false;
+    app.selectedCardId=app.debug.selectedCardId;app.focusCardId=app.debug.focusCardId;app.inspectedSlot=app.debug.inspectedSlot;
+    app.replay=null;app.replayActive=false;app.forecast=app.debug.forecast;app.forecastReview=app.debug.forecastReview;
     if(scene==="menu")markup=menuHTML();
     else if(scene==="join"||scene==="waiting"){
       app.screen="online";
@@ -847,7 +858,7 @@ function debugSceneHTML(scene) {
       if(app.modal)markup+=modalHTML();
     }
   }finally{Object.assign(app,saved);}
-  return `<div class="debug-scene ${app.debug.animation?`debug-scene--anim-${app.debug.animation}`:""}"><div class="debug-scene__content" inert>${markup}</div><span class="debug-scene__label">ПРЕДПРОСМОТР · ${scene}</span></div>`;
+  return `<div class="debug-scene ${app.debug.animation?`debug-scene--anim-${app.debug.animation}`:""}"><div class="debug-scene__content">${markup}</div><span class="debug-scene__label">ПРЕДПРОСМОТР · ${scene}</span></div>`;
 }
 
 function debugWorkshopHTML() {
@@ -897,7 +908,7 @@ function restoreLocal() {
 }
 
 function animateBoard() {
-  const state = app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState();
+  const state = app.forecast ? (app.forecastReview ? app.forecast.after : app.forecast.before) : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState());
   if (!state) return;
   const nextPositions = Object.fromEntries(Object.values(state.pieces).map(piece => [piece.id, {x:piece.x,y:piece.y}]));
   const board = root.querySelector('.board');
@@ -940,6 +951,47 @@ root.addEventListener("click", (event) => {
     }
     render();return;
   }
+  if (app.debug.open && event.target.closest(".debug-scene")) {
+    const pressed=event.target.closest("[data-action]");
+    const card=event.target.closest("[data-card-id]");
+    const law=event.target.closest("[data-focus-card]");
+    const piece=event.target.closest("[data-piece-kind]");
+    if(card&&!card.disabled){
+      app.debug.selectedCardId=app.debug.selectedCardId===card.dataset.cardId?null:card.dataset.cardId;
+      app.debug.inspectedSlot=cardById(card.dataset.cardId).slot;
+      app.debug.focusCardId=card.dataset.cardId;
+    }else if(law){
+      app.debug.selectedCardId=null;
+      app.debug.focusCardId=law.dataset.focusCard;
+      app.debug.inspectedSlot=law.dataset.slot||null;
+    }else if(piece){
+      app.debug.selectedCardId=null;
+      app.debug.inspectedSlot=piece.dataset.pieceKind;
+      const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
+      app.debug.focusCardId=activeLaws(demo)[app.debug.inspectedSlot]?.id||null;
+    }else if(pressed){
+      const a=pressed.dataset.action;
+      if(a==="toggle-rules")app.debug.scene="rules";
+      else if(a==="toggle-settings")app.debug.scene="settings";
+      else if(a==="start-ai"||a==="start-hotseat")app.debug.scene=a==="start-hotseat"?"hotseat":"game";
+      else if(a==="open-online")app.debug.scene="join";
+      else if(a==="create-room")app.debug.scene="waiting";
+      else if(a==="rematch")app.debug.scene="game";
+      else if(a==="back-menu")app.debug.scene="menu";
+      else if(a==="close-modal")app.debug.scene="game";
+      else if(a==="clear-inspection"){app.debug.focusCardId=null;app.debug.selectedCardId=null;app.debug.inspectedSlot=null;}
+      else if(a==="confirm-choice")app.debug.scene="ready";
+      else if(a==="forecast-open"){
+        const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
+        const cardId=app.debug.selectedCardId;
+        const result=forecastTurn(demo,cardId?"p1":null,cardId||null);
+        app.debug.forecast={before:demo,after:result.state,logs:result.logs,cardId:cardId||null};
+        app.debug.forecastReview=true;
+      }else if(a==="forecast-toggle")app.debug.forecastReview=!app.debug.forecastReview;
+      else if(a==="forecast-close")app.debug.forecast=null;
+    }
+    render();return;
+  }
   const stop = event.target.closest("[data-stop-click]");
   if (stop) {
     return;
@@ -978,6 +1030,12 @@ root.addEventListener("click", (event) => {
       case "toggle-settings":
         openModal("settings");
         break;
+      case "forecast-open":
+        openForecast();break;
+      case "forecast-toggle":
+        app.forecastReview=!app.forecastReview;render();break;
+      case "forecast-close":
+        app.forecast=null;app.forecastReview=false;render();break;
       case "clear-inspection":
         app.focusCardId=null; app.selectedCardId=null; app.inspectedSlot=null; render();
         break;
@@ -995,7 +1053,7 @@ root.addEventListener("click", (event) => {
         closeModal();
         break;
       case "back-menu":
-        window.clearTimeout(app.replayTimer);app.replayActive=false;
+        window.clearTimeout(app.replayTimer);app.replayActive=false;app.forecast=null;
         app.screen = "menu";
         app.local.state = null;
         render();
@@ -1039,6 +1097,7 @@ root.addEventListener("click", (event) => {
     const cardId = card.dataset.cardId;
     if(card.disabled)return;
     app.selectedCardId = app.selectedCardId === cardId ? null : cardId;
+    app.forecast=null;
     app.inspectedSlot=cardById(cardId).slot;
     playTone("tap");
     render();
@@ -1078,6 +1137,7 @@ root.addEventListener("click", (event) => {
 root.addEventListener("input", (event) => { if (event.target.matches("[data-input=room-code]")) app.online.codeInput = event.target.value.toUpperCase(); });
 
 root.addEventListener("change", (event) => {
+  if(app.debug.open&&event.target.closest(".debug-scene"))return;
   if (event.target.matches("[data-input='room-code']")) {
     app.online.codeInput = event.target.value.toUpperCase();
     return;
