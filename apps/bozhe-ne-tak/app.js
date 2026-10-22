@@ -1,6 +1,6 @@
 
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
-import {ITEMS,DOCTRINES,TREATMENTS,MAX_ROUNDS,START_FAITH,MAX_FAITH,createGame,setAction,
+import {ITEMS,DOCTRINES,TREATMENTS,VOWS,MAX_ROUNDS,START_FAITH,MAX_FAITH,createGame,setAction,
  getRite,getIncident,getItem,getDoctrine,doctrineEffect,commitRite,continueFromJudgment,chooseDoctrine,
  conveneCouncil,loadGame,isWin} from './engine.js';
 import {offeringArt,godArt,treatmentArt,incidentArt} from './art.js';
@@ -126,6 +126,7 @@ function play(){
  '<div class="choice-block"><div class="section-label">III. ЗВОН</div><div class="beats">'+bells+'</div></div>'+
  '<div class="choice-block height-choice"><div class="section-label">IV. ВЫСОТА</div><div class="tools-row"><button class="tool '+(a.height==='low'?'chosen':'')+'" data-height="low" aria-pressed="'+(a.height==='low')+'">У подножия</button>'+
  '<button class="tool '+(a.height==='high'?'chosen':'')+'" data-height="high" aria-pressed="'+(a.height==='high')+'">Поднять</button></div></div></div>'+
+ '<div class="vow-control"><div class="section-label">V. ОБЕТ · КАК РИСКОВАТЬ МИЛОСТЬЮ</div><div class="vow-options">'+VOWS.map(v=>'<button type="button" data-vow="'+v.id+'" class="vow-option '+(a.vow===v.id?'chosen':'')+'" aria-pressed="'+(a.vow===v.id)+'"><strong>'+toHtml(v.name)+'</strong><small>'+toHtml(v.detail)+'</small></button>').join('')+'</div></div>'+
  '<div class="active-dogmas"><div class="section-label">ДОГМАТЫ '+(session.doctrines.length?session.doctrines.length+'/3':'')+'</div>'+doctrineRibbon()+
  (session.doctrines.length&&!session.councilUsed&&session.faith>=2?'<button class="council" type="button" data-action="council">Созвать собор · −1 милость</button>':'')+'</div>'+
  '<button class="btn primary ritual-commit" type="button" data-action="commit" '+(!item?'disabled':'')+'>'+
@@ -142,7 +143,7 @@ function judgment(){
  return layout(chapter()+ '<div class="work-space verdict-space"><section class="shrine-column">'+
  riteStage(mood,offeringArt(obj.id,108),headline)+'</section><section class="work-column verdict-column">'+
  '<div class="section-label">'+toHtml(rit.title)+'</div><h2 class="verdict-title '+mood+'">'+headline+'</h2>'+
- '<p class="verdict-copy">'+subtitle+'</p><p class="miracle-text">'+toHtml(j.miracleText||'')+'</p>'+
+ '<p class="verdict-copy">'+subtitle+'</p><p class="vow-verdict">'+toHtml(VOWS.find(v=>v.id===j.vow)?.name||'Обычный обряд')+' · изменение милости '+(j.faithDelta>0?'+':'')+j.faithDelta+'</p><p class="miracle-text">'+toHtml(j.miracleText||'')+'</p>'+
  '<div class="score-seal"><span>СУД НЕБЕС</span><strong>'+j.score+'</strong><span>Милость: <b>'+(j.faithDelta>0?'+':'')+j.faithDelta+'</b></span></div>'+
  '<div class="score-breakdown">'+j.criteria.map(scoreLine).join('')+
  j.doctrineResults.map(d=>'<div class="score-row dogma-score"><span>'+toHtml(getDoctrine(d.id).name)+': '+toHtml(d.text)+'</span>'+
@@ -192,7 +193,7 @@ function ending(){
 function help(){
  return '<section class="help-screen"><span class="chapter">ЗАПОВЕДИ НЕОПЫТНОГО ЖРЕЦА</span><h1>Пять обрядов до просветления</h1>'+
  '<div class="help-steps"><p><b>1. Прочтите знамение.</b> Бог описывает желанный дар, запрет, подготовку, число звонов и высоту подношения. В его словах действительно есть ответ.</p>'+
- '<p><b>2. Приготовьте обряд.</b> Выберите предмет по характеристикам, обработайте его, задайте звон и высоту. Можно менять решения до суда.</p>'+
+ '<p><b>2. Приготовьте обряд.</b> Выберите предмет, подготовку, звон, высоту и обет риска. Происшествие каждого раунда тоже влияет на суд. Все решения можно менять до жертвоприношения.</p>'+
  '<p><b>3. Получите вердикт.</b> ОГО начисляет или отнимает милость. После обряда вы сами утверждаете новый догмат, который изменит следующие испытания.</p>'+
  '<p><b>4. Доживите до финала.</b> Милость не должна упасть до нуля. Один раз за игру разрешено отменить старейший догмат через собор, потратив милость.</p></div>'+
  '<p class="help-note">Можно играть одному или в PocketNet на 2–5 человек с отдельными тайными обязанностями. Каждый раунд происходит событие, которое добавляет бонус или штраф при определённом выборе.</p>'+
@@ -262,7 +263,7 @@ function offerRite(){
 }
 document.addEventListener('click',event=>{
  if(screen==='online'&&online.action(event))return;
- const choice=event.target.closest('[data-item],[data-treatment],[data-bell],[data-height],[data-pick-dogma],[data-doc],[data-offer-filter]');
+ const choice=event.target.closest('[data-item],[data-treatment],[data-bell],[data-height],[data-vow],[data-pick-dogma],[data-doc],[data-offer-filter]');
  const button=event.target.closest('[data-action]');
  if(choice){
   if(choice.hasAttribute('data-offer-filter')){offerFilter=choice.dataset.offerFilter;render();return;}
@@ -273,6 +274,7 @@ document.addEventListener('click',event=>{
   else if(choice.hasAttribute('data-treatment'))patch={treatment:choice.dataset.treatment};
   else if(choice.hasAttribute('data-bell'))patch={bell:Number(choice.dataset.bell)};
   else if(choice.hasAttribute('data-height'))patch={height:choice.dataset.height};
+  else if(choice.hasAttribute('data-vow'))patch={vow:choice.dataset.vow};
   if(Object.keys(patch).length){changeState(setAction(session,patch));bellAudio(choice.hasAttribute('data-bell')?'bell':'wood');}
   return;
  }
