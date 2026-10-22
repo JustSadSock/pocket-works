@@ -1,7 +1,9 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {GLYPHS,glyphSVG} from './symbols.js';
 installMobileRuntime();
+createWorkshopMode({appName:'ПИКТО',version:'1.3.0',cachePrefix:'picto-',storageNamespace:'pocket-works:picto'});
 
 const root=document.querySelector('#view');
 const indicator=document.querySelector('#connection');
