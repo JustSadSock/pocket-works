@@ -164,7 +164,32 @@ function actionsBlock(you){
  }else html+='<p class="muted">Ломбард использован в этом ходу.</p>';
  return html+'<button type="button" class="primary" data-action="end">Завершить ход →</button></div>';
 }
+function collectDrafts(){
+ const current={};
+ for(const form of app.querySelectorAll('form[data-form]')){
+  current[form.dataset.form]=Object.fromEntries(new FormData(form).entries());
+ }
+ return current;
+}
+function restoreDrafts(drafts){
+ for(const form of app.querySelectorAll('form[data-form]')){
+  const vals=drafts[form.dataset.form];
+  if(!vals)continue;
+  if(form.dataset.form==='deal'&&vals.to){
+   const target=state?.players?.find(p=>p.id===vals.to);
+   const requested=form.querySelector('#dealWantItem');
+   if(target&&requested)requested.innerHTML=itemOptions(target.inventory.filter(i=>i.id!==state.listing?.id));
+  }
+  for(const field of Array.from(form.elements)){
+   if(!field.name||vals[field.name]===undefined)continue;
+   const value=vals[field.name];
+   if(field.tagName==='SELECT'&&!Array.from(field.options).some(o=>o.value===value))continue;
+   field.value=value;
+  }
+ }
+}
 function renderPlay(){
+ const drafts=mode==='play'?collectDrafts():{};
  mode='play';const you=state.you;
  if(!you){app.innerHTML='<p>Синхронизация личного состояния…</p>';return;}
  const active=state.turnId===me?.id;
@@ -174,6 +199,7 @@ function renderPlay(){
  '<div class="layout"><div>'+secretBlock(you)+urgentBlock(you)+inventoryBlock(you)+'</div>'+
  '<div>'+tradePanel(you)+marketBlock(you,active)+(active?actionsBlock(you):'<div class="panel"><p>Пока другой игрок продаёт товар, можно предложить ставку на его лот или прямой обмен.</p></div>')+'</div>'+
  '<div class="wide">'+scoreBox()+'<div class="panel"><h2>Журнал событий</h2><ol>'+state.log.map(entry=>'<li>'+esc(entry)+'</li>').join('')+'</ol></div></div></div>';
+ restoreDrafts(drafts);
 }
 function renderDone(){
  mode='done';
