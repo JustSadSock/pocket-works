@@ -349,7 +349,8 @@ function action(s,id,v){
     for(const k of RESOURCES)net[k]=bid.offer[k]-Math.ceil(bid.offer[k]*MARKET_COMMISSION);
     add(me,net);
     const item=lot.item;
-    item.history.push(me.id);item.acquiredRound=s.round;
+    // The buyer sees an anonymized provenance hop, never the intermediary's seller ID.
+    item.history.push('Анонимный рынок');item.acquiredRound=s.round;
     buyer.items.push(item);applyRelationship(s,me,buyer);
     s.blackLots=s.blackLots.filter(l=>l.id!==lot.id);
     issue(s,'Анонимный лот продан. Посредник удержал 10% комиссии.');
