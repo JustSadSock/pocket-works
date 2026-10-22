@@ -16,7 +16,7 @@ function fixture(n,rounds=4){
 }
 function submit(s,p,ps,text,other={}){
  const v=see(s,p,ps);
- return run(s,p,{type:'submit',round:v.round,sheetId:v.sheet.id,answer:text,tailIndexes:[0,1],gender:'unspecified',...other});
+ return run(s,p,{type:'submit',round:v.round,sheetId:v.sheet.id,answer:text,tailIndexes:s.round===s.total-1?[]:[0,1],gender:'unspecified',...other});
 }
 test('2–8 authors complete four or sixteen rounds with rotated manuscripts and arbitrary submission order',()=>{
  for(let n=2;n<=8;n++){
