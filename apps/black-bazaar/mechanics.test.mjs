@@ -526,11 +526,12 @@ test('Black market sealed bid can be inspected, accepted and processed exactly o
  while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
  const [seller,buyer]=state.contestants;
  const item=seller.items[0],before=seller.resources.gold;
+ buyer.resources.gold=400;
  act(state,seller.id,{type:'black_post',itemId:item.id,ask:{gold:100}});
  const lot=state.blackLots[0];
  const info=act(state,buyer.id,{type:'black_inspect',lotId:lot.id});
  assert.equal(info.events[0].type,'state');
- assert.equal(buyer.resources.gold,225);
+ assert.equal(buyer.resources.gold,375);
  assert.equal(game.viewForPlayer({state,player:{id:buyer.id}}).blackLots[0].inspection.originalName,specName(item));
  act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:90}});
  const visible=game.viewForPlayer({state,player:{id:seller.id}});
@@ -544,7 +545,7 @@ test('Black market sealed bid can be inspected, accepted and processed exactly o
  assert.equal(state.blackLots.length,0);
  assert.ok(buyer.items.some(i=>i.id===item.id));
  assert.equal(seller.resources.gold,before+81);
- assert.equal(buyer.resources.gold,135);
+ assert.equal(buyer.resources.gold,285);
  assert.equal(game.viewForPlayer({state,player:{id:buyer.id}}).you.items.some(i=>i.id===item.id&&!!i.positive),true);
  const repeat=act(state,seller.id,{type:'black_accept',lotId:lot.id,bidId:bid.id});
  assert.equal(repeat.events[0].type,'notice');
@@ -595,3 +596,64 @@ function specName(item){
    mushroom:'Гриб прибыли',hourglass:'Песочные часы',amulet:'Амулет расчёта'};
  return names[item.key];
 }
+
+
+test('Escrow reserves a full inventory slot; black-market bid cannot exceed inventory capacity',()=>{
+ const {state}=makeRoom(3);
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const [seller,buyer]=state.contestants;
+ const item=seller.items[0];
+ act(state,seller.id,{type:'black_post',itemId:item.id,ask:{gold:55}});
+ // Buyer has two originals; fill two more, still respecting unique inventory IDs.
+ buyer.items.push({...buyer.items[0],id:'item-99001'},{...buyer.items[0],id:'item-99002'});
+ buyer.resources.gold=400;
+ const lot=state.blackLots[0],bid=act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:60}});
+ assert.equal(bid.events[0].type,'notice');
+ const projected=game.viewForPlayer({state,player:{id:seller.id}});
+ assert.equal(projected.blackLots[0].item.id,undefined,'real item IDs must not leak');
+});
+test('Escrow seller cannot buy extra inventory and unsold lot returns without slot overflow',()=>{
+ const {state}=makeRoom(2);
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const owner=state.contestants[0];
+ owner.items.push({...owner.items[0],id:'item-90002'},{...owner.items[0],id:'item-90003'});
+ assert.equal(owner.items.length,4);
+ act(state,owner.id,{type:'black_post',itemId:owner.items[0].id,ask:{gold:60}});
+ assert.equal(owner.items.length,3);
+ owner.resources.gold=500;
+ while(state.contestants[state.turnIndex].id!==owner.id)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const fail=act(state,owner.id,{type:'broker_buy'});
+ assert.equal(fail.events[0].type,'notice');
+ while(state.round===2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ assert.equal(owner.items.length,4);
+});
+test('Server authoritative deadline skips stalled players without spending their late commands',()=>{
+ const {state}=makeRoom(3);
+ const active=state.contestants[state.turnIndex],before=active.resources.gold;
+ assert.ok(state.deadlineAt>Date.now());
+ const now=state.deadlineAt+5;
+ const res=game.onTick({state,now});
+ assert.equal(res.events[0].type,'state');
+ assert.equal(state.turnIndex,1);
+ assert.equal(active.resources.gold,before);
+ assert.ok(state.deadlineAt>Date.now());
+ const noChange=game.onTick({state,now:Date.now()});
+ assert.equal(noChange,null);
+ const next=state.contestants[state.turnIndex],turn=state.turnIndex;
+ state.deadlineAt=Date.now()-1;
+ const sent=act(state,next.id,{type:'work',resource:'gold'});
+ assert.equal(sent.events[0].type,'state');
+ assert.notEqual(state.turnIndex,turn);
+ assert.equal(next.worked,false,'the expired action was not executed');
+});
+test('Leaving during market escrow returns the seller item and removes stranded offers',()=>{
+ const {state}=makeRoom(3);
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const leaving=state.contestants[1],owned=leaving.items[0],remaining=state.players.filter(p=>p.id!==leaving.id);
+ act(state,leaving.id,{type:'black_post',itemId:owned.id,ask:{gold:45}});
+ assert.equal(state.blackLots.length,1);
+ game.onLeave({state,player:{id:leaving.id},players:remaining});
+ assert.equal(state.blackLots.length,0);
+ assert.equal(leaving.items.some(i=>i.id===owned.id),true);
+ assert.equal(leaving.bankrupt,true);
+});
