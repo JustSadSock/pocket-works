@@ -263,7 +263,9 @@ function editor(){
      ...(unlocks.includes('seoul-artist')?[['stage-pin','Лунная шпилька артиста']]:[]),
     ...(unlocks.includes('zamazka.shared-canvas')?[['brush','Кисть за ухом']]:[]),
      ...(unlocks.includes('zamazka.eagle-eye')?[['seer-diadem','Диадема проницательности']]:[]),
-     ...(unlocks.includes('cantica.seven')?[['solar-circlet','Солнечная роза']]:[])];
+     ...(unlocks.includes('cantica.seven')?[['solar-circlet','Солнечная роза']]:[]),
+    ...(unlocks.includes('blockies.double')?[['stack-cap','Пиксельный козырёк']]:[]),
+    ...(unlocks.includes('blockies.hundred-lines')?[['block-crown','Корона «Четыре клетки»']]:[])];
   const secretClothes=[...(unlocks.includes('astronaut')?[['spacesuit','Скафандр']]:[]),
     ...(unlocks.includes('wedding')?[['wedding','Свадебный наряд']]:[]),
     ...(unlocks.includes('herald')?[['tabard','Накидка герольда']]:[]),
@@ -273,7 +275,8 @@ function editor(){
     ...(unlocks.includes('cantica.complete')?[['illuminator','Мантия иллюминатора']]:[])];
   const secretAccessories=[...mascotAccessories,...(unlocks.includes('dragon-keeper')?[['shoulder-dragon','Изумрудный дракон на плече']]:[]),
      ...(unlocks.includes('zamazka.ghost-brush')?[['spectral-quill','Призрачное перо']]:[]),
-    ...(unlocks.includes('cantica.four-altars')?[['sun-crystal','Солнечный кристалл']]:[])];
+    ...(unlocks.includes('cantica.four-altars')?[['sun-crystal','Солнечный кристалл']]:[]),
+    ...(unlocks.includes('blockies.coop-twenty')?[['mini-block','Тетрамино на плече']]:[])];
   const rewardFace=[...mascotFaces,...(unlocks.includes('zamazka.sharp-eye')?[['monocle','Монокль']]:[])];
   const retiredTitles={'Призрачная кисть':'zamazka.ghost-brush','Всевидящий':'zamazka.eagle-eye'};
   const rewardTitles=mascotTitles.filter(t=>(!zamazkaAchievements.some(a=>a.slot==='title'&&a.item===t)||
