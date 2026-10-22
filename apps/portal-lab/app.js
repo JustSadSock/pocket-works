@@ -1,5 +1,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 installMobileRuntime();
+createWorkshopMode({appName:'ШОВ',version:'1.5.0',cachePrefix:'portal-lab-',storageNamespace:'pocket-works:portal-lab'});
 import {metric,geometry,launch,advance,constraint,collectBeam,staticAcceleration,staticClockRate,nullEnergyRadial,localSpeed} from './relativity.js';
 import {AudioBus} from './audio.js';
 import {createObservatory} from './observatory.js';
@@ -745,4 +747,4 @@ window.__SHOV__={snapshot:()=>({
  metric:currentMetric(),settings:structuredClone(settings),elapsed,observer:{...observatory.state},optics:observatory.status,tidal:observatory.probe,material:materialLab.snapshot,waves:waveLab.snapshot,designer:designer.snapshot,rotation:rotationLab.snapshot,causality:causalityLab.snapshot,atlas:atlasLab.snapshot,notebook:notebookLab.snapshot,volume:volumeLab.snapshot,field3d:fieldLab.snapshot,split:splitLab.snapshot,
  rays:rays.map(r=>({l:r.l,phi:r.phi,E:r.E,L:r.L,k:r.k,crossings:r.crossings,constraint:constraint(r,currentMetric())}))
  }),emit,clear:()=>resetData(),setModel:(model)=>{settings.model=model==='redshift'?'redshift':'ellis';changeMetric();}};
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+// Service worker lifecycle is handled by the shared update manager.
