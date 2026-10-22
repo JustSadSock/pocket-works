@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { build } from 'esbuild';
 
 const root = path.resolve(import.meta.dirname, '../..');
@@ -18,8 +19,34 @@ for (const entry of await readdir(apps, { withFileTypes: true })) {
   try { config = JSON.parse(await readFile(path.join(folder, 'module.json'), 'utf8')); }
   catch (error) { if (error.code === 'ENOENT') continue; throw error; }
   if (config.protocolVersion !== 1 || config.gameId !== gameId || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(gameId)) throw new Error(`Invalid module config: ${gameId}`);
-  const output = await build({ entryPoints: [path.join(folder, 'module.ts')], bundle: true, platform: 'node', target: 'node22', format: 'esm', write: false, minify: true, logLevel: 'silent' });
+  // Legacy Pocket Server requires a single self-contained Node.js module. A
+  // bare .wasm import is neither supported by esbuild's default Node loader nor
+  // deployable to ModuleRegistry. Compile the checked-in binary into a Node
+  // WebAssembly.Module inside the bundle; gzip keeps the existing 1 MiB cap.
+  const output = await build({
+    entryPoints: [path.join(folder, 'module.ts')],
+    bundle: true, platform: 'node', target: 'node22', format: 'esm',
+    write: false, minify: true, logLevel: 'silent',
+    plugins: [{
+      name: 'pocket-server-embedded-wasm',
+      setup(build) {
+        build.onLoad({filter: /\\.wasm$/}, async ({path: filename}) => {
+          const zipped = gzipSync(await readFile(filename), {level: 9, mtime: 0});
+          const encoded = JSON.stringify(zipped.toString('base64'));
+          return {
+            loader: 'js',
+            contents: 'import { gunzipSync } from "node:zlib"; ' +
+              'export default new WebAssembly.Module(gunzipSync(Buffer.from(' +
+              encoded + ', "base64")));'
+          };
+        });
+      }
+    }]
+  });
   const bundle = output.outputFiles[0].text;
+  if (Buffer.byteLength(bundle) > 1024 * 1024) {
+    throw new Error('Pocket Server module '+gameId+' exceeds the existing 1 MiB upload limit (compressed WASM included)');
+  }
   const sha256 = createHash('sha256').update(bundle).digest('hex');
   console.log(`${gameId}@${sha256}`);
   if (publishing) {
