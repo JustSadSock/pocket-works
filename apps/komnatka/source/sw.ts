@@ -4,9 +4,10 @@ import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<{ url: string; revision?: string }> };
 const CACHE_PREFIX='komnatka-';
-const APP_VERSION='1.0.0';
-const RELEASE_DATE='2026-10-13';
-const RELEASE_NOTES=['КОМНАТКА 1.0: 30 предметов, три планировки, обои, 5 сохранений, фоторежим и новые онлайн-задания.'];
+const APP_VERSION='1.2.0';
+const CACHE_NAME='komnatka-v1.2.0';
+const RELEASE_DATE='2026-10-15';
+const RELEASE_NOTES=["Пять самостоятельных назначений комнат с сохранениями и рекомендованным каталогом: гостиная, спальня, кухня, детская, кабинет.","16 новых настоящих моделей мебели и декора — всего 46, материалы от льна и бархата до дерева, керамики и металла.","Новые фактурные обои и покрытия: штукатурка, панели, лен, паркет ёлочкой и терраццо.","PocketNet v3: пространственные задачи жильцов, три уровня сложности и точный разбор игры по памяти.","Сравнение комнаты до и после с интерактивной границей, старые комнаты и правила v1/v2 сохранены."];
 setCacheNameDetails({prefix:'komnatka',suffix:`v${APP_VERSION}`,precache:'precache',runtime:'runtime'});
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
