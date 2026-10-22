@@ -3,11 +3,9 @@
   "suites": [
     {
       "id": "multiplayer-v5",
-      "kind": "node-test",
+      "kind": "node",
       "tier": "smoke",
-      "files": [
-        "rules.mjs"
-      ]
+      "entry": "qa/rules.mjs"
     },
     {
       "id": "responsive-entry",
