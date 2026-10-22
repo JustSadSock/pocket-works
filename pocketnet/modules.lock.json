@@ -253,5 +253,11 @@
       "v4",
       "v5"
     ]
+  },
+  "black-bazaar": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
