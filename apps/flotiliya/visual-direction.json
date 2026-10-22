@@ -71,6 +71,11 @@
         "slug": "shevel",
         "spatialDifference": "Вместо игровой сцены с музыкальным/ритмическим движением и хореографией графических элементов — тактическая широкая морская карта и постоянная компактная командная консоль для двух половин фазы.",
         "interactionDifference": "В отличие от ритмического немедленного ввода игрок заранее рисует путь мышью или пальцем и назначает отдельный приказ в половине хода, а затем смотрит автономное исполнение нескольких судов."
+      },
+      {
+        "slug": "black-bazaar",
+        "spatialDifference": "Black Bazaar places inventories and anonymous bid forms on a multi-column economic table. Flotiliya devotes the central view to a vertical sea canvas with war galleys, routes, islands and a side instrument console.",
+        "interactionDifference": "Black Bazaar negotiates an economy through secret offers; Flotiliya plots simultaneous paid ship orders and resolves actual movement and tactical engagements."
       }
     ]
   },
