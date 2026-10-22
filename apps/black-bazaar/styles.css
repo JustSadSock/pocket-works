@@ -373,3 +373,70 @@ body.sheet-open{overflow:hidden}
  .table-stage .mini-artifacts button{width:70px;min-height:70px}
 }
 @media(prefers-reduced-motion:reduce){.detail-display .item-svg{animation:none}}
+
+/* Stage 6.4: low-cost paper-and-wood movement. Always respect reduced motion. */
+.sound-toggle{display:grid;place-items:center;flex:none;width:43px;min-width:43px;height:40px;min-height:40px;padding:5px;
+ background:linear-gradient(#654633,#493023);color:#ffe1aa;border:2px solid #b58b5a;border-radius:12px;box-shadow:0 3px 0 #291c18}
+.sound-toggle svg{width:23px;height:23px}
+.sound-toggle[aria-pressed="false"]{background:#37483e;color:#e4b88d;border-color:#7d8d6e}
+.sound-toggle:hover:not(:disabled){filter:brightness(1.1)}
+.seat.is-turn .seat-character.art-ready{animation:character-breathe 2.7s ease-in-out infinite alternate}
+.table-stage>.artifact .item-svg,.table-stage>.mini-artifacts .item-svg{transform-origin:50% 82%;transition:transform .18s ease,filter .18s ease}
+.table-stage>.artifact:hover .item-svg,.table-stage>.artifact:focus-visible .item-svg{transform:translateY(-6px) rotate(-3deg) scale(1.04);
+ filter:drop-shadow(2px 15px 4px #2d1c14aa)}
+.table-stage .mini-artifacts button:hover .item-svg,.table-stage .mini-artifacts button:focus-visible .item-svg{transform:translateY(-4px) rotate(4deg)}
+.inventory-object .item-svg{transition:transform .18s ease}
+.inventory-object:hover .item-svg{transform:rotate(-5deg) translateY(-3px)}
+.side-sheet.sheet-enter{animation:paper-slide .29s cubic-bezier(.2,.78,.2,1) both}
+@keyframes paper-slide{from{transform:translateX(44px);opacity:.7}to{transform:translateX(0);opacity:1}}
+.confirmed-cue{position:fixed;z-index:31;top:calc(76px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+ display:inline-flex;align-items:center;justify-content:center;gap:10px;width:max-content;max-width:calc(100vw - 28px);
+ min-height:49px;padding:10px 17px;color:#3e291e;text-align:center;font:900 clamp(14px,2vw,18px) Georgia,serif;
+ border:3px solid #714525;border-radius:13px 16px 12px 17px;
+ background:linear-gradient(110deg,#ffe9c0,#ebc28d);box-shadow:0 5px 0 #543223,0 15px 30px #0a17147a;
+ pointer-events:none;animation:cue-drop 1.35s ease both}
+.confirmed-cue svg{width:23px;height:23px;flex:none}
+.confirmed-cue.confirmed-deal,.confirmed-cue.confirmed-reward,.confirmed-cue.confirmed-bid{background:linear-gradient(#ffebb8,#d8a15e)}
+.confirmed-cue.confirmed-curse,.confirmed-cue.confirmed-warning{color:#ffddb5;border-color:#382b38;background:linear-gradient(#69414c,#3e2938)}
+.confirmed-cue.confirmed-ward{background:linear-gradient(#ecf0c8,#a9c9a2);border-color:#4e6652}
+@keyframes cue-drop{
+ 0%{opacity:0;transform:translate(-50%,-17px) rotate(-2deg) scale(.93)}
+ 17%{opacity:1;transform:translate(-50%,0) rotate(0) scale(1)}
+ 72%{opacity:1;transform:translate(-50%,0) scale(1)}
+ 100%{opacity:0;transform:translate(-50%,-8px) scale(.98)}
+}
+.trade-burst{position:absolute;z-index:5;left:50%;top:55%;width:1px;height:1px;pointer-events:none;
+ --burst-ink:#edc279}
+.trade-burst.burst-curse,.trade-burst.burst-warning{--burst-ink:#78515d}
+.trade-burst.burst-ward{--burst-ink:#c4e6b5}
+.trade-burst.burst-inspect{--burst-ink:#c5e2c8}
+.trade-burst.burst-craft{--burst-ink:#d5a171}
+.trade-burst i{position:absolute;left:0;top:0;width:12px;height:12px;
+ background:var(--burst-ink);clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);
+ box-shadow:0 0 10px #ffe0aa;animation:burst-spark .73s ease-out forwards}
+.trade-burst i:nth-child(1){--dx:-130px;--dy:-60px;animation-delay:0ms}
+.trade-burst i:nth-child(2){--dx:-90px;--dy:-121px;animation-delay:35ms}
+.trade-burst i:nth-child(3){--dx:3px;--dy:-140px;animation-delay:20ms}
+.trade-burst i:nth-child(4){--dx:101px;--dy:-104px;animation-delay:70ms}
+.trade-burst i:nth-child(5){--dx:140px;--dy:-12px;animation-delay:40ms}
+.trade-burst i:nth-child(6){--dx:103px;--dy:80px;animation-delay:90ms}
+.trade-burst i:nth-child(7){--dx:-8px;--dy:110px;animation-delay:52ms}
+.trade-burst i:nth-child(8){--dx:-123px;--dy:73px;animation-delay:65ms}
+@keyframes burst-spark{
+ 0%{opacity:0;transform:translate(0,0) scale(.15) rotate(0)}
+ 24%{opacity:1}
+ 100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.4) rotate(90deg)}
+}
+@media(max-width:680px){
+ .play-head .sound-toggle{width:38px;min-width:38px;min-height:37px;height:37px;padding:5px}
+ .sound-toggle svg{width:19px;height:19px}
+ .confirmed-cue{top:calc(65px + env(safe-area-inset-top));min-height:44px;padding:8px 12px;font-size:14px}
+ .trade-burst i{width:8px;height:8px}
+ .trade-burst{transform:scale(.67)}
+}
+@media(prefers-reduced-motion:reduce){
+ .seat.is-turn .seat-character.art-ready,.side-sheet.sheet-enter,.confirmed-cue,.trade-burst i{animation:none!important}
+ .confirmed-cue{opacity:1}
+ .trade-burst{display:none}
+ .table-stage>.artifact .item-svg,.table-stage>.mini-artifacts .item-svg,.inventory-object .item-svg{transition:none!important;transform:none!important}
+}
