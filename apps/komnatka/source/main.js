@@ -846,7 +846,7 @@ function addEvents(){
  $('materialToggle').addEventListener('click',()=>{expandedMaterials=!expandedMaterials;
   $('selectionMaterials').hidden=!expandedMaterials;$('materialToggle').setAttribute('aria-expanded',String(expandedMaterials));sound('select');});
  $('undoBtn').addEventListener('click',undo);$('redoBtn').addEventListener('click',redo);
- $('eveningBtn').addEventListener('click',switchDollhouseLighting);
+ $('eveningBtn').addEventListener('click',()=>{closeToolMenu();switchDollhouseLighting();});
  $('soundBtn').addEventListener('click',()=>{soundscape.toggle();updateActions();});
  $('photoBtn').addEventListener('click',()=>studio.photoOpen());
  $('resetBtn').addEventListener('click',()=>{if(online?.active){toast('Сброс недоступен в общей комнате');return;}$('resetDialog').hidden=false;});
