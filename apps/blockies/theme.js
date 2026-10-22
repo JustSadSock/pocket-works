@@ -5,7 +5,8 @@
   const media=window.matchMedia('(prefers-color-scheme: dark)');
   let preference='auto';
   try{const saved=localStorage.getItem(KEY);if(valid.has(saved))preference=saved;}catch{}
-  const resolved=()=>preference==='auto'?(media.matches?'dark':'light'):preference;
+  // Night is dark even when the operating system remains in its daytime palette.
+  const resolved=()=>preference==='auto'?(media.matches||new Date().getHours()>=20||new Date().getHours()<7?'dark':'light'):preference;
   function apply(){
     const theme=resolved();
     document.documentElement.dataset.theme=theme;
@@ -29,12 +30,10 @@
   }
   document.getElementById('theme-toggle')?.addEventListener('click',()=>set(resolved()==='dark'?'light':'dark'));
   document.getElementById('theme-choice')?.addEventListener('change',event=>set(event.target.value));
-  document.getElementById('reset-settings-btn')?.addEventListener('click',()=>{
-    // Visual preference resets only if game confirms its settings reset.
-    // Do not silently reset the theme when the user cancels a game-setting change.
-    requestAnimationFrame(apply);
-  });
   media.addEventListener?.('change',()=>{if(preference==='auto')apply();});
+  // Follow the evening/daylight transition without requiring a page reload.
+  const refresh=()=>{if(preference==='auto' && document.documentElement.dataset.theme!==resolved())apply();};
+  window.setInterval(refresh,5*60*1000);
   window.addEventListener('storage',event=>{if(event.key===KEY){preference=valid.has(event.newValue)?event.newValue:'auto';apply();}});
   apply();
 })();
