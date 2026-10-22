@@ -34,6 +34,14 @@ const app = {
   effects: [],
   effectTimer: null,
   simulationReport: null,
+  inspectedSlot: null,
+  historyExpanded: false,
+  replay: null,
+  preResolutionState: null,
+  replayActive: false,
+  replayStage: "after",
+  replayTimer: null,
+  debug: { open: false, tab: "screens", scene: "game", animation: null },
   debugSelects: Object.fromEntries(SLOT_TYPES.map((slot) => [slot, "base"])),
   settings: {
     sound: true,
@@ -83,8 +91,8 @@ function closeModal() {
   render();
 }
 
-function ensureAudio() {
-  if (!app.settings.sound) {
+function ensureAudio(force = false) {
+  if (!app.settings.sound && !force) {
     return null;
   }
   if (!app.audioCtx) {
@@ -97,8 +105,8 @@ function ensureAudio() {
   return app.audioCtx;
 }
 
-function playTone(kind = "tap") {
-  const ctx = ensureAudio();
+function playTone(kind = "tap", force = false) {
+  const ctx = ensureAudio(force);
   if (!ctx) {
     return;
   }
@@ -250,6 +258,10 @@ function startLocalGame(mode, aiProfile = "contender") {
   app.local.lastLogs = [];
   app.simulationReport = null;
   app.effects = [];
+  app.replay = null;
+  app.replayActive = false;
+  app.inspectedSlot = null;
+  app.historyExpanded = false;
   app.selectedCardId = null;
   app.focusCardId = null;
   app.lastConflictSlots = [];
@@ -276,6 +288,10 @@ function currentHand() {
 
 function recordResolution(resolution, isOnline = false) {
   app.lastConflictSlots = resolution.conflicts || [];
+  if (!isOnline && app.preResolutionState) {
+    app.replay = { before: app.preResolutionState, after: structuredClone(app.local.state) };
+    app.preResolutionState = null;
+  }
   scheduleEffects(buildEffects(isOnline ? app.online.roomState : app.local.state, resolution));
   if (resolution.tracker.crownEvents.length > 0) {
     playTone("crown");
@@ -316,6 +332,7 @@ function confirmSelection() {
     render();
     window.setTimeout(() => {
       const aiCard = chooseAiCard(app.local.state, "p2", app.local.aiProfile);
+      app.preResolutionState = structuredClone(app.local.state);
       const resolution = resolveTurn(app.local.state, {
         p1: { cardId: humanCard },
         p2: { cardId: aiCard }
@@ -339,6 +356,7 @@ function confirmSelection() {
       render();
       return;
     }
+    app.preResolutionState = structuredClone(app.local.state);
     const resolution = resolveTurn(app.local.state, app.local.pendingHotseat);
     app.local.state = resolution.state;
     app.local.pendingHotseat = {};
@@ -373,12 +391,14 @@ function setupSocket() {
       playTone("ready");
     }
     if (payload.type === "room:update") {
-      const prevTurn = app.online.roomState?.turn;
+      const previousRoomState = app.online.roomState;
+      const prevTurn = previousRoomState?.turn;
       app.online.roomCode = payload.room.code;
       app.online.you = payload.room.you;
       app.online.ready = payload.room.ready;
       app.online.roomState = payload.room.state;
       if (app.online.roomState && prevTurn && app.online.roomState.turn !== prevTurn) {
+        app.replay = { before: structuredClone(previousRoomState), after: structuredClone(app.online.roomState) };
         app.online.lastLogs = app.online.roomState.battleLog.slice(0, 8);
         app.lastConflictSlots = app.online.roomState.turnSummaries[0]?.conflicts || [];
         playTone("move");
@@ -486,14 +506,14 @@ function boardHTML(state) {
         .filter(Boolean)
         .join(" ");
       return `
-        <div class="${classes}" data-piece-id="${piece.id}" style="--x:${piece.x};--y:${piece.y}">
+        <button type="button" class="${classes} ${app.inspectedSlot === piece.kind ? "piece--focused" : ""}" data-piece-kind="${piece.kind}" data-piece-id="${piece.id}" aria-label="${piece.kind === "champion" ? (piece.owner === "p1" ? "Чемпион Севера" : "Чемпион Юга") : SLOT_LABELS[piece.kind]}" style="--x:${piece.x};--y:${piece.y}">
           <div class="piece__token">
             ${pieceGlyph(piece)}
             ${piece.shield ? `<span class="status-chip status-chip--shield">Щит</span>` : ""}
             ${piece.stun ? `<span class="status-chip status-chip--stun">Оглушен</span>` : ""}
             ${piece.carryingSeal ? `<span class="status-chip status-chip--seal">Печать</span>` : ""}
           </div>
-        </div>
+        </button>
       `;
     })
     .join("");
@@ -515,98 +535,46 @@ function boardHTML(state) {
 }
 
 function lawSlotsHTML(state) {
-  const laws = activeLaws(state);
-  return `
-    <section class="law-panel">
-      <div class="panel-head">
-        <h3>Законы</h3>
-        <span>5 слотов власти</span>
-      </div>
-      <div class="law-slots">
-        ${SLOT_TYPES.map((slot) => {
-          const active = laws[slot];
-          const isBase = !state.slots[slot].activeCardId;
-          const detailId = isBase ? BASE_LAWS[slot].id : active.id;
-          return `
-            <button data-native-press class="law-slot ${app.lastConflictSlots.includes(slot) ? "law-slot--conflict" : ""}" style="--slot-color:${SLOT_COLORS[slot]}" data-slot="${slot}" data-focus-card="${detailId}" aria-label="Действующий закон ${SLOT_LABELS[slot]}: ${active.name}">
-              <span class="law-slot__slot">${SLOT_LABELS[slot].replace("Закон ", "")}</span>
-              <span class="law-slot__name">${active.name}</span>
-              <span class="law-slot__mode">${isBase ? "База" : "Активный"}</span>
-            </button>
-          `;
-        }).join("")}
-      </div>
-    </section>
-  `;
+  const laws=activeLaws(state);
+  const short={champion:"Чемпионы",guard:"Страж",beast:"Зверь",priest:"Жрец",thief:"Вор"};
+  return `<section class="law-panel" aria-label="Пять действующих законов">
+    <div class="panel-head"><h3>Законы мира</h3><span>Действуют на обе стороны</span></div>
+    <div class="law-slots">${SLOT_TYPES.map(slot=>{
+      const law=laws[slot],base=!state.slots[slot].activeCardId;
+      const id=base?BASE_LAWS[slot].id:law.id;
+      return `<button type="button" data-native-press class="law-slot ${app.inspectedSlot===slot?"law-slot--focused":""} ${app.lastConflictSlots.includes(slot)?"law-slot--conflict":""}" style="--slot-color:${SLOT_COLORS[slot]}" data-slot="${slot}" data-focus-card="${id}" title="${law.name}" aria-pressed="${app.inspectedSlot===slot}">
+        <span class="law-slot__short">${short[slot]}</span><span class="law-slot__copy"><span class="law-slot__name">${law.name}</span><span class="law-slot__mode">${base?"Каменный закон":"Новый указ"}</span></span>
+      </button>`;
+    }).join("")}</div></section>`;
 }
 
-function detailCard() {
-  const sourceId = app.focusCardId || app.selectedCardId;
-  if (!sourceId) {
-    return `
-      <section class="detail-card detail-card--empty">
-        <div class="panel-head">
-          <h3>Свод закона</h3>
-          <span>Тап по карте</span>
-        </div>
-        <p>Выберите карту или слот, чтобы увидеть полное правило.</p>
-      </section>
-    `;
-  }
-  const card = CARD_BY_ID[sourceId] || Object.values(BASE_LAWS).find((law) => law.id === sourceId);
-  const slot = card.slot;
-  return `
-    <section class="detail-card" style="--detail-color:${SLOT_COLORS[slot] || "#6a655c"}">
-      <div class="panel-head">
-        <h3>${card.name}</h3>
-        <span>${SLOT_LABELS[slot]}</span>
-      </div>
-      <p>${card.description}</p>
-    </section>
-  `;
+function detailCard(state) {
+  const id=app.selectedCardId||app.focusCardId;
+  if(!id)return "";
+  const card=CARD_BY_ID[id]||Object.values(BASE_LAWS).find(law=>law.id===id);
+  if(!card)return "";
+  const replacing=Boolean(app.selectedCardId&&id===app.selectedCardId);
+  const active=activeLaws(state)[card.slot];
+  return `<section class="detail-card" style="--detail-color:${SLOT_COLORS[card.slot]}">
+    <div class="detail-card__heading"><span>${SLOT_LABELS[card.slot]}</span><button type="button" class="text-btn" data-action="clear-inspection" aria-label="Закрыть описание">×</button></div>
+    ${replacing?`<div class="law-comparison"><div class="law-comparison__old"><small>Сейчас действует</small><strong>${active.name}</strong><p>${active.description}</p></div><div class="law-comparison__new"><small>После утверждения</small><strong>${card.name}</strong><p>${card.description}</p></div></div><p class="detail-note">Закон действует на обе стороны. Соперник может вызвать конфликт, выбрав ту же категорию.</p>`:`<strong class="detail-card__title">${card.name}</strong><p>${card.description}</p>`}
+  </section>`;
 }
 
 function handHTML(state) {
-  const viewer = getViewerPlayer();
-  const locked =
-    (app.screen === "online" && app.online.ready[viewer]) ||
-    app.local.waitingAi ||
-    (app.local.mode === "hotseat" && app.local.passScreen);
-  return `
-    <section class="hand-panel ${locked ? "hand-panel--locked" : ""}">
-      <div class="panel-head">
-        <h3>Рука · ${viewer === "p1" ? "Север" : "Юг"}</h3>
-        <span>${locked ? "Выбор принят" : "Указ на следующий ход"}</span>
-      </div>
-      <div class="hand">
-        ${currentHand()
-          .map((cardId) => {
-            const card = cardById(cardId);
-            return `
-              <button
-                class="law-card ${app.selectedCardId === cardId ? "law-card--selected" : ""}"
-                style="--card-color:${SLOT_COLORS[card.slot]}" aria-pressed="${app.selectedCardId === cardId}"
-                draggable="true"
-                data-card-id="${cardId}"
-                data-focus-card="${cardId}"
-              >
-                <span class="law-card__slot">${SLOT_LABELS[card.slot].replace("Закон ", "")}</span>
-                <span class="law-card__title">${card.name}</span>
-                <span class="law-card__body">${card.description}</span>
-              </button>
-            `;
-          })
-          .join("")}
-      </div>
-      <div class="hand-preview" role="status">
-        ${app.selectedCardId ? `<strong>${cardById(app.selectedCardId).name}</strong><span>${cardById(app.selectedCardId).description}</span>` : locked ? "Закон запечатан. Ожидайте второго игрока." : "Коснитесь карты — прочитайте действие и подтвердите выбор."}
-      </div>
-      <div class="hand-actions">
-        <button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId || locked ? "disabled" : ""}>Утвердить закон</button>
-        <button data-native-press class="ghost-btn" data-action="toggle-rules">Свод</button>
-      </div>
-    </section>
-  `;
+  const viewer=getViewerPlayer();
+  const locked=(app.screen==="online"&&app.online.ready[viewer])||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
+  return `<section class="hand-panel ${locked?"hand-panel--locked":""}">
+    <div class="panel-head"><h3>Ваши указы</h3><span>${viewer==="p1"?"Север":"Юг"} · ${currentHand().length} карт</span></div>
+    ${locked?`<p class="sealed-notice">Ваш указ принят и запечатан. ${app.screen==="online"?"Ожидаем соперника.":"Идёт разрешение хода."}</p>`:""}
+    <div class="hand" role="group" aria-label="Выбор одного указа">${currentHand().map(cardId=>{
+      const card=cardById(cardId);
+      return `<button type="button" class="law-card ${app.selectedCardId===cardId?"law-card--selected":""}" style="--card-color:${SLOT_COLORS[card.slot]}" aria-pressed="${app.selectedCardId===cardId}" ${locked?"disabled":""} draggable="${!locked}" data-card-id="${cardId}" data-focus-card="${cardId}">
+        <span class="law-card__slot">${SLOT_LABELS[card.slot].replace("Закон ","")}</span><strong class="law-card__title">${card.name}</strong></button>`;
+    }).join("")}</div>
+    ${detailCard(state)}
+    <div class="hand-actions"><button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId||locked?"disabled":""}>${locked?"Указ запечатан":"Утвердить закон"}</button></div>
+  </section>`;
 }
 
 function phaseBanner() {
@@ -627,28 +595,14 @@ function phaseBanner() {
 }
 
 function logHTML(state) {
-  const logs = app.screen === "online" ? app.online.lastLogs : app.local.lastLogs.length ? app.local.lastLogs : state.battleLog.slice(0, 8);
-  return `
-    <section class="log-panel">
-      <div class="panel-head">
-        <h3>Ход</h3>
-        <span>${phaseBanner()}</span>
-      </div>
-      <div class="log-list">
-        ${logs
-          .slice(0, 8)
-          .map(
-            (entry) => `
-              <div class="log-entry">
-                <span class="log-entry__phase">${entry.phase}</span>
-                <span class="log-entry__text">${entry.text}</span>
-              </div>
-            `
-          )
-          .join("")}
-      </div>
-    </section>
-  `;
+  const logs=app.screen==="online"?app.online.lastLogs:(app.local.lastLogs.length?app.local.lastLogs:state.battleLog.slice(0,8));
+  const recent=logs[0];
+  return `<section class="log-panel"><div class="log-panel__summary">
+    <span class="log-panel__phase">${phaseBanner()}</span>
+    <span class="log-panel__recent">${recent?.text||"Законы определяют судьбу фигур — выберите свой указ."}</span>
+    <button data-action="toggle-history" class="text-btn" aria-expanded="${app.historyExpanded}">${app.historyExpanded?"Скрыть":"История"}</button>
+    ${app.replay?`<button data-action="replay-turn" class="ghost-btn" ${app.replayActive?"disabled":""}>Повторить ход</button>`:""}
+    </div>${app.historyExpanded?`<div class="log-list">${logs.slice(0,12).map(entry=>`<div class="log-entry"><span class="log-entry__phase">${entry.phase}</span><span class="log-entry__text">${entry.text}</span></div>`).join("")||"<p>Событий пока нет.</p>"}</div>`:""}</section>`;
 }
 
 function debugHTML(state) {
@@ -656,8 +610,8 @@ function debugHTML(state) {
     return "";
   }
   return `
-    <details class="debug-panel">
-      <summary>DEBUG / балансировка</summary>
+    <section class="debug-panel">
+      <h3>Баланс и диагностика</h3>
       <div class="debug-grid">
         <button data-native-press class="ghost-btn" data-debug="restart">Перезапуск матча</button>
         <button data-native-press class="ghost-btn" data-debug-action="simulate-20">Симулировать 20 ходов</button>
@@ -705,7 +659,7 @@ function debugHTML(state) {
           </div>
         ` : ""}
       </div>
-    </details>
+    </section>
   `;
 }
 
@@ -784,7 +738,7 @@ function gameHTML(state, eyebrow) {
       <div class="game-shell__frame">
         <header class="topbar">
           <div class="topbar__left">
-            <span class="eyebrow">${chooserLabel || "Двор престола"}</span>
+            <span class="eyebrow">${chooserLabel || "Зал пяти законов"} · ход ${state.turn}</span>
             <h1>Законы короны</h1>
           </div>
           <div class="topbar__right">
@@ -798,14 +752,12 @@ function gameHTML(state, eyebrow) {
           </div>
         </header>
         <main class="game-layout">
-          <div class="game-layout__main">${boardHTML(state)}</div>
+          <div class="game-layout__main">${boardHTML(app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : state)}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
           <aside class="game-layout__side">
             ${lawSlotsHTML(state)}
-            ${detailCard()}
-            ${logHTML(state)}
-            ${debugHTML(state)}
           </aside>
           <div class="game-layout__hand">${handHTML(state)}</div>
+          <div class="game-layout__foot">${logHTML(state)}</div>
         </main>
       </div>
       ${app.local.mode === "hotseat" && app.local.passScreen ? `
@@ -935,6 +887,57 @@ function modalHTML() {
   `;
 }
 
+function debugSceneHTML(scene) {
+  const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,replay:app.replay,replayActive:app.replayActive};
+  let markup="";
+  try {
+    const state=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
+    app.screen="game";
+    app.local={...app.local,mode:"ai",state,waitingAi:false,passScreen:false,hotseatChooser:"p1"};
+    app.online={...app.online,roomState:null,roomCode:"",ready:{p1:false,p2:false},you:"p1"};
+    app.modal=null;
+    app.effects=[];app.lastConflictSlots=[];
+    app.selectedCardId=null;app.focusCardId=null;app.inspectedSlot=null;
+    app.replay=null;app.replayActive=false;
+    if(scene==="menu")markup=menuHTML();
+    else if(scene==="join"||scene==="waiting"){
+      app.screen="online";
+      if(scene==="waiting")app.online.roomCode="DEMO1";
+      markup=roomHTML();
+    }else{
+      if(scene==="ready"){app.screen="online";app.online.roomState=state;app.online.ready.p1=true;}
+      if(scene==="hotseat"){app.local.mode="hotseat";app.local.passScreen=true;app.local.hotseatChooser="p2";}
+      if(scene==="victory"){state.winner="p1";state.players.p1.activeCrowns=3;}
+      if(scene==="rules"||scene==="settings"||scene==="simulation"){
+        app.modal=scene;
+        if(scene==="simulation")app.simulationReport={turnsPlayed:20,turnsRequested:20,crowns:{p1:2,p2:1},conflicts:3,throneStands:{p1:3,p2:2},crownBlocked:2,averageDistance:{p1:1.8,p2:2.1}};
+      }
+      const anim=app.debug.animation;
+      if(anim==="crown"||anim==="shield")app.effects=[{kind:anim,x:2,y:3}];
+      if(anim==="beast-dash"||anim==="seal-trail")app.effects=[{kind:anim,from:{x:2,y:4},to:{x:3,y:2}}];
+      if(anim==="conflict")app.lastConflictSlots=["guard"];
+      markup=gameHTML(state,scene==="ready"?"Ожидание соперника":"Демонстрационная партия");
+      if(app.modal)markup+=modalHTML();
+    }
+  }finally{Object.assign(app,saved);}
+  return `<div class="debug-scene ${app.debug.animation?`debug-scene--anim-${app.debug.animation}`:""}"><div class="debug-scene__content" inert>${markup}</div><span class="debug-scene__label">ПРЕДПРОСМОТР · ${scene}</span></div>`;
+}
+
+function debugWorkshopHTML() {
+  const scenes=[["menu","Главное меню"],["game","Игровая партия"],["join","Создание / вход"],["waiting","Ожидание гостя"],["ready","Выбор запечатан"],["hotseat","Передача устройства"],["victory","Экран победы"],["rules","Правила"],["settings","Настройки"],["simulation","Отчёт симуляции"]];
+  const animations=[["move","Перемещение фишки"],["crown","Получение короны"],["shield","Защитный щит"],["beast-dash","Рывок зверя"],["seal-trail","Похищение печати"],["conflict","Конфликт законов"],["card","Выбор карты"]];
+  const sounds=[["tap","Выбор карты"],["ready","Утверждение"],["move","Перемещение"],["conflict","Конфликт"],["crown","Корона"]];
+  return `<aside class="debug-workshop" role="dialog" aria-label="Мастерская разработчика">
+    <header class="debug-workshop__top"><div><small>Тильда · Backquote</small><h2>Мастерская</h2></div><button type="button" data-debug-close class="ghost-btn" aria-label="Закрыть">×</button></header>
+    <nav class="debug-workshop__tabs" aria-label="Разделы отладки">${[["screens","Экраны"],["animations","Анимации"],["sounds","Звуки"],["balance","Баланс"]].map(([id,label])=>`<button type="button" class="${app.debug.tab===id?"is-active":""}" data-debug-tab="${id}">${label}</button>`).join("")}</nav>
+    ${app.debug.tab==="screens"?`<p>Настоящие игровые шаблоны с демонстрационными данными. Партия не изменяется.</p><div class="debug-workshop__items">${scenes.map(([id,label])=>`<button type="button" class="${app.debug.scene===id?"is-active":""}" data-debug-scene="${id}">${label}</button>`).join("")}</div>`:""}
+    ${app.debug.tab==="animations"?`<p>Выберите эффект — он запустится прямо на поле предпросмотра.</p><div class="debug-workshop__items">${animations.map(([id,label])=>`<button type="button" data-demo-animation="${id}">${label} ↗</button>`).join("")}</div>`:""}
+    ${app.debug.tab==="sounds"?`<p>Звуки можно прослушать даже при выключенных игровых эффектах.</p><div class="debug-workshop__items">${sounds.map(([id,label])=>`<button type="button" data-demo-sound="${id}">${label} ▶</button>`).join("")}</div>`:""}
+    ${app.debug.tab==="balance"?(app.local.state&&app.screen==="game"?`<p>Изменения применяются к текущей локальной партии.</p>${debugHTML(app.local.state)}`:"<p>Изменение баланса доступно в локальной партии с ИИ или на одном устройстве.</p>"):""}
+    <footer class="debug-workshop__foot">Закрыть: <kbd>~</kbd> или <kbd>Esc</kbd></footer>
+  </aside>`;
+}
+
 function render() {
   const state = currentState();
   if (app.screen === "menu") {
@@ -944,7 +947,8 @@ function render() {
   } else if (app.screen === "game" && state) {
     root.innerHTML = `${gameHTML(state, app.local.mode === "ai" ? AI_PROFILES[app.local.aiProfile].name : "Локальная партия")}${modalHTML()}`;
   }
-  animateBoard();
+  if(app.debug.open)root.innerHTML=debugSceneHTML(app.debug.scene)+debugWorkshopHTML();
+  if(!app.debug.open)animateBoard();
   syncExports();
   persistLocal();
 }
@@ -966,7 +970,7 @@ function restoreLocal() {
 }
 
 function animateBoard() {
-  const state = currentState();
+  const state = app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState();
   if (!state) return;
   const nextPositions = Object.fromEntries(Object.values(state.pieces).map(piece => [piece.id, {x:piece.x,y:piece.y}]));
   const board = root.querySelector('.board');
@@ -996,6 +1000,19 @@ function syncExports() {
 }
 
 root.addEventListener("click", (event) => {
+  const dev=event.target.closest("[data-debug-close],[data-debug-tab],[data-debug-scene],[data-demo-animation],[data-demo-sound]");
+  if(dev){
+    if(dev.hasAttribute("data-debug-close"))app.debug.open=false;
+    if(dev.dataset.debugTab){app.debug.tab=dev.dataset.debugTab;if(app.debug.tab==="animations")app.debug.scene="game";}
+    if(dev.dataset.debugScene){app.debug.scene=dev.dataset.debugScene;app.debug.animation=null;}
+    if(dev.dataset.demoSound){playTone(dev.dataset.demoSound,true);return;}
+    if(dev.dataset.demoAnimation){
+      const name=dev.dataset.demoAnimation;
+      app.debug.scene="game";app.debug.animation=name;
+      window.setTimeout(()=>{if(app.debug.animation===name){app.debug.animation=null;if(app.debug.open)render();}},1300);
+    }
+    render();return;
+  }
   const stop = event.target.closest("[data-stop-click]");
   if (stop) {
     return;
@@ -1026,7 +1043,7 @@ root.addEventListener("click", (event) => {
         playTone("tap");
         break;
       case "confirm-choice":
-        confirmSelection();
+        if(!app.replayActive)confirmSelection();
         break;
       case "toggle-rules":
         openModal("rules");
@@ -1034,10 +1051,24 @@ root.addEventListener("click", (event) => {
       case "toggle-settings":
         openModal("settings");
         break;
+      case "clear-inspection":
+        app.focusCardId=null; app.selectedCardId=null; app.inspectedSlot=null; render();
+        break;
+      case "toggle-history":
+        app.historyExpanded=!app.historyExpanded; render();
+        break;
+      case "replay-turn":
+        if(app.replay&&!app.replayActive){
+          app.replayActive=true; app.replayStage="before"; render();
+          window.clearTimeout(app.replayTimer);
+          app.replayTimer=window.setTimeout(()=>{app.replayStage="after";render();app.replayTimer=window.setTimeout(()=>{app.replayActive=false;render();},1100);},700);
+        }
+        break;
       case "close-modal":
         closeModal();
         break;
       case "back-menu":
+        window.clearTimeout(app.replayTimer);app.replayActive=false;
         app.screen = "menu";
         app.local.state = null;
         render();
@@ -1059,10 +1090,19 @@ root.addEventListener("click", (event) => {
   }
 
   const focus = event.target.closest("[data-focus-card]");
-  if (focus) {
-    app.focusCardId = focus.dataset.focusCard;
+  if (focus && !event.target.closest("[data-card-id]")) {
+    app.focusCardId=focus.dataset.focusCard;
+    app.inspectedSlot=focus.dataset.slot||null;
+    if(app.inspectedSlot)app.selectedCardId=null;
   }
 
+  const piece=event.target.closest("[data-piece-kind]");
+  if(piece){
+    app.inspectedSlot=piece.dataset.pieceKind;
+    app.focusCardId=activeLaws(currentState())[app.inspectedSlot]?.id||null;
+    app.selectedCardId=null;
+    render();return;
+  }
   const card = event.target.closest("[data-card-id]");
   if (focus && !card) {
     render();
@@ -1070,7 +1110,9 @@ root.addEventListener("click", (event) => {
   }
   if (card) {
     const cardId = card.dataset.cardId;
+    if(card.disabled)return;
     app.selectedCardId = app.selectedCardId === cardId ? null : cardId;
+    app.inspectedSlot=cardById(cardId).slot;
     playTone("tap");
     render();
     return;
@@ -1155,6 +1197,10 @@ root.addEventListener("drop", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
+  if((event.code==="Backquote"||event.key==="~"||event.key==="`")&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||"")){
+    event.preventDefault();app.debug.open=!app.debug.open;app.debug.animation=null;render();return;
+  }
+  if(event.key==="Escape"&&app.debug.open){app.debug.open=false;render();return;}
   if (event.key === "Escape" && app.modal) {
     closeModal();
   }
