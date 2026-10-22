@@ -1,5 +1,10 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 installMobileRuntime();
+createWorkshopMode({
+ appName:'КАРТОТЕКА', version:'1.2.1',
+ cachePrefix: 'art-cabinet-', storageNamespace: 'pocket-works:art-cabinet'
+});
 import {REVIEW_WORKS} from './original-review.js';
 import {APPROVED_WORKS as FIRST_EDITION} from './approved.js';
 import {SECOND_APPROVED_WORKS} from './second-approved.js';
@@ -333,4 +338,4 @@ function wire(){
  draw();document.documentElement.dataset.artCabinetReady='3';
 }
 wire();
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+// Shared update manager owns service worker lifecycle and deferred activation.
