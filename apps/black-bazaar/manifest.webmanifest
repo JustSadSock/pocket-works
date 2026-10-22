@@ -1,0 +1,20 @@
+{
+  "id": "/apps/black-bazaar/",
+  "name": "Чёрная барахолка",
+  "short_name": "Барахолка",
+  "description": "Онлайн-торговля артефактами — механический прототип",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f3ef",
+  "theme_color": "#f4f3ef",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
