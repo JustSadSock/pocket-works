@@ -29,7 +29,7 @@ const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),d
 let currentRoomId=activeRoomId(),state=loadRoom(currentRoomId),scene,engine,camera,room,director,guide,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map();
 const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
 const GROUPS=[['suggested','Для комнаты'],['furniture','Мебель'],['lights','Свет'],['decor','Декор'],['walls','На стены'],['finish','Отделка']];
-let activeGroup='furniture',savedTimer=0,toastTimer=0;
+let activeGroup='furniture',savedTimer=0,toastTimer=0,saveMessage='Сохранено';
 const thumbnails=new Map();
 let catalogGesture=null;
 let online=null,offlineBackup=null,queuedSnapshot=null,studio=null;
@@ -61,7 +61,10 @@ function retireMissing(previous,next){
 function toast(message) {
  ui.toast.textContent=message;ui.toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>ui.toast.classList.remove('show'),2350);
 }
-function status(message='Сохранено'){ui.status.textContent=message;}
+function status(message='Сохранено'){
+ saveMessage=message;
+ ui.status.textContent=online?.active?'Общая комната':saveMessage;
+}
 function hideHome(){
  $('homeScreen').hidden=true;
  $('menuBtn').setAttribute('aria-label','Открыть главное меню');
@@ -105,7 +108,9 @@ function showHome(){
  if(online?.active){online.open();return;}
  if(pending)cancelPending(false);
  selectedId=null;hideSelection();
- saveRoom(currentRoomId,state,thumbnail());updateHomePreview();
+ clearTimeout(savedTimer);
+ if(!saveRoom(currentRoomId,state,thumbnail()))status('Не удалось сохранить');
+ updateHomePreview();
  $('homeScreen').hidden=false;
 }
 function playHomeMode(mode){
@@ -124,8 +129,10 @@ function thumbnail(){
 }
 function switchSavedRoom(id){
  if(online?.active)return;
- saveRoom(currentRoomId,state,thumbnail());
- selectRoom(id);currentRoomId=id;state=loadRoom(id);
+ clearTimeout(savedTimer);
+ if(!saveRoom(currentRoomId,state,thumbnail())){status('Не удалось сохранить');toast('Проверь свободное место для сохранения');return;}
+ if(!selectRoom(id)){toast('Не удалось переключить комнатку');return;}
+ currentRoomId=id;state=loadRoom(id);
  for(const root of roots.values())root.dispose(false,false);
  roots.clear();history.length=0;future.length=0;
  selectedId=null;cancelPending(false);hideSelection();activeGroup='suggested';refresh();hideHome();toast('Комнатка открыта');
@@ -161,7 +168,10 @@ function setupHome(){
 function persist() {
  if(online?.active)return;
  clearTimeout(savedTimer);status('Сохраняем…');
- savedTimer=setTimeout(()=>{status(saveRoom(currentRoomId,state)?'Сохранено':'Не удалось сохранить');},240);
+ const roomId=currentRoomId,snapshot=clone(state);
+ savedTimer=setTimeout(()=>{
+  if(!online?.active)status(saveRoom(roomId,snapshot)?'Сохранено':'Не удалось сохранить');
+ },240);
 }
 function record(before) {
  if(online?.active)return;
@@ -199,7 +209,7 @@ function updateActions() {
  $('eveningBtn').setAttribute('aria-pressed',String(state.evening));
  $('soundBtn').setAttribute('aria-pressed',String(!soundscape.muted));
  $('soundBtn').title=soundscape.muted?'Включить звук':'Выключить звук';
- ui.status.textContent=online?.active?'Общая комната':'Сохранено';
+ ui.status.textContent=online?.active?'Общая комната':saveMessage;
 }
 function sprite(type){
  const d={
@@ -550,7 +560,7 @@ function catalogPointerMove(ev){
   if(intent==='drag'){
    g.dragging=true;beginPlacement(g.type,true);
    if(!pending){catalogGesture=null;return;}
-   drag={kind:'place',fromCatalog:true,startX:g.startX,startY:g.startY};
+   drag={kind:'place',fromCatalog:true,pointerId:ev.pointerId,startX:g.startX,startY:g.startY};
   }
  }
  if(g.scrolling){
@@ -576,21 +586,21 @@ function catalogPointerCancel(ev){
  if(drag?.fromCatalog){drag=null;cancelPending(false);}
 }
 function startPointer(ev){
- if(!ready||ev.button>0)return;
+ if(!ready||ev.button>0||drag)return;
  if(online?.active&&!online.canEdit){toast('Ждём начала обустройства');return;}
  ui.canvas.setPointerCapture(ev.pointerId);
- if(pending){updateGhost(ev);drag={kind:'place',startX:ev.clientX,startY:ev.clientY};return;}
+ if(pending){updateGhost(ev);drag={kind:'place',pointerId:ev.pointerId,startX:ev.clientX,startY:ev.clientY};return;}
  const hit=pick(ev,m=>Boolean(m.metadata?.itemId));
  const id=hit?.hit?hit.pickedMesh.metadata.itemId:null;
  if(id){
   if(selectedId!==id)select(id);
   online?.active&&online.select(id,'move');
   director?.lift(id);sound('lift');
-  drag={kind:'move',id,startX:ev.clientX,startY:ev.clientY,moved:false,before:JSON.stringify(state),startPoint:pointOnGround(ev),cell:null};
- }else {selectedId=null;hideSelection();drag={kind:'tap'};}
+  drag={kind:'move',id,pointerId:ev.pointerId,startX:ev.clientX,startY:ev.clientY,moved:false,before:JSON.stringify(state),startPoint:pointOnGround(ev),cell:null};
+ }else {selectedId=null;hideSelection();drag={kind:'tap',pointerId:ev.pointerId};}
 }
 function movePointer(ev) {
- if(!ready)return;
+ if(!ready||drag&&drag.pointerId!==undefined&&drag.pointerId!==ev.pointerId)return;
  if(pending){updateGhost(ev);return;}
  if(!drag||drag.kind!=='move')return;
  if(Math.hypot(ev.clientX-drag.startX,ev.clientY-drag.startY)<5&&!drag.moved)return;
@@ -616,11 +626,14 @@ function movePointer(ev) {
  drag.valid=ok;
 }
 function endPointer(ev) {
- if(!drag)return;
+ if(!drag||drag.pointerId!==undefined&&drag.pointerId!==ev.pointerId)return;
  const d=drag;drag=null;hideTrash();hideGuide();
  if(d.kind==='move'&&d.moved&&d.trash){
+  if(online?.active){
+   if(!online.send({type:'delete',id:d.id}))toast('Нет соединения с комнатой');
+   return; // The server owns the shared scene; wait for its authoritative update.
+  }
   const previous=state.items;
-  if(online?.active)online.send({type:'delete',id:d.id});
   state.items=removeWithChildren(state,d.id);
   retireMissing(previous,state.items);
   selectedId=null;hideSelection();record(d.before);refresh();
@@ -647,7 +660,12 @@ function endPointer(ev) {
   }
  }else if(d.kind==='move'&&d.moved){
   if(d.valid&&state.items.every(i=>i.id===d.id||i.support!==d.id||valid(state,i))){
-   if(online?.active){const changed=state.items.find(i=>i.id===d.id);online.send({type:'edit',id:d.id,patch:{x:changed.x,z:changed.z,y:changed.y,rot:changed.rot,support:changed.support}});}
+   if(online?.active){
+    const changed=state.items.find(i=>i.id===d.id);
+    if(!online.send({type:'edit',id:d.id,patch:{x:changed.x,z:changed.z,y:changed.y,rot:changed.rot,support:changed.support}})){
+     state=sanitize(JSON.parse(d.before));toast('Нет соединения с комнатой');
+    }
+   }
    record(d.before);refresh();
    director?.land(d.id);
    itemSound(state.items.find(i=>i.id===d.id));
@@ -659,6 +677,7 @@ function endPointer(ev) {
  }else if(d.kind==='move'&&!d.moved){
   director?.touch(d.id);
  }
+ if(d.kind==='move'&&online?.active)online.send({type:'select',id:''});
 }
 function rotateSelected() {
  const item=state.items.find(i=>i.id===selectedId);if(!item||byType[item.type].layer==='wall')return;
@@ -668,7 +687,10 @@ function rotateSelected() {
   Object.assign(item,prev);for(const old of children)Object.assign(state.items.find(x=>x.id===old.id),old);
   director?.refuse(item.id);toast('Нет места для поворота');sound('blocked');return;
  }
- if(online?.active)online.send({type:'edit',id:item.id,patch:{rot:item.rot}});
+ if(online?.active&&!online.send({type:'edit',id:item.id,patch:{rot:item.rot}})){
+  Object.assign(item,prev);for(const old of children)Object.assign(state.items.find(x=>x.id===old.id),old);
+  refresh();toast('Нет соединения с комнатой');return;
+ }
  record(before);refresh();
  director?.rotate(item.id,(item.rot*Math.PI/2)-Math.PI/2);
  for(const child of children)director?.rotate(child.id,child.rot*Math.PI/2,{x:child.x,z:child.z});
@@ -685,8 +707,8 @@ function duplicateSelected(){
 }
 function removeSelected(){
  if(!selectedId)return;
+ if(online?.active){if(!online.send({type:'delete',id:selectedId}))toast('Нет соединения с комнатой');return;}
  const before=JSON.stringify(state),previous=state.items;
- if(online?.active)online.send({type:'delete',id:selectedId});
  state.items=removeWithChildren(state,selectedId);retireMissing(previous,state.items);
  selectedId=null;hideSelection();record(before);refresh();sound('delete');
 }
@@ -718,9 +740,19 @@ function addEvents(){
   // Apply the newest authoritative snapshot as soon as the gesture ends.
   if(queuedSnapshot){const latest=queuedSnapshot;queuedSnapshot=null;onOnlineRoom(latest.snapshot,latest);}
  });
- ui.canvas.addEventListener('pointercancel',()=>{if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);}drag=null;hideTrash();hideGuide();});
- window.addEventListener('blur',()=>{if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);}catalogGesture=null;drag=null;hideTrash();hideGuide();persist();});
- document.addEventListener('visibilitychange',()=>{if(document.hidden&&!online?.active){clearTimeout(savedTimer);saveRoom(currentRoomId,state);status('Сохранено');}});
+ ui.canvas.addEventListener('pointercancel',ev=>{
+  if(drag?.pointerId!==undefined&&drag.pointerId!==ev.pointerId)return;
+  if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);online?.active&&online.send({type:'select',id:''});}
+  drag=null;hideTrash();hideGuide();
+  if(queuedSnapshot){const latest=queuedSnapshot;queuedSnapshot=null;onOnlineRoom(latest.snapshot,latest);}
+ });
+ window.addEventListener('blur',()=>{
+  if(drag?.kind==='move'&&drag.before){const id=drag.id;state=sanitize(JSON.parse(drag.before));refresh();director?.reset(id);online?.active&&online.send({type:'select',id:''});}
+  catalogGesture=null;drag=null;hideTrash();hideGuide();
+  if(queuedSnapshot){const latest=queuedSnapshot;queuedSnapshot=null;onOnlineRoom(latest.snapshot,latest);}
+  persist();
+ });
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&!online?.active){clearTimeout(savedTimer);status(saveRoom(currentRoomId,state)?'Сохранено':'Не удалось сохранить');}});
  window.addEventListener('pagehide',()=>{if(!online?.active){clearTimeout(savedTimer);saveRoom(currentRoomId,state);}});
  $('rotateBtn').addEventListener('click',rotateSelected);
  $('duplicateBtn').addEventListener('click',duplicateSelected);
@@ -771,13 +803,18 @@ function setup(){
  online=createOnlineController({
   toast,
   onEnter(){
-   if(!offlineBackup)offlineBackup=clone(state);
+   if(!offlineBackup){
+    offlineBackup=clone(state);
+    clearTimeout(savedTimer);
+    if(!saveRoom(currentRoomId,offlineBackup))status('Не удалось сохранить');
+   }
    history.length=0;future.length=0;
    selectedId=null;cancelPending(false);hideSelection();
    updateActions();
   },
   onExit(){
    if(offlineBackup){state=offlineBackup;offlineBackup=null;}
+   queuedSnapshot=null;drag=null;$('onlineMarkers').replaceChildren();
    selectedId=null;cancelPending(false);hideSelection();refresh();showHome();
   },
   onDismiss:showHome,
@@ -793,7 +830,9 @@ function setup(){
    if(el.dataset.imageType===type)el.innerHTML='<img class="actual-thumbnail" src="'+src+'" alt="">';
   });
  }),500);
- if(!localStorage.getItem('pocket-works:komnatka:intro')){
+ let introSeen=false;
+ try{introSeen=Boolean(localStorage.getItem('pocket-works:komnatka:intro'));}catch{}
+ if(!introSeen){
   ui.hint.textContent='Выбери мебель справа или перетащи предмет в комнате';
   ui.hint.classList.add('visible');setTimeout(()=>ui.hint.classList.remove('visible'),4800);
   try{localStorage.setItem('pocket-works:komnatka:intro','1');}catch{}
