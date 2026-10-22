@@ -2,7 +2,7 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Чёрная барахолка',version:'0.9.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+createWorkshopMode({appName:'Чёрная барахолка',version:'0.9.1',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -200,7 +200,7 @@ function blackMarketBlock(you){
  if(!state.blackMarket)return '';
  let out='<div class="panel"><h2>Анонимный чёрный рынок · раунд '+state.round+'</h2>'+
  '<p class="muted">Лоты хранятся у посредника до продажи. Ставки закрытые, имена участников неизвестны. По завершении раунда непроданные предметы возвращаются.</p>'+
- '<p class="muted">Пока рынок открыт, чужие балансы и инвентари временно скрыты. Посредник удерживает '+state.marketFeePercent+'% с каждого полученного ресурса.</p>';
+ '<p class="muted">Пока рынок открыт, чужие балансы и инвентари временно скрыты. Посредник удерживает '+(state.marketFeePercent??10)+'% с каждого полученного ресурса.</p>';
  for(const lot of state.blackLots||[]){
   const inspected=lot.inspection;
   out+='<section class="offer"><h3>'+esc(lot.item.name)+' · '+esc(lot.id)+'</h3>'+
@@ -275,7 +275,7 @@ function actionsBlock(you){
     '</select></label><button type="submit">Обменять</button></form>';
   if(you.items.length)html+='<form data-form="pawn" class="row"><label>Продать за 45 золота<select name="itemId">'+you.items.map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label><button type="submit">Сдать предмет</button></form>';
   const dismantle=you.items.filter(i=>i.acquiredRound!==state.round);
-  if(dismantle.length)html+='<form data-form="salvage" class="row"><label>Разобрать за '+state.salvageParts+' детали<select name="itemId">'+dismantle.map(i=>
+  if(dismantle.length)html+='<form data-form="salvage" class="row"><label>Разобрать за '+(state.salvageParts??2)+' детали<select name="itemId">'+dismantle.map(i=>
      '<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label>'+
      '<button type="submit">Разобрать предмет</button></form>';
  }else html+='<p class="muted">Ломбард использован в этом ходу.</p>';
