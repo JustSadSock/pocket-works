@@ -86,6 +86,16 @@
         "slug": "katana-echo",
         "spatialDifference": "Katana Echo foregrounds blade sweeps and close-quarters character trails within a side-view sword-fighting composition; Perekos separates two miniature wizards across a top-down architectural courtyard whose whole floor and spell landing cues remain visible.",
         "interactionDifference": "Katana Echo emphasizes timed melee swings, dashes and sword contact; Perekos telegraphs long-range elemental cast windups, held flame cones and falling rock impacts that can be dodged, then opens a deliberate three-chain rune workshop between rounds."
+      },
+      {
+        "slug": "axis-pals",
+        "spatialDifference": "Axis Pals помещает общий складской стол в среднюю сцену под верхней панелью и нижней колодой команд. В Перекосе полноэкранная вертикальная 400×620-арена не разбивается верхом и низом: боевое управление находится в ней, а перестройка заклинаний открывает отдельную промежуточную мастерскую с тремя самостоятельными магическими цепочками.",
+        "interactionDifference": "В Axis Pals двое операторов распределяют горизонтальную и вертикальную команду грузовым блокам с общим сопротивлением склада. В Перекосе каждый двигает мага в реальном времени, прицеливается и собирает условие, действие и мутацию из отдельных рун, а настоящий урон рождает краткий кинетический отклик."
+      },
+      {
+        "slug": "blockies",
+        "spatialDifference": "Blockies держит один общий вертикальный тетрис-колодец и нижний блок кнопок. В Перекосе поле открыто для свободного перемещения двух маленьких магов среди укрытий, а три столбца рунических цепочек появляются только между боями. На ПК сенсорная нижняя колода скрывается.",
+        "interactionDifference": "Blockies использует клеточные сдвиги, вращение и сброс фигуры с командным удержанием колодца; Перекос использует непрерывное движение, прицеливание, каст, защиту и реальные попадания, а расположение рун меняется drag-and-drop и кнопками порядка без клетки или вращения."
       }
     ]
   },
