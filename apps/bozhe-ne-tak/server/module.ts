@@ -89,9 +89,6 @@ const INCIDENTS=Object.freeze([
  {id:'oil',title:'Постановление о масле',story:'Умащение теперь считается особенно важным обрядом.',field:'treatment',value:'anoint',delta:1}
 ]);
 
-
-import {EXTRA_ITEMS,EXTRA_TREATMENTS,EXTRA_RITES,EXTRA_DOCTRINES,INCIDENTS} from './content.js';
-
 /* BNT v0.2 - deterministic, dependency-free local ritual engine.
    The pure transition functions are deliberately reusable by a future PocketNet server. */
 const ITEMS = Object.freeze([
