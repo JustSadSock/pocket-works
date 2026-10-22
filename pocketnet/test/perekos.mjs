@@ -63,7 +63,7 @@ const receive=(who,phase)=>who.next('game_event',m=>m.event.type==='state'&&m.ev
 try{
  host.send('create_room',{gameId:'perekos'});
  const opened=await host.next('room_joined');const room=opened.roomId,code=room.slice(0,8);
- assert.equal(opened.version,'v3');assert.equal(opened.state.phase,'lobby');assert.equal(opened.state.me,0);
+ assert.equal(opened.version,'v4','The current Perekos room must use the pinned v4 ruleset');assert.equal(opened.state.rulesVersion,4);assert.equal(opened.state.phase,'lobby');assert.equal(opened.state.me,0);
  guest.send('join_room',{roomId:code.toUpperCase()});
  const joined=await guest.next('room_joined');assert.equal(joined.state.me,1);assert.equal(joined.roomId,room);
  assert.equal(joined.state.players.length,2);
@@ -72,7 +72,7 @@ try{
  assert.match((await guest.next('game_event',m=>m.event.type==='notice')).event.payload,/создатель/i);
  host.send('game_message',{payload:{type:'start'}});
  const started=(await receive(host,'fight')).event.payload;
- assert.equal(started.match.round,1);assert.deepEqual(started.match.score,[0,0]);
+ assert.equal(started.rulesVersion,4);assert.equal(started.match.version,4);assert.equal(started.match.round,1);assert.deepEqual(started.match.score,[0,0]);
  const startX=started.match.actors[0].x;
  const ctl=(x=0)=>({x,y:0,aim:{x:320,y:140},attack:false,shield:false,dash:false});
  host.send('game_message',{payload:{type:'input',seq:0,round:1,control:ctl(999)}});
