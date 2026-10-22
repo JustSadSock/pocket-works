@@ -504,36 +504,34 @@ const sheetTitles={
  actions:'Мой ход',players:'Игроки'
 };
 function openSheet(sheetName,focus=false,targetId=''){
- if(!document.querySelector('#bazaarSheet'))return;
- if(sheetName&&!Object.prototype.hasOwnProperty.call(sheetTitles,sheetName))return;
- activeSheet=sheetName;
- const sheet=document.querySelector('#bazaarSheet'),backdrop=document.querySelector('#sheetBackdrop');
- if(sheetName==='detail'&&state?.you&&focus){
-  const detailPage=sheet.querySelector('[data-sheet-page="detail"]');
-  if(detailPage)detailPage.innerHTML=artifactDetailBlock(state.you);
- }
- sheet.hidden=!sheetName;backdrop.hidden=!sheetName;
- sheet.classList.toggle('sheet-enter',Boolean(focus&&sheetName));
- document.body.classList.toggle('sheet-open',Boolean(sheetName));
- for(const page of sheet.querySelectorAll('[data-sheet-page]'))page.hidden=page.dataset.sheetPage!==sheetName;
- const title=sheet.querySelector('#sheetTitle');if(title&&sheetName)title.textContent=sheetTitles[sheetName];
+ const sheet=document.querySelector('#bazaarSheet');if(!sheet)return;
+ const name=sheetTitles[sheetName]?sheetName:'actions';activeSheet=name;
+ if(focus&&name==='deals')for(const d of state.deals||[])if(d.to===state.you?.id)readDeals.add(roomId+':'+d.id);
+ if(focus&&name==='secret'&&taskKey())readTasks.add(taskKey());
+ const detail=sheet.querySelector('[data-sheet-page="detail"]');
+ if(focus&&name==='detail'&&detail&&state?.you)detail.innerHTML=artifactDetailBlock(state.you);
+ for(const page of sheet.querySelectorAll('[data-sheet-page]'))page.hidden=page.dataset.sheetPage!==name;
+ const title=sheet.querySelector('#sheetTitle');if(title)title.textContent=sheetTitles[name];
  for(const tab of app.querySelectorAll('[data-action="open-sheet"]')){
-  tab.setAttribute('aria-expanded',String(tab.dataset.sheet===sheetName));
+  const selected=tab.dataset.sheet===name;
+  tab.setAttribute('aria-selected',String(selected));tab.setAttribute('aria-expanded',String(selected));
+  const badge=tab.querySelector('.tab-count');
+  if(badge){const count=unreadCount(tab.dataset.sheet);badge.textContent=String(count);badge.hidden=!count;}
  }
- if(focus&&sheetName){
-  requestAnimationFrame(()=>{
-   if(targetId)document.getElementById(targetId)?.scrollIntoView({block:'nearest'});
-   sheet.querySelector('[data-action="close-sheet"]')?.focus({preventScroll:true});
-  });
- }else if(focus&&!sheetName){
-  lastSheetTrigger?.focus?.({preventScroll:true});
+ if(focus){
+  sheet.classList.remove('sheet-enter');void sheet.offsetWidth;sheet.classList.add('sheet-enter');
+  const scroll=sheet.querySelector('.sheet-content');if(scroll)scroll.scrollTop=0;
+  if(targetId)requestAnimationFrame(()=>document.getElementById(targetId)?.scrollIntoView({block:'nearest'}));
  }
 }
-function resourceWallet(w){
- return '<div class="currency-strip" aria-label="Мои ресурсы">'+
- [['gold','coin','Золото'],['crystals','gem','Кристаллы'],['parts','parts','Детали']].map(([k,icon,label])=>
- '<span class="currency" title="'+label+'" aria-label="'+label+': '+(w[k]??0)+'">'+
- svgIcon(icon)+'<strong>'+(w[k]??0)+'</strong><em>'+label+'</em></span>').join('')+'</div>';
+function resourceWallet(w,forecast){
+ return '<div class="currency-strip" aria-label="Ресурсы и итог за раунд">'+
+ [['gold','coin','Золото'],['crystals','gem','Кристаллы'],['parts','parts','Детали']].map(([k,icon,title])=>{
+ const d=forecast.delta[k],text=d>0?'+'+d:String(d);
+ return '<span class="currency" aria-label="'+title+': '+(w[k]||0)+', за раунд '+text+'">'+svgIcon(icon)+
+ '<span class="wallet-values"><strong>'+(w[k]||0)+'</strong><em>'+title+'</em></span>'+
+ '<small class="wallet-delta '+(d>0?'positive':d<0?'negative':'neutral')+'">'+text+'</small></span>';
+ }).join('')+'</div>';
 }
 function renderPlay(){
  const drafts=mode==='play'?collectDrafts():{};
