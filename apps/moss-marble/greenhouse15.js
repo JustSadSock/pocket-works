@@ -119,8 +119,8 @@ export class LivingGreenhouseLayer {
 
   resize(force = false) {
     const rect = this.canvas.getBoundingClientRect();
-    const width = Math.max(320, rect.width || window.innerWidth);
-    const height = Math.max(480, rect.height || window.innerHeight);
+    const width = Math.max(1, rect.width || this.canvas.clientWidth || window.innerWidth);
+    const height = Math.max(1, rect.height || this.canvas.clientHeight || window.innerHeight);
     const targetDpr = Math.min(window.devicePixelRatio || 1, this.quality < .6 ? 1 : 1.6);
     if (!force && width === this.width && height === this.height && targetDpr === this.dpr) return;
     this.width = width;
