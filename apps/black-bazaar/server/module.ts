@@ -220,6 +220,13 @@ function dealItem(p,itemId){
 function validItemId(id){
   return id===null||typeof id==='string'&&/^item-[1-9][0-9]*$/.test(id);
 }
+function validateDealPayload(s,sender,target,v){
+  const give=wallet(v.give),want=wallet(v.want),giveItemId=v.giveItemId??null,wantItemId=v.wantItemId??null;
+  if(!give||!want||!validItemId(giveItemId)||!validItemId(wantItemId)||
+      !(nonzero(give)||nonzero(want)||giveItemId||wantItemId))return null;
+  const proposal={from:sender.id,to:target.id,give,want,giveItemId,wantItemId,round:s.round};
+  return dealAvailable(s,proposal)?proposal:null;
+}
 function dealAvailable(s,deal){
   const from=s.contestants.find(p=>p.id===deal.from),to=s.contestants.find(p=>p.id===deal.to);
   if(!from||!to||from.bankrupt||to.bankrupt)return false;
@@ -251,17 +258,27 @@ function action(s,id,v){
   if(me.bankrupt)return failure(s,id,'Банкрот больше не участвует в торговле.');
   const isTurn=active.id===id;
   if(v.type==='deal_propose'){
-    const target=getPlayer(s,v.to),give=wallet(v.give),want=wallet(v.want);
-    const giveItemId=v.giveItemId??null,wantItemId=v.wantItemId??null;
+    const target=getPlayer(s,v.to);
     if(!target||target.id===me.id||target.bankrupt||!s.players.some(p=>p.id===target.id))
       return failure(s,id,'Этот игрок недоступен для сделки.');
-    if(!give||!want||!validItemId(giveItemId)||!validItemId(wantItemId)||
-       !(nonzero(give)||nonzero(want)||giveItemId||wantItemId))
-      return failure(s,id,'Укажите корректное непустое предложение.');
-    const deal={id:'deal-'+(++s.dealSerial),from:id,to:target.id,give,want,giveItemId,wantItemId,round:s.round};
-    if(!dealAvailable(s,deal))return failure(s,id,'Нельзя предложить эту сделку: не хватает ресурсов, предмет не ваш или инвентарь заполнен.');
+    const data=validateDealPayload(s,me,target,v);
+    if(!data)return failure(s,id,'Невозможная сделка: проверь ресурсы, предметы и свободные места.');
     s.deals=s.deals.filter(d=>d.from!==id);
-    s.deals.push(deal);
+    s.deals.push({...data,id:'deal-'+(++s.dealSerial),depth:0});
+    return success(s);
+  }
+  if(v.type==='deal_counter'){
+    const old=s.deals.find(d=>d.id===v.dealId);
+    if(!old||old.to!==id||old.round!==s.round)
+      return failure(s,id,'Контрпредложение доступно только адресату актуальной сделки.');
+    if((old.depth||0)>=6)return failure(s,id,'Слишком много встречных предложений; создайте новый договор.');
+    const recipient=getPlayer(s,old.from);
+    if(!recipient||recipient.bankrupt||!s.players.some(p=>p.id===recipient.id))
+      return failure(s,id,'Получатель больше не участвует в партии.');
+    const data=validateDealPayload(s,me,recipient,v);
+    if(!data)return failure(s,id,'Нельзя отправить такие условия: ресурсы или предмет недоступны.');
+    s.deals=s.deals.filter(d=>d.id!==old.id&&d.from!==id);
+    s.deals.push({...data,id:'deal-'+(++s.dealSerial),depth:(old.depth||0)+1});
     return success(s);
   }
   if(v.type==='deal_cancel'){
@@ -350,9 +367,11 @@ function viewForPlayer({state,player}){
   return {phase:s.phase,host:s.host,revision:s.revision,round:s.round,rounds:TOTAL_ROUNDS,
     turnId:turn?.id||null,players:s.contestants.map(p=>({
       id:p.id,name:p.name,character:p.character,
-      items:p.items.length,inventory:p.items.map(publicItem),resources:{...p.resources},strikes:p.strikes,
+      items:p.items.length,inventory:p.items.map(item=>({
+        ...publicItem(item),tradable:item.acquiredRound!==s.round&&s.listing?.itemId!==item.id
+      })),resources:{...p.resources},strikes:p.strikes,
       bankrupt:p.bankrupt,urgent:p.urgent?.status==='pending',
-      progress:Math.round(balance(p)*100),connected:s.players.some(x=>x.id===p.id)
+      connected:s.players.some(x=>x.id===p.id)
     })),
     listing:listed?{...publicItem(listed),seller:s.listing.seller,ask:s.listing.ask}:null,
     bids:s.bids.map(b=>({buyer:b.buyer,offer:b.offer})),
