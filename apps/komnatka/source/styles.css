@@ -736,3 +736,15 @@
 @media(prefers-reduced-motion:reduce){
  .scene-context button,.wallpaper-option,.floor-sample{transition:none}
 }
+
+/* The day/night control is an immediate action, not a buried preference. */
+.topbar .quick-tools > .evening-top-button{
+ display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;
+ border-radius:10px;
+}
+@media(max-width:840px){
+ .topbar .quick-tools > .evening-top-button{width:34px;flex-basis:34px}
+}
+@media(max-width:375px){
+ .topbar .quick-tools > .evening-top-button{width:31px;flex-basis:31px}
+}
