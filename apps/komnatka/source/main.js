@@ -28,7 +28,7 @@ const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};
 let currentRoomId=activeRoomId(),state=loadRoom(currentRoomId),scene,engine,camera,room,director,guide,ready=false,selectedId=null,pending=null,drag=null,history=[],future=[],roots=new Map();
 const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');
-const GROUPS=[['suggested','Для комнаты'],['furniture','Мебель'],['lights','Свет'],['decor','Декор'],['walls','На стены'],['finish','Отделка']];
+const GROUPS=[['suggested','Подборка'],['furniture','Мебель'],['lights','Свет'],['decor','Декор'],['walls','На стены'],['wallpaper','Обои'],['floor','Пол'],['room','Комната']];
 let activeGroup='furniture',savedTimer=0,toastTimer=0,saveMessage='Сохранено';
 const thumbnails=new Map();
 let catalogGesture=null;
@@ -137,19 +137,20 @@ function thumbnail(){
  catch{return null;}
 }
 function switchSavedRoom(id){
- if(online?.active)return;
+ if(online?.active)return false;
  clearTimeout(savedTimer);
- if(!saveRoom(currentRoomId,state,thumbnail())){status('Не удалось сохранить');toast('Проверь свободное место для сохранения');return;}
- if(!selectRoom(id)){toast('Не удалось переключить комнатку');return;}
+ if(!saveRoom(currentRoomId,state,thumbnail())){status('Не удалось сохранить');toast('Проверь свободное место для сохранения');return false;}
+ if(!selectRoom(id)){toast('Не удалось переключить комнатку');return false;}
  currentRoomId=id;state=loadRoom(id);
  for(const root of roots.values())root.dispose(false,false);
  roots.clear();history.length=0;future.length=0;
  selectedId=null;cancelPending(false);hideSelection();activeGroup='suggested';refresh();hideHome();toast('Комнатка открыта');
+ return true;
 }
 function createGalleryUI(){
  studio=createStudioUI({
   getState:()=>({
-   records:roomList,rename:renameRoom,
+   records:roomList,rename:(id,name)=>{const ok=renameRoom(id,name);if(ok)updateActions();return ok;}, 
    delete:id=>{const was=id===currentRoomId,done=deleteRoom(id);
     if(done&&was){currentRoomId=activeRoomId();state=loadRoom(currentRoomId);
      for(const root of roots.values())root.dispose(false,false);
@@ -158,8 +159,12 @@ function createGalleryUI(){
    create:(name,layout,purpose)=>addRoom({name,layout,purpose})
   }),
   load:switchSavedRoom,
-  save:()=>saveRoom(currentRoomId,state,thumbnail()),
-  onClose:showHome,toast,
+  save:()=>{
+   clearTimeout(savedTimer);
+   const ok=saveRoom(currentRoomId,state,thumbnail());status(ok?'Сохранено':'Не удалось сохранить');
+   return ok;
+  },
+  onClose:source=>source==='editor'?hideHome():showHome(),toast,
   photo:{
    angle:()=>({alpha:camera.alpha,beta:camera.beta}),
    setAngle:({alpha,beta})=>{camera.alpha=alpha;camera.beta=beta;scene.render();},
@@ -167,9 +172,20 @@ function createGalleryUI(){
   }
  });
 }
+function openGallery(source='editor'){
+ if(online?.active){toast('Коллекция доступна вне общей игры');return;}
+ if(pending)cancelPending(false);
+ if(studio.gallery(source)){
+  closeToolMenu();
+  if(source==='home')hideHome();
+  sound('select');
+ }
+}
 function setupHome(){
  $('homeSolo').addEventListener('click',()=>playHomeMode('solo'));
- $('homeLibrary').addEventListener('click',()=>{hideHome();studio.gallery();sound('select');});
+ $('homeLibrary').addEventListener('click',()=>openGallery('home'));
+ $('roomsButton').addEventListener('click',()=>openGallery('editor'));
+ $('wallpaperShortcut').addEventListener('click',()=>activateGroup('wallpaper'));
  $('homeTenants').addEventListener('click',()=>playHomeMode('tenants'));
  $('homeMemory').addEventListener('click',()=>playHomeMode('memory'));
  $('menuBtn').addEventListener('click',showHome);
@@ -219,6 +235,10 @@ function updateActions() {
  $('soundBtn').setAttribute('aria-pressed',String(!soundscape.muted));
  $('soundBtn').title=soundscape.muted?'Включить звук':'Выключить звук';
  ui.status.textContent=online?.active?'Общая комната':saveMessage;
+ const rooms=roomList(),record=rooms.find(r=>r.id===currentRoomId);
+ $('activeRoomLabel').textContent=record?.name||'Моя комнатка';
+ $('roomsCount').textContent=rooms.length+'/'+ROOM_CAP;
+ $('roomsButton').hidden=Boolean(online?.active);
 }
 function sprite(type){
  const d={
@@ -247,44 +267,83 @@ function sprite(type){
  };
  return '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(d[type]||d[({table:'coffee',lamp:'floorlamp',shelf:'shelf',plant:'plant',mug:'mug',rug:'rug',frame:'frame'})[byType[type]?.icon]]||d.sofa)+'</svg>';
 }
+function activateGroup(group){
+ if(pending)cancelPending(false);
+ activeGroup=group;
+ showCatalog();
+ sound('select');
+}
 function showCatalog() {
- ui.categories.innerHTML=GROUPS.map(([key,name])=>'<button type="button" data-group="'+key+'" class="'+(key===activeGroup?'on':'')+'">'+name+'</button>').join('');
- ui.categories.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{activeGroup=b.dataset.group;cancelPending(false);showCatalog();sound('select');}));
- ui.catalog.hidden=activeGroup==='finish';ui.finish.hidden=activeGroup!=='finish';
+ const scrollX=ui.categories.scrollLeft;
+ ui.categories.innerHTML=GROUPS.map(([key,name])=>
+  '<button type="button" data-group="'+key+'" aria-pressed="'+(key===activeGroup)+'" class="'+(key===activeGroup?'on':'')+'">'+name+'</button>').join('');
+ ui.categories.scrollLeft=scrollX;
+ ui.categories.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>activateGroup(b.dataset.group)));
+ const finishes=['wallpaper','floor','room'].includes(activeGroup);
+ ui.catalog.hidden=finishes;ui.finish.hidden=!finishes;
  $('cancelPlacement').hidden=!pending;
  $('cancelPlacementMobile').hidden=!pending;
- if(activeGroup==='finish'){renderFinish();return;}
- ui.catalog.innerHTML=CATALOG.filter(it=>activeGroup==='suggested'?recommendedFor(state.purpose,it.type):it.group===activeGroup).map(it=>'<button type="button" class="item-button '+(pending?.type===it.type?'choosing':'')+'" data-type="'+it.type+'"><span class="item-drawing '+it.type+'" data-image-type="'+it.type+'">'+(thumbnails.has(it.type)?'<img class="actual-thumbnail" src="'+thumbnails.get(it.type)+'" alt="">':sprite(it.type))+'</span><span>'+it.name+'</span></button>').join('');
+ if(finishes){renderFinish();return;}
+ ui.catalog.innerHTML=CATALOG.filter(it=>activeGroup==='suggested'?recommendedFor(state.purpose,it.type):it.group===activeGroup)
+  .map(it=>'<button type="button" class="item-button '+(pending?.type===it.type?'choosing':'')+'" data-type="'+it.type+'"><span class="item-drawing '+it.type+'" data-image-type="'+it.type+'">'+(thumbnails.has(it.type)?'<img class="actual-thumbnail" src="'+thumbnails.get(it.type)+'" alt="">':sprite(it.type))+'</span><span>'+it.name+'</span></button>').join('');
  ui.catalog.querySelectorAll('button').forEach(b=>{
   b.addEventListener('pointerdown',catalogPointerDown);
-  // A pointer release is handled by catalogPointerUp, not a synthetic click.
   b.addEventListener('click',ev=>{if(ev.detail===0)beginPlacement(b.dataset.type);});
  });
 }
 function renderFinish(){
  const PATTERN_NAMES=['Краска','Полоска','Цветы','Клетка','Ягодки','Звёзды','Ромашки','Горошек','Веточки','Лён','Штукатурка','Панели'];
  const FLOOR_NAMES=['Мёд','Орех','Светлый','Плитка','Розовый','Вишня','Ёлочка','Терраццо'];
- const chips=(key,attr)=>'<div class="color-row">'+WALLS.map((c,i)=>'<button class="paint-chip '+(state[key]===i?'picked':'')+'" style="--paint:'+c+'" data-'+attr+'="'+i+'" title="Цвет '+(i+1)+'"></button>').join('')+'</div>';
- const patterns=(key,attr)=>'<div class="pattern-row">'+PATTERNS.map((p,i)=>'<button class="'+(state[key]===p?'picked':'')+'" data-'+attr+'="'+p+'">'+PATTERN_NAMES[i]+'</button>').join('')+'</div>';
- ui.finish.innerHTML='<div class="finish-row"><b>Задняя стена</b>'+chips('wallColor','wall')+patterns('pattern','pattern')+'</div>'+
- '<div class="finish-row"><b>Боковая стена</b>'+chips('wallColorLeft','wall-left')+patterns('patternLeft','pattern-left')+'</div>'+
- '<div class="finish-row"><b>Пол</b><div class="floor-row">'+FLOORS.map((f,i)=>'<button class="'+(state.floor===f?'picked':'')+'" data-floor="'+f+'">'+FLOOR_NAMES[i]+'</button>').join('')+'</div></div>'+
- '<div class="finish-row"><b>Назначение</b><div class="room-kind-choices">'+ROOM_KINDS.map(kind=>'<button data-purpose="'+kind.id+'" class="'+(state.purpose===kind.id?'picked':'')+'">'+kind.name+'</button>').join('')+'</div></div>'+ 
-  '<div class="finish-row"><b>Планировка</b><div class="floor-row">'+LAYOUTS.map(l=>'<button data-layout="'+l.id+'" class="'+(state.layout===l.id?'picked':'')+'">'+l.name+'</button>').join('')+'</div></div>';
+ const chips=(key,attr)=>'<div class="color-row">'+WALLS.map((c,i)=>
+  '<button type="button" class="paint-chip '+(state[key]===i?'picked':'')+'" style="--paint:'+c+'" data-'+attr+'="'+i+'" aria-label="Цвет стены '+(i+1)+'" aria-pressed="'+(state[key]===i)+'"></button>').join('')+'</div>';
+ const patterns=(key,attr,colorKey,label)=>'<div class="wallpaper-grid" data-scroll-key="'+attr+'">'+PATTERNS.map((p,i)=>{
+  const color=WALLS[state[colorKey]],src=room?.wallpaperThumbnail(color,p)||'';
+  return '<button type="button" class="wallpaper-option '+(state[key]===p?'picked':'')+'" data-'+attr+'="'+p+'" aria-pressed="'+(state[key]===p)+'" aria-label="'+label+': '+PATTERN_NAMES[i]+'">'+
+   '<span class="wallpaper-picture" style="background-color:'+color+'">'+(src?'<img src="'+src+'" alt="">':'')+'</span><span>'+PATTERN_NAMES[i]+'</span></button>';
+ }).join('')+'</div>';
+ const floorChoices='<div class="floor-palette">'+FLOORS.map((f,i)=>
+  '<button type="button" class="floor-sample '+(state.floor===f?'picked':'')+'" data-floor="'+f+'" aria-pressed="'+(state.floor===f)+'"><span class="floor-thumb floor-'+f+'"></span><span>'+FLOOR_NAMES[i]+'</span></button>').join('')+'</div>';
+ if(activeGroup==='wallpaper')ui.finish.innerHTML=
+  '<div class="finish-row"><h3>Задняя стена</h3>'+chips('wallColor','wall')+patterns('pattern','pattern','wallColor','Задняя стена')+'</div>'+
+  '<div class="finish-row"><h3>Боковая стена</h3>'+chips('wallColorLeft','wall-left')+patterns('patternLeft','pattern-left','wallColorLeft','Боковая стена')+'</div>';
+ else if(activeGroup==='floor')ui.finish.innerHTML=
+  '<div class="finish-row"><h3>Покрытие пола</h3>'+floorChoices+'</div>';
+ else ui.finish.innerHTML=
+  '<div class="finish-row"><h3>Другие комнатки</h3>'+
+  (online?.active?'<p class="finish-note">Во время совместной игры коллекция недоступна.</p>':
+   '<button id="openRoomGallery" type="button" class="open-room-gallery">Открыть коллекцию · '+roomList().length+'/'+ROOM_CAP+' <span aria-hidden="true">→</span></button>')+
+  '</div><div class="finish-row"><h3>Назначение</h3><div class="room-kind-choices">'+ROOM_KINDS.map(kind=>
+   '<button type="button" data-purpose="'+kind.id+'" '+(online?.active?'disabled ':'')+'class="'+(state.purpose===kind.id?'picked':'')+'">'+kind.name+'</button>').join('')+
+  '</div></div><div class="finish-row"><h3>Планировка</h3><div class="floor-row">'+LAYOUTS.map(l=>
+   '<button type="button" data-layout="'+l.id+'" '+(online?.active?'disabled ':'')+'class="'+(state.layout===l.id?'picked':'')+'">'+l.name+'</button>').join('')+'</div></div>';
+ function retainScroll(fn){
+  const top=ui.finish.scrollTop;
+  const horizontal=[...ui.finish.querySelectorAll('[data-scroll-key]')].map(el=>[el.dataset.scrollKey,el.scrollLeft]);
+  fn();
+  ui.finish.scrollTop=top;
+  for(const [key,x] of horizontal){
+   const next=[...ui.finish.querySelectorAll('[data-scroll-key]')].find(el=>el.dataset.scrollKey===key);
+   if(next)next.scrollLeft=x;
+  }
+ }
  for(const [attr,key] of [['wall','wallColor'],['wall-left','wallColorLeft'],['pattern','pattern'],['pattern-left','patternLeft'],['floor','floor']])
   ui.finish.querySelectorAll('[data-'+attr+']').forEach(el=>el.addEventListener('click',()=>{
+   if(online?.active&&!online.canEdit){toast('Отделка доступна после начала раунда');return;}
    const value=attr.startsWith('wall')?Number(el.getAttribute('data-'+attr)):el.getAttribute('data-'+attr);
-   mutate(()=>{state[key]=value;});if(online?.active)online.send({type:'decorate',patch:{[key]:value}});
+   if(state[key]===value)return;
+   retainScroll(()=>mutate(()=>{state[key]=value;}));
+   if(online?.active)online.send({type:'decorate',patch:{[key]:value}});
    sound('paint');
   }));
+ $('openRoomGallery')?.addEventListener('click',()=>openGallery('editor'));
  ui.finish.querySelectorAll('[data-purpose]').forEach(el=>el.addEventListener('click',()=>{
-  if(online?.active){toast('Назначение общей комнаты выбирается до раунда');return;}
+  if(online?.active)return;
   const next=el.dataset.purpose;if(state.purpose===next)return;
   mutate(()=>{state.purpose=next;});activeGroup='suggested';showCatalog();
   toast('Теперь '+byRoomKind[next].name.toLowerCase());sound('paint');
  }));
  ui.finish.querySelectorAll('[data-layout]').forEach(el=>el.addEventListener('click',()=>{
-  if(online?.active){toast('Планировку онлайн-раунда выбирает сервер');return;}
+  if(online?.active)return;
   const next=el.dataset.layout;
   if(next===state.layout)return;
   const draft={...state,layout:next,items:state.items.map(item=>
@@ -292,7 +351,7 @@ function renderFinish(){
   if(draft.items.some(item=>!valid(draft,item))){
    toast('Некоторые вещи не помещаются. Убери их или создай новую комнатку.');return;
   }
-  mutate(()=>{state.layout=next;state.items=draft.items;});
+  retainScroll(()=>mutate(()=>{state.layout=next;state.items=draft.items;}));
   toast('Комнатка поменяла форму');sound('place');
  }));
 }
