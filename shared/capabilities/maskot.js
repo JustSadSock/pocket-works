@@ -1,15 +1,16 @@
 import {zamazkaAchievements} from './zamazka-achievements.js';
 import {canticaAchievements} from './cantica-achievements.js';
+import {blockiesAchievements} from './blockies-achievements.js';
 // Pocket Works MASKOT — original, hand-drawn, composable SVG geometry.
 // Asset IDs (not arbitrary markup) are the only user-controlled input.
 // Public profile renders are already server-validated; these IDs are visual decoding rights, not ownership grants.
-export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom','seoul-artist','dragon-keeper',...zamazkaAchievements.map(a=>a.id),...canticaAchievements.map(a=>a.id)];
+export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom','seoul-artist','dragon-keeper',...zamazkaAchievements.map(a=>a.id),...canticaAchievements.map(a=>a.id),...blockiesAchievements.map(a=>a.id)];
 export const mascotAnimals=[['cat','Кот'],['black-cat','Чёрный кот'],['fox','Лиса'],['rabbit','Кролик'],['frog','Лягушка']];
 export const mascotHats=[['none','Без'],['crown','Корона'],['beret','Берет'],['flower','Цветок']];
 export const mascotClothes=[['tunic','Туника'],['vest','Жилет'],['mantle','Мантия']];
 export const mascotAccessories=[['none','Без аксессуара']];
 export const mascotFaces=[['none','Без'],['glasses','Очки'],['stars','Звёздочки']];
-export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Призрачная кисть','Всевидящий','Авантюрист',...canticaAchievements.filter(a=>a.slot==='title').map(a=>a.item)];
+export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Призрачная кисть','Всевидящий','Авантюрист',...canticaAchievements.filter(a=>a.slot==='title').map(a=>a.item),...blockiesAchievements.filter(a=>a.slot==='title').map(a=>a.item)];
 export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'},groom:{clothes:'groom'},'seoul-artist':{hat:'stage-pin',clothes:'stage-hanbok'},'dragon-keeper':{accessory:'shoulder-dragon'}};
 const one=(rows,id,fallback)=>rows.some(x=>x[0]===id)?id:fallback;
 export function safeMascot(input,unlocks=[]){
@@ -17,6 +18,7 @@ export function safeMascot(input,unlocks=[]){
   const valid=(item,category,standard)=>typeof item==='string'&&(standard.some(x=>x[0]===item)||
     zamazkaAchievements.some(a=>a.slot===category&&a.item===item&&u.includes(a.id))||
     canticaAchievements.some(a=>a.slot===category&&a.item===item&&u.includes(a.id))||
+    blockiesAchievements.some(a=>a.slot===category&&a.item===item&&u.includes(a.id))||
     Object.entries(mascotSecret).some(([key,x])=>u.includes(key)&&x[category]===item));
   const src=input&&typeof input==='object'?input:{};
   return {
@@ -173,6 +175,13 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
   };
   const hats={
     none:'',
+    'stack-cap':`<!-- Four pixel blocks form a tilted visor above the ears -->
+<path d="M67 77Q79 51 121 49L184 63 178 91Q122 85 69 95Z" fill="#235e63" stroke="#2d414a" stroke-width="5" stroke-linejoin="round"/>
+<path d="M71 84 182 79 209 93Q158 109 76 99Z" fill="#83d3ba" stroke="#29494d" stroke-width="4"/>
+<path d="M90 54h18v18H90zM112 46h18v18h-18zM134 51h18v18h-18z" fill="#f6b65e" stroke="#fff0cb" stroke-width="2"/>`,
+    'block-crown':`<!-- A tetromino crown built from four large enameled squares -->
+<path d="M71 91 70 72 87 72 87 54 105 54 105 72 119 72 119 38 138 38 138 72 151 72 151 54 169 54 169 72 185 72 184 91Q127 80 71 91Z" fill="#f4c76e" stroke="#334652" stroke-width="4" stroke-linejoin="round"/>
+<path d="M74 82 183 82" stroke="#ffe7ab" stroke-width="4"/><path d="M92 57h10v10H92zM123 43h10v10h-10zM156 57h10v10h-10z" fill="#3f8796"/>`,
     crown:`<path d="M74 81 66 44 98 61 127 22 157 61 188 44 179 81Q129 89 74 81Z" fill="#e9c06c" stroke="#34434a" stroke-width="5" stroke-linejoin="round"/><path d="M78 78Q128 88 177 78" fill="none" stroke="#bc6e5d" stroke-width="10" stroke-linecap="round"/><path d="M127 45 137 59 127 70 117 59Z" fill="#4e8390" stroke="#34434a" stroke-width="2"/>`,
     beret:`<path d="M72 76Q79 40 135 40Q182 40 187 76Q150 93 102 85L75 92Z" fill="#82738e" stroke="#34434a" stroke-width="5"/><path d="M128 41Q134 25 141 34" stroke="#34434a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M92 66Q122 54 160 63" stroke="#b6a1c4" stroke-width="5" fill="none" stroke-linecap="round"/>`,
     flower:`<path d="M183 72Q201 58 204 81" fill="none" stroke="#567f62" stroke-width="5"/><g fill="#f6efe9" stroke="#34434a" stroke-width="2.4"><circle cx="184" cy="60" r="12"/><circle cx="206" cy="61" r="12"/><circle cx="195" cy="47" r="12"/><circle cx="195" cy="72" r="12"/></g><circle cx="195" cy="60" r="9" fill="#e9c36c" stroke="#34434a" stroke-width="2"/>`,
@@ -223,6 +232,9 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
   };
   const accessories={
     none:'',
+    'mini-block':`<!-- Tiny solid tetromino keeps clear of the face -->
+<path d="M196 225 196 203 212 203 212 186 229 186 229 203 244 203 244 220 229 220 229 237 212 237 212 220Z" fill="#49aabb" stroke="#304651" stroke-width="4" stroke-linejoin="round"/>
+<path d="M198 205h12v12h-12zM214 188h12v12h-12zM214 205h12v12h-12zM231 205h11v12h-11z" fill="#b6f2e7" opacity=".7"/>`,
     'spectral-quill':`<!-- Spectral feather floats just above the shoulder, never hiding the animal's face -->
 <path d="M202 222Q238 190 232 141Q212 147 199 169Q187 193 202 222Z" fill="#9ed5c6" opacity=".6" stroke="#497c79" stroke-width="3.5" stroke-linejoin="round"/>
 <path d="M203 218Q222 184 230 148" fill="none" stroke="#edf7dc" stroke-width="3.7" stroke-linecap="round"/>
