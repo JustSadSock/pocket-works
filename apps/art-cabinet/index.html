@@ -3,9 +3,9 @@
 <meta name="theme-color" content="#263329"><meta name="description" content="Картотека — ревизия 72 исходных картин Замазки с выбором кандидатов на удаление и сохранёнными 64 одобренными картинами.">
 <title>КАРТОТЕКА · Ревизия исходного фонда</title>
 <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
-<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"></head>
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css"><link rel="stylesheet" href="./styles.css"></head>
 <body><main class="shell" data-app-shell>
-<header class="topbar"><a class="back" data-native-press href="../../" aria-label="Вернуться в PocketWorks">← <span>PocketWorks</span></a><div class="brand"><span class="brand-icon">▤</span><span>КАРТОТЕКА</span><small>03</small></div><div class="top-count"><strong id="selectedCount">0</strong> на удаление</div></header>
+<header class="topbar"><a class="back" data-native-press href="../../" aria-label="Вернуться в PocketWorks">← <span>PocketWorks</span></a><div class="brand"><span class="brand-icon">▤</span><span>КАРТОТЕКА</span><small>03</small></div><div class="top-count"><strong id="selectedCount">0</strong> на удаление</div><button type="button" class="workshop-action" data-workshop-trigger data-native-press title="Диагностика" aria-label="Диагностика Картотеки">⋯</button></header>
 <div class="workspace">
 <aside class="feature">
  <div class="feature-heading"><span>ЛИЧНЫЙ ФОНД</span><span>РЕВИЗИЯ № 03</span></div>
@@ -53,5 +53,6 @@
 <div id="copyFallback" class="copy-fallback" hidden role="dialog" aria-modal="true" aria-labelledby="copyTitle"><div><h3 id="copyTitle">Игровые ID на удаление</h3><p>Выдели и скопируй текст.</p><textarea id="copyText" readonly></textarea><button id="copyClose" type="button">Закрыть</button></div></div>
 </main>
 <script>(function(){function report(){if(document.documentElement.dataset.artCabinetReady==='3')return;const node=document.getElementById('notice');if(node){node.hidden=false;node.textContent='Каталог не запустился. Обновите страницу или проверьте подключение.'}}window.addEventListener('error',report);window.setTimeout(report,9000)})();</script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="КАРТОТЕКА" data-app-version="1.2.1"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
