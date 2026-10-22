@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {ITEMS,TREATMENTS,getRite,evaluateRite} from '../engine.js';
+import {ITEMS,TREATMENTS,getRite,getIncident,evaluateRite} from '../engine.js';
 const src=await readFile(new URL('../server/module.ts',import.meta.url),'utf8');
 const {default:mod,MIN_PLAYERS,MAX_PLAYERS,RULESET_VERSION}=await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(src));
 const people=n=>Array.from({length:n},(_,i)=>({id:'p'+i,name:'Жрец '+i,verified:false}));
@@ -21,7 +21,7 @@ function optimal(s){
  for(const item of ITEMS)for(const treatment of TREATMENTS)for(const bell of [1,2,3])
   for(const height of ['low','high']){
    const a={itemId:item.id,treatment:treatment.id,bell,height};
-   const score=evaluateRite(rite,a,s.match.doctrines).score;
+   const score=evaluateRite(rite,a,s.match.doctrines,getIncident(s.match)).score;
    if(!best||score>best.score)best={...a,score};
   }
  return best;
@@ -43,7 +43,7 @@ function playRound(r){
  assert.equal(r.s.phase,'play');
 }
 test('role schema assigns each of five duties exactly once at every player count',()=>{
- assert.equal(MIN_PLAYERS,2);assert.equal(MAX_PLAYERS,5);assert.equal(RULESET_VERSION,2);
+ assert.equal(MIN_PLAYERS,2);assert.equal(MAX_PLAYERS,5);assert.equal(RULESET_VERSION,3);
  for(const n of [2,3,4,5]){
   const r=room(n);const assignments=Object.values(r.s.assignments).flat().sort();
   assert.deepEqual(assignments,['bell','height','need','offering','taboo'].sort());
