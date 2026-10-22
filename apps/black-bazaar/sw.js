@@ -1,6 +1,6 @@
-const VERSION='0.4.0';
-const NOTES=['Брокер и разбор предметов; контрпредложения и проверка правил торговли.'];
-const CACHE='black-bazaar-v0.4.0';
+const VERSION='0.5.0';
+const NOTES=['Новые асимметричные личные квоты, сопоставимые по трудозатратам.'];
+const CACHE='black-bazaar-v0.5.0';
 const PREFIX='black-bazaar-v';
 const FILES=[
  './','./index.html','./app.js','./styles.css','./app.config.json',
