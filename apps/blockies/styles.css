@@ -621,3 +621,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 :root[data-theme="dark"] .blockies-debug button:hover{background:#305048}
 :root[data-theme="dark"] .blockies-debug__details{background:#0d1c21}
 :root[data-theme="dark"] .result-board__canvas{border-color:#45605d}
+
+#settings-container>h3{grid-column:1/-1;margin:6px 0 0!important;font-size:clamp(20px,2vw,25px)}
+.online-lobby-container:has(#room-view[style*="display: block"])>.nickname-section{display:none}
