@@ -71,8 +71,13 @@ export function offeringArt(id,size=76){
  const shape=paint[id]||paint.stone;
  return '<svg class="offering-svg" width="'+size+'" height="'+size+'" viewBox="0 0 80 80" aria-hidden="true"><g stroke-linecap="round" stroke-linejoin="round">'+shape+'</g></svg>';
 }
-export function godArt(){
- return '<svg class="god-face" viewBox="0 0 260 264" role="img" aria-label="Резной лик бога ОГО">'+
+const patronOrnaments={
+ krak:'<path d="M34 92Q-5 69 18 29L47 52l19 2M225 92q40-23 16-63l-29 23-19 2" stroke="#493a34" stroke-width="12" fill="#bc986c" stroke-linejoin="round"/><path d="m116 26 26-17-6 20 13 0-27 27 7-22-18 0Z" fill="#e9ca89" stroke="#77513a" stroke-width="3"/><path d="m65 174 23-12 24 11m40 0 22-11 22 12" fill="none" stroke="#76503d" stroke-width="8" stroke-linecap="round"/>',
+ sivilla:'<ellipse cx="130" cy="53" rx="91" ry="41" fill="none" stroke="#d8bf93" stroke-width="8" stroke-dasharray="12 11"/><path d="M91 122a24 24 0 1 0 0 48 24 24 0 1 0 0-48m75 0a24 24 0 1 0 0 48 24 24 0 1 0 0-48m-50 24q14-8 25 0" fill="none" stroke="#b9d0c0" stroke-width="7"/><path d="m82 61 18-17 30 12 30-12 18 17-18 16h-60Z" fill="#abc0ac" stroke="#665a48" stroke-width="4"/><path d="m123 44 7-8 7 8-7 8Z" fill="#eddaaf"/>'
+};
+export function godArt(patron='ogo'){
+ const alt=patron==='krak'?'КРАК':patron==='sivilla'?'СИВИЛЛА':'ОГО';
+ return '<svg class="god-face god-'+(patron==='krak'?'krak':patron==='sivilla'?'sivilla':'ogo')+'" viewBox="0 0 260 264" role="img" aria-label="Резной лик '+alt+'">'+
  '<defs><linearGradient id="faceWood" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#84583e"/><stop offset=".48" stop-color="#d2a276"/><stop offset=".95" stop-color="#7b4d36"/></linearGradient></defs>'+
  '<path d="M128 5 223 55l20 115-46 64-69 27-72-27-41-70L37 53Z" fill="#4c3428" stroke="#a47652" stroke-width="7"/>'+
  '<path d="M128 18 209 65l17 98-37 58-61 25-63-25-34-58 20-98Z" fill="url(#faceWood)" stroke="#684630" stroke-width="6"/>'+
@@ -84,5 +89,5 @@ export function godArt(){
  '<path d="m129 131-12 41 25 3" fill="none" stroke="#754c37" stroke-width="8" stroke-linecap="round"/>'+
  '<g class="god-jaw"><path d="M93 202q36-27 70 0-35 46-70 0Z" fill="#392820" stroke="#efd59f" stroke-width="4"/><path d="M104 207h49" stroke="#f4dca4" stroke-width="7" stroke-linecap="round"/></g>'+
  '<path d="m35 85-17 38 21 6M224 85l17 38-19 6" fill="none" stroke="#c39266" stroke-width="8" stroke-linecap="round"/>'+
- '</svg>';
+ (patronOrnaments[patron]||'')+'</svg>';
 }
