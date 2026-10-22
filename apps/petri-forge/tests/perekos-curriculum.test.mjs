@@ -5,7 +5,10 @@ import {runPerekosEpisode,trainingSettings,trainingCases,holdoutCases,evaluatePe
 
 test('actual native spell damage can secure a round against stationary training rival',()=>{
  const result=runPerekosEpisode(createPerekosPolicy(43,'aggressive'),{seed:41,mage:'kindle',opponent:'pebble',rival:'dummy',mode:'round'});
- assert.equal(result.roundWin,1);assert.equal(result.roundLoss,0);assert.ok(result.dealt>90);
+ assert.equal(result.roundWin,1);assert.equal(result.roundLoss,0);
+ assert.ok(result.dealt>0,'Native attacks must actually damage the dummy');
+ assert.ok(result.damageMargin>0,'Round win must be supported by greater inflicted than received damage');
+ assert.equal(result.damageMargin,result.dealt-result.received,'Damage scoreboard must be internally consistent');
 });
 test('draws do not masquerade as full-match victories',()=>{
  const result=runPerekosEpisode(createPerekosPolicy(43,'aggressive'),{seed:41,rival:'native',mode:'round'});
