@@ -92,8 +92,11 @@ test('Urgent tasks activate in rounds 3/6/9; penalties and round economy advance
 test('Rare legendary destiny can claim second, never first, when linked player wins',()=>{
  const {state}=makeRoom(4);
  const [winner,other,linked,last]=state.contestants;
- for(const p of state.contestants){p.resources={gold:1,crystals:1,parts:1};p.legendary=null;}
- winner.resources={gold:999,crystals:999,parts:99};
+ // Isolate the ranking contract from stochastic inventory effects.
+ for(const p of state.contestants){
+   p.items=[];p.resources={gold:1,crystals:1,parts:1};p.legendary=null;
+ }
+ winner.resources={gold:2000,crystals:800,parts:50};
  other.resources={gold:500,crystals:50,parts:10};
  linked.legendary=winner.id;
  const loop=9*state.contestants.length;
@@ -217,4 +220,70 @@ test('Leaving player forfeits; remaining players finish without stalled bankrupt
  }
  assert.equal(state.phase,'done');
  assert.ok(guard<100);
+});
+
+
+test('Private counteroffer reverses parties, swaps items safely, and original offer cannot be replayed',()=>{
+ const {state}=makeRoom(3);
+ const [a,b,c]=state.contestants;
+ const first=a.items[0],second=b.items[0];
+ act(state,a.id,{type:'deal_propose',to:b.id,give:{gold:40},want:{crystals:2},giveItemId:first.id});
+ const initialId=state.deals[0].id;
+ const unauth=act(state,c.id,{type:'deal_counter',dealId:initialId,give:{crystals:2},want:{gold:20}});
+ assert.equal(unauth.events[0].type,'notice');
+ act(state,b.id,{type:'deal_counter',dealId:initialId,
+   give:{crystals:3},want:{gold:25},giveItemId:second.id,wantItemId:first.id});
+ assert.equal(state.deals.length,1);
+ const revised=state.deals[0];
+ assert.equal(revised.from,b.id);
+ assert.equal(revised.to,a.id);
+ assert.equal(revised.depth,1);
+ assert.notEqual(revised.id,initialId);
+ assert.equal(revised.giveItemId,second.id);
+ assert.equal(revised.wantItemId,first.id);
+ assert.equal(game.viewForPlayer({state,player:{id:c.id}}).deals.length,0);
+ const replay=act(state,b.id,{type:'deal_accept',dealId:initialId});
+ assert.equal(replay.events[0].type,'notice');
+ act(state,a.id,{type:'deal_accept',dealId:revised.id});
+ assert.equal(state.deals.length,0);
+ assert.equal(a.items.some(i=>i.id===second.id),true);
+ assert.equal(b.items.some(i=>i.id===first.id),true);
+ assert.equal(a.resources.gold,225);
+ assert.equal(b.resources.gold,275);
+});
+test('Counteroffers are validated against inventory and resources and have a finite negotiation depth',()=>{
+ const {state}=makeRoom(2),[a,b]=state.contestants;
+ act(state,a.id,{type:'deal_propose',to:b.id,give:{gold:5},want:{crystals:2}});
+ for(let i=0;i<6;i++){
+   const d=state.deals[0],recipient=d.to;
+   const response=act(state,recipient,{type:'deal_counter',dealId:d.id,give:{crystals:1},want:{gold:1}});
+   assert.equal(response.events[0].type,'state');
+   assert.equal(state.deals[0].depth,i+1);
+ }
+ const last=state.deals[0];
+ const deny=act(state,last.to,{type:'deal_counter',dealId:last.id,give:{crystals:1},want:{gold:1}});
+ assert.equal(deny.events[0].type,'notice');
+ assert.equal(state.deals[0].id,last.id);
+ const invalid=act(state,last.to,{type:'deal_propose',to:last.from,give:{gold:900},want:{crystals:1}});
+ assert.equal(invalid.events[0].type,'notice');
+});
+test('Players cannot infer quota from public progress while game is live',()=>{
+ const {state}=makeRoom(4);
+ const view=game.viewForPlayer({state,player:{id:state.contestants[0].id}});
+ assert.ok(view.you.quota.gold>0);
+ for(const other of view.players){
+   assert.equal('progress' in other,false);
+   assert.equal('quota' in other,false);
+   assert.equal('positiveTarget' in other,false);
+   assert.equal(other.inventory.every(x=>!('positive' in x)&&!('negative' in x)),true);
+ }
+});
+test('Counteroffer expires after full round and cannot be accepted in later round',()=>{
+ const {state}=makeRoom(2),[a,b]=state.contestants;
+ act(state,a.id,{type:'deal_propose',to:b.id,give:{gold:5},want:{parts:1}});
+ const id=state.deals[0].id;
+ for(let i=0;i<2;i++)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ assert.equal(state.round,2);assert.equal(state.deals.length,0);
+ const rejected=act(state,b.id,{type:'deal_accept',dealId:id});
+ assert.equal(rejected.events[0].type,'notice');
 });
