@@ -582,3 +582,30 @@ button:active:not(:disabled){transform:translateY(1px)}
  .offering,.net-offering,.offer-filter button,.net-tool{transition:none}
  .offering.chosen,.net-offering.chosen{transform:none}
 }
+
+
+/* Risk-taking is a real choice, not a fourth cosmetic treatment. */
+.vow-control{padding:9px 0;border-top:1px solid #776149}
+.vow-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.vow-option{min-width:0;min-height:71px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:9px 10px;
+ color:#ead8c0;background:#40352d;border:1px solid #80694f;box-shadow:inset 0 1px #715844;transition:background .12s,transform .12s}
+.vow-option strong{font-size:11px;line-height:1.22;color:#e9c591}
+.vow-option small{font-size:10px;line-height:1.28;color:#c2b09b}
+.vow-option.chosen{background:#67503a;border:2px solid #e8bc7b;box-shadow:inset 0 0 0 2px #372b25}
+.vow-option.chosen strong{color:#ffe5ba}
+.vow-option:hover:not(.chosen){background:#514031}
+.vow-verdict{font-size:12px;color:#e9c491;border-left:3px solid #c79e63;padding-left:12px}
+.net-vow-options .vow-option{min-height:77px;padding:9px}
+.net-vow-label{margin-top:12px}
+.net-vow-result{font-size:12px!important;color:#e9bd82!important}
+@media(max-width:760px){
+ .vow-control{padding:6px 0}
+ .vow-options{gap:4px}
+ .vow-option{padding:7px 6px;min-height:66px;gap:3px}
+ .vow-option strong{font-size:10px}
+ .vow-option small{font-size:9px;line-height:1.16}
+ .net-vow-options{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .net-vow-options .vow-option{min-height:80px}
+}
+@media(max-width:350px){.vow-option strong{font-size:9px}.vow-option small{font-size:8.5px}}
+@media(prefers-reduced-motion:reduce){.vow-option{transition:none}}
