@@ -89,8 +89,8 @@ export class CoursePolishLayer {
   resize() {
     const rect = this.canvas.getBoundingClientRect();
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.width = Math.max(320, rect.width || window.innerWidth);
-    this.height = Math.max(480, rect.height || window.innerHeight);
+    this.width = Math.max(1, rect.width || this.canvas.clientWidth || window.innerWidth);
+    this.height = Math.max(1, rect.height || this.canvas.clientHeight || window.innerHeight);
     const width = Math.round(this.width * this.dpr);
     const height = Math.round(this.height * this.dpr);
     if (this.layer.width !== width || this.layer.height !== height) {
@@ -218,6 +218,9 @@ export class CoursePolishLayer {
   }
 
   draw(level, time, dt, ball) {
+    const rect = this.canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (Math.abs(rect.width - this.width) > .5 || Math.abs(rect.height - this.height) > .5 || dpr !== this.dpr) this.resize();
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
     const field = level?.course18?.field;
