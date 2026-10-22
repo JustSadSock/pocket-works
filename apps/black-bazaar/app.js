@@ -83,7 +83,8 @@ function scoreBox(){
     '</tbody></table></div>';
 }
 function inventoryBlock(you){
- return '<div class="panel"><h2>Мой инвентарь ('+you.items.length+'/4)</h2>'+
+ const reserved=you.escrowItems?.length||0;
+ return '<div class="panel"><h2>Мой инвентарь ('+(you.items.length+reserved)+'/4, у посредника: '+reserved+')</h2>'+
  (you.items.length?'<ol class="inventory">'+you.items.map(it=>'<li><strong>'+esc(it.name)+'</strong> · '+esc(it.rarity)+
  '<div class="success">Доход: '+esc(formatEffect(it.positive))+'</div><div class="error">Содержание: '+esc(formatEffect(it.negative,true))+
  '</div>'+specialLine(it.special)+'<small>Получен в раунде '+it.acquiredRound+(it.acquiredRound===state.round?' — пока нельзя перепродать':'')+'</small></li>').join('')+'</ol>':'<p class="muted">Предметов нет. Можно подработать и торговать ресурсами через ломбард.</p>')+
@@ -258,7 +259,7 @@ function actionsBlock(you){
   const stock=state.broker;
   html+='<section><h3>Брокер: '+esc(stock.name)+'</h3>'+
     '<p>Цена: 75 золота. До покупки свойства неизвестны. Купленный предмет нельзя продать или разобрать в этом раунде.</p>'+
-    '<button type="button" data-action="broker-buy" '+(you.resources.gold<75||you.items.length>=4?'disabled':'')+
+    '<button type="button" data-action="broker-buy" '+(you.resources.gold<75||you.items.length+(you.escrowItems?.length||0)>=4?'disabled':'')+
     '>Купить запечатанный предмет</button></section>';
  }
  if(!you.worked)html+='<form class="row" data-form="work"><label>Подработка<select name="resource"><option value="gold">+35 золота</option><option value="crystals">+4 кристалла</option><option value="parts">+1 деталь</option></select></label><button type="submit">Подработать</button></form>';
