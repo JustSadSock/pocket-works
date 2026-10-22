@@ -3,7 +3,7 @@ const SETS=[{"id":"characterArc","label":"Цілісна історія"},{"id":
 const GENRES=[{"id":"groundedDrama","label":"Приземлена драма"},{"id":"absurdComedy","label":"Абсурдна комедія"},{"id":"horror","label":"Горор"},{"id":"detectiveNoir","label":"Нуарний детектив"},{"id":"romanticMelodrama","label":"Романтична мелодрама"},{"id":"fantasyEpic","label":"Фентезійна епіка"},{"id":"sciFiParanoia","label":"Науково-фантастична параноя"},{"id":"cyberpunk","label":"Кіберпанк"},{"id":"cozyWhimsy","label":"Затишна дивина"},{"id":"postApocalypse","label":"Постапокаліпсис"},{"id":"mythicLegend","label":"Міф і легенда"},{"id":"satire","label":"Сатира"}];
 export function demoView(id){
  const people=[{id:'qa-host',name:'Марта',submitted:false},{id:'qa-guest',name:'Назар',submitted:false},{id:'qa-third',name:'Софія',submitted:false},{id:'qa-fourth',name:'Ярина',submitted:false}];
- const settings={maxPlayers:4,questionSet:'collapsingPlan',visibleTailWords:3,genre:'absurdComedy',customQuestions:[],customGenre:''};
+ const settings={maxPlayers:4,questionSet:'collapsingPlan',visibleTailWords:3,showNextQuestion:true,genre:'absurdComedy',customQuestions:[],customGenre:''};
  const v={protocol:1,revision:1,phase:'lobby',host:'qa-host',players:people.slice(0,2),settings,questionSets:SETS,genres:GENRES,round:0,total:0,message:''};
  const d={view:v,me:id==='lobby-guest'?'qa-guest':'qa-host',room:'a1b2c3d4',connected:true,connecting:false,notice:'',invitation:'',storyId:'',modal:'',answer:'',selection:[]};
  if(['home','home-member','invite','error','connecting'].includes(id)){
@@ -24,12 +24,12 @@ export function demoView(id){
   ];
   v.stories=f.map((fragments,i)=>({id:'sheet-'+i,starter:people[i].name,genre:'Абсурдна комедія',setLabel:'Ланцюг провалів',fragments,text:fragments.map(x=>x.answer).join('\n\n')}));
   d.storyId=id==='results-second'?'sheet-1':'sheet-0';
-  if(id==='comic')d.modal='comic';
+  if(id==='comic')d.modal='comic-prompt';
  }else{
   v.phase='writing';v.round=['writing-first','writing-selection','writing-zero','leave'].includes(id)?0:1;v.total=3;
   v.players=people;v.settings={...settings,visibleTailWords:id==='writing-zero'?0:3};
   v.sheet={id:'sheet-0',starter:'Марта',set:'collapsingPlan',setLabel:'Ланцюг провалів',genre:'absurdComedy',genreLabel:'Абсурдна комедія',gender:v.round?'female':null,tail:v.round?'директора дощ валізу':'',
-   question:v.round?{prompt:'Що або хто внесли перший серйозний збій?',guidance:'Додай несподіваний поворот.',creativeFreedom:'Залиши простір для інших.'}:{prompt:'Хто вліз у цю авантюру?',guidance:'Представ героя.',creativeFreedom:'Можеш додати дивну дрібницю.'}};
+   nextQuestion:v.round?'Як герої намагалися виправити ситуацію?':'Який задум спав герою на думку?',question:v.round?{prompt:'Що або хто внесли перший серйозний збій?',guidance:'Додай несподіваний поворот.',creativeFreedom:'Залиши простір для інших.'}:{prompt:'Хто вліз у цю авантюру?',guidance:'Представ героя.',creativeFreedom:'Можеш додати дивну дрібницю.'}};
   v.waiting=id==='waiting';
   if(v.waiting)v.players.forEach((p,i)=>{p.submitted=i!==2});
   if(id==='offline')d.connected=false;
