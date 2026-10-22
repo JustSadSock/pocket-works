@@ -34,7 +34,7 @@ export function constrainPoint(shape, point, margin = BALL_RADIUS) {
     if(d>r){p.x=cx+dx/d*r;p.y=270+dy/d*r}
     return p;
   }
-  for(let k=0;k<4;k++) for(let i=0;i<3;i++){
+  for(let k=0;k<32;k++) for(let i=0;i<3;i++){
     const a=TRI[i],b=TRI[(i+1)%3],ex=b.x-a.x,ey=b.y-a.y,len=Math.hypot(ex,ey),nx=-ey/len,ny=ex/len;
     const dot=(p.x-a.x)*nx+(p.y-a.y)*ny;
     if(dot<margin){p.x+=(margin-dot)*nx;p.y+=(margin-dot)*ny}
