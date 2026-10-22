@@ -25,7 +25,7 @@ test('v0.9 visual pass: six equipped mage costumes, expressive casts, actual spe
  await info.attach('v09-distinct-classes',{body:await page.screenshot(),contentType:'image/png'});
  await page.locator('#mage-cancel').click();
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  const confirmed=await page.evaluate(async()=>{
   const {tick,STEP}=await import('/apps/perekos/core.mjs');
   const {SpellChoreography}=await import('/apps/perekos/spell-choreography.mjs');

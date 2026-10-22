@@ -49,7 +49,7 @@
         },
         {
           "action": "visible",
-          "selector": "#controls"
+          "selector": "#hud"
         },
         {
           "action": "screenshot"

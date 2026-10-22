@@ -46,7 +46,7 @@ test('v0.12: seven directional projectile silhouettes and seven distinct real im
  await info.attach('v012-materials-contact-sheet',{body:await page.screenshot(),contentType:'image/png'});
  await page.locator('#spell-kinetics-audit').evaluate(el=>el.remove());
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  await page.evaluate(()=>new Promise(requestAnimationFrame));
  await info.attach('v012-combat-mobile',{body:await page.screenshot(),contentType:'image/png'});
  const bound=await page.evaluate(()=>({screen:innerWidth,page:document.documentElement.scrollWidth}));
