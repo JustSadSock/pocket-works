@@ -1,6 +1,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
+import {svgIcon,artifactSVG,brandEmblem} from './art.js';
 installMobileRuntime();
 createWorkshopMode({appName:'Чёрная барахолка',version:'0.9.1',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
@@ -55,26 +56,35 @@ function specialLine(t){
 let net=null,me=null,state=null,roomId='',mode='home',connecting=false,connected=false;
 let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
 let notice='';
+let activeSheet=null,lastSheetTrigger=null;
 function message(m,isError=false){notice=m;status.textContent=m;status.className=isError?'error':'muted';}
 function localStore(){const node=document.querySelector('#nickname');if(node)name=(node.value.trim()||'Игрок').slice(0,22);try{localStorage.setItem('black-bazaar:name',name);}catch{}}
 function renderHome(){
-  mode='home';app.innerHTML='<h1>Чёрная барахолка</h1><p>Механический альфа-прототип: онлайн-торговля предметами со скрытыми эффектами. Для партии нужны 2–6 игроков.</p>'+
-  '<div class="panel stack"><label>Имя игрока<input id="nickname" type="text" maxlength="22" value="'+esc(name)+'"></label>'+
-  '<button type="button" class="primary" data-action="create">Создать комнату</button>'+
-  '<label>Код или полная ссылка комнаты<input id="roomCode" type="text" spellcheck="false" value="'+esc(hintRoom)+'" placeholder="Код комнаты"></label>'+
-  '<button type="button" data-action="join">Присоединиться</button></div>'+
-  '<div class="panel"><h2>Правила тестовой партии</h2><p>Девять раундов. Три ресурса. У каждого секретная квота и тайные связи. Продавец объявляет цену за предмет, остальные предлагают ставки. Каждые три раунда появляется личный срочный заказ, который надо оплатить к концу своего хода.</p><p>У предметов есть доход и содержание — покупатель видит точные свойства только после покупки. Можно проверить чужой лот за 15 золота. Система сама подсчитывает конец раунда и места.</p></div>';
+ mode='home';activeSheet=null;document.body.classList.remove('sheet-open');
+ app.innerHTML='<div class="entry-screen">'+
+ '<div class="entry-art" aria-hidden="true"><div class="entry-table"></div><div class="entry-emblem">'+brandEmblem()+'</div></div>'+
+ '<div class="entry-copy"><h1>Чёрная барахолка</h1>'+
+ '<p>Девять раундов. Странные находки. Торгуйся, хитри и не разорись.</p>'+
+ '<div class="entry-form"><div class="panel stack">'+
+ '<label>Твоё имя<input id="nickname" type="text" maxlength="22" value="'+esc(name)+'" autocomplete="nickname"></label>'+
+ '<button type="button" class="primary" data-action="create">Создать комнату '+svgIcon('arrow')+'</button>'+
+ '<label>Код комнаты<input id="roomCode" type="text" spellcheck="false" value="'+esc(hintRoom)+'" placeholder="Код или ссылка"></label>'+
+ '<button type="button" data-action="join">Войти к друзьям</button>'+
+ '</div></div></div></div>';
 }
 function renderLobby(){
-  mode='lobby';
-  const all=state?.players||[];
-  const host=state?.host===me?.id;
-  const short=roomId.slice(0,8).toUpperCase();
-  app.innerHTML='<h1>Комната '+esc(short)+'</h1><p>Участники: '+all.length+'/6. Отправьте код или ссылку друзьям.</p>'+
-  '<div class="panel stack"><div class="row"><button type="button" data-action="copy-code">Скопировать код</button><button type="button" data-action="copy-url">Скопировать ссылку</button></div>'+
-  '<ul>'+all.map(p=>'<li>'+esc(p.name)+(p.id===state.host?' (ведущий)':'')+'</li>').join('')+'</ul>'+
-  (host?'<button type="button" class="primary" data-action="start" '+(all.length<2?'disabled':'')+'>Начать партию</button>':'<p>Ведущий начинает игру, когда все подключились.</p>')+
-  '<button type="button" data-action="leave">Покинуть комнату</button></div>';
+ mode='lobby';activeSheet=null;document.body.classList.remove('sheet-open');
+ const all=state?.players||[],host=state?.host===me?.id,short=roomId.slice(0,8).toUpperCase();
+ app.innerHTML='<div class="lobby-screen"><div class="panel stack">'+
+ '<h1>За одним столом</h1><p>Код комнаты</p><strong class="lobby-room">'+esc(short)+'</strong>'+
+ '<div class="row"><button type="button" data-action="copy-code">'+svgIcon('box')+' Код</button>'+
+ '<button type="button" data-action="copy-url">'+svgIcon('trade')+' Ссылка</button></div>'+
+ '<div class="lobby-players">'+all.map(p=>'<div class="lobby-player"><strong>'+esc(p.name)+'</strong>'+
+ (p.id===state.host?'<br><small>Создатель</small>':'')+'</div>').join('')+'</div>'+
+ '<p class="muted">'+all.length+' из 6 игроков · старт от двух</p>'+
+ (host?'<button type="button" class="primary" data-action="start" '+(all.length<2?'disabled':'')+'>Начать игру</button>':'<p>Начало — у создателя комнаты.</p>')+
+ '<button type="button" data-action="leave">Покинуть комнату</button>'+
+ '</div></div>';
 }
 function scoreBox(){
   return '<div class="panel"><h2>Участники</h2><table class="table"><thead><tr><th>Игрок</th><th>Ресурсы</th><th>Предметы</th><th>Штрафы</th></tr></thead><tbody>'+
@@ -85,7 +95,7 @@ function scoreBox(){
 function inventoryBlock(you){
  const reserved=you.escrowItems?.length||0;
  return '<div class="panel"><h2>Мой инвентарь ('+(you.items.length+reserved)+'/4, у посредника: '+reserved+')</h2>'+
- (you.items.length?'<ol class="inventory">'+you.items.map(it=>'<li><strong>'+esc(it.name)+'</strong> · '+esc(it.rarity)+
+ (you.items.length?'<ol class="inventory">'+you.items.map(it=>'<li class="sheet-scroll-target" id="item-'+esc(it.id)+'"><strong>'+esc(it.name)+'</strong> · '+esc(it.rarity)+
  '<div class="success">Доход: '+esc(formatEffect(it.positive))+'</div><div class="error">Содержание: '+esc(formatEffect(it.negative,true))+
  '</div>'+specialLine(it.special)+'<small>Получен в раунде '+it.acquiredRound+(it.acquiredRound===state.round?' — пока нельзя перепродать':'')+'</small></li>').join('')+'</ol>':'<p class="muted">Предметов нет. Можно подработать и торговать ресурсами через ломбард.</p>')+
  '</div>';
@@ -320,23 +330,94 @@ function eventBlock(){
  const e=state.event;
  return e?'<section class="panel"><h2>Событие раунда: '+esc(e.title)+'</h2><p>'+esc(e.description)+'</p></section>':'';
 }
+const sheetTitles={
+ secret:'Задания',inventory:'Инвентарь',deals:'Обмен',market:'Торги',
+ actions:'Мой ход',players:'Игроки'
+};
+function openSheet(sheetName,focus=false,targetId=''){
+ if(!document.querySelector('#bazaarSheet'))return;
+ if(sheetName&&!Object.prototype.hasOwnProperty.call(sheetTitles,sheetName))return;
+ activeSheet=sheetName;
+ const sheet=document.querySelector('#bazaarSheet'),backdrop=document.querySelector('#sheetBackdrop');
+ sheet.hidden=!sheetName;backdrop.hidden=!sheetName;
+ document.body.classList.toggle('sheet-open',Boolean(sheetName));
+ for(const page of sheet.querySelectorAll('[data-sheet-page]'))page.hidden=page.dataset.sheetPage!==sheetName;
+ const title=sheet.querySelector('#sheetTitle');if(title&&sheetName)title.textContent=sheetTitles[sheetName];
+ for(const tab of app.querySelectorAll('[data-action="open-sheet"]')){
+  tab.setAttribute('aria-expanded',String(tab.dataset.sheet===sheetName));
+ }
+ if(focus&&sheetName){
+  requestAnimationFrame(()=>{
+   if(targetId)document.getElementById(targetId)?.scrollIntoView({block:'nearest'});
+   sheet.querySelector('[data-action="close-sheet"]')?.focus({preventScroll:true});
+  });
+ }else if(focus&&!sheetName){
+  lastSheetTrigger?.focus?.({preventScroll:true});
+ }
+}
+function resourceWallet(w){
+ return '<div class="currency-strip" aria-label="Мои ресурсы">'+
+ [['gold','coin','Золото'],['crystals','gem','Кристаллы'],['parts','parts','Детали']].map(([k,icon,label])=>
+ '<span class="currency" title="'+label+'" aria-label="'+label+': '+(w[k]??0)+'">'+
+ svgIcon(icon)+'<strong>'+(w[k]??0)+'</strong><em>'+label+'</em></span>').join('')+'</div>';
+}
 function renderPlay(){
  const drafts=mode==='play'?collectDrafts():{};
  mode='play';const you=state.you;
- if(!you){app.innerHTML='<p>Синхронизация личного состояния…</p>';return;}
+ if(!you){app.innerHTML='<p class="panel">Подключаемся к комнате…</p>';return;}
  const active=state.turnId===me?.id;
- app.innerHTML='<div class="row"><h1>Раунд '+state.round+' / '+state.rounds+'</h1><span class="chip">'+(active?'Твой ход':'Ход: '+esc(label(state.turnId)))+'</span>'+
- '<span class="chip">Осталось: <strong id="turnClock" role="timer">—</strong></span>'+
- '<button type="button" data-action="leave">Выйти из комнаты</button></div>'+
- '<div class="panel"><h2>'+esc(you.character)+'</h2><p>Запасы: <strong>'+esc(amounts(you.resources))+'</strong>. Провалы срочных заказов: '+state.players.find(p=>p.id===me.id)?.strikes+'/3.</p></div>'+eventBlock()+
- '<div class="layout"><div>'+secretBlock(you)+urgentBlock(you)+inventoryBlock(you)+'</div>'+
- '<div>'+blackMarketBlock(you)+tradePanel(you)+marketBlock(you,active)+repackBlock(you)+(active?actionsBlock(you):'<div class="panel"><p>Пока другой игрок продаёт товар, можно предложить ставку на его лот или прямой обмен.</p></div>')+'</div>'+
- '<div class="wide">'+scoreBox()+'<div class="panel"><h2>Журнал событий</h2><ol>'+state.log.map(entry=>'<li>'+esc(entry)+'</li>').join('')+'</ol></div></div></div>';
+ const turnName=active?'Твой ход':'Ходит '+label(state.turnId);
+ const seats=state.players.map(p=>
+ '<div class="seat '+(p.id===state.turnId?'is-turn':'')+'">'+
+ '<div class="seat-icon" aria-hidden="true"></div><strong>'+esc(p.character)+'</strong>'+
+ '<small>'+esc(p.name)+'</small></div>').join('');
+ const listing=state.listing;
+ const lot=listing?
+ '<button type="button" class="artifact" data-action="open-sheet" data-sheet="market" aria-label="Открыть лот: '+esc(listing.name)+'">'+
+ artifactSVG(listing.name)+'<strong>'+esc(listing.name)+'</strong></button>':
+ '<div class="artifact-note">Лота пока нет</div>';
+ const ownItems=you.items.length?'<div class="mini-artifacts" aria-label="Мои предметы">'+
+ you.items.map(it=>'<button type="button" data-action="open-sheet" data-sheet="inventory" data-scroll="item-'+esc(it.id)+'" title="'+esc(it.name)+'">'+
+ artifactSVG(it.name)+' '+esc(it.name)+'</button>').join('')+'</div>':'';
+ const edge=[
+ ['secret','scroll','Задания'],['inventory','bag','Инвентарь'],
+ ['deals','trade','Обмен'],['players','people','Игроки']
+ ].map(([name,icon,title])=>'<button type="button" class="edge-tab" data-action="open-sheet" data-sheet="'+name+
+ '" aria-label="'+title+'" aria-controls="bazaarSheet" aria-expanded="false" title="'+title+'">'+
+ svgIcon(icon)+'<span>'+title+'</span></button>').join('');
+ const sheets=
+ '<section class="sheet-page" data-sheet-page="secret">'+secretBlock(you)+urgentBlock(you)+'</section>'+
+ '<section class="sheet-page" data-sheet-page="inventory">'+inventoryBlock(you)+repackBlock(you)+'</section>'+
+ '<section class="sheet-page" data-sheet-page="deals">'+tradePanel(you)+'</section>'+
+ '<section class="sheet-page" data-sheet-page="market">'+marketBlock(you,active)+blackMarketBlock(you)+'</section>'+
+ '<section class="sheet-page" data-sheet-page="actions">'+
+ (active?actionsBlock(you):'<div class="panel">Сейчас ходит другой игрок. Прямые сделки доступны в разделе «Обмен».</div>')+'</section>'+
+ '<section class="sheet-page" data-sheet-page="players">'+scoreBox()+eventBlock()+
+ '<div class="panel"><h2>События</h2><ol>'+state.log.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ol></div></section>';
+ app.innerHTML='<div class="play-screen"><div class="play-head">'+
+ '<h1>Раунд '+state.round+' / '+state.rounds+'</h1>'+
+ '<span class="chip">'+esc(turnName)+'</span>'+
+ '<span class="chip" aria-label="До конца хода">◷ <strong id="turnClock" role="timer">—</strong></span>'+
+ '<button type="button" class="leave-button" data-action="leave">Выйти</button></div>'+
+ resourceWallet(you.resources)+
+ '<div class="play-field"><div class="player-seats">'+seats+'</div>'+
+ '<div class="table-stage">'+lot+ownItems+
+ (state.blackMarket?'<button type="button" data-action="open-sheet" data-sheet="market">'+svgIcon('eye')+' Чёрный рынок</button>':'')+
+ (state.event?'<button type="button" data-action="open-sheet" data-sheet="players" class="table-event">'+svgIcon('leaf')+' '+esc(state.event.title)+'</button>':'')+
+ '</div><div class="bottom-ribbon">'+
+ '<button class="primary" type="button" data-action="open-sheet" data-sheet="market">'+svgIcon('gavel')+' Торг</button>'+
+ '<button type="button" data-action="open-sheet" data-sheet="actions">'+svgIcon('box')+' '+(active?'Мой ход':'Операции')+'</button>'+
+ '</div><nav class="edge-tabs" aria-label="Разделы игры">'+edge+'</nav></div>'+
+ '<button type="button" id="sheetBackdrop" class="sheet-backdrop" data-action="close-sheet" aria-label="Закрыть панель" hidden></button>'+
+ '<aside id="bazaarSheet" class="side-sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>'+
+ '<div class="sheet-heading"><h2 id="sheetTitle"></h2><button type="button" data-action="close-sheet" aria-label="Закрыть">'+svgIcon('close',26)+'</button></div>'+sheets+
+ '</aside></div>';
  restoreDrafts(drafts);
+ openSheet(activeSheet);
  updateTurnClock();
 }
 function renderDone(){
- mode='done';
+ mode='done';activeSheet=null;document.body.classList.remove('sheet-open');
  const ranks=state.ranking||[];
  app.innerHTML='<h1>Партия окончена</h1><p>Рейтинг по выполнению секретной квоты. Банкротство лишает права на победу; легендарная связь может изменить второе место.</p>'+
  '<div class="panel"><table class="table"><thead><tr><th>Место</th><th>Игрок</th><th>Квота</th><th>Итог</th></tr></thead><tbody>'+
@@ -360,6 +441,7 @@ function render(){
  return renderPlay();
 }
 function closeRoom(){
+ activeSheet=null;document.body.classList.remove('sheet-open');
  if(net){try{if(connected)net.leaveRoom()}catch{}try{net.close()}catch{}}
  net=null;me=null;state=null;roomId='';connected=false;connecting=false;message('');renderHome();
 }
@@ -407,6 +489,12 @@ async function copy(value){
 app.addEventListener('click',event=>{
  const btn=event.target.closest('button[data-action]');if(!btn||btn.disabled)return;
  const action=btn.dataset.action;
+ if(action==='open-sheet'){
+  lastSheetTrigger=btn;
+  const next=activeSheet===btn.dataset.sheet?null:btn.dataset.sheet;
+  openSheet(next,true,btn.dataset.scroll||'');return;
+ }
+ if(action==='close-sheet'){openSheet(null,true);return;}
  if(action==='create'){localStore();connect('create');return;}
  if(action==='join'){
   localStore();let code=document.querySelector('#roomCode')?.value.trim()||'';
@@ -451,6 +539,18 @@ app.addEventListener('click',event=>{
    if(!confirm('Срочный заказ не обеспечен ресурсами. Завершение хода даст штраф. Продолжить?'))return;
   }
   return request({type:'end'});
+ }
+});
+document.addEventListener('keydown',event=>{
+ if(event.key==='Escape'&&activeSheet){event.preventDefault();openSheet(null,true);}
+ if(event.key==='Tab'&&activeSheet){
+  const sheet=document.querySelector('#bazaarSheet');
+  const focusable=[...sheet.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),summary,a[href]')]
+   .filter(el=>el.getClientRects().length);
+  if(!focusable.length)return;
+  const first=focusable[0],last=focusable.at(-1);
+  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+  if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
  }
 });
 app.addEventListener('change',event=>{
