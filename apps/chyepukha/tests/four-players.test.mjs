@@ -53,7 +53,7 @@ function playFour(game,{custom=false}={}){
    const answer='автор'+i+' раунд'+round+' сигнал'+i+round+' тінь'+i+round+
     ' орбіта'+i+round+' PRIVATE_'+i+'_'+round;
    const tail='автор'+i+' сигнал'+i+round+' орбіта'+i+round;
-   const packet={type:'submit',round,sheetId:v.sheet.id,answer,tailIndexes:[0,2,4],gender:'unspecified'};
+   const packet={type:'submit',round,sheetId:v.sheet.id,answer,tailIndexes:round===questionCount-1&&state.settings.showNextQuestion!==undefined?[]:[0,2,4],gender:'unspecified'};
    const response=send(game,state,player,packet);
    assert.equal(response.events[0].type,'state');
    state=response.state;
