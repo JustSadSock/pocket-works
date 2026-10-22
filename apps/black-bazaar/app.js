@@ -2,7 +2,7 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Чёрная барахолка',version:'0.7.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+createWorkshopMode({appName:'Чёрная барахолка',version:'0.8.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -35,6 +35,23 @@ const formatEffect=(fx,minus=false)=>{
   const key=fx.type==='goldPercent'?'золота':names[fx.type]||fx.type;
   return (minus?'−':'+')+fx.value+(fx.type==='goldPercent'?'% ':' ')+key;
 };
+function curseHint(curse){
+ if(!curse)return '';
+ const effect=esc(formatEffect(curse.effect,true));
+ return curse.resolved?'Проклятие уже сработало: '+effect:
+   'Отложенное проклятие: '+effect+' в конце раунда '+esc(curse.dueRound);
+}
+function specialHint(t){
+ if(!t)return '';
+ if(t.kind==='curse')return curseHint(t);
+ if(t.kind==='ward')return 'Защита от одной невыполненной срочной заявки · осталось '+t.charges+' зарядов';
+ if(t.kind==='sellerBonus')return 'При перепродаже: '+formatEffect(t.effect)+' продавцу (не чаще раза за раунд)';
+ if(t.kind==='appraisal')return 'Скидка на экспертизу: обычная '+t.publicCost+', чёрная '+t.blackCost+' золота';
+ return '';
+}
+function specialLine(t){
+ return t?'<div class="chip"><strong>'+esc(t.title)+'</strong>: '+esc(specialHint(t))+'</div>':'';
+}
 let net=null,me=null,state=null,roomId='',mode='home',connecting=false,connected=false;
 let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
 let notice='';
@@ -69,7 +86,7 @@ function inventoryBlock(you){
  return '<div class="panel"><h2>Мой инвентарь ('+you.items.length+'/4)</h2>'+
  (you.items.length?'<ol class="inventory">'+you.items.map(it=>'<li><strong>'+esc(it.name)+'</strong> · '+esc(it.rarity)+
  '<div class="success">Доход: '+esc(formatEffect(it.positive))+'</div><div class="error">Содержание: '+esc(formatEffect(it.negative,true))+
- '</div><small>Получен в раунде '+it.acquiredRound+(it.acquiredRound===state.round?' — пока нельзя перепродать':'')+'</small></li>').join('')+'</ol>':'<p class="muted">Предметов нет. Можно подработать и торговать ресурсами через ломбард.</p>')+
+ '</div>'+specialLine(it.special)+'<small>Получен в раунде '+it.acquiredRound+(it.acquiredRound===state.round?' — пока нельзя перепродать':'')+'</small></li>').join('')+'</ol>':'<p class="muted">Предметов нет. Можно подработать и торговать ресурсами через ломбард.</p>')+
  '</div>';
 }
 function secretBlock(you){
@@ -85,7 +102,7 @@ function secretBlock(you){
 function urgentBlock(you){
  if(!you.urgent)return '';
  const u=you.urgent,need=u.needs;
- return '<div class="panel urgent"><h2>Срочный заказ · '+(u.status==='pending'?'должен быть оплачен до конца твоего хода':u.status==='success'?'выполнен':'провален')+'</h2>'+
+ return '<div class="panel urgent"><h2>Срочный заказ · '+(u.status==='pending'?'должен быть оплачен до конца твоего хода':u.status==='success'?'выполнен':u.status==='shielded'?'защищён амулетом':'провален')+'</h2>'+
  '<p>Необходимо сдать: <strong>'+esc(amounts(need))+'</strong>.</p><p>Если хватит ресурсов при завершении хода, заказ оплатится автоматически, а ты получишь 35 золота. Иначе штраф; третий провал означает банкротство.</p>'+
  '<p>Сейчас: '+esc(amounts(you.resources))+'</p></div>';
 }
@@ -97,8 +114,11 @@ function marketBlock(you,canAct){
  let html='<div class="panel"><h2>Лот: '+esc(listing.name)+'</h2><p>Продавец: '+esc(label(listing.seller))+
  '. Редкость: '+esc(listing.rarity)+'. Запрошено: <strong>'+esc(amounts(listing.ask))+'</strong>.</p>'+
  '<p class="muted">Продавец может описывать любые свойства. Реальные эффекты узнаются после покупки или частичной проверки.</p>';
- if(!sellerIsMe&&already)html+='<p>Проверка показала содержание: <strong>'+esc(formatEffect(already.negative,true))+'</strong></p>';
- if(!sellerIsMe&&!already)html+='<button type="button" data-action="inspect" '+(you.resources.gold<15?'disabled':'')+'>Проверить содержание (15 золота)</button>';
+ if(!sellerIsMe&&already)html+='<p>Проверка показала содержание: <strong>'+esc(formatEffect(already.negative,true))+
+    '</strong></p>'+(already.curse?'<p class="error">'+curseHint(already.curse)+'</p>':'');
+ const cost=you.inspectionPrices?.public??15;
+ if(!sellerIsMe&&!already)html+='<button type="button" data-action="inspect" '+(you.resources.gold<cost?'disabled':'')+
+   '>Экспертиза ('+cost+' золота)</button>';
  if(sellerIsMe){
   html+='<h3>Предложения покупателей</h3>'+
     (state.bids.length?state.bids.map(b=>'<div class="row"><span>'+esc(label(b.buyer))+' предлагает '+esc(amounts(b.offer))+'</span>'+
@@ -186,7 +206,8 @@ function blackMarketBlock(you){
   out+='<section class="offer"><h3>'+esc(lot.item.name)+' · '+esc(lot.id)+'</h3>'+
    '<p>Запрошено: '+esc(amounts(lot.ask))+' · Закрытых ставок: '+lot.bidCount+'</p>';
   if(inspected)out+='<p class="success">Экспертиза: '+esc(inspected.originalName)+
-    '; содержание '+esc(formatEffect(inspected.negative,true))+'</p>';
+    '; содержание '+esc(formatEffect(inspected.negative,true))+'</p>'+
+    (inspected.curse?'<p class="error">'+curseHint(inspected.curse)+'</p>':'');
   if(lot.mine){
    out+='<p><strong>Твой анонимный лот</strong></p>'+
     (lot.bids.length?lot.bids.map(b=>'<div class="row"><span>Ставка '+esc(amounts(b.offer))+'</span>'+
@@ -195,8 +216,9 @@ function blackMarketBlock(you){
       '<p class="muted">Пока предложений нет.</p>')+
     '<button type="button" data-action="black-cancel" data-id="'+esc(lot.id)+'">Снять с рынка</button>';
   }else if(!you.bankrupt){
+   const cost=you.inspectionPrices?.black??25;
    if(!inspected)out+='<button type="button" data-action="black-inspect" data-id="'+esc(lot.id)+
-     '" '+(you.resources.gold<25?'disabled':'')+'>Экспертиза (25 золота)</button>';
+     '" '+(you.resources.gold<cost?'disabled':'')+'>Экспертиза ('+cost+' золота)</button>';
    out+='<form data-form="black-bid" data-lot-id="'+esc(lot.id)+'" class="stack">'+
      '<p>Твоя закрытая ставка:</p>'+resourceFields('offer',lot.myBid||lot.ask)+
      '<button type="submit" class="primary">Отправить закрытую ставку</button></form>';
