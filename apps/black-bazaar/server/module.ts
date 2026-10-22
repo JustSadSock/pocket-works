@@ -274,12 +274,13 @@ function applyRelationship(s,seller,buyer){
     buyer.resources.gold=Math.max(0,buyer.resources.gold-20);seller.negativeUsed=s.round;
   }
 }
-function awardSaleTrait(s,seller,item){
+function awardSaleTrait(s,seller,item,anonymous=false){
   const t=trait(item);
   if(t?.kind==='sellerBonus'&&item.tradeUsedRound!==s.round){
     add(seller,{gold:0,crystals:t.effect.value,parts:0});
     item.tradeUsedRound=s.round;
-    issue(s,'Эхо перепродажи принесло '+seller.character+' +'+t.effect.value+' кристалла.');
+    // An anonymous sale must not identify its seller through the public log.
+    if(!anonymous)issue(s,'Эхо перепродажи принесло '+seller.character+' +'+t.effect.value+' кристалла.');
   }
 }
 function transferItem(s,seller,buyer,item){
@@ -417,7 +418,7 @@ function action(s,id,v){
     // The buyer sees an anonymized provenance hop, never the intermediary's seller ID.
     item.history.push('Анонимный рынок');item.acquiredRound=s.round;
     buyer.items.push(item);
-    awardSaleTrait(s,me,item);
+    awardSaleTrait(s,me,item,true);
     applyRelationship(s,me,buyer);
     s.blackLots=s.blackLots.filter(l=>l.id!==lot.id);
     issue(s,'Анонимный лот продан. Посредник удержал 10% комиссии.');
