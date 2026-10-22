@@ -1,6 +1,6 @@
 import type { PocketModule } from '../../../pocket-server/module-contract.js';
 export const MIN_PLAYERS = 2;
-export const RULESET_VERSION = 4;
+export const RULESET_VERSION = 5;
 
 
 const WORDS = {
@@ -86,7 +86,7 @@ const GOODS:Word[]=['key','crown','heart','book','flower','clock','star','sword'
 const placeFor=(index:number,a:Word,b:Word):Word=>PLACES.find((p,i)=>i>index%PLACES.length&&p!==a&&p!==b)||PLACES.find(p=>p!==a&&p!==b)!;
 // Curated causal story arcs: verbs, consequences and settings are not random.
 type Story={kind:Kind;subject:Word;verb:string;object:Word;next:string;location:string};
-const STORY_ROWS="action|cat|крадёт|key|открывает запертую дверь|в башне\naction|dragon|крадёт|crown|прячет добычу|в пещере\naction|bird|крадёт|book|улетает от погони|над мостом\naction|human|крадёт|clock|подменяет пропажу|в магазине\naction|cat|крадёт|flower|дарит добычу другу|в саду\naction|human|крадёт|sword|защищается от стражи|у ворот\naction|dragon|крадёт|key|запирает хозяина|в замке\naction|bird|крадёт|crown|строит тайник|на дереве\naction|cat|находит|crown|притворяется королём|в замке\naction|human|находит|book|читает заклинание|в башне\naction|bird|находит|key|открывает тайник|под деревом\naction|dragon|находит|heart|возвращает находку|в деревне\naction|human|ищет|sword|вызывает врага на бой|у ворот\naction|cat|ищет|fish|устраивает засаду|на берегу\naction|dragon|ищет|crown|пугает свидетеля|в пещере\naction|bird|ищет|flower|несёт подарок домой|в лесу\nroles|human|спасает|cat|уносит от опасности|из пещеры\nroles|dragon|спасает|bird|защищает от охотника|в лесу\nroles|cat|спасает|fish|отпускает на свободу|у реки\nroles|bird|спасает|human|зовёт на помощь|в горах\nroles|human|прячет|dragon|обманывает преследователя|в башне\nroles|cat|прячет|bird|отвлекает охранника|в саду\nroles|dragon|прячет|fish|устраивает ловушку|в пещере\nroles|human|кормит|bird|завоёвывает доверие|в саду\nroles|cat|пугает|bird|занимает чужой дом|на дереве\nroles|dragon|пугает|human|требует выкуп|у ворот\nroles|human|обманывает|dragon|забирает сокровище|в пещере\nroles|bird|обманывает|cat|освобождает пленника|в башне\nchange|human|чинит|clock|успевает к празднику|на площади\nchange|cat|ломает|clock|останавливает соревнование|в башне\nchange|dragon|ломает|door|освобождает пленника|в замке\nchange|human|чинит|boat|отправляется в путешествие|на берегу\nchange|dragon|превращает|flower|дарит необычный подарок|в саду\nchange|human|превращает|key|прячет волшебство|в башне\nchange|bird|ломает|crown|свергает самозванца|на площади\nchange|cat|рисует|dragon|пугает посетителей|в школе\nchange|human|рисует|door|создаёт тайный проход|в башне\nchange|dragon|уничтожает|book|скрывает опасный секрет|в пещере\nchange|human|создаёт|key|открывает волшебный сундук|в мастерской\nchange|cat|портит|flower|пытается всё исправить|в саду\njourney|human|несёт|book|передаёт секретный приказ|в замке\njourney|cat|несёт|key|теряет дорогу домой|в лесу\njourney|dragon|несёт|crown|отдаёт её королю|у ворот\njourney|bird|несёт|flower|готовит сюрприз|на мосту\njourney|human|несёт|heart|прячется от врага|в башне\njourney|cat|ведёт|bird|показывает тайную тропу|в лесу\njourney|dragon|ведёт|human|показывает своё убежище|в пещере\njourney|human|везёт|crown|прячется от разбойников|на мосту\njourney|bird|несёт|key|спасает пленного друга|в замке\njourney|human|теряет|book|ищет помощь|в пустыне\nexchange|human|дарит|flower|получает благодарность|в саду\nexchange|cat|дарит|key|освобождает друга|у ворот\nexchange|dragon|дарит|crown|заключает мир|в замке\nexchange|bird|дарит|book|раскрывает старую тайну|в башне\nexchange|human|отдаёт|sword|сдаётся победителю|на мосту\nexchange|cat|отдаёт|fish|спасается от погони|у реки\nexchange|human|меняет|book|получает волшебный ключ|в магазине\nexchange|dragon|меняет|crown|получает лекарство|в замке\nexchange|bird|отдаёт|flower|мирится с другом|в саду\nexchange|human|возвращает|key|получает награду|у ворот\nspace|human|прячет|key|возвращается за находкой|под мостом\nspace|cat|прячет|fish|защищает запас от вора|под деревом\nspace|dragon|охраняет|crown|отгоняет грабителя|в пещере\nspace|bird|охраняет|book|отвлекает незнакомца|в башне\nspace|human|прячет|heart|запутывает следы|в лесу\nspace|cat|охраняет|door|не пускает чужака|в доме\nspace|human|теряет|key|оказывается взаперти|в башне\nspace|bird|теряет|flower|возвращается за подарком|над мостом\nspace|dragon|охраняет|sword|проверяет смелость героя|в замке\nspace|human|находит|clock|узнаёт тайну прошлого|в пещере".trim().split('\n');
+const STORY_ROWS="action|cat|крадёт|key|чтобы освободить своего врага|в башне\naction|dragon|крадёт|crown|чтобы отвлечь стражу от пленника|в пещере\naction|bird|крадёт|book|чтобы доказать невиновность друга|над мостом\naction|human|крадёт|clock|чтобы задержать приход соперника|в магазине\naction|cat|крадёт|flower|дарит добычу другу|в саду\naction|human|крадёт|sword|защищается от стражи|у ворот\naction|dragon|крадёт|key|запирает хозяина|в замке\naction|bird|крадёт|crown|строит тайник|на дереве\naction|cat|находит|crown|чтобы выдать себя за правителя|в замке\naction|human|находит|book|читает заклинание|в башне\naction|bird|находит|key|открывает тайник|под деревом\naction|dragon|находит|heart|возвращает находку|в деревне\naction|human|ищет|sword|чтобы защитить бывшего врага|у ворот\naction|cat|ищет|fish|устраивает засаду|на берегу\naction|dragon|ищет|crown|пугает свидетеля|в пещере\naction|bird|ищет|flower|несёт подарок домой|в лесу\nroles|human|спасает|cat|чтобы завоевать доверие соперника|из пещеры\nroles|dragon|спасает|bird|чтобы та раскрыла чужую тайну|в лесу\nroles|cat|спасает|fish|чтобы вернуть долг старому другу|у реки\nroles|bird|спасает|human|зовёт на помощь|в горах\nroles|human|прячет|dragon|чтобы подставить невиновного стража|в башне\nroles|cat|прячет|bird|отвлекает охранника|в саду\nroles|dragon|прячет|fish|устраивает ловушку|в пещере\nroles|human|кормит|bird|завоёвывает доверие|в саду\nroles|cat|пугает|bird|занимает чужой дом|на дереве\nroles|dragon|пугает|human|требует выкуп|у ворот\nroles|human|обманывает|dragon|чтобы спасти чужое сокровище|в пещере\nroles|bird|обманывает|cat|освобождает пленника|в башне\nchange|human|чинит|clock|чтобы отменить давнее обещание|на площади\nchange|cat|ломает|clock|останавливает соревнование|в башне\nchange|dragon|ломает|door|чтобы помочь своему преследователю|в замке\nchange|human|чинит|boat|чтобы вернуть врага домой|на берегу\nchange|dragon|превращает|flower|дарит необычный подарок|в саду\nchange|human|превращает|key|чтобы скрыть следы колдовства|в башне\nchange|bird|ломает|crown|чтобы передать власть незнакомцу|на площади\nchange|cat|рисует|dragon|пугает посетителей|в школе\nchange|human|рисует|door|создаёт тайный проход|в башне\nchange|dragon|уничтожает|book|скрывает опасный секрет|в пещере\nchange|human|создаёт|key|открывает волшебный сундук|в мастерской\nchange|cat|портит|flower|пытается всё исправить|в саду\njourney|human|несёт|book|чтобы сорвать тайный заговор|в замке\njourney|cat|несёт|key|теряет дорогу домой|в лесу\njourney|dragon|несёт|crown|чтобы прекратить войну соперников|у ворот\njourney|bird|несёт|flower|готовит сюрприз|на мосту\njourney|human|несёт|heart|прячется от врага|в башне\njourney|cat|ведёт|bird|чтобы увести её от настоящего сокровища|в лесу\njourney|dragon|ведёт|human|показывает своё убежище|в пещере\njourney|human|везёт|crown|прячется от разбойников|на мосту\njourney|bird|несёт|key|спасает пленного друга|в замке\njourney|human|теряет|book|чтобы никто не узнал его секрет|в пустыне\nexchange|human|дарит|flower|чтобы извиниться перед врагом|в саду\nexchange|cat|дарит|key|освобождает друга|у ворот\nexchange|dragon|дарит|crown|чтобы прекратить древнюю вражду|в замке\nexchange|bird|дарит|book|раскрывает старую тайну|в башне\nexchange|human|отдаёт|sword|чтобы защитить своего победителя|на мосту\nexchange|cat|отдаёт|fish|чтобы отвлечь опасного охотника|у реки\nexchange|human|меняет|book|получает волшебный ключ|в магазине\nexchange|dragon|меняет|crown|получает лекарство|в замке\nexchange|bird|отдаёт|flower|мирится с другом|в саду\nexchange|human|возвращает|key|получает награду|у ворот\nspace|human|прячет|key|чтобы заманить врага в ловушку|под мостом\nspace|cat|прячет|fish|чтобы накормить тайного друга|под деревом\nspace|dragon|охраняет|crown|чтобы потом вернуть её хозяину|в пещере\nspace|bird|охраняет|book|отвлекает незнакомца|в башне\nspace|human|прячет|heart|запутывает следы|в лесу\nspace|cat|охраняет|door|не пускает чужака|в доме\nspace|human|теряет|key|чтобы инсценировать своё похищение|в башне\nspace|bird|теряет|flower|возвращается за подарком|над мостом\nspace|dragon|охраняет|sword|проверяет смелость героя|в замке\nspace|human|находит|clock|узнаёт тайну прошлого|в пещере".trim().split('\n');
 const STORIES:Story[]=STORY_ROWS.map(row=>{const [kind,subject,verb,object,next,location]=row.split('|');return {kind:kind as Kind,subject:subject as Word,verb,object:object as Word,next,location};});
 export const SCENE_COUNT=STORIES.length;
 export const TOTAL_TASKS=SCENE_COUNT;
@@ -134,8 +134,8 @@ function puzzle(s:State){
  s.target=[s.choices[0].indexOf(W(story.subject)),s.choices[1].indexOf(story.verb),
    s.choices[2].indexOf(w(story.object,1)),s.choices[3].indexOf(story.next),s.choices[4].indexOf(story.location)];
  s.solution=s.target.map((n,i)=>s.choices[i][n]);
- s.prompt=W(story.subject)+' '+story.verb+' '+w(story.object,1)+', затем '+story.next+' '+story.location+'.';
- s.story=s.prompt;s.kind=kind;s.locationForms=[];s.frames=s.round%3===0?3:2;s.semanticVersion=4;
+ s.prompt=W(story.subject)+' '+story.verb+' '+w(story.object,1)+(story.next.startsWith('чтобы ')?', ':', затем ')+story.next+' '+story.location+'.';
+ s.story=s.prompt;s.kind=kind;s.locationForms=[];s.frames=s.round%3===0?3:2;s.semanticVersion=5;
  s.palette=[...SYMBOLS];s.blocked=[];
 }
 function fresh(s:State){
@@ -162,7 +162,14 @@ function reveal(s:State){
  s.phase='reveal';s.deadline=Date.now()+14000;s.revision++;
 }
 function advance(s:State){
- if(s.phase==='compose'){s.phase='guess';s.deadline=Date.now()+80000;s.revision++;}
+ if(s.phase==='compose'){
+   if(!s.board.length){
+    // Do not make guests guess a blank scene after the author times out.
+    s.history.push({author:s.author,name:s.players.find(p=>p.id===s.author)?.name||'Участник',
+     prompt:s.prompt,board:[],correct:0,total:0,points:0});
+    s.phase='reveal';s.deadline=Date.now()+14000;s.revision++;
+   }else{s.phase='guess';s.deadline=Date.now()+80000;s.revision++;}
+  }
  else if(s.phase==='guess')reveal(s);
  else if(s.phase==='reveal'){
   if(s.round>=s.maxRounds||s.players.length<2){s.phase='results';s.deadline=0;s.revision++;}
@@ -191,7 +198,7 @@ function validAnswer(raw:unknown,s:State):raw is Answer{
  return Array.isArray(raw)&&raw.length===5&&raw.every((v,i)=>v===null||(typeof v==='number'&&Number.isInteger(v)&&v>=0&&Number(v)<(s.choices[i]?.length||0)));
 }
 const strip=(s:State,id:string)=>({
- host:s.host,players:s.players,phase:s.phase,round:s.round,maxRounds:s.maxRounds,author:s.author,deadline:s.deadline,
+ host:s.host,players:s.players,phase:s.phase,round:s.round,maxRounds:s.maxRounds,author:s.author,deadline:s.deadline,serverNow:Date.now(),
  board:s.board,revision:s.revision,kind:s.kind,frames:s.frames,semanticVersion:s.semanticVersion,lexicon:s.lexicon,
  palette:id===s.author&&s.phase==='compose'?s.palette:[],
  blocked:id===s.author&&s.phase==='compose'?s.blocked:[],
@@ -233,10 +240,13 @@ const module:PocketModule<State>={
  onMessage({state,player,payload}){
   const raw=(payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{}) as Record<string,unknown>;
   const id=player.id;
-  if(raw.type==='sync')return {state,events:[{type:'state',to:id,payload:strip(state,id)}]};
   if(!received(state,id))return {state,events:notice(id,'Ты не участник этой комнаты.')};
   const before=state.revision;step(state);
-  if(raw.type==='pulse')return {state,events:before===state.revision?[]:emit(state)};
+  if(raw.type==='sync')return {state,events:[{type:'state',to:id,payload:strip(state,id)}]};
+  if(raw.type==='pulse'){
+   const echo=typeof raw.clientSentAt==='number'&&Number.isFinite(raw.clientSentAt)?raw.clientSentAt:null;
+   return {state,events:before===state.revision?[{type:'clock',to:id,payload:{serverNow:Date.now(),echo}}]:emit(state)};
+  }
   if(raw.type==='lexicon-import'){
    if(state.phase!=='lobby'||state.host!==id||!Array.isArray(raw.entries))return {state,events:notice(id,'Словарь восстанавливает ведущий до игры.')};
    for(const item of raw.entries.slice(0,24)){
@@ -274,8 +284,14 @@ const module:PocketModule<State>={
    state.board=board;state.revision++;return {state,events:emit(state)};
   }
   if(raw.type==='publish'){
-   if(state.phase!=='compose'||state.author!==id)return {state,events:notice(id,'Отправить сообщение может только автор.')};
-   if(!Array.from({length:state.frames},(_,frame)=>state.board.some(g=>(g.frame??0)===frame)).every(Boolean))return {state,events:notice(id,'Добавь хотя бы один знак в каждый кадр.')};
+   if(state.phase!=='compose'||state.author!==id)return {state,events:notice(id,'Сейчас отправляет только автор текущего раунда.')};
+   // Atomic final storyboard: an earlier edit may still be debounced or in transit.
+   if(raw.glyphs!==undefined){
+    const board=sanitized(raw.glyphs,state.palette);
+    if(!board||board.some(g=>(g.frame??0)>=state.frames))return {state,events:notice(id,'Некорректная композиция.')};
+    state.board=board;
+   }
+   if(!state.board.length)return {state,events:notice(id,'Добавь хотя бы один знак. Остальные кадры необязательны.')};
    advance(state);return {state,events:emit(state)};
   }
   if(raw.type==='answer'){
