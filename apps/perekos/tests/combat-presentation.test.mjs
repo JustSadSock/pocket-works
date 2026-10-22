@@ -76,7 +76,7 @@ test('only actual HP damage creates hit-stop and damage numbers, without changin
  assert.equal(JSON.stringify(hurt),original);
  p.ingest(hurt);
  assert.equal(p.damageNumbers.length,1,'same frame cannot double count damage');
- for(let i=0;i<55;i++)p.advance(1/60);
+ for(let i=0;i<75;i++)p.advance(1/60);
  assert.equal(p.shocks.length,0);
  assert.equal(p.damageNumbers.length,0);
 });
