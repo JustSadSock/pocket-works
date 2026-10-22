@@ -42,8 +42,9 @@ try{
   querySelector:()=>art};
  const gallery={clientWidth:850,clientHeight:420};
  const plaque={offsetHeight:51},locked={offsetHeight:21};
+ let ballotCard=false;
  const stage={clientWidth:250,clientHeight:340,isConnected:true,
-  closest:()=>gallery,parentElement:gallery,
+  closest:selector=>selector==='.finale-ballot-card'?(ballotCard?gallery:null):gallery,parentElement:gallery,
   querySelector:q=>q==='.zam-exhibit-rim'?rim:q==='.zam-exhibit-plaque'?plaque:
     q==='.stake-actions,.stake-locked'?locked:null};
  const root={querySelectorAll:()=>[stage]};
@@ -57,6 +58,10 @@ try{
  gallery.clientHeight=290;stage.clientHeight=160;
  fit.refresh();callbacks.shift()();
  assert(Number.parseFloat(values.height)<full,'real parent resize must still resize frame');
+ const afterParentResize=Number.parseFloat(values.height);
+ ballotCard=true;stage.clientHeight=110;
+ fit.refresh();callbacks.shift()();
+ assert(Number.parseFloat(values.height)<afterParentResize,'finale ballot cards must respect real available height');
  fit.dispose();
 }finally{
  if(previousRaf===undefined)delete globalThis.requestAnimationFrame;else globalThis.requestAnimationFrame=previousRaf;
