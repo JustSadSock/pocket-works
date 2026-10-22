@@ -1,7 +1,6 @@
 import './styles.css';
 import '../../../shared/mobile-runtime.css';
 import { installMobileRuntime } from '../../../shared/mobile-runtime.js';
-import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 import { Engine, Scene, ArcRotateCamera, Vector3, Color3, TransformNode, Matrix } from '@babylonjs/core';
 import { CATALOG, COLORS, byType, makeItem } from './models.js';
 import { createSoundscape } from './soundscape.js';
@@ -22,7 +21,7 @@ import { WALLS, FLOORS, PATTERNS, createRoom } from './room.js';
 import { load, save, starter, sanitize, valid, dimensions, findSupport, moveWithChildren, removeWithChildren, nextId } from './state.js';
 
 installMobileRuntime().setScrollLocked(true);
-registerEnhancedUpdate({appName:'КОМНАТКА',version:'1.2.0',releaseNotes:['Пять назначений комнат, 46 моделей, семь материалов, новые обои и полы, пространственные задачи жильцов и сравнение по памяти.']});
+// Enhanced updates register once in main.ts to avoid competing service workers.
 
 const $=id=>document.getElementById(id);
 const ui={canvas:$('roomCanvas'), loading:$('loading'), loadText:$('loadText'),dock:$('dock'),catalog:$('catalog'),categories:$('categories'),finish:$('finish'),selected:$('selection'),selectedName:$('selectionName'),swatches:$('selectionColors'),status:$('saveStatus'),hint:$('hint'),toast:$('toast'),resetDialog:$('resetDialog')};

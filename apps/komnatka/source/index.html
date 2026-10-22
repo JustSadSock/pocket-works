@@ -16,7 +16,7 @@
     <div class="home-grain" aria-hidden="true"></div>
     <header class="home-topline">
       <div class="home-atelier"><span class="home-atelier-mark" aria-hidden="true">⌂</span><span>МАЛЕНЬКАЯ МАСТЕРСКАЯ</span></div>
-      <div class="home-nav-buttons"><button id="homeLibrary" class="home-exit" type="button" data-native-press title="Коллекция сохранённых комнаток">▦ Мои комнатки</button><a href="../../" class="home-exit" data-app-control data-native-press>← Pocket Works</a></div>
+      <div class="home-nav-buttons"><button class="home-exit" type="button" data-workshop-trigger data-native-press aria-label="Диагностика Комнатки">Диагностика</button><button id="homeLibrary" class="home-exit" type="button" data-native-press title="Коллекция сохранённых комнаток">▦ Мои комнатки</button><a href="../../" class="home-exit" data-app-control data-native-press>← Pocket Works</a></div>
     </header>
     <div class="home-composition">
       <div class="home-choices">
@@ -68,6 +68,7 @@
       <button id="eveningBtn" class="evening-top-button" type="button" data-native-press title="Вечерний свет" aria-label="Вечерний свет" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M19.5 17.5A8.5 8.5 0 0 1 8 4.5 8.5 8.5 0 1 0 19.5 17.5Z"/></svg></button>
       <button id="toolsMoreBtn" class="toolbar-more-toggle" type="button" data-native-press title="Другие инструменты" aria-label="Другие инструменты" aria-controls="toolbarMore" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
       <div id="toolbarMore" class="toolbar-secondary" role="group" aria-label="Инструменты комнаты">
+      <button type="button" data-workshop-trigger data-native-press title="Диагностика приложения" aria-label="Диагностика приложения">⋯</button>
       <button id="undoBtn" type="button" data-native-press title="Отменить (Ctrl+Z)" aria-label="Отменить" disabled><svg viewBox="0 0 24 24"><path d="M8 7 3 12l5 5M3 12h11a6 6 0 1 1 0 12" transform="translate(0 -3)"/></svg></button>
       <button id="redoBtn" type="button" data-native-press title="Вернуть (Ctrl+Y)" aria-label="Повторить" disabled><svg viewBox="0 0 24 24"><path d="m16 7 5 5-5 5M21 12H10a6 6 0 1 0 0 12" transform="translate(0 -3)"/></svg></button>
       <button id="soundBtn" type="button" data-native-press title="Выключить звуки" aria-label="Включить или выключить звуки" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4H4ZM16 9a5 5 0 0 1 0 6m2-9a9 9 0 0 1 0 12"/></svg></button>
