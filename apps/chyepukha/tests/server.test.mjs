@@ -16,7 +16,7 @@ function fixture(names=['Anna','Bohdan'],settings={}){
 }
 function answer(state,player,players,txt,indices=[0,2]){
  const v=see(state,player,players);
- return msg(state,player,{type:'submit',round:v.round,sheetId:v.sheet.id,answer:txt,tailIndexes:indices,gender:'unspecified'});
+ return msg(state,player,{type:'submit',round:v.round,sheetId:v.sheet.id,answer:txt,tailIndexes:state.round===state.total-1?[]:indices,gender:'unspecified'});
 }
 test('full two-person run: parallel authors, deterministic sheet rotation, private tails and final reveal',()=>{
  const {players}=fixture(),[a,b]=players;let {state}=fixture();
@@ -112,7 +112,7 @@ test('eight authors and sixteen maximal Cyrillic fragments remain below PocketNe
  for(let round=0;round<16;round++){
    for(const player of players){
      const view=see(state,player,players);
-     const result=msg(state,player,{type:'submit',round,sheetId:view.sheet.id,answer,tailIndexes:[0,1,2],gender:'unspecified'});
+     const result=msg(state,player,{type:'submit',round,sheetId:view.sheet.id,answer,tailIndexes:round===15?[]:[0,1,2],gender:'unspecified'});
      assert.equal(result.events[0].type,'state');
      state=result.state;
    }
