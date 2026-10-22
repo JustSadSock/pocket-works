@@ -17,6 +17,7 @@ import {
   coordLabel,
   createInitialState,
   resolveTurn,
+  forecastTurn,
   serializeTextState
 } from "../shared/game-engine.js";
 import { chooseAiCard } from "../shared/ai.js";
@@ -36,12 +37,14 @@ const app = {
   simulationReport: null,
   inspectedSlot: null,
   historyExpanded: false,
+  forecast: null,
+  forecastReview: false,
   replay: null,
   preResolutionState: null,
   replayActive: false,
   replayStage: "after",
   replayTimer: null,
-  debug: { open: false, tab: "screens", scene: "game", animation: null },
+  debug: { open: false, tab: "screens", scene: "game", animation: null, selectedCardId: null, focusCardId: null, inspectedSlot: null, forecast: null, forecastReview: false },
   debugSelects: Object.fromEntries(SLOT_TYPES.map((slot) => [slot, "base"])),
   settings: {
     sound: true,
@@ -262,6 +265,8 @@ function startLocalGame(mode, aiProfile = "contender") {
   app.replayActive = false;
   app.inspectedSlot = null;
   app.historyExpanded = false;
+  app.forecast = null;
+  app.forecastReview = false;
   app.selectedCardId = null;
   app.focusCardId = null;
   app.lastConflictSlots = [];
@@ -307,11 +312,23 @@ function recordResolution(resolution, isOnline = false) {
   }
 }
 
+function openForecast(){
+ const state=currentState();
+ if(!state||app.replayActive||state.winner)return;
+ const viewer=getViewerPlayer();
+ const cardId=app.selectedCardId||null;
+ const result=forecastTurn(state,cardId?viewer:null,cardId);
+ app.forecast={before:structuredClone(state),after:result.state,logs:result.logs,cardId};
+ app.forecastReview=true;
+ render();
+}
+
 function confirmSelection() {
   const state = currentState();
   if (!state || !app.selectedCardId) {
     return;
   }
+  app.forecast=null;app.forecastReview=false;
 
   if (app.screen === "online") {
     if (!app.online.socket || app.online.socket.readyState !== WebSocket.OPEN) {
@@ -448,23 +465,18 @@ function activeLaws(state) {
   return activeLawSummary(state);
 }
 
-function crownRow(player, title, side = "north") {
-  return `
-    <div class="crown-bar crown-bar--${side}">
-      <span class="crown-bar__label">${title}</span>
-      <div class="crown-bar__icons">
-        <span class="crown crown--active" title="Активные короны" aria-label="Активные короны: ${player.activeCrowns}"><i></i>${player.activeCrowns}</span>
-        <span class="crown crown--sealed" title="Запечатанные короны" aria-label="Запечатанные короны: ${player.sealedCrowns}"><i></i>${player.sealedCrowns}</span>
-        <span class="crown crown--lost" title="Потерянные короны" aria-label="Потерянные короны: ${player.lostCrowns}"><i></i>${player.lostCrowns}</span>
-      </div>
-    </div>
-  `;
+function crownRow(player,title,side="north") {
+  const lit=Math.max(0,Math.min(3,player.activeCrowns));
+  return `<div class="crown-bar crown-bar--${side}" aria-label="${title}: ${lit} из 3 корон">
+    <div class="crown-bar__identity"><span class="crown-bar__portrait sprite-figure sprite-figure--${side}" aria-hidden="true"></span><span class="crown-bar__label">${title}</span></div>
+    <div class="crown-bar__icons crown-row" role="img" aria-label="Получено корон: ${lit} из 3">
+      ${Array.from({length:3},(_,i)=>`<span class="crown-mark ${i<lit?"is-earned":"is-empty"}" aria-hidden="true"><svg viewBox="0 0 48 40"><path d="M5 33L2 11l12 10L24 4l10 17 12-10-3 22-5 4H10Z"/><path d="M9 29h30" fill="none" stroke-width="3"/></svg></span>`).join("")}
+    </div></div>`;
 }
 
 function pieceGlyph(piece) {
-  // Carved typographic counters: no raster sprites or SVG.
-  const marks = { champion: "К", guard: "С", beast: "З", priest: "Ж", thief: "В" };
-  return '<span class="piece__sigil" aria-hidden="true">' + (marks[piece.kind] || "·") + '</span>';
+  const key=piece.kind==="champion"?(piece.owner==="p1"?"north":"south"):piece.kind;
+  return `<span class="piece__portrait sprite-figure sprite-figure--${key}" aria-hidden="true"></span>`;
 }
 
 function effectsHTML() {
@@ -482,56 +494,13 @@ function effectsHTML() {
 }
 
 function boardHTML(state) {
-  const cells = [];
-  for (let y = 0; y < 7; y += 1) {
-    for (let x = 0; x < 5; x += 1) {
-      cells.push(`
-        <div class="board-cell ${x === THRONE.x && y === THRONE.y ? "board-cell--throne" : ""}">
-          <span>${String.fromCharCode(65 + x)}${y + 1}</span>
-        </div>
-      `);
-    }
-  }
-
-  const pieces = Object.values(state.pieces)
-    .map((piece) => {
-      const classes = [
-        "piece",
-        `piece--${piece.kind}`,
-        piece.id === "champion_p1" ? "piece--p1" : piece.id === "champion_p2" ? "piece--p2" : "",
-        piece.shield ? "piece--shielded" : "",
-        piece.stun ? "piece--stunned" : "",
-        piece.carryingSeal ? "piece--sealed" : ""
-      ]
-        .filter(Boolean)
-        .join(" ");
-      return `
-        <button type="button" class="${classes} ${app.inspectedSlot === piece.kind ? "piece--focused" : ""}" data-piece-kind="${piece.kind}" data-piece-id="${piece.id}" aria-label="${piece.kind === "champion" ? (piece.owner === "p1" ? "Чемпион Севера" : "Чемпион Юга") : SLOT_LABELS[piece.kind]}" style="--x:${piece.x};--y:${piece.y}">
-          <div class="piece__token">
-            ${pieceGlyph(piece)}
-            ${piece.shield ? `<span class="status-chip status-chip--shield">Щит</span>` : ""}
-            ${piece.stun ? `<span class="status-chip status-chip--stun">Оглушен</span>` : ""}
-            ${piece.carryingSeal ? `<span class="status-chip status-chip--seal">Печать</span>` : ""}
-          </div>
-        </button>
-      `;
-    })
-    .join("");
-
-  return `
-    <section class="board-panel">
-      <div class="board-caption">
-        <span class="board-caption__title">Королевский двор</span>
-        <span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span>
-      </div>
-      <div class="board-surround"><div class="board">
-        <div class="board-grid">${cells.join("")}</div>
-        <div class="board-glow"></div>
-        <div class="board-effects">${effectsHTML()}</div>
-        ${pieces}
-      </div></div>
-    </section>
-  `;
+ const cells=[];
+ for(let y=0;y<7;y++)for(let x=0;x<5;x++)cells.push(`<div class="board-cell ${x===THRONE.x&&y===THRONE.y?"board-cell--throne":""}"><span>${String.fromCharCode(65+x)}${y+1}</span></div>`);
+ const pieces=Object.values(state.pieces).map(piece=>{
+  const cls=["piece",`piece--${piece.kind}`,piece.owner==="p1"?"piece--p1":piece.owner==="p2"?"piece--p2":"",piece.shield?"piece--shielded":"",piece.stun?"piece--stunned":"",piece.carryingSeal?"piece--sealed":"",app.inspectedSlot===piece.kind?"piece--focused":""].filter(Boolean).join(" ");
+  return `<button type="button" class="${cls}" data-piece-kind="${piece.kind}" data-piece-id="${piece.id}" title="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" aria-label="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" style="--x:${piece.x};--y:${piece.y}"><span class="piece__token">${pieceGlyph(piece)}${piece.shield?'<span class="piece__status piece__status--shield" title="Щит">✦</span>':""}${piece.stun?'<span class="piece__status piece__status--stun" title="Оглушение">✕</span>':""}${piece.carryingSeal?'<span class="piece__status piece__status--seal" title="Похищенная печать">◇</span>':""}</span></button>`;
+ }).join("");
+ return `<section class="board-panel"><div class="board-caption"><span class="board-caption__title">Королевский двор</span><span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span></div><div class="board-surround"><div class="board"><div class="board-grid">${cells.join("")}</div><div class="board-glow"></div><div class="board-effects">${effectsHTML()}</div>${pieces}</div></div></section>`;
 }
 
 function lawSlotsHTML(state) {
@@ -543,7 +512,7 @@ function lawSlotsHTML(state) {
       const law=laws[slot],base=!state.slots[slot].activeCardId;
       const id=base?BASE_LAWS[slot].id:law.id;
       return `<button type="button" data-native-press class="law-slot ${app.inspectedSlot===slot?"law-slot--focused":""} ${app.lastConflictSlots.includes(slot)?"law-slot--conflict":""}" style="--slot-color:${SLOT_COLORS[slot]}" data-slot="${slot}" data-focus-card="${id}" title="${law.name}" aria-pressed="${app.inspectedSlot===slot}">
-        <span class="law-slot__short">${short[slot]}</span><span class="law-slot__copy"><span class="law-slot__name">${law.name}</span><span class="law-slot__mode">${base?"Каменный закон":"Новый указ"}</span></span>
+        <span class="law-slot__sigil sprite-seal sprite-seal--${slot}" aria-hidden="true"></span><span class="law-slot__short">${short[slot]}</span><span class="law-slot__copy"><span class="law-slot__name">${law.name}</span><span class="law-slot__mode">${base?"Каменный закон":"Новый указ"}</span></span>
       </button>`;
     }).join("")}</div></section>`;
 }
@@ -561,19 +530,24 @@ function detailCard(state) {
   </section>`;
 }
 
+function forecastControlsHTML(){
+ if(!app.forecast)return "";
+ return `<div class="forecast-control" role="status"><span class="forecast-control__symbol">◈</span><div><strong>Условный ход · ${app.forecastReview?"после":"до"}</strong><span>${app.forecast.cardId?"Соперник не меняет закон":"Оба сохраняют законы"}</span></div><button type="button" class="ghost-btn" data-action="forecast-toggle">${app.forecastReview?"↶ Начало":"→ Результат"}</button><button type="button" class="text-btn" data-action="forecast-close" aria-label="Закрыть прогноз">×</button></div>`;
+}
+
 function handHTML(state) {
   const viewer=getViewerPlayer();
   const locked=(app.screen==="online"&&app.online.ready[viewer])||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
   return `<section class="hand-panel ${locked?"hand-panel--locked":""}">
     <div class="panel-head"><h3>Ваши указы</h3><span>${viewer==="p1"?"Север":"Юг"} · ${currentHand().length} карт</span></div>
-    ${locked?`<p class="sealed-notice">Ваш указ принят и запечатан. ${app.screen==="online"?"Ожидаем соперника.":"Идёт разрешение хода."}</p>`:""}
+    ${locked?`<div class="sealed-notice" role="status"><div class="sealed-notice__wax" aria-hidden="true"><span>✦</span></div><div class="sealed-notice__copy"><strong>Указ запечатан</strong><span>${app.screen==="online"?"Ход соперника":"Разыгрывание хода"}</span></div><span class="sealed-notice__pulse" aria-hidden="true"><i></i><i></i><i></i></span></div>`:""}
     <div class="hand" role="group" aria-label="Выбор одного указа">${currentHand().map(cardId=>{
       const card=cardById(cardId);
       return `<button type="button" class="law-card ${app.selectedCardId===cardId?"law-card--selected":""}" style="--card-color:${SLOT_COLORS[card.slot]}" aria-pressed="${app.selectedCardId===cardId}" ${locked?"disabled":""} draggable="${!locked}" data-card-id="${cardId}" data-focus-card="${cardId}">
-        <span class="law-card__slot">${SLOT_LABELS[card.slot].replace("Закон ","")}</span><strong class="law-card__title">${card.name}</strong></button>`;
+        <span class="law-card__sigil sprite-seal sprite-seal--${card.slot}" aria-hidden="true"></span><span class="law-card__copy"><span class="law-card__slot">${SLOT_LABELS[card.slot].replace("Закон ","")}</span><strong class="law-card__title">${card.name}</strong></span></button>`;
     }).join("")}</div>
-    ${detailCard(state)}
-    <div class="hand-actions"><button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId||locked?"disabled":""}>${locked?"Указ запечатан":"Утвердить закон"}</button></div>
+    ${app.selectedCardId ? detailCard(state) : ""}
+    <div class="hand-actions"><button data-native-press class="ghost-btn forecast-btn" data-action="forecast-open" ${locked?"disabled":""} aria-label="Условный предпросмотр следующего хода">◈ Предпросмотр</button><button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId||locked?"disabled":""}>${locked?"◆ Указ отправлен":"◆ Утвердить"}</button></div>
   </section>`;
 }
 
@@ -664,23 +638,14 @@ function debugHTML(state) {
 }
 
 function victoryHTML(state) {
-  if (!state.winner) {
-    return "";
-  }
-  const winnerName = state.winner === "p1" ? "Северный Чемпион" : "Южный Чемпион";
-  return `
-    <div class="victory">
-      <div class="victory__panel">
-        <span class="victory__eyebrow">Партия завершена</span>
-        <h2>${winnerName} берет корону</h2>
-        <p>Активные короны: ${state.players[state.winner].activeCrowns}. Последние законы и позиционное давление переломили дуэль.</p>
-        <div class="victory__actions">
-          <button data-native-press class="primary-btn" data-action="rematch">Реванш</button>
-          <button data-native-press class="ghost-btn" data-action="back-menu">Вернуться в меню</button>
-        </div>
-      </div>
-    </div>
-  `;
+ if(!state.winner)return "";
+ const winner=state.winner==="p1"?"Северный претендент":"Южный претендент";
+ return `<div class="victory" role="dialog" aria-label="Партия завершена"><div class="victory__panel victory__panel--illustrated">
+    <div class="victory__art" aria-hidden="true"></div><div class="victory__ribbon">ПОБЕДА</div><h2>Корона обрела хозяина</h2><strong class="victory__winner">${winner}</strong>
+    ${crownRow(state.players[state.winner],winner,state.winner==="p1"?"north":"south")}
+    <p>Три короны. Трон под контролем.</p>
+    <div class="victory__actions"><button data-native-press class="primary-btn" data-action="rematch">Реванш ↗</button><button data-native-press class="ghost-btn" data-action="back-menu">В зал совета</button></div>
+  </div></div>`;
 }
 
 function roomHTML() {
@@ -733,6 +698,7 @@ function roomHTML() {
 function gameHTML(state, eyebrow) {
   const viewer = getViewerPlayer();
   const chooserLabel = app.local.mode === "hotseat" ? (viewer === "p1" ? "Север выбирает указ" : "Юг выбирает указ") : eyebrow;
+  const displayState=app.forecast?(app.forecastReview?app.forecast.after:app.forecast.before):(app.replayActive&&app.replayStage==="before"&&app.replay?app.replay.before:state);
   return `
     <div class="game-shell">
       <div class="game-shell__frame">
@@ -742,8 +708,8 @@ function gameHTML(state, eyebrow) {
             <h1>Законы короны</h1>
           </div>
           <div class="topbar__right">
-            ${crownRow(state.players.p1, viewer === "p1" ? "Север · вы" : "Север · соперник", "north")}
-            ${crownRow(state.players.p2, viewer === "p2" ? "Юг · вы" : "Юг · соперник", "south")}
+            ${crownRow(displayState.players.p1, viewer === "p1" ? "Север · вы" : "Север · соперник", "north")}
+            ${crownRow(displayState.players.p2, viewer === "p2" ? "Юг · вы" : "Юг · соперник", "south")}
             <div class="hud-actions">
               <button data-native-press class="text-btn" data-action="toggle-rules">Правила</button>
               <button data-native-press class="text-btn" data-action="toggle-settings">Звук</button>
@@ -751,10 +717,11 @@ function gameHTML(state, eyebrow) {
             </div>
           </div>
         </header>
-        <main class="game-layout">
-          <div class="game-layout__main">${boardHTML(app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : state)}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
+        ${forecastControlsHTML()}<main class="game-layout">
+          <div class="game-layout__main">${boardHTML(displayState)}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
           <aside class="game-layout__side">
-            ${lawSlotsHTML(state)}
+            ${lawSlotsHTML(displayState)}
+            ${!app.selectedCardId && app.focusCardId ? detailCard(displayState) : ""}
           </aside>
           <div class="game-layout__hand">${handHTML(state)}</div>
           <div class="game-layout__foot">${logHTML(state)}</div>
@@ -776,38 +743,26 @@ function gameHTML(state, eyebrow) {
 }
 
 function menuHTML() {
-  return `
-    <section class="menu-shell">
-      <div class="hero-card hero-card--menu">
-        <div class="hero-card__content">
-          <span class="eyebrow">Состязание за престол</span>
-          <h1><span class="title-line">Законы</span><span class="title-line">короны</span></h1>
-          <p class="hero-card__lede">Два претендента, один трон. Вы не двигаете фигуры — вы переписываете законы, которым они подчиняются.</p>
-          <div class="hero-card__crest" aria-hidden="true">ЗК</div>
-        </div>
-        <nav class="menu-navigation" aria-label="Режим игры">
-          <span class="menu-navigation__label">Начать заседание</span>
-          <div class="menu-grid">
-            ${profileOptions()}
-            <button data-native-press class="menu-card" data-action="open-online">
-              <span class="menu-card__index">II</span>
-              <span class="menu-card__copy"><span class="menu-card__title">Играть онлайн</span><span class="menu-card__text">Приватная комната на двоих</span></span>
-              <span class="menu-card__arrow" aria-hidden="true">→</span>
-            </button>
-            <button data-native-press class="menu-card" data-action="start-hotseat">
-              <span class="menu-card__index">III</span>
-              <span class="menu-card__copy"><span class="menu-card__title">На одном устройстве</span><span class="menu-card__text">Передавайте устройство после тайного выбора</span></span>
-              <span class="menu-card__arrow" aria-hidden="true">→</span>
-            </button>
-          </div>
-          <div class="menu-secondary">
-            <button data-native-press class="ghost-btn" data-action="toggle-rules">Как играть</button>
-            <button data-native-press class="ghost-btn" data-action="toggle-settings">Настройки</button>
-          </div>
-        </nav>
-      </div>
-    </section>
-  `;
+ return `<section class="menu-shell menu-shell--illustrated">
+   <div class="hall-stage" aria-hidden="true"><div class="hall-stage__art"></div><div class="hall-stage__light"></div><div class="hall-stage__north sprite-figure sprite-figure--north"></div><div class="hall-stage__south sprite-figure sprite-figure--south"></div></div>
+   <div class="menu-interface"><div class="menu-title"><span class="menu-title__prelude">Дуэль указов за королевский престол</span><h1>Законы <em>короны</em></h1><div class="menu-title__emblem sprite-seal sprite-seal--champion" aria-hidden="true"></div><p>Не двигай фигурами. Измени законы, которым подчиняется весь двор.</p></div>
+    <nav class="menu-choices" aria-label="Режим игры"><button data-native-press class="menu-choice menu-choice--primary" data-action="start-ai"><span class="menu-choice__roman">I</span><span><strong>Против ИИ</strong><small>Начать партию</small></span><span class="menu-choice__arrow">↗</span></button>
+    <button data-native-press class="menu-choice" data-action="open-online"><span class="menu-choice__roman">II</span><span><strong>Онлайн-дуэль</strong><small>Комната на двоих</small></span><span class="menu-choice__arrow">↗</span></button>
+    <button data-native-press class="menu-choice" data-action="start-hotseat"><span class="menu-choice__roman">III</span><span><strong>На одном устройстве</strong><small>Тайные указы по очереди</small></span><span class="menu-choice__arrow">↗</span></button>
+    <div class="menu-choices__aux"><button data-action="toggle-rules" class="text-btn">Правила ↗</button><button data-action="toggle-settings" class="text-btn">Настройки ⚙</button></div></nav>
+   </div>
+ </section>`;
+}
+
+function rulesHTML() {
+ const ordered=["priest","champion","guard","beast","thief"];
+ const labels={priest:"Жрец",champion:"Чемпионы",guard:"Страж",beast:"Зверь",thief:"Вор"};
+ return `<div class="modal-shell" data-action="close-modal"><div class="modal-card modal-card--rules" data-stop-click="1">
+    <div class="rules__heading"><span>КОДЕКС КОРОНЫ</span><button data-action="close-modal" class="text-btn" aria-label="Закрыть">×</button></div><h2>Пять законов. Один трон.</h2>
+    <div class="rules__objective"><span class="rules__crown" aria-hidden="true">♛</span><p>Займи трон чемпионом и собери <strong>3 активные короны</strong>. Вор может их похищать.</p></div>
+    <div class="rules__steps"><div><b>1</b><strong>Секретно</strong><small>Оба выбирают по одному указу.</small></div><div><b>2</b><strong>Конфликт</strong><small>Одна категория — все её новые и старый указы сбрасываются.</small></div><div><b>3</b><strong>Действие</strong><small>Мир выполняет действующие законы по порядку.</small></div></div>
+    <div class="rules__phases">${ordered.map((id,i)=>`<span><i class="sprite-seal sprite-seal--${id}"></i><small>${i+1}. ${labels[id]}</small></span>`).join("")}<span class="rules__throne"><b>♛</b><small>Трон</small></span></div>
+    <p class="rules__footer">Законы работают для обеих сторон. Щит, оглушение и печать меняют исход; нажми на закон или фигуру, чтобы узнать подробности.</p></div></div>`;
 }
 
 function modalHTML() {
@@ -852,21 +807,7 @@ function modalHTML() {
       </div>
     `;
   }
-  if (app.modal === "rules") {
-    return `
-      <div class="modal-shell" data-action="close-modal">
-        <div class="modal-card" data-stop-click="1">
-          <div class="panel-head">
-            <h3>Правила и опоры</h3>
-            <button data-native-press class="text-btn" data-action="close-modal">Закрыть</button>
-          </div>
-          <div class="rules-list">
-            ${RULES_TEXT.map((line) => `<p>${line}</p>`).join("")}
-          </div>
-        </div>
-      </div>
-    `;
-  }
+  if (app.modal === "rules") return rulesHTML();
   return `
     <div class="modal-shell" data-action="close-modal">
       <div class="modal-card" data-stop-click="1">
@@ -888,7 +829,7 @@ function modalHTML() {
 }
 
 function debugSceneHTML(scene) {
-  const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,replay:app.replay,replayActive:app.replayActive};
+  const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,replay:app.replay,replayActive:app.replayActive,forecast:app.forecast,forecastReview:app.forecastReview};
   let markup="";
   try {
     const state=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
@@ -897,8 +838,8 @@ function debugSceneHTML(scene) {
     app.online={...app.online,roomState:null,roomCode:"",ready:{p1:false,p2:false},you:"p1"};
     app.modal=null;
     app.effects=[];app.lastConflictSlots=[];
-    app.selectedCardId=null;app.focusCardId=null;app.inspectedSlot=null;
-    app.replay=null;app.replayActive=false;
+    app.selectedCardId=app.debug.selectedCardId;app.focusCardId=app.debug.focusCardId;app.inspectedSlot=app.debug.inspectedSlot;
+    app.replay=null;app.replayActive=false;app.forecast=app.debug.forecast;app.forecastReview=app.debug.forecastReview;
     if(scene==="menu")markup=menuHTML();
     else if(scene==="join"||scene==="waiting"){
       app.screen="online";
@@ -920,7 +861,7 @@ function debugSceneHTML(scene) {
       if(app.modal)markup+=modalHTML();
     }
   }finally{Object.assign(app,saved);}
-  return `<div class="debug-scene ${app.debug.animation?`debug-scene--anim-${app.debug.animation}`:""}"><div class="debug-scene__content" inert>${markup}</div><span class="debug-scene__label">ПРЕДПРОСМОТР · ${scene}</span></div>`;
+  return `<div class="debug-scene ${app.debug.animation?`debug-scene--anim-${app.debug.animation}`:""}"><div class="debug-scene__content">${markup}</div><span class="debug-scene__label">ПРЕДПРОСМОТР · ${scene}</span></div>`;
 }
 
 function debugWorkshopHTML() {
@@ -939,6 +880,7 @@ function debugWorkshopHTML() {
 }
 
 function render() {
+  const previousHandScroll = app.debug.open ? 0 : (root.querySelector(".hand")?.scrollLeft || 0);
   const state = currentState();
   if (app.screen === "menu") {
     root.innerHTML = `${menuHTML()}${modalHTML()}`;
@@ -948,7 +890,11 @@ function render() {
     root.innerHTML = `${gameHTML(state, app.local.mode === "ai" ? AI_PROFILES[app.local.aiProfile].name : "Локальная партия")}${modalHTML()}`;
   }
   if(app.debug.open)root.innerHTML=debugSceneHTML(app.debug.scene)+debugWorkshopHTML();
-  if(!app.debug.open)animateBoard();
+  if(!app.debug.open){
+    const hand=root.querySelector(".hand");
+    if(hand)hand.scrollLeft=previousHandScroll;
+    animateBoard();
+  }
   syncExports();
   persistLocal();
 }
@@ -970,7 +916,7 @@ function restoreLocal() {
 }
 
 function animateBoard() {
-  const state = app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState();
+  const state = app.forecast ? (app.forecastReview ? app.forecast.after : app.forecast.before) : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState());
   if (!state) return;
   const nextPositions = Object.fromEntries(Object.values(state.pieces).map(piece => [piece.id, {x:piece.x,y:piece.y}]));
   const board = root.querySelector('.board');
@@ -1013,6 +959,47 @@ root.addEventListener("click", (event) => {
     }
     render();return;
   }
+  if (app.debug.open && event.target.closest(".debug-scene")) {
+    const pressed=event.target.closest("[data-action]");
+    const card=event.target.closest("[data-card-id]");
+    const law=event.target.closest("[data-focus-card]");
+    const piece=event.target.closest("[data-piece-kind]");
+    if(card&&!card.disabled){
+      app.debug.selectedCardId=app.debug.selectedCardId===card.dataset.cardId?null:card.dataset.cardId;
+      app.debug.inspectedSlot=cardById(card.dataset.cardId).slot;
+      app.debug.focusCardId=card.dataset.cardId;
+    }else if(law){
+      app.debug.selectedCardId=null;
+      app.debug.focusCardId=law.dataset.focusCard;
+      app.debug.inspectedSlot=law.dataset.slot||null;
+    }else if(piece){
+      app.debug.selectedCardId=null;
+      app.debug.inspectedSlot=piece.dataset.pieceKind;
+      const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
+      app.debug.focusCardId=activeLaws(demo)[app.debug.inspectedSlot]?.id||null;
+    }else if(pressed){
+      const a=pressed.dataset.action;
+      if(a==="toggle-rules")app.debug.scene="rules";
+      else if(a==="toggle-settings")app.debug.scene="settings";
+      else if(a==="start-ai"||a==="start-hotseat")app.debug.scene=a==="start-hotseat"?"hotseat":"game";
+      else if(a==="open-online")app.debug.scene="join";
+      else if(a==="create-room")app.debug.scene="waiting";
+      else if(a==="rematch")app.debug.scene="game";
+      else if(a==="back-menu")app.debug.scene="menu";
+      else if(a==="close-modal")app.debug.scene="game";
+      else if(a==="clear-inspection"){app.debug.focusCardId=null;app.debug.selectedCardId=null;app.debug.inspectedSlot=null;}
+      else if(a==="confirm-choice")app.debug.scene="ready";
+      else if(a==="forecast-open"){
+        const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
+        const cardId=app.debug.selectedCardId;
+        const result=forecastTurn(demo,cardId?"p1":null,cardId||null);
+        app.debug.forecast={before:demo,after:result.state,logs:result.logs,cardId:cardId||null};
+        app.debug.forecastReview=true;
+      }else if(a==="forecast-toggle")app.debug.forecastReview=!app.debug.forecastReview;
+      else if(a==="forecast-close")app.debug.forecast=null;
+    }
+    render();return;
+  }
   const stop = event.target.closest("[data-stop-click]");
   if (stop) {
     return;
@@ -1051,6 +1038,12 @@ root.addEventListener("click", (event) => {
       case "toggle-settings":
         openModal("settings");
         break;
+      case "forecast-open":
+        openForecast();break;
+      case "forecast-toggle":
+        app.forecastReview=!app.forecastReview;render();break;
+      case "forecast-close":
+        app.forecast=null;app.forecastReview=false;render();break;
       case "clear-inspection":
         app.focusCardId=null; app.selectedCardId=null; app.inspectedSlot=null; render();
         break;
@@ -1068,7 +1061,7 @@ root.addEventListener("click", (event) => {
         closeModal();
         break;
       case "back-menu":
-        window.clearTimeout(app.replayTimer);app.replayActive=false;
+        window.clearTimeout(app.replayTimer);app.replayActive=false;app.forecast=null;
         app.screen = "menu";
         app.local.state = null;
         render();
@@ -1112,6 +1105,7 @@ root.addEventListener("click", (event) => {
     const cardId = card.dataset.cardId;
     if(card.disabled)return;
     app.selectedCardId = app.selectedCardId === cardId ? null : cardId;
+    app.forecast=null;
     app.inspectedSlot=cardById(cardId).slot;
     playTone("tap");
     render();
@@ -1151,6 +1145,7 @@ root.addEventListener("click", (event) => {
 root.addEventListener("input", (event) => { if (event.target.matches("[data-input=room-code]")) app.online.codeInput = event.target.value.toUpperCase(); });
 
 root.addEventListener("change", (event) => {
+  if(app.debug.open&&event.target.closest(".debug-scene"))return;
   if (event.target.matches("[data-input='room-code']")) {
     app.online.codeInput = event.target.value.toUpperCase();
     return;
