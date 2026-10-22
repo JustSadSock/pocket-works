@@ -215,7 +215,11 @@ function onTrade(s,seller,buyer,item,price){
   add(buyer,price,-1);add(seller,price,+1);
   transferItem(s,seller,buyer,item);
   seller.marketDeals++;
-  issue(s,buyer.character+' купил «'+spec(item).name+'» у '+seller.character+'.');
+  // The first public sale pays one reusable spare part: trading generates
+  // supply, rather than leaving parts dependent only on grinding a work action.
+  if(seller.marketDeals===1)seller.resources.parts=Math.min(9999,seller.resources.parts+1);
+  issue(s,buyer.character+' купил «'+spec(item).name+'» у '+seller.character+
+    (seller.marketDeals===1?' (продавец получил 1 деталь за первую продажу).':'')+'.');
   return true;
 }
 function dealValidItem(s,p,itemId){
