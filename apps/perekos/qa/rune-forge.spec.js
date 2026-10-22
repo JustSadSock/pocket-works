@@ -4,7 +4,7 @@ test('backquote atlas previews all twelve existing screens without changing the 
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
  await page.locator('#primary-action').click();
- const before=await page.evaluate(()=>{const s=window.__perekosTest.state;return {seed:s.seed,score:[...s.score],runes:[...s.actors[0].runes]}});
+ const before=await page.evaluate(()=>{const s=window.__perekosTest.state;return {seed:s.seed,score:[...s.score],runes:[...s.actors[0].runes],save:localStorage.getItem('pocket-works:perekos:match'),continueHidden:document.getElementById('continue').hidden}});
  await page.keyboard.press('Backquote');
  await expect(page.locator('#debug-atlas')).toBeVisible();
  await expect(page.locator('#debug-atlas [data-scene]')).toHaveCount(12);
@@ -20,7 +20,7 @@ test('backquote atlas previews all twelve existing screens without changing the 
  await page.keyboard.press('Backquote');
  await expect(page.locator('#debug-atlas')).toBeHidden();
  await expect(page.locator('#hud')).toBeVisible();
- const after=await page.evaluate(()=>{const s=window.__perekosTest.state;return {seed:s.seed,score:[...s.score],runes:[...s.actors[0].runes]}});
+ const after=await page.evaluate(()=>{const s=window.__perekosTest.state;return {seed:s.seed,score:[...s.score],runes:[...s.actors[0].runes],save:localStorage.getItem('pocket-works:perekos:match'),continueHidden:document.getElementById('continue').hidden}});
  expect(after).toEqual(before);
  expect(errors).toEqual([]);
 });

@@ -40,7 +40,7 @@ function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return n
 function put(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;desktopPanelsVisible=savedPrefs?.desktopPanels!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';
 function remember(){put(prefsKey,{sound,mage:selectedMage,desktopPanels:desktopPanelsVisible});if(!debugSession&&!online?.active&&active&&validState(active))put(saveKey,active)}
-function forget(){try{localStorage.removeItem(saveKey)}catch{}}
+function forget(){if(debugSession)return;try{localStorage.removeItem(saveKey)}catch{}}
 const resume=stored(saveKey);
 if(resume&&validState(resume))$('continue').hidden=false;
 function audioContext(){if(!sound)return null;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;if(!audio)audio=new C();if(audio.state==='suspended')audio.resume().catch(()=>{});return audio}catch{return null}}
@@ -395,13 +395,13 @@ function previewDebug(name){
 function toggleDebug(){
  if(debugSession){
   const prev=debugSession;debugSession=null;atlas.hidden=true;
-  active=prev.active;onlinePreviewRunes=prev.onlinePreviewRunes;paused=prev.paused;displayXY=prev.displayXY;
+  active=prev.active;onlinePreviewRunes=prev.onlinePreviewRunes;paused=prev.paused;displayXY=prev.displayXY;$('continue').hidden=prev.continueHidden;
   lastTacticRunes='';combatPresentation.reset();spellChoreography.reset();seen=active?.serial||0;
   if(online?.active&&online.view){onlinePhase='';onlineView(online.view)}
   else{show(prev.mode);if(prev.mode==='draft')renderDraft();else if(prev.mode==='build')renderWorkbench();else if(prev.mode==='result')renderResult();else if(prev.mode==='books')renderBooks()}
   last=performance.now();return;
  }
- debugSession={active,mode,paused,onlinePreviewRunes,displayXY,fixture:debugFixture()};
+ debugSession={active,mode,paused,onlinePreviewRunes,displayXY,continueHidden:$('continue').hidden,fixture:debugFixture()};
  keys.clear();input.attack=false;input.shield=false;input.dash=false;tapAttackQueued=false;
  atlas.hidden=false;previewDebug(mode==='fight'?'fight':'menu');
 }
