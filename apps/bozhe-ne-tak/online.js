@@ -29,8 +29,8 @@ const EXPLAIN={
 const safeAction=()=>({itemId:null,treatment:null,bell:1,height:'low'});
 const FILTERS=[['all','Все'],['living','Живое'],['food','Еда'],['relic','Реликвии'],['regalia','Регалии'],['tool','Инструменты']];
 export function createOnline(onChange,onExit){
- let offeringFilter='all',draftVow='steady';
- let draftItem='',draftTreatment'',clockOffset=0,client=null,view=null,ownId='',roomId='',name=store.getItem('nickname')||'',code=new URL(location.href).searchParams.get('room')||'',status='intro',error='',notice='',lastMode='',epoch=0,sequence=0;
+ let offeringFilter='all',draftVow=null;
+ let draftItem='',draftTreatment='',clockOffset=0,client=null,view=null,ownId='',roomId='',name=store.getItem('nickname')||'',code=new URL(location.href).searchParams.get('room')||'',status='intro',error='',notice='',lastMode='',epoch=0,sequence=0;
  const show=()=>onChange();
  const isLive=()=>client?.socket?.readyState===WebSocket.OPEN&&status==='room';
  const message=s=>{notice=s;show()};
@@ -39,7 +39,7 @@ export function createOnline(onChange,onExit){
   if(!s||!Array.isArray(s.players)||typeof s.phase!=='string')return;
   if(view&&Number.isInteger(s.revision)&&s.revision<view.revision)return;
   const old=view;view=s;if(Number.isFinite(s.serverNow))clockOffset=s.serverNow-Date.now();sequence=Math.max(sequence,s.ownSeq||0);
-  if(old?.phaseId!==s.phaseId){notice='';draftItem='';draftTreatment='';draftVow='steady';}
+  if(old?.phaseId!==s.phaseId){notice='';draftItem='';draftTreatment='';draftVow=null;}
   status='room';show();
  };
  const bind=(net,id)=>{
@@ -165,7 +165,7 @@ export function createOnline(onChange,onExit){
   }else if(task==='offering'){
    const item=draftItem||view.altar?.itemId||'';
    const treatment=draftTreatment||view.altar?.treatment||'';
-   const vow=draftVow!=='steady'?draftVow:(view.altar?.vow||'steady');
+   const vow=draftVow??(view.altar?.vow||'steady');
    controls='<div class="offer-filter net-offer-filter">'+FILTERS.map(([id,label])=>'<button type="button" data-role-filter="'+id+'" aria-pressed="'+(offeringFilter===id)+'">'+label+'</button>').join('')+'</div>'+
     '<div class="net-offerings">'+ITEMS.filter(x=>offeringFilter==='all'||x.kind===offeringFilter).map(x=>'<button type="button" class="net-offering '+(item===x.id?'chosen':'')+
     '" data-role-item="'+x.id+'" aria-pressed="'+(item===x.id)+'" '+(locked?'disabled':'')+'>'+offeringArt(x.id,48)+
@@ -304,7 +304,7 @@ export function createOnline(onChange,onExit){
    else if(el.hasAttribute('data-role-treatment'))draftTreatment=el.dataset.roleTreatment;
    else draftVow=el.dataset.roleVow;
    const item=draftItem||view?.altar?.itemId,treatment=draftTreatment||view?.altar?.treatment;
-   if(item&&treatment)command('set',{task:'offering',itemId:item,treatment,vow:draftVow});
+   if(item&&treatment)command('set',{task:'offering',itemId:item,treatment,vow:draftVow??(view.altar?.vow||'steady')});
    show();return true;
   }
   if(el.hasAttribute('data-role-bell')){if(!sealed&&own.includes('bell'))command('set',{task:'bell',value:Number(el.dataset.roleBell)});return true}
