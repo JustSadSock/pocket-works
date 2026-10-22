@@ -64,13 +64,16 @@
     <div class="quick-tools" aria-label="Действия">
       <button id="menuBtn" class="menu-return" type="button" data-native-press title="Главное меню"><svg viewBox="0 0 24 24"><path d="m3 12 9-8 9 8M6 10v10h12V10M10 20v-6h4v6"/></svg><span>Меню</span></button>
       <span id="saveStatus" class="save-status" aria-live="polite">Сохранено</span>
-      <button id="onlineBtn" class="online-top-button" type="button" data-native-press title="Играть с друзьями"><svg viewBox="0 0 24 24"><path d="M15 19a6 6 0 0 0-12 0m6-8a4 4 0 1 0 0-8 4 4 0 0 0 0 8m10 8v-3a4 4 0 0 0-3-3m-2-10a4 4 0 0 1 0 8"/></svg><span>Друзья</span></button>
+      <button id="onlineBtn" class="online-top-button" type="button" data-native-press title="Играть с друзьями" aria-label="Играть с друзьями"><svg viewBox="0 0 24 24"><path d="M15 19a6 6 0 0 0-12 0m6-8a4 4 0 1 0 0-8 4 4 0 0 0 0 8m10 8v-3a4 4 0 0 1 0 8"/></svg><span>Друзья</span></button>
+      <button id="toolsMoreBtn" class="toolbar-more-toggle" type="button" data-native-press title="Другие инструменты" aria-label="Другие инструменты" aria-controls="toolbarMore" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+      <div id="toolbarMore" class="toolbar-secondary" role="group" aria-label="Инструменты комнаты">
       <button id="undoBtn" type="button" data-native-press title="Отменить (Ctrl+Z)" aria-label="Отменить" disabled><svg viewBox="0 0 24 24"><path d="M8 7 3 12l5 5M3 12h11a6 6 0 1 1 0 12" transform="translate(0 -3)"/></svg></button>
       <button id="redoBtn" type="button" data-native-press title="Вернуть (Ctrl+Y)" aria-label="Повторить" disabled><svg viewBox="0 0 24 24"><path d="m16 7 5 5-5 5M21 12H10a6 6 0 1 0 0 12" transform="translate(0 -3)"/></svg></button>
       <button id="eveningBtn" type="button" data-native-press title="Вечерний свет" aria-label="Вечерний свет" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M19.5 17.5A8.5 8.5 0 0 1 8 4.5 8.5 8.5 0 1 0 19.5 17.5Z"/></svg></button>
       <button id="soundBtn" type="button" data-native-press title="Выключить звуки" aria-label="Включить или выключить звуки" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4H4ZM16 9a5 5 0 0 1 0 6m2-9a9 9 0 0 1 0 12"/></svg></button>
       <button id="photoBtn" type="button" data-native-press title="Скачать снимок комнаты" aria-label="Сделать снимок"><svg viewBox="0 0 24 24"><path d="M4 7h4l2-3h4l2 3h4v13H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
       <button id="resetBtn" type="button" data-native-press class="reset-button" aria-label="Восстановить исходную комнату" title="Начать заново"><svg viewBox="0 0 24 24"><path d="M4 11a8 8 0 1 1 2 6M4 4v7h7"/></svg></button>
+      </div>
     </div>
   </header>
   <section class="workspace">
