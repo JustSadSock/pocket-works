@@ -19,7 +19,7 @@ test('screen inspector has all stages and actual responsive app views',async({pa
   ['writing-first','#answerForm'],['writing-tail','.incoming'],
   ['writing-selection','.word.selected'],['writing-zero','#wordCount'],
   ['waiting','.wax'],['offline','#answerForm'],['leave','.comic-modal'],
-  ['results','.story-paper'],['results-second','.story-paper'],['comic','.comic-inner img'],
+  ['results','.story-paper'],['results-second','.story-paper'],['comic','.comic-actions'],
   ['archive','.archive-manuscript'],['archive-empty','.archive-empty'],['archive-delete','.comic-modal']
  ]){
   if(await inspector.evaluate(e=>e.classList.contains('collapsed')))await inspector.locator('.chy-qa-expand').click();
