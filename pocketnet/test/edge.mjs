@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { setTimeout as sleep } from 'node:timers/promises';
+import {readFile} from 'node:fs/promises';
+const versionLock=JSON.parse(await readFile(new URL('../modules.lock.json',import.meta.url),'utf8'));
+
 import WebSocket from '../../pocket-server/node_modules/ws/index.js';
 
 const base = process.env.POCKETNET_TEST_URL || 'http://127.0.0.1:8787';
@@ -190,7 +193,7 @@ try{
  await x.next('authenticated');await y.next('authenticated');
  x.send('create_room',{gameId:'bozhe-ne-tak'});
  const created=await x.next('room_joined');
- assert.equal(created.version,'v2');
+ assert.equal(created.version,versionLock['bozhe-ne-tak'].current);
  assert.equal(created.state.phase,'lobby');
  assert.equal(created.state.match,null);
  y.send('join_room',{roomId:created.roomId.slice(0,8)});
