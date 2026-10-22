@@ -1,8 +1,13 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {createGame,advance,botAction,DIRECTIONS} from './engine.js';
 
 installMobileRuntime();
+createWorkshopMode({
+ appName:'Последняя плита', version:'1.0.0',
+ cachePrefix: 'last-tile-duel-', storageNamespace: 'pocket-works:last-tile-duel'
+});
 const $=id=>document.getElementById(id);
 const SERVER=location.origin+'/pocketnet',PREFIX='pocket-works:last-tile-duel:';
 const store={
