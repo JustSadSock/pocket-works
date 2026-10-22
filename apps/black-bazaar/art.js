@@ -15,7 +15,9 @@ const glyph={
  star:'<path d="m12 2 3.1 6.4 7 1-5.1 5 1.3 7-6.3-3.3-6.3 3.3 1.3-7-5.1-5 7-1L12 2Z"/>',
  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
  leaf:'<path d="M21 3C9 3 4 9 4 16c0 4 5 6 9 3 4-3 6-9 8-16ZM4 21c3-6 8-9 13-12"/>',
- arrow:'<path d="m4 12 16 0m-7-7 7 7-7 7"/>'
+ arrow:'<path d="m4 12 16 0m-7-7 7 7-7 7"/>',
+ 'volume-on':'<path d="M11 5 6 9H3v6h3l5 4V5Zm4 4a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/>',
+ 'volume-off':'<path d="M11 5 6 9H3v6h3l5 4V5Zm5 4 5 6m0-6-5 6"/>'
 };
 export function svgIcon(name,size=22){
  const path=glyph[name]||glyph.star;

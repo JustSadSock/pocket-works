@@ -3,9 +3,10 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {svgIcon,brandEmblem} from './art.js';
 import {artifactSVG} from './art/artifacts.js';
+import {classifyFeedback,createAudioFeedback} from './feedback.js';
 import {roleCharacter,characterMarkup,applyCharacterArt,loadCharacterArt} from './art/characters.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Чёрная барахолка',version:'0.12.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+createWorkshopMode({appName:'Чёрная барахолка',version:'0.13.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -60,7 +61,41 @@ let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
 const decorativeGuests=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
 let notice='';
 let activeSheet=null,lastSheetTrigger=null,selectedArtifact=null;
+const sound=createAudioFeedback();
+let cueTimer=null;
 function message(m,isError=false){notice=m;status.textContent=m;status.className=isError?'error':'muted';}
+function soundToggle(){
+ const enabled=sound.isEnabled();
+ return '<button class="sound-toggle" type="button" data-action="toggle-sound" aria-pressed="'+enabled+'" aria-label="'+
+ (enabled?'Выключить звук':'Включить звук')+'" title="'+(enabled?'Выключить звук':'Включить звук')+'">'+
+ svgIcon(enabled?'volume-on':'volume-off',20)+'</button>';
+}
+const cueIcons={curse:'eye',ward:'star',warning:'eye',reward:'gem',deal:'trade',
+ craft:'parts',inspect:'eye',bid:'coin',reveal:'bag',round:'scroll',turn:'gavel',finish:'star'};
+function showConfirmedCue(cue){
+ if(!cue||mode!=='play'&&mode!=='done')return;
+ clearTimeout(cueTimer);
+ const root=app.querySelector('.play-screen')||app;
+ const prior=root.querySelector('.confirmed-cue');
+ prior?.remove();
+ const banner=document.createElement('div');
+ banner.className='confirmed-cue confirmed-'+cue.kind;
+ banner.setAttribute('role','status');banner.setAttribute('aria-live','polite');
+ // Only static, internal SVG icons and predefined user-facing labels.
+ banner.innerHTML=svgIcon(cueIcons[cue.kind]||'star',22)+'<span></span>';
+ banner.querySelector('span').textContent=cue.label;
+ root.appendChild(banner);
+ const scene=root.querySelector('.play-field');
+ if(scene&&!(typeof window!=='undefined'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)){
+  const burst=document.createElement('div');
+  burst.className='trade-burst burst-'+cue.kind;
+  burst.setAttribute('aria-hidden','true');
+  for(let i=0;i<8;i++)burst.appendChild(document.createElement('i'));
+  scene.appendChild(burst);
+  cueTimer=setTimeout(()=>{banner.remove();burst.remove()},1450);
+ }else cueTimer=setTimeout(()=>banner.remove(),1450);
+ sound.play(cue.kind);
+}
 function localStore(){const node=document.querySelector('#nickname');if(node)name=(node.value.trim()||'Игрок').slice(0,22);try{localStorage.setItem('black-bazaar:name',name);}catch{}}
 function renderHome(){
  mode='home';activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
@@ -456,6 +491,7 @@ function openSheet(sheetName,focus=false,targetId=''){
   if(detailPage)detailPage.innerHTML=artifactDetailBlock(state.you);
  }
  sheet.hidden=!sheetName;backdrop.hidden=!sheetName;
+ sheet.classList.toggle('sheet-enter',Boolean(focus&&sheetName));
  document.body.classList.toggle('sheet-open',Boolean(sheetName));
  for(const page of sheet.querySelectorAll('[data-sheet-page]'))page.hidden=page.dataset.sheetPage!==sheetName;
  const title=sheet.querySelector('#sheetTitle');if(title&&sheetName)title.textContent=sheetTitles[sheetName];
@@ -521,7 +557,7 @@ function renderPlay(){
  app.innerHTML='<div class="play-screen"><div class="play-head">'+
  '<h1>Раунд '+state.round+' / '+state.rounds+'</h1>'+
  '<span class="chip">'+esc(turnName)+'</span>'+
- '<span class="chip" aria-label="До конца хода">◷ <strong id="turnClock" role="timer">—</strong></span>'+
+ '<span class="chip" aria-label="До конца хода">◷ <strong id="turnClock" role="timer">—</strong></span>'+soundToggle()+
  '<button type="button" class="leave-button" data-action="leave">Выйти</button></div>'+
  resourceWallet(you.resources)+
  '<div class="play-field" data-player-count="'+state.players.length+'">'+
@@ -568,14 +604,23 @@ function render(){
  return renderPlay();
 }
 function closeRoom(){
+ clearTimeout(cueTimer);cueTimer=null;
  activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
  if(net){try{if(connected)net.leaveRoom()}catch{}try{net.close()}catch{}}
  net=null;me=null;state=null;roomId='';connected=false;connecting=false;message('');renderHome();
 }
 function wire(client){
- client.on('connected',data=>{if(net!==client)return;me=data.player;connected=true;message('PocketNet подключён.');});
- client.on('room_joined',data=>{if(net!==client)return;roomId=data.roomId;state=data.state;connecting=false;message('Комната подключена.');render();});
- client.on('game_event',data=>{if(net!==client)return;if(data.event?.type==='state'){state=data.event.payload;render();}else if(data.event?.type==='notice')message(data.event.payload,true);});
+ client.on('connected',data=>{if(net!==client)return;me=data.player;connected=true;message('');});
+ client.on('room_joined',data=>{if(net!==client)return;roomId=data.roomId;state=data.state;connecting=false;message('');render();});
+ client.on('game_event',data=>{
+  if(net!==client)return;
+  if(data.event?.type==='state'){
+   const incoming=data.event.payload;
+   const cue=classifyFeedback(state,incoming,me?.id);
+   state=incoming;render();
+   if(cue)showConfirmedCue(cue);
+  }else if(data.event?.type==='notice')message(data.event.payload,true);
+ });
  client.on('disconnected',()=>{if(net!==client)return;connected=false;message('Связь потеряна. PocketNet переподключается…',true);});
  client.on('error',e=>{
   if(net!==client)return;
@@ -607,7 +652,7 @@ async function connect(kind,code=''){
 }
 function request(payload){
  if(!net||!connected){message('Нет соединения с комнатой.',true);return;}
- try{net.sendGame(payload);message('Команда отправлена.');}catch(e){message('Не удалось отправить: '+e.message,true);}
+ try{net.sendGame(payload);message('');}catch(e){message('Не удалось отправить: '+e.message,true);}
 }
 async function copy(value){
  try{await navigator.clipboard.writeText(value);message('Скопировано.');}
@@ -616,7 +661,19 @@ async function copy(value){
 app.addEventListener('click',event=>{
  const btn=event.target.closest('button[data-action]');if(!btn||btn.disabled)return;
  const action=btn.dataset.action;
- if(action==='open-item'){
+ if(action==='toggle-sound'){
+  const enabled=sound.setEnabled(!sound.isEnabled());
+  if(enabled){sound.unlock();sound.play('open');}
+  const toggle=app.querySelector('.sound-toggle');
+  if(toggle){
+   const fresh=document.createElement('div');fresh.innerHTML=soundToggle();
+   toggle.replaceWith(fresh.firstElementChild);
+   app.querySelector('.sound-toggle')?.focus({preventScroll:true});
+  }
+  return;
+ }
+ sound.unlock();
+ if(action==='open-item'){sound.play('open');
   lastSheetTrigger=btn;selectedArtifact={kind:btn.dataset.kind,id:btn.dataset.id};
   openSheet('detail',true);
   return;
@@ -642,6 +699,7 @@ app.addEventListener('click',event=>{
   return;
  }
  if(action==='trade-with'){
+  sound.play('tap');
   const recipient=state?.players?.find(p=>p.id===btn.dataset.player);
   if(!recipient?.connected||recipient.bankrupt||state?.you?.bankrupt)return;
   lastSheetTrigger=btn;openSheet('deals',true);
@@ -654,11 +712,12 @@ app.addEventListener('click',event=>{
   return;
  }
  if(action==='open-sheet'){
+  sound.play('open');
   lastSheetTrigger=btn;
   const next=activeSheet===btn.dataset.sheet?null:btn.dataset.sheet;
   openSheet(next,true,btn.dataset.scroll||'');return;
  }
- if(action==='close-sheet'){openSheet(null,true);return;}
+ if(action==='close-sheet'){sound.play('close');openSheet(null,true);return;}
  if(action==='create'){localStore();connect('create');return;}
  if(action==='join'){
   localStore();let code=document.querySelector('#roomCode')?.value.trim()||'';
