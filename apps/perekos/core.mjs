@@ -299,7 +299,7 @@ export function tick(s,input={},dt=STEP,otherInput=null){
  }
 const control=[input,otherInput===null?botInput(s,dt):otherInput];
 for(let i=0;i<2;i++){const a=s.actors[i],c=control[i],other=s.actors[1-i];
- if(s.gameMode==='rupture'&&a.hp<=0){a.respawn=Math.max(0,(a.respawn||0)-dt);if(a.respawn<=0){const next=freshActor(a);next.hit=a.hit;next.kills=a.kills;next.invuln=1.25;s.actors[i]=next;}continue}
+ if(s.gameMode==='rupture'&&a.hp<=0){if(a.respawn>0){a.respawn=Math.max(0,a.respawn-dt);if(a.respawn<=0){const next=freshActor(a);next.hit=a.hit;next.kills=a.kills;next.invuln=1.25;s.actors[i]=next;}}continue}
  a.cast=Math.max(0,a.cast-dt);a.shieldReady=Math.max(0,a.shieldReady-dt);a.dashReady=Math.max(0,a.dashReady-dt);a.stun=Math.max(0,a.stun-dt);a.flash=Math.max(0,a.flash-dt);a.invuln=Math.max(0,a.invuln-dt);
 if(!c.attack)a.flameCharge=Math.max(0,(a.flameCharge||0)-dt*5);
 if(a.windup&&(a.stun>0||c.dash))a.windup=null;
