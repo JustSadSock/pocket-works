@@ -179,6 +179,12 @@ try{
  await host.page.locator('.wait-box').waitFor();
  assert.equal(room.state.author,room.players[1].id,'Second round must change author to guest');
  await guest.page.locator('[data-glyph="human"]').click();
+ const mobileSubmit=await guest.page.locator('[data-action="publish"]').evaluate(button=>{
+  const rect=button.getBoundingClientRect();
+  return {top:rect.top,bottom:rect.bottom,viewport:innerHeight};
+ });
+ assert.ok(mobileSubmit.top>=55&&mobileSubmit.bottom<=mobileSubmit.viewport-6,
+  'Mobile publish action must stay visible without scrolling: '+JSON.stringify(mobileSubmit));
  await shot(guest.page,'second-author-one-frame.png');
  await guest.page.locator('[data-action="publish"]').click();
  await host.page.locator('.guess-card').waitFor();
