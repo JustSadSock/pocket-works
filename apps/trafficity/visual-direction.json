@@ -66,6 +66,16 @@
         "slug": "crossline-5x5",
         "spatialDifference": "Crossline 5x5 — компактная симметричная боeвая арена с крупными персонажами, Trafficity — процедурный миниатюрный город с магистралями, мостами и кварталами.",
         "interactionDifference": "В Crossline игрок заранее задаёт боевой приказ; в Trafficity прокладывает и перестраивает маршрут по физически загруженной дорожной сети."
+      },
+      {
+        "slug": "black-bazaar",
+        "spatialDifference": "Black Bazaar uses a ledger of offers and private deals, while Trafficity displays a manipulable three-dimensional-feeling miniature road graph on one large city canvas.",
+        "interactionDifference": "Black Bazaar trades bids, while Trafficity plots real delivery routes and resolves congestion through simultaneous moves."
+      },
+      {
+        "slug": "picto",
+        "spatialDifference": "Picto provides a pale paper story strip and movable symbols; Trafficity has an irregular model city, streets, bridges, dispatcher controls and vehicle tokens.",
+        "interactionDifference": "Picto draws and guesses semantic pictures, while Trafficity assigns couriers and plans dynamic paths with finite travel costs."
       }
     ]
   },

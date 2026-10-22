@@ -1,8 +1,10 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {createGame,shortestPath,routeVehicle,stopVehicle,autoRoute,offerRoute,botPlan,advanceGame,winner} from './engine.js';
 import {renderCity,pointerNode,pointerCar} from './art.js';
 installMobileRuntime();
+createWorkshopMode({appName:'Trafficity',version:'1.6.0',cachePrefix: 'trafficity-',storageNamespace: 'pocket-works:trafficity'});
 const $=id=>document.getElementById(id);
 const storagePrefix='pocket-works:trafficity:';
 const store={
