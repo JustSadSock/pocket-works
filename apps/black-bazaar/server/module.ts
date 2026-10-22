@@ -139,7 +139,7 @@ function openGame(s){
     const lucky=sample(s.contestants),partner=sample(s.contestants.filter(p=>p.id!==lucky.id));
     lucky.legendary=partner.id;
   }
-  s.listing=null;s.bids=[];s.log=[];startTurn(s);
+  s.listing=null;s.bids=[];s.deals=[];s.dealSerial=0;s.log=[];startTurn(s);
 }
 function resolveUrgent(s,p){
   if(!p.urgent)return;
@@ -175,24 +175,65 @@ function nextTurn(s){
   s.listing=null;s.bids=[];
   s.turnIndex++;
   if(s.turnIndex===s.contestants.length){
-    roundIncome(s);s.turnIndex=0;s.round++;
+    roundIncome(s);s.turnIndex=0;s.round++;s.deals=[];
   }
   startTurn(s);
 }
-function onTrade(s,seller,buyer,item,price){
-  if(buyer.items.length>=MAX_ITEMS||!has(buyer,price))return false;
-  const index=seller.items.findIndex(x=>x.id===item.id);
-  if(index<0)return false;
-  add(buyer,price,-1);add(seller,price,+1);
-  seller.items.splice(index,1);item.history.push(seller.id);item.acquiredRound=s.round;buyer.items.push(item);
-  seller.marketDeals++;
+function applyRelationship(s,seller,buyer){
   if(buyer.positiveTarget===seller.id && buyer.positiveUsed!==s.round){
     buyer.resources.crystals+=3;buyer.positiveUsed=s.round;
   }
   if(seller.negativeTarget===buyer.id && seller.negativeUsed!==s.round){
     buyer.resources.gold=Math.max(0,buyer.resources.gold-20);seller.negativeUsed=s.round;
   }
+}
+function transferItem(s,seller,buyer,item){
+  const index=seller.items.findIndex(x=>x.id===item.id);
+  if(index<0)return false;
+  seller.items.splice(index,1);
+  item.history.push(seller.id);item.acquiredRound=s.round;buyer.items.push(item);
+  applyRelationship(s,seller,buyer);
+  return true;
+}
+function onTrade(s,seller,buyer,item,price){
+  if(buyer.items.length>=MAX_ITEMS||!has(buyer,price)||item.acquiredRound===s.round)return false;
+  if(!seller.items.some(x=>x.id===item.id))return false;
+  add(buyer,price,-1);add(seller,price,+1);
+  transferItem(s,seller,buyer,item);
+  seller.marketDeals++;
   issue(s,buyer.character+' купил «'+spec(item).name+'» у '+seller.character+'.');
+  return true;
+}
+function dealValidItem(s,p,itemId){
+  if(itemId===null)return true;
+  const item=p.items.find(x=>x.id===itemId);
+  return !!item&&item.acquiredRound!==s.round&&s.listing?.itemId!==itemId;
+}
+function dealItem(p,itemId){
+  return itemId===null?null:p.items.find(x=>x.id===itemId)||null;
+}
+function validItemId(id){
+  return id===null||typeof id==='string'&&/^item-[1-9][0-9]*$/.test(id);
+}
+function dealAvailable(s,deal){
+  const from=s.contestants.find(p=>p.id===deal.from),to=s.contestants.find(p=>p.id===deal.to);
+  if(!from||!to||from.bankrupt||to.bankrupt)return false;
+  if(!has(from,deal.give)||!has(to,deal.want))return false;
+  if(!dealValidItem(s,from,deal.giveItemId)||!dealValidItem(s,to,deal.wantItemId))return false;
+  const fromCount=from.items.length-Number(deal.giveItemId!==null)+Number(deal.wantItemId!==null);
+  const toCount=to.items.length-Number(deal.wantItemId!==null)+Number(deal.giveItemId!==null);
+  return fromCount<=MAX_ITEMS&&toCount<=MAX_ITEMS;
+}
+function acceptDeal(s,deal){
+  if(!dealAvailable(s,deal))return false;
+  const from=s.contestants.find(p=>p.id===deal.from),to=s.contestants.find(p=>p.id===deal.to);
+  const a=dealItem(from,deal.giveItemId),b=dealItem(to,deal.wantItemId);
+  add(from,deal.give,-1);add(to,deal.want,-1);
+  add(to,deal.give);add(from,deal.want);
+  if(a)transferItem(s,from,to,a);
+  if(b)transferItem(s,to,from,b);
+  s.deals=s.deals.filter(d=>d.id!==deal.id);
+  issue(s,'Прямая сделка между '+from.character+' и '+to.character+' заключена.');
   return true;
 }
 const stateEvent=()=>[{type:'state',payload:{}}];
@@ -204,6 +245,31 @@ function action(s,id,v){
   if(!me)return failure(s,id,'Игрок не найден.');
   if(me.bankrupt)return failure(s,id,'Банкрот больше не участвует в торговле.');
   const isTurn=active.id===id;
+  if(v.type==='deal_propose'){
+    const target=getPlayer(s,v.to),give=wallet(v.give),want=wallet(v.want);
+    const giveItemId=v.giveItemId??null,wantItemId=v.wantItemId??null;
+    if(!target||target.id===me.id||target.bankrupt||!s.players.some(p=>p.id===target.id))
+      return failure(s,id,'Этот игрок недоступен для сделки.');
+    if(!give||!want||!validItemId(giveItemId)||!validItemId(wantItemId)||
+       !(nonzero(give)||nonzero(want)||giveItemId||wantItemId))
+      return failure(s,id,'Укажите корректное непустое предложение.');
+    const deal={id:'deal-'+(++s.dealSerial),from:id,to:target.id,give,want,giveItemId,wantItemId,round:s.round};
+    if(!dealAvailable(s,deal))return failure(s,id,'Нельзя предложить эту сделку: не хватает ресурсов, предмет не ваш или инвентарь заполнен.');
+    s.deals=s.deals.filter(d=>d.from!==id);
+    s.deals.push(deal);
+    return success(s);
+  }
+  if(v.type==='deal_cancel'){
+    const deal=s.deals.find(d=>d.id===v.dealId);
+    if(!deal||deal.from!==id&&deal.to!==id)return failure(s,id,'Предложение не найдено.');
+    s.deals=s.deals.filter(d=>d.id!==deal.id);return success(s);
+  }
+  if(v.type==='deal_accept'){
+    const deal=s.deals.find(d=>d.id===v.dealId);
+    if(!deal||deal.to!==id)return failure(s,id,'Это предложение адресовано другому игроку.');
+    if(!acceptDeal(s,deal))return failure(s,id,'Условия сделки устарели или ресурсы уже потрачены.');
+    return success(s);
+  }
   if(v.type==='bid'){
     if(!s.listing||isTurn)return failure(s,id,'Сейчас нет чужого лота.');
     const price=wallet(v.offer);
@@ -222,7 +288,7 @@ function action(s,id,v){
     me.resources.gold-=15;me.inspections.push({itemId:item.id,negative:spec(item).negative});
     return success(s);
   }
-  if(!isTurn)return failure(s,id,'Дождитесь своего хода. Сейчас можно только делать ставки.');
+  if(!isTurn)return failure(s,id,'Не ваш ход. Можно принимать прямые сделки, предлагать обмен и делать ставки.');
   if(v.type==='work'){
     if(me.worked)return failure(s,id,'Подработка уже использована в этом ходу.');
     const gains={gold:{gold:35,crystals:0,parts:0},crystals:{gold:0,crystals:4,parts:0},parts:{gold:0,crystals:0,parts:1}};
@@ -277,12 +343,16 @@ function viewForPlayer({state,player}){
   return {phase:s.phase,host:s.host,revision:s.revision,round:s.round,rounds:TOTAL_ROUNDS,
     turnId:turn?.id||null,players:s.contestants.map(p=>({
       id:p.id,name:p.name,character:p.character,
-      items:p.items.length,resources:{...p.resources},strikes:p.strikes,
+      items:p.items.length,inventory:p.items.map(publicItem),resources:{...p.resources},strikes:p.strikes,
       bankrupt:p.bankrupt,urgent:p.urgent?.status==='pending',
       progress:Math.round(balance(p)*100),connected:s.players.some(x=>x.id===p.id)
     })),
     listing:listed?{...publicItem(listed),seller:s.listing.seller,ask:s.listing.ask}:null,
     bids:s.bids.map(b=>({buyer:b.buyer,offer:b.offer})),
+    deals:me?s.deals.filter(d=>d.from===me.id||d.to===me.id).map(d=>({
+      ...d,giveItem:d.giveItemId?publicItem(getPlayer(s,d.from).items.find(x=>x.id===d.giveItemId)):null,
+      wantItem:d.wantItemId?publicItem(getPlayer(s,d.to).items.find(x=>x.id===d.wantItemId)):null
+    })):[],
     log:s.log,ranking:s.phase==='done'?s.ranking:undefined,
     you:me?{id:me.id,character:me.character,resources:{...me.resources},quota:{...me.quota},
       items:me.items.map(privateItem),positiveTarget:me.positiveTarget,
@@ -294,7 +364,7 @@ const game={
   protocolVersion:1,viewForPlayer,
   createRoom({player}){return {state:{
     host:player.id,players:[{id:player.id,name:player.name}],contestants:[],
-    phase:'lobby',revision:0,round:0,turnIndex:0,listing:null,bids:[],log:[],ranking:[],serial:0
+    phase:'lobby',revision:0,round:0,turnIndex:0,listing:null,bids:[],deals:[],dealSerial:0,log:[],ranking:[],serial:0
   }};},
   onJoin({state,players}){
     if(state.phase!=='lobby'&&!state.contestants.some(p=>p.id===players.at(-1)?.id))throw Error('match_in_progress');
@@ -306,6 +376,7 @@ const game={
     state.players=players.map(p=>({id:p.id,name:p.name}));
     if(!state.players.some(p=>p.id===state.host))state.host=state.players[0]?.id||state.host;
     if(state.phase==='lobby')state.contestants=[];
+    state.deals=state.deals.filter(d=>state.players.some(p=>p.id===d.from)&&state.players.some(p=>p.id===d.to));
     // Departure forfeits a turn, but the account can rejoin during a match.
     if(state.phase==='play'&&state.contestants[state.turnIndex]&&!state.players.some(p=>p.id===state.contestants[state.turnIndex].id))nextTurn(state);
     state.revision++;return {state,events:stateEvent()};
