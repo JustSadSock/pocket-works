@@ -48,7 +48,12 @@ export const DOCTRINES=Object.freeze([
  {id:'food',name:'Съедобная истина',desc:'Пища +1. Иное —1.',positive:'Вера поддерживается пищей.',negative:'Жрецы забыли кормить веру.'}
  ,...EXTRA_DOCTRINES
 ]);
-export const MAX_ROUNDS=5;
+export export const VOWS=Object.freeze([
+ {id:'steady',name:'Обычный обряд',detail:'Без дополнительного риска.'},
+ {id:'bold',name:'Дерзкий обет',detail:'Благословение +3 милости, сомнение −1, гнев −3.'},
+ {id:'shelter',name:'Обет осторожности',detail:'Благословение +1, сомнение +1, гнев −1.'}
+]);
+const MAX_ROUNDS=5;
 export const START_FAITH=6;
 export const MAX_FAITH=10;
 const validItem=id=>ITEMS.some(x=>x.id===id);
@@ -65,7 +70,7 @@ export const getIncident=state=>{
  return INCIDENTS[deck[state.round%deck.length]];
 };
 export const getIncidentById=id=>INCIDENTS.find(x=>x.id===id)||null;
-export const defaultAction=()=>({itemId:null,treatment:null,bell:1,height:'low'});
+export const defaultAction=()=>({itemId:null,treatment:null,bell:1,height:'low',vow:'steady'});
 function random32(seed) { let x=(seed>>>0)||0x6d2b79f5; return ()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296};}
 export function createGame(seed=0x6ab52d19) {
  const number=Number.isInteger(seed)?(seed>>>0):0x6ab52d19;
@@ -81,6 +86,7 @@ export function setAction(state,patch){
  if(Object.hasOwn(patch,'treatment')&&(patch.treatment===null||treatSet.has(patch.treatment)))next.treatment=patch.treatment;
  if([1,2,3].includes(patch.bell))next.bell=patch.bell;
  if(['low','high'].includes(patch.height))next.height=patch.height;
+ if(VOWS.some(v=>v.id===patch.vow))next.vow=patch.vow;
  return {...state,actions:next};
 }
 export function doctrineEffect(id,action){
@@ -119,7 +125,10 @@ export function evaluateRite(rite,action,doctrines=[],incident=null){
  const doctrineResults=doctrines.map(id=>({id,...doctrineEffect(id,action)}));
  const score=criteria.reduce((n,c)=>n+c.score,0)+doctrineResults.reduce((n,d)=>n+d.delta,0);
  const verdict=score>=4?'bless':score>=3?'doubt':'wrath';
- const delta=verdict==='bless'?2:verdict==='wrath'?-2:0;
+ const vow=VOWS.some(v=>v.id===action.vow)?action.vow:'steady';
+ const delta=vow==='bold'?{bless:3,doubt:-1,wrath:-3}[verdict]:
+  vow==='shelter'?{bless:1,doubt:1,wrath:-1}[verdict]:
+  {bless:2,doubt:0,wrath:-2}[verdict];
  // Four authored miracle families arise from real actions, not a random joke generator.
  const special={goat:'goat',apple:'apple',mushroom:'mushroom',flower:'flower',mirror:'mirror',mask:'mask',scroll:'scroll',sword:'sword',shield:'shield',hourglass:'hourglass',book:'book',boot:'boot',cheese:'cheese',lantern:'lantern',frog:'frog',compass:'compass',skull:'skull',potato:'potato'};
  const miracleId=special[item.id]|| (item.id==='goose'?'goose':action.treatment==='gild'?'gilded':
@@ -148,7 +157,7 @@ export function evaluateRite(rite,action,doctrines=[],incident=null){
   skull:'Череп засмеялся без нижней челюсти. Бог потребовал позвать анатома.',
   potato:'Картошка пустила росток. Церковь объявила это первым земным пророчеством.'
  }[miracleId];
- return {score,criteria,doctrineResults,verdict,faithDelta:delta,selected:item.id,miracleId,miracleText,
+ return {score,criteria,doctrineResults,verdict,faithDelta:delta,vow,selected:item.id,miracleId,miracleText,
   incidentId:incident?.id||null,incidentText:incident?incident.story:null,incidentScore};
 }
 function makeOffers(state,judgment){
@@ -196,9 +205,9 @@ export function conveneCouncil(state){
  return {...state,councilUsed:true,faith:state.faith-1,doctrines:state.doctrines.slice(1)};
 }
 export function getBestPossible(state){
- const rite=getRite(state);let best=-999;
+ const rite=getRite(state),incident=getIncident(state);let best=-999;
  for(const item of ITEMS)for(const treatment of TREATMENTS)for(const bell of [1,2,3])for(const height of ['low','high']){
-  best=Math.max(best,evaluateRite(rite,{itemId:item.id,treatment:treatment.id,bell,height},state.doctrines,getIncident(state)).score);
+  best=Math.max(best,evaluateRite(rite,{itemId:item.id,treatment:treatment.id,bell,height},state.doctrines,incident).score);
  }
  return best;
 }
@@ -218,6 +227,8 @@ export function loadGame(raw){
   clean.treatment=raw.actions.treatment;
   if(![1,2,3].includes(raw.actions.bell)||!['low','high'].includes(raw.actions.height))return null;
   clean.bell=raw.actions.bell;clean.height=raw.actions.height;
+  if(raw.actions.vow!==undefined&&!VOWS.some(v=>v.id===raw.actions.vow))return null;
+  clean.vow=raw.actions.vow||'steady';
   if(raw.history.length!==raw.round+(raw.phase==='play'?0:1) && !(raw.phase==='end'&&raw.faith===0))return null;
   if(raw.history.some(x=>!x||!RITES.some(r=>r.id===x.riteId)||!validItem(x.itemId)))return null;
   return {...raw,actions:clean,councilUsed:raw.councilUsed===true,
