@@ -1192,8 +1192,10 @@ class CanvasFallback {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.width = Math.max(1, rect.width || this.canvas.clientWidth || window.innerWidth);
     this.height = Math.max(1, rect.height || this.canvas.clientHeight || window.innerHeight);
-    this.canvas.width = Math.round(this.width * dpr);
-    this.canvas.height = Math.round(this.height * dpr);
+    const pixelWidth = Math.round(this.width * dpr);
+    const pixelHeight = Math.round(this.height * dpr);
+    if (this.canvas.width !== pixelWidth) this.canvas.width = pixelWidth;
+    if (this.canvas.height !== pixelHeight) this.canvas.height = pixelHeight;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   setParallax(x, y) { this.targetParallaxX = clamp(x, -1, 1); this.targetParallaxY = clamp(y, -1, 1); }
