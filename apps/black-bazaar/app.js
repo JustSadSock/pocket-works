@@ -13,7 +13,8 @@ const keys=['gold','crystals','parts'];
 // Separate durable token storage: never collide with another PocketWorks game.
 const netStorage={
  getItem(key){
-  try{return localStorage.getItem('black-bazaar:'+key)||sessionStorage.getItem(key);}catch{return null;}
+  try{const saved=localStorage.getItem('black-bazaar:'+key);if(saved)return saved;}catch{}
+  try{return sessionStorage.getItem(key);}catch{return null;}
  },
  setItem(key,value){
   try{localStorage.setItem('black-bazaar:'+key,value);}catch{try{sessionStorage.setItem(key,value);}catch{}}
