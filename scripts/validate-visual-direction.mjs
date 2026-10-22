@@ -31,14 +31,14 @@ export function mobileOnlyHtmlChange(before, after) {
   const normalise = (source, original) => {
     let text = source;
     if (!original.includes('src="./app.js"')) {
-      text = text.replace(/\\s*<script type="module" src="\\.\\/app\\.js"><\\/script>/g, '');
+      text = text.replace(/\s*<script type="module" src="\.\/app\.js"><\/script>/g, '');
     }
     text = text
-      .replace(/\\sdata-native-press(?=[\\s>])/g, '')
-      .replace(/\\sdata-app-shell(?=[\\s>])/g, '')
-      .replace(/\\s*<link rel="stylesheet" href="\\.\\.\\/\\.\\.\\/shared\\/mobile-runtime\\.css"\\s*\\/?>/g, '')
-      .replace(/<script type="module" src="\\.\\/app\\.js"><\\/script>/g, '<script src="./app.js" defer></script>')
-      .replace(/>\\s+</g, '><').trim();
+      .replace(/\sdata-native-press(?=[\s>])/g, '')
+      .replace(/\sdata-app-shell(?=[\s>])/g, '')
+      .replace(/\s*<link rel="stylesheet" href="\.\.\/\.\.\/shared\/mobile-runtime\.css"\s*\/?>/g, '')
+      .replace(/<script type="module" src="\.\/app\.js"><\/script>/g, '<script src="./app.js" defer></script>')
+      .replace(/>\s+</g, '><').trim();
     return text;
   };
   return normalise(before,before)===normalise(after,before);
