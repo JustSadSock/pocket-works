@@ -346,6 +346,7 @@ if(IS_PREVIEW){
  if(PREVIEW_ID==='home-member'){pocketIdentity={id:'00000000-0000-4000-8000-000000000001',nickname:'Марта',avatar:'moss',complete:true};identityReady=true}
  else identityReady=true;
  if(view?.phase==='writing')draftSelections[draftKey()]=d.selection;
+ if(modal==='comic-prompt')comicSource=view?.stories?.[0]||null;
 
  window.addEventListener('keydown',e=>{
   if((e.code==='Backquote'&&!e.repeat)||e.key==='Escape'){
