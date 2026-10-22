@@ -10,6 +10,19 @@ const qs=new URLSearchParams(location.search);
 const hintRoom=(qs.get('room')||'').trim().toUpperCase();
 const names={gold:'золота',crystals:'кристаллов',parts:'деталей'};
 const keys=['gold','crystals','parts'];
+// Separate durable token storage: never collide with another PocketWorks game.
+const netStorage={
+ getItem(key){
+  try{return localStorage.getItem('black-bazaar:'+key)||sessionStorage.getItem(key);}catch{return null;}
+ },
+ setItem(key,value){
+  try{localStorage.setItem('black-bazaar:'+key,value);}catch{try{sessionStorage.setItem(key,value);}catch{}}
+ },
+ removeItem(key){
+  try{localStorage.removeItem('black-bazaar:'+key);}catch{}
+  try{sessionStorage.removeItem(key);}catch{}
+ }
+};
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const amounts=w=>keys.filter(k=>w?.[k]).map(k=>w[k]+' '+names[k]).join(', ')||'ничего';
 const person=id=>state?.players?.find(p=>p.id===id);
@@ -315,7 +328,17 @@ function wire(client){
  client.on('room_joined',data=>{if(net!==client)return;roomId=data.roomId;state=data.state;connecting=false;message('Комната подключена.');render();});
  client.on('game_event',data=>{if(net!==client)return;if(data.event?.type==='state'){state=data.event.payload;render();}else if(data.event?.type==='notice')message(data.event.payload,true);});
  client.on('disconnected',()=>{if(net!==client)return;connected=false;message('Связь потеряна. PocketNet переподключается…',true);});
- client.on('error',e=>{if(net!==client)return;message('Ошибка сервера: '+String(e?.code||e?.message||'неизвестно'),true);});
+ client.on('error',e=>{
+  if(net!==client)return;
+  const code=String(e?.code||e?.message||'неизвестно');
+  if(code==='room_not_found'||code==='room_version_unavailable'){
+    netStorage.removeItem('pocket-net:'+ORIGIN);
+    net.close();net=null;state=null;roomId='';me=null;connecting=false;connected=false;
+    renderHome();message('Комната больше недоступна. Можно создать новую.',true);
+    return;
+  }
+  message('Ошибка сервера: '+code,true);
+ });
  client.on('room_closed',()=>{if(net!==client)return;closeRoom();message('Комната закрылась.',true);});
 }
 async function connect(kind,code=''){
@@ -323,7 +346,7 @@ async function connect(kind,code=''){
  connecting=true;state=null;roomId='';renderHome();message('Подключение к PocketNet…');
  try{
   if(net){net.close();net=null;}
-  const storage=sessionStorage;
+  const storage=netStorage;
   if(kind!=='resume')storage.removeItem('pocket-net:'+ORIGIN);
   const client=new PocketNet({serverUrl:ORIGIN,name,storage});net=client;wire(client);
   await client.connect();
@@ -426,4 +449,4 @@ app.addEventListener('submit',event=>{
 });
 renderHome();
 setInterval(updateTurnClock,1000);
-try{const saved=JSON.parse(sessionStorage.getItem('pocket-net:'+ORIGIN)||'null');if(saved?.roomId)connect('resume');}catch{}
+try{const saved=JSON.parse(netStorage.getItem('pocket-net:'+ORIGIN)||'null');if(saved?.roomId)connect('resume');}catch{}
