@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f4f1e9">
+  <script>try{const p=localStorage.getItem("pocket-works:blockies:theme")||"auto";document.documentElement.dataset.theme=p==="auto"?(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):p;}catch{document.documentElement.dataset.theme=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}</script>
   <title>Blockies — Pocket Works</title>
   <link rel="icon" href="./icons/icon.svg">
   <link rel="manifest" href="./manifest.webmanifest">
@@ -25,6 +26,7 @@
         <button data-native-press id="pause-btn" class="top-action" style="display:none" type="button"><span aria-hidden="true">Ⅱ</span><span data-i18n="pause">Пауза</span></button>
         <button data-native-press id="quit-btn" class="top-action" style="display:none" type="button"><span aria-hidden="true">↩</span><span data-i18n="menu">Меню</span></button>
         <button data-native-press id="achievements-btn" class="top-action achievements-top-button" type="button" aria-expanded="false" aria-controls="achievements-modal" aria-label="Достижения"><span aria-hidden="true">◆</span><span>Награды</span></button>
+        <button data-native-press id="theme-toggle" class="top-action theme-toggle" type="button" aria-label="Сменить оформление" title="Сменить оформление"><span class="theme-glyph" aria-hidden="true">☾</span></button>
         <button data-native-press id="settings-btn" class="top-action" type="button" aria-label="Настройки"><span aria-hidden="true">⚙</span><span data-i18n="settings">Настройки</span></button>
         <select id="language-selector" class="language-selector" aria-label="Язык"><option value="ru">RU</option><option value="en">EN</option></select>
         <div id="gamepad-status" class="gamepad-status" aria-live="polite"></div>
@@ -148,6 +150,7 @@
 
     <section id="settings-screen" class="screen setup-screen" aria-label="Настройки">
       <div class="page-head"><span class="eyebrow">PREFERENCES</span><h2 data-i18n="settings">Настройки</h2></div>
+      <div class="settings-pref"><label for="theme-choice">Оформление</label><select id="theme-choice" aria-label="Цветовая тема"><option value="auto">Как в системе</option><option value="dark">Ночное</option><option value="light">Дневное</option></select></div>
       <div id="settings-container"></div>
       <div class="settings-actions"><button data-native-press id="save-settings-btn" class="btn btn-primary" data-i18n="saveSettings">Сохранить</button><button data-native-press id="reset-settings-btn" class="btn btn-warning" data-i18n="resetToDefault">Сбросить</button><button data-native-press id="cancel-settings-btn" class="btn btn-secondary" data-i18n="cancel">Назад</button></div>
     </section>
@@ -160,7 +163,7 @@
       </div>
     </div>
     <div id="gameover-menu" class="modal" role="dialog" aria-modal="true" aria-label="Игра окончена">
-      <div class="modal-content"><span class="eyebrow">ROUND / END</span><h2 data-i18n="gameOver">Игра окончена</h2><div id="final-scores"></div>
+      <div class="modal-content results-content"><span class="eyebrow">ROUND / END</span><h2 data-i18n="gameOver">Игра окончена</h2><div id="final-scores"></div>
         <button data-native-press id="play-again-btn" class="btn btn-primary btn-large" data-i18n="playAgain">Ещё раунд</button>
         <button data-native-press id="menu-btn" class="btn btn-secondary" data-i18n="mainMenu">В главное меню</button>
       </div>
@@ -177,6 +180,7 @@
       </section>
     </div>
   </main>
+  <script defer src="./theme.js"></script>
   <script type="module" src="./app.js"></script>
   <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Blockies" data-app-version="0.5.0"></script>
 </body>
