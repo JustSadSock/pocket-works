@@ -321,7 +321,7 @@ test('Every player gets one urgency challenge in each resource, with equal work-
  }
 });
 test('Simulated 2–6 person complete matches preserve invariants through barter, auction and deadlines',()=>{
- const stats={matches:0,deals:0,auctions:0,contractsSuccess:0,contractsFailed:0,quotasMet:0,bankrupt:0,
+ const stats={matches:0,deals:0,auctions:0,brokerBought:0,salvaged:0,contractsSuccess:0,contractsFailed:0,quotasMet:0,bankrupt:0,
    thresholds:{'50%':0,'60%':0,'70%':0,'80%':0,'90%':0,'100%':0},
    alternatives:{'gold100_crystal85_parts60':0,'gold95_crystal85_parts60':0,
      'gold100_crystal85_parts50':0,'gold90_crystal80_parts50':0},
@@ -337,6 +337,18 @@ test('Simulated 2–6 person complete matches preserve invariants through barter
      const best=short||['gold','crystals','parts'].sort((a,b)=>
        owner.resources[a]/owner.quota[a]-owner.resources[b]/owner.quota[b])[0];
      if(!owner.bankrupt)act(state,owner.id,{type:'work',resource:best});
+     // Mixed bot policies exercise market supply and destruction, without asserting that these bots play optimally.
+     if(!owner.bankrupt&&caseNo%4===1&&owner.resources.gold>=150&&owner.items.length<4&&state.brokerOffer){
+       const result=act(state,owner.id,{type:'broker_buy'});
+       if(result.events[0]?.type==='state')stats.brokerBought++;
+     }
+     if(!owner.bankrupt&&caseNo%4===2&&owner.resources.parts<5&&owner.items.length>1){
+       const item=owner.items.find(i=>i.acquiredRound!==state.round);
+       if(item){
+         const result=act(state,owner.id,{type:'salvage',itemId:item.id});
+         if(result.events[0]?.type==='state')stats.salvaged++;
+       }
+     }
      if(others.length&&caseNo%3===0&&!owner.bankrupt){
        const counterparty=others[0];
        if(owner.resources.gold>=10&&counterparty.resources.crystals>=1){
@@ -399,4 +411,59 @@ test('Simulated 2–6 person complete matches preserve invariants through barter
  assert.ok(stats.deals>0&&stats.auctions>0);
  for(const key of ['gold','crystals','parts'])stats.meanRatios[key]=Math.round(stats.meanRatios[key]/stats.players*100)/100;
  console.log('Black Bazaar economy smoke simulation:',JSON.stringify(stats));
+});
+
+
+test('Broker generates one sealed offer per turn, and new owner sees secret properties',()=>{
+ const {state}=makeRoom(2);const first=state.contestants[state.turnIndex];
+ const offer=state.brokerOffer;
+ assert.ok(offer&&offer.id);
+ const before=first.resources.gold;
+ const masked=game.viewForPlayer({state,player:{id:first.id}}).broker;
+ assert.equal(masked.id,offer.id);
+ assert.equal('positive' in masked,false);
+ assert.equal('negative' in masked,false);
+ const bought=act(state,first.id,{type:'broker_buy'});
+ assert.equal(bought.events[0].type,'state');
+ assert.equal(first.resources.gold,before-75);
+ assert.equal(state.brokerOffer,null);
+ const full=game.viewForPlayer({state,player:{id:first.id}}).you.items.find(i=>i.id===offer.id);
+ assert.ok(full.positive&&full.negative);
+ assert.equal(full.acquiredRound,state.round);
+ const repeated=act(state,first.id,{type:'broker_buy'});
+ assert.equal(repeated.events[0].type,'notice');
+ const cannotList=act(state,first.id,{type:'post',itemId:offer.id,ask:{gold:75}});
+ assert.equal(cannotList.events[0].type,'notice');
+ act(state,first.id,{type:'end'});
+ assert.ok(state.brokerOffer?.id!==offer.id);
+});
+test('Dismantling yields parts but burns an item and a pawnshop slot',()=>{
+ const {state}=makeRoom(2);const first=state.contestants[state.turnIndex];
+ const id=first.items[0].id,prev=first.resources.parts,prevLen=first.items.length;
+ const out=act(state,first.id,{type:'salvage',itemId:id});
+ assert.equal(out.events[0].type,'state');
+ assert.equal(first.items.length,prevLen-1);
+ assert.equal(first.resources.parts,prev+2);
+ assert.equal(first.usedPawn,true);
+ assert.equal(first.items.some(i=>i.id===id),false);
+ const reused=act(state,first.id,{type:'exchange',mode:'buy_parts'});
+ assert.equal(reused.events[0].type,'notice');
+ const again=act(state,first.id,{type:'salvage',itemId:first.items[0].id});
+ assert.equal(again.events[0].type,'notice');
+});
+test('Broker cannot overdraft wallets or exceed four inventory slots',()=>{
+ const {state}=makeRoom(2),current=state.contestants[state.turnIndex];
+ const offer=state.brokerOffer;
+ current.resources.gold=74;
+ const low=act(state,current.id,{type:'broker_buy'});
+ assert.equal(low.events[0].type,'notice');
+ assert.equal(state.brokerOffer.id,offer.id);
+ current.resources.gold=300;
+ current.items.push({...current.items[0],id:'item-99997'});
+ current.items.push({...current.items[0],id:'item-99998'});
+ assert.equal(current.items.length,4);
+ const full=act(state,current.id,{type:'broker_buy'});
+ assert.equal(full.events[0].type,'notice');
+ assert.equal(state.brokerOffer.id,offer.id);
+ assert.equal(current.resources.gold,300);
 });
