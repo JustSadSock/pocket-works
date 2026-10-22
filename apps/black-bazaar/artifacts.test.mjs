@@ -33,7 +33,7 @@ test('Inspectable contexts keep their live PocketNet actions',()=>{
   assert.ok(ui.includes('data-form="'+form+'"'));
  for(const action of ['inspect','black-inspect','broker-buy','detail-pawn','detail-salvage','detail-trade','open-item'])
   assert.ok(ui.includes('data-action="'+action+'"'));
- assert.match(ui,/if\(sheetName==='detail'&&state\?\.you&&focus\)/);
+ assert.match(ui,/if\(focus&&name==='detail'&&detail&&state\?\.you\)/);
  assert.match(ui,/function artifactDetailBlock\(you\)/);
  assert.match(ui,/const privateItem=mine\?/);
  assert.match(ui,/if\(type==='detail-bid'\)return request\(\{type:'bid'/);

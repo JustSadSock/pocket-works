@@ -3,6 +3,7 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {svgIcon,brandEmblem} from './art.js';
 import {artifactSVG} from './art/artifacts.js';
+import {forecastEconomy} from './economy.js';
 import {classifyFeedback,createAudioFeedback} from './feedback.js';
 import {roleCharacter,characterMarkup,applyCharacterArt,loadCharacterArt} from './art/characters.js';
 import {createBazaarDebug} from './debug-console.js';
@@ -10,7 +11,7 @@ import {createDebugState,debugSetItem,debugCommand} from './debug-state.js';
 
 const debugPreview=new URLSearchParams(location.search).has('debugPreview');
 installMobileRuntime();
-if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.14.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.15.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -65,6 +66,8 @@ let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
 const decorativeGuests=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
 let notice='';
 let activeSheet=null,lastSheetTrigger=null,selectedArtifact=null;
+let playStarted=false;
+const readDeals=new Set(),readTasks=new Set();
 const sound=createAudioFeedback(debugPreview?{storage:{getItem:()=>null,setItem(){}}}:{});
 let cueTimer=null;
 function message(m,isError=false){notice=m;status.textContent=m;status.className=isError?'error':'muted';}
@@ -102,7 +105,7 @@ function showConfirmedCue(cue,playAudio=true){
 }
 function localStore(){const node=document.querySelector('#nickname');if(node)name=(node.value.trim()||'Игрок').slice(0,22);if(!debugPreview)try{localStorage.setItem('black-bazaar:name',name);}catch{}}
 function renderHome(){
- mode='home';activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
+ mode='home';activeSheet=null;selectedArtifact=null;playStarted=false;document.body.classList.remove('sheet-open');
  app.innerHTML='<div class="entry-screen">'+
  '<div class="entry-art" aria-hidden="true">'+
  '<div class="entry-cast">'+decorativeGuests.map(kind=>'<span class="entry-character">'+characterMarkup(kind)+'</span>').join('')+'</div>'+
@@ -118,7 +121,7 @@ function renderHome(){
  applyCharacterArt(app);
 }
 function renderLobby(){
- mode='lobby';activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
+ mode='lobby';activeSheet=null;selectedArtifact=null;playStarted=false;document.body.classList.remove('sheet-open');
  const all=state?.players||[],host=state?.host===me?.id,short=roomId.slice(0,8).toUpperCase();
  app.innerHTML='<div class="lobby-screen"><div class="panel stack">'+
  '<h1>За одним столом</h1><p>Код комнаты</p><strong class="lobby-room">'+esc(short)+'</strong>'+
@@ -143,7 +146,7 @@ function inventoryBlock(you){
  const held=you.escrowItems?.length||0;
  const itemButton=item=>'<button type="button" class="inventory-object" data-action="open-item" data-kind="inventory" data-id="'+esc(item.id)+'" aria-label="Посмотреть: '+esc(item.name)+'">'+
  '<span class="inventory-art">'+artifactSVG(item.name,item.rarity)+'</span>'+
- '<span class="inventory-copy"><strong>'+esc(item.name)+'</strong><small>'+esc(item.rarity)+' · '+(item.acquiredRound===state.round?'Новый':'Из раунда '+item.acquiredRound)+'</small></span>'+
+ '<span class="inventory-copy"><strong>'+esc(item.name)+'</strong><small>'+esc(itemDormant(item,forecastEconomy(you.resources,you.items))||item.rarity)+'</small></span>'+
  svgIcon('arrow',18)+'</button>';
  return '<div class="panel inventory-panel"><h2>Мои находки <small>'+(you.items.length+held)+'/4</small></h2>'+
  (you.items.length?'<div class="inventory-gallery">'+you.items.map(itemButton).join('')+'</div>':
@@ -151,21 +154,21 @@ function inventoryBlock(you){
  (held?'<p class="inventory-escrow">У посредника: '+held+'</p>':'')+'</div>';
 }
 function secretBlock(you){
- const relationA=label(you.positiveTarget),relationB=label(you.negativeTarget);
- const goal=you.quota;
- return '<div class="panel"><h2>Секретные условия (видны только тебе)</h2>'+
- '<p><strong>Постоянная квота:</strong> '+esc(amounts(goal))+' одновременно к окончанию 9-го раунда.</p>'+
- '<p><strong>Покровитель:</strong> при покупке у «'+esc(relationA)+'» +3 кристалла (не чаще раза за раунд).</p>'+
- '<p><strong>Уязвимый клиент:</strong> при покупке у тебя «'+esc(relationB)+'» теряет дополнительно 20 золота (не чаще раза за раунд).</p>'+
- (you.legendary?'<p><strong>Легендарная судьба:</strong> если «'+esc(label(you.legendary))+'» займёт первое место, а ты не обанкротишься, получишь второе место.</p>':'')+
- '</div>';
+ return '<div class="panel compact-goals"><h2>Твои цели</h2><div class="goal-numbers">'+
+ ['gold','crystals','parts'].map(k=>'<div class="goal-pair"><small>'+names[k]+'</small><strong>'+you.resources[k]+' / '+you.quota[k]+'</strong></div>').join('')+
+ '</div><details class="quiet-details"><summary>Тайные связи</summary>'+
+ '<p>Покупка у '+esc(label(you.positiveTarget))+' · +3 кристалла.</p>'+
+ '<p>Продажа '+esc(label(you.negativeTarget))+' · покупатель теряет 20 золота.</p>'+
+ (you.legendary?'<p>Судьба связана с '+esc(label(you.legendary))+'.</p>':'')+
+ '</details></div>';
 }
 function urgentBlock(you){
- if(!you.urgent)return '';
- const u=you.urgent,need=u.needs;
- return '<div class="panel urgent"><h2>Срочный заказ · '+(u.status==='pending'?'должен быть оплачен до конца твоего хода':u.status==='success'?'выполнен':u.status==='shielded'?'защищён амулетом':'провален')+'</h2>'+
- '<p>Необходимо сдать: <strong>'+esc(amounts(need))+'</strong>.</p><p>Если хватит ресурсов при завершении хода, заказ оплатится автоматически, а ты получишь 35 золота. Иначе штраф; третий провал означает банкротство.</p>'+
- '<p>Сейчас: '+esc(amounts(you.resources))+'</p></div>';
+ const u=you.urgent;if(!u)return '';
+ const pending=u.status==='pending',ready=keys.every(k=>you.resources[k]>=(u.needs[k]||0));
+ return '<div class="panel urgent compact-urgent"><h2>Срочный заказ</h2>'+
+ '<strong>'+esc(amounts(u.needs))+'</strong><p class="'+(pending?(ready?'success':'error'):'muted')+'">'+
+ (pending?(ready?'Готов к сдаче · +35 золота':'Собери до конца хода'):
+ u.status==='success'?'Выполнен':u.status==='shielded'?'Защитил амулет':'Провален')+'</p></div>';
 }
 function marketBlock(you,canAct){
  const listing=state.listing;
@@ -211,8 +214,7 @@ function tradePanel(you){
  const deals=state.deals||[];
  const inbox=deals.filter(d=>d.to===you.id);
  const outbox=deals.filter(d=>d.from===you.id);
- let html='<div class="panel"><h2>Прямой обмен с игроками</h2>'+
- '<p class="muted">Предложить можно даже во время чужого хода. Сделка проводится только после согласия обеих сторон. Разрешены подарки, обмен ресурсами и предметами.</p>';
+ let html='<div class="panel compact-trades"><h2>Обмен</h2>';
  if(inbox.length){
   html+='<h3>Предложения тебе</h3>'+inbox.map(d=>{
     const partner=state.players.find(p=>p.id===d.from);
@@ -241,8 +243,7 @@ function tradePanel(you){
   const first=recipients[0];
   const giveItems=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
   const wantItems=first.inventory.filter(i=>i.tradable);
-  html+='<form data-form="deal" class="stack">'+
-    '<h3>Новое предложение</h3>'+
+  html+='<details class="quiet-details"'+(!inbox.length&&!outbox.length?' open':'')+'><summary>Предложить обмен</summary><form data-form="deal" class="stack">'+
     '<label>Кому<select name="to" id="dealTarget">'+recipients.map(p=>
       '<option value="'+esc(p.id)+'">'+esc(p.character)+'</option>').join('')+'</select></label>'+
     '<label>Какой предмет отдаёшь<select name="giveItemId">'+itemOptions(giveItems)+'</select></label>'+
@@ -250,7 +251,7 @@ function tradePanel(you){
     '<label>Какой предмет хочешь получить<select name="wantItemId" id="dealWantItem">'+itemOptions(wantItems)+'</select></label>'+
     '<p>Просишь ресурсы:</p>'+resourceFields('want')+
     '<button type="submit" class="primary">Предложить обмен</button>'+
-    '<small>Новое предложение заменяет твоё предыдущее. Неисполненные предложения исчезают в конце раунда. Предметы, купленные в этом раунде, нельзя передать снова.</small></form>';
+    '</form></details>';
  }else if(!inbox.length&&!outbox.length){
   html+='<p class="muted">Сейчас нет доступных торговых партнёров.</p>';
  }
@@ -312,38 +313,7 @@ function repackBlock(you){
  '<button type="submit" '+(you.resources.gold<price.gold||you.resources.parts<price.parts?'disabled':'')+'>Перепаковать</button>'+
  '</form></div>';
 }
-function actionsBlock(you){
- let html='<div class="panel"><h2>Мой ход: операции</h2>';
- if(you.bankrupt)return html+'<p>Ты обанкротился. Можно наблюдать за ходом партии.</p><button data-action="end">Пропустить ход</button></div>';
- html+='<p>Можно подработать, купить запечатанный товар, провести торги и выполнить одну операцию с ломбардом или разбором.</p>';
- if(state.broker){
-  const stock=state.broker;
-  html+='<section><button type="button" class="inventory-object" data-action="open-item" data-kind="broker" data-id="'+esc(stock.id)+'">'+
- '<span class="inventory-art">'+artifactSVG(stock.name,stock.rarity)+'</span><span class="inventory-copy"><strong>'+esc(stock.name)+'</strong><small>Запечатано · 75 золота</small></span>'+svgIcon('arrow',18)+'</button>'+
-    '<p>Цена: 75 золота. До покупки свойства неизвестны. Купленный предмет нельзя продать или разобрать в этом раунде.</p>'+
-    '<button type="button" data-action="broker-buy" '+(you.resources.gold<75||you.items.length+(you.escrowItems?.length||0)>=4?'disabled':'')+
-    '>Купить запечатанный предмет</button></section>';
- }
- if(!you.worked)html+='<form class="row" data-form="work"><label>Подработка<select name="resource"><option value="gold">+35 золота</option><option value="crystals">+4 кристалла</option><option value="parts">+1 деталь</option></select></label><button type="submit">Подработать</button></form>';
- else html+='<p class="success">Подработка выполнена.</p>';
- const resell=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
- if(you.marketDeals<2&&resell.length)html+='<form data-form="post" class="stack"><h3>Выставить предмет</h3>'+
-   '<label>Какой товар<select name="itemId">'+resell.map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label>'+
-   '<p>Цена (можно просить несколько ресурсов одновременно)</p>'+resourceFields('ask',{gold:100})+
-   '<button type="submit" class="primary">Выставить лот</button></form>';
- if(!you.usedPawn){
-  html+='<h3>Аварийный ломбард</h3><form data-form="exchange" class="row"><label>Обмен<select name="mode">'+
-    '<option value="buy_crystals">70 золота → 6 кристаллов</option><option value="buy_parts">90 золота → 1 деталь</option>'+
-    '<option value="sell_crystals">6 кристаллов → 25 золота</option><option value="sell_parts">1 деталь → 40 золота</option>'+
-    '</select></label><button type="submit">Обменять</button></form>';
-  if(you.items.length)html+='<form data-form="pawn" class="row"><label>Продать за 45 золота<select name="itemId">'+you.items.map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label><button type="submit">Сдать предмет</button></form>';
-  const dismantle=you.items.filter(i=>i.acquiredRound!==state.round);
-  if(dismantle.length)html+='<form data-form="salvage" class="row"><label>Разобрать за '+(state.salvageParts??2)+' детали<select name="itemId">'+dismantle.map(i=>
-     '<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label>'+
-     '<button type="submit">Разобрать предмет</button></form>';
- }else html+='<p class="muted">Ломбард использован в этом ходу.</p>';
- return html+'<button type="button" class="primary" data-action="end">Завершить ход →</button></div>';
-}
+function actionsBlock(you){return quickActions(you,state.turnId===me?.id);}
 function collectDrafts(){
  const current={};
  for(const form of app.querySelectorAll('form[data-form]')){
@@ -383,6 +353,54 @@ function eventBlock(){
  return e?'<section class="panel"><h2>Событие раунда: '+esc(e.title)+'</h2><p>'+esc(e.description)+'</p></section>':'';
 }
 
+
+function taskKey(){
+ const u=state?.you?.urgent;
+ return u?.status==='pending'?roomId+':'+state.round+':'+state.you.id+':'+JSON.stringify(u.needs):null;
+}
+function unreadCount(section){
+ if(!state?.you)return 0;
+ if(section==='deals')return (state.deals||[]).filter(d=>d.to===state.you.id&&!readDeals.has(roomId+':'+d.id)).length;
+ if(section==='secret'){const key=taskKey();return key&&!readTasks.has(key)?1:0;}
+ return 0;
+}
+function unreadBadge(section){
+ const value=unreadCount(section);
+ return value?'<span class="tab-count" aria-label="'+value+' новых">'+value+'</span>':'';
+}
+function itemDormant(item,plan){
+ const blocked=plan.inactive.find(x=>x.id===item.id);
+ return blocked?'Не хватает '+blocked.missing.map(k=>names[k]).join(', '):'';
+}
+function quickMarket(you){
+ const lot=state.listing;
+ let html='<div class="panel compact-market"><h2>Торги</h2>';
+ if(lot)html+='<button type="button" class="inventory-object" data-action="open-item" data-kind="listing" data-id="'+esc(lot.id)+'">'+
+ '<span class="inventory-art">'+artifactSVG(lot.name,lot.rarity)+'</span>'+
+ '<span class="inventory-copy"><strong>'+esc(lot.name)+'</strong><small>'+esc(label(lot.seller))+' · '+esc(amounts(lot.ask))+'</small></span>'+
+ svgIcon('arrow',18)+'</button>'+(state.bids.length?'<p class="muted">Ставок: '+state.bids.length+'</p>':'');
+ else html+='<p class="muted">Нет лота. Чтобы выставить вещь, нажми на неё на столе.</p>';
+ if(state.blackMarket)html+='<details class="quiet-details"><summary>Анонимный рынок · '+(state.blackLots||[]).length+'</summary>'+blackMarketBlock(you)+'</details>';
+ return html+'</div>';
+}
+function quickActions(you,active){
+ if(!active)return '<div class="panel"><h2>Чужой ход</h2><p>Обмен и ставки доступны.</p></div>';
+ if(you.bankrupt)return '<div class="panel"><h2>Твой ход</h2><p>Осталось завершить ход.</p></div>';
+ let html='<div class="panel compact-actions"><h2>Твой ход</h2>';
+ if(!you.worked)html+='<form data-form="work" class="fast-work"><label>Подработка<select name="resource">'+
+ '<option value="gold">+35 золота</option><option value="crystals">+4 кристалла</option><option value="parts">+1 деталь</option>'+
+ '</select></label><button type="submit" class="primary">Получить</button></form>';
+ else html+='<p class="success">Подработка выполнена</p>';
+ if(state.broker)html+='<button type="button" class="inventory-object" data-action="open-item" data-kind="broker" data-id="'+esc(state.broker.id)+'">'+
+ '<span class="inventory-art">'+artifactSVG(state.broker.name,state.broker.rarity)+'</span>'+
+ '<span class="inventory-copy"><strong>Запечатанная находка</strong><small>75 золота</small></span>'+svgIcon('arrow',18)+'</button>';
+ html+='<details class="quiet-details"><summary>Ломбард</summary>'+
+ (!you.usedPawn?'<form data-form="exchange" class="fast-work"><label>Обмен<select name="mode">'+
+ '<option value="buy_crystals">70 золота → 6 кристаллов</option><option value="buy_parts">90 золота → 1 деталь</option>'+
+ '<option value="sell_crystals">6 кристаллов → 25 золота</option><option value="sell_parts">1 деталь → 40 золота</option>'+
+ '</select></label><button type="submit">Обменять</button></form>':'<p>Ломбард уже использован.</p>')+
+ '</details></div>';return html;
+}
 const rarityLabel=r=>r==='редкий'?'Редкая вещь':'Обычная вещь';
 function artifactFacts(item,{showPositive=false,showNegative=false,inspection=false}={}){
  const knownPlus=showPositive&&item?.positive;
@@ -410,7 +428,9 @@ function artifactDetailBlock(you){
   if(!item)return '<div class="panel">Предмет уже выбыл из инвентаря.<p><button type="button" data-action="open-sheet" data-sheet="inventory">К инвентарю</button></p></div>';
   const tradable=item.acquiredRound!==state.round&&state.listing?.id!==item.id;
   const free=tradable&&!locked;
+  const inactiveReason=itemDormant(item,forecastEconomy(you.resources,you.items));
   body=itemCard(item.name,item.rarity,tradable?'Можно передавать':'Получен в этом раунде')+
+   (inactiveReason?'<p class="detail-inactive">'+svgIcon('eye',18)+' Не работает: '+esc(inactiveReason)+'. Доход не начислится.</p>':'')+
    artifactFacts(item,{showPositive:true,showNegative:true})+
    '<div class="detail-actions">'+
    (free?'<button type="button" data-action="detail-trade" data-id="'+esc(item.id)+'">'+svgIcon('trade')+' Обмен</button>':'')+
@@ -486,105 +506,106 @@ const sheetTitles={
  actions:'Мой ход',players:'Игроки'
 };
 function openSheet(sheetName,focus=false,targetId=''){
- if(!document.querySelector('#bazaarSheet'))return;
- if(sheetName&&!Object.prototype.hasOwnProperty.call(sheetTitles,sheetName))return;
- activeSheet=sheetName;
- const sheet=document.querySelector('#bazaarSheet'),backdrop=document.querySelector('#sheetBackdrop');
- if(sheetName==='detail'&&state?.you&&focus){
-  const detailPage=sheet.querySelector('[data-sheet-page="detail"]');
-  if(detailPage)detailPage.innerHTML=artifactDetailBlock(state.you);
- }
- sheet.hidden=!sheetName;backdrop.hidden=!sheetName;
- sheet.classList.toggle('sheet-enter',Boolean(focus&&sheetName));
- document.body.classList.toggle('sheet-open',Boolean(sheetName));
- for(const page of sheet.querySelectorAll('[data-sheet-page]'))page.hidden=page.dataset.sheetPage!==sheetName;
- const title=sheet.querySelector('#sheetTitle');if(title&&sheetName)title.textContent=sheetTitles[sheetName];
+ const sheet=document.querySelector('#bazaarSheet');if(!sheet)return;
+ const name=sheetTitles[sheetName]?sheetName:'actions';activeSheet=name;
+ if(focus&&name==='deals')for(const d of state.deals||[])if(d.to===state.you?.id)readDeals.add(roomId+':'+d.id);
+ if(focus&&name==='secret'&&taskKey())readTasks.add(taskKey());
+ const detail=sheet.querySelector('[data-sheet-page="detail"]');
+ if(focus&&name==='detail'&&detail&&state?.you)detail.innerHTML=artifactDetailBlock(state.you);
+ for(const page of sheet.querySelectorAll('[data-sheet-page]'))page.hidden=page.dataset.sheetPage!==name;
+ const title=sheet.querySelector('#sheetTitle');if(title)title.textContent=sheetTitles[name];
  for(const tab of app.querySelectorAll('[data-action="open-sheet"]')){
-  tab.setAttribute('aria-expanded',String(tab.dataset.sheet===sheetName));
+  const selected=tab.dataset.sheet===name;
+  tab.setAttribute('aria-selected',String(selected));tab.setAttribute('aria-expanded',String(selected));
+  const badge=tab.querySelector('.tab-count');
+  if(badge){const count=unreadCount(tab.dataset.sheet);badge.textContent=String(count);badge.hidden=!count;}
  }
- if(focus&&sheetName){
-  requestAnimationFrame(()=>{
-   if(targetId)document.getElementById(targetId)?.scrollIntoView({block:'nearest'});
-   sheet.querySelector('[data-action="close-sheet"]')?.focus({preventScroll:true});
-  });
- }else if(focus&&!sheetName){
-  lastSheetTrigger?.focus?.({preventScroll:true});
+ if(focus){
+  sheet.classList.remove('sheet-enter');void sheet.offsetWidth;sheet.classList.add('sheet-enter');
+  const scroll=sheet.querySelector('.sheet-content');if(scroll)scroll.scrollTop=0;
+  if(targetId)requestAnimationFrame(()=>document.getElementById(targetId)?.scrollIntoView({block:'nearest'}));
  }
 }
-function resourceWallet(w){
- return '<div class="currency-strip" aria-label="Мои ресурсы">'+
- [['gold','coin','Золото'],['crystals','gem','Кристаллы'],['parts','parts','Детали']].map(([k,icon,label])=>
- '<span class="currency" title="'+label+'" aria-label="'+label+': '+(w[k]??0)+'">'+
- svgIcon(icon)+'<strong>'+(w[k]??0)+'</strong><em>'+label+'</em></span>').join('')+'</div>';
+function resourceWallet(w,forecast){
+ return '<div class="currency-strip" aria-label="Ресурсы и итог за раунд">'+
+ [['gold','coin','Золото'],['crystals','gem','Кристаллы'],['parts','parts','Детали']].map(([k,icon,title])=>{
+ const d=forecast.delta[k],text=d>0?'+'+d:String(d);
+ return '<span class="currency" aria-label="'+title+': '+(w[k]||0)+', за раунд '+text+'">'+svgIcon(icon)+
+ '<span class="wallet-values"><strong>'+(w[k]||0)+'</strong><em>'+title+'</em></span>'+
+ '<small class="wallet-delta '+(d>0?'positive':d<0?'negative':'neutral')+'">'+text+'</small></span>';
+ }).join('')+'</div>';
 }
 function renderPlay(){
  const drafts=mode==='play'?collectDrafts():{};
+ const previousScroll=mode==='play'?app.querySelector('.sheet-content')?.scrollTop||0:0;
+ const expanded=mode==='play'?[...app.querySelectorAll('.sheet-page details')].map((el,i)=>el.open?i:-1).filter(i=>i>=0):[];
  mode='play';const you=state.you;
- if(!you){app.innerHTML='<p class="panel">Подключаемся к комнате…</p>';return;}
- const active=state.turnId===me?.id;
- const turnName=active?'Твой ход':'Ходит '+label(state.turnId);
+ if(!you){app.innerHTML='<p class="panel">Подключаемся…</p>';return;}
+ if(!playStarted){playStarted=true;activeSheet='actions';}
+ const active=state.turnId===me?.id,plan=forecastEconomy(you.resources,you.items);
  const seats=state.players.map(p=>{
- const isMe=p.id===me?.id;
- const available=!isMe&&p.connected&&!p.bankrupt&&!you.bankrupt;
- const disabled=!isMe&&!available;
- return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(isMe?'is-me ':'')+(p.bankrupt?'is-bankrupt ':'')+
- '" data-action="'+(isMe?'open-sheet':'trade-with')+'" '+(isMe?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
- (disabled?' disabled title="Игрок недоступен"':' title="'+(isMe?'Мой инвентарь':'Предложить обмен')+'"')+
- ' aria-label="'+esc(p.character)+' — '+esc(p.name)+(available?', предложить обмен':'')+'">'+
- '<span class="seat-portrait">'+characterMarkup(roleCharacter(p.character),'seat-character')+'</span>'+
- '<strong>'+esc(p.character)+'</strong><small>'+esc(p.name)+'</small></button>';
+  const self=p.id===me?.id,available=!self&&p.connected&&!p.bankrupt&&!you.bankrupt;
+  return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(self?'is-me ':'')+
+  '" data-action="'+(self?'open-sheet':'trade-with')+'" '+(self?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
+  (!self&&!available?' disabled':'')+' aria-label="'+esc(p.character)+' — '+esc(p.name)+'">'+
+  '<span class="seat-portrait">'+characterMarkup(roleCharacter(p.character),'seat-character')+'</span>'+
+  '<strong>'+esc(p.character)+'</strong><small>'+esc(p.name)+'</small></button>';
  }).join('');
  const listing=state.listing;
- const lot=listing?
- '<button type="button" class="artifact" data-action="open-item" data-kind="listing" data-id="'+esc(listing.id)+'" aria-label="Открыть лот: '+esc(listing.name)+'">'+
+ const lot=listing?'<button type="button" class="artifact" data-action="open-item" data-kind="listing" data-id="'+esc(listing.id)+'">'+
  artifactSVG(listing.name,listing.rarity)+'<strong>'+esc(listing.name)+'</strong></button>':
- '<div class="artifact-note">Лота пока нет</div>';
- const ownItems=you.items.length?'<div class="mini-artifacts" aria-label="Мои предметы">'+
- you.items.map(it=>'<button type="button" data-action="open-item" data-kind="inventory" data-id="'+esc(it.id)+'" title="'+esc(it.name)+'" aria-label="Посмотреть '+esc(it.name)+'">'+
- artifactSVG(it.name,it.rarity)+'<span>'+esc(it.name)+'</span></button>').join('')+'</div>':'';
- const edge=[
- ['secret','scroll','Задания'],['inventory','bag','Инвентарь'],
+ '<div class="artifact-note">Нет лота</div>';
+ const inventory=you.items.map(item=>{
+  const reason=itemDormant(item,plan);
+  return '<button type="button" class="'+(reason?'item-dormant':'')+'" data-action="open-item" data-kind="inventory" data-id="'+esc(item.id)+
+  '" aria-label="'+esc(item.name)+(reason?' — '+esc(reason):'')+'" title="'+esc(reason||item.name)+'">'+
+  artifactSVG(item.name,item.rarity)+'<span>'+esc(item.name)+'</span>'+
+  (reason?'<small class="inactive-tag">'+esc(reason.replace('Не хватает ','Нет '))+'</small>':'')+'</button>';
+ }).join('');
+ const sections=[
+ ['actions','box','Мой ход'],['market','gavel','Торги'],
+ ['inventory','bag','Предметы'],['secret','scroll','Задания'],
  ['deals','trade','Обмен'],['players','people','Игроки']
- ].map(([name,icon,title])=>'<button type="button" class="edge-tab" data-action="open-sheet" data-sheet="'+name+
- '" aria-label="'+title+'" aria-controls="bazaarSheet" aria-expanded="false" title="'+title+'">'+
- svgIcon(icon)+'<span>'+title+'</span></button>').join('');
- const sheets=
+ ].map(([id,icon,label])=>'<button class="workspace-tab" type="button" data-action="open-sheet" data-sheet="'+id+
+ '" aria-controls="bazaarSheet" role="tab" aria-selected="'+(activeSheet===id)+'" aria-expanded="'+(activeSheet===id)+'">'+
+ svgIcon(icon,19)+'<span>'+label+'</span>'+
+ '<span class="tab-count"'+(!unreadCount(id)?' hidden':'')+'>'+unreadCount(id)+'</span></button>').join('');
+ const pages=
  '<section class="sheet-page" data-sheet-page="detail">'+artifactDetailBlock(you)+'</section>'+
+ '<section class="sheet-page" data-sheet-page="actions">'+quickActions(you,active)+'</section>'+
+ '<section class="sheet-page" data-sheet-page="market">'+quickMarket(you)+'</section>'+
+ '<section class="sheet-page" data-sheet-page="inventory">'+inventoryBlock(you)+'</section>'+
  '<section class="sheet-page" data-sheet-page="secret">'+secretBlock(you)+urgentBlock(you)+'</section>'+
- '<section class="sheet-page" data-sheet-page="inventory">'+inventoryBlock(you)+repackBlock(you)+'</section>'+
  '<section class="sheet-page" data-sheet-page="deals">'+tradePanel(you)+'</section>'+
- '<section class="sheet-page" data-sheet-page="market">'+marketBlock(you,active)+blackMarketBlock(you)+'</section>'+
- '<section class="sheet-page" data-sheet-page="actions">'+
- (active?actionsBlock(you):'<div class="panel">Сейчас ходит другой игрок. Прямые сделки доступны в разделе «Обмен».</div>')+'</section>'+
  '<section class="sheet-page" data-sheet-page="players">'+scoreBox()+eventBlock()+
- '<div class="panel"><h2>События</h2><ol>'+state.log.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ol></div></section>';
+ '<details class="quiet-details"><summary>История</summary><ol>'+state.log.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ol></details></section>';
  app.innerHTML='<div class="play-screen"><div class="play-head">'+
- '<h1>Раунд '+state.round+' / '+state.rounds+'</h1>'+
- '<span class="chip">'+esc(turnName)+'</span>'+
- '<span class="chip" aria-label="До конца хода">◷ <strong id="turnClock" role="timer">—</strong></span>'+soundToggle()+
+ '<h1>Раунд '+state.round+'/'+state.rounds+'</h1>'+
+ '<span class="chip">'+esc(active?'Твой ход':'Ходит '+label(state.turnId))+'</span>'+
+ '<span class="chip"><strong id="turnClock" role="timer">—</strong></span>'+soundToggle()+
  '<button type="button" class="leave-button" data-action="leave">Выйти</button></div>'+
- resourceWallet(you.resources)+
- '<div class="play-field" data-player-count="'+state.players.length+'">'+
+ resourceWallet(you.resources,plan)+
+ '<div class="play-body"><div class="play-field" data-player-count="'+state.players.length+'">'+
  '<div class="ambient-lights" aria-hidden="true"><i></i><i></i><i></i><i></i></div>'+
  '<div class="player-seats" data-seats="'+state.players.length+'">'+seats+'</div>'+
- '<div class="table-stage">'+lot+ownItems+
- (state.blackMarket?'<button type="button" data-action="open-sheet" data-sheet="market">'+svgIcon('eye')+' Чёрный рынок</button>':'')+
- (state.event?'<button type="button" data-action="open-sheet" data-sheet="players" class="table-event">'+svgIcon('leaf')+' '+esc(state.event.title)+'</button>':'')+
+ '<div class="table-stage">'+lot+
+ (inventory?'<div class="mini-artifacts" aria-label="Мои предметы">'+inventory+'</div>':'')+
+ (state.event?'<button type="button" data-action="open-sheet" data-sheet="players" class="table-event">'+
+ svgIcon('leaf')+' '+esc(state.event.title)+'</button>':'')+
  '</div><div class="bottom-ribbon">'+
- '<button class="primary" type="button" data-action="open-sheet" data-sheet="market">'+svgIcon('gavel')+' Торг</button>'+
- '<button type="button" data-action="open-sheet" data-sheet="actions">'+svgIcon('box')+' '+(active?'Мой ход':'Операции')+'</button>'+
- '</div><nav class="edge-tabs" aria-label="Разделы игры">'+edge+'</nav></div>'+
- '<button type="button" id="sheetBackdrop" class="sheet-backdrop" data-action="close-sheet" aria-label="Закрыть панель" hidden></button>'+
- '<aside id="bazaarSheet" class="side-sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>'+
- '<div class="sheet-heading"><h2 id="sheetTitle"></h2><button type="button" data-action="close-sheet" aria-label="Закрыть">'+svgIcon('close',26)+'</button></div>'+sheets+
- '</aside></div>';
- restoreDrafts(drafts);
- openSheet(activeSheet);
- applyCharacterArt(app);
- updateTurnClock();
+ (active?'<button type="button" class="primary action-end" data-action="end">'+svgIcon('check')+' Завершить ход</button>':
+ '<span class="turn-wait">Можешь торговаться в чужой ход</span>')+'</div></div>'+
+ '<aside id="bazaarSheet" class="workspace-panel" aria-label="Разделы игры">'+
+ '<nav class="workspace-tabs" role="tablist" aria-label="Разделы">'+sections+'</nav>'+
+ '<div class="sheet-heading"><h2 id="sheetTitle">Мой ход</h2></div>'+
+ '<div class="sheet-content">'+pages+'</div></aside></div></div>';
+ restoreDrafts(drafts);openSheet(activeSheet);
+ [...app.querySelectorAll('.sheet-page details')].forEach((el,i)=>{if(expanded.includes(i))el.open=true;});
+ const scroll=app.querySelector('.sheet-content');if(scroll)scroll.scrollTop=previousScroll;
+ applyCharacterArt(app);updateTurnClock();
 }
 function renderDone(){
- mode='done';activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
+ mode='done';activeSheet=null;selectedArtifact=null;playStarted=false;readDeals.clear();readTasks.clear();document.body.classList.remove('sheet-open');
  const ranks=state.ranking||[];
  app.innerHTML='<h1>Партия окончена</h1><p>Рейтинг по выполнению секретной квоты. Банкротство лишает права на победу; легендарная связь может изменить второе место.</p>'+
  '<div class="panel"><table class="table"><thead><tr><th>Место</th><th>Игрок</th><th>Квота</th><th>Итог</th></tr></thead><tbody>'+
@@ -609,7 +630,7 @@ function render(){
 }
 function closeRoom(){
  clearTimeout(cueTimer);cueTimer=null;
- activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
+ activeSheet=null;selectedArtifact=null;playStarted=false;readDeals.clear();readTasks.clear();document.body.classList.remove('sheet-open');
  if(net){try{if(connected)net.leaveRoom()}catch{}try{net.close()}catch{}}
  net=null;me=null;state=null;roomId='';connected=false;connecting=false;message('');renderHome();
 }
@@ -732,10 +753,10 @@ app.addEventListener('click',event=>{
  if(action==='open-sheet'){
   sound.play('open');
   lastSheetTrigger=btn;
-  const next=activeSheet===btn.dataset.sheet?null:btn.dataset.sheet;
+  const next=btn.dataset.sheet;
   openSheet(next,true,btn.dataset.scroll||'');return;
  }
- if(action==='close-sheet'){sound.play('close');openSheet(null,true);return;}
+ if(action==='close-sheet'){sound.play('close');openSheet('inventory',true);return;}
  if(action==='create'){localStore();connect('create');return;}
  if(action==='join'){
   localStore();let code=document.querySelector('#roomCode')?.value.trim()||'';
@@ -783,16 +804,8 @@ app.addEventListener('click',event=>{
  }
 });
 document.addEventListener('keydown',event=>{
- if(event.key==='Escape'&&activeSheet){event.preventDefault();openSheet(null,true);}
- if(event.key==='Tab'&&activeSheet){
-  const sheet=document.querySelector('#bazaarSheet');
-  const focusable=[...sheet.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),summary,a[href]')]
-   .filter(el=>el.getClientRects().length);
-  if(!focusable.length)return;
-  const first=focusable[0],last=focusable.at(-1);
-  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
-  if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
- }
+ if(event.key==='Escape'&&activeSheet==='detail'){event.preventDefault();openSheet('inventory',true);}
+
 });
 app.addEventListener('change',event=>{
  if(event.target.id!=='dealTarget')return;
