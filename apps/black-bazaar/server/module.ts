@@ -538,13 +538,6 @@ function viewForPlayer({state,player}){
 }
 const game={
   protocolVersion:1,viewForPlayer,
-  onTick({state,now}){
-    if(state.phase!=='play'||!state.deadlineAt||now<state.deadlineAt)return null;
-    const active=state.contestants[state.turnIndex];
-    issue(state,'Лимит времени истёк. Ход «'+active.character+'» завершён автоматически.');
-    nextTurn(state);
-    return success(state);
-  },
   createRoom({player}){return {state:{
     host:player.id,players:[{id:player.id,name:player.name}],contestants:[],
     phase:'lobby',revision:0,round:0,turnIndex:0,deadlineAt:null,listing:null,bids:[],brokerOffer:null,deals:[],dealSerial:0,blackLots:[],blackSeq:0,log:[],ranking:[],serial:0
@@ -582,6 +575,7 @@ const game={
       nextTurn(state);
       return success(state);
     }
+    if(v.type==='tick')return {state,events:[]};
     if(v.type==='start'&&player.id===state.host&&(state.phase==='lobby'||state.phase==='done')){
       if(state.players.length<MIN_PLAYERS)return failure(state,player.id,'Нужно минимум два игрока.');
       state.players=shuffled(state.players);openGame(state);return success(state);
