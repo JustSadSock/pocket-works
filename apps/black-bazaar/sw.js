@@ -1,6 +1,6 @@
-const VERSION='0.6.0';
-const NOTES=['Первая успешная публичная продажа приносит одну дополнительную деталь.'];
-const CACHE='black-bazaar-v0.6.0';
+const VERSION='0.7.0';
+const NOTES=['Анонимный чёрный рынок и перепаковка с экспертизой; серверный таймер хода.'];
+const CACHE='black-bazaar-v0.7.0';
 const PREFIX='black-bazaar-v';
 const FILES=[
  './','./index.html','./app.js','./styles.css','./app.config.json',
