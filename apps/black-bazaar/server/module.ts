@@ -226,7 +226,7 @@ function resolveUrgent(s,p){
   if(!p.urgent)return;
   const needed=p.urgent.needs;
   if(has(p,needed)){
-    add(p,needed,-1);p.resources.gold+=35;p.urgent.status='success';increment(s,'urgentMet');
+    add(p,needed,-1);add(p,{gold:35,crystals:0,parts:0});p.urgent.status='success';increment(s,'urgentMet');
     issue(s,p.character+' выполнил срочный заказ.');
   }else{
     // An unspent amulet charge protects the entire urgent failure once.
@@ -291,7 +291,7 @@ function nextTurn(s){
 }
 function applyRelationship(s,seller,buyer){
   if(buyer.positiveTarget===seller.id && buyer.positiveUsed!==s.round){
-    buyer.resources.crystals+=3;buyer.positiveUsed=s.round;
+    buyer.resources.crystals=Math.min(9999,buyer.resources.crystals+3);buyer.positiveUsed=s.round;
   }
   if(seller.negativeTarget===buyer.id && seller.negativeUsed!==s.round){
     buyer.resources.gold=Math.max(0,buyer.resources.gold-20);seller.negativeUsed=s.round;
@@ -569,7 +569,7 @@ function action(s,id,v){
     if(s.listing?.itemId===v.itemId){s.listing=null;s.bids=[];}
     me.items.splice(index,1);
     s.deals=s.deals.filter(d=>d.giveItemId!==v.itemId&&d.wantItemId!==v.itemId);
-    me.resources.gold+=45;me.usedPawn=true;issue(s,me.character+' сдал предмет в ломбард.');return success(s);
+    me.resources.gold=Math.min(9999,me.resources.gold+45);me.usedPawn=true;issue(s,me.character+' сдал предмет в ломбард.');return success(s);
   }
   if(v.type==='exchange'){
     if(me.usedPawn)return failure(s,id,'Одна операция с ломбардом за ход.');
