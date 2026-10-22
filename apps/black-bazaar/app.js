@@ -428,7 +428,9 @@ function artifactDetailBlock(you){
   if(!item)return '<div class="panel">Предмет уже выбыл из инвентаря.<p><button type="button" data-action="open-sheet" data-sheet="inventory">К инвентарю</button></p></div>';
   const tradable=item.acquiredRound!==state.round&&state.listing?.id!==item.id;
   const free=tradable&&!locked;
+  const inactiveReason=itemDormant(item,forecastEconomy(you.resources,you.items));
   body=itemCard(item.name,item.rarity,tradable?'Можно передавать':'Получен в этом раунде')+
+   (inactiveReason?'<p class="detail-inactive">'+svgIcon('eye',18)+' Не работает: '+esc(inactiveReason)+'. Доход не начислится.</p>':'')+
    artifactFacts(item,{showPositive:true,showNegative:true})+
    '<div class="detail-actions">'+
    (free?'<button type="button" data-action="detail-trade" data-id="'+esc(item.id)+'">'+svgIcon('trade')+' Обмен</button>':'')+
