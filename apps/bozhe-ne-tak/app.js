@@ -1,7 +1,7 @@
 
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {ITEMS,DOCTRINES,TREATMENTS,VOWS,MAX_ROUNDS,START_FAITH,MAX_FAITH,createGame,setAction,
- getRite,getIncident,getItem,getDoctrine,doctrineEffect,commitRite,continueFromJudgment,chooseDoctrine,
+ getRite,getIncident,getItem,getDoctrine,getPatron,doctrineEffect,commitRite,continueFromJudgment,chooseDoctrine,
  conveneCouncil,loadGame,isWin} from './engine.js';
 import {offeringArt,godArt,treatmentArt,incidentArt} from './art.js';
 import {createOnline} from './online.js';
@@ -65,7 +65,7 @@ function topbar(){
  (sound?'ЗВУК: ВКЛ':'ЗВУК: ВЫКЛ')+'</button></header>';
 }
 function mask(mood='idle',small=false){
- return '<div class="idol '+(small?'mini ':'')+'mood-'+mood+'">'+godArt()+
+ return '<div class="idol '+(small?'mini ':'')+'mood-'+mood+'">'+godArt(session?.patronId||'ogo')+
  '<div class="idol-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>';
 }
 function footer(text=''){
@@ -76,7 +76,7 @@ function home(){
  return '<section class="home-stage"><div class="home-architecture" aria-hidden="true"><i></i><i></i><i></i></div>'+
  '<div class="home-idol">'+mask('idle')+'</div><div class="home-copy">'+
  '<div class="chapter-mark">ХРАМ НЕКОМПЕТЕНТНЫХ ЖРЕЦОВ</div><h1>БОЖЕ,<br>НЕ ТАК!</h1>'+
- '<p>Пять обрядов из двадцати шести. Непредсказуемые происшествия, 28 даров и законы, которые вы сами и придумали.</p>'+
+ '<p>Три капризных божества, 26 знамений, 28 даров. И собор, который сам придумывает себе проблемы.</p>'+
  '<div class="home-actions">'+(has?'<button class="btn primary" data-action="resume">Продолжить '+(session.phase==='end'?'хронику':'обряд')+' <span>→</span></button>':'')+
  '<button class="btn '+(has?'secondary':'primary')+'" data-action="new">'+(has?'Новая религия':'Начать служение')+' <span>✦</span></button>'+
  '</div><div class="home-online"><button type="button" class="btn secondary" data-action="online">ИГРАТЬ ВМЕСТЕ · POCKETNET <span>↗</span></button></div><div class="quiet-actions"><button data-action="help">Как играть</button><button data-action="project">Дорожная карта</button></div>'+
@@ -86,7 +86,7 @@ function layout(inside,view='active'){
  return '<div class="ritual-layout '+view+'">'+inside+'</div>';
 }
 function chapter(phaseTitle){
- return '<div class="ritual-head"><span class="chapter">ОБРЯД '+(session.round+1)+' / '+MAX_ROUNDS+'</span>'+
+ return '<div class="ritual-head"><span class="chapter">ОБРЯД '+(session.round+1)+' / '+MAX_ROUNDS+' · '+toHtml(getPatron(session.patronId).name)+'</span>'+
  '<div class="faith"><span class="faith-label">МИЛОСТЬ</span>'+
  '<span class="faith-pips" aria-label="'+session.faith+' из '+MAX_FAITH+'">'+Array.from({length:MAX_FAITH},(_,i)=>'<i class="'+(i<session.faith?'lit':'')+'"></i>').join('')+'</span>'+
  '<strong>'+session.faith+'</strong></div></div>';
@@ -119,6 +119,7 @@ function play(){
  '<section class="shrine-column">'+riteStage('idle',item?offeringArt(item.id,94):null,item?item.name:'Выберите дар ниже')+
  '<div class="prophecy"><div class="prophecy-kicker">ЗНАМЕНИЕ · '+toHtml(rite.title)+'</div><p>'+toHtml(rite.riddle)+'</p></div></section>'+
  '<section class="work-column">'+
+ '<div class="patron-brief"><strong>'+toHtml(getPatron(session.patronId).name)+' · '+toHtml(getPatron(session.patronId).title)+'</strong><span>'+toHtml(getPatron(session.patronId).rule)+'</span></div>'+
  '<div class="incident-brief"><div class="incident-stamp">'+incidentArt(incident.id,40)+'</div><div><strong>СОБЫТИЕ: '+toHtml(incident.title)+'</strong><p>'+toHtml(incident.story)+'</p></div><b class="incident-delta '+(incident.delta>0?'bonus':'penalty')+'">'+(incident.delta>0?'+1':'−1')+'</b></div>'+
  '<div class="section-label">I. ВЫБЕРИТЕ ДАР · '+ITEMS.length+' В АРХИВЕ</div>'+filterTabs(offerFilter)+'<div class="offering-row" tabindex="0" aria-label="Предметы для подношения">'+items+'</div>'+
  (item?'<div class="offering-inspect"><span>ВЫБРАНО: '+toHtml(item.name)+'</span><span>'+[item.color,item.shape,item.kind,item.material].map(v=>toHtml(TRAITS[v]||v)).join(' · ')+'</span></div>':'')+
@@ -139,7 +140,7 @@ function judgment(){
  const j=session.judgment,rit=getRite(session),obj=getItem(session.actions.itemId);
  const mood=j.verdict==='bless'?'bless':j.verdict==='wrath'?'wrath':'doubt';
  const headline={bless:'БОГ ДОВОЛЕН',doubt:'БОГ ЗАДУМАЛСЯ',wrath:'БОГ РАЗГНЕВАН'}[mood];
- const subtitle={bless:'ОГО одобряет ваше странное богослужение.',doubt:'ОГО морщит деревянный лоб и ничего не обещает.',wrath:'ОГО требует объяснить, кто вас вообще рукоположил.'}[mood];
+ const subtitle={bless:'Божество одобряет ваше богослужение.',doubt:'Божество морщит деревянный лоб и ничего не обещает.',wrath:'Небеса требуют объяснить, кто вас вообще рукоположил.'}[mood];
  return layout(chapter()+ '<div class="work-space verdict-space"><section class="shrine-column">'+
  riteStage(mood,offeringArt(obj.id,108),headline)+'</section><section class="work-column verdict-column">'+
  '<div class="section-label">'+toHtml(rit.title)+'</div><h2 class="verdict-title '+mood+'">'+headline+'</h2>'+
@@ -173,7 +174,7 @@ function getIncidentByIdSafe(id){return ({tax:'Сборщик десятины',
 function ending(){
  const win=isWin(session);
  const title=win?'НАША ВЕРА ВЫЖИЛА':'БОГ ЗАКРЫЛ ХРАМ';
- const paragraphs=win?'ОГО остался с вами. Теперь у него появились правила, которых вчера ещё не существовало.':
+ const paragraphs=win?getPatron(session.patronId).name+' остался с вами. Теперь у вашей церкви появились правила, которых вчера не существовало.':
  'Священный престол пуст. Но хроника ваших нелепых решений сохранилась.';
  const timeline=session.history.map((h,i)=>{
   const d=getDoctrine(h.adopted);
@@ -183,7 +184,7 @@ function ending(){
   ' · '+h.score+' очк.</p>'+(h.incidentId?'<p class="chronicle-incident">Случилось: '+toHtml(getIncidentByIdSafe(h.incidentId))+'</p>':'')+'<p class="chronicle-miracle">'+toHtml(h.miracleText||'')+'</p>'+(d?'<span class="chronicle-law">НОВЫЙ ДОГМАТ: '+toHtml(d.name)+'</span>':'')+'</div></li>';
  }).join('');
  return '<section class="ending"><div class="ending-main">'+mask(win?'bless':'wrath',true)+
- '<div class="chapter">КОНЕЦ ПАЛОМНИЧЕСТВА</div><h1>'+title+'</h1><p>'+paragraphs+'</p>'+
+ '<div class="chapter">КОНЕЦ ПАЛОМНИЧЕСТВА · '+toHtml(getPatron(session.patronId).name)+'</div><h1>'+title+'</h1><p>'+paragraphs+'</p>'+
  '<div class="final-metrics"><div>МИЛОСТЬ <strong>'+session.faith+'</strong></div><div>ОБРЯДЫ <strong>'+session.history.length+'/5</strong></div>'+
  '<div>ДОГМАТЫ <strong>'+session.doctrines.length+'</strong></div></div>'+
  '<button class="btn primary" data-action="new">НОВАЯ РЕЛИГИЯ <span>→</span></button>'+
@@ -191,12 +192,12 @@ function ending(){
  '<div class="chronicle"><div class="section-label">ЛЕТОПИСЬ НАШЕЙ ВЕРЫ</div><ol>'+timeline+'</ol></div></section>';
 }
 function help(){
- return '<section class="help-screen"><span class="chapter">ЗАПОВЕДИ НЕОПЫТНОГО ЖРЕЦА</span><h1>Пять обрядов до просветления</h1>'+
+ return '<section class="help-screen"><span class="chapter">ЗАПОВЕДИ НЕОПЫТНОГО ЖРЕЦА</span><h1>Три божества и пять обрядов до просветления</h1>'+
  '<div class="help-steps"><p><b>1. Прочтите знамение.</b> Бог описывает желанный дар, запрет, подготовку, число звонов и высоту подношения. В его словах действительно есть ответ.</p>'+
  '<p><b>2. Приготовьте обряд.</b> Выберите предмет, подготовку, звон, высоту и обет риска. Происшествие каждого раунда тоже влияет на суд. Все решения можно менять до жертвоприношения.</p>'+
  '<p><b>3. Получите вердикт.</b> ОГО начисляет или отнимает милость. После обряда вы сами утверждаете новый догмат, который изменит следующие испытания.</p>'+
  '<p><b>4. Доживите до финала.</b> Милость не должна упасть до нуля. Один раз за игру разрешено отменить старейший догмат через собор, потратив милость.</p></div>'+
- '<p class="help-note">Можно играть одному или в PocketNet на 2–5 человек с отдельными тайными обязанностями. Каждый раунд происходит событие, которое добавляет бонус или штраф при определённом выборе.</p>'+
+ '<p class="help-note">Можно играть одному или в PocketNet на 2–5 человек с отдельными тайными обязанностями. Каждую партию правит один из трёх богов со своим предпочтением. В каждом раунде происходит событие, добавляющее бонус или штраф при определённом выборе.</p>'+
  '<button class="btn primary" data-action="home">ПОНЯТНО <span>→</span></button></section>';
 }
 function parseDoc(markdown){
