@@ -501,3 +501,84 @@ button:active:not(:disabled){transform:translateY(1px)}
  .net-role-person>span:nth-child(2){grid-column:1/-1;grid-row:2}
  .net-role-person b{grid-column:2;grid-row:1}
 }
+
+
+
+/* v0.5 — a carved event ledger and a browsable reliquary, not 28 identical slots. */
+.incident-brief{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:12px;padding:11px 13px;
+ background:linear-gradient(110deg,#66503b 0%,#514232 64%,#3c342d 100%);border:1px solid #ac8258;
+ border-left:4px solid #ddac72;box-shadow:inset 0 1px #b78c60,0 4px 12px #221b1890;position:relative;overflow:hidden}
+.incident-brief:after{content:"";position:absolute;right:14px;top:-12px;height:80px;width:80px;border:1px solid #edc58a22;
+ transform:rotate(45deg);pointer-events:none}
+.incident-stamp{width:45px;height:45px;display:flex;align-items:center;justify-content:center;
+ background:#3f3026;border:1px solid #ae8357;transform:rotate(-3deg);box-shadow:inset 0 0 0 3px #372b2355}
+.incident-stamp svg{filter:drop-shadow(0 2px 2px #201916)}
+.incident-brief strong{display:block;color:#f5cf91;letter-spacing:.06em;font-size:11px;font-weight:850;line-height:1.2}
+.incident-brief p{margin:5px 0 0;color:#e9d2b4;font:13px/1.35 Georgia,serif}
+.incident-delta{font:700 18px Georgia,serif;border:1px solid #bea077;padding:7px 9px;color:#cfdfbd;z-index:1}
+.incident-delta.penalty{color:#f2b29f;border-color:#b77a62}
+.offer-filter{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;flex-shrink:0;
+ padding:0 0 5px;scroll-snap-type:x proximity}
+.offer-filter::-webkit-scrollbar{display:none}
+.offer-filter button{flex:0 0 auto;min-height:37px;padding:8px 12px;color:#d4c2aa;background:#372e28;
+ border:1px solid #65513f;font-size:11px;font-weight:750;white-space:nowrap;scroll-snap-align:start;transition:background .14s,border-color .14s}
+.offer-filter button[aria-pressed="true"]{background:#b18356;color:#201a16;border-color:#f4c98f;box-shadow:inset 0 -3px #84603b}
+.offering-row{min-height:0;scroll-padding-left:9px}
+.offering{transition:background .12s,transform .13s,border-color .12s;min-height:129px}
+.offering:hover:not(.chosen){background:#594536;border-color:#ac8b65}
+.offering.chosen{transform:translateY(-2px)}
+.offering-inspect{background:#2c302d;border-left:3px solid #91ae94;padding:8px 12px;display:flex;justify-content:space-between;gap:9px;
+ font-size:11px;flex-wrap:wrap;align-items:center;color:#d8e1ce}
+.offering-inspect>span:first-child{font-weight:800;color:#c7dbad}
+.offering-inspect>span:last-child{font-size:11px;color:#e6d0b1}
+.tool-illustrated{display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;min-width:0}
+.tool-symbol{flex:0 0 auto;filter:drop-shadow(0 2px 2px #221a17)}
+.tool-illustrated.chosen .tool-symbol{filter:drop-shadow(0 0 4px #fae2af)}
+.score-row .neutral{color:#d8c2a5}
+.score-row .miss{color:#f2aa93}
+.chronicle-incident{font-size:11px!important;color:#e3b67e!important}
+.net-incident{margin:2px 0 8px;background:linear-gradient(110deg,#5c4938,#3a3028)}
+.net-offer-filter{max-width:100%;margin:2px 0}
+.net-tool-row{flex-wrap:wrap}
+.net-tool{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:78px;flex:1 1 auto;min-height:46px;transition:background .14s}
+.net-tool .tool-symbol{width:17px;height:17px}
+.net-offering{flex:0 0 94px;min-height:113px;transition:transform .12s,border-color .12s}
+.net-offering.chosen{transform:translateY(-2px)}
+.net-offerings{scroll-padding-left:8px;scrollbar-width:thin}
+.net-role-small{line-height:1.35}
+@media(max-width:760px){
+ .work-column{gap:6px}
+ .incident-brief{grid-template-columns:33px minmax(0,1fr) 36px;gap:8px;padding:7px 8px}
+ .incident-stamp{width:32px;height:32px}
+ .incident-stamp svg{width:28px;height:28px}
+ .incident-brief strong{font-size:9px;letter-spacing:.01em}
+ .incident-brief p{font:11px/1.23 Georgia,serif;margin-top:2px}
+ .incident-delta{padding:4px 2px;font-size:13px;text-align:center}
+ .offer-filter{margin-top:-1px;padding-bottom:2px}
+ .offer-filter button{min-height:34px;font-size:10px;padding:6px 10px}
+ .offering-inspect{padding:6px 8px;font-size:10px}
+ .offering-inspect>span:last-child{font-size:10px}
+ .choice-tools{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .choice-block:first-child{grid-column:1/-1}
+ .choice-block.height-choice{grid-column:auto}
+ .choice-block:first-child .tools-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+ .choice-block:first-child .tool{min-width:0;min-height:50px;font-size:10px;padding:4px 2px;display:flex;flex-direction:column;gap:2px}
+ .choice-block:first-child .tool-symbol{width:19px;height:19px}
+ .height-choice .tools-row{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+ .height-choice .tool{font-size:10px;min-height:44px;white-space:normal}
+ .net-incident{margin:0 0 4px}
+ .net-offer-filter button{min-height:39px}
+ .net-tool{min-width:78px;min-height:44px}
+ .net-offering{flex-basis:88px}
+ .net-actions-v4{padding-bottom:max(20px,env(safe-area-inset-bottom))}
+}
+@media(max-width:350px){
+ .choice-block:first-child .tool{font-size:9px}
+ .choice-block.height-choice{grid-column:auto}
+ .offer-filter button{padding:6px 9px}
+ .incident-brief p{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ .offering,.net-offering,.offer-filter button,.net-tool{transition:none}
+ .offering.chosen,.net-offering.chosen{transform:none}
+}
