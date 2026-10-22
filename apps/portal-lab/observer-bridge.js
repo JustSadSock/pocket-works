@@ -27,8 +27,9 @@ export function frameAt(point){
  const p=normalizeObserverPoint(point),lon=deg(p.longitude),lat=deg(p.latitude);
  const r=[Math.cos(lat)*Math.cos(lon),Math.cos(lat)*Math.sin(lon),Math.sin(lat)];
  const east=[-Math.sin(lon),Math.cos(lon),0],side=Math.sign(p.l);
- const x=r.map(v=>v*side),y=east,z=unit(cross(x,y));
- return {x,y,z,radial:r,side,position:p};
+ const positiveZero=axis=>axis.map(value=>value===0?0:value);
+ const x=positiveZero(r.map(v=>v*side)),y=positiveZero(east),z=positiveZero(unit(cross(x,y)));
+ return {x,y,z,radial:positiveZero(r),side,position:p};
 }
 export function worldDirection(local,frame){
  if(!Array.isArray(local)||local.length!==3||!local.every(Number.isFinite))
