@@ -213,6 +213,15 @@ function action(s,id,v){
   if(v.type==='withdraw_bid'){
     s.bids=s.bids.filter(b=>b.buyer!==id);return success(s);
   }
+  if(v.type==='inspect'){
+    const listing=s.listing;
+    if(!listing||listing.seller===id||me.resources.gold<15)return failure(s,id,'Для проверки чужого лота нужно 15 золота.');
+    if(me.inspections.some(i=>i.itemId===listing.itemId))return failure(s,id,'Этот экземпляр уже проверен.');
+    const seller=getPlayer(s,listing.seller),item=seller?.items.find(i=>i.id===listing.itemId);
+    if(!item)return failure(s,id,'Лот недоступен.');
+    me.resources.gold-=15;me.inspections.push({itemId:item.id,negative:spec(item).negative});
+    return success(s);
+  }
   if(!isTurn)return failure(s,id,'Дождитесь своего хода. Сейчас можно только делать ставки.');
   if(v.type==='work'){
     if(me.worked)return failure(s,id,'Подработка уже использована в этом ходу.');
@@ -235,15 +244,6 @@ function action(s,id,v){
     const buyer=getPlayer(s,v.buyer);
     if(!bid||!item||!buyer||buyer.bankrupt||!onTrade(s,me,buyer,item,bid.offer))return failure(s,id,'Ставка уже недоступна.');
     s.listing=null;s.bids=[];return success(s);
-  }
-  if(v.type==='inspect'){
-    const listing=s.listing;
-    if(!listing||listing.seller===id||me.resources.gold<15)return failure(s,id,'Для проверки чужого лота нужно 15 золота.');
-    if(me.inspections.some(i=>i.itemId===listing.itemId))return failure(s,id,'Этот экземпляр уже проверен.');
-    const seller=getPlayer(s,listing.seller),item=seller?.items.find(i=>i.id===listing.itemId);
-    if(!item)return failure(s,id,'Лот недоступен.');
-    me.resources.gold-=15;me.inspections.push({itemId:item.id,negative:spec(item).negative});
-    return success(s);
   }
   if(v.type==='pawn'){
     if(me.usedPawn)return failure(s,id,'Ломбард доступен раз за ход.');
