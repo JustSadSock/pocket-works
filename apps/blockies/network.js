@@ -43,6 +43,9 @@ export class NetworkManager {
       });
       this.net.on('game_event',message=>{
         if(message.event?.type==='state')this.apply(message.event.payload);
+        else if(message.event?.type==='achievement_awarded'&&message.event.to===this.socket.id){
+          window.dispatchEvent(new CustomEvent('blockies:award',{detail:message.event.payload}));
+        }
       });
       this.net.on('error',message=>{
         if(message.code==='room_not_found'){this.resetRoom();this.trigger('leftRoom');}
