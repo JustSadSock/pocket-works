@@ -2,7 +2,7 @@
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
 import {ITEMS,TREATMENTS,getItem,getDoctrine,MAX_ROUNDS} from './engine.js';
-import {offeringArt,godArt} from './art.js';
+import {offeringArt,godArt,treatmentArt,incidentArt} from './art.js';
 
 const K='pocket-works:bozhe-ne-tak:online:';
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -27,7 +27,9 @@ const EXPLAIN={
  rate_limited:'Слишком много команд. Попробуйте ещё раз.'
 };
 const safeAction=()=>({itemId:null,treatment:null,bell:1,height:'low'});
+const FILTERS=[['all','Все'],['living','Живое'],['food','Еда'],['relic','Реликвии'],['regalia','Регалии'],['tool','Инструменты']];
 export function createOnline(onChange,onExit){
+ let offeringFilter='all';
  let draftItem='',draftTreatment='',clockOffset=0,client=null,view=null,ownId='',roomId='',name=store.getItem('nickname')||'',code=new URL(location.href).searchParams.get('room')||'',status='intro',error='',notice='',lastMode='',epoch=0,sequence=0;
  const show=()=>onChange();
  const isLive=()=>client?.socket?.readyState===WebSocket.OPEN&&status==='room';
@@ -44,9 +46,9 @@ export function createOnline(onChange,onExit){
   net.on('connected',x=>{if(id!==epoch)return;ownId=x.player.id;error='';status='connecting';show()});
   net.on('room_joined',x=>{
    if(id!==epoch)return;
-   if(x.version!=='v2'){
+   if(x.version!=='v3'){
     try{net.leaveRoom()}catch{}
-    roomId='';view=null;status='intro';error='Эта комната создана на старой версии. Создайте новый храм.';show();return;
+    roomId='';view=null;status='intro';error='Это храм старой версии правил. Создайте новую комнату (старый матч не удалён).';show();return;
    }
    roomId=x.roomId;ownId=ownId||x.players?.[0]?.id||'';apply(x.state);send({type:'sync'});
   });
@@ -163,11 +165,12 @@ export function createOnline(onChange,onExit){
   }else if(task==='offering'){
    const item=draftItem||view.altar?.itemId||'';
    const treatment=draftTreatment||view.altar?.treatment||'';
-   controls='<div class="net-offerings">'+ITEMS.map(x=>'<button type="button" class="net-offering '+(item===x.id?'chosen':'')+
+   controls='<div class="offer-filter net-offer-filter">'+FILTERS.map(([id,label])=>'<button type="button" data-role-filter="'+id+'" aria-pressed="'+(offeringFilter===id)+'">'+label+'</button>').join('')+'</div>'+
+    '<div class="net-offerings">'+ITEMS.filter(x=>offeringFilter==='all'||x.kind===offeringFilter).map(x=>'<button type="button" class="net-offering '+(item===x.id?'chosen':'')+
     '" data-role-item="'+x.id+'" aria-pressed="'+(item===x.id)+'" '+(locked?'disabled':'')+'>'+offeringArt(x.id,48)+
     '<b>'+escape(x.name)+'</b></button>').join('')+'</div><div class="net-tool-row">'+TREATMENTS.map(x=>
     '<button type="button" class="net-tool '+(treatment===x.id?'chosen':'')+'" data-role-treatment="'+x.id+
-    '" aria-pressed="'+(treatment===x.id)+'" '+(locked?'disabled':'')+'>'+escape(x.name)+'</button>').join('')+'</div>'+
+    '" aria-pressed="'+(treatment===x.id)+'" '+(locked?'disabled':'')+'>'+treatmentArt(x.id,19)+escape(x.name)+'</button>').join('')+'</div>'+
     '<span class="net-role-small">'+(done?'Дар поставлен. Можно изменить до печати.':
       'Укажите предмет и подготовку — выбранное сразу появится на общем алтаре.')+'</span>';
   }else if(task==='bell'){
@@ -195,6 +198,7 @@ export function createOnline(onChange,onExit){
    '</p><small>Каждый жрец знает лишь свою часть обряда.</small></div></div>'+
    '<div class="net-actions net-actions-v4"><div class="net-live"><span>ДО СУДА <b data-net-timer>'+timer+
    '</b> С</span><span>'+Object.keys(view.locked||{}).length+'/'+all+' ЗАПЕЧАТАЛИ</span></div>'+
+   (m.incident?'<div class="incident-brief net-incident"><div class="incident-stamp">'+incidentArt(m.incident.id,42)+'</div><div><strong>СОБЫТИЕ: '+escape(m.incident.title)+'</strong><p>'+escape(m.incident.story)+'</p></div><b class="incident-delta '+(m.incident.delta>0?'bonus':'penalty')+'">'+(m.incident.delta>0?'+1':'−1')+'</b></div>':'')+
    '<div class="section-label">ВАШИ ОБЯЗАННОСТИ</div>'+
    tasks.map(roleCard).join('')+
    '<div class="section-label">НАСТЕННЫЕ ЗНАМЕНИЯ</div>'+
@@ -282,9 +286,10 @@ export function createOnline(onChange,onExit){
  }
 
  function action(event){
-  const el=event.target.closest('[data-net],[data-net-vote],[data-role-reveal],[data-role-item],[data-role-treatment],[data-role-bell],[data-role-height],[data-role-call]');
+  const el=event.target.closest('[data-net],[data-net-vote],[data-role-reveal],[data-role-item],[data-role-treatment],[data-role-bell],[data-role-height],[data-role-call],[data-role-filter]');
   if(!el)return false;
   const own=view?.ownTasks||[],sealed=!!view?.locked?.[ownId];
+  if(el.hasAttribute('data-role-filter')){offeringFilter=el.dataset.roleFilter;show();return true;}
   if(el.hasAttribute('data-net-vote')){command('vote',{id:el.dataset.netVote});return true}
   if(el.hasAttribute('data-role-call')){command('call',{kind:el.dataset.roleCall});return true}
   if(el.hasAttribute('data-role-reveal')){
