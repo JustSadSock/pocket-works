@@ -78,7 +78,7 @@ test('grimoire saves a real five-slot chain and can replay it in solo practice',
 });
 
 test('desktop arena hides mobile controls, shows genuine rune/cooldown dossiers and remembers panel preference',async({browser})=>{
- const context=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block'});const page=await context.newPage();
+ const context=await browser.newContext({viewport:{width:1440,height:900},isMobile:false,hasTouch:false,serviceWorkers:'block'});const page=await context.newPage();
  try{
   await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('#primary-action')).toBeVisible();
