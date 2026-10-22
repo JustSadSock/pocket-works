@@ -1,3 +1,5 @@
+import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+installMobileRuntime();
 (() => {
 'use strict';
 const $=id=>document.getElementById(id);

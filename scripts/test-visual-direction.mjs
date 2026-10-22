@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { draftVisualDirection, validateVisualDirection } from './visual-direction.mjs';
 import { compareArchitecture, validateArchitecturalDiversity, LEGACY_PROFILES } from './visual-architecture.mjs';
-import { retainedScaffoldShare, visualChanges } from './validate-visual-direction.mjs';
+import { retainedScaffoldShare, visualChanges, mobileOnlyHtmlChange } from './validate-visual-direction.mjs';
 
 const slug = 'new-visual-app';
 const draft = draftVisualDirection(slug, 'New Visual App');
@@ -55,4 +55,11 @@ const changeSet = visualChanges([
 assert.equal(changeSet.get('new-visual-app').visual, true);
 assert.equal(changeSet.get('other-game').visual, false);
 assert.equal(changeSet.has('_template'), false);
+const beforeMobile='<main data-app-shell><a href="../../">Back</a></main><script src="./app.js" defer></script>';
+const afterMobile='<main data-app-shell><a data-native-press href="../../">Back</a></main><script type="module" src="./app.js"></script>';
+assert.equal(mobileOnlyHtmlChange(beforeMobile,afterMobile),true,'real mobile runtime markup is not an unrelated visual redesign');
+assert.equal(mobileOnlyHtmlChange(beforeMobile,afterMobile.replace('>Back</a>','>Invisible</a>')),false,'visible label changes still require design review');
+assert.equal(mobileOnlyHtmlChange(beforeMobile,afterMobile.replace('data-native-press','style="display:none"')),false,'hidden controls cannot bypass review');
+assert.equal(mobileOnlyHtmlChange('<body><main>Play</main></body>','<body data-app-shell><main>Play</main></body>'),true);
+assert.equal(mobileOnlyHtmlChange('<main>Play</main>','<main>Play</main><button>New action</button>'),false);
 console.log('Creative brief, generic-copy rejection, template detection and changed-app scope passed.');

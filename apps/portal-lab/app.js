@@ -1,3 +1,5 @@
+import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+installMobileRuntime();
 import {metric,geometry,launch,advance,constraint,collectBeam,staticAcceleration,staticClockRate,nullEnergyRadial,localSpeed} from './relativity.js';
 import {AudioBus} from './audio.js';
 import {createObservatory} from './observatory.js';

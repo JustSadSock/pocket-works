@@ -1,3 +1,5 @@
+import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+installMobileRuntime();
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
 

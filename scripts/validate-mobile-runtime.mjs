@@ -1,5 +1,5 @@
 import { reportValidationDebt } from './validation-debt.mjs';
-import { readFile } from 'node:fs/promises';
+import { readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { buildRegistryEntries } from './app-config.mjs';
 
@@ -78,7 +78,24 @@ const quickTargets = [
 for (const target of quickTargets) {
   const directory = `apps/${target.slug}`;
   const html = await read(`${directory}/index.html`);
-  const appJs = await read(`${directory}/app.js`);
+  // Several faithful ports intentionally have no app.js. Discover their
+  // *actual* first-party ES module with an installed shared mobile runtime.
+  let entrypoint='app.js';
+  try { await access(path.join(root,directory,'app.js')); }
+  catch {
+    const scripts=[...html.matchAll(/<script\b[^>]*>/g)].map(m=>m[0]);
+    for(const tag of scripts) {
+      if(!/\btype=["']module["']/.test(tag))continue;
+      const match=/\bsrc=["']\.\/([^"']+\.js)["']/.exec(tag);
+      if(!match||match[1].includes('/'))continue;
+      let code='';
+      try { code=await readFile(path.join(root,directory,match[1]),'utf8'); } catch { continue; }
+      if(code.includes('../../shared/mobile-runtime.js')&&code.includes('installMobileRuntime')) {
+        entrypoint=match[1];break;
+      }
+    }
+  }
+  const appJs = await read(`${directory}/${entrypoint}`);
   const serviceWorker = await read(`${directory}/sw.js`);
   requireIncludes(html, ['../../shared/mobile-runtime.css', 'data-app-shell'], `${directory}/index.html`);
   requireIncludes(appJs, ['../../shared/mobile-runtime.js', 'installMobileRuntime'], `${directory}/app.js`);
