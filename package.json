@@ -16,7 +16,7 @@
     "new:app": "node scripts/new-app.mjs",
     "registry:build": "node scripts/build-registry.mjs --output=dist-site/apps.json",
     "registry:check": "node scripts/build-registry.mjs --check",
-    "build:enhanced": "node scripts/build-enhanced.mjs",
+    "build:enhanced": "node --test scripts/enhanced-build-queue.test.mjs && node scripts/build-enhanced.mjs",
     "build:godot": "node scripts/build-godot.mjs",
     "test:enhanced": "node scripts/test-enhanced.mjs",
     "prepare:sente-engine": "node scripts/prepare-sente-engine.mjs",
