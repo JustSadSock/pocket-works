@@ -328,6 +328,7 @@ function confirmSelection() {
   if (!state || !app.selectedCardId) {
     return;
   }
+  app.forecast=null;app.forecastReview=false;
 
   if (app.screen === "online") {
     if (!app.online.socket || app.online.socket.readyState !== WebSocket.OPEN) {
@@ -545,7 +546,7 @@ function handHTML(state) {
       return `<button type="button" class="law-card ${app.selectedCardId===cardId?"law-card--selected":""}" style="--card-color:${SLOT_COLORS[card.slot]}" aria-pressed="${app.selectedCardId===cardId}" ${locked?"disabled":""} draggable="${!locked}" data-card-id="${cardId}" data-focus-card="${cardId}">
         <span class="law-card__sigil sprite-seal sprite-seal--${card.slot}" aria-hidden="true"></span><span class="law-card__copy"><span class="law-card__slot">${SLOT_LABELS[card.slot].replace("Закон ","")}</span><strong class="law-card__title">${card.name}</strong></span></button>`;
     }).join("")}</div>
-    ${detailCard(state)}
+    ${app.selectedCardId ? detailCard(state) : ""}
     <div class="hand-actions"><button data-native-press class="ghost-btn forecast-btn" data-action="forecast-open" ${locked?"disabled":""} aria-label="Условный предпросмотр следующего хода">◈ Предпросмотр</button><button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId||locked?"disabled":""}>${locked?"◆ Указ отправлен":"◆ Утвердить"}</button></div>
   </section>`;
 }
@@ -697,6 +698,7 @@ function roomHTML() {
 function gameHTML(state, eyebrow) {
   const viewer = getViewerPlayer();
   const chooserLabel = app.local.mode === "hotseat" ? (viewer === "p1" ? "Север выбирает указ" : "Юг выбирает указ") : eyebrow;
+  const displayState=app.forecast?(app.forecastReview?app.forecast.after:app.forecast.before):(app.replayActive&&app.replayStage==="before"&&app.replay?app.replay.before:state);
   return `
     <div class="game-shell">
       <div class="game-shell__frame">
@@ -706,8 +708,8 @@ function gameHTML(state, eyebrow) {
             <h1>Законы короны</h1>
           </div>
           <div class="topbar__right">
-            ${crownRow(state.players.p1, viewer === "p1" ? "Север · вы" : "Север · соперник", "north")}
-            ${crownRow(state.players.p2, viewer === "p2" ? "Юг · вы" : "Юг · соперник", "south")}
+            ${crownRow(displayState.players.p1, viewer === "p1" ? "Север · вы" : "Север · соперник", "north")}
+            ${crownRow(displayState.players.p2, viewer === "p2" ? "Юг · вы" : "Юг · соперник", "south")}
             <div class="hud-actions">
               <button data-native-press class="text-btn" data-action="toggle-rules">Правила</button>
               <button data-native-press class="text-btn" data-action="toggle-settings">Звук</button>
@@ -716,9 +718,10 @@ function gameHTML(state, eyebrow) {
           </div>
         </header>
         ${forecastControlsHTML()}<main class="game-layout">
-          <div class="game-layout__main">${boardHTML(app.forecast ? (app.forecastReview ? app.forecast.after : app.forecast.before) : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : state))}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
+          <div class="game-layout__main">${boardHTML(displayState)}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
           <aside class="game-layout__side">
-            ${lawSlotsHTML(state)}
+            ${lawSlotsHTML(displayState)}
+            ${!app.selectedCardId && app.focusCardId ? detailCard(displayState) : ""}
           </aside>
           <div class="game-layout__hand">${handHTML(state)}</div>
           <div class="game-layout__foot">${logHTML(state)}</div>
@@ -877,6 +880,7 @@ function debugWorkshopHTML() {
 }
 
 function render() {
+  const previousHandScroll = app.debug.open ? 0 : (root.querySelector(".hand")?.scrollLeft || 0);
   const state = currentState();
   if (app.screen === "menu") {
     root.innerHTML = `${menuHTML()}${modalHTML()}`;
@@ -886,7 +890,11 @@ function render() {
     root.innerHTML = `${gameHTML(state, app.local.mode === "ai" ? AI_PROFILES[app.local.aiProfile].name : "Локальная партия")}${modalHTML()}`;
   }
   if(app.debug.open)root.innerHTML=debugSceneHTML(app.debug.scene)+debugWorkshopHTML();
-  if(!app.debug.open)animateBoard();
+  if(!app.debug.open){
+    const hand=root.querySelector(".hand");
+    if(hand)hand.scrollLeft=previousHandScroll;
+    animateBoard();
+  }
   syncExports();
   persistLocal();
 }
