@@ -1,6 +1,14 @@
-const VERSION='1.0.0',PREFIX='last-tile-duel-',CACHE_NAME='last-tile-duel-v1.0.0';
+const APP_VERSION='1.0.0';
+const RELEASE_DATE='2026-10-13';
+const RELEASE_NOTES=["Первый релиз: онлайн-комнаты PocketNet на двух игроков, приглашение по коду и ссылке.","Строго один авторитетный игровой тик в секунду: шаг, прыжок, толчок, разрушение плит и матч до трёх побед.","Локальная тренировка против бота, управление с клавиатуры и телефона, локальные звук и статистика."];
+const PREFIX='last-tile-duel-';
+const CACHE_NAME='last-tile-duel-v1.0.0';
+const VERSION=APP_VERSION;
 const FILES=['./','./index.html','./app.js','./engine.js','./styles.css','./manifest.webmanifest','./icons/icon.svg',
-  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/capabilities/net.js','../../shared/update-manager.js'];
+  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/capabilities/net.js','./../../shared/update-manager.js','../../shared/update-manager.css',
+  '../../shared/workshop-mode.js','../../shared/workshop-mode.css',
+  '../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js',
+  '../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
 const BASE=new URL('./',self.registration.scope);
 const MAP=new Map(FILES.map(path=>{const url=new URL(path,BASE);return [url.pathname,url.href]}));
 self.addEventListener('install',e=>e.waitUntil((async()=>{
@@ -10,18 +18,18 @@ self.addEventListener('install',e=>e.waitUntil((async()=>{
   if(!response.ok)throw Error('precache: '+url);
   await cache.put(url,response);
  }));
- await self.skipWaiting();
+ // A waiting update only activates after the shared update-manager asks for it.
 })()));
 self.addEventListener('activate',e=>e.waitUntil((async()=>{
  const names=await caches.keys();
  await Promise.all(names.filter(n=>n.startsWith(PREFIX)&&n!==CACHE_NAME).map(n=>caches.delete(n)));
  await self.clients.claim();
 })()));
-self.addEventListener('message',e=>{
- if(e.data?.type==='GET_UPDATE_INFO')e.ports?.[0]?.postMessage({
-  version:VERSION,releaseDate:'2026-10-13',releaseNotes:['Тактическая дуэль с одним игровым тиком в секунду.'],cacheProtocol:1,cacheName:CACHE_NAME
+self.addEventListener('message',event=>{
+ if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({
+  version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:2,cacheName:CACHE_NAME
  });
- if(e.data?.type==='SKIP_WAITING')self.skipWaiting();
+ if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
 });
 self.addEventListener('fetch',e=>{
  const req=e.request;if(req.method!=='GET')return;
