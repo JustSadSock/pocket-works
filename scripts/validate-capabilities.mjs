@@ -2,6 +2,7 @@ import { reportValidationDebt } from './validation-debt.mjs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { collectAppConfigs, runtimeForConfig } from './app-config.mjs';
+import { ownModuleScripts } from './quick-module-entries.mjs';
 
 const root = process.cwd();
 const errors = [];
@@ -76,15 +77,22 @@ for (const config of configs) {
     if (!hasStorageNamespace(app, config.storageNamespace)) fail(`${directory}/source/main.ts must include storage namespace ${config.storageNamespace}`);
   } else if (runtime === 'quick') {
     const index = await read(`${directory}/index.html`);
-    const app = await read(`${directory}/app.js`);
+    // Some real Quick games (Fog of Conquest) intentionally have no app.js.
+    // Check the modules *actually imported by index.html*, not a guessed path.
+    const ownedModules = ownModuleScripts(index);
+    const moduleSources = await Promise.all(ownedModules.map(async (entry) =>
+      readOptional(`${directory}/${entry}`)));
+    const app = await readOptional(`${directory}/app.js`);
     const workshopBootstrap = await readOptional(`${directory}/workshop.js`);
-    const integrationSource = `${app}\n${workshopBootstrap}`;
+    if (!ownedModules.length && !app && !workshopBootstrap)
+      fail(`${directory} has no actual ES module entrypoint for Workshop Mode`);
+    const integrationSource = [app, ...moduleSources, workshopBootstrap].join('\n');
     const worker = await read(`${directory}/sw.js`);
     requireFragments(index, ['../../shared/workshop-mode.css', 'data-workshop-trigger'], `${directory}/index.html`);
     if (workshopBootstrap) requireFragments(index, ['./workshop.js'], `${directory}/index.html`);
     requireFragments(integrationSource, ["from '../../shared/workshop-mode.js'", 'createWorkshopMode', `cachePrefix: '${config.slug}-'`], `${directory} Workshop integration`);
     if (!hasStorageNamespace(integrationSource, config.storageNamespace)) fail(`${directory} Workshop integration must include storage namespace ${config.storageNamespace}`);
-    if (app.includes("navigator.serviceWorker.register('./sw.js')")) fail(`${directory}/app.js must leave Service Worker registration to update-manager`);
+    if (integrationSource.includes("navigator.serviceWorker.register('./sw.js')")) fail(`${directory} app modules must leave Service Worker registration to update-manager`);
     for (const offlineFile of requiredOfflineFiles) if (!worker.includes(offlineFile)) fail(`${directory}/sw.js must cache ${offlineFile}`);
   } else if (runtime === 'godot') {
     const bridge = await read(`${directory}/source/pocket_works.gd`);
