@@ -290,6 +290,8 @@ function updateUILanguage() {
     }
 }
 
+import {spawnLaneX} from './spawn-bays.js';
+
 // Game Configuration
 const BLOCK_SIZE = 25;
 const BASE_BOARD_WIDTH = 10;
@@ -681,7 +683,20 @@ class Player {
     spawnPiece() {
         this.currentPiece = this.nextPiece;
         this.nextPiece = this.randomPiece();
-        const pieceWidth = this.currentPiece[0].length;
+        const pieceWidth=this.currentPiece[0].length;
+        if(gameState.numPlayers>1){
+            const laneX=Number.isInteger(this.spawnLaneX)
+                ? this.spawnLaneX:spawnLaneX(this.id,gameState.numPlayers,getBoardWidth());
+            const x=laneX+Math.floor((4-pieceWidth)/2);
+            this.position={x,y:0};
+            if(this.checkCollision().collides){
+                this.gameOver=true;
+                this.currentPiece=null;
+                checkAllPlayersGameOver();
+            }
+            this.dropCounter=0;
+            return;
+        }
         const boardWidth = getBoardWidth();
         const preferredX = Math.min(
             boardWidth - pieceWidth,
@@ -1542,19 +1557,29 @@ class UIManager {
         canvas.style.maxWidth = `${canvas.width}px`;
         canvas.style.maxHeight = 'none';
         boardWrapper.style.setProperty('--board-max-width', `${canvas.width}px`);
+        if(numPlayers>1){
+            const rail=document.createElement('div');
+            rail.id='spawn-rail';
+            rail.setAttribute('aria-label','Личные зоны появления фигур');
+            boardWrapper.appendChild(rail);
+        }
         this.installBoardGestures(canvas);
         boardWrapper.appendChild(canvas);
 
         container.appendChild(boardWrapper);
 
         for (let i = 0; i < numPlayers; i++) {
-            const spawnAnchor = ((i + 1) / (numPlayers + 1)) * gameState.boardWidth;
+            const laneX=spawnLaneX(i,numPlayers,gameState.boardWidth);
+            const spawnAnchor=numPlayers>1?laneX+2:gameState.boardWidth/2;
             const player = new Player(
                 i,
                 gameState.settings.colors[i],
                 gameState.settings.keys[i],
                 spawnAnchor
             );
+            player.spawnLaneX=laneX;
+            player.name=this.isOnlineMode?(this.onlineParticipantNames?.[i]||`Игрок ${i+1}`):
+                (this.localPlayerNames?.[i]||`Игрок ${i+1}`);
             player.init();
             player.score = gameState.sharedStats.score;
             player.level = gameState.sharedStats.level;
@@ -1567,14 +1592,13 @@ class UIManager {
             });
 
             this.createPlayerInfo(player, playerInfoSidebar);
-            this.createNextPiecePreview(player, nextPiecesPreview);
+            if(numPlayers===1)this.createNextPiecePreview(player, nextPiecesPreview);
+            else this.createSpawnBay(player,document.getElementById('spawn-rail'));
             this.updatePlayerInfo(player);
             this.drawNextPiece(player);
         }
 
-        if (nextPiecesPreview && numPlayers > 0) {
-            nextPiecesPreview.classList.add('visible');
-        }
+        if(nextPiecesPreview)nextPiecesPreview.classList.toggle('visible',numPlayers===1);
         
         if (playerInfoSidebar && numPlayers > 0) {
             playerInfoSidebar.classList.add('visible');
@@ -1591,6 +1615,35 @@ class UIManager {
         requestAnimationFrame((time) => this.gameLoop(time, run));
     }
     
+    createSpawnBay(player,rail){
+        if(!rail)return;
+        const bay=document.createElement('div');
+        bay.className='spawn-bay';
+        bay.id=`spawn-bay-${player.id}`;
+        bay.style.left=(100*player.spawnLaneX/gameState.boardWidth)+'%';
+        bay.style.width=(400/gameState.boardWidth)+'%';
+        bay.style.setProperty('--bay-color',player.color);
+        const label=document.createElement('span');
+        label.className='spawn-bay__name';
+        label.textContent=player.name;
+        label.title=player.name;
+        const next=document.createElement('canvas');
+        next.id=`bay-next-${player.id}`;
+        next.className='spawn-bay__next';
+        next.width=4*BLOCK_SIZE;
+        next.height=2*BLOCK_SIZE;
+        next.setAttribute('aria-label','Следующая фигура: '+player.name);
+        const mouth=document.createElement('div');
+        mouth.className='spawn-bay__mouth';
+        mouth.setAttribute('aria-hidden','true');
+        const status=document.createElement('span');
+        status.className='spawn-bay__status';
+        status.textContent='×';
+        mouth.append(status);
+        bay.append(label,next,mouth);
+        rail.appendChild(bay);
+    }
+
     createNextPiecePreview(player, container) {
         if (!container) return;
         
