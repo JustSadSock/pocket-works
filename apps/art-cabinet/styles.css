@@ -7,3 +7,8 @@
 
 /* The mobile page scrolls naturally; the full-screen viewer alone locks background scrolling. */
 @media(max-width:760px){html.has-viewer,html.has-viewer body{overflow-y:hidden!important;overscroll-behavior:none!important}html.has-viewer .viewer-inner{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}}
+
+/* Secondary diagnostic action does not displace the painting selection count. */
+.workshop-action{border:1px solid #cfc8b9;background:transparent;color:#485449;min-width:36px;min-height:36px;padding:0 8px;font-size:22px;line-height:1;cursor:pointer;flex:0 0 auto}
+.workshop-action:focus-visible{outline:3px solid #c98b60;outline-offset:2px}
+@media(max-width:550px){.topbar{gap:8px}.brand{margin:auto 0}.top-count{margin-left:auto}}
