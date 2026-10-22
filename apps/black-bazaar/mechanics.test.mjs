@@ -478,3 +478,20 @@ test('Personal quota variants have comparable work-equivalent effort and distinc
  assert.ok(new Set(state.contestants.map(p=>p.quota.parts)).size>=3);
  assert.ok(new Set(state.contestants.map(p=>p.quota.gold)).size===6);
 });
+
+
+test('First successful public sale awards only one part to the seller per turn',()=>{
+ const {state}=makeRoom(3),[seller,buyer1,buyer2]=state.contestants;
+ const ids=seller.items.map(i=>i.id),before=seller.resources.parts;
+ for(const [index,buyer] of [buyer1,buyer2].entries()){
+   act(state,seller.id,{type:'post',itemId:ids[index],ask:{gold:30}});
+   act(state,buyer.id,{type:'bid',offer:{gold:30}});
+   const accepted=act(state,seller.id,{type:'accept',buyer:buyer.id});
+   assert.equal(accepted.events[0].type,'state');
+ }
+ assert.equal(seller.marketDeals,2);
+ assert.equal(seller.resources.parts,before+1);
+ act(state,seller.id,{type:'end'});
+ // A new seller will separately earn its first-sale part on the next turn.
+ assert.equal(state.contestants[state.turnIndex].marketDeals,0);
+});
