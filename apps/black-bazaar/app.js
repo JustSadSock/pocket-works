@@ -65,7 +65,7 @@ let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
 const decorativeGuests=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
 let notice='';
 let activeSheet=null,lastSheetTrigger=null,selectedArtifact=null;
-const sound=createAudioFeedback();
+const sound=createAudioFeedback(debugPreview?{storage:{getItem:()=>null,setItem(){}}}:{});
 let cueTimer=null;
 function message(m,isError=false){notice=m;status.textContent=m;status.className=isError?'error':'muted';}
 function soundToggle(){
@@ -100,7 +100,7 @@ function showConfirmedCue(cue,playAudio=true){
  }else cueTimer=setTimeout(()=>banner.remove(),1450);
  if(playAudio)sound.play(cue.kind);
 }
-function localStore(){const node=document.querySelector('#nickname');if(node)name=(node.value.trim()||'Игрок').slice(0,22);try{localStorage.setItem('black-bazaar:name',name);}catch{}}
+function localStore(){const node=document.querySelector('#nickname');if(node)name=(node.value.trim()||'Игрок').slice(0,22);if(!debugPreview)try{localStorage.setItem('black-bazaar:name',name);}catch{}}
 function renderHome(){
  mode='home';activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
  app.innerHTML='<div class="entry-screen">'+
