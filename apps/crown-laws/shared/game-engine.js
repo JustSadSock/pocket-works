@@ -1218,6 +1218,42 @@ export function resolveTurn(state, choices) {
   return { state: next, logs: turnLog, conflicts, tracker };
 }
 
+
+/**
+ * Client-only counterfactual. Resolves the regular deterministic phases without
+ * either side submitting a new card. This is NOT a prediction of a hidden choice.
+ * No mutation of the source state, hand, deck, timer, or server match occurs.
+ */
+export function forecastTurn(state, playerId = null, cardId = null) {
+  if (cardId && (!CARD_BY_ID[cardId] || !PLAYER_ORDER.includes(playerId))) {
+    throw new Error("Invalid preview law");
+  }
+  const next = clone(state);
+  const logs = [];
+  const tracker = {
+    moved: new Set(), pushed: new Set(), movementTimeline: [],
+    crownEvents: [], sealEvents: [], throneBlessingSpent: new Set(), wardedOwner: null
+  };
+  if (cardId) {
+    const card = CARD_BY_ID[cardId];
+    next.slots[card.slot] = { activeCardId: card.id, activeOwner: playerId };
+    record(logs, "laws", "Условный сценарий: вступает в силу " + card.name + ". Другой игрок ничего не меняет.", { kind: "forecast-law", slot: card.slot });
+  } else {
+    record(logs, "laws", "Условный сценарий: оба игрока сохраняют текущие законы.", { kind: "forecast-law" });
+  }
+  priestPhase(next, logs, tracker);
+  resolveChampionMoves(next, slotLaw(next, "champion").id, logs, tracker);
+  guardPhase(next, logs, tracker);
+  beastPhase(next, logs, tracker);
+  thiefPhase(next, logs, tracker);
+  thronePhase(next, logs, tracker);
+  clearThroneNeutrals(next, logs, tracker);
+  next.winner = winCheck(next);
+  applyDurations(next);
+  next.battleLog = [...logs, ...next.battleLog].slice(0, 120);
+  return { state: next, logs, tracker, assumedNoOpponentLaw: true };
+}
+
 export function cardById(cardId) {
   return CARD_BY_ID[cardId];
 }
