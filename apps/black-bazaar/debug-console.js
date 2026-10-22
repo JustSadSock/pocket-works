@@ -21,7 +21,7 @@ export function createBazaarDebug(){
  function controls(list){return '<div class="dev-buttons">'+list.join('')+'</div>'}
  function panelMarkup(){
   if(section==='screens')return '<p class="dev-hint">Реальные игровые экраны. Все действия работают в изолированной симуляции без PocketNet.</p>'+
-   controls(DEBUG_SCENES.map(([id,label])=>option(label,'data-debug-scene="'+id+'"',scene===id)))) +
+   controls(DEBUG_SCENES.map(([id,label])=>option(label,'data-debug-scene="'+id+'"',scene===id))) +
    '<p class="dev-hint">Боковые панели</p>'+controls([['secret','Задания'],['inventory','Инвентарь'],['deals','Обмен'],['market','Рынок'],['actions','Мой ход'],['players','Участники'],['detail','Предмет']].map(([id,label])=>option(label,'data-debug-sheet="'+id+'"')));
   if(section==='items')return '<p class="dev-hint">Выбери предмет, чтобы открыть подробную карточку в предпросмотре.</p>'+
    controls([['inventory','В инвентаре'],['listing','На торгах'],['broker','У брокера'],['black','Анонимно']].map(([id,label])=>option(label,'data-debug-kind="'+id+'"',itemKind===id)))+
