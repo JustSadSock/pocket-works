@@ -609,3 +609,15 @@ button:active:not(:disabled){transform:translateY(1px)}
 }
 @media(max-width:350px){.vow-option strong{font-size:9px}.vow-option small{font-size:8.5px}}
 @media(prefers-reduced-motion:reduce){.vow-option{transition:none}}
+
+
+/* An announced divine temperament: constant across the run, mechanically testable. */
+.patron-brief{padding:8px 13px;display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+ background:linear-gradient(90deg,#3d4540,#333c36);border-left:4px solid #9aaf9b;color:#e9e5cd;font-size:11px;line-height:1.35}
+.patron-brief strong{font-size:11px;font-weight:800;color:#d7e2c8;white-space:normal}
+.patron-brief span{color:#c3d0bd;font-size:11px;text-align:right}
+.god-face.god-krak{filter:drop-shadow(0 9px 1px #30201d) sepia(.14)}
+.god-face.god-sivilla{filter:drop-shadow(0 8px 1px #25382e) saturate(.86)}
+.net-actions .patron-brief{padding:8px 10px;background:#364038}
+@media(max-width:760px){.patron-brief{padding:6px 9px;gap:7px;align-items:center}.patron-brief strong,.patron-brief span{font-size:10px}}
+@media(max-width:350px){.patron-brief{flex-direction:column;align-items:flex-start;gap:1px}.patron-brief span{text-align:left}}
