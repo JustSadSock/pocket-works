@@ -76,15 +76,15 @@ function sfx(type,school='fire'){
   // Each material has a physically distinct envelope and mass.
   const style=type.slice(7);
   if(style==='rock'||style==='wave'){
-   tone(style==='rock'?148:105,style==='rock'?43:37,.2,'triangle',.039);
-   tone(68,36,.16,'sine',.018,.012);
+   tone(style==='rock'?148:105,style==='rock'?43:37,.24,'triangle',.051);
+   tone(68,36,.19,'sine',.034,.012);
    grit(style==='rock'?.15:.12,style==='rock'?250:430,.024);
   }else if(style==='bolt'||style==='arc'){
-   tone(style==='arc'?1050:1280,style==='arc'?170:300,.085,'sawtooth',.018);
+   tone(style==='arc'?1050:1280,style==='arc'?170:300,.085,'sawtooth',.023);tone(165,49,.19,'triangle',.032,.008);
    tone(460,130,.12,'triangle',.016,.008);
    grit(.042,2400,.012);
   }else if(style==='flame'||style==='orb'){
-   tone(style==='flame'?360:270,65,.14,'triangle',.023);
+   tone(style==='flame'?360:270,65,.18,'triangle',.037);
    grit(style==='flame'?.11:.065,style==='flame'?780:1050,.02);
   }else{
    tone(340,120,.08,'sine',.012);
@@ -106,7 +106,7 @@ function sfx(type,school='fire'){
  }else if(type==='fracture'){
   tone(180,43,.11,'triangle',.023);grit(.11,360,.021);
  }else if(type==='hit'){
-  tone(195,65,.08,'triangle',.015);
+  tone(210,42,.18,'triangle',.046);tone(78,31,.14,'sine',.028,.015);grit(.075,620,.026);
  }else if(type==='shield'){
   tone(270,550,.18,'sine',.023);tone(440,310,.25,'triangle',.018,.015);
  }else if(type==='dash'){
@@ -499,7 +499,7 @@ function render(){
    const a=active.actors[i],mine=i===myIndex();
    if(!displayXY[i])displayXY[i]={x:a.x,y:a.y};
    const p=displayXY[i],oldX=p.x,oldY=p.y;
-   if(online?.active){p.x+=(a.x-p.x)*.34;p.y+=(a.y-p.y)*.34}else{p.x=a.x;p.y=a.y}
+   if(combatPresentation.hold<=0){if(online?.active){p.x+=(a.x-p.x)*.34;p.y+=(a.y-p.y)*.34}else{p.x=a.x;p.y=a.y}}
    const moving=Math.min(1,Math.hypot(p.x-oldX,p.y-oldY)*.48);
    wizard(p.x,p.y,a.face,frame/60,!mine,1,a.shield,a.flash,moving,true);
    drawActorCues(ctx,a,p.x,p.y,mine,frame/60,reducedMotion);
