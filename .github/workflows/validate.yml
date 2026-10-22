@@ -188,26 +188,10 @@ jobs:
       - name: Validate PWA structure
         run: npm run validate
 
-      - name: Validate mobile runtime
-        run: npm run validate:mobile
-
-      - name: Validate managed updates
-        run: npm run validate:updates
-
-      - name: Validate launcher shelf
-        run: npm run validate:launcher
-
-      - name: Validate shared capabilities
-        run: npm run validate:capabilities
-
-      - name: Validate Enhanced runtime
-        run: npm run validate:enhanced
-
-      - name: Validate Godot source contract
-        run: npm run validate:godot
-
-      - name: Validate browser quality contract
-        run: npm run validate:quality
+      - name: Validate independent app contracts and report all failures
+        run: |
+          node --test scripts/validate-all-independent.test.mjs
+          node scripts/validate-all-independent.mjs --contracts-only
 
       - name: Upload explicit legacy validation debt
         if: always()
