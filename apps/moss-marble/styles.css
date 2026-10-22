@@ -28,7 +28,7 @@ html, body { width: 100%; min-width: 320px; min-height: 100%; }
 html { background: var(--forest); }
 body {
   margin: 0;
-  min-height: var(--app-viewport-height);
+  min-height: var(--app-viewport-height, 100dvh);
   overflow: hidden;
   background: var(--forest);
   color: var(--ink);
@@ -41,7 +41,7 @@ button { color: inherit; }
 .app-shell {
   position: relative;
   width: 100%;
-  height: var(--app-viewport-height);
+  height: var(--app-viewport-height, 100dvh);
   overflow: hidden;
   isolation: isolate;
   background: var(--forest);
