@@ -255,7 +255,7 @@
     ]
   },
   "black-bazaar": {
-    "current": "v9",
+    "current": "v10",
     "versions": [
       "v1",
       "v2",
@@ -265,7 +265,8 @@
       "v6",
       "v7",
       "v8",
-      "v9"
+      "v9",
+      "v10"
     ]
   }
 }
