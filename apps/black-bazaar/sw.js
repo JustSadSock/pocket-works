@@ -1,6 +1,6 @@
-const VERSION='0.1.0';
-const NOTES=['Механический альфа-прототип на PocketNet: ставки, предметы, квоты и тайные связи.'];
-const CACHE='black-bazaar-v0.1.0';
+const VERSION='0.2.0';
+const NOTES=['Механический альфа-прототип: двусторонние приватные обмены, серверная проверка и улучшенные тесты.'];
+const CACHE='black-bazaar-v0.2.0';
 const PREFIX='black-bazaar-v';
 const FILES=[
  './','./index.html','./app.js','./styles.css','./app.config.json',
