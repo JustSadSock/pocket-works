@@ -1,5 +1,10 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 installMobileRuntime();
+createWorkshopMode({
+  appName:'Fog of Conquest',version:'1.10.0',
+  cachePrefix: 'fog-of-conquest-', storageNamespace: 'pocket-works:fog-of-conquest'
+});
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
 
