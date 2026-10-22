@@ -1,0 +1,92 @@
+/* Chyepukha 1.3: readable manuscript reveal, explicit story contracts, compact audio. */
+.reader-layout{width:min(1120px,100%);height:calc(var(--app-viewport-height,100dvh) - 84px);max-height:none;min-height:0;grid-template-columns:minmax(155px,200px) minmax(0,1fr);align-self:stretch}
+.reader-layout .chapters{min-height:0;overflow-y:auto}
+.reader-layout .story-paper{height:100%;min-height:0;max-height:none;overflow:hidden;display:flex;flex-direction:column;padding:clamp(16px,2.2vw,28px)}
+.reader-top{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;padding:9px 0 14px;flex:none}
+.reader-top h2{font-size:clamp(23px,3vw,37px);margin:12px 0 3px}
+.reader-top .mini{margin:0}
+.reader-switch{display:inline-flex;align-items:stretch;gap:0;border:1px solid #67785f;flex-shrink:0}
+.reader-switch button{background:transparent;color:#34473a;border:0;padding:12px 15px;font-weight:800;font-size:12px;min-height:43px}
+.reader-switch button+button{border-left:1px solid #67785f}
+.reader-switch button.active{color:#f4e8d1;background:#355648}
+.reader-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;border-block:1px solid #c0ab87;background:#f7edda;padding:clamp(14px,2.4vw,28px);scrollbar-gutter:stable}
+.reader-prose{max-width:70ch;margin:0 auto;white-space:pre-wrap;overflow-wrap:anywhere;font:400 clamp(16px,1.65vw,19px)/1.85 Georgia,'Literata',serif;color:#263b32;user-select:text;-webkit-user-select:text}
+.reader-fragment{padding:0 0 26px;max-width:70ch;margin:0 auto 25px;border-bottom:1px dashed #b9a07b}
+.reader-fragment:last-child{border-bottom:0;margin-bottom:0}
+.reader-fragment-meta{font-size:11px;font-weight:900;letter-spacing:.08em;color:#86583c}
+.reader-fragment h3{font-size:clamp(18px,2vw,24px);margin:8px 0 12px;color:#364c3c}
+.reader-fragment p{font:17px/1.78 Georgia,'Literata',serif;white-space:pre-wrap;overflow-wrap:anywhere;margin:0;user-select:text;-webkit-user-select:text}
+.reader-actions{flex:none;margin:12px 0 0}
+.reader-footer{display:flex;justify-content:space-between;align-items:center;gap:15px;min-height:39px;flex:none}
+.reader-footer .leave{margin:0}
+.reader-layout .story-pager{max-width:310px}
+.question-contract{font-size:12px;line-height:1.35;background:#e8dcc3;border-left:3px solid #5b785f;padding:8px 12px;margin:5px 0 7px}
+.question-contract p{margin:1px 0 5px}
+.question-contract p:last-child{margin-bottom:1px}
+.question-contract b{display:inline;margin-right:5px;font-size:10px;color:#365a44;letter-spacing:.035em}
+.question-contract .contract-stop b{color:#8d503a}
+.question-contract .contract-stop{color:#715543}
+.story-anchor{display:block;font:700 12px/1.45 Georgia,serif;color:#4a604f;margin-top:3px}
+.anchor-field{display:block;margin:8px 0 0}
+.anchor-field .field{min-height:39px}
+.anchor-field .field-label{margin-bottom:3px}
+.next-question{background:#d2ddc8;border-left:3px solid #58765c;padding:9px 12px;margin-top:9px}
+.next-question b{font-size:10px;letter-spacing:.04em}
+.next-question p{margin:5px 0;font:700 15px/1.32 Georgia,serif}
+.next-question small{font-size:11px;color:#53634b}
+.final-sheet-note{margin-top:9px;padding:9px 12px;background:#d2ddc8;font-size:12px;font-weight:800}
+.show-next{display:flex;align-items:center;gap:9px;font-size:13px;line-height:1.35;min-height:40px}
+.show-next input{height:18px;width:18px;flex:none}
+.audio-modal{width:min(95vw,480px);display:flex;flex-direction:column;gap:13px}
+.audio-row{display:flex;align-items:center;gap:11px;font-size:15px;font-weight:700}
+.audio-row input{width:21px;height:21px;flex:none;accent-color:#365747}
+.audio-volume{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px 15px;font-size:12px;font-weight:800}
+.audio-volume output{margin-left:auto}
+.audio-volume input{width:100%;accent-color:#365747;min-height:29px}
+.comic-ai{width:min(95vw,560px);display:flex;flex-direction:column;gap:8px}
+.comic-ai h3{font-size:clamp(25px,3.5vw,33px);margin:4px 0 7px}
+.comic-ai>p{font-size:14px;line-height:1.55;margin:0 0 5px}
+.comic-ai .comic-actions{display:grid;gap:10px;margin:6px 0}
+.comic-ai .comic-actions .button{width:100%;min-height:51px}
+.comic-ai .button-row a{text-decoration:none}
+.archive-manuscript .content{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;min-height:0}
+@media(max-width:760px){
+ .reader-layout{height:calc(var(--app-viewport-height,100dvh) - 63px);display:flex;flex-direction:column;gap:7px;min-height:0}
+ .reader-layout .chapters{display:flex;align-items:center;gap:5px;overflow-x:auto;overflow-y:hidden;max-height:64px;min-height:55px;flex:none;padding:5px}
+ .reader-layout .chapter{min-width:112px;padding:7px 10px!important;font-size:12px}
+ .reader-layout .story-paper{padding:12px 13px;flex:1;min-height:0;overflow:hidden}
+ .reader-layout .story-paper .progress{padding-bottom:5px}
+ .reader-layout .story-paper .stamp{font-size:9px;padding:3px}
+ .reader-top{padding:5px 0 9px;align-items:center;gap:5px}
+ .reader-top h2{font-size:23px;margin:6px 0 2px}
+ .reader-top .mini{font-size:10px}
+ .reader-switch button{font-size:11px;padding:9px;min-height:36px}
+ .reader-layout .story-pager{max-width:none;width:185px;gap:3px}
+ .reader-layout .story-pager strong{font-size:10px}
+ .reader-layout .story-pager button{width:32px;height:32px;min-height:32px}
+ .reader-scroll{min-height:0;padding:14px 12px}
+ .reader-prose{font-size:17px;line-height:1.75}
+ .reader-fragment p{font-size:16px}
+ .reader-actions{margin-top:8px;gap:6px}
+ .reader-actions .button{font-size:11px;padding:10px 9px}
+ .reader-footer{min-height:31px}
+ .reader-footer .leave{padding:7px 5px;font-size:11px}
+ .play .writing{overflow-y:auto;overscroll-behavior:contain}
+ .writing .question{font-size:clamp(21px,5.7vw,28px);margin:8px 0 4px}
+ .question-contract{font-size:11px;padding:6px 9px;margin:3px 0 5px}
+ .question-contract p{margin:1px 0 3px}
+ .anchor-field{margin:5px 0}
+ .anchor-field .field{font-size:16px}
+ .next-question{padding:7px 9px;margin-top:5px}
+ .next-question p{font-size:13px}
+ .next-question small{display:none}
+ .incoming{margin:4px 0}
+ .comic-ai .button-row>*{flex:1}
+}
+@media(max-height:690px) and (max-width:760px){
+ .reader-layout .chapters{max-height:48px;min-height:44px}
+ .reader-top h2{font-size:19px;margin:3px 0}
+ .reader-scroll{padding:11px}
+ .reader-footer{min-height:28px}
+ .reader-actions .button{min-height:36px}
+}

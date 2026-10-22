@@ -10,7 +10,9 @@
         "tests/four-players.test.mjs",
         "tests/hardening.test.mjs",
         "tests/tab-session.test.mjs",
-        "tests/story-library.test.mjs"
+        "tests/story-library.test.mjs",
+        "tests/story-contract.test.mjs",
+        "tests/comic-prompt.test.mjs"
       ]
     },
     {

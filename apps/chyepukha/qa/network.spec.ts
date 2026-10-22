@@ -143,7 +143,7 @@ test('completed manuscripts remain in the private local archive after leaving th
  await expect(page.locator('.archive-page')).toBeVisible();
  await expect(page.locator('.archive-manuscript')).toContainText('Ключ знайшли у печері');
  await page.locator('[data-act=archive-comic]').click();
- await expect(page.locator('.comic-inner img')).toBeVisible();
+ await expect(page.locator('.comic-actions [data-act=copy-comic-direct]')).toBeVisible();
  await page.locator('[data-act=close-comic]').click();
  await page.locator('[data-act=archive-ask-delete]').click();
  await expect(page.locator('[data-act=archive-confirm-delete]')).toBeVisible();

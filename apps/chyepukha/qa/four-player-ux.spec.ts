@@ -59,3 +59,36 @@ test('desktop keeps four-author progress and result controls alongside the manus
  await page.locator('[data-act=prev-story]').click();
  await expect(page.locator('.story-pager')).toContainText('Історія 2 / 4');
 });
+
+test('final manuscript is genuinely scrollable and both reading modes work on a phone',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(preview('results'));
+ const scroll=page.locator('.reader-scroll');
+ await expect(scroll).toBeVisible();
+ await page.locator('[data-act=reader-parts]').click();
+ await expect(page.locator('.reader-fragment')).toHaveCount(3);
+ await page.locator('[data-act=reader-full]').click();
+ await expect(page.locator('.reader-prose')).toBeVisible();
+ const result=await scroll.evaluate(el=>{
+  const prose=el.querySelector('.reader-prose');
+  prose.textContent=Array(35).fill(prose.textContent).join('\n\n');
+  el.scrollTop=el.scrollHeight;
+  return {scrollHeight:el.scrollHeight,clientHeight:el.clientHeight,scrollTop:el.scrollTop};
+ });
+ expect(result.scrollHeight).toBeGreaterThan(result.clientHeight);
+ expect(result.scrollTop).toBeGreaterThan(0);
+});
+test('comic export and audio controls are accessible from final view',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(preview('results'));
+ await page.locator('[data-act=comic]').click();
+ await expect(page.locator('[data-act=copy-comic-direct]')).toBeVisible();
+ await expect(page.locator('[data-act=copy-comic-safe]')).toBeVisible();
+ await page.locator('[data-act=close-comic]').click();
+ await page.locator('#sound').click();
+ await expect(page.locator('input[name=effectsEnabled]')).toBeVisible();
+ await expect(page.locator('input[name=musicEnabled]')).toBeVisible();
+ await page.locator('input[name=musicEnabled]').check();
+ await page.locator('[data-act=close-audio]').click();
+ await expect(page.locator('.reader-scroll')).toBeVisible();
+});
