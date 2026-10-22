@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "slug": "billiard-lab",
+  "name": "РИКОШЕТ — лаборатория бильярда",
+  "shortName": "РИКОШЕТ",
+  "description": "Математический бильярд: решай задачи рикошетами и исследуй траектории на четырёх формах стола.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-23",
+  "releaseDateTime": "2026-10-23T01:12:00+03:00",
+  "changelog": [
+    "Восемь задач на отражения с очками и сохранением рекордов.",
+    "Свободная лаборатория с четырьмя геометриями, переставляемыми зеркалами, бамперами и датчиком.",
+    "Физический прогноз, веер соседних траекторий, регулируемые параметры и офлайн-режим."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#ce6340",
+  "backgroundColor": "#e6e4d8",
+  "themeColor": "#242d30",
+  "orientation": "any",
+  "cacheName": "billiard-lab-v1.0.0",
+  "storageNamespace": "pocket-works:billiard-lab",
+  "tags": [
+    "physics",
+    "math",
+    "billiards",
+    "puzzle",
+    "sandbox",
+    "canvas",
+    "offline"
+  ],
+  "order": 115
+}
