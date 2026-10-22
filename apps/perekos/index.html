@@ -70,13 +70,13 @@
 <section id="net-wait" class="scene-panel net-wait" hidden data-ui>
 <div class="sheet"><div class="sheet-kicker">НАСТРОЙКА МАГИИ</div><h2>Руна готова.</h2><p>Второй маг ещё собирает свои правила. Бой начнётся, когда оба будут готовы.</p><div class="net-wait-mark" aria-hidden="true">✷</div><button id="net-wait-leave" type="button" data-native-press>Выйти из комнаты</button></div></section>
 <section id="draft" class="scene-panel draft" hidden data-ui>
-<div class="sheet"><div class="sheet-kicker">ПОСЛЕ РАУНДА <span id="draft-score"></span></div><h2 id="draft-title">Выбери руну</h2><span id="draft-outcome" class="draft-outcome"></span><p>Что поменяем в твоём маге?</p><div id="rune-cards" class="rune-cards"></div><div id="replace-zone" class="replace-zone" hidden><strong>Что заменить?</strong><div id="replace-list"></div><button id="replace-cancel" type="button">Другую руну</button></div><div class="loadout" id="loadout"></div></div>
+<div class="sheet rune-draft-sheet"><div class="sheet-kicker">МАГИЧЕСКИЙ ОТБОР <span id="draft-score"></span></div><h2 id="draft-title">Выбери руну</h2><span id="draft-outcome" class="draft-outcome"></span><p class="draft-instruction">Одна печать изменит следующий раунд. Выбери, какую силу вплести в сборку.</p><div id="rune-cards" class="rune-cards"></div><div id="replace-zone" class="replace-zone" hidden><strong>Что заменить?</strong><div id="replace-list"></div><button id="replace-cancel" type="button">Другую руну</button></div><div class="loadout" id="loadout"></div></div>
 </section>
 <section id="build" class="scene-panel build" hidden data-ui>
 <div class="sheet workbench">
-<div class="sheet-kicker">ТРИ ЦЕПОЧКИ МАГИИ <span id="bench-count">2 / 9</span></div><canvas id="bench-mage" width="64" height="80" aria-label="Вид мага с текущими рунами"></canvas>
-<h2>Собери свои приёмы</h2>
-<p class="bench-explain">Три независимых приёма: «когда → что → как». У каждого свой запуск. Переставляй руны стрелками или пальцем.</p>
+<div class="sheet-kicker">МАСТЕРСКАЯ ЗАКЛИНАНИЙ <span id="bench-count">2 / 9</span></div><canvas id="bench-mage" width="64" height="80" aria-label="Вид мага с текущими рунами"></canvas>
+<h2>Сплети заклинание</h2>
+<p class="bench-explain">Печати читаются сверху вниз: <strong>условие → действие → мутация</strong>. Перетаскивай их или пользуйся стрелками: перестановка меняет то, как работает магия.</p>
 <div id="chemistry-preview" class="chemistry-preview" role="status" aria-live="polite"></div><nav id="spell-index" class="spell-index" aria-label="Перейти к одному из трёх приёмов"></nav><div id="bench-slots" class="bench-slots" aria-label="Три цепочки, девять мест для рун"></div>
 <div class="bench-result">
 <strong>ЧТО ПОЛУЧИТСЯ</strong><div id="chain-preview" class="chain-preview"></div>

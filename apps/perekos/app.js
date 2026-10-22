@@ -1,5 +1,6 @@
 import {W,H,STEP,WALLS,RUNES,makeMatch,validState,tick,chooseRune,beginRound,reorderRunes,startRound,ringRadius,has,stats} from './core.mjs';
 import {rune,description,compile,TYPES,legalRunes,chosenElement} from './runes.mjs';
+import {runeSeal} from './rune-seals.mjs';
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {DEFAULT_APPEARANCE,COLORSETS,normalizeAppearance,decodeAppearance} from './avatar-profile.mjs';
@@ -206,18 +207,17 @@ function updateTacticalHud(a){
 function updateHud(){if(!active)return;const side=myIndex(),a=active.actors[side],b=active.actors[1-side];const am=stats(a),bm=stats(b);$('my-hp').style.width=Math.max(0,100*a.hp/am.max)+'%';$('bot-hp').style.width=Math.max(0,100*b.hp/bm.max)+'%';$('my-hp-text').textContent=Math.ceil(a.hp)+' / '+am.max;$('bot-hp-text').textContent=Math.ceil(b.hp)+' / '+bm.max;$('clock').textContent=Math.ceil(active.remaining);$('clock').style.color=active.overtime?'#f3a27c':'#f7edce';$('round-number').textContent=active.remaining<=10?'10 С ДО КОНЦА':'РАУНД '+active.round;$('score-me').textContent='● '.repeat(active.score[side])+'○ '.repeat(4-active.score[side]);$('score-bot').textContent='● '.repeat(active.score[1-side])+'○ '.repeat(4-active.score[1-side]);$('heat-fill').style.width=Math.round(a.heat)+'%';$('heat-value').textContent=Math.round(a.heat)+'%';
 $('heat-fill').classList.toggle('danger',a.heat>=78);
 $('dash-cooldown').style.height=100*Math.min(1,a.dashReady/2.5)+'%';$('shield-cooldown').style.height=100*Math.min(1,a.shieldReady/5)+'%';$('attack-cooldown').style.height=100*Math.min(1,a.cast/stats(a).reload)+'%';$('attack-name').textContent=ATTACK_NAMES[a.mageId];if(!$('desktop-dashboard').hidden)updateTacticalHud(a)}
-const icons={when:'⌁',do:'✷',how:'↗'};
 function typeName(type){return TYPES[type]||type}
 function drawRuneNode(r,compact=false){
  const row=document.createElement('span');row.className='rune-node rune-'+r.type;
- const ic=document.createElement('span');ic.className='rune-icon';ic.textContent=icons[r.type];
+ const ic=document.createElement('span');ic.className='rune-icon';ic.append(runeSeal(r));
  const text=document.createElement('span'),title=document.createElement('strong');title.textContent=r.name;
- const detail=document.createElement('small');detail.textContent=compact?typeName(r.type):typeName(r.type)+' · '+r.desc;
+ const detail=document.createElement('small');detail.textContent=compact?typeName(r.type):r.desc;
  text.append(title,detail);row.append(ic,text);return row;
 }
 function drawOwned(){
  $('loadout').replaceChildren();
- for(const id of myActor().runes){const r=rune(id);if(!r)continue;const b=document.createElement('b');b.textContent=r.name;$('loadout').append(b)}
+ for(const id of myActor().runes){const r=rune(id);if(!r)continue;const b=document.createElement('b');b.className='owned-rune rune-'+r.type;b.append(runeSeal(r));const label=document.createElement('span');label.textContent=r.name;b.append(label);$('loadout').append(b)}
 }
 function finishPick(id,slot=null){
  if(online?.active){if(!online.pick(id,slot))return false;pendingRune=null;$('replace-zone').hidden=true;toast('Руна выбрана.');return true}
@@ -227,7 +227,7 @@ function finishPick(id,slot=null){
 function renderReplacement(id){
  pendingRune=id;$('replace-zone').hidden=false;$('rune-cards').hidden=true;const list=$('replace-list');list.replaceChildren();
  const slots=myActor().runes;
- slots.forEach((owned,i)=>{const r=rune(owned),btn=document.createElement('button');btn.type='button';btn.className='replacement';btn.textContent=(i+1)+'. '+r.name;btn.addEventListener('click',()=>finishPick(id,i));list.append(btn)});
+ slots.forEach((owned,i)=>{const r=rune(owned),btn=document.createElement('button');btn.type='button';btn.className='replacement rune-'+r.type;btn.append(runeSeal(r));const label=document.createElement('span');label.textContent=(i+1)+'. '+r.name;btn.append(label);btn.addEventListener('click',()=>finishPick(id,i));list.append(btn)});
 }
 $('replace-cancel').addEventListener('click',()=>{pendingRune=null;$('replace-zone').hidden=true;$('rune-cards').hidden=false});
 function renderDraft(){
@@ -238,7 +238,7 @@ function renderDraft(){
  $('rune-cards').hidden=false;$('replace-zone').hidden=true;pendingRune=null;
  const list=$('rune-cards');list.replaceChildren();
  for(const id of (online?.active?online.view?.offers||[]:active.pick)){
-  const r=rune(id);if(!r)continue;const btn=document.createElement('button');btn.className='rune-choice';btn.type='button';btn.append(drawRuneNode(r));
+  const r=rune(id);if(!r)continue;const btn=document.createElement('button');btn.className='rune-choice rune-choice-'+r.type;btn.type='button';const number=document.createElement('span');number.className='rune-offer-number';number.textContent='0'+(list.children.length+1);const accept=document.createElement('span');accept.className='rune-accept';accept.textContent='ВЗЯТЬ ↗';btn.append(number,drawRuneNode(r),accept);
   btn.addEventListener('click',()=>{if(myActor().runes.length>=9)renderReplacement(id);else finishPick(id)});list.append(btn);
  }
  drawOwned();
@@ -258,9 +258,10 @@ function renderWorkbench(){
  'Фирменная атака: '+ATTACK_NAMES[myActor().mageId]+'. Руны «КАК» в собранных цепочках усиливают её: сила, ширина, дальность и темп. Эффект зависит от класса.';
  slots.forEach((id,i)=>{
   const r=rune(id);if(!r)return;
-  if(r.type==='when'||!lane){laneNumber++;lane=document.createElement('div');lane.className='spell-lane';const head=document.createElement('div');head.className='spell-lane-head';head.textContent='ПРИЁМ '+Math.min(3,laneNumber);lane.append(head);rack.append(lane)}
+  if(r.type==='when'||!lane){laneNumber++;lane=document.createElement('div');lane.className='spell-lane';const head=document.createElement('div');head.className='spell-lane-head';const title=document.createElement('strong');title.textContent='ПРИЁМ '+Math.min(3,laneNumber);const subtitle=document.createElement('small');subtitle.textContent='Цепочка '+laneNumber;head.append(title,subtitle);lane.append(head);rack.append(lane)}
   const row=document.createElement('div');row.className='bench-slot '+(info.dormant.includes(id)?'is-dormant':'');
   row.dataset.slot=String(i);
+  const role=document.createElement('span');role.className='rune-stage';role.textContent=r.type==='when'?'01 / УСЛОВИЕ':r.type==='do'?'02 / ДЕЙСТВИЕ':'03 / МУТАЦИЯ';row.append(role);
   const drag=document.createElement('div');drag.className='slot-drag';drag.setAttribute('role','button');drag.setAttribute('tabindex','0');
   drag.setAttribute('aria-label','Перетащить руну '+r.name);drag.append(drawRuneNode(r,true));
   const moves=document.createElement('div');moves.className='slot-move';
@@ -273,11 +274,11 @@ function renderWorkbench(){
   drag.addEventListener('keydown',e=>{if(e.code==='ArrowUp'||e.code==='ArrowDown'){e.preventDefault();const to=i+(e.code==='ArrowUp'?-1:1);if(reorderOnBench(i,to)){remember();renderWorkbench()}}});
   drag.addEventListener('pointerdown',e=>{
    if(e.button!==0)return;
-   const origin=e.clientY;let moved=false;drag.setPointerCapture(e.pointerId);drag.classList.add('dragging');
-   const onMove=ev=>{if(ev.pointerId!==e.pointerId)return;const delta=ev.clientY-origin;if(Math.abs(delta)>5)moved=true;drag.style.transform='translateY('+delta+'px)'};
+   const origin={x:e.clientX,y:e.clientY};let moved=false;drag.setPointerCapture(e.pointerId);drag.classList.add('dragging');
+   const onMove=ev=>{if(ev.pointerId!==e.pointerId)return;const dx=ev.clientX-origin.x,dy=ev.clientY-origin.y;if(Math.hypot(dx,dy)>5)moved=true;drag.style.transform='translate('+dx+'px,'+dy+'px)'};
    const onEnd=ev=>{if(ev.pointerId!==e.pointerId)return;drag.removeEventListener('pointermove',onMove);drag.removeEventListener('pointerup',onEnd);drag.removeEventListener('pointercancel',onEnd);drag.style.transform='';drag.classList.remove('dragging');
     if(ev.type==='pointercancel'||!moved)return;const rows=[...rack.querySelectorAll('.bench-slot')];let index=i,nearest=Infinity;
-    for(let j=0;j<rows.length;j++){const box=rows[j].getBoundingClientRect(),dist=Math.abs(ev.clientY-(box.top+box.height/2));if(dist<nearest){nearest=dist;index=j}}
+    for(let j=0;j<rows.length;j++){const box=rows[j].getBoundingClientRect(),dist=Math.hypot(ev.clientX-(box.left+box.width/2),ev.clientY-(box.top+box.height/2));if(dist<nearest){nearest=dist;index=j}}
     if(reorderOnBench(i,index)){remember();renderWorkbench();sfx('dash')}
    };
    drag.addEventListener('pointermove',onMove);drag.addEventListener('pointerup',onEnd);drag.addEventListener('pointercancel',onEnd);
