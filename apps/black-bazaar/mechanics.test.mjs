@@ -467,3 +467,14 @@ test('Broker cannot overdraft wallets or exceed four inventory slots',()=>{
  assert.equal(state.brokerOffer.id,offer.id);
  assert.equal(current.resources.gold,300);
 });
+
+
+test('Personal quota variants have comparable work-equivalent effort and distinct priorities',()=>{
+ const {state}=makeRoom(6);
+ const efforts=state.contestants.map(p=>
+   (p.quota.gold-250)/35+(p.quota.crystals-20)/4+(p.quota.parts-3));
+ const spread=Math.max(...efforts)-Math.min(...efforts);
+ assert.ok(spread<1,'Work-equivalent quota spread: '+spread);
+ assert.ok(new Set(state.contestants.map(p=>p.quota.parts)).size>=3);
+ assert.ok(new Set(state.contestants.map(p=>p.quota.gold)).size===6);
+});
