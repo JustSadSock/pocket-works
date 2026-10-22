@@ -4,7 +4,7 @@ const RELEASE_DATE='2026-10-22';
 const RELEASE_NOTES = ["Первая завершённая публичная продажа за ход приносит продавцу дополнительную деталь.","Личные квоты и волны срочных заказов нормированы по трудозатратам.","Контрпредложения, покупки у брокера и разбор предметов доступны в механической альфе."];
 const NOTES=RELEASE_NOTES;
 const CACHE='black-bazaar-v0.6.0';
-const CACHE_NAME=CACHE;
+const CACHE_NAME='black-bazaar-v0.6.0';
 const PREFIX='black-bazaar-v';
 const FILES=[
  './','./index.html','./app.js','./styles.css','./app.config.json',
