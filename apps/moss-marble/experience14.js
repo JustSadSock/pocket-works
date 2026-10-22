@@ -356,8 +356,8 @@ export function installLivingTerrain(renderer, canvas, getState) {
 
   function resizeOverlay() {
     const rect = canvas.getBoundingClientRect();
-    const width = Math.max(320, rect.width || window.innerWidth);
-    const height = Math.max(480, rect.height || window.innerHeight);
+    const width = Math.max(1, rect.width || canvas.clientWidth || window.innerWidth);
+    const height = Math.max(1, rect.height || canvas.clientHeight || window.innerHeight);
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     const pixelWidth = Math.round(width * dpr);
     const pixelHeight = Math.round(height * dpr);
@@ -387,13 +387,13 @@ export function installLivingTerrain(renderer, canvas, getState) {
       camera.introUntil = performance.now() + 1050;
       camera.x = (bounds.minX + bounds.maxX) * .5;
       camera.y = (bounds.minY + bounds.maxY) * .5;
-      camera.scale = Math.min((width - 34) / boardWidth, (height - 148) / (boardHeight * .82));
+      camera.scale = Math.max(.05, Math.min((width - 34) / boardWidth, (height - 148) / (boardHeight * .82)));
     }
     const autoOverview = performance.now() < camera.introUntil;
     const overviewTarget = camera.overview || autoOverview || state.mode !== 'playing';
     camera.overviewProgress = smooth(camera.overviewProgress, overviewTarget ? 1 : 0, dt, overviewTarget ? .0005 : .002);
-    const fullScale = Math.min((width - 34) / boardWidth, (height - 148) / (boardHeight * .82));
-    const followScale = Math.max(fullScale, Math.min((width - 30) / 720, (height - 156) / (900 * .82)));
+    const fullScale = Math.max(.05, Math.min((width - 34) / boardWidth, (height - 148) / (boardHeight * .82)));
+    const followScale = Math.max(fullScale, Math.max(.05, Math.min((width - 30) / 720, (height - 156) / (900 * .82))));
     const targetScale = lerp(followScale, fullScale, camera.overviewProgress);
     camera.scale = smooth(camera.scale || targetScale, targetScale, dt, .0015);
     const centerX = (bounds.minX + bounds.maxX) * .5;

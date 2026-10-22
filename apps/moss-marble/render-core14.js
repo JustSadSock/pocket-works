@@ -320,21 +320,28 @@ function addSymmetricBox(builder, ax, ay, bx, by, width, z0, z1, tint, material 
   builder.quad(p(bL, z0), p(bR, z0), p(bR, z1), p(bL, z1), tint, material);
 }
 
-function addOutwardCurb(builder, a, b, centroid, width, height, tint, sideTint = C.stoneDark) {
+function addOutwardCurb(builder, a, b, width, height, tint, sideTint = C.stoneDark, heightAt = null, winding = 1) {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const length = Math.hypot(dx, dy) || 1;
-  let nx = -dy / length;
-  let ny = dx / length;
-  const midpoint = { x: (a.x + b.x) * .5, y: (a.y + b.y) * .5 };
-  if ((midpoint.x - centroid.x) * nx + (midpoint.y - centroid.y) * ny < 0) { nx *= -1; ny *= -1; }
+  // Polygon winding, not the polygon centroid, determines the outside on hairpin bends.
+  const direction = winding >= 0 ? -1 : 1;
+  const nx = -dy / length * direction;
+  const ny = dx / length * direction;
   const outerA = { x: a.x + nx * width, y: a.y + ny * width };
   const outerB = { x: b.x + nx * width, y: b.y + ny * width };
+  const sample = (point) => heightAt ? heightAt(point.x - nx * 9, point.y - ny * 9) : 0;
+  const groundA = sample(a), groundB = sample(b);
+  const baseA = groundA - 8, baseB = groundB - 8;
+  const topA = groundA + height, topB = groundB + height;
+  const bevel = Math.min(4, width * .16);
   const p = (point, z) => [point.x, point.y, z];
-  builder.quad(p(a, height), p(b, height), p(outerB, height), p(outerA, height), tint, 0, [0, 0, 1]);
-  builder.quad(p(a, 0), p(a, height), p(outerA, height), p(outerA, 0), sideTint, 0);
-  builder.quad(p(b, 0), p(outerB, 0), p(outerB, height), p(b, height), sideTint, 0);
-  builder.quad(p(outerA, 0), p(outerA, height), p(outerB, height), p(outerB, 0), sideTint, 0);
+  // A slightly sloped stone cap gives the edge a visible silhouette.
+  builder.quad(p(a, topA), p(b, topB), p(outerB, topB - bevel), p(outerA, topA - bevel), tint, 0);
+  builder.quad(p(a, baseA), p(b, baseB), p(b, topB), p(a, topA), sideTint, 0);
+  builder.quad(p(outerA, baseA), p(outerA, topA - bevel), p(outerB, topB - bevel), p(outerB, baseB), sideTint, 0);
+  builder.quad(p(a, baseA), p(a, topA), p(outerA, topA - bevel), p(outerA, baseA), sideTint, 0);
+  builder.quad(p(b, baseB), p(outerB, baseB), p(outerB, topB - bevel), p(b, topB), sideTint, 0);
 }
 
 function addRock(builder, obstacle) {
@@ -484,7 +491,8 @@ function addBoardScene(level) {
   const shadows = new MeshBuilder();
   const transparent = new MeshBuilder();
   const materials = { ...C, ...(level.visual?.materials || {}) };
-  const centroid = level.outline.reduce((sum, point) => ({ x: sum.x + point.x / level.outline.length, y: sum.y + point.y / level.outline.length }), { x: 0, y: 0 });
+  const curbWinding = Math.sign(polygonArea(level.outline)) || 1;
+  const terrainHeight = level.course18?.field?.heightAt || null;
 
   const shadowOutline = level.outline.map((point) => ({ x: point.x + 18, y: point.y + 34 }));
   shadows.polygon(shadowOutline, -34, color('#020905', .42), 3);
@@ -504,7 +512,7 @@ function addBoardScene(level) {
       const start = { x: lerp(a.x, b.x, t0), y: lerp(a.y, b.y, t0) };
       const end = { x: lerp(a.x, b.x, t1), y: lerp(a.y, b.y, t1) };
       const tint = hashNoise(index, piece, level.id) > .5 ? materials.stone : materials.stoneLight;
-      addOutwardCurb(opaque, start, end, centroid, 18, 16 + hashNoise(index, piece, 9) * 3, tint, materials.stoneDark);
+      addOutwardCurb(opaque, start, end, 19, 16 + hashNoise(index, piece, 9) * 3, tint, materials.stoneDark, terrainHeight, curbWinding);
     }
   }
 
@@ -813,8 +821,8 @@ class WebGLDiorama {
   resize() {
     const rect = this.canvas.getBoundingClientRect();
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.width = Math.max(320, rect.width || window.innerWidth);
-    this.height = Math.max(480, rect.height || window.innerHeight);
+    this.width = Math.max(1, rect.width || this.canvas.clientWidth || window.innerWidth);
+    this.height = Math.max(1, rect.height || this.canvas.clientHeight || window.innerHeight);
     const pixelWidth = Math.round(this.width * this.dpr);
     const pixelHeight = Math.round(this.height * this.dpr);
     if (this.canvas.width !== pixelWidth || this.canvas.height !== pixelHeight) {
@@ -1182,10 +1190,12 @@ class CanvasFallback {
   resize() {
     const rect = this.canvas.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.width = Math.max(320, rect.width || window.innerWidth);
-    this.height = Math.max(480, rect.height || window.innerHeight);
-    this.canvas.width = Math.round(this.width * dpr);
-    this.canvas.height = Math.round(this.height * dpr);
+    this.width = Math.max(1, rect.width || this.canvas.clientWidth || window.innerWidth);
+    this.height = Math.max(1, rect.height || this.canvas.clientHeight || window.innerHeight);
+    const pixelWidth = Math.round(this.width * dpr);
+    const pixelHeight = Math.round(this.height * dpr);
+    if (this.canvas.width !== pixelWidth) this.canvas.width = pixelWidth;
+    if (this.canvas.height !== pixelHeight) this.canvas.height = pixelHeight;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   setParallax(x, y) { this.targetParallaxX = clamp(x, -1, 1); this.targetParallaxY = clamp(y, -1, 1); }

@@ -146,7 +146,8 @@ for (const seed of [1, 2, 3, 5, 8, 13, 17, 21, 34, 55, 89, 144, 233, 50291, 0xDE
     const level = compileCourse19(rawA);
     const report = inspectCourse19(level);
     assert(report.ok, `compiled ${seed}/${depth}: ${report.issues.join(', ')}`);
-    assert(level.course18?.triangleCount === 1932, `compiled ${seed}/${depth}: unexpected mesh budget`);
+    assert(level.course18.passage?.ok === true, `compiled ${seed}/${depth}: procedural passage is not navigable`);
+    assert(level.course18?.triangleCount === 3060, `compiled ${seed}/${depth}: unexpected mesh budget`);
     const holeClearance = Math.max(72, Number(level.hole?.r || 31) * 2.25);
     for (const wall of level.walls || []) {
       assert(wallDistanceToPoint(wall, level.hole) >= holeClearance, `compiled ${seed}/${depth}: wall blocks hole approach`);

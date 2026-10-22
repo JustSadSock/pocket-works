@@ -89,8 +89,8 @@ export class CoursePolishLayer {
   resize() {
     const rect = this.canvas.getBoundingClientRect();
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.width = Math.max(320, rect.width || window.innerWidth);
-    this.height = Math.max(480, rect.height || window.innerHeight);
+    this.width = Math.max(1, rect.width || this.canvas.clientWidth || window.innerWidth);
+    this.height = Math.max(1, rect.height || this.canvas.clientHeight || window.innerHeight);
     const width = Math.round(this.width * this.dpr);
     const height = Math.round(this.height * this.dpr);
     if (this.layer.width !== width || this.layer.height !== height) {
@@ -218,6 +218,9 @@ export class CoursePolishLayer {
   }
 
   draw(level, time, dt, ball) {
+    const rect = this.canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (Math.abs(rect.width - this.width) > .5 || Math.abs(rect.height - this.height) > .5 || dpr !== this.dpr) this.resize();
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
     const field = level?.course18?.field;
@@ -249,6 +252,25 @@ export class CoursePolishLayer {
       this.pathWorld([...routeOutline, routeOutline[0]], field, 14.2);
       ctx.strokeStyle = terrainTint(level.visual?.materials?.stoneLight, 'rgba(224,218,184,.50)', .51);
       ctx.lineWidth = 1.25;
+      ctx.stroke();
+    }
+
+    // These contours follow real terrain heights, making playable slopes readable
+    // without introducing separate fake hill sprites.
+    for (const landform of field.landforms || []) {
+      if (!['mound', 'ridge', 'depression'].includes(landform.kind)) continue;
+      if (Math.abs(Number(landform.height || 0)) < 8) continue;
+      const depression = landform.kind === 'depression';
+      const outer = maskWorldPoints(landform, .82, 42);
+      const inner = maskWorldPoints(landform, .54, 42);
+      ctx.globalAlpha = 1;
+      this.pathWorld(outer, field, .55);
+      ctx.strokeStyle = depression ? 'rgba(41,29,15,.23)' : 'rgba(23,53,29,.30)';
+      ctx.lineWidth = 1.65;
+      ctx.stroke();
+      this.pathWorld(inner, field, .68);
+      ctx.strokeStyle = depression ? 'rgba(237,218,152,.20)' : 'rgba(231,234,173,.26)';
+      ctx.lineWidth = 1.1;
       ctx.stroke();
     }
 

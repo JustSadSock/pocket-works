@@ -518,7 +518,21 @@ export function stepBall(ball, level, dt, time) {
     if (!ball.inCup) stepVertical(ball, level, step, events);
 
     resolveBoundary(ball, level, events);
-    for (const obstacle of level.obstacles || []) resolveCircle(ball, obstacle, level, events);
+    for (const obstacle of level.obstacles || []) {
+      if (obstacle.kind === 'rockCluster' && obstacle.parts?.length) {
+        // The rendered cluster consists of individual stones, not one invisible disc.
+        for (const part of obstacle.parts) {
+          resolveCircle(ball, {
+            ...obstacle,
+            x: obstacle.x + Number(part.x || 0),
+            y: obstacle.y + Number(part.y || 0),
+            r: Math.max(1, Number(part.r || obstacle.r))
+          }, level, events);
+        }
+      } else {
+        resolveCircle(ball, obstacle, level, events);
+      }
+    }
     for (const wall of level.walls || []) resolveCapsule(ball, wall, level, events, time);
     for (const rotor of level.rotors || []) resolveCapsule(ball, { ...rotor, rotor: true }, level, events, time);
 
