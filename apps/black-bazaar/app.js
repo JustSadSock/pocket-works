@@ -536,68 +536,67 @@ function resourceWallet(w,forecast){
 function renderPlay(){
  const drafts=mode==='play'?collectDrafts():{};
  mode='play';const you=state.you;
- if(!you){app.innerHTML='<p class="panel">Подключаемся к комнате…</p>';return;}
- const active=state.turnId===me?.id;
- const turnName=active?'Твой ход':'Ходит '+label(state.turnId);
+ if(!you){app.innerHTML='<p class="panel">Подключаемся…</p>';return;}
+ if(!playStarted){playStarted=true;activeSheet='actions';}
+ const active=state.turnId===me?.id,plan=forecastEconomy(you.resources,you.items);
  const seats=state.players.map(p=>{
- const isMe=p.id===me?.id;
- const available=!isMe&&p.connected&&!p.bankrupt&&!you.bankrupt;
- const disabled=!isMe&&!available;
- return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(isMe?'is-me ':'')+(p.bankrupt?'is-bankrupt ':'')+
- '" data-action="'+(isMe?'open-sheet':'trade-with')+'" '+(isMe?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
- (disabled?' disabled title="Игрок недоступен"':' title="'+(isMe?'Мой инвентарь':'Предложить обмен')+'"')+
- ' aria-label="'+esc(p.character)+' — '+esc(p.name)+(available?', предложить обмен':'')+'">'+
- '<span class="seat-portrait">'+characterMarkup(roleCharacter(p.character),'seat-character')+'</span>'+
- '<strong>'+esc(p.character)+'</strong><small>'+esc(p.name)+'</small></button>';
+  const self=p.id===me?.id,available=!self&&p.connected&&!p.bankrupt&&!you.bankrupt;
+  return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(self?'is-me ':'')+
+  '" data-action="'+(self?'open-sheet':'trade-with')+'" '+(self?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
+  (!self&&!available?' disabled':'')+' aria-label="'+esc(p.character)+' — '+esc(p.name)+'">'+
+  '<span class="seat-portrait">'+characterMarkup(roleCharacter(p.character),'seat-character')+'</span>'+
+  '<strong>'+esc(p.character)+'</strong><small>'+esc(p.name)+'</small></button>';
  }).join('');
  const listing=state.listing;
- const lot=listing?
- '<button type="button" class="artifact" data-action="open-item" data-kind="listing" data-id="'+esc(listing.id)+'" aria-label="Открыть лот: '+esc(listing.name)+'">'+
+ const lot=listing?'<button type="button" class="artifact" data-action="open-item" data-kind="listing" data-id="'+esc(listing.id)+'">'+
  artifactSVG(listing.name,listing.rarity)+'<strong>'+esc(listing.name)+'</strong></button>':
- '<div class="artifact-note">Лота пока нет</div>';
- const ownItems=you.items.length?'<div class="mini-artifacts" aria-label="Мои предметы">'+
- you.items.map(it=>'<button type="button" data-action="open-item" data-kind="inventory" data-id="'+esc(it.id)+'" title="'+esc(it.name)+'" aria-label="Посмотреть '+esc(it.name)+'">'+
- artifactSVG(it.name,it.rarity)+'<span>'+esc(it.name)+'</span></button>').join('')+'</div>':'';
- const edge=[
- ['secret','scroll','Задания'],['inventory','bag','Инвентарь'],
+ '<div class="artifact-note">Нет лота</div>';
+ const inventory=you.items.map(item=>{
+  const reason=itemDormant(item,plan);
+  return '<button type="button" class="'+(reason?'item-dormant':'')+'" data-action="open-item" data-kind="inventory" data-id="'+esc(item.id)+
+  '" aria-label="'+esc(item.name)+(reason?' — '+esc(reason):'')+'" title="'+esc(reason||item.name)+'">'+
+  artifactSVG(item.name,item.rarity)+'<span>'+esc(item.name)+'</span>'+
+  (reason?'<small class="inactive-tag">Не работает</small>':'')+'</button>';
+ }).join('');
+ const sections=[
+ ['actions','box','Мой ход'],['market','gavel','Торги'],
+ ['inventory','bag','Предметы'],['secret','scroll','Задания'],
  ['deals','trade','Обмен'],['players','people','Игроки']
- ].map(([name,icon,title])=>'<button type="button" class="edge-tab" data-action="open-sheet" data-sheet="'+name+
- '" aria-label="'+title+'" aria-controls="bazaarSheet" aria-expanded="false" title="'+title+'">'+
- svgIcon(icon)+'<span>'+title+'</span></button>').join('');
- const sheets=
+ ].map(([id,icon,label])=>'<button class="workspace-tab" type="button" data-action="open-sheet" data-sheet="'+id+
+ '" aria-controls="bazaarSheet" role="tab" aria-selected="'+(activeSheet===id)+'" aria-expanded="'+(activeSheet===id)+'">'+
+ svgIcon(icon,19)+'<span>'+label+'</span>'+
+ '<span class="tab-count"'+(!unreadCount(id)?' hidden':'')+'>'+unreadCount(id)+'</span></button>').join('');
+ const pages=
  '<section class="sheet-page" data-sheet-page="detail">'+artifactDetailBlock(you)+'</section>'+
+ '<section class="sheet-page" data-sheet-page="actions">'+quickActions(you,active)+'</section>'+
+ '<section class="sheet-page" data-sheet-page="market">'+quickMarket(you)+'</section>'+
+ '<section class="sheet-page" data-sheet-page="inventory">'+inventoryBlock(you)+'</section>'+
  '<section class="sheet-page" data-sheet-page="secret">'+secretBlock(you)+urgentBlock(you)+'</section>'+
- '<section class="sheet-page" data-sheet-page="inventory">'+inventoryBlock(you)+repackBlock(you)+'</section>'+
  '<section class="sheet-page" data-sheet-page="deals">'+tradePanel(you)+'</section>'+
- '<section class="sheet-page" data-sheet-page="market">'+marketBlock(you,active)+blackMarketBlock(you)+'</section>'+
- '<section class="sheet-page" data-sheet-page="actions">'+
- (active?actionsBlock(you):'<div class="panel">Сейчас ходит другой игрок. Прямые сделки доступны в разделе «Обмен».</div>')+'</section>'+
  '<section class="sheet-page" data-sheet-page="players">'+scoreBox()+eventBlock()+
- '<div class="panel"><h2>События</h2><ol>'+state.log.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ol></div></section>';
+ '<details class="quiet-details"><summary>История</summary><ol>'+state.log.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ol></details></section>';
  app.innerHTML='<div class="play-screen"><div class="play-head">'+
- '<h1>Раунд '+state.round+' / '+state.rounds+'</h1>'+
- '<span class="chip">'+esc(turnName)+'</span>'+
- '<span class="chip" aria-label="До конца хода">◷ <strong id="turnClock" role="timer">—</strong></span>'+soundToggle()+
+ '<h1>Раунд '+state.round+'/'+state.rounds+'</h1>'+
+ '<span class="chip">'+esc(active?'Твой ход':'Ходит '+label(state.turnId))+'</span>'+
+ '<span class="chip"><strong id="turnClock" role="timer">—</strong></span>'+soundToggle()+
  '<button type="button" class="leave-button" data-action="leave">Выйти</button></div>'+
- resourceWallet(you.resources)+
- '<div class="play-field" data-player-count="'+state.players.length+'">'+
+ resourceWallet(you.resources,plan)+
+ '<div class="play-body"><div class="play-field" data-player-count="'+state.players.length+'">'+
  '<div class="ambient-lights" aria-hidden="true"><i></i><i></i><i></i><i></i></div>'+
  '<div class="player-seats" data-seats="'+state.players.length+'">'+seats+'</div>'+
- '<div class="table-stage">'+lot+ownItems+
- (state.blackMarket?'<button type="button" data-action="open-sheet" data-sheet="market">'+svgIcon('eye')+' Чёрный рынок</button>':'')+
- (state.event?'<button type="button" data-action="open-sheet" data-sheet="players" class="table-event">'+svgIcon('leaf')+' '+esc(state.event.title)+'</button>':'')+
+ '<div class="table-stage">'+lot+
+ (inventory?'<div class="mini-artifacts" aria-label="Мои предметы">'+inventory+'</div>':'')+
+ (state.event?'<button type="button" data-action="open-sheet" data-sheet="players" class="table-event">'+
+ svgIcon('leaf')+' '+esc(state.event.title)+'</button>':'')+
  '</div><div class="bottom-ribbon">'+
- '<button class="primary" type="button" data-action="open-sheet" data-sheet="market">'+svgIcon('gavel')+' Торг</button>'+
- '<button type="button" data-action="open-sheet" data-sheet="actions">'+svgIcon('box')+' '+(active?'Мой ход':'Операции')+'</button>'+
- '</div><nav class="edge-tabs" aria-label="Разделы игры">'+edge+'</nav></div>'+
- '<button type="button" id="sheetBackdrop" class="sheet-backdrop" data-action="close-sheet" aria-label="Закрыть панель" hidden></button>'+
- '<aside id="bazaarSheet" class="side-sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>'+
- '<div class="sheet-heading"><h2 id="sheetTitle"></h2><button type="button" data-action="close-sheet" aria-label="Закрыть">'+svgIcon('close',26)+'</button></div>'+sheets+
- '</aside></div>';
- restoreDrafts(drafts);
- openSheet(activeSheet);
- applyCharacterArt(app);
- updateTurnClock();
+ (active?'<button type="button" class="primary action-end" data-action="end">'+svgIcon('check')+' Завершить ход</button>':
+ '<span class="turn-wait">Можешь торговаться в чужой ход</span>')+'</div></div>'+
+ '<aside id="bazaarSheet" class="workspace-panel" aria-label="Разделы игры">'+
+ '<nav class="workspace-tabs" role="tablist" aria-label="Разделы">'+sections+'</nav>'+
+ '<div class="sheet-heading"><h2 id="sheetTitle">Мой ход</h2></div>'+
+ '<div class="sheet-content">'+pages+'</div></aside></div></div>';
+ restoreDrafts(drafts);openSheet(activeSheet);
+ applyCharacterArt(app);updateTurnClock();
 }
 function renderDone(){
  mode='done';activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
@@ -748,10 +747,10 @@ app.addEventListener('click',event=>{
  if(action==='open-sheet'){
   sound.play('open');
   lastSheetTrigger=btn;
-  const next=activeSheet===btn.dataset.sheet?null:btn.dataset.sheet;
+  const next=btn.dataset.sheet;
   openSheet(next,true,btn.dataset.scroll||'');return;
  }
- if(action==='close-sheet'){sound.play('close');openSheet(null,true);return;}
+ if(action==='close-sheet'){sound.play('close');openSheet('inventory',true);return;}
  if(action==='create'){localStore();connect('create');return;}
  if(action==='join'){
   localStore();let code=document.querySelector('#roomCode')?.value.trim()||'';
@@ -799,16 +798,8 @@ app.addEventListener('click',event=>{
  }
 });
 document.addEventListener('keydown',event=>{
- if(event.key==='Escape'&&activeSheet){event.preventDefault();openSheet(null,true);}
- if(event.key==='Tab'&&activeSheet){
-  const sheet=document.querySelector('#bazaarSheet');
-  const focusable=[...sheet.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),summary,a[href]')]
-   .filter(el=>el.getClientRects().length);
-  if(!focusable.length)return;
-  const first=focusable[0],last=focusable.at(-1);
-  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
-  if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
- }
+ if(event.key==='Escape'&&activeSheet==='detail'){event.preventDefault();openSheet('inventory',true);}
+
 });
 app.addEventListener('change',event=>{
  if(event.target.id!=='dealTarget')return;
