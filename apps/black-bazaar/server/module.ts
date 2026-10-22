@@ -126,6 +126,7 @@ function startTurn(s){
   const p=s.contestants[s.turnIndex];
   p.worked=false;p.usedPawn=false;p.marketDeals=0;
   s.listing=null;s.bids=[];
+  s.brokerOffer=newItem(s);
   p.urgent=(s.round%3===0&&!p.bankrupt)?{needs:urgentFor(s.round,p),status:'pending'}:null;
   issue(s,'Раунд '+s.round+': ход игрока '+p.character+'.');
 }
@@ -144,7 +145,7 @@ function openGame(s){
     const lucky=sample(s.contestants),partner=sample(s.contestants.filter(p=>p.id!==lucky.id));
     lucky.legendary=partner.id;
   }
-  s.listing=null;s.bids=[];s.deals=[];s.dealSerial=0;s.log=[];startTurn(s);
+  s.listing=null;s.bids=[];s.brokerOffer=null;s.deals=[];s.dealSerial=0;s.log=[];startTurn(s);
 }
 function resolveUrgent(s,p){
   if(!p.urgent)return;
@@ -316,6 +317,28 @@ function action(s,id,v){
     return success(s);
   }
   if(!isTurn)return failure(s,id,'Не ваш ход. Можно принимать прямые сделки, предлагать обмен и делать ставки.');
+  if(v.type==='broker_buy'){
+    if(!s.brokerOffer)return failure(s,id,'У брокера больше нет товара на этот ход.');
+    if(me.resources.gold<75||me.items.length>=MAX_ITEMS)
+      return failure(s,id,'Для покупки нужно 75 золота и свободный слот.');
+    me.resources.gold-=75;
+    const item=s.brokerOffer;
+    item.acquiredRound=s.round;
+    me.items.push(item);s.brokerOffer=null;
+    issue(s,me.character+' купил запечатанный предмет у брокера.');
+    return success(s);
+  }
+  if(v.type==='salvage'){
+    if(me.usedPawn)return failure(s,id,'Ломбард или разбор доступен лишь один раз в ход.');
+    const index=me.items.findIndex(i=>i.id===v.itemId&&i.acquiredRound!==s.round);
+    if(index<0)return failure(s,id,'Этот предмет пока нельзя разбирать.');
+    const [item]=me.items.splice(index,1);
+    if(s.listing?.itemId===item.id){s.listing=null;s.bids=[];}
+    s.deals=s.deals.filter(d=>d.giveItemId!==item.id&&d.wantItemId!==item.id);
+    me.resources.parts=Math.min(9999,me.resources.parts+2);me.usedPawn=true;
+    issue(s,me.character+' разобрал предмет и получил две детали.');
+    return success(s);
+  }
   if(v.type==='work'){
     if(me.worked)return failure(s,id,'Подработка уже использована в этом ходу.');
     const gains={gold:{gold:35,crystals:0,parts:0},crystals:{gold:0,crystals:4,parts:0},parts:{gold:0,crystals:0,parts:1}};
@@ -379,6 +402,7 @@ function viewForPlayer({state,player}){
       connected:s.players.some(x=>x.id===p.id)
     })),
     listing:listed?{...publicItem(listed),seller:s.listing.seller,ask:s.listing.ask}:null,
+    broker:s.brokerOffer?{...publicItem(s.brokerOffer),price:{gold:75,crystals:0,parts:0}}:null,
     bids:s.bids.map(b=>({buyer:b.buyer,offer:b.offer})),
     deals:me?s.deals.filter(d=>d.from===me.id||d.to===me.id).map(d=>({
       ...d,giveItem:d.giveItemId&&dealItem(getPlayer(s,d.from),d.giveItemId)?publicItem(dealItem(getPlayer(s,d.from),d.giveItemId)):null,
@@ -395,7 +419,7 @@ const game={
   protocolVersion:1,viewForPlayer,
   createRoom({player}){return {state:{
     host:player.id,players:[{id:player.id,name:player.name}],contestants:[],
-    phase:'lobby',revision:0,round:0,turnIndex:0,listing:null,bids:[],deals:[],dealSerial:0,log:[],ranking:[],serial:0
+    phase:'lobby',revision:0,round:0,turnIndex:0,listing:null,bids:[],brokerOffer:null,deals:[],dealSerial:0,log:[],ranking:[],serial:0
   }};},
   onJoin({state,players}){
     if(state.phase!=='lobby'&&!state.contestants.some(p=>p.id===players.at(-1)?.id))throw Error('match_in_progress');
