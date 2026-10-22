@@ -17,7 +17,7 @@ const MAX_PLAYERS = 8;
 // Versioned game modules enforce these caps in onJoin; mirror them for accurate
 // discoverability before a player follows an invitation link.
 const GAME_SEATS=Object.freeze({'blind-pals':2,flagpost:2,'fog-of-conquest':2,'last-tile-duel':2,'kromka-duel':2,
-  'black-bazaar':6,folio:6,lipki:4,natyazhenie:5,komnatka:5,'uzel-party':6,'ne-tem-golosom':6,'fog-of-conquest':2});
+  folio:6,lipki:4,natyazhenie:5,komnatka:5,'uzel-party':6,'ne-tem-golosom':6,'fog-of-conquest':2});
 const ROOM_TTL = 30 * 60_000;
 const SESSION_TTL = 7 * 86400_000;
 const GAME_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -278,21 +278,7 @@ export class PocketNetHub {
   ensureAlarm() {
     // Pending grants survive room closure and are retried until Pocket Social confirms them.
     const waiting=this.sql('SELECT 1 FROM achievement_outbox LIMIT 1').toArray().length>0;
-    if (this.countRooms()||waiting) {
-      const now=Date.now();
-      let next=now+(waiting?20_000:ROOM_TTL);
-      // Game timers are Durable Object alarms, not browser-driven polling.
-      // This bridge is narrowly limited to modules implementing onTick.
-      const timers=this.sql("SELECT state FROM rooms WHERE game_id='black-bazaar'").toArray();
-      for(const row of timers){
-        try{
-          const state=JSON.parse(row.state);
-          if(state?.phase==='play'&&Number.isFinite(state.deadlineAt))
-            next=Math.min(next,Math.max(now+1000,state.deadlineAt));
-        }catch{}
-      }
-      this.ctx.storage.setAlarm(next).catch(e=>console.error('pocketnet_alarm',String(e)));
-    }
+    if (this.countRooms()||waiting) this.ctx.storage.setAlarm(Date.now() + (waiting?20_000:ROOM_TTL)).catch(e=>console.error('pocketnet_alarm',String(e)));
   }
   recordZamazkaRewards(room, previous, next, events, actor) {
     if(room.gameId!=='zamazka')return;
@@ -632,29 +618,16 @@ export class PocketNetHub {
   }
 
   async alarm() {
-    return this.run(async()=>{
     await this.flushAwards();
     const now = Date.now();
     this.sql('DELETE FROM sessions WHERE expires < ?', now);
     const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
     for (const row of rows) {
       const room = this.readRoom(row.id);
-      if(room?.state?.phase==='play'&&Number.isFinite(room.state.deadlineAt)&&room.state.deadlineAt<=now){
-        const mod=this.module(room.gameId,room.version);
-        if(typeof mod?.onTick==='function'){
-          const result=await mod.onTick({state:copied(room.state),players:room.players,now});
-          if(result?.state){
-            room.state=result.state;
-            this.persist(room);
-            this.emit(room,result.events??[]);
-          }
-        }
-      }
       const ttl=room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000 : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000 : ROOM_TTL;
       if(now-row.updated_at<ttl||this.sockets(row.id).length)continue;
       if(room)await this.closeRoom(room);
     }
     this.ensureAlarm();
-    });
   }
 }
