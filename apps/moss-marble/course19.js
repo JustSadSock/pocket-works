@@ -1,4 +1,5 @@
 import { compileCourse18 as compileLegacy18, isCourse18 } from './course18.js';
+import { inspectCoursePassage, repairProceduralPassage } from './playability.js';
 
 const STRIDE = 11;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -298,7 +299,12 @@ function buildSurfaceMesh(level, field, along = 70, across = 15) {
 }
 
 function resolveBarrier(level, barrier, index) {
-  const points = barrier.points.map((point) => routePoint(level, point.t, point.side));
+  const points = barrier.points.map((point) => {
+    const center = routePoint(level, point.t, 0);
+    const minSide = Number(barrier.minCenterClearance || 0) / Math.max(1, center.halfWidth);
+    const side = minSide && Math.abs(point.side) < minSide ? Math.sign(point.side || 1) * minSide : point.side;
+    return routePoint(level, point.t, side);
+  });
   const segments = [];
   for (let cursor = 0; cursor < points.length - 1; cursor += 1) {
     segments.push({
@@ -604,6 +610,11 @@ function buildCompiledLevel(raw, blueprint) {
     triangleCount: surfaceMesh.vertexCount / 3,
     scenario: blueprint.theme || raw.endless?.scenario || 'authored'
   };
+  if (raw.endless) {
+    // Procedural sections must have a continuous, comfortably wide static route.
+    // Repair the compiled physics and display meshes together.
+    level.course18.passage = repairProceduralPassage(level);
+  }
   return sealCompiled(level);
 }
 
@@ -660,6 +671,7 @@ export function inspectCourse19(level) {
   if (!pointInPolygon(level.start, level.outline)) issues.push('start-outside');
   if (!pointInPolygon(level.hole, level.outline)) issues.push('hole-outside');
   if (level.course18.triangleCount > 12000) issues.push('triangle-budget');
+  if (level.endless && !inspectCoursePassage(level).ok) issues.push('impassable-course');
   for (const wall of level.walls || []) {
     if (![wall.ax, wall.ay, wall.bx, wall.by, wall.thickness].every(Number.isFinite)) issues.push('invalid-wall');
   }
