@@ -22,7 +22,7 @@ import {
 
 // Runtime equivalent of: import { createWorkshopMode } from '../../shared/workshop-mode.js'
 
-const APP_VERSION = '1.15.0';
+const APP_VERSION = '1.16.0';
 const STORAGE_KEY = 'pocket-works:moss-marble:save';
 const DEFAULT_SAVE = createDefaultSave(LEVELS.length);
 
@@ -1006,7 +1006,20 @@ function bindControls() {
   $('tiltBtn').addEventListener('click', enableTilt);
   ['menuHomeLink', 'codeHomeLink', 'holesHomeLink', 'pauseHomeLink', 'resultHomeLink', 'finishHomeLink'].forEach((id) => $(id).addEventListener('click', exitToShelf));
 
-  window.addEventListener('resize', () => renderer.resize(), { passive: true });
+  // Pocket Works can resize its embedded viewport without a browser resize event.
+  // Cancel an active drag to avoid firing a shot with stale projected coordinates.
+  let previousWidth = canvas.clientWidth, previousHeight = canvas.clientHeight;
+  if (typeof ResizeObserver !== 'undefined') {
+    const viewObserver = new ResizeObserver(() => {
+      const width = canvas.clientWidth, height = canvas.clientHeight;
+      if (Math.abs(width - previousWidth) < 1 && Math.abs(height - previousHeight) < 1) return;
+      previousWidth = width; previousHeight = height;
+      cancelAim();
+      renderer.resize();
+    });
+    viewObserver.observe(canvas.parentElement || canvas);
+  }
+  window.addEventListener('resize', () => { cancelAim(); renderer.resize(); }, { passive: true });
   window.addEventListener('orientationchange', () => window.setTimeout(() => renderer.resize(), 180), { passive: true });
   window.addEventListener('moss-marble:webgl-lost', () => {
     saveActiveCheckpoint();
