@@ -55,7 +55,7 @@ test('PocketNet menu: create, room invitation, active fight, private rune and re
  await expect(page.locator('#net-players .net-player')).toHaveCount(2);
  await expect(page.locator('#net-start')).toBeVisible();
  await page.locator('#net-start').click();
- await expect(page.locator('#controls')).toBeVisible({timeout:9000});
+ await expect(page.locator('#hud')).toBeVisible({timeout:9000});
  await expect.poll(()=>page.evaluate(()=>window.__netMock.commands.filter(m=>m.payload?.type==='input').length),{timeout:6000}).toBeGreaterThan(5);
  await expect(page.locator('#draft')).toBeVisible({timeout:6000});
  await expect(page.locator('.rune-choice')).toHaveCount(3);
@@ -63,7 +63,7 @@ test('PocketNet menu: create, room invitation, active fight, private rune and re
  await expect(page.locator('#build')).toBeVisible();
  await expect(page.locator('.bench-slot')).toHaveCount(3);
  await page.locator('#bench-fight').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  expect(await page.evaluate(()=>window.__netMock.commands.some(m=>m.payload?.type==='ready'))).toBe(true);
  expect(errors).toEqual([]);
 });

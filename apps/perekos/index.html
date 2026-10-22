@@ -8,6 +8,25 @@
 <canvas id="world" width="400" height="620" aria-label="Пиксельная каменная арена: двигайтесь, прицеливайтесь и уклоняйтесь от разных видов магии"></canvas>
 <div class="arena-shade"></div>
 </div>
+<aside id="desktop-dashboard" class="desktop-dashboard" hidden data-ui aria-label="Тактическая информация дуэли" data-open="true">
+<button id="desktop-panels-toggle" class="desktop-panels-toggle" type="button" aria-expanded="true" aria-controls="desktop-dossier desktop-grimoire">Скрыть панели <span aria-hidden="true">×</span></button>
+<section id="desktop-dossier" class="desktop-aside desktop-dossier" aria-label="Маг и способности">
+<div class="aside-heading"><span class="aside-number">01 / МАГ</span><span class="aside-marker" aria-hidden="true">◆</span></div>
+<div class="dossier-class">БОЕВОЕ ДОСЬЕ</div><h2 id="tactic-mage">Искра</h2><p id="tactic-school">Огонь</p>
+<div class="aside-rule"></div><p class="aside-caption">Фирменный приём</p><strong class="dossier-attack" id="tactic-attack">ПОДЖОГ</strong>
+<div class="aside-rule"></div><p class="aside-caption">Готовность приёмов</p>
+<div class="ability-state"><span>АТАКА <kbd>ЛКМ / SPACE</kbd></span><div class="ability-track"><i id="tactic-cast-bar"></i></div><small id="tactic-cast">ГОТОВО</small></div>
+<div class="ability-state"><span>ЩИТ <kbd>Q / E</kbd></span><div class="ability-track"><i id="tactic-shield-bar"></i></div><small id="tactic-shield">ГОТОВО</small></div>
+<div class="ability-state"><span>РЫВОК <kbd>SHIFT / F</kbd></span><div class="ability-track"><i id="tactic-dash-bar"></i></div><small id="tactic-dash">ГОТОВО</small></div>
+<p class="dossier-foot">WASD — движение <span>·</span> Мышь — прицел <span>·</span> ESC — пауза</p>
+</section>
+<section id="desktop-grimoire" class="desktop-aside desktop-grimoire" aria-label="Активные рунические комбинации">
+<div class="aside-heading"><span class="aside-number">02 / ГРИМУАР</span><span class="aside-marker" aria-hidden="true">✧</span></div>
+<h2>Твоя магия</h2><p class="aside-caption">Работающие сочетания рун</p>
+<div id="tactic-runes" class="tactic-runes" aria-live="off"><p>Цепочки появятся после первого выбора рун.</p></div>
+<p class="grimoire-foot">Новые руны — между раундами.</p>
+</section>
+</aside>
 <header class="battle-hud" id="hud" hidden data-ui>
 <div class="hud-block me"><span class="my-identity"><canvas id="my-portrait" width="40" height="40" aria-hidden="true"></canvas><span id="my-name">ТЫ</span></span><div class="hp-track"><i id="my-hp"></i></div><small id="my-hp-text">100 / 100</small></div>
 <div class="round-clock"><strong id="clock">25</strong><span id="round-number">РАУНД 1</span></div>
@@ -25,9 +44,9 @@
 <section id="menu" class="scene-panel menu" data-ui>
 <div class="menu-top"><a href="../../" data-app-control>← В PocketWorks</a><button id="menu-audio" type="button" data-native-press>Звук: вкл.</button></div>
 <div class="menu-composition"><canvas id="hero-preview" width="128" height="156" aria-label="Ваш маг в пиксельном мире"></canvas>
-<h1>ПЕРЕКОС</h1><p>Маги. Руны. Очень плохие идеи.</p>
+<h1>ПЕРЕКОС</h1><p>Три стихии. Шесть магов. Двор, который не переживёт дуэль.</p>
 <div class="play-block"><button id="choose-mage" class="mage-switch" type="button" data-native-press>Мой маг <strong id="chosen-mage-name">Искра</strong><span>Сменить ↗</span></button><button id="primary-action" class="big-button" type="button" data-native-press>Начать дуэль <span>↗</span></button><button id="continue" type="button" hidden data-native-press>Продолжить матч</button><button id="online-open" class="online-button" type="button" data-native-press>Дуэль с другом <span>↗</span></button><button id="open-grimoire" type="button" data-native-press>Мои сборки</button><small>До 4 побед · ничьи не дают очков</small></div>
-</div><div class="menu-bottom"><span>v0.18.0 · ЗАРОСШИЙ ДВОР</span><a class="identity-card" id="profile-link" href="../../?pocket-id=profile" data-app-control><canvas id="menu-portrait" width="42" height="42" aria-hidden="true"></canvas><span><strong id="identity">Гостевой маг</strong><small id="identity-kind">Открой профиль PocketWorks</small></span><span aria-hidden="true">↗</span></a></div></section>
+</div><div class="menu-bottom"><span>v0.21.0 · МАГИЧЕСКИЙ РАЗЛОМ</span><a class="identity-card" id="profile-link" href="../../?pocket-id=profile" data-app-control><canvas id="menu-portrait" width="42" height="42" aria-hidden="true"></canvas><span><strong id="identity">Гостевой маг</strong><small id="identity-kind">Открой профиль PocketWorks</small></span><span aria-hidden="true">↗</span></a></div></section>
 <section id="mage-select" class="scene-panel mage-select" hidden data-ui><div class="sheet mage-picker"><div class="sheet-kicker">МОЙ МАГ · ХАРАКТЕР</div><h2>Выбери своего</h2><p>Три вида магии, шесть персонажей. У каждого свой способ атаковать: поток огня, молния, волна и другие приёмы. Внешность из PocketWorks сохраняется.</p><div id="mage-options" class="mage-options"></div><div class="mage-picker-actions"><button id="mage-cancel" type="button" data-native-press>Назад</button><button id="mage-confirm" class="big-button" type="button" data-native-press>Выбрать <span>↗</span></button></div></div></section>
 <section id="online-lobby" class="scene-panel online-lobby" hidden data-ui>
 <div class="sheet net-sheet">
@@ -85,6 +104,6 @@
 <section id="confirm" class="scene-panel confirm" hidden data-ui><div class="sheet"><h2>Закончить матч?</h2><p id="quit-warning">Прогресс текущей серии будет потерян.</p><button id="quit-yes" type="button" class="big-button" data-native-press>Да, закончить</button><button id="quit-no" type="button" data-native-press>Отмена</button></div></section>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЕРЕКОС" data-app-version="0.20.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ПЕРЕКОС" data-app-version="0.21.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>

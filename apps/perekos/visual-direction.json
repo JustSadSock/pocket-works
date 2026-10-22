@@ -4,24 +4,34 @@
   "product": "perekos",
   "direction": {
     "premise": "Two tiny, stubborn wizards have no idea how badly their own spell combinations will misbehave, but the duel still reads at a glance.",
-    "composition": "A bright hand-drawn mossy rune garden in the exact 400×620 duel rectangle, with symmetrical emerald masonry channels, a nested central diamond, two carved double-rune blocks and light worn pavers. The small mages and vivid spell attacks remain high-contrast.",
+    "composition": "В центре — оригинальная несжатая арена 400×620. На широком ПК по бокам отдельно и необязательно раскрываются два тактических обрамления: слева живые кулдауны и боец, справа только собственные рабочие рунические цепочки. Меню использует несимметричный кадр с крупным магом слева и выбором игры справа; на телефоне — последовательный вертикальный вход.",
     "shapeLanguage": "Universal Art Forge palette-locked architecture, block-cut square edges, six distinctive small magicians and seven pixel spell forms. No antialiased curved projectile sculptures or ornamental granular stone noise.",
     "surfaceAndMaterial": "Layered ivory limestone and moss pixels, restrained white flowering ivy on the stone perimeter, deeply engraved dark teal channels and crisp square chiseled diamond plaques. Everything is authored in editable Forge pixel rows and code-drawn fixed integer shapes, never an imported scene image.",
     "paletteLogic": "Light sage and cream stone provide calm negative space; muted emerald and slate-green geometry emphasize the two raised carved cover blocks; spell bolts and compact fighters contrast without making the environment darker.",
-    "typography": "Headings use an old-book serif as a restrained signboard; interface text uses sturdy system sans, short Russian instructions and plain names such as Шар больнее.",
-    "signature": "A bespoke botanical rune court: a central nested stone diamond and cross-channel connects four carved stones, while ivy grows around the perimeter and two raised engraved rune barriers.",
-    "distinction": "Unlike VENETS parchment political screens and MEAT.EXE first-person corridors, Perekos has an unframed bird's-eye arcade arena with bottom-corner direct spell buttons."
+    "typography": "На ПК крупное книжное название ПЕРЕКОС стоит отдельно от пиксельного магического персонажа, а боевые сведения представлены точными лаконичными моноширинными цифровыми шкалами и текстом. На мобильном главным остаётся действие в чётких коротких надписях.",
+    "signature": "Узнаваемый магический разлом: новая иконка объединяет две противоположные стихийные дуги и один плотный знак удара в центре; то же напряжение организует широкое асимметричное меню. В бою игрок может мгновенно убрать всю информацию по краям и оставить голую дуэль.",
+    "distinction": "В отличие от Black Bazaar с постоянным переговорным столом и вкладками, центр Перекоса — один непрерывный вертикальный боевой мир, а фланги — только исчезающие информационные инструменты. В отличие от Боже Не Так нет ни алтаря, ни выбора предметов; события происходят непосредственно в движущейся каменной дуэли."
   },
   "architecture": {
     "spatialLayout": "full-bleed-world",
     "controlLocation": "perimeter",
     "navigation": "overlay-list",
-    "chromeTopology": "layered-panels",
-    "dominantMotion": "sliding",
-    "primaryVerb": "Run with one thumb, aim a single class-specific spell with the other, and craft three independent reaction chains between rounds.",
-    "physicalFeedback": "Crisp 24px spell silhouettes and confirmed impact frames on a luminous 32px hand-cut limestone courtyard, with two unchanged server-authoritative stone collision barriers dressed in engraved panels and moss.",
-    "spatialRationale": "Borderless portrait arena, status on the top edge, left movement and right adjustable thumb aim; a character selector and three inset handwritten spell lanes replace the original single long build list.",
+    "chromeTopology": "unframed-scene",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Уклоняться и прицеливаться мышью или пальцем, сражаться реальными разнообразными заклинаниями, наблюдать готовность приёмов и редактировать до трёх рунических цепочек между раундами.",
+    "physicalFeedback": "Движение мгновенно отвечает на WASD, действия имеют реальные откаты из состояния симуляции и показываются шкалами только на широком ПК; идущий по дуге валун сохраняет собственную тень и точку падения. Выключение боковых панелей не изменяет ни пикселя игровой координатной системы.",
+    "spatialRationale": "Вертикальная арена остаётся физически одинаковой на телефоне и широком ПК; соперники, земляные подсказки и точки приземления сохраняют свои координаты. На ПК мышь и клавиатура заменяют сенсорные кнопки, а освободившееся боковое пространство условно заполняется отключаемыми НЕ модальными табло. Скрытие происходит сразу и сохраняется. На телефоне боковые панели не появляются вообще.",
     "comparisons": [
+      {
+        "slug": "black-bazaar",
+        "spatialDifference": "В Black Bazaar постоянный торговый стол с участниками слева и обязательная рабочая колонка справа; у Перекоса посередине неизменяемая вертикальная Canvas-арена, а два отдельно отключаемых боковых табло появляются исключительно на широком ПК и не содержат основных команд.",
+        "interactionDifference": "В Black Bazaar игрок выбирает лоты, рассчитывает ресурсы и ведёт пошаговый торг через постоянный интерфейс. В Перекосе бой непрерывный, игрок управляет магом WASD и мышью, а боковые элементы только отображают реальные откаты и комбинации рун, не требуя кликов."
+      },
+      {
+        "slug": "bozhe-ne-tak",
+        "spatialDifference": "В Боже Не Так фронтальный резной алтарь и лавка подношений образуют статичную сцену, тогда как Перекос сосредоточен вокруг строго вертикальной движущейся пиксельной арены, которую можно оставить совсем без бокового интерфейса.",
+        "interactionDifference": "В Боже Не Так пользователь руками готовит предмет и утверждает обряд перед божеством. В Перекосе реальный персонаж постоянно двигается, кастует с разными фазами подготовки и выбирает реактивные руны между боевыми раундами."
+      },
       {
         "slug": "not-dead-yet",
         "spatialDifference": "The first-person apartment owns the entire frame with a gun overlay, while Perekos uses an overhead stone battleground and explicit two-sided health labels.",
@@ -98,7 +108,7 @@
       "type": "click",
       "selector": "#primary-action"
     },
-    "expectedChange": "In mobile and desktop screenshots, the court should match the selected pale green garden concept (ivory pavers, mossy edge, central vertical/horizontal green rune channels, nested central diamond and two engraved obstacles) rather than the old dark green checker floor. The scene must remain sharp at 400×620 and preserve all controls.",
+    "expectedChange": "На широком мониторе стартовый экран — асимметричный кадр с увеличенным живым магом и ведущими к дуэли кнопками справа. После клика Начать дуэль неизменённая вертикальная арена сохраняется, но мобильная панель исчезает: справа видны собственные рунические цепочки, слева реальные откаты; боковые табло можно сразу свернуть и вернуть без изменения управления.",
     "capture": [
       "initial",
       "action",

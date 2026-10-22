@@ -18,7 +18,7 @@ test('art pass: stage geometry, animated sprites, effects and mobile bounds',asy
  expect(snapshot.edge).not.toEqual(snapshot.court);
  await info.attach('sunken-stone-menu',{body:await page.screenshot(),contentType:'image/png'});
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  const direction=await page.evaluate(async()=>{
   const mod=await import('/apps/perekos/mage-art.mjs');
   const c=document.createElement('canvas');c.width=100;c.height=110;const ctx=c.getContext('2d');

@@ -1,10 +1,11 @@
 import {test,expect} from '@playwright/test';
 
 test('six-class aiming: touch-style drag preserves the ray near the arena corner',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  await page.evaluate(()=>{
   const a=window.__perekosTest.state.actors[0];
   a.x=365;a.y=550;a.cast=0;

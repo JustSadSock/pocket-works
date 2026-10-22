@@ -64,7 +64,7 @@ test('v0.13: enlarged characters play a complete combat action without breaking 
  await page.setViewportSize({width:390,height:844});
  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  const metrics=await page.evaluate(async()=>{
   const s=window.__perekosTest.state;
   s.actors[0].x=170;s.actors[0].y=310;

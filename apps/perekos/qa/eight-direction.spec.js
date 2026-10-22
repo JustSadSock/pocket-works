@@ -64,7 +64,7 @@ test('v0.14: physical projectile rays remain accurate after sprite direction cha
  await page.setViewportSize({width:390,height:844});
  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  const results=await page.evaluate(async()=>{
   const {MAGES}=await import('/apps/perekos/mages.mjs');
   const {makeMatch,tick,STEP}=await import('/apps/perekos/core.mjs');

@@ -4,7 +4,7 @@ test('combat v0.8: actual projectile and mine warnings render without changing s
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  const inspected=await page.evaluate(async()=>{
   const {combatCues,drawGroundCues,drawActorCues}=await import('/apps/perekos/combat-readability.mjs');
   const s=window.__perekosTest.state;

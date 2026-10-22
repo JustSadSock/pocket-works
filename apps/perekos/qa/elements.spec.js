@@ -3,7 +3,7 @@ test('real fire + electric projectile reaction renders a readable combat burst',
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  const summary=await page.evaluate(async()=>{
   const {tick,STEP}=await import('/apps/perekos/core.mjs'),s=window.__perekosTest.state;
   const a=s.actors[0],b=s.actors[1];a.x=165;a.y=320;b.x=230;b.y=320;

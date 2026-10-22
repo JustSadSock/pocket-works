@@ -46,7 +46,7 @@ test('v0.11 art direction: six body rigs have different silhouettes across actua
  await info.attach('body-rig-contact-sheet',{body:await page.screenshot(),contentType:'image/png'});
  await page.locator('#rig-audit').evaluate(node=>node.remove());
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  await page.evaluate(()=>new Promise(requestAnimationFrame));
  await info.attach('quarried-arena-mobile',{body:await page.screenshot(),contentType:'image/png'});
  const widths=await page.evaluate(()=>({client:innerWidth,document:document.documentElement.scrollWidth}));

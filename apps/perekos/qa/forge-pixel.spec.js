@@ -36,7 +36,7 @@ test('six Forge pixel fighters load offline-ready exports and retain 48 directio
  await info.attach('true-pixel-character-selection',{body:await page.screenshot(),contentType:'image/png'});
  await page.locator('#mage-cancel').click();
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  await page.evaluate(()=>new Promise(requestAnimationFrame));
  await info.attach('true-pixel-live-duel',{body:await page.screenshot(),contentType:'image/png'});
  expect(errors).toEqual([]);

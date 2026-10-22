@@ -13,11 +13,11 @@ test('visual audit: six mages, own silhouette, different projectile and three-ru
  const next=await page.locator('#hero-preview').evaluate(c=>Array.from(c.getContext('2d').getImageData(0,0,c.width,c.height).data).join(','));
  expect(next).not.toBe(original);
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  expect(await page.evaluate(()=>window.__perekosTest.state.actors[0].mageId)).toBe('wire');
  await expect(page.locator('#attack-name')).toHaveText('ПРОБОЙ');
- const fire=await page.locator('#attack-btn').boundingBox();expect(fire).toBeTruthy();
- await page.mouse.move(fire.x+fire.width/2,fire.y+fire.height/2);
+ const field=await page.locator('#world').boundingBox();expect(field).toBeTruthy();
+ await page.mouse.move(field.x+field.width*.65,field.y+field.height*.40);
  await page.mouse.down();
  await expect.poll(()=>page.evaluate(()=>window.__perekosTest.state.shots.filter(s=>s.owner===0).map(s=>s.style)),{timeout:2500}).toContain('bolt');
  const shots=await page.evaluate(()=>window.__perekosTest.state.shots.filter(s=>s.owner===0).map(s=>s.style));

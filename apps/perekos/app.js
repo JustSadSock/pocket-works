@@ -25,7 +25,7 @@ let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,l
 let online=null,onlinePreviewRunes=null,onlinePhase='',displayXY=[null,null];
 let rivalAppearance={...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']},pendingRival=null,rivalKey='',rivalRequest=0;
 let selectedMage='kindle',mageFrom='menu',selectionDraft='kindle';
-let sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null;
+let desktopPanelsVisible=true,lastTacticRunes='',sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null;
 const combatPresentation=new CombatPresentation();
 const spellChoreography=new SpellChoreography();
 const contactTheater=new ContactTheater();
@@ -37,8 +37,8 @@ const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,aim:nul
 let tapAttackQueued=false,aimTouch=false,aimTouchStart=0,aimDragged=false,aimVector=null;
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
 function put(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
-const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';
-function remember(){put(prefsKey,{sound,mage:selectedMage});if(!online?.active&&active&&validState(active))put(saveKey,active)}
+const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;desktopPanelsVisible=savedPrefs?.desktopPanels!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';
+function remember(){put(prefsKey,{sound,mage:selectedMage,desktopPanels:desktopPanelsVisible});if(!online?.active&&active&&validState(active))put(saveKey,active)}
 function forget(){try{localStorage.removeItem(saveKey)}catch{}}
 const resume=stored(saveKey);
 if(resume&&validState(resume))$('continue').hidden=false;
@@ -124,7 +124,14 @@ function sfx(type,school='fire'){
 function setAudio(){sound=!sound;remember();$('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');if(sound)audioContext()}
 $('menu-audio').addEventListener('click',setAudio);$('pause-audio').addEventListener('click',setAudio);
 $('menu-audio').textContent=$('pause-audio').textContent='Звук: '+(sound?'вкл.':'выкл.');
-function show(name){mode=name;tapAttackQueued=false;if(name==='menu'||name==='result'||name==='online-lobby')mageMotion.reset();for(const id of ['menu','mage-select','draft','build','books','book-delete','result','pause','confirm','online-lobby','net-wait'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=!active||['menu','mage-select','online-lobby','books','book-delete'].includes(name);if(name==='fight'||name==='menu')paused=false;if(name!=='fight')input.aim=null;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;updateHud()}
+function applyDesktopPanels(){
+ $('desktop-dashboard').dataset.open=String(desktopPanelsVisible);
+ const toggle=$('desktop-panels-toggle');toggle.setAttribute('aria-expanded',String(desktopPanelsVisible));
+ toggle.innerHTML=desktopPanelsVisible?'Скрыть панели <span aria-hidden="true">×</span>':'Показать панели <span aria-hidden="true">＋</span>';
+}
+$('desktop-panels-toggle').addEventListener('click',()=>{desktopPanelsVisible=!desktopPanelsVisible;applyDesktopPanels();remember()});
+applyDesktopPanels();
+function show(name){mode=name;$('desktop-dashboard').hidden=name!=='fight';tapAttackQueued=false;if(name==='menu'||name==='result'||name==='online-lobby')mageMotion.reset();for(const id of ['menu','mage-select','draft','build','books','book-delete','result','pause','confirm','online-lobby','net-wait'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=!active||['menu','mage-select','online-lobby','books','book-delete'].includes(name);if(name==='fight'||name==='menu')paused=false;if(name!=='fight')input.aim=null;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;updateHud()}
 function mageCards(node,value,onPick,small=false){
  node.replaceChildren();
  for(const school of SCHOOLS){
@@ -155,7 +162,7 @@ $('choose-mage').addEventListener('click',()=>{
 $('mage-cancel').addEventListener('click',()=>show('menu'));
 $('mage-confirm').addEventListener('click',()=>{selectedMage=selectionDraft;updateSelectedMage();remember();show('menu');toast('Выбран '+mage(selectedMage).name)});
 updateSelectedMage();
-function newMatch(){if(online?.active)online.leave();onlinePhase='';applyPendingAppearance();active=makeMatch((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff),selectedMage,MAGES[(MAGES.findIndex(m=>m.id===selectedMage)+3)%MAGES.length].id);fxParticles=[];combatPresentation.reset();spellChoreography.reset();seen=0;audioContext();show('fight');toast('Зажми атаку, веди пальцем для прицеливания');remember()}
+function newMatch(){if(online?.active)online.leave();onlinePhase='';applyPendingAppearance();active=makeMatch((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff),selectedMage,MAGES[(MAGES.findIndex(m=>m.id===selectedMage)+3)%MAGES.length].id);fxParticles=[];combatPresentation.reset();spellChoreography.reset();seen=0;audioContext();show('fight');toast(matchMedia('(hover:hover) and (pointer:fine)').matches?'WASD — ходьба · ЛКМ / Space — атака · Q — щит · Shift — рывок':'Зажми атаку, веди пальцем для прицеливания');remember()}
 $('primary-action').addEventListener('click',newMatch);$('again').addEventListener('click',()=>online?.active?online.start():newMatch());
 $('continue').addEventListener('click',()=>{const s=stored(saveKey);if(s&&validState(s)){active=s;if(s.phase!=='fight')applyPendingAppearance();show(s.phase);if(s.phase==='draft')renderDraft();if(s.phase==='build')renderWorkbench();if(s.phase==='result')renderResult()}else newMatch()});
 function pause(){if(mode!=='fight')return;paused=true;show('pause');$('pause-title').textContent=online?.active?'Сетевой матч':'Передышка';$('pause-online-note').hidden=!online?.active;remember()}
@@ -168,9 +175,37 @@ let toastT=0;
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');toastT=1.9}
 function myIndex(){return online?.active?online.me:0}
 function myActor(){return active?.actors?.[myIndex()]}
+function renderTacticalRunes(a){
+ const runes=Array.isArray(a?.runes)?a.runes:[],key=runes.join('|'),list=$('tactic-runes');
+ if(key===lastTacticRunes)return;
+ lastTacticRunes=key;list.replaceChildren();
+ const info=description(runes);
+ if(!info.chains.length){const empty=document.createElement('p');empty.textContent='Пока нет рунических приёмов. Первый появится после выбора рун.';list.append(empty);return}
+ for(let i=0;i<Math.min(3,info.chains.length);i++){
+  const chain=info.chains[i],block=document.createElement('div');block.className='rune-chain'+(chain.actions.length?'':' inactive');
+  const title=document.createElement('strong');title.textContent='ЦЕПОЧКА '+(i+1);
+  const body=document.createElement('p');body.textContent=(rune(chain.trigger)?.name||'Событие')+' → '+(chain.actions.length?chain.actions.map(action=>[rune(action.id)?.name,...action.mods.map(id=>rune(id)?.name)].filter(Boolean).join(' · ')).join(' / '):'нужна руна действия');
+  block.append(title,body);list.append(block);
+ }
+}
+function renderTacticalAbility(id,remaining,total){
+ const value=Math.max(0,Number(remaining)||0),part=Math.max(0,Math.min(1,1-value/Math.max(.1,total)));
+ $('tactic-'+id+'-bar').style.width=Math.round(part*100)+'%';
+ $('tactic-'+id).textContent=value<=.05?'ГОТОВО':value.toFixed(1)+' с';
+}
+function updateTacticalHud(a){
+ const m=mage(a.mageId);
+ $('tactic-mage').textContent=m.name;
+ $('tactic-school').textContent={fire:'Пиромантия',storm:'Грозовая магия',stone:'Каменная магия'}[m.school]||m.school;
+ $('tactic-attack').textContent=ATTACK_NAMES[a.mageId]||'ЗАКЛИНАНИЕ';
+ renderTacticalAbility('cast',a.cast,stats(a).reload);
+ renderTacticalAbility('shield',a.shieldReady,5);
+ renderTacticalAbility('dash',a.dashReady,2.5);
+ renderTacticalRunes(a);
+}
 function updateHud(){if(!active)return;const side=myIndex(),a=active.actors[side],b=active.actors[1-side];const am=stats(a),bm=stats(b);$('my-hp').style.width=Math.max(0,100*a.hp/am.max)+'%';$('bot-hp').style.width=Math.max(0,100*b.hp/bm.max)+'%';$('my-hp-text').textContent=Math.ceil(a.hp)+' / '+am.max;$('bot-hp-text').textContent=Math.ceil(b.hp)+' / '+bm.max;$('clock').textContent=Math.ceil(active.remaining);$('clock').style.color=active.overtime?'#f3a27c':'#f7edce';$('round-number').textContent=active.remaining<=10?'10 С ДО КОНЦА':'РАУНД '+active.round;$('score-me').textContent='● '.repeat(active.score[side])+'○ '.repeat(4-active.score[side]);$('score-bot').textContent='● '.repeat(active.score[1-side])+'○ '.repeat(4-active.score[1-side]);$('heat-fill').style.width=Math.round(a.heat)+'%';$('heat-value').textContent=Math.round(a.heat)+'%';
 $('heat-fill').classList.toggle('danger',a.heat>=78);
-$('dash-cooldown').style.height=100*Math.min(1,a.dashReady/2.5)+'%';$('shield-cooldown').style.height=100*Math.min(1,a.shieldReady/5)+'%';$('attack-cooldown').style.height=100*Math.min(1,a.cast/stats(a).reload)+'%';$('attack-name').textContent=ATTACK_NAMES[a.mageId]}
+$('dash-cooldown').style.height=100*Math.min(1,a.dashReady/2.5)+'%';$('shield-cooldown').style.height=100*Math.min(1,a.shieldReady/5)+'%';$('attack-cooldown').style.height=100*Math.min(1,a.cast/stats(a).reload)+'%';$('attack-name').textContent=ATTACK_NAMES[a.mageId];if(!$('desktop-dashboard').hidden)updateTacticalHud(a)}
 const icons={when:'⌁',do:'✷',how:'↗'};
 function typeName(type){return TYPES[type]||type}
 function drawRuneNode(r,compact=false){

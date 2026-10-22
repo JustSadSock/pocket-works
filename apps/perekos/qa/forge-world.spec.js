@@ -30,7 +30,7 @@ test('Forge arena and spells are real online/offline-owned pixel assets',async({
  expect(data.colors).toBeGreaterThanOrEqual(11);
  expect(data.wallPattern).not.toEqual(data.paverPattern);
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  await page.evaluate(()=>new Promise(requestAnimationFrame));
  await info.attach('v017-forged-pixel-arena',{body:await page.screenshot(),contentType:'image/png'});
  expect(errors).toEqual([]);
@@ -127,6 +127,6 @@ test('chosen overgrown rune garden is a real, authored, bright pixel battlefield
  expect(sample.barriers[0]).not.toBe(sample.floor);
  expect(sample.barriers[1]).not.toBe(sample.floor);
  await page.locator('#primary-action').click();
- await expect(page.locator('#controls')).toBeVisible();
+ await expect(page.locator('#hud')).toBeVisible();
  await info.attach('selected-rune-garden-live',{body:await page.screenshot(),contentType:'image/png'});
 });
