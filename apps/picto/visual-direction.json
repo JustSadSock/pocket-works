@@ -56,6 +56,11 @@
         "slug": "crown-laws",
         "spatialDifference": "В «Законах короны» каменная правовая панель и последовательные политические решения, а здесь светлая наборная мастерская с кадрами пиктографической истории и набором знаков.",
         "interactionDifference": "В «Законах короны» выбирают юридические и политические действия, в ПИКТО свободно расставляют, поворачивают и трактуют символы совместно с друзьями."
+      },
+      {
+        "slug": "black-bazaar",
+        "spatialDifference": "Black Bazaar uses a compact market board of offers and player balances; Picto keeps a large paper storyboard workspace with glyph palette and minimal top bar.",
+        "interactionDifference": "Black Bazaar negotiates and manipulates market transactions, while Picto positions and rotates picture symbols and shares a visual phrase through PocketNet."
       }
     ]
   },
