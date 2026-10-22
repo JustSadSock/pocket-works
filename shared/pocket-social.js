@@ -2,6 +2,7 @@ import {askUnsaved,confirmShell} from './shell-dialogs.js';
 import {pocketAvatarMarkup} from './capabilities/identity.js';
 import {zamazkaAchievements} from './capabilities/zamazka-achievements.js';
 import {canticaAchievements} from './capabilities/cantica-achievements.js';
+import {blockiesAchievements} from './capabilities/blockies-achievements.js';
 import {collectProfileRewards,profileRewardById,rewardIsEquipped,equipProfileReward} from './capabilities/profile-rewards.js';
 import {mountCardCanvas} from './capabilities/card-studio.js';
 import {mascotSvg,safeMascot,mascotPublicUnlocks,mascotAnimals,mascotHats,mascotClothes,mascotAccessories,mascotFaces,mascotTitles} from './capabilities/maskot.js';
@@ -1032,4 +1033,3 @@ function install(){
 }
 window.PocketSocial=Object.freeze({open:(room='',gameId='zamazka')=>open(room,false,gameId),openEditor:()=>open('',true)});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
-\nimport {blockiesAchievements} from './capabilities/blockies-achievements.js';
