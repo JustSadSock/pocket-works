@@ -79,3 +79,18 @@ test('thin rugs remain valid below furniture and furniture blocks furniture',()=
  assert.equal(valid(state,state.items[1]),true);
  assert.equal(valid(state,{id:'duplicate-chair',type:'chair',x:.25,z:.25,rot:0}),false);
 });
+
+test('star decorations and curtains can be mounted to the same walls as frames',()=>{
+ for(const type of ['starwall','curtains']){
+  const size={starwall:.65,curtains:1.67}[type];
+  for(const layout of ['classic','narrow','nook']){
+   const s={layout,items:[]};
+   const mounted={id:'wall-'+type,type,x:0,z:-3.91,y:2.5,wall:'back',rot:0};
+   assert.equal(valid(s,mounted),true,`${type} on back wall in ${layout}`);
+   assert.equal(valid(s,{...mounted,x:layout==='narrow'?2.85:3.6}),false,
+    `${type} must not hang beyond the wall in ${layout}`);
+   const left={...mounted,x:layout==='narrow'?-3.05:-3.91,z:0,wall:'left',rot:1};
+   assert.equal(valid(s,left),true,`${type} on left wall in ${layout}`);
+  }
+ }
+});
