@@ -80,7 +80,12 @@
     <div class="scene-stage" id="stage">
       <div class="scene-backdrop" aria-hidden="true"><span class="sun-disc"></span><span class="little-star star-a">✦</span><span class="little-star star-b">✧</span><span class="little-star star-c">✦</span></div>
       <canvas id="roomCanvas" data-gesture-surface data-block-callout aria-label="Кукольная комната. Выбирай мебель в каталоге и перемещай предметы пальцем или мышью."></canvas>
-      <div class="scene-caption" data-ui><span class="caption-dot"></span> Твоя маленькая комната</div>
+      <div class="scene-context" data-ui>
+        <button id="roomsButton" class="scene-room-switch" type="button" data-native-press title="Открыть свои комнатки" aria-label="Открыть коллекцию комнаток">
+          <span class="room-switch-icon" aria-hidden="true">⌂</span><span id="activeRoomLabel">Моя комнатка</span><small id="roomsCount">1/5</small><span aria-hidden="true">⌄</span>
+        </button>
+        <button id="wallpaperShortcut" class="scene-wallpaper-shortcut" type="button" data-native-press>Обои</button>
+      </div>
       <div class="scene-hint" id="hint" data-ui></div>
       <div id="onlineHUD" class="online-hud" hidden data-ui>
         <div class="online-hud-line">
