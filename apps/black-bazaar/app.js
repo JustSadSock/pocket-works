@@ -385,7 +385,7 @@ function quickMarket(you){
 }
 function quickActions(you,active){
  if(!active)return '<div class="panel"><h2>Чужой ход</h2><p>Обмен и ставки доступны.</p></div>';
- if(you.bankrupt)return '<div class="panel"><h2>Твой ход</h2><button data-action="end" class="primary">Пропустить</button></div>';
+ if(you.bankrupt)return '<div class="panel"><h2>Твой ход</h2><p>Осталось завершить ход.</p></div>';
  let html='<div class="panel compact-actions"><h2>Твой ход</h2>';
  if(!you.worked)html+='<form data-form="work" class="fast-work"><label>Подработка<select name="resource">'+
  '<option value="gold">+35 золота</option><option value="crystals">+4 кристалла</option><option value="parts">+1 деталь</option>'+
@@ -537,6 +537,8 @@ function resourceWallet(w,forecast){
 }
 function renderPlay(){
  const drafts=mode==='play'?collectDrafts():{};
+ const previousScroll=mode==='play'?app.querySelector('.sheet-content')?.scrollTop||0:0;
+ const expanded=mode==='play'?[...app.querySelectorAll('.sheet-page details')].map((el,i)=>el.open?i:-1).filter(i=>i>=0):[];
  mode='play';const you=state.you;
  if(!you){app.innerHTML='<p class="panel">Подключаемся…</p>';return;}
  if(!playStarted){playStarted=true;activeSheet='actions';}
@@ -598,10 +600,12 @@ function renderPlay(){
  '<div class="sheet-heading"><h2 id="sheetTitle">Мой ход</h2></div>'+
  '<div class="sheet-content">'+pages+'</div></aside></div></div>';
  restoreDrafts(drafts);openSheet(activeSheet);
+ [...app.querySelectorAll('.sheet-page details')].forEach((el,i)=>{if(expanded.includes(i))el.open=true;});
+ const scroll=app.querySelector('.sheet-content');if(scroll)scroll.scrollTop=previousScroll;
  applyCharacterArt(app);updateTurnClock();
 }
 function renderDone(){
- mode='done';activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
+ mode='done';activeSheet=null;selectedArtifact=null;playStarted=false;readDeals.clear();readTasks.clear();document.body.classList.remove('sheet-open');
  const ranks=state.ranking||[];
  app.innerHTML='<h1>Партия окончена</h1><p>Рейтинг по выполнению секретной квоты. Банкротство лишает права на победу; легендарная связь может изменить второе место.</p>'+
  '<div class="panel"><table class="table"><thead><tr><th>Место</th><th>Игрок</th><th>Квота</th><th>Итог</th></tr></thead><tbody>'+
