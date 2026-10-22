@@ -39,7 +39,7 @@ self.addEventListener('fetch',e=>{
  const url=new URL(e.request.url);
  if(url.origin!==location.origin||url.pathname.startsWith('/pocketnet/'))return;
  if(e.request.mode!=='navigate'&&!ENTRIES.has(url.pathname))return;
- const fallback=e.request.mode==='navigate'?ROOT.href:ENTRIES.get(url.pathname);
+ const fallback=e.request.mode==='navigate'?(ENTRIES.get(url.pathname)||ROOT.href):ENTRIES.get(url.pathname);
  e.respondWith((async()=>{
    try{
      const response=await fetch(e.request);
