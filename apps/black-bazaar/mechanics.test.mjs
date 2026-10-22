@@ -972,3 +972,264 @@ test('Independent four-player client projections converge after complete simulat
  assert.ok(done.every(v=>JSON.stringify(v.report)===JSON.stringify(done[0].report)));
  assert.equal(done[0].ranking.length,4);
 });
+
+
+// -----------------------------------------------------------------------------
+// PRE-RELEASE AUTOMATED QA — no human testers and no visual-design dependency.
+// These tests exercise the exact PocketNet module API used by real clients.
+// The real browser/socket/worker environment is covered separately by CI.
+// -----------------------------------------------------------------------------
+const QA_RESOURCES=['gold','crystals','parts'];
+const qaEmpty=()=>({gold:0,crystals:0,parts:0});
+function qaAssets(s){
+ const pocket=s.contestants.flatMap(p=>p.items.map(i=>({id:i.id,owner:p.id})));
+ const escrow=(s.blackLots||[]).map(l=>({id:l.item.id,owner:l.seller,escrow:true}));
+ return [...pocket,...escrow];
+}
+function qaValidate(s,label){
+ assert.ok(['play','done'].includes(s.phase),label+' phase');
+ assert.ok(Number.isInteger(s.revision)&&s.revision>=1,label+' revision');
+ assert.ok(s.log.length<=18,label+' bounded event log');
+ assert.equal(JSON.stringify(JSON.parse(JSON.stringify(s))),JSON.stringify(s),label+' JSON serialization');
+ const assets=qaAssets(s),itemIds=assets.map(x=>x.id);
+ assert.equal(itemIds.length,new Set(itemIds).size,label+' duplicate owned/escrow items');
+ for(const p of s.contestants){
+  for(const key of QA_RESOURCES){
+   assert.ok(Number.isSafeInteger(p.resources[key])&&p.resources[key]>=0&&p.resources[key]<=9999,
+     label+' invalid '+key+' wallet for '+p.id+': '+p.resources[key]);
+  }
+  assert.ok(assets.filter(x=>x.owner===p.id).length<=4,label+' escrow capacity for '+p.id);
+  assert.ok(p.items.every(i=>i.acquiredRound<=s.round),label+' future item acquisition');
+  assert.ok(Number.isInteger(p.strikes)&&p.strikes>=0&&p.strikes<=3,label+' strikes');
+ }
+ if(s.phase==='play'){
+  assert.ok(s.round>=1&&s.round<=9,label+' round');
+  assert.ok(s.turnIndex>=0&&s.turnIndex<s.contestants.length,label+' seat');
+  assert.ok(s.deadlineAt>Date.now()-60_000,label+' stale deadline');
+  const a=s.contestants[s.turnIndex];
+  assert.ok(!a.bankrupt,label+' active bankrupt seat');
+  assert.ok(s.blackLots.every(l=>l.round===s.round&&[2,5,8].includes(s.round)),label+' market wave leak');
+  assert.equal(s.eventSchedule[4]===s.eventSchedule[6],false,label+' duplicated event');
+ }else{
+  assert.equal(s.ranking.length,s.contestants.length,label+' final ranking');
+  assert.deepEqual(s.ranking.map(x=>x.place),Array.from({length:s.contestants.length},(_,i)=>i+1));
+  assert.equal(new Set(s.ranking.map(x=>x.id)).size,s.contestants.length,label+' duplicate rank');
+  assert.equal(s.blackLots.length,0,label+' incomplete escrow cleanup');
+ }
+}
+function qaOffer(s,actor,target){
+ const resource=QA_RESOURCES[(s.round+actor.items.length)%3];
+ const offer=qaEmpty();offer[resource]=1;
+ if(actor.resources[resource]<1)return false;
+ act(s,actor.id,{type:'deal_propose',to:target.id,give:offer,want:qaEmpty()});
+ const deal=s.deals.find(d=>d.from===actor.id&&d.to===target.id);
+ if(!deal)return false;
+ const accepted=act(s,target.id,{type:'deal_accept',dealId:deal.id});
+ return accepted.events[0]?.type==='state';
+}
+function qaAutoplay(size,run,stats){
+ const {state}=makeRoom(size);
+ let turns=0,actions=0;
+ const maxTurns=9*size+6;
+ while(state.phase==='play'){
+  assert.ok(++turns<=maxTurns,'stalled match size '+size+' run '+run);
+  const actor=state.contestants[state.turnIndex];
+  const other=state.contestants.filter(p=>p.id!==actor.id&&!p.bankrupt);
+  const which=(run*11+turns*7)%8;
+  if(which===0||which===2||which===4||which===7){
+   const missing=QA_RESOURCES.slice().sort((a,b)=>(
+      actor.resources[a]/actor.quota[a]-actor.resources[b]/actor.quota[b]))[0];
+   if(act(state,actor.id,{type:'work',resource:missing}).events[0]?.type==='state')actions++;
+  }
+  if(which===1&&other.length&&actor.resources.gold>=2){
+   if(qaOffer(state,actor,other[0])){actions++;stats.private++;}
+  }
+  if(which===2||which===5){
+   const item=actor.items.find(i=>i.acquiredRound!==state.round);
+   const buyer=other.find(p=>p.items.length+(state.blackLots||[]).filter(l=>l.seller===p.id).length<4&&p.resources.gold>=12);
+   if(item&&buyer){
+    act(state,actor.id,{type:'post',itemId:item.id,ask:{gold:12}});
+    const bid=act(state,buyer.id,{type:'bid',offer:{gold:12}});
+    if(bid.events[0]?.type==='state'){
+      const traded=act(state,actor.id,{type:'accept',buyer:buyer.id});
+      if(traded.events[0]?.type==='state'){actions++;stats.public++;}
+    }
+   }
+  }
+  if(which===3&&actor.resources.gold>=75&&actor.items.length<4&&!state.blackLots.some(l=>l.seller===actor.id)){
+   const bought=act(state,actor.id,{type:'broker_buy'});
+   if(bought.events[0]?.type==='state'){actions++;stats.broker++;}
+  }
+  if(which===4&&!actor.usedPawn){
+   const item=actor.items.find(i=>i.acquiredRound!==state.round);
+   if(item){
+    const salvaged=act(state,actor.id,{type:'salvage',itemId:item.id});
+    if(salvaged.events[0]?.type==='state'){actions++;stats.salvage++;}
+   }
+  }
+  if(which===6&&state.round===2&&other.length){
+    const item=actor.items.find(i=>i.acquiredRound!==state.round);
+    if(item){
+      const listed=act(state,actor.id,{type:'black_post',itemId:item.id,ask:{gold:17}});
+      const lot=state.blackLots.find(l=>l.seller===actor.id);
+      const buyer=other.find(p=>p.resources.gold>=17&&p.items.length<4);
+      if(listed.events[0]?.type==='state'&&lot&&buyer){
+        act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:17}});
+        const sealed=lot.bids.find(b=>b.buyer===buyer.id);
+        if(sealed&&act(state,actor.id,{type:'black_accept',lotId:lot.id,bidId:sealed.id}).events[0]?.type==='state'){
+          actions++;stats.black++;
+        }
+      }
+    }
+  }
+  const previous=state.revision;
+  act(state,actor.id,{type:'end'});
+  assert.ok(state.revision>previous,'revision did not advance');
+  // Project all participants through the same server APIs exposed by PocketNet.
+  for(const p of state.contestants){
+   const view=game.viewForPlayer({state,player:{id:p.id}});
+   assert.equal(view.you.id,p.id);
+   assert.equal(view.players.every(entry=>!('quota' in entry)&&!('legendary' in entry)),true);
+   assert.ok(view.deals.every(deal=>deal.from===p.id||deal.to===p.id));
+   assert.equal(JSON.stringify(view).includes('\"eventSchedule\"'),false);
+   if(state.phase==='play'&&[2,5,8].includes(state.round)){
+     assert.equal(view.players.filter(x=>x.id!==p.id).every(x=>x.resources===null&&x.inventory.length===0),true);
+     assert.equal(view.blackLots.every(lot=>lot.item.id===undefined&&lot.seller===undefined),true);
+   }
+  }
+  qaValidate(state,'size='+size+',run='+run+',turn='+turns);
+ }
+ stats.games++;
+ stats.steps+=turns;
+ stats.completed+=state.ranking.filter(x=>x.complete&&!x.bankrupt).length;
+ stats.bankrupt+=state.contestants.filter(x=>x.bankrupt).length;
+ assert.ok(actions<=turns*5);
+}
+
+test('Pre-release: 750 complete games exercise all seat counts, private views, escrow and economy boundaries',()=>{
+ const stats={games:0,steps:0,completed:0,bankrupt:0,private:0,public:0,black:0,broker:0,salvage:0};
+ for(const seats of [2,3,4,5,6]){
+  for(let run=0;run<150;run++)qaAutoplay(seats,run,stats);
+ }
+ assert.equal(stats.games,750);
+ assert.ok(stats.public>0&&stats.private>0&&stats.black>0&&stats.broker>0&&stats.salvage>0);
+ console.log('Black Bazaar comprehensive 750-match QA:',JSON.stringify(stats));
+});
+test('Malformed and forged remote amounts cannot mutate resources, inventory or game revision',()=>{
+ const {state}=makeRoom(4);
+ const [seller,buyer,stranger]=state.contestants;
+ act(state,seller.id,{type:'post',itemId:seller.items[0].id,ask:{gold:40}});
+ const malformed=[-1,-0.5,1.5,NaN,Infinity,-Infinity,'10',null,{},[],true,2001,1e100];
+ for(const amount of malformed){
+  const before=JSON.stringify({wallets:state.contestants.map(p=>p.resources),items:qaAssets(state),revision:state.revision});
+  const result=act(state,buyer.id,{type:'bid',offer:{gold:amount}});
+  if(amount===null){
+   // Null is interpreted as omitted currency (=0) and an empty bid is invalid.
+  }
+  assert.equal(result.events[0].type,'notice','amount '+String(amount));
+  assert.equal(JSON.stringify({wallets:state.contestants.map(p=>p.resources),items:qaAssets(state),revision:state.revision}),before);
+ }
+ for(const bad of [null,'not an object',[],{gold:-1},{gold:3.33},{parts:'1'},{crystals:NaN}]){
+  const before=state.revision;
+  const answer=act(state,buyer.id,{type:'deal_propose',to:stranger.id,give:bad,want:{gold:1}});
+  assert.equal(answer.events[0].type,'notice');
+  assert.equal(state.revision,before);
+ }
+});
+test('Replayed or unauthorized sale commands never mint additional resources',()=>{
+ const {state}=makeRoom(3);
+ const [seller,buyer,outsider]=state.contestants;
+ const item=seller.items[0];
+ act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:60}});
+ act(state,buyer.id,{type:'bid',offer:{gold:55}});
+ const sellerInitial=seller.resources.gold;
+ const buyerInitial=buyer.resources.gold;
+ const bad=act(state,outsider.id,{type:'accept',buyer:buyer.id});
+ assert.equal(bad.events[0].type,'notice');
+ assert.equal(seller.resources.gold,sellerInitial);
+ const good=act(state,seller.id,{type:'accept',buyer:buyer.id});
+ assert.equal(good.events[0].type,'state');
+ const once=JSON.stringify({wallets:state.contestants.map(p=>p.resources),items:qaAssets(state),revision:state.revision});
+ for(let i=0;i<10;i++){
+  const result=act(state,seller.id,{type:'accept',buyer:buyer.id});
+  assert.equal(result.events[0].type,'notice');
+ }
+ assert.equal(JSON.stringify({wallets:state.contestants.map(p=>p.resources),items:qaAssets(state),revision:state.revision}),once);
+ assert.equal(seller.resources.gold,sellerInitial+55);
+ assert.equal(buyer.resources.gold,buyerInitial-55-(seller.negativeTarget===buyer.id?20:0));
+});
+test('Multiple black-market bids cannot pay for more than inventory limit, and old bids cannot settle twice',()=>{
+ const {state}=makeRoom(4);
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const [seller1,seller2,buyer]=state.contestants;
+ seller1.items=[{id:'item-30001',key:'pig',variant:1,acquiredRound:0,history:[]}];
+ seller2.items=[{id:'item-30002',key:'cat',variant:1,acquiredRound:0,history:[]}];
+ buyer.items=[];buyer.resources.gold=500;
+ for(const seller of [seller1,seller2])act(state,seller.id,{type:'black_post',itemId:seller.items[0].id,ask:{gold:100}});
+ const [a,b]=state.blackLots;
+ act(state,buyer.id,{type:'black_bid',lotId:a.id,offer:{gold:300}});
+ act(state,buyer.id,{type:'black_bid',lotId:b.id,offer:{gold:300}});
+ assert.equal(a.bids.length,1);
+ assert.equal(b.bids.length,1);
+ // First settlement consumes funds; second must be rejected on live balance.
+ const first=act(state,seller1.id,{type:'black_accept',lotId:a.id,bidId:a.bids[0].id});
+ assert.equal(first.events[0].type,'state');
+ const left=buyer.resources.gold;
+ const second=act(state,seller2.id,{type:'black_accept',lotId:b.id,bidId:b.bids[0].id});
+ assert.equal(second.events[0].type,'notice');
+ assert.equal(buyer.resources.gold,left);
+ assert.equal(state.blackLots.length,1);
+});
+test('Voluntary host departure moves control, cancels escrow and lets remaining players finish',()=>{
+ const {state}=makeRoom(4);
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const hostId=state.host,host=state.contestants.find(p=>p.id===hostId);
+ const item=host.items.find(i=>i.acquiredRound!==state.round);
+ assert.ok(item);
+ act(state,host.id,{type:'black_post',itemId:item.id,ask:{gold:12}});
+ const currentPlayers=state.players.filter(x=>x.id!==host.id);
+ game.onLeave({state,player:{id:host.id},players:currentPlayers});
+ assert.ok(!state.players.some(x=>x.id===hostId));
+ assert.equal(host.bankrupt,true);
+ assert.equal(state.blackLots.some(l=>l.seller===hostId),false);
+ assert.equal(host.items.some(x=>x.id===item.id),true);
+ assert.equal(state.host,currentPlayers[0].id);
+ let steps=0;
+ while(state.phase==='play'&&steps++<80){
+  const p=state.contestants[state.turnIndex];
+  assert.notEqual(p.id,hostId);
+  act(state,p.id,{type:'end'});
+ }
+ assert.equal(state.phase,'done');
+ qaValidate(state,'post-host-departure');
+});
+test('Game server state round-trips through JSON and preserves private outcomes after reconnect',()=>{
+ const {state}=makeRoom(4);
+ const [a,b,c]=state.contestants;
+ act(state,a.id,{type:'deal_propose',to:b.id,give:{gold:5},want:{crystals:1}});
+ assert.equal(state.deals.length,1);
+ // Simulate durable database save/reload, including variant powers and sealed trades.
+ const clone=JSON.parse(JSON.stringify(state));
+ const before=game.viewForPlayer({state,player:{id:a.id}});
+ const after=game.viewForPlayer({state:clone,player:{id:a.id}});
+ assert.deepEqual(after,before);
+ const outsider=game.viewForPlayer({state:clone,player:{id:c.id}});
+ assert.equal(outsider.deals.length,0);
+ const id=clone.deals[0].id;
+ const accepted=game.onMessage({state:clone,player:{id:b.id},payload:{type:'deal_accept',dealId:id}});
+ assert.equal(accepted.events[0].type,'state');
+ assert.equal(clone.deals.length,0);
+ assert.equal(state.deals.length,1,'durable snapshots are isolated');
+ qaValidate(clone,'roundtrip');
+});
+test('A late malicious action advances the expired turn but never buys an item or spends funds',()=>{
+ const {state}=makeRoom(3);
+ const active=state.contestants[state.turnIndex],before={...active.resources};
+ state.deadlineAt=Date.now()-1;
+ const revision=state.revision;
+ const result=act(state,active.id,{type:'broker_buy'});
+ assert.equal(result.events[0].type,'state');
+ assert.equal(state.turnIndex,1);
+ assert.deepEqual(active.resources,before);
+ assert.equal(state.revision,revision+1);
+});
