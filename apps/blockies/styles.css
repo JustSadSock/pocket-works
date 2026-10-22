@@ -364,3 +364,42 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .room-invite-actions .btn{min-height:42px}
 .room-invite-actions [hidden]{display:none!important}
 @media (max-width:540px){.room-header{align-items:flex-start;flex-wrap:wrap}.room-invite-actions{width:100%;justify-content:stretch}.room-invite-actions .btn{flex:1 1 140px}}
+
+
+/* Cooperative spawn gantry: physical 4 × 2 mouths aligned exactly to board cells. */
+#shared-board:has(#spawn-rail){display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;line-height:normal}
+#spawn-rail{position:relative;flex:none;background:#142629;overflow:hidden}
+.spawn-bay{position:absolute;bottom:0;display:flex;flex-direction:column;height:calc(4 * var(--bay-cell) + 16px);min-width:0;color:var(--bay-color);pointer-events:none}
+.spawn-bay__name{display:block;height:16px;min-height:16px;line-height:16px;font:800 clamp(8px,1.3vw,11px)/16px system-ui,sans-serif;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:center;background:#142629;color:var(--bay-color);padding-inline:2px}
+.spawn-bay__next{display:block;width:100%;height:calc(var(--bay-cell) * 2);object-fit:fill;image-rendering:auto;background:#142629}
+.spawn-bay__mouth{position:relative;flex:none;height:calc(var(--bay-cell) * 2);border:2px solid var(--bay-color);border-bottom:0;border-radius:5px 5px 0 0;background:linear-gradient(to bottom,color-mix(in srgb,var(--bay-color) 20%,#142629),#142629 75%);box-shadow:inset 0 5px 10px #0005,0 0 10px color-mix(in srgb,var(--bay-color) 28%,transparent)}
+.spawn-bay__mouth:after{content:"";position:absolute;left:0;right:0;bottom:0;border-bottom:2px dashed color-mix(in srgb,var(--bay-color) 55%,transparent)}
+.spawn-bay__status{display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:clamp(13px,2vw,26px);font-weight:800;background:#1b292be0;color:#e9aa9e}
+.spawn-bay.is-out .spawn-bay__status{display:flex}
+.spawn-bay.is-out .spawn-bay__name{color:#a2aaa7;text-decoration:line-through}
+.spawn-bay.is-out .spawn-bay__next{opacity:.24}
+.coop-name-label{display:grid;gap:5px;font-weight:750;font-size:12px;margin:10px 0}
+.coop-name-input{height:42px;width:100%;border:1px solid var(--line);border-radius:8px;background:#fdfcf6;padding:8px 11px;font-size:16px;color:var(--ink)}
+#game-screen.active.wide-well{grid-template-areas:"stats board controls";grid-template-rows:minmax(0,1fr)}
+#game-screen.active.wide-well .next-pieces-preview{display:none}
+#game-screen.active.wide-well .touch-controls{justify-content:center}
+
+/* Developer inspection panel (Backquote / Ё); no entry in normal player chrome. */
+.blockies-debug{position:fixed;inset:0;z-index:390;display:flex;justify-content:flex-end;background:#0d1d1bc2}
+.blockies-debug[hidden]{display:none!important}
+.blockies-debug__panel{height:100%;width:min(390px,100%);padding:18px max(18px,env(safe-area-inset-right));background:#f5f1e7;color:#18332e;box-shadow:-12px 0 40px #0005;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.blockies-debug__head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.blockies-debug__head h2{font:850 24px system-ui;margin:0}
+.blockies-debug__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.blockies-debug button{min-height:40px;border:1px solid #aabbb3;background:#fff;border-radius:8px;color:#17433a;font:750 12px system-ui;cursor:pointer;padding:8px}
+.blockies-debug button:hover{background:#e2f0e8}
+.blockies-debug__details{flex:1;min-height:110px;max-height:36vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.5 ui-monospace,monospace;padding:12px;background:#18352e;color:#e5f0e6;border-radius:8px}
+@media(max-width:760px) and (orientation:portrait){
+ #game-screen.active.wide-well{grid-template-areas:"stats" "board" "controls";grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+ #game-screen.active.wide-well .next-pieces-preview{display:none}
+ .spawn-bay__name{font-size:clamp(7px,1.9vw,10px)}
+}
+@media(orientation:landscape) and (max-height:690px){
+ #game-screen.active.wide-well{grid-template-areas:"controls board stats";grid-template-columns:minmax(130px,1fr) minmax(0,1.5fr) minmax(95px,.58fr);grid-template-rows:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce){.spawn-bay,.spawn-bay__mouth{transition:none!important}}

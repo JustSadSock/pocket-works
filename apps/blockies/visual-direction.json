@@ -4,12 +4,12 @@
   "product": "blockies",
   "direction": {
     "premise": "A cooperative falling-block arcade rebuilt around a legible single shared well, even on narrow phones.",
-    "composition": "A light editorial entry becomes a high-contrast centered well with compact score to the side or above, next pieces on a rail, and an ergonomic two-thumb control deck.",
+    "composition": "An editorial start screen leads to a shared crisp falling-block well. On cooperative games a colored multi-gate gantry anchors each player exactly above their four-cell entrance, while touch controls sit at thumb reach.",
     "shapeLanguage": "Crisp square stack cells, quiet linear menu rows, pill-free directional keys and one heavy color-filled hard-drop key.",
     "surfaceAndMaterial": "Warm paper shell and sage hardware borders surround a dark deep-green playing well; no glass overlays, purple gradients or neon chromed cabinet.",
     "paletteLogic": "A neutral matte shell yields attention to player-owned cyan, pink, yellow and green cells; the hard-drop key is deep green.",
     "typography": "Humanist sans for mode choices, tightly-spaced monospace for score and technical status; labels stay concise.",
-    "signature": "The multiplayer phone well expands to full width automatically, while the two-thumb deck supports both precise hold controls and direct canvas swipe rotation.",
+    "signature": "Four-cell by two-cell colored individual spawn gates extend directly above the shared well; every gate has the player name and own next-piece indicator. Input and gameplay remain one instrument.",
     "distinction": "Distinct from ZAMAZKA's art paper and FOG's tactical maps: this is a fitted precision arcade well within a restrained editorial instrument, not a decorative game cabinet."
   },
   "architecture": {
@@ -20,7 +20,7 @@
     "dominantMotion": "immediate",
     "primaryVerb": "Place falling pieces into the one shared well: hold horizontal movement or soft-drop, rotate with a tap, swipe in whole-cell steps, or hard-drop.",
     "physicalFeedback": "Two-thumb buttons depress by 3px on pointer contact, local gestures resolve immediately, online snapshots reconcile to the authoritative well.",
-    "spatialRationale": "The smallest screen reserves the most area for its current 20-row field, shifts wide shared wells to full-width play, and keeps two control groups at thumb reach; landscape moves controls left of the well.",
+    "spatialRationale": "Keep 20-row board cell precision at all breakpoints; dedicate four columns and two rows of visible gate to each player. Place next-piece preview and player nickname immediately over their individual gate, rather than a disjoint sidebar. The four gates remain aligned under aspect-ratio changes.",
     "comparisons": [
       {
         "slug": "perekos",
@@ -71,19 +71,24 @@
         "slug": "bozhe-ne-tak",
         "spatialDifference": "Bozhe Ne Tak dedicates its split workspace to a carved god altar, tribute shelf and ritual props; Blockies keeps an uninterrupted pixel-accurate falling-block well and a narrow score rail with controls below.",
         "interactionDifference": "Bozhe Ne Tak resolves discrete ritual offerings and deity judgments; Blockies is continuous real-time co-op, with repeat-on-hold motion and PocketNet snapshots synchronized for every falling piece."
+      },
+      {
+        "slug": "axis-pals",
+        "spatialDifference": "Axis Pals uses a partnership puzzle workspace built around coordinating choices, while Blockies gives its one uninterrupted falling-block well a cell-aligned gantry of individual next-piece and spawn entrances.",
+        "interactionDifference": "The discrete joint decisions of Axis Pals differ from Blockies' repeat-on-hold movement and hard-drop physics, with independently blocked player entrances and server-authoritative board synchronization."
       }
     ]
   },
   "production": {
     "renderer": "Canvas 2D paints crisp, flat tiles with light rims and ghost landings; source collision, scoring, seeded pieces and server-authoritative online rules are preserved.",
-    "focalAsset": "Dark 20-row well and shared bright tetromino silhouettes; matte stack-shaped SVG install identity matches the new shell."
+    "focalAsset": "A dark shared well with personal 4×2 colored inlet gates, a clipped next-tetromino preview and a label for every teammate; one coherent geometric stack-shaped icon."
   },
   "motion": {
     "character": "Gravity, directional repeat and swipe displacement use visible cell-by-cell changes, never interpolation that misrepresents landing coordinates.",
     "action": "Move and rotate your own falling piece, then drop it into the shared stack while leaving room for the other player.",
-    "anticipation": "A ghost silhouette, next piece rail and legible room ready indicators prepare the next exact move.",
+    "anticipation": "Each player's named colored 4×2 bay previews their next piece directly above the exact spawn entrance. An obstructed entrance visibly closes for that player alone.",
     "response": "A key depresses on touch, then the piece moves or rotates; hard drop snaps to the ghost position; server snapshots remain authoritative.",
-    "followThrough": "Line-clear bonuses enter the compact feed without covering the well; score updates pulse once.",
+    "followThrough": "A filled personal entrance stops only its own player's pieces, with a visible blocked gate; the remaining teammates keep clearing the shared field.",
     "interruption": "Pointer cancel, disconnect and app background release held controls; room rejoin restores authoritative state.",
     "reducedMotion": "Prefer-reduced-motion strips UI transitions without affecting Tetris gravity or button/input semantics."
   },

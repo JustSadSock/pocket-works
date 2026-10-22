@@ -290,6 +290,8 @@ function updateUILanguage() {
     }
 }
 
+import {spawnLaneX} from './spawn-bays.js';
+
 // Game Configuration
 const BLOCK_SIZE = 25;
 const BASE_BOARD_WIDTH = 10;
@@ -681,7 +683,20 @@ class Player {
     spawnPiece() {
         this.currentPiece = this.nextPiece;
         this.nextPiece = this.randomPiece();
-        const pieceWidth = this.currentPiece[0].length;
+        const pieceWidth=this.currentPiece[0].length;
+        if(gameState.numPlayers>1){
+            const laneX=Number.isInteger(this.spawnLaneX)
+                ? this.spawnLaneX:spawnLaneX(this.id,gameState.numPlayers,getBoardWidth());
+            const x=laneX+Math.floor((4-pieceWidth)/2);
+            this.position={x,y:0};
+            if(this.checkCollision().collides){
+                this.gameOver=true;
+                this.currentPiece=null;
+                checkAllPlayersGameOver();
+            }
+            this.dropCounter=0;
+            return;
+        }
         const boardWidth = getBoardWidth();
         const preferredX = Math.min(
             boardWidth - pieceWidth,
@@ -1425,6 +1440,104 @@ class UIManager {
         this.saveSoloCheckpoint(true);
     }
 
+    toggleDebugMenu(){
+        let overlay=document.getElementById('blockies-debug');
+        if(!overlay){
+            overlay=document.createElement('div');
+            overlay.id='blockies-debug';
+            overlay.className='blockies-debug';
+            overlay.hidden=true;
+            const panel=document.createElement('section');
+            panel.className='blockies-debug__panel';
+            panel.setAttribute('role','dialog');
+            panel.setAttribute('aria-label','Отладка Blockies');
+            const head=document.createElement('div');
+            head.className='blockies-debug__head';
+            const title=document.createElement('h2');
+            title.textContent='Blockies · Debug';
+            const close=document.createElement('button');
+            close.type='button';
+            close.textContent='Закрыть ×';
+            close.addEventListener('click',()=>this.toggleDebugMenu());
+            head.append(title,close);
+            const help=document.createElement('p');
+            help.textContent='Backquote / Ё — открыть или закрыть. Экраны для проверки.';
+            const grid=document.createElement('div');
+            grid.className='blockies-debug__grid';
+            const screens=[
+                ['mainMenu','Главное меню'],['coopSetup','Локальная комната'],
+                ['onlineLobby','Онлайн-комната'],['gameScreen','Игровое поле'],
+                ['settingsScreen','Настройки'],['pause','Пауза'],
+                ['gameOver','Результаты'],['achievements','Награды']
+            ];
+            for(const [id,label] of screens){
+                const button=document.createElement('button');
+                button.type='button';button.textContent=label;
+                button.addEventListener('click',()=>{this.debugOpenScreen(id);this.toggleDebugMenu();});
+                grid.append(button);
+            }
+            const inspect=document.createElement('pre');
+            inspect.className='blockies-debug__details';
+            inspect.id='blockies-debug-details';
+            const refresh=document.createElement('button');
+            refresh.type='button';refresh.textContent='Обновить состояние';
+            refresh.addEventListener('click',()=>this.refreshDebugDetails());
+            panel.append(head,help,grid,refresh,inspect);
+            overlay.append(panel);
+            overlay.addEventListener('click',event=>{if(event.target===overlay)this.toggleDebugMenu();});
+            document.body.append(overlay);
+        }
+        overlay.hidden=!overlay.hidden;
+        if(!overlay.hidden)this.refreshDebugDetails();
+    }
+
+    refreshDebugDetails(){
+        const node=document.getElementById('blockies-debug-details');
+        if(!node)return;
+        const state={
+            screen:Object.keys(this.screens).find(key=>this.screens[key].classList.contains('active')),
+            connection:networkManager.connected?'online':'offline',
+            room:networkManager.roomId||null,
+            round:networkManager.activeRound||0,
+            players:gameState.players.map(player=>({
+                id:player.id,name:player.name,color:player.color,
+                entranceX:player.spawnLaneX,entranceWidth:4,entranceHeight:2,
+                position:player.position,next:player.nextPiece,
+                eliminated:player.gameOver
+            })),
+            field:{width:gameState.boardWidth,height:BOARD_HEIGHT},
+            score:gameState.sharedStats
+        };
+        node.textContent=JSON.stringify(state,null,2);
+    }
+
+    debugOpenScreen(id){
+        this.hideModal('pause');this.hideModal('gameOver');
+        if(id==='mainMenu'){this.showScreen('mainMenu');return;}
+        if(id==='coopSetup'){this.showCoopSetup();return;}
+        if(id==='onlineLobby'){this.showOnlineLobby();return;}
+        if(id==='settingsScreen'){this.showSettings();return;}
+        if(id==='achievements'){document.getElementById('achievements-btn')?.click();return;}
+        if(!gameState.players.length||!this.screens.gameScreen.classList.contains('active')){
+            // A real playable local board for UI inspection, not a dead mock screen.
+            this.isOnlineMode=false;
+            this.localPlayerNames=['Игрок 1','Игрок 2'];
+            this.startGame(2);
+        }else this.showScreen('gameScreen');
+        if(id==='pause'){
+            if(!this.isOnlineMode)gameState.isPaused=true;
+            this.showModal('pause');
+        }else if(id==='gameOver'){
+            if(this.isOnlineMode){
+                // Never manufacture a result or mutate a running PocketNet round.
+                this.showStyledMessage('Debug','Результаты онлайн-партии показывает сервер после её завершения. Для предпросмотра запусти локальную игру.','info');
+                return;
+            }
+            gameState.isGameOver=true;
+            this.showGameOver();
+        }
+    }
+
     showScreen(screenName) {
         // Track previous screen for settings navigation
         const currentScreen = Object.keys(this.screens).find(key => 
@@ -1542,19 +1655,29 @@ class UIManager {
         canvas.style.maxWidth = `${canvas.width}px`;
         canvas.style.maxHeight = 'none';
         boardWrapper.style.setProperty('--board-max-width', `${canvas.width}px`);
+        if(numPlayers>1){
+            const rail=document.createElement('div');
+            rail.id='spawn-rail';
+            rail.setAttribute('aria-label','Личные зоны появления фигур');
+            boardWrapper.appendChild(rail);
+        }
         this.installBoardGestures(canvas);
         boardWrapper.appendChild(canvas);
 
         container.appendChild(boardWrapper);
 
         for (let i = 0; i < numPlayers; i++) {
-            const spawnAnchor = ((i + 1) / (numPlayers + 1)) * gameState.boardWidth;
+            const laneX=spawnLaneX(i,numPlayers,gameState.boardWidth);
+            const spawnAnchor=numPlayers>1?laneX+2:gameState.boardWidth/2;
             const player = new Player(
                 i,
                 gameState.settings.colors[i],
                 gameState.settings.keys[i],
                 spawnAnchor
             );
+            player.spawnLaneX=laneX;
+            player.name=this.isOnlineMode?(this.onlineParticipantNames?.[i]||`Игрок ${i+1}`):
+                (this.localPlayerNames?.[i]||`Игрок ${i+1}`);
             player.init();
             player.score = gameState.sharedStats.score;
             player.level = gameState.sharedStats.level;
@@ -1567,14 +1690,13 @@ class UIManager {
             });
 
             this.createPlayerInfo(player, playerInfoSidebar);
-            this.createNextPiecePreview(player, nextPiecesPreview);
+            if(numPlayers===1)this.createNextPiecePreview(player, nextPiecesPreview);
+            else this.createSpawnBay(player,document.getElementById('spawn-rail'));
             this.updatePlayerInfo(player);
             this.drawNextPiece(player);
         }
 
-        if (nextPiecesPreview && numPlayers > 0) {
-            nextPiecesPreview.classList.add('visible');
-        }
+        if(nextPiecesPreview)nextPiecesPreview.classList.toggle('visible',numPlayers===1);
         
         if (playerInfoSidebar && numPlayers > 0) {
             playerInfoSidebar.classList.add('visible');
@@ -1591,6 +1713,35 @@ class UIManager {
         requestAnimationFrame((time) => this.gameLoop(time, run));
     }
     
+    createSpawnBay(player,rail){
+        if(!rail)return;
+        const bay=document.createElement('div');
+        bay.className='spawn-bay';
+        bay.id=`spawn-bay-${player.id}`;
+        bay.style.left=(100*player.spawnLaneX/gameState.boardWidth)+'%';
+        bay.style.width=(400/gameState.boardWidth)+'%';
+        bay.style.setProperty('--bay-color',player.color);
+        const label=document.createElement('span');
+        label.className='spawn-bay__name';
+        label.textContent=player.name;
+        label.title=player.name;
+        const next=document.createElement('canvas');
+        next.id=`bay-next-${player.id}`;
+        next.className='spawn-bay__next';
+        next.width=4*BLOCK_SIZE;
+        next.height=2*BLOCK_SIZE;
+        next.setAttribute('aria-label','Следующая фигура: '+player.name);
+        const mouth=document.createElement('div');
+        mouth.className='spawn-bay__mouth';
+        mouth.setAttribute('aria-hidden','true');
+        const status=document.createElement('span');
+        status.className='spawn-bay__status';
+        status.textContent='×';
+        mouth.append(status);
+        bay.append(label,next,mouth);
+        rail.appendChild(bay);
+    }
+
     createNextPiecePreview(player, container) {
         if (!container) return;
         
@@ -1773,20 +1924,28 @@ class UIManager {
     }
 
     drawNextPiece(player) {
-        const canvas=document.getElementById(`next-${player.id}`);
-        if(!canvas)return;
-        const ctx=canvas.getContext('2d');
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        const piece=player.nextPiece;
-        if(!piece)return;
-        const offsetX=Math.floor((PREVIEW_SIZE-piece[0].length)/2);
-        const offsetY=Math.floor((PREVIEW_SIZE-piece.length)/2);
-        for(let y=0;y<piece.length;y++)for(let x=0;x<piece[y].length;x++){
-            if(piece[y][x])this.paintBlock(ctx,offsetX+x,offsetY+y,player.color,true);
+        for(const id of [`next-${player.id}`,`bay-next-${player.id}`]){
+            const canvas=document.getElementById(id);
+            if(!canvas)continue;
+            const ctx=canvas.getContext('2d');
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            const piece=player.nextPiece;
+            if(!piece||player.gameOver)continue;
+            const offsetX=Math.floor((canvas.width/BLOCK_SIZE-piece[0].length)/2);
+            const offsetY=Math.floor((canvas.height/BLOCK_SIZE-piece.length)/2);
+            for(let y=0;y<piece.length;y++)for(let x=0;x<piece[y].length;x++){
+                if(piece[y][x])this.paintBlock(ctx,offsetX+x,offsetY+y,player.color,true);
+            }
         }
     }
 
     updatePlayerInfo(player) {
+        const bay=document.getElementById(`spawn-bay-${player.id}`);
+        if(bay){
+            bay.classList.toggle('is-out',!!player.gameOver);
+            const label=bay.querySelector('.spawn-bay__name');
+            if(label&&label.textContent!==player.name){label.textContent=player.name;label.title=player.name;}
+        }
         const statusEl = document.getElementById(`status-${player.id}`);
         if (!statusEl) return;
 
@@ -2015,7 +2174,11 @@ class UIManager {
         const gap=parseFloat(stageStyles.gap)||0;
         const maxWidth=Math.max(1,rect.width-padX-frameX-2);
         const maxHeight=Math.max(1,rect.height-padY-frameY-(head?.getBoundingClientRect().height||0)-gap-2);
-        const ratio=Math.max(.05,Math.min(1.6,maxWidth/canvas.width,maxHeight/canvas.height));
+        const rail=document.getElementById('spawn-rail');
+        const railExtra=rail?4*BLOCK_SIZE:0;
+        const labelExtra=rail?16:0;
+        const ratio=Math.max(.05,Math.min(1.6,maxWidth/canvas.width,
+            Math.max(1,maxHeight-labelExtra)/(canvas.height+railExtra)));
         const width=Math.floor(canvas.width*ratio);
         const height=Math.floor(canvas.height*ratio);
         canvas.style.width=width+'px';
@@ -2023,7 +2186,14 @@ class UIManager {
         canvas.style.maxWidth='none';
         canvas.style.maxHeight='none';
         wrapper.style.width=(width+frameX)+'px';
-        wrapper.style.height=(height+frameY)+'px';
+        const railHeight=rail?Math.round(railExtra*ratio)+labelExtra:0;
+        if(rail){
+            const cell=width/gameState.boardWidth;
+            rail.style.width=width+'px';
+            rail.style.height=railHeight+'px';
+            rail.style.setProperty('--bay-cell',cell+'px');
+        }
+        wrapper.style.height=(height+railHeight+frameY)+'px';
     }
 
     installBoardGestures(canvas) {
@@ -2178,6 +2348,13 @@ class UIManager {
     }
 
     handleKeyPress(e) {
+        if(e.code==='Backquote'&&!e.repeat&&!e.target?.closest?.('input,textarea,[contenteditable="true"]')){
+            e.preventDefault();this.toggleDebugMenu();return;
+        }
+        if(e.code==='Escape'&&!document.getElementById('blockies-debug')?.hidden){
+            const debug=document.getElementById('blockies-debug');
+            if(debug){e.preventDefault();this.toggleDebugMenu();return;}
+        }
         const code = normalizeKeyCode(e.code);
         const isGameActive = this.screens.gameScreen.classList.contains('active') && gameState.players.length;
 
@@ -2389,6 +2566,9 @@ class UIManager {
     }
 
     updateCoopPlayerConfig(numPlayers) {
+        let names=[];
+        try{names=JSON.parse(localStorage.getItem('pocket-works:blockies:coop-names')||'[]');}
+        catch{}
         const container = document.getElementById('coop-players-config');
         container.innerHTML = '';
 
@@ -2404,6 +2584,9 @@ class UIManager {
                     <span class="player-color-badge" style="background: ${color};"></span>
                     ${t('player')} ${i + 1}
                 </h4>
+                <label class="coop-name-label">Ник игрока
+                    <input type="text" class="coop-name-input" id="coop-nickname-${i}" maxlength="20" autocomplete="off" placeholder="Игрок ${i+1}">
+                </label>
                 <div class="color-picker">
                     <label>${t('blockColor')}</label>
                     <input type="color" id="coop-color-${i}" value="${color}">
@@ -2438,6 +2621,8 @@ class UIManager {
             `;
             
             container.appendChild(card);
+            const nickname=card.querySelector('.coop-name-input');
+            if(nickname)nickname.value=String(names[i]||'').slice(0,20);
 
             // Add event listener for key binding inputs
             const actions = ['left', 'right', 'down', 'rotate', 'drop'];
@@ -2511,6 +2696,9 @@ class UIManager {
             }
         }
         
+        this.localPlayerNames=Array.from({length:numPlayers},(_,i)=>
+            document.getElementById(`coop-nickname-${i}`)?.value.trim().slice(0,20)||`Игрок ${i+1}`);
+        localStorage.setItem('pocket-works:blockies:coop-names',JSON.stringify(this.localPlayerNames));
         // Save to localStorage
         localStorage.setItem('pocket-works:blockies:settings', JSON.stringify(gameState.settings));
         
@@ -2802,6 +2990,7 @@ class UIManager {
         this.networkPlayers = {};
         this.localPlayerIndex = -1;
         this.isOnlineMode = true; // Flag to indicate online mode
+        this.onlineParticipantNames=data.players.map(p=>p.name);
         
         // Update game state with player colors from network and map IDs
         data.players.forEach((netPlayer, index) => {
@@ -3317,7 +3506,10 @@ for(const [method,action] of [['move','move'],['rotate','rotate'],['drop','drop'
 function applyNetworkSnapshot(s){
  if(!s||!window.uiManager?.isOnlineMode)return;
  gameState.board=s.board;gameState.sharedStats=s.sharedStats;gameState.sharedStatsDirty=true;gameState.isGameOver=s.isGameOver;
- s.players.forEach((data,i)=>{const player=gameState.players[i];if(player){const keys=player.keys;Object.assign(player,data,{keys});}});
+ s.players.forEach((data,i)=>{const player=gameState.players[i];if(player){
+   const keys=player.keys;Object.assign(player,data,{keys});
+   window.uiManager.updatePlayerInfo(player);window.uiManager.drawNextPiece(player);
+  }});
  window.uiManager.drawBoard();window.uiManager.updateTeamStatsIfNeeded();
 }
 document.querySelector('#join-code-btn').onclick=()=>networkManager.joinRoom(document.querySelector('#join-code').value.trim());
