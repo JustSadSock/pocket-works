@@ -691,8 +691,12 @@ test('Delayed curse follows the physical frog across public trading and activate
  assert.equal('special' in other,false);
  while(state.round<3)act(state,state.contestants[state.turnIndex].id,{type:'end'});
  buyer.resources.gold=1000;
+ // Suppress unrelated urgent contracts: isolate delayed upkeep math.
  // Round 3 upkeep: -18% (180), delayed curse then -30% (246).
- while(state.round===3)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ while(state.round===3){
+   const current=state.contestants[state.turnIndex];current.urgent=null;
+   act(state,current.id,{type:'end'});
+ }
  assert.equal(buyer.resources.gold,574);
  assert.equal(cursed.curseResolved,true);
  const resolved=game.viewForPlayer({state,player:{id:buyer.id}}).you.items.find(i=>i.id===cursed.id);
@@ -724,7 +728,10 @@ test('Hourglass curse persists through black escrow, transfers to buyer, then co
  assert.equal(buyer.resources.parts,8);
  assert.equal(hourglass.curseResolved,true);
  buyer.resources.parts=10;
- while(state.round===3)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ while(state.round===3){
+   const current=state.contestants[state.turnIndex];current.urgent=null;
+   act(state,current.id,{type:'end'});
+ }
  assert.equal(buyer.resources.parts,10);
 });
 test('One-use amulet prevents failed urgent order once and keeps spent state across rounds',()=>{
