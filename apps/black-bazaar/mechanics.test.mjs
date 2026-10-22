@@ -287,3 +287,92 @@ test('Counteroffer expires after full round and cannot be accepted in later roun
  const rejected=act(state,b.id,{type:'deal_accept',dealId:id});
  assert.equal(rejected.events[0].type,'notice');
 });
+
+
+test('Every player gets one urgency challenge in each resource, with equal work-equivalent difficulty per wave',()=>{
+ for(const size of [2,3,4,5,6]){
+  const {state}=makeRoom(size);
+  const byPlayer=new Map(state.contestants.map(p=>[p.id,[]]));
+  let steps=0;
+  while(state.phase==='play'&&steps++<80){
+   const turn=state.contestants[state.turnIndex];
+   if(turn.urgent?.status==='pending'){
+     const card=turn.urgent.needs;
+     const key=['gold','crystals','parts'].find(k=>card[k]>0);
+     byPlayer.get(turn.id).push([state.round,key,card[key]]);
+   }
+   act(state,turn.id,{type:'end'});
+  }
+  assert.equal(state.phase,'done');
+  const expected=[2,3,4];
+  for(const cards of byPlayer.values()){
+   assert.equal(cards.length,3);
+   assert.deepEqual(cards.map(x=>x[0]),[3,6,9]);
+   assert.equal(new Set(cards.map(x=>x[1])).size,3);
+   for(let j=0;j<3;j++){
+     const [,key,amount]=cards[j];
+     assert.equal(amount,expected[j]*({gold:35,crystals:4,parts:1}[key]));
+   }
+  }
+ }
+});
+test('Simulated 2–6 person complete matches preserve invariants through barter, auction and deadlines',()=>{
+ const stats={matches:0,deals:0,auctions:0,contractsSuccess:0,contractsFailed:0,quotasMet:0,bankrupt:0};
+ for(const size of [2,3,4,5,6]){
+  for(let caseNo=0;caseNo<24;caseNo++){
+   const {state}=makeRoom(size);let steps=0;
+   while(state.phase==='play'){
+     if(steps++>TOTAL_ROUNDS*size+5)throw Error('stalled match with '+size+' players');
+     const owner=state.contestants[state.turnIndex],others=state.contestants.filter(p=>p.id!==owner.id&&!p.bankrupt);
+     const urgent=owner.urgent?.status==='pending'?owner.urgent.needs:null;
+     const short=urgent&&['gold','crystals','parts'].find(k=>owner.resources[k]<urgent[k]);
+     const best=short||['gold','crystals','parts'].sort((a,b)=>
+       owner.resources[a]/owner.quota[a]-owner.resources[b]/owner.quota[b])[0];
+     if(!owner.bankrupt)act(state,owner.id,{type:'work',resource:best});
+     if(others.length&&caseNo%3===0&&!owner.bankrupt){
+       const counterparty=others[0];
+       if(owner.resources.gold>=10&&counterparty.resources.crystals>=1){
+         act(state,owner.id,{type:'deal_propose',to:counterparty.id,
+           give:{gold:10},want:{crystals:1}});
+         const deal=state.deals.find(d=>d.from===owner.id);
+         if(deal){act(state,counterparty.id,{type:'deal_accept',dealId:deal.id});stats.deals++;}
+       }
+     }
+     if(others.length&&caseNo%4===0&&!owner.bankrupt){
+       const buyer=others.find(p=>p.items.length<4&&p.resources.gold>=18);
+       const item=owner.items.find(i=>i.acquiredRound!==state.round);
+       if(buyer&&item){
+         act(state,owner.id,{type:'post',itemId:item.id,ask:{gold:20}});
+         if(state.listing){
+           act(state,buyer.id,{type:'bid',offer:{gold:18}});
+           const result=act(state,owner.id,{type:'accept',buyer:buyer.id});
+           if(result.events[0]?.type==='state')stats.auctions++;
+         }
+       }
+     }
+     act(state,owner.id,{type:'end'});
+     for(const p of state.contestants){
+       for(const key of ['gold','crystals','parts']){
+         assert.ok(Number.isInteger(p.resources[key])&&p.resources[key]>=0&&p.resources[key]<=9999);
+       }
+       assert.ok(p.items.length<=4);
+       assert.equal(new Set(p.items.map(i=>i.id)).size,p.items.length);
+     }
+     const allItems=state.contestants.flatMap(p=>p.items.map(i=>i.id));
+     assert.equal(new Set(allItems).size,allItems.length);
+   }
+   assert.equal(state.phase,'done');
+   assert.equal(state.ranking.length,size);
+   for(const p of state.contestants){
+     stats.contractsFailed+=p.strikes;
+     stats.contractsSuccess+=3-p.strikes;
+     stats.bankrupt+=Number(p.bankrupt);
+   }
+   stats.quotasMet+=state.ranking.filter(p=>p.complete&&!p.bankrupt).length;
+   stats.matches++;
+  }
+ }
+ assert.equal(stats.matches,120);
+ assert.ok(stats.deals>0&&stats.auctions>0);
+ console.log('Black Bazaar economy smoke simulation:',JSON.stringify(stats));
+});
