@@ -879,6 +879,12 @@ if(debugPreview){
    emit('status',{message:'Предмет: '+(state.listing?.name||state.you?.items?.[0]?.name||'открыт')});
    return;
   }
+  if(d.type==='sheet'){
+   if(!state||state.phase!=='play')showScene('four');
+   if(d.name==='detail'&&!selectedArtifact)selectedArtifact={kind:'inventory',id:state.you.items[0]?.id};
+   renderPlay();openSheet(d.name,true);
+   emit('status',{message:'Раздел: '+d.name});return;
+  }
   if(d.type==='effect'){
    showConfirmedCue({kind:d.kind,label:d.label},false);
    emit('status',{message:'Эффект: '+d.label});return;
