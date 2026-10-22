@@ -77,6 +77,7 @@ const REPACK_PARTS = 1;
 const turnDurationMs = seats => seats<=2?90_000:seats<=4?80_000:65_000;
 const isBlackRound = s => s.phase==='play' && BLACK_ROUNDS.includes(s.round);
 const itemLocked = (s,id) => s.blackLots?.some(l=>l.item.id===id) || s.listing?.itemId===id;
+const inventoryCount = (s,p) => p.items.length+(s.blackLots||[]).filter(l=>l.seller===p.id).length;
 
 const sample = xs => xs[Math.floor(Math.random()*xs.length)];
 const shuffled = xs => [...xs].sort(()=>Math.random()-.5);
@@ -230,7 +231,7 @@ function transferItem(s,seller,buyer,item){
   return true;
 }
 function onTrade(s,seller,buyer,item,price){
-  if(buyer.items.length>=MAX_ITEMS||!has(buyer,price)||item.acquiredRound===s.round)return false;
+  if(inventoryCount(s,buyer)>=MAX_ITEMS||!has(buyer,price)||item.acquiredRound===s.round)return false;
   if(!seller.items.some(x=>x.id===item.id))return false;
   add(buyer,price,-1);add(seller,price,+1);
   transferItem(s,seller,buyer,item);
@@ -265,8 +266,8 @@ function dealAvailable(s,deal){
   if(!from||!to||from.bankrupt||to.bankrupt)return false;
   if(!has(from,deal.give)||!has(to,deal.want))return false;
   if(!dealValidItem(s,from,deal.giveItemId)||!dealValidItem(s,to,deal.wantItemId))return false;
-  const fromCount=from.items.length-Number(deal.giveItemId!==null)+Number(deal.wantItemId!==null);
-  const toCount=to.items.length-Number(deal.wantItemId!==null)+Number(deal.giveItemId!==null);
+  const fromCount=inventoryCount(s,from)-Number(deal.giveItemId!==null)+Number(deal.wantItemId!==null);
+  const toCount=inventoryCount(s,to)-Number(deal.wantItemId!==null)+Number(deal.giveItemId!==null);
   return fromCount<=MAX_ITEMS&&toCount<=MAX_ITEMS;
 }
 function acceptDeal(s,deal){
@@ -313,7 +314,7 @@ function action(s,id,v){
   if(v.type==='black_bid'){
     const lot=s.blackLots.find(l=>l.id===v.lotId),offer=wallet(v.offer);
     if(!isBlackRound(s)||!lot||lot.seller===id||!offer||!nonzero(offer)
-       ||!has(me,offer)||me.items.length>=MAX_ITEMS)
+       ||!has(me,offer)||inventoryCount(s,me)>=MAX_ITEMS)
       return failure(s,id,'Ставка недоступна: лот, ресурсы или инвентарь.');
     lot.bids=lot.bids.filter(b=>b.buyer!==id);
     lot.bids.push({id:'bbid-'+(++s.blackSeq),buyer:id,offer});
@@ -340,7 +341,7 @@ function action(s,id,v){
     const lot=s.blackLots.find(l=>l.id===v.lotId);
     if(!lot||lot.seller!==id)return failure(s,id,'Только владелец может принять ставку.');
     const bid=lot.bids.find(b=>b.id===v.bidId),buyer=bid&&getPlayer(s,bid.buyer);
-    if(!buyer||buyer.bankrupt||!s.players.some(p=>p.id===buyer.id)||buyer.items.length>=MAX_ITEMS
+    if(!buyer||buyer.bankrupt||!s.players.some(p=>p.id===buyer.id)||inventoryCount(s,buyer)>=MAX_ITEMS
        ||!has(buyer,bid.offer)||lot.item.acquiredRound===s.round)
       return failure(s,id,'Ставка устарела либо у покупателя нет ресурсов.');
     add(buyer,bid.offer,-1);
@@ -405,7 +406,7 @@ function action(s,id,v){
   if(v.type==='bid'){
     if(!s.listing||isTurn)return failure(s,id,'Сейчас нет чужого лота.');
     const price=wallet(v.offer);
-    if(!price||!nonzero(price)||!has(me,price)||me.items.length>=MAX_ITEMS)return failure(s,id,'Недостаточно ресурсов или мест в инвентаре.');
+    if(!price||!nonzero(price)||!has(me,price)||inventoryCount(s,me)>=MAX_ITEMS)return failure(s,id,'Недостаточно ресурсов или мест в инвентаре.');
     s.bids=s.bids.filter(b=>b.buyer!==id);s.bids.push({buyer:id,offer:price});return success(s);
   }
   if(v.type==='withdraw_bid'){
@@ -423,7 +424,7 @@ function action(s,id,v){
   if(!isTurn)return failure(s,id,'Не ваш ход. Можно принимать прямые сделки, предлагать обмен и делать ставки.');
   if(v.type==='broker_buy'){
     if(!s.brokerOffer)return failure(s,id,'У брокера больше нет товара на этот ход.');
-    if(me.resources.gold<75||me.items.length>=MAX_ITEMS)
+    if(me.resources.gold<75||inventoryCount(s,me)>=MAX_ITEMS)
       return failure(s,id,'Для покупки нужно 75 золота и свободный слот.');
     me.resources.gold-=75;
     const item=s.brokerOffer;
@@ -502,7 +503,7 @@ function viewForPlayer({state,player}){
   return {phase:s.phase,host:s.host,revision:s.revision,round:s.round,rounds:TOTAL_ROUNDS,deadlineAt:s.deadlineAt||null,
     turnId:turn?.id||null,players:s.contestants.map(p=>({
       id:p.id,name:p.name,character:p.character,
-      items:veil&&p.id!==me?.id?null:p.items.length,
+      items:veil&&p.id!==me?.id?null:inventoryCount(s,p),
       inventory:veil&&p.id!==me?.id?[]:p.items.map(item=>({
         ...publicItem(item),tradable:item.acquiredRound!==s.round&&s.listing?.itemId!==item.id
       })),
@@ -515,7 +516,7 @@ function viewForPlayer({state,player}){
     bids:s.bids.map(b=>({buyer:b.buyer,offer:b.offer})),
     blackMarket:veil,
     blackLots:(s.blackLots||[]).map(l=>({
-      id:l.id,item:publicItem(l.item),ask:{...l.ask},bidCount:l.bids.length,
+      id:l.id,item:{name:publicItem(l.item).name,rarity:spec(l.item).rarity},ask:{...l.ask},bidCount:l.bids.length,
       mine:l.seller===me?.id,
       myBid:l.bids.find(b=>b.buyer===me?.id)?.offer||null,
       bids:l.seller===me?.id?l.bids.map(b=>({id:b.id,offer:{...b.offer}})):[],
@@ -559,6 +560,11 @@ const game={
     if(state.phase==='lobby')state.contestants=[];
     state.deals=state.deals.filter(d=>state.players.some(p=>p.id===d.from)&&state.players.some(p=>p.id===d.to));
     if(state.phase==='play'){
+      for(const lot of (state.blackLots||[]).filter(l=>l.seller===player.id)){
+        const exiting=state.contestants.find(p=>p.id===player.id);
+        if(exiting)exiting.items.push(lot.item);
+      }
+      state.blackLots=(state.blackLots||[]).filter(l=>l.seller!==player.id);
       const departed=state.contestants.find(p=>p.id===player.id);
       if(departed){departed.bankrupt=true;departed.urgent=null;issue(state,departed.character+' покинул партию и выбыл.');}
       if(state.contestants[state.turnIndex]?.id===player.id)nextTurn(state);
