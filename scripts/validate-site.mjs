@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { collectAppConfigs } from './app-config.mjs';
 import { shouldPublishAppPath, shouldPublishGodotWebPath } from './publish-policy.mjs';
 import { appOwnedScripts } from './pwa-entrypoints.mjs';
+import { validateReleaseInventory } from './release-inventory.mjs';
 
 const root=process.cwd();
 const output=path.join(root,'dist-site');
@@ -151,6 +152,7 @@ for(const config of configs){
   catch(error){errors.push(`dist-site/apps/${config.slug}/release.json is invalid: ${error.message}`);}
 
   if(release){
+    for(const issue of validateReleaseInventory(release,config,await walkFiles(directory)))errors.push(`dist-site/apps/${config.slug}: ${issue}`);
     if(release.version!==config.version)errors.push(`dist-site/apps/${config.slug}/release.json version mismatch`);
     if(!/^[0-9a-f]{24}$/.test(release.fingerprint||''))errors.push(`dist-site/apps/${config.slug}/release.json fingerprint is invalid`);
     if(!Array.isArray(release.files)||!release.files.includes('index.html'))errors.push(`dist-site/apps/${config.slug}/release.json has no file inventory`);
