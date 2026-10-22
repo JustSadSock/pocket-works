@@ -5,13 +5,16 @@ export const MAX_PLAYERS = 6;
 export const TOTAL_ROUNDS = 9;
 export const RESOURCES = ['gold','crystals','parts'];
 const CHARACTERS = ['Волшебник','Мак','Слайм','Мимик','Ведьма','Жабий барон'];
+// Each quota is about 6.4–7.0 additional work-equivalent units
+// above the same 250 gold / 20 crystal / 3 parts starting wallet.
+// Different players NEED different things, without unequal total effort.
 const QUOTAS = [
-  {gold:470,crystals:45,parts:8},
-  {gold:440,crystals:50,parts:8},
-  {gold:500,crystals:43,parts:7},
-  {gold:450,crystals:47,parts:9},
-  {gold:480,crystals:46,parts:8},
-  {gold:460,crystals:49,parts:8}
+  {gold:430,crystals:26,parts:3},
+  {gold:300,crystals:36,parts:4},
+  {gold:340,crystals:28,parts:5},
+  {gold:390,crystals:32,parts:3},
+  {gold:315,crystals:34,parts:4},
+  {gold:370,crystals:30,parts:4}
 ];
 const GOODS = [
   {key:'frog',name:'Золотая жаба',rarity:'редкий',variants:[
