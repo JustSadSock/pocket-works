@@ -1,8 +1,8 @@
 
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
-import {ITEMS,TREATMENTS,getItem,getDoctrine,MAX_ROUNDS} from './engine.js';
-import {offeringArt,godArt} from './art.js';
+import {ITEMS,TREATMENTS,VOWS,getItem,getDoctrine,getPatron,MAX_ROUNDS} from './engine.js';
+import {offeringArt,godArt,treatmentArt,incidentArt} from './art.js';
 
 const K='pocket-works:bozhe-ne-tak:online:';
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -27,7 +27,9 @@ const EXPLAIN={
  rate_limited:'Слишком много команд. Попробуйте ещё раз.'
 };
 const safeAction=()=>({itemId:null,treatment:null,bell:1,height:'low'});
+const FILTERS=[['all','Все'],['living','Живое'],['food','Еда'],['relic','Реликвии'],['regalia','Регалии'],['tool','Инструменты']];
 export function createOnline(onChange,onExit){
+ let offeringFilter='all',draftVow=null;
  let draftItem='',draftTreatment='',clockOffset=0,client=null,view=null,ownId='',roomId='',name=store.getItem('nickname')||'',code=new URL(location.href).searchParams.get('room')||'',status='intro',error='',notice='',lastMode='',epoch=0,sequence=0;
  const show=()=>onChange();
  const isLive=()=>client?.socket?.readyState===WebSocket.OPEN&&status==='room';
@@ -37,16 +39,16 @@ export function createOnline(onChange,onExit){
   if(!s||!Array.isArray(s.players)||typeof s.phase!=='string')return;
   if(view&&Number.isInteger(s.revision)&&s.revision<view.revision)return;
   const old=view;view=s;if(Number.isFinite(s.serverNow))clockOffset=s.serverNow-Date.now();sequence=Math.max(sequence,s.ownSeq||0);
-  if(old?.phaseId!==s.phaseId){notice='';draftItem='';draftTreatment='';}
+  if(old?.phaseId!==s.phaseId){notice='';draftItem='';draftTreatment='';draftVow=null;}
   status='room';show();
  };
  const bind=(net,id)=>{
   net.on('connected',x=>{if(id!==epoch)return;ownId=x.player.id;error='';status='connecting';show()});
   net.on('room_joined',x=>{
    if(id!==epoch)return;
-   if(x.version!=='v2'){
+   if(x.version!=='v3'){
     try{net.leaveRoom()}catch{}
-    roomId='';view=null;status='intro';error='Эта комната создана на старой версии. Создайте новый храм.';show();return;
+    roomId='';view=null;status='intro';error='Это храм старой версии правил. Создайте новую комнату (старый матч не удалён).';show();return;
    }
    roomId=x.roomId;ownId=ownId||x.players?.[0]?.id||'';apply(x.state);send({type:'sync'});
   });
@@ -163,11 +165,14 @@ export function createOnline(onChange,onExit){
   }else if(task==='offering'){
    const item=draftItem||view.altar?.itemId||'';
    const treatment=draftTreatment||view.altar?.treatment||'';
-   controls='<div class="net-offerings">'+ITEMS.map(x=>'<button type="button" class="net-offering '+(item===x.id?'chosen':'')+
+   const vow=draftVow??(view.altar?.vow||'steady');
+   controls='<div class="offer-filter net-offer-filter">'+FILTERS.map(([id,label])=>'<button type="button" data-role-filter="'+id+'" aria-pressed="'+(offeringFilter===id)+'">'+label+'</button>').join('')+'</div>'+
+    '<div class="net-offerings">'+ITEMS.filter(x=>offeringFilter==='all'||x.kind===offeringFilter).map(x=>'<button type="button" class="net-offering '+(item===x.id?'chosen':'')+
     '" data-role-item="'+x.id+'" aria-pressed="'+(item===x.id)+'" '+(locked?'disabled':'')+'>'+offeringArt(x.id,48)+
     '<b>'+escape(x.name)+'</b></button>').join('')+'</div><div class="net-tool-row">'+TREATMENTS.map(x=>
     '<button type="button" class="net-tool '+(treatment===x.id?'chosen':'')+'" data-role-treatment="'+x.id+
-    '" aria-pressed="'+(treatment===x.id)+'" '+(locked?'disabled':'')+'>'+escape(x.name)+'</button>').join('')+'</div>'+
+    '" aria-pressed="'+(treatment===x.id)+'" '+(locked?'disabled':'')+'>'+treatmentArt(x.id,19)+escape(x.name)+'</button>').join('')+'</div>'+
+    '<div class="section-label net-vow-label">ОБЕТ ПЕРЕД СУДОМ</div><div class="vow-options net-vow-options">'+VOWS.map(x=>'<button type="button" data-role-vow="'+x.id+'" class="vow-option '+(vow===x.id?'chosen':'')+'" aria-pressed="'+(vow===x.id)+'" '+(locked?'disabled':'')+'><strong>'+escape(x.name)+'</strong><small>'+escape(x.detail)+'</small></button>').join('')+'</div>'+
     '<span class="net-role-small">'+(done?'Дар поставлен. Можно изменить до печати.':
       'Укажите предмет и подготовку — выбранное сразу появится на общем алтаре.')+'</span>';
   }else if(task==='bell'){
@@ -189,12 +194,14 @@ export function createOnline(onChange,onExit){
   const signals=(view.announcements||[]).slice(-9);
   const dogmas=(m.doctrines||[]).map(id=>'<span class="net-rule">'+escape(getDoctrine(id)?.name||'')+'</span>').join('');
   return '<section class="net-play">'+sharedHeader()+'<div class="net-play-main">'+
-   '<div class="net-shrine"><div class="net-mask">'+godArt()+'</div>'+
+   '<div class="net-shrine"><div class="net-mask">'+godArt(view?.match?.patronId||'ogo')+'</div>'+
    '<div class="net-plinth">'+(chosen?offeringArt(chosen.id,93):'<span>?</span>')+'</div>'+
    '<div class="net-prophecy"><span>СКРЫТОЕ ЗНАМЕНИЕ</span><p>'+escape(view.riteTitle||'ОГО ждёт вашего дара')+
    '</p><small>Каждый жрец знает лишь свою часть обряда.</small></div></div>'+
    '<div class="net-actions net-actions-v4"><div class="net-live"><span>ДО СУДА <b data-net-timer>'+timer+
    '</b> С</span><span>'+Object.keys(view.locked||{}).length+'/'+all+' ЗАПЕЧАТАЛИ</span></div>'+
+   (m.incident?'<div class="incident-brief net-incident"><div class="incident-stamp">'+incidentArt(m.incident.id,42)+'</div><div><strong>СОБЫТИЕ: '+escape(m.incident.title)+'</strong><p>'+escape(m.incident.story)+'</p></div><b class="incident-delta '+(m.incident.delta>0?'bonus':'penalty')+'">'+(m.incident.delta>0?'+1':'−1')+'</b></div>':'')+
+   '<div class="patron-brief"><strong>'+escape(getPatron(m.patronId).name)+' · '+escape(getPatron(m.patronId).title)+'</strong><span>'+escape(getPatron(m.patronId).rule)+'</span></div>'+
    '<div class="section-label">ВАШИ ОБЯЗАННОСТИ</div>'+
    tasks.map(roleCard).join('')+
    '<div class="section-label">НАСТЕННЫЕ ЗНАМЕНИЯ</div>'+
@@ -218,8 +225,8 @@ export function createOnline(onChange,onExit){
   const verdict=j.verdict==='bless'?'БОГ ДОВОЛЕН':j.verdict==='wrath'?'БОГ РАЗГНЕВАН':'БОГ ЗАДУМАЛСЯ';
   const item=getItem(j.selected);
   return '<section class="net-verdict">'+sharedHeader()+'<div class="net-verdict-head">'+
-   '<div class="net-mask verdict-'+j.verdict+'">'+godArt()+'</div><div><span class="chapter">СУД НАД ОБЩИМ ДАРОМ</span>'+
-   '<h1>'+verdict+'</h1><p>'+escape(j.miracleText)+'</p>'+
+   '<div class="net-mask verdict-'+j.verdict+'">'+godArt(view?.match?.patronId||'ogo')+'</div><div><span class="chapter">СУД НАД ОБЩИМ ДАРОМ</span>'+
+   '<h1>'+verdict+'</h1><p>'+escape(j.miracleText)+'</p><p class="net-vow-result">'+escape(VOWS.find(v=>v.id===j.vow)?.name||'Обычный обряд')+'</p>'+
    '<strong>Оценка '+j.score+' · Милость '+(j.faithDelta>0?'+':'')+j.faithDelta+'</strong></div></div>'+
    '<div class="section-label">ОГО ПРОВЕРИЛ</div><div class="net-score-list">'+
    '<div><span>Общее подношение: '+escape(item?.name||'Каравай')+'</span><strong>'+j.score+'</strong></div>'+
@@ -233,7 +240,7 @@ export function createOnline(onChange,onExit){
  }
  function phaseDogma(){
   const m=view.match,offers=m.offers||[],votes=view.votes||{},chosen=votes[ownId];
-  return '<section class="net-council">'+sharedHeader()+'<div class="net-council-body"><div class="net-mask">'+godArt()+'</div>'+
+  return '<section class="net-council">'+sharedHeader()+'<div class="net-council-body"><div class="net-mask">'+godArt(view?.match?.patronId||'ogo')+'</div>'+
    '<div><span class="chapter">СОБОР ПОСЛЕ СУДА</span><h1>Какое чудо стало законом?</h1>'+
     '<p>Каждый выбирает один догмат. Большинство определит правило следующих обрядов. При равенстве побеждает первое предложение.</p>'+
     '<div class="net-dogma-picks">'+offers.map(id=>{const d=getDoctrine(id);return '<button data-net-vote="'+id+
@@ -245,9 +252,9 @@ export function createOnline(onChange,onExit){
  function phaseEnd(){
   const m=view.match,finished=m.history?.length||0,win=m.faith>0;
   return '<section class="net-end">'+sharedHeader()+'<div class="net-end-head">'+
-   '<div class="net-mask">'+godArt()+'</div><div><span class="chapter">ПОСЛЕДНЕЕ СЛОВО НЕБЕС</span><h1>'+(
+   '<div class="net-mask">'+godArt(view?.match?.patronId||'ogo')+'</div><div><span class="chapter">ПОСЛЕДНЕЕ СЛОВО НЕБЕС</span><h1>'+(
     win?'ОГО ПРИЗНАЛ ЦЕРКОВЬ':'ХРАМ ОСТАЛСЯ БЕЗ БОГА')+'</h1>'+
-    '<p>Милость: '+m.faith+' · Обрядов: '+finished+' · Новых догматов: '+m.doctrines.length+'</p></div></div>'+
+    '<p>'+escape(getPatron(m.patronId).name)+' · Милость: '+m.faith+' · Обрядов: '+finished+' · Новых догматов: '+m.doctrines.length+'</p></div></div>'+
     '<div class="net-end-list">'+m.history.map((h,i)=>'<div><b>'+String(i+1).padStart(2,'0')+' · '+escape(h.riteTitle)+'</b>'+
     '<span>'+escape(h.miracleText||'')+'</span></div>').join('')+'</div>'+
     (view.host===ownId?controls('НОВАЯ СЛУЖБА С ЭТОЙ ГРУППОЙ →','start',false,'primary'):
@@ -255,7 +262,7 @@ export function createOnline(onChange,onExit){
     controls('Покинуть комнату','leave')+'</section>';
  }
  function intro(){
-  return '<section class="net-intro"><div class="net-intro-mask">'+godArt()+'</div>'+
+  return '<section class="net-intro"><div class="net-intro-mask">'+godArt(view?.match?.patronId||'ogo')+'</div>'+
    '<div class="net-intro-form"><span class="chapter">POCKETNET · НАСТОЯЩИЕ ИГРОКИ</span><h1>Собор зовёт</h1>'+
     '<p>Создайте храм или присоединитесь по коду. Роли разные: один раскрывает знамение, другой готовит дар, третий звонит. Общий приговор выносит сервер.</p>'+
     '<label for="bnt-name">ИМЯ ЖРЕЦА</label><input id="bnt-name" autocomplete="nickname" maxlength="24" value="'+escape(name)+'" placeholder="Ваше имя"/>'+
@@ -269,9 +276,9 @@ export function createOnline(onChange,onExit){
  }
  function markup(){
   return '<div class="net-shell">'+
-   (status==='connecting'?'<div class="net-loading"><div class="net-mask">'+godArt()+'</div><h2>Зовём небеса…</h2><p>Устанавливаем защищённое соединение с PocketNet.</p>'+
+   (status==='connecting'?'<div class="net-loading"><div class="net-mask">'+godArt(view?.match?.patronId||'ogo')+'</div><h2>Зовём небеса…</h2><p>Устанавливаем защищённое соединение с PocketNet.</p>'+
      controls('Отмена','cancel')+'</div>':
-    status==='reconnecting'?'<div class="net-loading"><div class="net-mask">'+godArt()+'</div><h2>Связь оборвалась</h2>'+
+    status==='reconnecting'?'<div class="net-loading"><div class="net-mask">'+godArt(view?.match?.patronId||'ogo')+'</div><h2>Связь оборвалась</h2>'+
     '<p>Место в храме сохранено. PocketNet пытается подключиться повторно.</p>'+
     controls('Покинуть комнату','leave')+'</div>':
     status!=='room'||!view?intro():view.phase==='lobby'?lobby():view.phase==='play'?phasePlay():
@@ -282,20 +289,23 @@ export function createOnline(onChange,onExit){
  }
 
  function action(event){
-  const el=event.target.closest('[data-net],[data-net-vote],[data-role-reveal],[data-role-item],[data-role-treatment],[data-role-bell],[data-role-height],[data-role-call]');
+  const el=event.target.closest('[data-net],[data-net-vote],[data-role-reveal],[data-role-item],[data-role-treatment],[data-role-vow],[data-role-bell],[data-role-height],[data-role-call],[data-role-filter]');
   if(!el)return false;
   const own=view?.ownTasks||[],sealed=!!view?.locked?.[ownId];
+  if(el.hasAttribute('data-role-filter')){offeringFilter=el.dataset.roleFilter;show();return true;}
   if(el.hasAttribute('data-net-vote')){command('vote',{id:el.dataset.netVote});return true}
   if(el.hasAttribute('data-role-call')){command('call',{kind:el.dataset.roleCall});return true}
   if(el.hasAttribute('data-role-reveal')){
    const task=el.dataset.roleReveal;
    if(!sealed&&own.includes(task))command('reveal',{task});return true;
   }
-  if(el.hasAttribute('data-role-item')||el.hasAttribute('data-role-treatment')){
+  if(el.hasAttribute('data-role-item')||el.hasAttribute('data-role-treatment')||el.hasAttribute('data-role-vow')){
    if(sealed||!own.includes('offering'))return true;
    if(el.hasAttribute('data-role-item'))draftItem=el.dataset.roleItem;
-   else draftTreatment=el.dataset.roleTreatment;
-   if(draftItem&&draftTreatment)command('set',{task:'offering',itemId:draftItem,treatment:draftTreatment});
+   else if(el.hasAttribute('data-role-treatment'))draftTreatment=el.dataset.roleTreatment;
+   else draftVow=el.dataset.roleVow;
+   const item=draftItem||view?.altar?.itemId,treatment=draftTreatment||view?.altar?.treatment;
+   if(item&&treatment)command('set',{task:'offering',itemId:item,treatment,vow:draftVow??(view.altar?.vow||'steady')});
    show();return true;
   }
   if(el.hasAttribute('data-role-bell')){if(!sealed&&own.includes('bell'))command('set',{task:'bell',value:Number(el.dataset.roleBell)});return true}

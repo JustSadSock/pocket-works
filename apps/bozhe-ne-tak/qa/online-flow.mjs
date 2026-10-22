@@ -31,7 +31,7 @@ function handle(socket,msg){
  const player=socket.player;if(!player)return enqueue(socket,{type:'error',code:'auth_required'});
  if(msg.type==='create_room'){
   const room={id:roomId,players:[player],state:rules.createRoom({player}).state};rooms.set(roomId,room);socket.roomId=roomId;
-  enqueue(socket,{type:'room_joined',roomId,gameId:'bozhe-ne-tak',version:'v2',players:room.players,state:rules.viewForPlayer({state:room.state,player,players:room.players})});
+  enqueue(socket,{type:'room_joined',roomId,gameId:'bozhe-ne-tak',version:'v3',players:room.players,state:rules.viewForPlayer({state:room.state,player,players:room.players})});
   return;
  }
  if(msg.type==='join_room'){
@@ -44,7 +44,7 @@ function handle(socket,msg){
    catch(e){enqueue(socket,{type:'error',code:e.message});return}
   }
   socket.roomId=roomId;
-  enqueue(socket,{type:'room_joined',roomId,gameId:'bozhe-ne-tak',version:'v2',players:room.players,state:rules.viewForPlayer({state:room.state,player,players:room.players})});
+  enqueue(socket,{type:'room_joined',roomId,gameId:'bozhe-ne-tak',version:'v3',players:room.players,state:rules.viewForPlayer({state:room.state,player,players:room.players})});
   broadcast(room,{type:'presence',roomId,players:room.players});return;
  }
  const room=rooms.get(socket.roomId);
