@@ -130,6 +130,16 @@ export function createBazaarDebug(){
   }else if(event.key==='Escape'&&isOpen){event.preventDefault();event.stopImmediatePropagation();close();}
  },true);
  document.querySelectorAll('[data-bazaar-debug-open]').forEach(b=>b.addEventListener('click',open));
+ const logo=document.querySelector('header .header-title');
+ if(logo){
+  let timer=0;
+  logo.addEventListener('pointerdown',e=>{
+   if(e.pointerType!=='touch')return;
+   clearTimeout(timer);timer=setTimeout(()=>{timer=0;open();},950);
+  });
+  for(const name of ['pointerup','pointercancel','pointerleave'])logo.addEventListener(name,()=>{clearTimeout(timer);timer=0});
+ }
+
  if(new URLSearchParams(location.search).get('debug')==='1')open();
  return {open,close};
 }
