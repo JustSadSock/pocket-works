@@ -495,3 +495,103 @@ test('First successful public sale awards only one part to the seller per turn',
  // A new seller will separately earn its first-sale part on the next turn.
  assert.equal(state.contestants[state.turnIndex].marketDeals,0);
 });
+
+
+test('Anonymous black market only runs in rounds 2, 5 and 8; secrets survive different views',()=>{
+ const {state}=makeRoom(4);
+ const [seller,buyer,stranger]=state.contestants;
+ const early=act(state,seller.id,{type:'black_post',itemId:seller.items[0].id,ask:{gold:50}});
+ assert.equal(early.events[0].type,'notice');
+ while(state.round<2){const turn=state.contestants[state.turnIndex];act(state,turn.id,{type:'end'});}
+ const item=seller.items[0];
+ act(state,seller.id,{type:'black_post',itemId:item.id,ask:{gold:60}});
+ assert.equal(state.blackLots.length,1);
+ assert.equal(seller.items.some(i=>i.id===item.id),false);
+ const lot=state.blackLots[0], seen=game.viewForPlayer({state,player:{id:stranger.id}});
+ assert.equal(seen.blackMarket,true);
+ assert.equal(seen.blackLots[0].mine,false);
+ assert.equal('seller' in seen.blackLots[0],false);
+ assert.equal('buyer' in seen.blackLots[0],false);
+ assert.equal(seen.players.find(p=>p.id===seller.id).resources,null);
+ assert.equal(seen.players.find(p=>p.id===seller.id).inventory.length,0);
+ const sellerView=game.viewForPlayer({state,player:{id:seller.id}});
+ assert.equal(sellerView.blackLots[0].mine,true);
+ assert.equal(sellerView.you.escrowItems[0].id,item.id);
+ assert.ok(sellerView.you.escrowItems[0].positive);
+ const buyerView=game.viewForPlayer({state,player:{id:buyer.id}});
+ assert.equal(buyerView.blackLots[0].myBid,null);
+});
+test('Black market sealed bid can be inspected, accepted and processed exactly once',()=>{
+ const {state}=makeRoom(3);
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const [seller,buyer]=state.contestants;
+ const item=seller.items[0],before=seller.resources.gold;
+ act(state,seller.id,{type:'black_post',itemId:item.id,ask:{gold:100}});
+ const lot=state.blackLots[0];
+ const info=act(state,buyer.id,{type:'black_inspect',lotId:lot.id});
+ assert.equal(info.events[0].type,'state');
+ assert.equal(buyer.resources.gold,225);
+ assert.equal(game.viewForPlayer({state,player:{id:buyer.id}}).blackLots[0].inspection.originalName,specName(item));
+ act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:90}});
+ const visible=game.viewForPlayer({state,player:{id:seller.id}});
+ const bid=visible.blackLots[0].bids[0];
+ assert.equal('buyer' in bid,false);
+ assert.equal(bid.offer.gold,90);
+ const stranger=game.viewForPlayer({state,player:{id:state.contestants[2].id}});
+ assert.equal(stranger.blackLots[0].bids.length,0);
+ const ok=act(state,seller.id,{type:'black_accept',lotId:lot.id,bidId:bid.id});
+ assert.equal(ok.events[0].type,'state');
+ assert.equal(state.blackLots.length,0);
+ assert.ok(buyer.items.some(i=>i.id===item.id));
+ assert.equal(seller.resources.gold,before+81);
+ assert.equal(buyer.resources.gold,135);
+ assert.equal(game.viewForPlayer({state,player:{id:buyer.id}}).you.items.some(i=>i.id===item.id&&!!i.positive),true);
+ const repeat=act(state,seller.id,{type:'black_accept',lotId:lot.id,bidId:bid.id});
+ assert.equal(repeat.events[0].type,'notice');
+});
+
+test('Black market unsold escrow returns after round and cannot be posted twice',()=>{
+ const {state}=makeRoom(2);
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ const seller=state.contestants[0],item=seller.items[0];
+ act(state,seller.id,{type:'black_post',itemId:item.id,ask:{crystals:20}});
+ const lot=state.blackLots[0],repeat=act(state,seller.id,{type:'black_post',itemId:seller.items[0].id,ask:{gold:1}});
+ assert.equal(repeat.events[0].type,'notice');
+ const retract=act(state,seller.id,{type:'black_cancel',lotId:lot.id});
+ assert.equal(retract.events[0].type,'state');
+ assert.ok(seller.items.some(i=>i.id===item.id));
+ const again=act(state,seller.id,{type:'black_post',itemId:item.id,ask:{gold:2}});
+ assert.equal(again.events[0].type,'notice');
+ while(state.round===2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ assert.equal(state.blackLots.length,0);
+ assert.ok(seller.items.some(i=>i.id===item.id));
+ assert.equal(seller.items.length,2);
+});
+test('Repack preserves real effect and original item identity; paid market inspection unmasks name',()=>{
+ const {state}=makeRoom(3); const owner=state.contestants[0];
+ const item=owner.items[0],id=item.id,positive=item.variant,gold=owner.resources.gold,parts=owner.resources.parts;
+ const result=act(state,owner.id,{type:'repack',itemId:id,aliasIndex:0});
+ assert.equal(result.events[0].type,'state');
+ assert.equal(item.alias,'Талисман достатка');
+ assert.equal(item.variant,positive);assert.equal(item.id,id);
+ assert.equal(owner.resources.gold,gold-20);assert.equal(owner.resources.parts,parts-1);
+ assert.equal(game.viewForPlayer({state,player:{id:owner.id}}).you.items.find(i=>i.id===id).originalName!==item.alias,true);
+ const invalid=act(state,owner.id,{type:'repack',itemId:id,aliasIndex:999});
+ assert.equal(invalid.events[0].type,'notice');
+ while(state.round<2)act(state,state.contestants[state.turnIndex].id,{type:'end'});
+ act(state,owner.id,{type:'black_post',itemId:id,ask:{gold:70}});
+ const l=state.blackLots[0];
+ const outsider=state.contestants[1];
+ act(state,outsider.id,{type:'black_inspect',lotId:l.id});
+ const actual=game.viewForPlayer({state,player:{id:outsider.id}}).blackLots[0].inspection;
+ assert.ok(actual.originalName&&actual.originalName!==item.alias);
+ assert.ok(actual.negative);
+});
+function specName(item){
+ // Tests deliberately avoid importing a private helper: derive the true visible
+ // original from the owner's item before escrow.
+ const names={frog:'Золотая жаба',pig:'Жадная копилка',spider:'Паук-механик',crown:'Корона должника',
+   mimic:'Сундук-мимик',cat:'Кот неудачи',mirror:'Зеркало зависти',gear:'Медная шестерня',lens:'Око рынка',
+   mushroom:'Гриб прибыли',hourglass:'Песочные часы',amulet:'Амулет расчёта'};
+ return names[item.key];
+}
