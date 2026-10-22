@@ -146,7 +146,7 @@ function inventoryBlock(you){
  const held=you.escrowItems?.length||0;
  const itemButton=item=>'<button type="button" class="inventory-object" data-action="open-item" data-kind="inventory" data-id="'+esc(item.id)+'" aria-label="Посмотреть: '+esc(item.name)+'">'+
  '<span class="inventory-art">'+artifactSVG(item.name,item.rarity)+'</span>'+
- '<span class="inventory-copy"><strong>'+esc(item.name)+'</strong><small>'+esc(item.rarity)+' · '+(item.acquiredRound===state.round?'Новый':'Из раунда '+item.acquiredRound)+'</small></span>'+
+ '<span class="inventory-copy"><strong>'+esc(item.name)+'</strong><small>'+esc(itemDormant(item,forecastEconomy(you.resources,you.items))||item.rarity)+'</small></span>'+
  svgIcon('arrow',18)+'</button>';
  return '<div class="panel inventory-panel"><h2>Мои находки <small>'+(you.items.length+held)+'/4</small></h2>'+
  (you.items.length?'<div class="inventory-gallery">'+you.items.map(itemButton).join('')+'</div>':
@@ -154,21 +154,21 @@ function inventoryBlock(you){
  (held?'<p class="inventory-escrow">У посредника: '+held+'</p>':'')+'</div>';
 }
 function secretBlock(you){
- const relationA=label(you.positiveTarget),relationB=label(you.negativeTarget);
- const goal=you.quota;
- return '<div class="panel"><h2>Секретные условия (видны только тебе)</h2>'+
- '<p><strong>Постоянная квота:</strong> '+esc(amounts(goal))+' одновременно к окончанию 9-го раунда.</p>'+
- '<p><strong>Покровитель:</strong> при покупке у «'+esc(relationA)+'» +3 кристалла (не чаще раза за раунд).</p>'+
- '<p><strong>Уязвимый клиент:</strong> при покупке у тебя «'+esc(relationB)+'» теряет дополнительно 20 золота (не чаще раза за раунд).</p>'+
- (you.legendary?'<p><strong>Легендарная судьба:</strong> если «'+esc(label(you.legendary))+'» займёт первое место, а ты не обанкротишься, получишь второе место.</p>':'')+
- '</div>';
+ return '<div class="panel compact-goals"><h2>Твои цели</h2><div class="goal-numbers">'+
+ ['gold','crystals','parts'].map(k=>'<div class="goal-pair"><small>'+names[k]+'</small><strong>'+you.resources[k]+' / '+you.quota[k]+'</strong></div>').join('')+
+ '</div><details class="quiet-details"><summary>Тайные связи</summary>'+
+ '<p>Покупка у '+esc(label(you.positiveTarget))+' · +3 кристалла.</p>'+
+ '<p>Продажа '+esc(label(you.negativeTarget))+' · покупатель теряет 20 золота.</p>'+
+ (you.legendary?'<p>Судьба связана с '+esc(label(you.legendary))+'.</p>':'')+
+ '</details></div>';
 }
 function urgentBlock(you){
- if(!you.urgent)return '';
- const u=you.urgent,need=u.needs;
- return '<div class="panel urgent"><h2>Срочный заказ · '+(u.status==='pending'?'должен быть оплачен до конца твоего хода':u.status==='success'?'выполнен':u.status==='shielded'?'защищён амулетом':'провален')+'</h2>'+
- '<p>Необходимо сдать: <strong>'+esc(amounts(need))+'</strong>.</p><p>Если хватит ресурсов при завершении хода, заказ оплатится автоматически, а ты получишь 35 золота. Иначе штраф; третий провал означает банкротство.</p>'+
- '<p>Сейчас: '+esc(amounts(you.resources))+'</p></div>';
+ const u=you.urgent;if(!u)return '';
+ const pending=u.status==='pending',ready=keys.every(k=>you.resources[k]>=(u.needs[k]||0));
+ return '<div class="panel urgent compact-urgent"><h2>Срочный заказ</h2>'+
+ '<strong>'+esc(amounts(u.needs))+'</strong><p class="'+(pending?(ready?'success':'error'):'muted')+'">'+
+ (pending?(ready?'Готов к сдаче · +35 золота':'Собери до конца хода'):
+ u.status==='success'?'Выполнен':u.status==='shielded'?'Защитил амулет':'Провален')+'</p></div>';
 }
 function marketBlock(you,canAct){
  const listing=state.listing;
@@ -214,8 +214,7 @@ function tradePanel(you){
  const deals=state.deals||[];
  const inbox=deals.filter(d=>d.to===you.id);
  const outbox=deals.filter(d=>d.from===you.id);
- let html='<div class="panel"><h2>Прямой обмен с игроками</h2>'+
- '<p class="muted">Предложить можно даже во время чужого хода. Сделка проводится только после согласия обеих сторон. Разрешены подарки, обмен ресурсами и предметами.</p>';
+ let html='<div class="panel compact-trades"><h2>Обмен</h2>';
  if(inbox.length){
   html+='<h3>Предложения тебе</h3>'+inbox.map(d=>{
     const partner=state.players.find(p=>p.id===d.from);
@@ -244,8 +243,7 @@ function tradePanel(you){
   const first=recipients[0];
   const giveItems=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
   const wantItems=first.inventory.filter(i=>i.tradable);
-  html+='<form data-form="deal" class="stack">'+
-    '<h3>Новое предложение</h3>'+
+  html+='<details class="quiet-details"'+(!inbox.length&&!outbox.length?' open':'')+'><summary>Предложить обмен</summary><form data-form="deal" class="stack">'+
     '<label>Кому<select name="to" id="dealTarget">'+recipients.map(p=>
       '<option value="'+esc(p.id)+'">'+esc(p.character)+'</option>').join('')+'</select></label>'+
     '<label>Какой предмет отдаёшь<select name="giveItemId">'+itemOptions(giveItems)+'</select></label>'+
@@ -253,7 +251,7 @@ function tradePanel(you){
     '<label>Какой предмет хочешь получить<select name="wantItemId" id="dealWantItem">'+itemOptions(wantItems)+'</select></label>'+
     '<p>Просишь ресурсы:</p>'+resourceFields('want')+
     '<button type="submit" class="primary">Предложить обмен</button>'+
-    '<small>Новое предложение заменяет твоё предыдущее. Неисполненные предложения исчезают в конце раунда. Предметы, купленные в этом раунде, нельзя передать снова.</small></form>';
+    '</form></details>';
  }else if(!inbox.length&&!outbox.length){
   html+='<p class="muted">Сейчас нет доступных торговых партнёров.</p>';
  }
@@ -315,38 +313,7 @@ function repackBlock(you){
  '<button type="submit" '+(you.resources.gold<price.gold||you.resources.parts<price.parts?'disabled':'')+'>Перепаковать</button>'+
  '</form></div>';
 }
-function actionsBlock(you){
- let html='<div class="panel"><h2>Мой ход: операции</h2>';
- if(you.bankrupt)return html+'<p>Ты обанкротился. Можно наблюдать за ходом партии.</p><button data-action="end">Пропустить ход</button></div>';
- html+='<p>Можно подработать, купить запечатанный товар, провести торги и выполнить одну операцию с ломбардом или разбором.</p>';
- if(state.broker){
-  const stock=state.broker;
-  html+='<section><button type="button" class="inventory-object" data-action="open-item" data-kind="broker" data-id="'+esc(stock.id)+'">'+
- '<span class="inventory-art">'+artifactSVG(stock.name,stock.rarity)+'</span><span class="inventory-copy"><strong>'+esc(stock.name)+'</strong><small>Запечатано · 75 золота</small></span>'+svgIcon('arrow',18)+'</button>'+
-    '<p>Цена: 75 золота. До покупки свойства неизвестны. Купленный предмет нельзя продать или разобрать в этом раунде.</p>'+
-    '<button type="button" data-action="broker-buy" '+(you.resources.gold<75||you.items.length+(you.escrowItems?.length||0)>=4?'disabled':'')+
-    '>Купить запечатанный предмет</button></section>';
- }
- if(!you.worked)html+='<form class="row" data-form="work"><label>Подработка<select name="resource"><option value="gold">+35 золота</option><option value="crystals">+4 кристалла</option><option value="parts">+1 деталь</option></select></label><button type="submit">Подработать</button></form>';
- else html+='<p class="success">Подработка выполнена.</p>';
- const resell=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
- if(you.marketDeals<2&&resell.length)html+='<form data-form="post" class="stack"><h3>Выставить предмет</h3>'+
-   '<label>Какой товар<select name="itemId">'+resell.map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label>'+
-   '<p>Цена (можно просить несколько ресурсов одновременно)</p>'+resourceFields('ask',{gold:100})+
-   '<button type="submit" class="primary">Выставить лот</button></form>';
- if(!you.usedPawn){
-  html+='<h3>Аварийный ломбард</h3><form data-form="exchange" class="row"><label>Обмен<select name="mode">'+
-    '<option value="buy_crystals">70 золота → 6 кристаллов</option><option value="buy_parts">90 золота → 1 деталь</option>'+
-    '<option value="sell_crystals">6 кристаллов → 25 золота</option><option value="sell_parts">1 деталь → 40 золота</option>'+
-    '</select></label><button type="submit">Обменять</button></form>';
-  if(you.items.length)html+='<form data-form="pawn" class="row"><label>Продать за 45 золота<select name="itemId">'+you.items.map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label><button type="submit">Сдать предмет</button></form>';
-  const dismantle=you.items.filter(i=>i.acquiredRound!==state.round);
-  if(dismantle.length)html+='<form data-form="salvage" class="row"><label>Разобрать за '+(state.salvageParts??2)+' детали<select name="itemId">'+dismantle.map(i=>
-     '<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label>'+
-     '<button type="submit">Разобрать предмет</button></form>';
- }else html+='<p class="muted">Ломбард использован в этом ходу.</p>';
- return html+'<button type="button" class="primary" data-action="end">Завершить ход →</button></div>';
-}
+function actionsBlock(you){return quickActions(you,state.turnId===me?.id);}
 function collectDrafts(){
  const current={};
  for(const form of app.querySelectorAll('form[data-form]')){
