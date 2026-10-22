@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { build } from 'esbuild';
+import { embeddedNodeWasm } from './embedded-node-wasm.mjs';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const apps = path.join(root, 'apps');
@@ -18,8 +19,20 @@ for (const entry of await readdir(apps, { withFileTypes: true })) {
   try { config = JSON.parse(await readFile(path.join(folder, 'module.json'), 'utf8')); }
   catch (error) { if (error.code === 'ENOENT') continue; throw error; }
   if (config.protocolVersion !== 1 || config.gameId !== gameId || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(gameId)) throw new Error(`Invalid module config: ${gameId}`);
-  const output = await build({ entryPoints: [path.join(folder, 'module.ts')], bundle: true, platform: 'node', target: 'node22', format: 'esm', write: false, minify: true, logLevel: 'silent' });
+  // Legacy Pocket Server requires a single self-contained Node.js module. A
+  // bare .wasm import is neither supported by esbuild's default Node loader nor
+  // deployable to ModuleRegistry. Compile the checked-in binary into a Node
+  // WebAssembly.Module inside the bundle; gzip keeps the existing 1 MiB cap.
+  const output = await build({
+    entryPoints: [path.join(folder, 'module.ts')],
+    bundle: true, platform: 'node', target: 'node22', format: 'esm',
+    write: false, minify: true, logLevel: 'silent',
+    plugins: [embeddedNodeWasm()]
+  });
   const bundle = output.outputFiles[0].text;
+  if (Buffer.byteLength(bundle) > 1024 * 1024) {
+    throw new Error('Pocket Server module '+gameId+' exceeds the existing 1 MiB upload limit (compressed WASM included)');
+  }
   const sha256 = createHash('sha256').update(bundle).digest('hex');
   console.log(`${gameId}@${sha256}`);
   if (publishing) {
