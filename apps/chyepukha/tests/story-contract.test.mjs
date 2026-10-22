@@ -62,4 +62,4 @@ test('last chapter requires zero carried words and rejects unnecessary handoff',
  assert.equal(failed.events[0].type,'notice');
  state=send(state,players[0],{type:'submit',round:1,sheetId:v.sheet.id,answer:'Усі жили довго та щасливо',tailIndexes:[],gender:'unspecified'});
  assert.equal(state.round,1);
-}
+});
