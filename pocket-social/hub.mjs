@@ -1,20 +1,21 @@
 import {zamazkaAchievements,zamazkaAwardById,ownedAchievementItem} from '../shared/capabilities/zamazka-achievements.js';
 import {canticaAchievements,canticaOwns} from '../shared/capabilities/cantica-achievements.js';
+import {blockiesAchievements,blockiesAwardById,blockiesOwns} from '../shared/capabilities/blockies-achievements.js';
 import {verifyCanticaProof,canticaEligible} from './cantica-proof.mjs';
 // Pocket Social. Only trusted Worker headers identify users; room checks stay in PocketNet.
 const HEAD={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const reply=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:HEAD});
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const backgrounds=new Set(['forest','clay','lilac','ocean','night','paper','gallery','chapel']);
+const backgrounds=new Set(['forest','clay','lilac','ocean','night','paper','gallery','chapel','block-grid']);
 const frames=new Set(['clean','double','corners','stamp']);
 const backgroundModes=new Set(['preset','drawing']);
-const portraitFrames=new Set(['none','wood','gilt','worn-gilt','rose-window']);
+const portraitFrames=new Set(['none','wood','gilt','worn-gilt','rose-window','tetromino']);
 const maskotAnimals=new Set(['cat','black-cat','fox','rabbit','frog']);
-const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush','stage-pin','seer-diadem','solar-circlet']);
+const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush','stage-pin','seer-diadem','solar-circlet','stack-cap','block-crown']);
 const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard','restorer','groom','stage-hanbok','illuminator']);
 const maskotFaces=new Set(['none','glasses','stars','monocle']);
-const maskotAccessories=new Set(['none','shoulder-dragon','spectral-quill','sun-crystal']);
-const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Авантюрист','Призрачная кисть','Всевидящий',...canticaAchievements.filter(a=>a.slot==='title').map(a=>a.item)]);
+const maskotAccessories=new Set(['none','shoulder-dragon','spectral-quill','sun-crystal','mini-block']);
+const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Авантюрист','Призрачная кисть','Всевидящий',...canticaAchievements.filter(a=>a.slot==='title').map(a=>a.item),...blockiesAchievements.filter(a=>a.slot==='title').map(a=>a.item)]);
 const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding'],['VIGIL-1347','knight'],['HERALD-1415','herald'],['GROOM-2026','groom'],['SEOUL-MOONLIGHT','seoul-artist'],['DRAGON-EMBER','dragon-keeper']]);
 function validMaskot(value,unlocked){
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
@@ -29,6 +30,7 @@ function validMaskot(value,unlocked){
   for(const category of ['hat','clothes','face','accessory']){
     if(zamazkaAchievements.some(a=>a.slot===category&&a.item===value[category])&&!ownedAchievementItem(value[category],unlocked))return false;
     if(canticaAchievements.some(a=>a.slot===category&&a.item===value[category])&&!canticaOwns(value[category],category,unlocked))return false;
+    if(blockiesAchievements.some(a=>a.slot===category&&a.item===value[category])&&!blockiesOwns(value[category],category,unlocked))return false;
   }
   return true;
 }
@@ -182,8 +184,9 @@ export class PocketSocial {
       if(request.method!=='POST'||request.headers.get('x-pw-internal')!=='1')return reply({error:'forbidden'},403);
       const body=await bodyJson(request);
       if(!body||!uuid.test(body.accountId||'')||!uuid.test(body.roomId||'')||
-         !uuid.test(body.matchId||'')||body.gameId!=='zamazka'||
-         !zamazkaAwardById.has(body.achievementId)||typeof body.nickname!=='string'||!body.nickname||
+         !uuid.test(body.matchId||'')||
+         !((body.gameId==='zamazka'&&zamazkaAwardById.has(body.achievementId))||
+           (body.gameId==='blockies'&&blockiesAwardById.has(body.achievementId)))||typeof body.nickname!=='string'||!body.nickname||
          body.nickname.length>20)return reply({error:'invalid_award'},400);
       const current=this.one('SELECT id FROM profiles WHERE id=?',body.accountId);
       if(!current)this.seed({id:body.accountId,nickname:body.nickname,avatar:body.avatar||'clay'});
@@ -353,11 +356,14 @@ export class PocketSocial {
         if(body.title!==undefined&&(!maskotTitles.has(body.title)||
            (zamazkaAchievements.some(a=>a.slot==='title'&&a.item===body.title)&&!ownedAchievementItem(body.title,unlocked))||
            (retiredTitles[body.title]&&!unlocked.includes(retiredTitles[body.title]))||
-           (canticaAchievements.some(a=>a.slot==='title'&&a.item===body.title)&&!canticaOwns(body.title,'title',unlocked))))return reply({error:'invalid_profile'},400);
+           (canticaAchievements.some(a=>a.slot==='title'&&a.item===body.title)&&!canticaOwns(body.title,'title',unlocked))||
+           (blockiesAchievements.some(a=>a.slot==='title'&&a.item===body.title)&&!blockiesOwns(body.title,'title',unlocked))))return reply({error:'invalid_profile'},400);
         if(background==='gallery'&&!ownedAchievementItem('gallery',unlocked))return reply({error:'invalid_profile'},400);
         if(background==='chapel'&&!canticaOwns('chapel','background',unlocked))return reply({error:'invalid_profile'},400);
+        if(background==='block-grid'&&!blockiesOwns('block-grid','background',unlocked))return reply({error:'invalid_profile'},400);
         if(body.portraitFrame==='worn-gilt'&&!ownedAchievementItem('worn-gilt',unlocked))return reply({error:'invalid_profile'},400);
         if(body.portraitFrame==='rose-window'&&!canticaOwns('rose-window','portraitFrame',unlocked))return reply({error:'invalid_profile'},400);
+        if(body.portraitFrame==='tetromino'&&!blockiesOwns('tetromino','portraitFrame',unlocked))return reply({error:'invalid_profile'},400);
         if(body.backgroundMode!==undefined&&!backgroundModes.has(body.backgroundMode))return reply({error:'invalid_profile'},400);
         if(body.portraitFrame!==undefined&&!portraitFrames.has(body.portraitFrame))return reply({error:'invalid_profile'},400);
         // Older clients keep the new cosmetics untouched. New clients store only validated IDs.

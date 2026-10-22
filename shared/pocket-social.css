@@ -685,3 +685,28 @@
 @media(min-width:701px) and (max-width:900px){
  .pws-maskot-editor:has(.pws-collection) .pws-collection__entries{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Blockies earned cosmetics: graphic grid and enamel tetromino frame. */
+.pws-card[data-background="block-grid"]{
+ background-color:#1b4d58;
+ background-image:linear-gradient(145deg,#193f4f 0%,transparent 72%),
+ repeating-linear-gradient(0deg,transparent 0 25px,#94dcd81a 26px 27px),
+ repeating-linear-gradient(90deg,transparent 0 25px,#94dcd81a 26px 27px);
+ color:#e7faf2;--pws-ink:#e7faf2;--pws-accent:#f9d085;
+}
+.pws-card[data-background="block-grid"]::before{
+ content:"";position:absolute;right:8%;top:10%;height:36px;width:36px;
+ box-shadow:38px 0 #f5b76999,38px 38px #f5b76999,76px 38px #f5b76999;
+ opacity:.65;pointer-events:none;transform:rotate(-8deg);
+}
+.pws-portrait[data-portrait-frame="tetromino"],
+.pws-portrait-sample[data-portrait-frame="tetromino"]{
+ border:8px solid #5ec9c1;border-radius:2px;
+ background:#223e4d;
+ box-shadow:inset 0 0 0 3px #d9faf0,0 0 0 3px #295866,0 5px 10px #0b1d2680;
+}
+.pws-portrait[data-portrait-frame="tetromino"]::before,
+.pws-portrait-sample[data-portrait-frame="tetromino"]::before{
+ content:"";position:absolute;inset:-9px;pointer-events:none;
+ border:3px dashed #f6c26b;opacity:.7;
+}

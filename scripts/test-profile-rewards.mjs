@@ -5,7 +5,8 @@ assert.equal(empty.find(x=>x.id==='zamazka').earned,0);
 assert.equal(empty.find(x=>x.id==='zamazka').total,11);
 assert.equal(empty.find(x=>x.id==='cantica').total,9);
 assert.equal(empty.find(x=>x.id==='pocketworks').total,7);
-assert.equal(profileRewardSources.reduce((n,x)=>n+x.rewards.length,0),27);
+assert.equal(empty.find(x=>x.id==='blockies').total,9);
+assert.equal(profileRewardSources.reduce((n,x)=>n+x.rewards.length,0),36);
 const owned=collectProfileRewards(['zamazka.shared-canvas','zamazka.first-stroke','astronaut','cantica.first-light','cantica.seven','tetris.quick-win'],
   [{slug:'tetris',name:'Тетрис'}]);
 assert.equal(owned.find(x=>x.id==='zamazka').earned,2);

@@ -1,0 +1,14 @@
+// Canonical Blockies catalogue. Only PocketNet awards profile entitlements.
+export const blockiesAchievements=Object.freeze([
+ {id:'blockies.first-line',name:'Первая линия',tier:'Лёгкое',detail:'Уберите первую линию в сетевой партии.',reward:'Титул «Собиратель линий»',slot:'title',item:'Собиратель линий',nameEn:'First line',detailEn:'Clear your first line in an online match.',rewardEn:'Title: Line collector'},
+ {id:'blockies.double',name:'Двойной удар',tier:'Среднее',detail:'Уберите две или больше линий одним сбросом.',reward:'Шапка «Пиксельный козырёк»',slot:'hat',item:'stack-cap',nameEn:'Double strike',detailEn:'Clear two or more lines with one piece.',rewardEn:'Pixel visor'},
+ {id:'blockies.combo-three',name:'Цепная реакция',tier:'Среднее',detail:'Три сброса подряд с очисткой линий.',reward:'Титул «Мастер комбо»',slot:'title',item:'Мастер комбо',nameEn:'Chain reaction',detailEn:'Clear lines with three consecutive pieces.',rewardEn:'Title: Combo master'},
+ {id:'blockies.ten-lines',name:'Фундамент',tier:'Среднее',detail:'Уберите 10 линий за сетевую партию.',reward:'Фон «Блочная сетка»',slot:'background',item:'block-grid',nameEn:'Foundation',detailEn:'Clear 10 lines in one online match.',rewardEn:'Block grid backdrop'},
+ {id:'blockies.four-lines',name:'Классический тетрис',tier:'Сложное',detail:'Уберите сразу четыре линии одной фигурой.',reward:'Рамка «Тетрамино»',slot:'portraitFrame',item:'tetromino',nameEn:'Classic tetris',detailEn:'Clear four lines with one piece.',rewardEn:'Tetromino portrait frame'},
+ {id:'blockies.coop-twenty',name:'Одно поле',tier:'Сложное',detail:'Уберите 20 линий за матч вместе с минимум одним напарником.',reward:'Фигурка тетрамино на плече',slot:'accessory',item:'mini-block',nameEn:'One shared board',detailEn:'Clear 20 lines together with at least one teammate.',rewardEn:'Shoulder tetromino'},
+ {id:'blockies.forty-lines',name:'Высотка',tier:'Сложное',detail:'Уберите 40 линий за одну сетевую партию.',reward:'Титул «Смотритель поля»',slot:'title',item:'Смотритель поля',nameEn:'High rise',detailEn:'Clear 40 lines in one online match.',rewardEn:'Title: Board keeper'},
+ {id:'blockies.five-thousand',name:'Пять тысяч',tier:'Сложное',detail:'Наберите 5 000 командных очков за матч.',reward:'Титул «Живой алгоритм»',slot:'title',item:'Живой алгоритм',nameEn:'Five thousand',detailEn:'Score 5,000 team points in one match.',rewardEn:'Title: Living algorithm'},
+ {id:'blockies.hundred-lines',name:'Монумент',tier:'Легендарное',detail:'Уберите 100 линий за одну сетевую партию.',reward:'Корона «Четыре клетки»',slot:'hat',item:'block-crown',nameEn:'Monument',detailEn:'Clear 100 lines in one online match.',rewardEn:'Four squares crown'}
+]);
+export const blockiesAwardById=new Map(blockiesAchievements.map(a=>[a.id,a]));
+export const blockiesOwns=(item,slot,unlocks)=>blockiesAchievements.some(a=>a.slot===slot&&a.item===item&&unlocks.includes(a.id));
