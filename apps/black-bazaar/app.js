@@ -2,7 +2,7 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 installMobileRuntime();
-createWorkshopMode({appName:'Чёрная барахолка',version:'0.8.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+createWorkshopMode({appName:'Чёрная барахолка',version:'0.9.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -200,7 +200,7 @@ function blackMarketBlock(you){
  if(!state.blackMarket)return '';
  let out='<div class="panel"><h2>Анонимный чёрный рынок · раунд '+state.round+'</h2>'+
  '<p class="muted">Лоты хранятся у посредника до продажи. Ставки закрытые, имена участников неизвестны. По завершении раунда непроданные предметы возвращаются.</p>'+
- '<p class="muted">Пока рынок открыт, чужие балансы и инвентари временно скрыты. Посредник удерживает 10% с каждого полученного ресурса.</p>';
+ '<p class="muted">Пока рынок открыт, чужие балансы и инвентари временно скрыты. Посредник удерживает '+state.marketFeePercent+'% с каждого полученного ресурса.</p>';
  for(const lot of state.blackLots||[]){
   const inspected=lot.inspection;
   out+='<section class="offer"><h3>'+esc(lot.item.name)+' · '+esc(lot.id)+'</h3>'+
@@ -241,12 +241,13 @@ function blackMarketBlock(you){
 function repackBlock(you){
  const options=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
  if(!options.length||you.bankrupt)return '';
+ const price=state.repackCost||{gold:20,parts:1};
  return '<div class="panel"><h2>Перепаковка предмета</h2>'+
- '<p class="muted">За 20 золота и 1 деталь можно поменять видимое торговое название экземпляра. Эффекты не изменятся. Экспертиза сможет установить оригинал.</p>'+
+ '<p class="muted">Стоимость: '+price.gold+' золота и '+price.parts+' деталей. Можно поменять торговое название экземпляра, но не свойства. Экспертиза установит оригинал.</p>'+
  '<form class="stack" data-form="repack">'+
  '<label>Предмет<select name="itemId">'+options.map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label>'+
  '<label>Новая этикетка<select name="aliasIndex">'+you.disguises.map((n,i)=>'<option value="'+i+'">'+esc(n)+'</option>').join('')+'</select></label>'+
- '<button type="submit" '+(you.resources.gold<20||you.resources.parts<1?'disabled':'')+'>Перепаковать</button>'+
+ '<button type="submit" '+(you.resources.gold<price.gold||you.resources.parts<price.parts?'disabled':'')+'>Перепаковать</button>'+
  '</form></div>';
 }
 function actionsBlock(you){
@@ -274,7 +275,7 @@ function actionsBlock(you){
     '</select></label><button type="submit">Обменять</button></form>';
   if(you.items.length)html+='<form data-form="pawn" class="row"><label>Продать за 45 золота<select name="itemId">'+you.items.map(i=>'<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label><button type="submit">Сдать предмет</button></form>';
   const dismantle=you.items.filter(i=>i.acquiredRound!==state.round);
-  if(dismantle.length)html+='<form data-form="salvage" class="row"><label>Разобрать за 2 детали<select name="itemId">'+dismantle.map(i=>
+  if(dismantle.length)html+='<form data-form="salvage" class="row"><label>Разобрать за '+state.salvageParts+' детали<select name="itemId">'+dismantle.map(i=>
      '<option value="'+esc(i.id)+'">'+esc(i.name)+'</option>').join('')+'</select></label>'+
      '<button type="submit">Разобрать предмет</button></form>';
  }else html+='<p class="muted">Ломбард использован в этом ходу.</p>';
@@ -314,6 +315,10 @@ function updateTurnClock(){
  node.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');
  node.setAttribute('aria-label','До конца хода '+left+' секунд');
 }
+function eventBlock(){
+ const e=state.event;
+ return e?'<section class="panel"><h2>Событие раунда: '+esc(e.title)+'</h2><p>'+esc(e.description)+'</p></section>':'';
+}
 function renderPlay(){
  const drafts=mode==='play'?collectDrafts():{};
  mode='play';const you=state.you;
@@ -322,7 +327,7 @@ function renderPlay(){
  app.innerHTML='<div class="row"><h1>Раунд '+state.round+' / '+state.rounds+'</h1><span class="chip">'+(active?'Твой ход':'Ход: '+esc(label(state.turnId)))+'</span>'+
  '<span class="chip">Осталось: <strong id="turnClock" role="timer">—</strong></span>'+
  '<button type="button" data-action="leave">Выйти из комнаты</button></div>'+
- '<div class="panel"><h2>'+esc(you.character)+'</h2><p>Запасы: <strong>'+esc(amounts(you.resources))+'</strong>. Провалы срочных заказов: '+state.players.find(p=>p.id===me.id)?.strikes+'/3.</p></div>'+
+ '<div class="panel"><h2>'+esc(you.character)+'</h2><p>Запасы: <strong>'+esc(amounts(you.resources))+'</strong>. Провалы срочных заказов: '+state.players.find(p=>p.id===me.id)?.strikes+'/3.</p></div>'+eventBlock()+
  '<div class="layout"><div>'+secretBlock(you)+urgentBlock(you)+inventoryBlock(you)+'</div>'+
  '<div>'+blackMarketBlock(you)+tradePanel(you)+marketBlock(you,active)+repackBlock(you)+(active?actionsBlock(you):'<div class="panel"><p>Пока другой игрок продаёт товар, можно предложить ставку на его лот или прямой обмен.</p></div>')+'</div>'+
  '<div class="wide">'+scoreBox()+'<div class="panel"><h2>Журнал событий</h2><ol>'+state.log.map(entry=>'<li>'+esc(entry)+'</li>').join('')+'</ol></div></div></div>';
@@ -335,7 +340,16 @@ function renderDone(){
  app.innerHTML='<h1>Партия окончена</h1><p>Рейтинг по выполнению секретной квоты. Банкротство лишает права на победу; легендарная связь может изменить второе место.</p>'+
  '<div class="panel"><table class="table"><thead><tr><th>Место</th><th>Игрок</th><th>Квота</th><th>Итог</th></tr></thead><tbody>'+
  ranks.map(p=>'<tr><td>'+p.place+'</td><td>'+esc(p.character)+' · '+esc(p.name)+'</td><td>'+p.progress+'%</td><td>'+(p.bankrupt?'банкрот':p.complete?'выполнена':'не выполнена')+'</td></tr>').join('')+
- '</tbody></table></div><div class="row">'+(state.host===me?.id?'<button type="button" data-action="start" class="primary">Новая партия</button>':'')+
+ '</tbody></table></div>'+
+ (state.report?'<div class="panel"><h2>Итоги торговли за партию</h2><p>Публичные продажи: '+state.report.publicSales+
+ '; частные сделки: '+state.report.privateDeals+'; продажи на чёрном рынке: '+state.report.blackSales+
+ '; экспертизы: '+state.report.inspections+'; перепаковки: '+state.report.repack+
+ '; разборы: '+state.report.salvage+'.</p>'+
+ '<p>Срочных заказов выполнено: '+state.report.urgentMet+
+ '; провалено: '+state.report.urgentMissed+
+ '; заблокировано амулетом: '+state.report.wardUsed+
+ '; проклятий сработало: '+state.report.curseFired+'.</p></div>':'')+
+ '<div class="row">'+(state.host===me?.id?'<button type="button" data-action="start" class="primary">Новая партия</button>':'')+
  '<button type="button" data-action="leave">В меню</button></div>';
 }
 function render(){
