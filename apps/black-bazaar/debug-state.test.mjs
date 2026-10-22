@@ -38,6 +38,7 @@ test('Debug commands exercise purchase, bid, inspection, work, barter and turn w
  const s=createDebugState('four');
  let r=debugCommand(s,{type:'work',resource:'gold'});
  assert.equal(r.state.you.resources.gold,425);
+ s.listing=null;
  r=debugCommand(s,{type:'post',itemId:'owned-gear',ask:{gold:60,crystals:0,parts:0}});
  assert.equal(r.state.listing.id,'owned-gear');
  r=debugCommand(s,{type:'bid',offer:{gold:55,crystals:0,parts:0}});
