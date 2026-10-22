@@ -3,6 +3,7 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {svgIcon,brandEmblem} from './art.js';
 import {artifactSVG} from './art/artifacts.js';
+import {forecastEconomy} from './economy.js';
 import {classifyFeedback,createAudioFeedback} from './feedback.js';
 import {roleCharacter,characterMarkup,applyCharacterArt,loadCharacterArt} from './art/characters.js';
 import {createBazaarDebug} from './debug-console.js';
@@ -10,7 +11,7 @@ import {createDebugState,debugSetItem,debugCommand} from './debug-state.js';
 
 const debugPreview=new URLSearchParams(location.search).has('debugPreview');
 installMobileRuntime();
-if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.14.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.15.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -65,6 +66,8 @@ let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
 const decorativeGuests=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
 let notice='';
 let activeSheet=null,lastSheetTrigger=null,selectedArtifact=null;
+let playStarted=false;
+const readDeals=new Set(),readTasks=new Set();
 const sound=createAudioFeedback(debugPreview?{storage:{getItem:()=>null,setItem(){}}}:{});
 let cueTimer=null;
 function message(m,isError=false){notice=m;status.textContent=m;status.className=isError?'error':'muted';}
@@ -102,7 +105,7 @@ function showConfirmedCue(cue,playAudio=true){
 }
 function localStore(){const node=document.querySelector('#nickname');if(node)name=(node.value.trim()||'Игрок').slice(0,22);if(!debugPreview)try{localStorage.setItem('black-bazaar:name',name);}catch{}}
 function renderHome(){
- mode='home';activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
+ mode='home';activeSheet=null;selectedArtifact=null;playStarted=false;document.body.classList.remove('sheet-open');
  app.innerHTML='<div class="entry-screen">'+
  '<div class="entry-art" aria-hidden="true">'+
  '<div class="entry-cast">'+decorativeGuests.map(kind=>'<span class="entry-character">'+characterMarkup(kind)+'</span>').join('')+'</div>'+
@@ -118,7 +121,7 @@ function renderHome(){
  applyCharacterArt(app);
 }
 function renderLobby(){
- mode='lobby';activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
+ mode='lobby';activeSheet=null;selectedArtifact=null;playStarted=false;document.body.classList.remove('sheet-open');
  const all=state?.players||[],host=state?.host===me?.id,short=roomId.slice(0,8).toUpperCase();
  app.innerHTML='<div class="lobby-screen"><div class="panel stack">'+
  '<h1>За одним столом</h1><p>Код комнаты</p><strong class="lobby-room">'+esc(short)+'</strong>'+
@@ -383,6 +386,54 @@ function eventBlock(){
  return e?'<section class="panel"><h2>Событие раунда: '+esc(e.title)+'</h2><p>'+esc(e.description)+'</p></section>':'';
 }
 
+
+function taskKey(){
+ const u=state?.you?.urgent;
+ return u?.status==='pending'?roomId+':'+state.round+':'+state.you.id+':'+JSON.stringify(u.needs):null;
+}
+function unreadCount(section){
+ if(!state?.you)return 0;
+ if(section==='deals')return (state.deals||[]).filter(d=>d.to===state.you.id&&!readDeals.has(roomId+':'+d.id)).length;
+ if(section==='secret'){const key=taskKey();return key&&!readTasks.has(key)?1:0;}
+ return 0;
+}
+function unreadBadge(section){
+ const value=unreadCount(section);
+ return value?'<span class="tab-count" aria-label="'+value+' новых">'+value+'</span>':'';
+}
+function itemDormant(item,plan){
+ const blocked=plan.inactive.find(x=>x.id===item.id);
+ return blocked?'Не хватает '+blocked.missing.map(k=>names[k]).join(', '):'';
+}
+function quickMarket(you){
+ const lot=state.listing;
+ let html='<div class="panel compact-market"><h2>Торги</h2>';
+ if(lot)html+='<button type="button" class="inventory-object" data-action="open-item" data-kind="listing" data-id="'+esc(lot.id)+'">'+
+ '<span class="inventory-art">'+artifactSVG(lot.name,lot.rarity)+'</span>'+
+ '<span class="inventory-copy"><strong>'+esc(lot.name)+'</strong><small>'+esc(label(lot.seller))+' · '+esc(amounts(lot.ask))+'</small></span>'+
+ svgIcon('arrow',18)+'</button>'+(state.bids.length?'<p class="muted">Ставок: '+state.bids.length+'</p>':'');
+ else html+='<p class="muted">Нет лота. Чтобы выставить вещь, нажми на неё на столе.</p>';
+ if(state.blackMarket)html+='<details class="quiet-details"><summary>Анонимный рынок · '+(state.blackLots||[]).length+'</summary>'+blackMarketBlock(you)+'</details>';
+ return html+'</div>';
+}
+function quickActions(you,active){
+ if(!active)return '<div class="panel"><h2>Чужой ход</h2><p>Обмен и ставки доступны.</p></div>';
+ if(you.bankrupt)return '<div class="panel"><h2>Твой ход</h2><button data-action="end" class="primary">Пропустить</button></div>';
+ let html='<div class="panel compact-actions"><h2>Твой ход</h2>';
+ if(!you.worked)html+='<form data-form="work" class="fast-work"><label>Подработка<select name="resource">'+
+ '<option value="gold">+35 золота</option><option value="crystals">+4 кристалла</option><option value="parts">+1 деталь</option>'+
+ '</select></label><button type="submit" class="primary">Получить</button></form>';
+ else html+='<p class="success">Подработка выполнена</p>';
+ if(state.broker)html+='<button type="button" class="inventory-object" data-action="open-item" data-kind="broker" data-id="'+esc(state.broker.id)+'">'+
+ '<span class="inventory-art">'+artifactSVG(state.broker.name,state.broker.rarity)+'</span>'+
+ '<span class="inventory-copy"><strong>Запечатанная находка</strong><small>75 золота</small></span>'+svgIcon('arrow',18)+'</button>';
+ html+='<details class="quiet-details"><summary>Ломбард</summary>'+
+ (!you.usedPawn?'<form data-form="exchange" class="fast-work"><label>Обмен<select name="mode">'+
+ '<option value="buy_crystals">70 золота → 6 кристаллов</option><option value="buy_parts">90 золота → 1 деталь</option>'+
+ '<option value="sell_crystals">6 кристаллов → 25 золота</option><option value="sell_parts">1 деталь → 40 золота</option>'+
+ '</select></label><button type="submit">Обменять</button></form>':'<p>Ломбард уже использован.</p>')+
+ '</details></div>';return html;
+}
 const rarityLabel=r=>r==='редкий'?'Редкая вещь':'Обычная вещь';
 function artifactFacts(item,{showPositive=false,showNegative=false,inspection=false}={}){
  const knownPlus=showPositive&&item?.positive;
@@ -609,7 +660,7 @@ function render(){
 }
 function closeRoom(){
  clearTimeout(cueTimer);cueTimer=null;
- activeSheet=null;selectedArtifact=null;document.body.classList.remove('sheet-open');
+ activeSheet=null;selectedArtifact=null;playStarted=false;readDeals.clear();readTasks.clear();document.body.classList.remove('sheet-open');
  if(net){try{if(connected)net.leaveRoom()}catch{}try{net.close()}catch{}}
  net=null;me=null;state=null;roomId='';connected=false;connecting=false;message('');renderHome();
 }
