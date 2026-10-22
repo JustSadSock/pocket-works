@@ -13,14 +13,16 @@ const option=(text,attr,selected=false)=>'<button type="button" class="dev-choic
 export function createBazaarDebug(){
  let root=null,frame=null,isOpen=false,viewport=DEBUG_VIEWPORTS[0],scene='four',section='screens',itemKind='inventory';
  let lastFocus=null,observer=null,auditQueue=null,results=[],ready=false;
- const audio=createAudioFeedback();
+ let debugSound='on';
+ const audio=createAudioFeedback({storage:{getItem:()=>debugSound,setItem:(_,v)=>{debugSound=v;}}});
  const tabs=[['screens','Экраны'],['items','Предметы'],['characters','Персонажи'],['effects','Эффекты'],['qa','Проверка']];
  const characters=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
  const characterNames=[...DEBUG_ROLES,'Многоглазый кот','Цветок','Старик'];
  function controls(list){return '<div class="dev-buttons">'+list.join('')+'</div>'}
  function panelMarkup(){
   if(section==='screens')return '<p class="dev-hint">Реальные игровые экраны. Все действия работают в изолированной симуляции без PocketNet.</p>'+
-   controls(DEBUG_SCENES.map(([id,label])=>option(label,'data-debug-scene="'+id+'"',scene===id)));
+   controls(DEBUG_SCENES.map(([id,label])=>option(label,'data-debug-scene="'+id+'"',scene===id)))) +
+   '<p class="dev-hint">Боковые панели</p>'+controls([['secret','Задания'],['inventory','Инвентарь'],['deals','Обмен'],['market','Рынок'],['actions','Мой ход'],['players','Участники'],['detail','Предмет']].map(([id,label])=>option(label,'data-debug-sheet="'+id+'"')));
   if(section==='items')return '<p class="dev-hint">Выбери предмет, чтобы открыть подробную карточку в предпросмотре.</p>'+
    controls([['inventory','В инвентаре'],['listing','На торгах'],['broker','У брокера'],['black','Анонимно']].map(([id,label])=>option(label,'data-debug-kind="'+id+'"',itemKind===id)))+
    '<div class="dev-object-grid">'+DEBUG_ITEMS.map(([name,rarity],i)=>
@@ -91,6 +93,7 @@ export function createBazaarDebug(){
   if(b.dataset.debugTab){section=b.dataset.debugTab;refreshPanel();return}
   if(b.dataset.debugViewport){viewport=DEBUG_VIEWPORTS.find(v=>v[0]===b.dataset.debugViewport)||viewport;resize();return}
   if(b.dataset.debugScene){selectScene(b.dataset.debugScene);return}
+  if(b.dataset.debugSheet){if(['home','lobby','done'].includes(scene))selectScene('four');send({type:'sheet',name:b.dataset.debugSheet});return}
   if(b.dataset.debugKind){itemKind=b.dataset.debugKind;refreshPanel();return}
   if(b.hasAttribute('data-debug-item')){
    if(!scene||['home','lobby','done'].includes(scene))selectScene('four');
