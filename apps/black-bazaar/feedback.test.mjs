@@ -32,6 +32,8 @@ test('Public bids and individual inspections react without claiming command acce
  const old=snapshot();
  assert.equal(classifyFeedback(old,{...old,revision:13,bids:[{buyer:'guest',offer:{gold:40}}]},'me')?.kind,'bid');
  assert.equal(classifyFeedback(old,{...old,revision:13,you:{...p,inspections:[{itemId:'lot-1',negative:{type:'gold',value:10}}]}},'me')?.kind,'inspect');
+ assert.equal(classifyFeedback(old,{...old,revision:13,log:['Маг получил доход от подработки.',...old.log]},'me')?.kind,'reward');
+ assert.equal(classifyFeedback(old,{...old,revision:13,log:['Маг сдал предмет в ломбард.',...old.log]},'me')?.kind,'craft');
  assert.equal(classifyFeedback(old,{...old,revision:13,round:4,turnId:'me'},'me')?.kind,'round');
  assert.equal(classifyFeedback(old,{...old,revision:13,turnId:'me'},'me')?.kind,'turn');
 });
