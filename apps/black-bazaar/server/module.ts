@@ -108,21 +108,25 @@ function rankPlayers(s){
   }
   return rows.map((r,i)=>({...r,place:i+1}));
 }
-function urgentFor(round){
+// Equal urgency burden measured in the number of ordinary work actions:
+ // round 3 = two actions, round 6 = three, round 9 = four.
+ // Each player gets all three currency categories exactly once (permuted).
+function urgentFor(round,player){
   const tier=Math.floor(round/3);
-  const options=[
-    [{gold:60,crystals:0,parts:0},{gold:0,crystals:7,parts:0},{gold:0,crystals:0,parts:1}],
-    [{gold:90,crystals:0,parts:0},{gold:0,crystals:10,parts:0},{gold:35,crystals:0,parts:1}],
-    [{gold:120,crystals:0,parts:0},{gold:0,crystals:13,parts:0},{gold:35,crystals:0,parts:2}]
-  ];
-  return {...sample(options[Math.min(2,tier-1)])};
+  const category=RESOURCES[(player.urgentOffset+tier-1)%RESOURCES.length];
+  const workUnits=tier+1;
+  return {
+    gold:category==='gold'?35*workUnits:0,
+    crystals:category==='crystals'?4*workUnits:0,
+    parts:category==='parts'?workUnits:0
+  };
 }
 function startTurn(s){
   if(s.round> TOTAL_ROUNDS){s.phase='done';s.ranking=rankPlayers(s);issue(s,'Партия окончена. Итоги подсчитаны.');return;}
   const p=s.contestants[s.turnIndex];
   p.worked=false;p.usedPawn=false;p.marketDeals=0;
   s.listing=null;s.bids=[];
-  p.urgent=(s.round%3===0&&!p.bankrupt)?{needs:urgentFor(s.round),status:'pending'}:null;
+  p.urgent=(s.round%3===0&&!p.bankrupt)?{needs:urgentFor(s.round,p),status:'pending'}:null;
   issue(s,'Раунд '+s.round+': ход игрока '+p.character+'.');
 }
 function openGame(s){
@@ -131,7 +135,8 @@ function openGame(s){
     const targets=s.players.filter(x=>x.id!==p.id).map(x=>x.id);
     const plus=sample(targets),minus=sample(targets);
     return {id:p.id,name:p.name,character:CHARACTERS[i],resources:{gold:250,crystals:20,parts:3},quota:{...QUOTAS[i]},
-      items:[newItem(s),newItem(s)],positiveTarget:plus,negativeTarget:minus,
+      items:[newItem(s),newItem(s)],urgentOffset:Math.floor(Math.random()*RESOURCES.length),
+      positiveTarget:plus,negativeTarget:minus,
       legendary:null,positiveUsed:0,negativeUsed:0,urgent:null,strikes:0,bankrupt:false,
       worked:false,usedPawn:false,marketDeals:0,inspections:[]};
   });
