@@ -24,6 +24,7 @@
       <div class="menu-buttons">
         <button data-native-press id="pause-btn" class="top-action" style="display:none" type="button"><span aria-hidden="true">Ⅱ</span><span data-i18n="pause">Пауза</span></button>
         <button data-native-press id="quit-btn" class="top-action" style="display:none" type="button"><span aria-hidden="true">↩</span><span data-i18n="menu">Меню</span></button>
+        <button data-native-press id="achievements-btn" class="top-action achievements-top-button" type="button" aria-expanded="false" aria-controls="achievements-modal" aria-label="Достижения"><span aria-hidden="true">◆</span><span>Награды</span></button>
         <button data-native-press id="settings-btn" class="top-action" type="button" aria-label="Настройки"><span aria-hidden="true">⚙</span><span data-i18n="settings">Настройки</span></button>
         <select id="language-selector" class="language-selector" aria-label="Язык"><option value="ru">RU</option><option value="en">EN</option></select>
         <div id="gamepad-status" class="gamepad-status" aria-live="polite"></div>
@@ -164,8 +165,19 @@
         <button data-native-press id="menu-btn" class="btn btn-secondary" data-i18n="mainMenu">В главное меню</button>
       </div>
     </div>
+    <div id="achievements-modal" class="achievements-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="achievements-title">
+      <section class="achievements-panel">
+        <header class="achievements-header">
+          <div><span class="eyebrow">BLOCKIES / COLLECTION</span><h2 id="achievements-title">Награды</h2><p id="achievements-status" aria-live="polite"></p></div>
+          <button type="button" id="achievements-close" class="achievements-close" aria-label="Закрыть">✕</button>
+        </header>
+        <div class="achievements-summary"><strong id="achievements-count">— / 9</strong><span>открыто</span><button id="achievements-refresh" type="button">Обновить</button></div>
+        <div id="achievements-list" class="achievements-list"></div>
+        <footer class="achievements-footer">Результаты одиночных и локальных партий не выдают награды аккаунта. В сетевой партии достижения засчитываются всей команде.</footer>
+      </section>
+    </div>
   </main>
   <script type="module" src="./app.js"></script>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Blockies" data-app-version="0.4.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Blockies" data-app-version="0.4.1"></script>
 </body>
 </html>
