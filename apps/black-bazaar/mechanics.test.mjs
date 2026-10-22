@@ -1233,3 +1233,36 @@ test('A late malicious action advances the expired turn but never buys an item o
  assert.deepEqual(active.resources,before);
  assert.equal(state.revision,revision+1);
 });
+
+
+test('Currency balances saturate at 9999 for urgent rewards, pawnshop and secret relationship gains',()=>{
+ // (a) A fully wealthy player's urgent reward must not overflow gold.
+ {
+  const {state}=makeRoom(2),actor=state.contestants[0];
+  actor.resources.gold=9990;actor.resources.crystals=100;actor.resources.parts=100;
+  actor.urgent={needs:{gold:0,crystals:1,parts:0},status:'pending'};
+  const ended=act(state,actor.id,{type:'end'});
+  assert.equal(ended.events[0].type,'state');
+  assert.equal(actor.resources.gold,9999);
+  assert.equal(actor.urgent.status,'success');
+ }
+ // (b) Pawnshop pays 45 without exceeding the bank limit.
+ {
+  const {state}=makeRoom(2),actor=state.contestants[0];
+  actor.resources.gold=9990;
+  const pawn=act(state,actor.id,{type:'pawn',itemId:actor.items[0].id});
+  assert.equal(pawn.events[0].type,'state');
+  assert.equal(actor.resources.gold,9999);
+ }
+ // (c) +3 crystals from a personal relationship also saturate properly.
+ {
+  const {state}=makeRoom(2),[seller,buyer]=state.contestants;
+  buyer.positiveTarget=seller.id;buyer.positiveUsed=0;
+  buyer.resources.crystals=9998;
+  act(state,seller.id,{type:'post',itemId:seller.items[0].id,ask:{gold:1}});
+  act(state,buyer.id,{type:'bid',offer:{gold:1}});
+  const sold=act(state,seller.id,{type:'accept',buyer:buyer.id});
+  assert.equal(sold.events[0].type,'state');
+  assert.equal(buyer.resources.crystals,9999);
+ }
+});
