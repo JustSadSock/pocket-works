@@ -3,7 +3,7 @@ test('start, move, cast, pause, resume, pick rune and finish complete 1v1 traini
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
  await expect(page.locator('#primary-action')).toBeVisible();
- await page.locator('#primary-action').click();
+ await page.locator('#mode-duel').click();await page.locator('#primary-action').click();
  await expect(page.locator('#hud')).toBeVisible();
  const a=await page.evaluate(()=>window.__perekosTest.state.actors[0].x);
  await page.keyboard.down('d');await page.waitForTimeout(330);await page.keyboard.up('d');
@@ -39,7 +39,7 @@ test('start, move, cast, pause, resume, pick rune and finish complete 1v1 traini
 });
 test('portrait controls and explicit PocketWorks return',async({browser})=>{
  const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,isMobile:true,hasTouch:true,serviceWorkers:'block'});const page=await context.newPage();
- try{await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});await page.locator('#primary-action').click();await expect(page.locator('#controls')).toBeVisible();const joy=await page.locator('#stick').boundingBox();expect(joy).toBeTruthy();
+ try{await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});await page.locator('#mode-duel').click();await page.locator('#primary-action').click();await expect(page.locator('#controls')).toBeVisible();const joy=await page.locator('#stick').boundingBox();expect(joy).toBeTruthy();
  const before=await page.evaluate(()=>window.__perekosTest.state.actors[0].y);
  const x=joy.x+joy.width/2,y=joy.y+joy.height/2;await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x,y-joy.height*.28,{steps:7});await page.waitForTimeout(350);await page.mouse.up();
  const after=await page.evaluate(()=>window.__perekosTest.state.actors[0].y);expect(after).toBeLessThan(before);
@@ -50,7 +50,7 @@ test('portrait controls and explicit PocketWorks return',async({browser})=>{
 
 test('grimoire saves a real five-slot chain and can replay it in solo practice',async({page})=>{
  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
- await page.locator('#primary-action').click();
+ await page.locator('#mode-duel').click();await page.locator('#primary-action').click();
  await page.evaluate(()=>{
   for(let i=0;i<2000&&window.__perekosTest.state.phase==='fight';i++)window.__perekosTest.step()
  });
@@ -82,7 +82,7 @@ test('desktop arena hides mobile controls, shows genuine rune/cooldown dossiers 
  try{
   await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('#primary-action')).toBeVisible();
-  await page.locator('#primary-action').click();
+  await page.locator('#mode-duel').click();await page.locator('#primary-action').click();
   await expect(page.locator('#hud')).toBeVisible();
   await expect(page.locator('#controls')).toBeHidden();
   await expect(page.locator('#desktop-dashboard')).toBeVisible();
