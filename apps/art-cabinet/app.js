@@ -1,3 +1,5 @@
+import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+installMobileRuntime();
 import {REVIEW_WORKS} from './original-review.js';
 import {APPROVED_WORKS as FIRST_EDITION} from './approved.js';
 import {SECOND_APPROVED_WORKS} from './second-approved.js';
