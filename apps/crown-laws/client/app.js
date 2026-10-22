@@ -626,23 +626,14 @@ function debugHTML(state) {
 }
 
 function victoryHTML(state) {
-  if (!state.winner) {
-    return "";
-  }
-  const winnerName = state.winner === "p1" ? "Северный Чемпион" : "Южный Чемпион";
-  return `
-    <div class="victory">
-      <div class="victory__panel">
-        <span class="victory__eyebrow">Партия завершена</span>
-        <h2>${winnerName} берет корону</h2>
-        <p>Активные короны: ${state.players[state.winner].activeCrowns}. Последние законы и позиционное давление переломили дуэль.</p>
-        <div class="victory__actions">
-          <button data-native-press class="primary-btn" data-action="rematch">Реванш</button>
-          <button data-native-press class="ghost-btn" data-action="back-menu">Вернуться в меню</button>
-        </div>
-      </div>
-    </div>
-  `;
+ if(!state.winner)return "";
+ const winner=state.winner==="p1"?"Северный претендент":"Южный претендент";
+ return `<div class="victory" role="dialog" aria-label="Партия завершена"><div class="victory__panel victory__panel--illustrated">
+    <div class="victory__art" aria-hidden="true"></div><div class="victory__ribbon">ПОБЕДА</div><h2>Корона обрела хозяина</h2><strong class="victory__winner">${winner}</strong>
+    ${crownRow(state.players[state.winner],winner,state.winner==="p1"?"north":"south")}
+    <p>Три короны. Трон под контролем.</p>
+    <div class="victory__actions"><button data-native-press class="primary-btn" data-action="rematch">Реванш ↗</button><button data-native-press class="ghost-btn" data-action="back-menu">В зал совета</button></div>
+  </div></div>`;
 }
 
 function roomHTML() {
@@ -738,38 +729,26 @@ function gameHTML(state, eyebrow) {
 }
 
 function menuHTML() {
-  return `
-    <section class="menu-shell">
-      <div class="hero-card hero-card--menu">
-        <div class="hero-card__content">
-          <span class="eyebrow">Состязание за престол</span>
-          <h1><span class="title-line">Законы</span><span class="title-line">короны</span></h1>
-          <p class="hero-card__lede">Два претендента, один трон. Вы не двигаете фигуры — вы переписываете законы, которым они подчиняются.</p>
-          <div class="hero-card__crest" aria-hidden="true">ЗК</div>
-        </div>
-        <nav class="menu-navigation" aria-label="Режим игры">
-          <span class="menu-navigation__label">Начать заседание</span>
-          <div class="menu-grid">
-            ${profileOptions()}
-            <button data-native-press class="menu-card" data-action="open-online">
-              <span class="menu-card__index">II</span>
-              <span class="menu-card__copy"><span class="menu-card__title">Играть онлайн</span><span class="menu-card__text">Приватная комната на двоих</span></span>
-              <span class="menu-card__arrow" aria-hidden="true">→</span>
-            </button>
-            <button data-native-press class="menu-card" data-action="start-hotseat">
-              <span class="menu-card__index">III</span>
-              <span class="menu-card__copy"><span class="menu-card__title">На одном устройстве</span><span class="menu-card__text">Передавайте устройство после тайного выбора</span></span>
-              <span class="menu-card__arrow" aria-hidden="true">→</span>
-            </button>
-          </div>
-          <div class="menu-secondary">
-            <button data-native-press class="ghost-btn" data-action="toggle-rules">Как играть</button>
-            <button data-native-press class="ghost-btn" data-action="toggle-settings">Настройки</button>
-          </div>
-        </nav>
-      </div>
-    </section>
-  `;
+ return `<section class="menu-shell menu-shell--illustrated">
+   <div class="hall-stage" aria-hidden="true"><div class="hall-stage__art"></div><div class="hall-stage__light"></div><div class="hall-stage__north sprite-figure sprite-figure--north"></div><div class="hall-stage__south sprite-figure sprite-figure--south"></div></div>
+   <div class="menu-interface"><div class="menu-title"><span class="menu-title__prelude">Дуэль указов за королевский престол</span><h1>Законы <em>короны</em></h1><div class="menu-title__emblem sprite-seal sprite-seal--champion" aria-hidden="true"></div><p>Не двигай фигурами. Измени законы, которым подчиняется весь двор.</p></div>
+    <nav class="menu-choices" aria-label="Режим игры"><button data-native-press class="menu-choice menu-choice--primary" data-action="start-ai"><span class="menu-choice__roman">I</span><span><strong>Против ИИ</strong><small>Начать партию</small></span><span class="menu-choice__arrow">↗</span></button>
+    <button data-native-press class="menu-choice" data-action="open-online"><span class="menu-choice__roman">II</span><span><strong>Онлайн-дуэль</strong><small>Комната на двоих</small></span><span class="menu-choice__arrow">↗</span></button>
+    <button data-native-press class="menu-choice" data-action="start-hotseat"><span class="menu-choice__roman">III</span><span><strong>На одном устройстве</strong><small>Тайные указы по очереди</small></span><span class="menu-choice__arrow">↗</span></button>
+    <div class="menu-choices__aux"><button data-action="toggle-rules" class="text-btn">Правила ↗</button><button data-action="toggle-settings" class="text-btn">Настройки ⚙</button></div></nav>
+   </div>
+ </section>`;
+}
+
+function rulesHTML() {
+ const ordered=["priest","champion","guard","beast","thief"];
+ const labels={priest:"Жрец",champion:"Чемпионы",guard:"Страж",beast:"Зверь",thief:"Вор"};
+ return `<div class="modal-shell" data-action="close-modal"><div class="modal-card modal-card--rules" data-stop-click="1">
+    <div class="rules__heading"><span>КОДЕКС КОРОНЫ</span><button data-action="close-modal" class="text-btn" aria-label="Закрыть">×</button></div><h2>Пять законов. Один трон.</h2>
+    <div class="rules__objective"><span class="rules__crown" aria-hidden="true">♛</span><p>Займи трон чемпионом и собери <strong>3 активные короны</strong>. Вор может их похищать.</p></div>
+    <div class="rules__steps"><div><b>1</b><strong>Секретно</strong><small>Оба выбирают по одному указу.</small></div><div><b>2</b><strong>Конфликт</strong><small>Одна категория — все её новые и старый указы сбрасываются.</small></div><div><b>3</b><strong>Действие</strong><small>Мир выполняет действующие законы по порядку.</small></div></div>
+    <div class="rules__phases">${ordered.map((id,i)=>`<span><i class="sprite-seal sprite-seal--${id}"></i><small>${i+1}. ${labels[id]}</small></span>`).join("")}<span class="rules__throne"><b>♛</b><small>Трон</small></span></div>
+    <p class="rules__footer">Законы работают для обеих сторон. Щит, оглушение и печать меняют исход; нажми на закон или фигуру, чтобы узнать подробности.</p></div></div>`;
 }
 
 function modalHTML() {
@@ -814,21 +793,7 @@ function modalHTML() {
       </div>
     `;
   }
-  if (app.modal === "rules") {
-    return `
-      <div class="modal-shell" data-action="close-modal">
-        <div class="modal-card" data-stop-click="1">
-          <div class="panel-head">
-            <h3>Правила и опоры</h3>
-            <button data-native-press class="text-btn" data-action="close-modal">Закрыть</button>
-          </div>
-          <div class="rules-list">
-            ${RULES_TEXT.map((line) => `<p>${line}</p>`).join("")}
-          </div>
-        </div>
-      </div>
-    `;
-  }
+  if (app.modal === "rules") return rulesHTML();
   return `
     <div class="modal-shell" data-action="close-modal">
       <div class="modal-card" data-stop-click="1">
