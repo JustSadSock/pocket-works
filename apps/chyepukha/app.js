@@ -3,6 +3,7 @@ import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketAvatarMarkup,pocketPlayerBadge,pocketIdProfileUrl} from '../../shared/capabilities/identity.js';
 import {storageForTab,prepareSession,markActive,releaseActive} from './tab-session.js';
 import {buildComicPrompt} from './comic-prompt.js';
+import {createSoundscape} from './audio.js';
 import {readEditions,writeEditions,addFinishedEdition,removeEdition,storyText} from './story-library.js';
 import {installScreenInspector,PREVIEW_PARAM} from './screen-inspector.js';
 import {demoView} from './preview-data.js';
@@ -21,7 +22,8 @@ const code=s=>{let x=String(s||'').trim();try{x=new URL(x).searchParams.get('roo
 const words=s=>String(s||'').trim().split(/\s+/u).filter(Boolean);
 const GENDERS=[['male','Чоловік'],['female','Жінка'],['nonbinary','Інше'],['unspecified','Неважливо']];
 let net=null,view=null,me='',room='',connected=false,connecting=false,notice='';
-let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',comicImage='',modal='',sound=read('sound','off')==='on',audio=null;
+let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',comicImage='',modal='',effectsEnabled=read('sound','off')==='on',musicEnabled=read('music','off')==='on',effectsVolume=Number(read('effectsVolume','.45')),musicVolume=Number(read('musicVolume','.22'));
+const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
 let previewDraft='',previewEditions=[];let readerMode='full',comicSource=null;
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='';
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
@@ -46,7 +48,7 @@ const loadDraft=()=>{if(IS_PREVIEW)return previewDraft;try{return localStorage.g
 const saveDraft=x=>{if(IS_PREVIEW){previewDraft=x;return}try{localStorage.setItem(draftKey(),x)}catch{}};
 const clearDraft=()=>{if(IS_PREVIEW){previewDraft='';return}try{localStorage.removeItem(draftKey())}catch{}};
 function toast(x){toastEl.textContent=String(x);toastEl.classList.add('show');clearTimeout(toastEl.timer);toastEl.timer=setTimeout(()=>toastEl.classList.remove('show'),3200)}
-function tick(f=580){if(!sound)return;try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;audio||=new A();audio.resume();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.026,audio.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.12);o.connect(g).connect(audio.destination);o.start();o.stop(audio.currentTime+.13)}catch{}}
+function tick(f=580){soundscape.fx(f>=750?'reveal':f>=680?'turn':f>=620?'word':f<500?'seal':'tap')}
 function netStatus(){
  const status=IS_PREVIEW?'DEMO':connected?'ONLINE':connecting?'CONNECTING':netHealth==='online'?'ONLINE':netHealth==='checking'?'CHECKING':'OFFLINE';
  network.textContent='POCKETNET · '+status;
@@ -230,7 +232,7 @@ function apply(v){if(!v||v.protocol!==1||!Array.isArray(v.players))return;
  if(v.phase==='finished'&&Array.isArray(v.stories))v={...v,stories:v.stories.map(st=>({...st,text:st.fragments.map(f=>f.answer).join('\n\n')}))};
  const prev=view;const same=prev?.phase==='writing'&&v.phase==='writing'&&!prev.waiting&&!v.waiting&&prev.round===v.round&&prev.sheet?.id===v.sheet?.id;
  if(prev?.phase==='writing'&&!prev.waiting&&v.waiting)clearDraft();
- view=v;if(v.phase==='finished')keepFinished(v);if(prev?.round!==v.round&&prev?.phase==='writing')tick(690);
+ view=v;soundscape.setScene(v.phase==='lobby'?'lobby':v.phase==='writing'?'writing':'finished');if(prev?.phase!==v.phase&&v.phase==='finished')soundscape.fx('reveal');if(v.phase==='finished')keepFinished(v);if(prev?.round!==v.round&&prev?.phase==='writing')tick(690);
  if(same){const el=$('sideRoster');if(el)el.innerHTML=rosterCompact();const progress=$('turnProgress');if(progress){const next=document.createElement('div');next.innerHTML=turnProgress();progress.replaceWith(next.firstElementChild)}return}
  render();
 }
@@ -275,10 +277,11 @@ function results(){
 function overlay(){
  if(modal==='archive-delete')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Видалити видання"><section class="comic-inner"><div class="eyebrow">ПІДТВЕРДИТИ ВИДАЛЕННЯ</div><h3>Видалити це видання?</h3><p class="mini">Усі рукописи цього випуску буде видалено лише з цього пристрою. Дію не можна скасувати.</p><div class="button-row"><button class="button outline" type="button" data-act="cancel">Залишити</button><button class="button" type="button" data-act="archive-confirm-delete">Видалити</button></div></section></div>';
  if(modal==='leave')return '<div class="comic-modal" role="dialog" aria-modal="true"><section class="comic-inner"><h3>Залишити партію?</h3><p class="mini">Якщо гра триває, для інших авторів партію буде скинуто.</p><div class="button-row"><button class="button outline" data-act="cancel">Залишитись</button><button class="button" data-act="confirm-leave">Вийти</button></div></section></div>';
+ if(modal==='audio')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Налаштування звуку"><section class="comic-inner audio-modal"><div class="eyebrow">ЗВУК РЕДАКЦІЇ</div><h3>Звуки та музика</h3><label class="audio-row"><input type="checkbox" name="effectsEnabled" '+(effectsEnabled?'checked':'')+'><span>Ефекти: папір, печатки, перегортання</span></label><label class="audio-volume">Гучність ефектів <output id="effectsLevelOut">'+Math.round(effectsVolume*100)+'%</output><input type="range" name="effectsVolume" min="0" max="100" value="'+Math.round(effectsVolume*100)+'"></label><label class="audio-row"><input type="checkbox" name="musicEnabled" '+(musicEnabled?'checked':'')+'><span>Тиха інструментальна музика</span></label><label class="audio-volume">Гучність музики <output id="musicLevelOut">'+Math.round(musicVolume*100)+'%</output><input type="range" name="musicVolume" min="0" max="100" value="'+Math.round(musicVolume*100)+'"></label><p class="mini">Музика починає грати після дії користувача й стихає у фоновій вкладці.</p><div class="button-row"><button class="button" data-act="close-audio">Готово</button></div></section></div>';
  if(modal==='comic-prompt')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Комікс через ChatGPT"><section class="comic-inner comic-ai"><div class="eyebrow">КОМІКС · 4 СТОРІНКИ</div><h3>Намалюй історію в ChatGPT</h3><p>Скопіюй готовий промпт і встав у ChatGPT. Зображення створює ChatGPT, а не гра.</p><div class="comic-actions"><button class="button" type="button" data-act="copy-comic-direct">Скопіювати промпт коміксу <span>↗</span></button><button class="button outline" type="button" data-act="copy-comic-safe">Спершу адаптувати історію <span>↗</span></button></div><p class="mini">Адаптація — два кроки: перший чат готує безпечний сценарій, другий створює чотири послідовні сторінки. Деякі сюжети потребуватимуть значної переробки, а генерація не гарантована.</p><div class="button-row"><a class="button outline small" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">Відкрити ChatGPT ↗</a><button class="button outline small" data-act="close-comic">Закрити</button></div></section></div>';
  return '';
 }
-function render(){netStatus();syncIdentityBar();$('sound').textContent='Звук: '+(sound?'увімк.':'вимк.');
+function render(){netStatus();syncIdentityBar();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.');soundscape.setScene(view?.phase==='lobby'?'lobby':view?.phase==='writing'?'writing':view?.phase==='finished'?'finished':'menu');
  if(connecting&&!view){scene.innerHTML='<section class="paper waiting"><div class="eyebrow">POCKETNET</div><h2>З’єднуємо авторів…</h2><p class="mini">Відновлюємо захищену кімнату.</p><button class="button outline" type="button" data-act="cancel-connect">Скасувати підключення</button></section>';return}
  scene.innerHTML=(view?(view.phase==='lobby'?lobby():view.phase==='writing'?(view.waiting?waiting():writing()):view.phase==='finished'?results():waiting()):archiveOpen?archiveScreen():home())+overlay();
  if(view?.phase==='writing'&&!view.waiting)refreshWords();
@@ -294,9 +297,9 @@ scene.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
  const gender=document.querySelector('input[name=gender]:checked')?.value||'unspecified';save('gender',gender);
  if(send({type:'submit',round:view.round,sheetId:view.sheet.id,answer,tailIndexes:chosen,gender,heroAnchor:$('heroAnchor')?.value||''}))tick(445);
  }});
-scene.addEventListener('input',e=>{if(e.target.id==='guestNick')name=e.target.value.slice(0,24);if(e.target.name==='room'&&e.target.closest('#joinForm'))invitation=e.target.value;if(e.target.id==='answer'){saveDraft(e.target.value);refreshWords()}if(e.target.id==='questionSet')$('customField')?.classList.toggle('hidden',e.target.value!=='custom');if(e.target.id==='genre')$('customGenreField')?.classList.toggle('hidden',e.target.value!=='custom')});
+scene.addEventListener('input',e=>{if(e.target.id==='guestNick')name=e.target.value.slice(0,24);if(e.target.name==='room'&&e.target.closest('#joinForm'))invitation=e.target.value;if(e.target.id==='answer'){saveDraft(e.target.value);refreshWords()}if(e.target.name==='effectsEnabled'){effectsEnabled=e.target.checked;save('sound',effectsEnabled?'on':'off');soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});soundscape.unlock();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.')}if(e.target.name==='musicEnabled'){musicEnabled=e.target.checked;save('music',musicEnabled?'on':'off');soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});soundscape.unlock();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.')}if(e.target.name==='effectsVolume'){effectsVolume=Number(e.target.value)/100;save('effectsVolume',effectsVolume);$('effectsLevelOut').textContent=Math.round(effectsVolume*100)+'%';soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume})}if(e.target.name==='musicVolume'){musicVolume=Number(e.target.value)/100;save('musicVolume',musicVolume);$('musicLevelOut').textContent=Math.round(musicVolume*100)+'%';soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume})}if(e.target.id==='questionSet')$('customField')?.classList.toggle('hidden',e.target.value!=='custom');if(e.target.id==='genre')$('customGenreField')?.classList.toggle('hidden',e.target.value!=='custom')});
 scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act;
- if(act==='copy-comic-direct'||act==='copy-comic-safe'){const txt=buildComicPrompt(comicSource,{adapt:act==='copy-comic-safe'});if(txt)void copyText(txt);else toast('Немає рукопису для промпту.');return}if(act==='word'){const i=Number(b.dataset.index),ids=indices(),need=view.round===view.total-1?0:Math.min(view.settings.visibleTailWords,words($('answer')?.value).length),at=ids.indexOf(i);if(at>=0)ids.splice(at,1);else if(ids.length<need)ids.push(i);else{toast('Вже вибрано '+need+' слів.');return}draftSelections[draftKey()]=ids;refreshWords();tick(650);return}
+ if(act==='close-audio'){modal='';render();return}if(act==='copy-comic-direct'||act==='copy-comic-safe'){const txt=buildComicPrompt(comicSource,{adapt:act==='copy-comic-safe'});if(txt)void copyText(txt);else toast('Немає рукопису для промпту.');return}if(act==='word'){const i=Number(b.dataset.index),ids=indices(),need=view.round===view.total-1?0:Math.min(view.settings.visibleTailWords,words($('answer')?.value).length),at=ids.indexOf(i);if(at>=0)ids.splice(at,1);else if(ids.length<need)ids.push(i);else{toast('Вже вибрано '+need+' слів.');return}draftSelections[draftKey()]=ids;refreshWords();tick(650);return}
  if(act==='archive'){archiveOpen=true;archiveEditionId='';archiveStoryId='';render();return}
   if(act==='archive-back'){archiveOpen=false;archiveEditionId='';archiveStoryId='';render();return}
   if(act==='archive-edition'){archiveEditionId=b.dataset.id;archiveStoryId='';render();return}
@@ -318,7 +321,8 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
  if(act==='comic'||act==='archive-comic'){comicSource=act==='archive-comic'?archiveSelection().story:view?.stories?.find(x=>x.id===storyId);if(!comicSource){toast('Не знайдено історію.');return}modal='comic-prompt';tick(800);render();return}
  if(act==='close-comic'){modal='';comicSource=null;render();return}
 });
-$('sound').addEventListener('click',()=>{sound=!sound;save('sound',sound?'on':'off');render();tick()});
+$('sound').addEventListener('click',()=>{soundscape.unlock();modal='audio';render()});
+document.addEventListener('pointerdown',()=>{if(effectsEnabled||musicEnabled)soundscape.unlock()},{once:true});
 document.addEventListener('visibilitychange',()=>{
  if(IS_PREVIEW)return;
  // A hidden->visible transition is unreliable in embedded iOS / WKWebView; any
