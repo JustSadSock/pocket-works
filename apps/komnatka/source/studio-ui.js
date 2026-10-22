@@ -4,9 +4,11 @@ import {ROOM_KINDS,roomKind} from './room-kinds.js';
 export function createStudioUI({getState,load,save,render,photo,onClose,toast}){
  const $=id=>document.getElementById(id);
  const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- let newLayout='classic',newPurpose='living';
- function gallery(){
-  save();
+ let newLayout='classic',newPurpose='living',gallerySource='home';
+ function gallery(source=gallerySource){
+  if(save()===false){toast('Не удалось сохранить комнатку. Освободи место для сохранения.');return false;}
+  gallerySource=source;
+  $('roomsBack').textContent=source==='editor'?'← В редактор':'← В меню';
   const records=getState().records(),limit=5;
   $('roomsCounter').textContent=records.length+'/'+limit;
   $('roomsGrid').innerHTML=records.map(r=>
@@ -19,15 +21,23 @@ export function createStudioUI({getState,load,save,render,photo,onClose,toast}){
    '</div></article>').join('')+
    (records.length<limit?'<button id="addAlbum" class="room-album-add" type="button"><span>＋</span>Новая комнатка</button>':'');
   $('roomsLayer').hidden=false;
-  for(const button of $('roomsGrid').querySelectorAll('[data-open]'))button.onclick=()=>{load(button.dataset.open);$('roomsLayer').hidden=true;$('newRoomForm').hidden=true;};
-  for(const input of $('roomsGrid').querySelectorAll('[data-name]'))input.onchange=()=>{getState().rename(input.dataset.name,input.value);gallery();};
+  for(const button of $('roomsGrid').querySelectorAll('[data-open]'))button.onclick=()=>{
+   if(load(button.dataset.open)===false)return;
+   $('roomsLayer').hidden=true;$('newRoomForm').hidden=true;
+  };
+  for(const input of $('roomsGrid').querySelectorAll('[data-name]'))input.onchange=()=>{
+   if(!getState().rename(input.dataset.name,input.value))toast('Не удалось переименовать комнатку');
+   gallery();
+  };
   for(const button of $('roomsGrid').querySelectorAll('[data-delete]'))button.onclick=()=>{
    if(!confirm('Удалить комнатку? Отменить удаление нельзя.'))return;
-   getState().delete(button.dataset.delete);gallery();
+   if(!getState().delete(button.dataset.delete)){toast('Не удалось удалить комнатку');return;}
+   gallery();
   };
   const add=$('addAlbum');if(add)add.onclick=()=>{$('newRoomForm').hidden=false;};
+  return true;
  }
- function close(){ $('roomsLayer').hidden=true;$('newRoomForm').hidden=true;onClose?.();}
+ function close(){ $('roomsLayer').hidden=true;$('newRoomForm').hidden=true;onClose?.(gallerySource);}
  $('roomsBack').onclick=close;
  $('roomCreateCancel').onclick=()=>{$('newRoomForm').hidden=true;};
  for(const b of $('newRoomLayouts').querySelectorAll('[data-layout]'))b.onclick=()=>{
@@ -41,7 +51,8 @@ export function createStudioUI({getState,load,save,render,photo,onClose,toast}){
  $('roomCreateConfirm').onclick=()=>{
   const created=getState().create($('newRoomName').value,newLayout,newPurpose);
   if(!created){toast('Не получилось создать комнатку');return;}
-  load(created.id);$('roomsLayer').hidden=true;$('newRoomForm').hidden=true;
+  if(load(created.id)===false){toast('Комнатка создана, но открыть её не удалось');gallery();return;}
+  $('roomsLayer').hidden=true;$('newRoomForm').hidden=true;
  };
  let savedCamera=null;
  function preview(){
