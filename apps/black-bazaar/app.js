@@ -2,6 +2,7 @@ import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {svgIcon,artifactSVG,brandEmblem} from './art.js';
+import {roleCharacter,characterMarkup,applyCharacterArt,loadCharacterArt} from './art/characters.js';
 installMobileRuntime();
 createWorkshopMode({appName:'Чёрная барахолка',version:'0.10.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
@@ -55,6 +56,7 @@ function specialLine(t){
 }
 let net=null,me=null,state=null,roomId='',mode='home',connecting=false,connected=false;
 let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
+const decorativeGuests=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
 let notice='';
 let activeSheet=null,lastSheetTrigger=null;
 function message(m,isError=false){notice=m;status.textContent=m;status.className=isError?'error':'muted';}
@@ -62,7 +64,9 @@ function localStore(){const node=document.querySelector('#nickname');if(node)nam
 function renderHome(){
  mode='home';activeSheet=null;document.body.classList.remove('sheet-open');
  app.innerHTML='<div class="entry-screen">'+
- '<div class="entry-art" aria-hidden="true"><div class="entry-table"></div><div class="entry-emblem">'+brandEmblem()+'</div></div>'+
+ '<div class="entry-art" aria-hidden="true">'+
+ '<div class="entry-cast">'+decorativeGuests.map(kind=>'<span class="entry-character">'+characterMarkup(kind)+'</span>').join('')+'</div>'+
+ '<div class="entry-table"></div><div class="entry-emblem">'+brandEmblem()+'</div></div>'+
  '<div class="entry-copy"><h1>Чёрная барахолка</h1>'+
  '<p>Девять раундов. Странные находки. Торгуйся, хитри и не разорись.</p>'+
  '<div class="entry-form"><div class="panel stack">'+
@@ -71,6 +75,7 @@ function renderHome(){
  '<label>Код комнаты<input id="roomCode" type="text" spellcheck="false" value="'+esc(hintRoom)+'" placeholder="Код или ссылка"></label>'+
  '<button type="button" data-action="join">Войти к друзьям</button>'+
  '</div></div></div></div>';
+ applyCharacterArt(app);
 }
 function renderLobby(){
  mode='lobby';activeSheet=null;document.body.classList.remove('sheet-open');
@@ -79,12 +84,14 @@ function renderLobby(){
  '<h1>За одним столом</h1><p>Код комнаты</p><strong class="lobby-room">'+esc(short)+'</strong>'+
  '<div class="row"><button type="button" data-action="copy-code">'+svgIcon('box')+' Код</button>'+
  '<button type="button" data-action="copy-url">'+svgIcon('trade')+' Ссылка</button></div>'+
- '<div class="lobby-players">'+all.map(p=>'<div class="lobby-player"><strong>'+esc(p.name)+'</strong>'+
+ '<div class="lobby-players">'+all.map((p,index)=>'<div class="lobby-player">'+
+ characterMarkup(decorativeGuests[index%decorativeGuests.length],'lobby-portrait')+'<strong>'+esc(p.name)+'</strong>'+
  (p.id===state.host?'<br><small>Создатель</small>':'')+'</div>').join('')+'</div>'+
  '<p class="muted">'+all.length+' из 6 игроков · старт от двух</p>'+
  (host?'<button type="button" class="primary" data-action="start" '+(all.length<2?'disabled':'')+'>Начать игру</button>':'<p>Начало — у создателя комнаты.</p>')+
  '<button type="button" data-action="leave">Покинуть комнату</button>'+
  '</div></div>';
+ applyCharacterArt(app);
 }
 function scoreBox(){
   return '<div class="panel"><h2>Участники</h2><table class="table"><thead><tr><th>Игрок</th><th>Ресурсы</th><th>Предметы</th><th>Штрафы</th></tr></thead><tbody>'+
@@ -367,10 +374,17 @@ function renderPlay(){
  if(!you){app.innerHTML='<p class="panel">Подключаемся к комнате…</p>';return;}
  const active=state.turnId===me?.id;
  const turnName=active?'Твой ход':'Ходит '+label(state.turnId);
- const seats=state.players.map(p=>
- '<div class="seat '+(p.id===state.turnId?'is-turn':'')+'">'+
- '<div class="seat-icon" aria-hidden="true"></div><strong>'+esc(p.character)+'</strong>'+
- '<small>'+esc(p.name)+'</small></div>').join('');
+ const seats=state.players.map(p=>{
+ const isMe=p.id===me?.id;
+ const available=!isMe&&p.connected&&!p.bankrupt&&!you.bankrupt;
+ const disabled=!isMe&&!available;
+ return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(isMe?'is-me ':'')+(p.bankrupt?'is-bankrupt ':'')+
+ '" data-action="'+(isMe?'open-sheet':'trade-with')+'" '+(isMe?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
+ (disabled?' disabled title="Игрок недоступен"':' title="'+(isMe?'Мой инвентарь':'Предложить обмен')+'"')+
+ ' aria-label="'+esc(p.character)+' — '+esc(p.name)+(available?', предложить обмен':'')+'">'+
+ '<span class="seat-portrait">'+characterMarkup(roleCharacter(p.character),'seat-character')+'</span>'+
+ '<strong>'+esc(p.character)+'</strong><small>'+esc(p.name)+'</small></button>';
+ }).join('');
  const listing=state.listing;
  const lot=listing?
  '<button type="button" class="artifact" data-action="open-sheet" data-sheet="market" aria-label="Открыть лот: '+esc(listing.name)+'">'+
@@ -400,7 +414,9 @@ function renderPlay(){
  '<span class="chip" aria-label="До конца хода">◷ <strong id="turnClock" role="timer">—</strong></span>'+
  '<button type="button" class="leave-button" data-action="leave">Выйти</button></div>'+
  resourceWallet(you.resources)+
- '<div class="play-field"><div class="player-seats">'+seats+'</div>'+
+ '<div class="play-field" data-player-count="'+state.players.length+'">'+
+ '<div class="ambient-lights" aria-hidden="true"><i></i><i></i><i></i><i></i></div>'+
+ '<div class="player-seats" data-seats="'+state.players.length+'">'+seats+'</div>'+
  '<div class="table-stage">'+lot+ownItems+
  (state.blackMarket?'<button type="button" data-action="open-sheet" data-sheet="market">'+svgIcon('eye')+' Чёрный рынок</button>':'')+
  (state.event?'<button type="button" data-action="open-sheet" data-sheet="players" class="table-event">'+svgIcon('leaf')+' '+esc(state.event.title)+'</button>':'')+
@@ -414,6 +430,7 @@ function renderPlay(){
  '</aside></div>';
  restoreDrafts(drafts);
  openSheet(activeSheet);
+ applyCharacterArt(app);
  updateTurnClock();
 }
 function renderDone(){
@@ -489,6 +506,18 @@ async function copy(value){
 app.addEventListener('click',event=>{
  const btn=event.target.closest('button[data-action]');if(!btn||btn.disabled)return;
  const action=btn.dataset.action;
+ if(action==='trade-with'){
+  const recipient=state?.players?.find(p=>p.id===btn.dataset.player);
+  if(!recipient?.connected||recipient.bankrupt||state?.you?.bankrupt)return;
+  lastSheetTrigger=btn;openSheet('deals',true);
+  const choose=app.querySelector('#dealTarget');
+  if(choose&&[...choose.options].some(o=>o.value===recipient.id)){
+   choose.value=recipient.id;
+   const dropdown=app.querySelector('#dealWantItem');
+   if(dropdown)dropdown.innerHTML=itemOptions((recipient.inventory||[]).filter(i=>i.tradable));
+  }
+  return;
+ }
  if(action==='open-sheet'){
   lastSheetTrigger=btn;
   const next=activeSheet===btn.dataset.sheet?null:btn.dataset.sheet;
@@ -588,6 +617,7 @@ app.addEventListener('submit',event=>{
  if(type==='exchange')return request({type:'exchange',mode:data.get('mode')});
 });
 renderHome();
+loadCharacterArt().catch(error=>{console.warn('Unable to load character art:',error);message('Иллюстрации недоступны — игра продолжает работать.',true);});
 let lastHeartbeat=0;
 setInterval(()=>{
  updateTurnClock();
