@@ -13,14 +13,14 @@
     "distinction": "В отличие от горизонтальной прошлой версии, карта теперь портретная с северным направлением наступления; ни на одном другом поле PocketWorks действия нескольких именных кораблей не тарифицируются общим бюджетом двух коротких стадий."
   },
   "architecture": {
-    "spatialLayout": "split-workspace",
+    "spatialLayout": "map-table",
     "controlLocation": "side-rail",
     "navigation": "overlay-list",
     "chromeTopology": "layered-panels",
     "dominantMotion": "rotational-inertia",
     "primaryVerb": "Командовать небольшой эскадрой на портретном море: составить курс и боевой приказ, обойти врага, повредить его вёсла и инициировать или разорвать многоходовой абордаж.",
     "physicalFeedback": "Вычисляемый сектор удара изменяет тип последствий: корпус, вёсла, бойцы и мораль. Состояния видны в компактной панели; на карте появляются сломанные вёсла, канаты сцепления и шкала абордажа.",
-    "spatialRationale": "Портретный экран теперь повторяет направление столкновения судов — собственная эскадра снизу, противник сверху. На широком десктопе карта центральная, справа панель бюджета и приказов, на узком телефоне — компактная нижняя панель без длинного скролла.",
+    "spatialRationale": "Интерактивная морская карта занимает весь главный рабочий сектор — в отличие от двух равноправных колонок документов. Управление оплачиваемыми приказами размещено у границы карты: справа на ПК и в нижней короткой палубе на телефоне. Повороты галер видны по действительному маршруту и не маскируются поверх навигации.",
     "comparisons": [
       {
         "slug": "stapel",
@@ -71,6 +71,11 @@
         "slug": "shevel",
         "spatialDifference": "Вместо игровой сцены с музыкальным/ритмическим движением и хореографией графических элементов — тактическая широкая морская карта и постоянная компактная командная консоль для двух половин фазы.",
         "interactionDifference": "В отличие от ритмического немедленного ввода игрок заранее рисует путь мышью или пальцем и назначает отдельный приказ в половине хода, а затем смотрит автономное исполнение нескольких судов."
+      },
+      {
+        "slug": "black-bazaar",
+        "spatialDifference": "Black Bazaar places inventories and anonymous bid forms on a multi-column economic table. Flotiliya devotes the central view to a vertical sea canvas with war galleys, routes, islands and a side instrument console.",
+        "interactionDifference": "Black Bazaar negotiates an economy through secret offers; Flotiliya plots simultaneous paid ship orders and resolves actual movement and tactical engagements."
       }
     ]
   },

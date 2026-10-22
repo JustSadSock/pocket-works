@@ -1,10 +1,15 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import { renderSea, renderGalley } from './sea-art.js';
 import { planSquadronShip } from './squadron-plan.js';
 import { TURN_SECONDS, buildCourse, sampleCourse } from './course-motion.js';
 import { ACTION_COST, MOVE_STEP, getBudget, canPlan, stagePathLength, stageRange, availableActions } from './turn-budget.js';
 import { condition, attackSector, attackPacket, contest, nearbySupport, rangeBlocked, oarFraction } from './naval-combat.js';
 installMobileRuntime();
+createWorkshopMode({
+ appName:'ФЛОТИЛИЯ',version:'0.6.0',
+ cachePrefix: 'flotiliya-',storageNamespace: 'pocket-works:flotiliya'
+});
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('sea'), ctx = canvas.getContext('2d', {alpha:false});
