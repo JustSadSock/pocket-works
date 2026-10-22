@@ -1,1 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="20" fill="#172723"/><path d="M14 86V40l26-21 32 7 36-10 5 33-16 34-28 22-41-1Z" fill="#4c6857" stroke="#ddbb83" stroke-width="3"/><path d="M28 92h75l-14-18-11-6-11-48-12 45-19 16Z" fill="#dbb77e"/><path d="M55 32 46 78l14-2 6-40ZM65 55l-1 27h10Z" fill="#8e694e"/><path d="M28 91h73v9H28Z" fill="#644b3e"/><path d="m16 31 12-7-4 14Zm89 27 11 8-13 3ZM88 16l7 3-5 10Z" fill="#f1d397"/><circle cx="62" cy="86" r="4" fill="#233b35"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Перекос — столкновение двух стихий">
+<defs><linearGradient id="g" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#271f23"/><stop offset="1" stop-color="#142a32"/></linearGradient><linearGradient id="f" x1="0" y1="1" x2=".7" y2="0"><stop stop-color="#c54e31"/><stop offset="1" stop-color="#f6c47b"/></linearGradient><linearGradient id="i" x1="1" y1="0" x2="0" y2="1"><stop stop-color="#9be1d2"/><stop offset="1" stop-color="#2a788b"/></linearGradient><clipPath id="tile"><rect x="0" y="0" width="128" height="128" rx="24"/></clipPath></defs>
+<g clip-path="url(#tile)"><rect width="128" height="128" fill="url(#g)"/><path d="M0 0H74L33 73 0 94Z" fill="#a94b34" opacity=".22"/><path d="M128 14v114H49l53-78Z" fill="#4a9e9f" opacity=".22"/>
+<path d="M17 26 40 14 55 22 64 11 76 24 97 21 111 43 108 74 115 94 92 110 63 104 36 114 15 94 19 66Z" fill="#0e2227" stroke="#c0ae86" stroke-width="4" stroke-linejoin="round"/>
+<path d="M21 83 41 67 36 49 55 23 52 49 65 58 48 70 40 91 25 97Z" fill="url(#f)" stroke="#f0bb79" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M105 37 85 52 92 70 75 103 76 78 63 68 80 57 86 35 101 29Z" fill="url(#i)" stroke="#9fe6d7" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="m71 16-22 40 18-5-21 53 37-50-18 6Z" fill="#f9e7b5" stroke="#192f33" stroke-width="3" stroke-linejoin="round"/>
+<path d="M23 43h11M94 91h11M27 106l9-8M92 22l-8 9" stroke="#e5c59a" stroke-width="3" opacity=".85"/>
+<path d="M9 15h16M15 9v16M110 106h12M116 100v12" stroke="#c5b793" stroke-width="2" opacity=".5"/></g>
+</svg>
