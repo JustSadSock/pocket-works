@@ -247,7 +247,8 @@ function buildField(level, blueprint) {
     const variation = clamp(.12 + texture * .22 + fine * .07 + Math.max(0, normal[2] - .84) * .12, 0, .48);
     let color = mixColor(base, light, variation);
     const cavity = clamp((10 - height) / 18, 0, 1);
-    const slopeShade = clamp(.76 + normal[2] * .25 - cavity * .12, .60, 1.06);
+    const sun = clamp(normal[0] * .50 - normal[1] * .40 + normal[2] * .78, 0, 1);
+    const slopeShade = clamp(.58 + sun * .44 - cavity * .10 + clamp((height - 12) / 60, 0, 1) * .07, .54, 1.10);
     color = [color[0] * slopeShade, color[1] * slopeShade, color[2] * slopeShade, color[3]];
     if (type === 'grass' && fine > .78) color = mixColor(color, palette.grassDry, .14);
     if (info.weight > 0 && info.weight < 1) color = mixColor(palette.grass, color, info.weight);
@@ -256,7 +257,7 @@ function buildField(level, blueprint) {
   return { landforms, masks, heightAt, gradientAt, normalAt, surfaceAt, surfaceInfoAt, rampAt, colorAt };
 }
 
-function buildSurfaceMesh(level, field, along = 70, across = 15) {
+function buildSurfaceMesh(level, field, along = 86, across = 19) {
   const vertices = [];
   const boundaryLeft = [];
   const boundaryRight = [];
