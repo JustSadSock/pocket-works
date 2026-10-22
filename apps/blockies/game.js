@@ -1826,20 +1826,28 @@ class UIManager {
     }
 
     drawNextPiece(player) {
-        const canvas=document.getElementById(`next-${player.id}`);
-        if(!canvas)return;
-        const ctx=canvas.getContext('2d');
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        const piece=player.nextPiece;
-        if(!piece)return;
-        const offsetX=Math.floor((PREVIEW_SIZE-piece[0].length)/2);
-        const offsetY=Math.floor((PREVIEW_SIZE-piece.length)/2);
-        for(let y=0;y<piece.length;y++)for(let x=0;x<piece[y].length;x++){
-            if(piece[y][x])this.paintBlock(ctx,offsetX+x,offsetY+y,player.color,true);
+        for(const id of [`next-${player.id}`,`bay-next-${player.id}`]){
+            const canvas=document.getElementById(id);
+            if(!canvas)continue;
+            const ctx=canvas.getContext('2d');
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            const piece=player.nextPiece;
+            if(!piece||player.gameOver)continue;
+            const offsetX=Math.floor((canvas.width/BLOCK_SIZE-piece[0].length)/2);
+            const offsetY=Math.floor((canvas.height/BLOCK_SIZE-piece.length)/2);
+            for(let y=0;y<piece.length;y++)for(let x=0;x<piece[y].length;x++){
+                if(piece[y][x])this.paintBlock(ctx,offsetX+x,offsetY+y,player.color,true);
+            }
         }
     }
 
     updatePlayerInfo(player) {
+        const bay=document.getElementById(`spawn-bay-${player.id}`);
+        if(bay){
+            bay.classList.toggle('is-out',!!player.gameOver);
+            const label=bay.querySelector('.spawn-bay__name');
+            if(label&&label.textContent!==player.name){label.textContent=player.name;label.title=player.name;}
+        }
         const statusEl = document.getElementById(`status-${player.id}`);
         if (!statusEl) return;
 
@@ -2068,7 +2076,11 @@ class UIManager {
         const gap=parseFloat(stageStyles.gap)||0;
         const maxWidth=Math.max(1,rect.width-padX-frameX-2);
         const maxHeight=Math.max(1,rect.height-padY-frameY-(head?.getBoundingClientRect().height||0)-gap-2);
-        const ratio=Math.max(.05,Math.min(1.6,maxWidth/canvas.width,maxHeight/canvas.height));
+        const rail=document.getElementById('spawn-rail');
+        const railExtra=rail?4*BLOCK_SIZE:0;
+        const labelExtra=rail?16:0;
+        const ratio=Math.max(.05,Math.min(1.6,maxWidth/canvas.width,
+            Math.max(1,maxHeight-labelExtra)/(canvas.height+railExtra)));
         const width=Math.floor(canvas.width*ratio);
         const height=Math.floor(canvas.height*ratio);
         canvas.style.width=width+'px';
@@ -2076,7 +2088,14 @@ class UIManager {
         canvas.style.maxWidth='none';
         canvas.style.maxHeight='none';
         wrapper.style.width=(width+frameX)+'px';
-        wrapper.style.height=(height+frameY)+'px';
+        const railHeight=rail?Math.round(railExtra*ratio)+labelExtra:0;
+        if(rail){
+            const cell=width/gameState.boardWidth;
+            rail.style.width=width+'px';
+            rail.style.height=railHeight+'px';
+            rail.style.setProperty('--bay-cell',cell+'px');
+        }
+        wrapper.style.height=(height+railHeight+frameY)+'px';
     }
 
     installBoardGestures(canvas) {
