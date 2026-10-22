@@ -254,9 +254,20 @@ function applyEffect(p,fx,sign){
 function roundIncome(s){
   for(const p of s.contestants){
     if(p.bankrupt)continue;
-    // Positive effects first, then upkeep; one-time curses last.
-    for(const item of p.items)applyEffect(p,spec(item).positive,+1);
-    for(const item of p.items)applyEffect(p,spec(item).negative,-1);
+    // Maintenance is reserved before income. An unaffordable item
+    // is inactive for this payout (neither income nor upkeep).
+    const budget={...p.resources},active=[];
+    for(const item of p.items){
+      const upkeep=spec(item).negative;
+      const key=upkeep.type==='goldPercent'?'gold':upkeep.type;
+      const cost=upkeep.type==='goldPercent'
+        ?Math.floor(budget.gold*upkeep.value/100):upkeep.value;
+      if(!RESOURCES.includes(key)||budget[key]<cost)continue;
+      budget[key]-=cost;active.push(item);
+    }
+    for(const key of RESOURCES)p.resources[key]=budget[key];
+    for(const item of active)applyEffect(p,spec(item).positive,+1);
+    // Curses remain attached to an item, even if its upkeep is unaffordable.
     for(const item of p.items){
       const t=trait(item);
       if(t?.kind==='curse'&&!item.curseResolved&&s.round>=(item.curseDueRound??Infinity)){
