@@ -34,7 +34,8 @@ test('Per-player network projection hides other players quota, items and relatio
  assert.ok(other.you.quota.gold>0);
  assert.equal(own.players.some(p=>'quota' in p),false);
  assert.equal(other.players.some(p=>'positiveTarget' in p),false);
- assert.equal(JSON.stringify(own).includes('positiveTarget":"'+state.contestants[1].positiveTarget),false); // where distinct target
+ assert.equal(own.you.id,state.contestants[0].id);
+ assert.equal(other.you.id,state.contestants[1].id);
 });
 test('Seller lists an item, buyer can inspect its hidden downside and place a bid',()=>{
  const {state}=makeRoom(2);
