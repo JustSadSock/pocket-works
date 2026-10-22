@@ -8,23 +8,23 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Pocket Works">
-  <meta name="pocket-works-build" content="0.13.2">
+  <meta name="pocket-works-build" content="0.13.3">
   <title>Pocket Works</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=0.13.2">
-  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.13.2" type="image/svg+xml">
-  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.13.2">
-  <link rel="stylesheet" href="./shared/update-manager.css?v=0.13.2">
-  <link rel="stylesheet" href="./styles.css?v=0.13.2">
-  <link rel="stylesheet" href="./launcher-performance.css?v=0.13.2">
-  <link rel="stylesheet" href="./launcher-sync.css?v=0.13.2">
-  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.13.2">
-  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.13.2">
+  <link rel="manifest" href="./manifest.webmanifest?v=0.13.3">
+  <link rel="icon" href="./shared/pocket-works-icon.svg?v=0.13.3" type="image/svg+xml">
+  <link rel="stylesheet" href="./shared/mobile-runtime.css?v=0.13.3">
+  <link rel="stylesheet" href="./shared/update-manager.css?v=0.13.3">
+  <link rel="stylesheet" href="./styles.css?v=0.13.3">
+  <link rel="stylesheet" href="./launcher-performance.css?v=0.13.3">
+  <link rel="stylesheet" href="./launcher-sync.css?v=0.13.3">
+  <link rel="stylesheet" href="./shared/app-icon-previews.css?v=0.13.3">
+  <link rel="stylesheet" href="./shared/launcher-list-motion.css?v=0.13.3">
 
-  <link rel="stylesheet" href="./shared/capabilities/identity.css?v=0.13.2">
-  <link rel="stylesheet" href="./shared/pocket-id.css?v=0.13.2">
-  <link rel="stylesheet" href="./shared/pocket-social.css?v=0.13.2">
-  <link rel="stylesheet" href="./shared/shell-dialogs.css?v=0.13.2">
-  <link rel="stylesheet" href="./deck-shell.css?v=0.13.2">
+  <link rel="stylesheet" href="./shared/capabilities/identity.css?v=0.13.3">
+  <link rel="stylesheet" href="./shared/pocket-id.css?v=0.13.3">
+  <link rel="stylesheet" href="./shared/pocket-social.css?v=0.13.3">
+  <link rel="stylesheet" href="./shared/shell-dialogs.css?v=0.13.3">
+  <link rel="stylesheet" href="./deck-shell.css?v=0.13.3">
 </head>
 <body>
   <div class="library-room" aria-hidden="true"><span class="room-light"></span><span class="room-grain"></span><span class="room-shadow"></span></div>
@@ -35,7 +35,7 @@
         <span><strong>Pocket Works</strong><small>personal library</small></span>
       </a>
       <div class="shelf-heading">
-        <p class="eyebrow">COLLECTION · 0.13.2</p>
+        <p class="eyebrow">COLLECTION · 0.13.3</p>
         <h1>PocketWorks</h1>
       </div>
       <div class="system-rail" aria-label="Library status">
@@ -238,7 +238,7 @@
     <p class="shelf-tools__intro">Каталог — список приложений. Проверка обновлений — версии уже открытых игр.</p>
     <div class="shelf-tools__maintenance deck-actions"><button id="refresh-button" type="button" data-native-press>Обновить каталог</button><button id="update-installed-button" type="button" data-native-press>Проверить обновления</button><button id="shelf-tools-button" type="button" hidden>Диагностика</button></div>
     </section>
-    <details class="shelf-tools__about"><summary>О PocketWorks</summary><p>Версия 0.13.2</p><a href="/privacy">Политика конфиденциальности</a></details>
+    <details class="shelf-tools__about"><summary>О PocketWorks</summary><p>Версия 0.13.3</p><a href="/privacy">Политика конфиденциальности</a></details>
     <details class="shelf-tools__advanced">
       <summary>Диагностика и восстановление</summary>
       <div class="shelf-tools__facts" id="tools-facts" aria-live="polite">Проверяем устройство…</div>
@@ -326,16 +326,16 @@
   <template id="app-card-template">
     <article class="app-entry"><a class="app-entry__select" data-action="open" data-native-press><span class="app-preview" aria-hidden="true"><span class="preview-grid"></span><span class="preview-orbit"></span><span class="preview-signal"></span><span class="preview-bars"><i></i><i></i><i></i><i></i><i></i></span><span class="preview-scan"></span><span class="app-entry__pin" title="Закреплено для всех"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3 6 0-1 6 4 4v2h-5v6l-2-3v-3H6v-2l4-4z"/></svg></span></span><span class="app-entry__body"><span class="app-entry__topline"><strong class="app-entry__name"></strong><span class="app-entry__status"></span></span><span class="app-entry__description"></span><span class="app-entry__meta"></span></span></a><button class="app-entry__favorite" type="button" data-action="favorite" data-native-press aria-label="В избранное" aria-pressed="false">☆</button><button type="button" class="app-entry__more" data-action="details" data-native-press aria-label="Об приложении"><span aria-hidden="true">···</span></button></article>
   </template>
-  <script type="module" src="./shared/update-manager.js?v=0.13.2" data-update-manager data-service-worker="./sw.js?build=0.13.2" data-app-name="Pocket Works" data-app-version="0.13.2" data-quiet-updates="true"></script>
-  <script src="./shared/view-transition-guard.js?v=0.13.2" type="module"></script>
-  <script src="./launcher-new-app-focus.js?v=0.13.2"></script>
-  <script src="./app.js?v=0.13.2" type="module"></script>
-  <script src="./launcher-release-links.js?v=0.13.2" type="module"></script>
-  <script src="./launcher-update-all-v3.js?v=0.13.2" type="module"></script>
-  <script src="./launcher-sync.js?v=0.13.2" type="module"></script>
-  <script src="./shared/launcher-list-motion.js?v=0.13.2" type="module"></script>
-  <script type="module" src="./shared/pocket-id.js?v=0.13.2"></script>
-  <script type="module" src="./shared/pocket-social.js?v=0.13.2"></script>
-  <script src="./shared/app-icon-previews.js?v=0.13.2" type="module"></script>
+  <script type="module" src="./shared/update-manager.js?v=0.13.3" data-update-manager data-service-worker="./sw.js?build=0.13.3" data-app-name="Pocket Works" data-app-version="0.13.3" data-quiet-updates="true"></script>
+  <script src="./shared/view-transition-guard.js?v=0.13.3" type="module"></script>
+  <script src="./launcher-new-app-focus.js?v=0.13.3"></script>
+  <script src="./app.js?v=0.13.3" type="module"></script>
+  <script src="./launcher-release-links.js?v=0.13.3" type="module"></script>
+  <script src="./launcher-update-all-v3.js?v=0.13.3" type="module"></script>
+  <script src="./launcher-sync.js?v=0.13.3" type="module"></script>
+  <script src="./shared/launcher-list-motion.js?v=0.13.3" type="module"></script>
+  <script type="module" src="./shared/pocket-id.js?v=0.13.3"></script>
+  <script type="module" src="./shared/pocket-social.js?v=0.13.3"></script>
+  <script src="./shared/app-icon-previews.js?v=0.13.3" type="module"></script>
 </body>
 </html>

@@ -1,9 +1,10 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.13.2';
-const APP_VERSION = '0.13.2';
+const CACHE_NAME = 'pocket-works-launcher-v0.13.3';
+const APP_VERSION = '0.13.3';
 const RELEASE_DATE = '2026-10-22';
 const CACHE_PROTOCOL = 8;
 const RELEASE_NOTES = [
+  'Pocket ID: отдельная коллекция наград Замазки и Cantica с фильтрами и примеркой.',
   'MASKOT: компактный бацинет стража и два новых визуальных трофея Замазки — диадема и призрачное перо.',
   'MASKOT: black cat and fox species, Seoul Moonstage performer costume and dragon shoulder companion unlock codes.',
   'Понятные социальные меню, компактные списки друзей и приглашений, защита черновиков и единые подтверждения.',
@@ -38,7 +39,7 @@ const APP_SHELL = [
   './', './index.html', './privacy.html', './styles.css', './deck-shell.css', './covers/index.json', './launcher-performance.css', './launcher-sync.css', './app.js',
   './launcher-new-app-focus.js', './launcher-update-all-v3.js', './launcher-release-links.js', './launcher-sync.js', './apps.json', './manifest.webmanifest',
   './shared/shell-dialogs.js', './shared/shell-dialogs.css', './shared/catalog-art.js', './shared/catalog-art/art-cabinet.svg', './shared/catalog-art/oskolki.svg', './shared/catalog-art/ne-tem-golosom.svg',
-  './shared/deck-batch.js', './shared/capabilities/identity.js', './shared/capabilities/maskot.js', './shared/capabilities/zamazka-achievements.js', './shared/capabilities/card-studio.js', './shared/capabilities/identity.css', './shared/pocket-id.css', './shared/pocket-id.js', './shared/pocket-social.css', './shared/pocket-social.js', './shared/pocket-works-icon.svg', './shared/pocket-deck.js', './shared/deck-state.js', './shared/launcher-registry.js', './shared/shelf-state.js', './shared/shell-tools.js', './shared/launcher-dom-reconcile.js', './shared/offline-readiness.js', './shared/release-coordinator.js', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
+  './shared/deck-batch.js', './shared/capabilities/identity.js', './shared/capabilities/maskot.js', './shared/capabilities/zamazka-achievements.js', './shared/capabilities/profile-rewards.js', './shared/capabilities/card-studio.js', './shared/capabilities/identity.css', './shared/pocket-id.css', './shared/pocket-id.js', './shared/pocket-social.css', './shared/pocket-social.js', './shared/pocket-works-icon.svg', './shared/pocket-deck.js', './shared/deck-state.js', './shared/launcher-registry.js', './shared/shelf-state.js', './shared/shell-tools.js', './shared/launcher-dom-reconcile.js', './shared/offline-readiness.js', './shared/release-coordinator.js', './shared/mobile-runtime.css', './shared/mobile-runtime.js',
   './shared/update-manager.css', './shared/update-manager.js', './shared/release-guard.js', './shared/view-transition-guard.js',
   './shared/app-icon-previews.css', './shared/app-icon-previews.js', './shared/launcher-list-motion.css', './shared/launcher-list-motion.js'
 ];
