@@ -1440,6 +1440,104 @@ class UIManager {
         this.saveSoloCheckpoint(true);
     }
 
+    toggleDebugMenu(){
+        let overlay=document.getElementById('blockies-debug');
+        if(!overlay){
+            overlay=document.createElement('div');
+            overlay.id='blockies-debug';
+            overlay.className='blockies-debug';
+            overlay.hidden=true;
+            const panel=document.createElement('section');
+            panel.className='blockies-debug__panel';
+            panel.setAttribute('role','dialog');
+            panel.setAttribute('aria-label','Отладка Blockies');
+            const head=document.createElement('div');
+            head.className='blockies-debug__head';
+            const title=document.createElement('h2');
+            title.textContent='Blockies · Debug';
+            const close=document.createElement('button');
+            close.type='button';
+            close.textContent='Закрыть ×';
+            close.addEventListener('click',()=>this.toggleDebugMenu());
+            head.append(title,close);
+            const help=document.createElement('p');
+            help.textContent='Backquote / Ё — открыть или закрыть. Экраны для проверки.';
+            const grid=document.createElement('div');
+            grid.className='blockies-debug__grid';
+            const screens=[
+                ['mainMenu','Главное меню'],['coopSetup','Локальная комната'],
+                ['onlineLobby','Онлайн-комната'],['gameScreen','Игровое поле'],
+                ['settingsScreen','Настройки'],['pause','Пауза'],
+                ['gameOver','Результаты'],['achievements','Награды']
+            ];
+            for(const [id,label] of screens){
+                const button=document.createElement('button');
+                button.type='button';button.textContent=label;
+                button.addEventListener('click',()=>{this.debugOpenScreen(id);this.toggleDebugMenu();});
+                grid.append(button);
+            }
+            const inspect=document.createElement('pre');
+            inspect.className='blockies-debug__details';
+            inspect.id='blockies-debug-details';
+            const refresh=document.createElement('button');
+            refresh.type='button';refresh.textContent='Обновить состояние';
+            refresh.addEventListener('click',()=>this.refreshDebugDetails());
+            panel.append(head,help,grid,refresh,inspect);
+            overlay.append(panel);
+            overlay.addEventListener('click',event=>{if(event.target===overlay)this.toggleDebugMenu();});
+            document.body.append(overlay);
+        }
+        overlay.hidden=!overlay.hidden;
+        if(!overlay.hidden)this.refreshDebugDetails();
+    }
+
+    refreshDebugDetails(){
+        const node=document.getElementById('blockies-debug-details');
+        if(!node)return;
+        const state={
+            screen:Object.keys(this.screens).find(key=>this.screens[key].classList.contains('active')),
+            connection:networkManager.connected?'online':'offline',
+            room:networkManager.roomId||null,
+            round:networkManager.activeRound||0,
+            players:gameState.players.map(player=>({
+                id:player.id,name:player.name,color:player.color,
+                entranceX:player.spawnLaneX,entranceWidth:4,entranceHeight:2,
+                position:player.position,next:player.nextPiece,
+                eliminated:player.gameOver
+            })),
+            field:{width:gameState.boardWidth,height:BOARD_HEIGHT},
+            score:gameState.sharedStats
+        };
+        node.textContent=JSON.stringify(state,null,2);
+    }
+
+    debugOpenScreen(id){
+        this.hideModal('pause');this.hideModal('gameOver');
+        if(id==='mainMenu'){this.showScreen('mainMenu');return;}
+        if(id==='coopSetup'){this.showCoopSetup();return;}
+        if(id==='onlineLobby'){this.showOnlineLobby();return;}
+        if(id==='settingsScreen'){this.showSettings();return;}
+        if(id==='achievements'){document.getElementById('achievements-btn')?.click();return;}
+        if(!gameState.players.length||!this.screens.gameScreen.classList.contains('active')){
+            // A real playable local board for UI inspection, not a dead mock screen.
+            this.isOnlineMode=false;
+            this.localPlayerNames=['Игрок 1','Игрок 2'];
+            this.startGame(2);
+        }else this.showScreen('gameScreen');
+        if(id==='pause'){
+            if(!this.isOnlineMode)gameState.isPaused=true;
+            this.showModal('pause');
+        }else if(id==='gameOver'){
+            if(this.isOnlineMode){
+                // Never manufacture a result or mutate a running PocketNet round.
+                this.showStyledMessage('Debug','Результаты онлайн-партии показывает сервер после её завершения. Для предпросмотра запусти локальную игру.','info');
+                return;
+            }
+            gameState.isGameOver=true;
+            this.showGameOver();
+        }
+    }
+
     showScreen(screenName) {
         // Track previous screen for settings navigation
         const currentScreen = Object.keys(this.screens).find(key => 
@@ -2250,6 +2348,13 @@ class UIManager {
     }
 
     handleKeyPress(e) {
+        if(e.code==='Backquote'&&!e.repeat&&!e.target?.closest?.('input,textarea,[contenteditable="true"]')){
+            e.preventDefault();this.toggleDebugMenu();return;
+        }
+        if(e.code==='Escape'&&!document.getElementById('blockies-debug')?.hidden){
+            const debug=document.getElementById('blockies-debug');
+            if(debug){e.preventDefault();this.toggleDebugMenu();return;}
+        }
         const code = normalizeKeyCode(e.code);
         const isGameActive = this.screens.gameScreen.classList.contains('active') && gameState.players.length;
 
