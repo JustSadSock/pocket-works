@@ -76,6 +76,11 @@
         "slug": "axis-pals",
         "spatialDifference": "Axis Pals uses a partnership puzzle workspace built around coordinating choices, while Blockies gives its one uninterrupted falling-block well a cell-aligned gantry of individual next-piece and spawn entrances.",
         "interactionDifference": "The discrete joint decisions of Axis Pals differ from Blockies' repeat-on-hold movement and hard-drop physics, with independently blocked player entrances and server-authoritative board synchronization."
+      },
+      {
+        "slug": "crown-laws",
+        "spatialDifference": "Crown Laws is a medieval council interface with document-like law choices and political consequences. Blockies instead keeps a narrow central pixel-grid arcade board and a coherent four-cell spawn gantry; large setup columns are for configuring physical controls, not storytelling.",
+        "interactionDifference": "Council decisions in Crown Laws advance political turns, whereas Blockies uses simultaneous real-time tetromino actions, live PocketNet snapshots, player-specific entry points and a compact data-backed post-round field recap."
       }
     ]
   },
