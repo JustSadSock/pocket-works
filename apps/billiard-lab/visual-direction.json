@@ -13,11 +13,11 @@
     "distinction": "Одна полноценная постоянно живая оптическая лаборатория без задач, датчиков, прицеливания и побед."
   },
   "architecture": {
-    "spatialLayout": "immersive-observatory",
-    "controlLocation": "side-instrument-bench",
-    "navigation": "single-screen-laboratory",
-    "chromeTopology": "minimal-physical-console",
-    "dominantMotion": "continuous-wavefront",
+    "spatialLayout": "split-workspace",
+    "controlLocation": "side-rail",
+    "navigation": "none",
+    "chromeTopology": "unframed-scene",
+    "dominantMotion": "immediate",
     "primaryVerb": "Выпустить из точки тысячи лучей во все направления и наблюдать, как их общий контур отражается и самопересекается.",
     "physicalFeedback": "Смена геометрии мгновенно меняет отражения; перенос источника запускает новую окружность, отражатели формируют изломы нити.",
     "spatialRationale": "На компьютере приборы справа, на телефоне камера во всю ширину, а инструменты ниже. Работает без вложенных экранов.",
