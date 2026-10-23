@@ -233,7 +233,9 @@ export function grantEarnedMagicRune(state,id){
  const check=validateMagicState(state);
  if(!check.ok)return invalid(state,check.error);
  if(!permittedRune(state.school,id))return invalid(state,'Чужая стихия или неизвестная руна');
- if([...state.reserve,...allSpells(state).flatMap(activeRunes)].some(r=>r.defId===id))return invalid(state,'Такая руна уже получена');
+ // Different *instances* of the same card are intentional: a sealed rune is
+ // permanently consumed, but another copy may be earned later in this match.
+ if(state.nextInstance>80)return invalid(state,'Достигнут предел рун за партию');
  const s=copy(state);s.reserve.push(makeInstance(s,id));s.revision++;
  return valid(s);
 }
@@ -256,7 +258,10 @@ export function dealMagicOffers(state,minute){
  if(!Number.isInteger(minute)||minute<1||minute>9)return invalid(state,'Неверный этап Разлома');
  if(state.offers.length)return invalid(state,'Сначала выбери предложенную руну');
  const s=copy(state),available=new Set([...s.reserve,...allSpells(s).flatMap(activeRunes)].map(r=>r.defId));
- const pool=availableMagicRunes(s.school).filter(r=>!available.has(r.id));
+ // Cards held in reserve/editable slots do not crowd the offer. Sealed copies
+ // can reappear later, so early sealing never makes the rest of the match dead.
+ const pool=availableMagicRunes(s.school).filter(r=>!available.has(r.id)||
+   s.sealed.some(spell=>activeRunes(spell).some(inst=>inst.defId===r.id)));
  const weights=rarityWeights[minute<=2?0:minute<=5?1:2];
  const picked=[];
  // On milestone minutes guarantee at least one *offer*, never a forced selection.
