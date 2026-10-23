@@ -80,7 +80,7 @@ function updateControls(){
     station.classList.toggle('hidden',!present&&i>=2);
     station.classList.toggle('my-role',onlineRun&&role===i);
     const can=localRun&&i<count||onlineRun&&role===i&&online?.canInput(ability.id);
-    button.disabled=!can;
+    button.disabled=!can || (ability.hold && (game?.energy?.[ability.id]??1)<.14 && !game?.held?.[ability.id]);
     button.setAttribute('aria-label',ability.name+(ability.hold?' — удерживать':''));
     if(onlineRun&&i<count){
       const label=document.createElement('span');label.textContent=(i+1)+' '+ability.operator.toUpperCase();
@@ -112,7 +112,7 @@ function input(action,pressed=true){
   const result=commandGame(game,action,pressed);
   if(result==='cooldown'){announce('Механизм ещё перезаряжается.');return;}
   if(result==='empty'){announce('Энергия закончилась — отпустите кнопку для зарядки.');return;}
-  if(result==='nochange')return;
+  if(result==='nochange'){if(!pressed)$(action).classList.remove('pressed');return;}
   if(result==='reverse'||result==='push'){renderer.impact(.25);sound(action);}
   const element=$(action);element.classList.toggle('pressed',pressed);
   if(!HOLD_ACTIONS.includes(action)){setTimeout(()=>element.classList.remove('pressed'),105);if(action==='jump')sound(action);}
