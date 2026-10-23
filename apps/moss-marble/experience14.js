@@ -1,4 +1,4 @@
-import { anchoredCameraOffset, clampFollowCenter, courseFit, inverseRotateXY, portraitCourseRotation } from './camera-space.js';
+import { anchoredCameraOffset, clampFollowCenter, courseFit, inverseRotateXY, portraitCourseRotation, keepFocusInSafeArea } from './camera-space.js';
 import { BALL_RADIUS } from './physics.js';
 import { levelBounds } from './levels.js';
 import { terrainGradientAt, terrainHeightAt, zoneCenter, zoneKind } from './terrain.js';
@@ -441,6 +441,15 @@ export function installLivingTerrain(renderer, canvas, getState) {
     target = { x: lerp(target.x, center.x, camera.overviewProgress), y: lerp(target.y, center.y, camera.overviewProgress) };
     camera.x = smooth(camera.x, target.x, dt, camera.overviewProgress > .5 ? .0008 : .003);
     camera.y = smooth(camera.y, target.y, dt, camera.overviewProgress > .5 ? .0008 : .003);
+    if (state.mode === 'playing' && camera.overviewProgress < .80 && ball && !ball.sunk) {
+      const safe = keepFocusInSafeArea(
+        camera.x, camera.y, ball.x, ball.y,
+        Number.isFinite(ball.z) ? ball.z : terrainHeightAt(level, ball.x, ball.y) + BALL_RADIUS,
+        camera.scale, rotation, view, clamp(36 + BALL_RADIUS * camera.scale * .65, 37, 64)
+      );
+      camera.x = safe.x;
+      camera.y = safe.y;
+    }
     renderer.cameraX = camera.x;
     renderer.cameraY = camera.y;
     renderer.cameraZoom = 1;
