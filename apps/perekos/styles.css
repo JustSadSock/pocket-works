@@ -677,3 +677,21 @@
  #draft .rune-choice{touch-action:manipulation}
  #draft .rune-choice:active{filter:brightness(.94)}
 }
+
+/* Three-station evolution press: add, fuse, mutate. All modes have live actions. */
+.draft-path{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:11px 0 14px}
+.draft-path button{min-height:47px;border:2px solid #73654f;background:#cbbb9b;color:#403b2e;font:850 clamp(9px,1.1vw,12px)/1.25 system-ui,sans-serif;letter-spacing:.035em;cursor:pointer;padding:6px 3px}
+.draft-path button[aria-pressed="true"]{color:#ffe5b3;background:#263f37;border-color:#263f37;box-shadow:inset 0 3px #79988b}
+.draft-path button:focus-visible,.evo-offer:focus-visible{outline:3px solid #ad632e;outline-offset:2px}
+.evo-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;max-height:min(45dvh,390px);overflow:auto}
+.evo-offer{display:flex;flex-direction:column;gap:7px;min-width:0;min-height:215px;padding:12px 10px;background:#f2e5c5;color:#263d34;border:2px solid #958262;text-align:left;cursor:pointer;box-shadow:0 4px #8b7250}
+.evo-offer:disabled{opacity:.55;cursor:default}
+.evo-offer .evo-glyph{font-size:29px;font-family:Georgia,serif;font-weight:bold;letter-spacing:-3px;line-height:1.3;color:#4c8678;white-space:nowrap}
+.evo-offer-ember_nova .evo-glyph{color:#b5643c}.evo-offer-stone_crush .evo-glyph{color:#787f59}
+.evo-offer>span:last-child{display:flex;flex-direction:column;gap:7px}
+.evo-offer strong{font:800 18px/1.1 Georgia,serif}.evo-offer small{font:500 11px/1.45 system-ui,sans-serif;color:#625d49}.evo-offer em{font:850 10px/1.4 system-ui,sans-serif;color:#85613c;font-style:normal;margin-top:4px}
+.evo-empty{grid-column:1/-1;padding:15px;border:1px dashed #8d785a;font:500 13px/1.6 system-ui,sans-serif;color:#594c38}
+.evo-readout{padding:9px 11px;margin:7px 0;background:#35483d;color:#efe3bd;font:700 11px/1.45 system-ui,sans-serif}
+.evo-tactic{color:#e9cd96!important;font-size:12px!important;line-height:1.4!important}
+@media (max-width:700px){.evo-cards{grid-template-columns:1fr;gap:7px;max-height:38dvh}.evo-offer{flex-direction:row;align-items:center;min-height:89px;padding:9px;gap:12px}.evo-offer .evo-glyph{min-width:65px;font-size:26px}.evo-offer strong{font-size:15px}.evo-offer small{font-size:10px}.evo-offer em{font-size:9px}.draft-path{margin:8px 0 10px}}
+@media (hover:none), (pointer:coarse){.evo-offer,.draft-path button{touch-action:manipulation;transition:none!important;transform:none!important}}

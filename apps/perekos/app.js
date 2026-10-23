@@ -1,4 +1,4 @@
-import {W,H,STEP,WALLS,RUNES,makeMatch,validState,tick,chooseRune,beginRound,reorderRunes,startRound,ringRadius,has,stats} from './core.mjs';
+import {W,H,STEP,WALLS,RUNES,makeMatch,validState,tick,chooseRune,beginRound,reorderRunes,startRound,ringRadius,has,stats,EVOLUTIONS,FUSIONS,availableFusions,chooseEvolution} from './core.mjs';
 import {rune,description,compile,TYPES,legalRunes,chosenElement} from './runes.mjs';
 import {runeSeal} from './rune-seals.mjs';
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
@@ -25,7 +25,7 @@ const storage='pocket-works:perekos:',prefsKey=storage+'prefs',saveKey=storage+'
 let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,lastProfileFetch=0,avatarInFlight=null;
 let online=null,onlinePreviewRunes=null,onlinePhase='',displayXY=[null,null];
 let rivalAppearance={...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']},pendingRival=null,rivalKey='',rivalRequest=0;
-let selectedMage='kindle',mageFrom='menu',selectionDraft='kindle',selectedGameMode='rupture',netSyncAt=0;
+let selectedMage='kindle',mageFrom='menu',selectionDraft='kindle',selectedGameMode='rupture',netSyncAt=0,evoPath='add';
 let desktopPanelsVisible=true,lastTacticRunes='',sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null,debugSession=null;
 const combatPresentation=new CombatPresentation();
 const spellChoreography=new SpellChoreography();
@@ -180,7 +180,7 @@ function toast(message){$('toast').textContent=message;$('toast').classList.add(
 function myIndex(){return debugSession?0:online?.active?online.me:0}
 function myActor(){return active?.actors?.[myIndex()]}
 function renderTacticalRunes(a){
- const runes=Array.isArray(a?.runes)?a.runes:[],key=runes.join('|'),list=$('tactic-runes');
+ const runes=Array.isArray(a?.runes)?a.runes:[],key=runes.join('|')+'|'+(a?.evolution?.form||'')+'|'+(a?.evolution?.level||0)+'|'+(a?.fusions||[]).join(','),list=$('tactic-runes');
  if(key===lastTacticRunes)return;
  lastTacticRunes=key;list.replaceChildren();
  const info=description(runes);
@@ -191,6 +191,8 @@ function renderTacticalRunes(a){
   const body=document.createElement('p');body.textContent=(rune(chain.trigger)?.name||'Событие')+' → '+(chain.actions.length?chain.actions.map(action=>[rune(action.id)?.name,...action.mods.map(id=>rune(id)?.name)].filter(Boolean).join(' · ')).join(' / '):'нужна руна действия');
   block.append(title,body);list.append(block);
  }
+ if(a.evolution){const p=document.createElement('p');p.className='evo-tactic';p.textContent='ФОРМА: '+(EVOLUTIONS.find(x=>x.id===a.evolution.form)?.name||'')+' · '+a.evolution.level+'/3';list.prepend(p)}
+ if(a.fusions?.length){const p=document.createElement('p');p.className='evo-tactic';p.textContent='СЛИЯНИЯ: '+a.fusions.map(id=>FUSIONS.find(f=>f.id===id)?.name).join(' · ');list.prepend(p)}
 }
 function renderTacticalAbility(id,remaining,total){
  const value=Math.max(0,Number(remaining)||0),part=Math.max(0,Math.min(1,1-value/Math.max(.1,total)));
@@ -233,26 +235,54 @@ function renderReplacement(id){
  slots.forEach((owned,i)=>{const r=rune(owned),btn=document.createElement('button');btn.type='button';btn.className='replacement rune-'+r.type;btn.append(runeSeal(r));const label=document.createElement('span');label.textContent=(i+1)+'. '+r.name;btn.append(label);btn.addEventListener('click',()=>finishPick(id,i));list.append(btn)});
 }
 $('replace-cancel').addEventListener('click',()=>{pendingRune=null;$('replace-zone').hidden=true;$('rune-cards').hidden=false});
+function finishEvolution(kind,form){
+ if(active?.gameMode!=='rupture'||active.phase!=='draft')return false;
+ if(online?.active){if(!online.evolve(kind,form))return false;toast('Эволюция выбрана.');return true}
+ if(!chooseEvolution(active,kind,form))return false;
+ sfx('shield');remember();show('build');renderWorkbench();return true;
+}
+function renderEvolutionOffers(){
+ const on=active?.gameMode==='rupture';
+ $('draft-path').hidden=!on;$('evo-cards').hidden=!on||evoPath==='add';$('rune-cards').hidden=on&&evoPath!=='add';
+ if(!on)return;
+ for(const kind of ['add','mutate','fuse'])$('evo-path-'+kind).setAttribute('aria-pressed',String(evoPath===kind));
+ if(evoPath==='add')return;
+ const list=$('evo-cards'),options=evoPath==='mutate'?EVOLUTIONS:availableFusions(myActor());list.replaceChildren();
+ if(!options.length){const p=document.createElement('p');p.className='evo-empty';p.textContent='Сначала собери рабочую цепочку: КОГДА → ШАР / МИНА / УДАР → ЖАР, ТОК или КАМЕНЬ. Тогда появится новая форма для объединения.';list.append(p);return}
+ for(const option of options){
+  const current=myActor().evolution,same=current?.form===option.id,level=same?current.level:0,locked=evoPath==='mutate'&&level>=3;
+  const button=document.createElement('button');button.type='button';button.className='evo-offer evo-offer-'+option.id;button.disabled=locked;
+  const glyph=document.createElement('span');glyph.className='evo-glyph';glyph.textContent=({beam:'━━━',swarm:'✣ ✣',field:'◎',ember_nova:'✹',storm_lattice:'ϟ',stone_crush:'⬡'})[option.id];
+  const text=document.createElement('span'),name=document.createElement('strong'),description=document.createElement('small'),tier=document.createElement('em');
+  name.textContent=option.name;description.textContent=option.desc;
+  tier.textContent=evoPath==='mutate'?(locked?'МАКСИМУМ III':(same?'УСИЛИТЬ '+(level+1)+'/3':'НОВАЯ ФОРМА I/3')):'СЛИТЬ ДВЕ РУНЫ';
+  text.append(name,description,tier);button.append(glyph,text);
+  if(!locked)button.addEventListener('click',()=>finishEvolution(evoPath,option.id));
+  list.append(button);
+ }
+}
+for(const kind of ['add','mutate','fuse'])$('evo-path-'+kind).addEventListener('click',()=>{if(active?.gameMode!=='rupture')return;evoPath=kind;$('replace-zone').hidden=true;pendingRune=null;renderEvolutionOffers()});
 function renderDraft(){
  if(!active)return;
  $('draft-score').textContent=active.score[myIndex()]+' : '+active.score[1-myIndex()];
  $('draft-outcome').textContent=active.lastOutcome==='draw'?'РАУНД ВНИЧЬЮ · 0 ОЧКОВ':'';
  $('draft-title').textContent=active.lastOutcome==='draw'?'Ничья. Очки не меняются. Возьми руну.':active.lastWinner===myIndex()?'Хороший раунд. Возьми руну.':'Проиграли раунд. Возьми руну.';
  if(active.gameMode==='rupture'){$('draft-outcome').textContent='СТАДИЯ '+active.round+' / 10';$('draft-title').textContent='Эволюция магии. Выбери новую руну.'}
- $('rune-cards').hidden=false;$('replace-zone').hidden=true;pendingRune=null;
+ evoPath='add';$('rune-cards').hidden=false;$('replace-zone').hidden=true;pendingRune=null;
  const list=$('rune-cards');list.replaceChildren();
  for(const id of (debugSession?active.pick:online?.active?online.view?.offers||[]:active.pick)){
   const r=rune(id);if(!r)continue;const btn=document.createElement('button');btn.className='rune-choice rune-choice-'+r.type;btn.type='button';const number=document.createElement('span');number.className='rune-offer-number';number.textContent='0'+(list.children.length+1);const accept=document.createElement('span');accept.className='rune-accept';accept.textContent='ВЗЯТЬ ↗';btn.append(number,drawRuneNode(r),accept);
   btn.addEventListener('click',()=>{if(myActor().runes.length>=9)renderReplacement(id);else finishPick(id)});list.append(btn);
  }
  drawOwned();
+ renderEvolutionOffers();
 }
 function reorderOnBench(from,to){if(online?.active){const list=onlinePreviewRunes;if(!Array.isArray(list)||from<0||to<0||from>=list.length||to>=list.length)return false;const [id]=list.splice(from,1);list.splice(to,0,id);return true}return reorderRunes(active,from,to)}
 function renderWorkbench(){
  if(!active)return;const slots=debugSession?myActor().runes:online?.active?(onlinePreviewRunes||[...myActor().runes]):myActor().runes;
  const preview=$('bench-mage'),mini=preview.getContext('2d');mini.clearRect(0,0,64,80);
  drawMage(mini,appearance,{x:32,y:57,scale:2,time:0,runes:slots,mageId:myActor().mageId});
- $('bench-count').textContent=slots.length+' / 9';const rack=$('bench-slots'),previousScroll=rack.scrollTop;rack.replaceChildren();let lane=null,laneNumber=0;
+ const evolved=myActor().evolution,fusions=myActor().fusions||[];$('evo-readout').hidden=active.gameMode!=='rupture';$('evo-readout').textContent=evolved?(EVOLUTIONS.find(x=>x.id===evolved.form)?.name+' · УРОВЕНЬ '+evolved.level+(fusions.length?' · СЛИЯНИЯ: '+fusions.map(id=>FUSIONS.find(x=>x.id===id)?.name).join(', '):'')):(fusions.length?'СЛИЯНИЯ: '+fusions.map(id=>FUSIONS.find(x=>x.id===id)?.name).join(', '):'Форма ещё не пробуждена. Выбери «Мутировать» при эволюции.');$('bench-count').textContent=slots.length+' / 9';const rack=$('bench-slots'),previousScroll=rack.scrollTop;rack.replaceChildren();let lane=null,laneNumber=0;
  const info=description(slots);
  const available=new Set([mage(myActor().mageId).school]);
  for(const chain of info.chains)for(const action of chain.actions)if(['ball','blast','mine'].includes(action.id))available.add(chosenElement(action.mods,mage(myActor().mageId).school));
@@ -334,7 +364,8 @@ function savedBooks(){const books=stored(booksKey);return Array.isArray(books)?b
 function saveBuild(){
  if(!active||!legalRunes(myActor().runes))return false;
  const ids=[...(online?.active?onlinePreviewRunes||myActor().runes:myActor().runes)],list=savedBooks();
- if(!list.some(b=>b.runes.join('|')===ids.join('|')))list.unshift({id:Date.now()+':'+Math.floor(Math.random()*100000),runes:ids,date:Date.now()});
+ const actor=myActor(),evolution=actor.evolution?{...actor.evolution}:null,fusions=[...(actor.fusions||[])];
+ if(!list.some(b=>b.runes.join('|')===ids.join('|')&&JSON.stringify(b.evolution||null)===JSON.stringify(evolution)&&JSON.stringify(b.fusions||[])===JSON.stringify(fusions)))list.unshift({id:Date.now()+':'+Math.floor(Math.random()*100000),runes:ids,evolution,fusions,date:Date.now()});
  put(booksKey,list.slice(0,12));toast('Сборка в гримуаре');sfx('heal');return true;
 }
 $('bench-save').addEventListener('click',saveBuild);
@@ -346,10 +377,10 @@ function renderBooks(){
   const row=document.createElement('div');row.className='book-row';
   const name=document.createElement('div');name.className='book-identity';
   const title=document.createElement('strong');title.textContent=description(book.runes).lines[0]||'Сборка без цепочки';
-  const summary=document.createElement('small');summary.textContent=book.runes.length+' рун · '+book.runes.map(id=>rune(id).name).join(' · ');name.append(title,summary);
+  const summary=document.createElement('small');summary.textContent=book.runes.length+' рун · '+book.runes.map(id=>rune(id).name).join(' · ')+(book.evolution?' · '+(EVOLUTIONS.find(x=>x.id===book.evolution.form)?.name||'Эволюция')+' '+book.evolution.level+'/3':'')+(book.fusions?.length?' · '+book.fusions.map(id=>FUSIONS.find(x=>x.id===id)?.name).join(' + '):'');name.append(title,summary);
   const actions=document.createElement('div');actions.className='book-actions';
   const play=document.createElement('button');play.type='button';play.textContent='Испытать';play.addEventListener('click',()=>{
-   applyPendingAppearance();active=makeMatch((Date.now()>>>0)^book.runes.length);active.actors[0].runes=[...book.runes];startRound(active);remember();show('fight');toast('Сборка из гримуара');
+   applyPendingAppearance();active=makeMatch((Date.now()>>>0)^book.runes.length,selectedMage,'pebble',book.evolution||book.fusions?.length?'rupture':'duel');active.actors[0].runes=[...book.runes];active.actors[0].evolution=book.evolution?{...book.evolution}:null;active.actors[0].fusions=[...(book.fusions||[])];startRound(active);remember();show('fight');toast('Сборка из гримуара');
   });
   const del=document.createElement('button');del.type='button';del.textContent='Удалить';del.addEventListener('click',()=>{bookToDelete=book.id;show('book-delete')});
   actions.append(play,del);row.append(name,actions);root.append(row);
@@ -487,6 +518,25 @@ function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0,moving=0,
  const pose=animate&&a?mageMotion.sample(a,{x,y},performance.now()/1000,active?.round||0,reducedMotion):null;
  drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.windup?.remaining>0?a.windup.remaining*2.7:a?.cast||0,dashing:a?.dash||0,moving,pose});
 }
+function drawEvolutionMagic(s){
+ if(s?.gameMode!=='rupture')return;
+ const colors={fire:'#efa464',storm:'#7ce1de',stone:'#d1d4aa'};
+ ctx.save();
+ for(const f of s.fields||[]){
+  const color=colors[f.element]||colors.storm;
+  ctx.globalAlpha=Math.max(.15,Math.min(.65,f.life*.17));ctx.strokeStyle=color;ctx.lineWidth=2+f.level;
+  ctx.beginPath();ctx.arc(f.x,f.y,f.r*(.96+.04*Math.sin(frame*.13)),0,Math.PI*2);ctx.stroke();
+  ctx.globalAlpha=.48;ctx.fillStyle=color;ctx.fillRect(f.x-8,f.y-8,16,16);ctx.strokeRect(f.x-14,f.y-14,28,28);
+  for(let i=0;i<6;i++){const a=i*Math.PI/3+frame*.016;ctx.fillRect(f.x+Math.cos(a)*f.r-2,f.y+Math.sin(a)*f.r-2,4,4)}
+ }
+ for(const b of s.beams||[])if(b.style==='evo-beam'){
+  ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.angle);ctx.globalAlpha=Math.min(1,b.life*4);
+  ctx.fillStyle=colors[b.element]||colors.storm;ctx.fillRect(4,-b.width,b.length,b.width*2);
+  ctx.fillStyle='#fff2d5';ctx.fillRect(4,-Math.max(2,b.width*.26),b.length,Math.max(4,b.width*.52));
+  ctx.restore();
+ }
+ ctx.restore();
+}
 function drawRuptureCore(s){
  if(s?.gameMode!=='rupture')return;
  const near=s.actors.map(a=>a.hp>0&&Math.hypot(a.x-200,a.y-310)<52),owner=near[0]&&!near[1]?0:near[1]&&!near[0]?1:-1;
@@ -564,6 +614,7 @@ function render(){
   // mines only. No enemy hidden runes, damage estimates or artificial aim.
   drawGroundCues(ctx,active,myIndex(),frame/60,reducedMotion);
   drawRuptureCore(active);
+  drawEvolutionMagic(active);
   drawSpellGround(ctx,spellChoreography,reducedMotion);
   drawSignatureGround(ctx,active,frame,reducedMotion);
   combatPresentation.ground(ctx);
