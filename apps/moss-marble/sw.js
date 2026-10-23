@@ -1,23 +1,23 @@
 const CACHE_PREFIX = 'moss-marble-';
-const CACHE_NAME = 'moss-marble-v1.27.0';
-const APP_VERSION = '1.27.0';
+const CACHE_NAME = 'moss-marble-v1.28.0';
+const APP_VERSION = '1.28.0';
 const RELEASE_DATE = '2026-10-23';
 const RELEASE_NOTES = [
-  "Бордюры бесконечных секций теперь повторяют настоящую внешнюю границу поверхности: исправлены самопересечения и выступающие каменные соединения.",
-  "Холмы бесконечного режима получили более широкие округлые вершины и умеренно увеличенную физическую высоту.",
-  "Добавлены проверки сетки, стыков бордюра, сохранения расположения мяча и лунки внутри поля и проходимости маршрута."
+  "Склоны травяной поверхности получили деликатный направленный свет: солнечная и теневая стороны видны без контурных стрелок.",
+  "Мелкие травинки ориентируются по реальному направлению спуска и остаются закреплены на поверхности при движении камеры.",
+  "Добавлены тесты ориентации травы, сохранения физической геометрии и мобильной производительности."
 ];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
-  './styles.css?v=1.27.0',
+  './styles.css?v=1.28.0',
   './styles14.css?v=1.4.0',
   './styles15.css?v=1.5.0',
   './styles16.css?v=1.6.0',
   './styles161.css?v=1.14.0',
-  './styles115.css?v=1.27.0',
-  './styles121.css?v=1.27.0',
+  './styles115.css?v=1.28.0',
+  './styles121.css?v=1.28.0',
   './levels.js',
   './procedural.js',
   './camera-space.js',
@@ -34,6 +34,7 @@ const APP_SHELL = [
   './terrain17.js',
   './terrain18.js',
   './polish19.js',
+  './slope-grass.js',
   './integrity.js',
   './physics.js',
   './state.js',
@@ -41,9 +42,9 @@ const APP_SHELL = [
   './greenhouse15.js',
   './render.js',
   './experience14.js',
-  './camera-intro-guard.js?v=1.27.0',
+  './camera-intro-guard.js?v=1.28.0',
   './audio.js',
-  './app.js?v=1.27.0',
+  './app.js?v=1.28.0',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',

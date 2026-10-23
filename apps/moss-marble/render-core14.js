@@ -662,6 +662,11 @@ void main() {
     float undergrowth = valueNoise(vWorld.xy * .052 + vec2(19.2, -8.4));
     float weave = valueNoise(vWorld.xy * .19 + vec2(-4.9, 11.8));
     base *= .87 + canopy * .16 + undergrowth * .065 + weave * .028;
+    // Slope-only velvet nap: tiny fibers are anchored in world coordinates.
+    // The flat playing surface retains a neutral, matte finish.
+    float turfGrade = smoothstep(.08, .39, length(n.xy));
+    float thread = sin(dot(vWorld.xy, vec2(.26, -.11)) + undergrowth * 2.2);
+    base *= 1.0 + turfGrade * thread * .018;
   } else if (vMaterial > 5.5 && vMaterial < 6.5) {
     float waveA = sin(vWorld.x * .105 + vWorld.y * .045 + uTime * 1.35);
     float waveB = sin(vWorld.y * .082 - vWorld.x * .032 - uTime * 1.05);
@@ -694,6 +699,14 @@ void main() {
   float ambient = .33 + skyAccess * .22;
   vec3 lit = base * warmKey * (ambient + diffuse * (.48 + grazing * .13));
   lit += base * coolFill * (back * .085 + (1.0 - skyAccess) * .028);
+  if(vMaterial > .5 && vMaterial < 1.5) {
+    // A real grassy hillside has brighter sunward fibers and a cool,
+    // softly shaded opposite face. No painted height rings or dark patches.
+    float hillside = smoothstep(.07, .36, length(n.xy));
+    float lightFacing = dot(n.xy, normalize(lightDir.xy));
+    lit *= 1.0 + hillside * clamp(lightFacing, -.52, .52) * .20;
+    lit += vec3(.020, .023, .008) * hillside * max(lightFacing, 0.0);
+  }
   if (vMaterial > 1.5 && vMaterial < 2.5) {
     float glassNoise = valueNoise(vWorld.xy * .08 + vWorld.z * .035);
     float fresnel = pow(1.0 - abs(dot(n, viewDir)), 2.0);

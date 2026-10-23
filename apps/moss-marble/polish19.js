@@ -1,4 +1,5 @@
 import { ScenicFrameGate } from './scenic-frame-gate.js';
+import { sampleSlopeFibers } from './slope-grass.js';
 const TAU = Math.PI * 2;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -158,7 +159,8 @@ export class CoursePolishLayer {
         phase: hashNoise(index, seed, 53) * TAU
       };
     });
-    return { details, waterMasks, sandMasks, mossMasks, landmarks, sandGrains };
+    const slopeFibers = sampleSlopeFibers(level, field);
+    return { details, waterMasks, sandMasks, mossMasks, landmarks, sandGrains, slopeFibers };
   }
 
   drawLandmark(ctx, landmark, motif, accent, field, time) {
@@ -292,6 +294,26 @@ export class CoursePolishLayer {
       ctx.beginPath();
       ctx.ellipse(point.x, point.y, size * 1.5, size * .59, -.15, 0, TAU);
       ctx.fill();
+    }
+
+    // Directional turf nap reveals the physical fall-line in sloped grass.
+    // These are tiny matte strands, never arrows, HUD rings or contour maps.
+    // Locations and gradients are cached per course; only the projection
+    // changes with camera movement.
+    for(const fiber of cache.slopeFibers || []) {
+      if(ball && Math.hypot(fiber.x-ball.x,fiber.y-ball.y)<44) continue;
+      const start=this.renderer.worldToScreen(fiber.x,fiber.y,field.heightAt(fiber.x,fiber.y)+.6);
+      if(start.x < -12 || start.x > this.width+12 || start.y < -12 || start.y > this.height+12) continue;
+      const end=this.renderer.worldToScreen(fiber.endX,fiber.endY,
+        field.heightAt(fiber.endX,fiber.endY)+.6);
+      const len=Math.hypot(end.x-start.x,end.y-start.y);
+      if(len < .8 || len > 20) continue;
+      ctx.strokeStyle=fiber.light ? 'rgba(193,204,129,.24)' : 'rgba(20,47,27,.27)';
+      ctx.lineWidth=clamp(.48+(fiber.slope-.085)*.7,.46,.82);
+      ctx.beginPath();
+      ctx.moveTo(start.x,start.y);
+      ctx.quadraticCurveTo((start.x+end.x)*.5,(start.y+end.y)*.5-.35,end.x,end.y);
+      ctx.stroke();
     }
 
     // Moss texture is now integrated into the terrain material.
