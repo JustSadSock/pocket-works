@@ -58,6 +58,24 @@ try{
    if(panel&&panel.scrollHeight>panel.clientHeight+5&&!['auto','scroll'].includes(getComputedStyle(panel).overflowY))issues.push('panel clipped without scroll');
    return {issues,overflow,width,height:document.documentElement.clientHeight,phase};
   });
+  // Exercise the real tab delegation, not only static scene geometry.
+  if(!['home','lobby','done'].includes(scene)){
+   const tabs=await frame.evaluate(()=>{
+    const issues=[];
+    for(const name of ['actions','market','inventory','secret','deals','players']){
+     const button=document.querySelector('[data-action="open-sheet"][data-sheet="'+name+'"]');
+     const page=document.querySelector('[data-sheet-page="'+name+'"]');
+     if(!button||!page){issues.push('missing tab '+name);continue;}
+     button.click();
+     if(page.hidden||button.getAttribute('aria-selected')!=='true')issues.push('tab did not open '+name);
+     const content=document.querySelector('.sheet-content');
+     if(content&&content.scrollHeight>content.clientHeight+5&&!['auto','scroll'].includes(getComputedStyle(content).overflowY))
+      issues.push('tab content clipped '+name);
+    }
+    return issues;
+   });
+   report.issues.push(...tabs);
+  }
   const result={scene,device:id,requested:{width,height},...report};
   if(report.issues.length||scene==='four'&&['small','short','phone','landscape','tablet','desktop'].includes(id)){
    await frame.locator('body').screenshot({path:out+'/'+scene+'-'+id+'.png'});
