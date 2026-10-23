@@ -4,9 +4,9 @@ const empty=collectProfileRewards();
 assert.equal(empty.find(x=>x.id==='zamazka').earned,0);
 assert.equal(empty.find(x=>x.id==='zamazka').total,11);
 assert.equal(empty.find(x=>x.id==='cantica').total,9);
-assert.equal(empty.find(x=>x.id==='pocketworks').total,7);
+assert.equal(empty.find(x=>x.id==='pocketworks').total,8);
 assert.equal(empty.find(x=>x.id==='blockies').total,9);
-assert.equal(profileRewardSources.reduce((n,x)=>n+x.rewards.length,0),36);
+assert.equal(profileRewardSources.reduce((n,x)=>n+x.rewards.length,0),37);
 const owned=collectProfileRewards(['zamazka.shared-canvas','zamazka.first-stroke','astronaut','cantica.first-light','cantica.seven','tetris.quick-win'],
   [{slug:'tetris',name:'Тетрис'}]);
 assert.equal(owned.find(x=>x.id==='zamazka').earned,2);
@@ -33,4 +33,10 @@ assert.equal(equipProfileReward(owned.find(x=>x.id==='tetris').rewards[0],base),
 const canticaCrown=owned.find(x=>x.id==='cantica').rewards.find(x=>x.id==='cantica.seven');
 assert.equal(equipProfileReward(canticaCrown,base).maskot.hat,'solar-circlet');
 assert.equal(owned.find(x=>x.id==='cantica').rewards.find(x=>x.id==='cantica.first-light').items[0].slot,'title');
+const personal=collectProfileRewards(['yasya-chaos']).find(x=>x.id==='pocketworks').rewards.find(x=>x.id==='yasya-chaos');
+assert.equal(personal.earned,true);
+const special=equipProfileReward(personal,base);
+assert.equal(special.maskot.hat,'quiet-chaos');
+assert.equal(special.maskot.accessory,'tiny-guardian');
+assert.ok(rewardIsEquipped(personal,special));
 console.log('PocketWorks profile reward catalogue OK');

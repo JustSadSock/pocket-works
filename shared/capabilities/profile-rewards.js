@@ -11,6 +11,7 @@ const codeRewards=[
   {id:'herald',name:'Герольд',detail:'Награда за специальный код PocketWorks.',reward:'Накидка герольда',items:[{slot:'clothes',item:'tabard'}]},
   {id:'groom',name:'Жених',detail:'Награда за специальный код PocketWorks.',reward:'Свадебный мужской костюм',items:[{slot:'clothes',item:'groom'}]},
   {id:'seoul-artist',name:'Лунная сцена',detail:'Награда за специальный код PocketWorks.',reward:'Лунная шпилька и сценический ханбок',items:[{slot:'hat',item:'stage-pin'},{slot:'clothes',item:'stage-hanbok'}]},
+  {id:'yasya-chaos',name:'Тихий хаос Яси',detail:'Персональная награда, привязанная к Pocket ID получателя.',reward:'Диадема тихого хаоса и Личный телохранитель',items:[{slot:'hat',item:'quiet-chaos'},{slot:'accessory',item:'tiny-guardian'}]},
   {id:'dragon-keeper',name:'Хранитель дракона',detail:'Награда за специальный код PocketWorks.',reward:'Изумрудный дракон на плече',items:[{slot:'accessory',item:'shoulder-dragon'}]}
 ];
 export const profileRewardSources=[

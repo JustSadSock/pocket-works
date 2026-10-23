@@ -261,6 +261,7 @@ function editor(){
   const secretHats=[...(unlocks.includes('astronaut')?[['helmet','Шлем космонавта']]:[]),
     ...(unlocks.includes('wedding')?[['veil','Фата']]:[]),
     ...(unlocks.includes('knight')?[['bascinet','Бацинет стража']]:[]),
+    ...(unlocks.includes('yasya-chaos')?[['quiet-chaos','Диадема тихого хаоса']]:[]),
      ...(unlocks.includes('seoul-artist')?[['stage-pin','Лунная шпилька артиста']]:[]),
     ...(unlocks.includes('zamazka.shared-canvas')?[['brush','Кисть за ухом']]:[]),
      ...(unlocks.includes('zamazka.eagle-eye')?[['seer-diadem','Диадема проницательности']]:[]),
@@ -275,6 +276,7 @@ function editor(){
     ...(unlocks.includes('zamazka.maestro')?[['restorer','Мантия великого реставратора']]:[]),
     ...(unlocks.includes('cantica.complete')?[['illuminator','Мантия иллюминатора']]:[])];
   const secretAccessories=[...mascotAccessories,...(unlocks.includes('dragon-keeper')?[['shoulder-dragon','Изумрудный дракон на плече']]:[]),
+    ...(unlocks.includes('yasya-chaos')?[['tiny-guardian','Личный телохранитель']]:[]),
      ...(unlocks.includes('zamazka.ghost-brush')?[['spectral-quill','Призрачное перо']]:[]),
     ...(unlocks.includes('cantica.four-altars')?[['sun-crystal','Солнечный кристалл']]:[]),
     ...(unlocks.includes('blockies.coop-twenty')?[['mini-block','Тетрамино на плече']]:[])];
