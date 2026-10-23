@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 310" role="img" aria-label="Два места за королевским советом"><defs><linearGradient id="wood" x2=".7" y2="1"><stop stop-color="#8c7651"/><stop offset=".46" stop-color="#594e3c"/><stop offset="1" stop-color="#332f2b"/></linearGradient><linearGradient id="brass" x2=".6" y2="1"><stop stop-color="#f2d393"/><stop offset=".5" stop-color="#ae8754"/><stop offset="1" stop-color="#735632"/></linearGradient><linearGradient id="velvet" x2="0" y2="1"><stop stop-color="#74535a"/><stop offset="1" stop-color="#362c37"/></linearGradient></defs>
+<path d="M15 281Q360 225 705 281l15 29H0Z" fill="#222e2a" stroke="#a6936d" stroke-width="3"/>
+<path d="M24 277h672" stroke="#c0a678" stroke-width="3"/>
+<g transform="translate(64 3)">
+<path d="M32 243V111Q34 42 154 33 281 42 282 111v132" fill="url(#wood)" stroke="url(#brass)" stroke-width="8"/>
+<path d="M54 220V120Q56 67 156 58q99 9 101 62v100Z" fill="url(#velvet)" stroke="#ae925d" stroke-width="5"/>
+<path d="M57 165q96-48 195 0" stroke="#b89469" stroke-width="3" fill="none"/>
+<path d="M24 228V137h29v111H24Zm244 0v-91h28v111h-28Z" fill="url(#wood)" stroke="#ad8d60" stroke-width="5"/>
+<path d="M34 218h263v25H34Z" fill="url(#wood)" stroke="#dec387" stroke-width="5"/>
+<path d="M67 219h179v25H67Z" fill="#6f454b" stroke="#bb945f" stroke-width="3"/>
+<path d="M152 38l-26-29 26 15 25-15-21 29" fill="url(#brass)" stroke="#f5d59b" stroke-width="3"/>
+<circle cx="154" cy="85" r="12" fill="#bfa074" stroke="#ebcf92" stroke-width="3"/>
+<path d="M154 74v23m-11-12h22" stroke="#614d38" stroke-width="3"/>
+</g>
+<g transform="translate(380 3)">
+<path d="M32 243V111Q34 42 154 33 281 42 282 111v132" fill="url(#wood)" stroke="url(#brass)" stroke-width="8"/>
+<path d="M54 220V120Q56 67 156 58q99 9 101 62v100Z" fill="#394d45" stroke="#ae925d" stroke-width="5"/>
+<path d="M57 165q96-48 195 0" stroke="#b89469" stroke-width="3" fill="none"/>
+<path d="M24 228V137h29v111H24Zm244 0v-91h28v111h-28Z" fill="url(#wood)" stroke="#ad8d60" stroke-width="5"/>
+<path d="M34 218h263v25H34Z" fill="url(#wood)" stroke="#dec387" stroke-width="5"/>
+<path d="M67 219h179v25H67Z" fill="#52695a" stroke="#bb945f" stroke-width="3"/>
+<path d="M152 38l-26-29 26 15 25-15-21 29" fill="url(#brass)" stroke="#f5d59b" stroke-width="3"/>
+<circle cx="154" cy="85" r="12" fill="#bfa074" stroke="#ebcf92" stroke-width="3"/>
+<path d="M154 74v23m-11-12h22" stroke="#614d38" stroke-width="3"/>
+</g></svg>
