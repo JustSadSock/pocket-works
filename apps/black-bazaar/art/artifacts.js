@@ -149,7 +149,5 @@ export function artifactSVG(visibleName,rarity='обычный'){
  // Transparent object, ink outline, small print-like imperfections and a
  // physical contact shadow. This can be reused on the tabletop and in detail.
  return '<svg class="item-svg item-svg-'+kind+'" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'+
- '<ellipse cx="92" cy="166" rx="70" ry="10" fill="#1e1714" opacity=".21"/>'+
- '<path d="M39 151l-9 7M144 147l8 6" stroke="#473427" stroke-width="3" opacity=".5"/>'+
- motifs[kind]()+rim+'</svg>';
+  motifs[kind]()+rim+'</svg>';
 }
