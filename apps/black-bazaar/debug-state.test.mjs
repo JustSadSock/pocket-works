@@ -73,3 +73,5 @@ test('Mobile portrait CSS keeps content panels scrollable without expanding page
  assert.match(css,/\.sheet-content\{flex:1 1 auto;overflow-y:auto\}/);
  assert.match(css,/max-height:670px/);
 });
+
+test('Mobile audit checks collisions and clipped scrolling content',()=>{const ui=readFileSync(new URL('./app.js',import.meta.url),'utf8');assert.match(ui,/Стол перекрывает вкладки/);assert.match(ui,/Задание перекрывает ресурсы/);assert.match(ui,/Содержимое боковой панели обрезано/);});
