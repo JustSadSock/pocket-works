@@ -105,6 +105,36 @@ function showConfirmedCue(cue,playAudio=true){
  }else cueTimer=setTimeout(()=>banner.remove(),1450);
  if(playAudio)sound.play(cue.kind);
 }
+function showConfirmedMovement(before,after){
+ if(!before?.you||!after?.you||before.revision===after.revision||after.phase!=='play')return;
+ const root=app.querySelector('.play-screen');if(!root)return;
+ // Snapshots are authoritative: animation never pre-empts a server response.
+ const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+ for(const key of keys){
+  const oldValue=before.you.resources?.[key],newValue=after.you.resources?.[key];
+  if(!Number.isFinite(oldValue)||!Number.isFinite(newValue)||oldValue===newValue)continue;
+  const cell=root.querySelector('.currency[data-resource="'+key+'"]');
+  if(!cell)continue;
+  const delta=newValue-oldValue;
+  cell.classList.remove('wallet-change');void cell.offsetWidth;cell.classList.add('wallet-change');
+  if(reduce)continue;
+  const chip=document.createElement('span');chip.className='wallet-float '+(delta>0?'wallet-plus':'wallet-minus');
+  chip.textContent=(delta>0?'+':'')+delta;chip.setAttribute('aria-hidden','true');
+  cell.append(chip);chip.addEventListener('animationend',()=>chip.remove(),{once:true});
+ }
+ const oldIds=new Set((before.you.items||[]).map(item=>item.id));
+ const newIds=new Set((after.you.items||[]).map(item=>item.id));
+ const gained=(after.you.items||[]).filter(item=>!oldIds.has(item.id));
+ const lost=(before.you.items||[]).filter(item=>!newIds.has(item.id));
+ if(reduce||!gained.length&&!lost.length)return;
+ const field=root.querySelector('.play-field');if(!field)return;
+ const movement=document.createElement('div');movement.className='artifact-transfer';
+ movement.setAttribute('aria-hidden','true');
+ const item=gained[0]||lost[0];
+ movement.innerHTML=artifactSVG(item.name,item.rarity);
+ movement.classList.add(gained.length?'transfer-in':'transfer-out');
+ field.append(movement);movement.addEventListener('animationend',()=>movement.remove(),{once:true});
+}
 function localStore(){const node=document.querySelector('#nickname');if(node)name=(node.value.trim()||'Игрок').slice(0,22);if(!debugPreview)try{localStorage.setItem('black-bazaar:name',name);}catch{}}
 function renderHome(){
  mode='home';activeSheet=null;selectedArtifact=null;playStarted=false;document.body.classList.remove('sheet-open');
@@ -534,7 +564,7 @@ function resourceWallet(w,forecast){
  const d=forecast.delta[k],text=d>0?'+'+d:String(d);
   const goal=Math.max(0,state?.you?.quota?.[k]||0),value=Math.max(0,w[k]||0);
   const progress=goal?Math.min(100,Math.round(100*value/goal)):100;
- return '<span class="currency" aria-label="'+title+': '+(w[k]||0)+', за раунд '+text+'">'+svgIcon(icon)+
+ return '<span class="currency" data-resource="'+k+'" aria-label="'+title+': '+(w[k]||0)+', за раунд '+text+'">'+svgIcon(icon)+
  '<span class="wallet-values"><strong>'+(w[k]||0)+' <span class="quota-sep">/</span> '+(state?.you?.quota?.[k]??'—')+'</strong><em>'+title+'</em><span class="wallet-track" role="progressbar" aria-label="Квота: '+title+'" aria-valuemin="0" aria-valuemax="'+goal+'" aria-valuenow="'+Math.min(value,goal)+'"><i style="width:'+progress+'%"></i></span></span>'+
  '<small class="wallet-delta '+(d>0?'positive':d<0?'negative':'neutral')+'">'+text+'</small></span>';
  }).join('')+'</div>';
