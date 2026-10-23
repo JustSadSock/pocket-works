@@ -280,6 +280,28 @@ export async function renderArtwork(canvas,id,variation=0,strokes=null,damaged=f
 // A restoration stroke is a continuous gesture. Preserve
 // the important bends instead of silently stopping once the buffer fills.
 // Endpoints remain untouched, making very long mouse/finger drags uninterrupted.
+// Budget compaction is intentionally more conservative than input smoothing:
+// never discard a visibly curved corner just to free additional brush points.
+// Geometry is expressed in the 600x450 logical canvas, so the tolerance stays
+// below a typical brush nib and does not depend on current zoom.
+export function simplifyPointsWithinTolerance(points,limit,tolerance=.35){
+ if(points.length<=limit)return points.slice();
+ const kept=points.slice(),minimum=Math.max(2,Math.floor(limit));
+ const allowed=Math.max(0,Number(tolerance)||0);
+ while(kept.length>minimum){
+  let chosen=-1,minError=Infinity;
+  for(let i=1;i<kept.length-1;i++){
+   const a=kept[i-1],b=kept[i],c=kept[i+1];
+   const dx=c[0]-a[0],dy=c[1]-a[1],length=dx*dx+dy*dy;
+   const t=length?Math.max(0,Math.min(1,((b[0]-a[0])*dx+(b[1]-a[1])*dy)/length)):0;
+   const error=Math.hypot(b[0]-a[0]-dx*t,b[1]-a[1]-dy*t);
+   if(error<minError){minError=error;chosen=i}
+  }
+  if(chosen<0||minError>allowed)break;
+  kept.splice(chosen,1);
+ }
+ return kept;
+}
 export function simplifyPoints(points,limit){
  if(points.length<=limit)return points.slice();
  const kept=points.slice();
@@ -510,7 +532,7 @@ export class Editor{
     let changed=false;
     for(const stroke of this.strokes){
       if(stroke.p.length<12)continue;
-      const candidate=simplifyPoints(stroke.p,Math.max(8,Math.floor(stroke.p.length*.77)));
+      const candidate=simplifyPointsWithinTolerance(stroke.p,Math.max(8,Math.floor(stroke.p.length*.77)));
       if(candidate.length<stroke.p.length){stroke.p=candidate;changed=true}
     }
     for(let i=1;i<this.strokes.length;i++){
