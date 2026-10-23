@@ -932,7 +932,7 @@ if(debugPreview){
   selectedArtifact=null;activeSheet=null;render();
   emit('status',{message:'Сцена: '+id+' · тестовые данные'});
  };
- const audit=()=>{
+ const audit=(run=null)=>{
   const width=document.documentElement.clientWidth;
   const overflow=Math.max(0,document.documentElement.scrollWidth-width);
   const visible=[...document.querySelectorAll('#app button:not([hidden]):not(:disabled),#app input:not(:disabled),#app select:not(:disabled)')]
@@ -962,7 +962,7 @@ if(debugPreview){
   if(scrollable&&scrollable.scrollHeight>scrollable.clientHeight+5&&!['auto','scroll'].includes(scrollable.overflowY))issues.push('Содержимое боковой панели обрезано');
   issues.push(...collisions,...clipping);
   emit('audit',{report:{viewport:width+' × '+document.documentElement.clientHeight,
-   horizontalOverflow:overflow,actionable:visible.length,smallTargets:small.slice(0,12),collisions,clipping,scrollable,issues}});
+   horizontalOverflow:overflow,actionable:visible.length,smallTargets:small.slice(0,12),collisions,clipping,scrollable,issues},run});
  };
  window.addEventListener('message',event=>{
   if(event.origin!==location.origin||event.source!==window.parent||event.data?.source!=='bazaar-debug-console')return;
@@ -987,7 +987,7 @@ if(debugPreview){
    showConfirmedCue({kind:d.kind,label:d.label},false);
    emit('status',{message:'Эффект: '+d.label});return;
   }
-  if(d.type==='audit')return audit();
+  if(d.type==='audit')return audit(d.run??null);
  });
  document.querySelector('[data-preview-exit]')?.addEventListener('click',e=>{e.preventDefault();window.parent?.postMessage({source:'bazaar-debug-preview',type:'status',message:'Закрой мастерскую кнопкой ×'},location.origin)});
  emit('ready');
