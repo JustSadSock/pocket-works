@@ -133,38 +133,28 @@ function submissionToken(ass,round){return [roomId,round,ass.art,ass.variation].
 function confirmSubmission(art,round,checksum=null){
  if(!pendingSubmit||pendingSubmit.round!==round||pendingSubmit.art!==art||pendingSubmit.room!==roomId)return;
  if(checksum&&paintingChecksum(pendingSubmit.strokes)!==checksum){draftIndicator('Рисунок не совпадает с отправленным · повторяем');pendingSubmit.sentAt=0;persistPending();return;}
- activeSubmitTransfer?.abort();activeSubmitTransfer=null;
+ clearResumeRequest();activeSubmitTransfer?.abort();activeSubmitTransfer=null;
  const committed=pendingSubmit;pendingSubmit=null;persistPending();autoSubmitted=committed.token;
  screen.querySelector('.restore')?.classList.remove('is-submitting');
  const button=screen.querySelector('[data-action="submit"]');if(button)button.disabled=true;
  draftIndicator('Принято сервером ✓');sound('confirm');
 }
-function attemptSubmission(force=false){
- if(view?.paused)return;
- const p=pendingSubmit;
- if(!p||p.room!==roomId||!net||!view||view.phase!=='drawing'||view.done?.includes(me?.id)||
-    activeSubmitTransfer||Date.now()<submissionBackoffUntil)return;
- // One complete upload at a time. Allow time for server persistence and its
- // authoritative acknowledgement before retransmitting a new revision.
- // When the drawing timer has ended the server only has a short upload
- // acceptance window. Retry lost receipts promptly instead of waiting 15s.
- const retryMs=view.deadline&&networkNow()>=view.deadline?3500:15000;
- if(!force&&p.sentAt&&Date.now()-p.sentAt<retryMs)return;
- activeDraftTransfer?.abort();activeDraftTransfer=null;
- clearTimeout(draftDelay);
- const controller=new AbortController();activeSubmitTransfer=controller;
+let pendingResume=null;
+function clearResumeRequest(){
+ if(pendingResume?.timer)clearTimeout(pendingResume.timer);
+ pendingResume=null;
+}
+function sendFinalParts(p,controller,startIndex=0){
+ if(pendingSubmit!==p||controller.signal.aborted)return;
  try{
-  // Declare the immutable final revision before its chunks, so the server
-  // cannot promote an older autosave while the upload is still underway.
-  net.sendGame({type:'submit_begin',round:p.round,art:p.art,variation:p.variation});
   const result=sendPaintingPaced(packet=>net.sendGame(packet),
-   {type:'submit_chunk',round:p.round,art:p.art,variation:p.variation,strokes:p.strokes},
-   {signal:controller.signal,onProgress:(sent,total)=>{
-      if(pendingSubmit===p)draftIndicator('Передаём работу · '+Math.round(sent/total*100)+'%');
+   {type:'submit_chunk',round:p.round,art:p.art,variation:p.variation,
+    strokes:p.strokes,revision:p.revision},
+   {startIndex,signal:controller.signal,onProgress:(sent,total)=>{
+     if(pendingSubmit===p)draftIndicator('Передаём работу · '+Math.round(sent/total*100)+'%');
    }});
-  p.revision=result.revision;p.sentAt=Date.now();p.attempts=(p.attempts||0)+1;persistPending();
-  const button=screen.querySelector('[data-action="submit"]');if(button)button.disabled=true;
-  screen.querySelector('.restore')?.classList.add('is-submitting');
+  p.revision=result.revision;p.parts=result.parts;p.sentAt=Date.now();
+  p.attempts=(p.attempts||0)+1;persistPending();
   result.completion.then(()=>{
    if(activeSubmitTransfer!==controller)return;
    activeSubmitTransfer=null;
@@ -174,11 +164,48 @@ function attemptSubmission(force=false){
    activeSubmitTransfer=null;
    if(pendingSubmit===p){
     p.sentAt=0;persistPending();submissionBackoffUntil=Date.now()+4000;
-    draftIndicator('Не удалось передать все части · повторим автоматически');
+    draftIndicator('Передача прервана · продолжим с сохранённой части');
    }
   });
  }catch{
-  activeSubmitTransfer=null;p.sentAt=0;persistPending();
+  if(activeSubmitTransfer===controller)activeSubmitTransfer=null;
+  p.sentAt=0;persistPending();submissionBackoffUntil=Date.now()+4000;
+  draftIndicator('Работа на устройстве · повторим отправку');
+ }
+}
+function attemptSubmission(force=false){
+ if(view?.paused)return;
+ const p=pendingSubmit;
+ if(!p||p.room!==roomId||!net||!view||view.phase!=='drawing'||view.done?.includes(me?.id)||
+    activeSubmitTransfer||Date.now()<submissionBackoffUntil)return;
+ const retryMs=view.deadline&&networkNow()>=view.deadline?3500:15000;
+ if(!force&&p.sentAt&&Date.now()-p.sentAt<retryMs)return;
+ activeDraftTransfer?.abort();activeDraftTransfer=null;
+ clearTimeout(draftDelay);
+ const controller=new AbortController();activeSubmitTransfer=controller;
+ try{
+  if(p.revision&&p.parts){
+   const revision=p.revision;
+   // Old pinned room versions might not know submit_resume. Restart safely
+   // after a bounded request timeout instead of getting stuck forever.
+   const request={p,controller,revision,timer:null};
+   pendingResume=request;
+   net.sendGame({type:'submit_resume',round:p.round,art:p.art,variation:p.variation,
+    revision,checksum:paintingChecksum(p.strokes),parts:p.parts});
+   request.timer=setTimeout(()=>{
+    if(pendingResume!==request)return;
+    clearResumeRequest();
+    sendFinalParts(p,controller,0);
+   },2200);
+   draftIndicator('Проверяем полученные сервером части…');
+  }else{
+   net.sendGame({type:'submit_begin',round:p.round,art:p.art,variation:p.variation});
+   sendFinalParts(p,controller,0);
+  }
+  const button=screen.querySelector('[data-action="submit"]');if(button)button.disabled=true;
+  screen.querySelector('.restore')?.classList.add('is-submitting');
+ }catch{
+  clearResumeRequest();activeSubmitTransfer=null;p.sentAt=0;persistPending();
   submissionBackoffUntil=Date.now()+4000;
   draftIndicator('Работа на устройстве · повторим отправку');
  }
@@ -243,7 +270,7 @@ function queueDraft(){
 function stopEditor(){
  clearTimeout(draftDelay);draftDelay=null;
  activeDraftTransfer?.abort();activeDraftTransfer=null;
- activeSubmitTransfer?.abort();activeSubmitTransfer=null;
+ clearResumeRequest();activeSubmitTransfer?.abort();activeSubmitTransfer=null;
  if(editor){editor.dispose();editor=null}
 }
 function autoFinishOnDeadline(){
@@ -1039,6 +1066,16 @@ async function connect(mode){
        lastTimePongAt=Date.now();
        serverClock.observeEcho(event.payload?.stamp,event.payload?.serverNow);
       }
+      else if(event?.type==='submit_resume_state'){
+       const req=pendingResume,p=event.payload;
+       if(req&&req.p===pendingSubmit&&activeSubmitTransfer===req.controller&&
+          p?.revision===req.revision&&p.round===req.p.round&&
+          p.checksum===paintingChecksum(req.p.strokes)&&p.parts===req.p.parts&&
+          Number.isInteger(p.next)&&p.next>=0&&p.next<=p.parts){
+         clearResumeRequest();
+         sendFinalParts(req.p,req.controller,p.next);
+       }
+      }
       else if(event?.type==='submission_saved'){
        if(pendingSubmit&&event.payload?.round===pendingSubmit.round&&
           event.payload?.art===pendingSubmit.art&&event.payload?.revision===pendingSubmit.revision)
@@ -1072,7 +1109,7 @@ async function connect(mode){
    client.on('disconnected',()=>{
      if(client.closed)return;connectionLost=true;lastTimePongAt=0;museumAudio.stopCountdown();connectionStatus('offline');
      activeDraftTransfer?.abort();activeDraftTransfer=null;
-     activeSubmitTransfer?.abort();activeSubmitTransfer=null;
+     clearResumeRequest();activeSubmitTransfer?.abort();activeSubmitTransfer=null;
      lastDraftSentAt=0;lastDraftAckRevision='';autoSubmitted='';
      if(pendingSubmit){pendingSubmit.sentAt=0;persistPending();draftIndicator('Нет связи · работа на устройстве')}
      else draftIndicator('Нет связи · черновик на устройстве');
