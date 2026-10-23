@@ -45,8 +45,8 @@
       "id": "royal-codex-stage05",
       "medium": "Hand-authored full-figure SVG sprite atlas and relief/carved decorative SVG on a strictly flat board, physical paper and stone panels composed in CSS",
       "composition": "Six visibly differentiated pieces occupy the 5x7 court; five laws are bound in an ivory codex on desktop and arranged into seals on mobile; decree choice resembles an illustrated folded folio",
-      "interaction": "Select a decree once, inspect any existing rule without losing the selection, compare current and proposed world laws in a single manuscript inspector, then intentionally preview, confirm or unselect. The inspector has no authority to modify match state.",
-      "motion": "Wax-arrow indicators mark a proposed category while leaving the standing law legible. One compact codex sheet folds in place without moving the board; reduced-motion removes its opening movement.",
+      "interaction": "Two claimants commit secret cards with authoritative PocketNet server acknowledgement. Reconnection, host-only rematch and explicit leave afford a complete functional game lifecycle while preserving the established illustrated court and codex.",
+      "motion": "A wax ready stamp first shows transmission then server-confirmed sealing; restored matches clear previous phase animation and show the new turn without layout movement.",
       "rationale": "Replace repetitive circular portrait tokens and generic cards with character silhouettes and one consistent material grammar."
     },
     {
@@ -68,7 +68,7 @@
   ],
   "selection": {
     "concept": "royal-codex-stage05",
-    "reason": "The law comparison is a single reversible card-to-world action rather than two disconnected rectangular information panels. The standing public law and private decree are separated by an engraved wax transition.",
+    "reason": "The authoritative turn and host-only rematch remain the heart of the game rather than speculative client-side synchronization; local UI does not lie about card acceptance.",
     "rejected": [
       {
         "concept": "cathedral-relief",
@@ -241,7 +241,9 @@
       "Clipboard copying may be blocked by browser permissions; never show success unless the Promise resolves.",
       "Victory must reflect actual winner and current viewer; avoid showing the same congratulations to the losing online player.",
       "Inspecting a standing law or figure must not clear selectedCardId; this is critical when comparing several categories in multiplayer.",
-      "The comparison and selected-decree controls must not become visible during hidden hot-seat handoff or while another player is deciding."
+      "The comparison and selected-decree controls must not become visible during hidden hot-seat handoff or while another player is deciding.",
+      "A stale match update after rematch must not replay the old game's turn or leave both sides with a blocked secret decree.",
+      "A disconnected client's optimistic submission must be reversible on server rejection; guest must not be able to request restart."
     ],
     "comparisons": [
       "Capture initial menu and compare type/edges to former hero layout to verify absence of recovered assets.",
