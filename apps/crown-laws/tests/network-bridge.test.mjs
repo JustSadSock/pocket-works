@@ -14,7 +14,7 @@ class FakeNet{
  constructor(){this.handlers={};this.actions=[];this.closed=false;this.roomId=null;FakeNet.last=this;}
  on(type,cb){(this.handlers[type] ||= []).push(cb);}
  emit(type,data={}){for(const fn of this.handlers[type]||[])fn(data);}
- async connect(){this.emit("connected");return this;}
+ async connect(){await Promise.resolve();this.emit("connected");return this;}
  createRoom(id,config){this.actions.push(["create",id,config]);}
  joinRoom(code){this.actions.push(["join",code]);}
  leaveRoom(){this.actions.push(["leave"]);this.roomId=null;}
