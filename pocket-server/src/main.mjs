@@ -130,7 +130,7 @@ async function transition(room, action, player, payload = null) {
     }
     if (changed) {
       await saveRoom(room);
-      roomBroadcast(room, 'presence', { roomId: room.id, players: room.players });
+      roomBroadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?[...sockets].filter(([,connection])=>connection.roomId===room.id).map(([id])=>id):undefined });
       await refreshZamazkaPresence(room);
     }
   }
@@ -264,7 +264,7 @@ wss.on('connection', ws => {
           roomId = room.id;
           sockets.get(player.id).roomId = room.id;
           send(ws, 'room_joined', { roomId: room.id, gameId: room.gameId, version: room.version, state: room.state, players: room.players });
-          roomBroadcast(room, 'presence', { roomId: room.id, players: room.players });
+          roomBroadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?[...sockets].filter(([,connection])=>connection.roomId===room.id).map(([id])=>id):undefined });
           await refreshZamazkaPresence(room);
         });
         return;
@@ -282,7 +282,7 @@ wss.on('connection', ws => {
           roomId = null;
           sockets.get(player.id).roomId = null;
           if (!room.players.length && rooms.has(room.id)) await closeRoom(room);
-          else if (rooms.has(room.id)) roomBroadcast(room, 'presence', { roomId: room.id, players: room.players });
+          else if (rooms.has(room.id)) roomBroadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?[...sockets].filter(([,connection])=>connection.roomId===room.id).map(([id])=>id):undefined });
         });
         return;
       }
