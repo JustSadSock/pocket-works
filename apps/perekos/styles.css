@@ -670,3 +670,10 @@
 .core-indicator{font-size:10px;letter-spacing:.1em;color:#ecd3a3;text-align:center;font-weight:700}.net-mode-selector{margin-bottom:10px}
 @media(max-width:470px){.mode-option{min-height:58px;padding:9px;gap:4px}.mode-option strong{font-size:10px;letter-spacing:.03em}.mode-option small{font-size:10px}.core-indicator{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.mode-option{transition:none}.mode-option:hover:not(:disabled){transform:none}}
+
+/* Touch screens must never move an offered rune under a fingertip or a WebKit synthetic hover. */
+@media (hover:none), (pointer:coarse){
+ #draft .rune-choice,#draft .rune-choice:hover,#draft .rune-choice:active{transform:none!important;transition:none!important}
+ #draft .rune-choice{touch-action:manipulation}
+ #draft .rune-choice:active{filter:brightness(.94)}
+}
