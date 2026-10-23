@@ -39,3 +39,33 @@ test('Inspectable contexts keep their live PocketNet actions',()=>{
  assert.match(ui,/if\(type==='detail-bid'\)return request\(\{type:'bid'/);
  assert.match(ui,/if\(type==='detail-black-bid'\)return request\(\{type:'black_bid'/);
 });
+
+test('All artifact motifs have transparent, independent silhouettes',()=>{
+ for(const [name] of games){const art=artifactSVG(name,'редкий');
+  assert.doesNotMatch(art,/cx="92" cy="166" rx="70"/);
+  assert.doesNotMatch(art,/<rect[^>]*width="180"[^>]*height="180"/);
+  assert.match(art,/viewBox="0 0 180 180"/);
+ }
+});
+
+test('All 13 art motifs render independently at every supported presentation size',()=>{
+ const names=['Золотая жаба','Жадная копилка','Паук-механик','Корона должника','Сундук-мимик','Кот неудачи','Зеркало зависти','Медная шестерня','Око рынка','Гриб прибыли','Песочные часы','Амулет расчёта','Неизвестный предмет'];
+ assert.equal(names.length,13);
+ for(const size of [40,80,180])for(const name of names){
+  const svg=artifactSVG(name,'редкий');
+  assert.match(svg,/viewBox="0 0 180 180"/);
+  assert.ok(svg.endsWith('</svg>'));
+  assert.ok(svg.length>320,name+' at '+size+'px');
+  assert.doesNotMatch(svg,/cx="92" cy="166" rx="70"/);
+  assert.doesNotMatch(svg,/<rect[^>]+width="180"[^>]+height="180"/);
+ }
+});
+
+test('Compact economic controls retain resource field names and accessible pictograms',()=>{
+ const ui=readFileSync(new URL('./app.js',import.meta.url),'utf8');
+ for(const key of ['gold','crystals','parts'])assert.match(ui,new RegExp(key));
+ assert.match(ui,/resource-inputs/);
+ assert.match(ui,/aria-label/);
+ assert.match(ui,/wallet-track/);
+ assert.ok(ui.includes('progressbar'));
+});

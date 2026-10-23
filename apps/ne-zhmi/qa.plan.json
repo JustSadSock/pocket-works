@@ -8,7 +8,9 @@
       "files": [
         "engine.test.mjs",
         "server.test.mjs",
-        "online-flow.test.mjs"
+        "online-flow.test.mjs",
+        "course.test.mjs",
+        "abilities.test.mjs"
       ]
     },
     {
@@ -125,6 +127,13 @@
       "tier": "smoke",
       "install": true,
       "entry": "qa/online-duet.mjs"
+    },
+    {
+      "id": "six-operator-crew",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "install": true,
+      "entry": "qa/six-crew.mjs"
     }
   ]
 }

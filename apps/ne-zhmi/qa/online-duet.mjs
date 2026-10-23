@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import { chromium } from '@playwright/test';
-import module from '../server/module.ts';
+import module, * as testModule from '../server/module.ts';
 
 const root=resolve(import.meta.dirname,'../../..');
 const mime={'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.svg':'image/svg+xml'};
@@ -64,7 +64,14 @@ function wireSocket(socket){
     }
     if(req.type==='game_message'&&room){
       const answer=module.onMessage({state:room.state,player:me,payload:req.payload});
-      room.state=answer.state;broadcastEvents(answer.events);
+      room.state=answer.state;
+      // The network E2E uses a known two-jump benchmark for reproducibility;
+      // procedural courses are separately validated across seeds.
+      if((req.payload?.type==='start'||req.payload?.type==='restart')&&room.state.phase==='play'&&room.state.round<=2){
+        room.state.robot=testModule.createGame(testModule.LEVEL);
+        for(const event of answer.events||[])if(event.type==='state')event.payload.robot=room.state.robot;
+      }
+      broadcastEvents(answer.events);
     }
     if(req.type==='leave_room'&&room){
       const remaining=room.state.players.filter(p=>p.id!==me.id);
@@ -96,7 +103,7 @@ try{
   await guest.locator('#online-code-input').fill('AABBCCDD');
   await guest.locator('#online-join').click();
   await poll(()=>host.locator('#online-start').isEnabled(),'second seat');
-  await poll(()=>guest.locator('#online-role').textContent().then(s=>s?.includes('разворотом')),'guest role');
+  await poll(()=>guest.locator('#online-role').textContent().then(s=>s?.includes('разворот')),'guest role');
   await guest.screenshot({path:screenshots+'/duet-guest-lobby.png'});
   await host.locator('#online-start').click();
   await poll(()=>host.locator('#online-out').isVisible(),'host in game');
@@ -135,7 +142,13 @@ try{
   await poll(()=>!room.state.hold,'both operators actively pulsing');
   const preRound=room.state.round;
   const restarted=module.onMessage({state:room.state,player:players[0],payload:{type:'restart'}});
-  room.state=restarted.state;broadcastEvents(restarted.events);
+  room.state=restarted.state;
+  // This branch deliberately tests the known benchmark to assert both real
+  // operator buttons can finish a complete run. The *following* round uses
+  // an untouched procedural server seed and is asserted separately.
+  room.state.robot=testModule.createGame(testModule.LEVEL);
+  for(const event of restarted.events||[])if(event.type==='state')event.payload.robot=room.state.robot;
+  broadcastEvents(restarted.events);
   await poll(()=>room.state.round===preRound+1,'server restart');
   await poll(()=>host.locator('#jump').isEnabled(),'host input after restart');
   await poll(()=>guest.locator('#reverse').isEnabled(),'guest input after restart');
@@ -160,6 +173,10 @@ try{
   await host.locator('#online-again').click();
   await poll(()=>room.state.phase==='play'&&room.state.round===round+1,'next shared round');
   await poll(()=>guest.locator('#online-out').isVisible(),'guest entered next round');
+  if(room.state.robot.level?.sections?.length!==5)throw Error('Next shared course was not generated');
+  await poll(async()=>await guest.locator('#scene-label').textContent()===await host.locator('#scene-label').textContent(),'same section/theme caption');
+  await host.screenshot({path:screenshots+'/duet-host-generated.png'});
+  await guest.screenshot({path:screenshots+'/duet-guest-generated.png'});
   console.log('PASS: create -> join -> role controls -> checkpoint -> reconnect -> finish on both clients -> replay');
   for(const context of contexts)await context.close();
 }finally{await browser?.close();await new Promise(done=>server.close(done));}

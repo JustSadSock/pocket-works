@@ -88,6 +88,6 @@ test("the comparison panel cannot resize the fixed mobile board or obscure a sce
  assert.ok(styles.includes("@import './client/stage11-law-codex.css';"));
  assert.ok(worker.includes("./client/law-readout.js"));
  assert.ok(worker.includes("./client/stage11-law-codex.css"));
- assert.equal(config.version,"0.9.0");
+ assert.equal(config.version,"1.0.0");
  assert.ok(worker.includes("crown-laws-v"+config.version));
 });

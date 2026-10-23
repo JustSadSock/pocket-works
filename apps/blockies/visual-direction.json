@@ -4,13 +4,14 @@
   "product": "blockies",
   "direction": {
     "premise": "A cooperative falling-block arcade rebuilt around a legible single shared well, even on narrow phones.",
-    "composition": "An editorial start screen leads to a shared crisp falling-block well. On cooperative games a colored multi-gate gantry anchors each player exactly above their four-cell entrance, while touch controls sit at thumb reach. An automatically dark evening palette maintains low luminance on every setup and result screen; desktop forms use broad two-column structures.",
-    "shapeLanguage": "Crisp square stack cells, quiet linear menu rows, pill-free directional keys and one heavy color-filled hard-drop key. The top gate is one contiguous industrial inlet instead of floating separate preview boxes.",
+    "composition": "An editorial start screen leads to a shared crisp falling-block well. On cooperative games a colored multi-gate gantry anchors each player exactly above their four-cell entrance, while touch controls sit at thumb reach. An automatically dark evening palette maintains low luminance on every setup and result screen; desktop forms use broad two-column structures. The four-cell inlets and two-cell previews now occupy a single contiguous grid plane aligned to the playable canvas with hairline colored rails carrying visually into the first two board rows.",
+    "shapeLanguage": "Crisp square stack cells, quiet linear menu rows, pill-free directional keys and one heavy color-filled hard-drop key. The top gate is one contiguous industrial inlet instead of floating separate preview boxes. Personal identity is encoded with thin vertical lane lips and faint board-entry traces rather than boxed preview cards; eliminated gates shut with a restrained diagonal hatch.",
     "surfaceAndMaterial": "Warm paper shell and sage hardware borders surround a dark deep-green playing well; no glass overlays, purple gradients or neon chromed cabinet.",
     "paletteLogic": "A neutral matte shell yields attention to player-owned cyan, pink, yellow and green cells; the hard-drop key is deep green.",
     "typography": "Humanist sans for mode choices, tightly-spaced monospace for score and technical status; labels stay concise.",
     "signature": "Four-cell by two-cell colored individual spawn gates extend directly above the shared well; every gate has the player name and own next-piece indicator. Input and gameplay remain one instrument.",
-    "distinction": "Distinct from ZAMAZKA's art paper and FOG's tactical maps: this is a fitted precision arcade well within a restrained editorial instrument, not a decorative game cabinet."
+    "distinction": "Distinct from ZAMAZKA's art paper and FOG's tactical maps: this is a fitted precision arcade well within a restrained editorial instrument, not a decorative game cabinet.",
+    "motion": " A bounded canvas overlay adds brief stamped block impact, row fracture and clear-combo rising score, independent of game logic and keyboard/touch flow; prefers-reduced-motion removes these effects. Procedural low-frequency impact and tonal crystalline clears replace shrill flat beeps, while the existing mute toggle remains functional."
   },
   "architecture": {
     "spatialLayout": "single-instrument",
@@ -81,6 +82,16 @@
         "slug": "crown-laws",
         "spatialDifference": "Crown Laws is a medieval council interface with document-like law choices and political consequences. Blockies instead keeps a narrow central pixel-grid arcade board and a coherent four-cell spawn gantry; large setup columns are for configuring physical controls, not storytelling.",
         "interactionDifference": "Council decisions in Crown Laws advance political turns, whereas Blockies uses simultaneous real-time tetromino actions, live PocketNet snapshots, player-specific entry points and a compact data-backed post-round field recap."
+      },
+      {
+        "slug": "jam-tape",
+        "spatialDifference": "Jam Tape is a collaborative instrument workstation arranged around tracks, playback and tape controls. Blockies remains a shared uninterrupted cell grid with an exact-width top gantry physically aligned to individual tetromino entrances.",
+        "interactionDifference": "Recording and mixing on a timeline in Jam Tape differs from Blockies' simultaneous gravity-driven piece navigation, split-lane spawn gates and deterministic server collision checks."
+      },
+      {
+        "slug": "ne-zhmi",
+        "spatialDifference": "Ne Zhmi is built around the user deciding whether to press a tempting control; Blockies centers a long shared playfield with narrow segmented but unboxed preview bays that are visually part of the board.",
+        "interactionDifference": "Ne Zhmi's discrete one-off button choice is unlike continuous falling-block movement, rotation, hard dropping, player-specific blocked-entry elimination and high-frequency authoritative snapshots."
       }
     ]
   },

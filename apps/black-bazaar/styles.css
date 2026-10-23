@@ -695,3 +695,42 @@ body.sheet-open{overflow:auto}
 .player-popover-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.player-popover-head button{min-height:30px;width:32px;padding:0;box-shadow:none}.player-popover>button{display:flex;align-items:center;gap:8px;justify-content:flex-start;box-shadow:none;min-height:42px}
 .quick-expand{border:1px solid #a68054;border-radius:10px;padding:8px 10px;background:#f5d9ab44}.quick-expand summary{display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:800}.quick-expand .detail-offer-form{margin-top:10px}
 @media(max-width:680px){.player-popover{top:calc(100% - 8px)}.currency em{font-size:9px}.wallet-values strong{font-size:14px}.currency{padding:4px 6px}}
+
+.quota-sep{opacity:.48;font-weight:400}
+.detail-actions>button.primary{background:linear-gradient(#f5ca75,#e6a247)}
+.quick-expand summary{cursor:pointer;min-height:38px;display:flex;align-items:center;gap:8px}
+@media(prefers-reduced-motion:no-preference){
+ .mini-artifacts button .item-svg,.inventory-art .item-svg{transition:transform .2s ease,filter .2s ease}
+ .mini-artifacts button:hover .item-svg,.inventory-object:hover .item-svg{transform:translateY(-4px) rotate(-2deg);filter:drop-shadow(0 8px 6px #2b1b1255)}
+ .player-popover{animation:bazaar-pop .14s cubic-bezier(.2,.8,.2,1) both}
+ @keyframes bazaar-pop{from{opacity:0;transform:translate(-50%,-8px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+}
+@media(prefers-reduced-motion:reduce){.player-popover,.mini-artifacts button .item-svg{animation:none!important;transition:none!important}}
+
+/* The same standalone illustration is usable at tabletop, inventory and detail scales. */
+.item-svg{display:block;overflow:visible;max-width:100%;max-height:100%;object-fit:contain;transform-origin:center 60%}
+.inventory-art .item-svg,.detail-display .item-svg{background:none!important}
+
+/* Mobile player menu is centered above the tabletop without shifting layout. */
+@media(max-width:680px){
+ .player-seats{isolation:auto}
+ .player-popover{position:absolute;left:50%;top:calc(100% + 4px);transform:translateX(-50%);width:min(320px,calc(100vw - 32px));max-height:min(45dvh,310px);overflow:auto;z-index:40}
+ .player-popover>button{white-space:normal;text-align:left}
+ .currency-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+ .currency{min-width:0;justify-content:center}
+ .wallet-values strong{font-size:clamp(11px,3.1vw,15px);white-space:nowrap}
+ .wallet-delta{font-size:10px}
+}
+
+/* Resource pictograms, quiet progress and state-specific deal cues. */
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.resource-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%}
+.resource-input{position:relative;display:flex;align-items:center;gap:6px;min-width:0;padding:4px 7px;border:1px solid #a77c4d;border-radius:11px;background:#f9e6c5;color:#664529}
+.resource-input-icon{width:23px;height:23px;display:grid;place-items:center;flex:none}
+.resource-input input[type=number]{width:100%;min-width:0;flex:1;font-variant-numeric:tabular-nums;padding:5px 2px;border:0;background:transparent;font-size:17px;font-weight:800;box-shadow:none;min-height:36px}
+.wallet-track{display:block;position:relative;height:4px;margin-top:4px;border-radius:8px;background:#64472d30;overflow:hidden;width:100%}
+.wallet-track i{display:block;height:100%;background:#679465;border-radius:inherit;transition:width .25s ease}
+.deal-state{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:12px;color:#4d754c;margin-bottom:5px}
+.deal-state.is-pending{color:#85643e}
+@media(max-width:680px){.resource-inputs{gap:4px}.resource-input{gap:2px;padding:3px 4px}.resource-input-icon{width:18px}.resource-input-icon svg{width:17px;height:17px}.resource-input input[type=number]{font-size:15px}.wallet-track{height:3px}}
+@media(prefers-reduced-motion:reduce){.wallet-track i{transition:none}}

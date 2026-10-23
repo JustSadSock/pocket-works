@@ -194,6 +194,7 @@ function startTurn(s){
   if(s.round> TOTAL_ROUNDS){s.phase='done';s.deadlineAt=null;s.ranking=rankPlayers(s);issue(s,'Партия окончена. Итоги подсчитаны.');return;}
   const p=s.contestants[s.turnIndex];
   s.deadlineAt=Date.now()+turnDurationMs(s.contestants.length);
+  s.connectionGraceUntil=null;
   p.worked=false;p.usedPawn=false;p.marketDeals=0;
   s.listing=null;s.bids=[];
   s.brokerOffer=newItem(s);
@@ -607,7 +608,7 @@ function viewForPlayer({state,player}){
   // Hide other wallets and inventory while anonymity could be defeated by a visible change.
   // Direct resource trades remain possible, but choosing an unknown stranger's item is suspended.
   const veil=isBlackRound(s);
-  return {phase:s.phase,host:s.host,revision:s.revision,round:s.round,rounds:TOTAL_ROUNDS,deadlineAt:s.deadlineAt||null,
+  return {phase:s.phase,host:s.host,revision:s.revision,round:s.round,rounds:TOTAL_ROUNDS,deadlineAt:s.deadlineAt||null,connectionGraceUntil:s.connectionGraceUntil||null,
     turnId:turn?.id||null,players:s.contestants.map(p=>({
       id:p.id,name:p.name,character:p.character,
       items:veil&&p.id!==me?.id?null:inventoryCount(s,p),
@@ -675,6 +676,29 @@ const game={
       if(state.contestants[state.turnIndex]?.id===player.id)nextTurn(state);
     }
     state.revision++;return {state,events:stateEvent()};
+  },
+  onPresence({state,player,online}){
+    if(state.phase!=='play'||state.contestants[state.turnIndex]?.id!==player.id)
+      return {state,events:[]};
+    const now=Date.now();
+    const turnKey=state.round+':'+state.turnIndex;
+    if(!online){
+      if(state.connectionGraceUsed===turnKey||!Number.isFinite(state.deadlineAt)||now>=state.deadlineAt)
+        return {state,events:[]};
+      state.connectionGraceUsed=turnKey;
+      state.connectionGraceUntil=now+30000;
+      state.deadlineAt+=30000;
+      issue(state,'Связь с текущим игроком потеряна: до 30 секунд на восстановление.');
+      return success(state);
+    }
+    if(state.connectionGraceUntil){
+      const unspent=Math.max(0,state.connectionGraceUntil-now);
+      state.deadlineAt-=unspent;
+      state.connectionGraceUntil=null;
+      issue(state,'Игрок вернулся. Ход продолжается.');
+      return success(state);
+    }
+    return {state,events:[]};
   },
   onMessage({state,player,payload}){
     const v=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};

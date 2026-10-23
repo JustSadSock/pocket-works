@@ -17,10 +17,10 @@ const COLORS = {
   grass: [0.34, 0.49, 0.25, 1],
   grassLight: [0.52, 0.64, 0.34, 1],
   grassDry: [0.45, 0.51, 0.27, 1],
-  moss: [0.15, 0.34, 0.17, 1],
-  mossLight: [0.30, 0.49, 0.24, 1],
-  sand: [0.69, 0.55, 0.30, 1],
-  sandLight: [0.87, 0.73, 0.44, 1],
+  moss: [0.25, 0.43, 0.28, 1],
+  mossLight: [0.36, 0.53, 0.35, 1],
+  sand: [0.78, 0.67, 0.48, 1],
+  sandLight: [0.90, 0.80, 0.63, 1],
   water: [0.13, 0.39, 0.40, 0.88],
   waterLight: [0.29, 0.58, 0.56, 0.88]
 };
@@ -267,9 +267,10 @@ function buildField(level, blueprint) {
     let color = mixColor(grass, materialColor, blend);
     // Lighting stays anchored to actual field normals and elevation, but the
     // shader owns directional diffuse shading so vertex colors remain gentle.
-    const sunSlope = normal[0] * .20 - normal[1] * .16;
-    const cavity = clamp((8 - height) / 23, 0, 1);
-    const slopeShade = clamp(.93 + sunSlope - cavity * .075, .78, 1.11);
+    const sunSlope = normal[0] * .30 - normal[1] * .24;
+    const elevation = clamp((height - 9) / 55, -.30, .85);
+    // Explain real slope direction rather than staining depressions dark.
+    const slopeShade = clamp(.99 + sunSlope + elevation * .065, .76, 1.20);
     color = [color[0] * slopeShade, color[1] * slopeShade, color[2] * slopeShade, color[3]];
     return color;
   };
@@ -365,7 +366,9 @@ function resolveRotor(level, rotor, index) {
   return {
     x: point.x,
     y: point.y,
-    length: rotor.length || 280,
+    // The full rotation must remain inside the real physics boundary.
+    length: Math.min(rotor.length || 280,
+      Math.max(96, 2 * (distanceToOutline(point, level.outline) - (rotor.thickness || 26) * .5 - 16))),
     thickness: rotor.thickness || 26,
     speed: rotor.speed || .45,
     angle: point.angle + Number(rotor.angle || 0),

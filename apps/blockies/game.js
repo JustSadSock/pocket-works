@@ -1,5 +1,6 @@
 // Localization
 import {loadSolo,saveSolo,clearSolo} from './solo-save.js';
+import {BoardEffects,getNewLockedCells} from './board-effects.js';
 
 const TRANSLATIONS = {
     en: {
@@ -303,92 +304,95 @@ const BASE_LINE_SCORE = 100;
 const STREAK_BONUS_STEP = 0.1;
 const MULTI_LINE_BONUS_STEP = 0.2;
 
-// Sound Manager - simple Web Audio API sounds
+// Sound design: soft mechanical movement, weighted lock, rising crystalline clears.
+// Pure Web Audio; no fetched assets, delayed game logic or sounds after mute.
 class SoundManager {
-    constructor() {
-        this.audioContext = null;
-        this.enabled = true;
-        this.initAudio();
-        this.loadSettings();
+    constructor(){
+        this.audioContext=null;
+        this.master=null;
+        this.enabled=true;
+        this.lastMoveAt=0;
+        try{
+            const saved=localStorage.getItem('pocket-works:blockies:sound-enabled');
+            if(saved!==null)this.enabled=saved==='true';
+        }catch{}
     }
-
-    initAudio() {
-        try {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        } catch (e) {
-            console.log('Web Audio API not supported');
-            this.enabled = false;
+    initAudio(){
+        if(this.audioContext)return this.audioContext;
+        try{
+            const Audio=window.AudioContext||window.webkitAudioContext;
+            if(!Audio)return null;
+            const ctx=new Audio();
+            const master=ctx.createGain();
+            master.gain.value=.65;
+            master.connect(ctx.destination);
+            this.audioContext=ctx;
+            this.master=master;
+            return ctx;
+        }catch{return null;}
+    }
+    setEnabled(enabled){
+        this.enabled=Boolean(enabled);
+        try{localStorage.setItem('pocket-works:blockies:sound-enabled',String(this.enabled));}catch{}
+        if(this.master)this.master.gain.value=this.enabled ? .65 : 0;
+    }
+    toggle(){this.setEnabled(!this.enabled);return this.enabled;}
+    voice({frequency,toFrequency=frequency,duration=.1,gain=.03,type='sine',delay=0,filter=0}){
+        if(!this.enabled)return;
+        const ctx=this.initAudio();
+        if(!ctx||!this.master)return;
+        if(ctx.state==='suspended')ctx.resume().catch(()=>{});
+        const start=ctx.currentTime+delay;
+        const end=start+duration;
+        const oscillator=ctx.createOscillator(),envelope=ctx.createGain();
+        oscillator.type=type;
+        oscillator.frequency.setValueAtTime(Math.max(35,frequency),start);
+        oscillator.frequency.exponentialRampToValueAtTime(Math.max(35,toFrequency),end);
+        envelope.gain.setValueAtTime(.0001,start);
+        envelope.gain.exponentialRampToValueAtTime(Math.max(.0002,gain),start+Math.min(.015,duration*.2));
+        envelope.gain.exponentialRampToValueAtTime(.0001,end);
+        oscillator.connect(envelope);
+        let lowpass=null;
+        if(filter){
+            lowpass=ctx.createBiquadFilter();
+            lowpass.type='lowpass';lowpass.frequency.value=filter;
+            envelope.connect(lowpass);lowpass.connect(this.master);
+        }else envelope.connect(this.master);
+        oscillator.start(start);oscillator.stop(end+.012);
+        oscillator.onended=()=>{
+            oscillator.disconnect();envelope.disconnect();
+            lowpass?.disconnect();
+        };
+    }
+    move(){
+        const now=performance.now();
+        if(now-this.lastMoveAt<65)return;
+        this.lastMoveAt=now;
+        this.voice({frequency:285,toFrequency:225,duration:.038,gain:.014,type:'triangle',filter:1200});
+    }
+    rotate(){this.voice({frequency:370,toFrequency:520,duration:.082,gain:.024,type:'sine'});}
+    land(hard=false){
+        // A short low-frequency knock with a quieter textured transient.
+        this.voice({frequency:hard?135:115,toFrequency:hard?57:67,duration:hard?.19:.135,gain:hard?.105:.065,type:'triangle',filter:530});
+        this.voice({frequency:hard?590:420,toFrequency:190,duration:.052,gain:hard?.017:.012,type:'square',filter:1200});
+    }
+    drop(){this.land(false);}
+    lineClear(count,combo=1){
+        const notes=Math.max(1,Math.min(4,count));
+        for(let i=0;i<notes;i++){
+            const frequency=420+i*92+Math.min(combo,7)*24;
+            this.voice({frequency,toFrequency:frequency*1.26,duration:.18,gain:.036+notes*.006,type:'sine',delay:i*.054});
+            this.voice({frequency:frequency*.5,toFrequency:frequency*.68,duration:.18,gain:.016,type:'triangle',delay:i*.054});
+        }
+        if(combo>1){
+            const top=640+Math.min(combo,7)*65;
+            this.voice({frequency:top,toFrequency:top*1.28,duration:.22,gain:.033,type:'sine',delay:notes*.055});
         }
     }
-
-    loadSettings() {
-        const saved = localStorage.getItem('pocket-works:blockies:sound-enabled');
-        if (saved !== null) {
-            this.enabled = saved === 'true';
-        }
-    }
-
-    toggle() {
-        this.enabled = !this.enabled;
-        localStorage.setItem('pocket-works:blockies:sound-enabled', this.enabled.toString());
-        return this.enabled;
-    }
-
-    setEnabled(enabled) {
-        this.enabled = enabled;
-        localStorage.setItem('pocket-works:blockies:sound-enabled', this.enabled.toString());
-    }
-
-    playTone(frequency, duration, volume = 0.1) {
-        if (!this.enabled || !this.audioContext) return;
-        if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume().catch(() => {});
-        }
-
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
-
-        oscillator.frequency.value = frequency;
-        oscillator.type = 'square';
-
-        gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
-
-        oscillator.start(this.audioContext.currentTime);
-        oscillator.stop(this.audioContext.currentTime + duration);
-    }
-
-    move() {
-        this.playTone(200, 0.05, 0.05);
-    }
-
-    rotate() {
-        this.playTone(300, 0.08, 0.06);
-    }
-
-    drop() {
-        this.playTone(150, 0.1, 0.08);
-    }
-
-    lineClear(count) {
-        const baseFreq = 400;
-        for (let i = 0; i < count; i++) {
-            setTimeout(() => {
-                this.playTone(baseFreq + i * 100, 0.15, 0.1);
-            }, i * 50);
-        }
-    }
-
-    gameOver() {
-        const frequencies = [300, 250, 200, 150];
-        frequencies.forEach((freq, i) => {
-            setTimeout(() => {
-                this.playTone(freq, 0.2, 0.08);
-            }, i * 100);
-        });
+    gameOver(){
+        [280,235,195,155].forEach((frequency,i)=>this.voice({
+            frequency,toFrequency:frequency*.84,duration:.21,gain:.032,type:'triangle',delay:i*.11,filter:720
+        }));
     }
 }
 
@@ -814,8 +818,9 @@ class Player {
         if (collision.collides) {
             this.position.y--;
             if (collision.withLocked) {
-                this.merge();
-                soundManager.drop();
+                const locked=this.merge();
+                soundManager.land(false);
+                window.uiManager?.onPieceLocked?.(this,locked,false);
                 this.clearLines();
                 this.spawnPiece();
             }
@@ -849,8 +854,9 @@ class Player {
         }
 
         if (landedOnLocked) {
-            this.merge();
-            soundManager.drop();
+            const locked=this.merge();
+            soundManager.land(true);
+            window.uiManager?.onPieceLocked?.(this,locked,true);
             this.clearLines();
             this.spawnPiece();
         }
@@ -862,6 +868,7 @@ class Player {
     }
 
     merge() {
+        const locked=[];
         for (let y = 0; y < this.currentPiece.length; y++) {
             for (let x = 0; x < this.currentPiece[y].length; x++) {
                 if (this.currentPiece[y][x]) {
@@ -869,16 +876,20 @@ class Player {
                     const boardX = this.position.x + x;
                     if (boardY >= 0) {
                         gameState.board[boardY][boardX] = this.id + 1;
+                        locked.push({x:boardX,y:boardY,owner:this.id+1});
                     }
                 }
             }
         }
+        return locked;
     }
 
     clearLines() {
         let linesCleared = 0;
 
         const boardWidth = getBoardWidth();
+        const clearedRows=gameState.board.flatMap((row,y)=>
+            row.every(cell=>cell!==0)?[{y,cells:row.slice()}]:[]);
         for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
             if (gameState.board[y].every(cell => cell !== 0)) {
                 gameState.board.splice(y, 1);
@@ -896,9 +907,6 @@ class Player {
             gameState.sharedStats.lastClearDetail = null;
             return;
         }
-
-        // Play line clear sound
-        soundManager.lineClear(linesCleared);
 
         const comboStep = gameState.sharedStats.comboChain || 0;
         const comboMultiplier = 1 + STREAK_BONUS_STEP * comboStep;
@@ -924,6 +932,9 @@ class Player {
             streakBonusPercent,
             multiBonusPercent
         };
+
+        soundManager.lineClear(linesCleared,gameState.sharedStats.comboChain);
+        window.uiManager?.onLinesCleared?.(clearedRows,gameState.sharedStats.lastClearDetail);
 
         this.lines = gameState.sharedStats.lines;
         this.score = gameState.sharedStats.score;
@@ -1005,6 +1016,10 @@ class UIManager {
         this.comboLabel = document.getElementById('combo-label');
         this.comboBonus = document.getElementById('combo-bonus');
         this.clearFeed = document.getElementById('clear-feed');
+        this.boardEffects = new BoardEffects({
+            reducedMotion:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||false,
+            colors:()=>gameState.players.map(player=>player.color)
+        });
         this.pendingScaleFrame = null;
         this.lastComboChain = 0;
         
@@ -1361,6 +1376,7 @@ class UIManager {
                 break;
         }
 
+        this.noteSpawnAction(player);
         if (requiresInfoUpdate) {
             this.updatePlayerInfo(player);
             this.drawNextPiece(player);
@@ -1607,6 +1623,8 @@ class UIManager {
 
     startGame(numPlayers, seed = Date.now()) {
         this.lastSoloSaveAt = 0;
+        this.boardEffects.reset();
+        clearTimeout(this.spawnFocusTimer);
         if (!this.isOnlineMode && numPlayers === 1) clearSolo();
         setRandomSeed(seed);
         gameState.numPlayers = numPlayers;
@@ -1658,11 +1676,21 @@ class UIManager {
         if(numPlayers>1){
             const rail=document.createElement('div');
             rail.id='spawn-rail';
+            rail.className='spawn-gantry';
+            rail.setAttribute('role','group');
             rail.setAttribute('aria-label','Личные зоны появления фигур');
             boardWrapper.appendChild(rail);
         }
         this.installBoardGestures(canvas);
         boardWrapper.appendChild(canvas);
+        const effectsCanvas=document.createElement('canvas');
+        effectsCanvas.id='game-effects-canvas';
+        effectsCanvas.width=canvas.width;
+        effectsCanvas.height=canvas.height;
+        effectsCanvas.setAttribute('aria-hidden','true');
+        boardWrapper.appendChild(effectsCanvas);
+        this.boardEffects.boardWidth=gameState.boardWidth;
+        this.boardEffects.attach(effectsCanvas);
 
         container.appendChild(boardWrapper);
 
@@ -1713,11 +1741,25 @@ class UIManager {
         requestAnimationFrame((time) => this.gameLoop(time, run));
     }
     
+    noteSpawnAction(player){
+        if(!player||gameState.numPlayers<2)return;
+        const bay=document.getElementById(`spawn-bay-${player.id}`);
+        if(!bay||bay.classList.contains('is-out'))return;
+        for(const active of document.querySelectorAll('#spawn-rail .spawn-bay.is-engaged')){
+            active.classList.remove('is-engaged');
+        }
+        bay.classList.add('is-engaged');
+        clearTimeout(this.spawnFocusTimer);
+        this.spawnFocusTimer=setTimeout(()=>bay.classList.remove('is-engaged'),540);
+    }
+
     createSpawnBay(player,rail){
         if(!rail)return;
         const bay=document.createElement('div');
         bay.className='spawn-bay';
         bay.id=`spawn-bay-${player.id}`;
+        bay.setAttribute('role','group');
+        bay.setAttribute('aria-label',player.name);
         bay.style.left=(100*player.spawnLaneX/gameState.boardWidth)+'%';
         bay.style.width=(400/gameState.boardWidth)+'%';
         bay.style.setProperty('--bay-color',player.color);
@@ -1731,15 +1773,28 @@ class UIManager {
         next.width=4*BLOCK_SIZE;
         next.height=2*BLOCK_SIZE;
         next.setAttribute('aria-label','Следующая фигура: '+player.name);
+        const preview=document.createElement('div');
+        preview.className='spawn-bay__preview';
+        next.setAttribute('role','img');
+        preview.append(next);
         const mouth=document.createElement('div');
         mouth.className='spawn-bay__mouth';
         mouth.setAttribute('aria-hidden','true');
         const status=document.createElement('span');
         status.className='spawn-bay__status';
         status.textContent='×';
+        status.setAttribute('aria-hidden','true');
         mouth.append(status);
-        bay.append(label,next,mouth);
+        bay.append(label,preview,mouth);
         rail.appendChild(bay);
+    }
+
+    onPieceLocked(player,cells,hard=false){
+        this.boardEffects.landing(cells,player.color,{hard});
+    }
+
+    onLinesCleared(rows,detail){
+        this.boardEffects.clearRows(rows,detail||{});
     }
 
     createNextPiecePreview(player, container) {
@@ -1874,6 +1929,7 @@ class UIManager {
                 this.paintBlock(ctx,x,y,player?.color||'#92a5a1');
             }
         }
+        if(gameState.numPlayers>1)this.drawSpawnEntryGuides(ctx);
         // Each active piece gets a matching landing outline.
         for(const player of gameState.players){
             if(!player.currentPiece||player.gameOver)continue;
@@ -1899,6 +1955,33 @@ class UIManager {
                 if(player.currentPiece[y][x])
                     this.paintBlock(ctx,player.position.x+x,player.position.y+y,player.color,true);
             }
+        }
+    }
+
+    drawSpawnEntryGuides(ctx){
+        // The rails continue into the first two actual rows without altering collision data.
+        const depth=2*BLOCK_SIZE;
+        for(const player of gameState.players){
+            if(player.gameOver||!Number.isInteger(player.spawnLaneX))continue;
+            const left=player.spawnLaneX*BLOCK_SIZE;
+            const width=4*BLOCK_SIZE;
+            ctx.save();
+            const tint=ctx.createLinearGradient(0,0,0,depth);
+            tint.addColorStop(0,player.color);
+            tint.addColorStop(1,'#142629');
+            ctx.globalAlpha=.095;
+            ctx.fillStyle=tint;
+            ctx.fillRect(left,0,width,depth);
+            ctx.strokeStyle=player.color;
+            ctx.globalAlpha=.26;
+            ctx.lineWidth=1;
+            ctx.beginPath();
+            ctx.moveTo(left+.5,0);
+            ctx.lineTo(left+.5,depth*.86);
+            ctx.moveTo(left+width-.5,0);
+            ctx.lineTo(left+width-.5,depth*.86);
+            ctx.stroke();
+            ctx.restore();
         }
     }
 
@@ -1943,6 +2026,9 @@ class UIManager {
         const bay=document.getElementById(`spawn-bay-${player.id}`);
         if(bay){
             bay.classList.toggle('is-out',!!player.gameOver);
+            bay.classList.toggle('is-owned',this.isOnlineMode&&player.id===this.localPlayerIndex&&!player.gameOver);
+            const accessibleName=player.name+(player.gameOver?' — выбыл':'');
+            if(bay.getAttribute('aria-label')!==accessibleName)bay.setAttribute('aria-label',accessibleName);
             const label=bay.querySelector('.spawn-bay__name');
             if(label&&label.textContent!==player.name){label.textContent=player.name;label.title=player.name;}
         }
@@ -2186,12 +2272,19 @@ class UIManager {
         canvas.style.maxWidth='none';
         canvas.style.maxHeight='none';
         wrapper.style.width=(width+frameX)+'px';
-        const railHeight=rail?Math.round(railExtra*ratio)+labelExtra:0;
+        // Keep the fractional CSS rail cell in exact horizontal lockstep with the canvas.
+        const railHeight=rail?(4*width/gameState.boardWidth)+labelExtra:0;
         if(rail){
             const cell=width/gameState.boardWidth;
             rail.style.width=width+'px';
             rail.style.height=railHeight+'px';
             rail.style.setProperty('--bay-cell',cell+'px');
+        }
+        const effects=document.getElementById('game-effects-canvas');
+        if(effects){
+            effects.style.width=width+'px';
+            effects.style.height=height+'px';
+            effects.style.top=railHeight+'px';
         }
         wrapper.style.height=(height+railHeight+frameY)+'px';
     }
@@ -2213,6 +2306,7 @@ class UIManager {
             const player=this.getTouchPlayer();
             if(!player)return;
             event.preventDefault();
+            this.noteSpawnAction(player);
             const cell=Math.max(15,canvas.getBoundingClientRect().width/gameState.boardWidth*.85);
             // Move in the axis that was deliberately dragged; no accidental hard drops.
             let dx=event.clientX-gesture.lastX,dy=event.clientY-gesture.lastY;
@@ -2386,6 +2480,7 @@ class UIManager {
             if (!action) return;
 
             handled = true;
+            this.noteSpawnAction(player);
 
             switch (action) {
                 case 'left':
@@ -2490,6 +2585,8 @@ class UIManager {
         if(banner)banner.hidden=true;
         if (!this.isOnlineMode) this.saveSoloCheckpoint(true);
         if (this.isOnlineMode && !window.confirm('Покинуть сетевую комнату? Остальные смогут продолжить игру.')) return;
+        clearTimeout(this.spawnFocusTimer);
+        this.boardEffects.reset();
         if (this.isOnlineMode) networkManager.leaveRoom();
         this.releaseTouchControls?.();
         this.gameLoopRun = (this.gameLoopRun || 0) + 1;
@@ -3579,14 +3676,39 @@ for(const [method,action] of [['move','move'],['rotate','rotate'],['drop','drop'
  Player.prototype[method]=function(...args){if(window.uiManager?.isOnlineMode){networkManager.sendPlayerInput({action,...(method==='move'?{direction:args[0]}:{})});return;}return original.apply(this,args);};
 }
 function applyNetworkSnapshot(s){
- if(!s||!window.uiManager?.isOnlineMode)return;
- gameState.board=s.board;gameState.sharedStats=s.sharedStats;gameState.sharedStatsDirty=true;gameState.isGameOver=s.isGameOver;
- s.players.forEach((data,i)=>{const player=gameState.players[i];if(player){
-   const keys=player.keys;Object.assign(player,data,{keys});
-   window.uiManager.updatePlayerInfo(player);window.uiManager.drawNextPiece(player);
+  const ui=window.uiManager;
+  if(!s||!ui?.isOnlineMode)return;
+  const oldBoard=gameState.board;
+  const oldScore=gameState.sharedStats.score||0;
+  const oldLines=gameState.sharedStats.lines||0;
+  const previousGameOver=gameState.isGameOver;
+  const lineDelta=Math.max(0,(s.sharedStats?.lines||0)-oldLines);
+  const freshClear=lineDelta>0;
+  const detail=freshClear?s.sharedStats?.lastClearDetail:null;
+  const newlyLocked=!freshClear?getNewLockedCells(oldBoard,s.board):[];
+  gameState.board=s.board;
+  // Snapshots repeat the last-clear metadata: only celebrate a new increase in lines.
+  gameState.sharedStats={...s.sharedStats,lastClearDetail:detail||null};
+  gameState.sharedStatsDirty=(s.sharedStats?.score!==oldScore||freshClear||
+    gameState.sharedStats.comboChain!==ui.lastComboChain);
+  gameState.isGameOver=s.isGameOver;
+  s.players.forEach((data,i)=>{const player=gameState.players[i];if(player){
+    const keys=player.keys;Object.assign(player,data,{keys});
+    ui.updatePlayerInfo(player);ui.drawNextPiece(player);
   }});
- window.uiManager.drawBoard();window.uiManager.updateTeamStatsIfNeeded();
+  if(freshClear){
+    soundManager.lineClear(lineDelta,detail?.comboChain||1);
+    ui.onLinesCleared([],detail||{linesCleared:lineDelta,comboChain:gameState.sharedStats.comboChain});
+  }else if(newlyLocked.length>0&&newlyLocked.length<=4){
+    // The server owns collisions. Effects only inspect the accepted board snapshot.
+    const color=gameState.players[newlyLocked[0].owner-1]?.color||'#a5dbcb';
+    ui.boardEffects.landing(newlyLocked,color,{hard:false});
+    soundManager.land(false);
+  }
+  if(!previousGameOver&&s.isGameOver)soundManager.gameOver();
+  ui.drawBoard();ui.updateTeamStatsIfNeeded();
 }
+
 document.querySelector('#join-code-btn').onclick=()=>networkManager.joinRoom(document.querySelector('#join-code').value.trim());
 document.querySelector('#copy-room-code')?.addEventListener('click',async()=>{
  const code=networkManager.code;
