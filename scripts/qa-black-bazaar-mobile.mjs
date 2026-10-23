@@ -98,6 +98,28 @@ try{
     report.issues.push('broker purchase did not transfer item and charge 75 gold');
    if(await frame.locator('.play-screen').count()!==1)report.issues.push('game UI missing after actions');
   }
+  if(scene==='buyer'&&actionSizes.includes(id)){
+   const before=await exercise({type:'tick'});
+   const offerButton=frame.locator('.table-stage .artifact[data-kind="listing"]');
+   if(await offerButton.count()!==1)report.issues.push('buyer cannot see active auction lot');
+   else{
+    await offerButton.click();
+    const bidButton=frame.locator('[data-sheet-page="detail"] button[data-action="bid-asking"]');
+    if(await bidButton.count()!==1||await bidButton.isDisabled())
+     report.issues.push('buyer cannot use asking-price bid button');
+    else await bidButton.click();
+   }
+   const offered=await exercise({type:'tick'});
+   if(offered.error||offered.after.bids.length!==1||
+     offered.after.bids[0].buyer!=='debug-0'||
+     offered.after.bids[0].offer.gold!==110||
+     offered.after.bids[0].offer.crystals!==1)
+     report.issues.push('asking-price bid not submitted correctly');
+   if(JSON.stringify(offered.after.resources)!==JSON.stringify(before.after.resources)||
+      JSON.stringify(offered.after.items)!==JSON.stringify(before.after.items)||
+      offered.after.listing?.id!==before.after.listing?.id)
+     report.issues.push('unaccepted bid charged buyer or transferred item');
+  }
   if(scene==='seller'&&actionSizes.includes(id)){
    const ask={gold:70,crystals:2,parts:0};
    const cleared=await exercise({type:'cancel'});
