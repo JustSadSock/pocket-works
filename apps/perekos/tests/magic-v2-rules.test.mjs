@@ -214,3 +214,27 @@ test('legacy migration is explicit, preserves original source and reports unsupp
  assert.equal(done.state.slots[0].when.defId,'u_on_hurt');
  assert.ok(done.state.reserve.some(x=>x.defId==='st_throw'));
 });
+
+test('malformed network state fails validation instead of crashing the spell server',()=>{
+ const valid=createMagicLoadout('fire');
+ for(const mutated of [
+  {...valid,slots:[null,valid.slots[1],valid.slots[2]]},
+  {...valid,slots:[{id:0,when:null,actions:[null]},valid.slots[1],valid.slots[2]]},
+  {...valid,slots:[{id:0,when:null,actions:[{rune:null,mods:[]}]},valid.slots[1],valid.slots[2]]},
+  {...valid,slots:[{id:0,when:null,actions:[{rune:{defId:'u_guard',instanceId:123},mods:null}]},valid.slots[1],valid.slots[2]]}
+ ]){
+  assert.doesNotThrow(()=>validateMagicState(mutated));
+  assert.equal(validateMagicState(mutated).ok,false);
+  assert.equal(applyMagicEdit(mutated,{type:'seal',slot:0,revision:valid.revision}).ok,false);
+ }
+});
+test('sealing a common rune frees that definition for future offers without duping its instance',()=>{
+ let s=createMagicLoadout('stone');
+ s=equip(s,'u_on_hit',1);s=equip(s,'st_shards',1);
+ const sealed=newer(s,'seal',1);
+ assert.equal(sealed.ok,true);
+ const offered=dealMagicOffers(sealed.state,7);
+ assert.equal(offered.ok,true);
+ assert.ok(offered.state.offers.every(x=>permittedRune('stone',x)));
+ assert.equal(validateMagicState(offered.state).ok,true);
+});
