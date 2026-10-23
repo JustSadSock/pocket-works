@@ -145,7 +145,7 @@ export function artifactKind(visibleName){
 export function artifactSVG(visibleName,rarity='обычный'){
  const kind=artifactKind(visibleName);
  const rare=rarity==='редкий';
- const rim=rare?'<path d="M25 31l8-10 6 8 12-4M128 32l10-10 8 11M40 162l-8 9 13 0M138 159l8 8-12 1" fill="none" stroke="#f0c777" stroke-width="4" stroke-linecap="round"/>':'';
+ const rim=rare?'<path d="M85 9l5-6 5 6-5 6Z" fill="#f0c777" stroke="#8c582e" stroke-width="2"/>':'';
  // Transparent object, ink outline, small print-like imperfections and a
  // physical contact shadow. This can be reused on the tabletop and in detail.
  return '<svg class="item-svg item-svg-'+kind+'" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'+
