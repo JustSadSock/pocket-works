@@ -1,3 +1,4 @@
+import { keyOnScreen, shadowDisplacement } from './light-space.js';
 const TAU = Math.PI * 2;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -162,7 +163,9 @@ export class LivingGreenhouseLayer {
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, width, height);
 
-    const warm = ctx.createRadialGradient(width * .76, height * .06, 0, width * .76, height * .06, width * .72);
+    const light = keyOnScreen(this.renderer.cameraRotation || 0);
+    const sunlightX = width * clamp(.50 + light.x * .42, .21, .79);
+    const warm = ctx.createRadialGradient(sunlightX, height * .04, 0, sunlightX, height * .04, width * .70);
     warm.addColorStop(0, tint(theme.glow, .24));
     warm.addColorStop(.34, tint(theme.glow, .08));
     warm.addColorStop(1, tint(theme.glow, 0));
@@ -241,17 +244,20 @@ export class LivingGreenhouseLayer {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
     }
 
-    // Illumination is oriented consistently with the existing WebGL key light.
-    const shaft = ctx.createLinearGradient(width * .89, 0, width * .36, height * .70);
-    shaft.addColorStop(0, tint(theme.beam, .085));
-    shaft.addColorStop(.52, tint(theme.beam, .024));
+    // Same world-space key as the 3D shader: rotate skylight and cast together.
+    const key = keyOnScreen(this.renderer.cameraRotation || 0);
+    const lightX = width * clamp(.50 + key.x * .42, .21, .79);
+    const castX = -key.x * width * .28;
+    const shaft = ctx.createLinearGradient(lightX, 0, lightX + castX, height * .72);
+    shaft.addColorStop(0, tint(theme.beam, .072));
+    shaft.addColorStop(.52, tint(theme.beam, .018));
     shaft.addColorStop(1, tint(theme.beam, 0));
     ctx.fillStyle = shaft;
     ctx.beginPath();
-    ctx.moveTo(width * .74, 0);
-    ctx.lineTo(width, 0);
-    ctx.lineTo(width * .76, height * .80);
-    ctx.lineTo(width * .30, height * .80);
+    ctx.moveTo(lightX - width * .13, 0);
+    ctx.lineTo(lightX + width * .13, 0);
+    ctx.lineTo(lightX + castX + width * .22, height * .74);
+    ctx.lineTo(lightX + castX - width * .22, height * .74);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
@@ -259,15 +265,16 @@ export class LivingGreenhouseLayer {
 
   drawPlanterShadow(ctx, level, mode) {
     if (!level?.course18 || !Array.isArray(level.outline) || level.outline.length < 3 || !this.renderer.worldToScreen) return;
-    const points = level.outline.map(point => this.renderer.worldToScreen(point.x + 23, point.y + 32, -67));
+    const displacement = shadowDisplacement(65);
+    const points = level.outline.map(point => this.renderer.worldToScreen(point.x + displacement.x, point.y + displacement.y, -67));
     ctx.save();
     ctx.beginPath();
     points.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
     ctx.closePath();
     ctx.shadowColor = 'rgba(1,8,5,.70)';
     ctx.shadowBlur = Math.min(34, Math.max(12, (this.renderer.scale || 1) * 38));
-    ctx.shadowOffsetX = 9;
-    ctx.shadowOffsetY = 18;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 9;
     ctx.fillStyle = 'rgba(6,17,11,.44)';
     ctx.fill();
     ctx.restore();

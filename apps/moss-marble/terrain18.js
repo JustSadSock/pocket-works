@@ -1,6 +1,7 @@
 import { installTerrain17 } from './terrain17.js';
 import { terrainHeightAt } from './terrain.js';
 import { isCourse18 } from './course18.js';
+import { appendSoftShadow, appendLineShadow } from './light-space.js';
 
 const TAU = Math.PI * 2;
 const STRIDE = 11;
@@ -147,7 +148,7 @@ function lowPolyRock(mesh, shadows, level, prop, part, seed, palette) {
       tone(palette.rockMoss, .80), 7
     );
   }
-  disc(shadows, x + radius * .07, y + radius * .11, ground + .1, radius * .98, radius * .70, C.shadow, 3, 20);
+  appendSoftShadow(shadows, (sx,sy)=>terrainHeightAt(level,sx,sy), { x, y, radiusX: radius * 1.27, radiusY: radius * 1.05, height: height * .42, strength: .31, segments: 22 });
 }
 
 function stump(mesh, shadows, level, prop, seed, palette) {
@@ -160,12 +161,12 @@ function stump(mesh, shadows, level, prop, seed, palette) {
   cylinder(mesh, {
     x: prop.x, y: prop.y, z0: ground + .3, z1: top - .9,
     r0: radius * .93, r1: radius * .87, tint: palette.wood,
-    topTint: palette.woodTop, material: 0, segments: 22, irregular: .045, seed
+    topTint: palette.woodTop, material: 11, segments: 22, irregular: .045, seed
   });
-  ring(mesh, prop.x, prop.y, top - .50, radius * .09, radius * .83, palette.woodTop, 0, 28);
-  ring(mesh, prop.x, prop.y, top - .34, radius * .30, radius * .345, tone(palette.wood, .89), 0, 28);
-  ring(mesh, prop.x, prop.y, top - .30, radius * .55, radius * .59, tone(palette.wood, .84), 0, 28);
-  ring(mesh, prop.x, prop.y, top - .26, radius * .76, radius * .82, tone(palette.wood, .79), 0, 28);
+  ring(mesh, prop.x, prop.y, top - .50, radius * .09, radius * .83, palette.woodTop, 11, 28);
+  ring(mesh, prop.x, prop.y, top - .34, radius * .30, radius * .345, tone(palette.wood, .89), 11, 28);
+  ring(mesh, prop.x, prop.y, top - .30, radius * .55, radius * .59, tone(palette.wood, .84), 11, 28);
+  ring(mesh, prop.x, prop.y, top - .26, radius * .76, radius * .82, tone(palette.wood, .79), 11, 28);
   const ribs = 11;
   for (let index = 0; index < ribs; index += 1) {
     const angle = (index + noise(index, seed, 4) * .13) / ribs * TAU;
@@ -179,10 +180,10 @@ function stump(mesh, shadows, level, prop, seed, palette) {
       [x - sa * radius * .018, y + ca * radius * .018, z0 + 3],
       [prop.x + ca * radius * .84 - sa * radius * .018, prop.y + sa * radius * .84 + ca * radius * .018, z1],
       [prop.x + ca * radius * .84, prop.y + sa * radius * .84, z1 - 3],
-      tone(palette.wood, .72), 0
+      tone(palette.wood, .72), 11
     );
   }
-  disc(shadows, prop.x + 4, prop.y + 7, ground + .12, radius, radius * .72, C.shadowStrong, 3, 22);
+  appendSoftShadow(shadows, (x,y)=>terrainHeightAt(level,x,y), { x:prop.x, y:prop.y, radiusX:radius*1.32, radiusY:radius*1.06, height:height*.5, strength:.36, segments:22 });
 }
 
 function barrierBox(mesh, shadows, level, wall, palette) {
@@ -195,6 +196,7 @@ function barrierBox(mesh, shadows, level, wall, palette) {
   const height = Number(wall.visualHeight || 28);
   const isStone = wall.material === 'stone' || Boolean(wall.tunnelWall);
   const topTint = isStone ? palette.stoneLight : palette.woodTop;
+  const material = isStone ? 0 : 11;
   const sideTint = isStone ? palette.stone : palette.wood;
   const aL = [wall.ax + nx * half, wall.ay + ny * half, zA];
   const aR = [wall.ax - nx * half, wall.ay - ny * half, zA];
@@ -202,11 +204,11 @@ function barrierBox(mesh, shadows, level, wall, palette) {
   const bR = [wall.bx - nx * half, wall.by - ny * half, zB];
   const atL = [aL[0], aL[1], zA + height], atR = [aR[0], aR[1], zA + height];
   const btL = [bL[0], bL[1], zB + height], btR = [bR[0], bR[1], zB + height];
-  mesh.quad(aL, bL, btL, atL, sideTint, 0);
-  mesh.quad(aR, atR, btR, bR, tone(sideTint, .85), 0);
-  mesh.quad(atL, atR, btR, btL, topTint, 0, [0, 0, 1]);
-  mesh.quad(aL, atL, atR, aR, tone(sideTint, .83), 0);
-  mesh.quad(bL, bR, btR, btL, tone(sideTint, .83), 0);
+  mesh.quad(aL, bL, btL, atL, sideTint, material);
+  mesh.quad(aR, atR, btR, bR, tone(sideTint, .85), material);
+  mesh.quad(atL, atR, btR, btL, topTint, material, [0, 0, 1]);
+  mesh.quad(aL, atL, atR, aR, tone(sideTint, .83), material);
+  mesh.quad(bL, bR, btR, btL, tone(sideTint, .83), material);
 
   const at = (t, side, lift = .34) => [
     wall.ax + dx * t + nx * side * half,
@@ -223,15 +225,14 @@ function barrierBox(mesh, shadows, level, wall, palette) {
     }
   } else {
     mesh.quad(at(.08, -.12), at(.92, -.12), at(.92, .12), at(.08, .12),
-      tone(palette.wood, .78), 0, [0, 0, 1]);
+      tone(palette.wood, .78), 11, [0, 0, 1]);
     const pegRadius = Math.min(half * .18, 3.5);
     for (const t of [.10, .90]) {
       const center = at(t, 0, .54);
       disc(mesh, center[0], center[1], center[2], pegRadius, pegRadius, palette.stoneLight, 4, 10);
     }
   }
-  disc(shadows, (wall.ax + wall.bx) * .5 + 4, (wall.ay + wall.by) * .5 + 7,
-    (zA + zB) * .5 + .1, length * .52, half * 1.7, C.shadow, 3, 18);
+  appendLineShadow(shadows, (x,y)=>terrainHeightAt(level,x,y), { ax:wall.ax,ay:wall.ay,bx:wall.bx,by:wall.by,width:half*2,height:height*.50,strength:.26 });
 }
 
 function portalPoint(endpoint, lateral, z, depth) {
@@ -292,7 +293,7 @@ function portal(mesh, shadows, level, endpoint, seed, palette) {
       palette.stoneLight, 0
     );
   }
-  disc(shadows, endpoint.x + 4, endpoint.y + 8, ground + .1, outer * .95, outer * .48, C.shadow, 3, 22);
+  appendSoftShadow(shadows, (x,y)=>terrainHeightAt(level,x,y), { x:endpoint.x,y:endpoint.y,radiusX:outer*1.18,radiusY:outer*.84,height:outer*.28,strength:.25,segments:24 });
 }
 
 function hole(mesh, shadows, level, palette) {
@@ -317,7 +318,7 @@ function hole(mesh, shadows, level, palette) {
   ring(mesh, x, y, ground + .25, radius * .965, radius + 3, palette.stoneDark, 0, segments);
   ring(mesh, x, y, ground + .44, radius + 3, radius + 7, palette.stoneLight, 0, segments);
   ring(mesh, x, y, ground + .15, radius + 7, radius + 10, tone(palette.stone, .80), 0, segments);
-  disc(shadows, x + 2, y + 2, ground + .07, radius * 1.08, radius * .73, C.shadow, 3, 24);
+  appendSoftShadow(shadows, (sx,sy)=>terrainHeightAt(level,sx,sy), { x, y, radiusX:radius*1.11, radiusY:radius*.93, height:0, strength:.24, segments:24 });
 }
 
 function details(mesh, level, seed, palette) {
