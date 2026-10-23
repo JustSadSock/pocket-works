@@ -2,6 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { PocketNet } from '../../shared/capabilities/net.js';
 import {getPocketIdentity,pocketAvatarMarkup,pocketIdProfileUrl} from '../../shared/capabilities/identity.js';
 import { STEPS, INSTRUMENTS, stepMs, loopMs, unlockAudio, audioContext, playNote, canHearTrack, renderWav } from './audio.js';
+import { advanceDeckMotion } from './deck-motion.js';
 installMobileRuntime();
 const STORAGE='pocket-works:jam-tape:session-v1', PROFILE='pocket-works:jam-tape:profile-v1';
 const view=document.querySelector('#view'), toastEl=document.querySelector('#toast');
@@ -14,6 +15,8 @@ let instrument='keys', air=true, hearOthers=true, onlyMine=false, settingsOpen=f
 let ownId=localId, screen='welcome', netClient=null, connected=false, room=null, isHost=false, pairingMode='', joinCode='', initialClips=[];
 let session=null, recording=null, editClip=null, editNotes=[], editInst='keys', editBar=0, editHalf=0, editLength=1, editVelocity=88, held=new Map(), remoteVoices=new Map(), busy=false, timer=null, probeTimer=null, toastTimer=null;
 let clockOffset=0,lastScheduledMs=0, displayedStep=-1;
+let deckPhysics={angle:0,velocity:0},deckFrame=0,deckPreviousFrame=0;
+const reduceMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true;
 const noteKeys=['a','s','d','f','g','h','j','k'];
 const colors=['#e8663b','#519289','#d1a24d','#8595b3'];
 const labels=Object.fromEntries(INSTRUMENTS.map(i=>[i.id,i.name]));
@@ -121,20 +124,21 @@ function trackView(p,i){
 function padsView(){
  const current=INSTRUMENTS.find(i=>i.id===instrument);
  return current.labels.map((label,i)=>'<button class="pad" data-pad="'+i+'" type="button" aria-label="'+safe(label)+'">'+
- '<span class="pad-key">'+noteKeys[i].toUpperCase()+'</span><span class="pad-label">'+safe(label)+'</span><span class="pad-index">'+fmt(i+1)+'</span></button>').join('');
+ '<span class="pad-key">'+noteKeys[i].toUpperCase()+'</span><span class="pad-light" aria-hidden="true"></span><span class="pad-label">'+safe(label)+'</span><span class="pad-index">'+fmt(i+1)+'</span></button>').join('');
 }
 function renderStudio(){
  if(!session)return;
  const owner=room&&isHost,canChange=!room||owner;
- view.innerHTML='<section class="studio '+(session.playing?'playing':'')+'">'+
- '<div class="studio-head"><div><p class="eyebrow">МУЗЫКАЛЬНАЯ СТУДИЯ / '+(room?'POCKETNET':'СОЛО')+'</p><h1>Твоя музыка.</h1></div><div class="mini-reels"><i></i><i></i></div></div>'+
+ view.innerHTML='<section class="studio '+(session.playing?'playing':'')+(recording?' is-recording':'')+'">'+
+ '<div class="studio-head"><div><p class="eyebrow">ЛЕНТА / '+(room?'ВМЕСТЕ':'МОЯ СТУДИЯ')+'</p><h1>Твоя музыка.</h1></div>'+
+ '<div class="cassette-deck" aria-hidden="true"><div class="cassette-tape"></div><i class="cassette-reel left"></i><i class="cassette-reel right"></i><span class="cassette-label">POCKET / SIDE A</span><span class="cassette-led"></span></div></div>'+
  '<div class="transport"><button id="playButton" class="'+(session.playing?'active':'')+'" data-action="play" aria-label="Воспроизвести">▶</button>'+
  '<button data-action="stop" aria-label="Остановить">■</button><button id="recordButton" class="record-button '+(recording?'recording':'')+'" data-action="record">● <span>'+(recording?'СТОП REC':'ЗАПИСЬ')+'</span></button>'+
  '<div class="transport-info"><strong id="beatReadout">01 : 01</strong><small id="transportState">'+(recording?'ИДЁТ ЗАПИСЬ':session.playing?'ИГРАЕТ':'ГОТОВО')+'</small></div>'+
  '<div class="tempo"><label for="tempoInput">BPM</label><input id="tempoInput" type="number" min="60" max="180" value="'+session.bpm+'" '+(!canChange?'disabled':'')+'></div></div>'+
  '<div class="meter"><div class="meter-grid" id="meterGrid">'+Array.from({length:64},(_,i)=>'<span class="meter-cell '+(i%16===0?'bar':'')+'" data-step="'+i+'"></span>').join('')+'</div>'+
  '<div class="meter-head"><span>4 ТАКТА · 64 ШАГА</span><span id="recHint" class="'+(recording?'armed':'')+'">'+(recording?'● ЗАПИСЫВАЕМ ТВОИ НОТЫ':'Нажми запись и играй')+'</span></div></div>'+
- '<div class="console"><div class="section-title"><div><h2>Выбери инструмент</h2></div><span class="micro">5 тембров · листай →</span></div>'+
+ '<div class="studio-workspace"><div class="console"><div class="section-title"><div><h2>Выбери инструмент</h2></div><span class="micro">5 тембров · листай →</span></div>'+
  '<div class="instruments">'+INSTRUMENTS.map(i=>'<button class="instrument '+(instrument===i.id?'active':'')+'" data-action="inst" data-inst="'+i.id+'"><b>'+
  (i.id==='keys'?'⌁':i.id==='bass'?'≋':i.id==='drums'?'◉':i.id==='lead'?'∿':'◇')+'</b><span>'+i.name+'<small>'+i.sub+'</small></span></button>').join('')+'</div>'+
  '<details class="mix-controls" '+(settingsOpen?'open':'')+'><summary>Настройки звука</summary><div class="sound-routing"><label class="route '+(air?'on':'')+'"><span class="route-led"></span><span><b>В эфир</b><small>Другие слышат меня</small></span><input id="airToggle" type="checkbox" '+(air?'checked':'')+'><i class="switch"></i></label>'+
@@ -146,10 +150,11 @@ function renderStudio(){
  '<button class="text-action" data-action="export">↓ WAV</button></div></div>'+
  '<div class="track-list">'+session.players.map(trackView).join('')+
  (recording?'<div class="record-take" id="recordTake">● НОВЫЙ ДУБЛЬ · '+recording.notes.length+' НОТ</div>':'')+'</div></div>'+
- '<div class="studio-footer">'+(room?'<button class="action secondary" data-action="invite">Пригласить друзей</button>':'<button class="action secondary" data-action="host-from-solo">Создать онлайн-комнату</button>')+
+ '</div><div class="studio-footer">'+(room?'<button class="action secondary" data-action="invite">Пригласить друзей</button>':'<button class="action secondary" data-action="host-from-solo">Создать онлайн-комнату</button>')+
  (canChange?'<button class="action secondary danger" data-action="reset">Новый проект</button>':'')+
  '<button class="action secondary" data-action="leave">← Меню</button></div></section>';
  updateMeter(true);
+ requestDeckFrame();
 }
 function updateMeter(force=false){
  if(screen!=='studio'||!session)return;
@@ -162,6 +167,23 @@ function updateMeter(force=false){
   const readout=view.querySelector('#beatReadout');if(readout)readout.textContent=fmt(Math.floor(step/16)+1)+' : '+fmt(Math.floor(step%16/4)+1);
  }
  if(recording){const take=view.querySelector('#recordTake');if(take)take.textContent='● НОВЫЙ ДУБЛЬ · '+recording.notes.length+' НОТ'}
+}
+// Frame-based movement is purely cosmetic: audio transport always follows PocketNet's clock.
+function drawDeckFrame(now){
+ deckFrame=0;
+ if(screen!=='studio'||document.hidden)return;
+ const dt=deckPreviousFrame?Math.min(.05,(now-deckPreviousFrame)/1000):1/60;
+ deckPreviousFrame=now;
+ deckPhysics=advanceDeckMotion(deckPhysics,dt,Boolean(session?.playing),session?.bpm);
+ const reels=view.querySelectorAll('.cassette-reel');
+ if(!reels.length){deckPreviousFrame=0;return}
+ for(const reel of reels)reel.style.transform='rotate('+deckPhysics.angle+'rad)';
+ if(session?.playing||deckPhysics.velocity>0)deckFrame=requestAnimationFrame(drawDeckFrame);
+ else deckPreviousFrame=0;
+}
+function requestDeckFrame(){
+ if(reduceMotion||document.hidden||screen!=='studio'||!session)return;
+ if(deckFrame===0){deckPreviousFrame=0;deckFrame=requestAnimationFrame(drawDeckFrame)}
 }
 function resetSchedule(){lastScheduledMs=0;displayedStep=-1}
 function schedule(){
@@ -198,7 +220,8 @@ function noteStep(){if(!session?.playing||!session.anchor)return 0;return clamp(
 async function press(pitch,key){
  if(!session||screen!=='studio'||held.has(key)||pitch<0||pitch>7)return;
  held.set(key,{pending:true,pitch});
- let ctx;try{ctx=await unlockAudio()}catch{held.delete(key);inform('Звук недоступен в этом браузере');return}
+ view.querySelector('.pad[data-pad="'+pitch+'"]')?.classList.add('active');
+ let ctx;try{ctx=await unlockAudio()}catch{release(key);inform('Звук недоступен в этом браузере');return}
  if(!held.has(key)||screen!=='studio')return;
  const uid=rand()+'-'+pitch,at=hostTime();
  const voice=playNote(ctx,instrument,pitch,ctx.currentTime,2.5,.88);
@@ -213,7 +236,7 @@ async function press(pitch,key){
 }
 function release(key){
  const h=held.get(key);if(!h)return;
- held.delete(key);if(h.pending)return;
+ held.delete(key);if(h.pending){if(![...held.values()].some(n=>n.pitch===h.pitch))view.querySelector('.pad[data-pad="'+h.pitch+'"]')?.classList.remove('active');return}
  h.voice.release();
  if(h.note)h.note[2]=clamp(Math.round((hostTime()-h.at)/stepMs(session.bpm)),1,16);
  if(air)sendLive('live-off',{uid:h.uid});
@@ -543,7 +566,7 @@ window.addEventListener('keydown',event=>{
 });
 window.addEventListener('keyup',event=>release('key-'+event.code));
 window.addEventListener('blur',releaseAll);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();else resetSchedule()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){releaseAll();deckPreviousFrame=0}else{resetSchedule();requestDeckFrame()}});
 document.querySelector('#roomButton').addEventListener('click',()=>{if(room){if(recording)finishRecord();pairingMode=isHost?'host':'join';setScreen('pair')}});
 document.querySelector('#trimStart').addEventListener('input',updateClipPreview);
 document.querySelector('#trimEnd').addEventListener('input',updateClipPreview);
