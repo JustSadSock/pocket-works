@@ -159,7 +159,7 @@ function demoSend(payload){
  if(payload.type==='start'||payload.type==='again'){
   const d=demoView('writing-first');
   view={...d.view,settings:view.settings,players:view.players.length>=2?view.players:demoView('lobby-ready').view.players};
-  me='qa-host';previewDraft='';modal='';render();return true;
+  me='qa-host';previewDraft='';previewWriterMeta={step:'draft',anchor:'',gender:'unspecified',selection:[]};modal='';render();return true;
  }
  if(payload.type==='submit'&&view.phase==='writing'&&!view.waiting){
   view={...view,waiting:true,players:view.players.map(p=>p.id===me?{...p,submitted:true}:p)};
@@ -341,7 +341,16 @@ scene.addEventListener('input',e=>{if(e.target.id==='guestNick')name=e.target.va
 scene.addEventListener('change',e=>{if(e.target.name==='gender'&&e.target.checked)saveWriterMeta({gender:e.target.value})});
 scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act;
  if(act==='back-to-draft'){saveWriterMeta({step:'draft'});soundscape.fx('page');render();return}
- if(act==='close-audio'){modal='';render();return}if(act==='copy-comic-direct'||act==='copy-comic-safe'){const txt=buildComicPrompt(comicSource,{adapt:act==='copy-comic-safe'});if(txt)void copyText(txt);else toast('Немає рукопису для промпту.');return}if(act==='word'){const i=Number(b.dataset.index),ids=indices(),need=roomVersion==='v4'&&view.round===view.total-1?0:Math.min(view.settings.visibleTailWords,words($('answer')?.value).length),at=ids.indexOf(i);if(at>=0)ids.splice(at,1);else if(ids.length<need)ids.push(i);else{toast('Вже вибрано '+need+' слів.');return}draftSelections[draftKey()]=ids;refreshWords();tick(650);return}
+ if(act==='close-audio'){modal='';render();return}if(act==='copy-comic-direct'||act==='copy-comic-safe'){const txt=buildComicPrompt(comicSource,{adapt:act==='copy-comic-safe'});if(txt)void copyText(txt);else toast('Немає рукопису для промпту.');return}if(act==='word'){
+ const i=Number(b.dataset.index),ids=indices();
+ const needed=handoffCount({roomVersion,round:view.round,total:view.total,visibleTailWords:view.settings.visibleTailWords,answer:loadDraft()});
+ const at=ids.indexOf(i);
+ if(at>=0)ids.splice(at,1);
+ else if(ids.length<needed)ids.push(i);
+ else{toast('Вже вибрано '+needed+' слів.');return}
+ draftSelections[draftKey()]=ids;saveWriterMeta({selection:ids});
+ refreshWords();tick(650);b.focus({preventScroll:true});return;
+}
  if(act==='archive'){archiveOpen=true;archiveEditionId='';archiveStoryId='';render();return}
   if(act==='archive-back'){archiveOpen=false;archiveEditionId='';archiveStoryId='';render();return}
   if(act==='archive-edition'){archiveEditionId=b.dataset.id;archiveStoryId='';render();return}
@@ -386,7 +395,7 @@ if(IS_PREVIEW){
   }
  if(PREVIEW_ID==='home-member'){pocketIdentity={id:'00000000-0000-4000-8000-000000000001',nickname:'Марта',avatar:'moss',complete:true};identityReady=true}
  else identityReady=true;
- if(view?.phase==='writing')draftSelections[draftKey()]=d.selection;
+ if(view?.phase==='writing'){draftSelections[draftKey()]=d.selection;previewWriterMeta={step:d.writerStep||'draft',anchor:d.heroAnchor||'',gender:'unspecified',selection:d.selection||[]}}
  if(modal==='comic-prompt')comicSource=view?.stories?.[0]||null;
 
  window.addEventListener('keydown',e=>{
