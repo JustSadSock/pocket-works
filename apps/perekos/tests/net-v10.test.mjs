@@ -77,7 +77,7 @@ test('sealing rune chain locks instances, frees slot, and physically shields und
    send(s,a,'input',{seq:n,round:s.match.round,control:{x:0,y:0,attack:n<8,shield:false,dash:false,aim:{x:330,y:120}}});
    send(s,b,'input',{seq:n,round:s.match.round,control:{x:0,y:0,attack:false,shield:false,dash:false,aim:{x:100,y:480}}});
   }
-  assert.ok(actor.shield>0,'magic guard triggered by physical attack on server');
+  assert.ok(s.match.actors[0].shield>0,'magic guard triggered by physical attack on server');
   assert.equal(s.match.magicLoadouts[0].sealed.length,1);
  }finally{Date.now=old}
 });
