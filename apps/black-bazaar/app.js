@@ -379,6 +379,7 @@ function updateTurnClock(){
  const left=Math.max(0,Math.ceil((state.deadlineAt-Date.now())/1000));
  node.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');
  node.setAttribute('aria-label','До конца хода '+left+' секунд');
+ const urgent=document.querySelector('#urgentClock');if(urgent)urgent.textContent=node.textContent;
 }
 function eventBlock(){
  const e=state.event;
@@ -586,8 +587,8 @@ function renderPlay(){
   '<strong>'+esc(p.character)+'</strong><small>'+esc(p.name)+'</small></button>';
  }).join('');
  const listing=state.listing;
- const lot=listing?'<button type="button" class="artifact" data-action="open-item" data-kind="listing" data-id="'+esc(listing.id)+'">'+
- artifactSVG(listing.name,listing.rarity)+'<strong>'+esc(listing.name)+'</strong></button>':
+ const lot=listing?'<button type="button" class="artifact" data-action="open-item" data-kind="listing" data-id="'+esc(listing.id)+'" aria-label="Открыть лот '+esc(listing.name)+', цена '+esc(amounts(listing.ask))+', предложений: '+state.bids.length+'">'+
+ artifactSVG(listing.name,listing.rarity)+'<strong>'+esc(listing.name)+'</strong><span class="lot-market-strip"><span>'+svgIcon('coin',16)+' '+esc(amounts(listing.ask))+'</span><span>'+svgIcon('gavel',16)+' '+state.bids.length+'</span></span></button>':
  '<div class="artifact-note">Нет лота</div>';
  const inventory=you.items.map(item=>{
   const reason=itemDormant(item,plan);
@@ -619,6 +620,7 @@ function renderPlay(){
  '<span class="chip"><strong id="turnClock" role="timer">—</strong></span>'+(state.connectionGraceUntil&&Date.now()<state.connectionGraceUntil?'<span class="chip" role="status">'+svgIcon('clock',16)+' Восстановление связи</span>':'')+soundToggle()+
  '<button type="button" class="leave-button" data-action="leave">Выйти</button></div>'+
  resourceWallet(you.resources,plan)+
+ (you.urgent?.status==='pending'?'<button class="urgent-ticket" type="button" data-action="open-sheet" data-sheet="secret" aria-label="Срочный заказ: '+esc(amounts(you.urgent.needs))+'; срок — до конца хода"><span>'+svgIcon('clock',17)+' Срочный заказ</span><strong>'+esc(amounts(you.urgent.needs))+'</strong><small id="urgentClock">—</small></button>':'')+
  '<div class="play-body"><div class="play-field" data-player-count="'+state.players.length+'">'+
  '<div class="ambient-lights" aria-hidden="true"><i></i><i></i><i></i><i></i></div>'+
  '<div class="player-seats" data-seats="'+state.players.length+'">'+seats+'</div>'+
