@@ -34,7 +34,10 @@ export function makeStoneRimProfile(outline, heightAt = () => 0, settings = {}) 
     const sumLength = Math.hypot(sumX, sumY) || 1;
     const normal = { x: sumX / sumLength, y: sumY / sumLength };
     // Restrict the miter at sharp reflex corners to prevent giant stone spikes.
-    const factor = clamp(1 / Math.max(.25, normal.x * nextN.x + normal.y * nextN.y), 1, 1.65);
+    // Acute miters create long disconnected-looking limestone triangles.
+    // A shallow bevel preserves continuity while staying close to the
+    // physical contour even when a generated outline has sharp turns.
+    const factor = clamp(1 / Math.max(.25, normal.x * nextN.x + normal.y * nextN.y), 1, 1.20);
     const offsetX = normal.x * factor;
     const offsetY = normal.y * factor;
     const ground = Number(heightAt(p.x - normal.x * 13, p.y - normal.y * 13)) || 0;

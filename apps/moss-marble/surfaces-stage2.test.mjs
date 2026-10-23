@@ -35,6 +35,15 @@ for (const raw of [
     const [r, g, b, a] = field.colorAt(vertex.inner[0], vertex.inner[1], vertex.ground, [0, 0, 1]);
     assert.ok([r,g,b,a].every(x => Number.isFinite(x) && x >= 0 && x <= 1));
   }
+  // No hard per-triangle sand/moss material switches: pigment handles both.
+  const mesh = level.course18.surfaceMesh?.data;
+  // The three Course18-legacy holes retain their original distinct
+  // materials for save/render compatibility. Only newly authored Course19
+  // and endless fields use the continuous terrain material contract.
+  if (mesh && ![1, 6, 8].includes(Number(level.id))) for (let index = 10; index < mesh.length; index += 11) {
+    assert.ok(mesh[index] === 1 || mesh[index] === 6,
+      'each terrain triangle must use continuous grass or physically wet water shading');
+  }
   const p = level.start;
   const base = field.colorAt(p.x, p.y, field.heightAt(p.x,p.y), field.normalAt(p.x,p.y));
   const nearby = field.colorAt(p.x + 2, p.y + 2, field.heightAt(p.x+2,p.y+2), field.normalAt(p.x+2,p.y+2));

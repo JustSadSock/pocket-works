@@ -33,6 +33,14 @@
       "files": [
         "qa/final-gallery.spec.js"
       ]
+    },
+    {
+      "id": "endless-visual",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/endless-gallery.spec.js"
+      ]
     }
   ]
 }
