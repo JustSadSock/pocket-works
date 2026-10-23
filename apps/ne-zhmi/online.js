@@ -2,7 +2,7 @@
 // UI events are never treated as confirmation until a server snapshot arrives.
 import { PocketNet } from '../../shared/capabilities/net.js';
 import { stepGame, FIXED_DT } from './engine.js';
-import { validRoom, roleOf, acceptOnlineSnapshot } from './online-flow.js';
+import { validRoom, roleOf, acceptOnlineSnapshot, hydrateOnlineSnapshot } from './online-flow.js';
 import {ABILITIES,HOLD_ACTIONS} from './abilities.js';
 const serverUrl=location.origin+'/pocketnet';
 const storagePrefix='ne-zhmi:net:';
@@ -81,6 +81,9 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
   }
   function format(t){const n=Math.max(0,Math.floor(t));return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');}
   function consume(next) {
+    const hydrated=hydrateOnlineSnapshot(snapshot,next);
+    if(hydrated===null){send({type:'sync'});return;}
+    next=hydrated;
     if(!acceptOnlineSnapshot(snapshot,next))return;
     const old=snapshot;
     if(next.round!==old?.round){display=null;displayDebt=0;commandSeq=0;}

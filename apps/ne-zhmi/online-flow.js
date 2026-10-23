@@ -12,3 +12,12 @@ export function acceptOnlineSnapshot(previous,next) {
     Number(next.robot?.t||0)<Number(previous.robot?.t||0)-.001)return false;
   return true;
 }
+
+// Continuous snapshots deliberately omit immutable track geometry.
+// Reattach ONLY the same round's previously verified level, otherwise demand
+// a full authoritative sync; never blend a prior round's course into a new one.
+export function hydrateOnlineSnapshot(previous,next){
+ if(!next?.robot||next.robot.level)return next;
+ if(!previous||next.round!==previous.round||!previous.robot?.level)return null;
+ return {...next,robot:{...next.robot,level:previous.robot.level}};
+}

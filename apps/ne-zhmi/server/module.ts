@@ -196,7 +196,7 @@ function bounds(state) {
   return { left: state.x - ROBOT.halfWidth, right: state.x + ROBOT.halfWidth, top: state.y - ROBOT.halfHeight, bottom: state.y + ROBOT.halfHeight };
 }
 const overlap = (a,b) => a.left < b.x + b.w - 1e-5 && a.right > b.x + 1e-5;
-function commandGame(state, action, pressed=true) {
+export function commandGame(state, action, pressed=true) {
   if(HOLD_ACTIONS.includes(action)){
     if(state.finished)return 'finished';
     if(pressed && state.energy[action]<.14)return 'empty';
@@ -231,7 +231,7 @@ function commandGame(state, action, pressed=true) {
   }
   return 'unknown';
 }
-function stepGame(state, dt = FIXED_DT) {
+export function stepGame(state, dt = FIXED_DT) {
   if (state.finished) return [];
   const events = [];
   const level = state.level || LEVEL;
@@ -305,8 +305,14 @@ function stepGame(state, dt = FIXED_DT) {
     box.x=clamp(box.x+box.vx*delta,.4,(level.width||18)-.4);
     if(!box.latched&&Math.abs(box.x-box.padX)<.4){box.latched=true;box.vx=0;eventsOnce('cargo');}
     if(!box.latched&&Math.abs(box.x-state.x)<.45){
-      state.x=Math.min(state.x,box.x-.42);
-      state.vx=Math.min(state.vx,.1);
+      // Resolve against the approach side. Previously a robot travelling
+      // left from the RIGHT teleported straight through to the other side.
+      const cameFromLeft=previousX<=box.x;
+      if(cameFromLeft&&state.vx>0){
+        state.x=Math.min(state.x,box.x-.42);state.vx=Math.min(state.vx,0);
+      }else if(!cameFromLeft&&state.vx<0){
+        state.x=Math.max(state.x,box.x+.42);state.vx=Math.max(state.vx,0);
+      }
     }
   }
   const floating=state.held.float&&state.energy.float>.005;
@@ -351,11 +357,12 @@ function stepGame(state, dt = FIXED_DT) {
     if(state.vx>=0&&oldRight<=r.x+.15){state.x=r.x-ROBOT.halfWidth;state.vx=0;eventsOnce('gate');}
     else if(state.vx<0&&oldLeft>=r.x+r.w-.15){state.x=r.x+r.w+ROBOT.halfWidth;state.vx=0;eventsOnce('gate');}
   }
-  if (state.y > WORLD.height + .8 || hazardous) {
+  if (state.y > WORLD.height + .8 || (hazardous && state.hazardCooldown<=0)) {
     const savedX = state.checkpoint;
     const spawnY=savedX===level.checkpoint?level.checkpointSpawn?.y:undefined;
     Object.assign(state, { x: savedX, y: spawnY ?? (savedX > 9 ? 6.25 - ROBOT.halfHeight : 6.5 - ROBOT.halfHeight),
       vx: 0, vy: 0, dir: 1, ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, rotation: 0,
+      hazardCooldown:.65,
       held:{magnet:false,brake:false,float:false},
       cargo:(level.devices||[]).filter(d=>d.type==='cargo').map(d=>({x:d.x,y:5.98,vx:0,id:d.x,latched:false,padX:d.padX})) });
     state.respawns++;
@@ -460,14 +467,15 @@ export const MIN_PLAYERS=2;
 export const MAX_PLAYERS=6;
 const PULSE_WINDOW_MS=1250;
 const MAX_DELTA_MS=180;
-function snapshot(s) {
+function snapshot(s,{compact=false}={}) {
+  const robot=compact&&s.robot?.level ? (({level,...rest})=>rest)(s.robot) : s.robot;
   return { phase:s.phase,host:s.host,players:s.players,roles:s.roles,
-    robot:s.robot,round:s.round,revision:s.revision,hold:s.hold,
+    robot,round:s.round,revision:s.revision,hold:s.hold,
     pulseAge: s.phase==='play'?Date.now()-s.lastClock:0,
     session:summary(s.session),config:{mode:s.session.mode,seed:s.session.seed,length:s.session.length} };
 }
-function stateEvent(s,to){return {type:'state', ...(to?{to}:{}),payload:snapshot(s)};}
-function emitState(s,to){return [stateEvent(s,to)];}
+function stateEvent(s,to,compact=false){return {type:'state', ...(to?{to}:{}),payload:snapshot(s,{compact})};}
+function emitState(s,to,compact=false){return [stateEvent(s,to,compact)];}
 function notice(to,value){return [{type:'notice',to,payload:value}];}
 function freeze(s,now){
   if(s.phase==='play'){
@@ -536,7 +544,7 @@ export function message(s,player,payload,now=Date.now()){
   if(v.type==='start'&&id===s.host&&['lobby','won'].includes(s.phase)){
     if(s.players.length<MIN_PLAYERS)return notice(id,'Для запуска нужны хотя бы два оператора');
     s.roles=s.roles.length===s.players.length&&s.roles.every(role=>s.players.some(p=>p.id===role))
-      ?s.roles:[s.players[0].id,s.players[1].id];
+      ?s.roles:s.players.map(p=>p.id);
     reset(s,now);return emitState(s);
   }
   if(v.type==='restart'&&id===s.host&&['play','won'].includes(s.phase)) {
@@ -552,7 +560,8 @@ export function message(s,player,payload,now=Date.now()){
     // Terminal transitions MUST reach both clients even when a previous
     // position snapshot was sent within the normal throttle interval.
     if(s.phase!==priorPhase||now-s.lastBroadcast>=105||s.hold!==s.lastHold){
-      s.lastBroadcast=now;s.lastHold=s.hold;return emitState(s);
+      s.lastBroadcast=now;s.lastHold=s.hold;
+      return emitState(s,undefined,s.phase==='play');
     }
     return [];
   }
@@ -571,7 +580,7 @@ export function message(s,player,payload,now=Date.now()){
     const outcome=commandGame(s.robot,action,HOLD_ACTIONS.includes(action)?v.pressed:true);
     if(outcome==='cooldown')return notice(id,'Механизм ещё перезаряжается');
     if(outcome==='nochange')return [];
-    s.revision++;s.lastBroadcast=now;return emitState(s);
+    s.revision++;s.lastBroadcast=now;return emitState(s,undefined,true);
   }
   return [];
 }
