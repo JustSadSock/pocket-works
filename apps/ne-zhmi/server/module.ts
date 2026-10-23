@@ -1,8 +1,25 @@
+// Shared operator contract. A room always assigns the first N roles, 2 <= N <= 6.
+const ABILITIES=Object.freeze([
+ {id:'jump',name:'ПРЫГ',operator:'Прыжок',key:'ПРОБЕЛ / W',icon:'↑',color:'#e7b06d',hold:false},
+ {id:'reverse',name:'РАЗВОРОТ',operator:'Разворот',key:'R / ←',icon:'↶',color:'#91bbc6',hold:false},
+ {id:'magnet',name:'МАГНИТ',operator:'Магнит',key:'M',icon:'⊂',color:'#bba4d4',hold:true},
+ {id:'brake',name:'ТОРМОЗ',operator:'Тормоз',key:'B',icon:'Ⅱ',color:'#d5ab98',hold:true},
+ {id:'push',name:'ТОЛЧОК',operator:'Толчок',key:'E',icon:'➜',color:'#a9bf84',hold:false},
+ {id:'float',name:'ПОПЛАВОК',operator:'Поплавок',key:'F',icon:'◯',color:'#e0bd83',hold:true}
+]);
+const MIN_OPERATORS=2;
+const MAX_OPERATORS=6;
+function operatorAbilities(count){
+ const n=Math.max(MIN_OPERATORS,Math.min(MAX_OPERATORS,Math.floor(count)||MIN_OPERATORS));
+ return ABILITIES.slice(0,n);
+}
+const HOLD_ACTIONS=Object.freeze(['magnet','brake','float']);
+
 // Mechanical Course Factory — deterministic, physically reachable by two controls.
 // All modules expose a flat floor at the entry and exit for lossless composition.
 // Additional art does not constitute a mechanic: every marked device participates
 // in the simulation in engine.js. The client and pinned PocketNet use this source.
-export const MODULES=Object.freeze([
+const MODULES=Object.freeze([
   {kind:'rail',name:'Рельсовый путь',hint:'Место для передышки'},
   {kind:'gap',name:'Разрыв пола',hint:'Прыжок через шахту'},
   {kind:'double-gap',name:'Две шахты',hint:'Серия коротких прыжков'},
@@ -14,16 +31,20 @@ export const MODULES=Object.freeze([
   {kind:'fan-up',name:'Подъёмный поток',hint:'Воздух поднимает робота'},
   {kind:'fan-side',name:'Боковой поток',hint:'Воздух толкает влево'},
   {kind:'press',name:'Пресс',hint:'Опускается с интервалом'},
-  {kind:'gate',name:'Шлюз',hint:'Открывается и закрывается'}
+  {kind:'gate',name:'Шлюз',hint:'Открывается и закрывается'},
+  {kind:'mag-rail',name:'Магнитная подвеска',hint:'Магнит помогает перелететь шахту',required:'magnet'},
+  {kind:'timing-press',name:'Двойной пресс',hint:'Тормоз позволяет переждать опасную фазу',required:'brake'},
+  {kind:'cargo-switch',name:'Грузовой шлюз',hint:'Толчком доставьте груз до датчика',required:'push'},
+  {kind:'float-gap',name:'Длинный пролёт',hint:'Поплавок удерживает Болтика над пропастью',required:'float'}
 ]);
-export const COURSE_THEMES=Object.freeze([
+const COURSE_THEMES=Object.freeze([
  {id:'factory',name:'ИСПЫТАТЕЛЬНЫЙ ЦЕХ',base:'#9aafa4',ground:'#79877b',accent:'#f0b45f'},
  {id:'warehouse',name:'СКЛАД МЕХАНИЗМОВ',base:'#adaba0',ground:'#8b7a69',accent:'#e9a46d'},
  {id:'kitchen',name:'МЕХАНИЧЕСКАЯ КУХНЯ',base:'#b1beb4',ground:'#809a93',accent:'#cfa67c'}
 ]);
-export const SECTION_W=4.6;
+const SECTION_W=4.6;
 const round=n=>Math.round(n*1000)/1000;
-export function rng(seed) {
+function rng(seed) {
   let value=(seed>>>0)||1;
   return ()=>{value^=value<<13;value^=value>>>17;value^=value<<5;return (value>>>0)/4294967296;};
 }
@@ -65,10 +86,24 @@ function section(kind,x,platforms,devices,random) {
       p(0,SECTION_W);add('press',2.02,.76,{phase:round(random()*6.2)});break;
     case 'gate':
       p(0,SECTION_W);add('gate',2.02,.34,{phase:round(random()*6.2)});break;
+    case 'mag-rail':
+      p(0,1.12);p(3.65,SECTION_W-3.65);
+      add('mag-rail',1.55,1.55,{y:3.65});add('warning',1.12,2.53);break;
+    case 'timing-press':
+      p(0,SECTION_W);add('press',1.75,.6,{phase:round(random()*4)});
+      add('press',2.95,.6,{phase:round(random()*4)});break;
+    case 'cargo-switch':
+      p(0,SECTION_W);
+      add('cargo',1.05,.48,{padX:round(x+3.05)});
+      add('cargo-pad',3.05,.63);
+      add('cargo-gate',3.9,.36);break;
+    case 'float-gap':
+      p(0,.85);p(4.05,SECTION_W-4.05);
+      add('warning',.85,3.2);add('balloon-sign',1.5,1.6);break;
     default:throw Error('Unknown mechanical module '+kind);
   }
 }
-export function generateCourse(seed=1,sectionCount=5) {
+export function generateCourse(seed=1,sectionCount=5,playerCount=2) {
   const number=(Number(seed)>>>0)||1;
   const random=rng(number);
   const count=clamp(Math.floor(sectionCount)||5,4,6);
@@ -77,11 +112,13 @@ export function generateCourse(seed=1,sectionCount=5) {
   floor(platforms,0,3.1);
   let previous=null;
   for(let i=0;i<count;i++){
-    let choices=MODULES.filter(m=>m.kind!==previous && (i>0||!['press','gate'].includes(m.kind)));
+    let choices=MODULES.filter(m=>m.kind!==previous &&
+      (!m.required || ['jump','reverse','magnet','brake','push','float'].slice(0,playerCount).includes(m.required)) &&
+      (i>0||!['press','gate','timing-press','cargo-switch'].includes(m.kind)));
     // Guaranteed two-action reachable courses: major vertical jumps are not
     // adjacent, so a player always gets at least one safe landing run-up.
-    if(['gap','double-gap','step','islands'].includes(previous))
-      choices=choices.filter(m=>!['gap','double-gap','step','islands'].includes(m.kind));
+    if(['gap','double-gap','step','islands','mag-rail','float-gap'].includes(previous))
+      choices=choices.filter(m=>!['gap','double-gap','step','islands','mag-rail','float-gap'].includes(m.kind));
     if(!choices.length)choices=MODULES;
     const selected=choices[Math.floor(random()*choices.length)];
     const x=round(3.1+i*SECTION_W);
@@ -94,11 +131,11 @@ export function generateCourse(seed=1,sectionCount=5) {
   const width=round(end+3.1);
   const pointIndex=Math.floor((count-1)/2);
   const checkpoint=round(3.1+(pointIndex+1)*SECTION_W+.25);
-  return {seed:number,version:1,name:theme.name,theme:theme.id,sections,platforms,devices,
+  return {seed:number,version:2,playerCount,name:theme.name,theme:theme.id,sections,platforms,devices,
     width,height:8,start:1.15,goal:round(width-1.45),
     checkpoint,checkpointSpawn:{x:checkpoint,y:6.04},length:count};
 }
-export function deviceRect(device,t) {
+function deviceRect(device,t) {
   if(device.type==='press'){
     const wave=(Math.sin(t*2.35+device.phase)+1)/2;
     return {x:device.x,y:3.38+wave*2.8,w:device.w,h:.82,active:true};
@@ -109,7 +146,7 @@ export function deviceRect(device,t) {
   }
   return null;
 }
-export function validateCourse(course) {
+function validateCourse(course) {
   if(!course||!Number.isInteger(course.seed)||!Array.isArray(course.platforms)||!course.platforms.length)return false;
   if(course.length<4||course.length>6||course.goal>=course.width||course.checkpoint>=course.goal)return false;
   if(course.platforms.some(p=>p.x<0||p.w<=0||p.y<3||p.y>6.5||p.x+p.w>course.width+.001))return false;
@@ -122,13 +159,14 @@ export function validateCourse(course) {
   const jumpRange=3.4*(2*9.15/19);
   for(let i=0;i<course.platforms.length-1;i++){
     const a=course.platforms[i],b=course.platforms[i+1];
-    if(b.x-a.x-a.w>jumpRange-.2)return false;
+    if(b.x-a.x-a.w>jumpRange-.2 && !(course.sections||[]).some(s=>
+      ['float-gap','mag-rail'].includes(s.kind) && a.x+a.w>=s.x && b.x<=s.x+s.w+.1))return false;
   }
   return true;
 }
 
 // NE ZHMI! — isolated, deterministic simulation. No DOM, networking or rendering.
-export const WORLD = Object.freeze({ width: 18, height: 8, gravity: 19, speed: 3.4 });
+const WORLD = Object.freeze({ width: 18, height: 8, gravity: 19, speed: 3.4 });
 export const ROBOT = Object.freeze({ halfWidth: 0.33, halfHeight: 0.46, jump: 9.15 });
 export const LEVEL = Object.freeze({
   name: 'Испытательный цех', goal: 16.5, checkpoint: 10.25,
@@ -139,11 +177,15 @@ export const LEVEL = Object.freeze({
     { x: 13.35, y: 6.5, w: 4.65, h: 1.5, id: 'finish' }
   ]
 });
-export const FIXED_DT = 1 / 120;
+const FIXED_DT = 1 / 120;
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 export function createGame(level = LEVEL) {
   return {
     level,
+    held:{magnet:false,brake:false,float:false},
+    energy:{magnet:1,brake:1,float:1},
+    pushCooldown:0,pushes:0,magnetUses:0,brakeTime:0,floatTime:0,
+    cargo:(level.devices||[]).filter(d=>d.type==='cargo').map(d=>({x:d.x,y:5.98,vx:0,id:d.x,latched:false,padX:d.padX})),
     x: level.start ?? 1.15, y: 6.5 - ROBOT.halfHeight, vx: 0, vy: 0, dir: 1,
     ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, t: 0,
     rotation: 0, checkpoint: level.start ?? 1.15, respawns: 0, jumps: 0, reverses: 0, springCooldown:0, hazardCooldown:0,
@@ -154,13 +196,32 @@ function bounds(state) {
   return { left: state.x - ROBOT.halfWidth, right: state.x + ROBOT.halfWidth, top: state.y - ROBOT.halfHeight, bottom: state.y + ROBOT.halfHeight };
 }
 const overlap = (a,b) => a.left < b.x + b.w - 1e-5 && a.right > b.x + 1e-5;
-export function commandGame(state, action) {
+function commandGame(state, action, pressed=true) {
+  if(HOLD_ACTIONS.includes(action)){
+    if(state.finished)return 'finished';
+    if(pressed && state.energy[action]<.14)return 'empty';
+    if(state.held[action]===!!pressed)return 'nochange';
+    state.held[action]=!!pressed;
+    if(action==='magnet'&&pressed)state.magnetUses++;
+    state.lastEvent=action+(pressed?'-on':'-off');
+    return state.lastEvent;
+  }
   if (state.finished) return 'finished';
   if (action === 'reverse') {
     if (state.cooldown > .01) return 'cooldown';
     state.dir *= -1; state.cooldown = .24; state.reverses++;
     state.lastEvent = 'reverse';
     return 'reverse';
+  }
+  if(action==='push'){
+    if(state.pushCooldown>0)return 'cooldown';
+    state.pushCooldown=1.15;state.pushes++;
+    state.vx+=state.dir*5.4;
+    for(const box of state.cargo||[]){
+      if(Math.abs(box.x-state.x)<2.4 && Math.abs(box.y-state.y)<1.4)
+        box.vx+=state.dir*16;
+    }
+    state.lastEvent='push';return 'push';
   }
   if (action === 'jump') {
     // Buffered jump: input a fraction before landing is not discarded.
@@ -170,7 +231,7 @@ export function commandGame(state, action) {
   }
   return 'unknown';
 }
-export function stepGame(state, dt = FIXED_DT) {
+function stepGame(state, dt = FIXED_DT) {
   if (state.finished) return [];
   const events = [];
   const level = state.level || LEVEL;
@@ -180,6 +241,18 @@ export function stepGame(state, dt = FIXED_DT) {
   state.t += delta;
   state.cooldown = Math.max(0, state.cooldown - delta);
   state.wallCooldown = Math.max(0, state.wallCooldown - delta);
+  state.pushCooldown=Math.max(0,(state.pushCooldown||0)-delta);
+  for(const action of HOLD_ACTIONS){
+    const on=!!state.held[action]&&state.energy[action]>.005;
+    state.energy[action]=clamp(state.energy[action]+(on?-(action==='float'?.25:.19):.29)*delta,0,1);
+    if(on&&action==='brake')state.brakeTime+=delta;
+    if(on&&action==='float')state.floatTime+=delta;
+    // Exhaustion must actually release the force. Otherwise a held key would
+    // generate hundreds of one-frame force flickers while partially recharging.
+    if(on&&state.energy[action]<=.005){
+      state.energy[action]=0;state.held[action]=false;eventsOnce('empty-'+action);
+    }
+  }
   state.springCooldown = Math.max(0, (state.springCooldown||0)-delta);
   state.hazardCooldown = Math.max(0, (state.hazardCooldown||0)-delta);
   state.buffer = Math.max(0, state.buffer - delta);
@@ -193,9 +266,15 @@ export function stepGame(state, dt = FIXED_DT) {
     Math.abs(state.y+ROBOT.halfHeight-p.y)<.14);
   const belt=state.ground && groundSurface?.effect?.startsWith('belt-')
     ? (groundSurface.effect==='belt-right'?1.45:-1.35) : 0;
-  const desired = WORLD.speed * state.dir + belt;
-  const acceleration = state.ground ? 23 : 9.5;
+  const braking=state.held.brake&&state.energy.brake>.005;
+  const desired = braking?0:WORLD.speed*state.dir+belt;
+  const acceleration = braking?45:(state.ground?23:9.5);
   state.vx += clamp(desired - state.vx, -acceleration * delta, acceleration * delta);
+  if(braking)state.vx*=Math.max(0,1-10*delta);
+  if(state.held.magnet&&state.energy.magnet>.005)for(const device of level.devices||[]){
+    if(device.type!=='mag-rail'||Math.abs(state.x-(device.x+device.w/2))>3.0)continue;
+    if(state.y>3.5 && state.y<7)state.vy-=28*delta;
+  }
   const previousX = state.x;
   // Air jets are continuous forces: the same inputs result in the same motion
   // on client and authoritative server, including on low refresh-rate devices.
@@ -217,7 +296,22 @@ export function stepGame(state, dt = FIXED_DT) {
       }
     }
   }
-  state.vy += WORLD.gravity * delta;
+  for(const box of state.cargo||[]){
+    const distance=state.x-box.x;
+    if(state.held.magnet&&state.energy.magnet>.005&&Math.abs(distance)<3){
+      box.vx+=Math.sign(distance)*12*delta;
+    }
+    box.vx*=Math.max(0,1-1.3*delta);
+    box.x=clamp(box.x+box.vx*delta,.4,(level.width||18)-.4);
+    if(!box.latched&&Math.abs(box.x-box.padX)<.4){box.latched=true;box.vx=0;eventsOnce('cargo');}
+    if(!box.latched&&Math.abs(box.x-state.x)<.45){
+      state.x=Math.min(state.x,box.x-.42);
+      state.vx=Math.min(state.vx,.1);
+    }
+  }
+  const floating=state.held.float&&state.energy.float>.005;
+  state.vy += (floating?WORLD.gravity*.29:WORLD.gravity)*delta;
+  if(floating)state.vy=Math.min(state.vy,2.9);
   const oldY = state.y;
   state.y += state.vy * delta;
   state.ground = false;
@@ -248,8 +342,8 @@ export function stepGame(state, dt = FIXED_DT) {
   const playerBox=bounds(state);
   let hazardous=false;
   for(const device of level.devices||[]) {
-    if(!['gate','press'].includes(device.type))continue;
-    const r=deviceRect(device,state.t);
+    if(!['gate','press','cargo-gate'].includes(device.type))continue;
+    const r=device.type==='cargo-gate'?{x:device.x,y:4.55,w:device.w,h:1.95,active:!(state.cargo||[]).some(c=>c.latched&&Math.abs(c.padX-device.x)<1.3)}:deviceRect(device,state.t);
     if(!r?.active||playerBox.left>=r.x+r.w||playerBox.right<=r.x||
        playerBox.top>=r.y+r.h||playerBox.bottom<=r.y)continue;
     if(device.type==='press'){hazardous=true;break;}
@@ -261,7 +355,9 @@ export function stepGame(state, dt = FIXED_DT) {
     const savedX = state.checkpoint;
     const spawnY=savedX===level.checkpoint?level.checkpointSpawn?.y:undefined;
     Object.assign(state, { x: savedX, y: spawnY ?? (savedX > 9 ? 6.25 - ROBOT.halfHeight : 6.5 - ROBOT.halfHeight),
-      vx: 0, vy: 0, dir: 1, ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, rotation: 0 });
+      vx: 0, vy: 0, dir: 1, ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, rotation: 0,
+      held:{magnet:false,brake:false,float:false},
+      cargo:(level.devices||[]).filter(d=>d.type==='cargo').map(d=>({x:d.x,y:5.98,vx:0,id:d.x,latched:false,padX:d.padX})) });
     state.respawns++;
     state.lastEvent = 'respawn'; eventsOnce(hazardous?'hazard':'respawn');
   }
@@ -273,16 +369,16 @@ export function stepGame(state, dt = FIXED_DT) {
   state.rotation += (targetRot - state.rotation) * Math.min(1, delta * 9);
   return events;
 }
-export function progressGame(state) {
+function progressGame(state) {
   const level=state.level||LEVEL;
   return clamp((state.x - (level.start??1.15)) / (level.goal - (level.start??1.15)), 0, 1);
 }
 
-// Protocol v3 — authoritative PocketNet two-player simulation.
+// Protocol v5 — authoritative PocketNet 2–6 operator simulation.
 // The backend is message-driven: a peer sends activity pulses, but only the
 // server advances time and applies control impulses. No client can set position.
 export const MIN_PLAYERS=2;
-export const MAX_PLAYERS=2;
+export const MAX_PLAYERS=6;
 const PULSE_WINDOW_MS=1250;
 const MAX_DELTA_MS=180;
 function snapshot(s) {
@@ -299,7 +395,7 @@ function freeze(s,now){
   }
 }
 export function reset(s,now) {
-  const course=generateCourse((s.seed ^ Math.imul(s.round+1,2654435761))>>>0,5);
+  const course=generateCourse((s.seed ^ Math.imul(s.round+1,2654435761))>>>0,5,s.players.length);
   s.robot=createGame(course);s.phase='play';s.hold=false;
   s.round++;s.revision++;
   s.lastClock=now;s.lastBroadcast=0;s.remainder=0;
@@ -311,9 +407,12 @@ function heartbeat(s,id,now) {
 }
 function advance(s,now) {
   if(s.phase!=='play')return;
-  const alive=s.roles.length===2 && s.players.length===2 &&
+  const alive=s.roles.length>=MIN_PLAYERS && s.roles.length===s.players.length &&
     s.roles.every(id=>now-(s.signals?.[id]||0)<=PULSE_WINDOW_MS);
-  if(!alive){if(!s.hold)freeze(s,now);else s.lastClock=now;return;}
+  if(!alive){
+    for(const action of HOLD_ACTIONS)s.robot.held[action]=false;
+    if(!s.hold)freeze(s,now);else s.lastClock=now;return;
+  }
   if(s.hold){
     s.hold=false;s.lastClock=now;s.revision++;
     return;
@@ -340,12 +439,12 @@ export function message(s,player,payload,now=Date.now()){
   const id=player?.id;
   if(!s.players.some(p=>p.id===id))return [];
   if(v.type==='sync') return emitState(s,id);
-  if(v.type==='swap'&&s.phase==='lobby'&&id===s.host&&s.players.length===2){
-    s.roles.reverse();s.revision++;return emitState(s);
+  if(v.type==='swap'&&s.phase==='lobby'&&id===s.host&&s.players.length>=MIN_PLAYERS){
+    s.roles.unshift(s.roles.pop());s.revision++;return emitState(s);
   }
   if(v.type==='start'&&id===s.host&&['lobby','won'].includes(s.phase)){
-    if(s.players.length!==2)return notice(id,'Для запуска нужны два оператора');
-    s.roles=s.roles.length===2&&s.roles.every(role=>s.players.some(p=>p.id===role))
+    if(s.players.length<MIN_PLAYERS)return notice(id,'Для запуска нужны хотя бы два оператора');
+    s.roles=s.roles.length===s.players.length&&s.roles.every(role=>s.players.some(p=>p.id===role))
       ?s.roles:[s.players[0].id,s.players[1].id];
     reset(s,now);return emitState(s);
   }
@@ -372,13 +471,15 @@ export function message(s,player,payload,now=Date.now()){
     if(s.hold) return emitState(s,id);
     if(v.round!==s.round||!Number.isSafeInteger(v.seq)||v.seq<=0||v.seq>1e9)return [];
     const role=s.roles.indexOf(id);
-    const action=role===0?'jump':role===1?'reverse':null;
+    const action=ABILITIES[role]?.id||null;
     if(!action||action!==v.action)return [];
+    if(HOLD_ACTIONS.includes(action)&&typeof v.pressed!=='boolean')return [];
     const previous=s.sequences[id]||0;
     if(v.seq<=previous)return [];
     s.sequences[id]=v.seq;
-    const outcome=commandGame(s.robot,action);
-    if(outcome==='cooldown')return notice(id,'Разворот ещё перезаряжается');
+    const outcome=commandGame(s.robot,action,HOLD_ACTIONS.includes(action)?v.pressed:true);
+    if(outcome==='cooldown')return notice(id,'Механизм ещё перезаряжается');
+    if(outcome==='nochange')return [];
     s.revision++;s.lastBroadcast=now;return emitState(s);
   }
   return [];
@@ -391,9 +492,12 @@ const module={
       signals:{},sequences:{},remainder:0}};
   },
   onJoin({state,players}){
-    if(players.length>2)throw Error('room_full');
+    if(players.length>MAX_PLAYERS)throw Error('room_full');
     if(state.phase!=='lobby')throw Error('match_in_progress');
-    state.players=players;state.roles=players.map(p=>p.id);
+    state.players=players;
+    // Existing seats keep their roles when more people enter the lobby.
+    state.roles=[...state.roles.filter(id=>players.some(p=>p.id===id)),
+      ...players.map(p=>p.id).filter(id=>!state.roles.includes(id))];
     state.revision++;return {state,events:emitState(state)};
   },
   onLeave({state,players}){

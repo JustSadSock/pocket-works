@@ -26,10 +26,10 @@ test('500 procedural circuits satisfy structural reachability contract',()=>{
   assert.ok(course.goal>course.checkpoint&&course.checkpoint>course.start);
  }
 });
-test('every one of twelve modules appears and has a mechanical implementation',()=>{
+test('all role-gated mechanical modules are generated with six players',()=>{
  const seen=new Set(),artTypes=new Set();
  for(let seed=1;seed<=120;seed++){
-  const c=generateCourse(seed);
+  const c=generateCourse(seed,5,6);
   c.sections.forEach(s=>seen.add(s.kind));
   c.devices.forEach(d=>artTypes.add(d.type));
  }
@@ -94,4 +94,15 @@ test('changing seeds never mutates earlier snapshots',()=>{
  const b=generateCourse(600);
  const s=createGame(b);for(let i=0;i<300;i++)stepGame(s,FIXED_DT);
  assert.equal(JSON.stringify(a),before);
+});
+
+test('generator never requires absent operators',()=>{
+ const abilityBySection={ 'mag-rail':3,'timing-press':4,'cargo-switch':5,'float-gap':6 };
+ for(let count=2;count<=6;count++){
+  for(let seed=1;seed<=200;seed++){
+   const level=generateCourse(seed,5,count);
+   assert.equal(validateCourse(level),true);
+   for(const section of level.sections)assert.ok(!abilityBySection[section.kind]||abilityBySection[section.kind]<=count);
+  }
+ }
 });

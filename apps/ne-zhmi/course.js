@@ -14,7 +14,11 @@ export const MODULES=Object.freeze([
   {kind:'fan-up',name:'Подъёмный поток',hint:'Воздух поднимает робота'},
   {kind:'fan-side',name:'Боковой поток',hint:'Воздух толкает влево'},
   {kind:'press',name:'Пресс',hint:'Опускается с интервалом'},
-  {kind:'gate',name:'Шлюз',hint:'Открывается и закрывается'}
+  {kind:'gate',name:'Шлюз',hint:'Открывается и закрывается'},
+  {kind:'mag-rail',name:'Магнитная подвеска',hint:'Магнит помогает перелететь шахту',required:'magnet'},
+  {kind:'timing-press',name:'Двойной пресс',hint:'Тормоз позволяет переждать опасную фазу',required:'brake'},
+  {kind:'cargo-switch',name:'Грузовой шлюз',hint:'Толчком доставьте груз до датчика',required:'push'},
+  {kind:'float-gap',name:'Длинный пролёт',hint:'Поплавок удерживает Болтика над пропастью',required:'float'}
 ]);
 export const COURSE_THEMES=Object.freeze([
  {id:'factory',name:'ИСПЫТАТЕЛЬНЫЙ ЦЕХ',base:'#9aafa4',ground:'#79877b',accent:'#f0b45f'},
@@ -66,10 +70,24 @@ function section(kind,x,platforms,devices,random) {
       p(0,SECTION_W);add('press',2.02,.76,{phase:round(random()*6.2)});break;
     case 'gate':
       p(0,SECTION_W);add('gate',2.02,.34,{phase:round(random()*6.2)});break;
+    case 'mag-rail':
+      p(0,1.12);p(3.65,SECTION_W-3.65);
+      add('mag-rail',1.55,1.55,{y:3.65});add('warning',1.12,2.53);break;
+    case 'timing-press':
+      p(0,SECTION_W);add('press',1.75,.6,{phase:round(random()*4)});
+      add('press',2.95,.6,{phase:round(random()*4)});break;
+    case 'cargo-switch':
+      p(0,SECTION_W);
+      add('cargo',1.05,.48,{padX:round(x+3.05)});
+      add('cargo-pad',3.05,.63);
+      add('cargo-gate',3.9,.36);break;
+    case 'float-gap':
+      p(0,.85);p(4.05,SECTION_W-4.05);
+      add('warning',.85,3.2);add('balloon-sign',1.5,1.6);break;
     default:throw Error('Unknown mechanical module '+kind);
   }
 }
-export function generateCourse(seed=1,sectionCount=5) {
+export function generateCourse(seed=1,sectionCount=5,playerCount=2) {
   const number=(Number(seed)>>>0)||1;
   const random=rng(number);
   const count=clamp(Math.floor(sectionCount)||5,4,6);
@@ -78,11 +96,13 @@ export function generateCourse(seed=1,sectionCount=5) {
   floor(platforms,0,3.1);
   let previous=null;
   for(let i=0;i<count;i++){
-    let choices=MODULES.filter(m=>m.kind!==previous && (i>0||!['press','gate'].includes(m.kind)));
+    let choices=MODULES.filter(m=>m.kind!==previous &&
+      (!m.required || ['jump','reverse','magnet','brake','push','float'].slice(0,playerCount).includes(m.required)) &&
+      (i>0||!['press','gate','timing-press','cargo-switch'].includes(m.kind)));
     // Guaranteed two-action reachable courses: major vertical jumps are not
     // adjacent, so a player always gets at least one safe landing run-up.
-    if(['gap','double-gap','step','islands'].includes(previous))
-      choices=choices.filter(m=>!['gap','double-gap','step','islands'].includes(m.kind));
+    if(['gap','double-gap','step','islands','mag-rail','float-gap'].includes(previous))
+      choices=choices.filter(m=>!['gap','double-gap','step','islands','mag-rail','float-gap'].includes(m.kind));
     if(!choices.length)choices=MODULES;
     const selected=choices[Math.floor(random()*choices.length)];
     const x=round(3.1+i*SECTION_W);
@@ -95,7 +115,7 @@ export function generateCourse(seed=1,sectionCount=5) {
   const width=round(end+3.1);
   const pointIndex=Math.floor((count-1)/2);
   const checkpoint=round(3.1+(pointIndex+1)*SECTION_W+.25);
-  return {seed:number,version:1,name:theme.name,theme:theme.id,sections,platforms,devices,
+  return {seed:number,version:2,playerCount,name:theme.name,theme:theme.id,sections,platforms,devices,
     width,height:8,start:1.15,goal:round(width-1.45),
     checkpoint,checkpointSpawn:{x:checkpoint,y:6.04},length:count};
 }
@@ -123,7 +143,8 @@ export function validateCourse(course) {
   const jumpRange=3.4*(2*9.15/19);
   for(let i=0;i<course.platforms.length-1;i++){
     const a=course.platforms[i],b=course.platforms[i+1];
-    if(b.x-a.x-a.w>jumpRange-.2)return false;
+    if(b.x-a.x-a.w>jumpRange-.2 && !(course.sections||[]).some(s=>
+      ['float-gap','mag-rail'].includes(s.kind) && a.x+a.w>=s.x && b.x<=s.x+s.w+.1))return false;
   }
   return true;
 }

@@ -61,6 +61,11 @@
         "slug": "blockies",
         "spatialDifference": "НЕ ЖМИ! uses a long, continuous side-view mechanical course with autonomous wheeled robot, rather than Blockies' fixed falling-block grid and score layout.",
         "interactionDifference": "Players share physical impulses on one robot and solve timed devices, while Blockies organizes discrete placement, rotation and line-clearing."
+      },
+      {
+        "slug": "crown-laws",
+        "spatialDifference": "NE ZHMI uses a continuous side-view industrial test track and full-size tactile plunger control rather than the turn-based illustrated political board and governance panels of Crown Laws.",
+        "interactionDifference": "Six operators affect a single physical body through timed impulses and held forces, not political voting or turn resolution."
       }
     ]
   },

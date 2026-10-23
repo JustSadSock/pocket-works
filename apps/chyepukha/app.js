@@ -4,6 +4,7 @@ import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketAva
 import {storageForTab,prepareSession,markActive,releaseActive} from './tab-session.js';
 import {buildComicPrompt} from './comic-prompt.js';
 import {createSoundscape} from './audio.js';
+import {makeSubmission,outgoingPacket,validPending,isSafeReceipt,canRetry} from './submission-guard.js';
 import {renderWaiting} from './waiting-view.js';
 import {updateWaitingView} from './waiting-sync.js';
 import {mayShowFinaleIntro} from './finale-state.js';
@@ -34,7 +35,7 @@ let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
 let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',comicSource=null;
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='';
-let lastScreenSignature='',finaleIntroActive=false;
+let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false;
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
 const playerName=()=>preferredPocketName(pocketIdentity,name.trim());
@@ -68,6 +69,26 @@ function saveWriterMeta(patch){
  if(IS_PREVIEW){previewWriterMeta=value;return value}
  try{localStorage.setItem(writerMetaKey(),JSON.stringify(value))}catch{}
  return value;
+}
+const pendingStorageKey=()=>KEY+'submit:'+sessionKey()+':'+room;
+function readPending(){
+ if(IS_PREVIEW)return null;
+ try{const v=JSON.parse(localStorage.getItem(pendingStorageKey())||'null');return validPending(v)?v:null}
+ catch{return null}
+}
+function savePending(record){if(IS_PREVIEW)return true;try{localStorage.setItem(pendingStorageKey(),JSON.stringify(record));return true}catch{toast('Не вдалося зберегти відправку на цьому пристрої.');return false}}
+function discardPending(){if(IS_PREVIEW)return;try{localStorage.removeItem(pendingStorageKey())}catch{}}
+function acknowledgeReceipt(receipt){
+ const p=readPending();
+ if(roomVersion!=='v5'||!isSafeReceipt(receipt,p))return false;
+ try{localStorage.removeItem(p.draftStorageKey);localStorage.removeItem(p.draftStorageKey+':editor');localStorage.removeItem(pendingStorageKey())}catch{}
+ delete draftSelections[p.draftStorageKey];
+ return true;
+}
+function retryPending(){
+ const p=readPending();
+ if(roomVersion!=='v5'||!p||!canRetry(p,view)||!connected||!net?.roomId)return false;
+ return send(outgoingPacket(p));
 }
 const clearDraft=()=>{if(IS_PREVIEW){previewDraft='';previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};return}try{localStorage.removeItem(draftKey());localStorage.removeItem(writerMetaKey())}catch{}};
 function toast(x){toastEl.textContent=String(x);toastEl.classList.add('show');clearTimeout(toastEl.timer);toastEl.timer=setTimeout(()=>toastEl.classList.remove('show'),3200)}
@@ -127,10 +148,10 @@ async function refreshPocketBadge(initial=false){
  }
 }
 function clearRoomTimeout(){if(roomTimeout!==null){clearTimeout(roomTimeout);roomTimeout=null}}
-function cancelConnection(){
+function cancelConnection({preserveRoom=false}={}){
  ++connectionAttempt;clearRoomTimeout();releaseActive();
  const c=net;net=null;
- if(c){c.roomId=null;c.persist();c.close()}
+ if(c){if(!preserveRoom)c.roomId=null;c.persist();c.close()}
  connected=false;connecting=false;view=null;room='';me='';modal='';storyId='';
  notice='';syncUrl();render();
 }
@@ -187,7 +208,7 @@ async function connect(how,settings){
  if(how==='join'&&!code(invitation)){toast('Вкажи правильний код кімнати.');return}
  if(how==='resume'&&!savedRoom()){toast('Збережена кімната для цього профілю недоступна.');return}
  if(net){net.close();net=null;releaseActive()}
- connected=false;connecting=true;notice='';render();
+ roomJoinedOnSocket=false;connected=false;connecting=true;notice='';render();
  try{
   // Avoid two adjacent checks of the same Edge endpoint. WebKit service workers
   // can deliver a stale offline response on the second GET despite a healthy session.
@@ -204,20 +225,22 @@ async function connect(how,settings){
   const c=new PocketNet({serverUrl:ORIGIN,name:nick,storage,identityKey:sessionKey()});
   net=c;
   if(how!=='resume'){c.roomId=null;c.persist()}
-  c.on('connected',v=>{if(net!==c)return;me=v.player?.id||'';connected=true;connecting=false;markActive(ORIGIN,c.token);netStatus()});
+  c.on('connected',v=>{if(net!==c)return;me=v.player?.id||'';connected=true;connecting=false;markActive(ORIGIN,c.token);netStatus();if(roomJoinedOnSocket)retryPending()});
   c.on('room_joined',v=>{
    if(net!==c)return;
    clearRoomTimeout();
-   if(v.gameId!=='chyepukha'||!['v1','v2','v3','v4'].includes(v.version)||v.state?.protocol!==1){
+   if(v.gameId!=='chyepukha'||!['v1','v2','v3','v4','v5'].includes(v.version)||v.state?.protocol!==1){
     notice='Несумісна версія кімнати. Створи нову.';try{c.leaveRoom()}catch{}
     room='';view=null;render();return;
    }
-   room=v.roomId;roomVersion=v.version;syncUrl();apply(v.state);send({type:'sync'});
+   room=v.roomId;roomVersion=v.version;roomJoinedOnSocket=true;syncUrl();apply(v.state);send({type:'sync'});if(roomVersion==='v5')retryPending();
   });
   c.on('game_event',v=>{if(net!==c)return;if(v.event?.type==='state')apply(v.event.payload);
+   else if(v.event?.type==='receipt')acknowledgeReceipt(v.event.payload);
+   else if(v.event?.type==='submission_rejected'){if(roomVersion==='v5'&&readPending()?.requestId===v.event.payload?.requestId){discardPending();render()}toast(v.event.payload?.reason||'Відповідь не прийнято.')}
    else if(v.event?.type==='notice')toast(v.event.payload)});
   c.on('presence',()=>{if(net===c&&room&&connected)send({type:'sync'})});
-  c.on('disconnected',()=>{if(net!==c)return;connected=false;connecting=true;netStatus()});
+  c.on('disconnected',()=>{if(net!==c)return;roomJoinedOnSocket=false;connected=false;connecting=true;netStatus()});
   c.on('room_closed',()=>{if(net!==c)return;room='';view=null;connected=false;connecting=false;syncUrl();notice='Кімнату закрито.';render()});
   c.on('error',e=>{
    if(net!==c)return;connecting=false;clearRoomTimeout();
@@ -239,7 +262,7 @@ async function connect(how,settings){
   else if(how==='resume'&&!c.roomId)throw Error('Попередню кімнату не знайдено.');
   roomTimeout=setTimeout(()=>{
    if(net!==c||ticket!==connectionAttempt||room)return;
-   cancelConnection();
+   cancelConnection({preserveRoom:how==='resume'});
    notice='Сервер не відкрив кімнату. Перевір з’єднання й спробуй ще раз.';
    render();toast(notice);
   },12000);
@@ -253,10 +276,11 @@ async function connect(how,settings){
 function apply(v){if(!v||v.protocol!==1||!Array.isArray(v.players))return;
  if(view&&v.revision<view.revision)return;
  if(v.phase==='finished'&&Array.isArray(v.stories))v={...v,stories:v.stories.map(st=>({...st,text:st.fragments.map(f=>f.answer).join('\n\n')}))};
- const prev=view;const waitingSame=prev?.phase==='writing'&&v.phase==='writing'&&prev.waiting&&v.waiting&&prev.round===v.round;
+ if(roomVersion==='v5')acknowledgeReceipt(v.lastReceipt);
+  const prev=view;const waitingSame=prev?.phase==='writing'&&v.phase==='writing'&&prev.waiting&&v.waiting&&prev.round===v.round;
  if(mayShowFinaleIntro(prev?.phase,v.phase,Array.isArray(v.stories)&&v.stories.length>0)&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)finaleIntroActive=true;
  const same=prev?.phase==='writing'&&v.phase==='writing'&&!prev.waiting&&!v.waiting&&prev.round===v.round&&prev.sheet?.id===v.sheet?.id;
- if(prev?.phase==='writing'&&!prev.waiting&&v.waiting)clearDraft();
+ if(prev?.phase==='writing'&&!prev.waiting&&v.waiting&&roomVersion!=='v5')clearDraft();
  view=v;soundscape.setScene(v.phase==='lobby'?'lobby':v.phase==='writing'?'writing':'finished');if(prev?.phase!==v.phase&&v.phase==='finished')soundscape.fx('reveal');if(v.phase==='finished')keepFinished(v);if(prev?.round!==v.round&&prev?.phase==='writing')tick(690);
  if(waitingSame&&updateWaitingView(scene.querySelector('.dispatch-room'),prev,v,{sound:type=>soundscape.fx(type)}))return;
  if(same){const el=$('sideRoster');if(el)el.innerHTML=rosterCompact();const progress=$('turnProgress');if(progress){const next=document.createElement('div');next.innerHTML=turnProgress();progress.replaceWith(next.firstElementChild)}return}
@@ -283,14 +307,14 @@ function archiveScreen(){
 }
 function opts(arr,id){return arr.map(x=>'<option value="'+escape(x.id)+'" '+(id===x.id?'selected':'')+'>'+escape(x.label)+'</option>').join('')}
 function settingsForm(s){return '<form class="settings" id="settingsForm"><div class="two"><label><span class="field-label">Максимум гравців</span><select class="field" name="maxPlayers">'+[2,3,4,5,6,7,8].map(n=>'<option value="'+n+'" '+(n===s.maxPlayers?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label><span class="field-label">Передати слів</span><select class="field" name="visibleTailWords">'+[0,1,2,3,4,5,6,8,10,12].map(n=>'<option value="'+n+'" '+(n===s.visibleTailWords?'selected':'')+'>'+n+'</option>').join('')+'</select></label></div><label><span class="field-label">Сюжетний набір</span><select class="field" name="questionSet" id="questionSet">'+opts([...view.questionSets,{id:'random',label:'Випадковий'},{id:'perSheetRandom',label:'Різний для кожної історії'},{id:'custom',label:'Свої питання'}],s.questionSet)+'</select></label><label class="'+(s.questionSet==='custom'?'':'hidden')+'" id="customField"><span class="field-label">Свої питання (по одному на рядок)</span><textarea class="field" name="customQuestions" rows="4">'+escape(s.customQuestions?.join('\n')||'')+'</textarea></label><label><span class="field-label">Жанр</span><select class="field" name="genre" id="genre">'+opts([...view.genres,{id:'random',label:'Випадковий'},{id:'perSheetRandom',label:'Різний для кожної історії'},{id:'custom',label:'Свій жанр'}],s.genre)+'</select></label><label class="'+(s.genre==='custom'?'':'hidden')+'" id="customGenreField"><span class="field-label">Свій жанр</span><input class="field" name="customGenre" maxlength="60" value="'+escape(s.customGenre||'')+'"></label>'+(roomVersion==='v4'?'<label class="show-next"><input type="checkbox" name="showNextQuestion" '+(s.showNextQuestion!==false?'checked':'')+'> Показувати наступне питання при виборі слів</label>':'')+'<button class="button outline small" type="submit">Зберегти правила</button></form>'}
-function roster(){return view.players.map((p,i)=>'<div class="person"><b class="person-index">'+String(i+1).padStart(2,'0')+'</b><span class="person-portrait">'+(p.verified&&p.accountId?pocketAvatarMarkup(p.avatar,{accountId:p.accountId}):'<span class="guest-monogram">'+escape(p.name?.charAt(0)?.toLocaleUpperCase()||'?')+'</span>')+'</span><strong>'+escape(p.name)+'</strong>'+(p.verified?pocketPlayerBadge(p,{showGuest:false}):'')+'<small>'+(p.id===view.host?'ВЕДУЧИЙ':view.phase==='writing'?(p.submitted?'ГОТОВО':'ПИШЕ'):'АВТОР')+'</small></div>').join('')}
-function rosterCompact(){return view.players.map(p=>'<div class="status"><span>'+escape(p.name)+(p.verified?pocketPlayerBadge(p,{showGuest:false}):'')+'</span><b>'+(p.submitted?'✓':'…')+'</b></div>').join('')}
+function roster(){return view.players.map((p,i)=>'<div class="person"><b class="person-index">'+String(i+1).padStart(2,'0')+'</b><span class="person-portrait">'+(p.verified&&p.accountId?pocketAvatarMarkup(p.avatar,{accountId:p.accountId}):'<span class="guest-monogram">'+escape(p.name?.charAt(0)?.toLocaleUpperCase()||'?')+'</span>')+'</span><strong>'+escape(p.name)+'</strong>'+(p.verified?pocketPlayerBadge(p,{showGuest:false}):'')+'<small>'+(p.id===view.host?'ВЕДУЧИЙ':view.phase==='writing'?(p.submitted?'ГОТОВО':p.departed?'ВІДСУТНІЙ':'ПИШЕ'):'АВТОР')+'</small></div>').join('')}
+function rosterCompact(){return view.players.map(p=>'<div class="status"><span>'+escape(p.name)+(p.verified?pocketPlayerBadge(p,{showGuest:false}):'')+'</span><b>'+(p.submitted?'✓':p.departed?'×':'…')+'</b></div>').join('')}
 function turnProgress(){
  const ready=view.players.filter(p=>p.submitted).length,total=view.players.length;
  return '<div class="turn-progress" id="turnProgress" aria-label="Готові фрагменти: '+ready+' із '+total+'"><div class="turn-progress-count"><strong>'+ready+' / '+total+'</strong><span>готово</span></div><div class="turn-progress-authors">'+view.players.map(p=>'<span class="turn-progress-author '+(p.submitted?'is-ready':'')+'" title="'+escape(p.name)+' — '+(p.submitted?'готово':'пише')+'"><i aria-hidden="true">'+(p.submitted?'✓':'·')+'</i><span>'+escape(p.name)+'</span></span>').join('')+'</div></div>';
 }
 function lobby(){const host=view.host===me,s=view.settings;return '<div class="room"><section class="paper"><div class="eyebrow">ЗБІР АВТОРІВ</div><h2>Чекаємо на хаос</h2><div class="mini">Код кімнати</div><div class="code">'+room.slice(0,8).toUpperCase()+'</div><div class="button-row"><button class="button outline small" data-act="copy-code">Копіювати код</button><button class="button outline small" data-act="copy-link">Посилання друзям</button></div><div class="roster">'+roster()+'</div>'+(member()?'<button type="button" class="invite-people" data-act="invite-social" data-social-invite>Запросити друзів із Pocket ID <span>↗</span></button>':'')+'<p class="mini">'+view.players.length+'/'+s.maxPlayers+' учасників. '+(view.players.length===s.maxPlayers?'Усі місця заповнено.':'Почати можна від двох авторів.')+'</p>'+(host?'<button class="button" data-act="start" '+(view.players.length<2?'disabled':'')+'>Почати писати <span>→</span></button>':'<p class="mini">Ведучий почне, коли всі зберуться.</p>')+(view.message?'<p class="warning">'+escape(view.message)+'</p>':'')+'<button class="leave" data-act="leave">Залишити кімнату</button></section><aside class="room-aside"><div class="eyebrow">ПРАВИЛА РЕДАКЦІЇ</div><h3>Аркуші підуть по колу</h3><p class="lobby-hint">У кожному раунді ти пишеш свою частину. Наступний автор побачить лише кілька обраних тобою слів. У фіналі історії відкриються повністю.</p>'+(host?settingsForm(s):'<p class="mini">Жанр і питання визначає ведучий. Ніхто не бачить приховані фрагменти.</p>')+'</aside></div>'}
-function writing(){return renderWriting({view,roomVersion,draft:loadDraft(),meta:readWriterMeta(),chosen:indices(),escape,rosterCompact,turnProgress,genres:GENRE_TONES,genders:GENDERS})}
+function writing(){return renderWriting({view,roomVersion,draft:loadDraft(),meta:readWriterMeta(),chosen:indices(),pending:roomVersion==='v5'&&Boolean(readPending()),escape,rosterCompact,turnProgress,genres:GENRE_TONES,genders:GENDERS})}
 function waiting(){return renderWaiting({players:view?.players||[],myId:me,escape,round:view?.round||0,totalRounds:view?.total||0})}
 function results(){
  if(!view.stories?.length)return waiting();
@@ -301,7 +325,12 @@ function results(){
 }
 function overlay(){
  if(modal==='archive-delete')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Видалити видання"><section class="comic-inner"><div class="eyebrow">ПІДТВЕРДИТИ ВИДАЛЕННЯ</div><h3>Видалити це видання?</h3><p class="mini">Усі рукописи цього випуску буде видалено лише з цього пристрою. Дію не можна скасувати.</p><div class="button-row"><button class="button outline" type="button" data-act="cancel">Залишити</button><button class="button" type="button" data-act="archive-confirm-delete">Видалити</button></div></section></div>';
- if(modal==='leave')return '<div class="comic-modal" role="dialog" aria-modal="true"><section class="comic-inner"><h3>Залишити партію?</h3><p class="mini">Якщо гра триває, для інших авторів партію буде скинуто.</p><div class="button-row"><button class="button outline" data-act="cancel">Залишитись</button><button class="button" data-act="confirm-leave">Вийти</button></div></section></div>';
+ if(modal==='leave'){
+   const live=roomVersion==='v5'&&view?.phase==='writing';
+   if(live)return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Вихід із кімнати"><section class="comic-inner safe-room-exit"><div class="eyebrow">РУКОПИСИ ЗБЕРЕЖЕНО</div><h3>Вийти з кімнати?</h3><p class="mini">Усі вже здані фрагменти зберігаються на сервері. Твоє місце не зникне.</p><div class="safe-exit-options"><button class="button" type="button" data-act="disconnect-room">Вийти тимчасово <span>↗</span></button><p class="mini">Можна повернутися до того самого раунду. Чернетка залишиться на пристрої.</p><button class="button outline" type="button" data-act="confirm-leave">Звільнити своє місце</button><p class="mini">Партія не обнулиться, але учасникам доведеться чекати твого повернення або завершення випуску ведучим.</p>'+(view.host===me?'<button class="button outline" type="button" data-act="ask-early-end">Завершити випуск достроково</button>':'')+'</div><button class="leave" type="button" data-act="cancel">Скасувати</button></section></div>';
+   return '<div class="comic-modal" role="dialog" aria-modal="true"><section class="comic-inner"><h3>Залишити партію?</h3><p class="mini">'+(view?.phase==='writing'?'У старій версії кімнати вихід скине партію.':'Ти вийдеш із кімнати.')+'</p><div class="button-row"><button class="button outline" data-act="cancel">Залишитись</button><button class="button" data-act="confirm-leave">Вийти</button></div></section></div>';
+ }
+ if(modal==='early-end')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Дострокове завершення"><section class="comic-inner"><div class="eyebrow">ЗАВЕРШЕННЯ ВИПУСКУ</div><h3>Завершити зараз?</h3><p>Усі здані фрагменти залишаться в готових рукописах. Незакінчені частини не буде вигадано або дописано автоматично. Продовжити ці раунди після завершення не можна.</p><div class="button-row"><button class="button outline" type="button" data-act="cancel">Продовжувати</button><button class="button" type="button" data-act="confirm-early-end">Зберегти й завершити</button></div></section></div>';
  if(modal==='audio')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Налаштування звуку"><section class="comic-inner audio-modal"><div class="eyebrow">ЗВУК РЕДАКЦІЇ</div><h3>Звуки та музика</h3><label class="audio-row"><input type="checkbox" name="effectsEnabled" '+(effectsEnabled?'checked':'')+'><span>Ефекти: папір, печатки, перегортання</span></label><label class="audio-volume">Гучність ефектів <output id="effectsLevelOut">'+Math.round(effectsVolume*100)+'%</output><input type="range" name="effectsVolume" min="0" max="100" value="'+Math.round(effectsVolume*100)+'"></label><label class="audio-row"><input type="checkbox" name="musicEnabled" '+(musicEnabled?'checked':'')+'><span>Тиха інструментальна музика</span></label><label class="audio-volume">Гучність музики <output id="musicLevelOut">'+Math.round(musicVolume*100)+'%</output><input type="range" name="musicVolume" min="0" max="100" value="'+Math.round(musicVolume*100)+'"></label><p class="mini">Музика починає грати після дії користувача й стихає у фоновій вкладці.</p><div class="button-row"><button class="button" data-act="close-audio">Готово</button></div></section></div>';
  if(modal==='comic-prompt')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Комікс через ChatGPT"><section class="comic-inner comic-ai"><div class="eyebrow">КОМІКС · 4 СТОРІНКИ</div><h3>Намалюй історію в ChatGPT</h3><p>Скопіюй готовий промпт і встав у ChatGPT. Зображення створює ChatGPT, а не гра.</p><div class="comic-actions"><button class="button" type="button" data-act="copy-comic-direct">Скопіювати промпт коміксу <span>↗</span></button><button class="button outline" type="button" data-act="copy-comic-safe">Спершу адаптувати історію <span>↗</span></button></div><p class="mini">Адаптація — два кроки: перший чат готує безпечний сценарій, другий створює чотири послідовні сторінки. Деякі сюжети потребуватимуть значної переробки, а генерація не гарантована.</p><div class="button-row"><a class="button outline small" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">Відкрити ChatGPT ↗</a><button class="button outline small" data-act="close-comic">Закрити</button></div></section></div>';
  return '';
@@ -338,6 +367,14 @@ function refreshWords(){
  const strip=$('selectedStrip');
  if(strip)strip.innerHTML=chosen.length?handoffWords(text,chosen).map(w=>'<span class="handoff-chip">'+escape(w)+'</span>').join(''):'<span class="handoff-placeholder">Слів поки не вибрано</span>';
 }
+function disconnectRoom(){
+ ++connectionAttempt;clearRoomTimeout();releaseActive();
+ const c=net;net=null;
+ try{if(c){c.persist();c.close()}}catch{}
+ connected=false;connecting=false;view=null;me='';room='';modal='';storyId='';
+ notice='Місце збережено. Можна повернутися до партії.';
+ syncUrl();render();
+}
 function leaveNow(){++connectionAttempt;clearRoomTimeout();releaseActive();const c=net;net=null;try{if(connected&&c?.roomId)c.leaveRoom()}catch{}try{if(c){c.roomId=null;c.persist();c.close()}}catch{}view=null;me='';room='';connected=false;connecting=false;modal='';storyId='';syncUrl();render()}
 scene.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
  if(f.id==='createForm'||f.id==='joinForm'){const d=new FormData(f);if(!member())name=String($('guestNick')?.value||d.get('name')||'').trim().slice(0,24);invitation=String(d.get('room')||'');connect(f.id==='createForm'?'create':'join',{maxPlayers:4,questionSet:'collapsingPlan',visibleTailWords:3,genre:'absurdComedy'});return}
@@ -355,7 +392,16 @@ scene.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
  const chosen=indices();
  if(chosen.length!==needed){toast('Познач рівно '+needed+' слів.');return}
  const gender=meta.gender||'unspecified';save('gender',gender);
- if(send({type:'submit',round:view.round,sheetId:view.sheet.id,answer,tailIndexes:chosen,gender,heroAnchor:meta.anchor||''}))tick(445);
+ if(roomVersion==='v5'){
+    let p=readPending();
+    if(p&&!canRetry(p,view)){discardPending();p=null}
+    if(!p){
+      p=makeSubmission({round:view.round,sheetId:view.sheet.id,answer,tailIndexes:chosen,gender,heroAnchor:meta.anchor||'',requestId:crypto.randomUUID(),draftStorageKey:draftKey()});
+      if(!savePending(p))return;
+    }
+    if(send(outgoingPacket(p)))tick(445);
+    render();
+ }else if(send({type:'submit',round:view.round,sheetId:view.sheet.id,answer,tailIndexes:chosen,gender,heroAnchor:meta.anchor||''}))tick(445);
  }});
 scene.addEventListener('input',e=>{if(e.target.id==='guestNick')name=e.target.value.slice(0,24);if(e.target.name==='room'&&e.target.closest('#joinForm'))invitation=e.target.value;if(e.target.id==='answer'){if(e.target.value!==loadDraft()){draftSelections[draftKey()]=[];saveWriterMeta({selection:[]})}saveDraft(e.target.value);refreshWords()}if(e.target.id==='heroAnchor')saveWriterMeta({anchor:e.target.value.slice(0,72)});if(e.target.name==='effectsEnabled'){effectsEnabled=e.target.checked;save('sound',effectsEnabled?'on':'off');soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});soundscape.unlock();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.')}if(e.target.name==='musicEnabled'){musicEnabled=e.target.checked;save('music',musicEnabled?'on':'off');soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});soundscape.unlock();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.')}if(e.target.name==='effectsVolume'){effectsVolume=Number(e.target.value)/100;save('effectsVolume',effectsVolume);$('effectsLevelOut').textContent=Math.round(effectsVolume*100)+'%';soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume})}if(e.target.name==='musicVolume'){musicVolume=Number(e.target.value)/100;save('musicVolume',musicVolume);$('musicLevelOut').textContent=Math.round(musicVolume*100)+'%';soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume})}if(e.target.id==='questionSet')$('customField')?.classList.toggle('hidden',e.target.value!=='custom');if(e.target.id==='genre')$('customGenreField')?.classList.toggle('hidden',e.target.value!=='custom')});
 scene.addEventListener('change',e=>{if(e.target.name==='gender'&&e.target.checked)saveWriterMeta({gender:e.target.value})});
@@ -383,11 +429,15 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
    if(archivePendingDelete){try{const remaining=removeEdition(editions(),archivePendingDelete);if(IS_PREVIEW)previewEditions=remaining;else if(remaining.length){if(!writeEditions(localStorage,archiveKey(),remaining)){toast('Не вдалося видалити видання.');modal='';render();return}}else localStorage.removeItem(archiveKey());toast('Видання видалено.')}catch{toast('Не вдалося видалити видання.')}}
    archivePendingDelete='';archiveEditionId='';archiveStoryId='';modal='';render();return
   }
-  if(act==='profile'){void openPocketProfile();return}if(act==='invite-social'){void openPocketInvites();return}if(act==='cancel-connect'){cancelConnection();return}
+  if(act==='profile'){void openPocketProfile();return}if(act==='invite-social'){void openPocketInvites();return}if(act==='cancel-connect'){cancelConnection({preserveRoom:Boolean(savedRoom())});return}
  if(act==='resume'){connect('resume');return}if(act==='copy-code'){if(IS_PREVIEW){toast('Це демонстраційна кімната.');return}copyText(room.slice(0,8).toUpperCase());return}
  if(act==='copy-link'){if(IS_PREVIEW){toast('Тестове посилання не створюється.');return}copyText(location.origin+location.pathname+'?room='+room.slice(0,8));return}
  if(act==='start'||act==='again'){send({type:act});return}
- if(act==='leave'){modal='leave';render();return}if(act==='cancel'){modal='';render();return}if(act==='confirm-leave'){leaveNow();return}
+ if(act==='leave'){modal='leave';render();return}if(act==='cancel'){modal='';render();return}
+ if(act==='disconnect-room'){disconnectRoom();return}
+ if(act==='ask-early-end'){modal='early-end';render();return}
+ if(act==='confirm-early-end'){modal='';send({type:'finish_early'});render();return}
+ if(act==='confirm-leave'){leaveNow();return}
  if(act==='reader-full'||act==='reader-parts'){readerMode=act==='reader-parts'?'parts':'full';soundscape.fx('page');render();return}if(act==='story'){storyId=b.dataset.id;soundscape.fx('page');render();return}
  if(act==='prev-story'||act==='next-story'){const list=view?.stories||[],index=list.findIndex(x=>x.id===storyId);if(list.length){const delta=act==='next-story'?1:-1;storyId=list[((index<0?0:index)+delta+list.length)%list.length].id;soundscape.fx('page');render()}return}
  if(act==='copy-story'){const st=view.stories.find(x=>x.id===storyId);if(st)copyText(st.text);return}

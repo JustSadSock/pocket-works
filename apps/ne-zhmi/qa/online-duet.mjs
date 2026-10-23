@@ -103,7 +103,7 @@ try{
   await guest.locator('#online-code-input').fill('AABBCCDD');
   await guest.locator('#online-join').click();
   await poll(()=>host.locator('#online-start').isEnabled(),'second seat');
-  await poll(()=>guest.locator('#online-role').textContent().then(s=>s?.includes('разворотом')),'guest role');
+  await poll(()=>guest.locator('#online-role').textContent().then(s=>s?.includes('разворот')),'guest role');
   await guest.screenshot({path:screenshots+'/duet-guest-lobby.png'});
   await host.locator('#online-start').click();
   await poll(()=>host.locator('#online-out').isVisible(),'host in game');

@@ -1267,3 +1267,81 @@ test('Currency balances saturate at 9999 for urgent rewards, pawnshop and secret
   assert.equal(buyer.resources.crystals,9999);
  }
 });
+
+test('Reconnect of an existing contestant preserves wallet, holdings, active auction and turn',()=>{
+ const {state}=makeRoom(3);
+ const [seller,buyer]=state.contestants;
+ const id=seller.items[0].id;
+ act(state,seller.id,{type:'post',itemId:id,ask:{gold:75,crystals:0,parts:0}});
+ act(state,buyer.id,{type:'bid',offer:{gold:75,crystals:0,parts:0}});
+ const before={turn:state.turnIndex,round:state.round,deadline:state.deadlineAt,
+  wallet:{...buyer.resources},itemIds:buyer.items.map(x=>x.id),bid:state.bids[0].buyer};
+ const rejoined=state.players.map(p=>({...p}));
+ game.onJoin({state,players:rejoined});
+ assert.equal(state.turnIndex,before.turn);
+ assert.equal(state.round,before.round);
+ assert.equal(state.deadlineAt,before.deadline);
+ assert.deepEqual(buyer.resources,before.wallet);
+ assert.deepEqual(buyer.items.map(x=>x.id),before.itemIds);
+ assert.equal(state.bids[0].buyer,before.bid);
+ assert.equal(state.listing.itemId,id);
+ const view=game.viewForPlayer({state,player:{id:buyer.id}});
+ assert.equal(view.you.id,buyer.id);
+ assert.equal(view.listing.id,id);
+});
+test('Quick-price bid is only a bid; seller acceptance changes ownership exactly once',()=>{
+ const {state}=makeRoom(2);
+ const [seller,buyer]=state.contestants;
+ const item=seller.items[0],before=buyer.resources.gold;
+ act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:85,crystals:0,parts:0}});
+ act(state,buyer.id,{type:'bid',offer:{gold:85,crystals:0,parts:0}});
+ assert.equal(buyer.resources.gold,before);
+ assert.equal(state.listing.itemId,item.id);
+ assert.equal(state.bids.length,1);
+ act(state,seller.id,{type:'accept',buyer:buyer.id});
+ assert.equal(buyer.resources.gold,before-85);
+ assert.equal(state.listing,null);
+ assert.equal(buyer.items.filter(x=>x.id===item.id).length,1);
+ const replay=act(state,seller.id,{type:'accept',buyer:buyer.id});
+ assert.equal(replay.events[0].type,'notice');
+ assert.equal(buyer.items.filter(x=>x.id===item.id).length,1);
+});
+
+test('Reconnect with the same member preserves the game and every asset',()=>{
+ const {state}=makeRoom(2);const p=state.contestants[1];
+ const items=p.items.map(i=>i.id),wallet={...p.resources},turn=state.turnIndex;
+ // Socket disconnect does not call onLeave in the PocketNet transport.
+ game.onJoin({state,players:state.players.map(x=>({...x}))});
+ assert.equal(p.bankrupt,false);
+ assert.deepEqual(p.items.map(i=>i.id),items);
+ assert.deepEqual(p.resources,wallet);
+ assert.equal(state.turnIndex,turn);
+ assert.equal(game.viewForPlayer({state,player:{id:p.id}}).you.id,p.id);
+});
+
+test('Only one 30-second reconnect allowance per active turn; return resumes the clock',()=>{
+ const {state}=makeRoom(2),p=state.contestants[state.turnIndex];
+ const original=state.deadlineAt;
+ game.onPresence({state,player:{id:p.id},online:false});
+ assert.equal(state.deadlineAt,original+30000);
+ game.onPresence({state,player:{id:p.id},online:false});
+ assert.equal(state.deadlineAt,original+30000);
+ game.onPresence({state,player:{id:p.id},online:true});
+ assert.ok(state.deadlineAt>=original-300);
+ assert.ok(state.deadlineAt<=original+30000);
+ assert.equal(state.connectionGraceUntil,null);
+ const returned=state.deadlineAt;
+ game.onPresence({state,player:{id:p.id},online:false});
+ assert.equal(state.deadlineAt,returned);
+});
+test('Non-active disconnect does not affect timer; grace resets for next turn',()=>{
+ const {state}=makeRoom(2),current=state.contestants[state.turnIndex];
+ const other=state.contestants.find(p=>p.id!==current.id),initial=state.deadlineAt;
+ game.onPresence({state,player:{id:other.id},online:false});
+ assert.equal(state.deadlineAt,initial);
+ game.onPresence({state,player:{id:current.id},online:false});
+ act(state,current.id,{type:'end'});
+ const next=state.contestants[state.turnIndex],nextDeadline=state.deadlineAt;
+ game.onPresence({state,player:{id:next.id},online:false});
+ assert.equal(state.deadlineAt,nextDeadline+30000);
+});

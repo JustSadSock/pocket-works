@@ -3,6 +3,7 @@
 import { PocketNet } from '../../shared/capabilities/net.js';
 import { stepGame, FIXED_DT } from './engine.js';
 import { validRoom, roleOf, acceptOnlineSnapshot } from './online-flow.js';
+import {ABILITIES,HOLD_ACTIONS} from './abilities.js';
 const serverUrl=location.origin+'/pocketnet';
 const storagePrefix='ne-zhmi:net:';
 const $=id=>document.getElementById(id);
@@ -31,7 +32,7 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
     $('online-room').classList.toggle('hidden',!joined);
     $('online-start').classList.toggle('hidden',!joined||!host);
     $('online-swap').classList.toggle('hidden',!joined||!host);
-    $('online-start').disabled=!connected||busy||total!==2;
+    $('online-start').disabled=!connected||busy||total<2;
     $('online-swap').disabled=!connected||busy||total!==2;
     $('online-again').classList.toggle('hidden',!host);
     $('online-again').disabled=!connected||busy||total!==2;
@@ -40,15 +41,16 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
     const roles=snapshot?.roles||[];
     const people=snapshot?.players||[];
     $('online-roster').replaceChildren();
-    for(let i=0;i<2;i++){
+    for(let i=0;i<Math.min(6,Math.max(2,total+1));i++){
       const id=roles[i],person=people.find(p=>p.id===id);
       const item=document.createElement('div');item.className='operator-seat'+(id===me?.id?' mine':'');
       const name=document.createElement('strong'),label=document.createElement('small');
       name.textContent=person?.name||'Ожидание оператора';
-      label.textContent=i===0?'ПОСТ 01 · ПРЫЖОК':'ПОСТ 02 · РАЗВОРОТ';
+      label.textContent='ПОСТ '+String(i+1).padStart(2,'0')+' · '+ABILITIES[i].operator.toUpperCase();
       item.append(name,label);$('online-roster').append(item);
     }
-    const label=role===0?'Вы управляете прыжком':role===1?'Вы управляете разворотом':'Ожидание роли';
+    const label=ABILITIES[role]?'Ваш пост — '+ABILITIES[role].operator.toLowerCase():'Ожидание роли';
+    $('online-count').textContent='Места '+total+'/6 · старт от 2 игроков';
     $('online-role').textContent=label;
     $('online-lobby-title').textContent=joined?'Комната готова':mode==='join'?'Войти по коду':'Подключение';
     const playing=snapshot?.phase==='play';
@@ -59,11 +61,11 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
     $('online-result-stats').textContent=snapshot?.robot
       ? 'Время '+format(snapshot.robot.wonAt||snapshot.robot.t)+' · падений '+snapshot.robot.respawns+
         ' · прыжков '+snapshot.robot.jumps+' · разворотов '+snapshot.robot.reverses:'';
-    if(playing)$('online-role-chip').textContent=role===0?'ПОСТ 01 · ПРЫЖОК':role===1?'ПОСТ 02 · РАЗВОРОТ':'СИНХРОНИЗАЦИЯ';
+    if(playing)$('online-role-chip').textContent=ABILITIES[role]?'ПОСТ '+String(role+1).padStart(2,'0')+' · '+ABILITIES[role].operator.toUpperCase():'СИНХРОНИЗАЦИЯ';
     $('online-role-chip').classList.toggle('hidden',!playing);
     $('online-role-chip').classList.toggle('chip-unavailable',troubled);
-    $('jump').disabled=!playing||troubled||role!==0;
-    $('reverse').disabled=!playing||troubled||role!==1;
+    for(const [i,ability] of ABILITIES.entries())
+      $(ability.id).disabled=!playing||troubled||role!==i;
     onUpdate({active,snapshot,role,connected,connecting,troubled});
   }
   function format(t){const n=Math.max(0,Math.floor(t));return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');}
@@ -76,7 +78,7 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
     // remains immutable from the perspective of renderer and local input.
     if(next.robot) {
       if(!display||!old||next.round!==old.round||Math.abs(display.x-next.robot.x)>.7||Math.abs(display.y-next.robot.y)>.65) {
-        display={...next.robot};displayDebt=0;
+        display=structuredClone(next.robot);displayDebt=0;
       }else{
         const correction=.46;
         display.x+=(next.robot.x-display.x)*correction;
@@ -88,6 +90,9 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
         display.t=next.robot.t;display.finished=next.robot.finished;
         display.checkpoint=next.robot.checkpoint;
         display.respawns=next.robot.respawns;display.jumps=next.robot.jumps;display.reverses=next.robot.reverses;
+        display.pushes=next.robot.pushes;display.pushCooldown=next.robot.pushCooldown;
+        display.held={...next.robot.held};display.energy={...next.robot.energy};
+        display.cargo=structuredClone(next.robot.cargo||[]);display.level=next.robot.level;
       }
     }
     if(next.phase==='won')stopPulses();
@@ -205,11 +210,12 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
     busy=true;refresh();
     try{client.joinRoom(code);}catch{busy=false;refresh();notify('Не удалось отправить приглашение');}
   }
-  function sendAction(action){
+  function sendAction(action,pressed=true){
     if(!active||!connected||snapshot?.phase!=='play'||snapshot.hold||pausedForPrompt)return false;
     const role=roleOf(snapshot,me?.id);
-    if((role===0&&action!=='jump')||(role===1&&action!=='reverse')||role<0)return false;
-    return send({type:'input',action,round:snapshot.round,seq:++commandSeq});
+    if(role<0||ABILITIES[role]?.id!==action)return false;
+    if(pressed&&HOLD_ACTIONS.includes(action)&&(snapshot.robot?.energy?.[action]??1)<.14)return false;
+    return send({type:'input',action,pressed:!!pressed,round:snapshot.round,seq:++commandSeq});
   }
   function request(action){
     if(!connected||!snapshot||snapshot.host!==me?.id)return notify('Действие доступно ведущему');
@@ -239,7 +245,7 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
   function resultState(){return display||snapshot?.robot||null;}
   function isActive(){return active;}
   function isPlaying(){return active&&snapshot?.phase==='play';}
-  function canInput(action){const role=roleOf(snapshot,me?.id);return isPlaying()&&connected&&!snapshot?.hold&&!pausedForPrompt&& (role===0&&action==='jump'||role===1&&action==='reverse');}
+  function canInput(action){const role=roleOf(snapshot,me?.id);return isPlaying()&&connected&&!snapshot?.hold&&!pausedForPrompt&&ABILITIES[role]?.id===action;}
   function exitPrompt(){if(!active)return;pausedForPrompt=true;$('online-confirm').classList.remove('hidden');refresh();}
   function cancelExit(){pausedForPrompt=false;$('online-confirm').classList.add('hidden');refresh();}
   function leave(){disconnect();$('online-confirm').classList.add('hidden');onExit?.();}
@@ -252,5 +258,5 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
   for(const id of ['online-leave','online-out','online-leave-result'])$(id).addEventListener('click',exitPrompt);
   $('online-leave-no').addEventListener('click',cancelExit);
   $('online-leave-yes').addEventListener('click',leave);
-  return {enter,join,leave,isActive,isPlaying,canInput,sendAction,request,advance,resultState,refresh,getSnapshot:()=>snapshot};
+  return {enter,join,leave,isActive,isPlaying,canInput,sendAction,request,advance,resultState,refresh,getSnapshot:()=>snapshot,getRole:()=>roleOf(snapshot,me?.id)};
 }

@@ -60,3 +60,12 @@ test('All 13 art motifs render independently at every supported presentation siz
   assert.doesNotMatch(svg,/<rect[^>]+width="180"[^>]+height="180"/);
  }
 });
+
+test('Compact economic controls retain resource field names and accessible pictograms',()=>{
+ const ui=readFileSync(new URL('./app.js',import.meta.url),'utf8');
+ for(const key of ['gold','crystals','parts'])assert.match(ui,new RegExp(key));
+ assert.match(ui,/resource-inputs/);
+ assert.match(ui,/aria-label/);
+ assert.match(ui,/wallet-track/);
+ assert.ok(ui.includes('progressbar'));
+});

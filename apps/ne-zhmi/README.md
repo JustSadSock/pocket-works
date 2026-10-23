@@ -31,3 +31,6 @@ Server module: `server/module.ts`, pinned as `pocketnet/module-versions/ne-zhmi/
 
 ## Stage 3 — Mechanical Course Factory
 Every locally started run or new PocketNet round now generates five safe connector modules from a catalog of twelve, using a reproducible seed. The world has three painted workshop themes, dynamic track dimensions, collision-aware timed gates and pistons, conveyors, springs and fan forces. Local replay repeats the same seed; next run generates a new layout. PocketNet locks the course in the authoritative room snapshot (server module v3), so all connected clients see the same geometry and devices.
+
+## Stage 4 — Six operator stations
+Lobby seats accept 2–6 users, role rotation moves every seat, and each player can send only their assigned mechanic. Local test mode supports 2–6 operator buttons on the same keyboard/tablet. Magnet (hold, attracts cargo and magnetic rails), brake (hold, slows the drive), push (impulse, with cooldown, launches cargo), and float (hold, lifts the balloon and reduces effective gravity) have server-authored force, charge and cooldown states. The generator uses player count as an ability-set filter so a two-person party never receives the special six-person devices. Service Worker caches new gameplay files. PocketNet v5 is pinned independently of v1–v4.

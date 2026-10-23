@@ -12,7 +12,8 @@
         "objects-stage3.test.mjs",
         "lighting-stage4.test.mjs",
         "garden-identity.test.mjs",
-        "final-polish.test.mjs"
+        "final-polish.test.mjs",
+        "visual-fixes.test.mjs"
       ]
     },
     {

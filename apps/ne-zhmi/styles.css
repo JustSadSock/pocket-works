@@ -104,3 +104,47 @@ button:focus-visible,a:focus-visible{outline:3px solid #c06a40;outline-offset:3p
  .operator-seat{min-height:40px;padding:5px 8px}
  .online-sheet .room-code strong{font-size:18px}
 }
+
+/* Stage 4: each crew station owns one physical control; never a fake toggle. */
+.operator-config{display:flex;align-items:center;justify-content:space-between;gap:8px;font:900 10px/1.2 ui-monospace,monospace;color:#475c58;letter-spacing:.04em;margin:8px 0}
+.operator-config select{appearance:none;background:#f5ead1;border:2px solid #7c877a;border-radius:2px;color:#334748;font:800 12px system-ui;min-height:39px;padding:7px 24px 7px 9px;max-width:60%}
+.switches{transition:gap .15s ease}
+.control-desk.crew-many .switches{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1030px;gap:10px}
+.control-desk.crew-many .cable{display:none}
+.control-desk.crew-many .lever{min-height:78px;grid-template-columns:42px 1fr;padding:7px 10px;gap:3px}
+.control-desk.crew-many .lever-symbol{grid-row:1/span 2;width:36px;height:36px;font-size:23px}
+.control-desk.crew-many .lever strong{font-size:18px}
+.control-desk.crew-many .lever small{font-size:9px}
+.control-desk.crew-many .control-station{gap:3px}
+.control-desk.crew-many .station-label{font-size:9px}
+.crew-status{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:5px;margin:4px auto 0;max-width:820px}
+.crew-status span{border:1px solid #879b91;background:#4b605e;padding:3px 6px;color:#e8e0c7;font:800 9px ui-monospace,monospace}
+.crew-status span.active{background:#d6aa72;border-color:#f3d69e;color:#31464a}
+.crew-status span.held{background:#aabf9f;color:#2f4140}
+.lever-magnet{background:#bba4d4}.lever-brake{background:#d5ab98}
+.lever-push{background:#a9bf84}.lever-float{background:#e0bd83}
+.power-meter{height:3px;background:linear-gradient(to right,#f5c47e var(--energy,100%),#536561 var(--energy,100%));border:1px solid #354b4d}
+.control-desk.crew-online .switches{grid-template-columns:minmax(0,440px);justify-content:center}
+.control-desk.crew-online .control-station:not(.my-role){display:none}
+.control-desk.crew-online .cable{display:none}
+.control-desk.crew-online .lever{min-height:105px}
+.control-desk.crew-online .control-station.my-role .station-label{font-size:11px}
+.control-desk.crew-online .crew-status{margin-top:9px}
+@media(max-width:720px){
+ .control-desk.crew-many .switches{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:5px auto}
+ .control-desk.crew-many .lever{min-height:66px;display:flex;flex-direction:column;gap:2px;padding:3px}
+ .control-desk.crew-many .lever-symbol{width:28px;height:28px;font-size:18px;flex:0 0 auto}
+ .control-desk.crew-many .lever strong{font-size:14px}
+ .control-desk.crew-many .lever small{font-size:8px}
+ .control-desk.crew-many .station-label{font-size:7px}
+ .control-desk.crew-online .lever{min-height:110px;display:grid;grid-template-columns:70px 1fr}
+ .control-desk.crew-online .lever-symbol{grid-row:1/span 2;width:58px;height:58px}
+ .crew-status span{font-size:8px;padding:3px 4px}
+}
+@media(max-height:680px){
+ .control-desk.crew-many .lever{min-height:51px;grid-template-columns:24px 1fr;display:grid;padding:3px}
+ .control-desk.crew-many .lever-symbol{grid-row:1/span 2;width:22px;height:22px;font-size:16px}
+ .control-desk.crew-many .lever strong{font-size:12px}
+ .control-desk.crew-many .lever small{font-size:7px}
+ .control-desk.crew-many .crew-status{display:none}
+}

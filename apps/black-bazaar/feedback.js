@@ -53,6 +53,9 @@ export function classifyFeedback(previous,next,myId){
  return null;
 }
 const sequences={
+ gold:[[540,0,.055,'sine'],[760,.045,.075,'triangle']],
+ crystals:[[820,0,.09,'sine'],[1160,.075,.14,'sine']],
+ parts:[[285,0,.05,'triangle'],[390,.06,.065,'triangle']],
  tap:[[440,.035,.045,'sine']],
  open:[[350,.0,.055,'triangle'],[480,.07,.045,'sine']],
  close:[[390,.0,.046,'triangle']],

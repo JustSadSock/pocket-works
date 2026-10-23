@@ -587,6 +587,7 @@ uniform vec2 uOffset;
 uniform vec2 uParallax;
 uniform float uCameraRotation;
 uniform vec2 uCameraCenter;
+uniform vec3 uBallCenter;
 out vec3 vNormal;
 out vec4 vColor;
 out vec3 vWorld;
@@ -597,6 +598,15 @@ void main() {
   vec2 rotated = vec2(aPosition.x * cs - aPosition.y * sn, aPosition.x * sn + aPosition.y * cs);
   float sx = uOffset.x + rotated.x * uScale + uParallax.x * aPosition.z * uScale * .14;
   float sy = uOffset.y + rotated.y * uScale * .82 - aPosition.z * uScale + uParallax.y * aPosition.z * uScale * .09;
+  // Isometric turf makes a sphere vertically elliptical (sqrt(.82² + 1²)).
+  // Optically round ONLY the marble. World geometry and aiming stay unchanged.
+  if (aMaterial > 9.5 && aMaterial < 10.5) {
+    vec2 centerXY = vec2(uBallCenter.x * cs - uBallCenter.y * sn,
+                         uBallCenter.x * sn + uBallCenter.y * cs);
+    float centerSY = uOffset.y + centerXY.y * uScale * .82
+      - uBallCenter.z * uScale + uParallax.y * uBallCenter.z * uScale * .09;
+    sy = centerSY + (sy - centerSY) * 0.7732;
+  }
   vec2 clip = vec2(sx / uViewport.x * 2.0 - 1.0, 1.0 - sy / uViewport.y * 2.0);
   float centerDepth = uCameraCenter.x * sn + uCameraCenter.y * cs;
   float depth = clamp(-(rotated.y - centerDepth + aPosition.z * .86) / 2500.0, -.95, .95);
@@ -780,6 +790,7 @@ class WebGLDiorama {
       parallax: gl.getUniformLocation(this.program, 'uParallax'),
       rotation: gl.getUniformLocation(this.program, 'uCameraRotation'),
       cameraCenter: gl.getUniformLocation(this.program, 'uCameraCenter'),
+      ballCenter: gl.getUniformLocation(this.program, 'uBallCenter'),
       hole: gl.getUniformLocation(this.program, 'uHole'),
       time: gl.getUniformLocation(this.program, 'uTime')
     };
@@ -796,12 +807,7 @@ class WebGLDiorama {
     canvas.addEventListener('webglcontextrestored', () => {
       window.setTimeout(() => window.location.reload(), 120);
     });
-    canvas.style.background = [
-      'radial-gradient(circle at 72% 8%, rgba(231,220,151,.24), transparent 34%)',
-      'repeating-linear-gradient(90deg, transparent 0 calc(25% - 5px), rgba(6,18,12,.26) calc(25% - 4px) 25%)',
-      'repeating-linear-gradient(0deg, transparent 0 116px, rgba(5,17,11,.22) 117px 124px)',
-      'linear-gradient(180deg,#31483c 0%,#1b3025 48%,#0d1b14 100%)'
-    ].join(',');
+    canvas.style.background = 'linear-gradient(180deg,#344e3f 0%,#20392c 52%,#13251b 100%)';
     this.installDebugControl();
     this.resize();
   }
@@ -970,6 +976,7 @@ class WebGLDiorama {
     const transparent = new MeshBuilder();
     const surface = this.surfaceHeight(level, ball);
     const centerZ = this.ballHeight(level, ball);
+    this.currentBallCenter = [ball.x, ball.y, centerZ];
     const speed = Math.hypot(ball.vx, ball.vy);
     if (!ball.sunk) {
       this.spin[0] += ball.vy / BALL_RADIUS * dt;
@@ -1017,13 +1024,9 @@ class WebGLDiorama {
         ax, ay, bx, by, width:rotor.thickness, height:22, strength:.27
       });
       addSymmetricBox(opaque, ax, ay, bx, by,
-        rotor.thickness, ground + 9, ground + 31, metal ? C.brass : C.wood, metal ? 4 : 11);
-      // A fine inlaid grain, never a second floating plank.
-      addSymmetricBox(opaque,
-        rotor.x - hx * .91, rotor.y - hy * .91,
-        rotor.x + hx * .91, rotor.y + hy * .91,
-        rotor.thickness * .24, ground + 31, ground + 32,
-        metal ? C.brassLight : C.woodLight, metal ? 4 : 11);
+        rotor.thickness, ground + 7, ground + 34, metal ? C.brass : C.wood, metal ? 4 : 11);
+      // A single solid bar prevents the thin separated inset from flickering
+      // and splitting visually as the obstacle rotates.
       addCylinder(opaque, {
         x: rotor.x, y: rotor.y, z0: ground + .5, z1: ground + 35,
         r0: rotor.thickness * .58, r1: rotor.thickness * .55,
@@ -1073,6 +1076,7 @@ class WebGLDiorama {
     gl.uniform2f(this.locations.parallax, this.parallaxX, this.parallaxY);
     gl.uniform1f(this.locations.rotation, this.cameraRotation || 0);
     gl.uniform2f(this.locations.cameraCenter, this.cameraX || 0, this.cameraY || 0);
+    gl.uniform3f(this.locations.ballCenter, ...(this.currentBallCenter || [0, 0, 0]));
     gl.uniform3f(this.locations.hole, level.hole.x, level.hole.y, level.hole.r * 1.03);
     gl.uniform1f(this.locations.time, time);
 

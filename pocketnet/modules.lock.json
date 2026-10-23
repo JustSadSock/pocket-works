@@ -174,12 +174,13 @@
     ]
   },
   "chyepukha": {
-    "current": "v4",
+    "current": "v5",
     "versions": [
       "v1",
       "v2",
       "v3",
-      "v4"
+      "v4",
+      "v5"
     ]
   },
   "crossline-5x5": {
@@ -266,7 +267,7 @@
     ]
   },
   "black-bazaar": {
-    "current": "v14",
+    "current": "v15",
     "versions": [
       "v1",
       "v2",
@@ -281,16 +282,21 @@
       "v11",
       "v12",
       "v13",
-      "v14"
+      "v14",
+      "v15"
     ]
   },
   "ne-zhmi": {
-    "current": "v4",
+    "current": "v8",
     "versions": [
       "v1",
       "v2",
       "v3",
-      "v4"
+      "v4",
+      "v5",
+      "v6",
+      "v7",
+      "v8"
     ]
   }
 }

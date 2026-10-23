@@ -710,3 +710,41 @@ body.sheet-open{overflow:auto}
 /* The same standalone illustration is usable at tabletop, inventory and detail scales. */
 .item-svg{display:block;overflow:visible;max-width:100%;max-height:100%;object-fit:contain;transform-origin:center 60%}
 .inventory-art .item-svg,.detail-display .item-svg{background:none!important}
+
+/* Mobile player menu is centered above the tabletop without shifting layout. */
+@media(max-width:680px){
+ .player-seats{isolation:auto}
+ .player-popover{position:absolute;left:50%;top:calc(100% + 4px);transform:translateX(-50%);width:min(320px,calc(100vw - 32px));max-height:min(45dvh,310px);overflow:auto;z-index:40}
+ .player-popover>button{white-space:normal;text-align:left}
+ .currency-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+ .currency{min-width:0;justify-content:center}
+ .wallet-values strong{font-size:clamp(11px,3.1vw,15px);white-space:nowrap}
+ .wallet-delta{font-size:10px}
+}
+
+/* Resource pictograms, quiet progress and state-specific deal cues. */
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.resource-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%}
+.resource-input{position:relative;display:flex;align-items:center;gap:6px;min-width:0;padding:4px 7px;border:1px solid #a77c4d;border-radius:11px;background:#f9e6c5;color:#664529}
+.resource-input-icon{width:23px;height:23px;display:grid;place-items:center;flex:none}
+.resource-input input[type=number]{width:100%;min-width:0;flex:1;font-variant-numeric:tabular-nums;padding:5px 2px;border:0;background:transparent;font-size:17px;font-weight:800;box-shadow:none;min-height:36px}
+.wallet-track{display:block;position:relative;height:4px;margin-top:4px;border-radius:8px;background:#64472d30;overflow:hidden;width:100%}
+.wallet-track i{display:block;height:100%;background:#679465;border-radius:inherit;transition:width .25s ease}
+.deal-state{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:12px;color:#4d754c;margin-bottom:5px}
+.deal-state.is-pending{color:#85643e}
+@media(max-width:680px){.resource-inputs{gap:4px}.resource-input{gap:2px;padding:3px 4px}.resource-input-icon{width:18px}.resource-input-icon svg{width:17px;height:17px}.resource-input input[type=number]{font-size:15px}.wallet-track{height:3px}}
+@media(prefers-reduced-motion:reduce){.wallet-track i{transition:none}}
+
+/* Server-confirmed resource and object transitions. */
+.currency{position:relative}.wallet-change{animation:wallet-confirm .42s ease-out}
+.wallet-float{position:absolute;z-index:8;top:-10px;right:8px;pointer-events:none;padding:3px 7px;font-weight:900;font-size:13px;background:#f8e9c7;border:1px solid #9a784b;border-radius:9px;box-shadow:0 4px 12px #20170c44;animation:wallet-float .95s ease-out forwards}
+.wallet-plus{color:#277044}.wallet-minus{color:#9b4438}
+.artifact-transfer{position:absolute;z-index:12;left:50%;bottom:14%;width:96px;height:96px;pointer-events:none;filter:drop-shadow(0 9px 8px #23160e77)}
+.artifact-transfer svg{width:100%;height:100%}
+.transfer-in{animation:artifact-in .65s cubic-bezier(.15,.9,.3,1) forwards}
+.transfer-out{animation:artifact-out .55s ease-in forwards}
+@keyframes wallet-confirm{0%{filter:brightness(1.25);transform:translateY(-2px)}100%{filter:none;transform:none}}
+@keyframes wallet-float{0%{opacity:0;transform:translateY(10px)}20%{opacity:1}100%{opacity:0;transform:translateY(-24px)}}
+@keyframes artifact-in{0%{opacity:0;transform:translate(-50%,-75px) scale(.45) rotate(-12deg)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,0) scale(1.1)}}
+@keyframes artifact-out{0%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-90px) scale(.4) rotate(12deg)}}
+@media(prefers-reduced-motion:reduce){.wallet-change,.wallet-float,.artifact-transfer{animation:none!important}.wallet-float,.artifact-transfer{display:none}}
