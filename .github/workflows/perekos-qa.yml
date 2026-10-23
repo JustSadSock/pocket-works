@@ -49,6 +49,13 @@ jobs:
         run: |
           npm install --legacy-peer-deps --no-audit --no-fund
           npm install --no-save --legacy-peer-deps --no-audit --no-fund @playwright/test@1.55.0
+      - name: New elemental laboratory fast smoke gate
+        env:
+          PW_QA_SITE_ROOT: ${{ github.workspace }}
+          PW_QA_OUTPUT_DIR: ${{ github.workspace }}/qa-artifacts/perekos-journey
+        run: |
+          node node_modules/@playwright/test/cli.js test --config=scripts/universal-qa/playwright.config.mjs \\
+            apps/perekos/qa/magic-v2-lab.spec.js --project=desktop-chromium
       - name: Browser journey and screenshot review (Chromium/WebKit, mobile/PC)
         env:
           PW_QA_SITE_ROOT: ${{ github.workspace }}
