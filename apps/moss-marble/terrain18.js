@@ -3,6 +3,7 @@ import { terrainHeightAt } from './terrain.js';
 import { isCourse18 } from './course18.js';
 import { appendSoftShadow, appendLineShadow } from './light-space.js';
 import { appendGardenIdentity } from './garden-identity.js';
+import { planTurfClumps, appendTurfClumps } from './turf-clumps.js';
 
 const TAU = Math.PI * 2;
 const STRIDE = 11;
@@ -329,29 +330,10 @@ function hole(mesh, shadows, level, palette) {
 }
 
 function details(mesh, level, seed, palette) {
-  const centerline = level.centerline || [];
-  if (centerline.length < 2) return;
-  for (let index = 0; index < 34; index += 1) {
-    const t = (index + .5) / 34;
-    const scaled = t * (centerline.length - 1);
-    const segment = Math.min(centerline.length - 2, Math.floor(scaled));
-    const local = scaled - segment;
-    const a = centerline[segment];
-    const b = centerline[segment + 1];
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const length = Math.hypot(dx, dy) || 1;
-    const nx = -dy / length;
-    const ny = dx / length;
-    const side = index % 2 ? 1 : -1;
-    const offset = 115 + noise(index, seed, 71) * 115;
-    const x = lerp(a.x, b.x, local) + nx * side * offset;
-    const y = lerp(a.y, b.y, local) + ny * side * offset;
-    const ground = terrainHeightAt(level, x, y);
-    const height = 7 + noise(index, seed, 73) * 10;
-    const width = 2.2 + noise(index, seed, 77) * 2.4;
-    mesh.triangle([x - width, y, ground + .2], [x + width, y, ground + .2], [x + nx * 2, y + ny * 2, ground + height], index % 7 === 0 ? palette.flower : palette.leaf, 0);
-  }
+  // The old mesh used 34 single flat dark vertical triangles. Real foliage
+  // now consists of small bent multi-blade tufts that inherit local turf
+  // pigment, follow the physical ground and keep off sand/water/props.
+  appendTurfClumps(mesh, planTurfClumps(level, seed, palette));
 }
 
 export function buildCourse18Geometry(level) {

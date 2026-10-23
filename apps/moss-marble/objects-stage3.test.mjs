@@ -3,6 +3,7 @@ import { LEVELS } from './levels.js';
 import { generateEndlessLevel } from './procedural.js';
 import { compileCourse19, inspectCourse19 } from './course19.js';
 import { buildCourse18Geometry } from './terrain18.js';
+import { planTurfClumps, appendTurfClumps } from './turf-clumps.js';
 
 let checked = 0;
 const counts = { rocks: 0, stumps: 0, tunnels: 0, stoneWalls: 0, woodWalls: 0 };
@@ -19,6 +20,34 @@ for (const original of [
     start: JSON.stringify(level.start)
   };
   assert.equal(inspectCourse19(level).ok, true, 'compiled course must be playable');
+  const tuftSeed=Number(level.id)||18;
+  const tufts=planTurfClumps(level,tuftSeed,level.visual?.materials || {});
+  const again=planTurfClumps(level,tuftSeed,level.visual?.materials || {});
+  assert.deepEqual(tufts,again,'tufts must remain deterministic through replays');
+  assert.ok(tufts.length<=25,'foliage remains within the mobile vertex budget');
+  let bladeTotal=0;
+  const data=[];
+  const fake={triangle(a,b,c,color,material,normal){
+    data.push(...a,...b,...c,...color,...normal,material);
+  }};
+  appendTurfClumps(fake,tufts);
+  for(const tuft of tufts){
+    assert.ok(['grass','moss'].includes(level.course18.field.surfaceAt(tuft.x,tuft.y)),
+      'do not plant grass in bunkers or water');
+    assert.ok(Math.hypot(tuft.x-level.start.x,tuft.y-level.start.y)>=90,
+      'turf may not obscure the tee');
+    assert.ok(Math.hypot(tuft.x-level.hole.x,tuft.y-level.hole.y)>
+      (level.hole.r||30)+68,'turf may not hide the cup');
+    for(const blade of tuft.blades){
+      bladeTotal++;
+      assert.equal(blade.vertices.length,5,'each blade has a bent midrib rather than a tall triangle');
+      assert.ok(blade.vertices.every(v=>v.length===3&&v.every(Number.isFinite)));
+      assert.ok(blade.vertices[4][2]>blade.vertices[0][2],
+        'blade tip rises naturally from the terrain');
+      assert.ok(blade.color.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
+    }
+  }
+  assert.equal(data.length,bladeTotal*3*17,'each blade uses exactly three short curved faces');
   const geometry = buildCourse18Geometry(level);
   assert.ok(geometry.opaque instanceof Float32Array);
   for (const [name, array] of Object.entries(geometry)) {
