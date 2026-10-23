@@ -61,7 +61,7 @@ test('electric ray uses line geometry; relay origin moves the discharge point',(
  const direct=fit(makeMagicV2Practice('storm',400),'storm','li_form_ray');
  direct.actors[1].x=175;direct.actors[1].y=484;
  tick(direct,C);
- assert.equal(direct.shots.length,0);
+ assert.ok(direct.shots.every(q=>q.depth>0),'only on-hit secondary projectiles, never a default bolt');
  assert.equal(direct.beams.at(-1).style,'evo-beam');
  assert.ok(direct.actors[1].hp<100,'ray really damages unobstructed enemy');
  const relay=fit(makeMagicV2Practice('storm',401),'storm','li_form_ray','li_origin_pylon');
