@@ -164,9 +164,19 @@ export function smudgeStamp(ctx,x,y,size,dx,dy,mask=false,zoneMask=null,aspect=W
  const len=Math.hypot(dx/correction,dy);
  const sx=len?Math.round(dx/correction/len*pullX):0,sy=len?Math.round(dy/len*pullY):0;
  const region=zoneMask?.data||zoneMask;
+ // The mask can be a compact, offset raster of the damage polygon rather
+ // than another full-resolution canvas covering the entire master painting.
+ const maskBounds=Number.isInteger(zoneMask?.left)&&Number.isInteger(zoneMask?.top)
+  ?zoneMask:null;
  const valid=(px,py)=>{
   if(px<0||py<0||px>=widthFull||py>=heightFull)return false;
-  return !region||region[(py*widthFull+px)*4+3]>=120;
+  if(!region)return true;
+  if(maskBounds){
+   const lx=px-maskBounds.left,ly=py-maskBounds.top;
+   return lx>=0&&ly>=0&&lx<maskBounds.width&&ly<maskBounds.height&&
+     region[(ly*maskBounds.width+lx)*4+3]>=120;
+  }
+  return region[(py*widthFull+px)*4+3]>=120;
  };
  // Smudge can touch thousands of pixels each pointer frame. Precompute the
  // five pigment samples once per stamp instead of constructing five nested
@@ -1348,8 +1358,16 @@ export class Editor{
          this.smudgePreviewPointCount=0;
        }
        if(!this.smudgeZoneMask){
-         const zoneLayer=makeLayer();zoneLayer.ctx.fillStyle='#fff';damagePath(zoneLayer.ctx,this.zone);zoneLayer.ctx.fill();
-         this.smudgeZoneMask=zoneLayer.ctx.getImageData(0,0,c.width,c.height);
+         // Damage is normally ~3% of the painting. Avoid a full-size stencil
+         // canvas and 6–7 MB readback on high-DPI mobile screens.
+         const bounds=fillRasterBounds(this.zone,c.width/W,c.width,c.height,4);
+         const maskCanvas=document.createElement('canvas');
+         maskCanvas.width=bounds.width;maskCanvas.height=bounds.height;
+         const maskCtx=maskCanvas.getContext('2d',{willReadFrequently:true});
+         maskCtx.setTransform(c.width/W,0,0,c.height/H,-bounds.left,-bounds.top);
+         maskCtx.fillStyle='#fff';damagePath(maskCtx,this.zone);maskCtx.fill();
+         this.smudgeZoneMask={...bounds,
+           data:maskCtx.getImageData(0,0,bounds.width,bounds.height).data};
        }
        const from=this.smudgePreviewPointCount||0;
        if(this.working.p.length>from){
