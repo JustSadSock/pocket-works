@@ -988,6 +988,15 @@ if(debugPreview){
    showConfirmedCue({kind:d.kind,label:d.label},false);
    emit('status',{message:'Эффект: '+d.label});return;
   }
+  if(d.type==='qa-action'){
+   const run=d.run,step=d.step,command=d.command;
+   if(!state||state.phase!=='play'){emit('qa-action-result',{run,step,error:'Not a playable scene'});return;}
+   const before={resources:{...state.you.resources},items:state.you.items.map(item=>item.id)};
+   request(command);
+   const after={resources:{...state.you.resources},items:state.you.items.map(item=>item.id)};
+   emit('qa-action-result',{run,step,before,after,error:document.querySelector('#status')?.textContent||null});
+   return;
+  }
   if(d.type==='audit')return audit(d.run??null,d.step??null);
  });
  document.querySelector('[data-preview-exit]')?.addEventListener('click',e=>{e.preventDefault();window.parent?.postMessage({source:'bazaar-debug-preview',type:'status',message:'Закрой мастерскую кнопкой ×'},location.origin)});
