@@ -196,7 +196,7 @@ function bounds(state) {
   return { left: state.x - ROBOT.halfWidth, right: state.x + ROBOT.halfWidth, top: state.y - ROBOT.halfHeight, bottom: state.y + ROBOT.halfHeight };
 }
 const overlap = (a,b) => a.left < b.x + b.w - 1e-5 && a.right > b.x + 1e-5;
-function commandGame(state, action, pressed=true) {
+export function commandGame(state, action, pressed=true) {
   if(HOLD_ACTIONS.includes(action)){
     if(state.finished)return 'finished';
     if(pressed && state.energy[action]<.14)return 'empty';

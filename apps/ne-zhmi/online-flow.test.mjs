@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validRoom,roleOf,acceptOnlineSnapshot} from './online-flow.js';
+import {validRoom,roleOf,acceptOnlineSnapshot,hydrateOnlineSnapshot} from './online-flow.js';
 test('only real short code and UUID invites accepted',()=>{
  assert.ok(validRoom('A1B2C3D4'));
  assert.ok(validRoom('01234567-89ab-cdef-0123-456789abcdef'));
