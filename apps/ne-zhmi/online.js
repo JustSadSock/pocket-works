@@ -33,10 +33,20 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
     $('online-start').classList.toggle('hidden',!joined||!host);
     $('online-swap').classList.toggle('hidden',!joined||!host);
     $('online-start').disabled=!connected||busy||total<2;
-    $('online-swap').disabled=!connected||busy||total!==2;
+    $('online-swap').disabled=!connected||busy||total<2;
     $('online-again').classList.toggle('hidden',!host);
-    $('online-again').disabled=!connected||busy||total!==2;
+    $('online-again').disabled=!connected||busy||total<2;
     $('online-wait-host').classList.toggle('hidden',host);
+    const config=snapshot?.config||{mode:'quick',seed:2026,length:5};
+    $('online-mode').disabled=!joined||!host||!connected;
+    $('online-mode').value=config.mode;
+    $('online-lab').classList.toggle('hidden',config.mode!=='lab'||!joined);
+    for(const id of ['online-lab-seed','online-lab-length','online-configure'])$(id).disabled=!host||!connected;
+    if(document.activeElement!==$('online-lab-seed'))$('online-lab-seed').value=String(config.seed);
+    if(document.activeElement!==$('online-lab-length'))$('online-lab-length').value=String(config.length);
+    const ticket=snapshot?.session;
+    if(ticket?.mode==='party')$('online-again').textContent=ticket.complete?'Новая серия →':'Следующая трасса →';
+    else $('online-again').textContent=config.mode==='lab'?'Повторить эксперимент →':'Следующая трасса →';
     $('online-code').textContent=roomId?roomId.slice(0,8).toUpperCase():'--------';
     const roles=snapshot?.roles||[];
     const people=snapshot?.players||[];
@@ -221,6 +231,15 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
     if(!connected||!snapshot||snapshot.host!==me?.id)return notify('Действие доступно ведущему');
     if(action==='start'||action==='restart'||action==='swap')send({type:action});
   }
+  function configure(mode=$('online-mode').value){
+    if(!connected||!snapshot||snapshot.host!==me?.id)return notify('Только ведущий меняет режим');
+    const seed=Number($('online-lab-seed').value);
+    const length=Number($('online-lab-length').value);
+    if(mode==='lab'&&(!Number.isSafeInteger(seed)||seed<1||seed>4294967295)){
+      notify('Код трассы: число от 1 до 4294967295');return;
+    }
+    send({type:'config',mode,seed:mode==='lab'?seed:undefined,length:mode==='lab'?length:5});
+  }
   async function copyInvite(){
     if(!roomId)return;
     const link=new URL(location.href);link.searchParams.set('room',roomId.slice(0,8).toUpperCase());
@@ -252,6 +271,8 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
   $('online-start').addEventListener('click',()=>request('start'));
   $('online-again').addEventListener('click',()=>request('start'));
   $('online-swap').addEventListener('click',()=>request('swap'));
+  $('online-mode').addEventListener('change',()=>configure());
+  $('online-configure').addEventListener('click',()=>configure('lab'));
   $('online-join').addEventListener('click',()=>join());
   $('online-code-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();join();}});
   $('online-copy').addEventListener('click',copyInvite);
