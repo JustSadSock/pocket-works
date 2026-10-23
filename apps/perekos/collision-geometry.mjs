@@ -1,5 +1,6 @@
 // Shared pure continuous collision geometry. Identical source is in frozen PocketNet rules.
 const GEOMETRY_EPS=1e-8;
+const COLLISION_WALLS=[{x:102,y:180,w:64,h:54},{x:232,y:385,w:66,h:56}];
 export function segmentBox(x,y,dx,dy,r,b){
  const minX=b.x-r,maxX=b.x+b.w+r,minY=b.y-r,maxY=b.y+b.h+r;
  let near=-Infinity,far=Infinity,nx=0,ny=0;
@@ -20,7 +21,7 @@ export function segmentCircle(x,y,dx,dy,r,c){
  const B=2*(vx*dx+vy*dy),D=B*B-4*A*C;if(D<0)return null;
  const t=(-B-Math.sqrt(D))/(2*A);if(t<0||t>1)return null;
  const hx=vx+dx*t,hy=vy+dy*t,d=Math.hypot(hx,hy)||1;
- return {t,nx:hx/d,ny:hy/d};
+ return {t,nx:hx/d,ny:hy/d,exit:(-B+Math.sqrt(D))/(2*A)};
 }
 export function firstCollision(s,x,y,dx,dy,r,owner,{actors=false,skipBarrier=-1}={}){
  let best=null;
@@ -33,7 +34,7 @@ export function firstCollision(s,x,y,dx,dy,r,owner,{actors=false,skipBarrier=-1}
  offer(segmentBox(x,y,dx,dy,0,{x:381-r,y:-10000,w:10000,h:20620}),'edge');
  offer(segmentBox(x,y,dx,dy,0,{x:-10000,y:-10000,w:20400,h:10021+r}),'edge');
  offer(segmentBox(x,y,dx,dy,0,{x:-10000,y:599-r,w:20400,h:10000}),'edge');
- for(let i=0;i<WALLS.length;i++)offer(segmentBox(x,y,dx,dy,r,WALLS[i]),'wall',i);
+ for(let i=0;i<COLLISION_WALLS.length;i++)offer(segmentBox(x,y,dx,dy,r,COLLISION_WALLS[i]),'wall',i);
  for(let i=0;i<(s?.barriers?.length||0);i++){
   if(i===skipBarrier)continue;
   const b=s.barriers[i];if(b.aperture&&b.owner===owner)continue;
