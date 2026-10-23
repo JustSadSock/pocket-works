@@ -221,10 +221,18 @@ export class PocketNetHub {
          (!state||state.schema!==1||!Array.isArray(state.sheets)))throw Error('invalid_chyepukha_state');
     }catch(error){
       if(row.game_id!=='chyepukha'||row.version!=='v5')throw error;
-      const backup=this.sql('SELECT state,players FROM chyepukha_checkpoints WHERE room_id=? ORDER BY revision DESC LIMIT 1',id).toArray()[0];
-      if(!backup)throw error;
-      state=JSON.parse(backup.state);roomPlayers=JSON.parse(backup.players);
-      this.sql('UPDATE rooms SET state=?,players=? WHERE id=?',backup.state,backup.players,id);
+      const backups=this.sql('SELECT state,players FROM chyepukha_checkpoints WHERE room_id=? ORDER BY revision DESC LIMIT 4',id).toArray();
+      let recovered=false;
+      for(const backup of backups){
+        try{
+          const candidate=JSON.parse(backup.state),members=JSON.parse(backup.players);
+          if(candidate?.schema!==1||!Array.isArray(candidate.sheets)||!Array.isArray(members))continue;
+          state=candidate;roomPlayers=members;
+          this.sql('UPDATE rooms SET state=?,players=? WHERE id=?',backup.state,backup.players,id);
+          recovered=true;break;
+        }catch{}
+      }
+      if(!recovered)throw error;
     }
     if(row.game_id==='zamazka'){
       const payloads=this.sql('SELECT pkey,payload FROM zamazka_art_payloads WHERE room_id=?',id).toArray();
