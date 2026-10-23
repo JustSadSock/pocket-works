@@ -105,9 +105,9 @@ jobs:
           node pocket-cloud/test/edge.mjs
           node pocketnet/test/identity.mjs
           node pocketnet/test/edge.mjs
-          node pocketnet/test/chyepukha-safety.mjs
           node pocketnet/test/flagpost.mjs
           node pocketnet/test/perekos.mjs
+          node pocketnet/test/chyepukha-safety.mjs
       - name: Install real Fog browser QA and copy authentic app assets
         run: |
           mkdir -p dist-site/apps
