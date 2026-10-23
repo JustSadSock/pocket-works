@@ -859,3 +859,10 @@ body.sheet-open{overflow:auto}
  .workspace-panel .sheet-heading{display:none}
  .sheet-content{padding-top:4px}
 }
+
+/* A pending urgent order consumes one extra header row on tiny phones.
+   Preserve a fully visible first action without shrinking normal rounds. */
+@media(max-width:680px) and (orientation:portrait) and (max-height:600px){
+ .urgent-ticket{min-height:28px;padding:2px 5px;gap:3px}
+ .urgent-ticket + .play-body{grid-template-rows:minmax(196px,46%) minmax(0,1fr)}
+}
