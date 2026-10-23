@@ -817,3 +817,28 @@ body.sheet-open{overflow:auto}
 
 @media(max-width:680px) and (orientation:portrait){.play-screen{display:flex;flex-direction:column}.play-head,.currency-strip,.urgent-ticket{flex-shrink:0}.play-body{display:grid;min-height:0;flex:1 1 0;overflow:hidden}.play-field,.workspace-panel{min-height:0;min-width:0}.workspace-panel .sheet-content{min-height:0;overflow-y:auto;overscroll-behavior:contain}.player-seats .seat{min-width:0}.player-popover{position:fixed;top:auto;bottom:12%;left:50%;transform:translateX(-50%);width:min(320px,calc(100vw - 24px));max-height:min(50dvh,340px)}}
 @media(max-width:680px) and (orientation:portrait) and (max-height:600px){.play-body{grid-template-rows:minmax(120px,32%) minmax(0,1fr)}.table-stage .mini-artifacts button{max-height:46px;min-height:40px}.table-stage .mini-artifacts button .item-svg{width:25px;height:25px}}
+
+/* Verified screenshot correction: small portrait screens must reserve enough
+   physical height for auction art, player seats and the end-turn ribbon. */
+@media(max-width:680px) and (orientation:portrait) and (max-height:670px){
+ .play-body{grid-template-rows:minmax(220px,46%) minmax(0,1fr)}
+ .player-seats{margin-bottom:1px}
+ .table-stage .artifact{max-height:118px;padding:0 4px 1px;gap:1px}
+ .table-stage .artifact .item-svg{width:clamp(58px,19vw,76px);height:clamp(47px,8vh,61px)}
+ .table-stage .artifact strong{font-size:11px;padding:2px 5px}
+ .lot-market-strip{gap:2px;margin-top:1px}
+ .lot-market-strip>span{font-size:10px;padding:1px 3px}
+ .table-stage .mini-artifacts button{min-height:34px;max-height:42px;font-size:8px}
+ .table-stage .mini-artifacts button .item-svg{width:24px;height:24px}
+ .bottom-ribbon{margin-top:0}
+}
+@media(max-width:680px) and (orientation:portrait) and (max-height:600px){
+ .play-body{grid-template-rows:minmax(236px,54%) minmax(0,1fr)}
+ .seat-portrait{height:29px;width:29px}
+ .player-seats{gap:1px 2px}
+ .seat strong{font-size:8px;padding:1px 2px}
+ .seat small{font-size:8px}
+ .table-stage .artifact .item-svg{height:48px;width:61px}
+ .table-stage .mini-artifacts button{max-height:34px;min-height:30px}
+ .bottom-ribbon .action-end{min-height:33px;padding:3px 5px}
+}
