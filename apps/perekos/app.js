@@ -419,8 +419,8 @@ function savedBooks(){const books=stored(booksKey);return Array.isArray(books)?b
 function saveBuild(){
  if(!active||!legalRunes(myActor().runes))return false;
  const ids=[...(online?.active?onlinePreviewRunes||myActor().runes:myActor().runes)],list=savedBooks();
- const actor=myActor(),evolution=actor.evolution?{...actor.evolution}:null,fusions=[...(actor.fusions||[])];
- if(!list.some(b=>b.runes.join('|')===ids.join('|')&&JSON.stringify(b.evolution||null)===JSON.stringify(evolution)&&JSON.stringify(b.fusions||[])===JSON.stringify(fusions)))list.unshift({id:Date.now()+':'+Math.floor(Math.random()*100000),runes:ids,evolution,fusions,date:Date.now()});
+ const actor=myActor(),evolution=actor.evolution?{...actor.evolution}:null,fusions=[...(actor.fusions||[])],archetype=actor.archetype||'striker',gameMode=active.gameMode==='forge'?'forge':undefined;
+ if(!list.some(b=>b.runes.join('|')===ids.join('|')&&JSON.stringify(b.evolution||null)===JSON.stringify(evolution)&&JSON.stringify(b.fusions||[])===JSON.stringify(fusions)&&(b.archetype||'striker')===archetype&&b.gameMode===gameMode))list.unshift({id:Date.now()+':'+Math.floor(Math.random()*100000),runes:ids,evolution,fusions,archetype,gameMode,date:Date.now()});
  put(booksKey,list.slice(0,12));toast('Сборка в гримуаре');sfx('heal');return true;
 }
 $('bench-save').addEventListener('click',saveBuild);
@@ -432,10 +432,10 @@ function renderBooks(){
   const row=document.createElement('div');row.className='book-row';
   const name=document.createElement('div');name.className='book-identity';
   const title=document.createElement('strong');title.textContent=description(book.runes).lines[0]||'Сборка без цепочки';
-  const summary=document.createElement('small');summary.textContent=book.runes.length+' рун · '+book.runes.map(id=>rune(id).name).join(' · ')+(book.evolution?' · '+(EVOLUTIONS.find(x=>x.id===book.evolution.form)?.name||'Эволюция')+' '+book.evolution.level+'/3':'')+(book.fusions?.length?' · '+book.fusions.map(id=>FUSIONS.find(x=>x.id===id)?.name).join(' + '):'');name.append(title,summary);
+  const summary=document.createElement('small');summary.textContent=book.runes.length+' рун · '+book.runes.map(id=>rune(id).name).join(' · ')+(book.evolution?' · '+(EVOLUTIONS.find(x=>x.id===book.evolution.form)?.name||'Эволюция')+' '+book.evolution.level+'/3':'')+(book.fusions?.length?' · '+book.fusions.map(id=>FUSIONS.find(x=>x.id===id)?.name).join(' + '):'')+' · '+(ARCHETYPES.find(x=>x.id===book.archetype)?.name||'Стрелок')+(book.gameMode==='forge'?' · ЛАБОРАТОРИЯ':'');name.append(title,summary);
   const actions=document.createElement('div');actions.className='book-actions';
   const play=document.createElement('button');play.type='button';play.textContent='Испытать';play.addEventListener('click',()=>{
-   applyPendingAppearance();active=makeMatch((Date.now()>>>0)^book.runes.length,selectedMage,'pebble',book.evolution||book.fusions?.length?'rupture':'duel');active.actors[0].runes=[...book.runes];active.actors[0].evolution=book.evolution?{...book.evolution}:null;active.actors[0].fusions=[...(book.fusions||[])];startRound(active);remember();show('fight');toast('Сборка из гримуара');
+   applyPendingAppearance();active=makeMatch((Date.now()>>>0)^book.runes.length,selectedMage,'pebble',book.gameMode==='forge'?'forge':book.evolution||book.fusions?.length?'rupture':'duel',validArchetype(book.archetype)?book.archetype:selectedArchetype,'shaper');active.actors[0].runes=[...book.runes];active.actors[0].evolution=book.evolution?{...book.evolution}:null;active.actors[0].fusions=[...(book.fusions||[])];startRound(active);remember();show('fight');toast('Сборка из гримуара');
   });
   const del=document.createElement('button');del.type='button';del.textContent='Удалить';del.addEventListener('click',()=>{bookToDelete=book.id;show('book-delete')});
   actions.append(play,del);row.append(name,actions);root.append(row);
