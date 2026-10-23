@@ -75,10 +75,10 @@ test('legitimate 2 jumps win when server advances with stable pulses',()=>{
 
 test('terminal victory bypasses throttled position updates and reaches both peers',()=>{
  const s=setup(),base=Date.now();reset(s,base);
- s.robot.x=16.49;s.robot.y=6.5-ROBOT.halfHeight;s.robot.ground=true;
- s.lastBroadcast=base+119;s.lastClock=base+119;
- s.signals={H:base+119,G:base+119};
- const events=message(s,host,{type:'pulse'},base+120);
+ s.robot.x=16.52;s.robot.y=6.5-ROBOT.halfHeight;s.robot.ground=true;
+ s.lastBroadcast=base+129;s.lastClock=base+119;
+ s.signals={H:base+129,G:base+129};
+ const events=message(s,host,{type:'pulse'},base+130);
  assert.equal(s.phase,'won');
  assert.equal(events.length,1);
  assert.equal(events[0].type,'state');
