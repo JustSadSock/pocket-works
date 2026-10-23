@@ -57,9 +57,10 @@ const C = {
   sugarShade: color('#aaa58f'),
   shadow: color('#06120b', .27),
   shadowStrong: color('#06120b', .48),
-  ballGlass: color('#d9f2e9', .55),
-  ballVein: color('#d7c36d', .58),
-  ballVeinDark: color('#456d5b', .45),
+  ballMarble: color('#e6e0d0'),
+  ballMarbleLight: color('#f6f0dd'),
+  ballVein: color('#93a69a'),
+  ballVeinDark: color('#bcc5b8'),
   flag: color('#d2a954'),
   flagDark: color('#765929'),
   debug: '#f2d16c'
@@ -685,6 +686,13 @@ void main() {
     float brushed = .84 + sin((vWorld.x + vWorld.y) * .82) * .06 + valueNoise(vWorld.xy * .13) * .10;
     lit *= brushed;
     lit += spec * vec3(1.0, .86, .48) * 1.72 + rim * base * .20;
+  } else if (vMaterial > 9.5 && vMaterial < 10.5) {
+    // Polished marble is opaque with a small, clean warm reflection.
+    // Unlike the old nested translucent shells it has a solid silhouette.
+    float pearl = pow(max(dot(reflect(-lightDir, n), viewDir), 0.0), 27.0);
+    lit = base * (.46 + diffuse * .54 + sky * .08);
+    lit += pearl * vec3(.96, .91, .75) * .52;
+    lit += rim * vec3(.14, .16, .12);
   } else {
     if (vMaterial < .5) {
       float mineral = valueNoise(vWorld.xy * .034 + vWorld.z * .022);
@@ -961,17 +969,21 @@ class WebGLDiorama {
       addGroundEllipse(shadows, ball.x, ball.y + 1, surface + .22, BALL_RADIUS * .34 * shadowScale, BALL_RADIUS * .20 * shadowScale, color('#020805', .55));
     }
 
-    addSphere(transparent, {
-      x: ball.x, y: ball.y, z: centerZ, radius: BALL_RADIUS * .79,
-      tint: C.ballVein, material: 2, segments: 16, rings: 9, rotation: this.spin,
-      colorFn: (local) => {
-        const band = Math.abs(Math.sin(local[0] * 7.2 + local[1] * 3.8 + local[2] * 5.1));
-        return band > .66 ? C.ballVein : C.ballVeinDark;
-      }
-    });
-    addSphere(transparent, {
+    // A solid, polished garden marble (not two nested glass spheres).
+    // Thin mineral veins rotate with the rolling ball and stay legible at
+    // normal phone zoom. The collision sphere remains BALL_RADIUS.
+    addSphere(opaque, {
       x: ball.x, y: ball.y, z: centerZ, radius: BALL_RADIUS,
-      tint: C.ballGlass, material: 2, segments: 20, rings: 12, rotation: this.spin
+      tint: C.ballMarble, material: 10, segments: 26, rings: 17, rotation: this.spin,
+      colorFn: (local) => {
+        const field = local[0] * 10.8 + local[1] * 5.7 + local[2] * 8.2 +
+          Math.sin(local[1] * 6.5 + local[2] * 3.2) * 1.12;
+        const vein = Math.abs(Math.sin(field));
+        const shoulder = .5 + local[2] * .08;
+        if (vein < .095) return C.ballVein;
+        if (vein < .18) return C.ballVeinDark;
+        return shoulder > .52 ? C.ballMarbleLight : C.ballMarble;
+      }
     });
 
     for (const rotor of level.rotors || []) {
