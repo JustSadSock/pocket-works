@@ -15,6 +15,7 @@ on:
       - 'apps/zamazka/qa/editor-raster-invalidation.mjs'
       - 'apps/zamazka/qa/editor-geometry-compaction.mjs'
       - 'apps/zamazka/qa/editor-budget-soak.mjs'
+      - 'apps/zamazka/qa/smudge-pixel-parity.mjs'
       - 'apps/zamazka/qa/large-painting.mjs'
       - 'pocketnet/hub.mjs'
       - 'pocketnet/room-join-view.mjs'
@@ -81,6 +82,8 @@ jobs:
         run: node apps/zamazka/qa/editor-geometry-compaction.mjs
       - name: Check dense 24k-point brush budget without geometry loss
         run: node apps/zamazka/qa/editor-budget-soak.mjs
+      - name: Verify smudge pixel parity and measured rendering time
+        run: node apps/zamazka/qa/smudge-pixel-parity.mjs
       - name: Validate JavaScript syntax
         run: |
           node --check apps/zamazka/app.js
