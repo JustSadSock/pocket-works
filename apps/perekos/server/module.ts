@@ -133,7 +133,7 @@ function compilePreview(ids){const info=description(ids);return info.lines.lengt
 
 
 
-const W=400,H=620,STEP=1/60,ROUND_SECONDS=25;
+const W=400,H=620,STEP=1/60,ROUND_SECONDS=25,RUPTURE_SECONDS=600,EVOLUTION_SECONDS=60,COLLAPSE_SECONDS=90;
 const WALLS=[{x:102,y:180,w:64,h:54},{x:232,y:385,w:66,h:56}];
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -141,9 +141,9 @@ const mag=(x,y)=>Math.hypot(x,y)||1;
 function random(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296}
 function has(a,k){return a.runes.includes(k)}
 function stats(a){const m=mage(a.mageId);return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power,reload:.56*m.reload,shield:34*m.shield}}
-function actor(id,x,y,runes,mageId='kindle'){return {id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0,burn:0,burnTick:0,burnSource:null,windup:null,flameCharge:0}}
+function actor(id,x,y,runes,mageId='kindle'){return {id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0,burn:0,burnTick:0,burnSource:null,windup:null,flameCharge:0,respawn:0}}
 function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId);o.hp=stats(o).max;return o}
-function makeMatch(seed=0x718abc,first='kindle',second='pebble'){const s={version:4,seed:seed>>>0||1,phase:'fight',round:1,remaining:ROUND_SECONDS,overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first),actor(1,336,134,['on_hurt','armor'],second)],shots:[],streams:[],beams:[],waves:[],lobs:[],echoes:[],mines:[],barriers:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
+function makeMatch(seed=0x718abc,first='kindle',second='pebble',gameMode='duel'){const kind=gameMode==='rupture'?'rupture':'duel';const s={version:4,gameMode:kind,seed:seed>>>0||1,phase:'fight',round:1,remaining:kind==='rupture'?RUPTURE_SECONDS:ROUND_SECONDS,elapsed:0,nextEvolution:RUPTURE_SECONDS-EVOLUTION_SECONDS,coreHold:[0,0],overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first),actor(1,336,134,['on_hurt','armor'],second)],shots:[],streams:[],beams:[],waves:[],lobs:[],echoes:[],mines:[],barriers:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
 function offers(s){return eligibleOffers(s)}
 // Choosing a rune opens the working table. Players may reorder before returning to battle.
 function chooseRune(s,id,replaceIndex=null){
@@ -162,13 +162,19 @@ function reorderRunes(s,from,to){
 }
 function beginRound(s){if(s.phase!=='build')return false;startRound(s);return true}
 function startRound(s){
+ if(s.gameMode==='rupture'){
+  s.phase='fight';s.shots=[];s.streams=[];s.beams=[];s.waves=[];s.lobs=[];s.echoes=[];s.mines=[];s.barriers=[];s.eventQueue=[];s.pick=[];s.fx=[];s.coreHold=[0,0];
+  for(const a of s.actors){a.heat=0;a.overloadCd=0;a.runeTimers={};a.cast=0;a.windup=null;}
+  return;
+ }
  s.phase='fight';s.round=s.score[0]+s.score[1]+s.draws+1;s.remaining=ROUND_SECONDS;s.overtime=0;
  s.actors=s.actors.map(freshActor);s.shots=[];s.streams=[];s.beams=[];s.waves=[];s.lobs=[];s.echoes=[];s.mines=[];s.barriers=[];s.eventQueue=[];s.pick=[];s.fx=[];s.ticks=0;s.reactions=0;
 }
 function retryMatch(s){return makeMatch((s.seed+0x9e3779b9)>>>0)}
 function distWall(x,y,r=0){return WALLS.some(w=>x+r>w.x&&x-r<w.x+w.w&&y+r>w.y&&y-r<w.y+w.h)}
 function canStand(x,y,r=12){return x>=r+13&&x<=W-r-13&&y>=r+16&&y<=H-r-16&&!distWall(x,y,r)}
-function ringRadius(s){return s.remaining>=10?230:Math.max(80,80+15*s.remaining)}
+function collapseActive(s){return s.gameMode==='rupture'?s.remaining<COLLAPSE_SECONDS:s.remaining<10}
+function ringRadius(s){return s.gameMode==='rupture'?(s.remaining>=COLLAPSE_SECONDS?230:Math.max(78,78+152*s.remaining/COLLAPSE_SECONDS)):(s.remaining>=10?230:Math.max(80,80+15*s.remaining))}
 let safeWorld=null;const blocking=(s,x,y,r=12)=>!!s?.barriers?.some(b=>Math.hypot(x-b.x,y-b.y)<r+b.r);function move(a,x,y,r=12){const nx=clamp(a.x+x,r+13,W-r-13),ny=clamp(a.y+y,r+16,H-r-16);if(canStand(nx,a.y,r)&&!blocking(safeWorld,nx,a.y,r))a.x=nx;if(canStand(a.x,ny,r)&&!blocking(safeWorld,a.x,ny,r))a.y=ny}
 function fx(s,k,x,y,t=0){if(s.fx.length>60)s.fx.shift();s.fx.push({k,x,y,t,id:++s.serial})}
 function harm(s,a,amount,from,depth=0){
@@ -402,7 +408,7 @@ function flushEvents(s){
  s.reactions=reactions;
 }
 function botInput(s,dt){const b=s.actors[1],p=s.actors[0];const dx=p.x-b.x,dy=p.y-b.y,d=mag(dx,dy);b.aiT-=dt;if(b.aiT<=0){b.aiT=.5+random(s)*.55;b.aiMove=random(s)<.5?-1:1}const sideX=-dy/d*b.aiMove,sideY=dx/d*b.aiMove;let toward=d>200?1:d<110?-1:0;let x=dx/d*toward+sideX*.8,y=dy/d*toward+sideY*.8;
-if(s.remaining<10){const cx=200-b.x,cy=310-b.y,cd=mag(cx,cy);if(cd>ringRadius(s)-22){x=cx/cd+sideX*.15;y=cy/cd+sideY*.15}}
+if(collapseActive(s)){const cx=200-b.x,cy=310-b.y,cd=mag(cx,cy);if(cd>ringRadius(s)-22){x=cx/cd+sideX*.15;y=cy/cd+sideY*.15}}
 for(const shot of s.shots){if(shot.owner===1)continue;const rx=b.x-shot.x,ry=b.y-shot.y;const t=clamp((rx*shot.vx+ry*shot.vy)/(shot.vx**2+shot.vy**2),0,.4);if(Math.hypot(rx-shot.vx*t,ry-shot.vy*t)<27){x=-shot.vy/252*1.7;y=shot.vx/252*1.7;if(b.dashReady<=0&&t<.2&&random(s)<.025)dash(s,b,{x,y});if(b.shieldReady<=0&&b.hp<65)guard(s,b);break}}
 if(d<260&&random(s)<.035)attack(s,b,p);
 if(b.shieldReady<=0&&b.hp<55&&random(s)<.009)guard(s,b);
@@ -422,7 +428,9 @@ function tick(s,input={},dt=STEP,otherInput=null){
   if(a.heat>=HEAT_LIMIT&&a.overloadCd<=0)addHeat(s,a,0);
  }
 const control=[input,otherInput===null?botInput(s,dt):otherInput];
-for(let i=0;i<2;i++){const a=s.actors[i],c=control[i],other=s.actors[1-i];a.cast=Math.max(0,a.cast-dt);a.shieldReady=Math.max(0,a.shieldReady-dt);a.dashReady=Math.max(0,a.dashReady-dt);a.stun=Math.max(0,a.stun-dt);a.flash=Math.max(0,a.flash-dt);a.invuln=Math.max(0,a.invuln-dt);
+for(let i=0;i<2;i++){const a=s.actors[i],c=control[i],other=s.actors[1-i];
+ if(s.gameMode==='rupture'&&a.hp<=0){if(a.respawn>0){a.respawn=Math.max(0,a.respawn-dt);if(a.respawn<=0){const next=freshActor(a);next.hit=a.hit;next.kills=a.kills;next.invuln=1.25;s.actors[i]=next;}}continue}
+ a.cast=Math.max(0,a.cast-dt);a.shieldReady=Math.max(0,a.shieldReady-dt);a.dashReady=Math.max(0,a.dashReady-dt);a.stun=Math.max(0,a.stun-dt);a.flash=Math.max(0,a.flash-dt);a.invuln=Math.max(0,a.invuln-dt);
 if(!c.attack)a.flameCharge=Math.max(0,(a.flameCharge||0)-dt*5);
 if(a.windup&&(a.stun>0||c.dash))a.windup=null;
 if(a.windup){a.windup.remaining-=dt;
@@ -461,7 +469,7 @@ for(let j=s.mines.length-1;j>=0;j--){
  for(let j=s.barriers.length-1;j>=0;j--){s.barriers[j].life-=dt;if(s.barriers[j].life<=0)s.barriers.splice(j,1)}
  // The court tightens in the last ten seconds. Environmental damage bypasses
  // endlessly rechargeable shields; the clock itself still never awards a point.
- if(s.remaining<10){
+ if(collapseActive(s)){
   const radius=ringRadius(s);
   for(const a of s.actors){
    const outside=Math.hypot(a.x-200,a.y-310)-radius;
@@ -470,7 +478,16 @@ for(let j=s.mines.length-1;j>=0;j--){
  }
  flushEvents(s);
  s.fx.forEach(f=>f.t+=dt);s.fx=s.fx.filter(f=>f.t<.38);
-if(s.actors.some(a=>a.hp<=0)||s.remaining<=0){const [a,b]=s.actors;let winner=null;
+if(s.gameMode==='rupture'){
+  s.elapsed=RUPTURE_SECONDS-s.remaining;
+  for(const a of s.actors){if(a.hp<=0&&a.respawn<=0){a.respawn=2.5;const opponent=s.actors[1-a.id];opponent.kills++;s.score[opponent.id]+=s.remaining<=60?4:2;fx(s,'overload',a.x,a.y)}}
+  if(s.ticks%60===0){const contest=s.actors.map(a=>a.hp>0&&Math.hypot(a.x-200,a.y-310)<=52);const owner=contest[0]&&!contest[1]?0:contest[1]&&!contest[0]?1:-1;
+   for(let i=0;i<2;i++){s.coreHold[i]=owner===i?(s.coreHold[i]||0)+1:0;if(s.coreHold[i]>=8){s.coreHold[i]=0;s.score[i]+=s.remaining<=60?3:1;fx(s,'overload',200,310)}}}
+  if(s.remaining<=0){s.phase='result';const [a,b]=s.actors;s.champion=s.score[0]===s.score[1]?(a.hit===b.hit?null:a.hit>b.hit?0:1):(s.score[0]>s.score[1]?0:1)}
+  else if(s.remaining<=s.nextEvolution&&s.nextEvolution>0){s.phase='draft';s.pick=offers(s);s.round++;s.nextEvolution-=EVOLUTION_SECONDS;s.coreHold=[0,0];}
+  return s;
+ }
+ if(s.actors.some(a=>a.hp<=0)||s.remaining<=0){const [a,b]=s.actors;let winner=null;
 if(a.hp<=0&&b.hp<=0)winner=null;
 else if(a.hp<=0)winner=1;else if(b.hp<=0)winner=0;
 // Timeouts and double knockouts are actual draws: no overtime tie-breaker or free point.
@@ -484,10 +501,10 @@ function validState(s){
  return !!s&&s.version===4&&['fight','draft','build','result'].includes(s.phase)
  &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&typeof a.mark==='string'&&Number.isFinite(a.markLife)&&a.markLife>=0&&Number.isFinite(a.reactionCd)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&a.runeTimers&&typeof a.runeTimers==='object')
  &&Array.isArray(s.shots)&&(!s.streams||Array.isArray(s.streams))&&(!s.beams||Array.isArray(s.beams))&&(!s.waves||Array.isArray(s.waves))&&(!s.lobs||Array.isArray(s.lobs))&&Array.isArray(s.echoes)&&Array.isArray(s.mines)&&Array.isArray(s.barriers)&&Array.isArray(s.eventQueue)
- &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&n<=4);
+ &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture',undefined].includes(s.gameMode);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=4;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=5;
 const ZERO={x:0,y:0,aim:{x:200,y:310},attack:false,shield:false,dash:false};
 const clock=()=>Date.now(),updates=()=>[{type:'state',payload:null}],warn=(to,msg)=>[{type:'notice',to,payload:msg}];
 const side=(s,id)=>s.seats.indexOf(id);
@@ -498,7 +515,7 @@ const safeInput=v=>{
  const m=Math.max(1,Math.hypot(x,y));return {x:x/m,y:y/m,aim:{x:ax,y:ay},attack:v.attack===true,shield:v.shield===true,dash:v.dash===true};
 };
 function beginNet(s){
- s.match=makeMatch((clock()>>>0)^Math.floor(Math.random()*0xffffffff),s.mages[0],s.mages[1]);
+ s.match=makeMatch((clock()>>>0)^Math.floor(Math.random()*0xffffffff),s.mages[0],s.mages[1],s.gameMode);
  startRound(s.match);s.phase='fight';s.offers=[[],[]];s.picked=[false,false];s.ready=[false,false];
  s.inputs=[{...ZERO},{...ZERO}];s.seq=[-1,-1];s.seen=[clock(),clock()];s.at=clock();s.credit=0;s.lastEmit=0;s.revision++;
 }
@@ -510,10 +527,15 @@ function advanceNet(s){
  let steps=0;
  while(s.credit>=1000/60&&steps<12&&s.match.phase==='fight'){tick(s.match,s.inputs[0],STEP,s.inputs[1]);s.credit-=1000/60;steps++}
  if(s.match.phase==='draft'){
-  s.phase='draft';s.offers=[0,1].map(i=>eligibleOffers(s.match,i));s.match.pick=[];s.picked=[false,false];s.ready=[false,false];s.revision++;return true;
+  s.phase='draft';s.draftAt=clock();s.offers=[0,1].map(i=>eligibleOffers(s.match,i));s.match.pick=[];s.picked=[false,false];s.ready=[false,false];s.revision++;return true;
  }
  if(s.match.phase==='result'){s.phase='result';s.revision++;return true}
  return steps>0;
+}
+function autoAdvanceDraft(s){
+ if(s.phase!=='draft'||clock()-(s.draftAt||clock())<35000)return false;
+ for(let i=0;i<2;i++)if(!s.picked[i]){const id=s.offers[i][0],a=s.match.actors[i];if(id){if(a.runes.length>=9)a.runes[0]=id;else a.runes.push(id)}}
+ startRound(s.match);s.phase='fight';s.seq=[-1,-1];s.inputs=[{...ZERO},{...ZERO}];s.seen=[clock(),clock()];s.at=clock();s.credit=0;s.revision++;return true;
 }
 function chooseNet(s,i,id,replace){
  if(s.phase!=='draft'||s.picked[i]||!s.offers[i].includes(id))return false;
@@ -537,7 +559,7 @@ function readyNet(s,i,list){
 }
 function viewForPlayer({state:s,player,players}){
  const i=side(s,player.id);
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:4,mages:s.mages,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:5,gameMode:s.gameMode,mages:s.mages,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};
@@ -545,7 +567,7 @@ function viewForPlayer({state:s,player,players}){
 const module={
  protocolVersion:1,
  createRoom({player}){return {state:{host:player.id,seats:[player.id],phase:'lobby',match:null,revision:0,
-  mages:['kindle','wire'],offers:[[],[]],picked:[false,false],ready:[false,false],seq:[-1,-1],inputs:[{...ZERO},{...ZERO}],
+  gameMode:'rupture',mages:['kindle','wire'],offers:[[],[]],picked:[false,false],ready:[false,false],seq:[-1,-1],inputs:[{...ZERO},{...ZERO}],
   seen:[clock(),clock()],at:clock(),credit:0,lastEmit:0}}},
  onJoin({state:s,player,players}){
   if(s.seats.filter(Boolean).length>=2||players.length>2)throw Error('room_full');
@@ -555,7 +577,7 @@ const module={
  onLeave({state:s,player}){
   const i=side(s,player.id);if(i<0)return {state:s,events:[]};
   if(s.match&&!['lobby','result'].includes(s.phase)){
-   s.phase='result';s.match.phase='result';s.match.champion=1-i;s.match.score[1-i]=4;
+   s.phase='result';s.match.phase='result';s.match.champion=1-i;s.match.score[1-i]=s.match.gameMode==='rupture'?Math.max(...s.match.score)+3:4;
   }
   s.seats[i]='';s.mages[i]='wire';if(s.host===player.id)s.host=s.seats.find(Boolean)||'';
   s.revision++;return {state:s,events:updates()};
@@ -565,14 +587,16 @@ const module={
   const i=side(s,player.id);if(i<0)return {state:s,events:[]};
   const p=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
   const out=(events=updates())=>({state:s,events});
-  if(p.type==='sync'){s.seen[i]=clock();s.at=clock();return out([{type:'state',to:player.id,payload:null}])}
+  if(p.type==='sync'){s.seen[i]=clock();s.at=clock();if(autoAdvanceDraft(s))return out();return out([{type:'state',to:player.id,payload:null}])}
   if(p.type==='start'||p.type==='rematch'){
    if(s.host!==player.id)return out(warn(player.id,'Матч запускает создатель комнаты.'));
    if(s.seats.length!==2||!s.seats.every(Boolean))return out(warn(player.id,'Нужны два игрока.'));
    if((p.type==='start'&&s.phase!=='lobby')||(p.type==='rematch'&&s.phase!=='result'))return out([]);
+   if(['duel','rupture'].includes(p.gameMode))s.gameMode=p.gameMode;
    beginNet(s);return out();
   }
-  if(p.type==='mage'){if(s.phase!=='lobby'||!validMage(p.mageId))return out(warn(player.id,'Выбрать мага можно только до боя.'));s.mages[i]=p.mageId;s.revision++;return out()}
+  if(p.type==='mode'){if(s.phase!=='lobby'||s.host!==player.id||!['duel','rupture'].includes(p.gameMode))return out(warn(player.id,'Режим выбирает создатель до начала матча.'));s.gameMode=p.gameMode;s.revision++;return out()}
+   if(p.type==='mage'){if(s.phase!=='lobby'||!validMage(p.mageId))return out(warn(player.id,'Выбрать мага можно только до боя.'));s.mages[i]=p.mageId;s.revision++;return out()}
   if(p.type==='input'){
    if(s.phase!=='fight'||p.round!==s.match.round||!Number.isSafeInteger(p.seq)||p.seq<=s.seq[i]||p.seq>s.seq[i]+100000)return out([]);
    const input=safeInput(p.control);if(!input)return out(warn(player.id,'Неверная команда.'));
@@ -580,7 +604,8 @@ const module={
    if(moved||clock()-s.lastEmit>115){s.lastEmit=clock();s.revision++;return out()}
    return out([]);
   }
-  if(p.type==='pick')return chooseNet(s,i,p.rune,p.replace)?out():out(warn(player.id,'Такую руну взять нельзя.'));
+  if(s.phase==='draft'&&autoAdvanceDraft(s))return out();
+   if(p.type==='pick')return chooseNet(s,i,p.rune,p.replace)?out():out(warn(player.id,'Такую руну взять нельзя.'));
   if(p.type==='order')return reorderNet(s,i,p.runes)?out():out(warn(player.id,'Порядок рун не подходит.'));
   if(p.type==='ready')return readyNet(s,i,p.runes)?out():out(warn(player.id,'Сначала выбери руну.'));
   return out([]);

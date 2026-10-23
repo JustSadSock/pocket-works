@@ -12,6 +12,7 @@ test('visual audit: six mages, own silhouette, different projectile and three-ru
  await expect(page.locator('#chosen-mage-name')).toHaveText('Провод');
  const next=await page.locator('#hero-preview').evaluate(c=>Array.from(c.getContext('2d').getImageData(0,0,c.width,c.height).data).join(','));
  expect(next).not.toBe(original);
+ await page.locator('#mode-duel').click();
  await page.locator('#primary-action').click();
  await expect(page.locator('#hud')).toBeVisible();
  expect(await page.evaluate(()=>window.__perekosTest.state.actors[0].mageId)).toBe('wire');

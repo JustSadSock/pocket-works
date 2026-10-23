@@ -2,6 +2,7 @@ import {test,expect} from '@playwright/test';
 test('real fire + electric projectile reaction renders a readable combat burst',async({page},info)=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ await page.locator('#mode-duel').click();
  await page.locator('#primary-action').click();
  await expect(page.locator('#hud')).toBeVisible();
  const summary=await page.evaluate(async()=>{
@@ -25,6 +26,7 @@ test('real fire + electric projectile reaction renders a readable combat burst',
 });
 test('actual rune workshop previews reachable cross-school reaction',async({page},info)=>{
  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ await page.locator('#mode-duel').click();
  await page.locator('#primary-action').click();
  await page.evaluate(()=>{const s=window.__perekosTest.state;s.actors[0].runes=['on_cast','ball','as_storm'];s.remaining=.00001;window.__perekosTest.step()});
  await expect(page.locator('#draft')).toBeVisible();

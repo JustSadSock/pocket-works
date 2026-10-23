@@ -25,7 +25,7 @@ const storage='pocket-works:perekos:',prefsKey=storage+'prefs',saveKey=storage+'
 let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,lastProfileFetch=0,avatarInFlight=null;
 let online=null,onlinePreviewRunes=null,onlinePhase='',displayXY=[null,null];
 let rivalAppearance={...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']},pendingRival=null,rivalKey='',rivalRequest=0;
-let selectedMage='kindle',mageFrom='menu',selectionDraft='kindle';
+let selectedMage='kindle',mageFrom='menu',selectionDraft='kindle',selectedGameMode='rupture',netSyncAt=0;
 let desktopPanelsVisible=true,lastTacticRunes='',sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null,debugSession=null;
 const combatPresentation=new CombatPresentation();
 const spellChoreography=new SpellChoreography();
@@ -38,8 +38,8 @@ const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,aim:nul
 let tapAttackQueued=false,aimTouch=false,aimTouchStart=0,aimDragged=false,aimVector=null;
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
 function put(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
-const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;desktopPanelsVisible=savedPrefs?.desktopPanels!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';
-function remember(){put(prefsKey,{sound,mage:selectedMage,desktopPanels:desktopPanelsVisible});if(!debugSession&&!online?.active&&active&&validState(active))put(saveKey,active)}
+const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;desktopPanelsVisible=savedPrefs?.desktopPanels!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';selectedGameMode=savedPrefs?.gameMode==='duel'?'duel':'rupture';
+function remember(){put(prefsKey,{sound,mage:selectedMage,gameMode:selectedGameMode,desktopPanels:desktopPanelsVisible});if(!debugSession&&!online?.active&&active&&validState(active))put(saveKey,active)}
 function forget(){if(debugSession)return;try{localStorage.removeItem(saveKey)}catch{}}
 const resume=stored(saveKey);
 if(resume&&validState(resume))$('continue').hidden=false;
@@ -163,7 +163,10 @@ $('choose-mage').addEventListener('click',()=>{
 $('mage-cancel').addEventListener('click',()=>show('menu'));
 $('mage-confirm').addEventListener('click',()=>{selectedMage=selectionDraft;updateSelectedMage();remember();show('menu');toast('Выбран '+mage(selectedMage).name)});
 updateSelectedMage();
-function newMatch(){if(online?.active)online.leave();onlinePhase='';applyPendingAppearance();active=makeMatch((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff),selectedMage,MAGES[(MAGES.findIndex(m=>m.id===selectedMage)+3)%MAGES.length].id);fxParticles=[];combatPresentation.reset();spellChoreography.reset();seen=0;audioContext();show('fight');toast(matchMedia('(hover:hover) and (pointer:fine)').matches?'WASD — ходьба · ЛКМ / Space — атака · Q — щит · Shift — рывок':'Зажми атаку, веди пальцем для прицеливания');remember()}
+function selectMode(kind){selectedGameMode=kind==='duel'?'duel':'rupture';for(const id of ['rupture','duel'])$('mode-'+id).setAttribute('aria-pressed',String(id===selectedGameMode));$('primary-action').firstChild.textContent=selectedGameMode==='rupture'?'Начать Разлом ':'Начать дуэль ';remember()}
+for(const id of ['rupture','duel'])$('mode-'+id).addEventListener('click',()=>selectMode(id));
+selectMode(selectedGameMode);
+function newMatch(){if(online?.active)online.leave();onlinePhase='';applyPendingAppearance();active=makeMatch((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff),selectedMage,MAGES[(MAGES.findIndex(m=>m.id===selectedMage)+3)%MAGES.length].id,selectedGameMode);fxParticles=[];combatPresentation.reset();spellChoreography.reset();seen=0;audioContext();show('fight');toast(matchMedia('(hover:hover) and (pointer:fine)').matches?'WASD — ходьба · ЛКМ / Space — атака · Q — щит · Shift — рывок':'Зажми атаку, веди пальцем для прицеливания');remember()}
 $('primary-action').addEventListener('click',newMatch);$('again').addEventListener('click',()=>online?.active?online.start():newMatch());
 $('continue').addEventListener('click',()=>{const s=stored(saveKey);if(s&&validState(s)){active=s;if(s.phase!=='fight')applyPendingAppearance();show(s.phase);if(s.phase==='draft')renderDraft();if(s.phase==='build')renderWorkbench();if(s.phase==='result')renderResult()}else newMatch()});
 function pause(){if(mode!=='fight')return;paused=true;show('pause');$('pause-title').textContent=online?.active?'Сетевой матч':'Передышка';$('pause-online-note').hidden=!online?.active;remember()}
@@ -204,7 +207,7 @@ function updateTacticalHud(a){
  renderTacticalAbility('dash',a.dashReady,2.5);
  renderTacticalRunes(a);
 }
-function updateHud(){if(!active)return;const side=myIndex(),a=active.actors[side],b=active.actors[1-side];const am=stats(a),bm=stats(b);$('my-hp').style.width=Math.max(0,100*a.hp/am.max)+'%';$('bot-hp').style.width=Math.max(0,100*b.hp/bm.max)+'%';$('my-hp-text').textContent=Math.ceil(a.hp)+' / '+am.max;$('bot-hp-text').textContent=Math.ceil(b.hp)+' / '+bm.max;$('clock').textContent=Math.ceil(active.remaining);$('clock').style.color=active.overtime?'#f3a27c':'#f7edce';$('round-number').textContent=active.remaining<=10?'10 С ДО КОНЦА':'РАУНД '+active.round;$('score-me').textContent='● '.repeat(active.score[side])+'○ '.repeat(4-active.score[side]);$('score-bot').textContent='● '.repeat(active.score[1-side])+'○ '.repeat(4-active.score[1-side]);$('heat-fill').style.width=Math.round(a.heat)+'%';$('heat-value').textContent=Math.round(a.heat)+'%';
+function updateHud(){if(!active)return;const side=myIndex(),a=active.actors[side],b=active.actors[1-side];const am=stats(a),bm=stats(b);$('my-hp').style.width=Math.max(0,100*a.hp/am.max)+'%';$('bot-hp').style.width=Math.max(0,100*b.hp/bm.max)+'%';$('my-hp-text').textContent=Math.ceil(a.hp)+' / '+am.max;$('bot-hp-text').textContent=Math.ceil(b.hp)+' / '+bm.max;const rupture=active.gameMode==='rupture',secs=Math.max(0,Math.ceil(active.remaining));$('clock').textContent=rupture?String(Math.floor(secs/60)).padStart(2,'0')+':'+String(secs%60).padStart(2,'0'):secs;$('clock').style.color=rupture&&secs<=90?'#f3a27c':'#f7edce';$('round-number').textContent=rupture?(secs<=90?'КОЛЛАПС':'ЭВОЛЮЦИЯ '+active.round+'/10'):(secs<=10?'10 С ДО КОНЦА':'РАУНД '+active.round);$('score-me').textContent=rupture?'✦ '+active.score[side]:'● '.repeat(active.score[side])+'○ '.repeat(Math.max(0,4-active.score[side]));$('score-bot').textContent=rupture?'✦ '+active.score[1-side]:'● '.repeat(active.score[1-side])+'○ '.repeat(Math.max(0,4-active.score[1-side]));$('core-indicator').hidden=!rupture;if(rupture){const c=active.coreHold||[0,0];$('core-indicator').textContent='ЯДРО · '+Math.floor((c[side]||0)/8*100)+'%';}$('heat-fill').style.width=Math.round(a.heat)+'%';$('heat-value').textContent=Math.round(a.heat)+'%';
 $('heat-fill').classList.toggle('danger',a.heat>=78);
 $('dash-cooldown').style.height=100*Math.min(1,a.dashReady/2.5)+'%';$('shield-cooldown').style.height=100*Math.min(1,a.shieldReady/5)+'%';$('attack-cooldown').style.height=100*Math.min(1,a.cast/stats(a).reload)+'%';$('attack-name').textContent=ATTACK_NAMES[a.mageId];if(!$('desktop-dashboard').hidden)updateTacticalHud(a)}
 function typeName(type){return TYPES[type]||type}
@@ -235,6 +238,7 @@ function renderDraft(){
  $('draft-score').textContent=active.score[myIndex()]+' : '+active.score[1-myIndex()];
  $('draft-outcome').textContent=active.lastOutcome==='draw'?'РАУНД ВНИЧЬЮ · 0 ОЧКОВ':'';
  $('draft-title').textContent=active.lastOutcome==='draw'?'Ничья. Очки не меняются. Возьми руну.':active.lastWinner===myIndex()?'Хороший раунд. Возьми руну.':'Проиграли раунд. Возьми руну.';
+ if(active.gameMode==='rupture'){$('draft-outcome').textContent='СТАДИЯ '+active.round+' / 10';$('draft-title').textContent='Эволюция магии. Выбери новую руну.'}
  $('rune-cards').hidden=false;$('replace-zone').hidden=true;pendingRune=null;
  const list=$('rune-cards');list.replaceChildren();
  for(const id of (debugSession?active.pick:online?.active?online.view?.offers||[]:active.pick)){
@@ -324,7 +328,7 @@ function drawBenchSample(ids){
  else{p.fillRect(171,26,13,13);p.fillStyle='#e59e65';p.fillRect(177,20,3,6);p.fillRect(181,33,8,4)}
 }
 $('bench-fight').addEventListener('click',()=>{if(online?.active){if(online.ready(onlinePreviewRunes||myActor().runes)){if(online.view?.phase==='draft'){show('net-wait');toast('Ждём второго мага')}}return}if(active&&beginRound(active)){applyPendingAppearance();sfx('shield');remember();show('fight');toast('Сборка готова')}});
-function renderResult(){drawPortrait($('result-portrait').getContext('2d'),appearance,56);const won=active.champion===myIndex();$('result-title').textContent=won?'Ты выиграл.':'Ты проиграл.';$('result-copy').textContent=won?'Сборка выдержала проверку. А может, просто повезло.':'В следующий раз собери что-нибудь похуже для врага.';$('result-score').textContent=active.score[myIndex()]+' : '+active.score[1-myIndex()];if(online?.active&&!debugSession){$('again').hidden=online.view?.host!==online.view?.seats?.[myIndex()];$('again').firstChild.textContent='Реванш ';$('net-result-leave').hidden=false}else{$('again').hidden=false;$('again').firstChild.textContent='Ещё один матч ';$('net-result-leave').hidden=true;forget();$('continue').hidden=true}}
+function renderResult(){drawPortrait($('result-portrait').getContext('2d'),appearance,56);const won=active.champion===myIndex();$('result-title').textContent=active.champion===null?'Ничья.':won?'Ты выиграл.':'Ты проиграл.';$('result-copy').textContent=active.champion===null?'Магия не выбрала победителя.':active.gameMode==='rupture'?(won?'Разлом пережил твою магию.':'Захватывай ядро и усиливай сборку.'):(won?'Сборка выдержала проверку. А может, просто повезло.':'В следующий раз собери что-нибудь похуже для врага.');$('result-score').textContent=active.score[myIndex()]+' : '+active.score[1-myIndex()];if(online?.active&&!debugSession){$('again').hidden=online.view?.host!==online.view?.seats?.[myIndex()];$('again').firstChild.textContent='Реванш ';$('net-result-leave').hidden=false}else{$('again').hidden=false;$('again').firstChild.textContent='Ещё один матч ';$('net-result-leave').hidden=true;forget();$('continue').hidden=true}}
 function transition(){if(!active)return;if(active.phase==='draft'){void refreshAppearance();show('draft');renderDraft();remember();sfx('shield')}else if(active.phase==='build'){show('build');renderWorkbench();remember()}else if(active.phase==='result'){show('result');renderResult();sfx('overtime')}}
 function savedBooks(){const books=stored(booksKey);return Array.isArray(books)?books.filter(b=>b&&legalRunes(b.runes)&&b.runes.length>=2).slice(0,12):[]}
 function saveBuild(){
@@ -483,6 +487,15 @@ function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0,moving=0,
  const pose=animate&&a?mageMotion.sample(a,{x,y},performance.now()/1000,active?.round||0,reducedMotion):null;
  drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.windup?.remaining>0?a.windup.remaining*2.7:a?.cast||0,dashing:a?.dash||0,moving,pose});
 }
+function drawRuptureCore(s){
+ if(s?.gameMode!=='rupture')return;
+ const near=s.actors.map(a=>a.hp>0&&Math.hypot(a.x-200,a.y-310)<52),owner=near[0]&&!near[1]?0:near[1]&&!near[0]?1:-1;
+ const hold=owner>=0?s.coreHold?.[owner]||0:0,pulse=3+Math.sin(frame*.07)*2;
+ ctx.save();ctx.translate(200,310);ctx.strokeStyle=owner===0?'#a7d8e3':owner===1?'#e3ac83':'#c3b999';ctx.lineWidth=2;
+ ctx.strokeRect(-29-pulse/2,-29-pulse/2,58+pulse,58+pulse);ctx.strokeRect(-17,-17,34,34);
+ ctx.fillStyle='#152f32';ctx.fillRect(-12,-12,24,24);ctx.fillStyle='#e6c580';ctx.fillRect(-8,-8,16,16);ctx.fillStyle='#fff2c5';ctx.fillRect(-3,-3,6,6);
+ if(hold>0){ctx.fillStyle=owner===0?'#93dce9':'#efb68d';ctx.fillRect(-25,32,50*hold/8,4)}ctx.restore();
+}
 function drawConstructs(s){
  if(drawForgeConstructs(ctx,s,frame/60,reducedMotion))return;
  for(const b of s.barriers){
@@ -523,7 +536,7 @@ function drawEffects(s){
  }
 }
 function drawOverlay(s){
- if(s?.phase==='fight'&&s.remaining<10){
+ if(s?.phase==='fight'&&(s.gameMode==='rupture'?s.remaining<=90:s.remaining<10)){
   const radius=ringRadius(s),warning=.65+Math.sin(frame*.19)*.15;
   ctx.strokeStyle='#df9972';ctx.globalAlpha=warning;ctx.lineWidth=4;ctx.setLineDash([8,5]);
   ctx.beginPath();ctx.arc(200,310,radius,0,Math.PI*2);ctx.stroke();
@@ -550,6 +563,7 @@ function render(){
   // Telegraphs belong to the physical court: visible projectiles and placed
   // mines only. No enemy hidden runes, damage estimates or artificial aim.
   drawGroundCues(ctx,active,myIndex(),frame/60,reducedMotion);
+  drawRuptureCore(active);
   drawSpellGround(ctx,spellChoreography,reducedMotion);
   drawSignatureGround(ctx,active,frame,reducedMotion);
   combatPresentation.ground(ctx);
@@ -590,7 +604,7 @@ function render(){
  combatPresentation.screen(ctx);
 }
 function handleEvents(){if(!active)return;let count=0;const played=new Set();for(const f of active.fx){if(f.id<=seen||count>=5||played.has(f.k))continue;sfx(f.k,active.actors.reduce((closest,a)=>!closest||Math.hypot(a.x-f.x,a.y-f.y)<Math.hypot(closest.x-f.x,closest.y-f.y)?a:closest,null)?.mageId?mage(active.actors.reduce((closest,a)=>!closest||Math.hypot(a.x-f.x,a.y-f.y)<Math.hypot(closest.x-f.x,closest.y-f.y)?a:closest,null).mageId).school:'fire');played.add(f.k);count++}seen=active.serial}
-function loop(now){const elapsed=Math.min(.13,(now-last)/1000||0);last=now;frame++;if(toastT>0){toastT-=elapsed;if(toastT<=0)$('toast').classList.remove('visible')}if(online?.active){if(!debugSession&&active&&online.view?.phase==='fight'){online.sample(()=>mode==='fight'?playerInput():{x:0,y:0,aim:{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y},attack:false,shield:false,dash:false},active.round,now);handleEvents()}if(frame%5===0)updateHud();acc=0}else if(mode==='fight'&&active&&!debugSession){acc+=elapsed;let steps=0;while(acc>=STEP&&steps<8){tick(active,playerInput());acc-=STEP;steps++;if(active.phase!=='fight')break}handleEvents();if(frame%5===0)updateHud();if(frame%120===0)remember();if(active.phase!=='fight')transition()}else acc=0;render();requestAnimationFrame(loop)}
+function loop(now){const elapsed=Math.min(.13,(now-last)/1000||0);last=now;frame++;if(toastT>0){toastT-=elapsed;if(toastT<=0)$('toast').classList.remove('visible')}if(online?.active){if(!debugSession&&online.view?.phase==='draft'&&now-netSyncAt>1700){netSyncAt=now;online.sync()}if(!debugSession&&active&&online.view?.phase==='fight'){online.sample(()=>mode==='fight'?playerInput():{x:0,y:0,aim:{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y},attack:false,shield:false,dash:false},active.round,now);handleEvents()}if(frame%5===0)updateHud();acc=0}else if(mode==='fight'&&active&&!debugSession){acc+=elapsed;let steps=0;while(acc>=STEP&&steps<8){tick(active,playerInput());acc-=STEP;steps++;if(active.phase!=='fight')break}handleEvents();if(frame%5===0)updateHud();if(frame%120===0)remember();if(active.phase!=='fight')transition()}else acc=0;render();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 // The authenticated avatar is presentation only: never serialize art into a
 // combat save. Switching profiles does not change the sprite mid-round.
@@ -689,7 +703,7 @@ function onlineView(view){
  if(debugSession){online.view=view;return}
  void refreshRival(view);
  online.view=view;active=view.match||null;
- const stamp=[view.phase,active?.round??0,view.picked,view.ready].join(':');
+ const stamp=[view.phase,active?.round??0,view.picked,view.ready,view.gameMode].join(':');
  if(stamp===onlinePhase){if(view.phase==='lobby'){updateNetworkLobby(view);drawNetworkMageOptions()}return}
  onlinePhase=stamp;displayXY=[null,null];
  if(view.phase==='lobby'){applyRival();show('online-lobby');updateNetworkLobby(view);drawNetworkMageOptions();if(view.mages?.[view.me]!==selectedMage)online.chooseMage(selectedMage)}
@@ -704,7 +718,9 @@ function updateNetworkLobby(view){
  const full=(view?.seats?.length||0)===2;
  const isHost=view?.host===view?.seats?.[view.me];
  $('net-start').hidden=!full||!isHost;
- $('net-help').textContent=full?'Оба мага на месте. Создатель комнаты запускает дуэль.':'Пришли код другу. Оба игрока смогут участвовать со своих устройств.';
+ for(const kind of ['rupture','duel']){const btn=$('net-mode-'+kind);btn.disabled=!isHost;btn.setAttribute('aria-pressed',String((view.gameMode||'rupture')===kind))}
+ $('net-start').firstChild.textContent=view.gameMode==='duel'?'Начать дуэль ':'Начать Разлом ';
+ $('net-help').textContent=full?'Создатель комнаты выбирает режим и запускает матч.':'Пришли код другу. Оба игрока смогут участвовать со своих устройств.';
  roomRoster(view?.players||[]);
 }
 online=new OnlineDuel({
@@ -728,6 +744,7 @@ $('net-join').addEventListener('click',()=>{
 });
 $('net-resume').addEventListener('click',()=>startNetwork('resume'));
 $('net-start').addEventListener('click',()=>online.start());
+for(const kind of ['rupture','duel'])$('net-mode-'+kind).addEventListener('click',()=>{if(online?.active)online.chooseMode(kind)});
 $('net-back').addEventListener('click',()=>{online.leave();onlinePhase='';active=null;show('menu')});
 $('net-wait-leave').addEventListener('click',()=>{online.leave();onlinePhase='';active=null;show('menu')});
 $('net-result-leave').addEventListener('click',()=>{online.leave();onlinePhase='';active=null;show('menu')});
@@ -747,4 +764,4 @@ try{
 const invite=incomingCode();
 if(invite){$('net-code').value=invite;show('online-lobby');$('net-feedback').textContent='Приглашение готово. Нажми «Войти».'}
 
-window.__perekosTest={get state(){return active},get mode(){return mode},get aim(){return input.aim?{...input.aim}:null},get appearance(){return {source:appearance.source,accountId:appearance.accountId,preset:appearance.preset,mascot:appearance.mascot,colors:appearance.colors,hasArt:!!appearance.artCanvas}},get hasPendingAppearance(){return !!pendingAppearance},refreshAvatar:()=>refreshAppearance({force:true}),start:newMatch,step:()=>{if(active){tick(active,{attack:true});if(active.phase!=='fight')transition()}},pick:(id,slot=null)=>{if(active?.phase==='draft'){return finishPick(id,slot)}return false},build:()=>{$('bench-fight').click()},reorder:(from,to)=>{const result=reorderRunes(active,from,to);if(result)renderWorkbench();return result},save:saveBuild};
+window.__perekosTest={get state(){return active},get mode(){return mode},get aim(){return input.aim?{...input.aim}:null},get appearance(){return {source:appearance.source,accountId:appearance.accountId,preset:appearance.preset,mascot:appearance.mascot,colors:appearance.colors,hasArt:!!appearance.artCanvas}},get hasPendingAppearance(){return !!pendingAppearance},get selectedGameMode(){return selectedGameMode},refreshAvatar:()=>refreshAppearance({force:true}),start:newMatch,step:()=>{if(active){tick(active,{attack:true});if(active.phase!=='fight')transition()}},pick:(id,slot=null)=>{if(active?.phase==='draft'){return finishPick(id,slot)}return false},build:()=>{$('bench-fight').click()},reorder:(from,to)=>{const result=reorderRunes(active,from,to);if(result)renderWorkbench();return result},save:saveBuild};
