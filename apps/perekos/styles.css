@@ -1028,3 +1028,9 @@
  #net-room-info .mode-option small{font-size:9px}
  .net-school-options .v2-school{font-size:13px;min-height:57px}
 }
+
+/* Rune branching is named only when compatible FORM + ORIGIN really executes. */
+.v2-form-summary{display:grid;gap:5px;padding:11px 14px;background:#c7d0b4;color:#243e33;border:1px solid #879579;box-shadow:inset 4px 0 #45654c}
+.v2-form-summary strong{font:750 clamp(15px,3vw,19px)/1.15 Georgia,serif}
+.v2-form-summary p{font-size:12px}
+.v2-form-summary small{font-size:10px;color:#4a594b}

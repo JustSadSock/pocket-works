@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Perekos PocketNet v10: both legacy PvP and server-authoritative single-school rune duels.
+// Perekos PocketNet v11: both legacy PvP and server-authoritative single-school rune duels.
 // Six mechanically distinct fighters in three plain-language magic families.
 // This data is frozen into the matching server ruleset version.
 const mageEntry=(id,school,name,trait,description,style,speed,power,reload,shield)=>({id,school,name,trait,description,style,speed,power,reload,shield});
@@ -388,15 +388,23 @@ function slateWave(s,a){
  addHeat(s,a,mastery(a,'cheap')?4:8);fx(s,'quake',a.x,a.y);emit(s,'on_cast',a.id);
 }
 function processWave(s,w){
- const other=s.actors[1-w.owner];w.life-=STEP;w.reach=Math.min(w.range,w.reach+w.range*STEP/.23);
+ const other=s.actors[1-w.owner];w.life-=STEP;
+ if(w.warmup>0){w.warmup=Math.max(0,w.warmup-STEP);return}
+ w.reach=Math.min(w.range,w.reach+w.range*STEP/.23);
  if(w.hit||!insideCone(w,other,w.angle,w.reach,w.halfAngle))return;
  const d=Math.hypot(other.x-w.x,other.y-w.y);
  if(d>beamLength(s,w.x,w.y,Math.atan2(other.y-w.y,other.x-w.x),d+3,w.owner)+6)return;
  w.hit=true;
- const attacker=s.actors[w.owner],dealt=harm(s,other,mastery(attacker,'strong')?18:15,w.owner);
+ const attacker=s.actors[w.owner],dealt=harm(s,other,
+  w.v2Element?Math.min(18,Math.max(1,w.damage||10)):mastery(attacker,'strong')?18:15,w.owner);
  const k=mag(other.x-w.x,other.y-w.y);
  move(other,(other.x-w.x)/k*18,(other.y-w.y)/k*18);
- if(dealt>0){markTarget(s,other,'stone',w.owner);other.slow=Math.max(other.slow,.45);emit(s,'on_hit',w.owner)}
+ if(dealt>0){
+  if(w.v2Element==='fire'){other.burn=Math.max(other.burn||0,1.2);other.burnSource=w.owner}
+  else other.slow=Math.max(other.slow,.45);
+  if(!w.v2Element)markTarget(s,other,'stone',w.owner);
+  emit(s,'on_hit',w.owner);
+ }
  fx(s,'impact_wave',other.x,other.y);
 }
 function unobstructed(s,fromX,fromY,targetX,targetY,owner,margin=8){
@@ -703,7 +711,7 @@ function validState(s){
  &&(!s.magicModeV2||(s.magicLoadouts?.length===2&&s.magicLoadouts.every(x=>v2SpellAllowed(x))))&&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=10;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=11;
 
 // ---- Immutable PocketNet ruleset 10: generated from reviewed magic-v2 runtime.
 // v9 is preserved separately; 10 retains all its legacy logic for old-style new rooms.
@@ -1041,11 +1049,15 @@ function migrateLegacyMagic(legacy,{confirmed=false,seed=1}={}){
 const MAGIC_V2_PRACTICE_RUNES=Object.freeze([
  'u_on_cast','u_on_hit','u_on_hurt','u_after_dash','u_after_guard',
  'u_guard','u_push','u_heal','u_afterimage','u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
- 'st_throw','st_shards','st_wall','fi_ember','fi_scorch','fi_flamepatch','li_spark','li_arc'
+ 'st_throw','st_shards','st_wall','fi_ember','fi_scorch','fi_flamepatch','li_spark','li_arc',
+ 'u_reform_base','st_form_wave','st_origin_self','st_origin_below',
+ 'fi_form_stream','fi_origin_self','fi_origin_sky',
+ 'li_form_ray','li_origin_self','li_origin_pylon'
 ]);
 // Only verified modifiers appear as equippable buttons for a given action in
 // the current live laboratory. The full catalog is reserved for later phases.
 const V2_PRACTICE_MODS=Object.freeze({
+ u_reform_base:['st_form_wave','st_origin_self','st_origin_below','fi_form_stream','fi_origin_self','fi_origin_sky','li_form_ray','li_origin_self','li_origin_pylon'],
  u_guard:['u_size','u_efficient'],
  u_push:['u_size','u_efficient'],
  u_heal:['u_efficient'],
@@ -1065,11 +1077,53 @@ function magicV2PracticeModifierFits(action,modifier){
 function magicV2Attack(s,a,target){
  if(a.cast>0||a.stun>0||a.windup)return false;
  a.face=Math.atan2(target.y-a.y,target.x-a.x);
- const school=a.magicSchool,style=school==='stone'?'rock':school==='storm'?'bolt':'orb';
- a.cast=stats(a).reload;
- const ok=spawnShot(s,a,a.face,a.x,a.y,{style,element:school,damage:12,life:1.3,signature:false});
- if(ok){addHeat(s,a,7);emit(s,'on_cast',a.id)}
- return ok;
+ const school=a.magicSchool,form=effectiveMagicForm(s.magicLoadouts?.[a.id]||{slots:[],sealed:[]});
+ const shape=form.ok?form.shape:null,origin=form.ok?form.origin:null;
+ const angle=a.face,forward=(distance,margin=12)=>{
+  // The launch point must be reachable from the caster. Shapes never teleport
+  // through a permanent wall or a temporary opposing barrier.
+  const path=rayCollision(s,a.x,a.y,angle,distance,margin,a.id,false);
+  const d=Math.max(0,Math.min(distance,path.length-margin));
+  return {x:a.x+Math.cos(angle)*d,y:a.y+Math.sin(angle)*d};
+ };
+ let fired=false,extraHeat=0;
+ if(school==='stone'&&shape==='st_form_wave'&&s.waves.length<12){
+  const fromBelow=origin==='st_origin_below',self=origin==='st_origin_self';
+  const at=fromBelow?forward(154):{x:a.x,y:a.y};
+  s.waves.push({owner:a.id,x:at.x,y:at.y,angle,range:fromBelow?65:self?104:130,
+   reach:0,halfAngle:fromBelow||self?Math.PI:.57,life:fromBelow?.68:.34,
+   warmup:fromBelow?.22:0,hit:false,v2Element:'stone',damage:fromBelow?11:13});
+  fx(s,'quake',at.x,at.y);fired=true;extraHeat=7;
+ }else if(school==='fire'&&shape==='fi_form_stream'&&s.waves.length<12){
+  const sky=origin==='fi_origin_sky',self=origin==='fi_origin_self';
+  const at=sky?forward(152):{x:a.x,y:a.y};
+  s.waves.push({owner:a.id,x:at.x,y:at.y,angle,range:sky?62:self?74:105,
+   reach:0,halfAngle:sky||self?Math.PI:.38,life:sky?.66:.34,
+   warmup:sky?.22:0,hit:false,v2Element:'fire',damage:sky?10:8});
+  fx(s,'flame',at.x,at.y);fired=true;extraHeat=6;
+ }else if(school==='storm'&&shape==='li_form_ray'&&s.beams.length<12){
+  const at=origin==='li_origin_pylon'?forward(68,7):{x:a.x,y:a.y};
+  const length=beamLength(s,at.x,at.y,angle,origin==='li_origin_self'?168:220,a.id);
+  s.beams.push({owner:a.id,x:at.x,y:at.y,angle,length,life:.22,style:'evo-beam',element:'storm',width:5});
+  const other=s.actors[1-a.id],dx=other.x-at.x,dy=other.y-at.y;
+  const along=dx*Math.cos(angle)+dy*Math.sin(angle);
+  const sideways=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
+  if(along>=0&&along<=length+9&&sideways<=15){
+   other.shield=Math.max(0,other.shield-3);
+   const damage=harm(s,other,11,a.id);
+   if(damage>0)emit(s,'on_hit',a.id);
+   fx(s,'impact_arc',other.x,other.y);
+  }
+  fx(s,'thunder',at.x,at.y);fired=true;extraHeat=9;
+ }else if(s.shots.length<80){
+  const style=school==='stone'?'rock':school==='storm'?'bolt':'orb';
+  fired=spawnShot(s,a,angle,a.x,a.y,{style,element:school,damage:12,life:1.3,signature:false});
+ }
+ if(fired){
+  a.cast=shape?(school==='stone'?0.86:school==='fire'?0.65:0.76):stats(a).reload;
+  addHeat(s,a,7+extraHeat);emit(s,'on_cast',a.id);
+ }
+ return fired;
 }
 function magicV2Action(s,a,act,mods,ev){
  const other=s.actors[1-a.id],school=a.magicSchool;
@@ -1159,7 +1213,10 @@ function flushMagicV2Events(s){
 const V2_START_POOL=Object.freeze([
  'u_on_cast','u_after_dash','u_on_hurt','u_guard','u_heal','u_push','u_size',
  'u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
- 'st_throw','st_shards','st_wall','fi_ember','fi_scorch','fi_flamepatch','li_spark','li_arc'
+ 'st_throw','st_shards','st_wall','fi_ember','fi_scorch','fi_flamepatch','li_spark','li_arc',
+ 'u_reform_base','st_form_wave','st_origin_self','st_origin_below',
+ 'fi_form_stream','fi_origin_self','fi_origin_sky',
+ 'li_form_ray','li_origin_self','li_origin_pylon'
 ]);
 const V2_SEAT_MAGES=Object.freeze({stone:'pebble',fire:'kindle',storm:'wire'});
 function v2Inventory(school,seed){
@@ -1264,7 +1321,7 @@ function readyNet(s,i,list){
 }
 function viewForPlayer({state:s,player,players}){
  const i=side(s,player.id);
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:10,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:11,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};
