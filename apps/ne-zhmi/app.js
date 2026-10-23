@@ -332,6 +332,6 @@ function frame(now){
   }
   requestAnimationFrame(frame);
 }
-createWorkshopMode({appName:'НЕ ЖМИ!',version:'0.6.0',cachePrefix: 'ne-zhmi-',storageNamespace: 'pocket-works:ne-zhmi',onReset:()=>{if(online?.isActive())online.leave();best=null;muted=false;updateSound();backToMenu();}});
+createWorkshopMode({appName:'НЕ ЖМИ!',version:'0.7.0',cachePrefix: 'ne-zhmi-',storageNamespace: 'pocket-works:ne-zhmi',onReset:()=>{if(online?.isActive())online.leave();best=null;muted=false;updateSound();backToMenu();}});
 window.addEventListener('workshopopen',()=>{if(phase==='playing')pause();});
 setMode('quick');saveParty();show('menu');requestAnimationFrame(frame);

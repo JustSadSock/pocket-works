@@ -40,3 +40,10 @@ The visual layer now tracks rolling displacement instead of periodically rotatin
 
 ## Stage 6 — modes and continuity
 The game's three physical channels are **one-off** (one fast run), **party** (three authoritative circuits with a cumulative results ticket and falls), and **free workshop** (specific reproducible 32-bit course seed plus 4/5/6 sections). Local party progress persists as a validated lightweight summary; interrupted runs replay from the start of the unfinished course. The room host configures the multiplayer game mode and lab geometry before starting. Guests can view but cannot change authoritative settings. Server-reported scores are the only source of truth for online party achievements. Room snapshots include config and session results, so reconnecting users see the same ticket; completing stage 3 offers a fresh three-stage series. No additional physical buttons, transport permissions or changes to legacy PocketNet module versions are necessary.
+
+## Stage 7 — Reliability and release audit
+- Side-aware robot and cargo contacts avoid teleporting to the other side of a box.
+- Post-piston recovery grace prevents immediate re-kills at checkpoints but does not disable later collisions.
+- PocketNet v13 sends compact repeated movement packets without the immutable route. New rounds, victory and sync include full geometry; the client reuses the known level only when round identifiers match, otherwise requests a fresh server sync. Frozen historical v1–v12 are unchanged.
+- New tests: 2,400 course variations, exact server/client physics equivalence, simulated 25-minute six-operator room with network stalls, directional box collisions, recovery, stale packets and mobile+online Playwright suites.
+- No new placeholder buttons or shell-level interface changes. Existing CI errors in unrelated apps are tracked separately from application tests.

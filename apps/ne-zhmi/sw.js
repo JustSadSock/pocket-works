@@ -1,7 +1,7 @@
-const APP_VERSION='0.6.0';
-const CACHE_NAME='ne-zhmi-v0.6.0';
+const APP_VERSION='0.7.0';
+const CACHE_NAME='ne-zhmi-v0.7.0';
 const RELEASE_DATE='2026-10-23';
-const RELEASE_NOTES=["Три полноценных режима: одиночный заезд, командная серия из трёх трасс и свободная мастерская.","Серия подсчитывает общий результат, сохраняет прогресс, поддерживает повтор этапа и восстановление после перезахода.","Мастерская позволяет воспроизводить трассу по коду и выбирать 4, 5 или 6 секций; онлайн-ведущий задаёт настройки комнаты."];
+const RELEASE_NOTES=["Исправлено прохождение сквозь грузовые ящики справа налево; после попадания под пресс добавлено короткое безопасное восстановление.","Сетевые обновления стали компактными: геометрия передаётся при запуске, смене раунда и переподключении, а не при каждом движении.","Восстановление всех ролей комнаты и нагрузочные тесты: 2400 трасс, соответствие клиентской и серверной физики, длительный матч."];
 const VERSION=APP_VERSION,CACHE=CACHE_NAME,PREFIX='ne-zhmi-';
 const FILES=['./','./index.html','./app.config.json','./styles.css','./app.js','./engine.js','./abilities.js','./course.js','./session.js','./renderer.js','./visual-fx.js','./soundscape.js','./online.js','./online-flow.js','../../shared/capabilities/net.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/update-manager.js'];
 const ROOT=new URL('./',self.registration.scope);
