@@ -756,7 +756,7 @@ app.addEventListener('click',event=>{
   }
   if(action==='close-player-actions'){app.querySelector('.player-popover')?.remove();return;}
   if(action==='trade-with'){
-  sound.play('tap');
+  app.querySelector('.player-popover')?.remove();sound.play('tap');
   const recipient=state?.players?.find(p=>p.id===btn.dataset.player);
   if(!recipient?.connected||recipient.bankrupt||state?.you?.bankrupt)return;
   lastSheetTrigger=btn;openSheet('deals',true);
