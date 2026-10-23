@@ -231,7 +231,7 @@ export function commandGame(state, action, pressed=true) {
   }
   return 'unknown';
 }
-function stepGame(state, dt = FIXED_DT) {
+export function stepGame(state, dt = FIXED_DT) {
   if (state.finished) return [];
   const events = [];
   const level = state.level || LEVEL;
