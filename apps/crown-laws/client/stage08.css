@@ -47,6 +47,11 @@ button:disabled{cursor:not-allowed}
 .council-lobby__seats{position:absolute;left:0;right:0;bottom:3%;height:57%;background:url('../assets/council-seats.svg') center/contain no-repeat;filter:drop-shadow(0 9px 15px #0b140f8a)}
 .council-lobby__occupant{position:absolute;z-index:2;left:15%;bottom:5%;width:30%;height:51%;background-image:url('../assets/court-figures.svg')!important;background-size:600% 100%!important;background-repeat:no-repeat;opacity:0;filter:drop-shadow(0 10px 8px #071009bb);transform:translateY(8px);transition:opacity .3s,transform .3s}
 .council-lobby__occupant.is-visible{opacity:1;transform:translateY(0)}
+/* North sits left, South sits right. The other chair must be genuinely empty. */
+.council-lobby__occupant.sprite-figure--south{left:59%}
+.council-lobby__visual:has(.sprite-figure--south.is-visible) .council-lobby__vacant{right:auto;left:11%}
+.council-lobby__visual:not(:has(.council-lobby__occupant.is-visible)) .council-lobby__vacant{opacity:0;animation:none}
+
 .council-lobby__vacant{position:absolute;right:11%;bottom:5%;width:33%;height:56%;background:radial-gradient(ellipse,#e6d19415,transparent 63%);animation:council-empty-chair 2.7s ease-in-out infinite}
 .council-lobby__vacant:after{content:'?';display:grid;place-items:center;width:41px;height:41px;border:1px solid #b8a26f;background:#1c3027a9;color:#e2c993;border-radius:50%;position:absolute;top:18%;left:40%;font:700 26px Georgia,serif}
 @keyframes council-empty-chair{50%{opacity:.6;filter:brightness(1.4)}}
