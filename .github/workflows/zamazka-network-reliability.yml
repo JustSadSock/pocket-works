@@ -1,0 +1,63 @@
+name: ZAMAZKA network reliability
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/zamazka/server/module.ts'
+      - 'apps/zamazka/draft-transfer.js'
+      - 'apps/zamazka/app.js'
+      - 'apps/zamazka/qa/final-transfer-recovery.mjs'
+      - 'apps/zamazka/qa/eight-player-transfer.mjs'
+      - 'apps/zamazka/qa/large-painting.mjs'
+      - 'pocketnet/hub.mjs'
+      - 'pocketnet/modules.lock.json'
+      - 'pocketnet/module-versions/zamazka/**'
+      - '.github/workflows/zamazka-network-reliability.yml'
+  pull_request:
+    paths:
+      - 'apps/zamazka/server/module.ts'
+      - 'apps/zamazka/draft-transfer.js'
+      - 'apps/zamazka/app.js'
+      - 'apps/zamazka/qa/**'
+      - 'pocketnet/hub.mjs'
+      - 'pocketnet/modules.lock.json'
+      - 'pocketnet/module-versions/zamazka/**'
+      - '.github/workflows/zamazka-network-reliability.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zamazka-network-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reliability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install isolated TypeScript test dependency
+        run: |
+          mkdir -p "$RUNNER_TEMP/zamazka-ci" node_modules
+          printf '{"name":"zamazka-reliability-qa","private":true}' > "$RUNNER_TEMP/zamazka-ci/package.json"
+          npm install --prefix "$RUNNER_TEMP/zamazka-ci" --no-package-lock --ignore-scripts --no-audit --no-fund typescript@5.9.3
+          ln -s "$RUNNER_TEMP/zamazka-ci/node_modules/typescript" node_modules/typescript
+      - name: Verify immutable PocketNet module snapshot
+        run: npm run pocketnet:check
+      - name: Validate JavaScript syntax
+        run: |
+          node --check apps/zamazka/app.js
+          node --check apps/zamazka/draft-transfer.js
+          node --check pocketnet/hub.mjs
+      - name: Test large paintings and frame limits
+        run: node apps/zamazka/qa/large-painting.mjs
+      - name: Test checksum and interrupted final recovery
+        run: node apps/zamazka/qa/final-transfer-recovery.mjs
+      - name: Test eight interleaved final submissions
+        run: node apps/zamazka/qa/eight-player-transfer.mjs
