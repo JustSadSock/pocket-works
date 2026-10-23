@@ -57,6 +57,7 @@ jobs:
           node node_modules/@playwright/test/cli.js test --config=scripts/universal-qa/playwright.config.mjs \
             apps/perekos/qa/journey.spec.js \
             apps/perekos/qa/hud-arena.spec.js \
+            apps/perekos/qa/magic-v2-lab.spec.js \
             apps/perekos/qa/avatar.spec.js \
             apps/perekos/qa/net.spec.js \
             apps/perekos/qa/visual-review.spec.js \
