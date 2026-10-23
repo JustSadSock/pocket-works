@@ -335,6 +335,21 @@ export function createRenderer(canvas) {
       ctx.fillStyle='#c98066';ctx.fillRect(px-scale*.35,py+scale*.33,scale*.7,4);
       ctx.fillStyle='#fff0cd';for(let i=0;i<3;i++)ctx.fillRect(px+(i-1)*13,py+scale*.43,4,8);
     }
+    if((state.brakeGuard||0)>0){
+      // Charged brake release uses an enamel impact shield, not a generic
+      // transparent aura; its length decays exactly with server protection.
+      const strength=Math.min(1,state.brakeGuard/.32);
+      const facing=state.dir||1;
+      ctx.save();ctx.globalAlpha=strength;
+      ctx.fillStyle='#425f60';
+      ctx.strokeStyle='#e5ba77';ctx.lineWidth=2.2;
+      const plateX=px+facing*scale*.48;
+      rr(ctx,plateX-(facing<0?11:0),py-scale*.30,11,scale*.75,4);
+      ctx.fill();ctx.stroke();
+      ctx.fillStyle='#e6bf88';
+      for(let i=0;i<3;i++)ctx.fillRect(plateX+(facing>0?2:-8),py-scale*.16+i*scale*.18,6,2);
+      ctx.restore();
+    }
     if(state.pushCooldown>.77){
       ctx.save();ctx.globalAlpha=Math.min(1,(state.pushCooldown-.77)*2.6);ctx.strokeStyle='#f5dca6';ctx.lineWidth=4;
       ctx.beginPath();ctx.arc(px,py,scale*(1.5-state.pushCooldown),0,Math.PI*2);ctx.stroke();ctx.restore();

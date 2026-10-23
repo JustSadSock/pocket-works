@@ -13,7 +13,7 @@ test('each operator in a crew of 3–6 receives an actual mechanical section',()
    const level=generateCourse(seed,sections,count);
    assert.ok(validateCourse(level),'geometry '+count+'/'+sections+'/'+seed);
    assert.equal(level.sections.length,sections);
-   assert.equal(level.version,3);
+   assert.equal(level.version,4);
    for(let role=3;role<=count;role++)
     assert.equal(level.sections.filter(s=>s.kind===need[role]).length,1,
      'missing specialist '+role+' for '+count+'/'+sections+'/'+seed);
@@ -23,7 +23,7 @@ test('each operator in a crew of 3–6 receives an actual mechanical section',()
       'unsafe adjacent jumps '+count+'/'+sections+'/'+seed);
   }
 });
-test('generator output matches authoritative PocketNet v15 across crew sizes and seeds',()=>{
+test('generator output matches authoritative PocketNet current ruleset across crew sizes and seeds',()=>{
  for(let count=2;count<=6;count++)for(let sections=4;sections<=6;sections++)
   for(let seed=1;seed<=80;seed++)
    assert.deepEqual(serverCourse(seed,sections,count),generateCourse(seed,sections,count));

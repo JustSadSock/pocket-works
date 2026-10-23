@@ -105,6 +105,7 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
         display.checkpoint=next.robot.checkpoint;
         display.respawns=next.robot.respawns;display.jumps=next.robot.jumps;display.reverses=next.robot.reverses;
         display.pushes=next.robot.pushes;display.pushCooldown=next.robot.pushCooldown;
+        display.brakeCharge=next.robot.brakeCharge;display.brakeGuard=next.robot.brakeGuard;
         display.held={...next.robot.held};display.energy={...next.robot.energy};
         display.cargo=structuredClone(next.robot.cargo||[]);display.level=next.robot.level;
       }

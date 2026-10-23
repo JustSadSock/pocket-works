@@ -1,7 +1,7 @@
-const APP_VERSION='0.8.0';
-const CACHE_NAME='ne-zhmi-v0.8.0';
-const RELEASE_DATE='2026-10-23';
-const RELEASE_NOTES=["Генератор трасс распределяет механизмы по операторам: магнит, тормоз, толчок и поплавок каждый получают собственный участок в каждой партии с соответствующим числом игроков.","Разделены сложные прыжковые секции, исключены повторяющиеся соседние модули; механики проверены физическими испытаниями.","Восстановлен общий выпуск PocketNet: модуль Чепухи закреплён в новой неизменяемой версии без изменения игровой логики."];
+const APP_VERSION='0.9.0';
+const CACHE_NAME='ne-zhmi-v0.9.0';
+const RELEASE_DATE='2026-10-24';
+const RELEASE_NOTES=["150 целых трасс завершены без падений реальными командами движка — по 30 для каждого состава из 2–6 игроков.","Генератор заменяет несовместимые секции и больше не ставит сложные прыжки сразу после пружины или воздушного потока.","Удержание и отпускание тормоза накапливает короткую защиту от пресса; магнит и толчок работают корректно при переходах между секциями.","Новая металлическая защита Болтика отображается в локальном и онлайн-режиме."];
 const VERSION=APP_VERSION,CACHE=CACHE_NAME,PREFIX='ne-zhmi-';
 const FILES=['./','./index.html','./app.config.json','./styles.css','./app.js','./engine.js','./abilities.js','./course.js','./session.js','./renderer.js','./visual-fx.js','./soundscape.js','./online.js','./online-flow.js','../../shared/capabilities/net.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/update-manager.js'];
 const ROOT=new URL('./',self.registration.scope);
