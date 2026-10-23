@@ -14,7 +14,9 @@
         "tests/story-contract.test.mjs",
         "tests/comic-prompt.test.mjs",
         "tests/writer-flow.test.mjs",
-        "tests/editor-motion.test.mjs"
+        "tests/editor-motion.test.mjs",
+        "tests/finale-state.test.mjs",
+        "tests/audio-score.test.mjs"
       ]
     },
     {
