@@ -85,7 +85,8 @@ test('hold packets must explicitly carry a boolean and old replay does not toggl
 });
 
 test('exhausted held ability releases and cannot stutter at the energy boundary',()=>{
- const s=createGame();
+ const level={start:1,goal:17,checkpoint:9,width:18,platforms:[{x:0,y:6.5,w:18,h:1.5}],devices:[]};
+ const s=createGame(level);
  assert.equal(commandGame(s,'float',true),'float-on');
  for(let i=0;i<800&&s.held.float;i++)stepGame(s,FIXED_DT);
  assert.equal(s.held.float,false);
