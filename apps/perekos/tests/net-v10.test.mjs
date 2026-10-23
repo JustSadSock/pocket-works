@@ -15,7 +15,7 @@ const equip=(s,player,id,slot,action)=>{
  assert.ok(own,id+' must be server-issued');
  return edit(s,player,{type:'equip',slot,instanceId:own.instanceId,...(action===undefined?{}:{action})});
 };
-test('v10 binary-exact snapshot, immutable v9 and current module lock',async()=>{
+test('v12 binary-exact snapshot, immutable v9 through v11 and current module lock',async()=>{
  const main=await readFile(new URL('../server/module.ts',import.meta.url),'utf8');
  const current=await readFile(new URL('../../../pocketnet/module-versions/perekos/v12.ts',import.meta.url),'utf8');
  const previous=await readFile(new URL('../../../pocketnet/module-versions/perekos/v9.ts',import.meta.url),'utf8');
@@ -81,7 +81,7 @@ test('sealing rune chain locks instances, frees slot, and physically shields und
   assert.equal(s.match.magicLoadouts[0].sealed.length,1);
  }finally{Date.now=old}
 });
-test('ready changes are rejected after entering a fight, and legacy rules stay playable under v10',()=>{
+test('ready changes are rejected after entering a fight, and legacy rules stay playable under v12',()=>{
  const s=magicRoom();
  send(s,a,'magic-ready');send(s,b,'magic-ready');
  const revision=s.match.magicLoadouts[0].revision;
@@ -90,4 +90,36 @@ test('ready changes are rejected after entering a fight, and legacy rules stay p
  const legacy=room();send(legacy,a,'start',{gameMode:'duel'});
  assert.equal(legacy.phase,'fight');assert.equal(legacy.match.magicModeV2,undefined);
  assert.equal(legacy.match.actors[0].runes[0],'on_hurt');
+});
+
+test('v12 server runs both opponents new ground-trap runes without trusting client physics',()=>{
+ const old=Date.now;let now=1_400_000;Date.now=()=>now;
+ try{
+  const s=magicRoom();
+  for(const [player,id] of [[a,'st_spikes'],[b,'fi_cindermine']]){
+   equip(s,player,'u_on_cast',1);equip(s,player,id,1);
+  }
+  send(s,a,'magic-ready');send(s,b,'magic-ready');
+  assert.equal(s.phase,'fight');
+  for(let i=0;i<3;i++){
+   now+=85;
+   send(s,a,'input',{seq:i,round:s.match.round,control:{x:0,y:0,attack:true,shield:false,dash:false,aim:{x:320,y:134}}});
+   send(s,b,'input',{seq:i,round:s.match.round,control:{x:0,y:0,attack:true,shield:false,dash:false,aim:{x:64,y:484}}});
+  }
+  assert.ok(s.match.waves.some(w=>w.v2Spikes&&w.owner===0),'server places real stone spike zones');
+  assert.ok(s.match.mines.some(m=>m.v2Trap&&m.owner===1),'server places an armed fire trap');
+  assert.ok(s.match.mines.every(m=>!m.v2Trap||m.arm>=0),'trap count is authoritative');
+ }finally{Date.now=old}
+});
+test('v12 server issues the storm fan but rejects it for other schools',()=>{
+ const s=magicRoom();
+ assert.ok(!s.match.magicLoadouts[0].reserve.some(x=>x.defId==='li_discharge'));
+ const book=s.match.magicLoadouts[0],before=s.revision;
+ send(s,a,'magic-edit',{command:{type:'equip',slot:1,revision:book.revision,instanceId:9999,nonce:'spoof-lightning'}});
+ assert.equal(s.revision,before);
+ const other=room();
+ send(other,a,'mode',{gameMode:'magic-v2'});
+ send(other,a,'magic-school',{school:'storm'});
+ send(other,a,'start',{gameMode:'magic-v2'});
+ assert.ok(other.match.magicLoadouts[0].reserve.some(x=>x.defId==='li_discharge'),'storm player receives true rune');
 });
