@@ -850,3 +850,12 @@ body.sheet-open{overflow:auto}
 .done-screen>.panel{margin:0;min-width:0;overflow-x:auto}
 .done-screen>.row{flex-wrap:wrap;gap:9px;margin-top:4px}
 @media(max-width:680px){.done-screen{gap:9px}.done-screen>h1{font-size:26px}.done-screen>p{font-size:13px}.done-screen>.panel{padding:10px}}
+
+/* Genuine screenshot finding: the generic `.artifact svg` selector accidentally
+   enlarged the small price/bid icons to full illustration size. */
+.table-stage .artifact .lot-market-strip svg{width:15px;height:15px;min-width:15px;min-height:15px;max-width:15px;max-height:15px;flex:none;filter:none;transform:none}
+@media(max-width:680px) and (orientation:portrait){
+ /* The tab itself and its content already name the active workspace. */
+ .workspace-panel .sheet-heading{display:none}
+ .sheet-content{padding-top:4px}
+}
