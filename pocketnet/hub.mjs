@@ -680,8 +680,13 @@ export class PocketNetHub {
     if (info?.roomId) {
       const room = this.readRoom(info.roomId);
       if (room) {
-        this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined, disconnected: info.id });
-        if(!this.connected(info.id,room.id))await this.updateBazaarPresence(room,{id:info.id},false);
+        // A reconnect replaces the old socket. Its late close must not look like
+        // a second disconnection if a new socket already owns the player seat.
+        const stillConnected=!!this.connected(info.id,room.id);
+        if(!stillConnected){
+          this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined, disconnected: info.id });
+          await this.updateBazaarPresence(room,{id:info.id},false);
+        }
         await this.refreshZamazkaPresence(room);
         this.ensureAlarm();
       }
