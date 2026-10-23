@@ -66,7 +66,7 @@ try{
  const roundTwo=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.round===1);
  assert.equal(roundTwo.event.payload.round,1);
  guest.send('leave_room');
- const afterLeave=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.players.some(p=>p.id===guestId&&p.departed));
+ const afterLeave=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='writing'&&m.event.payload.round===1&&m.event.payload.players.some(p=>p.id===guestId&&p.departed));
  assert.equal(afterLeave.event.payload.phase,'writing');
  assert.equal(afterLeave.event.payload.round,1);
  host.send('leave_room');
