@@ -61,7 +61,7 @@ export class BoardEffects {
   clearRows(rows,{linesCleared=1,comboChain=1,totalScore=0}={}){
     const safeRows=Array.isArray(rows)?rows
       .filter(row=>Number.isInteger(row.y)&&row.y>=0&&Array.isArray(row.cells))
-      .slice(0,4):[];
+      .slice(0,4).map(row=>({y:row.y,cells:row.cells.slice()})):[];
     this.queue({
       type:'clear',duration:FX_DURATION.clear,rows:safeRows,
       lines:clamp(linesCleared,1,4),combo:Math.max(1,comboChain),score:Math.max(0,totalScore)
