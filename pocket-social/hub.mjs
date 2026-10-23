@@ -17,6 +17,15 @@ const maskotFaces=new Set(['none','glasses','stars','monocle']);
 const maskotAccessories=new Set(['none','shoulder-dragon','spectral-quill','sun-crystal','mini-block','tiny-guardian']);
 const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Авантюрист','Призрачная кисть','Всевидящий',...canticaAchievements.filter(a=>a.slot==='title').map(a=>a.item),...blockiesAchievements.filter(a=>a.slot==='title').map(a=>a.item)]);
 const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding'],['VIGIL-1347','knight'],['HERALD-1415','herald'],['GROOM-2026','groom'],['SEOUL-MOONLIGHT','seoul-artist'],['DRAGON-EMBER','dragon-keeper']]);
+// Store only SHA-256 digests, never plaintext codes in public source or client assets.
+const privateRewardHashes=new Map([
+  ['5cf9736219a009d837e0d832dc08003038745d6e907a4394209eaafc96ea79b6','yasya-diadem'],
+  ['823496f0288c318026e18fa63a0642ad516457abe5d854aacc48806337a7b180','yasya-guardian']
+]);
+async function rewardCodeHash(value){
+  const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)));
+  return [...bytes].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
 function validMaskot(value,unlocked){
   if(!value||typeof value!=='object'||Array.isArray(value))return false;
   if(!maskotAnimals.has(value.animal)||!maskotHats.has(value.hat)||!maskotClothes.has(value.clothes)||!maskotFaces.has(value.face)||!maskotAccessories.has(value.accessory??'none'))return false;
@@ -27,7 +36,8 @@ function validMaskot(value,unlocked){
   if(value.clothes==='groom'&&!unlocked.includes('groom'))return false;
   if((value.hat==='stage-pin'||value.clothes==='stage-hanbok')&&!unlocked.includes('seoul-artist'))return false;
   if(value.accessory==='shoulder-dragon'&&!unlocked.includes('dragon-keeper'))return false;
-  if((value.hat==='quiet-chaos'||value.accessory==='tiny-guardian')&&!unlocked.includes('yasya-chaos'))return false;
+  if(value.hat==='quiet-chaos'&&!unlocked.includes('yasya-diadem')&&!unlocked.includes('yasya-chaos'))return false;
+  if(value.accessory==='tiny-guardian'&&!unlocked.includes('yasya-guardian')&&!unlocked.includes('yasya-chaos'))return false;
   for(const category of ['hat','clothes','face','accessory']){
     if(zamazkaAchievements.some(a=>a.slot===category&&a.item===value[category])&&!ownedAchievementItem(value[category],unlocked))return false;
     if(canticaAchievements.some(a=>a.slot===category&&a.item===value[category])&&!canticaOwns(value[category],category,unlocked))return false;
@@ -50,6 +60,9 @@ export class PocketSocial {
     this.env=env;
     this.sql=ctx.storage.sql;
     this.rates=new Map();
+    // The first authenticated holder of a private code binds the entire Yasya
+    // collection to one immutable account. A configured UUID takes priority.
+    this.sql.exec("CREATE TABLE IF NOT EXISTS personal_reward_owners(collection TEXT PRIMARY KEY,account_id TEXT NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS profiles(id TEXT PRIMARY KEY,nickname TEXT NOT NULL,avatar TEXT NOT NULL,background TEXT NOT NULL DEFAULT 'forest',frame TEXT NOT NULL DEFAULT 'clean',artwork TEXT NOT NULL DEFAULT '',favorite_game TEXT NOT NULL DEFAULT '',discoverable INTEGER NOT NULL DEFAULT 1,presence_visible INTEGER NOT NULL DEFAULT 1,allow_invites INTEGER NOT NULL DEFAULT 1,seen_at INTEGER NOT NULL DEFAULT 0,game_id TEXT NOT NULL DEFAULT '',updated_at INTEGER NOT NULL DEFAULT 0)");
     // Non-destructive migration: existing hand-drawn avatars remain available as card backgrounds.
     const columns=this.sql.exec('PRAGMA table_info(profiles)').toArray().map(x=>x.name);
@@ -324,14 +337,27 @@ export class PocketSocial {
       if(path==='/pocket-social/redeem'){
         if(!this.rate(id,'cosmetic-code',10,3600000))return reply({error:'rate_limited'},429);
         if(typeof body.code!=='string'||body.code.length>60)return reply({error:'invalid_code'},400);
-        // Private reward: both the recipient UUID and deployment secret must match.
-        // No shared code or account identifier is shipped to the public client.
-        const yasyaId=String(this.env.YASYA_POCKET_ID||'').trim().toLowerCase();
-        const yasyaCode=String(this.env.YASYA_MASCOT_CODE||'').trim();
         const requested=body.code.trim();
-        const personalReward=uuid.test(yasyaId)&&id.toLowerCase()===yasyaId&&
-          yasyaCode.length>=24&&requested===yasyaCode?'yasya-chaos':null;
-        const reward=personalReward||codeRewards.get(requested.toUpperCase());
+        const yasyaId=String(this.env?.YASYA_POCKET_ID||'').trim().toLowerCase();
+        const legacyCode=String(this.env?.YASYA_MASCOT_CODE||'').trim();
+        const legacy=uuid.test(yasyaId)&&legacyCode.length>=24&&
+          id.toLowerCase()===yasyaId&&requested===legacyCode?'yasya-chaos':null;
+        // A Map override exists for isolated in-memory tests only. Cloudflare
+        // environment variables cannot supply a JS Map via a request.
+        const allowedHashes=this.env?.YASYA_PRIVATE_CODE_HASHES instanceof Map?
+          this.env.YASYA_PRIVATE_CODE_HASHES:privateRewardHashes;
+        const privateReward=allowedHashes.get(await rewardCodeHash(requested));
+        if(privateReward){
+          // A deployed UUID locks redemption to that account even before the
+          // first claim. When none is configured, a 144-bit secret code enrolls
+          // its first verified redeemer; both codes are then owner-locked.
+          if(yasyaId&&(!uuid.test(yasyaId)||id.toLowerCase()!==yasyaId))
+            return reply({error:'invalid_code'},400);
+          this.sql.exec('INSERT OR IGNORE INTO personal_reward_owners(collection,account_id) VALUES(?,?)','yasya-2026',id);
+          const owner=this.one('SELECT account_id FROM personal_reward_owners WHERE collection=?','yasya-2026');
+          if(owner?.account_id!==id)return reply({error:'invalid_code'},400);
+        }
+        const reward=privateReward||legacy||codeRewards.get(requested.toUpperCase());
         if(!reward)return reply({error:'invalid_code'},400);
         let unlocked=[];try{unlocked=JSON.parse(this.one('SELECT unlocked FROM profiles WHERE id=?',id)?.unlocked||'[]')}catch{}
         if(!Array.isArray(unlocked))unlocked=[];

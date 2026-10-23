@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import {PocketSocial} from '../pocket-social/hub.mjs';
@@ -23,6 +24,10 @@ const privateMascot={animal:'rabbit',hat:'quiet-chaos',clothes:'tunic',face:'non
 assert.equal(safeMascot(privateMascot).hat,'none');
 assert.equal(safeMascot(privateMascot).accessory,'none');
 assert.deepEqual(safeMascot(privateMascot,['yasya-chaos']),privateMascot);
+assert.equal(safeMascot(privateMascot,['yasya-diadem']).hat,'quiet-chaos');
+assert.equal(safeMascot(privateMascot,['yasya-diadem']).accessory,'none');
+assert.equal(safeMascot(privateMascot,['yasya-guardian']).hat,'none');
+assert.equal(safeMascot(privateMascot,['yasya-guardian']).accessory,'tiny-guardian');
 const privateSvg=mascotSvg(privateMascot,{unlocks:['yasya-chaos']});
 assert.match(privateSvg,/Thin asymmetrical silver circlet/);
 assert.match(privateSvg,/Serious white rabbit/);
@@ -41,7 +46,17 @@ const sql={exec(query,...args){
   if(!isRead)stmt.run(...args);
   return {toArray:()=>isRead?stmt.all(...args):[]};
 }};
-const hub=new PocketSocial({storage:{sql}},{YASYA_POCKET_ID:'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',YASYA_MASCOT_CODE:'private-yasya-code-at-least-24-chars'});
+const testDiadem='TEST-DIADEM-PRIVATE-CODE-NOT-REAL';
+const testGuardian='TEST-GUARDIAN-PRIVATE-CODE-NOT-REAL';
+const hash=x=>createHash('sha256').update(x).digest('hex');
+const hub=new PocketSocial({storage:{sql}},{
+  YASYA_POCKET_ID:'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+  YASYA_MASCOT_CODE:'private-yasya-code-at-least-24-chars',
+  YASYA_PRIVATE_CODE_HASHES:new Map([
+    [hash(testDiadem),'yasya-diadem'],
+    [hash(testGuardian),'yasya-guardian']
+  ])
+});
 const users=[
   {id:'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',nickname:'Alice',avatar:'clay'},
   {id:'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',nickname:'Bob',avatar:'moss'},
@@ -61,12 +76,26 @@ async function call(who,path,body=null,extra={}){
 }
 let a=await call(0,'me'),b=await call(1,'me');
 assert.equal(a.profile.nickname,'Alice');
-assert.equal((await call(0,'redeem',{code:'private-yasya-code-at-least-24-chars'})).httpStatus,400,'other accounts cannot claim the private set');
+const originalYasyaId=hub.env.YASYA_POCKET_ID;
+assert.equal((await call(0,'redeem',{code:testDiadem})).httpStatus,400,'configured UUID rejects wrong account');
+assert.equal((await call(0,'redeem',{code:'private-yasya-code-at-least-24-chars'})).httpStatus,400,'legacy code rejects wrong account');
+// Without a configured UUID, the first verified redeemer becomes the owner.
+hub.env.YASYA_POCKET_ID='';
+assert.equal((await call(1,'redeem',{code:testDiadem})).reward,'yasya-diadem');
+assert.equal((await call(1,'redeem',{code:testDiadem})).already,true);
+assert.equal((await call(1,'me')).profile.unlocked.includes('yasya-guardian'),false);
+const appearance={background:'forest',frame:'clean',artwork:'',favoriteGame:'',discoverable:true,presenceVisible:true,allowInvites:true};
+assert.equal((await call(1,'profile',{...appearance,maskot:{animal:'rabbit',hat:'quiet-chaos',clothes:'tunic',face:'none',accessory:'tiny-guardian'}})).httpStatus,400,'separate cosmetic remains locked');
+assert.equal((await call(0,'redeem',{code:testGuardian})).httpStatus,400,'another account cannot claim the second code after binding');
+assert.equal((await call(1,'redeem',{code:testGuardian})).reward,'yasya-guardian');
+assert.equal((await call(0,'profile',{...appearance,maskot:{animal:'cat',hat:'quiet-chaos',clothes:'tunic',face:'none',accessory:'tiny-guardian'}})).httpStatus,400,'foreign profile cannot equip either item');
+assert.equal((await call(1,'profile',{...appearance,maskot:{animal:'rabbit',hat:'quiet-chaos',clothes:'tunic',face:'none',accessory:'tiny-guardian'}})).ok,true);
+assert.equal((await call(1,'me')).profile.maskot.accessory,'tiny-guardian');
+hub.env.YASYA_POCKET_ID=originalYasyaId;
 assert.equal((await call(1,'redeem',{code:'private-yasya-code-at-least-24-chars'})).reward,'yasya-chaos');
 assert.equal((await call(1,'redeem',{code:'private-yasya-code-at-least-24-chars'})).already,true);
-assert.equal((await call(0,'profile',{background:'forest',frame:'clean',artwork:'',favoriteGame:'',discoverable:true,presenceVisible:true,allowInvites:true,maskot:{animal:'cat',hat:'quiet-chaos',clothes:'tunic',face:'none',accessory:'tiny-guardian'}})).httpStatus,400);
-assert.equal((await call(1,'profile',{background:'forest',frame:'clean',artwork:'',favoriteGame:'',discoverable:true,presenceVisible:true,allowInvites:true,maskot:{animal:'rabbit',hat:'quiet-chaos',clothes:'tunic',face:'none',accessory:'tiny-guardian'}})).ok,true);
-assert.equal((await call(1,'me')).profile.maskot.accessory,'tiny-guardian');
+// Isolate private-code assertions from the original rate-limit regression sequence.
+hub.rates.clear();
 assert.equal(b.profile.nickname,'Bob');
 assert.equal(a.friends.length,0);
 const search=await call(0,'search?q=Bo',null,{'x-pw-directory':JSON.stringify([users[1]])});
