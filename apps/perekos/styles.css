@@ -772,3 +772,115 @@
 
 /* Compact mobile technique switcher; desktop uses Digit1–3. */
 .spellbar{position:relative}.special-choice{position:absolute;right:88px;bottom:82px;width:116px;max-width:40vw;height:27px;z-index:4;background:#2a3630;color:#f6e3b7;border:1px solid #a99567;border-radius:2px;font:700 10px/1 system-ui;pointer-events:auto;touch-action:manipulation}.spell-special small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:53px}.special-choice:focus-visible{outline:2px solid #f6dba3;outline-offset:2px}@media(max-width:420px){.special-choice{right:81px;bottom:135px;width:106px;font-size:9px}}@media(pointer:fine){.special-choice{display:none}}
+
+
+/* v0.28 — THE ENTIRE 400×620 ARENA IS SACROSANCT.
+   Three real grid tracks replace the old overlapping fixed HUD and joystick.
+   Overlay scenes remain absolute, preserving the existing menu/paused UX. */
+#app.app-shell{
+ display:grid;
+ grid-template-columns:minmax(0,1fr);
+ grid-template-rows:auto minmax(0,1fr) auto;
+}
+#app #arena.arena{
+ position:relative;inset:auto;grid-column:1;grid-row:2;
+ width:100%;height:100%;min-height:0;min-width:0;
+ place-self:stretch;overflow:hidden;
+}
+#app #world{
+ display:block;position:relative;flex:none;
+ aspect-ratio:400/620;
+ width:auto;height:auto;max-width:100%;max-height:100%;
+ object-fit:fill;
+}
+#app #hud.battle-hud{
+ position:relative;top:auto;right:auto;bottom:auto;left:auto;
+ grid-column:1;grid-row:1;align-self:start;justify-self:center;
+ width:min(510px,calc(100% - 16px));
+ max-width:510px;
+ min-width:0;
+ margin:calc(env(safe-area-inset-top) + 6px) auto 7px;
+ padding:7px 10px 6px;
+ box-sizing:border-box;
+ text-shadow:0 1px 2px #121c18;
+}
+#app #hud .hud-block{min-width:0}
+#app #hud .round-clock{min-width:0}
+#app #hud .score-row{min-width:0}
+#app #hud .score-row>span{white-space:nowrap;overflow:hidden;text-overflow:clip}
+#app #controls.control-layer{
+ position:relative;top:auto;left:auto;right:auto;bottom:auto;
+ grid-column:1;grid-row:3;align-self:end;justify-self:center;
+ width:min(510px,100%);max-width:100%;
+ margin:0 auto;
+ padding:5px 12px calc(env(safe-area-inset-bottom) + 10px);
+ box-sizing:border-box;
+ gap:8px;
+ overflow:visible;
+}
+#app #controls .joystick{flex:0 0 auto}
+#app #controls .spellbar{flex:0 1 auto;min-width:0;align-self:end}
+#app #controls .spell-button{flex:0 1 auto}
+/* Hover devices with keyboard input need neither virtual thumbstick nor footer. */
+@media (hover:hover) and (pointer:fine) and (min-width:900px){
+ #app #controls.control-layer:not([hidden]){display:none}
+}
+@media (hover:none), (pointer:coarse), (max-width:899px){
+ #app #controls.control-layer{min-height:0}
+ #app #controls .joystick{
+  width:clamp(74px,24vw,110px);height:clamp(74px,24vw,110px);
+  flex:0 0 clamp(74px,24vw,110px);
+ }
+ #app #controls .joystick #stick-knob{width:clamp(37px,11vw,53px);height:clamp(37px,11vw,53px)}
+ #app #controls .spellbar{gap:clamp(2px,1vw,6px);padding-top:29px;position:relative}
+ #app #controls .spell-button{
+  position:relative;bottom:auto;right:auto;
+  min-width:0;width:clamp(40px,12.6vw,57px);
+  height:clamp(51px,8.2vh,64px);
+  flex:0 1 auto;
+ }
+ #app #controls .spell-attack{width:clamp(49px,15vw,70px);height:clamp(59px,9vh,72px)}
+ #app #controls .spell-special{z-index:1}
+ #app #controls .spell-button .spell-icon{font-size:clamp(21px,6vw,29px);line-height:1}
+ #app #controls .spell-attack .spell-icon{font-size:clamp(27px,8vw,37px)}
+ #app #controls .spell-button small{font-size:8px;letter-spacing:0;max-width:100%}
+ #app #controls .special-choice{
+  display:block;position:absolute;bottom:calc(clamp(51px,8.2vh,64px) + 7px);
+  right:calc(clamp(49px,15vw,70px) + clamp(2px,1vw,6px));
+  width:clamp(40px,12.6vw,57px);max-width:none;
+  height:24px;font-size:10px;
+ }
+}
+@media(max-width:370px){
+ #app #hud.battle-hud{
+  width:calc(100% - 10px);margin-top:calc(env(safe-area-inset-top) + 3px);
+  margin-bottom:4px;padding:5px 6px 4px;
+  grid-template-columns:minmax(0,1fr) 66px minmax(0,1fr);
+  column-gap:4px;row-gap:3px;
+ }
+ #app #hud .round-clock strong{font-size:26px;line-height:27px}
+ #app #hud .round-clock span{letter-spacing:0}
+ #app #hud .hud-block>span,#app #hud .hud-block small{font-size:9px}
+ #app #hud .heat-row{font-size:8px;gap:5px}
+ #app #hud .score-row{letter-spacing:0;font-size:10px}
+ #app #controls.control-layer{padding-inline:7px;gap:5px;padding-bottom:calc(env(safe-area-inset-bottom) + 7px)}
+ #app #controls .spellbar{gap:3px}
+ #app #controls .spell-button{width:41px}
+ #app #controls .spell-attack{width:51px}
+ #app #controls .special-choice{right:54px;width:41px}
+}
+@media(max-height:620px){
+ #app #hud.battle-hud{margin-bottom:3px;padding-block:3px;row-gap:2px}
+ #app #hud .round-clock strong{font-size:25px;line-height:26px}
+ #app #hud .my-identity canvas{width:21px;height:21px}
+ #app #hud .hp-track{height:9px}
+ #app #hud .score-row{padding-top:2px;margin-top:0}
+ #app #hud .score-row button{height:28px}
+ #app #controls.control-layer{padding-top:2px;padding-bottom:calc(env(safe-area-inset-bottom) + 4px)}
+ #app #controls .joystick{width:72px;height:72px;flex-basis:72px}
+ #app #controls .spellbar{padding-top:24px}
+ #app #controls .special-choice{height:22px;bottom:calc(clamp(51px,8.2vh,64px) + 3px)}
+}
+@media(prefers-reduced-motion:reduce){
+ #app #hud .hp-track i,#app #hud .heat-track i{transition:none}
+}
