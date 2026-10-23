@@ -177,6 +177,31 @@
         "license": "original",
         "origin": "New original medieval court vector artwork, Crown Laws stage 0.5"
       }
+    },
+    {
+      "id": "council-seats",
+      "adapter": "vector",
+      "source": "asset-forge/council-seats.svg",
+      "dependsOn": [],
+      "seed": 3808,
+      "parameters": {
+        "width": 720,
+        "height": 310
+      },
+      "outputs": {
+        "image": "assets/council-seats.png",
+        "vector": "assets/council-seats.svg"
+      },
+      "budget": {
+        "maxBytes": 350000,
+        "maxWidth": 720,
+        "maxHeight": 310
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "Original full vector carved throne chairs for Crown Laws 0.8"
+      }
     }
   ]
 }
