@@ -2,6 +2,7 @@ import { POCKET_MODULES } from './generated-modules.mjs';
 import {assessZamazkaAwards} from './zamazka-awards.mjs';
 import {assessBlockiesAwards} from './blockies-awards.mjs';
 import {playerRoomView} from './private-views.mjs';
+import {roomJoinView} from './room-join-view.mjs';
 
 // All rooms share one small, hibernatable SQLite-backed coordinator. This matches
 // the personal/friends deployment (max 32 rooms / 48 sockets) without paid KV/D1.
@@ -103,8 +104,9 @@ export class PocketNetHub {
     return playerRoomView(mod,room.state,player,room.players);
   }
   joined(ws,room,player){
-    const state=this.projectedState(room,player);
-    // Legacy rooms may legitimately join with large artwork snapshots.
+    const state=roomJoinView(room,()=>this.projectedState(room,player));
+    // Zamazka receives a small join envelope and then a privately projected
+    // state over its existing game sync stream, not raw server assignments.
     // Only new private-view games opt into the small projected-view cap.
     const mod=this.module(room.gameId,room.version);
     if(typeof mod?.viewForPlayer==='function'&&
