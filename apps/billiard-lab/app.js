@@ -27,7 +27,15 @@ let fit={scale:1,left:0,top:0},pixelRatio=1,lastCanvasW=0,lastCanvasH=0,backgrou
 function notify(message){const el=$('toast');el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),2450)}
 function save(){try{localStorage.setItem(STORAGE,JSON.stringify({world,customVertices,rayIndex,speed,display,palette}))}catch{notify('Не удалось сохранить параметры лаборатории.')}}
 function takeUndo(){undos.push(JSON.stringify(world));if(undos.length>24)undos.shift()}
-function startOver(){particles=initialParticles(DENSITIES[rayIndex],world.origin);elapsed=0;previousFrame=0;forceDraw=true;updateNumbers()}
+function effectiveCount(){
+ const sides=world.edges.length,obstacles=world.circles.length+world.mirrors.length;
+ let cap=sides>=10?1024:sides>=8?1536:sides>=6?2048:sides>=3?3072:8192;
+ if(obstacles>8)cap=Math.min(cap,1024);
+ else if(obstacles>3)cap=Math.min(cap,2048);
+ else if(obstacles>0)cap=Math.min(cap,4096);
+ return Math.min(DENSITIES[rayIndex],cap);
+}
+function startOver(){particles=initialParticles(effectiveCount(),world.origin);elapsed=0;previousFrame=0;forceDraw=true;updateNumbers()}
 function commit(action){
  takeUndo();action();world=sanitizeWorld(world);
  startOver();save();updateControls();
@@ -54,6 +62,7 @@ function updateControls(){
  document.querySelectorAll('[data-palette]').forEach(b=>{const active=b.dataset.palette===palette;b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active))});
  $('paletteName').textContent=PALETTE_NAMES[palette];
  $('raysRange').value=rayIndex;$('raysOut').textContent=DENSITIES[rayIndex].toLocaleString('ru-RU');
+ $('rayCapNote').textContent=effectiveCount()<DENSITIES[rayIndex]?'В этой камере активны '+effectiveCount().toLocaleString('ru-RU')+' лучей — ограничение нагрузки.':'Все выбранные лучи активны.';
  $('speedRange').value=speed;$('speedOut').textContent=(speed/100).toFixed(2).replace(/0$/,'')+'×';
  $('undoBtn').disabled=(!undos.length&&!builder);
  $('customSetup').hidden=!(builder||world.shape==='custom');
@@ -333,4 +342,4 @@ window.addEventListener('pagehide',save);
 if('ResizeObserver'in window)new ResizeObserver(()=>forceDraw=true).observe(stage);
 window.addEventListener('resize',()=>forceDraw=true);
 createWorkshopMode({appName:'РИКОШЕТ',version:'2.1.0',cachePrefix:'billiard-lab-',storageNamespace:'pocket-works:billiard-lab',onReset(){try{localStorage.removeItem(STORAGE)}catch{}location.reload()}});
-updateControls();updateNumbers();requestAnimationFrame(frame);
+startOver();updateControls();updateNumbers();requestAnimationFrame(frame);
