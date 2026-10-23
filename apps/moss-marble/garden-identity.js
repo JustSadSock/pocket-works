@@ -95,13 +95,30 @@ function identityObject(mesh,at,motif,palette,index){
     meshDisc(mesh,x,y,top+23,9,[.26,.40,.32,1],0,20);
     for(let j=0;j<8;j++){const a=-Math.PI*.5+j/7*Math.PI; const xx=x+13+Math.sin(a)*8; const zz=top+14+Math.cos(a)*8; if(j){const prev=-Math.PI*.5+(j-1)/7*Math.PI;beam(mesh,f3(x+13+Math.sin(prev)*8,y,top+14+Math.cos(prev)*8),f3(xx,y,zz),2.5,ceramic);}}
   }else if(motif==='fern'){
-    stem(mesh,x,y,top,top+21,3,shade(palette.wood,.85),11,10,2);
-    for(let j=0;j<9;j++){
-      const a=j/9*TAU,spread=(j%3===0?31:24);
-      leaf(mesh,x,y,top+5,Math.cos(a)*spread,Math.sin(a)*spread,18+j%3*6,6.8,j%2?palette.leaf:shade(palette.leaf,1.3));
+    // Fern fronds are delicate divided stems, not 9 dark spear-shaped
+    // polygons. Keep the entire footprint behind the real course border.
+    stem(mesh,x,y,top,top+17,2.5,shade(palette.wood,.88),11,10,1.8);
+    for(let j=0;j<6;j++){
+      const angle=(j+.25)/6*TAU;
+      const dx=Math.cos(angle),dy=Math.sin(angle);
+      const reach=16+(j%3)*3.3;
+      const rise=18+(j%2)*5;
+      const tip=f3(x+dx*reach,y+dy*reach,top+rise);
+      const base=f3(x,y,top+5);
+      const tint=j%2?palette.leaf:shade(palette.leaf,1.21);
+      beam(mesh,base,tip,1.15,tint);
+      // Paired leaflets broaden toward the middle and taper at the tip.
+      for(let k=1;k<=5;k++){
+        const t=k/6;
+        const cx=x+dx*reach*t,cy=y+dy*reach*t,cz=top+5+(rise-5)*t;
+        const breadth=(.75-Math.abs(t-.50))*6.2;
+        const leafWidth=1.3;
+        leaf(mesh,cx,cy,cz,-dy*breadth+dx*1.8,dx*breadth+dy*1.8,2.4,leafWidth,tint);
+        leaf(mesh,cx,cy,cz,dy*breadth+dx*1.8,-dx*breadth+dy*1.8,2.4,leafWidth,shade(tint,.90));
+      }
     }
-    stem(mesh,x-5,y+4,top,top+8,5,shade(palette.wood,.85),11,12,4);
-    meshDisc(mesh,x-5,y+4,top+8,5.5,flower,0,12);
+    stem(mesh,x-5,y+4,top,top+7,4.2,shade(palette.wood,.87),11,12,3.7);
+    meshDisc(mesh,x-5,y+4,top+7,4.5,flower,0,12);
   }else if(motif==='dial'){
     stem(mesh,x,y,top,top+12,6,shade(palette.stoneDark,1.4),0,14,4);
     meshDisc(mesh,x,y,top+13,18,metal,4,28);
