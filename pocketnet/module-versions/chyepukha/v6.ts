@@ -70,7 +70,7 @@ function begin(s){
     fragments:[]};
  });
  s.total=resolveQuestions(opts,s.sheets[0].set).length;
- s.issue=(s.issue||0)+1;s.round=0;s.submitted={};s.receipts={};s.phase='writing';s.paused=false;s.waitlist=[];s.banned=[];s.votes={};s.message='';s.revision++;
+ s.issue=(s.issue||0)+1;s.round=0;s.submitted={};s.receipts={};s.phase='writing';s.paused=false;s.waitlist=[];s.votes={};s.message='';s.revision++;
  return null;
 }
 function viewForPlayer({state:s,player,players}){
