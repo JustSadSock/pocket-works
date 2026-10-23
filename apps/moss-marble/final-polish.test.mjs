@@ -20,7 +20,7 @@ assert.equal(gate.shouldDraw(.110,{...defaultScene,active:false}),true);
 assert.equal(gate.shouldDraw(.125,{...defaultScene,active:false,quality:.5}),true,'quality tier change forces repaint');
 assert.equal(gate.shouldDraw(.151,{...defaultScene,active:true,quality:.5}),false,'low power caps decorative frame rate');
 assert.equal(gate.shouldDraw(.179,{...defaultScene,active:true,quality:.5}),true);
-const reduced={...defaultScene,active:false,reducedMotion:true};
+const reduced={...defaultScene,quality:.5,active:false,reducedMotion:true};
 assert.equal(gate.shouldDraw(.251,reduced),false,'reduced-motion static scene can freeze');
 assert.equal(gate.shouldDraw(.261,{...reduced,renderer:{...reduced.renderer,offsetY:12}}),true,'camera motion must always refresh');
 assert.equal(gate.shouldDraw(.270,{...reduced,mode:'menu'}),true,'mode switch repaints immediately');
