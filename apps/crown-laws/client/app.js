@@ -134,8 +134,9 @@ function effectLineStyle(from, to) {
   const endY = to.y * cellHeight + cellHeight / 2;
   const dx = endX - startX;
   const dy = endY - startY;
-  const length = Math.hypot(dx, dy);
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+  // Square board cells are 20% wide and 100/7% tall: correct the visual y scale.
+  const length = Math.hypot(dx, dy * 7 / 5);
+  const angle = (Math.atan2(dy * 7 / 5, dx) * 180) / Math.PI;
   return `--sx:${startX}%;--sy:${startY}%;--len:${length}%;--angle:${angle}deg;`;
 }
 
@@ -313,9 +314,7 @@ function showFilmFrame(index){
  const frame=app.film.frames[index];
  if(!frame){stopFilm();return;}
  app.effects=app.settings.reducedMotion?[]:effectsForFrame(frame);
- if(!app.settings.reducedMotion){
-  const sound=soundForFrame(frame);if(sound)playTone(sound);
- }
+ const sound=soundForFrame(frame);if(sound)playTone(sound);
  render();
  const token=app.filmSequence;
  app.filmTimer=window.setTimeout(()=>{
@@ -530,7 +529,7 @@ function boardHTML(state) {
  const cells=[];
  for(let y=0;y<7;y++)for(let x=0;x<5;x++)cells.push(`<div class="board-cell ${x===THRONE.x&&y===THRONE.y?"board-cell--throne":""}"><span>${String.fromCharCode(65+x)}${y+1}</span></div>`);
  const pieces=Object.values(state.pieces).map(piece=>{
-  const cls=["piece",`piece--${piece.kind}`,piece.owner==="p1"?"piece--p1":piece.owner==="p2"?"piece--p2":"",piece.shield?"piece--shielded":"",piece.stun?"piece--stunned":"",piece.carryingSeal?"piece--sealed":"",app.inspectedSlot===piece.kind?"piece--focused":"",app.film?.active&&app.film.frames[app.film.index].moves?.some(m=>m.pieceId===piece.id)?"piece--performing":""].filter(Boolean).join(" ");
+  const cls=["piece",`piece--${piece.kind}`,piece.owner==="p1"?"piece--p1":piece.owner==="p2"?"piece--p2":"",piece.shield?"piece--shielded":"",piece.stun?"piece--stunned":"",piece.carryingSeal?"piece--sealed":"",app.inspectedSlot===piece.kind?"piece--focused":"",(app.film?.active?app.film.frames[app.film.index].moves:(app.debug.open?app.debug.round?.frames[app.debug.round.index]?.moves:null))?.some(m=>m.pieceId===piece.id)?"piece--performing":""].filter(Boolean).join(" ");
   return `<button type="button" class="${cls}" data-piece-kind="${piece.kind}" data-piece-id="${piece.id}" title="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" aria-label="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" style="--x:${piece.x};--y:${piece.y}"><span class="piece__token">${pieceGlyph(piece)}${piece.shield?'<span class="piece__status piece__status--shield" title="Щит">✦</span>':""}${piece.stun?'<span class="piece__status piece__status--stun" title="Оглушение">✕</span>':""}${piece.carryingSeal?'<span class="piece__status piece__status--seal" title="Похищенная печать">◇</span>':""}</span></button>`;
  }).join("");
  return `<section class="board-panel"><div class="board-caption"><span class="board-caption__title">Королевский двор</span><span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span></div><div class="board-surround"><div class="board"><div class="board-grid">${cells.join("")}</div><div class="board-glow"></div><div class="board-effects">${effectsHTML()}</div>${pieces}</div></div></section>`;
@@ -928,7 +927,7 @@ function debugSceneHTML(scene) {
     app.local={...app.local,mode:"ai",state,waitingAi:false,passScreen:false,hotseatChooser:"p1"};
     app.online={...app.online,roomState:null,roomCode:"",ready:{p1:false,p2:false},you:"p1"};
     app.modal=null;
-    app.effects=app.debug.round?effectsForFrame(app.debug.round.frames[app.debug.round.index]):[];app.lastConflictSlots=[];
+    app.effects=app.debug.round?effectsForFrame(app.debug.round.frames[app.debug.round.index]):[];app.lastConflictSlots=app.debug.round?.frames[app.debug.round.index]?.conflicts||[];
     app.selectedCardId=app.debug.selectedCardId;app.focusCardId=app.debug.focusCardId;app.inspectedSlot=app.debug.inspectedSlot;
     app.replay=null;app.replayActive=false;app.film=null;app.forecast=app.debug.forecast;app.forecastReview=app.debug.forecastReview;
     if(scene==="art")markup=artGalleryHTML();
@@ -1291,7 +1290,7 @@ root.addEventListener("drop", (event) => {
 
 window.addEventListener("keydown", (event) => {
   if((event.code==="Backquote"||event.key==="~"||event.key==="`")&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||"")){
-    event.preventDefault();app.debug.open=!app.debug.open;app.debug.animation=null;render();return;
+    event.preventDefault();app.debug.open=!app.debug.open;if(!app.debug.open)stopDebugRound();app.debug.animation=null;render();return;
   }
   if(event.key==="Escape"&&app.debug.open){stopDebugRound();app.debug.open=false;render();return;}
   if (event.key === "Escape" && app.modal) {
