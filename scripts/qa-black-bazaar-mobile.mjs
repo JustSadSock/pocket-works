@@ -9,6 +9,7 @@ await mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 const page=await browser.newPage({viewport:{width:1800,height:1250},deviceScaleFactor:1});
 const rows=[];
+page.on('dialog',dialog=>dialog.accept());
 try{
  await page.goto(base+'/apps/black-bazaar/?debug=1',{waitUntil:'domcontentloaded'});
  await page.locator('iframe.dev-frame').waitFor({timeout:20000});
@@ -108,7 +109,16 @@ try{
    const offered=await exercise({type:'bid',buyer:'debug-1',offer:ask});
    if(offered.error||offered.after.bids.length!==1||offered.after.bids[0].buyer!=='debug-1')
     report.issues.push('buyer bid not visible to seller');
-   const accepted=await exercise({type:'accept',buyer:'debug-1'});
+   // Accept through the same visible button and confirmation dialog used by players.
+   const itemButton=frame.locator('.table-stage .artifact[data-kind="listing"]');
+   if(await itemButton.count()!==1)report.issues.push('auction tabletop listing not clickable');
+   else{
+    await itemButton.click();
+    const acceptButton=frame.locator('[data-sheet-page="detail"] button[data-action="accept"][data-player="debug-1"]');
+    if(await acceptButton.count()!==1)report.issues.push('seller cannot find accept button');
+    else await acceptButton.click();
+   }
+   const accepted=await exercise({type:'tick'});
    const buyerBefore=before.players.find(p=>p.id==='debug-1');
    const buyerAfter=accepted.after.players.find(p=>p.id==='debug-1');
    if(accepted.error||accepted.after.listing||accepted.after.bids.length)
