@@ -266,7 +266,7 @@ try{
  const turnOwner=pausedSockets.find(c=>c.id===initialView.turnId);
  const turnOwnerView=stateOf(activeViews[pausedSockets.indexOf(turnOwner)]);
  const item=turnOwnerView.you.items[0];
- const nextBidder=pausedSockets.find(c=>c.id!==turnOwner.id);
+ const nextBidder=pausedSockets.find(c=>c.id!==turnOwner.id&&c.id!==owner.id)||pausedSockets.find(c=>c.id!==turnOwner.id);
  turnOwner.send('game_message',{payload:{type:'post',itemId:item.id,ask:{gold:48}}});
  await nextBidder.next('game_event',stateEvent('play',x=>x.listing?.id===item.id));
  nextBidder.send('game_message',{payload:{type:'bid',offer:{gold:48}}});
