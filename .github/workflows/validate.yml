@@ -187,6 +187,8 @@ jobs:
         run: node apps/zamazka/qa/smudge-mask-crop.mjs
       - name: Check source buffer reuse across 171 smudge stamps
         run: node apps/zamazka/qa/smudge-scratch-reuse.mjs
+      - name: Verify mobile compositor reuses compact smudge mask across frames
+        run: node apps/zamazka/qa/smudge-mask-lifecycle.mjs
       - name: Verify compositor reuse under 60 brush revisions and 120 pointer frames
         run: node apps/zamazka/qa/editor-frame-reuse.mjs
 
