@@ -708,7 +708,10 @@ export class PocketNetHub {
           if(room.gameId==='chyepukha'&&room.version==='v6')await this.applyKicks(room,result.events ?? [],player.id);
           this.emit(room, result.events ?? []);
           if(!(room.gameId==='chyepukha'&&room.version==='v6'))await this.applyKicks(room, result.events ?? [], player.id);
-          await this.flushAwards();
+          // Deliver cosmetics independently of bulk artwork packets. Pending awards
+          // are durably queued and retried by the existing alarm.
+          const bulkZamazka=room.gameId==='zamazka'&&['draft_chunk','submit_chunk','draft','submit_begin','submit_resume','sync','time_ping','pulse'].includes(msg.payload?.type);
+          if(!bulkZamazka)await this.flushAwards();
           if (result.finished) await this.closeRoom(room);
           return;
         }
@@ -738,6 +741,7 @@ export class PocketNetHub {
   }
 
   async webSocketClose(ws, code, reason, wasClean) {
+    return this.run(async () => {
     const info = ws.deserializeAttachment();
     if(info?.roomId){
       console.info(JSON.stringify({event:'pocketnet_socket_closed',
@@ -763,6 +767,7 @@ export class PocketNetHub {
         this.ensureAlarm();
       }
     }
+    });
   }
 
   async alarm() {
