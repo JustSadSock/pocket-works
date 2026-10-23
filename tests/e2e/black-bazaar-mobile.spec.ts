@@ -45,6 +45,7 @@ test('Black Bazaar fits compact phones with urgent notice and keeps actions reac
     outside,overlap:Math.min(field.right,panel.right)-Math.max(field.left,panel.left)>4
       &&Math.min(field.bottom,panel.bottom)-Math.max(field.top,panel.top)>4,
     tabHeights:[...document.querySelectorAll('.workspace-tab')].map(el=>el.getBoundingClientRect().height),
+    seatRightPadding:parseFloat(getComputedStyle(document.querySelector('.player-seats')!).paddingRight),
     contentHeight:content.height
    };
   });
@@ -52,6 +53,7 @@ test('Black Bazaar fits compact phones with urgent notice and keeps actions reac
   expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth+2);
   expect(layout.overlap).toBe(false);
   expect(Math.min(...layout.tabHeights)).toBeGreaterThanOrEqual(43);
+  expect(layout.seatRightPadding).toBeLessThanOrEqual(1);
   expect(layout.contentHeight).toBeGreaterThan(35);
   expect(layout.shellBottom).toBeLessThanOrEqual(layout.measuredHeight+4);
   await page.locator('.workspace-tab[data-sheet="market"]').click();
@@ -71,11 +73,13 @@ test('Black Bazaar tabletop and workspace remain separate in landscape',async({p
   const field=document.querySelector('.play-field')!.getBoundingClientRect();
   const panel=document.querySelector('.workspace-panel')!.getBoundingClientRect();
   const body=document.querySelector('.play-body')!.getBoundingClientRect();
-  return {fieldRight:field.right,panelLeft:panel.left,fieldBottom:field.bottom,bodyBottom:body.bottom,
+  const end=document.querySelector('.bottom-ribbon')!.getBoundingClientRect();
+  return {fieldRight:field.right,panelLeft:panel.left,fieldBottom:field.bottom,bodyBottom:body.bottom,endBottom:end.bottom,
    viewportWidth:document.documentElement.clientWidth,documentWidth:document.documentElement.scrollWidth};
  });
  expect(positions.fieldRight).toBeLessThanOrEqual(positions.panelLeft+3);
  expect(positions.fieldBottom).toBeLessThanOrEqual(positions.bodyBottom+3);
+ expect(positions.endBottom).toBeLessThanOrEqual(positions.fieldBottom+3);
  expect(positions.documentWidth).toBeLessThanOrEqual(positions.viewportWidth+2);
  await page.locator('.workspace-tab[data-sheet="inventory"]').click();
  await expect(page.locator('[data-sheet-page="inventory"]')).toBeVisible();
