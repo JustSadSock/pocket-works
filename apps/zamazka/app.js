@@ -23,7 +23,7 @@ import {ServerClock} from './server-clock.js';
 import {createExhibitionDirector,saveTone,animateCoinDeposit} from './exhibition-director.js';
 import {setDressScene} from './scenography.js';
 import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
-import {sendPaintingPaced} from './draft-transfer.js';
+import {sendPaintingPaced,paintingChecksum} from './draft-transfer.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 import {zamazkaStore} from './storage.js';
 import {DEBUG_QUERY,DEBUG_SCREENS,isDebugKey,debugId,debugMatch,mountDebugGallery} from './debug-gallery.js';
@@ -130,8 +130,9 @@ function persistPending(){
  return true;
 }
 function submissionToken(ass,round){return [roomId,round,ass.art,ass.variation].join(':')}
-function confirmSubmission(art,round){
+function confirmSubmission(art,round,checksum=null){
  if(!pendingSubmit||pendingSubmit.round!==round||pendingSubmit.art!==art||pendingSubmit.room!==roomId)return;
+ if(checksum&&paintingChecksum(pendingSubmit.strokes)!==checksum){draftIndicator('Рисунок не совпадает с отправленным · повторяем');pendingSubmit.sentAt=0;persistPending();return;}
  activeSubmitTransfer?.abort();activeSubmitTransfer=null;
  const committed=pendingSubmit;pendingSubmit=null;persistPending();autoSubmitted=committed.token;
  screen.querySelector('.restore')?.classList.remove('is-submitting');
@@ -889,7 +890,7 @@ function renderView(){
  }
  previousVisualPhase=phaseToken;
  if(view.phase==='drawing'&&view.done?.includes(me?.id)){
-   if(view.mine&&!view.incompleteSubmissions?.includes(me?.id))confirmSubmission(view.mine.art,view.round);
+   if(view.mine&&!view.incompleteSubmissions?.includes(me?.id))confirmSubmission(view.mine.art,view.round,view.mine.strokes?paintingChecksum(view.mine.strokes):null);
    if(editor&&!view.incompleteSubmissions?.includes(me?.id))editor.clearDraft();
  }
  const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
@@ -1021,7 +1022,7 @@ async function connect(mode){
        serverClock.observeState(event.payload?.serverNow);
        view=event.payload;
        if(pendingVote&&(view.phase!=='voting'||voteToken(view)!==pendingVote.token||view.voted?.includes(me?.id))){pendingVote=null;persistVote()}
-       if(view?.mine&&view.done?.includes(me?.id)&&!view.incompleteSubmissions?.includes(me?.id))confirmSubmission(view.mine.art,view.round);
+       if(view?.mine&&view.done?.includes(me?.id)&&!view.incompleteSubmissions?.includes(me?.id))confirmSubmission(view.mine.art,view.round,view.mine.strokes?paintingChecksum(view.mine.strokes):null);
        if(view?.incompleteSubmissions?.includes(me?.id)&&pendingSubmit?.round===view.round){
          draftIndicator('Сервер не получил финальный рисунок · полная версия сохранена на устройстве');
          notify('Не все мазки дошли до сервера. Полная работа сохранена на устройстве.');
@@ -1041,7 +1042,7 @@ async function connect(mode){
       else if(event?.type==='submission_saved'){
        if(pendingSubmit&&event.payload?.round===pendingSubmit.round&&
           event.payload?.art===pendingSubmit.art&&event.payload?.revision===pendingSubmit.revision)
-         confirmSubmission(event.payload.art,event.payload.round);
+         confirmSubmission(event.payload.art,event.payload.round,event.payload.checksum||null);
      }
      else if(event?.type==='vote_saved'){
        if(pendingVote?.round===event.payload?.round&&pendingVote?.turn===event.payload?.turn){pendingVote=null;persistVote()}
