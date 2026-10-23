@@ -207,3 +207,17 @@
 @media (prefers-reduced-motion:reduce){
  .codex-sheet,.law-slot--proposed{animation:none;transition:none}
 }
+
+.codex-sheet__unselect{
+ position:relative;z-index:1;display:block;margin:0 17px 10px auto;
+ padding:4px 5px;border:0;border-bottom:1px dotted #9a7c56;
+ background:transparent;color:#6b5035;font-size:11px;
+ min-height:29px;cursor:pointer;
+}
+.codex-sheet__unselect:hover{color:#8a3e30;border-color:#8a3e30}
+.codex-sheet__unselect:focus-visible{outline:2px solid #a87d44}
+@media(max-width:760px){
+ .game-shell:not(.debug-scene .game-shell) .codex-sheet__unselect{
+  margin:0 11px 7px auto;min-height:26px;font-size:10px;
+ }
+}
