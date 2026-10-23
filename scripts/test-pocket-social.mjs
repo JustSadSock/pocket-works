@@ -19,6 +19,13 @@ assert.equal(safeMascot({animal:'fox',hat:'none',clothes:'tunic',face:'none',acc
 assert.deepEqual(safeMascot({animal:'black-cat'}),{animal:'black-cat',hat:'none',clothes:'tunic',face:'none',accessory:'none'});
 assert.equal(safeMascot({animal:'fox',hat:'stage-pin',clothes:'stage-hanbok',face:'none',accessory:'shoulder-dragon'},
   ['seoul-artist','dragon-keeper']).accessory,'shoulder-dragon');
+const privateMascot={animal:'rabbit',hat:'quiet-chaos',clothes:'tunic',face:'none',accessory:'tiny-guardian'};
+assert.equal(safeMascot(privateMascot).hat,'none');
+assert.equal(safeMascot(privateMascot).accessory,'none');
+assert.deepEqual(safeMascot(privateMascot,['yasya-chaos']),privateMascot);
+const privateSvg=mascotSvg(privateMascot,{unlocks:['yasya-chaos']});
+assert.match(privateSvg,/Thin asymmetrical silver circlet/);
+assert.match(privateSvg,/Serious white rabbit/);
 const rootHtml=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const rootSw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const rootVersion=rootHtml.match(/<meta name="pocket-works-build" content="([^"]+)"/)?.[1];
@@ -34,7 +41,7 @@ const sql={exec(query,...args){
   if(!isRead)stmt.run(...args);
   return {toArray:()=>isRead?stmt.all(...args):[]};
 }};
-const hub=new PocketSocial({storage:{sql}});
+const hub=new PocketSocial({storage:{sql}},{YASYA_POCKET_ID:'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',YASYA_MASCOT_CODE:'private-yasya-code-at-least-24-chars'});
 const users=[
   {id:'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',nickname:'Alice',avatar:'clay'},
   {id:'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',nickname:'Bob',avatar:'moss'},
@@ -54,6 +61,12 @@ async function call(who,path,body=null,extra={}){
 }
 let a=await call(0,'me'),b=await call(1,'me');
 assert.equal(a.profile.nickname,'Alice');
+assert.equal((await call(0,'redeem',{code:'private-yasya-code-at-least-24-chars'})).httpStatus,400,'other accounts cannot claim the private set');
+assert.equal((await call(1,'redeem',{code:'private-yasya-code-at-least-24-chars'})).reward,'yasya-chaos');
+assert.equal((await call(1,'redeem',{code:'private-yasya-code-at-least-24-chars'})).already,true);
+assert.equal((await call(0,'profile',{background:'forest',frame:'clean',artwork:'',favoriteGame:'',discoverable:true,presenceVisible:true,allowInvites:true,maskot:{animal:'cat',hat:'quiet-chaos',clothes:'tunic',face:'none',accessory:'tiny-guardian'}})).httpStatus,400);
+assert.equal((await call(1,'profile',{background:'forest',frame:'clean',artwork:'',favoriteGame:'',discoverable:true,presenceVisible:true,allowInvites:true,maskot:{animal:'rabbit',hat:'quiet-chaos',clothes:'tunic',face:'none',accessory:'tiny-guardian'}})).ok,true);
+assert.equal((await call(1,'me')).profile.maskot.accessory,'tiny-guardian');
 assert.equal(b.profile.nickname,'Bob');
 assert.equal(a.friends.length,0);
 const search=await call(0,'search?q=Bo',null,{'x-pw-directory':JSON.stringify([users[1]])});
