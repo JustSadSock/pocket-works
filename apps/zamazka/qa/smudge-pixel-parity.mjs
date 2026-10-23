@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {performance} from 'node:perf_hooks';
-import {smudgeStamp} from '../editor.js';
+import {smudgeStamp,smudgeStroke} from '../editor.js';
 
 // Independent reference preserves the original sample/weight equation. The
 // fast renderer must produce the same Uint8ClampedArray for every tested case.
@@ -88,6 +88,27 @@ for(const [x,y,size,dx,dy] of [
  optimizedMs+=performance.now()-second;
  assert.deepEqual(actual.raster,expected.raster,
   'smudge must be pixel-identical for '+JSON.stringify({mask,aspect,x,y,size}));
+ cases++;
+}
+// A single continuously held brush reuses its source scratch across hundreds
+// of stamps. Compare each entire gesture with the independent legacy algorithm,
+// including the alpha-only contour mask and non-square painting proportions.
+const longGesture={s:18,p:Array.from({length:96},(_,i)=>
+ [155+i*2.5,190+Math.sin(i/6)*15])};
+for(const mask of [false,true])for(const aspect of [.72,600/450,2.05]){
+ const legacy=surface(width,height,pixels),fast=surface(width,height,pixels);
+ const points=longGesture.p,spacing=Math.max(1.4,Math.min(7,longGesture.s*.23));
+ reference(legacy,points[0][0],points[0][1],longGesture.s,0,0,mask,zone,aspect);
+ for(let i=1;i<points.length;i++){
+  const a=points[i-1],b=points[i],dx=b[0]-a[0],dy=b[1]-a[1];
+  const steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/spacing));
+  for(let j=1;j<=steps;j++)
+   reference(legacy,a[0]+dx*j/steps,a[1]+dy*j/steps,
+    longGesture.s,dx,dy,mask,zone,aspect);
+ }
+ smudgeStroke(fast,longGesture,0,mask,zone,aspect);
+ assert.deepEqual(fast.raster,legacy.raster,
+  'long continuously held smudge must match old brush pixel for pixel');
  cases++;
 }
 console.log(JSON.stringify({scenario:'zamazka-smudge-pixel-parity',
