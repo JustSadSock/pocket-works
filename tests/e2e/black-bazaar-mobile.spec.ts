@@ -96,3 +96,36 @@ test('host can open offline player menu without allowing an exchange',async({pag
  await expect(page.locator('.player-popover')).toContainText('Обмен недоступен');
  await expect(page.locator('.player-popover .kick-player')).toBeVisible();
 });
+
+
+test('pending connection is cancellable and a late rejection cannot cancel a retry',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ let count=0;
+ const pending=new Map<number,()=>void>();
+ await page.route('**/pocketnet/session',async route=>{
+  const id=++count;
+  await new Promise<void>(resolve=>pending.set(id,resolve));
+  await route.fulfill({status:503,contentType:'application/json',body:'{}'}).catch(()=>{});
+ });
+ try{
+  await page.goto('/apps/black-bazaar/');
+  await expect(page.locator('.entry-screen')).toBeVisible();
+  await page.locator('[data-action="create"]').click();
+  await expect.poll(()=>count).toBe(1);
+  await expect(page.locator('[data-action="create"]')).toBeDisabled();
+  await expect(page.locator('[data-action="cancel-connect"]')).toBeVisible();
+  await page.locator('[data-action="cancel-connect"]').click();
+  await expect(page.locator('[data-action="create"]')).toBeEnabled();
+  await expect(page.locator('[data-action="cancel-connect"]')).toHaveCount(0);
+  await page.locator('[data-action="create"]').click();
+  await expect.poll(()=>count).toBe(2);
+  pending.get(1)?.();
+  await expect(page.locator('[data-action="cancel-connect"]')).toBeVisible();
+  await expect(page.locator('[data-action="create"]')).toBeDisabled();
+  pending.get(2)?.();
+  await expect(page.locator('[data-action="create"]')).toBeEnabled();
+  await expect(page.locator('#status')).toContainText('Нет соединения');
+ }finally{
+  for(const resolve of pending.values())resolve();
+ }
+});
