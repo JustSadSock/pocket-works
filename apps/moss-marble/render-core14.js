@@ -1,5 +1,6 @@
 import { BALL_RADIUS } from './physics.js';
 import { levelBounds } from './levels.js';
+import { worldToScreenPoint, screenToWorldPoint, screenDeltaToWorld as inverseScreenVector } from './camera-space.js';
 
 const TAU = Math.PI * 2;
 const STRIDE = 11;
@@ -494,14 +495,26 @@ function addBoardScene(level) {
   const curbWinding = Math.sign(polygonArea(level.outline)) || 1;
   const terrainHeight = level.course18?.field?.heightAt || null;
 
-  const shadowOutline = level.outline.map((point) => ({ x: point.x + 18, y: point.y + 34 }));
-  shadows.polygon(shadowOutline, -34, color('#020905', .42), 3);
-  opaque.polygon(level.outline, -32, C.boardBottom, 0);
-  opaque.polygon(level.outline, 0, C.grass, 1);
+  const isGardenTray = Boolean(level.course18?.field?.heightAt);
+  const shadowOutline = level.outline.map((point) => ({ x: point.x + 22, y: point.y + 36 }));
+  shadows.polygon(shadowOutline, -68, color('#020905', .32), 3);
+  opaque.polygon(level.outline, isGardenTray ? -59 : -32, C.boardBottom, 0);
+  if (!isGardenTray) opaque.polygon(level.outline, 0, C.grass, 1);
   for (let index = 0; index < level.outline.length; index += 1) {
     const a = level.outline[index];
     const b = level.outline[(index + 1) % level.outline.length];
-    opaque.quad([a.x, a.y, -32], [b.x, b.y, -32], [b.x, b.y, 0], [a.x, a.y, 0], C.boardSide, 0);
+    if (isGardenTray) {
+      const at = terrainHeight(a.x, a.y);
+      const bt = terrainHeight(b.x, b.y);
+      // A single continuous vessel: limestone footing, compressed soil, turf lip.
+      opaque.quad([a.x, a.y, -59], [b.x, b.y, -59], [b.x, b.y, -47], [a.x, a.y, -47], materials.stoneDark, 0);
+      opaque.quad([a.x, a.y, -47], [b.x, b.y, -47], [b.x, b.y, -25], [a.x, a.y, -25], materials.stone, 0);
+      opaque.quad([a.x, a.y, -25], [b.x, b.y, -25], [b.x, b.y, -19], [a.x, a.y, -19], materials.stoneLight, 0);
+      opaque.quad([a.x, a.y, -19], [b.x, b.y, -19], [b.x, b.y, bt - 3], [a.x, a.y, at - 3], materials.soil || C.boardSide, 0);
+      opaque.quad([a.x, a.y, at - 3], [b.x, b.y, bt - 3], [b.x, b.y, bt], [a.x, a.y, at], materials.stoneDark, 0);
+    } else {
+      opaque.quad([a.x, a.y, -32], [b.x, b.y, -32], [b.x, b.y, 0], [a.x, a.y, 0], C.boardSide, 0);
+    }
 
     const length = Math.hypot(b.x - a.x, b.y - a.y);
     const pieces = Math.max(1, Math.ceil(length / 72));
@@ -583,15 +596,21 @@ uniform vec2 uViewport;
 uniform float uScale;
 uniform vec2 uOffset;
 uniform vec2 uParallax;
+uniform float uCameraRotation;
+uniform vec2 uCameraCenter;
 out vec3 vNormal;
 out vec4 vColor;
 out vec3 vWorld;
 flat out float vMaterial;
 void main() {
-  float sx = uOffset.x + aPosition.x * uScale + uParallax.x * aPosition.z * uScale * .14;
-  float sy = uOffset.y + aPosition.y * uScale * .82 - aPosition.z * uScale + uParallax.y * aPosition.z * uScale * .09;
+  float cs = cos(uCameraRotation);
+  float sn = sin(uCameraRotation);
+  vec2 rotated = vec2(aPosition.x * cs - aPosition.y * sn, aPosition.x * sn + aPosition.y * cs);
+  float sx = uOffset.x + rotated.x * uScale + uParallax.x * aPosition.z * uScale * .14;
+  float sy = uOffset.y + rotated.y * uScale * .82 - aPosition.z * uScale + uParallax.y * aPosition.z * uScale * .09;
   vec2 clip = vec2(sx / uViewport.x * 2.0 - 1.0, 1.0 - sy / uViewport.y * 2.0);
-  float depth = clamp(.82 - (aPosition.y + aPosition.z * .86) / 1120.0, -.97, .97);
+  float centerDepth = uCameraCenter.x * sn + uCameraCenter.y * cs;
+  float depth = clamp(-(rotated.y - centerDepth + aPosition.z * .86) / 2500.0, -.95, .95);
   gl_Position = vec4(clip, depth, 1.0);
   vNormal = aNormal;
   vColor = aColor;
@@ -718,6 +737,7 @@ class WebGLDiorama {
     this.scale = 1;
     this.offsetX = 0;
     this.offsetY = 0;
+    this.cameraRotation = 0;
     this.cameraX = 500;
     this.cameraY = 700;
     this.cameraZoom = 1;
@@ -750,6 +770,8 @@ class WebGLDiorama {
       scale: gl.getUniformLocation(this.program, 'uScale'),
       offset: gl.getUniformLocation(this.program, 'uOffset'),
       parallax: gl.getUniformLocation(this.program, 'uParallax'),
+      rotation: gl.getUniformLocation(this.program, 'uCameraRotation'),
+      cameraCenter: gl.getUniformLocation(this.program, 'uCameraCenter'),
       hole: gl.getUniformLocation(this.program, 'uHole'),
       time: gl.getUniformLocation(this.program, 'uTime')
     };
@@ -877,14 +899,15 @@ class WebGLDiorama {
   }
 
   worldToScreen(x, y, z = 0) {
-    return {
-      x: this.offsetX + x * this.scale + this.parallaxX * z * this.scale * .14,
-      y: this.offsetY + y * this.scale * .82 - z * this.scale + this.parallaxY * z * this.scale * .09
-    };
+    return worldToScreenPoint(x, y, z, this.scale, this.offsetX, this.offsetY, this.cameraRotation || 0, this.parallaxX, this.parallaxY);
   }
 
   screenToWorld(x, y) {
-    return { x: (x - this.offsetX) / this.scale, y: (y - this.offsetY) / (this.scale * .82) };
+    return screenToWorldPoint(x, y, this.scale, this.offsetX, this.offsetY, this.cameraRotation || 0);
+  }
+
+  screenDeltaToWorld(dx, dy) {
+    return inverseScreenVector(dx, dy, this.scale, this.cameraRotation || 0);
   }
 
   surfaceHeight(level, ball) {
@@ -1016,6 +1039,8 @@ class WebGLDiorama {
     gl.uniform1f(this.locations.scale, this.scale);
     gl.uniform2f(this.locations.offset, this.offsetX, this.offsetY);
     gl.uniform2f(this.locations.parallax, this.parallaxX, this.parallaxY);
+    gl.uniform1f(this.locations.rotation, this.cameraRotation || 0);
+    gl.uniform2f(this.locations.cameraCenter, this.cameraX || 0, this.cameraY || 0);
     gl.uniform3f(this.locations.hole, level.hole.x, level.hole.y, level.hole.r * 1.03);
     gl.uniform1f(this.locations.time, time);
 
@@ -1174,10 +1199,11 @@ class WebGLDiorama {
 class CanvasFallback {
   constructor(canvas) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d', { alpha: false });
+    this.ctx = canvas.getContext('2d', { alpha: true });
     this.scale = 1;
     this.offsetX = 0;
     this.offsetY = 0;
+    this.cameraRotation = 0;
     this.width = 0;
     this.height = 0;
     this.parallaxX = 0;
@@ -1205,7 +1231,15 @@ class CanvasFallback {
     this.offsetX = this.width * .5 - (bounds.minX + bounds.maxX) * .5 * this.scale;
     this.offsetY = 84 + (this.height - 120) * .5 - (bounds.minY + bounds.maxY) * .5 * this.scale * .82;
   }
-  worldToScreen(x, y, z = 0) { return { x: this.offsetX + x * this.scale, y: this.offsetY + y * this.scale * .82 - z * this.scale }; }
+  worldToScreen(x, y, z = 0) {
+    return worldToScreenPoint(x, y, z, this.scale, this.offsetX, this.offsetY, this.cameraRotation || 0);
+  }
+  screenToWorld(x, y) {
+    return screenToWorldPoint(x, y, this.scale, this.offsetX, this.offsetY, this.cameraRotation || 0);
+  }
+  screenDeltaToWorld(dx, dy) {
+    return inverseScreenVector(dx, dy, this.scale, this.cameraRotation || 0);
+  }
   ballScreenPoint(ball) { return this.worldToScreen(ball.x, ball.y, Number.isFinite(ball.z) ? ball.z : BALL_RADIUS); }
   emit(x, y, type, amount = 8) { for (let i = 0; i < amount; i += 1) this.particles.push({ x, y, type, life: 1 }); }
   pathEllipse(feature, scale = 1, segments = 32) {
@@ -1322,13 +1356,39 @@ class CanvasFallback {
     }
   }
   draw(level, ball, aim, time = 0) {
-    this.resize(); this.fit(level);
+    this.resize();
+    this.fit(level, ball, 1 / 60);
     const ctx = this.ctx;
     const visual = level.visual || {};
     this.terrainPalette = visual.terrain || {};
-    const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
-    gradient.addColorStop(0, visual.skyTop || '#30463b'); gradient.addColorStop(1, visual.skyBottom || '#101d17');
-    ctx.fillStyle = gradient; ctx.fillRect(0, 0, this.width, this.height);
+    const grounded = Boolean(level.course18?.field?.heightAt);
+    ctx.clearRect(0, 0, this.width, this.height);
+    if (grounded) {
+      // Canvas fallback shares the greenhouse backdrop instead of painting over it.
+      ctx.save();
+      ctx.beginPath();
+      level.outline.forEach((point, index) => {
+        const p = this.worldToScreen(point.x, point.y, -59);
+        if (index) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.shadowColor = 'rgba(2,9,5,.55)';
+      ctx.shadowBlur = 17;
+      ctx.shadowOffsetY = 15;
+      ctx.fillStyle = '#494b3b';
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.strokeStyle = '#9b9e83';
+      ctx.lineWidth = Math.max(3, this.scale * 22);
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
+      gradient.addColorStop(0, visual.skyTop || '#30463b'); gradient.addColorStop(1, visual.skyBottom || '#101d17');
+      ctx.fillStyle = gradient; ctx.fillRect(0, 0, this.width, this.height);
+    }
     ctx.beginPath(); level.outline.forEach((point, index) => { const p = this.worldToScreen(point.x, point.y); if (!index) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }); ctx.closePath();
     ctx.fillStyle = cssColor(this.terrainPalette.grass, '#78945e'); ctx.fill();
     ctx.strokeStyle = cssColor(this.terrainPalette.grassLight, 'rgba(230,222,178,.42)', .42); ctx.lineWidth = 2; ctx.stroke();

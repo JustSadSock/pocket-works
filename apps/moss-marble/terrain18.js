@@ -328,6 +328,8 @@ export function installTerrain18(core, canvas) {
     gl.uniform1f(core.locations.scale, core.scale);
     gl.uniform2f(core.locations.offset, core.offsetX, core.offsetY);
     gl.uniform2f(core.locations.parallax, core.parallaxX, core.parallaxY);
+    gl.uniform1f(core.locations.rotation, core.cameraRotation || 0);
+    gl.uniform2f(core.locations.cameraCenter, core.cameraX || 0, core.cameraY || 0);
     gl.uniform3f(core.locations.hole, level.hole.x, level.hole.y, level.hole.r * 1.03);
     gl.uniform1f(core.locations.time, time);
     core.drawMesh(core.staticMeshes.opaque, false, true);

@@ -1,3 +1,4 @@
+import { anchoredCameraOffset, clampFollowCenter, courseFit, inverseRotateXY, portraitCourseRotation } from './camera-space.js';
 import { BALL_RADIUS } from './physics.js';
 import { levelBounds } from './levels.js';
 import { terrainGradientAt, terrainHeightAt, zoneCenter, zoneKind } from './terrain.js';
@@ -368,6 +369,7 @@ export function installLivingTerrain(renderer, canvas, getState) {
     return { width, height };
   }
 
+  renderer.spatialCameraManaged = true;
   renderer.surfaceHeight = (level, ball) => terrainHeightAt(level, ball.x, ball.y);
   renderer.ballHeight = (level, ball) => Number.isFinite(ball.z) ? ball.z : terrainHeightAt(level, ball.x, ball.y) + BALL_RADIUS;
   renderer.ballScreenPoint = (ball) => renderer.worldToScreen(ball.x, ball.y, Number.isFinite(ball.z) ? ball.z : BALL_RADIUS);
@@ -376,47 +378,65 @@ export function installLivingTerrain(renderer, canvas, getState) {
     const state = getState();
     const ball = providedBall || state.ball;
     const dt = Number.isFinite(providedDt) ? providedDt : 1 / 60;
-    const bounds = levelBounds(level);
-    const boardWidth = Math.max(1, bounds.maxX - bounds.minX);
-    const boardHeight = Math.max(1, bounds.maxY - bounds.minY);
     const width = renderer.width || canvas.clientWidth || window.innerWidth;
     const height = renderer.height || canvas.clientHeight || window.innerHeight;
     const key = level.renderId ?? level.id;
-    if (camera.levelKey !== key) {
+    const desiredRotation = portraitCourseRotation(level, width, height);
+    const firstFrame = camera.levelKey !== key;
+    if (firstFrame) {
       camera.levelKey = key;
       camera.introUntil = performance.now() + 1050;
-      camera.x = (bounds.minX + bounds.maxX) * .5;
-      camera.y = (bounds.minY + bounds.maxY) * .5;
-      camera.scale = Math.max(.05, Math.min((width - 34) / boardWidth, (height - 148) / (boardHeight * .82)));
+      camera.rotation = desiredRotation;
+      const initial = courseFit(level, width, height, desiredRotation);
+      const center = inverseRotateXY(initial.bounds.centerX, initial.bounds.centerY, desiredRotation);
+      camera.x = center.x;
+      camera.y = center.y;
+      camera.scale = initial.scale;
     }
+    // Keep the camera absolutely fixed in rotation during an active pull.
+    if (!state.aim?.active) {
+      const delta = Math.atan2(Math.sin(desiredRotation - (camera.rotation || 0)), Math.cos(desiredRotation - (camera.rotation || 0)));
+      camera.rotation = (camera.rotation || 0) + delta * (1 - Math.pow(.00025, dt));
+    }
+    const rotation = camera.rotation || 0;
+    const full = courseFit(level, width, height, rotation);
+    const { view, bounds } = full;
+    const center = inverseRotateXY(bounds.centerX, bounds.centerY, rotation);
     const autoOverview = performance.now() < camera.introUntil;
     const overviewTarget = camera.overview || autoOverview || state.mode !== 'playing';
     camera.overviewProgress = smooth(camera.overviewProgress, overviewTarget ? 1 : 0, dt, overviewTarget ? .0005 : .002);
-    const fullScale = Math.max(.05, Math.min((width - 34) / boardWidth, (height - 148) / (boardHeight * .82)));
-    const followScale = Math.max(fullScale, Math.max(.05, Math.min((width - 30) / 720, (height - 156) / (900 * .82))));
+    const fullScale = full.scale;
+    const followScale = Math.max(fullScale, Math.min(view.width / 760, view.height / (920 * .82)));
     const targetScale = lerp(followScale, fullScale, camera.overviewProgress);
     camera.scale = smooth(camera.scale || targetScale, targetScale, dt, .0015);
-    const centerX = (bounds.minX + bounds.maxX) * .5;
-    const centerY = (bounds.minY + bounds.maxY) * .5;
-    const speed = Math.hypot(ball?.vx || 0, ball?.vy || 0);
-    const lookAhead = clamp(speed * .10, 0, 170);
-    const velocityLength = speed || 1;
-    let targetX = centerX; let targetY = centerY;
+
+    let target = center;
     if (camera.overviewProgress < .98 && ball) {
-      targetX = ball.x + ball.vx / velocityLength * lookAhead;
-      targetY = ball.y + ball.vy / velocityLength * lookAhead;
-      const halfWorldWidth = width / Math.max(.001, camera.scale) * .5;
-      const halfWorldHeight = (height - 122) / Math.max(.001, camera.scale * .82) * .5;
-      targetX = boardWidth <= halfWorldWidth * 2 ? centerX : clamp(targetX, bounds.minX + halfWorldWidth - 80, bounds.maxX - halfWorldWidth + 80);
-      targetY = boardHeight <= halfWorldHeight * 2 ? centerY : clamp(targetY, bounds.minY + halfWorldHeight - 60, bounds.maxY - halfWorldHeight + 60);
+      const speed = Math.hypot(ball.vx || 0, ball.vy || 0);
+      const lookAhead = clamp(speed * .13, 0, 175);
+      const velocityX = speed > .01 ? ball.vx / speed : 0;
+      const velocityY = speed > .01 ? ball.vy / speed : 0;
+      const toHoleX = level.hole.x - ball.x;
+      const toHoleY = level.hole.y - ball.y;
+      const toHoleLength = Math.hypot(toHoleX, toHoleY) || 1;
+      const sightline = speed > 40 ? 0 : Math.min(110, toHoleLength * .14);
+      target = clampFollowCenter(
+        ball.x + velocityX * lookAhead + toHoleX / toHoleLength * sightline,
+        ball.y + velocityY * lookAhead + toHoleY / toHoleLength * sightline,
+        level, camera.scale, rotation, view
+      );
     }
-    targetX = lerp(targetX, centerX, camera.overviewProgress);
-    targetY = lerp(targetY, centerY, camera.overviewProgress);
-    camera.x = smooth(camera.x, targetX, dt, camera.overviewProgress > .5 ? .0008 : .003);
-    camera.y = smooth(camera.y, targetY, dt, camera.overviewProgress > .5 ? .0008 : .003);
-    renderer.cameraX = camera.x; renderer.cameraY = camera.y; renderer.cameraZoom = 1; renderer.scale = camera.scale;
-    renderer.offsetX = width * .5 - camera.x * camera.scale;
-    renderer.offsetY = 78 + (height - 112) * .5 - camera.y * camera.scale * .82;
+    target = { x: lerp(target.x, center.x, camera.overviewProgress), y: lerp(target.y, center.y, camera.overviewProgress) };
+    camera.x = smooth(camera.x, target.x, dt, camera.overviewProgress > .5 ? .0008 : .003);
+    camera.y = smooth(camera.y, target.y, dt, camera.overviewProgress > .5 ? .0008 : .003);
+    renderer.cameraX = camera.x;
+    renderer.cameraY = camera.y;
+    renderer.cameraZoom = 1;
+    renderer.cameraRotation = rotation;
+    renderer.scale = camera.scale;
+    const offset = anchoredCameraOffset(camera.x, camera.y, camera.scale, rotation, view);
+    renderer.offsetX = offset.x;
+    renderer.offsetY = offset.y;
     renderer.parallaxX = smooth(renderer.parallaxX || 0, renderer.targetParallaxX || 0, dt, .035);
     renderer.parallaxY = smooth(renderer.parallaxY || 0, renderer.targetParallaxY || 0, dt, .035);
   };
@@ -441,6 +461,8 @@ export function installLivingTerrain(renderer, canvas, getState) {
     gl.uniform1f(renderer.locations.scale, renderer.scale);
     gl.uniform2f(renderer.locations.offset, renderer.offsetX, renderer.offsetY);
     gl.uniform2f(renderer.locations.parallax, renderer.parallaxX, renderer.parallaxY);
+    gl.uniform1f(renderer.locations.rotation, renderer.cameraRotation || 0);
+    gl.uniform2f(renderer.locations.cameraCenter, renderer.cameraX || 0, renderer.cameraY || 0);
     gl.uniform3f(renderer.locations.hole, level.hole.x, level.hole.y, level.hole.r * 1.03);
     gl.uniform1f(renderer.locations.time, time);
     renderer.drawMesh(active.opaque, false, true);
