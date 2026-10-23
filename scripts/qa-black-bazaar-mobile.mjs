@@ -50,6 +50,11 @@ try{
    if(overflow>2)issues.push('horizontal overflow '+overflow);
    if(collide(field,tabs))issues.push('table overlaps tabs');
    if(collide(ticket,wallet))issues.push('urgent ticket overlaps wallet');
+   for(const icon of document.querySelectorAll('.lot-market-strip svg')){
+    const bounds=icon.getBoundingClientRect();
+    if(bounds.width>24||bounds.height>24)
+     issues.push('auction price/bid icon enlarged beyond 24px');
+   }
    // Previous visual audits missed auction art extending beyond a clipped table
    // even though the play-field itself fitted the viewport.
    const auction=rect('.table-stage .artifact'),ribbon=rect('.bottom-ribbon');
