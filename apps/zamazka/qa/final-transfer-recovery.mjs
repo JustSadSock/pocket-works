@@ -63,4 +63,18 @@ const art=Array.from({length:400},(_,i)=>({c:'#abcdef',s:12,t:'brush',p:Array.fr
  for(const chunk of chunks)send(a,chunk);
  assert.equal(s.assignments[a.id].strokes.length,400,'a clean retry must be accepted');
 }
+{
+ const {s,send}=room(),ass=s.assignments[a.id];
+ const meta={round:s.round,art:ass.art,variation:ass.variation,strokes:art};
+ const chunks=paintPackets({...meta,type:'submit_chunk'});
+ for(const chunk of chunks.slice(0,7))send(a,chunk);
+ const query={type:'submit_resume',round:s.round,art:ass.art,
+  variation:ass.variation,revision:chunks[0].revision,
+  checksum:chunks[0].checksum,parts:chunks.length};
+ const response=send(a,query).events[0];
+ assert.equal(response.type,'submit_resume_state');
+ assert.equal(response.payload.next,7,'server reports exact durable prefix');
+ for(const chunk of chunks.slice(response.payload.next))send(a,chunk);
+ assert.equal(s.assignments[a.id].strokes.length,400,'resumed transfer preserves full painting');
+}
 console.log('ZAMAZKA: final transfer grace, completed chunks, explicit incomplete fallback OK');
