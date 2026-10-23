@@ -40,7 +40,7 @@ export function demoView(id){
  if(id.startsWith('mod-')){
   v.phase=id==='mod-lobby'?'lobby':'writing';v.round=id==='mod-lobby'?0:8;v.total=id==='mod-lobby'?0:10;
   v.players=people.map(p=>({...p}));
-  v.onlineIds=['qa-host','qa-guest','qa-third'];v.waitlist=[{id:'qa-new',name:'Олексій'}];
+  v.onlineIds=['qa-host','qa-guest','qa-third','qa-new'];v.waitlist=[{id:'qa-new',name:'Олексій'}];
   v.players[3].vacant=true;v.players[3].departed=true;
   if(id==='mod-paused')v.paused=true;
   if(id==='mod-candidate'){d.me='qa-new';v.waitingApproval=true;v.sheet=null}
