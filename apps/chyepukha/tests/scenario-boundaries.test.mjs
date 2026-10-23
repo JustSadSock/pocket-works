@@ -4,72 +4,76 @@ import {readFileSync} from 'node:fs';
 
 const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
 const game=new Function(source.replace(/export const /g,'const ').replace(/export default module;/,'return module;'))();
-const makePlayers=()=>[{id:'author-a',name:'Автор А'},{id:'author-b',name:'Автор Б'}];
+const players=[{id:'author-a',name:'Автор А'},{id:'author-b',name:'Автор Б'}];
+const bank=JSON.parse(source.match(/const BANK = (\{.*?\});\n/)[1]);
+function start(questionSet,genre='absurdComedy',showNextQuestion=true){
+ let state=game.createRoom({player:players[0],payload:{settings:{questionSet,genre,showNextQuestion}}}).state;
+ state=game.onJoin({state,players}).state;
+ return game.onMessage({state,player:players[0],payload:{type:'start'}}).state;
+}
+function view(state,round){state.round=round;return game.viewForPlayer({state,player:players[0],players}).sheet;}
 
-test('every built-in scenario has ten complete and distinct editorial stages',()=>{
- const [host,guest]=makePlayers();
- const lobby=game.createRoom({player:host,payload:{}}).state;
- const sets=game.viewForPlayer({state:lobby,player:host,players:[host]}).questionSets;
+test('all ten scenarios have ten well-formed, non-duplicated and accurately named stages',()=>{
+ const sets=game.viewForPlayer({state:game.createRoom({player:players[0],payload:{}}).state,player:players[0],players:[players[0]]}).questionSets;
  assert.equal(sets.length,10);
- assert.equal(new Set(sets.map(s=>s.id)).size,10);
+ assert.equal(new Set(sets.map(x=>x.id)).size,10);
  for(const set of sets){
-  let state=game.createRoom({player:host,payload:{settings:{questionSet:set.id,genre:'absurdComedy'}}}).state;
-  state=game.onJoin({state,players:[host,guest]}).state;
-  state=game.onMessage({state,player:host,payload:{type:'start'}}).state;
+  const state=start(set.id);
   assert.equal(state.total,10,set.id);
-  const questions=Array.from({length:10},(_,round)=>{
-   state.round=round;
-   const view=game.viewForPlayer({state,player:host,players:[host,guest]});
-   const q=view.sheet.question;
-   assert.ok(q.prompt&&q.guidance&&q.creativeFreedom,set.id+' '+round);
-   if(round<9){
-    assert.ok(q.creativeFreedom.includes('Наступний автор окремо відповість'),set.id+' '+round);
-    assert.ok(q.creativeFreedom.includes(view.sheet.nextQuestion),set.id+' '+round);
-   } else assert.match(q.creativeFreedom,/Це фінал/);
-   return q.prompt;
-  });
-  assert.equal(new Set(questions).size,10,set.id);
- }
-});
-
-test('all twelve genres provide genuinely differentiated writing guidance for all ten scenarios',()=>{
- const [host,guest]=makePlayers();
- const base=game.createRoom({player:host,payload:{}}).state;
- const info=game.viewForPlayer({state:base,player:host,players:[host]});
- assert.equal(info.genres.length,12);
- for(const set of info.questionSets){
-  const hints=[];
-  for(const genre of info.genres){
-   let state=game.createRoom({player:host,payload:{settings:{questionSet:set.id,genre:genre.id}}}).state;
-   state=game.onJoin({state,players:[host,guest]}).state;
-   state=game.onMessage({state,player:host,payload:{type:'start'}}).state;
-   const view=game.viewForPlayer({state,player:host,players:[host,guest]});
-   assert.equal(view.sheet.genre,genre.id);
-   assert.ok(view.sheet.question.guidance.length>35);
-   hints.push(view.sheet.question.guidance);
+  const prompts=[],stages=[];
+  for(let r=0;r<10;r++){
+   const sheet=view(state,r),q=sheet.question;
+   for(const field of ['prompt','stage','guidance','creativeFreedom'])
+    assert.ok(q[field]&&q[field].trim().length>3,set.id+' R'+r+' '+field);
+   assert.equal(sheet.nextQuestion,r===9?'':bank[set.id].questions[r+1].prompt);
+   // The next question is already presented as a separate UI element.
+   assert.ok(!q.creativeFreedom.includes(sheet.nextQuestion||'<empty>'),set.id+' R'+r+' redundant hint');
+   prompts.push(q.prompt);stages.push(q.stage);
   }
-  assert.equal(new Set(hints).size,12,set.id);
+  assert.equal(new Set(prompts).size,10,set.id+' duplicate question');
+  assert.ok(new Set(stages).size>=8,set.id+' generic/misleading stage labels');
+  assert.equal(stages.at(-1)==='Фінал'||stages.at(-1)==='Вирок',true,set.id+' ending stage');
  }
 });
 
-test('collapsing plan separates protagonist, goal and location without losing comedy',()=>{
- const sourceBank=source.match(/const BANK = (\{.*?\});\n/);
- assert.ok(sourceBank);
- const bank=JSON.parse(sourceBank[1]);
- const q=bank.collapsingPlan.questions;
- assert.match(q[0].creativeFreedom,/план/);
- assert.match(q[1].creativeFreedom,/локацію/);
- assert.match(q[2].prompt,/Де саме/);
- assert.match(q[1].guidance,/не її місце/);
+test('120 scenario-genre combinations keep their structure and genre-specific ending',()=>{
+ const lobby=game.viewForPlayer({state:game.createRoom({player:players[0],payload:{}}).state,player:players[0],players:[players[0]]});
+ assert.equal(lobby.genres.length,12);
+ for(const set of lobby.questionSets){
+  const beginnings=[],endings=[];
+  for(const genre of lobby.genres){
+   const state=start(set.id,genre.id);
+   const intro=view(state,0).question,final=view(state,9).question;
+   assert.ok(intro.guidance.includes(bank[set.id].questions[0].guidance));
+   assert.ok(final.guidance.includes(bank[set.id].questions[9].guidance));
+   assert.equal(final.prompt,bank[set.id].questions[9].prompt);
+   beginnings.push(intro.guidance);
+   endings.push(final.guidance);
+  }
+  assert.equal(new Set(beginnings).size,12,set.id+' intro genres');
+  assert.equal(new Set(endings).size,12,set.id+' ending genres');
+  assert.ok(!endings[3].includes('розгадку залиш на потім'),set.id+' noir must end');
+  assert.ok(!endings[6].includes('не пояснює її'),set.id+' sci-fi must end');
+ }
 });
 
-test('disabled next-question preview does not leak later stages in hints',()=>{
- const [host,guest]=makePlayers();
- let state=game.createRoom({player:host,payload:{settings:{questionSet:'collapsingPlan',showNextQuestion:false}}}).state;
- state=game.onJoin({state,players:[host,guest]}).state;
- state=game.onMessage({state,player:host,payload:{type:'start'}}).state;
- const view=game.viewForPlayer({state,player:host,players:[host,guest]});
- assert.equal(view.sheet.nextQuestion,'');
- assert.ok(!view.sheet.question.creativeFreedom.includes('Наступний автор окремо відповість'));
- assert.match(view.sheet.question.creativeFreedom,/Не вирішуй за наступного автора/);
+test('critical hidden-information boundaries are explicit',()=>{
+ assert.match(bank.collapsingPlan.questions[1].creativeFreedom,/локацію/);
+ assert.match(bank.collapsingPlan.questions[2].prompt,/Де саме/);
+ assert.match(bank.nightSurvival.questions[1].prompt,/до ночі/);
+ assert.match(bank.nightSurvival.questions[4].prompt,/перший явний знак/);
+ assert.match(bank.detectiveCase.questions[1].creativeFreedom,/Місце/);
+ assert.match(bank.roadTrip.questions[1].creativeFreedom,/куди/);
+ assert.match(bank.courtroomScandal.questions[1].creativeFreedom,/вирок/);
+});
+
+test('hiding next question reveals neither prompt nor duplicate in helper text',()=>{
+ const state=start('collapsingPlan','absurdComedy',false);
+ for(let round=0;round<9;round++){
+  const sheet=view(state,round);
+  assert.equal(sheet.nextQuestion,'');
+  const next=bank.collapsingPlan.questions[round+1].prompt;
+  assert.ok(!sheet.question.creativeFreedom.includes(next));
+  assert.ok(!sheet.question.guidance.includes(next));
+ }
 });

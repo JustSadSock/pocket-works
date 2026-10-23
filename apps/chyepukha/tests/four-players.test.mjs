@@ -10,6 +10,7 @@ const modules=[
  ['v4','../../../pocketnet/module-versions/chyepukha/v4.ts'],
  ['v5','../../../pocketnet/module-versions/chyepukha/v5.ts'],
  ['v6','../../../pocketnet/module-versions/chyepukha/v6.ts'],
+ ['v7','../../../pocketnet/module-versions/chyepukha/v7.ts'],
  ['working source','../server/module.ts']
 ];
 const players=Array.from({length:4},(_,i)=>({id:'author-'+i,name:'Автор '+i}));
