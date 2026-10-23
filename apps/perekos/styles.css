@@ -984,3 +984,22 @@
  .v2-school{min-height:88px}
 }
 @media(prefers-reduced-motion:reduce){.v2-stage button{transition:none}}
+
+/* Keep the new entry compact: the first screen must remain usable at 320×568. */
+#menu .v2-entry{min-height:45px;padding:8px 12px;gap:2px}
+#menu .v2-entry strong{font-size:11px}
+#menu .v2-entry small{font-size:10px}
+@media(max-width:950px) and (max-height:850px){
+ #menu #hero-preview{width:clamp(74px,13vh,115px)}
+ #menu .menu-composition>p{margin:4px 0 6px}
+ #menu .play-block{gap:5px}
+ #menu .play-block .big-button{min-height:47px}
+ #menu .forge-entry:not(.v2-entry){min-height:49px;padding-block:7px}
+ #menu .v2-entry{min-height:39px}
+}
+@media(max-width:420px) and (max-height:620px){
+ #menu .menu-composition{transform:scale(.94);transform-origin:center center}
+ #menu .play-block{gap:4px}
+ #menu .menu-composition h1{font-size:clamp(40px,12vw,53px)}
+ #menu .menu-composition>p{font-size:10px;margin-block:2px 4px}
+}
