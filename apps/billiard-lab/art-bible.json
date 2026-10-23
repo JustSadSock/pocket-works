@@ -128,6 +128,8 @@
   "verification": {
     "states": [
       "initial",
+      "action",
+      "settled",
       "running",
       "paused",
       "restarted"
