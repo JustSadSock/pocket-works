@@ -20,10 +20,18 @@ try{
    el.style.width=width+'px';el.style.height=height+'px';
    el.style.transform='none';
   },{width,height});
-  await page.evaluate(id=>{
-   document.querySelector('iframe.dev-frame').contentWindow.postMessage({source:'bazaar-debug-console',type:'scene',id},location.origin);
-  },scene);
-  await frame.waitForTimeout(100);
+  await page.evaluate(id=>new Promise((resolve,reject)=>{
+   const token=Math.floor(Math.random()*1e9);
+   const iframe=document.querySelector('iframe.dev-frame');
+   const timeout=setTimeout(()=>{removeEventListener('message',receive);reject(new Error('Scene did not acknowledge: '+id));},5000);
+   function receive(event){
+    if(event.source!==iframe.contentWindow||event.data?.source!=='bazaar-debug-preview'||event.data.type!=='scene-ready'||event.data.step!==token)return;
+    clearTimeout(timeout);removeEventListener('message',receive);resolve();
+   }
+   addEventListener('message',receive);
+   iframe.contentWindow.postMessage({source:'bazaar-debug-console',type:'scene',id,run:1,step:token},location.origin);
+  }),scene);
+  await frame.evaluate(({width,height,play})=>{window.__bazaarQaExpected={width,height,play};},{width,height,play:!['home','lobby','done'].includes(scene)});
   const report=await frame.evaluate(()=>{
    const width=document.documentElement.clientWidth;
    const overflow=Math.max(0,document.documentElement.scrollWidth-width);
@@ -31,6 +39,13 @@ try{
    const play=rect('.play-screen'),field=rect('.play-field'),tabs=rect('.workspace-tabs'),ticket=rect('.urgent-ticket'),wallet=rect('.currency-strip');
    const collide=(a,b)=>a&&b&&Math.min(a.right,b.right)-Math.max(a.left,b.left)>4&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>4;
    const issues=[];
+   const expected=window.__bazaarQaExpected;
+   if(expected&& (width!==expected.width||document.documentElement.clientHeight!==expected.height))
+     issues.push('wrong frame viewport '+width+'x'+document.documentElement.clientHeight);
+   const phase=document.querySelector('.play-screen')?'play':document.querySelector('#app')?.textContent?.trim().slice(0,35);
+   if(expected?.play&&(!document.querySelector('.play-field')||!document.querySelector('.workspace-tabs')))
+     issues.push('game scene missing');
+   if(document.querySelector('#app')?.textContent?.includes('Подключаемся…'))issues.push('loading placeholder');
    if(overflow>2)issues.push('horizontal overflow '+overflow);
    if(collide(field,tabs))issues.push('table overlaps tabs');
    if(collide(ticket,wallet))issues.push('urgent ticket overlaps wallet');
@@ -41,10 +56,10 @@ try{
    }
    const panel=document.querySelector('.sheet-content');
    if(panel&&panel.scrollHeight>panel.clientHeight+5&&!['auto','scroll'].includes(getComputedStyle(panel).overflowY))issues.push('panel clipped without scroll');
-   return {issues,overflow,width,height:document.documentElement.clientHeight};
+   return {issues,overflow,width,height:document.documentElement.clientHeight,phase};
   });
   const result={scene,device:id,requested:{width,height},...report};
-  if(report.issues.length){
+  if(report.issues.length||scene==='four'&&['small','short','phone','landscape','tablet','desktop'].includes(id)){
    await frame.locator('body').screenshot({path:out+'/'+scene+'-'+id+'.png'});
   }
   rows.push(result);
