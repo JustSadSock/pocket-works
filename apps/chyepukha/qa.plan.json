@@ -31,7 +31,8 @@
         "qa/network.spec.ts",
         "qa/four-player-ux.spec.ts",
         "qa/editor-motion.spec.ts",
-        "qa/finale-audio.spec.ts"
+        "qa/finale-audio.spec.ts",
+        "qa/room-safety-v5.spec.ts"
       ]
     }
   ]
