@@ -286,7 +286,7 @@ function apply(v){if(!v||v.protocol!==1||!Array.isArray(v.players))return;
  if(view&&v.revision<view.revision)return;
  if(v.phase==='finished'&&Array.isArray(v.stories))v={...v,stories:v.stories.map(st=>({...st,text:st.fragments.map(f=>f.answer).join('\n\n')}))};
  if(['v5','v6'].includes(roomVersion))acknowledgeReceipt(v.lastReceipt);
-  const prev=view;const changedModeration=roomVersion==='v6'&&prev&&(prev.paused!==v.paused||prev.host!==v.host||prev.waitingApproval!==v.waitingApproval||JSON.stringify(prev.waitlist)!==JSON.stringify(v.waitlist)||prev.players?.some((p,i)=>p.id!==v.players[i]?.id||p.vacant!==v.players[i]?.vacant||p.autoSkip!==v.players[i]?.autoSkip));
+  const prev=view;const changedModeration=roomVersion==='v6'&&prev&&(prev.paused!==v.paused||prev.host!==v.host||prev.waitingApproval!==v.waitingApproval||prev.hostOfflineSince!==v.hostOfflineSince||JSON.stringify(prev.onlineIds)!==JSON.stringify(v.onlineIds)||JSON.stringify(prev.waitlist)!==JSON.stringify(v.waitlist)||prev.players?.some((p,i)=>p.id!==v.players[i]?.id||p.vacant!==v.players[i]?.vacant||p.autoSkip!==v.players[i]?.autoSkip));
   const waitingSame=prev?.phase==='writing'&&v.phase==='writing'&&prev.waiting&&v.waiting&&prev.round===v.round;
  if(mayShowFinaleIntro(prev?.phase,v.phase,Array.isArray(v.stories)&&v.stories.length>0)&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)finaleIntroActive=true;
  const same=prev?.phase==='writing'&&v.phase==='writing'&&!prev.waiting&&!v.waiting&&prev.round===v.round&&prev.sheet?.id===v.sheet?.id;
