@@ -254,6 +254,10 @@ const module: PocketModule<State>={
    const id=player.id;const isMember=state.participants.some(p=>p.id===id);
    if(a.type==='sync')return {state,events:[{type:'state',to:id,payload:strip(state,id)}]};
     if(a.type==='time_ping'&&Number.isFinite(a.stamp))return {state,events:[{type:'time_pong',to:id,payload:{stamp:a.stamp,serverNow:now()}}]};
+   // Keep transport intent state immutable while a room is paused. The client
+   // retains its local drawing and can resume after all required seats return.
+   if(state.paused&&(a.type==='submit_begin'||a.type==='submit_resume'))
+     return {state,events:notice(id,'Матч на паузе. Дождитесь восстановления комнаты.')};
    // A final intent arrives before multipart upload. Keep the room in drawing while
    // this upload is recoverable (bounded by the hard recovery deadline).
    if(a.type==='submit_begin'&&state.phase==='drawing'&&isMember){
