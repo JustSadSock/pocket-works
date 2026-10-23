@@ -5,6 +5,7 @@ import {storageForTab,prepareSession,markActive,releaseActive} from './tab-sessi
 import {buildComicPrompt} from './comic-prompt.js';
 import {createSoundscape} from './audio.js';
 import {renderWriting} from './writing-view.js';
+import {screenSignature,transitionFor} from './editor-motion.js';
 import {handoffCount,handoffWords,hasMinimumDraft} from './writer-flow.js';
 import {readEditions,writeEditions,addFinishedEdition,removeEdition,storyText} from './story-library.js';
 import {installScreenInspector,PREVIEW_PARAM} from './screen-inspector.js';
@@ -29,6 +30,7 @@ let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
 let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',comicSource=null;
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='';
+let lastScreenSignature='';
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
 const playerName=()=>preferredPocketName(pocketIdentity,name.trim());
@@ -297,8 +299,18 @@ function overlay(){
  if(modal==='comic-prompt')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Комікс через ChatGPT"><section class="comic-inner comic-ai"><div class="eyebrow">КОМІКС · 4 СТОРІНКИ</div><h3>Намалюй історію в ChatGPT</h3><p>Скопіюй готовий промпт і встав у ChatGPT. Зображення створює ChatGPT, а не гра.</p><div class="comic-actions"><button class="button" type="button" data-act="copy-comic-direct">Скопіювати промпт коміксу <span>↗</span></button><button class="button outline" type="button" data-act="copy-comic-safe">Спершу адаптувати історію <span>↗</span></button></div><p class="mini">Адаптація — два кроки: перший чат готує безпечний сценарій, другий створює чотири послідовні сторінки. Деякі сюжети потребуватимуть значної переробки, а генерація не гарантована.</p><div class="button-row"><a class="button outline small" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">Відкрити ChatGPT ↗</a><button class="button outline small" data-act="close-comic">Закрити</button></div></section></div>';
  return '';
 }
-function render(){netStatus();syncIdentityBar();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.');soundscape.setScene(view?.phase==='lobby'?'lobby':view?.phase==='writing'?'writing':view?.phase==='finished'?'finished':'menu');
- if(connecting&&!view){scene.innerHTML='<section class="paper waiting"><div class="eyebrow">POCKETNET</div><h2>З’єднуємо авторів…</h2><p class="mini">Відновлюємо захищену кімнату.</p><button class="button outline" type="button" data-act="cancel-connect">Скасувати підключення</button></section>';return}
+function render(){
+ netStatus();syncIdentityBar();
+ $('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.');
+ soundscape.setScene(view?.phase==='lobby'?'lobby':view?.phase==='writing'?'writing':view?.phase==='finished'?'finished':'menu');
+ const next=screenSignature({view,archiveOpen,connecting,room,writerStep:view?.phase==='writing'&&!view.waiting?readWriterMeta().step:'draft'});
+ const motion=transitionFor(lastScreenSignature,next);
+ lastScreenSignature=next;
+ if(motion)scene.dataset.motion=motion;else delete scene.dataset.motion;
+ if(connecting&&!view){
+  scene.innerHTML='<section class="paper waiting"><div class="eyebrow">POCKETNET</div><h2>З’єднуємо авторів…</h2><p class="mini">Відновлюємо захищену кімнату.</p><button class="button outline" type="button" data-act="cancel-connect">Скасувати підключення</button></section>';
+  return;
+ }
  scene.innerHTML=(view?(view.phase==='lobby'?lobby():view.phase==='writing'?(view.waiting?waiting():writing()):view.phase==='finished'?results():waiting()):archiveOpen?archiveScreen():home())+overlay();
  if(view?.phase==='writing'&&!view.waiting)refreshWords();
 }
@@ -310,6 +322,7 @@ function refreshWords(){
  const needed=handoffCount({roomVersion,round:view.round,total:view.total,visibleTailWords:view.settings.visibleTailWords,answer:text});
  const chosen=indices().slice(0,needed);
  draftSelections[draftKey()]=chosen;
+ tray.closest('.selection-stage')?.classList.toggle('is-complete',needed>0&&chosen.length===needed);
  tray.querySelectorAll('.word').forEach(button=>{
   const selected=chosen.includes(Number(button.dataset.index));
   button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));
