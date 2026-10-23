@@ -185,12 +185,12 @@ export function smudgeStamp(ctx,x,y,size,dx,dy,mask=false,zoneMask=null,aspect=W
     sum+=k;
    }
    if(!sum)continue; // Keep the existing pigment if no valid source exists.
-   const remain=1-weight,blend=weight/sum;
-   if(mask)dst[i+3]=src[i+3]*remain+alpha*blend;
+   const remain=1-weight;
+   if(mask)dst[i+3]=src[i+3]*remain+alpha/sum*weight;
    else{
-    dst[i]=src[i]*remain+red*blend;
-    dst[i+1]=src[i+1]*remain+green*blend;
-    dst[i+2]=src[i+2]*remain+blue*blend;
+    dst[i]=src[i]*remain+red/sum*weight;
+    dst[i+1]=src[i+1]*remain+green/sum*weight;
+    dst[i+2]=src[i+2]*remain+blue/sum*weight;
    }
   }
  }
