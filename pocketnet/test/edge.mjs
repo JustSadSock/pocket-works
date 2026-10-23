@@ -158,8 +158,14 @@ try {
   await resumedHost.next('authenticated');
   resumedHost.send('join_room',{roomId});
   const frozen=await resumedHost.next('room_joined');
-  assert.equal(frozen.state.paused,true,'first reconnected player finds paused room');
-  assert(frozen.state.pauseRemainingMs>=0,'server preserves remaining seconds');
+  // The room_joined packet intentionally omits private Zamazka session
+  // details; only a role-specific sync may disclose pause and deadline.
+  assert.deepEqual(frozen.state,{phase:'preview'});
+  resumedHost.send('game_message',{payload:{type:'sync'}});
+  const pausedSnapshot=await resumedHost.next('game_event',event=>
+   event.event?.type==='state'&&event.event.payload.paused===true);
+  assert.equal(pausedSnapshot.event.payload.paused,true,'first reconnected player finds paused room');
+  assert(pausedSnapshot.event.payload.pauseRemainingMs>=0,'server preserves remaining seconds');
   resumedGuest=await channel(secondToken);
   await resumedGuest.next('authenticated');
   resumedGuest.send('join_room',{roomId});
