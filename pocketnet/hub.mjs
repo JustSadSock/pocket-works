@@ -164,7 +164,7 @@ export class PocketNetHub {
     }
     if (changed) {
       this.persist(room);
-      this.broadcast(room, 'presence', { roomId: room.id, players: room.players });
+      this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
       await this.refreshZamazkaPresence(room);
     }
   }
@@ -574,13 +574,13 @@ export class PocketNetHub {
               if (Array.isArray(room.state?.participants)) room.state.participants = room.state.participants.map(refresh);
               if (Array.isArray(room.state?.players)) room.state.players = room.state.players.map(refresh);
               this.persist(room);
-              this.broadcast(room, 'presence', { roomId: room.id, players: room.players });
+              this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
             }
             this.setRoom(ws, room.id);
             this.joined(ws,room,member);
             await this.refreshZamazkaPresence(room);
           }
-          this.broadcast(room, 'presence', { roomId: room.id, players: room.players });
+          this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
           return;
         }
         const room = player.roomId ? this.readRoom(player.roomId) : null;
@@ -617,7 +617,7 @@ export class PocketNetHub {
           else {
             this.persist(room);
             this.emit(room, result.events ?? []);
-            this.broadcast(room, 'presence', { roomId: room.id, players: room.players });
+            this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
           }
           return;
         }
@@ -633,7 +633,7 @@ export class PocketNetHub {
     if (info?.roomId) {
       const room = this.readRoom(info.roomId);
       if (room) {
-        this.broadcast(room, 'presence', { roomId: room.id, players: room.players, disconnected: info.id });
+        this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined, disconnected: info.id });
         await this.refreshZamazkaPresence(room);
         this.ensureAlarm();
       }
