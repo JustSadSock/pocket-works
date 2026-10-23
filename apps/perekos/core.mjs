@@ -323,21 +323,21 @@ function castClassSpell(s,a){
 
 export function previewAttack(s,a,target,special=false){
  const dx=target.x-a.x,dy=target.y-a.y,angle=Math.atan2(dy,dx),ux=Math.cos(angle),uy=Math.sin(angle);
- const type=special?(a.archetype==='shaper'?'placement':a.archetype==='distorter'?'phase':'ricochet'):a.mageId==='pebble'?'lob':a.mageId==='cinder'?'cone':a.mageId==='slate'?'sector':a.mageId==='coil'?'beam':'shot',far=mastery(a,'far'),wide=mastery(a,'wide');
+ const type=special?(a.technique==='alternate'?(a.archetype==='shaper'?'resonance':a.archetype==='distorter'?'bend':'siege'):(a.archetype==='shaper'?'placement':a.archetype==='distorter'?'phase':'ricochet')):a.mageId==='pebble'?'lob':a.mageId==='cinder'?'cone':a.mageId==='slate'?'sector':a.mageId==='coil'?'beam':'shot',far=mastery(a,'far'),wide=mastery(a,'wide');
  let length=0,width=0,radius=5;
  if(type==='lob'){length=Math.min(Math.hypot(dx,dy),far?295:252);radius=wide?42:33;return {type,angle,length,radius,blocked:false,x:a.x+ux*length,y:a.y+uy*length,segments:[{x:a.x,y:a.y,toX:a.x+ux*length,toY:a.y+uy*length}]}}
- if(type==='placement'){length=51;radius=22;const x=a.x+ux*length,y=a.y+uy*length;return {type,angle,length,radius,blocked:!canStand(x,y,23)||blocking(s,x,y,24),x,y,segments:[]}}
+ if(type==='placement'||type==='resonance'){length=type==='placement'?51:48;radius=22;const x=a.x+ux*length,y=a.y+uy*length;return {type,angle,length,radius,blocked:!canStand(x,y,23)||blocking(s,x,y,24),x,y,segments:[]}}
  if(type==='cone'){length=(far?239:210)*(.24+.76*(a.flameCharge||0));width=(wide?43:32)*(.42+.58*(a.flameCharge||0))}
  if(type==='beam')length=far?290:242;
  if(type==='sector'){length=far?133:112;width=wide?.75:.53}
- if(['shot','ricochet','phase'].includes(type)){
+ if(['shot','ricochet','phase','siege','bend'].includes(type)){
   const style=type==='shot'?mage(a.mageId).style:'arc';
   const v0=type==='shot'?(a.mageId==='kindle'?174:a.mageId==='wire'?480:style==='bolt'||style==='arc'?365:style==='rock'?198:252):365;
-  const life=type==='shot'?(far?1.8:1.15)*(style==='arc'?.84:style==='rock'?1.2:style==='wave'?.65:1):type==='phase'?1.2:1.3;
+  const life=type==='shot'?(far?1.8:1.15)*(style==='arc'?.84:style==='rock'?1.2:style==='wave'?.65:1):(type==='phase'||type==='bend')?1.2:type==='siege'?1.25:1.3;
   let speed=v0*(a.archetype==='striker'?1.035:1);
   for(let t=0;t<Math.ceil(life/STEP);t++){if(type==='shot'&&a.mageId==='kindle')speed=Math.min(310,speed+490*STEP);if(type==='shot'&&a.mageId==='wire')speed=Math.max(300,speed-380*STEP);length+=speed*STEP}
  }
- const hit=rayCollision(s,a.x,a.y,angle,length,radius,a.id,['shot','ricochet','phase'].includes(type));
+ const hit=rayCollision(s,a.x,a.y,angle,length,radius,a.id,['shot','ricochet','phase','siege','bend'].includes(type));
  const one={x:a.x,y:a.y,toX:a.x+ux*hit.length,toY:a.y+uy*hit.length},segments=[one];
  if(type==='phase'&&hit.hit&&(hit.hit.type==='wall'||hit.hit.type==='barrier')){
   const skip=phaseExitPoint(s,hit.hit,one.toX,one.toY,ux,uy,radius);
@@ -348,7 +348,16 @@ export function previewAttack(s,a,target,special=false){
    segments:[one,{x:one.toX,y:one.toY,toX:ex,toY:ey,phase:true},{x:ex,y:ey,toX:ex+ux*onward.length,toY:ey+uy*onward.length}]}
  }
 
- if(type==='ricochet'&&hit.hit){
+ if(type==='bend'&&length>65){
+   const turn=rayCollision(s,a.x,a.y,angle,65,5,a.id,true);
+   if(!turn.hit){
+    const bx=a.x+ux*65,by=a.y+uy*65,bendAngle=angle+.7,left=length-65;
+    const tail=rayCollision(s,bx,by,bendAngle,left,5,a.id,true);
+    return {type,angle,length:65+tail.length,maxRange:length,width,radius,blocked:!!tail.hit,x:bx+Math.cos(bendAngle)*tail.length,y:by+Math.sin(bendAngle)*tail.length,
+     segments:[{x:a.x,y:a.y,toX:bx,toY:by},{x:bx,y:by,toX:bx+Math.cos(bendAngle)*tail.length,toY:by+Math.sin(bendAngle)*tail.length}]}
+   }
+  }
+  if(type==='ricochet'&&hit.hit){
   const dot=ux*hit.hit.nx+uy*hit.hit.ny,rx=ux-2*dot*hit.hit.nx,ry=uy-2*dot*hit.hit.ny;
   const two=rayCollision(s,one.toX+rx*.15,one.toY+ry*.15,Math.atan2(ry,rx),Math.max(0,length-hit.length),5,a.id,true);
   segments.push({x:one.toX,y:one.toY,toX:one.toX+rx*two.length,toY:one.toY+ry*two.length})
@@ -473,9 +482,16 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
  q.life-=dt;if(q.life<=0){s.shots.splice(j,1);if(mage(s.actors[q.owner].mageId).trait==='miss_cool')s.actors[q.owner].heat=Math.max(0,s.actors[q.owner].heat-6);emit(s,'on_expire',q.owner,{},q.depth);continue}
  let remaining=dt,done=false,iterations=0;
  while(remaining>1e-7&&!done&&iterations++<4){
-  const dx=q.vx*remaining,dy=q.vy*remaining;
+  const speed=Math.hypot(q.vx,q.vy)||1,segmentTime=q.bendRemaining>0?Math.min(remaining,q.bendRemaining/speed):remaining;
+  const dx=q.vx*segmentTime,dy=q.vy*segmentTime;
   const hit=firstCollision(s,q.x,q.y,dx,dy,q.r,q.owner,{actors:true});
-  if(!hit){q.x+=dx;q.y+=dy;break}
+  if(!hit){q.x+=dx;q.y+=dy;
+  if(q.bendRemaining>0){
+   q.bendRemaining=Math.max(0,q.bendRemaining-speed*segmentTime);remaining-=segmentTime;
+   if(q.bendRemaining<=1e-5){const angle=q.bendAngle||0,vx=q.vx,vy=q.vy;q.vx=vx*Math.cos(angle)-vy*Math.sin(angle);q.vy=vx*Math.sin(angle)+vy*Math.cos(angle);fx(s,'thunder',q.x,q.y)}
+   continue;
+  }
+  break}
   q.x=hit.x;q.y=hit.y;
   if(hit.type==='actor'){
    if(q.style==='bolt')a.shield=Math.max(0,a.shield-3);
@@ -485,20 +501,21 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
    if(q.style==='rock')rockFracture(s,q,q.x,q.y);
    fx(s,'impact_'+(q.style||'orb'),q.x,q.y);s.shots.splice(j,1);done=true;continue;
   }
+  if(q.bendRemaining>0)q.bendRemaining=Math.max(0,q.bendRemaining-speed*segmentTime*hit.t);
   if(q.siege>0&&hit.type==='barrier'){
-   if(s.barriers[hit.index]){s.barriers.splice(hit.index,1);q.siege=0;q.x+=Math.sign(q.vx)*.2;q.y+=Math.sign(q.vy)*.2;remaining*=Math.max(0,1-hit.t);fx(s,'fracture',q.x,q.y);continue}
+   if(s.barriers[hit.index]){s.barriers.splice(hit.index,1);q.siege=0;q.x+=Math.sign(q.vx)*.2;q.y+=Math.sign(q.vy)*.2;remaining=Math.max(0,remaining-segmentTime*hit.t);fx(s,'fracture',q.x,q.y);continue}
   }
   if(q.phase>0&&(hit.type==='wall'||hit.type==='barrier')){
    const exit=phaseExitPoint(s,hit,q.x,q.y,q.vx,q.vy,q.r);
    q.phase=0;
    if(!exit){s.shots.splice(j,1);fx(s,'spark',q.x,q.y);done=true;continue}
    q.x=exit.x;q.y=exit.y;
-   fx(s,'phase_exit',q.x,q.y);remaining*=Math.max(0,1-hit.t);continue;
+   fx(s,'phase_exit',q.x,q.y);remaining=Math.max(0,remaining-segmentTime*hit.t);continue;
   }
   if(q.bounces>0){
    q.bounces--;const dot=q.vx*hit.nx+q.vy*hit.ny;q.vx-=2*dot*hit.nx;q.vy-=2*dot*hit.ny;
    q.x+=hit.nx*.08;q.y+=hit.ny*.08;
-   fx(s,'spark',hit.x,hit.y);emit(s,'on_bounce',q.owner,{},q.depth);remaining*=Math.max(0,1-hit.t);continue;
+   fx(s,'spark',hit.x,hit.y);emit(s,'on_bounce',q.owner,{},q.depth);remaining=Math.max(0,remaining-segmentTime*hit.t);continue;
   }
   if(q.style==='rock')rockFracture(s,q,q.x,q.y);s.shots.splice(j,1);fx(s,'spark',hit.x,hit.y);emit(s,'on_expire',q.owner,{},q.depth);done=true;
  }

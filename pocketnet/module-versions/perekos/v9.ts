@@ -625,9 +625,16 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
  q.life-=dt;if(q.life<=0){s.shots.splice(j,1);if(mage(s.actors[q.owner].mageId).trait==='miss_cool')s.actors[q.owner].heat=Math.max(0,s.actors[q.owner].heat-6);emit(s,'on_expire',q.owner,{},q.depth);continue}
  let remaining=dt,done=false,iterations=0;
  while(remaining>1e-7&&!done&&iterations++<4){
-  const dx=q.vx*remaining,dy=q.vy*remaining;
+  const speed=Math.hypot(q.vx,q.vy)||1,segmentTime=q.bendRemaining>0?Math.min(remaining,q.bendRemaining/speed):remaining;
+  const dx=q.vx*segmentTime,dy=q.vy*segmentTime;
   const hit=firstCollision(s,q.x,q.y,dx,dy,q.r,q.owner,{actors:true});
-  if(!hit){q.x+=dx;q.y+=dy;break}
+  if(!hit){q.x+=dx;q.y+=dy;
+  if(q.bendRemaining>0){
+   q.bendRemaining=Math.max(0,q.bendRemaining-speed*segmentTime);remaining-=segmentTime;
+   if(q.bendRemaining<=1e-5){const angle=q.bendAngle||0,vx=q.vx,vy=q.vy;q.vx=vx*Math.cos(angle)-vy*Math.sin(angle);q.vy=vx*Math.sin(angle)+vy*Math.cos(angle);fx(s,'thunder',q.x,q.y)}
+   continue;
+  }
+  break}
   q.x=hit.x;q.y=hit.y;
   if(hit.type==='actor'){
    if(q.style==='bolt')a.shield=Math.max(0,a.shield-3);
@@ -637,20 +644,21 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
    if(q.style==='rock')rockFracture(s,q,q.x,q.y);
    fx(s,'impact_'+(q.style||'orb'),q.x,q.y);s.shots.splice(j,1);done=true;continue;
   }
+  if(q.bendRemaining>0)q.bendRemaining=Math.max(0,q.bendRemaining-speed*segmentTime*hit.t);
   if(q.siege>0&&hit.type==='barrier'){
-   if(s.barriers[hit.index]){s.barriers.splice(hit.index,1);q.siege=0;q.x+=Math.sign(q.vx)*.2;q.y+=Math.sign(q.vy)*.2;remaining*=Math.max(0,1-hit.t);fx(s,'fracture',q.x,q.y);continue}
+   if(s.barriers[hit.index]){s.barriers.splice(hit.index,1);q.siege=0;q.x+=Math.sign(q.vx)*.2;q.y+=Math.sign(q.vy)*.2;remaining=Math.max(0,remaining-segmentTime*hit.t);fx(s,'fracture',q.x,q.y);continue}
   }
   if(q.phase>0&&(hit.type==='wall'||hit.type==='barrier')){
    const exit=phaseExitPoint(s,hit,q.x,q.y,q.vx,q.vy,q.r);
    q.phase=0;
    if(!exit){s.shots.splice(j,1);fx(s,'spark',q.x,q.y);done=true;continue}
    q.x=exit.x;q.y=exit.y;
-   fx(s,'phase_exit',q.x,q.y);remaining*=Math.max(0,1-hit.t);continue;
+   fx(s,'phase_exit',q.x,q.y);remaining=Math.max(0,remaining-segmentTime*hit.t);continue;
   }
   if(q.bounces>0){
    q.bounces--;const dot=q.vx*hit.nx+q.vy*hit.ny;q.vx-=2*dot*hit.nx;q.vy-=2*dot*hit.ny;
    q.x+=hit.nx*.08;q.y+=hit.ny*.08;
-   fx(s,'spark',hit.x,hit.y);emit(s,'on_bounce',q.owner,{},q.depth);remaining*=Math.max(0,1-hit.t);continue;
+   fx(s,'spark',hit.x,hit.y);emit(s,'on_bounce',q.owner,{},q.depth);remaining=Math.max(0,remaining-segmentTime*hit.t);continue;
   }
   if(q.style==='rock')rockFracture(s,q,q.x,q.y);s.shots.splice(j,1);fx(s,'spark',hit.x,hit.y);emit(s,'on_expire',q.owner,{},q.depth);done=true;
  }
