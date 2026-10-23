@@ -1318,3 +1318,30 @@ test('Reconnect with the same member preserves the game and every asset',()=>{
  assert.equal(state.turnIndex,turn);
  assert.equal(game.viewForPlayer({state,player:{id:p.id}}).you.id,p.id);
 });
+
+test('Only one 30-second reconnect allowance per active turn; return resumes the clock',()=>{
+ const {state}=makeRoom(2),p=state.contestants[state.turnIndex];
+ const original=state.deadlineAt;
+ game.onPresence({state,player:{id:p.id},online:false});
+ assert.equal(state.deadlineAt,original+30000);
+ game.onPresence({state,player:{id:p.id},online:false});
+ assert.equal(state.deadlineAt,original+30000);
+ game.onPresence({state,player:{id:p.id},online:true});
+ assert.ok(state.deadlineAt>=original-300);
+ assert.ok(state.deadlineAt<=original+30000);
+ assert.equal(state.connectionGraceUntil,null);
+ const returned=state.deadlineAt;
+ game.onPresence({state,player:{id:p.id},online:false});
+ assert.equal(state.deadlineAt,returned);
+});
+test('Non-active disconnect does not affect timer; grace resets for next turn',()=>{
+ const {state}=makeRoom(2),current=state.contestants[state.turnIndex];
+ const other=state.contestants.find(p=>p.id!==current.id),initial=state.deadlineAt;
+ game.onPresence({state,player:{id:other.id},online:false});
+ assert.equal(state.deadlineAt,initial);
+ game.onPresence({state,player:{id:current.id},online:false});
+ act(state,current.id,{type:'end'});
+ const next=state.contestants[state.turnIndex],nextDeadline=state.deadlineAt;
+ game.onPresence({state,player:{id:next.id},online:false});
+ assert.equal(state.deadlineAt,nextDeadline+30000);
+});
