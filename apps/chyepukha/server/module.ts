@@ -31,9 +31,29 @@ function initial(player,payload){
 }
 function events(){return [{type:'state'}];}
 function notice(to,message){return [{type:'notice',to,payload:message}];}
-function resolveQuestions(settings,id) {
+const GENRE_TONE = {
+ groundedDrama:'Нехай вчинок має людську причину і відчутний наслідок.',
+ absurdComedy:'Дозволь одну безглузду, але конкретну деталь. Не пояснюй жарт.',
+ horror:'Додай тривожну побутову деталь, не розкриваючи таємницю завчасно.',
+ detectiveNoir:'Нехай дрібниця виглядає підозріло; розгадку залиш на потім.',
+ romanticMelodrama:'Покажи емоцію через смішний або незручний конкретний вчинок.',
+ fantasyEpic:'Одна незвичайна деталь світу переконливіша за цілу лекцію про магію.',
+ sciFiParanoia:'Одна технологічна дивина натякає на більшу проблему, але не пояснює її.',
+ cyberpunk:'Додай приземлену дивину високотехнологічного міста.',
+ cozyWhimsy:'Нехай деталь буде лагідно дивною, навіть якщо ситуація безглузда.',
+ postApocalypse:'Покажи, як люди пристосували буденну річ до дивного світу.',
+ mythicLegend:'Надай дрібній події надмірно урочистого, легендарного звучання.',
+ satire:'Висміюй вчинки, правила чи установи через конкретну абсурдну деталь.'
+};
+function resolveQuestions(settings,id,genre) {
  if(id==='custom') return settings.customQuestions.map(prompt=>({prompt,guidance:'Продовжуй історію саме з цього моменту.',creativeFreedom:'Додай несподівану деталь, не переповідай попередні сцени.'}));
- return BANK[id]?.questions||BANK.collapsingPlan.questions;
+ const questions=BANK[id]?.questions||BANK.collapsingPlan.questions;
+ const tone=GENRE_TONE[genre]||'Додай одну оригінальну, виразну деталь.';
+ return questions.map((q,index)=>{
+  const next=questions[index+1];
+  const boundary=next?'Наступний автор окремо відповість на «'+next.prompt+'». Не визначай це замість нього.':'Це фінал: закінчи історію, не відкривай нову сюжетну лінію.';
+  return {...q,guidance:q.guidance+' '+tone,creativeFreedom:q.creativeFreedom+' '+boundary};
+ });
 }
 function begin(s){
  const opts=s.settings;
@@ -70,7 +90,7 @@ function viewForPlayer({state:s,player,players,onlineIds}){
   return {...common,sheet:{id:sheet.id,set:sheet.set,setLabel:BANK[sheet.set]?.label||'Свій набір',
     genre:sheet.genre,genreLabel:GENRES.find(x=>x.id===sheet.genre)?.label||s.settings.customGenre||'Свій жанр',
     starter:s.players.find(x=>x.id===sheet.starter)?.name||'Автор',gender:sheet.heroGender,heroAnchor:sheet.heroAnchor||'',
-    question:resolveQuestions(s.settings,sheet.set)[s.round],nextQuestion:s.settings.showNextQuestion===false?'':(resolveQuestions(s.settings,sheet.set)[s.round+1]?.prompt||''),tail:previous?.tail||''},waiting:Boolean(s.submitted[p.id])};
+    question:resolveQuestions(s.settings,sheet.set,sheet.genre)[s.round],nextQuestion:s.settings.showNextQuestion===false?'':(resolveQuestions(s.settings,sheet.set,sheet.genre)[s.round+1]?.prompt||''),tail:previous?.tail||''},waiting:Boolean(s.submitted[p.id])};
  }
  if(s.phase==='finished')return {...common,stories:s.sheets.map(sh=>({
    id:sh.id,starter:sh.starterName||s.players.find(x=>x.id===sh.starter)?.name||'Автор',
