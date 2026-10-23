@@ -104,6 +104,14 @@
         },
         {
           "action": "visible",
+          "selector": "#online-confirm"
+        },
+        {
+          "action": "click",
+          "selector": "#online-leave-yes"
+        },
+        {
+          "action": "visible",
           "selector": "#start"
         },
         {
