@@ -1252,6 +1252,11 @@ export function resolveTurn(state, choices, options = {}) {
  * either side submitting a new card. This is NOT a prediction of a hidden choice.
  * No mutation of the source state, hand, deck, timer, or server match occurs.
  */
+/**
+ * Counterfactual, not a hidden-opponent prediction. The opponent never submits
+ * an imaginary decree. Phase snapshots come from the same deterministic engine
+ * routines as the actual game, without drawing cards, changing turns or state.
+ */
 export function forecastTurn(state, playerId = null, cardId = null) {
   if (cardId && (!CARD_BY_ID[cardId] || !PLAYER_ORDER.includes(playerId))) {
     throw new Error("Invalid preview law");
@@ -1262,24 +1267,40 @@ export function forecastTurn(state, playerId = null, cardId = null) {
     moved: new Set(), pushed: new Set(), movementTimeline: [],
     crownEvents: [], sealEvents: [], throneBlessingSpent: new Set(), wardedOwner: null
   };
+  const frames = [{phase:"start",state:clone(next),logs:[],moves:[],crowns:[],seals:[]}];
+  let logAt=0,moveAt=0,crownAt=0,sealAt=0;
+  function capture(phase) {
+    frames.push({
+      phase, state:clone(next),
+      logs:logs.slice(logAt).map(entry=>({...entry})),
+      moves:tracker.movementTimeline.slice(moveAt).map(entry=>clone(entry)),
+      crowns:tracker.crownEvents.slice(crownAt).map(entry=>clone(entry)),
+      seals:tracker.sealEvents.slice(sealAt).map(entry=>clone(entry))
+    });
+    logAt=logs.length;moveAt=tracker.movementTimeline.length;
+    crownAt=tracker.crownEvents.length;sealAt=tracker.sealEvents.length;
+  }
   if (cardId) {
     const card = CARD_BY_ID[cardId];
-    next.slots[card.slot] = { activeCardId: card.id, activeOwner: playerId };
-    record(logs, "laws", "Условный сценарий: вступает в силу " + card.name + ". Другой игрок ничего не меняет.", { kind: "forecast-law", slot: card.slot });
+    next.slots[card.slot] = { activeCardId:card.id, activeOwner:playerId };
+    record(logs,"laws","Условный сценарий: вступает в силу "+card.name+". Другой игрок ничего не меняет.",{kind:"forecast-law",slot:card.slot});
   } else {
-    record(logs, "laws", "Условный сценарий: оба игрока сохраняют текущие законы.", { kind: "forecast-law" });
+    record(logs,"laws","Условный сценарий: оба игрока сохраняют текущие законы.",{kind:"forecast-law"});
   }
-  priestPhase(next, logs, tracker);
-  resolveChampionMoves(next, slotLaw(next, "champion").id, logs, tracker);
-  guardPhase(next, logs, tracker);
-  beastPhase(next, logs, tracker);
-  thiefPhase(next, logs, tracker);
-  thronePhase(next, logs, tracker);
-  clearThroneNeutrals(next, logs, tracker);
-  next.winner = winCheck(next);
+  capture("laws");
+  priestPhase(next,logs,tracker);capture("priest");
+  resolveChampionMoves(next,slotLaw(next,"champion").id,logs,tracker);capture("champion");
+  guardPhase(next,logs,tracker);capture("guard");
+  beastPhase(next,logs,tracker);capture("beast");
+  thiefPhase(next,logs,tracker);capture("thief");
+  thronePhase(next,logs,tracker);
+  clearThroneNeutrals(next,logs,tracker);
+  capture("throne");
+  next.winner=winCheck(next);
   applyDurations(next);
-  next.battleLog = [...logs, ...next.battleLog].slice(0, 120);
-  return { state: next, logs, tracker, assumedNoOpponentLaw: true };
+  next.battleLog=[...logs,...next.battleLog].slice(0,120);
+  capture("settled");
+  return {state:next,logs,tracker,frames,assumedNoOpponentLaw:true};
 }
 
 export function cardById(cardId) {
