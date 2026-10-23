@@ -14,7 +14,8 @@
         "visual-fx.test.mjs",
         "session.test.mjs",
         "stress.test.mjs",
-        "reachability.test.mjs"
+        "reachability.test.mjs",
+        "full-course.test.mjs"
       ]
     },
     {
