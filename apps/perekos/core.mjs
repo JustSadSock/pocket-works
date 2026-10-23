@@ -23,10 +23,29 @@ export function makeMatch(seed=0x718abc,first='kindle',second='pebble',gameMode=
 // authoritative court collision, renderer and fixed-step loop as legacy 0.28.
 // No server v9 packets or legacy room state are ever converted in-place.
 export const MAGIC_V2_PRACTICE_RUNES=Object.freeze([
- 'u_on_cast','u_on_hit','u_on_hurt','u_after_dash','u_after_guard','u_on_expire','u_on_barrier',
+ 'u_on_cast','u_on_hit','u_on_hurt','u_after_dash','u_after_guard',
  'u_guard','u_push','u_heal','u_afterimage','u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
  'st_throw','st_shards','st_wall','fi_ember','fi_scorch','fi_flamepatch','li_spark','li_arc'
 ]);
+// Only verified modifiers appear as equippable buttons for a given action in
+// the current live laboratory. The full catalog is reserved for later phases.
+const V2_PRACTICE_MODS=Object.freeze({
+ u_guard:['u_size','u_efficient'],
+ u_push:['u_size','u_efficient'],
+ u_heal:['u_efficient'],
+ u_afterimage:['u_efficient'],
+ st_throw:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
+ st_shards:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
+ st_wall:['u_size','u_duration','u_efficient'],
+ fi_ember:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
+ fi_scorch:['u_size','u_efficient'],
+ fi_flamepatch:['u_size','u_duration','u_efficient'],
+ li_spark:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
+ li_arc:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet']
+});
+export function magicV2PracticeModifierFits(action,modifier){
+ return !!V2_PRACTICE_MODS[action]?.includes(modifier);
+}
 export function makeMagicV2Practice(school,seed=0x29a){
  const canonical={stone:'pebble',fire:'kindle',storm:'wire'}[school];
  if(!canonical)throw new RangeError('Unknown magic school');
