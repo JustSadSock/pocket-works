@@ -242,41 +242,82 @@ function portalPoint(endpoint, lateral, z, depth) {
 
 function portal(mesh, shadows, level, endpoint, seed, palette) {
   const ground = terrainHeightAt(level, endpoint.x, endpoint.y);
-  const width = endpoint.width || 82;
-  const radius = width * .52;
-  const inner = radius * .68;
-  const depth = endpoint.depth || 76;
-  const segments = 14;
+  const width = Math.max(46, Number(endpoint.width || 82));
+  // Align with tunnel colliders: the visible mouth is never tighter than
+  // their +/-width/2 open span.
+  const inner = width * .515;
+  const outer = width * .69;
+  const depth = Number(endpoint.depth || 76);
+  const segments = 18;
   for (let index = 0; index < segments; index += 1) {
     const a = Math.PI - index / segments * Math.PI;
     const b = Math.PI - (index + 1) / segments * Math.PI;
-    const outerA = portalPoint(endpoint, Math.cos(a) * radius, ground + Math.sin(a) * radius, 0);
-    const outerB = portalPoint(endpoint, Math.cos(b) * radius, ground + Math.sin(b) * radius, 0);
+    const outerA = portalPoint(endpoint, Math.cos(a) * outer, ground + Math.sin(a) * outer, 0);
+    const outerB = portalPoint(endpoint, Math.cos(b) * outer, ground + Math.sin(b) * outer, 0);
     const innerA = portalPoint(endpoint, Math.cos(a) * inner, ground + Math.sin(a) * inner, 0);
     const innerB = portalPoint(endpoint, Math.cos(b) * inner, ground + Math.sin(b) * inner, 0);
-    mesh.quad(outerA, outerB, innerB, innerA, index % 3 ? palette.stone : palette.stoneLight, 0);
-    const backA = portalPoint(endpoint, Math.cos(a) * inner, ground + Math.sin(a) * inner, depth);
-    const backB = portalPoint(endpoint, Math.cos(b) * inner, ground + Math.sin(b) * inner, depth);
-    mesh.quad(innerA, innerB, backB, backA, palette.stoneDark, 9);
+    const blockShade = .91 + noise(seed, Math.floor(index / 3), 19) * .085;
+    const limestone = tone(index > 7 && index < 11 ? palette.stoneLight : palette.stone, blockShade);
+    mesh.quad(outerA, outerB, innerB, innerA, limestone, 0);
+    // Dark inward masonry runs back into the opening and gives it depth.
+    const backA = portalPoint(endpoint, Math.cos(a) * inner, ground + Math.sin(a) * inner, depth * .82);
+    const backB = portalPoint(endpoint, Math.cos(b) * inner, ground + Math.sin(b) * inner, depth * .82);
+    mesh.quad(innerA, innerB, backB, backA, tone(palette.stoneDark, .62), 0);
+    if (index % 3 === 0) {
+      // Thin radial mortar joints, in the arch face only.
+      const jointInner = portalPoint(endpoint, Math.cos(a) * (inner + 2), ground + Math.sin(a) * (inner + 2), -.25);
+      const jointOuter = portalPoint(endpoint, Math.cos(a) * (outer - 1), ground + Math.sin(a) * (outer - 1), -.25);
+      const jointHalf = .75;
+      const inward = portalPoint(endpoint, Math.cos(a + jointHalf / outer) * (inner + 2), ground + Math.sin(a + jointHalf / outer) * (inner + 2), -.25);
+      const outward = portalPoint(endpoint, Math.cos(a + jointHalf / outer) * (outer - 1), ground + Math.sin(a + jointHalf / outer) * (outer - 1), -.25);
+      mesh.quad(jointInner, jointOuter, outward, inward, tone(palette.stoneDark, .82), 0);
+    }
   }
+  // A recessed dark threshold suggests a true passage rather than a
+  // freestanding donut; the stone never caps the ball's physical path.
   mesh.quad(
-    portalPoint(endpoint, -inner, ground + .4, -10),
-    portalPoint(endpoint, inner, ground + .4, -10),
-    portalPoint(endpoint, inner * .82, ground + .4, depth),
-    portalPoint(endpoint, -inner * .82, ground + .4, depth),
-    palette.stone, 0, [0, 0, 1]
+    portalPoint(endpoint, -inner, ground + .36, 1),
+    portalPoint(endpoint, inner, ground + .36, 1),
+    portalPoint(endpoint, inner, ground + .36, depth * .80),
+    portalPoint(endpoint, -inner, ground + .36, depth * .80),
+    tone(palette.stoneDark, .66), 0, [0, 0, 1]
   );
-  disc(shadows, endpoint.x + 5, endpoint.y + 9, ground + .1, radius * 1.10, radius * .65, C.shadowStrong, 3, 22);
+  for (const sign of [-1, 1]) {
+    const outerX = inner * sign;
+    mesh.quad(
+      portalPoint(endpoint, outerX, ground + .5, -2),
+      portalPoint(endpoint, outerX + sign * Math.min(4, outer - inner), ground + .5, -2),
+      portalPoint(endpoint, outerX + sign * Math.min(4, outer - inner), ground + 8, 0),
+      portalPoint(endpoint, outerX, ground + 8, 0),
+      palette.stoneLight, 0
+    );
+  }
+  disc(shadows, endpoint.x + 4, endpoint.y + 8, ground + .1, outer * .95, outer * .48, C.shadow, 3, 22);
 }
 
 function hole(mesh, shadows, level, palette) {
-  const ground = terrainHeightAt(level, level.hole.x, level.hole.y);
-  const radius = level.hole.r;
+  const x = level.hole.x, y = level.hole.y;
+  const ground = terrainHeightAt(level, x, y);
+  const radius = Math.max(14, level.hole.r);
   const depth = Math.max(30, level.hole.depth || 64);
-  disc(mesh, level.hole.x, level.hole.y, ground - depth, radius * .92, radius * .92, C.cup, 9, 28);
-  cylinder(mesh, { x: level.hole.x, y: level.hole.y, z0: ground - depth, z1: ground - .8, r0: radius * .92, r1: radius * .92, tint: C.cup, topTint: C.cup, material: 9, segments: 28 });
-  ring(mesh, level.hole.x, level.hole.y, ground + .20, radius * .98, radius + 7, palette.soil, 0, 30);
-  disc(shadows, level.hole.x + 2, level.hole.y + 2, ground + .12, radius * 1.1, radius * .7, C.shadowStrong, 3, 24);
+  const segments = 32;
+  // An OPEN cup: no cylinder top cap can accidentally paint over the cavity.
+  disc(mesh, x, y, ground - depth + .4, radius * .93, radius * .93, C.cup, 9, segments);
+  for (let index = 0; index < segments; index += 1) {
+    const a = index / segments * TAU;
+    const b = (index + 1) / segments * TAU;
+    const r = radius * .94;
+    const aBottom = [x + Math.cos(a) * r, y + Math.sin(a) * r, ground - depth];
+    const bBottom = [x + Math.cos(b) * r, y + Math.sin(b) * r, ground - depth];
+    const aTop = [aBottom[0], aBottom[1], ground - .8];
+    const bTop = [bBottom[0], bBottom[1], ground - .8];
+    mesh.quad(aBottom, bBottom, bTop, aTop, tone(C.cup, .84), 9);
+  }
+  // Small dressed limestone lip, level with the playing turf.
+  ring(mesh, x, y, ground + .25, radius * .965, radius + 3, palette.stoneDark, 0, segments);
+  ring(mesh, x, y, ground + .44, radius + 3, radius + 7, palette.stoneLight, 0, segments);
+  ring(mesh, x, y, ground + .15, radius + 7, radius + 10, tone(palette.stone, .80), 0, segments);
+  disc(shadows, x + 2, y + 2, ground + .07, radius * 1.08, radius * .73, C.shadow, 3, 24);
 }
 
 function details(mesh, level, seed, palette) {
