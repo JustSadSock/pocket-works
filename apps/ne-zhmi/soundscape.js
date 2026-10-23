@@ -16,6 +16,8 @@ const sounds={
  magnet:[['sine',305,490,.16,.044],['triangle',570,715,.13,.026]],
  brake:[['triangle',215,105,.145,.046],['sine',115,70,.18,.032]],
  float:[['sine',490,760,.27,.044],['triangle',720,900,.19,.026]],
+ stage:[['triangle',395,580,.12,.05],['sine',660,820,.16,.03]],
+ series:[['triangle',410,640,.19,.061],['sine',580,920,.29,.057],['triangle',840,1220,.46,.045]],
  button:[['square',150,109,.055,.025]]
 };
 export function createSoundscape({audioContext=null}={}){

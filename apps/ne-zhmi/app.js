@@ -6,6 +6,7 @@ import { createSoundscape } from './soundscape.js';
 import {generateCourse} from './course.js';
 import {ABILITIES,HOLD_ACTIONS,operatorAbilities} from './abilities.js';
 import { createOnlineController } from './online.js';
+import {MODES,createSession,startTrack,recordFinish,partyComplete,canContinue,summary,replayLast,restoreParty,courseSeed,courseLength} from './session.js';
 installMobileRuntime();
 const $ = id => document.getElementById(id);
 const screens = ['menu','pause-panel','finish-panel'];
@@ -13,7 +14,8 @@ const canvas=$('scene'),renderer=createRenderer(canvas);
 let game=createGame(), online=null, lastOnline=null, phase='menu', accumulated=0, lastFrame=performance.now(), muted=false;
 const soundscape=createSoundscape();
 const storageKey='pocket-works:ne-zhmi:preferences';
-let best=null,records={},localSeed=1,localCount=2;
+let best=null,records={},localSeed=1,localCount=2,localSession=null,preferredMode='quick';
+const partyKey='pocket-works:ne-zhmi:unfinished-party';
 try {const saved=JSON.parse(localStorage.getItem(storageKey)||'{}');muted=!!saved.muted;best=Number.isFinite(saved.best)&&saved.best>0?saved.best:null;records=saved.records&&typeof saved.records==='object'?saved.records:{};} catch {}
 function persist(){try{localStorage.setItem(storageKey,JSON.stringify({muted,best,records}));}catch{}}
 function format(t){const sec=Math.max(0,Math.floor(t));return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');}
@@ -37,29 +39,75 @@ function show(which){
   $('status').textContent=which==='menu'?'ЖДЁМ СИГНАЛ':which==='online-lobby'?'ОЖИДАНИЕ ОПЕРАТОРОВ':which==='online-won'||which==='finish'?'ЗАДАНИЕ ВЫПОЛНЕНО':which==='pause'?'ПАУЗА':'ДВИЖЕНИЕ';
   if(which==='playing'||which==='online-playing')lastFrame=performance.now();
 }
-function start(fresh=true){
-  if(fresh)localSeed=((Math.random()*0xffffffff)>>>0)||1;
-  localCount=Number($('operator-count').value)||2;
-  game=createGame(generateCourse(localSeed,5,localCount));
-  renderer.reset();sound('button');
-  accumulated=0;show('playing');
-  // Paint the first course frame in the same interaction turn. Otherwise
-  // on mobile a screenshot or compositor frame can briefly show empty canvas.
-  renderer.frame(game,performance.now(),'playing');
-  announce('Трасса готова. '+localCount+' операторов, один Болтик.');
-  $('record').textContent='ЛУЧШЕЕ '+(records[localSeed]?format(records[localSeed]):'—');
+function randomSeed(){return ((Math.random()*4294967295)>>>0)||1;}
+function setMode(mode){
+ preferredMode=MODES.some(m=>m.id===mode)?mode:'quick';
+ for(const m of MODES){const b=$('mode-'+m.id),a=m.id===preferredMode;b.classList.toggle('active',a);b.setAttribute('aria-pressed',String(a));}
+ $('mode-description').textContent=MODES.find(m=>m.id===preferredMode).detail;
+ $('lab-options').classList.toggle('hidden',preferredMode!=='lab');
+ $('start').firstChild.textContent=preferredMode==='party'?'НАЧАТЬ СЕРИЮ ':preferredMode==='lab'?'ОТКРЫТЬ МАСТЕРСКУЮ ':'НАЧАТЬ ИСПЫТАНИЕ ';
 }
+function saveParty(){
+ try{if(canContinue(localSession))localStorage.setItem(partyKey,JSON.stringify(localSession));
+     else localStorage.removeItem(partyKey);}catch{}
+ let restored=null;
+ try{restored=restoreParty(JSON.parse(localStorage.getItem(partyKey)||'null'));}catch{}
+ $('resume-party').classList.toggle('hidden',!restored);
+ if(restored)$('resume-party').textContent='ПРОДОЛЖИТЬ СЕРИЮ · '+restored.entries.length+'/3 →';
+}
+function beginRun({newSession=false,replay=false}={}){
+ localCount=Number($('operator-count').value)||2;
+ if(newSession||!localSession)localSession=createSession({mode:preferredMode,seed:preferredMode==='lab'?courseSeed($('lab-seed').value):randomSeed(),length:courseLength($('lab-length').value)});
+ let track;
+ if(replay&&localSession.trackSeed){replayLast(localSession);track={seed:localSession.trackSeed,sections:localSession.mode==='lab'?localSession.length:5};}
+ else track=startTrack(localSession,{crew:localCount,round:0});
+ localSeed=track.seed;game=createGame(generateCourse(track.seed,track.sections,localCount));
+ renderer.reset();sound(localSession?.mode==='party'?'stage':'button');accumulated=0;show('playing');
+ renderer.frame(game,performance.now(),'playing');
+ announce((localSession.mode==='party'?'Трасса '+(localSession.entries.length+1)+'/3. ':localSession.mode==='lab'?'Мастерская · код '+localSeed+'. ':'')+'Болтик готов. Операторов: '+localCount+'.');
+ $('record').textContent='ЛУЧШЕЕ '+(records[localSeed]?format(records[localSeed]):'—');
+ saveParty();
+}
+function paintTicket(prefix,stats){
+ const area=$(prefix),stamps=$(prefix==='result-series'?'series-stamps':'online-series-stamps'),
+ total=$(prefix==='result-series'?'series-total':'online-series-total'),
+ recordsArea=$(prefix==='result-series'?'series-records':'online-series-records');
+ area.classList.toggle('hidden',stats?.mode!=='party');
+ if(stats?.mode!=='party')return;
+ stamps.replaceChildren();recordsArea.replaceChildren();
+ for(let i=0;i<3;i++){
+  const rec=stats.records?.[i],cell=document.createElement('div');cell.className='series-stamp'+(rec?' done':'');
+  const label=document.createElement('span'),number=document.createElement('strong');
+  label.textContent='ТРАССА '+(i+1);number.textContent=rec?format(rec.time):'—';
+  cell.append(label,number);stamps.append(cell);
+  if(rec){const row=document.createElement('div'),title=document.createElement('span'),info=document.createElement('span');
+   row.className='series-record';title.textContent='№'+(i+1)+' · '+format(rec.time);
+   info.textContent=rec.falls+' падений · '+rec.jumps+' прыжков';row.append(title,info);recordsArea.append(row);}
+ }
+ total.textContent=(stats.complete?'СЕРИЯ ЗАВЕРШЕНА · ':'ПРОМЕЖУТОЧНЫЙ ИТОГ · ')+format(stats.totalTime)+' / '+stats.totalFalls+' падений';
+}
+for(const m of MODES)$('mode-'+m.id).addEventListener('click',()=>{setMode(m.id);sound('button');});
+$('lab-random').addEventListener('click',()=>{$('lab-seed').value=String(randomSeed());sound('button');});
+$('resume-party').addEventListener('click',()=>{
+ let saved=null;try{saved=restoreParty(JSON.parse(localStorage.getItem(partyKey)||'null'));}catch{}
+ if(!saved)return;
+ setMode('party');localSession=saved;beginRun();
+});
 function pause(){if(phase==='playing'){releaseHeld();show('pause');sound('button');announce('Игра на паузе.');}}
 function resume(){if(phase==='pause'){show('playing');sound('button');announce('Игра продолжается.');}}
-function backToMenu(){renderer.reset();game=createGame();accumulated=0;show('menu');announce('Главное меню.');}
+function backToMenu(){renderer.reset();game=createGame();accumulated=0;show('menu');saveParty();announce('Главное меню.');}
 function finish(){
-  const elapsed=game.wonAt||game.t;
-  const record=!records[localSeed]||elapsed<records[localSeed];
-  if(record){records[localSeed]=elapsed;persist();}
-  $('result').textContent='Время '+format(elapsed)+' · падений '+game.respawns+' · прыжков '+game.jumps+' · разворотов '+game.reverses+(record?' · новый рекорд!':'');
-  $('record').textContent='ЛУЧШЕЕ '+format(records[localSeed]||elapsed);
-  show('finish');sound('finish');renderer.cue('finish',game);
-  announce('Финиш. '+$('result').textContent);
+ const elapsed=game.wonAt||game.t,record=!records[localSeed]||elapsed<records[localSeed];
+ if(record){records[localSeed]=elapsed;persist();}
+ recordFinish(localSession,game);
+ const stats=summary(localSession),mode=localSession?.mode||'quick';
+ $('result').textContent='Время '+format(elapsed)+' · падений '+game.respawns+' · прыжков '+game.jumps+' · разворотов '+game.reverses+(record?' · новый рекорд!':'');
+ $('record').textContent='ЛУЧШЕЕ '+format(records[localSeed]||elapsed);
+ paintTicket('result-series',stats);
+ $('again').textContent=mode==='party'?(stats.complete?'Новая серия →':'Следующая трасса →'):mode==='lab'?'Новый эксперимент →':'Новая трасса →';
+ $('retry-course').textContent=mode==='party'?'Переиграть последнюю трассу':'Повторить эту трассу';
+ saveParty();show('finish');sound(stats.complete?'series':'finish');renderer.cue('finish',game);
+ announce((stats.complete?'Вся серия завершена. ':'Финиш. ')+$('result').textContent);
 }
 function activeCount(){return phase.startsWith('online')?online?.getSnapshot()?.players?.length||2:localCount;}
 function updateControls(){
@@ -123,7 +171,7 @@ function input(action,pressed=true){
 function releaseHeld(){
   for(const id of HOLD_ACTIONS)if(game.held?.[id] || $(id).classList.contains('pressed'))input(id,false);
 }
-$('start').addEventListener('click',()=>start(true));
+$('start').addEventListener('click',()=>beginRun({newSession:true}));
 try{$('player-name').value=localStorage.getItem('pocket-works:ne-zhmi:player')||'Игрок';}catch{}
 function onlineView({active,snapshot,role,connected,troubled}){
   if(!active){if(phase.startsWith('online'))backToMenu();lastOnline=null;return;}
@@ -158,8 +206,9 @@ function onlineView({active,snapshot,role,connected,troubled}){
       }
     }
   }else if(snapshot.phase==='won'){
+    paintTicket('online-series-result',snapshot.session);
     if(phase!=='online-won'){
-      show('online-won');renderer.cue('finish',snapshot.robot);sound('finish');
+      show('online-won');renderer.cue('finish',snapshot.robot);sound(snapshot.session?.complete?'series':'finish');
     }
   }
   lastOnline=snapshot;
@@ -173,11 +222,15 @@ if(invite&&/^[a-f0-9]{8}$|^[a-f0-9-]{36}$/i.test(invite)) {
 }else{
   try{if(sessionStorage.getItem('ne-zhmi:net:active')==='yes')queueMicrotask(()=>online.enter('resume'));}catch{}
 }
-$('again').addEventListener('click',()=>start(true));
-$('retry-course').addEventListener('click',()=>start(false));
+$('again').addEventListener('click',()=>{
+ if(localSession?.mode==='party'&&!partyComplete(localSession))beginRun();
+ else if(localSession?.mode==='lab'){$('lab-seed').value=String(randomSeed());beginRun({newSession:true});}
+ else beginRun({newSession:true});
+});
+$('retry-course').addEventListener('click',()=>beginRun({replay:true}));
 $('pause').addEventListener('click',pause);
 $('resume').addEventListener('click',resume);
-$('restart-pause').addEventListener('click',()=>start(false));
+$('restart-pause').addEventListener('click',()=>beginRun({replay:true}));
 $('leave-pause').addEventListener('click',backToMenu);
 $('leave-finish').addEventListener('click',backToMenu);
 const pointerHolds=new Set();
@@ -256,7 +309,9 @@ function frame(now){
     const label=game.level?.name||'ИСПЫТАТЕЛЬНЫЙ ЦЕХ';
     const segments=game.level?.sections?.length;
     const current=game.level?.sections?.find(s=>game.x>=s.x&&game.x<s.x+s.w);
-    $('scene-label').textContent=label+(current?' / '+String(current.index).padStart(2,'0')+' · '+current.name.toUpperCase():segments?' / СТАРТ':' / 01');
+    $('scene-label').textContent=label+(current?' / '+String(current.index).padStart(2,'0')+' · '+current.name.toUpperCase():segments?' / СТАРТ':' / 01')+
+      ((localSession?.mode==='lab'&&['playing','pause'].includes(phase))||
+      (phase.startsWith('online')&&online?.getSnapshot()?.config?.mode==='lab')?' · #'+game.level?.seed:'');
     const ahead=(game.level?.devices||[]).filter(d=>d.x+Math.max(.2,d.w)>=game.x&&d.x-game.x<2.85)
       .sort((a,b)=>a.x-b.x)[0];
     const guide={
@@ -272,11 +327,11 @@ function frame(now){
     $('clock').textContent=format(game.t);
     $('falls').textContent='ПАДЕНИЯ '+String(game.respawns).padStart(2,'0');
     if(phase==='online-playing')$('status').textContent='POCKETNET · '+Math.round(progressGame(game)*100)+'%';
-    if(phase==='playing')$('status').textContent=game.checkpoint>9?'ЧЕКПОИНТ ✓ · '+Math.round(progressGame(game)*100)+'%':'ДО ФИНИША · '+Math.round(progressGame(game)*100)+'%';
+    if(phase==='playing')$('status').textContent=localSession?.mode==='party'?'СЕРИЯ '+(localSession.entries.length+1)+'/3 · '+Math.round(progressGame(game)*100)+'%':game.checkpoint>9?'ЧЕКПОИНТ ✓ · '+Math.round(progressGame(game)*100)+'%':'ДО ФИНИША · '+Math.round(progressGame(game)*100)+'%';
     if(phase==='playing'||phase==='pause')$('record').textContent='ЛУЧШЕЕ '+(records[localSeed]?format(records[localSeed]):'—');
   }
   requestAnimationFrame(frame);
 }
-createWorkshopMode({appName:'НЕ ЖМИ!',version:'0.5.0',cachePrefix: 'ne-zhmi-',storageNamespace: 'pocket-works:ne-zhmi',onReset:()=>{if(online?.isActive())online.leave();best=null;muted=false;updateSound();backToMenu();}});
+createWorkshopMode({appName:'НЕ ЖМИ!',version:'0.6.0',cachePrefix: 'ne-zhmi-',storageNamespace: 'pocket-works:ne-zhmi',onReset:()=>{if(online?.isActive())online.leave();best=null;muted=false;updateSound();backToMenu();}});
 window.addEventListener('workshopopen',()=>{if(phase==='playing')pause();});
-show('menu');requestAnimationFrame(frame);
+setMode('quick');saveParty();show('menu');requestAnimationFrame(frame);

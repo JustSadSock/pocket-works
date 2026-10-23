@@ -374,7 +374,86 @@ function progressGame(state) {
   return clamp((state.x - (level.start??1.15)) / (level.goal - (level.start??1.15)), 0, 1);
 }
 
-// Protocol v5 — authoritative PocketNet 2–6 operator simulation.
+// NE ZHMI! Session conductor. Pure data operations shared by local and PocketNet.
+// The simulation engine remains unchanged: only which route plays next changes.
+const MODES=Object.freeze([
+ {id:'quick',title:'ОДИН ЗАЕЗД',detail:'Одна случайная трасса · быстрый кооператив'},
+ {id:'party',title:'СЕРИЯ ИЗ ТРЁХ',detail:'Три разные трассы · общий результат команды'},
+ {id:'lab',title:'МАСТЕРСКАЯ',detail:'Выбирайте код и длину трассы · экспериментируйте'}
+]);
+const PARTY_STAGES=3;
+const validMode=value=>MODES.some(m=>m.id===value);
+const courseLength=value=>[4,5,6].includes(Number(value))?Number(value):5;
+const courseSeed=value=>{
+  const n=Number(value);
+  return Number.isSafeInteger(n)&&n>=1&&n<=4294967295?n:1;
+};
+function mix(seed,round){
+ let n=(courseSeed(seed)^Math.imul(round+1,0x9e3779b9))>>>0;
+ n=Math.imul(n^(n>>>16),0x85ebca6b)>>>0;
+ n=Math.imul(n^(n>>>13),0xc2b2ae35)>>>0;
+ return ((n^(n>>>16))>>>0)||1;
+}
+function createSession({mode='quick',seed=1,length=5}={}){
+ return {mode:validMode(mode)?mode:'quick',seed:courseSeed(seed),length:courseLength(length),
+   entries:[],trackSeed:0,finished:false};
+}
+function nextTrack(session,{crew=2,round=0}={}){
+ const s=session||createSession(),n=s.entries.length;
+ const seed=s.mode==='lab'?s.seed:mix(s.seed,s.mode==='party'?n:round);
+ const sectionCount=s.mode==='lab'?s.length:5;
+ return {seed,sections:sectionCount,crew:Math.max(2,Math.min(6,Math.floor(crew)||2)),stage:s.mode==='party'?Math.min(PARTY_STAGES,n+1):1};
+}
+function startTrack(session,opts={}){
+ const track=nextTrack(session,opts);
+ session.trackSeed=track.seed;
+ session.finished=false;
+ return track;
+}
+function recordFinish(session,game){
+ if(!session||session.finished||!game?.finished)return null;
+ const result={stage:session.mode==='party'?session.entries.length+1:1,
+   seed:session.trackSeed||session.seed,
+   time:Math.max(0,Math.round((game.wonAt||game.t||0)*100)/100),
+   falls:Math.max(0,game.respawns||0),jumps:Math.max(0,game.jumps||0),
+   reverses:Math.max(0,game.reverses||0),pushes:Math.max(0,game.pushes||0)};
+ if(session.mode==='party')session.entries.push(result);
+ else session.entries=[result];
+ session.finished=true;
+ return result;
+}
+function partyComplete(session){
+ return session?.mode==='party'&&session.entries.length>=PARTY_STAGES;
+}
+function canContinue(session){
+ return session?.mode==='party'&&session.entries.length>0&&!partyComplete(session);
+}
+function summary(session){
+ const records=session?.entries||[];
+ return {mode:session?.mode||'quick',count:records.length,target:session?.mode==='party'?PARTY_STAGES:1,
+   complete:partyComplete(session),
+   totalTime:Math.round(records.reduce((n,x)=>n+x.time,0)*100)/100,
+   totalFalls:records.reduce((n,x)=>n+x.falls,0),
+   totalJumps:records.reduce((n,x)=>n+x.jumps,0),
+   records:records.map(x=>({...x}))};
+}
+function replayLast(session){
+ if(!session)return;
+ if(session.finished&&session.mode==='party')session.entries.pop();
+ session.finished=false;
+ return session.trackSeed||session.seed;
+}
+function restoreParty(value){
+ if(!value||value.mode!=='party'||!Array.isArray(value.entries)||value.entries.length>=PARTY_STAGES)return null;
+ if(value.entries.some(x=>!Number.isFinite(x.time)||x.time<0||x.time>100000||!Number.isInteger(x.stage)))return null;
+ const restored=createSession({mode:'party',seed:value.seed});
+ restored.entries=value.entries.map(({stage,seed,time,falls,jumps,reverses,pushes})=>({stage,seed,time,falls,jumps,reverses,pushes}));
+ restored.trackSeed=courseSeed(value.trackSeed);
+ restored.finished=false;
+ return restored;
+}
+
+// Protocol v9 — authoritative PocketNet 2–6 operator simulation.
 // The backend is message-driven: a peer sends activity pulses, but only the
 // server advances time and applies control impulses. No client can set position.
 export const MIN_PLAYERS=2;
@@ -384,7 +463,8 @@ const MAX_DELTA_MS=180;
 function snapshot(s) {
   return { phase:s.phase,host:s.host,players:s.players,roles:s.roles,
     robot:s.robot,round:s.round,revision:s.revision,hold:s.hold,
-    pulseAge: s.phase==='play'?Date.now()-s.lastClock:0 };
+    pulseAge: s.phase==='play'?Date.now()-s.lastClock:0,
+    session:summary(s.session),config:{mode:s.session.mode,seed:s.session.seed,length:s.session.length} };
 }
 function stateEvent(s,to){return {type:'state', ...(to?{to}:{}),payload:snapshot(s)};}
 function emitState(s,to){return [stateEvent(s,to)];}
@@ -395,7 +475,10 @@ function freeze(s,now){
   }
 }
 export function reset(s,now) {
-  const course=generateCourse((s.seed ^ Math.imul(s.round+1,2654435761))>>>0,5,s.players.length);
+  if(!s.session)s.session=createSession({seed:s.seed});
+  if(partyComplete(s.session))s.session=createSession({mode:'party',seed:mix(s.session.seed,s.round+9)});
+  const spec=startTrack(s.session,{crew:s.players.length,round:s.round});
+  const course=generateCourse(spec.seed,spec.sections,s.players.length);
   s.robot=createGame(course);s.phase='play';s.hold=false;
   s.round++;s.revision++;
   s.lastClock=now;s.lastBroadcast=0;s.remainder=0;
@@ -429,6 +512,7 @@ function advance(s,now) {
     s.remainder-=FIXED_DT;steps++;
     if(s.robot.finished) {
       s.phase='won';s.hold=false;s.revision++;
+      recordFinish(s.session,s.robot);
       break;
     }
   }
@@ -439,6 +523,13 @@ export function message(s,player,payload,now=Date.now()){
   const id=player?.id;
   if(!s.players.some(p=>p.id===id))return [];
   if(v.type==='sync') return emitState(s,id);
+  if(v.type==='config'&&s.phase==='lobby'&&id===s.host){
+    if(!validMode(v.mode))return notice(id,'Неизвестный режим');
+    if(v.seed!==undefined&&(!Number.isSafeInteger(v.seed)||v.seed<1||v.seed>4294967295))return notice(id,'Неверный код трассы');
+    if(v.length!==undefined&&![4,5,6].includes(v.length))return notice(id,'Недопустимая длина');
+    s.session=createSession({mode:v.mode,seed:v.seed??s.seed,length:v.length??5});
+    s.revision++;return emitState(s);
+  }
   if(v.type==='swap'&&s.phase==='lobby'&&id===s.host&&s.players.length>=MIN_PLAYERS){
     s.roles.unshift(s.roles.pop());s.revision++;return emitState(s);
   }
@@ -487,13 +578,15 @@ export function message(s,player,payload,now=Date.now()){
 const module={
   protocolVersion:1,
   createRoom({player}){
+    const seed=Math.floor(Math.random()*4294967295)||1;
     return {state:{phase:'lobby',host:player.id,players:[player],roles:[],
-      robot:createGame(),seed:Math.floor(Math.random()*4294967295)||1,round:0,revision:0,hold:false,lastClock:0,lastBroadcast:0,lastHold:false,
-      signals:{},sequences:{},remainder:0}};
+      robot:createGame(),seed,round:0,revision:0,hold:false,lastClock:0,lastBroadcast:0,lastHold:false,
+      signals:{},sequences:{},remainder:0,session:createSession({seed})}};
   },
   onJoin({state,players}){
     if(players.length>MAX_PLAYERS)throw Error('room_full');
     if(state.phase!=='lobby')throw Error('match_in_progress');
+    if(!state.session)state.session=createSession({seed:state.seed});
     state.players=players;
     // Existing seats keep their roles when more people enter the lobby.
     state.roles=[...state.roles.filter(id=>players.some(p=>p.id===id)),
@@ -505,6 +598,8 @@ const module={
     state.host=players.some(p=>p.id===state.host)?state.host:players[0]?.id||'';
     state.phase='lobby';state.roles=players.map(p=>p.id);
     state.hold=false;state.robot=createGame();
+    // Keep the configured lab seed and completed party ticket when a player
+    // voluntarily leaves. The unfinished current circuit restarts in the lobby.
     state.round++;state.revision++;
     state.signals={};state.sequences={};state.remainder=0;
     return {state,events:emitState(state)};
