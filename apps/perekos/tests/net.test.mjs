@@ -72,7 +72,7 @@ test('two server-side rune offers stay secret across room joined and state event
 });
 test('reconnect sync keeps the original side, score, runes, version and host',()=>{
  const s=match(),before=JSON.stringify(s.match),seat1=module.viewForPlayer({state:s,player:q,players:[p,q]});
- assert.equal(seat1.me,1);assert.equal(seat1.rulesVersion,8);
+ assert.equal(seat1.me,1);assert.equal(seat1.rulesVersion,9);
  s.seen[1]=0;const stale=module.viewForPlayer({state:s,player:p,players:[p,q]});assert.equal(stale.opponentConnected,false);
  const reply=send(s,q,'sync');assert.equal(reply.events[0].to,'second');
  assert.equal(JSON.stringify(s.match),before);assert.equal(module.viewForPlayer({state:s,player:q,players:[p,q]}).me,1);
