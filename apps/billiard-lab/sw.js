@@ -1,8 +1,8 @@
 const CACHE_PREFIX = 'billiard-lab-';
-const CACHE_NAME = 'billiard-lab-v2.0.0';
-const APP_VERSION = '2.0.0';
+const CACHE_NAME = 'billiard-lab-v2.2.0';
+const APP_VERSION = '2.2.0';
 const RELEASE_DATE = '2026-10-23';
-const RELEASE_NOTES = ['Только лаборатория: тысячи независимых лучей в одной волновой линии.','Четыре камеры, препятствия, послесвечение и сохранение установок.'];
+const RELEASE_NOTES = ['Лаборатория теперь с 11 геометриями и редактором полей.','Одна цветная волна без шлейфов, оптимизированная физика и масштабирование.'];
 const CACHE_PROTOCOL = 2;
 const FILES = ['./','./index.html','./app.config.json','./app.js','./physics.mjs','./styles.css','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
 const SCOPE = new URL('./',self.registration.scope);
