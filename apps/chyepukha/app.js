@@ -189,6 +189,13 @@ function demoSend(payload){
   view={...d.view,settings:view.settings,players:view.players.length>=2?view.players:demoView('lobby-ready').view.players};
   me='qa-host';previewDraft='';previewWriterMeta={step:'draft',anchor:'',gender:'unspecified',selection:[]};modal='';render();return true;
  }
+ if(roomVersion==='v6'&&payload.type==='pause'){view={...view,paused:true,revision:view.revision+1};render();return true}
+ if(roomVersion==='v6'&&payload.type==='resume'){view={...view,paused:false,revision:view.revision+1};render();return true}
+ if(roomVersion==='v6'&&payload.type==='transfer_host'){view={...view,host:payload.targetId,revision:view.revision+1};render();return true}
+ if(roomVersion==='v6'&&payload.type==='kick'){view={...view,players:view.players.map(p=>p.id===payload.targetId?{...p,vacant:true,departed:true}:p),revision:view.revision+1};render();return true}
+ if(roomVersion==='v6'&&payload.type==='skip_seat'){view={...view,players:view.players.map(p=>p.id===payload.targetId?{...p,autoSkip:true}:p),revision:view.revision+1};render();return true}
+ if(roomVersion==='v6'&&payload.type==='assign_seat'){const candidate=view.waitlist.find(p=>p.id===payload.candidateId);if(candidate){view={...view,players:view.players.map(p=>p.id===payload.seatId?{...p,id:candidate.id,name:candidate.name,vacant:false,departed:false}:p),waitlist:view.waitlist.filter(p=>p.id!==candidate.id),revision:view.revision+1};render();return true}}
+ if(roomVersion==='v6'&&payload.type==='host_vote'){toast('Тестове голосування прийнято.');return true}
  if(payload.type==='submit'&&view.phase==='writing'&&!view.waiting){
   view={...view,waiting:true,players:view.players.map(p=>p.id===me?{...p,submitted:true}:p)};
   clearDraft();render();return true;
@@ -473,6 +480,7 @@ $('profileBtn')?.addEventListener('click',openPocketProfile);
 if(IS_PREVIEW){
  const d=demoView(PREVIEW_ID);
  view=d.view;me=d.me;room=d.room;connected=d.connected;connecting=d.connecting;
+ if(PREVIEW_ID.startsWith('mod-'))roomVersion='v6';
  notice=d.notice;invitation=d.invitation;storyId=d.storyId;modal=d.modal;previewDraft=d.answer;
   if(PREVIEW_ID==='archive'||PREVIEW_ID==='archive-empty'||PREVIEW_ID==='archive-delete'){
    archiveOpen=true;view=null;const final=demoView('results');
