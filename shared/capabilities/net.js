@@ -134,7 +134,7 @@ export class PocketNet {
     this.socket.send(JSON.stringify({ wireVersion: 1, type, ...payload }));
   }
   createRoom(gameId, payload) { this.send('create_room', { gameId, payload }); }
-  joinRoom(roomId) { this.send('join_room', { roomId }); }
+  joinRoom(roomId, options = {}) { this.send('join_room', { roomId, ...(options?.claimCode?{claimCode:options.claimCode}:{}) }); }
   sendGame(payload) { this.send('game_message', { payload }); }
   leaveRoom() { this.send('leave_room'); this.roomId = null; this.persist(); removeInviteShortcut(this); }
   close() { this.closed = true; this.socket?.close(); removeInviteShortcut(this); }
