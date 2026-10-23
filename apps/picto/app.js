@@ -3,7 +3,7 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {GLYPHS,GLYPH_MEANINGS,glyphSVG} from './symbols.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ПИКТО',version:'1.4.0',cachePrefix: 'picto-',storageNamespace: 'pocket-works:picto'});
+createWorkshopMode({appName:'ПИКТО',version:'1.4.1',cachePrefix: 'picto-',storageNamespace: 'pocket-works:picto'});
 
 const root=document.querySelector('#view');
 const indicator=document.querySelector('#connection');
@@ -19,7 +19,7 @@ let lastPhase='',lastAuthor='',pendingSend=0,toastTimer=0,confirmAction=null,req
 let soundEnabled=true;
 let activeFrame=0,paletteCategory='Все',paletteQuery='',lexiconImported=false;
 let draftAnswer=[null,null,null,null,null],answerSending=false;
-let serverClockOffset=0,clockCalibrated=false;
+let serverClockOffset=0,clockCalibrated=false,deadlineProbeAt=0,lastStateRecovery=0;
 function calibrateClock(payload){
  const serverNow=Number(payload?.serverNow);
  if(!Number.isFinite(serverNow)||serverNow<=0)return;
@@ -326,8 +326,14 @@ function render(){
 function updateClock(){
  const el=document.querySelector('#timer');
  if(!el)return;
- const remaining=Math.max(0,Math.ceil(((state?.deadline||0)-(Date.now()+(clockCalibrated?serverClockOffset:0)))/1000));
+ const now=Date.now();
+ const remaining=Math.max(0,Math.ceil(((state?.deadline||0)-(now+(clockCalibrated?serverClockOffset:0)))/1000));
  el.textContent=String(Math.floor(remaining/60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
+ // Do not leave a visible, editable 00:00 round waiting for some unrelated action.
+ // Throttled pulses work with both existing v5 rooms and v6 rooms.
+ if(!remaining&&state?.deadline&&connected&&net&&['compose','guess','reveal'].includes(state.phase)&&now-deadlineProbeAt>1200){
+  deadlineProbeAt=now;try{net.sendGame({type:'pulse',clientSentAt:now});}catch{}
+ }
 }
 function setState(next){
  if(!next||!Array.isArray(next.players)||!next.phase)return;
@@ -338,7 +344,7 @@ function setState(next){
  state=next;
  if(next.semanticVersion>=4&&next.lexicon?.length){try{localStorage.setItem(STORE+'lexicon',JSON.stringify(next.lexicon));}catch{}}
  if(next.semanticVersion>=4&&next.phase==='lobby'&&next.host===me?.id&&!lexiconImported){lexiconImported=true;try{const entries=JSON.parse(localStorage.getItem(STORE+'lexicon')||'[]');if(Array.isArray(entries)&&entries.length)send({type:'lexicon-import',entries});}catch{}}
- if(changed){hideConfirm();selected=-1;activeFrame=0;undo=[];draft=(next.board||[]).map(g=>({...g}));restoreDraft(next);draftAnswer=[null,null,null,null,null];answerSending=false;drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
+ if(changed){deadlineProbeAt=0;hideConfirm();selected=-1;activeFrame=0;undo=[];draft=(next.board||[]).map(g=>({...g}));restoreDraft(next);draftAnswer=[null,null,null,null,null];answerSending=false;drag=null;render();playTone(next.phase==='reveal'?830:540);return;}
  if(next.phase==='guess'&&!changed&&state.answered.includes(me?.id)===wasAnswered){
   const counter=document.querySelector('.prompt-strip .micro');
   if(counter)counter.textContent=state.answered.length+' / '+(state.players.length-1)+' ОТВЕТОВ';
@@ -395,7 +401,13 @@ async function connect(mode){
     if(packet.event?.type==='state')setState(packet.event.payload);
     else if(packet.event?.type==='clock')calibrateClock(packet.event.payload);
     else if(packet.event?.type==='notice'){
-     answerSending=false;notify(String(packet.event.payload));
+     answerSending=false;
+     const message=String(packet.event.payload);notify(message);
+     // v5 rooms can reject a late publish without sending their new phase.
+     // Explicit sync also rescues rooms pinned to those older rules.
+     if(state&&connected&&/автор текущего раунда|Сейчас нельзя редактировать композицию|Время вышло|Этот этап уже завершён/.test(message)&&Date.now()-lastStateRecovery>1200){
+      lastStateRecovery=Date.now();try{client.sendGame({type:'sync'});}catch{}
+     }
      if(state?.phase==='guess')render();
      else if(state?.phase==='compose'&&state.author===me?.id){
       const publish=document.querySelector('[data-action="publish"]');
