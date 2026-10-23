@@ -45,6 +45,20 @@
   will-change:transform;
 }
 @media (max-width:760px) {
+  /* WebKit does not resolve % top/height of absolute children consistently
+     when the containing block is sized only by aspect-ratio + height:auto.
+     Both dimensions must be definite lengths from the size container. */
+  .game-shell:not(.debug-scene .game-shell) .board {
+    width:min(100cqw,71.428571cqh);
+    height:min(140cqw,100cqh);
+    max-width:100%;
+    max-height:100%;
+    min-height:0;
+    min-width:0;
+    flex:0 0 auto;
+    aspect-ratio:5/7;
+    box-sizing:border-box;
+  }
   .game-shell:not(.debug-scene .game-shell) .board-grid {
     z-index:1;
     width:100%;
