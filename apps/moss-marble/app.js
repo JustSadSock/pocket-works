@@ -3,6 +3,7 @@ import { createRunSeed, formatRunCode, generateEndlessLevel, parseRunCode } from
 import { createBall, isBallStopped, stepBall, strikeBall } from './physics.js';
 import { DioramaRenderer } from './render.js';
 import { compileCourse19 } from './course19.js';
+import { routePosition, strengthLabel } from './field-guide.js';
 import { installLivingTerrain } from './experience14.js';
 import { AudioGarden } from './audio.js';
 import {
@@ -59,6 +60,8 @@ let overviewUiKey = '';
 let lastBallMovingState = '';
 let invalidAimAt = 0;
 let lastInactiveRenderAt = 0;
+let lastRouteRenderAt = 0;
+let lastRouteValue = -1;
 
 const aim = { active: false, pointerId: null, startX: 0, startY: 0, currentX: 0, currentY: 0, vx: 0, vy: 0, power: 0 };
 const livingTerrain = installLivingTerrain(renderer, canvas, () => ({ mode, level, ball, aim }));
@@ -182,11 +185,25 @@ function syncOverviewControl() {
   document.body.dataset.overview = String(overview);
 }
 
+function updateRouteProgress(force = false) {
+  if (mode !== 'playing' && !force) return;
+  const state = routePosition(level.centerline, ball);
+  const value = Math.round(state.progress * 100);
+  if (!force && value === lastRouteValue) return;
+  lastRouteValue = value;
+  $('routePercent').textContent = `${value}%`;
+  $('routeMeter').setAttribute('aria-valuenow', String(value));
+  $('routePocket').style.setProperty('--route-progress', `${value}%`);
+  $('routeLabel').textContent = endlessActive ? `Секция ${level.section}` : 'Путь к лунке';
+}
+
 function syncHeader() {
   $('holeLabel').textContent = endlessActive ? 'Секция' : 'Лунка';
   $('holeNumber').textContent = endlessActive ? String(level.section) : `${levelIndex + 1} / ${LEVELS.length}`;
   $('strokeCount').textContent = String(strokes);
   $('parCount').textContent = String(level.par);
+  $('courseName').textContent = endlessActive ? (level.name || `Секция ${level.section}`) : level.name;
+  updateRouteProgress(true);
   $('soundBtn').querySelector('b').textContent = save.sound ? 'Вкл' : 'Выкл';
   $('soundBtn').setAttribute('aria-pressed', String(save.sound));
   $('soundBtn').setAttribute('aria-label', save.sound ? 'Выключить звук' : 'Включить звук');
@@ -582,7 +599,7 @@ function beginAim(event) {
   if (distance > Math.max(76, 56 * renderer.scale)) {
     if (performance.now() - invalidAimAt > 900) {
       invalidAimAt = performance.now();
-      showSurface('Начни жест от стеклянного шара');
+      showSurface('Начни жест от мраморного шара');
       vibrate(4);
     }
     return;
@@ -660,7 +677,9 @@ function syncAimMeter() {
     const value = Math.round(Math.max(0, Math.min(1, aim.power)) * 100);
     meter.style.setProperty('--aim-power', String(value / 100));
     meter.setAttribute('aria-valuenow', String(value));
-    meter.setAttribute('aria-valuetext', `${value}%`);
+    meter.setAttribute('aria-valuetext', `${value}% · ${strengthLabel(aim.power)}`);
+    $('powerValue').textContent = `${value}%`;
+    $('powerDescriptor').textContent = strengthLabel(aim.power);
     meter.setAttribute('aria-hidden', String(!aim.active));
   }
   document.body.dataset.aiming = String(aim.active);
@@ -1104,6 +1123,10 @@ function frame(now) {
   }
   const renderMode = ['menu', 'holes', 'code', 'confirm'].includes(mode) ? 'menu' : 'playing';
   renderer.draw(level, ball, aim, elapsed, dt, renderMode);
+  if (mode === 'playing' && now - lastRouteRenderAt >= 125) {
+    lastRouteRenderAt = now;
+    updateRouteProgress();
+  }
   livingTerrain.draw(level, ball, elapsed, renderMode);
   syncOverviewControl();
   requestAnimationFrame(frame);
