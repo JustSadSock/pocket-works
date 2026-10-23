@@ -158,6 +158,7 @@ const module={
       return {state:s,events:[{type:'receipt',to:player.id,payload:prior}]};
     }
     error=submit(s,player,v);
+    if(error&&v.requestId)return {state:s,events:[{type:'submission_rejected',to:player.id,payload:{requestId:v.requestId,reason:error}}]};
     if(!error&&v.requestId)return {state:s,events:[...events(),{type:'receipt',to:player.id,payload:s.receipts[player.id]}]};
   } else error='Дія недоступна.';
   return {state:s,events:error?notice(player.id,error):events()};
