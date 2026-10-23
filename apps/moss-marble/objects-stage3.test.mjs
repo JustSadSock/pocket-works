@@ -5,6 +5,7 @@ import { compileCourse19, inspectCourse19 } from './course19.js';
 import { buildCourse18Geometry } from './terrain18.js';
 import { planTurfClumps, appendTurfClumps } from './turf-clumps.js';
 import { buildWoodBarrierProfile } from './wood-barrier.js';
+import { planGroundedRock } from './rock-profile.js';
 
 let checked = 0;
 const counts = { rocks: 0, stumps: 0, tunnels: 0, stoneWalls: 0, woodWalls: 0 };
@@ -68,6 +69,40 @@ for (const original of [
     }
     assert.equal(profile.stations[0].t,0);
     assert.equal(profile.stations.at(-1).t,1);
+  }
+  const rockPlans=[];
+  for(let index=0;index<level.course18.props.length;index++){
+    const prop=level.course18.props[index];
+    if(prop.kind==='stump')continue;
+    const parts=prop.kind==='rockCluster'&&prop.parts?.length?prop.parts:[null];
+    for(let pi=0;pi<parts.length;pi++){
+      const part=parts[pi];
+      const radius=Math.max(8,Number(part?.r||prop.r||48));
+      const x=prop.x+Number(part?.x||0),y=prop.y+Number(part?.y||0);
+      const seed=Number(level.id||18)+index*37+(part?pi*11:0);
+      const field=level.course18.field;
+      const shape=planGroundedRock(x,y,radius,seed,field.heightAt);
+      rockPlans.push(shape);
+      assert.equal(shape.sideCount,14,'bounded organic rock complexity');
+      assert.equal(shape.rings.length,5,'the shoulder and shallow crown should be distinguishable');
+      assert.ok(shape.rings.every(row=>row.length===shape.sideCount));
+      assert.ok(shape.top.every(Number.isFinite));
+      assert.ok(shape.rise>0);
+      for(let station=0;station<shape.sideCount;station++){
+        const base=shape.rings[0][station];
+        assert.ok(base.every(Number.isFinite));
+        assert.ok(Math.abs(base[2]-field.heightAt(base[0],base[1])+2.3)<1e-5,
+          'stone perimeter follows the real physical terrain, not center elevation');
+        for(let row=0;row<shape.rings.length;row++){
+          const v=shape.rings[row][station];
+          assert.ok(v.every(Number.isFinite),'finite rock mesh vertex');
+          assert.ok(Math.hypot(v[0]-x,v[1]-y)<=radius+1e-4,
+            'stone silhouette remains within its physical collider');
+          if(row>0)assert.ok(v[2]>shape.rings[row-1][station][2]-1e-3,
+            'stone profile should not fold onto itself');
+        }
+      }
+    }
   }
   const geometry = buildCourse18Geometry(level);
   assert.ok(geometry.opaque instanceof Float32Array);

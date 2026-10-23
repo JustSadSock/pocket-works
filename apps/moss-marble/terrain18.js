@@ -5,6 +5,7 @@ import { appendSoftShadow, appendLineShadow } from './light-space.js';
 import { appendGardenIdentity } from './garden-identity.js';
 import { planTurfClumps, appendTurfClumps } from './turf-clumps.js';
 import { buildWoodBarrierProfile } from './wood-barrier.js';
+import { planGroundedRock } from './rock-profile.js';
 
 const TAU = Math.PI * 2;
 const STRIDE = 11;
@@ -109,49 +110,43 @@ function tone(tint, multiplier = 1) {
 }
 
 function lowPolyRock(mesh, shadows, level, prop, part, seed, palette) {
-  const x = prop.x + Number(part?.x || 0);
-  const y = prop.y + Number(part?.y || 0);
-  const radius = Math.max(8, Number(part?.r || prop.r || 48));
-  const ground = terrainHeightAt(level, x, y);
-  const height = radius * (.74 + noise(seed, 18) * .14);
-  const segments = 15;
-  const profile = [
-    { z: ground + .2, width: .86, ox: 0, oy: 0 },
-    { z: ground + height * .28, width: .98, ox: 0, oy: 0 },
-    { z: ground + height * .66, width: .79, ox: radius * .025, oy: -radius * .016 },
-    { z: ground + height * .94, width: .32, ox: radius * .045, oy: -radius * .022 }
-  ];
-  const vertices = profile.map((layer, row) => Array.from({ length: segments }, (_, segment) => {
-    const angle = segment / segments * TAU;
-    const variation = .94 + noise(segment, seed, 11) * .055 + noise(segment, row, seed) * .01;
-    const extent = radius * layer.width * variation;
-    return [x + layer.ox + Math.cos(angle) * extent, y + layer.oy + Math.sin(angle) * extent, layer.z];
-  }));
-  for (let row = 0; row < profile.length - 1; row += 1) {
-    for (let segment = 0; segment < segments; segment += 1) {
-      const next = (segment + 1) % segments;
-      const direction = Math.sin(segment / segments * TAU + .5) * .055;
-      const tint = tone(row === 2 ? palette.stoneLight : palette.stone, .92 + direction + noise(segment, seed, 37) * .07);
-      mesh.quad(vertices[row][segment], vertices[row][next], vertices[row + 1][next], vertices[row + 1][segment], tint, 0);
+  const x=prop.x+Number(part?.x||0);
+  const y=prop.y+Number(part?.y||0);
+  const radius=Math.max(8,Number(part?.r||prop.r||48));
+  const shape=planGroundedRock(x,y,radius,seed,(sx,sy)=>terrainHeightAt(level,sx,sy));
+  const {rings,sideCount,rise}=shape;
+  // Terrain-following foot, varied shoulders and an irregular, low crown:
+  // there is no repeated conical tip and no horizontal floating base.
+  for(let row=0;row<rings.length-1;row++){
+    for(let j=0;j<sideCount;j++){
+      const next=(j+1)%sideCount;
+      const warmFacing=Math.sin(j/sideCount*TAU+.5)*.046;
+      const light=row>=2?palette.stoneLight:palette.stone;
+      const variation=.91+warmFacing+noise(j,seed,37)*.09;
+      const tint=tone(light,variation);
+      mesh.quad(rings[row][j],rings[row][next],rings[row+1][next],rings[row+1][j],tint,0);
     }
   }
-  const crown = [x + radius * .035, y - radius * .017, ground + height];
-  for (let segment = 0; segment < segments; segment += 1) {
-    mesh.triangle(vertices.at(-1)[segment], vertices.at(-1)[(segment + 1) % segments], crown,
-      tone(palette.stoneLight, .92 + noise(segment, seed, 29) * .06), 0);
+  const crownTint=tone(palette.stoneLight,.96);
+  for(let j=0;j<sideCount;j++){
+    mesh.triangle(rings.at(-1)[j],rings.at(-1)[(j+1)%sideCount],shape.top,
+      tone(crownTint,.95+noise(j,seed,29)*.055),0);
   }
-  // A little damp moss grows low on only one or two faces, not random green spikes.
-  for (const segment of [2, 3, 4]) {
-    if (noise(segment, seed, 53) < .30) continue;
-    const next = (segment + 1) % segments;
-    mesh.triangle(
-      [vertices[0][segment][0], vertices[0][segment][1], ground + .55],
-      [vertices[0][next][0], vertices[0][next][1], ground + .55],
-      [vertices[1][segment][0] * .45 + vertices[1][next][0] * .55, vertices[1][segment][1] * .45 + vertices[1][next][1] * .55, ground + height * .22],
-      tone(palette.rockMoss, .80), 7
-    );
+  // A restrained patch of moss hugs one or two of the lower faces.
+  // It shares rock vertices with a tiny offset rather than a sharp upright
+  // triangle planted through stone.
+  for(const j of [2,3]){
+    if(noise(j,seed,53)<.31)continue;
+    const next=(j+1)%sideCount;
+    const a=rings[0][j],b=rings[0][next],c=rings[1][next],d=rings[1][j];
+    const outward=p=>[p[0]+(p[0]-x)*.0012,p[1]+(p[1]-y)*.0012,p[2]+.12];
+    mesh.quad(outward(a),outward(b),outward(c),outward(d),
+      tone(palette.rockMoss,.78+noise(j,seed,57)*.14),7);
   }
-  appendSoftShadow(shadows, (sx,sy)=>terrainHeightAt(level,sx,sy), { x, y, radiusX: radius * 1.27, radiusY: radius * 1.05, height: height * .42, strength: .31, segments: 22 });
+  appendSoftShadow(shadows,(sx,sy)=>terrainHeightAt(level,sx,sy),{
+    x,y,radiusX:radius*1.16,radiusY:radius*.93,
+    height:rise*.31,strength:.26,segments:22
+  });
 }
 
 function stump(mesh, shadows, level, prop, seed, palette) {
