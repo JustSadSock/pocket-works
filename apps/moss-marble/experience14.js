@@ -381,13 +381,25 @@ export function installLivingTerrain(renderer, canvas, getState) {
     const width = renderer.width || canvas.clientWidth || window.innerWidth;
     const height = renderer.height || canvas.clientHeight || window.innerHeight;
     const key = level.renderId ?? level.id;
+    // Measure the actual interactive chrome only when geometry / layout changes.
+    if (camera.viewportWidth !== width || camera.viewportHeight !== height || !camera.chromeInsets) {
+      const header = document.querySelector('.scorebar')?.getBoundingClientRect();
+      const control = document.getElementById('overviewBtn')?.getBoundingClientRect();
+      camera.chromeInsets = {
+        top: Number.isFinite(header?.bottom) ? header.bottom : 0,
+        bottom: Number.isFinite(control?.top) ? Math.max(0, height - control.top) : 0
+      };
+      camera.viewportWidth = width;
+      camera.viewportHeight = height;
+    }
+    const { top: chromeTop, bottom: chromeBottom } = camera.chromeInsets;
     const desiredRotation = portraitCourseRotation(level, width, height);
     const firstFrame = camera.levelKey !== key;
     if (firstFrame) {
       camera.levelKey = key;
       camera.introUntil = performance.now() + 1050;
       camera.rotation = desiredRotation;
-      const initial = courseFit(level, width, height, desiredRotation);
+      const initial = courseFit(level, width, height, desiredRotation, chromeTop, chromeBottom);
       const center = inverseRotateXY(initial.bounds.centerX, initial.bounds.centerY, desiredRotation);
       camera.x = center.x;
       camera.y = center.y;
@@ -399,14 +411,14 @@ export function installLivingTerrain(renderer, canvas, getState) {
       camera.rotation = (camera.rotation || 0) + delta * (1 - Math.pow(.00025, dt));
     }
     const rotation = camera.rotation || 0;
-    const full = courseFit(level, width, height, rotation);
+    const full = courseFit(level, width, height, rotation, chromeTop, chromeBottom);
     const { view, bounds } = full;
     const center = inverseRotateXY(bounds.centerX, bounds.centerY, rotation);
     const autoOverview = performance.now() < camera.introUntil;
     const overviewTarget = camera.overview || autoOverview || state.mode !== 'playing';
     camera.overviewProgress = smooth(camera.overviewProgress, overviewTarget ? 1 : 0, dt, overviewTarget ? .0005 : .002);
     const fullScale = full.scale;
-    const followScale = Math.max(fullScale, Math.min(view.width / 760, view.height / (920 * .82)));
+    const followScale = Math.max(fullScale, Math.min(view.width / 625, view.height / (860 * .82)));
     const targetScale = lerp(followScale, fullScale, camera.overviewProgress);
     camera.scale = smooth(camera.scale || targetScale, targetScale, dt, .0015);
 
