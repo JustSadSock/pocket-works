@@ -3,6 +3,7 @@ import { makeStoneRimProfile, ringArea } from './curb-profile.js';
 import { compileCourse19, inspectCourse19, organicSandRadius } from './course19.js';
 import { generateEndlessLevel } from './procedural.js';
 import { LEVELS } from './levels.js';
+import { sampleSlopeFibers } from './slope-grass.js';
 
 const square = [{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 200, y: 200 }, { x: 0, y: 200 }];
 assert.equal(Math.round(ringArea(square)), 40000);
@@ -38,6 +39,20 @@ for (const raw of [
   const report = inspectCourse19(level);
   assert.equal(report.ok, true, `invalid course ${level.id}: ${report.issues.join(',')}`);
   const field = level.course18.field;
+  const fibers = sampleSlopeFibers(level,field,96);
+  assert.ok(fibers.length <= 96, 'bounded CPU and canvas slope-fiber budget');
+  for(const fiber of fibers) {
+    assert.ok(Object.values(fiber).every(v => typeof v === 'boolean' || Number.isFinite(v)),
+      'finite projected fiber endpoints');
+    assert.ok(fiber.slope >= .085 && fiber.slope <= 1.35, 'grass fibers require actual terrain tilt');
+    assert.ok(['grass','moss'].includes(field.surfaceAt(fiber.x,fiber.y)),
+      'no physical surface fibers in sand or water');
+    assert.ok(['grass','moss'].includes(field.surfaceAt(fiber.endX,fiber.endY)),
+      'turf fibers never escape grass or moss');
+    const actual = field.gradientAt(fiber.x,fiber.y);
+    assert.ok((fiber.endX-fiber.x)*actual.x+(fiber.endY-fiber.y)*actual.y < 0,
+      'fiber direction follows the real downhill gradient');
+  }
   const points = makeStoneRimProfile(level.outline, field.heightAt);
   assert.ok(points.length >= 3, 'rim must encircle the entire course');
   for (const vertex of points) {
