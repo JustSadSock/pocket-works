@@ -38,7 +38,7 @@ function show(which){
   $('finish-panel').classList.toggle('hidden',which!=='finish');
   $('pause').classList.toggle('hidden',which!=='playing');
   $('online-role-chip').classList.toggle('hidden',which!=='online-playing');
-  for(const id of ['jump','reverse'])$(id).disabled=which!=='playing';
+  for(const id of ['jump','reverse'])$(id).disabled=which==='online-playing'?!online?.canInput(id):which!=='playing';
   $('status').textContent=which==='menu'?'ЖДЁМ СИГНАЛ':which==='pause'?'ПАУЗА':which==='finish'?'ЗАДАНИЕ ВЫПОЛНЕНО':'ДВИЖЕНИЕ';
   if(which==='playing'||which==='online-playing')lastFrame=performance.now();
 }

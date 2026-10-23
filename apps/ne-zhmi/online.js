@@ -2,21 +2,9 @@
 // UI events are never treated as confirmation until a server snapshot arrives.
 import { PocketNet } from '../../shared/capabilities/net.js';
 import { stepGame, FIXED_DT } from './engine.js';
+import { validRoom, roleOf, acceptOnlineSnapshot } from './online-flow.js';
 const serverUrl=location.origin+'/pocketnet';
 const storagePrefix='ne-zhmi:net:';
-const UUID=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
-const ROOM=/^[0-9a-f]{8}$/i;
-export function validRoom(value){return ROOM.test(value)||UUID.test(value);}
-export function roleOf(snapshot,id){return snapshot?.roles?.indexOf(id)??-1;}
-export function acceptOnlineSnapshot(previous,next) {
-  if(!next||!['lobby','play','won'].includes(next.phase)||!Array.isArray(next.players))return false;
-  if(!previous)return true;
-  if(next.round<previous.round)return false;
-  if(next.round===previous.round&&next.revision<previous.revision)return false;
-  if(next.round===previous.round&&next.revision===previous.revision&&
-    Number(next.robot?.t||0)<Number(previous.robot?.t||0)-.001)return false;
-  return true;
-}
 const $=id=>document.getElementById(id);
 const str=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const netStorage={
@@ -174,6 +162,15 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
     refresh();notify('Подключаемся к PocketNet…');
     const requestedName=String($('player-name').value||'Игрок').trim().slice(0,22)||'Игрок';
     try{localStorage.setItem('pocket-works:ne-zhmi:player',requestedName)}catch{}
+    // Explicitly creating/joining a new room must not auto-rejoin a stale
+    // room from this tab's last session.
+    if(action!=='resume'){
+      try{
+        const key='pocket-net:'+serverUrl;
+        const remembered=JSON.parse(netStorage.getItem(key)||'null');
+        if(remembered){remembered.roomId=null;netStorage.setItem(key,JSON.stringify(remembered));}
+      }catch{}
+    }
     const net=new PocketNet({serverUrl,name:requestedName,storage:netStorage,identityKey:'guest'});
     client=net;wire(net,id);
     try{
@@ -182,10 +179,10 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
         new Promise((_,reject)=>setTimeout(()=>reject(Error('Сервер не ответил')),12000))
       ]);
       if(client!==net||id!==attemptId)return;
-      if(action==='create'){net.roomId=null;net.persist();net.createRoom('ne-zhmi');}
+      if(action==='create'){net.createRoom('ne-zhmi');}
       else if(action==='resume'){
         if(!net.roomId) {busy=false;notify('Комната недоступна, введите новый код');refresh();}
-        else {roomId=net.roomId;send({type:'sync'});}
+        else {busy=true;notify('Восстанавливаем комнату…');refresh();}
       } else if(code){join(code);}
       else{busy=false;refresh();notify('Введите код комнаты');}
     }catch(error){
