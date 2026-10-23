@@ -1299,7 +1299,10 @@ test('Quick-price bid is only a bid; seller acceptance changes ownership exactly
  assert.equal(state.listing.itemId,item.id);
  assert.equal(state.bids.length,1);
  act(state,seller.id,{type:'accept',buyer:buyer.id});
- assert.equal(buyer.resources.gold,before-85);
+ // A seller's secret negative relationship applies an additional 20-gold
+ // deduction after the bid settles, but never at the time of bidding.
+ const relationshipPenalty=seller.negativeTarget===buyer.id&&seller.negativeUsed===state.round?20:0;
+ assert.equal(buyer.resources.gold,before-85-relationshipPenalty);
  assert.equal(state.listing,null);
  assert.equal(buyer.items.filter(x=>x.id===item.id).length,1);
  const replay=act(state,seller.id,{type:'accept',buyer:buyer.id});
