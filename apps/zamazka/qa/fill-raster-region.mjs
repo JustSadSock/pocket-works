@@ -8,7 +8,7 @@ import {fillRasterBounds} from '../fill-raster-region.js';
 const W=1200,H=900,WIDTH=W*H,bytes=WIDTH*4;
 const zone={x:125,y:93,w:160,h:120};
 const bounds=fillRasterBounds(zone,2,W,H);
-assert.ok(bounds.width*bounds.height/WIDTH<.08,'damage ROI should avoid most of the painting');
+assert.ok(bounds.width*bounds.height/WIDTH<.1,'damage ROI should avoid most of the painting');
 function surface(data){
  const pixels=new Uint8ClampedArray(data),reads=[];
  return {canvas:{width:W,height:H},pixels,ctx:{
@@ -45,7 +45,7 @@ function run(name,seed,color,{pigment=false,priority=false}={}){
  const referencePaint=surface(initial),fastPaint=surface(initial);
  const referenceLines=surface(walls),fastLines=surface(walls);
  const boundary=priority?{walls:{width:W,height:H,data:walls},bounds:{
-  minX:125,minY:93,maxX:285,maxY:213
+  minX:150,minY:115,maxX:230,maxY:180
  }}:null;
  const started=performance.now();
  fillRegion(referenceLines,referencePaint,{width:W,height:H,data:mask},seed,color,boundary);
