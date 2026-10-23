@@ -25,8 +25,8 @@ async function channel(token){
  });
  await new Promise((resolve,reject)=>{ws.once('open',resolve);ws.once('error',reject)});
  ws.send(JSON.stringify({wireVersion:1,type:'auth',token}));
- await next('authenticated');
- return {ws,next,send:(type,extra={})=>ws.send(JSON.stringify({wireVersion:1,type,...extra}))};
+ const auth=await next('authenticated');
+ return {id:auth.player.id,ws,next,send:(type,extra={})=>ws.send(JSON.stringify({wireVersion:1,type,...extra}))};
 }
 async function shutdown(c){
  if(c.ws.readyState===WebSocket.CLOSED)return;
@@ -118,7 +118,7 @@ try{
   assert.equal(entered.state.players.length,2);
   assert.equal(entered.state.claim,null);
   assert.equal(entered.state.players.some(p=>p.id===guestId),false);
-  assert.equal(entered.state.players.some(p=>p.name==='Chy Replacement'),true);
+  assert.equal(entered.state.players.some(p=>p.id===replacement.id),true);
   replacement.send('game_message',{payload:{type:'pause'}});
   assert.equal((await replacement.next('game_event',m=>m.event?.type==='notice')).event.type,'notice');
   host.send('game_message',{payload:{type:'finish_early'}});
