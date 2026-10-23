@@ -35,7 +35,8 @@ export class ScenicFrameGate {
     // Tracking/motion gets 30fps, easing load without stuttering inputs.
     // On budget-constrained screens use 20fps visual-only animation.
     const cadence=quality<.65?(active||moved?50:92):(active||moved?33:67);
-    const should=layoutChanged || (elapsed>=cadence && (!reducedMotion || moved || active));
+    const should=layoutChanged || (elapsed>=cadence && (!reducedMotion || moved || active)) ||
+      (reducedMotion && moved && elapsed>=24);
     if(should) {
       this.lastPaint=now;
       this.level=level;this.mode=mode;
