@@ -62,7 +62,17 @@ export function courseFit(level, width, height, rotation = 0, topHUDHeight = 0, 
       scenicPoints.push({x:site.x+offset[0],y:site.y+offset[1]});
     }
   }
-  const bounds = projectedOutlineBounds(scenicPoints, rotation);
+  const outlineBounds = projectedOutlineBounds(scenicPoints, rotation);
+  // Ground bounds alone cut off flags, masonry portals and the nine
+  // raised miniatures. An asymmetric top margin reserves their actual
+  // vertical silhouettes in the overview, without distorting the level.
+  const verticalRoom = level?.course18 ? 145 / VERTICAL_COMPRESSION : 112 / VERTICAL_COMPRESSION;
+  const bounds = {
+    ...outlineBounds,
+    minY: outlineBounds.minY - verticalRoom,
+    height: outlineBounds.height + verticalRoom,
+    centerY: outlineBounds.centerY - verticalRoom * .5
+  };
   const view = courseViewport(width, height, topHUDHeight, bottomControlsHeight);
   const scale = clamp(Math.min(view.width / bounds.width, view.height / (bounds.height * VERTICAL_COMPRESSION)), .025, 3);
   return { scale, bounds, view };
@@ -87,4 +97,27 @@ export function clampFollowCenter(x, y, level, scale, rotation, view) {
     y: clampAxis(wanted.y, bounds.minY, bounds.maxY, halfHeight)
   };
   return inverseRotateXY(center.x, center.y, rotation);
+}
+
+/**
+ * Preserve touch affordance near the ball at the extreme ends of a course.
+ * Fit the *ball*, not just the board outline, between HUD and bottom instruments.
+ * This is a view-only translation; it never changes world coordinates.
+ */
+export function keepFocusInSafeArea(cameraX, cameraY, focusX, focusY, focusZ, scale, rotation, view, margin = 46) {
+  const safeScale = Math.max(.00001, Number(scale) || 1);
+  const center = rotateXY(cameraX, cameraY, rotation);
+  const offset = anchoredCameraOffset(cameraX, cameraY, safeScale, rotation, view);
+  const point = worldToScreenPoint(focusX, focusY, focusZ, safeScale, offset.x, offset.y, rotation);
+  const left = view.centerX - view.width * .5 + margin;
+  const right = view.centerX + view.width * .5 - margin;
+  const top = view.top + margin;
+  const bottom = view.top + view.height - margin;
+  const boundedX = clamp(point.x, Math.min(left,right), Math.max(left,right));
+  const boundedY = clamp(point.y, Math.min(top,bottom), Math.max(top,bottom));
+  return inverseRotateXY(
+    center.x + (point.x - boundedX) / safeScale,
+    center.y + (point.y - boundedY) / (safeScale * VERTICAL_COMPRESSION),
+    rotation
+  );
 }

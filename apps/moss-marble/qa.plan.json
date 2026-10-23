@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "camera-space.test.mjs",
+        "field-guide.test.mjs",
+        "surfaces-stage2.test.mjs",
+        "objects-stage3.test.mjs",
+        "lighting-stage4.test.mjs",
+        "garden-identity.test.mjs",
+        "final-polish.test.mjs"
+      ]
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "body"
+    },
+    {
+      "id": "nine-gardens",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/final-gallery.spec.js"
+      ]
+    }
+  ]
+}

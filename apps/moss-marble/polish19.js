@@ -1,3 +1,4 @@
+import { ScenicFrameGate } from './scenic-frame-gate.js';
 const TAU = Math.PI * 2;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -80,6 +81,7 @@ export class CoursePolishLayer {
     this.height = 0;
     this.dpr = 1;
     this.cache = new WeakMap();
+    this.frameGate = new ScenicFrameGate();
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches || false;
     this.resize = this.resize.bind(this);
     window.addEventListener('resize', this.resize, { passive: true });
@@ -221,6 +223,12 @@ export class CoursePolishLayer {
     const rect = this.canvas.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     if (Math.abs(rect.width - this.width) > .5 || Math.abs(rect.height - this.height) > .5 || dpr !== this.dpr) this.resize();
+    const speed = Math.hypot(ball?.vx || 0, ball?.vy || 0);
+    if (!this.frameGate.shouldDraw(time, {
+      level, mode:'course', renderer:this.renderer, width:this.width, height:this.height,
+      dpr:this.dpr, quality:this.width*this.height > 950000 ? .58 : 1,
+      reducedMotion:this.reducedMotion, active:speed > 12
+    })) return;
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
     const field = level?.course18?.field;

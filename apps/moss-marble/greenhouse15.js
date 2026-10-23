@@ -1,3 +1,4 @@
+import { ScenicFrameGate } from './scenic-frame-gate.js';
 import { keyOnScreen, shadowDisplacement } from './light-space.js';
 const TAU = Math.PI * 2;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -59,6 +60,8 @@ export class LivingGreenhouseLayer {
     this.dpr = 1;
     this.quality = 1;
     this.frameCost = 16;
+    this.frameGate = new ScenicFrameGate();
+    this.lastScenicPaintAt = null;
     this.lastQualityChange = 0;
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches || false;
     this.hidden = document.visibilityState === 'hidden';
@@ -110,7 +113,7 @@ export class LivingGreenhouseLayer {
     this.frameCost = lerp(this.frameCost, frameMs, .045);
     const now = performance.now();
     if (now - this.lastQualityChange < 1200) return;
-    const next = this.reducedMotion ? .58 : this.frameCost > 31 ? .5 : this.frameCost > 23 ? .72 : 1;
+    const next = this.frameCost > 31 ? .5 : this.frameCost > 23 ? .72 : 1;
     if (Math.abs(next - this.quality) > .08) {
       this.quality = next;
       this.lastQualityChange = now;
@@ -143,12 +146,19 @@ export class LivingGreenhouseLayer {
     this.updateBudget(dt);
     this.resize();
     const speed = Math.hypot(ball?.vx || 0, ball?.vy || 0);
+    const active = speed > 12 || Boolean(aim?.active) || this.pulses.length > 0;
+    if (!this.frameGate.shouldDraw(time, {
+      level, mode, renderer:this.renderer, width:this.width, height:this.height,
+      dpr:this.dpr, quality:this.quality, reducedMotion:this.reducedMotion, active
+    })) return;
+    const elapsed = this.lastScenicPaintAt == null ? dt : Math.min(.15, Math.max(0, time - this.lastScenicPaintAt));
+    this.lastScenicPaintAt = time;
     const directional = clamp(((ball?.vx || 0) - (ball?.vy || 0) * .25) / 900, -1, 1);
     this.windTarget = clamp((this.renderer.parallaxX || 0) * .45 + directional * .55, -1, 1);
-    this.wind = lerp(this.wind, this.windTarget, 1 - Math.pow(.004, Math.max(dt, 1 / 240)));
+    this.wind = lerp(this.wind, this.windTarget, 1 - Math.pow(.004, Math.max(elapsed, 1 / 240)));
     const theme = visualTheme(level);
     this.drawBackdrop(level, ball, time, mode, theme);
-    this.drawForeground(level, ball, aim, time, dt, mode, speed, theme);
+    this.drawForeground(level, ball, aim, time, elapsed, mode, speed, theme);
   }
 
   drawBackdrop(level, ball, time, mode, theme) {
@@ -465,6 +475,9 @@ export class LivingGreenhouseLayer {
     ctx.lineJoin = 'round';
     if (holeOnScreen) {
       const pulse = this.reducedMotion ? .5 : .45 + Math.sin(time * .48 + hole.x * .004) * .08;
+      // The real stone cup and pennant are already clear at close zoom.
+      // Only add a ground outline when the cup is tiny on screen.
+      if (hole.r * (this.renderer.scale || 1) < 17) {
       this.traceGroundRing(ctx, field, hole.x, hole.y, hole.r + 12 + pulse * 3, holeGround, 1.15);
       ctx.strokeStyle = 'rgba(4,16,10,.66)';
       ctx.lineWidth = 3.4;
@@ -473,9 +486,10 @@ export class LivingGreenhouseLayer {
       ctx.setLineDash([]);
       ctx.lineDashOffset = 0;
       ctx.strokeStyle = tint(theme.beam, .58 + pulse * .16);
-      ctx.lineWidth = 1.25;
+      ctx.lineWidth = 1.05;
       ctx.stroke();
       ctx.setLineDash([]);
+      }
 
       const beacon = ctx.createLinearGradient(holeBase.x, holeBase.y, holeTop.x, holeTop.y);
       beacon.addColorStop(0, tint(theme.beam, 0));
@@ -496,8 +510,11 @@ export class LivingGreenhouseLayer {
     if (!ball.sunk && !ball.inCup) {
       const ground = Number.isFinite(ball.groundZ) ? ball.groundZ : (field?.heightAt?.(ball.x, ball.y) || 0);
       const steady = speed < 8 && !ball.airborne;
-      const visibility = aim?.active ? .88 : steady ? .64 : .24;
+      const visibility = aim?.active ? 0 : steady ? .46 : .13;
       const cueRadius = 35;
+      // Keep the subtle locator only for a resting/tiny marble. The aim
+      // compass and moving physical shadow already communicate its position.
+      if (!aim?.active && (steady || 22 * (this.renderer.scale || 1) < 10)) {
       this.traceGroundRing(ctx, field, ball.x, ball.y, cueRadius, ground, 1.1, 32);
       ctx.strokeStyle = `rgba(2,12,7,${visibility * .72})`;
       ctx.lineWidth = 3.2;
@@ -506,9 +523,10 @@ export class LivingGreenhouseLayer {
       ctx.setLineDash([]);
       ctx.lineDashOffset = 0;
       ctx.strokeStyle = tint(theme.accent, visibility);
-      ctx.lineWidth = steady ? 1.45 : .85;
+      ctx.lineWidth = steady ? 1.15 : .75;
       ctx.stroke();
       ctx.setLineDash([]);
+      }
 
       const ballZ = Number.isFinite(ball.z) ? ball.z : ground + 22;
       const center = this.renderer.worldToScreen(ball.x, ball.y, ballZ);
