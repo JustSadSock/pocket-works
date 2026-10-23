@@ -2,6 +2,8 @@ import { POCKET_MODULES } from './generated-modules.mjs';
 import {assessZamazkaAwards} from './zamazka-awards.mjs';
 import {assessBlockiesAwards} from './blockies-awards.mjs';
 import {playerRoomView} from './private-views.mjs';
+import {roomJoinView} from './room-join-view.mjs';
+import {shouldAnnounceSocketDeparture} from './disconnect-presence.mjs';
 
 // All rooms share one small, hibernatable SQLite-backed coordinator. This matches
 // the personal/friends deployment (max 32 rooms / 48 sockets) without paid KV/D1.
@@ -103,7 +105,7 @@ export class PocketNetHub {
     return playerRoomView(mod,room.state,player,room.players,room.gameId==='chyepukha'&&room.version==='v6'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined);
   }
   joined(ws,room,player){
-    const state=this.projectedState(room,player);
+    const state=roomJoinView(room,()=>this.projectedState(room,player));
     // Legacy rooms may legitimately join with large artwork snapshots.
     // Only new private-view games opt into the small projected-view cap.
     const mod=this.module(room.gameId,room.version);
@@ -562,7 +564,11 @@ export class PocketNetHub {
             this.sql('UPDATE sessions SET name = ? WHERE token = ?', found.name, msg.token);
           }
           for (const old of this.ctx.getWebSockets()) {
-            if (old !== ws && old.deserializeAttachment()?.id === found.id) old.close(4000, 'reconnected');
+            const oldSeat=old.deserializeAttachment();
+            if(old!==ws&&oldSeat?.id===found.id){
+              this.attachment(old,{...oldSeat,serverReplaced:true});
+              old.close(4000,'reconnected');
+            }
           }
           player = { id: found.id, name: found.name, roomId: null,
             accountId: found.account_id || null, avatar: found.avatar || null,
@@ -759,7 +765,8 @@ export class PocketNetHub {
         // a second disconnection if a new socket already owns the player seat.
         const stillConnected=!!this.connected(info.id,room.id);
         if(!stillConnected){
-          this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined, disconnected: info.id });
+          if(shouldAnnounceSocketDeparture(info,stillConnected))
+            this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined, disconnected: info.id });
           await this.updateBazaarPresence(room,{id:info.id},false);
           await this.updateChyepukhaPresence(room,{id:info.id},false);
         }
