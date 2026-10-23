@@ -242,6 +242,14 @@ const module:PocketModule<State>={
   const id=player.id;
   if(!received(state,id))return {state,events:notice(id,'Ты не участник этой комнаты.')};
   const before=state.revision;step(state);
+  if(state.revision!==before){
+   // The deadline may expire during ANY command, not just pulse. Always
+   // broadcast the new phase; otherwise all later pulses only send clocks
+   // and clients can remain stuck in the previous round indefinitely.
+   const events=emit(state);
+   if(raw.type==='publish')events.push(...notice(id,'Время вышло. Раунд завершён автоматически.'));
+   return {state,events};
+  }
   if(raw.type==='sync')return {state,events:[{type:'state',to:id,payload:strip(state,id)}]};
   if(raw.type==='pulse'){
    const echo=typeof raw.clientSentAt==='number'&&Number.isFinite(raw.clientSentAt)?raw.clientSentAt:null;
@@ -278,13 +286,16 @@ const module:PocketModule<State>={
    start(state);return {state,events:emit(state)};
   }
   if(raw.type==='edit'){
-   if(state.phase!=='compose'||state.author!==id)return {state,events:notice(id,'Сейчас нельзя редактировать композицию.')};
+   if(state.phase!=='compose'||state.author!==id)return {state,events:[{type:'state',to:id,payload:strip(state,id)},...notice(id,'Сейчас нельзя редактировать композицию.')]};
    const board=sanitized(raw.glyphs,state.palette);
    if(!board||board.some(g=>(g.frame??0)>=state.frames))return {state,events:notice(id,'Некорректный знак или номер кадра.')};
    state.board=board;state.revision++;return {state,events:emit(state)};
   }
   if(raw.type==='publish'){
-   if(state.phase!=='compose'||state.author!==id)return {state,events:notice(id,'Сейчас отправляет только автор текущего раунда.')};
+   if(state.phase!=='compose'||state.author!==id)return {state,events:[
+    {type:'state',to:id,payload:strip(state,id)},
+    ...notice(id,state.phase!=='compose'?'Этот этап уже завершён. Обновляем комнату.':'Сейчас объясняет другой игрок.')
+   ]};
    // Atomic final storyboard: an earlier edit may still be debounced or in transit.
    if(raw.glyphs!==undefined){
     const board=sanitized(raw.glyphs,state.palette);
