@@ -88,5 +88,43 @@ try{
  const final=await guest.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='finished');
  assert.equal(final.event.payload.stories.length,2);
  assert.ok(final.event.payload.stories.every(story=>story.fragments.length===1));
+ // Create another protected room to verify moderator actions through real WebSockets.
+ host.send('leave_room');guest.send('leave_room');
+ await sleep(80);
+ host.send('create_room',{gameId:'chyepukha'});
+ const newRoom=await host.next('room_joined',m=>m.roomId!==roomId);
+ const modRoom=newRoom.roomId;
+ guest.send('join_room',{roomId:modRoom});
+ await guest.next('room_joined',m=>m.roomId===modRoom);
+ host.send('game_message',{payload:{type:'start'}});
+ await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='writing'&&m.roomId===modRoom);
+ host.send('game_message',{payload:{type:'pause'}});
+ const paused=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.paused&&m.roomId===modRoom);
+ assert.equal(paused.event.payload.paused,true);
+ host.send('game_message',{payload:{type:'unpause'}});
+ await host.next('game_event',m=>m.event?.type==='state'&&!m.event.payload.paused&&m.roomId===modRoom);
+ host.send('game_message',{payload:{type:'kick',seatId:guestId}});
+ const evicted=await guest.next('room_kicked');
+ assert.equal(evicted.roomId,modRoom);
+ guest.send('join_room',{roomId:modRoom});
+ assert.equal((await guest.next('error',m=>m.code==='room_kicked')).code,'room_kicked');
+ host.send('game_message',{payload:{type:'open_seat',seatId:guestId}});
+ const ticket=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.claim?.code&&m.roomId===modRoom);
+ const claimCode=ticket.event.payload.claim.code;
+ const replacement=await channel(await session('Chy Replacement'));
+ try{
+  replacement.send('join_room',{roomId:modRoom,claimCode});
+  const entered=await replacement.next('room_joined');
+  assert.equal(entered.state.players.length,2);
+  assert.equal(entered.state.claim,null);
+  assert.equal(entered.state.players.some(p=>p.id===guestId),false);
+  assert.equal(entered.state.players.some(p=>p.name==='Chy Replacement'),true);
+  replacement.send('game_message',{payload:{type:'pause'}});
+  assert.equal((await replacement.next('game_event',m=>m.event?.type==='notice')).event.type,'notice');
+  host.send('game_message',{payload:{type:'finish_early'}});
+  const release=await replacement.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='finished');
+  assert.equal(release.event.payload.stories.length,2);
+ }finally{await shutdown(replacement)}
+ console.log('Chyepukha v6: safe pause, server-authorized kick, no rejoin and one-time seat replacement');
  console.log('Chyepukha v6: durable seat rejoin, idempotent receipts and partial story survive');
 }finally{await Promise.allSettled([shutdown(host),shutdown(guest)])}
