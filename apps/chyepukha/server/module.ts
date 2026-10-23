@@ -117,14 +117,15 @@ const module={
  protocolVersion:1,
  createRoom({player,payload}){return {state:initial(player,payload)};},
  onJoin({state:s,players,player,payload}){
-  if((s.bannedIds||[]).includes(player.id)||(player.accountId&&(s.bannedAccounts||[]).includes(player.accountId)))throw Error('room_kicked');
+  const entrant=player||players.at(-1);
+  if((s.bannedIds||[]).includes(entrant.id)||(entrant.accountId&&(s.bannedAccounts||[]).includes(entrant.accountId)))throw Error('room_kicked');
   if(s.phase!=='lobby'){
    const claim=typeof payload?.claimCode==='string'?payload.claimCode.trim().toUpperCase():'';
    if(claim){
     if(!s.claim||s.claim.code!==claim||s.claim.expiresAt<Date.now())throw Error('invalid_replacement_code');
     const index=s.players.findIndex(p=>p.id===s.claim.seatId);
-    if(index<0||s.players.some(p=>p.id===player.id))throw Error('invalid_replacement_code');
-    const old=s.players[index],assigned=s.players[index]={...entries([player])[0],originalSeat:old.originalSeat||old.id};
+    if(index<0||s.players.some(p=>p.id===entrant.id))throw Error('invalid_replacement_code');
+    const old=s.players[index],assigned=s.players[index]={...entries([entrant])[0],originalSeat:old.originalSeat||old.id};
     s.bannedIds||=[];if(!s.bannedIds.includes(old.id))s.bannedIds.push(old.id);
     if(old.accountId){s.bannedAccounts||=[];if(!s.bannedAccounts.includes(old.accountId))s.bannedAccounts.push(old.accountId)}
     if(s.submitted[old.id])s.submitted[assigned.id]=true;
@@ -134,12 +135,12 @@ const module={
       if(sh.starter===old.id)sh.starterName=sh.starterName||old.name;
       for(const fragment of sh.fragments)if(fragment.by===old.id)fragment.authorName=fragment.authorName||old.name;
     }
-    if(s.host===old.id)s.host=player.id;
+    if(s.host===old.id)s.host=entrant.id;
     s.claim=null;s.hostVotes={};s.revision++;return {state:s,events:events()};
    }
 
    // The same durable player identity can reclaim a deliberately vacated seat.
-   const seat=s.players.find(p=>p.id===player.id);
+   const seat=s.players.find(p=>p.id===entrant.id);
    if(!seat)throw Error('match_in_progress');
    const current=players.find(p=>p.id===seat.id);
    if(current){seat.name=clean(current.name,24)||seat.name;seat.avatar=current.avatar||seat.avatar;}
