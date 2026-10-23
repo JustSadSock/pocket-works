@@ -545,7 +545,7 @@ function effectsHTML() {
   return app.effects
     .map((effect) => {
       if (["crown","shield","footfall","impact"].includes(effect.kind)) {
-        return `<div class="board-effect board-effect--${effect.kind}" style="--x:${effect.x};--y:${effect.y}"></div>`;
+        return `<div class="board-effect board-effect--${effect.kind}" style="--x:${effect.x};--y:${effect.y};left:${(effect.x+.5)*20}%;top:${(effect.y+.5)*(100/7)}%"></div>`;
       }
       if (["beast-dash","seal-trail","stride-trail"].includes(effect.kind)) {
         return `<div class="board-effect board-effect--${effect.kind}" style="${effectLineStyle(effect.from, effect.to)}"></div>`;
@@ -560,7 +560,7 @@ function boardHTML(state) {
  for(let y=0;y<7;y++)for(let x=0;x<5;x++)cells.push(`<div class="board-cell ${x===THRONE.x&&y===THRONE.y?"board-cell--throne":""}"><span>${String.fromCharCode(65+x)}${y+1}</span></div>`);
  const pieces=Object.values(state.pieces).map(piece=>{
   const cls=["piece",`piece--${piece.kind}`,piece.owner==="p1"?"piece--p1":piece.owner==="p2"?"piece--p2":"",piece.shield?"piece--shielded":"",piece.stun?"piece--stunned":"",piece.carryingSeal?"piece--sealed":"",app.inspectedSlot===piece.kind?"piece--focused":"",(app.film?.active?app.film.frames[app.film.index].moves:(app.debug.open?app.debug.round?.frames[app.debug.round.index]?.moves:null))?.some(m=>m.pieceId===piece.id)?"piece--performing":""].filter(Boolean).join(" ");
-  return `<button type="button" class="${cls}" data-piece-kind="${piece.kind}" data-piece-id="${piece.id}" title="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" aria-label="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" style="--x:${piece.x};--y:${piece.y}"><span class="piece__token">${pieceGlyph(piece)}${piece.shield?'<span class="piece__status piece__status--shield" title="Щит">✦</span>':""}${piece.stun?'<span class="piece__status piece__status--stun" title="Оглушение">✕</span>':""}${piece.carryingSeal?'<span class="piece__status piece__status--seal" title="Похищенная печать">◇</span>':""}</span></button>`;
+  return `<button type="button" class="${cls}" data-piece-kind="${piece.kind}" data-piece-id="${piece.id}" title="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" aria-label="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" style="--x:${piece.x};--y:${piece.y};left:${(piece.x+.5)*20}%;top:${(piece.y+.5)*(100/7)}%"><span class="piece__token">${pieceGlyph(piece)}${piece.shield?'<span class="piece__status piece__status--shield" title="Щит">✦</span>':""}${piece.stun?'<span class="piece__status piece__status--stun" title="Оглушение">✕</span>':""}${piece.carryingSeal?'<span class="piece__status piece__status--seal" title="Похищенная печать">◇</span>':""}</span></button>`;
  }).join("");
  return `<section class="board-panel"><div class="board-caption"><span class="board-caption__title">Королевский двор</span><span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span></div><div class="board-surround"><div class="board"><div class="board-grid">${cells.join("")}</div>${visionBoardOverlayHTML()}<div class="board-glow"></div><div class="board-effects">${effectsHTML()}</div>${pieces}</div></div></section>`;
 }
@@ -639,7 +639,7 @@ function visionBoardOverlayHTML() {
  return `<div class="vision-overlay" aria-hidden="true">${svg}
  ${ghosts.map(p=>{
   const key=p.kind==="champion"?(p.owner==="p1"?"north":"south"):p.kind;
-  return `<span class="vision-ghost sprite-figure--${key}" style="--gx:${p.x};--gy:${p.y}"></span>`;
+  return `<span class="vision-ghost sprite-figure--${key}" style="--gx:${p.x};--gy:${p.y};left:${(p.x+.5)*20}%;top:${(p.y+.5)*(100/7)}%"></span>`;
  }).join("")}</div>`;
 }
 
@@ -658,7 +658,7 @@ function handHTML(state) {
       return `<button type="button" class="law-card ${app.selectedCardId===cardId?"law-card--selected":""}" style="--card-color:${SLOT_COLORS[card.slot]}" aria-pressed="${app.selectedCardId===cardId}" ${locked?"disabled":""} draggable="${!locked}" data-card-id="${cardId}" data-focus-card="${cardId}">
         <span class="law-card__sigil sprite-seal sprite-seal--${card.slot}" aria-hidden="true"></span><span class="law-card__copy"><span class="law-card__slot">${SLOT_LABELS[card.slot].replace("Закон ","")}</span><strong class="law-card__title">${card.name}</strong></span></button>`;
     }).join("")}</div>
-    ${app.selectedCardId ? detailCard(state) : ""}
+    ${app.selectedCardId && !app.forecast && !app.film?.active ? detailCard(state) : ""}
     <div class="hand-actions"><button data-native-press class="ghost-btn forecast-btn" data-action="forecast-open" ${locked?"disabled":""} aria-label="Условный предпросмотр следующего хода">◈ Предпросмотр</button><button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId||locked?"disabled":""}>${locked?"◆ Указ отправлен":"◆ Утвердить"}</button></div>
   </section>`;
 }
@@ -866,7 +866,7 @@ function gameHTML(state, eyebrow) {
           <div class="game-layout__main">${boardHTML(displayState)}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
           <aside class="game-layout__side">
             ${lawSlotsHTML(displayState)}
-            ${!app.selectedCardId && app.focusCardId ? detailCard(displayState) : ""}
+            ${!app.forecast && !app.film?.active && !app.selectedCardId && app.focusCardId ? detailCard(displayState) : ""}
           </aside>
           <div class="game-layout__hand">${handHTML(state)}</div>
           <div class="game-layout__foot">${logHTML(state)}</div>
@@ -1154,6 +1154,23 @@ function syncExports() {
     return state ? serializeTextState(state) : JSON.stringify({ screen: app.screen });
   };
   window.advanceTime = () => {};
+  window.inspect_crown_board = () => {
+    const board = root.querySelector(".board"), cells = root.querySelectorAll(".board-cell");
+    if (!board) return null;
+    const rect = board.getBoundingClientRect();
+    return {
+      width: rect.width, height: rect.height,
+      cellCount: cells.length,
+      cells: Array.from(cells).map(cell => {
+        const r=cell.getBoundingClientRect();
+        return {x:r.x,y:r.y,width:r.width,height:r.height};
+      }),
+      pieces: Array.from(root.querySelectorAll(".piece")).map(piece => {
+        const r=piece.getBoundingClientRect();
+        return {id:piece.dataset.pieceId,x:r.x+r.width/2,y:r.y+r.height/2,width:r.width,height:r.height};
+      })
+    };
+  };
 }
 
 root.addEventListener("click", (event) => {
