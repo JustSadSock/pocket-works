@@ -67,7 +67,7 @@ test("full server-side two-client match supports repeated turns, reconnect view 
  // Force an actual completed server snapshot to exercise rematch authorization
  // without relying on the generated game duration.
  state.game.winner="p1";state.game.players.p1.activeCrowns=3;
- assert.throws(()=>run(state,B,{type:"match:restart"}),/организатору/);
+ assert.throws(()=>run(state,B,{type:"match:restart"}),/создателю/);
  const restarted=run(state,A,{type:"match:restart"});
  assert.equal(restarted.game.turn,1);
  assert.equal(restarted.game.winner,null);
