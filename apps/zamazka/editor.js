@@ -558,7 +558,13 @@ export class Editor{
   }
   countPoints(){if(this.committedPointCount===undefined)this.recountPoints();return this.committedPointCount+(this.working?.p.length||0)}
   recountPoints(){this.committedPointCount=this.strokes.reduce((n,x)=>n+x.p.length,0)}
-  invalidateInk(){this.paintRevision=(this.paintRevision||0)+1;this.pendingInkStrokes=null;this.displayRevision=-1}
+  invalidateInk(){
+    this.paintRevision=(this.paintRevision||0)+1;
+    this.pendingInkStrokes=null;this.displayRevision=-1;
+    // Raster replay caches compare stroke references. Compaction edits the
+    // point arrays in place; the old pigment image must never be reused.
+    if(this.inkRasterCache)this.inkRasterCache.state=null;
+  }
   beginStroke(p){
     const snapped=pointOnDamageEdge(this.zone,p,Math.min(25,Math.max(2,this.size*.65)));
     if(!snapped){
