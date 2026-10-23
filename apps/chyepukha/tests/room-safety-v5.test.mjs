@@ -31,7 +31,9 @@ test('accepted submission has receipt, duplicate packet is strictly idempotent',
  assert.deepEqual(duplicate.events.map(e=>e.type),['receipt']);
  assert.equal(duplicate.events[0].payload.accepted,true);
  const broken=move(s,players[1],{...r.packet,requestId:'<script>'});
- assert.equal(broken.events[0].type,'notice');
+ assert.equal(broken.events[0].type,'submission_rejected');
+ assert.equal(broken.events[0].payload.requestId,'<script>');
+ assert.match(broken.events[0].payload.reason,/ідентифікатор/i);
  assert.equal(broken.state.revision,originalRevision);
 });
 test('nine completed rounds survive explicit leave, zero live seats and verified rejoin',()=>{
