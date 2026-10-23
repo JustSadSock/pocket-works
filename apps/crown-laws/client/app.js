@@ -30,6 +30,8 @@ const root = document.getElementById("app");
 const app = {
   screen: "menu",
   modal: null,
+  rulesChapter: "goal",
+  victoryRecap: false,
   selectedCardId: null,
   focusCardId: null,
   dragCardId: null,
@@ -72,6 +74,7 @@ const app = {
     status: "idle",
     codeInput: "",
     roomCode: "",
+    copyStatus: "",
     you: null,
     roomState: null,
     ready: { p1: false, p2: false },
@@ -242,6 +245,7 @@ function startLocalGame(mode, aiProfile = "contender") {
   app.local.waitingAi = false;
   app.local.lastLogs = [];
   app.simulationReport = null;
+  app.victoryRecap=false;
   stopFilm({renderNow:false});
   app.effects = [];
   app.replay = null;
@@ -463,6 +467,7 @@ function setupSocket() {
       const prevTurn = previousRoomState?.turn;
       if(app.forecast&&payload.room.state?.turn!==app.forecast.turn){app.forecast=null;app.forecastReview=false;}
       app.online.roomCode = payload.room.code;
+      app.online.copyStatus="";
       app.online.you = payload.room.you;
       app.online.ready = payload.room.ready;
       app.online.roomState = payload.room.state;
@@ -738,61 +743,79 @@ function debugHTML(state) {
 }
 
 function victoryHTML(state) {
- if(!state.winner)return "";
- const winner=state.winner==="p1"?"Северный претендент":"Южный претендент";
- return `<div class="victory" role="dialog" aria-label="Партия завершена"><div class="victory__panel victory__panel--illustrated">
-    <div class="victory__art" aria-hidden="true"></div><div class="victory__ribbon">ПОБЕДА</div><h2>Корона обрела хозяина</h2><strong class="victory__winner">${winner}</strong>
-    ${crownRow(state.players[state.winner],winner,state.winner==="p1"?"north":"south")}
-    <p>Три короны. Трон под контролем.</p>
-    <div class="victory__actions"><button data-native-press class="primary-btn" data-action="rematch">Реванш ↗</button><button data-native-press class="ghost-btn" data-action="back-menu">В зал совета</button></div>
-  </div></div>`;
+ if(!state?.winner)return "";
+ const winnerId=state.winner,otherId=winnerId==="p1"?"p2":"p1";
+ const winner=winnerId==="p1"?"Север":"Юг",other=otherId==="p1"?"Север":"Юг";
+ const side=winnerId==="p1"?"north":"south";
+ const localHotseat=app.screen==="game"&&app.local.mode==="hotseat";
+ const viewer=getViewerPlayer();
+ const isSelf=!localHotseat&&winnerId===viewer;
+ const isDefeat=!localHotseat&&winnerId!==viewer;
+ const rounds=Math.max(0,state.turn-1),p=state.players[winnerId],op=state.players[otherId];
+ const entries=(state.battleLog||[]).filter(e=>e&&e.kind!=="crown-check"&&e.kind!=="hold"&&e.kind!=="setup").slice(0,12);
+ return `<div class="victory victory--ceremony" role="dialog" aria-modal="true" aria-label="${isDefeat?"Поражение":"Результат партии"}">
+  <section class="victory__panel victory__panel--ceremony">
+   <div class="ceremony__halo" aria-hidden="true"></div>
+   <div class="ceremony__ornament" aria-hidden="true"></div>
+   <div class="ceremony__figures" aria-hidden="true">
+    <span class="ceremony__claimant sprite-figure sprite-figure--${side}"></span>
+    <div class="ceremony__royal-crown"></div>
+   </div>
+   <div class="ceremony__heading">
+    <span class="ceremony__overline">${localHotseat?"ВЕНЕЦ ПРЕСТОЛА":isDefeat?"ТР О Н ЗАНЯТ".replaceAll(" ",""): "КОРОНАЦИЯ"}</span>
+    <h2>${localHotseat?"Правитель определён":isDefeat?"Трон достался сопернику":"Корона ваша"}</h2>
+    <p>${winner} · ${isDefeat?"победитель партии":localHotseat?"победитель дуэли":"новый правитель"}</p>
+   </div>
+   <div class="ceremony__score" aria-label="Итог корон">
+    <div class="ceremony__score-side"><span>ПОБЕДИТЕЛЬ</span><strong>${winner}</strong><div class="ceremony__crowns">${Array.from({length:3},(_,i)=>`<span class="${i<p.activeCrowns?"is-lit":""}" aria-hidden="true">♛</span>`).join("")}</div></div>
+    <div class="ceremony__score-mark">:</div>
+    <div class="ceremony__score-side"><span>СОПЕРНИК</span><strong>${other}</strong><div class="ceremony__crowns">${Array.from({length:3},(_,i)=>`<span class="${i<op.activeCrowns?"is-lit":""}" aria-hidden="true">♛</span>`).join("")}</div></div>
+   </div>
+   <div class="ceremony__stats"><span><strong>${rounds}</strong> ${rounds===1?"ход":"ходов"}</span><span><strong>${p.activeCrowns}</strong> активных короны</span>${op.sealedCrowns||p.sealedCrowns?`<span><strong>${p.sealedCrowns+op.sealedCrowns}</strong> запечатано</span>`:""}</div>
+   ${app.victoryRecap?`<section class="ceremony__chronicle" aria-label="Хроника последних событий"><h3>Последние события</h3><ol>${entries.map(e=>`<li>${escapeText(e.text)}</li>`).join("")||"<li>Событий пока нет.</li>"}</ol></section>`:""}
+   <div class="victory__actions ceremony__actions">
+     <button data-native-press class="primary-btn" data-action="rematch">↻ Реванш</button>
+     <button data-native-press class="ghost-btn" data-action="victory-chronicle" aria-pressed="${app.victoryRecap}">${app.victoryRecap?"Закрыть хронику":"Хроника хода"}</button>
+     <button data-native-press class="text-btn" data-action="back-menu">В зал совета</button>
+   </div>
+  </section>
+ </div>`;
 }
 
 function roomHTML() {
-  const roomState = app.online.roomState;
-  if (!roomState) {
-    if (app.online.roomCode) {
-      return `
-        <section class="menu-shell">
-          <div class="hero-card">
-            <span class="eyebrow">Онлайн 1v1</span>
-            <h1>Ждём соперника</h1>
-            <p>Север уже в зале. Поделитесь кодом с соперником и дождитесь, пока он войдет в комнату с другого устройства.</p>
-            <div class="room-wait-card">
-              <div class="room-wait-card__code">${app.online.roomCode}</div>
-              <div class="room-wait-card__meta">
-                <span>Статус соединения: ${app.online.status}</span>
-                <span>Ваше место: ${app.online.you === "p1" ? "Север" : "Юг"}</span>
-              </div>
-            </div>
-            <div class="room-actions">
-              <button data-native-press class="ghost-btn" data-action="copy-room-code">Скопировать код</button>
-              <button data-native-press class="text-btn" data-action="back-menu">Назад в меню</button>
-            </div>
-          </div>
-        </section>
-      `;
-    }
-    return `
-      <section class="menu-shell">
-        <div class="hero-card">
-          <span class="eyebrow">Онлайн 1v1</span>
-          <h1>Зал совета</h1>
-          <p>Создайте зал совета и пригласите второго игрока по коду. Указы выбираются скрытно.</p>
-          <div class="room-actions">
-            <button data-native-press class="primary-btn" data-action="create-room">Создать комнату</button>
-            <div class="join-box">
-              <input data-input="room-code" value="${app.online.codeInput}" maxlength="8" placeholder="Код комнаты" />
-              <button data-native-press class="ghost-btn" data-action="join-room">Подключиться</button>
-            </div>
-          </div>
-          <button data-native-press class="text-btn" data-action="back-menu">Назад в меню</button>
-        </div>
-      </section>
-    `;
-  }
-
-  return gameHTML(roomState, `Комната ${app.online.roomCode}`);
+ const state=app.online.roomState;
+ if(state)return gameHTML(state,`Комната ${app.online.roomCode}`);
+ const hasCode=Boolean(app.online.roomCode);
+ const side=app.online.you==="p2"?"south":"north";
+ const other=side==="north"?"south":"north";
+ return `<section class="menu-shell council-lobby">
+  <div class="council-lobby__grain" aria-hidden="true"></div>
+  <article class="council-lobby__layout">
+    <div class="council-lobby__visual" aria-hidden="true">
+      <div class="council-lobby__architecture"></div>
+      <div class="council-lobby__seats"></div>
+      <div class="council-lobby__occupant sprite-figure sprite-figure--${side} ${hasCode?"is-visible":""}"></div>
+      <div class="council-lobby__vacant" aria-hidden="true"></div>
+    </div>
+    <div class="council-lobby__controls">
+     <div class="council-lobby__eyebrow">ТАЙНЫЙ СОВЕТ · ДВА ИГРОКА</div>
+     <h1>${hasCode?"Второе кресло пустует":"Зал ожидает указов"}</h1>
+     <p>${hasCode?"Ваше место занято. Пригласите второго претендента — партия начнётся после подключения.":"Создайте комнату или войдите по коду. Оба претендента выбирают указы одновременно и скрытно."}</p>
+     ${hasCode?`<div class="council-lobby__invite">
+         <span class="council-lobby__stamp">ПРИГЛАШЕНИЕ</span>
+         <span class="council-lobby__code" role="text" aria-label="Код комнаты ${escapeText(app.online.roomCode)}">${escapeText(app.online.roomCode)}</span>
+         <button data-native-press class="primary-btn" data-action="copy-room-code">Скопировать код</button>
+         <p class="council-lobby__feedback" role="status">${app.online.copyStatus==="copied"?"✓ Код скопирован":app.online.copyStatus==="failed"?"Не удалось скопировать. Выделите код вручную.":"Передайте код второму игроку."}</p>
+       </div>`:`<div class="council-lobby__entry">
+         <button data-native-press class="primary-btn" data-action="create-room">Создать комнату</button>
+         <div class="council-lobby__separator">или</div>
+         <div class="join-box"><label for="crown-room-code">Код приглашения</label><input id="crown-room-code" data-input="room-code" value="${escapeText(app.online.codeInput)}" maxlength="8" placeholder="Введите код" autocomplete="off" autocapitalize="characters" spellcheck="false" /><button data-native-press class="ghost-btn" data-action="join-room">Войти</button></div>
+       </div>`}
+     <div class="council-lobby__footer"><span class="council-lobby__status"><i aria-hidden="true"></i>${app.online.status==="connected"?"Связь установлена":app.online.status==="connecting"?"Подключение к PocketNet":app.online.status==="error"?"Проверьте соединение":"Подключение ожидается"}</span><button data-native-press class="text-btn" data-action="back-menu">← Главное меню</button></div>
+     <p id="network-error" class="council-lobby__error" hidden role="alert"></p>
+    </div>
+  </article>
+ </section>`;
 }
 
 function filmHTML() {
@@ -842,12 +865,14 @@ function gameHTML(state, eyebrow) {
         </main>
       </div>
       ${app.local.mode === "hotseat" && app.local.passScreen ? `
-        <div class="pass-overlay">
-          <div class="pass-card">
-            <span class="eyebrow">Тайное голосование</span>
-            <h2>Передайте устройство</h2>
-            <p>Первый указ запечатан. Пусть второй игрок выберет свой закон.</p>
-            <button data-native-press class="primary-btn" data-action="continue-hotseat">Продолжить</button>
+        <div class="pass-overlay pass-overlay--ceremony" role="dialog" aria-modal="true" aria-label="Передача устройства">
+          <div class="pass-card pass-card--ceremony">
+            <div class="pass-card__decoration" aria-hidden="true"><span class="pass-card__letter">I</span><span class="pass-card__wax">✦</span><span class="pass-card__letter">II</span></div>
+            <span class="pass-card__eyebrow">УКАЗ СЕВЕРА ЗАПЕЧАТАН</span>
+            <h2>Очередь Южного<br>претендента</h2>
+            <p>Передайте устройство второму игроку. Его рука откроется только после подтверждения.</p>
+            <div class="pass-card__divider"><span></span><span>◆</span><span></span></div>
+            <button data-native-press class="primary-btn" data-action="continue-hotseat">Я — Юг. Открыть руку →</button>
           </div>
         </div>
       ` : ""}
@@ -868,15 +893,34 @@ function menuHTML() {
  </section>`;
 }
 
-function rulesHTML() {
- const ordered=["priest","champion","guard","beast","thief"];
- const labels={priest:"Жрец",champion:"Чемпионы",guard:"Страж",beast:"Зверь",thief:"Вор"};
- return `<div class="modal-shell" data-action="close-modal"><div class="modal-card modal-card--rules" data-stop-click="1">
-    <div class="rules__heading"><span>КОДЕКС КОРОНЫ</span><button data-action="close-modal" class="text-btn" aria-label="Закрыть">×</button></div><h2>Пять законов. Один трон.</h2>
-    <div class="rules__objective"><span class="rules__crown" aria-hidden="true">♛</span><p>Займи трон чемпионом и собери <strong>3 активные короны</strong>. Вор может их похищать.</p></div>
-    <div class="rules__steps"><div><b>1</b><strong>Секретно</strong><small>Оба выбирают по одному указу.</small></div><div><b>2</b><strong>Конфликт</strong><small>Одна категория — все её новые и старый указы сбрасываются.</small></div><div><b>3</b><strong>Действие</strong><small>Мир выполняет действующие законы по порядку.</small></div></div>
-    <div class="rules__phases">${ordered.map((id,i)=>`<span><i class="sprite-seal sprite-seal--${id}"></i><small>${i+1}. ${labels[id]}</small></span>`).join("")}<span class="rules__throne"><b>♛</b><small>Трон</small></span></div>
-    <p class="rules__footer">Законы работают для обеих сторон. Щит, оглушение и печать меняют исход; нажми на закон или фигуру, чтобы узнать подробности.</p></div></div>`;
+const RULE_CHAPTERS=[
+ {id:"goal",name:"Трон",title:"Три короны — одна победа",body:"Чемпион получает активную корону, когда стоит на троне и не оглушён. Нейтральная фигура на троне мешает коронации. Побеждает первый претендент с тремя активными коронами.",seal:"champion",tip:"Трон находится в центре поля — C4.",scene:"throne"},
+ {id:"secret",name:"Указы",title:"Правила для всего двора",body:"Каждый игрок тайно выбирает одну карту. Указ меняет действующий закон одной категории. Изменённый закон работает для обеих сторон, пока его не заменят.",seal:"priest",tip:"Соперник не видит вашу карту до раскрытия.",scene:"law"},
+ {id:"conflict",name:"Конфликт",title:"Один раздел — две печати",body:"Если оба игрока выбрали одну категорию, оба новых указа и предыдущий активный закон этой категории сбрасываются. Снова действует её базовый каменный закон.",seal:"guard",tip:"Это способ отменить сильный закон противника.",scene:"conflict"},
+ {id:"actors",name:"Фигуры",title:"Двор исполняет указ",body:"Фигуры ходят сами. Порядок: Жрец, оба Чемпиона, Стражник, Зверь, Вор и затем проверка трона. Вы управляете не фигурой, а законом, определяющим её действия.",seal:"beast",tip:"Нажмите на любого персонажа в игре, чтобы посмотреть его действующий закон.",scene:"actors"},
+ {id:"crown",name:"Печати",title:"Корону можно отнять",body:"Вор способен унести печать активной короны. Щит защищает, оглушение мешает действовать, а похищенные и потерянные короны учитываются отдельно от активных.",seal:"thief",tip:"Победа зависит только от числа активных корон.",scene:"seals"}
+];
+function escapeText(value){
+ return String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
+}
+function rulesHTML(){
+ const chapter=RULE_CHAPTERS.find(c=>c.id===app.rulesChapter)||RULE_CHAPTERS[0],idx=RULE_CHAPTERS.indexOf(chapter);
+ const coords=Array.from({length:15},(_,i)=>`<span class="${i===7?"is-throne":i===2?"is-north":i===12?"is-south":""}"></span>`).join("");
+ return `<div class="modal-shell" data-action="close-modal"><section class="modal-card codex-dialog" data-stop-click="1" role="dialog" aria-modal="true" aria-label="Правила игры">
+ <header class="codex-dialog__top"><span>КОРОЛЕВСКИЙ КОДЕКС</span><button data-native-press data-action="close-modal" aria-label="Закрыть правила">×</button></header>
+ <div class="codex-dialog__header"><h2>Пять законов.<br>Один трон.</h2><span class="codex-dialog__emblem sprite-seal sprite-seal--${chapter.seal}" aria-hidden="true"></span></div>
+ <nav class="codex-dialog__chapters" aria-label="Разделы правил">${RULE_CHAPTERS.map((c,i)=>`<button type="button" data-action="rules-chapter" data-chapter="${c.id}" class="${c.id===chapter.id?"is-active":""}" aria-current="${c.id===chapter.id?"page":"false"}"><span>${i+1}</span>${c.name}</button>`).join("")}</nav>
+ <div class="codex-dialog__chapter" aria-live="polite">
+  <div class="codex-dialog__illustration codex-dialog__illustration--${chapter.scene}" aria-hidden="true">
+   <div class="codex-dialog__mini-board">${coords}</div>
+   <div class="codex-dialog__mini-sigil sprite-seal sprite-seal--${chapter.seal}"></div>
+   <span class="codex-dialog__mini-crown">♛</span>
+   ${chapter.scene==="conflict"?'<span class="codex-dialog__crack">╳</span>':""}
+  </div>
+  <div class="codex-dialog__reading"><span>ГЛАВА ${idx+1} / 5</span><h3>${chapter.title}</h3><p>${chapter.body}</p><div class="codex-dialog__note"><span aria-hidden="true">✦</span>${chapter.tip}</div></div>
+ </div>
+ <footer class="codex-dialog__bottom"><button type="button" data-action="rules-chapter" data-chapter="${RULE_CHAPTERS[(idx+4)%5].id}" aria-label="Предыдущая глава">← Назад</button><span>${idx+1} / 5</span><button type="button" data-action="rules-chapter" data-chapter="${RULE_CHAPTERS[(idx+1)%5].id}" aria-label="Следующая глава">Далее →</button></footer>
+ </section></div>`;
 }
 
 function modalHTML() {
@@ -1158,6 +1202,8 @@ root.addEventListener("click", (event) => {
       const a=pressed.dataset.action;
       if(a==="toggle-rules")app.debug.scene="rules";
       else if(a==="toggle-settings")app.debug.scene="settings";
+      else if(a==="rules-chapter"&&RULE_CHAPTERS.some(c=>c.id===pressed.dataset.chapter))app.rulesChapter=pressed.dataset.chapter;
+      else if(a==="victory-chronicle")app.victoryRecap=!app.victoryRecap;
       else if(a==="start-ai"||a==="start-hotseat")app.debug.scene=a==="start-hotseat"?"hotseat":"game";
       else if(a==="open-online")app.debug.scene="join";
       else if(a==="create-room")app.debug.scene="waiting";
@@ -1210,14 +1256,17 @@ root.addEventListener("click", (event) => {
         joinRoom();
         break;
       case "copy-room-code":
-        navigator.clipboard?.writeText(app.online.roomCode);
-        playTone("tap");
+        if(app.online.roomCode&&navigator.clipboard?.writeText){
+          Promise.resolve(navigator.clipboard.writeText(app.online.roomCode)).then(()=>{
+            app.online.copyStatus="copied";playTone("ready");render();
+          }).catch(()=>{app.online.copyStatus="failed";render();});
+        }else{app.online.copyStatus="failed";render();}
         break;
       case "confirm-choice":
         if(!app.replayActive)confirmSelection();
         break;
       case "toggle-rules":
-        openModal("rules");
+        app.rulesChapter="goal";openModal("rules");
         break;
       case "toggle-settings":
         openModal("settings");
@@ -1248,11 +1297,16 @@ root.addEventListener("click", (event) => {
             frames:app.replay.frames||null,logs:app.replay.logs||[],conflicts:app.replay.conflicts||[]});
         }
         break;
+      case "rules-chapter":
+        if(RULE_CHAPTERS.some(c=>c.id===actionNode.dataset.chapter)){app.rulesChapter=actionNode.dataset.chapter;render();}
+        break;
+      case "victory-chronicle":
+        app.victoryRecap=!app.victoryRecap;render();break;
       case "close-modal":
         closeModal();
         break;
       case "back-menu":
-        stopFilm({renderNow:false});
+        stopFilm({renderNow:false});app.victoryRecap=false;app.online.copyStatus="";
         window.clearTimeout(app.replayTimer);app.replayActive=false;app.forecast=null;
         app.screen = "menu";
         app.local.state = null;
@@ -1263,7 +1317,7 @@ root.addEventListener("click", (event) => {
         render();
         break;
       case "rematch":
-        stopFilm({renderNow:false});
+        stopFilm({renderNow:false});app.victoryRecap=false;
         if (app.screen === "online" && app.online.socket) {
           app.online.socket.send(JSON.stringify({ type: "match:restart" }));
         } else {
