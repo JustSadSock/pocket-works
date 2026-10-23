@@ -47,6 +47,14 @@ try{
    if(expected?.play&&(!document.querySelector('.play-field')||!document.querySelector('.workspace-tabs')))
      issues.push('game scene missing');
    if(document.querySelector('#app')?.textContent?.includes('Подключаемся…'))issues.push('loading placeholder');
+   if(width<=350&&document.documentElement.clientHeight<=600&&expected?.play){
+    const actionPage=document.querySelector('[data-sheet-page="actions"]');
+    const workButton=actionPage?.querySelector('form[data-form="work"] button[type="submit"]');
+    const scrollPanel=document.querySelector('.sheet-content');
+    if(workButton&&!actionPage.hidden&&scrollPanel&&
+       workButton.getBoundingClientRect().bottom>scrollPanel.getBoundingClientRect().bottom+3)
+      issues.push('primary work button clipped below first screen');
+   }
    if(overflow>2)issues.push('horizontal overflow '+overflow);
    if(collide(field,tabs))issues.push('table overlaps tabs');
    if(collide(ticket,wallet))issues.push('urgent ticket overlaps wallet');
