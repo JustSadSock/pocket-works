@@ -1306,3 +1306,15 @@ test('Quick-price bid is only a bid; seller acceptance changes ownership exactly
  assert.equal(replay.events[0].type,'notice');
  assert.equal(buyer.items.filter(x=>x.id===item.id).length,1);
 });
+
+test('Reconnect with the same member preserves the game and every asset',()=>{
+ const {state}=makeRoom(2);const p=state.contestants[1];
+ const items=p.items.map(i=>i.id),wallet={...p.resources},turn=state.turnIndex;
+ // Socket disconnect does not call onLeave in the PocketNet transport.
+ game.onJoin({state,players:state.players.map(x=>({...x}))});
+ assert.equal(p.bankrupt,false);
+ assert.deepEqual(p.items.map(i=>i.id),items);
+ assert.deepEqual(p.resources,wallet);
+ assert.equal(state.turnIndex,turn);
+ assert.equal(game.viewForPlayer({state,player:{id:p.id}}).you.id,p.id);
+});
