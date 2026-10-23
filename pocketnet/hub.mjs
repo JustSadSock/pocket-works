@@ -291,16 +291,17 @@ export class PocketNetHub {
         // PocketNet can receive dozens of incremental strokes per second.
         // Touch only changed vectors; never rewrite eight complete paintings
         // just because a deadline pulse or someone else's brush arrived.
-        const existing=new Map(this.sql('SELECT pkey,payload FROM zamazka_art_payloads WHERE room_id=?',room.id)
-          .toArray().map(row=>[row.pkey,row.payload]));
+        // Query only small keys, not every large artwork payload. SQLite compares
+        // the new vector with the stored one in-place in the same transaction.
+        const stale=new Set(this.sql('SELECT pkey FROM zamazka_art_payloads WHERE room_id=?',room.id)
+          .toArray().map(row=>row.pkey));
         for(const [pkey,payload] of pieces){
           if(bytes(payload)>MAX_ZAMAZKA_STATE_EVENT)throw Error('artwork_too_large');
-          if(existing.get(pkey)!==payload)
-            this.sql('INSERT INTO zamazka_art_payloads(room_id,pkey,payload) VALUES(?,?,?) ON CONFLICT(room_id,pkey) DO UPDATE SET payload=excluded.payload',
-              room.id,pkey,payload);
-          existing.delete(pkey);
+          this.sql('INSERT INTO zamazka_art_payloads(room_id,pkey,payload) VALUES(?,?,?) ON CONFLICT(room_id,pkey) DO UPDATE SET payload=excluded.payload WHERE payload <> excluded.payload',
+            room.id,pkey,payload);
+          stale.delete(pkey);
         }
-        for(const pkey of existing.keys())
+        for(const pkey of stale)
           this.sql('DELETE FROM zamazka_art_payloads WHERE room_id=? AND pkey=?',room.id,pkey);
       }
       this.sql(`INSERT INTO rooms (id, game_id, version, state, players, created_at, updated_at)
@@ -641,7 +642,11 @@ export class PocketNetHub {
           for (const event of result.events ?? []) if (bytes({ roomId: room.id, event }) > (room.gameId==='zamazka'&&event?.type==='state'&&event?.to?MAX_ZAMAZKA_STATE_EVENT:MAX_EVENT_BYTES)) throw new Error('event_too_large');
           const prior=room.state;
           room.state = result.state;
-          this.persist(room);
+          // Pure queries do not change room state. Avoid serializing and writing
+          // the entire room for every time sync or reconnection snapshot.
+          const readOnlyZamazka=room.gameId==='zamazka'&&
+            (msg.payload?.type==='sync'||msg.payload?.type==='time_ping');
+          if(!readOnlyZamazka)this.persist(room);
           this.recordZamazkaRewards(room,prior,room.state,result.events ?? [],player.id);
           this.recordBlockiesRewards(room,prior,room.state);
           this.emit(room, result.events ?? []);
