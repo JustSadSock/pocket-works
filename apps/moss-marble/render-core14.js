@@ -57,9 +57,10 @@ const C = {
   sugarShade: color('#aaa58f'),
   shadow: color('#06120b', .27),
   shadowStrong: color('#06120b', .48),
-  ballGlass: color('#d9f2e9', .55),
-  ballVein: color('#d7c36d', .58),
-  ballVeinDark: color('#456d5b', .45),
+  ballMarble: color('#e6e0d0'),
+  ballMarbleLight: color('#f6f0dd'),
+  ballVein: color('#93a69a'),
+  ballVeinDark: color('#bcc5b8'),
   flag: color('#d2a954'),
   flagDark: color('#765929'),
   debug: '#f2d16c'
@@ -531,7 +532,10 @@ function addBoardScene(level) {
     }
   }
 
-  addHole(opaque, level);
+  // Course18/19 draws the cup at the actual field height in terrain18.js.
+  // The legacy zero-height cup and its static flag would duplicate and
+  // visually cover the real opening, so only draw them on older courses.
+  if (!isGardenTray) addHole(opaque, level);
   for (const obstacle of level.obstacles || []) addObstacle(opaque, shadows, obstacle);
   for (const wall of level.walls || []) {
     const z0 = wall.material === 'glass' ? 9 : .7;
@@ -685,6 +689,13 @@ void main() {
     float brushed = .84 + sin((vWorld.x + vWorld.y) * .82) * .06 + valueNoise(vWorld.xy * .13) * .10;
     lit *= brushed;
     lit += spec * vec3(1.0, .86, .48) * 1.72 + rim * base * .20;
+  } else if (vMaterial > 9.5 && vMaterial < 10.5) {
+    // Polished marble is opaque with a small, clean warm reflection.
+    // Unlike the old nested translucent shells it has a solid silhouette.
+    float pearl = pow(max(dot(reflect(-lightDir, n), viewDir), 0.0), 27.0);
+    lit = base * (.46 + diffuse * .54 + sky * .08);
+    lit += pearl * vec3(.96, .91, .75) * .52;
+    lit += rim * vec3(.14, .16, .12);
   } else {
     if (vMaterial < .5) {
       float mineral = valueNoise(vWorld.xy * .034 + vWorld.z * .022);
@@ -961,31 +972,47 @@ class WebGLDiorama {
       addGroundEllipse(shadows, ball.x, ball.y + 1, surface + .22, BALL_RADIUS * .34 * shadowScale, BALL_RADIUS * .20 * shadowScale, color('#020805', .55));
     }
 
-    addSphere(transparent, {
-      x: ball.x, y: ball.y, z: centerZ, radius: BALL_RADIUS * .79,
-      tint: C.ballVein, material: 2, segments: 16, rings: 9, rotation: this.spin,
-      colorFn: (local) => {
-        const band = Math.abs(Math.sin(local[0] * 7.2 + local[1] * 3.8 + local[2] * 5.1));
-        return band > .66 ? C.ballVein : C.ballVeinDark;
-      }
-    });
-    addSphere(transparent, {
+    // A solid, polished garden marble (not two nested glass spheres).
+    // Thin mineral veins rotate with the rolling ball and stay legible at
+    // normal phone zoom. The collision sphere remains BALL_RADIUS.
+    addSphere(opaque, {
       x: ball.x, y: ball.y, z: centerZ, radius: BALL_RADIUS,
-      tint: C.ballGlass, material: 2, segments: 20, rings: 12, rotation: this.spin
+      tint: C.ballMarble, material: 10, segments: 26, rings: 17, rotation: this.spin,
+      colorFn: (local) => {
+        const field = local[0] * 10.8 + local[1] * 5.7 + local[2] * 8.2 +
+          Math.sin(local[1] * 6.5 + local[2] * 3.2) * 1.12;
+        const vein = Math.abs(Math.sin(field));
+        const shoulder = .5 + local[2] * .08;
+        if (vein < .095) return C.ballVein;
+        if (vein < .18) return C.ballVeinDark;
+        return shoulder > .52 ? C.ballMarbleLight : C.ballMarble;
+      }
     });
 
     for (const rotor of level.rotors || []) {
       const angle = rotor.angle + time * rotor.speed;
       const hx = Math.cos(angle) * rotor.length * .5;
       const hy = Math.sin(angle) * rotor.length * .5;
-      addGroundEllipse(shadows, rotor.x + 4, rotor.y + 8, .15, rotor.length * .48, rotor.thickness * .82, C.shadow);
-      addSymmetricBox(
-        opaque, rotor.x - hx, rotor.y - hy, rotor.x + hx, rotor.y + hy,
-        rotor.thickness, 13, 32,
-        rotor.material === 'brass' ? C.brass : C.wood,
-        rotor.material === 'brass' ? 4 : 0
-      );
-      addCylinder(opaque, { x: rotor.x, y: rotor.y, z0: .5, z1: 40, r0: rotor.thickness * .62, r1: rotor.thickness * .55, tint: rotor.material === 'brass' ? C.brassLight : C.woodLight, material: rotor.material === 'brass' ? 4 : 0, segments: 16 });
+      const ground = level.course18?.field?.heightAt?.(rotor.x, rotor.y) || 0;
+      const metal = rotor.material === 'brass';
+      const ax = rotor.x - hx, ay = rotor.y - hy, bx = rotor.x + hx, by = rotor.y + hy;
+      addGroundEllipse(shadows, rotor.x + 4, rotor.y + 8, ground + .1, rotor.length * .48, rotor.thickness * .82, C.shadow);
+      addSymmetricBox(opaque, ax, ay, bx, by,
+        rotor.thickness, ground + 9, ground + 31, metal ? C.brass : C.wood, metal ? 4 : 0);
+      // A fine inlaid grain, never a second floating plank.
+      addSymmetricBox(opaque,
+        rotor.x - hx * .91, rotor.y - hy * .91,
+        rotor.x + hx * .91, rotor.y + hy * .91,
+        rotor.thickness * .24, ground + 31, ground + 32,
+        metal ? C.brassLight : C.woodLight, metal ? 4 : 0);
+      addCylinder(opaque, {
+        x: rotor.x, y: rotor.y, z0: ground + .5, z1: ground + 35,
+        r0: rotor.thickness * .58, r1: rotor.thickness * .55,
+        tint: metal ? C.brass : C.stoneDark,
+        material: metal ? 4 : 0, segments: 16
+      });
+      addRing(opaque, rotor.x, rotor.y, ground + 35.4,
+        rotor.thickness * .24, rotor.thickness * .54, C.brassLight, 4, 20);
     }
 
     this.dynamicOpaque.update(opaque.toArray());
@@ -1298,51 +1325,123 @@ class CanvasFallback {
     ctx.restore();
   }
 
-  drawBarrier(wall) {
+  drawBarrier(wall, field) {
     const ctx = this.ctx;
-    const a = this.worldToScreen(wall.ax, wall.ay, 1);
-    const b = this.worldToScreen(wall.bx, wall.by, 1);
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineWidth = Math.max(3, Number(wall.thickness || 18) * this.scale);
-    ctx.strokeStyle = wall.material === 'brass' ? '#a78448' : wall.material === 'stone' ? '#6f7165' : wall.material === 'glass' ? 'rgba(186,216,204,.72)' : '#604329';
-    ctx.beginPath(); ctx.moveTo(a.x + 2, a.y + 4); ctx.lineTo(b.x + 2, b.y + 4); ctx.stroke();
-    ctx.lineWidth *= .52;
-    ctx.strokeStyle = wall.material === 'stone' ? '#aaa993' : wall.material === 'glass' ? 'rgba(222,241,231,.82)' : '#a47b46';
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    const height = Number(wall.visualHeight || 28);
+    const topA = this.worldToScreen(wall.ax, wall.ay, (field?.heightAt?.(wall.ax, wall.ay) || 0) + height);
+    const topB = this.worldToScreen(wall.bx, wall.by, (field?.heightAt?.(wall.bx, wall.by) || 0) + height);
+    const width = Math.max(3, Number(wall.thickness || 18) * this.scale);
+    const stone = wall.material === 'stone', metal = wall.material === 'brass';
+    ctx.save();ctx.lineCap = 'butt';ctx.lineJoin = 'round';
+    ctx.strokeStyle = stone ? '#444e46' : metal ? '#775c32' : '#483425';
+    ctx.lineWidth = width;
+    ctx.beginPath();ctx.moveTo(topA.x,topA.y);ctx.lineTo(topB.x,topB.y);ctx.stroke();
+    ctx.strokeStyle = stone ? '#a0a793' : metal ? '#d2b06b' : '#aa8152';
+    ctx.lineWidth = width * .70;
+    ctx.beginPath();ctx.moveTo(topA.x,topA.y - 1);ctx.lineTo(topB.x,topB.y - 1);ctx.stroke();
+    ctx.strokeStyle = stone ? 'rgba(53,59,49,.30)' : 'rgba(62,42,23,.40)';
+    ctx.lineWidth = Math.max(.8, width * .12);
+    ctx.beginPath();ctx.moveTo(topA.x + 1,topA.y - 1);ctx.lineTo(topB.x + 1,topB.y - 1);ctx.stroke();
     ctx.restore();
   }
-  drawPortal(endpoint, isEntry) {
+  drawPortal(endpoint, isEntry, field) {
     const ctx = this.ctx;
-    const center = this.worldToScreen(endpoint.x, endpoint.y, 1);
-    const radius = endpoint.r * this.scale;
+    const ground = field?.heightAt?.(endpoint.x, endpoint.y) || 0;
+    const width = endpoint.width || endpoint.r * 2 || 82;
+    const inner = width * .515, outer = width * .69;
+    const nx = -endpoint.axisY, ny = endpoint.axisX;
+    const point = (side, height) => this.worldToScreen(
+      endpoint.x + nx * side, endpoint.y + ny * side, ground + height
+    );
     ctx.save();
-    ctx.strokeStyle = '#aaa993';
-    ctx.lineWidth = Math.max(3, radius * .24);
-    ctx.beginPath(); ctx.ellipse(center.x, center.y, radius, radius * .82, 0, Math.PI, TAU); ctx.stroke();
-    ctx.fillStyle = 'rgba(10,18,14,.78)';
-    ctx.beginPath(); ctx.ellipse(center.x, center.y + radius * .05, radius * .72, radius * .52, 0, 0, TAU); ctx.fill();
-    const marker = this.worldToScreen(endpoint.x + endpoint.axisX * endpoint.r * .75, endpoint.y + endpoint.axisY * endpoint.r * .75, 2);
-    ctx.strokeStyle = isEntry ? '#d5ba6e' : '#9ab9aa';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(marker.x, marker.y); ctx.stroke();
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let i = 0; i <= 22; i++) {
+      const a = Math.PI - i / 22 * Math.PI;
+      const p = point(Math.cos(a) * inner, Math.sin(a) * inner);
+      if (!i) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath(); ctx.fillStyle = '#212b25'; ctx.fill();
+    // Same open width and limestone profile as the WebGL arch.
+    ctx.beginPath();
+    for (let i = 0; i <= 28; i++) {
+      const a = Math.PI - i / 28 * Math.PI;
+      const p = point(Math.cos(a) * (inner + outer) * .5, Math.sin(a) * (inner + outer) * .5);
+      if (!i) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    ctx.strokeStyle = '#979c86';
+    ctx.lineWidth = Math.max(3, (outer - inner) * this.scale);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(51,59,49,.55)';
+    ctx.lineWidth = Math.max(.65, this.scale * 1.7);
+    for (let i = 3; i < 18; i += 3) {
+      const a = Math.PI - i / 18 * Math.PI;
+      const a0 = point(Math.cos(a) * inner, Math.sin(a) * inner);
+      const a1 = point(Math.cos(a) * outer, Math.sin(a) * outer);
+      ctx.beginPath();ctx.moveTo(a0.x,a0.y);ctx.lineTo(a1.x,a1.y);ctx.stroke();
+    }
+    const marker = point(0, inner * .56);
+    ctx.fillStyle = isEntry ? '#dec18a' : '#9ac3af';
+    ctx.beginPath();ctx.arc(marker.x,marker.y,Math.max(1.4,this.scale * 3),0,TAU);ctx.fill();
     ctx.restore();
   }
-  drawProp(obstacle) {
+  drawProp(obstacle, field) {
     const ctx = this.ctx;
     const parts = obstacle.parts?.length ? obstacle.parts : [{ x: 0, y: 0, r: obstacle.r }];
     for (const part of parts) {
       const x = obstacle.x + Number(part.x || 0);
       const y = obstacle.y + Number(part.y || 0);
       const radius = Number(part.r || obstacle.r);
-      const p = this.worldToScreen(x, y, radius * .5);
+      const ground = field?.heightAt?.(x, y) || 0;
+      const isWood = obstacle.kind === 'stump' || obstacle.material === 'wood';
+      const height = isWood ? Number(obstacle.height || radius * 1.15) : radius * .82;
+      const p = this.worldToScreen(x, y, ground + height * .53);
       const r = radius * this.scale;
-      ctx.fillStyle = 'rgba(3,10,6,.34)'; ctx.beginPath(); ctx.ellipse(p.x + 3, p.y + 8, r, r * .5, 0, 0, TAU); ctx.fill();
-      const rock = ctx.createRadialGradient(p.x - r * .3, p.y - r * .4, 0, p.x, p.y, r);
-      rock.addColorStop(0, obstacle.material === 'wood' ? '#ad8350' : '#b8b59d');
-      rock.addColorStop(1, obstacle.material === 'wood' ? '#4e3925' : '#596158');
-      ctx.fillStyle = rock;
-      ctx.beginPath(); ctx.ellipse(p.x, p.y - r * .35, r, r * .8, 0, 0, TAU); ctx.fill();
+      const elevatedTop = this.worldToScreen(x, y, ground + height);
+      const bottom = this.worldToScreen(x, y, ground);
+      ctx.save();
+      ctx.fillStyle = 'rgba(8,18,12,.34)';
+      ctx.beginPath(); ctx.ellipse(bottom.x + 3, bottom.y + r * .18, r * 1.07, r * .43, 0, 0, TAU); ctx.fill();
+      if (isWood) {
+        ctx.fillStyle = '#604a34';
+        ctx.beginPath();
+        ctx.moveTo(bottom.x - r * .9, bottom.y);
+        ctx.lineTo(elevatedTop.x - r * .80, elevatedTop.y);
+        ctx.lineTo(elevatedTop.x + r * .80, elevatedTop.y);
+        ctx.lineTo(bottom.x + r * .9, bottom.y);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(41,29,21,.42)'; ctx.lineWidth = Math.max(.7, r * .075);
+        for (let line = -2; line <= 2; line++) {
+          const lineX = bottom.x + line * r * .30;
+          ctx.beginPath();
+          ctx.moveTo(lineX, bottom.y - 2);
+          ctx.lineTo(elevatedTop.x + line * r * .25, elevatedTop.y + r * .2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#b39369'; ctx.beginPath();
+        ctx.ellipse(elevatedTop.x, elevatedTop.y, r * .81, r * .53, 0, 0, TAU); ctx.fill();
+        ctx.strokeStyle = '#806343'; ctx.lineWidth = Math.max(1, r * .045);
+        for (const ringSize of [.38, .61]) {
+          ctx.beginPath(); ctx.ellipse(elevatedTop.x, elevatedTop.y, r * ringSize, r * ringSize * .53, 0, 0, TAU); ctx.stroke();
+        }
+      } else {
+        const stone = ctx.createLinearGradient(p.x - r, p.y - r, p.x + r, p.y + r);
+        stone.addColorStop(0, '#b8bba6');
+        stone.addColorStop(.45, '#909783');
+        stone.addColorStop(1, '#4d6053');
+        ctx.fillStyle = stone;
+        ctx.beginPath();
+        const corners = 12;
+        for (let point = 0; point < corners; point++) {
+          const a = point / corners * TAU;
+          const spread = (.90 + hashNoise(point, x, y) * .08) * r;
+          const cx = p.x + Math.cos(a) * spread, cy = p.y + Math.sin(a) * spread * .78;
+          if (point) ctx.lineTo(cx, cy); else ctx.moveTo(cx, cy);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(214,225,201,.17)'; ctx.lineWidth = Math.max(.7, r * .04); ctx.stroke();
+      }
+      ctx.restore();
     }
   }
   draw(level, ball, aim, time = 0) {
@@ -1391,22 +1490,24 @@ class CanvasFallback {
     const field = level.course18?.field;
     for (const mask of field?.masks || []) this.drawSurface(mask);
     for (const landform of field?.landforms || []) this.drawLandform(landform);
-    for (const wall of level.course18?.barriers || level.walls || []) this.drawBarrier(wall);
+    for (const wall of level.course18?.barriers || level.walls || []) this.drawBarrier(wall, field);
     for (const tunnel of level.course18?.tunnelVisuals || []) {
-      if (tunnel.entry) this.drawPortal(tunnel.entry, true);
-      if (tunnel.exit) this.drawPortal(tunnel.exit, false);
+      if (tunnel.entry) this.drawPortal(tunnel.entry, true, field);
+      if (tunnel.exit) this.drawPortal(tunnel.exit, false, field);
     }
-    for (const obstacle of level.course18?.props || level.obstacles || []) this.drawProp(obstacle);
+    for (const obstacle of level.course18?.props || level.obstacles || []) this.drawProp(obstacle, field);
     for (const rotor of level.rotors || []) {
       const angle = rotor.angle + time * rotor.speed;
       const halfX = Math.cos(angle) * rotor.length * .5;
       const halfY = Math.sin(angle) * rotor.length * .5;
-      this.drawBarrier({ ax: rotor.x - halfX, ay: rotor.y - halfY, bx: rotor.x + halfX, by: rotor.y + halfY, thickness: rotor.thickness, material: rotor.material });
+      this.drawBarrier({ ax: rotor.x - halfX, ay: rotor.y - halfY, bx: rotor.x + halfX, by: rotor.y + halfY, thickness: rotor.thickness, visualHeight: 31, material: rotor.material }, field);
     }
     const holeGround = level.course18?.field?.heightAt?.(level.hole.x, level.hole.y) || 0;
     const hole = this.worldToScreen(level.hole.x, level.hole.y, holeGround + .5);
     const hr = level.hole.r * this.scale;
-    ctx.fillStyle = '#17150f'; ctx.beginPath(); ctx.ellipse(hole.x, hole.y, hr, hr * .82, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#252820'; ctx.beginPath(); ctx.ellipse(hole.x, hole.y, hr, hr * .82, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#bab7a1'; ctx.lineWidth = Math.max(1.25, this.scale * 7);
+    ctx.stroke();
     const ground = Number.isFinite(ball.groundZ) ? ball.groundZ : 0;
     const centerZ = (Number.isFinite(ball.z) ? ball.z : ground + BALL_RADIUS) - (ball.sunk ? ball.sink * (BALL_RADIUS + 20) : 0);
     const bp = this.worldToScreen(ball.x, ball.y, centerZ);
@@ -1417,8 +1518,15 @@ class CanvasFallback {
       ctx.globalAlpha = ballOpacity;
       ctx.fillStyle = 'rgba(3,10,6,.45)'; ctx.beginPath(); ctx.ellipse(bp.x, this.worldToScreen(ball.x, ball.y, ground).y, br, br * .35, 0, 0, TAU); ctx.fill();
       const sphere = ctx.createRadialGradient(bp.x - br * .35, bp.y - br * .45, br * .08, bp.x, bp.y, br);
-      sphere.addColorStop(0, '#f5fff8'); sphere.addColorStop(.35, '#a7d1c0'); sphere.addColorStop(1, '#315448');
+      sphere.addColorStop(0, '#fff9e8'); sphere.addColorStop(.38, '#e8e4d2'); sphere.addColorStop(1, '#a9b1a3');
       ctx.fillStyle = sphere; ctx.beginPath(); ctx.arc(bp.x, bp.y, br, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(bp.x, bp.y, br - .2, 0, TAU); ctx.clip();
+      ctx.strokeStyle = 'rgba(103,137,121,.42)';
+      ctx.lineWidth = Math.max(.7, br * .08);
+      ctx.beginPath();
+      ctx.moveTo(bp.x - br * .68, bp.y - br * .70);
+      ctx.bezierCurveTo(bp.x - br * .28, bp.y - br * .18, bp.x + br * .68, bp.y - br * .29, bp.x + br * .72, bp.y + br * .73);
+      ctx.stroke();
       ctx.restore();
     }
     if (aim.active) {

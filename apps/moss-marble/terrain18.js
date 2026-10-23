@@ -97,97 +97,141 @@ function cylinder(mesh, options) {
   disc(mesh, x, y, z1, r1, r1, topTint, material, segments);
 }
 
+// Material and geometry live in one vocabulary: chiseled limestone, carved
+// oak, dark loam and small patches of moss. The visible radius never exceeds
+// the collidable part radius; procedural clusters reuse their individual parts.
+function tone(tint, multiplier = 1) {
+  return [Math.min(1, tint[0] * multiplier), Math.min(1, tint[1] * multiplier), Math.min(1, tint[2] * multiplier), tint[3]];
+}
+
 function lowPolyRock(mesh, shadows, level, prop, part, seed, palette) {
   const x = prop.x + Number(part?.x || 0);
   const y = prop.y + Number(part?.y || 0);
-  const radius = Number(part?.r || prop.r || 48);
+  const radius = Math.max(8, Number(part?.r || prop.r || 48));
   const ground = terrainHeightAt(level, x, y);
-  const rings = 3;
-  const segments = 9;
-  const points = [];
-  for (let ringIndex = 0; ringIndex <= rings; ringIndex += 1) {
-    const v = ringIndex / rings;
-    const z = ground + Math.sin(v * Math.PI * .5) * radius * .92;
-    const ringRadius = ringIndex === rings ? radius * .18 : radius * (1 - v * .66);
-    points.push(Array.from({ length: segments }, (_, index) => {
-      const angle = index / segments * TAU;
-      const wobble = .84 + noise(index, ringIndex, seed) * .28;
-      return [x + Math.cos(angle) * ringRadius * wobble, y + Math.sin(angle) * ringRadius * wobble, z];
-    }));
-  }
-  for (let ringIndex = 0; ringIndex < rings; ringIndex += 1) {
-    for (let index = 0; index < segments; index += 1) {
-      const next = (index + 1) % segments;
-      mesh.quad(points[ringIndex][index], points[ringIndex][next], points[ringIndex + 1][next], points[ringIndex + 1][index], (index + ringIndex) % 3 === 0 ? palette.stoneLight : palette.stone, 0);
+  const height = radius * (.74 + noise(seed, 18) * .14);
+  const segments = 15;
+  const profile = [
+    { z: ground + .2, width: .86, ox: 0, oy: 0 },
+    { z: ground + height * .28, width: .98, ox: 0, oy: 0 },
+    { z: ground + height * .66, width: .79, ox: radius * .025, oy: -radius * .016 },
+    { z: ground + height * .94, width: .32, ox: radius * .045, oy: -radius * .022 }
+  ];
+  const vertices = profile.map((layer, row) => Array.from({ length: segments }, (_, segment) => {
+    const angle = segment / segments * TAU;
+    const variation = .94 + noise(segment, seed, 11) * .055 + noise(segment, row, seed) * .01;
+    const extent = radius * layer.width * variation;
+    return [x + layer.ox + Math.cos(angle) * extent, y + layer.oy + Math.sin(angle) * extent, layer.z];
+  }));
+  for (let row = 0; row < profile.length - 1; row += 1) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const direction = Math.sin(segment / segments * TAU + .5) * .055;
+      const tint = tone(row === 2 ? palette.stoneLight : palette.stone, .92 + direction + noise(segment, seed, 37) * .07);
+      mesh.quad(vertices[row][segment], vertices[row][next], vertices[row + 1][next], vertices[row + 1][segment], tint, 0);
     }
   }
-  const apex = [
-    x + (noise(seed, 29) - .5) * radius * .10,
-    y + (noise(seed, 31) - .5) * radius * .10,
-    ground + radius * .98
-  ];
-  for (let index = 0; index < segments; index += 1) {
-    const next = (index + 1) % segments;
-    const tint = index % 4 === 0 ? palette.rockMoss : palette.stoneLight;
-    mesh.triangle(points.at(-1)[index], points.at(-1)[next], apex, tint, 0);
+  const crown = [x + radius * .035, y - radius * .017, ground + height];
+  for (let segment = 0; segment < segments; segment += 1) {
+    mesh.triangle(vertices.at(-1)[segment], vertices.at(-1)[(segment + 1) % segments], crown,
+      tone(palette.stoneLight, .92 + noise(segment, seed, 29) * .06), 0);
   }
-  disc(shadows, x + radius * .08, y + radius * .14, ground + .12, radius * 1.08, radius * .72, C.shadowStrong, 3, 20);
+  // A little damp moss grows low on only one or two faces, not random green spikes.
+  for (const segment of [2, 3, 4]) {
+    if (noise(segment, seed, 53) < .30) continue;
+    const next = (segment + 1) % segments;
+    mesh.triangle(
+      [vertices[0][segment][0], vertices[0][segment][1], ground + .55],
+      [vertices[0][next][0], vertices[0][next][1], ground + .55],
+      [vertices[1][segment][0] * .45 + vertices[1][next][0] * .55, vertices[1][segment][1] * .45 + vertices[1][next][1] * .55, ground + height * .22],
+      tone(palette.rockMoss, .80), 7
+    );
+  }
+  disc(shadows, x + radius * .07, y + radius * .11, ground + .1, radius * .98, radius * .70, C.shadow, 3, 20);
 }
 
 function stump(mesh, shadows, level, prop, seed, palette) {
   const ground = terrainHeightAt(level, prop.x, prop.y);
-  const radius = prop.r || 56;
-  const height = prop.height || radius * 1.15;
+  const radius = Math.max(14, prop.r || 56);
+  const height = Math.max(18, Number(prop.height || radius * 1.15));
+  const top = ground + height;
+  // The silhouette retains the real collider. Wood grain follows the trunk,
+  // while the cut face is a flat, warm end-grain disc instead of a fake pot.
   cylinder(mesh, {
-    x: prop.x, y: prop.y, z0: ground, z1: ground + height,
-    r0: radius, r1: radius * .88, tint: palette.wood, topTint: palette.woodTop,
-    material: 0, segments: 18, irregular: .10, seed
+    x: prop.x, y: prop.y, z0: ground + .3, z1: top - .9,
+    r0: radius * .93, r1: radius * .87, tint: palette.wood,
+    topTint: palette.woodTop, material: 0, segments: 22, irregular: .045, seed
   });
-  ring(mesh, prop.x, prop.y, ground + height + .18, radius * .25, radius * .62, palette.woodLight, 0, 20);
-  ring(mesh, prop.x, prop.y, ground + height + .24, radius * .63, radius * .67, palette.wood, 0, 20);
-  disc(shadows, prop.x + 5, prop.y + 9, ground + .12, radius * 1.12, radius * .72, C.shadowStrong, 3, 22);
+  ring(mesh, prop.x, prop.y, top - .50, radius * .09, radius * .83, palette.woodTop, 0, 28);
+  ring(mesh, prop.x, prop.y, top - .34, radius * .30, radius * .345, tone(palette.wood, .89), 0, 28);
+  ring(mesh, prop.x, prop.y, top - .30, radius * .55, radius * .59, tone(palette.wood, .84), 0, 28);
+  ring(mesh, prop.x, prop.y, top - .26, radius * .76, radius * .82, tone(palette.wood, .79), 0, 28);
+  const ribs = 11;
+  for (let index = 0; index < ribs; index += 1) {
+    const angle = (index + noise(index, seed, 4) * .13) / ribs * TAU;
+    const ca = Math.cos(angle), sa = Math.sin(angle);
+    const x = prop.x + ca * radius * .905;
+    const y = prop.y + sa * radius * .905;
+    const z0 = ground + height * .08, z1 = top - height * .10;
+    // Narrow bark flute, embedded in the wood body.
+    mesh.quad(
+      [x, y, z0],
+      [x - sa * radius * .018, y + ca * radius * .018, z0 + 3],
+      [prop.x + ca * radius * .84 - sa * radius * .018, prop.y + sa * radius * .84 + ca * radius * .018, z1],
+      [prop.x + ca * radius * .84, prop.y + sa * radius * .84, z1 - 3],
+      tone(palette.wood, .72), 0
+    );
+  }
+  disc(shadows, prop.x + 4, prop.y + 7, ground + .12, radius, radius * .72, C.shadowStrong, 3, 22);
 }
 
 function barrierBox(mesh, shadows, level, wall, palette) {
-  const dx = wall.bx - wall.ax;
-  const dy = wall.by - wall.ay;
+  const dx = wall.bx - wall.ax, dy = wall.by - wall.ay;
   const length = Math.hypot(dx, dy) || 1;
-  const nx = -dy / length * wall.thickness * .5;
-  const ny = dx / length * wall.thickness * .5;
-  const zA = terrainHeightAt(level, wall.ax, wall.ay) + .5;
-  const zB = terrainHeightAt(level, wall.bx, wall.by) + .5;
+  const nx = -dy / length, ny = dx / length;
+  const half = Math.max(4, Number(wall.thickness || 18) * .5);
+  const zA = terrainHeightAt(level, wall.ax, wall.ay) + .6;
+  const zB = terrainHeightAt(level, wall.bx, wall.by) + .6;
   const height = Number(wall.visualHeight || 28);
-  const a0 = [wall.ax + nx, wall.ay + ny, zA];
-  const a1 = [wall.ax - nx, wall.ay - ny, zA];
-  const b0 = [wall.bx + nx, wall.by + ny, zB];
-  const b1 = [wall.bx - nx, wall.by - ny, zB];
-  const at0 = [a0[0], a0[1], zA + height];
-  const at1 = [a1[0], a1[1], zA + height];
-  const bt0 = [b0[0], b0[1], zB + height];
-  const bt1 = [b1[0], b1[1], zB + height];
-  const sideTint = wall.material === 'stone' ? palette.stone : palette.wood;
-  const topTint = wall.material === 'stone' ? palette.stoneLight : palette.woodLight;
-  mesh.quad(at0, at1, bt1, bt0, topTint, 0);
-  mesh.quad(a0, b0, bt0, at0, sideTint, 0);
-  mesh.quad(a1, at1, bt1, b1, sideTint, 0);
-  mesh.quad(a0, at0, at1, a1, sideTint, 0);
-  mesh.quad(b0, b1, bt1, bt0, sideTint, 0);
-  disc(shadows, (wall.ax + wall.bx) * .5 + 4, (wall.ay + wall.by) * .5 + 7, (zA + zB) * .5 + .1, length * .53, wall.thickness * .9, C.shadow, 3, 18);
-  if (wall.material === 'wood') {
-    const marks = Math.max(1, Math.floor(length / 70));
-    for (let index = 1; index < marks; index += 1) {
-      const t = index / marks;
-      const x = lerp(wall.ax, wall.bx, t);
-      const y = lerp(wall.ay, wall.by, t);
-      const z = lerp(zA, zB, t) + height + .22;
-      const across = wall.thickness * .45;
-      const p0 = [x + nx / wall.thickness * across, y + ny / wall.thickness * across, z];
-      const p1 = [x - nx / wall.thickness * across, y - ny / wall.thickness * across, z];
-      const forwardX = dx / length * 2;
-      const forwardY = dy / length * 2;
-      mesh.quad(p0, p1, [p1[0] + forwardX, p1[1] + forwardY, z], [p0[0] + forwardX, p0[1] + forwardY, z], palette.wood, 0, [0, 0, 1]);
+  const isStone = wall.material === 'stone' || Boolean(wall.tunnelWall);
+  const topTint = isStone ? palette.stoneLight : palette.woodTop;
+  const sideTint = isStone ? palette.stone : palette.wood;
+  const aL = [wall.ax + nx * half, wall.ay + ny * half, zA];
+  const aR = [wall.ax - nx * half, wall.ay - ny * half, zA];
+  const bL = [wall.bx + nx * half, wall.by + ny * half, zB];
+  const bR = [wall.bx - nx * half, wall.by - ny * half, zB];
+  const atL = [aL[0], aL[1], zA + height], atR = [aR[0], aR[1], zA + height];
+  const btL = [bL[0], bL[1], zB + height], btR = [bR[0], bR[1], zB + height];
+  mesh.quad(aL, bL, btL, atL, sideTint, 0);
+  mesh.quad(aR, atR, btR, bR, tone(sideTint, .85), 0);
+  mesh.quad(atL, atR, btR, btL, topTint, 0, [0, 0, 1]);
+  mesh.quad(aL, atL, atR, aR, tone(sideTint, .83), 0);
+  mesh.quad(bL, bR, btR, btL, tone(sideTint, .83), 0);
+
+  const at = (t, side, lift = .34) => [
+    wall.ax + dx * t + nx * side * half,
+    wall.ay + dy * t + ny * side * half,
+    lerp(zA, zB, t) + height + lift
+  ];
+  // A single inset carving gives the top its material, never a random decal.
+  if (isStone) {
+    mesh.quad(at(.07, -.58), at(.93, -.58), at(.93, .58), at(.07, .58),
+      tone(palette.stone, .89), 0, [0, 0, 1]);
+    for (let t = .23; t <= .78; t += .27) {
+      mesh.quad(at(t, -.60, .46), at(t + .012, -.60, .46), at(t + .012, .60, .46), at(t, .60, .46),
+        tone(palette.stoneLight, .77), 0, [0, 0, 1]);
+    }
+  } else {
+    mesh.quad(at(.08, -.12), at(.92, -.12), at(.92, .12), at(.08, .12),
+      tone(palette.wood, .78), 0, [0, 0, 1]);
+    const pegRadius = Math.min(half * .18, 3.5);
+    for (const t of [.10, .90]) {
+      const center = at(t, 0, .54);
+      disc(mesh, center[0], center[1], center[2], pegRadius, pegRadius, palette.stoneLight, 4, 10);
     }
   }
+  disc(shadows, (wall.ax + wall.bx) * .5 + 4, (wall.ay + wall.by) * .5 + 7,
+    (zA + zB) * .5 + .1, length * .52, half * 1.7, C.shadow, 3, 18);
 }
 
 function portalPoint(endpoint, lateral, z, depth) {
@@ -198,41 +242,82 @@ function portalPoint(endpoint, lateral, z, depth) {
 
 function portal(mesh, shadows, level, endpoint, seed, palette) {
   const ground = terrainHeightAt(level, endpoint.x, endpoint.y);
-  const width = endpoint.width || 82;
-  const radius = width * .52;
-  const inner = radius * .68;
-  const depth = endpoint.depth || 76;
-  const segments = 14;
+  const width = Math.max(46, Number(endpoint.width || 82));
+  // Align with tunnel colliders: the visible mouth is never tighter than
+  // their +/-width/2 open span.
+  const inner = width * .515;
+  const outer = width * .69;
+  const depth = Number(endpoint.depth || 76);
+  const segments = 18;
   for (let index = 0; index < segments; index += 1) {
     const a = Math.PI - index / segments * Math.PI;
     const b = Math.PI - (index + 1) / segments * Math.PI;
-    const outerA = portalPoint(endpoint, Math.cos(a) * radius, ground + Math.sin(a) * radius, 0);
-    const outerB = portalPoint(endpoint, Math.cos(b) * radius, ground + Math.sin(b) * radius, 0);
+    const outerA = portalPoint(endpoint, Math.cos(a) * outer, ground + Math.sin(a) * outer, 0);
+    const outerB = portalPoint(endpoint, Math.cos(b) * outer, ground + Math.sin(b) * outer, 0);
     const innerA = portalPoint(endpoint, Math.cos(a) * inner, ground + Math.sin(a) * inner, 0);
     const innerB = portalPoint(endpoint, Math.cos(b) * inner, ground + Math.sin(b) * inner, 0);
-    mesh.quad(outerA, outerB, innerB, innerA, index % 3 ? palette.stone : palette.stoneLight, 0);
-    const backA = portalPoint(endpoint, Math.cos(a) * inner, ground + Math.sin(a) * inner, depth);
-    const backB = portalPoint(endpoint, Math.cos(b) * inner, ground + Math.sin(b) * inner, depth);
-    mesh.quad(innerA, innerB, backB, backA, palette.stoneDark, 9);
+    const blockShade = .91 + noise(seed, Math.floor(index / 3), 19) * .085;
+    const limestone = tone(index > 7 && index < 11 ? palette.stoneLight : palette.stone, blockShade);
+    mesh.quad(outerA, outerB, innerB, innerA, limestone, 0);
+    // Dark inward masonry runs back into the opening and gives it depth.
+    const backA = portalPoint(endpoint, Math.cos(a) * inner, ground + Math.sin(a) * inner, depth * .82);
+    const backB = portalPoint(endpoint, Math.cos(b) * inner, ground + Math.sin(b) * inner, depth * .82);
+    mesh.quad(innerA, innerB, backB, backA, tone(palette.stoneDark, .62), 0);
+    if (index % 3 === 0) {
+      // Thin radial mortar joints, in the arch face only.
+      const jointInner = portalPoint(endpoint, Math.cos(a) * (inner + 2), ground + Math.sin(a) * (inner + 2), -.25);
+      const jointOuter = portalPoint(endpoint, Math.cos(a) * (outer - 1), ground + Math.sin(a) * (outer - 1), -.25);
+      const jointHalf = .75;
+      const inward = portalPoint(endpoint, Math.cos(a + jointHalf / outer) * (inner + 2), ground + Math.sin(a + jointHalf / outer) * (inner + 2), -.25);
+      const outward = portalPoint(endpoint, Math.cos(a + jointHalf / outer) * (outer - 1), ground + Math.sin(a + jointHalf / outer) * (outer - 1), -.25);
+      mesh.quad(jointInner, jointOuter, outward, inward, tone(palette.stoneDark, .82), 0);
+    }
   }
+  // A recessed dark threshold suggests a true passage rather than a
+  // freestanding donut; the stone never caps the ball's physical path.
   mesh.quad(
-    portalPoint(endpoint, -inner, ground + .4, -10),
-    portalPoint(endpoint, inner, ground + .4, -10),
-    portalPoint(endpoint, inner * .82, ground + .4, depth),
-    portalPoint(endpoint, -inner * .82, ground + .4, depth),
-    palette.stone, 0, [0, 0, 1]
+    portalPoint(endpoint, -inner, ground + .36, 1),
+    portalPoint(endpoint, inner, ground + .36, 1),
+    portalPoint(endpoint, inner, ground + .36, depth * .80),
+    portalPoint(endpoint, -inner, ground + .36, depth * .80),
+    tone(palette.stoneDark, .66), 0, [0, 0, 1]
   );
-  disc(shadows, endpoint.x + 5, endpoint.y + 9, ground + .1, radius * 1.10, radius * .65, C.shadowStrong, 3, 22);
+  for (const sign of [-1, 1]) {
+    const outerX = inner * sign;
+    mesh.quad(
+      portalPoint(endpoint, outerX, ground + .5, -2),
+      portalPoint(endpoint, outerX + sign * Math.min(4, outer - inner), ground + .5, -2),
+      portalPoint(endpoint, outerX + sign * Math.min(4, outer - inner), ground + 8, 0),
+      portalPoint(endpoint, outerX, ground + 8, 0),
+      palette.stoneLight, 0
+    );
+  }
+  disc(shadows, endpoint.x + 4, endpoint.y + 8, ground + .1, outer * .95, outer * .48, C.shadow, 3, 22);
 }
 
 function hole(mesh, shadows, level, palette) {
-  const ground = terrainHeightAt(level, level.hole.x, level.hole.y);
-  const radius = level.hole.r;
+  const x = level.hole.x, y = level.hole.y;
+  const ground = terrainHeightAt(level, x, y);
+  const radius = Math.max(14, level.hole.r);
   const depth = Math.max(30, level.hole.depth || 64);
-  disc(mesh, level.hole.x, level.hole.y, ground - depth, radius * .92, radius * .92, C.cup, 9, 28);
-  cylinder(mesh, { x: level.hole.x, y: level.hole.y, z0: ground - depth, z1: ground - .8, r0: radius * .92, r1: radius * .92, tint: C.cup, topTint: C.cup, material: 9, segments: 28 });
-  ring(mesh, level.hole.x, level.hole.y, ground + .20, radius * .98, radius + 7, palette.soil, 0, 30);
-  disc(shadows, level.hole.x + 2, level.hole.y + 2, ground + .12, radius * 1.1, radius * .7, C.shadowStrong, 3, 24);
+  const segments = 32;
+  // An OPEN cup: no cylinder top cap can accidentally paint over the cavity.
+  disc(mesh, x, y, ground - depth + .4, radius * .93, radius * .93, C.cup, 9, segments);
+  for (let index = 0; index < segments; index += 1) {
+    const a = index / segments * TAU;
+    const b = (index + 1) / segments * TAU;
+    const r = radius * .94;
+    const aBottom = [x + Math.cos(a) * r, y + Math.sin(a) * r, ground - depth];
+    const bBottom = [x + Math.cos(b) * r, y + Math.sin(b) * r, ground - depth];
+    const aTop = [aBottom[0], aBottom[1], ground - .8];
+    const bTop = [bBottom[0], bBottom[1], ground - .8];
+    mesh.quad(aBottom, bBottom, bTop, aTop, tone(C.cup, .84), 9);
+  }
+  // Small dressed limestone lip, level with the playing turf.
+  ring(mesh, x, y, ground + .25, radius * .965, radius + 3, palette.stoneDark, 0, segments);
+  ring(mesh, x, y, ground + .44, radius + 3, radius + 7, palette.stoneLight, 0, segments);
+  ring(mesh, x, y, ground + .15, radius + 7, radius + 10, tone(palette.stone, .80), 0, segments);
+  disc(shadows, x + 2, y + 2, ground + .07, radius * 1.08, radius * .73, C.shadow, 3, 24);
 }
 
 function details(mesh, level, seed, palette) {
@@ -261,7 +346,7 @@ function details(mesh, level, seed, palette) {
   }
 }
 
-function build(level) {
+export function buildCourse18Geometry(level) {
   const opaque = new Mesh(level.course18.surfaceMesh.data);
   const shadows = new Mesh();
   const transparent = new Mesh();
@@ -305,7 +390,7 @@ export function installTerrain18(core, canvas) {
     const next = level.renderId ?? level.id;
     if (meshes && key === next) return meshes;
     if (meshes) Object.values(meshes).forEach((mesh) => core.gl.deleteBuffer(mesh.buffer));
-    const built = build(level);
+    const built = buildCourse18Geometry(level);
     meshes = { opaque: gpu(core.gl, built.opaque), shadows: gpu(core.gl, built.shadows), transparent: gpu(core.gl, built.transparent) };
     key = next;
     return meshes;
