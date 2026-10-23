@@ -94,6 +94,8 @@ assert.equal((await call(1,'me')).profile.maskot.accessory,'tiny-guardian');
 hub.env.YASYA_POCKET_ID=originalYasyaId;
 assert.equal((await call(1,'redeem',{code:'private-yasya-code-at-least-24-chars'})).reward,'yasya-chaos');
 assert.equal((await call(1,'redeem',{code:'private-yasya-code-at-least-24-chars'})).already,true);
+// Isolate private-code assertions from the original rate-limit regression sequence.
+hub.rates.clear();
 assert.equal(b.profile.nickname,'Bob');
 assert.equal(a.friends.length,0);
 const search=await call(0,'search?q=Bo',null,{'x-pw-directory':JSON.stringify([users[1]])});
