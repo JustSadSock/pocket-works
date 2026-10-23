@@ -633,16 +633,19 @@ export class Editor{
       // No mark is stored until the cursor first enters the damage mask.
       this.outsidePoint=p;this.edgePaused=true;
       this.edgeGestureGroup||='gesture-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7);
-      return;
+      return false;
     }
     const entry=this.outsidePoint?firstDamageEntry(this.zone,this.outsidePoint,snapped):null;
-    if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS)this.compactStrokeBudget();
-    if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){this.warnLimit();return}
+    const compacted=this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS
+      ?this.compactStrokeBudget():false;
+    if(this.strokes.length>=MAX_STROKES||this.countPoints()>=MAX_TOTAL_POINTS){
+      this.warnLimit();if(compacted)this.render();return false;
+    }
     const pts=entry&&Math.hypot(entry[0]-snapped[0],entry[1]-snapped[1])>.1?[entry,snapped]:[snapped];
     this.working={c:this.color,s:this.size,t:this.tool,p:pts,g:this.edgeGestureGroup||'gesture-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)};
     this.cursorContact(true);
     this.edgePaused=false;this.outsidePoint=null;
-    this.redoStack=[];this.onSound?.('brush');this.render();
+    this.redoStack=[];this.onSound?.('brush');this.render();return true;
   }
   queueCommittedInk(stroke){
     this.paintRevision=(this.paintRevision||0)+1;
@@ -651,21 +654,28 @@ export class Editor{
   }
   warnLimit(){if(!this.limitWarned){this.onChange(-1);this.limitWarned=true}}
   extendStroke(p,drawNow=true){
-    if(!this.working)return;
+    if(!this.working)return false;
     const snapped=pointOnDamageEdge(this.zone,p,Math.min(25,Math.max(2,this.size*.65)));
     if(!snapped){
      // Lifting the pen outside the damaged fragment must not create an
      // unintended straight line when it re-enters a different border.
-     this.edgeGestureGroup=this.working.g;this.finishStroke();this.edgePaused=true;this.outsidePoint=p;return;
+     this.edgeGestureGroup=this.working.g;this.finishStroke();this.edgePaused=true;this.outsidePoint=p;return true;
     }
     p=snapped;
     const pts=this.working.p,prev=pts[pts.length-1];
-    if(Math.hypot(p[0]-prev[0],p[1]-prev[1])<.4)return;
-    if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0))this.compactStrokeBudget();
-    if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0)){this.warnLimit();return}
+    if(Math.hypot(p[0]-prev[0],p[1]-prev[1])<.4)return false;
+    let compacted=false;
+    if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0))
+      compacted=this.compactStrokeBudget()||compacted;
+    if(this.countPoints()>=MAX_TOTAL_POINTS-(pts.length>=MAX_STROKE_POINTS?1:0)){
+      this.warnLimit();if(compacted&&drawNow)this.render();return compacted;
+    }
     if(pts.length>=MAX_STROKE_POINTS){
-      if(this.strokes.length+1>=MAX_STROKES)this.compactStrokeBudget();
-      if(this.strokes.length+1>=MAX_STROKES){this.warnLimit();return}
+      if(this.strokes.length+1>=MAX_STROKES)
+        compacted=this.compactStrokeBudget()||compacted;
+      if(this.strokes.length+1>=MAX_STROKES){
+        this.warnLimit();if(compacted&&drawNow)this.render();return compacted;
+      }
       const old=this.working;
       this.strokes.push(old);
       // A continuous gesture can span several PocketNet-sized segments.
@@ -677,6 +687,7 @@ export class Editor{
       this.working={c:old.c,s:old.s,t:old.t,g:old.g,p:[prev,p]};
     }else pts.push(p);
     if(drawNow)this.render();
+    return true;
   }
   finishStroke(){
     if(!this.working)return;
@@ -952,8 +963,8 @@ export class Editor{
          const steps=crossesEdge?Math.min(70,Math.max(1,Math.ceil(length/2))):1;
          for(let i=1;i<=steps;i++){
           const point=previous?[previous[0]+(end[0]-previous[0])*i/steps,previous[1]+(end[1]-previous[1])*i/steps]:end;
-          if(this.working){this.extendStroke(point,false);changed=true}
-          else if(this.edgePaused){this.beginStroke(point);changed=true}
+          if(this.working)changed=this.extendStroke(point,false)||changed;
+          else if(this.edgePaused)changed=this.beginStroke(point)||changed;
          }
          previous=end;
         }
