@@ -246,9 +246,8 @@ const module:PocketModule<State>={
    // The deadline may expire during ANY command, not just pulse. Always
    // broadcast the new phase; otherwise all later pulses only send clocks
    // and clients can remain stuck in the previous round indefinitely.
-   const events=emit(state);
-   if(raw.type==='publish')events.push(...notice(id,'Время вышло. Раунд завершён автоматически.'));
-   return {state,events};
+   if(raw.type==='publish')return {state,events:[...emit(state),...notice(id,'Время вышло. Раунд завершён автоматически.')]};
+   return {state,events:emit(state)};
   }
   if(raw.type==='sync')return {state,events:[{type:'state',to:id,payload:strip(state,id)}]};
   if(raw.type==='pulse'){
