@@ -162,9 +162,13 @@ try {
   // details; only a role-specific sync may disclose pause and deadline.
   assert.deepEqual(frozen.state,{phase:'preview'});
   resumedHost.send('game_message',{payload:{type:'sync'}});
-  const pausedSnapshot=await resumedHost.next('game_event',event=>
-   event.event?.type==='state'&&event.event.payload.paused===true);
-  assert.equal(pausedSnapshot.event.payload.paused,true,'first reconnected player finds paused room');
+  const pausedSnapshot=await resumedHost.next('game_event',event=>event.event?.type==='state');
+  assert.equal(pausedSnapshot.event.payload.paused,true,
+   'first reconnected player finds paused room; view='+JSON.stringify({
+    paused:pausedSnapshot.event.payload.paused,
+    onlineIds:pausedSnapshot.event.payload.onlineIds,
+    phase:pausedSnapshot.event.payload.phase
+   }));
   assert(pausedSnapshot.event.payload.pauseRemainingMs>=0,'server preserves remaining seconds');
   resumedGuest=await channel(secondToken);
   await resumedGuest.next('authenticated');
