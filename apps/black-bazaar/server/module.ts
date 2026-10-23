@@ -650,11 +650,12 @@ function viewForPlayer({state,player}){
 const game={
   protocolVersion:1,viewForPlayer,
   createRoom({player}){return {state:{
-    host:player.id,players:[{id:player.id,name:player.name}],contestants:[],
+    host:player.id,players:[{id:player.id,name:player.name}],contestants:[],bannedIds:[],bannedAccounts:[],
     phase:'lobby',revision:0,round:0,turnIndex:0,deadlineAt:null,listing:null,
     eventSchedule:{},metrics:null,bids:[],brokerOffer:null,deals:[],dealSerial:0,blackLots:[],blackSeq:0,log:[],ranking:[],serial:0
   }};},
-  onJoin({state,players}){
+  onJoin({state,players,player}){
+    if((state.bannedIds||[]).includes(player?.id)||player?.accountId&&(state.bannedAccounts||[]).includes(player.accountId))throw Error('room_kicked');
     if(state.phase!=='lobby'&&!state.contestants.some(p=>p.id===players.at(-1)?.id))throw Error('match_in_progress');
     if(players.length>MAX_PLAYERS)throw Error('room_full');
     state.players=players.map(p=>({id:p.id,name:p.name}));
@@ -665,6 +666,8 @@ const game={
     if(!state.players.some(p=>p.id===state.host))state.host=state.players[0]?.id||state.host;
     if(state.phase==='lobby')state.contestants=[];
     state.deals=state.deals.filter(d=>state.players.some(p=>p.id===d.from)&&state.players.some(p=>p.id===d.to));
+    state.bids=state.bids.filter(b=>b.buyer!==player.id);
+    for(const lot of state.blackLots||[])lot.bids=lot.bids.filter(b=>b.buyer!==player.id);
     if(state.phase==='play'){
       for(const lot of (state.blackLots||[]).filter(l=>l.seller===player.id)){
         const exiting=state.contestants.find(p=>p.id===player.id);
@@ -700,8 +703,23 @@ const game={
     }
     return {state,events:[]};
   },
-  onMessage({state,player,payload}){
+  onMessage({state,player,players,payload}){
     const v=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
+    if(v.type==='kick'){
+      if(player.id!==state.host||!['lobby','play'].includes(state.phase))
+        return failure(state,player.id,'Исключать участников может только ведущий активной комнаты.');
+      const target=players?.find(p=>p.id===v.targetId);
+      if(!target||target.id===player.id||!state.players.some(p=>p.id===target.id))
+        return failure(state,player.id,'Игрок уже отсутствует или исключение недоступно.');
+      // Persist server-verified seat and account identity, not user-supplied IDs.
+      state.bannedIds=[...new Set([...(state.bannedIds||[]),target.id])].slice(-100);
+      if(target.accountId)state.bannedAccounts=[...new Set([...(state.bannedAccounts||[]),target.accountId])].slice(-100);
+      const result=game.onLeave({state,player:target,players:players.filter(p=>p.id!==target.id)});
+      issue(state,'Ведущий исключил участника '+target.name+'.');
+      // The transport must physically evict the socket after publishing the
+      // updated state, so the removed player cannot submit further commands.
+      return {...result,events:[...(result.events||[]),{type:'player_kicked',to:target.id}]};
+    }
     if(v.type==='sync'&&!(state.phase==='play'&&state.deadlineAt&&Date.now()>=state.deadlineAt))
       return {state,events:[{type:'state',to:player.id,payload:{}}]};
     if(state.phase==='play'&&state.deadlineAt&&Date.now()>=state.deadlineAt){
