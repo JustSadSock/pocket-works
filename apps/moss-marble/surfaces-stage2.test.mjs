@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { makeStoneRimProfile, ringArea } from './curb-profile.js';
-import { compileCourse19, inspectCourse19 } from './course19.js';
+import { compileCourse19, inspectCourse19, organicSandRadius } from './course19.js';
 import { generateEndlessLevel } from './procedural.js';
 import { LEVELS } from './levels.js';
 
@@ -14,6 +14,20 @@ for (const corner of circle) {
   assert.ok(corner.cap.every(Number.isFinite));
 }
 assert.deepEqual(makeStoneRimProfile([...square].reverse(), () => 4).length, circle.length);
+
+const bank = { x: 150, y: 160, length: 260, width: 150, angle: 0, cos: 1, sin: 0 };
+const edges = [];
+for (let i = 0; i < 32; i++) {
+  const phi = Math.PI * 2 * i / 32;
+  const dx = Math.cos(phi) * bank.length * .5;
+  const dy = Math.sin(phi) * bank.width * .5;
+  edges.push(organicSandRadius(bank.x + dx, bank.y + dy, bank));
+  assert.ok(edges[i] > .87 && edges[i] < 1.17, 'smooth sand bank is bounded');
+  assert.ok(organicSandRadius(bank.x + dx * .7, bank.y + dy * .7, bank)
+    < edges[i], 'the sand bank is radial and monotonic');
+}
+assert.ok(Math.max(...edges) - Math.min(...edges) > .10,
+  'natural sand banks must not be perfect ellipses');
 
 let checked = 0;
 for (const raw of [
@@ -43,6 +57,16 @@ for (const raw of [
   if (mesh && ![1, 6, 8].includes(Number(level.id))) for (let index = 10; index < mesh.length; index += 11) {
     assert.ok(mesh[index] === 1 || mesh[index] === 6,
       'each terrain triangle must use continuous grass or physically wet water shading');
+  }
+  if (level.endless) {
+    for (const basin of field.landforms.filter(f => f.sandBasin)) {
+      const mask = field.masks.find(m => m.type === 'sand'
+        && Math.hypot(m.x - basin.x, m.y - basin.y) < 1);
+      assert.ok(mask && Math.abs(mask.angle - basin.angle) < 1e-6,
+        'sand, friction and physical bowl must share a contour');
+      assert.ok(basin.height >= 10 && basin.height < 25,
+        'bunker depth remains within playable bounds');
+    }
   }
   const p = level.start;
   const base = field.colorAt(p.x, p.y, field.heightAt(p.x,p.y), field.normalAt(p.x,p.y));

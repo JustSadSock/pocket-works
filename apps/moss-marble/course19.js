@@ -19,8 +19,8 @@ const COLORS = {
   grassDry: [0.45, 0.51, 0.27, 1],
   moss: [0.25, 0.43, 0.28, 1],
   mossLight: [0.36, 0.53, 0.35, 1],
-  sand: [0.78, 0.67, 0.48, 1],
-  sandLight: [0.90, 0.80, 0.63, 1],
+  sand: [0.72, 0.62, 0.46, 1],
+  sandLight: [0.84, 0.75, 0.58, 1],
   water: [0.13, 0.39, 0.40, 0.88],
   waterLight: [0.29, 0.58, 0.56, 0.88]
 };
@@ -146,6 +146,20 @@ function ellipseMetric(x, y, feature) {
   return { localX, localY, radius: Math.sqrt((localX * localX) / (ax * ax) + (localY * localY) / (ay * ay)) };
 }
 
+// Low-frequency, bounded asymmetry shared by the sand color and real bowl.
+// Unlike random displacements, this bank is smooth and radially monotonic.
+export function organicSandRadius(x, y, feature) {
+  const metric = ellipseMetric(x, y, feature);
+  if (metric.radius < 1e-8) return 0;
+  const angle = Math.atan2(metric.localY / Math.max(1, feature.width * .5),
+    metric.localX / Math.max(1, feature.length * .5));
+  const phase = feature.x * .0127 + feature.y * .0173;
+  const shore = 1 + .082 * Math.sin(3 * angle + phase)
+    + .038 * Math.sin(5 * angle - phase * .53)
+    + .017 * Math.cos(7 * angle + phase * .83);
+  return metric.radius / shore;
+}
+
 function segmentMetric(x, y, feature) {
   const nearest = closestPointOnSegment({ x, y }, feature.a, feature.b);
   return { distance: Math.hypot(x - nearest.x, y - nearest.y), t: nearest.t };
@@ -190,8 +204,9 @@ function landformHeight(feature, x, y) {
     return Number(feature.height || 0) * Math.pow(1 - radius, Number(feature.falloff || 1.6)) * Math.pow(longitudinal, .7);
   }
   const metric = ellipseMetric(x, y, feature);
-  if (metric.radius >= 1) return 0;
-  const crown = Math.pow(1 - metric.radius, Number(feature.falloff || 1.6));
+  const radius = feature.sandBasin ? organicSandRadius(x, y, feature) : metric.radius;
+  if (radius >= 1) return 0;
+  const crown = Math.pow(1 - radius, Number(feature.falloff || 1.6));
   const asymmetry = clamp(Number(feature.asymmetry || 0), -.65, .65);
   const directional = clamp(metric.localX / Math.max(1, feature.length * .22), -1, 1);
   const sideFactor = 1 + asymmetry * directional;
@@ -206,7 +221,10 @@ function maskWeight(mask, x, y) {
     const endFade = Math.min(smoothstep(0, .16, metric.t), smoothstep(1, .84, metric.t));
     return clamp((1 - smoothstep(.68, 1, radius)) * endFade, 0, 1);
   }
-  return 1 - smoothstep(.66, 1, ellipseMetric(x, y, mask).radius);
+  const radius = mask.type === 'sand'
+    ? organicSandRadius(x, y, mask)
+    : ellipseMetric(x, y, mask).radius;
+  return 1 - smoothstep(mask.type === 'sand' ? .69 : .66, 1, radius);
 }
 
 function buildField(level, blueprint) {
@@ -269,12 +287,12 @@ function buildField(level, blueprint) {
     let color = mixColor(grass, materialColor, blend);
     // Lighting stays anchored to actual field normals and elevation, but the
     // shader owns directional diffuse shading so vertex colors remain gentle.
-    const sunSlope = normal[0] * .40 - normal[1] * .32;
-    const elevation = clamp((height - 9) / 45, -.42, 1.0);
+    const sunSlope = normal[0] * .55 - normal[1] * .43;
+    const elevation = clamp((height - 9) / 44, -.48, 1.0);
     const steepness = Math.hypot(normal[0], normal[1]);
-    // Readable raised crests, shaded downhill faces and softer depressions;
-    // every cue derives from *physical* height and normal, not decoration.
-    const slopeShade = clamp(.985 + sunSlope + elevation * .12 + steepness * .025, .70, 1.24);
+    // Convex crests and concave bowls read from actual height and normals,
+    // without fake ellipses or concentric contour overlays.
+    const slopeShade = clamp(.995 + sunSlope + elevation * .13 + steepness * .015, .68, 1.26);
     color = [color[0] * slopeShade, color[1] * slopeShade, color[2] * slopeShade, color[3]];
     return color;
   };
