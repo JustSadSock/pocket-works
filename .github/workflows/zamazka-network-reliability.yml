@@ -16,6 +16,8 @@ on:
       - 'apps/zamazka/qa/editor-geometry-compaction.mjs'
       - 'apps/zamazka/qa/editor-budget-soak.mjs'
       - 'apps/zamazka/qa/smudge-pixel-parity.mjs'
+      - 'apps/zamazka/qa/fill-raster-region.mjs'
+      - 'apps/zamazka/fill-raster-region.js'
       - 'apps/zamazka/qa/editor-frame-reuse.mjs'
       - 'apps/zamazka/qa/large-painting.mjs'
       - 'pocketnet/hub.mjs'
@@ -83,6 +85,8 @@ jobs:
         run: node apps/zamazka/qa/editor-geometry-compaction.mjs
       - name: Check dense 24k-point brush budget without geometry loss
         run: node apps/zamazka/qa/editor-budget-soak.mjs
+      - name: Verify flood-fill ROI against full-sized pixel reference
+        run: node apps/zamazka/qa/fill-raster-region.mjs
       - name: Verify smudge pixel parity and measured rendering time
         run: node apps/zamazka/qa/smudge-pixel-parity.mjs
       - name: Verify compositor reuse under 60 brush revisions and 120 pointer frames
