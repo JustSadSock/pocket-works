@@ -6,7 +6,8 @@
       "kind": "node-test",
       "tier": "smoke",
       "files": [
-        "engine.test.mjs"
+        "engine.test.mjs",
+        "server.test.mjs"
       ]
     },
     {
@@ -66,6 +67,43 @@
         {
           "action": "click",
           "selector": "#restart-pause"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "online-room-entry",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#create-online",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#join-online"
+        },
+        {
+          "action": "visible",
+          "selector": "#online-code-input"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#online-leave"
+        },
+        {
+          "action": "visible",
+          "selector": "#start"
         },
         {
           "action": "screenshot"

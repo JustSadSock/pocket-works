@@ -1,9 +1,9 @@
-const APP_VERSION='0.1.0';
-const CACHE_NAME='ne-zhmi-v0.1.0';
+const APP_VERSION='0.2.0';
+const CACHE_NAME='ne-zhmi-v0.2.0';
 const RELEASE_DATE='2026-10-23';
-const RELEASE_NOTES=["Первая играбельная локальная трасса: автоматическое движение Болтика, две независимые кнопки, прыжок и разворот.","Контрольная точка, ямы, столкновения, пауза, финиш, результаты и рекорд.","Адаптивный тактильный пульт с клавиатурным и сенсорным управлением."];
+const RELEASE_NOTES=["Онлайн-комнаты PocketNet для двух операторов: создание, код и ссылка приглашения, назначение ролей, запуск ведущим.","Авторитетная физика на сервере: события прыжка и разворота, восстановление связи и безопасная остановка при потере второго участника.","Подтверждённый сервером финиш, совместный повтор, подтверждение выхода, сохранение локального режима и диагностики."];
 const VERSION=APP_VERSION,CACHE=CACHE_NAME,PREFIX='ne-zhmi-';
-const FILES=['./','./index.html','./app.config.json','./styles.css','./app.js','./engine.js','./renderer.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/update-manager.js'];
+const FILES=['./','./index.html','./app.config.json','./styles.css','./app.js','./engine.js','./renderer.js','./online.js','../../shared/capabilities/net.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/update-manager.js'];
 const ROOT=new URL('./',self.registration.scope);
 const ENTRIES=new Map(FILES.map(file=>{const url=new URL(file,ROOT);return[url.pathname,url.href]}));
 self.addEventListener('install',event=>event.waitUntil((async()=>{

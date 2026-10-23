@@ -55,3 +55,52 @@ button:focus-visible,a:focus-visible{outline:3px solid #c06a40;outline-offset:3p
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 
 .workshop-entry{background:transparent;color:#53645a;border:0;border-bottom:1px dashed currentColor;font:800 11px/1.3 ui-monospace,monospace;padding:3px 1px;margin-left:8px;min-height:36px}.sheet .workshop-entry{text-align:left;margin:0;font-size:13px;width:max-content;color:#41504e}.workshop-entry:focus-visible{outline:2px solid #d77b46;outline-offset:3px}
+
+/* Co-op interface: the online layer remains a single mechanical control face. */
+.player-field{display:flex;align-items:center;gap:12px;font:900 10px ui-monospace,monospace;margin:0 0 12px;letter-spacing:.07em}
+.player-field input{min-width:0;flex:1;height:40px;border:2px solid #72807a;background:#f5f0df;color:#344547;font:800 15px system-ui;padding:6px 10px;border-radius:2px}
+.net-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.net-entry{border:2px solid #536462;background:#cad7c8;min-height:47px;color:#2b4041;text-align:center;font-size:12px;font-weight:900;padding:9px 8px}
+.net-entry:active,.option:active{transform:translateY(2px)}
+.online-sheet{min-width:0;max-height:calc(100% - 20px);overflow:auto;gap:10px;padding:19px}
+.online-sheet h2{font-size:clamp(21px,3vw,27px)}
+.online-sheet .plate{flex-wrap:wrap}.online-sheet .plate span:last-child{font-size:9px;overflow-wrap:anywhere;max-width:170px}
+.online-entry{display:grid;gap:9px}.online-entry label{font:800 10px/1.5 ui-monospace,monospace}
+.online-entry input{margin-top:6px;border:2px solid #66716c;background:#f5f0de;width:100%;height:47px;font:900 20px ui-monospace,monospace;letter-spacing:.15em;padding:8px 11px;color:#354446;border-radius:2px}
+.room-code{display:flex;justify-content:space-between;align-items:center;gap:10px;border:2px solid #a4a99d;background:#d8d9c5;padding:8px;font:800 10px ui-monospace,monospace}
+.room-code strong{font:900 22px ui-monospace,monospace;color:#b86e43;letter-spacing:.08em}
+.online-room{display:grid;gap:10px}.online-roster{display:grid;gap:6px}
+.operator-seat{min-height:52px;border:2px solid #89978a;background:#dedfcb;display:flex;align-items:center;justify-content:space-between;padding:8px 10px;gap:10px}
+.operator-seat.mine{border-color:#bd8a55;background:#f1e6c7}
+.operator-seat strong{font-size:13px}.operator-seat small{font:900 10px/1.2 ui-monospace,monospace;text-align:right;max-width:120px}
+.online-room p,.online-sheet p{font-size:13px;line-height:1.35;margin:1px 0;color:#53635c}
+.online-room .launch:disabled,.online-sheet .launch:disabled{filter:grayscale(1);opacity:.5;cursor:default}
+.online-sheet .exit-sheet{border:0;background:none;text-align:left;min-height:35px;width:max-content;color:#526359}
+.online-banner{position:absolute;left:50%;top:43px;transform:translateX(-50%);z-index:4;min-width:min(90%,340px);border:2px solid #b16d4a;background:#e5d9b6;padding:10px 12px;font:900 12px/1.3 system-ui;text-align:center;box-shadow:2px 4px 0 #2436364a}
+.online-role-chip{position:absolute;left:12px;top:47px;background:#e7ddc6;border:2px solid #536561;color:#364e52;z-index:3;font:900 11px ui-monospace,monospace;padding:7px 10px}
+.chip-unavailable{opacity:.6}
+.online-confirm{position:absolute;inset:0;z-index:9;background:#243235a8;display:grid;place-items:center;padding:20px}
+.confirm-panel{position:relative;max-width:380px;width:100%;padding:20px}
+.confirm-panel h2{font:900 24px Impact,system-ui;margin:0 0 12px}.confirm-panel p{font-size:14px;line-height:1.4}
+.confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}
+.confirm-actions .option{border:2px solid #596b64;background:#d5d6c3;min-height:49px;font-weight:800}
+.confirm-actions .launch{min-height:49px;box-shadow:none}
+@media(max-width:720px){
+ .intro{max-height:calc(100% - 16px);overflow:auto}
+ .intro h1{font-size:clamp(48px,13vw,73px);margin:12px 0}
+ .intro p{font-size:13px}
+ .online-sheet{max-height:calc(100% - 12px);padding:12px;gap:7px}
+ .online-sheet .option,.online-sheet .launch{min-height:42px;font-size:12px}
+ .online-role-chip{top:38px;left:7px;font-size:9px;padding:6px}
+ .online-banner{top:75px;font-size:11px}
+}
+@media(max-height:650px){
+ .intro .key-guide{display:none}
+ .intro h1{font-size:49px;margin:7px 0}
+ .intro p{font-size:12px;margin-bottom:7px}
+ .player-field input{height:32px}
+ .net-entry{min-height:36px;padding:5px;font-size:11px}
+ .online-sheet h2{margin:0;font-size:19px}
+ .operator-seat{min-height:40px;padding:5px 8px}
+ .online-sheet .room-code strong{font-size:18px}
+}

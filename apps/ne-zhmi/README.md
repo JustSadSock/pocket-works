@@ -23,3 +23,8 @@ Physics checks cover motor, jump, reversal cooldown, platform collisions, checkp
 
 ## Diagnostics
 The built-in Pocket Works Workshop can be opened from the first or pause screen, and from the standard shortcut. It reports the current application's runtime, errors and owned storage only. Reset prompts for a second click and returns to the menu.
+
+## Stage 2 — PocketNet
+Select "Создать онлайн-комнату" or "Войти по коду" from the menu. Two players join with eight-digit codes or links. Host can swap roles and start/restart; the first operator can only jump and the second can only reverse. The server calculates all authoritative physics and sends snapshots at approximately 8–10 Hz; clients render smoothly between snapshots. If either operator stops sending heartbeats for 1.25 seconds, the world freezes until both are present again. Room state survives websocket reconnect by session token. Leave confirmation is required. No PocketLAN.
+
+Server module: `server/module.ts`, pinned as `pocketnet/module-versions/ne-zhmi/v1.ts`. Run `node --test apps/ne-zhmi/server.test.mjs` and `npm run pocketnet:check`. The PocketNet release lock accompanies the module to ensure installed room versions remain immutable.
