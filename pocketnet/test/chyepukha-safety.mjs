@@ -38,7 +38,7 @@ const guest=await channel(await session('Chy Guest'));
 try{
  host.send('create_room',{gameId:'chyepukha'});
  const created=await host.next('room_joined');
- assert.equal(created.version,'v5');
+ assert.equal(created.version,'v6');
  const roomId=created.roomId,hostId=created.players[0].id;
  guest.send('join_room',{roomId});
  const joined=await guest.next('room_joined');
@@ -88,5 +88,5 @@ try{
  const final=await guest.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='finished');
  assert.equal(final.event.payload.stories.length,2);
  assert.ok(final.event.payload.stories.every(story=>story.fragments.length===1));
- console.log('Chyepukha v5: durable seat rejoin, idempotent receipts and partial story survive');
+ console.log('Chyepukha v6: durable seat rejoin, idempotent receipts and partial story survive');
 }finally{await Promise.allSettled([shutdown(host),shutdown(guest)])}
