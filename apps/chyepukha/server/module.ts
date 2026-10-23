@@ -62,6 +62,7 @@ function begin(s){
  if(opts.questionSet==='custom'&&opts.customQuestions.length<2) return 'Додай щонайменше два власні питання.';
  const commonSet=opts.questionSet==='random'?choose(IDS):opts.questionSet;
  const commonGenre=opts.genre==='random'?choose(GENRE_IDS):opts.genre;
+ s.authors=Object.fromEntries(s.players.map(p=>[p.id,p.name]));
  s.sheets=s.players.map((player,i)=>{
   const set=commonSet==='perSheetRandom'?choose(IDS):commonSet;
   const genre=commonGenre==='perSheetRandom'?choose(GENRE_IDS):commonGenre;
@@ -138,7 +139,7 @@ const module={
    const seat=s.players.find(p=>p.id===joining?.id);
    if(!seat){
     if(s.phase!=='writing'||(s.waitlist||[]).length>=MAX_PLAYERS)throw Error('match_in_progress');
-    if(!s.waitlist.some(p=>p.id===joining.id))s.waitlist.push({id:joining.id,name:clean(joining.name,24)||'Гравець'});
+    if(!s.waitlist.some(p=>p.id===joining.id))s.waitlist.push({id:joining.id,name:clean(joining.name,24)||'Гравець',avatar:joining.avatar,accountId:joining.accountId,verified:joining.verified===true});
     s.revision++;return {state:s,events:events()};
    }
    const current=players.find(p=>p.id===seat.id);
@@ -225,7 +226,7 @@ const module={
     else {
       const previousId=seat.id;
       s.authors[previousId] ||=seat.name;
-      seat.id=candidate.id;seat.name=candidate.name;seat.vacant=false;seat.autoSkip=false;
+      seat.id=candidate.id;seat.name=candidate.name;seat.accountId=candidate.accountId||null;seat.avatar=candidate.avatar||null;seat.verified=candidate.verified===true;seat.vacant=false;seat.autoSkip=false;
       s.authors[candidate.id]=candidate.name;
       if(s.submitted[previousId])s.submitted[candidate.id]=true;
       delete s.submitted[previousId];delete s.receipts[previousId];
