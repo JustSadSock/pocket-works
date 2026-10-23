@@ -1181,7 +1181,7 @@ export function activeLawSummary(state) {
   return Object.fromEntries(SLOT_TYPES.map((slot) => [slot, slotLaw(state, slot)]));
 }
 
-export function resolveTurn(state, choices) {
+export function resolveTurn(state, choices, options = {}) {
   const next = clone(state);
   const turnLog = [];
   const tracker = {
@@ -1195,9 +1195,11 @@ export function resolveTurn(state, choices) {
   };
   // Frame snapshots are captured AFTER each real engine phase, not recreated
   // by UI heuristics. They are presentation-only and not persisted/networked.
-  const frames = [{ phase: "start", state: clone(next), logs: [], moves: [], crowns: [], seals: [] }];
+  const captureFrames = options.captureFrames !== false;
+  const frames = captureFrames ? [{ phase: "start", state: clone(next), logs: [], moves: [], crowns: [], seals: [] }] : [];
   let logAt = 0, moveAt = 0, crownAt = 0, sealAt = 0;
   const capture = (phase) => {
+    if (!captureFrames) return;
     frames.push({
       phase,
       state: clone(next),
