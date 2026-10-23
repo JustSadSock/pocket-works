@@ -186,45 +186,52 @@ function stump(mesh, shadows, level, prop, seed, palette) {
 }
 
 function barrierBox(mesh, shadows, level, wall, palette) {
-  const dx = wall.bx - wall.ax;
-  const dy = wall.by - wall.ay;
+  const dx = wall.bx - wall.ax, dy = wall.by - wall.ay;
   const length = Math.hypot(dx, dy) || 1;
-  const nx = -dy / length * wall.thickness * .5;
-  const ny = dx / length * wall.thickness * .5;
-  const zA = terrainHeightAt(level, wall.ax, wall.ay) + .5;
-  const zB = terrainHeightAt(level, wall.bx, wall.by) + .5;
+  const nx = -dy / length, ny = dx / length;
+  const half = Math.max(4, Number(wall.thickness || 18) * .5);
+  const zA = terrainHeightAt(level, wall.ax, wall.ay) + .6;
+  const zB = terrainHeightAt(level, wall.bx, wall.by) + .6;
   const height = Number(wall.visualHeight || 28);
-  const a0 = [wall.ax + nx, wall.ay + ny, zA];
-  const a1 = [wall.ax - nx, wall.ay - ny, zA];
-  const b0 = [wall.bx + nx, wall.by + ny, zB];
-  const b1 = [wall.bx - nx, wall.by - ny, zB];
-  const at0 = [a0[0], a0[1], zA + height];
-  const at1 = [a1[0], a1[1], zA + height];
-  const bt0 = [b0[0], b0[1], zB + height];
-  const bt1 = [b1[0], b1[1], zB + height];
-  const sideTint = wall.material === 'stone' ? palette.stone : palette.wood;
-  const topTint = wall.material === 'stone' ? palette.stoneLight : palette.woodLight;
-  mesh.quad(at0, at1, bt1, bt0, topTint, 0);
-  mesh.quad(a0, b0, bt0, at0, sideTint, 0);
-  mesh.quad(a1, at1, bt1, b1, sideTint, 0);
-  mesh.quad(a0, at0, at1, a1, sideTint, 0);
-  mesh.quad(b0, b1, bt1, bt0, sideTint, 0);
-  disc(shadows, (wall.ax + wall.bx) * .5 + 4, (wall.ay + wall.by) * .5 + 7, (zA + zB) * .5 + .1, length * .53, wall.thickness * .9, C.shadow, 3, 18);
-  if (wall.material === 'wood') {
-    const marks = Math.max(1, Math.floor(length / 70));
-    for (let index = 1; index < marks; index += 1) {
-      const t = index / marks;
-      const x = lerp(wall.ax, wall.bx, t);
-      const y = lerp(wall.ay, wall.by, t);
-      const z = lerp(zA, zB, t) + height + .22;
-      const across = wall.thickness * .45;
-      const p0 = [x + nx / wall.thickness * across, y + ny / wall.thickness * across, z];
-      const p1 = [x - nx / wall.thickness * across, y - ny / wall.thickness * across, z];
-      const forwardX = dx / length * 2;
-      const forwardY = dy / length * 2;
-      mesh.quad(p0, p1, [p1[0] + forwardX, p1[1] + forwardY, z], [p0[0] + forwardX, p0[1] + forwardY, z], palette.wood, 0, [0, 0, 1]);
+  const isStone = wall.material === 'stone' || Boolean(wall.tunnelWall);
+  const topTint = isStone ? palette.stoneLight : palette.woodTop;
+  const sideTint = isStone ? palette.stone : palette.wood;
+  const aL = [wall.ax + nx * half, wall.ay + ny * half, zA];
+  const aR = [wall.ax - nx * half, wall.ay - ny * half, zA];
+  const bL = [wall.bx + nx * half, wall.by + ny * half, zB];
+  const bR = [wall.bx - nx * half, wall.by - ny * half, zB];
+  const atL = [aL[0], aL[1], zA + height], atR = [aR[0], aR[1], zA + height];
+  const btL = [bL[0], bL[1], zB + height], btR = [bR[0], bR[1], zB + height];
+  mesh.quad(aL, bL, btL, atL, sideTint, 0);
+  mesh.quad(aR, atR, btR, bR, tone(sideTint, .85), 0);
+  mesh.quad(atL, atR, btR, btL, topTint, 0, [0, 0, 1]);
+  mesh.quad(aL, atL, atR, aR, tone(sideTint, .83), 0);
+  mesh.quad(bL, bR, btR, btL, tone(sideTint, .83), 0);
+
+  const at = (t, side, lift = .34) => [
+    wall.ax + dx * t + nx * side * half,
+    wall.ay + dy * t + ny * side * half,
+    lerp(zA, zB, t) + height + lift
+  ];
+  // A single inset carving gives the top its material, never a random decal.
+  if (isStone) {
+    mesh.quad(at(.07, -.58), at(.93, -.58), at(.93, .58), at(.07, .58),
+      tone(palette.stone, .89), 0, [0, 0, 1]);
+    for (let t = .23; t <= .78; t += .27) {
+      mesh.quad(at(t, -.60, .46), at(t + .012, -.60, .46), at(t + .012, .60, .46), at(t, .60, .46),
+        tone(palette.stoneLight, .77), 0, [0, 0, 1]);
+    }
+  } else {
+    mesh.quad(at(.08, -.12), at(.92, -.12), at(.92, .12), at(.08, .12),
+      tone(palette.wood, .78), 0, [0, 0, 1]);
+    const pegRadius = Math.min(half * .18, 3.5);
+    for (const t of [.10, .90]) {
+      const center = at(t, 0, .54);
+      disc(mesh, center[0], center[1], center[2], pegRadius, pegRadius, palette.stoneLight, 4, 10);
     }
   }
+  disc(shadows, (wall.ax + wall.bx) * .5 + 4, (wall.ay + wall.by) * .5 + 7,
+    (zA + zB) * .5 + .1, length * .52, half * 1.7, C.shadow, 3, 18);
 }
 
 function portalPoint(endpoint, lateral, z, depth) {
