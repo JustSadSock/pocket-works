@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import module,{RULESET_VERSION} from '../server/module.ts';
+import {grantEarnedMagicRune} from '../magic-v2-rules.mjs';
 const a={id:'a',name:'А',verified:false},b={id:'b',name:'Б',verified:false},intruder={id:'outsider'};
 const players=[a,b];
 const send=(s,player,type,data={})=>module.onMessage({state:s,player,players,payload:{type,...data}});
@@ -10,18 +11,20 @@ const magicRoom=()=>{
  const s=room();send(s,a,'mode',{gameMode:'magic-v2'});send(s,a,'magic-school',{school:'stone'});send(s,b,'magic-school',{school:'fire'});send(s,a,'start',{gameMode:'magic-v2'});return s;
 };
 const edit=(s,player,command)=>send(s,player,'magic-edit',{command:{...command,revision:s.match.magicLoadouts[player===a?0:1].revision,nonce:'test-'+(s.revision+1)}});
+const fixtureCard=(s,player,id)=>{const i=player===a?0:1,book=s.match.magicLoadouts[i];if(book.reserve.some(r=>r.defId===id))return;const added=grantEarnedMagicRune(book,id);assert.equal(added.ok,true,added.error);s.match.magicLoadouts[i]=added.state};
 const equip=(s,player,id,slot,action)=>{
+ fixtureCard(s,player,id);
  const own=s.match.magicLoadouts[player===a?0:1].reserve.find(x=>x.defId===id);
  assert.ok(own,id+' must be server-issued');
  return edit(s,player,{type:'equip',slot,instanceId:own.instanceId,...(action===undefined?{}:{action})});
 };
-test('v12 binary-exact snapshot, immutable v9 through v11 and current module lock',async()=>{
+test('v13 binary-exact snapshot, immutable v9 through v11 and current module lock',async()=>{
  const main=await readFile(new URL('../server/module.ts',import.meta.url),'utf8');
- const current=await readFile(new URL('../../../pocketnet/module-versions/perekos/v12.ts',import.meta.url),'utf8');
+ const current=await readFile(new URL('../../../pocketnet/module-versions/perekos/v13.ts',import.meta.url),'utf8');
  const previous=await readFile(new URL('../../../pocketnet/module-versions/perekos/v9.ts',import.meta.url),'utf8');
  const lock=JSON.parse(await readFile(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
- assert.equal(main,current);assert.notEqual(main,previous);assert.equal(RULESET_VERSION,12);
- assert.equal(lock.perekos.current,'v12');assert.ok(lock.perekos.versions.includes('v9'));assert.ok(lock.perekos.versions.includes('v10'));assert.ok(lock.perekos.versions.includes('v11'));
+ assert.equal(main,current);assert.notEqual(main,previous);assert.equal(RULESET_VERSION,13);
+ assert.equal(lock.perekos.current,'v13');assert.ok(lock.perekos.versions.includes('v9'));assert.ok(lock.perekos.versions.includes('v10'));assert.ok(lock.perekos.versions.includes('v11'));assert.ok(lock.perekos.versions.includes('v12'));
  assert.match(previous,/RULESET_VERSION=9/);
 });
 test('two seats select isolated schools and get server-owned rune inventory',()=>{
@@ -32,10 +35,10 @@ test('two seats select isolated schools and get server-owned rune inventory',()=
  assert.equal(one.school,'stone');assert.equal(two.school,'fire');
  assert.equal(s.match.actors[0].magicSchool,'stone');
  assert.equal(s.match.actors[1].magicSchool,'fire');
- assert.ok(one.reserve.some(r=>r.defId==='st_wall'));
+ assert.ok(one.reserve.some(r=>r.defId==='st_throw'));
  assert.ok(two.reserve.some(r=>r.defId==='fi_ember'));
  assert.ok(!two.reserve.some(r=>r.defId==='li_spark'));
- assert.equal(module.viewForPlayer({state:s,player:a,players}).rulesVersion,12);
+ assert.equal(module.viewForPlayer({state:s,player:a,players}).rulesVersion,13);
  assert.equal(module.viewForPlayer({state:s,player:b,players}).loadout.school,'fire');
 });
 test('untrusted clients cannot modify somebody else, forge card IDs, or skip typed 1/2/2 slots',()=>{
@@ -47,7 +50,7 @@ test('untrusted clients cannot modify somebody else, forge card IDs, or skip typ
  assert.equal(s.revision,revision);
  send(s,a,'magic-school',{school:'storm'});
  assert.equal(s.schools[0],'stone');
- const own=s.match.magicLoadouts[0].reserve.find(x=>x.defId==='u_on_cast');
+ fixtureCard(s,a,'u_on_cast');const own=s.match.magicLoadouts[0].reserve.find(x=>x.defId==='u_on_cast');
  edit(s,a,{type:'equip',slot:1,instanceId:own.instanceId});
  assert.ok(s.match.magicLoadouts[0].slots[1].when);
  const guard=s.match.magicLoadouts[0].reserve.find(x=>x.defId==='u_guard');
@@ -81,7 +84,7 @@ test('sealing rune chain locks instances, frees slot, and physically shields und
   assert.equal(s.match.magicLoadouts[0].sealed.length,1);
  }finally{Date.now=old}
 });
-test('ready changes are rejected after entering a fight, and legacy rules stay playable under v12',()=>{
+test('ready changes are rejected after entering a fight, and legacy rules stay playable under v13',()=>{
  const s=magicRoom();
  send(s,a,'magic-ready');send(s,b,'magic-ready');
  const revision=s.match.magicLoadouts[0].revision;
@@ -121,5 +124,5 @@ test('v12 server issues the storm fan but rejects it for other schools',()=>{
  send(other,a,'mode',{gameMode:'magic-v2'});
  send(other,a,'magic-school',{school:'storm'});
  send(other,a,'start',{gameMode:'magic-v2'});
- assert.ok(other.match.magicLoadouts[0].reserve.some(x=>x.defId==='li_discharge'),'storm player receives true rune');
+ assert.ok(!other.match.magicLoadouts[0].reserve.some(x=>x.defId==='li_discharge'),'rarity draft reserves rare lightning rune for future rounds');
 });
