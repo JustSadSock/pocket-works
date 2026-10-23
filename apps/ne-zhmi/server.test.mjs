@@ -10,7 +10,12 @@ test('two seats, swap host only, start host only',()=>{
  send(s,host,{type:'swap'});assert.deepEqual(s.roles,['G','H']);
  send(s,guest,{type:'start'});assert.equal(s.phase,'lobby');
  send(s,host,{type:'start'});assert.equal(s.phase,'play');assert.equal(s.round,1);
- assert.throws(()=>module.onJoin({state:s,players:[host,guest,intruder]}),/room_full/);
+ // Up to six people may join before a run, but the seventh is rejected.
+ const extra=Array.from({length:5},(_,i)=>({id:'extra'+i,name:'extra'+i}));
+ const lobby=module.createRoom({player:host}).state;
+ module.onJoin({state:lobby,players:[host,guest,...extra.slice(0,4)]});
+ assert.equal(lobby.roles.length,6);
+ assert.throws(()=>module.onJoin({state:lobby,players:[host,guest,...extra]}),/room_full/);
 });
 test('server owns position; unauthorized role and foreign messages are ignored',()=>{
  const s=setup();send(s,host,{type:'start'});const x=s.robot.x;
