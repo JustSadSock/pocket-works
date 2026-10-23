@@ -6,14 +6,14 @@ export function renderWriting({view,roomVersion,draft,meta,chosen,pending=false,
  if(!s)return '<section class="paper waiting"><h2>Очікуємо аркуш…</h2></section>';
  const need=handoffCount({roomVersion,round:view.round,total:view.total,visibleTailWords:view.settings.visibleTailWords,answer:draft});
  const review=need>0&&meta.step==='select'&&hasMinimumDraft(draft);
- const final=['v4','v5','v6'].includes(roomVersion)&&view.round===view.total-1;
+ const final=['v4','v5','v6','v7'].includes(roomVersion)&&view.round===view.total-1;
  const safe=escape;
  const title=safe(s.question?.prompt||'Продовж історію');
  const hero=s.gender?genders.find(([id])=>id===s.gender)?.[1]||'Неважливо':null;
  const incoming='<div class="incoming incoming-compact"><b>'+(s.tail?'ВІД ПОПЕРЕДНЬОГО АВТОРА':'ПОЧАТОК ІСТОРІЇ')+'</b><p>'+safe(s.tail||'Ти пишеш першим. Нехай буде дивно.')+'</p>'+(s.heroAnchor?'<span class="story-anchor">Герой: '+safe(s.heroAnchor)+'</span>':'')+(hero?'<span class="mini">Персонаж: '+safe(hero)+'</span>':'')+'</div>';
  const intro='<div class="editor-question"><div class="mini">'+safe(s.setLabel)+' · '+safe(s.genreLabel)+'</div><h2 class="question">'+title+'</h2>'+incoming+'</div>';
  const guidelines='<details class="editorial-brief"><summary>Підказки до етапу <span aria-hidden="true">⌄</span></summary><div class="editorial-brief-content"><p><b>НАПИШИ</b> '+safe(s.question?.guidance||'Додай одну подію.')+'</p><p><b>НЕ ЗАБІГАЙ УПЕРЕД</b> '+safe(s.question?.creativeFreedom||'Не описуй майбутніх сцен.')+'</p>'+(genres[s.genreLabel]?'<p><b>ТОН ЖАНРУ</b> '+safe(genres[s.genreLabel])+'</p>':'')+'</div></details>';
- const passport=!review&&['v4','v5','v6'].includes(roomVersion)&&view.round===0?'<details class="hero-passport"><summary>Головний герой <small>необов’язково</small></summary><div class="passport-fields"><label class="anchor-field"><span class="field-label">Ім’я або роль героя — видно наступним авторам</span><input class="field" id="heroAnchor" maxlength="72" autocomplete="off" placeholder="Наприклад: Василь, чарівник" value="'+safe(meta.anchor)+'"></label><div class="genders" role="group" aria-label="Стать героя">'+genders.map(([id,label])=>'<label><input name="gender" type="radio" value="'+id+'" '+((meta.gender||'unspecified')===id?'checked':'')+'>'+label+'</label>').join('')+'</div></div></details>':'';
+ const passport=!review&&['v4','v5','v6','v7'].includes(roomVersion)&&view.round===0?'<details class="hero-passport"><summary>Головний герой <small>необов’язково</small></summary><div class="passport-fields"><label class="anchor-field"><span class="field-label">Ім’я або роль героя — видно наступним авторам</span><input class="field" id="heroAnchor" maxlength="72" autocomplete="off" placeholder="Наприклад: Василь, чарівник" value="'+safe(meta.anchor)+'"></label><div class="genders" role="group" aria-label="Стать героя">'+genders.map(([id,label])=>'<label><input name="gender" type="radio" value="'+id+'" '+((meta.gender||'unspecified')===id?'checked':'')+'>'+label+'</label>').join('')+'</div></div></details>':'';
  let position=0;
  const manuscript=wordParts(draft).map(token=>{
   if(/^\s+$/u.test(token))return safe(token);
