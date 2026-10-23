@@ -854,3 +854,52 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
  background:#d2b882;color:#1b2625;border-color:#d2b882;
 }
 @media(max-width:560px){.online-network-status:not([hidden]){font-size:11px;gap:6px}.online-network-status .net-retry{min-height:40px}}
+
+
+/* 0.5.5 — responsive final-pass: preserve room controls and replay at all heights. */
+.modal{
+  padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
+    max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+}
+.modal-content{
+  max-height:calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y:auto;overscroll-behavior:contain;
+}
+.results-content{
+  width:min(660px,100%);
+  scrollbar-gutter:stable;
+}
+.results-content #play-again-btn{
+  position:sticky;bottom:0;z-index:1;
+  box-shadow:0 -7px 14px var(--panel);
+  flex-shrink:0;
+}
+.results-content #menu-btn{flex-shrink:0}
+.results-content .result-metric{overflow:hidden}
+.results-content .result-metric strong{
+  overflow-wrap:anywhere;font-variant-numeric:tabular-nums;
+}
+#settings-container .key-binding input.capturing{
+  border-color:var(--accent);outline:2px solid color-mix(in srgb,var(--accent) 42%,transparent);
+  outline-offset:1px;
+}
+#settings-container .key-binding input:focus-visible,
+.modal-content button:focus-visible,
+.room-invite-actions button:focus-visible{
+  outline:2px solid var(--accent);outline-offset:3px;
+}
+@media(max-width:640px){
+  .results-content{scrollbar-gutter:auto}
+  .results-content .result-lower{grid-template-columns:minmax(0,1fr) minmax(110px,.8fr)}
+}
+@media(max-height:550px){
+  .modal{align-items:center;padding-block:7px}
+  .results-content{max-height:calc(100dvh - 14px - env(safe-area-inset-top) - env(safe-area-inset-bottom));gap:8px}
+  .results-content h2{font-size:clamp(26px,6vh,35px)}
+  .results-content .result-score{gap:4px;padding-bottom:9px}
+  .results-content .result-score__value{font-size:clamp(34px,11vh,52px)}
+  .results-content .result-metric{padding:9px}
+  .results-content .result-metrics{gap:6px}
+  .results-content .result-board__canvas{max-height:95px}
+  .results-content #play-again-btn{min-height:45px}
+}
