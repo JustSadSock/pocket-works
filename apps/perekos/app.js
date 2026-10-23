@@ -209,6 +209,7 @@ const magicV2Lab=installMagicV2Lab({
  root:$('magic-v2'),
  isRemote:()=>!!online?.active&&online.view?.gameMode==='magic-v2',
  onServerEdit:command=>online?.editMagic(command)||false,
+ onServerPick:(index,stage)=>online?.pickMagic(index,stage)||false,
  getMatch:()=>active,
  setLoadout:loadout=>{if(active?.magicModeV2){active.magicLoadouts[0]=loadout;remember()}},
  onStart:school=>{
@@ -953,6 +954,18 @@ function onlineView(view){
  void refreshRival(view);
  online.view=view;active=view.match||null;
  if(active?.magicModeV2)active.magicSeat=view.me;
+ if(view.gameMode==='magic-v2'&&view.phase==='magic-offer'){
+  const stamp=['magic-offer',view.me,view.magicStage,view.magicPicked?'picked':'choose'].join(':');
+  const desired=view.magicPicked?'net-wait':'magic-v2';
+  if(stamp===onlinePhase&&mode===desired)return;
+  onlinePhase=stamp;applyRival();
+  if(view.magicPicked)show('net-wait');
+  else{
+   if(mode!=='magic-v2')show('magic-v2');
+   magicV2Lab.renderOffers(view.magicChoices||[],view.magicStage||0);
+  }
+  return;
+ }
  if(view.gameMode==='magic-v2'&&view.phase==='magic-build'){
   // A room snapshot also arrives for connection keepalives and opponent input.
   // Rebuilding the editor on each snapshot detached a button while players
