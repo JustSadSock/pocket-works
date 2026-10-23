@@ -271,7 +271,7 @@
     ]
   },
   "black-bazaar": {
-    "current": "v16",
+    "current": "v17",
     "versions": [
       "v1",
       "v2",
@@ -288,7 +288,8 @@
       "v13",
       "v14",
       "v15",
-      "v16"
+      "v16",
+      "v17"
     ]
   },
   "ne-zhmi": {
