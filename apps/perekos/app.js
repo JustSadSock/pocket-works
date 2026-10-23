@@ -40,7 +40,7 @@ if(typeof ResizeObserver!=='undefined'){
 window.addEventListener('resize',fitWorldToArena,{passive:true});
 window.visualViewport?.addEventListener('resize',fitWorldToArena,{passive:true});
 requestAnimationFrame(fitWorldToArena);
-const storage='pocket-works:perekos:',prefsKey=storage+'prefs',saveKey=storage+'match',booksKey=storage+'grimoire';
+const storage='pocket-works:perekos:',prefsKey=storage+'prefs',saveKey=storage+'match',booksKey=storage+'grimoire',magicSaveKey=storage+'magic-v2-practice';
 let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,lastProfileFetch=0,avatarInFlight=null;
 let online=null,onlinePreviewRunes=null,onlinePhase='',displayXY=[null,null];
 let rivalAppearance={...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']},pendingRival=null,rivalKey='',rivalRequest=0;
@@ -59,10 +59,12 @@ let tapAttackQueued=false,aimTouch=false,aimTouchStart=0,aimDragged=false,aimVec
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
 function put(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;desktopPanelsVisible=savedPrefs?.desktopPanels!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';selectedGameMode=savedPrefs?.gameMode==='duel'?'duel':'rupture';selectedArchetype=validArchetype(savedPrefs?.archetype)?savedPrefs.archetype:'striker';selectedSpecialSlot=Number.isInteger(savedPrefs?.specialSlot)&&savedPrefs.specialSlot>=0&&savedPrefs.specialSlot<3?savedPrefs.specialSlot:0;
-function remember(){put(prefsKey,{sound,mage:selectedMage,gameMode:selectedGameMode,archetype:selectedArchetype,specialSlot:selectedSpecialSlot,desktopPanels:desktopPanelsVisible});if(!debugSession&&!online?.active&&active&&validState(active))put(saveKey,active)}
-function forget(){if(debugSession)return;try{localStorage.removeItem(saveKey)}catch{}}
+function remember(){put(prefsKey,{sound,mage:selectedMage,gameMode:selectedGameMode,archetype:selectedArchetype,specialSlot:selectedSpecialSlot,desktopPanels:desktopPanelsVisible});if(!debugSession&&!online?.active&&active&&validState(active))put(active.magicModeV2?magicSaveKey:saveKey,active)}
+function forget(magic=false){if(debugSession)return;try{localStorage.removeItem(magic?magicSaveKey:saveKey)}catch{}}
 const resume=stored(saveKey);
 if(resume&&validState(resume))$('continue').hidden=false;
+const magicResume=stored(magicSaveKey);
+if(magicResume?.magicModeV2&&validState(magicResume))$('continue-v2').hidden=false;
 function audioContext(){if(!sound)return null;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;if(!audio)audio=new C();if(audio.state==='suspended')audio.resume().catch(()=>{});return audio}catch{return null}}
 function sfx(type,school='fire'){
  const ac=audioContext();if(!ac)return;
@@ -209,10 +211,10 @@ const magicV2Lab=installMagicV2Lab({
  setLoadout:loadout=>{if(active?.magicModeV2){active.magicLoadouts[0]=loadout;remember()}},
  onStart:school=>{
   if(online?.active)online.leave();onlinePhase='';applyPendingAppearance();
-  if(!school){active=null;forget();show('magic-v2');return}
+  if(!school){forget(true);active=null;$('continue-v2').hidden=true;show('magic-v2');return}
   active=makeMagicV2Practice(school,(Date.now()>>>0)^0x29a329);
   fxParticles=[];combatPresentation.reset();spellChoreography.reset();seen=0;audioContext();
-  show('magic-v2');remember();
+  show('magic-v2');remember();$('continue-v2').hidden=false;
  },
  onFight:()=>{
   if(!active?.magicModeV2)return;
@@ -220,11 +222,24 @@ const magicV2Lab=installMagicV2Lab({
   toast('Новая магия · WASD/джойстик — движение · стреляй и возвращайся к рунам');
   remember();
  },
- onClose:()=>{active=null;forget();show('menu')}
+ onClose:()=>{forget(true);active=null;$('continue-v2').hidden=true;show('menu')}
 });
 $('open-v2-lab').addEventListener('click',()=>{
+ const saved=stored(magicSaveKey);
+ if(saved?.magicModeV2&&validState(saved)&&!window.confirm('Начать новую лабораторию? Сохранённую тренировочную сборку можно продолжить отдельной кнопкой. Новая заменит её.'))return;
  if(online?.active)online.leave();onlinePhase='';
- active=null;show('magic-v2');magicV2Lab.open();
+ if(saved?.magicModeV2)forget(true);
+ active=null;$('continue-v2').hidden=true;show('magic-v2');magicV2Lab.open();
+});
+$('continue-v2').addEventListener('click',()=>{
+ const s=stored(magicSaveKey);
+ if(!s?.magicModeV2||!validState(s)){
+  $('continue-v2').hidden=true;return;
+ }
+ if(online?.active)online.leave();onlinePhase='';
+ active=s;seen=active.serial||0;combatPresentation.reset();spellChoreography.reset();
+ if(s.phase==='fight')show('fight');
+ else{show('magic-v2');magicV2Lab.render()}
 });
 $('open-forge').addEventListener('click',startForge);
 $('forge-edit').addEventListener('click',()=>{if(active?.gameMode!=='forge'||online?.active)return;active.phase='build';if(active.magicModeV2){show('magic-v2');magicV2Lab.render()}else{show('build');renderWorkbench()}remember()});
@@ -235,7 +250,7 @@ $('pause-btn').addEventListener('click',pause);
 $('resume').addEventListener('click',()=>{show('fight');last=performance.now()});
 $('quit').addEventListener('click',()=>{$('quit-warning').textContent=online?.active?'Выход из комнаты засчитает поражение в текущем матче.':'Прогресс текущей серии будет потерян.';quitPrompt=true;$('pause').hidden=true;$('confirm').hidden=false;mode='confirm'});
 $('quit-no').addEventListener('click',()=>{quitPrompt=false;show('pause')});
-$('quit-yes').addEventListener('click',()=>{if(online?.active)online.leave();onlinePhase='';active=null;forget();$('continue').hidden=true;show('menu')});
+$('quit-yes').addEventListener('click',()=>{if(online?.active)online.leave();onlinePhase='';const wasMagic=!!active?.magicModeV2;forget(wasMagic);active=null;if(wasMagic)$('continue-v2').hidden=true;else $('continue').hidden=true;show('menu')});
 let toastT=0;
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');toastT=1.9}
 function myIndex(){return debugSession?0:online?.active?online.me:0}
