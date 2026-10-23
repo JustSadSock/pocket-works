@@ -4,14 +4,14 @@ import {blockiesAchievements} from './blockies-achievements.js';
 // Pocket Works MASKOT — original, hand-drawn, composable SVG geometry.
 // Asset IDs (not arbitrary markup) are the only user-controlled input.
 // Public profile renders are already server-validated; these IDs are visual decoding rights, not ownership grants.
-export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom','seoul-artist','dragon-keeper','yasya-chaos',...zamazkaAchievements.map(a=>a.id),...canticaAchievements.map(a=>a.id),...blockiesAchievements.map(a=>a.id)];
+export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom','seoul-artist','dragon-keeper','yasya-chaos','yasya-diadem','yasya-guardian',...zamazkaAchievements.map(a=>a.id),...canticaAchievements.map(a=>a.id),...blockiesAchievements.map(a=>a.id)];
 export const mascotAnimals=[['cat','Кот'],['black-cat','Чёрный кот'],['fox','Лиса'],['rabbit','Кролик'],['frog','Лягушка']];
 export const mascotHats=[['none','Без'],['crown','Корона'],['beret','Берет'],['flower','Цветок']];
 export const mascotClothes=[['tunic','Туника'],['vest','Жилет'],['mantle','Мантия']];
 export const mascotAccessories=[['none','Без аксессуара']];
 export const mascotFaces=[['none','Без'],['glasses','Очки'],['stars','Звёздочки']];
 export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Призрачная кисть','Всевидящий','Авантюрист',...canticaAchievements.filter(a=>a.slot==='title').map(a=>a.item),...blockiesAchievements.filter(a=>a.slot==='title').map(a=>a.item)];
-export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'},groom:{clothes:'groom'},'seoul-artist':{hat:'stage-pin',clothes:'stage-hanbok'},'dragon-keeper':{accessory:'shoulder-dragon'},'yasya-chaos':{hat:'quiet-chaos',accessory:'tiny-guardian'}};
+export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'},groom:{clothes:'groom'},'seoul-artist':{hat:'stage-pin',clothes:'stage-hanbok'},'dragon-keeper':{accessory:'shoulder-dragon'},'yasya-chaos':{hat:'quiet-chaos',accessory:'tiny-guardian'},'yasya-diadem':{hat:'quiet-chaos'},'yasya-guardian':{accessory:'tiny-guardian'}};
 const one=(rows,id,fallback)=>rows.some(x=>x[0]===id)?id:fallback;
 export function safeMascot(input,unlocks=[]){
   const u=Array.isArray(unlocks)?unlocks:[];
