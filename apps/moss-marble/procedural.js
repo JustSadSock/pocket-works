@@ -65,6 +65,23 @@ function buildCenterline(random, depth) {
   };
 }
 
+function smoothBank(points) {
+  // Subdivide the same contour used for rendering and physical collision.
+  // Preserve caps instead of making a separate cosmetic rim.
+  let bank = points;
+  for (let pass = 0; pass < 2; pass += 1) {
+    const next = [bank[0]];
+    for (let index = 0; index < bank.length - 1; index += 1) {
+      const a = bank[index], b = bank[index + 1];
+      next.push({ x: a.x * .75 + b.x * .25, y: a.y * .75 + b.y * .25 });
+      next.push({ x: a.x * .25 + b.x * .75, y: a.y * .25 + b.y * .75 });
+    }
+    next.push(bank.at(-1));
+    bank = next;
+  }
+  return bank;
+}
+
 function routeOutline(centerline, widths) {
   const left = [];
   const right = [];
@@ -79,7 +96,7 @@ function routeOutline(centerline, widths) {
     left.push({ x: centerline[index].x + nx * widths[index], y: centerline[index].y + ny * widths[index] });
     right.push({ x: centerline[index].x - nx * widths[index], y: centerline[index].y - ny * widths[index] });
   }
-  return [...left, ...right.reverse()];
+  return [...smoothBank(left), ...smoothBank(right).reverse()];
 }
 
 function pointInPolygon(point, polygon) {
