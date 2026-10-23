@@ -77,4 +77,39 @@ const art=Array.from({length:400},(_,i)=>({c:'#abcdef',s:12,t:'brush',p:Array.fr
  for(const chunk of chunks.slice(response.payload.next))send(a,chunk);
  assert.equal(s.assignments[a.id].strokes.length,400,'resumed transfer preserves full painting');
 }
+{
+ const {s,send}=room(),ass=s.assignments[a.id];
+ const meta={round:s.round,art:ass.art,variation:ass.variation,strokes:art};
+ const chunks=paintPackets({...meta,type:'submit_chunk'});
+ for(const chunk of chunks)send(a,chunk);
+ assert.equal(s.assignments[a.id].strokes.length,400,'server committed final before ACK loss');
+ const query={type:'submit_resume',round:s.round,art:ass.art,variation:ass.variation,
+  revision:chunks[0].revision,checksum:chunks[0].checksum,parts:chunks.length};
+ const acknowledged=send(a,query);
+ assert.equal(acknowledged.events[0].type,'submission_saved','lost ACK must not resend all packets');
+ assert.equal(acknowledged.events[0].payload.checksum,paintingChecksum(art));
+ assert.equal(s.assignments[a.id].strokes.length,400,'duplicate confirmation must not alter pixels');
+ const corrupted=send(a,{...query,checksum:'00000000'});
+ assert.notEqual(corrupted.events[0].type,'submission_saved','mismatched checksum must not confirm');
+ // The other artist finishes, advancing the gallery to voting. The same
+ // committed art must still be acknowledgeable after phase advancement.
+ const other=s.assignments[b.id];
+ for(const packet of paintPackets({type:'submit_chunk',round:s.round,art:other.art,
+  variation:other.variation,strokes:art}))send(b,packet);
+ assert.equal(s.phase,'voting');
+ assert.equal(send(a,query).events[0].type,'submission_saved','retry after phase transition is idempotent');
+}
+{
+ const {s,send}=room(),ass=s.assignments[a.id];
+ // Deadline may fall back to an earlier draft, but that is never a final receipt.
+ const chunks=paintPackets({type:'submit_chunk',round:s.round,art:ass.art,
+  variation:ass.variation,strokes:art});
+ clock=s.deadline+exports.FINAL_TRANSFER_RECOVERY_MS+1;
+ send(b,{type:'pulse'});
+ assert.ok(s.incompleteSubmissions.includes(a.id));
+ const result=send(a,{type:'submit_resume',round:s.round,art:ass.art,
+  variation:ass.variation,revision:chunks[0].revision,
+  checksum:chunks[0].checksum,parts:chunks.length});
+ assert.notEqual(result.events[0].type,'submission_saved','deadline fallback is not a confirmed final');
+}
 console.log('ZAMAZKA: final transfer grace, completed chunks, explicit incomplete fallback OK');
