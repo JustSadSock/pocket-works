@@ -154,6 +154,8 @@ function renderStudio(){
  (canChange?'<button class="action secondary danger" data-action="reset">Новый проект</button>':'')+
  '<button class="action secondary" data-action="leave">← Меню</button></div></section>';
  updateMeter(true);
+ // PocketNet snapshots can rebuild the console while a note is held.
+ for(const h of held.values())if(Number.isInteger(h.pitch))view.querySelector('.pad[data-pad="'+h.pitch+'"]')?.classList.add('active');
  requestDeckFrame();
 }
 function updateMeter(force=false){
