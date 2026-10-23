@@ -873,3 +873,11 @@ body.sheet-open{overflow:auto}
 .player-popover .kick-player{border:1px solid #b99373;background:#f8e3cc;color:#743b2c;font-weight:750}
 .player-popover .kick-player:hover{background:#f1c8aa}
 @media(max-width:680px){.lobby-player .lobby-kick{width:100%;min-height:37px}.player-popover .kick-player{min-height:44px}}
+
+/* The host player menu must be above the workspace panel. Without promoting
+   its containing stacking context, an otherwise visible kick button receives
+   pointer events on the panel behind it at 320x568. */
+.play-screen:has(.player-popover){overflow:visible}
+.play-body:has(.player-popover){overflow:visible}
+.play-field:has(.player-popover){position:relative;z-index:90;overflow:visible}
+.player-seats:has(.player-popover){position:relative;z-index:91}
