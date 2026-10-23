@@ -304,6 +304,31 @@ function castClassSpell(s,a){
  a.specialCd=spec.cooldown;addHeat(s,a,12);return true;
 }
 
+export function previewAttack(s,a,target,special=false){
+ const dx=target.x-a.x,dy=target.y-a.y,angle=Math.atan2(dy,dx),ux=Math.cos(angle),uy=Math.sin(angle);
+ const type=special?(a.archetype==='shaper'?'placement':a.archetype==='distorter'?'phase':'ricochet'):a.mageId==='pebble'?'lob':a.mageId==='cinder'?'cone':a.mageId==='slate'?'sector':a.mageId==='coil'?'beam':'shot',far=mastery(a,'far'),wide=mastery(a,'wide');
+ let length=0,width=0,radius=5;
+ if(type==='lob'){length=Math.min(Math.hypot(dx,dy),far?295:252);radius=wide?42:33;return {type,angle,length,radius,blocked:false,x:a.x+ux*length,y:a.y+uy*length,segments:[{x:a.x,y:a.y,toX:a.x+ux*length,toY:a.y+uy*length}]}}
+ if(type==='placement'){length=51;radius=22;const x=a.x+ux*length,y=a.y+uy*length;return {type,angle,length,radius,blocked:!canStand(x,y,23)||blocking(s,x,y,24),x,y,segments:[]}}
+ if(type==='cone'){length=(far?239:210)*(.24+.76*(a.flameCharge||0));width=(wide?43:32)*(.42+.58*(a.flameCharge||0))}
+ if(type==='beam')length=far?290:242;
+ if(type==='sector'){length=far?133:112;width=wide?.75:.53}
+ if(['shot','ricochet','phase'].includes(type)){
+  const style=type==='shot'?mage(a.mageId).style:'arc';
+  const v0=type==='shot'?(a.mageId==='kindle'?174:a.mageId==='wire'?480:style==='bolt'||style==='arc'?365:style==='rock'?198:252):365;
+  const life=type==='shot'?(far?1.8:1.15)*(style==='arc'?.84:style==='rock'?1.2:style==='wave'?.65:1):type==='phase'?1.2:1.3;
+  let speed=v0*(a.archetype==='striker'?1.035:1);
+  for(let t=0;t<Math.ceil(life/STEP);t++){if(type==='shot'&&a.mageId==='kindle')speed=Math.min(310,speed+490*STEP);if(type==='shot'&&a.mageId==='wire')speed=Math.max(300,speed-380*STEP);length+=speed*STEP}
+ }
+ const hit=rayCollision(s,a.x,a.y,angle,length,radius,a.id);
+ const one={x:a.x,y:a.y,toX:a.x+ux*hit.length,toY:a.y+uy*hit.length},segments=[one];
+ if(type==='ricochet'&&hit.hit){
+  const dot=ux*hit.hit.nx+uy*hit.hit.ny,rx=ux-2*dot*hit.hit.nx,ry=uy-2*dot*hit.hit.ny;
+  const two=rayCollision(s,one.toX+rx*.15,one.toY+ry*.15,Math.atan2(ry,rx),Math.max(0,length-hit.length),5,a.id);
+  segments.push({x:one.toX,y:one.toY,toX:one.toX+rx*two.length,toY:one.toY+ry*two.length})
+ }
+ return {type,angle,length:hit.length,maxRange:length,width,radius,blocked:!!hit.hit,x:one.toX,y:one.toY,segments};
+}
 function attack(s,a,target){
  if(a.mageId==='cinder')return flame(s,a,target);
  if(a.cast>0||a.stun>0||a.windup)return false;
