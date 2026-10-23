@@ -66,3 +66,10 @@ test('Five true iframe viewport sizes, including portrait and landscape',()=>{
   [390,844],[844,390],[820,1024],[1024,768],[1440,900]
  ]);
 });
+
+test('Mobile portrait CSS keeps content panels scrollable without expanding page',()=>{
+ const css=readFileSync(new URL('./styles.css',import.meta.url),'utf8');
+ assert.match(css,/\.sheet-page\[hidden\]\{display:none!important\}/);
+ assert.match(css,/\.sheet-content\{flex:1 1 auto;overflow-y:auto\}/);
+ assert.match(css,/max-height:670px/);
+});
