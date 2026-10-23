@@ -61,9 +61,9 @@ test('Preview boot prevents real PocketNet sessions and writes',()=>{
  assert.doesNotMatch(html,/update-manager\.js/);
  assert.doesNotMatch(html,/service-worker|registerSW/i);
 });
-test('Five true iframe viewport sizes, including portrait and landscape',()=>{
+test('Seven true iframe viewport sizes, including small portrait and landscape',()=>{
  assert.deepEqual(DEBUG_VIEWPORTS.map(x=>[x[2],x[3]]),[
-  [390,844],[844,390],[820,1024],[1024,768],[1440,900]
+  [320,568],[375,667],[390,844],[844,390],[820,1024],[1024,768],[1440,900]
  ]);
 });
 
@@ -76,7 +76,7 @@ test('Mobile portrait CSS keeps content panels scrollable without expanding page
 
 test('Mobile audit checks collisions and clipped scrolling content',()=>{const ui=readFileSync(new URL('./app.js',import.meta.url),'utf8');assert.match(ui,/Стол перекрывает вкладки/);assert.match(ui,/Задание перекрывает ресурсы/);assert.match(ui,/Содержимое боковой панели обрезано/);});
 
-test('Workshop batch audit enumerates every debug scene at each viewport',()=>{const source=readFileSync(new URL('./debug-console.js',import.meta.url),'utf8');assert.match(source,/data-debug-audit-matrix/);assert.match(source,/DEBUG_SCENES\.flatMap/);assert.match(source,/requestAnimationFrame\(\(\)=>requestAnimationFrame/);});
+test('Workshop batch audit enumerates every debug scene at each viewport',()=>{const source=readFileSync(new URL('./debug-console.js',import.meta.url),'utf8');assert.match(source,/data-debug-audit-matrix/);assert.match(source,/DEBUG_SCENES\.flatMap/);assert.match(source,/scene-ready/);});
 
 test('Workshop awaits scene-ready and ignores stale viewport measurements',()=>{const source=readFileSync(new URL('./debug-console.js',import.meta.url),'utf8');assert.match(source,/scene-ready/);assert.match(source,/d\.step!==auditStep/);assert.match(source,/data-debug-copy-report/);});
 
@@ -115,4 +115,13 @@ test('Public auction rejects invalid and stale bids without moving resources',()
  assert.ok(debugCommand(s,{type:'accept',buyer:'debug-1'}).error,'no valid bid');
  assert.deepEqual(s.players[1].resources,walletBefore);
  assert.ok(s.listing,'the unfilled listing remains');
+});
+
+test('Mobile browser QA checks public auction settlement and presentation',()=>{
+ const src=readFileSync(new URL('../../scripts/qa-black-bazaar-mobile.mjs',import.meta.url),'utf8');
+ assert.match(src,/scene==='seller'/);
+ assert.match(src,/type:'post'/);
+ assert.match(src,/type:'bid',buyer:'debug-1'/);
+ assert.match(src,/type:'accept',buyer:'debug-1'/);
+ assert.match(src,/auction payment or first-sale bonus incorrect/);
 });
