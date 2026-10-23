@@ -54,6 +54,17 @@ test("advisor does not display a competing decree sheet during the forecast or l
  assert.match(js,/pieces: Array\.from\(root\.querySelectorAll\("\.piece"\)\)/);
 });
 
+test("WebKit gets explicit pixel positioning based on the measured board rect",()=>{
+ assert.match(js,/function syncCourtGeometry\(\) \{/);
+ assert.match(js,/board\.getBoundingClientRect\(\)/);
+ assert.match(js,/grid\.style\.height = innerH \+ "px"/);
+ assert.match(js,/node\.style\.top = \(\(y \+ \.5\) \* innerH \/ 7\) \+ "px"/);
+ assert.match(js,/for \(const piece of board\.querySelectorAll\("\.piece"\)\)/);
+ assert.match(js,/for \(const ghost of board\.querySelectorAll\("\.vision-ghost"\)\)/);
+ assert.match(js,/function watchCourtGeometry\(\)/);
+ assert.match(js,/window\.addEventListener\("resize", syncCourtGeometry\)/);
+});
+
 test("release includes the CSS fix in the service-worker precache",()=>{
  const config=JSON.parse(read("app.config.json"));
  assert.equal(config.version,"0.8.2");
