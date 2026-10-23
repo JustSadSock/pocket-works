@@ -13,13 +13,19 @@ export function paintingChecksum(strokes){
  return hash.toString(16).padStart(8,'0');
 }
 
-export function paintPackets({type,round,art,variation,strokes,revision}){
+export function paintPackets({type,round,art,variation,strokes,revision,basePrefix=0,baseChecksum}){
  if(!['draft_chunk','submit_chunk'].includes(type)||!Array.isArray(strokes)||strokes.length>768)
   throw new Error('invalid_painting');
+ // A compact draft references only the server-confirmed prefix. Finals never
+ // depend on a previous draft: they remain independently recoverable.
+ if(!Number.isInteger(basePrefix)||basePrefix<0||basePrefix>strokes.length||
+    (basePrefix>0&&(type!=='draft_chunk'||typeof baseChecksum!=='string'||!/^[0-9a-f]{8}$/.test(baseChecksum))))
+  throw new Error('invalid_painting_prefix');
  const id=revision||'r'+Date.now().toString(36)+'-'+(++nextRevision).toString(36);
- const chunks=[],envelope={type,round,art,variation,revision:id,checksum:paintingChecksum(strokes)};
+ const chunks=[],envelope={type,round,art,variation,revision:id,checksum:paintingChecksum(strokes),
+  ...(basePrefix>0?{basePrefix,baseChecksum}:{})};
  let part=[];
- for(const stroke of strokes){
+ for(const stroke of strokes.slice(basePrefix)){
   if(part.length>=8||JSON.stringify({...envelope,index:0,parts:160,strokes:[...part,stroke]}).length>PAINT_PACKET_BUDGET){
    if(part.length){chunks.push(part);part=[]}
   }
