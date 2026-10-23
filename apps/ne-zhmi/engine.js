@@ -19,7 +19,7 @@ export function createGame(level = LEVEL) {
     level,
     held:{magnet:false,brake:false,float:false},
     energy:{magnet:1,brake:1,float:1},
-    pushCooldown:0,pushes:0,magnetUses:0,brakeTime:0,floatTime:0,
+    pushCooldown:0,pushes:0,magnetUses:0,brakeTime:0,floatTime:0,brakeCharge:0,brakeGuard:0,
     cargo:(level.devices||[]).filter(d=>d.type==='cargo').map(d=>({x:d.x,y:5.98,vx:0,id:d.x,latched:false,padX:d.padX})),
     x: level.start ?? 1.15, y: 6.5 - ROBOT.halfHeight, vx: 0, vy: 0, dir: 1,
     ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, t: 0,
@@ -36,6 +36,12 @@ export function commandGame(state, action, pressed=true) {
     if(state.finished)return 'finished';
     if(pressed && state.energy[action]<.14)return 'empty';
     if(state.held[action]===!!pressed)return 'nochange';
+    if(action==='brake'&&!pressed){
+      // A deliberate stop charges a brief safe exit through the press.
+      // An instant tap never grants protection.
+      if(state.brakeCharge>=.22)state.brakeGuard=Math.max(state.brakeGuard,1.08);
+      state.brakeCharge=0;
+    }
     state.held[action]=!!pressed;
     if(action==='magnet'&&pressed)state.magnetUses++;
     state.lastEvent=action+(pressed?'-on':'-off');
@@ -53,7 +59,7 @@ export function commandGame(state, action, pressed=true) {
     state.pushCooldown=1.15;state.pushes++;
     state.vx+=state.dir*5.4;
     for(const box of state.cargo||[]){
-      if(Math.abs(box.x-state.x)<2.4 && Math.abs(box.y-state.y)<1.4)
+      if(Math.abs(box.x-state.x)<2.8 && Math.abs(box.y-state.y)<3.3)
         box.vx+=state.dir*16;
     }
     state.lastEvent='push';return 'push';
@@ -77,15 +83,21 @@ export function stepGame(state, dt = FIXED_DT) {
   state.cooldown = Math.max(0, state.cooldown - delta);
   state.wallCooldown = Math.max(0, state.wallCooldown - delta);
   state.pushCooldown=Math.max(0,(state.pushCooldown||0)-delta);
+  state.brakeGuard=Math.max(0,(state.brakeGuard||0)-delta);
   for(const action of HOLD_ACTIONS){
     const on=!!state.held[action]&&state.energy[action]>.005;
     state.energy[action]=clamp(state.energy[action]+(on?-(action==='float'?.25:.19):.29)*delta,0,1);
-    if(on&&action==='brake')state.brakeTime+=delta;
+    if(on&&action==='brake'){
+      state.brakeTime+=delta;
+      state.brakeCharge=Math.min(.6,(state.brakeCharge||0)+delta);
+    }
     if(on&&action==='float')state.floatTime+=delta;
     // Exhaustion must actually release the force. Otherwise a held key would
     // generate hundreds of one-frame force flickers while partially recharging.
     if(on&&state.energy[action]<=.005){
-      state.energy[action]=0;state.held[action]=false;eventsOnce('empty-'+action);
+      state.energy[action]=0;state.held[action]=false;
+      if(action==='brake')state.brakeCharge=0;
+      eventsOnce('empty-'+action);
     }
   }
   state.springCooldown = Math.max(0, (state.springCooldown||0)-delta);
@@ -107,7 +119,9 @@ export function stepGame(state, dt = FIXED_DT) {
   state.vx += clamp(desired - state.vx, -acceleration * delta, acceleration * delta);
   if(braking)state.vx*=Math.max(0,1-10*delta);
   if(state.held.magnet&&state.energy.magnet>.005)for(const device of level.devices||[]){
-    if(device.type!=='mag-rail'||Math.abs(state.x-(device.x+device.w/2))>3.0)continue;
+    // Magnetic lift only acts under the physical rail; the robot descends
+    // before the next cargo or timed machinery can be skipped.
+    if(device.type!=='mag-rail'||state.x<device.x-.9||state.x>device.x+device.w+.45)continue;
     if(state.y>3.5 && state.y<7)state.vy-=28*delta;
   }
   const previousX = state.x;
@@ -192,12 +206,12 @@ export function stepGame(state, dt = FIXED_DT) {
     if(state.vx>=0&&oldRight<=r.x+.15){state.x=r.x-ROBOT.halfWidth;state.vx=0;eventsOnce('gate');}
     else if(state.vx<0&&oldLeft>=r.x+r.w-.15){state.x=r.x+r.w+ROBOT.halfWidth;state.vx=0;eventsOnce('gate');}
   }
-  if (state.y > WORLD.height + .8 || (hazardous && state.hazardCooldown<=0)) {
+  if (state.y > WORLD.height + .8 || (hazardous && state.hazardCooldown<=0 && state.brakeGuard<=0)) {
     const savedX = state.checkpoint;
     const spawnY=savedX===level.checkpoint?level.checkpointSpawn?.y:undefined;
     Object.assign(state, { x: savedX, y: spawnY ?? (savedX > 9 ? 6.25 - ROBOT.halfHeight : 6.5 - ROBOT.halfHeight),
       vx: 0, vy: 0, dir: 1, ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, rotation: 0,
-      hazardCooldown:.65,
+      hazardCooldown:.65,brakeCharge:0,brakeGuard:0,
       held:{magnet:false,brake:false,float:false},
       cargo:(level.devices||[]).filter(d=>d.type==='cargo').map(d=>({x:d.x,y:5.98,vx:0,id:d.x,latched:false,padX:d.padX})) });
     state.respawns++;
