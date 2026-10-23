@@ -640,9 +640,34 @@ function wizard(x,y,face,ticktime,enemy=false,alpha=1,shield=0,flash=0,moving=0,
  drawMage(ctx,look,{x,y,face,time:ticktime,enemy,alpha,scale:1,shield,flash,runes,mageId:a?.mageId||selectedMage,casting:a?.windup?.remaining>0?a.windup.remaining*2.7:a?.cast||0,dashing:a?.dash||0,moving,pose});
 }
 function drawEvolutionMagic(s){
- if(s?.gameMode!=='rupture')return;
+ if(s?.gameMode!=='rupture'&&!s?.magicModeV2)return;
  const colors={fire:'#efa464',storm:'#7ce1de',stone:'#d1d4aa'};
  ctx.save();
+ // Ruined-ground warning and moving front are gameplay data, not particles:
+ // the same wave is advanced by the authoritative server and the offline tick.
+ for(const wave of s.waves||[]){
+  if(!wave.v2Element)continue;
+  const fire=wave.v2Element==='fire';
+  ctx.save();
+  const color=fire?'#ed9c60':'#c8c9a3';
+  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=fire?5:7;
+  const radius=wave.warmup>0?Math.max(12,wave.range*.38):Math.max(6,wave.reach);
+  ctx.globalAlpha=wave.warmup>0?.64:Math.min(.87,Math.max(.27,wave.life*2.8));
+  ctx.beginPath();
+  if(wave.halfAngle>=Math.PI-.01)ctx.arc(wave.x,wave.y,radius,0,Math.PI*2);
+  else ctx.arc(wave.x,wave.y,radius,wave.angle-wave.halfAngle,wave.angle+wave.halfAngle);
+  if(wave.warmup>0)ctx.setLineDash([5,5]);
+  ctx.stroke();ctx.setLineDash([]);
+  if(wave.warmup>0){
+   ctx.lineWidth=2;ctx.strokeRect(wave.x-7,wave.y-7,14,14);
+  }else{
+   ctx.globalAlpha*=.45;
+   ctx.beginPath();ctx.arc(wave.x,wave.y,Math.max(3,radius-8),
+    wave.halfAngle>=Math.PI-.01?0:wave.angle-wave.halfAngle,
+    wave.halfAngle>=Math.PI-.01?Math.PI*2:wave.angle+wave.halfAngle);ctx.stroke();
+  }
+  ctx.restore();
+ }
  for(const f of s.fields||[]){
   const color=colors[f.element]||colors.storm;
   ctx.globalAlpha=Math.max(.15,Math.min(.65,f.life*.17));ctx.strokeStyle=color;ctx.lineWidth=2+f.level;
