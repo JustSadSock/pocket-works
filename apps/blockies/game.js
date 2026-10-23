@@ -352,13 +352,17 @@ class SoundManager {
         envelope.gain.exponentialRampToValueAtTime(Math.max(.0002,gain),start+Math.min(.015,duration*.2));
         envelope.gain.exponentialRampToValueAtTime(.0001,end);
         oscillator.connect(envelope);
+        let lowpass=null;
         if(filter){
-            const lowpass=ctx.createBiquadFilter();
+            lowpass=ctx.createBiquadFilter();
             lowpass.type='lowpass';lowpass.frequency.value=filter;
             envelope.connect(lowpass);lowpass.connect(this.master);
         }else envelope.connect(this.master);
         oscillator.start(start);oscillator.stop(end+.012);
-        oscillator.onended=()=>{oscillator.disconnect();envelope.disconnect();};
+        oscillator.onended=()=>{
+            oscillator.disconnect();envelope.disconnect();
+            lowpass?.disconnect();
+        };
     }
     move(){
         const now=performance.now();
