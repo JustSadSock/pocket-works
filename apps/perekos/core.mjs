@@ -2,6 +2,7 @@
 import {RUNES,legalRunes,compile,description,eligibleOffers,cooldown,heatCost,repetitions,MAX_CHAIN_DEPTH,MAX_REACTIONS_PER_TICK,MAX_QUEUE,HEAT_LIMIT,chosenElement} from './runes.mjs';
 export {RUNES} from './runes.mjs';
 import {mage,validMage} from './mages.mjs';
+import {createMagicLoadout,compileMagic,validateMagicState} from './magic-v2-rules.mjs';
 import {reactionFor,isElement} from './elements.mjs';
 import {firstCollision,rayCollision} from './collision-geometry.mjs';
 export const W=400,H=620,STEP=1/60,ROUND_SECONDS=25,RUPTURE_SECONDS=600,EVOLUTION_SECONDS=60,COLLAPSE_SECONDS=90;
@@ -14,10 +15,29 @@ export function has(a,k){return a.runes.includes(k)}
 export const ARCHETYPES=Object.freeze([{id:'striker',name:'Стрелок',desc:'Чаще атакует. Увеличены урон и скорость снарядов.'},{id:'shaper',name:'Формирователь',desc:'Крепче щиты и больше длительность, радиус полей, мин и стен.'},{id:'distorter',name:'Искажатель',desc:'Попадания замедляют и перегревают врага.'}]);
 export function validArchetype(id){return ARCHETYPES.some(a=>a.id===id)}
 
-export function stats(a){const m=mage(a.mageId),role=a.archetype||'striker';return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power*(role==='striker'?1.025:1),reload:.56*m.reload*(role==='striker'?.98:1),shield:34*m.shield*(role==='shaper'?1.27:1)}}
+export function stats(a){if(a.magicSchool)return {max:100,speed:125*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12,reload:.56,shield:34};const m=mage(a.mageId),role=a.archetype||'striker';return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power*(role==='striker'?1.025:1),reload:.56*m.reload*(role==='striker'?.98:1),shield:34*m.shield*(role==='shaper'?1.27:1)}}
 function actor(id,x,y,runes,mageId='kindle',archetype='striker'){return {archetype:validArchetype(archetype)?archetype:'striker',evolution:null,fusions:[],id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0,burn:0,burnTick:0,burnSource:null,windup:null,flameCharge:0,respawn:0,specialCd:0}}
-function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId,a.archetype||'striker');o.hp=stats(o).max;o.evolution=a.evolution?{...a.evolution}:null;o.fusions=[...(a.fusions||[])];return o}
+function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId,a.archetype||'striker');o.hp=stats(o).max;o.evolution=a.evolution?{...a.evolution}:null;o.fusions=[...(a.fusions||[])];if(a.magicSchool)o.magicSchool=a.magicSchool;return o}
 export function makeMatch(seed=0x718abc,first='kindle',second='pebble',gameMode='duel',firstArchetype='striker',secondArchetype='striker'){const kind=['rupture','duel','forge'].includes(gameMode)?gameMode:'duel';const s={version:4,gameMode:kind,seed:seed>>>0||1,phase:'fight',round:1,remaining:kind==='rupture'?RUPTURE_SECONDS:kind==='forge'?0:ROUND_SECONDS,forgeDummy:true,elapsed:0,nextEvolution:RUPTURE_SECONDS-EVOLUTION_SECONDS,coreHold:[0,0],overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first,firstArchetype),actor(1,336,134,['on_hurt','armor'],second,secondArchetype)],shots:[],streams:[],beams:[],waves:[],lobs:[],echoes:[],mines:[],barriers:[],fields:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
+// First real integration of magic v2: isolated OFFLINE practice uses the same
+// authoritative court collision, renderer and fixed-step loop as legacy 0.28.
+// No server v9 packets or legacy room state are ever converted in-place.
+export const MAGIC_V2_PRACTICE_RUNES=Object.freeze([
+ 'u_on_cast','u_on_hit','u_on_hurt','u_after_dash','u_after_guard','u_on_expire','u_on_barrier',
+ 'u_guard','u_push','u_heal','u_afterimage','u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
+ 'st_throw','st_shards','st_wall','fi_ember','fi_scorch','fi_flamepatch','li_spark','li_arc'
+]);
+export function makeMagicV2Practice(school,seed=0x29a){
+ const canonical={stone:'pebble',fire:'kindle',storm:'wire'}[school];
+ if(!canonical)throw new RangeError('Unknown magic school');
+ const s=makeMatch(seed,canonical,'pebble','forge','shaper','shaper');
+ s.magicModeV2=true;s.magicSchool=school;
+ s.magicLoadouts=[createMagicLoadout(school,{seed,starter:'attack'}),null];
+ s.actors[0].magicSchool=school;s.actors[1].magicSchool='stone';
+ // The former nine-slot compiler must never run alongside the new one.
+ s.actors[0].runes=[];s.actors[1].runes=[];
+ s.forgeDummy=true;s.phase='build';return s;
+}
 export const EVOLUTIONS=Object.freeze([{id:'beam',name:'Разящий луч',desc:'Атака выпускает толстый пробивной луч. Уровень усиливает урон и ширину.'},{id:'swarm',name:'Искровой рой',desc:'Атака выпускает веер дополнительных зарядов. Уровень увеличивает их число.'},{id:'field',name:'Грозовое поле',desc:'Атака оставляет опасную зону. Уровень увеличивает её размер и длительность.'}]);
 export const FUSIONS=Object.freeze([{id:'ember_nova',name:'Огненное сердце',mod:'as_fire',desc:'Огненный рунический снаряд взрывается и поджигает.'},{id:'storm_lattice',name:'Грозовая решётка',mod:'as_storm',desc:'Заряженный рунический снаряд выпускает дуги при попадании.'},{id:'stone_crush',name:'Каменный захват',mod:'as_stone',desc:'Каменные снаряды ломают щит и замедляют.'}]);
 export function availableFusions(a){return FUSIONS.filter(f=>!(a.fusions||[]).includes(f.id)&&compile(a.runes).some(c=>c.actions.some(x=>['ball','blast','mine'].includes(x.id)&&x.mods.includes(f.mod))))}
@@ -88,12 +108,12 @@ function harm(s,a,amount,from,depth=0){
  if(a.invuln>0||a.hp<=0||!Number.isFinite(amount))return 0;
  const attacker=from==null?null:s.actors[from],base=amount;const blocked=Math.min(a.shield,Math.max(0,base)),before=a.shield;a.shield-=blocked;
  const d=Math.max(0,Math.min(80,base-blocked));a.hp=Math.max(0,a.hp-d);a.flash=.15;
- if(d>0){if(from!=null&&from!==a.id)s.actors[from].hit+=d;if(attacker?.archetype==='distorter'&&attacker.id!==a.id){a.slow=Math.max(a.slow,.48);a.heat=Math.min(HEAT_LIMIT,a.heat+3)}emit(s,'on_hurt',a.id,{from},depth)}
+ if(d>0){if(from!=null&&from!==a.id)s.actors[from].hit+=d;if(!s.magicModeV2&&attacker?.archetype==='distorter'&&attacker.id!==a.id){a.slow=Math.max(a.slow,.48);a.heat=Math.min(HEAT_LIMIT,a.heat+3)}emit(s,'on_hurt',a.id,{from},depth)}
  if(blocked>0&&before>0&&a.shield===0)emit(s,'on_break',a.id,{from},depth);
  fx(s,'hit',a.x,a.y);return d;
 }
 function markTarget(s,target,element,source,depth=0){
- if(!isElement(element)||target.hp<=0)return null;
+ if(s.magicModeV2||!isElement(element)||target.hp<=0)return null;
  const previous=target.markLife>0?target.mark:'';
  const reaction=target.reactionCd<=0?reactionFor(previous,element):null;
  target.mark=element;target.markLife=3.8;
@@ -425,7 +445,106 @@ export function previewAttack(s,a,target,special=false,specialSlot=0){
  }
  return {type,angle,length:hit.length,maxRange:length,width,radius,blocked:!!hit.hit,x:one.toX,y:one.toY,segments};
 }
+
+// Physical magic v2 runtime — only the cards in MAGIC_V2_PRACTICE_RUNES
+// are offered by the experimental forge. The other catalog definitions
+// remain unavailable until their geometry and server counterparts exist.
+function magicV2Attack(s,a,target){
+ if(a.cast>0||a.stun>0||a.windup)return false;
+ a.face=Math.atan2(target.y-a.y,target.x-a.x);
+ const school=a.magicSchool,style=school==='stone'?'rock':school==='storm'?'bolt':'orb';
+ a.cast=stats(a).reload;
+ const ok=spawnShot(s,a,a.face,a.x,a.y,{style,element:school,damage:12,life:1.3,signature:false});
+ if(ok){addHeat(s,a,7);emit(s,'on_cast',a.id)}
+ return ok;
+}
+function magicV2Action(s,a,act,mods,ev){
+ const other=s.actors[1-a.id],school=a.magicSchool;
+ const defs=new Set(mods),size=defs.has('u_size'),extend=defs.has('u_duration')||defs.has('u_range'),
+ fast=defs.has('u_speed'),ricochet=defs.has('u_ricochet'),
+ split=defs.has('u_split'),cheap=defs.has('u_efficient');
+ const angle=a.face,base={element:school,signature:false,wide:size,fastshot:fast,far:extend,
+  bounce:ricochet,life:extend?2:1.15,damage:12,depth:ev.depth+1};
+ const shoot=(style,damage=12)=>{
+  const count=split?2:1;
+  for(let j=0;j<count;j++)spawnShot(s,a,angle+(count===2?(j===0?-.13:.13):0),a.x,a.y,{
+   ...base,style,damage:damage/count
+  });
+ };
+ switch(act){
+  case 'u_guard':a.shield=Math.min(80,a.shield+(size?22:14));fx(s,'shield',a.x,a.y);break;
+  case 'u_heal':receiveHeal(s,a,8,ev.depth+1);break;
+  case 'u_push':{
+   const dx=other.x-a.x,dy=other.y-a.y,d=mag(dx,dy);
+   if(d<125&&unobstructed(s,a.x,a.y,other.x,other.y,a.id,8))
+    move(other,dx/d*(size?38:26),dy/d*(size?38:26));
+   fx(s,'dash',other.x,other.y);break;
+  }
+  case 'u_afterimage':if(s.echoes.length<8)s.echoes.push({owner:a.id,x:a.x,y:a.y,cast:.45,life:1.5,shots:1});break;
+  case 'st_throw':shoot('rock');break;
+  case 'st_shards':{
+   const count=split?5:3;
+   for(let j=0;j<count;j++)spawnShot(s,a,angle+(j-(count-1)/2)*.16,a.x,a.y,
+    {...base,style:'rock',damage:6,life:extend?1.3:.8});
+   break;
+  }
+  case 'st_wall':{
+   const x=a.x+Math.cos(angle)*46,y=a.y+Math.sin(angle)*46,r=size?24:17;
+   if(s.barriers.length<10&&canStand(x,y,r)&&!blocking(s,x,y,r))
+    s.barriers.push({owner:a.id,x,y,r,life:extend?6:3.5,hp:30});
+   fx(s,'shield',x,y);break;
+  }
+  case 'fi_ember':shoot('orb');break;
+  case 'fi_scorch':{
+   const dx=other.x-a.x,dy=other.y-a.y,d=mag(dx,dy);
+   if(d<(size?116:86)&&unobstructed(s,a.x,a.y,other.x,other.y,a.id,8)){
+    const dealt=harm(s,other,split?8:11,a.id,ev.depth+1);
+    if(dealt>0)emit(s,'on_hit',a.id,{},ev.depth+1);
+   }
+   fx(s,'ember',a.x+Math.cos(angle)*31,a.y+Math.sin(angle)*31);break;
+  }
+  case 'fi_flamepatch':{
+   const x=a.x+Math.cos(angle)*32,y=a.y+Math.sin(angle)*32;
+   if(s.mines.length<14&&!distWall(x,y,8))s.mines.push({
+    owner:a.id,x,y,r:size?60:42,life:extend?5:3,damage:9,element:'fire'
+   });
+   fx(s,'mine',x,y);break;
+  }
+  case 'li_spark':shoot('bolt');break;
+  case 'li_arc':shoot('arc',10);break;
+  default:return false;
+ }
+ addHeat(s,a,(cheap?5:10)+mods.length*2,ev.depth+1);
+ return true;
+}
+function flushMagicV2Events(s){
+ let reactions=0,processed=0;
+ const map={on_cast:'u_on_cast',on_hit:'u_on_hit',on_hurt:'u_on_hurt',
+  on_dash:'u_after_dash',on_guard:'u_after_guard',on_expire:'u_on_expire',
+  on_bounce:'u_on_barrier'};
+ while(s.eventQueue.length&&processed++<MAX_QUEUE&&reactions<MAX_REACTIONS_PER_TICK){
+  const ev=s.eventQueue.shift(),a=s.actors[ev.owner],rules=s.magicLoadouts?.[ev.owner];
+  if(!a||!rules||ev.depth>=MAX_CHAIN_DEPTH)continue;
+  const trigger=map[ev.kind];if(!trigger)continue;
+  for(const spell of compileMagic(rules)){
+   if(spell.trigger!==trigger)continue;
+   const key='v2:'+spell.slotId;
+   if(s.ticks<(a.runeTimers[key]||0))continue;
+   a.runeTimers[key]=s.ticks+Math.ceil(.65/STEP);
+   for(const action of spell.actions){
+    if(reactions>=MAX_REACTIONS_PER_TICK)break;
+    if(!MAGIC_V2_PRACTICE_RUNES.includes(action.id))continue;
+    magicV2Action(s,a,action.id,action.mods,ev);
+    reactions++;
+   }
+  }
+ }
+ if(s.eventQueue.length){for(const a of s.actors)addHeat(s,a,3);s.eventQueue.length=0}
+ s.reactions=reactions;
+}
+
 function attack(s,a,target){
+ if(s.magicModeV2)return magicV2Attack(s,a,target);
  if(a.mageId==='cinder')return flame(s,a,target);
  if(a.cast>0||a.stun>0||a.windup)return false;
  if(['pebble','coil','slate'].includes(a.mageId))return startWindup(s,a,target,a.mageId);
@@ -437,12 +556,12 @@ function attack(s,a,target){
 }
 function guard(s,a){
  if(a.shieldReady>0||a.stun>0)return false;
- a.shield=Math.min(80,a.shield+stats(a).shield+(mage(a.mageId).trait==='guard_extra'?5:0));a.shieldReady=5;if(mage(a.mageId).trait==='guard_slow'){const enemy=s.actors[1-a.id];if(Math.hypot(a.x-enemy.x,a.y-enemy.y)<105)enemy.slow=Math.max(enemy.slow,1.1)}addHeat(s,a,7);
+ a.shield=Math.min(80,a.shield+stats(a).shield+(s.magicModeV2?0:mage(a.mageId).trait==='guard_extra'?5:0));a.shieldReady=5;if(!s.magicModeV2&&mage(a.mageId).trait==='guard_slow'){const enemy=s.actors[1-a.id];if(Math.hypot(a.x-enemy.x,a.y-enemy.y)<105)enemy.slow=Math.max(enemy.slow,1.1)}addHeat(s,a,7);
  fx(s,'shield',a.x,a.y);emit(s,'on_guard',a.id);return true;
 }
 function dash(s,a,dir){
  if(a.dashReady>0||a.stun>0)return false;const m=mag(dir.x,dir.y);
- a.windup=null;a.vx=dir.x/m*370;a.vy=dir.y/m*370;if(mage(a.mageId).trait==='dash_haste')a.haste=Math.max(a.haste,.9);a.dash=.17;a.dashReady=2.5;a.invuln=.13;addHeat(s,a,6);
+ a.windup=null;a.vx=dir.x/m*370;a.vy=dir.y/m*370;if(!s.magicModeV2&&mage(a.mageId).trait==='dash_haste')a.haste=Math.max(a.haste,.9);a.dash=.17;a.dashReady=2.5;a.invuln=.13;addHeat(s,a,6);
  fx(s,'dash',a.x,a.y);emit(s,'on_dash',a.id);return true;
 }
 // The queue is cleared each update and every event owns a bounded ancestry depth.
@@ -476,6 +595,7 @@ function act(s,a,action,mods,ev){
  }
 }
 function flushEvents(s){
+ if(s.magicModeV2)return flushMagicV2Events(s);
  let reactions=0,processed=0;
  while(s.eventQueue.length&&processed++<MAX_QUEUE&&reactions<MAX_REACTIONS_PER_TICK){
   const ev=s.eventQueue.shift(),a=s.actors[ev.owner];if(!a)continue;
@@ -531,7 +651,7 @@ if(a.windup)a.face=a.windup.angle;
 else if(c.aim&&Number.isFinite(c.aim.x)&&Number.isFinite(c.aim.y))a.face=Math.atan2(c.aim.y-a.y,c.aim.x-a.x);
 if(c.dash)dash(s,a,{x:Number(c.x)||Math.cos(a.face),y:Number(c.y)||Math.sin(a.face)});
 if(c.shield)guard(s,a);
-if(c.special)castClassSpell(s,a,Number.isInteger(c.specialSlot)?c.specialSlot:0);
+if(c.special&&!s.magicModeV2)castClassSpell(s,a,Number.isInteger(c.specialSlot)?c.specialSlot:0);
 if(c.attack)attack(s,a,c.aim||other);
 if(s.ticks%60===0&&a.heat>=HEAT_LIMIT)addHeat(s,a,0)}
 updateLobs(s,dt);if(['rupture','forge'].includes(s.gameMode))updateEvolutionFields(s,dt);
@@ -611,5 +731,5 @@ export function validState(s){
  return !!s&&s.version===4&&['fight','draft','build','result'].includes(s.phase)
  &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&typeof a.mark==='string'&&Number.isFinite(a.markLife)&&a.markLife>=0&&Number.isFinite(a.reactionCd)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&(!a.archetype||validArchetype(a.archetype))&&(!a.evolution||EVOLUTIONS.some(f=>f.id===a.evolution.form)&&Number.isInteger(a.evolution.level)&&a.evolution.level>0&&a.evolution.level<=3)&&(!a.fusions||Array.isArray(a.fusions)&&a.fusions.length<=3&&new Set(a.fusions).size===a.fusions.length&&a.fusions.every(id=>FUSIONS.some(f=>f.id===id)))&&a.runeTimers&&typeof a.runeTimers==='object')
  &&Array.isArray(s.shots)&&(!s.streams||Array.isArray(s.streams))&&(!s.beams||Array.isArray(s.beams))&&(!s.waves||Array.isArray(s.waves))&&(!s.lobs||Array.isArray(s.lobs))&&Array.isArray(s.echoes)&&Array.isArray(s.mines)&&Array.isArray(s.barriers)&&(!s.fields||Array.isArray(s.fields))&&Array.isArray(s.eventQueue)
- &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
+ &&(!s.magicModeV2||(s.gameMode==='forge'&&s.magicLoadouts?.length===2&&validateMagicState(s.magicLoadouts[0]).ok&&s.magicSchool===s.magicLoadouts[0].school))&&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }
