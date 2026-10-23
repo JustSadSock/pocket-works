@@ -183,9 +183,8 @@ function firstHit(x,y,dx,dy,world,distance){
 }
 function stabilize(x,y,dx,dy,world){
  const shape=world.shape,margin=.004;
- if(!inside(shape,x,y,margin,world.vertices)){
-  const q=contain(shape,{x,y},margin,world.vertices);x=q.x;y=q.y;
- }
+ const within=world.polygon ? inPolygon(world.polygon,x,y) : inside(shape,x,y,margin,world.vertices);
+ if(!within){const q=contain(shape,{x,y},margin,world.vertices);x=q.x;y=q.y}
  let reflections=0;
  const bounce=(nx,ny)=>{const dot=dx*nx+dy*ny;if(dot< -1e-7){dx-=2*dot*nx;dy-=2*dot*ny;reflections++}};
  if(shape==='rectangle'){
@@ -202,8 +201,8 @@ function stabilize(x,y,dx,dy,world){
   }
  }else{
   for(const e of world.edges){
-   const t=clamp(((x-e.x1)*e.dx+(y-e.y1)*e.dy)/(e.l*e.l),0,1),d=Math.hypot(x-e.x1-t*e.dx,y-e.y1-t*e.dy);
-   if(d<margin*1.8)bounce(e.nx,e.ny);
+   const t=clamp(((x-e.x1)*e.dx+(y-e.y1)*e.dy)/(e.l*e.l),0,1),ox=x-e.x1-t*e.dx,oy=y-e.y1-t*e.dy;
+   if(ox*ox+oy*oy<margin*margin*3.24)bounce(e.nx,e.ny);
   }
  }
  return {x,y,dx,dy,reflections};
