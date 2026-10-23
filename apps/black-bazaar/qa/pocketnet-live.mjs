@@ -182,10 +182,39 @@ try{
  assert.equal(snap.phase,'done','all nine rounds completed after reconnection');
  assert.equal(snap.ranking.length,3);
  assert.equal(snap.report.publicSales>=1,true);
+ // Host departure is distinct from a lost socket: host handoff must happen
+ // immediately and the remaining members must keep playing.
+ const nextTokens=await Promise.all(['Bazaar Host Handoff','Bazaar Successor','Bazaar Survivor'].map(session));
+ const successors=await Promise.all(nextTokens.map(async token=>{
+  const client=await open(token);clients.push(client);return client;
+ }));
+ const [leavingHost,successor,lastSeat]=successors;
+ leavingHost.send('create_room',{gameId:'black-bazaar'});
+ const nextRoom=(await leavingHost.next('room_joined')).roomId;
+ successor.send('join_room',{roomId:nextRoom});
+ await successor.next('room_joined');
+ lastSeat.send('join_room',{roomId:nextRoom});
+ await lastSeat.next('room_joined');
+ leavingHost.send('game_message',{payload:{type:'start'}});
+ const secondStart=await Promise.all(successors.map(c=>c.next('game_event',stateEvent('play'))));
+ const startedRevision=stateOf(secondStart[1]).revision;
+ leavingHost.send('leave_room');
+ const handed=stateOf(await successor.next('game_event',stateEvent('play',s=>
+  s.revision>startedRevision&&s.host===successor.id&&
+  s.players.some(p=>p.id===leavingHost.id&&p.bankrupt))));
+ assert.equal(handed.host,successor.id);
+ assert.equal(handed.players.filter(p=>!p.bankrupt).length,2);
+ assert.ok([successor.id,lastSeat.id].includes(handed.turnId));
+ const continuing=[successor,lastSeat].find(c=>c.id===handed.turnId);
+ continuing.send('game_message',{payload:{type:'end'}});
+ const afterHandoff=stateOf(await successor.next('game_event',stateEvent('play',s=>s.revision>handed.revision)));
+ assert.equal(afterHandoff.players.filter(p=>!p.bankrupt).length,2);
+ assert.equal(afterHandoff.host,successor.id);
+ assert.ok(afterHandoff.turnId!==leavingHost.id,'departed host cannot stall the match');
  console.log('BAZAAR_LIVE_POCKETNET_PASS',JSON.stringify({
   module:initial.version,seats:3,privateViews:true,auction:true,
   activeSellerReconnect:true,deadlineGrace:true,noDuplicateTrade:true,
-  rejectedLateJoin:true,completedRounds:snap.round||9,turns:commands
+  rejectedLateJoin:true,hostHandoff:true,completedRounds:snap.round||9,turns:commands
  }));
 }finally{
  for(const c of clients)try{await c.close()}catch{}
