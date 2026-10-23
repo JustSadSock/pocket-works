@@ -119,9 +119,9 @@ export class DuelFeedback{
   }
   ctx.restore();
  }
- aim(ctx,actor,target,{reduced=false,state=null,special=false}={}){
+ aim(ctx,actor,target,{reduced=false,state=null,special=false,specialSlot=0}={}){
   if(!ctx||!actor||!target||!state)return;
-  const g=previewAttack(state,actor,target,special),col=palette(actor)[0];
+  const g=previewAttack(state,actor,target,special,specialSlot),col=palette(actor)[0];
   ctx.save();ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1.5;ctx.globalAlpha=.76;
   ctx.setLineDash(g.blocked?[3,5]:[4,8]);
   for(const seg of g.segments){if(seg.phase){ctx.strokeStyle='#a4d3c5';ctx.setLineDash([1,4])}else{ctx.strokeStyle=col;ctx.setLineDash(g.blocked?[3,5]:[4,8])}ctx.beginPath();ctx.moveTo(seg.x,seg.y);ctx.lineTo(seg.toX,seg.toY);ctx.stroke()}
