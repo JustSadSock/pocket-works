@@ -499,8 +499,8 @@ function castClassSpell(s,a,slot=0){
   a.dashShot={angle:a.face,element:mage(a.mageId).school};
  }else if(type==='distorter'&&slot===2){
   const b=nearestBarrier(s,a,1-a.id,185);if(!b)return false;
-  if(b.originalOwner==null)b.originalOwner=b.owner;
-  b.owner=a.id;b.inversionLife=2.2;fx(s,'phase_entry',b.x,b.y);
+  if(b.originalOwner==null){b.originalOwner=b.owner;b.originalAperture=!!b.aperture}
+  b.owner=a.id;b.aperture=true;b.inversionLife=2.2;fx(s,'phase_entry',b.x,b.y);
  }else{
   if(!spawnShot(s,a,a.face,a.x,a.y,{style:'arc',element:mage(a.mageId).school,strong:true,far:true}))return false;
   const q=s.shots[s.shots.length-1];q.r=4;
@@ -661,7 +661,7 @@ for(let j=s.mines.length-1;j>=0;j--){
  if(Math.hypot(target.x-mine.x,target.y-mine.y)<mine.r&&beamLength(s,mine.x,mine.y,Math.atan2(target.y-mine.y,target.x-mine.x),Math.hypot(target.x-mine.x,target.y-mine.y)+4,mine.owner)>=Math.hypot(target.x-mine.x,target.y-mine.y)-8){const d=harm(s,target,mine.damage,mine.owner);if(d>0){markTarget(s,target,mine.element||mage(s.actors[mine.owner].mageId).school,mine.owner);emit(s,'on_hit',mine.owner)}fx(s,'overload',mine.x,mine.y);s.mines.splice(j,1)}
  else if(mine.life<=0)s.mines.splice(j,1);
  }
- for(let j=s.barriers.length-1;j>=0;j--){const b=s.barriers[j];b.life-=dt;if(b.inversionLife>0){b.inversionLife=Math.max(0,b.inversionLife-dt);if(b.inversionLife===0&&b.originalOwner!=null){b.owner=b.originalOwner;delete b.originalOwner;fx(s,'phase_exit',b.x,b.y)}}if(b.warded>0)b.warded=Math.max(0,b.warded-dt);if(b.life<=0)s.barriers.splice(j,1)}
+ for(let j=s.barriers.length-1;j>=0;j--){const b=s.barriers[j];b.life-=dt;if(b.inversionLife>0){b.inversionLife=Math.max(0,b.inversionLife-dt);if(b.inversionLife===0&&b.originalOwner!=null){b.owner=b.originalOwner;b.aperture=!!b.originalAperture;delete b.originalOwner;delete b.originalAperture;fx(s,'phase_exit',b.x,b.y)}}if(b.warded>0)b.warded=Math.max(0,b.warded-dt);if(b.life<=0)s.barriers.splice(j,1)}
  // The court tightens in the last ten seconds. Environmental damage bypasses
  // endlessly rechargeable shields; the clock itself still never awards a point.
  if(collapseActive(s)){
