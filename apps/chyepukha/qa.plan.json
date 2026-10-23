@@ -14,7 +14,9 @@
         "tests/story-contract.test.mjs",
         "tests/comic-prompt.test.mjs",
         "tests/writer-flow.test.mjs",
-        "tests/editor-motion.test.mjs"
+        "tests/editor-motion.test.mjs",
+        "tests/finale-state.test.mjs",
+        "tests/audio-score.test.mjs"
       ]
     },
     {
@@ -26,7 +28,8 @@
         "qa/account.spec.ts",
         "qa/network.spec.ts",
         "qa/four-player-ux.spec.ts",
-        "qa/editor-motion.spec.ts"
+        "qa/editor-motion.spec.ts",
+        "qa/finale-audio.spec.ts"
       ]
     }
   ]

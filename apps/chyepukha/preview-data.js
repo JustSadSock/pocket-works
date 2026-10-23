@@ -14,7 +14,7 @@ export function demoView(id){
  }else if(id.startsWith('lobby')){
   v.players=id==='lobby-host'?[people[0]]:people;
   if(id==='lobby-custom')v.settings={...settings,questionSet:'custom',customQuestions:['Хто знайшов таємну карту?','Чим скінчилась пригода?'],genre:'custom',customGenre:'Паперова пригода'};
- }else if(['results','results-second','comic'].includes(id)){
+ }else if(['results','results-second','comic','reveal'].includes(id)){
   v.phase='finished';v.round=3;v.total=3;v.players=people;
   const f=[
    [{author:'Марта',question:'Хто вліз у цю авантюру?',answer:'Архіваріус вирішив продати вчорашній дощ як музейний експонат.'},{author:'Назар',question:'Що пішло не так?',answer:'Дощ украв валізу директора і скликав таємну раду голубів.'},{author:'Софія',question:'Чим закінчилось?',answer:'Валізу обрали мером, а директор отримав посаду хмаринки.'}],
