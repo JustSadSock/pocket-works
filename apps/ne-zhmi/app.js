@@ -39,7 +39,7 @@ function show(which){
   $('pause').classList.toggle('hidden',which!=='playing');
   $('online-role-chip').classList.toggle('hidden',which!=='online-playing');
   for(const id of ['jump','reverse'])$(id).disabled=which==='online-playing'?!online?.canInput(id):which!=='playing';
-  $('status').textContent=which==='menu'?'ЖДЁМ СИГНАЛ':which==='pause'?'ПАУЗА':which==='finish'?'ЗАДАНИЕ ВЫПОЛНЕНО':'ДВИЖЕНИЕ';
+  $('status').textContent=which==='menu'?'ЖДЁМ СИГНАЛ':which==='online-lobby'?'ОЖИДАНИЕ ОПЕРАТОРОВ':which==='online-won'||which==='finish'?'ЗАДАНИЕ ВЫПОЛНЕНО':which==='pause'?'ПАУЗА':'ДВИЖЕНИЕ';
   if(which==='playing'||which==='online-playing')lastFrame=performance.now();
 }
 function start(){

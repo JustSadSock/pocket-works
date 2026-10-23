@@ -130,6 +130,20 @@ try{
   if(!room||room.state.players.length!==2)throw Error('Room membership lost');
   await host.screenshot({path:screenshots+'/duet-host-rejoined.png'});
   await guest.screenshot({path:screenshots+'/duet-guest-rejoined.png'});
-  console.log('PASS: create -> join -> roles -> shared movement -> checkpoint -> guest/host reconnect -> cancel leave');
+  // End-to-end finish and host-controlled replay; the client cannot declare
+  // victory without the server reaching the finish line.
+  await poll(()=>room.state.robot.x>11.9&&room.state.robot.ground,'approach final gap',17000);
+  await host.locator('#jump').click();
+  await poll(()=>room.state.robot.jumps>=2,'second jump');
+  await poll(()=>room.state.phase==='won','authoritative finish',10000);
+  await poll(()=>host.locator('#online-result').isVisible(),'host victory overlay');
+  await poll(()=>guest.locator('#online-result').isVisible(),'guest victory overlay');
+  await host.screenshot({path:screenshots+'/duet-host-finish.png'});
+  await guest.screenshot({path:screenshots+'/duet-guest-finish.png'});
+  const round=room.state.round;
+  await host.locator('#online-again').click();
+  await poll(()=>room.state.phase==='play'&&room.state.round===round+1,'next shared round');
+  await poll(()=>guest.locator('#online-out').isVisible(),'guest entered next round');
+  console.log('PASS: create -> join -> role controls -> checkpoint -> reconnect -> finish on both clients -> replay');
   for(const context of contexts)await context.close();
 }finally{await browser?.close();await new Promise(done=>server.close(done));}

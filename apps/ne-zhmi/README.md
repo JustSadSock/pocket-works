@@ -10,7 +10,7 @@ First playable stage of the local co-operative robot game in Pocket Works.
 - Pause, restart, complete, inspect run stats and replay; best time is stored locally.
 
 ## Scope
-The release deliberately implements **the local two-button stage only**. No PocketNet, procedural routes, additional abilities, or deceptive network controls are included. Online rooms belong to the following milestone.
+Version 0.1 implemented the local two-button stage only. Version 0.2 adds PocketNet rooms with server-owned physics and reconnection. Procedural routes and additional abilities belong to later milestones.
 
 ## Architecture
 engine.js is pure deterministic fixed-timestep simulation; renderer.js is a Canvas 2D presentation; app.js owns inputs/state/audio and uses the shared mobile runtime. Screen dimensions are handled in CSS; the camera pans on phone while preserving a world-coordinate progress bar. Rendering is uncoupled from physics.
