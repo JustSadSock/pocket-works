@@ -17,7 +17,7 @@ test('screen inspector has all stages and actual responsive app views',async({pa
   ['lobby-host','.room'],['lobby-guest','.room'],['lobby-ready','.room'],
   ['lobby-custom','#customField:not(.hidden)'],
   ['writing-first','#answerForm'],['writing-tail','.incoming'],
-  ['writing-selection','.word.selected'],['writing-zero','#wordCount'],
+  ['writing-selection','.word.selected'],['writing-zero','.editor-primary'],
   ['waiting','.wax'],['offline','#answerForm'],['leave','.comic-modal'],
   ['results','.story-paper'],['results-second','.story-paper'],['comic','.comic-actions'],
   ['archive','.archive-manuscript'],['archive-empty','.archive-empty'],['archive-delete','.comic-modal']
@@ -41,6 +41,8 @@ test('preview editing and sending a sheet do not mutate the original app',async(
  await page.locator('.chy-qa [data-screen=writing-first]').click();
  const frame=page.frameLocator('.chy-qa-frame');
  await frame.locator('#answer').fill('Кумедний архіваріус продав вчорашній дощ у міський музей');
+ await frame.locator('#answerForm button[type=submit]').click();
+ await expect(frame.locator('.writer-selection')).toBeVisible();
  await frame.locator('.word').nth(0).click();
  await frame.locator('.word').nth(2).click();
  await frame.locator('.word').nth(4).click();

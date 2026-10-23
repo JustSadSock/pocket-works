@@ -34,7 +34,7 @@ export function demoView(id){
   if(v.waiting)v.players.forEach((p,i)=>{p.submitted=i!==2});
   if(id==='offline')d.connected=false;
   if(id==='leave')d.modal='leave';
-  if(id==='writing-selection'){d.answer='Архіваріус вирішив продати вчорашній дощ як музейний експонат але передумав';d.selection=[0,2,4];}
+  if(id==='writing-selection'){d.writerStep='select';d.answer='Архіваріус вирішив продати вчорашній дощ як музейний експонат але передумав';d.selection=[0,2,4];}
   if(id==='writing-zero')d.answer='Маленький цирк вирішив переїхати на Місяць просто у неділю.';
  }
  return d;

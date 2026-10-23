@@ -92,3 +92,67 @@ test('comic export and audio controls are accessible from final view',async({pag
  await page.locator('[data-act=close-audio]').click();
  await expect(page.locator('.reader-scroll')).toBeVisible();
 });
+
+test('the writing phase gives the whole page to the draft, then reviews exact words',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(preview('writing-first'));
+ const answer=page.locator('#answer');
+ await expect(answer).toBeVisible();
+ await expect(page.locator('.writer-compose')).toBeVisible();
+ await expect(page.locator('#wordTray')).toHaveCount(0);
+ const story='Архіваріус знайшов місячну валізу і сховав її у старому саду';
+ await answer.fill(story);
+ await page.locator('#answerForm button[type=submit]').click();
+ await expect(page.locator('.writer-selection')).toBeVisible();
+ await expect(page.locator('.selection-paper')).toContainText(story);
+ await expect(page.locator('#answer')).toHaveCount(0);
+ await expect(page.locator('.word')).toHaveCount(10);
+ await page.locator('.word').nth(0).click();
+ await page.locator('.word').nth(2).click();
+ await page.locator('.word').nth(4).click();
+ await expect(page.locator('.word.selected')).toHaveCount(3);
+ await expect(page.locator('#selectedStrip .handoff-chip')).toHaveCount(3);
+ await page.locator('[data-act=back-to-draft]').click();
+ await expect(page.locator('#answer')).toHaveValue(story);
+ await expect(page.locator('.word')).toHaveCount(0);
+ await page.locator('#answerForm button[type=submit]').click();
+ await expect(page.locator('.word.selected')).toHaveCount(3);
+ await page.locator('[data-act=back-to-draft]').click();
+ await page.locator('#answer').fill(story+' несподівано');
+ await page.locator('#answerForm button[type=submit]').click();
+ await expect(page.locator('.word.selected')).toHaveCount(0);
+ await expect(page.locator('#wordCount')).toContainText('0 / 3');
+});
+
+test('the core writer action remains reachable in portrait and short landscape',async({page})=>{
+ for(const size of [{width:390,height:844},{width:320,height:568},{width:844,height:390}]){
+  await page.setViewportSize(size);
+  await page.goto(preview('writing-first'));
+  await expect(page.locator('#answer')).toBeVisible();
+  await expect(page.locator('.editor-primary')).toBeVisible();
+  const bounds=await page.evaluate(()=>{
+   const r=document.querySelector('.editor-primary').getBoundingClientRect();
+   const a=document.querySelector('#answer').getBoundingClientRect();
+   return {actionBottom:r.bottom,actionX:r.x,actionRight:r.right,answerHeight:a.height,scrollWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth,viewportHeight:innerHeight};
+  });
+  expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.viewportWidth+2);
+  expect(bounds.actionBottom).toBeLessThanOrEqual(bounds.viewportHeight+4);
+  expect(bounds.actionRight).toBeLessThanOrEqual(bounds.viewportWidth+4);
+  expect(bounds.actionX).toBeGreaterThanOrEqual(-2);
+  expect(bounds.answerHeight).toBeGreaterThan(45);
+  await page.locator('#answer').fill('Дракон випадково загубив срібний годинник між старими книжками');
+  await page.locator('#answerForm button[type=submit]').click();
+  await expect(page.locator('.writer-selection')).toBeVisible();
+  await expect(page.locator('.editor-primary')).toBeVisible();
+  const reviewBottom=await page.locator('.editor-primary').evaluate(el=>el.getBoundingClientRect().bottom);
+  expect(reviewBottom).toBeLessThanOrEqual(size.height+4);
+ }
+});
+
+test('zero-word handoff seals directly without exposing a dead review step',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(preview('writing-zero'));
+ await expect(page.locator('#wordTray')).toHaveCount(0);
+ await page.locator('#answerForm button[type=submit]').click();
+ await expect(page.locator('.wax')).toBeVisible();
+});
