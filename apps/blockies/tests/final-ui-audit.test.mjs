@@ -102,6 +102,14 @@ test('key capture accepts a new key without leaving a document-level listener ac
   assert.equal(removed.length,1);
 });
 
+test('live control changes can only run after successful preference validation',()=>{
+  const saveStart=gameSource.indexOf('    saveSettings() {');
+  const inSave=gameSource.indexOf('// Apply local controls to the resumed live round.',saveStart);
+  const nextMethod=gameSource.indexOf('    resetSettings() {',saveStart);
+  assert.ok(inSave>saveStart && inSave<nextMethod);
+  assert.equal(gameSource.slice(0,saveStart).includes('// Apply local controls to the resumed live round.'),false);
+});
+
 test('saving valid controls immediately updates a running local game',()=>{
   const {ui,nodes,state,calls}=fixture();
   ui.previousScreen='gameScreen';
