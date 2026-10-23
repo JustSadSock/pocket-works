@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Барахолка — ревизия предметов</title><style>
+:root{font-family:system-ui,sans-serif;color:#392b20;background:#18342d}*{box-sizing:border-box}body{margin:0;padding:clamp(12px,3vw,36px)}
+h1{font-size:clamp(20px,3vw,29px);color:#f6dfb6;margin:0 0 10px}p{color:#e4cbab;margin:0 0 20px}
+main{display:grid;gap:14px}.item{background:#f6e3c0;border:2px solid #9c7450;border-radius:12px;padding:15px;display:grid;grid-template-columns:minmax(90px,1fr) repeat(3,minmax(52px,180px));align-items:center;gap:8px}
+.item b{font-size:14px}.sample{position:relative;display:grid;place-items:center;min-height:192px;border:1px dashed #af8e6a;border-radius:8px;background:repeating-conic-gradient(#e7d6b6 0% 25%,#f9ebd0 0% 50%) 0/20px 20px}
+.sample svg{display:block;width:var(--sz);height:var(--sz);overflow:visible}.sample:after{content:attr(data-size);position:absolute;bottom:6px;right:7px;font:11px system-ui;color:#66503b}
+@media(max-width:740px){.item{grid-template-columns:1fr repeat(3,minmax(48px,1fr));padding:8px;gap:4px}.sample{min-height:130px}.sample:last-child svg{width:min(var(--sz),100%);height:auto;aspect-ratio:1}.item b{font-size:11px;overflow-wrap:anywhere}}
+</style></head><body><h1>Все предметы • проверка SVG</h1><p>39 вариантов просмотра: 13 силуэтов × 40 / 80 / 180 px. Редкие и обычные предметы используют одну геометрию. Это диагностическая страница, не игровой экран.</p><main id="catalog"></main><script type="module">
+import {artifactPreviewNames,artifactSVG} from './art/artifacts.js';
+const root=document.querySelector('#catalog');
+for(const name of artifactPreviewNames){const row=document.createElement('section');row.className='item';
+const label=document.createElement('b');label.textContent=name;row.append(label);
+for(const size of [40,80,180]){const sample=document.createElement('div');sample.className='sample';sample.dataset.size=size+'px';sample.style.setProperty('--sz',size+'px');sample.innerHTML=artifactSVG(name,'обычный');row.append(sample)}root.append(row)}
+</script></body></html>
