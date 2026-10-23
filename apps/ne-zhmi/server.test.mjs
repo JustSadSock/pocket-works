@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import module, { reset, message } from './server/module.ts';
+import module, { reset, message, ROBOT } from './server/module.ts';
 const host={id:'H',name:'Host'},guest={id:'G',name:'Guest'},intruder={id:'X',name:'X'};
 function setup(){const s=module.createRoom({player:host}).state;module.onJoin({state:s,players:[host,guest]});return s}
 function send(s,p,cmd){return module.onMessage({state:s,player:p,payload:cmd}).events}
@@ -71,4 +71,17 @@ test('legitimate 2 jumps win when server advances with stable pulses',()=>{
    if(s.phase==='won'){win=true;break;}
  }
  assert.equal(win,true);assert.equal(s.robot.respawns,0);
+});
+
+test('terminal victory bypasses throttled position updates and reaches both peers',()=>{
+ const s=setup(),base=Date.now();reset(s,base);
+ s.robot.x=16.49;s.robot.y=6.5-ROBOT.halfHeight;s.robot.ground=true;
+ s.lastBroadcast=base+119;s.lastClock=base+119;
+ s.signals={H:base+119,G:base+119};
+ const events=message(s,host,{type:'pulse'},base+120);
+ assert.equal(s.phase,'won');
+ assert.equal(events.length,1);
+ assert.equal(events[0].type,'state');
+ assert.equal(events[0].payload.phase,'won');
+ assert.equal(events[0].to,undefined);
 });

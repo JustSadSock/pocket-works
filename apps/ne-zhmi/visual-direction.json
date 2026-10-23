@@ -51,6 +51,11 @@
         "slug": "picto",
         "spatialDifference": "НЕ ЖМИ! uses a full-bleed continuous side-scrolling mechanical course instead of Picto's static composition and symbolic story slots.",
         "interactionDifference": "Mechanical inputs alter a shared robot's velocity in the immediate physical simulation, rather than submitting tiles in turn-based rounds."
+      },
+      {
+        "slug": "jam-tape",
+        "spatialDifference": "НЕ ЖМИ! keeps a continuous physical side-view robot course and two plungers, unlike Jam Tape's audio timeline and track deck.",
+        "interactionDifference": "Jump/reverse impulses govern one shared character with authoritative collision outcomes; Jam Tape edits and replays audio rather than real-time physical actions."
       }
     ]
   },

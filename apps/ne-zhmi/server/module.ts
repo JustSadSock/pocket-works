@@ -1,6 +1,6 @@
 // Frozen physics core shared in logic with the client for the first network protocol.
 const WORLD = Object.freeze({ width: 18, height: 8, gravity: 19, speed: 3.4 });
-const ROBOT = Object.freeze({ halfWidth: 0.33, halfHeight: 0.46, jump: 9.15 });
+export const ROBOT = Object.freeze({ halfWidth: 0.33, halfHeight: 0.46, jump: 9.15 });
 const LEVEL = Object.freeze({
   name: 'Испытательный цех', goal: 16.5, checkpoint: 10.25,
   platforms: [
@@ -188,10 +188,13 @@ export function message(s,player,payload,now=Date.now()){
   if(v.type==='pulse'&&s.phase==='play') {
     // Advance BEFORE recording a new pulse so a disconnected operator cannot
     // accidentally fast-forward the stalled state merely by reconnecting.
+    const priorPhase=s.phase;
     advance(s,now);
     heartbeat(s,id,now);
     if(s.hold)advance(s,now);
-    if(now-s.lastBroadcast>=105||s.hold!==s.lastHold){
+    // Terminal transitions MUST reach both clients even when a previous
+    // position snapshot was sent within the normal throttle interval.
+    if(s.phase!==priorPhase||now-s.lastBroadcast>=105||s.hold!==s.lastHold){
       s.lastBroadcast=now;s.lastHold=s.hold;return emitState(s);
     }
     return [];
