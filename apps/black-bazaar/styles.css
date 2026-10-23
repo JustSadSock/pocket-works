@@ -748,3 +748,11 @@ body.sheet-open{overflow:auto}
 @keyframes artifact-in{0%{opacity:0;transform:translate(-50%,-75px) scale(.45) rotate(-12deg)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,0) scale(1.1)}}
 @keyframes artifact-out{0%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-90px) scale(.4) rotate(12deg)}}
 @media(prefers-reduced-motion:reduce){.wallet-change,.wallet-float,.artifact-transfer{animation:none!important}.wallet-float,.artifact-transfer{display:none}}
+
+/* Auction surface: price and offer count are visible without opening a sheet. */
+.table-stage .artifact{position:relative}
+.lot-market-strip{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:5px;font-size:12px;font-weight:800}
+.lot-market-strip>span{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border-radius:8px;background:#f5dba8;color:#4a3021;border:1px solid #b08049;box-shadow:0 2px 4px #2f201d30}
+.urgent-ticket{display:flex;align-items:center;gap:9px;min-height:38px;width:fit-content;max-width:100%;margin:0 0 7px;padding:4px 9px;background:#f3ddad;color:#603e28;border:1px solid #a87743;border-radius:8px;box-shadow:0 2px 0 #805a35;font-size:12px;text-align:left}
+.urgent-ticket>span{display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800}.urgent-ticket>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.urgent-ticket>small{white-space:nowrap;font-weight:900;margin-left:auto;color:#9c4834}
+@media(max-width:680px){.urgent-ticket{width:100%;gap:5px;margin-bottom:4px}.urgent-ticket>span{font-size:11px}.urgent-ticket>strong{font-size:11px}.lot-market-strip{font-size:11px;gap:3px}.lot-market-strip>span{padding:3px 5px}}
