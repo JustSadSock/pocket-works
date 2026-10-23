@@ -17,11 +17,11 @@ const equip=(s,player,id,slot,action)=>{
 };
 test('v10 binary-exact snapshot, immutable v9 and current module lock',async()=>{
  const main=await readFile(new URL('../server/module.ts',import.meta.url),'utf8');
- const current=await readFile(new URL('../../../pocketnet/module-versions/perekos/v11.ts',import.meta.url),'utf8');
+ const current=await readFile(new URL('../../../pocketnet/module-versions/perekos/v12.ts',import.meta.url),'utf8');
  const previous=await readFile(new URL('../../../pocketnet/module-versions/perekos/v9.ts',import.meta.url),'utf8');
  const lock=JSON.parse(await readFile(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
- assert.equal(main,current);assert.notEqual(main,previous);assert.equal(RULESET_VERSION,11);
- assert.equal(lock.perekos.current,'v11');assert.ok(lock.perekos.versions.includes('v9'));assert.ok(lock.perekos.versions.includes('v10'));
+ assert.equal(main,current);assert.notEqual(main,previous);assert.equal(RULESET_VERSION,12);
+ assert.equal(lock.perekos.current,'v12');assert.ok(lock.perekos.versions.includes('v9'));assert.ok(lock.perekos.versions.includes('v10'));assert.ok(lock.perekos.versions.includes('v11'));
  assert.match(previous,/RULESET_VERSION=9/);
 });
 test('two seats select isolated schools and get server-owned rune inventory',()=>{
@@ -35,7 +35,7 @@ test('two seats select isolated schools and get server-owned rune inventory',()=
  assert.ok(one.reserve.some(r=>r.defId==='st_wall'));
  assert.ok(two.reserve.some(r=>r.defId==='fi_ember'));
  assert.ok(!two.reserve.some(r=>r.defId==='li_spark'));
- assert.equal(module.viewForPlayer({state:s,player:a,players}).rulesVersion,11);
+ assert.equal(module.viewForPlayer({state:s,player:a,players}).rulesVersion,12);
  assert.equal(module.viewForPlayer({state:s,player:b,players}).loadout.school,'fire');
 });
 test('untrusted clients cannot modify somebody else, forge card IDs, or skip typed 1/2/2 slots',()=>{
