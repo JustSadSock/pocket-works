@@ -49,8 +49,8 @@ test('v2 mobile scrollport keeps menu, rune lab and physical arena accessible',a
    await page.locator('.v2-school.v2-stone').click();
    const rect=await page.locator('.v2-stage').boundingBox();
    expect(rect.width).toBeGreaterThan(100);
-   expect(rect.left).toBeGreaterThanOrEqual(-1);
-   expect(rect.right??rect.x+rect.width).toBeLessThanOrEqual(viewport.width+1);
+   expect(rect.x).toBeGreaterThanOrEqual(-1);
+   expect(rect.x+rect.width).toBeLessThanOrEqual(viewport.width+1);
    expect(rect.y+rect.height).toBeLessThanOrEqual(viewport.height+1);
    await page.locator('.v2-play').click();
    await expect(page.locator('#controls')).toBeVisible();
