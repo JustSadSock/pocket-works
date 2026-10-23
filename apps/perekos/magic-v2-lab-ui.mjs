@@ -6,6 +6,7 @@ import {
 } from './magic-v2-rules.mjs';
 import {MAGIC_V2_PRACTICE_RUNES,magicV2PracticeModifierFits} from './core.mjs';
 import {MAGIC_RUNE_INDEX} from './magic-v2-rules.mjs';
+import {MAGIC_TRANSFORMS} from './magic-v2-data.mjs';
 
 const SCHOOL_LABELS={stone:'Камень',fire:'Огонь',storm:'Молния'};
 const SCHOOL_EXPLAINS={
@@ -75,6 +76,21 @@ export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoad
     status='';onFight();
   },'v2-play'));
   panel.append(head);
+  const form=effectiveMagicForm(book);
+  const shape=form.ok&&form.shape?MAGIC_RUNE_INDEX.get(form.shape):null;
+  if(shape){
+   const chosen=[form.shape,form.origin,form.motion,form.impact].filter(Boolean);
+   const recipe=MAGIC_TRANSFORMS.recipes.find(r=>r.school===book.school&&r.requires.every(id=>chosen.includes(id)));
+   const summary=el('div','v2-form-summary');
+   summary.append(el('strong','',recipe?.name||shape.name));
+   summary.append(el('p','',recipe?.effect||shape.effect));
+   summary.append(el('small','',form.origin
+    ?'Источник: '+(MAGIC_RUNE_INDEX.get(form.origin)?.name||'неизвестен')
+    :'Источник: обычная точка атаки'));
+   panel.append(summary);
+  }else if(book.slots.some(sp=>sp.actions.some(a=>a.rune.defId==='u_reform_base'))){
+   panel.append(el('p','v2-empty','Преображение начато: присоедини КАК с формой, чтобы заменить базовую атаку.'));
+  }
   const tools=el('div','v2-tools');
   tools.append(btn(remote?'Покинуть комнату':'В меню',()=>{
     if(window.confirm(remote?'Покинуть сетевую комнату?':'Закончить тренировку? Несохранённая магия этой партии будет потеряна.'))onClose();
