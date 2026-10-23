@@ -1,6 +1,7 @@
 @import './client/styles.css';
 @import './client/stage05.css';
 @import './client/stage06.css';
+@import './client/stage07.css';
 .pocket-exit{position:fixed;z-index:55;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));display:inline-flex;align-items:center;padding:7px 9px;background:#222b25;color:#d8cbaa;text-decoration:none;border:1px solid #777057;box-shadow:0 3px 7px #10150f;font:700 11px 'PT Sans',system-ui,sans-serif}
 .pocket-exit:hover{background:#384336;color:#fff1cf}
 #network-error{position:fixed;bottom:max(12px,env(safe-area-inset-bottom));left:16px;right:16px;z-index:120;padding:12px;background:#492c29;color:#fff0dc;border:1px solid #bd8771;font:600 13px system-ui}
