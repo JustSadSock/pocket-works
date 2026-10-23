@@ -48,6 +48,19 @@ export function chooseEvolution(s,kind,id){
  else{const offers=eligibleOffers(s,1),pick=offers[0];if(pick){if(bot.runes.length>=9)bot.runes[0]=pick;else bot.runes.push(pick)}}
  s.pick=[];s.phase='build';return true;
 }
+export function forgeEdit(s,action,id){
+ if(s?.gameMode!=='forge'||s.phase!=='build')return false;
+ const a=s.actors[0];
+ if(action==='add'){
+  const ids=[...a.runes,id];if(!legalRunes(ids))return false;a.runes=ids;return true;
+ }
+ if(action==='remove'){
+  const at=a.runes.indexOf(id);if(at<0)return false;a.runes.splice(at,1);a.fusions=a.fusions.filter(f=>availableFusions({...a,fusions:[]}).some(x=>x.id===f));return true;
+ }
+ if(action==='mutate'||action==='fuse')return grantEvolution(a,action,id);
+ if(action==='reset'){a.runes=['on_hurt','armor'];a.evolution=null;a.fusions=[];return true}
+ return false;
+}
 export function reorderRunes(s,from,to){
  if(s.phase!=='build')return false;const slots=s.actors[0].runes;
  if(!Number.isInteger(from)||!Number.isInteger(to)||from<0||to<0||from>=slots.length||to>=slots.length)return false;
