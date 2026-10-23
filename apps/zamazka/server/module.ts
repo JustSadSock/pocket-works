@@ -21,7 +21,7 @@ type VoteTiming=Record<string,Record<string,number[][]>>;
 type ScoreAudit={byVoter:Record<string,{eye:number;base:number;speed:number;correct:number}>;mask:number;base:number;delay:number;late:number;undetected:number;correct:number;wrong:number};
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[];full?:boolean};
-type DraftAssembly={revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
+type DraftAssembly={checksum?:string;revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
 type State={pendingFinals?:Record<string,number>;incompleteSubmissions?:string[];resumable?:boolean;balancedDamage?:boolean;shapeCorrected?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
@@ -183,6 +183,12 @@ function step(s:State){
  }
 }
 function eligible(s:State,target:string,connected:string[]){return members(s).filter(p=>p.id!==target&&connected.includes(p.id))}
+function paintingChecksum(strokes:Stroke[]):string{
+ const data=JSON.stringify(strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p})));
+ let hash=2166136261;
+ for(let i=0;i<data.length;i++){hash^=data.charCodeAt(i);hash=Math.imul(hash,16777619)>>>0}
+ return hash.toString(16).padStart(8,'0');
+}
 function normalize(raw:unknown):Stroke[]|null{
  if(!Array.isArray(raw)||raw.length>768)return null;
  let total=0;const out:Stroke[]=[];
@@ -360,7 +366,8 @@ const module: PocketModule<State>={
      if(typeof a.revision!=='string'||!/^r[a-z0-9-]{1,30}$/.test(a.revision)||
         !Number.isInteger(a.parts)||a.parts<1||a.parts>160||
         !Number.isInteger(a.index)||a.index<0||a.index>=a.parts||
-        !Array.isArray(a.strokes)||a.strokes.length>8)
+        !Array.isArray(a.strokes)||a.strokes.length>8||
+        (a.checksum!==undefined&&(typeof a.checksum!=='string'||!/^[0-9a-f]{8}$/.test(a.checksum))))
        return {state,events:notice(id,'Некорректная часть рисунка.')};
      const strokes=normalize(a.strokes);
      if(!strokes)return {state,events:notice(id,'Недопустимые мазки в рисунке.')};
@@ -370,11 +377,11 @@ const module: PocketModule<State>={
      if(a.index===0){
        // A new revision replaces only an INCOMPLETE assembly. The committed
        // draft remains available until every part has passed all checks.
-       assembling={revision:a.revision,kind,parts:a.parts,next:0,prefix:0,strokes:[]};
+       assembling={revision:a.revision,checksum:typeof a.checksum==='string'?a.checksum:undefined,kind,parts:a.parts,next:0,prefix:0,strokes:[]};
        state.draftAssemblies[id]=assembling;
      }
      if(!assembling||assembling.revision!==a.revision||assembling.kind!==kind||
-        assembling.parts!==a.parts||assembling.next!==a.index)
+        assembling.parts!==a.parts||assembling.next!==a.index||assembling.checksum!==a.checksum)
        return {state,events:notice(id,'Части рисунка пришли не по порядку. Повторяем сохранение.')};
      // Most saves differ only by their last few strokes. Keep the unchanged
      // prefix by reference to the committed backup instead of duplicating a
@@ -397,10 +404,12 @@ const module: PocketModule<State>={
      const completed=normalize([...previous.slice(0,assembling.prefix),...assembling.strokes]);
      delete state.draftAssemblies[id];
      if(!completed)return {state,events:notice(id,'Сохранение повреждено; предыдущая копия сохранена.')};
+     if(assembling.checksum&&paintingChecksum(completed)!==assembling.checksum)
+       return {state,events:notice(id,'Контрольная сумма рисунка не совпала. Повторяем отправку.')};
      state.drafts||={};
      state.drafts[id]=completed;
      if(kind==='draft_chunk')
-       return {state,events:[{type:'draft_saved',to:id,payload:{round:state.round,art:item.art,variation:item.variation,revision:a.revision,lines:completed.length}}]};
+       return {state,events:[{type:'draft_saved',to:id,payload:{round:state.round,art:item.art,variation:item.variation,revision:a.revision,checksum:paintingChecksum(completed),lines:completed.length}}]};
      item.strokes=completed;
      delete state.pendingFinals?.[id];
      delete state.drafts[id];
@@ -408,7 +417,7 @@ const module: PocketModule<State>={
      // A WebSocket send is not a confirmed submission: only this durable
      // server-side commit can acknowledge a full multi-packet restoration.
      return {state,events:[...emit(state),{type:'submission_saved',to:id,
-       payload:{round:state.round,art:item.art,variation:item.variation,revision:a.revision,lines:completed.length}}]};
+       payload:{round:state.round,art:item.art,variation:item.variation,revision:a.revision,checksum:paintingChecksum(completed),lines:completed.length}}]};
    }else if(a.type==='draft'&&state.phase==='drawing'){
      const item=state.assignments[id];
      if(!item||item.strokes!==null||Number(a.round)!==state.round||a.art!==item.art||a.variation!==item.variation)
