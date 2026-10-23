@@ -512,7 +512,7 @@ function act(s,a,action,mods,ev){
  case 'ball':spawnShot(s,a,angle,a.x,a.y,{element:chosenElement(mods,mage(a.mageId).school),strong:m.has('strong'),far:m.has('far'),bounce:m.has('bounce'),drain:m.has('drain'),wide:m.has('wide'),fastshot:m.has('fastshot'),depth});break;
  case 'heal':receiveHeal(s,a,7*strong,depth);break;
  case 'armor':a.shield=Math.min(80,a.shield+11*strong);fx(s,'shield',a.x,a.y);break;
- case 'blast':if(Math.hypot(other.x-a.x,other.y-a.y)<(m.has('wide')?110:72)*reach&&beamLength(s,a.x,a.y,Math.atan2(other.y-a.y,other.x-a.x),Math.hypot(other.x-a.x,other.y-a.y)+4)>=Math.hypot(other.x-a.x,other.y-a.y)-8){const d=harm(s,other,11*strong,a.id,depth);if(d>0){markTarget(s,other,chosenElement(mods,mage(a.mageId).school),a.id,depth);emit(s,'on_hit',a.id,{},depth)}}fx(s,'overload',a.x,a.y);break;
+ case 'blast':if(Math.hypot(other.x-a.x,other.y-a.y)<(m.has('wide')?110:72)*reach&&beamLength(s,a.x,a.y,Math.atan2(other.y-a.y,other.x-a.x),Math.hypot(other.x-a.x,other.y-a.y)+4,a.id)>=Math.hypot(other.x-a.x,other.y-a.y)-8){const d=harm(s,other,11*strong,a.id,depth);if(d>0){markTarget(s,other,chosenElement(mods,mage(a.mageId).school),a.id,depth);emit(s,'on_hit',a.id,{},depth)}}fx(s,'overload',a.x,a.y);break;
  case 'blink':{const step=38*reach*(m.has('reverse')?-1:1);move(a,Math.cos(a.face)*step,Math.sin(a.face)*step);fx(s,'dash',a.x,a.y);break}
  case 'clone':if(s.echoes.length<12)s.echoes.push({owner:a.id,x:a.x,y:a.y,life:m.has('lasting')?3.5:2.2,cast:.25,shots:2,extra:m.has('strong')});fx(s,'dash',a.x,a.y);break;
  case 'mine':if(s.mines.length<14)s.mines.push({x:a.x,y:a.y,owner:a.id,life:m.has('lasting')?6:3.5,damage:14*strong,element:chosenElement(mods,mage(a.mageId).school),r:(m.has('wide')?57:40)*(a.archetype==='shaper'?1.2:1)});fx(s,'mine',a.x,a.y);break;
@@ -618,7 +618,7 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
 for(let j=s.echoes.length-1;j>=0;j--){const e=s.echoes[j];e.life-=dt;e.cast-=dt;const source=s.actors[e.owner];if(e.cast<=0){e.cast=.76;const target=s.actors[1-e.owner];spawnShot(s,source,Math.atan2(target.y-e.y,target.x-e.x),e.x,e.y,{clone:true,strong:!!e.extra});e.shots=(e.shots??2)-1}if(e.life<=0||e.shots<=0)s.echoes.splice(j,1)}
 for(let j=s.mines.length-1;j>=0;j--){
  const mine=s.mines[j];mine.life-=dt;const target=s.actors[1-mine.owner];
- if(Math.hypot(target.x-mine.x,target.y-mine.y)<mine.r&&beamLength(s,mine.x,mine.y,Math.atan2(target.y-mine.y,target.x-mine.x),Math.hypot(target.x-mine.x,target.y-mine.y)+4)>=Math.hypot(target.x-mine.x,target.y-mine.y)-8){const d=harm(s,target,mine.damage,mine.owner);if(d>0){markTarget(s,target,mine.element||mage(s.actors[mine.owner].mageId).school,mine.owner);emit(s,'on_hit',mine.owner)}fx(s,'overload',mine.x,mine.y);s.mines.splice(j,1)}
+ if(Math.hypot(target.x-mine.x,target.y-mine.y)<mine.r&&beamLength(s,mine.x,mine.y,Math.atan2(target.y-mine.y,target.x-mine.x),Math.hypot(target.x-mine.x,target.y-mine.y)+4,mine.owner)>=Math.hypot(target.x-mine.x,target.y-mine.y)-8){const d=harm(s,target,mine.damage,mine.owner);if(d>0){markTarget(s,target,mine.element||mage(s.actors[mine.owner].mageId).school,mine.owner);emit(s,'on_hit',mine.owner)}fx(s,'overload',mine.x,mine.y);s.mines.splice(j,1)}
  else if(mine.life<=0)s.mines.splice(j,1);
  }
  for(let j=s.barriers.length-1;j>=0;j--){s.barriers[j].life-=dt;if(s.barriers[j].life<=0)s.barriers.splice(j,1)}
