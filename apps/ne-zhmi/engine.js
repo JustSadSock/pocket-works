@@ -15,7 +15,7 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 export function createGame() {
   return {
     x: 1.15, y: 6.5 - ROBOT.halfHeight, vx: 0, vy: 0, dir: 1,
-    ground: true, coyote: .1, buffer: 0, cooldown: 0, t: 0,
+    ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, t: 0,
     rotation: 0, checkpoint: 1.15, respawns: 0, jumps: 0, reverses: 0,
     finished: false, wonAt: null, impacts: 0, lastEvent: 'ready'
   };
@@ -47,6 +47,7 @@ export function stepGame(state, dt = FIXED_DT) {
   if (!delta) return events;
   state.t += delta;
   state.cooldown = Math.max(0, state.cooldown - delta);
+  state.wallCooldown = Math.max(0, state.wallCooldown - delta);
   state.buffer = Math.max(0, state.buffer - delta);
   if (state.ground) state.coyote = .10; else state.coyote = Math.max(0, state.coyote - delta);
   if (state.buffer > 0 && state.coyote > 0) {
@@ -64,10 +65,10 @@ export function stepGame(state, dt = FIXED_DT) {
     if (b.bottom > p.y + .025 && b.top < p.y + p.h - .02 && overlap(b,p)) {
       if (state.vx > 0 && previousX + ROBOT.halfWidth <= p.x + .09) {
         state.x = p.x - ROBOT.halfWidth; state.vx = 0;
-        events.push('wall');
+        if (state.wallCooldown <= 0) { events.push('wall'); state.wallCooldown = .25; }
       } else if (state.vx < 0 && previousX - ROBOT.halfWidth >= p.x + p.w - .09) {
         state.x = p.x + p.w + ROBOT.halfWidth; state.vx = 0;
-        events.push('wall');
+        if (state.wallCooldown <= 0) { events.push('wall'); state.wallCooldown = .25; }
       }
     }
   }
@@ -91,12 +92,12 @@ export function stepGame(state, dt = FIXED_DT) {
     b = bounds(state);
   }
   if (state.x > LEVEL.checkpoint && state.ground && state.checkpoint < LEVEL.checkpoint) {
-    state.checkpoint = 10.1; events.push('checkpoint'); state.lastEvent = 'checkpoint';
+    state.checkpoint = LEVEL.checkpoint; events.push('checkpoint'); state.lastEvent = 'checkpoint';
   }
   if (state.y > WORLD.height + .8) {
     const savedX = state.checkpoint;
     Object.assign(state, { x: savedX, y: savedX > 9 ? 6.25 - ROBOT.halfHeight : 6.5 - ROBOT.halfHeight,
-      vx: 0, vy: 0, dir: 1, ground: true, coyote: .1, buffer: 0, cooldown: 0, rotation: 0 });
+      vx: 0, vy: 0, dir: 1, ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, rotation: 0 });
     state.respawns++;
     state.lastEvent = 'respawn'; events.push('respawn');
   }
