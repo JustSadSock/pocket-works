@@ -142,7 +142,7 @@ const module={
     s.revision++;return {state:s,events:events()};
    }
    const current=players.find(p=>p.id===seat.id);
-   if(current){seat.name=clean(current.name,24)||seat.name;seat.avatar=current.avatar||seat.avatar;}
+   if(current){seat.name=clean(current.name,24)||seat.name;seat.avatar=current.avatar||seat.avatar;seat.vacant=false;seat.autoSkip=false;}
    s.revision++;return {state:s,events:events()};
   }
   if(players.length>s.settings.maxPlayers)throw Error('room_full');
