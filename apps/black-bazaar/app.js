@@ -649,7 +649,7 @@ function renderPlay(){
 function renderDone(){
  mode='done';activeSheet=null;selectedArtifact=null;playStarted=false;readDeals.clear();readTasks.clear();document.body.classList.remove('sheet-open');
  const ranks=state.ranking||[];
- app.innerHTML='<h1>Партия окончена</h1><p>Рейтинг по выполнению секретной квоты. Банкротство лишает права на победу; легендарная связь может изменить второе место.</p>'+
+ app.innerHTML='<section class="done-screen"><h1>Партия окончена</h1><p>Рейтинг по выполнению секретной квоты. Банкротство лишает права на победу; легендарная связь может изменить второе место.</p>'+
  '<div class="panel"><table class="table"><thead><tr><th>Место</th><th>Игрок</th><th>Квота</th><th>Итог</th></tr></thead><tbody>'+
  ranks.map(p=>'<tr><td>'+p.place+'</td><td>'+esc(p.character)+' · '+esc(p.name)+'</td><td>'+p.progress+'%</td><td>'+(p.bankrupt?'банкрот':p.complete?'выполнена':'не выполнена')+'</td></tr>').join('')+
  '</tbody></table></div>'+
@@ -662,7 +662,7 @@ function renderDone(){
  '; заблокировано амулетом: '+state.report.wardUsed+
  '; проклятий сработало: '+state.report.curseFired+'.</p></div>':'')+
  '<div class="row">'+(state.host===me?.id?'<button type="button" data-action="start" class="primary">Новая партия</button>':'')+
- '<button type="button" data-action="leave">В меню</button></div>';
+ '<button type="button" data-action="leave">В меню</button></div></section>';
 }
 function render(){
  if(!state)return renderHome();
