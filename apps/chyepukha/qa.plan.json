@@ -13,7 +13,8 @@
         "tests/story-library.test.mjs",
         "tests/story-contract.test.mjs",
         "tests/comic-prompt.test.mjs",
-        "tests/writer-flow.test.mjs"
+        "tests/writer-flow.test.mjs",
+        "tests/editor-motion.test.mjs"
       ]
     },
     {
