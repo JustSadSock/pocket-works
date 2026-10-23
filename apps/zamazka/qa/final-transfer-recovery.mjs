@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
-import {paintPackets} from '../draft-transfer.js';
+import {paintPackets,paintingChecksum} from '../draft-transfer.js';
 
 let clock=100000;
 class Clock extends Date{static now(){return clock}}
@@ -29,6 +29,7 @@ const art=Array.from({length:400},(_,i)=>({c:'#abcdef',s:12,t:'brush',p:Array.fr
  for(const chunk of draft)send(a,chunk);
  assert.equal(s.drafts[a.id].length,400);
  const final=paintPackets({...meta,type:'submit_chunk'});
+ assert.equal(final[0].checksum,paintingChecksum(art),'packets include integrity checksum');
  send(a,{type:'submit_begin',round:s.round,art:ass.art,variation:ass.variation});
  send(a,final[0]);
  clock=s.deadline+exports.FINAL_SUBMISSION_GRACE_MS+1;
@@ -48,5 +49,18 @@ const art=Array.from({length:400},(_,i)=>({c:'#abcdef',s:12,t:'brush',p:Array.fr
  send(b,{type:'pulse'});
  assert.equal(s.phase,'voting','recovery wait is bounded');
  assert.ok(s.incompleteSubmissions.includes(a.id),'fallback must be explicitly marked incomplete');
+}
+{
+ const {s,send}=room(),ass=s.assignments[a.id];
+ const meta={round:s.round,art:ass.art,variation:ass.variation,strokes:art};
+ const chunks=paintPackets({...meta,type:'submit_chunk'});
+ // All parts arrive in order, but one vector changes in transit or due to a bug.
+ const changed=chunks.map(p=>({...p,strokes:p.strokes.map(stroke=>({...stroke,p:stroke.p.map(point=>[...point])}))}));
+ changed.at(-1).strokes.at(-1).p[0][0]+=1;
+ const result=changed.map(p=>send(a,p)).at(-1);
+ assert.equal(s.assignments[a.id].strokes,null,'invalid checksum must never publish corrupted final art');
+ assert.ok(result.events.some(e=>e.type==='notice'),'sender must receive a checksum error');
+ for(const chunk of chunks)send(a,chunk);
+ assert.equal(s.assignments[a.id].strokes.length,400,'a clean retry must be accepted');
 }
 console.log('ZAMAZKA: final transfer grace, completed chunks, explicit incomplete fallback OK');
