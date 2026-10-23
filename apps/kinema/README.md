@@ -6,7 +6,7 @@ KINEMA is a focused third-person character motion study for Pocket Works. The en
 
 - Landscape phone first.
 - Left analog joystick controls travel direction and continuously maps input magnitude from slow walk to full run.
-- Movement now uses an inertial world-space velocity vector, so acceleration, braking and reversals carry physical momentum instead of snapping the body to joystick direction.
+- Movement uses an inertial world-space velocity vector, so acceleration, braking and reversals carry physical momentum instead of snapping the body to joystick direction.
 - Very short joystick gestures are buffered for one simulation frame so quick mobile input is not lost between WebGL frames.
 - Drag anywhere on the right side to orbit the third-person camera.
 - The default camera sits behind the character, leads slightly in the direction of actual travel and remains independent from the body's short turning delay.
@@ -32,7 +32,7 @@ The Asset Forge manifest requires both armature and animation on re-import. Gene
 
 ## Runtime motion system
 
-Babylon.js owns runtime motion and rendering concerns. KINEMA 1.7 no longer treats the five directional Blender actions as dormant export data:
+Babylon.js owns runtime motion and rendering concerns. The five directional Blender actions are active runtime locomotion data rather than dormant export clips:
 
 - `WalkBack` blends in while physical velocity temporarily trails behind a reversing body;
 - `StrafeLeft` / `StrafeRight` blend while the trajectory crosses the body's local side axis;
@@ -44,6 +44,17 @@ Babylon.js owns runtime motion and rendering concerns. KINEMA 1.7 no longer trea
 
 WebKit/Safari retains the no-UV material fallback for affected skinned meshes plus a two-frame scene warmup before the loading screen is removed.
 
+## Mobile delivery and presence
+
+KINEMA 1.8 reduces the cost of getting the character on screen without cutting its visual features:
+
+- Babylon imports are module-scoped instead of importing the full `@babylonjs/core` barrel;
+- the glTF loader is registered through a dynamic import immediately before the Blender GLB request;
+- the scene boots at a capped ~1.35 device render scale, then raises fidelity to a capped ~1.85 scale once the character and animation actions are resident;
+- landscape phone widths from 780 CSS px use a 2048 shadow map with tighter normal bias for cleaner foot contact and silhouette edges;
+- the 1.7 production build's ~6.94 MB Babylon chunk is reduced to ~3.26 MB in 1.8, while the entry bundle drops from ~294.7 KB to ~17.6 KB and the ~282 KB glTF loader remains split into its own chunk;
+- generated PWA precache weight falls from roughly 8.13 MB to 4.55 MB while keeping the experience available offline after installation.
+
 ## Validation
 
 ```bash
@@ -52,4 +63,4 @@ npm run typecheck --workspace @pocket-works/kinema
 npm run build --workspace @pocket-works/kinema
 ```
 
-Pocket Works AI Mobile Gameplay QA must exercise the production-like 1.7 build in Chromium and WebKit before merge. Runtime telemetry exposes peak speed, travel distance, loaded animation counts, directional clip availability and peak directional blend so the mobile pass can detect regressions that a final screenshot alone would hide.
+Pocket Works AI Mobile Gameplay QA must exercise the production-like 1.8 build in Chromium and WebKit before merge. Runtime telemetry exposes peak speed, travel distance, loaded animation counts, directional clip availability, peak directional blend and final render scale so mobile regressions are visible beyond a single screenshot.
