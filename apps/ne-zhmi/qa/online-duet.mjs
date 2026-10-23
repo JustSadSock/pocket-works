@@ -67,7 +67,7 @@ function wireSocket(socket){
       room.state=answer.state;
       // The network E2E uses a known two-jump benchmark for reproducibility;
       // procedural courses are separately validated across seeds.
-      if((req.payload?.type==='start'||req.payload?.type==='restart')&&room.state.phase==='play'){
+      if((req.payload?.type==='start'||req.payload?.type==='restart')&&room.state.phase==='play'&&room.state.round<=2){
         room.state.robot=testModule.createGame(testModule.LEVEL);
         for(const event of answer.events||[])if(event.type==='state')event.payload.robot=room.state.robot;
       }
@@ -167,6 +167,10 @@ try{
   await host.locator('#online-again').click();
   await poll(()=>room.state.phase==='play'&&room.state.round===round+1,'next shared round');
   await poll(()=>guest.locator('#online-out').isVisible(),'guest entered next round');
+  if(room.state.robot.level?.sections?.length!==5)throw Error('Next shared course was not generated');
+  await poll(async()=>await guest.locator('#scene-label').textContent()===await host.locator('#scene-label').textContent(),'same section/theme caption');
+  await host.screenshot({path:screenshots+'/duet-host-generated.png'});
+  await guest.screenshot({path:screenshots+'/duet-guest-generated.png'});
   console.log('PASS: create -> join -> role controls -> checkpoint -> reconnect -> finish on both clients -> replay');
   for(const context of contexts)await context.close();
 }finally{await browser?.close();await new Promise(done=>server.close(done));}

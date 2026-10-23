@@ -48,6 +48,37 @@ export function createRenderer(canvas) {
       ctx.fillStyle='#91a69c';
     }
     ctx.restore();
+    // Three places, three recognizable sets of machinery. The background is
+    // inert; everything with collision or force is drawn in the stage layer.
+    ctx.save();ctx.translate(-camX*scale*.29,0);ctx.globalAlpha=.34;
+    for(let i=0;i<16;i++){
+      const x=i*161-40,ground=sy(6.25);
+      if(level.theme==='warehouse'){
+        ctx.strokeStyle='#495c55';ctx.lineWidth=4;
+        ctx.strokeRect(x,ground-126,128,122);
+        for(let shelf=0;shelf<3;shelf++){
+          const yy=ground-110+shelf*39;
+          ctx.fillStyle='#806957';ctx.fillRect(x+9,yy,100,27);
+          ctx.strokeStyle='#d4bd8f';ctx.lineWidth=1.5;ctx.strokeRect(x+9,yy,100,27);
+          ctx.beginPath();ctx.moveTo(x+9,yy);ctx.lineTo(x+109,yy+27);ctx.stroke();
+        }
+      }else if(level.theme==='kitchen'){
+        ctx.strokeStyle='#e2ebe0';ctx.lineWidth=7;
+        ctx.beginPath();ctx.moveTo(x+20,ground-190);ctx.lineTo(x+20,ground-90);
+        ctx.quadraticCurveTo(x+20,ground-70,x+42,ground-70);ctx.lineTo(x+91,ground-70);
+        ctx.stroke();ctx.strokeStyle='#466b6c';ctx.lineWidth=4;
+        ctx.beginPath();ctx.arc(x+80,ground-103,35,0,Math.PI*2);ctx.stroke();
+        ctx.beginPath();ctx.arc(x+80,ground-103,23,0,Math.PI*2);ctx.stroke();
+        ctx.fillStyle='#d6c6a6';ctx.fillRect(x+35,ground-46,85,43);
+      }else{
+        ctx.fillStyle='#617a75';ctx.fillRect(x+18,ground-142,112,119);
+        ctx.fillStyle='#adc0b4';rr(ctx,x+31,ground-122,85,80,9);ctx.fill();
+        ctx.strokeStyle='#465d58';ctx.lineWidth=4;ctx.stroke();
+        ctx.fillStyle='#607f79';
+        for(let z=0;z<3;z++){ctx.beginPath();ctx.arc(x+51+z*25,ground-105+z*6,6,0,Math.PI*2);ctx.fill();}
+      }
+    }
+    ctx.restore();
     ctx.fillStyle='#667b73';ctx.fillRect(0,sy(7.6),w,Math.max(0,h-sy(7.6)));
     // Gap shadow / guard channel behind platforms
     ctx.fillStyle='#394e50';ctx.fillRect(0,sy(6.45),w,h-sy(6.45));
@@ -63,7 +94,7 @@ export function createRenderer(canvas) {
     for(const p of level.platforms) {
       const x=sx(p.x),y=sy(p.y),ww=p.w*scale,hh=p.h*scale;
       ctx.fillStyle='#455658';ctx.fillRect(x+4,y+8,ww,hh);
-      ctx.fillStyle=C.wall;ctx.fillRect(x,y,ww,hh);
+      ctx.fillStyle=theme.ground;ctx.fillRect(x,y,ww,hh);
       ctx.fillStyle='#f2e7cc';ctx.fillRect(x,y,ww,8);
       ctx.fillStyle='#acb5a0';ctx.fillRect(x,y+8,ww,10);
       ctx.fillStyle='rgba(40,53,56,.16)';
@@ -71,7 +102,7 @@ export function createRenderer(canvas) {
       for(let k=30;k<ww;k+=78){
         ctx.fillStyle='#435054';ctx.beginPath();ctx.arc(x+k,y+5,2.4,0,Math.PI*2);ctx.fill();
       }
-      ctx.fillStyle='#d79e62';
+      ctx.fillStyle=theme.accent;
       for(let k=13;k<ww-15;k+=55)ctx.fillRect(x+k,y+13,23,3);
     }
     // Explicit working mechanisms: painted surfaces mirror physics effects.

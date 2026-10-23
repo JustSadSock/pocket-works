@@ -22,7 +22,7 @@ function sound(kind){
     if(audio.state==='suspended')void audio.resume();
     const oscillator=audio.createOscillator(),gain=audio.createGain(),time=audio.currentTime;
     oscillator.type=kind==='reverse'?'triangle':'sine';
-    const frequencies={jump:425,reverse:190,land:90,respawn:120,checkpoint:620,finish:740,wall:100};
+    const frequencies={jump:425,reverse:190,land:90,respawn:120,checkpoint:620,finish:740,wall:100,spring:510,hazard:80,gate:140};
     const f=frequencies[kind]||280;oscillator.frequency.setValueAtTime(f,time);
     oscillator.frequency.exponentialRampToValueAtTime(Math.max(65,kind==='jump'?f*1.4:f*.65),time+.115);
     gain.gain.setValueAtTime(.0001,time);gain.gain.exponentialRampToValueAtTime(.10,time+.006);
@@ -132,10 +132,10 @@ function frame(now){
     while(accumulated>=FIXED_DT&&loops<9){
       const events=stepGame(game,FIXED_DT);accumulated-=FIXED_DT;loops++;
       for(const event of events){
-        if(['jump','land','respawn','checkpoint','wall'].includes(event)){
-          if(event==='respawn'||event==='land')renderer.impact(event==='respawn'?1.4:.8);
+        if(['jump','land','respawn','checkpoint','wall','spring','hazard','gate'].includes(event)){
+          if(['respawn','land','spring','hazard'].includes(event))renderer.impact(event==='respawn'||event==='hazard'?1.4:.8);
           sound(event);
-          if(event==='respawn')announce('Болтик упал. Возвращаем к контрольной точке.');
+          if(event==='respawn'||event==='hazard')announce(event==='hazard'?'Пресс сработал. Возвращаем к контрольной точке.':'Болтик упал. Возвращаем к контрольной точке.');
           if(event==='checkpoint')announce('Контрольная точка сохранена.');
         }
         if(event==='finish')finish();
