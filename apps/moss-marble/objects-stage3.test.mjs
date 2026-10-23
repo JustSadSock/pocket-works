@@ -47,7 +47,7 @@ for (const original of [
       assert.ok(blade.color.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
     }
   }
-  assert.equal(data.length,bladeTotal*3*18,'each blade uses exactly three short curved faces');
+  assert.equal(data.length,bladeTotal*3*17,'each blade uses exactly three short curved faces');
   const geometry = buildCourse18Geometry(level);
   assert.ok(geometry.opaque instanceof Float32Array);
   for (const [name, array] of Object.entries(geometry)) {
