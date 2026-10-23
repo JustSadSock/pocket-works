@@ -141,6 +141,17 @@ export function debugCommand(s,cmd){
  const type=cmd?.type;
  if(type==='tick')return {state:s,silent:true};
  if(type==='start')return {state:createDebugState('four')};
+ if(type==='kick'){
+  const target=s.players.find(p=>p.id===cmd.targetId);
+  if(s.host!=='debug-0'||!target||target.id==='debug-0'||target.bankrupt)
+   return {state:s,error:'Исключение недоступно'};
+  s.bannedIds=[...new Set([...(s.bannedIds||[]),target.id])];
+  if(s.phase==='lobby')s.players=s.players.filter(p=>p.id!==target.id);
+  else{target.bankrupt=true;target.connected=false;s.bids=s.bids.filter(b=>b.buyer!==target.id);
+   s.deals=s.deals.filter(d=>d.from!==target.id&&d.to!==target.id);
+   if(s.turnId===target.id)s.turnId='debug-0';}
+  s.revision++;return {state:s,message:'Участник исключён'};
+ }
  if(s.phase!=='play')return {state:s,error:'Действие недоступно на этом экране'};
  const you=s.you,other=s.players[1];
  const findItem=id=>you.items.find(x=>x.id===id);
