@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#e5ddc7"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="НЕ ЖМИ!">
+<title>НЕ ЖМИ! — Pocket Works</title>
+<link rel="icon" type="image/svg+xml" href="./icons/icon.svg"><link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/workshop-mode.css"><link rel="stylesheet" href="./styles.css">
+</head><body>
+<main class="app-shell machine" data-app-shell data-fullscreen-app>
+<header class="machine-top" data-ui>
+  <a class="return" href="../../" data-app-control data-native-press>← Pocket Works</a>
+  <div class="wordmark"><span class="lamp" aria-hidden="true"></span><b>НЕ ЖМИ!</b><small>МЕХАНИЧЕСКИЙ ЦЕХ</small></div>
+  <button id="sound" class="sound" type="button" data-native-press aria-label="Выключить звук">ЗВУК · ВКЛ</button>
+</header>
+<section class="workbench" aria-label="Испытательная трасса">
+  <div class="scene-header" data-ui><span id="scene-label">ИСПЫТАТЕЛЬНЫЙ ЦЕХ / 01</span><span id="clock">00:00</span></div>
+  <canvas id="scene" role="img" aria-label="Болтик — робот с колёсами; трасса из платформ, пропастей и финишной арки"></canvas>
+  <div class="scene-footer" data-ui><span id="status">ЖДЁМ СИГНАЛ</span><span id="falls">ПАДЕНИЯ 00</span></div>
+  <section id="menu" class="panel intro" aria-labelledby="menu-title">
+    <div class="plate">ПРОТОКОЛ 001 <span>ДВОЙНОЕ УПРАВЛЕНИЕ</span></div>
+    <h1 id="menu-title">НЕ<br><em>ЖМИ!</em></h1>
+    <p>Болтик едет сам. Один оператор прыгает, другой разворачивает. Проведите его через цех вместе.</p>
+    <label class="player-field">ПОЗЫВНОЙ <input id="player-name" maxlength="22" autocomplete="nickname" placeholder="Оператор" value="Игрок" spellcheck="false"></label>
+    <button id="start" class="launch" type="button" data-native-press>НАЧАТЬ ИСПЫТАНИЕ <span>→</span></button>
+    <div class="net-buttons"><button id="create-online" class="net-entry" type="button">Создать онлайн-комнату</button><button id="join-online" class="net-entry" type="button">Войти по коду</button></div>
+    <div class="key-guide">Локальный режим · два человека на одном устройстве <button type="button" class="workshop-entry" data-workshop-trigger>Диагностика</button></div>
+  </section>
+  <section id="pause-panel" class="panel sheet hidden" aria-labelledby="pause-title" role="dialog" aria-modal="true">
+    <div class="plate">ПРОТОКОЛ НА ПАУЗЕ</div>
+    <h2 id="pause-title">ТЕХНИЧЕСКИЙ ПЕРЕРЫВ</h2>
+    <button id="resume" class="launch" type="button">Продолжить →</button>
+    <button id="restart-pause" class="option" type="button">Начать трассу заново</button>
+    <button id="leave-pause" class="option" type="button">В меню</button>
+    <button type="button" class="workshop-entry" data-workshop-trigger>Диагностика</button><a class="exit-sheet" href="../../" data-app-control>← Pocket Works</a>
+  </section>
+  <section id="finish-panel" class="panel sheet hidden" aria-labelledby="finish-title" role="dialog" aria-modal="true">
+    <div class="plate">ФИНИШ ПОДТВЕРЖДЁН</div>
+    <h2 id="finish-title">БОЛТИК ВЫЖИЛ</h2>
+    <p id="result"></p>
+    <button id="again" class="launch" type="button">Ещё один заезд →</button>
+    <button id="leave-finish" class="option" type="button">В меню</button>
+    <a class="exit-sheet" href="../../" data-app-control>← Pocket Works</a>
+  </section>
+  <section id="online-lobby" class="panel sheet online-sheet hidden" aria-label="Комната PocketNet">
+    <div class="plate"><span>POCKETNET · ДВА ОПЕРАТОРА</span><span id="online-status" role="status">Подключаемся…</span></div>
+    <h2 id="online-lobby-title">Комната</h2>
+    <div id="online-entry" class="online-entry hidden">
+      <label>КОД ПРИГЛАШЕНИЯ<input id="online-code-input" inputmode="text" autocapitalize="characters" maxlength="36" placeholder="8 символов"></label>
+      <button id="online-join" class="launch" type="button">Подключиться →</button>
+    </div>
+    <div id="online-room" class="online-room hidden">
+      <div class="room-code">КОД КОМНАТЫ <strong id="online-code">--------</strong></div>
+      <button id="online-copy" type="button" class="option">Скопировать приглашение</button>
+      <div id="online-roster" class="online-roster"></div>
+      <p id="online-role">Ожидание роли</p>
+      <button id="online-swap" class="option hidden" type="button">Поменять роли местами</button>
+      <button id="online-start" class="launch hidden" type="button">Запустить испытание →</button>
+    </div>
+    <button id="online-leave" class="exit-sheet" type="button">← Выйти из комнаты</button>
+    <a class="exit-sheet" href="../../" data-app-control>← Pocket Works</a>
+  </section>
+  <section id="online-result" class="panel sheet online-sheet hidden" role="dialog" aria-modal="true" aria-labelledby="online-result-title">
+    <div class="plate">СЕРВЕР ПОДТВЕРДИЛ ФИНИШ</div><h2 id="online-result-title">ОПЕРАЦИЯ УДАЛАСЬ</h2>
+    <p id="online-result-stats"></p><button id="online-again" class="launch hidden" type="button">Начать новый заезд →</button>
+    <p id="online-wait-host" class="hidden">Ожидаем следующего испытания от ведущего.</p>
+    <button id="online-leave-result" class="option" type="button">Выйти из комнаты</button>
+    <a class="exit-sheet" href="../../" data-app-control>← Pocket Works</a>
+  </section>
+  <div id="online-banner" class="online-banner hidden" role="status" aria-live="polite">Ожидание связи…</div>
+  <button id="online-out" class="pause hidden" type="button">ВЫЙТИ</button>
+  <div id="online-confirm" class="online-confirm hidden" role="dialog" aria-modal="true" aria-labelledby="online-confirm-title">
+    <div class="panel confirm-panel"><h2 id="online-confirm-title">Выйти из комнаты?</h2>
+    <p>Вы покинете испытание. Второй оператор вернётся в комнату ожидания.</p>
+    <div class="confirm-actions"><button id="online-leave-no" class="option" type="button">Остаться</button><button id="online-leave-yes" class="launch" type="button">Выйти →</button></div></div>
+  </div>
+  <span id="online-role-chip" class="online-role-chip hidden" aria-live="polite"></span>
+  <button id="pause" class="pause hidden" type="button" aria-label="Поставить на паузу">Ⅱ ПАУЗА</button>
+</section>
+<section class="control-desk" aria-label="Пульт операторов" data-ui>
+  <div class="desk-head"><span>ПОСТ УПРАВЛЕНИЯ / 02 КАНАЛА</span><span class="desk-light"><i></i> ДВА КАНАЛА</span></div>
+  <div class="switches">
+    <div class="control-station">
+      <span class="station-label">ОПЕРАТОР 01 <b>ПРЫЖОК</b></span>
+      <button id="jump" class="lever lever-jump" type="button" data-native-press disabled>
+        <span class="lever-symbol" aria-hidden="true">↑</span><strong>ПРЫГ</strong><small>ПРОБЕЛ / W</small>
+      </button>
+    </div>
+    <div class="cable" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="control-station">
+      <span class="station-label">ОПЕРАТОР 02 <b>РАЗВОРОТ</b></span>
+      <button id="reverse" class="lever lever-reverse" type="button" data-native-press disabled>
+        <span class="lever-symbol" aria-hidden="true">↶</span><strong>РАЗВОРОТ</strong><small>R / ←</small>
+      </button>
+    </div>
+  </div>
+  <div class="desk-bottom"><span>ОДНА МАШИНА · ДВА РЕШЕНИЯ</span><span id="record">РЕКОРД —</span></div>
+</section>
+<div id="notice" role="status" aria-live="polite" class="sr-only"></div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="НЕ ЖМИ!" data-app-version="0.2.0"></script>
+<script type="module" src="./app.js"></script>
+</body></html>

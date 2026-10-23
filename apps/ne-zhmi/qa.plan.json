@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "physics",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "engine.test.mjs",
+        "server.test.mjs",
+        "online-flow.test.mjs"
+      ]
+    },
+    {
+      "id": "local-stage-desktop-phone",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#start",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#start"
+        },
+        {
+          "action": "visible",
+          "selector": "#scene"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#jump"
+        },
+        {
+          "action": "click",
+          "selector": "#reverse"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#pause"
+        },
+        {
+          "action": "visible",
+          "selector": "#pause-panel"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#resume"
+        },
+        {
+          "action": "click",
+          "selector": "#pause"
+        },
+        {
+          "action": "click",
+          "selector": "#restart-pause"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "online-room-entry",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#create-online",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#join-online"
+        },
+        {
+          "action": "visible",
+          "selector": "#online-code-input"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#online-leave"
+        },
+        {
+          "action": "visible",
+          "selector": "#online-confirm"
+        },
+        {
+          "action": "click",
+          "selector": "#online-leave-yes"
+        },
+        {
+          "action": "visible",
+          "selector": "#start"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "online-duet",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "install": true,
+      "entry": "qa/online-duet.mjs"
+    }
+  ]
+}
