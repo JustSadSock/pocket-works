@@ -132,10 +132,10 @@ function freeze(s,now){
     s.hold=true;s.lastClock=now;s.revision++;
   }
 }
-function reset(s,now) {
+export function reset(s,now) {
   s.robot=createGame();s.phase='play';s.hold=false;
   s.round++;s.revision++;
-  s.lastClock=now;s.lastBroadcast=0;
+  s.lastClock=now;s.lastBroadcast=0;s.remainder=0;
   s.signals=Object.fromEntries(s.roles.map(id=>[id,now]));
   s.sequences={};
 }
@@ -168,7 +168,7 @@ function advance(s,now) {
   }
   if(steps>=30)s.remainder=0;
 }
-function message(s,player,payload,now=Date.now()){
+export function message(s,player,payload,now=Date.now()){
   const v=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
   const id=player?.id;
   if(!s.players.some(p=>p.id===id))return [];
