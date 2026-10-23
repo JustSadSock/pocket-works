@@ -6,7 +6,7 @@ test('v2 new magic is a real class-free school selection, combat and sealed rune
  await expect(page.locator('#magic-v2')).toBeVisible();
  await expect(page.locator('.v2-school')).toHaveCount(3);
  await page.locator('.v2-school.v2-fire').click();
- await expect(page.locator('.v2-kicker')).toContainText('ОГОНЬ');
+ await expect(page.locator('.v2-kicker')).toContainText('Огонь');
  expect(await page.evaluate(()=>window.__perekosTest.state.magicSchool)).toBe('fire');
  const tab=page.locator('.v2-tab').nth(1);
  await tab.click();
