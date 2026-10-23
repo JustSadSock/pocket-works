@@ -22,8 +22,8 @@
 .turn-film__skip:hover{background:#405642;border-color:#eac88f}
 .turn-film__skip span{font:700 21px 'Cormorant Garamond',serif;margin-left:3px}
 .board-effects{isolation:isolate;overflow:visible;pointer-events:none}
-.board-effect--footfall{position:absolute;left:calc((var(--x) + .5)*20%);top:calc((var(--y) + .5)*14.285714%);width:14%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:2px solid #dbc9a38c;background:radial-gradient(ellipse,#e7c99060,transparent 65%);animation:court-step .52s cubic-bezier(.15,.7,.3,1) both}
-.board-effect--impact{position:absolute;left:calc((var(--x) + .5)*20%);top:calc((var(--y) + .5)*14.285714%);width:16%;aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid #f1bf77;border-radius:50%;filter:drop-shadow(0 0 7px #ffc877);animation:court-impact .38s cubic-bezier(.2,.9,.34,1) both}
+.board-effect--footfall{position:absolute;left:calc(var(--x)*20% + 10%);top:calc(var(--y)*14.285714% + 7.142857%);width:14%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:2px solid #dbc9a38c;background:radial-gradient(ellipse,#e7c99060,transparent 65%);animation:court-step .52s cubic-bezier(.15,.7,.3,1) both}
+.board-effect--impact{position:absolute;left:calc(var(--x)*20% + 10%);top:calc(var(--y)*14.285714% + 7.142857%);width:16%;aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid #f1bf77;border-radius:50%;filter:drop-shadow(0 0 7px #ffc877);animation:court-impact .38s cubic-bezier(.2,.9,.34,1) both}
 .board-effect--impact:before,.board-effect--impact:after{content:'';position:absolute;inset:-10px;border:2px dashed #f0d08a89;border-radius:50%;transform:rotate(22deg)}
 .board-effect--impact:after{inset:-22px;border-color:#e1ab6c59;transform:rotate(-20deg)}
 .board-effect--stride-trail{left:var(--sx);top:var(--sy);width:var(--len);height:0;border-top:3px dotted #e9d5a18a;transform-origin:left center;transform:rotate(var(--angle));animation:court-trail .53s ease-out both}
