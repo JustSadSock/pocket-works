@@ -660,7 +660,8 @@ export class PocketNetHub {
           // Pure queries do not change room state. Avoid serializing and writing
           // the entire room for every time sync or reconnection snapshot.
           const readOnlyZamazka=room.gameId==='zamazka'&&
-            (msg.payload?.type==='sync'||msg.payload?.type==='time_ping');
+            (msg.payload?.type==='sync'||msg.payload?.type==='time_ping'||
+             (msg.payload?.type==='pulse'&&(result.events?.length||0)===0));
           if(!readOnlyZamazka)this.persist(room);
           this.recordZamazkaRewards(room,prior,room.state,result.events ?? [],player.id);
           this.recordBlockiesRewards(room,prior,room.state);
