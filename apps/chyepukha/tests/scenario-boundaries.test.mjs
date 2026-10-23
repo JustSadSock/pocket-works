@@ -62,3 +62,14 @@ test('collapsing plan separates protagonist, goal and location without losing co
  assert.match(q[2].prompt,/Де саме/);
  assert.match(q[1].guidance,/не її місце/);
 });
+
+test('disabled next-question preview does not leak later stages in hints',()=>{
+ const [host,guest]=makePlayers();
+ let state=game.createRoom({player:host,payload:{settings:{questionSet:'collapsingPlan',showNextQuestion:false}}}).state;
+ state=game.onJoin({state,players:[host,guest]}).state;
+ state=game.onMessage({state,player:host,payload:{type:'start'}}).state;
+ const view=game.viewForPlayer({state,player:host,players:[host,guest]});
+ assert.equal(view.sheet.nextQuestion,'');
+ assert.ok(!view.sheet.question.creativeFreedom.includes('Наступний автор окремо відповість'));
+ assert.match(view.sheet.question.creativeFreedom,/Не вирішуй за наступного автора/);
+});
