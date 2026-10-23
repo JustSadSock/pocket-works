@@ -344,6 +344,56 @@ function castClassSpell(s,a,slot=0){
 }
 export function previewAttack(s,a,target,special=false,specialSlot=0){
  const dx=target.x-a.x,dy=target.y-a.y,angle=Math.atan2(dy,dx),ux=Math.cos(angle),uy=Math.sin(angle);
+ if(special&&specialSlot>0){
+  const angle=Math.atan2(target.y-a.y,target.x-a.x),ux=Math.cos(angle),uy=Math.sin(angle),role=a.archetype||'striker';
+  const pt=(x,y)=>({x,y}),segment=(x,y,toX,toY,extras={})=>({x,y,toX,toY,...extras});
+  if(role==='shaper'){
+   const b=nearestBarrier(s,a,a.id,specialSlot===1?170:190);
+   if(specialSlot===2){
+    const x=b?.x??a.x+ux*45,y=b?.y??a.y+uy*45,r=b?.r??18;
+    return {type:'contour',angle,length:0,radius:r,x,y,blocked:!b&&(!canStand(x,y,19)||blocking(s,x,y,20)||s.barriers.length>=10),segments:[segment(a.x,a.y,x,y)]};
+   }
+   if(!b)return {type:'resonance',angle,length:0,radius:0,x:a.x,y:a.y,blocked:true,segments:[]};
+   const enemy=s.actors[1-a.id],theta=Math.atan2(enemy.y-b.y,enemy.x-b.x),segments=[];
+   for(const sign of [-1,1]){
+    const dir=theta+sign*Math.PI/2,u=Math.cos(dir),v=Math.sin(dir),x=b.x+u*(b.r+9),y=b.y+v*(b.r+9);
+    const hit=rayCollision(s,x,y,dir,198,8,a.id,true);
+    segments.push(segment(x,y,x+u*hit.length,y+v*hit.length));
+   }
+   return {type:'resonance',angle,length:0,radius:b.r,x:b.x,y:b.y,blocked:false,segments};
+  }
+  if(role==='distorter'&&specialSlot===2){
+   const b=nearestBarrier(s,a,1-a.id,185);
+   return {type:'inversion',angle,length:0,radius:b?.r||0,x:b?.x??a.x,y:b?.y??a.y,blocked:!b,segments:b?[segment(a.x,a.y,b.x,b.y)]:[]};
+  }
+  if(role==='distorter'&&specialSlot===1){
+   const length=365*1.25,first=Math.min(length,365*.19),hit=rayCollision(s,a.x,a.y,angle,first,4,a.id,true);
+   const x=a.x+ux*hit.length,y=a.y+uy*hit.length,segments=[segment(a.x,a.y,x,y)];
+   if(hit.hit)return {type:'bend',angle,length:hit.length,radius:4,blocked:true,x,y,segments};
+   const enemy=s.actors[1-a.id],delta=Math.sin(Math.atan2(enemy.y-a.y,enemy.x-a.x)-angle),turn=angle+(delta<0?-1:1)*.55;
+   const u=Math.cos(turn),v=Math.sin(turn),second=rayCollision(s,x+u*.1,y+v*.1,turn,length-first,4,a.id,true);
+   segments.push(segment(x,y,x+u*second.length,y+v*second.length,{bend:true}));
+   return {type:'bend',angle,length:first+second.length,radius:4,blocked:!!second.hit,x:x+u*second.length,y:y+v*second.length,segments};
+  }
+  if(role==='striker'&&specialSlot===2){
+   const dash=rayCollision(s,a.x,a.y,angle,63,12,a.id);
+   const ex=a.x+ux*dash.length,ey=a.y+uy*dash.length,next=rayCollision(s,ex+ux*.2,ey+uy*.2,angle,264,5,a.id,true);
+   return {type:'dash',angle,length:dash.length,radius:5,x:ex+ux*next.length,y:ey+uy*next.length,blocked:!!dash.hit||!!next.hit,segments:[segment(a.x,a.y,ex,ey,{dash:true}),segment(ex,ey,ex+ux*next.length,ey+uy*next.length)]};
+  }
+  if(role==='striker'&&specialSlot===1){
+   const distance=365*1.3,first=rayCollision(s,a.x,a.y,angle,distance,4,a.id,true),one=segment(a.x,a.y,a.x+ux*first.length,a.y+uy*first.length),segments=[one];
+   if(first.hit?.type==='barrier'){
+    const b=s.barriers[first.hit.index];
+    if((b.hp??24)<=32){
+     const exit=first.hit.exit??first.hit.t,x=a.x+ux*distance*exit+ux*.2,y=a.y+uy*distance*exit+uy*.2;
+     const second=rayCollision(s,x,y,angle,Math.max(0,distance*(1-exit)),4,a.id,true);
+     segments.push(segment(one.toX,one.toY,x,y,{breach:true}),segment(x,y,x+ux*second.length,y+uy*second.length));
+     return {type:'breach',angle,length:first.length+second.length,radius:4,x:x+ux*second.length,y:y+uy*second.length,blocked:!!second.hit,segments};
+    }
+   }
+   return {type:'breach',angle,length:first.length,radius:4,x:one.toX,y:one.toY,blocked:!!first.hit,segments};
+  }
+ }
  const type=special?(a.archetype==='shaper'?'placement':a.archetype==='distorter'?(specialSlot===0?'phase':'shot'):(specialSlot===0?'ricochet':'shot')):a.mageId==='pebble'?'lob':a.mageId==='cinder'?'cone':a.mageId==='slate'?'sector':a.mageId==='coil'?'beam':'shot',far=mastery(a,'far'),wide=mastery(a,'wide');
  let length=0,width=0,radius=5;
  if(type==='lob'){length=Math.min(Math.hypot(dx,dy),far?295:252);radius=wide?42:33;return {type,angle,length,radius,blocked:false,x:a.x+ux*length,y:a.y+uy*length,segments:[{x:a.x,y:a.y,toX:a.x+ux*length,toY:a.y+uy*length}]}}
