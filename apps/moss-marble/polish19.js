@@ -129,6 +129,24 @@ export class CoursePolishLayer {
     const waterMasks = (field.masks || []).filter((mask) => mask.type === 'water');
     const sandMasks = (field.masks || []).filter((mask) => mask.type === 'sand');
     const mossMasks = (field.masks || []).filter((mask) => mask.type === 'moss');
+    const sandGrains = [];
+    for (let maskIndex = 0; maskIndex < sandMasks.length; maskIndex++) {
+      const mask = sandMasks[maskIndex];
+      if (!Number.isFinite(mask.x) || !Number.isFinite(mask.length)) continue;
+      const cos = Math.cos(mask.angle || 0), sin = Math.sin(mask.angle || 0);
+      for (let grain = 0; grain < 70; grain++) {
+        const phi = TAU * hashNoise(grain, seed, 171 + maskIndex * 29);
+        const radius = Math.sqrt(hashNoise(grain, seed, 211 + maskIndex * 31)) * .88;
+        const dx = Math.cos(phi) * mask.length * .5 * radius;
+        const dy = Math.sin(phi) * mask.width * .5 * radius;
+        const x = mask.x + dx * cos - dy * sin;
+        const y = mask.y + dx * sin + dy * cos;
+        const surface = field.surfaceInfoAt(x, y);
+        if (surface.type !== 'sand' || surface.weight < .55) continue;
+        sandGrains.push({ x, y, size: .65 + hashNoise(grain, seed, 239) * 1.45,
+          light: hashNoise(grain, seed, 257) > .51 });
+      }
+    }
     const landmarks = [.28, .76].map((t, index) => {
       const sample = routeSample(level.centerline, t);
       const side = index % 2 ? 1 : -1;
@@ -140,7 +158,7 @@ export class CoursePolishLayer {
         phase: hashNoise(index, seed, 53) * TAU
       };
     });
-    return { details, waterMasks, sandMasks, mossMasks, landmarks };
+    return { details, waterMasks, sandMasks, mossMasks, landmarks, sandGrains };
   }
 
   drawLandmark(ctx, landmark, motif, accent, field, time) {
@@ -263,6 +281,18 @@ export class CoursePolishLayer {
 
     // Sand lives in the continuous terrain pigment and scattered grain.
     // No full-ellipse outlines, which looked like transparent UI circles.
+
+    // Mineral flecks are attached to the terrain, never floating UI glyphs.
+    for (const grain of cache.sandGrains || []) {
+      if (ball && Math.hypot(grain.x - ball.x, grain.y - ball.y) < 30) continue;
+      const point = this.renderer.worldToScreen(grain.x, grain.y, field.heightAt(grain.x, grain.y) + .7);
+      if (point.x < -2 || point.x > this.width + 2 || point.y < -2 || point.y > this.height + 2) continue;
+      const size = clamp(grain.size * this.renderer.scale, .48, 1.65);
+      ctx.fillStyle = grain.light ? 'rgba(249,228,181,.33)' : 'rgba(91,76,53,.20)';
+      ctx.beginPath();
+      ctx.ellipse(point.x, point.y, size * 1.5, size * .59, -.15, 0, TAU);
+      ctx.fill();
+    }
 
     // Moss texture is now integrated into the terrain material.
     // Never outline a moss patch with a dashed circle.

@@ -1,23 +1,23 @@
 const CACHE_PREFIX = 'moss-marble-';
-const CACHE_NAME = 'moss-marble-v1.25.0';
-const APP_VERSION = '1.25.0';
+const CACHE_NAME = 'moss-marble-v1.26.0';
+const APP_VERSION = '1.26.0';
 const RELEASE_DATE = '2026-10-23';
 const RELEASE_NOTES = [
-  "В бесконечных секциях освещение и оттенки поверхности подчёркивают реальные подъёмы и спуски, а границы песка переходят в траву естественнее.",
-  "Убран резкий горизонтальный шов между оранжереей и фоном; каменные борта получили более аккуратные углы без длинных выступов.",
-  "Добавлен отдельный браузерный аудит четырёх бесконечных секций на телефонах и ПК."
+  "Бункеры получили волнистую естественную береговую линию, общую для песчаного покрытия и физического углубления.",
+  "Чаша песчаных препятствий стала глубже, а освещение реальных склонов контрастнее: различимы верх и низ рельефа.",
+  "Добавлены песчинки, прикреплённые к поверхности, и регрессионные тесты согласованности песка с физикой."
 ];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
-  './styles.css?v=1.25.0',
+  './styles.css?v=1.26.0',
   './styles14.css?v=1.4.0',
   './styles15.css?v=1.5.0',
   './styles16.css?v=1.6.0',
   './styles161.css?v=1.14.0',
-  './styles115.css?v=1.25.0',
-  './styles121.css?v=1.25.0',
+  './styles115.css?v=1.26.0',
+  './styles121.css?v=1.26.0',
   './levels.js',
   './procedural.js',
   './camera-space.js',
@@ -41,9 +41,9 @@ const APP_SHELL = [
   './greenhouse15.js',
   './render.js',
   './experience14.js',
-  './camera-intro-guard.js?v=1.25.0',
+  './camera-intro-guard.js?v=1.26.0',
   './audio.js',
-  './app.js?v=1.25.0',
+  './app.js?v=1.26.0',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',

@@ -114,8 +114,14 @@ function pointInPolygon(point, polygon) {
 function addSideBunker(blueprint, random, t, side, difficulty) {
   const length = 245 + random() * 85;
   const width = 125 + random() * 40;
-  blueprint.landforms.push({ kind: 'depression', t, side, length, width, height: 6 + difficulty * .45, angle: side * (.10 + random() * .22), falloff: 1.16 + random() * .18 });
-  blueprint.surfaces.push({ type: 'sand', t, side, length, width, angle: side * (.10 + random() * .22) });
+  const dipAngle = side * (.10 + random() * .22);
+  const falloff = 1.26 + random() * .18;
+  const sandAngle = side * (.10 + random() * .22);
+  const angle = (dipAngle + sandAngle) * .5;
+  // One organic shoreline for both the sand friction and its physical bowl.
+  blueprint.landforms.push({ kind: 'depression', sandBasin: true, t, side,
+    length, width, height: 10 + difficulty * .42, angle, falloff });
+  blueprint.surfaces.push({ type: 'sand', t, side, length, width, angle });
   blueprint.tags.push('bunker');
 }
 
