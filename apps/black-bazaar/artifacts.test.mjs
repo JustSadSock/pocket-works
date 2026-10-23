@@ -39,3 +39,11 @@ test('Inspectable contexts keep their live PocketNet actions',()=>{
  assert.match(ui,/if\(type==='detail-bid'\)return request\(\{type:'bid'/);
  assert.match(ui,/if\(type==='detail-black-bid'\)return request\(\{type:'black_bid'/);
 });
+
+test('All artifact motifs have transparent, independent silhouettes',()=>{
+ for(const [name] of games){const art=artifactSVG(name,'редкий');
+  assert.doesNotMatch(art,/cx="92" cy="166" rx="70"/);
+  assert.doesNotMatch(art,/<rect[^>]*width="180"[^>]*height="180"/);
+  assert.match(art,/viewBox="0 0 180 180"/);
+ }
+});
