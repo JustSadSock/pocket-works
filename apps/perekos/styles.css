@@ -743,3 +743,7 @@
 #chosen-archetype-name{color:#f6d498;font:800 11px/1.2 system-ui,sans-serif;white-space:nowrap;margin-left:4px}
 .mage-switch strong{margin-left:auto}
 @media(max-width:540px){#mage-select .mage-picker{max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px)}#chosen-archetype-name{font-size:10px}#mage-select .archetype-options{grid-template-columns:1fr}#mage-select .archetype-chip{min-height:40px}}
+
+/* Physical class-cast control with actual cooldown. */
+.spellbar{gap:clamp(3px,1.4vw,8px)}.spell-special{min-width:55px;background:#45544b;border-color:#d5bf84}.spell-special .spell-icon{color:#f5d59e;font-size:26px}.spell-special small{font-size:8px;letter-spacing:0}
+@media(max-width:420px){.control-layer{padding-inline:8px}.spell-button{min-width:47px;height:57px}.spell-attack{min-width:62px;height:70px}.spell-special{min-width:49px}.spell-button small{font-size:8px}}
