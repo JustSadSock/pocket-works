@@ -1608,6 +1608,7 @@ class UIManager {
 
     startGame(numPlayers, seed = Date.now()) {
         this.lastSoloSaveAt = 0;
+        clearTimeout(this.spawnFocusTimer);
         if (!this.isOnlineMode && numPlayers === 1) clearSolo();
         setRandomSeed(seed);
         gameState.numPlayers = numPlayers;
@@ -1750,7 +1751,7 @@ class UIManager {
         next.setAttribute('aria-label','Следующая фигура: '+player.name);
         const preview=document.createElement('div');
         preview.className='spawn-bay__preview';
-        preview.setAttribute('aria-hidden','true');
+        next.setAttribute('role','img');
         preview.append(next);
         const mouth=document.createElement('div');
         mouth.className='spawn-bay__mouth';
@@ -1994,7 +1995,8 @@ class UIManager {
         if(bay){
             bay.classList.toggle('is-out',!!player.gameOver);
             bay.classList.toggle('is-owned',this.isOnlineMode&&player.id===this.localPlayerIndex&&!player.gameOver);
-            bay.setAttribute('aria-label',player.name+(player.gameOver?' — выбыл':''));
+            const accessibleName=player.name+(player.gameOver?' — выбыл':'');
+            if(bay.getAttribute('aria-label')!==accessibleName)bay.setAttribute('aria-label',accessibleName);
             const label=bay.querySelector('.spawn-bay__name');
             if(label&&label.textContent!==player.name){label.textContent=player.name;label.title=player.name;}
         }
