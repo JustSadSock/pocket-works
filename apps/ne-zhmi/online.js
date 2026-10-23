@@ -155,12 +155,14 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
     netStorage.removeItem('active');refresh();
   }
   async function enter(action,code='') {
-    if(active)disconnect();
+    if(active&&client)disconnect();
     const id=++attemptId;
     mode=action==='create'?'create':'join';
-    active=true;busy=true;connecting=true;snapshot=null;roomId='';connected=false;
+    active=true;busy=!!code||action!=='join';connecting=!!code||action!=='join';snapshot=null;roomId='';connected=false;
     $('online-code-input').value=String(code||'').trim().toUpperCase();
-    refresh();notify('Подключаемся к PocketNet…');
+    refresh();
+    if(action==='join'&&!code){notify('Введите код приглашения');return;}
+    notify('Подключаемся к PocketNet…');
     const requestedName=String($('player-name').value||'Игрок').trim().slice(0,22)||'Игрок';
     try{localStorage.setItem('pocket-works:ne-zhmi:player',requestedName)}catch{}
     // Explicitly creating/joining a new room must not auto-rejoin a stale
@@ -188,14 +190,18 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
       else{busy=false;refresh();notify('Введите код комнаты');}
     }catch(error){
       if(client!==net||id!==attemptId)return;
-      disconnect();onExit?.();onNotice?.(error.message||'Не удалось подключиться к серверу');
+      const reason=error.message||'Не удалось подключиться к серверу';
+      disconnect();
+      active=true;mode=action==='create'?'create':'join';
+      busy=false;connecting=false;
+      refresh();notify(reason+' — попробуйте ещё раз');
     }
   }
   function join(value){
-    if(!connected||!client)return notify('Нет подключения к PocketNet');
     const code=String(value||$('online-code-input').value||'').trim().toUpperCase();
     if(!validRoom(code)){notify('Введите восьмизначный код приглашения');return;}
     if(roomId){notify('Вы уже в комнате');return;}
+    if(!connected||!client){void enter('join',code);return;}
     busy=true;refresh();
     try{client.joinRoom(code);}catch{busy=false;refresh();notify('Не удалось отправить приглашение');}
   }
