@@ -790,3 +790,43 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
     transition:none!important;animation:none!important;
   }
 }
+
+
+/* 0.5.3 — physical block feedback, without moving the live board or delaying input. */
+#shared-board{position:relative}
+#game-effects-canvas{
+  position:absolute;left:0;top:0;z-index:3;display:block;
+  pointer-events:none;touch-action:none;user-select:none;
+  max-width:none;max-height:none;mix-blend-mode:screen;contain:paint;
+}
+#shared-board:has(#game-effects-canvas){isolation:isolate}
+.clear-event{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 13%,var(--panel)),transparent);
+  border-left-color:var(--accent);
+  transform:translateY(9px);
+  transition:opacity .23s ease-out,transform .23s ease-out;
+}
+.clear-event.visible{transform:translateY(0)}
+.clear-event__points{font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.combo-indicator.visible{
+  border:1px solid color-mix(in srgb,var(--accent) 34%,transparent);
+  box-shadow:inset 2px 0 0 color-mix(in srgb,var(--accent) 46%,transparent);
+}
+@keyframes combo-mark{
+  0%{box-shadow:inset 2px 0 0 var(--accent);filter:brightness(1.22)}
+  100%{box-shadow:inset 2px 0 0 color-mix(in srgb,var(--accent) 46%,transparent);filter:none}
+}
+.combo-indicator.combo-burst{animation:combo-mark .29s ease-out}
+@keyframes tally-rise{
+  0%{transform:translateY(3px);opacity:.7}
+  100%{transform:none;opacity:1}
+}
+.score-card--pulse .score-card__value{animation:tally-rise .25s cubic-bezier(.19,.75,.25,1) both}
+:root[data-theme="dark"] .clear-event{
+  background:linear-gradient(90deg,#24453e,#1b2b31);
+}
+@media(prefers-reduced-motion:reduce){
+  #game-effects-canvas{display:none}
+  .clear-event,.combo-indicator{transition:none!important}
+  .combo-indicator.combo-burst,.score-card--pulse .score-card__value{animation:none!important}
+}
