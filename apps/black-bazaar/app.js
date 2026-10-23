@@ -927,12 +927,13 @@ setInterval(()=>{
 if(!debugPreview)try{const saved=JSON.parse(netStorage.getItem('pocket-net:'+ORIGIN)||'null');if(saved?.roomId)connect('resume');}catch{}
 if(debugPreview){
  const emit=(type,extra={})=>window.parent?.postMessage({source:'bazaar-debug-preview',type,...extra},location.origin);
- const showScene=id=>{
+ const showScene=(id,run=null,step=null)=>{
   state=createDebugState(id);me={id:'debug-0',name:'Алиса'};roomId='DBGLOCAL';
   selectedArtifact=null;activeSheet=null;render();
   emit('status',{message:'Сцена: '+id+' · тестовые данные'});
+  if(run!==null)requestAnimationFrame(()=>requestAnimationFrame(()=>emit('scene-ready',{run,step})));
  };
- const audit=(run=null)=>{
+ const audit=(run=null,step=null)=>{
   const width=document.documentElement.clientWidth;
   const overflow=Math.max(0,document.documentElement.scrollWidth-width);
   const visible=[...document.querySelectorAll('#app button:not([hidden]):not(:disabled),#app input:not(:disabled),#app select:not(:disabled)')]
@@ -962,12 +963,12 @@ if(debugPreview){
   if(scrollable&&scrollable.scrollHeight>scrollable.clientHeight+5&&!['auto','scroll'].includes(scrollable.overflowY))issues.push('Содержимое боковой панели обрезано');
   issues.push(...collisions,...clipping);
   emit('audit',{report:{viewport:width+' × '+document.documentElement.clientHeight,
-   horizontalOverflow:overflow,actionable:visible.length,smallTargets:small.slice(0,12),collisions,clipping,scrollable,issues},run});
+   horizontalOverflow:overflow,actionable:visible.length,smallTargets:small.slice(0,12),collisions,clipping,scrollable,issues},run,step});
  };
  window.addEventListener('message',event=>{
   if(event.origin!==location.origin||event.source!==window.parent||event.data?.source!=='bazaar-debug-console')return;
   const d=event.data;
-  if(d.type==='scene')return showScene(d.id);
+  if(d.type==='scene')return showScene(d.id,d.run??null,d.step??null);
   if(d.type==='item'){
    if(!state||state.phase!=='play')showScene('four');
    debugSetItem(state,Number(d.index),d.kind);
@@ -987,7 +988,7 @@ if(debugPreview){
    showConfirmedCue({kind:d.kind,label:d.label},false);
    emit('status',{message:'Эффект: '+d.label});return;
   }
-  if(d.type==='audit')return audit(d.run??null);
+  if(d.type==='audit')return audit(d.run??null,d.step??null);
  });
  document.querySelector('[data-preview-exit]')?.addEventListener('click',e=>{e.preventDefault();window.parent?.postMessage({source:'bazaar-debug-preview',type:'status',message:'Закрой мастерскую кнопкой ×'},location.origin)});
  emit('ready');
