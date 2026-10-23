@@ -6,6 +6,7 @@ import { appendGardenIdentity } from './garden-identity.js';
 import { planTurfClumps, appendTurfClumps } from './turf-clumps.js';
 import { buildWoodBarrierProfile } from './wood-barrier.js';
 import { planGroundedRock } from './rock-profile.js';
+import { planGroundedStump } from './stump-profile.js';
 
 const TAU = Math.PI * 2;
 const STRIDE = 11;
@@ -150,38 +151,54 @@ function lowPolyRock(mesh, shadows, level, prop, part, seed, palette) {
 }
 
 function stump(mesh, shadows, level, prop, seed, palette) {
-  const ground = terrainHeightAt(level, prop.x, prop.y);
-  const radius = Math.max(14, prop.r || 56);
-  const height = Math.max(18, Number(prop.height || radius * 1.15));
-  const top = ground + height;
-  // The silhouette retains the real collider. Wood grain follows the trunk,
-  // while the cut face is a flat, warm end-grain disc instead of a fake pot.
-  cylinder(mesh, {
-    x: prop.x, y: prop.y, z0: ground + .3, z1: top - .9,
-    r0: radius * .93, r1: radius * .87, tint: palette.wood,
-    topTint: palette.woodTop, material: 11, segments: 22, irregular: .045, seed
-  });
-  ring(mesh, prop.x, prop.y, top - .50, radius * .09, radius * .83, palette.woodTop, 11, 28);
-  ring(mesh, prop.x, prop.y, top - .34, radius * .30, radius * .345, tone(palette.wood, .89), 11, 28);
-  ring(mesh, prop.x, prop.y, top - .30, radius * .55, radius * .59, tone(palette.wood, .84), 11, 28);
-  ring(mesh, prop.x, prop.y, top - .26, radius * .76, radius * .82, tone(palette.wood, .79), 11, 28);
-  const ribs = 11;
-  for (let index = 0; index < ribs; index += 1) {
-    const angle = (index + noise(index, seed, 4) * .13) / ribs * TAU;
-    const ca = Math.cos(angle), sa = Math.sin(angle);
-    const x = prop.x + ca * radius * .905;
-    const y = prop.y + sa * radius * .905;
-    const z0 = ground + height * .08, z1 = top - height * .10;
-    // Narrow bark flute, embedded in the wood body.
-    mesh.quad(
-      [x, y, z0],
-      [x - sa * radius * .018, y + ca * radius * .018, z0 + 3],
-      [prop.x + ca * radius * .84 - sa * radius * .018, prop.y + sa * radius * .84 + ca * radius * .018, z1],
-      [prop.x + ca * radius * .84, prop.y + sa * radius * .84, z1 - 3],
-      tone(palette.wood, .72), 11
-    );
+  const x=prop.x,y=prop.y;
+  const radius=Math.max(14,prop.r||56);
+  const height=Math.max(18,Number(prop.height||radius*1.15));
+  const shape=planGroundedStump(x,y,radius,height,seed,(sx,sy)=>terrainHeightAt(level,sx,sy));
+  // Continuous bark, rooted in the true surface and subtly faceted. Color
+  // variation belongs to the bark faces, not upright overlaid stripes.
+  const {bark,cut,segments}=shape;
+  for(let row=0;row<bark.length-1;row++){
+    for(let j=0;j<segments;j++){
+      const next=(j+1)%segments;
+      const grain=noise(j,seed,31);
+      const weather=.86+grain*.13+Math.sin(j/segments*TAU+.4)*.045;
+      const root=row===0?.82:row===2?1.035:1;
+      const tint=tone(palette.wood,weather*root);
+      mesh.quad(bark[row][j],bark[row][next],bark[row+1][next],bark[row+1][j],tint,11);
+    }
   }
-  appendSoftShadow(shadows, (x,y)=>terrainHeightAt(level,x,y), { x:prop.x, y:prop.y, radiusX:radius*1.32, radiusY:radius*1.06, height:height*.5, strength:.36, segments:22 });
+  // A thin dark cambium lip and six gently uneven annual-growth bands,
+  // modeled as a single slightly tilted cut (not rings hovering above it).
+  for(let j=0;j<segments;j++){
+    const next=(j+1)%segments;
+    mesh.quad(bark.at(-1)[j],bark.at(-1)[next],cut[0][next],cut[0][j],
+      tone(palette.wood,.63),11);
+  }
+  const bands=[.83,1.03,.92,1.08,.93];
+  for(let row=0;row<cut.length-1;row++){
+    const band=tone(palette.woodTop,bands[row]);
+    for(let j=0;j<segments;j++){
+      const next=(j+1)%segments;
+      mesh.quad(cut[row][j],cut[row][next],cut[row+1][next],cut[row+1][j],band,11,[0,0,1]);
+    }
+  }
+  for(let j=0;j<segments;j++){
+    const next=(j+1)%segments;
+    mesh.triangle(cut.at(-1)[j],cut.at(-1)[next],shape.center,
+      tone(palette.woodTop,.97),11,[0,0,1]);
+  }
+  // Hairline radial checks break the perfect target-like disk without
+  // overpowering the end grain at phone scale.
+  for(const check of shape.checks){
+    mesh.triangle(check.a,check.b,check.c,tone(palette.woodTop,.68),11,[0,0,1]);
+  }
+  // A shallow physically anchored shadow grounds the stump. It is not a
+  // decorative translucent circle around the obstacle.
+  appendSoftShadow(shadows,(sx,sy)=>terrainHeightAt(level,sx,sy),{
+    x,y,radiusX:radius*1.12,radiusY:radius*.96,
+    height:height*.24,strength:.25,segments:22
+  });
 }
 
 function carvedWoodBarrier(mesh, wall, palette, heightAt) {
