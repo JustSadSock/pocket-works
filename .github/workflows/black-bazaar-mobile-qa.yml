@@ -11,7 +11,7 @@ permissions:
   contents: read
 concurrency:
   group: bazaar-mobile-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   browser-matrix:
     runs-on: ubuntu-latest
@@ -24,12 +24,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --legacy-peer-deps --no-audit --no-fund
-      - run: npm install --no-save --legacy-peer-deps --no-audit --no-fund @playwright/test@1.64.0
+      - name: Install isolated Playwright client
+        run: npm install --prefix /tmp/bazaar-playwright --no-save --no-audit --no-fund playwright@1.64.0
       - name: Start local static preview
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/bazaar-preview.log 2>&1 &
       - name: Audit 98 viewport and scene combinations
+        env:
+          BAZAAR_PLAYWRIGHT_MODULE: file:///tmp/bazaar-playwright/node_modules/playwright/index.mjs
         run: node scripts/qa-black-bazaar-mobile.mjs
       - name: Upload failed screenshots and all measurements
         if: always()
