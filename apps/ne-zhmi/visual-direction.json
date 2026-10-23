@@ -71,6 +71,11 @@
         "slug": "perekos",
         "spatialDifference": "НЕ ЖМИ! follows one tiny wheeled tin robot along an industrial side-scrolling test rig with tactile bottom-mounted buttons, not Perekos's spellcasting arena, class rune selection and aiming reticle.",
         "interactionDifference": "Cooperative 2–6 players operate one fixed control each with continuous forces, held tools and checkpointed machine obstacles; Perekos is a competitive caster duel with attacks and runes."
+      },
+      {
+        "slug": "chyepukha",
+        "spatialDifference": "НЕ ЖМИ! is a horizontal side-scrolling miniature factory with a real-time tin robot and enamel physical buttons, not Chyepukha's editorial stationery for composing linked narrative sentences.",
+        "interactionDifference": "Two to six operators each act on one shared moving physical character with jump, reversing, magnetism, braking, impulse and buoyancy; Chyepukha takes timed writing turns and reveals combined stories."
       }
     ]
   },
