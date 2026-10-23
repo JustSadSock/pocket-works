@@ -609,8 +609,7 @@ function moveAim(event) {
   aim.currentY = point.y;
   const dxScreen = aim.startX - point.x;
   const dyScreen = aim.startY - point.y;
-  const worldDx = dxScreen / renderer.scale;
-  const worldDy = dyScreen / (renderer.scale * .82);
+  const { x: worldDx, y: worldDy } = renderer.screenDeltaToWorld(dxScreen, dyScreen);
   const distance = Math.hypot(worldDx, worldDy);
   const maxPull = 260;
   const pull = Math.min(maxPull, distance);
