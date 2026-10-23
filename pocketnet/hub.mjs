@@ -675,8 +675,17 @@ export class PocketNetHub {
     });
   }
 
-  async webSocketClose(ws) {
+  async webSocketClose(ws, code, reason, wasClean) {
     const info = ws.deserializeAttachment();
+    if(info?.roomId){
+      console.info(JSON.stringify({event:'pocketnet_socket_closed',
+        game:'room', roomId:info.roomId, playerId:info.id,
+        code:Number.isInteger(code)?code:null,
+        reason:typeof reason==='string'?reason.slice(0,80):'',
+        clean:wasClean===true,
+        replaced:!!this.connected(info.id,info.roomId),
+        at:Date.now()}));
+    }
     if (info?.roomId) {
       const room = this.readRoom(info.roomId);
       if (room) {
