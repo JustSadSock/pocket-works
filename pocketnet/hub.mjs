@@ -5,6 +5,7 @@ import {playerRoomView} from './private-views.mjs';
 import {roomJoinView} from './room-join-view.mjs';
 import {shouldAnnounceSocketDeparture} from './disconnect-presence.mjs';
 import {prepareArtworkStorage} from './art-storage.mjs';
+import {reconcileZamazkaPresence} from './zamazka-presence.mjs';
 
 // All rooms share one small, hibernatable SQLite-backed coordinator. This matches
 // the personal/friends deployment (max 32 rooms / 48 sockets) without paid KV/D1.
@@ -216,27 +217,8 @@ export class PocketNetHub {
     const state=room.state;
     if(!state||!Array.isArray(state.participants))return;
     const ids=this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean);
-    const active=new Set(ids);
-    const nextOnline=state.participants.filter(p=>active.has(p.id)).map(p=>p.id);
-    const oldOnline=state.onlineIds||[];
-    const onlineChanged=nextOnline.length!==oldOnline.length||nextOnline.some((id,i)=>id!==oldOnline[i]);
-    const wasPaused=!!state.paused;
-    state.onlineIds=nextOnline;
-    const waiting=state.phase!=='lobby'&&state.phase!=='results';
-    let resumed=false;
-    if(waiting&&!state.paused&&state.onlineIds.length===0){
-      state.paused=true;
-      state.pauseRemainingMs=state.deadline?Math.max(0,state.deadline-Date.now()):null;
-      state.pausedAt=Date.now();
-    }else if(state.paused&&state.participants.every(p=>active.has(p.id))){
-      state.paused=false;
-      if(state.deadline&&Number.isFinite(state.pauseRemainingMs))
-        state.deadline=Date.now()+state.pauseRemainingMs;
-      state.pauseRemainingMs=null;
-      state.pausedAt=0;
-      resumed=true;
-    }
-    if(onlineChanged||wasPaused!==!!state.paused)this.persist(room);
+    const {changed,resumed}=reconcileZamazkaPresence(state,ids,Date.now());
+    if(changed)this.persist(room);
     // Send each participant their private snapshot, preserving hidden art.
     if(resumed){
       const mod=this.module(room.gameId,room.version);
