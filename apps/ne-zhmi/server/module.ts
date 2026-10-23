@@ -103,7 +103,7 @@ function section(kind,x,platforms,devices,random) {
     default:throw Error('Unknown mechanical module '+kind);
   }
 }
-function generateCourse(seed=1,sectionCount=5,playerCount=2) {
+export function generateCourse(seed=1,sectionCount=5,playerCount=2) {
   const number=(Number(seed)>>>0)||1;
   const random=rng(number);
   const count=clamp(Math.floor(sectionCount)||5,4,6);
@@ -167,8 +167,8 @@ function validateCourse(course) {
 
 // NE ZHMI! — isolated, deterministic simulation. No DOM, networking or rendering.
 const WORLD = Object.freeze({ width: 18, height: 8, gravity: 19, speed: 3.4 });
-const ROBOT = Object.freeze({ halfWidth: 0.33, halfHeight: 0.46, jump: 9.15 });
-const LEVEL = Object.freeze({
+export const ROBOT = Object.freeze({ halfWidth: 0.33, halfHeight: 0.46, jump: 9.15 });
+export const LEVEL = Object.freeze({
   name: 'Испытательный цех', goal: 16.5, checkpoint: 10.25,
   platforms: [
     { x: 0, y: 6.5, w: 4.72, h: 1.5, id: 'start' },
@@ -179,7 +179,7 @@ const LEVEL = Object.freeze({
 });
 const FIXED_DT = 1 / 120;
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
-function createGame(level = LEVEL) {
+export function createGame(level = LEVEL) {
   return {
     level,
     held:{magnet:false,brake:false,float:false},
