@@ -866,3 +866,10 @@ body.sheet-open{overflow:auto}
  .urgent-ticket{min-height:28px;padding:2px 5px;gap:3px}
  .urgent-ticket + .play-body{grid-template-rows:minmax(196px,46%) minmax(0,1fr)}
 }
+
+/* Host moderation belongs to room ownership, not to the market action row. */
+.lobby-player .lobby-kick{margin-top:8px;min-height:34px;padding:5px 9px;font-size:12px;font-weight:750;background:#f9e8d6;color:#75422d;border:1px solid #b99373;box-shadow:0 2px #cba47e}
+.lobby-player .lobby-kick:hover{background:#f5d7ba}
+.player-popover .kick-player{border:1px solid #b99373;background:#f8e3cc;color:#743b2c;font-weight:750}
+.player-popover .kick-player:hover{background:#f1c8aa}
+@media(max-width:680px){.lobby-player .lobby-kick{width:100%;min-height:37px}.player-popover .kick-player{min-height:44px}}
