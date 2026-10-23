@@ -21,6 +21,8 @@ import {
   serializeTextState
 } from "../shared/game-engine.js";
 import { chooseAiCard } from "../shared/ai.js";
+import { planTurnFilm, soundForFrame, PHASE_ORDER, PHASE_LABELS } from "./choreography.js";
+import { playCourtSound, COURT_SOUNDS } from "./soundscape.js";
 
 const root = document.getElementById("app");
 
@@ -34,6 +36,9 @@ const app = {
   lastBoardPositions: {},
   effects: [],
   effectTimer: null,
+  film: null,
+  filmTimer: null,
+  filmSequence: 0,
   simulationReport: null,
   inspectedSlot: null,
   historyExpanded: false,
@@ -108,32 +113,7 @@ function ensureAudio(force = false) {
   return app.audioCtx;
 }
 
-function playTone(kind = "tap", force = false) {
-  const ctx = ensureAudio(force);
-  if (!ctx) {
-    return;
-  }
-  const time = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  const palette = {
-    tap: { freq: 280, dur: 0.08, type: "triangle", vol: 0.02 },
-    ready: { freq: 420, dur: 0.12, type: "sine", vol: 0.03 },
-    conflict: { freq: 120, dur: 0.22, type: "sawtooth", vol: 0.05 },
-    crown: { freq: 560, dur: 0.18, type: "triangle", vol: 0.04 },
-    move: { freq: 220, dur: 0.07, type: "triangle", vol: 0.015 }
-  }[kind];
-
-  osc.type = palette.type;
-  osc.frequency.setValueAtTime(palette.freq, time);
-  gain.gain.setValueAtTime(palette.vol, time);
-  gain.gain.exponentialRampToValueAtTime(0.0001, time + palette.dur);
-  osc.start(time);
-  osc.stop(time + palette.dur);
-}
+function playTone(kind = "tap", force = false) { return playCourtSound(ensureAudio(force),kind); }
 
 function profileOptions() {
   return `
@@ -260,6 +240,7 @@ function startLocalGame(mode, aiProfile = "contender") {
   app.local.waitingAi = false;
   app.local.lastLogs = [];
   app.simulationReport = null;
+  stopFilm({renderNow:false});
   app.effects = [];
   app.replay = null;
   app.replayActive = false;
@@ -291,25 +272,76 @@ function currentHand() {
   return state.players[getViewerPlayer()].hand;
 }
 
-function recordResolution(resolution, isOnline = false) {
-  app.lastConflictSlots = resolution.conflicts || [];
-  if (!isOnline && app.preResolutionState) {
-    app.replay = { before: app.preResolutionState, after: structuredClone(app.local.state) };
-    app.preResolutionState = null;
+
+function stopFilm({renderNow = true} = {}) {
+ window.clearTimeout(app.filmTimer);app.filmTimer=null;app.filmSequence++;app.film=null;
+ app.effects=[];app.lastBoardPositions={};
+ if(renderNow)render();
+}
+function effectsForFrame(frame) {
+ if(!frame)return [];
+ const effects=[];
+ for(const move of frame.moves||[]){
+  if(!move.from||!move.to)continue;
+  effects.push({kind:"footfall",x:move.to.x,y:move.to.y,actor:move.pieceId});
+  effects.push({kind:move.pieceId==="beast"?"beast-dash":move.pieceId==="thief"?"seal-trail":"stride-trail",from:move.from,to:move.to});
+  if(move.style==="push")effects.push({kind:"impact",x:move.to.x,y:move.to.y});
+ }
+ const kinds=(frame.logs||[]).map(x=>x.kind);
+ if(kinds.some(k=>["push-block","shield-break","shield-block","stun","clash","blessing-break"].includes(k))){
+  const id=frame.phase==="beast"?"beast":frame.phase==="guard"?"guard":"champion_p1";
+  const p=frame.state?.pieces?.[id];
+  if(p)effects.push({kind:"impact",x:p.x,y:p.y});
+ }
+ for(const entry of frame.logs||[]){
+  if(entry.kind==="shield"&&frame.state?.pieces?.[entry.pieceId]){
+   const p=frame.state.pieces[entry.pieceId];effects.push({kind:"shield",x:p.x,y:p.y});
   }
-  scheduleEffects(buildEffects(isOnline ? app.online.roomState : app.local.state, resolution));
-  if (resolution.tracker.crownEvents.length > 0) {
-    playTone("crown");
-  } else if (resolution.conflicts.length > 0) {
-    playTone("conflict");
-  } else {
-    playTone("ready");
+  if(entry.kind==="seal-steal"&&frame.state?.pieces){
+   const owner=frame.state.pieces[entry.ownerId==="p1"?"champion_p1":"champion_p2"];
+   const thief=frame.state.pieces.thief;
+   if(owner&&thief)effects.push({kind:"seal-trail",from:owner,to:thief});
   }
-  if (isOnline) {
-    app.online.lastLogs = resolution.logs;
-  } else {
-    app.local.lastLogs = resolution.logs;
-  }
+ }
+ if(frame.phase==="throne"&&(frame.crowns||[]).some(c=>c.kind==="gain"))effects.push({kind:"crown",x:THRONE.x,y:THRONE.y});
+ if(frame.conflicts?.length)effects.push({kind:"conflict",slot:frame.conflicts[0]});
+ return effects;
+}
+function showFilmFrame(index){
+ if(!app.film?.active)return;
+ app.film.index=index;
+ const frame=app.film.frames[index];
+ if(!frame){stopFilm();return;}
+ app.effects=app.settings.reducedMotion?[]:effectsForFrame(frame);
+ if(!app.settings.reducedMotion){
+  const sound=soundForFrame(frame);if(sound)playTone(sound);
+ }
+ render();
+ const token=app.filmSequence;
+ app.filmTimer=window.setTimeout(()=>{
+  if(token!==app.filmSequence||!app.film?.active)return;
+  if(index+1<app.film.frames.length)showFilmFrame(index+1);else stopFilm();
+ },frame.duration);
+}
+function beginFilm(input){
+ window.clearTimeout(app.filmTimer);app.filmTimer=null;app.filmSequence++;
+ const frames=planTurnFilm(input,{compact:app.settings.reducedMotion});
+ if(!frames.length)return;
+ app.film={active:true,index:0,frames};
+ app.forecast=null;app.forecastReview=false;app.effects=[];app.lastBoardPositions={};
+ showFilmFrame(0);
+}
+
+function recordResolution(resolution,isOnline=false){
+ app.lastConflictSlots=resolution.conflicts||[];
+ const after=isOnline?app.online.roomState:app.local.state;
+ if(!isOnline&&app.preResolutionState){
+  const before=app.preResolutionState;
+  app.replay={before,after:structuredClone(after),frames:resolution.frames,logs:resolution.logs,conflicts:resolution.conflicts};
+  app.preResolutionState=null;
+  beginFilm({before,after,frames:resolution.frames,logs:resolution.logs,conflicts:resolution.conflicts});
+ }else{scheduleEffects(buildEffects(after,resolution));}
+ if(isOnline)app.online.lastLogs=resolution.logs;else app.local.lastLogs=resolution.logs;
 }
 
 function openForecast(){
@@ -325,7 +357,7 @@ function openForecast(){
 
 function confirmSelection() {
   const state = currentState();
-  if (!state || !app.selectedCardId) {
+  if (!state || !app.selectedCardId || app.film?.active) {
     return;
   }
   app.forecast=null;app.forecastReview=false;
@@ -415,10 +447,11 @@ function setupSocket() {
       app.online.ready = payload.room.ready;
       app.online.roomState = payload.room.state;
       if (app.online.roomState && prevTurn && app.online.roomState.turn !== prevTurn) {
-        app.replay = { before: structuredClone(previousRoomState), after: structuredClone(app.online.roomState) };
-        app.online.lastLogs = app.online.roomState.battleLog.slice(0, 8);
-        app.lastConflictSlots = app.online.roomState.turnSummaries[0]?.conflicts || [];
-        playTone("move");
+        const turnLogs=app.online.roomState.battleLog.slice(0,16);
+        const conflicts=app.online.roomState.turnSummaries[0]?.conflicts||[];
+        app.replay={before:structuredClone(previousRoomState),after:structuredClone(app.online.roomState),logs:turnLogs,conflicts};
+        app.online.lastLogs=turnLogs;app.lastConflictSlots=conflicts;
+        beginFilm({before:previousRoomState,after:app.online.roomState,logs:turnLogs,conflicts});
       }
       render();
     }
@@ -537,10 +570,10 @@ function forecastControlsHTML(){
 
 function handHTML(state) {
   const viewer=getViewerPlayer();
-  const locked=(app.screen==="online"&&app.online.ready[viewer])||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
+  const locked=Boolean(app.film?.active)||(app.screen==="online"&&app.online.ready[viewer])||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
   return `<section class="hand-panel ${locked?"hand-panel--locked":""}">
     <div class="panel-head"><h3>Ваши указы</h3><span>${viewer==="p1"?"Север":"Юг"} · ${currentHand().length} карт</span></div>
-    ${locked?`<div class="sealed-notice" role="status"><div class="sealed-notice__wax" aria-hidden="true"><span>✦</span></div><div class="sealed-notice__copy"><strong>Указ запечатан</strong><span>${app.screen==="online"?"Ход соперника":"Разыгрывание хода"}</span></div><span class="sealed-notice__pulse" aria-hidden="true"><i></i><i></i><i></i></span></div>`:""}
+    ${locked&&!app.film?.active?`<div class="sealed-notice" role="status"><div class="sealed-notice__wax" aria-hidden="true"><span>✦</span></div><div class="sealed-notice__copy"><strong>Указ запечатан</strong><span>${app.screen==="online"?"Ход соперника":"Разыгрывание хода"}</span></div><span class="sealed-notice__pulse" aria-hidden="true"><i></i><i></i><i></i></span></div>`:""}
     <div class="hand" role="group" aria-label="Выбор одного указа">${currentHand().map(cardId=>{
       const card=cardById(cardId);
       return `<button type="button" class="law-card ${app.selectedCardId===cardId?"law-card--selected":""}" style="--card-color:${SLOT_COLORS[card.slot]}" aria-pressed="${app.selectedCardId===cardId}" ${locked?"disabled":""} draggable="${!locked}" data-card-id="${cardId}" data-focus-card="${cardId}">
@@ -698,7 +731,7 @@ function roomHTML() {
 function gameHTML(state, eyebrow) {
   const viewer = getViewerPlayer();
   const chooserLabel = app.local.mode === "hotseat" ? (viewer === "p1" ? "Север выбирает указ" : "Юг выбирает указ") : eyebrow;
-  const displayState=app.forecast?(app.forecastReview?app.forecast.after:app.forecast.before):(app.replayActive&&app.replayStage==="before"&&app.replay?app.replay.before:state);
+  const displayState=app.film?.active?app.film.frames[app.film.index].state:(app.forecast?(app.forecastReview?app.forecast.after:app.forecast.before):(app.replayActive&&app.replayStage==="before"&&app.replay?app.replay.before:state));
   return `
     <div class="game-shell">
       <div class="game-shell__frame">
@@ -717,7 +750,7 @@ function gameHTML(state, eyebrow) {
             </div>
           </div>
         </header>
-        ${forecastControlsHTML()}<main class="game-layout">
+        ${app.film?.active ? filmHTML() : forecastControlsHTML()}<main class="game-layout">
           <div class="game-layout__main">${boardHTML(displayState)}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
           <aside class="game-layout__side">
             ${lawSlotsHTML(displayState)}
@@ -737,7 +770,7 @@ function gameHTML(state, eyebrow) {
           </div>
         </div>
       ` : ""}
-      ${victoryHTML(state)}
+      ${app.film?.active ? "" : victoryHTML(state)}
     </div>
   `;
 }
@@ -928,7 +961,7 @@ function restoreLocal() {
 }
 
 function animateBoard() {
-  const state = app.forecast ? (app.forecastReview ? app.forecast.after : app.forecast.before) : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState());
+  const state = app.film?.active ? app.film.frames[app.film.index].state : (app.forecast ? (app.forecastReview ? app.forecast.after : app.forecast.before) : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState()));
   if (!state) return;
   const nextPositions = Object.fromEntries(Object.values(state.pieces).map(piece => [piece.id, {x:piece.x,y:piece.y}]));
   const board = root.querySelector('.board');
@@ -943,7 +976,7 @@ function animateBoard() {
       node.animate([
         {transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.93)`},
         {transform: 'translate(-50%, -50%) scale(1)'}
-      ], {duration: 360,easing:'cubic-bezier(.2,.75,.2,1)'});
+      ], {duration:app.film?.active?Math.min(420,app.film.frames[app.film.index].duration):360,easing:'cubic-bezier(.2,.75,.2,1)'});
     });
   }
   app.lastBoardPositions = nextPositions;
