@@ -8,6 +8,7 @@ test('host sees actionable moderation and one-time replacement ticket',async({pa
  await expect(page.locator('[data-act=transfer-host]')).toHaveCount(2);
  await expect(page.locator('[data-act=open-seat]')).toHaveCount(1);
  await expect(page.locator('[data-act=ask-kick]')).toHaveCount(3);
+ await expect(page.locator('[data-act=ask-skip]')).toHaveCount(1);
  await expect(page.locator('.moderation-ticket>strong')).toHaveText('1A2B3C4D5E6F');
  await page.locator('[data-act=ask-kick]').first().click();
  await expect(page.locator('[data-act=confirm-kick]')).toBeVisible();
