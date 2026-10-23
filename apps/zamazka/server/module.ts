@@ -285,6 +285,7 @@ const module: PocketModule<State>={
    // Preview and voting advance at their normal deadlines. During drawing,
    // the timer expires at precisely 0:00, but buffered network chunks must
    // still have time to complete. Do not render voting before that window.
+   const phaseBeforePulse=state.phase,turnBeforePulse=state.turn,roundBeforePulse=state.round;
    if(!state.paused&&state.deadline&&state.phase!=='results'&&
       !(state.phase==='drawing'&&now()<state.deadline+FINAL_TRANSFER_RECOVERY_MS&&
         members(state).some(p=>state.assignments[p.id]?.strokes===null&&
@@ -292,7 +293,11 @@ const module: PocketModule<State>={
       (state.phase==='drawing'&&state.drawingSeconds>0
        ?state.deadline+(allCommitted(state)
           ?0:FINAL_SUBMISSION_GRACE_MS):state.deadline))step(state);
-   if(a.type==='pulse')return {state,events:emit(state)};
+   // Timer probes must not broadcast potentially megabyte-sized galleries
+   // to all eight players when no authoritative state actually changed.
+   if(a.type==='pulse')return {state,events:
+     state.phase!==phaseBeforePulse||state.turn!==turnBeforePulse||state.round!==roundBeforePulse
+       ?emit(state):[]};
     if(state.paused&&a.type!=='kick_player'&&a.type!=='claim_host')return {state,events:notice(id,'Матч на паузе. Дождитесь участников или исключите отсутствующего игрока.')};
    if(!isMember)return {state,events:notice(id,'Матч уже начался. Дождись следующей комнаты.')};
    if(a.type==='claim_host'&&state.paused){
