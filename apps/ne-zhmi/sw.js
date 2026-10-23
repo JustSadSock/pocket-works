@@ -1,5 +1,9 @@
-const VERSION='0.1.0',CACHE='ne-zhmi-v0.1.0',PREFIX='ne-zhmi-';
-const FILES=['./','./index.html','./app.config.json','./styles.css','./app.js','./engine.js','./renderer.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.js'];
+const APP_VERSION='0.1.0';
+const CACHE_NAME='ne-zhmi-v0.1.0';
+const RELEASE_DATE='2026-10-23';
+const RELEASE_NOTES=["Первая играбельная локальная трасса: автоматическое движение Болтика, две независимые кнопки, прыжок и разворот.","Контрольная точка, ямы, столкновения, пауза, финиш, результаты и рекорд.","Адаптивный тактильный пульт с клавиатурным и сенсорным управлением."];
+const VERSION=APP_VERSION,CACHE=CACHE_NAME,PREFIX='ne-zhmi-';
+const FILES=['./','./index.html','./app.config.json','./styles.css','./app.js','./engine.js','./renderer.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/update-manager.js'];
 const ROOT=new URL('./',self.registration.scope);
 const ENTRIES=new Map(FILES.map(file=>{const url=new URL(file,ROOT);return[url.pathname,url.href]}));
 self.addEventListener('install',event=>event.waitUntil((async()=>{
@@ -8,8 +12,7 @@ self.addEventListener('install',event=>event.waitUntil((async()=>{
   const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error('Cannot cache '+url);
   await cache.put(url,response);
  }));
- await self.skipWaiting();
-})()));
+ })()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
  const keys=await caches.keys();
  await Promise.all(keys.filter(key=>key.startsWith(PREFIX)&&key!==CACHE).map(key=>caches.delete(key)));
@@ -17,7 +20,7 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
 })()));
 self.addEventListener('message',event=>{
  if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
- if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:VERSION,releaseDate:'2026-10-23',releaseNotes:['Играбельная локальная трасса с прыжком, разворотом и финишем.'],cacheProtocol:2,cacheName:CACHE});
+ if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:2,cacheName:CACHE});
 });
 self.addEventListener('fetch',event=>{
  if(event.request.method!=='GET')return;

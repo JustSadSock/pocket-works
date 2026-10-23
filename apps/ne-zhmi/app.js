@@ -1,4 +1,5 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { createGame, commandGame, stepGame, FIXED_DT, progressGame } from './engine.js';
 import { createRenderer } from './renderer.js';
 installMobileRuntime();
@@ -115,4 +116,6 @@ function frame(now){
   }
   requestAnimationFrame(frame);
 }
+createWorkshopMode({appName:'НЕ ЖМИ!',version:'0.1.0',cachePrefix: 'ne-zhmi-',storageNamespace: 'pocket-works:ne-zhmi',onReset:()=>{best=null;muted=false;updateSound();backToMenu();}});
+window.addEventListener('workshopopen',()=>{if(phase==='playing')pause();});
 show('menu');requestAnimationFrame(frame);

@@ -5,7 +5,7 @@
 <meta name="apple-mobile-web-app-title" content="НЕ ЖМИ!">
 <title>НЕ ЖМИ! — Pocket Works</title>
 <link rel="icon" type="image/svg+xml" href="./icons/icon.svg"><link rel="manifest" href="./manifest.webmanifest">
-<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/workshop-mode.css"><link rel="stylesheet" href="./styles.css">
 </head><body>
 <main class="app-shell machine" data-app-shell data-fullscreen-app>
 <header class="machine-top" data-ui>
@@ -22,7 +22,7 @@
     <h1 id="menu-title">НЕ<br><em>ЖМИ!</em></h1>
     <p>Болтик едет сам. Один оператор прыгает, другой разворачивает. Проведите его через цех вместе.</p>
     <button id="start" class="launch" type="button" data-native-press>НАЧАТЬ ИСПЫТАНИЕ <span>→</span></button>
-    <div class="key-guide">Локальный режим · два человека на одном устройстве</div>
+    <div class="key-guide">Локальный режим · два человека на одном устройстве <button type="button" class="workshop-entry" data-workshop-trigger>Диагностика</button></div>
   </section>
   <section id="pause-panel" class="panel sheet hidden" aria-labelledby="pause-title" role="dialog" aria-modal="true">
     <div class="plate">ПРОТОКОЛ НА ПАУЗЕ</div>
@@ -30,7 +30,7 @@
     <button id="resume" class="launch" type="button">Продолжить →</button>
     <button id="restart-pause" class="option" type="button">Начать трассу заново</button>
     <button id="leave-pause" class="option" type="button">В меню</button>
-    <a class="exit-sheet" href="../../" data-app-control>← Pocket Works</a>
+    <button type="button" class="workshop-entry" data-workshop-trigger>Диагностика</button><a class="exit-sheet" href="../../" data-app-control>← Pocket Works</a>
   </section>
   <section id="finish-panel" class="panel sheet hidden" aria-labelledby="finish-title" role="dialog" aria-modal="true">
     <div class="plate">ФИНИШ ПОДТВЕРЖДЁН</div>

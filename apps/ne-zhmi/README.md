@@ -20,3 +20,6 @@ Run: node --test apps/ne-zhmi/engine.test.mjs
 Validate: npm run registry:check
 Mobile visual smoke: apps/ne-zhmi/qa.plan.json
 Physics checks cover motor, jump, reversal cooldown, platform collisions, checkpoint, respawn, finish and determinism.
+
+## Diagnostics
+The built-in Pocket Works Workshop can be opened from the first or pause screen, and from the standard shortcut. It reports the current application's runtime, errors and owned storage only. Reset prompts for a second click and returns to the menu.
