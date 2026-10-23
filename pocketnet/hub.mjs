@@ -625,6 +625,7 @@ export class PocketNetHub {
             const authorizedClaim=room.gameId==='chyepukha'&&room.version==='v6'&&
               typeof msg.claimCode==='string'&&msg.claimCode.toUpperCase()===room.state.claim?.code;
             if(room.players.length>=MAX_PLAYERS&&!authorizedClaim)throw Error('room_full');
+            if(authorizedClaim&&this.connected(room.state.claim.seatId,room.id))throw Error('seat_online');
             room.players.push(member);
             const result = mod.onJoin
               ? await mod.onJoin({ state: copied(room.state), player: member, players: room.players,
