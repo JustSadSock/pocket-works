@@ -1,5 +1,6 @@
 /* 0.8.1: STABLE MOBILE COURT — all dynamic UI is layered, never inserted
    into the flex allocation controlling the 5 × 7 board. */
+.court-mobile-history{display:none}
 @media (max-width:760px){
   .game-shell:not(.debug-scene .game-shell){
     position:fixed;inset:0;width:100%;height:100dvh;min-height:0;
@@ -84,7 +85,6 @@
     flex:0 0 auto;
     margin:auto;
     box-sizing:border-box;
-    contain:layout paint;
   }
   .game-shell:not(.debug-scene .game-shell) .game-layout__side{
     grid-area:side;position:relative;min-height:0;height:58px;
