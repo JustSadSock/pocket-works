@@ -1267,3 +1267,42 @@ test('Currency balances saturate at 9999 for urgent rewards, pawnshop and secret
   assert.equal(buyer.resources.crystals,9999);
  }
 });
+
+test('Reconnect of an existing contestant preserves wallet, holdings, active auction and turn',()=>{
+ const {state}=makeRoom(3);
+ const [seller,buyer]=state.contestants;
+ const id=seller.items[0].id;
+ act(state,seller.id,{type:'post',itemId:id,ask:{gold:75,crystals:0,parts:0}});
+ act(state,buyer.id,{type:'bid',offer:{gold:75,crystals:0,parts:0}});
+ const before={turn:state.turnIndex,round:state.round,deadline:state.deadlineAt,
+  wallet:{...buyer.resources},itemIds:buyer.items.map(x=>x.id),bid:state.bids[0].buyer};
+ const rejoined=state.players.map(p=>({...p}));
+ game.onJoin({state,players:rejoined});
+ assert.equal(state.turnIndex,before.turn);
+ assert.equal(state.round,before.round);
+ assert.equal(state.deadlineAt,before.deadline);
+ assert.deepEqual(buyer.resources,before.wallet);
+ assert.deepEqual(buyer.items.map(x=>x.id),before.itemIds);
+ assert.equal(state.bids[0].buyer,before.bid);
+ assert.equal(state.listing.itemId,id);
+ const view=game.viewForPlayer({state,player:{id:buyer.id}});
+ assert.equal(view.you.id,buyer.id);
+ assert.equal(view.listing.id,id);
+});
+test('Quick-price bid is only a bid; seller acceptance changes ownership exactly once',()=>{
+ const {state}=makeRoom(2);
+ const [seller,buyer]=state.contestants;
+ const item=seller.items[0],before=buyer.resources.gold;
+ act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:85,crystals:0,parts:0}});
+ act(state,buyer.id,{type:'bid',offer:{gold:85,crystals:0,parts:0}});
+ assert.equal(buyer.resources.gold,before);
+ assert.equal(state.listing.itemId,item.id);
+ assert.equal(state.bids.length,1);
+ act(state,seller.id,{type:'accept',buyer:buyer.id});
+ assert.equal(buyer.resources.gold,before-85);
+ assert.equal(state.listing,null);
+ assert.equal(buyer.items.filter(x=>x.id===item.id).length,1);
+ const replay=act(state,seller.id,{type:'accept',buyer:buyer.id});
+ assert.equal(replay.events[0].type,'notice');
+ assert.equal(buyer.items.filter(x=>x.id===item.id).length,1);
+});
