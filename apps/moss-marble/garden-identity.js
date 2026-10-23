@@ -162,24 +162,54 @@ function identityObject(mesh,at,motif,palette,index){
     prism(mesh,x,y,top+56,7,7,5,shade(metal,.81),4);
   }
 }
+function outsidePolygon(p,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const a=poly[i],b=poly[j];
+    if(((a.y>p.y)!==(b.y>p.y))&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)inside=!inside;
+  }
+  return !inside;
+}
+function boundaryDistance(p,outline){
+  let closest=Infinity;
+  for(let i=0;i<outline.length;i++){
+    const a=outline[i],b=outline[(i+1)%outline.length],dx=b.x-a.x,dy=b.y-a.y;
+    const lenSq=dx*dx+dy*dy;
+    const t=clamp(lenSq?((p.x-a.x)*dx+(p.y-a.y)*dy)/lenSq:0,0,1);
+    closest=Math.min(closest,Math.hypot(p.x-a.x-dx*t,p.y-a.y-dy*t));
+  }
+  return closest;
+}
 export function gardenSites(level) {
   const outline=level?.outline;
   if(!Array.isArray(outline)||outline.length<6||!GARDEN_STYLES[level?.visual?.motif])return [];
   const winding=signedArea(outline)>=0?1:-1;
   const n=outline.length;
-  // Choose long-ish edges; stagger them to avoid four predictable corners.
   const anchors=[.10,.36,.61,.86];
-  return anchors.map((t,i)=>{
-    const idx=Math.min(n-1,Math.floor(t*n));
-    const a=outline[idx],b=outline[(idx+1)%n],dx=b.x-a.x,dy=b.y-a.y;
-    const len=Math.hypot(dx,dy)||1;
-    const outside={x:dy/len*winding,y:-dx/len*winding};
-    const center={x:(a.x+b.x)*.5,y:(a.y+b.y)*.5};
-    // The underside of every mount is beyond the collision outline.
-    return {x:center.x+outside.x*48,y:center.y+outside.y*48,
-      anchorX:center.x,anchorY:center.y,offset:48,theme:level.visual.motif,index:i};
-  });
+  const sites=[];
+  for(let i=0;i<anchors.length;i++){
+    const desired=Math.min(n-1,Math.floor(anchors[i]*n));
+    let found=null;
+    // Search nearby edges on tight hairpins: a corner can put a nominal
+    // "outside" point inside the opposite arm of the course.
+    for(let attempt=0;attempt<n&&!found;attempt++){
+      const shift=attempt===0?0:Math.ceil(attempt/2)*(attempt%2?1:-1);
+      const idx=(desired+shift+n*2)%n;
+      const a=outline[idx],b=outline[(idx+1)%n],dx=b.x-a.x,dy=b.y-a.y;
+      const len=Math.hypot(dx,dy)||1;
+      const outside={x:dy/len*winding,y:-dx/len*winding};
+      const center={x:(a.x+b.x)*.5,y:(a.y+b.y)*.5};
+      const candidate={x:center.x+outside.x*48,y:center.y+outside.y*48,
+        anchorX:center.x,anchorY:center.y,offset:48,theme:level.visual.motif,index:i};
+      if(!outsidePolygon(candidate,outline)||boundaryDistance(candidate,outline)<30)continue;
+      if(sites.some(site=>Math.hypot(site.x-candidate.x,site.y-candidate.y)<110))continue;
+      found=candidate;
+    }
+    if(found)sites.push(found);
+  }
+  return sites;
 }
+
 export function appendGardenIdentity(mesh,level,heightAt){
   const sites=gardenSites(level),p=paletteFor(level);
   for(const site of sites){
