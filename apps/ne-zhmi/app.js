@@ -2,6 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { createGame, commandGame, stepGame, FIXED_DT, progressGame } from './engine.js';
 import { createRenderer } from './renderer.js';
+import { createSoundscape } from './soundscape.js';
 import {generateCourse} from './course.js';
 import {ABILITIES,HOLD_ACTIONS,operatorAbilities} from './abilities.js';
 import { createOnlineController } from './online.js';
@@ -9,28 +10,19 @@ installMobileRuntime();
 const $ = id => document.getElementById(id);
 const screens = ['menu','pause-panel','finish-panel'];
 const canvas=$('scene'),renderer=createRenderer(canvas);
-let game=createGame(), online=null, lastOnline=null, phase='menu', accumulated=0, lastFrame=performance.now(), muted=false, audio=null;
+let game=createGame(), online=null, lastOnline=null, phase='menu', accumulated=0, lastFrame=performance.now(), muted=false;
+const soundscape=createSoundscape();
 const storageKey='pocket-works:ne-zhmi:preferences';
 let best=null,records={},localSeed=1,localCount=2;
 try {const saved=JSON.parse(localStorage.getItem(storageKey)||'{}');muted=!!saved.muted;best=Number.isFinite(saved.best)&&saved.best>0?saved.best:null;records=saved.records&&typeof saved.records==='object'?saved.records:{};} catch {}
 function persist(){try{localStorage.setItem(storageKey,JSON.stringify({muted,best,records}));}catch{}}
 function format(t){const sec=Math.max(0,Math.floor(t));return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');}
-function sound(kind){
-  if(muted)return;
-  try{
-    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
-    if(!audio)audio=new AC();
-    if(audio.state==='suspended')void audio.resume();
-    const oscillator=audio.createOscillator(),gain=audio.createGain(),time=audio.currentTime;
-    oscillator.type=kind==='reverse'?'triangle':'sine';
-    const frequencies={magnet:450,brake:105,push:290,float:560,cargo:720,jump:425,reverse:190,land:90,respawn:120,checkpoint:620,finish:740,wall:100,spring:510,hazard:80,gate:140};
-    const f=frequencies[kind]||280;oscillator.frequency.setValueAtTime(f,time);
-    oscillator.frequency.exponentialRampToValueAtTime(Math.max(65,kind==='jump'?f*1.4:f*.65),time+.115);
-    gain.gain.setValueAtTime(.0001,time);gain.gain.exponentialRampToValueAtTime(.10,time+.006);
-    gain.gain.exponentialRampToValueAtTime(.0001,time+.16);
-    oscillator.connect(gain);gain.connect(audio.destination);
-    oscillator.start(time);oscillator.stop(time+.17);
-  }catch{}
+function sound(kind){return soundscape.play(kind);}
+function tactile(action){
+  if(typeof navigator!=='undefined'&&typeof navigator.vibrate==='function'&&
+      !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
+    try{navigator.vibrate(action==='push'?[14,20,12]:action==='jump'?12:7);}catch{}
+  }
 }
 function announce(value){$('notice').textContent=value;}
 function show(which){
@@ -48,19 +40,20 @@ function start(fresh=true){
   if(fresh)localSeed=((Math.random()*0xffffffff)>>>0)||1;
   localCount=Number($('operator-count').value)||2;
   game=createGame(generateCourse(localSeed,5,localCount));
+  renderer.reset();sound('button');
   accumulated=0;show('playing');announce('Трасса готова. '+localCount+' операторов, один Болтик.');
   $('record').textContent='ЛУЧШЕЕ '+(records[localSeed]?format(records[localSeed]):'—');
 }
-function pause(){if(phase==='playing'){show('pause');announce('Игра на паузе.');}}
-function resume(){if(phase==='pause'){show('playing');announce('Игра продолжается.');}}
-function backToMenu(){game=createGame();accumulated=0;show('menu');announce('Главное меню.');}
+function pause(){if(phase==='playing'){releaseHeld();show('pause');sound('button');announce('Игра на паузе.');}}
+function resume(){if(phase==='pause'){show('playing');sound('button');announce('Игра продолжается.');}}
+function backToMenu(){renderer.reset();game=createGame();accumulated=0;show('menu');announce('Главное меню.');}
 function finish(){
   const elapsed=game.wonAt||game.t;
   const record=!records[localSeed]||elapsed<records[localSeed];
   if(record){records[localSeed]=elapsed;persist();}
   $('result').textContent='Время '+format(elapsed)+' · падений '+game.respawns+' · прыжков '+game.jumps+' · разворотов '+game.reverses+(record?' · новый рекорд!':'');
   $('record').textContent='ЛУЧШЕЕ '+format(records[localSeed]||elapsed);
-  show('finish');sound('finish');renderer.impact(1.4);
+  show('finish');sound('finish');renderer.cue('finish',game);
   announce('Финиш. '+$('result').textContent);
 }
 function activeCount(){return phase.startsWith('online')?online?.getSnapshot()?.players?.length||2:localCount;}
@@ -81,6 +74,9 @@ function updateControls(){
     station.classList.toggle('my-role',onlineRun&&role===i);
     const can=localRun&&i<count||onlineRun&&role===i&&online?.canInput(ability.id);
     button.disabled=!can || (ability.hold && (game?.energy?.[ability.id]??1)<.14 && !game?.held?.[ability.id]);
+    button.classList.toggle('engaged',!!(game?.held?.[ability.id]&&ability.hold));
+    button.classList.toggle('charging',ability.id==='push'?(game?.pushCooldown||0)>.025:
+      ability.hold&&(game?.energy?.[ability.id]??1)<.14);
     button.setAttribute('aria-label',ability.name+(ability.hold?' — удерживать':''));
     if(onlineRun&&i<count){
       const label=document.createElement('span');label.textContent=(i+1)+' '+ability.operator.toUpperCase();
@@ -103,8 +99,8 @@ function input(action,pressed=true){
     if(!online?.canInput(action))return;
     if(online.sendAction(action,pressed)){
       const el=$(action);el.classList.toggle('pressed',pressed);
-      if(!HOLD_ACTIONS.includes(action)){setTimeout(()=>el.classList.remove('pressed'),105);sound(action);}
-      else if(pressed)sound(action);
+      if(pressed){sound('button');tactile(action);}
+      if(!HOLD_ACTIONS.includes(action))setTimeout(()=>el.classList.remove('pressed'),105);
     }
     return;
   }
@@ -113,9 +109,11 @@ function input(action,pressed=true){
   if(result==='cooldown'){announce('Механизм ещё перезаряжается.');return;}
   if(result==='empty'){announce('Энергия закончилась — отпустите кнопку для зарядки.');return;}
   if(result==='nochange'){if(!pressed)$(action).classList.remove('pressed');return;}
-  if(result==='reverse'||result==='push'){renderer.impact(.25);sound(action);}
+  if(result==='reverse'||result==='push'){renderer.cue(action,game);sound(action);}
+  if(pressed&&HOLD_ACTIONS.includes(action)){renderer.cue(action,game);sound(action);}
+  if(pressed)tactile(action);
   const element=$(action);element.classList.toggle('pressed',pressed);
-  if(!HOLD_ACTIONS.includes(action)){setTimeout(()=>element.classList.remove('pressed'),105);if(action==='jump')sound(action);}
+  if(!HOLD_ACTIONS.includes(action))setTimeout(()=>element.classList.remove('pressed'),105);
 }
 function releaseHeld(){
   for(const id of HOLD_ACTIONS)if(game.held?.[id] || $(id).classList.contains('pressed'))input(id,false);
@@ -124,17 +122,40 @@ $('start').addEventListener('click',()=>start(true));
 try{$('player-name').value=localStorage.getItem('pocket-works:ne-zhmi:player')||'Игрок';}catch{}
 function onlineView({active,snapshot,role,connected,troubled}){
   if(!active){if(phase.startsWith('online'))backToMenu();lastOnline=null;return;}
-  if(snapshot?.phase==='lobby'||!snapshot){if(phase!=='online-lobby')show('online-lobby');return;}
+  if(snapshot?.phase==='lobby'||!snapshot){
+    if(phase!=='online-lobby')show('online-lobby');
+    return;
+  }
   if(snapshot.phase==='play'){
+    const changedRound=lastOnline?.round!==snapshot.round;
     if(phase!=='online-playing')show('online-playing');
-    if(lastOnline?.round!==snapshot.round){renderer.impact(.55);announce('Онлайн-испытание началось.');}
-    const previous=lastOnline?.robot;
-    if(previous&&previous.jumps<snapshot.robot.jumps){sound('jump');}
-    if(previous&&previous.reverses<snapshot.robot.reverses){sound('reverse');renderer.impact(.25);}
-    if(previous&&previous.respawns<snapshot.robot.respawns){sound('respawn');renderer.impact(1);}
-    if(previous&&previous.checkpoint<snapshot.robot.checkpoint){sound('checkpoint');}
+    if(changedRound){
+      renderer.reset();sound('button');announce('Новый раунд. Команда подключена.');
+    }
+    const prev=!changedRound?lastOnline?.robot:null;
+    const next=snapshot.robot;
+    if(prev&&next){
+      const changes=[
+        ['jumps','jump'],['reverses','reverse'],['pushes','push'],
+        ['respawns','respawn'],['impacts','land']
+      ];
+      for(const [key,type] of changes)if((next[key]||0)>(prev[key]||0)){
+        // One network batch may contain several events. Show one concise burst.
+        renderer.cue(type,next);sound(type);
+      }
+      if(next.checkpoint>prev.checkpoint){renderer.cue('checkpoint',next);sound('checkpoint');}
+      for(const action of ['magnet','brake','float']){
+        if(next.held?.[action]&&!prev.held?.[action]){renderer.cue(action,next);sound(action);}
+      }
+      const oldCargo=prev.cargo||[],newCargo=next.cargo||[];
+      if(newCargo.some((box,i)=>box.latched&&!oldCargo[i]?.latched)){
+        renderer.cue('cargo',next);sound('cargo');
+      }
+    }
   }else if(snapshot.phase==='won'){
-    if(phase!=='online-won'){show('online-won');sound('finish');renderer.impact(1.2);}
+    if(phase!=='online-won'){
+      show('online-won');renderer.cue('finish',snapshot.robot);sound('finish');
+    }
   }
   lastOnline=snapshot;
 }
@@ -178,8 +199,9 @@ $('operator-count').addEventListener('change',()=>{
  if(phase==='menu')updateControls();
 });
 const soundButton=$('sound');
-function updateSound(){soundButton.textContent='ЗВУК · '+(muted?'ВЫКЛ':'ВКЛ');soundButton.setAttribute('aria-label',muted?'Включить звук':'Выключить звук');}
+function updateSound(){soundscape.setMuted(muted);soundButton.textContent='ЗВУК · '+(muted?'ВЫКЛ':'ВКЛ');soundButton.setAttribute('aria-label',muted?'Включить звук':'Выключить звук');}
 soundButton.addEventListener('click',()=>{muted=!muted;persist();updateSound();if(!muted)sound('checkpoint');});
+soundscape.setMuted(muted);
 updateSound();
 window.addEventListener('keydown',event=>{
   if(event.code==='Escape'){if(phase==='playing')pause();else if(phase==='pause')resume();else if(phase==='online-playing')$('online-out').click();return;}
@@ -206,8 +228,8 @@ function frame(now){
     while(accumulated>=FIXED_DT&&loops<9){
       const events=stepGame(game,FIXED_DT);accumulated-=FIXED_DT;loops++;
       for(const event of events){
-        if(['jump','land','respawn','checkpoint','wall','spring','hazard','gate'].includes(event)){
-          if(['respawn','land','spring','hazard'].includes(event))renderer.impact(event==='respawn'||event==='hazard'?1.4:.8);
+        if(['jump','land','respawn','checkpoint','wall','spring','hazard','gate','cargo'].includes(event)){
+          renderer.cue(event,game);
           sound(event);
           if(event==='respawn'||event==='hazard')announce(event==='hazard'?'Пресс сработал. Возвращаем к контрольной точке.':'Болтик упал. Возвращаем к контрольной точке.');
           if(event==='checkpoint')announce('Контрольная точка сохранена.');
@@ -237,6 +259,6 @@ function frame(now){
   }
   requestAnimationFrame(frame);
 }
-createWorkshopMode({appName:'НЕ ЖМИ!',version:'0.4.0',cachePrefix: 'ne-zhmi-',storageNamespace: 'pocket-works:ne-zhmi',onReset:()=>{if(online?.isActive())online.leave();best=null;muted=false;updateSound();backToMenu();}});
+createWorkshopMode({appName:'НЕ ЖМИ!',version:'0.5.0',cachePrefix: 'ne-zhmi-',storageNamespace: 'pocket-works:ne-zhmi',onReset:()=>{if(online?.isActive())online.leave();best=null;muted=false;updateSound();backToMenu();}});
 window.addEventListener('workshopopen',()=>{if(phase==='playing')pause();});
 show('menu');requestAnimationFrame(frame);
