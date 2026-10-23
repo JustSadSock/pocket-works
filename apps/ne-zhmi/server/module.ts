@@ -467,14 +467,15 @@ export const MIN_PLAYERS=2;
 export const MAX_PLAYERS=6;
 const PULSE_WINDOW_MS=1250;
 const MAX_DELTA_MS=180;
-function snapshot(s) {
+function snapshot(s,{compact=false}={}) {
+  const robot=compact&&s.robot?.level ? (({level,...rest})=>rest)(s.robot) : s.robot;
   return { phase:s.phase,host:s.host,players:s.players,roles:s.roles,
-    robot:s.robot,round:s.round,revision:s.revision,hold:s.hold,
+    robot,round:s.round,revision:s.revision,hold:s.hold,
     pulseAge: s.phase==='play'?Date.now()-s.lastClock:0,
     session:summary(s.session),config:{mode:s.session.mode,seed:s.session.seed,length:s.session.length} };
 }
-function stateEvent(s,to){return {type:'state', ...(to?{to}:{}),payload:snapshot(s)};}
-function emitState(s,to){return [stateEvent(s,to)];}
+function stateEvent(s,to,compact=false){return {type:'state', ...(to?{to}:{}),payload:snapshot(s,{compact})};}
+function emitState(s,to,compact=false){return [stateEvent(s,to,compact)];}
 function notice(to,value){return [{type:'notice',to,payload:value}];}
 function freeze(s,now){
   if(s.phase==='play'){
@@ -559,7 +560,8 @@ export function message(s,player,payload,now=Date.now()){
     // Terminal transitions MUST reach both clients even when a previous
     // position snapshot was sent within the normal throttle interval.
     if(s.phase!==priorPhase||now-s.lastBroadcast>=105||s.hold!==s.lastHold){
-      s.lastBroadcast=now;s.lastHold=s.hold;return emitState(s);
+      s.lastBroadcast=now;s.lastHold=s.hold;
+      return emitState(s,undefined,s.phase==='play');
     }
     return [];
   }
@@ -578,7 +580,7 @@ export function message(s,player,payload,now=Date.now()){
     const outcome=commandGame(s.robot,action,HOLD_ACTIONS.includes(action)?v.pressed:true);
     if(outcome==='cooldown')return notice(id,'Механизм ещё перезаряжается');
     if(outcome==='nochange')return [];
-    s.revision++;s.lastBroadcast=now;return emitState(s);
+    s.revision++;s.lastBroadcast=now;return emitState(s,undefined,true);
   }
   return [];
 }

@@ -29,3 +29,19 @@ test('reject invalid room snapshots instead of breaking UI',()=>{
  assert.equal(acceptOnlineSnapshot(null,{phase:'unknown',players:[]}),false);
  assert.equal(acceptOnlineSnapshot(null,{phase:'lobby',players:[]}),true);
 });
+
+test('compact movement snapshots hydrate the prior round without modifying authoritative packets',()=>{
+ const old={round:3,revision:1,phase:'play',players:[],robot:{level:{seed:23},x:1,t:1}};
+ const input={round:3,revision:2,phase:'play',players:[],robot:{x:2,t:2}};
+ const merged=hydrateOnlineSnapshot(old,input);
+ assert.equal(merged.robot.level.seed,23);
+ assert.equal(input.robot.level,undefined);
+ assert.equal(old.robot.x,1);
+ assert.equal(merged.robot.x,2);
+});
+test('compact snapshots cannot use a level from a different round or unknown peer',()=>{
+ const old={round:3,revision:1,phase:'play',players:[],robot:{level:{seed:1},x:2,t:1}};
+ assert.equal(hydrateOnlineSnapshot(null,{round:3,robot:{x:1}}),null);
+ assert.equal(hydrateOnlineSnapshot(old,{round:4,robot:{x:2}}),null);
+ assert.equal(hydrateOnlineSnapshot(old,{round:4,robot:{level:{seed:9},x:2}}).robot.level.seed,9);
+});
