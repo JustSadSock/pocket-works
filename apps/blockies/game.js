@@ -3340,8 +3340,10 @@ class UIManager {
             gameState.isPaused=true;
             this.settingsPausedLocalGame=true;
         }
-        this.settingsPausedModal=this.modals.pause.classList.contains('active');
-        if(this.settingsPausedModal)this.hideModal('pause');
+        if(!this.screens.settingsScreen.classList.contains('active')){
+            this.settingsPausedModal=this.modals.pause.classList.contains('active');
+            if(this.settingsPausedModal)this.hideModal('pause');
+        }
         this.cancelKeyCapture();
         clearTimeout(this.settingsReturnTimer);
         const container = document.getElementById('settings-container');
