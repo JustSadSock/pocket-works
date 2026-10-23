@@ -37,3 +37,8 @@
  .shape span{font-size:8px}
  .shape svg{height:27px}
 }
+
+.ray-cap{color:#88a9a4;font:700 10px/1.35 ui-monospace,monospace;margin:-10px 0 14px;min-height:14px}
+#stageBody{isolation:isolate}
+#board{contain:paint}
+@media(max-width:760px){.main-layout{width:100%}.stage-body{width:100%;aspect-ratio:5/3}.observatory{width:100%}}
