@@ -756,6 +756,10 @@ class WebGLDiorama {
     this.dynamicTransparent = new GpuMesh(gl, new Float32Array(), gl.DYNAMIC_DRAW);
     this.particles = [];
     this.spin = [0, 0, 0];
+    this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches || false;
+    window.matchMedia?.('(prefers-reduced-motion: reduce)')?.addEventListener?.('change', (event) => {
+      this.reducedMotion = Boolean(event.matches);
+    });
     this.debugHitboxes = localStorage.getItem('pocket-works:moss-marble:hitboxes') === '1';
     this.contextLost = false;
     this.overlay = this.createOverlay();
@@ -1101,7 +1105,7 @@ class WebGLDiorama {
 
     const horizon = this.height * .48;
     const rainAmount = clamp(Number(level?.visual?.rain ?? 1), 0, 1.6);
-    const rainCount = Math.min(this.rain.length, Math.round(this.rain.length * Math.min(1, rainAmount)));
+    const rainCount = this.reducedMotion ? 0 : Math.min(this.rain.length, Math.round(this.rain.length * Math.min(1, rainAmount)));
     const rainTint = level?.visual?.mist || '223,239,229';
     ctx.save();
     for (let index = 0; index < rainCount; index += 1) {
