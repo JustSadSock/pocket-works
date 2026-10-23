@@ -217,7 +217,7 @@ try{
  await host.page.locator('[data-action="again"]').click();
  await host.page.locator('[data-action="publish"]').waitFor();
  await host.page.locator('[data-glyph="key"]').click();
- await new Promise(resolve=>setTimeout(resolve,350)); // Wait for the debounced edit to reach the server.
+ for(let attempt=0;attempt<40&&room.state.board.length!==1;attempt++)await new Promise(resolve=>setTimeout(resolve,50)); // Await the debounced edit.
  assert.equal(room.state.board.length,1,'Server received the draft before its deadline');
  room.state.deadline=Date.now()-1;
  await host.page.locator('[data-action="publish"]').click();
