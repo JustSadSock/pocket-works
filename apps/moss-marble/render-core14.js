@@ -2,6 +2,7 @@ import { BALL_RADIUS } from './physics.js';
 import { levelBounds } from './levels.js';
 import { worldToScreenPoint, screenToWorldPoint, screenDeltaToWorld as inverseScreenVector } from './camera-space.js';
 import { makeStoneRimProfile } from './curb-profile.js';
+import { KEY_LIGHT, appendSoftShadow, appendLineShadow } from './light-space.js';
 
 const TAU = Math.PI * 2;
 const STRIDE = 11;
@@ -631,7 +632,7 @@ float valueNoise(vec2 p) {
 void main() {
   if (vMaterial > .5 && vMaterial < 1.5 && distance(vWorld.xy, uHole.xy) < uHole.z) discard;
   vec3 n = normalize(vNormal);
-  vec3 lightDir = normalize(vec3(-.48, -.52, .70));
+  vec3 lightDir = normalize(vec3(${KEY_LIGHT.x}, ${KEY_LIGHT.y}, ${KEY_LIGHT.z}));
   vec3 viewDir = normalize(vec3(0.0, -.76, .65));
   float diffuse = max(dot(n, lightDir), 0.0);
   float back = max(dot(n, -lightDir), 0.0);
@@ -675,10 +676,14 @@ void main() {
     return;
   }
 
-  vec3 warmKey = vec3(1.025, .985, .88);
-  vec3 coolFill = vec3(.72, .90, .86);
-  vec3 lit = base * warmKey * (.34 + diffuse * .66 + sky * .09);
-  lit += base * coolFill * (back * .08 + (1.0 - sky) * .035);
+  vec3 warmKey = vec3(1.035, .975, .875);
+  vec3 coolFill = vec3(.77, .89, .87);
+  // The greenhouse has one roof light and gentle cool ambient fill.
+  float skyAccess = clamp(n.z * .60 + .40, 0.0, 1.0);
+  float grazing = smoothstep(.05, .83, skyAccess);
+  float ambient = .33 + skyAccess * .22;
+  vec3 lit = base * warmKey * (ambient + diffuse * (.48 + grazing * .13));
+  lit += base * coolFill * (back * .085 + (1.0 - skyAccess) * .028);
   if (vMaterial > 1.5 && vMaterial < 2.5) {
     float glassNoise = valueNoise(vWorld.xy * .08 + vWorld.z * .035);
     float fresnel = pow(1.0 - abs(dot(n, viewDir)), 2.0);
@@ -690,12 +695,14 @@ void main() {
     lit *= brushed;
     lit += spec * vec3(1.0, .86, .48) * 1.72 + rim * base * .20;
   } else if (vMaterial > 9.5 && vMaterial < 10.5) {
-    // Polished marble is opaque with a small, clean warm reflection.
-    // Unlike the old nested translucent shells it has a solid silhouette.
     float pearl = pow(max(dot(reflect(-lightDir, n), viewDir), 0.0), 27.0);
-    lit = base * (.46 + diffuse * .54 + sky * .08);
-    lit += pearl * vec3(.96, .91, .75) * .52;
-    lit += rim * vec3(.14, .16, .12);
+    lit = base * warmKey * (.39 + diffuse * .49 + skyAccess * .11);
+    lit += pearl * vec3(1.0, .93, .77) * .45;
+    lit += rim * vec3(.10, .12, .095);
+  } else if (vMaterial > 10.5 && vMaterial < 11.5) {
+    float grain = valueNoise(vec2(vWorld.x * .035 + vWorld.y * .027, vWorld.z * .075));
+    lit *= .85 + grain * .20;
+    lit += rim * base * .025;
   } else {
     if (vMaterial < .5) {
       float mineral = valueNoise(vWorld.xy * .034 + vWorld.z * .022);
@@ -968,8 +975,14 @@ class WebGLDiorama {
 
     const shadowScale = ball.sunk ? Math.max(0, 1 - ball.sink * 1.3) : 1;
     if (shadowScale > 0) {
-      addGroundEllipse(shadows, ball.x, ball.y + 2, surface + .16, BALL_RADIUS * 1.06 * shadowScale, BALL_RADIUS * .62 * shadowScale, C.shadowStrong);
-      addGroundEllipse(shadows, ball.x, ball.y + 1, surface + .22, BALL_RADIUS * .34 * shadowScale, BALL_RADIUS * .20 * shadowScale, color('#020805', .55));
+      const field = level.course18?.field;
+      const height = Math.max(0, centerZ - surface - BALL_RADIUS);
+      appendSoftShadow(shadows, (x,y)=>field?.heightAt?.(x,y) ?? surface, {
+        x:ball.x, y:ball.y,
+        radiusX:BALL_RADIUS * (1.20 + Math.min(height / 155, 1.05)) * shadowScale,
+        radiusY:BALL_RADIUS * (.96 + Math.min(height / 175, .80)) * shadowScale,
+        height:Math.min(165,height), strength:.40 * shadowScale, segments:22
+      });
     }
 
     // A solid, polished garden marble (not two nested glass spheres).
@@ -996,15 +1009,17 @@ class WebGLDiorama {
       const ground = level.course18?.field?.heightAt?.(rotor.x, rotor.y) || 0;
       const metal = rotor.material === 'brass';
       const ax = rotor.x - hx, ay = rotor.y - hy, bx = rotor.x + hx, by = rotor.y + hy;
-      addGroundEllipse(shadows, rotor.x + 4, rotor.y + 8, ground + .1, rotor.length * .48, rotor.thickness * .82, C.shadow);
+      appendLineShadow(shadows, (x,y)=>level.course18?.field?.heightAt?.(x,y) ?? ground, {
+        ax, ay, bx, by, width:rotor.thickness, height:22, strength:.27
+      });
       addSymmetricBox(opaque, ax, ay, bx, by,
-        rotor.thickness, ground + 9, ground + 31, metal ? C.brass : C.wood, metal ? 4 : 0);
+        rotor.thickness, ground + 9, ground + 31, metal ? C.brass : C.wood, metal ? 4 : 11);
       // A fine inlaid grain, never a second floating plank.
       addSymmetricBox(opaque,
         rotor.x - hx * .91, rotor.y - hy * .91,
         rotor.x + hx * .91, rotor.y + hy * .91,
         rotor.thickness * .24, ground + 31, ground + 32,
-        metal ? C.brassLight : C.woodLight, metal ? 4 : 0);
+        metal ? C.brassLight : C.woodLight, metal ? 4 : 11);
       addCylinder(opaque, {
         x: rotor.x, y: rotor.y, z0: ground + .5, z1: ground + 35,
         r0: rotor.thickness * .58, r1: rotor.thickness * .55,
