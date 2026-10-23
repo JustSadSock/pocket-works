@@ -28,7 +28,7 @@ test("0.8 ceremony artwork remains an exact self-contained offline SVG export",(
 
 test("version 0.8 precaches every new visual layer",()=>{
  const config=JSON.parse(read("app.config.json"));
- assert.ok(/^0\\.8\\.\\d+$/.test(config.version),"This suite covers the 0.8.x ceremony release line");
+ assert.ok(/^0\.8\.\d+$/.test(config.version),"This suite covers the 0.8.x ceremony release line");
  const worker=read("sw.js");
  assert.ok(worker.includes("crown-laws-v"+config.version));
  assert.ok(worker.includes("./client/stage08.css"));
