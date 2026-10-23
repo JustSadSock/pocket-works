@@ -684,10 +684,12 @@ function wire(client){
   if(net!==client)return;
   if(data.event?.type==='state'){
    const incoming=data.event.payload;
-   const cue=classifyFeedback(state,incoming,me?.id);
+   const previous=state;
+   const cue=classifyFeedback(previous,incoming,me?.id);
    state=incoming;render();
+   showConfirmedMovement(previous,incoming);
    if(cue)showConfirmedCue(cue);
-    else if(previous?.you&&incoming?.you){
+   else if(previous?.you&&incoming?.you){
      const changed=keys.find(k=>previous.you.resources?.[k]!==incoming.you.resources?.[k]);
      if(changed)sound.play(changed);
     }
@@ -734,6 +736,7 @@ function request(payload){
   state=result.state;
   const cue=classifyFeedback(before,state,me?.id);
   render();message('');
+  showConfirmedMovement(before,state);
   if(cue)showConfirmedCue(cue);
   return;
  }
