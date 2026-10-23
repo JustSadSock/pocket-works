@@ -7,6 +7,7 @@ import { planTurfClumps, appendTurfClumps } from './turf-clumps.js';
 import { buildWoodBarrierProfile } from './wood-barrier.js';
 import { planGroundedRock } from './rock-profile.js';
 import { planGroundedStump } from './stump-profile.js';
+import { planGroundFooting, appendGroundFooting } from './ground-footing.js';
 
 const TAU = Math.PI * 2;
 const STRIDE = 11;
@@ -145,8 +146,8 @@ function lowPolyRock(mesh, shadows, level, prop, part, seed, palette) {
       tone(palette.rockMoss,.78+noise(j,seed,57)*.14),7);
   }
   appendSoftShadow(shadows,(sx,sy)=>terrainHeightAt(level,sx,sy),{
-    x,y,radiusX:radius*1.16,radiusY:radius*.93,
-    height:rise*.31,strength:.26,segments:22
+    x,y,radiusX:radius*1.06,radiusY:radius*.91,
+    height:rise*.19,strength:.235,segments:22
   });
 }
 
@@ -196,8 +197,8 @@ function stump(mesh, shadows, level, prop, seed, palette) {
   // A shallow physically anchored shadow grounds the stump. It is not a
   // decorative translucent circle around the obstacle.
   appendSoftShadow(shadows,(sx,sy)=>terrainHeightAt(level,sx,sy),{
-    x,y,radiusX:radius*1.12,radiusY:radius*.96,
-    height:height*.24,strength:.25,segments:22
+    x,y,radiusX:radius*1.05,radiusY:radius*.93,
+    height:height*.17,strength:.23,segments:22
   });
 }
 
@@ -396,6 +397,23 @@ export function buildCourse18Geometry(level) {
     else if (prop.kind === 'rockCluster') {
       for (let partIndex = 0; partIndex < (prop.parts || []).length; partIndex += 1) lowPolyRock(opaque, shadows, level, prop, prop.parts[partIndex], seed + index * 37 + partIndex * 11, palette);
     } else lowPolyRock(opaque, shadows, level, prop, null, seed + index * 37, palette);
+  }
+  // Small, irregular terrain-colored soil/moss leaves touch the roots of
+  // stones and timber. No complete rings, vertical spikes, or colliders.
+  for(let index=0;index<(level.course18.props||[]).length;index++){
+    const prop=level.course18.props[index];
+    const stump=prop.kind==='stump';
+    const sourceSeed=stump?seed+index*31:seed+index*37;
+    const parts=prop.kind==='rockCluster'&&prop.parts?.length?prop.parts:[null];
+    for(let j=0;j<parts.length;j++){
+      const part=parts[j];
+      const x=prop.x+Number(part?.x||0),y=prop.y+Number(part?.y||0);
+      const radius=Math.max(stump?14:8,Number(part?.r||prop.r||(stump?56:48)));
+      const patchSeed=sourceSeed+(part?j*11:0);
+      appendGroundFooting(opaque,planGroundFooting(
+        level,x,y,radius,patchSeed,stump?'stump':'rock',palette
+      ));
+    }
   }
   for (let index = 0; index < (level.course18.tunnelVisuals || []).length; index += 1) {
     const tunnel = level.course18.tunnelVisuals[index];

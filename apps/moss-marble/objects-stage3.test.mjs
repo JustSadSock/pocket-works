@@ -7,6 +7,7 @@ import { planTurfClumps, appendTurfClumps } from './turf-clumps.js';
 import { buildWoodBarrierProfile } from './wood-barrier.js';
 import { planGroundedRock } from './rock-profile.js';
 import { planGroundedStump } from './stump-profile.js';
+import { planGroundFooting, appendGroundFooting } from './ground-footing.js';
 
 let checked = 0;
 const counts = { rocks: 0, stumps: 0, tunnels: 0, stoneWalls: 0, woodWalls: 0 };
@@ -142,6 +143,43 @@ for (const original of [
         assert.ok(p.every(Number.isFinite));
         assert.ok(Math.hypot(p[0]-prop.x,p[1]-prop.y)<stump.radius*.75,
           'wood checks stay inside the cut face');
+      }
+    }
+  }
+  for(let index=0;index<level.course18.props.length;index++){
+    const prop=level.course18.props[index];
+    const stump=prop.kind==='stump';
+    const seed=Number(level.id)||18;
+    const sourceSeed=stump?seed+index*31:seed+index*37;
+    const parts=prop.kind==='rockCluster'&&prop.parts?.length?prop.parts:[null];
+    for(let partIndex=0;partIndex<parts.length;partIndex++){
+      const part=parts[partIndex];
+      const x=prop.x+Number(part?.x||0),y=prop.y+Number(part?.y||0);
+      const radius=Math.max(stump?14:8,Number(part?.r||prop.r||(stump?56:48)));
+      const s=sourceSeed+(part?partIndex*11:0);
+      const patches=planGroundFooting(level,x,y,radius,s,stump?'stump':'rock',level.visual?.materials||{});
+      assert.deepEqual(patches,planGroundFooting(level,x,y,radius,s,stump?'stump':'rock',level.visual?.materials||{}),
+        'footing details remain deterministic across reloads');
+      assert.ok(patches.length<=3,'no excessive dirt/moss decorations');
+      const fakeFooting={triangle(a,b,c,tint,material,normal){
+        assert.ok([a,b,c].every(p=>p.length===3&&p.every(Number.isFinite)));
+        assert.ok(tint.length===4&&tint.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
+        assert.ok([0,7].includes(material)&&normal.length===3);
+      }};
+      appendGroundFooting(fakeFooting,patches);
+      for(const patch of patches){
+        assert.ok(['grass','moss'].includes(patch.surface));
+        assert.equal(patch.points.length,8);
+        assert.ok(['loam','moss'].includes(patch.kind));
+        assert.ok(Math.hypot(patch.x-level.start.x,patch.y-level.start.y)>=76);
+        assert.ok(Math.hypot(patch.x-level.hole.x,patch.y-level.hole.y)>=(level.hole.r||30)+49);
+        for(const point of [patch.center,...patch.points]){
+          assert.ok(point.every(Number.isFinite));
+          assert.ok(Math.abs(point[2]-level.course18.field.heightAt(point[0],point[1])-.5)<.06,
+            'flat plant-footing patches should follow physical terrain');
+          assert.equal(level.course18.field.surfaceAt(point[0],point[1]),patch.surface,
+            'never paint moss/loam over water or sand');
+        }
       }
     }
   }

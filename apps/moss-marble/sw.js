@@ -1,23 +1,23 @@
 const CACHE_PREFIX = 'moss-marble-';
-const CACHE_NAME = 'moss-marble-v1.32.0';
-const APP_VERSION = '1.32.0';
+const CACHE_NAME = 'moss-marble-v1.33.0';
+const APP_VERSION = '1.33.0';
 const RELEASE_DATE = '2026-10-23';
 const RELEASE_NOTES = [
-  "Пни получили неровную кору, естественно сужающийся ствол и основание, которое опирается на физическую поверхность грунта по всему периметру.",
-  "На спиле теперь нерегулярные годовые кольца, тёмная кромка и тонкие трещины вместо идеально круглых декоративных дисков.",
-  "Добавлены проверки формы пня, точности физических радиусов, отсутствия зазоров, стабильности геометрии и мобильного бюджета."
+  "У оснований пней и камней появились небольшие неровные участки мха и почвы, которые повторяют настоящий рельеф и не образуют декоративных окружностей.",
+  "Контактные тени стали компактнее; новые природные детали не попадают на воду, песок, старт и лунку.",
+  "Добавлены тесты точности грунта, детерминированности деталей, ограничений их количества и неизменности игровой физики."
 ];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
-  './styles.css?v=1.32.0',
+  './styles.css?v=1.33.0',
   './styles14.css?v=1.4.0',
   './styles15.css?v=1.5.0',
   './styles16.css?v=1.6.0',
   './styles161.css?v=1.14.0',
-  './styles115.css?v=1.32.0',
-  './styles121.css?v=1.32.0',
+  './styles115.css?v=1.33.0',
+  './styles121.css?v=1.33.0',
   './levels.js',
   './procedural.js',
   './camera-space.js',
@@ -35,6 +35,7 @@ const APP_SHELL = [
   './terrain18.js',
   './rock-profile.js',
   './stump-profile.js',
+  './ground-footing.js',
   './wood-barrier.js',
   './turf-clumps.js',
   './polish19.js',
@@ -46,9 +47,9 @@ const APP_SHELL = [
   './greenhouse15.js',
   './render.js',
   './experience14.js',
-  './camera-intro-guard.js?v=1.32.0',
+  './camera-intro-guard.js?v=1.33.0',
   './audio.js',
-  './app.js?v=1.32.0',
+  './app.js?v=1.33.0',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
