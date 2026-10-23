@@ -181,3 +181,61 @@ test('all twelve genre overlays preserve full game flow, including endings',()=>
   'sciFiParanoia','cyberpunk','cozyWhimsy','postApocalypse','mythicLegend','satire'];
  for(let i=0;i<genres.length;i++)playBlind(scenarios[i%scenarios.length],2,genres[i]);
 });
+
+
+const CHAOTIC_DETAILS=[
+ 'під урочистий акомпанемент невидимого оркестру',
+ 'перед свідками у вигляді надзвичайно суворих голубів',
+ 'за офіційним рішенням таємної ради чайників',
+ 'на очах у дуже обуреного пластикового фламінго',
+ 'під схвальні вигуки місцевих черепах'
+];
+function playIndependentFragments(setId,count,seed){
+ const players=playersFor(count),genre=['absurdComedy','satire','horror','cozyWhimsy'][seed%4];
+ const settings={questionSet:setId,genre,maxPlayers:count,visibleTailWords:3,showNextQuestion:seed%2===0};
+ let state=game.createRoom({player:players[0],payload:{settings}}).state;
+ for(let i=1;i<count;i++)state=game.onJoin({state,players:players.slice(0,i+1)}).state;
+ state=game.onMessage({state,player:players[0],payload:{type:'start'}}).state;
+ const recorded=new Map();
+ for(let round=0;round<10;round++){
+  const order=players.map((_,i)=>players[(i+seed+round)%count]);
+  for(const player of order){
+   const v=game.viewForPlayer({state,player,players});
+   const sheet=Number(v.sheet.id.replace('sheet-',''));
+   const detail=CHAOTIC_DETAILS[(seed+sheet+round*3)%CHAOTIC_DETAILS.length];
+   const answer=STORIES[setId][round].replace(/\.$/u,'')+', '+detail+'.';
+   const exact=state.sheets[sheet].fragments;
+   const previous=exact.at(-1);
+   if(previous){
+    assert.equal(v.sheet.tail,previous.tail,setId+' '+round+' '+sheet+' transmitted tail');
+    assert.ok(!JSON.stringify(v.sheet).includes(previous.answer),setId+' '+round+' '+sheet+' concealed previous answer');
+   }
+   assert.ok(!('stories' in v),setId+' unfinished reveal');
+   const packet={
+    type:'submit',round,sheetId:v.sheet.id,answer,
+    tailIndexes:round===9?[]:[0,2,Math.min(4,answer.split(/\s+/u).length-1)],
+    gender:'unspecified',
+    heroAnchor:round===0?'Герой рукопису '+sheet:''
+   };
+   const response=game.onMessage({state,player,payload:packet});
+   assert.equal(response.events[0].type,'state',setId+' '+round+' '+sheet+' rejected');
+   state=response.state;
+   recorded.set(sheet+'/'+round,answer);
+  }
+ }
+ assert.equal(state.phase,'finished');
+ const finished=game.viewForPlayer({state,player:players[0],players});
+ assert.equal(finished.stories.length,count);
+ for(let sheet=0;sheet<count;sheet++){
+  assert.equal(finished.stories[sheet].fragments.length,10);
+  for(let round=0;round<10;round++)
+   assert.equal(finished.stories[sheet].fragments[round].answer,recorded.get(sheet+'/'+round));
+ }
+ assert.equal(new Set(finished.stories.map(x=>x.fragments.map(f=>f.answer).join('|'))).size,count);
+}
+
+test('60 additional mixed-author matches preserve privacy and distinct manuscripts',()=>{
+ for(const setId of scenarios)
+  for(const playerCount of [2,4,8])
+   for(const seed of [1,2])playIndependentFragments(setId,playerCount,seed);
+});
