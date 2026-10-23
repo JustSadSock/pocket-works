@@ -96,7 +96,7 @@ test('room capacity, host permission and early leave keeps the running issue',()
  assert.equal(run(s,guest,{type:'start'}).events[0].type,'notice');
  s=run(s,host,{type:'start'}).state;
  assert.throws(()=>game.onJoin({state:structuredClone(s),players:[host,guest,other]}),/match_in_progress/);
- s=game.onLeave({state:s,players:[guest]}).state;
+ s=game.onLeave({state:s,player:host,players:[guest]}).state;
  assert.equal(s.phase,'writing');
  assert.equal(s.host,host.id);
  assert.equal(s.sheets.length,2);
