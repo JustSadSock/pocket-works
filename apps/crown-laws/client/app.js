@@ -606,7 +606,7 @@ function detailCard(state) {
  </div>`:
  (v.selectedId?`<div class="codex-sheet__actions"><button type="button" data-action="law-compare" class="codex-sheet__compare">↗ Вернуться к выбранному указу</button></div>`:"");
  return `<section class="detail-card codex-sheet ${v.comparison?"codex-sheet--compare":"codex-sheet--inspect"}" role="region" aria-label="${v.label}. ${v.comparison?"Сравнение законов":"Текущий закон"}" style="--detail-color:${SLOT_COLORS[v.slot]}">
-  ${heading}${compare}${action}
+  ${heading}${compare}${v.comparison?'<button type="button" class="codex-sheet__unselect" data-action="unselect-card">Снять выбор указа</button>':""}${action}
  </section>`;
 }
 
