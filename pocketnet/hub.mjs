@@ -168,17 +168,18 @@ export class PocketNetHub {
   async applyKicks(room, events, actorId) {
     const zamazka=room.gameId==='zamazka'&&(room.state?.paused||room.state?.phase==='lobby')&&room.state?.host===actorId;
     const chyepukha=room.gameId==='chyepukha'&&room.version==='v6'&&room.state?.host===actorId;
-    if(!zamazka&&!chyepukha)return;
+    const bazaar=room.gameId==='black-bazaar'&&room.version==='v16'&&room.state?.host===actorId;
+    if(!zamazka&&!chyepukha&&!bazaar)return;
     let changed = false;
     for (const event of events ?? []) {
       if (event?.type !== 'player_kicked' || typeof event.to !== 'string') continue;
       const targetId = event.to;
       if (targetId === actorId || (zamazka&&room.state.participants?.some(p=>p.id===targetId)) ||
-          (chyepukha&&!(room.state.bannedIds||[]).includes(targetId)) ||
+          ((chyepukha||bazaar)&&!(room.state.bannedIds||[]).includes(targetId)) ||
           !room.players.some(p => p.id === targetId)) continue;
       const socket = this.connected(targetId, room.id);
       if (socket) {
-        message(socket, 'room_kicked', { roomId: room.id, reason:chyepukha?'host':'curator' });
+        message(socket, 'room_kicked', { roomId: room.id, reason:chyepukha||bazaar?'host':'curator' });
         this.setRoom(socket, null);
       }
       room.players = room.players.filter(p => p.id !== targetId);
@@ -610,7 +611,7 @@ export class PocketNetHub {
           const mod = this.module(room.gameId, room.version);
           if (!mod) throw new Error('room_version_unavailable');
           const previous = room.players.some(p => p.id === player.id);
-          if(room.gameId==='chyepukha'&&room.version==='v6'&&
+          if((room.gameId==='chyepukha'&&room.version==='v6'||room.gameId==='black-bazaar'&&room.version==='v16')&&
              ((room.state.bannedIds||[]).includes(player.id)||(member.accountId&&(room.state.bannedAccounts||[]).includes(member.accountId))))throw Error('room_kicked');
           if (!previous && member.accountId && room.players.some(p => p.accountId === member.accountId)) {
             throw new Error('account_already_in_room');
