@@ -133,7 +133,7 @@ const playersFor=count=>Array.from({length:count},(_,i)=>({id:'author-'+i,name:'
 // the public hero passport and a few explicitly shared words, never earlier text.
 function playBlind(setId,playerCount,genre){
  const players=playersFor(playerCount);
- let state=game.createRoom({player:players[0],payload:{settings:{questionSet:setId,genre,visibleTailWords:3}}}).state;
+ let state=game.createRoom({player:players[0],payload:{settings:{questionSet:setId,genre,visibleTailWords:3,maxPlayers:playerCount}}}).state;
  for(let i=1;i<players.length;i++)state=game.onJoin({state,players:players.slice(0,i+1)}).state;
  state=game.onMessage({state,player:players[0],payload:{type:'start'}}).state;
  assert.equal(state.phase,'writing');
