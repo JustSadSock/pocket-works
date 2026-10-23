@@ -346,7 +346,7 @@ function details(mesh, level, seed, palette) {
   }
 }
 
-function build(level) {
+export function buildCourse18Geometry(level) {
   const opaque = new Mesh(level.course18.surfaceMesh.data);
   const shadows = new Mesh();
   const transparent = new Mesh();
@@ -390,7 +390,7 @@ export function installTerrain18(core, canvas) {
     const next = level.renderId ?? level.id;
     if (meshes && key === next) return meshes;
     if (meshes) Object.values(meshes).forEach((mesh) => core.gl.deleteBuffer(mesh.buffer));
-    const built = build(level);
+    const built = buildCourse18Geometry(level);
     meshes = { opaque: gpu(core.gl, built.opaque), shadows: gpu(core.gl, built.shadows), transparent: gpu(core.gl, built.transparent) };
     key = next;
     return meshes;
