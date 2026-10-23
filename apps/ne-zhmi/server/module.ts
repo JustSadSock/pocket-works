@@ -33,7 +33,7 @@ const MODULES=Object.freeze([
   {kind:'press',name:'Пресс',hint:'Опускается с интервалом'},
   {kind:'gate',name:'Шлюз',hint:'Открывается и закрывается'},
   {kind:'mag-rail',name:'Магнитная подвеска',hint:'Магнит помогает перелететь шахту',required:'magnet'},
-  {kind:'timing-press',name:'Двойной пресс',hint:'Тормоз позволяет переждать опасную фазу',required:'brake'},
+  {kind:'timing-press',name:'Двойной пресс',hint:'Зажмите тормоз и отпустите для безопасного рывка',required:'brake'},
   {kind:'cargo-switch',name:'Грузовой шлюз',hint:'Толчком доставьте груз до датчика',required:'push'},
   {kind:'float-gap',name:'Длинный пролёт',hint:'Поплавок удерживает Болтика над пропастью',required:'float'}
 ]);
@@ -115,22 +115,15 @@ export function generateCourse(seed=1,sectionCount=5,playerCount=2) {
   // five sections. No one is assigned an unused button for an entire match.
   const abilities=['jump','reverse','magnet','brake','push','float'].slice(0,clamp(Math.floor(playerCount)||2,2,6));
   const special=MODULES.filter(m=>m.required&&abilities.includes(m.required));
+  // Each specialist receives one task; optional modules are retried until
+  // the ENTIRE sequence can be composed without a forced airborne jump.
   const jumpHeavy=new Set(['gap','double-gap','step','islands','mag-rail','float-gap']);
-  const optional=MODULES.filter(m=>!m.required);
-  const required= special.map(m=>m.kind);
-  let majorCount=required.filter(kind=>jumpHeavy.has(kind)).length;
-  while(required.length<count){
-    const choices=optional.filter(m=>!required.includes(m.kind) &&
-      (!jumpHeavy.has(m.kind)||majorCount<Math.ceil(count/2)));
-    const candidate=choices[Math.floor(random()*choices.length)];
-    required.push(candidate.kind);
-    if(jumpHeavy.has(candidate.kind))majorCount++;
-  }
   const invalidFirst=new Set(['press','gate','timing-press','cargo-switch']);
   const validSequence=kinds=>kinds.every((kind,i)=>(
     (i>0||!invalidFirst.has(kind)) &&
     (i===0||kind!==kinds[i-1]) &&
-    (i===0||!jumpHeavy.has(kind)||!jumpHeavy.has(kinds[i-1]))));
+    (i===0||!jumpHeavy.has(kind)||!jumpHeavy.has(kinds[i-1])) &&
+    (i===0||!jumpHeavy.has(kind)||!['spring','fan-up'].includes(kinds[i-1]))));
   const shuffle=items=>{
     const copy=[...items];
     for(let i=copy.length-1;i>0;i--){
@@ -139,25 +132,40 @@ export function generateCourse(seed=1,sectionCount=5,playerCount=2) {
     }
     return copy;
   };
+  const arrange=(prefix,remaining)=>{
+    if(!remaining.length)return prefix;
+    for(const kind of remaining){
+      const seq=[...prefix,kind];
+      if(!validSequence(seq))continue;
+      const found=arrange(seq,remaining.filter(v=>v!==kind));
+      if(found)return found;
+    }
+    return null;
+  };
+  const optional=MODULES.filter(m=>!m.required);
+  const specialist=special.map(m=>m.kind);
   let schedule=null;
-  for(let i=0;i<60;i++){
-    const candidate=shuffle(required);
-    if(validSequence(candidate)){schedule=candidate;break;}
+  for(let attempt=0;attempt<40&&!schedule;attempt++){
+    const required=[...specialist];
+    let majorCount=required.filter(kind=>jumpHeavy.has(kind)).length;
+    while(required.length<count){
+      const choices=optional.filter(m=>!required.includes(m.kind) &&
+        (!jumpHeavy.has(m.kind)||majorCount<Math.ceil(count/2)));
+      const candidate=choices[Math.floor(random()*choices.length)];
+      required.push(candidate.kind);
+      if(jumpHeavy.has(candidate.kind))majorCount++;
+    }
+    for(let i=0;i<32&&!schedule;i++){
+      const candidate=shuffle(required);
+      if(validSequence(candidate))schedule=candidate;
+    }
+    if(!schedule)schedule=arrange([],required);
   }
-  // Rejection cannot deadlock generation. A stable fallback searches only the
-  // 4–6 chosen module types and never invents unsupported abilities.
   if(!schedule){
-    const arrange=(prefix,remaining)=>{
-      if(!remaining.length)return prefix;
-      for(const kind of remaining){
-        const seq=[...prefix,kind];
-        if(!validSequence(seq))continue;
-        const found=arrange(seq,remaining.filter(v=>v!==kind));
-        if(found)return found;
-      }
-      return null;
-    };
-    schedule=arrange([],required);
+    const safe=[...specialist];
+    for(const kind of ['rail','belt-right','belt-left','fan-side','gate','press'])
+      if(safe.length<count)safe.push(kind);
+    schedule=arrange([],safe);
   }
   if(!schedule)throw Error('Unable to schedule safe course sections');
   for(let i=0;i<count;i++){
@@ -171,7 +179,7 @@ export function generateCourse(seed=1,sectionCount=5,playerCount=2) {
   const width=round(end+3.1);
   const pointIndex=Math.floor((count-1)/2);
   const checkpoint=round(3.1+(pointIndex+1)*SECTION_W+.25);
-  return {seed:number,version:3,playerCount,name:theme.name,theme:theme.id,sections,platforms,devices,
+  return {seed:number,version:4,playerCount,name:theme.name,theme:theme.id,sections,platforms,devices,
     width,height:8,start:1.15,goal:round(width-1.45),
     checkpoint,checkpointSpawn:{x:checkpoint,y:6.04},length:count};
 }
