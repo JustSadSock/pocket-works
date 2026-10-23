@@ -1099,10 +1099,26 @@ async function connect(mode){
       }
      else if(event?.type==='notice'){lastDraftSentAt=0;lastDraftAckRevision='';notify(String(event.payload||'Не удалось выполнить действие'))}
    });
+   // Coalesce presence updates. A transient reconnect is not an authoritative
+   // player departure, and every presence packet needn't fetch full artwork.
+   let presenceSyncTimer=null,lastPresenceSyncAt=0;
    client.on('presence',data=>{
      if(client.closed)return;
-     if(data.disconnected)notify('Один из гостей потерял соединение');
-     try{client.sendGame({type:'sync'})}catch{}
+     if(data.disconnected){
+       const disconnectedId=data.disconnected;
+       setTimeout(()=>{
+         if(client.closed||net!==client)return;
+         if(view?.onlineIds?.includes(disconnectedId))return;
+         // A sustained absence is shown in the existing room presence UI.
+       },2500);
+     }
+     if(presenceSyncTimer)return;
+     presenceSyncTimer=setTimeout(()=>{
+       presenceSyncTimer=null;
+       if(client.closed||net!==client)return;
+       lastPresenceSyncAt=Date.now();
+       try{client.sendGame({type:'sync'})}catch{}
+     },Math.max(300,1400-(Date.now()-lastPresenceSyncAt)));
    });
    client.on('room_kicked',()=>{if(net!==client||client.closed)return;home(true);notify('Куратор исключил тебя из комнаты')});
    client.on('room_closed',()=>{if(client.closed)return;home();notify('Комната закрыта')});
