@@ -81,3 +81,22 @@ test('author who comes back before claim is not replaceable',()=>{
  const denied=msg(s,authors[0],{type:'open_seat',seatId:authors[1].id},authors.map(x=>x.id));
  assert.equal(denied.events[0].type,'notice');
 });
+
+test('host can advance a stalled round with an explicitly labelled skip',()=>{
+ let state=begin();
+ state=answer(state,authors[0]).state;
+ state=answer(state,authors[2]).state;
+ const before=state.sheets.map(x=>x.fragments.map(y=>y.answer));
+ const offline=[authors[0].id,authors[2].id];
+ const noPermission=msg(state,authors[2],{type:'skip_slot',seatId:authors[1].id},offline);
+ assert.equal(noPermission.events[0].type,'notice');
+ const skipped=msg(state,authors[0],{type:'skip_slot',seatId:authors[1].id},offline);
+ state=skipped.state;
+ assert.equal(state.round,1);
+ assert.equal(state.players.length,3);
+ assert.ok(state.sheets.some(sh=>sh.fragments.some(f=>f.skipped&&f.questionIndex===0)));
+ const all=state.sheets.flatMap(sh=>sh.fragments.map(f=>f.answer));
+ for(const fragment of before.flat())assert.equal(all.includes(fragment),true);
+ assert.equal(state.sheets.filter(sh=>sh.fragments.some(f=>f.skipped)).length,1);
+ assert.equal(msg(state,authors[0],{type:'skip_slot',seatId:authors[1].id},authors.map(x=>x.id)).events[0].type,'notice');
+});
