@@ -1,11 +1,15 @@
 import { WORLD, LEVEL, ROBOT, progressGame } from './engine.js';
 import { COURSE_THEMES,deviceRect } from './course.js';
+import { createVisualEffects } from './visual-fx.js';
 const C = { sky:'#a5b6ab', haze:'#dce4da', ink:'#334047', wall:'#77817a', dark:'#344247',
   edge:'#f2e6c9', copper:'#d78b49', amber:'#f6ba67', red:'#ce7b65', teal:'#6a9b9e' };
 const rr=(ctx,x,y,w,h,r)=>{ctx.beginPath();ctx.roundRect(x,y,w,h,r);};
 export function createRenderer(canvas) {
   const ctx=canvas.getContext('2d');
+  const reducedMotion=typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const effects=createVisualEffects({reducedMotion});
   let w=800,h=460,scale=1,camX=0,shake=0,flash=0,previousLevel=null;
+  let prevTime=0,prevBodyX=null,wheelTurn=0,landing=0,rollDust=0,switchGlow=0;
   const resize=()=>{
     const rect=canvas.getBoundingClientRect();
     w=Math.max(1,rect.width);h=Math.max(1,rect.height);
@@ -15,18 +19,48 @@ export function createRenderer(canvas) {
   };
   if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(canvas);
   window.addEventListener('resize',resize);resize();
-  const impact=(power=1)=>{shake=Math.min(8,shake+power*2.2);flash=Math.min(.17,flash+power*.027);};
+  const impact=(power=1)=>{
+    shake=reducedMotion?0:Math.min(7,shake+power*1.65);
+    flash=reducedMotion?0:Math.min(.12,flash+power*.023);
+  };
+  function cue(type,state){
+    if(!state||!Number.isFinite(state.x)||!Number.isFinite(state.y))return;
+    effects.emit(type,state.x,state.y+(type==='land'?.35:0),state.dir||1);
+    if(type==='land'||type==='spring')landing=type==='land'?1.0:.58;
+    if(['wall','hazard','respawn','land','finish','spring'].includes(type))
+      impact(type==='finish'?1.25:type==='hazard'?1.4:type==='land'?.62:1.05);
+    switchGlow=1;
+  }
+  function reset(){
+    effects.clear();previousLevel=null;prevBodyX=null;prevTime=0;
+    wheelTurn=0;landing=0;shake=0;flash=0;switchGlow=0;rollDust=0;
+  }
   function frame(state,now=0,mode='playing') {
     const level=state.level||LEVEL;
-    if(previousLevel!==level){camX=0;previousLevel=level;}
+    if(previousLevel!==level){
+      camX=0;previousLevel=level;effects.clear();prevBodyX=null;
+      wheelTurn=0;landing=0;rollDust=0;
+    }
+    const dt=prevTime?Math.max(0,Math.min(.06,(now-prevTime)/1000)):0;
+    prevTime=now;
+    effects.advance(dt);landing=Math.max(0,landing-dt*3.9);
+    switchGlow=Math.max(0,switchGlow-dt*2.6);
+    if(prevBodyX!==null&&Math.abs(state.x-prevBodyX)<1.2){
+      wheelTurn+=(state.x-prevBodyX)/.175;
+      if(state.ground && Math.abs(state.vx)>.75 && !reducedMotion){
+        rollDust+=dt;
+        if(rollDust>.23){rollDust=0;effects.emit('land',state.x-(state.dir||1)*.28,state.y+.33,state.dir||1);}
+      }
+    }else rollDust=0;
+    prevBodyX=state.x;
     const theme=COURSE_THEMES.find(t=>t.id===level.theme)||COURSE_THEMES[0];
     const viewH=7.9, viewW=Math.min(20,Math.max(5.6,viewH*w/h));
     scale=h/viewH;
     const wanted=Math.max(0,Math.min((level.width||WORLD.width)-viewW,state.x-viewW*.38));
-    camX+=(wanted-camX)*.11;
+    camX+=(wanted-camX)*(reducedMotion?1:.11);
     if(wanted===0 && camX<.015)camX=0;
-    const shakeX=shake>0?Math.sin(now*.071)*shake:0;
-    shake=Math.max(0,shake-.35);
+    const shakeX=shake>0&&!reducedMotion?Math.sin(now*.071)*shake:0;
+    shake=Math.max(0,shake-dt*20);
     const sx=x=>(x-camX)*scale+shakeX;
     const sy=y=>y*scale;
     // Background: industrial painted panels, grounded by geometry rather than global noise.
@@ -216,33 +250,65 @@ export function createRenderer(canvas) {
       ctx.fillText(String(section.index).padStart(2,'0'),xx+20,sy(2.85)+14);
     }
     // Boltik: composed of a chassis, integrated wheel axles, enamel front, antenna and expressive optics.
+    effects.draw(ctx,sx,sy,scale,w);
     const px=sx(state.x),py=sy(state.y);
-    ctx.save();ctx.translate(px,py);ctx.rotate(state.rotation);
+    const airborne=!state.ground;
+    const breathing=(!reducedMotion && !airborne)?Math.sin(now*.0033)*.75:0;
+    const compression=landing*.15;
+    const stretch=airborne?Math.min(.075,Math.abs(state.vy)*.009):0;
+    const bodyTilt=reducedMotion?0:Math.max(-.23,Math.min(.23,state.rotation+state.vx*.012));
+    ctx.save();ctx.translate(px,py+breathing);
+    ctx.rotate(bodyTilt);
+    ctx.scale(1+compression*.6-stretch*.45,1-compression+stretch);
     const u=scale;
     const bw=ROBOT.halfWidth*u*2,bh=ROBOT.halfHeight*u*2;
     const drop=state.ground?0:2.6;
-    ctx.fillStyle='rgba(30,52,50,.27)';ctx.beginPath();ctx.ellipse(1,ROBOT.halfHeight*u+8,24,5,0,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#5d6261';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,-bh*.39);ctx.lineTo(0,-bh*.6);ctx.stroke();
-    ctx.fillStyle=C.copper;ctx.beginPath();ctx.arc(0,-bh*.61,4.4,0,Math.PI*2);ctx.fill();
+    // Shadow stays on the next piece of real ground; it never floats with the robot.
+    const shadowPlatform=level.platforms
+      .filter(p=>state.x>=p.x-.1&&state.x<=p.x+p.w+.1&&p.y>=state.y+ROBOT.halfHeight-.05)
+      .sort((a,b)=>a.y-b.y)[0];
+    if(shadowPlatform){
+      const yy=(shadowPlatform.y-state.y)*u;
+      const height=Math.max(0,shadowPlatform.y-state.y-ROBOT.halfHeight);
+      ctx.fillStyle='rgba(30,52,50,'+(.27/(1+height*.85)).toFixed(3)+')';
+      ctx.beginPath();ctx.ellipse(1,yy+3,Math.max(8,24-height*2.3),Math.max(2,5-height*.25),0,0,Math.PI*2);ctx.fill();
+    }
+    const flex=(!reducedMotion?Math.sin(now*.017+state.vx)*.12:0)+state.vx*.012;
+    ctx.strokeStyle='#5d6261';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,-bh*.39);ctx.lineTo(flex*bw,-bh*.60);ctx.stroke();
+    ctx.fillStyle=C.copper;ctx.beginPath();ctx.arc(flex*bw,-bh*.61,4.4,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='#3d4d4f';rr(ctx,-bw*.54,-bh*.27,bw*1.08,bh*.62,8);ctx.fill();
     ctx.fillStyle='#e8dfc8';rr(ctx,-bw*.49,-bh*.46,bw*.98,bh*.73,8);ctx.fill();
     ctx.strokeStyle='#82918a';ctx.lineWidth=2;ctx.stroke();
     ctx.fillStyle='#f0ae62';rr(ctx,-bw*.33,-bh*.26,bw*.66,bh*.25,4);ctx.fill();
-    ctx.fillStyle='#304249';
     const eyeY=-bh*.15;
+    const blink=(!reducedMotion && (now%4050)<96)?Math.max(.14,(now%4050)/120):1;
+    const worried=airborne&&state.vy>1.6;
     for(let v of [-1,1]){
-      rr(ctx,v*bw*.135-bw*.07,eyeY,bw*.14,bh*.12,2);ctx.fill();
+      ctx.fillStyle='#33454a';
+      rr(ctx,v*bw*.135-bw*.07,eyeY,bw*.14,bh*.12*blink,2);ctx.fill();
+      if(blink>.65){
+        ctx.fillStyle='#f6e5cf';
+        const glance=(state.dir||1)*Math.min(2,Math.abs(state.vx)*.4);
+        ctx.fillRect(v*bw*.135+glance,eyeY+2,2,2);
+      }
+      if(worried){
+        ctx.strokeStyle='#7d6761';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(v*bw*.14-3,eyeY-6);ctx.lineTo(v*bw*.14+4,eyeY-8+(v===1?2:-2));ctx.stroke();
+      }
     }
-    ctx.fillStyle='#ca7660';ctx.fillRect(-bw*.08,bh*.09,bw*.16,3);
+    ctx.strokeStyle='#b27b69';ctx.lineWidth=2;
+    if(worried){ctx.beginPath();ctx.arc(0,bh*.11,2,0,Math.PI*2);ctx.stroke();}
+    else{ctx.beginPath();ctx.moveTo(-bw*.09,bh*.1);ctx.quadraticCurveTo(0,bh*.14,bw*.09,bh*.1);ctx.stroke();}
     for(const side of [-1,1]) {
       ctx.strokeStyle='#667273';ctx.lineWidth=3.5;
-      ctx.beginPath();ctx.moveTo(side*bw*.4,0);ctx.lineTo(side*bw*.59,drop+bh*.08);ctx.stroke();
+      const armSwing=reducedMotion?0:Math.sin(wheelTurn*.65+side)*Math.min(5,Math.abs(state.vx)*1.3);
+      ctx.beginPath();ctx.moveTo(side*bw*.4,0);ctx.lineTo(side*bw*.59,drop+bh*.08+armSwing);ctx.stroke();
       const wheelX=side*bw*.4, wheelY=bh*.3+drop;
       ctx.fillStyle='#344347';ctx.beginPath();ctx.arc(wheelX,wheelY,u*.175,0,Math.PI*2);ctx.fill();
       ctx.fillStyle='#a5b6ad';ctx.beginPath();ctx.arc(wheelX,wheelY,u*.095,0,Math.PI*2);ctx.fill();
       ctx.strokeStyle='#e4dbbe';ctx.lineWidth=2;ctx.beginPath();
-      ctx.moveTo(wheelX+Math.cos(state.t*state.vx*2)*u*.085,wheelY+Math.sin(state.t*state.vx*2)*u*.085);
-      ctx.lineTo(wheelX-Math.cos(state.t*state.vx*2)*u*.085,wheelY-Math.sin(state.t*state.vx*2)*u*.085);ctx.stroke();
+      ctx.moveTo(wheelX+Math.cos(wheelTurn)*u*.085,wheelY+Math.sin(wheelTurn)*u*.085);
+      ctx.lineTo(wheelX-Math.cos(wheelTurn)*u*.085,wheelY-Math.sin(wheelTurn)*u*.085);ctx.stroke();
     }
     ctx.fillStyle='#737e74';ctx.beginPath();ctx.arc(-bw*.37,-bh*.37,2.3,0,7);ctx.arc(bw*.37,-bh*.37,2.3,0,7);ctx.fill();
     ctx.restore();
@@ -280,5 +346,5 @@ export function createRenderer(canvas) {
     flash=Math.max(0,flash-.008);
     if(mode==='menu'){ctx.fillStyle='rgba(31,45,45,.14)';ctx.fillRect(0,0,w,h);}
   }
-  return {resize,frame,impact};
+  return {resize,frame,impact,cue,reset,getEffects:()=>effects.stats()};
 }
