@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "physics",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "engine.test.mjs"
+      ]
+    },
+    {
+      "id": "local-stage-desktop-phone",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#start",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#start"
+        },
+        {
+          "action": "visible",
+          "selector": "#scene"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#jump"
+        },
+        {
+          "action": "click",
+          "selector": "#reverse"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#pause"
+        },
+        {
+          "action": "visible",
+          "selector": "#pause-panel"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#resume"
+        },
+        {
+          "action": "click",
+          "selector": "#pause"
+        },
+        {
+          "action": "click",
+          "selector": "#restart-pause"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}

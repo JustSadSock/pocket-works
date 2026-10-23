@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "slug": "ne-zhmi",
+  "name": "НЕ ЖМИ!",
+  "shortName": "НЕ ЖМИ!",
+  "description": "Кооперативная лаборатория: один робот едет сам, двое управляют прыжком и разворотом. Первая локальная испытательная трасса.",
+  "version": "0.1.0",
+  "releaseDate": "2026-10-23",
+  "releaseDateTime": "2026-10-23T16:00:00+03:00",
+  "changelog": [
+    "Первая играбельная локальная трасса: автоматическое движение Болтика, две независимые кнопки, прыжок и разворот.",
+    "Контрольная точка, ямы, столкновения, пауза, финиш, результаты и рекорд.",
+    "Адаптивный тактильный пульт с клавиатурным и сенсорным управлением."
+  ],
+  "status": "experimental",
+  "preset": "game-2d",
+  "runtime": "quick",
+  "accent": "#d77b46",
+  "backgroundColor": "#e5ddc7",
+  "themeColor": "#e5ddc7",
+  "orientation": "any",
+  "cacheName": "ne-zhmi-v0.1.0",
+  "storageNamespace": "pocket-works:ne-zhmi",
+  "tags": [
+    "game",
+    "co-op",
+    "physics",
+    "robot",
+    "local",
+    "offline",
+    "canvas",
+    "touch",
+    "party"
+  ],
+  "order": 355
+}

@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "product": "ne-zhmi",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "axis-pals",
+      "evidence": "apps/axis-pals/index.html",
+      "lesson": "Avoid a grid puzzle, twin characters, and warehouse navigation; render one continuous robot journey."
+    },
+    {
+      "slug": "crumple-yard",
+      "evidence": "apps/crumple-yard/index.html",
+      "lesson": "Avoid realistic car damage and dashboard telemetry; keep a toy factory and tactile shared actions."
+    },
+    {
+      "slug": "moss-marble",
+      "evidence": "apps/moss-marble/index.html",
+      "lesson": "Do not mimic miniature golf courses or their camera; favor a side-on mechanical rail."
+    },
+    {
+      "slug": "zamazka",
+      "evidence": "apps/zamazka/index.html",
+      "lesson": "Avoid paper material, brush panels and painter metaphors."
+    },
+    {
+      "slug": "billiard-lab",
+      "evidence": "apps/billiard-lab/index.html",
+      "lesson": "Avoid abstract luminous trajectory effects; keep highly legible solid obstacle silhouettes."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://teenage.engineering/products/po",
+      "inspectedAt": "2026-10-23",
+      "observation": "Compact hardware uses tactile, clearly separated controls and an exposed industrial casing.",
+      "principle": "One action occupies one unmistakable physical button.",
+      "application": "Two oversized mechanical plungers are the main mobile input.",
+      "avoid": "Do not reproduce product layout, silkscreen labels, logo or distinctive branded electronics."
+    },
+    {
+      "url": "https://www.humanfallflat.com/faq",
+      "inspectedAt": "2026-10-23",
+      "observation": "The physical comedy comes from shared action and awkward movement while attempting a common objective.",
+      "principle": "Consequences of player actions should be visible and physically grounded.",
+      "application": "Launch timing creates jumps, falls and accidental retreat instead of separate scripted jokes.",
+      "avoid": "No copying character art, ragdoll movement or level layout."
+    },
+    {
+      "url": "https://www.nintendo.com/us/store/products/snipperclips-cut-it-out-together-switch/",
+      "inspectedAt": "2026-10-23",
+      "observation": "Two players can share a short puzzle scenario with immediate cause and effect.",
+      "principle": "Keep a single joint goal and readable shared information.",
+      "application": "One visible finish, two role-specific controls and instant retries.",
+      "avoid": "No paper cutting, protagonist silhouettes or Nintendo UI."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "enamel-plunger",
+      "medium": "Vector Canvas 2D and CSS-styled metal/plastic buttons.",
+      "composition": "Full scene plus a two-channel bottom console.",
+      "interaction": "Two operators independently pulse one shared autonomous robot.",
+      "motion": "Sinking plungers, body angle and wheel rotation.",
+      "rationale": "Best readability and originality at mobile aspect ratios."
+    },
+    {
+      "id": "oscilloscope-lab",
+      "medium": "Single-color CRT traces and numerical console glyphs.",
+      "composition": "Instrument display with data bands and tiny robot silhouette.",
+      "interaction": "Timed waveform toggles adjust motor and jump.",
+      "motion": "Phosphor persistence and scan trails.",
+      "rationale": "Rejected because abstract waveform control hides the physical joke."
+    },
+    {
+      "id": "plush-workshop",
+      "medium": "Illustrated plush felt and chunky stitched toy accessories.",
+      "composition": "Portrait dollhouse with scattered tabletop controls.",
+      "interaction": "Pull fabric straps to redirect a soft robotic toy.",
+      "motion": "Soft cloth and settling stitches.",
+      "rationale": "Rejected because cloth simulation and toy-craft styling conflict with immediate two-button mechanics."
+    }
+  ],
+  "selection": {
+    "concept": "enamel-plunger",
+    "reason": "A control-as-object interaction emphasizes both roles; a visually separate world remains readable on narrow devices.",
+    "rejected": [
+      {
+        "concept": "oscilloscope-lab",
+        "reason": "Too abstract to understand a jump collision at a glance."
+      },
+      {
+        "concept": "plush-workshop",
+        "reason": "Requires additional soft-body art and hides the mechanical plunger signature."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "canvas-2d",
+      "availability": "available",
+      "reason": "Canvas 2D is a built-in rendering interface; no external art runtime required."
+    },
+    {
+      "id": "svg-geometry",
+      "availability": "available",
+      "reason": "The launcher icon and action glyphs are original authored SVG/CSS geometry."
+    },
+    {
+      "id": "blender",
+      "availability": "unavailable",
+      "reason": "No local Blender assets required for a two-dimensional side-view proof; could use a licensed future asset pipeline if changed."
+    }
+  ],
+  "assets": [
+    {
+      "id": "tin-robot",
+      "tool": "canvas-2d",
+      "source": "renderer.js",
+      "output": "runtime/canvas",
+      "role": "Main robot chassis, optics and wheels.",
+      "acceptance": "Clearly visible at mobile zoom and never confusable with static platforms.",
+      "integration": "Renderer consumes fixed-step state without mutating it.",
+      "provenance": "Original authored geometry in the app source.",
+      "maxBytes": 18000
+    },
+    {
+      "id": "pocket-plungers",
+      "tool": "svg-geometry",
+      "source": "styles.css",
+      "output": "runtime/dom",
+      "role": "Operator action surfaces in amber and faded blue enamel.",
+      "acceptance": "Each touch target exceeds 44 CSS pixels with immediate pressed response.",
+      "integration": "Buttons dispatch jump/reverse to the local simulation.",
+      "provenance": "Original CSS shapes with text labels.",
+      "maxBytes": 10000
+    },
+    {
+      "id": "identity",
+      "tool": "svg-geometry",
+      "source": "icons/icon.svg",
+      "output": "icons/icon.svg",
+      "role": "Pocket Works launcher mark of a single amber pushbutton.",
+      "acceptance": "Readable at 48×48 and unique from other apps.",
+      "integration": "Manifest, favicon, offline cache.",
+      "provenance": "Original SVG created for this app.",
+      "maxBytes": 4000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "active-motor",
+      "jump",
+      "reverse",
+      "pause",
+      "checkpoint",
+      "respawn",
+      "finish"
+    ],
+    "risks": [
+      "On short phones the control deck can consume the scene's height.",
+      "The fixed timestep must not tunnel through a ledge after background suspension.",
+      "Camera should not lose the robot at the goal.",
+      "Sound should never autoplay before interaction."
+    ],
+    "comparisons": [
+      "Initial menu to active side-scrolling world at 390×844.",
+      "Desktop 1366×768 compared with phone 390×844.",
+      "Jump and wall collision compared with gap death and respawn.",
+      "Pause and successful finish without browser scrolling."
+    ]
+  }
+}
