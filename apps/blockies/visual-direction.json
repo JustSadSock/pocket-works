@@ -93,6 +93,11 @@
         "slug": "ne-zhmi",
         "spatialDifference": "Ne Zhmi is built around the user deciding whether to press a tempting control; Blockies centers a long shared playfield with narrow segmented but unboxed preview bays that are visually part of the board.",
         "interactionDifference": "Ne Zhmi's discrete one-off button choice is unlike continuous falling-block movement, rotation, hard dropping, player-specific blocked-entry elimination and high-frequency authoritative snapshots."
+      },
+      {
+        "slug": "moss-marble",
+        "spatialDifference": "Moss & Marble frames a mini-golf course as a navigable sculpted outdoor landscape with depth, course walls and a ball trajectory; Blockies concentrates on a fixed shared vertical well with four-cell entry gantries and compact network recovery controls.",
+        "interactionDifference": "Golf swings and course geometry are turn-by-turn physics challenges, while Blockies uses simultaneous keyboard/touch falling-block movement, deterministic locking and server-authoritative recovery of entire co-op rounds."
       }
     ]
   },
