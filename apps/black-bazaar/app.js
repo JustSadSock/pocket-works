@@ -167,7 +167,9 @@ function renderLobby(){
  '<button type="button" data-action="copy-url">'+svgIcon('trade')+' Ссылка</button></div>'+
  '<div class="lobby-players">'+all.map((p,index)=>'<div class="lobby-player">'+
  characterMarkup(decorativeGuests[index%decorativeGuests.length],'lobby-portrait')+'<strong>'+esc(p.name)+'</strong>'+
- (p.id===state.host?'<br><small>Создатель</small>':'')+'</div>').join('')+'</div>'+
+ (p.id===state.host?'<br><small>Ведущий</small>':'')+
+ (host&&p.id!==me?.id?'<button type="button" class="lobby-kick" data-action="kick-player" data-player="'+esc(p.id)+'">Исключить</button>':'')+
+ '</div>').join('')+'</div>'
  '<p class="muted">'+all.length+' из 6 игроков · старт от двух</p>'+
  (host?'<button type="button" class="primary" data-action="start" '+(all.length<2?'disabled':'')+'>Начать игру</button>':'<p>Начало — у создателя комнаты.</p>')+
  '<button type="button" data-action="leave">Покинуть комнату</button>'+
@@ -707,6 +709,7 @@ function wire(client){
   }
   message('Ошибка сервера: '+code,true);
  });
+ client.on('room_kicked',()=>{if(net!==client)return;connected=false;closeRoom();message('Ведущий исключил вас из комнаты. Повторный вход по этому коду недоступен.',true);});
  client.on('room_closed',()=>{if(net!==client)return;closeRoom();message('Комната закрылась.',true);});
 }
 async function connect(kind,code=''){
@@ -801,7 +804,8 @@ app.addEventListener('click',event=>{
    if(!player||player.id===me?.id)return;
    app.querySelector('.player-popover')?.remove();
    const pop=document.createElement('div');pop.className='player-popover';pop.setAttribute('role','dialog');
-   pop.innerHTML='<div class="player-popover-head"><strong>'+esc(player.character||player.name)+'</strong><button type="button" data-action="close-player-actions" aria-label="Закрыть">×</button></div>'+(!playerOnline(player)||player.bankrupt||state.you.bankrupt?'<p>Обмен недоступен</p>':'<button type="button" class="primary" data-action="trade-with" data-player="'+esc(player.id)+'">'+svgIcon('trade',20)+' Обмен / подарок</button>')+'<button type="button" data-action="open-sheet" data-sheet="players">'+svgIcon('people',19)+' Участники</button>';
+   pop.innerHTML='<div class="player-popover-head"><strong>'+esc(player.character||player.name)+'</strong><button type="button" data-action="close-player-actions" aria-label="Закрыть">×</button></div>'+(!playerOnline(player)||player.bankrupt||state.you.bankrupt?'<p>Обмен недоступен</p>':'<button type="button" class="primary" data-action="trade-with" data-player="'+esc(player.id)+'">'+svgIcon('trade',20)+' Обмен / подарок</button>')+'<button type="button" data-action="open-sheet" data-sheet="players">'+svgIcon('people',19)+' Участники</button>'+
+   (state.host===me?.id&&!player.bankrupt?'<button type="button" class="kick-player" data-action="kick-player" data-player="'+esc(player.id)+'">'+svgIcon('close',18)+' Исключить из партии</button>':'');
    btn.closest('.player-seats')?.append(pop);sound.play('open');pop.querySelector('button')?.focus({preventScroll:true});return;
   }
   if(action==='close-player-actions'){app.querySelector('.player-popover')?.remove();return;}
@@ -836,6 +840,13 @@ app.addEventListener('click',event=>{
  }
  if(action==='copy-code')return copy(roomId.slice(0,8).toUpperCase());
  if(action==='copy-url')return copy(new URL('./?room='+encodeURIComponent(roomId),location.href).href);
+ if(action==='kick-player'){
+  const target=state?.players?.find(p=>p.id===btn.dataset.player);
+  if(state?.host!==me?.id||!target||target.id===me?.id||target.bankrupt)return;
+  if(confirm('Исключить «'+target.name+'» из комнаты? Вернуться в эту комнату с прежнего аккаунта он не сможет.'))
+   request({type:'kick',targetId:target.id});
+  return;
+ }
  if(action==='leave'){
   if(state?.phase==='play'&&!confirm('Покинуть текущую партию?'))return;
   closeRoom();return;
