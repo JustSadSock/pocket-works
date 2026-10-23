@@ -100,7 +100,7 @@ export class PocketNetHub {
   projectedState(room,player){
     const mod=this.module(room.gameId,room.version);
     if(!mod)throw Error('room_version_unavailable');
-    return playerRoomView(mod,room.state,player,room.players);
+    return playerRoomView(mod,room.state,player,room.players,room.gameId==='chyepukha'&&room.version==='v6'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined);
   }
   joined(ws,room,player){
     const state=this.projectedState(room,player);
@@ -163,16 +163,19 @@ export class PocketNetHub {
   // curator and removing the guest from its own lobby state. Transport removes
   // the seat even if the kicked browser ignores the notification.
   async applyKicks(room, events, actorId) {
-    if (room.gameId !== 'zamazka' || (!room.state?.paused&&room.state?.phase !== 'lobby') || room.state?.host !== actorId) return;
+    const zamazka=room.gameId==='zamazka'&&(room.state?.paused||room.state?.phase==='lobby')&&room.state?.host===actorId;
+    const chyepukha=room.gameId==='chyepukha'&&room.version==='v6'&&room.state?.host===actorId;
+    if(!zamazka&&!chyepukha)return;
     let changed = false;
     for (const event of events ?? []) {
       if (event?.type !== 'player_kicked' || typeof event.to !== 'string') continue;
       const targetId = event.to;
-      if (targetId === actorId || room.state.participants?.some(p => p.id === targetId) ||
+      if (targetId === actorId || (zamazka&&room.state.participants?.some(p=>p.id===targetId)) ||
+          (chyepukha&&!(room.state.bannedIds||[]).includes(targetId)) ||
           !room.players.some(p => p.id === targetId)) continue;
       const socket = this.connected(targetId, room.id);
       if (socket) {
-        message(socket, 'room_kicked', { roomId: room.id, reason: 'curator' });
+        message(socket, 'room_kicked', { roomId: room.id, reason:chyepukha?'host':'curator' });
         this.setRoom(socket, null);
       }
       room.players = room.players.filter(p => p.id !== targetId);
@@ -187,6 +190,14 @@ export class PocketNetHub {
   // PocketNet preserves authenticated seats after a socket disconnect. For v21+
   // rooms, freeze the authoritative deadline as soon as the last socket closes.
   // A room stays paused across Durable Object hibernation and server restarts.
+  async updateChyepukhaPresence(room,player,online){
+    if(room.gameId!=='chyepukha'||room.version!=='v6')return;
+    const mod=this.module(room.gameId,room.version);
+    if(!mod?.onPresence)return;
+    const onlineIds=this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean);
+    const result=await mod.onPresence({state:copied(room.state),player,online,onlineIds,now:Date.now()});
+    if(result?.state){room.state=result.state;this.persist(room);this.emit(room,result.events||[])}
+  }
   async updateBazaarPresence(room,player,online){
     if(room.gameId!=='black-bazaar')return;
     const mod=this.module(room.gameId,room.version);
@@ -241,10 +252,10 @@ export class PocketNetHub {
     let state,roomPlayers;
     try{
       state=JSON.parse(row.state);roomPlayers=JSON.parse(row.players);
-      if(row.game_id==='chyepukha'&&row.version==='v5'&&
+      if(row.game_id==='chyepukha'&&['v5','v6'].includes(row.version)&&
          (!state||state.schema!==1||!Array.isArray(state.sheets)))throw Error('invalid_chyepukha_state');
     }catch(error){
-      if(row.game_id!=='chyepukha'||row.version!=='v5')throw error;
+      if(row.game_id!=='chyepukha'||!['v5','v6'].includes(row.version))throw error;
       const backups=this.sql('SELECT state,players FROM chyepukha_checkpoints WHERE room_id=? ORDER BY revision DESC LIMIT 4',id).toArray();
       let recovered=false;
       for(const backup of backups){
@@ -323,7 +334,7 @@ export class PocketNetHub {
         VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET state=excluded.state, players=excluded.players, updated_at=excluded.updated_at`,
         room.id,room.gameId,room.version,encoded,players,room.createdAt,room.updatedAt);
-      if(room.gameId==='chyepukha'&&room.version==='v5'&&room.state.phase!=='lobby'){
+      if(room.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&room.state.phase!=='lobby'){
         this.sql(`INSERT INTO chyepukha_checkpoints (room_id,revision,state,players,saved_at)
           VALUES (?,?,?,?,?) ON CONFLICT(room_id,revision) DO UPDATE SET state=excluded.state,players=excluded.players,saved_at=excluded.saved_at`,
           room.id,Number(room.state.revision)||0,encoded,players,room.updatedAt);
@@ -605,6 +616,8 @@ export class PocketNetHub {
           const mod = this.module(room.gameId, room.version);
           if (!mod) throw new Error('room_version_unavailable');
           const previous = room.players.some(p => p.id === player.id);
+          if(room.gameId==='chyepukha'&&room.version==='v6'&&
+             ((room.state.bannedIds||[]).includes(player.id)||(member.accountId&&(room.state.bannedAccounts||[]).includes(member.accountId))))throw Error('room_kicked');
           if (!previous && member.accountId && room.players.some(p => p.accountId === member.accountId)) {
             throw new Error('account_already_in_room');
           }
@@ -612,7 +625,8 @@ export class PocketNetHub {
             if (room.players.length >= MAX_PLAYERS) throw new Error('room_full');
             room.players.push(member);
             const result = mod.onJoin
-              ? await mod.onJoin({ state: copied(room.state), player: member, players: room.players, payload: null })
+              ? await mod.onJoin({ state: copied(room.state), player: member, players: room.players,
+                   payload:room.gameId==='chyepukha'&&room.version==='v6'?{claimCode:typeof msg.claimCode==='string'?msg.claimCode.slice(0,40):''}:null })
               : { state: room.state, events: [] };
             if (!result || !('state' in result)) throw new Error('invalid_module_state');
             room.state = result.state;
@@ -621,6 +635,7 @@ export class PocketNetHub {
             this.joined(ws,room,member);
             this.emit(room, result.events ?? []);
             await this.refreshZamazkaPresence(room);
+            await this.updateChyepukhaPresence(room,member,true);
           } else {
             // Reconnecting with the same durable token keeps the same seat while
             // propagating a freshly verified nickname/avatar into room snapshots.
@@ -637,6 +652,7 @@ export class PocketNetHub {
             await this.updateBazaarPresence(room,member,true);
             this.joined(ws,room,member);
             await this.refreshZamazkaPresence(room);
+            await this.updateChyepukhaPresence(room,member,true);
           }
           this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
           return;
@@ -662,6 +678,9 @@ export class PocketNetHub {
         if (msg.type === 'game_message') {
           const result = await mod.onMessage({ state: copied(room.state), player: member,
             players: room.players, payload: msg.payload,
+            ...(room.gameId==='chyepukha'&&room.version==='v6'?{
+              connectedIds:this.sockets(room.id).map(peer=>peer.deserializeAttachment()?.id).filter(Boolean),now:Date.now()
+            }:{}),
             ...(room.gameId==='blockies'?{
               connectedIds:[...new Set(this.sockets(room.id).map(peer=>peer.deserializeAttachment()?.id).filter(Boolean))]
             }:{}) });
@@ -679,8 +698,9 @@ export class PocketNetHub {
           if(!readOnlyZamazka)this.persist(room);
           this.recordZamazkaRewards(room,prior,room.state,result.events ?? [],player.id);
           this.recordBlockiesRewards(room,prior,room.state);
+          if(room.gameId==='chyepukha'&&room.version==='v6')await this.applyKicks(room,result.events ?? [],player.id);
           this.emit(room, result.events ?? []);
-          await this.applyKicks(room, result.events ?? [], player.id);
+          if(!(room.gameId==='chyepukha'&&room.version==='v6'))await this.applyKicks(room, result.events ?? [], player.id);
           await this.flushAwards();
           if (result.finished) await this.closeRoom(room);
           return;
@@ -693,7 +713,7 @@ export class PocketNetHub {
           if (!result || !('state' in result)) throw new Error('invalid_module_state');
           room.state = result.state;
           this.setRoom(ws, null);
-          const keepVacant=room.gameId==='chyepukha'&&room.version==='v5'&&
+          const keepVacant=room.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&
             (room.state.phase==='writing'||room.state.phase==='finished');
           if (!room.players.length&&!keepVacant) await this.closeRoom(room);
           else {
@@ -730,6 +750,7 @@ export class PocketNetHub {
         if(!stillConnected){
           this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined, disconnected: info.id });
           await this.updateBazaarPresence(room,{id:info.id},false);
+          await this.updateChyepukhaPresence(room,{id:info.id},false);
         }
         await this.refreshZamazkaPresence(room);
         this.ensureAlarm();
@@ -744,8 +765,8 @@ export class PocketNetHub {
     const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
     for (const row of rows) {
       const room = this.readRoom(row.id);
-      const ttl=room?.gameId==='chyepukha'&&room.version==='v5'&&room.state?.phase==='writing' ? 72*60*60_000
-        : room?.gameId==='chyepukha'&&room.version==='v5'&&room.state?.phase==='finished' ? 7*24*60*60_000
+      const ttl=room?.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&room.state?.phase==='writing' ? 72*60*60_000
+        : room?.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&room.state?.phase==='finished' ? 7*24*60*60_000
         : room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000
         : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000 : ROOM_TTL;
       if(now-row.updated_at<ttl||this.sockets(row.id).length)continue;
