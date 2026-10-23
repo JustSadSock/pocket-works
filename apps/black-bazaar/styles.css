@@ -772,3 +772,45 @@ body.sheet-open{overflow:auto}
  .player-popover{max-width:calc(100vw - 28px);overflow-x:hidden}
 }
 @media(max-width:390px){.table-stage .mini-artifacts{gap:2px}.table-stage .mini-artifacts button{flex:0 1 59px;max-width:59px;min-width:0}.table-stage .mini-artifacts button .item-svg{max-width:100%;height:auto;aspect-ratio:1}.urgent-ticket{overflow:hidden}}
+
+/* Layout hardening: task ticket must not collapse the table or force page scroll. */
+.play-screen{min-width:0}
+.play-head>*{flex-shrink:0}
+.play-body{min-height:0;min-width:0}
+.play-field{min-width:0;overflow:visible}
+.workspace-panel{min-height:0;min-width:0}
+.sheet-content{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.sheet-page[hidden]{display:none!important}
+.urgent-ticket{flex:0 0 auto}
+@media(max-width:680px) and (orientation:portrait){
+ .play-screen{height:calc(100dvh - 60px - env(safe-area-inset-bottom));min-height:0;overflow:hidden}
+ .play-body{flex:1 1 auto;min-height:0;grid-template-rows:minmax(172px,38%) minmax(0,1fr)}
+ .play-field{min-height:0;height:100%;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+ .player-seats{flex:0 1 auto;max-height:none;gap:2px;margin:0 0 2px}
+ .table-stage{flex:1 1 auto;min-height:0;gap:2px;padding:0}
+ .table-stage .artifact{flex:0 1 auto;min-height:0}
+ .table-stage .artifact .item-svg{height:clamp(42px,8vh,77px);width:auto;max-width:85px}
+ .table-stage .mini-artifacts{flex:0 0 auto;gap:2px}
+ .table-stage .mini-artifacts button{min-height:42px;max-height:54px}
+ .table-stage .mini-artifacts button .item-svg{height:29px;width:29px}
+ .bottom-ribbon{flex:0 0 auto}
+ .workspace-panel{height:100%;overflow:hidden;display:flex;flex-direction:column}
+ .workspace-tabs,.workspace-panel .sheet-heading{flex:none}
+ .sheet-content{flex:1 1 auto;overflow-y:auto}
+ .urgent-ticket{min-height:32px;margin-bottom:2px;padding:3px 8px}
+ .player-popover{position:fixed;left:50%;top:30%;max-height:45dvh;z-index:80}
+}
+@media(max-width:680px) and (orientation:portrait) and (max-height:670px){
+ .play-head{min-height:31px}
+ .play-head h1{font-size:15px}
+ .currency-strip{margin:0 0 2px}
+ .currency{min-height:30px;padding:2px 3px}
+ .wallet-values em{display:none}
+ .wallet-delta{font-size:10px;padding:1px}
+ .play-body{grid-template-rows:minmax(143px,34%) minmax(0,1fr)}
+ .seat-portrait{height:31px;width:31px}
+ .seat strong,.seat small{font-size:8px}
+ .workspace-tab{min-height:32px;padding:3px}
+ .workspace-tabs{padding:3px}
+ .sheet-content{padding-bottom:max(8px,env(safe-area-inset-bottom))}
+}
