@@ -222,6 +222,7 @@ function updateTacticalHud(a){
  $('tactic-mage').textContent=m.name;
  $('tactic-school').textContent=({fire:'Пиромантия',storm:'Грозовая магия',stone:'Каменная магия'}[m.school]||m.school)+' · '+(ARCHETYPES.find(x=>x.id===a.archetype)?.name||'Стрелок');
  $('tactic-attack').textContent=ATTACK_NAMES[a.mageId]||'ЗАКЛИНАНИЕ';
+ const special=CLASS_SPELLS.find(x=>x.id===(a.archetype||'striker'));$('tactic-special').textContent=special.name;$('tactic-special-ready').textContent=(a.specialCd||0)>0?(a.specialCd.toFixed(1)+' С'):'ГОТОВО';
  renderTacticalAbility('cast',a.cast,stats(a).reload);
  renderTacticalAbility('shield',a.shieldReady,5);
  renderTacticalAbility('dash',a.dashReady,2.5);
