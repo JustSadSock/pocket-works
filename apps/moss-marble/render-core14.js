@@ -1325,18 +1325,23 @@ class CanvasFallback {
     ctx.restore();
   }
 
-  drawBarrier(wall) {
+  drawBarrier(wall, field) {
     const ctx = this.ctx;
-    const a = this.worldToScreen(wall.ax, wall.ay, 1);
-    const b = this.worldToScreen(wall.bx, wall.by, 1);
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineWidth = Math.max(3, Number(wall.thickness || 18) * this.scale);
-    ctx.strokeStyle = wall.material === 'brass' ? '#a78448' : wall.material === 'stone' ? '#6f7165' : wall.material === 'glass' ? 'rgba(186,216,204,.72)' : '#604329';
-    ctx.beginPath(); ctx.moveTo(a.x + 2, a.y + 4); ctx.lineTo(b.x + 2, b.y + 4); ctx.stroke();
-    ctx.lineWidth *= .52;
-    ctx.strokeStyle = wall.material === 'stone' ? '#aaa993' : wall.material === 'glass' ? 'rgba(222,241,231,.82)' : '#a47b46';
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    const height = Number(wall.visualHeight || 28);
+    const topA = this.worldToScreen(wall.ax, wall.ay, (field?.heightAt?.(wall.ax, wall.ay) || 0) + height);
+    const topB = this.worldToScreen(wall.bx, wall.by, (field?.heightAt?.(wall.bx, wall.by) || 0) + height);
+    const width = Math.max(3, Number(wall.thickness || 18) * this.scale);
+    const stone = wall.material === 'stone', metal = wall.material === 'brass';
+    ctx.save();ctx.lineCap = 'butt';ctx.lineJoin = 'round';
+    ctx.strokeStyle = stone ? '#444e46' : metal ? '#775c32' : '#483425';
+    ctx.lineWidth = width;
+    ctx.beginPath();ctx.moveTo(topA.x,topA.y);ctx.lineTo(topB.x,topB.y);ctx.stroke();
+    ctx.strokeStyle = stone ? '#a0a793' : metal ? '#d2b06b' : '#aa8152';
+    ctx.lineWidth = width * .70;
+    ctx.beginPath();ctx.moveTo(topA.x,topA.y - 1);ctx.lineTo(topB.x,topB.y - 1);ctx.stroke();
+    ctx.strokeStyle = stone ? 'rgba(53,59,49,.30)' : 'rgba(62,42,23,.40)';
+    ctx.lineWidth = Math.max(.8, width * .12);
+    ctx.beginPath();ctx.moveTo(topA.x + 1,topA.y - 1);ctx.lineTo(topB.x + 1,topB.y - 1);ctx.stroke();
     ctx.restore();
   }
   drawPortal(endpoint, isEntry, field) {
@@ -1485,7 +1490,7 @@ class CanvasFallback {
     const field = level.course18?.field;
     for (const mask of field?.masks || []) this.drawSurface(mask);
     for (const landform of field?.landforms || []) this.drawLandform(landform);
-    for (const wall of level.course18?.barriers || level.walls || []) this.drawBarrier(wall);
+    for (const wall of level.course18?.barriers || level.walls || []) this.drawBarrier(wall, field);
     for (const tunnel of level.course18?.tunnelVisuals || []) {
       if (tunnel.entry) this.drawPortal(tunnel.entry, true, field);
       if (tunnel.exit) this.drawPortal(tunnel.exit, false, field);
@@ -1495,7 +1500,7 @@ class CanvasFallback {
       const angle = rotor.angle + time * rotor.speed;
       const halfX = Math.cos(angle) * rotor.length * .5;
       const halfY = Math.sin(angle) * rotor.length * .5;
-      this.drawBarrier({ ax: rotor.x - halfX, ay: rotor.y - halfY, bx: rotor.x + halfX, by: rotor.y + halfY, thickness: rotor.thickness, material: rotor.material });
+      this.drawBarrier({ ax: rotor.x - halfX, ay: rotor.y - halfY, bx: rotor.x + halfX, by: rotor.y + halfY, thickness: rotor.thickness, visualHeight: 31, material: rotor.material }, field);
     }
     const holeGround = level.course18?.field?.heightAt?.(level.hole.x, level.hole.y) || 0;
     const hole = this.worldToScreen(level.hole.x, level.hole.y, holeGround + .5);
