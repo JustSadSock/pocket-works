@@ -23,6 +23,7 @@ import {
 import { chooseAiCard } from "../shared/ai.js";
 import { planTurnFilm, soundForFrame, PHASE_ORDER, PHASE_LABELS } from "./choreography.js";
 import { playCourtSound, COURT_SOUNDS } from "./soundscape.js";
+import { VISION_PHASES, createCounselVision, selectedVisionResult, selectedVisionFrame, alternateVisionFrame, visionPaths, visionGhosts, visionDifference } from "./counsel-vision.js";
 
 const root = document.getElementById("app");
 
@@ -343,15 +344,33 @@ function recordResolution(resolution,isOnline=false){
  if(isOnline)app.online.lastLogs=resolution.logs;else app.local.lastLogs=resolution.logs;
 }
 
-function openForecast(){
+function openForecast() {
  const state=currentState();
- if(!state||app.replayActive||state.winner)return;
- const viewer=getViewerPlayer();
- const cardId=app.selectedCardId||null;
- const result=forecastTurn(state,cardId?viewer:null,cardId);
- app.forecast={before:structuredClone(state),after:result.state,logs:result.logs,cardId};
- app.forecastReview=true;
+ if(!state||app.replayActive||app.film?.active||state.winner)return;
+ if(app.screen==="online" && app.online.ready[getViewerPlayer()])return;
+ if(app.local.waitingAi || app.local.passScreen)return;
+ const player=getViewerPlayer(),cardId=app.selectedCardId||null;
+ app.forecast=createCounselVision(state,player,cardId,forecastTurn);
+ app.forecastReview=false;
+ app.lastBoardPositions={};
  render();
+}
+
+function visionStepTo(step){
+ if(!app.forecast)return;
+ const next=Math.min(VISION_PHASES.length-1,Math.max(0,Number(step)||0));
+ app.forecast.step=next;app.forecastReview=next===VISION_PHASES.length-1;
+ render();
+}
+function visionChooseSide(side){
+ if(!app.forecast)return;
+ if(side==="proposed"&&!app.forecast.proposed)return;
+ if(!["current","proposed"].includes(side))return;
+ app.forecast.side=side;
+ render();
+}
+function closeVision(){
+ app.forecast=null;app.forecastReview=false;app.lastBoardPositions={};render();
 }
 
 function confirmSelection() {
@@ -532,7 +551,7 @@ function boardHTML(state) {
   const cls=["piece",`piece--${piece.kind}`,piece.owner==="p1"?"piece--p1":piece.owner==="p2"?"piece--p2":"",piece.shield?"piece--shielded":"",piece.stun?"piece--stunned":"",piece.carryingSeal?"piece--sealed":"",app.inspectedSlot===piece.kind?"piece--focused":"",(app.film?.active?app.film.frames[app.film.index].moves:(app.debug.open?app.debug.round?.frames[app.debug.round.index]?.moves:null))?.some(m=>m.pieceId===piece.id)?"piece--performing":""].filter(Boolean).join(" ");
   return `<button type="button" class="${cls}" data-piece-kind="${piece.kind}" data-piece-id="${piece.id}" title="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" aria-label="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" style="--x:${piece.x};--y:${piece.y}"><span class="piece__token">${pieceGlyph(piece)}${piece.shield?'<span class="piece__status piece__status--shield" title="Щит">✦</span>':""}${piece.stun?'<span class="piece__status piece__status--stun" title="Оглушение">✕</span>':""}${piece.carryingSeal?'<span class="piece__status piece__status--seal" title="Похищенная печать">◇</span>':""}</span></button>`;
  }).join("");
- return `<section class="board-panel"><div class="board-caption"><span class="board-caption__title">Королевский двор</span><span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span></div><div class="board-surround"><div class="board"><div class="board-grid">${cells.join("")}</div><div class="board-glow"></div><div class="board-effects">${effectsHTML()}</div>${pieces}</div></div></section>`;
+ return `<section class="board-panel"><div class="board-caption"><span class="board-caption__title">Королевский двор</span><span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span></div><div class="board-surround"><div class="board"><div class="board-grid">${cells.join("")}</div>${visionBoardOverlayHTML()}<div class="board-glow"></div><div class="board-effects">${effectsHTML()}</div>${pieces}</div></div></section>`;
 }
 
 function lawSlotsHTML(state) {
@@ -562,9 +581,55 @@ function detailCard(state) {
   </section>`;
 }
 
-function forecastControlsHTML(){
- if(!app.forecast)return "";
- return `<div class="forecast-control" role="status"><span class="forecast-control__symbol">◈</span><div><strong>Условный ход · ${app.forecastReview?"после":"до"}</strong><span>${app.forecast.cardId?"Соперник не меняет закон":"Оба сохраняют законы"}</span></div><button type="button" class="ghost-btn" data-action="forecast-toggle">${app.forecastReview?"↶ Начало":"→ Результат"}</button><button type="button" class="text-btn" data-action="forecast-close" aria-label="Закрыть прогноз">×</button></div>`;
+function forecastControlsHTML() {
+ const v=app.forecast;if(!v)return "";
+ const f=selectedVisionFrame(v),dif=visionDifference(v);
+ const events=f?.logs||[];
+ const prominent=events.filter(entry=>!["crown-check","hold"].includes(entry.kind)).slice(0,2);
+ const label=v.proposed? "Два условных сценария": "Текущие законы без новых указов";
+ const currentSelected=v.side==="current",chosenSelected=v.side==="proposed";
+ const status=v.proposed?`Фигуры: ${dif.moved} · Короны: ${dif.crowns} · Щиты: ${dif.shields}`:"Обе стороны сохраняют действующие законы";
+ return `<section class="vision" aria-label="Видение советника">
+ <div class="vision__heading">
+  <span class="vision__icon" aria-hidden="true">◇</span>
+  <div class="vision__intro"><strong>Видение советника</strong><small>${label} · ${status}</small></div>
+  <button type="button" class="vision__close" data-action="forecast-close" aria-label="Закрыть видение">×</button>
+ </div>
+ <div class="vision__controls">
+  <div class="vision__scenarios" role="group" aria-label="Сценарий">
+   <button type="button" data-action="vision-mode" data-mode="current" class="${currentSelected?"is-active":""}" aria-pressed="${currentSelected}">Как сейчас</button>
+   <button type="button" data-action="vision-mode" data-mode="proposed" class="${chosenSelected?"is-active":""}" aria-pressed="${chosenSelected}" ${v.proposed?"":"disabled"}>С моим указом</button>
+  </div>
+  <div class="vision__nav">
+   <button type="button" data-action="vision-previous" aria-label="Предыдущая фаза" ${v.step===0?"disabled":""}>‹</button>
+   <strong>${VISION_PHASES[v.step][1]}</strong>
+   <button type="button" data-action="vision-next" aria-label="Следующая фаза" ${v.step===VISION_PHASES.length-1?"disabled":""}>›</button>
+  </div>
+ </div>
+ <div class="vision__timeline" role="group" aria-label="Этапы условного хода">
+  ${VISION_PHASES.map(([phase,name],i)=>`<button type="button" class="${v.step===i?"is-active":""} ${v.step>i?"is-past":""}" data-action="vision-step" data-step="${i}" aria-current="${v.step===i?"step":"false"}" title="${name}"><span>${i===0?"◉":i===8?"♛":i}</span><small>${name}</small></button>`).join("")}
+ </div>
+ <div class="vision__events" aria-live="polite">
+  <span class="vision__events-label">${f?.moves?.length?"Маршруты фигур показаны на поле":v.step===0?"Исходное положение":"Действие закона"}</span>
+  <span class="vision__events-text">${prominent.map(entry=>entry.text).join(" · ")||"На этой фазе изменений нет."}</span>
+ </div>
+ <div class="vision__disclaimer"><span aria-hidden="true">!</span> Не предсказание: соперник не меняет закон. Его скрытый указ неизвестен. Призрачные фигуры — разница между двумя сценариями.</div>
+ </section>`;
+}
+
+function visionBoardOverlayHTML() {
+ const v=app.forecast;if(!v)return "";
+ const current=selectedVisionFrame(v),alternate=alternateVisionFrame(v);
+ const routes=visionPaths(current),ghosts=visionGhosts(current,alternate);
+ const svg=`<svg viewBox="0 0 500 700" preserveAspectRatio="none" aria-hidden="true">
+ <defs><marker id="vision-arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#f4d49a"/></marker></defs>
+ ${routes.map(path=>`<path class="vision-route ${path.style==="push"?"vision-route--push":""}" d="${path.path}" marker-end="url(#vision-arrowhead)"/><circle class="vision-route__origin" cx="${path.from.x*100+50}" cy="${path.from.y*100+50}" r="6"/>`).join("")}
+ </svg>`;
+ return `<div class="vision-overlay" aria-hidden="true">${svg}
+ ${ghosts.map(p=>{
+  const key=p.kind==="champion"?(p.owner==="p1"?"north":"south"):p.kind;
+  return `<span class="vision-ghost sprite-figure--${key}" style="--gx:${p.x};--gy:${p.y}"></span>`;
+ }).join("")}</div>`;
 }
 
 function handHTML(state) {
@@ -745,7 +810,7 @@ function filmHTML() {
 function gameHTML(state, eyebrow) {
   const viewer = getViewerPlayer();
   const chooserLabel = app.local.mode === "hotseat" ? (viewer === "p1" ? "Север выбирает указ" : "Юг выбирает указ") : eyebrow;
-  const displayState=app.film?.active?app.film.frames[app.film.index].state:(app.forecast?(app.forecastReview?app.forecast.after:app.forecast.before):(app.replayActive&&app.replayStage==="before"&&app.replay?app.replay.before:state));
+  const displayState=app.film?.active?app.film.frames[app.film.index].state:(app.forecast?(selectedVisionFrame(app.forecast)?.state||state):(app.replayActive&&app.replayStage==="before"&&app.replay?app.replay.before:state));
   return `
     <div class="game-shell">
       <div class="game-shell__frame">
@@ -1008,7 +1073,7 @@ function restoreLocal() {
 }
 
 function animateBoard() {
-  const state = app.film?.active ? app.film.frames[app.film.index].state : (app.forecast ? (app.forecastReview ? app.forecast.after : app.forecast.before) : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState()));
+  const state = app.film?.active ? app.film.frames[app.film.index].state : (app.forecast ? selectedVisionFrame(app.forecast)?.state : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState()));
   if (!state) return;
   const nextPositions = Object.fromEntries(Object.values(state.pieces).map(piece => [piece.id, {x:piece.x,y:piece.y}]));
   const board = root.querySelector('.board');
@@ -1138,9 +1203,17 @@ root.addEventListener("click", (event) => {
       case "forecast-open":
         openForecast();break;
       case "forecast-toggle":
-        app.forecastReview=!app.forecastReview;render();break;
+        visionStepTo(app.forecast?.step===0?VISION_PHASES.length-1:0);break;
       case "forecast-close":
-        app.forecast=null;app.forecastReview=false;render();break;
+        closeVision();break;
+      case "vision-mode":
+        visionChooseSide(action.dataset.mode);break;
+      case "vision-previous":
+        visionStepTo((app.forecast?.step||0)-1);break;
+      case "vision-next":
+        visionStepTo((app.forecast?.step||0)+1);break;
+      case "vision-step":
+        visionStepTo(action.dataset.step);break;
       case "clear-inspection":
         app.focusCardId=null; app.selectedCardId=null; app.inspectedSlot=null; render();
         break;
