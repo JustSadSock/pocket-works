@@ -45,8 +45,8 @@ export function firstCollision(s,x,y,dx,dy,r,owner,{actors=false,skipBarrier=-1}
  }
  return best;
 }
-export function rayCollision(s,x,y,angle,distance,r=3,owner=null){
+export function rayCollision(s,x,y,angle,distance,r=3,owner=null,actors=false){
  const dx=Math.cos(angle)*distance,dy=Math.sin(angle)*distance;
- const hit=firstCollision(s,x,y,dx,dy,r,owner);
+ const hit=firstCollision(s,x,y,dx,dy,r,owner,{actors});
  return {length:hit?Math.max(0,distance*hit.t):distance,hit};
 }
