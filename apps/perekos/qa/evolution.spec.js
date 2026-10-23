@@ -36,3 +36,20 @@ test('classic duel keeps its original single-route rune draft',async({page})=>{
  await page.evaluate(()=>{const s=window.__perekosTest.state;s.remaining=1/120;window.__perekosTest.step()});
  await expect(page.locator('#draft')).toBeVisible();await expect(page.locator('#draft-path')).toBeHidden();
 });
+
+test('grimoire retains the evolved form and can replay it offline',async({page})=>{
+ await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ await page.locator('#mode-rupture').click();await page.locator('#primary-action').click();
+ await page.evaluate(()=>{const s=window.__perekosTest.state;s.remaining=540+1/120;window.__perekosTest.step();window.__perekosTest.step()});
+ await expect(page.locator('#draft')).toBeVisible();
+ await page.locator('#evo-path-mutate').click();await page.locator('.evo-offer-beam').click();
+ await expect(page.locator('#build')).toBeVisible();
+ await page.locator('#bench-save').click();
+ await page.locator('#bench-fight').click();await expect(page.locator('#hud')).toBeVisible();
+ await page.locator('#pause-btn').click();await page.locator('#quit').click();await page.locator('#quit-yes').click();
+ await page.locator('#open-grimoire').click();await expect(page.locator('#books')).toBeVisible();
+ await expect(page.locator('#book-list')).toContainText('Разящий луч');
+ await page.locator('#book-list .book-row button').first().click();
+ await expect(page.locator('#hud')).toBeVisible();
+ expect(await page.evaluate(()=>window.__perekosTest.state.actors[0].evolution)).toEqual({form:'beam',level:1});
+});
