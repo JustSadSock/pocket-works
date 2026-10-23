@@ -54,7 +54,7 @@ test('All 13 art motifs render independently at every supported presentation siz
  for(const size of [40,80,180])for(const name of names){
   const svg=artifactSVG(name,'редкий');
   assert.match(svg,/viewBox="0 0 180 180"/);
-  assert.match(svg,/<\\/svg>$/);
+  assert.ok(svg.endsWith('</svg>'));
   assert.ok(svg.length>320,name+' at '+size+'px');
   assert.doesNotMatch(svg,/cx="92" cy="166" rx="70"/);
   assert.doesNotMatch(svg,/<rect[^>]+width="180"[^>]+height="180"/);
