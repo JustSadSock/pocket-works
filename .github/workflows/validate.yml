@@ -161,6 +161,12 @@ jobs:
       - name: Test ZAMAZKA multipart paintings and PocketNet frame limit
         run: node apps/zamazka/qa/large-painting.mjs
 
+      - name: Test ZAMAZKA final transfer checksum and interrupted upload recovery
+        run: node apps/zamazka/qa/final-transfer-recovery.mjs
+
+      - name: Test eight interleaved ZAMAZKA artwork uploads
+        run: node apps/zamazka/qa/eight-player-transfer.mjs
+
       - name: Test ZAMAZKA smudge, uninterrupted strokes and touch budgets
         run: node apps/zamazka/qa/editor-input.mjs && node apps/zamazka/qa/smudge.mjs
 
