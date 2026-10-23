@@ -688,3 +688,10 @@ body.sheet-open{overflow:auto}
  .workspace-panel .sheet-heading h2{font-size:17px}
 }
 @media(prefers-reduced-motion:reduce){.sheet-enter .sheet-page:not([hidden]){animation:none}}
+
+.table-stage .mini-artifacts button{background:transparent!important;border:1px solid transparent!important;box-shadow:none!important;border-radius:10px;color:#ffe1ac;text-shadow:0 1px 3px #1d100c;padding:3px!important}
+.table-stage .mini-artifacts button:hover:not(:disabled),.table-stage .mini-artifacts button:focus-visible{background:#ffdd9b19!important;border-color:#efc98799!important}
+.player-seats{isolation:isolate}.player-popover{position:absolute;z-index:30;top:calc(100% - 24px);left:50%;transform:translateX(-50%);width:min(300px,90vw);display:grid;gap:7px;padding:12px;border:2px solid #593c28;border-radius:13px;background:#f9e3bd;box-shadow:0 13px 30px #170f0dcc;text-align:left;color:#37261d}
+.player-popover-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.player-popover-head button{min-height:30px;width:32px;padding:0;box-shadow:none}.player-popover>button{display:flex;align-items:center;gap:8px;justify-content:flex-start;box-shadow:none;min-height:42px}
+.quick-expand{border:1px solid #a68054;border-radius:10px;padding:8px 10px;background:#f5d9ab44}.quick-expand summary{display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:800}.quick-expand .detail-offer-form{margin-top:10px}
+@media(max-width:680px){.player-popover{top:calc(100% - 8px)}.currency em{font-size:9px}.wallet-values strong{font-size:14px}.currency{padding:4px 6px}}
