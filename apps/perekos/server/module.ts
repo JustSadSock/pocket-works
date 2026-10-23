@@ -1065,11 +1065,53 @@ function magicV2PracticeModifierFits(action,modifier){
 function magicV2Attack(s,a,target){
  if(a.cast>0||a.stun>0||a.windup)return false;
  a.face=Math.atan2(target.y-a.y,target.x-a.x);
- const school=a.magicSchool,style=school==='stone'?'rock':school==='storm'?'bolt':'orb';
- a.cast=stats(a).reload;
- const ok=spawnShot(s,a,a.face,a.x,a.y,{style,element:school,damage:12,life:1.3,signature:false});
- if(ok){addHeat(s,a,7);emit(s,'on_cast',a.id)}
- return ok;
+ const school=a.magicSchool,form=effectiveMagicForm(s.magicLoadouts?.[a.id]||{slots:[],sealed:[]});
+ const shape=form.ok?form.shape:null,origin=form.ok?form.origin:null;
+ const angle=a.face,forward=(distance,margin=12)=>{
+  // The launch point must be reachable from the caster. Shapes never teleport
+  // through a permanent wall or a temporary opposing barrier.
+  const path=rayCollision(s,a.x,a.y,angle,distance,margin,a.id,false);
+  const d=Math.max(0,Math.min(distance,path.length-margin));
+  return {x:a.x+Math.cos(angle)*d,y:a.y+Math.sin(angle)*d};
+ };
+ let fired=false,extraHeat=0;
+ if(school==='stone'&&shape==='st_form_wave'&&s.waves.length<12){
+  const fromBelow=origin==='st_origin_below',self=origin==='st_origin_self';
+  const at=fromBelow?forward(154):{x:a.x,y:a.y};
+  s.waves.push({owner:a.id,x:at.x,y:at.y,angle,range:fromBelow?65:self?104:130,
+   reach:0,halfAngle:fromBelow||self?Math.PI:.57,life:fromBelow?.68:.34,
+   warmup:fromBelow?.22:0,hit:false,v2Element:'stone',damage:fromBelow?11:13});
+  fx(s,'quake',at.x,at.y);fired=true;extraHeat=7;
+ }else if(school==='fire'&&shape==='fi_form_stream'&&s.waves.length<12){
+  const sky=origin==='fi_origin_sky',self=origin==='fi_origin_self';
+  const at=sky?forward(152):{x:a.x,y:a.y};
+  s.waves.push({owner:a.id,x:at.x,y:at.y,angle,range:sky?62:self?74:105,
+   reach:0,halfAngle:sky||self?Math.PI:.38,life:sky?.66:.34,
+   warmup:sky?.22:0,hit:false,v2Element:'fire',damage:sky?10:8});
+  fx(s,'flame',at.x,at.y);fired=true;extraHeat=6;
+ }else if(school==='storm'&&shape==='li_form_ray'&&s.beams.length<12){
+  const at=origin==='li_origin_pylon'?forward(68,7):{x:a.x,y:a.y};
+  const length=beamLength(s,at.x,at.y,angle,origin==='li_origin_self'?168:220,a.id);
+  s.beams.push({owner:a.id,x:at.x,y:at.y,angle,length,life:.22,style:'evo-beam',element:'storm',width:5});
+  const other=s.actors[1-a.id],dx=other.x-at.x,dy=other.y-at.y;
+  const along=dx*Math.cos(angle)+dy*Math.sin(angle);
+  const sideways=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
+  if(along>=0&&along<=length+9&&sideways<=15){
+   other.shield=Math.max(0,other.shield-3);
+   const damage=harm(s,other,11,a.id);
+   if(damage>0)emit(s,'on_hit',a.id);
+   fx(s,'impact_arc',other.x,other.y);
+  }
+  fx(s,'thunder',at.x,at.y);fired=true;extraHeat=9;
+ }else if(s.shots.length<80){
+  const style=school==='stone'?'rock':school==='storm'?'bolt':'orb';
+  fired=spawnShot(s,a,angle,a.x,a.y,{style,element:school,damage:12,life:1.3,signature:false});
+ }
+ if(fired){
+  a.cast=shape?school==='stone'?.86:school==='fire'?.65:.76:stats(a).reload;
+  addHeat(s,a,7+extraHeat);emit(s,'on_cast',a.id);
+ }
+ return fired;
 }
 function magicV2Action(s,a,act,mods,ev){
  const other=s.actors[1-a.id],school=a.magicSchool;
