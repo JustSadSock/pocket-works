@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Perekos PocketNet v10: both legacy PvP and server-authoritative single-school rune duels.
+// Perekos PocketNet v11: both legacy PvP and server-authoritative single-school rune duels.
 // Six mechanically distinct fighters in three plain-language magic families.
 // This data is frozen into the matching server ruleset version.
 const mageEntry=(id,school,name,trait,description,style,speed,power,reload,shield)=>({id,school,name,trait,description,style,speed,power,reload,shield});
@@ -711,7 +711,7 @@ function validState(s){
  &&(!s.magicModeV2||(s.magicLoadouts?.length===2&&s.magicLoadouts.every(x=>v2SpellAllowed(x))))&&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=10;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=11;
 
 // ---- Immutable PocketNet ruleset 10: generated from reviewed magic-v2 runtime.
 // v9 is preserved separately; 10 retains all its legacy logic for old-style new rooms.
@@ -1321,7 +1321,7 @@ function readyNet(s,i,list){
 }
 function viewForPlayer({state:s,player,players}){
  const i=side(s,player.id);
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:10,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:11,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};
