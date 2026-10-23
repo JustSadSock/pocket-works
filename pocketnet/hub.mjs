@@ -238,6 +238,7 @@ export class PocketNetHub {
     for (const ws of this.sockets(room.id)) message(ws, type, payload);
   }
   readRoom(id) {
+    const startedAt=Date.now();
     const row = this.sql('SELECT * FROM rooms WHERE id = ?', id).toArray()[0];
     if(!row)return null;
     let state,roomPlayers;
@@ -262,6 +263,11 @@ export class PocketNetHub {
     }
     if(row.game_id==='zamazka'){
       const payloads=this.sql('SELECT pkey,payload FROM zamazka_art_payloads WHERE room_id=?',id).toArray();
+      // Room loads deserialize every saved sketch. Quantify this cost without
+      // logging names, strokes, artwork or any other player-supplied contents.
+      const loadMs=Date.now()-startedAt;
+      if(loadMs>=300)console.warn(JSON.stringify({event:'pocketnet_slow_room_metadata',
+        game:'zamazka',durationMs:loadMs,artPayloads:payloads.length}));
       for(const {pkey,payload} of payloads){
         const [kind,user]=pkey.split(':');
         const art=JSON.parse(payload);
@@ -273,10 +279,15 @@ export class PocketNetHub {
       for(const item of Object.values(state.drafts||{}))if(item===ZAMAZKA_ART_REF)throw Error('room_art_missing');
       for(const item of Object.values(state.draftAssemblies||{}))if(item.strokes===ZAMAZKA_ART_REF)throw Error('room_art_missing');
     }
+    const readMs=Date.now()-startedAt;
+    if(row.game_id==='zamazka'&&readMs>=300)
+      console.warn(JSON.stringify({event:'pocketnet_slow_room_hydration',
+        game:'zamazka',durationMs:readMs}));
     return {id:row.id,gameId:row.game_id,version:row.version,
       state,players:roomPlayers,createdAt:row.created_at,updatedAt:row.updated_at};
   }
   persist(room) {
+    const startedAt=Date.now();
     const pieces=[];
     let state=room.state;
     if(room.gameId==='zamazka'){
@@ -333,6 +344,11 @@ export class PocketNetHub {
           (SELECT revision FROM chyepukha_checkpoints WHERE room_id=? ORDER BY revision DESC LIMIT 4)`,room.id,room.id);
       }
     });
+    const writeMs=Date.now()-startedAt;
+    if(room.gameId==='zamazka'&&writeMs>=300)
+      console.warn(JSON.stringify({event:'pocketnet_slow_room_persist',
+        game:'zamazka',durationMs:writeMs,artPayloads:pieces.length,
+        metadataBytes:bytes(encoded)}));
     this.ensureAlarm();
   }
   ensureAlarm() {
