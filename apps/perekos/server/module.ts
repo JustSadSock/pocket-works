@@ -135,6 +135,59 @@ function compilePreview(ids){const info=description(ids);return info.lines.lengt
 
 const W=400,H=620,STEP=1/60,ROUND_SECONDS=25,RUPTURE_SECONDS=600,EVOLUTION_SECONDS=60,COLLAPSE_SECONDS=90;
 const WALLS=[{x:102,y:180,w:64,h:54},{x:232,y:385,w:66,h:56}];
+// Shared pure continuous collision geometry. Identical source is in frozen PocketNet rules.
+const GEOMETRY_EPS=1e-8;
+const COLLISION_WALLS=[{x:102,y:180,w:64,h:54},{x:232,y:385,w:66,h:56}];
+function segmentBox(x,y,dx,dy,r,b){
+ const minX=b.x-r,maxX=b.x+b.w+r,minY=b.y-r,maxY=b.y+b.h+r;
+ let near=-Infinity,far=Infinity,nx=0,ny=0;
+ for(const [pos,delta,lo,hi,axis] of [[x,dx,minX,maxX,'x'],[y,dy,minY,maxY,'y']]){
+  if(Math.abs(delta)<GEOMETRY_EPS){if(pos<lo||pos>hi)return null;continue}
+  const t0=(lo-pos)/delta,t1=(hi-pos)/delta,entry=Math.min(t0,t1),exit=Math.max(t0,t1);
+  if(entry>near){near=entry;nx=axis==='x'?(delta>0?-1:1):0;ny=axis==='y'?(delta>0?-1:1):0}
+  far=Math.min(far,exit);
+  if(near>far)return null;
+ }
+ if(far<0||near>1)return null;
+ return {t:Math.max(0,near),nx,ny,exit:far};
+}
+function segmentCircle(x,y,dx,dy,r,c){
+ const vx=x-c.x,vy=y-c.y,rr=r+c.r,A=dx*dx+dy*dy,C=vx*vx+vy*vy-rr*rr;
+ if(C<=0){const d=Math.hypot(vx,vy)||1;return {t:0,nx:vx/d,ny:vy/d}}
+ if(A<GEOMETRY_EPS)return null;
+ const B=2*(vx*dx+vy*dy),D=B*B-4*A*C;if(D<0)return null;
+ const t=(-B-Math.sqrt(D))/(2*A);if(t<0||t>1)return null;
+ const hx=vx+dx*t,hy=vy+dy*t,d=Math.hypot(hx,hy)||1;
+ return {t,nx:hx/d,ny:hy/d,exit:(-B+Math.sqrt(D))/(2*A)};
+}
+function firstCollision(s,x,y,dx,dy,r,owner,{actors=false,skipBarrier=-1}={}){
+ let best=null;
+ function offer(hit,type,index=-1){if(!hit||hit.t>1||hit.t<0)return;
+  if(!best||hit.t<best.t-1e-7||(Math.abs(hit.t-best.t)<1e-7&&type!=='actor'&&best.type==='actor'))
+    best={...hit,type,index,x:x+dx*hit.t,y:y+dy*hit.t};
+ }
+ const W=400,H=620;
+ offer(segmentBox(x,y,dx,dy,0,{x:-10000,y:-10000,w:10019+r,h:20620}),'edge');
+ offer(segmentBox(x,y,dx,dy,0,{x:381-r,y:-10000,w:10000,h:20620}),'edge');
+ offer(segmentBox(x,y,dx,dy,0,{x:-10000,y:-10000,w:20400,h:10021+r}),'edge');
+ offer(segmentBox(x,y,dx,dy,0,{x:-10000,y:599-r,w:20400,h:10000}),'edge');
+ for(let i=0;i<COLLISION_WALLS.length;i++)offer(segmentBox(x,y,dx,dy,r,COLLISION_WALLS[i]),'wall',i);
+ for(let i=0;i<(s?.barriers?.length||0);i++){
+  if(i===skipBarrier)continue;
+  const b=s.barriers[i];if(b.aperture&&b.owner===owner)continue;
+  offer(segmentCircle(x,y,dx,dy,r,b),'barrier',i);
+ }
+ if(actors&&Number.isInteger(owner)&&s?.actors?.[1-owner]){
+  const t=s.actors[1-owner];if(t.hp>0)offer(segmentCircle(x,y,dx,dy,r,{x:t.x,y:t.y,r:12}),'actor',1-owner);
+ }
+ return best;
+}
+function rayCollision(s,x,y,angle,distance,r=3,owner=null,actors=false){
+ const dx=Math.cos(angle)*distance,dy=Math.sin(angle)*distance;
+ const hit=firstCollision(s,x,y,dx,dy,r,owner,{actors});
+ return {length:hit?Math.max(0,distance*hit.t):distance,hit};
+}
+
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const mag=(x,y)=>Math.hypot(x,y)||1;
@@ -144,7 +197,7 @@ const ARCHETYPES=Object.freeze([{id:'striker',name:'Стрелок',desc:'Чащ
 function validArchetype(id){return ARCHETYPES.some(a=>a.id===id)}
 
 function stats(a){const m=mage(a.mageId),role=a.archetype||'striker';return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power*(role==='striker'?1.025:1),reload:.56*m.reload*(role==='striker'?.98:1),shield:34*m.shield*(role==='shaper'?1.27:1)}}
-function actor(id,x,y,runes,mageId='kindle',archetype='striker'){return {archetype:validArchetype(archetype)?archetype:'striker',evolution:null,fusions:[],id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0,burn:0,burnTick:0,burnSource:null,windup:null,flameCharge:0,respawn:0}}
+function actor(id,x,y,runes,mageId='kindle',archetype='striker'){return {archetype:validArchetype(archetype)?archetype:'striker',evolution:null,fusions:[],id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0,burn:0,burnTick:0,burnSource:null,windup:null,flameCharge:0,respawn:0,specialCd:0}}
 function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId,a.archetype||'striker');o.hp=stats(o).max;o.evolution=a.evolution?{...a.evolution}:null;o.fusions=[...(a.fusions||[])];return o}
 function makeMatch(seed=0x718abc,first='kindle',second='pebble',gameMode='duel',firstArchetype='striker',secondArchetype='striker'){const kind=['rupture','duel','forge'].includes(gameMode)?gameMode:'duel';const s={version:4,gameMode:kind,seed:seed>>>0||1,phase:'fight',round:1,remaining:kind==='rupture'?RUPTURE_SECONDS:kind==='forge'?0:ROUND_SECONDS,forgeDummy:true,elapsed:0,nextEvolution:RUPTURE_SECONDS-EVOLUTION_SECONDS,coreHold:[0,0],overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first,firstArchetype),actor(1,336,134,['on_hurt','armor'],second,secondArchetype)],shots:[],streams:[],beams:[],waves:[],lobs:[],echoes:[],mines:[],barriers:[],fields:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
 const EVOLUTIONS=Object.freeze([{id:'beam',name:'Разящий луч',desc:'Атака выпускает толстый пробивной луч. Уровень усиливает урон и ширину.'},{id:'swarm',name:'Искровой рой',desc:'Атака выпускает веер дополнительных зарядов. Уровень увеличивает их число.'},{id:'field',name:'Грозовое поле',desc:'Атака оставляет опасную зону. Уровень увеличивает её размер и длительность.'}]);
@@ -233,19 +286,14 @@ function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
   style,element,accel:options.signature?(a.mageId==='kindle'?490:a.mageId==='wire'?-380:0):0,
   minSpeed:options.signature&&a.mageId==='kindle'?310:options.signature&&a.mageId==='wire'?300:0,
   damage:Number.isFinite(options.damage)?options.damage:options.clone?6:stats(a).damage*(options.strong?1.6:1),life:options.life??(options.far?1.8:1.15)*(style==='arc'?.84:style==='rock'?1.2:style==='wave'?.65:1),
-  bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?10:style==='wave'?12:style==='rock'?8:style==='bolt'?3:options.clone?4:5,depth:options.depth||0,fusion:options.fusion!==false,evo:!!options.evo});
+  bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?10:style==='wave'?12:style==='rock'?8:style==='bolt'?3:options.clone?4:5,depth:options.depth||0,fusion:options.fusion!==false,evo:!!options.evo,phase:options.phase||0});
  fx(s,'shoot',x,y);return true;
 }
 
 /* Each mage has a distinct physical attack. All hit-tests use the fixed-step
    court geometry; these forms are state, not client-only cosmetic guesses. */
 function mastery(a,id){return compile(a.runes).some(chain=>chain.actions.some(action=>action.mods.includes(id)))}
-function beamLength(s,x,y,angle,range){
- const dx=Math.cos(angle),dy=Math.sin(angle);
- for(let d=8;d<=range;d+=6)if(distWall(x+dx*d,y+dy*d,3)||blocking(s,x+dx*d,y+dy*d,3)
-  ||x+dx*d<22||x+dx*d>W-22||y+dy*d<24||y+dy*d>H-24)return Math.max(0,d-6);
- return range;
-}
+function beamLength(s,x,y,angle,range,owner=null){return rayCollision(s,x,y,angle,range,3,owner).length}
 function insideCone(a,b,angle,reach,halfAngle){
  const dx=b.x-a.x,dy=b.y-a.y,r=Math.hypot(dx,dy);
  return r<=reach+12&&Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-angle),Math.cos(Math.atan2(dy,dx)-angle)))<=halfAngle;
@@ -292,7 +340,7 @@ function updateLobs(s,dt){
   q.height=q.apex*4*p*(1-p);
   if(p<1)continue;
   const target=s.actors[1-q.owner],range=Math.hypot(target.x-q.tx,target.y-q.ty);
-  if(range<q.radius+12){
+  if(range<q.radius+12&&unobstructed(s,q.tx,q.ty,target.x,target.y,q.owner,7)){
    const falloff=range<=13?1:Math.max(.36,1-(range-13)/(q.radius+12)*.65);
    const dealt=harm(s,target,q.damage*falloff,q.owner);
    if(dealt>0){markTarget(s,target,q.element,q.owner);target.slow=Math.max(target.slow,.65);emit(s,'on_hit',q.owner)}
@@ -305,7 +353,7 @@ function flame(s,a,target){
  const angle=Math.atan2(target.y-a.y,target.x-a.x),baseReach=mastery(a,'far')?239:210;
  a.flameCharge=Math.min(1,(a.flameCharge||0)+STEP*7.7);
  const reach=baseReach*(.24+.76*a.flameCharge);
- const length=beamLength(s,a.x,a.y,angle,reach),width=(mastery(a,'wide')?43:32)*(.42+.58*a.flameCharge);
+ const length=beamLength(s,a.x,a.y,angle,reach,a.id),width=(mastery(a,'wide')?43:32)*(.42+.58*a.flameCharge);
  a.face=angle;
  if(a.stun>0)return false;
  s.streams.push({owner:a.id,x:a.x,y:a.y,angle,length,width,charge:a.flameCharge});
@@ -321,7 +369,7 @@ function flame(s,a,target){
  emit(s,'on_cast',a.id);return true;
 }
 function thunder(s,a){
- const reach=mastery(a,'far')?290:242,len=beamLength(s,a.x,a.y,a.face,reach);
+ const reach=mastery(a,'far')?290:242,len=beamLength(s,a.x,a.y,a.face,reach,a.id);
  s.beams.push({owner:a.id,x:a.x,y:a.y,angle:a.face,length:len,life:.24,style:'coil'});
  const other=s.actors[1-a.id],dx=other.x-a.x,dy=other.y-a.y,
   along=dx*Math.cos(a.face)+dy*Math.sin(a.face),side=Math.abs(-dx*Math.sin(a.face)+dy*Math.cos(a.face));
@@ -342,7 +390,7 @@ function processWave(s,w){
  const other=s.actors[1-w.owner];w.life-=STEP;w.reach=Math.min(w.range,w.reach+w.range*STEP/.23);
  if(w.hit||!insideCone(w,other,w.angle,w.reach,w.halfAngle))return;
  const d=Math.hypot(other.x-w.x,other.y-w.y);
- if(d>beamLength(s,w.x,w.y,Math.atan2(other.y-w.y,other.x-w.x),d+3)+6)return;
+ if(d>beamLength(s,w.x,w.y,Math.atan2(other.y-w.y,other.x-w.x),d+3,w.owner)+6)return;
  w.hit=true;
  const attacker=s.actors[w.owner],dealt=harm(s,other,mastery(attacker,'strong')?18:15,w.owner);
  const k=mag(other.x-w.x,other.y-w.y);
@@ -350,10 +398,14 @@ function processWave(s,w){
  if(dealt>0){markTarget(s,other,'stone',w.owner);other.slow=Math.max(other.slow,.45);emit(s,'on_hit',w.owner)}
  fx(s,'impact_wave',other.x,other.y);
 }
+function unobstructed(s,fromX,fromY,targetX,targetY,owner,margin=8){
+ const dx=targetX-fromX,dy=targetY-fromY,distance=Math.hypot(dx,dy);
+ return distance<=1||beamLength(s,fromX,fromY,Math.atan2(dy,dx),distance+3,owner)>=distance-margin;
+}
 function rockFracture(s,q,x,y){
  if(q.style!=='rock')return;
  const target=s.actors[1-q.owner],d=Math.hypot(x-target.x,y-target.y);
- if(d< (mastery(s.actors[q.owner],'wide')?49:37)){
+ if(d<(mastery(s.actors[q.owner],'wide')?49:37)&&unobstructed(s,x,y,target.x,target.y,q.owner,7)){
   const dealt=harm(s,target,mastery(s.actors[q.owner],'strong')?4:2.5,q.owner,q.depth);
   if(dealt>0){markTarget(s,target,'stone',q.owner,q.depth);target.slow=Math.max(target.slow,.55);emit(s,'on_hit',q.owner,{},q.depth)}
  }
@@ -365,7 +417,7 @@ function castEvolution(s,a){
  if(!['rupture','forge'].includes(s.gameMode)||!a.evolution||a.hp<=0)return;
  const {form,level}=a.evolution,element=mage(a.mageId).school,enemy=s.actors[1-a.id],angle=a.face;
  if(form==='beam'){
-  const length=beamLength(s,a.x,a.y,angle,175+level*45),width=(5+level*5)*(a.archetype==='shaper'?1.25:1);
+  const length=beamLength(s,a.x,a.y,angle,175+level*45,a.id),width=(5+level*5)*(a.archetype==='shaper'?1.25:1);
   s.beams.push({owner:a.id,x:a.x,y:a.y,angle,length,width,life:.25,style:'evo-beam',element,level});
   const dx=enemy.x-a.x,dy=enemy.y-a.y,front=dx*Math.cos(angle)+dy*Math.sin(angle),side=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
   if(front>0&&front<length+12&&side<width+12){const hit=harm(s,enemy,3+level*2.4,a.id);if(hit>0){markTarget(s,enemy,element,a.id);enemy.slow=Math.max(enemy.slow,.15+level*.1);fx(s,'impact_arc',enemy.x,enemy.y)}}
@@ -395,13 +447,34 @@ function updateEvolutionFields(s,dt){
   const f=s.fields[j];f.life-=dt;f.timer-=dt;
   if(f.timer<=0){
    f.timer=.48;const target=s.actors[1-f.owner],distance=Math.hypot(target.x-f.x,target.y-f.y);
-   if(target.hp>0&&distance<f.r+12&&beamLength(s,f.x,f.y,Math.atan2(target.y-f.y,target.x-f.x),distance+3)>=distance-9){
+   if(target.hp>0&&distance<f.r+12&&beamLength(s,f.x,f.y,Math.atan2(target.y-f.y,target.x-f.x),distance+3,f.owner)>=distance-9){
     const hit=harm(s,target,1.6+f.level*1.1,f.owner);
     if(hit>0){markTarget(s,target,f.element,f.owner);target.slow=Math.max(target.slow,.2+f.level*.08);fx(s,'impact_arc',target.x,target.y)}
    }
   }
   if(f.life<=0)s.fields.splice(j,1);
  }
+}
+
+const CLASS_SPELLS=Object.freeze([
+ {id:'striker',name:'РИКОШЕТНЫЙ ЗАЛП',desc:'Два физических отскока от стен и препятствий',cooldown:5.5},
+ {id:'shaper',name:'АМБРАЗУРА',desc:'Собственное одностороннее укрытие для стрельбы',cooldown:8},
+ {id:'distorter',name:'СДВИГ ФАЗЫ',desc:'Один телеграфируемый проход сквозь первую стену',cooldown:7}
+]);
+function castClassSpell(s,a){
+ if(a.stun>0||a.hp<=0||(a.specialCd||0)>0||a.heat>87)return false;
+ const type=a.archetype||'striker',spec=CLASS_SPELLS.find(t=>t.id===type);
+ if(type==='shaper'){
+  const x=a.x+Math.cos(a.face)*51,y=a.y+Math.sin(a.face)*51;
+  if(!canStand(x,y,23)||blocking(s,x,y,24)||s.barriers.length>=10)return false;
+  s.barriers.push({owner:a.id,x,y,r:22,life:5,aperture:true});fx(s,'shield',x,y);
+ }else{
+  if(!spawnShot(s,a,a.face,a.x,a.y,{style:'arc',element:mage(a.mageId).school,strong:true,far:true}))return false;
+  const q=s.shots[s.shots.length-1];q.r=4;
+  if(type==='striker'){q.bounces=2;q.life=1.3;fx(s,'ricochet',a.x,a.y)}
+  else{q.phase=1;q.life=1.2;fx(s,'phase_entry',a.x,a.y)}
+ }
+ a.specialCd=spec.cooldown;addHeat(s,a,12);return true;
 }
 
 function attack(s,a,target){
@@ -443,13 +516,13 @@ function act(s,a,action,mods,ev){
  case 'ball':spawnShot(s,a,angle,a.x,a.y,{element:chosenElement(mods,mage(a.mageId).school),strong:m.has('strong'),far:m.has('far'),bounce:m.has('bounce'),drain:m.has('drain'),wide:m.has('wide'),fastshot:m.has('fastshot'),depth});break;
  case 'heal':receiveHeal(s,a,7*strong,depth);break;
  case 'armor':a.shield=Math.min(80,a.shield+11*strong);fx(s,'shield',a.x,a.y);break;
- case 'blast':if(Math.hypot(other.x-a.x,other.y-a.y)<(m.has('wide')?110:72)*reach){const d=harm(s,other,11*strong,a.id,depth);if(d>0){markTarget(s,other,chosenElement(mods,mage(a.mageId).school),a.id,depth);emit(s,'on_hit',a.id,{},depth)}}fx(s,'overload',a.x,a.y);break;
+ case 'blast':if(Math.hypot(other.x-a.x,other.y-a.y)<(m.has('wide')?110:72)*reach&&beamLength(s,a.x,a.y,Math.atan2(other.y-a.y,other.x-a.x),Math.hypot(other.x-a.x,other.y-a.y)+4,a.id)>=Math.hypot(other.x-a.x,other.y-a.y)-8){const d=harm(s,other,11*strong,a.id,depth);if(d>0){markTarget(s,other,chosenElement(mods,mage(a.mageId).school),a.id,depth);emit(s,'on_hit',a.id,{},depth)}}fx(s,'overload',a.x,a.y);break;
  case 'blink':{const step=38*reach*(m.has('reverse')?-1:1);move(a,Math.cos(a.face)*step,Math.sin(a.face)*step);fx(s,'dash',a.x,a.y);break}
  case 'clone':if(s.echoes.length<12)s.echoes.push({owner:a.id,x:a.x,y:a.y,life:m.has('lasting')?3.5:2.2,cast:.25,shots:2,extra:m.has('strong')});fx(s,'dash',a.x,a.y);break;
  case 'mine':if(s.mines.length<14)s.mines.push({x:a.x,y:a.y,owner:a.id,life:m.has('lasting')?6:3.5,damage:14*strong,element:chosenElement(mods,mage(a.mageId).school),r:(m.has('wide')?57:40)*(a.archetype==='shaper'?1.2:1)});fx(s,'mine',a.x,a.y);break;
  case 'wall':if(s.barriers.length<10){let bx=a.x+Math.cos(a.face)*34*reach,by=a.y+Math.sin(a.face)*34*reach;if(canStand(bx,by,14)&&!blocking(s,bx,by,15))s.barriers.push({owner:a.id,x:bx,y:by,r:m.has('wide')?23:15,life:(m.has('lasting')?4:2.5)*(a.archetype==='shaper'?1.4:1)})}fx(s,'shield',a.x,a.y);break;
- case 'push':{const dx=other.x-a.x,dy=other.y-a.y;if(mag(dx,dy)<100*reach){const k=mag(dx,dy);move(other,dx/k*30*strong*(m.has('fastshot')?1.3:1),dy/k*30*strong*(m.has('fastshot')?1.3:1))}fx(s,'dash',other.x,other.y);break}
- case 'slow':other.slow=Math.max(other.slow,m.has('lasting')?3.4:2);fx(s,'hit',other.x,other.y);break;
+ case 'push':{const dx=other.x-a.x,dy=other.y-a.y;if(mag(dx,dy)<100*reach&&unobstructed(s,a.x,a.y,other.x,other.y,a.id,8)){const k=mag(dx,dy);move(other,dx/k*30*strong*(m.has('fastshot')?1.3:1),dy/k*30*strong*(m.has('fastshot')?1.3:1))}fx(s,'dash',other.x,other.y);break}
+ case 'slow':if(unobstructed(s,a.x,a.y,other.x,other.y,a.id,8)){other.slow=Math.max(other.slow,m.has('lasting')?3.4:2);fx(s,'hit',other.x,other.y)}break;
  case 'haste':a.haste=Math.max(a.haste,m.has('lasting')?3.4:2);fx(s,'heal',a.x,a.y);break;
  case 'cool':a.heat=Math.max(0,a.heat-22*strong);fx(s,'heal',a.x,a.y);break;
  }
@@ -479,6 +552,7 @@ if(collapseActive(s)){const cx=200-b.x,cy=310-b.y,cd=mag(cx,cy);if(cd>ringRadius
 for(const shot of s.shots){if(shot.owner===1)continue;const rx=b.x-shot.x,ry=b.y-shot.y;const t=clamp((rx*shot.vx+ry*shot.vy)/(shot.vx**2+shot.vy**2),0,.4);if(Math.hypot(rx-shot.vx*t,ry-shot.vy*t)<27){x=-shot.vy/252*1.7;y=shot.vx/252*1.7;if(b.dashReady<=0&&t<.2&&random(s)<.025)dash(s,b,{x,y});if(b.shieldReady<=0&&b.hp<65)guard(s,b);break}}
 if(d<260&&random(s)<.035)attack(s,b,p);
 if(b.shieldReady<=0&&b.hp<55&&random(s)<.009)guard(s,b);
+if((b.specialCd||0)<=0&&b.heat<70&&random(s)<.012)castClassSpell(s,b);
 return {x,y,attack:false,shield:false,dash:false,aim:{x:p.x,y:p.y}}}
 function tick(s,input={},dt=STEP,otherInput=null){
  if(s.phase!=='fight')return s;if(['rupture','forge'].includes(s.gameMode)){s.fields ||= [];for(const a of s.actors)a.fusions ||= []}dt=STEP;safeWorld=s;s.ticks++;if(s.gameMode!=='forge')s.remaining=Math.max(0,s.remaining-dt);
@@ -497,7 +571,7 @@ function tick(s,input={},dt=STEP,otherInput=null){
 const control=[input,otherInput===null?(s.gameMode==='forge'&&s.forgeDummy!==false?{x:0,y:0,attack:false,shield:false,dash:false,aim:{x:200,y:310}}:botInput(s,dt)):otherInput];
 for(let i=0;i<2;i++){const a=s.actors[i],c=control[i],other=s.actors[1-i];
  if(['rupture','forge'].includes(s.gameMode)&&a.hp<=0){if(a.respawn>0){a.respawn=Math.max(0,a.respawn-dt);if(a.respawn<=0){const next=freshActor(a);next.hit=a.hit;next.kills=a.kills;next.invuln=1.25;s.actors[i]=next;}}continue}
- a.cast=Math.max(0,a.cast-dt);a.shieldReady=Math.max(0,a.shieldReady-dt);a.dashReady=Math.max(0,a.dashReady-dt);a.stun=Math.max(0,a.stun-dt);a.flash=Math.max(0,a.flash-dt);a.invuln=Math.max(0,a.invuln-dt);
+ a.cast=Math.max(0,a.cast-dt);a.shieldReady=Math.max(0,a.shieldReady-dt);a.dashReady=Math.max(0,a.dashReady-dt);a.specialCd=Math.max(0,(a.specialCd||0)-dt);a.stun=Math.max(0,a.stun-dt);a.flash=Math.max(0,a.flash-dt);a.invuln=Math.max(0,a.invuln-dt);
 if(!c.attack)a.flameCharge=Math.max(0,(a.flameCharge||0)-dt*5);
 if(a.windup&&(a.stun>0||c.dash))a.windup=null;
 if(a.windup){a.windup.remaining-=dt;
@@ -509,29 +583,46 @@ if(a.windup)a.face=a.windup.angle;
 else if(c.aim&&Number.isFinite(c.aim.x)&&Number.isFinite(c.aim.y))a.face=Math.atan2(c.aim.y-a.y,c.aim.x-a.x);
 if(c.dash)dash(s,a,{x:Number(c.x)||Math.cos(a.face),y:Number(c.y)||Math.sin(a.face)});
 if(c.shield)guard(s,a);
+if(c.special)castClassSpell(s,a);
 if(c.attack)attack(s,a,c.aim||other);
 if(s.ticks%60===0&&a.heat>=HEAT_LIMIT)addHeat(s,a,0)}
 updateLobs(s,dt);if(['rupture','forge'].includes(s.gameMode))updateEvolutionFields(s,dt);
 for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s.beams.splice(j,1)}
  for(let j=s.waves.length-1;j>=0;j--){const w=s.waves[j];processWave(s,w);if(w.life<=0)s.waves.splice(j,1)}
- for(let j=s.shots.length-1;j>=0;j--){const q=s.shots[j],a=s.actors[1-q.owner];if(q.accel){const speed=Math.hypot(q.vx,q.vy)||1;
- const next=q.accel>0?Math.min(q.minSpeed,speed+q.accel*dt):Math.max(q.minSpeed,speed+q.accel*dt);
- q.vx*=next/speed;q.vy*=next/speed;}
-const nx=q.x+q.vx*dt,ny=q.y+q.vy*dt;q.life-=dt;
-if(Math.hypot(nx-a.x,ny-a.y)<12+q.r){
- if(q.style==='bolt')a.shield=Math.max(0,a.shield-3);
- const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){markTarget(s,a,q.element||mage(s.actors[q.owner].mageId).school,q.owner,q.depth);const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn'){a.burn=Math.max(a.burn||0,has(attacker,'lasting')?2.4:1.55);a.burnSource=q.owner;}if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
- if(dealt>0)fusionImpact(s,q,a);
-  if(q.style==='rock')rockFracture(s,q,nx,ny);
- fx(s,'impact_'+(q.style||'orb'),nx,ny);s.shots.splice(j,1);continue
+ for(let j=s.shots.length-1;j>=0;j--){
+ const q=s.shots[j],a=s.actors[1-q.owner];
+ if(q.accel){const v=Math.hypot(q.vx,q.vy)||1,next=q.accel>0?Math.min(q.minSpeed,v+q.accel*dt):Math.max(q.minSpeed,v+q.accel*dt);q.vx*=next/v;q.vy*=next/v}
+ q.life-=dt;if(q.life<=0){s.shots.splice(j,1);if(mage(s.actors[q.owner].mageId).trait==='miss_cool')s.actors[q.owner].heat=Math.max(0,s.actors[q.owner].heat-6);emit(s,'on_expire',q.owner,{},q.depth);continue}
+ let remaining=dt,done=false,iterations=0;
+ while(remaining>1e-7&&!done&&iterations++<4){
+  const dx=q.vx*remaining,dy=q.vy*remaining;
+  const hit=firstCollision(s,q.x,q.y,dx,dy,q.r,q.owner,{actors:true});
+  if(!hit){q.x+=dx;q.y+=dy;break}
+  q.x=hit.x;q.y=hit.y;
+  if(hit.type==='actor'){
+   if(q.style==='bolt')a.shield=Math.max(0,a.shield-3);
+   const dealt=harm(s,a,q.damage,q.owner,q.depth);
+   if(dealt){markTarget(s,a,q.element||mage(s.actors[q.owner].mageId).school,q.owner,q.depth);const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn'){a.burn=Math.max(a.burn||0,has(attacker,'lasting')?2.4:1.55);a.burnSource=q.owner}if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
+   if(dealt>0)fusionImpact(s,q,a);
+   if(q.style==='rock')rockFracture(s,q,q.x,q.y);
+   fx(s,'impact_'+(q.style||'orb'),q.x,q.y);s.shots.splice(j,1);done=true;continue;
+  }
+  if(q.phase>0&&(hit.type==='wall'||hit.type==='barrier')){
+   const pass=firstCollision(s,q.x,q.y,q.vx*.65,q.vy*.65,q.r,q.owner);const skip=Math.max(.001,pass?.exit??0);q.x+=q.vx*.65*skip+Math.sign(q.vx)*.08;q.y+=q.vy*.65*skip+Math.sign(q.vy)*.08;q.phase=0;
+   fx(s,'phase_exit',q.x,q.y);remaining*=Math.max(0,1-hit.t);continue;
+  }
+  if(q.bounces>0){
+   q.bounces--;const dot=q.vx*hit.nx+q.vy*hit.ny;q.vx-=2*dot*hit.nx;q.vy-=2*dot*hit.ny;
+   q.x+=hit.nx*.08;q.y+=hit.ny*.08;
+   fx(s,'spark',hit.x,hit.y);emit(s,'on_bounce',q.owner,{},q.depth);remaining*=Math.max(0,1-hit.t);continue;
+  }
+  if(q.style==='rock')rockFracture(s,q,q.x,q.y);s.shots.splice(j,1);fx(s,'spark',hit.x,hit.y);emit(s,'on_expire',q.owner,{},q.depth);done=true;
+ }
 }
-const wall=distWall(nx,ny,q.r)||blocking(s,nx,ny,q.r),edge=nx<19||nx>W-19||ny<21||ny>H-21;
-if(wall||edge){if(q.bounces>0){q.bounces--;const wallX=distWall(nx,q.y,q.r)||blocking(s,nx,q.y,q.r)||nx<19||nx>W-19;if(wallX)q.vx*=-1;else q.vy*=-1;q.x+=q.vx*dt;q.y+=q.vy*dt;fx(s,'spark',q.x,q.y);emit(s,'on_bounce',q.owner,{},q.depth)}else{if(q.style==='rock')rockFracture(s,q,q.x,q.y);s.shots.splice(j,1);fx(s,'spark',q.x,q.y);emit(s,'on_expire',q.owner,{},q.depth)}continue}
-if(q.life<=0){s.shots.splice(j,1);if(mage(s.actors[q.owner].mageId).trait==='miss_cool')s.actors[q.owner].heat=Math.max(0,s.actors[q.owner].heat-6);emit(s,'on_expire',q.owner,{},q.depth);continue}q.x=nx;q.y=ny}
 for(let j=s.echoes.length-1;j>=0;j--){const e=s.echoes[j];e.life-=dt;e.cast-=dt;const source=s.actors[e.owner];if(e.cast<=0){e.cast=.76;const target=s.actors[1-e.owner];spawnShot(s,source,Math.atan2(target.y-e.y,target.x-e.x),e.x,e.y,{clone:true,strong:!!e.extra});e.shots=(e.shots??2)-1}if(e.life<=0||e.shots<=0)s.echoes.splice(j,1)}
 for(let j=s.mines.length-1;j>=0;j--){
  const mine=s.mines[j];mine.life-=dt;const target=s.actors[1-mine.owner];
- if(Math.hypot(target.x-mine.x,target.y-mine.y)<mine.r){const d=harm(s,target,mine.damage,mine.owner);if(d>0){markTarget(s,target,mine.element||mage(s.actors[mine.owner].mageId).school,mine.owner);emit(s,'on_hit',mine.owner)}fx(s,'overload',mine.x,mine.y);s.mines.splice(j,1)}
+ if(Math.hypot(target.x-mine.x,target.y-mine.y)<mine.r&&beamLength(s,mine.x,mine.y,Math.atan2(target.y-mine.y,target.x-mine.x),Math.hypot(target.x-mine.x,target.y-mine.y)+4,mine.owner)>=Math.hypot(target.x-mine.x,target.y-mine.y)-8){const d=harm(s,target,mine.damage,mine.owner);if(d>0){markTarget(s,target,mine.element||mage(s.actors[mine.owner].mageId).school,mine.owner);emit(s,'on_hit',mine.owner)}fx(s,'overload',mine.x,mine.y);s.mines.splice(j,1)}
  else if(mine.life<=0)s.mines.splice(j,1);
  }
  for(let j=s.barriers.length-1;j>=0;j--){s.barriers[j].life-=dt;if(s.barriers[j].life<=0)s.barriers.splice(j,1)}
@@ -573,15 +664,15 @@ function validState(s){
  &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=7;
-const ZERO={x:0,y:0,aim:{x:200,y:310},attack:false,shield:false,dash:false};
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=8;
+const ZERO={x:0,y:0,aim:{x:200,y:310},attack:false,shield:false,dash:false,special:false};
 const clock=()=>Date.now(),updates=()=>[{type:'state',payload:null}],warn=(to,msg)=>[{type:'notice',to,payload:msg}];
 const side=(s,id)=>s.seats.indexOf(id);
 const safeInput=v=>{
  if(!v||typeof v!=='object'||Array.isArray(v)||!v.aim)return null;
  const {x,y}=v,ax=v.aim.x,ay=v.aim.y;
  if(![x,y,ax,ay].every(n=>typeof n==='number'&&Number.isFinite(n))||Math.abs(x)>1.01||Math.abs(y)>1.01||ax<0||ax>W||ay<0||ay>H)return null;
- const m=Math.max(1,Math.hypot(x,y));return {x:x/m,y:y/m,aim:{x:ax,y:ay},attack:v.attack===true,shield:v.shield===true,dash:v.dash===true};
+ const m=Math.max(1,Math.hypot(x,y));return {x:x/m,y:y/m,aim:{x:ax,y:ay},attack:v.attack===true,shield:v.shield===true,dash:v.dash===true,special:v.special===true};
 };
 function beginNet(s){
  s.match=makeMatch((clock()>>>0)^Math.floor(Math.random()*0xffffffff),s.mages[0],s.mages[1],s.gameMode,s.archetypes[0],s.archetypes[1]);
@@ -629,7 +720,7 @@ function readyNet(s,i,list){
 }
 function viewForPlayer({state:s,player,players}){
  const i=side(s,player.id);
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:7,gameMode:s.gameMode,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:8,gameMode:s.gameMode,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};

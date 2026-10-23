@@ -2,7 +2,7 @@ import {forgeSpellsStatus} from './forge-spells.mjs';
 // PEREKOS — kinetic ink, grit and directional spell language.
 // Cosmetic only. All marks originate in actual shots, hit events or casts.
 import {mage} from './mages.mjs';
-import {visualReticle} from './aim-geometry.mjs';
+import {previewAttack} from './core.mjs';
 const TAU=Math.PI*2;
 const schemes={
  fire:['#fff0b4','#f7ab70','#9e5841'],
@@ -21,7 +21,7 @@ export class DuelFeedback{
   for(const f of state.fx||[]){
    if(!Number.isFinite(f.id)||f.id<=this.last)continue;
    const contact=state.actors.reduce((best,a)=>!best||Math.hypot(a.x-f.x,a.y-f.y)<Math.hypot(best.x-f.x,best.y-f.y)?a:best,null);
-   const colors=palette(contact),impact=f.k==='hit'||f.k.startsWith('impact_')||f.k.startsWith('react_')||f.k==='overload';
+   const colors=palette(contact),impact=f.k==='hit'||f.k.startsWith('impact_')||f.k.startsWith('react_')||f.k==='overload'||f.k==='phase_entry'||f.k==='phase_exit'||f.k==='ricochet';
    if(impact){
     const type=f.k.includes('rock')||f.k.includes('crack')?'stone':f.k.includes('arc')||f.k.includes('bolt')||f.k.includes('steam')?'storm':f.k.includes('flame')||f.k.includes('orb')||f.k.includes('slag')?'fire':mage(contact?.mageId).school;
     this.scars.push({x:f.x,y:f.y,age:0,life:f.k==='overload'?2.8:1.7,kind:type,seed:f.id});
@@ -119,28 +119,26 @@ export class DuelFeedback{
   }
   ctx.restore();
  }
- aim(ctx,actor,target,{reduced=false}={}){
-  if(!ctx||!actor||!target)return;
-  const dx=target.x-actor.x,dy=target.y-actor.y,d=Math.hypot(dx,dy);
-  if(d<.01)return;
-  const ax=dx/d,ay=dy/d,ret=visualReticle(actor,target);
-  ctx.save();const col=palette(actor)[0];
-  ctx.lineWidth=1;ctx.strokeStyle=col;ctx.globalAlpha=.42;
-  ctx.setLineDash([3,9]);
-  ctx.beginPath();ctx.moveTo(actor.x+ax*24,actor.y+ay*24);
-  ctx.lineTo(ret.x-ax*13,ret.y-ay*13);ctx.stroke();ctx.setLineDash([]);
-  ctx.globalAlpha=.95;ctx.lineWidth=1.4;
-  const rr=ret.edge?10:8;
-  ctx.beginPath();
-  ctx.arc(ret.x,ret.y,rr,Math.PI*.2,Math.PI*.8);
-  ctx.arc(ret.x,ret.y,rr,Math.PI*1.2,Math.PI*1.8);
-  ctx.stroke();
-  for(const side of [-1,1]){
-   ctx.beginPath();ctx.moveTo(ret.x+side*(rr+3),ret.y);
-   ctx.lineTo(ret.x+side*(rr+9),ret.y);ctx.stroke();
+ aim(ctx,actor,target,{reduced=false,state=null,special=false}={}){
+  if(!ctx||!actor||!target||!state)return;
+  const g=previewAttack(state,actor,target,special),col=palette(actor)[0];
+  ctx.save();ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1.5;ctx.globalAlpha=.76;
+  ctx.setLineDash(g.blocked?[3,5]:[4,8]);
+  for(const seg of g.segments){if(seg.phase){ctx.strokeStyle='#a4d3c5';ctx.setLineDash([1,4])}else{ctx.strokeStyle=col;ctx.setLineDash(g.blocked?[3,5]:[4,8])}ctx.beginPath();ctx.moveTo(seg.x,seg.y);ctx.lineTo(seg.toX,seg.toY);ctx.stroke()}
+  ctx.setLineDash([]);
+  if(g.type==='cone'||g.type==='sector'){
+   const half=g.type==='sector'?g.width:Math.atan(g.width/Math.max(1,g.length));ctx.globalAlpha=.42;
+   for(let i=-5;i<=5;i++){
+    const theta=g.angle+half*i/5;
+    const q=previewAttack(state,actor,{x:actor.x+Math.cos(theta)*100,y:actor.y+Math.sin(theta)*100},special);
+    if(!q.segments.length)continue;
+    const seg=q.segments[0];ctx.beginPath();ctx.moveTo(actor.x,actor.y);ctx.lineTo(seg.toX,seg.toY);ctx.stroke();
+   }
   }
-  ctx.fillStyle=col;ctx.fillRect(Math.round(ret.x)-1,Math.round(ret.y)-1,3,3);
-  if(ret.edge&&!reduced)stroke(ctx,ret.x-ax*5,ret.y-ay*5,ret.x+ax*5,ret.y+ay*5,col,2);
+  if(g.type==='lob'||g.type==='placement'){ctx.beginPath();ctx.arc(g.x,g.y,g.radius,0,Math.PI*2);ctx.stroke()}
+  const size=g.blocked?7:5;ctx.globalAlpha=.95;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(g.x-size,g.y-size);ctx.lineTo(g.x+size,g.y+size);ctx.moveTo(g.x-size,g.y+size);ctx.lineTo(g.x+size,g.y-size);ctx.stroke();
+  if(g.blocked){ctx.strokeStyle='#efa67f';ctx.beginPath();ctx.arc(g.x,g.y,9,0,Math.PI*2);ctx.stroke()}
   ctx.restore();
  }
 }

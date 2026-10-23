@@ -92,3 +92,23 @@ test('player can pick archetype and the selected class reaches the real combat s
  await page.locator('#mode-rupture').click();await page.locator('#primary-action').click();
  expect(await page.evaluate(()=>window.__perekosTest.state.actors[0].archetype)).toBe('shaper');
 });
+
+test('class ability button fires an actual attack or creates a wall with cooldown',async({page})=>{
+ for(const [archetype,effect] of [['striker','shot'],['shaper','wall'],['distorter','phase']]){
+  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+  await page.locator('#choose-mage').click();
+  await page.locator('#archetype-options button').filter({hasText:({striker:'Стрелок',shaper:'Формирователь',distorter:'Искажатель'})[archetype]}).click();
+  await page.locator('#mage-confirm').click();
+  await page.locator('#mode-duel').click();await page.locator('#primary-action').click();
+  if(await page.locator('#special-btn').isVisible())await page.locator('#special-btn').click();
+  else await page.keyboard.press('r'); // Desktop uses R; touch devices use the on-screen key.
+  await expect.poll(()=>page.evaluate(()=>window.__perekosTest.state.actors[0].specialCd),{timeout:4000}).toBeGreaterThan(0);
+  const result=await page.evaluate(()=>{
+   const s=window.__perekosTest.state;
+   return {shots:s.shots.filter(q=>q.owner===0).map(q=>({bounces:q.bounces,phase:q.phase})),walls:s.barriers.filter(b=>b.owner===0).map(b=>({aperture:b.aperture}))};
+  });
+  if(effect==='shot')expect(result.shots.some(q=>q.bounces===2)).toBe(true);
+  if(effect==='wall')expect(result.walls.some(b=>b.aperture===true)).toBe(true);
+  if(effect==='phase')expect(result.shots.some(q=>q.phase===1)).toBe(true);
+ }
+});
