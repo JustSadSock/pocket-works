@@ -251,3 +251,27 @@ P3: Визуальное направление (после референсов
 [x] Второстепенные формы спрятать в контекстные карточки/раскрытия.
 [x] Обновить серверную оплату содержания до PocketNet v14.
 [ ] Проверить изменённую компоновку в повторной живой партии 2–6.
+
+
+=== UX / PRESENTATION ROADMAP (23.10.2026) ===
+P0 (next, must verify on multi-client builds):
+- Automated browser smoke test: inspect, bid, withdraw, accept, direct trade and reconnect with 2-6 clients, also mobile viewport screenshots.
+- Validate server-authoritative payment/lot resolution and auction state transitions; label quick ask-price action as a bid, not a guaranteed purchase.
+- Make the trade-recipient selector automatically expand after choosing player (avoid hidden form); persist drafts through state updates.
+- Check all 13 SVG silhouettes at 40/80/180 px; revise individual shapes against their names and distinct silhouettes.
+P1 (visual comprehension):
+- Replace resource names in dense offer forms with icon + number and accessible aria labels; animate only actual balance changes confirmed by server.
+- Three-stage transaction UX: select an object > contextual actions > advanced terms on demand.
+- Explicit trade states in-place: sent / countered / accepted / expired, with short toast and log entry.
+- Goal progress ticks on wallet; neutral/positive/negative colors never used as the only information channel.
+- Urgent orders as a small countdown ticket near the current round, with clear penalty preview.
+- Auction table: visible current ask, seller, count of offers; reveal details only on click.
+P2 (polish):
+- Material-specific SVG contact shadows from CSS, varied object micro-motion, no fixed rectangular art tiles.
+- Optional distinct audio cues for coins, crystals, clock, placing lot, sealed trade, failure; volume settings and reduced-motion support.
+- Animate objects sliding from inventory to stage and back on confirmed transactions, not optimistic client sends.
+- Mobile contextual popovers anchored above trigger rather than over players/table, without layout shifts.
+- Color/contrast + keyboard audit, focus restore after menu close, safe-area and reduced-motion regression.
+P3 (optional):
+- End-game graphic recap of quota completion, most profitable trades, tricks and memorable artifacts; retain server-calculated truth.
+- In-game contextual first-action hints only until an action is first completed, not a full tutorial overlay.
