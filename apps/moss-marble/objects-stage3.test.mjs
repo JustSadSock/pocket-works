@@ -4,6 +4,7 @@ import { generateEndlessLevel } from './procedural.js';
 import { compileCourse19, inspectCourse19 } from './course19.js';
 import { buildCourse18Geometry } from './terrain18.js';
 import { planTurfClumps, appendTurfClumps } from './turf-clumps.js';
+import { buildWoodBarrierProfile } from './wood-barrier.js';
 
 let checked = 0;
 const counts = { rocks: 0, stumps: 0, tunnels: 0, stoneWalls: 0, woodWalls: 0 };
@@ -48,6 +49,26 @@ for (const original of [
     }
   }
   assert.equal(data.length,bladeTotal*3*17,'each blade uses exactly three short curved faces');
+  for(const wall of level.course18.barriers.filter(w=>w.material==='wood')){
+    const field=level.course18.field;
+    const profile=buildWoodBarrierProfile(wall,(x,y)=>field.heightAt(x,y));
+    assert.equal(profile.stations.length,profile.segments+1,
+      'a continuous oak rail must have joined height stations');
+    assert.ok(profile.segments>=1 && profile.segments<=8,'bounded rail tesselation');
+    assert.ok(profile.length>0 && profile.half>=4);
+    for(const s of profile.stations){
+      assert.ok([s.footL,s.footR,s.shoulderL,s.shoulderR,s.crownL,s.crownR]
+        .every(v=>v.length===3&&v.every(Number.isFinite)), 'finite rail coordinates');
+      assert.ok(Math.abs(s.footL[2]-field.heightAt(s.footL[0],s.footL[1])+1.8)<1e-5,
+        'left rail foot must be embedded in the true ground');
+      assert.ok(Math.abs(s.footR[2]-field.heightAt(s.footR[0],s.footR[1])+1.8)<1e-5,
+        'right rail foot must be embedded in the true ground');
+      assert.ok(s.crownL[2]>s.shoulderL[2] && s.crownR[2]>s.shoulderR[2],
+        'oak top bevel is physically raised and visible');
+    }
+    assert.equal(profile.stations[0].t,0);
+    assert.equal(profile.stations.at(-1).t,1);
+  }
   const geometry = buildCourse18Geometry(level);
   assert.ok(geometry.opaque instanceof Float32Array);
   for (const [name, array] of Object.entries(geometry)) {

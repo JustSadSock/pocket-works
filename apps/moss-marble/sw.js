@@ -1,23 +1,23 @@
 const CACHE_PREFIX = 'moss-marble-';
-const CACHE_NAME = 'moss-marble-v1.29.0';
-const APP_VERSION = '1.29.0';
+const CACHE_NAME = 'moss-marble-v1.30.0';
+const APP_VERSION = '1.30.0';
 const RELEASE_DATE = '2026-10-23';
 const RELEASE_NOTES = [
-  "Удалены тёмные одиночные треугольники травы; вместо них вырастают невысокие пучки из нескольких изогнутых травинок.",
-  "Растительность подбирает оттенок соседней поверхности, не появляется в песке и воде, не закрывает мяч, лунку и крупные препятствия.",
-  "Добавлены проверки детерминированности растительности, ограничений сетки, геометрии отдельных травинок и совместимости с игровой физикой."
+  "Деревянные ограждения теперь повторяют реальную высоту грунта несколькими соединёнными секциями: больше нет зазоров под длинными брусьями на холмах.",
+  "У деревянных барьеров появились мягкая верхняя фаска, светлая древесная кромка и закрытые торцы вместо плоского прямоугольного профиля.",
+  "Добавлены тесты контакта обеих сторон барьера с грунтом, непрерывности секций и сохранения физических коллизий."
 ];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
-  './styles.css?v=1.29.0',
+  './styles.css?v=1.30.0',
   './styles14.css?v=1.4.0',
   './styles15.css?v=1.5.0',
   './styles16.css?v=1.6.0',
   './styles161.css?v=1.14.0',
-  './styles115.css?v=1.29.0',
-  './styles121.css?v=1.29.0',
+  './styles115.css?v=1.30.0',
+  './styles121.css?v=1.30.0',
   './levels.js',
   './procedural.js',
   './camera-space.js',
@@ -33,6 +33,7 @@ const APP_SHELL = [
   './terrain.js',
   './terrain17.js',
   './terrain18.js',
+  './wood-barrier.js',
   './turf-clumps.js',
   './polish19.js',
   './slope-grass.js',
@@ -43,9 +44,9 @@ const APP_SHELL = [
   './greenhouse15.js',
   './render.js',
   './experience14.js',
-  './camera-intro-guard.js?v=1.29.0',
+  './camera-intro-guard.js?v=1.30.0',
   './audio.js',
-  './app.js?v=1.29.0',
+  './app.js?v=1.30.0',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
