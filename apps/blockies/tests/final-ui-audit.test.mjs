@@ -17,7 +17,8 @@ function fixture(){
   const state={
     numPlayers:1,settings:{colors:['#ffffff'],keys:[{left:'ArrowLeft'}]},
     gamepads:{assignments:{}},isPaused:false,isGameOver:false,
-    players:[{id:0}],board:[[1,0],[0,2]]
+    players:[{id:0,keys:{left:'ArrowLeft'},color:'#ffffff'}],
+    inputStates:new Map(),board:[[1,0],[0,2]]
   };
   const context={
     document:{
@@ -33,9 +34,11 @@ function fixture(){
     networkManager:{started:false},
     normalizeKeyCode:x=>x,
     formatKeyLabel:x=>x,
-    isColorTooDark:()=>true,
+    isColorTooDark:color=>color==='#000000',
+    createActionState:()=>({pressed:false}),
     DEFAULT_COLORS:['#ffffff'],
     DEFAULT_KEYS:[{left:'ArrowLeft'}],
+    localStorage:{setItem(key,value){calls.push(['storage',key,value]);},removeItem(){}},
     t:value=>value,
     clearTimeout:()=>{},
     setTimeout:()=>1,
@@ -97,6 +100,38 @@ test('key capture accepts a new key without leaving a document-level listener ac
   assert.equal(input.value,'KeyQ');
   assert.equal(ui.activeKeyCapture,null);
   assert.equal(removed.length,1);
+});
+
+test('saving valid controls immediately updates a running local game',()=>{
+  const {ui,nodes,state,calls}=fixture();
+  ui.previousScreen='gameScreen';
+  ui.updatePlayerInfo=()=>{};
+  ui.drawNextPiece=()=>{};
+  ui.drawBoard=()=>{calls.push(['boardRedraw']);};
+  ui.releaseTouchControls=()=>{calls.push(['touchReleased']);};
+  nodes.set('sound-enabled',{checked:false});
+  nodes.set('color-0',{value:'#123456'});
+  for(const [action,key] of Object.entries({
+    left:'KeyA',right:'KeyD',down:'KeyS',rotate:'KeyW',drop:'Space'
+  }))nodes.set('key-0-'+action,{dataset:{keyCode:key},value:key});
+  nodes.set('gamepad-0',{value:''});
+  ui.saveSettings();
+  assert.equal(state.players[0].color,'#123456');
+  assert.equal(state.players[0].keys.left,'KeyA');
+  assert.equal(state.settings.keys[0].rotate,'KeyW');
+  assert.equal(state.inputStates.get(0).left.pressed,false);
+  assert.ok(calls.some(c=>c[0]==='boardRedraw'));
+  assert.ok(calls.some(c=>c[0]==='sound'&&c[1]===false));
+  assert.ok(calls.some(c=>c[0]==='storage'&&c[1]==='pocket-works:blockies:settings'));
+});
+
+test('Backquote stays reserved for debug while capturing custom controls',()=>{
+  const {ui,added}=fixture(),input=keyInput('ArrowLeft');
+  ui.captureKey(input);
+  added[0][1]({code:'Backquote',key:'\\u0060',preventDefault(){},stopImmediatePropagation(){}});
+  assert.equal(input.value,'ArrowLeft');
+  assert.equal(input.dataset.keyCode,'ArrowLeft');
+  assert.equal(ui.activeKeyCapture,null);
 });
 
 test('failed settings validation does not persist a different sound preference',()=>{
