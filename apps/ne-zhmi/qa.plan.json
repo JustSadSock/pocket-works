@@ -136,6 +136,13 @@
       "tier": "smoke",
       "install": true,
       "entry": "qa/six-crew.mjs"
+    },
+    {
+      "id": "session-modes",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "install": true,
+      "entry": "qa/session-modes.mjs"
     }
   ]
 }
