@@ -56,17 +56,20 @@ test('three distinct starting schools are playable spell grammars with defense/m
  }
  assert.throws(()=>createMagicLoadout('ice'),RangeError);
 });
-test('server-owned rune grant rejects foreign, unknown, and duplicate cards',()=>{
+test('server-owned grants reject foreign/unknown cards and distinguish separate earned copies',()=>{
  const s=createMagicLoadout('stone');
  for(const id of ['fi_ember','li_spark','as_storm','not_real']){
   const attempt=grantEarnedMagicRune(s,id);
   assert.equal(attempt.ok,false);
   assert.equal(attempt.state,s);
  }
- assert.equal(grantEarnedMagicRune(s,'u_guard').ok,false);
+ const extraGuard=collect(s,'u_guard');
+ assert.notEqual(extraGuard.instanceId,s.slots[0].actions[0].rune.instanceId);
  const got=collect(s,'st_form_wave');
  assert.equal(got.state.reserve.length,1);
- assert.equal(grantEarnedMagicRune(got.state,'st_form_wave').ok,false);
+ const second=collect(got.state,'st_form_wave');
+ assert.notEqual(got.instanceId,second.instanceId);
+ assert.equal(validateMagicState(second.state).ok,true);
 });
 test('one WHEN, two DO and two HOW is the limit per independent slot',()=>{
  let s=createMagicLoadout('stone');
