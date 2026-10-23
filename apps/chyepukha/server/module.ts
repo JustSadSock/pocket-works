@@ -125,6 +125,8 @@ const module={
     const index=s.players.findIndex(p=>p.id===s.claim.seatId);
     if(index<0||s.players.some(p=>p.id===player.id))throw Error('invalid_replacement_code');
     const old=s.players[index],assigned=s.players[index]={...entries([player])[0],originalSeat:old.originalSeat||old.id};
+    s.bannedIds||=[];if(!s.bannedIds.includes(old.id))s.bannedIds.push(old.id);
+    if(old.accountId){s.bannedAccounts||=[];if(!s.bannedAccounts.includes(old.accountId))s.bannedAccounts.push(old.accountId)}
     if(s.submitted[old.id])s.submitted[assigned.id]=true;
     delete s.submitted[old.id];
     // Preserve historical attribution by stamping authors before changing IDs.
@@ -179,6 +181,7 @@ const module={
     s.host=target.id;s.hostOfflineSince=0;s.hostVotes={};s.revision++;return {state:s,events:events()};
   }
   if(v.type==='kick'&&host&&target&&target.id!==player.id){
+    if(s.phase==='lobby')s.players=s.players.filter(p=>p.id!==target.id);
     if(!s.bannedIds)s.bannedIds=[];
     if(!s.bannedIds.includes(target.id))s.bannedIds.push(target.id);
     if(target.accountId){s.bannedAccounts||=[];if(!s.bannedAccounts.includes(target.accountId))s.bannedAccounts.push(target.accountId)}
