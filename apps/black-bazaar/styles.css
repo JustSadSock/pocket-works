@@ -734,3 +734,17 @@ body.sheet-open{overflow:auto}
 .deal-state.is-pending{color:#85643e}
 @media(max-width:680px){.resource-inputs{gap:4px}.resource-input{gap:2px;padding:3px 4px}.resource-input-icon{width:18px}.resource-input-icon svg{width:17px;height:17px}.resource-input input[type=number]{font-size:15px}.wallet-track{height:3px}}
 @media(prefers-reduced-motion:reduce){.wallet-track i{transition:none}}
+
+/* Server-confirmed resource and object transitions. */
+.currency{position:relative}.wallet-change{animation:wallet-confirm .42s ease-out}
+.wallet-float{position:absolute;z-index:8;top:-10px;right:8px;pointer-events:none;padding:3px 7px;font-weight:900;font-size:13px;background:#f8e9c7;border:1px solid #9a784b;border-radius:9px;box-shadow:0 4px 12px #20170c44;animation:wallet-float .95s ease-out forwards}
+.wallet-plus{color:#277044}.wallet-minus{color:#9b4438}
+.artifact-transfer{position:absolute;z-index:12;left:50%;bottom:14%;width:96px;height:96px;pointer-events:none;filter:drop-shadow(0 9px 8px #23160e77)}
+.artifact-transfer svg{width:100%;height:100%}
+.transfer-in{animation:artifact-in .65s cubic-bezier(.15,.9,.3,1) forwards}
+.transfer-out{animation:artifact-out .55s ease-in forwards}
+@keyframes wallet-confirm{0%{filter:brightness(1.25);transform:translateY(-2px)}100%{filter:none;transform:none}}
+@keyframes wallet-float{0%{opacity:0;transform:translateY(10px)}20%{opacity:1}100%{opacity:0;transform:translateY(-24px)}}
+@keyframes artifact-in{0%{opacity:0;transform:translate(-50%,-75px) scale(.45) rotate(-12deg)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,0) scale(1.1)}}
+@keyframes artifact-out{0%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-90px) scale(.4) rotate(12deg)}}
+@media(prefers-reduced-motion:reduce){.wallet-change,.wallet-float,.artifact-transfer{animation:none!important}.wallet-float,.artifact-transfer{display:none}}
