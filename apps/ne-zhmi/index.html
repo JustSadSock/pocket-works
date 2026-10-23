@@ -16,6 +16,7 @@
 <section class="workbench" aria-label="Испытательная трасса">
   <div class="scene-header" data-ui><span id="scene-label">ИСПЫТАТЕЛЬНЫЙ ЦЕХ / 01</span><span id="clock">00:00</span></div>
   <canvas id="scene" role="img" aria-label="Болтик — робот с колёсами; трасса из платформ, пропастей и финишной арки"></canvas>
+  <div id="hazard-guide" class="hazard-guide hidden" aria-hidden="true"><span class="hazard-light"></span><span id="hazard-text"></span></div>
   <div class="scene-footer" data-ui><span id="status">ЖДЁМ СИГНАЛ</span><span id="falls">ПАДЕНИЯ 00</span></div>
   <section id="menu" class="panel intro" aria-labelledby="menu-title">
     <div class="plate">ПРОТОКОЛ 001 <span>ДВОЙНОЕ УПРАВЛЕНИЕ</span></div>
@@ -132,6 +133,6 @@
 </section>
 <div id="notice" role="status" aria-live="polite" class="sr-only"></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="НЕ ЖМИ!" data-app-version="0.4.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="НЕ ЖМИ!" data-app-version="0.5.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>

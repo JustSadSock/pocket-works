@@ -3,13 +3,13 @@
   "status": "ready",
   "product": "ne-zhmi",
   "direction": {
-    "premise": "A tiny tin robot barrels through a mechanical test rig while a pair of operators fight over two chunky industrial pushbuttons.",
-    "composition": "Edge-to-edge painted workshop diorama above a single shared lower metal control face; on portrait phones the camera follows the robot while the progress track remains visible.",
+    "premise": "A tiny tin robot drives itself through a chain of miniature mechanical hazards while 2–6 operators each hold one action on a tactile control desk.",
+    "composition": "Miniature full-bleed side-scrolling workshop over an enamel physical control face; mobile shows one assigned plunger and compact crew indicators without crowding the robot.",
     "shapeLanguage": "Pressed steel trays, machined circles, exposed bolts, enamel strips and two large plunger switches. Nothing is floating in a generic card grid.",
     "surfaceAndMaterial": "Painted iron, rubbed aluminum edges, amber enamel, rubber wheels and dusty machine-green workshop panels. All distinct from paper/ink media in neighboring apps.",
     "paletteLogic": "The world uses subdued sage and petroleum hues, the control deck graphite, jump honey-yellow and reversal desaturated cobalt; warnings have rust-orange accents.",
     "typography": "Compressed mechanical display heading, monospaced instrument legends, and readable sentence-case functional paragraphs.",
-    "signature": "The only two key controls are full-size physical plungers that visually sink on contact while a tiny metal character reacts inside the stage.",
+    "signature": "A single painted mechanical control desk with six role-specific plungers; impacts awaken a handmade wheeled tin robot through squash, wheel rotation, expressive optics and miniature dust bursts.",
     "distinction": "Unlike axis-pals's grid transport, this is continuous momentum and platform contact; unlike crumple-yard's vehicle sandbox, it is side-view two-action shared control."
   },
   "architecture": {
@@ -18,9 +18,9 @@
     "navigation": "overlay-list",
     "chromeTopology": "framed-stage",
     "dominantMotion": "rotational-inertia",
-    "primaryVerb": "Time jumps and reverse the autonomous Boltik to cross four metal platforms and reach the goal.",
-    "physicalFeedback": "The jump injects vertical velocity, the reversal changes motor facing, and impacts move the character and nudge the scene.",
-    "spatialRationale": "The scene owns all flexible space; the two touch controls keep fixed size and safe-area distance, and overlays replace it only between runs.",
+    "primaryVerb": "Coordinate jumps, reversals and four hold/impulse tools as 2–6 distinct operators to shepherd the shared Boltik through generated workshop sections.",
+    "physicalFeedback": "Real fixed-step forces cause landing compression, wheel motion, antenna sway, warning beacons, bounded debris and tonal machine sounds; cosmetic FX never change server outcomes.",
+    "spatialRationale": "One uninterrupted tracked world remains primary. The lower instrument deck scales from a two-station local layout to six short switches, while online each player gets a single oversized plunger.",
     "comparisons": [
       {
         "slug": "axis-pals",
@@ -66,6 +66,11 @@
         "slug": "crown-laws",
         "spatialDifference": "NE ZHMI uses a continuous side-view industrial test track and full-size tactile plunger control rather than the turn-based illustrated political board and governance panels of Crown Laws.",
         "interactionDifference": "Six operators affect a single physical body through timed impulses and held forces, not political voting or turn resolution."
+      },
+      {
+        "slug": "perekos",
+        "spatialDifference": "НЕ ЖМИ! follows one tiny wheeled tin robot along an industrial side-scrolling test rig with tactile bottom-mounted buttons, not Perekos's spellcasting arena, class rune selection and aiming reticle.",
+        "interactionDifference": "Cooperative 2–6 players operate one fixed control each with continuous forces, held tools and checkpointed machine obstacles; Perekos is a competitive caster duel with attacks and runes."
       }
     ]
   },

@@ -148,3 +148,38 @@ button:focus-visible,a:focus-visible{outline:3px solid #c06a40;outline-offset:3p
  .control-desk.crew-many .lever small{font-size:7px}
  .control-desk.crew-many .crew-status{display:none}
 }
+
+/* Micro-interactions for the toy test rig, without floating card decorations. */
+.lever{position:relative;overflow:hidden;isolation:isolate;transform:translateY(0);will-change:transform;transition:transform .11s cubic-bezier(.2,.7,.25,1),filter .16s ease,box-shadow .11s ease}
+.lever:before{content:'';position:absolute;inset:0 0 auto;height:6px;opacity:.55;background:rgba(255,255,255,.5);pointer-events:none;z-index:0}
+.lever:after{content:'';position:absolute;left:9px;bottom:9px;width:6px;height:6px;border-radius:50%;background:#6e766c;border:2px solid #465957;box-shadow:inset 0 1px 2px #253d40;transition:background .13s,box-shadow .13s;pointer-events:none}
+.lever:not(:disabled):hover{filter:brightness(1.055)}
+.lever.pressed,.lever.engaged,.lever:active:not(:disabled){transform:translateY(4px) scale(.993);filter:saturate(1.09) brightness(.96)}
+.lever.engaged:after,.lever.pressed:after{background:#f4e5b5;box-shadow:0 0 9px #f4dea9,inset 0 0 0 1px #fff}
+.lever.charging:after{background:#b37661;box-shadow:inset 0 0 0 1px #76554b}
+.lever:disabled{cursor:default}
+.power-meter{position:relative;overflow:hidden;transition:opacity .15s}
+.power-meter:after{content:'';position:absolute;inset:0 auto 0 0;width:var(--energy,100%);max-width:100%;background:rgba(255,240,194,.33);transition:width .09s linear;pointer-events:none}
+.control-station:has(.lever.engaged) .station-label b{color:#fff1b8}
+.control-station:has(.lever.charging) .station-label b{color:#d6a48c}
+.hazard-guide{position:absolute;top:58px;left:50%;transform:translateX(-50%);min-height:25px;display:flex;align-items:center;gap:8px;padding:5px 9px;border:2px solid #415956;background:#efddb9ed;color:#4a4940;white-space:nowrap;pointer-events:none;z-index:2;font:900 10px/1.05 ui-monospace,monospace;letter-spacing:.045em;box-shadow:2px 3px 0 #354b4e4f}
+.hazard-light{width:7px;height:7px;background:#d4835f;border-radius:50%;box-shadow:0 0 0 2px #ad775a55;animation:hazard-signal .95s ease-in-out infinite alternate}
+@keyframes hazard-signal{to{background:#f6bc70;box-shadow:0 0 0 4px #dba2673d}}
+@keyframes plate-arrive{from{opacity:0;transform:translate(-50%,-47%) scale(.975)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes intro-arrive{from{opacity:0;transform:translateY(-47%)}to{opacity:1;transform:translateY(-50%)}}
+.sheet:not(.hidden){animation:plate-arrive .22s cubic-bezier(.2,.8,.2,1) both}
+.intro:not(.hidden){animation:intro-arrive .26s cubic-bezier(.2,.8,.2,1) both}
+.machine:has(.lever.engaged) .desk-light i{box-shadow:0 0 10px #d7d7a4;background:#f1dca2}
+.scene-header span:first-child{max-width:min(60vw,440px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:720px){
+ .hazard-guide{top:69px;font-size:9px;padding:4px 6px;max-width:calc(100% - 28px)}
+ .scene-header span:first-child{max-width:58vw}
+}
+@media(max-height:620px){
+ .hazard-guide{top:45px}
+}
+@media(prefers-reduced-motion:reduce){
+ .hazard-light{animation:none}
+ .sheet:not(.hidden),.intro:not(.hidden){animation:none}
+ .lever,.power-meter,.lever:after{transition:none;will-change:auto}
+}

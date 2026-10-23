@@ -143,6 +143,12 @@ try{
  await local.locator('#operator-count').selectOption('6');
  await local.locator('#start').click();
  await poll(()=>local.locator('#float').isEnabled(),'local float available');
+ // Regression: the first browser compositor frame must have actual drawn pixels,
+ // not merely the CSS background while the workshop scene is unpainted.
+ await poll(()=>local.locator('#scene').evaluate(c=>{
+   const context=c.getContext('2d');
+   return c.width>30&&c.height>30&&context.getImageData(25,25,1,1).data[3]>0;
+ }),'local canvas painted without deferred frame');
  const enabled=await Promise.all(['jump','reverse','magnet','brake','push','float'].map(id=>local.locator('#'+id).isEnabled()));
  if(!enabled.every(Boolean))throw Error('Local operator station hidden or disabled');
  await local.screenshot({path:shots+'/crew-six-local-phone.png'});
