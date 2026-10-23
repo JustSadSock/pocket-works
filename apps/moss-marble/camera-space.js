@@ -31,7 +31,7 @@ export function screenToWorldPoint(x, y, scale, offsetX, offsetY, rotation = 0) 
 }
 
 export function portraitCourseRotation(level, width, height) {
-  if (width >= 610 || height < width * 1.20 || !level?.start || !level?.hole) return 0;
+  if (width >= 860 || height < width * 1.20 || !level?.start || !level?.hole) return 0;
   const dx = level.hole.x - level.start.x;
   const dy = level.hole.y - level.start.y;
   if (Math.hypot(dx, dy) < 80) return 0;
