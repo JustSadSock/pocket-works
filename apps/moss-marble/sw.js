@@ -1,24 +1,25 @@
 const CACHE_PREFIX = 'moss-marble-';
-const CACHE_NAME = 'moss-marble-v1.16.0';
-const APP_VERSION = '1.16.0';
+const CACHE_NAME = 'moss-marble-v1.17.0';
+const APP_VERSION = '1.17.0';
 const RELEASE_DATE = '2026-10-23';
 const RELEASE_NOTES = [
-  'Бесконечные лунки проверяются на проходимость и не создают непреодолимых ворот.',
-  'Новые объёмные бордюры повторяют рельеф, холмы стали отчётливее.',
-  'Коллизии камней совпадают с видимой формой, исправлены сбои размеров поля.'
+  'Поле теперь стоит на каменно-земляном основании и отбрасывает тень на пол оранжереи.',
+  'Убраны гигантские арки на фоне: пространство стало более спокойным и архитектурно цельным.',
+  'В портретной ориентации камера направляет маршрут вдоль экрана; удары точно соответствуют повернутому виду.'
 ];
 const APP_SHELL = [
   './',
   './index.html',
   './app.config.json',
-  './styles.css?v=1.16.0',
+  './styles.css?v=1.17.0',
   './styles14.css?v=1.4.0',
   './styles15.css?v=1.5.0',
   './styles16.css?v=1.6.0',
   './styles161.css?v=1.14.0',
-  './styles115.css?v=1.16.0',
+  './styles115.css?v=1.17.0',
   './levels.js',
   './procedural.js',
+  './camera-space.js',
   './playability.js',
   './course17.js',
   './course18.js',
@@ -34,9 +35,9 @@ const APP_SHELL = [
   './greenhouse15.js',
   './render.js',
   './experience14.js',
-  './camera-intro-guard.js?v=1.16.0',
+  './camera-intro-guard.js?v=1.17.0',
   './audio.js',
-  './app.js?v=1.16.0',
+  './app.js?v=1.17.0',
   './manifest.webmanifest',
   './icons/icon.svg',
   '../../shared/mobile-runtime.css',
