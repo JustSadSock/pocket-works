@@ -276,7 +276,7 @@ function currentHand() {
 
 function stopFilm({renderNow = true} = {}) {
  window.clearTimeout(app.filmTimer);app.filmTimer=null;app.filmSequence++;app.film=null;
- app.effects=[];app.lastBoardPositions={};
+ app.effects=[];app.lastConflictSlots=[];app.lastBoardPositions={};
  if(renderNow)render();
 }
 function effectsForFrame(frame) {
@@ -584,6 +584,7 @@ function handHTML(state) {
 }
 
 function phaseBanner() {
+  if (app.film?.active) return app.film.frames[app.film.index].label;
   if (app.screen === "online") {
     if (!app.online.roomState) {
       return "Ожидание второго игрока";
@@ -731,7 +732,7 @@ function filmHTML() {
  const pb=app.film;if(!pb?.active)return "";
  const frame=pb.frames[pb.index],messages=frame.logs||[];
  const featured=messages.find(l=>!["turn-start","crown-check","hold"].includes(l.kind))||messages[0];
- const phases=PHASE_ORDER.filter(phase=>pb.frames.some(f=>f.phase===phase)),idx=phases.indexOf(frame.phase);
+ const phases=frame.source==="network"?pb.frames.map(f=>f.phase):PHASE_ORDER.filter(phase=>pb.frames.some(f=>f.phase===phase)),idx=phases.indexOf(frame.phase);
  return `<section class="turn-film" aria-label="Разыгрывание закона" aria-live="polite">
  <div class="turn-film__crest" aria-hidden="true">${frame.phase==="laws"?"⚜":frame.phase==="throne"?"♛":"◆"}</div>
  <div class="turn-film__body"><div class="turn-film__title"><strong>${frame.label}</strong><span>${frame.source==="network"?"Результат общего хода":"Фаза "+Math.min(pb.index+1,pb.frames.length)+"/"+pb.frames.length}</span></div>
@@ -1293,6 +1294,7 @@ window.addEventListener("keydown", (event) => {
     event.preventDefault();app.debug.open=!app.debug.open;if(!app.debug.open)stopDebugRound();app.debug.animation=null;render();return;
   }
   if(event.key==="Escape"&&app.debug.open){stopDebugRound();app.debug.open=false;render();return;}
+  if(event.key==="Escape"&&app.film?.active){stopFilm();return;}
   if (event.key === "Escape" && app.modal) {
     closeModal();
   }
