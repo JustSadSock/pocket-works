@@ -61,6 +61,11 @@
         "slug": "moss-marble",
         "spatialDifference": "Moss & Marble is a landscape mini-golf course whose terrain and topology define the shot; Crown Laws is a fixed 5x7 court framed by an authoritative law book and a private decree hand.",
         "interactionDifference": "Moss & Marble asks the player to aim and time a kinetic ball shot, while Crown Laws asks for one secret rule change and then resolves simultaneous autonomous actor movement."
+      },
+      {
+        "slug": "chyepukha",
+        "spatialDifference": "Чепуха использует поочерёдное составление абсурдных высказываний на листах бумаги; Законы короны показывают постоянное игровое поле 5×7 с действующим кодексом слева и закрытой рукой общих указов справа.",
+        "interactionDifference": "В Чепухе игрок заполняет и передаёт бумажные ответы; здесь два скрытых закона разрешаются одновременно, после чего семь детерминированных фаз двигают автономных персонажей и награждают коронами."
       }
     ]
   },
