@@ -167,6 +167,41 @@ export function createRenderer(canvas) {
       }
       ctx.restore();
     }
+    // Ability-specific stage pieces: visual affordances track real interactions.
+    for(const device of level.devices||[]){
+      const x=sx(device.x),ww=device.w*scale,y=sy(6.5);
+      if(x>w+90||x+ww<-90)continue;
+      if(device.type==='mag-rail'){
+        ctx.save();ctx.strokeStyle='#896f9e';ctx.lineWidth=8;
+        ctx.beginPath();ctx.moveTo(x,sy(3.65));ctx.lineTo(x+ww,sy(3.65));ctx.stroke();
+        ctx.fillStyle='#bba4d4';ctx.font='bold 22px system-ui';ctx.textAlign='center';
+        for(let px=x+20;px<x+ww;px+=38)ctx.fillText('⌄',px,sy(3.65)+30);
+        ctx.restore();
+      }else if(device.type==='balloon-sign'){
+        ctx.save();ctx.globalAlpha=.7;ctx.strokeStyle='#f6e5c4';ctx.lineWidth=3;
+        for(let a=0;a<3;a++){
+          const xx=x+a*27+12;
+          ctx.beginPath();ctx.moveTo(xx,y-60);ctx.quadraticCurveTo(xx+9,y-104,xx,y-139);ctx.stroke();
+        }
+        ctx.restore();
+      }else if(device.type==='cargo-pad'){
+        ctx.fillStyle='#a3bd83';ctx.fillRect(x,y-9,ww,8);
+        ctx.fillStyle='#263c3d';ctx.fillRect(x+4,y-5,Math.max(0,ww-8),3);
+      }else if(device.type==='cargo-gate'){
+        const locked=!(state.cargo||[]).some(box=>box.latched&&Math.abs(box.padX-device.x)<1.3);
+        ctx.fillStyle=locked?'#c08a72':'#7d9c81';
+        ctx.fillRect(x,locked?sy(4.55):sy(2.6),ww,locked?1.95*scale:.6*scale);
+        ctx.strokeStyle='#3b5456';ctx.lineWidth=3;ctx.strokeRect(x,locked?sy(4.55):sy(2.6),ww,locked?1.95*scale:.6*scale);
+      }
+    }
+    for(const box of state.cargo||[]){
+      const x=sx(box.x),y=sy(box.y);
+      ctx.fillStyle=box.latched?'#96b894':'#c9a16e';
+      rr(ctx,x-17,y-20,34,34,4);ctx.fill();
+      ctx.strokeStyle='#415658';ctx.lineWidth=3;ctx.stroke();
+      ctx.strokeRect(x-10,y-13,20,20);
+      ctx.fillStyle='#526768';ctx.beginPath();ctx.arc(x,y-3,4.5,0,Math.PI*2);ctx.fill();
+    }
     // Physical checkpoint, not an invisible collision trigger.
     const markerX=sx(level.checkpoint);
     ctx.fillStyle='#3d6260';ctx.fillRect(markerX-3,sy(5.55),6,sy(6.25)-sy(5.55));
@@ -211,6 +246,30 @@ export function createRenderer(canvas) {
     }
     ctx.fillStyle='#737e74';ctx.beginPath();ctx.arc(-bw*.37,-bh*.37,2.3,0,7);ctx.arc(bw*.37,-bh*.37,2.3,0,7);ctx.fill();
     ctx.restore();
+    if(state.held?.float && state.energy?.float>.005){
+      // Inflatable stabilizer connected to Boltik with a visible cable.
+      const yy=py-scale*.95;
+      ctx.strokeStyle='#e5e4d4';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(px,py-26);ctx.lineTo(px,yy+20);ctx.stroke();
+      ctx.fillStyle='#efce82';ctx.beginPath();ctx.ellipse(px,yy,22,27,0,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#b18c58';ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle='#f8ecd3';ctx.beginPath();ctx.ellipse(px-7,yy-8,5,10,-.35,0,Math.PI*2);ctx.fill();
+    }
+    if(state.held?.magnet && state.energy?.magnet>.005){
+      ctx.save();ctx.globalAlpha=.32;ctx.strokeStyle='#ab91d0';ctx.lineWidth=2;
+      for(let i=0;i<3;i++){
+        ctx.beginPath();ctx.ellipse(px,py,39+i*23,31+i*16,0,0,Math.PI*2);ctx.stroke();
+      }
+      ctx.restore();
+    }
+    if(state.held?.brake && state.energy?.brake>.005){
+      ctx.fillStyle='#c98066';ctx.fillRect(px-scale*.35,py+scale*.33,scale*.7,4);
+      ctx.fillStyle='#fff0cd';for(let i=0;i<3;i++)ctx.fillRect(px+(i-1)*13,py+scale*.43,4,8);
+    }
+    if(state.pushCooldown>.77){
+      ctx.save();ctx.globalAlpha=Math.min(1,(state.pushCooldown-.77)*2.6);ctx.strokeStyle='#f5dca6';ctx.lineWidth=4;
+      ctx.beginPath();ctx.arc(px,py,scale*(1.5-state.pushCooldown),0,Math.PI*2);ctx.stroke();ctx.restore();
+    }
     // Clear progress indicator inside the world, showing overall track context.
     const barX=Math.max(16,w*.05),barW=Math.min(w-32,280),barY=Math.max(36,h-31);
     ctx.fillStyle='rgba(39,61,62,.77)';rr(ctx,barX-6,barY-10,barW+12,22,6);ctx.fill();
