@@ -87,7 +87,7 @@ test('visual and sound integration is confined to client, server rules remain un
     assert.match(game,/lastClearDetail:detail\|\|null/);
     assert.match(game,/if\(!previousGameOver&&s\.isGameOver\)soundManager\.gameOver\(\)/);
     assert.match(game,/setEnabled\(enabled\)/);
-    assert.match(game,/this\.master\.gain\.value=this\.enabled\?\.65:0/);
+    assert.match(game,/this\.master\.gain\.value=this\.enabled \? \.65 : 0/);
     assert.match(css,/#game-effects-canvas\{/);
     assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
     assert.match(sw,/board-effects\.js/);
