@@ -532,7 +532,10 @@ function addBoardScene(level) {
     }
   }
 
-  addHole(opaque, level);
+  // Course18/19 draws the cup at the actual field height in terrain18.js.
+  // The legacy zero-height cup and its static flag would duplicate and
+  // visually cover the real opening, so only draw them on older courses.
+  if (!isGardenTray) addHole(opaque, level);
   for (const obstacle of level.obstacles || []) addObstacle(opaque, shadows, obstacle);
   for (const wall of level.walls || []) {
     const z0 = wall.material === 'glass' ? 9 : .7;
