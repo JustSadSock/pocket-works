@@ -25,7 +25,8 @@
         "tests/forge-pixel.test.mjs",
         "tests/forge-world.test.mjs",
         "tests/rune-seals.test.mjs",
-        "tests/rupture.test.mjs"
+        "tests/rupture.test.mjs",
+        "tests/evolution.test.mjs"
       ]
     },
     {
@@ -85,7 +86,8 @@
         "qa/aim-precision.spec.js",
         "qa/kinetics.spec.js",
         "qa/rune-forge.spec.js",
-        "qa/rupture.spec.js"
+        "qa/rupture.spec.js",
+        "qa/evolution.spec.js"
       ]
     },
     {
