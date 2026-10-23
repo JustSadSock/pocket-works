@@ -4,6 +4,7 @@ import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketAva
 import {storageForTab,prepareSession,markActive,releaseActive} from './tab-session.js';
 import {buildComicPrompt} from './comic-prompt.js';
 import {createSoundscape} from './audio.js';
+import {makeSubmission,outgoingPacket,validPending,isSafeReceipt,canRetry} from './submission-guard.js';
 import {renderWaiting} from './waiting-view.js';
 import {updateWaitingView} from './waiting-sync.js';
 import {mayShowFinaleIntro} from './finale-state.js';
@@ -68,6 +69,26 @@ function saveWriterMeta(patch){
  if(IS_PREVIEW){previewWriterMeta=value;return value}
  try{localStorage.setItem(writerMetaKey(),JSON.stringify(value))}catch{}
  return value;
+}
+const pendingStorageKey=()=>KEY+'submit:'+sessionKey()+':'+room;
+function readPending(){
+ if(IS_PREVIEW)return null;
+ try{const v=JSON.parse(localStorage.getItem(pendingStorageKey())||'null');return validPending(v)?v:null}
+ catch{return null}
+}
+function savePending(record){if(IS_PREVIEW)return true;try{localStorage.setItem(pendingStorageKey(),JSON.stringify(record));return true}catch{toast('Не вдалося зберегти відправку на цьому пристрої.');return false}}
+function discardPending(){if(IS_PREVIEW)return;try{localStorage.removeItem(pendingStorageKey())}catch{}}
+function acknowledgeReceipt(receipt){
+ const p=readPending();
+ if(roomVersion!=='v5'||!isSafeReceipt(receipt,p))return false;
+ try{localStorage.removeItem(p.draftStorageKey);localStorage.removeItem(p.draftStorageKey+':editor');localStorage.removeItem(pendingStorageKey())}catch{}
+ delete draftSelections[p.draftStorageKey];
+ return true;
+}
+function retryPending(){
+ const p=readPending();
+ if(roomVersion!=='v5'||!p||!canRetry(p,view)||!connected||!net?.roomId)return false;
+ return send(outgoingPacket(p));
 }
 const clearDraft=()=>{if(IS_PREVIEW){previewDraft='';previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};return}try{localStorage.removeItem(draftKey());localStorage.removeItem(writerMetaKey())}catch{}};
 function toast(x){toastEl.textContent=String(x);toastEl.classList.add('show');clearTimeout(toastEl.timer);toastEl.timer=setTimeout(()=>toastEl.classList.remove('show'),3200)}
@@ -208,14 +229,15 @@ async function connect(how,settings){
   c.on('room_joined',v=>{
    if(net!==c)return;
    clearRoomTimeout();
-   if(v.gameId!=='chyepukha'||!['v1','v2','v3','v4'].includes(v.version)||v.state?.protocol!==1){
+   if(v.gameId!=='chyepukha'||!['v1','v2','v3','v4','v5'].includes(v.version)||v.state?.protocol!==1){
     notice='Несумісна версія кімнати. Створи нову.';try{c.leaveRoom()}catch{}
     room='';view=null;render();return;
    }
-   room=v.roomId;roomVersion=v.version;syncUrl();apply(v.state);send({type:'sync'});
+   room=v.roomId;roomVersion=v.version;syncUrl();apply(v.state);send({type:'sync'});if(roomVersion==='v5')retryPending();
   });
   c.on('game_event',v=>{if(net!==c)return;if(v.event?.type==='state')apply(v.event.payload);
-   else if(v.event?.type==='notice')toast(v.event.payload)});
+   else if(v.event?.type==='receipt')acknowledgeReceipt(v.event.payload);
+   else if(v.event?.type==='notice'){if(roomVersion==='v5'&&readPending())discardPending();toast(v.event.payload)}});
   c.on('presence',()=>{if(net===c&&room&&connected)send({type:'sync'})});
   c.on('disconnected',()=>{if(net!==c)return;connected=false;connecting=true;netStatus()});
   c.on('room_closed',()=>{if(net!==c)return;room='';view=null;connected=false;connecting=false;syncUrl();notice='Кімнату закрито.';render()});
@@ -253,10 +275,11 @@ async function connect(how,settings){
 function apply(v){if(!v||v.protocol!==1||!Array.isArray(v.players))return;
  if(view&&v.revision<view.revision)return;
  if(v.phase==='finished'&&Array.isArray(v.stories))v={...v,stories:v.stories.map(st=>({...st,text:st.fragments.map(f=>f.answer).join('\n\n')}))};
- const prev=view;const waitingSame=prev?.phase==='writing'&&v.phase==='writing'&&prev.waiting&&v.waiting&&prev.round===v.round;
+ if(roomVersion==='v5')acknowledgeReceipt(v.lastReceipt);
+  const prev=view;const waitingSame=prev?.phase==='writing'&&v.phase==='writing'&&prev.waiting&&v.waiting&&prev.round===v.round;
  if(mayShowFinaleIntro(prev?.phase,v.phase,Array.isArray(v.stories)&&v.stories.length>0)&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)finaleIntroActive=true;
  const same=prev?.phase==='writing'&&v.phase==='writing'&&!prev.waiting&&!v.waiting&&prev.round===v.round&&prev.sheet?.id===v.sheet?.id;
- if(prev?.phase==='writing'&&!prev.waiting&&v.waiting)clearDraft();
+ if(prev?.phase==='writing'&&!prev.waiting&&v.waiting&&roomVersion!=='v5')clearDraft();
  view=v;soundscape.setScene(v.phase==='lobby'?'lobby':v.phase==='writing'?'writing':'finished');if(prev?.phase!==v.phase&&v.phase==='finished')soundscape.fx('reveal');if(v.phase==='finished')keepFinished(v);if(prev?.round!==v.round&&prev?.phase==='writing')tick(690);
  if(waitingSame&&updateWaitingView(scene.querySelector('.dispatch-room'),prev,v,{sound:type=>soundscape.fx(type)}))return;
  if(same){const el=$('sideRoster');if(el)el.innerHTML=rosterCompact();const progress=$('turnProgress');if(progress){const next=document.createElement('div');next.innerHTML=turnProgress();progress.replaceWith(next.firstElementChild)}return}
