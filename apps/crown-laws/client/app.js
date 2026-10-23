@@ -974,24 +974,16 @@ function modalHTML() {
     `;
   }
   if (app.modal === "rules") return rulesHTML();
-  return `
-    <div class="modal-shell" data-action="close-modal">
-      <div class="modal-card" data-stop-click="1">
-        <div class="panel-head">
-          <h3>Настройки</h3>
-          <button data-native-press class="text-btn" data-action="close-modal">Закрыть</button>
-        </div>
-        <label class="setting-row">
-          <span>Звук эффектов</span>
-          <input type="checkbox" data-setting="sound" ${app.settings.sound ? "checked" : ""} />
-        </label>
-        <label class="setting-row">
-          <span>Снизить анимации</span>
-          <input type="checkbox" data-setting="reducedMotion" ${app.settings.reducedMotion ? "checked" : ""} />
-        </label>
-      </div>
-    </div>
-  `;
+  return `<div class="modal-shell" data-action="close-modal">
+    <section class="modal-card council-settings" data-stop-click="1" role="dialog" aria-modal="true" aria-label="Настройки">
+      <header><span>ЗАЛ СОВЕТА · НАСТРОЙКИ</span><button type="button" data-action="close-modal" aria-label="Закрыть настройки">×</button></header>
+      <h2>Тишина и движение</h2>
+      <p>Настройте звучание и темп церемоний. Изменения действуют сразу.</p>
+      <label class="council-settings__option"><span class="council-settings__symbol" aria-hidden="true">♫</span><span class="council-settings__copy"><strong>Звуки двора</strong><small>Шаги, печати, столкновения и коронации</small></span><input type="checkbox" data-setting="sound" ${app.settings.sound?"checked":""} aria-label="Включить звуковые эффекты" /></label>
+      <label class="council-settings__option"><span class="council-settings__symbol" aria-hidden="true">◇</span><span class="council-settings__copy"><strong>Меньше анимаций</strong><small>Сокращает показ хода и движение эффектов</small></span><input type="checkbox" data-setting="reducedMotion" ${app.settings.reducedMotion?"checked":""} aria-label="Снизить анимации" /></label>
+      <footer><button data-native-press class="primary-btn" data-action="close-modal">Вернуться к партии →</button></footer>
+    </section>
+  </div>`;
 }
 
 function artGalleryHTML() {
