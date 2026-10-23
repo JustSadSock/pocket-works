@@ -2,7 +2,7 @@
 // again in the authoritative PocketNet v6 module.
 const safe=(x,escape)=>escape(String(x??''));
 export function controlsBar(view,me,version,escape){
- if(version!=='v6'||!view||!['lobby','writing'].includes(view.phase))return '';
+ if(!['v6','v7'].includes(version)||!view||!['lobby','writing'].includes(view.phase))return '';
  const h=view.host===me,paused=view.paused;
  return '<div class="moderation-bar"><span class="moderation-state">'+(paused?'ПАУЗА · РУКОПИСИ ЗБЕРЕЖЕНІ':'РЕДАКЦІЯ · '+(view.round+1)+' / '+(view.total||'—'))+'</span><div class="moderation-actions">'+(h&&view.phase==='writing'?'<button type="button" class="moderation-pause" data-act="'+(paused?'unpause':'pause')+'">'+(paused?'Продовжити':'Пауза')+'</button>':'')+'<button type="button" data-act="manage-players" class="moderation-manage">'+(h?'Керування':'Учасники')+' <span aria-hidden="true">↗</span></button></div></div>';
 }
