@@ -1,5 +1,6 @@
 // NE ZHMI! — isolated, deterministic simulation. No DOM, networking or rendering.
 import {deviceRect} from './course.js';
+import {HOLD_ACTIONS} from './abilities.js';
 export const WORLD = Object.freeze({ width: 18, height: 8, gravity: 19, speed: 3.4 });
 export const ROBOT = Object.freeze({ halfWidth: 0.33, halfHeight: 0.46, jump: 9.15 });
 export const LEVEL = Object.freeze({
@@ -16,6 +17,10 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 export function createGame(level = LEVEL) {
   return {
     level,
+    held:{magnet:false,brake:false,float:false},
+    energy:{magnet:1,brake:1,float:1},
+    pushCooldown:0,pushes:0,magnetUses:0,brakeTime:0,floatTime:0,
+    cargo:(level.devices||[]).filter(d=>d.type==='cargo').map(d=>({x:d.x,y:5.98,vx:0,id:d.x,latched:false,padX:d.padX})),
     x: level.start ?? 1.15, y: 6.5 - ROBOT.halfHeight, vx: 0, vy: 0, dir: 1,
     ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, t: 0,
     rotation: 0, checkpoint: level.start ?? 1.15, respawns: 0, jumps: 0, reverses: 0, springCooldown:0, hazardCooldown:0,
@@ -26,13 +31,31 @@ function bounds(state) {
   return { left: state.x - ROBOT.halfWidth, right: state.x + ROBOT.halfWidth, top: state.y - ROBOT.halfHeight, bottom: state.y + ROBOT.halfHeight };
 }
 const overlap = (a,b) => a.left < b.x + b.w - 1e-5 && a.right > b.x + 1e-5;
-export function commandGame(state, action) {
+export function commandGame(state, action, pressed=true) {
+  if(HOLD_ACTIONS.includes(action)){
+    if(state.finished)return 'finished';
+    if(state.held[action]===!!pressed)return 'nochange';
+    state.held[action]=!!pressed;
+    if(action==='magnet'&&pressed)state.magnetUses++;
+    state.lastEvent=action+(pressed?'-on':'-off');
+    return state.lastEvent;
+  }
   if (state.finished) return 'finished';
   if (action === 'reverse') {
     if (state.cooldown > .01) return 'cooldown';
     state.dir *= -1; state.cooldown = .24; state.reverses++;
     state.lastEvent = 'reverse';
     return 'reverse';
+  }
+  if(action==='push'){
+    if(state.pushCooldown>0)return 'cooldown';
+    state.pushCooldown=1.15;state.pushes++;
+    state.vx+=state.dir*5.4;
+    for(const box of state.cargo||[]){
+      if(Math.abs(box.x-state.x)<2.4 && Math.abs(box.y-state.y)<1.4)
+        box.vx+=state.dir*16;
+    }
+    state.lastEvent='push';return 'push';
   }
   if (action === 'jump') {
     // Buffered jump: input a fraction before landing is not discarded.
@@ -52,6 +75,13 @@ export function stepGame(state, dt = FIXED_DT) {
   state.t += delta;
   state.cooldown = Math.max(0, state.cooldown - delta);
   state.wallCooldown = Math.max(0, state.wallCooldown - delta);
+  state.pushCooldown=Math.max(0,(state.pushCooldown||0)-delta);
+  for(const action of HOLD_ACTIONS){
+    const on=!!state.held[action]&&state.energy[action]>.005;
+    state.energy[action]=clamp(state.energy[action]+(on?-(action==='float'?.25:.19):.29)*delta,0,1);
+    if(on&&action==='brake')state.brakeTime+=delta;
+    if(on&&action==='float')state.floatTime+=delta;
+  }
   state.springCooldown = Math.max(0, (state.springCooldown||0)-delta);
   state.hazardCooldown = Math.max(0, (state.hazardCooldown||0)-delta);
   state.buffer = Math.max(0, state.buffer - delta);
@@ -65,9 +95,15 @@ export function stepGame(state, dt = FIXED_DT) {
     Math.abs(state.y+ROBOT.halfHeight-p.y)<.14);
   const belt=state.ground && groundSurface?.effect?.startsWith('belt-')
     ? (groundSurface.effect==='belt-right'?1.45:-1.35) : 0;
-  const desired = WORLD.speed * state.dir + belt;
-  const acceleration = state.ground ? 23 : 9.5;
+  const braking=state.held.brake&&state.energy.brake>.005;
+  const desired = braking?0:WORLD.speed*state.dir+belt;
+  const acceleration = braking?45:(state.ground?23:9.5);
   state.vx += clamp(desired - state.vx, -acceleration * delta, acceleration * delta);
+  if(braking)state.vx*=Math.max(0,1-10*delta);
+  if(state.held.magnet&&state.energy.magnet>.005)for(const device of level.devices||[]){
+    if(device.type!=='mag-rail'||Math.abs(state.x-(device.x+device.w/2))>3.0)continue;
+    if(state.y>3.5 && state.y<7)state.vy-=28*delta;
+  }
   const previousX = state.x;
   // Air jets are continuous forces: the same inputs result in the same motion
   // on client and authoritative server, including on low refresh-rate devices.
@@ -89,7 +125,22 @@ export function stepGame(state, dt = FIXED_DT) {
       }
     }
   }
-  state.vy += WORLD.gravity * delta;
+  for(const box of state.cargo||[]){
+    const distance=state.x-box.x;
+    if(state.held.magnet&&state.energy.magnet>.005&&Math.abs(distance)<3){
+      box.vx+=Math.sign(distance)*12*delta;
+    }
+    box.vx*=Math.max(0,1-1.3*delta);
+    box.x=clamp(box.x+box.vx*delta,.4,(level.width||18)-.4);
+    if(!box.latched&&Math.abs(box.x-box.padX)<.4){box.latched=true;box.vx=0;eventsOnce('cargo');}
+    if(!box.latched&&Math.abs(box.x-state.x)<.45){
+      state.x=Math.min(state.x,box.x-.42);
+      state.vx=Math.min(state.vx,.1);
+    }
+  }
+  const floating=state.held.float&&state.energy.float>.005;
+  state.vy += (floating?WORLD.gravity*.29:WORLD.gravity)*delta;
+  if(floating)state.vy=Math.min(state.vy,2.9);
   const oldY = state.y;
   state.y += state.vy * delta;
   state.ground = false;
@@ -120,8 +171,8 @@ export function stepGame(state, dt = FIXED_DT) {
   const playerBox=bounds(state);
   let hazardous=false;
   for(const device of level.devices||[]) {
-    if(!['gate','press'].includes(device.type))continue;
-    const r=deviceRect(device,state.t);
+    if(!['gate','press','cargo-gate'].includes(device.type))continue;
+    const r=device.type==='cargo-gate'?{x:device.x,y:4.55,w:device.w,h:1.95,active:!(state.cargo||[]).some(c=>c.latched&&Math.abs(c.padX-device.x)<1.3)}:deviceRect(device,state.t);
     if(!r?.active||playerBox.left>=r.x+r.w||playerBox.right<=r.x||
        playerBox.top>=r.y+r.h||playerBox.bottom<=r.y)continue;
     if(device.type==='press'){hazardous=true;break;}
@@ -133,7 +184,9 @@ export function stepGame(state, dt = FIXED_DT) {
     const savedX = state.checkpoint;
     const spawnY=savedX===level.checkpoint?level.checkpointSpawn?.y:undefined;
     Object.assign(state, { x: savedX, y: spawnY ?? (savedX > 9 ? 6.25 - ROBOT.halfHeight : 6.5 - ROBOT.halfHeight),
-      vx: 0, vy: 0, dir: 1, ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, rotation: 0 });
+      vx: 0, vy: 0, dir: 1, ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, rotation: 0,
+      held:{magnet:false,brake:false,float:false},
+      cargo:(level.devices||[]).filter(d=>d.type==='cargo').map(d=>({x:d.x,y:5.98,vx:0,id:d.x,latched:false,padX:d.padX})) });
     state.respawns++;
     state.lastEvent = 'respawn'; eventsOnce(hazardous?'hazard':'respawn');
   }
