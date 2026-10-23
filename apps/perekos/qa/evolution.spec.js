@@ -100,8 +100,8 @@ test('class ability button fires an actual attack or creates a wall with cooldow
   await page.locator('#archetype-options button').filter({hasText:({striker:'Стрелок',shaper:'Формирователь',distorter:'Искажатель'})[archetype]}).click();
   await page.locator('#mage-confirm').click();
   await page.locator('#mode-duel').click();await page.locator('#primary-action').click();
-  await expect(page.locator('#special-btn')).toBeVisible();
-  await page.locator('#special-btn').click();
+  if(await page.locator('#special-btn').isVisible())await page.locator('#special-btn').click();
+  else await page.keyboard.press('r'); // Desktop uses R; touch devices use the on-screen key.
   await expect.poll(()=>page.evaluate(()=>window.__perekosTest.state.actors[0].specialCd),{timeout:4000}).toBeGreaterThan(0);
   const result=await page.evaluate(()=>{
    const s=window.__perekosTest.state;
