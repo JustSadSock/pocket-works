@@ -1373,8 +1373,9 @@ test('Host can exclude a lobby guest; member and account bans are durable and pr
 });
 test('Host kick during a live auction cancels bids, returns black escrow and skips kicked turn',()=>{
  const {state,players}=makeRoom(3);
- const [host,guest]=state.contestants;
+ const host=state.contestants.find(p=>p.id===state.host),guest=state.contestants.find(p=>p.id!==state.host);
  const hostMember={id:host.id,name:host.name},guestMember={id:guest.id,name:guest.name};
+ state.turnIndex=state.contestants.indexOf(host);
  state.listing=null;
  const auction=host.items[0];
  act(state,host.id,{type:'post',itemId:auction.id,ask:{gold:45}});
@@ -1382,7 +1383,7 @@ test('Host kick during a live auction cancels bids, returns black escrow and ski
  assert.equal(state.bids.length,1);
  const blackItem=guest.items.pop();
  state.blackLots=[{id:'black-debug',seller:guest.id,item:blackItem,ask:{gold:20,crystals:0,parts:0},bids:[],round:state.round}];
- state.turnIndex=1;
+ state.turnIndex=state.contestants.indexOf(guest);
  const before=guest.items.length;
  const result=game.onMessage({state,player:hostMember,players:[hostMember,guestMember,{id:players[2].id,name:players[2].name}],payload:{type:'kick',targetId:guest.id}});
  assert.ok(result.events.some(e=>e.type==='player_kicked'&&e.to===guest.id));
