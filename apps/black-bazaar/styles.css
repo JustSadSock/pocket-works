@@ -842,3 +842,11 @@ body.sheet-open{overflow:auto}
  .table-stage .mini-artifacts button{max-height:34px;min-height:30px}
  .bottom-ribbon .action-end{min-height:33px;padding:3px 5px}
 }
+
+/* Real screenshot review: completion heading on the forest background was unreadable. */
+.done-screen{width:min(960px,100%);max-width:100%;margin:clamp(8px,3vh,30px) auto;display:grid;gap:12px;padding:0 clamp(8px,2vw,18px)}
+.done-screen>h1{color:#ffdfab;text-shadow:0 2px 3px #0d1812,0 0 18px #0a18128a;font-size:clamp(26px,4vw,42px);line-height:1.08;margin:0}
+.done-screen>p{color:#f6e4c6;text-shadow:0 1px 2px #08150d;line-height:1.4;max-width:68ch;margin:0}
+.done-screen>.panel{margin:0;min-width:0;overflow-x:auto}
+.done-screen>.row{flex-wrap:wrap;gap:9px;margin-top:4px}
+@media(max-width:680px){.done-screen{gap:9px}.done-screen>h1{font-size:26px}.done-screen>p{font-size:13px}.done-screen>.panel{padding:10px}}
