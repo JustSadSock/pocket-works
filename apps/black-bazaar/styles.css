@@ -748,3 +748,27 @@ body.sheet-open{overflow:auto}
 @keyframes artifact-in{0%{opacity:0;transform:translate(-50%,-75px) scale(.45) rotate(-12deg)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,0) scale(1.1)}}
 @keyframes artifact-out{0%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-90px) scale(.4) rotate(12deg)}}
 @media(prefers-reduced-motion:reduce){.wallet-change,.wallet-float,.artifact-transfer{animation:none!important}.wallet-float,.artifact-transfer{display:none}}
+
+/* Auction surface: price and offer count are visible without opening a sheet. */
+.table-stage .artifact{position:relative}
+.lot-market-strip{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:5px;font-size:12px;font-weight:800}
+.lot-market-strip>span{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border-radius:8px;background:#f5dba8;color:#4a3021;border:1px solid #b08049;box-shadow:0 2px 4px #2f201d30}
+.urgent-ticket{display:flex;align-items:center;gap:9px;min-height:38px;width:fit-content;max-width:100%;margin:0 0 7px;padding:4px 9px;background:#f3ddad;color:#603e28;border:1px solid #a87743;border-radius:8px;box-shadow:0 2px 0 #805a35;font-size:12px;text-align:left}
+.urgent-ticket>span{display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:800}.urgent-ticket>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.urgent-ticket>small{white-space:nowrap;font-weight:900;margin-left:auto;color:#9c4834}
+@media(max-width:680px){.urgent-ticket{width:100%;gap:5px;margin-bottom:4px}.urgent-ticket>span{font-size:11px}.urgent-ticket>strong{font-size:11px}.lot-market-strip{font-size:11px;gap:3px}.lot-market-strip>span{padding:3px 5px}}
+
+/* Object movement references the rendered tabletop, avoiding viewport-relative jumps. */
+.play-field{isolation:isolate}
+.artifact-transfer{left:0;top:0;bottom:auto;width:clamp(56px,8vw,100px);height:clamp(56px,8vw,100px);margin:0;transform-origin:center;will-change:transform,opacity}
+@keyframes artifact-in{0%{opacity:0;transform:translate(calc(var(--from-x) - 50%),calc(var(--from-y) - 50%)) scale(.66) rotate(-8deg)}18%{opacity:1}85%{opacity:1}100%{opacity:0;transform:translate(calc(var(--to-x) - 50%),calc(var(--to-y) - 50%)) scale(.76)}}
+@keyframes artifact-out{0%{opacity:0;transform:translate(calc(var(--from-x) - 50%),calc(var(--from-y) - 50%)) scale(.76)}18%{opacity:1}85%{opacity:1}100%{opacity:0;transform:translate(calc(var(--to-x) - 50%),calc(var(--to-y) - 50%)) scale(1.02) rotate(5deg)}}
+@media(max-width:680px){
+ .play-screen,.play-body,.play-field,.table-stage{max-width:100%;min-width:0}
+ .play-head{min-width:0;flex-wrap:wrap}
+ .table-stage .artifact{max-width:min(100%,260px)}
+ .table-stage .mini-artifacts{width:100%;max-width:100%;justify-content:center}
+ .lot-market-strip{max-width:100%;min-width:0}
+ .lot-market-strip>span{max-width:100%;min-width:0;overflow-wrap:anywhere}
+ .player-popover{max-width:calc(100vw - 28px);overflow-x:hidden}
+}
+@media(max-width:390px){.table-stage .mini-artifacts{gap:2px}.table-stage .mini-artifacts button{flex:0 1 59px;max-width:59px;min-width:0}.table-stage .mini-artifacts button .item-svg{max-width:100%;height:auto;aspect-ratio:1}.urgent-ticket{overflow:hidden}}

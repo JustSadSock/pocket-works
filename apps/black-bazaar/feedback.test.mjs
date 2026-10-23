@@ -66,3 +66,13 @@ test('Resource and artifact motion is gated by server snapshots',()=>{
  assert.match(source,/showConfirmedMovement\(previous,incoming\)/);
  assert.match(source,/data-resource/);
 });
+
+test('Auction tabletop shows asking price, live bid count, and urgent deadline ticket',()=>{
+ const ui=readFileSync(new URL('./app.js',import.meta.url),'utf8');
+ assert.match(ui,/lot-market-strip/);
+ assert.match(ui,/state\.bids\.length/);
+ assert.match(ui,/urgent-ticket/);
+ assert.match(ui,/urgentClock/);
+});
+
+test('Object transfers use measured stage and inventory coordinates',()=>{const src=readFileSync(new URL('./app.js',import.meta.url),'utf8');assert.match(src,/getBoundingClientRect/);assert.match(src,/--from-x/);assert.match(src,/--to-y/);});
