@@ -386,14 +386,14 @@ function closeVision(){
 
 function confirmSelection() {
   const state = currentState();
-  if (!state || !app.selectedCardId || app.film?.active) {
+  if (!state || !app.selectedCardId || app.film?.active || state.winner) {
     return;
   }
   app.forecast=null;app.forecastReview=false;
 
   if (app.screen === "online") {
     if (!app.online.socket || app.online.socket.readyState !== WebSocket.OPEN) {
-      return;
+      app.online.error="Нет связи: указ не отправлен.";render();return;
     }
     if(app.online.submissionPending||app.online.ready[app.online.you])return;
     const cardId=app.selectedCardId;
@@ -554,6 +554,7 @@ function setupSocket() {
 }
 
 function createRoom() {
+  app.online.error="";
   if (!app.online.socket || app.online.socket.readyState !== WebSocket.OPEN) {
     setupSocket();
     app.online.socket?.addEventListener(
@@ -569,8 +570,9 @@ function createRoom() {
 }
 
 function joinRoom() {
-  if (!app.online.codeInput.trim()) {
-    return;
+  app.online.error="";
+  if (!/^[0-9a-f]{8}$/i.test(app.online.codeInput.trim())) {
+    app.online.error="Введите 8 символов кода: 0–9, A–F.";render();return;
   }
   if (!app.online.socket || app.online.socket.readyState !== WebSocket.OPEN) {
     setupSocket();
@@ -722,12 +724,12 @@ function visionBoardOverlayHTML() {
 
 function handHTML(state) {
   const viewer=getViewerPlayer();
-  const locked=Boolean(app.film?.active)||(app.screen==="online"&&app.online.ready[viewer])||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
+  const locked=Boolean(app.film?.active)||(app.screen==="online"&&(app.online.ready[viewer]||app.online.submissionPending))||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
   return `<section class="hand-panel ${locked?"hand-panel--locked":""}">
     <div class="panel-head"><h3>Ваши указы</h3><span>${app.selectedCardId?'Выбран: '+cardById(app.selectedCardId).name:`${viewer==="p1"?"Север":"Юг"} · ${currentHand().length} карт`}</span>${app.selectedCardId&&!app.lawSheetMode?'<button class="hand-panel__compare" type="button" data-action="law-compare" aria-label="Сравнить выбранный указ с действующим">Сравнить ↗</button>':""}</div>
     ${locked&&!app.film?.active?`<div class="sealed-notice sealed-notice--ceremony" role="status">
       <div class="sealed-notice__wax" aria-hidden="true"><span>✦</span></div>
-      <div class="sealed-notice__copy"><strong>Указ запечатан</strong><span>${app.screen==="online"?"Ждём второй печати":"Указ принят"}</span></div>
+      <div class="sealed-notice__copy"><strong>${app.screen==="online"&&app.online.submissionPending?"Отправляем указ":"Указ запечатан"}</strong><span>${app.screen==="online"?(app.online.submissionPending?"Ожидаем подтверждение сервера":"Ждём второй печати"):"Указ принят"}</span></div>
       ${app.screen==="online"?`<div class="sealed-notice__readiness" aria-label="Готовность игроков"><span class="${app.online.ready.p1?"is-ready":""}" title="Север">I</span><span class="${app.online.ready.p2?"is-ready":""}" title="Юг">II</span></div>`:`<span class="sealed-notice__pulse" aria-hidden="true"><i></i><i></i><i></i></span>`}
     </div>`:""}
     <div class="hand" role="group" aria-label="Выбор одного указа">${currentHand().map(cardId=>{
@@ -859,7 +861,7 @@ function victoryHTML(state) {
    <div class="ceremony__stats"><span><strong>${rounds}</strong> ${rounds===1?"ход":"ходов"}</span><span><strong>${p.activeCrowns}</strong> активных корон</span>${op.sealedCrowns||p.sealedCrowns?`<span><strong>${p.sealedCrowns+op.sealedCrowns}</strong> запечатано</span>`:""}</div>
    ${app.victoryRecap?`<section class="ceremony__chronicle" aria-label="Хроника последних событий"><h3>Последние события</h3><ol>${entries.map(e=>`<li>${escapeText(e.text)}</li>`).join("")||"<li>Событий пока нет.</li>"}</ol></section>`:""}
    <div class="victory__actions ceremony__actions">
-     <button data-native-press class="primary-btn" data-action="rematch">↻ Реванш</button>
+     ${app.screen==="online"&&app.online.you!=="p1"?`<button class="primary-btn" disabled title="Реванш запускает организатор">Ждём организатора</button>`:`<button data-native-press class="primary-btn" data-action="rematch" ${app.screen==="online"&&(app.online.rematchPending||app.online.status!=="connected")?"disabled":""}>${app.screen==="online"&&app.online.rematchPending?"Ожидание реванша…":"↻ Реванш"}</button>`}
      <button data-native-press class="ghost-btn" data-action="victory-chronicle" aria-pressed="${app.victoryRecap}">${app.victoryRecap?"Закрыть хронику":"Хроника хода"}</button>
      <button data-native-press class="text-btn" data-action="back-menu">В зал совета</button>
    </div>
@@ -939,7 +941,7 @@ function gameHTML(state, eyebrow) {
             </div>
           </div>
         </header>
-        ${app.screen==="online"&&app.online.error?`<p class="game-network-error" role="alert">${escapeText(app.online.error)}</p>`:""}${app.film?.active ? filmHTML() : forecastControlsHTML()}<main class="game-layout">
+        ${app.screen==="online"&&(app.online.error||app.online.status!=="connected")?`<p class="game-network-error" role="alert">${escapeText(app.online.error||"Связь потеряна. Переподключаемся…")}</p>`:""}${app.film?.active ? filmHTML() : forecastControlsHTML()}<main class="game-layout">
           <div class="game-layout__main">${boardHTML(displayState)}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
           <aside class="game-layout__side">
             ${lawSlotsHTML(displayState)}
@@ -1412,6 +1414,8 @@ root.addEventListener("click", (event) => {
         app.online.error="";app.online.copyStatus="";
         app.screen = "online";
         app.online.roomState = null;
+        app.online.ready={p1:false,p2:false};app.online.submissionPending=false;
+        app.online.error="";app.online.rematchPending=false;
         render();
         break;
       case "create-room":
