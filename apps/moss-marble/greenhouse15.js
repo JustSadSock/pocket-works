@@ -214,23 +214,30 @@ export class LivingGreenhouseLayer {
       ctx.beginPath(); ctx.moveTo(x + 2, height * .11); ctx.lineTo(x + 2, horizon); ctx.stroke();
     }
     const ridge = { x: width * .5 + parallax, y: height * .065 };
-    ctx.strokeStyle = 'rgba(17,35,27,.27)';
-    ctx.lineWidth = Math.max(2.5, width * .006);
+    ctx.strokeStyle = 'rgba(17,35,27,.16)';
+    ctx.lineWidth = Math.max(1.7, width * .0035);
     ctx.beginPath();
     ctx.moveTo(-width * .06, height * .26);
     ctx.lineTo(ridge.x, ridge.y);
     ctx.lineTo(width * 1.06, height * .26);
     ctx.stroke();
 
-    const floor = ctx.createLinearGradient(0, horizon, 0, height);
-    floor.addColorStop(0, 'rgba(82,93,75,.20)');
-    floor.addColorStop(1, 'rgba(12,28,21,.63)');
+    // Soft, continuous light falloff instead of a hard floor/sky rectangle.
+    // The miniature garden floats on a real tray; the distant floor must stay
+    // subordinate and never create a horizontal stripe through gameplay.
+    const floor = ctx.createLinearGradient(0, height * .18, 0, height);
+    floor.addColorStop(0, 'rgba(55,70,55,0)');
+    floor.addColorStop(.30, 'rgba(62,80,64,.035)');
+    floor.addColorStop(.61, 'rgba(35,51,39,.12)');
+    floor.addColorStop(1, 'rgba(9,22,15,.55)');
     ctx.fillStyle = floor;
-    ctx.fillRect(0, horizon, width, height - horizon);
-    ctx.strokeStyle = 'rgba(192,198,166,.045)';
+    ctx.fillRect(0, 0, width, height);
+    // Low-opacity masonry seams only near the far bottom, and never across
+    // the centre where the putting surface sits.
+    ctx.strokeStyle = 'rgba(191,198,168,.025)';
     ctx.lineWidth = 1;
-    for (const fraction of [.31, .61, .87]) {
-      const y = horizon + (height - horizon) * fraction;
+    for (const fraction of [.79, .93]) {
+      const y = height * fraction;
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
     }
 

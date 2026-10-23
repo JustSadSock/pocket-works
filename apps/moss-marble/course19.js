@@ -263,14 +263,18 @@ function buildField(level, blueprint) {
     const highlight = info.type === 'sand' ? palette.sandLight : info.type === 'moss' ? palette.mossLight :
       info.type === 'water' ? palette.waterLight : palette.grassLight;
     const materialColor = mixColor(target, highlight, clamp(.14 + broad * .25 + medium * .065, .08, .50));
-    const blend = smoothstep(.12, .91, info.weight);
+    // Wider pigment transition prevents an elliptical sticker/halo edge on
+    // sand and moss. Surface semantics and physics remain unchanged.
+    const blend = smoothstep(.035, .985, info.weight);
     let color = mixColor(grass, materialColor, blend);
     // Lighting stays anchored to actual field normals and elevation, but the
     // shader owns directional diffuse shading so vertex colors remain gentle.
-    const sunSlope = normal[0] * .30 - normal[1] * .24;
-    const elevation = clamp((height - 9) / 55, -.30, .85);
-    // Explain real slope direction rather than staining depressions dark.
-    const slopeShade = clamp(.99 + sunSlope + elevation * .065, .76, 1.20);
+    const sunSlope = normal[0] * .40 - normal[1] * .32;
+    const elevation = clamp((height - 9) / 45, -.42, 1.0);
+    const steepness = Math.hypot(normal[0], normal[1]);
+    // Readable raised crests, shaded downhill faces and softer depressions;
+    // every cue derives from *physical* height and normal, not decoration.
+    const slopeShade = clamp(.985 + sunSlope + elevation * .12 + steepness * .025, .70, 1.24);
     color = [color[0] * slopeShade, color[1] * slopeShade, color[2] * slopeShade, color[3]];
     return color;
   };
