@@ -78,6 +78,9 @@ const app = {
     roomCode: "",
     copyStatus: "",
     error: "",
+    submissionPending: false,
+    pendingCardId: null,
+    rematchPending: false,
     you: null,
     roomState: null,
     ready: { p1: false, p2: false },
@@ -392,8 +395,11 @@ function confirmSelection() {
     if (!app.online.socket || app.online.socket.readyState !== WebSocket.OPEN) {
       return;
     }
-    app.online.socket.send(JSON.stringify({ type: "match:choose", cardId: app.selectedCardId }));
-    app.online.ready[app.online.you] = true;
+    if(app.online.submissionPending||app.online.ready[app.online.you])return;
+    const cardId=app.selectedCardId;
+    try{app.online.socket.send(JSON.stringify({type:"match:choose",cardId}));}
+    catch(e){app.online.error="Не удалось отправить указ. Попробуйте снова.";render();return;}
+    app.online.pendingCardId=cardId;app.online.submissionPending=true;
     app.forecast=null;app.forecastReview=false;app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
     app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
     playTone("ready");
@@ -444,52 +450,105 @@ function confirmSelection() {
   }
 }
 
+function leaveOnlineRoom(){
+ const old=app.online.socket;app.online.socket=null;
+ if(old)old.close();
+ app.online.status="idle";app.online.roomCode="";app.online.roomState=null;
+ app.online.you=null;app.online.ready={p1:false,p2:false};app.online.lastLogs=[];
+ app.online.error="";app.online.copyStatus="";app.online.submissionPending=false;
+ app.online.pendingCardId=null;app.online.rematchPending=false;
+ app.selectedCardId=null;app.inspectedSlot=null;app.focusCardId=null;app.lawSheetMode=null;
+ app.forecast=null;app.forecastReview=false;app.replay=null;app.lastConflictSlots=[];
+}
+function resetOnlineRound(){
+ stopFilm({renderNow:false});app.victoryRecap=false;
+ app.selectedCardId=null;app.focusCardId=null;app.inspectedSlot=null;app.lawSheetMode=null;
+ app.forecast=null;app.forecastReview=false;app.replay=null;app.replayActive=false;
+ app.effects=[];app.lastConflictSlots=[];app.lastBoardPositions={};
+ app.online.lastLogs=[];app.online.submissionPending=false;app.online.pendingCardId=null;
+ app.online.rematchPending=false;
+}
+function requestOnlineRematch(){
+ if(app.screen!=="online"||app.online.you!=="p1"||!app.online.roomState?.winner||app.online.rematchPending)return;
+ if(app.online.socket?.readyState!==WebSocket.OPEN){
+  app.online.error="Нет связи. Переподключитесь перед реваншем.";render();return;
+ }
+ try{
+  app.online.socket.send(JSON.stringify({type:"match:restart"}));
+  app.online.rematchPending=true;app.online.error="";
+ }catch(e){app.online.error="Не удалось начать реванш.";app.online.rematchPending=false;}
+ render();
+}
 function setupSocket() {
   if (app.online.socket) {
-    app.online.socket.close();
+    const previous=app.online.socket;app.online.socket=null;previous.close();
   }
   const socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
   app.online.socket = socket;
   app.online.status = "connecting";
   socket.addEventListener("open", () => {
-    app.online.status = "connected";app.online.error="";
-    render();
+    if(app.online.socket!==socket)return;
+    app.online.status="connected";app.online.error="";render();
   });
   socket.addEventListener("close", () => {
     if(app.online.socket!==socket)return;
-    app.online.status = "closed";
+    app.online.status="closed";app.online.submissionPending=false;
+    if(app.online.pendingCardId){app.selectedCardId=app.online.pendingCardId;app.lawSheetMode="compare";}
     render();
   });
+  socket.addEventListener("error",()=>{
+   if(app.online.socket!==socket)return;
+   app.online.status="error";app.online.error="Не удалось подключиться к PocketNet.";render();
+  });
   socket.addEventListener("message", (event) => {
-    const payload = JSON.parse(event.data);
+    if(app.online.socket!==socket)return;
+    let payload;try{payload=JSON.parse(event.data);}catch{return;}
     if (payload.type === "room:created" || payload.type === "room:joined") {
       app.screen = "online";
       app.online.roomCode = payload.code;
-      app.online.you = payload.you;
-      playTone("ready");
+      app.online.you=payload.you;app.online.error="";playTone("ready");
     }
     if (payload.type === "room:update") {
-      const previousRoomState = app.online.roomState;
-      const prevTurn = previousRoomState?.turn;
-      if(app.forecast&&payload.room.state?.turn!==app.forecast.turn){app.forecast=null;app.forecastReview=false;}
-      if(app.online.roomCode!==payload.room.code)app.online.copyStatus="";
-      app.online.roomCode = payload.room.code;
-      app.online.error="";
-      app.online.you = payload.room.you;
-      app.online.ready = payload.room.ready;
-      app.online.roomState = payload.room.state;
-      if (app.online.roomState && prevTurn && app.online.roomState.turn !== prevTurn) {
-        const turnLogs=app.online.roomState.battleLog.slice(0,16);
-        const conflicts=app.online.roomState.turnSummaries[0]?.conflicts||[];
-        app.replay={before:structuredClone(previousRoomState),after:structuredClone(app.online.roomState),logs:turnLogs,conflicts};
-        app.online.lastLogs=turnLogs;app.lastConflictSlots=conflicts;
-        beginFilm({before:previousRoomState,after:app.online.roomState,logs:turnLogs,conflicts});
+      const incoming=payload.room;
+      if(!incoming||!incoming.ready||!incoming.you||app.screen!=="online")return;
+      const old=app.online.roomState,newState=incoming.state;
+      const oldTurn=old?.turn||0,newTurn=newState?.turn||0;
+      const rematch=Boolean(old&&newState&&newTurn===1&&(oldTurn>1||old.winner||app.online.rematchPending));
+      if(old&&newState&&newTurn<oldTurn&&!rematch)return;
+      const advance=Boolean(old&&newState&&newTurn>oldTurn);
+      if(rematch)resetOnlineRound();
+      else if(advance){
+        app.selectedCardId=null;app.focusCardId=null;app.inspectedSlot=null;
+        app.lawSheetMode=null;app.forecast=null;app.forecastReview=false;
+        app.online.pendingCardId=null;app.online.submissionPending=false;
+      }
+      if(app.online.roomCode!==incoming.code)app.online.copyStatus="";
+      app.online.roomCode=incoming.code||app.online.roomCode;
+      app.online.you=incoming.you;app.online.ready=incoming.ready;
+      app.online.roomState=newState||null;app.online.error="";
+      if(incoming.ready[incoming.you]||advance||rematch){
+        app.online.submissionPending=false;app.online.pendingCardId=null;
+      }
+      if(advance&&!rematch){
+        const logs=(newState.battleLog||[]).slice(0,16);
+        const conflicts=newState.turnSummaries?.[0]?.conflicts||[];
+        app.replay={before:structuredClone(old),after:structuredClone(newState),logs,conflicts};
+        app.online.lastLogs=logs;app.lastConflictSlots=conflicts;
+        beginFilm({before:old,after:newState,logs,conflicts});
       }
       render();
     }
     if (payload.type === "room:error") {
       app.online.error=String(payload.message||"Ошибка соединения").slice(0,240);
-      render();
+      if(app.online.submissionPending){
+        app.online.submissionPending=false;
+        if(app.online.pendingCardId&&currentHand().includes(app.online.pendingCardId)){
+          app.selectedCardId=app.online.pendingCardId;app.focusCardId=app.online.pendingCardId;
+          app.inspectedSlot=cardById(app.online.pendingCardId).slot;app.lawSheetMode="compare";
+        }
+        app.online.pendingCardId=null;
+      }
+      app.online.rematchPending=false;render();
     }
   });
 }
@@ -1422,6 +1481,7 @@ root.addEventListener("click", (event) => {
       case "back-menu":
         stopFilm({renderNow:false});app.victoryRecap=false;app.online.copyStatus="";app.online.error="";app.lawSheetMode=null;
         window.clearTimeout(app.replayTimer);app.replayActive=false;app.forecast=null;
+        if(app.screen==="online")leaveOnlineRoom();
         app.screen = "menu";
         app.local.state = null;
         render();
@@ -1432,8 +1492,8 @@ root.addEventListener("click", (event) => {
         break;
       case "rematch":
         stopFilm({renderNow:false});app.victoryRecap=false;
-        if (app.screen === "online" && app.online.socket) {
-          app.online.socket.send(JSON.stringify({ type: "match:restart" }));
+        if (app.screen === "online") {
+          requestOnlineRematch();
         } else {
           startLocalGame(app.local.mode, app.local.aiProfile);
         }
