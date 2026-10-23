@@ -856,7 +856,7 @@ function gameHTML(state, eyebrow) {
             ${crownRow(displayState.players.p1, viewer === "p1" ? "Север · вы" : "Север · соперник", "north")}
             ${crownRow(displayState.players.p2, viewer === "p2" ? "Юг · вы" : "Юг · соперник", "south")}
             <div class="hud-actions">
-              <button data-native-press class="text-btn" data-action="toggle-rules">Правила</button>
+              <button data-native-press class="text-btn court-mobile-history" data-action="toggle-history" aria-expanded="${app.historyExpanded}" aria-label="Показать журнал событий">${app.historyExpanded?"Закрыть":"Журнал"}</button><button data-native-press class="text-btn" data-action="toggle-rules">Правила</button>
               <button data-native-press class="text-btn" data-action="toggle-settings">Звук</button>
               <button data-native-press class="text-btn" data-action="back-menu">Меню</button>
             </div>
