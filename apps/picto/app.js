@@ -3,7 +3,7 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {GLYPHS,GLYPH_MEANINGS,glyphSVG} from './symbols.js';
 installMobileRuntime();
-createWorkshopMode({appName:'ПИКТО',version:'1.4.1',cachePrefix: 'picto-',storageNamespace: 'pocket-works:picto'});
+createWorkshopMode({appName:'ПИКТО',version:'1.4.2',cachePrefix: 'picto-',storageNamespace: 'pocket-works:picto'});
 
 const root=document.querySelector('#view');
 const indicator=document.querySelector('#connection');
@@ -329,10 +329,12 @@ function updateClock(){
  const now=Date.now();
  const remaining=Math.max(0,Math.ceil(((state?.deadline||0)-(now+(clockCalibrated?serverClockOffset:0)))/1000));
  el.textContent=String(Math.floor(remaining/60)).padStart(2,'0')+':'+String(remaining%60).padStart(2,'0');
- // Do not leave a visible, editable 00:00 round waiting for some unrelated action.
- // Throttled pulses work with both existing v5 rooms and v6 rooms.
- if(!remaining&&state?.deadline&&connected&&net&&['compose','guess','reveal'].includes(state.phase)&&now-deadlineProbeAt>1200){
-  deadlineProbeAt=now;try{net.sendGame({type:'pulse',clientSentAt:now});}catch{}
+ // A legacy v5 server can silently advance another player's turn when a
+ // command crosses the deadline, then respond to *all future pulses* with
+ // clock-only packets. A full sync is necessary for every client at 00:00.
+ // Throttle these requests; the authoritative server still owns all phases.
+ if(!remaining&&state?.deadline&&connected&&net&&['compose','guess','reveal'].includes(state.phase)&&now-deadlineProbeAt>1600){
+  deadlineProbeAt=now;try{net.sendGame({type:'sync'});}catch{}
  }
 }
 function setState(next){
