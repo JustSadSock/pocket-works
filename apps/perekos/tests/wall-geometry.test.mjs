@@ -70,8 +70,8 @@ test('area attacks require genuine unobstructed line of sight',()=>{
  s.actors[0].runes=['on_cast','blast','wide'];
  tick(s,{...idle,attack:true},STEP,idle);assert.equal(s.actors[1].hp,100);
 });
-test('server v8 accepts bounded class cast inputs and never accepts a forged cooldown override',()=>{
- assert.equal(RULESET_VERSION,8);
+test('server v9 accepts bounded class cast inputs and never accepts a forged cooldown override',()=>{
+ assert.equal(RULESET_VERSION,9);
  const player={id:'host'},other={id:'guest'},state=module.createRoom({player}).state;
  module.onJoin({state,player:other,players:[player,other]});
  module.onMessage({state,player,payload:{type:'archetype',archetype:'shaper'}});
