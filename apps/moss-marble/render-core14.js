@@ -1352,7 +1352,8 @@ class CanvasFallback {
     }
   }
   draw(level, ball, aim, time = 0) {
-    this.resize(); this.fit(level);
+    this.resize();
+    if (!this.spatialCameraManaged) this.fit(level);
     const ctx = this.ctx;
     const visual = level.visual || {};
     this.terrainPalette = visual.terrain || {};
