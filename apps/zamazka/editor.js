@@ -1318,8 +1318,8 @@ export class Editor{
       try{
         if(!this.closed){
           if(this.frameTelemetry){
-            const start=performance.now(),drew=this.paintCachedFrame(img);
-            this.frameTelemetry.record(performance.now(),performance.now()-start,drew!==false);
+            const start=performance.now(),drew=this.paintCachedFrame(img),end=performance.now();
+            this.frameTelemetry.record(end,end-start,drew!==false);
           }else this.paintCachedFrame(img);
         }
       }finally{for(const cb of this.paintWaiters.splice(0))cb()}
