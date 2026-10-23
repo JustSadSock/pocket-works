@@ -655,11 +655,17 @@ export default {protocolVersion:1,
   state.players.forEach(p=>p.ready=false);
   return out(state);
  },
- onMessage({state,player,payload:p}){
+ onMessage({state,player,payload:p,connectedIds}){
   state=copy(state);
   const index=state.players.findIndex(v=>v.id===player.id&& !v.left);
   if(index<0)throw Error('Игрок не в комнате');
   const v=state.players[index];
+  // Host reassignment uses server-observed live sockets, never client claims.
+  // A survivor can therefore pause or start the next round if the host vanishes.
+  if(Array.isArray(connectedIds)&&connectedIds.length&&!connectedIds.includes(state.hostId)){
+   const successor=state.players.find(seat=>!seat.left&&connectedIds.includes(seat.id));
+   if(successor)state.hostId=successor.id;
+  }
   if(state.started){
    if(p?.type==='rematch'){
     if(player.id!==state.hostId||!state.engine?.isGameOver)throw Error('Только ведущий может начать новый раунд после завершения');
