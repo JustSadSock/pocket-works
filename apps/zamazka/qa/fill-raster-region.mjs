@@ -66,5 +66,23 @@ const results=[
  run('priority outline fallback',[165,150],'#88cc33',{priority:true}),
  run('outside damage',[30,30],'#aaccee')
 ];
+// Old/shape-corrected paintings can place the cutout almost against a frame
+// edge. Check both extremes: crop-to-canvas must not cut antialiasing.
+function edgeCase(name,edgeZone,seed){
+ const area=new Uint8ClampedArray(bytes);
+ const minX=Math.ceil(edgeZone.x*2),maxX=Math.floor((edgeZone.x+edgeZone.w)*2);
+ const minY=Math.ceil(edgeZone.y*2),maxY=Math.floor((edgeZone.y+edgeZone.h)*2);
+ for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++)
+  area[(y*W+x)*4+3]=255;
+ const old=surface(image),cropped=surface(image);
+ const oldLines=surface(walls),newLines=surface(walls);
+ fillRegion(oldLines,old,{data:area,width:W,height:H},seed,'#bb9944');
+ fillRegion(newLines,cropped,{data:area,width:W,height:H},seed,'#bb9944',null,edgeZone);
+ assert.deepEqual(cropped.pixels,old.pixels,name+' edge fill must remain identical');
+ return {name,oldReadMB:+(old.reads.reduce((a,b)=>a+b,0)/1e6).toFixed(2),
+  newReadMB:+(cropped.reads.reduce((a,b)=>a+b,0)/1e6).toFixed(2)};
+}
+results.push(edgeCase('upper-left frame',{x:2,y:1,w:55,h:47},[18,12]));
+results.push(edgeCase('lower-right frame',{x:539,y:396,w:59,h:52},[580,430]));
 console.log(JSON.stringify({scenario:'zamazka-bounded-flood-fill',
  regionFraction:+(bounds.width*bounds.height/WIDTH).toFixed(3),cases:results,result:'passed'}));
