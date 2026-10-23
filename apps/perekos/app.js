@@ -653,6 +653,18 @@ function drawEvolutionMagic(s){
   ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=fire?5:7;
   const radius=wave.warmup>0?Math.max(12,wave.range*.38):Math.max(6,wave.reach);
   ctx.globalAlpha=wave.warmup>0?.64:Math.min(.87,Math.max(.27,wave.life*2.8));
+  if(wave.v2Spikes){
+   ctx.save();ctx.globalAlpha=wave.warmup>0?.75:.95;
+   ctx.fillStyle=wave.warmup>0?'#9d9777':'#d6c6a0';
+   ctx.strokeStyle='#5b6251';ctx.lineWidth=2;
+   for(let j=-1;j<=1;j++){
+    const xx=wave.x+j*7,yy=wave.y+Math.sin(j*2)*3;
+    if(wave.warmup>0)ctx.strokeRect(xx-3,yy-3,6,6);
+    else{ctx.beginPath();ctx.moveTo(xx-6,yy+7);ctx.lineTo(xx,yy-16);
+     ctx.lineTo(xx+6,yy+7);ctx.closePath();ctx.fill();ctx.stroke()}
+   }
+   ctx.restore();continue;
+  }
   ctx.beginPath();
   if(wave.halfAngle>=Math.PI-.01)ctx.arc(wave.x,wave.y,radius,0,Math.PI*2);
   else ctx.arc(wave.x,wave.y,radius,wave.angle-wave.halfAngle,wave.angle+wave.halfAngle);
@@ -712,6 +724,17 @@ function drawConstructs(s){
  }
  for(const m of s.mines){
   const bob=Math.sin(frame*.11+m.x)*2,life=Math.min(1,m.life);
+  if(m.v2Trap){
+   ctx.save();ctx.globalAlpha=m.arm>0?.45+.15*Math.sin(frame*.13):.85;
+   ctx.strokeStyle=m.arm>0?'#c79b64':'#ffc06b';ctx.lineWidth=2;
+   ctx.setLineDash(m.arm>0?[4,4]:[]);ctx.beginPath();
+   ctx.arc(m.x,m.y,m.r,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+   pixel(m.x-12,m.y-10,24,20,'#4c3228');
+   pixel(m.x-7,m.y-13,14,6,'#b97a4e');
+   if(m.arm<=0)pixel(m.x-3,m.y-17,6,6,'#ffe2a3');
+   ctx.restore();
+   continue;
+  }
   circle(m.x+1,m.y+6,14,'#14211e92');
   ctx.strokeStyle='#8e9d78';ctx.lineWidth=2;
   ctx.beginPath();ctx.ellipse(m.x,m.y,16,8,frame*.01,0,Math.PI*2);ctx.stroke();
@@ -931,10 +954,21 @@ function onlineView(view){
  online.view=view;active=view.match||null;
  if(active?.magicModeV2)active.magicSeat=view.me;
  if(view.gameMode==='magic-v2'&&view.phase==='magic-build'){
-  onlinePhase='magic-build:'+view.revision;
+  // A room snapshot also arrives for connection keepalives and opponent input.
+  // Rebuilding the editor on each snapshot detached a button while players
+  // touched it (especially in iOS WebKit). Repaint only when OUR book changes.
+  const ownBook=active?.magicLoadouts?.[view.me];
+  const stamp=['magic-build',view.me,view.ready?'ready':'editing',
+   active?.round??0,ownBook?.revision??-1].join(':');
+  const desired=view.ready?'net-wait':'magic-v2';
+  if(stamp===onlinePhase&&mode===desired)return;
+  onlinePhase=stamp;
   applyRival();
   if(view.ready)show('net-wait');
-  else{show('magic-v2');magicV2Lab.render()}
+  else{
+   if(mode!=='magic-v2')show('magic-v2');
+   magicV2Lab.render();
+  }
   return;
  }
  const stamp=[view.phase,active?.round??0,view.picked,view.ready,view.gameMode].join(':');
