@@ -617,6 +617,7 @@ function drawConstructs(s){
   for(let j=0;j<5;j++){
    pixel(b.x-r+6+j*8,b.y-r-1+Math.sin(j+wob)*2,3,3,'#93a985');
   }
+  if(b.aperture){pixel(b.x-r*.56,b.y-5,r*1.12,10,'#17443c');pixel(b.x-r*.56,b.y-7,r*1.12,2,'#eed49c');pixel(b.x-r*.56,b.y+5,r*1.12,2,'#eed49c')}
   ctx.restore();
  }
  for(const m of s.mines){

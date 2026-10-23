@@ -236,6 +236,7 @@ export function drawForgeConstructs(ctx,state,time=0,reduced=false){
   ctx.restore();
   block(ctx,x-2,y-4,size+4,6,'#9aa381');block(ctx,x,y+2,size,2,'#20382d');
   block(ctx,x+size-3,y+7,3,size-8,'#213529');
+  if(wall.aperture){block(ctx,x+size*.23,y+size*.32,size*.54,size*.28,'#123b36');block(ctx,x+size*.23,y+size*.32,size*.54,3,'#f0d69d');block(ctx,x+size*.23,y+size*.57,size*.54,3,'#f0d69d');block(ctx,x+size*.46,y+size*.27,4,size*.42,'#9fdbc4')}
  }
  for(const mine of (state?.mines||[]).slice(0,20)){
   if(!Number.isFinite(mine.x)||!Number.isFinite(mine.y))continue;

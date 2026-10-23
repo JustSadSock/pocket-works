@@ -21,7 +21,7 @@ export class DuelFeedback{
   for(const f of state.fx||[]){
    if(!Number.isFinite(f.id)||f.id<=this.last)continue;
    const contact=state.actors.reduce((best,a)=>!best||Math.hypot(a.x-f.x,a.y-f.y)<Math.hypot(best.x-f.x,best.y-f.y)?a:best,null);
-   const colors=palette(contact),impact=f.k==='hit'||f.k.startsWith('impact_')||f.k.startsWith('react_')||f.k==='overload';
+   const colors=palette(contact),impact=f.k==='hit'||f.k.startsWith('impact_')||f.k.startsWith('react_')||f.k==='overload'||f.k==='phase_entry'||f.k==='phase_exit'||f.k==='ricochet';
    if(impact){
     const type=f.k.includes('rock')||f.k.includes('crack')?'stone':f.k.includes('arc')||f.k.includes('bolt')||f.k.includes('steam')?'storm':f.k.includes('flame')||f.k.includes('orb')||f.k.includes('slag')?'fire':mage(contact?.mageId).school;
     this.scars.push({x:f.x,y:f.y,age:0,life:f.k==='overload'?2.8:1.7,kind:type,seed:f.id});
@@ -124,7 +124,7 @@ export class DuelFeedback{
   const g=previewAttack(state,actor,target,special),col=palette(actor)[0];
   ctx.save();ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1.5;ctx.globalAlpha=.76;
   ctx.setLineDash(g.blocked?[3,5]:[4,8]);
-  for(const seg of g.segments){ctx.beginPath();ctx.moveTo(seg.x,seg.y);ctx.lineTo(seg.toX,seg.toY);ctx.stroke()}
+  for(const seg of g.segments){if(seg.phase){ctx.strokeStyle='#a4d3c5';ctx.setLineDash([1,4])}else{ctx.strokeStyle=col;ctx.setLineDash(g.blocked?[3,5]:[4,8])}ctx.beginPath();ctx.moveTo(seg.x,seg.y);ctx.lineTo(seg.toX,seg.toY);ctx.stroke()}
   ctx.setLineDash([]);
   if(g.type==='cone'||g.type==='sector'){
    const half=g.type==='sector'?g.width:Math.atan(g.width/Math.max(1,g.length));ctx.globalAlpha=.42;

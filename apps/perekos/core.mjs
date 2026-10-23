@@ -322,6 +322,14 @@ export function previewAttack(s,a,target,special=false){
  }
  const hit=rayCollision(s,a.x,a.y,angle,length,radius,a.id);
  const one={x:a.x,y:a.y,toX:a.x+ux*hit.length,toY:a.y+uy*hit.length},segments=[one];
+ if(type==='phase'&&hit.hit&&(hit.hit.type==='wall'||hit.hit.type==='barrier')){
+  const exit=Math.max(hit.hit.t,Math.min(1,hit.hit.exit??hit.hit.t));
+  const ex=a.x+ux*length*exit,ey=a.y+uy*length*exit,remaining=Math.max(0,length*(1-exit));
+  const onward=rayCollision(s,ex+ux*.2,ey+uy*.2,angle,remaining,5,a.id);
+  return {type,angle,length:hit.length,maxRange:length,radius:5,width,blocked:!!onward.hit,x:ex+ux*onward.length,y:ey+uy*onward.length,
+   segments:[one,{x:one.toX,y:one.toY,toX:ex,toY:ey,phase:true},{x:ex,y:ey,toX:ex+ux*onward.length,toY:ey+uy*onward.length}]}
+ }
+
  if(type==='ricochet'&&hit.hit){
   const dot=ux*hit.hit.nx+uy*hit.hit.ny,rx=ux-2*dot*hit.hit.nx,ry=uy-2*dot*hit.hit.ny;
   const two=rayCollision(s,one.toX+rx*.15,one.toY+ry*.15,Math.atan2(ry,rx),Math.max(0,length-hit.length),5,a.id);
