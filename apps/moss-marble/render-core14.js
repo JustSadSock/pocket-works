@@ -597,6 +597,7 @@ uniform float uScale;
 uniform vec2 uOffset;
 uniform vec2 uParallax;
 uniform float uCameraRotation;
+uniform vec2 uCameraCenter;
 out vec3 vNormal;
 out vec4 vColor;
 out vec3 vWorld;
@@ -608,7 +609,8 @@ void main() {
   float sx = uOffset.x + rotated.x * uScale + uParallax.x * aPosition.z * uScale * .14;
   float sy = uOffset.y + rotated.y * uScale * .82 - aPosition.z * uScale + uParallax.y * aPosition.z * uScale * .09;
   vec2 clip = vec2(sx / uViewport.x * 2.0 - 1.0, 1.0 - sy / uViewport.y * 2.0);
-  float depth = clamp(.82 - (rotated.y + aPosition.z * .86) / 1120.0, -.97, .97);
+  float centerDepth = uCameraCenter.x * sn + uCameraCenter.y * cs;
+  float depth = clamp(-(rotated.y - centerDepth + aPosition.z * .86) / 2500.0, -.95, .95);
   gl_Position = vec4(clip, depth, 1.0);
   vNormal = aNormal;
   vColor = aColor;
@@ -769,6 +771,7 @@ class WebGLDiorama {
       offset: gl.getUniformLocation(this.program, 'uOffset'),
       parallax: gl.getUniformLocation(this.program, 'uParallax'),
       rotation: gl.getUniformLocation(this.program, 'uCameraRotation'),
+      cameraCenter: gl.getUniformLocation(this.program, 'uCameraCenter'),
       hole: gl.getUniformLocation(this.program, 'uHole'),
       time: gl.getUniformLocation(this.program, 'uTime')
     };
@@ -1037,6 +1040,7 @@ class WebGLDiorama {
     gl.uniform2f(this.locations.offset, this.offsetX, this.offsetY);
     gl.uniform2f(this.locations.parallax, this.parallaxX, this.parallaxY);
     gl.uniform1f(this.locations.rotation, this.cameraRotation || 0);
+    gl.uniform2f(this.locations.cameraCenter, this.cameraX || 0, this.cameraY || 0);
     gl.uniform3f(this.locations.hole, level.hole.x, level.hole.y, level.hole.r * 1.03);
     gl.uniform1f(this.locations.time, time);
 
