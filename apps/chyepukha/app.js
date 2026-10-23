@@ -148,10 +148,10 @@ async function refreshPocketBadge(initial=false){
  }
 }
 function clearRoomTimeout(){if(roomTimeout!==null){clearTimeout(roomTimeout);roomTimeout=null}}
-function cancelConnection(){
+function cancelConnection({preserveRoom=false}={}){
  ++connectionAttempt;clearRoomTimeout();releaseActive();
  const c=net;net=null;
- if(c){c.roomId=null;c.persist();c.close()}
+ if(c){if(!preserveRoom)c.roomId=null;c.persist();c.close()}
  connected=false;connecting=false;view=null;room='';me='';modal='';storyId='';
  notice='';syncUrl();render();
 }
@@ -261,7 +261,7 @@ async function connect(how,settings){
   else if(how==='resume'&&!c.roomId)throw Error('Попередню кімнату не знайдено.');
   roomTimeout=setTimeout(()=>{
    if(net!==c||ticket!==connectionAttempt||room)return;
-   cancelConnection();
+   cancelConnection({preserveRoom:how==='resume'});
    notice='Сервер не відкрив кімнату. Перевір з’єднання й спробуй ще раз.';
    render();toast(notice);
   },12000);
@@ -428,7 +428,7 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
    if(archivePendingDelete){try{const remaining=removeEdition(editions(),archivePendingDelete);if(IS_PREVIEW)previewEditions=remaining;else if(remaining.length){if(!writeEditions(localStorage,archiveKey(),remaining)){toast('Не вдалося видалити видання.');modal='';render();return}}else localStorage.removeItem(archiveKey());toast('Видання видалено.')}catch{toast('Не вдалося видалити видання.')}}
    archivePendingDelete='';archiveEditionId='';archiveStoryId='';modal='';render();return
   }
-  if(act==='profile'){void openPocketProfile();return}if(act==='invite-social'){void openPocketInvites();return}if(act==='cancel-connect'){cancelConnection();return}
+  if(act==='profile'){void openPocketProfile();return}if(act==='invite-social'){void openPocketInvites();return}if(act==='cancel-connect'){cancelConnection({preserveRoom:Boolean(savedRoom())});return}
  if(act==='resume'){connect('resume');return}if(act==='copy-code'){if(IS_PREVIEW){toast('Це демонстраційна кімната.');return}copyText(room.slice(0,8).toUpperCase());return}
  if(act==='copy-link'){if(IS_PREVIEW){toast('Тестове посилання не створюється.');return}copyText(location.origin+location.pathname+'?room='+room.slice(0,8));return}
  if(act==='start'||act==='again'){send({type:act});return}
