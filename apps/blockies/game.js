@@ -2902,23 +2902,6 @@ class UIManager {
         this.localPlayerNames=Array.from({length:numPlayers},(_,i)=>
             document.getElementById(`coop-nickname-${i}`)?.value.trim().slice(0,20)||`Игрок ${i+1}`);
         localStorage.setItem('pocket-works:blockies:coop-names',JSON.stringify(this.localPlayerNames));
-        // Apply local controls to the resumed live round. Network colors
-        // stay server-authoritative; keyboard controls remain per-device.
-        if(this.previousScreen==='gameScreen' && gameState.players.length){
-            this.releaseTouchControls?.();
-            for(const player of gameState.players){
-                if(this.isOnlineMode && player.id!==this.localPlayerIndex)continue;
-                if(newKeys[player.id])player.keys={...newKeys[player.id]};
-                if(!this.isOnlineMode && newColors[player.id])player.color=newColors[player.id];
-                gameState.inputStates?.set(player.id,{
-                    left:createActionState(),right:createActionState(),down:createActionState()
-                });
-                this.updatePlayerInfo(player);
-                this.drawNextPiece(player);
-            }
-            this.drawBoard();
-        }
-
         // Save to localStorage
         localStorage.setItem('pocket-works:blockies:settings', JSON.stringify(gameState.settings));
         
@@ -3656,6 +3639,23 @@ class UIManager {
                 const gamepadIndex = parseInt(select.value);
                 gameState.gamepads.assignments[gamepadIndex] = i;
             }
+        }
+
+        // Apply local controls to the resumed live round. Network colors
+        // stay server-authoritative; keyboard controls remain per-device.
+        if(this.previousScreen==='gameScreen' && gameState.players.length){
+            this.releaseTouchControls?.();
+            for(const player of gameState.players){
+                if(this.isOnlineMode && player.id!==this.localPlayerIndex)continue;
+                if(newKeys[player.id])player.keys={...newKeys[player.id]};
+                if(!this.isOnlineMode && newColors[player.id])player.color=newColors[player.id];
+                gameState.inputStates?.set(player.id,{
+                    left:createActionState(),right:createActionState(),down:createActionState()
+                });
+                this.updatePlayerInfo(player);
+                this.drawNextPiece(player);
+            }
+            this.drawBoard();
         }
 
         // Save to localStorage
