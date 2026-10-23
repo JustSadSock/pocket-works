@@ -8,9 +8,9 @@ const send=(s,who,type,extra={})=>module.onMessage({state:s,player:who,players:[
 const input=(seq,round,changes={})=>({type:'input',seq,round,control:{x:0,y:0,aim:{x:200,y:300},attack:false,shield:false,dash:false,...changes}});
 function room(){const first=module.createRoom({player:p}).state;return module.onJoin({state:first,player:q,players:[p,q]}).state}
 function match(){const s=room();send(s,p,'mode',{gameMode:'duel'});send(s,p,'start');return s}
-test('server module is importable and binary-exact immutable v8 snapshot',async()=>{
- const [main,snapshot]=await Promise.all([readFile(new URL('../server/module.ts',import.meta.url),'utf8'),readFile(new URL('../../../pocketnet/module-versions/perekos/v8.ts',import.meta.url),'utf8')]);
- assert.equal(main,snapshot);assert.equal(RULESET_VERSION,8);
+test('server module is importable and binary-exact immutable v9 snapshot',async()=>{
+ const [main,snapshot]=await Promise.all([readFile(new URL('../server/module.ts',import.meta.url),'utf8'),readFile(new URL('../../../pocketnet/module-versions/perekos/v9.ts',import.meta.url),'utf8')]);
+ assert.equal(main,snapshot);assert.equal(RULESET_VERSION,9);
  assert.equal(module.protocolVersion,1);
 });
 test('rooms have two durable authenticated seats and host must start',()=>{
