@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "product": "crown-laws",
-  "status": "v0.5 illustrated royal codex",
+  "status": "ready",
   "memoryReview": [
     {
       "slug": "fog-of-conquest",
@@ -42,12 +42,12 @@
   ],
   "concepts": [
     {
-      "id": "stone-council",
-      "medium": "HTML/CSS geometric stone slab, paper legal cards and code-drawn stamped counters with no runtime image atlas.",
-      "composition": "The board and live law ledger form a two-column council on desktop; a compact hand follows the board on phone.",
-      "interaction": "Choose a decree tile, see the complete description directly below the hand, then confirm the hidden law choice.",
-      "motion": "Measured selected-card lift and per-cell linear token travel; short highlights punctuate clashes rather than covering the grid.",
-      "rationale": "This preserves the simultaneous hidden decree mechanic while replacing old decorative clutter with a spatially stable interface."
+      "id": "royal-codex-stage05",
+      "medium": "Hand-authored full-figure SVG sprite atlas and relief/carved decorative SVG on a strictly flat board, physical paper and stone panels composed in CSS",
+      "composition": "Six visibly differentiated pieces occupy the 5x7 court; five laws are bound in an ivory codex on desktop and arranged into seals on mobile; decree choice resembles an illustrated folded folio",
+      "interaction": "Existing law inspection, conditional forecast, choice confirmation and hot-seat remain; debug art gallery for asset acceptance",
+      "motion": "Light card and crown microfeedback only; detailed phase-based action choreography reserved for 0.6",
+      "rationale": "Replace repetitive circular portrait tokens and generic cards with character silhouettes and one consistent material grammar."
     },
     {
       "id": "cathedral-relief",
@@ -64,31 +64,19 @@
       "interaction": "Users flip between folios to examine individual acts and apply a decree from a compact bottom page tab.",
       "motion": "A page-turn sequence and layered parchment scroll would organize navigation around document transitions.",
       "rationale": "It makes room for long legal prose but repeatedly obscures the shared board precisely when laws are being evaluated."
-    },
-    {
-      "id": "illustrated-council",
-      "medium": "Original hand-authored SVG vector portrait sheet, law seals and two ceremonial illustrations; editable sources live in asset-forge/ and published SVG files in assets/.",
-      "composition": "Hall illustration anchors the menu; six illustrated actor tokens animate on a flat 5x7 field; five color-locked heraldic seals tag laws; a victory insignia replaces text-only end-state.",
-      "interaction": "All cards and laws are actionable. Debug screen preview offers read-only state interaction. Conditional turn forecast comes from pure engine simulation.",
-      "motion": "Brief wax seal, crown highlights, board move and victory reveal, all reducible.",
-      "rationale": "Distinct vector silhouette vocabulary corrects the geometric-only placeholder look without sacrificing rules legibility."
-    },
-    {
-      "id": "royal-codex-stage05",
-      "medium": "Hand-authored full-figure SVG sprite atlas and relief/carved decorative SVG on a strictly flat board, physical paper and stone panels composed in CSS",
-      "composition": "Six visibly differentiated pieces occupy the 5x7 court; five laws are bound in an ivory codex on desktop and arranged into seals on mobile; decree choice resembles an illustrated folded folio",
-      "interaction": "Existing law inspection, conditional forecast, choice confirmation and hot-seat remain; debug art gallery for asset acceptance",
-      "motion": "Light card and crown microfeedback only; detailed phase-based action choreography reserved for 0.6",
-      "rationale": "Replace repetitive circular portrait tokens and generic cards with character silhouettes and one consistent material grammar."
     }
   ],
   "selection": {
-    "concept": "illustrated-council",
-    "reason": "Original manuscript vector plates depict actors and ceremony, while keeping board and law mechanics directly accessible.",
+    "concept": "royal-codex-stage05",
+    "reason": "Hand-authored full-figure actors and a readable flat stone board give a distinctive royal manuscript setting without separating the player's hidden law choice from shared world consequences.",
     "rejected": [
       {
         "concept": "cathedral-relief",
-        "reason": "Full sculptural 2.5D view deferred; field remains flat and legible."
+        "reason": "Full sculptural or 2.5D tabletop changes the viewing perspective and obscures legal state, adding art and interaction complexity without aiding the strategy."
+      },
+      {
+        "concept": "royal-codex",
+        "reason": "Multiple separate page-flip screens force players to stop watching the board whenever they inspect the active laws or decree hand, undermining rapid decision-making."
       }
     ]
   },
@@ -105,13 +93,9 @@
     },
     {
       "id": "universal-art-forge-vector",
-      "availability": "source-authored; raster/index build pending",
-      "reason": "Four editable SVG sources and matching publishable SVG vectors are checked in, alongside an Art Forge v2 vector production plan. Do not activate manifest.json until required Inkscape PNG exports and hash index are built and committed."
-    },
-    {
-      "id": "art-forge-stage05",
-      "availability": "editable SVG sources and offline runtime SVG committed; Inkscape raster export + hash index pending",
-      "reason": "Three new source/export pairs recorded in vector-production-plan.json. Do not enable incomplete manifest. Existing independent apps are unaffected."
+      "availability": "unverified",
+      "reason": "Editable native SVG sources and self-contained identical runtime SVG exports are committed; full Inkscape PNG and hash-index build is not yet verified in this connected environment.",
+      "fallback": "Continue using the published identical self-contained SVG sources directly inside the local application until native Inkscape exports and the checked Forge index can be committed."
     }
   ],
   "assets": [
@@ -142,7 +126,7 @@
       "tool": "universal-art-forge-vector",
       "source": "asset-forge/law-seals.svg",
       "output": "assets/law-seals.svg",
-      "role": "Five heraldic law marks",
+      "role": "Five individual category sigils identifying the champion, guard, beast, priest and thief rules at a glance.",
       "acceptance": "Self-contained, deterministic, offline SVG; real Inkscape-exported PNG and forge index remain pending",
       "integration": "Local SVG used by CSS as an offline runtime asset",
       "provenance": "Original hand-authored vector paths for Crown Laws",
@@ -175,7 +159,7 @@
       "tool": "universal-art-forge-vector",
       "source": "asset-forge/court-figures.svg",
       "output": "assets/court-figures.svg",
-      "role": "Six full-height unique illustrated figures used on board and title scene",
+      "role": "Six individually authored full-body actors with distinctive armor, faces, cloaks, poses and silhouettes.",
       "acceptance": "Self-contained inline paths; CSS sprite sheet keeps correct family-specific positions; included in service-worker offline precache",
       "integration": "Native SVG loaded from app-owned offline assets via CSS",
       "provenance": "Original hand-authored SVG created for Crown Laws 0.5",
@@ -190,7 +174,7 @@
       "tool": "universal-art-forge-vector",
       "source": "asset-forge/throne-relief.svg",
       "output": "assets/throne-relief.svg",
-      "role": "Carved gilded throne tile centerpiece",
+      "role": "The large center tile features a custom gilded carved throne relief indicating the win condition.",
       "acceptance": "Self-contained inline paths; CSS sprite sheet keeps correct family-specific positions; included in service-worker offline precache",
       "integration": "Native SVG loaded from app-owned offline assets via CSS",
       "provenance": "Original hand-authored SVG created for Crown Laws 0.5",
@@ -205,7 +189,7 @@
       "tool": "universal-art-forge-vector",
       "source": "asset-forge/decree-ornament.svg",
       "output": "assets/decree-ornament.svg",
-      "role": "Subtle gilded manuscript border for codex and decrees",
+      "role": "A decorative gold border shared between individual parchment decrees and the bound law codex.",
       "acceptance": "Self-contained inline paths; CSS sprite sheet keeps correct family-specific positions; included in service-worker offline precache",
       "integration": "Native SVG loaded from app-owned offline assets via CSS",
       "provenance": "Original hand-authored SVG created for Crown Laws 0.5",
