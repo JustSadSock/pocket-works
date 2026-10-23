@@ -50,6 +50,13 @@ try{
    if(overflow>2)issues.push('horizontal overflow '+overflow);
    if(collide(field,tabs))issues.push('table overlaps tabs');
    if(collide(ticket,wallet))issues.push('urgent ticket overlaps wallet');
+   // Previous visual audits missed auction art extending beyond a clipped table
+   // even though the play-field itself fitted the viewport.
+   const auction=rect('.table-stage .artifact'),ribbon=rect('.bottom-ribbon');
+   if(auction&&field&&width<=680&&document.documentElement.clientHeight<=670){
+    if(auction.top<field.top-3)issues.push('auction art clipped above play field');
+    if(ribbon&&auction.bottom>ribbon.top+3)issues.push('auction art overlaps end-turn ribbon');
+   }
    for(const sel of ['.play-head','.currency-strip','.urgent-ticket','.play-field','.workspace-tabs']){
     const b=rect(sel);if(!b||!b.width)continue;
     if(b.left< -2||b.right>width+2)issues.push(sel+' exceeds viewport width');
