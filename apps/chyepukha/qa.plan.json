@@ -21,7 +21,8 @@
         "tests/submission-guard.test.mjs",
         "tests/moderation-v6.test.mjs",
         "tests/scenario-boundaries.test.mjs",
-        "tests/story-blind-play.test.mjs"
+        "tests/story-blind-play.test.mjs",
+        "tests/release-v7.test.mjs"
       ]
     },
     {
