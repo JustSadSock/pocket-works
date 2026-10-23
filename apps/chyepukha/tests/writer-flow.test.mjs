@@ -7,14 +7,16 @@ test('words in the readable manuscript match server whitespace tokenization',()=
  assert.deepEqual(wordParts(text),['Кіт','  ','сидів','\n','на',' ','даху,','\t','бо','   ','заблукав.']);
  assert.deepEqual(handoffWords(text,[0,2,5]),['Кіт','на','заблукав.']);
 });
-test('v4 and v5 finale submit without selected words while pinned v1–v3 preserve legacy selection',()=>{
+test('v4, v5 and v6 finale submit without selected words while pinned v1–v3 preserve legacy selection',()=>{
  const config={round:9,total:10,visibleTailWords:3,answer:'Великі дракони зникли за небокраєм'};
  assert.equal(handoffCount({...config,roomVersion:'v4'}),0);
  assert.equal(handoffCount({...config,roomVersion:'v5'}),0);
+ assert.equal(handoffCount({...config,roomVersion:'v6'}),0);
  assert.equal(handoffCount({...config,roomVersion:'v3'}),3);
  assert.equal(handoffCount({...config,roomVersion:'v1'}),3);
  assert.equal(handoffCount({...config,round:8,roomVersion:'v4'}),3);
  assert.equal(handoffCount({...config,round:8,roomVersion:'v5'}),3);
+ assert.equal(handoffCount({...config,round:8,roomVersion:'v6'}),3);
  assert.equal(handoffCount({...config,round:8,visibleTailWords:0}),0);
 });
 test('minimum four words and correct word cap are enforced before moving to review',()=>{
