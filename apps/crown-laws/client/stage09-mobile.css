@@ -236,6 +236,9 @@
   }
   .game-shell:not(.debug-scene .game-shell) .topbar__left{flex:0 0 auto;padding-right:0}
   .game-shell:not(.debug-scene .game-shell) .topbar__left h1{font-size:17px}
+  .game-shell:not(.debug-scene .game-shell) .topbar .court-mobile-history{
+    display:inline-flex;align-items:center;justify-content:center;
+  }
   .game-shell:not(.debug-scene .game-shell) .topbar__right{
     flex:1 1 auto;display:flex;justify-content:flex-end;width:auto;
     flex-wrap:nowrap;gap:3px;min-width:0;
