@@ -1,6 +1,6 @@
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
-const GAME='perekos',RULES=9;
+const GAME='perekos',RULES=10,COMPATIBLE_RULES=new Set([9,10]);
 const CODE=/^[0-9a-f]{8}$/i;
 const FULL=/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i;
 const scopedStorage={getItem:k=>{try{return localStorage.getItem('perekos-net:'+k)}catch{return null}},setItem:(k,v)=>{try{localStorage.setItem('perekos-net:'+k,v)}catch{}}};
@@ -35,7 +35,7 @@ export class OnlineDuel {
   client.on('room_joined',packet=>{
    if(this.client!==client)return;
    if(packet.gameId!==GAME){this.onError('Это комната другой игры.');this.leave();return}
-   if(packet.state?.rulesVersion!==RULES){this.onError('Комната использует другую версию правил.');this.leave();return}
+   if(!COMPATIBLE_RULES.has(packet.state?.rulesVersion)){this.onError('Комната использует другую версию правил.');this.leave();return}
    this.room=packet.roomId;this.seq=Math.max(0,(packet.state?.nextSeq||1)-1);this.view=packet.state;
    this.onRoom(packet.roomId);
    this.onPresence(packet.players||[]);
@@ -48,7 +48,7 @@ export class OnlineDuel {
    if(packet.event?.type==='notice')this.onStatus(typeof packet.event.payload==='string'?packet.event.payload:'Действие не принято.');
    if(packet.event?.type==='state'){
     const view=packet.event.payload;
-    if(view?.rulesVersion!==RULES){this.onError('Правила комнаты изменились. Войдите заново.');return}
+    if(!COMPATIBLE_RULES.has(view?.rulesVersion)){this.onError('Правила комнаты изменились. Войдите заново.');return}
     if((view.revision??-1)<(this.view?.revision??-1))return;
     const previousRound=this.view?.match?.round;
     if(view.phase==='fight'&&view.match?.round!==previousRound)this.seq=Math.max(0,(view.nextSeq||1)-1);
@@ -77,7 +77,10 @@ export class OnlineDuel {
  chooseMage(mageId){return this.send({type:'mage',mageId})}
  chooseArchetype(archetype){return this.send({type:'archetype',archetype})}
   evolve(kind,form){return this.send({type:'evolve',kind,form})}
- chooseMode(gameMode){if(!['duel','rupture'].includes(gameMode))return false;const sent=this.send({type:'mode',gameMode});if(sent)this.desiredMode=gameMode;return sent}
+ chooseSchool(school){return this.view?.rulesVersion===10&&this.send({type:'magic-school',school})}
+ editMagic(command){return this.view?.rulesVersion===10&&this.send({type:'magic-edit',command})}
+ readyMagic(){return this.view?.rulesVersion===10&&this.send({type:'magic-ready'})}
+ chooseMode(gameMode){if(!['duel','rupture','magic-v2'].includes(gameMode)||gameMode==='magic-v2'&&this.view?.rulesVersion!==10)return false;const sent=this.send({type:'mode',gameMode});if(sent)this.desiredMode=gameMode;return sent}
  pick(rune,replace){return this.send({type:'pick',rune,replace})}
  order(runes){return this.send({type:'order',runes})}
  ready(runes){return this.send({type:'ready',runes})}

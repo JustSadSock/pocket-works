@@ -1009,3 +1009,22 @@
 #menu .play-block:has(#continue:not([hidden])):has(#continue-v2:not([hidden])){grid-template-columns:repeat(2,minmax(0,1fr))}
 #menu .play-block:has(#continue:not([hidden])):has(#continue-v2:not([hidden]))>*:not(#continue):not(#continue-v2){grid-column:1/-1}
 #menu #continue,#menu #continue-v2{min-height:38px;padding:7px 9px;font-size:11px;white-space:normal;line-height:1.25}
+
+/* PocketNet v10 — three distinct modes and school selector without extra scroll. */
+#net-room-info .net-mode-selector:has(#net-mode-magic-v2){grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+#net-mode-magic-v2{min-width:0}
+#net-mode-magic-v2 strong{white-space:normal}
+.net-school-area{margin:6px 0 9px;display:grid;gap:7px}
+.net-school-area[hidden]{display:none}
+.net-school-area>small{font:800 10px ui-monospace,monospace;letter-spacing:.08em;color:#e6dbb5}
+.net-school-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.net-school-options .v2-school{min-height:65px;font-size:14px;text-align:center;align-content:center;padding:9px 5px}
+.net-school-options .v2-school[aria-pressed="true"]{outline:3px solid #f5d99a;outline-offset:0}
+.net-school-options .v2-school:disabled{opacity:1;cursor:default}
+@media(max-width:400px){
+ #net-room-info .net-mode-selector:has(#net-mode-magic-v2){gap:3px}
+ #net-room-info .mode-option{padding-inline:2px}
+ #net-room-info .mode-option strong{font-size:10px}
+ #net-room-info .mode-option small{font-size:9px}
+ .net-school-options .v2-school{font-size:13px;min-height:57px}
+}

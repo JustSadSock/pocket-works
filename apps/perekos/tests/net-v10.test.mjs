@@ -1,0 +1,93 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import module,{RULESET_VERSION} from '../server/module.ts';
+const a={id:'a',name:'А',verified:false},b={id:'b',name:'Б',verified:false},intruder={id:'outsider'};
+const players=[a,b];
+const send=(s,player,type,data={})=>module.onMessage({state:s,player,players,payload:{type,...data}});
+const room=()=>{let s=module.createRoom({player:a}).state;s=module.onJoin({state:s,player:b,players}).state;return s};
+const magicRoom=()=>{
+ const s=room();send(s,a,'mode',{gameMode:'magic-v2'});send(s,a,'magic-school',{school:'stone'});send(s,b,'magic-school',{school:'fire'});send(s,a,'start',{gameMode:'magic-v2'});return s;
+};
+const edit=(s,player,command)=>send(s,player,'magic-edit',{command:{...command,revision:s.match.magicLoadouts[player===a?0:1].revision,nonce:'test-'+(s.revision+1)}});
+const equip=(s,player,id,slot,action)=>{
+ const own=s.match.magicLoadouts[player===a?0:1].reserve.find(x=>x.defId===id);
+ assert.ok(own,id+' must be server-issued');
+ return edit(s,player,{type:'equip',slot,instanceId:own.instanceId,...(action===undefined?{}:{action})});
+};
+test('v10 binary-exact snapshot, immutable v9 and current module lock',async()=>{
+ const main=await readFile(new URL('../server/module.ts',import.meta.url),'utf8');
+ const current=await readFile(new URL('../../../pocketnet/module-versions/perekos/v10.ts',import.meta.url),'utf8');
+ const previous=await readFile(new URL('../../../pocketnet/module-versions/perekos/v9.ts',import.meta.url),'utf8');
+ const lock=JSON.parse(await readFile(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
+ assert.equal(main,current);assert.notEqual(main,previous);assert.equal(RULESET_VERSION,10);
+ assert.equal(lock.perekos.current,'v10');assert.ok(lock.perekos.versions.includes('v9'));
+ assert.match(previous,/RULESET_VERSION=9/);
+});
+test('two seats select isolated schools and get server-owned rune inventory',()=>{
+ const s=magicRoom();
+ assert.equal(s.phase,'magic-build');assert.equal(s.match.magicModeV2,true);
+ assert.equal(s.match.phase,'build');assert.deepEqual(s.schools,['stone','fire']);
+ const one=s.match.magicLoadouts[0],two=s.match.magicLoadouts[1];
+ assert.equal(one.school,'stone');assert.equal(two.school,'fire');
+ assert.equal(s.match.actors[0].magicSchool,'stone');
+ assert.equal(s.match.actors[1].magicSchool,'fire');
+ assert.ok(one.reserve.some(r=>r.defId==='st_wall'));
+ assert.ok(two.reserve.some(r=>r.defId==='fi_ember'));
+ assert.ok(!two.reserve.some(r=>r.defId==='li_spark'));
+ assert.equal(module.viewForPlayer({state:s,player:a,players}).rulesVersion,10);
+ assert.equal(module.viewForPlayer({state:s,player:b,players}).loadout.school,'fire');
+});
+test('untrusted clients cannot modify somebody else, forge card IDs, or skip typed 1/2/2 slots',()=>{
+ const s=magicRoom(),before=JSON.stringify(s.match.magicLoadouts[1]);
+ send(s,intruder,'magic-edit',{command:{type:'seal',slot:0,revision:0}});
+ assert.equal(JSON.stringify(s.match.magicLoadouts[1]),before);
+ let revision=s.revision;
+ send(s,a,'magic-edit',{command:{type:'equip',slot:1,instanceId:99999,revision:s.match.magicLoadouts[0].revision}});
+ assert.equal(s.revision,revision);
+ send(s,a,'magic-school',{school:'storm'});
+ assert.equal(s.schools[0],'stone');
+ const own=s.match.magicLoadouts[0].reserve.find(x=>x.defId==='u_on_cast');
+ edit(s,a,{type:'equip',slot:1,instanceId:own.instanceId});
+ assert.ok(s.match.magicLoadouts[0].slots[1].when);
+ const guard=s.match.magicLoadouts[0].reserve.find(x=>x.defId==='u_guard');
+ edit(s,a,{type:'equip',slot:1,instanceId:guard.instanceId});
+ assert.equal(s.match.magicLoadouts[0].slots[1].actions.length,1);
+ const stale={type:'seal',slot:1,revision:0,nonce:'stale'};
+ revision=s.revision;send(s,a,'magic-edit',{command:stale});assert.equal(s.revision,revision);
+ assert.equal(JSON.stringify(s.match.magicLoadouts[1]),before);
+});
+test('sealing rune chain locks instances, frees slot, and physically shields under live server ticks',()=>{
+ const old=Date.now;let now=1_000_000;Date.now=()=>now;
+ try{
+  const s=magicRoom();
+  equip(s,a,'u_on_cast',1);equip(s,a,'u_guard',1);
+  const actor=s.match.actors[0];
+  assert.equal(actor.shield,0);
+  edit(s,a,{type:'seal',slot:1});
+  assert.equal(s.match.magicLoadouts[0].sealed.length,1);
+  assert.equal(s.match.magicLoadouts[0].slots[1].actions.length,0);
+  edit(s,a,{type:'unequip',slot:1,instanceId:s.match.magicLoadouts[0].sealed[0].actions[0].rune.instanceId});
+  assert.equal(s.match.magicLoadouts[0].sealed.length,1);
+  send(s,a,'magic-ready');assert.equal(s.phase,'magic-build');
+  send(s,b,'magic-ready');assert.equal(s.phase,'fight');
+  assert.equal(s.match.phase,'fight');
+  for(let n=0;n<12;n++){
+   now+=85;
+   send(s,a,'input',{seq:n,round:s.match.round,control:{x:0,y:0,attack:n<8,shield:false,dash:false,aim:{x:330,y:120}}});
+   send(s,b,'input',{seq:n,round:s.match.round,control:{x:0,y:0,attack:false,shield:false,dash:false,aim:{x:100,y:480}}});
+  }
+  assert.ok(s.match.actors[0].shield>0,'magic guard triggered by physical attack on server');
+  assert.equal(s.match.magicLoadouts[0].sealed.length,1);
+ }finally{Date.now=old}
+});
+test('ready changes are rejected after entering a fight, and legacy rules stay playable under v10',()=>{
+ const s=magicRoom();
+ send(s,a,'magic-ready');send(s,b,'magic-ready');
+ const revision=s.match.magicLoadouts[0].revision;
+ edit(s,a,{type:'seal',slot:0});
+ assert.equal(s.match.magicLoadouts[0].revision,revision);
+ const legacy=room();send(legacy,a,'start',{gameMode:'duel'});
+ assert.equal(legacy.phase,'fight');assert.equal(legacy.match.magicModeV2,undefined);
+ assert.equal(legacy.match.actors[0].runes[0],'on_hurt');
+});

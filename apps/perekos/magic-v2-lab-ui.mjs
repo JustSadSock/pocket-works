@@ -26,7 +26,7 @@ const btn=(text,action,cls='')=>{
  n.type='button';n.addEventListener('click',action);
  return n;
 };
-export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoadout}){
+export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoadout,isRemote=()=>false,onServerEdit=()=>false}){
  let selectedSlot=0,status='',targetAction=0;
  const feedback=message=>{status=message;render()};
  const panel=el('div','v2-stage');
@@ -38,13 +38,22 @@ export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoad
   if(!result.ok){feedback(result.error);return}
   setLoadout(result.state);status='Изменения сохранены';render();
  };
- const edit=(type,fields={})=>change(current=>applyMagicEdit(current,{
-  type,slot:selectedSlot,revision:current.revision,nonce:'ui-'+current.revision,...fields
- }));
+ const edit=(type,fields={})=>{
+  if(isRemote()){
+   const book=getMatch()?.magicLoadouts?.[getMatch().magicSeat??0];
+   if(!book){feedback('Сетевой гримуар пока недоступен');return}
+   const command={type,slot:selectedSlot,revision:book.revision,nonce:'net-'+book.revision+'-'+type,...fields};
+   if(!onServerEdit(command))feedback('Сервер не принял команду');
+   return;
+  }
+  change(current=>applyMagicEdit(current,{
+   type,slot:selectedSlot,revision:current.revision,nonce:'ui-'+current.revision,...fields
+  }));
+ };
  const add=(id)=>change(current=>grantEarnedMagicRune(current,id));
  function render(){
   panel.replaceChildren();
-  const match=getMatch(),book=match?.magicModeV2?match.magicLoadouts[0]:null;
+  const match=getMatch(),remote=isRemote(),book=match?.magicModeV2?match.magicLoadouts[remote?(match.magicSeat??0):0]:null;
   if(!book){
    panel.append(el('div','v2-kicker','ПЕРЕКОС / ЭКСПЕРИМЕНТАЛЬНАЯ КУЗНИЦА'));
    panel.append(el('h2','','Начни с одной стихии'));
@@ -67,9 +76,9 @@ export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoad
   },'v2-play'));
   panel.append(head);
   const tools=el('div','v2-tools');
-  tools.append(btn('В меню',()=>{
-    if(window.confirm('Закончить тренировку? Несохранённая магия этой партии будет потеряна.'))onClose();
-  }));tools.append(btn('Сменить стихию',()=>{
+  tools.append(btn(remote?'Покинуть комнату':'В меню',()=>{
+    if(window.confirm(remote?'Покинуть сетевую комнату?':'Закончить тренировку? Несохранённая магия этой партии будет потеряна.'))onClose();
+  }));if(!remote)tools.append(btn('Сменить стихию',()=>{
     if(window.confirm('Начать новую тренировку? Все руны и печати текущей партии будут потеряны.')){
       onStart(null);selectedSlot=0;status='';render();
     }
@@ -100,7 +109,7 @@ export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoad
   }
   if(!spell.actions.length)details.append(el('p','v2-empty','Добавь «Что» — настоящее действие твоей стихии.'));
   const seal=btn('Запечатать комбинацию',()=>{
-   if(!window.confirm('Запечатать заклинание навсегда до конца тренировки? Вернуть или заменить руны будет нельзя.'))return;
+   if(!window.confirm(remote?'Запечатать до конца сетевого матча? Сервер запретит возвращать эти руны.':'Запечатать заклинание навсегда до конца тренировки? Вернуть или заменить руны будет нельзя.'))return;
    edit('seal');
   },'v2-seal');
   seal.disabled=!spell.actions.length;
@@ -156,8 +165,9 @@ export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoad
    }
    catalogue.append(grid);
   }
-  panel.append(catalogue);
-  const notice=el('p','v2-notice',status||'Все изменения действуют в следующем бою.');
+  if(!remote)panel.append(catalogue);
+  else panel.append(el('p','v2-hint','Сервер выдал одинаковый запас рун обоим игрокам. Всё редактирование и запечатывание проверяются PocketNet.'));
+  const notice=el('p','v2-notice',status||(remote?'Сетевая сборка сохраняется на сервере.':'Все изменения действуют в следующем бою.'));
   notice.setAttribute('role','status');panel.append(notice);
  }
  return {render,open:()=>{selectedSlot=0;status='';render()},setStatus:feedback};

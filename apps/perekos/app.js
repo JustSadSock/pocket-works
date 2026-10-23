@@ -207,6 +207,8 @@ function startForge(){
 }
 const magicV2Lab=installMagicV2Lab({
  root:$('magic-v2'),
+ isRemote:()=>!!online?.active&&online.view?.gameMode==='magic-v2',
+ onServerEdit:command=>online?.editMagic(command)||false,
  getMatch:()=>active,
  setLoadout:loadout=>{if(active?.magicModeV2){active.magicLoadouts[0]=loadout;remember()}},
  onStart:school=>{
@@ -218,11 +220,15 @@ const magicV2Lab=installMagicV2Lab({
  },
  onFight:()=>{
   if(!active?.magicModeV2)return;
+  if(online?.active&&online.view?.gameMode==='magic-v2'){
+   if(online.readyMagic()){show('net-wait');toast('Сборка подтверждена. Ждём второго мага.')}
+   return;
+  }
   active.phase='fight';show('fight');
   toast('Новая магия · WASD/джойстик — движение · стреляй и возвращайся к рунам');
   remember();
  },
- onClose:()=>{forget(true);active=null;$('continue-v2').hidden=true;show('menu')}
+ onClose:()=>{if(online?.active){online.leave();onlinePhase='';active=null;show('menu');return}forget(true);active=null;$('continue-v2').hidden=true;show('menu')}
 });
 $('open-v2-lab').addEventListener('click',()=>{
  const saved=stored(magicSaveKey);
@@ -796,7 +802,7 @@ function render(){
  combatPresentation.screen(ctx);
 }
 function handleEvents(){if(!active)return;let count=0;const played=new Set();for(const f of active.fx){if(f.id<=seen||count>=5||played.has(f.k))continue;sfx(f.k,active.actors.reduce((closest,a)=>!closest||Math.hypot(a.x-f.x,a.y-f.y)<Math.hypot(closest.x-f.x,closest.y-f.y)?a:closest,null)?.mageId?mage(active.actors.reduce((closest,a)=>!closest||Math.hypot(a.x-f.x,a.y-f.y)<Math.hypot(closest.x-f.x,closest.y-f.y)?a:closest,null).mageId).school:'fire');played.add(f.k);count++}seen=active.serial}
-function loop(now){const elapsed=Math.min(.13,(now-last)/1000||0);last=now;frame++;if(toastT>0){toastT-=elapsed;if(toastT<=0)$('toast').classList.remove('visible')}if(online?.active){if(!debugSession&&online.view?.phase==='draft'&&now-netSyncAt>1700){netSyncAt=now;online.sync()}if(!debugSession&&active&&online.view?.phase==='fight'){online.sample(()=>mode==='fight'?playerInput():{x:0,y:0,aim:{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y},attack:false,shield:false,dash:false},active.round,now);handleEvents()}if(frame%5===0)updateHud();acc=0}else if(mode==='fight'&&active&&!debugSession){acc+=elapsed;let steps=0;while(acc>=STEP&&steps<8){tick(active,playerInput());acc-=STEP;steps++;if(active.phase!=='fight')break}handleEvents();if(frame%5===0)updateHud();if(frame%120===0)remember();if(active.phase!=='fight')transition()}else acc=0;render();requestAnimationFrame(loop)}
+function loop(now){const elapsed=Math.min(.13,(now-last)/1000||0);last=now;frame++;if(toastT>0){toastT-=elapsed;if(toastT<=0)$('toast').classList.remove('visible')}if(online?.active){if(!debugSession&&['draft','magic-build'].includes(online.view?.phase)&&now-netSyncAt>1700){netSyncAt=now;online.sync()}if(!debugSession&&active&&online.view?.phase==='fight'){online.sample(()=>mode==='fight'?playerInput():{x:0,y:0,aim:{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y},attack:false,shield:false,dash:false},active.round,now);handleEvents()}if(frame%5===0)updateHud();acc=0}else if(mode==='fight'&&active&&!debugSession){acc+=elapsed;let steps=0;while(acc>=STEP&&steps<8){tick(active,playerInput());acc-=STEP;steps++;if(active.phase!=='fight')break}handleEvents();if(frame%5===0)updateHud();if(frame%120===0)remember();if(active.phase!=='fight')transition()}else acc=0;render();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 // The authenticated avatar is presentation only: never serialize art into a
 // combat save. Switching profiles does not change the sprite mid-round.
@@ -898,10 +904,18 @@ function onlineView(view){
  if(debugSession){online.view=view;return}
  void refreshRival(view);
  online.view=view;active=view.match||null;
+ if(active?.magicModeV2)active.magicSeat=view.me;
+ if(view.gameMode==='magic-v2'&&view.phase==='magic-build'){
+  onlinePhase='magic-build:'+view.revision;
+  applyRival();
+  if(view.ready)show('net-wait');
+  else{show('magic-v2');magicV2Lab.render()}
+  return;
+ }
  const stamp=[view.phase,active?.round??0,view.picked,view.ready,view.gameMode].join(':');
- if(stamp===onlinePhase){if(view.phase==='lobby'){updateNetworkLobby(view);drawNetworkMageOptions()}return}
+ if(stamp===onlinePhase){if(view.phase==='lobby'){updateNetworkLobby(view);if(view.gameMode!=='magic-v2')drawNetworkMageOptions()}return}
  onlinePhase=stamp;displayXY=[null,null];
- if(view.phase==='lobby'){applyRival();show('online-lobby');updateNetworkLobby(view);drawNetworkMageOptions();if(view.mages?.[view.me]!==selectedMage)online.chooseMage(selectedMage);if(view.archetypes?.[view.me]!==selectedArchetype)online.chooseArchetype(selectedArchetype)}
+ if(view.phase==='lobby'){applyRival();show('online-lobby');updateNetworkLobby(view);if(view.gameMode!=='magic-v2'){drawNetworkMageOptions();if(view.mages?.[view.me]!==selectedMage)online.chooseMage(selectedMage);if(view.archetypes?.[view.me]!==selectedArchetype)online.chooseArchetype(selectedArchetype)}}
  else if(view.phase==='fight'){onlinePreviewRunes=null;applyRival();applyPendingAppearance();show('fight');toast('Дуэль началась')}
  else if(view.phase==='draft'){
   applyRival();if(view.ready){show('net-wait')}
@@ -913,8 +927,23 @@ function updateNetworkLobby(view){
  const full=(view?.seats?.length||0)===2;
  const isHost=view?.host===view?.seats?.[view.me];
  $('net-start').hidden=!full||!isHost;
- for(const kind of ['rupture','duel']){const btn=$('net-mode-'+kind);btn.disabled=!isHost;btn.setAttribute('aria-pressed',String((view.gameMode||'rupture')===kind))}
- $('net-start').firstChild.textContent=view.gameMode==='duel'?'Начать дуэль ':'Начать Разлом ';
+ for(const kind of ['rupture','duel','magic-v2']){const btn=$('net-mode-'+kind);btn.disabled=!isHost||(kind==='magic-v2'&&view.rulesVersion!==10);btn.setAttribute('aria-pressed',String((view.gameMode||'rupture')===kind))}
+ $('net-start').firstChild.textContent=view.gameMode==='magic-v2'?'Начать магию 2.0 ':view.gameMode==='duel'?'Начать дуэль ':'Начать Разлом ';
+ const useMagic=view.gameMode==='magic-v2';
+ $('net-school-area').hidden=!useMagic;
+ $('net-mages').closest('.net-mage-area').hidden=useMagic;
+ $('net-archetypes').closest('.net-archetypes').hidden=useMagic;
+ if(useMagic){
+  const root=$('net-school-options');root.replaceChildren();
+  for(const [id,label] of [['stone','Камень'],['fire','Огонь'],['storm','Молния']]){
+   const item=document.createElement('button');item.type='button';item.className='v2-school v2-'+id;
+   const chosen=view.schools?.[view.me]===id;
+   item.textContent=label+(chosen?' ✓':'');
+   item.setAttribute('aria-pressed',String(chosen));item.disabled=chosen;
+   item.addEventListener('click',()=>online.chooseSchool(id));
+   root.append(item);
+  }
+ }
  $('net-help').textContent=full?'Создатель комнаты выбирает режим и запускает матч.':'Пришли код другу. Оба игрока смогут участвовать со своих устройств.';
  roomRoster(view?.players||[]);
 }
@@ -939,7 +968,7 @@ $('net-join').addEventListener('click',()=>{
 });
 $('net-resume').addEventListener('click',()=>startNetwork('resume'));
 $('net-start').addEventListener('click',()=>online.start());
-for(const kind of ['rupture','duel'])$('net-mode-'+kind).addEventListener('click',()=>{if(online?.active)online.chooseMode(kind)});
+for(const kind of ['rupture','duel','magic-v2'])$('net-mode-'+kind).addEventListener('click',()=>{if(online?.active)online.chooseMode(kind)});
 $('net-back').addEventListener('click',()=>{online.leave();onlinePhase='';active=null;show('menu')});
 $('net-wait-leave').addEventListener('click',()=>{online.leave();onlinePhase='';active=null;show('menu')});
 $('net-result-leave').addEventListener('click',()=>{online.leave();onlinePhase='';active=null;show('menu')});
