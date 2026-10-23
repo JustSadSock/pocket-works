@@ -19,7 +19,7 @@ const jumpTargets={
 function playSection(original,section,crew,jumpAt,waitUntil,fieldEnd){
  const state=clone(original);
  const initialTime=state.t;
- let jumped=false;
+ let jumped=false,reverseBack=false,reverseRecovered=false,reverseAt=0;
  for(let frame=0;frame<11/FIXED_DT&&!state.finished;frame++){
   const position=state.x-section.x;
   if(jumpAt>=0&&!jumped&&position>=jumpAt&&position<jumpAt+.24&&state.ground){
@@ -29,6 +29,16 @@ function playSection(original,section,crew,jumpAt,waitUntil,fieldEnd){
   commandGame(state,'float',section.kind==='float-gap'&&position>.28&&position<fieldEnd&&!state.ground);
   const ready=section.kind==='cargo-switch'&&!state.cargo.some(c=>c.latched);
   if(ready&&state.pushCooldown<=0&&position>.2&&position<3.65)commandGame(state,'push');
+  // Two or three operators have no brake: a real double reversal delays
+  // arrival at the press instead. No clock/position edits are used.
+  if(crew<4&&section.kind==='press'&&waitUntil>0){
+   if(!reverseBack&&!reverseRecovered&&position>.4&&state.cooldown<=.01){
+    commandGame(state,'reverse');reverseBack=true;reverseAt=state.t;
+   }
+   if(reverseBack&&state.t-reverseAt>=waitUntil&&state.cooldown<=.01){
+    commandGame(state,'reverse');reverseBack=false;reverseRecovered=true;
+   }
+  }
   const brake=crew>=4&&['timing-press','press'].includes(section.kind)
     &&position>.40&&state.t-initialTime<waitUntil;
   commandGame(state,'brake',brake);
@@ -46,7 +56,7 @@ export function solveFullTrack(level){
   const next=[];
   const jumps=jumpTargets[section.kind]||[-1];
   const waits=['timing-press','press'].includes(section.kind)&&level.playerCount>=4
-    ?[.25,.4,.6,.85,1.2,1.5]:[0];
+    ?[.25,.4,.6,.85,1.2,1.5]:section.kind==='press'?[0,.3,.42,.55,.7]:[0];
   const endValues=['float-gap','mag-rail'].includes(section.kind)?[2.2,2.8,3.35,4.15]:[4.4];
   for(const state of frontier)
    for(const jump of jumps)
