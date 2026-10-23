@@ -179,6 +179,8 @@ jobs:
         run: node apps/zamazka/qa/editor-geometry-compaction.mjs
       - name: Check dense 24k-point brush budget without geometry loss
         run: node apps/zamazka/qa/editor-budget-soak.mjs
+      - name: Verify smudge pixel parity and measured rendering time
+        run: node apps/zamazka/qa/smudge-pixel-parity.mjs
 
       - name: Test ZAMAZKA smudge, uninterrupted strokes and touch budgets
         run: node apps/zamazka/qa/editor-input.mjs && node apps/zamazka/qa/smudge.mjs
