@@ -124,7 +124,7 @@ export class DuelFeedback{
   const g=previewAttack(state,actor,target,special,specialSlot),col=palette(actor)[0];
   ctx.save();ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1.5;ctx.globalAlpha=.76;
   ctx.setLineDash(g.blocked?[3,5]:[4,8]);
-  for(const seg of g.segments){if(seg.phase){ctx.strokeStyle='#a4d3c5';ctx.setLineDash([1,4])}else{ctx.strokeStyle=col;ctx.setLineDash(g.blocked?[3,5]:[4,8])}ctx.beginPath();ctx.moveTo(seg.x,seg.y);ctx.lineTo(seg.toX,seg.toY);ctx.stroke()}
+  for(const seg of g.segments){if(seg.phase||seg.dash||seg.breach||seg.bend){ctx.strokeStyle=seg.phase?'#a4d3c5':seg.breach?'#eeaa77':'#d6d89a';ctx.setLineDash([1,4])}else{ctx.strokeStyle=col;ctx.setLineDash(g.blocked?[3,5]:[4,8])}ctx.beginPath();ctx.moveTo(seg.x,seg.y);ctx.lineTo(seg.toX,seg.toY);ctx.stroke()}
   ctx.setLineDash([]);
   if(g.type==='cone'||g.type==='sector'){
    const half=g.type==='sector'?g.width:Math.atan(g.width/Math.max(1,g.length));ctx.globalAlpha=.42;
@@ -135,7 +135,7 @@ export class DuelFeedback{
     const seg=q.segments[0];ctx.beginPath();ctx.moveTo(actor.x,actor.y);ctx.lineTo(seg.toX,seg.toY);ctx.stroke();
    }
   }
-  if(g.type==='lob'||g.type==='placement'){ctx.beginPath();ctx.arc(g.x,g.y,g.radius,0,Math.PI*2);ctx.stroke()}
+  if(['lob','placement','resonance','contour','inversion'].includes(g.type)&&g.radius>0){ctx.beginPath();ctx.arc(g.x,g.y,g.radius,0,Math.PI*2);ctx.stroke()}
   const size=g.blocked?7:5;ctx.globalAlpha=.95;ctx.lineWidth=2;
   ctx.beginPath();ctx.moveTo(g.x-size,g.y-size);ctx.lineTo(g.x+size,g.y+size);ctx.moveTo(g.x-size,g.y+size);ctx.lineTo(g.x+size,g.y-size);ctx.stroke();
   if(g.blocked){ctx.strokeStyle='#efa67f';ctx.beginPath();ctx.arc(g.x,g.y,9,0,Math.PI*2);ctx.stroke()}
