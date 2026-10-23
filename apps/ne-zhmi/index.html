@@ -23,6 +23,10 @@
     <p>Болтик едет сам. Один управляет прыжком, другой — разворотом. Каждый заезд собирается из новых механических секций.</p>
     <label class="player-field">ПОЗЫВНОЙ <input id="player-name" maxlength="22" autocomplete="nickname" placeholder="Оператор" value="Игрок" spellcheck="false"></label>
     <button id="start" class="launch" type="button" data-native-press>НАЧАТЬ ИСПЫТАНИЕ <span>→</span></button>
+    <label class="operator-config">ЛОКАЛЬНЫЕ ОПЕРАТОРЫ <select id="operator-count" aria-label="Количество локальных операторов">
+      <option value="2">2 оператора</option><option value="3">3 оператора</option>
+      <option value="4">4 оператора</option><option value="5">5 операторов</option>
+      <option value="6">6 операторов</option></select></label>
     <div class="net-buttons"><button id="create-online" class="net-entry" type="button">Создать онлайн-комнату</button><button id="join-online" class="net-entry" type="button">Войти по коду</button></div>
     <div class="key-guide">Локальный режим · два человека на одном устройстве <button type="button" class="workshop-entry" data-workshop-trigger>Диагностика</button></div>
   </section>
@@ -44,7 +48,7 @@
     <a class="exit-sheet" href="../../" data-app-control>← Pocket Works</a>
   </section>
   <section id="online-lobby" class="panel sheet online-sheet hidden" aria-label="Комната PocketNet">
-    <div class="plate"><span>POCKETNET · ДВА ОПЕРАТОРА</span><span id="online-status" role="status">Подключаемся…</span></div>
+    <div class="plate"><span>POCKETNET · 2–6 ОПЕРАТОРОВ</span><span id="online-status" role="status">Подключаемся…</span></div>
     <h2 id="online-lobby-title">Комната</h2>
     <div id="online-entry" class="online-entry hidden">
       <label>КОД ПРИГЛАШЕНИЯ<input id="online-code-input" inputmode="text" autocapitalize="characters" maxlength="36" placeholder="8 символов"></label>
@@ -54,7 +58,7 @@
       <div class="room-code">КОД КОМНАТЫ <strong id="online-code">--------</strong></div>
       <button id="online-copy" type="button" class="option">Скопировать приглашение</button>
       <div id="online-roster" class="online-roster"></div>
-      <p id="online-role">Ожидание роли</p>
+      <p id="online-role">Ожидание роли</p><p id="online-count">Места 1/6 · старт от 2 игроков</p>
       <button id="online-swap" class="option hidden" type="button">Поменять роли местами</button>
       <button id="online-start" class="launch hidden" type="button">Запустить испытание →</button>
     </div>
@@ -79,8 +83,8 @@
   <button id="pause" class="pause hidden" type="button" aria-label="Поставить на паузу">Ⅱ ПАУЗА</button>
 </section>
 <section class="control-desk" aria-label="Пульт операторов" data-ui>
-  <div class="desk-head"><span>ПОСТ УПРАВЛЕНИЯ / 02 КАНАЛА</span><span class="desk-light"><i></i> ДВА КАНАЛА</span></div>
-  <div class="switches">
+  <div class="desk-head"><span>ПОСТ УПРАВЛЕНИЯ / ОПЕРАТОРЫ</span><span class="desk-light"><i></i> ДВА КАНАЛА</span></div>
+  <div class="switches" id="switches">
     <div class="control-station">
       <span class="station-label">ОПЕРАТОР 01 <b>ПРЫЖОК</b></span>
       <button id="jump" class="lever lever-jump" type="button" data-native-press disabled>
@@ -94,8 +98,37 @@
         <span class="lever-symbol" aria-hidden="true">↶</span><strong>РАЗВОРОТ</strong><small>R / ←</small>
       </button>
     </div>
+    <div class="control-station optional-station hidden" data-operator="2">
+      <span class="station-label">ОПЕРАТОР 03 <b>МАГНИТ</b></span>
+      <button id="magnet" class="lever lever-magnet" type="button" data-native-press disabled>
+        <span class="lever-symbol" aria-hidden="true">⊂</span><strong>МАГНИТ</strong><small>M</small>
+      </button>
+      <span class="power-meter" id="power-magnet" aria-hidden="true"></span>
+    </div>
+    <div class="control-station optional-station hidden" data-operator="3">
+      <span class="station-label">ОПЕРАТОР 04 <b>ТОРМОЗ</b></span>
+      <button id="brake" class="lever lever-brake" type="button" data-native-press disabled>
+        <span class="lever-symbol" aria-hidden="true">Ⅱ</span><strong>ТОРМОЗ</strong><small>B</small>
+      </button>
+      <span class="power-meter" id="power-brake" aria-hidden="true"></span>
+    </div>
+    <div class="control-station optional-station hidden" data-operator="4">
+      <span class="station-label">ОПЕРАТОР 05 <b>ТОЛЧОК</b></span>
+      <button id="push" class="lever lever-push" type="button" data-native-press disabled>
+        <span class="lever-symbol" aria-hidden="true">➜</span><strong>ТОЛЧОК</strong><small>E</small>
+      </button>
+      <span class="power-meter" id="power-push" aria-hidden="true"></span>
+    </div>
+    <div class="control-station optional-station hidden" data-operator="5">
+      <span class="station-label">ОПЕРАТОР 06 <b>ПОПЛАВОК</b></span>
+      <button id="float" class="lever lever-float" type="button" data-native-press disabled>
+        <span class="lever-symbol" aria-hidden="true">◯</span><strong>ПОПЛАВОК</strong><small>F</small>
+      </button>
+      <span class="power-meter" id="power-float" aria-hidden="true"></span>
+    </div>
   </div>
-  <div class="desk-bottom"><span>ОДНА МАШИНА · ДВА РЕШЕНИЯ</span><span id="record">РЕКОРД —</span></div>
+  <div id="crew-status" class="crew-status hidden" aria-live="polite"></div>
+  <div class="desk-bottom"><span>ОДНА МАШИНА · ШЕСТЬ МЕХАНИЗМОВ</span><span id="record">РЕКОРД —</span></div>
 </section>
 <div id="notice" role="status" aria-live="polite" class="sr-only"></div>
 </main>
