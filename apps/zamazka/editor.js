@@ -3,6 +3,7 @@ import {zamazkaStore} from './storage.js';
 import {floodFillRaster,fillMatchingColorRaster} from './fill-core.js';
 import {enclosingContourAt,fillEscapedContour} from './fill-contours.js';
 import {brushCursorSVG,getBrushCursorStyle,setBrushCursorStyle} from './brush-cursor.js';
+import {createCanvasFrameTelemetry} from './frame-performance.js';
 import {fillRasterBounds,extractRasterRegion,localContourBounds} from './fill-raster-region.js';
 export {floodFillRaster};
 
@@ -454,6 +455,10 @@ const key='pocket-works:zamazka:draft:';
 export class Editor{
  constructor(root,{id,variation=0,round=1,onChange=()=>{},onSound=()=>{},onPersistenceError=()=>{},onPersistenceStatus=()=>{}}){
    this.root=root;this.id=id;this.variation=variation;this.round=round;this.onChange=onChange;this.onSound=onSound;this.onPersistenceError=onPersistenceError;this.onPersistenceStatus=onPersistenceStatus;this.saveGeneration=0;this.persistenceWarned=false;this.zone=zoneFor(id,variation);
+   // Enable on a real device with ?zamazkaPerf=1. Disabled during normal play.
+   this.frameTelemetry=typeof location!=='undefined'&&
+     new URLSearchParams(location.search).get('zamazkaPerf')==='1'
+      ?createCanvasFrameTelemetry(stats=>console.info('[ZAMAZKA canvas]',stats)):null;
    this.canvas=root.querySelector('#paintCanvas');this.viewport=root.querySelector('.viewport');
    this.tool='brush';this.color='#304a43';this.size=12;this.strokes=[];this.redoStack=[];this.working=null;this.edgePaused=false;this.edgeGestureGroup=null;this.outsidePoint=null;this.pointers=new Map();this.activePenPointer=null;this.scale=1.9;this.tx=0;this.ty=0;this.moving=false;this.closed=false;
     this.inputMode=(sessionStorage.getItem('pocket-works:zamazka:input-mode')||localStorage.getItem('pocket-works:zamazka:input-mode'))==='precision'?'precision':'direct';
@@ -1310,8 +1315,14 @@ export class Editor{
      if(this.paintFrameId)return;
      const frame=()=>{
       this.paintFrameId=null;
-      try{if(!this.closed)this.paintCachedFrame(img)}
-      finally{for(const cb of this.paintWaiters.splice(0))cb()}
+      try{
+        if(!this.closed){
+          if(this.frameTelemetry){
+            const start=performance.now(),drew=this.paintCachedFrame(img);
+            this.frameTelemetry.record(performance.now(),performance.now()-start,drew!==false);
+          }else this.paintCachedFrame(img);
+        }
+      }finally{for(const cb of this.paintWaiters.splice(0))cb()}
     };
      this.paintFrameId=typeof requestAnimationFrame==='function'?requestAnimationFrame(frame):setTimeout(frame,16);
    });
@@ -1328,7 +1339,7 @@ export class Editor{
    const frameStroke=this.working||null;
    const framePoints=frameStroke?.p?.length||0;
    if(!resized&&this.lastPaintedRevision===frameRevision&&
-      this.lastPaintedStroke===frameStroke&&this.lastPaintedPoints===framePoints)return;
+      this.lastPaintedStroke===frameStroke&&this.lastPaintedPoints===framePoints)return false;
    const makeLayer=()=>{
      const layer=document.createElement('canvas');layer.width=c.width;layer.height=c.height;
      const x=layer.getContext('2d');x.setTransform(c.width/W,0,0,c.height/H,0,0);
@@ -1425,6 +1436,7 @@ export class Editor{
    this.lastPaintedRevision=frameRevision;
    this.lastPaintedStroke=frameStroke;
    this.lastPaintedPoints=framePoints;
+   return true;
    // No dashed guide: the parchment cutout itself shows the editable area.
    // Keep clipZone above so tools still affect only the damage mask.
  }
