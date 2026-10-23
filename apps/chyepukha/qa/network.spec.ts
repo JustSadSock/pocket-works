@@ -157,3 +157,31 @@ test('completed manuscripts remain in the private local archive after leaving th
  await page.locator('[data-act=archive-back]').first().click();
  await expect(page.locator('.home-cover')).toBeVisible();
 });
+
+test('the selected handoff survives a real reload without leaking into the next draft',async({page})=>{
+ await runPocketRoom(page);
+ await newRoom(page);
+ await page.locator('[data-act=start]').click();
+ const answer='Архіваріус знайшов важливу записку на старій вежі';
+ await page.locator('#answer').fill(answer);
+ await page.locator('#answerForm button[type=submit]').click();
+ await expect(page.locator('.writer-selection')).toBeVisible();
+ await page.locator('.word').nth(0).click();
+ await page.locator('.word').nth(2).click();
+ await page.locator('.word').nth(4).click();
+ await expect(page.locator('.word.selected')).toHaveCount(3);
+ await page.reload();
+ await expect(page.locator('.writer-selection')).toBeVisible();
+ await expect(page.locator('.word.selected')).toHaveCount(3);
+ await expect(page.locator('#selectedStrip .handoff-chip')).toHaveCount(3);
+ await page.locator('[data-act=back-to-draft]').click();
+ await expect(page.locator('#answer')).toHaveValue(answer);
+ await page.locator('#answer').fill(answer+' вчора');
+ await page.locator('#answerForm button[type=submit]').click();
+ await expect(page.locator('.word.selected')).toHaveCount(0);
+ await page.locator('.word').nth(0).click();
+ await page.locator('.word').nth(1).click();
+ await page.locator('.word').nth(2).click();
+ await page.locator('#answerForm button[type=submit]').click();
+ await expect(page.locator('.wax')).toBeVisible();
+});
