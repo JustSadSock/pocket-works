@@ -38,6 +38,7 @@ const netStorage={
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const amounts=w=>keys.filter(k=>w?.[k]).map(k=>w[k]+' '+names[k]).join(', ')||'ничего';
 const person=id=>state?.players?.find(p=>p.id===id);
+const playerOnline=p=>onlinePlayerIds?onlinePlayerIds.has(p.id):p.connected;
 const label=id=>person(id)?.character||person(id)?.name||'Игрок';
 const formatEffect=(fx,minus=false)=>{
   if(!fx)return '—';
@@ -61,6 +62,7 @@ function specialHint(t){
 function specialLine(t){
  return t?'<div class="chip"><strong>'+esc(t.title)+'</strong>: '+esc(specialHint(t))+'</div>':'';
 }
+let onlinePlayerIds=null;
 let net=null,me=null,state=null,roomId='',mode='home',connecting=false,connected=false;
 let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
 const decorativeGuests=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
@@ -544,7 +546,7 @@ function renderPlay(){
  if(!playStarted){playStarted=true;activeSheet='actions';}
  const active=state.turnId===me?.id,plan=forecastEconomy(you.resources,you.items);
  const seats=state.players.map(p=>{
-  const self=p.id===me?.id,available=!self&&p.connected&&!p.bankrupt&&!you.bankrupt;
+  const self=p.id===me?.id,available=!self&&playerOnline(p)&&!p.bankrupt&&!you.bankrupt;
   return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(self?'is-me ':'')+
   '" data-action="'+(self?'open-sheet':'player-actions')+'" '+(self?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
   (!self&&!available?' disabled':'')+' aria-label="'+esc(p.character)+' — '+esc(p.name)+'">'+
@@ -632,11 +634,12 @@ function closeRoom(){
  clearTimeout(cueTimer);cueTimer=null;
  activeSheet=null;selectedArtifact=null;playStarted=false;readDeals.clear();readTasks.clear();document.body.classList.remove('sheet-open');
  if(net){try{if(connected)net.leaveRoom()}catch{}try{net.close()}catch{}}
- net=null;me=null;state=null;roomId='';connected=false;connecting=false;message('');renderHome();
+ net=null;me=null;state=null;onlinePlayerIds=null;roomId='';connected=false;connecting=false;message('');renderHome();
 }
 function wire(client){
  client.on('connected',data=>{if(net!==client)return;me=data.player;connected=true;message('');});
- client.on('room_joined',data=>{if(net!==client)return;roomId=data.roomId;state=data.state;connecting=false;message('');render();});
+ client.on('room_joined',data=>{if(net!==client)return;roomId=data.roomId;state=data.state;onlinePlayerIds=null;connecting=false;message('');render();});
+ client.on('presence',data=>{if(net!==client||!state||data.roomId!==roomId)return;if(Array.isArray(data.onlineIds)){onlinePlayerIds=new Set(data.onlineIds);if(state.phase==='play')render();}});
  client.on('game_event',data=>{
   if(net!==client)return;
   if(data.event?.type==='state'){
@@ -646,7 +649,7 @@ function wire(client){
    if(cue)showConfirmedCue(cue);
   }else if(data.event?.type==='notice')message(data.event.payload,true);
  });
- client.on('disconnected',()=>{if(net!==client)return;connected=false;message('Связь потеряна. PocketNet переподключается…',true);});
+ client.on('disconnected',()=>{if(net!==client)return;connected=false;onlinePlayerIds=null;message('Связь потеряна. PocketNet переподключается…',true);});
  client.on('error',e=>{
   if(net!==client)return;
   const code=String(e?.code||e?.message||'неизвестно');
@@ -751,14 +754,14 @@ app.addEventListener('click',event=>{
    if(!player||player.id===me?.id)return;
    app.querySelector('.player-popover')?.remove();
    const pop=document.createElement('div');pop.className='player-popover';pop.setAttribute('role','dialog');
-   pop.innerHTML='<div class="player-popover-head"><strong>'+esc(player.character||player.name)+'</strong><button type="button" data-action="close-player-actions" aria-label="Закрыть">×</button></div>'+(!player.connected||player.bankrupt||state.you.bankrupt?'<p>Обмен недоступен</p>':'<button type="button" class="primary" data-action="trade-with" data-player="'+esc(player.id)+'">'+svgIcon('trade',20)+' Обмен / подарок</button>')+'<button type="button" data-action="open-sheet" data-sheet="players">'+svgIcon('people',19)+' Участники</button>';
+   pop.innerHTML='<div class="player-popover-head"><strong>'+esc(player.character||player.name)+'</strong><button type="button" data-action="close-player-actions" aria-label="Закрыть">×</button></div>'+(!playerOnline(player)||player.bankrupt||state.you.bankrupt?'<p>Обмен недоступен</p>':'<button type="button" class="primary" data-action="trade-with" data-player="'+esc(player.id)+'">'+svgIcon('trade',20)+' Обмен / подарок</button>')+'<button type="button" data-action="open-sheet" data-sheet="players">'+svgIcon('people',19)+' Участники</button>';
    btn.closest('.player-seats')?.append(pop);sound.play('open');pop.querySelector('button')?.focus({preventScroll:true});return;
   }
   if(action==='close-player-actions'){app.querySelector('.player-popover')?.remove();return;}
   if(action==='trade-with'){
   app.querySelector('.player-popover')?.remove();sound.play('tap');
   const recipient=state?.players?.find(p=>p.id===btn.dataset.player);
-  if(!recipient?.connected||recipient.bankrupt||state?.you?.bankrupt)return;
+  if(!recipient||!playerOnline(recipient)||recipient.bankrupt||state?.you?.bankrupt)return;
   lastSheetTrigger=btn;openSheet('deals',true);
   const dealForm=app.querySelector('form[data-form="deal"]');
   if(dealForm?.closest('details'))dealForm.closest('details').open=true;
