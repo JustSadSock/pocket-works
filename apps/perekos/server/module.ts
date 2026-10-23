@@ -135,6 +135,59 @@ function compilePreview(ids){const info=description(ids);return info.lines.lengt
 
 const W=400,H=620,STEP=1/60,ROUND_SECONDS=25,RUPTURE_SECONDS=600,EVOLUTION_SECONDS=60,COLLAPSE_SECONDS=90;
 const WALLS=[{x:102,y:180,w:64,h:54},{x:232,y:385,w:66,h:56}];
+// Shared pure continuous collision geometry. Identical source is in frozen PocketNet rules.
+const GEOMETRY_EPS=1e-8;
+const COLLISION_WALLS=[{x:102,y:180,w:64,h:54},{x:232,y:385,w:66,h:56}];
+function segmentBox(x,y,dx,dy,r,b){
+ const minX=b.x-r,maxX=b.x+b.w+r,minY=b.y-r,maxY=b.y+b.h+r;
+ let near=-Infinity,far=Infinity,nx=0,ny=0;
+ for(const [pos,delta,lo,hi,axis] of [[x,dx,minX,maxX,'x'],[y,dy,minY,maxY,'y']]){
+  if(Math.abs(delta)<GEOMETRY_EPS){if(pos<lo||pos>hi)return null;continue}
+  const t0=(lo-pos)/delta,t1=(hi-pos)/delta,entry=Math.min(t0,t1),exit=Math.max(t0,t1);
+  if(entry>near){near=entry;nx=axis==='x'?(delta>0?-1:1):0;ny=axis==='y'?(delta>0?-1:1):0}
+  far=Math.min(far,exit);
+  if(near>far)return null;
+ }
+ if(far<0||near>1)return null;
+ return {t:Math.max(0,near),nx,ny,exit:far};
+}
+function segmentCircle(x,y,dx,dy,r,c){
+ const vx=x-c.x,vy=y-c.y,rr=r+c.r,A=dx*dx+dy*dy,C=vx*vx+vy*vy-rr*rr;
+ if(C<=0){const d=Math.hypot(vx,vy)||1;return {t:0,nx:vx/d,ny:vy/d}}
+ if(A<GEOMETRY_EPS)return null;
+ const B=2*(vx*dx+vy*dy),D=B*B-4*A*C;if(D<0)return null;
+ const t=(-B-Math.sqrt(D))/(2*A);if(t<0||t>1)return null;
+ const hx=vx+dx*t,hy=vy+dy*t,d=Math.hypot(hx,hy)||1;
+ return {t,nx:hx/d,ny:hy/d,exit:(-B+Math.sqrt(D))/(2*A)};
+}
+function firstCollision(s,x,y,dx,dy,r,owner,{actors=false,skipBarrier=-1}={}){
+ let best=null;
+ function offer(hit,type,index=-1){if(!hit||hit.t>1||hit.t<0)return;
+  if(!best||hit.t<best.t-1e-7||(Math.abs(hit.t-best.t)<1e-7&&type!=='actor'&&best.type==='actor'))
+    best={...hit,type,index,x:x+dx*hit.t,y:y+dy*hit.t};
+ }
+ const W=400,H=620;
+ offer(segmentBox(x,y,dx,dy,0,{x:-10000,y:-10000,w:10019+r,h:20620}),'edge');
+ offer(segmentBox(x,y,dx,dy,0,{x:381-r,y:-10000,w:10000,h:20620}),'edge');
+ offer(segmentBox(x,y,dx,dy,0,{x:-10000,y:-10000,w:20400,h:10021+r}),'edge');
+ offer(segmentBox(x,y,dx,dy,0,{x:-10000,y:599-r,w:20400,h:10000}),'edge');
+ for(let i=0;i<COLLISION_WALLS.length;i++)offer(segmentBox(x,y,dx,dy,r,COLLISION_WALLS[i]),'wall',i);
+ for(let i=0;i<(s?.barriers?.length||0);i++){
+  if(i===skipBarrier)continue;
+  const b=s.barriers[i];if(b.aperture&&b.owner===owner)continue;
+  offer(segmentCircle(x,y,dx,dy,r,b),'barrier',i);
+ }
+ if(actors&&Number.isInteger(owner)&&s?.actors?.[1-owner]){
+  const t=s.actors[1-owner];if(t.hp>0)offer(segmentCircle(x,y,dx,dy,r,{x:t.x,y:t.y,r:12}),'actor',1-owner);
+ }
+ return best;
+}
+function rayCollision(s,x,y,angle,distance,r=3,owner=null){
+ const dx=Math.cos(angle)*distance,dy=Math.sin(angle)*distance;
+ const hit=firstCollision(s,x,y,dx,dy,r,owner);
+ return {length:hit?Math.max(0,distance*hit.t):distance,hit};
+}
+
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const mag=(x,y)=>Math.hypot(x,y)||1;
@@ -233,19 +286,14 @@ function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
   style,element,accel:options.signature?(a.mageId==='kindle'?490:a.mageId==='wire'?-380:0):0,
   minSpeed:options.signature&&a.mageId==='kindle'?310:options.signature&&a.mageId==='wire'?300:0,
   damage:Number.isFinite(options.damage)?options.damage:options.clone?6:stats(a).damage*(options.strong?1.6:1),life:options.life??(options.far?1.8:1.15)*(style==='arc'?.84:style==='rock'?1.2:style==='wave'?.65:1),
-  bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?10:style==='wave'?12:style==='rock'?8:style==='bolt'?3:options.clone?4:5,depth:options.depth||0,fusion:options.fusion!==false,evo:!!options.evo});
+  bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?10:style==='wave'?12:style==='rock'?8:style==='bolt'?3:options.clone?4:5,depth:options.depth||0,fusion:options.fusion!==false,evo:!!options.evo,phase:options.phase||0});
  fx(s,'shoot',x,y);return true;
 }
 
 /* Each mage has a distinct physical attack. All hit-tests use the fixed-step
    court geometry; these forms are state, not client-only cosmetic guesses. */
 function mastery(a,id){return compile(a.runes).some(chain=>chain.actions.some(action=>action.mods.includes(id)))}
-function beamLength(s,x,y,angle,range){
- const dx=Math.cos(angle),dy=Math.sin(angle);
- for(let d=8;d<=range;d+=6)if(distWall(x+dx*d,y+dy*d,3)||blocking(s,x+dx*d,y+dy*d,3)
-  ||x+dx*d<22||x+dx*d>W-22||y+dy*d<24||y+dy*d>H-24)return Math.max(0,d-6);
- return range;
-}
+function beamLength(s,x,y,angle,range){return rayCollision(s,x,y,angle,range,3,null).length}
 function insideCone(a,b,angle,reach,halfAngle){
  const dx=b.x-a.x,dy=b.y-a.y,r=Math.hypot(dx,dy);
  return r<=reach+12&&Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-angle),Math.cos(Math.atan2(dy,dx)-angle)))<=halfAngle;
@@ -443,7 +491,7 @@ function act(s,a,action,mods,ev){
  case 'ball':spawnShot(s,a,angle,a.x,a.y,{element:chosenElement(mods,mage(a.mageId).school),strong:m.has('strong'),far:m.has('far'),bounce:m.has('bounce'),drain:m.has('drain'),wide:m.has('wide'),fastshot:m.has('fastshot'),depth});break;
  case 'heal':receiveHeal(s,a,7*strong,depth);break;
  case 'armor':a.shield=Math.min(80,a.shield+11*strong);fx(s,'shield',a.x,a.y);break;
- case 'blast':if(Math.hypot(other.x-a.x,other.y-a.y)<(m.has('wide')?110:72)*reach){const d=harm(s,other,11*strong,a.id,depth);if(d>0){markTarget(s,other,chosenElement(mods,mage(a.mageId).school),a.id,depth);emit(s,'on_hit',a.id,{},depth)}}fx(s,'overload',a.x,a.y);break;
+ case 'blast':if(Math.hypot(other.x-a.x,other.y-a.y)<(m.has('wide')?110:72)*reach&&beamLength(s,a.x,a.y,Math.atan2(other.y-a.y,other.x-a.x),Math.hypot(other.x-a.x,other.y-a.y)+4)>=Math.hypot(other.x-a.x,other.y-a.y)-8){const d=harm(s,other,11*strong,a.id,depth);if(d>0){markTarget(s,other,chosenElement(mods,mage(a.mageId).school),a.id,depth);emit(s,'on_hit',a.id,{},depth)}}fx(s,'overload',a.x,a.y);break;
  case 'blink':{const step=38*reach*(m.has('reverse')?-1:1);move(a,Math.cos(a.face)*step,Math.sin(a.face)*step);fx(s,'dash',a.x,a.y);break}
  case 'clone':if(s.echoes.length<12)s.echoes.push({owner:a.id,x:a.x,y:a.y,life:m.has('lasting')?3.5:2.2,cast:.25,shots:2,extra:m.has('strong')});fx(s,'dash',a.x,a.y);break;
  case 'mine':if(s.mines.length<14)s.mines.push({x:a.x,y:a.y,owner:a.id,life:m.has('lasting')?6:3.5,damage:14*strong,element:chosenElement(mods,mage(a.mageId).school),r:(m.has('wide')?57:40)*(a.archetype==='shaper'?1.2:1)});fx(s,'mine',a.x,a.y);break;
@@ -514,24 +562,40 @@ if(s.ticks%60===0&&a.heat>=HEAT_LIMIT)addHeat(s,a,0)}
 updateLobs(s,dt);if(['rupture','forge'].includes(s.gameMode))updateEvolutionFields(s,dt);
 for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s.beams.splice(j,1)}
  for(let j=s.waves.length-1;j>=0;j--){const w=s.waves[j];processWave(s,w);if(w.life<=0)s.waves.splice(j,1)}
- for(let j=s.shots.length-1;j>=0;j--){const q=s.shots[j],a=s.actors[1-q.owner];if(q.accel){const speed=Math.hypot(q.vx,q.vy)||1;
- const next=q.accel>0?Math.min(q.minSpeed,speed+q.accel*dt):Math.max(q.minSpeed,speed+q.accel*dt);
- q.vx*=next/speed;q.vy*=next/speed;}
-const nx=q.x+q.vx*dt,ny=q.y+q.vy*dt;q.life-=dt;
-if(Math.hypot(nx-a.x,ny-a.y)<12+q.r){
- if(q.style==='bolt')a.shield=Math.max(0,a.shield-3);
- const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){markTarget(s,a,q.element||mage(s.actors[q.owner].mageId).school,q.owner,q.depth);const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn'){a.burn=Math.max(a.burn||0,has(attacker,'lasting')?2.4:1.55);a.burnSource=q.owner;}if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
- if(dealt>0)fusionImpact(s,q,a);
-  if(q.style==='rock')rockFracture(s,q,nx,ny);
- fx(s,'impact_'+(q.style||'orb'),nx,ny);s.shots.splice(j,1);continue
+ for(let j=s.shots.length-1;j>=0;j--){
+ const q=s.shots[j],a=s.actors[1-q.owner];
+ if(q.accel){const v=Math.hypot(q.vx,q.vy)||1,next=q.accel>0?Math.min(q.minSpeed,v+q.accel*dt):Math.max(q.minSpeed,v+q.accel*dt);q.vx*=next/v;q.vy*=next/v}
+ q.life-=dt;if(q.life<=0){s.shots.splice(j,1);if(mage(s.actors[q.owner].mageId).trait==='miss_cool')s.actors[q.owner].heat=Math.max(0,s.actors[q.owner].heat-6);emit(s,'on_expire',q.owner,{},q.depth);continue}
+ let remaining=dt,done=false,iterations=0;
+ while(remaining>1e-7&&!done&&iterations++<4){
+  const dx=q.vx*remaining,dy=q.vy*remaining;
+  const hit=firstCollision(s,q.x,q.y,dx,dy,q.r,q.owner,{actors:true});
+  if(!hit){q.x+=dx;q.y+=dy;break}
+  q.x=hit.x;q.y=hit.y;
+  if(hit.type==='actor'){
+   if(q.style==='bolt')a.shield=Math.max(0,a.shield-3);
+   const dealt=harm(s,a,q.damage,q.owner,q.depth);
+   if(dealt){markTarget(s,a,q.element||mage(s.actors[q.owner].mageId).school,q.owner,q.depth);const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn'){a.burn=Math.max(a.burn||0,has(attacker,'lasting')?2.4:1.55);a.burnSource=q.owner}if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
+   if(dealt>0)fusionImpact(s,q,a);
+   if(q.style==='rock')rockFracture(s,q,q.x,q.y);
+   fx(s,'impact_'+(q.style||'orb'),q.x,q.y);s.shots.splice(j,1);done=true;continue;
+  }
+  if(q.phase>0&&(hit.type==='wall'||hit.type==='barrier')){
+   const exit=Math.max(hit.t,Math.min(1.6,hit.exit??hit.t));q.x+=dx*(exit-hit.t)+Math.sign(q.vx)*.08;q.y+=dy*(exit-hit.t)+Math.sign(q.vy)*.08;q.phase=0;
+   fx(s,'phase_exit',q.x,q.y);remaining*=Math.max(0,1-Math.min(exit,1));continue;
+  }
+  if(q.bounces>0){
+   q.bounces--;const dot=q.vx*hit.nx+q.vy*hit.ny;q.vx-=2*dot*hit.nx;q.vy-=2*dot*hit.ny;
+   q.x+=hit.nx*.08;q.y+=hit.ny*.08;
+   fx(s,'spark',hit.x,hit.y);emit(s,'on_bounce',q.owner,{},q.depth);remaining*=Math.max(0,1-hit.t);continue;
+  }
+  if(q.style==='rock')rockFracture(s,q,q.x,q.y);s.shots.splice(j,1);fx(s,'spark',hit.x,hit.y);emit(s,'on_expire',q.owner,{},q.depth);done=true;
+ }
 }
-const wall=distWall(nx,ny,q.r)||blocking(s,nx,ny,q.r),edge=nx<19||nx>W-19||ny<21||ny>H-21;
-if(wall||edge){if(q.bounces>0){q.bounces--;const wallX=distWall(nx,q.y,q.r)||blocking(s,nx,q.y,q.r)||nx<19||nx>W-19;if(wallX)q.vx*=-1;else q.vy*=-1;q.x+=q.vx*dt;q.y+=q.vy*dt;fx(s,'spark',q.x,q.y);emit(s,'on_bounce',q.owner,{},q.depth)}else{if(q.style==='rock')rockFracture(s,q,q.x,q.y);s.shots.splice(j,1);fx(s,'spark',q.x,q.y);emit(s,'on_expire',q.owner,{},q.depth)}continue}
-if(q.life<=0){s.shots.splice(j,1);if(mage(s.actors[q.owner].mageId).trait==='miss_cool')s.actors[q.owner].heat=Math.max(0,s.actors[q.owner].heat-6);emit(s,'on_expire',q.owner,{},q.depth);continue}q.x=nx;q.y=ny}
 for(let j=s.echoes.length-1;j>=0;j--){const e=s.echoes[j];e.life-=dt;e.cast-=dt;const source=s.actors[e.owner];if(e.cast<=0){e.cast=.76;const target=s.actors[1-e.owner];spawnShot(s,source,Math.atan2(target.y-e.y,target.x-e.x),e.x,e.y,{clone:true,strong:!!e.extra});e.shots=(e.shots??2)-1}if(e.life<=0||e.shots<=0)s.echoes.splice(j,1)}
 for(let j=s.mines.length-1;j>=0;j--){
  const mine=s.mines[j];mine.life-=dt;const target=s.actors[1-mine.owner];
- if(Math.hypot(target.x-mine.x,target.y-mine.y)<mine.r){const d=harm(s,target,mine.damage,mine.owner);if(d>0){markTarget(s,target,mine.element||mage(s.actors[mine.owner].mageId).school,mine.owner);emit(s,'on_hit',mine.owner)}fx(s,'overload',mine.x,mine.y);s.mines.splice(j,1)}
+ if(Math.hypot(target.x-mine.x,target.y-mine.y)<mine.r&&beamLength(s,mine.x,mine.y,Math.atan2(target.y-mine.y,target.x-mine.x),Math.hypot(target.x-mine.x,target.y-mine.y)+4)>=Math.hypot(target.x-mine.x,target.y-mine.y)-8){const d=harm(s,target,mine.damage,mine.owner);if(d>0){markTarget(s,target,mine.element||mage(s.actors[mine.owner].mageId).school,mine.owner);emit(s,'on_hit',mine.owner)}fx(s,'overload',mine.x,mine.y);s.mines.splice(j,1)}
  else if(mine.life<=0)s.mines.splice(j,1);
  }
  for(let j=s.barriers.length-1;j>=0;j--){s.barriers[j].life-=dt;if(s.barriers[j].life<=0)s.barriers.splice(j,1)}
