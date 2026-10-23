@@ -23,7 +23,9 @@ export class NetworkManager {
     this.currentRoom=null;
     this.socket={id:null};
     this.started=false;
+    this.finished=false;
     this.activeRound=0;
+    this.lastPulseAt=0;
     this.code='';
     this.roomId=null;
     this.hostId=null;
@@ -65,6 +67,7 @@ export class NetworkManager {
         if(button){button.hidden=!this.net.accountId;button.dataset.roomId=message.roomId;}
       });
       this.net.on('game_event',message=>{
+        if(!this.roomId||message.roomId!==this.roomId)return;
         if(message.event?.type==='state')this.apply(message.event.payload);
         else if(message.event?.type==='achievement_awarded'&&message.event.to===this.socket.id){
           window.dispatchEvent(new CustomEvent('blockies:award',{detail:message.event.payload}));
@@ -102,22 +105,43 @@ export class NetworkManager {
     return this.connecting;
   }
   stopClock(){if(this.timer){clearInterval(this.timer);this.timer=null;}}
+  reconnect(){
+    const socket=this.net?.socket;
+    if(socket&&(socket.readyState===0||socket.readyState===1)){
+      this.stale=true;
+      this.trigger('connectionHealth',{status:'recovering'});
+      // PocketNet reconnects using its existing authenticated token and room ID.
+      socket.close();
+      return;
+    }
+    // A closing/closed socket already has a scheduled retry in PocketNet.
+    if(!socket&&!this.connecting&&!this.connected){
+      this.connect().catch(()=>{});
+    }
+  }
   startClock(){
     if(this.timer)return;
     this.timer=setInterval(()=>{
       if(!this.connected||!this.started||document.hidden)return;
-      if(!this.stale && performance.now()-this.lastStateAt>5000){
+      const now=performance.now();
+      if(!this.stale&&now-this.lastStateAt>5000){
         this.stale=true;
         this.trigger('connectionHealth',{status:'stalled'});
       }
+      // An active game advances continuously; a finished round still polls
+      // occasionally so a disconnected host can be replaced before rematching.
+      if(this.finished&&now-this.lastPulseAt<1600)return;
+      this.lastPulseAt=now;
       this.send({type:'pulse'},true);
-    },220);
+    },320);
   }
   resetRoom(){
     this.stopClock();
     this.currentRoom=null;
     this.started=false;
+    this.finished=false;
     this.activeRound=0;
+    this.lastPulseAt=0;
     this.hostId=null;
     this.code='';
     this.roomId=null;
@@ -139,8 +163,10 @@ export class NetworkManager {
       gameStarted:!!state.started,
       availableColors:['#FF1493','#00D9FF','#FFDB58','#39FF14'].filter(color=>!players.some(p=>p.color===color))
     };
+    const previousHost=this.hostId;
     this.currentRoom=room;
     this.hostId=state.hostId;
+    if(previousHost!==this.hostId)this.trigger('hostChanged',{hostId:this.hostId,isHost:this.hostId===this.socket.id});
     const codeNode=document.querySelector('#pocket-room-code');
     if(codeNode)codeNode.textContent=this.code;
     if(joined)this.trigger(this.creating?'roomCreated':'roomJoined',room);
@@ -150,14 +176,15 @@ export class NetworkManager {
       const round=state.round||1;
       const newRound=!this.started||this.activeRound!==round;
       this.started=true;
+      this.finished=!!state.engine?.isGameOver;
       this.activeRound=round;
       if(newRound)this.trigger('gameStart',{players:state.players,seed:state.seed});
       if(state.engine)this.trigger('snapshot',state.engine);
       this.trigger('onlinePause',{paused:!!state.paused,isHost:state.hostId===this.socket.id});
-      if(state.engine?.isGameOver)this.stopClock();
-      else this.startClock();
+      this.startClock();
     }else{
       this.stopClock();
+      this.finished=false;
       if(this.started){
         this.started=false;
         this.activeRound=0;

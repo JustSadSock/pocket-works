@@ -622,7 +622,7 @@ function add(s,p){
  if(s.started||s.players.length>=4)throw Error('Комната заполнена или игра уже началась');
  s.players.push({id:p.id,name:String(p.name||'Игрок').slice(0,24),color:COLORS.find(c=>!s.players.some(v=>v.color===c)),ready:false,left:false});
 }
-function newMatch(state){
+function newMatch(state,connectedIds){
  state.seed=Date.now()>>>0;
  state.round=(state.round||0)+1;
  state.paused=false;
@@ -632,6 +632,16 @@ function newMatch(state){
  const r=runtime(null,state.seed);
  r.init(state.players);
  state.engine=r.snapshot();
+ // Preserve disconnected seats for later recovery without inserting ghost
+ // pieces into a new round the disconnected user never joined.
+ if(Array.isArray(connectedIds)){
+  state.engine.players.forEach((piece,index)=>{
+   if(!connectedIds.includes(state.players[index].id)){
+    piece.gameOver=true;
+    piece.currentPiece=null;
+   }
+  });
+ }
 }
 export default {protocolVersion:1,
  createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
@@ -655,17 +665,23 @@ export default {protocolVersion:1,
   state.players.forEach(p=>p.ready=false);
   return out(state);
  },
- onMessage({state,player,payload:p}){
+ onMessage({state,player,payload:p,connectedIds}){
   state=copy(state);
   const index=state.players.findIndex(v=>v.id===player.id&& !v.left);
   if(index<0)throw Error('Игрок не в комнате');
   const v=state.players[index];
+  // Host reassignment uses server-observed live sockets, never client claims.
+  // A survivor can therefore pause or start the next round if the host vanishes.
+  if(Array.isArray(connectedIds)&&connectedIds.length&&!connectedIds.includes(state.hostId)){
+   const successor=state.players.find(seat=>!seat.left&&connectedIds.includes(seat.id));
+   if(successor)state.hostId=successor.id;
+  }
   if(state.started){
    if(p?.type==='rematch'){
     if(player.id!==state.hostId||!state.engine?.isGameOver)throw Error('Только ведущий может начать новый раунд после завершения');
     state.players=state.players.filter(p=>!p.left);
     state.players.forEach(p=>p.ready=true);
-    newMatch(state);
+    newMatch(state,connectedIds);
     return out(state);
    }
    if(p?.type==='pause'){
@@ -692,7 +708,7 @@ export default {protocolVersion:1,
    v.color=p.color;
   }else if(p?.type==='ready'){
    v.ready=!v.ready;
-   if(state.players.length && state.players.every(p=>p.ready))newMatch(state);
+   if(state.players.length && state.players.every(p=>p.ready))newMatch(state,connectedIds);
   }else if(p?.type!=='sync')throw Error('Неизвестная команда');
   return out(state);
  },

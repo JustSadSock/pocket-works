@@ -631,7 +631,10 @@ export class PocketNetHub {
         if (!mod) throw new Error('room_version_unavailable');
         if (msg.type === 'game_message') {
           const result = await mod.onMessage({ state: copied(room.state), player: member,
-            players: room.players, payload: msg.payload });
+            players: room.players, payload: msg.payload,
+            ...(room.gameId==='blockies'?{
+              connectedIds:[...new Set(this.sockets(room.id).map(peer=>peer.deserializeAttachment()?.id).filter(Boolean))]
+            }:{}) });
           if (!result || !('state' in result)) throw new Error('invalid_module_state');
           if (!Array.isArray(result.events ?? []) || result.events.length > 32) throw new Error('invalid_module_events');
           // Validate event payloads before modifying persistent game state.

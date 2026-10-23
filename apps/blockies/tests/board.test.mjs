@@ -152,7 +152,8 @@ test('network round snapshots initialize once and subsequent snapshots refresh t
   net.apply({...state,round:2});
   assert.equal(starts,2);
   net.apply({...state,round:2,engine:{isGameOver:true}});
-  assert.equal(net.timer,null,'game-over should not waste PocketNet pulses');
+  assert.ok(net.timer,'finished rounds keep a throttled heartbeat for host recovery');
+  assert.equal(net.finished,true);
  }finally{
   net.stopClock();
   globalThis.document=originalDocument;

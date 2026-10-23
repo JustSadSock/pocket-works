@@ -2712,15 +2712,19 @@ class UIManager {
         details.append(boardSection);
         scoresDiv.append(details);
 
-        const again=document.getElementById('play-again-btn');
-        if(again){
-            const allowed=!this.isOnlineMode||networkManager.hostId===networkManager.socket.id;
-            again.disabled=!allowed;
-            again.textContent=this.isOnlineMode
-                ?(allowed?(ru?'Новый раунд':'New round'):(ru?'Раунд начинает ведущий':'Host starts next round'))
-                :t('playAgain');
-        }
+        this.refreshRematchPermission();
         this.showModal('gameOver');
+    }
+
+    refreshRematchPermission(){
+        const again=document.getElementById('play-again-btn');
+        if(!again)return;
+        const allowed=!this.isOnlineMode||networkManager.hostId===networkManager.socket.id;
+        again.disabled=!allowed;
+        again.textContent=this.isOnlineMode
+            ? (allowed ? (currentLanguage==='ru'?'Новый раунд':'New round') :
+                (currentLanguage==='ru'?'Раунд начинает ведущий':'Host starts next round'))
+            : t('playAgain');
     }
 
     showCoopSetup() {
@@ -2942,13 +2946,29 @@ class UIManager {
         });
 
         networkManager.on('snapshot', data => applyNetworkSnapshot(data));
+        networkManager.on('hostChanged', () => {
+            if(networkManager.currentRoom)this.updateRoomView(networkManager.currentRoom);
+            this.refreshRematchPermission();
+        });
         networkManager.on('connectionHealth', ({status}) => {
             const banner=document.getElementById('online-network-status');
             if (!banner) return;
             banner.hidden = status === 'online' || !this.isOnlineMode;
-            banner.textContent = status === 'offline' ? t('recoveryOffline') :
-                status === 'recovering' ? t('recoveryRestoring') :
-                status === 'stalled' ? t('recoveryStalled') : '';
+            const statusText=status==='offline' ? t('recoveryOffline') :
+                status==='recovering' ? t('recoveryRestoring') :
+                status==='stalled' ? t('recoveryStalled') : '';
+            banner.replaceChildren();
+            if(status!=='online'&&this.isOnlineMode){
+                const label=document.createElement('span');
+                label.textContent=statusText;
+                banner.append(label);
+                const retry=document.createElement('button');
+                retry.type='button';
+                retry.className='net-retry';
+                retry.textContent=currentLanguage==='ru'?'Переподключиться':'Reconnect';
+                retry.addEventListener('click',()=>networkManager.reconnect());
+                banner.append(retry);
+            }
             if (status !== 'online') this.releaseTouchControls?.();
             this.refreshTouchStatus();
         });
@@ -3092,7 +3112,9 @@ class UIManager {
                 name.textContent = player.name;
                 const status = document.createElement('div');
                 status.className = 'room-player-status';
-                status.textContent = player.ready ? 'Готов' : 'Не готов';
+                status.textContent=player.id===room.hostId
+                    ? (currentLanguage==='ru'?'Ведущий':'Host')
+                    : (player.ready ? (currentLanguage==='ru'?'Готов':'Ready') : (currentLanguage==='ru'?'Не готов':'Not ready'));
                 playerDiv.append(color,name,status);
                 playersListEl.appendChild(playerDiv);
             });

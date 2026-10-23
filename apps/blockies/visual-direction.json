@@ -11,7 +11,8 @@
     "typography": "Humanist sans for mode choices, tightly-spaced monospace for score and technical status; labels stay concise.",
     "signature": "Four-cell by two-cell colored individual spawn gates extend directly above the shared well; every gate has the player name and own next-piece indicator. Input and gameplay remain one instrument.",
     "distinction": "Distinct from ZAMAZKA's art paper and FOG's tactical maps: this is a fitted precision arcade well within a restrained editorial instrument, not a decorative game cabinet.",
-    "motion": " A bounded canvas overlay adds brief stamped block impact, row fracture and clear-combo rising score, independent of game logic and keyboard/touch flow; prefers-reduced-motion removes these effects. Procedural low-frequency impact and tonal crystalline clears replace shrill flat beeps, while the existing mute toggle remains functional."
+    "motion": " A bounded canvas overlay adds brief stamped block impact, row fracture and clear-combo rising score, independent of game logic and keyboard/touch flow; prefers-reduced-motion removes these effects. Procedural low-frequency impact and tonal crystalline clears replace shrill flat beeps, while the existing mute toggle remains functional.",
+    "interaction": " Connected teammates automatically inherit host permissions after host socket loss, while a compact in-game recovery bar offers one explicit reconnect action without forcing the user into a new menu."
   },
   "architecture": {
     "spatialLayout": "single-instrument",
@@ -92,6 +93,11 @@
         "slug": "ne-zhmi",
         "spatialDifference": "Ne Zhmi is built around the user deciding whether to press a tempting control; Blockies centers a long shared playfield with narrow segmented but unboxed preview bays that are visually part of the board.",
         "interactionDifference": "Ne Zhmi's discrete one-off button choice is unlike continuous falling-block movement, rotation, hard dropping, player-specific blocked-entry elimination and high-frequency authoritative snapshots."
+      },
+      {
+        "slug": "moss-marble",
+        "spatialDifference": "Moss & Marble frames a mini-golf course as a navigable sculpted outdoor landscape with depth, course walls and a ball trajectory; Blockies concentrates on a fixed shared vertical well with four-cell entry gantries and compact network recovery controls.",
+        "interactionDifference": "Golf swings and course geometry are turn-by-turn physics challenges, while Blockies uses simultaneous keyboard/touch falling-block movement, deterministic locking and server-authoritative recovery of entire co-op rounds."
       }
     ]
   },
