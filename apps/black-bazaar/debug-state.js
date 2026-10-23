@@ -25,7 +25,7 @@ export const DEBUG_FX=[
 ];
 export const DEBUG_SCENES=[
  ['home','Главная'],['lobby','Комната ожидания'],
- ['two','Стол · 2'],['four','Стол · 4'],['six','Стол · 6'],
+ ['two','Стол · 2'],['four','Стол · 4'],['six','Стол · 6'],['offline','Игрок отключился'],
  ['buyer','Торг · покупатель'],['seller','Торг · продавец'],
  ['bids','Торг · ставки'],['black','Чёрный рынок'],
  ['deals','Прямой обмен'],['urgent','Срочное задание'],
@@ -60,6 +60,7 @@ export function createDebugState(scene='four'){
   resources:wallet(260-i*20,22+i,3+(i%3))
  }));
  if(scene==='lobby')return {phase:'lobby',host:'debug-0',players:people,revision:1};
+ if(scene==='offline')people[1].connected=false;
  const owned=[debugItem(0,'owned-frog'),debugItem(11,'owned-amulet'),debugItem(7,'owned-gear')];
  const you={id:'debug-0',character:DEBUG_ROLES[0],resources:wallet(390,32,5),quota:wallet(430,26,3),
   items:owned,escrowItems:[],positiveTarget:'debug-1',negativeTarget:'debug-2',
