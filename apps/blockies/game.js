@@ -1037,6 +1037,11 @@ class UIManager {
         this.softDropRepeatInterval = 55;
 
         this.lastSoloSaveAt = 0;
+        this.activeKeyCapture = null;
+        this.settingsPausedLocalGame = false;
+        this.settingsPausedModal = false;
+        this.settingsReturnTimer = null;
+        this.debugPausedLocal = false;
         this.setupEventListeners();
         this.initTouchControls();
         this.refreshSoloResume();
@@ -1528,14 +1533,36 @@ class UIManager {
     }
 
     debugOpenScreen(id){
+        // Screenshots must never silently leave a real online match or fake its result.
+        if(this.isOnlineMode && networkManager.started &&
+           !['gameScreen','achievements'].includes(id)){
+            this.showStyledMessage('Debug',
+                'Сетевая партия идёт на сервере. Для просмотра других экранов сначала выйдите из комнаты.','info');
+            return;
+        }
+        if(id==='gameScreen' && gameState.players.length && !this.isOnlineMode){
+            this.hideModal('pause');this.hideModal('gameOver');
+            this.showScreen('gameScreen');
+            if(this.debugPausedLocal && !gameState.isGameOver){
+                gameState.isPaused=false;
+                gameState.lastTime=performance.now();
+                this.debugPausedLocal=false;
+            }
+            return;
+        }
+        if(!this.isOnlineMode && gameState.players.length && !gameState.isPaused &&
+           !gameState.isGameOver && id!=='gameScreen'){
+            this.debugPausedLocal=true;
+            gameState.isPaused=true;
+        }
         this.hideModal('pause');this.hideModal('gameOver');
         if(id==='mainMenu'){this.showScreen('mainMenu');return;}
         if(id==='coopSetup'){this.showCoopSetup();return;}
         if(id==='onlineLobby'){this.showOnlineLobby();return;}
         if(id==='settingsScreen'){this.showSettings();return;}
         if(id==='achievements'){document.getElementById('achievements-btn')?.click();return;}
-        if(!gameState.players.length||!this.screens.gameScreen.classList.contains('active')){
-            // A real playable local board for UI inspection, not a dead mock screen.
+        if(!gameState.players.length){
+            // Debug starts a playable local board only if one does not exist.
             this.isOnlineMode=false;
             this.localPlayerNames=['Игрок 1','Игрок 2'];
             this.startGame(2);
@@ -3301,6 +3328,24 @@ class UIManager {
     }
 
     showSettings() {
+        if(this.isOnlineMode && this.screens.gameScreen.classList.contains('active') &&
+           !gameState.isPaused && !gameState.isGameOver){
+            this.showStyledMessage(currentLanguage==='ru'?'Настройки':'Settings',
+                currentLanguage==='ru'?'Во время сетевой партии настройки доступны после паузы.':'Pause the online match before opening settings.','info');
+            return;
+        }
+        if(!this.isOnlineMode && this.screens.gameScreen.classList.contains('active') &&
+           !gameState.isPaused && !gameState.isGameOver){
+            this.saveSoloCheckpoint(true);
+            gameState.isPaused=true;
+            this.settingsPausedLocalGame=true;
+        }
+        if(!this.screens.settingsScreen.classList.contains('active')){
+            this.settingsPausedModal=this.modals.pause.classList.contains('active');
+            if(this.settingsPausedModal)this.hideModal('pause');
+        }
+        this.cancelKeyCapture();
+        clearTimeout(this.settingsReturnTimer);
         const container = document.getElementById('settings-container');
         container.innerHTML = '';
 
@@ -3319,7 +3364,8 @@ class UIManager {
         container.appendChild(globalDiv);
 
         // Only show settings for the current number of players, or all 4 if no game is active
-        const numPlayersToShow = gameState.numPlayers > 0 ? gameState.numPlayers : 4;
+        const numPlayersToShow = this.screens.gameScreen.classList.contains('active') &&
+            gameState.numPlayers > 0 ? gameState.numPlayers : 4;
 
         const playersTitle = document.createElement('h3');
         playersTitle.textContent = t('playerSettings');
@@ -3342,6 +3388,13 @@ class UIManager {
                 <label>${t('blockColor')}</label>
                 <input type="color" id="color-${i}" value="${colorValue}">
             `;
+            if(this.isOnlineMode && this.screens.gameScreen.classList.contains('active')){
+                const picker=colorDiv.querySelector('input[type="color"]');
+                if(picker){
+                    picker.disabled=true;
+                    picker.title=currentLanguage==='ru'?'Цвет сетевого игрока меняется в комнате':'Change online colors in the lobby';
+                }
+            }
             playerDiv.appendChild(colorDiv);
 
             // Key bindings - in a more compact grid
@@ -3364,7 +3417,6 @@ class UIManager {
                            data-key-code="${currentCode}">
                 `;
                 keysDiv.appendChild(bindingDiv);
-                gameState.settings.keys[i][action] = currentCode;
             });
 
             playerDiv.appendChild(keysDiv);
@@ -3414,30 +3466,47 @@ class UIManager {
         this.showScreen('settingsScreen');
     }
 
+    cancelKeyCapture(){
+        const capture=this.activeKeyCapture;
+        if(!capture)return;
+        document.removeEventListener('keydown',capture.handler,true);
+        if(capture.input.isConnected){
+            capture.input.classList.remove('capturing');
+            if(capture.input.value===capture.placeholder)capture.input.value=capture.previous;
+        }
+        this.activeKeyCapture=null;
+    }
+
     captureKey(input) {
-        input.value = 'Press a key...';
-
-        const handler = (e) => {
-            e.preventDefault();
-            const code = normalizeKeyCode(e.code || e.key);
-            input.dataset.keyCode = code;
-            input.value = formatKeyLabel(code);
-            document.removeEventListener('keydown', handler);
+        this.cancelKeyCapture();
+        const previous=input.value;
+        const placeholder=currentLanguage==='ru'?'Нажмите клавишу…':'Press a key…';
+        input.value=placeholder;
+        input.classList.add('capturing');
+        const handler=(event)=>{
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            if(event.code==='Backquote'){
+                input.value=previous; // reserved for the global Pocket Works debug menu
+            }else if(event.code!=='Escape'){
+                const code=normalizeKeyCode(event.code||event.key);
+                if(code){
+                    input.dataset.keyCode=code;
+                    input.value=formatKeyLabel(code);
+                }else input.value=previous;
+            }else input.value=previous;
+            this.cancelKeyCapture();
         };
-
-        document.addEventListener('keydown', handler);
+        this.activeKeyCapture={input,handler,previous,placeholder};
+        document.addEventListener('keydown',handler,true);
     }
 
     saveSettings() {
-        const numPlayersToSave = gameState.numPlayers > 0 ? gameState.numPlayers : 4;
+        this.cancelKeyCapture();
+        const numPlayersToSave = this.previousScreen==='gameScreen' &&
+            gameState.numPlayers > 0 ? gameState.numPlayers : 4;
 
-        // Save global settings
-        const soundCheckbox = document.getElementById('sound-enabled');
-        if (soundCheckbox) {
-            soundManager.setEnabled(soundCheckbox.checked);
-        }
-
-        // Collect all settings first for validation
+        // Collect settings without applying any of them until all checks pass.
         const newColors = [];
         const newKeys = [];
         
@@ -3554,7 +3623,9 @@ class UIManager {
             return;
         }
 
-        // All validations passed, save settings
+        // All validations passed. Persist sound and controls together.
+        const soundCheckbox = document.getElementById('sound-enabled');
+        if(soundCheckbox)soundManager.setEnabled(soundCheckbox.checked);
         for (let i = 0; i < numPlayersToSave; i++) {
             gameState.settings.colors[i] = newColors[i];
             gameState.settings.keys[i] = newKeys[i];
@@ -3570,6 +3641,23 @@ class UIManager {
             }
         }
 
+        // Apply local controls to the resumed live round. Network colors
+        // stay server-authoritative; keyboard controls remain per-device.
+        if(this.previousScreen==='gameScreen' && gameState.players.length){
+            this.releaseTouchControls?.();
+            for(const player of gameState.players){
+                if(this.isOnlineMode && player.id!==this.localPlayerIndex)continue;
+                if(newKeys[player.id])player.keys={...newKeys[player.id]};
+                if(!this.isOnlineMode && newColors[player.id])player.color=newColors[player.id];
+                gameState.inputStates?.set(player.id,{
+                    left:createActionState(),right:createActionState(),down:createActionState()
+                });
+                this.updatePlayerInfo(player);
+                this.drawNextPiece(player);
+            }
+            this.drawBoard();
+        }
+
         // Save to localStorage
         localStorage.setItem('pocket-works:blockies:settings', JSON.stringify(gameState.settings));
         localStorage.setItem('pocket-works:blockies:gamepad-assignments', JSON.stringify(gameState.gamepads.assignments));
@@ -3578,12 +3666,18 @@ class UIManager {
         this.showStyledMessage(t('settingsSaved'), t('settingsSavedMsg'), 'success');
 
         // Return to previous screen after a short delay
-        setTimeout(() => {
-            this.showScreen(this.previousScreen || 'mainMenu');
-        }, 1500);
+        clearTimeout(this.settingsReturnTimer);
+        this.settingsReturnTimer=setTimeout(()=>{
+            this.settingsReturnTimer=null;
+            if(this.screens.settingsScreen.classList.contains('active'))this.hideSettings();
+        },900);
     }
 
     resetSettings() {
+        if(!window.confirm(currentLanguage==='ru'
+            ?'Сбросить клавиши, цвета и назначения геймпадов?'
+            :'Reset keys, colors and gamepad assignments?'))return;
+        this.cancelKeyCapture();
         // Reset to defaults
         gameState.settings.colors = [...DEFAULT_COLORS];
         gameState.settings.keys = JSON.parse(JSON.stringify(DEFAULT_KEYS));
@@ -3596,15 +3690,25 @@ class UIManager {
         // Show success message
         this.showStyledMessage(t('settingsReset'), t('settingsResetMsg'), 'success');
         
-        // Refresh the settings display
-        setTimeout(() => {
-            this.showSettings();
-        }, 1500);
+        // Rebuild immediately: no delayed screen change after the user navigates away.
+        this.showSettings();
     }
 
     hideSettings() {
-        // Return to previous screen instead of always going to main menu
-        this.showScreen(this.previousScreen || 'mainMenu');
+        this.cancelKeyCapture();
+        clearTimeout(this.settingsReturnTimer);
+        this.settingsReturnTimer=null;
+        const destination=this.previousScreen||'mainMenu';
+        this.showScreen(destination);
+        if(destination==='gameScreen'){
+            if(this.settingsPausedLocalGame && !this.isOnlineMode && !gameState.isGameOver){
+                gameState.isPaused=false;
+                gameState.lastTime=performance.now();
+            }
+            if(this.settingsPausedModal && gameState.isPaused)this.showModal('pause');
+        }
+        this.settingsPausedLocalGame=false;
+        this.settingsPausedModal=false;
     }
 }
 
