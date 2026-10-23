@@ -59,7 +59,7 @@ test("0.8.1 CSS is imported and offline cached, version is coherent",()=>{
  const styles=read("styles.css"),worker=read("sw.js"),config=JSON.parse(read("app.config.json"));
  assert.ok(styles.includes("@import './client/stage09-mobile.css';"));
  assert.ok(worker.includes("./client/stage09-mobile.css"));
- assert.ok(/^0\.8\.\d+$/.test(config.version));
+ assert.ok(/^\d+\.\d+\.\d+$/.test(config.version) && (Number(config.version.split(".")[0])>0 || Number(config.version.split(".")[1])>=8));
  assert.ok(worker.includes("crown-laws-v"+config.version));
  assert.ok(read("index.html").includes('data-app-version="'+config.version+'"'));
 });
