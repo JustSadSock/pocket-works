@@ -131,6 +131,14 @@ try{
  await pages[2].screenshot({path:shots+'/crew-six-mobile-magnet.png'});
  const level=room.state.robot.level;
  if(level.playerCount!==6)throw Error('Game server did not generate six-person ability set');
+ const kinds=new Set(level.sections.map(section=>section.kind));
+ for(const kind of ['mag-rail','timing-press','cargo-switch','float-gap'])
+   if(!kinds.has(kind))throw Error('Missing physical task for operator: '+kind);
+ for(let k=1;k<level.sections.length;k++){
+   const hard=new Set(['gap','double-gap','step','islands','mag-rail','float-gap']);
+   if(hard.has(level.sections[k-1].kind)&&hard.has(level.sections[k].kind))
+     throw Error('Two hard jumps were placed consecutively');
+ }
  // Interruption: all six operators must remain associated with their roles.
  await pages[5].reload();
  await poll(()=>pages[5].locator('#float').isEnabled(),'float role after reconnect');
