@@ -22,9 +22,10 @@ test('four-author lobby, drafting, waiting and four-result navigation fit phone'
  expect(progress!.x+progress!.width).toBeLessThanOrEqual(392);
 
  await page.goto(preview('waiting'));
- await expect(page.locator('.turn-progress-author')).toHaveCount(4);
- await expect(page.locator('.turn-progress-author.is-ready')).toHaveCount(3);
- await expect(page.locator('.turn-progress-count')).toContainText('3 / 4');
+ await expect(page.locator('.dispatch-card')).toHaveCount(4);
+ await expect(page.locator('.dispatch-card.is-ready')).toHaveCount(3);
+ await expect(page.locator('.dispatch-count-value')).toContainText('3 / 4');
+ await expect(page.locator('.dispatch-heading')).toContainText('Залишився один автор');
 
  await page.goto(preview('results'));
  await expect(page.locator('.chapters .chapter')).toHaveCount(4);
