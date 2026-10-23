@@ -387,7 +387,6 @@ function confirmSelection() {
     return;
   }
   app.forecast=null;app.forecastReview=false;
-  app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
 
   if (app.screen === "online") {
     if (!app.online.socket || app.online.socket.readyState !== WebSocket.OPEN) {
@@ -395,7 +394,7 @@ function confirmSelection() {
     }
     app.online.socket.send(JSON.stringify({ type: "match:choose", cardId: app.selectedCardId }));
     app.online.ready[app.online.you] = true;
-    app.forecast=null;app.forecastReview=false;
+    app.forecast=null;app.forecastReview=false;app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
     app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
     playTone("ready");
     app.selectedCardId = null;
@@ -406,7 +405,7 @@ function confirmSelection() {
   if (app.local.mode === "ai") {
     app.local.waitingAi = true;
     const humanCard = app.selectedCardId;
-    app.selectedCardId = null;
+    app.selectedCardId = null;app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
     render();
     window.setTimeout(() => {
       const aiCard = chooseAiCard(app.local.state, "p2", app.local.aiProfile);
@@ -426,7 +425,7 @@ function confirmSelection() {
   if (app.local.mode === "hotseat") {
     const chooser = app.local.hotseatChooser;
     app.local.pendingHotseat[chooser] = { cardId: app.selectedCardId };
-    app.selectedCardId = null;
+    app.selectedCardId = null;app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
     playTone("ready");
     if (chooser === "p1") {
       app.local.hotseatChooser = "p2";
@@ -666,7 +665,7 @@ function handHTML(state) {
   const viewer=getViewerPlayer();
   const locked=Boolean(app.film?.active)||(app.screen==="online"&&app.online.ready[viewer])||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
   return `<section class="hand-panel ${locked?"hand-panel--locked":""}">
-    <div class="panel-head"><h3>Ваши указы</h3><span>${viewer==="p1"?"Север":"Юг"} · ${currentHand().length} карт</span></div>
+    <div class="panel-head"><h3>Ваши указы</h3><span>${app.selectedCardId?'Выбран: '+cardById(app.selectedCardId).name:`${viewer==="p1"?"Север":"Юг"} · ${currentHand().length} карт`}</span>${app.selectedCardId&&!app.lawSheetMode?'<button class="hand-panel__compare" type="button" data-action="law-compare" aria-label="Сравнить выбранный указ с действующим">Сравнить ↗</button>':""}</div>
     ${locked&&!app.film?.active?`<div class="sealed-notice sealed-notice--ceremony" role="status">
       <div class="sealed-notice__wax" aria-hidden="true"><span>✦</span></div>
       <div class="sealed-notice__copy"><strong>Указ запечатан</strong><span>${app.screen==="online"?"Ждём второй печати":"Указ принят"}</span></div>
@@ -1051,7 +1050,7 @@ function beginDebugRound(){
 }
 
 function debugSceneHTML(scene) {
-  const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,replay:app.replay,replayActive:app.replayActive,forecast:app.forecast,forecastReview:app.forecastReview,film:app.film};
+  const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,lawSheetMode:app.lawSheetMode,replay:app.replay,replayActive:app.replayActive,forecast:app.forecast,forecastReview:app.forecastReview,film:app.film};
   let markup="";
   try {
     const state=app.debug.round?.frames[app.debug.round.index]?.state || createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
@@ -1060,7 +1059,7 @@ function debugSceneHTML(scene) {
     app.online={...app.online,roomState:null,roomCode:"",ready:{p1:false,p2:false},you:"p1"};
     app.modal=null;
     app.effects=app.debug.round?effectsForFrame(app.debug.round.frames[app.debug.round.index]):[];app.lastConflictSlots=app.debug.round?.frames[app.debug.round.index]?.conflicts||[];
-    app.selectedCardId=app.debug.selectedCardId;app.focusCardId=app.debug.focusCardId;app.inspectedSlot=app.debug.inspectedSlot;
+    app.selectedCardId=app.debug.selectedCardId;app.focusCardId=app.debug.focusCardId;app.inspectedSlot=app.debug.inspectedSlot;app.lawSheetMode=app.debug.lawSheetMode;
     app.replay=null;app.replayActive=false;app.film=null;
     if(scene==="vision"&&!app.debug.forecast){
       const demoCard=app.debug.selectedCardId||state.players.p1.hand[0];
@@ -1286,20 +1285,21 @@ root.addEventListener("click", (event) => {
     const piece=event.target.closest("[data-piece-kind]");
     if(card&&!card.disabled){
       app.debug.selectedCardId=app.debug.selectedCardId===card.dataset.cardId?null:card.dataset.cardId;
-      app.debug.inspectedSlot=cardById(card.dataset.cardId).slot;
-      app.debug.focusCardId=card.dataset.cardId;
+      app.debug.inspectedSlot=app.debug.selectedCardId?cardById(card.dataset.cardId).slot:null;
+      app.debug.focusCardId=app.debug.selectedCardId;
+      app.debug.lawSheetMode=app.debug.selectedCardId?"compare":null;
       if(app.debug.forecast||app.debug.scene==="vision"){
         const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
         app.debug.forecast=createCounselVision(demo,"p1",app.debug.selectedCardId,forecastTurn);
         app.debug.scene="vision";
       }
     }else if(law){
-      app.debug.selectedCardId=null;
       app.debug.focusCardId=law.dataset.focusCard;
       app.debug.inspectedSlot=law.dataset.slot||null;
+      app.debug.lawSheetMode="inspect";
     }else if(piece){
-      app.debug.selectedCardId=null;
       app.debug.inspectedSlot=piece.dataset.pieceKind;
+      app.debug.lawSheetMode="inspect";
       const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
       app.debug.focusCardId=activeLaws(demo)[app.debug.inspectedSlot]?.id||null;
     }else if(pressed){
@@ -1314,7 +1314,9 @@ root.addEventListener("click", (event) => {
       else if(a==="rematch")app.debug.scene="game";
       else if(a==="back-menu")app.debug.scene="menu";
       else if(a==="close-modal")app.debug.scene="game";
-      else if(a==="clear-inspection"){app.debug.focusCardId=null;app.debug.selectedCardId=null;app.debug.inspectedSlot=null;}
+      else if(a==="clear-inspection"){app.debug.focusCardId=null;app.debug.inspectedSlot=null;app.debug.lawSheetMode=null;}
+      else if(a==="law-compare"&&app.debug.selectedCardId){app.debug.focusCardId=app.debug.selectedCardId;app.debug.lawSheetMode="compare";app.debug.inspectedSlot=cardById(app.debug.selectedCardId).slot;}
+      else if(a==="unselect-card"){app.debug.focusCardId=null;app.debug.selectedCardId=null;app.debug.lawSheetMode=null;app.debug.inspectedSlot=null;}
       else if(a==="confirm-choice")app.debug.scene="ready";
       else if(a==="forecast-open"){
         const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
@@ -1390,8 +1392,16 @@ root.addEventListener("click", (event) => {
       case "vision-step":
         visionStepTo(actionNode.dataset.step);break;
       case "clear-inspection":
-        app.focusCardId=null; app.selectedCardId=null; app.inspectedSlot=null; render();
+        app.lawSheetMode=null;app.focusCardId=null;app.inspectedSlot=null;render();break;
+      case "law-compare":
+        if(app.selectedCardId) {
+          app.lawSheetMode="compare";app.focusCardId=app.selectedCardId;
+          app.inspectedSlot=cardById(app.selectedCardId).slot;render();
+        }
         break;
+      case "unselect-card":
+        app.selectedCardId=null;app.focusCardId=null;app.inspectedSlot=null;
+        app.lawSheetMode=null;app.forecast=null;render();break;
       case "toggle-history":
         app.historyExpanded=!app.historyExpanded; render();
         break;
@@ -1410,7 +1420,7 @@ root.addEventListener("click", (event) => {
         closeModal();
         break;
       case "back-menu":
-        stopFilm({renderNow:false});app.victoryRecap=false;app.online.copyStatus="";app.online.error="";
+        stopFilm({renderNow:false});app.victoryRecap=false;app.online.copyStatus="";app.online.error="";app.lawSheetMode=null;
         window.clearTimeout(app.replayTimer);app.replayActive=false;app.forecast=null;
         app.screen = "menu";
         app.local.state = null;
@@ -1437,14 +1447,14 @@ root.addEventListener("click", (event) => {
   if (focus && !event.target.closest("[data-card-id]")) {
     app.focusCardId=focus.dataset.focusCard;
     app.inspectedSlot=focus.dataset.slot||null;
-    if(app.inspectedSlot)app.selectedCardId=null;
+    app.lawSheetMode="inspect";
   }
 
   const piece=event.target.closest("[data-piece-kind]");
   if(piece){
     app.inspectedSlot=piece.dataset.pieceKind;
     app.focusCardId=activeLaws(currentState())[app.inspectedSlot]?.id||null;
-    app.selectedCardId=null;
+    app.lawSheetMode="inspect";
     render();return;
   }
   const card = event.target.closest("[data-card-id]");
@@ -1457,7 +1467,9 @@ root.addEventListener("click", (event) => {
     if(card.disabled)return;
     app.selectedCardId = app.selectedCardId === cardId ? null : cardId;
     app.forecast=null;
-    app.inspectedSlot=cardById(cardId).slot;
+    app.lawSheetMode=app.selectedCardId?"compare":null;
+    app.focusCardId=app.selectedCardId;
+    app.inspectedSlot=app.selectedCardId?cardById(cardId).slot:null;
     playTone("tap");
     render();
     return;
@@ -1537,6 +1549,8 @@ root.addEventListener("drop", (event) => {
   const dragged = cardById(app.dragCardId);
   if (dragged.slot === slotNode.dataset.slot) {
     app.selectedCardId = app.dragCardId;
+    app.focusCardId=app.dragCardId;app.inspectedSlot=dragged.slot;
+    app.lawSheetMode="compare";app.forecast=null;
     render();
   }
   app.dragCardId = null;
@@ -1548,6 +1562,7 @@ window.addEventListener("keydown", (event) => {
   }
   if(event.key==="Escape"&&app.debug.open){stopDebugRound();app.debug.open=false;render();return;}
   if(event.key==="Escape"&&app.film?.active){stopFilm();return;}
+  if(event.key==="Escape"&&app.lawSheetMode){app.lawSheetMode=null;app.focusCardId=null;app.inspectedSlot=null;render();return;}
   if (event.key === "Escape" && app.modal) {
     closeModal();
   }
