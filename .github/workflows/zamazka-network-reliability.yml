@@ -78,3 +78,5 @@ jobs:
         run: node apps/zamazka/qa/eight-player-transfer.mjs
       - name: Soak eight seats through three voting and restoration rounds
         run: node apps/zamazka/qa/full-match-recovery.mjs
+      - name: Endure five full rounds with eight seats
+        run: ZAMAZKA_SOAK_ROUNDS=5 node apps/zamazka/qa/full-match-recovery.mjs
