@@ -88,7 +88,7 @@ function acknowledgeReceipt(receipt){
 }
 function retryPending(){
  const p=readPending();
- if(roomVersion!=='v5'||!p||!canRetry(p,view)||!connected||!net?.roomId)return false;
+ if(!['v5','v6'].includes(roomVersion)||!p||!canRetry(p,view)||!connected||!net?.roomId)return false;
  return send(outgoingPacket(p));
 }
 const clearDraft=()=>{if(IS_PREVIEW){previewDraft='';previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};return}try{localStorage.removeItem(draftKey());localStorage.removeItem(writerMetaKey())}catch{}};
@@ -238,7 +238,7 @@ async function connect(how,settings){
   });
   c.on('game_event',v=>{if(net!==c)return;if(v.event?.type==='state')apply(v.event.payload);
    else if(v.event?.type==='receipt')acknowledgeReceipt(v.event.payload);
-   else if(v.event?.type==='submission_rejected'){if(roomVersion==='v5'&&readPending()?.requestId===v.event.payload?.requestId){discardPending();render()}toast(v.event.payload?.reason||'Відповідь не прийнято.')}
+   else if(v.event?.type==='submission_rejected'){if(['v5','v6'].includes(roomVersion)&&readPending()?.requestId===v.event.payload?.requestId){discardPending();render()}toast(v.event.payload?.reason||'Відповідь не прийнято.')}
    else if(v.event?.type==='notice')toast(v.event.payload)});
   c.on('presence',()=>{if(net===c&&room&&connected)send({type:'sync'})});
   c.on('disconnected',()=>{if(net!==c)return;roomJoinedOnSocket=false;connected=false;connecting=true;netStatus()});
@@ -282,7 +282,7 @@ function apply(v){if(!v||v.protocol!==1||!Array.isArray(v.players))return;
   const prev=view;const waitingSame=prev?.phase==='writing'&&v.phase==='writing'&&prev.waiting&&v.waiting&&prev.round===v.round&&prev.paused===v.paused&&prev.host===v.host&&!modal;
  if(mayShowFinaleIntro(prev?.phase,v.phase,Array.isArray(v.stories)&&v.stories.length>0)&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)finaleIntroActive=true;
  const same=prev?.phase==='writing'&&v.phase==='writing'&&!prev.waiting&&!v.waiting&&prev.round===v.round&&prev.sheet?.id===v.sheet?.id&&prev.host===v.host&&prev.paused===v.paused&&!modal;
- if(prev?.phase==='writing'&&!prev.waiting&&v.waiting&&roomVersion!=='v5')clearDraft();
+ if(prev?.phase==='writing'&&!prev.waiting&&v.waiting&&!['v5','v6'].includes(roomVersion))clearDraft();
  view=v;soundscape.setScene(v.phase==='lobby'?'lobby':v.phase==='writing'?'writing':'finished');if(prev?.phase!==v.phase&&v.phase==='finished')soundscape.fx('reveal');if(v.phase==='finished')keepFinished(v);if(prev?.round!==v.round&&prev?.phase==='writing')tick(690);
  if(waitingSame&&updateWaitingView(scene.querySelector('.dispatch-room'),prev,v,{sound:type=>soundscape.fx(type)}))return;
  if(same){const el=$('sideRoster');if(el)el.innerHTML=rosterCompact();const progress=$('turnProgress');if(progress){const next=document.createElement('div');next.innerHTML=turnProgress();progress.replaceWith(next.firstElementChild)}return}
@@ -330,7 +330,7 @@ function overlay(){
  if(modal==='kick-confirm')return kickDialog(view,view?.players?.find(p=>p.id===kickTarget),escape);
  if(modal==='archive-delete')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Видалити видання"><section class="comic-inner"><div class="eyebrow">ПІДТВЕРДИТИ ВИДАЛЕННЯ</div><h3>Видалити це видання?</h3><p class="mini">Усі рукописи цього випуску буде видалено лише з цього пристрою. Дію не можна скасувати.</p><div class="button-row"><button class="button outline" type="button" data-act="cancel">Залишити</button><button class="button" type="button" data-act="archive-confirm-delete">Видалити</button></div></section></div>';
  if(modal==='leave'){
-   const live=roomVersion==='v5'&&view?.phase==='writing';
+   const live=['v5','v6'].includes(roomVersion)&&view?.phase==='writing';
    if(live)return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Вихід із кімнати"><section class="comic-inner safe-room-exit"><div class="eyebrow">РУКОПИСИ ЗБЕРЕЖЕНО</div><h3>Вийти з кімнати?</h3><p class="mini">Усі вже здані фрагменти зберігаються на сервері. Твоє місце не зникне.</p><div class="safe-exit-options"><button class="button" type="button" data-act="disconnect-room">Вийти тимчасово <span>↗</span></button><p class="mini">Можна повернутися до того самого раунду. Чернетка залишиться на пристрої.</p><button class="button outline" type="button" data-act="confirm-leave">Звільнити своє місце</button><p class="mini">Партія не обнулиться, але учасникам доведеться чекати твого повернення або завершення випуску ведучим.</p>'+(view.host===me?'<button class="button outline" type="button" data-act="ask-early-end">Завершити випуск достроково</button>':'')+'</div><button class="leave" type="button" data-act="cancel">Скасувати</button></section></div>';
    return '<div class="comic-modal" role="dialog" aria-modal="true"><section class="comic-inner"><h3>Залишити партію?</h3><p class="mini">'+(view?.phase==='writing'?'У старій версії кімнати вихід скине партію.':'Ти вийдеш із кімнати.')+'</p><div class="button-row"><button class="button outline" data-act="cancel">Залишитись</button><button class="button" data-act="confirm-leave">Вийти</button></div></section></div>';
  }
@@ -352,7 +352,7 @@ function render(){
   return;
  }
  scene.innerHTML=(view?(view.phase==='lobby'?lobby():view.phase==='writing'?(view.waiting?waiting():writing()):view.phase==='finished'?results():waiting()):archiveOpen?archiveScreen():home())+(view?controlsBar(view,me,roomVersion,escape):'')+overlay();
- if(view?.paused)scene.querySelectorAll('#answerForm button[type="submit"]').forEach(b=>{b.disabled=true;b.title='Партія на паузі'});
+ if(view?.paused){scene.querySelectorAll('#answerForm button[type="submit"]').forEach(b=>{b.disabled=true;b.title='Партія на паузі'});const area=scene.querySelector('.moderation-bar');if(area)area.insertAdjacentHTML('afterend','<div class="pause-banner">Редакція на паузі. Тексти збережено; надсилання тимчасово вимкнено.</div>')}
 
  if(view?.phase==='writing'&&!view.waiting)refreshWords();
 }
