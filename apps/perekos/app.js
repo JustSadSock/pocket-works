@@ -1,4 +1,4 @@
-import {W,H,STEP,WALLS,RUNES,makeMatch,validState,tick,chooseRune,beginRound,reorderRunes,startRound,ringRadius,has,stats,EVOLUTIONS,FUSIONS,availableFusions,chooseEvolution,ARCHETYPES,validArchetype,forgeEdit,CLASS_SPELLS} from './core.mjs';
+import {W,H,STEP,WALLS,RUNES,makeMatch,validState,tick,chooseRune,beginRound,reorderRunes,startRound,ringRadius,has,stats,EVOLUTIONS,FUSIONS,availableFusions,chooseEvolution,ARCHETYPES,validArchetype,forgeEdit,CLASS_SPELLS,makeMagicV2Practice} from './core.mjs';
 import {rune,description,compile,TYPES,legalRunes,chosenElement} from './runes.mjs';
 import {runeSeal} from './rune-seals.mjs';
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
@@ -17,6 +17,7 @@ import {drawKineticProjectiles,ContactTheater} from './spell-kinetics.mjs';
 import {drawSignatureGround,drawSignatureForeground} from './signature-art.mjs';
 import {DuelFeedback} from './duel-feedback.mjs';
 import {MageMotion} from './mage-motion.mjs';
+import {installMagicV2Lab} from './magic-v2-lab-ui.mjs';
 import {courtAim} from './aim-geometry.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('world'),ctx=canvas.getContext('2d',{alpha:false});
@@ -39,7 +40,7 @@ if(typeof ResizeObserver!=='undefined'){
 window.addEventListener('resize',fitWorldToArena,{passive:true});
 window.visualViewport?.addEventListener('resize',fitWorldToArena,{passive:true});
 requestAnimationFrame(fitWorldToArena);
-const storage='pocket-works:perekos:',prefsKey=storage+'prefs',saveKey=storage+'match',booksKey=storage+'grimoire';
+const storage='pocket-works:perekos:',prefsKey=storage+'prefs',saveKey=storage+'match',booksKey=storage+'grimoire',magicSaveKey=storage+'magic-v2-practice';
 let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,lastProfileFetch=0,avatarInFlight=null;
 let online=null,onlinePreviewRunes=null,onlinePhase='',displayXY=[null,null];
 let rivalAppearance={...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']},pendingRival=null,rivalKey='',rivalRequest=0;
@@ -58,10 +59,12 @@ let tapAttackQueued=false,aimTouch=false,aimTouchStart=0,aimDragged=false,aimVec
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
 function put(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;desktopPanelsVisible=savedPrefs?.desktopPanels!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';selectedGameMode=savedPrefs?.gameMode==='duel'?'duel':'rupture';selectedArchetype=validArchetype(savedPrefs?.archetype)?savedPrefs.archetype:'striker';selectedSpecialSlot=Number.isInteger(savedPrefs?.specialSlot)&&savedPrefs.specialSlot>=0&&savedPrefs.specialSlot<3?savedPrefs.specialSlot:0;
-function remember(){put(prefsKey,{sound,mage:selectedMage,gameMode:selectedGameMode,archetype:selectedArchetype,specialSlot:selectedSpecialSlot,desktopPanels:desktopPanelsVisible});if(!debugSession&&!online?.active&&active&&validState(active))put(saveKey,active)}
-function forget(){if(debugSession)return;try{localStorage.removeItem(saveKey)}catch{}}
+function remember(){put(prefsKey,{sound,mage:selectedMage,gameMode:selectedGameMode,archetype:selectedArchetype,specialSlot:selectedSpecialSlot,desktopPanels:desktopPanelsVisible});if(!debugSession&&!online?.active&&active&&validState(active))put(active.magicModeV2?magicSaveKey:saveKey,active)}
+function forget(magic=false){if(debugSession)return;try{localStorage.removeItem(magic?magicSaveKey:saveKey)}catch{}}
 const resume=stored(saveKey);
 if(resume&&validState(resume))$('continue').hidden=false;
+const magicResume=stored(magicSaveKey);
+if(magicResume?.magicModeV2&&validState(magicResume))$('continue-v2').hidden=false;
 function audioContext(){if(!sound)return null;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;if(!audio)audio=new C();if(audio.state==='suspended')audio.resume().catch(()=>{});return audio}catch{return null}}
 function sfx(type,school='fire'){
  const ac=audioContext();if(!ac)return;
@@ -151,7 +154,7 @@ function applyDesktopPanels(){
 }
 $('desktop-panels-toggle').addEventListener('click',()=>{desktopPanelsVisible=!desktopPanelsVisible;applyDesktopPanels();remember()});
 applyDesktopPanels();
-function show(name){mode=name;$('desktop-dashboard').hidden=name!=='fight';tapAttackQueued=false;if(name==='menu'||name==='result'||name==='online-lobby')mageMotion.reset();for(const id of ['menu','mage-select','draft','build','books','book-delete','result','pause','confirm','online-lobby','net-wait'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=!active||['menu','mage-select','online-lobby','books','book-delete'].includes(name);if(name==='fight'||name==='menu')paused=false;if(name!=='fight')input.aim=null;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;$('forge-edit').hidden=name!=='fight'||active?.gameMode!=='forge';updateHud();fitWorldToArena()}
+function show(name){mode=name;$('desktop-dashboard').hidden=name!=='fight'||!!active?.magicModeV2;tapAttackQueued=false;if(name==='menu'||name==='result'||name==='online-lobby')mageMotion.reset();for(const id of ['menu','mage-select','draft','build','books','book-delete','result','pause','confirm','online-lobby','net-wait','magic-v2'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=!active||['menu','mage-select','online-lobby','books','book-delete'].includes(name);if(name==='fight'||name==='menu')paused=false;if(name!=='fight')input.aim=null;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;$('forge-edit').hidden=name!=='fight'||active?.gameMode!=='forge';$('forge-edit').textContent=active?.magicModeV2?'Руны · изменить':'Редактировать';$('special-btn').hidden=!!active?.magicModeV2;$('special-choice').hidden=!!active?.magicModeV2;updateHud();fitWorldToArena()}
 function mageCards(node,value,onPick,small=false){
  node.replaceChildren();
  for(const school of SCHOOLS){
@@ -202,16 +205,52 @@ function startForge(){
  active.forgeDummy=true;active.phase='build';fxParticles=[];combatPresentation.reset();spellChoreography.reset();seen=0;audioContext();
  show('build');renderWorkbench();remember();
 }
+const magicV2Lab=installMagicV2Lab({
+ root:$('magic-v2'),
+ getMatch:()=>active,
+ setLoadout:loadout=>{if(active?.magicModeV2){active.magicLoadouts[0]=loadout;remember()}},
+ onStart:school=>{
+  if(online?.active)online.leave();onlinePhase='';applyPendingAppearance();
+  if(!school){forget(true);active=null;$('continue-v2').hidden=true;show('magic-v2');return}
+  active=makeMagicV2Practice(school,(Date.now()>>>0)^0x29a329);
+  fxParticles=[];combatPresentation.reset();spellChoreography.reset();seen=0;audioContext();
+  show('magic-v2');remember();$('continue-v2').hidden=false;
+ },
+ onFight:()=>{
+  if(!active?.magicModeV2)return;
+  active.phase='fight';show('fight');
+  toast('Новая магия · WASD/джойстик — движение · стреляй и возвращайся к рунам');
+  remember();
+ },
+ onClose:()=>{forget(true);active=null;$('continue-v2').hidden=true;show('menu')}
+});
+$('open-v2-lab').addEventListener('click',()=>{
+ const saved=stored(magicSaveKey);
+ if(saved?.magicModeV2&&validState(saved)&&!window.confirm('Начать новую лабораторию? Сохранённую тренировочную сборку можно продолжить отдельной кнопкой. Новая заменит её.'))return;
+ if(online?.active)online.leave();onlinePhase='';
+ if(saved?.magicModeV2)forget(true);
+ active=null;$('continue-v2').hidden=true;show('magic-v2');magicV2Lab.open();
+});
+$('continue-v2').addEventListener('click',()=>{
+ const s=stored(magicSaveKey);
+ if(!s?.magicModeV2||!validState(s)){
+  $('continue-v2').hidden=true;return;
+ }
+ if(online?.active)online.leave();onlinePhase='';
+ active=s;seen=active.serial||0;combatPresentation.reset();spellChoreography.reset();
+ if(s.phase==='fight')show('fight');
+ else{show('magic-v2');magicV2Lab.render()}
+});
 $('open-forge').addEventListener('click',startForge);
-$('forge-edit').addEventListener('click',()=>{if(active?.gameMode!=='forge'||online?.active)return;active.phase='build';show('build');renderWorkbench();remember()});
+$('forge-edit').addEventListener('click',()=>{if(active?.gameMode!=='forge'||online?.active)return;active.phase='build';if(active.magicModeV2){show('magic-v2');magicV2Lab.render()}else{show('build');renderWorkbench()}remember()});
 $('primary-action').addEventListener('click',newMatch);$('again').addEventListener('click',()=>online?.active?online.start():newMatch());
-$('continue').addEventListener('click',()=>{const s=stored(saveKey);if(s&&validState(s)){active=s;if(s.phase!=='fight')applyPendingAppearance();show(s.phase);if(s.phase==='draft')renderDraft();if(s.phase==='build')renderWorkbench();if(s.phase==='result')renderResult()}else newMatch()});
+$('continue').addEventListener('click',()=>{const s=stored(saveKey);if(s&&validState(s)){active=s;if(s.phase!=='fight')applyPendingAppearance();show(s.phase);if(s.phase==='draft')renderDraft();if(s.phase==='build'){if(s.magicModeV2){show('magic-v2');magicV2Lab.render()}else renderWorkbench()}if(s.phase==='result')renderResult()}else newMatch()});
 function pause(){if(mode!=='fight')return;paused=true;show('pause');$('pause-title').textContent=online?.active?'Сетевой матч':'Передышка';$('pause-online-note').hidden=!online?.active;remember()}
 $('pause-btn').addEventListener('click',pause);
 $('resume').addEventListener('click',()=>{show('fight');last=performance.now()});
 $('quit').addEventListener('click',()=>{$('quit-warning').textContent=online?.active?'Выход из комнаты засчитает поражение в текущем матче.':'Прогресс текущей серии будет потерян.';quitPrompt=true;$('pause').hidden=true;$('confirm').hidden=false;mode='confirm'});
 $('quit-no').addEventListener('click',()=>{quitPrompt=false;show('pause')});
-$('quit-yes').addEventListener('click',()=>{if(online?.active)online.leave();onlinePhase='';active=null;forget();$('continue').hidden=true;show('menu')});
+$('quit-yes').addEventListener('click',()=>{if(online?.active)online.leave();onlinePhase='';const wasMagic=!!active?.magicModeV2;forget(wasMagic);active=null;if(wasMagic)$('continue-v2').hidden=true;else $('continue').hidden=true;show('menu')});
 let toastT=0;
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');toastT=1.9}
 function myIndex(){return debugSession?0:online?.active?online.me:0}
@@ -730,7 +769,7 @@ function render(){
    const moving=Math.min(1,Math.hypot(p.x-oldX,p.y-oldY)*.48);
    wizard(p.x,p.y,a.face,frame/60,!mine,1,a.shield,a.flash,moving,true);
    drawActorCues(ctx,a,p.x,p.y,mine,frame/60,reducedMotion);
-   drawArchetypeGlyph(a,p.x,p.y);
+   if(!active.magicModeV2)drawArchetypeGlyph(a,p.x,p.y);
    if(a.markLife>0&&ELEMENTS[a.mark]){
     const color=ELEMENTS[a.mark].color;
     pixel(p.x-3,p.y-37,6,5,color);pixel(p.x-1,p.y-34,2,3,'#fff3cf');

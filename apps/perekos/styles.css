@@ -911,3 +911,101 @@
   bottom:calc(clamp(46px,13vh,60px) + 5px);
  }
 }
+
+/* 0.28.1 · Native rune laboratory for new elemental simulation.
+   It has ONE internal scrollport, never shifts the underlying arena. */
+.v2-entry{border-color:#d6b981!important;background:linear-gradient(120deg,#3f5347,#274039)!important}
+.v2-entry strong{color:#f3dfba}.v2-entry small{color:#c8dbcb}
+#magic-v2.v2-modal{
+ z-index:9;align-items:center;justify-content:center;
+ padding:calc(env(safe-area-inset-top) + 9px) 10px calc(env(safe-area-inset-bottom) + 9px);
+ background:#0b1714f0;backdrop-filter:blur(5px);overflow:hidden;
+}
+.v2-stage{
+ width:min(750px,100%);max-height:100%;
+ overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+ background:#dfcba8;color:#2c362f;border:3px solid #8a7152;
+ box-shadow:inset 0 0 0 3px #eeddc0,0 14px 50px #0008;
+ padding:clamp(12px,2vw,20px);display:grid;gap:13px;
+}
+.v2-stage h2,.v2-stage h3,.v2-stage h4{font-family:Georgia,serif;margin:0}
+.v2-stage h2{font-size:clamp(23px,5.8vw,34px);line-height:1.06}
+.v2-stage h3{font-size:19px}.v2-stage h4{font-size:13px}
+.v2-stage small{display:block;font-size:11px;line-height:1.4;color:#655d4f}
+.v2-stage p{margin:0;line-height:1.45}
+.v2-kicker{font:800 10px/1.5 ui-monospace,monospace;letter-spacing:.13em;color:#6e5741}
+.v2-copy{font-size:13px;color:#665a48;max-width:65ch}
+.v2-schools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.v2-stage button{border-radius:0;transition:filter .1s,transform .1s;touch-action:manipulation}
+.v2-stage button:hover{filter:brightness(1.1)}.v2-stage button:disabled{opacity:.43;cursor:not-allowed}
+.v2-school{display:grid;align-content:start;gap:10px;min-height:125px;text-align:left;padding:18px 12px;background:#3d5447;color:#fbebca;border:2px solid #657961;font-size:20px;font-weight:850}
+.v2-school small{color:#e6dfc0;font-weight:500}
+.v2-school.v2-fire{background:#774637;border-color:#c28263}.v2-school.v2-storm{background:#3b5475;border-color:#7e99b9}
+.v2-stage .v2-exit{min-height:42px;background:transparent;color:#5b5548;border:1px solid #9e896b}
+.v2-top{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.v2-top>div{min-width:0}.v2-top small{margin-top:5px}
+.v2-play{background:#335846;color:#fff2d1;border:2px solid #70977a;padding:12px 20px;min-height:48px;font-size:16px;font-weight:900;white-space:nowrap}
+.v2-tools{display:flex;gap:8px;border-bottom:1px solid #a18f74;padding-bottom:10px}
+.v2-tools button{border:1px solid #9a896e;padding:8px 12px;color:#4f463d;background:#d5c19e;font-size:11px;font-weight:750}
+.v2-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.v2-tab{background:#c5b292;color:#4d4b3d;border:1px solid #9e8969;padding:10px 3px;font-size:10px;font-weight:850}
+.v2-tab.selected{background:#344e41;border-color:#274437;color:#fff0cb}
+.v2-editor,.v2-reserve,.v2-seals,.v2-catalogue{display:grid;gap:7px;padding:11px;border:1px solid #a18c6d;background:#e8d7b8}
+.v2-editor{box-shadow:inset 4px 0 #637e68}
+.v2-editor h3,.v2-reserve h3,.v2-seals h3,.v2-catalogue h3{margin-bottom:3px}
+.v2-empty{font-size:12px;color:#786f5b}
+.v2-action{display:grid;gap:5px;border-left:2px solid #91785d;padding-left:7px}
+.v2-installed,.v2-reserve-item{min-height:36px;display:flex;align-items:center;gap:7px;padding:5px 7px;background:#f5e8cd;border:1px solid #c5ac86}
+.v2-installed strong{min-width:0;font-size:12px;flex:1}
+.v2-tag{font:800 9px ui-monospace,monospace;color:#775e49;white-space:nowrap}
+.v2-remove,.v2-equip{margin-left:auto;padding:7px 9px;background:#536b56;color:#fff1cc;font-weight:750;font-size:11px;white-space:nowrap}
+.v2-remove{background:#806b57}
+.v2-seal{background:#684c37;color:#f9e8c1;min-height:41px;font-size:13px;font-weight:900;margin-top:5px}
+.v2-reserve-item .v2-item-name{flex:1;font-size:12px;font-weight:850;min-width:0}
+.v2-reserve-item small{font-size:9px;margin-right:auto}
+.v2-reserve-item .v2-equip{margin-left:0}
+.v2-sealed{padding:9px 10px;border:1px solid #a39167;background:#d5c39c;color:#4b4232;font:850 11px/1.5 system-ui}
+.v2-hint{font-size:12px;color:#675947}
+.v2-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.v2-card{min-height:62px;padding:10px;text-align:left;background:#f4e8d1;border:1px solid #b29d7a;color:#3c4538;font-size:12px;font-weight:900;box-shadow:inset 3px 0 #8d9980;overflow-wrap:anywhere}
+.v2-card small{font-size:10px;font-weight:550;margin-top:5px}
+.v2-notice{font-size:12px;font-weight:850;color:#445d48;position:sticky;bottom:0;background:#f5e6c6;padding:8px;border:1px solid #a69474;z-index:2}
+@media(max-width:540px){
+ .v2-stage{padding:12px;gap:10px}
+ .v2-schools{grid-template-columns:1fr}
+ .v2-school{min-height:80px;padding:11px;gap:4px;font-size:18px}
+ .v2-card{min-height:53px;padding:8px}.v2-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .v2-top{align-items:start}.v2-play{font-size:13px;padding:9px;min-height:42px}
+ .v2-stage h2{font-size:25px}.v2-reserve-item{flex-wrap:wrap}.v2-reserve-item .v2-item-name{flex-basis:50%}
+}
+@media(max-height:540px) and (orientation:landscape){
+ .v2-stage{width:min(900px,100%);padding:10px}
+ .v2-schools{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .v2-school{min-height:88px}
+}
+@media(prefers-reduced-motion:reduce){.v2-stage button{transition:none}}
+
+/* Keep the new entry compact: the first screen must remain usable at 320×568. */
+#menu .v2-entry{min-height:45px;padding:8px 12px;gap:2px}
+#menu .v2-entry strong{font-size:11px}
+#menu .v2-entry small{font-size:10px}
+@media(max-width:950px) and (max-height:850px){
+ #menu #hero-preview{width:clamp(74px,13vh,115px)}
+ #menu .menu-composition>p{margin:4px 0 6px}
+ #menu .play-block{gap:5px}
+ #menu .play-block .big-button{min-height:47px}
+ #menu .forge-entry:not(.v2-entry){min-height:49px;padding-block:7px}
+ #menu .v2-entry{min-height:39px}
+}
+@media(max-width:420px) and (max-height:620px){
+ #menu .menu-composition{transform:scale(.94);transform-origin:center center}
+ #menu .play-block{gap:4px}
+ #menu .menu-composition h1{font-size:clamp(40px,12vw,53px)}
+ #menu .menu-composition>p{font-size:10px;margin-block:2px 4px}
+}
+
+/* Two unrelated saved games fit one continuation row rather than pushing the
+   compact menu down an extra full button height. */
+#menu .play-block:has(#continue:not([hidden])):has(#continue-v2:not([hidden])){grid-template-columns:repeat(2,minmax(0,1fr))}
+#menu .play-block:has(#continue:not([hidden])):has(#continue-v2:not([hidden]))>*:not(#continue):not(#continue-v2){grid-column:1/-1}
+#menu #continue,#menu #continue-v2{min-height:38px;padding:7px 9px;font-size:11px;white-space:normal;line-height:1.25}
