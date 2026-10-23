@@ -4,6 +4,7 @@ import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
 import {performance} from 'node:perf_hooks';
 import {paintPackets,paintingChecksum} from '../draft-transfer.js';
+import {reconcileZamazkaPresence} from '../../../pocketnet/zamazka-presence.mjs';
 
 // Deterministic server-level soak: 8 authenticated room seats, 3 rounds,
 // multipart restores, an interrupted socket upload, every ballot/reveal,
@@ -63,6 +64,22 @@ for(let round=1;round<=totalRounds;round++){
   variation:interrupted.item.variation,
   revision:interrupted.packets[0].revision,
   checksum:interrupted.packets[0].checksum,parts:interrupted.packets.length};
+ if(round===2){
+  const remaining=state.deadline-time;
+  const frozen=reconcileZamazkaPresence(state,[],time);
+  assert.equal(frozen.changed,true);
+  assert.equal(state.paused,true);
+  const originalOffset=state.draftAssemblies[interrupted.who.id].next;
+  time+=90_000; // Longer than the original drawing window.
+  const rejected=send(interrupted.who,query);
+  assert.equal(rejected.events[0].type,'notice','paused room rejects transfer intents');
+  assert.equal(state.draftAssemblies[interrupted.who.id].next,originalOffset);
+  reconcileZamazkaPresence(state,people.slice(0,-1).map(p=>p.id),time);
+  assert.equal(state.paused,true,'partial return must not restart match');
+  const back=reconcileZamazkaPresence(state,people.map(p=>p.id),time);
+  assert.equal(back.resumed,true);
+  assert.equal(state.deadline,time+remaining,'restore exact remaining drawing time');
+ }
  const resume=send(interrupted.who,query);
  assert.equal(resume.events[0].type,'submit_resume_state');
  assert.equal(resume.events[0].payload.next,pausedAt);
