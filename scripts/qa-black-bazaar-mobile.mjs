@@ -2,7 +2,7 @@ import {chromium} from '@playwright/test';
 import {mkdir,writeFile} from 'node:fs/promises';
 
 const devices=[['small',320,568],['short',375,667],['phone',390,844],['landscape',844,390],['tablet',820,1024],['tablet-landscape',1024,768],['desktop',1440,900]];
-const scenes=['home','lobby','two','four','six','buyer','seller','bids','black','urgent','inventory','deals','done','secret'];
+const scenes=['home','lobby','two','four','six','buyer','seller','bids','black','deals','urgent','event','bankrupt','done'];
 const base=process.env.BAZAAR_QA_ORIGIN||'http://127.0.0.1:8765';
 const out='qa-artifacts/black-bazaar-mobile';
 await mkdir(out,{recursive:true});
