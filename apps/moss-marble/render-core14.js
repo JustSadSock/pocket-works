@@ -1,6 +1,7 @@
 import { BALL_RADIUS } from './physics.js';
 import { levelBounds } from './levels.js';
 import { worldToScreenPoint, screenToWorldPoint, screenDeltaToWorld as inverseScreenVector } from './camera-space.js';
+import { makeStoneRimProfile } from './curb-profile.js';
 
 const TAU = Math.PI * 2;
 const STRIDE = 11;
@@ -321,28 +322,21 @@ function addSymmetricBox(builder, ax, ay, bx, by, width, z0, z1, tint, material 
   builder.quad(p(bL, z0), p(bR, z0), p(bR, z1), p(bL, z1), tint, material);
 }
 
-function addOutwardCurb(builder, a, b, width, height, tint, sideTint = C.stoneDark, heightAt = null, winding = 1) {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const length = Math.hypot(dx, dy) || 1;
-  // Polygon winding, not the polygon centroid, determines the outside on hairpin bends.
-  const direction = winding >= 0 ? -1 : 1;
-  const nx = -dy / length * direction;
-  const ny = dx / length * direction;
-  const outerA = { x: a.x + nx * width, y: a.y + ny * width };
-  const outerB = { x: b.x + nx * width, y: b.y + ny * width };
-  const sample = (point) => heightAt ? heightAt(point.x - nx * 9, point.y - ny * 9) : 0;
-  const groundA = sample(a), groundB = sample(b);
-  const baseA = groundA - 8, baseB = groundB - 8;
-  const topA = groundA + height, topB = groundB + height;
-  const bevel = Math.min(4, width * .16);
-  const p = (point, z) => [point.x, point.y, z];
-  // A slightly sloped stone cap gives the edge a visible silhouette.
-  builder.quad(p(a, topA), p(b, topB), p(outerB, topB - bevel), p(outerA, topA - bevel), tint, 0);
-  builder.quad(p(a, baseA), p(b, baseB), p(b, topB), p(a, topA), sideTint, 0);
-  builder.quad(p(outerA, baseA), p(outerA, topA - bevel), p(outerB, topB - bevel), p(outerB, baseB), sideTint, 0);
-  builder.quad(p(a, baseA), p(a, topA), p(outerA, topA - bevel), p(outerA, baseA), sideTint, 0);
-  builder.quad(p(b, baseB), p(outerB, baseB), p(outerB, topB - bevel), p(b, topB), sideTint, 0);
+function addContinuousStoneRim(builder, profile, materials, winding = 1) {
+  if (profile.length < 3) return;
+  for (let i = 0; i < profile.length; i++) {
+    const a = profile[i], b = profile[(i + 1) % profile.length];
+    const dx = b.inner[0] - a.inner[0], dy = b.inner[1] - a.inner[1];
+    const span = Math.hypot(dx, dy) || 1;
+    const outside = [dy / span * winding, -dx / span * winding, 0];
+    const bevelNormal = normalize([outside[0] * .65, outside[1] * .65, .75]);
+    // Shared ring vertices eliminate gaps and spiky miters at every turn.
+    builder.quad(a.inner, b.inner, b.crown, a.crown, materials.stone, 0, [0, 0, 1]);
+    builder.quad(a.crown, b.crown, b.cap, a.cap, materials.stoneLight, 0, [0, 0, 1]);
+    builder.quad(a.cap, b.cap, b.bevel, a.bevel, materials.stone, 0, bevelNormal);
+    builder.quad(a.bevel, b.bevel, b.heel, a.heel, materials.stoneDark, 0, outside);
+    builder.quad(a.heel, b.heel, b.inner, a.inner, materials.stone, 0, outside);
+  }
 }
 
 function addRock(builder, obstacle) {
@@ -492,8 +486,8 @@ function addBoardScene(level) {
   const shadows = new MeshBuilder();
   const transparent = new MeshBuilder();
   const materials = { ...C, ...(level.visual?.materials || {}) };
-  const curbWinding = Math.sign(polygonArea(level.outline)) || 1;
   const terrainHeight = level.course18?.field?.heightAt || null;
+  const stoneRim = makeStoneRimProfile(level.outline, terrainHeight || (() => 0));
 
   const isGardenTray = Boolean(level.course18?.field?.heightAt);
   const shadowOutline = level.outline.map((point) => ({ x: point.x + 22, y: point.y + 36 }));
@@ -516,18 +510,8 @@ function addBoardScene(level) {
       opaque.quad([a.x, a.y, -32], [b.x, b.y, -32], [b.x, b.y, 0], [a.x, a.y, 0], C.boardSide, 0);
     }
 
-    const length = Math.hypot(b.x - a.x, b.y - a.y);
-    const pieces = Math.max(1, Math.ceil(length / 72));
-    for (let piece = 0; piece < pieces; piece += 1) {
-      const inset = 2.4 / Math.max(1, length);
-      const t0 = piece / pieces + inset;
-      const t1 = (piece + 1) / pieces - inset;
-      const start = { x: lerp(a.x, b.x, t0), y: lerp(a.y, b.y, t0) };
-      const end = { x: lerp(a.x, b.x, t1), y: lerp(a.y, b.y, t1) };
-      const tint = hashNoise(index, piece, level.id) > .5 ? materials.stone : materials.stoneLight;
-      addOutwardCurb(opaque, start, end, 19, 16 + hashNoise(index, piece, 9) * 3, tint, materials.stoneDark, terrainHeight, curbWinding);
-    }
   }
+  addContinuousStoneRim(opaque, stoneRim, materials, Math.sign(polygonArea(level.outline)) || 1);
 
   for (const zone of level.zones || []) {
     const points = [
@@ -658,29 +642,29 @@ void main() {
     return;
   }
   if (vMaterial > .5 && vMaterial < 1.5) {
-    float tufts = noise2(floor(vWorld.xy * .075));
-    float grain = noise2(floor(vWorld.xy * .42));
-    float blades = sin(vWorld.x * .38 + sin(vWorld.y * .27)) * .5 + .5;
-    base *= .82 + tufts * .15 + grain * .09 + blades * .035;
-    base += vec3(.018, .025, .008) * max(0.0, sky - .72);
+    // Band-limited irregular fibers: no floored noise cells or checkerboards.
+    float canopy = valueNoise(vWorld.xy * .016);
+    float undergrowth = valueNoise(vWorld.xy * .052 + vec2(19.2, -8.4));
+    float weave = valueNoise(vWorld.xy * .19 + vec2(-4.9, 11.8));
+    base *= .87 + canopy * .16 + undergrowth * .065 + weave * .028;
   } else if (vMaterial > 5.5 && vMaterial < 6.5) {
     float waveA = sin(vWorld.x * .105 + vWorld.y * .045 + uTime * 1.35);
     float waveB = sin(vWorld.y * .082 - vWorld.x * .032 - uTime * 1.05);
     float wave = waveA * waveB;
     float caustic = smoothstep(.72, .98, sin(vWorld.x * .061 + waveB * 1.2 + uTime) * .5 + .5);
-    base += vec3(.025, .085, .078) * wave + vec3(.06, .13, .105) * caustic;
-    rim = max(rim, pow(1.0 - abs(dot(n, viewDir)), 3.5) * 1.25);
-    spec *= 2.15;
+    base += vec3(.018, .050, .047) * wave + vec3(.025, .075, .064) * caustic;
+    rim = max(rim, pow(1.0 - abs(dot(n, viewDir)), 3.5) * .85);
+    spec *= 1.30;
   } else if (vMaterial > 6.5 && vMaterial < 7.5) {
-    float mossCloud = noise2(floor(vWorld.xy * .055));
-    float mossFine = noise2(floor(vWorld.xy * .22));
-    base *= .72 + mossCloud * .28 + mossFine * .13;
-    rim *= 1.35;
+    float mossCloud = valueNoise(vWorld.xy * .019 + vec2(3.2, 12.5));
+    float mossFine = valueNoise(vWorld.xy * .085);
+    base *= .87 + mossCloud * .12 + mossFine * .045;
+    rim *= .55;
   } else if (vMaterial > 7.5 && vMaterial < 8.5) {
-    float dunes = sin(vWorld.x * .047 + sin(vWorld.y * .026) * 1.8) * .5 + .5;
-    float grains = noise2(floor(vWorld.xy * .37));
-    base *= .82 + dunes * .09 + grains * .16;
-    base += vec3(.025, .018, .006) * sky;
+    float mineral = valueNoise(vWorld.xy * .025 + vec2(27.0, 4.0));
+    float grains = valueNoise(vWorld.xy * .18 + vec2(-6.0, 24.0));
+    base *= .92 + mineral * .09 + grains * .027;
+    base += vec3(.016, .012, .006) * sky;
   } else if (vMaterial > 8.5 && vMaterial < 9.5) {
     base *= .52 + diffuse * .22;
     outColor = vec4(base, alpha);
@@ -706,7 +690,9 @@ void main() {
       float mineral = valueNoise(vWorld.xy * .034 + vWorld.z * .022);
       lit *= .94 + mineral * .08;
     }
-    lit += spec * vec3(.92, .88, .68) * .40 + rim * base * .11;
+    // Limestone is matte, not glazed; only wet grass gets a soft highlight.
+    float matteSpec = vMaterial < .5 ? .075 : .14;
+    lit += spec * vec3(.92, .88, .68) * matteSpec + rim * base * .045;
   }
   outColor = vec4(lit, alpha);
 }`;
@@ -1281,33 +1267,37 @@ class CanvasFallback {
       ctx.stroke();
     } else {
       this.pathEllipse(feature, .92);
-      ctx.fillStyle = colors[0];
+      const center = this.worldToScreen(feature.x, feature.y, .4);
+      const radius = Math.max(12, Math.max(feature.length, feature.width) * this.scale * .49);
+      const wash = ctx.createRadialGradient(center.x, center.y, radius * .22, center.x, center.y, radius);
+      wash.addColorStop(0, colors[0]);
+      wash.addColorStop(.64, colors[0]);
+      wash.addColorStop(1, 'rgba(105,129,95,0)');
+      ctx.fillStyle = wash;
       ctx.fill();
-      ctx.strokeStyle = colors[1];
-      ctx.lineWidth = 1.1;
-      ctx.stroke();
     }
     ctx.restore();
   }
   drawLandform(feature) {
+    // Canvas fallback uses one quiet pigment wash instead of contour rings.
     const ctx = this.ctx;
     ctx.save();
-    ctx.strokeStyle = feature.kind === 'depression' ? 'rgba(225,210,151,.24)' : 'rgba(229,232,178,.30)';
-    ctx.lineWidth = .8;
+    ctx.globalAlpha = .12;
+    ctx.fillStyle = feature.kind === 'depression' ? '#594b34' : '#b8cd8b';
     if (feature.a && feature.b) {
       const a = this.worldToScreen(feature.a.x, feature.a.y, 1);
       const b = this.worldToScreen(feature.b.x, feature.b.y, 1);
-      ctx.lineWidth = Math.max(2, feature.width * this.scale * .07);
       ctx.lineCap = 'round';
+      ctx.lineWidth = Math.max(3, feature.width * this.scale * .42);
+      ctx.strokeStyle = ctx.fillStyle;
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     } else {
-      for (const scale of [.38, .62, .82]) {
-        this.pathEllipse(feature, scale);
-        ctx.stroke();
-      }
+      this.pathEllipse(feature, .74);
+      ctx.fill();
     }
     ctx.restore();
   }
+
   drawBarrier(wall) {
     const ctx = this.ctx;
     const a = this.worldToScreen(wall.ax, wall.ay, 1);
@@ -1391,7 +1381,13 @@ class CanvasFallback {
     }
     ctx.beginPath(); level.outline.forEach((point, index) => { const p = this.worldToScreen(point.x, point.y); if (!index) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }); ctx.closePath();
     ctx.fillStyle = cssColor(this.terrainPalette.grass, '#78945e'); ctx.fill();
-    ctx.strokeStyle = cssColor(this.terrainPalette.grassLight, 'rgba(230,222,178,.42)', .42); ctx.lineWidth = 2; ctx.stroke();
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(4, 21 * this.scale);
+    ctx.strokeStyle = '#656958';
+    ctx.stroke();
+    ctx.lineWidth = Math.max(1.5, 9 * this.scale);
+    ctx.strokeStyle = '#adab91';
+    ctx.stroke();
     const field = level.course18?.field;
     for (const mask of field?.masks || []) this.drawSurface(mask);
     for (const landform of field?.landforms || []) this.drawLandform(landform);

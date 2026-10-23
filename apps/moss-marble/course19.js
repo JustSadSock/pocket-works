@@ -47,6 +47,16 @@ function noise(x, y = 0, seed = 0) {
 function mixColor(a, b, t) {
   return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t), lerp(a[3], b[3], t)];
 }
+function smoothNoise(x, y, seed) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const tx = fx * fx * (3 - 2 * fx);
+  const ty = fy * fy * (3 - 2 * fy);
+  const a = lerp(noise(ix, iy, seed), noise(ix + 1, iy, seed), tx);
+  const b = lerp(noise(ix, iy + 1, seed), noise(ix + 1, iy + 1, seed), tx);
+  return lerp(a, b, ty);
+}
+
 
 function closestPointOnSegment(point, a, b) {
   const dx = b.x - a.x;
@@ -239,19 +249,28 @@ function buildField(level, blueprint) {
   const rampAt = (x, y) => ramps.find((ramp) => ellipseMetric(x, y, ramp).radius < 1) || null;
   const colorAt = (x, y, height, normal) => {
     const info = surfaceInfoAt(x, y);
-    const type = info.weight > .08 ? info.type : 'grass';
-    const base = type === 'sand' ? palette.sand : type === 'moss' ? palette.moss : type === 'water' ? palette.water : palette.grass;
-    const light = type === 'sand' ? palette.sandLight : type === 'moss' ? palette.mossLight : type === 'water' ? palette.waterLight : palette.grassLight;
-    const texture = noise(x * .037, y * .037, seed);
-    const fine = noise(x * .11, y * .11, seed + 17);
-    const variation = clamp(.12 + texture * .22 + fine * .07 + Math.max(0, normal[2] - .84) * .12, 0, .48);
-    let color = mixColor(base, light, variation);
-    const cavity = clamp((10 - height) / 18, 0, 1);
-    const sun = clamp(normal[0] * .50 - normal[1] * .40 + normal[2] * .78, 0, 1);
-    const slopeShade = clamp(.58 + sun * .44 - cavity * .10 + clamp((height - 12) / 60, 0, 1) * .07, .54, 1.10);
+    // Two scales of interpolated pigment avoid cell-boundaries and triangular
+    // blotches. Palette shifts stay deterministic for every endless seed.
+    const broad = smoothNoise(x * .012, y * .012, seed);
+    const medium = smoothNoise(x * .048 + 13.4, y * .048 - 5.1, seed + 7);
+    const brightness = clamp(.16 + broad * .24 + medium * .105, .12, .52);
+    let grass = mixColor(palette.grass, palette.grassLight, brightness);
+    const dry = smoothstep(.66, .96, medium * .68 + broad * .32);
+    grass = mixColor(grass, palette.grassDry, dry * .16);
+
+    const target = info.type === 'sand' ? palette.sand : info.type === 'moss' ? palette.moss :
+      info.type === 'water' ? palette.water : palette.grass;
+    const highlight = info.type === 'sand' ? palette.sandLight : info.type === 'moss' ? palette.mossLight :
+      info.type === 'water' ? palette.waterLight : palette.grassLight;
+    const materialColor = mixColor(target, highlight, clamp(.14 + broad * .25 + medium * .065, .08, .50));
+    const blend = smoothstep(.12, .91, info.weight);
+    let color = mixColor(grass, materialColor, blend);
+    // Lighting stays anchored to actual field normals and elevation, but the
+    // shader owns directional diffuse shading so vertex colors remain gentle.
+    const sunSlope = normal[0] * .20 - normal[1] * .16;
+    const cavity = clamp((8 - height) / 23, 0, 1);
+    const slopeShade = clamp(.93 + sunSlope - cavity * .075, .78, 1.11);
     color = [color[0] * slopeShade, color[1] * slopeShade, color[2] * slopeShade, color[3]];
-    if (type === 'grass' && fine > .78) color = mixColor(color, palette.grassDry, .14);
-    if (info.weight > 0 && info.weight < 1) color = mixColor(palette.grass, color, info.weight);
     return color;
   };
   return { landforms, masks, heightAt, gradientAt, normalAt, surfaceAt, surfaceInfoAt, rampAt, colorAt };
@@ -285,7 +304,10 @@ function buildSurfaceMesh(level, field, along = 86, across = 19) {
         [indexOf(row, column), indexOf(row + 1, column + 1), indexOf(row, column + 1)]
       ]) {
         const center = triangle.reduce((sum, index) => ({ x: sum.x + vertices[index].x / 3, y: sum.y + vertices[index].y / 3 }), { x: 0, y: 0 });
-        const surface = field.surfaceAt(center.x, center.y);
+        // Material-specific specular effects start only at the solid interior
+        // of a patch. Near its perimeter the pigment itself crossfades.
+        const surfaceInfo = field.surfaceInfoAt(center.x, center.y);
+        const surface = surfaceInfo.weight > .90 ? surfaceInfo.type : 'grass';
         const material = surface === 'sand' ? 8 : surface === 'moss' ? 7 : surface === 'water' ? 6 : 1;
         for (const index of triangle) {
           const vertex = vertices[index];

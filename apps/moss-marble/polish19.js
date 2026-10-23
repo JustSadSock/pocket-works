@@ -243,70 +243,26 @@ export class CoursePolishLayer {
     const motif = level.visual?.motif || 'drop';
     const motifAccent = level.visual?.accent || '205,224,180';
 
-    const routeOutline = level.outline || [];
-    if (routeOutline.length > 2) {
-      this.pathWorld([...routeOutline, routeOutline[0]], field, 13.2);
-      ctx.strokeStyle = 'rgba(3,13,8,.52)';
-      ctx.lineWidth = 3.2;
+    // The solid 3D limestone profile owns the course silhouette.
+    // Avoid tracing it again as a floating UI line.
+    // A restrained wet meniscus, not concentric dashboard rings.
+    for (const mask of cache.waterMasks) {
+      this.pathWorld(maskWorldPoints(mask, .80, 40), field, .72);
+      ctx.strokeStyle = terrainTint(terrain.waterLight, 'rgba(160,216,201,.22)', .24);
+      ctx.lineWidth = 1.0;
       ctx.stroke();
-      this.pathWorld([...routeOutline, routeOutline[0]], field, 14.2);
-      ctx.strokeStyle = terrainTint(level.visual?.materials?.stoneLight, 'rgba(224,218,184,.50)', .51);
-      ctx.lineWidth = 1.25;
-      ctx.stroke();
-    }
-
-    // These contours follow real terrain heights, making playable slopes readable
-    // without introducing separate fake hill sprites.
-    for (const landform of field.landforms || []) {
-      if (!['mound', 'ridge', 'depression'].includes(landform.kind)) continue;
-      if (Math.abs(Number(landform.height || 0)) < 8) continue;
-      const depression = landform.kind === 'depression';
-      const outer = maskWorldPoints(landform, .82, 42);
-      const inner = maskWorldPoints(landform, .54, 42);
-      ctx.globalAlpha = 1;
-      this.pathWorld(outer, field, .55);
-      ctx.strokeStyle = depression ? 'rgba(41,29,15,.23)' : 'rgba(23,53,29,.30)';
-      ctx.lineWidth = 1.65;
-      ctx.stroke();
-      this.pathWorld(inner, field, .68);
-      ctx.strokeStyle = depression ? 'rgba(237,218,152,.20)' : 'rgba(231,234,173,.26)';
-      ctx.lineWidth = 1.1;
-      ctx.stroke();
-    }
-
-    for (let maskIndex = 0; maskIndex < cache.waterMasks.length; maskIndex += 1) {
-      const mask = cache.waterMasks[maskIndex];
-      for (let ring = 0; ring < 2; ring += 1) {
-        const pulse = 0;
-        const scale = .47 + ring * .29 + pulse;
-        this.pathWorld(maskWorldPoints(mask, scale, 30), field, .72);
-        ctx.globalAlpha = .74 + ring * .09;
-        ctx.strokeStyle = waterAccent;
-        ctx.lineWidth = .7 + ring * .14;
-        ctx.stroke();
-      }
-      this.pathWorld(maskWorldPoints(mask, .91, 38), field, .78);
-      ctx.setLineDash([6, 12]);
-      ctx.lineDashOffset = 0;
-      ctx.strokeStyle = terrainTint(terrain.waterLight, 'rgba(176,226,214,.28)', .30);
-      ctx.lineWidth = 1.25;
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
     }
 
     for (let maskIndex = 0; maskIndex < cache.sandMasks.length; maskIndex += 1) {
       const mask = cache.sandMasks[maskIndex];
-      this.pathWorld(maskWorldPoints(mask, .90, 38), field, .61);
-      ctx.setLineDash([2, 5]);
-      ctx.strokeStyle = terrainTint(terrain.sandLight, 'rgba(246,220,159,.30)', .34);
-      ctx.lineWidth = 1.15;
+      this.pathWorld(maskWorldPoints(mask, .84, 40), field, .67);
+      ctx.strokeStyle = terrainTint(terrain.sandLight, 'rgba(231,208,163,.15)', .17);
+      ctx.lineWidth = .85;
       ctx.stroke();
-      ctx.setLineDash([]);
       if (!Number.isFinite(mask.x)) continue;
       const cos = Math.cos((mask.angle || 0) + .45);
       const sin = Math.sin((mask.angle || 0) + .45);
-      for (let line = -3; line <= 3; line += 1) {
+      for (let line = -2; line <= 2; line += 1) {
         const centerX = mask.x + -sin * line * mask.width * .075;
         const centerY = mask.y + cos * line * mask.width * .075;
         const half = mask.length * (.18 + (3 - Math.abs(line)) * .012);
@@ -319,19 +275,8 @@ export class CoursePolishLayer {
       }
     }
 
-    for (let maskIndex = 0; maskIndex < cache.mossMasks.length; maskIndex += 1) {
-      const mask = cache.mossMasks[maskIndex];
-      for (let contour = 0; contour < 2; contour += 1) {
-        this.pathWorld(maskWorldPoints(mask, .54 + contour * .28, 34), field, .66);
-        ctx.setLineDash(contour === 0 ? [4, 12] : [2, 8]);
-        ctx.lineDashOffset = 0;
-        ctx.strokeStyle = terrainTint(terrain.mossLight, 'rgba(117,166,96,.28)', .30 + contour * .035);
-        ctx.lineWidth = contour === 1 ? 1.1 : .7;
-        ctx.stroke();
-      }
-      ctx.setLineDash([]);
-      ctx.lineDashOffset = 0;
-    }
+    // Moss texture is now integrated into the terrain material.
+    // Never outline a moss patch with a dashed circle.
 
     for (const landmark of cache.landmarks) this.drawLandmark(ctx, landmark, motif, motifAccent, field, time);
 
