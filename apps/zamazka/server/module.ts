@@ -408,7 +408,12 @@ const module: PocketModule<State>={
         !Number.isInteger(a.parts)||a.parts<1||a.parts>160||
         !Number.isInteger(a.index)||a.index<0||a.index>=a.parts||
         !Array.isArray(a.strokes)||a.strokes.length>8||
-        (a.checksum!==undefined&&(typeof a.checksum!=='string'||!/^[0-9a-f]{8}$/.test(a.checksum))))
+        (a.checksum!==undefined&&(typeof a.checksum!=='string'||!/^[0-9a-f]{8}$/.test(a.checksum)))||
+        (a.basePrefix!==undefined&&(kind!=='draft_chunk'||!Number.isInteger(a.basePrefix)||
+          a.basePrefix<1||a.basePrefix>768))||
+        (a.baseChecksum!==undefined&&(kind!=='draft_chunk'||!Number.isInteger(a.basePrefix)||
+          typeof a.baseChecksum!=='string'||!/^[0-9a-f]{8}$/.test(a.baseChecksum)))||
+        (a.basePrefix!==undefined&&a.baseChecksum===undefined))
        return {state,events:notice(id,'Некорректная часть рисунка.')};
      const strokes=normalize(a.strokes);
      if(!strokes)return {state,events:notice(id,'Недопустимые мазки в рисунке.')};
@@ -416,9 +421,19 @@ const module: PocketModule<State>={
      let assembling=state.draftAssemblies[id];
      if(kind==='submit_chunk')(state.pendingFinals||={})[id]=now();
      if(a.index===0){
+       // A compact draft can reference only a previous, fully acknowledged
+       // backup. Reject stale baselines without touching either saved artwork
+       // or an in-flight assembly, so the client can retry a full revision.
+       const basePrefix=kind==='draft_chunk'?Number(a.basePrefix)||0:0;
+       if(basePrefix){
+         const baseline=state.drafts?.[id];
+         if(!Array.isArray(baseline)||basePrefix>baseline.length||
+            paintingChecksum(baseline)!==a.baseChecksum)
+           return {state,events:notice(id,'Черновик на сервере изменился. Отправляем полную копию.')};
+       }
        // A new revision replaces only an INCOMPLETE assembly. The committed
        // draft remains available until every part has passed all checks.
-       assembling={revision:a.revision,checksum:typeof a.checksum==='string'?a.checksum:undefined,kind,parts:a.parts,next:0,prefix:0,strokes:[]};
+       assembling={revision:a.revision,checksum:typeof a.checksum==='string'?a.checksum:undefined,kind,parts:a.parts,next:0,prefix:basePrefix,strokes:[]};
        state.draftAssemblies[id]=assembling;
      }
      if(!assembling||assembling.revision!==a.revision||assembling.kind!==kind||
