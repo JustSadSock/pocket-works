@@ -65,10 +65,10 @@ function drawBackdrop(){
  for(let x=26;x<875;x+=104){ctx.beginPath();ctx.moveTo(x,27);ctx.lineTo(x,33);ctx.stroke()}
  ctx.restore();
 }
-function drawWave(x,y,count,color,width,maxLink=135){
+function drawWave(x,y,count,color,width,maxLink=135,stride=1){
  ctx.beginPath();let prevX=x[0],prevY=y[0];ctx.moveTo(prevX,prevY);
- for(let i=1;i<=count;i++){
-  const j=i===count?0:i,cx=x[j],cy=y[j];
+ for(let i=stride;i<count+stride;i+=stride){
+  const j=i>=count?0:i,cx=x[j],cy=y[j];
   if(Math.abs(cx-prevX)+Math.abs(cy-prevY)>maxLink){ctx.moveTo(cx,cy)}
   else ctx.lineTo(cx,cy);
   prevX=cx;prevY=cy;
@@ -77,11 +77,11 @@ function drawWave(x,y,count,color,width,maxLink=135){
 }
 function renderWave(){
  if(trail>0&&snapshots.length){
-  for(let i=0;i<snapshots.length;i++){
+  for(let i=0;i<snapshots.length;i+=2){
    const s=snapshots[i],age=1-(elapsed-s.time)/(.15+trail*.038);
    if(age<=0)continue;
    ctx.save();ctx.globalAlpha=Math.pow(age,2)*(.05+trail*.004);
-   if(display==='line')drawWave(s.x,s.y,s.x.length,'#a6d7cd',1.25);
+   if(display==='line')drawWave(s.x,s.y,s.x.length,'#a6d7cd',1.25,180,Math.max(1,Math.ceil(s.x.length/900)));
    else drawDots(s.x,s.y,s.x.length,'#83bdb1',1.2,3);
    ctx.restore();
   }
@@ -135,7 +135,7 @@ function retainSnapshot(){
  sinceSnapshot=0;
  snapshots.push({time:elapsed,x:particleSet.x.slice(),y:particleSet.y.slice()});
  const length=.15+trail*.038;
- while(snapshots.length&&(elapsed-snapshots[0].time>length||snapshots.length>36))snapshots.shift();
+ while(snapshots.length&&(elapsed-snapshots[0].time>length||snapshots.length>22))snapshots.shift();
 }
 function frame(stamp){
  const delta=previousFrame?Math.min(.045,Math.max(0,(stamp-previousFrame)/1000)):0;previousFrame=stamp;
@@ -162,7 +162,7 @@ function pointerDown(e){
  const p=pt(e);
  try{canvas.setPointerCapture(e.pointerId)}catch{}
  const selected=tool==='circle'?closest(p):null;
- drag={id:e.pointerId,from:p,now:p,type:tool==='circle'&&selected?.type==='circle'?'moveCircle':tool,index:selected?.index};
+ drag={id:e.pointerId,from:p,now:p,type:tool==='circle'&&selected?.type==='circle'?'moveCircle':tool,index:selected?.index,before:JSON.stringify(world)};
  forceDraw=true;
 }
 function pointerMove(e){
@@ -175,19 +175,20 @@ function pointerMove(e){
 function pointerEnd(e,cancel=false){
  if(!drag||e.pointerId!==drag.id)return;
  const action=drag;drag=null;try{canvas.releasePointerCapture(e.pointerId)}catch{}
- if(cancel){world=sanitizeWorld(world);startOver();return}
+ if(cancel){world=sanitizeWorld(JSON.parse(action.before));startOver();return}
  const p=pt(e);
  if(action.type==='source'){
-  snapshot();world.origin=contain(world.shape,p,42);
+  undos.push(action.before);if(undos.length>24)undos.shift();world.origin=contain(world.shape,p,42);
   world=sanitizeWorld(world);startOver();save();updateControls();return;
  }
  if(action.type==='moveCircle'){
-  snapshot();world.circles[action.index]={...world.circles[action.index],...contain(world.shape,p,40)};
+  undos.push(action.before);if(undos.length>24)undos.shift();world.circles[action.index]={...world.circles[action.index],...contain(world.shape,p,40)};
   world=sanitizeWorld(world);startOver();save();updateControls();return;
  }
  if(action.type==='circle'){
   if(world.circles.length>=12){notify('Не больше 12 отражателей.');return}
-  modify(()=>{const o=contain(world.shape,p,43);if(Math.hypot(o.x-world.origin.x,o.y-world.origin.y)<62)return;world.circles.push({...o,r:24})});
+  const o=contain(world.shape,p,43);if(Math.hypot(o.x-world.origin.x,o.y-world.origin.y)<62){notify('Отражатель слишком близко к источнику.');return}
+  modify(()=>world.circles.push({...o,r:24}));
   return;
  }
  if(action.type==='mirror'){
