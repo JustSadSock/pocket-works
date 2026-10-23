@@ -261,27 +261,8 @@ export class CoursePolishLayer {
       ctx.stroke();
     }
 
-    for (let maskIndex = 0; maskIndex < cache.sandMasks.length; maskIndex += 1) {
-      const mask = cache.sandMasks[maskIndex];
-      this.pathWorld(maskWorldPoints(mask, .84, 40), field, .67);
-      ctx.strokeStyle = terrainTint(terrain.sandLight, 'rgba(231,208,163,.15)', .17);
-      ctx.lineWidth = .85;
-      ctx.stroke();
-      if (!Number.isFinite(mask.x)) continue;
-      const cos = Math.cos((mask.angle || 0) + .45);
-      const sin = Math.sin((mask.angle || 0) + .45);
-      for (let line = -2; line <= 2; line += 1) {
-        const centerX = mask.x + -sin * line * mask.width * .075;
-        const centerY = mask.y + cos * line * mask.width * .075;
-        const half = mask.length * (.18 + (3 - Math.abs(line)) * .012);
-        const a = { x: centerX - cos * half, y: centerY - sin * half };
-        const b = { x: centerX + cos * half, y: centerY + sin * half };
-        this.pathWorld([a, b], field, .55);
-        ctx.strokeStyle = sandAccent;
-        ctx.lineWidth = .75;
-        ctx.stroke();
-      }
-    }
+    // Sand lives in the continuous terrain pigment and scattered grain.
+    // No full-ellipse outlines, which looked like transparent UI circles.
 
     // Moss texture is now integrated into the terrain material.
     // Never outline a moss patch with a dashed circle.

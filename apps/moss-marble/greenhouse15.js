@@ -193,84 +193,60 @@ export class LivingGreenhouseLayer {
 
   drawGreenhouseFrame(ctx, time, theme) {
     const { width, height } = this;
-    const parallax = (this.renderer.parallaxX || 0) * 10;
-    const horizon = height * .52;
-    const apexX = width * .53 + parallax;
-    const apexY = height * .075;
-    ctx.save();
-
-    // The greenhouse is an architectural room, not a giant ornamental wire dome.
-    // All uprights end at one floor datum and recede toward one vanishing region.
-    const wall = ctx.createLinearGradient(0, 0, 0, horizon);
-    wall.addColorStop(0, 'rgba(12,29,21,.08)');
-    wall.addColorStop(1, 'rgba(7,23,16,.30)');
-    ctx.fillStyle = wall;
+    const horizon = height * .58;
+    const parallax = (this.renderer.parallaxX || 0) * 7;
+    const glass = ctx.createLinearGradient(0, 0, 0, horizon);
+    glass.addColorStop(0, 'rgba(48,74,58,.10)');
+    glass.addColorStop(1, 'rgba(14,37,28,.18)');
+    ctx.fillStyle = glass;
     ctx.fillRect(0, 0, width, horizon);
-    ctx.strokeStyle = 'rgba(9,25,19,.36)';
-    ctx.lineWidth = Math.max(2, width * .004);
-    for (let i = 0; i <= 7; i += 1) {
-      const x = width * i / 7 + parallax * (i < 4 ? -.35 : .35);
-      ctx.beginPath();
-      ctx.moveTo(x, horizon);
-      ctx.lineTo(apexX + (x - apexX) * .42, apexY);
-      ctx.stroke();
-      ctx.strokeStyle = 'rgba(186,198,165,.085)';
-      ctx.lineWidth = .9;
-      ctx.beginPath();
-      ctx.moveTo(x + 2, horizon);
-      ctx.lineTo(apexX + (x - apexX) * .42 + 2, apexY);
-      ctx.stroke();
-      ctx.strokeStyle = 'rgba(9,25,19,.36)';
-      ctx.lineWidth = Math.max(2, width * .004);
-    }
-    for (const t of [.22, .45, .72]) {
-      const y = apexY + (horizon - apexY) * t;
-      ctx.strokeStyle = 'rgba(7,27,19,.30)';
-      ctx.lineWidth = 2.2;
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
-      ctx.strokeStyle = 'rgba(197,212,181,.060)';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(0, y + 2); ctx.lineTo(width, y + 2); ctx.stroke();
-    }
 
-    // A quiet limestone floor gives the game board a believable place to rest.
+    // Real greenhouse depth instead of rows of artificial diagonal stripes.
+    const mullions = [.08, .32, .68, .92];
+    ctx.lineCap = 'butt';
+    for (const fraction of mullions) {
+      const x = width * fraction + parallax * (fraction < .5 ? -.35 : .35);
+      ctx.strokeStyle = 'rgba(14,31,23,.25)';
+      ctx.lineWidth = Math.max(2, width * .005);
+      ctx.beginPath(); ctx.moveTo(x, height * .11); ctx.lineTo(x, horizon); ctx.stroke();
+      ctx.strokeStyle = 'rgba(205,215,186,.075)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x + 2, height * .11); ctx.lineTo(x + 2, horizon); ctx.stroke();
+    }
+    const ridge = { x: width * .5 + parallax, y: height * .065 };
+    ctx.strokeStyle = 'rgba(17,35,27,.27)';
+    ctx.lineWidth = Math.max(2.5, width * .006);
+    ctx.beginPath();
+    ctx.moveTo(-width * .06, height * .26);
+    ctx.lineTo(ridge.x, ridge.y);
+    ctx.lineTo(width * 1.06, height * .26);
+    ctx.stroke();
+
     const floor = ctx.createLinearGradient(0, horizon, 0, height);
-    floor.addColorStop(0, 'rgba(65,78,61,.20)');
-    floor.addColorStop(.5, 'rgba(36,48,38,.28)');
-    floor.addColorStop(1, 'rgba(14,29,22,.72)');
+    floor.addColorStop(0, 'rgba(82,93,75,.20)');
+    floor.addColorStop(1, 'rgba(12,28,21,.63)');
     ctx.fillStyle = floor;
     ctx.fillRect(0, horizon, width, height - horizon);
+    ctx.strokeStyle = 'rgba(192,198,166,.045)';
     ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(176,187,154,.060)';
-    for (let i = -4; i <= 4; i += 1) {
-      const baseX = width * (.5 + i * .26);
-      ctx.beginPath();
-      ctx.moveTo(apexX + i * width * .032, horizon);
-      ctx.lineTo(baseX, height + 24);
-      ctx.stroke();
-    }
-    for (const t of [.18, .37, .62, .88]) {
-      const y = horizon + (height - horizon) * t * t;
+    for (const fraction of [.31, .61, .87]) {
+      const y = horizon + (height - horizon) * fraction;
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
     }
 
-    // Same world-space key as the 3D shader: rotate skylight and cast together.
     const key = keyOnScreen(this.renderer.cameraRotation || 0);
-    const lightX = width * clamp(.50 + key.x * .42, .21, .79);
-    const castX = -key.x * width * .28;
-    const shaft = ctx.createLinearGradient(lightX, 0, lightX + castX, height * .72);
-    shaft.addColorStop(0, tint(theme.beam, .072));
-    shaft.addColorStop(.52, tint(theme.beam, .018));
+    const lightX = width * clamp(.50 + key.x * .40, .23, .77);
+    const shaft = ctx.createLinearGradient(lightX, 0, lightX - key.x * width * .22, height * .75);
+    shaft.addColorStop(0, tint(theme.beam, .065));
     shaft.addColorStop(1, tint(theme.beam, 0));
     ctx.fillStyle = shaft;
     ctx.beginPath();
     ctx.moveTo(lightX - width * .13, 0);
     ctx.lineTo(lightX + width * .13, 0);
-    ctx.lineTo(lightX + castX + width * .22, height * .74);
-    ctx.lineTo(lightX + castX - width * .22, height * .74);
+    ctx.lineTo(lightX - key.x * width * .14 + width * .24, height * .75);
+    ctx.lineTo(lightX - key.x * width * .14 - width * .24, height * .75);
     ctx.closePath();
     ctx.fill();
-    ctx.restore();
   }
 
   drawPlanterShadow(ctx, level, mode) {
@@ -507,37 +483,8 @@ export class LivingGreenhouseLayer {
       ctx.fill();
     }
 
-    if (!ball.sunk && !ball.inCup) {
-      const ground = Number.isFinite(ball.groundZ) ? ball.groundZ : (field?.heightAt?.(ball.x, ball.y) || 0);
-      const steady = speed < 8 && !ball.airborne;
-      const visibility = aim?.active ? 0 : steady ? .46 : .13;
-      const cueRadius = 35;
-      // Keep the subtle locator only for a resting/tiny marble. The aim
-      // compass and moving physical shadow already communicate its position.
-      if (!aim?.active && (steady || 22 * (this.renderer.scale || 1) < 10)) {
-      this.traceGroundRing(ctx, field, ball.x, ball.y, cueRadius, ground, 1.1, 32);
-      ctx.strokeStyle = `rgba(2,12,7,${visibility * .72})`;
-      ctx.lineWidth = 3.2;
-      ctx.stroke();
-      this.traceGroundRing(ctx, field, ball.x, ball.y, cueRadius, ground, 1.35, 32);
-      ctx.setLineDash([]);
-      ctx.lineDashOffset = 0;
-      ctx.strokeStyle = tint(theme.accent, visibility);
-      ctx.lineWidth = steady ? 1.15 : .75;
-      ctx.stroke();
-      ctx.setLineDash([]);
-      }
-
-      const ballZ = Number.isFinite(ball.z) ? ball.z : ground + 22;
-      const center = this.renderer.worldToScreen(ball.x, ball.y, ballZ);
-      const screenRadius = clamp(22 * (this.renderer.scale || 1), 5.5, 22);
-      ctx.globalCompositeOperation = 'screen';
-      ctx.strokeStyle = `rgba(242,255,247,${.28 + visibility * .34})`;
-      ctx.lineWidth = 1.15;
-      ctx.beginPath();
-      ctx.arc(center.x, center.y, screenRadius + 1.25, Math.PI * 1.03, Math.PI * 1.63);
-      ctx.stroke();
-    }
+    // The contact shadow is the only locator at rest; the aiming dial
+    // remains visible only while interacting. No decorative ground ring.
     ctx.restore();
   }
 
