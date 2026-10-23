@@ -170,7 +170,7 @@ function renderLobby(){
  characterMarkup(decorativeGuests[index%decorativeGuests.length],'lobby-portrait')+'<strong>'+esc(p.name)+'</strong>'+
  (p.id===state.host?'<br><small>Ведущий</small>':'')+
  (canKick&&p.id!==me?.id?'<button type="button" class="lobby-kick" data-action="kick-player" data-player="'+esc(p.id)+'">Исключить</button>':'')+
- '</div>').join('')+'</div>'
+ '</div>').join('')+'</div>'+
  '<p class="muted">'+all.length+' из 6 игроков · старт от двух</p>'+
  (host?'<button type="button" class="primary" data-action="start" '+(all.length<2?'disabled':'')+'>Начать игру</button>':'<p>Начало — у создателя комнаты.</p>')+
  '<button type="button" data-action="leave">Покинуть комнату</button>'+
