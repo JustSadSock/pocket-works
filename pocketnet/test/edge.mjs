@@ -289,7 +289,8 @@ try{
   blockiesRestoredHost.send('leave_room');
   await blockiesPartner.next('presence',m=>m.roomId===stableId&&m.players.every(p=>p.id!==hostID));
   blockiesPartner.send('leave_room');
-  await blockiesPartner.next('room_closed');
+  await sleep(75);
+  assert.equal((await health()).rooms,0,'explicit departure of all Blockies members closes room');
   console.log('PASS: Blockies v4 live socket failover, host pause, room and board preservation, same-token reconnect');
 }finally{
   if(blockiesHost)await close(blockiesHost);
