@@ -263,6 +263,25 @@ const module: PocketModule<State>={
      return {state,events:[{type:'submit_pending',to:id,payload:{round:state.round}}]};
     }
    }
+   // Resume only the validated, ordered prefix of an existing final revision.
+   // An unknown or replaced revision safely restarts from part zero.
+   if(a.type==='submit_resume'&&state.phase==='drawing'&&isMember){
+    const item=state.assignments[id];
+    const assembly=state.draftAssemblies?.[id];
+    const valid=!!item&&item.strokes===null&&a.round===state.round&&
+      a.art===item.art&&a.variation===item.variation&&
+      typeof a.revision==='string'&&/^r[a-z0-9-]{1,30}$/.test(a.revision)&&
+      typeof a.checksum==='string'&&/^[0-9a-f]{8}$/.test(a.checksum)&&
+      Number.isInteger(a.parts)&&a.parts>0&&a.parts<=160;
+    if(!valid)return {state,events:notice(id,'Невозможно восстановить эту отправку.')};
+    (state.pendingFinals||={})[id]=now();
+    const next=assembly?.kind==='submit_chunk'&&assembly.revision===a.revision&&
+      assembly.checksum===a.checksum&&assembly.parts===a.parts?assembly.next:0;
+    return {state,events:[{type:'submit_resume_state',to:id,payload:{
+      round:state.round,art:item.art,variation:item.variation,revision:a.revision,
+      checksum:a.checksum,parts:a.parts,next
+    }}]};
+   }
    // Preview and voting advance at their normal deadlines. During drawing,
    // the timer expires at precisely 0:00, but buffered network chunks must
    // still have time to complete. Do not render voting before that window.
