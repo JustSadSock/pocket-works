@@ -27,7 +27,7 @@ function settingsFrom(raw,previous=DEFAULTS) {
 }
 function initial(player,payload){
  return {schema:1,revision:0,phase:'lobby',host:player.id,players:entries([player]),
-   settings:settingsFrom(payload?.settings||{}),round:0,total:0,issue:0,sheets:[],submitted:{},receipts:{},message:''};
+   settings:settingsFrom(payload?.settings||{}),round:0,total:0,issue:0,sheets:[],submitted:{},receipts:{},paused:false,bannedIds:[],bannedAccounts:[],claim:null,hostOfflineSince:0,hostVotes:{},message:''};
 }
 function events(){return [{type:'state'}];}
 function notice(to,message){return [{type:'notice',to,payload:message}];}
@@ -48,16 +48,19 @@ function begin(s){
     fragments:[]};
  });
  s.total=resolveQuestions(opts,s.sheets[0].set).length;
- s.issue=(s.issue||0)+1;s.round=0;s.submitted={};s.receipts={};s.phase='writing';s.message='';s.revision++;
+ s.issue=(s.issue||0)+1;s.round=0;s.submitted={};s.receipts={};s.phase='writing';s.paused=false;s.claim=null;s.hostVotes={};s.hostOfflineSince=0;s.message='';s.revision++;
  return null;
 }
-function viewForPlayer({state:s,player,players}){
+function viewForPlayer({state:s,player,players,onlineIds}){
  const p=s.players.find(x=>x.id===player.id);
- const connected=new Set(players.map(x=>x.id));
+ const connected=new Set(Array.isArray(onlineIds)?onlineIds:players.map(x=>x.id));
  const common={protocol:1,revision:s.revision,phase:s.phase,host:s.host,
-   players:s.players.map(x=>({id:x.id,name:clean(x.name,32)||'Гравець',submitted:Boolean(s.submitted[x.id]),departed:!connected.has(x.id),verified:x.verified===true&&typeof x.accountId==='string',accountId:x.verified===true&&typeof x.accountId==='string'?x.accountId:null,avatar:x.verified===true&&typeof x.avatar==='string'?clean(x.avatar,32):null})),
+   players:s.players.map(x=>({id:x.id,name:clean(x.name,32)||'Гравець',submitted:Boolean(s.submitted[x.id]),departed:!connected.has(x.id),excluded:(s.bannedIds||[]).includes(x.id),verified:x.verified===true&&typeof x.accountId==='string',accountId:x.verified===true&&typeof x.accountId==='string'?x.accountId:null,avatar:x.verified===true&&typeof x.avatar==='string'?clean(x.avatar,32):null})),
    settings:s.settings,questionSets:questionOptions(),genres:genreOptions(),
-   round:s.round,total:s.total,issue:s.issue||0,message:s.message||'',lastReceipt:p?(s.receipts?.[p.id]||null):null};
+   round:s.round,total:s.total,issue:s.issue||0,message:s.message||'',paused:!!s.paused,
+ hostOfflineSince:s.hostOfflineSince||0,hostVotes:s.hostVotes||{},
+ claim:s.host===player.id&&s.claim?{seatId:s.claim.seatId,code:s.claim.code,expiresAt:s.claim.expiresAt}:null,
+ message:s.message||'',lastReceipt:p?(s.receipts?.[p.id]||null):null};
  if(!p) return common;
  if(s.phase==='writing'){
   const pi=s.players.findIndex(x=>x.id===p.id);
@@ -70,19 +73,20 @@ function viewForPlayer({state:s,player,players}){
     question:resolveQuestions(s.settings,sheet.set)[s.round],nextQuestion:s.settings.showNextQuestion===false?'':(resolveQuestions(s.settings,sheet.set)[s.round+1]?.prompt||''),tail:previous?.tail||''},waiting:Boolean(s.submitted[p.id])};
  }
  if(s.phase==='finished')return {...common,stories:s.sheets.map(sh=>({
-   id:sh.id,starter:s.players.find(x=>x.id===sh.starter)?.name||'Автор',
+   id:sh.id,starter:sh.starterName||s.players.find(x=>x.id===sh.starter)?.name||'Автор',
    setLabel:BANK[sh.set]?.label||'Свій набір',
    genre:GENRES.find(x=>x.id===sh.genre)?.label||s.settings.customGenre||'Свій жанр',
    heroGender:sh.heroGender,
    // Assemble the whole story client-side from fragments to avoid doubling wire bytes.
-   fragments:sh.fragments.map((f,i)=>({question:resolveQuestions(s.settings,sh.set)[i]?.prompt||'',answer:f.answer,
-      author:s.players.find(x=>x.id===f.by)?.name||'Автор'}))
+   fragments:sh.fragments.map((f,i)=>({question:resolveQuestions(s.settings,sh.set)[f.questionIndex??i]?.prompt||'',answer:f.answer,skipped:f.skipped===true,
+      author:f.authorName||s.players.find(x=>x.id===f.by)?.name||'Автор'}))
  }))};
  return common;
 }
 function submit(s,player,v){
  if(v.requestId!==undefined&&(!/^[a-zA-Z0-9_-]{12,96}$/.test(v.requestId)))return 'Некоректний ідентифікатор відправки.';
  if(s.phase!=='writing'||s.submitted[player.id])return 'Відповідь уже прийнято або раунд завершено.';
+ if(s.paused)return 'Партія на паузі. Ведучий може продовжити її.';
  if(v.round!==s.round)return 'Раунд змінився. Онови сторінку.';
  const pi=s.players.findIndex(p=>p.id===player.id);if(pi<0)return 'Твоє місце не знайдено.';
  const si=(pi-s.round%s.players.length+s.players.length)%s.players.length;
@@ -112,10 +116,31 @@ function submit(s,player,v){
 const module={
  protocolVersion:1,
  createRoom({player,payload}){return {state:initial(player,payload)};},
- onJoin({state:s,players}){
+ onJoin({state:s,players,player,payload}){
+  const entrant=player||players.at(-1);
+  if((s.bannedIds||[]).includes(entrant.id)||(entrant.accountId&&(s.bannedAccounts||[]).includes(entrant.accountId)))throw Error('room_kicked');
   if(s.phase!=='lobby'){
+   const claim=typeof payload?.claimCode==='string'?payload.claimCode.trim().toUpperCase():'';
+   if(claim){
+    if(!s.claim||s.claim.code!==claim||s.claim.expiresAt<Date.now())throw Error('invalid_replacement_code');
+    const index=s.players.findIndex(p=>p.id===s.claim.seatId);
+    if(index<0||s.players.some(p=>p.id===entrant.id))throw Error('invalid_replacement_code');
+    const old=s.players[index],assigned=s.players[index]={...entries([entrant])[0],originalSeat:old.originalSeat||old.id};
+    s.bannedIds||=[];if(!s.bannedIds.includes(old.id))s.bannedIds.push(old.id);
+    if(old.accountId){s.bannedAccounts||=[];if(!s.bannedAccounts.includes(old.accountId))s.bannedAccounts.push(old.accountId)}
+    if(s.submitted[old.id])s.submitted[assigned.id]=true;
+    delete s.submitted[old.id];
+    // Preserve historical attribution by stamping authors before changing IDs.
+    for(const sh of s.sheets){
+      if(sh.starter===old.id)sh.starterName=sh.starterName||old.name;
+      for(const fragment of sh.fragments)if(fragment.by===old.id)fragment.authorName=fragment.authorName||old.name;
+    }
+    if(s.host===old.id)s.host=entrant.id;
+    s.claim=null;s.hostVotes={};s.revision++;return {state:s,events:events()};
+   }
+
    // The same durable player identity can reclaim a deliberately vacated seat.
-   const seat=s.players.find(p=>p.id===players.at(-1)?.id);
+   const seat=s.players.find(p=>p.id===entrant.id);
    if(!seat)throw Error('match_in_progress');
    const current=players.find(p=>p.id===seat.id);
    if(current){seat.name=clean(current.name,24)||seat.name;seat.avatar=current.avatar||seat.avatar;}
@@ -124,21 +149,72 @@ const module={
   if(players.length>s.settings.maxPlayers)throw Error('room_full');
   s.players=entries(players);s.revision++;return {state:s,events:events()};
  },
- onLeave({state:s,players}){
+ onLeave({state:s,players,player}){
   if(s.phase==='lobby'){
    s.players=entries(players);
    s.host=s.players.some(p=>p.id===s.host)?s.host:s.players[0]?.id||'';
   }else{
    // Never reset writing or discard a finished issue when someone exits.
    // Permanent seat IDs keep the sheet rotation stable after departures.
+   if(player?.id===s.host&&!s.hostOfflineSince)s.hostOfflineSince=Date.now();
    s.message='Учасник від’єднався. Його місце та рукописи збережено.';
   }
   s.revision++;return {state:s,events:events()};
  },
  viewForPlayer,
- onMessage({state:s,player,payload}){
+ onPresence({state:s,player,online,onlineIds,now}){
+  if(s.phase==='lobby'||s.phase==='finished')return {state:s,events:events()};
+  if(player.id===s.host){
+   if(online){s.hostOfflineSince=0;s.hostVotes={};}
+   else if(!s.hostOfflineSince&&!onlineIds?.includes(s.host))s.hostOfflineSince=now||Date.now();
+  }
+  s.revision++;return {state:s,events:events()};
+ },
+ onMessage({state:s,player,payload,connectedIds,now}){
   const v=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
   if(v.type==='sync')return {state:s,events:events()};
+  const online=new Set(Array.isArray(connectedIds)?connectedIds:s.players.map(x=>x.id)),clock=now||Date.now();
+  const host=player.id===s.host,seatId=typeof v.seatId==='string'?v.seatId:'';
+  const target=s.players.find(p=>p.id===seatId);
+  if(v.type==='skip_slot'&&host&&s.phase==='writing'&&!s.paused&&target&&!online.has(target.id)&&!s.submitted[target.id]){
+    const pi=s.players.findIndex(p=>p.id===target.id),si=(pi-s.round%s.players.length+s.players.length)%s.players.length;
+    const paper=s.sheets[si];
+    if(paper.fragments.length)delete paper.fragments[paper.fragments.length-1].tail;
+    paper.fragments.push({by:target.id,answer:'[Фрагмент пропущено: автор не завершив свою частину.]',tail:'',skipped:true,questionIndex:s.round});
+    s.submitted[target.id]=true;
+    if(s.players.every(p=>s.submitted[p.id])){s.round++;s.submitted={};if(s.round>=s.total){s.phase='finished';s.message='Випуск готовий із позначеними пропусками.'}}
+    s.revision++;return {state:s,events:events()};
+  }
+  if(v.type==='pause'&&host&&s.phase==='writing'&&!s.paused){s.paused=true;s.message='Партію призупинено ведучим.';s.revision++;return {state:s,events:events()}}
+  if(v.type==='unpause'&&host&&s.phase==='writing'&&s.paused){s.paused=false;s.message='Партію продовжено.';s.revision++;return {state:s,events:events()}}
+  if(v.type==='transfer_host'&&host&&target&&online.has(target.id)&&!(s.bannedIds||[]).includes(target.id)){
+    s.host=target.id;s.hostOfflineSince=0;s.hostVotes={};s.revision++;return {state:s,events:events()};
+  }
+  if(v.type==='kick'&&host&&target&&target.id!==player.id){
+    if(s.phase==='lobby')s.players=s.players.filter(p=>p.id!==target.id);
+    if(!s.bannedIds)s.bannedIds=[];
+    if(!s.bannedIds.includes(target.id))s.bannedIds.push(target.id);
+    if(target.accountId){s.bannedAccounts||=[];if(!s.bannedAccounts.includes(target.accountId))s.bannedAccounts.push(target.accountId)}
+    if(s.claim?.seatId===target.id)s.claim=null;
+    s.message='Учасника виключено. Його фрагменти залишилися в рукописах.';
+    s.revision++;return {state:s,events:[...events(),{type:'player_kicked',to:target.id}]};
+  }
+  if(v.type==='open_seat'&&host&&s.phase==='writing'&&target&&target.id!==player.id&&!online.has(target.id)){
+    s.claim={seatId:target.id,code:crypto.randomUUID().replace(/-/g,'').slice(0,12).toUpperCase(),expiresAt:clock+10*60_000};
+    s.revision++;return {state:s,events:events()};
+  }
+  if(v.type==='close_seat'&&host){s.claim=null;s.revision++;return {state:s,events:events()}}
+  if(v.type==='vote_host'&&s.phase==='writing'&&!host&&s.hostOfflineSince>0&&clock-s.hostOfflineSince>=5*60_000&&!online.has(s.host)&&
+    target&&online.has(target.id)&&!(s.bannedIds||[]).includes(target.id)&&online.has(player.id)){
+    s.hostVotes||={};
+    s.hostVotes[player.id]=target.id;
+    const eligible=s.players.filter(p=>online.has(p.id)&&p.id!==s.host&&!(s.bannedIds||[]).includes(p.id));
+    const votes=eligible.filter(p=>s.hostVotes[p.id]===target.id).length;
+    if(votes>eligible.length/2&&eligible.length>0){s.host=target.id;s.hostOfflineSince=0;s.hostVotes={};s.claim=null;s.message='Нового ведучого обрано голосуванням.'}
+    s.revision++;return {state:s,events:events()};
+  }
+  if(['pause','unpause','transfer_host','kick','open_seat','close_seat','vote_host','skip_slot'].includes(v.type))
+    return {state:s,events:notice(player.id,'Цю дію зараз не дозволено.')};
   let error=null;
   if(v.type==='settings'&&s.phase==='lobby'&&player.id===s.host){
     const next=settingsFrom(v.settings,s.settings);
