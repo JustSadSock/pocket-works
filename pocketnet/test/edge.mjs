@@ -236,3 +236,63 @@ try{
 } finally {
  if(x)await close(x);if(y)await close(y);if(z)await close(z);
 }
+
+
+/* Blockies v4: the same real Worker must elect the next host from live sockets,
+   preserve the serialized playfield and let the old host reclaim its own seat. */
+const blockiesHostToken=await session('Blockies host');
+const blockiesPartnerToken=await session('Blockies partner');
+let blockiesHost,blockiesPartner,blockiesRestoredHost;
+try{
+  blockiesHost=await channel(blockiesHostToken);
+  blockiesPartner=await channel(blockiesPartnerToken);
+  const hostID=(await blockiesHost.next('authenticated')).player.id;
+  const partnerID=(await blockiesPartner.next('authenticated')).player.id;
+  blockiesHost.send('create_room',{gameId:'blockies'});
+  const initialBlockies=await blockiesHost.next('room_joined');
+  assert.equal(initialBlockies.version,'v4');
+  const stableId=initialBlockies.roomId;
+  blockiesPartner.send('join_room',{roomId:stableId});
+  await blockiesPartner.next('room_joined');
+  blockiesHost.send('game_message',{payload:{type:'ready'}});
+  await blockiesPartner.next('game_event',m=>m.event?.type==='state'&&m.event.payload.players?.some(p=>p.id===hostID&&p.ready));
+  blockiesPartner.send('game_message',{payload:{type:'ready'}});
+  await blockiesPartner.next('game_event',m=>m.event?.type==='state'&&m.event.payload.started===true);
+  blockiesHost.send('game_message',{payload:{type:'input',input:{action:'hardDrop'}}});
+  const beforeDisconnect=await blockiesPartner.next('game_event',m=>
+    m.event?.type==='state'&&m.event.payload.engine?.board?.flat().some(Boolean));
+  const savedBoard=beforeDisconnect.event.payload.engine.board;
+  const savedRound=beforeDisconnect.event.payload.round;
+  const savedScore=beforeDisconnect.event.payload.engine.sharedStats.score;
+  await close(blockiesHost);
+  blockiesPartner.send('game_message',{payload:{type:'pulse'}});
+  const inherited=await blockiesPartner.next('game_event',m=>
+    m.event?.type==='state'&&m.event.payload.hostId===partnerID);
+  assert.equal(inherited.event.payload.round,savedRound);
+  assert.deepEqual(inherited.event.payload.engine.board,savedBoard);
+  assert.equal(inherited.event.payload.engine.sharedStats.score,savedScore);
+  blockiesPartner.send('game_message',{payload:{type:'pause'}});
+  const pausedBlockies=await blockiesPartner.next('game_event',m=>
+    m.event?.type==='state'&&m.event.payload.paused===true);
+  assert.equal(pausedBlockies.event.payload.hostId,partnerID);
+  blockiesPartner.send('game_message',{payload:{type:'pause'}});
+  await blockiesPartner.next('game_event',m=>
+    m.event?.type==='state'&&m.event.payload.paused===false);
+  blockiesRestoredHost=await channel(blockiesHostToken);
+  assert.equal((await blockiesRestoredHost.next('authenticated')).player.id,hostID);
+  blockiesRestoredHost.send('join_room',{roomId:stableId});
+  const restoredBlockies=await blockiesRestoredHost.next('room_joined');
+  assert.equal(restoredBlockies.state.round,savedRound);
+  assert.equal(restoredBlockies.state.hostId,partnerID);
+  assert.deepEqual(restoredBlockies.state.engine.board,savedBoard);
+  assert.equal(restoredBlockies.state.players.find(p=>p.id===hostID)?.left,false);
+  blockiesRestoredHost.send('leave_room');
+  await blockiesPartner.next('presence',m=>m.roomId===stableId&&m.players.every(p=>p.id!==hostID));
+  blockiesPartner.send('leave_room');
+  await blockiesPartner.next('room_closed');
+  console.log('PASS: Blockies v4 live socket failover, host pause, room and board preservation, same-token reconnect');
+}finally{
+  if(blockiesHost)await close(blockiesHost);
+  if(blockiesPartner)await close(blockiesPartner);
+  if(blockiesRestoredHost)await close(blockiesRestoredHost);
+}
