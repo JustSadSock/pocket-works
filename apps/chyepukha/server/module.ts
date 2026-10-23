@@ -52,7 +52,7 @@ function settle(s){
    s.submitted[p.id]=true;
   }
   if(!s.players.every(p=>s.submitted[p.id]))return;
-  s.round++;s.submitted={};s.receipts={};
+  s.round++;s.submitted={}; // retain last receipts until the author submits again
   if(s.round>=s.total){s.phase='finished';s.message='Усі історії розкриті.';return;}
  }
 }
@@ -73,7 +73,7 @@ function begin(s){
  return null;
 }
 function viewForPlayer({state:s,player,players}){
- const p=s.players.find(x=>x.id===player.id);
+ const p=s.players.find(x=>x.id===player.id&&!x.vacant);
  const connected=new Set(s.onlineIds||players.map(x=>x.id));
  const waitlist=(s.waitlist||[]).map(x=>({id:x.id,name:x.name}));
  const common={protocol:1,revision:s.revision,phase:s.phase,host:s.host,paused:!!s.paused,hostOfflineSince:s.hostOfflineSince||0,
@@ -155,7 +155,7 @@ const module={
   }else{
    s.waitlist=(s.waitlist||[]).filter(p=>players.some(x=>x.id===p.id));
    const departed=s.players.find(p=>p.id===player.id);
-   if(departed)departed.vacant=true;
+   if(departed){departed.vacant=true;departed.autoSkip=false;}
    if(player.id===s.host&&!s.hostOfflineSince)s.hostOfflineSince=Date.now();
    // Never reset writing or discard a finished issue when someone exits.
    // Permanent seat IDs keep the sheet rotation stable after departures.
@@ -227,6 +227,7 @@ const module={
       s.authors[previousId] ||=seat.name;
       seat.id=candidate.id;seat.name=candidate.name;seat.vacant=false;seat.autoSkip=false;
       s.authors[candidate.id]=candidate.name;
+      if(s.submitted[previousId])s.submitted[candidate.id]=true;
       delete s.submitted[previousId];delete s.receipts[previousId];
       s.waitlist=s.waitlist.filter(p=>p.id!==candidate.id);
       s.message='Новий автор продовжить незакінчений аркуш.';s.revision++;
