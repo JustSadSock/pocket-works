@@ -109,7 +109,8 @@
     {
       "id": "blender",
       "availability": "unavailable",
-      "reason": "No local Blender assets required for a two-dimensional side-view proof; could use a licensed future asset pipeline if changed."
+      "reason": "No local Blender assets required for a two-dimensional side-view proof; could use a licensed future asset pipeline if changed.",
+      "fallback": "Use the existing original Canvas 2D geometry for the robot and factory instead of external Blender exports in this first playable stage."
     }
   ],
   "assets": [
@@ -138,7 +139,7 @@
     {
       "id": "identity",
       "tool": "svg-geometry",
-      "source": "icons/icon.svg",
+      "source": "assets/icon-master.svg",
       "output": "icons/icon.svg",
       "role": "Pocket Works launcher mark of a single amber pushbutton.",
       "acceptance": "Readable at 48×48 and unique from other apps.",
@@ -159,6 +160,8 @@
   "verification": {
     "states": [
       "initial",
+      "action",
+      "settled",
       "active-motor",
       "jump",
       "reverse",

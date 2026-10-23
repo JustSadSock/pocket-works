@@ -46,6 +46,11 @@
         "slug": "moss-marble",
         "spatialDifference": "Mechanical rail and robot replace miniature greens and putting camera.",
         "interactionDifference": "Motor and jump cooperate on landing control, rather than ball aim and momentum-only golf."
+      },
+      {
+        "slug": "picto",
+        "spatialDifference": "НЕ ЖМИ! uses a full-bleed continuous side-scrolling mechanical course instead of Picto's static composition and symbolic story slots.",
+        "interactionDifference": "Mechanical inputs alter a shared robot's velocity in the immediate physical simulation, rather than submitting tiles in turn-based rounds."
       }
     ]
   },
