@@ -153,6 +153,9 @@ function attemptSubmission(force=false){
  clearTimeout(draftDelay);
  const controller=new AbortController();activeSubmitTransfer=controller;
  try{
+  // Declare the immutable final revision before its chunks, so the server
+  // cannot promote an older autosave while the upload is still underway.
+  net.sendGame({type:'submit_begin',round:p.round,art:p.art,variation:p.variation});
   const result=sendPaintingPaced(packet=>net.sendGame(packet),
    {type:'submit_chunk',round:p.round,art:p.art,variation:p.variation,strokes:p.strokes},
    {signal:controller.signal,onProgress:(sent,total)=>{
@@ -886,8 +889,8 @@ function renderView(){
  }
  previousVisualPhase=phaseToken;
  if(view.phase==='drawing'&&view.done?.includes(me?.id)){
-   if(view.mine)confirmSubmission(view.mine.art,view.round);
-   if(editor)editor.clearDraft();
+   if(view.mine&&!view.incompleteSubmissions?.includes(me?.id))confirmSubmission(view.mine.art,view.round);
+   if(editor&&!view.incompleteSubmissions?.includes(me?.id))editor.clearDraft();
  }
  const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
@@ -1018,7 +1021,11 @@ async function connect(mode){
        serverClock.observeState(event.payload?.serverNow);
        view=event.payload;
        if(pendingVote&&(view.phase!=='voting'||voteToken(view)!==pendingVote.token||view.voted?.includes(me?.id))){pendingVote=null;persistVote()}
-       if(view?.mine&&view.done?.includes(me?.id))confirmSubmission(view.mine.art,view.round);
+       if(view?.mine&&view.done?.includes(me?.id)&&!view.incompleteSubmissions?.includes(me?.id))confirmSubmission(view.mine.art,view.round);
+       if(view?.incompleteSubmissions?.includes(me?.id)&&pendingSubmit?.round===view.round){
+         draftIndicator('Сервер не получил финальный рисунок · полная версия сохранена на устройстве');
+         notify('Не все мазки дошли до сервера. Полная работа сохранена на устройстве.');
+       }
        renderView();
        renderPauseOverlay();
        if(view?.phase==='drawing'&&!view.done?.includes(me?.id)&&
