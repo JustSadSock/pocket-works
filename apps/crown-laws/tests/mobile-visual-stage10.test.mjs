@@ -42,7 +42,7 @@ test("mobile decrees show a horizontally arranged seal and readable title withou
  assert.match(css,/flex:0 0 36px/);
  assert.match(css,/\.law-card__title\s*\{/);
  assert.match(css,/-webkit-line-clamp:2/);
- assert.match(css,/overflow-wrap:anywhere/);
+ assert.match(css,/word-break:normal/);
  assert.match(css,/\.hand-panel \.detail-card/);
 });
 
