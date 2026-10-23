@@ -1,4 +1,4 @@
-// Real Picto client + authoritative v5 rules in two browsers over a local PocketNet wire harness.
+// Real Picto clients + v6 and pinned legacy-v5 rules over a local PocketNet wire harness.
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
@@ -6,13 +6,14 @@ import {resolve,join,extname,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {chromium} from '@playwright/test';
 import rules from '../server/module.ts';
+import legacyRules from '../../../pocketnet/module-versions/picto/v5.ts';
 
 const root=resolve(fileURLToPath(new URL('../../../',import.meta.url)));
 const mime={'.html':'text/html','.css':'text/css','.js':'text/javascript','.mjs':'text/javascript',
  '.ts':'text/javascript','.json':'application/json','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const sockets=new Map(),sessions=new Map();
 const roomId='01234567-0000-4000-8000-000000000001';
-let room=null,counter=0;
+let room=null,counter=0,activeRules=rules,activeVersion='v6';
 const queue=(s,message)=>{if(s)s.messages.push(message)};
 function emit(events=[]){
  for(const event of events)for(const socket of sockets.values())
@@ -28,8 +29,8 @@ function onWire(socket,msg){
  const player=socket.player;
  if(!player)return queue(socket,{type:'error',code:'auth_required'});
  if(msg.type==='create_room'){
-  room={id:roomId,players:[player],state:rules.createRoom({player}).state};
-  socket.roomId=roomId;queue(socket,{type:'room_joined',roomId,gameId:'picto',version:'v5'});
+  room={id:roomId,players:[player],state:activeRules.createRoom({player}).state};
+  socket.roomId=roomId;queue(socket,{type:'room_joined',roomId,gameId:'picto',version:activeVersion});
   return;
  }
  if(msg.type==='join_room'){
@@ -38,21 +39,21 @@ function onWire(socket,msg){
   socket.roomId=roomId;
   if(!room.players.some(p=>p.id===player.id)){
    const players=[...room.players,player];
-   const next=rules.onJoin({state:room.state,player,players});
+   const next=activeRules.onJoin({state:room.state,player,players});
    room.state=next.state;room.players=players;emit(next.events);
   }
-  queue(socket,{type:'room_joined',roomId,gameId:'picto',version:'v5'});
+  queue(socket,{type:'room_joined',roomId,gameId:'picto',version:activeVersion});
   for(const other of sockets.values())if(other.roomId===roomId)queue(other,{type:'presence',roomId,players:room.players});
   return;
  }
  if(!room||socket.roomId!==roomId)return queue(socket,{type:'error',code:'not_in_room'});
  if(msg.type==='game_message'){
-  const result=rules.onMessage({state:room.state,player,players:room.players,payload:msg.payload});
+  const result=activeRules.onMessage({state:room.state,player,players:room.players,payload:msg.payload});
   room.state=result.state;emit(result.events);return;
  }
  if(msg.type==='leave_room'){
   room.players=room.players.filter(p=>p.id!==player.id);
-  const result=rules.onLeave({state:room.state,player,players:room.players});
+  const result=activeRules.onLeave({state:room.state,player,players:room.players});
   room.state=result.state;socket.roomId=null;emit(result.events);
  }
 }
@@ -96,6 +97,7 @@ const initSocket=()=>{
   static OPEN=1;
   constructor(){
    this.sid='socket-'+(++counter)+'-'+Math.random();
+   window.__pictoQaSocket=this;
    this.readyState=0;this.queue=Promise.resolve();this.polling=false;
    queueMicrotask(()=>{this.readyState=1;this.onopen?.();});
    this.timer=setInterval(()=>this.poll(),85);
@@ -127,7 +129,10 @@ async function open(name,viewport,skew=0){
  await page.locator('#playerName').fill(name);
  return {context,page};
 }
-const shot=async(page,file)=>{if(output)await page.screenshot({path:join(output,file)});};
+const shot=async(page,file)=>{if(output)await page.screenshot({path:join(output,file),fullPage:true});};
+const qaSend=(page,payload)=>page.evaluate(body=>window.__pictoQaSocket.send(JSON.stringify({wireVersion:1,type:'game_message',payload:body})),payload);
+const syncAll=()=>{for(const p of room.players){const r=activeRules.onMessage({state:room.state,player:p,players:room.players,payload:{type:'sync'}});room.state=r.state;emit(r.events);}};
+const settle=async(predicate,description)=>{for(let n=0;n<70&&!predicate();n++)await new Promise(resolve=>setTimeout(resolve,50));assert.ok(predicate(),description);};
 const clock=async page=>{
  const t=(await page.locator('#timer').innerText()).trim().split(':').map(Number);
  return t[0]*60+t[1];
