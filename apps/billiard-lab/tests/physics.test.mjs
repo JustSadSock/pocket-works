@@ -34,14 +34,14 @@ test('stadium and triangle keep reflected particles inside',()=>{
   const world=sanitizeWorld({shape,origin:{x:450,y:270}});
   const field=initialParticles(512,world.origin);
   for(let frame=0;frame<30;frame++)advance(field,world,25);
-  for(let i=0;i<field.count;i++)assert.ok(inside(shape,field.x[i],field.y[i],.1),shape+' ray '+i+' outside');
+  for(let i=0;i<field.count;i++)assert.ok(inside(shape,field.x[i],field.y[i],-.01),shape+' ray '+i+' outside at '+field.x[i]+','+field.y[i]);
   assert.ok(field.reflections>0);
  }
 });
 test('reflecting obstacle redirects a ray without particle collisions',()=>{
  const world=sanitizeWorld({shape:'rectangle',origin:{x:400,y:270},circles:[{x:500,y:270,r:20}]});
  const result=propagateRay(420,270,1,0,100,world);
- assert.ok(result.dx<0);assert.ok(Math.abs(result.x-460)<.01);
+ assert.ok(result.dx<0);assert.ok(Math.abs(result.x-440)<.01);
  const field=initialParticles(512,{x:400,y:270});
  advance(field,world,100);
  assert.ok(field.dx[0]<0);
@@ -60,7 +60,7 @@ test('wave simulation preserves finite coordinates for thousands of rays',()=>{
  for(let i=0;i<70;i++)advance(field,world,8);
  for(let i=0;i<field.count;i++){
   assert.ok(Number.isFinite(field.x[i])&&Number.isFinite(field.y[i]));
-  assert.ok(inside(world.shape,field.x[i],field.y[i],.2),'ray '+i+' escaped');
+  assert.ok(inside(world.shape,field.x[i],field.y[i],-.01),'ray '+i+' escaped at '+field.x[i]+','+field.y[i]);
  }
  assert.ok(field.reflections>0);
 });
