@@ -172,70 +172,104 @@ export class LivingGreenhouseLayer {
     this.drawGreenhouseFrame(ctx, time, theme);
     // Exhibition motifs and glass droplets live behind the menu, never over active play.
     if (mode === 'menu') this.drawThemeLandmark(ctx, time, theme);
-    this.drawDistantPlants(ctx, time, theme);
+    this.drawDistantPlants(ctx, time, theme, mode);
     if (mode === 'menu' && this.quality > .7) this.drawCondensation(ctx, time);
     this.drawFloorMist(ctx, time, mode, theme);
+    this.drawPlanterShadow(ctx, level, mode);
   }
 
   drawGreenhouseFrame(ctx, time, theme) {
     const { width, height } = this;
-    const px = (this.renderer.parallaxX || 0) * 12;
-    const py = (this.renderer.parallaxY || 0) * 6;
-    const horizon = height * .49;
-    const roofTop = -height * .08;
-    const frame = 'rgba(10,27,19,.66)';
-    const frameLight = 'rgba(148,167,133,.20)';
-
+    const parallax = (this.renderer.parallaxX || 0) * 10;
+    const horizon = height * .52;
+    const apexX = width * .53 + parallax;
+    const apexY = height * .075;
     ctx.save();
-    ctx.translate(px, py);
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = frame;
-    ctx.lineWidth = 8;
-    for (let column = -1; column <= 5; column += 1) {
-      const x = width * (column / 4);
-      ctx.beginPath();
-      ctx.moveTo(x, horizon + height * .18);
-      ctx.quadraticCurveTo(width * .5, roofTop, width - x, horizon + height * .18);
-      ctx.stroke();
-      ctx.strokeStyle = frameLight;
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-      ctx.strokeStyle = frame;
-      ctx.lineWidth = 8;
-    }
 
-    ctx.lineWidth = 7;
-    for (let row = 0; row < 5; row += 1) {
-      const t = row / 4;
-      const y = lerp(height * .03, horizon + height * .17, t * t * .72 + t * .28);
+    // The greenhouse is an architectural room, not a giant ornamental wire dome.
+    // All uprights end at one floor datum and recede toward one vanishing region.
+    const wall = ctx.createLinearGradient(0, 0, 0, horizon);
+    wall.addColorStop(0, 'rgba(12,29,21,.08)');
+    wall.addColorStop(1, 'rgba(7,23,16,.30)');
+    ctx.fillStyle = wall;
+    ctx.fillRect(0, 0, width, horizon);
+    ctx.strokeStyle = 'rgba(9,25,19,.36)';
+    ctx.lineWidth = Math.max(2, width * .004);
+    for (let i = 0; i <= 7; i += 1) {
+      const x = width * i / 7 + parallax * (i < 4 ? -.35 : .35);
       ctx.beginPath();
-      ctx.moveTo(-40, y);
-      ctx.quadraticCurveTo(width * .5, y - (1 - t) * 34, width + 40, y);
+      ctx.moveTo(x, horizon);
+      ctx.lineTo(apexX + (x - apexX) * .42, apexY);
       ctx.stroke();
-      ctx.strokeStyle = frameLight;
+      ctx.strokeStyle = 'rgba(186,198,165,.085)';
+      ctx.lineWidth = .9;
+      ctx.beginPath();
+      ctx.moveTo(x + 2, horizon);
+      ctx.lineTo(apexX + (x - apexX) * .42 + 2, apexY);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(9,25,19,.36)';
+      ctx.lineWidth = Math.max(2, width * .004);
+    }
+    for (const t of [.22, .45, .72]) {
+      const y = apexY + (horizon - apexY) * t;
+      ctx.strokeStyle = 'rgba(7,27,19,.30)';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+      ctx.strokeStyle = 'rgba(197,212,181,.060)';
       ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.strokeStyle = frame;
-      ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.moveTo(0, y + 2); ctx.lineTo(width, y + 2); ctx.stroke();
     }
 
-    ctx.globalCompositeOperation = 'screen';
-    const shaftPulse = this.reducedMotion ? .62 : .56 + Math.sin(time * .22) * .06;
-    for (let index = 0; index < 3; index += 1) {
-      const startX = width * (.66 + index * .1);
-      const spread = width * (.18 + index * .04);
-      const beam = ctx.createLinearGradient(startX, 0, startX - spread, height * .8);
-      beam.addColorStop(0, tint(theme.beam, .10 * shaftPulse));
-      beam.addColorStop(1, tint(theme.beam, 0));
-      ctx.fillStyle = beam;
+    // A quiet limestone floor gives the game board a believable place to rest.
+    const floor = ctx.createLinearGradient(0, horizon, 0, height);
+    floor.addColorStop(0, 'rgba(65,78,61,.20)');
+    floor.addColorStop(.5, 'rgba(36,48,38,.28)');
+    floor.addColorStop(1, 'rgba(14,29,22,.72)');
+    ctx.fillStyle = floor;
+    ctx.fillRect(0, horizon, width, height - horizon);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(176,187,154,.060)';
+    for (let i = -4; i <= 4; i += 1) {
+      const baseX = width * (.5 + i * .26);
       ctx.beginPath();
-      ctx.moveTo(startX - 22, 0);
-      ctx.lineTo(startX + 30, 0);
-      ctx.lineTo(startX - spread + 160, height * .82);
-      ctx.lineTo(startX - spread, height * .82);
-      ctx.closePath();
-      ctx.fill();
+      ctx.moveTo(apexX + i * width * .032, horizon);
+      ctx.lineTo(baseX, height + 24);
+      ctx.stroke();
     }
+    for (const t of [.18, .37, .62, .88]) {
+      const y = horizon + (height - horizon) * t * t;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+    }
+
+    // Illumination is oriented consistently with the existing WebGL key light.
+    const shaft = ctx.createLinearGradient(width * .89, 0, width * .36, height * .70);
+    shaft.addColorStop(0, tint(theme.beam, .085));
+    shaft.addColorStop(.52, tint(theme.beam, .024));
+    shaft.addColorStop(1, tint(theme.beam, 0));
+    ctx.fillStyle = shaft;
+    ctx.beginPath();
+    ctx.moveTo(width * .74, 0);
+    ctx.lineTo(width, 0);
+    ctx.lineTo(width * .76, height * .80);
+    ctx.lineTo(width * .30, height * .80);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawPlanterShadow(ctx, level, mode) {
+    if (!level?.course18 || !Array.isArray(level.outline) || level.outline.length < 3 || !this.renderer.worldToScreen) return;
+    const points = level.outline.map(point => this.renderer.worldToScreen(point.x + 23, point.y + 32, -67));
+    ctx.save();
+    ctx.beginPath();
+    points.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
+    ctx.closePath();
+    ctx.shadowColor = 'rgba(1,8,5,.70)';
+    ctx.shadowBlur = Math.min(34, Math.max(12, (this.renderer.scale || 1) * 38));
+    ctx.shadowOffsetX = 9;
+    ctx.shadowOffsetY = 18;
+    ctx.fillStyle = 'rgba(6,17,11,.44)';
+    ctx.fill();
     ctx.restore();
   }
 
@@ -303,13 +337,16 @@ export class LivingGreenhouseLayer {
     ctx.restore();
   }
 
-  drawDistantPlants(ctx, time, theme) {
+  drawDistantPlants(ctx, time, theme, mode) {
     const { width, height } = this;
     const horizon = height * .48;
     ctx.save();
-    ctx.globalAlpha = .72;
-    for (let index = 0; index < 18; index += 1) {
-      const x = hashNoise(index, 201) * width;
+    ctx.globalAlpha = mode === 'menu' ? .43 : .23;
+    for (let index = 0; index < 12; index += 1) {
+      // Recede to the greenhouse edges, away from the playable silhouette.
+      const x = index % 2
+        ? width * (.79 + hashNoise(index, 201) * .20)
+        : width * (.01 + hashNoise(index, 201) * .20);
       const baseY = horizon + hashNoise(index, 205) * height * .2;
       const scale = .65 + hashNoise(index, 211) * 1.25;
       const sway = this.reducedMotion ? 0 : Math.sin(time * (.22 + hashNoise(index, 213) * .22) + index) * 4 * scale + this.wind * 3;
@@ -642,7 +679,8 @@ export class LivingGreenhouseLayer {
     const { width, height } = this;
     ctx.save();
     for (let index = 0; index < this.vines.length; index += 1) {
-      if ((mode === 'playing' || this.quality < .7) && index % 2) continue;
+      if (mode === 'playing' && (vine.side === 0 || index % 2)) continue;
+      if (this.quality < .7 && index % 2) continue;
       const vine = this.vines[index];
       const originX = vine.side < 0 ? -8 : vine.side > 0 ? width + 8 : vine.x * width;
       const originY = vine.side === 0 ? -12 : height * (.14 + vine.x * .58);
@@ -650,7 +688,7 @@ export class LivingGreenhouseLayer {
       const sway = this.reducedMotion ? 0 : Math.sin(time * .55 + vine.phase) * 9 + this.wind * 7;
       const endX = vine.side === 0 ? originX + sway : originX + direction * width * vine.length;
       const endY = vine.side === 0 ? height * vine.length : originY + height * .11 + sway * .25;
-      ctx.strokeStyle = mode === 'menu' ? 'rgba(31,75,42,.94)' : 'rgba(29,68,39,.84)';
+      ctx.strokeStyle = mode === 'menu' ? 'rgba(31,75,42,.64)' : 'rgba(29,68,39,.34)';
       ctx.lineWidth = 2.2;
       ctx.beginPath();
       ctx.moveTo(originX, originY);
