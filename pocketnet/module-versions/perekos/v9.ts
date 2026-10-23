@@ -703,12 +703,12 @@ else{s.phase='draft';s.pick=offers(s)}
 return s}
 function validState(s){
  return !!s&&s.version===4&&['fight','draft','build','result'].includes(s.phase)
- &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&typeof a.mark==='string'&&Number.isFinite(a.markLife)&&a.markLife>=0&&Number.isFinite(a.reactionCd)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&(!a.archetype||validArchetype(a.archetype))&&(!a.evolution||EVOLUTIONS.some(f=>f.id===a.evolution.form)&&Number.isInteger(a.evolution.level)&&a.evolution.level>0&&a.evolution.level<=3)&&(!a.fusions||Array.isArray(a.fusions)&&a.fusions.length<=3&&new Set(a.fusions).size===a.fusions.length&&a.fusions.every(id=>FUSIONS.some(f=>f.id===id)))&&a.runeTimers&&typeof a.runeTimers==='object')
+ &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&typeof a.mark==='string'&&Number.isFinite(a.markLife)&&a.markLife>=0&&Number.isFinite(a.reactionCd)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&(!a.archetype||validArchetype(a.archetype))&&(!a.technique||['primary','alternate'].includes(a.technique))&&(!a.evolution||EVOLUTIONS.some(f=>f.id===a.evolution.form)&&Number.isInteger(a.evolution.level)&&a.evolution.level>0&&a.evolution.level<=3)&&(!a.fusions||Array.isArray(a.fusions)&&a.fusions.length<=3&&new Set(a.fusions).size===a.fusions.length&&a.fusions.every(id=>FUSIONS.some(f=>f.id===id)))&&a.runeTimers&&typeof a.runeTimers==='object')
  &&Array.isArray(s.shots)&&(!s.streams||Array.isArray(s.streams))&&(!s.beams||Array.isArray(s.beams))&&(!s.waves||Array.isArray(s.waves))&&(!s.lobs||Array.isArray(s.lobs))&&Array.isArray(s.echoes)&&Array.isArray(s.mines)&&Array.isArray(s.barriers)&&(!s.fields||Array.isArray(s.fields))&&Array.isArray(s.eventQueue)
  &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=8;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=9;
 const ZERO={x:0,y:0,aim:{x:200,y:310},attack:false,shield:false,dash:false,special:false};
 const clock=()=>Date.now(),updates=()=>[{type:'state',payload:null}],warn=(to,msg)=>[{type:'notice',to,payload:msg}];
 const side=(s,id)=>s.seats.indexOf(id);
@@ -720,6 +720,7 @@ const safeInput=v=>{
 };
 function beginNet(s){
  s.match=makeMatch((clock()>>>0)^Math.floor(Math.random()*0xffffffff),s.mages[0],s.mages[1],s.gameMode,s.archetypes[0],s.archetypes[1]);
+ for(let i=0;i<2;i++)s.match.actors[i].technique=s.techniques?.[i]==='alternate'?'alternate':'primary';
  startRound(s.match);s.phase='fight';s.offers=[[],[]];s.picked=[false,false];s.ready=[false,false];
  s.inputs=[{...ZERO},{...ZERO}];s.seq=[-1,-1];s.seen=[clock(),clock()];s.at=clock();s.credit=0;s.lastEmit=0;s.revision++;
 }
@@ -764,7 +765,7 @@ function readyNet(s,i,list){
 }
 function viewForPlayer({state:s,player,players}){
  const i=side(s,player.id);
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:8,gameMode:s.gameMode,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:9,gameMode:s.gameMode,mages:s.mages,archetypes:s.archetypes,techniques:s.techniques,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};
@@ -772,7 +773,7 @@ function viewForPlayer({state:s,player,players}){
 const module={
  protocolVersion:1,
  createRoom({player}){return {state:{host:player.id,seats:[player.id],phase:'lobby',match:null,revision:0,
-  gameMode:'rupture',mages:['kindle','wire'],archetypes:['striker','striker'],offers:[[],[]],picked:[false,false],ready:[false,false],seq:[-1,-1],inputs:[{...ZERO},{...ZERO}],
+  gameMode:'rupture',mages:['kindle','wire'],archetypes:['striker','striker'],techniques:['primary','primary'],offers:[[],[]],picked:[false,false],ready:[false,false],seq:[-1,-1],inputs:[{...ZERO},{...ZERO}],
   seen:[clock(),clock()],at:clock(),credit:0,lastEmit:0}}},
  onJoin({state:s,player,players}){
   if(s.seats.filter(Boolean).length>=2||players.length>2)throw Error('room_full');
@@ -801,6 +802,7 @@ const module={
    beginNet(s);return out();
   }
   if(p.type==='mode'){if(s.phase!=='lobby'||s.host!==player.id||!['duel','rupture'].includes(p.gameMode))return out(warn(player.id,'Режим выбирает создатель до начала матча.'));s.gameMode=p.gameMode;s.revision++;return out()}
+   if(p.type==='technique'){if(s.phase!=='lobby'||!['primary','alternate'].includes(p.technique))return out(warn(player.id,'Приём выбирают только до начала боя.'));s.techniques ||= ['primary','primary'];s.techniques[i]=p.technique;s.revision++;return out()}
    if(p.type==='archetype'){if(s.phase!=='lobby'||!validArchetype(p.archetype))return out(warn(player.id,'Боевой путь можно выбрать до начала матча.'));s.archetypes[i]=p.archetype;s.revision++;return out()}
    if(p.type==='mage'){if(s.phase!=='lobby'||!validMage(p.mageId))return out(warn(player.id,'Выбрать мага можно только до боя.'));s.mages[i]=p.mageId;s.revision++;return out()}
   if(p.type==='input'){
