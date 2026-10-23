@@ -33,6 +33,7 @@ function show(which){
   $('pause').classList.toggle('hidden',which!=='playing');
   $('online-role-chip').classList.toggle('hidden',which!=='online-playing');
   updateControls();
+  $('hazard-guide').classList.toggle('hidden',!['playing','online-playing'].includes(which));
   $('status').textContent=which==='menu'?'ЖДЁМ СИГНАЛ':which==='online-lobby'?'ОЖИДАНИЕ ОПЕРАТОРОВ':which==='online-won'||which==='finish'?'ЗАДАНИЕ ВЫПОЛНЕНО':which==='pause'?'ПАУЗА':'ДВИЖЕНИЕ';
   if(which==='playing'||which==='online-playing')lastFrame=performance.now();
 }
@@ -250,7 +251,20 @@ function frame(now){
     previousHud=now;
     const label=game.level?.name||'ИСПЫТАТЕЛЬНЫЙ ЦЕХ';
     const segments=game.level?.sections?.length;
-    $('scene-label').textContent=label+(segments?' / '+segments+' СЕКЦИЙ':' / 01');
+    const current=game.level?.sections?.find(s=>game.x>=s.x&&game.x<s.x+s.w);
+    $('scene-label').textContent=label+(current?' / '+String(current.index).padStart(2,'0')+' · '+current.name.toUpperCase():segments?' / СТАРТ':' / 01');
+    const ahead=(game.level?.devices||[]).filter(d=>d.x+Math.max(.2,d.w)>=game.x&&d.x-game.x<2.85)
+      .sort((a,b)=>a.x-b.x)[0];
+    const guide={
+      press:'ПРЕСС · БЕРЕГИСЬ',gate:'ШЛЮЗ · ЛОВИ МОМЕНТ',
+      'cargo-gate':'ПРОХОД · ПЕРЕДВИНЬ ГРУЗ','cargo':'ГРУЗ · ТОЛЧОК',
+      'mag-rail':'РЕЛЬС · МАГНИТ','balloon-sign':'ПРОЛЁТ · ПОПЛАВОК',
+      'belt-left':'ВСТРЕЧНАЯ ЛЕНТА','fan-up':'ВОЗДУШНЫЙ ПОТОК','fan-side':'БОКОВОЙ ВЕТЕР'
+    };
+    const warning=guide[ahead?.type];
+    const gameplay=['playing','online-playing'].includes(phase);
+    $('hazard-guide').classList.toggle('hidden',!warning||!gameplay);
+    if(warning)$('hazard-text').textContent=warning;
     $('clock').textContent=format(game.t);
     $('falls').textContent='ПАДЕНИЯ '+String(game.respawns).padStart(2,'0');
     if(phase==='online-playing')$('status').textContent='POCKETNET · '+Math.round(progressGame(game)*100)+'%';

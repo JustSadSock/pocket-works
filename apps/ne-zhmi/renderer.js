@@ -8,7 +8,7 @@ export function createRenderer(canvas) {
   const ctx=canvas.getContext('2d');
   const reducedMotion=typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const effects=createVisualEffects({reducedMotion});
-  let w=800,h=460,scale=1,camX=0,shake=0,flash=0,previousLevel=null;
+  let w=800,h=460,scale=1,camX=0,shake=0,flash=0,previousLevel=null,previousLevelKey=null;
   let prevTime=0,prevBodyX=null,wheelTurn=0,landing=0,rollDust=0,switchGlow=0;
   const resize=()=>{
     const rect=canvas.getBoundingClientRect();
@@ -32,13 +32,14 @@ export function createRenderer(canvas) {
     switchGlow=1;
   }
   function reset(){
-    effects.clear();previousLevel=null;prevBodyX=null;prevTime=0;
+    effects.clear();previousLevel=null;previousLevelKey=null;prevBodyX=null;prevTime=0;
     wheelTurn=0;landing=0;shake=0;flash=0;switchGlow=0;rollDust=0;
   }
   function frame(state,now=0,mode='playing') {
     const level=state.level||LEVEL;
-    if(previousLevel!==level){
-      camX=0;previousLevel=level;effects.clear();prevBodyX=null;
+    const levelKey=String(level.seed??'legacy')+':'+String(level.version??0)+':'+String(level.playerCount??0);
+    if(previousLevelKey!==levelKey){
+      camX=0;previousLevel=level;previousLevelKey=levelKey;effects.clear();prevBodyX=null;
       wheelTurn=0;landing=0;rollDust=0;
     }
     const dt=prevTime?Math.max(0,Math.min(.06,(now-prevTime)/1000)):0;
