@@ -12,6 +12,7 @@ on:
       - 'apps/zamazka/qa/full-match-recovery.mjs'
       - 'apps/zamazka/editor.js'
       - 'apps/zamazka/qa/editor-raster-invalidation.mjs'
+      - 'apps/zamazka/qa/editor-geometry-compaction.mjs'
       - 'apps/zamazka/qa/large-painting.mjs'
       - 'pocketnet/hub.mjs'
       - 'pocketnet/room-join-view.mjs'
@@ -73,6 +74,8 @@ jobs:
         run: npm run pocketnet:check
       - name: Prevent stale fill raster after stroke compaction
         run: node apps/zamazka/qa/editor-raster-invalidation.mjs
+      - name: Preserve line corners during brush budget compaction
+        run: node apps/zamazka/qa/editor-geometry-compaction.mjs
       - name: Validate JavaScript syntax
         run: |
           node --check apps/zamazka/app.js
