@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import { chromium } from '@playwright/test';
-import module from '../server/module.ts';
+import module, * as testModule from '../server/module.ts';
 
 const root=resolve(import.meta.dirname,'../../..');
 const mime={'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.svg':'image/svg+xml'};
@@ -64,7 +64,14 @@ function wireSocket(socket){
     }
     if(req.type==='game_message'&&room){
       const answer=module.onMessage({state:room.state,player:me,payload:req.payload});
-      room.state=answer.state;broadcastEvents(answer.events);
+      room.state=answer.state;
+      // The network E2E uses a known two-jump benchmark for reproducibility;
+      // procedural courses are separately validated across seeds.
+      if((req.payload?.type==='start'||req.payload?.type==='restart')&&room.state.phase==='play'){
+        room.state.robot=testModule.createGame(testModule.LEVEL);
+        for(const event of answer.events||[])if(event.type==='state')event.payload.robot=room.state.robot;
+      }
+      broadcastEvents(answer.events);
     }
     if(req.type==='leave_room'&&room){
       const remaining=room.state.players.filter(p=>p.id!==me.id);

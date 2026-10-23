@@ -284,10 +284,11 @@
     ]
   },
   "ne-zhmi": {
-    "current": "v2",
+    "current": "v3",
     "versions": [
       "v1",
-      "v2"
+      "v2",
+      "v3"
     ]
   }
 }
