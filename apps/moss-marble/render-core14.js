@@ -990,14 +990,26 @@ class WebGLDiorama {
       const angle = rotor.angle + time * rotor.speed;
       const hx = Math.cos(angle) * rotor.length * .5;
       const hy = Math.sin(angle) * rotor.length * .5;
-      addGroundEllipse(shadows, rotor.x + 4, rotor.y + 8, .15, rotor.length * .48, rotor.thickness * .82, C.shadow);
-      addSymmetricBox(
-        opaque, rotor.x - hx, rotor.y - hy, rotor.x + hx, rotor.y + hy,
-        rotor.thickness, 13, 32,
-        rotor.material === 'brass' ? C.brass : C.wood,
-        rotor.material === 'brass' ? 4 : 0
-      );
-      addCylinder(opaque, { x: rotor.x, y: rotor.y, z0: .5, z1: 40, r0: rotor.thickness * .62, r1: rotor.thickness * .55, tint: rotor.material === 'brass' ? C.brassLight : C.woodLight, material: rotor.material === 'brass' ? 4 : 0, segments: 16 });
+      const ground = level.course18?.field?.heightAt?.(rotor.x, rotor.y) || 0;
+      const metal = rotor.material === 'brass';
+      const ax = rotor.x - hx, ay = rotor.y - hy, bx = rotor.x + hx, by = rotor.y + hy;
+      addGroundEllipse(shadows, rotor.x + 4, rotor.y + 8, ground + .1, rotor.length * .48, rotor.thickness * .82, C.shadow);
+      addSymmetricBox(opaque, ax, ay, bx, by,
+        rotor.thickness, ground + 9, ground + 31, metal ? C.brass : C.wood, metal ? 4 : 0);
+      // A fine inlaid grain, never a second floating plank.
+      addSymmetricBox(opaque,
+        rotor.x - hx * .91, rotor.y - hy * .91,
+        rotor.x + hx * .91, rotor.y + hy * .91,
+        rotor.thickness * .24, ground + 31, ground + 32,
+        metal ? C.brassLight : C.woodLight, metal ? 4 : 0);
+      addCylinder(opaque, {
+        x: rotor.x, y: rotor.y, z0: ground + .5, z1: ground + 35,
+        r0: rotor.thickness * .58, r1: rotor.thickness * .55,
+        tint: metal ? C.brass : C.stoneDark,
+        material: metal ? 4 : 0, segments: 16
+      });
+      addRing(opaque, rotor.x, rotor.y, ground + 35.4,
+        rotor.thickness * .24, rotor.thickness * .54, C.brassLight, 4, 20);
     }
 
     this.dynamicOpaque.update(opaque.toArray());
