@@ -638,29 +638,29 @@ void main() {
     return;
   }
   if (vMaterial > .5 && vMaterial < 1.5) {
-    float tufts = noise2(floor(vWorld.xy * .075));
-    float grain = noise2(floor(vWorld.xy * .42));
-    float blades = sin(vWorld.x * .38 + sin(vWorld.y * .27)) * .5 + .5;
-    base *= .82 + tufts * .15 + grain * .09 + blades * .035;
-    base += vec3(.018, .025, .008) * max(0.0, sky - .72);
+    // Band-limited irregular fibers: no floored noise cells or checkerboards.
+    float canopy = valueNoise(vWorld.xy * .016);
+    float undergrowth = valueNoise(vWorld.xy * .052 + vec2(19.2, -8.4));
+    float weave = valueNoise(vWorld.xy * .19 + vec2(-4.9, 11.8));
+    base *= .87 + canopy * .16 + undergrowth * .065 + weave * .028;
   } else if (vMaterial > 5.5 && vMaterial < 6.5) {
     float waveA = sin(vWorld.x * .105 + vWorld.y * .045 + uTime * 1.35);
     float waveB = sin(vWorld.y * .082 - vWorld.x * .032 - uTime * 1.05);
     float wave = waveA * waveB;
     float caustic = smoothstep(.72, .98, sin(vWorld.x * .061 + waveB * 1.2 + uTime) * .5 + .5);
-    base += vec3(.025, .085, .078) * wave + vec3(.06, .13, .105) * caustic;
-    rim = max(rim, pow(1.0 - abs(dot(n, viewDir)), 3.5) * 1.25);
-    spec *= 2.15;
+    base += vec3(.018, .050, .047) * wave + vec3(.025, .075, .064) * caustic;
+    rim = max(rim, pow(1.0 - abs(dot(n, viewDir)), 3.5) * .85);
+    spec *= 1.30;
   } else if (vMaterial > 6.5 && vMaterial < 7.5) {
-    float mossCloud = noise2(floor(vWorld.xy * .055));
-    float mossFine = noise2(floor(vWorld.xy * .22));
-    base *= .72 + mossCloud * .28 + mossFine * .13;
-    rim *= 1.35;
+    float mossCloud = valueNoise(vWorld.xy * .019 + vec2(3.2, 12.5));
+    float mossFine = valueNoise(vWorld.xy * .085);
+    base *= .87 + mossCloud * .12 + mossFine * .045;
+    rim *= .55;
   } else if (vMaterial > 7.5 && vMaterial < 8.5) {
-    float dunes = sin(vWorld.x * .047 + sin(vWorld.y * .026) * 1.8) * .5 + .5;
-    float grains = noise2(floor(vWorld.xy * .37));
-    base *= .82 + dunes * .09 + grains * .16;
-    base += vec3(.025, .018, .006) * sky;
+    float mineral = valueNoise(vWorld.xy * .025 + vec2(27.0, 4.0));
+    float grains = valueNoise(vWorld.xy * .18 + vec2(-6.0, 24.0));
+    base *= .92 + mineral * .09 + grains * .027;
+    base += vec3(.016, .012, .006) * sky;
   } else if (vMaterial > 8.5 && vMaterial < 9.5) {
     base *= .52 + diffuse * .22;
     outColor = vec4(base, alpha);
@@ -686,7 +686,9 @@ void main() {
       float mineral = valueNoise(vWorld.xy * .034 + vWorld.z * .022);
       lit *= .94 + mineral * .08;
     }
-    lit += spec * vec3(.92, .88, .68) * .40 + rim * base * .11;
+    // Limestone is matte, not glazed; only wet grass gets a soft highlight.
+    float matteSpec = vMaterial < .5 ? .075 : .14;
+    lit += spec * vec3(.92, .88, .68) * matteSpec + rim * base * .045;
   }
   outColor = vec4(lit, alpha);
 }`;
