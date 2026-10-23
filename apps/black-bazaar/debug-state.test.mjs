@@ -77,3 +77,5 @@ test('Mobile portrait CSS keeps content panels scrollable without expanding page
 test('Mobile audit checks collisions and clipped scrolling content',()=>{const ui=readFileSync(new URL('./app.js',import.meta.url),'utf8');assert.match(ui,/Стол перекрывает вкладки/);assert.match(ui,/Задание перекрывает ресурсы/);assert.match(ui,/Содержимое боковой панели обрезано/);});
 
 test('Workshop batch audit enumerates every debug scene at each viewport',()=>{const source=readFileSync(new URL('./debug-console.js',import.meta.url),'utf8');assert.match(source,/data-debug-audit-matrix/);assert.match(source,/DEBUG_SCENES\.flatMap/);assert.match(source,/requestAnimationFrame\(\(\)=>requestAnimationFrame/);});
+
+test('Workshop awaits scene-ready and ignores stale viewport measurements',()=>{const source=readFileSync(new URL('./debug-console.js',import.meta.url),'utf8');assert.match(source,/scene-ready/);assert.match(source,/d\.step!==auditStep/);assert.match(source,/data-debug-copy-report/);});
