@@ -26,7 +26,8 @@
         "tests/forge-world.test.mjs",
         "tests/rune-seals.test.mjs",
         "tests/rupture.test.mjs",
-        "tests/evolution.test.mjs"
+        "tests/evolution.test.mjs",
+        "tests/archetypes-forge.test.mjs"
       ]
     },
     {
