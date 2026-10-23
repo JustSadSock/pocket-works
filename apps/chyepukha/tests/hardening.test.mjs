@@ -95,7 +95,11 @@ test('room capacity, host permission and early leave keeps the running issue',()
  assert.equal(run(s,guest,{type:'settings',settings:{maxPlayers:8}}).events[0].type,'notice');
  assert.equal(run(s,guest,{type:'start'}).events[0].type,'notice');
  s=run(s,host,{type:'start'}).state;
- assert.throws(()=>game.onJoin({state:structuredClone(s),players:[host,guest,other]}),/match_in_progress/);
+ if(typeof game.onPresence==='function'){
+  const pending=game.onJoin({state:structuredClone(s),players:[host,guest,other]}).state;
+  assert.equal(pending.waitlist.length,1);
+  assert.equal(pending.players.length,2);
+ }else assert.throws(()=>game.onJoin({state:structuredClone(s),players:[host,guest,other]}),/match_in_progress/);
  s=game.onLeave({state:s,player:host,players:[guest]}).state;
  assert.equal(s.phase,'writing');
  assert.equal(s.host,host.id);
