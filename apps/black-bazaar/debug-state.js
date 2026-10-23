@@ -161,21 +161,37 @@ export function debugCommand(s,cmd){
  }
  case 'bid':{
   if(!s.listing)return {state:s,error:'Нет лота'};
-  s.bids=s.bids.filter(b=>b.buyer!==you.id).concat({buyer:you.id,offer:cmd.offer||wallet(55)});
+  // The explicit buyer is available only to the isolated preview's QA bridge.
+  // Ordinary preview clicks still bid for the local player.
+  const bidder=s.players.find(p=>p.id===(cmd.buyer||you.id));
+  const offer=cmd.offer||wallet(55),payer=bidder?.id===you.id?you.resources:bidder?.resources;
+  if(!bidder||bidder.id===s.listing.seller||!payer||
+    !['gold','crystals','parts'].every(k=>Number.isSafeInteger(offer[k]||0)&&(offer[k]||0)>=0&&(payer[k]||0)>=(offer[k]||0))||
+    !['gold','crystals','parts'].some(k=>(offer[k]||0)>0))
+   return {state:s,error:'Ставка недоступна'};
+  s.bids=s.bids.filter(b=>b.buyer!==bidder.id).concat({buyer:bidder.id,offer:{...offer}});
   log='Сделана новая ставка.';break;
  }
  case 'withdraw_bid':s.bids=s.bids.filter(b=>b.buyer!==you.id);log='Ставка отозвана.';break;
  case 'accept':{
-  if(!s.listing)return {state:s,error:'Нет лота'};
-  const buyer=cmd.buyer||other.id,offer=s.bids.find(b=>b.buyer===buyer)?.offer||wallet(100);
-  if(s.listing.seller===you.id){
-   you.items=you.items.filter(i=>i.id!==s.listing.id);
-   change(you.resources,offer);
-  }else if(buyer===you.id){
-   you.items=[...you.items,debugItem(1,s.listing.id,s.round)].slice(-4);
-   change(you.resources,offer,-1);
-  }
-  log='Маг купил «'+s.listing.name+'» у '+s.players[0].character+'.';
+  if(!s.listing||s.listing.seller!==you.id)return {state:s,error:'Это не твой лот'};
+  const buyer=s.players.find(p=>p.id===(cmd.buyer||other.id));
+  const offer=s.bids.find(b=>b.buyer===buyer?.id)?.offer;
+  const item=findItem(s.listing.id);
+  if(!buyer||!offer||!item||buyer.id===you.id||buyer.bankrupt||
+   item.acquiredRound===s.round||you.marketDeals>=2||
+   (buyer.items??buyer.inventory.length)>=4||
+   !['gold','crystals','parts'].every(k=>(buyer.resources?.[k]||0)>=(offer[k]||0)))
+   return {state:s,error:'Ставка уже недоступна'};
+  // Mirror the authoritative public-market settlement, including first-sale part.
+  change(buyer.resources,offer,-1);
+  change(you.resources,offer);
+  you.items=you.items.filter(i=>i.id!==item.id);
+  buyer.inventory=[...(buyer.inventory||[]),publicItem(item)];
+  buyer.items=(buyer.items??buyer.inventory.length-1)+1;
+  you.marketDeals++;
+  if(you.marketDeals===1)change(you.resources,wallet(0,0,1));
+  log=buyer.character+' купил «'+s.listing.name+'» у '+you.character+'.';
   s.listing=null;s.bids=[];break;
  }
  case 'work':{
