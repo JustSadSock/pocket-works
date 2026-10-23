@@ -76,7 +76,7 @@ try{
  assert.equal(mainFrames,8,'next smudge point repaints');
 
  console.log(JSON.stringify({scenario:'zamazka-idle-frame-elision',
- avoidedDuplicateFrames:202,actualMainPaints:mainFrames,finalBacking:editor.canvas.width,
+ avoidedDuplicateFrames:202,actualFrameComposites:mainFrames,finalBacking:editor.canvas.width,
  result:'passed'}));
 }finally{
  globalThis.window=savedWindow;
