@@ -1,5 +1,5 @@
 // Real PocketNet integration: three authenticated WebSocket clients against
-// Wrangler's SQLite Durable Object and the immutable Bazaar v15 rules.
+// Wrangler's SQLite Durable Object and the immutable Bazaar v16 rules.
 import assert from 'node:assert/strict';
 import WebSocket from '../../../pocket-server/node_modules/ws/index.js';
 
@@ -85,7 +85,7 @@ try{
  host.send('create_room',{gameId:'black-bazaar'});
  const initial=await host.next('room_joined');
  roomId=initial.roomId;
- assert.equal(initial.version,'v15','new rooms must use immutable v15');
+ assert.equal(initial.version,'v16','new rooms must use immutable v16');
  assert.equal(initial.state.phase,'lobby');
  second.send('join_room',{roomId:roomId.slice(0,8).toUpperCase()});
  assert.equal((await second.next('room_joined')).state.players.length,2);
@@ -211,10 +211,50 @@ try{
  assert.equal(afterHandoff.players.filter(p=>!p.bankrupt).length,2);
  assert.equal(afterHandoff.host,successor.id);
  assert.ok(afterHandoff.turnId!==leavingHost.id,'departed host cannot stall the match');
+ // The successor host can remove an active member during play. Unlike a
+ // socket drop, this immediately revokes their seat and prevents re-entry.
+ const kickRevision=afterHandoff.revision;
+ successor.send('game_message',{payload:{type:'kick',targetId:lastSeat.id}});
+ const removed=await lastSeat.next('room_kicked');
+ assert.equal(removed.roomId,nextRoom);
+ assert.equal(removed.reason,'host');
+ const kickedState=stateOf(await successor.next('game_event',
+  stateEvent('play',state=>state.revision>kickRevision&&
+    state.players.some(p=>p.id===lastSeat.id&&p.bankrupt))));
+ assert.equal(kickedState.host,successor.id);
+ assert.equal(kickedState.players.filter(p=>!p.bankrupt).length,1);
+ assert.notEqual(kickedState.turnId,lastSeat.id);
+ lastSeat.send('join_room',{roomId:nextRoom});
+ assert.equal((await lastSeat.next('error')).code,'room_kicked');
+ const kickedReconnect=await open(nextTokens[2]);clients.push(kickedReconnect);
+ kickedReconnect.send('join_room',{roomId:nextRoom});
+ assert.equal((await kickedReconnect.next('error')).code,'room_kicked');
+ const safe=await sync(successor,kickedState.revision);
+ assert.equal(safe.players.find(p=>p.id===lastSeat.id).bankrupt,true);
+
+ // Lobby moderation must reject non-host commands, remove the socket and
+ // preserve the banned ID even when the excluded guest reauthenticates.
+ const lobbyTokens=await Promise.all(['Bazaar Lobby Leader','Bazaar Lobby Guest'].map(session));
+ const leader=await open(lobbyTokens[0]),untrusted=await open(lobbyTokens[1]);
+ clients.push(leader,untrusted);
+ leader.send('create_room',{gameId:'black-bazaar'});
+ const lobby=(await leader.next('room_joined')).roomId;
+ untrusted.send('join_room',{roomId:lobby});
+ await untrusted.next('room_joined');
+ untrusted.send('game_message',{payload:{type:'kick',targetId:leader.id}});
+ const denied=await untrusted.next('game_event',m=>m.event?.type==='notice');
+ assert.match(String(denied.event.payload),/только ведущий/);
+ leader.send('game_message',{payload:{type:'kick',targetId:untrusted.id}});
+ const lobbyKicked=await untrusted.next('room_kicked');
+ assert.equal(lobbyKicked.reason,'host');
+ const surviving=(await leader.next('game_event',stateEvent('lobby',v=>v.players.length===1))).event.payload;
+ assert.equal(surviving.players[0].id,leader.id);
+ untrusted.send('join_room',{roomId:lobby});
+ assert.equal((await untrusted.next('error')).code,'room_kicked');
  console.log('BAZAAR_LIVE_POCKETNET_PASS',JSON.stringify({
   module:initial.version,seats:3,privateViews:true,auction:true,
   activeSellerReconnect:true,deadlineGrace:true,noDuplicateTrade:true,
-  rejectedLateJoin:true,hostHandoff:true,completedRounds:snap.round||9,turns:commands
+  rejectedLateJoin:true,hostHandoff:true,lobbyKick:true,liveKick:true,bannedReconnect:true,completedRounds:snap.round||9,turns:commands
  }));
 }finally{
  for(const c of clients)try{await c.close()}catch{}
