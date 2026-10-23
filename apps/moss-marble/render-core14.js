@@ -1340,21 +1340,63 @@ class CanvasFallback {
     ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(marker.x, marker.y); ctx.stroke();
     ctx.restore();
   }
-  drawProp(obstacle) {
+  drawProp(obstacle, field) {
     const ctx = this.ctx;
     const parts = obstacle.parts?.length ? obstacle.parts : [{ x: 0, y: 0, r: obstacle.r }];
     for (const part of parts) {
       const x = obstacle.x + Number(part.x || 0);
       const y = obstacle.y + Number(part.y || 0);
       const radius = Number(part.r || obstacle.r);
-      const p = this.worldToScreen(x, y, radius * .5);
+      const ground = field?.heightAt?.(x, y) || 0;
+      const isWood = obstacle.kind === 'stump' || obstacle.material === 'wood';
+      const height = isWood ? Number(obstacle.height || radius * 1.15) : radius * .82;
+      const p = this.worldToScreen(x, y, ground + height * .53);
       const r = radius * this.scale;
-      ctx.fillStyle = 'rgba(3,10,6,.34)'; ctx.beginPath(); ctx.ellipse(p.x + 3, p.y + 8, r, r * .5, 0, 0, TAU); ctx.fill();
-      const rock = ctx.createRadialGradient(p.x - r * .3, p.y - r * .4, 0, p.x, p.y, r);
-      rock.addColorStop(0, obstacle.material === 'wood' ? '#ad8350' : '#b8b59d');
-      rock.addColorStop(1, obstacle.material === 'wood' ? '#4e3925' : '#596158');
-      ctx.fillStyle = rock;
-      ctx.beginPath(); ctx.ellipse(p.x, p.y - r * .35, r, r * .8, 0, 0, TAU); ctx.fill();
+      const elevatedTop = this.worldToScreen(x, y, ground + height);
+      const bottom = this.worldToScreen(x, y, ground);
+      ctx.save();
+      ctx.fillStyle = 'rgba(8,18,12,.34)';
+      ctx.beginPath(); ctx.ellipse(bottom.x + 3, bottom.y + r * .18, r * 1.07, r * .43, 0, 0, TAU); ctx.fill();
+      if (isWood) {
+        ctx.fillStyle = '#604a34';
+        ctx.beginPath();
+        ctx.moveTo(bottom.x - r * .9, bottom.y);
+        ctx.lineTo(elevatedTop.x - r * .80, elevatedTop.y);
+        ctx.lineTo(elevatedTop.x + r * .80, elevatedTop.y);
+        ctx.lineTo(bottom.x + r * .9, bottom.y);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(41,29,21,.42)'; ctx.lineWidth = Math.max(.7, r * .075);
+        for (let line = -2; line <= 2; line++) {
+          const lineX = bottom.x + line * r * .30;
+          ctx.beginPath();
+          ctx.moveTo(lineX, bottom.y - 2);
+          ctx.lineTo(elevatedTop.x + line * r * .25, elevatedTop.y + r * .2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#b39369'; ctx.beginPath();
+        ctx.ellipse(elevatedTop.x, elevatedTop.y, r * .81, r * .53, 0, 0, TAU); ctx.fill();
+        ctx.strokeStyle = '#806343'; ctx.lineWidth = Math.max(1, r * .045);
+        for (const ringSize of [.38, .61]) {
+          ctx.beginPath(); ctx.ellipse(elevatedTop.x, elevatedTop.y, r * ringSize, r * ringSize * .53, 0, 0, TAU); ctx.stroke();
+        }
+      } else {
+        const stone = ctx.createLinearGradient(p.x - r, p.y - r, p.x + r, p.y + r);
+        stone.addColorStop(0, '#b8bba6');
+        stone.addColorStop(.45, '#909783');
+        stone.addColorStop(1, '#4d6053');
+        ctx.fillStyle = stone;
+        ctx.beginPath();
+        const corners = 12;
+        for (let point = 0; point < corners; point++) {
+          const a = point / corners * TAU;
+          const spread = (.90 + hashNoise(point, x, y) * .08) * r;
+          const cx = p.x + Math.cos(a) * spread, cy = p.y + Math.sin(a) * spread * .78;
+          if (point) ctx.lineTo(cx, cy); else ctx.moveTo(cx, cy);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(214,225,201,.17)'; ctx.lineWidth = Math.max(.7, r * .04); ctx.stroke();
+      }
+      ctx.restore();
     }
   }
   draw(level, ball, aim, time = 0) {
@@ -1408,7 +1450,7 @@ class CanvasFallback {
       if (tunnel.entry) this.drawPortal(tunnel.entry, true);
       if (tunnel.exit) this.drawPortal(tunnel.exit, false);
     }
-    for (const obstacle of level.course18?.props || level.obstacles || []) this.drawProp(obstacle);
+    for (const obstacle of level.course18?.props || level.obstacles || []) this.drawProp(obstacle, field);
     for (const rotor of level.rotors || []) {
       const angle = rotor.angle + time * rotor.speed;
       const halfX = Math.cos(angle) * rotor.length * .5;
@@ -1418,7 +1460,9 @@ class CanvasFallback {
     const holeGround = level.course18?.field?.heightAt?.(level.hole.x, level.hole.y) || 0;
     const hole = this.worldToScreen(level.hole.x, level.hole.y, holeGround + .5);
     const hr = level.hole.r * this.scale;
-    ctx.fillStyle = '#17150f'; ctx.beginPath(); ctx.ellipse(hole.x, hole.y, hr, hr * .82, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#252820'; ctx.beginPath(); ctx.ellipse(hole.x, hole.y, hr, hr * .82, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#bab7a1'; ctx.lineWidth = Math.max(1.25, this.scale * 7);
+    ctx.stroke();
     const ground = Number.isFinite(ball.groundZ) ? ball.groundZ : 0;
     const centerZ = (Number.isFinite(ball.z) ? ball.z : ground + BALL_RADIUS) - (ball.sunk ? ball.sink * (BALL_RADIUS + 20) : 0);
     const bp = this.worldToScreen(ball.x, ball.y, centerZ);
@@ -1429,8 +1473,15 @@ class CanvasFallback {
       ctx.globalAlpha = ballOpacity;
       ctx.fillStyle = 'rgba(3,10,6,.45)'; ctx.beginPath(); ctx.ellipse(bp.x, this.worldToScreen(ball.x, ball.y, ground).y, br, br * .35, 0, 0, TAU); ctx.fill();
       const sphere = ctx.createRadialGradient(bp.x - br * .35, bp.y - br * .45, br * .08, bp.x, bp.y, br);
-      sphere.addColorStop(0, '#f5fff8'); sphere.addColorStop(.35, '#a7d1c0'); sphere.addColorStop(1, '#315448');
+      sphere.addColorStop(0, '#fff9e8'); sphere.addColorStop(.38, '#e8e4d2'); sphere.addColorStop(1, '#a9b1a3');
       ctx.fillStyle = sphere; ctx.beginPath(); ctx.arc(bp.x, bp.y, br, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(bp.x, bp.y, br - .2, 0, TAU); ctx.clip();
+      ctx.strokeStyle = 'rgba(103,137,121,.42)';
+      ctx.lineWidth = Math.max(.7, br * .08);
+      ctx.beginPath();
+      ctx.moveTo(bp.x - br * .68, bp.y - br * .70);
+      ctx.bezierCurveTo(bp.x - br * .28, bp.y - br * .18, bp.x + br * .68, bp.y - br * .29, bp.x + br * .72, bp.y + br * .73);
+      ctx.stroke();
       ctx.restore();
     }
     if (aim.active) {
