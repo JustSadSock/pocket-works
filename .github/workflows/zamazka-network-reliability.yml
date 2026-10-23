@@ -22,6 +22,8 @@ on:
       - 'apps/zamazka/qa/fill-raster-region.mjs'
       - 'apps/zamazka/fill-raster-region.js'
       - 'apps/zamazka/qa/editor-frame-reuse.mjs'
+      - 'apps/zamazka/qa/editor-frame-idle.mjs'
+      - 'apps/zamazka/qa/editor-pointer-dedup.mjs'
       - 'apps/zamazka/qa/large-painting.mjs'
       - 'pocketnet/hub.mjs'
       - 'pocketnet/room-join-view.mjs'
@@ -100,6 +102,10 @@ jobs:
         run: node apps/zamazka/qa/smudge-mask-lifecycle.mjs
       - name: Verify compositor reuse under 60 brush revisions and 120 pointer frames
         run: node apps/zamazka/qa/editor-frame-reuse.mjs
+      - name: Verify unchanged high-DPI canvas frames are skipped
+        run: node apps/zamazka/qa/editor-frame-idle.mjs
+      - name: Verify coalesced stationary pointers do not schedule redraws
+        run: node apps/zamazka/qa/editor-pointer-dedup.mjs
       - name: Validate JavaScript syntax
         run: |
           node --check apps/zamazka/app.js
