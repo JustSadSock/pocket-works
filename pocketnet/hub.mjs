@@ -773,19 +773,24 @@ export class PocketNetHub {
   }
 
   async alarm() {
+    // External reward delivery can be slow and must stay outside the socket
+    // queue. Actual room expiration, however, must serialize with join,
+    // submission, and disconnect mutations to avoid closing a resumed room.
     await this.flushAwards();
-    const now = Date.now();
-    this.sql('DELETE FROM sessions WHERE expires < ?', now);
-    const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
-    for (const row of rows) {
-      const room = this.readRoom(row.id);
-      const ttl=room?.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&room.state?.phase==='writing' ? 72*60*60_000
-        : room?.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&room.state?.phase==='finished' ? 7*24*60*60_000
-        : room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000
-        : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000 : ROOM_TTL;
-      if(now-row.updated_at<ttl||this.sockets(row.id).length)continue;
-      if(room)await this.closeRoom(room);
-    }
-    this.ensureAlarm();
+    return this.run(async()=>{
+      const now = Date.now();
+      this.sql('DELETE FROM sessions WHERE expires < ?', now);
+      const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
+      for (const row of rows) {
+        const room = this.readRoom(row.id);
+        const ttl=room?.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&room.state?.phase==='writing' ? 72*60*60_000
+          : room?.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&room.state?.phase==='finished' ? 7*24*60*60_000
+          : room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000
+          : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000 : ROOM_TTL;
+        if(now-row.updated_at<ttl||this.sockets(row.id).length)continue;
+        if(room)await this.closeRoom(room);
+      }
+      this.ensureAlarm();
+    });
   }
 }
