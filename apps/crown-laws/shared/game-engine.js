@@ -1193,16 +1193,41 @@ export function resolveTurn(state, choices) {
     throneBlessingSpent: new Set(),
     wardedOwner: null
   };
+  // Frame snapshots are captured AFTER each real engine phase, not recreated
+  // by UI heuristics. They are presentation-only and not persisted/networked.
+  const frames = [{ phase: "start", state: clone(next), logs: [], moves: [], crowns: [], seals: [] }];
+  let logAt = 0, moveAt = 0, crownAt = 0, sealAt = 0;
+  const capture = (phase) => {
+    frames.push({
+      phase,
+      state: clone(next),
+      logs: turnLog.slice(logAt).map(entry => ({...entry})),
+      moves: tracker.movementTimeline.slice(moveAt).map(entry => clone(entry)),
+      crowns: tracker.crownEvents.slice(crownAt).map(entry => clone(entry)),
+      seals: tracker.sealEvents.slice(sealAt).map(entry => clone(entry))
+    });
+    logAt = turnLog.length;
+    moveAt = tracker.movementTimeline.length;
+    crownAt = tracker.crownEvents.length;
+    sealAt = tracker.sealEvents.length;
+  };
 
   record(turnLog, "laws", `Ход ${next.turn}: игроки раскрывают законы.`, { kind: "turn-start", turn: next.turn });
   const conflicts = applyLawChoices(next, choices, turnLog);
+  capture("laws");
   priestPhase(next, turnLog, tracker);
+  capture("priest");
   resolveChampionMoves(next, slotLaw(next, "champion").id, turnLog, tracker);
+  capture("champion");
   guardPhase(next, turnLog, tracker);
+  capture("guard");
   beastPhase(next, turnLog, tracker);
+  capture("beast");
   thiefPhase(next, turnLog, tracker);
+  capture("thief");
   thronePhase(next, turnLog, tracker);
   clearThroneNeutrals(next, turnLog, tracker);
+  capture("throne");
   next.winner = winCheck(next);
   applyDurations(next);
   refillHands(next);
@@ -1215,7 +1240,8 @@ export function resolveTurn(state, choices) {
   next.turnSummaries = next.turnSummaries.slice(0, 6);
   next.battleLog = [...turnLog, ...next.battleLog].slice(0, 120);
   next.turn += 1;
-  return { state: next, logs: turnLog, conflicts, tracker };
+  capture("settled");
+  return { state: next, logs: turnLog, conflicts, tracker, frames };
 }
 
 
