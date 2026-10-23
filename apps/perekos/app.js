@@ -220,7 +220,7 @@ function renderTacticalAbility(id,remaining,total){
 function updateTacticalHud(a){
  const m=mage(a.mageId);
  $('tactic-mage').textContent=m.name;
- $('tactic-school').textContent={fire:'Пиромантия',storm:'Грозовая магия',stone:'Каменная магия'}[m.school]||m.school;
+ $('tactic-school').textContent=({fire:'Пиромантия',storm:'Грозовая магия',stone:'Каменная магия'}[m.school]||m.school)+' · '+(ARCHETYPES.find(x=>x.id===a.archetype)?.name||'Стрелок');
  $('tactic-attack').textContent=ATTACK_NAMES[a.mageId]||'ЗАКЛИНАНИЕ';
  renderTacticalAbility('cast',a.cast,stats(a).reload);
  renderTacticalAbility('shield',a.shieldReady,5);
@@ -337,7 +337,7 @@ function renderWorkbench(){
  if(!active)return;const slots=debugSession?myActor().runes:online?.active?(onlinePreviewRunes||[...myActor().runes]):myActor().runes;
  const preview=$('bench-mage'),mini=preview.getContext('2d');mini.clearRect(0,0,64,80);
  drawMage(mini,appearance,{x:32,y:57,scale:2,time:0,runes:slots,mageId:myActor().mageId});
- const evolved=myActor().evolution,fusions=myActor().fusions||[];$('evo-readout').hidden=!['rupture','forge'].includes(active.gameMode);$('evo-readout').textContent=evolved?(EVOLUTIONS.find(x=>x.id===evolved.form)?.name+' · УРОВЕНЬ '+evolved.level+(fusions.length?' · СЛИЯНИЯ: '+fusions.map(id=>FUSIONS.find(x=>x.id===id)?.name).join(', '):'')):(fusions.length?'СЛИЯНИЯ: '+fusions.map(id=>FUSIONS.find(x=>x.id===id)?.name).join(', '):'Форма ещё не пробуждена. Выбери «Мутировать» при эволюции.');$('bench-count').textContent=slots.length+' / 9';$('forge-lab').hidden=active.gameMode!=='forge';if(active.gameMode==='forge')renderForgeLab();const rack=$('bench-slots'),previousScroll=rack.scrollTop;rack.replaceChildren();let lane=null,laneNumber=0;
+ const evolved=myActor().evolution,fusions=myActor().fusions||[];$('evo-readout').hidden=!['rupture','forge'].includes(active.gameMode);$('evo-readout').textContent='БОЕВОЙ ПУТЬ: '+(ARCHETYPES.find(x=>x.id===myActor().archetype)?.name||'Стрелок')+' · '+(evolved?(EVOLUTIONS.find(x=>x.id===evolved.form)?.name+' · УРОВЕНЬ '+evolved.level+(fusions.length?' · СЛИЯНИЯ: '+fusions.map(id=>FUSIONS.find(x=>x.id===id)?.name).join(', '):'')):(fusions.length?'СЛИЯНИЯ: '+fusions.map(id=>FUSIONS.find(x=>x.id===id)?.name).join(', '):'Форма ещё не пробуждена. Выбери «Мутировать» при эволюции.'));$('bench-count').textContent=slots.length+' / 9';$('forge-lab').hidden=active.gameMode!=='forge';if(active.gameMode==='forge')renderForgeLab();const rack=$('bench-slots'),previousScroll=rack.scrollTop;rack.replaceChildren();let lane=null,laneNumber=0;
  const info=description(slots);
  const available=new Set([mage(myActor().mageId).school]);
  for(const chain of info.chains)for(const action of chain.actions)if(['ball','blast','mine'].includes(action.id))available.add(chosenElement(action.mods,mage(myActor().mageId).school));
@@ -640,6 +640,30 @@ function drawEffects(s){
   ctx.globalAlpha=1;
  }
 }
+
+function drawArchetypeGlyph(a,x,y){
+ const role=a.archetype||'striker',k=reducedMotion?0:Math.sin(frame*.10);
+ const baseY=y-42;
+ ctx.save();ctx.globalAlpha=.9;
+ pixel(x-13,baseY-2,26,11,'#172820dd');
+ if(role==='striker'){
+  const bright=a.cast<.05?'#f6d58d':'#a78968';
+  pixel(x-10,baseY+2,14,2,bright);pixel(x+5,baseY,4,2,bright);pixel(x+9,baseY-2,3,2,bright);pixel(x+5,baseY+4,4,2,bright);
+  if(a.cast<.05)pixel(x-12,baseY+2,2,2,'#fff4c5');
+ }else if(role==='shaper'){
+  const color=a.shield>0?'#d0dfb3':'#8ca99e';
+  ctx.strokeStyle=color;ctx.lineWidth=1.4;ctx.strokeRect(x-9,baseY-1,17,7);
+  pixel(x-3,baseY+1,6,3,color);
+  if(a.shield>0)pixel(x-10,baseY-3,20,1,'#eaf7d0');
+ }else{
+  const bright=a.heat>35?'#f1ad8b':'#93d6d4';
+  pixel(x-9,baseY+1,4,2,bright);pixel(x-5,baseY+3,5,2,bright);
+  pixel(x+1,baseY-1,4,2,bright);pixel(x+5,baseY+1,4,2,bright);
+  if(a.heat>35)pixel(x-1+k*2,baseY+2,2,2,'#f8e5b5');
+ }
+ ctx.restore();
+}
+
 function drawOverlay(s){
  if(s?.phase==='fight'&&(s.gameMode==='rupture'?s.remaining<=90:s.remaining<10)){
   const radius=ringRadius(s),warning=.65+Math.sin(frame*.19)*.15;
@@ -684,6 +708,7 @@ function render(){
    const moving=Math.min(1,Math.hypot(p.x-oldX,p.y-oldY)*.48);
    wizard(p.x,p.y,a.face,frame/60,!mine,1,a.shield,a.flash,moving,true);
    drawActorCues(ctx,a,p.x,p.y,mine,frame/60,reducedMotion);
+   drawArchetypeGlyph(a,p.x,p.y);
    if(a.markLife>0&&ELEMENTS[a.mark]){
     const color=ELEMENTS[a.mark].color;
     pixel(p.x-3,p.y-37,6,5,color);pixel(p.x-1,p.y-34,2,3,'#fff3cf');
