@@ -6,7 +6,7 @@ import {buildComicPrompt} from './comic-prompt.js';
 import {createSoundscape} from './audio.js';
 import {makeSubmission,outgoingPacket,validPending,isSafeReceipt,canRetry} from './submission-guard.js';
 import {renderWaiting} from './waiting-view.js';
-import {controlsBar,controlsDialog,kickDialog} from './moderation-view.js';
+import {controlsBar,controlsDialog,kickDialog,skipDialog} from './moderation-view.js';
 import {updateWaitingView} from './waiting-sync.js';
 import {mayShowFinaleIntro} from './finale-state.js';
 import {finaleCurtain} from './finale-intro.js';
@@ -36,7 +36,7 @@ let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
 let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',comicSource=null;
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='';
-let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false,joinSeatCode='',kickTarget='';
+let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false,joinSeatCode='',kickTarget='',skipTarget='';
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
 const playerName=()=>preferredPocketName(pocketIdentity,name.trim());
@@ -328,6 +328,7 @@ function results(){
 function overlay(){
  if(modal==='moderation')return controlsDialog(view,me,escape);
  if(modal==='kick-confirm')return kickDialog(view,view?.players?.find(p=>p.id===kickTarget),escape);
+ if(modal==='skip-confirm')return skipDialog(view,view?.players?.find(p=>p.id===skipTarget),escape);
  if(modal==='archive-delete')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Видалити видання"><section class="comic-inner"><div class="eyebrow">ПІДТВЕРДИТИ ВИДАЛЕННЯ</div><h3>Видалити це видання?</h3><p class="mini">Усі рукописи цього випуску буде видалено лише з цього пристрою. Дію не можна скасувати.</p><div class="button-row"><button class="button outline" type="button" data-act="cancel">Залишити</button><button class="button" type="button" data-act="archive-confirm-delete">Видалити</button></div></section></div>';
  if(modal==='leave'){
    const live=['v5','v6'].includes(roomVersion)&&view?.phase==='writing';
@@ -429,6 +430,8 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
  if(act==='pause'||act==='unpause'){send({type:act});return}
  if(act==='ask-kick'){kickTarget=b.dataset.id;modal='kick-confirm';render();return}
  if(act==='confirm-kick'){modal='moderation';send({type:'kick',seatId:b.dataset.id});render();return}
+ if(act==='ask-skip'){skipTarget=b.dataset.id;modal='skip-confirm';render();return}
+ if(act==='confirm-skip'){modal='moderation';send({type:'skip_slot',seatId:b.dataset.id});render();return}
  if(act==='transfer-host'){modal='';send({type:'transfer_host',seatId:b.dataset.id});render();return}
  if(act==='open-seat'){send({type:'open_seat',seatId:b.dataset.id});return}
  if(act==='close-seat'){send({type:'close_seat'});return}
