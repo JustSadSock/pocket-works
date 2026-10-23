@@ -12,7 +12,7 @@ const encode=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const option=(text,attr,selected=false)=>'<button type="button" class="dev-choice'+(selected?' is-selected':'')+'" '+attr+'>'+encode(text)+'</button>';
 export function createBazaarDebug(){
  let root=null,frame=null,isOpen=false,viewport=DEBUG_VIEWPORTS[0],scene='four',section='screens',itemKind='inventory';
- let lastFocus=null,observer=null,auditQueue=null,results=[],ready=false;
+ let lastFocus=null,observer=null,auditQueue=null,results=[],ready=false,auditRun=0;
  let debugSound='on';
  const audio=createAudioFeedback({storage:{getItem:()=>debugSound,setItem:(_,v)=>{debugSound=v;}}});
  const tabs=[['screens','Экраны'],['items','Предметы'],['characters','Персонажи'],['effects','Эффекты'],['qa','Проверка']];
@@ -36,7 +36,7 @@ export function createBazaarDebug(){
    controls(DEBUG_FX.map(([id,label])=>option(label,'data-debug-effect="'+id+'"')))+
    option(audio.isEnabled()?'Звук включён':'Звук выключен','data-debug-mute="1"');
   return '<p class="dev-hint">Проверка переполнения, размеров кнопок и доступности элементов на разных экранах.</p>'+
-   controls([option('Проверить текущий','data-debug-audit="1"'),option('Проверить все 5 размеров','data-debug-audit-all="1"')])+
+   controls([option('Проверить текущий','data-debug-audit="1"'),option('Проверить все 5 размеров','data-debug-audit-all="1"'),option('Полный аудит экранов','data-debug-audit-matrix="1"')])+
    '<pre class="dev-report" data-debug-report role="status">'+encode(results.length?JSON.stringify(results,null,2):'Нажми «Проверить».')+'</pre>';
  }
  function markup(){
@@ -71,19 +71,24 @@ export function createBazaarDebug(){
   root.querySelector('[data-debug-dimensions]').textContent=viewport[2]+' × '+viewport[3]+' · '+Math.round(scale*100)+'%';
   root.querySelectorAll('[data-debug-viewport]').forEach(b=>b.classList.toggle('is-selected',b.dataset.debugViewport===viewport[0]));
  }
+ function nextAudit(){
+  if(!auditQueue?.length){auditQueue=null;status('Проверка завершена · '+results.length+' экранов');refreshPanel();return;}
+  const step=auditQueue.shift();viewport=step.viewport;scene=step.scene;
+  resize();send({type:'scene',id:scene});
+  // Wait until the iframe has laid out the scene at its true CSS viewport.
+  const run=auditRun;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{if(run===auditRun&&isOpen)send({type:'audit',run});}));
+ }
  function receive(event){
   if(!isOpen||event.origin!==location.origin||event.source!==frame?.contentWindow)return;
   const d=event.data;if(d?.source!=='bazaar-debug-preview')return;
   if(d.type==='ready'){ready=true;status('Предпросмотр готов · без сети');send({type:'scene',id:scene});resize();}
   if(d.type==='status')status(d.message);
   if(d.type==='audit'){
+   if(auditQueue&&d.run!==auditRun)return;
    results.push({device:viewport[0],scene,...d.report});
    refreshPanel();status((d.report.issues?.length||0)+' проблем · '+viewport[2]+' × '+viewport[3]);
-   if(auditQueue?.length){
-    const next=auditQueue.shift();
-    if(next){viewport=next;resize();send({type:'audit'});}
-    else{auditQueue=null;status('Завершена проверка всех пяти размеров');refreshPanel();}
-   }
+   if(auditQueue)nextAudit();
   }
  }
  function selectScene(id){scene=id;send({type:'scene',id});if(section==='screens')refreshPanel();}
@@ -105,8 +110,9 @@ export function createBazaarDebug(){
    audio.unlock();audio.play(cue[0]);send({type:'effect',kind:cue[0],label:cue[1]});return;
   }
   if(b.dataset.debugMute){audio.setEnabled(!audio.isEnabled());if(audio.isEnabled())audio.unlock();refreshPanel();return;}
-  if(b.hasAttribute('data-debug-audit')){results=[];send({type:'audit'});return}
-  if(b.hasAttribute('data-debug-audit-all')){results=[];viewport=DEBUG_VIEWPORTS[0];auditQueue=[...DEBUG_VIEWPORTS.slice(1),null];resize();send({type:'audit'});}
+  if(b.hasAttribute('data-debug-audit')){auditQueue=null;auditRun++;results=[];send({type:'audit'});return}
+  if(b.hasAttribute('data-debug-audit-all')){results=[];auditRun++;auditQueue=DEBUG_VIEWPORTS.map(v=>({viewport:v,scene}));nextAudit();return}
+  if(b.hasAttribute('data-debug-audit-matrix')){results=[];auditRun++;auditQueue=DEBUG_SCENES.flatMap(([id])=>DEBUG_VIEWPORTS.map(v=>({viewport:v,scene:id})));nextAudit();return}
  }
  function open(){
   if(isOpen)return;isOpen=true;ready=false;lastFocus=document.activeElement;
@@ -118,7 +124,7 @@ export function createBazaarDebug(){
  }
  function close(){
   if(!isOpen)return;
-  isOpen=false;ready=false;auditQueue=null;observer?.disconnect();observer=null;
+  isOpen=false;ready=false;auditQueue=null;auditRun++;observer?.disconnect();observer=null;
   root?.remove();root=null;frame=null;document.body.classList.remove('bazaar-debug-open');
   lastFocus?.focus?.({preventScroll:true});
  }
