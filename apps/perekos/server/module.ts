@@ -229,8 +229,8 @@ function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
  s.shots.push({x,y,vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,owner:a.id,
   style,element,accel:options.signature?(a.mageId==='kindle'?490:a.mageId==='wire'?-380:0):0,
   minSpeed:options.signature&&a.mageId==='kindle'?310:options.signature&&a.mageId==='wire'?300:0,
-  damage:options.clone?6:stats(a).damage*(options.strong?1.6:1),life:(options.far?1.8:1.15)*(style==='arc'?.84:style==='rock'?1.2:style==='wave'?.65:1),
-  bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?10:style==='wave'?12:style==='rock'?8:style==='bolt'?3:options.clone?4:5,depth:options.depth||0});
+  damage:Number.isFinite(options.damage)?options.damage:options.clone?6:stats(a).damage*(options.strong?1.6:1),life:options.life??(options.far?1.8:1.15)*(style==='arc'?.84:style==='rock'?1.2:style==='wave'?.65:1),
+  bounces:options.bounce?1:0,drain:!!options.drain,r:options.wide?10:style==='wave'?12:style==='rock'?8:style==='bolt'?3:options.clone?4:5,depth:options.depth||0,fusion:options.fusion!==false,evo:!!options.evo});
  fx(s,'shoot',x,y);return true;
 }
 
@@ -357,6 +357,50 @@ function rockFracture(s,q,x,y){
  fx(s,'fracture',x,y);
 }
 
+
+function castEvolution(s,a){
+ if(s.gameMode!=='rupture'||!a.evolution||a.hp<=0)return;
+ const {form,level}=a.evolution,element=mage(a.mageId).school,enemy=s.actors[1-a.id],angle=a.face;
+ if(form==='beam'){
+  const length=beamLength(s,a.x,a.y,angle,175+level*45),width=5+level*5;
+  s.beams.push({owner:a.id,x:a.x,y:a.y,angle,length,width,life:.25,style:'evo-beam',element,level});
+  const dx=enemy.x-a.x,dy=enemy.y-a.y,front=dx*Math.cos(angle)+dy*Math.sin(angle),side=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
+  if(front>0&&front<length+12&&side<width+12){const hit=harm(s,enemy,3+level*2.4,a.id);if(hit>0){markTarget(s,enemy,element,a.id);enemy.slow=Math.max(enemy.slow,.15+level*.1);fx(s,'impact_arc',enemy.x,enemy.y)}}
+ }else if(form==='swarm'){
+  const count=2+level*2;
+  for(let i=0;i<count;i++)spawnShot(s,a,angle+(i-(count-1)/2)*(.17+level*.015),a.x,a.y,{style:'arc',element,damage:2+level*.55,life:.7+level*.1,depth:2,fusion:false,evo:true});
+ }else if(form==='field'&&s.fields.length<8){
+  const x=clamp(a.x+Math.cos(angle)*70,30,W-30),y=clamp(a.y+Math.sin(angle)*70,30,H-30);
+  s.fields.push({owner:a.id,x,y,r:27+level*16,life:2+level*.8,timer:0,element,level});fx(s,'overload',x,y);
+ }
+}
+function fusionImpact(s,q,target){
+ if(q.fusion===false||q.depth>=2)return;
+ const source=s.actors[q.owner];
+ for(const id of source.fusions){
+  if(id==='ember_nova'&&q.element==='fire'){target.burn=Math.max(target.burn,1.8);target.burnSource=q.owner;harm(s,target,3.5,q.owner,q.depth+1);fx(s,'overload',target.x,target.y)}
+  else if(id==='stone_crush'&&q.element==='stone'){target.shield=Math.max(0,target.shield-8);target.slow=Math.max(target.slow,1.25);fx(s,'fracture',target.x,target.y)}
+  else if(id==='storm_lattice'&&q.element==='storm'&&s.shots.length<76){
+   const d=Math.atan2(q.vy,q.vx);
+   for(const t of [-.50,.50])spawnShot(s,source,d+t,q.x,q.y,{style:'arc',element:'storm',damage:3,life:.48,depth:2,fusion:false});
+   fx(s,'thunder',target.x,target.y);
+  }
+ }
+}
+function updateEvolutionFields(s,dt){
+ for(let j=s.fields.length-1;j>=0;j--){
+  const f=s.fields[j];f.life-=dt;f.timer-=dt;
+  if(f.timer<=0){
+   f.timer=.48;const target=s.actors[1-f.owner],distance=Math.hypot(target.x-f.x,target.y-f.y);
+   if(target.hp>0&&distance<f.r+12&&beamLength(s,f.x,f.y,Math.atan2(target.y-f.y,target.x-f.x),distance+3)>=distance-9){
+    const hit=harm(s,target,1.6+f.level*1.1,f.owner);
+    if(hit>0){markTarget(s,target,f.element,f.owner);target.slow=Math.max(target.slow,.2+f.level*.08);fx(s,'impact_arc',target.x,target.y)}
+   }
+  }
+  if(f.life<=0)s.fields.splice(j,1);
+ }
+}
+
 function attack(s,a,target){
  if(a.mageId==='cinder')return flame(s,a,target);
  if(a.cast>0||a.stun>0||a.windup)return false;
@@ -380,7 +424,7 @@ function dash(s,a,dir){
 // The queue is cleared each update and every event owns a bounded ancestry depth.
 function emit(s,kind,owner,payload={},depth=0){
  if(depth>MAX_CHAIN_DEPTH||s.eventQueue.length>=MAX_QUEUE)return false;
- s.eventQueue.push({kind,owner,payload,depth});return true;
+ s.eventQueue.push({kind,owner,payload,depth});if(kind==='on_cast'&&depth===0&&s.gameMode==='rupture')castEvolution(s,s.actors[owner]);return true;
 }
 function addHeat(s,a,amount,depth=0){
  a.heat=Math.min(HEAT_LIMIT,a.heat+amount);
@@ -464,7 +508,7 @@ if(c.dash)dash(s,a,{x:Number(c.x)||Math.cos(a.face),y:Number(c.y)||Math.sin(a.fa
 if(c.shield)guard(s,a);
 if(c.attack)attack(s,a,c.aim||other);
 if(s.ticks%60===0&&a.heat>=HEAT_LIMIT)addHeat(s,a,0)}
-updateLobs(s,dt);
+updateLobs(s,dt);if(s.gameMode==='rupture')updateEvolutionFields(s,dt);
 for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s.beams.splice(j,1)}
  for(let j=s.waves.length-1;j>=0;j--){const w=s.waves[j];processWave(s,w);if(w.life<=0)s.waves.splice(j,1)}
  for(let j=s.shots.length-1;j>=0;j--){const q=s.shots[j],a=s.actors[1-q.owner];if(q.accel){const speed=Math.hypot(q.vx,q.vy)||1;
@@ -474,7 +518,8 @@ const nx=q.x+q.vx*dt,ny=q.y+q.vy*dt;q.life-=dt;
 if(Math.hypot(nx-a.x,ny-a.y)<12+q.r){
  if(q.style==='bolt')a.shield=Math.max(0,a.shield-3);
  const dealt=harm(s,a,q.damage,q.owner,q.depth);if(dealt){markTarget(s,a,q.element||mage(s.actors[q.owner].mageId).school,q.owner,q.depth);const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn'){a.burn=Math.max(a.burn||0,has(attacker,'lasting')?2.4:1.55);a.burnSource=q.owner;}if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
- if(q.style==='rock')rockFracture(s,q,nx,ny);
+ if(dealt>0)fusionImpact(s,q,a);
+  if(q.style==='rock')rockFracture(s,q,nx,ny);
  fx(s,'impact_'+(q.style||'orb'),nx,ny);s.shots.splice(j,1);continue
 }
 const wall=distWall(nx,ny,q.r)||blocking(s,nx,ny,q.r),edge=nx<19||nx>W-19||ny<21||ny>H-21;
