@@ -84,7 +84,7 @@ test('owner settings, custom questions, round restart, leave, and room limits',(
  let v=see(s,players[0],players);
  s=msg(s,players[0],{type:'submit',round:0,sheetId:v.sheet.id,answer:'Панда танцювала на сцені',tailIndexes:[],gender:'female'}).state;
  assert.equal(see(s,players[0],players).waiting,true);
- s=game.onLeave({state:s,players:[players[0]]}).state;
+ s=game.onLeave({state:s,player:players[1],players:[players[0]]}).state;
  assert.equal(s.phase,'writing');assert.equal(s.sheets.length,2);
  assert.equal(s.sheets[0].fragments.length,1);
  const next=msg(s,players[0],{type:'start'});assert.equal(next.events[0].type,'notice');
