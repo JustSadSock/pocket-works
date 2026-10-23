@@ -160,6 +160,8 @@ jobs:
 
       - name: Test ZAMAZKA multipart paintings and PocketNet frame limit
         run: node apps/zamazka/qa/large-painting.mjs
+      - name: Verify acknowledged draft suffix transfer and full fallback
+        run: node apps/zamazka/qa/draft-delta-transfer.mjs
 
       - name: Test ZAMAZKA final transfer checksum and interrupted upload recovery
         run: node apps/zamazka/qa/final-transfer-recovery.mjs
