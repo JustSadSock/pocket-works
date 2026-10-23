@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "product": "crown-laws",
-  "status": "v0.4 illustrated council",
+  "status": "v0.5 illustrated royal codex",
   "memoryReview": [
     {
       "slug": "fog-of-conquest",
@@ -72,6 +72,14 @@
       "interaction": "All cards and laws are actionable. Debug screen preview offers read-only state interaction. Conditional turn forecast comes from pure engine simulation.",
       "motion": "Brief wax seal, crown highlights, board move and victory reveal, all reducible.",
       "rationale": "Distinct vector silhouette vocabulary corrects the geometric-only placeholder look without sacrificing rules legibility."
+    },
+    {
+      "id": "royal-codex-stage05",
+      "medium": "Hand-authored full-figure SVG sprite atlas and relief/carved decorative SVG on a strictly flat board, physical paper and stone panels composed in CSS",
+      "composition": "Six visibly differentiated pieces occupy the 5x7 court; five laws are bound in an ivory codex on desktop and arranged into seals on mobile; decree choice resembles an illustrated folded folio",
+      "interaction": "Existing law inspection, conditional forecast, choice confirmation and hot-seat remain; debug art gallery for asset acceptance",
+      "motion": "Light card and crown microfeedback only; detailed phase-based action choreography reserved for 0.6",
+      "rationale": "Replace repetitive circular portrait tokens and generic cards with character silhouettes and one consistent material grammar."
     }
   ],
   "selection": {
@@ -99,6 +107,11 @@
       "id": "universal-art-forge-vector",
       "availability": "source-authored; raster/index build pending",
       "reason": "Four editable SVG sources and matching publishable SVG vectors are checked in, alongside an Art Forge v2 vector production plan. Do not activate manifest.json until required Inkscape PNG exports and hash index are built and committed."
+    },
+    {
+      "id": "art-forge-stage05",
+      "availability": "editable SVG sources and offline runtime SVG committed; Inkscape raster export + hash index pending",
+      "reason": "Three new source/export pairs recorded in vector-production-plan.json. Do not enable incomplete manifest. Existing independent apps are unaffected."
     }
   ],
   "assets": [
@@ -156,6 +169,51 @@
       "integration": "Local SVG used by CSS as an offline runtime asset",
       "provenance": "Original hand-authored vector paths for Crown Laws",
       "maxBytes": 120000
+    },
+    {
+      "id": "court-figures",
+      "tool": "universal-art-forge-vector",
+      "source": "asset-forge/court-figures.svg",
+      "output": "assets/court-figures.svg",
+      "role": "Six full-height unique illustrated figures used on board and title scene",
+      "acceptance": "Self-contained inline paths; CSS sprite sheet keeps correct family-specific positions; included in service-worker offline precache",
+      "integration": "Native SVG loaded from app-owned offline assets via CSS",
+      "provenance": "Original hand-authored SVG created for Crown Laws 0.5",
+      "maxBytes": 80000,
+      "dimensions": [
+        960,
+        240
+      ]
+    },
+    {
+      "id": "throne-relief",
+      "tool": "universal-art-forge-vector",
+      "source": "asset-forge/throne-relief.svg",
+      "output": "assets/throne-relief.svg",
+      "role": "Carved gilded throne tile centerpiece",
+      "acceptance": "Self-contained inline paths; CSS sprite sheet keeps correct family-specific positions; included in service-worker offline precache",
+      "integration": "Native SVG loaded from app-owned offline assets via CSS",
+      "provenance": "Original hand-authored SVG created for Crown Laws 0.5",
+      "maxBytes": 80000,
+      "dimensions": [
+        240,
+        240
+      ]
+    },
+    {
+      "id": "decree-ornament",
+      "tool": "universal-art-forge-vector",
+      "source": "asset-forge/decree-ornament.svg",
+      "output": "assets/decree-ornament.svg",
+      "role": "Subtle gilded manuscript border for codex and decrees",
+      "acceptance": "Self-contained inline paths; CSS sprite sheet keeps correct family-specific positions; included in service-worker offline precache",
+      "integration": "Native SVG loaded from app-owned offline assets via CSS",
+      "provenance": "Original hand-authored SVG created for Crown Laws 0.5",
+      "maxBytes": 80000,
+      "dimensions": [
+        280,
+        360
+      ]
     }
   ],
   "constraints": {
