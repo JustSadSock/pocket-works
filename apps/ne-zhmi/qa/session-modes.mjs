@@ -97,6 +97,12 @@ try{
  await guest.locator('#online-code-input').fill('AABBCCDD');
  await guest.locator('#online-join').click();
  await poll(()=>room.state.players.length===2,'guest joined');
+ const startFits=await host.locator('#online-start').evaluate(button=>{
+   const panel=document.getElementById('online-lobby');
+   const a=button.getBoundingClientRect(),b=panel.getBoundingClientRect();
+   return a.bottom<=b.bottom-2&&a.top>=b.top+1;
+ });
+ if(!startFits)throw Error('Host Start is below visible lobby viewport');
  if(!(await guest.locator('#online-mode').isDisabled()))throw Error('Guest must not alter room mode');
  await host.screenshot({path:output+'/series-online-lobby.png'});
  await host.locator('#online-start').click();

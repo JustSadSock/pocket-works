@@ -51,7 +51,7 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
     const roles=snapshot?.roles||[];
     const people=snapshot?.players||[];
     $('online-roster').replaceChildren();
-    for(let i=0;i<Math.min(6,Math.max(2,total+1));i++){
+    for(let i=0;i<Math.min(6,Math.max(1,total));i++){
       const id=roles[i],person=people.find(p=>p.id===id);
       const item=document.createElement('div');item.className='operator-seat'+(id===me?.id?' mine':'');
       const name=document.createElement('strong'),label=document.createElement('small');
