@@ -153,7 +153,7 @@ function segmentBox(x,y,dx,dy,r,b){
 }
 function segmentCircle(x,y,dx,dy,r,c){
  const vx=x-c.x,vy=y-c.y,rr=r+c.r,A=dx*dx+dy*dy,C=vx*vx+vy*vy-rr*rr;
- if(C<=0){const d=Math.hypot(vx,vy)||1;return {t:0,nx:vx/d,ny:vy/d}}
+ if(C<=0){const d=Math.hypot(vx,vy)||1,B=2*(vx*dx+vy*dy),D=B*B-4*A*C;return {t:0,nx:vx/d,ny:vy/d,exit:A>GEOMETRY_EPS&&D>=0?(-B+Math.sqrt(D))/(2*A):0}}
  if(A<GEOMETRY_EPS)return null;
  const B=2*(vx*dx+vy*dy),D=B*B-4*A*C;if(D<0)return null;
  const t=(-B-Math.sqrt(D))/(2*A);if(t<0||t>1)return null;
@@ -182,6 +182,23 @@ function firstCollision(s,x,y,dx,dy,r,owner,{actors=false,skipBarrier=-1}={}){
  }
  return best;
 }
+/** Phase exactly one obstacle, never the whole ray or a neighboring wall. */
+function phaseExitPoint(s,hit,x,y,dx,dy,r){
+ if(!hit||!['wall','barrier'].includes(hit.type))return null;
+ const distance=Math.hypot(dx,dy);if(distance<GEOMETRY_EPS)return null;
+ const ux=dx/distance,uy=dy/distance,probe=300;
+ const object=hit.type==='wall'?COLLISION_WALLS[hit.index]:s?.barriers?.[hit.index];
+ if(!object)return null;
+ const intersect=hit.type==='wall'
+  ?segmentBox(x,y,ux*probe,uy*probe,r,object)
+  :segmentCircle(x,y,ux*probe,uy*probe,r,object);
+ if(!intersect||!Number.isFinite(intersect.exit)||intersect.exit<0||intersect.exit*probe>=probe-1)return null;
+ const travel=intersect.exit*probe+.2;
+ const px=x+ux*travel,py=y+uy*travel;
+ if(px<20+r||px>380-r||py<20+r||py>600-r)return null;
+ return {x:px,y:py,travel};
+}
+
 function rayCollision(s,x,y,angle,distance,r=3,owner=null,actors=false){
  const dx=Math.cos(angle)*distance,dy=Math.sin(angle)*distance;
  const hit=firstCollision(s,x,y,dx,dy,r,owner,{actors});
@@ -608,7 +625,10 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
    fx(s,'impact_'+(q.style||'orb'),q.x,q.y);s.shots.splice(j,1);done=true;continue;
   }
   if(q.phase>0&&(hit.type==='wall'||hit.type==='barrier')){
-   const pass=firstCollision(s,q.x,q.y,q.vx*.65,q.vy*.65,q.r,q.owner);const skip=Math.max(.001,pass?.exit??0);q.x+=q.vx*.65*skip+Math.sign(q.vx)*.08;q.y+=q.vy*.65*skip+Math.sign(q.vy)*.08;q.phase=0;
+   const exit=phaseExitPoint(s,hit,q.x,q.y,q.vx,q.vy,q.r);
+   q.phase=0;
+   if(!exit){s.shots.splice(j,1);fx(s,'spark',q.x,q.y);done=true;continue}
+   q.x=exit.x;q.y=exit.y;
    fx(s,'phase_exit',q.x,q.y);remaining*=Math.max(0,1-hit.t);continue;
   }
   if(q.bounces>0){

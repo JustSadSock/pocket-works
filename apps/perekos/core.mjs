@@ -3,7 +3,7 @@ import {RUNES,legalRunes,compile,description,eligibleOffers,cooldown,heatCost,re
 export {RUNES} from './runes.mjs';
 import {mage,validMage} from './mages.mjs';
 import {reactionFor,isElement} from './elements.mjs';
-import {firstCollision,rayCollision} from './collision-geometry.mjs';
+import {firstCollision,rayCollision,phaseExitPoint} from './collision-geometry.mjs';
 export const W=400,H=620,STEP=1/60,ROUND_SECONDS=25,RUPTURE_SECONDS=600,EVOLUTION_SECONDS=60,COLLAPSE_SECONDS=90;
 export const WALLS=[{x:102,y:180,w:64,h:54},{x:232,y:385,w:66,h:56}];
 
@@ -327,8 +327,9 @@ export function previewAttack(s,a,target,special=false){
  const hit=rayCollision(s,a.x,a.y,angle,length,radius,a.id,['shot','ricochet','phase'].includes(type));
  const one={x:a.x,y:a.y,toX:a.x+ux*hit.length,toY:a.y+uy*hit.length},segments=[one];
  if(type==='phase'&&hit.hit&&(hit.hit.type==='wall'||hit.hit.type==='barrier')){
-  const exit=Math.max(hit.hit.t,Math.min(1,hit.hit.exit??hit.hit.t));
-  const ex=a.x+ux*length*exit,ey=a.y+uy*length*exit,remaining=Math.max(0,length*(1-exit));
+  const skip=phaseExitPoint(s,hit.hit,one.toX,one.toY,ux,uy,radius);
+  if(!skip)return {type,angle,length:hit.length,maxRange:length,width,radius,blocked:true,x:one.toX,y:one.toY,segments};
+  const ex=skip.x,ey=skip.y,remaining=Math.max(0,length-hit.length);
   const onward=rayCollision(s,ex+ux*.2,ey+uy*.2,angle,remaining,5,a.id,true);
   return {type,angle,length:hit.length,maxRange:length,radius:5,width,blocked:!!onward.hit,x:ex+ux*onward.length,y:ey+uy*onward.length,
    segments:[one,{x:one.toX,y:one.toY,toX:ex,toY:ey,phase:true},{x:ex,y:ey,toX:ex+ux*onward.length,toY:ey+uy*onward.length}]}
@@ -472,7 +473,10 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
    fx(s,'impact_'+(q.style||'orb'),q.x,q.y);s.shots.splice(j,1);done=true;continue;
   }
   if(q.phase>0&&(hit.type==='wall'||hit.type==='barrier')){
-   const pass=firstCollision(s,q.x,q.y,q.vx*.65,q.vy*.65,q.r,q.owner);const skip=Math.max(.001,pass?.exit??0);q.x+=q.vx*.65*skip+Math.sign(q.vx)*.08;q.y+=q.vy*.65*skip+Math.sign(q.vy)*.08;q.phase=0;
+   const exit=phaseExitPoint(s,hit,q.x,q.y,q.vx,q.vy,q.r);
+   q.phase=0;
+   if(!exit){s.shots.splice(j,1);fx(s,'spark',q.x,q.y);done=true;continue}
+   q.x=exit.x;q.y=exit.y;
    fx(s,'phase_exit',q.x,q.y);remaining*=Math.max(0,1-hit.t);continue;
   }
   if(q.bounces>0){
