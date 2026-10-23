@@ -199,7 +199,7 @@ function marketBlock(you,canAct){
  return html+'</div>';
 }
 function resourceFields(prefix,defaults={}){
- return '<div class="row">'+keys.map(k=>'<label>'+names[k]+'<input type="number" min="0" max="2000" step="1" name="'+prefix+'_'+k+'" value="'+(defaults[k]||0)+'" required></label>').join('')+'</div>';
+ return '<div class="row resource-inputs">'+keys.map(k=>'<label class="resource-input" title="'+names[k]+'"><span class="resource-input-icon">'+svgIcon(({gold:'coin',crystals:'gem',parts:'parts'})[k],19)+'</span><span class="sr-only">'+names[k]+'</span><input aria-label="'+names[k]+'" type="number" min="0" max="2000" step="1" name="'+prefix+'_'+k+'" value="'+(defaults[k]||0)+'" required></label>').join('')+'</div>';
 }
 function dealDescription(d){
   const one=(w,item)=>esc(amounts(w))+(item?' и «'+esc(item.name)+'»':'');
@@ -223,7 +223,7 @@ function tradePanel(you){
     const mine=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
     const theirs=(partner?.inventory||[]).filter(i=>i.tradable);
     const depth=d.depth||0;
-    return '<div class="offer"><p>'+dealDescription(d)+'</p>'+
+    return '<div class="offer"><div class="deal-state">'+svgIcon('mail-open',17)+' Получено · ожидает решения</div><p>'+dealDescription(d)+'</p>'+
       '<div class="row"><button type="button" class="primary" data-action="deal-accept" data-id="'+esc(d.id)+'">Принять обмен</button>'+
       '<button type="button" data-action="deal-cancel" data-id="'+esc(d.id)+'">Отклонить</button></div>'+
       (depth>=6?'<p class="muted">Лимит раундов переговоров достигнут.</p>':
@@ -237,10 +237,10 @@ function tradePanel(you){
   }).join('');
  }
  if(outbox.length){
-  html+='<h3>Твоё предложение</h3>'+outbox.map(d=>'<div class="offer"><p>'+dealDescription(d)+'</p>'+
+  html+='<h3>Твоё предложение</h3>'+outbox.map(d=>'<div class="offer"><div class="deal-state is-pending">'+svgIcon('clock',17)+' Ожидает ответа</div><p>'+dealDescription(d)+'</p>'+
     '<button type="button" data-action="deal-cancel" data-id="'+esc(d.id)+'">Отозвать</button></div>').join('');
  }
- const recipients=state.players.filter(p=>p.id!==you.id&&!p.bankrupt&&p.connected);
+ const recipients=state.players.filter(p=>p.id!==you.id&&!p.bankrupt&&playerOnline(p));
  if(!you.bankrupt&&recipients.length){
   const first=recipients[0];
   const giveItems=you.items.filter(i=>i.acquiredRound!==state.round&&i.id!==state.listing?.id);
@@ -532,8 +532,10 @@ function resourceWallet(w,forecast){
  return '<div class="currency-strip" aria-label="Ресурсы и итог за раунд">'+
  [['gold','coin','Золото'],['crystals','gem','Кристаллы'],['parts','parts','Детали']].map(([k,icon,title])=>{
  const d=forecast.delta[k],text=d>0?'+'+d:String(d);
+  const goal=Math.max(0,state?.you?.quota?.[k]||0),value=Math.max(0,w[k]||0);
+  const progress=goal?Math.min(100,Math.round(100*value/goal)):100;
  return '<span class="currency" aria-label="'+title+': '+(w[k]||0)+', за раунд '+text+'">'+svgIcon(icon)+
- '<span class="wallet-values"><strong>'+(w[k]||0)+' <span class="quota-sep">/</span> '+(state?.you?.quota?.[k]??'—')+'</strong><em>'+title+'</em></span>'+
+ '<span class="wallet-values"><strong>'+(w[k]||0)+' <span class="quota-sep">/</span> '+(state?.you?.quota?.[k]??'—')+'</strong><em>'+title+'</em><span class="wallet-track" role="progressbar" aria-label="Квота: '+title+'" aria-valuemin="0" aria-valuemax="'+goal+'" aria-valuenow="'+Math.min(value,goal)+'"><i style="width:'+progress+'%"></i></span></span>'+
  '<small class="wallet-delta '+(d>0?'positive':d<0?'negative':'neutral')+'">'+text+'</small></span>';
  }).join('')+'</div>';
 }
