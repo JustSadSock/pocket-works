@@ -322,16 +322,20 @@ function addSymmetricBox(builder, ax, ay, bx, by, width, z0, z1, tint, material 
   builder.quad(p(bL, z0), p(bR, z0), p(bR, z1), p(bL, z1), tint, material);
 }
 
-function addContinuousStoneRim(builder, profile, materials) {
+function addContinuousStoneRim(builder, profile, materials, winding = 1) {
   if (profile.length < 3) return;
   for (let i = 0; i < profile.length; i++) {
     const a = profile[i], b = profile[(i + 1) % profile.length];
-    // Shared ring vertices at every corner eliminate gaps and overhanging bricks.
+    const dx = b.inner[0] - a.inner[0], dy = b.inner[1] - a.inner[1];
+    const span = Math.hypot(dx, dy) || 1;
+    const outside = [dy / span * winding, -dx / span * winding, 0];
+    const bevelNormal = normalize([outside[0] * .65, outside[1] * .65, .75]);
+    // Shared ring vertices eliminate gaps and spiky miters at every turn.
     builder.quad(a.inner, b.inner, b.crown, a.crown, materials.stone, 0, [0, 0, 1]);
     builder.quad(a.crown, b.crown, b.cap, a.cap, materials.stoneLight, 0, [0, 0, 1]);
-    builder.quad(a.cap, b.cap, b.bevel, a.bevel, materials.stone, 0);
-    builder.quad(a.bevel, b.bevel, b.heel, a.heel, materials.stoneDark, 0);
-    builder.quad(a.heel, b.heel, b.inner, a.inner, materials.stone, 0);
+    builder.quad(a.cap, b.cap, b.bevel, a.bevel, materials.stone, 0, bevelNormal);
+    builder.quad(a.bevel, b.bevel, b.heel, a.heel, materials.stoneDark, 0, outside);
+    builder.quad(a.heel, b.heel, b.inner, a.inner, materials.stone, 0, outside);
   }
 }
 
@@ -507,7 +511,7 @@ function addBoardScene(level) {
     }
 
   }
-  addContinuousStoneRim(opaque, stoneRim, materials);
+  addContinuousStoneRim(opaque, stoneRim, materials, Math.sign(polygonArea(level.outline)) || 1);
 
   for (const zone of level.zones || []) {
     const points = [
