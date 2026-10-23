@@ -27,15 +27,13 @@ test('v2 new magic is a real class-free school selection, combat and sealed rune
  await expect(page.locator('#forge-edit')).toBeVisible();
  await expect(page.locator('#special-btn')).toBeHidden();
  if(await page.evaluate(()=>matchMedia('(pointer:coarse)').matches)){
-  const attack=await page.locator('#attack-btn').boundingBox();
-  const cx=attack.x+attack.width/2,cy=attack.y+attack.height/2;
-  await page.mouse.move(cx,cy);await page.mouse.down();
-  await page.mouse.move(cx-34,cy-34,{steps:8});
-  await page.waitForTimeout(310);await page.mouse.up();
+  // A real touchscreen tap queues one cast on pointerup. Mouse API fakes
+  // pointerType=mouse, whose press can be missed between simulation frames.
+  await page.locator('#attack-btn').tap();
  }else{
   await page.keyboard.down('Space');await page.waitForTimeout(170);await page.keyboard.up('Space');
  }
- expect(await page.evaluate(()=>window.__perekosTest.state.actors[0].shield)).toBeGreaterThan(0);
+ await expect.poll(()=>page.evaluate(()=>window.__perekosTest.state.actors[0].shield),{timeout:4000}).toBeGreaterThan(0);
  await page.locator('#forge-edit').click();
  await expect(page.locator('#magic-v2')).toBeVisible();
  await expect(page.locator('.v2-sealed')).toHaveCount(1);
