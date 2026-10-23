@@ -11,7 +11,8 @@ const codeRewards=[
   {id:'herald',name:'Герольд',detail:'Награда за специальный код PocketWorks.',reward:'Накидка герольда',items:[{slot:'clothes',item:'tabard'}]},
   {id:'groom',name:'Жених',detail:'Награда за специальный код PocketWorks.',reward:'Свадебный мужской костюм',items:[{slot:'clothes',item:'groom'}]},
   {id:'seoul-artist',name:'Лунная сцена',detail:'Награда за специальный код PocketWorks.',reward:'Лунная шпилька и сценический ханбок',items:[{slot:'hat',item:'stage-pin'},{slot:'clothes',item:'stage-hanbok'}]},
-  {id:'yasya-chaos',name:'Тихий хаос Яси',detail:'Персональная награда, привязанная к Pocket ID получателя.',reward:'Диадема тихого хаоса и Личный телохранитель',items:[{slot:'hat',item:'quiet-chaos'},{slot:'accessory',item:'tiny-guardian'}]},
+  {id:'yasya-diadem',name:'Диадема тихого хаоса',detail:'Личный предмет Яси. Активируется отдельным кодом.',reward:'Диадема тихого хаоса',items:[{slot:'hat',item:'quiet-chaos'}]},
+  {id:'yasya-guardian',name:'Личный телохранитель',detail:'Личный предмет Яси. Активируется отдельным кодом.',reward:'Белый кролик на плече',items:[{slot:'accessory',item:'tiny-guardian'}]},
   {id:'dragon-keeper',name:'Хранитель дракона',detail:'Награда за специальный код PocketWorks.',reward:'Изумрудный дракон на плече',items:[{slot:'accessory',item:'shoulder-dragon'}]}
 ];
 export const profileRewardSources=[
@@ -30,8 +31,10 @@ export const profileRewardById=new Map(profileRewardSources.flatMap(group=>group
 
 export function collectProfileRewards(unlocks=[],games=[]){
   const owned=new Set(Array.isArray(unlocks)?unlocks.filter(id=>typeof id==='string'):[]);
+  // Keep the retired combined entitlement from the original release functional.
+  if(owned.has('yasya-chaos')){owned.add('yasya-diadem');owned.add('yasya-guardian')}
   const groups=profileRewardSources.map(g=>({...g,rewards:g.rewards.map(r=>({...r,earned:owned.has(r.id)}))}));
-  const known=new Set(profileRewardById.keys());
+  const known=new Set([...profileRewardById.keys(),'yasya-chaos']);
   // Entitlements from future games must not disappear just because the shell
   // has not received their achievement metadata yet. Display only what the
   // trusted server has already unlocked; never fabricate locked achievements.
