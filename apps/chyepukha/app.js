@@ -35,7 +35,7 @@ let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
 let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',comicSource=null;
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='';
-let lastScreenSignature='',finaleIntroActive=false;
+let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false;
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
 const playerName=()=>preferredPocketName(pocketIdentity,name.trim());
@@ -208,7 +208,7 @@ async function connect(how,settings){
  if(how==='join'&&!code(invitation)){toast('Вкажи правильний код кімнати.');return}
  if(how==='resume'&&!savedRoom()){toast('Збережена кімната для цього профілю недоступна.');return}
  if(net){net.close();net=null;releaseActive()}
- connected=false;connecting=true;notice='';render();
+ roomJoinedOnSocket=false;connected=false;connecting=true;notice='';render();
  try{
   // Avoid two adjacent checks of the same Edge endpoint. WebKit service workers
   // can deliver a stale offline response on the second GET despite a healthy session.
@@ -225,7 +225,7 @@ async function connect(how,settings){
   const c=new PocketNet({serverUrl:ORIGIN,name:nick,storage,identityKey:sessionKey()});
   net=c;
   if(how!=='resume'){c.roomId=null;c.persist()}
-  c.on('connected',v=>{if(net!==c)return;me=v.player?.id||'';connected=true;connecting=false;markActive(ORIGIN,c.token);netStatus()});
+  c.on('connected',v=>{if(net!==c)return;me=v.player?.id||'';connected=true;connecting=false;markActive(ORIGIN,c.token);netStatus();if(roomJoinedOnSocket)retryPending()});
   c.on('room_joined',v=>{
    if(net!==c)return;
    clearRoomTimeout();
@@ -233,13 +233,14 @@ async function connect(how,settings){
     notice='Несумісна версія кімнати. Створи нову.';try{c.leaveRoom()}catch{}
     room='';view=null;render();return;
    }
-   room=v.roomId;roomVersion=v.version;syncUrl();apply(v.state);send({type:'sync'});if(roomVersion==='v5')retryPending();
+   room=v.roomId;roomVersion=v.version;roomJoinedOnSocket=true;syncUrl();apply(v.state);send({type:'sync'});if(roomVersion==='v5')retryPending();
   });
   c.on('game_event',v=>{if(net!==c)return;if(v.event?.type==='state')apply(v.event.payload);
    else if(v.event?.type==='receipt')acknowledgeReceipt(v.event.payload);
-   else if(v.event?.type==='notice'){if(roomVersion==='v5'&&readPending())discardPending();toast(v.event.payload)}});
+   else if(v.event?.type==='submission_rejected'){if(roomVersion==='v5'&&readPending()?.requestId===v.event.payload?.requestId){discardPending();render()}toast(v.event.payload?.reason||'Відповідь не прийнято.')}
+   else if(v.event?.type==='notice')toast(v.event.payload)});
   c.on('presence',()=>{if(net===c&&room&&connected)send({type:'sync'})});
-  c.on('disconnected',()=>{if(net!==c)return;connected=false;connecting=true;netStatus()});
+  c.on('disconnected',()=>{if(net!==c)return;roomJoinedOnSocket=false;connected=false;connecting=true;netStatus()});
   c.on('room_closed',()=>{if(net!==c)return;room='';view=null;connected=false;connecting=false;syncUrl();notice='Кімнату закрито.';render()});
   c.on('error',e=>{
    if(net!==c)return;connecting=false;clearRoomTimeout();
