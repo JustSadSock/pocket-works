@@ -814,3 +814,6 @@ body.sheet-open{overflow:auto}
  .workspace-tabs{padding:3px}
  .sheet-content{padding-bottom:max(8px,env(safe-area-inset-bottom))}
 }
+
+@media(max-width:680px) and (orientation:portrait){.play-screen{display:flex;flex-direction:column}.play-head,.currency-strip,.urgent-ticket{flex-shrink:0}.play-body{display:grid;min-height:0;flex:1 1 0;overflow:hidden}.play-field,.workspace-panel{min-height:0;min-width:0}.workspace-panel .sheet-content{min-height:0;overflow-y:auto;overscroll-behavior:contain}.player-seats .seat{min-width:0}.player-popover{position:fixed;top:auto;bottom:12%;left:50%;transform:translateX(-50%);width:min(320px,calc(100vw - 24px));max-height:min(50dvh,340px)}}
+@media(max-width:680px) and (orientation:portrait) and (max-height:600px){.play-body{grid-template-rows:minmax(120px,32%) minmax(0,1fr)}.table-stage .mini-artifacts button{max-height:46px;min-height:40px}.table-stage .mini-artifacts button .item-svg{width:25px;height:25px}}
