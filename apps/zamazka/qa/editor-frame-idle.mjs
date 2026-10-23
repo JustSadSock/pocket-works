@@ -22,7 +22,7 @@ const windowMock={devicePixelRatio:1,matchMedia:()=>({matches:false})};
 const main=makeCanvas(true);
 const editor=Object.assign(Object.create(Editor.prototype),{
  closed:false,id:1,canvas:main,zone:{x:90,y:80,w:100,h:85},
- baseLayer:makeCanvas(),inkLayer:makeCanvas(),
+ baseLayer:makeCanvas(),inkLayer:makeCanvas(),inkCtx:makeCanvas().getContext('2d'),
  cachedRevision:0,paintRevision:0,displayRevision:-1,
  pendingInkStrokes:[],strokes:[],hasRasterInk:false,
  working:null
