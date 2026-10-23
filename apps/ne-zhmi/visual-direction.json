@@ -3,13 +3,13 @@
   "status": "ready",
   "product": "ne-zhmi",
   "direction": {
-    "premise": "A tiny tin robot drives itself through a chain of miniature mechanical hazards while 2–6 operators each hold one action on a tactile control desk.",
+    "premise": "2–6 operators steer the same little tin robot, now across one quick mechanical run, a three-run scored party challenge, or a reproducible seed lab.",
     "composition": "Miniature full-bleed side-scrolling workshop over an enamel physical control face; mobile shows one assigned plunger and compact crew indicators without crowding the robot.",
     "shapeLanguage": "Pressed steel trays, machined circles, exposed bolts, enamel strips and two large plunger switches. Nothing is floating in a generic card grid.",
     "surfaceAndMaterial": "Painted iron, rubbed aluminum edges, amber enamel, rubber wheels and dusty machine-green workshop panels. All distinct from paper/ink media in neighboring apps.",
     "paletteLogic": "The world uses subdued sage and petroleum hues, the control deck graphite, jump honey-yellow and reversal desaturated cobalt; warnings have rust-orange accents.",
     "typography": "Compressed mechanical display heading, monospaced instrument legends, and readable sentence-case functional paragraphs.",
-    "signature": "A single painted mechanical control desk with six role-specific plungers; impacts awaken a handmade wheeled tin robot through squash, wheel rotation, expressive optics and miniature dust bursts.",
+    "signature": "A continuous side-scrolling tin robot workshop above a tactile physical control deck. A three-position enamel mode switch offers a quick circuit, stamped three-course party ticket, or seeded machine lab; role-specific buttons retain their one-action simplicity.",
     "distinction": "Unlike axis-pals's grid transport, this is continuous momentum and platform contact; unlike crumple-yard's vehicle sandbox, it is side-view two-action shared control."
   },
   "architecture": {
@@ -18,8 +18,8 @@
     "navigation": "overlay-list",
     "chromeTopology": "framed-stage",
     "dominantMotion": "rotational-inertia",
-    "primaryVerb": "Coordinate jumps, reversals and four hold/impulse tools as 2–6 distinct operators to shepherd the shared Boltik through generated workshop sections.",
-    "physicalFeedback": "Real fixed-step forces cause landing compression, wheel motion, antenna sway, warning beacons, bounded debris and tonal machine sounds; cosmetic FX never change server outcomes.",
+    "primaryVerb": "Share physical jump, reversal, magnet, brake, impulse and float roles to solve short generated circuits, assemble a three-run party score, or experiment with a chosen route.",
+    "physicalFeedback": "Stamped completion tickets show exactly three earned times and total falls; the world, tactile control deck, mechanical sounds and robot feedback remain unchanged in all modes.",
     "spatialRationale": "One uninterrupted tracked world remains primary. The lower instrument deck scales from a two-station local layout to six short switches, while online each player gets a single oversized plunger.",
     "comparisons": [
       {

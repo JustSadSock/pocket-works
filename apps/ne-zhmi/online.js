@@ -70,7 +70,8 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
     $('online-out').classList.toggle('hidden',!active||!playing);
     $('online-result-stats').textContent=snapshot?.robot
       ? 'Время '+format(snapshot.robot.wonAt||snapshot.robot.t)+' · падений '+snapshot.robot.respawns+
-        ' · прыжков '+snapshot.robot.jumps+' · разворотов '+snapshot.robot.reverses:'';
+        ' · прыжков '+snapshot.robot.jumps+' · разворотов '+snapshot.robot.reverses+
+        (snapshot.config?.mode==='lab'?' · код '+snapshot.robot.level?.seed:''):'';
     if(playing)$('online-role-chip').textContent=ABILITIES[role]?'ПОСТ '+String(role+1).padStart(2,'0')+' · '+ABILITIES[role].operator.toUpperCase():'СИНХРОНИЗАЦИЯ';
     $('online-role-chip').classList.toggle('hidden',!playing);
     $('online-role-chip').classList.toggle('chip-unavailable',troubled);

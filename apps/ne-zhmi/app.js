@@ -62,7 +62,7 @@ function beginRun({newSession=false,replay=false}={}){
  if(replay&&localSession.trackSeed){replayLast(localSession);track={seed:localSession.trackSeed,sections:localSession.mode==='lab'?localSession.length:5};}
  else track=startTrack(localSession,{crew:localCount,round:0});
  localSeed=track.seed;game=createGame(generateCourse(track.seed,track.sections,localCount));
- renderer.reset();sound('button');accumulated=0;show('playing');
+ renderer.reset();sound(localSession?.mode==='party'?'stage':'button');accumulated=0;show('playing');
  renderer.frame(game,performance.now(),'playing');
  announce((localSession.mode==='party'?'Трасса '+(localSession.entries.length+1)+'/3. ':localSession.mode==='lab'?'Мастерская · код '+localSeed+'. ':'')+'Болтик готов. Операторов: '+localCount+'.');
  $('record').textContent='ЛУЧШЕЕ '+(records[localSeed]?format(records[localSeed]):'—');
@@ -106,7 +106,7 @@ function finish(){
  paintTicket('result-series',stats);
  $('again').textContent=mode==='party'?(stats.complete?'Новая серия →':'Следующая трасса →'):mode==='lab'?'Новый эксперимент →':'Новая трасса →';
  $('retry-course').textContent=mode==='party'?'Переиграть последнюю трассу':'Повторить эту трассу';
- saveParty();show('finish');sound('finish');renderer.cue('finish',game);
+ saveParty();show('finish');sound(stats.complete?'series':'finish');renderer.cue('finish',game);
  announce((stats.complete?'Вся серия завершена. ':'Финиш. ')+$('result').textContent);
 }
 function activeCount(){return phase.startsWith('online')?online?.getSnapshot()?.players?.length||2:localCount;}
@@ -208,7 +208,7 @@ function onlineView({active,snapshot,role,connected,troubled}){
   }else if(snapshot.phase==='won'){
     paintTicket('online-series-result',snapshot.session);
     if(phase!=='online-won'){
-      show('online-won');renderer.cue('finish',snapshot.robot);sound('finish');
+      show('online-won');renderer.cue('finish',snapshot.robot);sound(snapshot.session?.complete?'series':'finish');
     }
   }
   lastOnline=snapshot;
@@ -309,7 +309,9 @@ function frame(now){
     const label=game.level?.name||'ИСПЫТАТЕЛЬНЫЙ ЦЕХ';
     const segments=game.level?.sections?.length;
     const current=game.level?.sections?.find(s=>game.x>=s.x&&game.x<s.x+s.w);
-    $('scene-label').textContent=label+(current?' / '+String(current.index).padStart(2,'0')+' · '+current.name.toUpperCase():segments?' / СТАРТ':' / 01');
+    $('scene-label').textContent=label+(current?' / '+String(current.index).padStart(2,'0')+' · '+current.name.toUpperCase():segments?' / СТАРТ':' / 01')+
+      ((localSession?.mode==='lab'&&['playing','pause'].includes(phase))||
+      (phase.startsWith('online')&&online?.getSnapshot()?.config?.mode==='lab')?' · #'+game.level?.seed:'');
     const ahead=(game.level?.devices||[]).filter(d=>d.x+Math.max(.2,d.w)>=game.x&&d.x-game.x<2.85)
       .sort((a,b)=>a.x-b.x)[0];
     const guide={
@@ -330,6 +332,6 @@ function frame(now){
   }
   requestAnimationFrame(frame);
 }
-createWorkshopMode({appName:'НЕ ЖМИ!',version:'0.5.0',cachePrefix: 'ne-zhmi-',storageNamespace: 'pocket-works:ne-zhmi',onReset:()=>{if(online?.isActive())online.leave();best=null;muted=false;updateSound();backToMenu();}});
+createWorkshopMode({appName:'НЕ ЖМИ!',version:'0.6.0',cachePrefix: 'ne-zhmi-',storageNamespace: 'pocket-works:ne-zhmi',onReset:()=>{if(online?.isActive())online.leave();best=null;muted=false;updateSound();backToMenu();}});
 window.addEventListener('workshopopen',()=>{if(phase==='playing')pause();});
 setMode('quick');saveParty();show('menu');requestAnimationFrame(frame);
