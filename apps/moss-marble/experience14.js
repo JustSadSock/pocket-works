@@ -462,6 +462,7 @@ export function installLivingTerrain(renderer, canvas, getState) {
     gl.uniform2f(renderer.locations.offset, renderer.offsetX, renderer.offsetY);
     gl.uniform2f(renderer.locations.parallax, renderer.parallaxX, renderer.parallaxY);
     gl.uniform1f(renderer.locations.rotation, renderer.cameraRotation || 0);
+    gl.uniform2f(renderer.locations.cameraCenter, renderer.cameraX || 0, renderer.cameraY || 0);
     gl.uniform3f(renderer.locations.hole, level.hole.x, level.hole.y, level.hole.r * 1.03);
     gl.uniform1f(renderer.locations.time, time);
     renderer.drawMesh(active.opaque, false, true);
