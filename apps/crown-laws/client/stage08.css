@@ -186,3 +186,42 @@ button:disabled{cursor:not-allowed}
  .victory__panel--ceremony,.ceremony__halo,.ceremony__claimant,.ceremony__royal-crown,.pass-card--ceremony,.council-lobby__vacant{animation:none!important}
  .council-lobby__occupant{transition:none}
 }
+
+/* Sealed correspondence indicates both players' readiness without leaking their cards */
+.sealed-notice--ceremony{position:relative;border:1px solid #c3a16a;background:linear-gradient(109deg,#51473a,#26392f 77%);padding:9px 10px;box-shadow:inset 0 0 0 2px #0f211b}
+.sealed-notice--ceremony .sealed-notice__copy{flex:1;min-width:0}
+.sealed-notice__readiness{display:flex;gap:6px;align-items:center}
+.sealed-notice__readiness span{display:grid;place-items:center;width:31px;height:37px;clip-path:polygon(50% 0,95% 20%,95% 78%,50% 100%,5% 78%,5% 20%);background:#405248;color:#a6a28c;font:700 19px 'Cormorant Garamond',serif;box-shadow:0 0 3px #0008;opacity:.55;filter:saturate(.25)}
+.sealed-notice__readiness span.is-ready{background:linear-gradient(#e7d39e,#aa8853);color:#3a372b;opacity:1;filter:drop-shadow(0 0 5px #dfc58788)}
+.game-network-error{color:#f8e4d6;background:#753d39;border:1px solid #db9c84;padding:8px 12px;margin:0 auto 8px;width:min(100%,1000px);font-size:12px}
+.council-settings{position:relative;isolation:isolate;width:min(540px,100%);padding:clamp(20px,4vw,35px);background:linear-gradient(128deg,#394a3d,#1b2e25);border:8px double #a68b61;color:#efe0bf;box-shadow:inset 0 0 0 3px #22352a,0 25px 70px #0b0f0bcb}
+.council-settings:before{content:'';position:absolute;z-index:-1;inset:9px;background:url('../assets/decree-ornament.svg') center/100% 100% no-repeat;opacity:.18;pointer-events:none}
+.council-settings header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 0 9px;border-bottom:1px solid #bb9b6897}
+.council-settings header span{font-size:10px;letter-spacing:.21em;color:#d5bc84;font-weight:700}
+.council-settings header button{width:38px;height:38px;border:1px solid #9d875b;background:#34483d;color:#eadcb5;font-size:23px}
+.council-settings h2{font:700 clamp(37px,5vw,51px)/.92 'Cormorant Garamond',serif;margin:18px 0 8px;color:#fff0d0}
+.council-settings>p{font-size:13px;color:#d2c4a5;line-height:1.4;margin:0 0 20px}
+.council-settings__option{display:grid;grid-template-columns:42px minmax(0,1fr) 42px;align-items:center;gap:11px;min-height:77px;padding:12px 7px;border-top:1px solid #bbab8669;cursor:pointer}
+.council-settings__option:last-of-type{border-bottom:1px solid #bbab8669}
+.council-settings__symbol{display:grid;place-items:center;width:40px;height:45px;border:1px solid #bfa16d;background:#475845;color:#e4c897;font:700 27px 'Cormorant Garamond',serif}
+.council-settings__copy{display:grid;gap:4px}
+.council-settings__copy strong{font:700 22px 'Cormorant Garamond',serif}
+.council-settings__copy small{font-size:11px;color:#c9b99c;line-height:1.3}
+.council-settings__option input{position:relative;appearance:none;width:40px;height:24px;cursor:pointer;border:1px solid #b49b68;background:#536052;border-radius:22px;transition:background .13s}
+.council-settings__option input:after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#c3bba9;transition:transform .13s}
+.council-settings__option input:checked{background:#aa8b50}
+.council-settings__option input:checked:after{transform:translateX(16px);background:#f7dfac}
+.council-settings__option input:focus-visible{outline:3px solid #f0d5a5;outline-offset:3px}
+.council-settings footer{display:flex;justify-content:flex-end;margin-top:18px}
+.council-settings footer button{min-height:44px}
+@media(max-width:600px){
+ .sealed-notice__readiness span{width:23px;height:28px;font-size:14px}
+ .council-settings{border-width:5px;padding:18px}
+ .council-settings__option{grid-template-columns:32px minmax(0,1fr) 40px;gap:8px}
+ .council-settings__symbol{width:30px;height:35px;font-size:21px}
+ .council-settings__copy strong{font-size:19px}
+ .council-settings__copy small{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ .council-settings__option input,.council-settings__option input:after{transition:none}
+}
