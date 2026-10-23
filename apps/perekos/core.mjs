@@ -124,7 +124,7 @@ function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
 /* Each mage has a distinct physical attack. All hit-tests use the fixed-step
    court geometry; these forms are state, not client-only cosmetic guesses. */
 function mastery(a,id){return compile(a.runes).some(chain=>chain.actions.some(action=>action.mods.includes(id)))}
-function beamLength(s,x,y,angle,range){return rayCollision(s,x,y,angle,range,3,null).length}
+function beamLength(s,x,y,angle,range,owner=null){return rayCollision(s,x,y,angle,range,3,owner).length}
 function insideCone(a,b,angle,reach,halfAngle){
  const dx=b.x-a.x,dy=b.y-a.y,r=Math.hypot(dx,dy);
  return r<=reach+12&&Math.abs(Math.atan2(Math.sin(Math.atan2(dy,dx)-angle),Math.cos(Math.atan2(dy,dx)-angle)))<=halfAngle;
@@ -184,7 +184,7 @@ function flame(s,a,target){
  const angle=Math.atan2(target.y-a.y,target.x-a.x),baseReach=mastery(a,'far')?239:210;
  a.flameCharge=Math.min(1,(a.flameCharge||0)+STEP*7.7);
  const reach=baseReach*(.24+.76*a.flameCharge);
- const length=beamLength(s,a.x,a.y,angle,reach),width=(mastery(a,'wide')?43:32)*(.42+.58*a.flameCharge);
+ const length=beamLength(s,a.x,a.y,angle,reach,a.id),width=(mastery(a,'wide')?43:32)*(.42+.58*a.flameCharge);
  a.face=angle;
  if(a.stun>0)return false;
  s.streams.push({owner:a.id,x:a.x,y:a.y,angle,length,width,charge:a.flameCharge});
@@ -200,7 +200,7 @@ function flame(s,a,target){
  emit(s,'on_cast',a.id);return true;
 }
 function thunder(s,a){
- const reach=mastery(a,'far')?290:242,len=beamLength(s,a.x,a.y,a.face,reach);
+ const reach=mastery(a,'far')?290:242,len=beamLength(s,a.x,a.y,a.face,reach,a.id);
  s.beams.push({owner:a.id,x:a.x,y:a.y,angle:a.face,length:len,life:.24,style:'coil'});
  const other=s.actors[1-a.id],dx=other.x-a.x,dy=other.y-a.y,
   along=dx*Math.cos(a.face)+dy*Math.sin(a.face),side=Math.abs(-dx*Math.sin(a.face)+dy*Math.cos(a.face));
@@ -221,7 +221,7 @@ function processWave(s,w){
  const other=s.actors[1-w.owner];w.life-=STEP;w.reach=Math.min(w.range,w.reach+w.range*STEP/.23);
  if(w.hit||!insideCone(w,other,w.angle,w.reach,w.halfAngle))return;
  const d=Math.hypot(other.x-w.x,other.y-w.y);
- if(d>beamLength(s,w.x,w.y,Math.atan2(other.y-w.y,other.x-w.x),d+3)+6)return;
+ if(d>beamLength(s,w.x,w.y,Math.atan2(other.y-w.y,other.x-w.x),d+3,w.owner)+6)return;
  w.hit=true;
  const attacker=s.actors[w.owner],dealt=harm(s,other,mastery(attacker,'strong')?18:15,w.owner);
  const k=mag(other.x-w.x,other.y-w.y);
@@ -244,7 +244,7 @@ function castEvolution(s,a){
  if(!['rupture','forge'].includes(s.gameMode)||!a.evolution||a.hp<=0)return;
  const {form,level}=a.evolution,element=mage(a.mageId).school,enemy=s.actors[1-a.id],angle=a.face;
  if(form==='beam'){
-  const length=beamLength(s,a.x,a.y,angle,175+level*45),width=(5+level*5)*(a.archetype==='shaper'?1.25:1);
+  const length=beamLength(s,a.x,a.y,angle,175+level*45,a.id),width=(5+level*5)*(a.archetype==='shaper'?1.25:1);
   s.beams.push({owner:a.id,x:a.x,y:a.y,angle,length,width,life:.25,style:'evo-beam',element,level});
   const dx=enemy.x-a.x,dy=enemy.y-a.y,front=dx*Math.cos(angle)+dy*Math.sin(angle),side=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
   if(front>0&&front<length+12&&side<width+12){const hit=harm(s,enemy,3+level*2.4,a.id);if(hit>0){markTarget(s,enemy,element,a.id);enemy.slow=Math.max(enemy.slow,.15+level*.1);fx(s,'impact_arc',enemy.x,enemy.y)}}
@@ -274,7 +274,7 @@ function updateEvolutionFields(s,dt){
   const f=s.fields[j];f.life-=dt;f.timer-=dt;
   if(f.timer<=0){
    f.timer=.48;const target=s.actors[1-f.owner],distance=Math.hypot(target.x-f.x,target.y-f.y);
-   if(target.hp>0&&distance<f.r+12&&beamLength(s,f.x,f.y,Math.atan2(target.y-f.y,target.x-f.x),distance+3)>=distance-9){
+   if(target.hp>0&&distance<f.r+12&&beamLength(s,f.x,f.y,Math.atan2(target.y-f.y,target.x-f.x),distance+3,f.owner)>=distance-9){
     const hit=harm(s,target,1.6+f.level*1.1,f.owner);
     if(hit>0){markTarget(s,target,f.element,f.owner);target.slow=Math.max(target.slow,.2+f.level*.08);fx(s,'impact_arc',target.x,target.y)}
    }
@@ -412,6 +412,7 @@ if(collapseActive(s)){const cx=200-b.x,cy=310-b.y,cd=mag(cx,cy);if(cd>ringRadius
 for(const shot of s.shots){if(shot.owner===1)continue;const rx=b.x-shot.x,ry=b.y-shot.y;const t=clamp((rx*shot.vx+ry*shot.vy)/(shot.vx**2+shot.vy**2),0,.4);if(Math.hypot(rx-shot.vx*t,ry-shot.vy*t)<27){x=-shot.vy/252*1.7;y=shot.vx/252*1.7;if(b.dashReady<=0&&t<.2&&random(s)<.025)dash(s,b,{x,y});if(b.shieldReady<=0&&b.hp<65)guard(s,b);break}}
 if(d<260&&random(s)<.035)attack(s,b,p);
 if(b.shieldReady<=0&&b.hp<55&&random(s)<.009)guard(s,b);
+if((b.specialCd||0)<=0&&b.heat<70&&random(s)<.012)castClassSpell(s,b);
 return {x,y,attack:false,shield:false,dash:false,aim:{x:p.x,y:p.y}}}
 export function tick(s,input={},dt=STEP,otherInput=null){
  if(s.phase!=='fight')return s;if(['rupture','forge'].includes(s.gameMode)){s.fields ||= [];for(const a of s.actors)a.fusions ||= []}dt=STEP;safeWorld=s;s.ticks++;if(s.gameMode!=='forge')s.remaining=Math.max(0,s.remaining-dt);
