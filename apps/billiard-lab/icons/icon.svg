@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><rect width="256" height="256" rx="54" fill="#243338"/><path d="M42 190V68H212" fill="none" stroke="#e7ddc7" stroke-width="12" stroke-linecap="square"/><path d="M72 163L125 104 176 157 218 114" fill="none" stroke="#f5aa70" stroke-width="10" stroke-linejoin="round" stroke-dasharray="14 13"/><circle cx="72" cy="163" r="19" fill="#f6e9d5" stroke="#cb5b3a" stroke-width="8"/><circle cx="176" cy="157" r="13" fill="#70a9a0"/><path d="M200 54l8-17 8 17 17 8-17 8-8 17-8-17-17-8z" fill="#f5aa70"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<defs><radialGradient id="g"><stop stop-color="#263f44"/><stop offset="1" stop-color="#0c1b1e"/></radialGradient></defs>
+<rect width="256" height="256" rx="52" fill="url(#g)"/>
+<rect x="28" y="28" width="200" height="200" rx="14" fill="none" stroke="#8ba9a0" stroke-width="5"/>
+<path d="M 128 56 C 181 56 200 77 200 118 S 164 205 123 200 S 56 159 56 124 S 84 56 128 56 Z" fill="none" stroke="#6ec8ac" stroke-width="9" stroke-linejoin="round"/>
+<path d="M 128 74 C 171 74 182 95 178 122 S 157 176 128 177 S 78 160 80 124 S 98 74 128 74 Z" fill="none" stroke="#d7f0df" stroke-width="3" opacity=".75"/>
+<path d="M 108 128 H 148 M 128 108 V 148" stroke="#deb083" stroke-width="3"/>
+<circle cx="128" cy="128" r="7" fill="#efcc9f"/>
+</svg>
