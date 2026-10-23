@@ -22,7 +22,8 @@ test('v2 new magic is a real class-free school selection, combat and sealed rune
  await expect(page.locator('.v2-sealed')).toHaveCount(1);
  expect(await page.evaluate(()=>window.__perekosTest.state.magicLoadouts[0].slots[1].actions.length)).toBe(0);
  await page.locator('.v2-play').click();
- await expect(page.locator('#controls')).toBeHidden();
+ if(await page.evaluate(()=>matchMedia('(pointer:coarse)').matches))await expect(page.locator('#controls')).toBeVisible();
+ else await expect(page.locator('#controls')).toBeHidden();
  await expect(page.locator('#forge-edit')).toBeVisible();
  await expect(page.locator('#special-btn')).toBeHidden();
  await page.keyboard.down('Space');await page.waitForTimeout(170);await page.keyboard.up('Space');
