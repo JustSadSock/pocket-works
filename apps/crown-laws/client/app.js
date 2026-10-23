@@ -1104,11 +1104,16 @@ function render() {
   if(!app.debug.open){
     const hand=root.querySelector(".hand");
     if(hand)hand.scrollLeft=previousHandScroll;
+    syncCourtGeometry();
+    watchCourtGeometry();
     animateBoard();
   }
   syncExports();
   persistLocal();
 }
+
+window.addEventListener("resize", syncCourtGeometry);
+window.visualViewport?.addEventListener?.("resize", syncCourtGeometry);
 
 function persistLocal() {
   try { localStorage.setItem('pocket-works:crown-laws:local', JSON.stringify({version:1,local:app.local,settings:app.settings,screen:app.screen==='game'?'game':'menu'})); } catch {}
@@ -1126,6 +1131,68 @@ function restoreLocal() {
   }catch{}
 }
 
+// WebKit has a long-standing percentage containing-block issue when an
+// aspect-ratio flex item has an automatic intrinsic height. Read real pixels,
+// then size the ABSOLUTE grid and inhabitants from the same measured rect.
+// This is presentation only: the authoritative engine keeps integer x/y.
+let courtGeometryObserver = null;
+function syncCourtGeometry() {
+  const board = root.querySelector(".board");
+  if (!board) return;
+  const rect = board.getBoundingClientRect();
+  if (!(rect.width > 0 && rect.height > 0)) return;
+  const computed = window.getComputedStyle?.(board);
+  const borderL = Number.parseFloat(computed?.borderLeftWidth || "0") || 0;
+  const borderR = Number.parseFloat(computed?.borderRightWidth || "0") || 0;
+  const borderT = Number.parseFloat(computed?.borderTopWidth || "0") || 0;
+  const borderB = Number.parseFloat(computed?.borderBottomWidth || "0") || 0;
+  const innerW = Math.max(1, rect.width - borderL - borderR);
+  const innerH = Math.max(1, rect.height - borderT - borderB);
+  const grid = board.querySelector(".board-grid");
+  if (grid) {
+    grid.style.width = innerW + "px";
+    grid.style.height = innerH + "px";
+    grid.style.top = "0px";
+    grid.style.left = "0px";
+  }
+  const positionCell = (node, x, y) => {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    node.style.left = ((x + .5) * innerW / 5) + "px";
+    node.style.top = ((y + .5) * innerH / 7) + "px";
+  };
+  for (const piece of board.querySelectorAll(".piece")) {
+    positionCell(piece, Number(piece.style.getPropertyValue("--x")), Number(piece.style.getPropertyValue("--y")));
+  }
+  for (const ghost of board.querySelectorAll(".vision-ghost")) {
+    positionCell(ghost, Number(ghost.style.getPropertyValue("--gx")), Number(ghost.style.getPropertyValue("--gy")));
+  }
+  for (const impact of board.querySelectorAll(".board-effect--crown,.board-effect--shield,.board-effect--impact,.board-effect--footfall")) {
+    positionCell(impact, Number(impact.style.getPropertyValue("--x")), Number(impact.style.getPropertyValue("--y")));
+  }
+  for (const streak of board.querySelectorAll(".board-effect--beast-dash,.board-effect--seal-trail,.board-effect--stride-trail")) {
+    const originX = Number.parseFloat(streak.style.getPropertyValue("--sx"));
+    const originY = Number.parseFloat(streak.style.getPropertyValue("--sy"));
+    const length = Number.parseFloat(streak.style.getPropertyValue("--len"));
+    if (![originX,originY,length].every(Number.isFinite)) continue;
+    streak.style.left = (originX * innerW / 100) + "px";
+    streak.style.top = (originY * innerH / 100) + "px";
+    streak.style.width = (length * innerW / 100) + "px";
+  }
+  // Safari may assign 0-height percentage boxes to these absolute overlays.
+  for (const layer of board.querySelectorAll(".vision-overlay,.board-effects,.board-glow")) {
+    layer.style.width = innerW + "px";
+    layer.style.height = innerH + "px";
+  }
+}
+function watchCourtGeometry() {
+  courtGeometryObserver?.disconnect();
+  courtGeometryObserver = null;
+  const board = root.querySelector(".board");
+  if (board && window.ResizeObserver) {
+    courtGeometryObserver = new window.ResizeObserver(syncCourtGeometry);
+    courtGeometryObserver.observe(board);
+  }
+}
 function animateBoard() {
   const state = app.film?.active ? app.film.frames[app.film.index].state : (app.forecast ? selectedVisionFrame(app.forecast)?.state : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState()));
   if (!state) return;
