@@ -79,3 +79,5 @@ test('Mobile audit checks collisions and clipped scrolling content',()=>{const u
 test('Workshop batch audit enumerates every debug scene at each viewport',()=>{const source=readFileSync(new URL('./debug-console.js',import.meta.url),'utf8');assert.match(source,/data-debug-audit-matrix/);assert.match(source,/DEBUG_SCENES\.flatMap/);assert.match(source,/requestAnimationFrame\(\(\)=>requestAnimationFrame/);});
 
 test('Workshop awaits scene-ready and ignores stale viewport measurements',()=>{const source=readFileSync(new URL('./debug-console.js',import.meta.url),'utf8');assert.match(source,/scene-ready/);assert.match(source,/d\.step!==auditStep/);assert.match(source,/data-debug-copy-report/);});
+
+test('QA matrix includes small and short phones and prioritizes failures',()=>{const src=readFileSync(new URL('./debug-console.js',import.meta.url),'utf8');assert.match(src,/320,568/);assert.match(src,/375,667/);assert.match(src,/failures=results.filter/);assert.match(src,/if\(!auditQueue&&d.run!=null\)return/);});
