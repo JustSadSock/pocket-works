@@ -97,7 +97,7 @@ function viewForPlayer({state:s,player,players}){
    genre:GENRES.find(x=>x.id===sh.genre)?.label||s.settings.customGenre||'Свій жанр',
    heroGender:sh.heroGender,
    // Assemble the whole story client-side from fragments to avoid doubling wire bytes.
-   fragments:sh.fragments.map((f,i)=>({question:resolveQuestions(s.settings,sh.set)[i]?.prompt||'',answer:f.answer,skipped:!!f.skipped,
+   fragments:sh.fragments.map((f,i)=>({question:resolveQuestions(s.settings,sh.set)[i]?.prompt||'',answer:f.skipped?'[Автор не завершив фрагмент]':f.answer,skipped:!!f.skipped,
       author:f.byName||authorName(s,f.by)}))
  }))};
  return common;
