@@ -13,7 +13,8 @@
         "abilities.test.mjs",
         "visual-fx.test.mjs",
         "session.test.mjs",
-        "stress.test.mjs"
+        "stress.test.mjs",
+        "reachability.test.mjs"
       ]
     },
     {
