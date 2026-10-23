@@ -84,6 +84,7 @@ const app = {
     you: null,
     roomState: null,
     ready: { p1: false, p2: false },
+    players: [],
     lastLogs: []
   },
   audioCtx: null
@@ -359,7 +360,8 @@ function openForecast() {
  const state=currentState();
  if(!state||app.replayActive||app.film?.active||state.winner)return;
  if(app.screen==="online" && app.online.ready[getViewerPlayer()])return;
- if(app.local.waitingAi || app.local.passScreen)return;
+ if(app.screen==="game"&&(app.local.waitingAi||app.local.passScreen))return;
+ if(app.screen==="online"&&(app.online.submissionPending||app.online.players.length<2))return;
  const player=getViewerPlayer(),cardId=app.selectedCardId||null;
  app.forecast=createCounselVision(state,player,cardId,forecastTurn);
  app.forecastReview=false;
@@ -396,6 +398,7 @@ function confirmSelection() {
       app.online.error="Нет связи: указ не отправлен.";render();return;
     }
     if(app.online.submissionPending||app.online.ready[app.online.you])return;
+    if(app.online.players.length<2){app.online.error="Ожидаем второго претендента.";render();return;}
     const cardId=app.selectedCardId;
     try{app.online.socket.send(JSON.stringify({type:"match:choose",cardId}));}
     catch(e){app.online.error="Не удалось отправить указ. Попробуйте снова.";render();return;}
@@ -454,7 +457,7 @@ function leaveOnlineRoom(){
  const old=app.online.socket;app.online.socket=null;
  if(old)old.close();
  app.online.status="idle";app.online.roomCode="";app.online.roomState=null;
- app.online.you=null;app.online.ready={p1:false,p2:false};app.online.lastLogs=[];
+ app.online.you=null;app.online.ready={p1:false,p2:false};app.online.players=[];app.online.lastLogs=[];
  app.online.error="";app.online.copyStatus="";app.online.submissionPending=false;
  app.online.pendingCardId=null;app.online.rematchPending=false;
  app.selectedCardId=null;app.inspectedSlot=null;app.focusCardId=null;app.lawSheetMode=null;
@@ -493,7 +496,8 @@ function setupSocket() {
   socket.addEventListener("close", () => {
     if(app.online.socket!==socket)return;
     app.online.status="closed";app.online.submissionPending=false;
-    if(app.online.pendingCardId){app.selectedCardId=app.online.pendingCardId;app.lawSheetMode="compare";}
+    if(app.online.pendingCardId){app.selectedCardId=app.online.pendingCardId;app.focusCardId=app.online.pendingCardId;
+      app.inspectedSlot=cardById(app.online.pendingCardId)?.slot||null;app.lawSheetMode="compare";}
     render();
   });
   socket.addEventListener("error",()=>{
@@ -525,6 +529,7 @@ function setupSocket() {
       if(app.online.roomCode!==incoming.code)app.online.copyStatus="";
       app.online.roomCode=incoming.code||app.online.roomCode;
       app.online.you=incoming.you;app.online.ready=incoming.ready;
+      app.online.players=Array.isArray(incoming.players)?incoming.players:[];
       app.online.roomState=newState||null;app.online.error="";
       if(incoming.ready[incoming.you]||advance||rematch){
         app.online.submissionPending=false;app.online.pendingCardId=null;
@@ -724,7 +729,7 @@ function visionBoardOverlayHTML() {
 
 function handHTML(state) {
   const viewer=getViewerPlayer();
-  const locked=Boolean(app.film?.active)||(app.screen==="online"&&(app.online.ready[viewer]||app.online.submissionPending))||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
+  const locked=Boolean(app.film?.active)||(app.screen==="online"&&(app.online.ready[viewer]||app.online.submissionPending||app.online.players.length<2||app.online.status!=="connected"))||(app.screen==="game"&&(app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen)));
   return `<section class="hand-panel ${locked?"hand-panel--locked":""}">
     <div class="panel-head"><h3>Ваши указы</h3><span>${app.selectedCardId?'Выбран: '+cardById(app.selectedCardId).name:`${viewer==="p1"?"Север":"Юг"} · ${currentHand().length} карт`}</span>${app.selectedCardId&&!app.lawSheetMode?'<button class="hand-panel__compare" type="button" data-action="law-compare" aria-label="Сравнить выбранный указ с действующим">Сравнить ↗</button>':""}</div>
     ${locked&&!app.film?.active?`<div class="sealed-notice sealed-notice--ceremony" role="status">
@@ -941,7 +946,7 @@ function gameHTML(state, eyebrow) {
             </div>
           </div>
         </header>
-        ${app.screen==="online"&&(app.online.error||app.online.status!=="connected")?`<p class="game-network-error" role="alert">${escapeText(app.online.error||"Связь потеряна. Переподключаемся…")}</p>`:""}${app.film?.active ? filmHTML() : forecastControlsHTML()}<main class="game-layout">
+        ${app.screen==="online"&&(app.online.error||app.online.status!=="connected"||app.online.players.length<2)?`<p class="game-network-error" role="alert">${escapeText(app.online.error||(app.online.status!=="connected"?"Связь потеряна. Переподключаемся…":"Второй претендент покинул совет. Ожидаем возвращения."))}</p>`:""}${app.film?.active ? filmHTML() : forecastControlsHTML()}<main class="game-layout">
           <div class="game-layout__main">${boardHTML(displayState)}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
           <aside class="game-layout__side">
             ${lawSlotsHTML(displayState)}
@@ -1414,7 +1419,8 @@ root.addEventListener("click", (event) => {
         app.online.error="";app.online.copyStatus="";
         app.screen = "online";
         app.online.roomState = null;
-        app.online.ready={p1:false,p2:false};app.online.submissionPending=false;
+        app.online.ready={p1:false,p2:false};app.online.players=[];app.online.submissionPending=false;
+        app.local.waitingAi=false;app.local.passScreen=false;
         app.online.error="";app.online.rematchPending=false;
         render();
         break;
