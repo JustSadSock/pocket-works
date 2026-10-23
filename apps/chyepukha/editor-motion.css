@@ -1,0 +1,129 @@
+/* Edition 1.5: meaningful paper motion and usable compact editor viewports.
+   All movement is event-driven: no continuous decorative loops. */
+@keyframes chy-leaf-receive{
+ from{opacity:.5;transform:translate3d(0,-14px,0) rotate(.35deg);filter:brightness(1.08)}
+ 75%{opacity:1;transform:translate3d(0,3px,0) rotate(-.35deg);filter:brightness(1)}
+ to{opacity:1;transform:translate3d(0,0,0) rotate(-.2deg);filter:none}
+}
+@keyframes chy-proof-sweep{
+ 0%{opacity:0;transform:translateX(-115%) skewX(-11deg)}
+ 30%{opacity:.65}
+ 100%{opacity:0;transform:translateX(140%) skewX(-11deg)}
+}
+@keyframes chy-copy-arrive{
+ from{opacity:0;transform:translateY(11px) scale(.99)}
+ to{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes chy-ink-select{
+ from{background:#a9b799;color:#203f33;transform:translateY(2px)}
+ to{background:#355849;color:#fff2d7;transform:translateY(0)}
+}
+@keyframes chy-ink-strip{
+ from{opacity:0;transform:translateY(6px) rotate(-2deg)}
+ to{opacity:1;transform:translateY(0) rotate(0)}
+}
+@keyframes chy-seal-arrive{
+ from{opacity:.1;transform:translateY(18px) scale(.97)}
+ to{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes chy-stamp-hit{
+ 0%{opacity:0;transform:translateY(-35px) scale(1.25) rotate(-18deg)}
+ 68%{opacity:1;transform:translateY(2px) scale(.92) rotate(-13deg)}
+ 84%{transform:translateY(-2px) scale(1.035) rotate(-13deg)}
+ 100%{transform:translateY(0) scale(1) rotate(-13deg)}
+}
+@keyframes chy-reveal-page{
+ from{opacity:.48;transform:translateY(14px) scale(.992);filter:brightness(1.05)}
+ to{opacity:1;transform:translateY(0) scale(1);filter:none}
+}
+@keyframes chy-press-stamp{
+ from{opacity:0;transform:rotate(6deg) scale(1.2)}
+ to{opacity:1;transform:rotate(-7deg) scale(1)}
+}
+#scene[data-motion="receive"] .writer-shell .editor-paper,
+#scene[data-motion="open"] .writer-shell .editor-paper{animation:chy-leaf-receive .39s cubic-bezier(.2,.75,.24,1) both;transform-origin:bottom center}
+#scene[data-motion="proof"] .writer-selection .selection-paper,
+#scene[data-motion="rewrite"] .writer-compose .answer{animation:chy-copy-arrive .24s cubic-bezier(.15,.8,.3,1) both}
+#scene[data-motion="proof"] .writer-shell .editor-paper{isolation:isolate}
+#scene[data-motion="proof"] .writer-shell .editor-paper:after{
+ content:"";position:absolute;z-index:2;inset:0;pointer-events:none;
+ background:linear-gradient(98deg,transparent 28%,#fff7e088 48%,transparent 69%);
+ animation:chy-proof-sweep .4s ease-out both;
+}
+#scene[data-motion="seal"] .waiting{animation:chy-seal-arrive .3s ease-out both}
+#scene[data-motion="seal"] .waiting .wax{animation:chy-stamp-hit .45s cubic-bezier(.17,.7,.22,1) .04s both}
+#scene[data-motion="reveal"] .reader-layout .story-paper{animation:chy-reveal-page .48s cubic-bezier(.19,.9,.31,1) both}
+#scene[data-motion="reveal"] .reader-layout .stamp{animation:chy-press-stamp .3s ease-out .24s both}
+.writer-shell .selection-paper .word.selected{animation:chy-ink-select .18s ease-out both}
+.writer-shell .selected-words .handoff-chip{animation:chy-ink-strip .18s cubic-bezier(.12,.7,.2,1) both}
+.writer-shell .selection-stage.is-complete .selected-words:after{
+ content:"ПЕРЕДАЧУ ПІДГОТОВЛЕНО";display:block;width:max-content;max-width:100%;
+ padding:4px 7px;margin:6px 0 2px;border:1.5px solid #64826b;color:#3a6547;
+ font-size:9px;font-weight:900;letter-spacing:.08em;transform:rotate(-1.5deg);
+ animation:chy-press-stamp .17s ease-out both;
+}
+.writer-shell .editor-primary{transition:transform .14s ease,box-shadow .14s ease,background .14s ease}
+.writer-shell .editor-primary:focus-visible,.writer-shell .editor-back:focus-visible,
+.writer-shell .selection-paper .word:focus-visible{outline:3px solid #af6142;outline-offset:3px}
+.writer-shell .editor-question{min-height:0;max-height:min(38vh,245px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.writer-shell .writer-selection .next-question{min-height:0;max-height:110px;overflow-y:auto;scrollbar-width:thin}
+.writer-shell .editorial-brief[open],.writer-shell .hero-passport[open]{min-height:0;max-height:min(27vh,170px);overflow-y:auto}
+.writer-shell .selection-paper .word{display:inline-block;line-height:1.55;min-height:31px;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.writer-shell .selected-words{min-height:54px}
+.writer-shell .writer-selection .editor-submit #chars{display:none}
+.writer-shell .writer-selection .editor-primary{flex:1 1 auto}
+@media(max-width:760px){
+ #scene[data-motion="open"] .writer-shell .editor-paper,
+ #scene[data-motion="receive"] .writer-shell .editor-paper{animation:chy-copy-arrive .28s cubic-bezier(.2,.75,.24,1) both}
+ .writer-shell .selection-paper .word{min-height:37px;padding:.22em .2em .24em;line-height:1.7;font-size:16px}
+ .writer-shell .editor-question{max-height:min(31vh,200px)}
+ .writer-shell .writer-selection .next-question{max-height:92px}
+ .writer-shell .editorial-brief[open],.writer-shell .hero-passport[open]{max-height:min(25vh,160px)}
+}
+@media(max-width:355px){
+ .writer-shell .editor-submit{gap:5px}
+ .writer-shell .editor-submit .editor-primary{min-width:0;white-space:normal}
+ .writer-shell .editor-submit #chars{font-size:9px;min-width:35px}
+ .writer-shell .editor-submit .editor-back{padding-inline:1px;font-size:10px}
+ .writer-shell .selected-words{max-height:73px}
+ .writer-shell .editor-question{max-height:28vh}
+}
+@media(max-height:540px){
+ .writer-shell .editor-question{max-height:min(26vh,98px)}
+ .writer-shell .editorial-brief[open],.writer-shell .hero-passport[open]{max-height:min(23vh,86px)}
+ .writer-shell .writer-selection .next-question{max-height:55px}
+ .writer-shell .writer-selection .selection-paper{min-height:45px}
+ .writer-shell .editor-submit .editor-primary{min-height:40px}
+ .writer-shell .editor-submit .editor-back{min-height:40px}
+ .writer-shell .selected-words{min-height:38px;max-height:54px}
+ .writer-shell .selection-stage.is-complete .selected-words:after{font-size:8px;padding:3px 5px;margin:3px 0 0}
+}
+html.is-app-keyboard-open .desk{
+ height:var(--app-viewport-height,100dvh);min-height:0;overflow:hidden;
+}
+html.is-app-keyboard-open .scene{padding-block:1px 3px;min-height:0}
+html.is-app-keyboard-open .rail{min-height:35px;height:35px;overflow:hidden}
+html.is-app-keyboard-open .play.writer-shell{height:calc(var(--app-viewport-height,100dvh) - 42px)}
+html.is-app-keyboard-open .writer-shell .editor-paper{
+ padding:5px 11px 4px;overflow-y:auto;overscroll-behavior:contain;
+}
+html.is-app-keyboard-open .writer-shell .editor-progress{padding-bottom:2px}
+html.is-app-keyboard-open .writer-shell .editor-roster{display:none}
+html.is-app-keyboard-open .writer-shell .editor-question{max-height:80px;overflow:auto}
+html.is-app-keyboard-open .writer-shell .editor-question .question{font-size:clamp(15px,3vw,20px);margin:2px 0 3px}
+html.is-app-keyboard-open .writer-shell .incoming-compact{padding:3px 7px;margin:0}
+html.is-app-keyboard-open .writer-shell .incoming-compact p{font-size:11px;line-height:1.2}
+html.is-app-keyboard-open .writer-shell .editorial-brief{margin-bottom:2px}
+html.is-app-keyboard-open .writer-shell .editorial-brief summary{padding-block:3px}
+html.is-app-keyboard-open .writer-shell .editor-submit{
+ position:sticky;bottom:0;z-index:3;margin-top:4px;padding-top:4px;
+ box-shadow:0 -6px 10px #f2e6cfdb;
+}
+html.is-app-keyboard-open .writer-shell .writer-compose .answer{min-height:48px;flex:1}
+@media(prefers-reduced-motion:reduce){
+ #scene[data-motion] .writer-shell *,#scene[data-motion] .waiting,
+ #scene[data-motion] .wax,#scene[data-motion] .reader-layout *,
+ .writer-shell .word.selected,.writer-shell .handoff-chip,
+ .writer-shell .selection-stage.is-complete .selected-words:after{animation:none!important;transition:none!important;filter:none!important}
+ #scene[data-motion="proof"] .writer-shell .editor-paper:after{display:none}
+}
