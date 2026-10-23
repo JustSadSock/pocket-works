@@ -13,7 +13,7 @@ export function has(a,k){return a.runes.includes(k)}
 export const ARCHETYPES=Object.freeze([{id:'striker',name:'Стрелок',desc:'Чаще атакует. Увеличены урон и скорость снарядов.'},{id:'shaper',name:'Формирователь',desc:'Крепче щиты и больше длительность, радиус полей, мин и стен.'},{id:'distorter',name:'Искажатель',desc:'Попадания замедляют и перегревают врага.'}]);
 export function validArchetype(id){return ARCHETYPES.some(a=>a.id===id)}
 
-export function stats(a){const m=mage(a.mageId),role=a.archetype||'striker';return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power*(role==='striker'?1.13:1),reload:.56*m.reload*(role==='striker'?.88:1),shield:34*m.shield*(role==='shaper'?1.27:1)}}
+export function stats(a){const m=mage(a.mageId),role=a.archetype||'striker';return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power*(role==='striker'?1.025:1),reload:.56*m.reload*(role==='striker'?.98:1),shield:34*m.shield*(role==='shaper'?1.27:1)}}
 function actor(id,x,y,runes,mageId='kindle',archetype='striker'){return {archetype:validArchetype(archetype)?archetype:'striker',evolution:null,fusions:[],id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0,burn:0,burnTick:0,burnSource:null,windup:null,flameCharge:0,respawn:0}}
 function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId,a.archetype||'striker');o.hp=stats(o).max;o.evolution=a.evolution?{...a.evolution}:null;o.fusions=[...(a.fusions||[])];return o}
 export function makeMatch(seed=0x718abc,first='kindle',second='pebble',gameMode='duel',firstArchetype='striker',secondArchetype='striker'){const kind=['rupture','duel','forge'].includes(gameMode)?gameMode:'duel';const s={version:4,gameMode:kind,seed:seed>>>0||1,phase:'fight',round:1,remaining:kind==='rupture'?RUPTURE_SECONDS:kind==='forge'?0:ROUND_SECONDS,forgeDummy:true,elapsed:0,nextEvolution:RUPTURE_SECONDS-EVOLUTION_SECONDS,coreHold:[0,0],overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first,firstArchetype),actor(1,336,134,['on_hurt','armor'],second,secondArchetype)],shots:[],streams:[],beams:[],waves:[],lobs:[],echoes:[],mines:[],barriers:[],fields:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
@@ -85,7 +85,7 @@ let safeWorld=null;const blocking=(s,x,y,r=12)=>!!s?.barriers?.some(b=>Math.hypo
 function fx(s,k,x,y,t=0){if(s.fx.length>60)s.fx.shift();s.fx.push({k,x,y,t,id:++s.serial})}
 function harm(s,a,amount,from,depth=0){
  if(a.invuln>0||a.hp<=0||!Number.isFinite(amount))return 0;
- const attacker=from==null?null:s.actors[from],base=attacker?.archetype==='striker'?amount*1.06:amount;const blocked=Math.min(a.shield,Math.max(0,base)),before=a.shield;a.shield-=blocked;
+ const attacker=from==null?null:s.actors[from],base=amount;const blocked=Math.min(a.shield,Math.max(0,base)),before=a.shield;a.shield-=blocked;
  const d=Math.max(0,Math.min(80,base-blocked));a.hp=Math.max(0,a.hp-d);a.flash=.15;
  if(d>0){if(from!=null&&from!==a.id)s.actors[from].hit+=d;if(attacker?.archetype==='distorter'&&attacker.id!==a.id){a.slow=Math.max(a.slow,.48);a.heat=Math.min(HEAT_LIMIT,a.heat+3)}emit(s,'on_hurt',a.id,{from},depth)}
  if(blocked>0&&before>0&&a.shield===0)emit(s,'on_break',a.id,{from},depth);
@@ -111,7 +111,7 @@ function markTarget(s,target,element,source,depth=0){
 function receiveHeal(s,a,amount,depth=0){const old=a.hp;a.hp=Math.min(stats(a).max,a.hp+amount);const delta=a.hp-old;if(delta>0){emit(s,'on_heal',a.id,{},depth);fx(s,'heal',a.x,a.y)}return delta}
 function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
  if(s.shots.length>=80)return false;
- const base=mage(a.mageId),style=options.clone?'echo':options.style||base.style,element=options.element||base.school;const v=(options.signature&&a.mageId==='kindle'?174:options.signature&&a.mageId==='wire'?480:style==='bolt'||style==='arc'?365:style==='rock'?198:style==='wave'?205:style==='flame'?260:252)*(options.fastshot?1.35:1)*(a.archetype==='striker'?1.14:1),speed=Number.isFinite(v)?v:252;
+ const base=mage(a.mageId),style=options.clone?'echo':options.style||base.style,element=options.element||base.school;const v=(options.signature&&a.mageId==='kindle'?174:options.signature&&a.mageId==='wire'?480:style==='bolt'||style==='arc'?365:style==='rock'?198:style==='wave'?205:style==='flame'?260:252)*(options.fastshot?1.35:1)*(a.archetype==='striker'?1.035:1),speed=Number.isFinite(v)?v:252;
  s.shots.push({x,y,vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,owner:a.id,
   style,element,accel:options.signature?(a.mageId==='kindle'?490:a.mageId==='wire'?-380:0):0,
   minSpeed:options.signature&&a.mageId==='kindle'?310:options.signature&&a.mageId==='wire'?300:0,
@@ -253,7 +253,7 @@ function castEvolution(s,a){
   const dx=enemy.x-a.x,dy=enemy.y-a.y,front=dx*Math.cos(angle)+dy*Math.sin(angle),side=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
   if(front>0&&front<length+12&&side<width+12){const hit=harm(s,enemy,3+level*2.4,a.id);if(hit>0){markTarget(s,enemy,element,a.id);enemy.slow=Math.max(enemy.slow,.15+level*.1);fx(s,'impact_arc',enemy.x,enemy.y)}}
  }else if(form==='swarm'){
-  const count=2+level*2;
+  const count=2+level*2+(a.archetype==='striker'?1:0);
   for(let i=0;i<count;i++)spawnShot(s,a,angle+(i-(count-1)/2)*(.17+level*.015),a.x,a.y,{style:'arc',element,damage:2+level*.55,life:.7+level*.1,depth:2,fusion:false,evo:true});
  }else if(form==='field'&&s.fields.length<8){
   const x=clamp(a.x+Math.cos(angle)*70,30,W-30),y=clamp(a.y+Math.sin(angle)*70,30,H-30);
@@ -453,5 +453,5 @@ export function validState(s){
  return !!s&&s.version===4&&['fight','draft','build','result'].includes(s.phase)
  &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&typeof a.mark==='string'&&Number.isFinite(a.markLife)&&a.markLife>=0&&Number.isFinite(a.reactionCd)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&(!a.archetype||validArchetype(a.archetype))&&(!a.evolution||EVOLUTIONS.some(f=>f.id===a.evolution.form)&&Number.isInteger(a.evolution.level)&&a.evolution.level>0&&a.evolution.level<=3)&&(!a.fusions||Array.isArray(a.fusions)&&a.fusions.length<=3&&new Set(a.fusions).size===a.fusions.length&&a.fusions.every(id=>FUSIONS.some(f=>f.id===id)))&&a.runeTimers&&typeof a.runeTimers==='object')
  &&Array.isArray(s.shots)&&(!s.streams||Array.isArray(s.streams))&&(!s.beams||Array.isArray(s.beams))&&(!s.waves||Array.isArray(s.waves))&&(!s.lobs||Array.isArray(s.lobs))&&Array.isArray(s.echoes)&&Array.isArray(s.mines)&&Array.isArray(s.barriers)&&(!s.fields||Array.isArray(s.fields))&&Array.isArray(s.eventQueue)
- &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture',undefined].includes(s.gameMode);
+ &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }

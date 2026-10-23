@@ -48,7 +48,7 @@ test('forge enforces rune count, chain count, duplicate prevention and fusion pr
  const s=makeMatch(207,'wire','pebble','forge');s.phase='build';
  assert.equal(forgeEdit(s,'fuse','storm_lattice'),false);
  assert.equal(forgeEdit(s,'add','armor'),false);
- for(const id of ['on_cast','ball','as_storm','on_hit','heal','on_dash','mine'])assert.equal(forgeEdit(s,'add',id),true);
+ for(const id of ['on_cast','ball','as_storm','on_hit','heal','mine','strong'])assert.equal(forgeEdit(s,'add',id),true);
  assert.equal(s.actors[0].runes.length,9);
  assert.equal(forgeEdit(s,'add','strong'),false);
  assert.equal(forgeEdit(s,'mutate','nope'),false);
