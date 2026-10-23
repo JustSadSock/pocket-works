@@ -217,7 +217,7 @@ export class PocketNetHub {
       }
     }
   }
-  async refreshChyepukhaPresence(room){
+  async refreshChyepukhaPresence(room,{emit=true}={}){
     if(room.gameId!=='chyepukha'||room.version!=='v6')return;
     const mod=this.module(room.gameId,room.version);
     if(!mod?.onPresence)return;
@@ -226,7 +226,7 @@ export class PocketNetHub {
     if(!result||!('state' in result))throw Error('invalid_module_state');
     const previous=room.state.revision;
     room.state=result.state;
-    if(room.state.revision!==previous){this.persist(room);this.emit(room,result.events??[]);}
+    if(room.state.revision!==previous){this.persist(room);if(emit)this.emit(room,result.events??[]);}
   }
   async applyChyepukhaEvictions(room,events,actorId){
     if(room.gameId!=='chyepukha'||room.version!=='v6'||room.state.host!==actorId)return;
@@ -595,8 +595,8 @@ export class PocketNetHub {
             state: result.state, createdAt: Date.now() };
           this.persist(room);
           this.setRoom(ws, room.id);
+          await this.refreshChyepukhaPresence(room,{emit:false});
           this.joined(ws,room,member);
-          await this.refreshChyepukhaPresence(room);
           if (result.events) this.emit(room, result.events);
           return;
         }
@@ -629,10 +629,10 @@ export class PocketNetHub {
             room.state = result.state;
             this.persist(room);
             this.setRoom(ws, room.id);
+            await this.refreshChyepukhaPresence(room,{emit:false});
             this.joined(ws,room,member);
             this.emit(room, result.events ?? []);
             await this.refreshZamazkaPresence(room);
-            await this.refreshChyepukhaPresence(room);
           } else {
             // Reconnecting with the same durable token keeps the same seat while
             // propagating a freshly verified nickname/avatar into room snapshots.
@@ -647,9 +647,9 @@ export class PocketNetHub {
             }
             this.setRoom(ws, room.id);
             await this.updateBazaarPresence(room,member,true);
+            await this.refreshChyepukhaPresence(room,{emit:false});
             this.joined(ws,room,member);
             await this.refreshZamazkaPresence(room);
-            await this.refreshChyepukhaPresence(room);
           }
           this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
           return;
