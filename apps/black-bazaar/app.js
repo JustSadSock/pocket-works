@@ -128,11 +128,17 @@ function showConfirmedMovement(before,after){
  const lost=(before.you.items||[]).filter(item=>!newIds.has(item.id));
  if(reduce||!gained.length&&!lost.length)return;
  const field=root.querySelector('.play-field');if(!field)return;
+ const item=gained[0]||lost[0],incoming=!!gained.length;
  const movement=document.createElement('div');movement.className='artifact-transfer';
- movement.setAttribute('aria-hidden','true');
- const item=gained[0]||lost[0];
- movement.innerHTML=artifactSVG(item.name,item.rarity);
- movement.classList.add(gained.length?'transfer-in':'transfer-out');
+ movement.setAttribute('aria-hidden','true');movement.innerHTML=artifactSVG(item.name,item.rarity);
+ const stage=field.querySelector('.table-stage .artifact')||field.querySelector('.table-stage');
+ const inventory=[...field.querySelectorAll('.mini-artifacts [data-id]')].find(node=>node.dataset.id===String(item.id))||field.querySelector('.mini-artifacts');
+ const fieldRect=field.getBoundingClientRect();
+ const center=(node,x,y)=>{if(!node)return {x,y};const r=node.getBoundingClientRect();return{x:r.left-fieldRect.left+r.width/2,y:r.top-fieldRect.top+r.height/2}};
+ const from=incoming?center(stage,fieldRect.width/2,fieldRect.height*.52):center(inventory,fieldRect.width/2,fieldRect.height*.82);
+ const to=incoming?center(inventory,fieldRect.width/2,fieldRect.height*.82):center(stage,fieldRect.width/2,fieldRect.height*.52);
+ for(const [key,value] of Object.entries({'--from-x':from.x+'px','--from-y':from.y+'px','--to-x':to.x+'px','--to-y':to.y+'px'}))movement.style.setProperty(key,value);
+ movement.classList.add(incoming?'transfer-in':'transfer-out');
  field.append(movement);movement.addEventListener('animationend',()=>movement.remove(),{once:true});
 }
 function localStore(){const node=document.querySelector('#nickname');if(node)name=(node.value.trim()||'Игрок').slice(0,22);if(!debugPreview)try{localStorage.setItem('black-bazaar:name',name);}catch{}}
