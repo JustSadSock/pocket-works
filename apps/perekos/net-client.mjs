@@ -1,6 +1,6 @@
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
-const GAME='perekos',RULES=5;
+const GAME='perekos',RULES=6;
 const CODE=/^[0-9a-f]{8}$/i;
 const FULL=/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i;
 const scopedStorage={getItem:k=>{try{return localStorage.getItem('perekos-net:'+k)}catch{return null}},setItem:(k,v)=>{try{localStorage.setItem('perekos-net:'+k,v)}catch{}}};
@@ -75,7 +75,8 @@ export class OnlineDuel {
  }
  start(){return this.send({type:this.view?.phase==='result'?'rematch':'start',gameMode:this.desiredMode||this.view?.gameMode||'rupture'})}
  chooseMage(mageId){return this.send({type:'mage',mageId})}
-  chooseMode(gameMode){if(!['duel','rupture'].includes(gameMode))return false;const sent=this.send({type:'mode',gameMode});if(sent)this.desiredMode=gameMode;return sent}
+  evolve(kind,form){return this.send({type:'evolve',kind,form})}
+ chooseMode(gameMode){if(!['duel','rupture'].includes(gameMode))return false;const sent=this.send({type:'mode',gameMode});if(sent)this.desiredMode=gameMode;return sent}
  pick(rune,replace){return this.send({type:'pick',rune,replace})}
  order(runes){return this.send({type:'order',runes})}
  ready(runes){return this.send({type:'ready',runes})}
