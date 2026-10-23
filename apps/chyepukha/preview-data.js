@@ -2,6 +2,16 @@
 const SETS=[{"id":"characterArc","label":"Цілісна історія"},{"id":"collapsingPlan","label":"Ланцюг провалів"},{"id":"detectiveCase","label":"Детективна справа"},{"id":"nightSurvival","label":"Ніч виживання"},{"id":"relationshipCrash","label":"Емоційний розлом"},{"id":"questAdventure","label":"Пригодницький квест"},{"id":"heistOperation","label":"Пограбування / операція"},{"id":"sciFiIncident","label":"Науково-фантастичний інцидент"},{"id":"roadTrip","label":"Дорожня пригода"},{"id":"courtroomScandal","label":"Суд і скандал"}];
 const GENRES=[{"id":"groundedDrama","label":"Приземлена драма"},{"id":"absurdComedy","label":"Абсурдна комедія"},{"id":"horror","label":"Горор"},{"id":"detectiveNoir","label":"Нуарний детектив"},{"id":"romanticMelodrama","label":"Романтична мелодрама"},{"id":"fantasyEpic","label":"Фентезійна епіка"},{"id":"sciFiParanoia","label":"Науково-фантастична параноя"},{"id":"cyberpunk","label":"Кіберпанк"},{"id":"cozyWhimsy","label":"Затишна дивина"},{"id":"postApocalypse","label":"Постапокаліпсис"},{"id":"mythicLegend","label":"Міф і легенда"},{"id":"satire","label":"Сатира"}];
 export function demoView(id){
+ if(['moderation-host','moderation-paused','moderation-guest'].includes(id)){
+  const d=demoView('writing-first');
+  d.view.paused=id==='moderation-paused';
+  d.view.host='qa-host';d.view.hostOfflineSince=id==='moderation-guest'?Date.now()-330000:0;
+  d.view.players[1].departed=true;
+  d.view.claim=id==='moderation-guest'?null:{seatId:'qa-guest',code:'1A2B3C4D5E6F',expiresAt:Date.now()+600000};
+  d.me=id==='moderation-guest'?'qa-third':'qa-host';
+  d.modal='moderation';return d;
+ }
+
  const people=[{id:'qa-host',name:'Марта',submitted:false},{id:'qa-guest',name:'Назар',submitted:false},{id:'qa-third',name:'Софія',submitted:false},{id:'qa-fourth',name:'Ярина',submitted:false}];
  const settings={maxPlayers:4,questionSet:'collapsingPlan',visibleTailWords:3,showNextQuestion:true,genre:'absurdComedy',customQuestions:[],customGenre:''};
  const v={protocol:1,revision:1,phase:'lobby',host:'qa-host',players:people.slice(0,2),settings,questionSets:SETS,genres:GENRES,round:0,total:0,message:''};
