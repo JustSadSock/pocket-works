@@ -148,6 +148,20 @@ func _update_visual() -> void:
 	right_stop.position = pivot + Vector2(120, -58) - right_stop.size * 0.5
 
 	var intensity := absf(handle_x)
+	if not enabled:
+		arc_line.modulate = Color(0.58,0.58,0.58,1)
+		stem_line.modulate = Color(0.62,0.62,0.62,1)
+		pivot_node.modulate = Color(0.70,0.70,0.70,1)
+		knob_node.modulate = Color(0.68,0.68,0.68,1)
+		left_stop.modulate = Color(0.58,0.58,0.58,1)
+		right_stop.modulate = Color(0.58,0.58,0.58,1)
+		return
+
+	arc_line.modulate = Color.WHITE
+	stem_line.modulate = Color.WHITE
+	pivot_node.modulate = Color.WHITE
+	left_stop.modulate = Color.WHITE
+	right_stop.modulate = Color.WHITE
 	if handle_x < -0.32:
 		knob_node.modulate = Color.WHITE.lerp(LEFT.lightened(0.28), intensity * 0.35)
 	elif handle_x > 0.32:
@@ -157,10 +171,12 @@ func _update_visual() -> void:
 
 func set_enabled(value: bool) -> void:
 	enabled = value
+	modulate.a = 1.0
 	if not enabled:
 		dragging = false
 		_snap_to(0.0)
-	modulate.a = 1.0 if value else 0.74
+	else:
+		_update_visual()
 
 func preview_external(value: float) -> void:
 	if not enabled:
