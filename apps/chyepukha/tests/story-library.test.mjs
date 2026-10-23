@@ -46,3 +46,15 @@ test('quota pressure evicts oldest editions but retains most recent work',()=>{
  assert.ok(restored.length>=1&&restored.length<6);
  assert.equal(restored[0].savedAt,500);
 });
+
+test('a v5 finished issue is saved only once even after the players leave and revision changes',()=>{
+ const stories=[{id:'sheet-0',starter:'Автор',setLabel:'Історія',genre:'Комедія',fragments:[{question:'Хто?',author:'Автор',answer:'Дуже дивна історія нарешті завершилась'}]}];
+ const first={phase:'finished',issue:1,revision:46,players:[{id:'a'},{id:'b'}],stories};
+ const changed={...first,revision:49};
+ const different={...first,issue:2,revision:53};
+ const once=addFinishedEdition([], 'room-v5',first,1000);
+ const twice=addFinishedEdition(once,'room-v5',changed,2000);
+ assert.equal(twice.length,1);
+ assert.equal(twice[0].savedAt,1000);
+ assert.equal(addFinishedEdition(twice,'room-v5',different,3000).length,2);
+});

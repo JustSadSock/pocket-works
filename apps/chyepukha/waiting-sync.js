@@ -20,7 +20,7 @@ export function updateWaitingView(root,previous,next,{sound}={}){
   card.classList.toggle('is-ready',done);
   card.classList.toggle('just-stamped',done&&!previousStatus.get(player.id));
   card.querySelector('.dispatch-icon').textContent=done?'✓':'·';
-  card.querySelector('.dispatch-status').textContent=done?'Аркуш здано':'Пише…';
+  card.querySelector('.dispatch-status').textContent=done?'Аркуш здано':player.departed?'Вийшов із кімнати':'Пише…';
  }
  if(changed.length){
   root.querySelector('.dispatch-a11y').textContent=changed.length===1?'Один автор здав рукопис.':changed.length+' автори здали рукописи.';

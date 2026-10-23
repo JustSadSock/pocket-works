@@ -6,7 +6,9 @@ import {readFileSync} from 'node:fs';
 const modules=[
  ['v1','../../../pocketnet/module-versions/chyepukha/v1.ts'],
  ['v2','../../../pocketnet/module-versions/chyepukha/v2.ts'],
- ['v3 (current)','../../../pocketnet/module-versions/chyepukha/v3.ts'],
+ ['v3','../../../pocketnet/module-versions/chyepukha/v3.ts'],
+ ['v4','../../../pocketnet/module-versions/chyepukha/v4.ts'],
+ ['v5','../../../pocketnet/module-versions/chyepukha/v5.ts'],
  ['working source','../server/module.ts']
 ];
 const players=Array.from({length:4},(_,i)=>({id:'author-'+i,name:'Автор '+i}));
@@ -111,5 +113,5 @@ for(const [version,path] of modules){
  });
 }
 test('four authors can finish all sixteen custom questions on current PocketNet',()=>{
- playFour(load('../../../pocketnet/module-versions/chyepukha/v3.ts'),{custom:true});
+ playFour(load('../../../pocketnet/module-versions/chyepukha/v5.ts'),{custom:true});
 });

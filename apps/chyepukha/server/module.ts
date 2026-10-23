@@ -12,7 +12,7 @@ const DEFAULTS = {maxPlayers:4,questionSet:'collapsingPlan',customQuestions:[],v
 const clean = (v,n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,n);
 const clamp = (v,a,b,d) => Number.isFinite(Number(v)) ? Math.max(a,Math.min(b,Math.trunc(Number(v)))) : d;
 const words = text => clean(text,MAX_ANSWER).split(/\s+/u).filter(Boolean);
-const entries = players => players.map(p => ({id:p.id,name:clean(p.name,24)||'Гравець'}));
+const entries = players => players.map(p => ({id:p.id,name:clean(p.name,24)||'Гравець',accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null,avatar:p.verified===true&&typeof p.avatar==='string'?clean(p.avatar,32):null,verified:p.verified===true}));
 const questionOptions = () => IDS.map(id=>({id,label:BANK[id].label}));
 const genreOptions = () => GENRES.map(g=>({id:g.id,label:g.label}));
 const choose = list => list[Math.floor(Math.random()*list.length)];
@@ -27,7 +27,7 @@ function settingsFrom(raw,previous=DEFAULTS) {
 }
 function initial(player,payload){
  return {schema:1,revision:0,phase:'lobby',host:player.id,players:entries([player]),
-   settings:settingsFrom(payload?.settings||{}),round:0,total:0,sheets:[],submitted:{},message:''};
+   settings:settingsFrom(payload?.settings||{}),round:0,total:0,issue:0,sheets:[],submitted:{},receipts:{},message:''};
 }
 function events(){return [{type:'state'}];}
 function notice(to,message){return [{type:'notice',to,payload:message}];}
@@ -48,15 +48,16 @@ function begin(s){
     fragments:[]};
  });
  s.total=resolveQuestions(opts,s.sheets[0].set).length;
- s.round=0;s.submitted={};s.phase='writing';s.message='';s.revision++;
+ s.issue=(s.issue||0)+1;s.round=0;s.submitted={};s.receipts={};s.phase='writing';s.message='';s.revision++;
  return null;
 }
 function viewForPlayer({state:s,player,players}){
- const p=players.find(x=>x.id===player.id);
+ const p=s.players.find(x=>x.id===player.id);
+ const connected=new Set(players.map(x=>x.id));
  const common={protocol:1,revision:s.revision,phase:s.phase,host:s.host,
-   players:players.map(x=>({id:x.id,name:clean(x.name,32)||'Гравець',submitted:Boolean(s.submitted[x.id]),verified:x.verified===true&&typeof x.accountId==='string',accountId:x.verified===true&&typeof x.accountId==='string'?x.accountId:null,avatar:x.verified===true&&typeof x.avatar==='string'?clean(x.avatar,32):null})),
+   players:s.players.map(x=>({id:x.id,name:clean(x.name,32)||'Гравець',submitted:Boolean(s.submitted[x.id]),departed:!connected.has(x.id),verified:x.verified===true&&typeof x.accountId==='string',accountId:x.verified===true&&typeof x.accountId==='string'?x.accountId:null,avatar:x.verified===true&&typeof x.avatar==='string'?clean(x.avatar,32):null})),
    settings:s.settings,questionSets:questionOptions(),genres:genreOptions(),
-   round:s.round,total:s.total,message:s.message||''};
+   round:s.round,total:s.total,issue:s.issue||0,message:s.message||'',lastReceipt:p?(s.receipts?.[p.id]||null):null};
  if(!p) return common;
  if(s.phase==='writing'){
   const pi=s.players.findIndex(x=>x.id===p.id);
@@ -80,6 +81,7 @@ function viewForPlayer({state:s,player,players}){
  return common;
 }
 function submit(s,player,v){
+ if(v.requestId!==undefined&&(!/^[a-zA-Z0-9_-]{12,96}$/.test(v.requestId)))return 'Некоректний ідентифікатор відправки.';
  if(s.phase!=='writing'||s.submitted[player.id])return 'Відповідь уже прийнято або раунд завершено.';
  if(v.round!==s.round)return 'Раунд змінився. Онови сторінку.';
  const pi=s.players.findIndex(p=>p.id===player.id);if(pi<0)return 'Твоє місце не знайдено.';
@@ -99,6 +101,7 @@ function submit(s,player,v){
  if(sh.fragments.length)delete sh.fragments[sh.fragments.length-1].tail;
  sh.fragments.push({by:player.id,answer,tail});
  s.submitted[player.id]=true;
+ if(v.requestId)s.receipts[player.id]={requestId:v.requestId,round:s.round,sheetId:sh.id,accepted:true};
  if(s.players.every(p=>s.submitted[p.id])){
   s.round++;
   s.submitted={};
@@ -110,16 +113,25 @@ const module={
  protocolVersion:1,
  createRoom({player,payload}){return {state:initial(player,payload)};},
  onJoin({state:s,players}){
-  if(s.phase!=='lobby')throw Error('match_in_progress');
+  if(s.phase!=='lobby'){
+   // The same durable player identity can reclaim a deliberately vacated seat.
+   const seat=s.players.find(p=>p.id===players.at(-1)?.id);
+   if(!seat)throw Error('match_in_progress');
+   const current=players.find(p=>p.id===seat.id);
+   if(current){seat.name=clean(current.name,24)||seat.name;seat.avatar=current.avatar||seat.avatar;}
+   s.revision++;return {state:s,events:events()};
+  }
   if(players.length>s.settings.maxPlayers)throw Error('room_full');
   s.players=entries(players);s.revision++;return {state:s,events:events()};
  },
  onLeave({state:s,players}){
-  s.players=entries(players);
-  s.host=s.players.some(p=>p.id===s.host)?s.host:s.players[0]?.id||'';
-  if(s.phase!=='lobby'){
-   s.phase='lobby';s.round=0;s.total=0;s.sheets=[];s.submitted={};
-   s.message='Учасник вийшов. Партію скинуто; можна почати нову.';
+  if(s.phase==='lobby'){
+   s.players=entries(players);
+   s.host=s.players.some(p=>p.id===s.host)?s.host:s.players[0]?.id||'';
+  }else{
+   // Never reset writing or discard a finished issue when someone exits.
+   // Permanent seat IDs keep the sheet rotation stable after departures.
+   s.message='Учасник від’єднався. Його місце та рукописи збережено.';
   }
   s.revision++;return {state:s,events:events()};
  },
@@ -136,8 +148,18 @@ const module={
   } else if((v.type==='start'||v.type==='again')&&player.id===s.host&&
            (s.phase==='lobby'||s.phase==='finished')){
     error=begin(s);
+  } else if(v.type==='finish_early'&&player.id===s.host&&s.phase==='writing'){
+    // Explicit host action preserves every committed fragment, including an incomplete current round.
+    s.phase='finished';s.message='Випуск завершено достроково; збережено всі здані фрагменти.';s.revision++;
   } else if(v.type==='submit'){
+    // Idempotency: the same packet can safely arrive after a lost acknowledgement.
+    const prior=s.receipts?.[player.id];
+    if(v.requestId&&prior?.requestId===v.requestId){
+      return {state:s,events:[{type:'receipt',to:player.id,payload:prior}]};
+    }
     error=submit(s,player,v);
+    if(error&&v.requestId)return {state:s,events:[{type:'submission_rejected',to:player.id,payload:{requestId:v.requestId,reason:error}}]};
+    if(!error&&v.requestId)return {state:s,events:[...events(),{type:'receipt',to:player.id,payload:s.receipts[player.id]}]};
   } else error='Дія недоступна.';
   return {state:s,events:error?notice(player.id,error):events()};
  }

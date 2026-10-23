@@ -59,6 +59,11 @@ export class PocketNetHub {
       id TEXT PRIMARY KEY, game_id TEXT NOT NULL, version TEXT NOT NULL,
       state TEXT NOT NULL, players TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
     )`);
+    ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS chyepukha_checkpoints (
+      room_id TEXT NOT NULL, revision INTEGER NOT NULL, state TEXT NOT NULL,
+      players TEXT NOT NULL, saved_at INTEGER NOT NULL,
+      PRIMARY KEY(room_id, revision)
+    )`);
   }
 
   run(task) {
@@ -218,7 +223,26 @@ export class PocketNetHub {
   readRoom(id) {
     const row = this.sql('SELECT * FROM rooms WHERE id = ?', id).toArray()[0];
     if(!row)return null;
-    const state=JSON.parse(row.state);
+    let state,roomPlayers;
+    try{
+      state=JSON.parse(row.state);roomPlayers=JSON.parse(row.players);
+      if(row.game_id==='chyepukha'&&row.version==='v5'&&
+         (!state||state.schema!==1||!Array.isArray(state.sheets)))throw Error('invalid_chyepukha_state');
+    }catch(error){
+      if(row.game_id!=='chyepukha'||row.version!=='v5')throw error;
+      const backups=this.sql('SELECT state,players FROM chyepukha_checkpoints WHERE room_id=? ORDER BY revision DESC LIMIT 4',id).toArray();
+      let recovered=false;
+      for(const backup of backups){
+        try{
+          const candidate=JSON.parse(backup.state),members=JSON.parse(backup.players);
+          if(candidate?.schema!==1||!Array.isArray(candidate.sheets)||!Array.isArray(members))continue;
+          state=candidate;roomPlayers=members;
+          this.sql('UPDATE rooms SET state=?,players=? WHERE id=?',backup.state,backup.players,id);
+          recovered=true;break;
+        }catch{}
+      }
+      if(!recovered)throw error;
+    }
     if(row.game_id==='zamazka'){
       const payloads=this.sql('SELECT pkey,payload FROM zamazka_art_payloads WHERE room_id=?',id).toArray();
       for(const {pkey,payload} of payloads){
@@ -233,7 +257,7 @@ export class PocketNetHub {
       for(const item of Object.values(state.draftAssemblies||{}))if(item.strokes===ZAMAZKA_ART_REF)throw Error('room_art_missing');
     }
     return {id:row.id,gameId:row.game_id,version:row.version,
-      state,players:JSON.parse(row.players),createdAt:row.created_at,updatedAt:row.updated_at};
+      state,players:roomPlayers,createdAt:row.created_at,updatedAt:row.updated_at};
   }
   persist(room) {
     const pieces=[];
@@ -283,6 +307,13 @@ export class PocketNetHub {
         VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET state=excluded.state, players=excluded.players, updated_at=excluded.updated_at`,
         room.id,room.gameId,room.version,encoded,players,room.createdAt,room.updatedAt);
+      if(room.gameId==='chyepukha'&&room.version==='v5'&&room.state.phase!=='lobby'){
+        this.sql(`INSERT INTO chyepukha_checkpoints (room_id,revision,state,players,saved_at)
+          VALUES (?,?,?,?,?) ON CONFLICT(room_id,revision) DO UPDATE SET state=excluded.state,players=excluded.players,saved_at=excluded.saved_at`,
+          room.id,Number(room.state.revision)||0,encoded,players,room.updatedAt);
+        this.sql(`DELETE FROM chyepukha_checkpoints WHERE room_id=? AND revision NOT IN
+          (SELECT revision FROM chyepukha_checkpoints WHERE room_id=? ORDER BY revision DESC LIMIT 4)`,room.id,room.id);
+      }
     });
     this.ensureAlarm();
   }
@@ -361,6 +392,7 @@ export class PocketNetHub {
   }
   async closeRoom(room) {
     this.sql('DELETE FROM rooms WHERE id = ?', room.id);
+    this.sql('DELETE FROM chyepukha_checkpoints WHERE room_id=?',room.id);
     this.sql('DELETE FROM zamazka_art_payloads WHERE room_id=?',room.id);
     this.sql('DELETE FROM zamazka_award_stats WHERE room_id=?',room.id);
     this.sql('DELETE FROM blockies_award_stats WHERE room_id=?',room.id);
@@ -623,7 +655,9 @@ export class PocketNetHub {
           if (!result || !('state' in result)) throw new Error('invalid_module_state');
           room.state = result.state;
           this.setRoom(ws, null);
-          if (!room.players.length) await this.closeRoom(room);
+          const keepVacant=room.gameId==='chyepukha'&&room.version==='v5'&&
+            (room.state.phase==='writing'||room.state.phase==='finished');
+          if (!room.players.length&&!keepVacant) await this.closeRoom(room);
           else {
             this.persist(room);
             this.emit(room, result.events ?? []);
@@ -658,7 +692,10 @@ export class PocketNetHub {
     const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
     for (const row of rows) {
       const room = this.readRoom(row.id);
-      const ttl=room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000 : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000 : ROOM_TTL;
+      const ttl=room?.gameId==='chyepukha'&&room.version==='v5'&&room.state?.phase==='writing' ? 72*60*60_000
+        : room?.gameId==='chyepukha'&&room.version==='v5'&&room.state?.phase==='finished' ? 7*24*60*60_000
+        : room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000
+        : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000 : ROOM_TTL;
       if(now-row.updated_at<ttl||this.sockets(row.id).length)continue;
       if(room)await this.closeRoom(room);
     }

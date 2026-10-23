@@ -29,7 +29,7 @@ export function addFinishedEdition(existing,room,state,savedAt=Date.now()){
  const editions=normalizeEditions(existing);
  if(state?.phase!=='finished'||!Array.isArray(state.stories)||!state.stories.length||!room)return editions;
  // Room revisions are monotonic across consecutive games and stable across reconnects.
- const id=shorten(String(room),100)+':'+String(Number.isInteger(state.revision)?state.revision:0);
+ const id=shorten(String(room),100)+':'+(Number.isInteger(state.issue)&&state.issue>0?'issue-'+state.issue:String(Number.isInteger(state.revision)?state.revision:0));
  if(editions.some(item=>item.id===id))return editions;
  const next=normalizeEditions([{id,savedAt,playerCount:state.players?.length||2,stories:state.stories},...editions]);
  return next;
