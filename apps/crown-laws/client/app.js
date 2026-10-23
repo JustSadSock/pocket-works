@@ -386,6 +386,7 @@ function confirmSelection() {
     }
     app.online.socket.send(JSON.stringify({ type: "match:choose", cardId: app.selectedCardId }));
     app.online.ready[app.online.you] = true;
+    app.forecast=null;app.forecastReview=false;
     playTone("ready");
     app.selectedCardId = null;
     render();
@@ -460,6 +461,7 @@ function setupSocket() {
     if (payload.type === "room:update") {
       const previousRoomState = app.online.roomState;
       const prevTurn = previousRoomState?.turn;
+      if(app.forecast&&payload.room.state?.turn!==app.forecast.turn){app.forecast=null;app.forecastReview=false;}
       app.online.roomCode = payload.room.code;
       app.online.you = payload.room.you;
       app.online.ready = payload.room.ready;
@@ -995,7 +997,15 @@ function debugSceneHTML(scene) {
     app.modal=null;
     app.effects=app.debug.round?effectsForFrame(app.debug.round.frames[app.debug.round.index]):[];app.lastConflictSlots=app.debug.round?.frames[app.debug.round.index]?.conflicts||[];
     app.selectedCardId=app.debug.selectedCardId;app.focusCardId=app.debug.focusCardId;app.inspectedSlot=app.debug.inspectedSlot;
-    app.replay=null;app.replayActive=false;app.film=null;app.forecast=app.debug.forecast;app.forecastReview=app.debug.forecastReview;
+    app.replay=null;app.replayActive=false;app.film=null;
+    if(scene==="vision"&&!app.debug.forecast){
+      const demoCard=app.debug.selectedCardId||state.players.p1.hand[0];
+      app.debug.selectedCardId=demoCard;
+      app.debug.forecast=createCounselVision(state,"p1",demoCard,forecastTurn);
+      app.debug.forecast.step=5;
+    }
+    app.selectedCardId=app.debug.selectedCardId;
+    app.forecast=app.debug.forecast;app.forecastReview=app.debug.forecastReview;
     if(scene==="art")markup=artGalleryHTML();
     else if(scene==="menu")markup=menuHTML();
     else if(scene==="join"||scene==="waiting"){
@@ -1022,7 +1032,7 @@ function debugSceneHTML(scene) {
 }
 
 function debugWorkshopHTML() {
-  const scenes=[["menu","Главное меню"],["game","Игровая партия"],["join","Создание / вход"],["waiting","Ожидание гостя"],["ready","Выбор запечатан"],["hotseat","Передача устройства"],["victory","Экран победы"],["rules","Правила"],["settings","Настройки"],["simulation","Отчёт симуляции"],["art","Арт-галерея"]];
+  const scenes=[["menu","Главное меню"],["game","Игровая партия"],["join","Создание / вход"],["waiting","Ожидание гостя"],["ready","Выбор запечатан"],["hotseat","Передача устройства"],["victory","Экран победы"],["rules","Правила"],["settings","Настройки"],["simulation","Отчёт симуляции"],["art","Арт-галерея"],["vision","Видение советника"]];
   const animations=[["move","Перемещение фишки"],["crown","Получение короны"],["shield","Защитный щит"],["beast-dash","Рывок зверя"],["seal-trail","Похищение печати"],["conflict","Конфликт законов"],["card","Выбор карты"]];
   const sounds=[["tap","Выбор карты"],["ready","Утверждение"],["move","Шаг"],["champion","Претендент"],["priest","Жрец"],["guard","Страж"],["beast","Зверь"],["thief","Вор"],["shield","Щит"],["seal","Печать"],["conflict","Конфликт"],["crown","Корона"]];
   return `<aside class="debug-workshop" role="dialog" aria-label="Мастерская разработчика">
@@ -1107,7 +1117,7 @@ root.addEventListener("click", (event) => {
   if(dev){
     if(dev.hasAttribute("data-debug-close")){stopDebugRound();app.debug.open=false;}
     if(dev.dataset.debugTab){stopDebugRound();app.debug.tab=dev.dataset.debugTab;if(app.debug.tab==="animations")app.debug.scene="game";}
-    if(dev.dataset.debugScene){stopDebugRound();app.debug.scene=dev.dataset.debugScene;app.debug.animation=null;}
+    if(dev.dataset.debugScene){stopDebugRound();app.debug.scene=dev.dataset.debugScene;app.debug.animation=null;if(app.debug.scene==="vision")app.debug.forecast=null;}
     if(dev.dataset.demoSound){playTone(dev.dataset.demoSound,true);return;}
     if(dev.hasAttribute("data-demo-round")){beginDebugRound();return;}
     if(dev.hasAttribute("data-demo-stop")){stopDebugRound(true);return;}
@@ -1130,6 +1140,11 @@ root.addEventListener("click", (event) => {
       app.debug.selectedCardId=app.debug.selectedCardId===card.dataset.cardId?null:card.dataset.cardId;
       app.debug.inspectedSlot=cardById(card.dataset.cardId).slot;
       app.debug.focusCardId=card.dataset.cardId;
+      if(app.debug.forecast||app.debug.scene==="vision"){
+        const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
+        app.debug.forecast=createCounselVision(demo,"p1",app.debug.selectedCardId,forecastTurn);
+        app.debug.scene="vision";
+      }
     }else if(law){
       app.debug.selectedCardId=null;
       app.debug.focusCardId=law.dataset.focusCard;
@@ -1154,11 +1169,18 @@ root.addEventListener("click", (event) => {
       else if(a==="forecast-open"){
         const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
         const cardId=app.debug.selectedCardId;
-        const result=forecastTurn(demo,cardId?"p1":null,cardId||null);
-        app.debug.forecast={before:demo,after:result.state,logs:result.logs,cardId:cardId||null};
-        app.debug.forecastReview=true;
-      }else if(a==="forecast-toggle")app.debug.forecastReview=!app.debug.forecastReview;
-      else if(a==="forecast-close")app.debug.forecast=null;
+        app.debug.forecast=createCounselVision(demo,"p1",cardId,forecastTurn);
+        app.debug.forecast.step=8;
+        app.debug.scene="vision";
+      }else if(a==="vision-mode" && app.debug.forecast){
+        const mode=pressed.dataset.mode;
+        if(mode==="current"||(mode==="proposed"&&app.debug.forecast.proposed))app.debug.forecast.side=mode;
+      }else if(a==="vision-step"&&app.debug.forecast){
+        app.debug.forecast.step=Math.min(8,Math.max(0,Number(pressed.dataset.step)||0));
+      }else if(a==="vision-previous"&&app.debug.forecast)app.debug.forecast.step=Math.max(0,app.debug.forecast.step-1);
+      else if(a==="vision-next"&&app.debug.forecast)app.debug.forecast.step=Math.min(8,app.debug.forecast.step+1);
+      else if(a==="forecast-toggle"&&app.debug.forecast)app.debug.forecast.step=app.debug.forecast.step===0?8:0;
+      else if(a==="forecast-close"){app.debug.forecast=null;app.debug.scene="game";}
     }
     render();return;
   }
@@ -1207,13 +1229,13 @@ root.addEventListener("click", (event) => {
       case "forecast-close":
         closeVision();break;
       case "vision-mode":
-        visionChooseSide(action.dataset.mode);break;
+        visionChooseSide(actionNode.dataset.mode);break;
       case "vision-previous":
         visionStepTo((app.forecast?.step||0)-1);break;
       case "vision-next":
         visionStepTo((app.forecast?.step||0)+1);break;
       case "vision-step":
-        visionStepTo(action.dataset.step);break;
+        visionStepTo(actionNode.dataset.step);break;
       case "clear-inspection":
         app.focusCardId=null; app.selectedCardId=null; app.inspectedSlot=null; render();
         break;
