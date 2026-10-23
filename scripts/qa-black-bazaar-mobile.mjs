@@ -59,6 +59,10 @@ try{
    if(panel&&panel.scrollHeight>panel.clientHeight+5&&!['auto','scroll'].includes(getComputedStyle(panel).overflowY))issues.push('panel clipped without scroll');
    return {issues,overflow,width,height:document.documentElement.clientHeight,phase};
   });
+  // Baseline capture before test actions, so reviewed images represent the real
+  // starting layout rather than a mutated post-trade or open-tabs state.
+  if(['small','phone','desktop'].includes(id))
+   await frame.locator('body').screenshot({path:out+'/'+scene+'-'+id+'-baseline.png'});
   // Exercise the real tab delegation, not only static scene geometry.
   if(!['home','lobby','done'].includes(scene)){
    const tabs=await frame.evaluate(()=>{
