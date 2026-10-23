@@ -24,6 +24,7 @@ import { chooseAiCard } from "../shared/ai.js";
 import { planTurnFilm, soundForFrame, PHASE_ORDER, PHASE_LABELS } from "./choreography.js";
 import { playCourtSound, COURT_SOUNDS } from "./soundscape.js";
 import { VISION_PHASES, createCounselVision, selectedVisionResult, selectedVisionFrame, alternateVisionFrame, visionPaths, visionGhosts, visionDifference } from "./counsel-vision.js";
+import { lawReadout, lawSlotsView } from "./law-readout.js";
 
 const root = document.getElementById("app");
 
@@ -34,6 +35,7 @@ const app = {
   victoryRecap: false,
   selectedCardId: null,
   focusCardId: null,
+  lawSheetMode: null,
   dragCardId: null,
   lastConflictSlots: [],
   lastBoardPositions: {},
@@ -52,7 +54,7 @@ const app = {
   replayActive: false,
   replayStage: "after",
   replayTimer: null,
-  debug: { open: false, tab: "screens", scene: "game", animation: null, selectedCardId: null, focusCardId: null, inspectedSlot: null, forecast: null, forecastReview: false, round: null, roundTimer: null, roundToken: 0 },
+  debug: { open: false, tab: "screens", scene: "game", animation: null, selectedCardId: null, focusCardId: null, inspectedSlot: null, lawSheetMode: null, forecast: null, forecastReview: false, round: null, roundTimer: null, roundToken: 0 },
   debugSelects: Object.fromEntries(SLOT_TYPES.map((slot) => [slot, "base"])),
   settings: {
     sound: true,
@@ -257,6 +259,7 @@ function startLocalGame(mode, aiProfile = "contender") {
   app.forecastReview = false;
   app.selectedCardId = null;
   app.focusCardId = null;
+  app.lawSheetMode = null;
   app.lastConflictSlots = [];
   render();
 }
@@ -391,7 +394,8 @@ function confirmSelection() {
     }
     app.online.socket.send(JSON.stringify({ type: "match:choose", cardId: app.selectedCardId }));
     app.online.ready[app.online.you] = true;
-    app.forecast=null;app.forecastReview=false;
+    app.forecast=null;app.forecastReview=false;app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
+    app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
     playTone("ready");
     app.selectedCardId = null;
     render();
@@ -401,7 +405,7 @@ function confirmSelection() {
   if (app.local.mode === "ai") {
     app.local.waitingAi = true;
     const humanCard = app.selectedCardId;
-    app.selectedCardId = null;
+    app.selectedCardId = null;app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
     render();
     window.setTimeout(() => {
       const aiCard = chooseAiCard(app.local.state, "p2", app.local.aiProfile);
@@ -421,7 +425,7 @@ function confirmSelection() {
   if (app.local.mode === "hotseat") {
     const chooser = app.local.hotseatChooser;
     app.local.pendingHotseat[chooser] = { cardId: app.selectedCardId };
-    app.selectedCardId = null;
+    app.selectedCardId = null;app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
     playTone("ready");
     if (chooser === "p1") {
       app.local.hotseatChooser = "p2";
@@ -566,30 +570,44 @@ function boardHTML(state) {
 }
 
 function lawSlotsHTML(state) {
-  const laws=activeLaws(state);
-  const short={champion:"Чемпионы",guard:"Страж",beast:"Зверь",priest:"Жрец",thief:"Вор"};
-  return `<section class="law-panel" aria-label="Пять действующих законов">
-    <div class="panel-head"><h3>Законы мира</h3><span>Действуют на обе стороны</span></div>
-    <div class="law-slots">${SLOT_TYPES.map(slot=>{
-      const law=laws[slot],base=!state.slots[slot].activeCardId;
-      const id=base?BASE_LAWS[slot].id:law.id;
-      return `<button type="button" data-native-press class="law-slot ${app.inspectedSlot===slot?"law-slot--focused":""} ${app.lastConflictSlots.includes(slot)?"law-slot--conflict":""}" style="--slot-color:${SLOT_COLORS[slot]}" data-slot="${slot}" data-focus-card="${id}" title="${law.name}" aria-pressed="${app.inspectedSlot===slot}">
-        <span class="law-slot__sigil sprite-seal sprite-seal--${slot}" aria-hidden="true"></span><span class="law-slot__short">${short[slot]}</span><span class="law-slot__copy"><span class="law-slot__name">${law.name}</span><span class="law-slot__mode">${base?"Каменный закон":"Новый указ"}</span></span>
-      </button>`;
-    }).join("")}</div></section>`;
+ const short={champion:"Чемпионы",guard:"Страж",beast:"Зверь",priest:"Жрец",thief:"Вор"};
+ return `<section class="law-panel" aria-label="Пять действующих законов">
+  <div class="panel-head"><h3>Законы мира</h3><span>Действуют на обе стороны</span></div>
+  <div class="law-slots">${lawSlotsView(state,app.selectedCardId,app.lawSheetMode?app.inspectedSlot:null).map(entry=>{
+   const {slot,active,base,selected,inspected}=entry;
+   return `<button type="button" data-native-press class="law-slot ${inspected?"law-slot--focused":""} ${selected?"law-slot--proposed":""} ${app.lastConflictSlots.includes(slot)?"law-slot--conflict":""}" style="--slot-color:${SLOT_COLORS[slot]}" data-slot="${slot}" data-focus-card="${active.id}" title="${active.name} · нажмите для подробностей" aria-label="${short[slot]}: ${active.name}${selected?". Предложен новый указ":""}" aria-pressed="${inspected}">
+      <span class="law-slot__sigil sprite-seal sprite-seal--${slot}" aria-hidden="true"></span>
+      <span class="law-slot__short">${short[slot]}</span>
+      <span class="law-slot__copy"><span class="law-slot__name">${active.name}</span><span class="law-slot__mode">${base?"Каменный закон":"Действующий указ"}</span></span>
+      ${selected?'<span class="law-slot__pending" aria-hidden="true">↗</span>':""}
+    </button>`;
+  }).join("")}</div></section>`;
 }
 
 function detailCard(state) {
-  const id=app.selectedCardId||app.focusCardId;
-  if(!id)return "";
-  const card=CARD_BY_ID[id]||Object.values(BASE_LAWS).find(law=>law.id===id);
-  if(!card)return "";
-  const replacing=Boolean(app.selectedCardId&&id===app.selectedCardId);
-  const active=activeLaws(state)[card.slot];
-  return `<section class="detail-card" style="--detail-color:${SLOT_COLORS[card.slot]}">
-    <div class="detail-card__heading"><span>${SLOT_LABELS[card.slot]}</span><button type="button" class="text-btn" data-action="clear-inspection" aria-label="Закрыть описание">×</button></div>
-    ${replacing?`<div class="law-comparison"><div class="law-comparison__old"><small>Сейчас действует</small><strong>${active.name}</strong><p>${active.description}</p></div><div class="law-comparison__new"><small>После утверждения</small><strong>${card.name}</strong><p>${card.description}</p></div></div><p class="detail-note">Закон действует на обе стороны. Соперник может вызвать конфликт, выбрав ту же категорию.</p>`:`<strong class="detail-card__title">${card.name}</strong><p>${card.description}</p>`}
-  </section>`;
+ const v=lawReadout(state,app.selectedCardId,app.focusCardId,app.lawSheetMode);
+ if(!v)return "";
+ const locked=Boolean(app.film?.active)||(app.screen==="online"&&app.online.ready[getViewerPlayer()])||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen)||state.winner;
+ const heading=`<header class="codex-sheet__heading">
+   <span class="codex-sheet__seal sprite-seal sprite-seal--${v.slot}" aria-hidden="true"></span>
+   <div><small>${v.label}</small><strong>${v.comparison?"Сравнение указов":"Действующий закон"}</strong></div>
+   <button type="button" class="codex-sheet__close" data-action="clear-inspection" aria-label="Закрыть описание, сохранив выбранный указ">×</button>
+ </header>`;
+ const compare=v.comparison?`<div class="codex-sheet__change" role="group" aria-label="Сравнение законов">
+  <article class="codex-sheet__law codex-sheet__law--old"><span class="codex-sheet__meta">СЕЙЧАС · ${v.activeIsBase?"КАМЕННЫЙ":"УСТАНОВЛЕННЫЙ"}</span><strong>${v.active.name}</strong><p>${v.active.description}</p></article>
+  <span class="codex-sheet__arrow" aria-label="заменяется">↓</span>
+  <article class="codex-sheet__law codex-sheet__law--new"><span class="codex-sheet__meta">${v.same?"УЖЕ ДЕЙСТВУЕТ":"ПОСЛЕ РАСКРЫТИЯ"}</span><strong>${v.card.name}</strong><p>${v.card.description}</p></article>
+ </div>
+ <div class="codex-sheet__warning"><span aria-hidden="true">⚜</span>${v.same?"Выбранный указ совпадает с действующим — но карту всё равно можно разыграть.":"Закон общий для обоих претендентов. Если противник выберет эту же категорию, новые указы вступят в конфликт и будет восстановлен каменный закон."}</div>`:
+ `<div class="codex-sheet__single"><span class="codex-sheet__meta">${v.activeIsBase?"КАМЕННЫЙ ЗАКОН":"ДЕЙСТВУЮЩИЙ УКАЗ"}</span><strong>${v.active.name}</strong><p>${v.active.description}</p></div>`;
+ const action=v.comparison?`<div class="codex-sheet__actions">
+ <button type="button" data-native-press class="codex-sheet__forecast" data-action="forecast-open" ${locked?"disabled":""}>◇ Видение хода</button>
+ <button type="button" data-native-press class="codex-sheet__confirm" data-action="confirm-choice" ${locked?"disabled":""}>◆ Утвердить указ</button>
+ </div>`:
+ (v.selectedId?`<div class="codex-sheet__actions"><button type="button" data-action="law-compare" class="codex-sheet__compare">↗ Вернуться к выбранному указу</button></div>`:"");
+ return `<section class="detail-card codex-sheet ${v.comparison?"codex-sheet--compare":"codex-sheet--inspect"}" role="region" aria-label="${v.label}. ${v.comparison?"Сравнение законов":"Текущий закон"}" style="--detail-color:${SLOT_COLORS[v.slot]}">
+  ${heading}${compare}${v.comparison?'<button type="button" class="codex-sheet__unselect" data-action="unselect-card">Снять выбор указа</button>':""}${action}
+ </section>`;
 }
 
 function forecastControlsHTML() {
@@ -647,7 +665,7 @@ function handHTML(state) {
   const viewer=getViewerPlayer();
   const locked=Boolean(app.film?.active)||(app.screen==="online"&&app.online.ready[viewer])||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
   return `<section class="hand-panel ${locked?"hand-panel--locked":""}">
-    <div class="panel-head"><h3>Ваши указы</h3><span>${viewer==="p1"?"Север":"Юг"} · ${currentHand().length} карт</span></div>
+    <div class="panel-head"><h3>Ваши указы</h3><span>${app.selectedCardId?'Выбран: '+cardById(app.selectedCardId).name:`${viewer==="p1"?"Север":"Юг"} · ${currentHand().length} карт`}</span>${app.selectedCardId&&!app.lawSheetMode?'<button class="hand-panel__compare" type="button" data-action="law-compare" aria-label="Сравнить выбранный указ с действующим">Сравнить ↗</button>':""}</div>
     ${locked&&!app.film?.active?`<div class="sealed-notice sealed-notice--ceremony" role="status">
       <div class="sealed-notice__wax" aria-hidden="true"><span>✦</span></div>
       <div class="sealed-notice__copy"><strong>Указ запечатан</strong><span>${app.screen==="online"?"Ждём второй печати":"Указ принят"}</span></div>
@@ -656,9 +674,9 @@ function handHTML(state) {
     <div class="hand" role="group" aria-label="Выбор одного указа">${currentHand().map(cardId=>{
       const card=cardById(cardId);
       return `<button type="button" class="law-card ${app.selectedCardId===cardId?"law-card--selected":""}" style="--card-color:${SLOT_COLORS[card.slot]}" aria-pressed="${app.selectedCardId===cardId}" ${locked?"disabled":""} draggable="${!locked}" data-card-id="${cardId}" data-focus-card="${cardId}">
-        <span class="law-card__sigil sprite-seal sprite-seal--${card.slot}" aria-hidden="true"></span><span class="law-card__copy"><span class="law-card__slot">${SLOT_LABELS[card.slot].replace("Закон ","")}</span><strong class="law-card__title">${card.name}</strong></span></button>`;
+        <span class="law-card__sigil sprite-seal sprite-seal--${card.slot}" aria-hidden="true"></span>${app.selectedCardId===cardId?'<span class="law-card__selection-mark" aria-hidden="true">✓</span>':""}<span class="law-card__copy"><span class="law-card__slot">${SLOT_LABELS[card.slot].replace("Закон ","")}</span><strong class="law-card__title">${card.name}</strong></span></button>`;
     }).join("")}</div>
-    ${app.selectedCardId && !app.forecast && !app.film?.active ? detailCard(state) : ""}
+    
     <div class="hand-actions"><button data-native-press class="ghost-btn forecast-btn" data-action="forecast-open" ${locked?"disabled":""} aria-label="Условный предпросмотр следующего хода">◈ Предпросмотр</button><button data-native-press class="primary-btn" data-action="confirm-choice" ${!app.selectedCardId||locked?"disabled":""}>${locked?"◆ Указ отправлен":"◆ Утвердить"}</button></div>
   </section>`;
 }
@@ -866,11 +884,12 @@ function gameHTML(state, eyebrow) {
           <div class="game-layout__main">${boardHTML(displayState)}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
           <aside class="game-layout__side">
             ${lawSlotsHTML(displayState)}
-            ${!app.forecast && !app.film?.active && !app.selectedCardId && app.focusCardId ? detailCard(displayState) : ""}
+            
           </aside>
           <div class="game-layout__hand">${handHTML(state)}</div>
           <div class="game-layout__foot">${logHTML(state)}</div>
         </main>
+        ${!app.forecast && !app.film?.active ? detailCard(state) : ""}
       </div>
       ${app.local.mode === "hotseat" && app.local.passScreen ? `
         <div class="pass-overlay pass-overlay--ceremony" role="dialog" aria-modal="true" aria-label="Передача устройства">
@@ -1031,7 +1050,7 @@ function beginDebugRound(){
 }
 
 function debugSceneHTML(scene) {
-  const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,replay:app.replay,replayActive:app.replayActive,forecast:app.forecast,forecastReview:app.forecastReview,film:app.film};
+  const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,lawSheetMode:app.lawSheetMode,replay:app.replay,replayActive:app.replayActive,forecast:app.forecast,forecastReview:app.forecastReview,film:app.film};
   let markup="";
   try {
     const state=app.debug.round?.frames[app.debug.round.index]?.state || createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
@@ -1040,7 +1059,7 @@ function debugSceneHTML(scene) {
     app.online={...app.online,roomState:null,roomCode:"",ready:{p1:false,p2:false},you:"p1"};
     app.modal=null;
     app.effects=app.debug.round?effectsForFrame(app.debug.round.frames[app.debug.round.index]):[];app.lastConflictSlots=app.debug.round?.frames[app.debug.round.index]?.conflicts||[];
-    app.selectedCardId=app.debug.selectedCardId;app.focusCardId=app.debug.focusCardId;app.inspectedSlot=app.debug.inspectedSlot;
+    app.selectedCardId=app.debug.selectedCardId;app.focusCardId=app.debug.focusCardId;app.inspectedSlot=app.debug.inspectedSlot;app.lawSheetMode=app.debug.lawSheetMode;
     app.replay=null;app.replayActive=false;app.film=null;
     if(scene==="vision"&&!app.debug.forecast){
       const demoCard=app.debug.selectedCardId||state.players.p1.hand[0];
@@ -1266,20 +1285,21 @@ root.addEventListener("click", (event) => {
     const piece=event.target.closest("[data-piece-kind]");
     if(card&&!card.disabled){
       app.debug.selectedCardId=app.debug.selectedCardId===card.dataset.cardId?null:card.dataset.cardId;
-      app.debug.inspectedSlot=cardById(card.dataset.cardId).slot;
-      app.debug.focusCardId=card.dataset.cardId;
+      app.debug.inspectedSlot=app.debug.selectedCardId?cardById(card.dataset.cardId).slot:null;
+      app.debug.focusCardId=app.debug.selectedCardId;
+      app.debug.lawSheetMode=app.debug.selectedCardId?"compare":null;
       if(app.debug.forecast||app.debug.scene==="vision"){
         const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
         app.debug.forecast=createCounselVision(demo,"p1",app.debug.selectedCardId,forecastTurn);
         app.debug.scene="vision";
       }
     }else if(law){
-      app.debug.selectedCardId=null;
       app.debug.focusCardId=law.dataset.focusCard;
       app.debug.inspectedSlot=law.dataset.slot||null;
+      app.debug.lawSheetMode="inspect";
     }else if(piece){
-      app.debug.selectedCardId=null;
       app.debug.inspectedSlot=piece.dataset.pieceKind;
+      app.debug.lawSheetMode="inspect";
       const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
       app.debug.focusCardId=activeLaws(demo)[app.debug.inspectedSlot]?.id||null;
     }else if(pressed){
@@ -1294,7 +1314,9 @@ root.addEventListener("click", (event) => {
       else if(a==="rematch")app.debug.scene="game";
       else if(a==="back-menu")app.debug.scene="menu";
       else if(a==="close-modal")app.debug.scene="game";
-      else if(a==="clear-inspection"){app.debug.focusCardId=null;app.debug.selectedCardId=null;app.debug.inspectedSlot=null;}
+      else if(a==="clear-inspection"){app.debug.focusCardId=null;app.debug.inspectedSlot=null;app.debug.lawSheetMode=null;}
+      else if(a==="law-compare"&&app.debug.selectedCardId){app.debug.focusCardId=app.debug.selectedCardId;app.debug.lawSheetMode="compare";app.debug.inspectedSlot=cardById(app.debug.selectedCardId).slot;}
+      else if(a==="unselect-card"){app.debug.focusCardId=null;app.debug.selectedCardId=null;app.debug.lawSheetMode=null;app.debug.inspectedSlot=null;}
       else if(a==="confirm-choice")app.debug.scene="ready";
       else if(a==="forecast-open"){
         const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
@@ -1370,8 +1392,16 @@ root.addEventListener("click", (event) => {
       case "vision-step":
         visionStepTo(actionNode.dataset.step);break;
       case "clear-inspection":
-        app.focusCardId=null; app.selectedCardId=null; app.inspectedSlot=null; render();
+        app.lawSheetMode=null;app.focusCardId=null;app.inspectedSlot=null;render();break;
+      case "law-compare":
+        if(app.selectedCardId) {
+          app.lawSheetMode="compare";app.focusCardId=app.selectedCardId;
+          app.inspectedSlot=cardById(app.selectedCardId).slot;render();
+        }
         break;
+      case "unselect-card":
+        app.selectedCardId=null;app.focusCardId=null;app.inspectedSlot=null;
+        app.lawSheetMode=null;app.forecast=null;render();break;
       case "toggle-history":
         app.historyExpanded=!app.historyExpanded; render();
         break;
@@ -1390,7 +1420,7 @@ root.addEventListener("click", (event) => {
         closeModal();
         break;
       case "back-menu":
-        stopFilm({renderNow:false});app.victoryRecap=false;app.online.copyStatus="";app.online.error="";
+        stopFilm({renderNow:false});app.victoryRecap=false;app.online.copyStatus="";app.online.error="";app.lawSheetMode=null;
         window.clearTimeout(app.replayTimer);app.replayActive=false;app.forecast=null;
         app.screen = "menu";
         app.local.state = null;
@@ -1417,14 +1447,14 @@ root.addEventListener("click", (event) => {
   if (focus && !event.target.closest("[data-card-id]")) {
     app.focusCardId=focus.dataset.focusCard;
     app.inspectedSlot=focus.dataset.slot||null;
-    if(app.inspectedSlot)app.selectedCardId=null;
+    app.lawSheetMode="inspect";
   }
 
   const piece=event.target.closest("[data-piece-kind]");
   if(piece){
     app.inspectedSlot=piece.dataset.pieceKind;
     app.focusCardId=activeLaws(currentState())[app.inspectedSlot]?.id||null;
-    app.selectedCardId=null;
+    app.lawSheetMode="inspect";
     render();return;
   }
   const card = event.target.closest("[data-card-id]");
@@ -1437,7 +1467,9 @@ root.addEventListener("click", (event) => {
     if(card.disabled)return;
     app.selectedCardId = app.selectedCardId === cardId ? null : cardId;
     app.forecast=null;
-    app.inspectedSlot=cardById(cardId).slot;
+    app.lawSheetMode=app.selectedCardId?"compare":null;
+    app.focusCardId=app.selectedCardId;
+    app.inspectedSlot=app.selectedCardId?cardById(cardId).slot:null;
     playTone("tap");
     render();
     return;
@@ -1517,6 +1549,8 @@ root.addEventListener("drop", (event) => {
   const dragged = cardById(app.dragCardId);
   if (dragged.slot === slotNode.dataset.slot) {
     app.selectedCardId = app.dragCardId;
+    app.focusCardId=app.dragCardId;app.inspectedSlot=dragged.slot;
+    app.lawSheetMode="compare";app.forecast=null;
     render();
   }
   app.dragCardId = null;
@@ -1528,6 +1562,7 @@ window.addEventListener("keydown", (event) => {
   }
   if(event.key==="Escape"&&app.debug.open){stopDebugRound();app.debug.open=false;render();return;}
   if(event.key==="Escape"&&app.film?.active){stopFilm();return;}
+  if(event.key==="Escape"&&app.lawSheetMode){app.lawSheetMode=null;app.focusCardId=null;app.inspectedSlot=null;render();return;}
   if (event.key === "Escape" && app.modal) {
     closeModal();
   }

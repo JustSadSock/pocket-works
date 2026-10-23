@@ -45,8 +45,8 @@
       "id": "royal-codex-stage05",
       "medium": "Hand-authored full-figure SVG sprite atlas and relief/carved decorative SVG on a strictly flat board, physical paper and stone panels composed in CSS",
       "composition": "Six visibly differentiated pieces occupy the 5x7 court; five laws are bound in an ivory codex on desktop and arranged into seals on mobile; decree choice resembles an illustrated folded folio",
-      "interaction": "The royal council remains an actionable codex and secret decree game. A two-seat illustrated online foyer, interactive five-chapter rule booklet, privacy-preserving device handoff and accurate win/lose ceremony complete the journey.",
-      "motion": "Original paper and crown transitions, faint vacant seat glimmer, responsive wax readiness and respectful reduced-motion support. Victory and defeat are separate real game outcomes.",
+      "interaction": "Select a decree once, inspect any existing rule without losing the selection, compare current and proposed world laws in a single manuscript inspector, then intentionally preview, confirm or unselect. The inspector has no authority to modify match state.",
+      "motion": "Wax-arrow indicators mark a proposed category while leaving the standing law legible. One compact codex sheet folds in place without moving the board; reduced-motion removes its opening movement.",
       "rationale": "Replace repetitive circular portrait tokens and generic cards with character silhouettes and one consistent material grammar."
     },
     {
@@ -68,7 +68,7 @@
   ],
   "selection": {
     "concept": "royal-codex-stage05",
-    "reason": "Material manuscript art and miniature physical court lead consistently into online invitation, private turn handoff, interactive teaching and correct endgame ceremony.",
+    "reason": "The law comparison is a single reversible card-to-world action rather than two disconnected rectangular information panels. The standing public law and private decree are separated by an engraved wax transition.",
     "rejected": [
       {
         "concept": "cathedral-relief",
@@ -239,7 +239,9 @@
       "Counsel Vision is deliberately counterfactual: the opponent is assumed to leave all laws unchanged; its future hidden decree cannot be inferred. Keep this notice visible.",
       "The preview stores detached snapshots only, never adjusting cards, crowns, network messages, or active turns; avoid accidentally rendering it into a persistent match state.",
       "Clipboard copying may be blocked by browser permissions; never show success unless the Promise resolves.",
-      "Victory must reflect actual winner and current viewer; avoid showing the same congratulations to the losing online player."
+      "Victory must reflect actual winner and current viewer; avoid showing the same congratulations to the losing online player.",
+      "Inspecting a standing law or figure must not clear selectedCardId; this is critical when comparing several categories in multiplayer.",
+      "The comparison and selected-decree controls must not become visible during hidden hot-seat handoff or while another player is deciding."
     ],
     "comparisons": [
       "Capture initial menu and compare type/edges to former hero layout to verify absence of recovered assets.",
@@ -255,6 +257,10 @@
       {
         "before": "Flat text waiting room, one static result modal and dry rules list.",
         "after": "Illustrated two-chair foyer, different win/loss ceremonies with actual result and chronicle, interactive five-chapter manuscript tutorial."
+      },
+      {
+        "before": "Tapping any standing law deselected the player's hand, and the selected decree detail appeared separately inside the tray.",
+        "after": "A single overlay compares the active public law with the proposed private decree; switching inspections preserves the choice and leaves the mobile board stationary."
       }
     ]
   }

@@ -47,8 +47,8 @@ test("mobile decrees show a horizontally arranged seal and readable title withou
 });
 
 test("advisor does not display a competing decree sheet during the forecast or live playback",()=>{
- assert.match(js,/app\.selectedCardId && !app\.forecast && !app\.film\?\.active \? detailCard/);
- assert.match(js,/!app\.forecast && !app\.film\?\.active && !app\.selectedCardId && app\.focusCardId/);
+ assert.match(js,/!app.forecast && !app.film\?\.active \? detailCard\(state\)/);
+ assert.match(js,/app\.lawSheetMode/);
  assert.match(js,/window\.inspect_crown_board = \(\) =>/);
  assert.match(js,/cellCount: cells\.length/);
  assert.match(js,/pieces: Array\.from\(root\.querySelectorAll\("\.piece"\)\)/);
@@ -67,9 +67,9 @@ test("WebKit gets explicit pixel positioning based on the measured board rect",(
 
 test("release includes the CSS fix in the service-worker precache",()=>{
  const config=JSON.parse(read("app.config.json"));
- assert.equal(config.version,"0.8.2");
+ assert.equal(config.version,"0.9.0");
  assert.ok(read("styles.css").includes("@import './client/stage10-mobile-qa.css';"));
  assert.ok(read("sw.js").includes("./client/stage10-mobile-qa.css"));
- assert.ok(read("index.html").includes('data-app-version="0.8.2"'));
- assert.match(read("sw.js"),/crown-laws-v0\.8\.2/);
+ assert.ok(read("index.html").includes('data-app-version="0.9.0"'));
+ assert.ok(read("sw.js").includes("crown-laws-v"+config.version));
 });
