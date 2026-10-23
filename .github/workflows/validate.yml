@@ -183,6 +183,10 @@ jobs:
         run: node apps/zamazka/qa/fill-raster-region.mjs
       - name: Verify smudge pixel parity and measured rendering time
         run: node apps/zamazka/qa/smudge-pixel-parity.mjs
+      - name: Check compact smudge stencil matches original on 120 cases
+        run: node apps/zamazka/qa/smudge-mask-crop.mjs
+      - name: Check source buffer reuse across 171 smudge stamps
+        run: node apps/zamazka/qa/smudge-scratch-reuse.mjs
       - name: Verify compositor reuse under 60 brush revisions and 120 pointer frames
         run: node apps/zamazka/qa/editor-frame-reuse.mjs
 
