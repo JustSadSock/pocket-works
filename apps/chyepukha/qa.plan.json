@@ -25,7 +25,8 @@
         "qa/inspector.spec.ts",
         "qa/account.spec.ts",
         "qa/network.spec.ts",
-        "qa/four-player-ux.spec.ts"
+        "qa/four-player-ux.spec.ts",
+        "qa/editor-motion.spec.ts"
       ]
     }
   ]
