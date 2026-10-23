@@ -25,7 +25,8 @@ test("board, effects and ghost coordinates are expressed as browser-native perce
 });
 
 test("board restores exactly 35 individually visible cell surfaces",()=>{
- assert.match(css,/height:min\(140cqw,100cqh\)/);\n assert.match(css,/\.board-grid\s*\{/);
+ assert.match(css,/height:min\(140cqw,100cqh\)/);
+ assert.match(css,/\.board-grid\s*\{/);
  assert.match(css,/width:100%;\s*height:100%/);
  assert.match(css,/grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
  assert.match(css,/grid-template-rows:repeat\(7,minmax\(0,1fr\)\)/);
