@@ -991,9 +991,16 @@ if(debugPreview){
   if(d.type==='qa-action'){
    const run=d.run,step=d.step,command=d.command;
    if(!state||state.phase!=='play'){emit('qa-action-result',{run,step,error:'Not a playable scene'});return;}
-   const before={resources:{...state.you.resources},items:state.you.items.map(item=>item.id)};
+   const snapshot=()=>({
+    resources:{...state.you.resources},items:state.you.items.map(item=>item.id),
+    marketDeals:state.you.marketDeals,listing:state.listing?{id:state.listing.id,seller:state.listing.seller}:null,
+    bids:state.bids.map(b=>({buyer:b.buyer,offer:{...b.offer}})),
+    players:state.players.map(p=>({id:p.id,resources:p.resources?{...p.resources}:null,
+      items:p.items,inventory:(p.inventory||[]).map(item=>item.id)}))
+   });
+   const before=snapshot();
    request(command);
-   const after={resources:{...state.you.resources},items:state.you.items.map(item=>item.id)};
+   const after=snapshot();
    emit('qa-action-result',{run,step,before,after,error:document.querySelector('#status')?.textContent||null});
    return;
   }
