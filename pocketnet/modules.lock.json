@@ -281,5 +281,11 @@
       "v13",
       "v14"
     ]
+  },
+  "ne-zhmi": {
+    "current": "v1",
+    "versions": [
+      "v1"
+    ]
   }
 }
