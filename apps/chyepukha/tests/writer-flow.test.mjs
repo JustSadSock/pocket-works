@@ -12,6 +12,7 @@ test('v4, v5 and v6 finale submit without selected words while pinned v1–v3 pr
  assert.equal(handoffCount({...config,roomVersion:'v4'}),0);
  assert.equal(handoffCount({...config,roomVersion:'v5'}),0);
  assert.equal(handoffCount({...config,roomVersion:'v6'}),0);
+ assert.equal(handoffCount({...config,roomVersion:'v7'}),0);
  assert.equal(handoffCount({...config,roomVersion:'v3'}),3);
  assert.equal(handoffCount({...config,roomVersion:'v1'}),3);
  assert.equal(handoffCount({...config,round:8,roomVersion:'v4'}),3);
