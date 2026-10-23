@@ -1325,7 +1325,7 @@ function v13Pool(book,rarity){
   return def?.rarity===rarity&&permittedRune(book.school,id)&&
    (def.aspect!=='origin'||hasForm);
  });
- return eligible.filter(id=>!owned.has(id)).length?eligible.filter(id=>!owned.has(id)):eligible;
+ return [...eligible.filter(id=>!owned.has(id)),...eligible.filter(id=>owned.has(id))];
 }
 function v13Deal(s,i){
  const book=s.match.magicLoadouts[i],stage=s.magicStage;
