@@ -1267,33 +1267,37 @@ class CanvasFallback {
       ctx.stroke();
     } else {
       this.pathEllipse(feature, .92);
-      ctx.fillStyle = colors[0];
+      const center = this.worldToScreen(feature.x, feature.y, .4);
+      const radius = Math.max(12, Math.max(feature.length, feature.width) * this.scale * .49);
+      const wash = ctx.createRadialGradient(center.x, center.y, radius * .22, center.x, center.y, radius);
+      wash.addColorStop(0, colors[0]);
+      wash.addColorStop(.64, colors[0]);
+      wash.addColorStop(1, 'rgba(105,129,95,0)');
+      ctx.fillStyle = wash;
       ctx.fill();
-      ctx.strokeStyle = colors[1];
-      ctx.lineWidth = 1.1;
-      ctx.stroke();
     }
     ctx.restore();
   }
   drawLandform(feature) {
+    // Canvas fallback uses one quiet pigment wash instead of contour rings.
     const ctx = this.ctx;
     ctx.save();
-    ctx.strokeStyle = feature.kind === 'depression' ? 'rgba(225,210,151,.24)' : 'rgba(229,232,178,.30)';
-    ctx.lineWidth = .8;
+    ctx.globalAlpha = .12;
+    ctx.fillStyle = feature.kind === 'depression' ? '#594b34' : '#b8cd8b';
     if (feature.a && feature.b) {
       const a = this.worldToScreen(feature.a.x, feature.a.y, 1);
       const b = this.worldToScreen(feature.b.x, feature.b.y, 1);
-      ctx.lineWidth = Math.max(2, feature.width * this.scale * .07);
       ctx.lineCap = 'round';
+      ctx.lineWidth = Math.max(3, feature.width * this.scale * .42);
+      ctx.strokeStyle = ctx.fillStyle;
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     } else {
-      for (const scale of [.38, .62, .82]) {
-        this.pathEllipse(feature, scale);
-        ctx.stroke();
-      }
+      this.pathEllipse(feature, .74);
+      ctx.fill();
     }
     ctx.restore();
   }
+
   drawBarrier(wall) {
     const ctx = this.ctx;
     const a = this.worldToScreen(wall.ax, wall.ay, 1);
@@ -1377,7 +1381,13 @@ class CanvasFallback {
     }
     ctx.beginPath(); level.outline.forEach((point, index) => { const p = this.worldToScreen(point.x, point.y); if (!index) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }); ctx.closePath();
     ctx.fillStyle = cssColor(this.terrainPalette.grass, '#78945e'); ctx.fill();
-    ctx.strokeStyle = cssColor(this.terrainPalette.grassLight, 'rgba(230,222,178,.42)', .42); ctx.lineWidth = 2; ctx.stroke();
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(4, 21 * this.scale);
+    ctx.strokeStyle = '#656958';
+    ctx.stroke();
+    ctx.lineWidth = Math.max(1.5, 9 * this.scale);
+    ctx.strokeStyle = '#adab91';
+    ctx.stroke();
     const field = level.course18?.field;
     for (const mask of field?.masks || []) this.drawSurface(mask);
     for (const landform of field?.landforms || []) this.drawLandform(landform);
