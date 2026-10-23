@@ -369,6 +369,7 @@ export function installLivingTerrain(renderer, canvas, getState) {
     return { width, height };
   }
 
+  renderer.spatialCameraManaged = true;
   renderer.surfaceHeight = (level, ball) => terrainHeightAt(level, ball.x, ball.y);
   renderer.ballHeight = (level, ball) => Number.isFinite(ball.z) ? ball.z : terrainHeightAt(level, ball.x, ball.y) + BALL_RADIUS;
   renderer.ballScreenPoint = (ball) => renderer.worldToScreen(ball.x, ball.y, Number.isFinite(ball.z) ? ball.z : BALL_RADIUS);
