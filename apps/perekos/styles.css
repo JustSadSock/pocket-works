@@ -760,3 +760,12 @@
 #draft .rune-draft-sheet{min-height:0;max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:auto;-webkit-overflow-scrolling:touch;position:relative}
 #draft .rune-cards{position:relative;min-height:0}
 @media(hover:none),(pointer:coarse){#draft .rune-choice{will-change:auto;backface-visibility:visible}#draft .rune-choice:hover,#draft .rune-choice:focus,#draft .rune-choice:active{transform:none!important;transition:none!important}}
+
+/* Stable rune selection on WebKit: no synthetic hover transform and no rubber-band
+   scroll of nested oversized parchment during the click hit test. */
+@media(max-width:700px){
+ #draft .rune-draft-sheet{scroll-behavior:auto!important;overscroll-behavior-y:contain;-webkit-overflow-scrolling:auto;scroll-padding-block:16px;transform:none!important}
+ #draft .rune-choice,#draft .rune-choice:hover,#draft .rune-choice:active{transform:none!important;transition:none!important;animation:none!important;will-change:auto!important;touch-action:manipulation}
+ #draft .rune-choice{scroll-margin-block:16px}
+ #draft .rune-seal-art,#draft .rune-choice:hover .rune-seal-art{transform:none!important;transition:none!important}
+}
