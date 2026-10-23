@@ -148,6 +148,11 @@ function priorityContourWalls(strokes,end,point,aspect,zoneMask){
 // Smudge only samples colour from the actual editable cutout. The original
 // implementation sampled beige/white pixels outside its irregular boundary,
 // then pulled them inside the painting. Mask coverage is held in raster space.
+// One reusable source snapshot per backing Canvas2D context. A long smudge
+// can produce hundreds of stamps, so allocating another Uint8ClampedArray on
+// every stamp causes repeated GC pauses on mobile devices. Weak keys allow the
+// buffer to be reclaimed when the canvas/editor is disposed.
+const smudgeSources=new WeakMap();
 export function smudgeStamp(ctx,x,y,size,dx,dy,mask=false,zoneMask=null,aspect=W/H){
  const widthFull=ctx.canvas.width,heightFull=ctx.canvas.height,scale=heightFull/H;
  const correction=(W/H)/Math.max(.1,aspect);
@@ -160,7 +165,13 @@ export function smudgeStamp(ctx,x,y,size,dx,dy,mask=false,zoneMask=null,aspect=W
  const right=Math.min(widthFull,cx+radiusX+pullX+blurX+3),bottom=Math.min(heightFull,cy+radiusY+pullY+blurY+3);
  if(left>=right||top>=bottom)return;
  const width=right-left,height=bottom-top,pixels=ctx.getImageData(left,top,width,height);
- const src=new Uint8ClampedArray(pixels.data),dst=pixels.data;
+ let src=smudgeSources.get(ctx);
+ if(!src||src.length<pixels.data.length){
+  src=new Uint8ClampedArray(pixels.data.length);
+  smudgeSources.set(ctx,src);
+ }
+ src.set(pixels.data);
+ const dst=pixels.data;
  const len=Math.hypot(dx/correction,dy);
  const sx=len?Math.round(dx/correction/len*pullX):0,sy=len?Math.round(dy/len*pullY):0;
  const region=zoneMask?.data||zoneMask;
