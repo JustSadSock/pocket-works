@@ -114,7 +114,7 @@ function notify(t){const message=String(t||'');if(message===lastToast&&Date.now(
 
 function closeDialog(){settingsPreviewAbort?.();settingsPreviewAbort=null;if(settingsPreviewVolume!==null){museumAudio.setVolume(soundVolume/100);settingsPreviewVolume=null}closeRoundViewer();dialog.classList.remove('round-view-dialog');dialog.classList.add('hidden');dialog.innerHTML='';const focused=dialogFocus;dialogFocus=null;if(focused?.isConnected)focused.focus({preventScroll:true})}
 function modal(title,body,buttons){dialogFocus=document.activeElement;dialog.classList.remove('hidden');dialog.innerHTML='<div class="dialog-box"><h2>'+title+'</h2>'+body+'<div class="stack" id="modalActions"></div></div>';const actionBox=dialog.querySelector('#modalActions');buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.className='btn '+(cls||'');b.textContent=label;b.addEventListener('click',()=>{sound('press',true);fn()});actionBox.append(b)});(actionBox.querySelector('.ghost')||actionBox.querySelector('button'))?.focus({preventScroll:true})}
-let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
+let draftDelay=null,lastDraftPayload='',lastDraftRound='',lastDraftRevision='',lastDraftAckRevision='',lastDraftAckPayload='',lastDraftSentAt=0,autoSubmitted='',archiveAutoSaved='';
 let activeSubmitTransfer=null,activeDraftTransfer=null,submissionBackoffUntil=0,draftSendAfter=0;
 const SUBMIT_KEY=NS+'pending-submission';
 let pendingSubmit=(()=>{try{return JSON.parse(sessionStorage.getItem(SUBMIT_KEY)||localStorage.getItem(SUBMIT_KEY)||'null')}catch{return null}})();
@@ -241,10 +241,26 @@ function backupDraft(force=false){
  if(!force&&token===lastDraftRound&&serialized===lastDraftPayload&&
     (lastDraftAckRevision===lastDraftRevision||Date.now()-lastDraftSentAt<15000))return;
  if(!net)return;
+ // Only v35+ validates partial drafts against an acknowledged checksum.
+ // Other rooms and missing ACKs keep the safe full upload protocol.
+ let basePrefix=0,baseChecksum;
+ if(Number(roomModuleVersion.slice(1))>=35&&lastDraftAckRevision&&
+    lastDraftAckPayload&&lastDraftRound===token){
+   try{
+    const baseline=JSON.parse(lastDraftAckPayload);
+    if(Array.isArray(baseline)){
+     const max=Math.min(baseline.length,strokes.length);
+     while(basePrefix<max&&JSON.stringify(baseline[basePrefix])===JSON.stringify(strokes[basePrefix]))
+       basePrefix++;
+     if(basePrefix>0)baseChecksum=paintingChecksum(baseline);
+    }
+   }catch{basePrefix=0;baseChecksum=undefined}
+ }
  const controller=new AbortController();activeDraftTransfer=controller;
  try{
   const result=sendPaintingPaced(packet=>net.sendGame(packet),
-    {type:'draft_chunk',round:view.round,art:ass.art,variation:ass.variation,strokes},
+    {type:'draft_chunk',round:view.round,art:ass.art,variation:ass.variation,
+     strokes,basePrefix,baseChecksum},
     {signal:controller.signal});
   lastDraftRound=token;lastDraftPayload=serialized;
   lastDraftRevision=result.revision;lastDraftSentAt=Date.now();draftIndicator('Сохраняем…');
@@ -253,7 +269,7 @@ function backupDraft(force=false){
    activeDraftTransfer=null;draftSendAfter=Date.now()+1800;
   }).catch(()=>{
    if(activeDraftTransfer!==controller)return;
-   activeDraftTransfer=null;lastDraftSentAt=0;lastDraftAckRevision='';
+   activeDraftTransfer=null;lastDraftSentAt=0;lastDraftAckRevision='';lastDraftAckPayload='';
    draftSendAfter=Date.now()+4000;
    draftIndicator('Копия на устройстве · повторим сохранение');
   });
@@ -1087,8 +1103,16 @@ async function connect(mode){
      else if(event?.type==='draft_saved'){
        if(view?.phase==='drawing'&&event.payload?.round===view.round&&event.payload?.art===view.mine?.art&&
           event.payload.revision===lastDraftRevision){
-         lastDraftAckRevision=lastDraftRevision;
-         draftIndicator('Копия в PocketNet ✓');
+         // Accept the compact-upload baseline only when the server proves
+         // it stored the exact vector revision we sent.
+         let verified=false;
+         try{verified=!!event.payload.checksum&&
+           event.payload.checksum===paintingChecksum(JSON.parse(lastDraftPayload))}catch{}
+         if(verified){
+          lastDraftAckRevision=lastDraftRevision;
+          lastDraftAckPayload=lastDraftPayload;
+         }else{lastDraftAckRevision='';lastDraftAckPayload='';lastDraftAckPayload=''}
+         draftIndicator(verified?'Копия в PocketNet ✓':'Проверяем копию · повторим сохранение');
        }
      }
      else if(event?.type==='board_delta'){if(page==='lobby'&&event.payload?.u!==me?.id)commonsBoard?.accept(event.payload)}
@@ -1097,7 +1121,7 @@ async function connect(mode){
         if(page==='lobby'){commonsBoard?.setFull();boardResync=true;net?.sendGame({type:'sync'})}
         notify('Общий холст заполнен. Старые мазки сохранены; ведущий может очистить холст.');
       }
-     else if(event?.type==='notice'){lastDraftSentAt=0;lastDraftAckRevision='';notify(String(event.payload||'Не удалось выполнить действие'))}
+     else if(event?.type==='notice'){lastDraftSentAt=0;lastDraftAckRevision='';lastDraftAckPayload='';notify(String(event.payload||'Не удалось выполнить действие'))}
    });
    // Coalesce presence updates. A transient reconnect is not an authoritative
    // player departure, and every presence packet needn't fetch full artwork.
@@ -1118,7 +1142,7 @@ async function connect(mode){
      if(client.closed)return;connectionLost=true;lastTimePongAt=0;museumAudio.stopCountdown();connectionStatus('offline');
      activeDraftTransfer?.abort();activeDraftTransfer=null;
      clearResumeRequest();activeSubmitTransfer?.abort();activeSubmitTransfer=null;
-     lastDraftSentAt=0;lastDraftAckRevision='';autoSubmitted='';
+     lastDraftSentAt=0;lastDraftAckRevision='';lastDraftAckPayload='';autoSubmitted='';
      if(pendingSubmit){pendingSubmit.sentAt=0;persistPending();draftIndicator('Нет связи · работа на устройстве')}
      else draftIndicator('Нет связи · черновик на устройстве');
      notify('Связь прервана · восстанавливаем комнату');
@@ -1132,7 +1156,7 @@ async function connect(mode){
        activeDraftTransfer?.abort();activeDraftTransfer=null;
        activeSubmitTransfer?.abort();activeSubmitTransfer=null;
        submissionBackoffUntil=Date.now()+6500;draftSendAfter=Date.now()+6500;
-       lastDraftSentAt=0;lastDraftAckRevision='';
+       lastDraftSentAt=0;lastDraftAckRevision='';lastDraftAckPayload='';
        if(pendingSubmit){pendingSubmit.sentAt=0;persistPending()}
        draftIndicator('Сервер занят · повторим отправку через несколько секунд');
        return;
