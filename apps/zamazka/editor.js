@@ -1309,6 +1309,15 @@ export class Editor{
    if(this.closed)return;
    const c=this.canvas,ctx=prepareCanvas(c,true);
    const resized=!this.baseLayer||this.baseLayer.width!==c.width||this.baseLayer.height!==c.height;
+   // Coalesced pointer events can repeatedly request a paint with no new
+   // sampled points. Skip the expensive full-canvas composition in that case.
+   // Include the committed revision, active stroke identity and point count;
+   // a resize must repaint even if none of these values changed.
+   const frameRevision=this.paintRevision||0;
+   const frameStroke=this.working||null;
+   const framePoints=frameStroke?.p?.length||0;
+   if(!resized&&this.lastPaintedRevision===frameRevision&&
+      this.lastPaintedStroke===frameStroke&&this.lastPaintedPoints===framePoints)return;
    const makeLayer=()=>{
      const layer=document.createElement('canvas');layer.width=c.width;layer.height=c.height;
      const x=layer.getContext('2d');x.setTransform(c.width/W,0,0,c.height/H,0,0);
@@ -1402,6 +1411,9 @@ export class Editor{
       }
      ctx.restore();
    }
+   this.lastPaintedRevision=frameRevision;
+   this.lastPaintedStroke=frameStroke;
+   this.lastPaintedPoints=framePoints;
    // No dashed guide: the parchment cutout itself shows the editable area.
    // Keep clipZone above so tools still affect only the damage mask.
  }
