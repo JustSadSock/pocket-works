@@ -21,6 +21,24 @@ import {courtAim} from './aim-geometry.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),canvas=$('world'),ctx=canvas.getContext('2d',{alpha:false});
 ctx.imageSmoothingEnabled=false;
+// A 1:1 coordinate map between the visible canvas box and the authoritative 400×620
+// court. The outer grid gives HUD/controls their own space; the canvas fits what remains.
+function fitWorldToArena(){
+ const arena=$('arena'),bounds=arena.getBoundingClientRect();
+ if(bounds.width<1||bounds.height<1)return;
+ const width=Math.min(bounds.width,bounds.height*W/H);
+ const height=width*H/W;
+ const pixelWidth=width.toFixed(3)+'px',pixelHeight=height.toFixed(3)+'px';
+ if(canvas.style.width!==pixelWidth)canvas.style.width=pixelWidth;
+ if(canvas.style.height!==pixelHeight)canvas.style.height=pixelHeight;
+}
+if(typeof ResizeObserver!=='undefined'){
+ const arenaSizeObserver=new ResizeObserver(fitWorldToArena);
+ arenaSizeObserver.observe($('arena'));
+}
+window.addEventListener('resize',fitWorldToArena,{passive:true});
+window.visualViewport?.addEventListener('resize',fitWorldToArena,{passive:true});
+requestAnimationFrame(fitWorldToArena);
 const storage='pocket-works:perekos:',prefsKey=storage+'prefs',saveKey=storage+'match',booksKey=storage+'grimoire';
 let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,lastProfileFetch=0,avatarInFlight=null;
 let online=null,onlinePreviewRunes=null,onlinePhase='',displayXY=[null,null];
@@ -133,7 +151,7 @@ function applyDesktopPanels(){
 }
 $('desktop-panels-toggle').addEventListener('click',()=>{desktopPanelsVisible=!desktopPanelsVisible;applyDesktopPanels();remember()});
 applyDesktopPanels();
-function show(name){mode=name;$('desktop-dashboard').hidden=name!=='fight';tapAttackQueued=false;if(name==='menu'||name==='result'||name==='online-lobby')mageMotion.reset();for(const id of ['menu','mage-select','draft','build','books','book-delete','result','pause','confirm','online-lobby','net-wait'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=!active||['menu','mage-select','online-lobby','books','book-delete'].includes(name);if(name==='fight'||name==='menu')paused=false;if(name!=='fight')input.aim=null;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;$('forge-edit').hidden=name!=='fight'||active?.gameMode!=='forge';updateHud()}
+function show(name){mode=name;$('desktop-dashboard').hidden=name!=='fight';tapAttackQueued=false;if(name==='menu'||name==='result'||name==='online-lobby')mageMotion.reset();for(const id of ['menu','mage-select','draft','build','books','book-delete','result','pause','confirm','online-lobby','net-wait'])$(id).hidden=id!==name;$('controls').hidden=name!=='fight';$('hud').hidden=!active||['menu','mage-select','online-lobby','books','book-delete'].includes(name);if(name==='fight'||name==='menu')paused=false;if(name!=='fight')input.aim=null;input.attack=false;input.shield=false;input.dash=false;seen=active?.serial||0;$('forge-edit').hidden=name!=='fight'||active?.gameMode!=='forge';updateHud();fitWorldToArena()}
 function mageCards(node,value,onPick,small=false){
  node.replaceChildren();
  for(const school of SCHOOLS){
