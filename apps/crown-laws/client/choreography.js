@@ -53,7 +53,7 @@ export function soundForFrame(frame) {
   if (frame.phase === "laws") return frame.conflicts?.length ? "conflict" : "ready";
   if (frame.phase === "priest") return kinds.includes("shield") ? "shield" : "priest";
   if (frame.phase === "champion") return moved(frame) ? "champion" : null;
-  if (frame.phase === "guard") return kinds.some(k=>String(k).includes("attack")||k==="hit") ? "guard" : moved(frame) ? "move" : null;
+  if (frame.phase === "guard") return kinds.some(k=>String(k).includes("attack")||["hit","push","push-block","shield-break","shield-block","blessing-break"].includes(k)) ? "guard" : moved(frame) ? "move" : null;
   if (frame.phase === "beast") return moved(frame)||kinds.some(k=>String(k).includes("attack")) ? "beast" : null;
   if (frame.phase === "thief") return kinds.some(k=>String(k).includes("seal")||String(k).includes("steal")) ? "seal" : moved(frame) ? "thief" : null;
   if (frame.phase === "throne") return (frame.crowns||[]).some(c=>c.kind==="gain") ? "crown" : null;
