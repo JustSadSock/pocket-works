@@ -219,6 +219,7 @@ export class PocketNetHub {
     const state=room.state;
     if(!state||!Array.isArray(state.participants))return;
     const ids=this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean);
+    const active=new Set(ids);
     const {changed,resumed}=reconcileZamazkaPresence(state,ids,Date.now());
     if(changed)this.persist(room);
     // Send each participant their private snapshot, preserving hidden art.
