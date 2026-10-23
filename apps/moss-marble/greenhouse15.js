@@ -679,9 +679,9 @@ export class LivingGreenhouseLayer {
     const { width, height } = this;
     ctx.save();
     for (let index = 0; index < this.vines.length; index += 1) {
+      const vine = this.vines[index];
       if (mode === 'playing' && (vine.side === 0 || index % 2)) continue;
       if (this.quality < .7 && index % 2) continue;
-      const vine = this.vines[index];
       const originX = vine.side < 0 ? -8 : vine.side > 0 ? width + 8 : vine.x * width;
       const originY = vine.side === 0 ? -12 : height * (.14 + vine.x * .58);
       const direction = vine.side < 0 ? 1 : vine.side > 0 ? -1 : 0;
