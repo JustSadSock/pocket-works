@@ -1,3 +1,4 @@
+import { fitAreaInsets } from './field-guide.js';
 // A single projection contract shared by WebGL, Canvas, pointer input and the camera.
 // Rotating the *view* never changes a level, its seed or its physical colliders.
 export const VERTICAL_COMPRESSION = .82;
@@ -47,22 +48,13 @@ export function projectedOutlineBounds(outline, rotation = 0) {
   return { minX, maxX, minY, maxY, centerX: (minX + maxX) * .5, centerY: (minY + maxY) * .5, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
 }
 
-export function courseViewport(width, height) {
-  const portrait = height >= width * 1.2;
-  const top = portrait ? 86 : 64;
-  const bottom = portrait ? 106 : 82;
-  return {
-    width: Math.max(1, width - (portrait ? 28 : 44)),
-    height: Math.max(1, height - top - bottom),
-    centerX: width * .5,
-    centerY: top + (height - top - bottom) * .5,
-    top, bottom
-  };
+export function courseViewport(width, height, topHUDHeight = 0, bottomControlsHeight = 0) {
+  return fitAreaInsets(width, height, topHUDHeight, bottomControlsHeight);
 }
 
-export function courseFit(level, width, height, rotation = 0) {
+export function courseFit(level, width, height, rotation = 0, topHUDHeight = 0, bottomControlsHeight = 0) {
   const bounds = projectedOutlineBounds(level?.outline, rotation);
-  const view = courseViewport(width, height);
+  const view = courseViewport(width, height, topHUDHeight, bottomControlsHeight);
   const scale = clamp(Math.min(view.width / bounds.width, view.height / (bounds.height * VERTICAL_COMPRESSION)), .025, 3);
   return { scale, bounds, view };
 }
