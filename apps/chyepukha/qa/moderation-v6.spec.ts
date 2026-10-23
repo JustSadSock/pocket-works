@@ -34,7 +34,7 @@ test('non-host cannot see kick, transfer, replacement ticket or pause controls',
  await expect(page.locator('[data-act=ask-kick]')).toHaveCount(0);
  await expect(page.locator('[data-act=transfer-host]')).toHaveCount(0);
  await expect(page.locator('.moderation-ticket')).toHaveCount(0);
- await expect(page.locator('[data-act=vote-host]')).toBeVisible();
+ await expect(page.locator('[data-act=vote-host]').first()).toBeVisible();
  await expect(page.locator('[data-act=pause]')).toHaveCount(0);
 });
 test('paused issue gives clear feedback and disables sending without hiding manuscript',async({page})=>{
