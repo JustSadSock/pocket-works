@@ -1,0 +1,95 @@
+/* 0.7 — Counsel Vision: distinct parchment+ink analytical layer.
+   All routes and silhouettes are derived from exact engine snapshots. */
+.vision{
+ position:relative;z-index:4;margin:0 auto 11px;
+ width:min(100%,1120px);padding:10px 12px 9px;
+ border:2px solid #baa779;background:linear-gradient(116deg,#263d37,#1d302b 70%,#172923);
+ box-shadow:inset 0 0 0 3px #182822,0 7px 19px #070e0bad;color:#f4e6c9;
+ clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px),0 8px)
+}
+.vision__heading{display:flex;align-items:center;gap:11px;padding-bottom:7px;border-bottom:1px solid #c6a97259}
+.vision__icon{display:grid;place-items:center;flex:0 0 39px;height:40px;font:700 29px 'Cormorant Garamond',serif;color:#f5d695;border:1px double #d3b87d;background:#425748;border-radius:50%;box-shadow:inset 0 0 0 3px #283c33}
+.vision__intro{display:grid;gap:3px;flex:1;min-width:0}
+.vision__intro strong{font:700 25px/.9 'Cormorant Garamond',Georgia,serif}
+.vision__intro small{font-size:11px;color:#cfbc9c;line-height:1.25}
+.vision__close{width:35px;height:35px;font-size:25px;display:grid;place-items:center;border:1px solid #a99167;color:#e7d9bd;background:#293b31}
+.vision__close:hover{background:#5d654d}
+.vision__controls{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px}
+.vision__scenarios{display:flex;gap:5px;min-width:0}
+.vision__scenarios button{min-height:34px;padding:5px 12px;border:1px solid #9c9176;background:#34483b;color:#decdb0;font-size:12px;white-space:nowrap;transition:background .12s,transform .12s}
+.vision__scenarios button.is-active{background:#c9b487;border-color:#f2d49d;color:#282f29;font-weight:700;box-shadow:inset 0 0 0 1px #fff1c4}
+.vision__scenarios button:not(:disabled):active{transform:translateY(1px)}
+.vision__scenarios button:disabled{opacity:.33;cursor:default}
+.vision__nav{display:flex;align-items:center;gap:6px}
+.vision__nav strong{font:700 20px 'Cormorant Garamond',serif;min-width:97px;text-align:center}
+.vision__nav button{width:32px;height:32px;display:grid;place-items:center;color:#efd4a1;border:1px solid #a99670;background:#35453b;font-size:23px;line-height:1}
+.vision__nav button:disabled{opacity:.3}
+.vision__timeline{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:3px;margin:10px 0}
+.vision__timeline button{position:relative;display:grid;gap:3px;justify-items:center;align-content:center;padding:6px 2px;min-height:44px;background:#22372e;color:#aeac98;border:1px solid #6e7c665d;min-width:0}
+.vision__timeline button.is-past{background:#394d3e;border-color:#8c9971}
+.vision__timeline button.is-active{background:linear-gradient(#d8c396,#bba274);border-color:#ead196;color:#292c25;box-shadow:0 0 0 1px #edd39783}
+.vision__timeline button span{font:700 15px 'Cormorant Garamond',serif}
+.vision__timeline button small{font-size:9px;white-space:nowrap;letter-spacing:-.01em}
+.vision__events{display:flex;align-items:baseline;gap:9px;background:#182e29;padding:7px 10px;border-left:3px solid #c8ac72;min-height:33px;overflow:hidden}
+.vision__events-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;color:#e0c392}
+.vision__events-text{font-size:11px;color:#e0d7c2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vision__disclaimer{display:flex;gap:8px;align-items:start;margin-top:7px;font-size:10px;line-height:1.35;color:#cbbda3}
+.vision__disclaimer span{display:grid;place-items:center;flex:0 0 14px;width:14px;height:14px;border:1px solid #ae9d72;border-radius:50%;font-size:9px;font-weight:700;color:#edd197}
+.board:has(.vision-overlay){isolation:isolate}
+.vision-overlay{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
+.vision-overlay svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 1px 2px #16261c);opacity:.91}
+.vision-route{stroke:#efc983;stroke-width:5;stroke-linecap:round;stroke-dasharray:13 9;fill:none;vector-effect:non-scaling-stroke;animation:vision-dashes 2s linear infinite}
+.vision-route--push{stroke:#d28c78;stroke-width:6}
+.vision-route__origin{fill:#e9dfb6;stroke:#506a55;stroke-width:3}
+.vision-ghost{
+ position:absolute;left:calc(var(--gx)*20% + 10%);top:calc(var(--gy)*14.285714% + 7.142857%);
+ width:15.5%;height:15.5%;transform:translate(-50%,-50%);
+ background-image:url('../assets/court-figures.svg')!important;
+ background-size:600% 100%!important;background-repeat:no-repeat;
+ opacity:.42;filter:sepia(.5) saturate(.65) brightness(1.8) drop-shadow(0 2px 5px #e7d39c);
+ border-bottom:2px dotted #f4ddab;mix-blend-mode:screen;
+ animation:vision-ghost-breathe 2s ease-in-out infinite
+}
+@keyframes vision-dashes{to{stroke-dashoffset:-44}}
+@keyframes vision-ghost-breathe{50%{opacity:.67;filter:sepia(.35) saturate(.6) brightness(2)}}
+.game-shell:has(.vision) .board{box-shadow:inset 0 0 0 3px #3a4138,inset 0 0 0 7px #bba57472,0 0 0 2px #a9b7a469,0 9px 0 #3c3327,0 14px 22px #040b087a}
+.game-shell:has(.vision) .board-glow{opacity:.38}
+.game-shell:has(.vision) .piece:not(.piece--focused) .piece__portrait{filter:drop-shadow(0 3px 2px #101c1499)}
+@media(max-width:1000px){
+ .vision__timeline button small{font-size:8px;letter-spacing:-.03em}
+ .vision__scenarios button{font-size:11px;padding:5px 8px}
+}
+@media(max-width:760px){
+ .vision{padding:7px;margin-bottom:5px}
+ .vision__heading{gap:7px}
+ .vision__icon{flex-basis:29px;height:29px;font-size:23px}
+ .vision__intro strong{font-size:19px}
+ .vision__intro small{font-size:9px}
+ .vision__close{width:30px;height:30px}
+ .vision__controls{gap:4px;margin-top:5px}
+ .vision__scenarios button{min-height:29px;padding:5px;font-size:10px}
+ .vision__nav{gap:2px}
+ .vision__nav strong{font-size:15px;min-width:51px}
+ .vision__nav button{width:26px;height:30px;font-size:20px}
+ .vision__timeline{gap:2px;margin:6px 0}
+ .vision__timeline button{min-height:29px;padding:4px 0;gap:0}
+ .vision__timeline button span{font-size:13px}
+ .vision__timeline button small{display:none}
+ .vision__timeline button:first-child small,.vision__timeline button:last-child small,.vision__timeline button.is-active small{display:block;position:absolute;z-index:2;top:100%;left:50%;transform:translateX(-50%);background:#cbb080;color:#26372e;padding:1px 3px;font-size:8px;font-weight:700;white-space:nowrap;pointer-events:none}
+ .vision__events{min-height:29px;margin-top:10px;padding:4px 6px;gap:5px}
+ .vision__events-label{display:none}
+ .vision__events-text{font-size:10px}
+ .vision__disclaimer{font-size:9px;margin-top:6px}
+ .vision-route{stroke-width:3}
+ .vision-ghost{width:14%;height:15%;opacity:.53}
+ .game-shell:has(.vision) .board{width:min(100%,410px,max(225px,calc((100dvh - 380px)*5/7)))}
+}
+@media(max-width:380px){
+ .vision__intro small{font-size:8px}
+ .vision__nav strong{min-width:40px;font-size:13px}
+ .vision__scenarios button{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+ .vision-route,.vision-ghost{animation:none!important}
+ .vision__scenarios button{transition:none}
+}

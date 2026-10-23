@@ -23,6 +23,7 @@ import {
 import { chooseAiCard } from "../shared/ai.js";
 import { planTurnFilm, soundForFrame, PHASE_ORDER, PHASE_LABELS } from "./choreography.js";
 import { playCourtSound, COURT_SOUNDS } from "./soundscape.js";
+import { VISION_PHASES, createCounselVision, selectedVisionResult, selectedVisionFrame, alternateVisionFrame, visionPaths, visionGhosts, visionDifference } from "./counsel-vision.js";
 
 const root = document.getElementById("app");
 
@@ -343,15 +344,33 @@ function recordResolution(resolution,isOnline=false){
  if(isOnline)app.online.lastLogs=resolution.logs;else app.local.lastLogs=resolution.logs;
 }
 
-function openForecast(){
+function openForecast() {
  const state=currentState();
- if(!state||app.replayActive||state.winner)return;
- const viewer=getViewerPlayer();
- const cardId=app.selectedCardId||null;
- const result=forecastTurn(state,cardId?viewer:null,cardId);
- app.forecast={before:structuredClone(state),after:result.state,logs:result.logs,cardId};
- app.forecastReview=true;
+ if(!state||app.replayActive||app.film?.active||state.winner)return;
+ if(app.screen==="online" && app.online.ready[getViewerPlayer()])return;
+ if(app.local.waitingAi || app.local.passScreen)return;
+ const player=getViewerPlayer(),cardId=app.selectedCardId||null;
+ app.forecast=createCounselVision(state,player,cardId,forecastTurn);
+ app.forecastReview=false;
+ app.lastBoardPositions={};
  render();
+}
+
+function visionStepTo(step){
+ if(!app.forecast)return;
+ const next=Math.min(VISION_PHASES.length-1,Math.max(0,Number(step)||0));
+ app.forecast.step=next;app.forecastReview=next===VISION_PHASES.length-1;
+ render();
+}
+function visionChooseSide(side){
+ if(!app.forecast)return;
+ if(side==="proposed"&&!app.forecast.proposed)return;
+ if(!["current","proposed"].includes(side))return;
+ app.forecast.side=side;
+ render();
+}
+function closeVision(){
+ app.forecast=null;app.forecastReview=false;app.lastBoardPositions={};render();
 }
 
 function confirmSelection() {
@@ -367,6 +386,7 @@ function confirmSelection() {
     }
     app.online.socket.send(JSON.stringify({ type: "match:choose", cardId: app.selectedCardId }));
     app.online.ready[app.online.you] = true;
+    app.forecast=null;app.forecastReview=false;
     playTone("ready");
     app.selectedCardId = null;
     render();
@@ -441,6 +461,7 @@ function setupSocket() {
     if (payload.type === "room:update") {
       const previousRoomState = app.online.roomState;
       const prevTurn = previousRoomState?.turn;
+      if(app.forecast&&payload.room.state?.turn!==app.forecast.turn){app.forecast=null;app.forecastReview=false;}
       app.online.roomCode = payload.room.code;
       app.online.you = payload.room.you;
       app.online.ready = payload.room.ready;
@@ -532,7 +553,7 @@ function boardHTML(state) {
   const cls=["piece",`piece--${piece.kind}`,piece.owner==="p1"?"piece--p1":piece.owner==="p2"?"piece--p2":"",piece.shield?"piece--shielded":"",piece.stun?"piece--stunned":"",piece.carryingSeal?"piece--sealed":"",app.inspectedSlot===piece.kind?"piece--focused":"",(app.film?.active?app.film.frames[app.film.index].moves:(app.debug.open?app.debug.round?.frames[app.debug.round.index]?.moves:null))?.some(m=>m.pieceId===piece.id)?"piece--performing":""].filter(Boolean).join(" ");
   return `<button type="button" class="${cls}" data-piece-kind="${piece.kind}" data-piece-id="${piece.id}" title="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" aria-label="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" style="--x:${piece.x};--y:${piece.y}"><span class="piece__token">${pieceGlyph(piece)}${piece.shield?'<span class="piece__status piece__status--shield" title="Щит">✦</span>':""}${piece.stun?'<span class="piece__status piece__status--stun" title="Оглушение">✕</span>':""}${piece.carryingSeal?'<span class="piece__status piece__status--seal" title="Похищенная печать">◇</span>':""}</span></button>`;
  }).join("");
- return `<section class="board-panel"><div class="board-caption"><span class="board-caption__title">Королевский двор</span><span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span></div><div class="board-surround"><div class="board"><div class="board-grid">${cells.join("")}</div><div class="board-glow"></div><div class="board-effects">${effectsHTML()}</div>${pieces}</div></div></section>`;
+ return `<section class="board-panel"><div class="board-caption"><span class="board-caption__title">Королевский двор</span><span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span></div><div class="board-surround"><div class="board"><div class="board-grid">${cells.join("")}</div>${visionBoardOverlayHTML()}<div class="board-glow"></div><div class="board-effects">${effectsHTML()}</div>${pieces}</div></div></section>`;
 }
 
 function lawSlotsHTML(state) {
@@ -562,9 +583,55 @@ function detailCard(state) {
   </section>`;
 }
 
-function forecastControlsHTML(){
- if(!app.forecast)return "";
- return `<div class="forecast-control" role="status"><span class="forecast-control__symbol">◈</span><div><strong>Условный ход · ${app.forecastReview?"после":"до"}</strong><span>${app.forecast.cardId?"Соперник не меняет закон":"Оба сохраняют законы"}</span></div><button type="button" class="ghost-btn" data-action="forecast-toggle">${app.forecastReview?"↶ Начало":"→ Результат"}</button><button type="button" class="text-btn" data-action="forecast-close" aria-label="Закрыть прогноз">×</button></div>`;
+function forecastControlsHTML() {
+ const v=app.forecast;if(!v)return "";
+ const f=selectedVisionFrame(v),dif=visionDifference(v);
+ const events=f?.logs||[];
+ const prominent=events.filter(entry=>!["crown-check","hold"].includes(entry.kind)).slice(0,2);
+ const label=v.proposed? "Два условных сценария": "Текущие законы без новых указов";
+ const currentSelected=v.side==="current",chosenSelected=v.side==="proposed";
+ const status=v.proposed?`Фигуры: ${dif.moved} · Короны: ${dif.crowns} · Щиты: ${dif.shields}`:"Обе стороны сохраняют действующие законы";
+ return `<section class="vision" aria-label="Видение советника">
+ <div class="vision__heading">
+  <span class="vision__icon" aria-hidden="true">◇</span>
+  <div class="vision__intro"><strong>Видение советника</strong><small>${label} · ${status}</small></div>
+  <button type="button" class="vision__close" data-action="forecast-close" aria-label="Закрыть видение">×</button>
+ </div>
+ <div class="vision__controls">
+  <div class="vision__scenarios" role="group" aria-label="Сценарий">
+   <button type="button" data-action="vision-mode" data-mode="current" class="${currentSelected?"is-active":""}" aria-pressed="${currentSelected}">Как сейчас</button>
+   <button type="button" data-action="vision-mode" data-mode="proposed" class="${chosenSelected?"is-active":""}" aria-pressed="${chosenSelected}" ${v.proposed?"":"disabled"}>С моим указом</button>
+  </div>
+  <div class="vision__nav">
+   <button type="button" data-action="vision-previous" aria-label="Предыдущая фаза" ${v.step===0?"disabled":""}>‹</button>
+   <strong>${VISION_PHASES[v.step][1]}</strong>
+   <button type="button" data-action="vision-next" aria-label="Следующая фаза" ${v.step===VISION_PHASES.length-1?"disabled":""}>›</button>
+  </div>
+ </div>
+ <div class="vision__timeline" role="group" aria-label="Этапы условного хода">
+  ${VISION_PHASES.map(([phase,name],i)=>`<button type="button" class="${v.step===i?"is-active":""} ${v.step>i?"is-past":""}" data-action="vision-step" data-step="${i}" aria-current="${v.step===i?"step":"false"}" title="${name}"><span>${i===0?"◉":i===8?"♛":i}</span><small>${name}</small></button>`).join("")}
+ </div>
+ <div class="vision__events" aria-live="polite">
+  <span class="vision__events-label">${f?.moves?.length?"Маршруты фигур показаны на поле":v.step===0?"Исходное положение":"Действие закона"}</span>
+  <span class="vision__events-text">${prominent.map(entry=>entry.text).join(" · ")||"На этой фазе изменений нет."}</span>
+ </div>
+ <div class="vision__disclaimer"><span aria-hidden="true">!</span> Не предсказание: соперник не меняет закон. Его скрытый указ неизвестен. Призрачные фигуры — разница между двумя сценариями.</div>
+ </section>`;
+}
+
+function visionBoardOverlayHTML() {
+ const v=app.forecast;if(!v)return "";
+ const current=selectedVisionFrame(v),alternate=alternateVisionFrame(v);
+ const routes=visionPaths(current),ghosts=visionGhosts(current,alternate);
+ const svg=`<svg viewBox="0 0 500 700" preserveAspectRatio="none" aria-hidden="true">
+ <defs><marker id="vision-arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#f4d49a"/></marker></defs>
+ ${routes.map(path=>`<path class="vision-route ${path.style==="push"?"vision-route--push":""}" d="${path.path}" marker-end="url(#vision-arrowhead)"/><circle class="vision-route__origin" cx="${path.from.x*100+50}" cy="${path.from.y*100+50}" r="6"/>`).join("")}
+ </svg>`;
+ return `<div class="vision-overlay" aria-hidden="true">${svg}
+ ${ghosts.map(p=>{
+  const key=p.kind==="champion"?(p.owner==="p1"?"north":"south"):p.kind;
+  return `<span class="vision-ghost sprite-figure--${key}" style="--gx:${p.x};--gy:${p.y}"></span>`;
+ }).join("")}</div>`;
 }
 
 function handHTML(state) {
@@ -745,7 +812,7 @@ function filmHTML() {
 function gameHTML(state, eyebrow) {
   const viewer = getViewerPlayer();
   const chooserLabel = app.local.mode === "hotseat" ? (viewer === "p1" ? "Север выбирает указ" : "Юг выбирает указ") : eyebrow;
-  const displayState=app.film?.active?app.film.frames[app.film.index].state:(app.forecast?(app.forecastReview?app.forecast.after:app.forecast.before):(app.replayActive&&app.replayStage==="before"&&app.replay?app.replay.before:state));
+  const displayState=app.film?.active?app.film.frames[app.film.index].state:(app.forecast?(selectedVisionFrame(app.forecast)?.state||state):(app.replayActive&&app.replayStage==="before"&&app.replay?app.replay.before:state));
   return `
     <div class="game-shell">
       <div class="game-shell__frame">
@@ -930,7 +997,15 @@ function debugSceneHTML(scene) {
     app.modal=null;
     app.effects=app.debug.round?effectsForFrame(app.debug.round.frames[app.debug.round.index]):[];app.lastConflictSlots=app.debug.round?.frames[app.debug.round.index]?.conflicts||[];
     app.selectedCardId=app.debug.selectedCardId;app.focusCardId=app.debug.focusCardId;app.inspectedSlot=app.debug.inspectedSlot;
-    app.replay=null;app.replayActive=false;app.film=null;app.forecast=app.debug.forecast;app.forecastReview=app.debug.forecastReview;
+    app.replay=null;app.replayActive=false;app.film=null;
+    if(scene==="vision"&&!app.debug.forecast){
+      const demoCard=app.debug.selectedCardId||state.players.p1.hand[0];
+      app.debug.selectedCardId=demoCard;
+      app.debug.forecast=createCounselVision(state,"p1",demoCard,forecastTurn);
+      app.debug.forecast.step=5;
+    }
+    app.selectedCardId=app.debug.selectedCardId;
+    app.forecast=app.debug.forecast;app.forecastReview=app.debug.forecastReview;
     if(scene==="art")markup=artGalleryHTML();
     else if(scene==="menu")markup=menuHTML();
     else if(scene==="join"||scene==="waiting"){
@@ -957,7 +1032,7 @@ function debugSceneHTML(scene) {
 }
 
 function debugWorkshopHTML() {
-  const scenes=[["menu","Главное меню"],["game","Игровая партия"],["join","Создание / вход"],["waiting","Ожидание гостя"],["ready","Выбор запечатан"],["hotseat","Передача устройства"],["victory","Экран победы"],["rules","Правила"],["settings","Настройки"],["simulation","Отчёт симуляции"],["art","Арт-галерея"]];
+  const scenes=[["menu","Главное меню"],["game","Игровая партия"],["join","Создание / вход"],["waiting","Ожидание гостя"],["ready","Выбор запечатан"],["hotseat","Передача устройства"],["victory","Экран победы"],["rules","Правила"],["settings","Настройки"],["simulation","Отчёт симуляции"],["art","Арт-галерея"],["vision","Видение советника"]];
   const animations=[["move","Перемещение фишки"],["crown","Получение короны"],["shield","Защитный щит"],["beast-dash","Рывок зверя"],["seal-trail","Похищение печати"],["conflict","Конфликт законов"],["card","Выбор карты"]];
   const sounds=[["tap","Выбор карты"],["ready","Утверждение"],["move","Шаг"],["champion","Претендент"],["priest","Жрец"],["guard","Страж"],["beast","Зверь"],["thief","Вор"],["shield","Щит"],["seal","Печать"],["conflict","Конфликт"],["crown","Корона"]];
   return `<aside class="debug-workshop" role="dialog" aria-label="Мастерская разработчика">
@@ -1008,7 +1083,7 @@ function restoreLocal() {
 }
 
 function animateBoard() {
-  const state = app.film?.active ? app.film.frames[app.film.index].state : (app.forecast ? (app.forecastReview ? app.forecast.after : app.forecast.before) : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState()));
+  const state = app.film?.active ? app.film.frames[app.film.index].state : (app.forecast ? selectedVisionFrame(app.forecast)?.state : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState()));
   if (!state) return;
   const nextPositions = Object.fromEntries(Object.values(state.pieces).map(piece => [piece.id, {x:piece.x,y:piece.y}]));
   const board = root.querySelector('.board');
@@ -1042,7 +1117,7 @@ root.addEventListener("click", (event) => {
   if(dev){
     if(dev.hasAttribute("data-debug-close")){stopDebugRound();app.debug.open=false;}
     if(dev.dataset.debugTab){stopDebugRound();app.debug.tab=dev.dataset.debugTab;if(app.debug.tab==="animations")app.debug.scene="game";}
-    if(dev.dataset.debugScene){stopDebugRound();app.debug.scene=dev.dataset.debugScene;app.debug.animation=null;}
+    if(dev.dataset.debugScene){stopDebugRound();app.debug.scene=dev.dataset.debugScene;app.debug.animation=null;if(app.debug.scene==="vision")app.debug.forecast=null;}
     if(dev.dataset.demoSound){playTone(dev.dataset.demoSound,true);return;}
     if(dev.hasAttribute("data-demo-round")){beginDebugRound();return;}
     if(dev.hasAttribute("data-demo-stop")){stopDebugRound(true);return;}
@@ -1065,6 +1140,11 @@ root.addEventListener("click", (event) => {
       app.debug.selectedCardId=app.debug.selectedCardId===card.dataset.cardId?null:card.dataset.cardId;
       app.debug.inspectedSlot=cardById(card.dataset.cardId).slot;
       app.debug.focusCardId=card.dataset.cardId;
+      if(app.debug.forecast||app.debug.scene==="vision"){
+        const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
+        app.debug.forecast=createCounselVision(demo,"p1",app.debug.selectedCardId,forecastTurn);
+        app.debug.scene="vision";
+      }
     }else if(law){
       app.debug.selectedCardId=null;
       app.debug.focusCardId=law.dataset.focusCard;
@@ -1089,11 +1169,18 @@ root.addEventListener("click", (event) => {
       else if(a==="forecast-open"){
         const demo=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
         const cardId=app.debug.selectedCardId;
-        const result=forecastTurn(demo,cardId?"p1":null,cardId||null);
-        app.debug.forecast={before:demo,after:result.state,logs:result.logs,cardId:cardId||null};
-        app.debug.forecastReview=true;
-      }else if(a==="forecast-toggle")app.debug.forecastReview=!app.debug.forecastReview;
-      else if(a==="forecast-close")app.debug.forecast=null;
+        app.debug.forecast=createCounselVision(demo,"p1",cardId,forecastTurn);
+        app.debug.forecast.step=8;
+        app.debug.scene="vision";
+      }else if(a==="vision-mode" && app.debug.forecast){
+        const mode=pressed.dataset.mode;
+        if(mode==="current"||(mode==="proposed"&&app.debug.forecast.proposed))app.debug.forecast.side=mode;
+      }else if(a==="vision-step"&&app.debug.forecast){
+        app.debug.forecast.step=Math.min(8,Math.max(0,Number(pressed.dataset.step)||0));
+      }else if(a==="vision-previous"&&app.debug.forecast)app.debug.forecast.step=Math.max(0,app.debug.forecast.step-1);
+      else if(a==="vision-next"&&app.debug.forecast)app.debug.forecast.step=Math.min(8,app.debug.forecast.step+1);
+      else if(a==="forecast-toggle"&&app.debug.forecast)app.debug.forecast.step=app.debug.forecast.step===0?8:0;
+      else if(a==="forecast-close"){app.debug.forecast=null;app.debug.scene="game";}
     }
     render();return;
   }
@@ -1138,9 +1225,17 @@ root.addEventListener("click", (event) => {
       case "forecast-open":
         openForecast();break;
       case "forecast-toggle":
-        app.forecastReview=!app.forecastReview;render();break;
+        visionStepTo(app.forecast?.step===0?VISION_PHASES.length-1:0);break;
       case "forecast-close":
-        app.forecast=null;app.forecastReview=false;render();break;
+        closeVision();break;
+      case "vision-mode":
+        visionChooseSide(actionNode.dataset.mode);break;
+      case "vision-previous":
+        visionStepTo((app.forecast?.step||0)-1);break;
+      case "vision-next":
+        visionStepTo((app.forecast?.step||0)+1);break;
+      case "vision-step":
+        visionStepTo(actionNode.dataset.step);break;
       case "clear-inspection":
         app.focusCardId=null; app.selectedCardId=null; app.inspectedSlot=null; render();
         break;
