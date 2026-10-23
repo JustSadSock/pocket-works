@@ -45,6 +45,26 @@ test('v7 writing shows the passport and finishes without transferred words',()=>
  assert.equal(handoffCount({roomVersion:'v7',round:9,total:10,visibleTailWords:3,answer:props.draft}),0);
 });
 
+test('word handoff gives an actionable hint and v7 avoids double genre instruction',()=>{
+ const view={
+  phase:'writing',host:'author',round:3,total:10,
+  settings:{visibleTailWords:3},players:[],
+  sheet:{setLabel:'Ланцюг провалів',genreLabel:'Абсурдна комедія',nextQuestion:'Наступний крок?',
+   question:{prompt:'Що трапилося?',guidance:'Опиши одну дивину.',creativeFreedom:'Не пиши фінал.'},
+   heroAnchor:'Василь',gender:'unspecified',tail:'Василь дивний будинок'}
+ };
+ const props={view,roomVersion:'v7',draft:'Василь знайшов дивний будинок з жабами',
+  meta:{step:'select',anchor:'',gender:'unspecified'},chosen:[],
+  escape:s=>String(s??''),rosterCompact:()=>'',turnProgress:()=>'',genres:{'Абсурдна комедія':'Занадто смішна підказка.'},genders:[['unspecified','Неважливо']]};
+ const html=renderWriting(props);
+ assert.match(html,/Обери слова-зачіпки/);
+ assert.match(html,/Наступний крок\?/);
+ const writing=renderWriting({...props,meta:{step:'draft',anchor:'',gender:'unspecified'}});
+ assert.doesNotMatch(writing,/ТОН ЖАНРУ/);
+ const old=renderWriting({...props,roomVersion:'v6',meta:{step:'draft',anchor:'',gender:'unspecified'}});
+ assert.match(old,/ТОН ЖАНРУ/);
+});
+
 test('host controls remain available in v7 as well as existing v6 rooms',()=>{
  const view={phase:'writing',host:'author',round:1,total:10,paused:false};
  for(const version of ['v6','v7']){
