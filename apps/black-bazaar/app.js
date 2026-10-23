@@ -760,6 +760,8 @@ app.addEventListener('click',event=>{
   const recipient=state?.players?.find(p=>p.id===btn.dataset.player);
   if(!recipient?.connected||recipient.bankrupt||state?.you?.bankrupt)return;
   lastSheetTrigger=btn;openSheet('deals',true);
+  const dealForm=app.querySelector('form[data-form="deal"]');
+  if(dealForm?.closest('details'))dealForm.closest('details').open=true;
   const choose=app.querySelector('#dealTarget');
   if(choose&&[...choose.options].some(o=>o.value===recipient.id)){
    choose.value=recipient.id;
