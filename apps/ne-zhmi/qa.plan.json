@@ -118,6 +118,13 @@
           "action": "screenshot"
         }
       ]
+    },
+    {
+      "id": "online-duet",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "install": true,
+      "entry": "qa/online-duet.mjs"
     }
   ]
 }
