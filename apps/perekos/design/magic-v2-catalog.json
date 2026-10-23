@@ -1,0 +1,1019 @@
+{
+  "schemaVersion": 1,
+  "status": "design-only",
+  "ruleset": "perekos-magic-v2",
+  "baseGameVersion": "0.27.0",
+  "summary": {
+    "total": 92,
+    "common": 20,
+    "uniquePerElement": 24,
+    "transformations": 18,
+    "exampleRecipes": 18
+  },
+  "rules": {
+    "elements": [
+      "stone",
+      "fire",
+      "storm"
+    ],
+    "noCrossElement": true,
+    "start": "Одинаковые базовые HP/скорость/рывок/щит; одно простое базовое заклинание стихии; три пустых слота; отсутствие внешних боевых преимуществ.",
+    "editableSlots": 3,
+    "spellLimits": {
+      "when": 1,
+      "do": 2,
+      "how": 2
+    },
+    "binding": "Каждая КАК имеет явную привязку к индексу действия ЧТО (0 либо 1). Обе КАК можно привязать к одному действию, если совместимы.",
+    "passive": "Только u_reform_base без КОГДА меняет базовую атаку постоянно; требует минимум одну совместимую КАК и не допускает второго ЧТО. Все остальные ЧТО требуют КОГДА.",
+    "seal": "Рабочую комбинацию можно запечатать в любой момент матча. Она освобождает слот, блокирует руны навсегда до конца партии и продолжает постоянно проверять своё условие/пассивный эффект. Нет бесплатной постоянной стрельбы.",
+    "aspects": [
+      "shape",
+      "origin",
+      "motion",
+      "impact"
+    ],
+    "conflict": "На каждую базовую атаку допускается ровно одно значение каждого аспекта. Две несовместимые формы/источника нельзя совместить ни внутри активной комбинации, ни с ранее запечатанным заклинанием; конфликты видны до запечатывания. Запечатанные не переписываются.",
+    "pipeline": "Источник -> форма -> движение -> контакт -> вторичные эффекты. Преображение реально заменяет геометрию, не является декоративным эффектом.",
+    "physics": "Нормаль столкновений, видимость, дальность, укрытия и проекция касаний используют один расчёт клиента и сервера. Исключения имеют телеграф и контригру.",
+    "runawayProtection": "Серверный авторитет; sourceId/generation, запрет вторичных on_cast, ограничение глубины, лимит активных объектов/событий за тик, кулдауны печатей и минимум перегрева.",
+    "oldRules": "Удалить в новом ruleset конверсии as_fire/as_storm/as_stone, межстихийные реакции и шесть классов + три архетипа. Старые PocketNet v1..v9 не переписывать.",
+    "migration": "Старые гримуары доступны на просмотр; предложение конверсии только совместимых рун по таблице, явный перечень несовместимых, сохранение новой копии лишь после подтверждения. Активные старые комнаты остаются на version pin."
+  },
+  "transforms": {
+    "recipes": [
+      {
+        "school": "stone",
+        "requires": [
+          "st_form_wave",
+          "st_origin_self"
+        ],
+        "name": "Землетрясение",
+        "effect": "Кольцевая каменная волна вокруг мага"
+      },
+      {
+        "school": "stone",
+        "requires": [
+          "st_form_wave",
+          "st_origin_below"
+        ],
+        "name": "Ползущий разлом",
+        "effect": "Фронт выходит из отмеченной области"
+      },
+      {
+        "school": "stone",
+        "requires": [
+          "st_form_spires",
+          "st_origin_self"
+        ],
+        "name": "Шипастый венец",
+        "effect": "Несколько волн шипов вокруг мага"
+      },
+      {
+        "school": "stone",
+        "requires": [
+          "st_form_spires",
+          "st_origin_below"
+        ],
+        "name": "Шиповой гребень",
+        "effect": "Выросший из земли направленный гребень"
+      },
+      {
+        "school": "stone",
+        "requires": [
+          "st_form_colossus",
+          "st_origin_below"
+        ],
+        "name": "Монолит недр",
+        "effect": "Тяжёлая колонна в отмеченной точке"
+      },
+      {
+        "school": "stone",
+        "requires": [
+          "st_form_wave",
+          "st_impact_rubble"
+        ],
+        "name": "Осыпной прибой",
+        "effect": "Волна оставляет временную осыпь"
+      },
+      {
+        "school": "fire",
+        "requires": [
+          "fi_form_stream",
+          "fi_origin_self"
+        ],
+        "name": "Огненное кольцо",
+        "effect": "Огонь расходится круговым фронтом"
+      },
+      {
+        "school": "fire",
+        "requires": [
+          "fi_form_stream",
+          "fi_origin_sky"
+        ],
+        "name": "Огненный дождь",
+        "effect": "Небольшие струи падают сверху"
+      },
+      {
+        "school": "fire",
+        "requires": [
+          "fi_form_whirl",
+          "fi_origin_self"
+        ],
+        "name": "Пламенный танец",
+        "effect": "Вращающееся пламя вокруг мага"
+      },
+      {
+        "school": "fire",
+        "requires": [
+          "fi_form_whirl",
+          "fi_origin_sky"
+        ],
+        "name": "Небесный вихрь",
+        "effect": "Неподвижный вихрь в целевой точке"
+      },
+      {
+        "school": "fire",
+        "requires": [
+          "fi_form_comet",
+          "fi_origin_sky"
+        ],
+        "name": "Метеор",
+        "effect": "Падающая комета с отмеченным ударом"
+      },
+      {
+        "school": "fire",
+        "requires": [
+          "fi_form_comet",
+          "fi_impact_wildfire"
+        ],
+        "name": "Пылающий кратер",
+        "effect": "Пожарище после падения"
+      },
+      {
+        "school": "storm",
+        "requires": [
+          "li_form_ray",
+          "li_origin_self"
+        ],
+        "name": "Грозовая корона",
+        "effect": "Короткие лучи расходятся от мага"
+      },
+      {
+        "school": "storm",
+        "requires": [
+          "li_form_ray",
+          "li_origin_pylon"
+        ],
+        "name": "Релейный луч",
+        "effect": "Луч из заряженного узла"
+      },
+      {
+        "school": "storm",
+        "requires": [
+          "li_form_sphere",
+          "li_origin_self"
+        ],
+        "name": "Живая сфера",
+        "effect": "Медленная сфера вокруг мага"
+      },
+      {
+        "school": "storm",
+        "requires": [
+          "li_form_sphere",
+          "li_motion_orbit"
+        ],
+        "name": "Электрический спутник",
+        "effect": "Сфера вращается вокруг источника"
+      },
+      {
+        "school": "storm",
+        "requires": [
+          "li_form_ray",
+          "li_impact_chain"
+        ],
+        "name": "Ломаная молния",
+        "effect": "Луч разветвляется после контакта"
+      },
+      {
+        "school": "storm",
+        "requires": [
+          "li_origin_pylon",
+          "li_impact_chain"
+        ],
+        "name": "Электрическая сеть",
+        "effect": "Передача разряда между своими узлами"
+      }
+    ],
+    "explicitlyForbidden": [
+      [
+        "st_form_wave",
+        "st_form_spires"
+      ],
+      [
+        "st_form_wave",
+        "st_form_colossus"
+      ],
+      [
+        "st_form_spires",
+        "st_form_colossus"
+      ],
+      [
+        "st_origin_self",
+        "st_origin_below"
+      ],
+      [
+        "st_form_colossus",
+        "st_origin_self"
+      ],
+      [
+        "fi_form_stream",
+        "fi_form_whirl"
+      ],
+      [
+        "fi_form_stream",
+        "fi_form_comet"
+      ],
+      [
+        "fi_form_whirl",
+        "fi_form_comet"
+      ],
+      [
+        "fi_origin_self",
+        "fi_origin_sky"
+      ],
+      [
+        "fi_form_comet",
+        "fi_origin_self"
+      ],
+      [
+        "li_form_ray",
+        "li_form_sphere"
+      ],
+      [
+        "li_origin_self",
+        "li_origin_pylon"
+      ],
+      [
+        "li_form_ray",
+        "li_motion_orbit"
+      ]
+    ]
+  },
+  "runes": [
+    {
+      "id": "u_on_hit",
+      "school": "common",
+      "kind": "when",
+      "rarity": "common",
+      "name": "При попадании",
+      "effect": "Подтверждённый урон врагу"
+    },
+    {
+      "id": "u_on_hurt",
+      "school": "common",
+      "kind": "when",
+      "rarity": "common",
+      "name": "Когда ранили",
+      "effect": "Получен урон здоровью, не щиту"
+    },
+    {
+      "id": "u_after_dash",
+      "school": "common",
+      "kind": "when",
+      "rarity": "uncommon",
+      "name": "После рывка",
+      "effect": "Завершён реальный рывок"
+    },
+    {
+      "id": "u_after_guard",
+      "school": "common",
+      "kind": "when",
+      "rarity": "uncommon",
+      "name": "После щита",
+      "effect": "Успешно установлен щит"
+    },
+    {
+      "id": "u_on_expire",
+      "school": "common",
+      "kind": "when",
+      "rarity": "rare",
+      "name": "Когда снаряд исчез",
+      "effect": "Истёк срок без попадания, не очистка лимита"
+    },
+    {
+      "id": "u_on_barrier",
+      "school": "common",
+      "kind": "when",
+      "rarity": "rare",
+      "name": "При ударе в стену",
+      "effect": "Физическое столкновение своего снаряда с укрытием"
+    },
+    {
+      "id": "u_on_cast",
+      "school": "common",
+      "kind": "when",
+      "rarity": "epic",
+      "name": "При выстреле",
+      "effect": "Только ручная базовая атака, не вторичные снаряды"
+    },
+    {
+      "id": "u_guard",
+      "school": "common",
+      "kind": "do",
+      "rarity": "common",
+      "name": "Защититься",
+      "effect": "Небольшой щит до общего потолка"
+    },
+    {
+      "id": "u_push",
+      "school": "common",
+      "kind": "do",
+      "rarity": "uncommon",
+      "name": "Толчок",
+      "effect": "Сместить видимого врага в ближней зоне"
+    },
+    {
+      "id": "u_heal",
+      "school": "common",
+      "kind": "do",
+      "rarity": "rare",
+      "name": "Подлечиться",
+      "effect": "Умеренное восстановление здоровья с кулдауном"
+    },
+    {
+      "id": "u_afterimage",
+      "school": "common",
+      "kind": "do",
+      "rarity": "rare",
+      "name": "Отголосок",
+      "effect": "Краткая копия один раз атакует своей стихией"
+    },
+    {
+      "id": "u_reform_base",
+      "school": "common",
+      "kind": "do",
+      "rarity": "uncommon",
+      "name": "Переплести основу",
+      "effect": "Пассивно изменить базовую атаку, если добавлена совместимая КАК"
+    },
+    {
+      "id": "u_size",
+      "school": "common",
+      "kind": "how",
+      "rarity": "common",
+      "name": "Увеличить",
+      "effect": "Реальный радиус снаряда или эффекта"
+    },
+    {
+      "id": "u_duration",
+      "school": "common",
+      "kind": "how",
+      "rarity": "common",
+      "name": "Продлить",
+      "effect": "Увеличить жизнь объекта или эффекта"
+    },
+    {
+      "id": "u_speed",
+      "school": "common",
+      "kind": "how",
+      "rarity": "uncommon",
+      "name": "Ускорить",
+      "effect": "Скорость полёта с физической коллизией"
+    },
+    {
+      "id": "u_split",
+      "school": "common",
+      "kind": "how",
+      "rarity": "uncommon",
+      "name": "Раздвоить",
+      "effect": "Два меньших объекта с нормализацией общего урона"
+    },
+    {
+      "id": "u_range",
+      "school": "common",
+      "kind": "how",
+      "rarity": "uncommon",
+      "name": "Дальше",
+      "effect": "Дальность полёта или размещения"
+    },
+    {
+      "id": "u_efficient",
+      "school": "common",
+      "kind": "how",
+      "rarity": "rare",
+      "name": "Экономия",
+      "effect": "Снизить нагрев, но не ниже минимальной цены"
+    },
+    {
+      "id": "u_ricochet",
+      "school": "common",
+      "kind": "how",
+      "rarity": "rare",
+      "name": "Рикошет",
+      "effect": "Ограниченный физический отскок по нормали"
+    },
+    {
+      "id": "u_repeat",
+      "school": "common",
+      "kind": "how",
+      "rarity": "epic",
+      "name": "Повторить",
+      "effect": "Повтор через паузу с дополнительным нагревом"
+    },
+    {
+      "id": "st_land",
+      "school": "stone",
+      "kind": "when",
+      "rarity": "uncommon",
+      "name": "При приземлении",
+      "effect": "Подтверждённая точка касания грунта"
+    },
+    {
+      "id": "st_wall_lost",
+      "school": "stone",
+      "kind": "when",
+      "rarity": "rare",
+      "name": "Когда стена разрушена",
+      "effect": "Своё временное укрытие разрушено уроном"
+    },
+    {
+      "id": "st_knock",
+      "school": "stone",
+      "kind": "when",
+      "rarity": "rare",
+      "name": "После каменного толчка",
+      "effect": "Враг действительно смещён каменной атакой"
+    },
+    {
+      "id": "st_throw",
+      "school": "stone",
+      "kind": "do",
+      "rarity": "common",
+      "name": "Метнуть камень",
+      "effect": "Дополнительный физический каменный снаряд"
+    },
+    {
+      "id": "st_shards",
+      "school": "stone",
+      "kind": "do",
+      "rarity": "common",
+      "name": "Осколки",
+      "effect": "Малый направленный веер каменных фрагментов"
+    },
+    {
+      "id": "st_wall",
+      "school": "stone",
+      "kind": "do",
+      "rarity": "uncommon",
+      "name": "Поднять стену",
+      "effect": "Разрушаемое временное укрытие"
+    },
+    {
+      "id": "st_spikes",
+      "school": "stone",
+      "kind": "do",
+      "rarity": "uncommon",
+      "name": "Шипы",
+      "effect": "Наземный ряд шипов с предупреждением"
+    },
+    {
+      "id": "st_fault",
+      "school": "stone",
+      "kind": "do",
+      "rarity": "rare",
+      "name": "Разлом",
+      "effect": "Наземная трещина без поражения сквозь стену"
+    },
+    {
+      "id": "st_satellites",
+      "school": "stone",
+      "kind": "do",
+      "rarity": "rare",
+      "name": "Каменные спутники",
+      "effect": "Две глыбы на орбите с задержкой повторного урона"
+    },
+    {
+      "id": "st_tremor",
+      "school": "stone",
+      "kind": "do",
+      "rarity": "epic",
+      "name": "Землетрясение",
+      "effect": "Круговая ударная волна после замаха"
+    },
+    {
+      "id": "st_mass",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "common",
+      "name": "Утяжелить",
+      "effect": "Больше импульса, меньше скорость и выше нагрев"
+    },
+    {
+      "id": "st_grit",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "uncommon",
+      "name": "Броневая крошка",
+      "effect": "Щит при контакте собственного камня с поверхностью, с кулдауном"
+    },
+    {
+      "id": "st_shatter",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "uncommon",
+      "name": "Дробление",
+      "effect": "Ограниченные осколки при ударе о препятствие"
+    },
+    {
+      "id": "st_drill",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "rare",
+      "name": "Бур",
+      "effect": "Повреждение только временной разрушаемой стены"
+    },
+    {
+      "id": "st_aftershock",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "rare",
+      "name": "Повторный толчок",
+      "effect": "Слабый наземный удар с задержкой"
+    },
+    {
+      "id": "st_pillar",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "rare",
+      "name": "Остаточный столб",
+      "effect": "Короткая разрушаемая опора при приземлении"
+    },
+    {
+      "id": "st_gravity",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "epic",
+      "name": "Притяжение",
+      "effect": "Ограниченная зона притяжения без прохождения стен"
+    },
+    {
+      "id": "st_tracking_fault",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "epic",
+      "name": "Ползущий разлом",
+      "effect": "Следующий сегмент к последней видимой позиции врага"
+    },
+    {
+      "id": "st_form_wave",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Каменная волна",
+      "effect": "Форма: наземный фронт вместо снаряда",
+      "aspect": "shape"
+    },
+    {
+      "id": "st_form_spires",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Гребень шипов",
+      "effect": "Форма: ряд поднимающихся каменных шипов",
+      "aspect": "shape"
+    },
+    {
+      "id": "st_form_colossus",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Монолит",
+      "effect": "Форма: тяжёлая глыба или столб с долгой подготовкой",
+      "aspect": "shape"
+    },
+    {
+      "id": "st_origin_self",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Эпицентр",
+      "effect": "Источник: атаковать от ног мага наружу",
+      "aspect": "origin"
+    },
+    {
+      "id": "st_origin_below",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Из недр",
+      "effect": "Источник: возникновение в отмеченной точке грунта",
+      "aspect": "origin"
+    },
+    {
+      "id": "st_impact_rubble",
+      "school": "stone",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Обвал",
+      "effect": "Контакт: короткоживущая осыпь с собственной геометрией",
+      "aspect": "impact"
+    },
+    {
+      "id": "fi_ignite",
+      "school": "fire",
+      "kind": "when",
+      "rarity": "uncommon",
+      "name": "При воспламенении",
+      "effect": "Первое наложение горения, не его продление"
+    },
+    {
+      "id": "fi_burn_tick",
+      "school": "fire",
+      "kind": "when",
+      "rarity": "rare",
+      "name": "Когда горит",
+      "effect": "Подтверждённый тик урона горением с интервалом"
+    },
+    {
+      "id": "fi_extinguish",
+      "school": "fire",
+      "kind": "when",
+      "rarity": "rare",
+      "name": "Когда погасло",
+      "effect": "Свой огненный след погас естественно"
+    },
+    {
+      "id": "fi_ember",
+      "school": "fire",
+      "kind": "do",
+      "rarity": "common",
+      "name": "Искра",
+      "effect": "Дополнительный огненный сгусток"
+    },
+    {
+      "id": "fi_scorch",
+      "school": "fire",
+      "kind": "do",
+      "rarity": "common",
+      "name": "Ожог",
+      "effect": "Короткая видимая вспышка перед магом"
+    },
+    {
+      "id": "fi_flamepatch",
+      "school": "fire",
+      "kind": "do",
+      "rarity": "uncommon",
+      "name": "Горящее пятно",
+      "effect": "Ограниченный огонь на полу"
+    },
+    {
+      "id": "fi_cindermine",
+      "school": "fire",
+      "kind": "do",
+      "rarity": "uncommon",
+      "name": "Угольная ловушка",
+      "effect": "Мина, вспыхивающая при приближении"
+    },
+    {
+      "id": "fi_lash",
+      "school": "fire",
+      "kind": "do",
+      "rarity": "rare",
+      "name": "Огненная плеть",
+      "effect": "Короткий огненный поток, прерываемый стенами"
+    },
+    {
+      "id": "fi_wisp",
+      "school": "fire",
+      "kind": "do",
+      "rarity": "rare",
+      "name": "Блуждающий огонёк",
+      "effect": "Медленный огонёк обходит преграды без фазового прохода"
+    },
+    {
+      "id": "fi_inferno",
+      "school": "fire",
+      "kind": "do",
+      "rarity": "epic",
+      "name": "Пекло",
+      "effect": "Широкая область после долгой подготовки"
+    },
+    {
+      "id": "fi_sear",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "common",
+      "name": "Поджечь сильнее",
+      "effect": "Дольше горение до лимита"
+    },
+    {
+      "id": "fi_spread",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "uncommon",
+      "name": "Распространить",
+      "effect": "Перекинуть огонь на смежную видимую поверхность"
+    },
+    {
+      "id": "fi_sticky",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "uncommon",
+      "name": "Прилипание",
+      "effect": "После контакта оставить огненное пятно"
+    },
+    {
+      "id": "fi_flash",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "rare",
+      "name": "Вспышка",
+      "effect": "Задержанный локальный взрыв с проверкой укрытий"
+    },
+    {
+      "id": "fi_feed",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "rare",
+      "name": "Разгореться",
+      "effect": "Огонь постепенно усиливается до потолка"
+    },
+    {
+      "id": "fi_backdraft",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "rare",
+      "name": "Обратная тяга",
+      "effect": "Небольшая волна при естественном угасании"
+    },
+    {
+      "id": "fi_meltshield",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "epic",
+      "name": "Оплавление",
+      "effect": "Горение частично ослабляет обычный щит"
+    },
+    {
+      "id": "fi_bank_heat",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "epic",
+      "name": "Тлеющий резерв",
+      "effect": "Вернуть часть нагрева при угасании, с общим кулдауном"
+    },
+    {
+      "id": "fi_form_stream",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Огненный поток",
+      "effect": "Форма: короткая непрерывная струя вместо шара",
+      "aspect": "shape"
+    },
+    {
+      "id": "fi_form_whirl",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Огненный вихрь",
+      "effect": "Форма: вращающаяся область пламени",
+      "aspect": "shape"
+    },
+    {
+      "id": "fi_form_comet",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Комета",
+      "effect": "Форма: тяжёлый горящий снаряд с дугой",
+      "aspect": "shape"
+    },
+    {
+      "id": "fi_origin_self",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Пламенный круг",
+      "effect": "Источник: атака вокруг мага",
+      "aspect": "origin"
+    },
+    {
+      "id": "fi_origin_sky",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Падение с неба",
+      "effect": "Источник: удар сверху по отмеченной точке",
+      "aspect": "origin"
+    },
+    {
+      "id": "fi_impact_wildfire",
+      "school": "fire",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Пожарище",
+      "effect": "Контакт: ограниченное распространение пламени по полу",
+      "aspect": "impact"
+    },
+    {
+      "id": "li_shield_break",
+      "school": "storm",
+      "kind": "when",
+      "rarity": "uncommon",
+      "name": "При пробое щита",
+      "effect": "Подтверждено уменьшение вражеского щита"
+    },
+    {
+      "id": "li_chain_end",
+      "school": "storm",
+      "kind": "when",
+      "rarity": "rare",
+      "name": "После цепи",
+      "effect": "Естественно завершилась цепь разрядов"
+    },
+    {
+      "id": "li_conduct",
+      "school": "storm",
+      "kind": "when",
+      "rarity": "rare",
+      "name": "Когда заряжен проводник",
+      "effect": "Свой узел получил заряд, один раз за событие"
+    },
+    {
+      "id": "li_spark",
+      "school": "storm",
+      "kind": "do",
+      "rarity": "common",
+      "name": "Импульс",
+      "effect": "Тонкий быстрый разряд"
+    },
+    {
+      "id": "li_arc",
+      "school": "storm",
+      "kind": "do",
+      "rarity": "common",
+      "name": "Дуга",
+      "effect": "Короткая направленная молния"
+    },
+    {
+      "id": "li_pylon",
+      "school": "storm",
+      "kind": "do",
+      "rarity": "uncommon",
+      "name": "Проводник",
+      "effect": "Поставить временный разрушаемый узел"
+    },
+    {
+      "id": "li_link",
+      "school": "storm",
+      "kind": "do",
+      "rarity": "uncommon",
+      "name": "Связь",
+      "effect": "Соединить видимые узлы, при отсутствии узлов короткий разряд"
+    },
+    {
+      "id": "li_coil",
+      "school": "storm",
+      "kind": "do",
+      "rarity": "uncommon",
+      "name": "Зарядная мина",
+      "effect": "Ограниченная по времени электрическая мина"
+    },
+    {
+      "id": "li_discharge",
+      "school": "storm",
+      "kind": "do",
+      "rarity": "rare",
+      "name": "Веер молний",
+      "effect": "Несколько коротких дуг с общей ценой"
+    },
+    {
+      "id": "li_stormcloud",
+      "school": "storm",
+      "kind": "do",
+      "rarity": "epic",
+      "name": "Грозовая туча",
+      "effect": "Медленная зона с отмеченными ударами"
+    },
+    {
+      "id": "li_accelerate",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "common",
+      "name": "Проводимость",
+      "effect": "Ускорить электрические снаряды"
+    },
+    {
+      "id": "li_drainshield",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "uncommon",
+      "name": "Снять заряд",
+      "effect": "Дополнительный урон щиту при контакте"
+    },
+    {
+      "id": "li_nodes",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "uncommon",
+      "name": "Перекинуть дугу",
+      "effect": "Достать один видимый проводник после контакта"
+    },
+    {
+      "id": "li_stagger",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "rare",
+      "name": "Оцепенение",
+      "effect": "Краткое замедление с защитой от постоянного контроля"
+    },
+    {
+      "id": "li_capacitor",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "rare",
+      "name": "Накопитель",
+      "effect": "Запас одного заряда на следующую ручную атаку"
+    },
+    {
+      "id": "li_reflect_arc",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "rare",
+      "name": "Угловой разряд",
+      "effect": "Отражение от камня с реальной коллизией"
+    },
+    {
+      "id": "li_shield_pierce",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "epic",
+      "name": "Пробой щита",
+      "effect": "Частичное игнорирование щита, но не стен"
+    },
+    {
+      "id": "li_overcharge",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "epic",
+      "name": "Перенапряжение",
+      "effect": "Сильный разряд за большой нагрев"
+    },
+    {
+      "id": "li_form_ray",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Грозовой луч",
+      "effect": "Форма: точный непрерывный луч с коллизиями",
+      "aspect": "shape"
+    },
+    {
+      "id": "li_form_sphere",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Шаровая молния",
+      "effect": "Форма: медленная сфера с внешними дугами",
+      "aspect": "shape"
+    },
+    {
+      "id": "li_origin_self",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Корона",
+      "effect": "Источник: разряд исходит кольцом от мага",
+      "aspect": "origin"
+    },
+    {
+      "id": "li_origin_pylon",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Проводящая опора",
+      "effect": "Источник: заряженный свой узел, при его отсутствии маг",
+      "aspect": "origin"
+    },
+    {
+      "id": "li_impact_chain",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Цепная реакция",
+      "effect": "Контакт: дуга к следующему видимому узлу",
+      "aspect": "impact"
+    },
+    {
+      "id": "li_motion_orbit",
+      "school": "storm",
+      "kind": "how",
+      "rarity": "transformation",
+      "name": "Орбита",
+      "effect": "Движение: ограниченная орбита вокруг источника",
+      "aspect": "motion"
+    }
+  ]
+}
