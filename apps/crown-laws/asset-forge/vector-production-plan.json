@@ -102,6 +102,81 @@
         "license": "original",
         "origin": "Hand-authored Crown Laws manuscript vector set, October 2026"
       }
+    },
+    {
+      "id": "court-figures",
+      "adapter": "vector",
+      "source": "asset-forge/court-figures.svg",
+      "dependsOn": [],
+      "seed": 2891,
+      "parameters": {
+        "width": 960,
+        "height": 240
+      },
+      "outputs": {
+        "image": "assets/court-figures.png",
+        "vector": "assets/court-figures.svg"
+      },
+      "budget": {
+        "maxBytes": 450000,
+        "maxWidth": 960,
+        "maxHeight": 240
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "New original medieval court vector artwork, Crown Laws stage 0.5"
+      }
+    },
+    {
+      "id": "throne-relief",
+      "adapter": "vector",
+      "source": "asset-forge/throne-relief.svg",
+      "dependsOn": [],
+      "seed": 2892,
+      "parameters": {
+        "width": 240,
+        "height": 240
+      },
+      "outputs": {
+        "image": "assets/throne-relief.png",
+        "vector": "assets/throne-relief.svg"
+      },
+      "budget": {
+        "maxBytes": 450000,
+        "maxWidth": 240,
+        "maxHeight": 240
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "New original medieval court vector artwork, Crown Laws stage 0.5"
+      }
+    },
+    {
+      "id": "decree-ornament",
+      "adapter": "vector",
+      "source": "asset-forge/decree-ornament.svg",
+      "dependsOn": [],
+      "seed": 2893,
+      "parameters": {
+        "width": 280,
+        "height": 360
+      },
+      "outputs": {
+        "image": "assets/decree-ornament.png",
+        "vector": "assets/decree-ornament.svg"
+      },
+      "budget": {
+        "maxBytes": 450000,
+        "maxWidth": 280,
+        "maxHeight": 360
+      },
+      "provenance": {
+        "author": "Pocket Works project agent",
+        "license": "original",
+        "origin": "New original medieval court vector artwork, Crown Laws stage 0.5"
+      }
     }
   ]
 }

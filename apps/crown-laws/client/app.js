@@ -828,6 +828,17 @@ function modalHTML() {
   `;
 }
 
+function artGalleryHTML() {
+  const figures=[["north","Север"],["south","Юг"],["guard","Страж"],["beast","Зверь"],["priest","Жрец"],["thief","Вор"]];
+  const seals=[["champion","Претенденты"],["guard","Страж"],["beast","Зверь"],["priest","Жрец"],["thief","Вор"]];
+  return `<section class="debug-art-gallery" aria-label="Галерея оригинальных изображений">
+    <h2>Герои двора</h2><p>Редактируемая серия Universal Art Forge: каждый персонаж обладает отдельным силуэтом. В игре используются те же рисунки.</p>
+    <div class="debug-art-gallery__figures">${figures.map(([kind,title])=>`<div class="debug-art-gallery__figure"><i class="sprite-figure sprite-figure--${kind}" aria-hidden="true"></i><span>${title}</span></div>`).join("")}</div>
+    <h2>Печати закона</h2><div class="debug-art-gallery__seals">${seals.map(([kind,title])=>`<div><i class="sprite-seal sprite-seal--${kind}" aria-hidden="true"></i><span>${title}</span></div>`).join("")}</div>
+    <h2>Резной трон</h2><div class="debug-art-gallery__throne" role="img" aria-label="Декоративный рельеф королевского трона"></div>
+  </section>`;
+}
+
 function debugSceneHTML(scene) {
   const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,replay:app.replay,replayActive:app.replayActive,forecast:app.forecast,forecastReview:app.forecastReview};
   let markup="";
@@ -840,7 +851,8 @@ function debugSceneHTML(scene) {
     app.effects=[];app.lastConflictSlots=[];
     app.selectedCardId=app.debug.selectedCardId;app.focusCardId=app.debug.focusCardId;app.inspectedSlot=app.debug.inspectedSlot;
     app.replay=null;app.replayActive=false;app.forecast=app.debug.forecast;app.forecastReview=app.debug.forecastReview;
-    if(scene==="menu")markup=menuHTML();
+    if(scene==="art")markup=artGalleryHTML();
+    else if(scene==="menu")markup=menuHTML();
     else if(scene==="join"||scene==="waiting"){
       app.screen="online";
       if(scene==="waiting")app.online.roomCode="DEMO1";
@@ -865,7 +877,7 @@ function debugSceneHTML(scene) {
 }
 
 function debugWorkshopHTML() {
-  const scenes=[["menu","Главное меню"],["game","Игровая партия"],["join","Создание / вход"],["waiting","Ожидание гостя"],["ready","Выбор запечатан"],["hotseat","Передача устройства"],["victory","Экран победы"],["rules","Правила"],["settings","Настройки"],["simulation","Отчёт симуляции"]];
+  const scenes=[["menu","Главное меню"],["game","Игровая партия"],["join","Создание / вход"],["waiting","Ожидание гостя"],["ready","Выбор запечатан"],["hotseat","Передача устройства"],["victory","Экран победы"],["rules","Правила"],["settings","Настройки"],["simulation","Отчёт симуляции"],["art","Арт-галерея"]];
   const animations=[["move","Перемещение фишки"],["crown","Получение короны"],["shield","Защитный щит"],["beast-dash","Рывок зверя"],["seal-trail","Похищение печати"],["conflict","Конфликт законов"],["card","Выбор карты"]];
   const sounds=[["tap","Выбор карты"],["ready","Утверждение"],["move","Перемещение"],["conflict","Конфликт"],["crown","Корона"]];
   return `<aside class="debug-workshop" role="dialog" aria-label="Мастерская разработчика">
