@@ -2910,6 +2910,9 @@ class UIManager {
                 if(this.isOnlineMode && player.id!==this.localPlayerIndex)continue;
                 if(newKeys[player.id])player.keys={...newKeys[player.id]};
                 if(!this.isOnlineMode && newColors[player.id])player.color=newColors[player.id];
+                gameState.inputStates?.set(player.id,{
+                    left:createActionState(),right:createActionState(),down:createActionState()
+                });
                 this.updatePlayerInfo(player);
                 this.drawNextPiece(player);
             }
@@ -3500,7 +3503,9 @@ class UIManager {
         const handler=(event)=>{
             event.preventDefault();
             event.stopImmediatePropagation();
-            if(event.code!=='Escape'){
+            if(event.code==='Backquote'){
+                input.value=previous; // reserved for the global Pocket Works debug menu
+            }else if(event.code!=='Escape'){
                 const code=normalizeKeyCode(event.code||event.key);
                 if(code){
                     input.dataset.keyCode=code;
