@@ -592,7 +592,7 @@ function renderPlay(){
   const moderate=['v16','v17'].includes(roomVersion)&&state.host===me?.id&&!self&&!p.bankrupt;
   return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(self?'is-me ':'')+
   '" data-action="'+(self?'open-sheet':'player-actions')+'" '+(self?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
-  (!self&&!available?' disabled':'')+' aria-label="'+esc(p.character)+' — '+esc(p.name)+'">'+
+  (!self&&!available&&!moderate?' disabled':'')+' aria-label="'+esc(p.character)+' — '+esc(p.name)+'">'+
   '<span class="seat-portrait">'+characterMarkup(roleCharacter(p.character),'seat-character')+'</span>'+
   '<strong>'+esc(p.character)+'</strong><small>'+esc(p.name)+'</small></button>';
  }).join('');
