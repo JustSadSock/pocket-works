@@ -142,7 +142,13 @@ try{
   await poll(()=>!room.state.hold,'both operators actively pulsing');
   const preRound=room.state.round;
   const restarted=module.onMessage({state:room.state,player:players[0],payload:{type:'restart'}});
-  room.state=restarted.state;broadcastEvents(restarted.events);
+  room.state=restarted.state;
+  // This branch deliberately tests the known benchmark to assert both real
+  // operator buttons can finish a complete run. The *following* round uses
+  // an untouched procedural server seed and is asserted separately.
+  room.state.robot=testModule.createGame(testModule.LEVEL);
+  for(const event of restarted.events||[])if(event.type==='state')event.payload.robot=room.state.robot;
+  broadcastEvents(restarted.events);
   await poll(()=>room.state.round===preRound+1,'server restart');
   await poll(()=>host.locator('#jump').isEnabled(),'host input after restart');
   await poll(()=>guest.locator('#reverse').isEnabled(),'guest input after restart');
