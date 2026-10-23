@@ -81,7 +81,10 @@ function effectiveTransforms(spells){
  return {scopes:byScope};
 }
 export function validateMagicSpell(spell,{requireReady=false}={}){
- if(!spell||!Array.isArray(spell.actions)||!Number.isInteger(spell.id))return {ok:false,error:'Повреждён слот заклинания'};
+ if(!spell||!Array.isArray(spell.actions)||!Number.isInteger(spell.id)||
+    spell.actions.some(a=>!a||!a.rune||!Array.isArray(a.mods))||
+    (spell.when!=null&&typeof spell.when!=='object'))
+   return {ok:false,error:'Повреждён слот заклинания'};
  if(spell.actions.length>MAGIC_SLOT_CAPS.do)return {ok:false,error:'В заклинании не больше двух ЧТО'};
  if(spellRuneCount(spell)>5)return {ok:false,error:'В заклинании не больше пяти рун'};
  if(spell.when&&card(idOf(spell.when))?.kind!=='when')return {ok:false,error:'Неверная руна КОГДА'};
