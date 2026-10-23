@@ -35,7 +35,8 @@ test('Black Bazaar fits compact phones with urgent notice and keeps actions reac
    const lastTab=rect('.workspace-tab:last-child')!;
    const content=rect('.sheet-content')!;
    const measuredHeight=window.visualViewport?.height||innerHeight;
-   const outside=[['screen',play],['field',field],['workspace',panel],['tabs',tabs],['end',end],['last tab',lastTab]]
+   const surfaces: Array<[string, DOMRect | null]>=[['screen',play],['field',field],['workspace',panel],['tabs',tabs],['end',end],['last tab',lastTab]];
+   const outside=surfaces
     .filter(([,box])=>!box||box.width<1||box.height<1||box.left<shell.left-3||box.right>shell.right+3||box.top<shell.top-3||box.bottom>shell.bottom+3)
     .map(([name])=>name);
    return {
