@@ -2,7 +2,7 @@
 import {RUNES,legalRunes,compile,description,eligibleOffers,cooldown,heatCost,repetitions,MAX_CHAIN_DEPTH,MAX_REACTIONS_PER_TICK,MAX_QUEUE,HEAT_LIMIT,chosenElement} from './runes.mjs';
 export {RUNES} from './runes.mjs';
 import {mage,validMage} from './mages.mjs';
-import {createMagicLoadout,compileMagic,validateMagicState} from './magic-v2-rules.mjs';
+import {createMagicLoadout,compileMagic,validateMagicState,effectiveMagicForm} from './magic-v2-rules.mjs';
 import {reactionFor,isElement} from './elements.mjs';
 import {firstCollision,rayCollision} from './collision-geometry.mjs';
 export const W=400,H=620,STEP=1/60,ROUND_SECONDS=25,RUPTURE_SECONDS=600,EVOLUTION_SECONDS=60,COLLAPSE_SECONDS=90;
@@ -25,11 +25,15 @@ export function makeMatch(seed=0x718abc,first='kindle',second='pebble',gameMode=
 export const MAGIC_V2_PRACTICE_RUNES=Object.freeze([
  'u_on_cast','u_on_hit','u_on_hurt','u_after_dash','u_after_guard',
  'u_guard','u_push','u_heal','u_afterimage','u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
- 'st_throw','st_shards','st_wall','fi_ember','fi_scorch','fi_flamepatch','li_spark','li_arc'
+ 'st_throw','st_shards','st_wall','fi_ember','fi_scorch','fi_flamepatch','li_spark','li_arc',
+ 'u_reform_base','st_form_wave','st_origin_self','st_origin_below',
+ 'fi_form_stream','fi_origin_self','fi_origin_sky',
+ 'li_form_ray','li_origin_self','li_origin_pylon'
 ]);
 // Only verified modifiers appear as equippable buttons for a given action in
 // the current live laboratory. The full catalog is reserved for later phases.
 const V2_PRACTICE_MODS=Object.freeze({
+ u_reform_base:['st_form_wave','st_origin_self','st_origin_below','fi_form_stream','fi_origin_self','fi_origin_sky','li_form_ray','li_origin_self','li_origin_pylon'],
  u_guard:['u_size','u_efficient'],
  u_push:['u_size','u_efficient'],
  u_heal:['u_efficient'],
