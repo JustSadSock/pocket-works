@@ -214,9 +214,9 @@ export class PocketNetHub {
   readRoom(id) {
     const row = this.sql('SELECT * FROM rooms WHERE id = ?', id).toArray()[0];
     if(!row)return null;
-    let state,roomPlayers=JSON.parse(row.players);
+    let state,roomPlayers;
     try{
-      state=JSON.parse(row.state);
+      state=JSON.parse(row.state);roomPlayers=JSON.parse(row.players);
       if(row.game_id==='chyepukha'&&row.version==='v5'&&
          (!state||state.schema!==1||!Array.isArray(state.sheets)))throw Error('invalid_chyepukha_state');
     }catch(error){
