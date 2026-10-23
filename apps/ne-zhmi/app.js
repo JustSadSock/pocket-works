@@ -90,7 +90,11 @@ function updateControls(){
     }
     if(i>=2){
       const meter=$('power-'+ability.id);
-      if(meter)meter.style.setProperty('--energy',Math.round((game?.energy?.[ability.id]??1)*100)+'%');
+      if(meter){
+        const fraction=ability.id==='push' ? 1-Math.min(1,(game?.pushCooldown||0)/1.15) : (game?.energy?.[ability.id]??1);
+        meter.style.setProperty('--energy',Math.round(fraction*100)+'%');
+        if(ability.hold && fraction<=.005)button.classList.remove('pressed');
+      }
     }
   }
 }
@@ -107,6 +111,7 @@ function input(action,pressed=true){
   if(phase!=='playing'||ABILITIES.findIndex(a=>a.id===action)>=localCount)return;
   const result=commandGame(game,action,pressed);
   if(result==='cooldown'){announce('Механизм ещё перезаряжается.');return;}
+  if(result==='empty'){announce('Энергия закончилась — отпустите кнопку для зарядки.');return;}
   if(result==='nochange')return;
   if(result==='reverse'||result==='push'){renderer.impact(.25);sound(action);}
   const element=$(action);element.classList.toggle('pressed',pressed);

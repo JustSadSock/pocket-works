@@ -83,3 +83,16 @@ test('hold packets must explicitly carry a boolean and old replay does not toggl
  message(s,players[2],{type:'input',action:'magnet',round:s.round,seq:2,pressed:false});
  assert.equal(s.robot.held.magnet,false);
 });
+
+test('exhausted held ability releases and cannot stutter at the energy boundary',()=>{
+ const s=createGame();
+ assert.equal(commandGame(s,'float',true),'float-on');
+ for(let i=0;i<800;i++)stepGame(s,FIXED_DT);
+ assert.equal(s.held.float,false);
+ const energy=s.energy.float;
+ assert.ok(energy>0);
+ assert.equal(commandGame(s,'float',true),'empty');
+ for(let i=0;i<120;i++)stepGame(s,FIXED_DT);
+ assert.ok(s.energy.float>energy);
+ assert.equal(commandGame(s,'float',true),'float-on');
+});

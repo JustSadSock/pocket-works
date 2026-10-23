@@ -199,6 +199,7 @@ const overlap = (a,b) => a.left < b.x + b.w - 1e-5 && a.right > b.x + 1e-5;
 function commandGame(state, action, pressed=true) {
   if(HOLD_ACTIONS.includes(action)){
     if(state.finished)return 'finished';
+    if(pressed && state.energy[action]<.14)return 'empty';
     if(state.held[action]===!!pressed)return 'nochange';
     state.held[action]=!!pressed;
     if(action==='magnet'&&pressed)state.magnetUses++;
@@ -246,6 +247,11 @@ function stepGame(state, dt = FIXED_DT) {
     state.energy[action]=clamp(state.energy[action]+(on?-(action==='float'?.25:.19):.29)*delta,0,1);
     if(on&&action==='brake')state.brakeTime+=delta;
     if(on&&action==='float')state.floatTime+=delta;
+    // Exhaustion must actually release the force. Otherwise a held key would
+    // generate hundreds of one-frame force flickers while partially recharging.
+    if(on&&state.energy[action]<=.005){
+      state.energy[action]=0;state.held[action]=false;eventsOnce('empty-'+action);
+    }
   }
   state.springCooldown = Math.max(0, (state.springCooldown||0)-delta);
   state.hazardCooldown = Math.max(0, (state.hazardCooldown||0)-delta);

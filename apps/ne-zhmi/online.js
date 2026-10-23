@@ -214,6 +214,7 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
     if(!active||!connected||snapshot?.phase!=='play'||snapshot.hold||pausedForPrompt)return false;
     const role=roleOf(snapshot,me?.id);
     if(role<0||ABILITIES[role]?.id!==action)return false;
+    if(pressed&&HOLD_ACTIONS.includes(action)&&(snapshot.robot?.energy?.[action]??1)<.14)return false;
     return send({type:'input',action,pressed:!!pressed,round:snapshot.round,seq:++commandSeq});
   }
   function request(action){
