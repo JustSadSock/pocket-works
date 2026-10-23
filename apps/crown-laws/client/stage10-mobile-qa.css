@@ -104,7 +104,7 @@
     padding:5px 7px;
     min-height:0;
     overflow:hidden;
-    flex-basis:150px;
+    flex-basis:172px;
   }
   .game-shell:not(.debug-scene .game-shell) .law-card__sigil {
     display:block;
@@ -142,7 +142,8 @@
     max-height:39px;
     overflow:hidden;
     white-space:normal;
-    overflow-wrap:anywhere;
+    overflow-wrap:normal;
+    word-break:normal;
     font-size:15px;
     line-height:1.08;
   }
@@ -204,7 +205,7 @@
 }
 @media (max-width:360px) {
   .game-shell:not(.debug-scene .game-shell) .law-card {
-    flex-basis:137px;
+    flex-basis:156px;
   }
   .game-shell:not(.debug-scene .game-shell) .law-card__sigil{
     width:31px;height:31px;min-width:31px;flex-basis:31px;
