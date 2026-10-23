@@ -11,6 +11,8 @@ on:
       - 'apps/zamazka/qa/eight-player-transfer.mjs'
       - 'apps/zamazka/qa/large-painting.mjs'
       - 'pocketnet/hub.mjs'
+      - 'pocketnet/room-join-view.mjs'
+      - 'pocketnet/qa/room-join-view.test.mjs'
       - 'pocketnet/modules.lock.json'
       - 'pocketnet/module-versions/zamazka/**'
       - '.github/workflows/zamazka-network-reliability.yml'
@@ -21,6 +23,8 @@ on:
       - 'apps/zamazka/app.js'
       - 'apps/zamazka/qa/**'
       - 'pocketnet/hub.mjs'
+      - 'pocketnet/room-join-view.mjs'
+      - 'pocketnet/qa/room-join-view.test.mjs'
       - 'pocketnet/modules.lock.json'
       - 'pocketnet/module-versions/zamazka/**'
       - '.github/workflows/zamazka-network-reliability.yml'
@@ -48,6 +52,8 @@ jobs:
           printf '{"name":"zamazka-reliability-qa","private":true}' > "$RUNNER_TEMP/zamazka-ci/package.json"
           npm install --prefix "$RUNNER_TEMP/zamazka-ci" --no-package-lock --ignore-scripts --no-audit --no-fund typescript@5.9.3
           ln -s "$RUNNER_TEMP/zamazka-ci/node_modules/typescript" node_modules/typescript
+      - name: Test secure room join projection
+        run: node --test pocketnet/qa/room-join-view.test.mjs
       - name: Verify immutable PocketNet module snapshot
         run: npm run pocketnet:check
       - name: Validate JavaScript syntax
