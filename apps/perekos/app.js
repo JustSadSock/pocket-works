@@ -25,6 +25,7 @@ const storage='pocket-works:perekos:',prefsKey=storage+'prefs',saveKey=storage+'
 let appearance={...DEFAULT_APPEARANCE},pendingAppearance=null,profileRequest=0,lastProfileFetch=0,avatarInFlight=null;
 let online=null,onlinePreviewRunes=null,onlinePhase='',displayXY=[null,null];
 let rivalAppearance={...DEFAULT_APPEARANCE,source:'rival',colors:['#b26258','#ecc08f','#7a393f']},pendingRival=null,rivalKey='',rivalRequest=0;
+let selectedSpecialSlot=0;
 let selectedMage='kindle',mageFrom='menu',selectionDraft='kindle',selectedGameMode='rupture',selectedArchetype='striker',selectionArchetype='striker',netSyncAt=0,evoPath='add';
 let desktopPanelsVisible=true,lastTacticRunes='',sound=true,paused=false,mode='menu',active=null,last=performance.now(),acc=0,frame=0,quietTimer=0,audio=null,seen=0,quitPrompt=false,fxParticles=[],pendingRune=null,bookToDelete=null,debugSession=null;
 const combatPresentation=new CombatPresentation();
@@ -38,8 +39,8 @@ const keys=new Set(),input={x:0,y:0,attack:false,shield:false,dash:false,special
 let tapAttackQueued=false,aimTouch=false,aimTouchStart=0,aimDragged=false,aimVector=null;
 function stored(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
 function put(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
-const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;desktopPanelsVisible=savedPrefs?.desktopPanels!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';selectedGameMode=savedPrefs?.gameMode==='duel'?'duel':'rupture';selectedArchetype=validArchetype(savedPrefs?.archetype)?savedPrefs.archetype:'striker';
-function remember(){put(prefsKey,{sound,mage:selectedMage,gameMode:selectedGameMode,archetype:selectedArchetype,desktopPanels:desktopPanelsVisible});if(!debugSession&&!online?.active&&active&&validState(active))put(saveKey,active)}
+const savedPrefs=stored(prefsKey);sound=savedPrefs?.sound!==false;desktopPanelsVisible=savedPrefs?.desktopPanels!==false;selectedMage=validMage(savedPrefs?.mage)?savedPrefs.mage:'kindle';selectedGameMode=savedPrefs?.gameMode==='duel'?'duel':'rupture';selectedArchetype=validArchetype(savedPrefs?.archetype)?savedPrefs.archetype:'striker';selectedSpecialSlot=Number.isInteger(savedPrefs?.specialSlot)&&savedPrefs.specialSlot>=0&&savedPrefs.specialSlot<3?savedPrefs.specialSlot:0;
+function remember(){put(prefsKey,{sound,mage:selectedMage,gameMode:selectedGameMode,archetype:selectedArchetype,specialSlot:selectedSpecialSlot,desktopPanels:desktopPanelsVisible});if(!debugSession&&!online?.active&&active&&validState(active))put(saveKey,active)}
 function forget(){if(debugSession)return;try{localStorage.removeItem(saveKey)}catch{}}
 const resume=stored(saveKey);
 if(resume&&validState(resume))$('continue').hidden=false;
@@ -222,13 +223,13 @@ function updateTacticalHud(a){
  $('tactic-mage').textContent=m.name;
  $('tactic-school').textContent=({fire:'Пиромантия',storm:'Грозовая магия',stone:'Каменная магия'}[m.school]||m.school)+' · '+(ARCHETYPES.find(x=>x.id===a.archetype)?.name||'Стрелок');
  $('tactic-attack').textContent=ATTACK_NAMES[a.mageId]||'ЗАКЛИНАНИЕ';
- const special=CLASS_SPELLS.find(x=>x.id===(a.archetype||'striker'));$('tactic-special').textContent=special.name;$('tactic-special-ready').textContent=(a.specialCd||0)>0?(a.specialCd.toFixed(1)+' С'):'ГОТОВО';
+ const special=CLASS_SPELLS.find(x=>x.id===(a.archetype||'striker'));$('tactic-special').textContent=special.variants[selectedSpecialSlot].name;$('tactic-special-ready').textContent=(a.specialCd||0)>0?(a.specialCd.toFixed(1)+' С'):'ГОТОВО';
  renderTacticalAbility('cast',a.cast,stats(a).reload);
  renderTacticalAbility('shield',a.shieldReady,5);
  renderTacticalAbility('dash',a.dashReady,2.5);
  renderTacticalRunes(a);
 }
-function updateHud(){if(!active)return;const side=myIndex(),a=active.actors[side],b=active.actors[1-side];const am=stats(a),bm=stats(b);$('my-hp').style.width=Math.max(0,100*a.hp/am.max)+'%';$('bot-hp').style.width=Math.max(0,100*b.hp/bm.max)+'%';$('my-hp-text').textContent=Math.ceil(a.hp)+' / '+am.max;$('bot-hp-text').textContent=Math.ceil(b.hp)+' / '+bm.max;const spell=CLASS_SPELLS.find(x=>x.id===(a.archetype||'striker'));$('special-name').textContent=spell.id==='striker'?'РИКОШЕТ':spell.id==='shaper'?'АМБРАЗУРА':'ФАЗА';$('special-btn').title=spell.name+' (R): '+spell.desc;$('special-cooldown').style.height=Math.min(100,100*(a.specialCd||0)/spell.cooldown)+'%';
+function updateHud(){if(!active)return;const side=myIndex(),a=active.actors[side],b=active.actors[1-side];const am=stats(a),bm=stats(b);$('my-hp').style.width=Math.max(0,100*a.hp/am.max)+'%';$('bot-hp').style.width=Math.max(0,100*b.hp/bm.max)+'%';$('my-hp-text').textContent=Math.ceil(a.hp)+' / '+am.max;$('bot-hp-text').textContent=Math.ceil(b.hp)+' / '+bm.max;const spell=CLASS_SPELLS.find(x=>x.id===(a.archetype||'striker'));if($('special-choice').dataset.role!==spell.id){$('special-choice').replaceChildren(...spell.variants.map((v,i)=>{const el=document.createElement('option');el.value=String(i);el.textContent=(i+1)+'. '+v.name;return el}));$('special-choice').dataset.role=spell.id}$('special-choice').value=String(selectedSpecialSlot);const variant=spell.variants[selectedSpecialSlot];$('special-name').textContent=['I','II','III'][selectedSpecialSlot]+' '+variant.name;$('special-btn').title=variant.name+' (R): '+variant.desc;$('special-cooldown').style.height=Math.min(100,100*(a.specialCd||0)/(spell.cooldown+selectedSpecialSlot*(selectedSpecialSlot===2?1.2:.7)))+'%';
  const rupture=active.gameMode==='rupture',secs=Math.max(0,Math.ceil(active.remaining));$('clock').textContent=active.gameMode==='forge'?'∞':rupture?String(Math.floor(secs/60)).padStart(2,'0')+':'+String(secs%60).padStart(2,'0'):secs;$('clock').style.color=rupture&&secs<=90?'#f3a27c':'#f7edce';$('round-number').textContent=active.gameMode==='forge'?'КУЗНИЦА · СВОБОДНЫЙ БОЙ':rupture?(secs<=90?'КОЛЛАПС':'ЭВОЛЮЦИЯ '+active.round+'/10'):(secs<=10?'10 С ДО КОНЦА':'РАУНД '+active.round);$('score-me').textContent=active.gameMode==='forge'?ARCHETYPES.find(x=>x.id===a.archetype)?.name:rupture?'✦ '+active.score[side]:'● '.repeat(active.score[side])+'○ '.repeat(Math.max(0,4-active.score[side]));$('score-bot').textContent=active.gameMode==='forge'?'МАНЕКЕН':rupture?'✦ '+active.score[1-side]:'● '.repeat(active.score[1-side])+'○ '.repeat(Math.max(0,4-active.score[1-side]));$('core-indicator').hidden=!rupture;if(rupture){const c=active.coreHold||[0,0];$('core-indicator').textContent='ЯДРО · '+Math.floor((c[side]||0)/8*100)+'%';}$('heat-fill').style.width=Math.round(a.heat)+'%';$('heat-value').textContent=Math.round(a.heat)+'%';
 $('heat-fill').classList.toggle('danger',a.heat>=78);
 $('dash-cooldown').style.height=100*Math.min(1,a.dashReady/2.5)+'%';$('shield-cooldown').style.height=100*Math.min(1,a.shieldReady/5)+'%';$('attack-cooldown').style.height=100*Math.min(1,a.cast/stats(a).reload)+'%';$('attack-name').textContent=ATTACK_NAMES[a.mageId];if(!$('desktop-dashboard').hidden)updateTacticalHud(a)}
@@ -508,7 +509,7 @@ document.addEventListener('click',event=>{
  if(debugSession&&!event.target.closest('#debug-atlas')){event.preventDefault();event.stopImmediatePropagation()}
 },true);
 
-document.addEventListener('keydown',e=>{if(e.code==='Backquote'){e.preventDefault();if(!e.repeat)toggleDebug();return}if(debugSession){e.preventDefault();if(e.code==='Escape')toggleDebug();return}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='Escape'){if(mode==='fight')pause();else if(mode==='pause')$('resume').click();else if(mode==='confirm')$('quit-no').click();else if(mode==='books')$('books-close').click();else if(mode==='book-delete')$('book-delete-no').click()}if(mode!=='fight')return;if(['KeyQ','KeyE'].includes(e.code))input.shield=true;if(['ShiftLeft','ShiftRight','KeyF'].includes(e.code))input.dash=true;if(e.code==='Space')input.attack=true;if(e.code==='KeyR')input.special=true});
+document.addEventListener('keydown',e=>{if(e.code==='Backquote'){e.preventDefault();if(!e.repeat)toggleDebug();return}if(debugSession){e.preventDefault();if(e.code==='Escape')toggleDebug();return}if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='Escape'){if(mode==='fight')pause();else if(mode==='pause')$('resume').click();else if(mode==='confirm')$('quit-no').click();else if(mode==='books')$('books-close').click();else if(mode==='book-delete')$('book-delete-no').click()}if(mode!=='fight')return;if(['KeyQ','KeyE'].includes(e.code))input.shield=true;if(['ShiftLeft','ShiftRight','KeyF'].includes(e.code))input.dash=true;if(e.code==='Space')input.attack=true;if(e.code==='KeyR')input.special=true;if(['Digit1','Digit2','Digit3'].includes(e.code)){selectedSpecialSlot=Number(e.code.slice(-1))-1;remember();updateHud()}});
 document.addEventListener('keyup',e=>{keys.delete(e.code);if(e.code==='Space')input.attack=false});
 window.addEventListener('blur',()=>{keys.clear();input.attack=false;if(mode==='fight'&&!debugSession)pause()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(mode==='fight'&&!debugSession)pause();remember();last=performance.now()}else last=performance.now()});
@@ -520,7 +521,7 @@ stickEl.addEventListener('pointermove',e=>{if(e.pointerId===stick.pointer)stickF
 function releaseStick(e){if(e.pointerId!==stick.pointer)return;stick.pointer=null;stick.x=stick.y=0;knob.style.transform='translate(0,0)'}
 stickEl.addEventListener('pointerup',releaseStick);stickEl.addEventListener('pointercancel',releaseStick);stickEl.addEventListener('lostpointercapture',releaseStick);
 function binder(id,field){const b=$(id);b.addEventListener('pointerdown',e=>{if(mode!=='fight')return;e.preventDefault();b.setPointerCapture(e.pointerId);if(field==='attack')input.attack=true;else input[field]=true});const release=e=>{if(field==='attack')input.attack=false};b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release);b.addEventListener('click',()=>{if(mode==='fight'&&field!=='attack')input[field]=true})}
-binder('attack-btn','attack');binder('shield-btn','shield');binder('dash-btn','dash');binder('special-btn','special');
+binder('attack-btn','attack');binder('shield-btn','shield');binder('dash-btn','dash');binder('special-btn','special');$('special-choice').addEventListener('change',()=>{selectedSpecialSlot=Math.max(0,Math.min(2,Number($('special-choice').value)||0));remember();updateHud()});
 const aimButton=$('attack-btn');let aimedPointer=null,aimOrigin=null;
 // A touch drag must establish its heading BEFORE the first shot. A brief tap
 // still fires once; a deliberate hold fires repeatedly after the aim window.
@@ -559,7 +560,7 @@ window.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')input.attack=
 function playerInput(){
  if(aimedPointer!==null&&aimTouch&&!aimDragged&&performance.now()-aimTouchStart>260){aimDragged=true;input.attack=true}
  if(aimedPointer!==null&&aimTouch&&aimVector&&active)input.aim=courtAim(myActor(),aimVector.dx,aimVector.dy,W,H);
- let x=stick.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),y=stick.y+(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0);const speed=Math.hypot(x,y);if(speed>1){x/=speed;y/=speed}const out={x,y,attack:input.attack||tapAttackQueued||keys.has('Space'),shield:input.shield,dash:input.dash,special:input.special,aim:input.aim||{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y}};input.shield=false;input.dash=false;input.special=false;tapAttackQueued=false;return out}
+ let x=stick.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),y=stick.y+(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0);const speed=Math.hypot(x,y);if(speed>1){x/=speed;y/=speed}const out={x,y,attack:input.attack||tapAttackQueued||keys.has('Space'),shield:input.shield,dash:input.dash,special:input.special,specialSlot:selectedSpecialSlot,aim:input.aim||{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y}};input.shield=false;input.dash=false;input.special=false;tapAttackQueued=false;return out}
 let bgCanvas;
 // When Forge assets decode, swap the previously rendered fallback stage once.
 void forgeCourtReady().then(ok=>{if(ok)bgCanvas=null});
@@ -724,7 +725,7 @@ function render(){
   contactTheater.draw(ctx,reducedMotion);
   drawSpellForeground(ctx,spellChoreography,reducedMotion,{impacts:false});
   combatPresentation.foreground(ctx);
-  if(mode==='fight'&&input.aim)duelFeedback.aim(ctx,active.actors[myIndex()],input.aim,{state:active,special:input.special||keys.has('KeyR'),reduced:reducedMotion});
+  if(mode==='fight'&&input.aim)duelFeedback.aim(ctx,active.actors[myIndex()],input.aim,{state:active,special:input.special||keys.has('KeyR'),specialSlot:selectedSpecialSlot,reduced:reducedMotion});
  }else{
   wizard(107,352,0,frame/60,false,1,12,0);
   wizard(297,252,Math.PI,frame/60,true,1,9,0);
