@@ -3,14 +3,14 @@
   "status": "ready",
   "product": "crown-laws",
   "direction": {
-    "premise": "Players secretly legislate how autonomous game pieces act around one royal throne.",
-    "composition": "A two-column stone council on desktop: carved board and law ledger, with the active hand underneath. Mobile prioritizes board and own cards, then ledger.",
-    "shapeLanguage": "Architectural cuts, carved borders, engraved counters, parchment rectangle decrees and slender bronze rules; every object is DOM/CSS.",
-    "surfaceAndMaterial": "Layered CSS gradients imply weathered limestone and paper without imported illustrations or sprites.",
-    "paletteLogic": "Blue North and red South champion counters, bronze high priority actions, neutral slate/ivory text.",
+    "premise": "Two contenders issue secret decrees that change how autonomous royals and neutral actors behave on a shared stone court.",
+    "composition": "The physical court is the visual center; a left-side bound ivory rule book keeps all five laws visible and a right-side illuminated document hand holds the real choices. On phone the board leads into five sigils and a horizontally swipeable hand.",
+    "shapeLanguage": "Asymmetric manuscript silhouettes, beveled stone, decorated parchment cuts and heraldic seals; full-height illustrated pieces stand on metal miniature bases.",
+    "surfaceAndMaterial": "Hand-authored local SVG illustrations supply faces, clothing, carved throne and medieval marginalia. Subtle warm paper, aged gold, steel, slate and wood-like carved edges separate functions.",
+    "paletteLogic": "Deep cobalt and oxblood distinguish contenders, original gold denotes the throne and crown progress, parchment backgrounds carry legible dark-ink laws, and neutral actors have individual costume hues.",
     "typography": "Cormorant-style medieval serif headings with readable sans-serif rules and statuses, falling back to installed fonts offline.",
-    "signature": "Large grid throne with stamped Cyrillic role counters; read law description beneath an immediately selectable decree.",
-    "distinction": "Focused royal ledger and stamped law cards rather than generic floating cards, neon or game screenshots."
+    "signature": "Six distinct full-body court figures on a flat relief stage; legal slot panels look like a bound codex and player's hand like wax-signed illuminated decrees.",
+    "distinction": "The experience is a miniature living manuscript with a fixed 5x7 stage, not a neon dashboard, standard card catalog, full 3D board or static medieval wallpaper."
   },
   "architecture": {
     "spatialLayout": "document-spread",
@@ -56,19 +56,24 @@
         "slug": "cantica-glass",
         "spatialDifference": "Cantica Glass organizes the experience as a linear framed stage with footer controls; Crown Laws pairs a long board with legislation.",
         "interactionDifference": "Cantica Glass navigates sequential glasswork gestures, but Crown Laws seals simultaneous hidden commands before automatic resolution."
+      },
+      {
+        "slug": "moss-marble",
+        "spatialDifference": "Moss & Marble is a landscape mini-golf course whose terrain and topology define the shot; Crown Laws is a fixed 5x7 court framed by an authoritative law book and a private decree hand.",
+        "interactionDifference": "Moss & Marble asks the player to aim and time a kinetic ball shot, while Crown Laws asks for one secret rule change and then resolves simultaneous autonomous actor movement."
       }
     ]
   },
   "production": {
-    "renderer": "HTML/CSS only for gameplay; no PNG sprites, SVG icons or canvas art.",
-    "focalAsset": "Code-drawn board. Separately authored 96x96 PNG icon serves only the shell/PWA."
+    "renderer": "Flat DOM board, CSS manuscript panels and original hand-authored SVG full-body actors, heraldic seals, gilded throne relief and decorative border sourced from app-owned assets.",
+    "focalAsset": "The six-figure illustrated SVG atlas is the dominant playable asset; a separate gilded throne relief and paper ornament distinguish legal decisions, with no 2.5D projection."
   },
   "motion": {
-    "character": "Selected decrees lift and brighten; active tokens travel using correct per-cell pixel deltas.",
-    "action": "Touch a card, read its rule in the preview, confirm law.",
+    "character": "Small parchment selection lift and wax-like card highlights; figural miniatures keep their silhouettes as their positions animate on the board.",
+    "action": "Select one parchment decree, inspect the replacement against the standing law, and confirm the private choice.",
     "anticipation": "Selection is explicit; the confirmation stays disabled until a card is chosen.",
     "response": "Turn progression remains controlled by the same game engine and PocketNet.",
-    "followThrough": "New turn and logs remain in view.",
+    "followThrough": "The active law book and crown score update in place; after a turn completes the real logs and prior-round replay remain available.",
     "interruption": "Reduced-motion keeps the board static and preserves state.",
     "reducedMotion": "Respect prefers-reduced-motion and app setting."
   },
