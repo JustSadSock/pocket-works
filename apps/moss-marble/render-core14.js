@@ -1199,7 +1199,7 @@ class WebGLDiorama {
 class CanvasFallback {
   constructor(canvas) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d', { alpha: false });
+    this.ctx = canvas.getContext('2d', { alpha: true });
     this.scale = 1;
     this.offsetX = 0;
     this.offsetY = 0;
@@ -1361,9 +1361,34 @@ class CanvasFallback {
     const ctx = this.ctx;
     const visual = level.visual || {};
     this.terrainPalette = visual.terrain || {};
-    const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
-    gradient.addColorStop(0, visual.skyTop || '#30463b'); gradient.addColorStop(1, visual.skyBottom || '#101d17');
-    ctx.fillStyle = gradient; ctx.fillRect(0, 0, this.width, this.height);
+    const grounded = Boolean(level.course18?.field?.heightAt);
+    ctx.clearRect(0, 0, this.width, this.height);
+    if (grounded) {
+      // Canvas fallback shares the greenhouse backdrop instead of painting over it.
+      ctx.save();
+      ctx.beginPath();
+      level.outline.forEach((point, index) => {
+        const p = this.worldToScreen(point.x, point.y, -59);
+        if (index) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.shadowColor = 'rgba(2,9,5,.55)';
+      ctx.shadowBlur = 17;
+      ctx.shadowOffsetY = 15;
+      ctx.fillStyle = '#494b3b';
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.strokeStyle = '#9b9e83';
+      ctx.lineWidth = Math.max(3, this.scale * 22);
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
+      gradient.addColorStop(0, visual.skyTop || '#30463b'); gradient.addColorStop(1, visual.skyBottom || '#101d17');
+      ctx.fillStyle = gradient; ctx.fillRect(0, 0, this.width, this.height);
+    }
     ctx.beginPath(); level.outline.forEach((point, index) => { const p = this.worldToScreen(point.x, point.y); if (!index) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }); ctx.closePath();
     ctx.fillStyle = cssColor(this.terrainPalette.grass, '#78945e'); ctx.fill();
     ctx.strokeStyle = cssColor(this.terrainPalette.grassLight, 'rgba(230,222,178,.42)', .42); ctx.lineWidth = 2; ctx.stroke();
