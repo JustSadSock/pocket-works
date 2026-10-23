@@ -21,7 +21,7 @@ clock=state.deadline+1;send({type:'pulse'});
 assert.equal(state.phase,'drawing');
 const item=state.assignments[a.id];
 const initial=Array.from({length:400},(_,i)=>({
- c:'#aabbcc',s:8,t:'brush',p:Array.from({length:24},(_,j)=>[i%72*8+j*.1,j*2.5])
+ c:'#aabbcc',s:8,t:'brush',p:Array.from({length:24},(_,j)=>[+(i%72*8+j*.1).toFixed(1),j*2.5])
 }));
 const meta={type:'draft_chunk',round:state.round,art:item.art,variation:item.variation};
 function transmit(packets){
