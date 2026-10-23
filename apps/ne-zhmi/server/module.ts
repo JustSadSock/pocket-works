@@ -1,7 +1,136 @@
-// Frozen physics core shared in logic with the client for the first network protocol.
-const WORLD = Object.freeze({ width: 18, height: 8, gravity: 19, speed: 3.4 });
+// Mechanical Course Factory — deterministic, physically reachable by two controls.
+// All modules expose a flat floor at the entry and exit for lossless composition.
+// Additional art does not constitute a mechanic: every marked device participates
+// in the simulation in engine.js. The client and pinned PocketNet use this source.
+export const MODULES=Object.freeze([
+  {kind:'rail',name:'Рельсовый путь',hint:'Место для передышки'},
+  {kind:'gap',name:'Разрыв пола',hint:'Прыжок через шахту'},
+  {kind:'double-gap',name:'Две шахты',hint:'Серия коротких прыжков'},
+  {kind:'step',name:'Высокий порог',hint:'Прыжок на ступень'},
+  {kind:'islands',name:'Островки',hint:'Платформы среди пустоты'},
+  {kind:'spring',name:'Пружина',hint:'Автоматический подброс'},
+  {kind:'belt-right',name:'Попутный конвейер',hint:'Ускоряющая лента'},
+  {kind:'belt-left',name:'Встречный конвейер',hint:'Лента мешает движению'},
+  {kind:'fan-up',name:'Подъёмный поток',hint:'Воздух поднимает робота'},
+  {kind:'fan-side',name:'Боковой поток',hint:'Воздух толкает влево'},
+  {kind:'press',name:'Пресс',hint:'Опускается с интервалом'},
+  {kind:'gate',name:'Шлюз',hint:'Открывается и закрывается'}
+]);
+export const COURSE_THEMES=Object.freeze([
+ {id:'factory',name:'ИСПЫТАТЕЛЬНЫЙ ЦЕХ',base:'#9aafa4',ground:'#79877b',accent:'#f0b45f'},
+ {id:'warehouse',name:'СКЛАД МЕХАНИЗМОВ',base:'#adaba0',ground:'#8b7a69',accent:'#e9a46d'},
+ {id:'kitchen',name:'МЕХАНИЧЕСКАЯ КУХНЯ',base:'#b1beb4',ground:'#809a93',accent:'#cfa67c'}
+]);
+export const SECTION_W=4.6;
+const round=n=>Math.round(n*1000)/1000;
+export function rng(seed) {
+  let value=(seed>>>0)||1;
+  return ()=>{value^=value<<13;value^=value>>>17;value^=value<<5;return (value>>>0)/4294967296;};
+}
+const floor=(platforms,x,w,effect='')=>{
+  if(w<.04)return;
+  platforms.push({x:round(x),y:6.5,w:round(w),h:1.5,id:'deck'+platforms.length,...(effect?{effect}:{})});
+};
+function section(kind,x,platforms,devices,random) {
+  const p=(offset,w,effect='')=>floor(platforms,x+offset,w,effect);
+  const add=(type,offset,w=.5,props={})=>devices.push({type,x:round(x+offset),w, ...props});
+  switch(kind) {
+    case 'rail':p(0,SECTION_W);break;
+    case 'gap':
+      p(0,1.35);p(2.18,SECTION_W-2.18);
+      add('warning',1.35,.83);break;
+    case 'double-gap':
+      p(0,1.12);p(1.85,.92);p(3.43,SECTION_W-3.43);
+      add('warning',1.12,.73);add('warning',2.77,.66);break;
+    case 'step':
+      p(0,1.22);platforms.push({x:round(x+1.22),y:5.53,w:1.72,h:2.47,id:'raised'+platforms.length});
+      p(2.94,SECTION_W-2.94);add('step',1.22,1.72);break;
+    case 'islands':
+      p(0,1.08);p(1.6,.68);p(2.68,.52);p(3.7,SECTION_W-3.7);
+      add('warning',1.08,.52);add('warning',2.28,.4);add('warning',3.2,.5);break;
+    case 'spring':
+      p(0,1.67);p(1.67,.7,'spring');p(2.37,SECTION_W-2.37);
+      add('spring',1.67,.7);break;
+    case 'belt-right':
+      p(0,.55);p(.55,3.1,'belt-right');p(3.65,SECTION_W-3.65);
+      add('belt-right',.55,3.1);break;
+    case 'belt-left':
+      p(0,.55);p(.55,3.1,'belt-left');p(3.65,SECTION_W-3.65);
+      add('belt-left',.55,3.1);break;
+    case 'fan-up':
+      p(0,SECTION_W);add('fan-up',1.48,1.66,{strength:1});break;
+    case 'fan-side':
+      p(0,SECTION_W);add('fan-side',1.55,1.65,{strength:1});break;
+    case 'press':
+      p(0,SECTION_W);add('press',2.02,.76,{phase:round(random()*6.2)});break;
+    case 'gate':
+      p(0,SECTION_W);add('gate',2.02,.34,{phase:round(random()*6.2)});break;
+    default:throw Error('Unknown mechanical module '+kind);
+  }
+}
+export function generateCourse(seed=1,sectionCount=5) {
+  const number=(Number(seed)>>>0)||1;
+  const random=rng(number);
+  const count=clamp(Math.floor(sectionCount)||5,4,6);
+  const theme=COURSE_THEMES[Math.floor(random()*COURSE_THEMES.length)];
+  const sections=[],platforms=[],devices=[];
+  floor(platforms,0,3.1);
+  let previous=null;
+  for(let i=0;i<count;i++){
+    let choices=MODULES.filter(m=>m.kind!==previous && (i>0||!['press','gate'].includes(m.kind)));
+    // Guaranteed two-action reachable courses: major vertical jumps are not
+    // adjacent, so a player always gets at least one safe landing run-up.
+    if(['gap','double-gap','step','islands'].includes(previous))
+      choices=choices.filter(m=>!['gap','double-gap','step','islands'].includes(m.kind));
+    if(!choices.length)choices=MODULES;
+    const selected=choices[Math.floor(random()*choices.length)];
+    const x=round(3.1+i*SECTION_W);
+    sections.push({kind:selected.kind,name:selected.name,x,w:SECTION_W,index:i+1});
+    section(selected.kind,x,platforms,devices,random);
+    previous=selected.kind;
+  }
+  const end=round(3.1+count*SECTION_W);
+  floor(platforms,end,3.1);
+  const width=round(end+3.1);
+  const pointIndex=Math.floor((count-1)/2);
+  const checkpoint=round(3.1+(pointIndex+1)*SECTION_W+.25);
+  return {seed:number,version:1,name:theme.name,theme:theme.id,sections,platforms,devices,
+    width,height:8,start:1.15,goal:round(width-1.45),
+    checkpoint,checkpointSpawn:{x:checkpoint,y:6.04},length:count};
+}
+export function deviceRect(device,t) {
+  if(device.type==='press'){
+    const wave=(Math.sin(t*2.35+device.phase)+1)/2;
+    return {x:device.x,y:3.38+wave*2.8,w:device.w,h:.82,active:true};
+  }
+  if(device.type==='gate'){
+    const closed=Math.sin(t*1.75+device.phase)<.15;
+    return {x:device.x,y:closed?4.8:2.3,w:device.w,h:closed?1.7:1.05,active:closed};
+  }
+  return null;
+}
+export function validateCourse(course) {
+  if(!course||!Number.isInteger(course.seed)||!Array.isArray(course.platforms)||!course.platforms.length)return false;
+  if(course.length<4||course.length>6||course.goal>=course.width||course.checkpoint>=course.goal)return false;
+  if(course.platforms.some(p=>p.x<0||p.w<=0||p.y<3||p.y>6.5||p.x+p.w>course.width+.001))return false;
+  // A shared-floor connector exists on both ends of every module; these are
+  // the guaranteed safe retry and composition surfaces.
+  for(const s of course.sections){
+    for(const x of [s.x+.1,s.x+s.w-.1])
+      if(!course.platforms.some(p=>p.x<=x&&p.x+p.w>=x&&p.y===6.5))return false;
+  }
+  const jumpRange=3.4*(2*9.15/19);
+  for(let i=0;i<course.platforms.length-1;i++){
+    const a=course.platforms[i],b=course.platforms[i+1];
+    if(b.x-a.x-a.w>jumpRange-.2)return false;
+  }
+  return true;
+}
+
+// NE ZHMI! — isolated, deterministic simulation. No DOM, networking or rendering.
+export const WORLD = Object.freeze({ width: 18, height: 8, gravity: 19, speed: 3.4 });
 export const ROBOT = Object.freeze({ halfWidth: 0.33, halfHeight: 0.46, jump: 9.15 });
-const LEVEL = Object.freeze({
+export const LEVEL = Object.freeze({
   name: 'Испытательный цех', goal: 16.5, checkpoint: 10.25,
   platforms: [
     { x: 0, y: 6.5, w: 4.72, h: 1.5, id: 'start' },
@@ -10,13 +139,14 @@ const LEVEL = Object.freeze({
     { x: 13.35, y: 6.5, w: 4.65, h: 1.5, id: 'finish' }
   ]
 });
-const FIXED_DT = 1 / 120;
+export const FIXED_DT = 1 / 120;
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
-function createGame() {
+export function createGame(level = LEVEL) {
   return {
-    x: 1.15, y: 6.5 - ROBOT.halfHeight, vx: 0, vy: 0, dir: 1,
+    level,
+    x: level.start ?? 1.15, y: 6.5 - ROBOT.halfHeight, vx: 0, vy: 0, dir: 1,
     ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, t: 0,
-    rotation: 0, checkpoint: 1.15, respawns: 0, jumps: 0, reverses: 0,
+    rotation: 0, checkpoint: level.start ?? 1.15, respawns: 0, jumps: 0, reverses: 0, springCooldown:0, hazardCooldown:0,
     finished: false, wonAt: null, impacts: 0, lastEvent: 'ready'
   };
 }
@@ -24,7 +154,7 @@ function bounds(state) {
   return { left: state.x - ROBOT.halfWidth, right: state.x + ROBOT.halfWidth, top: state.y - ROBOT.halfHeight, bottom: state.y + ROBOT.halfHeight };
 }
 const overlap = (a,b) => a.left < b.x + b.w - 1e-5 && a.right > b.x + 1e-5;
-function commandGame(state, action) {
+export function commandGame(state, action) {
   if (state.finished) return 'finished';
   if (action === 'reverse') {
     if (state.cooldown > .01) return 'cooldown';
@@ -40,14 +170,18 @@ function commandGame(state, action) {
   }
   return 'unknown';
 }
-function stepGame(state, dt = FIXED_DT) {
+export function stepGame(state, dt = FIXED_DT) {
   if (state.finished) return [];
   const events = [];
+  const level = state.level || LEVEL;
+  const eventsOnce=(name)=>{if(!events.includes(name))events.push(name)};
   const delta = clamp(Number.isFinite(dt) ? dt : 0, 0, 1 / 40);
   if (!delta) return events;
   state.t += delta;
   state.cooldown = Math.max(0, state.cooldown - delta);
   state.wallCooldown = Math.max(0, state.wallCooldown - delta);
+  state.springCooldown = Math.max(0, (state.springCooldown||0)-delta);
+  state.hazardCooldown = Math.max(0, (state.hazardCooldown||0)-delta);
   state.buffer = Math.max(0, state.buffer - delta);
   if (state.ground) state.coyote = .10; else state.coyote = Math.max(0, state.coyote - delta);
   if (state.buffer > 0 && state.coyote > 0) {
@@ -55,13 +189,24 @@ function stepGame(state, dt = FIXED_DT) {
     state.ground = false; state.coyote = 0; state.buffer = 0; state.jumps++;
     events.push('jump'); state.lastEvent = 'jump';
   }
-  const desired = WORLD.speed * state.dir;
+  const groundSurface=level.platforms.find(p=>state.x>=p.x&&state.x<=p.x+p.w &&
+    Math.abs(state.y+ROBOT.halfHeight-p.y)<.14);
+  const belt=state.ground && groundSurface?.effect?.startsWith('belt-')
+    ? (groundSurface.effect==='belt-right'?1.45:-1.35) : 0;
+  const desired = WORLD.speed * state.dir + belt;
   const acceleration = state.ground ? 23 : 9.5;
   state.vx += clamp(desired - state.vx, -acceleration * delta, acceleration * delta);
   const previousX = state.x;
-  state.x = clamp(state.x + state.vx * delta, ROBOT.halfWidth, WORLD.width - ROBOT.halfWidth);
+  // Air jets are continuous forces: the same inputs result in the same motion
+  // on client and authoritative server, including on low refresh-rate devices.
+  for(const device of level.devices||[]) {
+    if(state.x+ROBOT.halfWidth<=device.x||state.x-ROBOT.halfWidth>=device.x+device.w)continue;
+    if(device.type==='fan-side'&&state.y>4.25)state.vx-=6.4*delta;
+    if(device.type==='fan-up'&&state.y>4.4)state.vy-=31*delta;
+  }
+  state.x = clamp(state.x + state.vx * delta, ROBOT.halfWidth, (level.width ?? WORLD.width) - ROBOT.halfWidth);
   let b = bounds(state);
-  for (const p of LEVEL.platforms) {
+  for (const p of level.platforms) {
     if (b.bottom > p.y + .025 && b.top < p.y + p.h - .02 && overlap(b,p)) {
       if (state.vx > 0 && previousX + ROBOT.halfWidth <= p.x + .09) {
         state.x = p.x - ROBOT.halfWidth; state.vx = 0;
@@ -77,7 +222,7 @@ function stepGame(state, dt = FIXED_DT) {
   state.y += state.vy * delta;
   state.ground = false;
   b = bounds(state);
-  for (const p of LEVEL.platforms) {
+  for (const p of level.platforms) {
     if (!overlap(b,p)) continue;
     const oldBottom = oldY + ROBOT.halfHeight;
     const oldTop = oldY - ROBOT.halfHeight;
@@ -85,23 +230,42 @@ function stepGame(state, dt = FIXED_DT) {
       state.y = p.y - ROBOT.halfHeight;
       if (state.vy > 4.5) { state.impacts++; events.push('land'); }
       state.vy = 0; state.ground = true;
+      if(p.effect==='spring'&&state.springCooldown<=0){
+        state.vy=-11.35;state.ground=false;state.coyote=0;
+        state.springCooldown=.36;state.impacts++;eventsOnce('spring');
+      }
     } else if (state.vy < 0 && oldTop >= p.y + p.h - .03 && b.top <= p.y + p.h) {
       state.y = p.y + p.h + ROBOT.halfHeight; state.vy = .5;
       events.push('ceiling');
     }
     b = bounds(state);
   }
-  if (state.x > LEVEL.checkpoint && state.ground && state.checkpoint < LEVEL.checkpoint) {
-    state.checkpoint = LEVEL.checkpoint; events.push('checkpoint'); state.lastEvent = 'checkpoint';
+  if (state.x > level.checkpoint && state.ground && state.checkpoint < level.checkpoint) {
+    state.checkpoint = level.checkpoint; eventsOnce('checkpoint'); state.lastEvent = 'checkpoint';
   }
-  if (state.y > WORLD.height + .8) {
+  // Timed machinery blocks and damages only when physically touching the robot.
+  // A closed gate is a wall, whereas a lowered piston requires a safe retry.
+  const playerBox=bounds(state);
+  let hazardous=false;
+  for(const device of level.devices||[]) {
+    if(!['gate','press'].includes(device.type))continue;
+    const r=deviceRect(device,state.t);
+    if(!r?.active||playerBox.left>=r.x+r.w||playerBox.right<=r.x||
+       playerBox.top>=r.y+r.h||playerBox.bottom<=r.y)continue;
+    if(device.type==='press'){hazardous=true;break;}
+    const oldLeft=previousX-ROBOT.halfWidth,oldRight=previousX+ROBOT.halfWidth;
+    if(state.vx>=0&&oldRight<=r.x+.15){state.x=r.x-ROBOT.halfWidth;state.vx=0;eventsOnce('gate');}
+    else if(state.vx<0&&oldLeft>=r.x+r.w-.15){state.x=r.x+r.w+ROBOT.halfWidth;state.vx=0;eventsOnce('gate');}
+  }
+  if (state.y > WORLD.height + .8 || hazardous) {
     const savedX = state.checkpoint;
-    Object.assign(state, { x: savedX, y: savedX > 9 ? 6.25 - ROBOT.halfHeight : 6.5 - ROBOT.halfHeight,
+    const spawnY=savedX===level.checkpoint?level.checkpointSpawn?.y:undefined;
+    Object.assign(state, { x: savedX, y: spawnY ?? (savedX > 9 ? 6.25 - ROBOT.halfHeight : 6.5 - ROBOT.halfHeight),
       vx: 0, vy: 0, dir: 1, ground: true, coyote: .1, buffer: 0, cooldown: 0, wallCooldown: 0, rotation: 0 });
     state.respawns++;
-    state.lastEvent = 'respawn'; events.push('respawn');
+    state.lastEvent = 'respawn'; eventsOnce(hazardous?'hazard':'respawn');
   }
-  if (state.x >= LEVEL.goal && state.ground) {
+  if (state.x >= level.goal && state.ground) {
     state.finished = true; state.wonAt = state.t; state.vx = 0;
     events.push('finish'); state.lastEvent = 'finish';
   }
@@ -109,10 +273,12 @@ function stepGame(state, dt = FIXED_DT) {
   state.rotation += (targetRot - state.rotation) * Math.min(1, delta * 9);
   return events;
 }
-function progressGame(state) { return clamp((state.x - 1.15) / (LEVEL.goal - 1.15), 0, 1); }
+export function progressGame(state) {
+  const level=state.level||LEVEL;
+  return clamp((state.x - (level.start??1.15)) / (level.goal - (level.start??1.15)), 0, 1);
+}
 
-
-// Protocol v1 — authoritative PocketNet two-player simulation.
+// Protocol v3 — authoritative PocketNet two-player simulation.
 // The backend is message-driven: a peer sends activity pulses, but only the
 // server advances time and applies control impulses. No client can set position.
 export const MIN_PLAYERS=2;
@@ -133,7 +299,8 @@ function freeze(s,now){
   }
 }
 export function reset(s,now) {
-  s.robot=createGame();s.phase='play';s.hold=false;
+  const course=generateCourse((s.seed ^ Math.imul(s.round+1,2654435761))>>>0,5);
+  s.robot=createGame(course);s.phase='play';s.hold=false;
   s.round++;s.revision++;
   s.lastClock=now;s.lastBroadcast=0;s.remainder=0;
   s.signals=Object.fromEntries(s.roles.map(id=>[id,now]));
@@ -220,7 +387,7 @@ const module={
   protocolVersion:1,
   createRoom({player}){
     return {state:{phase:'lobby',host:player.id,players:[player],roles:[],
-      robot:createGame(),round:0,revision:0,hold:false,lastClock:0,lastBroadcast:0,lastHold:false,
+      robot:createGame(),seed:Math.floor(Math.random()*4294967295)||1,round:0,revision:0,hold:false,lastClock:0,lastBroadcast:0,lastHold:false,
       signals:{},sequences:{},remainder:0}};
   },
   onJoin({state,players}){
