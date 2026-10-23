@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Perekos PocketNet v4: authoritative elemental status and reactions. Immutable snapshot.
+// Perekos PocketNet v10: both legacy PvP and server-authoritative single-school rune duels.
 // Six mechanically distinct fighters in three plain-language magic families.
 // This data is frozen into the matching server ruleset version.
 const mageEntry=(id,school,name,trait,description,style,speed,power,reload,shield)=>({id,school,name,trait,description,style,speed,power,reload,shield});
@@ -196,9 +196,9 @@ function has(a,k){return a.runes.includes(k)}
 const ARCHETYPES=Object.freeze([{id:'striker',name:'Стрелок',desc:'Чаще атакует. Увеличены урон и скорость снарядов.'},{id:'shaper',name:'Формирователь',desc:'Крепче щиты и больше длительность, радиус полей, мин и стен.'},{id:'distorter',name:'Искажатель',desc:'Попадания замедляют и перегревают врага.'}]);
 function validArchetype(id){return ARCHETYPES.some(a=>a.id===id)}
 
-function stats(a){const m=mage(a.mageId),role=a.archetype||'striker';return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power*(role==='striker'?1.025:1),reload:.56*m.reload*(role==='striker'?.98:1),shield:34*m.shield*(role==='shaper'?1.27:1)}}
+function stats(a){if(a.magicSchool)return {max:100,speed:125*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12,reload:.56,shield:34};const m=mage(a.mageId),role=a.archetype||'striker';return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power*(role==='striker'?1.025:1),reload:.56*m.reload*(role==='striker'?.98:1),shield:34*m.shield*(role==='shaper'?1.27:1)}}
 function actor(id,x,y,runes,mageId='kindle',archetype='striker'){return {archetype:validArchetype(archetype)?archetype:'striker',evolution:null,fusions:[],id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0,burn:0,burnTick:0,burnSource:null,windup:null,flameCharge:0,respawn:0,specialCd:0}}
-function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId,a.archetype||'striker');o.hp=stats(o).max;o.evolution=a.evolution?{...a.evolution}:null;o.fusions=[...(a.fusions||[])];return o}
+function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId,a.archetype||'striker');o.hp=stats(o).max;o.evolution=a.evolution?{...a.evolution}:null;o.fusions=[...(a.fusions||[])];if(a.magicSchool)o.magicSchool=a.magicSchool;return o}
 function makeMatch(seed=0x718abc,first='kindle',second='pebble',gameMode='duel',firstArchetype='striker',secondArchetype='striker'){const kind=['rupture','duel','forge'].includes(gameMode)?gameMode:'duel';const s={version:4,gameMode:kind,seed:seed>>>0||1,phase:'fight',round:1,remaining:kind==='rupture'?RUPTURE_SECONDS:kind==='forge'?0:ROUND_SECONDS,forgeDummy:true,elapsed:0,nextEvolution:RUPTURE_SECONDS-EVOLUTION_SECONDS,coreHold:[0,0],overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first,firstArchetype),actor(1,336,134,['on_hurt','armor'],second,secondArchetype)],shots:[],streams:[],beams:[],waves:[],lobs:[],echoes:[],mines:[],barriers:[],fields:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
 const EVOLUTIONS=Object.freeze([{id:'beam',name:'Разящий луч',desc:'Атака выпускает толстый пробивной луч. Уровень усиливает урон и ширину.'},{id:'swarm',name:'Искровой рой',desc:'Атака выпускает веер дополнительных зарядов. Уровень увеличивает их число.'},{id:'field',name:'Грозовое поле',desc:'Атака оставляет опасную зону. Уровень увеличивает её размер и длительность.'}]);
 const FUSIONS=Object.freeze([{id:'ember_nova',name:'Огненное сердце',mod:'as_fire',desc:'Огненный рунический снаряд взрывается и поджигает.'},{id:'storm_lattice',name:'Грозовая решётка',mod:'as_storm',desc:'Заряженный рунический снаряд выпускает дуги при попадании.'},{id:'stone_crush',name:'Каменный захват',mod:'as_stone',desc:'Каменные снаряды ломают щит и замедляют.'}]);
@@ -257,11 +257,12 @@ function harm(s,a,amount,from,depth=0){
  if(a.invuln>0||a.hp<=0||!Number.isFinite(amount))return 0;
  const attacker=from==null?null:s.actors[from],base=amount;const blocked=Math.min(a.shield,Math.max(0,base)),before=a.shield;a.shield-=blocked;
  const d=Math.max(0,Math.min(80,base-blocked));a.hp=Math.max(0,a.hp-d);a.flash=.15;
- if(d>0){if(from!=null&&from!==a.id)s.actors[from].hit+=d;if(attacker?.archetype==='distorter'&&attacker.id!==a.id){a.slow=Math.max(a.slow,.48);a.heat=Math.min(HEAT_LIMIT,a.heat+3)}emit(s,'on_hurt',a.id,{from},depth)}
+ if(d>0){if(from!=null&&from!==a.id)s.actors[from].hit+=d;if(!s.magicModeV2&&attacker?.archetype==='distorter'&&attacker.id!==a.id){a.slow=Math.max(a.slow,.48);a.heat=Math.min(HEAT_LIMIT,a.heat+3)}emit(s,'on_hurt',a.id,{from},depth)}
  if(blocked>0&&before>0&&a.shield===0)emit(s,'on_break',a.id,{from},depth);
  fx(s,'hit',a.x,a.y);return d;
 }
 function markTarget(s,target,element,source,depth=0){
+ if(s.magicModeV2)return null;
  if(!isElement(element)||target.hp<=0)return null;
  const previous=target.markLife>0?target.mark:'';
  const reaction=target.reactionCd<=0?reactionFor(previous,element):null;
@@ -512,6 +513,7 @@ function castClassSpell(s,a,slot=0){
  a.specialCd=spec.cooldown+slot*(slot===2?1.2:.7);addHeat(s,a,12+slot*3);emit(s,'on_cast',a.id);return true;
 }
 function attack(s,a,target){
+ if(s.magicModeV2)return magicV2Attack(s,a,target);
  if(a.mageId==='cinder')return flame(s,a,target);
  if(a.cast>0||a.stun>0||a.windup)return false;
  if(['pebble','coil','slate'].includes(a.mageId))return startWindup(s,a,target,a.mageId);
@@ -523,12 +525,12 @@ function attack(s,a,target){
 }
 function guard(s,a){
  if(a.shieldReady>0||a.stun>0)return false;
- a.shield=Math.min(80,a.shield+stats(a).shield+(mage(a.mageId).trait==='guard_extra'?5:0));a.shieldReady=5;if(mage(a.mageId).trait==='guard_slow'){const enemy=s.actors[1-a.id];if(Math.hypot(a.x-enemy.x,a.y-enemy.y)<105)enemy.slow=Math.max(enemy.slow,1.1)}addHeat(s,a,7);
+ a.shield=Math.min(80,a.shield+stats(a).shield+(s.magicModeV2?0:mage(a.mageId).trait==='guard_extra'?5:0));a.shieldReady=5;if(!s.magicModeV2&&mage(a.mageId).trait==='guard_slow'){const enemy=s.actors[1-a.id];if(Math.hypot(a.x-enemy.x,a.y-enemy.y)<105)enemy.slow=Math.max(enemy.slow,1.1)}addHeat(s,a,7);
  fx(s,'shield',a.x,a.y);emit(s,'on_guard',a.id);return true;
 }
 function dash(s,a,dir){
  if(a.dashReady>0||a.stun>0)return false;const m=mag(dir.x,dir.y);
- a.windup=null;a.vx=dir.x/m*370;a.vy=dir.y/m*370;if(mage(a.mageId).trait==='dash_haste')a.haste=Math.max(a.haste,.9);a.dash=.17;a.dashReady=2.5;a.invuln=.13;addHeat(s,a,6);
+ a.windup=null;a.vx=dir.x/m*370;a.vy=dir.y/m*370;if(!s.magicModeV2&&mage(a.mageId).trait==='dash_haste')a.haste=Math.max(a.haste,.9);a.dash=.17;a.dashReady=2.5;a.invuln=.13;addHeat(s,a,6);
  fx(s,'dash',a.x,a.y);emit(s,'on_dash',a.id);return true;
 }
 // The queue is cleared each update and every event owns a bounded ancestry depth.
@@ -562,6 +564,7 @@ function act(s,a,action,mods,ev){
  }
 }
 function flushEvents(s){
+ if(s.magicModeV2)return flushMagicV2Events(s);
  let reactions=0,processed=0;
  while(s.eventQueue.length&&processed++<MAX_QUEUE&&reactions<MAX_REACTIONS_PER_TICK){
   const ev=s.eventQueue.shift(),a=s.actors[ev.owner];if(!a)continue;
@@ -617,7 +620,7 @@ if(a.windup)a.face=a.windup.angle;
 else if(c.aim&&Number.isFinite(c.aim.x)&&Number.isFinite(c.aim.y))a.face=Math.atan2(c.aim.y-a.y,c.aim.x-a.x);
 if(c.dash)dash(s,a,{x:Number(c.x)||Math.cos(a.face),y:Number(c.y)||Math.sin(a.face)});
 if(c.shield)guard(s,a);
-if(c.special)castClassSpell(s,a,Number.isInteger(c.specialSlot)?c.specialSlot:0);
+if(c.special&&!s.magicModeV2)castClassSpell(s,a,Number.isInteger(c.specialSlot)?c.specialSlot:0);
 if(c.attack)attack(s,a,c.aim||other);
 if(s.ticks%60===0&&a.heat>=HEAT_LIMIT)addHeat(s,a,0)}
 updateLobs(s,dt);if(['rupture','forge'].includes(s.gameMode))updateEvolutionFields(s,dt);
@@ -697,10 +700,511 @@ function validState(s){
  return !!s&&s.version===4&&['fight','draft','build','result'].includes(s.phase)
  &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&typeof a.mark==='string'&&Number.isFinite(a.markLife)&&a.markLife>=0&&Number.isFinite(a.reactionCd)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&(!a.archetype||validArchetype(a.archetype))&&(!a.evolution||EVOLUTIONS.some(f=>f.id===a.evolution.form)&&Number.isInteger(a.evolution.level)&&a.evolution.level>0&&a.evolution.level<=3)&&(!a.fusions||Array.isArray(a.fusions)&&a.fusions.length<=3&&new Set(a.fusions).size===a.fusions.length&&a.fusions.every(id=>FUSIONS.some(f=>f.id===id)))&&a.runeTimers&&typeof a.runeTimers==='object')
  &&Array.isArray(s.shots)&&(!s.streams||Array.isArray(s.streams))&&(!s.beams||Array.isArray(s.beams))&&(!s.waves||Array.isArray(s.waves))&&(!s.lobs||Array.isArray(s.lobs))&&Array.isArray(s.echoes)&&Array.isArray(s.mines)&&Array.isArray(s.barriers)&&(!s.fields||Array.isArray(s.fields))&&Array.isArray(s.eventQueue)
- &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
+ &&(!s.magicModeV2||(s.magicLoadouts?.length===2&&s.magicLoadouts.every(x=>v2SpellAllowed(x))))&&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=9;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=10;
+
+// ---- Immutable PocketNet ruleset 10: generated from reviewed magic-v2 runtime.
+// v9 is preserved separately; 10 retains all its legacy logic for old-style new rooms.
+// Generated from design/magic-v2-catalog.json, kept in sync by magic-v2-rules.test.mjs.
+// Pure ESM exports work in the browser, Node and the future deterministic PocketNet module.
+// This is a runnable data contract; introducing these cards does not make their combat effects live.
+const MAGIC_SCHOOLS=Object.freeze(["stone","fire","storm"]);
+const MAGIC_RUNES=Object.freeze([{"id":"u_on_hit","school":"common","kind":"when","rarity":"common","name":"При попадании","effect":"Подтверждённый урон врагу"},{"id":"u_on_hurt","school":"common","kind":"when","rarity":"common","name":"Когда ранили","effect":"Получен урон здоровью, не щиту"},{"id":"u_after_dash","school":"common","kind":"when","rarity":"uncommon","name":"После рывка","effect":"Завершён реальный рывок"},{"id":"u_after_guard","school":"common","kind":"when","rarity":"uncommon","name":"После щита","effect":"Успешно установлен щит"},{"id":"u_on_expire","school":"common","kind":"when","rarity":"rare","name":"Когда снаряд исчез","effect":"Истёк срок без попадания, не очистка лимита"},{"id":"u_on_barrier","school":"common","kind":"when","rarity":"rare","name":"При ударе в стену","effect":"Физическое столкновение своего снаряда с укрытием"},{"id":"u_on_cast","school":"common","kind":"when","rarity":"epic","name":"При выстреле","effect":"Только ручная базовая атака, не вторичные снаряды"},{"id":"u_guard","school":"common","kind":"do","rarity":"common","name":"Защититься","effect":"Небольшой щит до общего потолка"},{"id":"u_push","school":"common","kind":"do","rarity":"uncommon","name":"Толчок","effect":"Сместить видимого врага в ближней зоне"},{"id":"u_heal","school":"common","kind":"do","rarity":"rare","name":"Подлечиться","effect":"Умеренное восстановление здоровья с кулдауном"},{"id":"u_afterimage","school":"common","kind":"do","rarity":"rare","name":"Отголосок","effect":"Краткая копия один раз атакует своей стихией"},{"id":"u_reform_base","school":"common","kind":"do","rarity":"uncommon","name":"Переплести основу","effect":"Пассивно изменить базовую атаку, если добавлена совместимая КАК"},{"id":"u_size","school":"common","kind":"how","rarity":"common","name":"Увеличить","effect":"Реальный радиус снаряда или эффекта"},{"id":"u_duration","school":"common","kind":"how","rarity":"common","name":"Продлить","effect":"Увеличить жизнь объекта или эффекта"},{"id":"u_speed","school":"common","kind":"how","rarity":"uncommon","name":"Ускорить","effect":"Скорость полёта с физической коллизией"},{"id":"u_split","school":"common","kind":"how","rarity":"uncommon","name":"Раздвоить","effect":"Два меньших объекта с нормализацией общего урона"},{"id":"u_range","school":"common","kind":"how","rarity":"uncommon","name":"Дальше","effect":"Дальность полёта или размещения"},{"id":"u_efficient","school":"common","kind":"how","rarity":"rare","name":"Экономия","effect":"Снизить нагрев, но не ниже минимальной цены"},{"id":"u_ricochet","school":"common","kind":"how","rarity":"rare","name":"Рикошет","effect":"Ограниченный физический отскок по нормали"},{"id":"u_repeat","school":"common","kind":"how","rarity":"epic","name":"Повторить","effect":"Повтор через паузу с дополнительным нагревом"},{"id":"st_land","school":"stone","kind":"when","rarity":"uncommon","name":"При приземлении","effect":"Подтверждённая точка касания грунта"},{"id":"st_wall_lost","school":"stone","kind":"when","rarity":"rare","name":"Когда стена разрушена","effect":"Своё временное укрытие разрушено уроном"},{"id":"st_knock","school":"stone","kind":"when","rarity":"rare","name":"После каменного толчка","effect":"Враг действительно смещён каменной атакой"},{"id":"st_throw","school":"stone","kind":"do","rarity":"common","name":"Метнуть камень","effect":"Дополнительный физический каменный снаряд"},{"id":"st_shards","school":"stone","kind":"do","rarity":"common","name":"Осколки","effect":"Малый направленный веер каменных фрагментов"},{"id":"st_wall","school":"stone","kind":"do","rarity":"uncommon","name":"Поднять стену","effect":"Разрушаемое временное укрытие"},{"id":"st_spikes","school":"stone","kind":"do","rarity":"uncommon","name":"Шипы","effect":"Наземный ряд шипов с предупреждением"},{"id":"st_fault","school":"stone","kind":"do","rarity":"rare","name":"Разлом","effect":"Наземная трещина без поражения сквозь стену"},{"id":"st_satellites","school":"stone","kind":"do","rarity":"rare","name":"Каменные спутники","effect":"Две глыбы на орбите с задержкой повторного урона"},{"id":"st_tremor","school":"stone","kind":"do","rarity":"epic","name":"Землетрясение","effect":"Круговая ударная волна после замаха"},{"id":"st_mass","school":"stone","kind":"how","rarity":"common","name":"Утяжелить","effect":"Больше импульса, меньше скорость и выше нагрев"},{"id":"st_grit","school":"stone","kind":"how","rarity":"uncommon","name":"Броневая крошка","effect":"Щит при контакте собственного камня с поверхностью, с кулдауном"},{"id":"st_shatter","school":"stone","kind":"how","rarity":"uncommon","name":"Дробление","effect":"Ограниченные осколки при ударе о препятствие"},{"id":"st_drill","school":"stone","kind":"how","rarity":"rare","name":"Бур","effect":"Повреждение только временной разрушаемой стены"},{"id":"st_aftershock","school":"stone","kind":"how","rarity":"rare","name":"Повторный толчок","effect":"Слабый наземный удар с задержкой"},{"id":"st_pillar","school":"stone","kind":"how","rarity":"rare","name":"Остаточный столб","effect":"Короткая разрушаемая опора при приземлении"},{"id":"st_gravity","school":"stone","kind":"how","rarity":"epic","name":"Притяжение","effect":"Ограниченная зона притяжения без прохождения стен"},{"id":"st_tracking_fault","school":"stone","kind":"how","rarity":"epic","name":"Ползущий разлом","effect":"Следующий сегмент к последней видимой позиции врага"},{"id":"st_form_wave","school":"stone","kind":"how","rarity":"transformation","name":"Каменная волна","effect":"Форма: наземный фронт вместо снаряда","aspect":"shape"},{"id":"st_form_spires","school":"stone","kind":"how","rarity":"transformation","name":"Гребень шипов","effect":"Форма: ряд поднимающихся каменных шипов","aspect":"shape"},{"id":"st_form_colossus","school":"stone","kind":"how","rarity":"transformation","name":"Монолит","effect":"Форма: тяжёлая глыба или столб с долгой подготовкой","aspect":"shape"},{"id":"st_origin_self","school":"stone","kind":"how","rarity":"transformation","name":"Эпицентр","effect":"Источник: атаковать от ног мага наружу","aspect":"origin"},{"id":"st_origin_below","school":"stone","kind":"how","rarity":"transformation","name":"Из недр","effect":"Источник: возникновение в отмеченной точке грунта","aspect":"origin"},{"id":"st_impact_rubble","school":"stone","kind":"how","rarity":"transformation","name":"Обвал","effect":"Контакт: короткоживущая осыпь с собственной геометрией","aspect":"impact"},{"id":"fi_ignite","school":"fire","kind":"when","rarity":"uncommon","name":"При воспламенении","effect":"Первое наложение горения, не его продление"},{"id":"fi_burn_tick","school":"fire","kind":"when","rarity":"rare","name":"Когда горит","effect":"Подтверждённый тик урона горением с интервалом"},{"id":"fi_extinguish","school":"fire","kind":"when","rarity":"rare","name":"Когда погасло","effect":"Свой огненный след погас естественно"},{"id":"fi_ember","school":"fire","kind":"do","rarity":"common","name":"Искра","effect":"Дополнительный огненный сгусток"},{"id":"fi_scorch","school":"fire","kind":"do","rarity":"common","name":"Ожог","effect":"Короткая видимая вспышка перед магом"},{"id":"fi_flamepatch","school":"fire","kind":"do","rarity":"uncommon","name":"Горящее пятно","effect":"Ограниченный огонь на полу"},{"id":"fi_cindermine","school":"fire","kind":"do","rarity":"uncommon","name":"Угольная ловушка","effect":"Мина, вспыхивающая при приближении"},{"id":"fi_lash","school":"fire","kind":"do","rarity":"rare","name":"Огненная плеть","effect":"Короткий огненный поток, прерываемый стенами"},{"id":"fi_wisp","school":"fire","kind":"do","rarity":"rare","name":"Блуждающий огонёк","effect":"Медленный огонёк обходит преграды без фазового прохода"},{"id":"fi_inferno","school":"fire","kind":"do","rarity":"epic","name":"Пекло","effect":"Широкая область после долгой подготовки"},{"id":"fi_sear","school":"fire","kind":"how","rarity":"common","name":"Поджечь сильнее","effect":"Дольше горение до лимита"},{"id":"fi_spread","school":"fire","kind":"how","rarity":"uncommon","name":"Распространить","effect":"Перекинуть огонь на смежную видимую поверхность"},{"id":"fi_sticky","school":"fire","kind":"how","rarity":"uncommon","name":"Прилипание","effect":"После контакта оставить огненное пятно"},{"id":"fi_flash","school":"fire","kind":"how","rarity":"rare","name":"Вспышка","effect":"Задержанный локальный взрыв с проверкой укрытий"},{"id":"fi_feed","school":"fire","kind":"how","rarity":"rare","name":"Разгореться","effect":"Огонь постепенно усиливается до потолка"},{"id":"fi_backdraft","school":"fire","kind":"how","rarity":"rare","name":"Обратная тяга","effect":"Небольшая волна при естественном угасании"},{"id":"fi_meltshield","school":"fire","kind":"how","rarity":"epic","name":"Оплавление","effect":"Горение частично ослабляет обычный щит"},{"id":"fi_bank_heat","school":"fire","kind":"how","rarity":"epic","name":"Тлеющий резерв","effect":"Вернуть часть нагрева при угасании, с общим кулдауном"},{"id":"fi_form_stream","school":"fire","kind":"how","rarity":"transformation","name":"Огненный поток","effect":"Форма: короткая непрерывная струя вместо шара","aspect":"shape"},{"id":"fi_form_whirl","school":"fire","kind":"how","rarity":"transformation","name":"Огненный вихрь","effect":"Форма: вращающаяся область пламени","aspect":"shape"},{"id":"fi_form_comet","school":"fire","kind":"how","rarity":"transformation","name":"Комета","effect":"Форма: тяжёлый горящий снаряд с дугой","aspect":"shape"},{"id":"fi_origin_self","school":"fire","kind":"how","rarity":"transformation","name":"Пламенный круг","effect":"Источник: атака вокруг мага","aspect":"origin"},{"id":"fi_origin_sky","school":"fire","kind":"how","rarity":"transformation","name":"Падение с неба","effect":"Источник: удар сверху по отмеченной точке","aspect":"origin"},{"id":"fi_impact_wildfire","school":"fire","kind":"how","rarity":"transformation","name":"Пожарище","effect":"Контакт: ограниченное распространение пламени по полу","aspect":"impact"},{"id":"li_shield_break","school":"storm","kind":"when","rarity":"uncommon","name":"При пробое щита","effect":"Подтверждено уменьшение вражеского щита"},{"id":"li_chain_end","school":"storm","kind":"when","rarity":"rare","name":"После цепи","effect":"Естественно завершилась цепь разрядов"},{"id":"li_conduct","school":"storm","kind":"when","rarity":"rare","name":"Когда заряжен проводник","effect":"Свой узел получил заряд, один раз за событие"},{"id":"li_spark","school":"storm","kind":"do","rarity":"common","name":"Импульс","effect":"Тонкий быстрый разряд"},{"id":"li_arc","school":"storm","kind":"do","rarity":"common","name":"Дуга","effect":"Короткая направленная молния"},{"id":"li_pylon","school":"storm","kind":"do","rarity":"uncommon","name":"Проводник","effect":"Поставить временный разрушаемый узел"},{"id":"li_link","school":"storm","kind":"do","rarity":"uncommon","name":"Связь","effect":"Соединить видимые узлы, при отсутствии узлов короткий разряд"},{"id":"li_coil","school":"storm","kind":"do","rarity":"uncommon","name":"Зарядная мина","effect":"Ограниченная по времени электрическая мина"},{"id":"li_discharge","school":"storm","kind":"do","rarity":"rare","name":"Веер молний","effect":"Несколько коротких дуг с общей ценой"},{"id":"li_stormcloud","school":"storm","kind":"do","rarity":"epic","name":"Грозовая туча","effect":"Медленная зона с отмеченными ударами"},{"id":"li_accelerate","school":"storm","kind":"how","rarity":"common","name":"Проводимость","effect":"Ускорить электрические снаряды"},{"id":"li_drainshield","school":"storm","kind":"how","rarity":"uncommon","name":"Снять заряд","effect":"Дополнительный урон щиту при контакте"},{"id":"li_nodes","school":"storm","kind":"how","rarity":"uncommon","name":"Перекинуть дугу","effect":"Достать один видимый проводник после контакта"},{"id":"li_stagger","school":"storm","kind":"how","rarity":"rare","name":"Оцепенение","effect":"Краткое замедление с защитой от постоянного контроля"},{"id":"li_capacitor","school":"storm","kind":"how","rarity":"rare","name":"Накопитель","effect":"Запас одного заряда на следующую ручную атаку"},{"id":"li_reflect_arc","school":"storm","kind":"how","rarity":"rare","name":"Угловой разряд","effect":"Отражение от камня с реальной коллизией"},{"id":"li_shield_pierce","school":"storm","kind":"how","rarity":"epic","name":"Пробой щита","effect":"Частичное игнорирование щита, но не стен"},{"id":"li_overcharge","school":"storm","kind":"how","rarity":"epic","name":"Перенапряжение","effect":"Сильный разряд за большой нагрев"},{"id":"li_form_ray","school":"storm","kind":"how","rarity":"transformation","name":"Грозовой луч","effect":"Форма: точный непрерывный луч с коллизиями","aspect":"shape"},{"id":"li_form_sphere","school":"storm","kind":"how","rarity":"transformation","name":"Шаровая молния","effect":"Форма: медленная сфера с внешними дугами","aspect":"shape"},{"id":"li_origin_self","school":"storm","kind":"how","rarity":"transformation","name":"Корона","effect":"Источник: разряд исходит кольцом от мага","aspect":"origin"},{"id":"li_origin_pylon","school":"storm","kind":"how","rarity":"transformation","name":"Проводящая опора","effect":"Источник: заряженный свой узел, при его отсутствии маг","aspect":"origin"},{"id":"li_impact_chain","school":"storm","kind":"how","rarity":"transformation","name":"Цепная реакция","effect":"Контакт: дуга к следующему видимому узлу","aspect":"impact"},{"id":"li_motion_orbit","school":"storm","kind":"how","rarity":"transformation","name":"Орбита","effect":"Движение: ограниченная орбита вокруг источника","aspect":"motion"}].map(card=>Object.freeze(card)));
+const MAGIC_TRANSFORMS=Object.freeze({"recipes":[{"school":"stone","requires":["st_form_wave","st_origin_self"],"name":"Землетрясение","effect":"Кольцевая каменная волна вокруг мага"},{"school":"stone","requires":["st_form_wave","st_origin_below"],"name":"Ползущий разлом","effect":"Фронт выходит из отмеченной области"},{"school":"stone","requires":["st_form_spires","st_origin_self"],"name":"Шипастый венец","effect":"Несколько волн шипов вокруг мага"},{"school":"stone","requires":["st_form_spires","st_origin_below"],"name":"Шиповой гребень","effect":"Выросший из земли направленный гребень"},{"school":"stone","requires":["st_form_colossus","st_origin_below"],"name":"Монолит недр","effect":"Тяжёлая колонна в отмеченной точке"},{"school":"stone","requires":["st_form_wave","st_impact_rubble"],"name":"Осыпной прибой","effect":"Волна оставляет временную осыпь"},{"school":"fire","requires":["fi_form_stream","fi_origin_self"],"name":"Огненное кольцо","effect":"Огонь расходится круговым фронтом"},{"school":"fire","requires":["fi_form_stream","fi_origin_sky"],"name":"Огненный дождь","effect":"Небольшие струи падают сверху"},{"school":"fire","requires":["fi_form_whirl","fi_origin_self"],"name":"Пламенный танец","effect":"Вращающееся пламя вокруг мага"},{"school":"fire","requires":["fi_form_whirl","fi_origin_sky"],"name":"Небесный вихрь","effect":"Неподвижный вихрь в целевой точке"},{"school":"fire","requires":["fi_form_comet","fi_origin_sky"],"name":"Метеор","effect":"Падающая комета с отмеченным ударом"},{"school":"fire","requires":["fi_form_comet","fi_impact_wildfire"],"name":"Пылающий кратер","effect":"Пожарище после падения"},{"school":"storm","requires":["li_form_ray","li_origin_self"],"name":"Грозовая корона","effect":"Короткие лучи расходятся от мага"},{"school":"storm","requires":["li_form_ray","li_origin_pylon"],"name":"Релейный луч","effect":"Луч из заряженного узла"},{"school":"storm","requires":["li_form_sphere","li_origin_self"],"name":"Живая сфера","effect":"Медленная сфера вокруг мага"},{"school":"storm","requires":["li_form_sphere","li_motion_orbit"],"name":"Электрический спутник","effect":"Сфера вращается вокруг источника"},{"school":"storm","requires":["li_form_ray","li_impact_chain"],"name":"Ломаная молния","effect":"Луч разветвляется после контакта"},{"school":"storm","requires":["li_origin_pylon","li_impact_chain"],"name":"Электрическая сеть","effect":"Передача разряда между своими узлами"}],"explicitlyForbidden":[["st_form_wave","st_form_spires"],["st_form_wave","st_form_colossus"],["st_form_spires","st_form_colossus"],["st_origin_self","st_origin_below"],["st_form_colossus","st_origin_self"],["fi_form_stream","fi_form_whirl"],["fi_form_stream","fi_form_comet"],["fi_form_whirl","fi_form_comet"],["fi_origin_self","fi_origin_sky"],["fi_form_comet","fi_origin_self"],["li_form_ray","li_form_sphere"],["li_origin_self","li_origin_pylon"],["li_form_ray","li_motion_orbit"]]});
+const MAGIC_DESIGN_RULES=Object.freeze({"editableSlots":3,"spellLimits":{"when":1,"do":2,"how":2},"aspects":["shape","origin","motion","impact"]});
+
+// PEREKOS magic v2: pure, deterministic spell assembly and state transitions.
+// This module deliberately has NO DOM, storage, audio, timers, network or RNG side effects.
+// It is the same rule contract intended for a new immutable PocketNet version.
+// The v0.28 match rules remain in force until the full new match+UI is ready.
+
+const MAGIC_RULES_VERSION=2;
+const MAGIC_RUNE_INDEX=new Map(MAGIC_RUNES.map(card=>[card.id,card]));
+const MAGIC_RARITIES=Object.freeze(['common','uncommon','rare','epic','transformation']);
+const MAGIC_SLOT_CAPS=Object.freeze({...MAGIC_DESIGN_RULES.spellLimits});
+const BASIC_ATTACK=Object.freeze({stone:'st_throw',fire:'fi_ember',storm:'li_spark'});
+const LEGACY_SCHOOLS=Object.freeze({
+ kindle:'fire',cinder:'fire',wire:'storm',coil:'storm',pebble:'stone',slate:'stone',
+ fire:'fire',storm:'storm',stone:'stone'
+});
+const LEGACY_MAPPING=Object.freeze({
+ on_cast:'u_on_cast',on_hit:'u_on_hit',on_hurt:'u_on_hurt',
+ on_dash:'u_after_dash',on_guard:'u_after_guard',on_expire:'u_on_expire',
+ on_bounce:'u_on_barrier',armor:'u_guard',heal:'u_heal',
+ push:'u_push',clone:'u_afterimage',double:'u_split',
+ lasting:'u_duration',wide:'u_size',far:'u_range',
+ fastshot:'u_speed',bounce:'u_ricochet',cheap:'u_efficient',
+ ball:'@attack',mine:'@mine',wall:'@wall'
+});
+const FORMS={
+ stone:new Set(['st_throw','st_shards','st_spikes','st_fault','st_tremor']),
+ fire:new Set(['fi_ember','fi_scorch','fi_lash','fi_inferno']),
+ storm:new Set(['li_spark','li_arc','li_link','li_discharge'])
+};
+const FORBIDDEN=new Set(MAGIC_TRANSFORMS.explicitlyForbidden.map(p=>[...p].sort().join(':')));
+const copy=value=>JSON.parse(JSON.stringify(value));
+const own=(obj,key)=>Object.prototype.hasOwnProperty.call(obj,key);
+const card=id=>MAGIC_RUNE_INDEX.get(id)||null;
+const idOf=owned=>owned?.defId;
+const activeRunes=spell=>[
+ ...(spell.when?[spell.when]:[]),
+ ...spell.actions.flatMap(a=>[a.rune,...a.mods])
+];
+const spellRuneCount=spell=>activeRunes(spell).length;
+const permittedRune=(school,id)=>{
+ const def=card(id);
+ return !!def &&(def.school==='common'||def.school===school);
+};
+const newSlot=id=>({id,when:null,actions:[]});
+const invalid=(s,message)=>({ok:false,error:message,state:s});
+const valid=(s)=>({ok:true,state:s,error:null});
+const currentRevision=(s,command)=>{
+ if(!Number.isInteger(command.revision)||s.revision!==command.revision)return false;
+ if(command.nonce!=null&&(typeof command.nonce!=='string'||command.nonce.length<1||command.nonce.length>64))return false;
+ return true;
+};
+const transformPair=(a,b)=>[a,b].sort().join(':');
+function scopeFor(spell,action){
+ const def=card(idOf(action.rune));
+ return def?.id==='u_reform_base'?'base':def?.id;
+}
+function validateAction(def,mod){
+ if(mod.rarity!=='transformation')return true;
+ if(def.id==='u_reform_base')return true;
+ if(def.school!==mod.school)return false;
+ return !!FORMS[def.school]?.has(def.id);
+}
+function effectiveTransforms(spells){
+ const byScope=new Map();
+ for(const spell of spells){
+  for(const action of spell.actions){
+   const key=scopeFor(spell,action);
+   for(const instance of action.mods){
+    const def=card(idOf(instance));
+    if(def?.rarity!=='transformation')continue;
+    const keyName=key==='base'?'base':spell.id+':'+key;
+    const aspects=byScope.get(keyName)||new Map();
+    for(const prev of aspects.values()){
+     if(prev.id===def.id)continue;
+     if(prev.aspect===def.aspect||FORBIDDEN.has(transformPair(prev.id,def.id)))return {error:'Несовместимые преображения: '+prev.name+' и '+def.name};
+    }
+    aspects.set(def.aspect,def);byScope.set(keyName,aspects);
+   }
+  }
+ }
+ return {scopes:byScope};
+}
+function validateMagicSpell(spell,{requireReady=false}={}){
+ if(!spell||!Array.isArray(spell.actions)||!Number.isInteger(spell.id)||
+    spell.actions.some(a=>!a||!a.rune||!Array.isArray(a.mods))||
+    (spell.when!=null&&typeof spell.when!=='object'))
+   return {ok:false,error:'Повреждён слот заклинания'};
+ if(spell.actions.length>MAGIC_SLOT_CAPS.do)return {ok:false,error:'В заклинании не больше двух ЧТО'};
+ if(spellRuneCount(spell)>5)return {ok:false,error:'В заклинании не больше пяти рун'};
+ if(spell.when&&card(idOf(spell.when))?.kind!=='when')return {ok:false,error:'Неверная руна КОГДА'};
+ let modCount=0,passiveCount=0;
+ for(const a of spell.actions){
+  const d=card(idOf(a.rune));
+  if(!d||d.kind!=='do'||!Array.isArray(a.mods))return {ok:false,error:'Неверная руна ЧТО'};
+  if(d.id==='u_reform_base')passiveCount++;
+  for(const m of a.mods){
+   const md=card(idOf(m));
+   if(!md||md.kind!=='how'||!validateAction(d,md))return {ok:false,error:'Это КАК не подходит выбранному действию'};
+   modCount++;
+  }
+ }
+ if(modCount>MAGIC_SLOT_CAPS.how)return {ok:false,error:'В заклинании не больше двух КАК'};
+ if(passiveCount&&(passiveCount!==1||spell.actions.length!==1||spell.when))return {ok:false,error:'Преображение основы должно быть самостоятельным без КОГДА'};
+ if(requireReady){
+  if(spell.actions.length===0)return {ok:false,error:'Нельзя использовать пустое заклинание'};
+  if(passiveCount&&!spell.actions[0].mods.some(m=>card(idOf(m))?.rarity==='transformation'))return {ok:false,error:'Для преображения нужна руна формы'};
+  if(!passiveCount&&!spell.when)return {ok:false,error:'Заклинанию нужна руна КОГДА'};
+ }
+ const compatible=effectiveTransforms([spell]);
+ if(compatible.error)return {ok:false,error:compatible.error};
+ return {ok:true,error:null};
+}
+function allSpells(state){return [...state.sealed,...state.slots]}
+function validateMagicState(s){
+ if(!s||s.rulesetVersion!==MAGIC_RULES_VERSION||!MAGIC_SCHOOLS.includes(s.school)||!Number.isInteger(s.revision)||s.revision<0)return {ok:false,error:'Неизвестные правила или стихия'};
+ if(!Array.isArray(s.reserve)||!Array.isArray(s.slots)||s.slots.length!==3||!Array.isArray(s.sealed)||!Number.isInteger(s.nextInstance))return {ok:false,error:'Повреждён гримуарий'};
+ // A network or saved-state payload may contain malformed nested arrays. Reject
+ // it before enumerating rune instances rather than throwing from flatMap.
+ const spells=[...s.slots,...s.sealed];
+ if(spells.some(spell=>!spell||typeof spell!=='object'||!Array.isArray(spell.actions)||
+    spell.actions.some(a=>!a||!a.rune||!Array.isArray(a.mods))||
+    (spell.when!==null&&spell.when!==undefined&&typeof spell.when!=='object')))
+  return {ok:false,error:'Повреждена структура заклинаний'};
+ if(!s.slots.every((slot,i)=>slot.id===i))return {ok:false,error:'Неверные номера трёх слотов'};
+ if(!s.sealed.every((slot,i)=>slot.id===3+i))return {ok:false,error:'Повреждён порядок печатей'};
+ const seen=new Set();
+ for(const instance of [...s.reserve,...allSpells(s).flatMap(activeRunes)]){
+  if(!instance||!Number.isSafeInteger(instance.instanceId)||instance.instanceId<1||
+    !permittedRune(s.school,instance.defId)||seen.has(instance.instanceId))return {ok:false,error:'Дубликат или чужая руна'};
+  seen.add(instance.instanceId);
+ }
+ if(seen.size>=s.nextInstance)return {ok:false,error:'Повреждён счётчик экземпляров рун'};
+ for(const spell of s.slots){
+  const check=validateMagicSpell(spell);
+  if(!check.ok)return check;
+ }
+ for(const spell of s.sealed){
+  const check=validateMagicSpell(spell,{requireReady:true});
+  if(!check.ok)return check;
+ }
+ const transformations=effectiveTransforms(allSpells(s));
+ if(transformations.error)return {ok:false,error:transformations.error};
+ if(!Number.isInteger(s.seed)||s.seed<0||s.seed>0xffffffff)return {ok:false,error:'Повреждён seed'};
+ if(!Array.isArray(s.offers)||s.offers.some(id=>!permittedRune(s.school,id)))return {ok:false,error:'Чужие предложения'};
+ if(!Array.isArray(s.nonces)||s.nonces.length>48||s.nonces.some(n=>typeof n!=='string'||n.length>64))return {ok:false,error:'Повреждён журнал команд'};
+ return {ok:true,error:null};
+}
+const makeInstance=(s,id)=>({instanceId:s.nextInstance++,defId:id});
+function createMagicLoadout(school,{seed=1,starter='defense'}={}){
+ if(!MAGIC_SCHOOLS.includes(school))throw new RangeError('Unknown school');
+ const s={rulesetVersion:MAGIC_RULES_VERSION,school,seed:(seed>>>0)||1,revision:0,
+  reserve:[],slots:[newSlot(0),newSlot(1),newSlot(2)],sealed:[],
+  offers:[],nextInstance:1,nonces:[]};
+ const starterCards=starter==='attack'?['u_on_hit',BASIC_ATTACK[school]]:
+  starter==='mobility'?['u_after_dash','u_guard']:['u_on_hurt','u_guard'];
+ s.slots[0].when=makeInstance(s,starterCards[0]);
+ s.slots[0].actions.push({rune:makeInstance(s,starterCards[1]),mods:[]});
+ if(!validateMagicState(s).ok)throw Error('Invalid starter');
+ return s;
+}
+const availableMagicRunes=school=>MAGIC_RUNES.filter(r=>permittedRune(school,r.id));
+function compileMagic(s,{includeUnfinished=false}={}){
+ const result=[];
+ for(const spell of allSpells(s)){
+  const check=validateMagicSpell(spell,{requireReady:true});
+  if(!includeUnfinished&&!check.ok)continue;
+  result.push({
+   slotId:spell.id,sealed:spell.id>=3,ready:check.ok,
+   trigger:spell.when?.defId||null,
+   actions:spell.actions.map(a=>({
+    id:a.rune.defId,instanceId:a.rune.instanceId,
+    mods:a.mods.map(m=>m.defId)
+   }))
+  });
+ }
+ return result;
+}
+function effectiveMagicForm(s){
+ const transforms=effectiveTransforms(allSpells(s));
+ if(transforms.error)return {ok:false,error:transforms.error};
+ const base=transforms.scopes.get('base')||new Map();
+ return {ok:true,school:s.school,shape:base.get('shape')?.id||null,
+  origin:base.get('origin')?.id||null,
+  motion:base.get('motion')?.id||null,
+  impact:base.get('impact')?.id||null};
+}
+function editInner(s,cmd){
+ const slot=s.slots[cmd.slot];
+ if(!slot)return 'Нет такого слота';
+ if(cmd.type==='equip'){
+  const idx=s.reserve.findIndex(r=>r.instanceId===cmd.instanceId);
+  if(idx<0)return 'Руна не принадлежит игроку или уже установлена';
+  const inst=s.reserve[idx],def=card(inst.defId);
+  if(def.kind==='when'){
+   if(slot.when||slot.actions.some(a=>idOf(a.rune)==='u_reform_base'))return 'Нельзя добавить второе КОГДА';
+   slot.when=inst;
+  }else if(def.kind==='do'){
+   if(slot.actions.length>=2)return 'Не больше двух ЧТО';
+   if(def.id==='u_reform_base'&&(slot.when||slot.actions.length>0))return 'Преображение основы — отдельное заклинание';
+   if(slot.actions.some(a=>idOf(a.rune)==='u_reform_base'))return 'К пассивной форме нельзя добавить второе ЧТО';
+   slot.actions.push({rune:inst,mods:[]});
+  }else{
+   if(!Number.isInteger(cmd.action)||cmd.action<0||cmd.action>=slot.actions.length)return 'Сначала укажи ЧТО, которое изменяет КАК';
+   if(slot.actions.reduce((n,a)=>n+a.mods.length,0)>=2)return 'Не больше двух КАК';
+   if(!validateAction(card(idOf(slot.actions[cmd.action].rune)),def))return 'Руна КАК несовместима с действием';
+   slot.actions[cmd.action].mods.push(inst);
+  }
+  s.reserve.splice(idx,1);
+ }else if(cmd.type==='unequip'){
+  if(slot.when?.instanceId===cmd.instanceId){s.reserve.push(slot.when);slot.when=null;return null}
+  const index=slot.actions.findIndex(a=>a.rune.instanceId===cmd.instanceId);
+  if(index>=0){const [removed]=slot.actions.splice(index,1);s.reserve.push(removed.rune,...removed.mods);return null}
+  for(const a of slot.actions){
+   const modIndex=a.mods.findIndex(m=>m.instanceId===cmd.instanceId);
+   if(modIndex>=0){s.reserve.push(...a.mods.splice(modIndex,1));return null}
+  }
+  return 'Руна отсутствует в редактируемом слоте';
+ }else if(cmd.type==='seal'){
+  const ready=validateMagicSpell(slot,{requireReady:true});
+  if(!ready.ok)return ready.error;
+  const seal=copy(slot);seal.id=s.sealed.length+3;
+  s.sealed.push(seal);s.slots[cmd.slot]=newSlot(cmd.slot);
+ }else return 'Неизвестное действие редактора';
+ return null;
+}
+function applyMagicEdit(state,command){
+ const first=validateMagicState(state);
+ if(!first.ok)return invalid(state,first.error);
+ if(!command||typeof command!=='object'||!currentRevision(state,command))return invalid(state,'Устаревшая версия сборки');
+ if(command.nonce!=null&&state.nonces.includes(command.nonce))return invalid(state,'Повторная команда');
+ if(!['equip','unequip','seal'].includes(command.type))return invalid(state,'Команда не разрешена');
+ if(!Number.isInteger(command.slot)||command.slot<0||command.slot>=3)return invalid(state,'Нет такого слота');
+ const draft=copy(state);
+ const error=editInner(draft,command);
+ if(error)return invalid(state,error);
+ const check=validateMagicState(draft);
+ if(!check.ok)return invalid(state,check.error);
+ draft.revision++;
+ if(command.nonce!=null){draft.nonces.push(command.nonce);if(draft.nonces.length>48)draft.nonces.shift()}
+ return valid(draft);
+}
+function grantEarnedMagicRune(state,id){
+ const check=validateMagicState(state);
+ if(!check.ok)return invalid(state,check.error);
+ if(!permittedRune(state.school,id))return invalid(state,'Чужая стихия или неизвестная руна');
+ // Different *instances* of the same card are intentional: a sealed rune is
+ // permanently consumed, but another copy may be earned later in this match.
+ if(state.nextInstance>80)return invalid(state,'Достигнут предел рун за партию');
+ const s=copy(state);s.reserve.push(makeInstance(s,id));s.revision++;
+ return valid(s);
+}
+const rarityWeights=[
+ {common:60,uncommon:30,rare:9,epic:1,transformation:0},
+ {common:35,uncommon:35,rare:20,epic:7,transformation:3},
+ {common:20,uncommon:30,rare:28,epic:13,transformation:9}
+];
+const roll=s=>{s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296};
+const takeWeighted=(s,pool,weights)=>{
+ const total=pool.reduce((sum,c)=>sum+(weights[c.rarity]||0),0);
+ if(total<=0)return -1;
+ let x=roll(s)*total;
+ for(let i=0;i<pool.length;i++){x-=weights[pool[i].rarity]||0;if(x<0)return i}
+ return pool.length-1;
+};
+function dealMagicOffers(state,minute){
+ const check=validateMagicState(state);
+ if(!check.ok)return invalid(state,check.error);
+ if(!Number.isInteger(minute)||minute<1||minute>9)return invalid(state,'Неверный этап Разлома');
+ if(state.offers.length)return invalid(state,'Сначала выбери предложенную руну');
+ const s=copy(state),available=new Set([...s.reserve,...allSpells(s).flatMap(activeRunes)].map(r=>r.defId));
+ // Cards held in reserve/editable slots do not crowd the offer. Sealed copies
+ // can reappear later, so early sealing never makes the rest of the match dead.
+ const heldOutsideSeals=new Set([...s.reserve,...s.slots.flatMap(activeRunes)].map(r=>r.defId));
+ const pool=availableMagicRunes(s.school).filter(r=>!heldOutsideSeals.has(r.id));
+ const weights=rarityWeights[minute<=2?0:minute<=5?1:2];
+ const picked=[];
+ // On milestone minutes guarantee at least one *offer*, never a forced selection.
+ if(minute===4||minute===7){
+  const upgrades=pool.filter(r=>r.rarity==='transformation');
+  if(upgrades.length){const choice=upgrades[Math.floor(roll(s)*upgrades.length)];picked.push(choice.id);pool.splice(pool.indexOf(choice),1)}
+ }
+ while(pool.length&&picked.length<3){
+  const choice=takeWeighted(s,pool,weights);
+  if(choice<0)break;
+  picked.push(pool.splice(choice,1)[0].id);
+ }
+ s.offers=picked;s.revision++;
+ return valid(s);
+}
+function claimMagicOffer(state,id,revision){
+ const check=validateMagicState(state);
+ if(!check.ok)return invalid(state,check.error);
+ if(!Number.isInteger(revision)||state.revision!==revision)return invalid(state,'Устаревшее предложение');
+ if(!state.offers.includes(id))return invalid(state,'Руна не была предложена');
+ const draft=copy(state);draft.offers=[];draft.reserve.push(makeInstance(draft,id));draft.revision++;
+ return valid(draft);
+}
+function previewLegacyMagic(legacy){
+ const oldMage=legacy?.mageId||legacy?.mage||legacy?.school;
+ const school=LEGACY_SCHOOLS[oldMage]||null;
+ const oldRunes=Array.isArray(legacy?.runes)?legacy.runes:[];
+ const mapped=[],unmapped=[];
+ for(const old of oldRunes){
+  let converted=LEGACY_MAPPING[old];
+  if(converted==='@attack')converted=school&&BASIC_ATTACK[school];
+  if(converted==='@wall')converted=school==='stone'?'st_wall':null;
+  if(converted==='@mine')converted=school==='fire'?'fi_cindermine':school==='storm'?'li_coil':null;
+  if(school&&permittedRune(school,converted)&&!mapped.some(x=>x.to===converted))mapped.push({from:old,to:converted});
+  else unmapped.push(old);
+ }
+ return {supported:!!school,school,mapped,unmapped,original:copy(legacy||{})};
+}
+function migrateLegacyMagic(legacy,{confirmed=false,seed=1}={}){
+ const preview=previewLegacyMagic(legacy);
+ if(!confirmed||!preview.supported)return {ok:false,needsConfirmation:!confirmed,preview,state:null};
+ let s=createMagicLoadout(preview.school,{seed,starter:'defense'});
+ // Keep existing starter equipped, and put extra compatible cards into reserve.
+ for(const r of preview.mapped){
+  if([...s.reserve,...allSpells(s).flatMap(activeRunes)].some(a=>a.defId===r.to))continue;
+  s=grantEarnedMagicRune(s,r.to).state;
+ }
+ return {ok:true,needsConfirmation:false,preview,state:s};
+}
+
+const MAGIC_V2_PRACTICE_RUNES=Object.freeze([
+ 'u_on_cast','u_on_hit','u_on_hurt','u_after_dash','u_after_guard',
+ 'u_guard','u_push','u_heal','u_afterimage','u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
+ 'st_throw','st_shards','st_wall','fi_ember','fi_scorch','fi_flamepatch','li_spark','li_arc'
+]);
+// Only verified modifiers appear as equippable buttons for a given action in
+// the current live laboratory. The full catalog is reserved for later phases.
+const V2_PRACTICE_MODS=Object.freeze({
+ u_guard:['u_size','u_efficient'],
+ u_push:['u_size','u_efficient'],
+ u_heal:['u_efficient'],
+ u_afterimage:['u_efficient'],
+ st_throw:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
+ st_shards:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
+ st_wall:['u_size','u_duration','u_efficient'],
+ fi_ember:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
+ fi_scorch:['u_size','u_efficient'],
+ fi_flamepatch:['u_size','u_duration','u_efficient'],
+ li_spark:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
+ li_arc:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet']
+});
+function magicV2PracticeModifierFits(action,modifier){
+ return !!V2_PRACTICE_MODS[action]?.includes(modifier);
+}
+function magicV2Attack(s,a,target){
+ if(a.cast>0||a.stun>0||a.windup)return false;
+ a.face=Math.atan2(target.y-a.y,target.x-a.x);
+ const school=a.magicSchool,style=school==='stone'?'rock':school==='storm'?'bolt':'orb';
+ a.cast=stats(a).reload;
+ const ok=spawnShot(s,a,a.face,a.x,a.y,{style,element:school,damage:12,life:1.3,signature:false});
+ if(ok){addHeat(s,a,7);emit(s,'on_cast',a.id)}
+ return ok;
+}
+function magicV2Action(s,a,act,mods,ev){
+ const other=s.actors[1-a.id],school=a.magicSchool;
+ const defs=new Set(mods),size=defs.has('u_size'),extend=defs.has('u_duration')||defs.has('u_range'),
+ fast=defs.has('u_speed'),ricochet=defs.has('u_ricochet'),
+ split=defs.has('u_split'),cheap=defs.has('u_efficient');
+ const angle=a.face,base={element:school,signature:false,wide:size,fastshot:fast,far:extend,
+  bounce:ricochet,life:extend?2:1.15,damage:12,depth:ev.depth+1};
+ const shoot=(style,damage=12)=>{
+  const count=split?2:1;
+  for(let j=0;j<count;j++)spawnShot(s,a,angle+(count===2?(j===0?-.13:.13):0),a.x,a.y,{
+   ...base,style,damage:damage/count
+  });
+ };
+ switch(act){
+  case 'u_guard':a.shield=Math.min(80,a.shield+(size?22:14));fx(s,'shield',a.x,a.y);break;
+  case 'u_heal':receiveHeal(s,a,8,ev.depth+1);break;
+  case 'u_push':{
+   const dx=other.x-a.x,dy=other.y-a.y,d=mag(dx,dy);
+   if(d<125&&unobstructed(s,a.x,a.y,other.x,other.y,a.id,8))
+    move(other,dx/d*(size?38:26),dy/d*(size?38:26));
+   fx(s,'dash',other.x,other.y);break;
+  }
+  case 'u_afterimage':if(s.echoes.length<8)s.echoes.push({owner:a.id,x:a.x,y:a.y,cast:.45,life:1.5,shots:1});break;
+  case 'st_throw':shoot('rock');break;
+  case 'st_shards':{
+   const count=split?5:3;
+   for(let j=0;j<count;j++)spawnShot(s,a,angle+(j-(count-1)/2)*.16,a.x,a.y,
+    {...base,style:'rock',damage:6,life:extend?1.3:.8});
+   break;
+  }
+  case 'st_wall':{
+   const x=a.x+Math.cos(angle)*46,y=a.y+Math.sin(angle)*46,r=size?24:17;
+   if(s.barriers.length<10&&canStand(x,y,r)&&!blocking(s,x,y,r))
+    s.barriers.push({owner:a.id,x,y,r,life:extend?6:3.5,hp:30});
+   fx(s,'shield',x,y);break;
+  }
+  case 'fi_ember':shoot('orb');break;
+  case 'fi_scorch':{
+   const dx=other.x-a.x,dy=other.y-a.y,d=mag(dx,dy);
+   if(d<(size?116:86)&&unobstructed(s,a.x,a.y,other.x,other.y,a.id,8)){
+    const dealt=harm(s,other,split?8:11,a.id,ev.depth+1);
+    if(dealt>0)emit(s,'on_hit',a.id,{},ev.depth+1);
+   }
+   fx(s,'ember',a.x+Math.cos(angle)*31,a.y+Math.sin(angle)*31);break;
+  }
+  case 'fi_flamepatch':{
+   const x=a.x+Math.cos(angle)*32,y=a.y+Math.sin(angle)*32;
+   if(s.mines.length<14&&!distWall(x,y,8))s.mines.push({
+    owner:a.id,x,y,r:size?60:42,life:extend?5:3,damage:9,element:'fire'
+   });
+   fx(s,'mine',x,y);break;
+  }
+  case 'li_spark':shoot('bolt');break;
+  case 'li_arc':shoot('arc',10);break;
+  default:return false;
+ }
+ addHeat(s,a,(cheap?5:10)+mods.length*2,ev.depth+1);
+ return true;
+}
+function flushMagicV2Events(s){
+ let reactions=0,processed=0;
+ const map={on_cast:'u_on_cast',on_hit:'u_on_hit',on_hurt:'u_on_hurt',
+  on_dash:'u_after_dash',on_guard:'u_after_guard',on_expire:'u_on_expire',
+  on_bounce:'u_on_barrier'};
+ while(s.eventQueue.length&&processed++<MAX_QUEUE&&reactions<MAX_REACTIONS_PER_TICK){
+  const ev=s.eventQueue.shift(),a=s.actors[ev.owner],rules=s.magicLoadouts?.[ev.owner];
+  if(!a||!rules||ev.depth>=MAX_CHAIN_DEPTH)continue;
+  const trigger=map[ev.kind];if(!trigger)continue;
+  for(const spell of compileMagic(rules)){
+   if(spell.trigger!==trigger)continue;
+   const key='v2:'+spell.slotId;
+   if(s.ticks<(a.runeTimers[key]||0))continue;
+   a.runeTimers[key]=s.ticks+Math.ceil(.65/STEP);
+   for(const action of spell.actions){
+    if(reactions>=MAX_REACTIONS_PER_TICK)break;
+    if(!MAGIC_V2_PRACTICE_RUNES.includes(action.id))continue;
+    magicV2Action(s,a,action.id,action.mods,ev);
+    reactions++;
+   }
+  }
+ }
+ if(s.eventQueue.length){for(const a of s.actors)addHeat(s,a,3);s.eventQueue.length=0}
+ s.reactions=reactions;
+}
+
+const V2_START_POOL=Object.freeze([
+ 'u_on_cast','u_after_dash','u_on_hurt','u_guard','u_heal','u_push','u_size',
+ 'u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
+ 'st_throw','st_shards','st_wall','fi_ember','fi_scorch','fi_flamepatch','li_spark','li_arc'
+]);
+const V2_SEAT_MAGES=Object.freeze({stone:'pebble',fire:'kindle',storm:'wire'});
+function v2Inventory(school,seed){
+ let book=createMagicLoadout(school,{seed,starter:'attack'});
+ for(const id of V2_START_POOL){
+  if(!permittedRune(school,id))continue;
+  // Starter instances already belong to a slot; each extra card is independent.
+  const extra=grantEarnedMagicRune(book,id);
+  if(!extra.ok)throw Error('Invalid owned rune: '+id);
+  book=extra.state;
+ }
+ return book;
+}
+function v2SpellAllowed(book){
+ if(!validateMagicState(book).ok)return false;
+ const instances=[...book.reserve,...book.slots.flatMap(sp=>[
+  ...(sp.when?[sp.when]:[]),...sp.actions.flatMap(a=>[a.rune,...a.mods])
+ ]),...book.sealed.flatMap(sp=>[
+  ...(sp.when?[sp.when]:[]),...sp.actions.flatMap(a=>[a.rune,...a.mods])
+ ])];
+ if(instances.some(inst=>!V2_START_POOL.includes(inst.defId)&&!['u_on_hit','u_on_hurt'].includes(inst.defId)))return false;
+ for(const sp of [...book.slots,...book.sealed])for(const a of sp.actions){
+  if(!MAGIC_V2_PRACTICE_RUNES.includes(a.rune.defId))return false;
+  if(a.mods.some(m=>!magicV2PracticeModifierFits(a.rune.defId,m.defId)))return false;
+ }
+ return true;
+}
+function createV2Match(s){
+ const schools=s.schools.map(school=>V2_SEAT_MAGES[school]);
+ const m=makeMatch((clock()>>>0)^Math.floor(Math.random()*0xffffffff),schools[0],schools[1],'duel','shaper','shaper');
+ m.magicModeV2=true;m.magicSchool=s.schools[0];
+ m.magicLoadouts=s.schools.map((school,i)=>v2Inventory(school,(m.seed+(i+1)*911)>>>0));
+ m.actors.forEach((a,i)=>{a.magicSchool=s.schools[i];a.runes=[];a.fusions=[];a.evolution=null});
+ m.phase='build';return m;
+}
+function v2ValidAction(s,i,command){
+ if(s.gameMode!=='magic-v2'||s.phase!=='magic-build'||i<0||!s.match?.magicModeV2)return false;
+ const original=s.match.magicLoadouts[i];
+ if(!original||!v2SpellAllowed(original))return false;
+ if(!command||!['equip','unequip','seal'].includes(command.type))return false;
+ const edited=applyMagicEdit(original,command);
+ if(!edited.ok||!v2SpellAllowed(edited.state))return false;
+ s.match.magicLoadouts[i]=edited.state;s.ready[i]=false;s.revision++;return true;
+}
+
 const ZERO={x:0,y:0,aim:{x:200,y:310},attack:false,shield:false,dash:false,special:false};
 const clock=()=>Date.now(),updates=()=>[{type:'state',payload:null}],warn=(to,msg)=>[{type:'notice',to,payload:msg}];
 const side=(s,id)=>s.seats.indexOf(id);
@@ -712,8 +1216,8 @@ const safeInput=v=>{
  const m=Math.max(1,Math.hypot(x,y));return {x:x/m,y:y/m,aim:{x:ax,y:ay},attack:v.attack===true,shield:v.shield===true,dash:v.dash===true,special:v.special===true,specialSlot:v.specialSlot??0};
 };
 function beginNet(s){
- s.match=makeMatch((clock()>>>0)^Math.floor(Math.random()*0xffffffff),s.mages[0],s.mages[1],s.gameMode,s.archetypes[0],s.archetypes[1]);
- startRound(s.match);s.phase='fight';s.offers=[[],[]];s.picked=[false,false];s.ready=[false,false];
+ s.match=s.gameMode==='magic-v2'?createV2Match(s):makeMatch((clock()>>>0)^Math.floor(Math.random()*0xffffffff),s.mages[0],s.mages[1],s.gameMode,s.archetypes[0],s.archetypes[1]);
+ if(s.gameMode==='magic-v2')s.phase='magic-build';else{startRound(s.match);s.phase='fight'}s.offers=[[],[]];s.picked=[false,false];s.ready=[false,false];
  s.inputs=[{...ZERO},{...ZERO}];s.seq=[-1,-1];s.seen=[clock(),clock()];s.at=clock();s.credit=0;s.lastEmit=0;s.revision++;
 }
 function advanceNet(s){
@@ -724,6 +1228,9 @@ function advanceNet(s){
  let steps=0;
  while(s.credit>=1000/60&&steps<12&&s.match.phase==='fight'){tick(s.match,s.inputs[0],STEP,s.inputs[1]);s.credit-=1000/60;steps++}
  if(s.match.phase==='draft'){
+  if(s.gameMode==='magic-v2'){
+   s.match.phase='build';s.phase='magic-build';s.ready=[false,false];s.inputs=[{...ZERO},{...ZERO}];s.credit=0;s.revision++;return true;
+  }
   s.phase='draft';s.draftAt=clock();s.offers=[0,1].map(i=>eligibleOffers(s.match,i));s.match.pick=[];s.picked=[false,false];s.ready=[false,false];s.revision++;return true;
  }
  if(s.match.phase==='result'){s.phase='result';s.revision++;return true}
@@ -757,7 +1264,7 @@ function readyNet(s,i,list){
 }
 function viewForPlayer({state:s,player,players}){
  const i=side(s,player.id);
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:9,gameMode:s.gameMode,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:10,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};
@@ -765,19 +1272,19 @@ function viewForPlayer({state:s,player,players}){
 const module={
  protocolVersion:1,
  createRoom({player}){return {state:{host:player.id,seats:[player.id],phase:'lobby',match:null,revision:0,
-  gameMode:'rupture',mages:['kindle','wire'],archetypes:['striker','striker'],offers:[[],[]],picked:[false,false],ready:[false,false],seq:[-1,-1],inputs:[{...ZERO},{...ZERO}],
+  gameMode:'rupture',schools:['fire','storm'],mages:['kindle','wire'],archetypes:['striker','striker'],offers:[[],[]],picked:[false,false],ready:[false,false],seq:[-1,-1],inputs:[{...ZERO},{...ZERO}],
   seen:[clock(),clock()],at:clock(),credit:0,lastEmit:0}}},
  onJoin({state:s,player,players}){
   if(s.seats.filter(Boolean).length>=2||players.length>2)throw Error('room_full');
   if(!['lobby','result'].includes(s.phase))throw Error('match_in_progress');
-  const slot=s.seats.indexOf('');if(slot>=0)s.seats[slot]=player.id;else s.seats.push(player.id);s.seen[slot>=0?slot:1]=clock();s.mages[slot>=0?slot:1]='wire';s.revision++;return {state:s,events:updates()};
+  const slot=s.seats.indexOf('');if(slot>=0)s.seats[slot]=player.id;else s.seats.push(player.id);s.seen[slot>=0?slot:1]=clock();s.mages[slot>=0?slot:1]='wire';s.schools[slot>=0?slot:1]='storm';s.revision++;return {state:s,events:updates()};
  },
  onLeave({state:s,player}){
   const i=side(s,player.id);if(i<0)return {state:s,events:[]};
   if(s.match&&!['lobby','result'].includes(s.phase)){
    s.phase='result';s.match.phase='result';s.match.champion=1-i;s.match.score[1-i]=s.match.gameMode==='rupture'?Math.max(...s.match.score)+3:4;
   }
-  s.seats[i]='';s.mages[i]='wire';if(s.host===player.id)s.host=s.seats.find(Boolean)||'';
+  s.seats[i]='';s.mages[i]='wire';s.schools[i]='storm';if(s.host===player.id)s.host=s.seats.find(Boolean)||'';
   s.revision++;return {state:s,events:updates()};
  },
  viewForPlayer,
@@ -790,12 +1297,29 @@ const module={
    if(s.host!==player.id)return out(warn(player.id,'Матч запускает создатель комнаты.'));
    if(s.seats.length!==2||!s.seats.every(Boolean))return out(warn(player.id,'Нужны два игрока.'));
    if((p.type==='start'&&s.phase!=='lobby')||(p.type==='rematch'&&s.phase!=='result'))return out([]);
-   if(['duel','rupture'].includes(p.gameMode))s.gameMode=p.gameMode;
+   if(['duel','rupture','magic-v2'].includes(p.gameMode))s.gameMode=p.gameMode;
    beginNet(s);return out();
   }
-  if(p.type==='mode'){if(s.phase!=='lobby'||s.host!==player.id||!['duel','rupture'].includes(p.gameMode))return out(warn(player.id,'Режим выбирает создатель до начала матча.'));s.gameMode=p.gameMode;s.revision++;return out()}
+  if(p.type==='mode'){if(s.phase!=='lobby'||s.host!==player.id||!['duel','rupture','magic-v2'].includes(p.gameMode))return out(warn(player.id,'Режим выбирает создатель до начала матча.'));s.gameMode=p.gameMode;s.revision++;return out()}
+   if(p.type==='magic-school'){
+    if(s.phase!=='lobby'||!MAGIC_SCHOOLS.includes(p.school))return out(warn(player.id,'Стихию выбирают до начала боя.'));
+    s.schools[i]=p.school;s.revision++;return out();
+   }
    if(p.type==='archetype'){if(s.phase!=='lobby'||!validArchetype(p.archetype))return out(warn(player.id,'Боевой путь можно выбрать до начала матча.'));s.archetypes[i]=p.archetype;s.revision++;return out()}
    if(p.type==='mage'){if(s.phase!=='lobby'||!validMage(p.mageId))return out(warn(player.id,'Выбрать мага можно только до боя.'));s.mages[i]=p.mageId;s.revision++;return out()}
+  if(p.type==='magic-edit'){
+    if(v2ValidAction(s,i,p.command))return out();
+    return out(warn(player.id,'Комбинация недоступна или устарела.'));
+   }
+   if(p.type==='magic-ready'){
+    if(s.gameMode!=='magic-v2'||s.phase!=='magic-build'||s.ready[i])return out([]);
+    if(!v2SpellAllowed(s.match.magicLoadouts[i]))return out(warn(player.id,'Недопустимые руны.'));
+    s.ready[i]=true;s.revision++;
+    if(s.ready.every(Boolean)){
+     startRound(s.match);s.phase='fight';s.seq=[-1,-1];s.inputs=[{...ZERO},{...ZERO}];s.seen=[clock(),clock()];s.at=clock();s.credit=0;
+    }
+    return out();
+   }
   if(p.type==='input'){
    if(s.phase!=='fight'||p.round!==s.match.round||!Number.isSafeInteger(p.seq)||p.seq<=s.seq[i]||p.seq>s.seq[i]+100000)return out([]);
    const input=safeInput(p.control);if(!input)return out(warn(player.id,'Неверная команда.'));
