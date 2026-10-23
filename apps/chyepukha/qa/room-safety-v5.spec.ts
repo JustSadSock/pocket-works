@@ -67,7 +67,7 @@ async function manuscript(page){
 test('temporary departure preserves the original seat and unsent local manuscript',async({page})=>{
  await install(page);await start(page);
  await page.locator('#answer').fill('Старий автор загубив листа на міському вокзалі');
- await page.locator('.editor-paper [data-act=leave]').click();
+ await page.locator('[data-act=leave]:visible').first().click();
  await expect(page.locator('[data-act=disconnect-room]')).toBeVisible();
  await page.locator('[data-act=disconnect-room]').click();
  await expect(page.locator('.return-ticket')).toBeVisible();
