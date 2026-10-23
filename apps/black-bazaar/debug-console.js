@@ -4,6 +4,7 @@ import {characterMarkup,applyCharacterArt,loadCharacterArt} from './art/characte
 import {createAudioFeedback} from './feedback.js';
 
 export const DEBUG_VIEWPORTS=[
+ ['phone-small','Малый телефон',320,568],['phone-short','Телефон 667',375,667],
  ['phone','Телефон',390,844],['phone-wide','Телефон ↔',844,390],
  ['tablet','Планшет',820,1024],['tablet-wide','Планшет ↔',1024,768],
  ['desktop','ПК',1440,900]
@@ -35,9 +36,11 @@ export function createBazaarDebug(){
   if(section==='effects')return '<p class="dev-hint">Запускай звуки и визуальные эффекты вручную. Переключатель не меняет живую партию.</p>'+
    controls(DEBUG_FX.map(([id,label])=>option(label,'data-debug-effect="'+id+'"')))+
    option(audio.isEnabled()?'Звук включён':'Звук выключен','data-debug-mute="1"');
+  const failures=results.filter(r=>r.issues?.length),count=results.reduce((n,r)=>n+(r.issues?.length||0),0);
   return '<p class="dev-hint">Проверка переполнения, размеров кнопок и доступности элементов на разных экранах.</p>'+
-   controls([option('Проверить текущий','data-debug-audit="1"'),option('Проверить все 5 размеров','data-debug-audit-all="1"'),option('Полный аудит экранов','data-debug-audit-matrix="1"'),option('Скопировать отчёт','data-debug-copy-report="1"')])+
-   '<pre class="dev-report" data-debug-report role="status">'+encode(results.length?JSON.stringify(results,null,2):'Нажми «Проверить».')+'</pre>';
+   controls([option('Проверить текущий','data-debug-audit="1"'),option('Проверить все размеры','data-debug-audit-all="1"'),option('Полный аудит экранов','data-debug-audit-matrix="1"'),option('Скопировать отчёт','data-debug-copy-report="1"')])+
+   '<p class="dev-hint" role="status">Проверено: '+results.length+' · проблем: '+count+' · экранов с проблемами: '+failures.length+'</p>'+
+   '<pre class="dev-report" data-debug-report>'+encode(results.length?JSON.stringify(failures.length?failures:results,null,2):'Нажми «Проверить».')+'</pre>';
  }
  function markup(){
   return '<section class="bazaar-dev" role="dialog" aria-modal="true" aria-label="Мастерская Барахолки">'+
@@ -85,8 +88,9 @@ export function createBazaarDebug(){
   if(d.type==='scene-ready'&&auditQueue&&d.run===auditRun&&d.step===auditStep)send({type:'audit',run:auditRun,step:auditStep});
   if(d.type==='audit'){
    if(auditQueue&&(d.run!==auditRun||d.step!==auditStep))return;
+   if(!auditQueue&&d.run!=null)return;
    results.push({device:viewport[0],scene,...d.report});
-   refreshPanel();status((d.report.issues?.length||0)+' проблем · '+viewport[2]+' × '+viewport[3]);
+   if(section==='qa')refreshPanel();status((d.report.issues?.length||0)+' проблем · '+viewport[2]+' × '+viewport[3]);
    if(auditQueue)nextAudit();
   }
  }
