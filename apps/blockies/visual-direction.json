@@ -10,7 +10,8 @@
     "paletteLogic": "A neutral matte shell yields attention to player-owned cyan, pink, yellow and green cells; the hard-drop key is deep green.",
     "typography": "Humanist sans for mode choices, tightly-spaced monospace for score and technical status; labels stay concise.",
     "signature": "Four-cell by two-cell colored individual spawn gates extend directly above the shared well; every gate has the player name and own next-piece indicator. Input and gameplay remain one instrument.",
-    "distinction": "Distinct from ZAMAZKA's art paper and FOG's tactical maps: this is a fitted precision arcade well within a restrained editorial instrument, not a decorative game cabinet."
+    "distinction": "Distinct from ZAMAZKA's art paper and FOG's tactical maps: this is a fitted precision arcade well within a restrained editorial instrument, not a decorative game cabinet.",
+    "motion": " A bounded canvas overlay adds brief stamped block impact, row fracture and clear-combo rising score, independent of game logic and keyboard/touch flow; prefers-reduced-motion removes these effects. Procedural low-frequency impact and tonal crystalline clears replace shrill flat beeps, while the existing mute toggle remains functional."
   },
   "architecture": {
     "spatialLayout": "single-instrument",
