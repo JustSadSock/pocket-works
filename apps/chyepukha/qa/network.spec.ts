@@ -67,6 +67,8 @@ test('verified account can create a v3 room, play, submit a fragment and read fi
  await page.locator('[data-act=start]').click();
  await expect(page.locator('#answer')).toBeVisible();
  await page.locator('#answer').fill('Архіваріус знайшов чудернацьке дзеркало у старій башті');
+ await page.locator('[data-act=review-words]').count().then(async()=>{await page.locator('#answerForm button[type=submit]').click()});
+ await expect(page.locator('.writer-selection')).toBeVisible();
  await page.locator('.word').nth(0).click();
  await page.locator('.word').nth(2).click();
  await page.locator('.word').nth(4).click();
