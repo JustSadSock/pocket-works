@@ -78,9 +78,13 @@ const app = {
     roomCode: "",
     copyStatus: "",
     error: "",
+    submissionPending: false,
+    pendingCardId: null,
+    rematchPending: false,
     you: null,
     roomState: null,
     ready: { p1: false, p2: false },
+    players: [],
     lastLogs: []
   },
   audioCtx: null
@@ -356,7 +360,8 @@ function openForecast() {
  const state=currentState();
  if(!state||app.replayActive||app.film?.active||state.winner)return;
  if(app.screen==="online" && app.online.ready[getViewerPlayer()])return;
- if(app.local.waitingAi || app.local.passScreen)return;
+ if(app.screen==="game"&&(app.local.waitingAi||app.local.passScreen))return;
+ if(app.screen==="online"&&(app.online.submissionPending||app.online.players.length<2))return;
  const player=getViewerPlayer(),cardId=app.selectedCardId||null;
  app.forecast=createCounselVision(state,player,cardId,forecastTurn);
  app.forecastReview=false;
@@ -383,17 +388,21 @@ function closeVision(){
 
 function confirmSelection() {
   const state = currentState();
-  if (!state || !app.selectedCardId || app.film?.active) {
+  if (!state || !app.selectedCardId || app.film?.active || state.winner) {
     return;
   }
   app.forecast=null;app.forecastReview=false;
 
   if (app.screen === "online") {
     if (!app.online.socket || app.online.socket.readyState !== WebSocket.OPEN) {
-      return;
+      app.online.error="Нет связи: указ не отправлен.";render();return;
     }
-    app.online.socket.send(JSON.stringify({ type: "match:choose", cardId: app.selectedCardId }));
-    app.online.ready[app.online.you] = true;
+    if(app.online.submissionPending||app.online.ready[app.online.you])return;
+    if(app.online.players.length<2){app.online.error="Ожидаем второго претендента.";render();return;}
+    const cardId=app.selectedCardId;
+    try{app.online.socket.send(JSON.stringify({type:"match:choose",cardId}));}
+    catch(e){app.online.error="Не удалось отправить указ. Попробуйте снова.";render();return;}
+    app.online.pendingCardId=cardId;app.online.submissionPending=true;
     app.forecast=null;app.forecastReview=false;app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
     app.lawSheetMode=null;app.inspectedSlot=null;app.focusCardId=null;
     playTone("ready");
@@ -444,57 +453,113 @@ function confirmSelection() {
   }
 }
 
+function leaveOnlineRoom(){
+ const old=app.online.socket;app.online.socket=null;
+ if(old)old.close();
+ app.online.status="idle";app.online.roomCode="";app.online.roomState=null;
+ app.online.you=null;app.online.ready={p1:false,p2:false};app.online.players=[];app.online.lastLogs=[];
+ app.online.error="";app.online.copyStatus="";app.online.submissionPending=false;
+ app.online.pendingCardId=null;app.online.rematchPending=false;
+ app.selectedCardId=null;app.inspectedSlot=null;app.focusCardId=null;app.lawSheetMode=null;
+ app.forecast=null;app.forecastReview=false;app.replay=null;app.lastConflictSlots=[];
+}
+function resetOnlineRound(){
+ stopFilm({renderNow:false});app.victoryRecap=false;
+ app.selectedCardId=null;app.focusCardId=null;app.inspectedSlot=null;app.lawSheetMode=null;
+ app.forecast=null;app.forecastReview=false;app.replay=null;app.replayActive=false;
+ app.effects=[];app.lastConflictSlots=[];app.lastBoardPositions={};
+ app.online.lastLogs=[];app.online.submissionPending=false;app.online.pendingCardId=null;
+ app.online.rematchPending=false;
+}
+function requestOnlineRematch(){
+ if(app.screen!=="online"||app.online.you!=="p1"||!app.online.roomState?.winner||app.online.rematchPending)return;
+ if(app.online.socket?.readyState!==WebSocket.OPEN){
+  app.online.error="Нет связи. Переподключитесь перед реваншем.";render();return;
+ }
+ try{
+  app.online.socket.send(JSON.stringify({type:"match:restart"}));
+  app.online.rematchPending=true;app.online.error="";
+ }catch(e){app.online.error="Не удалось начать реванш.";app.online.rematchPending=false;}
+ render();
+}
 function setupSocket() {
   if (app.online.socket) {
-    app.online.socket.close();
+    const previous=app.online.socket;app.online.socket=null;previous.close();
   }
   const socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
   app.online.socket = socket;
   app.online.status = "connecting";
   socket.addEventListener("open", () => {
-    app.online.status = "connected";app.online.error="";
-    render();
+    if(app.online.socket!==socket)return;
+    app.online.status="connected";app.online.error="";render();
   });
   socket.addEventListener("close", () => {
     if(app.online.socket!==socket)return;
-    app.online.status = "closed";
+    app.online.status="closed";app.online.submissionPending=false;
+    if(app.online.pendingCardId){app.selectedCardId=app.online.pendingCardId;app.focusCardId=app.online.pendingCardId;
+      app.inspectedSlot=cardById(app.online.pendingCardId)?.slot||null;app.lawSheetMode="compare";}
     render();
   });
+  socket.addEventListener("error",()=>{
+   if(app.online.socket!==socket)return;
+   app.online.status="error";app.online.error="Не удалось подключиться к PocketNet.";render();
+  });
   socket.addEventListener("message", (event) => {
-    const payload = JSON.parse(event.data);
+    if(app.online.socket!==socket)return;
+    let payload;try{payload=JSON.parse(event.data);}catch{return;}
     if (payload.type === "room:created" || payload.type === "room:joined") {
       app.screen = "online";
       app.online.roomCode = payload.code;
-      app.online.you = payload.you;
-      playTone("ready");
+      app.online.you=payload.you;app.online.error="";playTone("ready");
     }
     if (payload.type === "room:update") {
-      const previousRoomState = app.online.roomState;
-      const prevTurn = previousRoomState?.turn;
-      if(app.forecast&&payload.room.state?.turn!==app.forecast.turn){app.forecast=null;app.forecastReview=false;}
-      if(app.online.roomCode!==payload.room.code)app.online.copyStatus="";
-      app.online.roomCode = payload.room.code;
-      app.online.error="";
-      app.online.you = payload.room.you;
-      app.online.ready = payload.room.ready;
-      app.online.roomState = payload.room.state;
-      if (app.online.roomState && prevTurn && app.online.roomState.turn !== prevTurn) {
-        const turnLogs=app.online.roomState.battleLog.slice(0,16);
-        const conflicts=app.online.roomState.turnSummaries[0]?.conflicts||[];
-        app.replay={before:structuredClone(previousRoomState),after:structuredClone(app.online.roomState),logs:turnLogs,conflicts};
-        app.online.lastLogs=turnLogs;app.lastConflictSlots=conflicts;
-        beginFilm({before:previousRoomState,after:app.online.roomState,logs:turnLogs,conflicts});
+      const incoming=payload.room;
+      if(!incoming||!incoming.ready||!incoming.you||app.screen!=="online")return;
+      const old=app.online.roomState,newState=incoming.state;
+      const oldTurn=old?.turn||0,newTurn=newState?.turn||0;
+      const rematch=Boolean(old&&newState&&newTurn===1&&(oldTurn>1||old.winner||app.online.rematchPending));
+      if(old&&newState&&newTurn<oldTurn&&!rematch)return;
+      const advance=Boolean(old&&newState&&newTurn>oldTurn);
+      if(rematch)resetOnlineRound();
+      else if(advance){
+        app.selectedCardId=null;app.focusCardId=null;app.inspectedSlot=null;
+        app.lawSheetMode=null;app.forecast=null;app.forecastReview=false;
+        app.online.pendingCardId=null;app.online.submissionPending=false;
+      }
+      if(app.online.roomCode!==incoming.code)app.online.copyStatus="";
+      app.online.roomCode=incoming.code||app.online.roomCode;
+      app.online.you=incoming.you;app.online.ready=incoming.ready;
+      app.online.players=Array.isArray(incoming.players)?incoming.players:[];
+      app.online.roomState=newState||null;app.online.error="";
+      if(incoming.ready[incoming.you]||advance||rematch){
+        app.online.submissionPending=false;app.online.pendingCardId=null;
+      }
+      if(advance&&!rematch){
+        const logs=(newState.battleLog||[]).slice(0,16);
+        const conflicts=newState.turnSummaries?.[0]?.conflicts||[];
+        app.replay={before:structuredClone(old),after:structuredClone(newState),logs,conflicts};
+        app.online.lastLogs=logs;app.lastConflictSlots=conflicts;
+        beginFilm({before:old,after:newState,logs,conflicts});
       }
       render();
     }
     if (payload.type === "room:error") {
       app.online.error=String(payload.message||"Ошибка соединения").slice(0,240);
-      render();
+      if(app.online.submissionPending){
+        app.online.submissionPending=false;
+        if(app.online.pendingCardId&&currentHand().includes(app.online.pendingCardId)){
+          app.selectedCardId=app.online.pendingCardId;app.focusCardId=app.online.pendingCardId;
+          app.inspectedSlot=cardById(app.online.pendingCardId).slot;app.lawSheetMode="compare";
+        }
+        app.online.pendingCardId=null;
+      }
+      app.online.rematchPending=false;render();
     }
   });
 }
 
 function createRoom() {
+  app.online.error="";
   if (!app.online.socket || app.online.socket.readyState !== WebSocket.OPEN) {
     setupSocket();
     app.online.socket?.addEventListener(
@@ -510,8 +575,9 @@ function createRoom() {
 }
 
 function joinRoom() {
-  if (!app.online.codeInput.trim()) {
-    return;
+  app.online.error="";
+  if (!/^[0-9a-f]{8}$/i.test(app.online.codeInput.trim())) {
+    app.online.error="Введите 8 символов кода: 0–9, A–F.";render();return;
   }
   if (!app.online.socket || app.online.socket.readyState !== WebSocket.OPEN) {
     setupSocket();
@@ -663,12 +729,12 @@ function visionBoardOverlayHTML() {
 
 function handHTML(state) {
   const viewer=getViewerPlayer();
-  const locked=Boolean(app.film?.active)||(app.screen==="online"&&app.online.ready[viewer])||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
+  const locked=Boolean(app.film?.active)||(app.screen==="online"&&(app.online.ready[viewer]||app.online.submissionPending||app.online.players.length<2||app.online.status!=="connected"))||(app.screen==="game"&&(app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen)));
   return `<section class="hand-panel ${locked?"hand-panel--locked":""}">
     <div class="panel-head"><h3>Ваши указы</h3><span>${app.selectedCardId?'Выбран: '+cardById(app.selectedCardId).name:`${viewer==="p1"?"Север":"Юг"} · ${currentHand().length} карт`}</span>${app.selectedCardId&&!app.lawSheetMode?'<button class="hand-panel__compare" type="button" data-action="law-compare" aria-label="Сравнить выбранный указ с действующим">Сравнить ↗</button>':""}</div>
     ${locked&&!app.film?.active?`<div class="sealed-notice sealed-notice--ceremony" role="status">
       <div class="sealed-notice__wax" aria-hidden="true"><span>✦</span></div>
-      <div class="sealed-notice__copy"><strong>Указ запечатан</strong><span>${app.screen==="online"?"Ждём второй печати":"Указ принят"}</span></div>
+      <div class="sealed-notice__copy"><strong>${app.screen==="online"&&app.online.submissionPending?"Отправляем указ":"Указ запечатан"}</strong><span>${app.screen==="online"?(app.online.submissionPending?"Ожидаем подтверждение сервера":"Ждём второй печати"):"Указ принят"}</span></div>
       ${app.screen==="online"?`<div class="sealed-notice__readiness" aria-label="Готовность игроков"><span class="${app.online.ready.p1?"is-ready":""}" title="Север">I</span><span class="${app.online.ready.p2?"is-ready":""}" title="Юг">II</span></div>`:`<span class="sealed-notice__pulse" aria-hidden="true"><i></i><i></i><i></i></span>`}
     </div>`:""}
     <div class="hand" role="group" aria-label="Выбор одного указа">${currentHand().map(cardId=>{
@@ -800,7 +866,7 @@ function victoryHTML(state) {
    <div class="ceremony__stats"><span><strong>${rounds}</strong> ${rounds===1?"ход":"ходов"}</span><span><strong>${p.activeCrowns}</strong> активных корон</span>${op.sealedCrowns||p.sealedCrowns?`<span><strong>${p.sealedCrowns+op.sealedCrowns}</strong> запечатано</span>`:""}</div>
    ${app.victoryRecap?`<section class="ceremony__chronicle" aria-label="Хроника последних событий"><h3>Последние события</h3><ol>${entries.map(e=>`<li>${escapeText(e.text)}</li>`).join("")||"<li>Событий пока нет.</li>"}</ol></section>`:""}
    <div class="victory__actions ceremony__actions">
-     <button data-native-press class="primary-btn" data-action="rematch">↻ Реванш</button>
+     ${app.screen==="online"&&app.online.you!=="p1"?`<button class="primary-btn" disabled title="Реванш запускает организатор">Ждём организатора</button>`:`<button data-native-press class="primary-btn" data-action="rematch" ${app.screen==="online"&&(app.online.rematchPending||app.online.status!=="connected")?"disabled":""}>${app.screen==="online"&&app.online.rematchPending?"Ожидание реванша…":"↻ Реванш"}</button>`}
      <button data-native-press class="ghost-btn" data-action="victory-chronicle" aria-pressed="${app.victoryRecap}">${app.victoryRecap?"Закрыть хронику":"Хроника хода"}</button>
      <button data-native-press class="text-btn" data-action="back-menu">В зал совета</button>
    </div>
@@ -880,7 +946,7 @@ function gameHTML(state, eyebrow) {
             </div>
           </div>
         </header>
-        ${app.screen==="online"&&app.online.error?`<p class="game-network-error" role="alert">${escapeText(app.online.error)}</p>`:""}${app.film?.active ? filmHTML() : forecastControlsHTML()}<main class="game-layout">
+        ${app.screen==="online"&&(app.online.error||app.online.status!=="connected"||app.online.players.length<2)?`<p class="game-network-error" role="alert">${escapeText(app.online.error||(app.online.status!=="connected"?"Связь потеряна. Переподключаемся…":"Второй претендент покинул совет. Ожидаем возвращения."))}</p>`:""}${app.film?.active ? filmHTML() : forecastControlsHTML()}<main class="game-layout">
           <div class="game-layout__main">${boardHTML(displayState)}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
           <aside class="game-layout__side">
             ${lawSlotsHTML(displayState)}
@@ -1353,6 +1419,9 @@ root.addEventListener("click", (event) => {
         app.online.error="";app.online.copyStatus="";
         app.screen = "online";
         app.online.roomState = null;
+        app.online.ready={p1:false,p2:false};app.online.players=[];app.online.submissionPending=false;
+        app.local.waitingAi=false;app.local.passScreen=false;
+        app.online.error="";app.online.rematchPending=false;
         render();
         break;
       case "create-room":
@@ -1422,6 +1491,7 @@ root.addEventListener("click", (event) => {
       case "back-menu":
         stopFilm({renderNow:false});app.victoryRecap=false;app.online.copyStatus="";app.online.error="";app.lawSheetMode=null;
         window.clearTimeout(app.replayTimer);app.replayActive=false;app.forecast=null;
+        if(app.screen==="online")leaveOnlineRoom();
         app.screen = "menu";
         app.local.state = null;
         render();
@@ -1432,8 +1502,8 @@ root.addEventListener("click", (event) => {
         break;
       case "rematch":
         stopFilm({renderNow:false});app.victoryRecap=false;
-        if (app.screen === "online" && app.online.socket) {
-          app.online.socket.send(JSON.stringify({ type: "match:restart" }));
+        if (app.screen === "online") {
+          requestOnlineRematch();
         } else {
           startLocalGame(app.local.mode, app.local.aiProfile);
         }
