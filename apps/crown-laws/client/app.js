@@ -1230,11 +1230,10 @@ root.addEventListener("click", (event) => {
     }
     render();return;
   }
+  // Modal card stops backdrop dismissal, but interactive descendants still work.
   const stop = event.target.closest("[data-stop-click]");
-  if (stop) {
-    return;
-  }
   const actionNode = event.target.closest("[data-action]");
+  if (stop && (!actionNode || !stop.contains(actionNode))) return;
   if (actionNode) {
     const action = actionNode.dataset.action;
     switch (action) {
