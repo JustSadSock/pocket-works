@@ -278,7 +278,12 @@ export class CoursePolishLayer {
     // Moss texture is now integrated into the terrain material.
     // Never outline a moss patch with a dashed circle.
 
-    for (const landmark of cache.landmarks) this.drawLandmark(ctx, landmark, motif, motifAccent, field, time);
+    // The nine themes now use substantial 3D garden objects mounted outside
+    // the rim. Keep procedural-only stencil icons where no matching geometry
+    // exists, rather than drawing a ghostly duplicate over every real object.
+    if (!level.visual?.motif) {
+      for (const landmark of cache.landmarks) this.drawLandmark(ctx, landmark, motif, motifAccent, field, time);
+    }
 
     for (const detail of cache.details) {
       if (ball && Math.hypot(detail.x - ball.x, detail.y - ball.y) < 58) continue;
