@@ -182,6 +182,32 @@ try{
    if(await frame.locator('.table-stage .artifact-note').count()===0)
     report.issues.push('sold item still displayed as active auction lot');
   }
+  if(scene==='lobby'&&['small','phone','desktop'].includes(id)){
+   const before=await frame.locator('.lobby-player').count();
+   const kick=frame.locator('button.lobby-kick').first();
+   if(before<2||await kick.count()!==1)report.issues.push('host moderation missing in lobby');
+   else{
+    await kick.click();
+    if(await frame.locator('.lobby-player').count()!==before-1)
+     report.issues.push('host kick did not remove lobby participant');
+   }
+  }
+  if(scene==='four'&&['small','phone','desktop'].includes(id)){
+   const seat=frame.locator('button.seat[data-action="player-actions"]:not([disabled])').first();
+   if(await seat.count()!==1)report.issues.push('host cannot select a participant');
+   else{
+    const target=await seat.getAttribute('data-player');
+    await seat.click();
+    const kick=frame.locator('.player-popover button[data-action="kick-player"]');
+    if(await kick.count()!==1)report.issues.push('host moderation missing in participant menu');
+    else{
+     await kick.click();
+     const removed=frame.locator('button.seat[data-player="'+target+'"]');
+     if(await removed.count()!==1||!await removed.isDisabled())
+      report.issues.push('kicked player remains an active trading seat');
+    }
+   }
+  }
   const result={scene,device:id,requested:{width,height},...report};
   if(report.issues.length||scene==='four'&&['small','short','phone','landscape','tablet','desktop'].includes(id)){
    await frame.locator('body').screenshot({path:out+'/'+scene+'-'+id+'.png'});
