@@ -334,7 +334,7 @@ class SoundManager {
     setEnabled(enabled){
         this.enabled=Boolean(enabled);
         try{localStorage.setItem('pocket-works:blockies:sound-enabled',String(this.enabled));}catch{}
-        if(this.master)this.master.gain.value=this.enabled?.65:0;
+        if(this.master)this.master.gain.value=this.enabled ? .65 : 0;
     }
     toggle(){this.setEnabled(!this.enabled);return this.enabled;}
     voice({frequency,toFrequency=frequency,duration=.1,gain=.03,type='sine',delay=0,filter=0}){
