@@ -99,7 +99,7 @@ async function closeRoom(room) {
   log('room_closed', { roomId: room.id, gameId: room.gameId });
 }
 async function transition(room, action, player, payload = null) {
-  const result = await modules.call(room.handle, action, { state: room.state, player: { id: player.id, name: player.name }, payload, players: room.players });
+  const result = await modules.call(room.handle, action, { state: room.state, player: { id: player.id, name: player.name }, payload, online:payload?.online, players: room.players });
   const encoded = JSON.stringify(result.state);
   if (Buffer.byteLength(encoded) > 256 * 1024) throw new Error('room_state_too_large');
   if (!Array.isArray(result.events) || result.events.length > 32) throw new Error('invalid_module_events');
@@ -263,6 +263,7 @@ wss.on('connection', ws => {
           }
           roomId = room.id;
           sockets.get(player.id).roomId = room.id;
+          if(room.gameId==='black-bazaar')await transition(room,'presence',player,{online:true});
           send(ws, 'room_joined', { roomId: room.id, gameId: room.gameId, version: room.version, state: room.state, players: room.players });
           roomBroadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?[...sockets].filter(([,connection])=>connection.roomId===room.id).map(([id])=>id):undefined });
           await refreshZamazkaPresence(room);
@@ -296,7 +297,7 @@ wss.on('connection', ws => {
       const room = rooms.get(roomId);
       if (room?.players.some(p => p.id === player.id)){
         roomBroadcast(room, 'presence', { roomId, players: room.players, disconnected: player.id });
-        void enqueue(room,()=>refreshZamazkaPresence(room));
+        void enqueue(room,async()=>{if(room.gameId==='black-bazaar')await transition(room,'presence',player,{online:false});await refreshZamazkaPresence(room);});
       }
     }
   });
