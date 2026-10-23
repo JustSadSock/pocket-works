@@ -4,6 +4,8 @@ import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey,pocketAva
 import {storageForTab,prepareSession,markActive,releaseActive} from './tab-session.js';
 import {buildComicPrompt} from './comic-prompt.js';
 import {createSoundscape} from './audio.js';
+import {renderWriting} from './writing-view.js';
+import {handoffCount,handoffWords,hasMinimumDraft} from './writer-flow.js';
 import {readEditions,writeEditions,addFinishedEdition,removeEdition,storyText} from './story-library.js';
 import {installScreenInspector,PREVIEW_PARAM} from './screen-inspector.js';
 import {demoView} from './preview-data.js';
@@ -25,7 +27,7 @@ const GENDERS=[['male','Чоловік'],['female','Жінка'],['nonbinary','�
 let net=null,view=null,me='',room='',roomVersion='v4',connected=false,connecting=false,notice='';
 let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',modal='',effectsEnabled=read('sound','off')==='on',musicEnabled=read('music','off')==='on',effectsVolume=Number(read('effectsVolume','.45')),musicVolume=Number(read('musicVolume','.22'));
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
-let previewDraft='',previewEditions=[];let readerMode='full',comicSource=null;
+let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',comicSource=null;
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='';
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
@@ -47,7 +49,21 @@ const portrait=()=>pocketAvatarMarkup(pocketIdentity?.artwork||pocketIdentity?.a
 const draftKey=()=>KEY+'draft:'+sessionKey()+':'+room+':'+(view?.round??0)+':'+(view?.sheet?.id||'');
 const loadDraft=()=>{if(IS_PREVIEW)return previewDraft;try{return localStorage.getItem(draftKey())||''}catch{return ''}};
 const saveDraft=x=>{if(IS_PREVIEW){previewDraft=x;return}try{localStorage.setItem(draftKey(),x)}catch{}};
-const clearDraft=()=>{if(IS_PREVIEW){previewDraft='';return}try{localStorage.removeItem(draftKey())}catch{}};
+const writerMetaKey=()=>draftKey()+':editor';
+function readWriterMeta(){
+ if(IS_PREVIEW)return previewWriterMeta;
+ try{const v=JSON.parse(localStorage.getItem(writerMetaKey())||'null');
+  if(v&&typeof v==='object')return {step:v.step==='select'?'select':'draft',anchor:String(v.anchor||'').slice(0,72),gender:String(v.gender||'unspecified')};
+ }catch{}
+ return {step:'draft',anchor:'',gender:read('gender','unspecified')};
+}
+function saveWriterMeta(patch){
+ const value={...readWriterMeta(),...patch};
+ if(IS_PREVIEW){previewWriterMeta=value;return value}
+ try{localStorage.setItem(writerMetaKey(),JSON.stringify(value))}catch{}
+ return value;
+}
+const clearDraft=()=>{if(IS_PREVIEW){previewDraft='';previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};return}try{localStorage.removeItem(draftKey());localStorage.removeItem(writerMetaKey())}catch{}};
 function toast(x){toastEl.textContent=String(x);toastEl.classList.add('show');clearTimeout(toastEl.timer);toastEl.timer=setTimeout(()=>toastEl.classList.remove('show'),3200)}
 function tick(f=580){soundscape.fx(f>=750?'reveal':f>=680?'turn':f>=620?'word':f<500?'seal':'tap')}
 function netStatus(){
@@ -265,8 +281,7 @@ function turnProgress(){
  return '<div class="turn-progress" id="turnProgress" aria-label="Готові фрагменти: '+ready+' із '+total+'"><div class="turn-progress-count"><strong>'+ready+' / '+total+'</strong><span>готово</span></div><div class="turn-progress-authors">'+view.players.map(p=>'<span class="turn-progress-author '+(p.submitted?'is-ready':'')+'" title="'+escape(p.name)+' — '+(p.submitted?'готово':'пише')+'"><i aria-hidden="true">'+(p.submitted?'✓':'·')+'</i><span>'+escape(p.name)+'</span></span>').join('')+'</div></div>';
 }
 function lobby(){const host=view.host===me,s=view.settings;return '<div class="room"><section class="paper"><div class="eyebrow">ЗБІР АВТОРІВ</div><h2>Чекаємо на хаос</h2><div class="mini">Код кімнати</div><div class="code">'+room.slice(0,8).toUpperCase()+'</div><div class="button-row"><button class="button outline small" data-act="copy-code">Копіювати код</button><button class="button outline small" data-act="copy-link">Посилання друзям</button></div><div class="roster">'+roster()+'</div>'+(member()?'<button type="button" class="invite-people" data-act="invite-social" data-social-invite>Запросити друзів із Pocket ID <span>↗</span></button>':'')+'<p class="mini">'+view.players.length+'/'+s.maxPlayers+' учасників. '+(view.players.length===s.maxPlayers?'Усі місця заповнено.':'Почати можна від двох авторів.')+'</p>'+(host?'<button class="button" data-act="start" '+(view.players.length<2?'disabled':'')+'>Почати писати <span>→</span></button>':'<p class="mini">Ведучий почне, коли всі зберуться.</p>')+(view.message?'<p class="warning">'+escape(view.message)+'</p>':'')+'<button class="leave" data-act="leave">Залишити кімнату</button></section><aside class="room-aside"><div class="eyebrow">ПРАВИЛА РЕДАКЦІЇ</div><h3>Аркуші підуть по колу</h3><p class="lobby-hint">У кожному раунді ти пишеш свою частину. Наступний автор побачить лише кілька обраних тобою слів. У фіналі історії відкриються повністю.</p>'+(host?settingsForm(s):'<p class="mini">Жанр і питання визначає ведучий. Ніхто не бачить приховані фрагменти.</p>')+'</aside></div>'}
-function writing(){const s=view.sheet;if(!s)return '<section class="paper waiting"><h2>Очікуємо аркуш…</h2></section>';
- const hero=s.gender?GENDERS.find(([id])=>id===s.gender)?.[1]||'Неважливо':null;const finalRound=roomVersion==='v4'&&view.round===view.total-1;return '<div class="play"><section class="paper writing"><div class="progress"><span class="eyebrow">ІСТОРІЯ · АРКУШ</span><button type="button" class="leave mobile-leave" data-act="leave">Вийти</button><strong>'+String(view.round+1).padStart(2,'0')+' / '+view.total+'</strong></div>'+turnProgress()+'<div class="mini" style="margin-top:12px">'+escape(s.setLabel)+' · '+escape(s.genreLabel)+'</div><h2 class="question">'+escape(s.question?.prompt||'Продовж історію')+'</h2><div class="incoming"><b>'+ (s.tail?'ВІД ПОПЕРЕДНЬОГО АВТОРА':'ПОЧАТОК ІСТОРІЇ')+'</b><p>'+escape(s.tail||'Ти пишеш першим. Нехай буде дивно.')+'</p>'+(hero?'<span class="mini">Персонаж: '+escape(hero)+'</span>':'')+(s.heroAnchor?'<span class="story-anchor">Герой: '+escape(s.heroAnchor)+'</span>':'')+'</div><div class="question-contract"><p><b>НАПИШИ</b> '+escape(s.question?.guidance||'Додай одну нову подію.')+'</p><p class="contract-stop"><b>НЕ ЗАБІГАЙ УПЕРЕД</b> '+escape(s.question?.creativeFreedom||'Не описуй майбутніх подій.')+'</p>'+(GENRE_TONES[s.genreLabel]?'<p class="genre-contract"><b>ТОН ЖАНРУ</b> '+escape(GENRE_TONES[s.genreLabel])+'</p>':'')+'</div><form id="answerForm" class="writer">'+(roomVersion==='v4'&&view.round===0?'<label class="anchor-field"><span class="field-label">Ім’я або роль героя (видно іншим, необов’язково)</span><input id="heroAnchor" class="field" maxlength="72" placeholder="Наприклад: Василь, невдалий чарівник" autocomplete="off"></label><div class="genders" role="group" aria-label="Стать героя">'+GENDERS.map(([id,label])=>'<label><input name="gender" type="radio" value="'+id+'" '+(read('gender','unspecified')===id?'checked':'')+'>'+label+'</label>').join('')+'</div>':'')+'<textarea id="answer" class="answer" maxlength="800" name="answer" placeholder="Продовж історію..." aria-label="Твій фрагмент">'+escape(loadDraft())+'</textarea>'+(finalRound?'<p class="final-sheet-note">Останній фрагмент: слова вже не потрібно передавати.</p>':(s.nextQuestion?'<div class="next-question"><b>НАСТУПНИЙ АВТОР ВІДПОВІДАТИМЕ НА ПИТАННЯ</b><p>'+escape(s.nextQuestion)+'</p><small>Познач слова, що допоможуть йому продовжити історію.</small></div>':'')+'<div class="word-head"><span>ВИБЕРИ СЛОВА ДЛЯ НАСТУПНОГО</span><span id="wordCount"></span></div><div id="wordTray" class="word-tray"></div>')+'<div class="submit-row"><button class="button" type="submit">Запечатати аркуш <span>↗</span></button><span id="chars" class="mini"></span></div></form></section><aside class="side"><div class="stamp">СЕКРЕТНО</div><h3>Наступний автор побачить лише вибрані слова</h3><p class="mini">Передай рівно '+view.settings.visibleTailWords+' слів. Слова можна вибрати в будь-якій частині тексту.</p><div id="sideRoster">'+rosterCompact()+'</div><button class="leave" data-act="leave">Вийти з партії</button></aside></div>'}
+function writing(){return renderWriting({view,roomVersion,draft:loadDraft(),meta:readWriterMeta(),chosen:indices(),escape,rosterCompact,turnProgress,genres:GENRE_TONES,genders:GENDERS})}
 function waiting(){return '<section class="paper waiting"><div class="eyebrow">АРКУШ ПЕРЕДАНО</div><div class="wax" aria-hidden="true">✓</div><h2>Запечатано</h2><p class="lead">Твоя частина прихована. Чекаємо решту авторів.</p>'+turnProgress()+'<button class="leave" data-act="leave">Залишити партію</button></section>'}
 function results(){
  if(!view.stories?.length)return waiting();
@@ -288,7 +303,21 @@ function render(){netStatus();syncIdentityBar();$('sound').textContent='Ауді
  if(view?.phase==='writing'&&!view.waiting)refreshWords();
 }
 function indices(){const w=words($('answer')?.value||'');return (draftSelections[draftKey()]||[]).filter(i=>Number.isInteger(i)&&i>=0&&i<w.length)}
-function refreshWords(){const a=$('answer'),tray=$('wordTray');if(!a)return;if(!tray){if($('chars'))$('chars').textContent=a.value.length+'/800';return}const ws=words(a.value),need=roomVersion==='v4'&&view.round===view.total-1?0:Math.min(view.settings.visibleTailWords,ws.length);let ids=indices().slice(0,need);draftSelections[draftKey()]=ids;tray.innerHTML=ws.length?ws.map((w,i)=>'<button type="button" class="word '+(ids.includes(i)?'selected':'')+'" data-act="word" data-index="'+i+'" aria-pressed="'+ids.includes(i)+'">'+escape(w)+'</button>').join(''):'<span class="mini">Спершу напиши свій фрагмент.</span>';$('wordCount').textContent=ids.length+'/'+need;$('chars').textContent=a.value.length+'/800'}
+function refreshWords(){
+ const input=$('answer'),text=input?input.value:loadDraft(),counter=$('chars');
+ if(counter)counter.textContent=text.length+'/800';
+ const tray=$('wordTray');if(!tray)return;
+ const needed=handoffCount({roomVersion,round:view.round,total:view.total,visibleTailWords:view.settings.visibleTailWords,answer:text});
+ const chosen=indices().slice(0,needed);
+ draftSelections[draftKey()]=chosen;
+ tray.querySelectorAll('.word').forEach(button=>{
+  const selected=chosen.includes(Number(button.dataset.index));
+  button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));
+ });
+ if($('wordCount'))$('wordCount').textContent=chosen.length+' / '+needed;
+ const strip=$('selectedStrip');
+ if(strip)strip.innerHTML=chosen.length?handoffWords(text,chosen).map(w=>'<span class="handoff-chip">'+escape(w)+'</span>').join(''):'<span class="handoff-placeholder">Слів поки не вибрано</span>';
+}
 function leaveNow(){++connectionAttempt;clearRoomTimeout();releaseActive();const c=net;net=null;try{if(connected&&c?.roomId)c.leaveRoom()}catch{}try{if(c){c.roomId=null;c.persist();c.close()}}catch{}view=null;me='';room='';connected=false;connecting=false;modal='';storyId='';syncUrl();render()}
 scene.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
  if(f.id==='createForm'||f.id==='joinForm'){const d=new FormData(f);if(!member())name=String($('guestNick')?.value||d.get('name')||'').trim().slice(0,24);invitation=String(d.get('room')||'');connect(f.id==='createForm'?'create':'join',{maxPlayers:4,questionSet:'collapsingPlan',visibleTailWords:3,genre:'absurdComedy'});return}
