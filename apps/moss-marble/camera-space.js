@@ -1,3 +1,4 @@
+import { gardenSites } from './garden-identity.js';
 import { fitAreaInsets } from './field-guide.js';
 // A single projection contract shared by WebGL, Canvas, pointer input and the camera.
 // Rotating the *view* never changes a level, its seed or its physical colliders.
@@ -53,7 +54,15 @@ export function courseViewport(width, height, topHUDHeight = 0, bottomControlsHe
 }
 
 export function courseFit(level, width, height, rotation = 0, topHUDHeight = 0, bottomControlsHeight = 0) {
-  const bounds = projectedOutlineBounds(level?.outline, rotation);
+  // Overview must show the four physical 3D rim mounts as well as the course.
+  // These visual-only bounds never participate in collision/pointer physics.
+  const scenicPoints = [...(level?.outline || [])];
+  for (const site of gardenSites(level)) {
+    for (const offset of [[-30,-30],[30,-30],[30,30],[-30,30]]) {
+      scenicPoints.push({x:site.x+offset[0],y:site.y+offset[1]});
+    }
+  }
+  const bounds = projectedOutlineBounds(scenicPoints, rotation);
   const view = courseViewport(width, height, topHUDHeight, bottomControlsHeight);
   const scale = clamp(Math.min(view.width / bounds.width, view.height / (bounds.height * VERTICAL_COMPRESSION)), .025, 3);
   return { scale, bounds, view };

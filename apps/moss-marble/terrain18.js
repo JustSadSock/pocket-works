@@ -2,6 +2,7 @@ import { installTerrain17 } from './terrain17.js';
 import { terrainHeightAt } from './terrain.js';
 import { isCourse18 } from './course18.js';
 import { appendSoftShadow, appendLineShadow } from './light-space.js';
+import { appendGardenIdentity } from './garden-identity.js';
 
 const TAU = Math.PI * 2;
 const STRIDE = 11;
@@ -368,6 +369,9 @@ export function buildCourse18Geometry(level) {
     portal(opaque, shadows, level, tunnel.exit, seed + index * 53 + 19, palette);
   }
   details(opaque, level, seed, palette);
+  // Miniature ornaments are beyond the physical field rim, and never appear
+  // in the obstacle/collision arrays. Endless themes reuse the same nine forms.
+  appendGardenIdentity(opaque, level, (x,y)=>terrainHeightAt(level,x,y));
   return { opaque: opaque.array(), shadows: shadows.array(), transparent: transparent.array() };
 }
 
