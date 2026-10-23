@@ -80,15 +80,15 @@
     ]
   },
   "production": {
-    "renderer": "Original SVG sigils and CSS manuscript sheet with an independent pure read-only law projection. No new graphics dependencies, network protocol changes, or game engine edits.",
+    "renderer": "Original illustrated codex and court with native PocketNet lifecycle cues, no independent server or external code generator.",
     "focalAsset": "The invitation lobby uses two physically carved royal seats; the coronation foregrounds the winning actor and animated crown while losing players see the correct result."
   },
   "motion": {
     "character": "Two asymmetric occupancy silhouettes make a newly opened room and awaited opponent legible without reading paragraphs.",
     "action": "Selecting a private decree shows a paired current/new law codex without changing the shared state. Tapping any standing law inspects it independently and returns to the chosen decree without discarding selection.",
     "anticipation": "The targeted category receives a small brass heraldic arrow. The old public law remains readable instead of being visually overwritten by an uncommitted decree.",
-    "response": "A two-stage parchment inspector labels the currently active law and the proposed replacement. Preview, confirm and explicit unselect are real separate controls.",
-    "followThrough": "Closing the inspector retains the selection; sending the decree clears it only after a valid action. Opening a phase forecast hides the inspector without affecting board dimensions.",
+    "response": "Private decree seals have sending, accepted and failed states. Both clients receive the same authoritative server board and enter a new match together.",
+    "followThrough": "The host alone may restart the online match; the guest sees a waiting state until a new authoritative game arrives. Leaving intentionally retires the socket and pending local selection.",
     "interruption": "Any newer turn cancels the former timeline. Skip clears timer/effects and immediately displays the final authoritative result. Reduced-motion mode abbreviates every phase and suppresses moving VFX.",
     "reducedMotion": "Do not animate codex arrival for reduced-motion users; tapping and state changes remain immediate."
   },
