@@ -65,12 +65,7 @@ function wireSocket(socket){
     if(req.type==='game_message'&&room){
       const answer=module.onMessage({state:room.state,player:me,payload:req.payload});
       room.state=answer.state;
-      // The network E2E uses a known two-jump benchmark for reproducibility;
-      // procedural courses are separately validated across seeds.
-      if((req.payload?.type==='start'||req.payload?.type==='restart')&&room.state.phase==='play'&&room.state.round<=2){
-        room.state.robot=testModule.createGame(testModule.LEVEL);
-        for(const event of answer.events||[])if(event.type==='state')event.payload.robot=room.state.robot;
-      }
+      // Six-player QA always uses the actual ability-gated generated course.
       broadcastEvents(answer.events);
     }
     if(req.type==='leave_room'&&room){
