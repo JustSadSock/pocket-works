@@ -46,7 +46,7 @@
       "medium": "Hand-authored full-figure SVG sprite atlas and relief/carved decorative SVG on a strictly flat board, physical paper and stone panels composed in CSS",
       "composition": "Six visibly differentiated pieces occupy the 5x7 court; five laws are bound in an ivory codex on desktop and arranged into seals on mobile; decree choice resembles an illustrated folded folio",
       "interaction": "Existing law inspection, conditional forecast, choice confirmation and hot-seat remain; debug art gallery for asset acceptance",
-      "motion": "Light card and crown microfeedback only; detailed phase-based action choreography reserved for 0.6",
+      "motion": "Short phase-by-phase choreography from deterministic snapshots, immediate cancellation with an explicit skip, and sync between physical hit effects and differentiated Web Audio notes.",
       "rationale": "Replace repetitive circular portrait tokens and generic cards with character silhouettes and one consistent material grammar."
     },
     {
@@ -68,7 +68,7 @@
   ],
   "selection": {
     "concept": "royal-codex-stage05",
-    "reason": "Hand-authored full-figure actors and a readable flat stone board give a distinctive royal manuscript setting without separating the player's hidden law choice from shared world consequences.",
+    "reason": "Preserve the original miniature manuscript visual design while making each independently resolved law cause and effect observable. The 0.6 phase playback reads game-engine snapshots without re-solving any hidden online decisions.",
     "rejected": [
       {
         "concept": "cathedral-relief",
@@ -218,11 +218,17 @@
     "risks": [
       "At 390 pixel widths the hand needs to remain accessible without the current law ledger hiding board controls.",
       "At tablet landscape sizes the side ledger and board must not obstruct the confirmation action.",
-      "The full Art Forge 2D PNG/index rebuild is pending. The build manifest must not be activated with missing files."
+      "The full Art Forge 2D PNG/index rebuild is pending. The build manifest must not be activated with missing files.",
+      "Ensure previous film timers cannot repaint or override newer online turns; a generation token invalidates stale callbacks.",
+      "Confirm WebKit audio is gesture-gated; unavailable audio devices must not interrupt the phase timeline."
     ],
     "comparisons": [
       "Capture initial menu and compare type/edges to former hero layout to verify absence of recovered assets.",
-      "Capture settled board and chosen decree and compare with prior sprite sheet render for readability and dimensional correctness."
+      "Capture settled board and chosen decree and compare with prior sprite sheet render for readability and dimensional correctness.",
+      {
+        "before": "Legacy instant jump from one board state to the final state after a complete turn.",
+        "after": "Successive snapshots from the actual game-engine phases show precisely which actor moved and when, with a control to skip."
+      }
     ]
   }
 }
