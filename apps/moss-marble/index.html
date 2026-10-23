@@ -15,12 +15,13 @@
   <link rel="stylesheet" href="../../shared/mobile-runtime.css">
   <link rel="stylesheet" href="../../shared/update-manager.css">
   <link rel="stylesheet" href="../../shared/workshop-mode.css">
-  <link rel="stylesheet" href="./styles.css?v=1.20.0">
+  <link rel="stylesheet" href="./styles.css?v=1.21.0">
   <link rel="stylesheet" href="./styles14.css?v=1.4.0">
   <link rel="stylesheet" href="./styles15.css?v=1.5.0">
   <link rel="stylesheet" href="./styles16.css?v=1.6.0">
   <link rel="stylesheet" href="./styles161.css?v=1.14.0">
-  <link rel="stylesheet" href="./styles115.css?v=1.20.0">
+  <link rel="stylesheet" href="./styles115.css?v=1.21.0">
+  <link rel="stylesheet" href="./styles121.css?v=1.21.0">
 </head>
 <body data-fullscreen-app>
   <main class="app-shell" id="app" data-app-shell>
@@ -29,27 +30,33 @@
     <header class="scorebar" data-ui aria-live="polite">
       <button class="text-control" type="button" id="pauseBtn" data-native-press aria-label="Открыть паузу">Пауза</button>
       <div class="score-cluster">
-        <div><span id="holeLabel">Лунка</span><strong id="holeNumber">1 / 9</strong></div>
+        <div class="score-primary"><span id="holeLabel">Лунка</span><strong id="holeNumber">1 / 9</strong></div>
         <i></i>
-        <div><span>Удары</span><strong id="strokeCount">0</strong></div>
+        <div class="score-primary"><span>Удары</span><strong id="strokeCount">0</strong></div>
         <i></i>
         <div><span>Пар</span><strong id="parCount">6</strong></div>
       </div>
+      <div class="course-engraving" id="courseName" aria-live="off">Длинная капля</div>
     </header>
 
     <button class="overview-control" type="button" id="overviewBtn" data-ui data-native-press aria-pressed="false" aria-label="Показать всю территорию">
       <i aria-hidden="true"></i><span>Обзор</span>
     </button>
 
-    <div class="aim-hint" id="aimHint" data-ui>Потяни назад · отпусти</div>
-    <div class="power-gauge" id="powerGauge" data-ui role="meter" aria-label="Сила удара" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-hidden="true"><span><i></i></span><b>Сила</b></div>
+    <div class="route-pocket" id="routePocket" data-ui aria-label="Положение на маршруте">
+      <div class="route-pocket-head"><span id="routeLabel">До лунки</span><strong id="routePercent">0%</strong></div>
+      <div class="route-pocket-track" role="progressbar" id="routeMeter" aria-label="Пройденная доля пути" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="routeFill"></i><b aria-hidden="true"></b></div>
+    </div>
+    <div class="aim-hint" id="aimHint" data-ui>Потяни мяч назад · отпусти</div>
+    <div class="power-gauge" id="powerGauge" data-ui role="meter" aria-label="Сила удара" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-hidden="true"><span><i></i></span><div class="power-caption"><b id="powerValue">0%</b><small id="powerDescriptor">Потяни дальше</small></div></div>
     <div class="surface-note" id="surfaceNote" data-ui role="status" aria-live="polite"></div>
 
     <section class="screen menu-screen is-visible" id="menuScreen" data-ui aria-labelledby="title">
       <div class="menu-wash"></div>
       <div class="menu-copy">
+        <div class="menu-issue">Мини-гольф в оранжерее <span aria-hidden="true">·</span> 9 лунок</div>
         <h1 id="title"><span>Moss</span><small>&amp;</small><span>Marble</span></h1>
-        <p class="lead">Девять лунок в старой оранжерее. Каждый удар решают рельеф, инерция и точность.</p>
+        <p class="lead">Мраморный шар, живой рельеф и девять настоящих маршрутов. Оттягивай, отпускай, находи путь к лунке.</p>
       </div>
       <div class="menu-actions">
         <button class="primary-action" type="button" id="continueBtn" data-native-press>
@@ -154,8 +161,8 @@
     <div class="toast" id="toast" data-ui role="status"></div>
   </main>
 
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Moss & Marble" data-app-version="1.20.0"></script>
-  <script type="module" src="./camera-intro-guard.js?v=1.20.0"></script>
-  <script type="module" src="./app.js?v=1.20.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Moss & Marble" data-app-version="1.21.0"></script>
+  <script type="module" src="./camera-intro-guard.js?v=1.21.0"></script>
+  <script type="module" src="./app.js?v=1.21.0"></script>
 </body>
 </html>

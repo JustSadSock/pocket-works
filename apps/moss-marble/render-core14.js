@@ -1125,20 +1125,45 @@ class WebGLDiorama {
 
     if (aim.active && !ball.sunk) {
       const center = this.ballScreenPoint(ball);
-      const worldLength = 95 + aim.power * 250;
-      const speed = Math.hypot(aim.vx, aim.vy) || 1;
-      const end = this.worldToScreen(ball.x + aim.vx / speed * worldLength, ball.y + aim.vy / speed * worldLength, this.surfaceHeight(level, ball) + 2);
+      const ground = this.surfaceHeight(level, ball);
+      const speed = Math.hypot(aim.vx, aim.vy);
+      const strength = clamp(aim.power || 0, 0, 1);
+      const length = 108 + strength * 170;
+      const direction = speed > 1 ? { x: aim.vx / speed, y: aim.vy / speed } : { x: 1, y: 0 };
+      const end = this.worldToScreen(ball.x + direction.x * length, ball.y + direction.y * length, ground + 4);
+      const start = this.worldToScreen(ball.x + direction.x * 29, ball.y + direction.y * 29, ground + BALL_RADIUS);
+      const angle = Math.atan2(end.y - center.y, end.x - center.x);
+      const radius = Math.max(23, BALL_RADIUS * this.scale + 13);
       ctx.save();
-      ctx.strokeStyle = 'rgba(244,238,205,.78)';
-      ctx.lineWidth = 1.25;
-      ctx.setLineDash([2, 8]);
-      ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(end.x, end.y); ctx.stroke();
-      ctx.setLineDash([]);
-      const dots = 5;
-      for (let index = 1; index <= dots; index += 1) {
-        const t = index / dots;
-        ctx.fillStyle = `rgba(244,238,205,${.34 + t * .5})`;
-        ctx.beginPath(); ctx.arc(lerp(center.x, end.x, t), lerp(center.y, end.y, t), 1.5 + t * 1.7, 0, TAU); ctx.fill();
+      ctx.lineCap = 'round';
+      // This dial is a strength indicator, not a simulated or predicted path.
+      ctx.strokeStyle = 'rgba(13,37,24,.78)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();ctx.arc(center.x, center.y, radius, -Math.PI * .70, Math.PI * .70);ctx.stroke();
+      ctx.strokeStyle = 'rgba(234,224,185,.40)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();ctx.arc(center.x, center.y, radius, -Math.PI * .70, Math.PI * .70);ctx.stroke();
+      ctx.strokeStyle = strength > .84 ? '#df9a70' : strength > .57 ? '#e9c77e' : '#bdd8a5';
+      ctx.lineWidth = 3.6;
+      ctx.beginPath();ctx.arc(center.x, center.y, radius, -Math.PI * .70, -Math.PI * .70 + Math.PI * 1.4 * strength);ctx.stroke();
+      if (speed > 1) {
+        ctx.strokeStyle = 'rgba(6,25,14,.65)';
+        ctx.lineWidth = 6.5;
+        ctx.beginPath();ctx.moveTo(start.x, start.y);ctx.lineTo(end.x, end.y);ctx.stroke();
+        ctx.strokeStyle = 'rgba(248,231,180,.92)';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();ctx.moveTo(start.x, start.y);ctx.lineTo(end.x, end.y);ctx.stroke();
+        const markers = 3;
+        for (let i = 0; i < markers; i++) {
+          const t = (i + 1) / (markers + 1);
+          const px = start.x + (end.x - start.x) * t;
+          const py = start.y + (end.y - start.y) * t;
+          ctx.fillStyle = i === markers - 1 ? '#fff3cf' : 'rgba(239,228,184,.76)';
+          ctx.beginPath();ctx.arc(px, py, 1.8 + t * 1.5, 0, TAU);ctx.fill();
+        }
+        ctx.translate(end.x,end.y);ctx.rotate(angle);
+        ctx.fillStyle = '#f4e4ba';
+        ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-4,-4);ctx.lineTo(-1,0);ctx.lineTo(-4,4);ctx.closePath();ctx.fill();
       }
       ctx.restore();
     }
