@@ -51,7 +51,7 @@ function resolveQuestions(settings,id,genre) {
  const tone=GENRE_TONE[genre]||'Додай одну оригінальну, виразну деталь.';
  return questions.map((q,index)=>{
   const next=questions[index+1];
-  const boundary=next?'Наступний автор окремо відповість на «'+next.prompt+'». Не визначай це замість нього.':'Це фінал: закінчи історію, не відкривай нову сюжетну лінію.';
+  const boundary=next?(settings.showNextQuestion===false?'Не вирішуй за наступного автора подальші події, відкриття або наслідки.':'Наступний автор окремо відповість на «'+next.prompt+'». Не визначай це замість нього.'):'Це фінал: закінчи історію, не відкривай нову сюжетну лінію.';
   return {...q,guidance:q.guidance+' '+tone,creativeFreedom:q.creativeFreedom+' '+boundary};
  });
 }
