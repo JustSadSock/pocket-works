@@ -67,9 +67,9 @@ test("WebKit gets explicit pixel positioning based on the measured board rect",(
 
 test("release includes the CSS fix in the service-worker precache",()=>{
  const config=JSON.parse(read("app.config.json"));
- assert.equal(config.version,"0.9.0");
+ assert.equal(config.version,"1.0.0");
  assert.ok(read("styles.css").includes("@import './client/stage10-mobile-qa.css';"));
  assert.ok(read("sw.js").includes("./client/stage10-mobile-qa.css"));
- assert.ok(read("index.html").includes('data-app-version="0.9.0"'));
+ assert.ok(read("index.html").includes('data-app-version="1.0.0"'));
  assert.ok(read("sw.js").includes("crown-laws-v"+config.version));
 });
