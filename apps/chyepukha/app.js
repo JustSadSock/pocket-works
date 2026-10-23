@@ -472,6 +472,7 @@ window.addEventListener('pageshow',event=>{if(!IS_PREVIEW&&event.persisted){void
 window.addEventListener('focus',()=>{if(!IS_PREVIEW&&identityReady)void refreshPocketBadge()});
 $('profileBtn')?.addEventListener('click',openPocketProfile);
 if(IS_PREVIEW){
+ if(PREVIEW_ID.startsWith('moderation-'))roomVersion='v6';
  const d=demoView(PREVIEW_ID);
  view=d.view;me=d.me;room=d.room;connected=d.connected;connecting=d.connecting;
  notice=d.notice;invitation=d.invitation;storyId=d.storyId;modal=d.modal;previewDraft=d.answer;
