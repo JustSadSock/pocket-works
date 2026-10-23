@@ -47,4 +47,11 @@ for(const item of datasets){
  assert.equal(paintingChecksum(stored),paintingChecksum(item.strokes),'all geometry preserved');
 }
 assert.equal(state.incompleteSubmissions?.length||0,0);
-console.log('ZAMAZKA: eight interleaved 380-stroke final uploads committed intact');
+// A normal deadline poll must never rebroadcast eight complete drawings.
+const quiet=send(players[0],{type:'pulse'});
+assert.equal(quiet.events.length,0,'unchanged deadline poll creates no large state broadcast');
+clock=state.deadline+1;
+const transitioned=send(players[0],{type:'pulse'});
+assert.equal(state.phase,'verdict','deadline must still advance authoritatively');
+assert.equal(transitioned.events.length,8,'real phase transition reaches each player');
+console.log('ZAMAZKA: eight complete interleaved uploads and no-op timer polls OK');
