@@ -3,11 +3,21 @@
 // The server publishes only the complete, validated last part.
 export const PAINT_PACKET_BUDGET=11*1024;
 let nextRevision=0;
+// Deterministic integrity marker over the exact vector format accepted by the server.
+// Exclude local gesture metadata and match server coordinate quantization.
+export function paintingChecksum(strokes){
+ const canonical=strokes.map(s=>({c:s.c,s:s.s,t:s.t,p:s.p.map(p=>[Math.round(p[0]*10)/10,Math.round(p[1]*10)/10])}));
+ const data=JSON.stringify(canonical);
+ let hash=2166136261;
+ for(let i=0;i<data.length;i++){hash^=data.charCodeAt(i);hash=Math.imul(hash,16777619)>>>0}
+ return hash.toString(16).padStart(8,'0');
+}
+
 export function paintPackets({type,round,art,variation,strokes,revision}){
  if(!['draft_chunk','submit_chunk'].includes(type)||!Array.isArray(strokes)||strokes.length>768)
   throw new Error('invalid_painting');
  const id=revision||'r'+Date.now().toString(36)+'-'+(++nextRevision).toString(36);
- const chunks=[],envelope={type,round,art,variation,revision:id};
+ const chunks=[],envelope={type,round,art,variation,revision:id,checksum:paintingChecksum(strokes)};
  let part=[];
  for(const stroke of strokes){
   if(part.length>=8||JSON.stringify({...envelope,index:0,parts:160,strokes:[...part,stroke]}).length>PAINT_PACKET_BUDGET){
