@@ -94,28 +94,68 @@ export function generateCourse(seed=1,sectionCount=5,playerCount=2) {
   const theme=COURSE_THEMES[Math.floor(random()*COURSE_THEMES.length)];
   const sections=[],platforms=[],devices=[];
   floor(platforms,0,3.1);
-  let previous=null;
+  // Every additional crew member receives one purpose-built station.
+  // In the six-operator game the four specialist modules occupy four of the
+  // five sections. No one is assigned an unused button for an entire match.
+  const abilities=['jump','reverse','magnet','brake','push','float'].slice(0,clamp(Math.floor(playerCount)||2,2,6));
+  const special=MODULES.filter(m=>m.required&&abilities.includes(m.required));
+  const jumpHeavy=new Set(['gap','double-gap','step','islands','mag-rail','float-gap']);
+  const optional=MODULES.filter(m=>!m.required);
+  const required= special.map(m=>m.kind);
+  let majorCount=required.filter(kind=>jumpHeavy.has(kind)).length;
+  while(required.length<count){
+    const choices=optional.filter(m=>!required.includes(m.kind) &&
+      (!jumpHeavy.has(m.kind)||majorCount<Math.ceil(count/2)));
+    const candidate=choices[Math.floor(random()*choices.length)];
+    required.push(candidate.kind);
+    if(jumpHeavy.has(candidate.kind))majorCount++;
+  }
+  const invalidFirst=new Set(['press','gate','timing-press','cargo-switch']);
+  const validSequence=kinds=>kinds.every((kind,i)=>(
+    (i>0||!invalidFirst.has(kind)) &&
+    (i===0||kind!==kinds[i-1]) &&
+    (i===0||!jumpHeavy.has(kind)||!jumpHeavy.has(kinds[i-1]))));
+  const shuffle=items=>{
+    const copy=[...items];
+    for(let i=copy.length-1;i>0;i--){
+      const j=Math.floor(random()*(i+1));
+      [copy[i],copy[j]]=[copy[j],copy[i]];
+    }
+    return copy;
+  };
+  let schedule=null;
+  for(let i=0;i<60;i++){
+    const candidate=shuffle(required);
+    if(validSequence(candidate)){schedule=candidate;break;}
+  }
+  // Rejection cannot deadlock generation. A stable fallback searches only the
+  // 4–6 chosen module types and never invents unsupported abilities.
+  if(!schedule){
+    const arrange=(prefix,remaining)=>{
+      if(!remaining.length)return prefix;
+      for(const kind of remaining){
+        const seq=[...prefix,kind];
+        if(!validSequence(seq))continue;
+        const found=arrange(seq,remaining.filter(v=>v!==kind));
+        if(found)return found;
+      }
+      return null;
+    };
+    schedule=arrange([],required);
+  }
+  if(!schedule)throw Error('Unable to schedule safe course sections');
   for(let i=0;i<count;i++){
-    let choices=MODULES.filter(m=>m.kind!==previous &&
-      (!m.required || ['jump','reverse','magnet','brake','push','float'].slice(0,playerCount).includes(m.required)) &&
-      (i>0||!['press','gate','timing-press','cargo-switch'].includes(m.kind)));
-    // Guaranteed two-action reachable courses: major vertical jumps are not
-    // adjacent, so a player always gets at least one safe landing run-up.
-    if(['gap','double-gap','step','islands','mag-rail','float-gap'].includes(previous))
-      choices=choices.filter(m=>!['gap','double-gap','step','islands','mag-rail','float-gap'].includes(m.kind));
-    if(!choices.length)choices=MODULES;
-    const selected=choices[Math.floor(random()*choices.length)];
+    const chosen=MODULES.find(m=>m.kind===schedule[i]);
     const x=round(3.1+i*SECTION_W);
-    sections.push({kind:selected.kind,name:selected.name,x,w:SECTION_W,index:i+1});
-    section(selected.kind,x,platforms,devices,random);
-    previous=selected.kind;
+    sections.push({kind:chosen.kind,name:chosen.name,x,w:SECTION_W,index:i+1});
+    section(chosen.kind,x,platforms,devices,random);
   }
   const end=round(3.1+count*SECTION_W);
   floor(platforms,end,3.1);
   const width=round(end+3.1);
   const pointIndex=Math.floor((count-1)/2);
   const checkpoint=round(3.1+(pointIndex+1)*SECTION_W+.25);
-  return {seed:number,version:2,playerCount,name:theme.name,theme:theme.id,sections,platforms,devices,
+  return {seed:number,version:3,playerCount,name:theme.name,theme:theme.id,sections,platforms,devices,
     width,height:8,start:1.15,goal:round(width-1.45),
     checkpoint,checkpointSpawn:{x:checkpoint,y:6.04},length:count};
 }
