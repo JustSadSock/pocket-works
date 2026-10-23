@@ -10,10 +10,13 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const mag=(x,y)=>Math.hypot(x,y)||1;
 export function random(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296}
 export function has(a,k){return a.runes.includes(k)}
-export function stats(a){const m=mage(a.mageId);return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power,reload:.56*m.reload,shield:34*m.shield}}
-function actor(id,x,y,runes,mageId='kindle'){return {evolution:null,fusions:[],id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0,burn:0,burnTick:0,burnSource:null,windup:null,flameCharge:0,respawn:0}}
-function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId);o.hp=stats(o).max;o.evolution=a.evolution?{...a.evolution}:null;o.fusions=[...(a.fusions||[])];return o}
-export function makeMatch(seed=0x718abc,first='kindle',second='pebble',gameMode='duel'){const kind=gameMode==='rupture'?'rupture':'duel';const s={version:4,gameMode:kind,seed:seed>>>0||1,phase:'fight',round:1,remaining:kind==='rupture'?RUPTURE_SECONDS:ROUND_SECONDS,elapsed:0,nextEvolution:RUPTURE_SECONDS-EVOLUTION_SECONDS,coreHold:[0,0],overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first),actor(1,336,134,['on_hurt','armor'],second)],shots:[],streams:[],beams:[],waves:[],lobs:[],echoes:[],mines:[],barriers:[],fields:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
+export const ARCHETYPES=Object.freeze([{id:'striker',name:'Стрелок',desc:'Чаще атакует. Увеличены урон и скорость снарядов.'},{id:'shaper',name:'Формирователь',desc:'Крепче щиты и больше длительность, радиус полей, мин и стен.'},{id:'distorter',name:'Искажатель',desc:'Попадания замедляют и перегревают врага.'}]);
+export function validArchetype(id){return ARCHETYPES.some(a=>a.id===id)}
+
+export function stats(a){const m=mage(a.mageId),role=a.archetype||'striker';return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power*(role==='striker'?1.13:1),reload:.56*m.reload*(role==='striker'?.88:1),shield:34*m.shield*(role==='shaper'?1.27:1)}}
+function actor(id,x,y,runes,mageId='kindle',archetype='striker'){return {archetype:validArchetype(archetype)?archetype:'striker',evolution:null,fusions:[],id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0,burn:0,burnTick:0,burnSource:null,windup:null,flameCharge:0,respawn:0}}
+function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId,a.archetype||'striker');o.hp=stats(o).max;o.evolution=a.evolution?{...a.evolution}:null;o.fusions=[...(a.fusions||[])];return o}
+export function makeMatch(seed=0x718abc,first='kindle',second='pebble',gameMode='duel',firstArchetype='striker',secondArchetype='striker'){const kind=['rupture','duel','forge'].includes(gameMode)?gameMode:'duel';const s={version:4,gameMode:kind,seed:seed>>>0||1,phase:'fight',round:1,remaining:kind==='rupture'?RUPTURE_SECONDS:kind==='forge'?0:ROUND_SECONDS,forgeDummy:true,elapsed:0,nextEvolution:RUPTURE_SECONDS-EVOLUTION_SECONDS,coreHold:[0,0],overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first,firstArchetype),actor(1,336,134,['on_hurt','armor'],second,secondArchetype)],shots:[],streams:[],beams:[],waves:[],lobs:[],echoes:[],mines:[],barriers:[],fields:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
 export const EVOLUTIONS=Object.freeze([{id:'beam',name:'Разящий луч',desc:'Атака выпускает толстый пробивной луч. Уровень усиливает урон и ширину.'},{id:'swarm',name:'Искровой рой',desc:'Атака выпускает веер дополнительных зарядов. Уровень увеличивает их число.'},{id:'field',name:'Грозовое поле',desc:'Атака оставляет опасную зону. Уровень увеличивает её размер и длительность.'}]);
 export const FUSIONS=Object.freeze([{id:'ember_nova',name:'Огненное сердце',mod:'as_fire',desc:'Огненный рунический снаряд взрывается и поджигает.'},{id:'storm_lattice',name:'Грозовая решётка',mod:'as_storm',desc:'Заряженный рунический снаряд выпускает дуги при попадании.'},{id:'stone_crush',name:'Каменный захват',mod:'as_stone',desc:'Каменные снаряды ломают щит и замедляют.'}]);
 export function availableFusions(a){return FUSIONS.filter(f=>!(a.fusions||[]).includes(f.id)&&compile(a.runes).some(c=>c.actions.some(x=>['ball','blast','mine'].includes(x.id)&&x.mods.includes(f.mod))))}
@@ -52,7 +55,7 @@ export function reorderRunes(s,from,to){
 }
 export function beginRound(s){if(s.phase!=='build')return false;startRound(s);return true}
 export function startRound(s){
- if(s.gameMode==='rupture'){
+ if(s.gameMode==='rupture'||s.gameMode==='forge'){
   s.phase='fight';s.shots=[];s.streams=[];s.beams=[];s.waves=[];s.lobs=[];s.echoes=[];s.mines=[];s.barriers=[];s.fields=[];s.eventQueue=[];s.pick=[];s.fx=[];s.coreHold=[0,0];
   for(const a of s.actors){a.heat=0;a.overloadCd=0;a.runeTimers={};a.cast=0;a.windup=null;}
   return;
@@ -63,15 +66,15 @@ export function startRound(s){
 export function retryMatch(s){return makeMatch((s.seed+0x9e3779b9)>>>0)}
 export function distWall(x,y,r=0){return WALLS.some(w=>x+r>w.x&&x-r<w.x+w.w&&y+r>w.y&&y-r<w.y+w.h)}
 export function canStand(x,y,r=12){return x>=r+13&&x<=W-r-13&&y>=r+16&&y<=H-r-16&&!distWall(x,y,r)}
-export function collapseActive(s){return s.gameMode==='rupture'?s.remaining<COLLAPSE_SECONDS:s.remaining<10}
-export function ringRadius(s){return s.gameMode==='rupture'?(s.remaining>=COLLAPSE_SECONDS?230:Math.max(78,78+152*s.remaining/COLLAPSE_SECONDS)):(s.remaining>=10?230:Math.max(80,80+15*s.remaining))}
+export function collapseActive(s){return s.gameMode==='forge'?false:s.gameMode==='rupture'?s.remaining<COLLAPSE_SECONDS:s.remaining<10}
+export function ringRadius(s){return s.gameMode==='forge'?230:s.gameMode==='rupture'?(s.remaining>=COLLAPSE_SECONDS?230:Math.max(78,78+152*s.remaining/COLLAPSE_SECONDS)):(s.remaining>=10?230:Math.max(80,80+15*s.remaining))}
 let safeWorld=null;const blocking=(s,x,y,r=12)=>!!s?.barriers?.some(b=>Math.hypot(x-b.x,y-b.y)<r+b.r);function move(a,x,y,r=12){const nx=clamp(a.x+x,r+13,W-r-13),ny=clamp(a.y+y,r+16,H-r-16);if(canStand(nx,a.y,r)&&!blocking(safeWorld,nx,a.y,r))a.x=nx;if(canStand(a.x,ny,r)&&!blocking(safeWorld,a.x,ny,r))a.y=ny}
 function fx(s,k,x,y,t=0){if(s.fx.length>60)s.fx.shift();s.fx.push({k,x,y,t,id:++s.serial})}
 function harm(s,a,amount,from,depth=0){
  if(a.invuln>0||a.hp<=0||!Number.isFinite(amount))return 0;
- const blocked=Math.min(a.shield,Math.max(0,amount)),before=a.shield;a.shield-=blocked;
- const d=Math.max(0,Math.min(80,amount-blocked));a.hp=Math.max(0,a.hp-d);a.flash=.15;
- if(d>0){if(from!=null&&from!==a.id)s.actors[from].hit+=d;emit(s,'on_hurt',a.id,{from},depth)}
+ const attacker=from==null?null:s.actors[from],base=attacker?.archetype==='striker'?amount*1.06:amount;const blocked=Math.min(a.shield,Math.max(0,base)),before=a.shield;a.shield-=blocked;
+ const d=Math.max(0,Math.min(80,base-blocked));a.hp=Math.max(0,a.hp-d);a.flash=.15;
+ if(d>0){if(from!=null&&from!==a.id)s.actors[from].hit+=d;if(attacker?.archetype==='distorter'&&attacker.id!==a.id){a.slow=Math.max(a.slow,.48);a.heat=Math.min(HEAT_LIMIT,a.heat+3)}emit(s,'on_hurt',a.id,{from},depth)}
  if(blocked>0&&before>0&&a.shield===0)emit(s,'on_break',a.id,{from},depth);
  fx(s,'hit',a.x,a.y);return d;
 }
@@ -95,7 +98,7 @@ function markTarget(s,target,element,source,depth=0){
 function receiveHeal(s,a,amount,depth=0){const old=a.hp;a.hp=Math.min(stats(a).max,a.hp+amount);const delta=a.hp-old;if(delta>0){emit(s,'on_heal',a.id,{},depth);fx(s,'heal',a.x,a.y)}return delta}
 function spawnShot(s,a,dir,x=a.x,y=a.y,options={}){
  if(s.shots.length>=80)return false;
- const base=mage(a.mageId),style=options.clone?'echo':options.style||base.style,element=options.element||base.school;const v=(options.signature&&a.mageId==='kindle'?174:options.signature&&a.mageId==='wire'?480:style==='bolt'||style==='arc'?365:style==='rock'?198:style==='wave'?205:style==='flame'?260:252)*(options.fastshot?1.35:1),speed=Number.isFinite(v)?v:252;
+ const base=mage(a.mageId),style=options.clone?'echo':options.style||base.style,element=options.element||base.school;const v=(options.signature&&a.mageId==='kindle'?174:options.signature&&a.mageId==='wire'?480:style==='bolt'||style==='arc'?365:style==='rock'?198:style==='wave'?205:style==='flame'?260:252)*(options.fastshot?1.35:1)*(a.archetype==='striker'?1.14:1),speed=Number.isFinite(v)?v:252;
  s.shots.push({x,y,vx:Math.cos(dir)*speed,vy:Math.sin(dir)*speed,owner:a.id,
   style,element,accel:options.signature?(a.mageId==='kindle'?490:a.mageId==='wire'?-380:0):0,
   minSpeed:options.signature&&a.mageId==='kindle'?310:options.signature&&a.mageId==='wire'?300:0,
@@ -229,10 +232,10 @@ function rockFracture(s,q,x,y){
 
 
 function castEvolution(s,a){
- if(s.gameMode!=='rupture'||!a.evolution||a.hp<=0)return;
+ if(!['rupture','forge'].includes(s.gameMode)||!a.evolution||a.hp<=0)return;
  const {form,level}=a.evolution,element=mage(a.mageId).school,enemy=s.actors[1-a.id],angle=a.face;
  if(form==='beam'){
-  const length=beamLength(s,a.x,a.y,angle,175+level*45),width=5+level*5;
+  const length=beamLength(s,a.x,a.y,angle,175+level*45),width=(5+level*5)*(a.archetype==='shaper'?1.25:1);
   s.beams.push({owner:a.id,x:a.x,y:a.y,angle,length,width,life:.25,style:'evo-beam',element,level});
   const dx=enemy.x-a.x,dy=enemy.y-a.y,front=dx*Math.cos(angle)+dy*Math.sin(angle),side=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
   if(front>0&&front<length+12&&side<width+12){const hit=harm(s,enemy,3+level*2.4,a.id);if(hit>0){markTarget(s,enemy,element,a.id);enemy.slow=Math.max(enemy.slow,.15+level*.1);fx(s,'impact_arc',enemy.x,enemy.y)}}
@@ -241,7 +244,7 @@ function castEvolution(s,a){
   for(let i=0;i<count;i++)spawnShot(s,a,angle+(i-(count-1)/2)*(.17+level*.015),a.x,a.y,{style:'arc',element,damage:2+level*.55,life:.7+level*.1,depth:2,fusion:false,evo:true});
  }else if(form==='field'&&s.fields.length<8){
   const x=clamp(a.x+Math.cos(angle)*70,30,W-30),y=clamp(a.y+Math.sin(angle)*70,30,H-30);
-  s.fields.push({owner:a.id,x,y,r:27+level*16,life:2+level*.8,timer:0,element,level});fx(s,'overload',x,y);
+  s.fields.push({owner:a.id,x,y,r:(27+level*16)*(a.archetype==='shaper'?1.3:1),life:(2+level*.8)*(a.archetype==='shaper'?1.45:1),timer:0,element,level});fx(s,'overload',x,y);
  }
 }
 function fusionImpact(s,q,target){
@@ -294,7 +297,7 @@ function dash(s,a,dir){
 // The queue is cleared each update and every event owns a bounded ancestry depth.
 function emit(s,kind,owner,payload={},depth=0){
  if(depth>MAX_CHAIN_DEPTH||s.eventQueue.length>=MAX_QUEUE)return false;
- s.eventQueue.push({kind,owner,payload,depth});if(kind==='on_cast'&&depth===0&&s.gameMode==='rupture')castEvolution(s,s.actors[owner]);return true;
+ s.eventQueue.push({kind,owner,payload,depth});if(kind==='on_cast'&&depth===0&&['rupture','forge'].includes(s.gameMode))castEvolution(s,s.actors[owner]);return true;
 }
 function addHeat(s,a,amount,depth=0){
  a.heat=Math.min(HEAT_LIMIT,a.heat+amount);
@@ -313,8 +316,8 @@ function act(s,a,action,mods,ev){
  case 'blast':if(Math.hypot(other.x-a.x,other.y-a.y)<(m.has('wide')?110:72)*reach){const d=harm(s,other,11*strong,a.id,depth);if(d>0){markTarget(s,other,chosenElement(mods,mage(a.mageId).school),a.id,depth);emit(s,'on_hit',a.id,{},depth)}}fx(s,'overload',a.x,a.y);break;
  case 'blink':{const step=38*reach*(m.has('reverse')?-1:1);move(a,Math.cos(a.face)*step,Math.sin(a.face)*step);fx(s,'dash',a.x,a.y);break}
  case 'clone':if(s.echoes.length<12)s.echoes.push({owner:a.id,x:a.x,y:a.y,life:m.has('lasting')?3.5:2.2,cast:.25,shots:2,extra:m.has('strong')});fx(s,'dash',a.x,a.y);break;
- case 'mine':if(s.mines.length<14)s.mines.push({x:a.x,y:a.y,owner:a.id,life:m.has('lasting')?6:3.5,damage:14*strong,element:chosenElement(mods,mage(a.mageId).school),r:m.has('wide')?57:40});fx(s,'mine',a.x,a.y);break;
- case 'wall':if(s.barriers.length<10){let bx=a.x+Math.cos(a.face)*34*reach,by=a.y+Math.sin(a.face)*34*reach;if(canStand(bx,by,14)&&!blocking(s,bx,by,15))s.barriers.push({owner:a.id,x:bx,y:by,r:m.has('wide')?23:15,life:m.has('lasting')?4:2.5})}fx(s,'shield',a.x,a.y);break;
+ case 'mine':if(s.mines.length<14)s.mines.push({x:a.x,y:a.y,owner:a.id,life:m.has('lasting')?6:3.5,damage:14*strong,element:chosenElement(mods,mage(a.mageId).school),r:(m.has('wide')?57:40)*(a.archetype==='shaper'?1.2:1)});fx(s,'mine',a.x,a.y);break;
+ case 'wall':if(s.barriers.length<10){let bx=a.x+Math.cos(a.face)*34*reach,by=a.y+Math.sin(a.face)*34*reach;if(canStand(bx,by,14)&&!blocking(s,bx,by,15))s.barriers.push({owner:a.id,x:bx,y:by,r:m.has('wide')?23:15,life:(m.has('lasting')?4:2.5)*(a.archetype==='shaper'?1.4:1)})}fx(s,'shield',a.x,a.y);break;
  case 'push':{const dx=other.x-a.x,dy=other.y-a.y;if(mag(dx,dy)<100*reach){const k=mag(dx,dy);move(other,dx/k*30*strong*(m.has('fastshot')?1.3:1),dy/k*30*strong*(m.has('fastshot')?1.3:1))}fx(s,'dash',other.x,other.y);break}
  case 'slow':other.slow=Math.max(other.slow,m.has('lasting')?3.4:2);fx(s,'hit',other.x,other.y);break;
  case 'haste':a.haste=Math.max(a.haste,m.has('lasting')?3.4:2);fx(s,'heal',a.x,a.y);break;
@@ -348,7 +351,7 @@ if(d<260&&random(s)<.035)attack(s,b,p);
 if(b.shieldReady<=0&&b.hp<55&&random(s)<.009)guard(s,b);
 return {x,y,attack:false,shield:false,dash:false,aim:{x:p.x,y:p.y}}}
 export function tick(s,input={},dt=STEP,otherInput=null){
- if(s.phase!=='fight')return s;if(s.gameMode==='rupture'){s.fields ||= [];for(const a of s.actors)a.fusions ||= []}dt=STEP;safeWorld=s;s.ticks++;s.remaining=Math.max(0,s.remaining-dt);
+ if(s.phase!=='fight')return s;if(['rupture','forge'].includes(s.gameMode)){s.fields ||= [];for(const a of s.actors)a.fusions ||= []}dt=STEP;safeWorld=s;s.ticks++;if(s.gameMode!=='forge')s.remaining=Math.max(0,s.remaining-dt);
  s.streams=[];s.beams=s.beams||[];s.waves=s.waves||[];s.lobs=s.lobs||[];
  for(const a of s.actors){
   a.heat=Math.max(0,a.heat-7*dt);a.overloadCd=Math.max(0,a.overloadCd-dt);
@@ -361,9 +364,9 @@ export function tick(s,input={},dt=STEP,otherInput=null){
   if(s.ticks%60===0&&Math.hypot(a.x-s.actors[1-a.id].x,a.y-s.actors[1-a.id].y)<78)emit(s,'on_close',a.id);
   if(a.heat>=HEAT_LIMIT&&a.overloadCd<=0)addHeat(s,a,0);
  }
-const control=[input,otherInput===null?botInput(s,dt):otherInput];
+const control=[input,otherInput===null?(s.gameMode==='forge'&&s.forgeDummy!==false?{x:0,y:0,attack:false,shield:false,dash:false,aim:{x:200,y:310}}:botInput(s,dt)):otherInput];
 for(let i=0;i<2;i++){const a=s.actors[i],c=control[i],other=s.actors[1-i];
- if(s.gameMode==='rupture'&&a.hp<=0){if(a.respawn>0){a.respawn=Math.max(0,a.respawn-dt);if(a.respawn<=0){const next=freshActor(a);next.hit=a.hit;next.kills=a.kills;next.invuln=1.25;s.actors[i]=next;}}continue}
+ if(['rupture','forge'].includes(s.gameMode)&&a.hp<=0){if(a.respawn>0){a.respawn=Math.max(0,a.respawn-dt);if(a.respawn<=0){const next=freshActor(a);next.hit=a.hit;next.kills=a.kills;next.invuln=1.25;s.actors[i]=next;}}continue}
  a.cast=Math.max(0,a.cast-dt);a.shieldReady=Math.max(0,a.shieldReady-dt);a.dashReady=Math.max(0,a.dashReady-dt);a.stun=Math.max(0,a.stun-dt);a.flash=Math.max(0,a.flash-dt);a.invuln=Math.max(0,a.invuln-dt);
 if(!c.attack)a.flameCharge=Math.max(0,(a.flameCharge||0)-dt*5);
 if(a.windup&&(a.stun>0||c.dash))a.windup=null;
@@ -378,7 +381,7 @@ if(c.dash)dash(s,a,{x:Number(c.x)||Math.cos(a.face),y:Number(c.y)||Math.sin(a.fa
 if(c.shield)guard(s,a);
 if(c.attack)attack(s,a,c.aim||other);
 if(s.ticks%60===0&&a.heat>=HEAT_LIMIT)addHeat(s,a,0)}
-updateLobs(s,dt);if(s.gameMode==='rupture')updateEvolutionFields(s,dt);
+updateLobs(s,dt);if(['rupture','forge'].includes(s.gameMode))updateEvolutionFields(s,dt);
 for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s.beams.splice(j,1)}
  for(let j=s.waves.length-1;j>=0;j--){const w=s.waves[j];processWave(s,w);if(w.life<=0)s.waves.splice(j,1)}
  for(let j=s.shots.length-1;j>=0;j--){const q=s.shots[j],a=s.actors[1-q.owner];if(q.accel){const speed=Math.hypot(q.vx,q.vy)||1;
@@ -413,6 +416,7 @@ for(let j=s.mines.length-1;j>=0;j--){
  }
  flushEvents(s);
  s.fx.forEach(f=>f.t+=dt);s.fx=s.fx.filter(f=>f.t<.38);
+if(s.gameMode==='forge'){for(const a of s.actors)if(a.hp<=0&&a.respawn<=0){a.respawn=1.6;fx(s,'overload',a.x,a.y)}return s;}
 if(s.gameMode==='rupture'){
   s.elapsed=RUPTURE_SECONDS-s.remaining;
   for(const a of s.actors){if(a.hp<=0&&a.respawn<=0){a.respawn=2.5;const opponent=s.actors[1-a.id];opponent.kills++;s.score[opponent.id]+=s.remaining<=60?4:2;fx(s,'overload',a.x,a.y)}}
@@ -434,7 +438,7 @@ else{s.phase='draft';s.pick=offers(s)}
 return s}
 export function validState(s){
  return !!s&&s.version===4&&['fight','draft','build','result'].includes(s.phase)
- &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&typeof a.mark==='string'&&Number.isFinite(a.markLife)&&a.markLife>=0&&Number.isFinite(a.reactionCd)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&(!a.evolution||EVOLUTIONS.some(f=>f.id===a.evolution.form)&&Number.isInteger(a.evolution.level)&&a.evolution.level>0&&a.evolution.level<=3)&&(!a.fusions||Array.isArray(a.fusions)&&a.fusions.length<=3&&new Set(a.fusions).size===a.fusions.length&&a.fusions.every(id=>FUSIONS.some(f=>f.id===id)))&&a.runeTimers&&typeof a.runeTimers==='object')
+ &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&typeof a.mark==='string'&&Number.isFinite(a.markLife)&&a.markLife>=0&&Number.isFinite(a.reactionCd)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&(!a.archetype||validArchetype(a.archetype))&&(!a.evolution||EVOLUTIONS.some(f=>f.id===a.evolution.form)&&Number.isInteger(a.evolution.level)&&a.evolution.level>0&&a.evolution.level<=3)&&(!a.fusions||Array.isArray(a.fusions)&&a.fusions.length<=3&&new Set(a.fusions).size===a.fusions.length&&a.fusions.every(id=>FUSIONS.some(f=>f.id===id)))&&a.runeTimers&&typeof a.runeTimers==='object')
  &&Array.isArray(s.shots)&&(!s.streams||Array.isArray(s.streams))&&(!s.beams||Array.isArray(s.beams))&&(!s.waves||Array.isArray(s.waves))&&(!s.lobs||Array.isArray(s.lobs))&&Array.isArray(s.echoes)&&Array.isArray(s.mines)&&Array.isArray(s.barriers)&&(!s.fields||Array.isArray(s.fields))&&Array.isArray(s.eventQueue)
  &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture',undefined].includes(s.gameMode);
 }
