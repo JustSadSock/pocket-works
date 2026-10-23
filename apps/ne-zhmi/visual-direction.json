@@ -18,9 +18,9 @@
     "navigation": "overlay-list",
     "chromeTopology": "framed-stage",
     "dominantMotion": "rotational-inertia",
-    "primaryVerb": "Jump and reverse with a shared two-person core, extending to guaranteed magnet, brake, cargo push and float tasks for each extra operator; all tasks affect the one physical robot.",
-    "physicalFeedback": "Stamped completion tickets show exactly three earned times and total falls; the world, tactile control deck, mechanical sounds and robot feedback remain unchanged in all modes. Opposing cargo collisions are side-correct, and a short post-hazard cooldown keeps recovery legible.",
-    "spatialRationale": "Procedural consecutive modules maintain flat lead-ins and avoid adjacent demanding jumps. A 6-person circuit allocates four unique specialist stations and one seeded classic section.",
+    "primaryVerb": "Share six distinct controls across complete seeded circuits; two operators use reversals to wait out a press, while the brake specialist can charge a protective exit.",
+    "physicalFeedback": "Stamped completion tickets show exactly three earned times and total falls; the world, tactile control deck, mechanical sounds and robot feedback remain unchanged in all modes. Opposing cargo collisions are side-correct, and a short post-hazard cooldown keeps recovery legible. Holding and releasing the brake charges a timed front-mounted enamel guard, which visibly decays with server-proven protection.",
+    "spatialRationale": "Whole-track planning resamples incompatible module sets, forbids airborne spring/updraft-to-jump transitions, and maintains flat run-up and landing space.",
     "comparisons": [
       {
         "slug": "axis-pals",

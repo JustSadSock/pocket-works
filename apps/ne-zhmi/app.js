@@ -322,7 +322,8 @@ function frame(now){
       'mag-rail':'РЕЛЬС · МАГНИТ','balloon-sign':'ПРОЛЁТ · ПОПЛАВОК',
       'belt-left':'ВСТРЕЧНАЯ ЛЕНТА','fan-up':'ВОЗДУШНЫЙ ПОТОК','fan-side':'БОКОВОЙ ВЕТЕР'
     };
-    const warning=guide[ahead?.type];
+    const warning=game.brakeGuard>.02?'ТОРМОЗ · ЗАЩИТА АКТИВНА':
+      ahead?.type==='press'&&activeCount()>=4?'ПРЕСС · УДЕРЖИ И ОТПУСТИ ТОРМОЗ':guide[ahead?.type];
     const gameplay=['playing','online-playing'].includes(phase);
     $('hazard-guide').classList.toggle('hidden',!warning||!gameplay);
     if(warning)$('hazard-text').textContent=warning;
@@ -334,6 +335,6 @@ function frame(now){
   }
   requestAnimationFrame(frame);
 }
-createWorkshopMode({appName:'НЕ ЖМИ!',version:'0.8.0',cachePrefix: 'ne-zhmi-',storageNamespace: 'pocket-works:ne-zhmi',onReset:()=>{if(online?.isActive())online.leave();best=null;muted=false;updateSound();backToMenu();}});
+createWorkshopMode({appName:'НЕ ЖМИ!',version:'0.9.0',cachePrefix: 'ne-zhmi-',storageNamespace: 'pocket-works:ne-zhmi',onReset:()=>{if(online?.isActive())online.leave();best=null;muted=false;updateSound();backToMenu();}});
 window.addEventListener('workshopopen',()=>{if(phase==='playing')pause();});
 setMode('quick');saveParty();show('menu');requestAnimationFrame(frame);

@@ -108,7 +108,7 @@ test('complete run uses actual physics from start to FINISH, never teleports bet
  const stats=[];
  for(let crew=2;crew<=6;crew++){
   let won=0,failed=[];
-  for(let seed=1;seed<=18;seed++){
+  for(let seed=1;seed<=30;seed++){
    const level=generateCourse(seed,5,crew);
    const result=solveFullTrack(level);
    if(result.success){
@@ -118,12 +118,12 @@ test('complete run uses actual physics from start to FINISH, never teleports bet
     won++;
    }else failed.push({seed,blocked:result.blocked,segments:result.segments});
   }
-  stats.push({crew,won,attempts:18,failed:failed.slice(0,5)});
-  assert.ok(won>=11,'Full-course verified rate insufficient: '+JSON.stringify(stats.at(-1)));
+  stats.push({crew,won,attempts:30,failed:failed.slice(0,5)});
+  assert.ok(won===30,'Full-course verified rate insufficient: '+JSON.stringify(stats.at(-1)));
  }
  const overall=stats.reduce((sum,entry)=>sum+entry.won,0);
  console.log('FULL COURSE PHYSICAL RUNS:',JSON.stringify(stats));
- assert.ok(overall>=68,'At least 68 of 90 complete end-to-end test routes must finish');
+ assert.ok(overall===150,'All 150 benchmark courses must physically finish');
 });
 
 test('charged brake protects on release only after a deliberate stop',()=>{
