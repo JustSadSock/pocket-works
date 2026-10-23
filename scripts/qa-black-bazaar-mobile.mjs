@@ -76,6 +76,25 @@ try{
    });
    report.issues.push(...tabs);
   }
+  if(scene==='four'&&['small','short','phone','landscape','tablet','desktop'].includes(id)){
+   const exercise=async command=>page.evaluate(command=>new Promise((resolve,reject)=>{
+    const iframe=document.querySelector('iframe.dev-frame');
+    const token=Math.floor(Math.random()*1e9);
+    const timer=setTimeout(()=>{removeEventListener('message',onMessage);reject(new Error('QA action timed out: '+command.type));},5000);
+    function onMessage(event){
+     if(event.source!==iframe.contentWindow||event.data?.source!=='bazaar-debug-preview'||event.data.type!=='qa-action-result'||event.data.step!==token)return;
+     clearTimeout(timer);removeEventListener('message',onMessage);resolve(event.data);
+    }
+    addEventListener('message',onMessage);
+    iframe.contentWindow.postMessage({source:'bazaar-debug-console',type:'qa-action',run:1,step:token,command},location.origin);
+   }),command);
+   const work=await exercise({type:'work',resource:'gold'});
+   if(work.error||work.after.resources.gold!==work.before.resources.gold+35)report.issues.push('work action did not credit 35 gold');
+   const buy=await exercise({type:'broker_buy'});
+   if(buy.error||buy.after.resources.gold!==buy.before.resources.gold-75||buy.after.items.length!==buy.before.items.length+1)
+    report.issues.push('broker purchase did not transfer item and charge 75 gold');
+   if(await frame.locator('.play-screen').count()!==1)report.issues.push('game UI missing after actions');
+  }
   const result={scene,device:id,requested:{width,height},...report};
   if(report.issues.length||scene==='four'&&['small','short','phone','landscape','tablet','desktop'].includes(id)){
    await frame.locator('body').screenshot({path:out+'/'+scene+'-'+id+'.png'});
