@@ -457,26 +457,60 @@ function updateEvolutionFields(s,dt){
 }
 
 const CLASS_SPELLS=Object.freeze([
- {id:'striker',name:'РИКОШЕТНЫЙ ЗАЛП',desc:'Два физических отскока от стен и препятствий',cooldown:5.5},
- {id:'shaper',name:'АМБРАЗУРА',desc:'Собственное одностороннее укрытие для стрельбы',cooldown:8},
- {id:'distorter',name:'СДВИГ ФАЗЫ',desc:'Один телеграфируемый проход сквозь первую стену',cooldown:7}
+ {id:'striker',name:'РИКОШЕТНЫЙ ЗАЛП',desc:'Два отскока от препятствий',cooldown:5.5,variants:[
+  {name:'РИКОШЕТ',desc:'Два отскока от укрытий'},{name:'РАЗЛОМ БРОНИ',desc:'Разрушение рунической стены'},{name:'РЫВОК С ЗАЛПОМ',desc:'Залп после рывка'}]},
+ {id:'shaper',name:'АМБРАЗУРА',desc:'Односторонняя стена',cooldown:8,variants:[
+  {name:'АМБРАЗУРА',desc:'Односторонняя стрельба'},{name:'РЕЗОНАНС',desc:'Два снаряда вдоль собственной стены'},{name:'ОБОРОННЫЙ КОНТУР',desc:'Усиление стены и соседних мин'}]},
+ {id:'distorter',name:'СДВИГ ФАЗЫ',desc:'Проход первого препятствия',cooldown:7,variants:[
+  {name:'ФАЗА',desc:'Перенос через первое препятствие'},{name:'ИЗЛОМ МАРШРУТА',desc:'Снаряд меняет направление в полёте'},{name:'ИНВЕРСИЯ БАРЬЕРА',desc:'Временное обращение чужой стены'}]}
 ]);
-function castClassSpell(s,a){
- if(a.stun>0||a.hp<=0||(a.specialCd||0)>0||a.heat>87)return false;
- const type=a.archetype||'striker',spec=CLASS_SPELLS.find(t=>t.id===type);
+function nearestBarrier(s,a,owner,reach=170){
+ let found=null,best=reach;for(const b of s.barriers){const d=Math.hypot(b.x-a.x,b.y-a.y);if(b.owner===owner&&d<best){found=b;best=d}}return found;
+}
+function castClassSpell(s,a,slot=0){
+ if(a.stun>0||a.hp<=0||(a.specialCd||0)>0||a.heat>87||!Number.isInteger(slot)||slot<0||slot>2)return false;
+ const type=a.archetype||'striker',spec=CLASS_SPELLS.find(t=>t.id===type);if(!spec)return false;
  if(type==='shaper'){
-  const x=a.x+Math.cos(a.face)*51,y=a.y+Math.sin(a.face)*51;
-  if(!canStand(x,y,23)||blocking(s,x,y,24)||s.barriers.length>=10)return false;
-  s.barriers.push({owner:a.id,x,y,r:22,life:5,aperture:true});fx(s,'shield',x,y);
+  if(slot===0){
+   const x=a.x+Math.cos(a.face)*51,y=a.y+Math.sin(a.face)*51;
+   if(!canStand(x,y,23)||blocking(s,x,y,24)||s.barriers.length>=10)return false;
+   s.barriers.push({owner:a.id,x,y,r:22,hp:26,life:5,aperture:true});fx(s,'shield',x,y);
+  }else if(slot===1){
+   const b=nearestBarrier(s,a,a.id);if(!b||s.shots.length>76)return false;
+   const enemy=s.actors[1-a.id],angle=Math.atan2(enemy.y-b.y,enemy.x-b.x);
+   for(const sign of [-1,1]){
+    const direction=angle+sign*Math.PI/2,x=b.x+Math.cos(direction)*(b.r+9),y=b.y+Math.sin(direction)*(b.r+9);
+    spawnShot(s,a,direction,x,y,{style:'rock',element:'stone',damage:9,life:.82});
+   }
+   fx(s,'fracture',b.x,b.y);
+  }else{
+   let b=nearestBarrier(s,a,a.id,190);
+   if(!b){
+    const x=a.x+Math.cos(a.face)*45,y=a.y+Math.sin(a.face)*45;
+    if(!canStand(x,y,19)||blocking(s,x,y,20)||s.barriers.length>=10)return false;
+    b={owner:a.id,x,y,r:18,life:3.7,hp:28};s.barriers.push(b);
+   }
+   b.hp=(b.hp??24)+22;b.life=Math.min(9,b.life+2);b.warded=2.6;
+   for(const m of s.mines)if(m.owner===a.id&&Math.hypot(m.x-b.x,m.y-b.y)<100){m.r=Math.min(85,m.r+12);m.damage+=3}
+   fx(s,'shield',b.x,b.y);
+  }
+ }else if(type==='striker'&&slot===2){
+  if(a.dashReady>0||!dash(s,a,{x:Math.cos(a.face),y:Math.sin(a.face)}))return false;
+  a.dashShot={angle:a.face,element:mage(a.mageId).school};
+ }else if(type==='distorter'&&slot===2){
+  const b=nearestBarrier(s,a,1-a.id,185);if(!b)return false;
+  if(b.originalOwner==null){b.originalOwner=b.owner;b.originalAperture=!!b.aperture}
+  b.owner=a.id;b.aperture=true;b.inversionLife=2.2;fx(s,'phase_entry',b.x,b.y);
  }else{
   if(!spawnShot(s,a,a.face,a.x,a.y,{style:'arc',element:mage(a.mageId).school,strong:true,far:true}))return false;
   const q=s.shots[s.shots.length-1];q.r=4;
-  if(type==='striker'){q.bounces=2;q.life=1.3;fx(s,'ricochet',a.x,a.y)}
-  else{q.phase=1;q.life=1.2;fx(s,'phase_entry',a.x,a.y)}
+  if(type==='striker'&&slot===0){q.bounces=2;q.life=1.3;fx(s,'ricochet',a.x,a.y)}
+  else if(type==='striker'){q.breach=32;q.damage=18;q.life=1.3;fx(s,'fracture',a.x,a.y)}
+  else if(slot===0){q.phase=1;q.life=1.2;fx(s,'phase_entry',a.x,a.y)}
+  else{const enemy=s.actors[1-a.id],delta=Math.sin(Math.atan2(enemy.y-a.y,enemy.x-a.x)-a.face);q.turnAt=.19;q.turnDelta=(delta<0?-1:1)*.55;q.life=1.25;fx(s,'thunder',a.x,a.y)}
  }
- a.specialCd=spec.cooldown;addHeat(s,a,12);return true;
+ a.specialCd=spec.cooldown+slot*(slot===2?1.2:.7);addHeat(s,a,12+slot*3);emit(s,'on_cast',a.id);return true;
 }
-
 function attack(s,a,target){
  if(a.mageId==='cinder')return flame(s,a,target);
  if(a.cast>0||a.stun>0||a.windup)return false;
@@ -577,13 +611,13 @@ if(a.windup&&(a.stun>0||c.dash))a.windup=null;
 if(a.windup){a.windup.remaining-=dt;
  if(a.windup.remaining<=0){const w=a.windup;a.windup=null;releaseWindup(s,a,w)}
 }
-if(a.dash>0){move(a,a.vx*dt,a.vy*dt);a.dash=Math.max(0,a.dash-dt)}
+if(a.dash>0){move(a,a.vx*dt,a.vy*dt);a.dash=Math.max(0,a.dash-dt);if(a.dash===0&&a.dashShot){const q=a.dashShot;a.dashShot=null;spawnShot(s,a,q.angle,a.x,a.y,{strong:true,element:q.element,life:1.05});fx(s,'shoot',a.x,a.y)}}
 else{let x=Number(c.x)||0,y=Number(c.y)||0,m=mag(x,y);if(m>1){x/=m;y/=m}move(a,x*stats(a).speed*dt,y*stats(a).speed*dt)}
 if(a.windup)a.face=a.windup.angle;
 else if(c.aim&&Number.isFinite(c.aim.x)&&Number.isFinite(c.aim.y))a.face=Math.atan2(c.aim.y-a.y,c.aim.x-a.x);
 if(c.dash)dash(s,a,{x:Number(c.x)||Math.cos(a.face),y:Number(c.y)||Math.sin(a.face)});
 if(c.shield)guard(s,a);
-if(c.special)castClassSpell(s,a);
+if(c.special)castClassSpell(s,a,Number.isInteger(c.specialSlot)?c.specialSlot:0);
 if(c.attack)attack(s,a,c.aim||other);
 if(s.ticks%60===0&&a.heat>=HEAT_LIMIT)addHeat(s,a,0)}
 updateLobs(s,dt);if(['rupture','forge'].includes(s.gameMode))updateEvolutionFields(s,dt);
@@ -592,6 +626,7 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
  for(let j=s.shots.length-1;j>=0;j--){
  const q=s.shots[j],a=s.actors[1-q.owner];
  if(q.accel){const v=Math.hypot(q.vx,q.vy)||1,next=q.accel>0?Math.min(q.minSpeed,v+q.accel*dt):Math.max(q.minSpeed,v+q.accel*dt);q.vx*=next/v;q.vy*=next/v}
+ if(q.turnAt>0){q.turnAt-=dt;if(q.turnAt<=0){const speed=Math.hypot(q.vx,q.vy),angle=Math.atan2(q.vy,q.vx)+q.turnDelta;q.vx=Math.cos(angle)*speed;q.vy=Math.sin(angle)*speed;q.turnAt=0;fx(s,'thunder',q.x,q.y)}}
  q.life-=dt;if(q.life<=0){s.shots.splice(j,1);if(mage(s.actors[q.owner].mageId).trait==='miss_cool')s.actors[q.owner].heat=Math.max(0,s.actors[q.owner].heat-6);emit(s,'on_expire',q.owner,{},q.depth);continue}
  let remaining=dt,done=false,iterations=0;
  while(remaining>1e-7&&!done&&iterations++<4){
@@ -607,6 +642,7 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
    if(q.style==='rock')rockFracture(s,q,q.x,q.y);
    fx(s,'impact_'+(q.style||'orb'),q.x,q.y);s.shots.splice(j,1);done=true;continue;
   }
+  if(q.breach>0&&hit.type==='barrier'){const b=s.barriers[hit.index];b.hp=(b.hp??24)-q.breach;q.breach=0;if(b.hp<=0){s.barriers.splice(hit.index,1);fx(s,'fracture',b.x,b.y);q.x+=Math.sign(q.vx)*.15;q.y+=Math.sign(q.vy)*.15;remaining*=Math.max(0,1-hit.t);continue}}
   if(q.phase>0&&(hit.type==='wall'||hit.type==='barrier')){
    const pass=firstCollision(s,q.x,q.y,q.vx*.65,q.vy*.65,q.r,q.owner);const skip=Math.max(.001,pass?.exit??0);q.x+=q.vx*.65*skip+Math.sign(q.vx)*.08;q.y+=q.vy*.65*skip+Math.sign(q.vy)*.08;q.phase=0;
    fx(s,'phase_exit',q.x,q.y);remaining*=Math.max(0,1-hit.t);continue;
@@ -625,7 +661,7 @@ for(let j=s.mines.length-1;j>=0;j--){
  if(Math.hypot(target.x-mine.x,target.y-mine.y)<mine.r&&beamLength(s,mine.x,mine.y,Math.atan2(target.y-mine.y,target.x-mine.x),Math.hypot(target.x-mine.x,target.y-mine.y)+4,mine.owner)>=Math.hypot(target.x-mine.x,target.y-mine.y)-8){const d=harm(s,target,mine.damage,mine.owner);if(d>0){markTarget(s,target,mine.element||mage(s.actors[mine.owner].mageId).school,mine.owner);emit(s,'on_hit',mine.owner)}fx(s,'overload',mine.x,mine.y);s.mines.splice(j,1)}
  else if(mine.life<=0)s.mines.splice(j,1);
  }
- for(let j=s.barriers.length-1;j>=0;j--){s.barriers[j].life-=dt;if(s.barriers[j].life<=0)s.barriers.splice(j,1)}
+ for(let j=s.barriers.length-1;j>=0;j--){const b=s.barriers[j];b.life-=dt;if(b.inversionLife>0){b.inversionLife=Math.max(0,b.inversionLife-dt);if(b.inversionLife===0&&b.originalOwner!=null){b.owner=b.originalOwner;b.aperture=!!b.originalAperture;delete b.originalOwner;delete b.originalAperture;fx(s,'phase_exit',b.x,b.y)}}if(b.warded>0)b.warded=Math.max(0,b.warded-dt);if(b.life<=0)s.barriers.splice(j,1)}
  // The court tightens in the last ten seconds. Environmental damage bypasses
  // endlessly rechargeable shields; the clock itself still never awards a point.
  if(collapseActive(s)){
@@ -664,7 +700,7 @@ function validState(s){
  &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=8;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=9;
 const ZERO={x:0,y:0,aim:{x:200,y:310},attack:false,shield:false,dash:false,special:false};
 const clock=()=>Date.now(),updates=()=>[{type:'state',payload:null}],warn=(to,msg)=>[{type:'notice',to,payload:msg}];
 const side=(s,id)=>s.seats.indexOf(id);
@@ -672,7 +708,8 @@ const safeInput=v=>{
  if(!v||typeof v!=='object'||Array.isArray(v)||!v.aim)return null;
  const {x,y}=v,ax=v.aim.x,ay=v.aim.y;
  if(![x,y,ax,ay].every(n=>typeof n==='number'&&Number.isFinite(n))||Math.abs(x)>1.01||Math.abs(y)>1.01||ax<0||ax>W||ay<0||ay>H)return null;
- const m=Math.max(1,Math.hypot(x,y));return {x:x/m,y:y/m,aim:{x:ax,y:ay},attack:v.attack===true,shield:v.shield===true,dash:v.dash===true,special:v.special===true};
+ if(v.specialSlot!=null&&(!Number.isInteger(v.specialSlot)||v.specialSlot<0||v.specialSlot>2))return null;
+ const m=Math.max(1,Math.hypot(x,y));return {x:x/m,y:y/m,aim:{x:ax,y:ay},attack:v.attack===true,shield:v.shield===true,dash:v.dash===true,special:v.special===true,specialSlot:v.specialSlot??0};
 };
 function beginNet(s){
  s.match=makeMatch((clock()>>>0)^Math.floor(Math.random()*0xffffffff),s.mages[0],s.mages[1],s.gameMode,s.archetypes[0],s.archetypes[1]);
@@ -720,7 +757,7 @@ function readyNet(s,i,list){
 }
 function viewForPlayer({state:s,player,players}){
  const i=side(s,player.id);
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:8,gameMode:s.gameMode,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:9,gameMode:s.gameMode,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};

@@ -769,3 +769,6 @@
  #draft .rune-choice{scroll-margin-block:16px}
  #draft .rune-seal-art,#draft .rune-choice:hover .rune-seal-art{transform:none!important;transition:none!important}
 }
+
+/* Compact mobile technique switcher; desktop uses Digit1–3. */
+.spellbar{position:relative}.special-choice{position:absolute;right:88px;bottom:82px;width:116px;max-width:40vw;height:27px;z-index:4;background:#2a3630;color:#f6e3b7;border:1px solid #a99567;border-radius:2px;font:700 10px/1 system-ui;pointer-events:auto;touch-action:manipulation}.spell-special small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:53px}.special-choice:focus-visible{outline:2px solid #f6dba3;outline-offset:2px}@media(max-width:420px){.special-choice{right:81px;bottom:135px;width:106px;font-size:9px}}@media(pointer:fine){.special-choice{display:none}}
