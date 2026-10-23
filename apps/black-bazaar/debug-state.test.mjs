@@ -122,6 +122,7 @@ test('Mobile browser QA checks public auction settlement and presentation',()=>{
  assert.match(src,/scene==='seller'/);
  assert.match(src,/type:'post'/);
  assert.match(src,/type:'bid',buyer:'debug-1'/);
- assert.match(src,/type:'accept',buyer:'debug-1'/);
+ assert.match(src,/acceptButton\.click\(\)/);
+ assert.match(src,/data-action=\\"accept\\"/);
  assert.match(src,/auction payment or first-sale bonus incorrect/);
 });
