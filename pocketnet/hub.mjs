@@ -681,7 +681,14 @@ export class PocketNetHub {
           this.recordBlockiesRewards(room,prior,room.state);
           this.emit(room, result.events ?? []);
           await this.applyKicks(room, result.events ?? [], player.id);
-          await this.flushAwards();
+          // Reward delivery can fetch a separate Durable Object and stall this
+          // room's serialized WebSocket queue. Artwork packets never award
+          // cosmetics; pending grants are already retried by the durable alarm.
+          const bulkZamazkaMessage=room.gameId==='zamazka'&&[
+            'draft_chunk','submit_chunk','draft','submit_begin','submit_resume',
+            'sync','time_ping','pulse'
+          ].includes(msg.payload?.type);
+          if(!bulkZamazkaMessage)await this.flushAwards();
           if (result.finished) await this.closeRoom(room);
           return;
         }
