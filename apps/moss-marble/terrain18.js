@@ -4,6 +4,7 @@ import { isCourse18 } from './course18.js';
 import { appendSoftShadow, appendLineShadow } from './light-space.js';
 import { appendGardenIdentity } from './garden-identity.js';
 import { planTurfClumps, appendTurfClumps } from './turf-clumps.js';
+import { buildWoodBarrierProfile } from './wood-barrier.js';
 
 const TAU = Math.PI * 2;
 const STRIDE = 11;
@@ -188,6 +189,31 @@ function stump(mesh, shadows, level, prop, seed, palette) {
   appendSoftShadow(shadows, (x,y)=>terrainHeightAt(level,x,y), { x:prop.x, y:prop.y, radiusX:radius*1.32, radiusY:radius*1.06, height:height*.5, strength:.36, segments:22 });
 }
 
+function carvedWoodBarrier(mesh, wall, palette, heightAt) {
+  const profile=buildWoodBarrierProfile(wall,heightAt);
+  if(!profile.segments)return;
+  const {stations}=profile;
+  // One joined, faceted oak railing: a dark grain side, softly chamfered
+  // shoulders, and a single pale satin crown. Real ground heights are used
+  // separately at each edge, including the two endpoints.
+  for(let i=0;i<stations.length-1;i++){
+    const a=stations[i],b=stations[i+1];
+    const shadeFactor=.97 + Math.sin(i*.73+profile.length*.031)*.045;
+    mesh.quad(a.footL,b.footL,b.shoulderL,a.shoulderL,tone(palette.wood,shadeFactor),11);
+    mesh.quad(a.footR,a.shoulderR,b.shoulderR,b.footR,tone(palette.wood,.81*shadeFactor),11);
+    mesh.quad(a.shoulderL,b.shoulderL,b.crownL,a.crownL,tone(palette.woodLight,.82),11);
+    mesh.quad(a.crownL,b.crownL,b.crownR,a.crownR,palette.woodTop,11);
+    mesh.quad(a.crownR,b.crownR,b.shoulderR,a.shoulderR,tone(palette.wood,.88),11);
+  }
+  // End-grain closes actual rail ends, not every small terrain-following
+  // segment (which would leave bright transverse seams).
+  const first=stations[0],last=stations.at(-1);
+  for(const p of [first,last]){
+    mesh.quad(p.footL,p.shoulderL,p.shoulderR,p.footR,tone(palette.wood,.71),11);
+    mesh.quad(p.shoulderL,p.crownL,p.crownR,p.shoulderR,tone(palette.wood,.77),11);
+  }
+}
+
 function barrierBox(mesh, shadows, level, wall, palette) {
   const dx = wall.bx - wall.ax, dy = wall.by - wall.ay;
   const length = Math.hypot(dx, dy) || 1;
@@ -197,6 +223,14 @@ function barrierBox(mesh, shadows, level, wall, palette) {
   const zB = terrainHeightAt(level, wall.bx, wall.by) + .6;
   const height = Number(wall.visualHeight || 28);
   const isStone = wall.material === 'stone' || Boolean(wall.tunnelWall);
+  if(!isStone && wall.material !== 'glass') {
+    carvedWoodBarrier(mesh,wall,palette,(x,y)=>terrainHeightAt(level,x,y));
+    appendLineShadow(shadows,(x,y)=>terrainHeightAt(level,x,y),{
+      ax:wall.ax,ay:wall.ay,bx:wall.bx,by:wall.by,
+      width:half*2,height:Number(wall.visualHeight||28)*.5,strength:.29
+    });
+    return;
+  }
   const topTint = isStone ? palette.stoneLight : palette.woodTop;
   const material = isStone ? 0 : 11;
   const sideTint = isStone ? palette.stone : palette.wood;
