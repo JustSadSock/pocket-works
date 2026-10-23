@@ -641,6 +641,20 @@ export class PocketNetHub {
           this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
           return;
         }
+        // Time echoes must not deserialize up to eight large SQL artwork
+        // payloads merely to answer a five-second clock health probe.
+        // Authenticate against the durable room seat before taking this fast path.
+        if(msg.type==='game_message'&&msg.payload?.type==='time_ping'&&
+           player.roomId&&Number.isFinite(msg.payload.stamp)){
+          const seat=this.sql('SELECT game_id,players FROM rooms WHERE id=?',player.roomId).toArray()[0];
+          if(seat?.game_id==='zamazka'&&JSON.parse(seat.players).some(p=>p.id===player.id)){
+            message(ws,'game_event',{roomId:player.roomId,event:{
+              type:'time_pong',to:player.id,
+              payload:{stamp:msg.payload.stamp,serverNow:Date.now()}
+            }});
+            return;
+          }
+        }
         const room = player.roomId ? this.readRoom(player.roomId) : null;
         if (!room || !room.players.some(p => p.id === player.id)) throw new Error('not_in_room');
         const mod = this.module(room.gameId, room.version);
