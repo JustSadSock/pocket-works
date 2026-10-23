@@ -39,7 +39,7 @@ export function playCourtSound(ctx, name = "tap") {
       env.connect(bus);
       osc.start(t);
       osc.stop(t + recipe.duration + .012);
-      osc.onended = () => { osc.disconnect(); env.disconnect(); };
+      osc.onended = () => { osc.disconnect(); env.disconnect(); if (i === recipe.notes.length - 1) bus.disconnect(); };
     });
     // A tiny deterministic papery transient provides physical attack on hard actions.
     if (["guard", "beast", "conflict", "seal"].includes(name) && ctx.createBuffer && ctx.createBufferSource) {
