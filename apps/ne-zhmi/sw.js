@@ -1,9 +1,9 @@
-const APP_VERSION='0.4.0';
-const CACHE_NAME='ne-zhmi-v0.4.0';
+const APP_VERSION='0.5.0';
+const CACHE_NAME='ne-zhmi-v0.5.0';
 const RELEASE_DATE='2026-10-23';
-const RELEASE_NOTES=["Кооператив от 2 до 6 игроков: новая расстановка ролей, перераспределение постов и динамический пульт.","Магнит, тормоз, толчок и поплавок с реальными физическими эффектами, удержанием и восстановлением заряда.","Новые магнитные пролёты, двойные прессы, грузовой шлюз и длинная шахта доступны только соответствующему составу операторов."];
+const RELEASE_NOTES=["Болтик ожил: реакция на прыжок, приземление и падение, взгляд, моргание, антенна и колёса с физической прокруткой.","Частицы и ударные волны при столкновениях, пружинах, грузах, контрольных точках и финише; предупреждения о механизмах по ходу трассы.","Новая палитра многослойных синтезированных звуков, тактильные кнопки и режим уменьшенной анимации."];
 const VERSION=APP_VERSION,CACHE=CACHE_NAME,PREFIX='ne-zhmi-';
-const FILES=['./','./index.html','./app.config.json','./styles.css','./app.js','./engine.js','./abilities.js','./course.js','./renderer.js','./online.js','./online-flow.js','../../shared/capabilities/net.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/update-manager.js'];
+const FILES=['./','./index.html','./app.config.json','./styles.css','./app.js','./engine.js','./abilities.js','./course.js','./renderer.js','./visual-fx.js','./soundscape.js','./online.js','./online-flow.js','../../shared/capabilities/net.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/update-manager.js'];
 const ROOT=new URL('./',self.registration.scope);
 const ENTRIES=new Map(FILES.map(file=>{const url=new URL(file,ROOT);return[url.pathname,url.href]}));
 self.addEventListener('install',event=>event.waitUntil((async()=>{
