@@ -12,6 +12,7 @@ export class DesertAudio {
     this.sandFilter = null;
     this.noiseBuffer = null;
     this.gustPhase = 0;
+    this.lastExternalGust = 0;
     this.enabled = localStorage.getItem('pocket-works:sirocco:sound') !== 'off';
   }
 
@@ -80,20 +81,24 @@ export class DesertAudio {
     this.sandFilter = sand.filter;
   }
 
-  update(speed, slope) {
+  update(speed, slope, windState = null) {
     if (!this.ctx || !this.windGain) return;
     const now = this.ctx.currentTime;
     this.gustPhase += 0.013 + speed * 0.0015;
-    const gust = 0.5 + 0.5 * Math.sin(this.gustPhase + Math.sin(this.gustPhase * 0.37) * 1.7);
+    const procedural = 0.5 + 0.5 * Math.sin(this.gustPhase + Math.sin(this.gustPhase * 0.37) * 1.7);
+    const externalGust = clamp(windState?.gust ?? procedural, 0, 1);
+    const windStrength = clamp(windState?.strength ?? (0.35 + procedural * 0.35), 0, 1);
+    const gust = clamp(procedural * 0.28 + externalGust * 0.72, 0, 1);
     const speedNorm = clamp(speed / 3.5, 0, 1);
     const slopeNorm = clamp(slope / 0.65, 0, 1);
 
-    this.windGain.gain.setTargetAtTime(0.038 + speedNorm * 0.036 + gust * 0.018, now, 0.22);
-    this.windFilter.frequency.setTargetAtTime(440 + speedNorm * 260 + gust * 110, now, 0.30);
-    this.gustGain.gain.setTargetAtTime(0.010 + gust * 0.035, now, 0.42);
-    this.gustFilter.frequency.setTargetAtTime(210 + gust * 170, now, 0.36);
-    this.sandGain.gain.setTargetAtTime(0.001 + speedNorm * 0.010 + slopeNorm * 0.016, now, 0.12);
-    this.sandFilter.frequency.setTargetAtTime(1450 + speedNorm * 850, now, 0.16);
+    this.windGain.gain.setTargetAtTime(0.030 + windStrength * 0.052 + speedNorm * 0.020, now, 0.22);
+    this.windFilter.frequency.setTargetAtTime(390 + windStrength * 250 + gust * 170 + speedNorm * 100, now, 0.30);
+    this.gustGain.gain.setTargetAtTime(0.006 + gust * 0.048, now, 0.34);
+    this.gustFilter.frequency.setTargetAtTime(180 + gust * 230, now, 0.30);
+    this.sandGain.gain.setTargetAtTime(0.001 + speedNorm * 0.008 + slopeNorm * 0.014 + windStrength * gust * 0.010, now, 0.12);
+    this.sandFilter.frequency.setTargetAtTime(1380 + speedNorm * 760 + gust * 320, now, 0.16);
+    this.lastExternalGust = externalGust;
   }
 
   footstep(strength = 1) {

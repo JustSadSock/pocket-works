@@ -5,14 +5,14 @@ import { createWorkshopMode } from '../../../shared/workshop-mode.js';
 import { registerEnhancedUpdate } from '../../../shared/enhanced-update-manager';
 
 const appName = 'SIROCCO';
-const version = '1.6.0';
+const version = '1.7.0';
 const storageNamespace = 'pocket-works:sirocco';
 const releaseNotes = [
-  'Песок v2 различает рыхлый и уплотнённый слой: свежие валики осыпаются, повторный след уплотняется и становится твёрже.',
-  'Локальная сетка теперь сгущает тот же vertex budget вокруг ног, поэтому следы заметно плавнее без возврата старых лагов.',
-  'Sand physics сам снижает avalanche/settling budget при дорогом WebKit-тике и постепенно восстанавливает его при наличии запаса.',
-  'Бедуин получил отдельную фактуру кожи, льна и куфии, а first-person камера ещё надёжнее вынесена из головы.',
-  'Playwright Chromium/WebKit проверяет обычный взгляд вниз на тело, экстремальную камеру, физический песок, Blender-скалы и CPU-бюджет.'
+  'Ветер теперь единый для звука, низких песчаных струй, дымки и вторичного движения одежды.',
+  'Свежие рыхлые валики следов понемногу переносятся по ветру, а глубокие впадины постепенно смягчаются наносимым песком.',
+  'Добавлен отдельный низкий слой ветрового песка, который появляется только во время заметных порывов.',
+  'Presence layer имеет собственный ограниченный erosion budget и не вмешивается в основной terrain/locomotion loop.',
+  'Node + Chromium/WebKit QA отдельно проверяет gust-state, перенос рыхлого песка, штиль и mobile landscape rendering.'
 ];
 const runtime = installMobileRuntime();
 runtime.setScrollLocked(true);
