@@ -133,6 +133,7 @@ const module={
  protocolVersion:1,
  createRoom({player,payload}){return {state:initial(player,payload)};},
  onJoin({state:s,players}){
+  if(s.banned?.includes(players.at(-1)?.id))throw Error('room_kicked');
   if(s.phase!=='lobby'){
    const joining=players.at(-1);
    if(s.banned?.includes(joining?.id))throw Error('room_kicked');
@@ -192,7 +193,7 @@ const module={
     if(!s.paused){s.paused=true;s.message='Ведучий призупинив партію.';s.revision++;}
   } else if(v.type==='resume'&&isHost(s,player.id)&&s.phase==='writing'){
     if(s.paused){s.paused=false;s.message='Партію продовжено.';settle(s);s.revision++;}
-  } else if(v.type==='transfer_host'&&isHost(s,player.id)&&s.phase==='writing'){
+  } else if(v.type==='transfer_host'&&isHost(s,player.id)&&['writing','lobby'].includes(s.phase)){
     const target=s.players.find(p=>p.id===v.targetId&&!p.vacant&&!p.autoSkip);
     if(!target||!s.onlineIds.includes(target.id))error='Оберіть присутнього автора.';
     else {s.host=target.id;s.hostOfflineSince=0;s.votes={};s.revision++;}
@@ -207,7 +208,7 @@ const module={
       if(votes>active.length/2){s.host=v.targetId;s.hostOfflineSince=0;s.votes={};s.message='Автори обрали нового ведучого.';}
       s.revision++;
     }
-  } else if(v.type==='kick'&&isHost(s,player.id)&&s.phase==='writing'){
+  } else if(v.type==='kick'&&isHost(s,player.id)&&['writing','lobby'].includes(s.phase)){
     const target=clean(v.targetId,100);
     if(!target||target===player.id)error='Не можна виключити себе.';
     else if(!s.players.some(p=>p.id===target)&&!s.waitlist.some(p=>p.id===target))error='Автора не знайдено.';
@@ -215,7 +216,8 @@ const module={
       s.banned=[...new Set([...(s.banned||[]),target])];
       s.waitlist=s.waitlist.filter(p=>p.id!==target);
       const seat=s.players.find(p=>p.id===target);
-      if(seat){seat.vacant=true;seat.autoSkip=false;delete s.receipts[target];}
+      if(seat){if(s.phase==='lobby')s.players=s.players.filter(p=>p.id!==target);
+        else{seat.vacant=true;seat.autoSkip=false;delete s.receipts[target];}}
       s.message='Автора виключено. Рукописи збережено.';s.revision++;
       return {state:s,events:[...events(),{type:'player_kicked',to:target,payload:{reason:'host'}}]};
     }
