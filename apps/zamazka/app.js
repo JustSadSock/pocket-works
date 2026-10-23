@@ -1102,16 +1102,8 @@ async function connect(mode){
    // Coalesce presence updates. A transient reconnect is not an authoritative
    // player departure, and every presence packet needn't fetch full artwork.
    let presenceSyncTimer=null,lastPresenceSyncAt=0;
-   client.on('presence',data=>{
+   client.on('presence',()=>{
      if(client.closed)return;
-     if(data.disconnected){
-       const disconnectedId=data.disconnected;
-       setTimeout(()=>{
-         if(client.closed||net!==client)return;
-         if(view?.onlineIds?.includes(disconnectedId))return;
-         // A sustained absence is shown in the existing room presence UI.
-       },2500);
-     }
      if(presenceSyncTimer)return;
      presenceSyncTimer=setTimeout(()=>{
        presenceSyncTimer=null;
