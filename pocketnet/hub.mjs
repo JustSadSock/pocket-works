@@ -67,8 +67,19 @@ export class PocketNetHub {
   }
 
   run(task) {
-    const outcome = this.queue.then(task);
-    this.queue = outcome.catch(error => console.error(JSON.stringify({ event: 'pocketnet_error', message: String(error) })));
+    const queuedAt=Date.now();
+    const outcome=this.queue.then(async()=>{
+      const waitMs=Date.now()-queuedAt;
+      const started=Date.now();
+      try{return await task()}
+      finally{
+        const executionMs=Date.now()-started;
+        // Log only pathological delays; do not expose private packet content.
+        if(waitMs>=300||executionMs>=300)
+          console.warn(JSON.stringify({event:'pocketnet_slow_operation',waitMs,executionMs}));
+      }
+    });
+    this.queue=outcome.catch(error=>console.error(JSON.stringify({event:'pocketnet_error',message:String(error)})));
     return outcome;
   }
 
