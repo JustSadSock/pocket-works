@@ -95,3 +95,12 @@ test('terminal victory bypasses throttled position updates and reaches both peer
  assert.equal(events[0].payload.phase,'won');
  assert.equal(events[0].to,undefined);
 });
+
+test('generated geometry, not the legacy arena, supports physical landings',()=>{
+ const s=setup(),now=Date.now();reset(s,now);
+ const next=s.robot.level.platforms[s.robot.level.platforms.length-1];
+ const l=s.robot.level;s.robot.x=l.goal+.01;s.robot.y=next.y-ROBOT.halfHeight;
+ s.robot.ground=true;s.lastClock=now+110;s.signals={H:now+110,G:now+110};
+ const e=message(s,host,{type:'pulse'},now+120);
+ assert.equal(s.phase,'won');assert.equal(e[0].payload.phase,'won');
+});

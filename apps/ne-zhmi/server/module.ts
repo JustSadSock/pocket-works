@@ -222,7 +222,7 @@ export function stepGame(state, dt = FIXED_DT) {
   state.y += state.vy * delta;
   state.ground = false;
   b = bounds(state);
-  for (const p of LEVEL.platforms) {
+  for (const p of level.platforms) {
     if (!overlap(b,p)) continue;
     const oldBottom = oldY + ROBOT.halfHeight;
     const oldTop = oldY - ROBOT.halfHeight;
