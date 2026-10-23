@@ -9,7 +9,7 @@
     "surfaceAndMaterial": "Painted iron, rubbed aluminum edges, amber enamel, rubber wheels and dusty machine-green workshop panels. All distinct from paper/ink media in neighboring apps.",
     "paletteLogic": "The world uses subdued sage and petroleum hues, the control deck graphite, jump honey-yellow and reversal desaturated cobalt; warnings have rust-orange accents.",
     "typography": "Compressed mechanical display heading, monospaced instrument legends, and readable sentence-case functional paragraphs.",
-    "signature": "A continuous side-scrolling tin robot workshop above a tactile physical control deck. A three-position enamel mode switch offers a quick circuit, stamped three-course party ticket, or seeded machine lab; role-specific buttons retain their one-action simplicity.",
+    "signature": "A tiny tin robot negotiates a continuous miniature factory; each assigned operator receives a recognizable personal mechanism during each seeded team run, with a tactile plunger control deck and stamped results tickets.",
     "distinction": "Unlike axis-pals's grid transport, this is continuous momentum and platform contact; unlike crumple-yard's vehicle sandbox, it is side-view two-action shared control."
   },
   "architecture": {
@@ -18,9 +18,9 @@
     "navigation": "overlay-list",
     "chromeTopology": "framed-stage",
     "dominantMotion": "rotational-inertia",
-    "primaryVerb": "Coordinate six machine controls across short seeded tracks, party series and workshop, retaining a coherent game session when transport stalls.",
+    "primaryVerb": "Jump and reverse with a shared two-person core, extending to guaranteed magnet, brake, cargo push and float tasks for each extra operator; all tasks affect the one physical robot.",
     "physicalFeedback": "Stamped completion tickets show exactly three earned times and total falls; the world, tactile control deck, mechanical sounds and robot feedback remain unchanged in all modes. Opposing cargo collisions are side-correct, and a short post-hazard cooldown keeps recovery legible.",
-    "spatialRationale": "One uninterrupted tracked world remains primary. The lower instrument deck scales from a two-station local layout to six short switches, while online each player gets a single oversized plunger.",
+    "spatialRationale": "Procedural consecutive modules maintain flat lead-ins and avoid adjacent demanding jumps. A 6-person circuit allocates four unique specialist stations and one seeded classic section.",
     "comparisons": [
       {
         "slug": "axis-pals",

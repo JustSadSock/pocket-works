@@ -1,6 +1,8 @@
 // Real local Worker / Durable Object regression, not a simulated game module.
 // Covers commit-before-ack, duplicate send, vacant seats and partial issue.
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const versionLock=JSON.parse(await readFile(new URL('../modules.lock.json',import.meta.url),'utf8'));
 import {setTimeout as sleep} from 'node:timers/promises';
 import WebSocket from '../../pocket-server/node_modules/ws/index.js';
 const base=process.env.POCKETNET_TEST_URL||'http://127.0.0.1:8787';
@@ -38,7 +40,7 @@ const guest=await channel(await session('Chy Guest'));
 try{
  host.send('create_room',{gameId:'chyepukha'});
  const created=await host.next('room_joined');
- assert.equal(created.version,'v6');
+ assert.equal(created.version,versionLock.chyepukha.current);
  const roomId=created.roomId,hostId=created.players[0].id;
  guest.send('join_room',{roomId});
  const joined=await guest.next('room_joined');
@@ -125,6 +127,6 @@ try{
   const release=await replacement.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='finished');
   assert.equal(release.event.payload.stories.length,2);
  }finally{await shutdown(replacement)}
- console.log('Chyepukha v6: safe pause, server-authorized kick, no rejoin and one-time seat replacement');
- console.log('Chyepukha v6: durable seat rejoin, idempotent receipts and partial story survive');
+ console.log('Chyepukha current: safe pause, server-authorized kick, no rejoin and one-time seat replacement');
+ console.log('Chyepukha current: durable seat rejoin, idempotent receipts and partial story survive');
 }finally{await Promise.allSettled([shutdown(host),shutdown(guest)])}

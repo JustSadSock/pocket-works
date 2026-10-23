@@ -143,9 +143,14 @@ try{
  assert.equal(room.players[0].avatar,'plum');
  guest.send('join_room',{roomId:room.roomId});
  const joined=await guest.next('room_joined');
- assert.equal(joined.state.participants[0].name,nick1);
- assert.equal(joined.state.participants[0].verified,true);
- assert.equal(joined.state.participants[1].verified,false);
+ // Zamazka must never send unfiltered artwork (or player lists) on the
+ // room_joined handshake. Members receive a private projected state via sync.
+ assert.deepEqual(joined.state,{phase:'lobby'});
+ guest.send('game_message',{payload:{type:'sync'}});
+ const guestState=(await guest.next('game_event')).event.payload;
+ assert.equal(guestState.participants[0].name,nick1);
+ assert.equal(guestState.participants[0].verified,true);
+ assert.equal(guestState.participants[1].verified,false);
  // A second tab with the same Pocket ID cannot occupy another player seat.
  const duplicateToken=await token('Impersonated name',alice.cookie);
  const duplicate=await open(duplicateToken,alice.cookie);
@@ -167,9 +172,12 @@ try{
  assert.equal(refreshed.player.avatar,'stone');
  verified.send('join_room',{roomId:room.roomId});
  const rejoined=await verified.next('room_joined');
- assert.equal(rejoined.state.participants[0].id,auth.player.id);
- assert.equal(rejoined.state.participants[0].name,revisedName);
- assert.equal(rejoined.state.participants[0].avatar,'stone');
+ assert.deepEqual(rejoined.state,{phase:'lobby'});
+ verified.send('game_message',{payload:{type:'sync'}});
+ const rejoinedState=(await verified.next('game_event')).event.payload;
+ assert.equal(rejoinedState.participants[0].id,auth.player.id);
+ assert.equal(rejoinedState.participants[0].name,revisedName);
+ assert.equal(rejoinedState.participants[0].avatar,'stone');
  // Leave both seats before revoking the host cookie, so room cleanup is deterministic.
  verified.send('leave_room');
  guest.send('leave_room');

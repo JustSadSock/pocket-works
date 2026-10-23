@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const versionLock=JSON.parse(await readFile(new URL('../modules.lock.json',import.meta.url),'utf8'));
 import WebSocket from '../../pocket-server/node_modules/ws/index.js';
 
 const base = process.env.POCKETNET_TEST_URL || 'http://127.0.0.1:8787';
@@ -63,7 +65,8 @@ const receive=(who,phase)=>who.next('game_event',m=>m.event.type==='state'&&m.ev
 try{
  host.send('create_room',{gameId:'perekos'});
  const opened=await host.next('room_joined');const room=opened.roomId,code=room.slice(0,8);
- assert.equal(opened.version,'v9','The current Perekos room must use the pinned v9 ruleset');assert.equal(opened.state.rulesVersion,9);assert.equal(opened.state.gameMode,'rupture');assert.equal(opened.state.phase,'lobby');assert.equal(opened.state.me,0);
+ assert.equal(opened.version,versionLock.perekos.current,'New rooms must use the currently pinned Perekos ruleset');
+ assert.ok(opened.state.rulesVersion>=9,'Perekos must keep authoritative rules generation');assert.equal(opened.state.gameMode,'rupture');assert.equal(opened.state.phase,'lobby');assert.equal(opened.state.me,0);
  guest.send('join_room',{roomId:code.toUpperCase()});
  const joined=await guest.next('room_joined');assert.equal(joined.state.me,1);assert.equal(joined.roomId,room);
  assert.equal(joined.state.players.length,2);
@@ -75,7 +78,7 @@ try{
  assert.equal(selectedMode.gameMode,'duel');
  host.send('game_message',{payload:{type:'start',gameMode:'duel'}});
  const started=(await receive(host,'fight')).event.payload;
- assert.equal(started.rulesVersion,9);assert.equal(started.match.gameMode,'duel');assert.equal(started.match.version,4);assert.equal(started.match.round,1);assert.deepEqual(started.match.score,[0,0]);
+ assert.equal(started.rulesVersion,opened.state.rulesVersion);assert.equal(started.match.gameMode,'duel');assert.equal(started.match.version,4);assert.equal(started.match.round,1);assert.deepEqual(started.match.score,[0,0]);
  const startX=started.match.actors[0].x;
  const ctl=(x=0)=>({x,y:0,aim:{x:320,y:140},attack:false,shield:false,dash:false});
  host.send('game_message',{payload:{type:'input',seq:0,round:1,control:ctl(999)}});

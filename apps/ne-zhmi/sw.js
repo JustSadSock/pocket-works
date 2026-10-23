@@ -1,7 +1,7 @@
-const APP_VERSION='0.7.0';
-const CACHE_NAME='ne-zhmi-v0.7.0';
+const APP_VERSION='0.8.0';
+const CACHE_NAME='ne-zhmi-v0.8.0';
 const RELEASE_DATE='2026-10-23';
-const RELEASE_NOTES=["Исправлено прохождение сквозь грузовые ящики справа налево; после попадания под пресс добавлено короткое безопасное восстановление.","Сетевые обновления стали компактными: геометрия передаётся при запуске, смене раунда и переподключении, а не при каждом движении.","Восстановление всех ролей комнаты и нагрузочные тесты: 2400 трасс, соответствие клиентской и серверной физики, длительный матч."];
+const RELEASE_NOTES=["Генератор трасс распределяет механизмы по операторам: магнит, тормоз, толчок и поплавок каждый получают собственный участок в каждой партии с соответствующим числом игроков.","Разделены сложные прыжковые секции, исключены повторяющиеся соседние модули; механики проверены физическими испытаниями.","Восстановлен общий выпуск PocketNet: модуль Чепухи закреплён в новой неизменяемой версии без изменения игровой логики."];
 const VERSION=APP_VERSION,CACHE=CACHE_NAME,PREFIX='ne-zhmi-';
 const FILES=['./','./index.html','./app.config.json','./styles.css','./app.js','./engine.js','./abilities.js','./course.js','./session.js','./renderer.js','./visual-fx.js','./soundscape.js','./online.js','./online-flow.js','../../shared/capabilities/net.js','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/update-manager.js'];
 const ROOT=new URL('./',self.registration.scope);
