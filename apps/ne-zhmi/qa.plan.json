@@ -11,7 +11,8 @@
         "online-flow.test.mjs",
         "course.test.mjs",
         "abilities.test.mjs",
-        "visual-fx.test.mjs"
+        "visual-fx.test.mjs",
+        "session.test.mjs"
       ]
     },
     {
