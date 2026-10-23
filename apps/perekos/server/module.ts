@@ -146,14 +146,14 @@ function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.run
 function makeMatch(seed=0x718abc,first='kindle',second='pebble',gameMode='duel'){const kind=gameMode==='rupture'?'rupture':'duel';const s={version:4,gameMode:kind,seed:seed>>>0||1,phase:'fight',round:1,remaining:kind==='rupture'?RUPTURE_SECONDS:ROUND_SECONDS,elapsed:0,nextEvolution:RUPTURE_SECONDS-EVOLUTION_SECONDS,coreHold:[0,0],overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first),actor(1,336,134,['on_hurt','armor'],second)],shots:[],streams:[],beams:[],waves:[],lobs:[],echoes:[],mines:[],barriers:[],fields:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
 const EVOLUTIONS=Object.freeze([{id:'beam',name:'Разящий луч',desc:'Атака выпускает толстый пробивной луч. Уровень усиливает урон и ширину.'},{id:'swarm',name:'Искровой рой',desc:'Атака выпускает веер дополнительных зарядов. Уровень увеличивает их число.'},{id:'field',name:'Грозовое поле',desc:'Атака оставляет опасную зону. Уровень увеличивает её размер и длительность.'}]);
 const FUSIONS=Object.freeze([{id:'ember_nova',name:'Огненное сердце',mod:'as_fire',desc:'Огненный рунический снаряд взрывается и поджигает.'},{id:'storm_lattice',name:'Грозовая решётка',mod:'as_storm',desc:'Заряженный рунический снаряд выпускает дуги при попадании.'},{id:'stone_crush',name:'Каменный захват',mod:'as_stone',desc:'Каменные снаряды ломают щит и замедляют.'}]);
-function availableFusions(a){return FUSIONS.filter(f=>!a.fusions.includes(f.id)&&compile(a.runes).some(c=>c.actions.some(x=>['ball','blast','mine'].includes(x.id)&&x.mods.includes(f.mod))))}
+function availableFusions(a){return FUSIONS.filter(f=>!(a.fusions||[]).includes(f.id)&&compile(a.runes).some(c=>c.actions.some(x=>['ball','blast','mine'].includes(x.id)&&x.mods.includes(f.mod))))}
 function grantEvolution(a,kind,id){
  if(kind==='mutate'){
   if(!EVOLUTIONS.some(f=>f.id===id))return false;
   const level=a.evolution?.form===id?a.evolution.level+1:1;if(level>3)return false;
   a.evolution={form:id,level};return true;
  }
- if(kind==='fuse'){if(!availableFusions(a).some(f=>f.id===id))return false;a.fusions.push(id);return true}
+ if(kind==='fuse'){if(!availableFusions(a).some(f=>f.id===id))return false;(a.fusions||(a.fusions=[])).push(id);return true}
  return false;
 }
 
@@ -377,7 +377,7 @@ function castEvolution(s,a){
 function fusionImpact(s,q,target){
  if(q.fusion===false||q.depth>=2)return;
  const source=s.actors[q.owner];
- for(const id of source.fusions){
+ for(const id of source.fusions||[]){
   if(id==='ember_nova'&&q.element==='fire'){target.burn=Math.max(target.burn,1.8);target.burnSource=q.owner;harm(s,target,3.5,q.owner,q.depth+1);fx(s,'overload',target.x,target.y)}
   else if(id==='stone_crush'&&q.element==='stone'){target.shield=Math.max(0,target.shield-8);target.slow=Math.max(target.slow,1.25);fx(s,'fracture',target.x,target.y)}
   else if(id==='storm_lattice'&&q.element==='storm'&&s.shots.length<76){
@@ -478,7 +478,7 @@ if(d<260&&random(s)<.035)attack(s,b,p);
 if(b.shieldReady<=0&&b.hp<55&&random(s)<.009)guard(s,b);
 return {x,y,attack:false,shield:false,dash:false,aim:{x:p.x,y:p.y}}}
 function tick(s,input={},dt=STEP,otherInput=null){
- if(s.phase!=='fight')return s;dt=STEP;safeWorld=s;s.ticks++;s.remaining=Math.max(0,s.remaining-dt);
+ if(s.phase!=='fight')return s;if(s.gameMode==='rupture'){s.fields ||= [];for(const a of s.actors)a.fusions ||= []}dt=STEP;safeWorld=s;s.ticks++;s.remaining=Math.max(0,s.remaining-dt);
  s.streams=[];s.beams=s.beams||[];s.waves=s.waves||[];s.lobs=s.lobs||[];
  for(const a of s.actors){
   a.heat=Math.max(0,a.heat-7*dt);a.overloadCd=Math.max(0,a.overloadCd-dt);
@@ -564,7 +564,7 @@ else{s.phase='draft';s.pick=offers(s)}
 return s}
 function validState(s){
  return !!s&&s.version===4&&['fight','draft','build','result'].includes(s.phase)
- &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&typeof a.mark==='string'&&Number.isFinite(a.markLife)&&a.markLife>=0&&Number.isFinite(a.reactionCd)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&(!a.evolution||EVOLUTIONS.some(f=>f.id===a.evolution.form)&&Number.isInteger(a.evolution.level)&&a.evolution.level>0&&a.evolution.level<=3)&&Array.isArray(a.fusions)&&a.fusions.length<=3&&new Set(a.fusions).size===a.fusions.length&&a.fusions.every(id=>FUSIONS.some(f=>f.id===id))&&a.runeTimers&&typeof a.runeTimers==='object')
+ &&Array.isArray(s.actors)&&s.actors.length===2&&s.actors.every(a=>Number.isFinite(a.x)&&Number.isFinite(a.hp)&&validMage(a.mageId)&&typeof a.mark==='string'&&Number.isFinite(a.markLife)&&a.markLife>=0&&Number.isFinite(a.reactionCd)&&Number.isFinite(a.heat)&&a.heat>=0&&a.heat<=100&&legalRunes(a.runes)&&(!a.evolution||EVOLUTIONS.some(f=>f.id===a.evolution.form)&&Number.isInteger(a.evolution.level)&&a.evolution.level>0&&a.evolution.level<=3)&&(!a.fusions||Array.isArray(a.fusions)&&a.fusions.length<=3&&new Set(a.fusions).size===a.fusions.length&&a.fusions.every(id=>FUSIONS.some(f=>f.id===id)))&&a.runeTimers&&typeof a.runeTimers==='object')
  &&Array.isArray(s.shots)&&(!s.streams||Array.isArray(s.streams))&&(!s.beams||Array.isArray(s.beams))&&(!s.waves||Array.isArray(s.waves))&&(!s.lobs||Array.isArray(s.lobs))&&Array.isArray(s.echoes)&&Array.isArray(s.mines)&&Array.isArray(s.barriers)&&(!s.fields||Array.isArray(s.fields))&&Array.isArray(s.eventQueue)
  &&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture',undefined].includes(s.gameMode);
 }
