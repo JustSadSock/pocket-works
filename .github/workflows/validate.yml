@@ -195,6 +195,8 @@ jobs:
         run: node apps/zamazka/qa/editor-frame-idle.mjs
       - name: Verify coalesced stationary pointers do not schedule redraws
         run: node apps/zamazka/qa/editor-pointer-dedup.mjs
+      - name: Verify opt-in mobile frame profiler and latency percentiles
+        run: node --test apps/zamazka/qa/frame-performance.test.mjs
 
       - name: Test ZAMAZKA smudge, uninterrupted strokes and touch budgets
         run: node apps/zamazka/qa/editor-input.mjs && node apps/zamazka/qa/smudge.mjs
