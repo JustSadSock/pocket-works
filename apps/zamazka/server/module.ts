@@ -269,15 +269,28 @@ const module: PocketModule<State>={
    }
    // Resume only the validated, ordered prefix of an existing final revision.
    // An unknown or replaced revision safely restarts from part zero.
-   if(a.type==='submit_resume'&&state.phase==='drawing'&&isMember){
+   if(a.type==='submit_resume'&&isMember){
     const item=state.assignments[id];
     const assembly=state.draftAssemblies?.[id];
-    const valid=!!item&&item.strokes===null&&a.round===state.round&&
+    const valid=!!item&&a.round===state.round&&
       a.art===item.art&&a.variation===item.variation&&
       typeof a.revision==='string'&&/^r[a-z0-9-]{1,30}$/.test(a.revision)&&
       typeof a.checksum==='string'&&/^[0-9a-f]{8}$/.test(a.checksum)&&
       Number.isInteger(a.parts)&&a.parts>0&&a.parts<=160;
     if(!valid)return {state,events:notice(id,'Невозможно восстановить эту отправку.')};
+    // The full final may be committed while its ACK is lost in a reconnect.
+    // Confirm the durable bytes instead of requesting another multipart upload.
+    // A timer fallback is not a confirmed final even if its draft matches.
+    if(Array.isArray(item.strokes)&&!state.incompleteSubmissions?.includes(id)){
+      const committed=paintingChecksum(item.strokes);
+      if(committed===a.checksum)return {state,events:[{type:'submission_saved',to:id,payload:{
+        round:state.round,art:item.art,variation:item.variation,revision:a.revision,
+        checksum:committed,lines:item.strokes.length
+      }}]};
+      return {state,events:notice(id,'Сохранённая работа не совпадает с отправкой.')};
+    }
+    if(state.phase!=='drawing'||item.strokes!==null)
+      return {state,events:notice(id,'Невозможно восстановить эту отправку.')};
     (state.pendingFinals||={})[id]=now();
     const next=assembly?.kind==='submit_chunk'&&assembly.revision===a.revision&&
       assembly.checksum===a.checksum&&assembly.parts===a.parts?assembly.next:0;
