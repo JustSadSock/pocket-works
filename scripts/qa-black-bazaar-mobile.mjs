@@ -1,4 +1,4 @@
-import {chromium} from '@playwright/test';
+const {chromium}=await import(process.env.BAZAAR_PLAYWRIGHT_MODULE||'playwright');
 import {mkdir,writeFile} from 'node:fs/promises';
 
 const devices=[['small',320,568],['short',375,667],['phone',390,844],['landscape',844,390],['tablet',820,1024],['tablet-landscape',1024,768],['desktop',1440,900]];
