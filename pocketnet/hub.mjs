@@ -4,6 +4,7 @@ import {assessBlockiesAwards} from './blockies-awards.mjs';
 import {playerRoomView} from './private-views.mjs';
 import {roomJoinView} from './room-join-view.mjs';
 import {shouldAnnounceSocketDeparture} from './disconnect-presence.mjs';
+import {prepareArtworkStorage} from './art-storage.mjs';
 
 // All rooms share one small, hibernatable SQLite-backed coordinator. This matches
 // the personal/friends deployment (max 32 rooms / 48 sockets) without paid KV/D1.
@@ -287,27 +288,13 @@ export class PocketNetHub {
     return {id:row.id,gameId:row.game_id,version:row.version,
       state,players:roomPlayers,createdAt:row.created_at,updatedAt:row.updated_at};
   }
-  persist(room) {
-    const pieces=[];
-    let state=room.state;
+  persist(room,{artOwner=null,skipAlarm=false}={}) {
+    let state=room.state, pieces=[], activeArtKeys=null;
     if(room.gameId==='zamazka'){
-      state={...state,assignments:{...state.assignments},drafts:{...state.drafts},
-        draftAssemblies:{...state.draftAssemblies}};
-      for(const [id,item] of Object.entries(state.assignments||{})){
-        if(!Array.isArray(item?.strokes))continue;
-        pieces.push(['final:'+id,JSON.stringify(item.strokes)]);
-        state.assignments[id]={...item,strokes:ZAMAZKA_ART_REF};
-      }
-      for(const [id,art] of Object.entries(state.drafts||{})){
-        if(!Array.isArray(art))continue;
-        pieces.push(['draft:'+id,JSON.stringify(art)]);
-        state.drafts[id]=ZAMAZKA_ART_REF;
-      }
-      for(const [id,item] of Object.entries(state.draftAssemblies||{})){
-        if(!Array.isArray(item?.strokes))continue;
-        pieces.push(['assembly:'+id,JSON.stringify(item.strokes)]);
-        state.draftAssemblies[id]={...item,strokes:ZAMAZKA_ART_REF};
-      }
+      const projected=prepareArtworkStorage(state,ZAMAZKA_ART_REF,artOwner);
+      state=projected.stored;
+      pieces=projected.updates;
+      activeArtKeys=projected.activeKeys;
     }
     const encoded=JSON.stringify(state);
     if(bytes(encoded)>MAX_STATE)throw Error('room_state_too_large');
@@ -327,9 +314,10 @@ export class PocketNetHub {
           if(bytes(payload)>MAX_ZAMAZKA_STATE_EVENT)throw Error('artwork_too_large');
           this.sql('INSERT INTO zamazka_art_payloads(room_id,pkey,payload) VALUES(?,?,?) ON CONFLICT(room_id,pkey) DO UPDATE SET payload=excluded.payload WHERE payload <> excluded.payload',
             room.id,pkey,payload);
-          stale.delete(pkey);
         }
-        for(const pkey of stale)
+        // When an artist commits their final work, obsolete draft/assembly
+        // rows disappear here without deleting untouched art of other players.
+        for(const pkey of stale)if(!activeArtKeys.has(pkey))
           this.sql('DELETE FROM zamazka_art_payloads WHERE room_id=? AND pkey=?',room.id,pkey);
       }
       this.sql(`INSERT INTO rooms (id, game_id, version, state, players, created_at, updated_at)
@@ -344,7 +332,7 @@ export class PocketNetHub {
           (SELECT revision FROM chyepukha_checkpoints WHERE room_id=? ORDER BY revision DESC LIMIT 4)`,room.id,room.id);
       }
     });
-    this.ensureAlarm();
+    if(!skipAlarm)this.ensureAlarm();
   }
   ensureAlarm() {
     // Pending grants survive room closure and are retried until Pocket Social confirms them.
@@ -708,7 +696,12 @@ export class PocketNetHub {
           const readOnlyZamazka=room.gameId==='zamazka'&&
             (msg.payload?.type==='sync'||msg.payload?.type==='time_ping'||
              (msg.payload?.type==='pulse'&&(result.events?.length||0)===0));
-          if(!readOnlyZamazka)this.persist(room);
+          if(!readOnlyZamazka){
+            const artworkPacket=room.gameId==='zamazka'&&
+              ['draft_chunk','submit_chunk'].includes(msg.payload?.type)&&
+              prior.phase===room.state.phase&&prior.round===room.state.round;
+            this.persist(room,artworkPacket?{artOwner:player.id,skipAlarm:true}:{});
+          }
           this.recordZamazkaRewards(room,prior,room.state,result.events ?? [],player.id);
           this.recordBlockiesRewards(room,prior,room.state);
           if(room.gameId==='chyepukha'&&room.version==='v6')await this.applyKicks(room,result.events ?? [],player.id);
