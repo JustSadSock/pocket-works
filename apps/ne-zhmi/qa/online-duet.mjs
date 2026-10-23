@@ -130,11 +130,27 @@ try{
   if(!room||room.state.players.length!==2)throw Error('Room membership lost');
   await host.screenshot({path:screenshots+'/duet-host-rejoined.png'});
   await guest.screenshot({path:screenshots+'/duet-guest-rejoined.png'});
-  // End-to-end finish and host-controlled replay; the client cannot declare
-  // victory without the server reaching the finish line.
-  await poll(()=>room.state.robot.x>11.9&&room.state.robot.ground,'approach final gap',17000);
+  // A fresh round isolates finish from the deliberately interrupted reconnect
+  // sequence. Both clients must acknowledge the replacement round.
+  await poll(()=>!room.state.hold,'both operators actively pulsing');
+  const preRound=room.state.round;
+  const restarted=module.onMessage({state:room.state,player:players[0],payload:{type:'restart'}});
+  room.state=restarted.state;broadcastEvents(restarted.events);
+  await poll(()=>room.state.round===preRound+1,'server restart');
+  await poll(()=>host.locator('#jump').isEnabled(),'host input after restart');
+  await poll(()=>guest.locator('#reverse').isEnabled(),'guest input after restart');
+  await poll(()=>room.state.robot.x>4.1&&room.state.robot.ground,'new round first obstacle');
   await host.locator('#jump').click();
-  await poll(()=>room.state.robot.jumps>=2,'second jump');
+  await poll(()=>room.state.robot.jumps===1,'first jump in replay');
+  await poll(()=>room.state.robot.x>11.9&&room.state.robot.ground,'new round final gap',12000);
+  await host.locator('#jump').click();
+  await poll(()=>room.state.robot.jumps>=2,'second jump',5000).catch(error=>{
+    console.error('JUMP DIAGNOSTIC',JSON.stringify({
+      phase:room.state.phase,hold:room.state.hold,round:room.state.round,
+      x:room.state.robot.x,t:room.state.robot.t,jumps:room.state.robot.jumps,
+      signals:room.state.signals,lastClock:room.state.lastClock,now:Date.now()
+    }));throw error;
+  });
   await poll(()=>room.state.phase==='won','authoritative finish',10000);
   await poll(()=>host.locator('#online-result').isVisible(),'host victory overlay');
   await poll(()=>guest.locator('#online-result').isVisible(),'guest victory overlay');
