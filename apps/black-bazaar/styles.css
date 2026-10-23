@@ -706,3 +706,7 @@ body.sheet-open{overflow:auto}
  @keyframes bazaar-pop{from{opacity:0;transform:translate(-50%,-8px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 }
 @media(prefers-reduced-motion:reduce){.player-popover,.mini-artifacts button .item-svg{animation:none!important;transition:none!important}}
+
+/* The same standalone illustration is usable at tabletop, inventory and detail scales. */
+.item-svg{display:block;overflow:visible;max-width:100%;max-height:100%;object-fit:contain;transform-origin:center 60%}
+.inventory-art .item-svg,.detail-display .item-svg{background:none!important}
