@@ -475,6 +475,9 @@ export class LivingGreenhouseLayer {
     ctx.lineJoin = 'round';
     if (holeOnScreen) {
       const pulse = this.reducedMotion ? .5 : .45 + Math.sin(time * .48 + hole.x * .004) * .08;
+      // The real stone cup and pennant are already clear at close zoom.
+      // Only add a ground outline when the cup is tiny on screen.
+      if (hole.r * (this.renderer.scale || 1) < 17) {
       this.traceGroundRing(ctx, field, hole.x, hole.y, hole.r + 12 + pulse * 3, holeGround, 1.15);
       ctx.strokeStyle = 'rgba(4,16,10,.66)';
       ctx.lineWidth = 3.4;
@@ -483,9 +486,10 @@ export class LivingGreenhouseLayer {
       ctx.setLineDash([]);
       ctx.lineDashOffset = 0;
       ctx.strokeStyle = tint(theme.beam, .58 + pulse * .16);
-      ctx.lineWidth = 1.25;
+      ctx.lineWidth = 1.05;
       ctx.stroke();
       ctx.setLineDash([]);
+      }
 
       const beacon = ctx.createLinearGradient(holeBase.x, holeBase.y, holeTop.x, holeTop.y);
       beacon.addColorStop(0, tint(theme.beam, 0));
@@ -506,8 +510,11 @@ export class LivingGreenhouseLayer {
     if (!ball.sunk && !ball.inCup) {
       const ground = Number.isFinite(ball.groundZ) ? ball.groundZ : (field?.heightAt?.(ball.x, ball.y) || 0);
       const steady = speed < 8 && !ball.airborne;
-      const visibility = aim?.active ? .88 : steady ? .64 : .24;
+      const visibility = aim?.active ? 0 : steady ? .46 : .13;
       const cueRadius = 35;
+      // Keep the subtle locator only for a resting/tiny marble. The aim
+      // compass and moving physical shadow already communicate its position.
+      if (!aim?.active && (steady || 22 * (this.renderer.scale || 1) < 10)) {
       this.traceGroundRing(ctx, field, ball.x, ball.y, cueRadius, ground, 1.1, 32);
       ctx.strokeStyle = `rgba(2,12,7,${visibility * .72})`;
       ctx.lineWidth = 3.2;
@@ -516,9 +523,10 @@ export class LivingGreenhouseLayer {
       ctx.setLineDash([]);
       ctx.lineDashOffset = 0;
       ctx.strokeStyle = tint(theme.accent, visibility);
-      ctx.lineWidth = steady ? 1.45 : .85;
+      ctx.lineWidth = steady ? 1.15 : .75;
       ctx.stroke();
       ctx.setLineDash([]);
+      }
 
       const ballZ = Number.isFinite(ball.z) ? ball.z : ground + 22;
       const center = this.renderer.worldToScreen(ball.x, ball.y, ballZ);
