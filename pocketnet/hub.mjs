@@ -202,7 +202,11 @@ export class PocketNetHub {
     if(!state||!Array.isArray(state.participants))return;
     const ids=this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean);
     const active=new Set(ids);
-    state.onlineIds=state.participants.filter(p=>active.has(p.id)).map(p=>p.id);
+    const nextOnline=state.participants.filter(p=>active.has(p.id)).map(p=>p.id);
+    const oldOnline=state.onlineIds||[];
+    const onlineChanged=nextOnline.length!==oldOnline.length||nextOnline.some((id,i)=>id!==oldOnline[i]);
+    const wasPaused=!!state.paused;
+    state.onlineIds=nextOnline;
     const waiting=state.phase!=='lobby'&&state.phase!=='results';
     let resumed=false;
     if(waiting&&!state.paused&&state.onlineIds.length===0){
@@ -217,7 +221,7 @@ export class PocketNetHub {
       state.pausedAt=0;
       resumed=true;
     }
-    this.persist(room);
+    if(onlineChanged||wasPaused!==!!state.paused)this.persist(room);
     // Send each participant their private snapshot, preserving hidden art.
     if(resumed){
       const mod=this.module(room.gameId,room.version);
