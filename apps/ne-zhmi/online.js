@@ -109,8 +109,8 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
       if(client!==net||attemptId!==id)return;
       me=e.player;connected=true;connecting=false;
       notify('PocketNet · соединение установлено');
-      if(snapshot?.phase==='play')startPulses();
-      if(roomId)send({type:'sync'});
+      // Authentication is not room membership; the hub joins the room next.
+      // Starting pulses here races 'join_room' after WebSocket reconnect.
       refresh();
     });
     net.on('room_joined',e=>{
@@ -118,6 +118,7 @@ export function createOnlineController({onUpdate,onExit,onNotice}) {
       if(e.gameId!=='ne-zhmi'){notify('Неверная игра в приглашении');return;}
       roomId=e.roomId;busy=false;connecting=false;
       consume(e.state);send({type:'sync'});
+      if(snapshot?.phase==='play')startPulses();
       try{netStorage.setItem('active','yes')}catch{}
       refresh();
     });
