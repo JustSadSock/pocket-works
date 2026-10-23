@@ -37,7 +37,12 @@ test('current match remains cosmetically stable until between-round transition',
  expect(await page.evaluate(()=>window.__perekosTest.appearance.mascot.animal)).toBe('cat');
  await page.evaluate(()=>{for(let i=0;i<2000&&window.__perekosTest.state.phase==='fight';i++)window.__perekosTest.step()});
  await expect(page.locator('#draft')).toBeVisible();
- await page.locator('.rune-choice').first().click();
+ const firstChoice=page.locator('.rune-choice').first();
+ await expect(firstChoice).toBeVisible();
+ // Keyboard activation must be equivalent to touch: WebKit can reject pointer actions
+ // while scroll momentum settles, but the accessible button must still work.
+ await firstChoice.focus();
+ await firstChoice.press('Enter');
  await expect(page.locator('#build')).toBeVisible();
  await page.locator('#bench-fight').click();
  await expect.poll(()=>page.evaluate(()=>window.__perekosTest.appearance.mascot.animal)).toBe('frog');
