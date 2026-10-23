@@ -53,6 +53,7 @@ export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoad
  };
  const add=(id)=>change(current=>grantEarnedMagicRune(current,id));
  function render(){
+  const previousScroll=panel.scrollTop;
   panel.replaceChildren();
   const match=getMatch(),remote=isRemote(),book=match?.magicModeV2?match.magicLoadouts[remote?(match.magicSeat??0):0]:null;
   if(!book){
@@ -185,6 +186,9 @@ export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoad
   else panel.append(el('p','v2-hint','Сервер выдал одинаковый запас рун обоим игрокам. Всё редактирование и запечатывание проверяются PocketNet.'));
   const notice=el('p','v2-notice',status||(remote?'Сетевая сборка сохраняется на сервере.':'Все изменения действуют в следующем бою.'));
   notice.setAttribute('role','status');panel.append(notice);
+  // Receiving an acknowledged remote edit should not throw a player who is
+  // browsing their rune reserve back to the top of this scrollport.
+  panel.scrollTop=previousScroll;
  }
  return {render,open:()=>{selectedSlot=0;status='';render()},setStatus:feedback};
 }
