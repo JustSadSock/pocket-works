@@ -1108,11 +1108,11 @@ async function connect(mode){
          let verified=false;
          try{verified=!!event.payload.checksum&&
            event.payload.checksum===paintingChecksum(JSON.parse(lastDraftPayload))}catch{}
-         if(verified){
+         if(verified||Number(roomModuleVersion.slice(1))<35&&!event.payload.checksum){
           lastDraftAckRevision=lastDraftRevision;
-          lastDraftAckPayload=lastDraftPayload;
-         }else{lastDraftAckRevision='';lastDraftAckPayload='';lastDraftAckPayload=''}
-         draftIndicator(verified?'Копия в PocketNet ✓':'Проверяем копию · повторим сохранение');
+          lastDraftAckPayload=verified?lastDraftPayload:'';
+         }else{lastDraftAckRevision='';lastDraftAckPayload=''}
+         draftIndicator(verified||lastDraftAckRevision?'Копия в PocketNet ✓':'Проверяем копию · повторим сохранение');
        }
      }
      else if(event?.type==='board_delta'){if(page==='lobby'&&event.payload?.u!==me?.id)commonsBoard?.accept(event.payload)}
