@@ -210,6 +210,19 @@ export function gardenSites(level) {
   return sites;
 }
 
+function displayScale(mesh,x,y,z) {
+  // Recognisable silhouettes remain legible in a full-course camera:
+  // grow only vertically, leaving the actual footprint untouched.
+  const point=p=>[x+(p[0]-x)*1.06,y+(p[1]-y)*1.06,z+(p[2]-z)*1.70];
+  return {
+    triangle(a,b,c,color,material,normal) {
+      mesh.triangle(point(a),point(b),point(c),color,material,normal);
+    },
+    quad(a,b,c,d,color,material,normal) {
+      mesh.quad(point(a),point(b),point(c),point(d),color,material,normal);
+    }
+  };
+}
 export function appendGardenIdentity(mesh,level,heightAt){
   const sites=gardenSites(level),p=paletteFor(level);
   for(const site of sites){
@@ -218,7 +231,7 @@ export function appendGardenIdentity(mesh,level,heightAt){
     // the course outline; all ornaments use the same baseline/scale.
     const z=ground+7;
     badge(mesh,site.x,site.y,z,0,p.stone,p.stoneLight);
-    identityObject(mesh,{x:site.x,y:site.y,z:z+4},site.theme,p,site.index);
+    identityObject(displayScale(mesh,site.x,site.y,z+9),{x:site.x,y:site.y,z:z+4},site.theme,p,site.index);
   }
   return sites;
 }
