@@ -64,6 +64,7 @@ function specialLine(t){
 }
 let onlinePlayerIds=null;
 let net=null,me=null,state=null,roomId='',mode='home',connecting=false,connected=false;
+let roomVersion=debugPreview?'v16':null;
 let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
 const decorativeGuests=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
 let notice='';
@@ -160,7 +161,7 @@ function renderHome(){
 }
 function renderLobby(){
  mode='lobby';activeSheet=null;selectedArtifact=null;playStarted=false;document.body.classList.remove('sheet-open');
- const all=state?.players||[],host=state?.host===me?.id,short=roomId.slice(0,8).toUpperCase();
+ const all=state?.players||[],host=state?.host===me?.id,canKick=host&&roomVersion==='v16',short=roomId.slice(0,8).toUpperCase();
  app.innerHTML='<div class="lobby-screen"><div class="panel stack">'+
  '<h1>За одним столом</h1><p>Код комнаты</p><strong class="lobby-room">'+esc(short)+'</strong>'+
  '<div class="row"><button type="button" data-action="copy-code">'+svgIcon('box')+' Код</button>'+
@@ -168,7 +169,7 @@ function renderLobby(){
  '<div class="lobby-players">'+all.map((p,index)=>'<div class="lobby-player">'+
  characterMarkup(decorativeGuests[index%decorativeGuests.length],'lobby-portrait')+'<strong>'+esc(p.name)+'</strong>'+
  (p.id===state.host?'<br><small>Ведущий</small>':'')+
- (host&&p.id!==me?.id?'<button type="button" class="lobby-kick" data-action="kick-player" data-player="'+esc(p.id)+'">Исключить</button>':'')+
+ (canKick&&p.id!==me?.id?'<button type="button" class="lobby-kick" data-action="kick-player" data-player="'+esc(p.id)+'">Исключить</button>':'')+
  '</div>').join('')+'</div>'
  '<p class="muted">'+all.length+' из 6 игроков · старт от двух</p>'+
  (host?'<button type="button" class="primary" data-action="start" '+(all.length<2?'disabled':'')+'>Начать игру</button>':'<p>Начало — у создателя комнаты.</p>')+
@@ -676,11 +677,11 @@ function closeRoom(){
  clearTimeout(cueTimer);cueTimer=null;
  activeSheet=null;selectedArtifact=null;playStarted=false;readDeals.clear();readTasks.clear();document.body.classList.remove('sheet-open');
  if(net){try{if(connected)net.leaveRoom()}catch{}try{net.close()}catch{}}
- net=null;me=null;state=null;onlinePlayerIds=null;roomId='';connected=false;connecting=false;message('');renderHome();
+ net=null;me=null;state=null;onlinePlayerIds=null;roomId='';roomVersion=null;connected=false;connecting=false;message('');renderHome();
 }
 function wire(client){
  client.on('connected',data=>{if(net!==client)return;me=data.player;connected=true;message('');});
- client.on('room_joined',data=>{if(net!==client)return;roomId=data.roomId;state=data.state;onlinePlayerIds=null;connecting=false;message('');render();});
+ client.on('room_joined',data=>{if(net!==client)return;roomVersion=data.version;roomId=data.roomId;state=data.state;onlinePlayerIds=null;connecting=false;message('');render();});
  client.on('presence',data=>{if(net!==client||!state||data.roomId!==roomId)return;if(Array.isArray(data.onlineIds)){onlinePlayerIds=new Set(data.onlineIds);if(state.phase==='play')render();}});
  client.on('game_event',data=>{
   if(net!==client)return;
@@ -805,7 +806,7 @@ app.addEventListener('click',event=>{
    app.querySelector('.player-popover')?.remove();
    const pop=document.createElement('div');pop.className='player-popover';pop.setAttribute('role','dialog');
    pop.innerHTML='<div class="player-popover-head"><strong>'+esc(player.character||player.name)+'</strong><button type="button" data-action="close-player-actions" aria-label="Закрыть">×</button></div>'+(!playerOnline(player)||player.bankrupt||state.you.bankrupt?'<p>Обмен недоступен</p>':'<button type="button" class="primary" data-action="trade-with" data-player="'+esc(player.id)+'">'+svgIcon('trade',20)+' Обмен / подарок</button>')+'<button type="button" data-action="open-sheet" data-sheet="players">'+svgIcon('people',19)+' Участники</button>'+
-   (state.host===me?.id&&!player.bankrupt?'<button type="button" class="kick-player" data-action="kick-player" data-player="'+esc(player.id)+'">'+svgIcon('close',18)+' Исключить из партии</button>':'');
+   (roomVersion==='v16'&&state.host===me?.id&&!player.bankrupt?'<button type="button" class="kick-player" data-action="kick-player" data-player="'+esc(player.id)+'">'+'Исключить из партии</button>':'');
    btn.closest('.player-seats')?.append(pop);sound.play('open');pop.querySelector('button')?.focus({preventScroll:true});return;
   }
   if(action==='close-player-actions'){app.querySelector('.player-popover')?.remove();return;}
