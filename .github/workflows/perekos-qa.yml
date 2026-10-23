@@ -54,7 +54,7 @@ jobs:
           PW_QA_SITE_ROOT: ${{ github.workspace }}
           PW_QA_OUTPUT_DIR: ${{ github.workspace }}/qa-artifacts/perekos-journey
         run: |
-          node node_modules/@playwright/test/cli.js test --config=scripts/universal-qa/playwright.config.mjs \\
+          node node_modules/@playwright/test/cli.js test --config=scripts/universal-qa/playwright.config.mjs \
             apps/perekos/qa/magic-v2-lab.spec.js --project=desktop-chromium
       - name: Browser journey and screenshot review (Chromium/WebKit, mobile/PC)
         env:
