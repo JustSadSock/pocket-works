@@ -725,3 +725,9 @@
 #forge-reset-confirm[hidden]{display:none}#forge-reset-confirm span{flex:1;font:700 11px/1.3 system-ui,sans-serif}#forge-reset-confirm button{padding:6px;background:#9b5c46;color:#fff1dd;border:0;font:700 11px system-ui,sans-serif}
 @media(max-width:620px){.archetype-options{grid-template-columns:1fr}.archetype-chip{min-height:38px;gap:2px;padding:8px}.archetype-chip small{font-size:10px}.forge-runes{grid-template-columns:repeat(3,minmax(0,1fr));max-height:190px}.forge-mutations,.forge-fusions{grid-template-columns:1fr}.forge-upgrade{min-height:35px}}
 @media(hover:none),(pointer:coarse){.archetype-chip,.forge-token,.forge-upgrade,.forge-entry{transition:none!important;transform:none!important;touch-action:manipulation}}
+
+/* The forge editor must stay touch-sized; generic scoreboard buttons are only 32px. */
+.score-row .forge-edit{width:auto;min-width:70px;height:32px;flex-shrink:0;padding:4px 6px;font-size:11px;line-height:1;letter-spacing:0}
+.score-row .forge-edit[hidden]{display:none}
+.score-row:has(.forge-edit:not([hidden])){letter-spacing:0;gap:5px}
+.score-row:has(.forge-edit:not([hidden]))>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
