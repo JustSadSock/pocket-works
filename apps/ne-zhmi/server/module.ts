@@ -185,7 +185,9 @@ export function generateCourse(seed=1,sectionCount=5,playerCount=2) {
 }
 function deviceRect(device,t) {
   if(device.type==='press'){
-    const wave=(Math.sin(t*2.35+device.phase)+1)/2;
+    // Cam-driven fast strike / long lifted interval: predictable crossing
+    // windows for two operators, rather than an almost half-cycle hazard.
+    const wave=((Math.sin(t*2.35+device.phase)+1)/2)**3;
     return {x:device.x,y:3.38+wave*2.8,w:device.w,h:.82,active:true};
   }
   if(device.type==='gate'){
