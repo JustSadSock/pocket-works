@@ -1,10 +1,11 @@
 import { WORLD, LEVEL, ROBOT, progressGame } from './engine.js';
+import { COURSE_THEMES,deviceRect } from './course.js';
 const C = { sky:'#a5b6ab', haze:'#dce4da', ink:'#334047', wall:'#77817a', dark:'#344247',
   edge:'#f2e6c9', copper:'#d78b49', amber:'#f6ba67', red:'#ce7b65', teal:'#6a9b9e' };
 const rr=(ctx,x,y,w,h,r)=>{ctx.beginPath();ctx.roundRect(x,y,w,h,r);};
 export function createRenderer(canvas) {
   const ctx=canvas.getContext('2d');
-  let w=800,h=460,scale=1,camX=0,shake=0,flash=0;
+  let w=800,h=460,scale=1,camX=0,shake=0,flash=0,previousLevel=null;
   const resize=()=>{
     const rect=canvas.getBoundingClientRect();
     w=Math.max(1,rect.width);h=Math.max(1,rect.height);
@@ -16,9 +17,12 @@ export function createRenderer(canvas) {
   window.addEventListener('resize',resize);resize();
   const impact=(power=1)=>{shake=Math.min(8,shake+power*2.2);flash=Math.min(.17,flash+power*.027);};
   function frame(state,now=0,mode='playing') {
+    const level=state.level||LEVEL;
+    if(previousLevel!==level){camX=0;previousLevel=level;}
+    const theme=COURSE_THEMES.find(t=>t.id===level.theme)||COURSE_THEMES[0];
     const viewH=7.9, viewW=Math.min(20,Math.max(5.6,viewH*w/h));
     scale=h/viewH;
-    const wanted=Math.max(0,Math.min(WORLD.width-viewW,state.x-viewW*.38));
+    const wanted=Math.max(0,Math.min((level.width||WORLD.width)-viewW,state.x-viewW*.38));
     camX+=(wanted-camX)*.11;
     if(wanted===0 && camX<.015)camX=0;
     const shakeX=shake>0?Math.sin(now*.071)*shake:0;
@@ -27,7 +31,7 @@ export function createRenderer(canvas) {
     const sy=y=>y*scale;
     // Background: industrial painted panels, grounded by geometry rather than global noise.
     const sky=ctx.createLinearGradient(0,0,0,h);
-    sky.addColorStop(0,'#c9d6c8');sky.addColorStop(.62,C.sky);sky.addColorStop(1,'#80968e');
+    sky.addColorStop(0,'#d9dfd2');sky.addColorStop(.62,theme.base);sky.addColorStop(1,theme.ground);
     ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
     ctx.save();ctx.translate(-camX*scale*.18,0);
     ctx.fillStyle='#a8baaf';
@@ -50,13 +54,13 @@ export function createRenderer(canvas) {
     ctx.strokeStyle='rgba(233,221,194,.16)';ctx.lineWidth=1;
     for(let x=-10;x<30;x+=.48){const px=sx(x);ctx.beginPath();ctx.moveTo(px,sy(7.4));ctx.lineTo(px+scale*.2,sy(7.56));ctx.stroke();}
     // Finish apparatus
-    const goalX=sx(LEVEL.goal);
+    const goalX=sx(level.goal);
     ctx.fillStyle='#526e66';ctx.fillRect(goalX-14,sy(4.75),28,sy(6.5)-sy(4.75));
     ctx.fillStyle=C.amber;rr(ctx,goalX-32,sy(4.5),64,26,5);ctx.fill();
     ctx.fillStyle=C.ink;ctx.font='800 12px system-ui';ctx.textAlign='center';ctx.fillText('ФИНИШ',goalX,sy(4.5)+17);
     ctx.strokeStyle='#d6e8d5';ctx.setLineDash([8,6]);ctx.lineWidth=2;ctx.beginPath();
     ctx.moveTo(goalX,sy(4.9));ctx.lineTo(goalX,sy(6.4));ctx.stroke();ctx.setLineDash([]);
-    for(const p of LEVEL.platforms) {
+    for(const p of level.platforms) {
       const x=sx(p.x),y=sy(p.y),ww=p.w*scale,hh=p.h*scale;
       ctx.fillStyle='#455658';ctx.fillRect(x+4,y+8,ww,hh);
       ctx.fillStyle=C.wall;ctx.fillRect(x,y,ww,hh);
@@ -70,11 +74,81 @@ export function createRenderer(canvas) {
       ctx.fillStyle='#d79e62';
       for(let k=13;k<ww-15;k+=55)ctx.fillRect(x+k,y+13,23,3);
     }
+    // Explicit working mechanisms: painted surfaces mirror physics effects.
+    for(const device of level.devices||[]){
+      const x=sx(device.x),ww=device.w*scale,top=sy(6.5);
+      if(x+ww<-50||x>w+50)continue;
+      ctx.save();
+      if(device.type==='warning'){
+        ctx.fillStyle='#e4b56f';ctx.fillRect(x,top-9,ww,8);
+        ctx.strokeStyle='#263e41';ctx.lineWidth=2;
+        for(let stripe=0;stripe<ww;stripe+=17){ctx.beginPath();ctx.moveTo(x+stripe,top-9);ctx.lineTo(x+stripe+7,top-1);ctx.stroke();}
+      }else if(device.type.startsWith('belt-')){
+        ctx.fillStyle=device.type==='belt-right'?'#69929a':'#bd8467';
+        ctx.fillRect(x,top-14,ww,13);
+        ctx.fillStyle='#34474b';
+        for(let px=x+10;px<x+ww;px+=25){
+          const shift=(((state.t*75*(device.type==='belt-right'?1:-1))%25)+25)%25;
+          ctx.beginPath();ctx.arc(px+shift,top-7.5,3,0,Math.PI*2);ctx.fill();
+        }
+        ctx.fillStyle='#f8e7cc';ctx.font='900 15px system-ui';
+        ctx.textAlign='center';ctx.fillText(device.type==='belt-right'?'→ →':'← ←',x+ww/2,top-17);
+      }else if(device.type==='spring'){
+        ctx.fillStyle='#d5a76b';rr(ctx,x,top-17,ww,16,5);ctx.fill();
+        ctx.strokeStyle='#425c57';ctx.lineWidth=2.5;
+        for(let px=x+8;px<x+ww-7;px+=13){
+          ctx.beginPath();ctx.moveTo(px,top-16);ctx.lineTo(px+6,top-6);ctx.lineTo(px+12,top-16);ctx.stroke();
+        }
+      }else if(device.type==='fan-up'||device.type==='fan-side'){
+        ctx.fillStyle='#e4dfc9';ctx.strokeStyle='#51676a';ctx.lineWidth=2.5;
+        const mid=x+ww/2,cy=top-35;
+        ctx.beginPath();ctx.arc(mid,cy,19,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.save();ctx.translate(mid,cy);ctx.rotate(state.t*6);
+        for(let i=0;i<4;i++){ctx.rotate(Math.PI/2);ctx.fillStyle='#759e98';
+          ctx.beginPath();ctx.ellipse(0,-9,5.5,11,.3,0,Math.PI*2);ctx.fill();}
+        ctx.restore();ctx.fillStyle='#45565a';
+        ctx.beginPath();ctx.arc(mid,cy,4.5,0,Math.PI*2);ctx.fill();
+        ctx.font='bold 12px ui-monospace,monospace';ctx.textAlign='center';
+        ctx.fillText(device.type==='fan-up'?'↑ ↑ ↑':'← ← ←',mid,top-64);
+        ctx.globalAlpha=.22;ctx.fillStyle='#dcebd9';
+        if(device.type==='fan-up'){ctx.fillRect(x,sy(4.55),ww,top-sy(4.55));}
+        else ctx.fillRect(x,sy(4.75),ww,top-sy(4.75));
+      }else if(device.type==='press'){
+        const r=deviceRect(device,state.t),yy=sy(r.y);
+        ctx.fillStyle='#4c6566';ctx.fillRect(x+ww*.34,sy(1.25),ww*.32,yy-sy(1.25));
+        ctx.fillStyle='#bd806a';rr(ctx,x-4,yy,ww+8,r.h*scale,3);ctx.fill();
+        ctx.fillStyle='#e9bc78';ctx.fillRect(x-4,yy,ww+8,7);
+        ctx.strokeStyle='#34454a';ctx.lineWidth=4;
+        for(let v=0;v<ww;v+=19){ctx.beginPath();ctx.moveTo(x+v,yy+r.h*scale-13);
+          ctx.lineTo(x+v+10,yy+r.h*scale-2);ctx.stroke();}
+      }else if(device.type==='gate'){
+        const r=deviceRect(device,state.t),yy=sy(r.y);
+        ctx.fillStyle='#d1a776';ctx.fillRect(x-8,sy(2.1),ww+16,7);
+        ctx.fillStyle=r.active?'#c27e65':'#839d91';
+        ctx.fillRect(x,yy,ww,r.h*scale);
+        ctx.strokeStyle='#3b5456';ctx.lineWidth=3;ctx.strokeRect(x,yy,ww,r.h*scale);
+        for(let py=yy+11;py<yy+r.h*scale;py+=17){
+          ctx.beginPath();ctx.moveTo(x+3,py);ctx.lineTo(x+ww-3,py);ctx.stroke();
+        }
+      }else if(device.type==='step'){
+        ctx.fillStyle='#e3b370';ctx.font='900 12px ui-monospace,monospace';
+        ctx.textAlign='center';ctx.fillText('↑',x+ww/2,sy(5.4)-12);
+      }
+      ctx.restore();
+    }
     // Physical checkpoint, not an invisible collision trigger.
-    const markerX=sx(LEVEL.checkpoint);
+    const markerX=sx(level.checkpoint);
     ctx.fillStyle='#3d6260';ctx.fillRect(markerX-3,sy(5.55),6,sy(6.25)-sy(5.55));
-    ctx.fillStyle=state.checkpoint>9?'#f6c57c':'#d5d2ad';
+    ctx.fillStyle=state.checkpoint>=level.checkpoint?'#f6c57c':'#d5d2ad';
     ctx.beginPath();ctx.moveTo(markerX+4,sy(5.53));ctx.lineTo(markerX+37,sy(5.63));ctx.lineTo(markerX+4,sy(5.81));ctx.closePath();ctx.fill();
+    // Each section has a numbered enamel plate, readable at wide and narrow zoom.
+    for(const section of level.sections||[]){
+      const xx=sx(section.x+.5);
+      if(xx < -60||xx>w+60)continue;
+      ctx.fillStyle='#465d5e';rr(ctx,xx,sy(2.85),40,20,3);ctx.fill();
+      ctx.fillStyle='#f8edcf';ctx.textAlign='center';ctx.font='800 11px ui-monospace,monospace';
+      ctx.fillText(String(section.index).padStart(2,'0'),xx+20,sy(2.85)+14);
+    }
     // Boltik: composed of a chassis, integrated wheel axles, enamel front, antenna and expressive optics.
     const px=sx(state.x),py=sy(state.y);
     ctx.save();ctx.translate(px,py);ctx.rotate(state.rotation);
