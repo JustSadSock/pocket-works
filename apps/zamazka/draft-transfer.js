@@ -41,13 +41,14 @@ export function sendPainting(send,meta){
 // strokes require dozens of chunks: blasting them synchronously deterministically
 // trips the limit, and repeating the burst cannot succeed. Leave headroom for
 // presence, sync and timer traffic. The caller owns cancellation / retries.
-export function sendPaintingPaced(send,meta,{intervalMs=95,signal,onProgress=()=>{}}={}){
+export function sendPaintingPaced(send,meta,{intervalMs=95,startIndex=0,signal,onProgress=()=>{}}={}){
  const packets=paintPackets(meta);
  const delay=Math.max(80,Number(intervalMs)||95);
+ const start=Number.isInteger(startIndex)&&startIndex>=0&&startIndex<=packets.length?startIndex:0;
  const completion=(async()=>{
-  for(let i=0;i<packets.length;i++){
+  for(let i=start;i<packets.length;i++){
    if(signal?.aborted)throw new Error('paint_transfer_cancelled');
-   if(i)await new Promise(resolve=>setTimeout(resolve,delay));
+   if(i>start)await new Promise(resolve=>setTimeout(resolve,delay));
    if(signal?.aborted)throw new Error('paint_transfer_cancelled');
    send(packets[i]);
    onProgress(i+1,packets.length);
