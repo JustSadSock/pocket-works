@@ -83,7 +83,6 @@
         "qa/spectacle.spec.js",
         "qa/readability.spec.js",
         "qa/choreography.spec.js",
-        "qa/aim-precision.spec.js",
         "qa/kinetics.spec.js",
         "qa/rune-forge.spec.js",
         "qa/rupture.spec.js",

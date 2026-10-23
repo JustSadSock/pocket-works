@@ -45,7 +45,7 @@ export function chooseEvolution(s,kind,id){
  else{const offers=eligibleOffers(s,1),pick=offers[0];if(pick){if(bot.runes.length>=9)bot.runes[0]=pick;else bot.runes.push(pick)}}
  s.pick=[];s.phase='build';return true;
 }
-function reorderRunes(s,from,to){
+export function reorderRunes(s,from,to){
  if(s.phase!=='build')return false;const slots=s.actors[0].runes;
  if(!Number.isInteger(from)||!Number.isInteger(to)||from<0||to<0||from>=slots.length||to>=slots.length)return false;
  const [id]=slots.splice(from,1);slots.splice(to,0,id);return true;
