@@ -4,7 +4,7 @@ import {
  createMagicLoadout,applyMagicEdit,grantEarnedMagicRune,
  validateMagicState,effectiveMagicForm,compileMagic
 } from './magic-v2-rules.mjs';
-import {MAGIC_V2_PRACTICE_RUNES} from './core.mjs';
+import {MAGIC_V2_PRACTICE_RUNES,magicV2PracticeModifierFits} from './core.mjs';
 import {MAGIC_RUNE_INDEX} from './magic-v2-rules.mjs';
 
 const SCHOOL_LABELS={stone:'Камень',fire:'Огонь',storm:'Молния'};
@@ -116,8 +116,12 @@ export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoad
    item.append(el('div','v2-item-name',def.name));
    item.append(el('small','',KIND[def.kind]+' · '+RARITY[def.rarity]));
    if(def.kind==='how'){
-    for(let j=0;j<slotActionCount;j++)
-     item.append(btn('К '+(j+1),()=>edit('equip',{instanceId:instance.instanceId,action:j}),'v2-equip'));
+    for(let j=0;j<slotActionCount;j++){
+     const fits=magicV2PracticeModifierFits(spell.actions[j].rune.defId,def.id);
+     if(fits)item.append(btn('К '+(j+1),()=>edit('equip',{instanceId:instance.instanceId,action:j}),'v2-equip'));
+    }
+    if(!spell.actions.some(a=>magicV2PracticeModifierFits(a.rune.defId,def.id)))
+     item.append(el('small','','Не подходит к этому ЧТО'));
    }else item.append(btn('В слот',()=>edit('equip',{instanceId:instance.instanceId}),'v2-equip'));
    reserve.append(item);
   }
