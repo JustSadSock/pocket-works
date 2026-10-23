@@ -69,9 +69,9 @@ function verifyPrivate(state,selfId){
  assert.ok(state.players.every(p=>!('quota' in p)&&!('positiveTarget' in p)&&!('negativeTarget' in p)));
  assert.ok(!('contestants' in state),'authoritative contestant secrets are never sent');
 }
-async function sync(client){
+async function sync(client,minRevision=0){
  client.send('game_message',{payload:{type:'sync'}});
- return stateOf(await client.next('game_event',stateEvent('play')));
+ return stateOf(await client.next('game_event',stateEvent('play',s=>s.revision>=minRevision)));
 }
 const clients=[],healthStatus=await health();
 assert.ok(healthStatus.modules.includes('black-bazaar'),'the actual Worker must publish Bazaar');
@@ -137,7 +137,7 @@ try{
  const acceptRevision=afterResume.revision;
  sellerBack.send('game_message',{payload:{type:'accept',buyer:buyer.id}});
  const paid=stateOf(await buyer.next('game_event',stateEvent('play',s=>s.revision>acceptRevision&&s.listing===null&&s.you.items.some(i=>i.id===itemId))));
- const sellerPaid=await sync(sellerBack);
+ const sellerPaid=await sync(sellerBack,paid.revision);
  assert.equal(paid.you.items.length,buyerCount+1);
  assert.equal(paid.you.resources.gold,buyerGold-45-(sellerStart.you.negativeTarget===buyer.id?20:0));
  assert.equal(sellerPaid.you.resources.gold,sellerGold+45);
@@ -147,7 +147,7 @@ try{
  sellerBack.send('game_message',{payload:{type:'accept',buyer:buyer.id}});
  const duplicate=await sellerBack.next('game_event',m=>m.event?.type==='notice');
  assert.ok(duplicate,'stale accept must be rejected');
- const unchanged=await sync(buyer);
+ const unchanged=await sync(buyer,paid.revision);
  assert.equal(unchanged.you.items.filter(i=>i.id===itemId).length,1);
  assert.equal(unchanged.you.resources.gold,paid.you.resources.gold);
 
@@ -159,9 +159,9 @@ try{
 
  // Nine rounds continue from the authoritative snapshots and survive the
  // disconnect that took place while an auction was outstanding.
- let rounds=0,commands=0;
+ let rounds=0,commands=0,lastRevision=paid.revision;
  for(let n=0;n<48;n++){
-  const active=await sync(byId.get(host.id));
+  const active=await sync(byId.get(host.id),lastRevision);
   if(active.phase==='done')break;
   const player=byId.get(active.turnId);
   assert.ok(player,'active seat must stay recoverable');
@@ -170,7 +170,9 @@ try{
    m=>m.event?.type==='state'&&m.event.payload?.revision>active.revision);
   const progress=stateOf(next);
   if(progress.phase==='done'){snap=progress;break;}
+  lastRevision=progress.revision;
   rounds=Math.max(rounds,progress.round);commands++;
+  await delay(65); // Stay below the Worker 30-message/second abuse limit.
  }
  if(snap.phase!=='done'){
   host.send('game_message',{payload:{type:'sync'}});
