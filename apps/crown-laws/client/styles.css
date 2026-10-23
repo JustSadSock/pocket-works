@@ -1,4 +1,4 @@
-/* Crown Laws — Stone Council. Entirely authored UI; no image, icon or SVG dependencies. */
+/* Crown Laws — legacy stone council foundation; stage05.css adds local manuscript SVG art. */
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=PT+Sans:wght@400;500;600;700&display=swap');
 :root{color-scheme:dark;--night:#131816;--stone:#292d2a;--stone-hi:#404640;--stone-cut:#1c2421;--ivory:#eee5d0;--faded:#b3ac95;--gold:#c7a971;--gold-bright:#e7c990;--blue:#89b1be;--red:#cb887d;--paper:#ddd0ac;--ink:#342e27;--line:rgba(224,201,150,.23);--shadow:0 22px 65px rgba(0,0,0,.43);font-family:'PT Sans',system-ui,sans-serif;font-synthesis:none}
 *{box-sizing:border-box}
