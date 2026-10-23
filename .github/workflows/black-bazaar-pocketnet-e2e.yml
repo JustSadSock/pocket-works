@@ -32,8 +32,16 @@ jobs:
           node-version: '22'
       - name: Install WebSocket client
         run: npm ci --prefix pocket-server --no-audit --no-fund
-      - name: Build pinned production PocketNet rules
-        run: npm run build:pocketnet
+      - name: Verify immutable Bazaar v16 snapshot
+        run: |
+          node --input-type=module -e "import {readFileSync} from 'node:fs';const src=readFileSync('apps/black-bazaar/server/module.ts','utf8'),pin=readFileSync('pocketnet/module-versions/black-bazaar/v16.ts','utf8'),lock=JSON.parse(readFileSync('pocketnet/modules.lock.json'));if(src!==pin||lock['black-bazaar'].current!=='v16')process.exit(1)"
+      - name: Build isolated integration-test PocketNet modules
+        run: |
+          # A different game's in-flight, unsnapshotted source must not block
+          # testing Bazaar's immutable v16. These files exist only on this
+          # disposable CI runner; no version lock is committed or deployed.
+          node scripts/build-pocketnet-modules.mjs --snapshot
+          node scripts/build-pocketnet-modules.mjs --check
       - name: Install Wrangler 4
         run: npm install --prefix /tmp/bazaar-wrangler --no-audit --no-fund wrangler@4
       - name: Run three authenticated players on a real SQLite Durable Object
