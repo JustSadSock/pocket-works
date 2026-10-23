@@ -341,5 +341,5 @@ document.addEventListener('visibilitychange',()=>{previousFrame=0;lastRender=0;i
 window.addEventListener('pagehide',save);
 if('ResizeObserver'in window)new ResizeObserver(()=>forceDraw=true).observe(stage);
 window.addEventListener('resize',()=>forceDraw=true);
-createWorkshopMode({appName:'РИКОШЕТ',version:'2.1.0',cachePrefix:'billiard-lab-',storageNamespace:'pocket-works:billiard-lab',onReset(){try{localStorage.removeItem(STORAGE)}catch{}location.reload()}});
+createWorkshopMode({appName:'РИКОШЕТ',version:'2.2.0',cachePrefix:'billiard-lab-',storageNamespace:'pocket-works:billiard-lab',onReset(){try{localStorage.removeItem(STORAGE)}catch{}location.reload()}});
 startOver();updateControls();updateNumbers();requestAnimationFrame(frame);
