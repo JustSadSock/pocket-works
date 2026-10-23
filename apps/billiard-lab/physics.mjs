@@ -57,7 +57,7 @@ export function initialParticles(count,point){
  return {x,y,dx,dy,count:n,reflections:0};
 }
 function choose(best,t,nx,ny,max){
- if(t>EPS&&t<max&&t<best.t&&Number.isFinite(t))return {t,nx,ny};
+ if(t>EPS&&t<=max+EPS&&t<best.t&&Number.isFinite(t))return {t,nx,ny};
  return best;
 }
 function rayCircle(x,y,dx,dy,cx,cy,r,insideBoundary,best,arc){
@@ -114,8 +114,39 @@ function firstHit(x,y,dx,dy,world,maxDistance){
  }
  return best.t<=maxDistance?best:null;
 }
+// A Float32 particle can land *exactly* on a wall at the end of a frame.
+// In that case the next positive-time ray cast cannot see the same wall.
+// Keep the point just inside and turn outgoing directions inward, including at vertices.
+function stabilize(x,y,dx,dy,shape){
+ const margin=.002;
+ if(!inside(shape,x,y,margin)){const p=contain(shape,{x,y},margin);x=p.x;y=p.y}
+ let reflections=0;
+ const bounce=(nx,ny)=>{
+  const dot=dx*nx+dy*ny;
+  if(dot< -1e-7){dx-=2*dot*nx;dy-=2*dot*ny;reflections++}
+ };
+ if(shape==='rectangle'){
+  if(x<=26+margin*1.2)bounce(1,0);
+  if(x>=874-margin*1.2)bounce(-1,0);
+  if(y<=27+margin*1.2)bounce(0,1);
+  if(y>=513-margin*1.2)bounce(0,-1);
+ }else if(shape==='circle'||shape==='stadium'){
+  const cx=shape==='circle'?450:clamp(x,278,622),cy=270,r=shape==='circle'?232:224;
+  const ox=x-cx,oy=y-cy,d=Math.hypot(ox,oy);
+  if(d>=r-margin*1.2&&d>0)bounce(-ox/d,-oy/d);
+ }else if(shape==='triangle'){
+  for(let i=0;i<3;i++){
+   const a=triangle[i],b=triangle[(i+1)%3],sx=b.x-a.x,sy=b.y-a.y,l=Math.hypot(sx,sy);
+   const nx=-sy/l,ny=sx/l,side=(x-a.x)*nx+(y-a.y)*ny;
+   if(side<=margin*1.2)bounce(nx,ny);
+  }
+ }
+ return {x,y,dx,dy,reflections};
+}
 export function propagateRay(x,y,dx,dy,distance,world){
- let count=0,remaining=distance;
+ const start=stabilize(x,y,dx,dy,world.shape);
+ x=start.x;y=start.y;dx=start.dx;dy=start.dy;
+ let count=start.reflections,remaining=distance;
  for(let i=0;i<8&&remaining>EPS;i++){
   const hit=firstHit(x,y,dx,dy,world,remaining);
   if(!hit){x+=dx*remaining;y+=dy*remaining;remaining=0;break}
@@ -126,10 +157,11 @@ export function propagateRay(x,y,dx,dy,distance,world){
   const push=Math.min(.0002,remaining*.1);x+=dx*push;y+=dy*push;remaining-=push;
   count++;
  }
- if(remaining>EPS){ // Degenerate corner: preserve finite coordinates instead of going unbounded.
+ if(remaining>EPS){ // Rare repeated corner hit: never allow an unbounded ray.
   x+=dx*Math.min(remaining,.01);y+=dy*Math.min(remaining,.01);
  }
- return {x,y,dx,dy,reflections:count};
+ const end=stabilize(x,y,dx,dy,world.shape);
+ return {...end,reflections:count+end.reflections};
 }
 export function advance(particles,world,distance){
  const {x,y,dx,dy,count}=particles;let hits=0;
