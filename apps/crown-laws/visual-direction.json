@@ -80,17 +80,17 @@
     ]
   },
   "production": {
-    "renderer": "Original fully local SVG vector chairs, court figures, heraldic seals, parchment and native CSS two-state ceremonial UI with no new dependencies.",
+    "renderer": "Original SVG sigils and CSS manuscript sheet with an independent pure read-only law projection. No new graphics dependencies, network protocol changes, or game engine edits.",
     "focalAsset": "The invitation lobby uses two physically carved royal seats; the coronation foregrounds the winning actor and animated crown while losing players see the correct result."
   },
   "motion": {
     "character": "Two asymmetric occupancy silhouettes make a newly opened room and awaited opponent legible without reading paragraphs.",
-    "action": "Players can navigate five illustrated rules chapters, confirm a private hot-seat handoff, copy invitations and review the verified winning player's last recorded events.",
-    "anticipation": "Opening the advisor shifts focus to a compact parchment strip with nine selectable engine phases and an explicit conditional warning. The court stays fully readable.",
-    "response": "Clipboard confirmation appears only after successful API completion; win vs loss is calculated from current viewer, not assumed.",
-    "followThrough": "The winner's three-crown ceremony opens after the authoritative resolution, with a chronicle toggle and working rematch. Reduced-motion preferences disable ceremonial flourish.",
+    "action": "Selecting a private decree shows a paired current/new law codex without changing the shared state. Tapping any standing law inspects it independently and returns to the chosen decree without discarding selection.",
+    "anticipation": "The targeted category receives a small brass heraldic arrow. The old public law remains readable instead of being visually overwritten by an uncommitted decree.",
+    "response": "A two-stage parchment inspector labels the currently active law and the proposed replacement. Preview, confirm and explicit unselect are real separate controls.",
+    "followThrough": "Closing the inspector retains the selection; sending the decree clears it only after a valid action. Opening a phase forecast hides the inspector without affecting board dimensions.",
     "interruption": "Any newer turn cancels the former timeline. Skip clears timer/effects and immediately displays the final authoritative result. Reduced-motion mode abbreviates every phase and suppresses moving VFX.",
-    "reducedMotion": "CSS ceremonial movements and decorative pulses are disabled by prefers-reduced-motion; buttons and scenario transitions retain their clear state."
+    "reducedMotion": "Do not animate codex arrival for reduced-motion users; tapping and state changes remain immediate."
   },
   "evidence": {
     "entry": "./",
