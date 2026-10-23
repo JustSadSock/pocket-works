@@ -680,7 +680,9 @@ export class PocketNetHub {
           // the entire room for every time sync or reconnection snapshot.
           const readOnlyZamazka=room.gameId==='zamazka'&&
             (msg.payload?.type==='sync'||msg.payload?.type==='time_ping'||
-             (msg.payload?.type==='pulse'&&(result.events?.length||0)===0));
+             (msg.payload?.type==='pulse'&&(result.events?.length||0)===0)||
+             (msg.payload?.type==='submit_resume'&&
+              result.events?.some(e=>e.type==='submission_saved')));
           if(!readOnlyZamazka){
             const artworkPacket=room.gameId==='zamazka'&&
               ['draft_chunk','submit_chunk'].includes(msg.payload?.type)&&
