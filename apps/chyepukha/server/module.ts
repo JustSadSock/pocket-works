@@ -148,6 +148,9 @@ const module={
   } else if((v.type==='start'||v.type==='again')&&player.id===s.host&&
            (s.phase==='lobby'||s.phase==='finished')){
     error=begin(s);
+  } else if(v.type==='finish_early'&&player.id===s.host&&s.phase==='writing'){
+    // Explicit host action preserves every committed fragment, including an incomplete current round.
+    s.phase='finished';s.message='Випуск завершено достроково; збережено всі здані фрагменти.';s.revision++;
   } else if(v.type==='submit'){
     // Idempotency: the same packet can safely arrive after a lost acknowledgement.
     const prior=s.receipts?.[player.id];
