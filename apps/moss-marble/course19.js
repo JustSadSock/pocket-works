@@ -281,7 +281,7 @@ function buildField(level, blueprint) {
   return { landforms, masks, heightAt, gradientAt, normalAt, surfaceAt, surfaceInfoAt, rampAt, colorAt };
 }
 
-function buildSurfaceMesh(level, field, along = 86, across = 19) {
+function buildSurfaceMesh(level, field, along = 100, across = 23) {
   const vertices = [];
   const boundaryLeft = [];
   const boundaryRight = [];
@@ -313,7 +313,10 @@ function buildSurfaceMesh(level, field, along = 86, across = 19) {
         // of a patch. Near its perimeter the pigment itself crossfades.
         const surfaceInfo = field.surfaceInfoAt(center.x, center.y);
         const surface = surfaceInfo.weight > .90 ? surfaceInfo.type : 'grass';
-        const material = surface === 'sand' ? 8 : surface === 'moss' ? 7 : surface === 'water' ? 6 : 1;
+        // Sand and moss shades already blend per vertex in field.colorAt().
+        // Switching fragment materials per triangle produces sharp triangular
+        // borders in an otherwise continuous pigment transition.
+        const material = surface === 'water' ? 6 : 1;
         for (const index of triangle) {
           const vertex = vertices[index];
           const surfaceNormal = field.normalAt(vertex.x, vertex.y);
