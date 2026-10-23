@@ -78,7 +78,7 @@ function viewForPlayer({state:s,player,players,onlineIds}){
    genre:GENRES.find(x=>x.id===sh.genre)?.label||s.settings.customGenre||'Свій жанр',
    heroGender:sh.heroGender,
    // Assemble the whole story client-side from fragments to avoid doubling wire bytes.
-   fragments:sh.fragments.map((f,i)=>({question:resolveQuestions(s.settings,sh.set)[i]?.prompt||'',answer:f.answer,
+   fragments:sh.fragments.map((f,i)=>({question:resolveQuestions(s.settings,sh.set)[f.questionIndex??i]?.prompt||'',answer:f.answer,skipped:f.skipped===true,
       author:f.authorName||s.players.find(x=>x.id===f.by)?.name||'Автор'}))
  }))};
  return common;
@@ -176,6 +176,15 @@ const module={
   const online=new Set(Array.isArray(connectedIds)?connectedIds:s.players.map(x=>x.id)),clock=now||Date.now();
   const host=player.id===s.host,seatId=typeof v.seatId==='string'?v.seatId:'';
   const target=s.players.find(p=>p.id===seatId);
+  if(v.type==='skip_slot'&&host&&s.phase==='writing'&&!s.paused&&target&&!online.has(target.id)&&!s.submitted[target.id]){
+    const pi=s.players.findIndex(p=>p.id===target.id),si=(pi-s.round%s.players.length+s.players.length)%s.players.length;
+    const paper=s.sheets[si];
+    if(paper.fragments.length)delete paper.fragments[paper.fragments.length-1].tail;
+    paper.fragments.push({by:target.id,answer:'[Фрагмент пропущено: автор не завершив свою частину.]',tail:'',skipped:true,questionIndex:s.round});
+    s.submitted[target.id]=true;
+    if(s.players.every(p=>s.submitted[p.id])){s.round++;s.submitted={};if(s.round>=s.total){s.phase='finished';s.message='Випуск готовий із позначеними пропусками.'}}
+    s.revision++;return {state:s,events:events()};
+  }
   if(v.type==='pause'&&host&&s.phase==='writing'&&!s.paused){s.paused=true;s.message='Партію призупинено ведучим.';s.revision++;return {state:s,events:events()}}
   if(v.type==='unpause'&&host&&s.phase==='writing'&&s.paused){s.paused=false;s.message='Партію продовжено.';s.revision++;return {state:s,events:events()}}
   if(v.type==='transfer_host'&&host&&target&&online.has(target.id)&&!(s.bannedIds||[]).includes(target.id)){
@@ -204,7 +213,7 @@ const module={
     if(votes>eligible.length/2&&eligible.length>0){s.host=target.id;s.hostOfflineSince=0;s.hostVotes={};s.claim=null;s.message='Нового ведучого обрано голосуванням.'}
     s.revision++;return {state:s,events:events()};
   }
-  if(['pause','unpause','transfer_host','kick','open_seat','close_seat','vote_host'].includes(v.type))
+  if(['pause','unpause','transfer_host','kick','open_seat','close_seat','vote_host','skip_slot'].includes(v.type))
     return {state:s,events:notice(player.id,'Цю дію зараз не дозволено.')};
   let error=null;
   if(v.type==='settings'&&s.phase==='lobby'&&player.id===s.host){
