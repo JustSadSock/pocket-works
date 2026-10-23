@@ -1,0 +1,58 @@
+name: Black Bazaar Real PocketNet E2E
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/black-bazaar/qa/pocketnet-live.mjs'
+      - 'apps/black-bazaar/server/module.ts'
+      - 'pocketnet/module-versions/black-bazaar/**'
+      - 'pocketnet/hub.mjs'
+      - 'pocketnet/modules.lock.json'
+      - '.github/workflows/black-bazaar-pocketnet-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bazaar-real-pocketnet-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  real-durable-room:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install WebSocket client
+        run: npm ci --prefix pocket-server --no-audit --no-fund
+      - name: Build pinned production PocketNet rules
+        run: npm run build:pocketnet
+      - name: Install Wrangler 4
+        run: npm install --prefix /tmp/bazaar-wrangler --no-audit --no-fund wrangler@4
+      - name: Run three authenticated players on a real SQLite Durable Object
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-site
+          printf '<!doctype html><title>Bazaar network E2E</title>' > dist-site/index.html
+          cp privacy.html dist-site/privacy.html
+          cp privacy.html dist-site/privacy.txt
+          /tmp/bazaar-wrangler/node_modules/.bin/wrangler dev --local --port 8787 > /tmp/black-bazaar-pocketnet.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; tail -n 90 /tmp/black-bazaar-pocketnet.log' EXIT
+          node apps/black-bazaar/qa/pocketnet-live.mjs
+      - name: Upload Worker and transport diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: black-bazaar-real-pocketnet-worker
+          path: /tmp/black-bazaar-pocketnet.log
+          retention-days: 10
+          if-no-files-found: warn
