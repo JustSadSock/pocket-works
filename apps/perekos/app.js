@@ -296,6 +296,43 @@ function renderDraft(){
  renderEvolutionOffers();
 }
 function reorderOnBench(from,to){if(online?.active){const list=onlinePreviewRunes;if(!Array.isArray(list)||from<0||to<0||from>=list.length||to>=list.length)return false;const [id]=list.splice(from,1);list.splice(to,0,id);return true}return reorderRunes(active,from,to)}
+function renderForgeLab(){
+ if(active?.gameMode!=='forge')return;
+ const a=myActor(),owned=new Set(a.runes),list=$('forge-runes');list.replaceChildren();
+ for(const category of ['when','do','how']){
+  const group=document.createElement('div');group.className='forge-rune-group';
+  const title=document.createElement('strong');title.textContent=TYPES[category];group.append(title);
+  for(const r of RUNES.filter(x=>x.type===category)){
+   const button=document.createElement('button');button.type='button';button.textContent=r.name;
+   button.className='forge-token';button.setAttribute('aria-pressed',String(owned.has(r.id)));
+   button.title=r.desc;button.disabled=!owned.has(r.id)&&(a.runes.length>=9||(category==='when'&&a.runes.filter(id=>rune(id)?.type==='when').length>=3));
+   button.addEventListener('click',()=>{if(forgeEdit(active,owned.has(r.id)?'remove':'add',r.id)){remember();renderWorkbench();sfx('dash')}});
+   group.append(button);
+  }list.append(group);
+ }
+ const mutations=$('forge-mutations');mutations.replaceChildren();
+ for(const evolution of EVOLUTIONS){
+  const same=a.evolution?.form===evolution.id,level=same?a.evolution.level:0;
+  const button=document.createElement('button');button.type='button';button.className='forge-upgrade';button.disabled=level>=3;
+  button.textContent=evolution.name+' '+(level>=3?'III / III':same?'↑ '+(level+1)+'/3':'I / III');
+  button.addEventListener('click',()=>{if(forgeEdit(active,'mutate',evolution.id)){remember();renderWorkbench();sfx('shield')}});
+  mutations.append(button);
+ }
+ const fusions=$('forge-fusions');fusions.replaceChildren();const available=new Set(availableFusions(a).map(x=>x.id));
+ for(const f of FUSIONS){
+  const button=document.createElement('button');button.type='button';button.className='forge-upgrade';
+  button.textContent=f.name+(a.fusions?.includes(f.id)?' ✓':'');button.disabled=!available.has(f.id);button.title=f.desc;
+  button.addEventListener('click',()=>{if(forgeEdit(active,'fuse',f.id)){remember();renderWorkbench();sfx('shield')}});
+  fusions.append(button);
+ }
+ $('forge-dummy').textContent=active.forgeDummy?'Манекен · не атакует':'Соперник · атакует';
+ $('forge-status').textContent=a.runes.length+'/9 рун · '+(a.evolution?EVOLUTIONS.find(x=>x.id===a.evolution.form)?.name+' '+a.evolution.level+'/3':'Выбери форму');
+}
+$('forge-dummy').addEventListener('click',()=>{if(active?.gameMode!=='forge')return;active.forgeDummy=!active.forgeDummy;remember();renderForgeLab()});
+$('forge-reset').addEventListener('click',()=>{$('forge-reset-confirm').hidden=false});
+$('forge-reset-no').addEventListener('click',()=>{$('forge-reset-confirm').hidden=true});
+$('forge-reset-yes').addEventListener('click',()=>{if(active?.gameMode==='forge'&&forgeEdit(active,'reset')){remember();renderWorkbench();toast('Сборка сброшена')}$('forge-reset-confirm').hidden=true});
+
 function renderWorkbench(){
  if(!active)return;const slots=debugSession?myActor().runes:online?.active?(onlinePreviewRunes||[...myActor().runes]):myActor().runes;
  const preview=$('bench-mage'),mini=preview.getContext('2d');mini.clearRect(0,0,64,80);
