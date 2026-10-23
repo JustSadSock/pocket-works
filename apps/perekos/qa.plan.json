@@ -27,7 +27,8 @@
         "tests/rune-seals.test.mjs",
         "tests/rupture.test.mjs",
         "tests/evolution.test.mjs",
-        "tests/archetypes-forge.test.mjs"
+        "tests/archetypes-forge.test.mjs",
+        "tests/wall-geometry.test.mjs"
       ]
     },
     {
