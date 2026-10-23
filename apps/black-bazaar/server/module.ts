@@ -204,6 +204,7 @@ function startTurn(s){
 }
 function openGame(s){
   s.phase='play';s.round=1;s.turnIndex=0;s.serial=0;s.ranking=[];
+  s.offlinePaused=false;s.offlinePausedAt=null;s.pauseRemainingMs=null;
   const middle=shuffled(['salvage_boom','mask_festival']);
   s.eventSchedule={4:middle[0],6:middle[1],8:sample(['smuggler_holiday','audit_fair'])};
   s.metrics={publicSales:0,privateDeals:0,blackSales:0,inspections:0,brokerSales:0,
@@ -608,7 +609,7 @@ function viewForPlayer({state,player}){
   // Hide other wallets and inventory while anonymity could be defeated by a visible change.
   // Direct resource trades remain possible, but choosing an unknown stranger's item is suspended.
   const veil=isBlackRound(s);
-  return {phase:s.phase,host:s.host,revision:s.revision,round:s.round,rounds:TOTAL_ROUNDS,deadlineAt:s.deadlineAt||null,connectionGraceUntil:s.connectionGraceUntil||null,
+  return {phase:s.phase,host:s.host,revision:s.revision,round:s.round,rounds:TOTAL_ROUNDS,deadlineAt:s.deadlineAt||null,connectionGraceUntil:s.connectionGraceUntil||null,offlinePaused:!!s.offlinePaused,
     turnId:turn?.id||null,players:s.contestants.map(p=>({
       id:p.id,name:p.name,character:p.character,
       items:veil&&p.id!==me?.id?null:inventoryCount(s,p),
@@ -651,7 +652,7 @@ const game={
   protocolVersion:1,viewForPlayer,
   createRoom({player}){return {state:{
     host:player.id,players:[{id:player.id,name:player.name}],contestants:[],bannedIds:[],bannedAccounts:[],
-    phase:'lobby',revision:0,round:0,turnIndex:0,deadlineAt:null,listing:null,
+    phase:'lobby',revision:0,round:0,turnIndex:0,deadlineAt:null,offlinePaused:false,offlinePausedAt:null,pauseRemainingMs:null,listing:null,
     eventSchedule:{},metrics:null,bids:[],brokerOffer:null,deals:[],dealSerial:0,blackLots:[],blackSeq:0,log:[],ranking:[],serial:0
   }};},
   onJoin({state,players,player}){
@@ -680,10 +681,34 @@ const game={
     }
     state.revision++;return {state,events:stateEvent()};
   },
-  onPresence({state,player,online}){
-    if(state.phase!=='play'||state.contestants[state.turnIndex]?.id!==player.id)
-      return {state,events:[]};
+  onPresence({state,player,online,onlineIds}){
+    if(state.phase!=='play')return {state,events:[]};
     const now=Date.now();
+    // The last disconnected socket freezes the authoritative countdown.
+    // This snapshot is persisted in the Durable Object before it hibernates.
+    if(!online&&Array.isArray(onlineIds)&&onlineIds.length===0){
+      if(state.offlinePaused)return {state,events:[]};
+      state.offlinePaused=true;
+      state.offlinePausedAt=now;
+      state.pauseRemainingMs=Math.max(0,(state.deadlineAt??now)-now);
+      state.deadlineAt=null;
+      state.connectionGraceUntil=null;
+      issue(state,'Все участники отключились. Партия сохранена, таймер приостановлен.');
+      return success(state);
+    }
+    // Any original member can wake the room, even if the host or current
+    // seller has not yet returned. Do not retroactively expire the turn.
+    if(online&&state.offlinePaused){
+      state.deadlineAt=now+Math.max(1000,state.pauseRemainingMs??0);
+      state.offlinePaused=false;
+      state.offlinePausedAt=null;
+      state.pauseRemainingMs=null;
+      state.connectionGraceUntil=null;
+      issue(state,'Участники возвращаются: партия и таймер восстановлены.');
+      return success(state);
+    }
+    if(state.offlinePaused||state.contestants[state.turnIndex]?.id!==player.id)
+      return {state,events:[]};
     const turnKey=state.round+':'+state.turnIndex;
     if(!online){
       if(state.connectionGraceUsed===turnKey||!Number.isFinite(state.deadlineAt)||now>=state.deadlineAt)
@@ -720,6 +745,7 @@ const game={
       // updated state, so the removed player cannot submit further commands.
       return {...result,events:[...(result.events||[]),{type:'player_kicked',to:target.id}]};
     }
+    if(state.offlinePaused)return failure(state,player.id,'Партия ждёт переподключения участников.');
     if(v.type==='sync'&&!(state.phase==='play'&&state.deadlineAt&&Date.now()>=state.deadlineAt))
       return {state,events:[{type:'state',to:player.id,payload:{}}]};
     if(state.phase==='play'&&state.deadlineAt&&Date.now()>=state.deadlineAt){
