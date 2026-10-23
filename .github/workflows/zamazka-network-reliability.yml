@@ -9,6 +9,7 @@ on:
       - 'apps/zamazka/app.js'
       - 'apps/zamazka/qa/final-transfer-recovery.mjs'
       - 'apps/zamazka/qa/eight-player-transfer.mjs'
+      - 'apps/zamazka/qa/full-match-recovery.mjs'
       - 'apps/zamazka/qa/large-painting.mjs'
       - 'pocketnet/hub.mjs'
       - 'pocketnet/room-join-view.mjs'
@@ -75,3 +76,5 @@ jobs:
         run: node apps/zamazka/qa/final-transfer-recovery.mjs
       - name: Test eight interleaved final submissions
         run: node apps/zamazka/qa/eight-player-transfer.mjs
+      - name: Soak eight seats through three voting and restoration rounds
+        run: node apps/zamazka/qa/full-match-recovery.mjs
