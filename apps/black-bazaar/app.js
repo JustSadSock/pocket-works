@@ -153,9 +153,10 @@ function renderHome(){
  '<p>Девять раундов. Странные находки. Торгуйся, хитри и не разорись.</p>'+
  '<div class="entry-form"><div class="panel stack">'+
  '<label>Твоё имя<input id="nickname" type="text" maxlength="22" value="'+esc(name)+'" autocomplete="nickname"></label>'+
- '<button type="button" class="primary" data-action="create">Создать комнату '+svgIcon('arrow')+'</button>'+
+ '<button type="button" class="primary" data-action="create" '+(connecting?'disabled':'')+'>Создать комнату '+svgIcon('arrow')+'</button>'+
  '<label>Код комнаты<input id="roomCode" type="text" spellcheck="false" value="'+esc(hintRoom)+'" placeholder="Код или ссылка"></label>'+
- '<button type="button" data-action="join">Войти к друзьям</button>'+
+ '<button type="button" data-action="join" '+(connecting?'disabled':'')+'>Войти к друзьям</button>'+
+ (connecting?'<div class="entry-connecting" role="status"><span class="entry-spinner" aria-hidden="true"></span><strong>Подключаемся к PocketNet…</strong><button type="button" data-action="cancel-connect">Отмена</button></div>':'')+
  '</div></div></div></div>';
  applyCharacterArt(app);
 }
@@ -680,6 +681,15 @@ function closeRoom(){
  if(net){try{if(connected)net.leaveRoom()}catch{}try{net.close()}catch{}}
  net=null;me=null;state=null;onlinePlayerIds=null;roomId='';roomVersion=null;connected=false;connecting=false;message('');renderHome();
 }
+function cancelConnect(){
+ if(!connecting)return;
+ const old=net;net=null;
+ connecting=false;connected=false;me=null;state=null;roomId='';roomVersion=null;onlinePlayerIds=null;
+ try{old?.close();}catch{}
+ // Explicit cancellation must not auto-resume the abandoned room after reload.
+ netStorage.removeItem('pocket-net:'+ORIGIN);
+ renderHome();message('Подключение отменено.');
+}
 function wire(client){
  client.on('connected',data=>{if(net!==client)return;me=data.player;connected=true;message('');});
  client.on('room_joined',data=>{if(net!==client)return;roomVersion=data.version;roomId=data.roomId;state=data.state;onlinePlayerIds=null;connecting=false;message('');render();});
@@ -709,6 +719,14 @@ function wire(client){
     renderHome();message('Комната больше недоступна. Можно создать новую.',true);
     return;
   }
+  // A failed join must release the pending state; otherwise the lobby buttons
+  // stay disabled and a later retry silently does nothing.
+  if(connecting&&!roomId){
+   try{client.close();}catch{}
+   net=null;connecting=false;connected=false;me=null;state=null;roomVersion=null;
+   renderHome();message('Не удалось подключиться: '+code,true);
+   return;
+  }
   message('Ошибка сервера: '+code,true);
  });
  client.on('room_kicked',()=>{if(net!==client)return;connected=false;closeRoom();message('Ведущий исключил вас из комнаты. Повторный вход по этому коду недоступен.',true);});
@@ -721,17 +739,23 @@ async function connect(kind,code=''){
  }
  if(connecting)return;
  connecting=true;state=null;roomId='';renderHome();message('Подключение к PocketNet…');
+ let client=null;
  try{
   if(net){net.close();net=null;}
   const storage=netStorage;
   if(kind!=='resume')storage.removeItem('pocket-net:'+ORIGIN);
-  const client=new PocketNet({serverUrl:ORIGIN,name,storage});net=client;wire(client);
+  client=new PocketNet({serverUrl:ORIGIN,name,storage});net=client;wire(client);
   await client.connect();
   if(net!==client)return;
   if(kind==='create')client.createRoom(GAME_ID);
   else if(kind==='join')client.joinRoom(code);
   else if(!client.roomId){connecting=false;renderHome();message('Сохранённая комната не найдена.',true);}
- }catch(e){connecting=false;message('Нет соединения: '+e.message,true);if(net){net.close();net=null;}}
+ }catch(e){
+  if(net!==client)return; // Ignore an abandoned attempt after cancellation or a newer retry.
+  connecting=false;connected=false;
+  if(net){net.close();net=null;}
+  renderHome();message('Нет соединения: '+e.message,true);
+ }
 }
 function request(payload){
  if(debugPreview){
@@ -755,6 +779,7 @@ async function copy(value){
 app.addEventListener('click',event=>{
  const btn=event.target.closest('button[data-action]');if(!btn||btn.disabled)return;
  const action=btn.dataset.action;
+ if(action==='cancel-connect'){cancelConnect();return;}
  if(action==='toggle-sound'){
   const enabled=sound.setEnabled(!sound.isEnabled());
   if(enabled){sound.unlock();sound.play('open');}
