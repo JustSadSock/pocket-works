@@ -436,15 +436,15 @@ function artifactDetailBlock(you){
    (free?'<button type="button" data-action="detail-trade" data-id="'+esc(item.id)+'">'+svgIcon('trade')+' Обмен</button>':'')+
    (free&&active&&you.marketDeals<2&&!state.listing?
     '<form class="detail-offer-form" data-form="detail-post"><input type="hidden" name="itemId" value="'+esc(item.id)+'">'+
-     '<strong>Выставить на торги</strong>'+resourceFields('ask',{gold:100})+
-     '<button type="submit" class="primary">'+svgIcon('gavel')+' Выставить</button></form>':'')+
+     '<details class="quick-expand"><summary>'+svgIcon('gavel',18)+' Выставить на торги</summary>'+resourceFields('ask',{gold:100})+
+     '<button type="submit" class="primary">'+svgIcon('gavel')+' Выставить</button></details></form>':'')+
    (!locked&&active&&!you.usedPawn?
      '<div class="detail-secondary-actions"><button type="button" data-action="detail-pawn" data-id="'+esc(item.id)+'">Ломбард · 45 золота</button>'+
      (tradable?'<button type="button" data-action="detail-salvage" data-id="'+esc(item.id)+'">Разобрать · '+(state.salvageParts??2)+' детали</button>':'')+'</div>':'')+
    (tradable&&!locked?
      '<form class="detail-offer-form" data-form="detail-repack"><input type="hidden" name="itemId" value="'+esc(item.id)+'">'+
-      '<label>Сменить этикетку<select name="aliasIndex">'+you.disguises.map((n,i)=>'<option value="'+i+'">'+esc(n)+'</option>').join('')+'</select></label>'+
-      '<button type="submit" '+(you.resources.gold<(state.repackCost?.gold??20)||you.resources.parts<(state.repackCost?.parts??1)?'disabled':'')+'>Перепаковать · '+(state.repackCost?.gold??20)+' золота</button></form>':'')+
+      '<details class="quick-expand"><summary>Перепаковать</summary><label>Сменить этикетку<select name="aliasIndex">'+you.disguises.map((n,i)=>'<option value="'+i+'">'+esc(n)+'</option>').join('')+'</select></label>'+
+      '<button type="submit" '+(you.resources.gold<(state.repackCost?.gold??20)||you.resources.parts<(state.repackCost?.parts??1)?'disabled':'')+'>Перепаковать · '+(state.repackCost?.gold??20)+' золота</button></details></form>':'')+
    '</div>';
  }else if(kind==='listing'){
   item=state.listing;
@@ -462,7 +462,7 @@ function artifactDetailBlock(you){
      '<button type="button" data-action="cancel">Снять лот</button>':
     (!locked?
      ((!checked?'<button type="button" data-action="inspect" '+(you.resources.gold<(you.inspectionPrices?.public??15)?'disabled':'')+'>'+svgIcon('eye')+' Проверить · '+(you.inspectionPrices?.public??15)+' золота</button>':'')+
-      '<button type="button" class="primary" data-action="bid-asking">'+svgIcon('check')+' Принять цену · '+esc(amounts(item.ask))+'</button><details class="quick-expand"><summary>'+svgIcon('gavel',18)+' Другая цена</summary><form class="detail-offer-form" data-form="detail-bid">'+resourceFields('offer',item.ask)+
+      '<button type="button" class="primary" data-action="bid-asking" '+(keys.every(k=>(you.resources[k]||0)>=(item.ask[k]||0))?'':'disabled')+'>'+svgIcon('check')+' Принять цену · '+esc(amounts(item.ask))+'</button><details class="quick-expand"><summary>'+svgIcon('gavel',18)+' Другая цена</summary><form class="detail-offer-form" data-form="detail-bid">'+resourceFields('offer',item.ask)+
       '<button type="submit" class="primary">'+svgIcon('gavel')+' Предложить</button></form></details>'+
       (state.bids.some(b=>b.buyer===me?.id)?'<button type="button" data-action="withdraw">Отозвать ставку</button>':'')):'<p class="muted">Торг недоступен после банкротства.</p>'))+
    '</div>';
@@ -492,8 +492,8 @@ function artifactDetailBlock(you){
       '<button type="button" data-action="black-cancel" data-id="'+esc(lot.id)+'">Вернуть предмет</button>':
      (!locked?
        (!inspected?'<button type="button" data-action="black-inspect" data-id="'+esc(lot.id)+'" '+(you.resources.gold<(you.inspectionPrices?.black??25)?'disabled':'')+'>'+svgIcon('eye')+' Экспертиза · '+(you.inspectionPrices?.black??25)+'</button>':'')+
-       '<form class="detail-offer-form" data-form="detail-black-bid" data-lot-id="'+esc(lot.id)+'"><strong>Закрытая ставка</strong>'+
-       resourceFields('offer',lot.myBid||lot.ask)+'<button type="submit" class="primary">Предложить</button></form>'+
+       '<button type="button" class="primary" data-action="black-bid-asking" data-id="'+esc(lot.id)+'" '+(keys.every(k=>(you.resources[k]||0)>=(lot.ask[k]||0))?'':'disabled')+'>'+svgIcon('check')+' Предложить цену · '+esc(amounts(lot.ask))+'</button><details class="quick-expand"><summary>'+svgIcon('gavel',18)+' Другая цена</summary><form class="detail-offer-form" data-form="detail-black-bid" data-lot-id="'+esc(lot.id)+'">'+
+       resourceFields('offer',lot.myBid||lot.ask)+'<button type="submit" class="primary">Предложить</button></form></details>'+
        (lot.myBid?'<button type="button" data-action="black-withdraw" data-id="'+esc(lot.id)+'">Отозвать ставку</button>':'')
        :'<p class="muted">Ставки недоступны.</p>'))+
    '</div>';
@@ -531,7 +531,7 @@ function resourceWallet(w,forecast){
  [['gold','coin','Золото'],['crystals','gem','Кристаллы'],['parts','parts','Детали']].map(([k,icon,title])=>{
  const d=forecast.delta[k],text=d>0?'+'+d:String(d);
  return '<span class="currency" aria-label="'+title+': '+(w[k]||0)+', за раунд '+text+'">'+svgIcon(icon)+
- '<span class="wallet-values"><strong>'+(w[k]||0)+' / '+(state?.you?.quota?.[k]??'—')+'</strong><em>'+title+' · цель</em></span>'+
+ '<span class="wallet-values"><strong>'+(w[k]||0)+' <span class="quota-sep">/</span> '+(state?.you?.quota?.[k]??'—')+'</strong><em>'+title+'</em></span>'+
  '<small class="wallet-delta '+(d>0?'positive':d<0?'negative':'neutral')+'">'+text+'</small></span>';
  }).join('')+'</div>';
 }
@@ -737,8 +737,13 @@ app.addEventListener('click',event=>{
   }
   return;
  }
- if(action==='bid-asking'){
-   const lot=state?.listing;if(!lot||lot.seller===me?.id||state.you.bankrupt)return;
+ if(action==='black-bid-asking'){
+   const lot=(state?.blackLots||[]).find(x=>x.id===btn.dataset.id);
+   if(!lot||lot.mine||state.you.bankrupt||!keys.every(k=>(state.you.resources[k]||0)>=(lot.ask[k]||0)))return;
+   request({type:'black_bid',lotId:lot.id,offer:{...lot.ask}});return;
+  }
+  if(action==='bid-asking'){
+   const lot=state?.listing;if(!lot||lot.seller===me?.id||state.you.bankrupt||!keys.every(k=>(state.you.resources[k]||0)>=(lot.ask[k]||0)))return;
    request({type:'bid',offer:{...lot.ask}});return;
   }
   if(action==='player-actions'){
@@ -817,6 +822,7 @@ app.addEventListener('click',event=>{
  }
 });
 document.addEventListener('keydown',event=>{
+ if(event.key==='Escape'&&app.querySelector('.player-popover')){app.querySelector('.player-popover').remove();event.preventDefault();return;}
  if(event.key==='Escape'&&activeSheet==='detail'){event.preventDefault();openSheet('inventory',true);}
 
 });
