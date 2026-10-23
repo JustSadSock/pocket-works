@@ -27,7 +27,7 @@ function settingsFrom(raw,previous=DEFAULTS) {
 }
 function initial(player,payload){
  return {schema:1,revision:0,phase:'lobby',host:player.id,players:entries([player]),
-   settings:settingsFrom(payload?.settings||{}),round:0,total:0,sheets:[],submitted:{},receipts:{},message:''};
+   settings:settingsFrom(payload?.settings||{}),round:0,total:0,issue:0,sheets:[],submitted:{},receipts:{},message:''};
 }
 function events(){return [{type:'state'}];}
 function notice(to,message){return [{type:'notice',to,payload:message}];}
@@ -48,7 +48,7 @@ function begin(s){
     fragments:[]};
  });
  s.total=resolveQuestions(opts,s.sheets[0].set).length;
- s.round=0;s.submitted={};s.receipts={};s.phase='writing';s.message='';s.revision++;
+ s.issue=(s.issue||0)+1;s.round=0;s.submitted={};s.receipts={};s.phase='writing';s.message='';s.revision++;
  return null;
 }
 function viewForPlayer({state:s,player,players}){
@@ -57,7 +57,7 @@ function viewForPlayer({state:s,player,players}){
  const common={protocol:1,revision:s.revision,phase:s.phase,host:s.host,
    players:s.players.map(x=>({id:x.id,name:clean(x.name,32)||'Гравець',submitted:Boolean(s.submitted[x.id]),departed:!connected.has(x.id),verified:x.verified===true&&typeof x.accountId==='string',accountId:x.verified===true&&typeof x.accountId==='string'?x.accountId:null,avatar:x.verified===true&&typeof x.avatar==='string'?clean(x.avatar,32):null})),
    settings:s.settings,questionSets:questionOptions(),genres:genreOptions(),
-   round:s.round,total:s.total,message:s.message||'',lastReceipt:p?(s.receipts?.[p.id]||null):null};
+   round:s.round,total:s.total,issue:s.issue||0,message:s.message||'',lastReceipt:p?(s.receipts?.[p.id]||null):null};
  if(!p) return common;
  if(s.phase==='writing'){
   const pi=s.players.findIndex(x=>x.id===p.id);
