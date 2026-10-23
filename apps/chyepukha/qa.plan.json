@@ -16,7 +16,9 @@
         "tests/writer-flow.test.mjs",
         "tests/editor-motion.test.mjs",
         "tests/finale-state.test.mjs",
-        "tests/audio-score.test.mjs"
+        "tests/audio-score.test.mjs",
+        "tests/room-safety-v5.test.mjs",
+        "tests/submission-guard.test.mjs"
       ]
     },
     {
