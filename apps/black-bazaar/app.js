@@ -679,6 +679,10 @@ function wire(client){
    const cue=classifyFeedback(state,incoming,me?.id);
    state=incoming;render();
    if(cue)showConfirmedCue(cue);
+    else if(previous?.you&&incoming?.you){
+     const changed=keys.find(k=>previous.you.resources?.[k]!==incoming.you.resources?.[k]);
+     if(changed)sound.play(changed);
+    }
   }else if(data.event?.type==='notice')message(data.event.payload,true);
  });
  client.on('disconnected',()=>{if(net!==client)return;connected=false;onlinePlayerIds=null;message('Связь потеряна. PocketNet переподключается…',true);});
