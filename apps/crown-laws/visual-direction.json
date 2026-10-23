@@ -66,21 +66,26 @@
         "slug": "chyepukha",
         "spatialDifference": "Чепуха использует поочерёдное составление абсурдных высказываний на листах бумаги; Законы короны показывают постоянное игровое поле 5×7 с действующим кодексом слева и закрытой рукой общих указов справа.",
         "interactionDifference": "В Чепухе игрок заполняет и передаёт бумажные ответы; здесь два скрытых закона разрешаются одновременно, после чего семь детерминированных фаз двигают автономных персонажей и награждают коронами."
+      },
+      {
+        "slug": "billiard-lab",
+        "spatialDifference": "Бильярдная лаборатория концентрируется на одном бесконечно переиспользуемом поле распространения лучей и множестве отражающихся траекторий. Законы короны опираются на фиксированную клеточную сцену 5×7 с двумя боковыми секциями — постоянным кодексом законов и личной рукой указов.",
+        "interactionDifference": "В бильярдной лаборатории пользователь запускает радиальные частицы и наблюдает непрерывную физическую интерференцию; здесь игроки тайно утверждают указ по очереди, после чего детерминированные фазы, коронация и передача устройства выражаются отдельными завершёнными состояниями."
       }
     ]
   },
   "production": {
-    "renderer": "DOM 5×7 board, native SVG vector path overlay, original manuscript actor atlas and a compact nine-stage parchment counsel panel. No new external textures or API services.",
-    "focalAsset": "The same six royal miniatures gain semi-transparent counterfactual outlines and per-phase dotted trajectories, with a strong gold calligraphy-inspired panel."
+    "renderer": "Original fully local SVG vector chairs, court figures, heraldic seals, parchment and native CSS two-state ceremonial UI with no new dependencies.",
+    "focalAsset": "The invitation lobby uses two physically carved royal seats; the coronation foregrounds the winning actor and animated crown while losing players see the correct result."
   },
   "motion": {
-    "character": "The selected scenario moves fully authored miniature silhouettes only to real deterministic engine coordinates; alternative ghost figures appear solely when the opposing conditional scenario differs.",
-    "action": "Switch current-law versus selected-decree scenarios without restarting the simulation. Phase keys expose actual moving actors and their routes.",
+    "character": "Two asymmetric occupancy silhouettes make a newly opened room and awaited opponent legible without reading paragraphs.",
+    "action": "Players can navigate five illustrated rules chapters, confirm a private hot-seat handoff, copy invitations and review the verified winning player's last recorded events.",
     "anticipation": "Opening the advisor shifts focus to a compact parchment strip with nine selectable engine phases and an explicit conditional warning. The court stays fully readable.",
-    "response": "Each selected phase shows real log events, matching dotted movement trails and the actor positions recorded at that phase.",
-    "followThrough": "The last phase displays the full hypothetical outcome and visual differences, but the original turn, cards, player readiness and active PocketNet room remain unchanged.",
+    "response": "Clipboard confirmation appears only after successful API completion; win vs loss is calculated from current viewer, not assumed.",
+    "followThrough": "The winner's three-crown ceremony opens after the authoritative resolution, with a chronicle toggle and working rematch. Reduced-motion preferences disable ceremonial flourish.",
     "interruption": "Any newer turn cancels the former timeline. Skip clears timer/effects and immediately displays the final authoritative result. Reduced-motion mode abbreviates every phase and suppresses moving VFX.",
-    "reducedMotion": "Animated route dashes and ghost breathing stop in reduced-motion mode; phase selector remains keyboard/touch accessible."
+    "reducedMotion": "CSS ceremonial movements and decorative pulses are disabled by prefers-reduced-motion; buttons and scenario transitions retain their clear state."
   },
   "evidence": {
     "entry": "./",
