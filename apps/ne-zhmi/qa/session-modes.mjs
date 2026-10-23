@@ -148,6 +148,28 @@ try{
  await poll(()=>local.locator('#notice').textContent().then(t=>t.includes('2027')),'seeded lab');
  await poll(()=>local.locator('#scene').evaluate(c=>c.getContext('2d').getImageData(24,24,1,1).data[3]>0),'lab stage drawn');
  await local.screenshot({path:output+'/lab-mobile-seed-2027.png'});
+
+ // Each distinct crew size and lab section count owns its own record,
+ // rather than comparing a four-module track to a six-module one.
+ await local.evaluate(()=>{
+   const key='pocket-works:ne-zhmi:preferences';
+   localStorage.setItem(key,JSON.stringify({records:{
+     '2027:6:2':120,'2027:4:2':31,'2027':5
+   }}));
+ });
+ await local.reload();
+ await local.locator('#mode-lab').click();
+ await local.locator('#lab-seed').fill('2027');
+ await local.locator('#lab-length').selectOption('6');
+ await local.locator('#start').click();
+ await poll(()=>local.locator('#record').textContent().then(t=>t.includes('02:00')),'six-section record');
+ await local.locator('#pause').click();
+ await local.locator('#leave-pause').click();
+ await local.locator('#mode-lab').click();
+ await local.locator('#lab-seed').fill('2027');
+ await local.locator('#lab-length').selectOption('4');
+ await local.locator('#start').click();
+ await poll(()=>local.locator('#record').textContent().then(t=>t.includes('00:31')),'four-section record not confused');
  await local.locator('#pause').click();
  await poll(()=>local.locator('#pause-panel').isVisible(),'lab pause');
  await local.locator('#restart-pause').click();

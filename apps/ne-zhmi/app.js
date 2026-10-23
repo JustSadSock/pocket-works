@@ -14,7 +14,9 @@ const canvas=$('scene'),renderer=createRenderer(canvas);
 let game=createGame(), online=null, lastOnline=null, phase='menu', accumulated=0, lastFrame=performance.now(), muted=false;
 const soundscape=createSoundscape();
 const storageKey='pocket-works:ne-zhmi:preferences';
-let best=null,records={},localSeed=1,localCount=2,localSession=null,preferredMode='quick';
+let best=null,records={},localSeed=1,localCount=2,localSession=null,preferredMode='quick',currentSections=5;
+const recordKey=()=>localSeed+':'+currentSections+':'+localCount;
+const courseBest=()=>records[recordKey()]??(currentSections===5&&localCount===2?records[localSeed]:null);
 const partyKey='pocket-works:ne-zhmi:unfinished-party';
 try {const saved=JSON.parse(localStorage.getItem(storageKey)||'{}');muted=!!saved.muted;best=Number.isFinite(saved.best)&&saved.best>0?saved.best:null;records=saved.records&&typeof saved.records==='object'?saved.records:{};} catch {}
 function persist(){try{localStorage.setItem(storageKey,JSON.stringify({muted,best,records}));}catch{}}
@@ -61,11 +63,11 @@ function beginRun({newSession=false,replay=false}={}){
  let track;
  if(replay&&localSession.trackSeed){replayLast(localSession);track={seed:localSession.trackSeed,sections:localSession.mode==='lab'?localSession.length:5};}
  else track=startTrack(localSession,{crew:localCount,round:0});
- localSeed=track.seed;game=createGame(generateCourse(track.seed,track.sections,localCount));
+ localSeed=track.seed;currentSections=track.sections;game=createGame(generateCourse(track.seed,track.sections,localCount));
  renderer.reset();sound(localSession?.mode==='party'?'stage':'button');accumulated=0;show('playing');
  renderer.frame(game,performance.now(),'playing');
  announce((localSession.mode==='party'?'Трасса '+(localSession.entries.length+1)+'/3. ':localSession.mode==='lab'?'Мастерская · код '+localSeed+'. ':'')+'Болтик готов. Операторов: '+localCount+'.');
- $('record').textContent='ЛУЧШЕЕ '+(records[localSeed]?format(records[localSeed]):'—');
+ $('record').textContent='ЛУЧШЕЕ '+(courseBest()?format(courseBest()):'—');
  saveParty();
 }
 function paintTicket(prefix,stats){
@@ -97,12 +99,12 @@ function pause(){if(phase==='playing'){releaseHeld();show('pause');sound('button
 function resume(){if(phase==='pause'){show('playing');sound('button');announce('Игра продолжается.');}}
 function backToMenu(){renderer.reset();game=createGame();accumulated=0;show('menu');saveParty();announce('Главное меню.');}
 function finish(){
- const elapsed=game.wonAt||game.t,record=!records[localSeed]||elapsed<records[localSeed];
- if(record){records[localSeed]=elapsed;persist();}
+ const elapsed=game.wonAt||game.t,record=!courseBest()||elapsed<courseBest();
+ if(record){records[recordKey()]=elapsed;persist();}
  recordFinish(localSession,game);
  const stats=summary(localSession),mode=localSession?.mode||'quick';
  $('result').textContent='Время '+format(elapsed)+' · падений '+game.respawns+' · прыжков '+game.jumps+' · разворотов '+game.reverses+(record?' · новый рекорд!':'');
- $('record').textContent='ЛУЧШЕЕ '+format(records[localSeed]||elapsed);
+ $('record').textContent='ЛУЧШЕЕ '+format(courseBest()||elapsed);
  paintTicket('result-series',stats);
  $('again').textContent=mode==='party'?(stats.complete?'Новая серия →':'Следующая трасса →'):mode==='lab'?'Новый эксперимент →':'Новая трасса →';
  $('retry-course').textContent=mode==='party'?'Переиграть последнюю трассу':'Повторить эту трассу';
@@ -328,7 +330,7 @@ function frame(now){
     $('falls').textContent='ПАДЕНИЯ '+String(game.respawns).padStart(2,'0');
     if(phase==='online-playing')$('status').textContent='POCKETNET · '+Math.round(progressGame(game)*100)+'%';
     if(phase==='playing')$('status').textContent=localSession?.mode==='party'?'СЕРИЯ '+(localSession.entries.length+1)+'/3 · '+Math.round(progressGame(game)*100)+'%':game.checkpoint>9?'ЧЕКПОИНТ ✓ · '+Math.round(progressGame(game)*100)+'%':'ДО ФИНИША · '+Math.round(progressGame(game)*100)+'%';
-    if(phase==='playing'||phase==='pause')$('record').textContent='ЛУЧШЕЕ '+(records[localSeed]?format(records[localSeed]):'—');
+    if(phase==='playing'||phase==='pause')$('record').textContent='ЛУЧШЕЕ '+(courseBest()?format(courseBest()):'—');
   }
   requestAnimationFrame(frame);
 }
