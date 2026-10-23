@@ -388,15 +388,23 @@ function slateWave(s,a){
  addHeat(s,a,mastery(a,'cheap')?4:8);fx(s,'quake',a.x,a.y);emit(s,'on_cast',a.id);
 }
 function processWave(s,w){
- const other=s.actors[1-w.owner];w.life-=STEP;w.reach=Math.min(w.range,w.reach+w.range*STEP/.23);
+ const other=s.actors[1-w.owner];w.life-=STEP;
+ if(w.warmup>0){w.warmup=Math.max(0,w.warmup-STEP);return}
+ w.reach=Math.min(w.range,w.reach+w.range*STEP/.23);
  if(w.hit||!insideCone(w,other,w.angle,w.reach,w.halfAngle))return;
  const d=Math.hypot(other.x-w.x,other.y-w.y);
  if(d>beamLength(s,w.x,w.y,Math.atan2(other.y-w.y,other.x-w.x),d+3,w.owner)+6)return;
  w.hit=true;
- const attacker=s.actors[w.owner],dealt=harm(s,other,mastery(attacker,'strong')?18:15,w.owner);
+ const attacker=s.actors[w.owner],dealt=harm(s,other,
+  w.v2Element?Math.min(18,Math.max(1,w.damage||10)):mastery(attacker,'strong')?18:15,w.owner);
  const k=mag(other.x-w.x,other.y-w.y);
  move(other,(other.x-w.x)/k*18,(other.y-w.y)/k*18);
- if(dealt>0){markTarget(s,other,'stone',w.owner);other.slow=Math.max(other.slow,.45);emit(s,'on_hit',w.owner)}
+ if(dealt>0){
+  if(w.v2Element==='fire'){other.burn=Math.max(other.burn||0,1.2);other.burnSource=w.owner}
+  else other.slow=Math.max(other.slow,.45);
+  if(!w.v2Element)markTarget(s,other,'stone',w.owner);
+  emit(s,'on_hit',w.owner);
+ }
  fx(s,'impact_wave',other.x,other.y);
 }
 function unobstructed(s,fromX,fromY,targetX,targetY,owner,margin=8){
@@ -1108,7 +1116,7 @@ function magicV2Attack(s,a,target){
   fired=spawnShot(s,a,angle,a.x,a.y,{style,element:school,damage:12,life:1.3,signature:false});
  }
  if(fired){
-  a.cast=shape?school==='stone'?.86:school==='fire'?.65:.76:stats(a).reload;
+  a.cast=shape?(school==='stone'?0.86:school==='fire'?0.65:0.76):stats(a).reload;
   addHeat(s,a,7+extraHeat);emit(s,'on_cast',a.id);
  }
  return fired;
