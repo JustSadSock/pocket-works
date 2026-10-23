@@ -340,7 +340,7 @@ function updateLobs(s,dt){
   q.height=q.apex*4*p*(1-p);
   if(p<1)continue;
   const target=s.actors[1-q.owner],range=Math.hypot(target.x-q.tx,target.y-q.ty);
-  if(range<q.radius+12){
+  if(range<q.radius+12&&unobstructed(s,q.tx,q.ty,target.x,target.y,q.owner,7)){
    const falloff=range<=13?1:Math.max(.36,1-(range-13)/(q.radius+12)*.65);
    const dealt=harm(s,target,q.damage*falloff,q.owner);
    if(dealt>0){markTarget(s,target,q.element,q.owner);target.slow=Math.max(target.slow,.65);emit(s,'on_hit',q.owner)}
@@ -398,10 +398,14 @@ function processWave(s,w){
  if(dealt>0){markTarget(s,other,'stone',w.owner);other.slow=Math.max(other.slow,.45);emit(s,'on_hit',w.owner)}
  fx(s,'impact_wave',other.x,other.y);
 }
+function unobstructed(s,fromX,fromY,targetX,targetY,owner,margin=8){
+ const dx=targetX-fromX,dy=targetY-fromY,distance=Math.hypot(dx,dy);
+ return distance<=1||beamLength(s,fromX,fromY,Math.atan2(dy,dx),distance+3,owner)>=distance-margin;
+}
 function rockFracture(s,q,x,y){
  if(q.style!=='rock')return;
  const target=s.actors[1-q.owner],d=Math.hypot(x-target.x,y-target.y);
- if(d< (mastery(s.actors[q.owner],'wide')?49:37)){
+ if(d<(mastery(s.actors[q.owner],'wide')?49:37)&&unobstructed(s,x,y,target.x,target.y,q.owner,7)){
   const dealt=harm(s,target,mastery(s.actors[q.owner],'strong')?4:2.5,q.owner,q.depth);
   if(dealt>0){markTarget(s,target,'stone',q.owner,q.depth);target.slow=Math.max(target.slow,.55);emit(s,'on_hit',q.owner,{},q.depth)}
  }
@@ -517,8 +521,8 @@ function act(s,a,action,mods,ev){
  case 'clone':if(s.echoes.length<12)s.echoes.push({owner:a.id,x:a.x,y:a.y,life:m.has('lasting')?3.5:2.2,cast:.25,shots:2,extra:m.has('strong')});fx(s,'dash',a.x,a.y);break;
  case 'mine':if(s.mines.length<14)s.mines.push({x:a.x,y:a.y,owner:a.id,life:m.has('lasting')?6:3.5,damage:14*strong,element:chosenElement(mods,mage(a.mageId).school),r:(m.has('wide')?57:40)*(a.archetype==='shaper'?1.2:1)});fx(s,'mine',a.x,a.y);break;
  case 'wall':if(s.barriers.length<10){let bx=a.x+Math.cos(a.face)*34*reach,by=a.y+Math.sin(a.face)*34*reach;if(canStand(bx,by,14)&&!blocking(s,bx,by,15))s.barriers.push({owner:a.id,x:bx,y:by,r:m.has('wide')?23:15,life:(m.has('lasting')?4:2.5)*(a.archetype==='shaper'?1.4:1)})}fx(s,'shield',a.x,a.y);break;
- case 'push':{const dx=other.x-a.x,dy=other.y-a.y;if(mag(dx,dy)<100*reach){const k=mag(dx,dy);move(other,dx/k*30*strong*(m.has('fastshot')?1.3:1),dy/k*30*strong*(m.has('fastshot')?1.3:1))}fx(s,'dash',other.x,other.y);break}
- case 'slow':other.slow=Math.max(other.slow,m.has('lasting')?3.4:2);fx(s,'hit',other.x,other.y);break;
+ case 'push':{const dx=other.x-a.x,dy=other.y-a.y;if(mag(dx,dy)<100*reach&&unobstructed(s,a.x,a.y,other.x,other.y,a.id,8)){const k=mag(dx,dy);move(other,dx/k*30*strong*(m.has('fastshot')?1.3:1),dy/k*30*strong*(m.has('fastshot')?1.3:1))}fx(s,'dash',other.x,other.y);break}
+ case 'slow':if(unobstructed(s,a.x,a.y,other.x,other.y,a.id,8)){other.slow=Math.max(other.slow,m.has('lasting')?3.4:2);fx(s,'hit',other.x,other.y)}break;
  case 'haste':a.haste=Math.max(a.haste,m.has('lasting')?3.4:2);fx(s,'heal',a.x,a.y);break;
  case 'cool':a.heat=Math.max(0,a.heat-22*strong);fx(s,'heal',a.x,a.y);break;
  }
