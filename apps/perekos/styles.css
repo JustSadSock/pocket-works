@@ -731,3 +731,15 @@
 .score-row .forge-edit[hidden]{display:none}
 .score-row:has(.forge-edit:not([hidden])){letter-spacing:0;gap:5px}
 .score-row:has(.forge-edit:not([hidden]))>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* The full roster, archetype choice and confirmation share ONE scrolling context.
+   Nested overflow caused WebKit's scroll-into-view target to sit underneath
+   the non-scrolling sheet and other controls on short touch screens. */
+#mage-select .mage-picker{display:block;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#mage-select .mage-options{overflow:visible;min-height:auto;flex:none}
+#mage-select .mage-picker-actions{position:sticky;bottom:-1px;z-index:2;padding:9px 0 1px;background:#dfc9a2}
+#mage-select .mage-picker>.archetype-pick{margin-top:11px;padding-top:10px}
+#mage-select .archetype-chip{min-width:0}
+#chosen-archetype-name{color:#f6d498;font:800 11px/1.2 system-ui,sans-serif;white-space:nowrap;margin-left:4px}
+.mage-switch strong{margin-left:auto}
+@media(max-width:540px){#mage-select .mage-picker{max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px)}#chosen-archetype-name{font-size:10px}#mage-select .archetype-options{grid-template-columns:1fr}#mage-select .archetype-chip{min-height:40px}}

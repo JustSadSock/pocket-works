@@ -88,7 +88,7 @@ test('player can pick archetype and the selected class reaches the real combat s
  await page.locator('#choose-mage').click();
  await page.locator('#archetype-options button').filter({hasText:'Формирователь'}).click();
  await page.locator('#mage-confirm').click();
- await expect(page.locator('#chosen-mage-name')).toContainText('Формирователь');
+ await expect(page.locator('#chosen-archetype-name')).toHaveText('Формирователь');
  await page.locator('#mode-rupture').click();await page.locator('#primary-action').click();
  expect(await page.evaluate(()=>window.__perekosTest.state.actors[0].archetype)).toBe('shaper');
 });

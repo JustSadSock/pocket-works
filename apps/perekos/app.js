@@ -162,7 +162,7 @@ function archetypeCards(node,value,onPick){
 }
 function pickArchetype(id){selectionArchetype=id;archetypeCards($('archetype-options'),id,pickArchetype)}
 function updateSelectedMage(){
- $('chosen-mage-name').textContent=mage(selectedMage).name+' · '+ARCHETYPES.find(x=>x.id===selectedArchetype).name;drawHero($('hero-preview').getContext('2d'),appearance,0,[],selectedMage,reducedMotion);
+ $('chosen-mage-name').textContent=mage(selectedMage).name;$('chosen-archetype-name').textContent=ARCHETYPES.find(x=>x.id===selectedArchetype).name;drawHero($('hero-preview').getContext('2d'),appearance,0,[],selectedMage,reducedMotion);
  $('attack-name').textContent=ATTACK_NAMES[selectedMage];
 }
 $('choose-mage').addEventListener('click',()=>{
