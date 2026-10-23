@@ -12,7 +12,8 @@
         "course.test.mjs",
         "abilities.test.mjs",
         "visual-fx.test.mjs",
-        "session.test.mjs"
+        "session.test.mjs",
+        "stress.test.mjs"
       ]
     },
     {
