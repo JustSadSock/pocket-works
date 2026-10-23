@@ -56,7 +56,7 @@ export class BoardEffects {
   }
   landing(cells,color,{hard=false}={}){
     if(!Array.isArray(cells)||!cells.length)return;
-    this.queue({type:'landing',duration:FX_DURATION.landing,cells:cells.slice(0,4),color,hard});
+    this.queue({type:'landing',duration:FX_DURATION.landing,cells:cells.slice(0,4).map(cell=>({x:cell.x,y:cell.y,owner:cell.owner})),color,hard});
   }
   clearRows(rows,{linesCleared=1,comboChain=1,totalScore=0}={}){
     const safeRows=Array.isArray(rows)?rows
