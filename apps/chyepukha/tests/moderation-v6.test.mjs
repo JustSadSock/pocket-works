@@ -5,7 +5,7 @@ const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8')
 const game=new Function(source.replace(/export const /g,'const ').replace('export default module;','return module;'))();
 const authors=Array.from({length:3},(_,i)=>({id:'author-'+i,name:'Автор '+i,verified:true,accountId:'account-'+i,avatar:'paper'}));
 const newcomer={id:'author-new',name:'Новий автор',verified:true,accountId:'account-new'};
-const msg=(s,p,packet,online=authors.map(x=>x.id),now=1000000)=>game.onMessage({state:s,player:p,payload:packet,connectedIds:online,now});
+const msg=(s,p,packet,online=authors.map(x=>x.id),now=Date.now())=>game.onMessage({state:s,player:p,payload:packet,connectedIds:online,now});
 const playerView=(s,p,online=authors.map(x=>x.id))=>game.viewForPlayer({state:s,player:p,players:authors,onlineIds:online});
 function begin(){
  let s=game.createRoom({player:authors[0],payload:{settings:{questionSet:'characterArc'}}}).state;
