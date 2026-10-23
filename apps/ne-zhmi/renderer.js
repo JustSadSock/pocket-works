@@ -69,6 +69,8 @@ export function createRenderer(canvas) {
     sky.addColorStop(0,'#d9dfd2');sky.addColorStop(.62,theme.base);sky.addColorStop(1,theme.ground);
     ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
     ctx.save();ctx.translate(-camX*scale*.18,0);
+    // Receding etched-wall instruments support the diorama, not a wallpaper.
+    ctx.globalAlpha=.46;
     ctx.fillStyle='#a8baaf';
     for(let i=0;i<24;i++){const x=i*104-80;ctx.fillRect(x,28,1.8,h-55);
       ctx.fillStyle='rgba(255,255,255,.17)';ctx.fillRect(x+10,35,74,4);

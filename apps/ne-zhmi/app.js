@@ -42,7 +42,11 @@ function start(fresh=true){
   localCount=Number($('operator-count').value)||2;
   game=createGame(generateCourse(localSeed,5,localCount));
   renderer.reset();sound('button');
-  accumulated=0;show('playing');announce('Трасса готова. '+localCount+' операторов, один Болтик.');
+  accumulated=0;show('playing');
+  // Paint the first course frame in the same interaction turn. Otherwise
+  // on mobile a screenshot or compositor frame can briefly show empty canvas.
+  renderer.frame(game,performance.now(),'playing');
+  announce('Трасса готова. '+localCount+' операторов, один Болтик.');
   $('record').textContent='ЛУЧШЕЕ '+(records[localSeed]?format(records[localSeed]):'—');
 }
 function pause(){if(phase==='playing'){releaseHeld();show('pause');sound('button');announce('Игра на паузе.');}}
