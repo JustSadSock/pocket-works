@@ -97,55 +97,92 @@ function cylinder(mesh, options) {
   disc(mesh, x, y, z1, r1, r1, topTint, material, segments);
 }
 
+// Material and geometry live in one vocabulary: chiseled limestone, carved
+// oak, dark loam and small patches of moss. The visible radius never exceeds
+// the collidable part radius; procedural clusters reuse their individual parts.
+function tone(tint, multiplier = 1) {
+  return [Math.min(1, tint[0] * multiplier), Math.min(1, tint[1] * multiplier), Math.min(1, tint[2] * multiplier), tint[3]];
+}
+
 function lowPolyRock(mesh, shadows, level, prop, part, seed, palette) {
   const x = prop.x + Number(part?.x || 0);
   const y = prop.y + Number(part?.y || 0);
-  const radius = Number(part?.r || prop.r || 48);
+  const radius = Math.max(8, Number(part?.r || prop.r || 48));
   const ground = terrainHeightAt(level, x, y);
-  const rings = 3;
-  const segments = 9;
-  const points = [];
-  for (let ringIndex = 0; ringIndex <= rings; ringIndex += 1) {
-    const v = ringIndex / rings;
-    const z = ground + Math.sin(v * Math.PI * .5) * radius * .92;
-    const ringRadius = ringIndex === rings ? radius * .18 : radius * (1 - v * .66);
-    points.push(Array.from({ length: segments }, (_, index) => {
-      const angle = index / segments * TAU;
-      const wobble = .84 + noise(index, ringIndex, seed) * .28;
-      return [x + Math.cos(angle) * ringRadius * wobble, y + Math.sin(angle) * ringRadius * wobble, z];
-    }));
-  }
-  for (let ringIndex = 0; ringIndex < rings; ringIndex += 1) {
-    for (let index = 0; index < segments; index += 1) {
-      const next = (index + 1) % segments;
-      mesh.quad(points[ringIndex][index], points[ringIndex][next], points[ringIndex + 1][next], points[ringIndex + 1][index], (index + ringIndex) % 3 === 0 ? palette.stoneLight : palette.stone, 0);
+  const height = radius * (.74 + noise(seed, 18) * .14);
+  const segments = 15;
+  const profile = [
+    { z: ground + .2, width: .86, ox: 0, oy: 0 },
+    { z: ground + height * .28, width: .98, ox: 0, oy: 0 },
+    { z: ground + height * .66, width: .79, ox: radius * .025, oy: -radius * .016 },
+    { z: ground + height * .94, width: .32, ox: radius * .045, oy: -radius * .022 }
+  ];
+  const vertices = profile.map((layer, row) => Array.from({ length: segments }, (_, segment) => {
+    const angle = segment / segments * TAU;
+    const variation = .94 + noise(segment, seed, 11) * .055 + noise(segment, row, seed) * .01;
+    const extent = radius * layer.width * variation;
+    return [x + layer.ox + Math.cos(angle) * extent, y + layer.oy + Math.sin(angle) * extent, layer.z];
+  }));
+  for (let row = 0; row < profile.length - 1; row += 1) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const direction = Math.sin(segment / segments * TAU + .5) * .055;
+      const tint = tone(row === 2 ? palette.stoneLight : palette.stone, .92 + direction + noise(segment, seed, 37) * .07);
+      mesh.quad(vertices[row][segment], vertices[row][next], vertices[row + 1][next], vertices[row + 1][segment], tint, 0);
     }
   }
-  const apex = [
-    x + (noise(seed, 29) - .5) * radius * .10,
-    y + (noise(seed, 31) - .5) * radius * .10,
-    ground + radius * .98
-  ];
-  for (let index = 0; index < segments; index += 1) {
-    const next = (index + 1) % segments;
-    const tint = index % 4 === 0 ? palette.rockMoss : palette.stoneLight;
-    mesh.triangle(points.at(-1)[index], points.at(-1)[next], apex, tint, 0);
+  const crown = [x + radius * .035, y - radius * .017, ground + height];
+  for (let segment = 0; segment < segments; segment += 1) {
+    mesh.triangle(vertices.at(-1)[segment], vertices.at(-1)[(segment + 1) % segments], crown,
+      tone(palette.stoneLight, .92 + noise(segment, seed, 29) * .06), 0);
   }
-  disc(shadows, x + radius * .08, y + radius * .14, ground + .12, radius * 1.08, radius * .72, C.shadowStrong, 3, 20);
+  // A little damp moss grows low on only one or two faces, not random green spikes.
+  for (const segment of [2, 3, 4]) {
+    if (noise(segment, seed, 53) < .30) continue;
+    const next = (segment + 1) % segments;
+    mesh.triangle(
+      [vertices[0][segment][0], vertices[0][segment][1], ground + .55],
+      [vertices[0][next][0], vertices[0][next][1], ground + .55],
+      [vertices[1][segment][0] * .45 + vertices[1][next][0] * .55, vertices[1][segment][1] * .45 + vertices[1][next][1] * .55, ground + height * .22],
+      tone(palette.rockMoss, .80), 7
+    );
+  }
+  disc(shadows, x + radius * .07, y + radius * .11, ground + .1, radius * .98, radius * .70, C.shadow, 3, 20);
 }
 
 function stump(mesh, shadows, level, prop, seed, palette) {
   const ground = terrainHeightAt(level, prop.x, prop.y);
-  const radius = prop.r || 56;
-  const height = prop.height || radius * 1.15;
+  const radius = Math.max(14, prop.r || 56);
+  const height = Math.max(18, Number(prop.height || radius * 1.15));
+  const top = ground + height;
+  // The silhouette retains the real collider. Wood grain follows the trunk,
+  // while the cut face is a flat, warm end-grain disc instead of a fake pot.
   cylinder(mesh, {
-    x: prop.x, y: prop.y, z0: ground, z1: ground + height,
-    r0: radius, r1: radius * .88, tint: palette.wood, topTint: palette.woodTop,
-    material: 0, segments: 18, irregular: .10, seed
+    x: prop.x, y: prop.y, z0: ground + .3, z1: top - .9,
+    r0: radius * .93, r1: radius * .87, tint: palette.wood,
+    topTint: palette.woodTop, material: 0, segments: 22, irregular: .045, seed
   });
-  ring(mesh, prop.x, prop.y, ground + height + .18, radius * .25, radius * .62, palette.woodLight, 0, 20);
-  ring(mesh, prop.x, prop.y, ground + height + .24, radius * .63, radius * .67, palette.wood, 0, 20);
-  disc(shadows, prop.x + 5, prop.y + 9, ground + .12, radius * 1.12, radius * .72, C.shadowStrong, 3, 22);
+  ring(mesh, prop.x, prop.y, top - .50, radius * .09, radius * .83, palette.woodTop, 0, 28);
+  ring(mesh, prop.x, prop.y, top - .34, radius * .30, radius * .345, tone(palette.wood, .89), 0, 28);
+  ring(mesh, prop.x, prop.y, top - .30, radius * .55, radius * .59, tone(palette.wood, .84), 0, 28);
+  ring(mesh, prop.x, prop.y, top - .26, radius * .76, radius * .82, tone(palette.wood, .79), 0, 28);
+  const ribs = 11;
+  for (let index = 0; index < ribs; index += 1) {
+    const angle = (index + noise(index, seed, 4) * .13) / ribs * TAU;
+    const ca = Math.cos(angle), sa = Math.sin(angle);
+    const x = prop.x + ca * radius * .905;
+    const y = prop.y + sa * radius * .905;
+    const z0 = ground + height * .08, z1 = top - height * .10;
+    // Narrow bark flute, embedded in the wood body.
+    mesh.quad(
+      [x, y, z0],
+      [x - sa * radius * .018, y + ca * radius * .018, z0 + 3],
+      [prop.x + ca * radius * .84 - sa * radius * .018, prop.y + sa * radius * .84 + ca * radius * .018, z1],
+      [prop.x + ca * radius * .84, prop.y + sa * radius * .84, z1 - 3],
+      tone(palette.wood, .72), 0
+    );
+  }
+  disc(shadows, prop.x + 4, prop.y + 7, ground + .12, radius, radius * .72, C.shadowStrong, 3, 22);
 }
 
 function barrierBox(mesh, shadows, level, wall, palette) {
