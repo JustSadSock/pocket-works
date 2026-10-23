@@ -352,7 +352,7 @@ function render(){
   scene.innerHTML='<section class="paper waiting"><div class="eyebrow">POCKETNET</div><h2>З’єднуємо авторів…</h2><p class="mini">Відновлюємо захищену кімнату.</p><button class="button outline" type="button" data-act="cancel-connect">Скасувати підключення</button></section>';
   return;
  }
- scene.innerHTML=(view?(view.phase==='lobby'?lobby():view.phase==='writing'?(view.waitingApproval&&roomVersion==='v6'?candidateWaiting():view.waiting?waiting():writing()):view.phase==='finished'?results():waiting()):archiveOpen?archiveScreen():home())+(view&&roomVersion==='v6'&&view.phase==='writing'&&!view.waitingApproval?moderationStrip(view,me):'')+(view&&roomVersion==='v6'&&view.phase==='writing'&&view.paused&&!view.waitingApproval?pauseOverlay(view.host===me):'')+overlay();
+ scene.innerHTML=(view?(view.phase==='lobby'?lobby():view.phase==='writing'?(view.waitingApproval&&roomVersion==='v6'?candidateWaiting():view.waiting?waiting():writing()):view.phase==='finished'?results():waiting()):archiveOpen?archiveScreen():home())+(view&&roomVersion==='v6'&&['writing','lobby'].includes(view.phase)&&!view.waitingApproval?moderationStrip(view,me):'')+(view&&roomVersion==='v6'&&view.phase==='writing'&&view.paused&&!view.waitingApproval?pauseOverlay(view.host===me):'')+overlay();
  if(view?.phase==='writing'&&!view.waiting)refreshWords();
 }
 function indices(){const w=words($('answer')?.value||loadDraft());return (draftSelections[draftKey()]||readWriterMeta().selection||[]).filter(i=>Number.isInteger(i)&&i>=0&&i<w.length)}
