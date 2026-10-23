@@ -695,3 +695,14 @@ body.sheet-open{overflow:auto}
 .player-popover-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.player-popover-head button{min-height:30px;width:32px;padding:0;box-shadow:none}.player-popover>button{display:flex;align-items:center;gap:8px;justify-content:flex-start;box-shadow:none;min-height:42px}
 .quick-expand{border:1px solid #a68054;border-radius:10px;padding:8px 10px;background:#f5d9ab44}.quick-expand summary{display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:800}.quick-expand .detail-offer-form{margin-top:10px}
 @media(max-width:680px){.player-popover{top:calc(100% - 8px)}.currency em{font-size:9px}.wallet-values strong{font-size:14px}.currency{padding:4px 6px}}
+
+.quota-sep{opacity:.48;font-weight:400}
+.detail-actions>button.primary{background:linear-gradient(#f5ca75,#e6a247)}
+.quick-expand summary{cursor:pointer;min-height:38px;display:flex;align-items:center;gap:8px}
+@media(prefers-reduced-motion:no-preference){
+ .mini-artifacts button .item-svg,.inventory-art .item-svg{transition:transform .2s ease,filter .2s ease}
+ .mini-artifacts button:hover .item-svg,.inventory-object:hover .item-svg{transform:translateY(-4px) rotate(-2deg);filter:drop-shadow(0 8px 6px #2b1b1255)}
+ .player-popover{animation:bazaar-pop .14s cubic-bezier(.2,.8,.2,1) both}
+ @keyframes bazaar-pop{from{opacity:0;transform:translate(-50%,-8px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+}
+@media(prefers-reduced-motion:reduce){.player-popover,.mini-artifacts button .item-svg{animation:none!important;transition:none!important}}
