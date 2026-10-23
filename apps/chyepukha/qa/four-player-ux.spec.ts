@@ -100,7 +100,7 @@ test('the writing phase gives the whole page to the draft, then reviews exact wo
  await expect(answer).toBeVisible();
  await expect(page.locator('.writer-compose')).toBeVisible();
  await expect(page.locator('#wordTray')).toHaveCount(0);
- const story='Архіваріус знайшов місячну валізу і сховав її у саду';
+ const story='Архіваріус знайшов місячну валізу і сховав її у старому саду';
  await answer.fill(story);
  await page.locator('#answerForm button[type=submit]').click();
  await expect(page.locator('.writer-selection')).toBeVisible();
