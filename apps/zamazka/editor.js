@@ -1310,12 +1310,19 @@ export class Editor{
      this.hasRasterInk=this.strokes.some(stroke=>stroke.t==='fill'||stroke.t==='smudge');
      this.pendingInkStrokes=[];this.cachedRevision=rev;this.displayRevision=-1;
    }
-   // Composite immutable work once per committed revision, never for every pointer sample.
-   if(!this.displayLayer||this.displayLayer.width!==c.width||this.displayRevision!==rev){
-     const composed=makeLayer();composed.ctx.drawImage(this.baseLayer,0,0,W,H);
-     composed.ctx.save();clipZone(composed.ctx,this.zone);
-     composed.ctx.drawImage(this.inkLayer,0,0,W,H);composed.ctx.restore();
-     this.displayLayer=composed.canvas;this.displayRevision=rev;
+   // The committed canvas can occupy ~10 MiB on a mobile retina display.
+   // Reuse it when a brush stroke commits instead of allocating a new backing
+   // canvas (and provoking garbage collection) for every paint revision.
+   const needsDisplayLayer=!this.displayLayer||
+     this.displayLayer.width!==c.width||this.displayLayer.height!==c.height;
+   if(needsDisplayLayer)this.displayLayer=makeLayer().canvas;
+   if(needsDisplayLayer||this.displayRevision!==rev){
+     const composed=this.displayLayer.getContext('2d');
+     composed.clearRect(0,0,W,H);
+     composed.drawImage(this.baseLayer,0,0,W,H);
+     composed.save();clipZone(composed,this.zone);
+     composed.drawImage(this.inkLayer,0,0,W,H);composed.restore();
+     this.displayRevision=rev;
    }
    ctx.clearRect(0,0,W,H);ctx.drawImage(this.displayLayer,0,0,W,H);
    if(this.working){
