@@ -37,7 +37,10 @@ for (const raw of [
   }
   // No hard per-triangle sand/moss material switches: pigment handles both.
   const mesh = level.course18.surfaceMesh?.data;
-  if (level.course18.version === 2 && mesh) for (let index = 10; index < mesh.length; index += 11) {
+  // The three Course18-legacy holes retain their original distinct
+  // materials for save/render compatibility. Only newly authored Course19
+  // and endless fields use the continuous terrain material contract.
+  if (mesh && ![1, 6, 8].includes(Number(level.id))) for (let index = 10; index < mesh.length; index += 11) {
     assert.ok(mesh[index] === 1 || mesh[index] === 6,
       'each terrain triangle must use continuous grass or physically wet water shading');
   }
