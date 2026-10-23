@@ -1,8 +1,8 @@
 {
   "id": "/apps/billiard-lab/",
-  "name": "РИКОШЕТ — лаборатория бильярда",
+  "name": "РИКОШЕТ — лаборатория волнового фронта",
   "short_name": "РИКОШЕТ",
-  "description": "Эксперименты с математическими отражениями и задачи на рикошеты.",
+  "description": "Тысячи независимых частиц разлетаются из одной точки, отражаются от геометрических границ и образуют живую волновую линию.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -12,8 +12,8 @@
     "minimal-ui"
   ],
   "orientation": "any",
-  "background_color": "#e6e4d8",
-  "theme_color": "#242d30",
+  "background_color": "#102024",
+  "theme_color": "#15282a",
   "icons": [
     {
       "src": "./icons/icon.svg",
