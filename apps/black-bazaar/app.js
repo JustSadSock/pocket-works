@@ -944,8 +944,25 @@ if(debugPreview){
   if(overflow>2)issues.push('Горизонтальное переполнение: '+overflow+'px');
   if(small.length)issues.push('Мелкие элементы: '+small.length);
   if(!document.querySelector('#app button')&&state?.phase==='play')issues.push('Игровые действия отсутствуют');
+  const rect=s=>document.querySelector(s)?.getBoundingClientRect();
+  const area=rect('.play-screen'),field=rect('.play-field'),panel=rect('.workspace-panel'),tabs=rect('.workspace-tabs'),ticket=rect('.urgent-ticket'),wallet=rect('.currency-strip');
+  const overlaps=(a,b)=>a&&b&&Math.min(a.right,b.right)-Math.max(a.left,b.left)>4&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>4;
+  const collisions=[];
+  if(overlaps(field,tabs))collisions.push('Стол перекрывает вкладки');
+  if(overlaps(field,panel))collisions.push('Стол перекрывает панель');
+  if(overlaps(ticket,wallet))collisions.push('Задание перекрывает ресурсы');
+  const clipping=[];
+  for(const sel of ['.play-head','.currency-strip','.urgent-ticket','.play-field','.workspace-tabs']){
+   const box=rect(sel);if(!box||!box.width)continue;
+   if(box.left< -2||box.right>width+2)clipping.push(sel+' выходит по ширине');
+   if(area&&(box.top<area.top-2||box.bottom>area.bottom+2))clipping.push(sel+' выходит по высоте');
+  }
+  const content=document.querySelector('.sheet-content');
+  const scrollable=content?{clientHeight:content.clientHeight,scrollHeight:content.scrollHeight,overflowY:getComputedStyle(content).overflowY}:null;
+  if(scrollable&&scrollable.scrollHeight>scrollable.clientHeight+5&&!['auto','scroll'].includes(scrollable.overflowY))issues.push('Содержимое боковой панели обрезано');
+  issues.push(...collisions,...clipping);
   emit('audit',{report:{viewport:width+' × '+document.documentElement.clientHeight,
-   horizontalOverflow:overflow,actionable:visible.length,smallTargets:small.slice(0,12),issues}});
+   horizontalOverflow:overflow,actionable:visible.length,smallTargets:small.slice(0,12),collisions,clipping,scrollable,issues}});
  };
  window.addEventListener('message',event=>{
   if(event.origin!==location.origin||event.source!==window.parent||event.data?.source!=='bazaar-debug-console')return;
