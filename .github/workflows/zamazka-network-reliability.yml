@@ -6,6 +6,7 @@ on:
     paths:
       - 'apps/zamazka/server/module.ts'
       - 'apps/zamazka/draft-transfer.js'
+      - 'apps/zamazka/qa/draft-delta-transfer.mjs'
       - 'apps/zamazka/app.js'
       - 'apps/zamazka/qa/final-transfer-recovery.mjs'
       - 'apps/zamazka/qa/eight-player-transfer.mjs'
@@ -31,6 +32,7 @@ on:
     paths:
       - 'apps/zamazka/server/module.ts'
       - 'apps/zamazka/draft-transfer.js'
+      - 'apps/zamazka/qa/draft-delta-transfer.mjs'
       - 'apps/zamazka/app.js'
       - 'apps/zamazka/qa/**'
       - 'pocketnet/hub.mjs'
@@ -86,6 +88,8 @@ jobs:
           node --check pocketnet/hub.mjs
       - name: Test large paintings and frame limits
         run: node apps/zamazka/qa/large-painting.mjs
+      - name: Verify acknowledged draft suffix transfer and full fallback
+        run: node apps/zamazka/qa/draft-delta-transfer.mjs
       - name: Test checksum and interrupted final recovery
         run: node apps/zamazka/qa/final-transfer-recovery.mjs
       - name: Test eight interleaved final submissions
