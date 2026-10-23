@@ -156,7 +156,7 @@ function drawLine(){
  ctx.beginPath();ctx.moveTo(x[0],y[0]);
  for(let i=1;i<count;i++)ctx.lineTo(x[i],y[i]);
  ctx.closePath();
- ctx.lineJoin='round';ctx.lineCap='round';ctx.strokeStyle=paletteGradient();ctx.lineWidth=1.75;
+ ctx.lineJoin='round';ctx.lineCap='round';ctx.strokeStyle=paletteGradient();ctx.lineWidth=Math.max(1.75,1.45/fit.scale);
  ctx.stroke();
 }
 function drawDots(){
