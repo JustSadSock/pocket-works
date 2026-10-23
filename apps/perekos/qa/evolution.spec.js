@@ -53,3 +53,42 @@ test('grimoire retains the evolved form and can replay it offline',async({page})
  await expect(page.locator('#hud')).toBeVisible();
  expect(await page.evaluate(()=>window.__perekosTest.state.actors[0].evolution)).toEqual({form:'beam',level:1});
 });
+
+test('forge is perpetual, edits physical runes and permits another combat trial',async({page})=>{
+ await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ await page.locator('#open-forge').click();
+ await expect(page.locator('#build')).toBeVisible();
+ await expect(page.locator('#forge-lab')).toBeVisible();
+ expect(await page.evaluate(()=>window.__perekosTest.state.gameMode)).toBe('forge');
+ await page.locator('#forge-runes button').filter({hasText:'При выстреле'}).click();
+ await page.locator('#forge-runes button').filter({hasText:'Выпустить шар'}).click();
+ await page.locator('#forge-runes button').filter({hasText:'Дать разряд'}).click();
+ await expect(page.locator('#forge-status')).toContainText('5/9');
+ await page.locator('#forge-fusions button').filter({hasText:'Грозовая решётка'}).click();
+ await page.locator('#forge-mutations button').filter({hasText:'Искровой рой'}).click();
+ await expect(page.locator('#evo-readout')).toContainText('Искровой рой');
+ await page.locator('#bench-fight').click();
+ await expect(page.locator('#forge-edit')).toBeVisible();
+ await expect(page.locator('#clock')).toContainText('∞');
+ await page.evaluate(()=>{for(let i=0;i<70;i++)window.__perekosTest.step()});
+ expect(await page.evaluate(()=>window.__perekosTest.state.phase)).toBe('fight');
+ await page.locator('#forge-edit').click();
+ await expect(page.locator('#build')).toBeVisible();
+ await expect(page.locator('#forge-status')).toContainText('5/9');
+ await page.locator('#forge-reset').click();
+ await expect(page.locator('#forge-reset-confirm')).toBeVisible();
+ await page.locator('#forge-reset-no').click();
+ await expect(page.locator('#forge-status')).toContainText('5/9');
+ await page.locator('#forge-reset').click();
+ await page.locator('#forge-reset-yes').click();
+ await expect(page.locator('#forge-status')).toContainText('2/9');
+});
+test('player can pick archetype and the selected class reaches the real combat state',async({page})=>{
+ await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ await page.locator('#choose-mage').click();
+ await page.locator('#archetype-options button').filter({hasText:'Формирователь'}).click();
+ await page.locator('#mage-confirm').click();
+ await expect(page.locator('#chosen-archetype-name')).toHaveText('Формирователь');
+ await page.locator('#mode-rupture').click();await page.locator('#primary-action').click();
+ expect(await page.evaluate(()=>window.__perekosTest.state.actors[0].archetype)).toBe('shaper');
+});
