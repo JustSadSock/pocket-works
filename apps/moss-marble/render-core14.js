@@ -1,6 +1,7 @@
 import { BALL_RADIUS } from './physics.js';
 import { levelBounds } from './levels.js';
 import { worldToScreenPoint, screenToWorldPoint, screenDeltaToWorld as inverseScreenVector } from './camera-space.js';
+import { makeStoneRimProfile } from './curb-profile.js';
 
 const TAU = Math.PI * 2;
 const STRIDE = 11;
@@ -321,28 +322,17 @@ function addSymmetricBox(builder, ax, ay, bx, by, width, z0, z1, tint, material 
   builder.quad(p(bL, z0), p(bR, z0), p(bR, z1), p(bL, z1), tint, material);
 }
 
-function addOutwardCurb(builder, a, b, width, height, tint, sideTint = C.stoneDark, heightAt = null, winding = 1) {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const length = Math.hypot(dx, dy) || 1;
-  // Polygon winding, not the polygon centroid, determines the outside on hairpin bends.
-  const direction = winding >= 0 ? -1 : 1;
-  const nx = -dy / length * direction;
-  const ny = dx / length * direction;
-  const outerA = { x: a.x + nx * width, y: a.y + ny * width };
-  const outerB = { x: b.x + nx * width, y: b.y + ny * width };
-  const sample = (point) => heightAt ? heightAt(point.x - nx * 9, point.y - ny * 9) : 0;
-  const groundA = sample(a), groundB = sample(b);
-  const baseA = groundA - 8, baseB = groundB - 8;
-  const topA = groundA + height, topB = groundB + height;
-  const bevel = Math.min(4, width * .16);
-  const p = (point, z) => [point.x, point.y, z];
-  // A slightly sloped stone cap gives the edge a visible silhouette.
-  builder.quad(p(a, topA), p(b, topB), p(outerB, topB - bevel), p(outerA, topA - bevel), tint, 0);
-  builder.quad(p(a, baseA), p(b, baseB), p(b, topB), p(a, topA), sideTint, 0);
-  builder.quad(p(outerA, baseA), p(outerA, topA - bevel), p(outerB, topB - bevel), p(outerB, baseB), sideTint, 0);
-  builder.quad(p(a, baseA), p(a, topA), p(outerA, topA - bevel), p(outerA, baseA), sideTint, 0);
-  builder.quad(p(b, baseB), p(outerB, baseB), p(outerB, topB - bevel), p(b, topB), sideTint, 0);
+function addContinuousStoneRim(builder, profile, materials) {
+  if (profile.length < 3) return;
+  for (let i = 0; i < profile.length; i++) {
+    const a = profile[i], b = profile[(i + 1) % profile.length];
+    // Shared ring vertices at every corner eliminate gaps and overhanging bricks.
+    builder.quad(a.inner, b.inner, b.crown, a.crown, materials.stone, 0, [0, 0, 1]);
+    builder.quad(a.crown, b.crown, b.cap, a.cap, materials.stoneLight, 0, [0, 0, 1]);
+    builder.quad(a.cap, b.cap, b.bevel, a.bevel, materials.stone, 0);
+    builder.quad(a.bevel, b.bevel, b.heel, a.heel, materials.stoneDark, 0);
+    builder.quad(a.heel, b.heel, b.inner, a.inner, materials.stone, 0);
+  }
 }
 
 function addRock(builder, obstacle) {
@@ -492,8 +482,8 @@ function addBoardScene(level) {
   const shadows = new MeshBuilder();
   const transparent = new MeshBuilder();
   const materials = { ...C, ...(level.visual?.materials || {}) };
-  const curbWinding = Math.sign(polygonArea(level.outline)) || 1;
   const terrainHeight = level.course18?.field?.heightAt || null;
+  const stoneRim = makeStoneRimProfile(level.outline, terrainHeight || (() => 0));
 
   const isGardenTray = Boolean(level.course18?.field?.heightAt);
   const shadowOutline = level.outline.map((point) => ({ x: point.x + 22, y: point.y + 36 }));
@@ -516,18 +506,8 @@ function addBoardScene(level) {
       opaque.quad([a.x, a.y, -32], [b.x, b.y, -32], [b.x, b.y, 0], [a.x, a.y, 0], C.boardSide, 0);
     }
 
-    const length = Math.hypot(b.x - a.x, b.y - a.y);
-    const pieces = Math.max(1, Math.ceil(length / 72));
-    for (let piece = 0; piece < pieces; piece += 1) {
-      const inset = 2.4 / Math.max(1, length);
-      const t0 = piece / pieces + inset;
-      const t1 = (piece + 1) / pieces - inset;
-      const start = { x: lerp(a.x, b.x, t0), y: lerp(a.y, b.y, t0) };
-      const end = { x: lerp(a.x, b.x, t1), y: lerp(a.y, b.y, t1) };
-      const tint = hashNoise(index, piece, level.id) > .5 ? materials.stone : materials.stoneLight;
-      addOutwardCurb(opaque, start, end, 19, 16 + hashNoise(index, piece, 9) * 3, tint, materials.stoneDark, terrainHeight, curbWinding);
-    }
   }
+  addContinuousStoneRim(opaque, stoneRim, materials);
 
   for (const zone of level.zones || []) {
     const points = [
