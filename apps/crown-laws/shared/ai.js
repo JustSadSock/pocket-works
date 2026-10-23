@@ -184,7 +184,7 @@ export function chooseAiCard(state, playerId = "p2", profileId = "contender") {
       const resolution = resolveTurn(state, {
         [playerId]: { cardId },
         [enemyId]: { cardId: enemyCardId }
-      });
+      }, { captureFrames: false });
       const weight = index === 0 ? 0.72 : 0.28;
       return (
         (scoreForPlayer(resolution.state, playerId) +

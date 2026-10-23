@@ -21,6 +21,8 @@ import {
   serializeTextState
 } from "../shared/game-engine.js";
 import { chooseAiCard } from "../shared/ai.js";
+import { planTurnFilm, soundForFrame, PHASE_ORDER, PHASE_LABELS } from "./choreography.js";
+import { playCourtSound, COURT_SOUNDS } from "./soundscape.js";
 
 const root = document.getElementById("app");
 
@@ -34,6 +36,9 @@ const app = {
   lastBoardPositions: {},
   effects: [],
   effectTimer: null,
+  film: null,
+  filmTimer: null,
+  filmSequence: 0,
   simulationReport: null,
   inspectedSlot: null,
   historyExpanded: false,
@@ -44,7 +49,7 @@ const app = {
   replayActive: false,
   replayStage: "after",
   replayTimer: null,
-  debug: { open: false, tab: "screens", scene: "game", animation: null, selectedCardId: null, focusCardId: null, inspectedSlot: null, forecast: null, forecastReview: false },
+  debug: { open: false, tab: "screens", scene: "game", animation: null, selectedCardId: null, focusCardId: null, inspectedSlot: null, forecast: null, forecastReview: false, round: null, roundTimer: null, roundToken: 0 },
   debugSelects: Object.fromEntries(SLOT_TYPES.map((slot) => [slot, "base"])),
   settings: {
     sound: true,
@@ -108,32 +113,7 @@ function ensureAudio(force = false) {
   return app.audioCtx;
 }
 
-function playTone(kind = "tap", force = false) {
-  const ctx = ensureAudio(force);
-  if (!ctx) {
-    return;
-  }
-  const time = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  const palette = {
-    tap: { freq: 280, dur: 0.08, type: "triangle", vol: 0.02 },
-    ready: { freq: 420, dur: 0.12, type: "sine", vol: 0.03 },
-    conflict: { freq: 120, dur: 0.22, type: "sawtooth", vol: 0.05 },
-    crown: { freq: 560, dur: 0.18, type: "triangle", vol: 0.04 },
-    move: { freq: 220, dur: 0.07, type: "triangle", vol: 0.015 }
-  }[kind];
-
-  osc.type = palette.type;
-  osc.frequency.setValueAtTime(palette.freq, time);
-  gain.gain.setValueAtTime(palette.vol, time);
-  gain.gain.exponentialRampToValueAtTime(0.0001, time + palette.dur);
-  osc.start(time);
-  osc.stop(time + palette.dur);
-}
+function playTone(kind = "tap", force = false) { return playCourtSound(ensureAudio(force),kind); }
 
 function profileOptions() {
   return `
@@ -154,8 +134,9 @@ function effectLineStyle(from, to) {
   const endY = to.y * cellHeight + cellHeight / 2;
   const dx = endX - startX;
   const dy = endY - startY;
-  const length = Math.hypot(dx, dy);
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+  // Square board cells are 20% wide and 100/7% tall: correct the visual y scale.
+  const length = Math.hypot(dx, dy * 7 / 5);
+  const angle = (Math.atan2(dy * 7 / 5, dx) * 180) / Math.PI;
   return `--sx:${startX}%;--sy:${startY}%;--len:${length}%;--angle:${angle}deg;`;
 }
 
@@ -260,6 +241,7 @@ function startLocalGame(mode, aiProfile = "contender") {
   app.local.waitingAi = false;
   app.local.lastLogs = [];
   app.simulationReport = null;
+  stopFilm({renderNow:false});
   app.effects = [];
   app.replay = null;
   app.replayActive = false;
@@ -291,25 +273,74 @@ function currentHand() {
   return state.players[getViewerPlayer()].hand;
 }
 
-function recordResolution(resolution, isOnline = false) {
-  app.lastConflictSlots = resolution.conflicts || [];
-  if (!isOnline && app.preResolutionState) {
-    app.replay = { before: app.preResolutionState, after: structuredClone(app.local.state) };
-    app.preResolutionState = null;
+
+function stopFilm({renderNow = true} = {}) {
+ window.clearTimeout(app.filmTimer);app.filmTimer=null;app.filmSequence++;app.film=null;
+ app.effects=[];app.lastConflictSlots=[];app.lastBoardPositions={};
+ if(renderNow)render();
+}
+function effectsForFrame(frame) {
+ if(!frame)return [];
+ const effects=[];
+ for(const move of frame.moves||[]){
+  if(!move.from||!move.to)continue;
+  effects.push({kind:"footfall",x:move.to.x,y:move.to.y,actor:move.pieceId});
+  effects.push({kind:move.pieceId==="beast"?"beast-dash":move.pieceId==="thief"?"seal-trail":"stride-trail",from:move.from,to:move.to});
+  if(move.style==="push")effects.push({kind:"impact",x:move.to.x,y:move.to.y});
+ }
+ const kinds=(frame.logs||[]).map(x=>x.kind);
+ if(kinds.some(k=>["push-block","shield-break","shield-block","stun","clash","blessing-break"].includes(k))){
+  const id=frame.phase==="beast"?"beast":frame.phase==="guard"?"guard":"champion_p1";
+  const p=frame.state?.pieces?.[id];
+  if(p)effects.push({kind:"impact",x:p.x,y:p.y});
+ }
+ for(const entry of frame.logs||[]){
+  if(entry.kind==="shield"&&frame.state?.pieces?.[entry.pieceId]){
+   const p=frame.state.pieces[entry.pieceId];effects.push({kind:"shield",x:p.x,y:p.y});
   }
-  scheduleEffects(buildEffects(isOnline ? app.online.roomState : app.local.state, resolution));
-  if (resolution.tracker.crownEvents.length > 0) {
-    playTone("crown");
-  } else if (resolution.conflicts.length > 0) {
-    playTone("conflict");
-  } else {
-    playTone("ready");
+  if(entry.kind==="seal-steal"&&frame.state?.pieces){
+   const owner=frame.state.pieces[entry.ownerId==="p1"?"champion_p1":"champion_p2"];
+   const thief=frame.state.pieces.thief;
+   if(owner&&thief)effects.push({kind:"seal-trail",from:owner,to:thief});
   }
-  if (isOnline) {
-    app.online.lastLogs = resolution.logs;
-  } else {
-    app.local.lastLogs = resolution.logs;
-  }
+ }
+ if(frame.phase==="throne"&&(frame.crowns||[]).some(c=>c.kind==="gain"))effects.push({kind:"crown",x:THRONE.x,y:THRONE.y});
+ if(frame.conflicts?.length)effects.push({kind:"conflict",slot:frame.conflicts[0]});
+ return effects;
+}
+function showFilmFrame(index){
+ if(!app.film?.active)return;
+ app.film.index=index;
+ const frame=app.film.frames[index];
+ if(!frame){stopFilm();return;}
+ app.effects=app.settings.reducedMotion?[]:effectsForFrame(frame);
+ const sound=soundForFrame(frame);if(sound)playTone(sound);
+ render();
+ const token=app.filmSequence;
+ app.filmTimer=window.setTimeout(()=>{
+  if(token!==app.filmSequence||!app.film?.active)return;
+  if(index+1<app.film.frames.length)showFilmFrame(index+1);else stopFilm();
+ },frame.duration);
+}
+function beginFilm(input){
+ window.clearTimeout(app.filmTimer);app.filmTimer=null;app.filmSequence++;
+ const frames=planTurnFilm(input,{compact:app.settings.reducedMotion});
+ if(!frames.length)return;
+ app.film={active:true,index:0,frames};
+ app.forecast=null;app.forecastReview=false;app.effects=[];app.lastBoardPositions={};
+ showFilmFrame(0);
+}
+
+function recordResolution(resolution,isOnline=false){
+ app.lastConflictSlots=resolution.conflicts||[];
+ const after=isOnline?app.online.roomState:app.local.state;
+ if(!isOnline&&app.preResolutionState){
+  const before=app.preResolutionState;
+  app.replay={before,after:structuredClone(after),frames:resolution.frames,logs:resolution.logs,conflicts:resolution.conflicts};
+  app.preResolutionState=null;
+  beginFilm({before,after,frames:resolution.frames,logs:resolution.logs,conflicts:resolution.conflicts});
+ }else{scheduleEffects(buildEffects(after,resolution));}
+ if(isOnline)app.online.lastLogs=resolution.logs;else app.local.lastLogs=resolution.logs;
 }
 
 function openForecast(){
@@ -325,7 +356,7 @@ function openForecast(){
 
 function confirmSelection() {
   const state = currentState();
-  if (!state || !app.selectedCardId) {
+  if (!state || !app.selectedCardId || app.film?.active) {
     return;
   }
   app.forecast=null;app.forecastReview=false;
@@ -415,10 +446,11 @@ function setupSocket() {
       app.online.ready = payload.room.ready;
       app.online.roomState = payload.room.state;
       if (app.online.roomState && prevTurn && app.online.roomState.turn !== prevTurn) {
-        app.replay = { before: structuredClone(previousRoomState), after: structuredClone(app.online.roomState) };
-        app.online.lastLogs = app.online.roomState.battleLog.slice(0, 8);
-        app.lastConflictSlots = app.online.roomState.turnSummaries[0]?.conflicts || [];
-        playTone("move");
+        const turnLogs=app.online.roomState.battleLog.slice(0,16);
+        const conflicts=app.online.roomState.turnSummaries[0]?.conflicts||[];
+        app.replay={before:structuredClone(previousRoomState),after:structuredClone(app.online.roomState),logs:turnLogs,conflicts};
+        app.online.lastLogs=turnLogs;app.lastConflictSlots=conflicts;
+        beginFilm({before:previousRoomState,after:app.online.roomState,logs:turnLogs,conflicts});
       }
       render();
     }
@@ -482,10 +514,10 @@ function pieceGlyph(piece) {
 function effectsHTML() {
   return app.effects
     .map((effect) => {
-      if (effect.kind === "crown" || effect.kind === "shield") {
+      if (["crown","shield","footfall","impact"].includes(effect.kind)) {
         return `<div class="board-effect board-effect--${effect.kind}" style="--x:${effect.x};--y:${effect.y}"></div>`;
       }
-      if (effect.kind === "beast-dash" || effect.kind === "seal-trail") {
+      if (["beast-dash","seal-trail","stride-trail"].includes(effect.kind)) {
         return `<div class="board-effect board-effect--${effect.kind}" style="${effectLineStyle(effect.from, effect.to)}"></div>`;
       }
       return "";
@@ -497,7 +529,7 @@ function boardHTML(state) {
  const cells=[];
  for(let y=0;y<7;y++)for(let x=0;x<5;x++)cells.push(`<div class="board-cell ${x===THRONE.x&&y===THRONE.y?"board-cell--throne":""}"><span>${String.fromCharCode(65+x)}${y+1}</span></div>`);
  const pieces=Object.values(state.pieces).map(piece=>{
-  const cls=["piece",`piece--${piece.kind}`,piece.owner==="p1"?"piece--p1":piece.owner==="p2"?"piece--p2":"",piece.shield?"piece--shielded":"",piece.stun?"piece--stunned":"",piece.carryingSeal?"piece--sealed":"",app.inspectedSlot===piece.kind?"piece--focused":""].filter(Boolean).join(" ");
+  const cls=["piece",`piece--${piece.kind}`,piece.owner==="p1"?"piece--p1":piece.owner==="p2"?"piece--p2":"",piece.shield?"piece--shielded":"",piece.stun?"piece--stunned":"",piece.carryingSeal?"piece--sealed":"",app.inspectedSlot===piece.kind?"piece--focused":"",(app.film?.active?app.film.frames[app.film.index].moves:(app.debug.open?app.debug.round?.frames[app.debug.round.index]?.moves:null))?.some(m=>m.pieceId===piece.id)?"piece--performing":""].filter(Boolean).join(" ");
   return `<button type="button" class="${cls}" data-piece-kind="${piece.kind}" data-piece-id="${piece.id}" title="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" aria-label="${piece.kind==="champion"?(piece.owner==="p1"?"Северный претендент":"Южный претендент"):SLOT_LABELS[piece.kind]}" style="--x:${piece.x};--y:${piece.y}"><span class="piece__token">${pieceGlyph(piece)}${piece.shield?'<span class="piece__status piece__status--shield" title="Щит">✦</span>':""}${piece.stun?'<span class="piece__status piece__status--stun" title="Оглушение">✕</span>':""}${piece.carryingSeal?'<span class="piece__status piece__status--seal" title="Похищенная печать">◇</span>':""}</span></button>`;
  }).join("");
  return `<section class="board-panel"><div class="board-caption"><span class="board-caption__title">Королевский двор</span><span class="board-pill board-pill--throne">Трон ${coordLabel(THRONE)} · ход ${state.turn}</span></div><div class="board-surround"><div class="board"><div class="board-grid">${cells.join("")}</div><div class="board-glow"></div><div class="board-effects">${effectsHTML()}</div>${pieces}</div></div></section>`;
@@ -537,10 +569,10 @@ function forecastControlsHTML(){
 
 function handHTML(state) {
   const viewer=getViewerPlayer();
-  const locked=(app.screen==="online"&&app.online.ready[viewer])||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
+  const locked=Boolean(app.film?.active)||(app.screen==="online"&&app.online.ready[viewer])||app.local.waitingAi||(app.local.mode==="hotseat"&&app.local.passScreen);
   return `<section class="hand-panel ${locked?"hand-panel--locked":""}">
     <div class="panel-head"><h3>Ваши указы</h3><span>${viewer==="p1"?"Север":"Юг"} · ${currentHand().length} карт</span></div>
-    ${locked?`<div class="sealed-notice" role="status"><div class="sealed-notice__wax" aria-hidden="true"><span>✦</span></div><div class="sealed-notice__copy"><strong>Указ запечатан</strong><span>${app.screen==="online"?"Ход соперника":"Разыгрывание хода"}</span></div><span class="sealed-notice__pulse" aria-hidden="true"><i></i><i></i><i></i></span></div>`:""}
+    ${locked&&!app.film?.active?`<div class="sealed-notice" role="status"><div class="sealed-notice__wax" aria-hidden="true"><span>✦</span></div><div class="sealed-notice__copy"><strong>Указ запечатан</strong><span>${app.screen==="online"?"Ход соперника":"Разыгрывание хода"}</span></div><span class="sealed-notice__pulse" aria-hidden="true"><i></i><i></i><i></i></span></div>`:""}
     <div class="hand" role="group" aria-label="Выбор одного указа">${currentHand().map(cardId=>{
       const card=cardById(cardId);
       return `<button type="button" class="law-card ${app.selectedCardId===cardId?"law-card--selected":""}" style="--card-color:${SLOT_COLORS[card.slot]}" aria-pressed="${app.selectedCardId===cardId}" ${locked?"disabled":""} draggable="${!locked}" data-card-id="${cardId}" data-focus-card="${cardId}">
@@ -552,6 +584,7 @@ function handHTML(state) {
 }
 
 function phaseBanner() {
+  if (app.film?.active) return app.film.frames[app.film.index].label;
   if (app.screen === "online") {
     if (!app.online.roomState) {
       return "Ожидание второго игрока";
@@ -695,10 +728,24 @@ function roomHTML() {
   return gameHTML(roomState, `Комната ${app.online.roomCode}`);
 }
 
+function filmHTML() {
+ const pb=app.film;if(!pb?.active)return "";
+ const frame=pb.frames[pb.index],messages=frame.logs||[];
+ const featured=messages.find(l=>!["turn-start","crown-check","hold"].includes(l.kind))||messages[0];
+ const phases=frame.source==="network"?pb.frames.map(f=>f.phase):PHASE_ORDER.filter(phase=>pb.frames.some(f=>f.phase===phase)),idx=phases.indexOf(frame.phase);
+ return `<section class="turn-film" aria-label="Разыгрывание закона" aria-live="polite">
+ <div class="turn-film__crest" aria-hidden="true">${frame.phase==="laws"?"⚜":frame.phase==="throne"?"♛":"◆"}</div>
+ <div class="turn-film__body"><div class="turn-film__title"><strong>${frame.label}</strong><span>${frame.source==="network"?"Результат общего хода":"Фаза "+Math.min(pb.index+1,pb.frames.length)+"/"+pb.frames.length}</span></div>
+ <div class="turn-film__caption">${featured?.text || (frame.phase==="start"?"Указы вскрываются.":"Двор исполняет действующие законы.")}</div>
+ <div class="turn-film__rail" aria-hidden="true">${phases.map((phase,i)=>`<span class="${idx>=i?"is-complete":""} ${phase===frame.phase?"is-current":""}" title="${PHASE_LABELS[phase]}"></span>`).join("")}</div></div>
+ <button type="button" data-action="skip-film" class="turn-film__skip" aria-label="Пропустить показ хода и открыть результат">Пропустить <span aria-hidden="true">↠</span></button>
+ </section>`;
+}
+
 function gameHTML(state, eyebrow) {
   const viewer = getViewerPlayer();
   const chooserLabel = app.local.mode === "hotseat" ? (viewer === "p1" ? "Север выбирает указ" : "Юг выбирает указ") : eyebrow;
-  const displayState=app.forecast?(app.forecastReview?app.forecast.after:app.forecast.before):(app.replayActive&&app.replayStage==="before"&&app.replay?app.replay.before:state);
+  const displayState=app.film?.active?app.film.frames[app.film.index].state:(app.forecast?(app.forecastReview?app.forecast.after:app.forecast.before):(app.replayActive&&app.replayStage==="before"&&app.replay?app.replay.before:state));
   return `
     <div class="game-shell">
       <div class="game-shell__frame">
@@ -717,7 +764,7 @@ function gameHTML(state, eyebrow) {
             </div>
           </div>
         </header>
-        ${forecastControlsHTML()}<main class="game-layout">
+        ${app.film?.active ? filmHTML() : forecastControlsHTML()}<main class="game-layout">
           <div class="game-layout__main">${boardHTML(displayState)}${app.replayActive ? `<p class="replay-ribbon">Повтор предыдущего хода · ${app.replayStage === "before" ? "до" : "после"} выполнения законов</p>` : ""}</div>
           <aside class="game-layout__side">
             ${lawSlotsHTML(displayState)}
@@ -737,7 +784,7 @@ function gameHTML(state, eyebrow) {
           </div>
         </div>
       ` : ""}
-      ${victoryHTML(state)}
+      ${app.film?.active ? "" : victoryHTML(state)}
     </div>
   `;
 }
@@ -839,18 +886,51 @@ function artGalleryHTML() {
   </section>`;
 }
 
+
+function stopDebugRound(renderNow=false){
+  window.clearTimeout(app.debug.roundTimer);
+  app.debug.roundTimer=null;app.debug.roundToken++;app.debug.round=null;
+  if(renderNow&&app.debug.open)render();
+}
+function showDebugRoundFrame(index){
+  const round=app.debug.round;
+  if(!round||!app.debug.open)return;
+  round.index=index;
+  const frame=round.frames[index];
+  if(!frame){stopDebugRound(true);return;}
+  const sound=soundForFrame(frame);
+  if(sound&&app.settings.sound)playTone(sound);
+  render();
+  const token=app.debug.roundToken;
+  app.debug.roundTimer=window.setTimeout(()=>{
+    if(token!==app.debug.roundToken||!app.debug.open||!app.debug.round)return;
+    if(index+1<round.frames.length)showDebugRoundFrame(index+1);
+    else stopDebugRound(true);
+  },frame.duration);
+}
+function beginDebugRound(){
+  stopDebugRound(false);
+  const start=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
+  const resolved=resolveTurn(start,{p1:{cardId:start.players.p1.hand[0]},p2:{cardId:start.players.p2.hand[0]}});
+  const frames=planTurnFilm({before:start,after:resolved.state,frames:resolved.frames,logs:resolved.logs,conflicts:resolved.conflicts},
+    {compact:app.settings.reducedMotion});
+  app.debug.round={frames,index:0};
+  app.debug.scene="game";app.debug.tab="animations";app.debug.animation=null;
+  showDebugRoundFrame(0);
+}
+
 function debugSceneHTML(scene) {
-  const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,replay:app.replay,replayActive:app.replayActive,forecast:app.forecast,forecastReview:app.forecastReview};
+  const saved={screen:app.screen,local:app.local,online:app.online,modal:app.modal,simulationReport:app.simulationReport,effects:app.effects,lastConflictSlots:app.lastConflictSlots,selectedCardId:app.selectedCardId,focusCardId:app.focusCardId,inspectedSlot:app.inspectedSlot,replay:app.replay,replayActive:app.replayActive,forecast:app.forecast,forecastReview:app.forecastReview,film:app.film};
   let markup="";
   try {
-    const state=createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
+    const state=app.debug.round?.frames[app.debug.round.index]?.state || createInitialState({mode:"ai",seed:"crown-laws-debug-scene"});
     app.screen="game";
     app.local={...app.local,mode:"ai",state,waitingAi:false,passScreen:false,hotseatChooser:"p1"};
     app.online={...app.online,roomState:null,roomCode:"",ready:{p1:false,p2:false},you:"p1"};
     app.modal=null;
-    app.effects=[];app.lastConflictSlots=[];
+    app.effects=app.debug.round?effectsForFrame(app.debug.round.frames[app.debug.round.index]):[];app.lastConflictSlots=app.debug.round?.frames[app.debug.round.index]?.conflicts||[];
     app.selectedCardId=app.debug.selectedCardId;app.focusCardId=app.debug.focusCardId;app.inspectedSlot=app.debug.inspectedSlot;
-    app.replay=null;app.replayActive=false;app.forecast=app.debug.forecast;app.forecastReview=app.debug.forecastReview;
+    app.replay=null;app.replayActive=false;app.film=null;app.forecast=app.debug.forecast;app.forecastReview=app.debug.forecastReview;
     if(scene==="art")markup=artGalleryHTML();
     else if(scene==="menu")markup=menuHTML();
     else if(scene==="join"||scene==="waiting"){
@@ -869,7 +949,7 @@ function debugSceneHTML(scene) {
       if(anim==="crown"||anim==="shield")app.effects=[{kind:anim,x:2,y:3}];
       if(anim==="beast-dash"||anim==="seal-trail")app.effects=[{kind:anim,from:{x:2,y:4},to:{x:3,y:2}}];
       if(anim==="conflict")app.lastConflictSlots=["guard"];
-      markup=gameHTML(state,scene==="ready"?"Ожидание соперника":"Демонстрационная партия");
+      markup=app.debug.round ? `<div class="demo-ribbon"><span>Живая демонстрация · ${app.debug.round.frames[app.debug.round.index].label}</span><span>${app.debug.round.index+1}/${app.debug.round.frames.length}</span></div>`+gameHTML(state,"Демонстрационная партия") : gameHTML(state,scene==="ready"?"Ожидание соперника":"Демонстрационная партия");
       if(app.modal)markup+=modalHTML();
     }
   }finally{Object.assign(app,saved);}
@@ -879,12 +959,12 @@ function debugSceneHTML(scene) {
 function debugWorkshopHTML() {
   const scenes=[["menu","Главное меню"],["game","Игровая партия"],["join","Создание / вход"],["waiting","Ожидание гостя"],["ready","Выбор запечатан"],["hotseat","Передача устройства"],["victory","Экран победы"],["rules","Правила"],["settings","Настройки"],["simulation","Отчёт симуляции"],["art","Арт-галерея"]];
   const animations=[["move","Перемещение фишки"],["crown","Получение короны"],["shield","Защитный щит"],["beast-dash","Рывок зверя"],["seal-trail","Похищение печати"],["conflict","Конфликт законов"],["card","Выбор карты"]];
-  const sounds=[["tap","Выбор карты"],["ready","Утверждение"],["move","Перемещение"],["conflict","Конфликт"],["crown","Корона"]];
+  const sounds=[["tap","Выбор карты"],["ready","Утверждение"],["move","Шаг"],["champion","Претендент"],["priest","Жрец"],["guard","Страж"],["beast","Зверь"],["thief","Вор"],["shield","Щит"],["seal","Печать"],["conflict","Конфликт"],["crown","Корона"]];
   return `<aside class="debug-workshop" role="dialog" aria-label="Мастерская разработчика">
     <header class="debug-workshop__top"><div><small>Тильда · Backquote</small><h2>Мастерская</h2></div><button type="button" data-debug-close class="ghost-btn" aria-label="Закрыть">×</button></header>
     <nav class="debug-workshop__tabs" aria-label="Разделы отладки">${[["screens","Экраны"],["animations","Анимации"],["sounds","Звуки"],["balance","Баланс"]].map(([id,label])=>`<button type="button" class="${app.debug.tab===id?"is-active":""}" data-debug-tab="${id}">${label}</button>`).join("")}</nav>
     ${app.debug.tab==="screens"?`<p>Настоящие игровые шаблоны с демонстрационными данными. Партия не изменяется.</p><div class="debug-workshop__items">${scenes.map(([id,label])=>`<button type="button" class="${app.debug.scene===id?"is-active":""}" data-debug-scene="${id}">${label}</button>`).join("")}</div>`:""}
-    ${app.debug.tab==="animations"?`<p>Выберите эффект — он запустится прямо на поле предпросмотра.</p><div class="debug-workshop__items">${animations.map(([id,label])=>`<button type="button" data-demo-animation="${id}">${label} ↗</button>`).join("")}</div>`:""}
+    ${app.debug.tab==="animations"?`<p>Запусти полноценный раунд из реального движка или проверь эффекты по одному. Партия не изменится.</p><div class="debug-workshop__items"><button type="button" data-demo-round>▶ Полный ход</button>${app.debug.round?`<button type="button" data-demo-stop>■ Остановить</button>`:""}${animations.map(([id,label])=>`<button type="button" data-demo-animation="${id}">${label} ↗</button>`).join("")}</div>`:""}
     ${app.debug.tab==="sounds"?`<p>Звуки можно прослушать даже при выключенных игровых эффектах.</p><div class="debug-workshop__items">${sounds.map(([id,label])=>`<button type="button" data-demo-sound="${id}">${label} ▶</button>`).join("")}</div>`:""}
     ${app.debug.tab==="balance"?(app.local.state&&app.screen==="game"?`<p>Изменения применяются к текущей локальной партии.</p>${debugHTML(app.local.state)}`:"<p>Изменение баланса доступно в локальной партии с ИИ или на одном устройстве.</p>"):""}
     <footer class="debug-workshop__foot">Закрыть: <kbd>~</kbd> или <kbd>Esc</kbd></footer>
@@ -928,7 +1008,7 @@ function restoreLocal() {
 }
 
 function animateBoard() {
-  const state = app.forecast ? (app.forecastReview ? app.forecast.after : app.forecast.before) : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState());
+  const state = app.film?.active ? app.film.frames[app.film.index].state : (app.forecast ? (app.forecastReview ? app.forecast.after : app.forecast.before) : (app.replayActive && app.replayStage === "before" && app.replay ? app.replay.before : currentState()));
   if (!state) return;
   const nextPositions = Object.fromEntries(Object.values(state.pieces).map(piece => [piece.id, {x:piece.x,y:piece.y}]));
   const board = root.querySelector('.board');
@@ -943,7 +1023,7 @@ function animateBoard() {
       node.animate([
         {transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.93)`},
         {transform: 'translate(-50%, -50%) scale(1)'}
-      ], {duration: 360,easing:'cubic-bezier(.2,.75,.2,1)'});
+      ], {duration:app.film?.active?Math.min(420,app.film.frames[app.film.index].duration):360,easing:'cubic-bezier(.2,.75,.2,1)'});
     });
   }
   app.lastBoardPositions = nextPositions;
@@ -958,19 +1038,24 @@ function syncExports() {
 }
 
 root.addEventListener("click", (event) => {
-  const dev=event.target.closest("[data-debug-close],[data-debug-tab],[data-debug-scene],[data-demo-animation],[data-demo-sound]");
+  const dev=event.target.closest("[data-debug-close],[data-debug-tab],[data-debug-scene],[data-demo-animation],[data-demo-sound],[data-demo-round],[data-demo-stop]");
   if(dev){
-    if(dev.hasAttribute("data-debug-close"))app.debug.open=false;
-    if(dev.dataset.debugTab){app.debug.tab=dev.dataset.debugTab;if(app.debug.tab==="animations")app.debug.scene="game";}
-    if(dev.dataset.debugScene){app.debug.scene=dev.dataset.debugScene;app.debug.animation=null;}
+    if(dev.hasAttribute("data-debug-close")){stopDebugRound();app.debug.open=false;}
+    if(dev.dataset.debugTab){stopDebugRound();app.debug.tab=dev.dataset.debugTab;if(app.debug.tab==="animations")app.debug.scene="game";}
+    if(dev.dataset.debugScene){stopDebugRound();app.debug.scene=dev.dataset.debugScene;app.debug.animation=null;}
     if(dev.dataset.demoSound){playTone(dev.dataset.demoSound,true);return;}
+    if(dev.hasAttribute("data-demo-round")){beginDebugRound();return;}
+    if(dev.hasAttribute("data-demo-stop")){stopDebugRound(true);return;}
     if(dev.dataset.demoAnimation){
       const name=dev.dataset.demoAnimation;
+      stopDebugRound();
       app.debug.scene="game";app.debug.animation=name;
       window.setTimeout(()=>{if(app.debug.animation===name){app.debug.animation=null;if(app.debug.open)render();}},1300);
     }
     render();return;
   }
+  if(event.target.closest('[data-action="skip-film"]')){stopFilm();return;}
+  if(app.film?.active&&!app.debug.open)return;
   if (app.debug.open && event.target.closest(".debug-scene")) {
     const pressed=event.target.closest("[data-action]");
     const card=event.target.closest("[data-card-id]");
@@ -1063,16 +1148,16 @@ root.addEventListener("click", (event) => {
         app.historyExpanded=!app.historyExpanded; render();
         break;
       case "replay-turn":
-        if(app.replay&&!app.replayActive){
-          app.replayActive=true; app.replayStage="before"; render();
-          window.clearTimeout(app.replayTimer);
-          app.replayTimer=window.setTimeout(()=>{app.replayStage="after";render();app.replayTimer=window.setTimeout(()=>{app.replayActive=false;render();},1100);},700);
+        if(app.replay&&!app.film?.active){
+          beginFilm({before:app.replay.before,after:app.replay.after,
+            frames:app.replay.frames||null,logs:app.replay.logs||[],conflicts:app.replay.conflicts||[]});
         }
         break;
       case "close-modal":
         closeModal();
         break;
       case "back-menu":
+        stopFilm({renderNow:false});
         window.clearTimeout(app.replayTimer);app.replayActive=false;app.forecast=null;
         app.screen = "menu";
         app.local.state = null;
@@ -1083,6 +1168,7 @@ root.addEventListener("click", (event) => {
         render();
         break;
       case "rematch":
+        stopFilm({renderNow:false});
         if (app.screen === "online" && app.online.socket) {
           app.online.socket.send(JSON.stringify({ type: "match:restart" }));
         } else {
@@ -1205,9 +1291,10 @@ root.addEventListener("drop", (event) => {
 
 window.addEventListener("keydown", (event) => {
   if((event.code==="Backquote"||event.key==="~"||event.key==="`")&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||"")){
-    event.preventDefault();app.debug.open=!app.debug.open;app.debug.animation=null;render();return;
+    event.preventDefault();app.debug.open=!app.debug.open;if(!app.debug.open)stopDebugRound();app.debug.animation=null;render();return;
   }
-  if(event.key==="Escape"&&app.debug.open){app.debug.open=false;render();return;}
+  if(event.key==="Escape"&&app.debug.open){stopDebugRound();app.debug.open=false;render();return;}
+  if(event.key==="Escape"&&app.film?.active){stopFilm();return;}
   if (event.key === "Escape" && app.modal) {
     closeModal();
   }
