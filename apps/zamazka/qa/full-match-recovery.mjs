@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
+import {performance} from 'node:perf_hooks';
 import {paintPackets,paintingChecksum} from '../draft-transfer.js';
 
 // Deterministic server-level soak: 8 authenticated room seats, 3 rounds,
@@ -18,12 +19,21 @@ const game=exports.default;
 const people=Array.from({length:8},(_,n)=>({id:'seat-'+n,name:'Restorer '+n}));
 const state=game.createRoom({player:people[0]}).state;
 for(const who of people.slice(1))game.onJoin({state,player:who,players:people});
-const send=(who,payload)=>game.onMessage({state,player:who,players:people,payload});
+const latencies=[];let inboundBytes=0,packetCount=0;
+const send=(who,payload)=>{
+ const started=performance.now();
+ const result=game.onMessage({state,player:who,players:people,payload});
+ latencies.push(performance.now()-started);
+ inboundBytes+=Buffer.byteLength(JSON.stringify(payload));
+ packetCount++;
+ return result;
+};
 const pulse=()=>send(people[0],{type:'pulse'});
-send(people[0],{type:'start',rounds:3,drawingSeconds:60});
-assert.equal(state.rounds,3);
+const totalRounds=process.env.ZAMAZKA_SOAK_ROUNDS==='5'?5:3;
+send(people[0],{type:'start',rounds:totalRounds,drawingSeconds:60});
+assert.equal(state.rounds,totalRounds);
 let uploaded=0,ballots=0;
-for(let round=1;round<=3;round++){
+for(let round=1;round<=totalRounds;round++){
  assert.equal(state.round,round);
  assert.equal(state.phase,'preview');
  time=state.deadline+1;pulse();
@@ -90,12 +100,18 @@ for(let round=1;round<=3;round++){
  }
  assert.equal(state.deadline,0,'round review remains untimed');
  send(people[0],{type:'continue'});
- assert.equal(state.phase,round===3?'results':'preview');
+ assert.equal(state.phase,round===totalRounds?'results':'preview');
 }
-assert.equal(uploaded,24);
-assert.equal(ballots,168);
+assert.equal(uploaded,8*totalRounds);
+assert.equal(ballots,56*totalRounds);
 assert.equal(state.phase,'results');
-assert.equal(state.round,3);
+assert.equal(state.round,totalRounds);
 assert.equal(state.participants.length,8);
 for(const who of people)assert.ok(Number.isFinite(state.scores[who.id].mask+state.scores[who.id].eye));
-console.log('ZAMAZKA: 8 seats x 3 rounds, 24 restored artworks, 168 accepted ballots, multipart resume, reveal and results OK');
+const sorted=latencies.toSorted((a,b)=>a-b);
+const q=p=>Math.round(sorted[Math.max(0,Math.ceil(sorted.length*p)-1)]*100)/100;
+console.log(JSON.stringify({scenario:'zamazka-eight-player-full-match',
+ rounds:totalRounds,players:people.length,committedArtworks:uploaded,acceptedBallots:ballots,
+ packetCount,inboundKiB:Math.round(inboundBytes/1024),handlerP50Ms:q(.5),
+ handlerP95Ms:q(.95),handlerP99Ms:q(.99),handlerMaxMs:q(1),
+ result:'passed'}));
