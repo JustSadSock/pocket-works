@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "regression",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "bootstrap.test.mjs",
+        "economy.test.mjs",
+        "debug-state.test.mjs",
+        "artifacts.test.mjs",
+        "feedback.test.mjs"
+      ]
+    },
+    {
+      "id": "mobile-journey",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/mobile.spec.ts"
+      ]
+    },
+    {
+      "id": "economic-stress",
+      "kind": "node-test",
+      "tier": "deep",
+      "files": [
+        "mechanics.test.mjs"
+      ]
+    }
+  ]
+}
