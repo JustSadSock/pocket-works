@@ -584,7 +584,7 @@ function renderPlay(){
  app.innerHTML='<div class="play-screen"><div class="play-head">'+
  '<h1>Раунд '+state.round+'/'+state.rounds+'</h1>'+
  '<span class="chip">'+esc(active?'Твой ход':'Ходит '+label(state.turnId))+'</span>'+
- '<span class="chip"><strong id="turnClock" role="timer">—</strong></span>'+soundToggle()+
+ '<span class="chip"><strong id="turnClock" role="timer">—</strong></span>'+(state.connectionGraceUntil&&Date.now()<state.connectionGraceUntil?'<span class="chip" role="status">'+svgIcon('clock',16)+' Восстановление связи</span>':'')+soundToggle()+
  '<button type="button" class="leave-button" data-action="leave">Выйти</button></div>'+
  resourceWallet(you.resources,plan)+
  '<div class="play-body"><div class="play-field" data-player-count="'+state.players.length+'">'+
