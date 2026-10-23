@@ -705,9 +705,10 @@ export class PocketNetHub {
           }
           this.recordZamazkaRewards(room,prior,room.state,result.events ?? [],player.id);
           this.recordBlockiesRewards(room,prior,room.state);
-          if(room.gameId==='chyepukha'&&room.version==='v6')await this.applyKicks(room,result.events ?? [],player.id);
+          const earlyKick=room.gameId==='chyepukha'&&room.version==='v6'||room.gameId==='black-bazaar'&&room.version==='v16';
+          if(earlyKick)await this.applyKicks(room,result.events ?? [],player.id);
           this.emit(room, result.events ?? []);
-          if(!(room.gameId==='chyepukha'&&room.version==='v6'))await this.applyKicks(room, result.events ?? [], player.id);
+          if(!earlyKick)await this.applyKicks(room, result.events ?? [], player.id);
           // Deliver cosmetics independently of bulk artwork packets. Pending awards
           // are durably queued and retried by the existing alarm.
           const bulkZamazka=room.gameId==='zamazka'&&['draft_chunk','submit_chunk','draft','submit_begin','submit_resume','sync','time_ping','pulse'].includes(msg.payload?.type);
