@@ -14,7 +14,7 @@ const newer=(s,type,slot,fields={})=>applyMagicEdit(s,{type,slot,revision:s.revi
 function collect(s,id){
  const granted=grantEarnedMagicRune(s,id);
  assert.equal(granted.ok,true,granted.error);
- return {state:granted.state,instanceId:granted.state.reserve.find(r=>r.defId===id).instanceId};
+ return {state:granted.state,instanceId:granted.state.reserve.at(-1).instanceId};
 }
 function equip(s,id,slot,action){
  const got=collect(s,id);
