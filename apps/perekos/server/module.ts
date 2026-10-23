@@ -712,7 +712,7 @@ function validState(s){
  &&(!s.magicModeV2||(s.magicLoadouts?.length===2&&s.magicLoadouts.every(x=>v2SpellAllowed(x))))&&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=12;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=13;
 
 // ---- Immutable PocketNet ruleset 10: generated from reviewed magic-v2 runtime.
 // v9 is preserved separately; 10 retains all its legacy logic for old-style new rooms.
@@ -1267,9 +1267,8 @@ const V2_START_POOL=Object.freeze([
 const V2_SEAT_MAGES=Object.freeze({stone:'pebble',fire:'kindle',storm:'wire'});
 function v2Inventory(school,seed){
  let book=createMagicLoadout(school,{seed,starter:'attack'});
- for(const id of V2_START_POOL){
-  if(!permittedRune(school,id))continue;
-  // Starter instances already belong to a slot; each extra card is independent.
+ for(const id of ['u_on_hurt','u_guard','u_size','u_reform_base',
+  {stone:'st_throw',fire:'fi_ember',storm:'li_spark'}[school]]){
   const extra=grantEarnedMagicRune(book,id);
   if(!extra.ok)throw Error('Invalid owned rune: '+id);
   book=extra.state;
@@ -1308,6 +1307,76 @@ function v2ValidAction(s,i,command){
  s.match.magicLoadouts[i]=edited.state;s.ready[i]=false;s.revision++;return true;
 }
 
+
+const V13_DRAFT_LIMIT=45000;
+function v13Roll(seed,stage,seat,choice,step){
+ let x=(seed^Math.imul(stage+1,0x9e3779b1)^Math.imul(seat+1,0x85ebca6b)^Math.imul(choice+1,0xc2b2ae35)^step)>>>0;
+ x^=x>>>16;x=Math.imul(x,0x7feb352d)>>>0;x^=x>>>15;
+ return (Math.imul(x,0x846ca68b)^(x>>>16))>>>0;
+}
+function v13Pool(book,rarity){
+ const owned=new Set([...book.reserve,...book.slots.flatMap(sp=>[
+  ...(sp.when?[sp.when]:[]),...sp.actions.flatMap(a=>[a.rune,...a.mods])
+ ])].map(r=>r.defId));
+ const hasForm=[...owned,...book.sealed.flatMap(sp=>sp.actions.flatMap(a=>a.mods.map(m=>m.defId)))]
+  .some(id=>MAGIC_RUNE_INDEX.get(id)?.aspect==='shape');
+ const eligible=V2_START_POOL.filter(id=>{
+  const def=MAGIC_RUNE_INDEX.get(id);
+  return def?.rarity===rarity&&permittedRune(book.school,id)&&
+   (def.aspect!=='origin'||hasForm);
+ });
+ return eligible.filter(id=>!owned.has(id)).length?eligible.filter(id=>!owned.has(id)):eligible;
+}
+function v13Deal(s,i){
+ const book=s.match.magicLoadouts[i],stage=s.magicStage;
+ const milestone=stage===3||stage===5||stage>=7;
+ const types=['common',stage<=2?'uncommon':'rare',
+  milestone?'transformation':stage>=4?'epic':'rare'];
+ return types.map((rarity,index)=>{
+  const count=index===0?2:1,ids=[],used=new Set();
+  let pool=v13Pool(book,rarity);
+  if(!pool.length)pool=v13Pool(book,'common');
+  for(let step=0;step<count;step++){
+   const choices=pool.filter(id=>!used.has(id));if(!choices.length)break;
+   const id=choices[v13Roll(s.match.seed,stage,i,index,step)%choices.length];
+   ids.push(id);used.add(id);
+  }
+  return {index,kind:count===2?'bundle':'single',rarity,runes:ids};
+ });
+}
+function v13BeginOffer(s){
+ s.magicStage=s.match.score[0]+s.match.score[1]+s.match.draws;
+ s.magicChoices=[v13Deal(s,0),v13Deal(s,1)];s.magicPicked=[false,false];
+ s.magicOfferAt=clock();s.ready=[false,false];s.phase='magic-offer';
+ s.inputs=[{...ZERO},{...ZERO}];s.credit=0;s.revision++;
+}
+function v13Choose(s,i,index,stage){
+ if(s.gameMode!=='magic-v2'||s.phase!=='magic-offer'||s.magicPicked?.[i]||
+  !Number.isInteger(index)||index<0||index>2||stage!==s.magicStage)return false;
+ const pack=s.magicChoices?.[i]?.[index];
+ if(!pack?.runes?.length)return false;
+ let book=s.match.magicLoadouts[i];
+ for(const id of pack.runes){
+  const result=grantEarnedMagicRune(book,id);if(!result.ok)return false;
+  book=result.state;
+ }
+ if(!v2SpellAllowed(book))return false;
+ s.match.magicLoadouts[i]=book;s.magicPicked[i]=true;s.revision++;
+ if(s.magicPicked.every(Boolean)){
+  s.phase='magic-build';s.match.phase='build';s.magicChoices=[[],[]];
+  s.ready=[false,false];s.magicOfferAt=0;s.revision++;
+ }
+ return true;
+}
+function v13OfferTimeout(s){
+ if(s.phase!=='magic-offer'||clock()-s.magicOfferAt<V13_DRAFT_LIMIT)return false;
+ for(let i=0;i<2;i++)if(!s.magicPicked[i]){
+  const choice=s.magicChoices[i].findIndex(pack=>pack.runes.length);
+  if(choice>=0)v13Choose(s,i,choice,s.magicStage);
+ }
+ return true;
+}
+
 const ZERO={x:0,y:0,aim:{x:200,y:310},attack:false,shield:false,dash:false,special:false};
 const clock=()=>Date.now(),updates=()=>[{type:'state',payload:null}],warn=(to,msg)=>[{type:'notice',to,payload:msg}];
 const side=(s,id)=>s.seats.indexOf(id);
@@ -1320,7 +1389,7 @@ const safeInput=v=>{
 };
 function beginNet(s){
  s.match=s.gameMode==='magic-v2'?createV2Match(s):makeMatch((clock()>>>0)^Math.floor(Math.random()*0xffffffff),s.mages[0],s.mages[1],s.gameMode,s.archetypes[0],s.archetypes[1]);
- if(s.gameMode==='magic-v2')s.phase='magic-build';else{startRound(s.match);s.phase='fight'}s.offers=[[],[]];s.picked=[false,false];s.ready=[false,false];
+ if(s.gameMode==='magic-v2')s.phase='magic-build';else{startRound(s.match);s.phase='fight'}s.offers=[[],[]];s.picked=[false,false];s.ready=[false,false];s.magicChoices=[[],[]];s.magicPicked=[false,false];s.magicStage=0;s.magicOfferAt=0;
  s.inputs=[{...ZERO},{...ZERO}];s.seq=[-1,-1];s.seen=[clock(),clock()];s.at=clock();s.credit=0;s.lastEmit=0;s.revision++;
 }
 function advanceNet(s){
@@ -1332,7 +1401,7 @@ function advanceNet(s){
  while(s.credit>=1000/60&&steps<12&&s.match.phase==='fight'){tick(s.match,s.inputs[0],STEP,s.inputs[1]);s.credit-=1000/60;steps++}
  if(s.match.phase==='draft'){
   if(s.gameMode==='magic-v2'){
-   s.match.phase='build';s.phase='magic-build';s.ready=[false,false];s.inputs=[{...ZERO},{...ZERO}];s.credit=0;s.revision++;return true;
+   v13BeginOffer(s);return true;
   }
   s.phase='draft';s.draftAt=clock();s.offers=[0,1].map(i=>eligibleOffers(s.match,i));s.match.pick=[];s.picked=[false,false];s.ready=[false,false];s.revision++;return true;
  }
@@ -1367,15 +1436,15 @@ function readyNet(s,i,list){
 }
 function viewForPlayer({state:s,player,players}){
  const i=side(s,player.id);
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:12,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:13,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
-  offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],
+  offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],magicStage:s.magicStage||0,magicChoices:i>=0&&s.phase==='magic-offer'&&!s.magicPicked?.[i]?s.magicChoices[i]:[],magicPicked:i>=0&&!!s.magicPicked?.[i],magicOfferDeadline:s.phase==='magic-offer'?s.magicOfferAt+V13_DRAFT_LIMIT:0,
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};
 }
 const module={
  protocolVersion:1,
  createRoom({player}){return {state:{host:player.id,seats:[player.id],phase:'lobby',match:null,revision:0,
-  gameMode:'rupture',schools:['fire','storm'],mages:['kindle','wire'],archetypes:['striker','striker'],offers:[[],[]],picked:[false,false],ready:[false,false],seq:[-1,-1],inputs:[{...ZERO},{...ZERO}],
+  gameMode:'rupture',schools:['fire','storm'],mages:['kindle','wire'],archetypes:['striker','striker'],offers:[[],[]],picked:[false,false],ready:[false,false],magicChoices:[[],[]],magicPicked:[false,false],magicStage:0,magicOfferAt:0,seq:[-1,-1],inputs:[{...ZERO},{...ZERO}],
   seen:[clock(),clock()],at:clock(),credit:0,lastEmit:0}}},
  onJoin({state:s,player,players}){
   if(s.seats.filter(Boolean).length>=2||players.length>2)throw Error('room_full');
@@ -1395,7 +1464,7 @@ const module={
   const i=side(s,player.id);if(i<0)return {state:s,events:[]};
   const p=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
   const out=(events=updates())=>({state:s,events});
-  if(p.type==='sync'){s.seen[i]=clock();s.at=clock();if(autoAdvanceDraft(s))return out();return out([{type:'state',to:player.id,payload:null}])}
+  if(p.type==='sync'){s.seen[i]=clock();s.at=clock();if(autoAdvanceDraft(s)||v13OfferTimeout(s))return out();return out([{type:'state',to:player.id,payload:null}])}
   if(p.type==='start'||p.type==='rematch'){
    if(s.host!==player.id)return out(warn(player.id,'Матч запускает создатель комнаты.'));
    if(s.seats.length!==2||!s.seats.every(Boolean))return out(warn(player.id,'Нужны два игрока.'));
@@ -1410,6 +1479,7 @@ const module={
    }
    if(p.type==='archetype'){if(s.phase!=='lobby'||!validArchetype(p.archetype))return out(warn(player.id,'Боевой путь можно выбрать до начала матча.'));s.archetypes[i]=p.archetype;s.revision++;return out()}
    if(p.type==='mage'){if(s.phase!=='lobby'||!validMage(p.mageId))return out(warn(player.id,'Выбрать мага можно только до боя.'));s.mages[i]=p.mageId;s.revision++;return out()}
+  if(p.type==='magic-pick')return v13Choose(s,i,p.index,p.stage)?out():out(warn(player.id,'Пакет рун недоступен или уже выбран.'));
   if(p.type==='magic-edit'){
     if(v2ValidAction(s,i,p.command))return out();
     return out(warn(player.id,'Комбинация недоступна или устарела.'));
