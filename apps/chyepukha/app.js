@@ -53,9 +53,9 @@ const writerMetaKey=()=>draftKey()+':editor';
 function readWriterMeta(){
  if(IS_PREVIEW)return previewWriterMeta;
  try{const v=JSON.parse(localStorage.getItem(writerMetaKey())||'null');
-  if(v&&typeof v==='object')return {step:v.step==='select'?'select':'draft',anchor:String(v.anchor||'').slice(0,72),gender:String(v.gender||'unspecified')};
+  if(v&&typeof v==='object')return {step:v.step==='select'?'select':'draft',anchor:String(v.anchor||'').slice(0,72),gender:String(v.gender||'unspecified'),selection:Array.isArray(v.selection)?v.selection.filter(Number.isInteger):[]};
  }catch{}
- return {step:'draft',anchor:'',gender:read('gender','unspecified')};
+ return {step:'draft',anchor:'',gender:read('gender','unspecified'),selection:[]};
 }
 function saveWriterMeta(patch){
  const value={...readWriterMeta(),...patch};
@@ -302,7 +302,7 @@ function render(){netStatus();syncIdentityBar();$('sound').textContent='Ауді
  scene.innerHTML=(view?(view.phase==='lobby'?lobby():view.phase==='writing'?(view.waiting?waiting():writing()):view.phase==='finished'?results():waiting()):archiveOpen?archiveScreen():home())+overlay();
  if(view?.phase==='writing'&&!view.waiting)refreshWords();
 }
-function indices(){const w=words($('answer')?.value||'');return (draftSelections[draftKey()]||[]).filter(i=>Number.isInteger(i)&&i>=0&&i<w.length)}
+function indices(){const w=words($('answer')?.value||loadDraft());return (draftSelections[draftKey()]||readWriterMeta().selection||[]).filter(i=>Number.isInteger(i)&&i>=0&&i<w.length)}
 function refreshWords(){
  const input=$('answer'),text=input?input.value:loadDraft(),counter=$('chars');
  if(counter)counter.textContent=text.length+'/800';
@@ -322,10 +322,20 @@ function leaveNow(){++connectionAttempt;clearRoomTimeout();releaseActive();const
 scene.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
  if(f.id==='createForm'||f.id==='joinForm'){const d=new FormData(f);if(!member())name=String($('guestNick')?.value||d.get('name')||'').trim().slice(0,24);invitation=String(d.get('room')||'');connect(f.id==='createForm'?'create':'join',{maxPlayers:4,questionSet:'collapsingPlan',visibleTailWords:3,genre:'absurdComedy'});return}
  if(f.id==='settingsForm'){const d=new FormData(f),settings={maxPlayers:+d.get('maxPlayers'),visibleTailWords:+d.get('visibleTailWords'),showNextQuestion:d.has('showNextQuestion'),questionSet:d.get('questionSet'),genre:d.get('genre'),customGenre:d.get('customGenre'),customQuestions:String(d.get('customQuestions')||'').split('\n').map(s=>s.trim()).filter(Boolean)};if(settings.questionSet==='custom'&&settings.customQuestions.length<2){toast('Додай хоча б два питання.');return}send({type:'settings',settings});return}
- if(f.id==='answerForm'){const answer=$('answer').value.trim(),ws=words(answer),chosen=indices(),needed=roomVersion==='v4'&&view.round===view.total-1?0:Math.min(view.settings.visibleTailWords,ws.length);
- if(ws.length<4){toast('Напиши хоча б чотири слова.');return}if(chosen.length!==needed){toast('Познач рівно '+needed+' слів.');return}
- const gender=document.querySelector('input[name=gender]:checked')?.value||'unspecified';save('gender',gender);
- if(send({type:'submit',round:view.round,sheetId:view.sheet.id,answer,tailIndexes:chosen,gender,heroAnchor:$('heroAnchor')?.value||''}))tick(445);
+ if(f.id==='answerForm'){
+ const answer=($('answer')?.value||loadDraft()).trim();
+ const needed=handoffCount({roomVersion,round:view.round,total:view.total,visibleTailWords:view.settings.visibleTailWords,answer});
+ if(!hasMinimumDraft(answer)){toast('Напиши хоча б чотири слова.');return}
+ const meta=readWriterMeta();
+ if(needed>0&&meta.step!=='select'){
+  document.activeElement?.blur();
+  saveWriterMeta({step:'select'});
+  soundscape.fx('page');render();return;
+ }
+ const chosen=indices();
+ if(chosen.length!==needed){toast('Познач рівно '+needed+' слів.');return}
+ const gender=meta.gender||'unspecified';save('gender',gender);
+ if(send({type:'submit',round:view.round,sheetId:view.sheet.id,answer,tailIndexes:chosen,gender,heroAnchor:meta.anchor||''}))tick(445);
  }});
 scene.addEventListener('input',e=>{if(e.target.id==='guestNick')name=e.target.value.slice(0,24);if(e.target.name==='room'&&e.target.closest('#joinForm'))invitation=e.target.value;if(e.target.id==='answer'){saveDraft(e.target.value);refreshWords()}if(e.target.name==='effectsEnabled'){effectsEnabled=e.target.checked;save('sound',effectsEnabled?'on':'off');soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});soundscape.unlock();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.')}if(e.target.name==='musicEnabled'){musicEnabled=e.target.checked;save('music',musicEnabled?'on':'off');soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});soundscape.unlock();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.')}if(e.target.name==='effectsVolume'){effectsVolume=Number(e.target.value)/100;save('effectsVolume',effectsVolume);$('effectsLevelOut').textContent=Math.round(effectsVolume*100)+'%';soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume})}if(e.target.name==='musicVolume'){musicVolume=Number(e.target.value)/100;save('musicVolume',musicVolume);$('musicLevelOut').textContent=Math.round(musicVolume*100)+'%';soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume})}if(e.target.id==='questionSet')$('customField')?.classList.toggle('hidden',e.target.value!=='custom');if(e.target.id==='genre')$('customGenreField')?.classList.toggle('hidden',e.target.value!=='custom')});
 scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act;
