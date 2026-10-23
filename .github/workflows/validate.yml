@@ -166,6 +166,8 @@ jobs:
 
       - name: Test eight interleaved ZAMAZKA artwork uploads
         run: node apps/zamazka/qa/eight-player-transfer.mjs
+      - name: Test three-round eight-player ZAMAZKA lifecycle and transfer resume
+        run: node apps/zamazka/qa/full-match-recovery.mjs
 
       - name: Test ZAMAZKA smudge, uninterrupted strokes and touch budgets
         run: node apps/zamazka/qa/editor-input.mjs && node apps/zamazka/qa/smudge.mjs
