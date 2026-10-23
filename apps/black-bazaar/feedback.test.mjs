@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {newLogEntries,classifyFeedback,createAudioFeedback} from './feedback.js';
 
 const p={id:'me',items:[],inspections:[],resources:{gold:90,parts:2,crystals:4}};
