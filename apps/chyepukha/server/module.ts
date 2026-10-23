@@ -156,7 +156,7 @@ const module={
   }else{
    // Never reset writing or discard a finished issue when someone exits.
    // Permanent seat IDs keep the sheet rotation stable after departures.
-   if(player.id===s.host&&!s.hostOfflineSince)s.hostOfflineSince=Date.now();
+   if(player?.id===s.host&&!s.hostOfflineSince)s.hostOfflineSince=Date.now();
    s.message='Учасник від’єднався. Його місце та рукописи збережено.';
   }
   s.revision++;return {state:s,events:events()};
