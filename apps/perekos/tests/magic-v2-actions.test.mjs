@@ -55,6 +55,8 @@ test('fi_cindermine remains harmless while arming, triggers after contact, then 
  const mine=s.mines.find(m=>m.v2Trap);
  assert.ok(mine,'a mine is placed');
  assert.ok(mine.arm>.45&&mine.life>3);
+ // Only the planted mine is under test, not the independently fired default bolt.
+ s.shots.length=0;
  s.actors[1].x=mine.x;s.actors[1].y=mine.y;
  const hp=s.actors[1].hp;
  for(let i=0;i<20;i++)advance(s);
