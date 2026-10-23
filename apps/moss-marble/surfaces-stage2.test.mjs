@@ -68,6 +68,13 @@ for (const raw of [
         'bunker depth remains within playable bounds');
     }
   }
+  if (level.endless) {
+    const hills = field.landforms.filter(feature => feature.roundedHill);
+    assert.ok(hills.every(feature => feature.height > 0 && feature.height <= 44),
+      'sculpted hill height stays bounded');
+    assert.ok(hills.every(feature => feature.kind === 'mound' || feature.kind === 'ridge'),
+      'ramps never receive artificial rounded hill profiles');
+  }
   const p = level.start;
   const base = field.colorAt(p.x, p.y, field.heightAt(p.x,p.y), field.normalAt(p.x,p.y));
   const nearby = field.colorAt(p.x + 2, p.y + 2, field.heightAt(p.x+2,p.y+2), field.normalAt(p.x+2,p.y+2));
