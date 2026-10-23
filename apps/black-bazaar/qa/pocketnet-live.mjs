@@ -1,5 +1,5 @@
 // Real PocketNet integration: three authenticated WebSocket clients against
-// Wrangler's SQLite Durable Object and the immutable Bazaar v16 rules.
+// Wrangler's SQLite Durable Object and the immutable Bazaar v17 rules.
 import assert from 'node:assert/strict';
 import WebSocket from '../../../pocket-server/node_modules/ws/index.js';
 
@@ -85,7 +85,7 @@ try{
  host.send('create_room',{gameId:'black-bazaar'});
  const initial=await host.next('room_joined');
  roomId=initial.roomId;
- assert.equal(initial.version,'v16','new rooms must use immutable v16');
+ assert.equal(initial.version,'v17','new rooms must use immutable v17');
  assert.equal(initial.state.phase,'lobby');
  second.send('join_room',{roomId:roomId.slice(0,8).toUpperCase()});
  assert.equal((await second.next('room_joined')).state.players.length,2);
@@ -251,10 +251,57 @@ try{
  assert.equal(surviving.players[0].id,leader.id);
  untrusted.send('join_room',{roomId:lobby});
  assert.equal((await untrusted.next('error')).code,'room_kicked');
+
+ // Recover an active auction after a simultaneous, room-wide socket blackout.
+ const pausedTokens=await Promise.all(['Bazaar Offline Owner','Bazaar Offline Bidder','Bazaar Offline Watcher'].map(session));
+ const pausedSockets=await Promise.all(pausedTokens.map(async token=>{const c=await open(token);clients.push(c);return c;}));
+ const [owner,bidder,watcher]=pausedSockets;
+ owner.send('create_room',{gameId:'black-bazaar'});
+ const pausedRoom=(await owner.next('room_joined')).roomId;
+ bidder.send('join_room',{roomId:pausedRoom});await bidder.next('room_joined');
+ watcher.send('join_room',{roomId:pausedRoom});await watcher.next('room_joined');
+ owner.send('game_message',{payload:{type:'start'}});
+ const activeViews=await Promise.all(pausedSockets.map(c=>c.next('game_event',stateEvent('play'))));
+ const initialView=stateOf(activeViews[0]);
+ const turnOwner=pausedSockets.find(c=>c.id===initialView.turnId);
+ const turnOwnerView=stateOf(activeViews[pausedSockets.indexOf(turnOwner)]);
+ const item=turnOwnerView.you.items[0];
+ const nextBidder=pausedSockets.find(c=>c.id!==turnOwner.id);
+ turnOwner.send('game_message',{payload:{type:'post',itemId:item.id,ask:{gold:48}}});
+ await nextBidder.next('game_event',stateEvent('play',x=>x.listing?.id===item.id));
+ nextBidder.send('game_message',{payload:{type:'bid',offer:{gold:48}}});
+ const bidView=stateOf(await nextBidder.next('game_event',stateEvent('play',x=>x.bids.some(b=>b.buyer===nextBidder.id))));
+ const initialRemaining=bidView.deadlineAt-Date.now();
+ const beforeBalance=bidView.you.resources.gold;
+ const beforeItems=bidView.you.items.map(i=>i.id);
+ await Promise.all(pausedSockets.map(c=>c.close()));
+ await delay(2600);
+ const firstReturn=await open(pausedTokens[pausedSockets.indexOf(nextBidder)]);clients.push(firstReturn);
+ firstReturn.send('join_room',{roomId:pausedRoom});
+ const wakeState=(await firstReturn.next('room_joined')).state;
+ assert.equal(wakeState.phase,'play');
+ assert.equal(wakeState.host,owner.id,'disconnection does not elect a new host');
+ assert.equal(wakeState.turnId,turnOwner.id);
+ assert.equal(wakeState.listing.id,item.id);
+ assert.ok(wakeState.bids.some(b=>b.buyer===nextBidder.id));
+ assert.equal(wakeState.you.resources.gold,beforeBalance);
+ assert.deepEqual(wakeState.you.items.map(i=>i.id),beforeItems);
+ assert.ok(wakeState.deadlineAt>Date.now());
+ assert.ok(wakeState.deadlineAt-Date.now()>initialRemaining-1800,
+  'time spent entirely offline cannot consume active turn budget');
+ assert.equal(wakeState.offlinePaused,false);
+ const hostReturn=await open(pausedTokens[0]);clients.push(hostReturn);
+ hostReturn.send('join_room',{roomId:pausedRoom});
+ const resumedHost=(await hostReturn.next('room_joined')).state;
+ assert.equal(resumedHost.host,owner.id);
+ assert.equal(resumedHost.listing.id,item.id);
+ assert.equal(resumedHost.round,initialView.round);
+ assert.ok(resumedHost.deadlineAt<=wakeState.deadlineAt+250,
+  'late host reconnect must not grant a second complete turn');
  console.log('BAZAAR_LIVE_POCKETNET_PASS',JSON.stringify({
   module:initial.version,seats:3,privateViews:true,auction:true,
   activeSellerReconnect:true,deadlineGrace:true,noDuplicateTrade:true,
-  rejectedLateJoin:true,hostHandoff:true,lobbyKick:true,liveKick:true,bannedReconnect:true,completedRounds:snap.round||9,turns:commands
+  rejectedLateJoin:true,hostHandoff:true,lobbyKick:true,liveKick:true,bannedReconnect:true,allOfflineRecovery:true,completedRounds:snap.round||9,turns:commands
  }));
 }finally{
  for(const c of clients)try{await c.close()}catch{}
