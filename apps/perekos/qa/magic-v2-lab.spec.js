@@ -93,3 +93,32 @@ test('v2 training save is separate from an unfinished old duel, even after reloa
  expect(await page.evaluate(()=>window.__perekosTest.state.magicSchool)).toBe('storm');
  expect(await page.evaluate(()=>localStorage.getItem('pocket-works:perekos:match'))).toBe(old);
 });
+
+
+test('the rune forge composes named stone transformations and physical ground waves',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ await page.locator('#open-v2-lab').click();
+ await page.locator('.v2-school.v2-stone').click();
+ await page.locator('.v2-tab').nth(1).click();
+ await page.locator('.v2-card').filter({hasText:'Переплести основу'}).click();
+ await page.locator('.v2-reserve-item').filter({hasText:'Переплести основу'}).locator('.v2-equip').click();
+ await page.locator('.v2-card').filter({hasText:'Каменная волна'}).click();
+ await page.locator('.v2-reserve-item').filter({hasText:'Каменная волна'}).locator('.v2-equip').click();
+ await expect(page.locator('.v2-form-summary strong')).toHaveText('Каменная волна');
+ await page.locator('.v2-card').filter({hasText:'Эпицентр'}).click();
+ await page.locator('.v2-reserve-item').filter({hasText:'Эпицентр'}).locator('.v2-equip').click();
+ await expect(page.locator('.v2-form-summary strong')).toHaveText('Землетрясение');
+ await page.locator('.v2-play').click();
+ await page.evaluate(()=>window.__perekosTest.step());
+ const physical=await page.evaluate(()=>({
+  magic:window.__perekosTest.state.magicModeV2,
+  waves:window.__perekosTest.state.waves.filter(w=>w.v2Element==='stone'),
+  projectileCount:window.__perekosTest.state.shots.length
+ }));
+ expect(physical.magic).toBe(true);
+ expect(physical.waves.length).toBeGreaterThan(0);
+ expect(physical.waves[0].halfAngle).toBeCloseTo(Math.PI,4);
+ expect(physical.projectileCount).toBe(0);
+ expect(errors).toEqual([]);
+});
