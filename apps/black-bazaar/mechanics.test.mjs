@@ -528,11 +528,13 @@ test('Black market sealed bid can be inspected, accepted and processed exactly o
  const [seller,buyer]=state.contestants;
  const item=seller.items[0],before=seller.resources.gold;
  buyer.resources.gold=400;
+ // Black-market inspection is discounted when the buyer owns a market lens.
+ const inspectionFee=game.viewForPlayer({state,player:{id:buyer.id}}).you.inspectionPrices.black;
  act(state,seller.id,{type:'black_post',itemId:item.id,ask:{gold:100}});
  const lot=state.blackLots[0];
  const info=act(state,buyer.id,{type:'black_inspect',lotId:lot.id});
  assert.equal(info.events[0].type,'state');
- assert.equal(buyer.resources.gold,375);
+ assert.equal(buyer.resources.gold,400-inspectionFee);
  assert.equal(game.viewForPlayer({state,player:{id:buyer.id}}).blackLots[0].inspection.originalName,specName(item));
  act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:90}});
  const visible=game.viewForPlayer({state,player:{id:seller.id}});
@@ -547,7 +549,7 @@ test('Black market sealed bid can be inspected, accepted and processed exactly o
  assert.ok(buyer.items.some(i=>i.id===item.id));
  assert.equal(buyer.items.find(i=>i.id===item.id).history.at(-1),'Анонимный рынок');
  assert.equal(seller.resources.gold,before+81);
- assert.equal(buyer.resources.gold,285-(seller.negativeTarget===buyer.id?20:0));
+ assert.equal(buyer.resources.gold,400-inspectionFee-90-(seller.negativeTarget===buyer.id?20:0));
  assert.equal(game.viewForPlayer({state,player:{id:buyer.id}}).you.items.some(i=>i.id===item.id&&!!i.positive),true);
  const repeat=act(state,seller.id,{type:'black_accept',lotId:lot.id,bidId:bid.id});
  assert.equal(repeat.events[0].type,'notice');
@@ -1299,7 +1301,10 @@ test('Quick-price bid is only a bid; seller acceptance changes ownership exactly
  assert.equal(state.listing.itemId,item.id);
  assert.equal(state.bids.length,1);
  act(state,seller.id,{type:'accept',buyer:buyer.id});
- assert.equal(buyer.resources.gold,before-85);
+ // A seller's secret negative relationship applies an additional 20-gold
+ // deduction after the bid settles, but never at the time of bidding.
+ const relationshipPenalty=seller.negativeTarget===buyer.id&&seller.negativeUsed===state.round?20:0;
+ assert.equal(buyer.resources.gold,before-85-relationshipPenalty);
  assert.equal(state.listing,null);
  assert.equal(buyer.items.filter(x=>x.id===item.id).length,1);
  const replay=act(state,seller.id,{type:'accept',buyer:buyer.id});

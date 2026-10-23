@@ -9,6 +9,7 @@ await mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 const page=await browser.newPage({viewport:{width:1800,height:1250},deviceScaleFactor:1});
 const rows=[];
+page.on('dialog',dialog=>dialog.accept());
 try{
  await page.goto(base+'/apps/black-bazaar/?debug=1',{waitUntil:'domcontentloaded'});
  await page.locator('iframe.dev-frame').waitFor({timeout:20000});
@@ -58,6 +59,10 @@ try{
    if(panel&&panel.scrollHeight>panel.clientHeight+5&&!['auto','scroll'].includes(getComputedStyle(panel).overflowY))issues.push('panel clipped without scroll');
    return {issues,overflow,width,height:document.documentElement.clientHeight,phase};
   });
+  // Baseline capture before test actions, so reviewed images represent the real
+  // starting layout rather than a mutated post-trade or open-tabs state.
+  if(['small','phone','desktop'].includes(id))
+   await frame.locator('body').screenshot({path:out+'/'+scene+'-'+id+'-baseline.png'});
   // Exercise the real tab delegation, not only static scene geometry.
   if(!['home','lobby','done'].includes(scene)){
    const tabs=await frame.evaluate(()=>{
@@ -76,24 +81,86 @@ try{
    });
    report.issues.push(...tabs);
   }
-  if(scene==='four'&&['small','short','phone','landscape','tablet','desktop'].includes(id)){
-   const exercise=async command=>page.evaluate(command=>new Promise((resolve,reject)=>{
-    const iframe=document.querySelector('iframe.dev-frame');
-    const token=Math.floor(Math.random()*1e9);
-    const timer=setTimeout(()=>{removeEventListener('message',onMessage);reject(new Error('QA action timed out: '+command.type));},5000);
-    function onMessage(event){
-     if(event.source!==iframe.contentWindow||event.data?.source!=='bazaar-debug-preview'||event.data.type!=='qa-action-result'||event.data.step!==token)return;
-     clearTimeout(timer);removeEventListener('message',onMessage);resolve(event.data);
-    }
-    addEventListener('message',onMessage);
-    iframe.contentWindow.postMessage({source:'bazaar-debug-console',type:'qa-action',run:1,step:token,command},location.origin);
-   }),command);
+  const actionSizes=['small','short','phone','landscape','tablet','desktop'];
+  const exercise=async command=>page.evaluate(command=>new Promise((resolve,reject)=>{
+   const iframe=document.querySelector('iframe.dev-frame');
+   const token=Math.floor(Math.random()*1e9);
+   const timer=setTimeout(()=>{removeEventListener('message',onMessage);reject(new Error('QA action timed out: '+command.type));},5000);
+   function onMessage(event){
+    if(event.source!==iframe.contentWindow||event.data?.source!=='bazaar-debug-preview'||
+       event.data.type!=='qa-action-result'||event.data.step!==token)return;
+    clearTimeout(timer);removeEventListener('message',onMessage);resolve(event.data);
+   }
+   addEventListener('message',onMessage);
+   iframe.contentWindow.postMessage({source:'bazaar-debug-console',type:'qa-action',run:1,step:token,command},location.origin);
+  }),command);
+  if(scene==='four'&&actionSizes.includes(id)){
    const work=await exercise({type:'work',resource:'gold'});
    if(work.error||work.after.resources.gold!==work.before.resources.gold+35)report.issues.push('work action did not credit 35 gold');
    const buy=await exercise({type:'broker_buy'});
    if(buy.error||buy.after.resources.gold!==buy.before.resources.gold-75||buy.after.items.length!==buy.before.items.length+1)
     report.issues.push('broker purchase did not transfer item and charge 75 gold');
    if(await frame.locator('.play-screen').count()!==1)report.issues.push('game UI missing after actions');
+  }
+  if(scene==='buyer'&&actionSizes.includes(id)){
+   const before=await exercise({type:'tick'});
+   const offerButton=frame.locator('.table-stage .artifact[data-kind="listing"]');
+   if(await offerButton.count()!==1)report.issues.push('buyer cannot see active auction lot');
+   else{
+    await offerButton.click();
+    const bidButton=frame.locator('[data-sheet-page="detail"] button[data-action="bid-asking"]');
+    if(await bidButton.count()!==1||await bidButton.isDisabled())
+     report.issues.push('buyer cannot use asking-price bid button');
+    else await bidButton.click();
+   }
+   const offered=await exercise({type:'tick'});
+   if(offered.error||offered.after.bids.length!==1||
+     offered.after.bids[0].buyer!=='debug-0'||
+     offered.after.bids[0].offer.gold!==110||
+     offered.after.bids[0].offer.crystals!==1)
+     report.issues.push('asking-price bid not submitted correctly');
+   if(JSON.stringify(offered.after.resources)!==JSON.stringify(before.after.resources)||
+      JSON.stringify(offered.after.items)!==JSON.stringify(before.after.items)||
+      offered.after.listing?.id!==before.after.listing?.id)
+     report.issues.push('unaccepted bid charged buyer or transferred item');
+  }
+  if(scene==='seller'&&actionSizes.includes(id)){
+   const ask={gold:70,crystals:2,parts:0};
+   const cleared=await exercise({type:'cancel'});
+   const before=cleared.after;
+   const itemId=before.items[0];
+   if(cleared.error||cleared.after.listing)report.issues.push('seller failed to clear fixture lot');
+   const posted=await exercise({type:'post',itemId,ask});
+   if(posted.error||posted.after.listing?.id!==itemId)report.issues.push('seller failed to post item');
+   const offered=await exercise({type:'bid',buyer:'debug-1',offer:ask});
+   if(offered.error||offered.after.bids.length!==1||offered.after.bids[0].buyer!=='debug-1')
+    report.issues.push('buyer bid not visible to seller');
+   // Accept through the same visible button and confirmation dialog used by players.
+   const itemButton=frame.locator('.table-stage .artifact[data-kind="listing"]');
+   if(await itemButton.count()!==1)report.issues.push('auction tabletop listing not clickable');
+   else{
+    await itemButton.click();
+    const acceptButton=frame.locator('[data-sheet-page="detail"] button[data-action="accept"][data-player="debug-1"]');
+    if(await acceptButton.count()!==1)report.issues.push('seller cannot find accept button');
+    else await acceptButton.click();
+   }
+   const accepted=await exercise({type:'tick'});
+   const buyerBefore=before.players.find(p=>p.id==='debug-1');
+   const buyerAfter=accepted.after.players.find(p=>p.id==='debug-1');
+   if(accepted.error||accepted.after.listing||accepted.after.bids.length)
+    report.issues.push('accepted listing or bids not cleared');
+   if(accepted.after.items.includes(itemId)||!buyerAfter.inventory.includes(itemId)||
+      buyerAfter.items!==buyerBefore.items+1)
+    report.issues.push('auction item not delivered to buyer');
+   if(accepted.after.resources.gold!==before.resources.gold+ask.gold||
+      accepted.after.resources.crystals!==before.resources.crystals+ask.crystals||
+      accepted.after.resources.parts!==before.resources.parts+1||
+      buyerAfter.resources.gold!==buyerBefore.resources.gold-ask.gold||
+      buyerAfter.resources.crystals!==buyerBefore.resources.crystals-ask.crystals)
+    report.issues.push('auction payment or first-sale bonus incorrect');
+   if(accepted.after.marketDeals!==1)report.issues.push('public sale counter not incremented');
+   if(await frame.locator('.table-stage .artifact-note').count()===0)
+    report.issues.push('sold item still displayed as active auction lot');
   }
   const result={scene,device:id,requested:{width,height},...report};
   if(report.issues.length||scene==='four'&&['small','short','phone','landscape','tablet','desktop'].includes(id)){

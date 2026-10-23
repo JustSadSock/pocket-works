@@ -41,8 +41,8 @@ test('Debug commands exercise purchase, bid, inspection, work, barter and turn w
  s.listing=null;
  r=debugCommand(s,{type:'post',itemId:'owned-gear',ask:{gold:60,crystals:0,parts:0}});
  assert.equal(r.state.listing.id,'owned-gear');
- r=debugCommand(s,{type:'bid',offer:{gold:55,crystals:0,parts:0}});
- assert.ok(r.state.bids.some(b=>b.buyer==='debug-0'));
+ r=debugCommand(s,{type:'bid',buyer:'debug-1',offer:{gold:55,crystals:0,parts:0}});
+ assert.ok(r.state.bids.some(b=>b.buyer==='debug-1'));
  r=debugCommand(s,{type:'inspect'});
  assert.equal(r.state.you.inspections.length,1);
  r=debugCommand(s,{type:'deal_propose',to:'debug-1',give:{gold:10,crystals:0,parts:0},want:{gold:0,crystals:1,parts:0}});
@@ -61,9 +61,9 @@ test('Preview boot prevents real PocketNet sessions and writes',()=>{
  assert.doesNotMatch(html,/update-manager\.js/);
  assert.doesNotMatch(html,/service-worker|registerSW/i);
 });
-test('Five true iframe viewport sizes, including portrait and landscape',()=>{
+test('Seven true iframe viewport sizes, including small portrait and landscape',()=>{
  assert.deepEqual(DEBUG_VIEWPORTS.map(x=>[x[2],x[3]]),[
-  [390,844],[844,390],[820,1024],[1024,768],[1440,900]
+  [320,568],[375,667],[390,844],[844,390],[820,1024],[1024,768],[1440,900]
  ]);
 });
 
@@ -76,8 +76,53 @@ test('Mobile portrait CSS keeps content panels scrollable without expanding page
 
 test('Mobile audit checks collisions and clipped scrolling content',()=>{const ui=readFileSync(new URL('./app.js',import.meta.url),'utf8');assert.match(ui,/Стол перекрывает вкладки/);assert.match(ui,/Задание перекрывает ресурсы/);assert.match(ui,/Содержимое боковой панели обрезано/);});
 
-test('Workshop batch audit enumerates every debug scene at each viewport',()=>{const source=readFileSync(new URL('./debug-console.js',import.meta.url),'utf8');assert.match(source,/data-debug-audit-matrix/);assert.match(source,/DEBUG_SCENES\.flatMap/);assert.match(source,/requestAnimationFrame\(\(\)=>requestAnimationFrame/);});
+test('Workshop batch audit enumerates every debug scene at each viewport',()=>{const source=readFileSync(new URL('./debug-console.js',import.meta.url),'utf8');assert.match(source,/data-debug-audit-matrix/);assert.match(source,/DEBUG_SCENES\.flatMap/);assert.match(source,/scene-ready/);});
 
 test('Workshop awaits scene-ready and ignores stale viewport measurements',()=>{const source=readFileSync(new URL('./debug-console.js',import.meta.url),'utf8');assert.match(source,/scene-ready/);assert.match(source,/d\.step!==auditStep/);assert.match(source,/data-debug-copy-report/);});
 
 test('QA matrix includes small and short phones and prioritizes failures',()=>{const src=readFileSync(new URL('./debug-console.js',import.meta.url),'utf8');assert.match(src,/320,568/);assert.match(src,/375,667/);assert.match(src,/failures=results.filter/);assert.match(src,/if\(!auditQueue&&d.run!=null\)return/);});
+
+test('Public auction settles buyer and seller balances, item ownership and first-sale bonus',()=>{
+ const s=createDebugState('four');
+ s.listing=null;
+ const itemId=s.you.items[0].id,offer={gold:70,crystals:2,parts:0};
+ const sellerBefore={...s.you.resources},buyerBefore={...s.players[1].resources};
+ const buyerCount=s.players[1].items;
+ assert.ok(!debugCommand(s,{type:'post',itemId,ask:offer}).error);
+ assert.equal(s.listing.id,itemId);
+ assert.ok(!debugCommand(s,{type:'bid',buyer:'debug-1',offer}).error);
+ assert.equal(s.bids.length,1);
+ assert.ok(!debugCommand(s,{type:'accept',buyer:'debug-1'}).error);
+ assert.equal(s.listing,null);
+ assert.equal(s.bids.length,0);
+ assert.equal(s.you.items.some(i=>i.id===itemId),false);
+ assert.equal(s.players[1].inventory.some(i=>i.id===itemId),true);
+ assert.equal(s.players[1].items,buyerCount+1);
+ assert.equal(s.you.resources.gold,sellerBefore.gold+70);
+ assert.equal(s.you.resources.crystals,sellerBefore.crystals+2);
+ assert.equal(s.you.resources.parts,sellerBefore.parts+1);
+ assert.equal(s.players[1].resources.gold,buyerBefore.gold-70);
+ assert.equal(s.players[1].resources.crystals,buyerBefore.crystals-2);
+ assert.equal(s.you.marketDeals,1);
+});
+test('Public auction rejects invalid and stale bids without moving resources',()=>{
+ const s=createDebugState('four');
+ s.listing=null;
+ debugCommand(s,{type:'post',itemId:s.you.items[0].id,ask:{gold:70,crystals:0,parts:0}});
+ const walletBefore={...s.players[1].resources};
+ assert.ok(debugCommand(s,{type:'bid',buyer:'debug-0',offer:{gold:70}}).error,'seller cannot bid');
+ assert.ok(debugCommand(s,{type:'bid',buyer:'debug-1',offer:{gold:99999}}).error,'insufficient resources');
+ assert.ok(debugCommand(s,{type:'accept',buyer:'debug-1'}).error,'no valid bid');
+ assert.deepEqual(s.players[1].resources,walletBefore);
+ assert.ok(s.listing,'the unfilled listing remains');
+});
+
+test('Mobile browser QA checks public auction settlement and presentation',()=>{
+ const src=readFileSync(new URL('../../scripts/qa-black-bazaar-mobile.mjs',import.meta.url),'utf8');
+ assert.match(src,/scene==='seller'/);
+ assert.match(src,/type:'post'/);
+ assert.match(src,/type:'bid',buyer:'debug-1'/);
+ assert.match(src,/acceptButton\.click\(\)/);
+ assert.ok(src.includes('button[data-action="accept"]'));
+ assert.match(src,/auction payment or first-sale bonus incorrect/);
+});

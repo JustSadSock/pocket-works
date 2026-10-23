@@ -64,6 +64,7 @@ test('Resource and artifact motion is gated by server snapshots',()=>{
  assert.match(source,/function showConfirmedMovement\(before,after\)/);
  assert.match(source,/before\.revision===after\.revision/);
  assert.match(source,/showConfirmedMovement\(previous,incoming\)/);
+ assert.match(source,/const previous=state;/);
  assert.match(source,/data-resource/);
 });
 
