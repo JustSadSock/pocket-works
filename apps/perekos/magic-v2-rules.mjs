@@ -111,6 +111,13 @@ function allSpells(state){return [...state.sealed,...state.slots]}
 export function validateMagicState(s){
  if(!s||s.rulesetVersion!==MAGIC_RULES_VERSION||!MAGIC_SCHOOLS.includes(s.school)||!Number.isInteger(s.revision)||s.revision<0)return {ok:false,error:'Неизвестные правила или стихия'};
  if(!Array.isArray(s.reserve)||!Array.isArray(s.slots)||s.slots.length!==3||!Array.isArray(s.sealed)||!Number.isInteger(s.nextInstance))return {ok:false,error:'Повреждён гримуарий'};
+ // A network or saved-state payload may contain malformed nested arrays. Reject
+ // it before enumerating rune instances rather than throwing from flatMap.
+ const spells=[...s.slots,...s.sealed];
+ if(spells.some(spell=>!spell||typeof spell!=='object'||!Array.isArray(spell.actions)||
+    spell.actions.some(a=>!a||!a.rune||!Array.isArray(a.mods))||
+    (spell.when!==null&&spell.when!==undefined&&typeof spell.when!=='object')))
+  return {ok:false,error:'Повреждена структура заклинаний'};
  if(!s.slots.every((slot,i)=>slot.id===i))return {ok:false,error:'Неверные номера трёх слотов'};
  if(!s.sealed.every((slot,i)=>slot.id===3+i))return {ok:false,error:'Повреждён порядок печатей'};
  const seen=new Set();
@@ -260,8 +267,8 @@ export function dealMagicOffers(state,minute){
  const s=copy(state),available=new Set([...s.reserve,...allSpells(s).flatMap(activeRunes)].map(r=>r.defId));
  // Cards held in reserve/editable slots do not crowd the offer. Sealed copies
  // can reappear later, so early sealing never makes the rest of the match dead.
- const pool=availableMagicRunes(s.school).filter(r=>!available.has(r.id)||
-   s.sealed.some(spell=>activeRunes(spell).some(inst=>inst.defId===r.id)));
+ const heldOutsideSeals=new Set([...s.reserve,...s.slots.flatMap(activeRunes)].map(r=>r.defId));
+ const pool=availableMagicRunes(s.school).filter(r=>!heldOutsideSeals.has(r.id));
  const weights=rarityWeights[minute<=2?0:minute<=5?1:2];
  const picked=[];
  // On milestone minutes guarantee at least one *offer*, never a forced selection.
