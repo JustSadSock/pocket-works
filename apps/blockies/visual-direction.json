@@ -81,6 +81,16 @@
         "slug": "crown-laws",
         "spatialDifference": "Crown Laws is a medieval council interface with document-like law choices and political consequences. Blockies instead keeps a narrow central pixel-grid arcade board and a coherent four-cell spawn gantry; large setup columns are for configuring physical controls, not storytelling.",
         "interactionDifference": "Council decisions in Crown Laws advance political turns, whereas Blockies uses simultaneous real-time tetromino actions, live PocketNet snapshots, player-specific entry points and a compact data-backed post-round field recap."
+      },
+      {
+        "slug": "jam-tape",
+        "spatialDifference": "Jam Tape is a collaborative instrument workstation arranged around tracks, playback and tape controls. Blockies remains a shared uninterrupted cell grid with an exact-width top gantry physically aligned to individual tetromino entrances.",
+        "interactionDifference": "Recording and mixing on a timeline in Jam Tape differs from Blockies' simultaneous gravity-driven piece navigation, split-lane spawn gates and deterministic server collision checks."
+      },
+      {
+        "slug": "ne-zhmi",
+        "spatialDifference": "Ne Zhmi is built around the user deciding whether to press a tempting control; Blockies centers a long shared playfield with narrow segmented but unboxed preview bays that are visually part of the board.",
+        "interactionDifference": "Ne Zhmi's discrete one-off button choice is unlike continuous falling-block movement, rotation, hard dropping, player-specific blocked-entry elimination and high-frequency authoritative snapshots."
       }
     ]
   },
