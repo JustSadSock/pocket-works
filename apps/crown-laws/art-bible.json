@@ -45,8 +45,8 @@
       "id": "royal-codex-stage05",
       "medium": "Hand-authored full-figure SVG sprite atlas and relief/carved decorative SVG on a strictly flat board, physical paper and stone panels composed in CSS",
       "composition": "Six visibly differentiated pieces occupy the 5x7 court; five laws are bound in an ivory codex on desktop and arranged into seals on mobile; decree choice resembles an illustrated folded folio",
-      "interaction": "Existing law inspection, conditional forecast, choice confirmation and hot-seat remain; debug art gallery for asset acceptance",
-      "motion": "Short phase-by-phase choreography from deterministic snapshots, immediate cancellation with an explicit skip, and sync between physical hit effects and differentiated Web Audio notes.",
+      "interaction": "Existing law inspection and legal choice remain. The advisor offers nine user-controlled deterministic phase snapshots, compares an unchanged-law scenario to a chosen decree, and overlays exact actor paths plus alternative ghost silhouettes.",
+      "motion": "A parchment timeline presents phases; inked route dashes follow engine movement events; reduced-motion preferences remove decorative pulses while preserving navigation.",
       "rationale": "Replace repetitive circular portrait tokens and generic cards with character silhouettes and one consistent material grammar."
     },
     {
@@ -68,7 +68,7 @@
   ],
   "selection": {
     "concept": "royal-codex-stage05",
-    "reason": "Preserve the original miniature manuscript visual design while making each independently resolved law cause and effect observable. The 0.6 phase playback reads game-engine snapshots without re-solving any hidden online decisions.",
+    "reason": "Preserve the cohesive miniature manuscript language while explaining complex law interactions through inspectable deterministic positions. Neither candidate assumes knowledge of the opponent's hidden choice.",
     "rejected": [
       {
         "concept": "cathedral-relief",
@@ -220,7 +220,9 @@
       "At tablet landscape sizes the side ledger and board must not obstruct the confirmation action.",
       "The full Art Forge 2D PNG/index rebuild is pending. The build manifest must not be activated with missing files.",
       "Ensure previous film timers cannot repaint or override newer online turns; a generation token invalidates stale callbacks.",
-      "Confirm WebKit audio is gesture-gated; unavailable audio devices must not interrupt the phase timeline."
+      "Confirm WebKit audio is gesture-gated; unavailable audio devices must not interrupt the phase timeline.",
+      "Counsel Vision is deliberately counterfactual: the opponent is assumed to leave all laws unchanged; its future hidden decree cannot be inferred. Keep this notice visible.",
+      "The preview stores detached snapshots only, never adjusting cards, crowns, network messages, or active turns; avoid accidentally rendering it into a persistent match state."
     ],
     "comparisons": [
       "Capture initial menu and compare type/edges to former hero layout to verify absence of recovered assets.",
@@ -228,6 +230,10 @@
       {
         "before": "Legacy instant jump from one board state to the final state after a complete turn.",
         "after": "Successive snapshots from the actual game-engine phases show precisely which actor moved and when, with a control to skip."
+      },
+      {
+        "before": "0.6 forecast jumps directly between initial and resulting boards; changed actors are hard to trace.",
+        "after": "0.7 forecast allows nine-step chronological inspection, exact movement trails, side-by-side scenario switching and alternate translucent actor silhouettes."
       }
     ]
   }
