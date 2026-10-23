@@ -212,8 +212,19 @@ try{
  await guest.page.locator('.finish').waitFor();
  assert.equal(room.state.phase,'results');
  assert.equal(room.state.history.length,2);
- assert.deepEqual(errors,[],'No uncaught browser exceptions');
  await shot(host.page,'final-gallery-desktop.png');
- console.log('Picto PocketNet 2-player browser flow OK: 15s clock skew, resize invariant, 2 authors, optional empty frame, reveal/results.');
+ // Regression: an expired round must never leave the author editing at 00:00.
+ await host.page.locator('[data-action="again"]').click();
+ await host.page.locator('[data-action="publish"]').waitFor();
+ await host.page.locator('[data-glyph="key"]').click();
+ await new Promise(resolve=>setTimeout(resolve,350)); // Wait for the debounced edit to reach the server.
+ assert.equal(room.state.board.length,1,'Server received the draft before its deadline');
+ room.state.deadline=Date.now()-1;
+ await host.page.locator('[data-action="publish"]').click();
+ await host.page.locator('.wait-box').waitFor();
+ await guest.page.locator('.guess-card').waitFor();
+ assert.equal(room.state.phase,'guess','Author and guest enter guessing after an expired publish');
+ assert.deepEqual(errors,[],'No uncaught browser exceptions');
+ console.log('Picto PocketNet 2-player browser flow OK: 15s skew, resize, author rotation, 00:00 recovery and reveal/results.');
  await host.context.close();await guest.context.close();
 }finally{await browser.close();await new Promise(done=>server.close(done));}
