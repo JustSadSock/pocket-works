@@ -38,7 +38,7 @@
     <button type="button" class="main-action" id="playBtn" data-native-press><span id="playSymbol">Ⅱ</span><span id="playText">ПАУЗА</span></button>
     <button type="button" class="sub-action" id="restartBtn" data-native-press><span class="action-symbol">↺</span><span>СНАЧАЛА</span></button>
     <button type="button" class="sub-action" id="snapshotBtn" data-native-press><span class="action-symbol">▣</span><span>СНИМОК</span></button>
-    <span class="command-note">ВОЛНА БЕЗ СТОЛКНОВЕНИЙ ЧАСТИЦ</span>
+    <span class="command-note" id="fpsLabel">ЗАГРУЗКА · ОПТИМИЗАЦИЯ</span>
    </div>
   </section>
   <aside class="inspector" aria-label="Параметры лаборатории" data-ui>
@@ -47,21 +47,40 @@
     <section class="control-section">
      <h3><span>01</span> ФОРМА КАМЕРЫ</h3>
      <div class="shape-grid" id="shapeGrid">
-      <button type="button" class="shape selected" data-shape="rectangle" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><rect x="6" y="6" width="42" height="20" rx="1"/></svg><span>Прямоугольник</span></button>
+      <button type="button" class="shape selected" data-shape="rectangle" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><rect x="7" y="7" width="40" height="18" rx="1"/></svg><span>Прямоугольник</span></button>
       <button type="button" class="shape" data-shape="circle" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><circle cx="27" cy="16" r="11"/></svg><span>Круг</span></button>
-      <button type="button" class="shape" data-shape="stadium" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><rect x="7" y="5" width="40" height="22" rx="11"/></svg><span>Стадион</span></button>
-      <button type="button" class="shape" data-shape="triangle" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><path d="M27 5L46 27H8z"/></svg><span>Треугольник</span></button>
+      <button type="button" class="shape" data-shape="stadium" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><rect x="8" y="6" width="38" height="20" rx="10"/></svg><span>Стадион</span></button>
+      <button type="button" class="shape" data-shape="triangle" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><path d="M27 5L47 27H7z"/></svg><span>Треугольник</span></button>
+      <button type="button" class="shape" data-shape="ellipse" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><ellipse cx="27" cy="16" rx="20" ry="10"/></svg><span>Эллипс</span></button>
+      <button type="button" class="shape" data-shape="diamond" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><path d="M27 4L49 16L27 28L5 16z"/></svg><span>Ромб</span></button>
+      <button type="button" class="shape" data-shape="pentagon" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><path d="M27 4L47 14L40 28H14L7 14z"/></svg><span>Пятиугольник</span></button>
+      <button type="button" class="shape" data-shape="hexagon" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><path d="M17 5H37L49 16L37 27H17L5 16z"/></svg><span>Шестиугольник</span></button>
+      <button type="button" class="shape" data-shape="octagon" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><path d="M17 4H37L49 12V20L37 28H17L5 20V12z"/></svg><span>Восьмиугольник</span></button>
+      <button type="button" class="shape" data-shape="star" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><path d="M27 3L32 11L44 8L39 17L50 24L35 23L27 30L19 23L4 24L15 17L10 8L22 11z"/></svg><span>Звезда</span></button>
+      <button type="button" class="shape shape-custom" data-shape="custom" data-native-press><svg viewBox="0 0 54 32" aria-hidden="true"><path d="M7 25L11 8L25 4L43 11L48 23L27 28z"/><circle cx="11" cy="8" r="2"/><circle cx="43" cy="11" r="2"/></svg><span>Своё поле</span></button>
+     </div>
+     <div class="custom-setup" id="customSetup" hidden>
+      <p id="customHelp">Отмечай углы будущего поля на поверхности камеры. Контур замыкается автоматически.</p>
+      <div class="custom-buttons"><button type="button" id="customDrawBtn">Нарисовать заново</button><button type="button" id="customBackBtn">↶ Точка</button><button type="button" id="customFinishBtn" class="custom-finish">Готово</button></div>
+      <button type="button" id="customCancelBtn" hidden>Отменить построение</button>
      </div>
     </section>
     <section class="control-section">
      <h3><span>02</span> ПОВЕДЕНИЕ ВОЛНЫ</h3>
      <label class="slider-label"><span>Количество лучей</span><output id="raysOut">4096</output><input type="range" id="raysRange" min="0" max="4" step="1" value="3"></label>
      <label class="slider-label"><span>Скорость</span><output id="speedOut">1.0×</output><input type="range" id="speedRange" min="25" max="250" step="5" value="100"></label>
-     <label class="slider-label"><span>Послесвечение</span><output id="trailOut">45%</output><input type="range" id="trailRange" min="0" max="100" step="5" value="45"></label>
+     <div class="palette-head"><span>Палитра волны</span><strong id="paletteName">СПЕКТР</strong></div>
+     <div class="palette-grid" id="paletteGrid" role="group" aria-label="Цвета волны">
+      <button type="button" class="palette selected" data-palette="spectrum" aria-label="Спектр"><span style="background:linear-gradient(90deg,#68eff2,#b694ff,#ff80b7,#f8c57a)"></span></button>
+      <button type="button" class="palette" data-palette="aurora" aria-label="Северное сияние"><span style="background:linear-gradient(90deg,#78f4ae,#56bee6,#a2baff)"></span></button>
+      <button type="button" class="palette" data-palette="ember" aria-label="Медь"><span style="background:linear-gradient(90deg,#ff9e65,#ffe0a5,#ff6c93)"></span></button>
+      <button type="button" class="palette" data-palette="arctic" aria-label="Лёд"><span style="background:linear-gradient(90deg,#b5ffff,#80baff,#e9f8ff)"></span></button>
+      <button type="button" class="palette" data-palette="mono" aria-label="Монохром"><span style="background:linear-gradient(90deg,#c2d2ce,#fbfff4)"></span></button>
+     </div>
      <div class="display-picker" role="group" aria-label="Тип визуализации"><button class="selected" data-display="line" type="button" data-native-press>НЕПРЕРЫВНАЯ НИТЬ</button><button data-display="dots" type="button" data-native-press>ЧАСТИЦЫ</button></div>
     </section>
     <section class="control-section">
-     <h3><span>03</span> РЕДАКТОР</h3>
+     <h3><span>03</span> ОБЪЕКТЫ</h3>
      <div class="tools" role="group" aria-label="Действие на поле">
       <button type="button" class="selected" data-tool="source" data-native-press>◎ <span>Источник</span></button>
       <button type="button" data-tool="circle" data-native-press>◉ <span>Отражатель</span></button>
@@ -78,6 +97,6 @@
  <div class="modal" id="clearModal" hidden data-ui><section role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><span class="eyebrow">ПОДТВЕРЖДЕНИЕ</span><h2 id="confirmTitle">Очистить камеру?</h2><p>Все отражатели и перегородки исчезнут. Форма камеры и параметры волны сохранятся.</p><div><button id="cancelClear" data-native-press>Отмена</button><button id="confirmClear" data-native-press>Очистить</button></div></section></div>
  <button type="button" id="workshopTrigger" data-workshop-trigger data-native-press hidden>Workshop</button>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="РИКОШЕТ" data-app-version="2.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="РИКОШЕТ" data-app-version="2.1.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
