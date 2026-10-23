@@ -72,3 +72,15 @@ test("sound palette can be previewed without AudioContext and includes all court
  assert.equal(playCourtSound(null,"crown"),false);
  assert.equal(playCourtSound(undefined,"beast"),false);
 });
+
+test("AI search can skip all cinematic snapshots without changing the game result",()=>{
+  const before=createInitialState({seed:"ai-lightweight-film"});
+  const a={p1:{cardId:before.players.p1.hand[0]},p2:{cardId:before.players.p2.hand[0]}};
+  const normal=resolveTurn(before,a);
+  const quick=resolveTurn(before,a,{captureFrames:false});
+  assert.equal(quick.frames.length,0);
+  assert.deepEqual(quick.state,normal.state);
+  assert.deepEqual(quick.logs,normal.logs);
+  assert.deepEqual(quick.conflicts,normal.conflicts);
+  assert.deepEqual(quick.tracker.movementTimeline,normal.tracker.movementTimeline);
+});
