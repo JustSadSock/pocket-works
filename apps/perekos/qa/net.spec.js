@@ -148,6 +148,13 @@ test('PocketNet v10 permits two-player rune mode, server-owned editor commands a
  await page.locator('#net-start').click();
  await expect(page.locator('#magic-v2')).toBeVisible();
  await expect(page.locator('.v2-kicker')).toContainText('Камень');
+ // A server heartbeat must not detach the actual button under an iOS finger.
+ const stableOnHeartbeat=await page.evaluate(()=>{
+  const tab=document.querySelectorAll('.v2-tab')[1];
+  window.__netV10.socket.send(JSON.stringify({type:'game_message',payload:{type:'sync'}}));
+  return tab===document.querySelectorAll('.v2-tab')[1];
+ });
+ expect(stableOnHeartbeat).toBe(true);
  await page.locator('.v2-tab').nth(1).click();
  const avail=page.locator('.v2-reserve-item').filter({hasText:'При выстреле'});
  await avail.locator('.v2-equip').first().click();

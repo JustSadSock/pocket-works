@@ -25,7 +25,7 @@ export function makeMatch(seed=0x718abc,first='kindle',second='pebble',gameMode=
 export const MAGIC_V2_PRACTICE_RUNES=Object.freeze([
  'u_on_cast','u_on_hit','u_on_hurt','u_after_dash','u_after_guard',
  'u_guard','u_push','u_heal','u_afterimage','u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
- 'st_throw','st_shards','st_wall','fi_ember','fi_scorch','fi_flamepatch','li_spark','li_arc',
+ 'st_throw','st_shards','st_wall','st_spikes','fi_ember','fi_scorch','fi_flamepatch','fi_cindermine','li_spark','li_arc','li_discharge',
  'u_reform_base','st_form_wave','st_origin_self','st_origin_below',
  'fi_form_stream','fi_origin_self','fi_origin_sky',
  'li_form_ray','li_origin_self','li_origin_pylon'
@@ -41,11 +41,14 @@ const V2_PRACTICE_MODS=Object.freeze({
  st_throw:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
  st_shards:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
  st_wall:['u_size','u_duration','u_efficient'],
+ st_spikes:['u_size','u_duration','u_efficient'],
  fi_ember:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
  fi_scorch:['u_size','u_efficient'],
  fi_flamepatch:['u_size','u_duration','u_efficient'],
+ fi_cindermine:['u_size','u_duration','u_efficient'],
  li_spark:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
- li_arc:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet']
+ li_arc:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
+ li_discharge:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet']
 });
 export function magicV2PracticeModifierFits(action,modifier){
  return !!V2_PRACTICE_MODS[action]?.includes(modifier);
@@ -561,11 +564,39 @@ function magicV2Action(s,a,act,mods,ev){
     {...base,style:'rock',damage:6,life:extend?1.3:.8});
    break;
   }
+  case 'st_spikes':{
+   // Three separate ground spikes. Each is armed visibly before dealing damage;
+   // placement respects real line-of-sight and never spawns beyond cover.
+   for(let j=0;j<3&&s.waves.length<16;j++){
+    const distance=51+j*34;
+    if(beamLength(s,a.x,a.y,angle,distance+8,a.id)<distance-5)break;
+    const x=a.x+Math.cos(angle)*distance,y=a.y+Math.sin(angle)*distance;
+    if(!canStand(x,y,8))break;
+    s.waves.push({owner:a.id,x,y,angle,range:size?32:24,reach:0,
+     halfAngle:Math.PI,life:(extend?1.2:.85)+j*.10,
+     warmup:.30+j*.10,hit:false,v2Element:'stone',v2Spikes:true,damage:6.5});
+   }
+   fx(s,'quake',a.x+Math.cos(angle)*35,a.y+Math.sin(angle)*35);
+   break;
+  }
   case 'st_wall':{
    const x=a.x+Math.cos(angle)*46,y=a.y+Math.sin(angle)*46,r=size?24:17;
    if(s.barriers.length<10&&canStand(x,y,r)&&!blocking(s,x,y,r))
     s.barriers.push({owner:a.id,x,y,r,life:extend?6:3.5,hp:30});
    fx(s,'shield',x,y);break;
+  }
+  case 'fi_cindermine':{
+   // Independent armed trap: approach-sensitive, expires, and cannot trigger
+   // through permanent walls or a defending player's construct.
+   const distance=65;
+   if(s.mines.length<14&&beamLength(s,a.x,a.y,angle,distance+9,a.id)>=distance-5){
+    const x=a.x+Math.cos(angle)*distance,y=a.y+Math.sin(angle)*distance;
+    if(canStand(x,y,12)&&!blocking(s,x,y,12))
+     s.mines.push({owner:a.id,x,y,r:size?50:37,life:extend?6:4.4,
+      arm:.58,damage:10,element:'fire',v2Trap:true});
+    fx(s,'mine',x,y);
+   }
+   break;
   }
   case 'fi_ember':shoot('orb');break;
   case 'fi_scorch':{
@@ -584,6 +615,20 @@ function magicV2Action(s,a,act,mods,ev){
    fx(s,'mine',x,y);break;
   }
   case 'li_spark':shoot('bolt');break;
+  case 'li_discharge':{
+   // Three short real projectiles share the total damage budget; split
+   // changes the number of arcs rather than multiplying free damage.
+   const count=split?5:3,total=17;
+   for(let j=0;j<count;j++){
+    const offset=(j-(count-1)/2)*(count===5?.17:.24);
+    spawnShot(s,a,angle+offset,a.x,a.y,{
+     ...base,style:'bolt',damage:total/count,life:extend?.80:.46,
+     fastshot:true,wide:size
+    });
+   }
+   fx(s,'thunder',a.x,a.y);
+   break;
+  }
   case 'li_arc':shoot('arc',10);break;
   default:return false;
  }
@@ -765,6 +810,7 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
 for(let j=s.echoes.length-1;j>=0;j--){const e=s.echoes[j];e.life-=dt;e.cast-=dt;const source=s.actors[e.owner];if(e.cast<=0){e.cast=.76;const target=s.actors[1-e.owner];spawnShot(s,source,Math.atan2(target.y-e.y,target.x-e.x),e.x,e.y,{clone:true,strong:!!e.extra});e.shots=(e.shots??2)-1}if(e.life<=0||e.shots<=0)s.echoes.splice(j,1)}
 for(let j=s.mines.length-1;j>=0;j--){
  const mine=s.mines[j];mine.life-=dt;const target=s.actors[1-mine.owner];
+ if(mine.arm>0){mine.arm=Math.max(0,mine.arm-dt);if(mine.life<=0)s.mines.splice(j,1);continue}
  if(Math.hypot(target.x-mine.x,target.y-mine.y)<mine.r&&beamLength(s,mine.x,mine.y,Math.atan2(target.y-mine.y,target.x-mine.x),Math.hypot(target.x-mine.x,target.y-mine.y)+4,mine.owner)>=Math.hypot(target.x-mine.x,target.y-mine.y)-8){const d=harm(s,target,mine.damage,mine.owner);if(d>0){markTarget(s,target,mine.element||mage(s.actors[mine.owner].mageId).school,mine.owner);emit(s,'on_hit',mine.owner)}fx(s,'overload',mine.x,mine.y);s.mines.splice(j,1)}
  else if(mine.life<=0)s.mines.splice(j,1);
  }
