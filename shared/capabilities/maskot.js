@@ -4,14 +4,14 @@ import {blockiesAchievements} from './blockies-achievements.js';
 // Pocket Works MASKOT — original, hand-drawn, composable SVG geometry.
 // Asset IDs (not arbitrary markup) are the only user-controlled input.
 // Public profile renders are already server-validated; these IDs are visual decoding rights, not ownership grants.
-export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom','seoul-artist','dragon-keeper',...zamazkaAchievements.map(a=>a.id),...canticaAchievements.map(a=>a.id),...blockiesAchievements.map(a=>a.id)];
+export const mascotPublicUnlocks=['astronaut','wedding','knight','herald','groom','seoul-artist','dragon-keeper','yasya-chaos',...zamazkaAchievements.map(a=>a.id),...canticaAchievements.map(a=>a.id),...blockiesAchievements.map(a=>a.id)];
 export const mascotAnimals=[['cat','Кот'],['black-cat','Чёрный кот'],['fox','Лиса'],['rabbit','Кролик'],['frog','Лягушка']];
 export const mascotHats=[['none','Без'],['crown','Корона'],['beret','Берет'],['flower','Цветок']];
 export const mascotClothes=[['tunic','Туника'],['vest','Жилет'],['mantle','Мантия']];
 export const mascotAccessories=[['none','Без аксессуара']];
 export const mascotFaces=[['none','Без'],['glasses','Очки'],['stars','Звёздочки']];
 export const mascotTitles=['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Призрачная кисть','Всевидящий','Авантюрист',...canticaAchievements.filter(a=>a.slot==='title').map(a=>a.item),...blockiesAchievements.filter(a=>a.slot==='title').map(a=>a.item)];
-export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'},groom:{clothes:'groom'},'seoul-artist':{hat:'stage-pin',clothes:'stage-hanbok'},'dragon-keeper':{accessory:'shoulder-dragon'}};
+export const mascotSecret={astronaut:{hat:'helmet',clothes:'spacesuit'},wedding:{hat:'veil',clothes:'wedding'},knight:{hat:'bascinet'},herald:{clothes:'tabard'},groom:{clothes:'groom'},'seoul-artist':{hat:'stage-pin',clothes:'stage-hanbok'},'dragon-keeper':{accessory:'shoulder-dragon'},'yasya-chaos':{hat:'quiet-chaos',accessory:'tiny-guardian'}};
 const one=(rows,id,fallback)=>rows.some(x=>x[0]===id)?id:fallback;
 export function safeMascot(input,unlocks=[]){
   const u=Array.isArray(unlocks)?unlocks:[];
@@ -175,6 +175,15 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
   };
   const hats={
     none:'',
+    'quiet-chaos':`<!-- Thin asymmetrical silver circlet; crescent, pearls and lavender opal -->
+<path d="M76 88Q128 70 182 88" fill="none" stroke="#34434a" stroke-width="10" stroke-linecap="round"/>
+<path d="M77 85Q128 67 181 85" fill="none" stroke="#d6dce3" stroke-width="6" stroke-linecap="round"/>
+<path d="M116 68Q102 47 117 27Q108 49 130 56Q143 59 153 45Q151 67 133 73Z" fill="#e8e5f0" stroke="#526373" stroke-width="3"/>
+<path d="M130 48 140 60 131 72 121 60Z" fill="#ad9ac6" stroke="#f8e8ff" stroke-width="2.5"/>
+<circle cx="92" cy="79" r="4.5" fill="#fff6e5" stroke="#9e99a8" stroke-width="1.7"/>
+<circle cx="169" cy="81" r="4.5" fill="#fff6e5" stroke="#9e99a8" stroke-width="1.7"/>
+<path d="M172 84Q175 98 179 104" fill="none" stroke="#c3c9d4" stroke-width="2"/>
+<circle cx="179" cy="107" r="4.2" fill="#ffefdc" stroke="#9e99a8" stroke-width="1.4"/>`,
     'stack-cap':`<!-- Four pixel blocks form a tilted visor above the ears -->
 <path d="M67 77Q79 51 121 49L184 63 178 91Q122 85 69 95Z" fill="#235e63" stroke="#2d414a" stroke-width="5" stroke-linejoin="round"/>
 <path d="M71 84 182 79 209 93Q158 109 76 99Z" fill="#83d3ba" stroke="#29494d" stroke-width="4"/>
@@ -232,6 +241,17 @@ export function mascotSvg(raw,{unlocks=[],size=256}={}){
   };
   const accessories={
     none:'',
+    'tiny-guardian':`<!-- Serious white rabbit perched by the right shoulder; eyes and muzzle remain clear -->
+<ellipse cx="220" cy="226" rx="25" ry="24" fill="#e8e3dc" stroke="#34434a" stroke-width="4"/>
+<path d="M203 206 199 165Q199 157 206 159L218 193 224 162Q231 156 235 165L233 208Z" fill="#eee8e0" stroke="#34434a" stroke-width="3.5"/>
+<path d="M206 182 205 169M229 183 230 171" stroke="#d6a8b4" stroke-width="5" stroke-linecap="round"/>
+<ellipse cx="220" cy="209" rx="23" ry="18" fill="#f7f0e8" stroke="#34434a" stroke-width="3"/>
+<path d="M203 202 211 199M226 199 235 202" stroke="#53606a" stroke-width="2.6" stroke-linecap="round"/>
+<circle cx="211" cy="207" r="3" fill="#34434a"/><circle cx="229" cy="207" r="3" fill="#34434a"/>
+<path d="M216 216 223 216 220 220Z" fill="#c28e9e"/>
+<path d="M214 222 220 216 226 222" fill="none" stroke="#9b9296" stroke-width="1.6"/>
+<path d="M207 230Q219 217 231 230L225 235 220 230 214 235Z" fill="#c78aab" stroke="#865875" stroke-width="2"/>
+<circle cx="220" cy="231" r="3.2" fill="#eac77d"/>`,
     'mini-block':`<!-- Tiny solid tetromino keeps clear of the face -->
 <path d="M196 225 196 203 212 203 212 186 229 186 229 203 244 203 244 220 229 220 229 237 212 237 212 220Z" fill="#49aabb" stroke="#304651" stroke-width="4" stroke-linejoin="round"/>
 <path d="M198 205h12v12h-12zM214 188h12v12h-12zM214 205h12v12h-12zM231 205h11v12h-11z" fill="#b6f2e7" opacity=".7"/>`,
