@@ -589,6 +589,7 @@ function renderPlay(){
  const active=state.turnId===me?.id,plan=forecastEconomy(you.resources,you.items);
  const seats=state.players.map(p=>{
   const self=p.id===me?.id,available=!self&&playerOnline(p)&&!p.bankrupt&&!you.bankrupt;
+  const moderate=roomVersion==='v16'&&state.host===me?.id&&!self&&!p.bankrupt;
   return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(self?'is-me ':'')+
   '" data-action="'+(self?'open-sheet':'player-actions')+'" '+(self?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
   (!self&&!available?' disabled':'')+' aria-label="'+esc(p.character)+' — '+esc(p.name)+'">'+
