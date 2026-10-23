@@ -598,7 +598,8 @@ const module={
     state.host=players.some(p=>p.id===state.host)?state.host:players[0]?.id||'';
     state.phase='lobby';state.roles=players.map(p=>p.id);
     state.hold=false;state.robot=createGame();
-    state.session=createSession({mode:state.session?.mode||'quick',seed:state.seed,length:state.session?.length||5});
+    // Keep the configured lab seed and completed party ticket when a player
+    // voluntarily leaves. The unfinished current circuit restarts in the lobby.
     state.round++;state.revision++;
     state.signals={};state.sequences={};state.remainder=0;
     return {state,events:emitState(state)};

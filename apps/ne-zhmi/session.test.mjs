@@ -140,3 +140,32 @@ test('invalid client session messages never modify role assignments',()=>{
  assert.deepEqual(s.roles,initial);
  assert.equal(s.session.mode,'quick');
 });
+
+test('guest departure preserves lab code and length, rather than silently rerolling',()=>{
+ const s=room();
+ message(s,host,{type:'config',mode:'lab',seed:314159,length:6});
+ module.onLeave({state:s,players:[host]});
+ assert.equal(s.phase,'lobby');
+ assert.equal(s.session.mode,'lab');
+ assert.equal(s.session.seed,314159);
+ assert.equal(s.session.length,6);
+ module.onJoin({state:s,players:[host,guest]});
+ message(s,host,{type:'start'});
+ assert.equal(s.robot.level.seed,314159);
+ assert.equal(s.robot.level.sections.length,6);
+});
+test('party completion progress persists when an operator leaves mid-series',()=>{
+ const s=room();
+ message(s,host,{type:'config',mode:'party'});
+ serverWin(s,1);
+ assert.equal(s.session.entries.length,1);
+ module.onLeave({state:s,players:[host]});
+ assert.equal(s.session.entries.length,1);
+ assert.equal(s.phase,'lobby');
+ module.onJoin({state:s,players:[host,guest]});
+ message(s,host,{type:'start'});
+ assert.equal(s.phase,'play');
+ assert.equal(s.session.entries.length,1);
+ const snapshot=message(s,guest,{type:'sync'})[0].payload;
+ assert.equal(snapshot.session.count,1);
+});
