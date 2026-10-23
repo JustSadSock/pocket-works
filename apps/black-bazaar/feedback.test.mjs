@@ -57,3 +57,11 @@ test('Silent preference persists; oscillator playback requires an unlocked conte
  audio.setEnabled(false);assert.equal(audio.play('curse'),false);
  assert.equal(persisted.get('black-bazaar:sound'),'off');
 });
+
+test('Resource and artifact motion is gated by server snapshots',()=>{
+ const source=readFileSync(new URL('./app.js',import.meta.url),'utf8');
+ assert.match(source,/function showConfirmedMovement\(before,after\)/);
+ assert.match(source,/before\.revision===after\.revision/);
+ assert.match(source,/showConfirmedMovement\(previous,incoming\)/);
+ assert.match(source,/data-resource/);
+});
