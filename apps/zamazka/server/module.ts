@@ -12,6 +12,8 @@ const DEFAULT_DRAWING_SECONDS=160;
 // At 0:00 freeze client painting, then accept in-flight multipart submissions.
 // This is transport grace, not extra drawing time; never expose early results.
 export const FINAL_SUBMISSION_GRACE_MS=25000;
+// Allow a declared final upload to finish/retry without silently publishing an old draft.
+export const FINAL_TRANSFER_RECOVERY_MS=120000;
 type Stroke={c:string;s:number;t:string;p:number[][]};
 type Assignment={art:number;variation:number;strokes:Stroke[]|null};
 type Chips=number[];
@@ -20,7 +22,7 @@ type ScoreAudit={byVoter:Record<string,{eye:number;base:number;speed:number;corr
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[];full?:boolean};
 type DraftAssembly={revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
-type State={resumable?:boolean;balancedDamage?:boolean;shapeCorrected?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type State={pendingFinals?:Record<string,number>;incompleteSubmissions?:string[];resumable?:boolean;balancedDamage?:boolean;shapeCorrected?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
@@ -30,6 +32,7 @@ const strip=(s:State,id:string)=>({
  host:s.host,phase:s.phase,serverNow:now(),timedScoring:Boolean(s.timedScoring),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
  selected:s.selected,participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
+ incompleteSubmissions:s.incompleteSubmissions||[],
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
  mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation,strokes:s.assignments[id].strokes,draft:s.drafts?.[id]??null}:null,
  author:members(s)[s.turn]||null,
@@ -42,7 +45,7 @@ function choose(s:State){
  s.selected=shuffled(Array.from({length:CATALOG_COUNT-1},(_,i)=>i+1).filter(id=>!EXCLUDED_PAINTINGS.has(id))).slice(0,5);
  // Assign each restorer independently from the same five previewed originals.
  // Two players may receive one painting but different damaged fragments.
- s.assignments={};s.drafts={};s.draftAssemblies={};s.votes={};s.voteDrafts={};s.voteTiming={};s.turn=0;s.revealed=false;
+ s.assignments={};s.drafts={};s.draftAssemblies={};s.pendingFinals={};s.incompleteSubmissions=[];s.votes={};s.voteDrafts={};s.voteTiming={};s.turn=0;s.revealed=false;
  members(s).forEach(p=>s.assignments[p.id]={art:s.selected[Math.floor(Math.random()*s.selected.length)],
   variation:s.shapeCorrected?0x200000000+Math.floor(Math.random()*0x100000000):s.balancedDamage?0x100000000+Math.floor(Math.random()*0x100000000):Math.floor(Math.random()*0xffffffff),strokes:null});
  s.readyPlayers=[];s.phase=s.artPreparationEnabled?'preparing':'preview';s.deadline=now()+(s.artPreparationEnabled?15000:25000);
@@ -139,7 +142,13 @@ function step(s:State){
    s.deadline=s.drawingSeconds===0?0:now()+(s.drawingSeconds??DEFAULT_DRAWING_SECONDS)*1000;
   }
  else if(s.phase==='drawing'){
-  for(const p of members(s))if(s.assignments[p.id]?.strokes===null)s.assignments[p.id].strokes=s.drafts?.[p.id]??[];
+  // A timed-out upload must be visible as incomplete, never represented as a confirmed final painting.
+  s.incompleteSubmissions=[];
+  for(const p of members(s))if(s.assignments[p.id]?.strokes===null){
+   s.incompleteSubmissions.push(p.id);
+   s.assignments[p.id].strokes=s.drafts?.[p.id]??[];
+  }
+  s.pendingFinals={};
   // In-flight chunks must not survive the deadline: their complete predecessor
   // is already installed, and keeping them can bloat a full eight-player room.
   s.draftAssemblies={};s.drafts={};
@@ -239,10 +248,22 @@ const module: PocketModule<State>={
    const id=player.id;const isMember=state.participants.some(p=>p.id===id);
    if(a.type==='sync')return {state,events:[{type:'state',to:id,payload:strip(state,id)}]};
     if(a.type==='time_ping'&&Number.isFinite(a.stamp))return {state,events:[{type:'time_pong',to:id,payload:{stamp:a.stamp,serverNow:now()}}]};
+   // A final intent arrives before multipart upload. Keep the room in drawing while
+   // this upload is recoverable (bounded by the hard recovery deadline).
+   if(a.type==='submit_begin'&&state.phase==='drawing'&&isMember){
+    const item=state.assignments[id];
+    if(item&&item.strokes===null&&a.round===state.round&&a.art===item.art&&a.variation===item.variation){
+     (state.pendingFinals||={})[id]=now();
+     return {state,events:[{type:'submit_pending',to:id,payload:{round:state.round}}]};
+    }
+   }
    // Preview and voting advance at their normal deadlines. During drawing,
    // the timer expires at precisely 0:00, but buffered network chunks must
    // still have time to complete. Do not render voting before that window.
-   if(!state.paused&&state.deadline&&state.phase!=='results'&&now()>=
+   if(!state.paused&&state.deadline&&state.phase!=='results'&&
+      !(state.phase==='drawing'&&now()<state.deadline+FINAL_TRANSFER_RECOVERY_MS&&
+        members(state).some(p=>state.assignments[p.id]?.strokes===null&&
+          (state.pendingFinals?.[p.id]||state.draftAssemblies?.[p.id]?.kind==='submit_chunk')))&&now()>=
       (state.phase==='drawing'&&state.drawingSeconds>0
        ?state.deadline+(allCommitted(state)
           ?0:FINAL_SUBMISSION_GRACE_MS):state.deadline))step(state);
@@ -345,6 +366,7 @@ const module: PocketModule<State>={
      if(!strokes)return {state,events:notice(id,'Недопустимые мазки в рисунке.')};
      state.draftAssemblies||={};
      let assembling=state.draftAssemblies[id];
+     if(kind==='submit_chunk')(state.pendingFinals||={})[id]=now();
      if(a.index===0){
        // A new revision replaces only an INCOMPLETE assembly. The committed
        // draft remains available until every part has passed all checks.
@@ -380,6 +402,7 @@ const module: PocketModule<State>={
      if(kind==='draft_chunk')
        return {state,events:[{type:'draft_saved',to:id,payload:{round:state.round,art:item.art,variation:item.variation,revision:a.revision,lines:completed.length}}]};
      item.strokes=completed;
+     delete state.pendingFinals?.[id];
      delete state.drafts[id];
      if(allCommitted(state))step(state);
      // A WebSocket send is not a confirmed submission: only this durable
@@ -400,6 +423,7 @@ const module: PocketModule<State>={
      if(!item||item.strokes!==null)return {state,events:notice(id,'Эта работа уже сдана.')};
      if(!strokes)return {state,events:notice(id,'Некорректные или слишком большие данные рисунка.')};
      item.strokes=strokes;
+     delete state.pendingFinals?.[id];
      delete state.drafts?.[id];
      if(allCommitted(state))step(state);
      return {state,events:[...emit(state),{type:'submission_saved',to:id,
@@ -440,7 +464,7 @@ const module: PocketModule<State>={
      if(state.round<state.rounds){state.round++;choose(state);}
      else {state.phase='results';state.deadline=0;}
    }else if(a.type==='next'&&state.phase==='results'&&id===state.host){
-     state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.board={revision:(state.board?.revision||0)+1,segments:[]};state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.drafts={};state.draftAssemblies={};state.votes={};state.selected=[];state.turn=0;
+     state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.board={revision:(state.board?.revision||0)+1,segments:[]};state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.drafts={};state.draftAssemblies={};state.pendingFinals={};state.incompleteSubmissions=[];state.votes={};state.selected=[];state.turn=0;
    }
    return {state,events:emit(state)};
  }
