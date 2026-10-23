@@ -1,0 +1,206 @@
+/* 0.8.2 / mobile visual audit
+   The board is a 5 × 7 court, not a blank stretched surface. Real measured
+   screenshots revealed that percentage positions using calc(var(*) * %) are
+   invalid in WebKit; piece/ghost/effect positions now come from JS percent
+   literals. The grid receives an explicit size to guard Safari flex sizing. */
+
+/* Explicit grid dimensions on every platform so the court never paints blank
+   when child intrinsic sizes are ignored by Safari's contain/flex algorithm. */
+.board-grid {
+  position:absolute;
+  inset:0;
+  box-sizing:border-box;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  grid-template-rows:repeat(7,minmax(0,1fr));
+  align-items:stretch;
+  justify-items:stretch;
+}
+.board-cell {
+  min-width:0;
+  min-height:0;
+  box-sizing:border-box;
+  box-shadow:inset 0 0 0 1px #e8dbb51d;
+  border-right:1px solid #293a31b3;
+  border-bottom:1px solid #293a31b3;
+}
+.board-cell:nth-child(5n) { border-right:0; }
+.board-cell:nth-last-child(-n+5) { border-bottom:0; }
+.board-cell--throne {
+  background:radial-gradient(circle,#dfbe7957,transparent 80%)!important;
+  box-shadow:inset 0 0 0 1px #d6b4718c;
+}
+/* Absolute center positions on pieces/ghosts/effects are emitted in inline
+   styles as simple percentages. Avoid calc(var(--x)*20% + 10%) in older WebKit. */
+.piece,
+.vision-ghost,
+.board-effect--crown,
+.board-effect--shield,
+.board-effect--impact,
+.board-effect--footfall {
+  will-change:transform;
+}
+@media (max-width:760px) {
+  .game-shell:not(.debug-scene .game-shell) .board-grid {
+    z-index:1;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+  }
+  .game-shell:not(.debug-scene .game-shell) .board-cell span {
+    font-size:clamp(7px,2vw,10px);
+    color:#e9d8a45e;
+    left:3px;top:3px;
+  }
+  .game-shell:not(.debug-scene .game-shell) .board-glow { z-index:0; }
+  .game-shell:not(.debug-scene .game-shell) .board-effects { z-index:5; }
+  .game-shell:not(.debug-scene .game-shell) .piece { z-index:6; }
+  .game-shell:not(.debug-scene .game-shell) .vision-overlay { z-index:4; }
+  /* Settle upper HUD without sacrificing the board's fixed layout area. */
+  .game-shell:not(.debug-scene .game-shell) .topbar__right {
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;
+    gap:4px;
+  }
+  .game-shell:not(.debug-scene .game-shell) .hud-actions {
+    align-items:center;
+  }
+  .game-shell:not(.debug-scene .game-shell) .hud-actions button {
+    min-height:35px;
+    min-width:33px;
+    padding:5px 4px;
+    font-size:10px;
+  }
+  .game-shell:not(.debug-scene .game-shell) .crown-bar {
+    min-height:35px;
+    justify-content:center;
+  }
+  /* The old mobile decree cards were taller than their fixed tray,
+     clipping names beneath the action row. Render each as a compact folio. */
+  .game-shell:not(.debug-scene .game-shell) .law-card {
+    display:flex;
+    flex-direction:row;
+    flex-wrap:nowrap;
+    align-items:center;
+    justify-content:flex-start;
+    gap:6px;
+    padding:5px 7px;
+    min-height:0;
+    overflow:hidden;
+    flex-basis:150px;
+  }
+  .game-shell:not(.debug-scene .game-shell) .law-card__sigil {
+    display:block;
+    width:36px;
+    height:36px;
+    min-width:36px;
+    flex:0 0 36px;
+    margin:0;
+  }
+  .game-shell:not(.debug-scene .game-shell) .law-card__copy {
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:flex-start;
+    min-height:0;
+    min-width:0;
+    flex:1;
+    overflow:hidden;
+    gap:2px;
+  }
+  .game-shell:not(.debug-scene .game-shell) .law-card__slot {
+    display:block;
+    font-size:9px;
+    line-height:1.05;
+    letter-spacing:.05em;
+    white-space:nowrap;
+    max-width:100%;
+  }
+  .game-shell:not(.debug-scene .game-shell) .law-card__title {
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    line-clamp:2;
+    max-width:100%;
+    max-height:39px;
+    overflow:hidden;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    font-size:15px;
+    line-height:1.08;
+  }
+  .game-shell:not(.debug-scene .game-shell) .law-card--selected {
+    outline-offset:-2px;
+    transform:none;
+    box-shadow:inset 0 0 0 2px #d6b275,0 0 6px #e0c18470;
+  }
+  /* Avoid competing sheets when inspecting rules and invoking preview.
+     Forecast takes precedence; details are suppressed in app.js. */
+  .game-shell:not(.debug-scene .game-shell) .hand-panel .detail-card,
+  .game-shell:not(.debug-scene .game-shell) .game-layout__side>.detail-card {
+    z-index:116;
+    max-height:min(40dvh,320px);
+    border-radius:2px 2px 0 0;
+  }
+  .game-shell:not(.debug-scene .game-shell) .detail-card__heading button {
+    min-width:40px;
+    min-height:40px;
+  }
+  /* Allow visual history to be dismissed without reflow. */
+  .game-shell:not(.debug-scene .game-shell) .game-layout__foot {
+    z-index:114;
+  }
+  .game-shell:not(.debug-scene .game-shell) .vision {
+    z-index:121;
+    border-radius:2px 2px 0 0;
+  }
+}
+@media (max-width:950px) and (max-height:600px) and (orientation:landscape) {
+  .game-shell:not(.debug-scene .game-shell) .law-card {
+    flex-basis:auto;
+    width:100%;
+    height:54px;
+    min-height:54px;
+    gap:4px;
+    padding:4px 5px;
+  }
+  .game-shell:not(.debug-scene .game-shell) .law-card__sigil {
+    width:30px;height:30px;min-width:30px;flex:0 0 30px;
+  }
+  .game-shell:not(.debug-scene .game-shell) .law-card__title {
+    font-size:14px;
+    line-height:1;
+    max-height:32px;
+  }
+  .game-shell:not(.debug-scene .game-shell) .game-layout__hand {
+    overflow:hidden;
+  }
+  .game-shell:not(.debug-scene .game-shell) .hand-panel {
+    overflow:hidden;
+  }
+  .game-shell:not(.debug-scene .game-shell) .hand {
+    min-height:0;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    scroll-padding-top:4px;
+  }
+}
+@media (max-width:360px) {
+  .game-shell:not(.debug-scene .game-shell) .law-card {
+    flex-basis:137px;
+  }
+  .game-shell:not(.debug-scene .game-shell) .law-card__sigil{
+    width:31px;height:31px;min-width:31px;flex-basis:31px;
+  }
+  .game-shell:not(.debug-scene .game-shell) .law-card__title{
+    font-size:14px;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .piece,.vision-ghost,.board-effect {
+    will-change:auto;
+  }
+}
