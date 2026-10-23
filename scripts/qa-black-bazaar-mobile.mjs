@@ -76,24 +76,55 @@ try{
    });
    report.issues.push(...tabs);
   }
-  if(scene==='four'&&['small','short','phone','landscape','tablet','desktop'].includes(id)){
-   const exercise=async command=>page.evaluate(command=>new Promise((resolve,reject)=>{
-    const iframe=document.querySelector('iframe.dev-frame');
-    const token=Math.floor(Math.random()*1e9);
-    const timer=setTimeout(()=>{removeEventListener('message',onMessage);reject(new Error('QA action timed out: '+command.type));},5000);
-    function onMessage(event){
-     if(event.source!==iframe.contentWindow||event.data?.source!=='bazaar-debug-preview'||event.data.type!=='qa-action-result'||event.data.step!==token)return;
-     clearTimeout(timer);removeEventListener('message',onMessage);resolve(event.data);
-    }
-    addEventListener('message',onMessage);
-    iframe.contentWindow.postMessage({source:'bazaar-debug-console',type:'qa-action',run:1,step:token,command},location.origin);
-   }),command);
+  const actionSizes=['small','short','phone','landscape','tablet','desktop'];
+  const exercise=async command=>page.evaluate(command=>new Promise((resolve,reject)=>{
+   const iframe=document.querySelector('iframe.dev-frame');
+   const token=Math.floor(Math.random()*1e9);
+   const timer=setTimeout(()=>{removeEventListener('message',onMessage);reject(new Error('QA action timed out: '+command.type));},5000);
+   function onMessage(event){
+    if(event.source!==iframe.contentWindow||event.data?.source!=='bazaar-debug-preview'||
+       event.data.type!=='qa-action-result'||event.data.step!==token)return;
+    clearTimeout(timer);removeEventListener('message',onMessage);resolve(event.data);
+   }
+   addEventListener('message',onMessage);
+   iframe.contentWindow.postMessage({source:'bazaar-debug-console',type:'qa-action',run:1,step:token,command},location.origin);
+  }),command);
+  if(scene==='four'&&actionSizes.includes(id)){
    const work=await exercise({type:'work',resource:'gold'});
    if(work.error||work.after.resources.gold!==work.before.resources.gold+35)report.issues.push('work action did not credit 35 gold');
    const buy=await exercise({type:'broker_buy'});
    if(buy.error||buy.after.resources.gold!==buy.before.resources.gold-75||buy.after.items.length!==buy.before.items.length+1)
     report.issues.push('broker purchase did not transfer item and charge 75 gold');
    if(await frame.locator('.play-screen').count()!==1)report.issues.push('game UI missing after actions');
+  }
+  if(scene==='seller'&&actionSizes.includes(id)){
+   const ask={gold:70,crystals:2,parts:0};
+   const cleared=await exercise({type:'cancel'});
+   const before=cleared.after;
+   const itemId=before.items[0];
+   if(cleared.error||cleared.after.listing)report.issues.push('seller failed to clear fixture lot');
+   const posted=await exercise({type:'post',itemId,ask});
+   if(posted.error||posted.after.listing?.id!==itemId)report.issues.push('seller failed to post item');
+   const offered=await exercise({type:'bid',buyer:'debug-1',offer:ask});
+   if(offered.error||offered.after.bids.length!==1||offered.after.bids[0].buyer!=='debug-1')
+    report.issues.push('buyer bid not visible to seller');
+   const accepted=await exercise({type:'accept',buyer:'debug-1'});
+   const buyerBefore=before.players.find(p=>p.id==='debug-1');
+   const buyerAfter=accepted.after.players.find(p=>p.id==='debug-1');
+   if(accepted.error||accepted.after.listing||accepted.after.bids.length)
+    report.issues.push('accepted listing or bids not cleared');
+   if(accepted.after.items.includes(itemId)||!buyerAfter.inventory.includes(itemId)||
+      buyerAfter.items!==buyerBefore.items+1)
+    report.issues.push('auction item not delivered to buyer');
+   if(accepted.after.resources.gold!==before.resources.gold+ask.gold||
+      accepted.after.resources.crystals!==before.resources.crystals+ask.crystals||
+      accepted.after.resources.parts!==before.resources.parts+1||
+      buyerAfter.resources.gold!==buyerBefore.resources.gold-ask.gold||
+      buyerAfter.resources.crystals!==buyerBefore.resources.crystals-ask.crystals)
+    report.issues.push('auction payment or first-sale bonus incorrect');
+   if(accepted.after.marketDeals!==1)report.issues.push('public sale counter not incremented');
+   if(await frame.locator('.table-stage .artifact-note').count()===0)
+    report.issues.push('sold item still displayed as active auction lot');
   }
   const result={scene,device:id,requested:{width,height},...report};
   if(report.issues.length||scene==='four'&&['small','short','phone','landscape','tablet','desktop'].includes(id)){
