@@ -87,7 +87,7 @@ test('invalid and malicious packets never advance the round or corrupt manuscrip
  assert.equal(once.events[0].type,'state');
  assert.equal(run(once.state,p,payload).events[0].type,'notice');
 });
-test('room capacity, host permission, replacement host and early leave reset',()=>{
+test('room capacity, host permission and early leave keeps the running issue',()=>{
  const host=user(0),guest=user(1),other=user(2);
  let s=game.createRoom({player:host,payload:{settings:{maxPlayers:2}}}).state;
  s=game.onJoin({state:s,players:[host,guest]}).state;
@@ -97,9 +97,10 @@ test('room capacity, host permission, replacement host and early leave reset',()
  s=run(s,host,{type:'start'}).state;
  assert.throws(()=>game.onJoin({state:structuredClone(s),players:[host,guest,other]}),/match_in_progress/);
  s=game.onLeave({state:s,players:[guest]}).state;
- assert.equal(s.phase,'lobby');
- assert.equal(s.host,guest.id);
- assert.deepEqual(s.sheets,[]);
+ assert.equal(s.phase,'writing');
+ assert.equal(s.host,host.id);
+ assert.equal(s.sheets.length,2);
+ assert.equal(s.players.length,2);
  assert.equal(run(s,guest,{type:'start'}).events[0].type,'notice');
 });
 test('zero and twelve transmitted words follow actual configured limits',()=>{
