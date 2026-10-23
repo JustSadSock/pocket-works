@@ -32,7 +32,7 @@ test('v2 new magic is a real class-free school selection, combat and sealed rune
  await expect(page.locator('.v2-sealed')).toHaveCount(1);
  expect(await page.evaluate(()=>window.__perekosTest.state.magicLoadouts[0].sealed.length)).toBe(1);
  await page.reload({waitUntil:'domcontentloaded'});
- await page.locator('#continue').click();
+ await page.locator('#continue-v2').click();
  await expect(page.locator('#magic-v2')).toBeVisible();
  await expect(page.locator('.v2-sealed')).toHaveCount(1);
 });
@@ -63,4 +63,26 @@ test('v2 mobile scrollport keeps menu, rune lab and physical arena accessible',a
    await testInfo.attach('magic-v2-'+viewport.width+'x'+viewport.height,{body:await page.screenshot(),contentType:'image/png'});
   }finally{await context.close()}
  }
+});
+
+test('v2 training save is separate from an unfinished old duel, even after reload',async({page})=>{
+ await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ const old=await page.evaluate(async()=>{
+  const mod=await import('/apps/perekos/core.mjs');
+  const state=mod.makeMatch(441,'kindle','pebble','duel');
+  localStorage.setItem('pocket-works:perekos:match',JSON.stringify(state));
+  return JSON.stringify(state);
+ });
+ await page.locator('#open-v2-lab').click();
+ await page.locator('.v2-school.v2-storm').click();
+ await page.locator('.v2-play').click();
+ await page.locator('#forge-edit').click();
+ expect(await page.evaluate(()=>localStorage.getItem('pocket-works:perekos:match'))).toBe(old);
+ expect(await page.evaluate(()=>localStorage.getItem('pocket-works:perekos:magic-v2-practice'))).toContain('magicModeV2');
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#continue')).toBeVisible();
+ await expect(page.locator('#continue-v2')).toBeVisible();
+ await page.locator('#continue-v2').click();
+ expect(await page.evaluate(()=>window.__perekosTest.state.magicSchool)).toBe('storm');
+ expect(await page.evaluate(()=>localStorage.getItem('pocket-works:perekos:match'))).toBe(old);
 });
