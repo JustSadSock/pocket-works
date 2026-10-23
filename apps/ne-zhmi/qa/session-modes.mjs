@@ -151,7 +151,9 @@ try{
 
  // Each distinct crew size and lab section count owns its own record,
  // rather than comparing a four-module track to a six-module one.
- await local.evaluate(()=>{
+ // Install before the next document executes; the outgoing page has a
+ // pagehide persistence handler that would otherwise overwrite seeded data.
+ await local.addInitScript(()=>{
    const key='pocket-works:ne-zhmi:preferences';
    localStorage.setItem(key,JSON.stringify({records:{
      '2027:6:2':120,'2027:4:2':31,'2027':5
