@@ -214,8 +214,8 @@ const ARCHETYPES=Object.freeze([{id:'striker',name:'Стрелок',desc:'Чащ
 function validArchetype(id){return ARCHETYPES.some(a=>a.id===id)}
 
 function stats(a){const m=mage(a.mageId),role=a.archetype||'striker';return {max:100,speed:125*m.speed*(a.haste>0?1.35:1)*(a.slow>0?.68:1),damage:12*m.power*(role==='striker'?1.025:1),reload:.56*m.reload*(role==='striker'?.98:1),shield:34*m.shield*(role==='shaper'?1.27:1)}}
-function actor(id,x,y,runes,mageId='kindle',archetype='striker'){return {archetype:validArchetype(archetype)?archetype:'striker',evolution:null,fusions:[],id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0,burn:0,burnTick:0,burnSource:null,windup:null,flameCharge:0,respawn:0,specialCd:0}}
-function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId,a.archetype||'striker');o.hp=stats(o).max;o.evolution=a.evolution?{...a.evolution}:null;o.fusions=[...(a.fusions||[])];return o}
+function actor(id,x,y,runes,mageId='kindle',archetype='striker'){return {technique:'primary',archetype:validArchetype(archetype)?archetype:'striker',evolution:null,fusions:[],id,x,y,mageId:validMage(mageId)?mageId:'kindle',vx:0,vy:0,hp:100,shield:0,face:id===0?0:Math.PI,cast:0,guard:0,dash:0,dashReady:0,shieldReady:0,stun:0,flash:0,runes:[...runes],kills:0,hit:0,aiT:0,aiMove:1,invuln:0,heat:0,overloadCd:0,runeTimers:{},haste:0,slow:0,mark:'',markLife:0,reactionCd:0,reactionsDone:0,burn:0,burnTick:0,burnSource:null,windup:null,flameCharge:0,respawn:0,specialCd:0}}
+function freshActor(a){const o=actor(a.id,a.id===0?64:336,a.id===0?484:134,a.runes,a.mageId,a.archetype||'striker');o.hp=stats(o).max;o.technique=a.technique==='alternate'?'alternate':'primary';o.evolution=a.evolution?{...a.evolution}:null;o.fusions=[...(a.fusions||[])];return o}
 function makeMatch(seed=0x718abc,first='kindle',second='pebble',gameMode='duel',firstArchetype='striker',secondArchetype='striker'){const kind=['rupture','duel','forge'].includes(gameMode)?gameMode:'duel';const s={version:4,gameMode:kind,seed:seed>>>0||1,phase:'fight',round:1,remaining:kind==='rupture'?RUPTURE_SECONDS:kind==='forge'?0:ROUND_SECONDS,forgeDummy:true,elapsed:0,nextEvolution:RUPTURE_SECONDS-EVOLUTION_SECONDS,coreHold:[0,0],overtime:0,score:[0,0],draws:0,lastOutcome:'',elementCombos:[0,0],actors:[actor(0,64,484,['on_hurt','armor'],first,firstArchetype),actor(1,336,134,['on_hurt','armor'],second,secondArchetype)],shots:[],streams:[],beams:[],waves:[],lobs:[],echoes:[],mines:[],barriers:[],fields:[],eventQueue:[],fx:[],pick:[],log:[],ticks:0,serial:0,champion:null};s.actors=s.actors.map(freshActor);return s}
 const EVOLUTIONS=Object.freeze([{id:'beam',name:'Разящий луч',desc:'Атака выпускает толстый пробивной луч. Уровень усиливает урон и ширину.'},{id:'swarm',name:'Искровой рой',desc:'Атака выпускает веер дополнительных зарядов. Уровень увеличивает их число.'},{id:'field',name:'Грозовое поле',desc:'Атака оставляет опасную зону. Уровень увеличивает её размер и длительность.'}]);
 const FUSIONS=Object.freeze([{id:'ember_nova',name:'Огненное сердце',mod:'as_fire',desc:'Огненный рунический снаряд взрывается и поджигает.'},{id:'storm_lattice',name:'Грозовая решётка',mod:'as_storm',desc:'Заряженный рунический снаряд выпускает дуги при попадании.'},{id:'stone_crush',name:'Каменный захват',mod:'as_stone',desc:'Каменные снаряды ломают щит и замедляют.'}]);
@@ -478,17 +478,30 @@ const CLASS_SPELLS=Object.freeze([
  {id:'shaper',name:'АМБРАЗУРА',desc:'Собственное одностороннее укрытие для стрельбы',cooldown:8},
  {id:'distorter',name:'СДВИГ ФАЗЫ',desc:'Один телеграфируемый проход сквозь первую стену',cooldown:7}
 ]);
+const SECONDARY_SPELLS=Object.freeze([
+ {id:'striker',name:'СТЕНОЛОМ',desc:'Разбивает ближайшее созданное укрытие, но не каменную стену.',cooldown:7.5},
+ {id:'shaper',name:'КАМЕННЫЙ РЕЗОНАНС',desc:'Своя стена выпускает три настоящих физических осколка.',cooldown:8.5},
+ {id:'distorter',name:'ИЗЛОМ МАРШРУТА',desc:'Заряд поворачивает через 65 единиц пути, не проходя сквозь стены.',cooldown:6.8}
+]);
+function chosenClassSpell(a){return (a.technique==='alternate'?SECONDARY_SPELLS:CLASS_SPELLS).find(t=>t.id===(a.archetype||'striker'))}
 function castClassSpell(s,a){
  if(a.stun>0||a.hp<=0||(a.specialCd||0)>0||a.heat>87)return false;
- const type=a.archetype||'striker',spec=CLASS_SPELLS.find(t=>t.id===type);
- if(type==='shaper'){
+ const type=a.archetype||'striker',technique=a.technique==='alternate'?'alternate':'primary',spec=chosenClassSpell(a);
+ if(technique==='alternate'&&type==='shaper'){
+  let barrier=s.barriers.find(b=>b.owner===a.id);
+  if(!barrier){const x=a.x+Math.cos(a.face)*48,y=a.y+Math.sin(a.face)*48;if(!canStand(x,y,23)||blocking(s,x,y,24)||s.barriers.length>=10)return false;barrier={owner:a.id,x,y,r:21,life:3,aperture:true};s.barriers.push(barrier)}
+  let count=0;for(const offset of [-.26,0,.26]){const dir=a.face+offset,x=barrier.x+Math.cos(dir)*(barrier.r+7),y=barrier.y+Math.sin(dir)*(barrier.r+7);if(spawnShot(s,a,dir,x,y,{style:'rock',element:'stone',damage:5.5,life:.75})){count++}}
+  if(!count)return false;fx(s,'quake',barrier.x,barrier.y);
+ }else if(type==='shaper'){
   const x=a.x+Math.cos(a.face)*51,y=a.y+Math.sin(a.face)*51;
   if(!canStand(x,y,23)||blocking(s,x,y,24)||s.barriers.length>=10)return false;
   s.barriers.push({owner:a.id,x,y,r:22,life:5,aperture:true});fx(s,'shield',x,y);
  }else{
   if(!spawnShot(s,a,a.face,a.x,a.y,{style:'arc',element:mage(a.mageId).school,strong:true,far:true}))return false;
   const q=s.shots[s.shots.length-1];q.r=4;
-  if(type==='striker'){q.bounces=2;q.life=1.3;fx(s,'ricochet',a.x,a.y)}
+  if(technique==='alternate'&&type==='striker'){q.siege=1;q.life=1.25;fx(s,'fracture',a.x,a.y)}
+  else if(technique==='alternate'&&type==='distorter'){q.bendRemaining=65;q.bendAngle=.7;q.life=1.2;fx(s,'thunder',a.x,a.y)}
+  else if(type==='striker'){q.bounces=2;q.life=1.3;fx(s,'ricochet',a.x,a.y)}
   else{q.phase=1;q.life=1.2;fx(s,'phase_entry',a.x,a.y)}
  }
  a.specialCd=spec.cooldown;addHeat(s,a,12);return true;
@@ -623,6 +636,9 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
    if(dealt>0)fusionImpact(s,q,a);
    if(q.style==='rock')rockFracture(s,q,q.x,q.y);
    fx(s,'impact_'+(q.style||'orb'),q.x,q.y);s.shots.splice(j,1);done=true;continue;
+  }
+  if(q.siege>0&&hit.type==='barrier'){
+   if(s.barriers[hit.index]){s.barriers.splice(hit.index,1);q.siege=0;q.x+=Math.sign(q.vx)*.2;q.y+=Math.sign(q.vy)*.2;remaining*=Math.max(0,1-hit.t);fx(s,'fracture',q.x,q.y);continue}
   }
   if(q.phase>0&&(hit.type==='wall'||hit.type==='barrier')){
    const exit=phaseExitPoint(s,hit,q.x,q.y,q.vx,q.vy,q.r);
