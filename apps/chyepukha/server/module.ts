@@ -148,14 +148,15 @@ const module={
   if(players.length>s.settings.maxPlayers)throw Error('room_full');
   s.players=entries(players);s.revision++;return {state:s,events:events()};
  },
- onLeave({state:s,players}){
+ onLeave({state:s,player,players}){
   if(s.phase==='lobby'){
    s.players=entries(players);
    s.host=s.players.some(p=>p.id===s.host)?s.host:s.players[0]?.id||'';
   }else{
    s.waitlist=(s.waitlist||[]).filter(p=>players.some(x=>x.id===p.id));
-   const departed=s.players.find(p=>p.id!==s.host&&!players.some(x=>x.id===p.id));
+   const departed=s.players.find(p=>p.id===player.id);
    if(departed)departed.vacant=true;
+   if(player.id===s.host&&!s.hostOfflineSince)s.hostOfflineSince=Date.now();
    // Never reset writing or discard a finished issue when someone exits.
    // Permanent seat IDs keep the sheet rotation stable after departures.
    s.message='Учасник від’єднався. Його місце та рукописи збережено.';
