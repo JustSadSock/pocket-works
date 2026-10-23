@@ -3,6 +3,7 @@ import {zamazkaStore} from './storage.js';
 import {floodFillRaster,fillMatchingColorRaster} from './fill-core.js';
 import {enclosingContourAt,fillEscapedContour} from './fill-contours.js';
 import {brushCursorSVG,getBrushCursorStyle,setBrushCursorStyle} from './brush-cursor.js';
+import {fillRasterBounds,extractRasterRegion,localContourBounds} from './fill-raster-region.js';
 export {floodFillRaster};
 
 // Keep stroke coordinates in the 600×450 logical world, but rasterize on a much
@@ -73,16 +74,21 @@ export function preservePaintContours(output,original,walls,changed=null,useWall
   }
  }
 }
-function fillRegion(lines,paint,zoneMask,p,colour,priority=null){
- const w=lines.canvas.width,h=lines.canvas.height;
- const current=paint.ctx.getImageData(0,0,w,h);
+export function fillRegion(lines,paint,zoneMask,p,colour,priority=null,zone=null){
+ const fullWidth=lines.canvas.width,fullHeight=lines.canvas.height;
+ const region=fillRasterBounds(zone,FILL_SCALE,fullWidth,fullHeight);
+ const {left,top,width:w,height:h}=region;
+ const seedX=p[0]*FILL_SCALE-left,seedY=p[1]*FILL_SCALE-top;
+ // A tap far beyond the clipped cutout must not be clamped to its edge.
+ // The 12px halo already covers the nearest-valid search radius (10px).
+ if(seedX<0||seedY<0||seedX>=w||seedY>=h)return;
+ const full=left===0&&top===0&&w===fullWidth&&h===fullHeight;
+ const mask=full?zoneMask:extractRasterRegion(zoneMask,fullWidth,region);
+ const current=paint.ctx.getImageData(left,top,w,h);
  const inkBefore=new Uint8ClampedArray(current.data);
  const changed=new Uint8Array(w*h);
  const color=[1,3,5].map(i=>parseInt(colour.slice(i,i+2),16));
- // Sample the actual composited canvas, not the opaque wall-mask alpha.
- // A filled tan interior surrounded by black strokes must recolour as one
- // connected area regardless of when/how many gestures painted it.
- const px=Math.floor(p[0]*FILL_SCALE),py=Math.floor(p[1]*FILL_SCALE);
+ const px=Math.floor(seedX),py=Math.floor(seedY);
  if(px>=0&&px<w&&py>=0&&py<h){
   const k=(py*w+px)*4,ink=current.data,paper=[232,221,198];
   const isPigment=ink[k+3]>=120&&
@@ -90,33 +96,35 @@ function fillRegion(lines,paint,zoneMask,p,colour,priority=null){
     Math.abs(ink[k+2]-paper[2]))>18;
   if(isPigment){
    const painted=fillMatchingColorRaster({
-    width:w,height:h,zone:zoneMask,output:current,changed,
+    width:w,height:h,zone:mask,output:current,changed,
     point:[px,py],color
    });
-   if(painted){paint.ctx.putImageData(current,0,0);return}
+   if(painted){paint.ctx.putImageData(current,left,top);return}
   }
  }
  const apply=walls=>floodFillRaster({
-  width:w,height:h,walls,zone:zoneMask,output:current,changed,
-  point:[p[0]*FILL_SCALE,p[1]*FILL_SCALE],color
+  width:w,height:h,walls,zone:mask,output:current,changed,
+  point:[seedX,seedY],color
  });
- // The latest closed outline must remain a boundary even when its entire
- // interior is already covered by older opaque brushwork.
- let walls=priority?.walls||lines.ctx.getImageData(0,0,w,h);
+ const existingWalls=()=>lines.ctx.getImageData(left,top,w,h);
+ let walls=priority?.walls
+  ?full?priority.walls:extractRasterRegion(priority.walls,fullWidth,region)
+  :existingWalls();
  let filled=apply(walls);
- if(priority&&(!filled||fillEscapedContour(changed,w,h,priority.bounds,FILL_SCALE))){
-  // A geometrically closed but raster-leaky line cannot repaint other basins.
+ if(priority&&(!filled||fillEscapedContour(changed,w,h,
+   localContourBounds(priority.bounds,region,FILL_SCALE),FILL_SCALE))){
+  // Keep the fallback atomic: a leaky priority outline must never spill into
+  // a second painted basin outside its bounds.
   current.data.set(inkBefore);
   changed.fill(0);
-  walls=lines.ctx.getImageData(0,0,w,h);
+  walls=existingWalls();
   filled=apply(walls);
  }
  if(filled){
   preservePaintContours(current.data,inkBefore,walls.data,changed,true);
-  paint.ctx.putImageData(current,0,0);
+  paint.ctx.putImageData(current,left,top);
  }
 }
-
 function priorityContourWalls(strokes,end,point,aspect,zoneMask){
  const contour=enclosingContourAt(strokes,end,point,aspect);
  if(!contour)return null;
@@ -236,7 +244,7 @@ function renderStrokes(ctx,strokes,zone,aspect=W/H,cache=null){
   const stroke=strokes[i];
   if(stroke.t==='fill'){
    fillRegion(lines,paint,zoneMask,stroke.p[0],stroke.c,
-    priorityContourWalls(strokes,i,stroke.p[0],aspect,zoneMask));
+    priorityContourWalls(strokes,i,stroke.p[0],aspect,zoneMask),zone);
    continue;
   }
   if(stroke.t==='smudge'){
