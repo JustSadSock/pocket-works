@@ -1336,20 +1336,45 @@ class CanvasFallback {
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     ctx.restore();
   }
-  drawPortal(endpoint, isEntry) {
+  drawPortal(endpoint, isEntry, field) {
     const ctx = this.ctx;
-    const center = this.worldToScreen(endpoint.x, endpoint.y, 1);
-    const radius = endpoint.r * this.scale;
+    const ground = field?.heightAt?.(endpoint.x, endpoint.y) || 0;
+    const width = endpoint.width || endpoint.r * 2 || 82;
+    const inner = width * .515, outer = width * .69;
+    const nx = -endpoint.axisY, ny = endpoint.axisX;
+    const point = (side, height) => this.worldToScreen(
+      endpoint.x + nx * side, endpoint.y + ny * side, ground + height
+    );
     ctx.save();
-    ctx.strokeStyle = '#aaa993';
-    ctx.lineWidth = Math.max(3, radius * .24);
-    ctx.beginPath(); ctx.ellipse(center.x, center.y, radius, radius * .82, 0, Math.PI, TAU); ctx.stroke();
-    ctx.fillStyle = 'rgba(10,18,14,.78)';
-    ctx.beginPath(); ctx.ellipse(center.x, center.y + radius * .05, radius * .72, radius * .52, 0, 0, TAU); ctx.fill();
-    const marker = this.worldToScreen(endpoint.x + endpoint.axisX * endpoint.r * .75, endpoint.y + endpoint.axisY * endpoint.r * .75, 2);
-    ctx.strokeStyle = isEntry ? '#d5ba6e' : '#9ab9aa';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(marker.x, marker.y); ctx.stroke();
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let i = 0; i <= 22; i++) {
+      const a = Math.PI - i / 22 * Math.PI;
+      const p = point(Math.cos(a) * inner, Math.sin(a) * inner);
+      if (!i) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath(); ctx.fillStyle = '#212b25'; ctx.fill();
+    // Same open width and limestone profile as the WebGL arch.
+    ctx.beginPath();
+    for (let i = 0; i <= 28; i++) {
+      const a = Math.PI - i / 28 * Math.PI;
+      const p = point(Math.cos(a) * (inner + outer) * .5, Math.sin(a) * (inner + outer) * .5);
+      if (!i) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    ctx.strokeStyle = '#979c86';
+    ctx.lineWidth = Math.max(3, (outer - inner) * this.scale);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(51,59,49,.55)';
+    ctx.lineWidth = Math.max(.65, this.scale * 1.7);
+    for (let i = 3; i < 18; i += 3) {
+      const a = Math.PI - i / 18 * Math.PI;
+      const a0 = point(Math.cos(a) * inner, Math.sin(a) * inner);
+      const a1 = point(Math.cos(a) * outer, Math.sin(a) * outer);
+      ctx.beginPath();ctx.moveTo(a0.x,a0.y);ctx.lineTo(a1.x,a1.y);ctx.stroke();
+    }
+    const marker = point(0, inner * .56);
+    ctx.fillStyle = isEntry ? '#dec18a' : '#9ac3af';
+    ctx.beginPath();ctx.arc(marker.x,marker.y,Math.max(1.4,this.scale * 3),0,TAU);ctx.fill();
     ctx.restore();
   }
   drawProp(obstacle, field) {
@@ -1459,8 +1484,8 @@ class CanvasFallback {
     for (const landform of field?.landforms || []) this.drawLandform(landform);
     for (const wall of level.course18?.barriers || level.walls || []) this.drawBarrier(wall);
     for (const tunnel of level.course18?.tunnelVisuals || []) {
-      if (tunnel.entry) this.drawPortal(tunnel.entry, true);
-      if (tunnel.exit) this.drawPortal(tunnel.exit, false);
+      if (tunnel.entry) this.drawPortal(tunnel.entry, true, field);
+      if (tunnel.exit) this.drawPortal(tunnel.exit, false, field);
     }
     for (const obstacle of level.course18?.props || level.obstacles || []) this.drawProp(obstacle, field);
     for (const rotor of level.rotors || []) {
