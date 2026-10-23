@@ -6,6 +6,7 @@ import { buildCourse18Geometry } from './terrain18.js';
 import { planTurfClumps, appendTurfClumps } from './turf-clumps.js';
 import { buildWoodBarrierProfile } from './wood-barrier.js';
 import { planGroundedRock } from './rock-profile.js';
+import { planGroundedStump } from './stump-profile.js';
 
 let checked = 0;
 const counts = { rocks: 0, stumps: 0, tunnels: 0, stoneWalls: 0, woodWalls: 0 };
@@ -101,6 +102,46 @@ for (const original of [
           if(row>0)assert.ok(v[2]>shape.rings[row-1][station][2]-1e-3,
             'stone profile should not fold onto itself');
         }
+      }
+    }
+  }
+  for(let i=0;i<level.course18.props.length;i++){
+    const prop=level.course18.props[i];
+    if(prop.kind!=='stump')continue;
+    const heightAt=level.course18.field.heightAt;
+    const seed=Number(level.id||18)+i*31;
+    const h=Math.max(18,Number(prop.height||Math.max(14,prop.r||56)*1.15));
+    const stump=planGroundedStump(prop.x,prop.y,prop.r||56,h,seed,heightAt);
+    const repeated=planGroundedStump(prop.x,prop.y,prop.r||56,h,seed,heightAt);
+    assert.deepEqual(stump,repeated,'stump cuts reproducible from run seed');
+    assert.equal(stump.segments,24);
+    assert.equal(stump.bark.length,4);
+    assert.equal(stump.cut.length,6);
+    assert.equal(stump.checks.length,4);
+    assert.ok(stump.center.every(Number.isFinite));
+    for(let j=0;j<stump.segments;j++){
+      const root=stump.bark[0][j];
+      assert.ok(Math.abs(root[2]-heightAt(root[0],root[1])+2)<1e-5,
+        'lower bark must touch terrain around the whole circumference');
+      for(const ring of [...stump.bark,...stump.cut]){
+        const p=ring[j];
+        assert.ok(p.every(Number.isFinite),'stump mesh has no NaN vertex');
+        assert.ok(Math.hypot(p[0]-prop.x,p[1]-prop.y)<=stump.radius+1e-4,
+          'visual stump never exceeds physical radius');
+      }
+      for(let row=1;row<stump.bark.length;row++){
+        assert.ok(stump.bark[row][j][2]>stump.bark[row-1][j][2]+.01,
+          'bark must rise monotonically');
+      }
+      const top=stump.cut[0][j];
+      assert.ok(top[2]>stump.bark.at(-1)[j][2],
+        'cut face must sit on its bark lip');
+    }
+    for(const mark of stump.checks){
+      for(const p of [mark.a,mark.b,mark.c]){
+        assert.ok(p.every(Number.isFinite));
+        assert.ok(Math.hypot(p[0]-prop.x,p[1]-prop.y)<stump.radius*.75,
+          'wood checks stay inside the cut face');
       }
     }
   }
