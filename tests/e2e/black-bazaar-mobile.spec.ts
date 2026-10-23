@@ -80,3 +80,15 @@ test('Black Bazaar tabletop and workspace remain separate in landscape',async({p
  await page.locator('.workspace-tab[data-sheet="inventory"]').click();
  await expect(page.locator('[data-sheet-page="inventory"]')).toBeVisible();
 });
+
+test('host can open offline player menu without allowing an exchange',async({page})=>{
+ await page.setViewportSize({width:320,height:568});
+ await page.goto(game);
+ await expect(page.locator('.entry-screen')).toBeVisible();
+ await scene(page,'offline');
+ const guest=page.locator('.seat[data-player="debug-1"]');
+ await expect(guest).toBeEnabled();
+ await guest.click();
+ await expect(page.locator('.player-popover')).toContainText('Обмен недоступен');
+ await expect(page.locator('.player-popover .kick-player')).toBeVisible();
+});
