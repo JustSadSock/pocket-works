@@ -217,6 +217,31 @@ export class PocketNetHub {
       }
     }
   }
+  async refreshChyepukhaPresence(room,{emit=true}={}){
+    if(room.gameId!=='chyepukha'||room.version!=='v6')return;
+    const mod=this.module(room.gameId,room.version);
+    if(!mod?.onPresence)return;
+    const onlineIds=[...new Set(this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean))].sort();
+    const result=await mod.onPresence({state:copied(room.state),players:room.players,onlineIds,now:Date.now()});
+    if(!result||!('state' in result))throw Error('invalid_module_state');
+    const previous=room.state.revision;
+    room.state=result.state;
+    if(room.state.revision!==previous){this.persist(room);if(emit)this.emit(room,result.events??[]);}
+  }
+  async applyChyepukhaEvictions(room,events,actorId){
+    if(room.gameId!=='chyepukha'||room.version!=='v6'||room.state.host!==actorId)return;
+    let changed=false;
+    for(const event of events??[]){
+      if(event?.type!=='player_kicked'||!room.state.banned?.includes(event.to)||event.to===actorId)continue;
+      const targetId=event.to;
+      const socket=this.connected(targetId,room.id);
+      if(socket){message(socket,'room_kicked',{roomId:room.id,reason:'host'});this.setRoom(socket,null);}
+      const previous=room.players.length;
+      room.players=room.players.filter(p=>p.id!==targetId);
+      if(room.players.length!==previous)changed=true;
+    }
+    if(changed){this.persist(room);await this.refreshChyepukhaPresence(room);this.broadcast(room,'presence',{roomId:room.id,players:room.players});}
+  }
   broadcast(room, type, payload) {
     for (const ws of this.sockets(room.id)) message(ws, type, payload);
   }
@@ -226,10 +251,10 @@ export class PocketNetHub {
     let state,roomPlayers;
     try{
       state=JSON.parse(row.state);roomPlayers=JSON.parse(row.players);
-      if(row.game_id==='chyepukha'&&row.version==='v5'&&
+      if(row.game_id==='chyepukha'&&['v5','v6'].includes(row.version)&&
          (!state||state.schema!==1||!Array.isArray(state.sheets)))throw Error('invalid_chyepukha_state');
     }catch(error){
-      if(row.game_id!=='chyepukha'||row.version!=='v5')throw error;
+      if(row.game_id!=='chyepukha'||!['v5','v6'].includes(row.version))throw error;
       const backups=this.sql('SELECT state,players FROM chyepukha_checkpoints WHERE room_id=? ORDER BY revision DESC LIMIT 4',id).toArray();
       let recovered=false;
       for(const backup of backups){
@@ -307,7 +332,7 @@ export class PocketNetHub {
         VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET state=excluded.state, players=excluded.players, updated_at=excluded.updated_at`,
         room.id,room.gameId,room.version,encoded,players,room.createdAt,room.updatedAt);
-      if(room.gameId==='chyepukha'&&room.version==='v5'&&room.state.phase!=='lobby'){
+      if(room.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&room.state.phase!=='lobby'){
         this.sql(`INSERT INTO chyepukha_checkpoints (room_id,revision,state,players,saved_at)
           VALUES (?,?,?,?,?) ON CONFLICT(room_id,revision) DO UPDATE SET state=excluded.state,players=excluded.players,saved_at=excluded.saved_at`,
           room.id,Number(room.state.revision)||0,encoded,players,room.updatedAt);
@@ -570,6 +595,7 @@ export class PocketNetHub {
             state: result.state, createdAt: Date.now() };
           this.persist(room);
           this.setRoom(ws, room.id);
+          await this.refreshChyepukhaPresence(room,{emit:false});
           this.joined(ws,room,member);
           if (result.events) this.emit(room, result.events);
           return;
@@ -588,6 +614,7 @@ export class PocketNetHub {
           if (!room) throw new Error('room_not_found');
           const mod = this.module(room.gameId, room.version);
           if (!mod) throw new Error('room_version_unavailable');
+          if(room.gameId==='chyepukha'&&room.version==='v6'&&room.state.banned?.includes(player.id))throw Error('room_kicked');
           const previous = room.players.some(p => p.id === player.id);
           if (!previous && member.accountId && room.players.some(p => p.accountId === member.accountId)) {
             throw new Error('account_already_in_room');
@@ -602,6 +629,7 @@ export class PocketNetHub {
             room.state = result.state;
             this.persist(room);
             this.setRoom(ws, room.id);
+            await this.refreshChyepukhaPresence(room,{emit:false});
             this.joined(ws,room,member);
             this.emit(room, result.events ?? []);
             await this.refreshZamazkaPresence(room);
@@ -619,6 +647,7 @@ export class PocketNetHub {
             }
             this.setRoom(ws, room.id);
             await this.updateBazaarPresence(room,member,true);
+            await this.refreshChyepukhaPresence(room,{emit:false});
             this.joined(ws,room,member);
             await this.refreshZamazkaPresence(room);
           }
@@ -646,6 +675,7 @@ export class PocketNetHub {
           this.recordBlockiesRewards(room,prior,room.state);
           this.emit(room, result.events ?? []);
           await this.applyKicks(room, result.events ?? [], player.id);
+          await this.applyChyepukhaEvictions(room, result.events ?? [], player.id);
           await this.flushAwards();
           if (result.finished) await this.closeRoom(room);
           return;
@@ -658,13 +688,14 @@ export class PocketNetHub {
           if (!result || !('state' in result)) throw new Error('invalid_module_state');
           room.state = result.state;
           this.setRoom(ws, null);
-          const keepVacant=room.gameId==='chyepukha'&&room.version==='v5'&&
+          const keepVacant=room.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&
             (room.state.phase==='writing'||room.state.phase==='finished');
           if (!room.players.length&&!keepVacant) await this.closeRoom(room);
           else {
             this.persist(room);
             this.emit(room, result.events ?? []);
             this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
+            await this.refreshChyepukhaPresence(room);
           }
           return;
         }
@@ -683,6 +714,7 @@ export class PocketNetHub {
         this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined, disconnected: info.id });
         if(!this.connected(info.id,room.id))await this.updateBazaarPresence(room,{id:info.id},false);
         await this.refreshZamazkaPresence(room);
+        await this.refreshChyepukhaPresence(room);
         this.ensureAlarm();
       }
     }
@@ -695,8 +727,8 @@ export class PocketNetHub {
     const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
     for (const row of rows) {
       const room = this.readRoom(row.id);
-      const ttl=room?.gameId==='chyepukha'&&room.version==='v5'&&room.state?.phase==='writing' ? 72*60*60_000
-        : room?.gameId==='chyepukha'&&room.version==='v5'&&room.state?.phase==='finished' ? 7*24*60*60_000
+      const ttl=room?.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&room.state?.phase==='writing' ? 72*60*60_000
+        : room?.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&room.state?.phase==='finished' ? 7*24*60*60_000
         : room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000
         : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000 : ROOM_TTL;
       if(now-row.updated_at<ttl||this.sockets(row.id).length)continue;

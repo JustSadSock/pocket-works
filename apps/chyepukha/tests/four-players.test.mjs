@@ -9,6 +9,7 @@ const modules=[
  ['v3','../../../pocketnet/module-versions/chyepukha/v3.ts'],
  ['v4','../../../pocketnet/module-versions/chyepukha/v4.ts'],
  ['v5','../../../pocketnet/module-versions/chyepukha/v5.ts'],
+ ['v6','../../../pocketnet/module-versions/chyepukha/v6.ts'],
  ['working source','../server/module.ts']
 ];
 const players=Array.from({length:4},(_,i)=>({id:'author-'+i,name:'Автор '+i}));
@@ -35,7 +36,11 @@ function playFour(game,{custom=false}={}){
  assert.equal(state.phase,'writing');
  assert.equal(state.total,questionCount);
  assert.equal(state.sheets.length,4);
- assert.throws(()=>game.onJoin({state:structuredClone(state),players:[...players,{id:'fifth',name:'П’ятий'}]}),/match_in_progress/);
+ if(typeof game.onPresence==='function'){
+  const candidate=game.onJoin({state:structuredClone(state),players:[...players,{id:'fifth',name:'П’ятий'}]}).state;
+  assert.equal(candidate.players.length,4);
+  assert.equal(candidate.waitlist.length,1);
+ }else assert.throws(()=>game.onJoin({state:structuredClone(state),players:[...players,{id:'fifth',name:'П’ятий'}]}),/match_in_progress/);
  const expected=new Map();
  for(let round=0;round<questionCount;round++){
   assert.equal(state.round,round);

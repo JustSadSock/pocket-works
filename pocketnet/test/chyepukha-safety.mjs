@@ -38,7 +38,7 @@ const guest=await channel(await session('Chy Guest'));
 try{
  host.send('create_room',{gameId:'chyepukha'});
  const created=await host.next('room_joined');
- assert.equal(created.version,'v5');
+ assert.equal(created.version,'v6');
  const roomId=created.roomId,hostId=created.players[0].id;
  guest.send('join_room',{roomId});
  const joined=await guest.next('room_joined');
@@ -66,7 +66,7 @@ try{
  const roundTwo=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.round===1);
  assert.equal(roundTwo.event.payload.round,1);
  guest.send('leave_room');
- const afterLeave=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.players.some(p=>p.id===guestId&&p.departed));
+ const afterLeave=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='writing'&&m.event.payload.round===1&&m.event.payload.players.some(p=>p.id===guestId&&p.departed));
  assert.equal(afterLeave.event.payload.phase,'writing');
  assert.equal(afterLeave.event.payload.round,1);
  host.send('leave_room');
@@ -81,12 +81,36 @@ try{
  const restoreGuest=await guest.next('room_joined');
  assert.equal(restoreGuest.state.players.length,2);
  assert.equal(restoreGuest.state.players.some(p=>p.id===guestId&&p.departed),false);
- // End early only by the original owner. Incomplete future chapters stay absent.
+ // Moderation runs on the real Worker, never on client-only state.
+ guest.send('game_message',{payload:{type:'pause'}});
+ await guest.next('game_event',m=>m.event?.type==='notice');
+ host.send('game_message',{payload:{type:'pause'}});
+ await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.paused===true);
+ host.send('game_message',{payload:{type:'resume'}});
+ await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.paused===false);
  guest.send('game_message',{payload:{type:'finish_early'}});
- assert.equal((await guest.next('game_event',m=>m.event?.type==='notice')).event.type,'notice');
- host.send('game_message',{payload:{type:'finish_early'}});
- const final=await guest.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='finished');
- assert.equal(final.event.payload.stories.length,2);
- assert.ok(final.event.payload.stories.every(story=>story.fragments.length===1));
- console.log('Chyepukha v5: durable seat rejoin, idempotent receipts and partial story survive');
+ await guest.next('game_event',m=>m.event?.type==='notice');
+ host.send('game_message',{payload:{type:'kick',targetId:guestId}});
+ await guest.next('room_kicked');
+ const candidate=await channel(await session('Chy Replacement'));
+ try{
+  candidate.send('join_room',{roomId});
+  const queued=await candidate.next('room_joined');
+  assert.equal(queued.state.waitingApproval,true);
+  assert.equal(queued.state.sheet,undefined);
+  const candidateId=queued.players.find(p=>p.id!==hostId)?.id;
+  assert.ok(candidateId);
+  host.send('game_message',{payload:{type:'assign_seat',seatId:guestId,candidateId}});
+  const assigned=await candidate.next('game_event',m=>m.event?.type==='state'&&m.event.payload.players.some(p=>p.id===candidateId&&!p.vacant));
+  assert.ok(assigned.event.payload.sheet);
+  assert.equal(assigned.event.payload.round,1);
+  host.send('game_message',{payload:{type:'finish_early'}});
+  const final=await candidate.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='finished');
+  assert.equal(final.event.payload.stories.length,2);
+  assert.ok(final.event.payload.stories.every(story=>story.fragments.length===1));
+ }finally{await shutdown(candidate);}
+ guest.send('join_room',{roomId});
+ const rejected=await guest.next('error');
+ assert.equal(rejected.code,'room_kicked');
+ console.log('Chyepukha v6: persisted rooms, pause, server kicks, candidate replacement and finished stories');
 }finally{await Promise.allSettled([shutdown(host),shutdown(guest)])}

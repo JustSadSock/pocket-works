@@ -1,0 +1,37 @@
+/* v1.8 · A small, authoritative editorial-control layer */
+.mod-strip{order:-1;position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 14px;margin:0 auto 3px;width:min(100%,920px);border-bottom:2px solid #91785a;background:#e8dbc0;color:#31483d}
+.mod-room-state{font:800 11px/1.2 system-ui,sans-serif;letter-spacing:.065em}
+.mod-strip-actions{display:flex;gap:7px}
+.mod-strip button,.mod-person-actions button,.mod-vote button,.mod-candidates button{padding:6px 10px;min-height:34px;background:#e3d1af;color:#315445;border:1px solid #a99471;font:700 12px/1.2 system-ui,sans-serif;cursor:pointer}
+.mod-strip button:hover,.mod-person-actions button:hover,.mod-candidates button:hover{background:#cdd9c3}
+.mod-strip button:focus-visible,.mod-person:focus-visible,.mod-panel button:focus-visible{outline:3px solid #aa6046;outline-offset:2px}
+.mod-panel{display:flex;flex-direction:column;gap:10px;max-height:calc(var(--app-viewport-height,100dvh) - 36px);width:min(460px,94vw);overflow-y:auto;text-align:left}
+.mod-header{display:flex;justify-content:space-between;gap:10px;align-items:start}
+.mod-header h3{margin:2px 0}
+.mod-header>button{border:0;background:transparent;color:#484131;font-size:30px;line-height:1;cursor:pointer}
+.mod-list{display:flex;flex-direction:column;gap:5px}
+.mod-person{display:flex;align-items:center;gap:11px;width:100%;min-height:53px;text-align:left;border:1px solid #baa27e;background:#f1e4cb;padding:7px 10px;color:#31483d;cursor:pointer}
+.mod-person.is-selected{background:#dce3d2;border-color:#6e8b72}
+.mod-avatar{width:29px;height:29px;border:1px solid #8fa58e;display:grid;place-items:center;font-weight:800}
+.mod-person span:nth-child(2){flex:1;min-width:0;display:flex;flex-direction:column}
+.mod-person b{font-size:14px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.mod-person small{font-size:11px;color:#6b765f}
+.mod-person-actions{display:flex;flex-wrap:wrap;gap:7px;border-top:1px dashed #b09d81;padding:11px 0 0}
+.mod-person-actions>strong{flex-basis:100%}
+.mod-person-actions>button[data-act=mod-ask-kick]{color:#813a31;border-color:#be9380}
+.mod-candidates{display:flex;flex-direction:column;width:100%;gap:6px}
+.mod-candidates>span{font-size:11px;color:#586e61}
+.mod-candidates>button{text-align:left}
+.mod-waitlist,.mod-vote{padding:10px;border:1px dashed #b7a17a;background:#eddfc5}
+.mod-waitlist p,.mod-vote p{font-size:12px;line-height:1.4;margin:5px 0}
+.mod-vote button{margin:3px}
+.mod-panel>.button{align-self:stretch}
+.mod-candidate{max-width:580px;margin:auto}
+.mod-pause-overlay{position:absolute;z-index:6;inset:0;display:grid;place-items:center;background:#1b3527bd;backdrop-filter:blur(2px);padding:16px}
+.mod-pause-paper{width:min(450px,96%);padding:27px;background:#efe0bf;border:2px solid #b69d71;box-shadow:9px 10px 0 #102c24;text-align:center;color:#35483a}
+.mod-pause-paper h2{margin:9px 0;font-size:clamp(25px,6vw,38px)}
+.mod-pause-paper p{font-size:13px;line-height:1.45}
+.mod-pause-paper .button{margin:10px auto 0}
+@media(max-width:760px){.mod-strip{padding:7px 9px;gap:7px}.mod-room-state{font-size:10px}.mod-strip-actions button{min-height:34px;padding:5px 8px;font-size:11px}.mod-panel{padding:14px}.mod-pause-paper{padding:20px}.mod-person{min-height:47px}}
+@media(max-height:490px){.mod-strip{padding:3px 8px}.mod-strip-actions button{min-height:27px}.mod-pause-paper{padding:12px}.mod-pause-paper h2{font-size:23px;margin:4px}.mod-pause-paper p{margin:4px}.mod-panel{max-height:calc(var(--app-viewport-height,100dvh) - 22px)}}
+@media(prefers-reduced-motion:reduce){.mod-strip *,.mod-panel *,.mod-pause-overlay *{animation:none!important;transition:none!important}}

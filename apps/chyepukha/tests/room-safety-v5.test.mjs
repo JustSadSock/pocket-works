@@ -43,17 +43,18 @@ test('nine completed rounds survive explicit leave, zero live seats and verified
   assert.equal(s.round,round+1);
  }
  const fragmentsBefore=s.sheets.map(sh=>sh.fragments.map(f=>f.answer));
- s=game.onLeave({state:s,players:players.slice(0,3)}).state;
+ s=game.onLeave({state:s,player:players[3],players:players.slice(0,3)}).state;
  assert.equal(s.round,9);
  assert.equal(s.phase,'writing');
  assert.equal(s.players.length,4);
  assert.equal(view(s,players[0],players.slice(0,3)).players[3].departed,true);
  assert.deepEqual(s.sheets.map(sh=>sh.fragments.map(f=>f.answer)),fragmentsBefore);
- s=game.onLeave({state:s,players:[]}).state;
+ for(const p of players.slice(0,3))s=game.onLeave({state:s,player:p,players:[]}).state;
  assert.equal(s.phase,'writing');
  assert.equal(s.sheets[0].fragments.length,9);
- assert.throws(()=>game.onJoin({state:structuredClone(s),players:[...players.slice(0,3),{id:'stranger',name:'Stranger'}]}),/match_in_progress/);
- s=game.onJoin({state:s,players}).state;
+ const candidate=game.onJoin({state:structuredClone(s),players:[{id:'stranger',name:'Stranger'}]}).state;
+ assert.equal(game.viewForPlayer({state:candidate,player:{id:'stranger'},players:[{id:'stranger'}]}).waitingApproval,true);
+ for(let i=0;i<players.length;i++)s=game.onJoin({state:s,players:[players[i]]}).state;
  assert.equal(s.players.length,4);
  for(const p of players){const r=submit(s,p,counter++);s=r.state;}
  assert.equal(s.phase,'finished');
@@ -70,7 +71,7 @@ test('a host can finish the edition early without losing completed chapters',()=
  assert.equal(done.round,9);
  assert.ok(done.sheets.every(sh=>sh.fragments.length===9));
  assert.equal(view(done,players[1]).stories.length,4);
- s=game.onLeave({state:done,players:[players[0]]}).state;
+ s=game.onLeave({state:done,player:players[1],players:[players[0]]}).state;
  assert.equal(s.phase,'finished');
  assert.equal(s.sheets[0].fragments.length,9);
 });

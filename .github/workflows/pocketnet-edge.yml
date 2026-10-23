@@ -127,3 +127,36 @@ jobs:
           node pocketnet/test/fog-real-worker.mjs
           node_modules/.bin/playwright test --config apps/fog-of-conquest/qa/worker.config.ts
 
+
+  chyepukha-safety:
+    name: Chyepukha v6 Real Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install WebSocket test runtime
+        run: npm ci --prefix pocket-server --no-audit --no-fund
+      - name: Build immutable PocketNet registry and local Wrangler
+        run: |
+          npm run build:pocketnet
+          npm install --prefix /tmp/chyepukha-wrangler --no-audit --no-fund wrangler@4
+          mkdir -p dist-site
+          printf '<!doctype html><title>Chyepukha CI</title>' > dist-site/index.html
+          cp privacy.html dist-site/privacy.html
+          cp privacy.html dist-site/privacy.txt
+      - name: Verify real Durable Object moderation and recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/chyepukha-wrangler/node_modules/.bin/wrangler dev --local --port 8787 > /tmp/chyepukha-ci.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; tail -n 60 /tmp/chyepukha-ci.log' EXIT
+          for attempt in $(seq 1 50); do
+            if curl --silent --fail http://127.0.0.1:8787/pocketnet/health >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8787/pocketnet/health >/dev/null
+          node pocketnet/test/chyepukha-safety.mjs
