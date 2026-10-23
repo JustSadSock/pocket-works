@@ -65,17 +65,17 @@
     ]
   },
   "production": {
-    "renderer": "Flat DOM board, CSS manuscript panels and original hand-authored SVG full-body actors, heraldic seals, gilded throne relief and decorative border sourced from app-owned assets.",
-    "focalAsset": "The six-figure illustrated SVG atlas is the dominant playable asset; a separate gilded throne relief and paper ornament distinguish legal decisions, with no 2.5D projection."
+    "renderer": "Flat DOM 5×7 board with original local SVG actors, CSS-only phase visuals and Web Audio oscillator synthesis for separate court events.",
+    "focalAsset": "The six-figure illustrated atlas remains the main visual. Short physical action trails, phase banners, shield pulses and rising crown symbols add meaningful movement."
   },
   "motion": {
-    "character": "Small parchment selection lift and wax-like card highlights; figural miniatures keep their silhouettes as their positions animate on the board.",
-    "action": "Select one parchment decree, inspect the replacement against the standing law, and confirm the private choice.",
-    "anticipation": "Selection is explicit; the confirmation stays disabled until a card is chosen.",
-    "response": "Turn progression remains controlled by the same game engine and PocketNet.",
-    "followThrough": "The active law book and crown score update in place; after a turn completes the real logs and prior-round replay remain available.",
-    "interruption": "Reduced-motion keeps the board static and preserves state.",
-    "reducedMotion": "Respect prefers-reduced-motion and app setting."
+    "character": "The six miniature actors have individual silhouette choreography driven by authoritative snapshots of priest, champions, guard, beast, thief and throne resolution.",
+    "action": "Both secret decrees resolve through engine snapshots; a council banner names the actual phase. Players can skip immediately or replay the last completed turn.",
+    "anticipation": "Sealed choices open with wax and phase marks; a collision uses a short directed impact rather than a full-screen shake.",
+    "response": "The real game state is committed atomically. Rendering only reads sequenced phase snapshots and never advances the shared simulation or invents opponent choices.",
+    "followThrough": "Hits have short dust bursts, shields catch light and a gained crown rises from the throne into the score, while replay returns to the latest authoritative state.",
+    "interruption": "Any newer turn cancels the former timeline. Skip clears timer/effects and immediately displays the final authoritative result. Reduced-motion mode abbreviates every phase and suppresses moving VFX.",
+    "reducedMotion": "Respect OS and local reduced-motion preferences, preserve audio preferences independently, and keep explicit skip available throughout."
   },
   "evidence": {
     "entry": "./",
