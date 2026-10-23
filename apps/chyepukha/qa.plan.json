@@ -18,7 +18,8 @@
         "tests/finale-state.test.mjs",
         "tests/audio-score.test.mjs",
         "tests/room-safety-v5.test.mjs",
-        "tests/submission-guard.test.mjs"
+        "tests/submission-guard.test.mjs",
+        "tests/moderation-v6.test.mjs"
       ]
     },
     {
