@@ -140,7 +140,7 @@ function priorityContourWalls(strokes,end,point,aspect,zoneMask){
 // Smudge only samples colour from the actual editable cutout. The original
 // implementation sampled beige/white pixels outside its irregular boundary,
 // then pulled them inside the painting. Mask coverage is held in raster space.
-function smudgeStamp(ctx,x,y,size,dx,dy,mask=false,zoneMask=null,aspect=W/H){
+export function smudgeStamp(ctx,x,y,size,dx,dy,mask=false,zoneMask=null,aspect=W/H){
  const widthFull=ctx.canvas.width,heightFull=ctx.canvas.height,scale=heightFull/H;
  const correction=(W/H)/Math.max(.1,aspect);
  const radiusY=Math.min(75,Math.max(3,Math.round(size*scale*.56)));
@@ -160,6 +160,11 @@ function smudgeStamp(ctx,x,y,size,dx,dy,mask=false,zoneMask=null,aspect=W/H){
   if(px<0||py<0||px>=widthFull||py>=heightFull)return false;
   return !region||region[(py*widthFull+px)*4+3]>=120;
  };
+ // Smudge can touch thousands of pixels each pointer frame. Precompute the
+ // five pigment samples once per stamp instead of constructing five nested
+ // arrays for every pixel (and allocating a colour vector each iteration).
+ const taps=[[-sx,-sy,3],[-sx+blurX,-sy,1],[-sx-blurX,-sy,1],
+             [-sx,-sy+blurY,1],[-sx,-sy-blurY,1]];
  const at=(px,py)=>(py*width+px)*4;
  for(let py=Math.max(0,cy-radiusY-top);py<Math.min(height,cy+radiusY+1-top);py++){
   for(let px=Math.max(0,cx-radiusX-left);px<Math.min(width,cx+radiusX+1-left);px++){
@@ -170,18 +175,23 @@ function smudgeStamp(ctx,x,y,size,dx,dy,mask=false,zoneMask=null,aspect=W/H){
    const weight=.72*Math.pow(1-dist,1.45),i=at(px,py);
    // Ignore invalid taps and renormalize the remaining samples. Never use a
    // fake white/transparent pixel to complete a sample near the cutout edge.
-   let sum=0,parts=[0,0,0,0];
-   for(const [ox,oy,k] of [[-sx,-sy,3],[-sx+blurX,-sy,1],[-sx-blurX,-sy,1],
-                           [-sx,-sy+blurY,1],[-sx,-sy-blurY,1]]){
+   let sum=0,red=0,green=0,blue=0,alpha=0;
+   for(const [ox,oy,k] of taps){
     const xx=absX+ox,yy=absY+oy;
     if(!valid(xx,yy)||xx<left||xx>=right||yy<top||yy>=bottom)continue;
     const a=at(xx-left,yy-top);
-    for(let ch=mask?3:0;ch<(mask?4:3);ch++)parts[ch]+=src[a+ch]*k;
+    if(mask)alpha+=src[a+3]*k;
+    else{red+=src[a]*k;green+=src[a+1]*k;blue+=src[a+2]*k}
     sum+=k;
    }
    if(!sum)continue; // Keep the existing pigment if no valid source exists.
-   for(let ch=mask?3:0;ch<(mask?4:3);ch++)
-    dst[i+ch]=src[i+ch]*(1-weight)+parts[ch]/sum*weight;
+   const remain=1-weight,blend=weight/sum;
+   if(mask)dst[i+3]=src[i+3]*remain+alpha*blend;
+   else{
+    dst[i]=src[i]*remain+red*blend;
+    dst[i+1]=src[i+1]*remain+green*blend;
+    dst[i+2]=src[i+2]*remain+blue*blend;
+   }
   }
  }
  ctx.putImageData(pixels,left,top);
