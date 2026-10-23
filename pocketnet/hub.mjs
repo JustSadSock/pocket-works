@@ -596,6 +596,7 @@ export class PocketNetHub {
           this.persist(room);
           this.setRoom(ws, room.id);
           this.joined(ws,room,member);
+          await this.refreshChyepukhaPresence(room);
           if (result.events) this.emit(room, result.events);
           return;
         }
@@ -723,8 +724,8 @@ export class PocketNetHub {
     const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
     for (const row of rows) {
       const room = this.readRoom(row.id);
-      const ttl=room?.gameId==='chyepukha'&&room.version==='v5'&&room.state?.phase==='writing' ? 72*60*60_000
-        : room?.gameId==='chyepukha'&&room.version==='v5'&&room.state?.phase==='finished' ? 7*24*60*60_000
+      const ttl=room?.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&room.state?.phase==='writing' ? 72*60*60_000
+        : room?.gameId==='chyepukha'&&['v5','v6'].includes(room.version)&&room.state?.phase==='finished' ? 7*24*60*60_000
         : room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000
         : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000 : ROOM_TTL;
       if(now-row.updated_at<ttl||this.sockets(row.id).length)continue;
