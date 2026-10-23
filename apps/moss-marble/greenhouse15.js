@@ -113,7 +113,7 @@ export class LivingGreenhouseLayer {
     this.frameCost = lerp(this.frameCost, frameMs, .045);
     const now = performance.now();
     if (now - this.lastQualityChange < 1200) return;
-    const next = this.reducedMotion ? .58 : this.frameCost > 31 ? .5 : this.frameCost > 23 ? .72 : 1;
+    const next = this.frameCost > 31 ? .5 : this.frameCost > 23 ? .72 : 1;
     if (Math.abs(next - this.quality) > .08) {
       this.quality = next;
       this.lastQualityChange = now;
