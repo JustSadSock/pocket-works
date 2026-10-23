@@ -467,10 +467,10 @@ export function message(s,player,payload,now=Date.now()){
     const role=s.roles.indexOf(id);
     const action=ABILITIES[role]?.id||null;
     if(!action||action!==v.action)return [];
+    if(HOLD_ACTIONS.includes(action)&&typeof v.pressed!=='boolean')return [];
     const previous=s.sequences[id]||0;
     if(v.seq<=previous)return [];
     s.sequences[id]=v.seq;
-    if(HOLD_ACTIONS.includes(action)&&typeof v.pressed!=='boolean')return [];
     const outcome=commandGame(s.robot,action,HOLD_ACTIONS.includes(action)?v.pressed:true);
     if(outcome==='cooldown')return notice(id,'Механизм ещё перезаряжается');
     if(outcome==='nochange')return [];

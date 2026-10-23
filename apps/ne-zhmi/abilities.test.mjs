@@ -16,7 +16,7 @@ test('energy changes while holding and recharges after release',()=>{
  assert.ok(s.energy.float>low);
 });
 test('float increases airtime and brake stops wheels',()=>{
- const a=createGame(),b=createGame();a.ground=false;b.ground=false;a.vy=0;b.vy=0;
+ const a=createGame(),b=createGame();a.ground=false;b.ground=false;a.y=4.5;b.y=4.5;a.vy=0;b.vy=0;
  commandGame(a,'float',true);stepGame(a,FIXED_DT);stepGame(b,FIXED_DT);
  assert.ok(a.vy<b.vy);
  const c=createGame(),d=createGame();c.vx=3.4;d.vx=3.4;
