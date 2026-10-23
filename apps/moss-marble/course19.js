@@ -206,7 +206,9 @@ function landformHeight(feature, x, y) {
   const metric = ellipseMetric(x, y, feature);
   const radius = feature.sandBasin ? organicSandRadius(x, y, feature) : metric.radius;
   if (radius >= 1) return 0;
-  const crown = Math.pow(1 - radius, Number(feature.falloff || 1.6));
+  const crown = feature.roundedHill
+    ? Math.pow(1 - smoothstep(0, 1, radius), .84 + Number(feature.falloff || 1.6) * .18)
+    : Math.pow(1 - radius, Number(feature.falloff || 1.6));
   const asymmetry = clamp(Number(feature.asymmetry || 0), -.65, .65);
   const directional = clamp(metric.localX / Math.max(1, feature.length * .22), -1, 1);
   const sideFactor = 1 + asymmetry * directional;
@@ -229,7 +231,15 @@ function maskWeight(mask, x, y) {
 
 function buildField(level, blueprint) {
   const palette = { ...COLORS, ...(level.visual?.terrain || {}) };
-  const landforms = (blueprint.landforms || []).map((feature) => resolveFeature(level, feature));
+  const landforms = (blueprint.landforms || []).map((feature) => {
+    const resolved = resolveFeature(level, feature);
+    // Round physical hill crests and broaden shoulders in endless sections;
+    // ramps, bunkers and authored campaign relief remain unchanged.
+    if (level.endless && (feature.kind === 'mound' || feature.kind === 'ridge')) {
+      return { ...resolved, height: Math.min(44, Number(resolved.height || 0) * 1.20), roundedHill: true };
+    }
+    return resolved;
+  });
   const masks = (blueprint.surfaces || []).map((feature) => resolveFeature(level, feature));
   const ramps = landforms.filter((feature) => feature.ramp);
   const seed = hashSeed(`${level.id}:${level.endless?.seed || ''}:${level.endless?.depth || ''}:course19`);
@@ -299,19 +309,53 @@ function buildField(level, blueprint) {
   return { landforms, masks, heightAt, gradientAt, normalAt, surfaceAt, surfaceInfoAt, rampAt, colorAt };
 }
 
+function sampleBankAtY(bank, y) {
+  let index = 1;
+  while (index < bank.length - 1 && bank[index].y > y) index++;
+  const a = bank[index - 1], b = bank[index];
+  const t = clamp((a.y - y) / Math.max(1e-6, a.y - b.y), 0, 1);
+  return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t) };
+}
+
+// The procedural banks already form a continuous, non-self-intersecting
+// polygon. Following those physical banks instead of offsetting a spline
+// tangent prevents folded mesh boundaries and broken limestone overhangs.
+function sampleEndlessBanks(outline, rows) {
+  if (!outline || outline.length < 8 || outline.length % 2) return null;
+  const half = outline.length / 2;
+  const left = outline.slice(0, half);
+  const right = outline.slice(half).reverse();
+  if ([left, right].some(bank => bank.some((p, i) => i > 0 && p.y >= bank[i - 1].y))) return null;
+  const topY = Math.min(left[0].y, right[0].y) - .5;
+  const bottomY = Math.max(left.at(-1).y, right.at(-1).y) + .5;
+  if (topY <= bottomY) return null;
+  return Array.from({ length: rows }, (_, i) => {
+    if (i === 0) return [left[0], right[0]];
+    if (i === rows - 1) return [left.at(-1), right.at(-1)];
+    const y = lerp(topY, bottomY, (i - 1) / (rows - 3));
+    return [sampleBankAtY(left, y), sampleBankAtY(right, y)];
+  });
+}
+
 function buildSurfaceMesh(level, field, along = 100, across = 23) {
   const vertices = [];
   const boundaryLeft = [];
   const boundaryRight = [];
+  // Authored holes keep their original projection. Endless holes use their
+  // exact physical polygon banks, including both endpoints, for every row.
+  const banks = level.endless ? sampleEndlessBanks(level.outline, along) : null;
   for (let row = 0; row < along; row += 1) {
     const t = row / (along - 1);
-    const sample = sampleSpline(level.centerline, t);
-    const halfWidth = clamp(distanceToOutline(sample, level.outline) - 4, 92, 360);
+    const sample = banks ? null : sampleSpline(level.centerline, t);
+    const halfWidth = banks ? 0 : clamp(distanceToOutline(sample, level.outline) - 4, 92, 360);
     for (let column = 0; column < across; column += 1) {
       const lane = column / (across - 1) * 2 - 1;
       const bowed = Math.sign(lane) * Math.pow(Math.abs(lane), 1.035);
-      const x = sample.x + sample.nx * bowed * halfWidth;
-      const y = sample.y + sample.ny * bowed * halfWidth;
+      const weight = (bowed + 1) * .5;
+      const x = banks ? lerp(banks[row][0].x, banks[row][1].x, weight)
+        : sample.x + sample.nx * bowed * halfWidth;
+      const y = banks ? lerp(banks[row][0].y, banks[row][1].y, weight)
+        : sample.y + sample.ny * bowed * halfWidth;
       const z = field.heightAt(x, y);
       vertices.push({ x, y, z });
       if (column === 0) boundaryLeft.push({ x, y });
