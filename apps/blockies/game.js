@@ -1361,6 +1361,7 @@ class UIManager {
                 break;
         }
 
+        this.noteSpawnAction(player);
         if (requiresInfoUpdate) {
             this.updatePlayerInfo(player);
             this.drawNextPiece(player);
@@ -1658,6 +1659,8 @@ class UIManager {
         if(numPlayers>1){
             const rail=document.createElement('div');
             rail.id='spawn-rail';
+            rail.className='spawn-gantry';
+            rail.setAttribute('role','group');
             rail.setAttribute('aria-label','Личные зоны появления фигур');
             boardWrapper.appendChild(rail);
         }
@@ -1713,11 +1716,25 @@ class UIManager {
         requestAnimationFrame((time) => this.gameLoop(time, run));
     }
     
+    noteSpawnAction(player){
+        if(!player||gameState.numPlayers<2)return;
+        const bay=document.getElementById(`spawn-bay-${player.id}`);
+        if(!bay||bay.classList.contains('is-out'))return;
+        for(const active of document.querySelectorAll('#spawn-rail .spawn-bay.is-engaged')){
+            active.classList.remove('is-engaged');
+        }
+        bay.classList.add('is-engaged');
+        clearTimeout(this.spawnFocusTimer);
+        this.spawnFocusTimer=setTimeout(()=>bay.classList.remove('is-engaged'),540);
+    }
+
     createSpawnBay(player,rail){
         if(!rail)return;
         const bay=document.createElement('div');
         bay.className='spawn-bay';
         bay.id=`spawn-bay-${player.id}`;
+        bay.setAttribute('role','group');
+        bay.setAttribute('aria-label',player.name);
         bay.style.left=(100*player.spawnLaneX/gameState.boardWidth)+'%';
         bay.style.width=(400/gameState.boardWidth)+'%';
         bay.style.setProperty('--bay-color',player.color);
@@ -1731,14 +1748,19 @@ class UIManager {
         next.width=4*BLOCK_SIZE;
         next.height=2*BLOCK_SIZE;
         next.setAttribute('aria-label','Следующая фигура: '+player.name);
+        const preview=document.createElement('div');
+        preview.className='spawn-bay__preview';
+        preview.setAttribute('aria-hidden','true');
+        preview.append(next);
         const mouth=document.createElement('div');
         mouth.className='spawn-bay__mouth';
         mouth.setAttribute('aria-hidden','true');
         const status=document.createElement('span');
         status.className='spawn-bay__status';
         status.textContent='×';
+        status.setAttribute('aria-hidden','true');
         mouth.append(status);
-        bay.append(label,next,mouth);
+        bay.append(label,preview,mouth);
         rail.appendChild(bay);
     }
 
@@ -1874,6 +1896,7 @@ class UIManager {
                 this.paintBlock(ctx,x,y,player?.color||'#92a5a1');
             }
         }
+        if(gameState.numPlayers>1)this.drawSpawnEntryGuides(ctx);
         // Each active piece gets a matching landing outline.
         for(const player of gameState.players){
             if(!player.currentPiece||player.gameOver)continue;
@@ -1899,6 +1922,33 @@ class UIManager {
                 if(player.currentPiece[y][x])
                     this.paintBlock(ctx,player.position.x+x,player.position.y+y,player.color,true);
             }
+        }
+    }
+
+    drawSpawnEntryGuides(ctx){
+        // The rails continue into the first two actual rows without altering collision data.
+        const depth=2*BLOCK_SIZE;
+        for(const player of gameState.players){
+            if(player.gameOver||!Number.isInteger(player.spawnLaneX))continue;
+            const left=player.spawnLaneX*BLOCK_SIZE;
+            const width=4*BLOCK_SIZE;
+            ctx.save();
+            const tint=ctx.createLinearGradient(0,0,0,depth);
+            tint.addColorStop(0,player.color);
+            tint.addColorStop(1,'#142629');
+            ctx.globalAlpha=.095;
+            ctx.fillStyle=tint;
+            ctx.fillRect(left,0,width,depth);
+            ctx.strokeStyle=player.color;
+            ctx.globalAlpha=.26;
+            ctx.lineWidth=1;
+            ctx.beginPath();
+            ctx.moveTo(left+.5,0);
+            ctx.lineTo(left+.5,depth*.86);
+            ctx.moveTo(left+width-.5,0);
+            ctx.lineTo(left+width-.5,depth*.86);
+            ctx.stroke();
+            ctx.restore();
         }
     }
 
@@ -1943,6 +1993,8 @@ class UIManager {
         const bay=document.getElementById(`spawn-bay-${player.id}`);
         if(bay){
             bay.classList.toggle('is-out',!!player.gameOver);
+            bay.classList.toggle('is-owned',this.isOnlineMode&&player.id===this.localPlayerIndex&&!player.gameOver);
+            bay.setAttribute('aria-label',player.name+(player.gameOver?' — выбыл':''));
             const label=bay.querySelector('.spawn-bay__name');
             if(label&&label.textContent!==player.name){label.textContent=player.name;label.title=player.name;}
         }
@@ -2186,7 +2238,8 @@ class UIManager {
         canvas.style.maxWidth='none';
         canvas.style.maxHeight='none';
         wrapper.style.width=(width+frameX)+'px';
-        const railHeight=rail?Math.round(railExtra*ratio)+labelExtra:0;
+        // Keep the fractional CSS rail cell in exact horizontal lockstep with the canvas.
+        const railHeight=rail?(4*width/gameState.boardWidth)+labelExtra:0;
         if(rail){
             const cell=width/gameState.boardWidth;
             rail.style.width=width+'px';
@@ -2213,6 +2266,7 @@ class UIManager {
             const player=this.getTouchPlayer();
             if(!player)return;
             event.preventDefault();
+            this.noteSpawnAction(player);
             const cell=Math.max(15,canvas.getBoundingClientRect().width/gameState.boardWidth*.85);
             // Move in the axis that was deliberately dragged; no accidental hard drops.
             let dx=event.clientX-gesture.lastX,dy=event.clientY-gesture.lastY;
@@ -2386,6 +2440,7 @@ class UIManager {
             if (!action) return;
 
             handled = true;
+            this.noteSpawnAction(player);
 
             switch (action) {
                 case 'left':
@@ -2490,6 +2545,7 @@ class UIManager {
         if(banner)banner.hidden=true;
         if (!this.isOnlineMode) this.saveSoloCheckpoint(true);
         if (this.isOnlineMode && !window.confirm('Покинуть сетевую комнату? Остальные смогут продолжить игру.')) return;
+        clearTimeout(this.spawnFocusTimer);
         if (this.isOnlineMode) networkManager.leaveRoom();
         this.releaseTouchControls?.();
         this.gameLoopRun = (this.gameLoopRun || 0) + 1;
