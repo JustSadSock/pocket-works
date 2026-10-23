@@ -19,17 +19,29 @@
   <div id="hazard-guide" class="hazard-guide hidden" aria-hidden="true"><span class="hazard-light"></span><span id="hazard-text"></span></div>
   <div class="scene-footer" data-ui><span id="status">ЖДЁМ СИГНАЛ</span><span id="falls">ПАДЕНИЯ 00</span></div>
   <section id="menu" class="panel intro" aria-labelledby="menu-title">
-    <div class="plate">ПРОТОКОЛ 001 <span>ДВОЙНОЕ УПРАВЛЕНИЕ</span></div>
+    <div class="plate">ПРОТОКОЛ 001 <span>КОМАНДНЫЙ ПУЛЬТ</span></div>
     <h1 id="menu-title">НЕ<br><em>ЖМИ!</em></h1>
     <p>Болтик едет сам. Один управляет прыжком, другой — разворотом. Каждый заезд собирается из новых механических секций.</p>
     <label class="player-field">ПОЗЫВНОЙ <input id="player-name" maxlength="22" autocomplete="nickname" placeholder="Оператор" value="Игрок" spellcheck="false"></label>
+    <div class="mode-switch" role="group" aria-label="Режим игры">
+      <button id="mode-quick" class="mode-tab active" type="button" aria-pressed="true">ЗАЕЗД</button>
+      <button id="mode-party" class="mode-tab" type="button" aria-pressed="false">СЕРИЯ ×3</button>
+      <button id="mode-lab" class="mode-tab" type="button" aria-pressed="false">МАСТЕРСКАЯ</button>
+    </div>
+    <p id="mode-description" class="mode-description">Одна трасса · быстрый кооператив</p>
+    <div id="lab-options" class="lab-options hidden">
+      <label>КОД ТРАССЫ<input id="lab-seed" type="number" min="1" max="4294967295" inputmode="numeric" value="2026" aria-label="Код трассы"></label>
+      <label>СЕКЦИИ<select id="lab-length" aria-label="Количество секций"><option value="4">4</option><option selected value="5">5</option><option value="6">6</option></select></label>
+      <button id="lab-random" class="option" type="button" title="Случайная трасса">↻</button>
+    </div>
+    <button id="resume-party" class="resume-party hidden" type="button">Продолжить серию →</button>
     <button id="start" class="launch" type="button" data-native-press>НАЧАТЬ ИСПЫТАНИЕ <span>→</span></button>
     <label class="operator-config">ЛОКАЛЬНЫЕ ОПЕРАТОРЫ <select id="operator-count" aria-label="Количество локальных операторов">
       <option value="2">2 оператора</option><option value="3">3 оператора</option>
       <option value="4">4 оператора</option><option value="5">5 операторов</option>
       <option value="6">6 операторов</option></select></label>
     <div class="net-buttons"><button id="create-online" class="net-entry" type="button">Создать онлайн-комнату</button><button id="join-online" class="net-entry" type="button">Войти по коду</button></div>
-    <div class="key-guide">Локальный режим · два человека на одном устройстве <button type="button" class="workshop-entry" data-workshop-trigger>Диагностика</button></div>
+    <div class="key-guide">Локально · 2–6 операторов на одном устройстве <button type="button" class="workshop-entry" data-workshop-trigger>Диагностика</button></div>
   </section>
   <section id="pause-panel" class="panel sheet hidden" aria-labelledby="pause-title" role="dialog" aria-modal="true">
     <div class="plate">ПРОТОКОЛ НА ПАУЗЕ</div>
@@ -43,6 +55,11 @@
     <div class="plate">ФИНИШ ПОДТВЕРЖДЁН</div>
     <h2 id="finish-title">БОЛТИК ВЫЖИЛ</h2>
     <p id="result"></p>
+    <div id="result-series" class="series-result hidden" aria-label="Результаты серии">
+      <div class="series-stamps" id="series-stamps"></div>
+      <div class="series-total" id="series-total"></div>
+      <div id="series-records" class="series-records"></div>
+    </div>
     <button id="again" class="launch" type="button">Новая трасса →</button>
     <button id="retry-course" class="option" type="button">Повторить эту трассу</button>
     <button id="leave-finish" class="option" type="button">В меню</button>
@@ -59,6 +76,16 @@
       <div class="room-code">КОД КОМНАТЫ <strong id="online-code">--------</strong></div>
       <button id="online-copy" type="button" class="option">Скопировать приглашение</button>
       <div id="online-roster" class="online-roster"></div>
+      <label class="online-mode-row">РЕЖИМ КОМНАТЫ
+        <select id="online-mode" aria-label="Режим онлайн-комнаты">
+          <option value="quick">Один заезд</option><option value="party">Серия ×3</option><option value="lab">Мастерская</option>
+        </select>
+      </label>
+      <div id="online-lab" class="online-lab hidden">
+        <label>КОД<input type="number" id="online-lab-seed" min="1" max="4294967295" value="2026"></label>
+        <label>СЕКЦИИ<select id="online-lab-length"><option value="4">4</option><option selected value="5">5</option><option value="6">6</option></select></label>
+        <button id="online-configure" type="button" class="option">Применить трассу</button>
+      </div>
       <p id="online-role">Ожидание роли</p><p id="online-count">Места 1/6 · старт от 2 игроков</p>
       <button id="online-swap" class="option hidden" type="button">Поменять роли местами</button>
       <button id="online-start" class="launch hidden" type="button">Запустить испытание →</button>
@@ -68,7 +95,12 @@
   </section>
   <section id="online-result" class="panel sheet online-sheet hidden" role="dialog" aria-modal="true" aria-labelledby="online-result-title">
     <div class="plate">СЕРВЕР ПОДТВЕРДИЛ ФИНИШ</div><h2 id="online-result-title">ОПЕРАЦИЯ УДАЛАСЬ</h2>
-    <p id="online-result-stats"></p><button id="online-again" class="launch hidden" type="button">Следующая трасса →</button>
+    <p id="online-result-stats"></p>
+    <div id="online-series-result" class="series-result hidden">
+      <div id="online-series-stamps" class="series-stamps"></div>
+      <div id="online-series-total" class="series-total"></div>
+      <div id="online-series-records" class="series-records"></div>
+    </div><button id="online-again" class="launch hidden" type="button">Следующая трасса →</button>
     <p id="online-wait-host" class="hidden">Ожидаем следующего испытания от ведущего.</p>
     <button id="online-leave-result" class="option" type="button">Выйти из комнаты</button>
     <a class="exit-sheet" href="../../" data-app-control>← Pocket Works</a>

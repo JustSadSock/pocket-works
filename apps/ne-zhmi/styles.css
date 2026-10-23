@@ -183,3 +183,30 @@ button:focus-visible,a:focus-visible{outline:3px solid #c06a40;outline-offset:3p
  .sheet:not(.hidden),.intro:not(.hidden){animation:none}
  .lever,.power-meter,.lever:after{transition:none;will-change:auto}
 }
+
+/* Mechanical channel switch and the team's scored three-course ticket. */
+.mode-switch{display:grid;grid-template-columns:1fr 1fr 1.18fr;gap:3px;margin:11px 0 0;border:2px solid #69766c;padding:3px;background:#596964}
+.mode-tab{min-height:40px;border:1px solid #8a9b8d;background:#d0d7c9;color:#465857;font:900 11px/1 system-ui;white-space:nowrap;padding:7px 4px;transition:transform .12s,background .12s,color .12s}
+.mode-tab.active{background:#e6af74;color:#312f2c;box-shadow:inset 0 -3px #ad7147}
+.mode-tab:active{transform:translateY(2px)}
+.mode-description{font:800 11px/1.3 ui-monospace,monospace!important;margin:7px 0 10px!important;color:#62746a}
+.lab-options{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 38px;gap:6px;margin:9px 0}
+.lab-options label,.online-lab label{font:900 9px/1.4 ui-monospace,monospace;display:grid;gap:3px;color:#4b605a}
+.lab-options input,.lab-options select,.online-lab input,.online-lab select{height:36px;width:100%;min-width:0;border:2px solid #687971;background:#f6ebd4;color:#304443;padding:6px;font:800 13px system-ui}
+.lab-options .option{font-size:21px;min-height:36px;background:#d9c39b;border:2px solid #6b756c}
+.resume-party{border:1px solid #ac895c;color:#42574e;background:#e7d7b7;width:100%;margin:7px 0;padding:8px;font:900 11px ui-monospace,monospace;text-align:center}
+.series-result{display:grid;gap:8px;padding:10px 11px;background:#d6dbca;border:2px solid #879589}
+.series-stamps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.series-stamp{display:grid;gap:3px;text-align:center;border:2px solid #879589;padding:8px 3px;background:#e6e4d4;color:#66716b;font:900 10px/1.15 ui-monospace,monospace}
+.series-stamp.done{border-color:#b18652;background:#f2dfb9;color:#5e4c36}
+.series-stamp strong{font:900 17px/1 system-ui}
+.series-total{font:900 17px/1.2 system-ui;color:#394f4c}
+.series-records{display:grid;gap:4px}
+.series-record{display:flex;justify-content:space-between;font:800 10px/1.3 ui-monospace,monospace;color:#53665e;border-bottom:1px solid #8d9c90;padding-bottom:3px}
+.online-mode-row{display:flex;gap:12px;justify-content:space-between;align-items:center;font:900 10px ui-monospace,monospace}
+.online-mode-row select{border:2px solid #677a6a;padding:7px;max-width:64%;min-width:0;background:#f4e6cc;font:800 12px system-ui}
+.online-lab{display:grid;grid-template-columns:1fr .65fr 1fr;gap:6px;align-items:end}
+.online-lab .option{padding:5px;font-size:10px!important;min-height:36px!important}
+@media(max-width:720px){.mode-tab{font-size:10px;min-height:36px}.mode-description{margin:4px 0 6px!important}.lab-options{margin:5px 0}.series-result{padding:7px}.series-stamp{padding:5px 3px}}
+@media(max-height:690px){.intro{padding-top:11px;padding-bottom:13px}.intro h1{margin:8px 0 9px}.intro p:not(.mode-description){margin-bottom:9px}.mode-switch{margin:6px 0 0}.mode-tab{min-height:30px}}
+@media(prefers-reduced-motion:reduce){.mode-tab{transition:none}}
