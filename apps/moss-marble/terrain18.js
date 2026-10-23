@@ -258,9 +258,15 @@ function portal(mesh, shadows, level, endpoint, seed, palette) {
     const outerB = portalPoint(endpoint, Math.cos(b) * outer, ground + Math.sin(b) * outer, 0);
     const innerA = portalPoint(endpoint, Math.cos(a) * inner, ground + Math.sin(a) * inner, 0);
     const innerB = portalPoint(endpoint, Math.cos(b) * inner, ground + Math.sin(b) * inner, 0);
-    const blockShade = .91 + noise(seed, Math.floor(index / 3), 19) * .085;
-    const limestone = tone(index > 7 && index < 11 ? palette.stoneLight : palette.stone, blockShade);
-    mesh.quad(outerA, outerB, innerB, innerA, limestone, 0);
+    const blockShade = .94 + noise(seed, Math.floor(index / 3), 19) * .075;
+    const limestone = tone(palette.stoneLight, blockShade);
+    // The arch faces the arriving marble. Orienting its light-catching normal
+    // toward the opening prevents the "flat black slab" seen from above.
+    const frontNormal = [-endpoint.axisX, -endpoint.axisY, .66];
+    mesh.quad(outerA, outerB, innerB, innerA, limestone, 0, frontNormal);
+    const lipA = portalPoint(endpoint, Math.cos(a) * (inner + 2.8), ground + Math.sin(a) * (inner + 2.8), -.8);
+    const lipB = portalPoint(endpoint, Math.cos(b) * (inner + 2.8), ground + Math.sin(b) * (inner + 2.8), -.8);
+    mesh.quad(lipA, lipB, innerB, innerA, tone(palette.stoneLight, 1.08), 0, frontNormal);
     // Dark inward masonry runs back into the opening and gives it depth.
     const backA = portalPoint(endpoint, Math.cos(a) * inner, ground + Math.sin(a) * inner, depth * .82);
     const backB = portalPoint(endpoint, Math.cos(b) * inner, ground + Math.sin(b) * inner, depth * .82);
