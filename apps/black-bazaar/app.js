@@ -462,8 +462,8 @@ function artifactDetailBlock(you){
      '<button type="button" data-action="cancel">Снять лот</button>':
     (!locked?
      ((!checked?'<button type="button" data-action="inspect" '+(you.resources.gold<(you.inspectionPrices?.public??15)?'disabled':'')+'>'+svgIcon('eye')+' Проверить · '+(you.inspectionPrices?.public??15)+' золота</button>':'')+
-      '<form class="detail-offer-form" data-form="detail-bid"><strong>Твоя ставка</strong>'+resourceFields('offer',item.ask)+
-      '<button type="submit" class="primary">'+svgIcon('gavel')+' Предложить</button></form>'+
+      '<button type="button" class="primary" data-action="bid-asking">'+svgIcon('check')+' Принять цену · '+esc(amounts(item.ask))+'</button><details class="quick-expand"><summary>'+svgIcon('gavel',18)+' Другая цена</summary><form class="detail-offer-form" data-form="detail-bid">'+resourceFields('offer',item.ask)+
+      '<button type="submit" class="primary">'+svgIcon('gavel')+' Предложить</button></form></details>'+
       (state.bids.some(b=>b.buyer===me?.id)?'<button type="button" data-action="withdraw">Отозвать ставку</button>':'')):'<p class="muted">Торг недоступен после банкротства.</p>'))+
    '</div>';
  }else if(kind==='broker'){
@@ -531,7 +531,7 @@ function resourceWallet(w,forecast){
  [['gold','coin','Золото'],['crystals','gem','Кристаллы'],['parts','parts','Детали']].map(([k,icon,title])=>{
  const d=forecast.delta[k],text=d>0?'+'+d:String(d);
  return '<span class="currency" aria-label="'+title+': '+(w[k]||0)+', за раунд '+text+'">'+svgIcon(icon)+
- '<span class="wallet-values"><strong>'+(w[k]||0)+'</strong><em>'+title+'</em></span>'+
+ '<span class="wallet-values"><strong>'+(w[k]||0)+' / '+(state?.you?.quota?.[k]??'—')+'</strong><em>'+title+' · цель</em></span>'+
  '<small class="wallet-delta '+(d>0?'positive':d<0?'negative':'neutral')+'">'+text+'</small></span>';
  }).join('')+'</div>';
 }
@@ -546,7 +546,7 @@ function renderPlay(){
  const seats=state.players.map(p=>{
   const self=p.id===me?.id,available=!self&&p.connected&&!p.bankrupt&&!you.bankrupt;
   return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(self?'is-me ':'')+
-  '" data-action="'+(self?'open-sheet':'trade-with')+'" '+(self?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
+  '" data-action="'+(self?'open-sheet':'player-actions')+'" '+(self?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
   (!self&&!available?' disabled':'')+' aria-label="'+esc(p.character)+' — '+esc(p.name)+'">'+
   '<span class="seat-portrait">'+characterMarkup(roleCharacter(p.character),'seat-character')+'</span>'+
   '<strong>'+esc(p.character)+'</strong><small>'+esc(p.name)+'</small></button>';
@@ -737,7 +737,20 @@ app.addEventListener('click',event=>{
   }
   return;
  }
- if(action==='trade-with'){
+ if(action==='bid-asking'){
+   const lot=state?.listing;if(!lot||lot.seller===me?.id||state.you.bankrupt)return;
+   request({type:'bid',offer:{...lot.ask}});return;
+  }
+  if(action==='player-actions'){
+   const player=state?.players?.find(p=>p.id===btn.dataset.player);
+   if(!player||player.id===me?.id)return;
+   app.querySelector('.player-popover')?.remove();
+   const pop=document.createElement('div');pop.className='player-popover';pop.setAttribute('role','dialog');
+   pop.innerHTML='<div class="player-popover-head"><strong>'+esc(player.character||player.name)+'</strong><button type="button" data-action="close-player-actions" aria-label="Закрыть">×</button></div>'+(!player.connected||player.bankrupt||state.you.bankrupt?'<p>Обмен недоступен</p>':'<button type="button" class="primary" data-action="trade-with" data-player="'+esc(player.id)+'">'+svgIcon('trade',20)+' Обмен / подарок</button>')+'<button type="button" data-action="open-sheet" data-sheet="players">'+svgIcon('people',19)+' Участники</button>';
+   btn.closest('.player-seats')?.append(pop);sound.play('open');pop.querySelector('button')?.focus({preventScroll:true});return;
+  }
+  if(action==='close-player-actions'){app.querySelector('.player-popover')?.remove();return;}
+  if(action==='trade-with'){
   sound.play('tap');
   const recipient=state?.players?.find(p=>p.id===btn.dataset.player);
   if(!recipient?.connected||recipient.bankrupt||state?.you?.bankrupt)return;
