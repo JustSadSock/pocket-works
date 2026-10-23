@@ -632,6 +632,10 @@ export class PocketNetHub {
               : { state: room.state, events: [] };
             if (!result || !('state' in result)) throw new Error('invalid_module_state');
             room.state = result.state;
+            if(room.gameId==='chyepukha'&&room.version==='v6'){
+              const banned=new Set(room.state.bannedIds||[]);
+              room.players=room.players.filter(p=>!banned.has(p.id));
+            }
             this.persist(room);
             this.setRoom(ws, room.id);
             this.joined(ws,room,member);
