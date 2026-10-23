@@ -105,6 +105,20 @@ export class NetworkManager {
     return this.connecting;
   }
   stopClock(){if(this.timer){clearInterval(this.timer);this.timer=null;}}
+  reconnect(){
+    const socket=this.net?.socket;
+    if(socket&&(socket.readyState===0||socket.readyState===1)){
+      this.stale=true;
+      this.trigger('connectionHealth',{status:'recovering'});
+      // PocketNet reconnects using its existing authenticated token and room ID.
+      socket.close();
+      return;
+    }
+    // A closing/closed socket already has a scheduled retry in PocketNet.
+    if(!socket&&!this.connecting&&!this.connected){
+      this.connect().catch(()=>{});
+    }
+  }
   startClock(){
     if(this.timer)return;
     this.timer=setInterval(()=>{
