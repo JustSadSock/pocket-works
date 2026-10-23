@@ -237,6 +237,19 @@ export function drawForgeConstructs(ctx,state,time=0,reduced=false){
   block(ctx,x-2,y-4,size+4,6,'#9aa381');block(ctx,x,y+2,size,2,'#20382d');
   block(ctx,x+size-3,y+7,3,size-8,'#213529');
   if(wall.aperture){block(ctx,x+size*.23,y+size*.32,size*.54,size*.28,'#123b36');block(ctx,x+size*.23,y+size*.32,size*.54,3,'#f0d69d');block(ctx,x+size*.23,y+size*.57,size*.54,3,'#f0d69d');block(ctx,x+size*.46,y+size*.27,4,size*.42,'#9fdbc4')}
+  // State-based physical cues: who can shoot through a wall, how much runic cover
+  // remains and when an inverted aperture returns to its original owner.
+  const own=wall.owner===0?'#8bd6e0':'#e9aa83';
+  block(ctx,x,y-7,size,2,own);
+  if(wall.hp!=null){
+   const fraction=Math.max(0,Math.min(1,wall.hp/(wall.warded>0?60:32)));
+   block(ctx,x,y+size+2,size,3,'#1b312b');block(ctx,x,y+size+2,Math.round(size*fraction),3,'#cfb78f');
+  }
+  if(wall.inversionLife>0){
+   const pulse=reduced?true:Math.floor(time*9)%2===0;
+   if(pulse){block(ctx,x-4,y-4,3,size+8,'#d9cf8c');block(ctx,x+size+1,y-4,3,size+8,'#d9cf8c')}
+   block(ctx,x-2,y-11,Math.round((size+4)*Math.min(1,wall.inversionLife/2.2)),3,'#b3c6a0');
+  }
  }
  for(const mine of (state?.mines||[]).slice(0,20)){
   if(!Number.isFinite(mine.x)||!Number.isFinite(mine.y))continue;
