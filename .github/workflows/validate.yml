@@ -181,6 +181,8 @@ jobs:
         run: node apps/zamazka/qa/editor-budget-soak.mjs
       - name: Verify smudge pixel parity and measured rendering time
         run: node apps/zamazka/qa/smudge-pixel-parity.mjs
+      - name: Verify compositor reuse under 60 brush revisions and 120 pointer frames
+        run: node apps/zamazka/qa/editor-frame-reuse.mjs
 
       - name: Test ZAMAZKA smudge, uninterrupted strokes and touch budgets
         run: node apps/zamazka/qa/editor-input.mjs && node apps/zamazka/qa/smudge.mjs
