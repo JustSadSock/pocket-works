@@ -11,10 +11,10 @@ const frames=new Set(['clean','double','corners','stamp']);
 const backgroundModes=new Set(['preset','drawing']);
 const portraitFrames=new Set(['none','wood','gilt','worn-gilt','rose-window','tetromino']);
 const maskotAnimals=new Set(['cat','black-cat','fox','rabbit','frog']);
-const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush','stage-pin','seer-diadem','solar-circlet','stack-cap','block-crown']);
+const maskotHats=new Set(['none','crown','beret','flower','helmet','veil','bascinet','brush','stage-pin','seer-diadem','solar-circlet','stack-cap','block-crown','quiet-chaos']);
 const maskotClothes=new Set(['tunic','vest','mantle','spacesuit','wedding','tabard','restorer','groom','stage-hanbok','illuminator']);
 const maskotFaces=new Set(['none','glasses','stars','monocle']);
-const maskotAccessories=new Set(['none','shoulder-dragon','spectral-quill','sun-crystal','mini-block']);
+const maskotAccessories=new Set(['none','shoulder-dragon','spectral-quill','sun-crystal','mini-block','tiny-guardian']);
 const maskotTitles=new Set(['','Первопроходец','Коллекционер','Хранитель хаоса','Подмастерье','Знаток подделок','Двойной агент','Авантюрист','Призрачная кисть','Всевидящий',...canticaAchievements.filter(a=>a.slot==='title').map(a=>a.item),...blockiesAchievements.filter(a=>a.slot==='title').map(a=>a.item)]);
 const codeRewards=new Map([['ORBIT-7','astronaut'],['WHITE-ROSE','wedding'],['VIGIL-1347','knight'],['HERALD-1415','herald'],['GROOM-2026','groom'],['SEOUL-MOONLIGHT','seoul-artist'],['DRAGON-EMBER','dragon-keeper']]);
 function validMaskot(value,unlocked){
@@ -27,6 +27,7 @@ function validMaskot(value,unlocked){
   if(value.clothes==='groom'&&!unlocked.includes('groom'))return false;
   if((value.hat==='stage-pin'||value.clothes==='stage-hanbok')&&!unlocked.includes('seoul-artist'))return false;
   if(value.accessory==='shoulder-dragon'&&!unlocked.includes('dragon-keeper'))return false;
+  if((value.hat==='quiet-chaos'||value.accessory==='tiny-guardian')&&!unlocked.includes('yasya-chaos'))return false;
   for(const category of ['hat','clothes','face','accessory']){
     if(zamazkaAchievements.some(a=>a.slot===category&&a.item===value[category])&&!ownedAchievementItem(value[category],unlocked))return false;
     if(canticaAchievements.some(a=>a.slot===category&&a.item===value[category])&&!canticaOwns(value[category],category,unlocked))return false;
@@ -323,7 +324,14 @@ export class PocketSocial {
       if(path==='/pocket-social/redeem'){
         if(!this.rate(id,'cosmetic-code',10,3600000))return reply({error:'rate_limited'},429);
         if(typeof body.code!=='string'||body.code.length>60)return reply({error:'invalid_code'},400);
-        const reward=codeRewards.get(body.code.trim().toUpperCase());
+        // Private reward: both the recipient UUID and deployment secret must match.
+        // No shared code or account identifier is shipped to the public client.
+        const yasyaId=String(this.env.YASYA_POCKET_ID||'').trim().toLowerCase();
+        const yasyaCode=String(this.env.YASYA_MASCOT_CODE||'').trim();
+        const requested=body.code.trim();
+        const personalReward=uuid.test(yasyaId)&&id.toLowerCase()===yasyaId&&
+          yasyaCode.length>=24&&requested===yasyaCode?'yasya-chaos':null;
+        const reward=personalReward||codeRewards.get(requested.toUpperCase());
         if(!reward)return reply({error:'invalid_code'},400);
         let unlocked=[];try{unlocked=JSON.parse(this.one('SELECT unlocked FROM profiles WHERE id=?',id)?.unlocked||'[]')}catch{}
         if(!Array.isArray(unlocked))unlocked=[];
