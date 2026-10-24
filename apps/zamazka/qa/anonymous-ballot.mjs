@@ -123,12 +123,13 @@ assert.match(code,/rasterBallots:true/,'new online rooms request escrowed raster
 assert.match(code,/composeBallotRaster\(selected,mine,\{render:renderArtwork\}\)/);
 assert.match(code,/createAnonymousBallotPainter\(v\.ballotSprite,v\.selected\)/);
 assert.match(code,/view\.phase==='sealing'/,'client renders preparation room');
-assert(code.includes('fallbackWarning=v.rasterBallots&&v.spriteFallback'),
- 'clients must visibly disclose when raster anti-cheat falls back to legacy voting');
+assert(code.includes('skippedBallots'),
+ 'the review must identify unjudged works without revealing correct answers');
 const hub=readFileSync(new URL('../../../pocketnet/hub.mjs',import.meta.url),'utf8');
 assert(hub.includes("kind==='ballot'")&&hub.includes("kind==='ballot-assembly'"),'durable SQL hydration supports both raster stages');
 assert(hub.includes("'ballot_chunk'"),'transport permits bitmap chunks');
-// Fail-open only after a clearly visible, finite preparation deadline.
+// If no safe raster exists, do not display any ballot or leak candidate IDs.
+// End the unjudged round with no score changes and keep next-round navigation.
 const retry=mod.createRoom({player:people[0]}).state;
 mod.onJoin({state:retry,player:people[1],players:people});
 const attempt=(id,payload)=>mod.onMessage({state:retry,player:people.find(p=>p.id===id),players:people,payload});
@@ -138,9 +139,13 @@ attempt('a',{type:'submit',strokes:[]});
 attempt('b',{type:'submit',strokes:[]});
 assert.equal(retry.phase,'sealing');
 now=retry.deadline+1;attempt('a',{type:'pulse'});
-assert.equal(retry.phase,'voting');
-assert.equal(retry.spriteFallback,true);
-assert(attempt('b',{type:'sync'}).events[0].payload.candidate,'a failed image encoder cannot permanently strand the match');
+assert.equal(retry.phase,'round-review','no safe previews must skip jury, not disclose answers');
+assert.equal(retry.spriteFallback,false);
+const failed=attempt('b',{type:'sync'}).events[0].payload;
+assert.equal(failed.candidate,null,'a failed uploader never exposes current candidate metadata');
+assert.deepEqual(Array.from(failed.skippedBallots),['a','b']);
+assert.equal(retry.revealed,true,'skipped jury is final and cannot issue votes');
+assert(Object.values(retry.scores).every(s=>s.eye===0&&s.mask===0),'no player gains or loses points from an unjudged round');
 
 // Large room: all eight authors send independent rasters; no person's
 // actual assignment or unfinished vector artwork leaks in the ballot view.
