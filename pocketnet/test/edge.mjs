@@ -81,7 +81,7 @@ const secondToken = await session('Observer');
 assert.notEqual(firstToken, secondToken);
 const first = await channel(firstToken);
 const second = await channel(secondToken);
-let again,resumedHost,resumedGuest;
+let again,resumedHost,resumedGuest,replacement,replacementToken;
 try {
   assert.equal((await first.next('authenticated')).player.name, 'Гость · Painter');
   assert.equal((await second.next('authenticated')).player.name, 'Гость · Observer');
@@ -134,15 +134,22 @@ try {
   assert.equal(afterKick.event.payload.board.segments.length,0);
   second.send('game_message',{payload:{type:'sync'}});
   assert.equal((await second.next('error')).code,'not_in_room');
-  // Kick does not permanently ban the player: a new invite still works.
+  // The kicked account may not use the same invite again; a genuinely new
+  // participant may occupy the freed lobby seat before the match starts.
   second.send('join_room',{roomId:code});
-  assert.equal((await second.next('room_joined')).roomId,roomId);
+  assert.equal((await second.next('error')).code,'room_kicked');
+  replacementToken=await session('Replacement');
+  replacement=await channel(replacementToken);
+  await replacement.next('authenticated');
+  replacement.send('join_room',{roomId:code});
+  assert.equal((await replacement.next('room_joined')).roomId,roomId);
   first.send('game_message',{payload:{type:'start',rounds:1}});
 
   const started = await first.next('game_event', event => event.event?.type === 'state' && event.event.payload.phase === 'preview');
   assert.equal(started.event.payload.round, 1);
   await close(second);
-  again = await channel(secondToken);
+  await close(replacement);
+  again = await channel(replacementToken);
   await again.next('authenticated');
   again.send('join_room', { roomId });
   const restored = await again.next('room_joined');
@@ -170,7 +177,7 @@ try {
     phase:pausedSnapshot.event.payload.phase
    }));
   assert(pausedSnapshot.event.payload.pauseRemainingMs>=0,'server preserves remaining seconds');
-  resumedGuest=await channel(secondToken);
+  resumedGuest=await channel(replacementToken);
   await resumedGuest.next('authenticated');
   resumedGuest.send('join_room',{roomId});
   await resumedGuest.next('room_joined');
@@ -186,6 +193,7 @@ try {
 } finally {
   await close(first);
   await close(second);
+  if (replacement) await close(replacement);
   if (again) await close(again);
   if (resumedHost) await close(resumedHost);
   if (resumedGuest) await close(resumedGuest);
