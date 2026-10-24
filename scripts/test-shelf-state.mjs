@@ -112,5 +112,5 @@ assert.deepEqual(newTab.get().favorites, ['rivet'], 'guest shelf survives logout
 assert.equal(newTab.getStorageKey(),'pocket-works:shelf:v2');
 assert.equal(indexed.rows.get('personal-shelf:account:'+alice).data.favorites[0],'alice-game');
 assert.equal(indexed.rows.get('personal-shelf:account:'+bob).data.favorites[0],'bob-game');
-await assert.rejects(()=>newTab.setAccount('not-a-uuid'),TypeError);
+assert.throws(()=>newTab.setAccount('not-a-uuid'),TypeError);
 console.log('Shelf migration, redundant persistence, quota fallback, backup import/export, cross-tab convergence and account isolation passed.');
