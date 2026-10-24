@@ -485,7 +485,7 @@ function renderTimeline(){
  $('undo-btn').disabled=!editHistory.canUndo;
  $('redo-btn').disabled=!editHistory.canRedo;
  $('erase-btn').disabled=!picked;
- $('replace-clip-btn').disabled=!picked;
+ $('replace-clip-btn').disabled=!picked||!!record||!!preroll||!!micPending||!!pendingRecording;
  renderPlayhead();
 }
 function editClipResult(id,kind,delta,clips=localClips){
@@ -661,7 +661,7 @@ async function deleteClip(){
  setClips(localClips.filter(c=>c.id!==chosen.id));
  await draftWrite();cue('stop');
 }
-async function markReady(){cancelCountdown();if(record)finishRecording();if(pendingRecording)await pendingRecording;stopAllPlayback();if(!localClips.length)return toast('Запиши хотя бы один фрагмент.');if(!await draftWrite())return;if(mode==='solo'){beginPremiere();return}if(!state||state.phase!=='recording')return;sendGame({type:'ready',count:localClips.length});waitUI();cue('ready')}
+async function markReady(){if(micPending)return toast('Дождись ответа микрофона.');cancelCountdown();if(record)finishRecording();if(pendingRecording)await pendingRecording;stopAllPlayback();if(!localClips.length)return toast('Запиши хотя бы один фрагмент.');if(!await draftWrite())return;if(mode==='solo'){beginPremiere();return}if(!state||state.phase!=='recording')return;sendGame({type:'ready',count:localClips.length});waitUI();cue('ready')}
 function receivedCount(){return localClips.length+remoteClips.length}
 function expectedCount(){if(mode==='solo')return localClips.length;return Object.values(state?.counts||{}).reduce((a,b)=>a+(Number(b)||0),0)}
 function updatePremiereStatus(){const need=expectedCount(),got=receivedCount();$('premiere-loading').classList.toggle('hidden',got>=need);$('premiere-loading').textContent=got>=need?'':('Получаем дорожки · '+got+'/'+need);$('premiere-play').disabled=got<need;$('premiere-repeat').disabled=got<need}
@@ -710,14 +710,68 @@ $('room-players').onchange=async e=>{
 };
 $('room-start').onclick=()=>sendGame({type:'start'});
 $('play-toggle').onclick=playStage;
-$('record-btn').onclick=startRecord;
+$('record-btn').onclick=()=>startRecord(0);
+$('count-record-btn').onclick=()=>startRecord(3);
+$('replace-clip-btn').onclick=()=>{if(selectedClip)void startRecord(0,selectedClip)};
+$('timeline-zoom-in').onclick=()=>zoomTimeline(1);
+$('timeline-zoom-out').onclick=()=>zoomTimeline(-1);
 $('scrubber').oninput=e=>{if(record||preroll)return;setPlayhead(Number(e.target.value)/10)};
+$('clip-lane').onpointerdown=e=>{
+ if(e.button!==0||record||preroll||micPending||pendingRecording)return;
+ const button=e.target.closest('[data-clip]'),clip=localClips.find(c=>c.id===button?.dataset.clip);
+ if(!clip)return;
+ skipTimelineClick=false;
+ const edge=e.target.closest('[data-edge]')?.dataset.edge;
+ clipDrag={id:clip.id,kind:edge||'move',x:e.clientX,element:button,
+  originalStart:clip.start,originalEnd:clip.end,preview:null,moved:false};
+ selectedClip=clip.id;
+ button.setPointerCapture(e.pointerId);
+ e.preventDefault();
+};
+$('clip-lane').onpointermove=e=>{
+ const drag=clipDrag;if(!drag)return;
+ const distance=e.clientX-drag.x;
+ if(Math.abs(distance)<3&&!drag.moved)return;
+ drag.moved=true;
+ const w=Math.max(1,$('timeline-content').getBoundingClientRect().width);
+ const seconds=distance/w*scene.duration;
+ const edited=editClipResult(drag.id,drag.kind,seconds);
+ drag.preview=edited;
+ const c=edited?.find(x=>x.id===drag.id);
+ if(c){
+  drag.element.style.left=(c.start/scene.duration*100)+'%';
+  drag.element.style.width=((c.end-c.start)/scene.duration*100)+'%';
+  $('selected-clip-info').textContent=fmt(c.start)+' – '+fmt(c.end)+' · '+(drag.kind==='move'?'перемещение':'подрезка');
+ }
+ drag.element.classList.add('dragging');
+ e.preventDefault();
+};
+$('clip-lane').onpointerup=e=>{
+ const drag=clipDrag;if(!drag)return;
+ clipDrag=null;
+ if(drag.element.hasPointerCapture(e.pointerId))drag.element.releasePointerCapture(e.pointerId);
+ if(drag.moved){
+  skipTimelineClick=true;
+  if(!commitClipEdit(drag.preview,drag.id))renderTimeline();
+ }else{
+  const clip=localClips.find(c=>c.id===drag.id);
+  if(clip){
+   setPlayhead(clip.start);renderTimeline();
+   $('clip-lane').querySelector('[data-clip="'+clip.id+'"]')?.focus({preventScroll:true});
+  }
+ }
+};
+$('clip-lane').onpointercancel=e=>{
+ if(!clipDrag)return;
+ clipDrag=null;renderTimeline();
+};
 $('clip-lane').onclick=e=>{
  const b=e.target.closest('[data-clip]');if(!b||record||preroll)return;
+ if(skipTimelineClick){skipTimelineClick=false;return}
  const clip=localClips.find(c=>c.id===b.dataset.clip);if(!clip)return;
  const wasFocused=document.activeElement===b;
  selectedClip=clip.id;setPlayhead(clip.start);renderTimeline();
- if(wasFocused)[...$('clip-lane').querySelectorAll('[data-clip]')].find(el=>el.dataset.clip===clip.id)?.focus({preventScroll:true});
+ if(wasFocused)$('clip-lane').querySelector('[data-clip="'+clip.id+'"]')?.focus({preventScroll:true});
 };
 $('undo-btn').onclick=undoEdit;
 $('redo-btn').onclick=redoEdit;
@@ -739,7 +793,8 @@ $('premiere-repeat').onclick=()=>{pausePremiere();setPlayhead(0,true)};
 $('premiere-scrub').oninput=e=>{pausePremiere();setPlayhead(Number(e.target.value)/10,true)};
 $('premiere-back').onclick=()=>{pausePremiere();if(mode==='solo')openEditor();else if(meHost())sendGame({type:'again'});else toast('Новую сцену начинает ведущий.')};
 for(const b of document.querySelectorAll('[data-back]'))b.onclick=async()=>{const to=b.dataset.back;if(view==='wait'&&mode!=='solo'){sendGame({type:'unready'});await openEditor()}else if(to==='home'){if(await resetRuntime()){leaveNetwork();show('home')}}else if(to==='library'){videoExportController?.abort();clearExportPreview();library()}else if(to==='editor')await openEditor()};
-$('stage-video').ontimeupdate=()=>{if(!scene)return;const t=time($('stage-video'));if(t>=scene.duration-.05){if(record)finishRecording();else stopAllPlayback();seekVideo($('stage-video'),scene.duration-.04)}if(!record)updateClipSound(t,playing,false);renderPlayhead()};
+$('stage-video').ontimeupdate=()=>{if(!scene)return;const t=time($('stage-video'));if(record?.replaceId&&t>=record.limit-.035)finishRecording();
+else if(t>=scene.duration-.05){if(record)finishRecording();else stopAllPlayback();seekVideo($('stage-video'),scene.duration-.04)}if(!record)updateClipSound(t,playing,false);renderPlayhead()};
 $('premiere-video').ontimeupdate=()=>{if(!scene)return;const t=time($('premiere-video'));$('premiere-scrub').value=String(Math.round(t*10));if(t>=scene.duration-.04){pausePremiere();seekVideo($('premiere-video'),scene.duration-.04)}else updateClipSound(t,!$('premiere-video').paused,true)};
 $('stage-video').onpause=()=>{if(!record){playing=false;$('play-toggle').textContent='▶';updateClipSound(time($('stage-video')),false)}};
 document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelCountdown();if(record)finishRecording();stopAllPlayback();pausePremiere()}});
@@ -750,10 +805,15 @@ document.addEventListener('keydown',e=>{
    e.preventDefault();if(e.shiftKey)redoEdit();else undoEdit();
  }else if((e.ctrlKey||e.metaKey)&&e.code==='KeyY'){
    e.preventDefault();redoEdit();
+ }else if(selectedClip&&e.altKey&&['ArrowLeft','ArrowRight'].includes(e.key)){
+   e.preventDefault();
+   const kind=e.ctrlKey?'right':e.shiftKey?'left':'move';
+   const delta=(e.key==='ArrowRight'?1:-1)*0.1;
+   commitClipEdit(editClipResult(selectedClip,kind,delta),selectedClip);
  }else if(e.code==='Space'&&!e.repeat){
    e.preventDefault();playStage();
  }else if(e.code==='KeyR'&&!e.ctrlKey&&!e.metaKey&&!e.repeat){
-   e.preventDefault();startRecord();
+   e.preventDefault();startRecord(e.shiftKey?3:0);
  }else if(e.key==='Delete'||e.key==='Backspace'){
    if(selectedClip){e.preventDefault();void deleteClip()}
  }else if(e.key==='Escape'){
