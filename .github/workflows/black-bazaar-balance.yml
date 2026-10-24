@@ -9,6 +9,12 @@ on:
       - 'pocketnet/module-versions/black-bazaar/**'
       - 'pocketnet/modules.lock.json'
       - '.github/workflows/black-bazaar-balance.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/black-bazaar/**'
+      - 'pocketnet/module-versions/black-bazaar/**'
+      - '.github/workflows/black-bazaar-balance.yml'
   workflow_dispatch:
 
 permissions:
