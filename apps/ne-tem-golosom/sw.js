@@ -1,9 +1,9 @@
 const CACHE_PREFIX='ne-tem-golosom-';
-const CACHE='ne-tem-golosom-v1.1.0';
-const APP_VERSION='1.1.0';
-const RELEASE_DATE='2026-10-15';
-const RELEASE_NOTES=['Локальная видеомастерская: обрезка, качество и предпросмотр после обработки','До 96 МиБ видео для комнат и до 512 МиБ исходного файла','Фрагментарная озвучка и монтаж на киноленте; улучшенная кооперативная премьера','Фрагментарная запись на мобильных устройствах и компьютерах','PocketNet-комнаты, прямой обмен файлами, локальные черновики'];
-const OWN=['./','./index.html','./app.js','./media-lab.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/capabilities/net.js','../../shared/capabilities/identity.js'];
+const CACHE='ne-tem-golosom-v1.2.0';
+const APP_VERSION='1.2.0';
+const RELEASE_DATE='2026-10-24';
+const RELEASE_NOTES=['Визуальный выбор фрагмента на киноленте','Подготовка на ПК без лишней вертикальной прокрутки','Единая кнопка подтверждения и просмотр исходника и результата','Локальная видеомастерская: обрезка, качество и предпросмотр после обработки','До 96 МиБ видео для комнат и до 512 МиБ исходного файла','Фрагментарная озвучка и монтаж на киноленте; улучшенная кооперативная премьера','Фрагментарная запись на мобильных устройствах и компьютерах','PocketNet-комнаты, прямой обмен файлами, локальные черновики'];
+const OWN=['./','./index.html','./app.js','./media-lab.js','./trim-range.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/capabilities/net.js','../../shared/capabilities/identity.js'];
 const SCOPE=new URL('./',self.registration.scope);
 const URLS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 async function fetchCurrent(url){const u=new URL(url);u.searchParams.set('__pw_build',APP_VERSION);const r=await fetch(u.href,{cache:'no-store',credentials:'same-origin'});if(!r.ok)throw Error('HTTP '+r.status);return r}
