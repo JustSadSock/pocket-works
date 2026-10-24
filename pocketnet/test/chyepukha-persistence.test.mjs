@@ -29,6 +29,23 @@ test('legitimate lobby settings increment revision and must still persist',()=>{
  assert.equal(isReadOnlyChyepukhaUpdate(room,before,updated.state),false);
 });
 
+test('first submission persists, duplicate acknowledgement does not rewrite it',()=>{
+ const guest={id:'author-2',name:'Автор 2',verified:false};
+ const joined=game.onJoin({state:copy(created()),player:guest,players:[host,guest]}).state;
+ const started=game.onMessage({state:copy(joined),player:host,payload:{type:'start'}}).state;
+ assert.equal(started.phase,'writing');
+ const sheet=game.viewForPlayer({state:started,player:host,players:[host,guest]}).sheet;
+ const packet={type:'submit',requestId:'submission_123456',round:0,sheetId:sheet.id,
+  answer:'Кіт знайшов чарівну валізу біля старої школи',tailIndexes:[0,2,4],gender:'unspecified'};
+ const committed=game.onMessage({state:copy(started),player:host,payload:packet});
+ assert.equal(committed.state.revision,started.revision+1);
+ assert.equal(isReadOnlyChyepukhaUpdate(room,started,committed.state),false);
+ const retry=game.onMessage({state:copy(committed.state),player:host,payload:packet});
+ assert.equal(retry.state.revision,committed.state.revision);
+ assert.ok(retry.events.some(e=>e.type==='receipt'&&e.payload.accepted===true));
+ assert.equal(isReadOnlyChyepukhaUpdate(room,committed.state,retry.state),true);
+});
+
 test('never suppress writes for legacy versions, other games, or malformed revision',()=>{
  const a={revision:4},b={revision:4};
  assert.equal(isReadOnlyChyepukhaUpdate(room,a,b),true);
