@@ -196,6 +196,7 @@ export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoad
   panel.append(el('h2','','Выбери усиление'));
   panel.append(el('p','v2-copy',
    'Выбери один из трёх пакетов. Две обычные руны дают больше вариантов, одна редкая усиливает специализацию. Выбор подтвердит сервер.'));
+  const notice=el('p','v2-notice','Выбор подтверждается сервером.');notice.setAttribute('role','status');
   const list=el('div','v2-pack-list');
   for(const pack of offers){
    const item=el('div','v2-pack');
@@ -208,12 +209,12 @@ export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoad
    }
    const choose=btn('Забрать '+(names.length>1?'обе руны':'руну')+' ↗',()=>{
     choose.disabled=true;
-    if(!onServerPick(pack.index,stage)){choose.disabled=false;feedback('Не удалось отправить выбор. Попробуй снова.')}
+    if(!onServerPick(pack.index,stage)){choose.disabled=false;notice.textContent='Соединение недоступно. Повтори выбор после переподключения.'}
    },'v2-pack-choose');
    choose.disabled=names.length===0;
    item.append(choose);list.append(item);
   }
-  panel.append(list);
+  panel.append(list,notice);
   panel.append(btn('Покинуть комнату',()=>{
    if(window.confirm('Покинуть сетевую комнату?'))onClose();
   },'v2-exit'));
