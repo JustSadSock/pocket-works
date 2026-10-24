@@ -39,7 +39,7 @@ const mem=new Map(),session={
 let sound=true,audioContext=null,identity=null,name='Гость',mode='solo',view='home',selected=null,sourceBlob=null,scene=null;
 let relayQueue=Promise.resolve(),relayInbox=new Map();
 let videoExportController=null,videoExportBlob=null,videoExportUrl=null,trimRange=null,encodedCache=null;
-let premiereExportController=null,premiereResultUrl=null,premiereExportGeneration=0,premiereLocalCopy=null;
+let premiereExportController=null,premiereResultUrl=null,premiereExportGeneration=0,premiereLocalCopy=null,premiereExportNotice='';
 const qualityNames=['Экономное','Компактное','Сбалансированное','Высокое','Максимальное'];
 let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0,timelineZoom=1,clipDrag=null,skipTimelineClick=false,micPending=false;
 const roomsOrigin=location.origin+'/pocketnet';
@@ -738,7 +738,7 @@ function updatePremiereStatus(){
       ?'Исходное видео ещё не получено.'
       :premiereResultUrl
         ?'Файл готов. Можешь скачать его ещё раз.'
-        :'Сохраним изображение и '+got+' '+(got===1?'реплику':'реплик')+' в один файл. Обработка займёт примерно время сцены.';
+        :premiereExportNotice||('Сохраним изображение и '+got+' '+(got===1?'реплику':'реплик')+' в один файл. Обработка займёт примерно время сцены.');
 }
 function stopPremiereExport(clearResult=true){
  premiereExportGeneration++;
@@ -748,6 +748,8 @@ function stopPremiereExport(clearResult=true){
  if(clearResult)resetPremiereResult();
  $('premiere-export-progress').classList.add('hidden');
  $('premiere-export-bar').value=0;
+ $('premiere-film-audio').disabled=false;
+ $('premiere-local-file').disabled=false;
 }
 async function downloadPremiere(){
  if(premiereExportController)return;
@@ -757,7 +759,7 @@ async function downloadPremiere(){
  updateClipSound(time($('premiere-video')),false,true);
  stopAllPlayback();
  $('premiere-play').textContent='▶ Смотреть премьеру';
- resetPremiereResult();
+ resetPremiereResult();premiereExportNotice='';
  const generation=++premiereExportGeneration;
  const controller=new AbortController();
  premiereExportController=controller;
@@ -767,6 +769,7 @@ async function downloadPremiere(){
  $('premiere-export').textContent='Создаём файл…';
  $('premiere-play').disabled=true;$('premiere-repeat').disabled=true;
  $('premiere-export-cancel').disabled=false;
+ $('premiere-film-audio').disabled=true;$('premiere-local-file').disabled=true;
  status.textContent='Подготавливаем звук…';
  const audioClips=[...localClips,...remoteClips].map(c=>({
   id:c.id,start:c.start,end:c.end,offset:c.offset,owner:c.owner,blob:c.blob
@@ -808,9 +811,11 @@ async function downloadPremiere(){
  }catch(e){
   if(generation!==premiereExportGeneration)return;
   if(e?.name==='AbortError'){
-   status.textContent='Экспорт отменён. Все реплики сохранены.';
+   premiereExportNotice='Экспорт отменён. Все реплики сохранены.';
+   status.textContent=premiereExportNotice;
   }else{
-   status.textContent=e?.message||'Не удалось сохранить видео. Попробуй другой формат исходника.';
+   premiereExportNotice=e?.message||'Не удалось сохранить видео. Попробуй другой формат исходника.';
+   status.textContent=premiereExportNotice;
    if(!sceneCopy.custom&&/сервер|встроенного|исходного видео|запись кадров/i.test(status.textContent))
      $('premiere-local-fallback').classList.remove('hidden');
    toast(status.textContent);
@@ -818,13 +823,14 @@ async function downloadPremiere(){
  }finally{
   if(generation===premiereExportGeneration){
    premiereExportController=null;
+   $('premiere-film-audio').disabled=false;$('premiere-local-file').disabled=false;
    progress.classList.add('hidden');
    $('premiere-export').textContent='↓ Сохранить видео';
    updatePremiereStatus();
   }
  }
 }
-function beginPremiere(){stopPremiereExport();premiereLocalCopy=null;$('premiere-local-fallback').classList.add('hidden');stopAllPlayback();setVideoSources('premiere-video');$('premiere-video').muted=true;$('premiere-credits').innerHTML=(state?.players||[{id:'solo',name}]).map((p,i)=>'<span class="credit" style="border-left-color:'+colors[i%colors.length]+'">'+esc(p.name)+' · '+esc(state?.assignments?.[p.id]||'Все роли')+'</span>').join('')+(scene.custom?'':'<span class="credit">© '+(scene.id.startsWith('bunny')?'Blender Foundation · CC BY 3.0':'Blender Studio · CC BY 4.0')+' · Голоса изменены</span>');$('premiere-scrub').max=String(Math.round(scene.duration*10));$('premiere-scrub').value='0';show('premiere');seekVideo($('premiere-video'),0);updatePremiereStatus();sendAllOwn()}
+function beginPremiere(){stopPremiereExport();premiereExportNotice='';premiereLocalCopy=null;$('premiere-local-fallback').classList.add('hidden');stopAllPlayback();setVideoSources('premiere-video');$('premiere-video').muted=true;$('premiere-credits').innerHTML=(state?.players||[{id:'solo',name}]).map((p,i)=>'<span class="credit" style="border-left-color:'+colors[i%colors.length]+'">'+esc(p.name)+' · '+esc(state?.assignments?.[p.id]||'Все роли')+'</span>').join('')+(scene.custom?'':'<span class="credit">© '+(scene.id.startsWith('bunny')?'Blender Foundation · CC BY 3.0':'Blender Studio · CC BY 4.0')+' · Голоса изменены</span>');$('premiere-scrub').max=String(Math.round(scene.duration*10));$('premiere-scrub').value='0';show('premiere');seekVideo($('premiere-video'),0);updatePremiereStatus();sendAllOwn()}
 function pausePremiere(){const v=$('premiere-video');v.pause();updateClipSound(time(v),false,true);$('premiere-play').textContent='▶ Смотреть премьеру'}
 async function playPremiere(){if(receivedCount()<expectedCount())return;const v=$('premiere-video');if(!v.paused){pausePremiere();return}if(time(v)>=scene.duration-.08)seekVideo(v,0);try{updateClipSound(time(v),true,true);await v.play();$('premiere-play').textContent='Ⅱ Пауза'}catch{toast('Нажми ещё раз для запуска со звуком.')}}
 
@@ -951,7 +957,7 @@ $('unready-btn').onclick=()=>{sendGame({type:'unready'});openEditor()};
 $('premiere-play').onclick=playPremiere;
 $('premiere-export').onclick=downloadPremiere;
 $('premiere-export-cancel').onclick=()=>premiereExportController?.abort();
-$('premiere-film-audio').onchange=()=>{resetPremiereResult();updatePremiereStatus()};
+$('premiere-film-audio').onchange=()=>{premiereExportNotice='';resetPremiereResult();updatePremiereStatus()};
 $('premiere-local-file').onchange=async e=>{
  const file=e.target.files?.[0];e.target.value='';
  if(!file||!scene||view!=='premiere'||premiereExportController)return;
@@ -972,6 +978,7 @@ $('premiere-local-file').onchange=async e=>{
   if(!duration||duration+.15<scene.start+scene.duration)
    return toast('В этом файле нет всей выбранной сцены.');
   premiereLocalCopy=file;
+  premiereExportNotice='Локальная копия фильма выбрана. Теперь можно повторить сохранение.';
   resetPremiereResult();
   $('premiere-local-fallback').classList.add('hidden');
   $('premiere-export-status').textContent='Локальная копия готова. Сохрани видео с общими голосами.';
