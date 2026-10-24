@@ -982,3 +982,18 @@ main.app-shell:has(.play-screen) #app>.play-screen{height:100%;max-height:100%;m
  .entry-form input{min-height:40px;padding:6px 9px}
  .entry-form button{min-height:43px;padding:6px 10px}
 }
+
+/* Real launcher header: the back control stays 40px, the title truncates
+   gracefully, and the workshop button remains reachable at 320px. */
+@media(max-width:390px){
+ header{gap:4px;min-width:0}
+ header .header-back{
+  flex:0 0 40px;display:grid;place-items:center;min-width:40px;height:40px;
+  padding:0;font-size:0;line-height:1;
+ }
+ header .header-back:before{content:"←";font-size:19px}
+ header .header-title{flex:1 1 auto;min-width:0;gap:4px;justify-content:center}
+ header .header-title strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(12px,3.8vw,15px)}
+ header .header-title img{flex:none;width:23px;height:23px}
+ header .workshop-button{flex:0 0 39px}
+}
