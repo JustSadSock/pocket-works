@@ -2,13 +2,14 @@ import {defineConfig,devices} from '@playwright/test';
 
 export default defineConfig({
  testDir:'./qa',
+ outputDir:process.cwd()+'/test-results/chyepukha',
  testMatch:/\.spec\.ts$/,
  fullyParallel:false,
  timeout:45_000,
  expect:{timeout:7_000},
  retries:process.env.CI?1:0,
  workers:process.env.CI?1:undefined,
- reporter:process.env.CI?[['line'],['html',{outputFolder:'playwright-report/chyepukha',open:'never'}]]:[['list']],
+ reporter:process.env.CI?[['line'],['html',{outputFolder:process.cwd()+'/playwright-report/chyepukha',open:'never'}]]:[['list']],
  use:{
   baseURL:'http://127.0.0.1:4174',
   serviceWorkers:'block',
