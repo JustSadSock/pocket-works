@@ -139,4 +139,39 @@ now=retry.deadline+1;attempt('a',{type:'pulse'});
 assert.equal(retry.phase,'voting');
 assert.equal(retry.spriteFallback,true);
 assert(attempt('b',{type:'sync'}).events[0].payload.candidate,'a failed image encoder cannot permanently strand the match');
+
+// Large room: all eight authors send independent rasters; no person's
+// actual assignment or unfinished vector artwork leaks in the ballot view.
+{
+ let clock=1_000_000;
+ class Clock8 extends Date{static now(){return clock}}
+ const ex={};runInNewContext(js,{exports:ex,Date:Clock8,Math,Array,Number,Object,Error,JSON,Set,Map,console});
+ const game8=ex.default;
+ const people8=Array.from({length:8},(_,n)=>({id:'seat-'+n,name:'Painter '+n}));
+ const room=game8.createRoom({player:people8[0]}).state;
+ for(const p of people8.slice(1))game8.onJoin({state:room,player:p,players:people8});
+ const send8=(p,msg)=>game8.onMessage({state:room,player:p,players:people8,payload:msg});
+ send8(people8[0],{type:'start',rounds:1,rasterBallots:true});
+ clock=room.deadline+1;send8(people8[0],{type:'pulse'});
+ for(const p of people8)send8(p,{type:'submit',strokes:[]});
+ assert.equal(room.phase,'sealing');
+ for(const p of people8.slice(0,-1))for(const chunk of packets)send8(p,chunk);
+ assert.equal(room.phase,'sealing');
+ for(const chunk of packets)send8(people8.at(-1),chunk);
+ assert.equal(room.phase,'voting');
+ for(const p of people8){
+  const visible=send8(p,{type:'sync'}).events[0].payload;
+  assert.equal(visible.candidate,null);
+  assert.equal(visible.ballotSprite,sample);
+  assert.equal(visible.ballotReady.length,8);
+  assert.equal(visible.gallery,null);
+  assert.equal(visible.spriteFallback,false);
+ }
+ const owner=people8[0];
+ for(const p of people8.slice(1)){
+  send8(p,{type:'vote',chips:[1,0,0,0,0],round:room.round,turn:room.turn,targetId:owner.id});
+ }
+ assert.equal(room.phase,'verdict','eight-seat anonymous vote completes normally');
+ assert(Array.isArray(room.assignments[owner.id].strokes),'server preserves authentic vector work for scoring');
+}
 console.log('ZAMAZKA raster ballot: WebP contract, five-surface sprite, private escrow, chunk replay, atomic activation and timeout recovery OK');
