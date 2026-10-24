@@ -995,7 +995,7 @@ function renderView(){
  const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
   if(page==='waiting'&&['drawing','sealing'].includes(view.phase)&&key===lastUiKey){
-   updateWaiting(screen,view.done||[],view.participants||[]);
+   updateWaiting(screen,view.phase==='sealing'?(view.ballotReady||[]):(view.done||[]),view.participants||[]);
    return;
  }
  if(page==='preparing'&&view.phase==='preparing'&&key===lastUiKey){
