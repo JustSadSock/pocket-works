@@ -3919,6 +3919,28 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 window.addEventListener('pagehide',()=>window.uiManager?.saveSoloCheckpoint(true));
+// Opening the collection must not allow solo/local pieces to fall behind the modal.
+window.addEventListener('blockies:awards-visibility',event=>{
+    const ui=window.uiManager;
+    if(!ui)return;
+    if(event.detail?.visible){
+        ui.awardsPausedLocal=!ui.isOnlineMode&&!gameState.isPaused&&!gameState.isGameOver&&
+            ui.screens.gameScreen.classList.contains('active');
+        if(ui.awardsPausedLocal){
+            ui.releaseTouchControls?.();
+            for(const states of gameState.inputStates.values())for(const state of Object.values(states)){
+                state.active=false;state.heldTime=0;state.hasFiredInitial=false;
+            }
+            ui.saveSoloCheckpoint(true);
+            gameState.isPaused=true;
+        }
+    }else if(ui.awardsPausedLocal){
+        ui.awardsPausedLocal=false;
+        if(!ui.isOnlineMode&&!gameState.isGameOver&&ui.screens.gameScreen.classList.contains('active')){
+            gameState.lastTime=performance.now();gameState.isPaused=false;
+        }
+    }
+});
 window.render_game_to_text=()=>JSON.stringify({coordinates:'cells, x right, y down, top-left origin',online:!!window.uiManager?.isOnlineMode,paused:gameState.isPaused,gameOver:gameState.isGameOver,board:gameState.board,score:gameState.sharedStats,players:gameState.players.map(p=>({id:p.id,position:p.position,piece:p.currentPiece,next:p.nextPiece,gameOver:p.gameOver}))});
 window.advanceTime=ms=>{if(window.uiManager&&!gameState.isPaused&&!window.uiManager.isOnlineMode){for(let t=0;t<ms;t+=16.667)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(16.667,ms-t));window.uiManager.drawBoard();}};
 
