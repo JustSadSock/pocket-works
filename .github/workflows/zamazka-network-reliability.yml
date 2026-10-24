@@ -16,6 +16,8 @@ on:
       - 'apps/zamazka/qa/vote-uniform-rendering.mjs'
       - 'apps/zamazka/qa/vote-aspect-fairness.mjs'
       - 'apps/zamazka/ballot-raster.js'
+      - 'apps/zamazka/ballot-webp.js'
+      - 'apps/zamazka/qa/webp-container.mjs'
       - 'apps/zamazka/ballot-sprite-view.js'
       - 'apps/zamazka/ballot-audit.js'
       - 'apps/zamazka/qa/ballot-audit.mjs'
@@ -109,6 +111,8 @@ jobs:
         run: node apps/zamazka/qa/vote-uniform-rendering.mjs && node apps/zamazka/qa/vote-aspect-fairness.mjs
       - name: Verify server-scored anonymous five-artwork raster ballots
         run: node apps/zamazka/qa/anonymous-ballot.mjs
+      - name: Reject corrupted and animated ballot WebP containers
+        run: node apps/zamazka/qa/webp-container.mjs
       - name: Audit disclosed WebP pixels on independent spectator clients
         run: node apps/zamazka/qa/ballot-audit.mjs
       - name: Prevent stale fill raster after stroke compaction
@@ -141,6 +145,7 @@ jobs:
         run: |
           node --check apps/zamazka/app.js
           node --check apps/zamazka/ballot-raster.js
+          node --check apps/zamazka/ballot-webp.js
           node --check apps/zamazka/ballot-sprite-view.js
           node --check apps/zamazka/ballot-audit.js
           node --check apps/zamazka/draft-transfer.js
