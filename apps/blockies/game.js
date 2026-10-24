@@ -2002,6 +2002,11 @@ class UIManager {
 
         preview.appendChild(header);
         preview.appendChild(status);
+        const impact=document.createElement('span');
+        impact.className='preview-impact';
+        impact.id=`impact-${player.id}`;
+        impact.hidden=true;
+        preview.appendChild(impact);
         container.appendChild(preview);
     }
 
@@ -2252,6 +2257,19 @@ class UIManager {
     }
 
     updatePlayerInfo(player) {
+        if(gameState.numPlayers>1){
+            const impact=document.getElementById(`impact-${player.id}`);
+            if(impact){
+                const contribution=gameState.sharedStats.contributions?.[player.id];
+                impact.hidden=!contribution;
+                if(contribution){
+                    const description=currentLanguage==='ru'
+                        ?`Линий: ${contribution.linesHelped} · клеток: ${contribution.cellsCleared}`
+                        :`Lines helped: ${contribution.linesHelped} · cells: ${contribution.cellsCleared}`;
+                    if(impact.textContent!==description)impact.textContent=description;
+                }
+            }
+        }
         const isTouchOwner=this.isOnlineMode?player.id===this.localPlayerIndex:player.id===this.touchPlayerIndex;
         if(isTouchOwner){
             const holdButton=this.touchControls?.querySelector('[data-action="hold"]');
@@ -2925,6 +2943,15 @@ class UIManager {
             status.className='result-player__status';
             status.textContent=player.gameOver?(ru?'Выбыл':'Out'):(ru?'На поле':'Playing');
             entry.append(swatch,name,status);
+            const contribution=gameState.sharedStats.contributions?.[player.id];
+            if(isCoop&&contribution){
+                const summary=document.createElement('span');
+                summary.className='result-player__impact';
+                summary.textContent=ru
+                    ?`Вклад: ${contribution.linesHelped} лин. · ${contribution.cellsCleared} кл. · завершил ${contribution.finishes} · вернулся ${contribution.returns}`
+                    :`Helped: ${contribution.linesHelped} lines · ${contribution.cellsCleared} cells · completed ${contribution.finishes} · returned ${contribution.returns}`;
+                entry.append(summary);
+            }
             team.append(entry);
         }
         details.append(team);
