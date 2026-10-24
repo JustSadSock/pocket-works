@@ -25,7 +25,8 @@
         "tests/release-v7.test.mjs",
         "tests/reconnect-endurance.test.mjs",
         "tests/v7-preview.test.mjs",
-        "tests/story-stage4-v8.test.mjs"
+        "tests/story-stage4-v8.test.mjs",
+        "tests/finale-v9.test.mjs"
       ]
     },
     {
@@ -42,7 +43,8 @@
         "qa/room-safety-v5.spec.ts",
         "qa/moderation-v6.spec.ts",
         "qa/v7-critical.spec.ts",
-        "qa/story-v8.spec.ts"
+        "qa/story-v8.spec.ts",
+        "qa/finale-v9.spec.ts"
       ]
     }
   ]

@@ -11,6 +11,7 @@ import {updateWaitingView} from './waiting-sync.js';
 import {mayShowFinaleIntro} from './finale-state.js';
 import {finaleCurtain} from './finale-intro.js';
 import {renderWriting} from './writing-view.js';
+import {chapterReader,reactionBar,clampPage,nextPage,previousPage} from './reader-reveal.js';
 import {screenSignature,transitionFor} from './editor-motion.js';
 import {handoffCount,handoffWords,hasMinimumDraft} from './writer-flow.js';
 import {readEditions,writeEditions,addFinishedEdition,removeEdition,storyText} from './story-library.js';
@@ -34,7 +35,7 @@ const GENDERS=[['male','Чоловік'],['female','Жінка'],['nonbinary','�
 let net=null,view=null,me='',room='',roomVersion='v4',connected=false,connecting=false,notice='';
 let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',modal='',effectsEnabled=read('sound','off')==='on',musicEnabled=read('music','off')==='on',effectsVolume=Number(read('effectsVolume','.45')),musicVolume=Number(read('musicVolume','.22'));
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
-let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',comicSource=null;
+let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',readerPage=0,comicSource=null;
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='';
 let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false,joinSeatCode='',kickTarget='',skipTarget='',seatDecisionTarget='',kickFollowUpTarget='',transferTarget='',moderationTimer=null;
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
@@ -81,14 +82,14 @@ function savePending(record){if(IS_PREVIEW)return true;try{localStorage.setItem(
 function discardPending(){if(IS_PREVIEW)return;try{localStorage.removeItem(pendingStorageKey())}catch{}}
 function acknowledgeReceipt(receipt){
  const p=readPending();
- if(!['v5','v6','v7','v8'].includes(roomVersion)||!isSafeReceipt(receipt,p))return false;
+ if(!['v5','v6','v7','v8','v9'].includes(roomVersion)||!isSafeReceipt(receipt,p))return false;
  try{localStorage.removeItem(p.draftStorageKey);localStorage.removeItem(p.draftStorageKey+':editor');localStorage.removeItem(pendingStorageKey())}catch{}
  delete draftSelections[p.draftStorageKey];
  return true;
 }
 function retryPending(){
  const p=readPending();
- if(!['v5','v6','v7','v8'].includes(roomVersion)||!p||!canRetry(p,view)||!connected||!net?.roomId)return false;
+ if(!['v5','v6','v7','v8','v9'].includes(roomVersion)||!p||!canRetry(p,view)||!connected||!net?.roomId)return false;
  return send(outgoingPacket(p));
 }
 const clearDraft=()=>{if(IS_PREVIEW){previewDraft='';previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};return}try{localStorage.removeItem(draftKey());localStorage.removeItem(writerMetaKey())}catch{}};
@@ -180,6 +181,16 @@ function demoSend(payload){
  if(!connected){toast('Тестовий стан: PocketNet офлайн.');return false}
  if(!view)return false;
  if(payload.type==='sync')return true;
+ if(payload.type==='react_story'&&view.phase==='finished'&&roomVersion==='v9'){
+  const id=payload.storyId,reaction=payload.reaction;
+  if(!view.stories?.some(x=>x.id===id)||!['laugh','surprised','heart'].includes(reaction))return false;
+  const old=view.myReactions?.[id]||'',next=old===reaction?'':reaction;
+  const totals={...(view.reactionTotals?.[id]||{laugh:0,surprised:0,heart:0})};
+  if(old)totals[old]=Math.max(0,Number(totals[old]||0)-1);
+  if(next)totals[next]=Number(totals[next]||0)+1;
+  view={...view,revision:view.revision+1,reactionTotals:{...view.reactionTotals,[id]:totals},myReactions:{...view.myReactions,[id]:next}};
+  render();return true;
+ }
  if(['kick','open_seat','close_seat','skip_slot','vote_host','transfer_host','pause','unpause'].includes(payload.type)){
   const target=view.players.find(p=>p.id===payload.seatId);
   if(payload.type==='kick'&&target&&view.host===me){
@@ -249,11 +260,11 @@ async function connect(how,settings){
   c.on('room_joined',v=>{
    if(net!==c)return;
    clearRoomTimeout();
-   if(v.gameId!=='chyepukha'||!['v1','v2','v3','v4','v5','v6','v7','v8'].includes(v.version)||v.state?.protocol!==1){
+   if(v.gameId!=='chyepukha'||!['v1','v2','v3','v4','v5','v6','v7','v8','v9'].includes(v.version)||v.state?.protocol!==1){
     notice='Несумісна версія кімнати. Створи нову.';try{c.leaveRoom()}catch{}
     room='';view=null;render();return;
    }
-   room=v.roomId;roomVersion=v.version;roomJoinedOnSocket=true;syncUrl();apply(v.state);if(scene.querySelector('.reconnect-banner'))render();if(['v5','v6','v7','v8'].includes(roomVersion))retryPending();
+   room=v.roomId;roomVersion=v.version;roomJoinedOnSocket=true;syncUrl();apply(v.state);if(scene.querySelector('.reconnect-banner'))render();if(['v5','v6','v7','v8','v9'].includes(roomVersion))retryPending();
   });
   c.on('game_event',v=>{if(net!==c)return;if(v.event?.type==='state'){
     const state=v.event.payload;
@@ -267,9 +278,9 @@ async function connect(how,settings){
     apply(state);
    }
    else if(v.event?.type==='receipt')acknowledgeReceipt(v.event.payload);
-   else if(v.event?.type==='submission_rejected'){if(['v5','v6','v7','v8'].includes(roomVersion)&&readPending()?.requestId===v.event.payload?.requestId){discardPending();render()}toast(v.event.payload?.reason||'Відповідь не прийнято.')}
+   else if(v.event?.type==='submission_rejected'){if(['v5','v6','v7','v8','v9'].includes(roomVersion)&&readPending()?.requestId===v.event.payload?.requestId){discardPending();render()}toast(v.event.payload?.reason||'Відповідь не прийнято.')}
    else if(v.event?.type==='notice')toast(v.event.payload)});
-  c.on('presence',()=>{if(net===c&&room&&connected&&!['v6','v7','v8'].includes(roomVersion))send({type:'sync'})});
+  c.on('presence',()=>{if(net===c&&room&&connected&&!['v6','v7','v8','v9'].includes(roomVersion))send({type:'sync'})});
   c.on('disconnected',()=>{if(net!==c)return;roomJoinedOnSocket=false;connected=false;connecting=true;netStatus();if(view)render()});
   c.on('room_kicked',()=>{if(net!==c)return;room='';view=null;modal='';connected=false;connecting=false;notice='Ведучий закрив доступ до кімнати або твоє місце передано іншому автору.';syncUrl();render()});
   c.on('room_closed',()=>{if(net!==c)return;room='';view=null;connected=false;connecting=false;syncUrl();notice='Кімнату закрито.';render()});
@@ -307,12 +318,12 @@ async function connect(how,settings){
 function apply(v){if(!v||v.protocol!==1||!Array.isArray(v.players))return;
  if(view&&v.revision<view.revision)return;
  if(v.phase==='finished'&&Array.isArray(v.stories))v={...v,stories:v.stories.map(st=>({...st,text:st.fragments.map(f=>f.answer).join('\n\n')}))};
- if(['v5','v6','v7','v8'].includes(roomVersion))acknowledgeReceipt(v.lastReceipt);
+ if(['v5','v6','v7','v8','v9'].includes(roomVersion))acknowledgeReceipt(v.lastReceipt);
   const prev=view;const waitingSame=prev?.phase==='writing'&&v.phase==='writing'&&prev.waiting&&v.waiting&&prev.round===v.round&&prev.paused===v.paused&&prev.host===v.host&&!modal;
  if(mayShowFinaleIntro(prev?.phase,v.phase,Array.isArray(v.stories)&&v.stories.length>0)&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)finaleIntroActive=true;
  const same=prev?.phase==='writing'&&v.phase==='writing'&&!prev.waiting&&!v.waiting&&prev.round===v.round&&prev.sheet?.id===v.sheet?.id&&prev.host===v.host&&prev.paused===v.paused&&!modal;
- if(prev?.phase==='writing'&&!prev.waiting&&v.waiting&&!['v5','v6','v7','v8'].includes(roomVersion))clearDraft();
- view=v;soundscape.setScene(v.phase==='lobby'?'lobby':v.phase==='writing'?'writing':'finished');if(prev?.phase!==v.phase&&v.phase==='finished')soundscape.fx('reveal');if(v.phase==='finished')keepFinished(v);if(prev?.round!==v.round&&prev?.phase==='writing')tick(690);
+ if(prev?.phase==='writing'&&!prev.waiting&&v.waiting&&!['v5','v6','v7','v8','v9'].includes(roomVersion))clearDraft();
+ view=v;soundscape.setScene(v.phase==='lobby'?'lobby':v.phase==='writing'?'writing':'finished');if(prev?.phase!==v.phase&&v.phase==='finished'){readerMode=roomVersion==='v9'?'pages':'full';readerPage=0;soundscape.fx('reveal')}if(v.phase==='finished')keepFinished(v);if(prev?.round!==v.round&&prev?.phase==='writing')tick(690);
  if(waitingSame&&updateWaitingView(scene.querySelector('.dispatch-room'),prev,v,{sound:type=>soundscape.fx(type)}))return;
  if(same){const el=$('sideRoster');if(el)el.innerHTML=rosterCompact();const progress=$('turnProgress');if(progress){const next=document.createElement('div');next.innerHTML=turnProgress();progress.replaceWith(next.firstElementChild)}return}
  render();
@@ -345,14 +356,14 @@ function turnProgress(){
  return '<div class="turn-progress" id="turnProgress" aria-label="Готові фрагменти: '+ready+' із '+total+'"><div class="turn-progress-count"><strong>'+ready+' / '+total+'</strong><span>готово</span></div><div class="turn-progress-authors">'+view.players.map(p=>'<span class="turn-progress-author '+(p.submitted?'is-ready':'')+'" title="'+escape(p.name)+' — '+(p.submitted?'готово':'пише')+'"><i aria-hidden="true">'+(p.submitted?'✓':'·')+'</i><span>'+escape(p.name)+'</span></span>').join('')+'</div></div>';
 }
 function lobby(){const host=view.host===me,s=view.settings;return '<div class="room"><section class="paper"><div class="eyebrow">ЗБІР АВТОРІВ</div><h2>Чекаємо на хаос</h2><div class="mini">Код кімнати</div><div class="code">'+room.slice(0,8).toUpperCase()+'</div><div class="button-row"><button class="button outline small" data-act="copy-code">Копіювати код</button><button class="button outline small" data-act="copy-link">Посилання друзям</button></div><div class="roster">'+roster()+'</div>'+(member()?'<button type="button" class="invite-people" data-act="invite-social" data-social-invite>Запросити друзів із Pocket ID <span>↗</span></button>':'')+'<p class="mini">'+view.players.length+'/'+s.maxPlayers+' учасників. '+(view.players.length===s.maxPlayers?'Усі місця заповнено.':'Почати можна від двох авторів.')+'</p>'+(host?'<button class="button" data-act="start" '+(view.players.length<2?'disabled':'')+'>Почати писати <span>→</span></button>':'<p class="mini">Ведучий почне, коли всі зберуться.</p>')+(view.message?'<p class="warning">'+escape(view.message)+'</p>':'')+'<button class="leave" data-act="leave">Залишити кімнату</button></section><aside class="room-aside"><div class="eyebrow">ПРАВИЛА РЕДАКЦІЇ</div><h3>Аркуші підуть по колу</h3><p class="lobby-hint">У кожному раунді ти пишеш свою частину. Наступний автор побачить лише кілька обраних тобою слів. У фіналі історії відкриються повністю.</p>'+(host?settingsForm(s):'<p class="mini">Жанр і питання визначає ведучий. Ніхто не бачить приховані фрагменти.</p>')+'</aside></div>'}
-function writing(){return renderWriting({view,roomVersion,draft:loadDraft(),meta:readWriterMeta(),chosen:indices(),pending:['v5','v6','v7','v8'].includes(roomVersion)&&Boolean(readPending()),escape,rosterCompact,turnProgress,genres:GENRE_TONES,genders:GENDERS})}
+function writing(){return renderWriting({view,roomVersion,draft:loadDraft(),meta:readWriterMeta(),chosen:indices(),pending:['v5','v6','v7','v8','v9'].includes(roomVersion)&&Boolean(readPending()),escape,rosterCompact,turnProgress,genres:GENRE_TONES,genders:GENDERS})}
 function waiting(){return renderWaiting({players:view?.players||[],myId:me,escape,round:view?.round||0,totalRounds:view?.total||0})}
 function results(){
  if(!view.stories?.length)return waiting();
  const st=view.stories.find(s=>s.id===storyId)||view.stories[0];storyId=st.id;const pos=view.stories.findIndex(x=>x.id===st.id);
  const nav='<nav class="chapters"><h3>Рукописи</h3>'+view.stories.map((s,i)=>'<button class="chapter '+(s.id===st.id?'active':'')+'" data-act="story" data-id="'+escape(s.id)+'"><small>ІСТОРІЯ '+String(i+1).padStart(2,'0')+'</small>'+escape(s.starter)+'</button>').join('')+'</nav>';
- const body=readerMode==='parts'?'<div class="reader-parts">'+st.fragments.map((f,i)=>'<section class="reader-fragment"><div class="reader-fragment-meta">РОЗДІЛ '+String(i+1).padStart(2,'0')+' · '+escape(f.author)+'</div><h3>'+escape(f.question)+'</h3><p>'+escape(f.answer)+'</p></section>').join('')+'</div>':'<div class="story-text reader-prose selectable-content">'+escape(st.text)+'</div>';
- return '<div class="results reader-layout">'+nav+'<article class="paper story-paper"><div class="progress"><span class="eyebrow">ФІНАЛЬНЕ РОЗКРИТТЯ</span><span class="stamp">ГОТОВО</span></div><div class="reader-top"><div><div class="story-pager" aria-label="Перемикання історій"><button type="button" data-act="prev-story" aria-label="Попередня історія">←</button><strong>Історія '+(pos+1)+' / '+view.stories.length+'</strong><button type="button" data-act="next-story" aria-label="Наступна історія">→</button></div><h2>Історія '+escape(st.starter)+'</h2><p class="mini">'+escape(st.setLabel)+' · '+escape(st.genre)+'</p></div><div class="reader-switch" role="group" aria-label="Режим читання"><button type="button" data-act="reader-full" aria-pressed="'+(readerMode==='full')+'" class="'+(readerMode==='full'?'active':'')+'">Текст</button><button type="button" data-act="reader-parts" aria-pressed="'+(readerMode==='parts')+'" class="'+(readerMode==='parts'?'active':'')+'">Автори</button></div></div><div class="content reader-scroll" tabindex="0" aria-label="Текст історії">'+body+'</div><div class="button-row reader-actions"><button class="button outline small" data-act="copy-story">Копіювати текст</button><button class="button small" data-act="comic">Комікс через ChatGPT ↗</button></div><div class="reader-footer">'+(view.host===me?'<button class="leave" data-act="again">Нова партія</button>':'<span class="mini">Ведучий може запустити нову партію.</span>')+'<button class="leave" data-act="leave">Вийти до меню</button></div></article></div>'+(finaleIntroActive?finaleCurtain({count:view.stories.length}):'');
+ const body=readerMode==='pages'?chapterReader(st,readerPage,escape):readerMode==='parts'?'<div class="reader-parts">'+st.fragments.map((f,i)=>'<section class="reader-fragment"><div class="reader-fragment-meta">РОЗДІЛ '+String(i+1).padStart(2,'0')+' · '+escape(f.author)+'</div><h3>'+escape(f.question)+'</h3><p>'+escape(f.answer)+'</p></section>').join('')+'</div>':'<div class="story-text reader-prose selectable-content">'+escape(st.text)+'</div>';
+ return '<div class="results reader-layout">'+nav+'<article class="paper story-paper"><div class="progress"><span class="eyebrow">ФІНАЛЬНЕ РОЗКРИТТЯ</span><span class="stamp">ГОТОВО</span></div><div class="reader-top"><div><div class="story-pager" aria-label="Перемикання історій"><button type="button" data-act="prev-story" aria-label="Попередня історія">←</button><strong>Історія '+(pos+1)+' / '+view.stories.length+'</strong><button type="button" data-act="next-story" aria-label="Наступна історія">→</button></div><h2>Історія '+escape(st.starter)+'</h2><p class="mini">'+escape(st.setLabel)+' · '+escape(st.genre)+'</p></div><div class="reader-switch" role="group" aria-label="Режим читання">'+(roomVersion==='v9'?'<button type="button" data-act="reader-pages" aria-pressed="'+(readerMode==='pages')+'" class="'+(readerMode==='pages'?'active':'')+'">Аркуші</button>':'')+'<button type="button" data-act="reader-full" aria-pressed="'+(readerMode==='full')+'" class="'+(readerMode==='full'?'active':'')+'">Текст</button><button type="button" data-act="reader-parts" aria-pressed="'+(readerMode==='parts')+'" class="'+(readerMode==='parts'?'active':'')+'">Автори</button></div></div><div class="content reader-scroll" tabindex="0" aria-label="Текст історії">'+body+'</div>'+reactionBar({storyId:st.id,view,version:roomVersion,escape,connected:IS_PREVIEW||(connected&&roomJoinedOnSocket)})+'<div class="button-row reader-actions"><button class="button outline small" data-act="copy-story">Копіювати текст</button><button class="button small" data-act="comic">Комікс через ChatGPT ↗</button></div><div class="reader-footer">'+(view.host===me?'<button class="leave" data-act="again">Нова партія</button>':'<span class="mini">Ведучий може запустити нову партію.</span>')+'<button class="leave" data-act="leave">Вийти до меню</button></div></article></div>'+(finaleIntroActive?finaleCurtain({count:view.stories.length}):'');
 }
 function overlay(){
  if(modal==='moderation')return controlsDialog(view,me,escape);
@@ -362,7 +373,7 @@ function overlay(){
   if(modal==='transfer-confirm')return transferHostDialog(view?.players?.find(p=>p.id===transferTarget),escape);
  if(modal==='archive-delete')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Видалити видання"><section class="comic-inner"><div class="eyebrow">ПІДТВЕРДИТИ ВИДАЛЕННЯ</div><h3>Видалити це видання?</h3><p class="mini">Усі рукописи цього випуску буде видалено лише з цього пристрою. Дію не можна скасувати.</p><div class="button-row"><button class="button outline" type="button" data-act="cancel">Залишити</button><button class="button" type="button" data-act="archive-confirm-delete">Видалити</button></div></section></div>';
  if(modal==='leave'){
-   const live=['v5','v6','v7','v8'].includes(roomVersion)&&view?.phase==='writing';
+   const live=['v5','v6','v7','v8','v9'].includes(roomVersion)&&view?.phase==='writing';
    if(live)return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Вихід із кімнати"><section class="comic-inner safe-room-exit"><div class="eyebrow">РУКОПИСИ ЗБЕРЕЖЕНО</div><h3>Вийти з кімнати?</h3><p class="mini">Усі вже здані фрагменти зберігаються на сервері. Твоє місце не зникне.</p><div class="safe-exit-options"><button class="button" type="button" data-act="disconnect-room">Вийти тимчасово <span>↗</span></button><p class="mini">Можна повернутися до того самого раунду. Чернетка залишиться на пристрої.</p><button class="button outline" type="button" data-act="confirm-leave">Звільнити своє місце</button><p class="mini">Партія не обнулиться, але учасникам доведеться чекати твого повернення або завершення випуску ведучим.</p>'+(view.host===me?'<button class="button outline" type="button" data-act="ask-early-end">Завершити випуск достроково</button>':'')+'</div><button class="leave" type="button" data-act="cancel">Скасувати</button></section></div>';
    return '<div class="comic-modal" role="dialog" aria-modal="true"><section class="comic-inner"><h3>Залишити партію?</h3><p class="mini">'+(view?.phase==='writing'?'У старій версії кімнати вихід скине партію.':'Ти вийдеш із кімнати.')+'</p><div class="button-row"><button class="button outline" data-act="cancel">Залишитись</button><button class="button" data-act="confirm-leave">Вийти</button></div></section></div>';
  }
@@ -449,7 +460,7 @@ scene.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
  const chosen=indices();
  if(chosen.length!==needed){toast('Познач рівно '+needed+' слів.');return}
  const gender=meta.gender||'unspecified';save('gender',gender);
- if(['v5','v6','v7','v8'].includes(roomVersion)){
+ if(['v5','v6','v7','v8','v9'].includes(roomVersion)){
     let p=readPending();
     if(p&&!canRetry(p,view)){discardPending();p=null}
     if(!p){
@@ -537,8 +548,19 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
  if(act==='ask-early-end'){modal='early-end';render();return}
  if(act==='confirm-early-end'){modal='';send({type:'finish_early'});render();return}
  if(act==='confirm-leave'){leaveNow();return}
- if(act==='reader-full'||act==='reader-parts'){readerMode=act==='reader-parts'?'parts':'full';soundscape.fx('page');render();return}if(act==='story'){storyId=b.dataset.id;soundscape.fx('page');render();return}
- if(act==='prev-story'||act==='next-story'){const list=view?.stories||[],index=list.findIndex(x=>x.id===storyId);if(list.length){const delta=act==='next-story'?1:-1;storyId=list[((index<0?0:index)+delta+list.length)%list.length].id;soundscape.fx('page');render()}return}
+ if(act==='reader-full'||act==='reader-parts'||act==='reader-pages'){
+  readerMode=act==='reader-pages'?'pages':act==='reader-parts'?'parts':'full';soundscape.fx('page');render();return
+ }if(act==='prev-part'||act==='next-part'){
+  if(readerMode!=='pages'||view?.phase!=='finished')return;
+  const st=view.stories?.find(x=>x.id===storyId);if(!st)return;
+  readerPage=act==='next-part'?nextPage(readerPage,st.fragments.length):previousPage(readerPage,st.fragments.length);
+  soundscape.fx('page');render();return
+ }if(act==='react-story'){
+  if(view?.phase!=='finished'||roomVersion!=='v9')return;
+  if(send({type:'react_story',storyId:b.dataset.id,reaction:b.dataset.reaction}))soundscape.fx('page');
+  return
+ }if(act==='story'){storyId=b.dataset.id;readerPage=0;soundscape.fx('page');render();return}
+ if(act==='prev-story'||act==='next-story'){const list=view?.stories||[],index=list.findIndex(x=>x.id===storyId);if(list.length){const delta=act==='next-story'?1:-1;storyId=list[((index<0?0:index)+delta+list.length)%list.length].id;readerPage=0;soundscape.fx('page');render()}return}
  if(act==='copy-story'){const st=view.stories.find(x=>x.id===storyId);if(st)copyText(st.text);return}
  if(act==='comic'||act==='archive-comic'){comicSource=act==='archive-comic'?archiveSelection().story:view?.stories?.find(x=>x.id===storyId);if(!comicSource){toast('Не знайдено історію.');return}modal='comic-prompt';tick(800);render();return}
  if(act==='close-comic'){modal='';comicSource=null;render();return}
@@ -560,6 +582,7 @@ if(IS_PREVIEW){
  if(PREVIEW_ID==='moderation-kicked')seatDecisionTarget='qa-guest';
  if(['writing-v7','writing-v7-selection','writing-v7-final'].includes(PREVIEW_ID))roomVersion='v7';
  if(['writing-v8','writing-v8-selection','writing-v8-final'].includes(PREVIEW_ID))roomVersion='v8';
+ if(['results-v9','results-v9-second'].includes(PREVIEW_ID)){roomVersion='v9';readerMode='pages'}
  const d=demoView(PREVIEW_ID);
  view=d.view;me=d.me;room=d.room;connected=d.connected;connecting=d.connecting;
  notice=d.notice;invitation=d.invitation;storyId=d.storyId;modal=d.modal;previewDraft=d.answer;

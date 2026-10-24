@@ -100,6 +100,21 @@ try{
  const final=await guest.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='finished');
  assert.equal(final.event.payload.stories.length,2);
  assert.ok(final.event.payload.stories.every(story=>story.fragments.length===1));
+ // The finished issue supports one private, server-authoritative reaction per seat.
+ const firstStory=final.event.payload.stories[0].id;
+ guest.send('game_message',{payload:{type:'react_story',storyId:firstStory,reaction:'laugh'}});
+ const hostVote=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.reactionTotals?.[firstStory]?.laugh===1);
+ assert.equal(hostVote.event.payload.myReactions[firstStory],undefined,'peer choice must stay private');
+ const guestVote=await guest.next('game_event',m=>m.event?.type==='state'&&m.event.payload.myReactions?.[firstStory]==='laugh');
+ assert.equal(guestVote.event.payload.reactionTotals[firstStory].laugh,1);
+ host.send('game_message',{payload:{type:'react_story',storyId:firstStory,reaction:'surprised'}});
+ const combined=await guest.next('game_event',m=>m.event?.type==='state'&&m.event.payload.reactionTotals?.[firstStory]?.surprised===1);
+ assert.equal(combined.event.payload.reactionTotals[firstStory].laugh,1);
+ guest.send('game_message',{payload:{type:'react_story',storyId:firstStory,reaction:'laugh'}});
+ const cleared=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.reactionTotals?.[firstStory]?.laugh===0&&m.event.payload.reactionTotals[firstStory].surprised===1);
+ assert.equal(cleared.event.payload.reactionTotals[firstStory].surprised,1);
+ guest.send('game_message',{payload:{type:'react_story',storyId:'not-a-story',reaction:'laugh'}});
+ assert.equal((await guest.next('game_event',m=>m.event?.type==='notice')).event.type,'notice');
  // Create another protected room to verify moderator actions through real WebSockets.
  host.send('leave_room');guest.send('leave_room');
  await sleep(80);

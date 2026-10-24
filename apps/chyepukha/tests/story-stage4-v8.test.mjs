@@ -26,9 +26,9 @@ function room(id,genre,count,showNextQuestion=true){
 
 test('v8 appends a pinned narrative snapshot and preserves all earlier published rooms',()=>{
  const lock=JSON.parse(file('pocketnet/modules.lock.json'));
- assert.equal(lock.chyepukha.current,'v8');
- assert.deepEqual(lock.chyepukha.versions,Array.from({length:8},(_,i)=>'v'+(i+1)));
- assert.equal(file('apps/chyepukha/server/module.ts'),v8);
+ assert.ok(lock.chyepukha.versions.includes('v8'));
+ assert.deepEqual(lock.chyepukha.versions.slice(0,8),Array.from({length:8},(_,i)=>'v'+(i+1)));
+ assert.notEqual(file('apps/chyepukha/server/module.ts'),v8);
  assert.notEqual(v7,v8);
  assert.equal(ids.length,10);
  assert.equal(new Set(ids).size,10);
