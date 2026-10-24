@@ -2,6 +2,7 @@
 import {loadSolo,saveSolo,clearSolo} from './solo-save.js';
 import {BoardEffects,getNewLockedCells} from './board-effects.js';
 import {projectOwnPiece} from './input-prediction.js';
+import {SHAPES,PIECE_TYPES,LOCK_DELAY_MS,MAX_LOCK_RESETS,KICK_OFFSETS,SAFE_LANE_ROWS,rotatedClockwise,inferShapeType,checkPieceCollision,findRotationPlacement,isLaneClear} from './physics-core.js';
 
 const TRANSLATIONS = {
     en: {
@@ -302,7 +303,6 @@ import {spawnLaneX} from './spawn-bays.js';
 const BLOCK_SIZE = 25;
 const BASE_BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
-const SAFE_LANE_ROWS = 5;
 const ADDITIONAL_COLUMNS_PER_PLAYER = 4;
 const PREVIEW_SIZE = 4;
 
@@ -404,18 +404,7 @@ class SoundManager {
 
 const soundManager = new SoundManager();
 
-// Tetromino shapes
-const SHAPES = {
-    I: [[1, 1, 1, 1]],
-    O: [[1, 1], [1, 1]],
-    T: [[0, 1, 0], [1, 1, 1]],
-    S: [[0, 1, 1], [1, 1, 0]],
-    Z: [[1, 1, 0], [0, 1, 1]],
-    J: [[1, 0, 0], [1, 1, 1]],
-    L: [[0, 0, 1], [1, 1, 1]]
-};
-
-// Default colors for players - Retro-futurism palette
+// Default colors for players// Default colors for players - Retro-futurism palette
 const DEFAULT_COLORS = ['#FF1493', '#00D9FF', '#FFDB58', '#39FF14'];
 
 // Minimum brightness threshold for player colors (0-255)
@@ -682,22 +671,6 @@ function createActionState() {
 }
 
 // Player Class
-const PIECE_TYPES=Object.keys(SHAPES);
-const LOCK_DELAY_MS=450;
-const MAX_LOCK_RESETS=8;
-const KICK_OFFSETS=[[0,0],[-1,0],[1,0],[-2,0],[2,0],[-3,0],[3,0],[0,-1],[-1,-1],[1,-1]];
-function rotatedClockwise(piece){return piece[0].map((_,i)=>piece.map(row=>row[i]).reverse());}
-function inferShapeType(piece){
- if(!Array.isArray(piece))return null;
- for(const type of PIECE_TYPES){
-  let shape=SHAPES[type];
-  for(let i=0;i<4;i++){
-   if(JSON.stringify(shape)===JSON.stringify(piece))return type;
-   shape=rotatedClockwise(shape);
-  }
- }
- return null;
-}
 class Player {
     constructor(id, color, keys, spawnAnchor) {
         this.id = id;
@@ -828,42 +801,7 @@ class Player {
     }
 
     checkCollision(piece = this.currentPiece, pos = this.position) {
-        const result = {
-            collides: false,
-            withLocked: false,
-            withActive: false
-        };
-
-        for (let y = 0; y < piece.length; y++) {
-            for (let x = 0; x < piece[y].length; x++) {
-                if (!piece[y][x]) continue;
-
-                const boardX = pos.x + x;
-                const boardY = pos.y + y;
-                const boardWidth = getBoardWidth();
-
-                if (boardX < 0 || boardX >= boardWidth || boardY >= BOARD_HEIGHT) {
-                    result.collides = true;
-                    result.withLocked = true;
-                    return result;
-                }
-
-                if (boardY < 0) continue;
-
-                if (gameState.board[boardY][boardX]) {
-                    result.collides = true;
-                    result.withLocked = true;
-                    return result;
-                }
-
-                if (isCellOccupiedByOtherPiece(boardX, boardY, this.id)) {
-                    result.collides = true;
-                    result.withActive = true;
-                }
-            }
-        }
-
-        return result;
+        return checkPieceCollision(piece,pos,gameState.board,gameState.players,this.id);
     }
 
     resetLockOnAdjustment(){
@@ -883,17 +821,14 @@ class Player {
     }
     rotate({broadcast=true}={}){
         if(this.gameOver||!this.currentPiece)return false;
-        const rotated=rotatedClockwise(this.currentPiece);
-        for(const [dx,dy] of KICK_OFFSETS){
-            const at={x:this.position.x+dx,y:this.position.y+dy};
-            if(this.checkCollision(rotated,at).collides)continue;
-            this.currentPiece=rotated;this.position=at;
-            this.resetLockOnAdjustment();
-            soundManager.rotate();
-            if(broadcast&&window.uiManager?.isOnlineMode)networkManager.sendPlayerInput({action:'rotate'});
-            return true;
-        }
-        return false;
+        const rotated=findRotationPlacement(this.currentPiece,this.position,gameState.board,gameState.players,this.id);
+        if(!rotated)return false;
+        this.currentPiece=rotated.currentPiece;
+        this.position=rotated.position;
+        this.resetLockOnAdjustment();
+        soundManager.rotate();
+        if(broadcast&&window.uiManager?.isOnlineMode)networkManager.sendPlayerInput({action:'rotate'});
+        return true;
     }
     holdPiece({broadcast=true}={}){
         if(this.gameOver||!this.currentPiece||this.holdUsed)return false;
@@ -1039,35 +974,10 @@ class Player {
     }
 }
 
-function isCellOccupiedByOtherPiece(x, y, currentPlayerId) {
-    return gameState.players.some(player => {
-        if (player.id === currentPlayerId || player.gameOver || player.offline || !player.currentPiece) {
-            return false;
-        }
-
-        for (let py = 0; py < player.currentPiece.length; py++) {
-            for (let px = 0; px < player.currentPiece[py].length; px++) {
-                if (!player.currentPiece[py][px]) continue;
-                const boardX = player.position.x + px;
-                const boardY = player.position.y + py;
-
-                if (boardX === x && boardY === y) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    });
-}
-
 function laneHasClearance(player){
-    if(gameState.numPlayers<=1)return true;
-    const x=Number.isInteger(player.spawnLaneX)?player.spawnLaneX:spawnLaneX(player.id,gameState.numPlayers,getBoardWidth());
-    for(let y=0;y<SAFE_LANE_ROWS;y++)for(let col=x;col<x+4;col++){
-        if(gameState.board[y]?.[col]||isCellOccupiedByOtherPiece(col,y,player.id))return false;
-    }
-    return true;
+    const x=Number.isInteger(player.spawnLaneX)?player.spawnLaneX:
+        spawnLaneX(player.id,gameState.numPlayers,getBoardWidth());
+    return isLaneClear(x,gameState.board,gameState.players,player.id,gameState.numPlayers);
 }
 
 function checkAllPlayersGameOver() {
