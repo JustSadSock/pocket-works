@@ -819,10 +819,11 @@ test('Anonymous echo bonus credits the seller without leaking their identity to 
 });
 
 
-test('Economic events are publicly announced only in rounds 4/6/8 with identical rules for every player',()=>{
+test('Economic events in rounds 4/5/6/8 are identical for all players',()=>{
  for(const seats of [2,3,4,5,6]){
   const {state}=makeRoom(seats);
-  assert.equal(Object.keys(state.eventSchedule).join(','),'4,6,8');
+  assert.equal(Object.keys(state.eventSchedule).join(','),'4,5,6,8');
+  assert.equal(state.eventSchedule[5],'shadow_fair');
   assert.deepEqual(new Set([state.eventSchedule[4],state.eventSchedule[6]]),
     new Set(['salvage_boom','mask_festival']));
   assert.ok(['smuggler_holiday','audit_fair'].includes(state.eventSchedule[8]));
@@ -835,7 +836,7 @@ test('Economic events are publicly announced only in rounds 4/6/8 with identical
   while(state.phase==='play'&&guard++<100){
    const turn=state.contestants[state.turnIndex];
    const event=game.viewForPlayer({state,player:{id:turn.id}}).event;
-   if([4,6,8].includes(state.round)){
+   if([4,5,6,8].includes(state.round)){
      assert.equal(event.id,state.eventSchedule[state.round]);
      for(const p of state.contestants){
        assert.deepEqual(game.viewForPlayer({state,player:{id:p.id}}).event,event);
@@ -1728,7 +1729,7 @@ test('v22 secret counteroffers use verified bid IDs and settle atomically withou
  assert.equal(state.revision,stable);
  assert.equal(act(state,buyer.id,{type:'black_counter_accept',lotId:lot.id,bidId:bid.id,counterId:counter.id}).events[0].type,'state');
  assert.equal(state.blackLots.length,0);
- assert.equal(buyer.resources.gold,buyerGold-75);
+ assert.equal(buyer.resources.gold,buyerGold-75-(seller.negativeTarget===buyer.id?20:0),'secret relationship penalty still applies to counter trades');
  assert.equal(seller.resources.gold,startingGold+72,'3% fee rounded up, seller gets 72');
  assert.ok(buyer.items.some(x=>x.id===item.id));
  assert.equal(buyer.items.find(x=>x.id===item.id).history.at(-1),'Анонимный рынок');
