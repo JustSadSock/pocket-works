@@ -79,14 +79,14 @@ export function createDebugState(scene='four'){
   deadlineAt:Date.now()+90000,listing:null,broker:publicItem(debugItem(4,'broker-1')),
   blackMarket:scene==='black',marketFeePercent:scene==='black'?10:10,
   salvageParts:scene==='event'?3:2,repackCost:scene==='event'?wallet(10,0,0):wallet(20,0,1),
-  bids:[],blackLots:[],deals:[],log:['Раунд '+round+': начался ход.'],
+  bids:[],bidSerial:0,blackLots:[],deals:[],log:['Раунд '+round+': начался ход.'],
   event:null,you,report:null,ranking:[]
  };
  if(['buyer','seller','bids','two','four','six','urgent','event','bankrupt'].includes(scene)){
   const mine=scene==='seller',thing=mine?owned[0]:debugItem(5,'listing-cat');
   state.listing={...publicItem(thing),seller:mine?'debug-0':'debug-1',ask:wallet(110,1,0)};
  }
- if(scene==='bids'||scene==='seller')state.bids=[{buyer:'debug-1',offer:wallet(125,0,0)}];
+ if(scene==='bids'||scene==='seller')state.bids=[{id:'bid-0',buyer:'debug-1',offer:wallet(125,0,0)}];
  if(scene==='buyer'){state.you.inspections=[{itemId:'listing-cat',negative:{type:'crystals',value:6},curse:null}];}
  if(scene==='black'){
   const mine=debugItem(2,'escrow-spider');
@@ -181,14 +181,14 @@ export function debugCommand(s,cmd){
     !['gold','crystals','parts'].every(k=>Number.isSafeInteger(offer[k]||0)&&(offer[k]||0)>=0&&(payer[k]||0)>=(offer[k]||0))||
     !['gold','crystals','parts'].some(k=>(offer[k]||0)>0))
    return {state:s,error:'Ставка недоступна'};
-  s.bids=s.bids.filter(b=>b.buyer!==bidder.id).concat({buyer:bidder.id,offer:{...offer}});
+  s.bids=s.bids.filter(b=>b.buyer!==bidder.id).concat({id:'bid-'+(++s.bidSerial),buyer:bidder.id,offer:{...offer}});
   log='Сделана новая ставка.';break;
  }
  case 'withdraw_bid':s.bids=s.bids.filter(b=>b.buyer!==you.id);log='Ставка отозвана.';break;
  case 'accept':{
   if(!s.listing||s.listing.seller!==you.id)return {state:s,error:'Это не твой лот'};
   const buyer=s.players.find(p=>p.id===(cmd.buyer||other.id));
-  const offer=s.bids.find(b=>b.buyer===buyer?.id)?.offer;
+  const offer=s.bids.find(b=>b.buyer===buyer?.id&&b.id===cmd.bidId)?.offer;
   const item=findItem(s.listing.id);
   if(!buyer||!offer||!item||buyer.id===you.id||buyer.bankrupt||
    item.acquiredRound===s.round||you.marketDeals>=2||

@@ -95,7 +95,7 @@ test('Public auction settles buyer and seller balances, item ownership and first
  assert.equal(s.listing.id,itemId);
  assert.ok(!debugCommand(s,{type:'bid',buyer:'debug-1',offer}).error);
  assert.equal(s.bids.length,1);
- assert.ok(!debugCommand(s,{type:'accept',buyer:'debug-1'}).error);
+ assert.ok(!debugCommand(s,{type:'accept',buyer:'debug-1',bidId:s.bids[0].id}).error);
  assert.equal(s.listing,null);
  assert.equal(s.bids.length,0);
  assert.equal(s.you.items.some(i=>i.id===itemId),false);
@@ -128,4 +128,15 @@ test('Mobile browser QA checks public auction settlement and presentation',()=>{
  assert.match(src,/acceptButton\.click\(\)/);
  assert.ok(src.includes('button[data-action="accept"]'));
  assert.match(src,/auction payment or first-sale bonus incorrect/);
+});
+
+test('Workshop rejects a repriced offer with the old immutable ID',()=>{
+ const s=createDebugState('four');s.listing=null;
+ assert.ok(!debugCommand(s,{type:'post',itemId:s.you.items[0].id,ask:{gold:40}}).error);
+ assert.ok(!debugCommand(s,{type:'bid',buyer:'debug-1',offer:{gold:40}}).error);
+ const prior=s.bids[0].id;
+ assert.ok(!debugCommand(s,{type:'bid',buyer:'debug-1',offer:{gold:1}}).error);
+ assert.notEqual(s.bids[0].id,prior);
+ assert.ok(debugCommand(s,{type:'accept',buyer:'debug-1',bidId:prior}).error);
+ assert.ok(!debugCommand(s,{type:'accept',buyer:'debug-1',bidId:s.bids[0].id}).error);
 });

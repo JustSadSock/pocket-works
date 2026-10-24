@@ -182,7 +182,7 @@ export class PocketNetHub {
   async applyKicks(room, events, actorId) {
     const zamazka=room.gameId==='zamazka'&&(room.state?.paused||room.state?.phase==='lobby')&&room.state?.host===actorId;
     const chyepukha=room.gameId==='chyepukha'&&['v6','v7'].includes(room.version)&&room.state?.host===actorId;
-    const bazaar=room.gameId==='black-bazaar'&&['v16','v17'].includes(room.version)&&room.state?.host===actorId;
+    const bazaar=room.gameId==='black-bazaar'&&['v16','v17','v18'].includes(room.version)&&room.state?.host===actorId;
     if(!zamazka&&!chyepukha&&!bazaar)return;
     let changed = false;
     for (const event of events ?? []) {
@@ -222,7 +222,7 @@ export class PocketNetHub {
     if(typeof mod?.onPresence!=='function')return;
     const onlineIds=this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean);
     const result=await mod.onPresence({state:copied(room.state),player,online,
-      ...(room.version==='v17'?{onlineIds}: {})});
+      ...(['v17','v18'].includes(room.version)?{onlineIds}: {})});
     if(result?.state&&result.events?.length){
       room.state=result.state;this.persist(room);this.emit(room,result.events);
     }
@@ -610,7 +610,7 @@ export class PocketNetHub {
           const mod = this.module(room.gameId, room.version);
           if (!mod) throw new Error('room_version_unavailable');
           const previous = room.players.some(p => p.id === player.id);
-          if((room.gameId==='chyepukha'&&['v6','v7'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17'].includes(room.version))&&
+          if((room.gameId==='chyepukha'&&['v6','v7'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17','v18'].includes(room.version))&&
              ((room.state.bannedIds||[]).includes(player.id)||(member.accountId&&(room.state.bannedAccounts||[]).includes(member.accountId))))throw Error('room_kicked');
           if (!previous && member.accountId && room.players.some(p => p.accountId === member.accountId)) {
             throw new Error('account_already_in_room');
@@ -706,7 +706,7 @@ export class PocketNetHub {
           }
           this.recordZamazkaRewards(room,prior,room.state,result.events ?? [],player.id);
           this.recordBlockiesRewards(room,prior,room.state);
-          const earlyKick=room.gameId==='chyepukha'&&['v6','v7'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17'].includes(room.version);
+          const earlyKick=room.gameId==='chyepukha'&&['v6','v7'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17','v18'].includes(room.version);
           if(earlyKick)await this.applyKicks(room,result.events ?? [],player.id);
           this.emit(room, result.events ?? []);
           if(!earlyKick)await this.applyKicks(room, result.events ?? [], player.id);
@@ -788,7 +788,7 @@ export class PocketNetHub {
           : room?.gameId==='chyepukha'&&['v5','v6','v7'].includes(room.version)&&room.state?.phase==='finished' ? 7*24*60*60_000
           : room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000
           : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000
-          : room?.gameId==='black-bazaar'&&room.version==='v17'&&room.state?.phase==='play'&&room.state?.offlinePaused
+          : room?.gameId==='black-bazaar'&&['v17','v18'].includes(room.version)&&room.state?.phase==='play'&&room.state?.offlinePaused
             ? 24*60*60_000 : ROOM_TTL;
         if(now-row.updated_at<ttl||this.sockets(row.id).length)continue;
         if(room)await this.closeRoom(room);

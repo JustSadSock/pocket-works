@@ -169,7 +169,7 @@ function renderHome(){
 }
 function renderLobby(){
  mode='lobby';activeSheet=null;selectedArtifact=null;playStarted=false;document.body.classList.remove('sheet-open');
- const all=state?.players||[],host=state?.host===me?.id,canKick=host&&['v16','v17'].includes(roomVersion),short=roomId.slice(0,8).toUpperCase();
+ const all=state?.players||[],host=state?.host===me?.id,canKick=host&&['v16','v17','v18'].includes(roomVersion),short=roomId.slice(0,8).toUpperCase();
  app.innerHTML='<div class="lobby-screen"><div class="panel stack">'+
  '<h1>За одним столом</h1><p>Код комнаты</p><strong class="lobby-room">'+esc(short)+'</strong>'+
  '<div class="row"><button type="button" data-action="copy-code">'+svgIcon('box')+' Код</button>'+
@@ -605,7 +605,7 @@ function renderPlay(){
  const active=state.turnId===me?.id,plan=forecastEconomy(you.resources,you.items);
  const seats=state.players.map(p=>{
   const self=p.id===me?.id,available=!self&&playerOnline(p)&&!p.bankrupt&&!you.bankrupt;
-  const moderate=['v16','v17'].includes(roomVersion)&&state.host===me?.id&&!self&&!p.bankrupt;
+  const moderate=['v16','v17','v18'].includes(roomVersion)&&state.host===me?.id&&!self&&!p.bankrupt;
   return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(self?'is-me ':'')+
   '" data-action="'+(self?'open-sheet':'player-actions')+'" '+(self?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
   (!self&&!available&&!moderate?' disabled':'')+' aria-label="'+esc(p.character)+' — '+esc(p.name)+'">'+
@@ -849,7 +849,7 @@ app.addEventListener('click',event=>{
    app.querySelector('.player-popover')?.remove();
    const pop=document.createElement('div');pop.className='player-popover';pop.setAttribute('role','dialog');
    pop.innerHTML='<div class="player-popover-head"><strong>'+esc(player.character||player.name)+'</strong><button type="button" data-action="close-player-actions" aria-label="Закрыть">×</button></div>'+(!playerOnline(player)||player.bankrupt||state.you.bankrupt?'<p>Обмен недоступен</p>':'<button type="button" class="primary" data-action="trade-with" data-player="'+esc(player.id)+'">'+svgIcon('trade',20)+' Обмен / подарок</button>')+'<button type="button" data-action="open-sheet" data-sheet="players">'+svgIcon('people',19)+' Участники</button>'+
-   (['v16','v17'].includes(roomVersion)&&state.host===me?.id&&!player.bankrupt?'<button type="button" class="kick-player" data-action="kick-player" data-player="'+esc(player.id)+'">'+'Исключить из партии</button>':'');
+   (['v16','v17','v18'].includes(roomVersion)&&state.host===me?.id&&!player.bankrupt?'<button type="button" class="kick-player" data-action="kick-player" data-player="'+esc(player.id)+'">'+'Исключить из партии</button>':'');
    btn.closest('.player-seats')?.append(pop);sound.play('open');pop.querySelector('button')?.focus({preventScroll:true});return;
   }
   if(action==='close-player-actions'){app.querySelector('.player-popover')?.remove();return;}
