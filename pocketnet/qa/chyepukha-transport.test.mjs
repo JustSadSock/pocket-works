@@ -34,7 +34,7 @@ test('capacity checks UTF-8 bytes and reserves room metadata',()=>{
 test('preflight does not mutate previously committed manuscript snapshots',()=>{
  const accepted={round:8,sheets:[{fragments:[{answer:'тест'}]}]};
  const before=structuredClone(accepted);
- const candidate={...accepted,sheets:[{fragments:[{answer:'界'.repeat(84000)}]}]};
+ const candidate={...accepted,sheets:[{fragments:[{answer:'界'.repeat(86000)}]}]};
  assert.equal(checkChyepukhaStateBudget(candidate,LIMIT).ok,false);
  assert.deepEqual(accepted,before);
 });
