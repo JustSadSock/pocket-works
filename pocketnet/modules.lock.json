@@ -234,7 +234,7 @@
     ]
   },
   "blockies": {
-    "current": "v8",
+    "current": "v9",
     "versions": [
       "v1",
       "v2",
@@ -243,7 +243,8 @@
       "v5",
       "v6",
       "v7",
-      "v8"
+      "v8",
+      "v9"
     ]
   },
   "skyforge-relay": {
