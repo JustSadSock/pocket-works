@@ -385,11 +385,19 @@ function restoreDrafts(drafts){
 }
 function updateTurnClock(){
  const node=document.querySelector('#turnClock');
- if(!node||!state?.deadlineAt)return;
+ if(!node)return;
+ const urgent=document.querySelector('#urgentClock');
+ const frozen=!debugPreview&&!connected?'Нет связи':state?.offlinePaused?'Пауза':!state?.deadlineAt?'—':null;
+ if(frozen!==null){
+  node.textContent=frozen;
+  node.setAttribute('aria-label',frozen);
+  if(urgent)urgent.textContent=frozen;
+  return;
+ }
  const left=Math.max(0,Math.ceil((state.deadlineAt-Date.now())/1000));
  node.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');
  node.setAttribute('aria-label','До конца хода '+left+' секунд');
- const urgent=document.querySelector('#urgentClock');if(urgent)urgent.textContent=node.textContent;
+ if(urgent)urgent.textContent=node.textContent;
 }
 function eventBlock(){
  const e=state.event;
@@ -691,7 +699,7 @@ function cancelConnect(){
  renderHome();message('Подключение отменено.');
 }
 function wire(client){
- client.on('connected',data=>{if(net!==client)return;me=data.player;connected=true;message('');});
+ client.on('connected',data=>{if(net!==client)return;me=data.player;connected=true;message(state?.phase==='play'?'Восстанавливаем комнату…':'');});
  client.on('room_joined',data=>{if(net!==client)return;roomVersion=data.version;roomId=data.roomId;state=data.state;onlinePlayerIds=null;connecting=false;message('');render();});
  client.on('presence',data=>{if(net!==client||!state||data.roomId!==roomId)return;if(Array.isArray(data.onlineIds)){onlinePlayerIds=new Set(data.onlineIds);if(state.phase==='play')render();}});
  client.on('game_event',data=>{
