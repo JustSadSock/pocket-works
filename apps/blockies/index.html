@@ -142,6 +142,7 @@
             <div class="touch-row">
               <button data-native-press type="button" class="touch-btn touch-rotate" data-action="rotate" aria-label="Повернуть фигуру"><span aria-hidden="true" class="key-symbol">↻</span><span data-i18n="rotate">Поворот</span></button>
               <button data-native-press type="button" class="touch-btn touch-drop" data-action="drop" aria-label="Мгновенно сбросить фигуру"><span aria-hidden="true" class="key-symbol">⇣</span><span data-i18n="drop">Сброс</span></button>
+              <button data-native-press type="button" class="touch-btn touch-hold" data-action="hold" aria-label="Отложить текущую фигуру, один раз до следующей"><span aria-hidden="true" class="key-symbol">⇄</span><span data-i18n="hold">Запас</span></button>
             </div>
           </div>
         </div>
@@ -152,6 +153,7 @@
     <section id="settings-screen" class="screen setup-screen" aria-label="Настройки">
       <div class="page-head"><span class="eyebrow">PREFERENCES</span><h2 data-i18n="settings">Настройки</h2></div>
       <div class="settings-pref"><label for="theme-choice">Оформление</label><select id="theme-choice" aria-label="Цветовая тема"><option value="auto">Авто — система и время суток</option><option value="dark">Ночное</option><option value="light">Дневное</option></select></div>
+      <div class="settings-pref"><label for="movement-speed">Повтор движения</label><select id="movement-speed" aria-label="Скорость повторного движения"><option value="145">Размеренно · 145 мс</option><option value="105">Обычно · 105 мс</option><option value="70">Быстро · 70 мс</option></select></div>
       <div id="settings-container"></div>
       <div class="settings-actions"><button data-native-press id="save-settings-btn" class="btn btn-primary" data-i18n="saveSettings">Сохранить</button><button data-native-press id="reset-settings-btn" class="btn btn-warning" data-i18n="resetToDefault">Сбросить</button><button data-native-press id="cancel-settings-btn" class="btn btn-secondary" data-i18n="cancel">Назад</button></div>
     </section>
