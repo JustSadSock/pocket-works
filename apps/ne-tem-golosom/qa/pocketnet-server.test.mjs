@@ -1,0 +1,73 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const file=new URL('../server/module.ts',import.meta.url);
+const version=new URL('../../../pocketnet/module-versions/ne-tem-golosom/v3.ts',import.meta.url);
+const source=readFileSync(file,'utf8');
+const {default:game}=await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(source));
+const a={id:'host',name:'Host'},b={id:'guest',name:'Guest'};
+const send=(state,player,payload)=>game.onMessage({state,player,payload});
+const events=result=>result.events||[];
+const setup=()=>{
+ const initial=game.createRoom({player:a}).state;
+ return game.onJoin({state:initial,players:[a,b],player:b}).state;
+};
+test('server v3 is identical to pinned version and is selected in lock',()=>{
+ assert.equal(source,readFileSync(version,'utf8'));
+ const lock=JSON.parse(readFileSync(new URL('../../../pocketnet/modules.lock.json',import.meta.url)));
+ assert.equal(lock['ne-tem-golosom'].current,'v3');
+});
+test('room phases and current video epoch are enforced',()=>{
+ const state=setup();
+ assert.equal(state.mediaEpoch,1);
+ send(state,a,{type:'scene',scene:{id:'scene',title:'Test',start:0,duration:15,
+  roles:['Actor'],custom:true}});
+ assert.equal(state.mediaEpoch,2);
+ assert.equal(state.mediaReady.guest,false);
+ assert.equal(events(send(state,b,{type:'media_ready',scene:'scene',epoch:1})).length,0);
+ assert.equal(state.mediaReady.guest,false);
+ assert.equal(events(send(state,b,{type:'media_ready',scene:'old',epoch:2})).length,0);
+ assert.equal(state.mediaReady.guest,false);
+ send(state,b,{type:'media_ready',scene:'scene',epoch:2});
+ assert.equal(state.mediaReady.guest,true);
+ send(state,a,{type:'start'});
+ assert.equal(state.phase,'recording');
+ assert.equal(events(send(state,b,{type:'ready',count:0})).length,1);
+ assert.equal(state.ready.guest,undefined);
+ send(state,a,{type:'ready',count:1});
+ assert.equal(events(send(state,a,{type:'reveal'}))[0].type,'notice');
+ send(state,b,{type:'ready',count:1});
+ send(state,a,{type:'reveal'});
+ assert.equal(state.phase,'premiere');
+});
+test('audio relay enforces the current actor, position, and encoded size',()=>{
+ const state=setup();
+ send(state,a,{type:'scene',scene:{id:'scene',title:'Test',start:0,duration:15,roles:['Actor'],custom:false}});
+ send(state,a,{type:'start'});
+ send(state,a,{type:'ready',count:1});
+ send(state,b,{type:'ready',count:1});
+ send(state,a,{type:'reveal'});
+ const meta={id:'clip-1',owner:'guest',start:2,end:4,offset:0,epoch:state.mediaEpoch};
+ const begin=data=>send(state,b,{type:'relay',to:'host',data:{action:'begin',token:'voice-token',kind:'audio',size:1234,meta,...data}});
+ assert.equal(events(begin({}))[0].type,'relay');
+ assert.equal(events(begin({meta:{...meta,epoch:1}})).length,0);
+ assert.equal(events(begin({meta:{...meta,owner:'host'}})).length,0);
+ assert.equal(events(begin({meta:{...meta,end:20}})).length,0);
+ assert.equal(events(begin({size:3000001})).length,0);
+ assert.equal(events(begin({meta:{...meta,offset:-1}})).length,0);
+});
+test('reusing the same scene after a new round does not reuse the old epoch',()=>{
+ const state=setup();
+ const movie={id:'scene',title:'Test',start:0,duration:15,roles:['Actor'],custom:true};
+ send(state,a,{type:'scene',scene:movie});
+ const initialEpoch=state.mediaEpoch;
+ send(state,b,{type:'media_ready',scene:movie.id,epoch:initialEpoch});
+ send(state,a,{type:'start'});
+ send(state,a,{type:'ready',count:1});send(state,b,{type:'ready',count:1});
+ send(state,a,{type:'reveal'});
+ send(state,a,{type:'again'});
+ send(state,a,{type:'scene',scene:movie});
+ assert(state.mediaEpoch>initialEpoch);
+ assert.equal(state.mediaReady.guest,false);
+ assert.equal(events(send(state,b,{type:'media_ready',scene:movie.id,epoch:initialEpoch})).length,0);
+});
