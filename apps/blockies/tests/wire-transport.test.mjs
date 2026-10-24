@@ -165,6 +165,11 @@ test('PocketNet wire: independently authenticated clients play, pause, ACK, leav
   assert.equal(a.inputQueue.length,0);
   a.togglePause();await settle();
   assert.equal(a.paused,false);
+  assert.equal(a.sendPlayerInput({action:'rotate'}),true,
+   'the same session must resume accepting new input');
+  a.flushInputs();await settle();
+  assert.equal(wire.room.engine.players[0].lastInputSeq,2);
+  assert.equal(a.pendingInputs.length,0,'resume ACK reconciles the new command');
 
   const originalPiece=wire.room.engine.players[0].currentType;
   a.leaveRoom();await settle();
