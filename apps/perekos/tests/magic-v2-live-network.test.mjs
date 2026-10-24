@@ -31,10 +31,10 @@ function fire(s,seq,aim){
  send(s,guest,'input',{seq,round:s.match.round,
   control:{x:0,y:0,attack:false,shield:false,dash:false,aim:{x:64,y:484}}});
 }
-test('PocketNet v17 simulates each heavy form and shares live objects without exposing owned runes',()=>{
+test('PocketNet v18 simulates each heavy form and shares live objects without exposing owned runes',()=>{
  const clock=Date.now;let now=3_000_000;Date.now=()=>now;
  try{
-  assert.equal(RULESET_VERSION,17);
+  assert.equal(RULESET_VERSION,18);
   for(const [school,form,origin,marker] of [
    ['stone','st_form_colossus','st_origin_below','v2Monolith'],
    ['fire','fi_form_comet','fi_origin_sky','v2Comet']
@@ -47,11 +47,11 @@ test('PocketNet v17 simulates each heavy form and shares live objects without ex
    const projection=module.viewForPlayer({state:s,player:guest,players});
    assert.ok(projection.match.lobs.some(obj=>obj[marker]));
    assert.equal(projection.match.magicLoadouts[0],null);
-   assert.equal(projection.rulesVersion,17);
+   assert.equal(projection.rulesVersion,18);
   }
  }finally{Date.now=clock}
 });
-test('PocketNet v17 issues link nodes, creates a bounded wire and preserves private rune books',()=>{
+test('PocketNet v18 issues link nodes, creates a bounded wire and preserves private rune books',()=>{
  const clock=Date.now;let now=4_000_000;Date.now=()=>now;
  try{
   const s=makeRoom('storm');

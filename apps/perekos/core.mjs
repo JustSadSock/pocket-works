@@ -26,31 +26,31 @@ export const MAGIC_V2_PRACTICE_RUNES=Object.freeze([
  'u_on_cast','u_on_hit','u_on_hurt','u_after_dash','u_after_guard',
  'u_guard','u_push','u_heal','u_afterimage','u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
  'st_throw','st_shards','st_wall','st_spikes','st_fault','fi_ember','fi_scorch','fi_flamepatch','fi_cindermine','fi_lash','li_spark','li_arc','li_pylon','li_link','li_coil','li_discharge',
- 'u_reform_base','st_form_wave','st_form_spires','st_form_colossus','st_origin_self','st_origin_below',
- 'fi_form_stream','fi_form_whirl','fi_form_comet','fi_origin_self','fi_origin_sky',
- 'li_form_ray','li_form_sphere','li_origin_self','li_origin_pylon'
+ 'u_reform_base','st_form_wave','st_form_spires','st_form_colossus','st_origin_self','st_origin_below','st_impact_rubble',
+ 'fi_form_stream','fi_form_whirl','fi_form_comet','fi_origin_self','fi_origin_sky','fi_impact_wildfire',
+ 'li_form_ray','li_form_sphere','li_origin_self','li_origin_pylon','li_motion_orbit','li_impact_chain'
 ]);
 // Only verified modifiers appear as equippable buttons for a given action in
 // the current live laboratory. The full catalog is reserved for later phases.
 const V2_PRACTICE_MODS=Object.freeze({
- u_reform_base:['st_form_wave','st_form_spires','st_form_colossus','st_origin_self','st_origin_below','fi_form_stream','fi_form_whirl','fi_form_comet','fi_origin_self','fi_origin_sky','li_form_ray','li_form_sphere','li_origin_self','li_origin_pylon'],
+ u_reform_base:['st_form_wave','st_form_spires','st_form_colossus','st_origin_self','st_origin_below','st_impact_rubble','fi_form_stream','fi_form_whirl','fi_form_comet','fi_origin_self','fi_origin_sky','fi_impact_wildfire','li_form_ray','li_form_sphere','li_origin_self','li_origin_pylon','li_motion_orbit','li_impact_chain'],
  u_guard:['u_size','u_efficient'],
  u_push:['u_size','u_efficient'],
  u_heal:['u_efficient'],
  u_afterimage:['u_efficient'],
- st_throw:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
- st_shards:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
+ st_throw:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet','st_impact_rubble'],
+ st_shards:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet','st_impact_rubble'],
  st_wall:['u_size','u_duration','u_efficient'],
  st_spikes:['u_size','u_duration','u_efficient'],
- st_fault:['u_size','u_duration','u_efficient'],
- fi_ember:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
+ st_fault:['u_size','u_duration','u_efficient','st_impact_rubble'],
+ fi_ember:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet','fi_impact_wildfire'],
  fi_scorch:['u_size','u_efficient'],
  fi_flamepatch:['u_size','u_duration','u_efficient'],
  fi_cindermine:['u_size','u_duration','u_efficient'],
- fi_lash:['u_size','u_range','u_efficient'],
- li_spark:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
- li_arc:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
- li_discharge:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
+ fi_lash:['u_size','u_range','u_efficient','fi_impact_wildfire'],
+ li_spark:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet','li_motion_orbit','li_impact_chain'],
+ li_arc:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet','li_impact_chain'],
+ li_discharge:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet','li_impact_chain'],
  li_coil:['u_size','u_duration','u_efficient'],
  li_pylon:['u_size','u_duration','u_efficient'],
  li_link:['u_size','u_duration','u_efficient']
@@ -211,6 +211,62 @@ function releaseWindup(s,a,w){
  if(w.kind==='slate'){slateWave(s,a);return true}
  return false;
 }
+
+// Actual secondary contact geometry. All aspects use the same server state,
+// explicit object caps and independent arming / cooldowns as ordinary spells.
+function v2Aftermath(s,owner,impact,x,y){
+ if(!impact||s.mines.length>=14)return;
+ if(impact==='st_impact_rubble'){
+  if(!canStand(x,y,10)||blocking(s,x,y,10))return;
+  if(s.mines.filter(m=>m.owner===owner&&m.v2Rubble).length>=3)return;
+  s.mines.push({owner,x,y,r:27,life:1.55,arm:.19,
+   damage:3.3,element:'stone',v2Rubble:true,afterCd:0});
+  fx(s,'fracture',x,y);
+ }else if(impact==='fi_impact_wildfire'){
+  if(s.mines.filter(m=>m.owner===owner&&m.v2Wildfire).length>=6)return;
+  // Spread into two side petals, never into a wall or through temporary cover.
+  const angle=s.actors[owner].face||0;
+  const candidates=[[x,y],[x-Math.sin(angle)*30,y+Math.cos(angle)*30],
+   [x+Math.sin(angle)*30,y-Math.cos(angle)*30]];
+  for(const [cx,cy] of candidates){
+   if(s.mines.length>=14||s.mines.filter(m=>m.owner===owner&&m.v2Wildfire).length>=6)break;
+   if(!canStand(cx,cy,9)||blocking(s,cx,cy,9)||!unobstructed(s,x,y,cx,cy,owner,7))continue;
+   s.mines.push({owner,x:cx,y:cy,r:21,life:1.65,arm:.15,
+    damage:1.75,element:'fire',v2Wildfire:true,afterCd:0});
+  }
+  fx(s,'flame',x,y);
+ }
+}
+function v2ChainContact(s,owner,x,y){
+ const caster=s.actors[owner],target=s.actors[1-owner];
+ const gate='v2:chain-contact';
+ if(!target||target.hp<=0||s.ticks<(caster.runeTimers[gate]||0)||s.beams.length>=14)return;
+ const pylons=s.barriers.filter(b=>b.owner===owner&&b.v2Pylon&&b.hp>0
+  &&Math.hypot(b.x-x,b.y-y)<=152);
+ const p=pylons.find(b=>{
+  const court={...s,barriers:s.barriers.filter(node=>node!==b)};
+  return unobstructed(court,x,y,b.x,b.y,owner,8)
+   &&Math.hypot(target.x-b.x,target.y-b.y)<=130
+   &&unobstructed(court,b.x,b.y,target.x,target.y,owner,7);
+ });
+ if(!p)return;
+ // Two visible discharge segments, at most one bounded relay per .84 seconds.
+ for(const [ax,ay,bx,by] of [[x,y,p.x,p.y],[p.x,p.y,target.x,target.y]]){
+  const angle=Math.atan2(by-ay,bx-ax);
+  s.beams.push({owner,x:ax,y:ay,angle,length:Math.hypot(bx-ax,by-ay),
+   life:.24,width:3,element:'storm',style:'evo-beam',v2Chain:true});
+ }
+ caster.runeTimers[gate]=s.ticks+Math.ceil(.84/STEP);
+ target.shield=Math.max(0,target.shield-1.4);
+ const dealt=harm(s,target,3.8,owner,1);
+ if(dealt>0){target.slow=Math.max(target.slow,.3);emit(s,'on_hit',owner,{},1)}
+ fx(s,'impact_arc',p.x,p.y);
+}
+function v2Contact(s,owner,impact,x,y){
+ if(impact==='li_impact_chain')v2ChainContact(s,owner,x,y);
+ else v2Aftermath(s,owner,impact,x,y);
+}
+
 function updateLobs(s,dt){
  for(let i=s.lobs.length-1;i>=0;i--){
   const q=s.lobs[i];q.age=Math.min(q.duration,q.age+dt);
@@ -232,6 +288,7 @@ function updateLobs(s,dt){
     emit(s,'on_hit',q.owner);
    }
   }
+  v2Contact(s,q.owner,q.v2Impact,q.tx,q.ty);
   if(q.v2Monolith&&s.barriers.length<10&&canStand(q.tx,q.ty,18)
     &&!blocking(s,q.tx,q.ty,18)){
    s.barriers.push({owner:q.owner,x:q.tx,y:q.ty,r:18,life:3.6,hp:38,v2Monolith:true});
@@ -301,6 +358,7 @@ function processWave(s,w){
   if(!w.v2Element)markTarget(s,other,'stone',w.owner);
   emit(s,'on_hit',w.owner);
  }
+ if(dealt>0)v2Contact(s,w.owner,w.v2Impact,other.x,other.y);
  fx(s,'impact_wave',other.x,other.y);
 }
 function unobstructed(s,fromX,fromY,targetX,targetY,owner,margin=8){
@@ -508,7 +566,8 @@ function magicV2Attack(s,a,target){
  a.face=Math.atan2(target.y-a.y,target.x-a.x);
  const school=a.magicSchool,form=effectiveMagicForm(s.magicLoadouts?.[a.id]||{slots:[],sealed:[]});
  const shape=form.ok?form.shape:null,origin=form.ok?form.origin:null;
- const angle=a.face,forward=(distance,margin=12)=>{
+ const angle=a.face,impact=form.ok?form.impact:null,motion=form.ok?form.motion:null,
+ forward=(distance,margin=12)=>{
   // The launch point must be reachable from the caster. Shapes never teleport
   // through a permanent wall or a temporary opposing barrier.
   const path=rayCollision(s,a.x,a.y,angle,distance,margin,a.id,false);
@@ -526,7 +585,7 @@ function magicV2Attack(s,a,target){
    s.lobs.push({owner:a.id,sx:a.x,sy:a.y,x:a.x,y:a.y,
     tx:at.x,ty:at.y,progress:0,duration:self?.53:below?.82:.71,
     age:0,height:0,apex:below?99:78,radius:self?30:35,
-    damage:self?15:18,element:'stone',v2Monolith:true});
+    damage:self?15:18,element:'stone',v2Monolith:true,v2Impact:impact});
    fired=true;extraHeat=12;fx(s,'hurl',a.x,a.y);
   }
  }else if(school==='fire'&&shape==='fi_form_comet'&&s.lobs.length<12){
@@ -536,7 +595,7 @@ function magicV2Attack(s,a,target){
    s.lobs.push({owner:a.id,sx:a.x,sy:a.y,x:a.x,y:a.y,
     tx:at.x,ty:at.y,progress:0,duration:sky?.82:.62,
     age:0,height:0,apex:sky?118:80,radius:sky?48:42,
-    damage:sky?16:14,element:'fire',v2Comet:true});
+    damage:sky?16:14,element:'fire',v2Comet:true,v2Impact:impact});
    fired=true;extraHeat=11;fx(s,'hurl',a.x,a.y);
   }
  }else if(school==='stone'&&shape==='st_form_spires'&&s.waves.length<12){
@@ -554,7 +613,7 @@ function magicV2Attack(s,a,target){
    s.waves.push({owner:a.id,x,y,angle:direction,
     range:self?77:24,reach:0,halfAngle:self?.37:Math.PI,
     life:self?.85:1.18+j*.15,warmup:self?.21+j*.035:.28+j*.14,
-    hit:false,v2Element:'stone',v2Spire:true,damage:self?6:4.5});
+    hit:false,v2Element:'stone',v2Spire:true,damage:self?6:4.5,v2Impact:impact});
   }
   fired=true;extraHeat=9;fx(s,'quake',a.x,a.y);
  }else if(school==='fire'&&shape==='fi_form_whirl'&&s.mines.length<14){
@@ -563,7 +622,7 @@ function magicV2Attack(s,a,target){
   if(canStand(at.x,at.y,12)&&!blocking(s,at.x,at.y,12)){
    s.mines.push({owner:a.id,x:at.x,y:at.y,r:self?65:sky?59:55,
     arm:sky?.42:.22,life:sky?2.55:2.25,damage:2.4,element:'fire',
-    v2Whirl:true,phase:angle,whirlCd:0,followOwner:self});
+    v2Whirl:true,phase:angle,whirlCd:0,followOwner:self,v2Impact:impact});
    fired=true;extraHeat=9;fx(s,'flame',at.x,at.y);
   }
  }else if(school==='storm'&&shape==='li_form_sphere'&&s.shots.length<79){
@@ -575,7 +634,7 @@ function magicV2Attack(s,a,target){
     damage:9,life:orbit?2.05:1.8,signature:false});
    if(fired){
     const q=s.shots[s.shots.length-1];
-    q.v2Sphere=true;q.v2Orbit=orbit;q.r=12;
+    q.v2Sphere=true;q.v2Orbit=orbit||motion==='li_motion_orbit';q.v2Impact=impact;q.r=12;
     q.vx=Math.cos(angle)*138;q.vy=Math.sin(angle)*138;
     q.accel=0;q.spherePulse=.36;q.orbitAngle=angle;q.orbitRadius=38;
     extraHeat=10;fx(s,'thunder',at.x,at.y);
@@ -586,17 +645,20 @@ function magicV2Attack(s,a,target){
   const at=fromBelow?forward(154):{x:a.x,y:a.y};
   s.waves.push({owner:a.id,x:at.x,y:at.y,angle,range:fromBelow?65:self?104:130,
    reach:0,halfAngle:fromBelow||self?Math.PI:.57,life:fromBelow?.68:.34,
-   warmup:fromBelow?.22:0,hit:false,v2Element:'stone',damage:fromBelow?11:13});
+   warmup:fromBelow?.22:0,hit:false,v2Element:'stone',damage:fromBelow?11:13,v2Impact:impact});
   fx(s,'quake',at.x,at.y);fired=true;extraHeat=7;
  }else if(school==='fire'&&shape==='fi_form_stream'&&s.waves.length<12){
   const sky=origin==='fi_origin_sky',self=origin==='fi_origin_self';
   const at=sky?forward(152):{x:a.x,y:a.y};
   s.waves.push({owner:a.id,x:at.x,y:at.y,angle,range:sky?62:self?74:105,
    reach:0,halfAngle:sky||self?Math.PI:.38,life:sky?.66:.34,
-   warmup:sky?.22:0,hit:false,v2Element:'fire',damage:sky?10:8});
+   warmup:sky?.22:0,hit:false,v2Element:'fire',damage:sky?10:8,v2Impact:impact});
   fx(s,'flame',at.x,at.y);fired=true;extraHeat=6;
  }else if(school==='storm'&&shape==='li_form_ray'&&s.beams.length<12){
-  const at=origin==='li_origin_pylon'?forward(68,7):{x:a.x,y:a.y};
+  const orbital=motion==='li_motion_orbit';
+  const spin=angle+s.ticks*STEP*3.8;
+  const at=orbital?{x:a.x+Math.cos(spin)*39,y:a.y+Math.sin(spin)*39}:
+   origin==='li_origin_pylon'?forward(68,7):{x:a.x,y:a.y};
   const length=beamLength(s,at.x,at.y,angle,origin==='li_origin_self'?168:220,a.id);
   s.beams.push({owner:a.id,x:at.x,y:at.y,angle,length,life:.22,style:'evo-beam',element:'storm',width:5});
   const other=s.actors[1-a.id],dx=other.x-at.x,dy=other.y-at.y;
@@ -605,13 +667,20 @@ function magicV2Attack(s,a,target){
   if(along>=0&&along<=length+9&&sideways<=15){
    other.shield=Math.max(0,other.shield-3);
    const damage=harm(s,other,11,a.id);
-   if(damage>0)emit(s,'on_hit',a.id);
+   if(damage>0){emit(s,'on_hit',a.id);v2Contact(s,a.id,impact,other.x,other.y)}
    fx(s,'impact_arc',other.x,other.y);
   }
   fx(s,'thunder',at.x,at.y);fired=true;extraHeat=9;
  }else if(s.shots.length<80){
   const style=school==='stone'?'rock':school==='storm'?'bolt':'orb';
   fired=spawnShot(s,a,angle,a.x,a.y,{style,element:school,damage:12,life:1.3,signature:false});
+  if(fired){const q=s.shots[s.shots.length-1];q.v2Impact=impact;
+   if(motion==='li_motion_orbit'&&school==='storm'){
+    q.v2MagicOrbit=true;q.v2Orbit=true;q.orbitAngle=angle;
+    q.orbitRadius=42;q.x=a.x+Math.cos(angle)*42;q.y=a.y+Math.sin(angle)*42;
+    q.life=1.85;q.damage=9;
+   }
+  }
  }
  if(fired){
   a.cast=shape?(school==='stone'?0.86:school==='fire'?0.65:0.76):stats(a).reload;
@@ -624,13 +693,22 @@ function magicV2Action(s,a,act,mods,ev){
  const defs=new Set(mods),size=defs.has('u_size'),extend=defs.has('u_duration')||defs.has('u_range'),
  fast=defs.has('u_speed'),ricochet=defs.has('u_ricochet'),
  split=defs.has('u_split'),cheap=defs.has('u_efficient');
- const angle=a.face,base={element:school,signature:false,wide:size,fastshot:fast,far:extend,
+ const angle=a.face,impact=mods.find(id=>['st_impact_rubble','fi_impact_wildfire','li_impact_chain'].includes(id)),
+ base={element:school,signature:false,wide:size,fastshot:fast,far:extend,
   bounce:ricochet,life:extend?2:1.15,damage:12,depth:ev.depth+1};
  const shoot=(style,damage=12)=>{
   const count=split?2:1;
-  for(let j=0;j<count;j++)spawnShot(s,a,angle+(count===2?(j===0?-.13:.13):0),a.x,a.y,{
-   ...base,style,damage:damage/count
-  });
+  for(let j=0;j<count;j++){
+   if(spawnShot(s,a,angle+(count===2?(j===0?-.13:.13):0),a.x,a.y,{
+    ...base,style,damage:damage/count
+   })){const q=s.shots[s.shots.length-1];q.v2Impact=impact;
+    if(defs.has('li_motion_orbit')&&school==='storm'){
+     const theta=angle+(count===2?(j===0?-.13:.13):0);
+     q.v2MagicOrbit=true;q.v2Orbit=true;q.orbitAngle=theta;q.orbitRadius=40;
+     q.x=a.x+Math.cos(theta)*40;q.y=a.y+Math.sin(theta)*40;q.life=1.75;
+    }
+   }
+  }
  };
  switch(act){
   case 'u_guard':a.shield=Math.min(80,a.shield+(size?22:14));fx(s,'shield',a.x,a.y);break;
@@ -645,8 +723,10 @@ function magicV2Action(s,a,act,mods,ev){
   case 'st_throw':shoot('rock');break;
   case 'st_shards':{
    const count=split?5:3;
-   for(let j=0;j<count;j++)spawnShot(s,a,angle+(j-(count-1)/2)*.16,a.x,a.y,
-    {...base,style:'rock',damage:6,life:extend?1.3:.8});
+   for(let j=0;j<count;j++){
+    if(spawnShot(s,a,angle+(j-(count-1)/2)*.16,a.x,a.y,
+     {...base,style:'rock',damage:6,life:extend?1.3:.8}))s.shots[s.shots.length-1].v2Impact=impact;
+   }
    break;
   }
   case 'st_spikes':{
@@ -711,6 +791,7 @@ function magicV2Action(s,a,act,mods,ev){
     off=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
    if(ahead>=0&&ahead<=length+5&&off<=width+10){
     const dealt=harm(s,other,10,a.id,ev.depth+1);
+   if(dealt>0)v2Contact(s,a.id,impact,other.x,other.y);
     if(dealt>0){
      other.burn=Math.max(other.burn||0,1.3);other.burnSource=a.id;
      emit(s,'on_hit',a.id,{},ev.depth+1);
@@ -811,6 +892,7 @@ function magicV2Action(s,a,act,mods,ev){
      ...base,style:'bolt',damage:total/count,life:extend?.80:.46,
      fastshot:true,wide:size
     });
+    if(s.shots.length)s.shots[s.shots.length-1].v2Impact=impact;
    }
    fx(s,'thunder',a.x,a.y);
    break;
@@ -966,14 +1048,14 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
  for(let j=s.waves.length-1;j>=0;j--){const w=s.waves[j];processWave(s,w);if(w.life<=0)s.waves.splice(j,1)}
  for(let j=s.shots.length-1;j>=0;j--){
  const q=s.shots[j],a=s.actors[1-q.owner];
- if(q.v2Sphere){
+ if(q.v2Sphere||q.v2MagicOrbit){
   if(q.v2Orbit){
    const source=s.actors[q.owner],next=q.orbitAngle+dt*3.8;
    const x=source.x+Math.cos(next)*q.orbitRadius,y=source.y+Math.sin(next)*q.orbitRadius;
    q.vx=(x-q.x)/dt;q.vy=(y-q.y)/dt;q.orbitAngle=next;
   }
-  q.spherePulse-=dt;
-  if(q.spherePulse<=0){
+  if(q.v2Sphere)q.spherePulse-=dt;
+  if(q.v2Sphere&&q.spherePulse<=0){
    q.spherePulse=.38;
    const range=Math.hypot(a.x-q.x,a.y-q.y);
    if(range<=49&&range>q.r+11&&unobstructed(s,q.x,q.y,a.x,a.y,q.owner,7)){
@@ -982,6 +1064,7 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
     if(dealt>0){
      a.slow=Math.max(a.slow,.23);
      emit(s,'on_hit',q.owner,{},q.depth+1);
+     v2Contact(s,q.owner,q.v2Impact,a.x,a.y);
     }
     fx(s,'impact_arc',a.x,a.y);
    }
@@ -1002,7 +1085,7 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
    const dealt=harm(s,a,q.damage,q.owner,q.depth);
    if(q.v2Sphere&&dealt>0)a.slow=Math.max(a.slow,.6);
    if(dealt){markTarget(s,a,q.element||mage(s.actors[q.owner].mageId).school,q.owner,q.depth);const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn'){a.burn=Math.max(a.burn||0,has(attacker,'lasting')?2.4:1.55);a.burnSource=q.owner}if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
-   if(dealt>0)fusionImpact(s,q,a);
+   if(dealt>0){fusionImpact(s,q,a);v2Contact(s,q.owner,q.v2Impact,q.x,q.y)}
    if(q.style==='rock')rockFracture(s,q,q.x,q.y);
    fx(s,'impact_'+(q.style||'orb'),q.x,q.y);s.shots.splice(j,1);done=true;continue;
   }
@@ -1025,12 +1108,32 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
    q.x+=hit.nx*.08;q.y+=hit.ny*.08;
    fx(s,'spark',hit.x,hit.y);emit(s,'on_bounce',q.owner,{},q.depth);remaining*=Math.max(0,1-hit.t);continue;
   }
-  if(q.style==='rock')rockFracture(s,q,q.x,q.y);s.shots.splice(j,1);fx(s,'spark',hit.x,hit.y);emit(s,'on_expire',q.owner,{},q.depth);done=true;
+  if(q.style==='rock')rockFracture(s,q,q.x,q.y);
+  v2Contact(s,q.owner,q.v2Impact,q.x,q.y);
+  s.shots.splice(j,1);fx(s,'spark',hit.x,hit.y);emit(s,'on_expire',q.owner,{},q.depth);done=true;
  }
 }
 for(let j=s.echoes.length-1;j>=0;j--){const e=s.echoes[j];e.life-=dt;e.cast-=dt;const source=s.actors[e.owner];if(e.cast<=0){e.cast=.76;const target=s.actors[1-e.owner];spawnShot(s,source,Math.atan2(target.y-e.y,target.x-e.x),e.x,e.y,{clone:true,strong:!!e.extra});e.shots=(e.shots??2)-1}if(e.life<=0||e.shots<=0)s.echoes.splice(j,1)}
 for(let j=s.mines.length-1;j>=0;j--){
  const mine=s.mines[j];mine.life-=dt;const target=s.actors[1-mine.owner];
+ if(mine.v2Rubble||mine.v2Wildfire){
+  if(mine.arm>0){mine.arm=Math.max(0,mine.arm-dt);continue}
+  mine.afterCd=Math.max(0,mine.afterCd-dt);
+  if(mine.afterCd<=0&&target.hp>0
+    &&Math.hypot(target.x-mine.x,target.y-mine.y)<=mine.r+12
+    &&unobstructed(s,mine.x,mine.y,target.x,target.y,mine.owner,7)){
+   const dealt=harm(s,target,mine.damage,mine.owner);
+   if(dealt>0){
+    if(mine.v2Rubble)target.slow=Math.max(target.slow,.65);
+    else{target.burn=Math.max(target.burn||0,.58);target.burnSource=mine.owner}
+    emit(s,'on_hit',mine.owner);
+   }
+   mine.afterCd=mine.v2Rubble?.65:.46;
+   fx(s,mine.v2Rubble?'fracture':'flame',target.x,target.y);
+  }
+  if(mine.life<=0)s.mines.splice(j,1);
+  continue;
+ }
  if(mine.v2Conduit){
   const u=s.barriers.find(b=>b.v2Pylon&&b.owner===mine.owner&&b.nodeId===mine.aId&&b.hp>0);
   const v=s.barriers.find(b=>b.v2Pylon&&b.owner===mine.owner&&b.nodeId===mine.bId&&b.hp>0);
