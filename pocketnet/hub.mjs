@@ -575,19 +575,20 @@ export class PocketNetHub {
           if (!isSessionToken(msg.token)) throw new Error('invalid_token');
           const found = await findSessionByToken((sql, ...params) => this.sql(sql, ...params), msg.token);
           if (!found || (found.account_id || null) !== (player.edgeAccountId || null)) throw new Error('invalid_token');
+          const storedToken = await sessionTokenKey(msg.token);
           // A linked user's nickname/portrait may have changed since token issuance.
           // Only edge-validated identity fields may refresh the durable record.
           if (found.account_id && player.edgeName) {
             if (found.name !== player.edgeName || found.avatar !== player.edgeAvatar) {
               found.name = player.edgeName;
               found.avatar = player.edgeAvatar;
-              this.sql('UPDATE sessions SET name = ?, avatar = ? WHERE token = ?',found.name,found.avatar,msg.token);
+              this.sql('UPDATE sessions SET name = ?, avatar = ? WHERE token = ?',found.name,found.avatar,storedToken);
             }
           }
           // Legacy unverified sessions may predate the guest marker.
           if (!found.account_id && !found.name.startsWith('Гость · ')) {
             found.name = 'Гость · ' + found.name.slice(0,24);
-            this.sql('UPDATE sessions SET name = ? WHERE token = ?', found.name, msg.token);
+            this.sql('UPDATE sessions SET name = ? WHERE token = ?', found.name, storedToken);
           }
           for (const old of this.ctx.getWebSockets()) {
             const oldSeat=old.deserializeAttachment();
