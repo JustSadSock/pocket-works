@@ -6,7 +6,7 @@ import {buildComicPrompt} from './comic-prompt.js';
 import {createSoundscape} from './audio.js';
 import {makeSubmission,outgoingPacket,validPending,isSafeReceipt,canRetry} from './submission-guard.js';
 import {renderWaiting} from './waiting-view.js';
-import {controlsBar,controlsDialog,kickDialog,skipDialog} from './moderation-view.js';
+import {controlsBar,controlsDialog,kickDialog,skipDialog,seatDecisionDialog,transferHostDialog,updateRecoveryCountdown} from './moderation-view.js';
 import {updateWaitingView} from './waiting-sync.js';
 import {mayShowFinaleIntro} from './finale-state.js';
 import {finaleCurtain} from './finale-intro.js';
@@ -36,7 +36,7 @@ let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
 let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',comicSource=null;
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='';
-let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false,joinSeatCode='',kickTarget='',skipTarget='';
+let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false,joinSeatCode='',kickTarget='',skipTarget='',seatDecisionTarget='',kickFollowUpTarget='',transferTarget='',moderationTimer=null;
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
 const playerName=()=>preferredPocketName(pocketIdentity,name.trim());
@@ -95,11 +95,11 @@ const clearDraft=()=>{if(IS_PREVIEW){previewDraft='';previewWriterMeta={step:'dr
 function toast(x){toastEl.textContent=String(x);toastEl.classList.add('show');clearTimeout(toastEl.timer);toastEl.timer=setTimeout(()=>toastEl.classList.remove('show'),3200)}
 function tick(f=580){soundscape.fx(f>=750?'reveal':f>=680?'turn':f>=620?'word':f<500?'seal':'tap')}
 function netStatus(){
- const status=IS_PREVIEW?'DEMO':connected?'ONLINE':connecting?'CONNECTING':netHealth==='online'?'ONLINE':netHealth==='checking'?'CHECKING':'OFFLINE';
+ const status=IS_PREVIEW?'DEMO':view&&(!connected||!roomJoinedOnSocket)?'RECONNECTING':connected?'ONLINE':connecting?'CONNECTING':netHealth==='online'?'ONLINE':netHealth==='checking'?'CHECKING':'OFFLINE';
  network.textContent='POCKETNET · '+status;
  network.classList.toggle('online',status==='ONLINE');
- network.classList.toggle('offline',status==='OFFLINE');
- network.setAttribute('aria-label',status==='ONLINE'?'Онлайн-сервер доступний':status==='OFFLINE'?'Інтернет-з’єднання недоступне':'Перевіряємо підключення');
+ network.classList.toggle('offline',status==='OFFLINE'||status==='RECONNECTING');
+ network.setAttribute('aria-label',status==='ONLINE'?'З’єднання з кімнатою активне':status==='RECONNECTING'?'Відновлюємо підключення до ігрової кімнати':status==='OFFLINE'?'Інтернет-з’єднання недоступне':'Перевіряємо підключення');
 }
 function syncIdentityBar(){
  const button=$('profileBtn');if(!button)return;
@@ -234,14 +234,24 @@ async function connect(how,settings){
     notice='Несумісна версія кімнати. Створи нову.';try{c.leaveRoom()}catch{}
     room='';view=null;render();return;
    }
-   room=v.roomId;roomVersion=v.version;roomJoinedOnSocket=true;syncUrl();apply(v.state);if(['v5','v6','v7'].includes(roomVersion))retryPending();
+   room=v.roomId;roomVersion=v.version;roomJoinedOnSocket=true;syncUrl();apply(v.state);if(scene.querySelector('.reconnect-banner'))render();if(['v5','v6','v7'].includes(roomVersion))retryPending();
   });
-  c.on('game_event',v=>{if(net!==c)return;if(v.event?.type==='state')apply(v.event.payload);
+  c.on('game_event',v=>{if(net!==c)return;if(v.event?.type==='state'){
+    const state=v.event.payload;
+    if(kickFollowUpTarget){
+     const seat=state?.players?.find(p=>p.id===kickFollowUpTarget);
+     if(state?.phase!=='writing'||state?.host!==me)kickFollowUpTarget='';
+     else if(seat?.excluded&&seat?.departed){
+      seatDecisionTarget=kickFollowUpTarget;kickFollowUpTarget='';modal='seat-choice';
+     }
+    }
+    apply(state);
+   }
    else if(v.event?.type==='receipt')acknowledgeReceipt(v.event.payload);
    else if(v.event?.type==='submission_rejected'){if(['v5','v6','v7'].includes(roomVersion)&&readPending()?.requestId===v.event.payload?.requestId){discardPending();render()}toast(v.event.payload?.reason||'Відповідь не прийнято.')}
    else if(v.event?.type==='notice')toast(v.event.payload)});
   c.on('presence',()=>{if(net===c&&room&&connected&&!['v6','v7'].includes(roomVersion))send({type:'sync'})});
-  c.on('disconnected',()=>{if(net!==c)return;roomJoinedOnSocket=false;connected=false;connecting=true;netStatus()});
+  c.on('disconnected',()=>{if(net!==c)return;roomJoinedOnSocket=false;connected=false;connecting=true;netStatus();if(view)render()});
   c.on('room_kicked',()=>{if(net!==c)return;room='';view=null;modal='';connected=false;connecting=false;notice='Ведучий закрив доступ до кімнати або твоє місце передано іншому автору.';syncUrl();render()});
   c.on('room_closed',()=>{if(net!==c)return;room='';view=null;connected=false;connecting=false;syncUrl();notice='Кімнату закрито.';render()});
   c.on('error',e=>{
@@ -329,6 +339,8 @@ function overlay(){
  if(modal==='moderation')return controlsDialog(view,me,escape);
  if(modal==='kick-confirm')return kickDialog(view,view?.players?.find(p=>p.id===kickTarget),escape);
  if(modal==='skip-confirm')return skipDialog(view,view?.players?.find(p=>p.id===skipTarget),escape);
+  if(modal==='seat-choice')return seatDecisionDialog(view,view?.players?.find(p=>p.id===seatDecisionTarget),escape);
+  if(modal==='transfer-confirm')return transferHostDialog(view?.players?.find(p=>p.id===transferTarget),escape);
  if(modal==='archive-delete')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Видалити видання"><section class="comic-inner"><div class="eyebrow">ПІДТВЕРДИТИ ВИДАЛЕННЯ</div><h3>Видалити це видання?</h3><p class="mini">Усі рукописи цього випуску буде видалено лише з цього пристрою. Дію не можна скасувати.</p><div class="button-row"><button class="button outline" type="button" data-act="cancel">Залишити</button><button class="button" type="button" data-act="archive-confirm-delete">Видалити</button></div></section></div>';
  if(modal==='leave'){
    const live=['v5','v6','v7'].includes(roomVersion)&&view?.phase==='writing';
@@ -340,6 +352,15 @@ function overlay(){
  if(modal==='comic-prompt')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Комікс через ChatGPT"><section class="comic-inner comic-ai"><div class="eyebrow">КОМІКС · 4 СТОРІНКИ</div><h3>Намалюй історію в ChatGPT</h3><p>Скопіюй готовий промпт і встав у ChatGPT. Зображення створює ChatGPT, а не гра.</p><div class="comic-actions"><button class="button" type="button" data-act="copy-comic-direct">Скопіювати промпт коміксу <span>↗</span></button><button class="button outline" type="button" data-act="copy-comic-safe">Спершу адаптувати історію <span>↗</span></button></div><p class="mini">Адаптація — два кроки: перший чат готує безпечний сценарій, другий створює чотири послідовні сторінки. Деякі сюжети потребуватимуть значної переробки, а генерація не гарантована.</p><div class="button-row"><a class="button outline small" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">Відкрити ChatGPT ↗</a><button class="button outline small" data-act="close-comic">Закрити</button></div></section></div>';
  return '';
 }
+function syncModerationTimer(){
+ if(modal==='moderation'&&scene.querySelector('[data-recovery-countdown]')){
+  updateRecoveryCountdown(scene,view,me);
+  if(!moderationTimer)moderationTimer=setInterval(()=>{
+   if(modal==='moderation'&&scene.querySelector('[data-recovery-countdown]'))updateRecoveryCountdown(scene,view,me);
+   else{clearInterval(moderationTimer);moderationTimer=null}
+  },1000);
+ }else if(moderationTimer){clearInterval(moderationTimer);moderationTimer=null}
+}
 function render(){
  netStatus();syncIdentityBar();
  $('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.');
@@ -350,12 +371,20 @@ function render(){
  if(motion)scene.dataset.motion=motion;else delete scene.dataset.motion;
  if(connecting&&!view){
   scene.innerHTML='<section class="paper waiting"><div class="eyebrow">POCKETNET</div><h2>З’єднуємо авторів…</h2><p class="mini">Відновлюємо захищену кімнату.</p><button class="button outline" type="button" data-act="cancel-connect">Скасувати підключення</button></section>';
-  return;
+  syncModerationTimer();return;
  }
  scene.innerHTML=(view?(view.phase==='lobby'?lobby():view.phase==='writing'?(view.waiting?waiting():writing()):view.phase==='finished'?results():waiting()):archiveOpen?archiveScreen():home())+(view?controlsBar(view,me,roomVersion,escape):'')+overlay();
  if(view?.paused){scene.querySelectorAll('#answerForm button[type="submit"]').forEach(b=>{b.disabled=true;b.title='Партія на паузі'});const area=scene.querySelector('.moderation-bar');if(area)area.insertAdjacentHTML('afterend','<div class="pause-banner">Редакція на паузі. Тексти збережено; надсилання тимчасово вимкнено.</div>')}
 
  if(view?.phase==='writing'&&!view.waiting)refreshWords();
+ const reconnecting=view&&!IS_PREVIEW&&(!connected||!roomJoinedOnSocket);
+ if(reconnecting){
+  scene.querySelectorAll('#answerForm button[type="submit"]').forEach(button=>{button.disabled=true;button.title='Чекаємо підтвердження від PocketNet'});
+  const bar=scene.querySelector('.moderation-bar');
+  const anchor=bar||scene.firstElementChild;
+  if(anchor)anchor.insertAdjacentHTML('afterend','<div class="reconnect-banner" role="status">З’єднання з кімнатою відновлюється. Твоя чернетка збережена на пристрої; відправка стане доступною після підтвердження сервера.</div>');
+ }
+ syncModerationTimer();
 }
 function indices(){const w=words($('answer')?.value||loadDraft());return (draftSelections[draftKey()]||readWriterMeta().selection||[]).filter(i=>Number.isInteger(i)&&i>=0&&i<w.length)}
 function refreshWords(){
@@ -429,10 +458,14 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
  if(act==='manage-players'){modal='moderation';render();return}
  if(act==='pause'||act==='unpause'){send({type:act});return}
  if(act==='ask-kick'){kickTarget=b.dataset.id;modal='kick-confirm';render();return}
- if(act==='confirm-kick'){modal='moderation';send({type:'kick',seatId:b.dataset.id});render();return}
+ if(act==='confirm-kick'){const id=b.dataset.id;modal='moderation';if(send({type:'kick',seatId:id}))kickFollowUpTarget=view?.phase==='writing'?id:'';render();return}
  if(act==='ask-skip'){skipTarget=b.dataset.id;modal='skip-confirm';render();return}
  if(act==='confirm-skip'){modal='moderation';send({type:'skip_slot',seatId:b.dataset.id});render();return}
- if(act==='transfer-host'){modal='';send({type:'transfer_host',seatId:b.dataset.id});render();return}
+ if(act==='ask-transfer-host'){transferTarget=b.dataset.id;modal='transfer-confirm';render();return}
+ if(act==='confirm-transfer-host'){transferTarget='';modal='';send({type:'transfer_host',seatId:b.dataset.id});render();return}
+ if(act==='choice-replace'){seatDecisionTarget='';modal='moderation';send({type:'open_seat',seatId:b.dataset.id});render();return}
+ if(act==='choice-skip'){skipTarget=b.dataset.id;seatDecisionTarget='';modal='skip-confirm';render();return}
+ if(act==='choice-later'){seatDecisionTarget='';modal='moderation';render();return}
  if(act==='open-seat'){send({type:'open_seat',seatId:b.dataset.id});return}
  if(act==='close-seat'){send({type:'close_seat'});return}
  if(act==='copy-seat-code'){if(view?.claim?.code)copyText(view.claim.code);return}
