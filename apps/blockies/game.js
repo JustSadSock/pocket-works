@@ -20,6 +20,7 @@ const TRANSLATIONS = {
         inviteCode:"INVITE CODE",invite:"Share invite",linesLabel:"Lines",
         sharedBoard:"SHARED WELL",moveHint:"MOVE",actionsHint:"ACTIONS",
         hold: "Hold",
+        repeatSpeed:"Move repeat",speedSlow:"Relaxed · 145 ms",speedNormal:"Normal · 105 ms",speedFast:"Fast · 70 ms",
         gestureHint:"On the board: tap to rotate · swipe to move",
         pauseDescription:"Your pieces stay right where you left them.",
         resumeSoloGame: "Continue saved game",
@@ -147,6 +148,7 @@ const TRANSLATIONS = {
         inviteCode:"КОД ПРИГЛАШЕНИЯ",invite:"Поделиться",linesLabel:"Линии",
         sharedBoard:"ОБЩЕЕ ПОЛЕ",moveHint:"ДВИЖЕНИЕ",actionsHint:"ДЕЙСТВИЯ",
         hold: "Запас",
+        repeatSpeed:"Повтор движения",speedSlow:"Размеренно · 145 мс",speedNormal:"Обычно · 105 мс",speedFast:"Быстро · 70 мс",
         gestureHint:"На поле: касание — поворот, свайп — движение",
         pauseDescription:"Фигуры останутся на своих местах.",
         resumeSoloGame: "Продолжить партию",
@@ -1534,6 +1536,12 @@ class UIManager {
         player.color = checkpoint.player.color;
         player.currentType=checkpoint.player.currentType||inferShapeType(player.currentPiece);
         player.nextType=checkpoint.player.nextType||inferShapeType(player.nextPiece);
+        // Legacy v1 data allowed arbitrary matrices. Repair an unknown queued type
+        // without losing the historic board or active falling shape.
+        if(!player.nextType){
+            player.nextType=player.randomType();
+            player.nextPiece=SHAPES[player.nextType].map(row=>row.slice());
+        }
         player.bag=checkpoint.player.bag?.slice()||[];
         player.holdType=checkpoint.player.holdType||null;
         player.holdUsed=checkpoint.player.holdUsed===true;
@@ -1942,7 +1950,7 @@ class UIManager {
         if(this.isOnlineMode&&player.id===this.localPlayerIndex)item.classList.add('is-mine');
         container.appendChild(item);
         const held=document.createElement('div');held.className='next-piece-item next-piece-item--hold';
-        const title=document.createElement('span');title.className='next-piece-label';title.textContent=t('hold');
+        const title=document.createElement('span');title.className='next-piece-label';title.textContent=t('hold');title.dataset.i18n='hold';
         const canvas=document.createElement('canvas');canvas.id=`hold-${player.id}`;
         canvas.width=PREVIEW_SIZE*BLOCK_SIZE;canvas.height=PREVIEW_SIZE*BLOCK_SIZE;
         held.append(title,canvas);container.append(held);
