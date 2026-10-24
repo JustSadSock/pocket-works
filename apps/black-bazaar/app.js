@@ -717,8 +717,9 @@ function renderPlay(){
  '<nav class="workspace-tabs" role="tablist" aria-label="Разделы">'+sections+'</nav>'+
  '<div class="sheet-heading"><h2 id="sheetTitle">Мой ход</h2></div>'+
  '<div class="sheet-content">'+pages+'</div></aside></div></div>';
- restoreDrafts(drafts);openSheet(activeSheet);restoreDraftFocus(draftFocus);
+ restoreDrafts(drafts);openSheet(activeSheet);
  [...app.querySelectorAll('.sheet-page details')].forEach((el,i)=>{if(expanded.includes(i))el.open=true;});
+ restoreDraftFocus(draftFocus);
  const scroll=app.querySelector('.sheet-content');if(scroll)scroll.scrollTop=previousScroll;
  applyCharacterArt(app);updateTurnClock();
 }
