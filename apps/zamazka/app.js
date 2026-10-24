@@ -36,7 +36,7 @@ import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.34',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.35',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -694,6 +694,7 @@ function attemptVote(force=false){
 function submitVote(allowPartial=false){
  if(autoVoteTimer!==null){clearTimeout(autoVoteTimer);autoVoteTimer=null}
  if(!view||view.phase!=='voting'||view.voted?.includes(me?.id))return;
+ if(view.rasterBallots&&screen.firstElementChild?.dataset.votePaintingsReady!=='true')return;
  if(!pendingVote||pendingVote.token!==voteToken(view)){
    if(chips.reduce((a,b)=>a+b,0)<1||(!allowPartial&&chips.reduce((a,b)=>a+b,0)!==3))return;
    pendingVote={token:voteToken(view),round:view.round,turn:view.turn,chips:[...chips],sentAt:0,attempts:0};
@@ -742,8 +743,10 @@ function vote(){
  const count=(v.voted||[]).length,expected=v.participants.length-1;
  const examined=v.candidate;
  const fallbackWarning=v.rasterBallots&&v.skippedBallots?.length?'<div class="notice ballot-fallback-notice" role="status">Некоторые работы не успели подготовиться. Они пропущены без начисления очков; правильный ответ остаётся скрытым.</div>':'';
- const spriteRenderer=v.rasterBallots&&typeof v.ballotSprite==='string'?
-    createAnonymousBallotPainter(v.ballotSprite,v.selected):null;
+ let spriteRenderer=null;
+ if(v.rasterBallots&&typeof v.ballotSprite==='string'){
+  try{spriteRenderer=createAnonymousBallotPainter(v.ballotSprite,v.selected)}catch{}
+ }
  change('<section class="phase-page expert-phase'+(isOwn||already?' is-vote-waiting':'')+'">'+head('ЭКСПЕРТИЗА · '+(v.turn+1)+' / '+v.participants.length,'Найди реставрацию',v.deadline)+
  '<div class="phase-body expert-round"><div class="expert-intro"><div><div class="expert-author">'+(target?memberSeal(target):'')+'<h3>'+esc(target?.name||'Реставратор')+'</h3></div><p class="phase-directive">Одна из пяти картин отреставрирована.</p></div><p class="expert-observers">Заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
  '<div class="expert-ballot">'+fallbackWarning+'<p class="hint">'+(isOwn?'Это твоя реставрация. Ставки на неё делают остальные.':already?'Твои фишки приняты. Можешь рассматривать картины, пока остальные голосуют.':(v.timedScoring?'Раньше угадаешь — больше очков. Поставленные монеты засчитываются в конце.':'Распредели до 3 монет. По окончании времени поставленные монеты засчитываются.'))+'</p>'+
@@ -756,6 +759,18 @@ function vote(){
  exhibitFitter=mountExhibitFrames(screen);
  const ballotScreen=screen.firstElementChild;
  ballotScreen.dataset.votePaintingsReady='false';
+ if(v.rasterBallots&&!spriteRenderer){
+  ballotScreen.dataset.voteSpriteUnavailable='true';
+  const status=ballotScreen.querySelector('#voteRenderStatus');
+  if(status)status.hidden=true;
+  const error=ballotScreen.querySelector('#voteRenderError');
+  if(error){
+   error.hidden=false;
+   error.firstChild.textContent='Защищённая картина не получена. Голосование недоступно. ';
+  }
+  if(!isOwn&&!already)updateChips();
+  return;
+ }
  void paintVoteSurfaces(ballotScreen,v.selected,spriteRenderer?null:examined,{render:spriteRenderer||renderArtwork}).then(result=>{
   if(!ballotScreen?.isConnected)return;
   ballotScreen.dataset.votePaintingsReady=result.ready?'true':'false';
@@ -1028,6 +1043,10 @@ function renderView(){
  if(['verdict','reveal','results'].includes(page)&&view.phase===page&&
     lastUiKey.startsWith(view.phase+':'+view.round+':'+view.turn+':'))return;
  if(page==='vote'&&view.phase==='voting'&&voteScreenToken===view.round+':'+view.turn){
+  if(view.rasterBallots&&typeof view.ballotSprite==='string'&&
+     screen.firstElementChild?.dataset.voteSpriteUnavailable==='true'){
+   vote();lastUiKey=key;return;
+  }
   // Authoritative vote receipts can update dozens of times per round.
   // Preserve the live gallery, five loaded originals, coin controls, scroll
   // position and any animation instead of recreating the entire DOM.
@@ -1569,7 +1588,10 @@ screen.addEventListener('click',e=>{
  else if(action==='leave')modal('Выйти из комнаты?','<p class="hint">Другие реставраторы смогут продолжить без тебя.</p>',[['Выйти',()=>{closeDialog();home()},'primary'],['Отмена',closeDialog,'ghost']]);
  else if(action==='skip')practiceStep();
  else if(action==='submit')doSubmit();
- else if(action==='retry-vote-paintings'&&view?.phase==='voting')vote()
+ else if(action==='retry-vote-paintings'&&view?.phase==='voting'){
+  if(view.rasterBallots&&screen.firstElementChild?.dataset.voteSpriteUnavailable==='true')net?.sendGame({type:'sync'});
+  else vote();
+ }
  else if(action==='vote')submitVote()
  else if(action==='advance')net?.sendGame({type:'advance'});
  else if(action==='continue'&&view?.phase==='round-review'&&me?.id===view.host){b.disabled=true;try{net?.sendGame({type:'continue'})}catch{b.disabled=false;notify('Нет соединения с комнатой')}}
@@ -1626,7 +1648,8 @@ function tick(){
  if(!view?.paused&&!connectionLost)autoFinishOnDeadline();
  if(!practice&&view?.phase==='voting'&&!view.paused&&!connectionLost&&
     view.author?.id!==me?.id&&!view.voted?.includes(me?.id)&&
-    networkNow()>=view.deadline&&chips.some(Boolean)&&!pendingVote)submitVote(true);
+    networkNow()>=view.deadline&&chips.some(Boolean)&&!pendingVote&&
+    (!view.rasterBallots||screen.firstElementChild?.dataset.votePaintingsReady==='true'))submitVote(true);
  // A half-open socket can stay OPEN on sleeping tablets even though the
  // server no longer receives drafts. Force PocketNet's normal reconnect path.
  if(net&&roomId&&!connectionLost&&!document.hidden&&
