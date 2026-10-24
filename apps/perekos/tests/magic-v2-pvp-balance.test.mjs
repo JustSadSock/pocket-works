@@ -34,16 +34,10 @@ test('overlapping physical hazards share a fixed 12-point secondary damage budge
  run(s);
  assert.equal(target.hp,88,'simultaneous fields cannot stack past 12 HP damage');
  assert.equal(caster.v2SecondaryWindow.spent,12);
- const trace=[];
- for(let i=0;i<48;i++){
-  const hp=target.hp,source=target.burnSource,burn=target.burn;
-  run(s);
-  if(target.hp!==hp)trace.push({tick:s.ticks,delta:hp-target.hp,
-   sourceBefore:source,sourceAfter:target.burnSource,burnBefore:burn,
-   burnAfter:target.burn,secondary:caster.v2SecondaryWindow?.spent,
-   casterHit:caster.hit,targetHit:target.hit,fx:s.fx.slice(-3).map(f=>f.type||f.kind)});
- }
- assert.ok(target.hp>=88,'fire pulses and burns cannot exceed the shared first-window allowance '+JSON.stringify({hp:target.hp,ticks:s.ticks,budget:caster.v2SecondaryWindow,burn:target.burn,spent:caster.v2SecondaryWindow?.spent,phase:s.phase,trace}));
+ for(let i=0;i<48;i++)run(s);
+ assert.equal(target.hp,88,'stacked pulses and burns share the first one-second budget');
+ assert.equal(s.shots.length,0,
+  'secondary hazard ticks must not auto-trigger free on_hit projectiles');
  for(let i=0;i<15;i++)run(s);
  assert.ok(target.hp<88,'new one-second window restores some periodic pressure');
  assert.ok(target.hp>=76,'second window has the same cap');
