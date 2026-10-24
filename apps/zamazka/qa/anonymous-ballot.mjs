@@ -123,6 +123,8 @@ assert.match(code,/rasterBallots:true/,'new online rooms request escrowed raster
 assert.match(code,/composeBallotRaster\(selected,mine,\{render:renderArtwork\}\)/);
 assert.match(code,/createAnonymousBallotPainter\(v\.ballotSprite,v\.selected\)/);
 assert.match(code,/view\.phase==='sealing'/,'client renders preparation room');
+assert(code.includes('fallbackWarning=v.rasterBallots&&v.spriteFallback'),
+ 'clients must visibly disclose when raster anti-cheat falls back to legacy voting');
 const hub=readFileSync(new URL('../../../pocketnet/hub.mjs',import.meta.url),'utf8');
 assert(hub.includes("kind==='ballot'")&&hub.includes("kind==='ballot-assembly'"),'durable SQL hydration supports both raster stages');
 assert(hub.includes("'ballot_chunk'"),'transport permits bitmap chunks');
