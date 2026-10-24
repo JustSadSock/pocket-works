@@ -1,0 +1,100 @@
+/* ЧЕПУХА · handwritten editor: focus first, no nested scrolling during typing.
+   Overrides the historical responsive layers without changing the desktop layout. */
+.editor-context-tab{display:none}
+.writer-shell #selectedStrip{pointer-events:auto}
+.writer-shell #selectedStrip:focus{outline:none}
+.writer-shell #selectedStrip .handoff-chip{
+ appearance:none;border:1px solid #365849;cursor:pointer;min-height:36px;
+ background:#365849;color:#f7e6ca;display:inline-flex;align-items:center;
+ gap:7px;max-width:100%;white-space:normal;text-align:left;overflow-wrap:anywhere;
+ transition:background .14s,transform .14s;
+}
+.writer-shell #selectedStrip .handoff-chip span{font:700 16px/1 system-ui,sans-serif;opacity:.78}
+.writer-shell #selectedStrip .handoff-chip:hover{background:#496c5a}
+.writer-shell #selectedStrip .handoff-chip:active{transform:scale(.97)}
+.writer-shell #selectedStrip .handoff-chip:focus-visible{
+ outline:3px solid #a85d40;outline-offset:2px;
+}
+.writer-shell .selected-hint{font-weight:600;letter-spacing:0;font-size:10px;color:#7b745f}
+@media(max-width:760px){
+ /* The folded question tab stays reachable even while the virtual keyboard is open. */
+ .writer-shell .editor-context-tab{
+  display:inline-flex;flex:none;align-items:center;justify-content:center;gap:5px;
+  min-height:36px;padding:4px 10px;margin-inline:auto 0;
+  border:1px solid #a58f6e;background:#e5d5b8;color:#365447;
+  font:800 11px/1 system-ui,sans-serif;white-space:nowrap;
+  box-shadow:2px 2px 0 #7b6d5840;
+ }
+ .writer-shell .editor-context-tab[aria-expanded="true"]{background:#365447;color:#fff1d9}
+ .writer-shell .editor-context-tab span{font-size:13px}
+ .writer-shell .editor-context-tab:focus-visible{outline:3px solid #a65a3e;outline-offset:2px}
+ .writer-shell .editor-progress{gap:5px}
+ .writer-shell .editor-progress .eyebrow{font-size:10px;letter-spacing:.055em}
+ .writer-shell .editor-progress .mobile-leave{margin-left:0}
+ .writer-shell .editor-roster{margin-top:1px}
+ .writer-shell .editor-roster .turn-progress-authors{display:none}
+ .writer-shell .editor-roster .turn-progress{padding:2px 0}
+ .writer-shell .editor-roster .turn-progress-count{display:flex;gap:6px;align-items:baseline}
+ .writer-shell .editor-question{scrollbar-width:thin}
+ .writer-shell .writer-compose .answer{
+  flex:1 1 auto;min-height:74px;padding-inline:5px;
+  font-size:17px;line-height:29px;caret-color:#a6533d;
+  -webkit-overflow-scrolling:touch;
+ }
+ .writer-shell .editor-submit{position:relative;z-index:2;min-height:53px}
+ .writer-shell .editor-submit .editor-primary{min-height:46px}
+ .writer-shell .writer-selection .selection-paper{
+  -webkit-overflow-scrolling:touch;scroll-padding-block:12px;
+  overscroll-behavior:contain;
+ }
+ .writer-shell .selection-paper .word{
+  min-height:44px;line-height:1.6;touch-action:manipulation;
+  padding:.33em .28em .37em;display:inline-block;
+ }
+ .writer-shell .selected-words{flex:0 1 auto;min-height:46px;max-height:min(20vh,94px)}
+ .writer-shell .selected-words>b{margin-bottom:3px}
+ .writer-shell #selectedStrip{gap:5px;min-height:35px}
+ .writer-shell #selectedStrip .handoff-chip{min-height:39px;padding:7px 9px;font-size:13px}
+ .writer-shell .selected-hint{font-size:9px}
+ /* Review is scrollable independently, but the submit footer never joins that scroll. */
+ .writer-shell .writer-selection .selection-stage{min-height:0;overflow:hidden}
+}
+@media(max-width:375px){
+ .writer-shell .editor-context-tab{padding-inline:7px;font-size:10px;min-height:34px}
+ .writer-shell .editor-progress .eyebrow{font-size:9px}
+ .writer-shell .editor-roster{margin-top:0}
+ .writer-shell .editor-submit{gap:5px}
+ .writer-shell .editor-submit .editor-primary{min-width:0;white-space:normal}
+ .writer-shell .selected-hint{display:none}
+}
+@media(max-height:540px){
+ .writer-shell .editor-context-tab{min-height:29px;font-size:10px;padding:2px 8px}
+ .writer-shell .editor-roster{display:none}
+ .writer-shell .editor-progress{padding-bottom:2px}
+ .writer-shell .writer-compose .answer{min-height:48px}
+ .writer-shell .writer-selection .selection-paper{min-height:46px}
+ .writer-shell .writer-selection .selected-words{min-height:0;max-height:55px;padding:3px 0}
+ .writer-shell .selected-words>b{display:none}
+ .writer-shell #selectedStrip .handoff-chip{min-height:34px;padding:4px 7px;font-size:12px}
+ .writer-shell .editor-submit .editor-primary{min-height:42px}
+}
+/* The device's visual viewport, not a guessed keyboard height, drives this mode.
+   Keep the actual question one tap away; leave the textarea mounted and focused. */
+html.is-app-keyboard-open .writer-shell.is-typing[data-context-open="false"] .editor-question,
+html.is-app-keyboard-open .writer-shell.is-typing .editor-roster,
+html.is-app-keyboard-open .writer-shell.is-typing .editorial-brief,
+html.is-app-keyboard-open .writer-shell.is-typing .hero-passport{display:none}
+html.is-app-keyboard-open .writer-shell.is-typing[data-context-open="true"] .editor-question{
+ display:block;max-height:min(88px,30vh);overflow-y:auto;
+}
+html.is-app-keyboard-open .writer-shell.is-typing .editor-paper{overflow:hidden}
+html.is-app-keyboard-open .writer-shell.is-typing .writer-compose{min-height:0}
+html.is-app-keyboard-open .writer-shell.is-typing .writer-compose .answer{
+ min-height:48px;flex:1 1 auto;overflow-y:auto;
+}
+html.is-app-keyboard-open .writer-shell.is-typing .editor-submit{
+ position:sticky;bottom:0;z-index:5;flex:none;
+}
+@media(prefers-reduced-motion:reduce){
+ .writer-shell #selectedStrip .handoff-chip{transition:none}
+}
