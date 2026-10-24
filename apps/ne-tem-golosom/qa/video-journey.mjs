@@ -67,8 +67,9 @@ try{
     });
     await page.waitForSelector('#screen-trim:not(.hidden)',{timeout:20000});
     assert(await page.locator('#media-workbench').isVisible(),'video controls not displayed');
-    await page.locator('#trim-length').fill('10');
-    await page.locator('#trim-length').dispatchEvent('input');
+    await page.locator('#trim-range-handle-end').focus();
+    await page.locator('#trim-range-handle-end').press('Home');
+    assert.equal(await page.locator('#trim-length').inputValue(),'10','visual trim handle updates scene duration');
     await page.locator('#media-quality').evaluate(input=>{input.value='2';input.dispatchEvent(new Event('input',{bubbles:true}))});
     await page.screenshot({path:join(out,viewport.name+'-source.png'),fullPage:true});
     await page.locator('#media-render').click();
@@ -88,10 +89,13 @@ try{
     const resultSize=await page.locator('#media-output-size').innerText();
     assert(resultSize.includes('МиБ')||resultSize.includes('КиБ'),'output size missing');
     await page.screenshot({path:join(out,viewport.name+'-review.png'),fullPage:true});
-    await page.locator('#media-accept').click();
-    assert.equal(await page.locator('#trim-start').inputValue(),'0');
-    assert((await page.locator('#media-note').innerText()).includes('Фрагмент готов'));
+    assert.match(await page.locator('#confirm-scene').innerText(),/Использовать и продолжить/);
+    await page.locator('#preview-original').click();
+    assert(await page.locator('#trim-video').isVisible(),'can compare original');
+    await page.locator('#preview-result').click();
+    assert(await page.locator('#media-output-preview').isVisible(),'can compare result');
     await page.locator('#confirm-scene').click();
+    assert.equal(await page.locator('#trim-start').inputValue(),'0');
     await page.waitForSelector('#screen-room:not(.hidden)',{timeout:10000});
     await page.waitForSelector('#room-retry:not(.hidden)',{timeout:12000});
     assert.match(await page.locator('#room-connection-status').innerText(),/Не удалось создать комнату/);
