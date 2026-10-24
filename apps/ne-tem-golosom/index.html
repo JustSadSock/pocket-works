@@ -105,6 +105,10 @@
     <button id="premiere-export" class="action premiere-export-button" type="button" disabled>↓ Сохранить видео</button>
   </div>
   <div id="premiere-export-status" class="premiere-export-status" role="status" aria-live="polite">Кнопка станет доступна, когда все голоса будут получены.</div>
+  <label id="premiere-local-fallback" class="premiere-local-fallback hidden">
+    <span>Встроенный фильм не разрешает экспорт? Выбери локальную копию этого видео.</span>
+    <input id="premiere-local-file" type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov">
+  </label>
   <div id="premiere-export-progress" class="premiere-export-progress hidden">
     <progress id="premiere-export-bar" value="0" max="100" aria-label="Экспорт премьеры"></progress>
     <button id="premiere-export-cancel" class="text-action" type="button">Отменить</button>
