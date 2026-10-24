@@ -1041,7 +1041,7 @@ class Player {
 
 function isCellOccupiedByOtherPiece(x, y, currentPlayerId) {
     return gameState.players.some(player => {
-        if (player.id === currentPlayerId || player.gameOver || !player.currentPiece) {
+        if (player.id === currentPlayerId || player.gameOver || player.offline || !player.currentPiece) {
             return false;
         }
 
@@ -1140,7 +1140,7 @@ class UIManager {
     
     // Helper method to check if a player can be controlled locally
     isPlayerControllable(player) {
-        if (player.gameOver) return false;
+        if (player.gameOver || player.offline) return false;
         if (this.isOnlineMode && (!networkManager.connected || networkManager.stale)) return false;
         // In online mode, only allow local player to be controlled
         if (this.isOnlineMode && player.id !== this.localPlayerIndex) {
@@ -2294,7 +2294,10 @@ class UIManager {
         const statusEl = document.getElementById(`status-${player.id}`);
         if (!statusEl) return;
 
-        if (player.gameOver) {
+        if (player.offline) {
+            statusEl.textContent = currentLanguage==='ru'?'Нет соединения':'Offline';
+            statusEl.classList.add('is-out');
+        } else if (player.gameOver) {
             statusEl.textContent = player.blocked?(currentLanguage==='ru'?'Ждёт проход':'Waiting'):t('out');
             statusEl.classList.add('is-out');
         } else {
@@ -2941,7 +2944,7 @@ class UIManager {
             name.textContent=player.name||((ru?'Игрок ':'Player ')+(player.id+1));
             const status=document.createElement('span');
             status.className='result-player__status';
-            status.textContent=player.gameOver?(ru?'Выбыл':'Out'):(ru?'На поле':'Playing');
+            status.textContent=player.offline?(ru?'Отключён':'Offline'):player.gameOver?(ru?'Выбыл':'Out'):(ru?'На поле':'Playing');
             entry.append(swatch,name,status);
             const contribution=gameState.sharedStats.contributions?.[player.id];
             if(isCoop&&contribution){
