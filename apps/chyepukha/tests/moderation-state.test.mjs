@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {hostRecovery,recoveryCountdown,seatOptions,recoveryLabel} from '../moderation-state.js';
 import {controlsDialog,seatDecisionDialog,transferHostDialog} from '../moderation-view.js';
 
-const now=1_000_000;
+const now=Date.now();
 const players=[
  {id:'host',name:'Марта',departed:true,submitted:false},
  {id:'other',name:'Назар',departed:false,submitted:false},
