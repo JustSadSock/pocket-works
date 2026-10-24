@@ -180,6 +180,25 @@ function demoSend(payload){
  if(!connected){toast('Тестовий стан: PocketNet офлайн.');return false}
  if(!view)return false;
  if(payload.type==='sync')return true;
+ if(['kick','open_seat','close_seat','skip_slot','vote_host','transfer_host','pause','unpause'].includes(payload.type)){
+  const target=view.players.find(p=>p.id===payload.seatId);
+  if(payload.type==='kick'&&target&&view.host===me){
+   view={...view,revision:view.revision+1,players:view.players.map(p=>p.id===target.id?{...p,excluded:true,departed:true}:p)};
+  }else if(payload.type==='open_seat'&&target&&view.host===me){
+   view={...view,revision:view.revision+1,claim:{seatId:target.id,code:'DEMO12345678',expiresAt:Date.now()+600000}};
+  }else if(payload.type==='close_seat'&&view.host===me){
+   view={...view,revision:view.revision+1,claim:null};
+  }else if(payload.type==='skip_slot'&&target&&view.host===me&&!view.paused){
+   view={...view,revision:view.revision+1,players:view.players.map(p=>p.id===target.id?{...p,submitted:true}:p)};
+  }else if(payload.type==='vote_host'&&target&&view.host!==me){
+   view={...view,revision:view.revision+1,host:target.id,hostOfflineSince:0,hostVotes:{},players:view.players.map(p=>p.id===target.id?{...p,departed:false}:p)};
+  }else if(payload.type==='transfer_host'&&target&&view.host===me){
+   view={...view,revision:view.revision+1,host:target.id};
+  }else if(['pause','unpause'].includes(payload.type)&&view.host===me){
+   view={...view,revision:view.revision+1,paused:payload.type==='pause'};
+  }else{toast('Цю дію зараз не дозволено.');return false}
+  render();return true;
+ }
  if(payload.type==='settings'){
   view={...view,settings:{...view.settings,...payload.settings},revision:view.revision+1};
   render();toast('Тестові правила збережено.');return true;
@@ -458,7 +477,7 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
  if(act==='manage-players'){modal='moderation';render();return}
  if(act==='pause'||act==='unpause'){send({type:act});return}
  if(act==='ask-kick'){kickTarget=b.dataset.id;modal='kick-confirm';render();return}
- if(act==='confirm-kick'){const id=b.dataset.id;modal='moderation';if(send({type:'kick',seatId:id}))kickFollowUpTarget=view?.phase==='writing'?id:'';render();return}
+ if(act==='confirm-kick'){const id=b.dataset.id;modal='moderation';if(send({type:'kick',seatId:id})){if(IS_PREVIEW&&view?.phase==='writing'){seatDecisionTarget=id;modal='seat-choice'}else kickFollowUpTarget=view?.phase==='writing'?id:''}render();return}
  if(act==='ask-skip'){skipTarget=b.dataset.id;modal='skip-confirm';render();return}
  if(act==='confirm-skip'){modal='moderation';send({type:'skip_slot',seatId:b.dataset.id});render();return}
  if(act==='ask-transfer-host'){transferTarget=b.dataset.id;modal='transfer-confirm';render();return}
@@ -509,6 +528,7 @@ window.addEventListener('focus',()=>{if(!IS_PREVIEW&&identityReady)void refreshP
 $('profileBtn')?.addEventListener('click',openPocketProfile);
 if(IS_PREVIEW){
  if(PREVIEW_ID.startsWith('moderation-'))roomVersion=PREVIEW_ID==='moderation-v7'?'v7':'v6';
+ if(PREVIEW_ID==='moderation-kicked')seatDecisionTarget='qa-guest';
  if(['writing-v7','writing-v7-selection','writing-v7-final'].includes(PREVIEW_ID))roomVersion='v7';
  const d=demoView(PREVIEW_ID);
  view=d.view;me=d.me;room=d.room;connected=d.connected;connecting=d.connecting;
