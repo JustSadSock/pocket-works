@@ -34,7 +34,8 @@
         "realism-contract.test.mjs",
         "realism-ensemble.test.mjs",
         "forensics.test.mjs",
-        "institutions.test.mjs"
+        "institutions.test.mjs",
+        "crafts.test.mjs"
       ]
     },
     {
