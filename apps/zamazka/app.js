@@ -30,11 +30,13 @@ import {zamazkaStore} from './storage.js';
 import {DEBUG_QUERY,DEBUG_SCREENS,isDebugKey,debugId,debugMatch,mountDebugGallery} from './debug-gallery.js';
 import {exhibitFacets,exhibitPlaque,mountExhibitFrames} from './exhibition-ui.js';
 import {paintVoteSurfaces} from './vote-surfaces.js';
+import {composeBallotRaster,ballotRasterPackets} from './ballot-raster.js';
+import {createAnonymousBallotPainter} from './ballot-sprite-view.js';
 import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.30',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.31',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -60,7 +62,7 @@ const sound=(event='press',gesture=false)=>IS_DEBUG_FRAME&&page!=='debug-sounds'
 let personalEmblem=getSavedEmblem();
 let zamazkaCloud=null;
 let pocketIdentity=null;
-let pendingVote=null,preparedRound='',preparingError='',archiveObserver=null,dialogFocus=null,loadedRound='';
+let pendingVote=null,pendingBallot=null,preparedRound='',preparingError='',archiveObserver=null,dialogFocus=null,loadedRound='';
 const VOTE_KEY=NS+'pending-vote';
 try{pendingVote=JSON.parse(sessionStorage.getItem(VOTE_KEY)||'null')}catch{}
 function persistVote(){try{if(pendingVote)sessionStorage.setItem(VOTE_KEY,JSON.stringify(pendingVote));else sessionStorage.removeItem(VOTE_KEY)}catch{}}
@@ -351,7 +353,7 @@ function home(skipLeave=false){
  if(!IS_DEBUG_FRAME)clearTabGuest();
  if(net){if(!skipLeave)try{net.leaveRoom()}catch{}net.close();net=null}
  clearTimeout(legacyDossierTimer);legacyDossierActive='';legacyDossiers.clear();
- view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';preparedRound='';preparingError='';loadedRound='';pendingVote=null;if(!IS_DEBUG_FRAME)persistVote();connectionStatus('off');
+ view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';preparedRound='';preparingError='';loadedRound='';pendingVote=null;pendingBallot=null;if(!IS_DEBUG_FRAME)persistVote();connectionStatus('off');
  change('<section class="museum-home">'+
   
   '<div class="museum-headline"><h1>Подделай<br><em>шедевр.</em></h1></div>'+
@@ -636,6 +638,41 @@ function waiting(){
  void renderArtwork(screen.querySelector('#origCanvas'),ass.art,0,null,false);
 }
 
+
+function maybeSendAnonymousBallot(){
+ const v=view;
+ if(!v||!net||connectionLost||Number(roomModuleVersion.slice(1))<39||
+    !v.rasterBallots||!['drawing','sealing'].includes(v.phase)||
+    !v.done?.includes(me?.id)||!Array.isArray(v.mine?.strokes))return;
+ if(v.ballotReady?.includes(me.id)){pendingBallot=null;return}
+ const token=[roomId,v.round,me.id].join(':');
+ if(pendingBallot?.token===token){
+  if(pendingBallot.busy||Date.now()-(pendingBallot.sentAt||0)<8500)return;
+ }else pendingBallot={token,room:roomId,round:v.round,revision:'r'+Date.now().toString(36),data:null,busy:false,sentAt:0};
+ const job=pendingBallot;
+ job.busy=true;
+ const selected=[...v.selected],mine={...v.mine,strokes:v.mine.strokes};
+ void (async()=>{
+  try{
+   if(!job.data)job.data=await composeBallotRaster(selected,mine,{render:renderArtwork});
+   if(pendingBallot!==job||connectionLost||view?.round!==job.round)return;
+   const packets=ballotRasterPackets(job.data,job.round,job.revision);
+   for(const packet of packets){
+    if(pendingBallot!==job||connectionLost||!net||!['drawing','sealing'].includes(view?.phase))return;
+    net.sendGame(packet);
+    // Leave headroom for normal PocketNet sync/heartbeat and other players.
+    await new Promise(resolve=>setTimeout(resolve,95));
+   }
+   job.sentAt=Date.now();
+  }catch(error){
+   job.sentAt=Date.now()-4500;
+   if(pendingBallot===job&&!connectionLost)notify('Не удалось подготовить выставку · повторяем отправку');
+  }finally{
+   job.busy=false;
+  }
+ })();
+}
+
 function voteToken(v){return [roomId,v.round,v.turn].join(':')}
 // Identify the exact author, round and ballot to prevent delayed votes.
 function voteContext(v){return {round:v.round,turn:v.turn,targetId:v.author?.id}}
@@ -704,6 +741,8 @@ function vote(){
  if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=pendingVote?.token===voteToken(v)?[...pendingVote.chips]:[0,0,0,0,0]}
  const count=(v.voted||[]).length,expected=v.participants.length-1;
  const examined=v.candidate;
+ const spriteRenderer=v.rasterBallots&&!v.spriteFallback&&typeof v.ballotSprite==='string'?
+    createAnonymousBallotPainter(v.ballotSprite,v.selected):null;
  change('<section class="phase-page expert-phase'+(isOwn||already?' is-vote-waiting':'')+'">'+head('ЭКСПЕРТИЗА · '+(v.turn+1)+' / '+v.participants.length,'Найди реставрацию',v.deadline)+
  '<div class="phase-body expert-round"><div class="expert-intro"><div><div class="expert-author">'+(target?memberSeal(target):'')+'<h3>'+esc(target?.name||'Реставратор')+'</h3></div><p class="phase-directive">Одна из пяти картин отреставрирована.</p></div><p class="expert-observers">Заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
  '<div class="expert-ballot"><p class="hint">'+(isOwn?'Это твоя реставрация. Ставки на неё делают остальные.':already?'Твои фишки приняты. Можешь рассматривать картины, пока остальные голосуют.':(v.timedScoring?'Раньше угадаешь — больше очков. Поставленные монеты засчитываются в конце.':'Распредели до 3 монет. По окончании времени поставленные монеты засчитываются.'))+'</p>'+
@@ -716,7 +755,7 @@ function vote(){
  exhibitFitter=mountExhibitFrames(screen);
  const ballotScreen=screen.firstElementChild;
  ballotScreen.dataset.votePaintingsReady='false';
- void paintVoteSurfaces(ballotScreen,v.selected,examined,{render:renderArtwork}).then(result=>{
+ void paintVoteSurfaces(ballotScreen,v.selected,spriteRenderer?null:examined,{render:spriteRenderer||renderArtwork}).then(result=>{
   if(!ballotScreen?.isConnected)return;
   ballotScreen.dataset.votePaintingsReady=result.ready?'true':'false';
   const status=ballotScreen.querySelector('#voteRenderStatus');
@@ -949,13 +988,13 @@ function renderView(){
    else if(view.phase==='round-review')sound('confirm');
  }
  previousVisualPhase=phaseToken;
- if(view.phase==='drawing'&&view.done?.includes(me?.id)){
+ if(['drawing','sealing'].includes(view.phase)&&view.done?.includes(me?.id)){
    if(view.mine&&!view.incompleteSubmissions?.includes(me?.id))confirmSubmission(view.mine.art,view.round,view.mine.strokes?paintingChecksum(view.mine.strokes):null);
    if(editor&&!view.incompleteSubmissions?.includes(me?.id))editor.clearDraft();
  }
  const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
-  if(page==='waiting'&&view.phase==='drawing'&&key===lastUiKey){
+  if(page==='waiting'&&['drawing','sealing'].includes(view.phase)&&key===lastUiKey){
    updateWaiting(screen,view.done||[],view.participants||[]);
    return;
  }
@@ -1002,6 +1041,7 @@ function renderView(){
  else if(view.phase==='preparing')preparing();
  else if(view.phase==='preview')preview();
  else if(view.phase==='drawing')drawing();
+ else if(view.phase==='sealing')waiting();
  else if(view.phase==='voting')vote();
  else if(view.phase==='verdict')verdict();
  else if(view.phase==='reveal')reveal();
@@ -1083,11 +1123,15 @@ async function connect(mode){
        }
        renderView();
        renderPauseOverlay();
+       maybeSendAnonymousBallot();
        if(view?.phase==='drawing'&&!view.done?.includes(me?.id)&&
           pendingSubmit?.room===roomId&&pendingSubmit.round===view.round){
          const retryMs=view.deadline&&networkNow()>=view.deadline?3500:15000;
          if(!pendingSubmit.sentAt||Date.now()-pendingSubmit.sentAt>retryMs)attemptSubmission();
        }
+     }
+     else if(event?.type==='ballot_saved'){
+       if(pendingBallot?.round===event.payload?.round)pendingBallot=null;
      }
      else if(event?.type==='time_pong'){
        lastTimePongAt=Date.now();
@@ -1154,6 +1198,7 @@ async function connect(mode){
      activeDraftTransfer?.abort();activeDraftTransfer=null;
      clearResumeRequest();activeSubmitTransfer?.abort();activeSubmitTransfer=null;
      lastDraftSentAt=0;lastDraftAckRevision='';lastDraftAckPayload='';autoSubmitted='';
+     if(pendingBallot)pendingBallot.busy=false;
      if(pendingSubmit){pendingSubmit.sentAt=0;persistPending();draftIndicator('Нет связи · работа на устройстве')}
      else draftIndicator('Нет связи · черновик на устройстве');
      notify('Связь прервана · восстанавливаем комнату');
@@ -1509,7 +1554,7 @@ screen.addEventListener('click',e=>{
  else if(action==='connect')connect(b.dataset.mode);
  else if(action==='share')share();
  else if(action==='copy-code')copyText(inviteCode(roomId),'Код комнаты скопирован');
- else if(action==='start')net?.sendGame({type:'start',preload:true,rounds:Number(screen.querySelector('#rounds')?.value||3),drawingSeconds:Number(screen.querySelector('#drawingSeconds')?.value??300)});
+ else if(action==='start')net?.sendGame({type:'start',preload:true,rasterBallots:true,rounds:Number(screen.querySelector('#rounds')?.value||3),drawingSeconds:Number(screen.querySelector('#drawingSeconds')?.value??300)});
  else if(action==='leave')modal('Выйти из комнаты?','<p class="hint">Другие реставраторы смогут продолжить без тебя.</p>',[['Выйти',()=>{closeDialog();home()},'primary'],['Отмена',closeDialog,'ghost']]);
  else if(action==='skip')practiceStep();
  else if(action==='submit')doSubmit();
@@ -1528,6 +1573,7 @@ function tick(){
   const takeover=screen.querySelector('[data-action="claim-host"]:disabled');if(takeover)takeover.disabled=false;
  }
  if(pendingVote&&!view?.paused)attemptVote();
+ if(!view?.paused)maybeSendAnonymousBallot();
  const v=practice||view,clock=document.querySelector('#clock');
  const timed=(page==='preview'||page==='drawing')&&
              (v?.phase==='preview'||v?.phase==='drawing')&&Number(v?.deadline)>0;
