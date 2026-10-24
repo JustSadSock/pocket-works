@@ -38,6 +38,20 @@ function invariants(state,count){
   assert.ok(player.lockResets<=8&&player.lockResets>=0);
   assert.ok(Array.isArray(player.bag)&&player.bag.length<=7);
  }
+ const occupied=new Set();
+ for(const player of players){
+  if(player.gameOver||!player.currentPiece)continue;
+  for(let y=0;y<player.currentPiece.length;y++)
+   for(let x=0;x<player.currentPiece[y].length;x++){
+    if(!player.currentPiece[y][x])continue;
+    const xx=player.position.x+x,yy=player.position.y+y;
+    assert.ok(xx>=0&&xx<boardWidth&&yy>=0&&yy<20,'active cell exceeds the well');
+    assert.equal(board[yy][xx],0,'active piece intersects a locked tile');
+    const key=xx+':'+yy;
+    assert.ok(!occupied.has(key),'two falling pieces overlap');
+    occupied.add(key);
+   }
+ }
  if(players.every(p=>p.gameOver))assert.equal(state.engine.isGameOver,true);
 }
 for(const count of [2,3,4]){
