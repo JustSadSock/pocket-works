@@ -17,22 +17,33 @@ export function normalizeEditions(raw){
  if(!Array.isArray(raw))return [];
  const found=new Set();
  return raw.slice(0,MAX_EDITIONS*3).map(item=>{
-  if(!item||typeof item!=='object'||typeof item.id!=='string'||!item.id||found.has(item.id))return null;
+  if(!item||typeof item!=='object'||typeof item.id!=='string'||!item.id)return null;
+  const normalizedId=shorten(item.id,160);
+  if(!normalizedId||found.has(normalizedId))return null;
   const stories=Array.isArray(item.stories)?item.stories.slice(0,8).map(cleanStory).filter(Boolean):[];
   if(!stories.length)return null;
-  const edition={id:shorten(item.id,160),savedAt:Number.isFinite(item.savedAt)?Math.max(0,item.savedAt):0,
+  const edition={id:normalizedId,savedAt:Number.isFinite(item.savedAt)?Math.max(0,item.savedAt):0,
    playerCount:Number.isInteger(item.playerCount)?Math.max(2,Math.min(8,item.playerCount)):2,favorite:item.favorite===true,stories};
-  found.add(edition.id);return edition;
+  found.add(normalizedId);return edition;
  }).filter(Boolean).sort((a,b)=>Number(b.favorite)-Number(a.favorite)||b.savedAt-a.savedAt).slice(0,MAX_EDITIONS);
 }
-export function addFinishedEdition(existing,room,state,savedAt=Date.now()){
- const editions=normalizeEditions(existing);
- if(state?.phase!=='finished'||!Array.isArray(state.stories)||!state.stories.length||!room)return editions;
- // Room revisions are monotonic across consecutive games and stable across reconnects.
- const id=shorten(String(room),100)+':'+(Number.isInteger(state.issue)&&state.issue>0?'issue-'+state.issue:String(Number.isInteger(state.revision)?state.revision:0));
- if(editions.some(item=>item.id===id))return editions;
+export function finishedEditionId(room,state){
+ if(!room||!state||state.phase!=='finished'||!Array.isArray(state.stories)||!state.stories.length)return '';
+ return shorten(String(room),100)+':'+(Number.isInteger(state.issue)&&state.issue>0?'issue-'+state.issue:String(Number.isInteger(state.revision)?state.revision:0));
+}
+/** Never discard an archived issue automatically when the shelf is full. */
+export function planFinishedEdition(existing,room,state,savedAt=Date.now()){
+ const editions=normalizeEditions(existing),id=finishedEditionId(room,state);
+ if(!id)return {status:'invalid',editions,edition:null};
+ const prior=editions.find(x=>x.id===id);
+ if(prior)return {status:'already-saved',editions,edition:prior};
+ if(editions.length>=MAX_EDITIONS)return {status:'full',editions,edition:null};
  const next=normalizeEditions([{id,savedAt,playerCount:state.players?.length||2,stories:state.stories},...editions]);
- return next;
+ if(next.length!==editions.length+1)return {status:'invalid',editions,edition:null};
+ return {status:'ready',editions:next,edition:next.find(x=>x.id===id)};
+}
+export function addFinishedEdition(existing,room,state,savedAt=Date.now()){
+ return planFinishedEdition(existing,room,state,savedAt).editions;
 }
 export const removeEdition=(editions,id)=>normalizeEditions(editions).filter(item=>item.id!==id);
 export function readEditions(storage,key){
@@ -40,11 +51,8 @@ export function readEditions(storage,key){
 }
 export function writeEditions(storage,key,editions){
  const list=normalizeEditions(editions);
- // Trim oldest editions on quota exhaustion; never replace a good archive with an empty value.
- for(let n=list.length;n>0;n--){
-  try{storage.setItem(key,JSON.stringify(list.slice(0,n)));return true}catch{}
- }
- return false;
+ // Atomic write: never silently discard old (or pinned) stories on quota failure.
+ try{storage.setItem(key,JSON.stringify(list));return true}catch{return false}
 }
 
 /** Search never mutates storage. Matching one chapter preserves its entire story for reading. */

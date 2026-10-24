@@ -68,3 +68,16 @@
 @media(prefers-reduced-motion:reduce){
  .page-turn-controls button,.reaction-options button{transition:none}
 }
+
+/* A finished issue must remain retrievable even when local archive storage is full. */
+.reader-layout .archive-save-warning{
+ margin:6px 0 0;flex:none;padding:10px 12px;
+ border:1px solid #af714a;border-left:4px solid #ad5f35;background:#fbebd5;
+ color:#75412d;font:700 12px/1.5 'DM Sans',system-ui,sans-serif;overflow-wrap:anywhere;
+}
+.reader-layout .reader-actions{flex-wrap:wrap}
+.reader-layout [data-act="download-issue"]{min-height:40px}
+@media(max-width:760px){
+ .reader-layout .archive-save-warning{padding:7px 9px;font-size:11px}
+ .reader-layout [data-act="download-issue"]{min-height:42px}
+}
