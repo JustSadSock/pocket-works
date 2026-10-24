@@ -621,8 +621,8 @@ function renderPlay(){
  ['inventory','bag','Предметы'],['secret','scroll','Задания'],
  ['deals','trade','Обмен'],['players','people','Игроки']
  ].map(([id,icon,label])=>'<button class="workspace-tab" type="button" data-action="open-sheet" data-sheet="'+id+
- '" aria-controls="bazaarSheet" role="tab" aria-selected="'+(activeSheet===id)+'" aria-expanded="'+(activeSheet===id)+'">'+
- svgIcon(icon,19)+'<span>'+label+'</span>'+
+ '" aria-label="'+esc(label)+'" title="'+esc(label)+'" aria-controls="bazaarSheet" role="tab" aria-selected="'+(activeSheet===id)+'" aria-expanded="'+(activeSheet===id)+'">'+
+ svgIcon(icon,19)+'<span class="workspace-tab-label">'+esc(label)+'</span>'+
  '<span class="tab-count"'+(!unreadCount(id)?' hidden':'')+'>'+unreadCount(id)+'</span></button>').join('');
  const pages=
  '<section class="sheet-page" data-sheet-page="detail">'+artifactDetailBlock(you)+'</section>'+
