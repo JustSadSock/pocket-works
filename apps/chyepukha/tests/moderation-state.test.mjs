@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {hostRecovery,recoveryCountdown,seatOptions,recoveryLabel} from '../moderation-state.js';
 import {controlsDialog,seatDecisionDialog,transferHostDialog} from '../moderation-view.js';
 
@@ -80,4 +81,11 @@ test('host transfer has a dedicated confirmation rather than a one-tap command',
  assert.match(html,/data-act="ask-transfer-host"/);
  assert.doesNotMatch(html,/data-act="transfer-host"/);
  assert.match(transferHostDialog(players[1],escape),/data-act="confirm-transfer-host"/);
+});
+
+test('reconnection never sends game commands before room_joined',()=>{
+ const client=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(client,/view&&!roomJoinedOnSocket/);
+ assert.match(client,/reconnect-banner/);
+ assert.match(client,/button\.disabled=true/);
 });
