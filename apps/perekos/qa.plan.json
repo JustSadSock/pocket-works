@@ -39,7 +39,8 @@
         "tests/magic-v2-motion-impact.test.mjs",
         "tests/magic-v2-network-aspects.test.mjs",
         "tests/magic-v2-pvp-balance.test.mjs",
-        "tests/magic-v2-shield-budget.test.mjs"
+        "tests/magic-v2-shield-budget.test.mjs",
+        "tests/magic-v2-matchups.test.mjs"
       ]
     },
     {

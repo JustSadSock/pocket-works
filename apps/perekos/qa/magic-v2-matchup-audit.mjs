@@ -1,0 +1,100 @@
+// Deterministic, position-balanced Magic 2.0 matchup audit.
+// This is a fixed-step BOT benchmark, not evidence from human multiplayer matches.
+import assert from 'node:assert/strict';
+import {mkdirSync,writeFileSync} from 'node:fs';
+import {dirname} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {makeMagicV2Practice,tick,STEP,validState} from '../core.mjs';
+import {createMagicLoadout,grantEarnedMagicRune,applyMagicEdit,validateMagicState} from '../magic-v2-rules.mjs';
+
+export const SCHOOLS=Object.freeze(['stone','fire','storm']);
+export const PROFILES=Object.freeze(['starter','guard','pressure']);
+const MAGES={stone:'pebble',fire:'kindle',storm:'wire'};
+const PRESSURE={stone:'st_spikes',fire:'fi_lash',storm:'li_discharge'};
+const round=n=>Number(n.toFixed(3));
+
+function equip(book,id,slot=1){
+ const granted=grantEarnedMagicRune(book,id);
+ assert.equal(granted.ok,true,granted.error);
+ const instance=granted.state.reserve.at(-1);
+ const result=applyMagicEdit(granted.state,{
+  type:'equip',slot,instanceId:instance.instanceId,revision:granted.state.revision
+ });
+ assert.equal(result.ok,true,result.error||id);
+ return result.state;
+}
+function profile(book,kind,school){
+ if(kind==='starter')return book;
+ let next=equip(book,'u_on_cast');
+ next=equip(next,kind==='guard'?'u_guard':PRESSURE[school]);
+ assert.equal(validateMagicState(next).ok,true);
+ return next;
+}
+function controls(self,enemy,seat,frame){
+ const dx=enemy.x-self.x,dy=enemy.y-self.y,d=Math.hypot(dx,dy)||1;
+ const chase=d>145?.67:d<80?-.33:.08;
+ const strafe=(Math.floor(frame/210)+seat)%2===0?.46:-.46;
+ return {x:dx/d*chase-dy/d*strafe,y:dy/d*chase+dx/d*strafe,
+  aim:{x:enemy.x,y:enemy.y},attack:true,
+  shield:frame%317===3,dash:frame%229===7};
+}
+export function simulate(left,right,kind,seed,frames=900){
+ assert.ok(SCHOOLS.includes(left)&&SCHOOLS.includes(right));
+ assert.ok(PROFILES.includes(kind)&&Number.isInteger(seed));
+ const s=makeMagicV2Practice(left,seed);
+ s.magicLoadouts[0]=profile(s.magicLoadouts[0],kind,left);
+ s.magicLoadouts[1]=profile(createMagicLoadout(right,{seed:seed+911,starter:'attack'}),kind,right);
+ s.actors[1].magicSchool=right;
+ s.actors[1].mageId=MAGES[right];
+ s.phase='fight';
+ let elapsed=0,maxShots=0,maxMines=0,maxBarriers=0;
+ for(let frame=0;frame<frames;frame++){
+  const [a,b]=s.actors;
+  tick(s,controls(a,b,0,frame),STEP,controls(b,a,1,frame));
+  elapsed=frame+1;
+  maxShots=Math.max(maxShots,s.shots.length);
+  maxMines=Math.max(maxMines,s.mines.length);
+  maxBarriers=Math.max(maxBarriers,s.barriers.length);
+  assert.ok(maxShots<=80,'Projectile cap exceeded');
+  if(s.actors.some(actor=>actor.hp<=0))break;
+ }
+ assert.equal(validState(s),true,'Invalid fixed-step Magic 2.0 state');
+ const [a,b]=s.actors;
+ return {left,right,profile:kind,seed,ticks:elapsed,
+  hp:[round(a.hp),round(b.hp)],shield:[round(a.shield),round(b.shield)],
+  heat:[round(a.heat),round(b.heat)],
+  knockout:a.hp<=0&&b.hp<=0?'double':a.hp<=0?'right':b.hp<=0?'left':'none',
+  hpDelta:round(a.hp-b.hp),
+  maxShots,maxMines,maxBarriers};
+}
+export function audit({seeds=[431,997],frames=900}={}){
+ const matches=[];
+ for(const kind of PROFILES)for(const seed of seeds)for(const left of SCHOOLS)for(const right of SCHOOLS){
+  matches.push(simulate(left,right,kind,seed,frames));
+ }
+ const pairs=[];
+ for(let i=0;i<SCHOOLS.length;i++)for(let j=i+1;j<SCHOOLS.length;j++){
+  const a=SCHOOLS[i],b=SCHOOLS[j];
+  const aligned=matches.filter(m=>m.left===a&&m.right===b);
+  const reversed=matches.filter(m=>m.left===b&&m.right===a);
+  assert.equal(aligned.length,reversed.length);
+  const neutral=aligned.map((m,k)=>(m.hpDelta-reversed[k].hpDelta)/2);
+  const advantage=round(neutral.reduce((x,y)=>x+y,0)/neutral.length);
+  pairs.push({a,b,samples:neutral.length,seatNeutralHpAdvantage:advantage,
+   warning:Math.abs(advantage)>20?'investigate':'within-observation-band'});
+ }
+ const seatAdvantage=round(matches.reduce((sum,m)=>sum+m.hpDelta,0)/matches.length);
+ return {schema:1,kind:'deterministic-fixed-step-bot-proxy',rules:'Magic 2.0',
+  description:'Not live PocketNet sessions; reports cannot establish human win rates.',
+  config:{schools:SCHOOLS,profiles:PROFILES,seeds,frames,seatOrders:'both'},
+  samples:matches.length,seatOneMeanHpAdvantage:seatAdvantage,
+  seatWarning:Math.abs(seatAdvantage)>15?'investigate':'within-observation-band',
+  pairs,matches};
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
+ const report=audit();
+ const output=process.env.PEREKOS_AUDIT_OUT;
+ if(output){mkdirSync(dirname(output),{recursive:true});writeFileSync(output,JSON.stringify(report,null,2)+'\n')}
+ process.stdout.write(JSON.stringify({samples:report.samples,seatOneMeanHpAdvantage:report.seatOneMeanHpAdvantage,
+  seatWarning:report.seatWarning,pairs:report.pairs})+'\n');
+}
