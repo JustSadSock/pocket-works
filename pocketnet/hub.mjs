@@ -52,6 +52,7 @@ export class PocketNetHub {
     this.chyepukhaSyncAt = new WeakMap();
     this.zamazkaSyncAt = new WeakMap();
     this.bazaarSyncAt = new WeakMap();
+    this.bazaarPingAt = new WeakMap();
     ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY, id TEXT NOT NULL, name TEXT NOT NULL, expires INTEGER NOT NULL
     )`);
@@ -725,8 +726,9 @@ export class PocketNetHub {
           const command=msg.payload.type,now=Date.now();
           this.advanceBazaarDeadline(room,now);
           if(command==='tick')return;
-          if(now-(this.bazaarSyncAt.get(ws)||0)<1500)return;
-          this.bazaarSyncAt.set(ws,now);
+          const rateMap=command==='sync'?this.bazaarSyncAt:this.bazaarPingAt;
+          if(now-(rateMap.get(ws)||0)<1500)return;
+          rateMap.set(ws,now);
           if(command==='sync')this.emit(room,[{type:'state',to:player.id}]);
           else if(Number.isFinite(msg.payload.stamp))
             message(ws,'game_event',{roomId:room.id,event:{type:'time_pong',to:player.id,
