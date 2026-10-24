@@ -128,7 +128,7 @@ export class NetworkManager {
       this.clearQueuedInputs();this.pendingInputs=[];
       return;
     }
-    if(this.inputQueue.length)this.inputFlushTimer=setTimeout(()=>this.flushInputs(),40);
+    if(this.inputQueue.length)this.inputFlushTimer=setTimeout(()=>this.flushInputs(),65);
   }
   reconnect(){
     const socket=this.net?.socket;
@@ -329,7 +329,7 @@ export class NetworkManager {
     this.pendingInputs.push(action);
     this.inputQueue.push(action);
     if(input.action==='hardDrop'||this.inputQueue.length>=12)this.flushInputs();
-    else if(!this.inputFlushTimer)this.inputFlushTimer=setTimeout(()=>this.flushInputs(),40);
+    else if(!this.inputFlushTimer)this.inputFlushTimer=setTimeout(()=>this.flushInputs(),65);
     return true;
   }
   requestLaneResume(){return this.started&&!this.finished&&!this.stale&&this.send({type:'resume'});}
