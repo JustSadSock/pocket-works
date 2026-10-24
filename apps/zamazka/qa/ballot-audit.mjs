@@ -5,6 +5,7 @@ import ts from 'typescript';
 import {compareAuditPixels,auditRevealedBallot} from '../ballot-audit.js';
 import {ballotRasterPackets,ballotRasterChecksum} from '../ballot-raster.js';
 import {paintingChecksum} from '../draft-transfer.js';
+import {prepareArtworkStorage} from '../../../pocketnet/art-storage.mjs';
 import {rasterAuditCaption} from '../round-review.js';
 
 const make=v=>{const b=new Uint8ClampedArray(120*90*4);for(let i=0;i<b.length;i+=4){b[i]=b[i+1]=b[i+2]=v;b[i+3]=255}return b};
@@ -90,6 +91,10 @@ send(voters[1].id,{...data,mae:42,patch:80,differing:50,status:'match'});
 assert.equal(room.ballotAudits[author][voters[1].id].status,'mismatch',
  'server ignores spoofed labels and applies its own thresholds');
 assert.equal(JSON.stringify(room.scores),score,'audit cannot touch scores');
+const storage=prepareArtworkStorage(room,'__zamazka_sqlite_art__','');
+assert.equal(storage.updates.length,0,'audit metadata must not rewrite even one artwork blob');
+assert(storage.activeKeys.has('ballot:'+author),'retention still tracks raster keys');
+assert.equal(storage.stored.ballotSprites[author],'__zamazka_sqlite_art__');
 const visible=send(author,{type:'sync'}).events[0].payload;
 assert.equal(visible.gallery[visible.turn].rasterAudit.matches,1);
 assert.equal(visible.gallery[visible.turn].rasterAudit.mismatches,1);
