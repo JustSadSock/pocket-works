@@ -64,7 +64,7 @@ test('input prediction does not mutate authoritative snapshots and respects lock
  ]);
  assert.equal(predicted.position.x,3);
  assert.deepEqual(player,before);
- board[0][2]=1;
+ board[0][3]=1;
  const blocked=projectOwnPiece(player,board,[player],[{seq:3,action:'move',direction:-1}]);
  assert.equal(blocked.position.x,4,'obstacle prevents optimistic movement');
  const floor=projectOwnPiece(player,board,[player],[{seq:4,action:'hardDrop'}]);
