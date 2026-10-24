@@ -91,7 +91,15 @@ test('client coalesces a rapid gesture and prunes predictions only after server 
   net.apply(state,true);
   assert.equal(net.pendingInputs.length,0);
   net.sendPlayerInput({action:'rotate'});
-  assert.equal(net.pendingInputs[0].seq,3);
+  net.sendPlayerInput({action:'move',direction:-1});
+  net.flushInputs();
+  assert.deepEqual(net.pendingInputs.map(a=>a.seq),[3,4]);
+  state.engine.players[0].lastInputSeq=3;
+  net.apply(state);
+  assert.deepEqual(net.pendingInputs.map(a=>a.seq),[4],'unconfirmed input must survive older snapshot');
+  state.engine.players[0].lastInputSeq=4;
+  net.apply(state);
+  assert.equal(net.pendingInputs.length,0,'acknowledgement reconciles optimistic movement');
   net.resetRoom();
   assert.equal(net.pendingInputs.length,0);
  }finally{globalThis.document=originalDocument;net.stopClock();}
