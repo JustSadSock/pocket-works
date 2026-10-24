@@ -730,7 +730,7 @@ export class PocketNetHub {
             const last=this.bazaarSyncAt.get(ws),revision=room.state.revision;
             // Suppress duplicate snapshots only. A completed trade changes
             // revision and must be immediately resyncable on the same socket.
-            if(last&&last.revision===revision&&now-last.at<1500)return;
+            if(last&&last.revision===revision&&now-last.at<40)return;
             this.bazaarSyncAt.set(ws,{at:now,revision});
             this.emit(room,[{type:'state',to:player.id}]);
           }else if(Number.isFinite(msg.payload.stamp)){
