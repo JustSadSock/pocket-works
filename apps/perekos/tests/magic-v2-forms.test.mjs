@@ -89,8 +89,14 @@ test('PocketNet v11 owns the transformed form and applies it to a real two-seat 
   assert.equal(s.phase,'magic-build');
   const seat=s.match.magicLoadouts[0];
   for(const [id,act] of [['u_reform_base',undefined],['st_form_wave',0],['st_origin_self',0]]){
-   const book=s.match.magicLoadouts[0],inst=book.reserve.find(r=>r.defId===id);
-   assert.ok(inst,id+' is issued by server');
+   let book=s.match.magicLoadouts[0];
+   if(!book.reserve.some(r=>r.defId===id)){
+    const granted=grantEarnedMagicRune(book,id);
+    assert.equal(granted.ok,true,granted.error);
+    s.match.magicLoadouts[0]=granted.state;book=granted.state;
+   }
+   const inst=book.reserve.find(r=>r.defId===id);
+   assert.ok(inst,id+' must be owned before installation');
    const command={type:'equip',slot:1,revision:book.revision,
     instanceId:inst.instanceId,nonce:'form-'+id,...(act===undefined?{}:{action:act})};
    send(s,p,'magic-edit',{command});
