@@ -224,3 +224,18 @@ test('Cosmetic selection is reachable only in the waiting room',()=>{
  assert.match(source,/avatarOf\(p\)/);
  assert.match(source,/return-lobby/);
 });
+
+test('Contextual market controls never bypass the versioned public bid and avoid extra sheets',()=>{
+ const source=readFileSync(join(root,'app.js'),'utf8');
+ const controls=source.slice(source.indexOf('function tableTradeActions(you){'),source.indexOf('function collectDrafts(){'));
+ assert.ok(controls.includes('data-action="bid-asking"'));
+ assert.ok(controls.includes('data-action="accept"'));
+ assert.ok(controls.includes('data-bid="'),'seller must confirm immutable offer ID');
+ assert.ok(controls.includes('data-action="withdraw"'));
+ assert.ok(controls.includes('data-action="open-item"'),'details remain accessible');
+ assert.ok(controls.includes('data-action="inspect"'));
+ assert.ok(source.includes("'+lot+tableTradeActions(you)+"),'rail belongs to physical table');
+ assert.match(source,/const draftFocus=mode==='play'\?captureDraftFocus\(\):null/);
+ assert.match(source,/restoreDraftFocus\(draftFocus\)/);
+ assert.match(source,/class="direct-post"/,'inventory listing form should not be hidden under another disclosure');
+});

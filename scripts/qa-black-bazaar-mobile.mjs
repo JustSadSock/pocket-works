@@ -127,11 +127,13 @@ try{
    const offerButton=frame.locator('.table-stage .artifact[data-kind="listing"]');
    if(await offerButton.count()!==1)report.issues.push('buyer cannot see active auction lot');
    else{
-    await offerButton.click();
-    const bidButton=frame.locator('[data-sheet-page="detail"] button[data-action="bid-asking"]');
+    const bidButton=frame.locator('.table-trade-actions button[data-action="bid-asking"]');
     if(await bidButton.count()!==1||await bidButton.isDisabled())
-     report.issues.push('buyer cannot use asking-price bid button');
+     report.issues.push('buyer cannot offer asking price directly on the table');
     else await bidButton.click();
+    const awaiting=frame.locator('.table-trade-actions.is-buyer .table-awaiting');
+    if(await awaiting.count()!==1||!(await awaiting.innerText()).includes('Твоя ставка'))
+     report.issues.push('buyer did not see pending offer on tabletop');
    }
    const offered=await exercise({type:'tick'});
    if(offered.error||offered.after.bids.length!==1||
@@ -159,9 +161,9 @@ try{
    const itemButton=frame.locator('.table-stage .artifact[data-kind="listing"]');
    if(await itemButton.count()!==1)report.issues.push('auction tabletop listing not clickable');
    else{
-    await itemButton.click();
-    const acceptButton=frame.locator('[data-sheet-page="detail"] button[data-action="accept"][data-player="debug-1"]');
-    if(await acceptButton.count()!==1)report.issues.push('seller cannot find accept button');
+    const acceptButton=frame.locator('.table-trade-actions.is-seller button[data-action="accept"][data-player="debug-1"]');
+    if(await acceptButton.count()!==1||!await acceptButton.getAttribute('data-bid'))
+     report.issues.push('seller cannot accept exact bid from the tabletop');
     else await acceptButton.click();
    }
    const accepted=await exercise({type:'tick'});

@@ -11,7 +11,7 @@ import {createDebugState,debugSetItem,debugCommand} from './debug-state.js';
 
 const debugPreview=new URLSearchParams(location.search).has('debugPreview');
 installMobileRuntime();
-if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.16.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.16.1',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -379,6 +379,45 @@ function repackBlock(you){
  '</form></div>';
 }
 function actionsBlock(you){return quickActions(you,state.turnId===me?.id);}
+function captureDraftFocus(){
+ const field=document.activeElement,form=field?.closest?.('form[data-form]');
+ if(!form||!app.contains(form)||!field.name)return null;
+ return {id:form.dataset.form+':'+(form.dataset.dealId||form.dataset.lotId||''),name:field.name,
+  selection:field.tagName==='INPUT'&&field.type!=='number'&&typeof field.selectionStart==='number'?[field.selectionStart,field.selectionEnd]:null};
+}
+function restoreDraftFocus(focus){
+ if(!focus)return;
+ const form=[...app.querySelectorAll('form[data-form]')].find(f=>f.dataset.form+':'+(f.dataset.dealId||f.dataset.lotId||'')===focus.id);
+ const field=[...(form?.elements||[])].find(x=>x.name===focus.name);
+ if(!field||field.disabled||field.closest('[hidden]'))return;
+ field.focus({preventScroll:true});
+ if(focus.selection&&field.setSelectionRange)field.setSelectionRange(...focus.selection);
+}
+function tableTradeActions(you){
+ const lot=state.listing,active=state.turnId===me?.id;
+ if(!lot)return active&&!you.bankrupt&&you.items.some(item=>item.acquiredRound!==state.round)?
+  '<div class="table-trade-actions is-empty"><button type="button" data-action="open-sheet" data-sheet="inventory">'+svgIcon('bag',17)+' Выбрать находку для продажи</button></div>':'';
+ if(lot.seller===me?.id){
+  const latest=state.bids.at(-1);
+  return '<div class="table-trade-actions is-seller" aria-label="Действия продавца">'+
+   (latest?'<button type="button" class="primary table-quick-offer" data-action="accept" data-player="'+esc(latest.buyer)+'" data-bid="'+esc(latest.id||'')+'" aria-label="Принять '+esc(label(latest.buyer))+': '+esc(amounts(latest.offer))+'">'+svgIcon('check',17)+
+    '<span>Принять · '+esc(label(latest.buyer))+'<small>'+esc(amounts(latest.offer))+'</small></span></button>':
+    '<span class="table-awaiting">'+svgIcon('clock',16)+' Ждём предложений</span>')+
+   '<button type="button" class="table-quiet-action" data-action="open-item" data-kind="listing" data-id="'+esc(lot.id)+'">'+(state.bids.length>1?'Все ставки · '+state.bids.length:'Управлять лотом')+'</button></div>';
+ }
+ if(you.bankrupt)return '';
+ const yourBid=state.bids.find(b=>b.buyer===me?.id);
+ const affordable=keys.every(k=>(you.resources[k]||0)>=(lot.ask[k]||0));
+ const canInspect=!you.inspections.some(i=>i.itemId===lot.id);
+ return '<div class="table-trade-actions is-buyer" aria-label="Действия покупателя">'+
+  (yourBid?'<span class="table-awaiting">Твоя ставка · '+esc(amounts(yourBid.offer))+'</span>'+
+    '<button type="button" class="table-quiet-action" data-action="withdraw">Отозвать</button>':
+    '<button type="button" class="primary table-quick-offer" data-action="bid-asking" '+(!affordable?'disabled':'')+'>'+
+    svgIcon('gavel',17)+'<span>'+(affordable?'Предложить цену':'Не хватает ресурсов')+'<small>'+esc(amounts(lot.ask))+'</small></span></button>')+
+   '<button type="button" class="table-quiet-action" data-action="open-item" data-kind="listing" data-id="'+esc(lot.id)+'">Другая цена / детали</button>'+
+   (canInspect&&you.resources.gold>=(you.inspectionPrices?.public??15)?'<button type="button" class="table-quiet-action" data-action="inspect">'+svgIcon('eye',16)+' Проверить · '+(you.inspectionPrices?.public??15)+'</button>':'')+
+   '</div>';
+}
 function collectDrafts(){
  const current={};
  for(const form of app.querySelectorAll('form[data-form]')){
@@ -510,8 +549,8 @@ function artifactDetailBlock(you){
    (free?'<button type="button" data-action="detail-trade" data-id="'+esc(item.id)+'">'+svgIcon('trade')+' Обмен</button>':'')+
    (free&&active&&you.marketDeals<2&&!state.listing?
     '<form class="detail-offer-form" data-form="detail-post"><input type="hidden" name="itemId" value="'+esc(item.id)+'">'+
-     '<details class="quick-expand"><summary>'+svgIcon('gavel',18)+' Выставить на торги</summary>'+resourceFields('ask',{gold:100})+
-     '<button type="submit" class="primary">'+svgIcon('gavel')+' Выставить</button></details></form>':'')+
+     '<div class="direct-post"><strong>'+svgIcon('gavel',18)+' Выставить на торги</strong>'+resourceFields('ask',{gold:100})+
+     '<button type="submit" class="primary">'+svgIcon('gavel')+' Выставить с этой ценой</button></div></form>':'')+
    (!locked&&active&&!you.usedPawn?
      '<div class="detail-secondary-actions"><button type="button" data-action="detail-pawn" data-id="'+esc(item.id)+'">Ломбард · 45 золота</button>'+
      (tradable?'<button type="button" data-action="detail-salvage" data-id="'+esc(item.id)+'">Разобрать · '+(state.salvageParts??2)+' детали</button>':'')+'</div>':'')+
@@ -612,6 +651,7 @@ function resourceWallet(w,forecast){
  }).join('')+'</div>';
 }
 function renderPlay(){
+ const draftFocus=mode==='play'?captureDraftFocus():null;
  const drafts=mode==='play'?collectDrafts():{};
  const previousScroll=mode==='play'?app.querySelector('.sheet-content')?.scrollTop||0:0;
  const expanded=mode==='play'?[...app.querySelectorAll('.sheet-page details')].map((el,i)=>el.open?i:-1).filter(i=>i>=0):[];
@@ -666,7 +706,7 @@ function renderPlay(){
  '<div class="play-body"><div class="play-field" data-player-count="'+state.players.length+'">'+
  '<div class="ambient-lights" aria-hidden="true"><i></i><i></i><i></i><i></i></div>'+
  '<div class="player-seats" data-seats="'+state.players.length+'">'+seats+'</div>'+
- '<div class="table-stage">'+lot+
+ '<div class="table-stage'+(listing?' has-trade-actions':'')+'">'+lot+tableTradeActions(you)+
  (inventory?'<div class="mini-artifacts" aria-label="Мои предметы">'+inventory+'</div>':'')+
  (state.event?'<button type="button" data-action="open-sheet" data-sheet="players" class="table-event">'+
  svgIcon('leaf')+' '+esc(state.event.title)+'</button>':'')+
@@ -677,7 +717,7 @@ function renderPlay(){
  '<nav class="workspace-tabs" role="tablist" aria-label="Разделы">'+sections+'</nav>'+
  '<div class="sheet-heading"><h2 id="sheetTitle">Мой ход</h2></div>'+
  '<div class="sheet-content">'+pages+'</div></aside></div></div>';
- restoreDrafts(drafts);openSheet(activeSheet);
+ restoreDrafts(drafts);openSheet(activeSheet);restoreDraftFocus(draftFocus);
  [...app.querySelectorAll('.sheet-page details')].forEach((el,i)=>{if(expanded.includes(i))el.open=true;});
  const scroll=app.querySelector('.sheet-content');if(scroll)scroll.scrollTop=previousScroll;
  applyCharacterArt(app);updateTurnClock();

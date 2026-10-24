@@ -209,3 +209,65 @@ test('production entry and navigation fit a 320px phone',async({page})=>{
  expect(layout.createBottom).toBeLessThan(layout.joinBottom);
  expect(layout.joinBottom).toBeLessThanOrEqual(layout.viewportHeight-5);
 });
+
+test('tabletop lets buyers bid and sellers accept without opening a side panel',async({page})=>{
+ await page.setViewportSize({width:375,height:667});
+ page.on('dialog',dialog=>dialog.accept());
+ await page.goto(game);
+ await scene(page,'buyer');
+ const buyerRail=page.locator('.table-trade-actions.is-buyer');
+ await expect(buyerRail).toBeVisible();
+ await expect(buyerRail.locator('button[data-action="bid-asking"]')).toHaveCount(1);
+ await buyerRail.locator('button[data-action="bid-asking"]').click();
+ await expect(page.locator('.table-trade-actions .table-awaiting')).toContainText('Твоя ставка');
+ await expect(page.locator('.table-trade-actions button[data-action="withdraw"]')).toBeVisible();
+ await scene(page,'seller');
+ const sellerRail=page.locator('.table-trade-actions.is-seller');
+ const accept=sellerRail.locator('button[data-action="accept"]');
+ await expect(accept).toHaveAttribute('data-bid',/bid-/);
+ await accept.click();
+ await expect(page.locator('.table-stage .artifact-note')).toContainText('Нет лота');
+ await expect(page.locator('.table-trade-actions.is-seller')).toHaveCount(0);
+});
+
+test('tabletop auction action rail does not overlap owned artifacts on small screens',async({page})=>{
+ await page.goto(game);
+ for(const [width,height] of [[320,568],[375,667],[390,844],[844,390],[1440,900]]){
+  await page.setViewportSize({width,height});
+  await scene(page,'buyer');
+  const layout=await page.evaluate(()=>{
+   const container=document.querySelector('.table-stage')!.getBoundingClientRect();
+   const rail=document.querySelector('.table-trade-actions')!.getBoundingClientRect();
+   const item=document.querySelector('.table-stage .artifact')!.getBoundingClientRect();
+   const inventory=document.querySelector('.table-stage .mini-artifacts')!.getBoundingClientRect();
+   const over=(a:DOMRect,b:DOMRect)=>Math.min(a.right,b.right)-Math.max(a.left,b.left)>5&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>5;
+   return {vw:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,
+    rail:{left:rail.left,right:rail.right,top:rail.top,bottom:rail.bottom},
+    stage:{left:container.left,right:container.right,top:container.top,bottom:container.bottom},
+    overlapItem:over(rail,item),overlapInventory:over(rail,inventory),
+    actionButtons:[...document.querySelectorAll('.table-trade-actions button')].filter(el=>getComputedStyle(el).display!=='none').map(el=>({h:el.getBoundingClientRect().height,w:el.getBoundingClientRect().width}))
+   };
+  });
+  expect(layout.scroll,JSON.stringify({width,height,layout})).toBeLessThanOrEqual(layout.vw+2);
+  expect(layout.rail.left,JSON.stringify({width,height,layout})).toBeGreaterThanOrEqual(layout.stage.left-3);
+  expect(layout.rail.right).toBeLessThanOrEqual(layout.stage.right+3);
+  expect(layout.overlapItem,JSON.stringify({width,height,layout})).toBe(false);
+  expect(layout.overlapInventory,JSON.stringify({width,height,layout})).toBe(false);
+  expect(layout.actionButtons.length).toBeGreaterThan(0);
+  expect(Math.min(...layout.actionButtons.map(x=>x.w))).toBeGreaterThan(65);
+ }
+});
+
+test('server-driven redraw keeps the focused price field and its edited value',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(game);await scene(page,'buyer');
+ await page.locator('.table-trade-actions [data-action="open-item"]').click();
+ const summary=page.locator('[data-sheet-page="detail"] summary').filter({hasText:'Другая цена'});
+ await summary.click();
+ const price=page.locator('form[data-form="detail-bid"] input[name="offer_gold"]');
+ await price.fill('73');
+ await price.focus();
+ await page.evaluate(()=>document.querySelector<HTMLButtonElement>('[data-sheet-page="detail"] button[data-action="bid-asking"]')!.click());
+ await expect(price).toHaveValue('73');
+ await expect(price).toBeFocused();
+});
