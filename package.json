@@ -57,7 +57,7 @@
     "sync:metadata": "node scripts/sync-app-metadata.mjs",
     "build:pocketnet": "node scripts/build-pocketnet-modules.mjs",
     "snapshot:pocketnet": "node scripts/build-pocketnet-modules.mjs --snapshot",
-    "pocketnet:check": "node scripts/build-pocketnet-modules.mjs --check",
+    "pocketnet:check": "node scripts/build-pocketnet-modules.mjs --check && node --test pocketnet/test/session-tokens.test.mjs",
     "test:pocketnet:release": "node --test scripts/build-pocketnet-modules.test.mjs",
     "test:blockies:awards": "node scripts/test-blockies-achievements.mjs && node scripts/test-profile-rewards.mjs"
   },
