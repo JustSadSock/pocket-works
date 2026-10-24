@@ -1,0 +1,70 @@
+/* ЧЕПУХА · Финальное чтение: одна бумажная страница, один голос. */
+.page-reveal{display:flex;flex-direction:column;gap:12px;max-width:720px;min-height:100%;margin:0 auto}
+.page-progress{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed #ad9578;padding-bottom:11px;color:#7a684e;font:800 10px/1.4 'DM Sans',system-ui,sans-serif;letter-spacing:.08em}
+.page-reveal h3{margin:8px 0 0;font:600 clamp(22px,2.7vw,32px)/1.22 Georgia,serif;color:#2f4739;letter-spacing:-.03em}
+.page-manuscript{margin:0 0 auto;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text;font:400 clamp(18px,2vw,23px)/1.72 Georgia,'Literata',serif;color:#263a31}
+.page-turn-controls{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid #c7b39a;padding-top:15px;margin-top:22px;flex:none}
+.page-turn-controls button{min-height:45px;padding:9px 14px;border:1px solid #637663;background:#dce2d0;color:#2b493b;cursor:pointer;font:800 12px/1.35 'DM Sans',system-ui,sans-serif;transition:transform .15s,background .15s}
+.page-turn-controls button:focus-visible{outline:3px solid #aa6b42;outline-offset:2px}
+.page-turn-controls button:active:not(:disabled){transform:translateY(2px)}
+.page-turn-controls button:hover:not(:disabled){background:#becbb0}
+.page-turn-controls .page-next,.page-turn-controls .page-next-story{background:#3c5e4a;color:#f5e7d1}
+.page-turn-controls .page-next:hover,.page-turn-controls .page-next-story:hover{background:#50735e}
+.page-turn-controls button:disabled{cursor:default;opacity:.36}
+.page-dots{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;max-width:32%}
+.page-dots i{display:block;width:6px;height:6px;border:1px solid #9e977a;border-radius:50%}
+.page-dots i.current{background:#9d5f3c;border-color:#9d5f3c;transform:scale(1.35)}
+.page-dots i.seen{background:#8d9d80;border-color:#8d9d80}
+.page-ending{font:900 9px/1.4 system-ui,sans-serif;letter-spacing:.06em;color:#93563d;text-align:center}
+.reader-reactions{flex:none;margin:10px 0 1px;border-top:1px solid #bda98b;padding-top:10px}
+.reaction-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;font:800 10px/1.4 'DM Sans',system-ui,sans-serif;letter-spacing:.07em;color:#385446}
+.reaction-heading small{font-size:10px;letter-spacing:0;text-align:right;color:#7a6d59;font-weight:600}
+.reaction-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:7px}
+.reaction-options button{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;min-height:45px;padding:5px 8px;border:1px solid #ad9d84;background:#e7ddc8;color:#415241;cursor:pointer;font:800 12px/1.2 'DM Sans',system-ui,sans-serif;transition:background .15s,transform .15s}
+.reaction-options button:focus-visible{outline:3px solid #af6b43;outline-offset:2px}
+.reaction-options button:active:not(:disabled){transform:translateY(2px)}
+.reaction-options button[aria-pressed="true"]{background:#365b47;border-color:#365b47;color:#faf2e1;box-shadow:inset 0 0 0 2px #faf2e15c}
+.reaction-options button:disabled{opacity:.55;cursor:not-allowed}
+.reaction-options .reaction-mark{display:grid;place-items:center;flex:none;width:24px;height:24px;border:1px solid currentColor;border-radius:50%;font:bold 17px/1 Georgia,serif}
+.reaction-options b{font-size:13px;font-variant-numeric:tabular-nums;opacity:.9}
+.reader-layout .chapter.active{box-shadow:inset 4px 0 0 #975e3d}
+.reader-layout .reader-switch button[aria-pressed="true"]{background:#355648;color:#f4e8d1}
+@media(max-width:760px){
+ .reader-layout .story-paper{padding:10px 12px}
+ .reader-layout .reader-top{flex-wrap:wrap;align-items:flex-start;gap:6px}
+ .reader-layout .reader-switch{margin-left:auto}
+ .reader-layout .reader-switch button{min-height:42px;padding:7px 10px}
+ .reader-layout .reader-scroll{padding:12px 13px}
+ .page-reveal{gap:9px}
+ .page-progress{font-size:9px;padding-bottom:7px}
+ .page-reveal h3{font-size:clamp(19px,5.6vw,25px);margin-top:3px}
+ .page-manuscript{font-size:clamp(16px,4.2vw,19px);line-height:1.6}
+ .page-turn-controls{margin-top:14px;padding-top:9px}
+ .page-turn-controls button{padding:7px 9px;min-height:44px;font-size:11px}
+ .reader-reactions{padding-top:6px;margin-top:7px}
+ .reaction-heading small{font-size:9px}
+ .reaction-options{gap:4px;margin-top:5px}
+ .reaction-options button{min-height:44px;gap:4px;padding:4px 2px;font-size:10px}
+ .reaction-options .reaction-mark{width:20px;height:20px;font-size:14px}
+ .reaction-options b{font-size:12px}
+}
+@media(max-height:560px){
+ .reader-layout .reader-top{padding-block:3px}
+ .reader-layout .reader-top h2{font-size:19px;margin:2px 0}
+ .reader-layout .reader-scroll{padding:7px 11px}
+ .page-turn-controls{margin-top:8px;padding-top:7px}
+ .page-reveal{gap:6px}
+ .reader-reactions{padding-top:5px;margin-top:4px}
+ .reaction-options button{min-height:38px}
+ .reaction-options .reaction-mark{width:18px;height:18px;font-size:12px}
+ .reader-layout .reader-actions{margin-top:4px}
+}
+@media(max-width:350px){
+ .reader-layout .reader-switch button{padding:6px 6px;font-size:10px}
+ .reaction-heading{display:block}
+ .reaction-heading small{display:block;text-align:left}
+ .page-ending{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ .page-turn-controls button,.reaction-options button{transition:none}
+}

@@ -111,7 +111,7 @@ export class PocketNetHub {
   projectedState(room,player){
     const mod=this.module(room.gameId,room.version);
     if(!mod)throw Error('room_version_unavailable');
-    return playerRoomView(mod,room.state,player,room.players,room.gameId==='chyepukha'&&['v6','v7','v8'].includes(room.version)?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined);
+    return playerRoomView(mod,room.state,player,room.players,room.gameId==='chyepukha'&&['v6','v7','v8','v9'].includes(room.version)?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined);
   }
   joined(ws,room,player){
     const state=roomJoinView(room,()=>this.projectedState(room,player));
@@ -187,7 +187,7 @@ export class PocketNetHub {
   // the seat even if the kicked browser ignores the notification.
   async applyKicks(room, events, actorId) {
     const zamazka=room.gameId==='zamazka'&&(room.state?.paused||room.state?.phase==='lobby')&&room.state?.host===actorId;
-    const chyepukha=room.gameId==='chyepukha'&&['v6','v7','v8'].includes(room.version)&&room.state?.host===actorId;
+    const chyepukha=room.gameId==='chyepukha'&&['v6','v7','v8','v9'].includes(room.version)&&room.state?.host===actorId;
     const bazaar=room.gameId==='black-bazaar'&&['v16','v17','v18','v19','v20','v21','v22'].includes(room.version)&&room.state?.host===actorId;
     if(!zamazka&&!chyepukha&&!bazaar)return;
     let changed = false;
@@ -219,7 +219,7 @@ export class PocketNetHub {
   // rooms, freeze the authoritative deadline as soon as the last socket closes.
   // A room stays paused across Durable Object hibernation and server restarts.
   async updateChyepukhaPresence(room,player,online){
-    if(room.gameId!=='chyepukha'||!['v6','v7','v8'].includes(room.version))return;
+    if(room.gameId!=='chyepukha'||!['v6','v7','v8','v9'].includes(room.version))return;
     const mod=this.module(room.gameId,room.version);
     if(!mod?.onPresence)return;
     const onlineIds=this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean);
@@ -278,10 +278,10 @@ export class PocketNetHub {
     let state,roomPlayers;
     try{
       state=JSON.parse(row.state);roomPlayers=JSON.parse(row.players);
-      if(row.game_id==='chyepukha'&&['v5','v6','v7','v8'].includes(row.version)&&
+      if(row.game_id==='chyepukha'&&['v5','v6','v7','v8','v9'].includes(row.version)&&
          (!state||state.schema!==1||!Array.isArray(state.sheets)))throw Error('invalid_chyepukha_state');
     }catch(error){
-      if(row.game_id!=='chyepukha'||!['v5','v6','v7','v8'].includes(row.version))throw error;
+      if(row.game_id!=='chyepukha'||!['v5','v6','v7','v8','v9'].includes(row.version))throw error;
       const backups=this.sql('SELECT state,players FROM chyepukha_checkpoints WHERE room_id=? ORDER BY revision DESC LIMIT 4',id).toArray();
       let recovered=false;
       for(const backup of backups){
@@ -351,7 +351,7 @@ export class PocketNetHub {
         VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET state=excluded.state, players=excluded.players, updated_at=excluded.updated_at`,
         room.id,room.gameId,room.version,encoded,players,room.createdAt,room.updatedAt);
-      if(room.gameId==='chyepukha'&&['v5','v6','v7','v8'].includes(room.version)&&room.state.phase!=='lobby'){
+      if(room.gameId==='chyepukha'&&['v5','v6','v7','v8','v9'].includes(room.version)&&room.state.phase!=='lobby'){
         this.sql(`INSERT INTO chyepukha_checkpoints (room_id,revision,state,players,saved_at)
           VALUES (?,?,?,?,?) ON CONFLICT(room_id,revision) DO UPDATE SET state=excluded.state,players=excluded.players,saved_at=excluded.saved_at`,
           room.id,Number(room.state.revision)||0,encoded,players,room.updatedAt);
@@ -647,25 +647,25 @@ export class PocketNetHub {
           const mod = this.module(room.gameId, room.version);
           if (!mod) throw new Error('room_version_unavailable');
           const previous = room.players.some(p => p.id === player.id);
-          if((room.gameId==='chyepukha'&&['v6','v7','v8'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17','v18','v19','v20','v21','v22'].includes(room.version)||room.gameId==='zamazka'&&Number(room.version.slice(1))>=37)&&
+          if((room.gameId==='chyepukha'&&['v6','v7','v8','v9'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17','v18','v19','v20','v21','v22'].includes(room.version)||room.gameId==='zamazka'&&Number(room.version.slice(1))>=37)&&
              ((room.state.bannedIds||[]).includes(player.id)||(member.accountId&&(room.state.bannedAccounts||[]).includes(member.accountId))))throw Error('room_kicked');
           if(room.gameId==='zamazka'&&Number(room.version.slice(1))>=37&&!previous&&room.state.phase!=='lobby'&&!room.state.participants?.some(p=>p.id===player.id))throw Error('room_in_progress');
           if (!previous && member.accountId && room.players.some(p => p.accountId === member.accountId)) {
             throw new Error('account_already_in_room');
           }
           if (!previous) {
-            const authorizedClaim=room.gameId==='chyepukha'&&['v6','v7','v8'].includes(room.version)&&
+            const authorizedClaim=room.gameId==='chyepukha'&&['v6','v7','v8','v9'].includes(room.version)&&
               typeof msg.claimCode==='string'&&msg.claimCode.toUpperCase()===room.state.claim?.code;
             if(room.players.length>=MAX_PLAYERS&&!authorizedClaim)throw Error('room_full');
             if(authorizedClaim&&this.connected(room.state.claim.seatId,room.id))throw Error('seat_online');
             room.players.push(member);
             const result = mod.onJoin
               ? await mod.onJoin({ state: copied(room.state), player: member, players: room.players,
-                   payload:room.gameId==='chyepukha'&&['v6','v7','v8'].includes(room.version)?{claimCode:typeof msg.claimCode==='string'?msg.claimCode.slice(0,40):''}:null })
+                   payload:room.gameId==='chyepukha'&&['v6','v7','v8','v9'].includes(room.version)?{claimCode:typeof msg.claimCode==='string'?msg.claimCode.slice(0,40):''}:null })
               : { state: room.state, events: [] };
             if (!result || !('state' in result)) throw new Error('invalid_module_state');
             room.state = result.state;
-            if(room.gameId==='chyepukha'&&['v6','v7','v8'].includes(room.version)){
+            if(room.gameId==='chyepukha'&&['v6','v7','v8','v9'].includes(room.version)){
               const banned=new Set(room.state.bannedIds||[]);
               room.players=room.players.filter(p=>!banned.has(p.id));
             }
@@ -765,7 +765,7 @@ export class PocketNetHub {
         if (msg.type === 'game_message') {
           const result = await mod.onMessage({ state: copied(room.state), player: member,
             players: room.players, payload: msg.payload,
-            ...(room.gameId==='chyepukha'&&['v6','v7','v8'].includes(room.version)?{
+            ...(room.gameId==='chyepukha'&&['v6','v7','v8','v9'].includes(room.version)?{
               connectedIds:this.sockets(room.id).map(peer=>peer.deserializeAttachment()?.id).filter(Boolean),now:Date.now()
             }:{}),
             ...(room.gameId==='blockies'?{
@@ -814,7 +814,7 @@ export class PocketNetHub {
           }
           this.recordZamazkaRewards(room,prior,room.state,result.events ?? [],player.id);
           this.recordBlockiesRewards(room,prior,room.state);
-          const earlyKick=room.gameId==='chyepukha'&&['v6','v7','v8'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17','v18','v19','v20','v21','v22'].includes(room.version);
+          const earlyKick=room.gameId==='chyepukha'&&['v6','v7','v8','v9'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17','v18','v19','v20','v21','v22'].includes(room.version);
           if(earlyKick)await this.applyKicks(room,result.events ?? [],player.id);
           this.emit(room, result.events ?? []);
           if(!earlyKick)await this.applyKicks(room, result.events ?? [], player.id);
@@ -833,7 +833,7 @@ export class PocketNetHub {
           if (!result || !('state' in result)) throw new Error('invalid_module_state');
           room.state = result.state;
           this.setRoom(ws, null);
-          const keepVacant=room.gameId==='chyepukha'&&['v5','v6','v7','v8'].includes(room.version)&&
+          const keepVacant=room.gameId==='chyepukha'&&['v5','v6','v7','v8','v9'].includes(room.version)&&
             (room.state.phase==='writing'||room.state.phase==='finished');
           if (!room.players.length&&!keepVacant) await this.closeRoom(room);
           else {
@@ -891,8 +891,8 @@ export class PocketNetHub {
       const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
       for (const row of rows) {
         const room = this.readRoom(row.id);
-        const ttl=room?.gameId==='chyepukha'&&['v5','v6','v7','v8'].includes(room.version)&&room.state?.phase==='writing' ? 72*60*60_000
-          : room?.gameId==='chyepukha'&&['v5','v6','v7','v8'].includes(room.version)&&room.state?.phase==='finished' ? 7*24*60*60_000
+        const ttl=room?.gameId==='chyepukha'&&['v5','v6','v7','v8','v9'].includes(room.version)&&room.state?.phase==='writing' ? 72*60*60_000
+          : room?.gameId==='chyepukha'&&['v5','v6','v7','v8','v9'].includes(room.version)&&room.state?.phase==='finished' ? 7*24*60*60_000
           : room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000
           : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000
           : room?.gameId==='black-bazaar'&&['v17','v18','v19','v20','v21','v22'].includes(room.version)&&room.state?.phase==='play'&&room.state?.offlinePaused

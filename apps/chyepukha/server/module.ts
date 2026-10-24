@@ -8,6 +8,7 @@ const IDS = Object.keys(BANK);
 const GENRE_IDS = GENRES.map(g => g.id);
 const GENDERS = ['male','female','nonbinary','unspecified'];
 const MAX_ANSWER = 800;
+const REACTION_KEYS = ['laugh','surprised','heart'];
 const DEFAULTS = {maxPlayers:4,questionSet:'collapsingPlan',customQuestions:[],visibleTailWords:3,showNextQuestion:true,genre:'absurdComedy',customGenre:''};
 const clean = (v,n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,n);
 const clamp = (v,a,b,d) => Number.isFinite(Number(v)) ? Math.max(a,Math.min(b,Math.trunc(Number(v)))) : d;
@@ -27,7 +28,7 @@ function settingsFrom(raw,previous=DEFAULTS) {
 }
 function initial(player,payload){
  return {schema:1,revision:0,phase:'lobby',host:player.id,players:entries([player]),
-   settings:settingsFrom(payload?.settings||{}),round:0,total:0,issue:0,sheets:[],submitted:{},receipts:{},paused:false,bannedIds:[],bannedAccounts:[],claim:null,hostOfflineSince:0,hostVotes:{},message:''};
+   settings:settingsFrom(payload?.settings||{}),round:0,total:0,issue:0,sheets:[],submitted:{},receipts:{},paused:false,bannedIds:[],bannedAccounts:[],claim:null,hostOfflineSince:0,hostVotes:{},reactions:{},message:''};
 }
 function events(){return [{type:'state'}];}
 function notice(to,message){return [{type:'notice',to,payload:message}];}
@@ -80,7 +81,7 @@ function begin(s){
     fragments:[]};
  });
  s.total=resolveQuestions(opts,s.sheets[0].set).length;
- s.issue=(s.issue||0)+1;s.round=0;s.submitted={};s.receipts={};s.phase='writing';s.paused=false;s.claim=null;s.hostVotes={};s.hostOfflineSince=0;s.message='';s.revision++;
+ s.issue=(s.issue||0)+1;s.round=0;s.submitted={};s.receipts={};s.phase='writing';s.paused=false;s.claim=null;s.hostVotes={};s.hostOfflineSince=0;s.reactions={};s.message='';s.revision++;
  return null;
 }
 function viewForPlayer({state:s,player,players,onlineIds}){
@@ -104,7 +105,16 @@ function viewForPlayer({state:s,player,players,onlineIds}){
     starter:s.players.find(x=>x.id===sheet.starter)?.name||'Автор',gender:sheet.heroGender,heroAnchor:sheet.heroAnchor||'',
     question:resolveQuestions(s.settings,sheet.set,sheet.genre)[s.round],nextQuestion:s.settings.showNextQuestion===false?'':(resolveQuestions(s.settings,sheet.set,sheet.genre)[s.round+1]?.prompt||''),tail:previous?.tail||''},waiting:Boolean(s.submitted[p.id])};
  }
- if(s.phase==='finished')return {...common,stories:s.sheets.map(sh=>({
+ if(s.phase==='finished'){
+  // Readers see totals and only their own chosen reaction, never others' votes.
+  const reactionTotals={},myReactions={};
+  for(const sh of s.sheets){
+   const responses=s.reactions?.[sh.id]||{};
+   reactionTotals[sh.id]=Object.fromEntries(REACTION_KEYS.map(key=>[key,
+    s.players.filter(x=>!(s.bannedIds||[]).includes(x.id)&&responses[x.id]===key).length]));
+   if(REACTION_KEYS.includes(responses[player.id]))myReactions[sh.id]=responses[player.id];
+  }
+  return {...common,reactionTotals,myReactions,stories:s.sheets.map(sh=>({
    id:sh.id,starter:sh.starterName||s.players.find(x=>x.id===sh.starter)?.name||'Автор',
    setLabel:BANK[sh.set]?.label||'Свій набір',
    genre:GENRES.find(x=>x.id===sh.genre)?.label||s.settings.customGenre||'Свій жанр',
@@ -113,6 +123,7 @@ function viewForPlayer({state:s,player,players,onlineIds}){
    fragments:sh.fragments.map((f,i)=>({question:resolveQuestions(s.settings,sh.set)[f.questionIndex??i]?.prompt||'',answer:f.answer,skipped:f.skipped===true,
       author:f.authorName||s.players.find(x=>x.id===f.by)?.name||'Автор'}))
  }))};
+ }
  return common;
 }
 function submit(s,player,v){
@@ -208,6 +219,20 @@ const module={
   const online=new Set(Array.isArray(connectedIds)?connectedIds:s.players.map(x=>x.id)),clock=now||Date.now();
   const host=player.id===s.host,seatId=typeof v.seatId==='string'?v.seatId:'';
   const target=s.players.find(p=>p.id===seatId);
+  if(v.type==='react_story'){
+   const storyId=typeof v.storyId==='string'?v.storyId:'';
+   const reaction=typeof v.reaction==='string'?v.reaction:'';
+   if(s.phase!=='finished'||!s.players.some(p=>p.id===player.id)||(s.bannedIds||[]).includes(player.id)||
+      !s.sheets.some(sh=>sh.id===storyId)||!REACTION_KEYS.includes(reaction))
+    return {state:s,events:notice(player.id,'Цю реакцію зараз не дозволено.')};
+   s.reactions||={};
+   const responses=s.reactions[storyId]||{};
+   if(responses[player.id]===reaction)delete responses[player.id];
+   else responses[player.id]=reaction;
+   if(Object.keys(responses).length)s.reactions[storyId]=responses;
+   else delete s.reactions[storyId];
+   s.revision++;return {state:s,events:events()};
+  }
   if(v.type==='skip_slot'&&host&&s.phase==='writing'&&!s.paused&&target&&!online.has(target.id)&&!s.submitted[target.id]){
     const pi=s.players.findIndex(p=>p.id===target.id),si=(pi-s.round%s.players.length+s.players.length)%s.players.length;
     const paper=s.sheets[si];
