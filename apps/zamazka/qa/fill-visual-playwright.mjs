@@ -9,7 +9,8 @@ import {chromium} from '@playwright/test';
 
 const dir=process.env.ZAMAZKA_QA_ARTIFACT_DIR||join(tmpdir(),'zamazka-fill-playwright');
 mkdirSync(dir,{recursive:true});
-const fillSource=readFileSync(new URL('../fill-core.js',import.meta.url),'utf8').replace('export function ','function ');
+const fillSource=readFileSync(new URL('../fill-core.js',import.meta.url),'utf8').replaceAll('export function ','function ');
+assert(fillSource.includes('function floodFillRaster(')&&!fillSource.includes('export function'),'classic browser QA script must expose every raster function without ESM export tokens');
 const editorSource=readFileSync(new URL('../editor.js',import.meta.url),'utf8');
 const section=editorSource.slice(editorSource.indexOf('export function preservePaintContours('),editorSource.indexOf('function fillRegion('));
 assert(section.includes('useWallPigment'));
