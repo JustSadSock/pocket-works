@@ -1,5 +1,6 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createTrimRange} from './trim-range.js';
+import {meterHeights} from './studio-feedback.js';
 import {renderPremiere,supportsPremiereExport,premiereFilename} from './premiere-export.js';
 import {TimelineHistory,snapshotClips,spliceRecording,packTimeline,unpackTimeline,editClip,replaceSelectedRecording,MIN_CLIP_SECONDS} from './timeline-model.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
@@ -77,12 +78,10 @@ function startMicMonitor(stream){
   const measure=()=>{
    if(micMonitor!==m)return;
    analyser.getByteTimeDomainData(samples);
-   let total=0;for(const v of samples){const n=(v-128)/128;total+=n*n}
-   const level=Math.min(1,Math.sqrt(total/samples.length)*9);
+   const heights=meterHeights(samples,bars.length);
    for(let i=0;i<bars.length;i++){
-    const height=Math.max(3,Math.round(3+level*17*(1-.1*Math.abs(i-3))));
-    bars[i].style.height=height+'px';
-    bars[i].classList.toggle('active',level>.08&&height>5);
+    bars[i].style.height=heights[i]+'px';
+    bars[i].classList.toggle('active',heights[i]>5);
    }
    m.frame=requestAnimationFrame(measure);
   };
