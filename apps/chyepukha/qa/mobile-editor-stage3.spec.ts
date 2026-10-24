@@ -15,6 +15,8 @@ test('keyboard focus folds the manuscript brief without unmounting or clearing t
  await expect(page.locator('.writer-shell')).toHaveClass(/is-typing/);
  await expect(page.locator('#editorQuestion')).toBeHidden();
  await expect(page.locator('.editorial-brief')).toBeHidden();
+ // The floating moderation bar must not steal pointer events from the question tab.
+ await expect(page.locator('.moderation-bar')).toBeHidden();
  await expect(page.locator('#answer')).toHaveValue(original);
  const bounds=await page.evaluate(()=>{
   const answer=document.querySelector('#answer')!.getBoundingClientRect();
