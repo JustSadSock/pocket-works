@@ -49,25 +49,58 @@ function show(id){view=id;for(const el of document.querySelectorAll('.screen'))e
 function toggleSound(){sound=!sound;try{localStorage.setItem(STORE+'sound',sound?'1':'0')}catch{}$('sound-label').textContent=sound?'вкл.':'выкл.'}
 try{sound=localStorage.getItem(STORE+'sound')!=='0'}catch{}$('sound-label').textContent=sound?'вкл.':'выкл.';
 
-function db(){return new Promise((resolve,reject)=>{const req=indexedDB.open(STORE+'drafts',1);req.onupgradeneeded=()=>req.result.createObjectStore('drafts',{keyPath:'key'});req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
-async function draftRead(key){try{const d=await db();return await new Promise((resolve,reject)=>{const tx=d.transaction('drafts','readonly');const r=tx.objectStore('drafts').get(key);r.onsuccess=()=>{d.close();resolve(r.result)};r.onerror=()=>{d.close();reject(r.error)}})}catch{return null}}
-// Save a complete immutable snapshot before queueing the IndexedDB transaction.
-// Writes for one (or several) projects are serialized, so an older write can
-// never finish after a newer edit and silently replace it.
+function db(){
+ return new Promise((resolve,reject)=>{
+   const req=indexedDB.open(STORE+'drafts',2);
+   req.onupgradeneeded=()=>{
+     if(!req.result.objectStoreNames.contains('drafts'))
+       req.result.createObjectStore('drafts',{keyPath:'key'});
+     if(!req.result.objectStoreNames.contains('media'))
+       req.result.createObjectStore('media',{keyPath:'key'});
+   };
+   req.onsuccess=()=>resolve(req.result);
+   req.onerror=()=>reject(req.error);
+ });
+}
+async function draftRead(key){
+ try{
+   const d=await db();
+   try{
+     return await new Promise((resolve,reject)=>{
+       const tx=d.transaction(['drafts','media'],'readonly');
+       let saved=null,media=null;
+       tx.objectStore('drafts').get(key).onsuccess=e=>{saved=e.target.result||null};
+       tx.objectStore('media').get(key).onsuccess=e=>{media=e.target.result||null};
+       tx.oncomplete=()=>resolve(saved?{...saved,video:media?.video||saved.video||null}:null);
+       tx.onerror=()=>reject(tx.error);
+       tx.onabort=()=>reject(tx.error||Error('Не удалось прочитать черновик'));
+     });
+   }finally{d.close()}
+ }catch{return null}
+}
+// This tracks the Blob identity already persisted in the separate media store.
+// Editing a sentence never rewrites a 96 MiB source video.
 let saveQueue=Promise.resolve(),restoreGeneration=0;
+const writtenVideoByKey=new Map();
 async function draftWrite(){
  if(!projectKey||!scene)return true;
- const entry={key:projectKey,scene:{...scene},timeline:packTimeline(localClips,editHistory,selectedClip),
-  video:scene.custom?sourceBlob:null,updated:Date.now()};
+ const key=projectKey,video=scene.custom&&sourceBlob instanceof Blob?sourceBlob:null;
+ const entry={key,scene:{...scene},timeline:packTimeline(localClips,editHistory,selectedClip),
+  updated:Date.now()};
  const operation=saveQueue.then(async()=>{
+   const needsVideo=!!video&&writtenVideoByKey.get(key)!==video;
    const d=await db();
    try{
      await new Promise((resolve,reject)=>{
-       const tx=d.transaction('drafts','readwrite');
-       tx.oncomplete=()=>resolve();
+       const tx=d.transaction(needsVideo?['drafts','media']:['drafts'],'readwrite');
+       tx.oncomplete=()=>{
+         if(needsVideo)writtenVideoByKey.set(key,video);
+         resolve();
+       };
        tx.onerror=()=>reject(tx.error||Error('Ошибка сохранения'));
        tx.onabort=()=>reject(tx.error||Error('Запись отменена'));
        tx.objectStore('drafts').put(entry);
+       if(needsVideo)tx.objectStore('media').put({key,video,updated:entry.updated});
      });
    }finally{d.close()}
  });
@@ -109,6 +142,7 @@ async function restore(key){
  const old=await draftRead(key);
  if(request!==restoreGeneration)return;
  projectKey=key;
+ if(old?.scene?.id===scene?.id&&scene.custom&&old.video instanceof Blob)writtenVideoByKey.set(key,old.video);
  if(old?.scene?.id===scene?.id&&Array.isArray(old?.timeline?.clips)){
    const restored=unpackTimeline(old.timeline,scene.duration);
    editHistory=restored.history;setClips(restored.clips,restored.selected);
@@ -451,7 +485,7 @@ async function deleteClip(){
  setClips(localClips.filter(c=>c.id!==chosen.id));
  await draftWrite();cue('stop');
 }
-async function markReady(){cancelCountdown();if(record)finishRecording();if(pendingRecording)await pendingRecording;stopAllPlayback();if(!localClips.length)return toast('Запиши хотя бы один фрагмент.');await draftWrite();if(mode==='solo'){beginPremiere();return}if(!state||state.phase!=='recording')return;sendGame({type:'ready',count:localClips.length});waitUI();cue('ready')}
+async function markReady(){cancelCountdown();if(record)finishRecording();if(pendingRecording)await pendingRecording;stopAllPlayback();if(!localClips.length)return toast('Запиши хотя бы один фрагмент.');if(!await draftWrite())return;if(mode==='solo'){beginPremiere();return}if(!state||state.phase!=='recording')return;sendGame({type:'ready',count:localClips.length});waitUI();cue('ready')}
 function receivedCount(){return localClips.length+remoteClips.length}
 function expectedCount(){if(mode==='solo')return localClips.length;return Object.values(state?.counts||{}).reduce((a,b)=>a+(Number(b)||0),0)}
 function updatePremiereStatus(){const need=expectedCount(),got=receivedCount();$('premiere-loading').classList.toggle('hidden',got>=need);$('premiere-loading').textContent=got>=need?'':('Получаем дорожки · '+got+'/'+need);$('premiere-play').disabled=got<need;$('premiere-repeat').disabled=got<need}
