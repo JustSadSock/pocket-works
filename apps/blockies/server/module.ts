@@ -642,7 +642,7 @@ function checkAllPlayersGameOver() {
    throw Error('Некорректный пакет команд');
   const ordered=actions.filter(a=>a.seq>v.lastInputSeq);
   if(!ordered.length)return;
-  if(ordered.some((a,j)=>a.seq!==(j?ordered[j-1].seq:v.lastInputSeq)+1))
+  if(ordered.some((a,j)=>a.seq<=(j?ordered[j-1].seq:v.lastInputSeq)))
    throw Error('Пропущен порядковый номер команды');
   if(!v.inputWindowStart||now-v.inputWindowStart>=1000||now<v.inputWindowStart){
    v.inputWindowStart=now;v.inputWindowCount=0;
