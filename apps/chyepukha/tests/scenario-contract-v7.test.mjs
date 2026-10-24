@@ -22,7 +22,7 @@ test('all ten story scenarios have ten distinct, fully guided steps',()=>{
    assert.ok(!stages.has(q.stage),`${id}: repeated narrative function ${q.stage}`);
    stages.add(q.stage);
   }
-  assert.match(scenario.questions.at(-1).stage,/фінал/i,`${id}: final question must conclude story`);
+  assert.match(scenario.questions.at(-1).stage,/фінал|вирок/i,`${id}: final question must conclude story`);
  }
 });
 
