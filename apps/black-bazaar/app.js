@@ -687,6 +687,8 @@ function closeRoom(){
  clearTimeout(cueTimer);cueTimer=null;
  activeSheet=null;selectedArtifact=null;playStarted=false;readDeals.clear();readTasks.clear();document.body.classList.remove('sheet-open');
  if(net){try{if(connected)net.leaveRoom()}catch{}try{net.close()}catch{}}
+ // A deliberate exit must never silently resume a reserved seat from local storage.
+ netStorage.removeItem('pocket-net:'+ORIGIN);
  net=null;me=null;state=null;onlinePlayerIds=null;roomId='';roomVersion=null;connected=false;connecting=false;message('');renderHome();
 }
 function cancelConnect(){
@@ -699,8 +701,8 @@ function cancelConnect(){
  renderHome();message('Подключение отменено.');
 }
 function wire(client){
- client.on('connected',data=>{if(net!==client)return;me=data.player;connected=true;message(state?.phase==='play'?'Восстанавливаем комнату…':'');});
- client.on('room_joined',data=>{if(net!==client)return;roomVersion=data.version;roomId=data.roomId;state=data.state;onlinePlayerIds=null;connecting=false;message('');render();});
+ client.on('connected',data=>{if(net!==client)return;me=data.player;connected=false;message(state?.phase==='play'?'Восстанавливаем комнату…':'');});
+ client.on('room_joined',data=>{if(net!==client)return;roomVersion=data.version;roomId=data.roomId;state=data.state;onlinePlayerIds=null;connecting=false;connected=true;message('');render();});
  client.on('presence',data=>{if(net!==client||!state||data.roomId!==roomId)return;if(Array.isArray(data.onlineIds)){onlinePlayerIds=new Set(data.onlineIds);if(state.phase==='play')render();}});
  client.on('game_event',data=>{
   if(net!==client)return;
