@@ -367,7 +367,8 @@ try{
  const secretSeller=secretSockets.find(c=>c.id===secretState.turnId);
  const secretBuyer=secretSockets.find(c=>c.id!==secretSeller.id);
  const secretStranger=secretSockets.find(c=>c.id!==secretSeller.id&&c.id!==secretBuyer.id);
- const sellerPrivate=stateOf(await secretSeller.next('game_event',stateEvent('play',v=>v.round===2&&v.revision>=secretState.revision)));
+ const sellerPrivate=secretSeller.id===secretHost.id?secretState:
+  stateOf(await secretSeller.next('game_event',stateEvent('play',v=>v.round===2&&v.revision>=secretState.revision)));
  const secretItem=sellerPrivate.you.items[0];
  const sellerGoldBefore=sellerPrivate.you.resources.gold;
  secretSeller.send('game_message',{payload:{type:'black_post',itemId:secretItem.id,ask:{gold:50}}});
