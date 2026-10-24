@@ -105,7 +105,7 @@ assert(css.includes('#screen>.expert-phase .stake-frame.zam-exhibit-rim>img,') &
 assert.match(css,/height:100%!important;[\s\S]*?object-fit:fill!important/);
 assert(app.includes('fitGalleryArtwork(cells)'),'preview shares a sizing rule with the vote');
 assert(ui.includes('fitGalleryArtwork(cells)'),'all voting cards are sized together');
-assert(app.includes('paintVoteSurfaces(ballotScreen,v.selected,examined,{render:renderArtwork})'),
+assert(app.includes('paintVoteSurfaces(ballotScreen,v.selected,spriteRenderer?null:examined,{render:spriteRenderer||renderArtwork})'),
  'five suspect canvases are composited together before revealing the ballot');
 assert(app.includes('data-vote-canvas=') && !app.includes('examinedCanvas'),
  'all five framed suspects share exactly the same DOM shape');
