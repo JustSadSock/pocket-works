@@ -58,8 +58,14 @@ sendLost(guest,{type:'pulse'});
 assert.equal(lost.phase,'drawing','unconfirmed final packets remain eligible during grace');
 now=deadline+output.FINAL_SUBMISSION_GRACE_MS-1;sendLost(guest,{type:'pulse'});
 assert.equal(lost.phase,'drawing','never process the artwork a moment before grace ends');
+// A multipart submit is explicitly marked as pending; unlike a silent client,
+// it has a bounded 120-second retry window beyond the normal 25-second grace.
 now=deadline+output.FINAL_SUBMISSION_GRACE_MS;sendLost(guest,{type:'pulse'});
-assert.equal(lost.phase,'voting');
+assert.equal(lost.phase,'drawing','declared final upload must remain recoverable after basic grace');
+now=deadline+output.FINAL_TRANSFER_RECOVERY_MS-1;sendLost(guest,{type:'pulse'});
+assert.equal(lost.phase,'drawing','recoverable upload stays private up to its hard expiry');
+now=deadline+output.FINAL_TRANSFER_RECOVERY_MS;sendLost(guest,{type:'pulse'});
+assert.equal(lost.phase,'voting','hard recovery limit closes incomplete final transfer');
 assert.deepEqual(JSON.stringify(lost.assignments.host.strokes),JSON.stringify(previous),
  'incomplete transfers cannot erase an earlier complete backup');
 
@@ -95,4 +101,4 @@ assert.ok(clock.indexOf('if(plan.cue)sound(plan.cue)')<clock.indexOf('autoFinish
 const css=readFileSync(new URL('../experience.css',import.meta.url),'utf8');
 assert.match(css,/\.screen>\.phase-page,\.screen>\.restore\{animation:none\}/,
  'a timer transition must not move the entire screen');
-console.log('ZAMAZKA: 0:00 deadline, multipart final 96 strokes, 25s transfer grace, recovery and 15s mechanical bed and 10/5/0 Clockmaker signals OK');
+console.log('ZAMAZKA: 0:00 deadline, 96-stroke final transfer, 25s normal grace, 120s declared-upload recovery, backup preservation and Clockmaker signals OK');
