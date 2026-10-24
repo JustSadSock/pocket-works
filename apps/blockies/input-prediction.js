@@ -29,7 +29,7 @@ export function projectOwnPiece(player,board,players,inputs=[]){
    attempt(piece,{x:position.x+input.direction,y:position.y});
   else if(input.action==='rotate'){
    const shape=piece[0].map((_,i)=>piece.map(row=>row[i]).reverse());
-   for(const [dx,dy] of [[0,0],[-1,0],[1,0],[-2,0],[2,0],[0,-1],[-1,-1],[1,-1]]){
+   for(const [dx,dy] of [[0,0],[-1,0],[1,0],[-2,0],[2,0],[-3,0],[3,0],[0,-1],[-1,-1],[1,-1]]){
     if(attempt(shape,{x:position.x+dx,y:position.y+dy}))break;
    }
   }else if(input.action==='drop')attempt(piece,{x:position.x,y:position.y+1});
