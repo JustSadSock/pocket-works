@@ -98,8 +98,8 @@ export async function renderPremiere({
   video.src=localUrl||source;
   const Context=window.AudioContext||window.webkitAudioContext;
   let ctx=null,recorder=null,capture=null,raf=0,frameCallback=false;
-  let stallTimer=0,stopError=null,finished=false,sources=[],mixedTrack=null;
-  let onVideoEnded=null;
+  let stallTimer=0,stopError=null,sources=[],mixedTrack=null;
+  let onVideoEnded=null,onVideoFailed=null;
   const stopRecording=error=>{
     if(error&&!stopError)stopError=error;
     video.pause();
@@ -154,10 +154,9 @@ export async function renderPremiere({
       await waiting;
     }
     assertLive(signal);
-    await eventWait(video,'loadeddata','error',12000,signal,
-      'Видеокадр не загрузился. Попробуй другой формат файла.').catch(e=>{
-        if(video.readyState<2)throw e;
-      });
+    if(video.readyState<2)
+      await eventWait(video,'loadeddata','error',12000,signal,
+        'Видеокадр не загрузился. Попробуй другой формат файла.');
     const wantedWidth=Math.min(1280,Math.max(2,video.videoWidth||640));
     const ratio=Math.min(1,wantedWidth/Math.max(1,video.videoWidth));
     const canvas=document.createElement('canvas');
@@ -234,7 +233,8 @@ export async function renderPremiere({
     };
     onVideoEnded=()=>{if(recorder?.state==='recording')stopRecording()};
     video.addEventListener('ended',onVideoEnded);
-    video.addEventListener('error',onVideoEnded);
+    onVideoFailed=()=>stopRecording(Error('Ошибка чтения исходного видео во время экспорта.'));
+    video.addEventListener('error',onVideoFailed);
     stallTimer=setInterval(()=>{
       if(recorder?.state!=='recording'||video.paused||video.seeking)return;
       if(performance.now()-lastAdvance>15000)
@@ -274,7 +274,6 @@ export async function renderPremiere({
     if(hasFrameCallback)raf=video.requestVideoFrameCallback(callback);
     else raf=requestAnimationFrame(fallback);
     const result=await done;
-    finished=true;
     onProgress({phase:'encoding',fraction:1});
     return result;
   }finally{
@@ -283,7 +282,7 @@ export async function renderPremiere({
     clearInterval(stallTimer);
     if(onVideoEnded){
       video.removeEventListener('ended',onVideoEnded);
-      video.removeEventListener('error',onVideoEnded);
+      if(onVideoFailed)video.removeEventListener('error',onVideoFailed);
     }
     for(const node of sources){try{node.stop()}catch{}}
     video.pause();
