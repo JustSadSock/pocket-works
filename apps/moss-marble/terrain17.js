@@ -1,4 +1,5 @@
 import { BALL_RADIUS } from './physics.js';
+import { uploadBallCenterUniform } from './render-uniforms.js';
 import { hillHeightAt, hillPeakPoint, rampHeightAt, terrainHeightAt, zoneCenter, zoneKind } from './terrain.js';
 
 const TAU = Math.PI * 2;
@@ -543,7 +544,10 @@ export function installTerrain17(core, canvas) {
     gl.uniform2f(core.locations.viewport, core.width, core.height);
     gl.uniform1f(core.locations.scale, core.scale);
     gl.uniform2f(core.locations.offset, core.offsetX, core.offsetY);
+    uploadBallCenterUniform(gl, core.locations.ballCenter, core.currentBallCenter);
     gl.uniform2f(core.locations.parallax, core.parallaxX, core.parallaxY);
+    gl.uniform1f(core.locations.rotation, core.cameraRotation || 0);
+    gl.uniform2f(core.locations.cameraCenter, core.cameraX || 0, core.cameraY || 0);
     gl.uniform3f(core.locations.hole, level.hole.x, level.hole.y, level.hole.r * 1.03);
     gl.uniform1f(core.locations.time, time);
     core.drawMesh(core.staticMeshes.opaque, false, true);

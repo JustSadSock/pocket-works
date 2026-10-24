@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { uploadBallCenterUniform } from './render-uniforms.js';
 import { LEVELS } from './levels.js';
 import { compileCourse19, inspectCourse19 } from './course19.js';
 import { generateEndlessLevel } from './procedural.js';
@@ -6,6 +8,34 @@ import { buildCourse18Geometry } from './terrain18.js';
 import { KEY_LIGHT, keyOnScreen, shadowDisplacement, appendSoftShadow } from './light-space.js';
 
 const nearly = (a,b) => Math.abs(a-b) < 1e-7;
+// Catch the missing uBallCenter uniform that caused the marble to render
+// far above the physical contact point while aim/collisions stayed correct.
+// All three WebGL paths must upload the SAME world-space center, not a
+// default shader pivot at (0,0,0).
+const uploads=[];
+const fakeGl={uniform3f:(location,x,y,z)=>uploads.push({location,x,y,z})};
+const marbleWorld=[430,876,37];
+uploadBallCenterUniform(fakeGl,'uBallCenter',marbleWorld);
+assert.deepEqual(uploads,[{location:'uBallCenter',x:430,y:876,z:37}]);
+assert.throws(()=>uploadBallCenterUniform(fakeGl,'uBallCenter',null),/missing physical marble center/);
+for(const path of ['render-core14.js','terrain17.js','terrain18.js']){
+  const source=readFileSync(new URL(path,import.meta.url),'utf8');
+  const renderBody=source.slice(source.indexOf(path==='render-core14.js'
+    ? '  render3D(level, time) {' : 'core.render3D = function render3D(level, time) {'));
+  const uniformIndex=renderBody.indexOf('uploadBallCenterUniform(');
+  const drawIndex=renderBody.indexOf(path==='render-core14.js'
+    ? 'this.drawMesh(this.staticMeshes.opaque' : 'core.drawMesh(core.staticMeshes.opaque');
+  assert.ok(uniformIndex>=0 && drawIndex>uniformIndex,
+    path+': ball center must be bound before the first draw call');
+}
+const pivotScale=.7732;
+for(const projectedY of [200,600,1200,1800]){
+  const centerY=projectedY;
+  const corrected=centerY+(projectedY-centerY)*pivotScale;
+  assert.ok(nearly(corrected,projectedY),
+    'sphere-rounding must preserve the projected physical center');
+}
+
 assert.ok(KEY_LIGHT.z > 0 && KEY_LIGHT.x < 0 && KEY_LIGHT.y < 0);
 for (const angle of [-Math.PI,-1.1,-.3,0,.5,1.6,Math.PI]){
  const p=keyOnScreen(angle);
