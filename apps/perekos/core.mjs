@@ -26,14 +26,14 @@ export const MAGIC_V2_PRACTICE_RUNES=Object.freeze([
  'u_on_cast','u_on_hit','u_on_hurt','u_after_dash','u_after_guard',
  'u_guard','u_push','u_heal','u_afterimage','u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
  'st_throw','st_shards','st_wall','st_spikes','st_fault','fi_ember','fi_scorch','fi_flamepatch','fi_cindermine','fi_lash','li_spark','li_arc','li_coil','li_discharge',
- 'u_reform_base','st_form_wave','st_origin_self','st_origin_below',
- 'fi_form_stream','fi_origin_self','fi_origin_sky',
- 'li_form_ray','li_origin_self','li_origin_pylon'
+ 'u_reform_base','st_form_wave','st_form_spires','st_origin_self','st_origin_below',
+ 'fi_form_stream','fi_form_whirl','fi_origin_self','fi_origin_sky',
+ 'li_form_ray','li_form_sphere','li_origin_self','li_origin_pylon'
 ]);
 // Only verified modifiers appear as equippable buttons for a given action in
 // the current live laboratory. The full catalog is reserved for later phases.
 const V2_PRACTICE_MODS=Object.freeze({
- u_reform_base:['st_form_wave','st_origin_self','st_origin_below','fi_form_stream','fi_origin_self','fi_origin_sky','li_form_ray','li_origin_self','li_origin_pylon'],
+ u_reform_base:['st_form_wave','st_form_spires','st_origin_self','st_origin_below','fi_form_stream','fi_form_whirl','fi_origin_self','fi_origin_sky','li_form_ray','li_form_sphere','li_origin_self','li_origin_pylon'],
  u_guard:['u_size','u_efficient'],
  u_push:['u_size','u_efficient'],
  u_heal:['u_efficient'],
@@ -499,7 +499,49 @@ function magicV2Attack(s,a,target){
   return {x:a.x+Math.cos(angle)*d,y:a.y+Math.sin(angle)*d};
  };
  let fired=false,extraHeat=0;
- if(school==='stone'&&shape==='st_form_wave'&&s.waves.length<12){
+ if(school==='stone'&&shape==='st_form_spires'&&s.waves.length<12){
+  const self=origin==='st_origin_self',count=self?4:3;
+  // A crown uses four directional spokes from the caster. The directional
+  // crest is a series of individually warned ground eruptions; no relocation
+  // past walls or hostile temporary cover.
+  for(let j=0;j<count&&s.waves.length<16;j++){
+   const direction=self?angle+j*Math.PI/2:angle;
+   const distance=48+j*39;
+   if(!self&&beamLength(s,a.x,a.y,angle,distance+7,a.id)<distance-5)break;
+   const x=self?a.x:a.x+Math.cos(angle)*distance;
+   const y=self?a.y:a.y+Math.sin(angle)*distance;
+   if(!canStand(x,y,self?12:9)||blocking(s,x,y,self?12:9))break;
+   s.waves.push({owner:a.id,x,y,angle:direction,
+    range:self?77:24,reach:0,halfAngle:self?.37:Math.PI,
+    life:self?.85:1.18+j*.15,warmup:self?.21+j*.035:.28+j*.14,
+    hit:false,v2Element:'stone',v2Spire:true,damage:self?6:4.5});
+  }
+  fired=true;extraHeat=9;fx(s,'quake',a.x,a.y);
+ }else if(school==='fire'&&shape==='fi_form_whirl'&&s.mines.length<14){
+  const self=origin==='fi_origin_self',sky=origin==='fi_origin_sky';
+  const at=self?{x:a.x,y:a.y}:forward(sky?143:82,11);
+  if(canStand(at.x,at.y,12)&&!blocking(s,at.x,at.y,12)){
+   s.mines.push({owner:a.id,x:at.x,y:at.y,r:self?65:sky?59:55,
+    arm:sky?.42:.22,life:sky?2.55:2.25,damage:2.4,element:'fire',
+    v2Whirl:true,phase:angle,whirlCd:0,followOwner:self});
+   fired=true;extraHeat=9;fx(s,'flame',at.x,at.y);
+  }
+ }else if(school==='storm'&&shape==='li_form_sphere'&&s.shots.length<79){
+  const orbit=origin==='li_origin_self',pylon=origin==='li_origin_pylon';
+  const at=orbit?{x:a.x+Math.cos(angle)*38,y:a.y+Math.sin(angle)*38}:
+   pylon?forward(73,11):{x:a.x,y:a.y};
+  if(canStand(at.x,at.y,14)&&!blocking(s,at.x,at.y,14)){
+   fired=spawnShot(s,a,angle,at.x,at.y,{style:'arc',element:'storm',
+    damage:9,life:orbit?2.05:1.8,signature:false});
+   if(fired){
+    const q=s.shots[s.shots.length-1];
+    q.v2Sphere=true;q.v2Orbit=orbit;q.r=12;
+    q.vx=Math.cos(angle)*138;q.vy=Math.sin(angle)*138;
+    q.accel=0;q.spherePulse=.36;q.orbitAngle=angle;q.orbitRadius=38;
+    extraHeat=10;fx(s,'thunder',at.x,at.y);
+   }
+  }
+ }else if(school==='stone'&&shape==='st_form_wave'&&s.waves.length<12){
   const fromBelow=origin==='st_origin_below',self=origin==='st_origin_self';
   const at=fromBelow?forward(154):{x:a.x,y:a.y};
   s.waves.push({owner:a.id,x:at.x,y:at.y,angle,range:fromBelow?65:self?104:130,
@@ -833,6 +875,27 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
  for(let j=s.waves.length-1;j>=0;j--){const w=s.waves[j];processWave(s,w);if(w.life<=0)s.waves.splice(j,1)}
  for(let j=s.shots.length-1;j>=0;j--){
  const q=s.shots[j],a=s.actors[1-q.owner];
+ if(q.v2Sphere){
+  if(q.v2Orbit){
+   const source=s.actors[q.owner],next=q.orbitAngle+dt*3.8;
+   const x=source.x+Math.cos(next)*q.orbitRadius,y=source.y+Math.sin(next)*q.orbitRadius;
+   q.vx=(x-q.x)/dt;q.vy=(y-q.y)/dt;q.orbitAngle=next;
+  }
+  q.spherePulse-=dt;
+  if(q.spherePulse<=0){
+   q.spherePulse=.38;
+   const range=Math.hypot(a.x-q.x,a.y-q.y);
+   if(range<=49&&range>q.r+11&&unobstructed(s,q.x,q.y,a.x,a.y,q.owner,7)){
+    a.shield=Math.max(0,a.shield-1);
+    const dealt=harm(s,a,2.3,q.owner,q.depth+1);
+    if(dealt>0){
+     a.slow=Math.max(a.slow,.23);
+     emit(s,'on_hit',q.owner,{},q.depth+1);
+    }
+    fx(s,'impact_arc',a.x,a.y);
+   }
+  }
+ }
  if(q.accel){const v=Math.hypot(q.vx,q.vy)||1,next=q.accel>0?Math.min(q.minSpeed,v+q.accel*dt):Math.max(q.minSpeed,v+q.accel*dt);q.vx*=next/v;q.vy*=next/v}
  if(q.turnAt>0){q.turnAt-=dt;if(q.turnAt<=0){const speed=Math.hypot(q.vx,q.vy),angle=Math.atan2(q.vy,q.vx)+q.turnDelta;q.vx=Math.cos(angle)*speed;q.vy=Math.sin(angle)*speed;q.turnAt=0;fx(s,'thunder',q.x,q.y)}}
  q.life-=dt;if(q.life<=0){s.shots.splice(j,1);if(mage(s.actors[q.owner].mageId).trait==='miss_cool')s.actors[q.owner].heat=Math.max(0,s.actors[q.owner].heat-6);emit(s,'on_expire',q.owner,{},q.depth);continue}
@@ -844,7 +907,9 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
   q.x=hit.x;q.y=hit.y;
   if(hit.type==='actor'){
    if(q.style==='bolt')a.shield=Math.max(0,a.shield-3);
+   if(q.v2Sphere)a.shield=Math.max(0,a.shield-2);
    const dealt=harm(s,a,q.damage,q.owner,q.depth);
+   if(q.v2Sphere&&dealt>0)a.slow=Math.max(a.slow,.6);
    if(dealt){markTarget(s,a,q.element||mage(s.actors[q.owner].mageId).school,q.owner,q.depth);const attacker=s.actors[q.owner],trait=mage(attacker.mageId).trait;if(trait==='burn'){a.burn=Math.max(a.burn||0,has(attacker,'lasting')?2.4:1.55);a.burnSource=q.owner}if(trait==='hit_push')move(a,Math.cos(Math.atan2(q.vy,q.vx))*8,Math.sin(Math.atan2(q.vy,q.vx))*8);emit(s,'on_hit',q.owner,{},q.depth);if(q.drain)receiveHeal(s,attacker,3,q.depth)}
    if(dealt>0)fusionImpact(s,q,a);
    if(q.style==='rock')rockFracture(s,q,q.x,q.y);
@@ -866,6 +931,36 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
 for(let j=s.echoes.length-1;j>=0;j--){const e=s.echoes[j];e.life-=dt;e.cast-=dt;const source=s.actors[e.owner];if(e.cast<=0){e.cast=.76;const target=s.actors[1-e.owner];spawnShot(s,source,Math.atan2(target.y-e.y,target.x-e.x),e.x,e.y,{clone:true,strong:!!e.extra});e.shots=(e.shots??2)-1}if(e.life<=0||e.shots<=0)s.echoes.splice(j,1)}
 for(let j=s.mines.length-1;j>=0;j--){
  const mine=s.mines[j];mine.life-=dt;const target=s.actors[1-mine.owner];
+ if(mine.v2Whirl){
+  // The angular sectors are the hit geometry, not a cosmetic spinning circle.
+  // Rotating sectors can hit repeatedly only after their own bounded cooldown.
+  if(mine.followOwner){
+   const source=s.actors[mine.owner];
+   mine.x=source.x;mine.y=source.y;
+  }
+  if(mine.arm>0)mine.arm=Math.max(0,mine.arm-dt);
+  else{
+   mine.phase+=dt*6.3;mine.whirlCd=Math.max(0,mine.whirlCd-dt);
+   const dx=target.x-mine.x,dy=target.y-mine.y;
+   const distance=Math.hypot(dx,dy),theta=Math.atan2(dy,dx);
+   let sector=false;
+   for(let k=0;k<3;k++){
+    const d=theta-mine.phase-k*2*Math.PI/3;
+    if(Math.abs(Math.atan2(Math.sin(d),Math.cos(d)))<.34){sector=true;break}
+   }
+   if(mine.whirlCd<=0&&sector&&distance<=mine.r+10&&distance>=19
+     &&unobstructed(s,mine.x,mine.y,target.x,target.y,mine.owner,8)){
+    const dealt=harm(s,target,mine.damage,mine.owner);
+    if(dealt>0){
+     target.burn=Math.max(target.burn||0,.68);target.burnSource=mine.owner;
+     emit(s,'on_hit',mine.owner);
+    }
+    mine.whirlCd=.31;fx(s,'flame',target.x,target.y);
+   }
+  }
+  if(mine.life<=0)s.mines.splice(j,1);
+  continue;
+ }
  if(mine.arm>0){mine.arm=Math.max(0,mine.arm-dt);if(mine.life<=0)s.mines.splice(j,1);continue}
  if(Math.hypot(target.x-mine.x,target.y-mine.y)<mine.r&&beamLength(s,mine.x,mine.y,Math.atan2(target.y-mine.y,target.x-mine.x),Math.hypot(target.x-mine.x,target.y-mine.y)+4,mine.owner)>=Math.hypot(target.x-mine.x,target.y-mine.y)-8){
   if(mine.v2Charge)target.shield=Math.max(0,target.shield-6);

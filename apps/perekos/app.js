@@ -654,6 +654,26 @@ function drawEvolutionMagic(s){
   ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=fire?5:7;
   const radius=wave.warmup>0?Math.max(12,wave.range*.38):Math.max(6,wave.reach);
   ctx.globalAlpha=wave.warmup>0?.64:Math.min(.87,Math.max(.27,wave.life*2.8));
+  if(wave.v2Spire){
+   ctx.save();
+   ctx.globalAlpha=wave.warmup>0?.7:.95;
+   ctx.strokeStyle=wave.warmup>0?'#a5b2a0':'#e7d19e';
+   ctx.fillStyle='#e2d1aa';ctx.lineWidth=2;
+   const dirs=wave.halfAngle>=Math.PI-0.01?8:3;
+   for(let j=0;j<dirs;j++){
+    const d=dirs===8?j*Math.PI/4:wave.angle+(j-1)*.17;
+    const dist=wave.warmup>0?wave.range:Math.min(wave.reach,wave.range);
+    ctx.beginPath();ctx.moveTo(wave.x,wave.y);
+    ctx.lineTo(wave.x+Math.cos(d)*dist,wave.y+Math.sin(d)*dist);ctx.stroke();
+    if(wave.warmup<=0)for(let k=16;k<dist;k+=16){
+     const px=wave.x+Math.cos(d)*k,py=wave.y+Math.sin(d)*k;
+     ctx.beginPath();ctx.moveTo(px-6,py+5);
+     ctx.lineTo(px,py-12);ctx.lineTo(px+6,py+5);
+     ctx.closePath();ctx.fill();
+    }
+   }
+   ctx.restore();continue;
+  }
   if(wave.v2Fault){
    ctx.save();ctx.strokeStyle=wave.warmup>0?'#a7a082':'#f2d1a0';
    ctx.lineWidth=wave.warmup>0?2:4;
@@ -690,6 +710,25 @@ function drawEvolutionMagic(s){
    ctx.beginPath();ctx.arc(wave.x,wave.y,Math.max(3,radius-8),
     wave.halfAngle>=Math.PI-.01?0:wave.angle-wave.halfAngle,
     wave.halfAngle>=Math.PI-.01?Math.PI*2:wave.angle+wave.halfAngle);ctx.stroke();
+  }
+  ctx.restore();
+ }
+ // The sphere and its short periodic arcs are authoritative projectiles,
+ // drawn at their actual network coordinates (including real wall collisions).
+ for(const q of s.shots||[])if(q.v2Sphere){
+  ctx.save();
+  ctx.globalAlpha=Math.max(.35,Math.min(1,q.life*1.5));
+  ctx.strokeStyle='#97dfda';ctx.fillStyle='#d6fbde';
+  const r=Math.max(8,q.r||12);
+  ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(q.x,q.y,r+5,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.arc(q.x,q.y,r-3,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#f3edb9';ctx.lineWidth=1.5;
+  for(let i=0;i<4;i++){
+   const theta=frame*.055+i*Math.PI/2;
+   ctx.beginPath();ctx.moveTo(q.x+Math.cos(theta)*r,q.y+Math.sin(theta)*r);
+   ctx.lineTo(q.x+Math.cos(theta+.32)*(r+12),q.y+Math.sin(theta+.32)*(r+12));
+   ctx.stroke();
   }
   ctx.restore();
  }
@@ -737,6 +776,20 @@ function drawConstructs(s){
  }
  for(const m of s.mines){
   const bob=Math.sin(frame*.11+m.x)*2,life=Math.min(1,m.life);
+  if(m.v2Whirl){
+   ctx.save();
+   ctx.globalAlpha=m.arm>0?.57:.87;ctx.strokeStyle='#f3bb7c';
+   ctx.lineWidth=3;ctx.setLineDash(m.arm>0?[5,5]:[]);
+   ctx.beginPath();ctx.arc(m.x,m.y,m.r,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+   ctx.lineWidth=7;ctx.strokeStyle=m.arm>0?'#be8059':'#f6d292';
+   for(let i=0;i<3;i++){
+    const theta=m.phase+i*2*Math.PI/3;
+    ctx.beginPath();ctx.moveTo(m.x+Math.cos(theta)*19,m.y+Math.sin(theta)*19);
+    ctx.lineTo(m.x+Math.cos(theta)*m.r,m.y+Math.sin(theta)*m.r);
+    ctx.stroke();
+   }
+   ctx.restore();continue;
+  }
   if(m.v2Charge){
    ctx.save();
    ctx.globalAlpha=m.arm>0?.63:.96;

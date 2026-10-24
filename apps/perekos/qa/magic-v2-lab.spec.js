@@ -145,3 +145,24 @@ test('three newly physical rune families appear in their own offline school only
   }
  }
 });
+
+test('each elemental school offers a live form without granting foreign transformations',async({page})=>{
+ await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ await page.locator('#open-v2-lab').click();
+ const picker=page.locator('#magic-v2 > .v2-stage > .v2-schools');
+ const cases=[
+  ['stone','Гребень шипов','Огненный вихрь'],
+  ['fire','Огненный вихрь','Шаровая молния'],
+  ['storm','Шаровая молния','Гребень шипов']
+ ];
+ for(const [index,[school,form,foreign]] of cases.entries()){
+  await picker.locator('.v2-school.v2-'+school).click();
+  await expect(page.locator('.v2-card').filter({hasText:form})).toHaveCount(1);
+  await expect(page.locator('.v2-card').filter({hasText:foreign})).toHaveCount(0);
+  if(index!==cases.length-1){
+   page.once('dialog',dialog=>dialog.accept());
+   await page.getByRole('button',{name:'Сменить стихию'}).click();
+   await expect(picker).toBeVisible();
+  }
+ }
+});
