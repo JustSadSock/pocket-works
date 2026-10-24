@@ -1,5 +1,5 @@
 // Real PocketNet integration: three authenticated WebSocket clients against
-// Wrangler's SQLite Durable Object and the immutable Bazaar v22 rules.
+// Wrangler's SQLite Durable Object and the immutable Bazaar v23 rules.
 import assert from 'node:assert/strict';
 import WebSocket from '../../../pocket-server/node_modules/ws/index.js';
 
@@ -92,7 +92,7 @@ try{
  host.send('create_room',{gameId:'black-bazaar'});
  const initial=await host.next('room_joined');
  roomId=initial.roomId;
- assert.equal(initial.version,'v22','new rooms must use immutable v22');
+ assert.equal(initial.version,'v23','new rooms must use immutable v23');
  assert.equal(initial.state.phase,'lobby');
  second.send('join_room',{roomId:roomId.slice(0,8).toUpperCase()});
  assert.equal((await second.next('room_joined')).state.players.length,2);
