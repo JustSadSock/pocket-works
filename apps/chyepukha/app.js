@@ -37,7 +37,7 @@ let net=null,view=null,me='',room='',roomVersion='v4',connected=false,connecting
 let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',modal='',effectsEnabled=read('sound','off')==='on',musicEnabled=read('music','off')==='on',effectsVolume=Number(read('effectsVolume','.45')),musicVolume=Number(read('musicVolume','.22'));
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
 let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',readerPage=0,comicSource=null;
-let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='',archiveQuery='',archiveReaderMode='pages',archiveReaderPage=0;
+let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='',archiveQuery='',archiveReaderMode='full',archiveReaderPage=0;
 let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false,joinSeatCode='',kickTarget='',skipTarget='',seatDecisionTarget='',kickFollowUpTarget='',transferTarget='',moderationTimer=null;
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
