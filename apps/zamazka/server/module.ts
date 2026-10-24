@@ -22,7 +22,7 @@ type ScoreAudit={byVoter:Record<string,{eye:number;base:number;speed:number;corr
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[];full?:boolean};
 type DraftAssembly={checksum?:string;revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
-type State={pendingFinals?:Record<string,number>;incompleteSubmissions?:string[];resumable?:boolean;balancedDamage?:boolean;shapeCorrected?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;bannedIds?:string[];board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type State={pendingFinals?:Record<string,number>;incompleteSubmissions?:string[];resumable?:boolean;balancedDamage?:boolean;shapeCorrected?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;bannedIds?:string[];emblemUpdatedAt?:Record<string,number>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
@@ -37,7 +37,7 @@ const strip=(s:State,id:string)=>({
  mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation,strokes:s.assignments[id].strokes,draft:s.drafts?.[id]??null}:null,
  author:members(s)[s.turn]||null,
  candidate:s.phase==='voting'?s.assignments[members(s)[s.turn]?.id]||null:null,
- gallery:(s.phase==='verdict'||s.phase==='reveal'||s.phase==='round-review'||s.phase==='results')?members(s).map((p,i)=>s.phase!=='reveal'||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{},scoreAudit:s.timedScoring?scoreTurn(s,p.id):undefined}):null):null
+ gallery:(s.phase==='verdict'||s.phase==='reveal'||s.phase==='round-review'||s.phase==='results')?members(s).map((p,i)=>(s.phase!=='verdict'&&s.phase!=='reveal')||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{},scoreAudit:s.timedScoring?scoreTurn(s,p.id):undefined}):null):null
 });
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
 function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]}
@@ -237,7 +237,7 @@ function boardSegment(raw:Record<string,unknown>,u:string):BoardSegment|null{
 }
 const module: PocketModule<State>={
  protocolVersion:1,
- createRoom({player}){return {state:{resumable:true,balancedDamage:true,shapeCorrected:true,timedScoring:true,board:{revision:0,segments:[]},emblems:{},bannedIds:[],host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},voteTiming:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
+ createRoom({player}){return {state:{resumable:true,balancedDamage:true,shapeCorrected:true,timedScoring:true,board:{revision:0,segments:[]},emblems:{},emblemUpdatedAt:{},bannedIds:[],host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},voteTiming:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
  onJoin({state,player}){
    if(state.bannedIds?.includes(player.id))throw Error('room_kicked');
    if(state.phase!=='lobby'&&!state.participants.some(p=>p.id===player.id))throw Error('room_in_progress');
@@ -247,7 +247,7 @@ const module: PocketModule<State>={
    return {state,events:emit(state)};
  },
  onLeave({state,player,players}){
-   if(state.phase==='lobby'){state.participants=state.participants.filter(p=>p.id!==player.id);delete state.scores[player.id];if(state.emblems)delete state.emblems[player.id]}
+   if(state.phase==='lobby'){state.participants=state.participants.filter(p=>p.id!==player.id);delete state.scores[player.id];if(state.emblems)delete state.emblems[player.id];if(state.emblemUpdatedAt)delete state.emblemUpdatedAt[player.id]}
    if(state.host===player.id)state.host=players[0]?.id||'';
    return {state,events:emit(state)};
  },
@@ -349,6 +349,7 @@ const module: PocketModule<State>={
       state.onlineIds=state.onlineIds?.filter(p=>p!==target);
      delete state.scores[target];
      delete state.emblems?.[target];
+     delete state.emblemUpdatedAt?.[target];
      delete state.assignments[target];
      delete state.drafts?.[target];
      delete state.draftAssemblies?.[target];
@@ -365,7 +366,8 @@ const module: PocketModule<State>={
    if(a.type==='art_ready'&&state.phase==='preparing'){
      if(a.round!==state.round)return {state,events:notice(id,'Этот набор картин уже сменился.')};
      state.readyPlayers||=[];
-     if(!state.readyPlayers.includes(id))state.readyPlayers.push(id);
+     if(state.readyPlayers.includes(id))return {state,events:[]};
+     state.readyPlayers.push(id);
      if(members(state).every(p=>state.readyPlayers?.includes(p.id)))step(state);
      return {state,events:emit(state)};
    }
@@ -389,9 +391,14 @@ const module: PocketModule<State>={
      return {state,events:[{type:'board_reset',payload:board}]};
    }
    if(a.type==='emblem'){
+     if(state.phase!=='lobby')return {state,events:notice(id,'Личный знак меняется только в зале ожидания.')};
      const data=sanitizeEmblem(a.image);
      if(data===undefined)return {state,events:notice(id,'Не удалось сохранить личный знак: изображение слишком большое или некорректное.')};
      state.emblems||={};
+     if((state.emblems[id]||null)===data)return {state,events:[]};
+     state.emblemUpdatedAt||={};
+     if(now()-(state.emblemUpdatedAt[id]??-Infinity)<1800)return {state,events:[]};
+     state.emblemUpdatedAt[id]=now();
      if(data===null)delete state.emblems[id];else state.emblems[id]=data;
      return {state,events:emit(state)};
    }
