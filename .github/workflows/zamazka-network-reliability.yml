@@ -92,6 +92,8 @@ jobs:
         run: node --test pocketnet/qa/room-join-view.test.mjs pocketnet/qa/disconnect-presence.test.mjs pocketnet/qa/art-storage.test.mjs pocketnet/qa/zamazka-presence.test.mjs pocketnet/qa/zamazka-state-stream.test.mjs
       - name: Verify immutable PocketNet module snapshot
         run: npm run pocketnet:check
+      - name: Reject stale votes and unauthorized room access
+        run: node apps/zamazka/qa/security-stage1.mjs
       - name: Prevent stale fill raster after stroke compaction
         run: node apps/zamazka/qa/editor-raster-invalidation.mjs
       - name: Preserve line corners during brush budget compaction
