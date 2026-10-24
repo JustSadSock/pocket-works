@@ -73,7 +73,7 @@ export function toggleEditionFavorite(raw,id){
  return normalizeEditions(list.map(item=>item.id===id?{...item,favorite:!item.favorite}:item));
 }
 export const ARCHIVE_BACKUP_VERSION=1;
-export const MAX_BACKUP_BYTES=3_000_000;
+export const MAX_BACKUP_BYTES=8_000_000;
 export function createArchiveBackup(raw,createdAt=Date.now()){
  const editions=normalizeEditions(raw);
  return JSON.stringify({format:'pocketworks-chyepukha-archive',version:ARCHIVE_BACKUP_VERSION,createdAt,editions},null,2);
@@ -85,9 +85,34 @@ export function parseArchiveBackup(text){
  try{backup=JSON.parse(text)}catch{throw Error('Файл не містить коректного JSON.')}
  if(!backup||backup.format!=='pocketworks-chyepukha-archive'||backup.version!==ARCHIVE_BACKUP_VERSION||
    !Array.isArray(backup.editions))throw Error('Це не резервна копія архіву «Чепухи».');
- if(backup.editions.length>MAX_EDITIONS*3)throw Error('У резервній копії забагато випусків.');
- if(backup.editions.length&&!normalizeEditions(backup.editions).length)throw Error('У файлі немає коректних рукописів.');
- return normalizeEditions(backup.editions);
+ // Import must be lossless: a backup produced by this app must never be
+ // truncated to the shelf limit, nor can corrupt chapters be silently dropped.
+ if(backup.editions.length>MAX_EDITIONS)throw Error('У копії більше 12 випусків. Жоден рукопис не імпортовано.');
+ const bounded=(value,max)=>typeof value==='string'&&value.length<=max;
+ const issueIds=new Set();
+ for(const issue of backup.editions){
+  if(!issue||!bounded(issue.id,160)||!issue.id||issueIds.has(issue.id)||
+    !Number.isFinite(issue.savedAt)||!Number.isInteger(issue.playerCount)||
+    issue.playerCount<2||issue.playerCount>8||!Array.isArray(issue.stories)||
+    issue.stories.length<1||issue.stories.length>8)
+   throw Error('Копія містить пошкоджені або повторювані випуски. Імпорт скасовано.');
+  issueIds.add(issue.id);
+  const storyIds=new Set();
+  for(const story of issue.stories){
+   if(!story||!bounded(story.id,64)||storyIds.has(story.id)||
+     !bounded(story.starter,48)||!bounded(story.setLabel,90)||
+     !bounded(story.genre,90)||!bounded(story.heroGender,20)||
+     !Array.isArray(story.fragments)||story.fragments.length<1||story.fragments.length>16)
+    throw Error('У копії є пошкоджені історії. Імпорт скасовано.');
+   storyIds.add(story.id);
+   if(story.fragments.some(f=>!f||!bounded(f.question,160)||
+      !bounded(f.author,48)||!bounded(f.answer,800)))
+    throw Error('У копії є пошкоджені або обрізані фрагменти. Імпорт скасовано.');
+  }
+ }
+ const editions=normalizeEditions(backup.editions);
+ if(editions.length!==backup.editions.length)throw Error('Не вдалося відновити усі випуски без втрат.');
+ return editions;
 }
 export function mergeArchiveBackup(existing,imported){
  const current=normalizeEditions(existing);
