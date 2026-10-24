@@ -2,7 +2,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#171918"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="NOT DEAD YET">
 <title>NOT DEAD YET — Бесконечный хоррор-рогалик</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
-<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css"></head>
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css"><link rel="stylesheet" href="./styles.css"></head>
 <body><main class="app-shell" data-app-shell data-fullscreen-app>
 <canvas id="view" tabindex="0" data-gesture-surface data-block-callout aria-label="Меняющаяся хрущёвка от первого лица"></canvas>
 <div class="grain" aria-hidden="true"></div><div id="perception" class="perception" aria-hidden="true"></div><div class="reticle" aria-hidden="true"></div>
@@ -29,7 +29,7 @@
  <p class="intro">Ты заблудился в собственной хрущёвке. Комнаты исчезают из памяти и появляются другими. Иди дальше, отбивайся от видений и собирай знакомые вещи. Выхода нет.</p>
  <div class="menu-actions"><button id="start" class="primary" data-native-press>Начать забег <span>↗</span></button>
  <button id="continue" class="secondary" hidden data-native-press>Продолжить забег</button>
- <button id="sound" class="secondary" data-native-press>Звук: вкл</button>
+ <button id="sound" class="secondary" data-native-press>Звук: вкл</button><button type="button" class="secondary" data-native-press data-workshop-trigger>Диагностика</button>
  <a class="secondary chapter-link" href="./?chapter=1">Сюжетная глава: квартира №17</a><a class="exit" data-app-control href="../../">Вернуться в Pocket Works</a></div>
  <p class="control-help">WASD — движение · Мышь — обзор · ЛКМ — огонь · E — действие · Shift — бег · Esc — пауза</p>
  </div>
@@ -37,7 +37,7 @@
 <section id="pauseOverlay" class="overlay" hidden data-ui><div class="dialog">
  <p class="eyebrow">ПЕРЕДЫШКА</p><h2>Коридор подождёт.</h2><p id="pauseText" class="intro"></p>
  <p class="control-help">WASD — ходьба, Shift — бег, мышь — обзор, ЛКМ/Пробел — выстрел, E — взять/дверь, R — перезарядка, F — фонарь, Tab/I — улучшения, Esc — пауза. Стрелки влево/вправо поворачивают камеру.</p>
- <button id="resume" class="primary" data-native-press>Продолжить</button><button id="pauseSound" class="secondary" data-native-press>Звук: вкл</button><button id="new" class="secondary" data-native-press>Начать заново</button>
+ <button id="resume" class="primary" data-native-press>Продолжить</button><button id="pauseSound" class="secondary" data-native-press>Звук: вкл</button><button type="button" class="secondary" data-native-press data-workshop-trigger>Диагностика</button><button id="new" class="secondary" data-native-press>Начать заново</button>
  <a href="../../" data-app-control class="exit">Вернуться в Pocket Works</a>
 </div></section>
 <section id="inventoryOverlay" class="overlay" hidden data-ui><div class="dialog pack-panel">
