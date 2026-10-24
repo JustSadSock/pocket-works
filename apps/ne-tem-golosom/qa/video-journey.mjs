@@ -67,6 +67,8 @@ try{
     });
     await page.waitForSelector('#screen-trim:not(.hidden)',{timeout:20000});
     assert(await page.locator('#media-workbench').isVisible(),'video controls not displayed');
+    assert.match(await page.locator('#media-fast-status').innerText(),/без сжатия/i,'small import should take the fast path');
+    assert.equal(await page.locator('#media-keep-audio').isChecked(),false,'soundtrack processing off by default');
     if(viewport.name==='desktop'){
       const layout=await page.evaluate(()=>{
         const footer=document.querySelector('#confirm-scene').getBoundingClientRect();
@@ -89,6 +91,16 @@ try{
     await page.locator('#media-render').click();
     await page.waitForSelector('#media-result:not(.hidden)',{timeout:60000});
     assert(await page.locator('#media-output-preview').evaluate(v=>Boolean(v.currentSrc)),'no output preview');
+    // Running the same settings again must be immediate: a cached Blob should
+    // replace the previously expensive live encoding stage.
+    const initialResult=await page.locator('#media-output-size').innerText();
+    await page.locator('#media-discard').click();
+    const cacheStart=Date.now();
+    await page.locator('#media-render').click();
+    await page.waitForSelector('#media-result:not(.hidden)',{timeout:3000});
+    assert(Date.now()-cacheStart<3000,'cached encoding should be available immediately');
+    assert.equal(await page.locator('#media-output-size').innerText(),initialResult);
+    assert.match(await page.locator('#media-note').innerText(),/из памяти/);
     await page.waitForFunction(()=>{
       const v=document.getElementById('media-output-preview');
       return v.readyState>=2&&v.videoWidth>0;
