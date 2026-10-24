@@ -16,8 +16,13 @@ export function markActive(server,token){active=token?{server,token}:null}
 export function releaseActive(){active=null}
 export async function prepareSession(server,name,identityKey){
  const storage=storageForTab(),key='pocket-net:'+server,owner=STORAGE+'session-owner:'+server;
- const fingerprint=identityKey+':'+name;
- if(storage.getItem(owner)&&storage.getItem(owner)!==fingerprint)storage.removeItem(key);
+ // A verified Pocket ID keeps its durable seat when the public nickname changes.
+ // Guest names are still separate identities on the same browser.
+ const accountOwner=identityKey.startsWith('pocket-id:');
+ const fingerprint=accountOwner?identityKey:identityKey+':'+name;
+ const oldOwner=storage.getItem(owner);
+ const legacyAccountOwner=accountOwner&&oldOwner?.startsWith(identityKey+':');
+ if(oldOwner&&oldOwner!==fingerprint&&!legacyAccountOwner)storage.removeItem(key);
  let previous=null;try{previous=JSON.parse(storage.getItem(key)||'null')}catch{}
  if(previous?.identityKey!==identityKey)storage.removeItem(key);
  else if(previous?.token&&channel){
