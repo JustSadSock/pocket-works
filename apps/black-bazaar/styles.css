@@ -956,3 +956,29 @@ main.app-shell:has(.play-screen) #app>.play-screen{height:100%;max-height:100%;m
  .workspace-panel .tab-count{right:-2px;top:-5px;min-width:17px;height:17px;font-size:10px}
  .workspace-panel .sheet-content{padding-top:4px}
 }
+
+/* Auction sticker: each currency keeps its own recognizable pictogram. */
+.lot-market-strip .lot-price{display:inline-flex;align-items:center;gap:6px;padding:3px 6px}
+.lot-price-amount{display:inline-flex;align-items:center;gap:2px;white-space:nowrap;font-weight:900;font-variant-numeric:tabular-nums}
+.table-stage .artifact .lot-price-amount svg{width:13px;height:13px;min-width:13px;min-height:13px;max-width:13px;max-height:13px;filter:none;transform:none}
+@media(max-width:390px){
+ .lot-market-strip .lot-price{gap:3px;padding:2px 4px}
+ .lot-price-amount{font-size:11px}
+}
+/* The small-phone entrance must reveal BOTH room actions without scrolling.
+   The forest artwork remains, but no longer occupies half the first frame. */
+@media(max-width:680px) and (max-height:700px){
+ .entry-screen{padding:4px 8px 12px;gap:4px}
+ .entry-art{min-height:108px;height:108px;border-radius:24px}
+ .entry-art:before,.entry-art:after{display:none}
+ .entry-character{height:57px;width:43px}
+ .entry-emblem{width:53px;margin-top:0}
+ .entry-table{bottom:-43px;height:40%}
+ .entry-copy h1{font-size:clamp(25px,8.6vw,32px);line-height:1.08;margin:2px 0 4px}
+ .entry-copy>p{font-size:12px;line-height:1.25;margin:3px 0 8px}
+ .entry-form{margin-top:6px}
+ .entry-form .panel{padding:9px;gap:5px}
+ .entry-form label{font-size:12px;gap:2px}
+ .entry-form input{min-height:40px;padding:6px 9px}
+ .entry-form button{min-height:43px;padding:6px 10px}
+}
