@@ -103,3 +103,52 @@ export function unpackTimeline(data,duration=Infinity) {
   const selected=clips.some(c=>c.id===data.selected)?data.selected:null;
   return {clips,history:new TimelineHistory(past,future),selected};
 }
+
+
+/* Stage 3: every editing gesture is one atomic timeline transaction.
+ * "move" shifts a whole line without changing the recorded voice; "left" and
+ * "right" trim its edges. A clip may not overlap its neighbors or leave the film.
+ * We never extend beyond recorded audio, even if the browser hasn't decoded
+ * the source duration yet.
+ */
+export const MIN_CLIP_SECONDS=0.15;
+const clampEdit=(value,lo,hi)=>Math.max(lo,Math.min(hi,value));
+export function editClip(clips,id,kind,delta,sceneDuration,audioDuration=NaN){
+ if(!['move','left','right'].includes(kind)||!Number.isFinite(delta)||!Number.isFinite(sceneDuration)||sceneDuration<=0)return null;
+ const index=clips.findIndex(c=>c.id===id);
+ if(index<0)return null;
+ const original=clips[index],prev=clips[index-1],next=clips[index+1];
+ const lower=Math.max(0,prev?.end??0),upper=Math.min(sceneDuration,next?.start??sceneDuration);
+ if(upper-lower<MIN_CLIP_SECONDS)return null;
+ let start=original.start,end=original.end,offset=original.offset;
+ if(kind==='move'){
+   const width=end-start;
+   start=clampEdit(start+delta,lower,upper-width);
+   end=start+width;
+ }else if(kind==='left'){
+   // A leftward extension can recover audio already trimmed via offset.
+   start=clampEdit(start+delta,Math.max(lower,start-offset),end-MIN_CLIP_SECONDS);
+   offset+=(start-original.start);
+ }else{
+   // The recording itself may be longer than the currently visible snippet.
+   const sourceEnd=Number.isFinite(audioDuration)&&audioDuration>0
+    ?original.start+(audioDuration-original.offset)
+    :original.end;
+   end=clampEdit(end+delta,start+MIN_CLIP_SECONDS,Math.min(upper,Math.max(original.end,sourceEnd)));
+ }
+ if(Math.abs(start-original.start)<0.000001&&Math.abs(end-original.end)<0.000001)return null;
+ const updated={...original,start,end,offset};
+ const result=clips.slice();result[index]=updated;
+ return result;
+}
+
+export function replaceSelectedRecording(clips,targetId,blob,duration,newId){
+ const at=clips.findIndex(c=>c.id===targetId);
+ if(at<0||!blob||!newId||!Number.isFinite(duration)||duration<=0)return null;
+ const old=clips[at];
+ const end=Math.min(old.end,old.start+duration);
+ if(end-old.start<MIN_CLIP_SECONDS)return null;
+ const next=clips.slice();
+ next[at]={id:newId,owner:old.owner,start:old.start,end,offset:0,blob};
+ return next;
+}
