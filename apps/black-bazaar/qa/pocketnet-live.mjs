@@ -85,7 +85,7 @@ try{
  host.send('create_room',{gameId:'black-bazaar'});
  const initial=await host.next('room_joined');
  roomId=initial.roomId;
- assert.equal(initial.version,'v17','new rooms must use immutable v17');
+ assert.equal(initial.version,'v18','new rooms must use immutable v18');
  assert.equal(initial.state.phase,'lobby');
  second.send('join_room',{roomId:roomId.slice(0,8).toUpperCase()});
  assert.equal((await second.next('room_joined')).state.players.length,2);
