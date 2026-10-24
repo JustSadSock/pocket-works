@@ -22,7 +22,7 @@ test('size labels and estimates use binary MiB',()=>{
 test('room selection, wire sender and receiver enforce the same video budget',()=>{
   const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
   assert.match(app,/sourceBlob\?\.size>MAX_ROOM_VIDEO_BYTES/);
-  assert.match(app,/item\.kind==='video'\?MAX_ROOM_VIDEO_BYTES/);
+  assert.match(app,/current\.kind==='video'\?MAX_ROOM_VIDEO_BYTES/);
   assert.match(app,/packet\.media==='video'\?MAX_ROOM_VIDEO_BYTES/);
   assert.match(app,/f\.size>MAX_ROOM_VIDEO_BYTES/);
 });
