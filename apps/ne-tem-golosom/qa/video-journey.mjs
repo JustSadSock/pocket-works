@@ -67,6 +67,20 @@ try{
     });
     await page.waitForSelector('#screen-trim:not(.hidden)',{timeout:20000});
     assert(await page.locator('#media-workbench').isVisible(),'video controls not displayed');
+    if(viewport.name==='desktop'){
+      const layout=await page.evaluate(()=>{
+        const footer=document.querySelector('#confirm-scene').getBoundingClientRect();
+        const stage=document.querySelector('#trim-preview').getBoundingClientRect();
+        const range=document.querySelector('#trim-range-root').getBoundingClientRect();
+        return {
+          scrollHeight:document.scrollingElement.scrollHeight,viewport:innerHeight,
+          footerVisible:footer.bottom<=innerHeight-2&&footer.top>=0,
+          rangeVisible:range.bottom<=innerHeight-2&&range.top>=stage.bottom
+        };
+      });
+      assert(layout.scrollHeight<=layout.viewport+3,'preparation page must fit desktop viewport');
+      assert(layout.footerVisible&&layout.rangeVisible,'trim controls must not be clipped on desktop');
+    }
     await page.locator('#trim-range-handle-end').focus();
     await page.locator('#trim-range-handle-end').press('Home');
     assert.equal(await page.locator('#trim-length').inputValue(),'10','visual trim handle updates scene duration');
