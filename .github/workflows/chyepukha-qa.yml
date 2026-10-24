@@ -1,0 +1,66 @@
+name: Chyepukha regression and browser QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/chyepukha/**"
+      - "pocketnet/module-versions/chyepukha/**"
+      - "pocketnet/hub.mjs"
+      - "pocketnet/modules.lock.json"
+      - ".github/workflows/chyepukha-qa.yml"
+  pull_request:
+    paths:
+      - "apps/chyepukha/**"
+      - "pocketnet/module-versions/chyepukha/**"
+      - "pocketnet/hub.mjs"
+      - "pocketnet/modules.lock.json"
+      - ".github/workflows/chyepukha-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chyepukha-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify immutable PocketNet module snapshots
+        run: npm run pocketnet:check
+      - name: Run entire Chyepukha node regression suite
+        run: node --test apps/chyepukha/tests/*.test.mjs
+
+  browser:
+    needs: server
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install browser test dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Install browser engines
+        run: npx playwright install --with-deps chromium webkit
+      - name: Exercise all Chyepukha browser flows at desktop and mobile sizes
+        run: npx playwright test --config apps/chyepukha/playwright.config.ts
+      - name: Preserve failed screenshots, traces and recordings
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chyepukha-browser-failures
+          path: |
+            test-results/
+            playwright-report/chyepukha/
+          if-no-files-found: ignore
+          retention-days: 14
