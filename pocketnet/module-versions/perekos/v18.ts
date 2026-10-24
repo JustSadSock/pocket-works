@@ -336,10 +336,18 @@ function releaseWindup(s,a,w){
 function v2Aftermath(s,owner,impact,x,y){
  if(!impact||s.mines.length>=14)return;
  if(impact==='st_impact_rubble'){
-  if(!canStand(x,y,10)||blocking(s,x,y,10))return;
-  if(s.mines.filter(m=>m.owner===owner&&m.v2Rubble).length>=3)return;
-  s.mines.push({owner,x,y,r:27,life:1.55,arm:.19,
-   damage:3.3,element:'stone',v2Rubble:true,afterCd:0});
+  // Scatter just OUTSIDE the landing column. A monument on the impact point
+  // must not occlude its own rubble's subsequent line-of-sight hit tests.
+  const face=s.actors[owner].face||0,c=Math.cos(face),n=Math.sin(face);
+  const pieces=[[x+c*28-n*22,y+n*28+c*22],
+   [x+c*28+n*22,y+n*28-c*22]];
+  for(const [px,py] of pieces){
+   if(s.mines.length>=14||s.mines.filter(m=>m.owner===owner&&m.v2Rubble).length>=3)break;
+   if(!canStand(px,py,10)||blocking(s,px,py,10)
+    ||!unobstructed(s,x,y,px,py,owner,6))continue;
+   s.mines.push({owner,x:px,y:py,r:27,life:1.55,arm:.19,
+    damage:3.3,element:'stone',v2Rubble:true,afterCd:0});
+  }
   fx(s,'fracture',x,y);
  }else if(impact==='fi_impact_wildfire'){
   if(s.mines.filter(m=>m.owner===owner&&m.v2Wildfire).length>=6)return;

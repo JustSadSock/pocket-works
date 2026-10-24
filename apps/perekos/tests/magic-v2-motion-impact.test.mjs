@@ -32,7 +32,11 @@ test('rubble is a physical capped hazard created by a real stone contact, then e
  for(let i=0;i<46;i++)advance(s);
  assert.ok(s.mines.some(m=>m.v2Rubble&&m.arm>=0&&m.r<=32));
  assert.ok(s.mines.filter(m=>m.v2Rubble).length<=3);
- for(let i=0;i<115;i++)advance(s);
+ const hpAfterColumn=s.actors[1].hp;
+ for(let i=0;i<17;i++)advance(s);
+ assert.ok(s.actors[1].hp<hpAfterColumn,
+  'rubble positioned outside monolith must still cause real damage');
+ for(let i=0;i<98;i++)advance(s);
  assert.equal(s.mines.filter(m=>m.v2Rubble).length,0);
  assert.equal(validState(s),true);
 });
