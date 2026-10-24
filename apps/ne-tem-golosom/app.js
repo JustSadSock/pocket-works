@@ -449,12 +449,12 @@ function stateChanged(s){if(!s||!s.phase||!Array.isArray(s.players))return;const
  else if(s.phase==='recording'&&view==='wait')waitUI();
  if(s.phase==='premiere'&&(!prev||prev.phase!=='premiere')){sentPremiere=false;beginPremiere();}
 }
-async function connectRoom(action){if(net){try{net.close()}catch{}net=null}show('room');$('net-pill').textContent='Подключаемся…';room=null;state=null;$('room-connection-status').textContent='Подключаемся к PocketNet…';$('room-retry').classList.add('hidden');roomUI();const conn=new PocketNet({serverUrl:roomsOrigin,name,identityKey:identity?.accountId||'guest',storage:session});net=conn;conn.roomId=null;conn.persist();conn.on('connected',m=>{me=m.player?.id||'';$('net-pill').textContent='PocketNet · онлайн'});
+async function connectRoom(action){if(net){try{net.close()}catch{}net=null}show('room');setNetStatus('connecting','Подключаемся…');room=null;state=null;$('room-connection-status').textContent='Подключаемся к PocketNet…';$('room-retry').classList.add('hidden');roomUI();const conn=new PocketNet({serverUrl:roomsOrigin,name,identityKey:identity?.accountId||'guest',storage:session});net=conn;conn.roomId=null;conn.persist();conn.on('connected',m=>{me=m.player?.id||'';setNetStatus('online','PocketNet · онлайн')});
  conn.on('room_joined',m=>{room=m.roomId;if(action==='create'){state=m.state;roomUI();sendGame({type:'scene',scene:sceneForServer()})}else{stateChanged(m.state);if(me)sendGame({type:'sync'})}ensurePeers()});
  conn.on('game_event',m=>{if(m.event?.type==='state'){const s=m.event.payload;stateChanged(s);ensurePeers()}else if(m.event?.type==='notice')toast(m.event.payload);else if(m.event?.type==='signal')receiveSignal(m.event.payload);else if(m.event?.type==='relay')receiveRelay(m.event.payload)});
  conn.on('error',e=>toast('Связь: '+(e.code||e.message||'ошибка')));
- conn.on('disconnected',()=>{$('net-pill').textContent='Переподключаемся…';toast('Соединение потеряно. Записи остались на устройстве.')});
- try{await conn.connect();if(action==='create')conn.createRoom('ne-tem-golosom');else conn.joinRoom(($('join-code').value||new URLSearchParams(location.search).get('room')||'').trim());}catch(e){toast('PocketNet недоступен: '+e.message);$('net-pill').textContent='Нет связи';$('room-connection-status').textContent='Не удалось создать комнату. Проверь подключение и попробуй снова.';$('room-retry').classList.remove('hidden');roomUI()}}
+ conn.on('disconnected',()=>{setNetStatus('connecting','Переподключаемся…');toast('Соединение потеряно. Записи остались на устройстве.')});
+ try{await conn.connect();if(action==='create')conn.createRoom('ne-tem-golosom');else conn.joinRoom(($('join-code').value||new URLSearchParams(location.search).get('room')||'').trim());}catch(e){toast('PocketNet недоступен: '+e.message);setNetStatus('offline','Нет связи');$('room-connection-status').textContent='Не удалось создать комнату. Проверь подключение и попробуй снова.';$('room-retry').classList.remove('hidden');roomUI()}}
 function leaveNetwork(){relayInbox.clear();relayQueue=Promise.resolve();for(const id of [...peers.keys()])closePeer(id);try{net?.leaveRoom();net?.close()}catch{}net=null;state=null;me='';room='';sentPremiere=false;}
 async function resetRuntime(){
  stopPremiereExport();premiereLocalCopy=null;videoExportController?.abort();encodedCache=null;clearExportPreview();cancelCountdown();
@@ -769,7 +769,27 @@ async function deleteClip(){
  setClips(localClips.filter(c=>c.id!==chosen.id));
  await draftWrite();cue('stop');
 }
-async function markReady(){if(micPending)return toast('Дождись ответа микрофона.');cancelCountdown();if(record)finishRecording();if(pendingRecording)await pendingRecording;stopAllPlayback();if(!localClips.length)return toast('Запиши хотя бы один фрагмент.');if(!await draftWrite())return;if(mode==='solo'){beginPremiere();return}if(!state||state.phase!=='recording')return;sendGame({type:'ready',count:localClips.length});waitUI();cue('ready')}
+async function markReady(){
+ if(readyPending)return;
+ if(micPending)return toast('Дождись ответа микрофона.');
+ readyPending=true;
+ const button=$('finish-btn'),original=button.textContent;
+ button.disabled=true;button.textContent='Сохраняем…';
+ try{
+  cancelCountdown();
+  if(record)finishRecording();
+  if(pendingRecording)await pendingRecording;
+  stopAllPlayback();
+  if(!localClips.length){toast('Запиши хотя бы один фрагмент.');return}
+  if(!await draftWrite())return;
+  if(mode==='solo'){beginPremiere();cue('ready');return}
+  if(!state||state.phase!=='recording'){toast('Комната ещё не готова.');return}
+  sendGame({type:'ready',count:localClips.length});
+  waitUI();cue('ready');
+ }finally{
+  readyPending=false;button.disabled=false;button.textContent=original;
+ }
+}
 function receivedCount(){return localClips.length+remoteClips.length}
 function expectedCount(){if(mode==='solo')return localClips.length;return Object.values(state?.counts||{}).reduce((a,b)=>a+(Number(b)||0),0)}
 function hasAllPremiereTracks(){
