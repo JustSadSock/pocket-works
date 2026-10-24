@@ -80,7 +80,7 @@ export function createArchiveBackup(raw,createdAt=Date.now()){
 }
 export function parseArchiveBackup(text){
  if(typeof text!=='string'||new TextEncoder().encode(text).length>MAX_BACKUP_BYTES)
-  throw Error('Файл архіву занадто великий (до 3 МБ).');
+  throw Error('Файл архіву занадто великий (до 8 МБ).');
  let backup;
  try{backup=JSON.parse(text)}catch{throw Error('Файл не містить коректного JSON.')}
  if(!backup||backup.format!=='pocketworks-chyepukha-archive'||backup.version!==ARCHIVE_BACKUP_VERSION||
@@ -89,24 +89,26 @@ export function parseArchiveBackup(text){
  // truncated to the shelf limit, nor can corrupt chapters be silently dropped.
  if(backup.editions.length>MAX_EDITIONS)throw Error('У копії більше 12 випусків. Жоден рукопис не імпортовано.');
  const bounded=(value,max)=>typeof value==='string'&&value.length<=max;
+ const optional=(value,max)=>value===undefined||bounded(value,max);
  const issueIds=new Set();
  for(const issue of backup.editions){
   if(!issue||!bounded(issue.id,160)||!issue.id||issueIds.has(issue.id)||
-    !Number.isFinite(issue.savedAt)||!Number.isInteger(issue.playerCount)||
-    issue.playerCount<2||issue.playerCount>8||!Array.isArray(issue.stories)||
+    (issue.savedAt!==undefined&&!Number.isFinite(issue.savedAt))||
+    (issue.playerCount!==undefined&&(!Number.isInteger(issue.playerCount)||
+      issue.playerCount<2||issue.playerCount>8))||!Array.isArray(issue.stories)||
     issue.stories.length<1||issue.stories.length>8)
    throw Error('Копія містить пошкоджені або повторювані випуски. Імпорт скасовано.');
   issueIds.add(issue.id);
   const storyIds=new Set();
   for(const story of issue.stories){
-   if(!story||!bounded(story.id,64)||storyIds.has(story.id)||
-     !bounded(story.starter,48)||!bounded(story.setLabel,90)||
-     !bounded(story.genre,90)||!bounded(story.heroGender,20)||
+   if(!story||!optional(story.id,64)||storyIds.has(story.id)||
+     !optional(story.starter,48)||!optional(story.setLabel,90)||
+     !optional(story.genre,90)||!optional(story.heroGender,20)||
      !Array.isArray(story.fragments)||story.fragments.length<1||story.fragments.length>16)
     throw Error('У копії є пошкоджені історії. Імпорт скасовано.');
    storyIds.add(story.id);
-   if(story.fragments.some(f=>!f||!bounded(f.question,160)||
-      !bounded(f.author,48)||!bounded(f.answer,800)))
+   if(story.fragments.some(f=>!f||!optional(f.question,160)||
+      !optional(f.author,48)||!bounded(f.answer,800)))
     throw Error('У копії є пошкоджені або обрізані фрагменти. Імпорт скасовано.');
   }
  }
