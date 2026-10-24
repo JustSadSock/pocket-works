@@ -23,8 +23,8 @@ const scripts = packageJson.scripts || {};
 const deployCommand = 'npm run pocketnet:check && npm run build:enhanced && npm run prepare:site && npm run validate:site';
 const fullCiCommand = 'npm run pocketnet:check && npm run prepare:sente-engine && npm run test:sente-ai && npm run health && npm run prepare:site && npm run validate:site';
 
-if (scripts['pocketnet:check'] !== 'node scripts/build-pocketnet-modules.mjs --check') {
-  errors.push('PocketNet preflight must be read-only and fail before production builds start');
+if (scripts['pocketnet:check'] !== 'node scripts/build-pocketnet-modules.mjs --check && node --test pocketnet/test/session-tokens.test.mjs') {
+  errors.push('PocketNet preflight must verify immutable modules and session credential regressions before production builds start');
 }
 if (!scripts['validate:pipeline']?.includes('npm run test:pocketnet:release')) {
   errors.push('Pipeline validation must execute PocketNet snapshot regression tests');
