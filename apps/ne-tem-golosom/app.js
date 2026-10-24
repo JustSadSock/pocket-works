@@ -107,6 +107,9 @@ function showTrimPreview(which='source'){
  $('preview-result').classList.toggle('active',result);
  $('preview-original').setAttribute('aria-pressed',String(!result));
  $('preview-result').setAttribute('aria-pressed',String(result));
+ $('trim-range-root').classList.toggle('previewing-output',result);
+ $('trim-mark-start').disabled=result;
+ $('trim-mark-end').disabled=result;
 }
 function clearExportPreview(){
  showTrimPreview('source');
@@ -131,7 +134,7 @@ function invalidateMediaResult(){if(videoExportBlob)clearExportPreview();updateM
 function updateMediaLab(){
   const active=!!selected?.custom&&sourceBlob instanceof Blob;
   $('media-workbench').classList.toggle('hidden',!active);
-  if(!active){clearExportPreview();return}
+  if(!active){clearExportPreview();updateConfirmAction();return}
   const length=Math.max(0,Number($('trim-length').value)||0);
   const size=estimateVideoBytes(length,Number($('media-quality').value));
   $('media-source-size').textContent='Исходник · '+formatVideoBytes(sourceBlob.size);
@@ -156,6 +159,8 @@ function exportBusy(busy){
   for(const id of ['media-quality','media-resolution'])$(id).disabled=busy;
   $('trim-range-root').classList.toggle('range-locked',busy);
   $('trim-mark-start').disabled=busy;$('trim-mark-end').disabled=busy;
+  $('trim-range-handle-start').disabled=busy;
+  $('trim-range-handle-end').disabled=busy;
   updateConfirmAction();
   $('media-progress').classList.toggle('hidden',!busy);
 }
