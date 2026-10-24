@@ -999,7 +999,7 @@ function updateNetworkLobby(view){
  const full=(view?.seats?.length||0)===2;
  const isHost=view?.host===view?.seats?.[view.me];
  $('net-start').hidden=!full||!isHost;
- for(const kind of ['rupture','duel','magic-v2']){const btn=$('net-mode-'+kind);btn.disabled=!isHost||(kind==='magic-v2'&&view.rulesVersion!==10);btn.setAttribute('aria-pressed',String((view.gameMode||'rupture')===kind))}
+ for(const kind of ['rupture','duel','magic-v2']){const btn=$('net-mode-'+kind);btn.disabled=!isHost||(kind==='magic-v2'&&view.rulesVersion<10);btn.setAttribute('aria-pressed',String((view.gameMode||'rupture')===kind))}
  $('net-start').firstChild.textContent=view.gameMode==='magic-v2'?'Начать магию 2.0 ':view.gameMode==='duel'?'Начать дуэль ':'Начать Разлом ';
  const useMagic=view.gameMode==='magic-v2';
  $('net-school-area').hidden=!useMagic;
