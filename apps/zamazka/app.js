@@ -671,13 +671,15 @@ function saveVoteDraft(){
  try{net.sendGame({type:'vote_draft',chips:[...chips],...voteContext(view)})}catch{}
 }
 function updateChips(){
+ // Do not accept a guess while the forgery is still being composited.
+ const paintingsReady=screen.firstElementChild?.dataset.votePaintingsReady==='true';
  const total=chips.reduce((a,b)=>a+b,0);
  screen.querySelectorAll('[data-chip-count]').forEach(el=>{el.textContent=chips[Number(el.dataset.chipCount)]});
- screen.querySelectorAll('[data-chipadd]').forEach(el=>{el.disabled=Boolean(pendingVote?.token===voteToken(view))||total>=3});
- screen.querySelectorAll('[data-chipsub]').forEach(el=>{el.disabled=Boolean(pendingVote?.token===voteToken(view))||chips[Number(el.dataset.chipsub)]===0});
+ screen.querySelectorAll('[data-chipadd]').forEach(el=>{el.disabled=!paintingsReady||Boolean(pendingVote?.token===voteToken(view))||total>=3});
+ screen.querySelectorAll('[data-chipsub]').forEach(el=>{el.disabled=!paintingsReady||Boolean(pendingVote?.token===voteToken(view))||chips[Number(el.dataset.chipsub)]===0});
  screen.querySelectorAll('[data-stake-card]').forEach(el=>{const i=Number(el.dataset.stakeCard),n=chips[i];el.classList.toggle('has-chips',n>0);el.querySelector('[data-chip-pips]').innerHTML=chipDots(n)});
  const remain=screen.querySelector('#chipsRemaining');if(remain)remain.innerHTML=chipDots(3-total)+'<strong>'+(3-total)+'</strong> свободно';
- const button=screen.querySelector('[data-action="vote"]');if(button){button.disabled=total!==3||Boolean(pendingVote?.token===voteToken(view));if(pendingVote?.token===voteToken(view))button.textContent='Подтверждаем фишки…'}
+ const button=screen.querySelector('[data-action="vote"]');if(button){button.disabled=!paintingsReady||total!==3||Boolean(pendingVote?.token===voteToken(view));if(pendingVote?.token===voteToken(view))button.textContent='Подтверждаем фишки…'}
  // In the default quick-voting mode the third coin is the final action.
  // Give the player a brief correction window, then submit exactly once.
  if(autoVoteTimer!==null){clearTimeout(autoVoteTimer);autoVoteTimer=null}
@@ -685,7 +687,7 @@ function updateChips(){
  const pending=Boolean(pendingVote?.token===voteToken(view));
  const status=screen.querySelector('#coinVoteStatus');
  if(status)status.textContent=pending?'Передаём фишки…':total===3?'Голос уйдёт автоматически':total+' / 3 фишки';
- if(automatic&&total===3&&!pending&&view?.phase==='voting'&&!view.voted?.includes(me?.id)){
+ if(automatic&&paintingsReady&&total===3&&!pending&&view?.phase==='voting'&&!view.voted?.includes(me?.id)){
   const token=voteToken(view);
   autoVoteTimer=setTimeout(()=>{
    autoVoteTimer=null;
@@ -710,18 +712,27 @@ function vote(){
  '</div>'+exhibitPlaque(ARTS[id]?.title||'Картина',ARTS[id]?.artist||'')+
  (!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с полотна '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на полотно '+(i+1)+'">＋</button></div>':'<span class="stake-locked">На проверке</span>')+'</div></div>').join('')+'</div>'+
  (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div>'+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'<button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button>':'<span class="coin-auto-status" id="coinVoteStatus" role="status" aria-live="polite">3 фишки — и голос учтён</span>')+'</div>':'<div class="stake-wait">Ожидаем завершения голосования…</div>')+
- '</div><div class="vote-render-error" id="voteRenderError" hidden role="alert">Не удалось загрузить все пять картин. <button class="btn" type="button" data-action="retry-vote-paintings">Повторить загрузку</button></div></div></section>','vote');
+ '</div><div id="voteRenderStatus" class="vote-render-status" role="status">Подготавливаем пять картин…</div><div class="vote-render-error" id="voteRenderError" hidden role="alert">Не удалось загрузить все пять картин. <button class="btn" type="button" data-action="retry-vote-paintings">Повторить загрузку</button></div></div></section>','vote');
  exhibitFitter=mountExhibitFrames(screen);
  const ballotScreen=screen.firstElementChild;
+ ballotScreen.dataset.votePaintingsReady='false';
  void paintVoteSurfaces(ballotScreen,v.selected,examined,{render:renderArtwork}).then(result=>{
   if(!ballotScreen?.isConnected)return;
+  ballotScreen.dataset.votePaintingsReady=result.ready?'true':'false';
+  const status=ballotScreen.querySelector('#voteRenderStatus');
+  if(status)status.hidden=true;
   if(!result.ready){
    const error=ballotScreen.querySelector('#voteRenderError');
    if(error)error.hidden=false;
   }
+  if(!isOwn&&!already)updateChips();
   exhibitFitter?.refresh();
  }).catch(()=>{
-  const error=ballotScreen?.querySelector('#voteRenderError');
+  if(!ballotScreen?.isConnected)return;
+  ballotScreen.dataset.votePaintingsReady='false';
+  const status=ballotScreen.querySelector('#voteRenderStatus');
+  if(status)status.hidden=true;
+  const error=ballotScreen.querySelector('#voteRenderError');
   if(error)error.hidden=false;
  });
  if(!isOwn&&!already)updateChips();
