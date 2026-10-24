@@ -455,11 +455,46 @@ function roomUI(){
  $('room-help').textContent=esc(s.scene.title)+' · '+fmt(s.scene.duration)+' · '+(s.scene.custom?'личное видео':'CC BY, Blender Studio');$('room-start').classList.toggle('hidden',!meHost());$('room-start').disabled=s.players.length<2||!s.players.every(p=>s.mediaReady?.[p.id]);
 }
 function waitUI(){show('wait');$('wait-roster').innerHTML=(state?.players||[{id:'solo',name:name}]).map(p=>'<span class="wait-chip '+(mode==='solo'||state?.ready?.[p.id]?'ready':'')+'">'+esc(p.name)+' · '+(mode==='solo'||state?.ready?.[p.id]?'Готов':'Записывает')+'</span>').join('');$('reveal-btn').classList.toggle('hidden',mode==='solo'||!meHost()||!state?.players.every(p=>state.ready?.[p.id]));$('unready-btn').classList.toggle('hidden',mode==='solo')}
-function stateChanged(s){if(!s||!s.phase||!Array.isArray(s.players))return;const prev=state;state=s;if(!scene||scene.id!==s.scene.id||scene.start!==s.scene.start||scene.duration!==s.scene.duration){scene={...s.scene};if(!scene.custom)sourceBlob=null;setVideoSources()}
- if(s.phase==='lobby'){if(prev?.phase==='premiere'){remoteClips=[];sentPremiere=false}roomUI();if(scene.custom&&meHost()&&sourceBlob)for(const id of peers.keys())sendVideoTo(id);}
- if(s.phase==='recording'&&(!prev||prev.phase!=='recording'))openEditor();
- else if(s.phase==='recording'&&view==='wait')waitUI();
- if(s.phase==='premiere'&&(!prev||prev.phase!=='premiere')){sentPremiere=false;beginPremiere();}
+function disposeRemoteClips(){
+ for(const c of remoteClips){try{c.audio?.pause()}catch{}if(c.url)URL.revokeObjectURL(c.url)}
+ remoteClips=[];
+}
+function stateChanged(s){
+ if(!s||!['lobby','recording','premiere'].includes(s.phase)||!Array.isArray(s.players)||!s.scene)return;
+ const prev=state,epochChanged=!!prev&&prev.mediaEpoch!==s.mediaEpoch;
+ const leftPremiere=prev?.phase==='premiere'&&s.phase!=='premiere';
+ const sceneChanged=!scene||scene.id!==s.scene.id||scene.start!==s.scene.start||
+   scene.duration!==s.scene.duration||epochChanged;
+ state=s;
+ if(epochChanged||leftPremiere){
+  stopPremiereExport();stopAllPlayback();disposeRemoteClips();
+  relayInbox.clear();sentPremiere=false;
+  for(const p of peers.values()){p.rx=null;p.queued.length=0}
+  if(epochChanged)videoSent.clear();
+ }
+ // A departed actor must never leave obsolete voice clips in our mix.
+ const validOwners=new Set(s.players.map(p=>p.id));
+ const dropped=remoteClips.filter(c=>!validOwners.has(c.owner));
+ if(dropped.length){
+  for(const c of dropped){try{c.audio?.pause()}catch{}if(c.url)URL.revokeObjectURL(c.url)}
+  remoteClips=remoteClips.filter(c=>validOwners.has(c.owner));
+ }
+ if(sceneChanged){
+  scene={...s.scene};
+  if(!scene.custom||(epochChanged&&me!==s.host))sourceBlob=null;
+  setVideoSources();
+ }
+ if(s.phase==='lobby'){
+  roomUI();
+  if(scene.custom&&meHost()&&sourceBlob)
+    for(const id of peers.keys())sendVideoTo(id);
+ }else if(s.phase==='recording'){
+  if(!prev||prev.phase!=='recording')void openEditor();
+  else if(view==='wait')waitUI();
+ }else if(s.phase==='premiere'){
+  if(!prev||prev.phase!=='premiere'){sentPremiere=false;beginPremiere()}
+  else updatePremiereStatus();
+ }
 }
 async function connectRoom(action){if(net){try{net.close()}catch{}net=null}show('room');setNetStatus('connecting','Подключаемся…');room=null;state=null;$('room-connection-status').textContent='Подключаемся к PocketNet…';$('room-retry').classList.add('hidden');roomUI();const conn=new PocketNet({serverUrl:roomsOrigin,name,identityKey:identity?.accountId||'guest',storage:session});net=conn;conn.roomId=null;conn.persist();conn.on('connected',m=>{me=m.player?.id||'';setNetStatus('online','PocketNet · онлайн')});
  conn.on('room_joined',m=>{room=m.roomId;if(action==='create'){state=m.state;roomUI();sendGame({type:'scene',scene:sceneForServer()})}else{stateChanged(m.state);if(me)sendGame({type:'sync'})}ensurePeers()});
@@ -545,8 +580,40 @@ function sendVideoTo(id){
  videoSent.add(key);
  queueMedia(id,'video',sourceBlob,{scene:scene.id,epoch:state.mediaEpoch,mime:sourceBlob.type||'video/mp4'});
 }
-function onMedia(p,data){if(typeof data==='string'){let m;try{m=JSON.parse(data)}catch{return}if(m.kind==='begin'){if(p.rx||!['video','audio'].includes(m.media)||!Number.isInteger(m.size)||m.size<1||m.size>(m.media==='video'?MAX_ROOM_VIDEO_BYTES:MAX_AUDIO_BYTES))return;p.rx={kind:m.media,token:m.token,size:m.size,meta:m.meta||{},received:0,chunks:[]}}else if(m.kind==='end'&&p.rx?.token===m.token){const rx=p.rx;p.rx=null;if(rx.received===rx.size)receivedMedia(p,rx,new Blob(rx.chunks,{type:rx.meta.mime||'application/octet-stream'}))}return}
- const rx=p.rx;const b=data instanceof ArrayBuffer?data:null;if(!rx||!b||rx.received+b.byteLength>rx.size){p.rx=null;return}rx.received+=b.byteLength;rx.chunks.push(b)}
+function onMedia(p,data){
+ if(typeof data==='string'){
+  let packet;
+  try{packet=JSON.parse(data)}catch{return}
+  if(packet.kind==='begin'){
+   if(p.rx||!['video','audio'].includes(packet.media)||
+      typeof packet.token!=='string'||packet.token.length<6||packet.token.length>55||
+      !Number.isInteger(packet.size)||packet.size<1)return;
+   const max=packet.media==='video'?MAX_ROOM_VIDEO_BYTES:MAX_AUDIO_BYTES;
+   if(packet.size>max)return;
+   const metadata=packet.meta;
+   if(packet.media==='audio'){
+    if(state?.phase!=='premiere'||!validAudioEnvelope({
+     meta:metadata,bytes:packet.size,scene,epoch:state?.mediaEpoch,
+     players:state?.players?.map(player=>player.id),expected:state?.counts,
+     sender:p.id,host:state?.host,receiver:me
+    })||!canAcceptVoice({owner:metadata?.owner,local:localClips,remote:remoteClips,expected:state?.counts}))return;
+   }else if(!validVideoEnvelope({
+    meta:metadata,bytes:packet.size,maxBytes:MAX_ROOM_VIDEO_BYTES,
+    scene,epoch:state?.mediaEpoch,sender:p.id,host:state?.host,receiver:me,phase:state?.phase
+   }))return;
+   p.rx={kind:packet.media,token:packet.token,size:packet.size,
+    meta:metadata,received:0,chunks:[]};
+  }else if(packet.kind==='end'&&p.rx?.token===packet.token){
+   const rx=p.rx;p.rx=null;
+   if(rx.received===rx.size)
+    receivedMedia(p,rx,new Blob(rx.chunks,{type:rx.meta.mime||'application/octet-stream'}));
+  }
+  return;
+ }
+ const rx=p.rx,bytes=data instanceof ArrayBuffer?data:null;
+ if(!rx||!bytes||rx.received+bytes.byteLength>rx.size){p.rx=null;return}
+ rx.received+=bytes.byteLength;rx.chunks.push(bytes);
+}
 async function receivedMedia(p,rx,blob){
  if(!state||!scene||!(blob instanceof Blob))return;
  if(rx.kind==='video'){
