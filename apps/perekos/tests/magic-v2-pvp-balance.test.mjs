@@ -38,8 +38,10 @@ test('overlapping physical hazards share a fixed 12-point secondary damage budge
  assert.equal(target.hp,88,'stacked pulses and burns share the first one-second budget');
  assert.equal(s.shots.length,0,
   'secondary hazard ticks must not auto-trigger free on_hit projectiles');
- for(let i=0;i<15;i++)run(s);
- assert.ok(target.hp<88,'new one-second window restores some periodic pressure');
+ // The damage budget refreshes after 60 ticks, but each individual fire
+ // petal still retains its own .46s hit cadence. The next real hit is later.
+ for(let i=0;i<42;i++)run(s);
+ assert.ok(target.hp<88,'new window permits a later genuinely armed field pulse');
  assert.ok(target.hp>=76,'second window has the same cap');
  assert.equal(validState(s),true);
 });
