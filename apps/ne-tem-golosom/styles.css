@@ -348,3 +348,19 @@
  .record-live-dot,.draft-status[data-save-state="saving"]:before,.network-pill[data-net-state="connecting"]:before,.editor .countdown.ntg-tick{animation:none}
  .action,.transport-btn,.record-btn,.count-record-btn,.done-btn,.nav-back,.scene-card,.room-player,.clip-bar,.mic-meter span,.stage-wrap{transition:none!important}
 }
+
+
+/* Real browser regression: mobile-runtime expands native range input hitboxes.
+ * Keep the invisible scrubber confined to the 25px ruler; otherwise it masks
+ * the clip bars, silently disabling mouse and touch drag/trim gestures. */
+.editor #timeline-content #scrubber{
+ position:absolute!important;
+ top:0!important;left:0!important;
+ width:100%!important;
+ height:23px!important;min-height:0!important;max-height:23px!important;
+ margin:0!important;padding:0!important;
+ transform:none!important;
+ opacity:0;
+ z-index:1;
+}
+.editor #clip-lane{position:relative;z-index:2}
