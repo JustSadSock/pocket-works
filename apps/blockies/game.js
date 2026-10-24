@@ -1781,6 +1781,8 @@ class UIManager {
         }
 
         this.drawBoard();
+        this.blockedLaneSignature=null;
+        this.updateBlockedLanes();
 
         this.showScreen('gameScreen');
         if (!this.isOnlineMode && numPlayers === 1) this.saveSoloCheckpoint(true);
@@ -1929,6 +1931,7 @@ class UIManager {
 
             this.drawBoard();
             this.updateTeamStatsIfNeeded();
+            this.updateBlockedLanes();
             if (!this.isOnlineMode) this.saveSoloCheckpoint();
 
             if (touchStatusNeedsUpdate) {
@@ -2072,12 +2075,45 @@ class UIManager {
         }
     }
 
+    updateBlockedLanes(){
+        const area=document.getElementById('blocked-lanes');
+        if(!area)return;
+        const blocked=gameState.isGameOver?[]:gameState.players.filter(p=>p.blocked);
+        const model=blocked.map(p=>({id:p.id,name:p.name||('Игрок '+(p.id+1)),ready:!!(this.isOnlineMode?p.canResume:laneHasClearance(p)),mine:!this.isOnlineMode||p.id===this.localPlayerIndex}));
+        const signature=JSON.stringify([model,this.isOnlineMode&&networkManager.connected,this.isOnlineMode&&networkManager.stale,currentLanguage]);
+        if(this.blockedLaneSignature===signature)return;
+        this.blockedLaneSignature=signature;
+        area.hidden=model.length===0;
+        area.replaceChildren();
+        for(const item of model){
+            const row=document.createElement('div');row.className='blocked-lane';
+            const message=document.createElement('span');message.className='blocked-lane__message';
+            message.textContent=item.name+': '+(item.ready?(currentLanguage==='ru'?'проход свободен':'lane clear'):(currentLanguage==='ru'?'проход пока занят':'lane blocked'));
+            row.append(message);
+            if(item.mine&&item.ready){
+                const btn=document.createElement('button');btn.type='button';btn.className='blocked-lane__resume';
+                btn.textContent=currentLanguage==='ru'?'Я готов — вернуться':'Ready — return';
+                btn.disabled=this.isOnlineMode&&(!networkManager.connected||networkManager.stale);
+                btn.addEventListener('click',()=>{
+                    if(this.isOnlineMode){networkManager.requestLaneResume();return;}
+                    const player=gameState.players[item.id];
+                    if(player?.resumeFromGate()){
+                        this.blockedLaneSignature=null;this.updatePlayerInfo(player);
+                        this.drawNextPiece(player);this.drawBoard();this.refreshTouchStatus();this.updateBlockedLanes();
+                    }
+                });
+                row.append(btn);
+            }
+            area.append(row);
+        }
+    }
+
     updatePlayerInfo(player) {
         const bay=document.getElementById(`spawn-bay-${player.id}`);
         if(bay){
             bay.classList.toggle('is-out',!!player.gameOver);
             bay.classList.toggle('is-owned',this.isOnlineMode&&player.id===this.localPlayerIndex&&!player.gameOver);
-            const accessibleName=player.name+(player.gameOver?' — выбыл':'');
+            const accessibleName=player.name+(player.blocked?' — проход занят':player.gameOver?' — выбыл':'');
             if(bay.getAttribute('aria-label')!==accessibleName)bay.setAttribute('aria-label',accessibleName);
             const label=bay.querySelector('.spawn-bay__name');
             if(label&&label.textContent!==player.name){label.textContent=player.name;label.title=player.name;}
@@ -2086,7 +2122,7 @@ class UIManager {
         if (!statusEl) return;
 
         if (player.gameOver) {
-            statusEl.textContent = t('out');
+            statusEl.textContent = player.blocked?(currentLanguage==='ru'?'Ждёт проход':'Waiting'):t('out');
             statusEl.classList.add('is-out');
         } else {
             statusEl.textContent = t('inPlay');
@@ -3855,7 +3891,7 @@ function applyNetworkSnapshot(s){
     soundManager.land(false);
   }
   if(!previousGameOver&&s.isGameOver)soundManager.gameOver();
-  ui.drawBoard();ui.updateTeamStatsIfNeeded();
+  ui.drawBoard();ui.updateTeamStatsIfNeeded();ui.updateBlockedLanes();
 }
 
 document.querySelector('#join-code-btn').onclick=()=>networkManager.joinRoom(document.querySelector('#join-code').value.trim());
