@@ -42,8 +42,8 @@ test('entry form provides a real cancellation path only while connecting',()=>{
  };
  const idle=render(false),busy=render(true);
  assert.doesNotMatch(idle,/data-action="cancel-connect"/);
- assert.match(idle,/data-action="create">/);
- assert.match(idle,/data-action="join">/);
+ assert.match(idle,/data-action="create"\s*>/);
+ assert.match(idle,/data-action="join"\s*>/);
  assert.match(busy,/data-action="create" disabled/);
  assert.match(busy,/data-action="join" disabled/);
  assert.match(busy,/data-action="cancel-connect"/);
@@ -82,7 +82,7 @@ test('cancellation closes old socket, clears resume token and restores entry sta
    assert.equal(ctx.rendered,0);
   }
  }
- assert.match(src,/catch\(e\)\{\s*if\(net!==client\)return;/,
+ assert.match(src,/catch\(e\)\{\s*if\(net!==client\)\{try\{client\?\.close\(\);\}catch\{\}return;\}/,
   'A rejected abandoned connect must not overwrite a newer connection');
 });
 
