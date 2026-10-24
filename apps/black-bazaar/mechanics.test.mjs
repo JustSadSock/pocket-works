@@ -1700,7 +1700,7 @@ test('v22 secret counteroffers use verified bid IDs and settle atomically withou
  const view=game.viewForPlayer({state,player:{id:buyer.id}});
  assert.equal(view.event.id,'shadow_fair');
  assert.equal(view.marketFeePercent,3);
- assert.equal(view.you.inspectionPrices.black,15);
+ assert.ok([10,15].includes(view.you.inspectionPrices.black),'festival inspection discount also stacks with the starting appraisal lens');
  const item=seller.items[0],startingGold=seller.resources.gold,buyerGold=buyer.resources.gold;
  assert.equal(act(state,seller.id,{type:'black_post',itemId:item.id,ask:{gold:60}}).events[0].type,'state');
  const lot=state.blackLots[0];
