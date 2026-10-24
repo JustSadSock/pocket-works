@@ -73,13 +73,13 @@ test('host controls remain available in v7 as well as existing v6 rooms',()=>{
  }
 });
 
-test('client, offline cache and release metadata agree on version 1.8.4',()=>{
+test('client, offline cache and release metadata agree on version 1.8.5',()=>{
  const config=JSON.parse(repoFile('apps/chyepukha/app.config.json'));
  const sw=repoFile('apps/chyepukha/sw.js');
  const html=repoFile('apps/chyepukha/index.html');
- assert.equal(config.version,'1.8.4');
- assert.equal(config.cacheName,'chyepukha-v1.8.4');
- assert.match(sw,/const APP_VERSION='1\.8\.4'/);
- assert.match(sw,/__pw_build','chyepukha-1\.8\.4'/);
- assert.match(html,/data-app-version="1\.8\.4"/);
+ assert.equal(config.version,'1.8.5');
+ assert.equal(config.cacheName,'chyepukha-v1.8.5');
+ assert.match(sw,/const APP_VERSION='1\.8\.5'/);
+ assert.match(sw,/__pw_build','chyepukha-1\.8\.5'/);
+ assert.match(html,/data-app-version="1\.8\.5"/);
 });
