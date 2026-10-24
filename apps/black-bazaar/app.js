@@ -11,7 +11,7 @@ import {createDebugState,debugSetItem,debugCommand} from './debug-state.js';
 
 const debugPreview=new URLSearchParams(location.search).has('debugPreview');
 installMobileRuntime();
-if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.16.1',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.17.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -73,7 +73,12 @@ function specialLine(t){
 }
 let onlinePlayerIds=null;
 let net=null,me=null,state=null,roomId='',mode='home',connecting=false,connected=false;
-let roomVersion=debugPreview?'v19':null;
+let roomVersion=debugPreview?'v20':null;
+let serverClockOffset=0,lastClockPing=0;
+const serverTime=()=>Date.now()+serverClockOffset;
+function calibrateServerClock(snapshot){
+ if(Number.isFinite(snapshot?.serverNow))serverClockOffset=snapshot.serverNow-Date.now();
+}
 let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
 const decorativeGuests=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
 let notice='';
@@ -171,7 +176,7 @@ function renderHome(){
 }
 function renderLobby(){
   mode='lobby';activeSheet=null;selectedArtifact=null;playStarted=false;document.body.classList.remove('sheet-open');
-  const all=state?.players||[],host=state?.host===me?.id,canKick=host&&['v16','v17','v18','v19'].includes(roomVersion),short=roomId.slice(0,8).toUpperCase();
+  const all=state?.players||[],host=state?.host===me?.id,canKick=host&&['v16','v17','v18','v19','v20'].includes(roomVersion),short=roomId.slice(0,8).toUpperCase();
   const modern=Number(roomVersion?.slice(1)||0)>=19;
   const mine=all.find(p=>p.id===me?.id);
   const chosen=avatarOf(mine);
@@ -456,7 +461,7 @@ function updateTurnClock(){
   if(urgent)urgent.textContent=frozen;
   return;
  }
- const left=Math.max(0,Math.ceil((state.deadlineAt-Date.now())/1000));
+ const left=Math.max(0,Math.ceil((state.deadlineAt-serverTime())/1000));
  node.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');
  node.setAttribute('aria-label','До конца хода '+left+' секунд');
  if(urgent)urgent.textContent=node.textContent;
@@ -661,7 +666,7 @@ function renderPlay(){
  const active=state.turnId===me?.id,plan=forecastEconomy(you.resources,you.items);
  const seats=state.players.map(p=>{
   const self=p.id===me?.id,available=!self&&playerOnline(p)&&!p.bankrupt&&!you.bankrupt;
-  const moderate=['v16','v17','v18','v19'].includes(roomVersion)&&state.host===me?.id&&!self&&!p.bankrupt;
+  const moderate=['v16','v17','v18','v19','v20'].includes(roomVersion)&&state.host===me?.id&&!self&&!p.bankrupt;
   return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(self?'is-me ':'')+
   '" data-action="'+(self?'open-sheet':'player-actions')+'" '+(self?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
   (!self&&!available&&!moderate?' disabled':'')+' aria-label="'+esc(p.name||p.character)+'">'+
@@ -699,7 +704,7 @@ function renderPlay(){
  app.innerHTML='<div class="play-screen"><div class="play-head">'+
  '<h1>Раунд '+state.round+'/'+state.rounds+'</h1>'+
  '<span class="chip">'+esc(active?'Твой ход':'Ходит '+label(state.turnId))+'</span>'+
- '<span class="chip"><strong id="turnClock" role="timer">—</strong></span>'+(state.connectionGraceUntil&&Date.now()<state.connectionGraceUntil?'<span class="chip" role="status">'+svgIcon('clock',16)+' Восстановление связи</span>':'')+soundToggle()+
+ '<span class="chip"><strong id="turnClock" role="timer">—</strong></span>'+(state.connectionGraceUntil&&serverTime()<state.connectionGraceUntil?'<span class="chip" role="status">'+svgIcon('clock',16)+' Восстановление связи</span>':'')+soundToggle()+
  '<button type="button" class="leave-button" data-action="leave">Выйти</button></div>'+
  resourceWallet(you.resources,plan)+
  (you.urgent?.status==='pending'?'<button class="urgent-ticket" type="button" data-action="open-sheet" data-sheet="secret" aria-label="Срочный заказ: '+esc(amounts(you.urgent.needs))+'; срок — до конца хода"><span>'+svgIcon('clock',17)+' Срочный заказ</span><strong>'+esc(amounts(you.urgent.needs))+'</strong><small id="urgentClock">—</small></button>':'')+
@@ -754,7 +759,7 @@ function closeRoom(){
  if(net){try{if(connected)net.leaveRoom()}catch{}try{net.close()}catch{}}
  // A deliberate exit must never silently resume a reserved seat from local storage.
  netStorage.removeItem('pocket-net:'+ORIGIN);
- net=null;me=null;state=null;onlinePlayerIds=null;roomId='';roomVersion=null;connected=false;connecting=false;message('');renderHome();
+ net=null;me=null;state=null;onlinePlayerIds=null;roomId='';roomVersion=null;serverClockOffset=0;lastClockPing=0;connected=false;connecting=false;message('');renderHome();
 }
 function cancelConnect(){
  if(!connecting)return;
@@ -767,7 +772,7 @@ function cancelConnect(){
 }
 function wire(client){
  client.on('connected',data=>{if(net!==client)return;me=data.player;connected=false;message(state?.phase==='play'?'Восстанавливаем комнату…':'');});
- client.on('room_joined',data=>{if(net!==client)return;roomVersion=data.version;roomId=data.roomId;state=data.state;onlinePlayerIds=null;connecting=false;connected=true;message('');render();});
+ client.on('room_joined',data=>{if(net!==client)return;roomVersion=data.version;roomId=data.roomId;state=data.state;calibrateServerClock(state);onlinePlayerIds=null;connecting=false;connected=true;message('');render();});
  client.on('presence',data=>{if(net!==client||!state||data.roomId!==roomId)return;if(Array.isArray(data.onlineIds)){onlinePlayerIds=new Set(data.onlineIds);if(state.phase==='play')render();}});
  client.on('game_event',data=>{
   if(net!==client)return;
@@ -775,13 +780,21 @@ function wire(client){
    const incoming=data.event.payload;
    const previous=state;
    const cue=classifyFeedback(previous,incoming,me?.id);
-   state=incoming;render();
+   state=incoming;calibrateServerClock(state);render();
    showConfirmedMovement(previous,incoming);
    if(cue)showConfirmedCue(cue);
    else if(previous?.you&&incoming?.you){
      const changed=keys.find(k=>previous.you.resources?.[k]!==incoming.you.resources?.[k]);
      if(changed)sound.play(changed);
     }
+  }else if(data.event?.type==='time_pong'){
+   const pong=data.event.payload;
+   if(Number.isFinite(pong?.stamp)&&pong.stamp===lastClockPing&&Number.isFinite(pong.serverNow)){
+     const now=Date.now();
+     // The transport delay is approximately half the measured round trip.
+     serverClockOffset=pong.serverNow-(now+pong.stamp)/2;
+     updateTurnClock();
+   }
   }else if(data.event?.type==='notice')message(data.event.payload,true);
  });
  client.on('disconnected',()=>{if(net!==client)return;connected=false;onlinePlayerIds=null;message('Связь потеряна. PocketNet переподключается…',true);});
@@ -913,7 +926,7 @@ app.addEventListener('click',event=>{
    app.querySelector('.player-popover')?.remove();
    const pop=document.createElement('div');pop.className='player-popover';pop.setAttribute('role','dialog');
    pop.innerHTML='<div class="player-popover-head"><strong>'+esc(player.name||player.character)+'</strong><button type="button" data-action="close-player-actions" aria-label="Закрыть">×</button></div>'+(!playerOnline(player)||player.bankrupt||state.you.bankrupt?'<p>Обмен недоступен</p>':'<button type="button" class="primary" data-action="trade-with" data-player="'+esc(player.id)+'">'+svgIcon('trade',20)+' Обмен / подарок</button>')+'<button type="button" data-action="open-sheet" data-sheet="players">'+svgIcon('people',19)+' Участники</button>'+
-   (['v16','v17','v18','v19'].includes(roomVersion)&&state.host===me?.id&&!player.bankrupt?'<button type="button" class="kick-player" data-action="kick-player" data-player="'+esc(player.id)+'">'+'Исключить из партии</button>':'');
+   (['v16','v17','v18','v19','v20'].includes(roomVersion)&&state.host===me?.id&&!player.bankrupt?'<button type="button" class="kick-player" data-action="kick-player" data-player="'+esc(player.id)+'">'+'Исключить из партии</button>':'');
    btn.closest('.player-seats')?.append(pop);sound.play('open');pop.querySelector('button')?.focus({preventScroll:true});return;
   }
   if(action==='close-player-actions'){app.querySelector('.player-popover')?.remove();return;}
@@ -1053,9 +1066,17 @@ loadCharacterArt().catch(error=>{console.warn('Unable to load character art:',er
 let lastHeartbeat=0;
 setInterval(()=>{
  updateTurnClock();
- if(connected&&state?.phase==='play'&&net&&Date.now()-lastHeartbeat>8000){
-  lastHeartbeat=Date.now();
-  try{net.sendGame({type:'tick'});}catch{}
+ if(connected&&state?.phase==='play'&&net){
+   const now=Date.now();
+   if(Number(roomVersion?.slice(1)||0)>=20){
+     // Only the server alarm advances turns; probes correct drift without persisting.
+     if(now-lastHeartbeat>=30_000&&document.visibilityState!=='hidden'){
+       lastHeartbeat=now;lastClockPing=now;
+       try{net.sendGame({type:'time_ping',stamp:lastClockPing});}catch{}
+     }
+   }else if(now-lastHeartbeat>=8000){
+     lastHeartbeat=now;try{net.sendGame({type:'tick'});}catch{}
+   }
  }
 },1000);
 if(!debugPreview)try{const saved=JSON.parse(netStorage.getItem('pocket-net:'+ORIGIN)||'null');if(saved?.roomId)connect('resume');}catch{}

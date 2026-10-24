@@ -239,3 +239,18 @@ test('Contextual market controls never bypass the versioned public bid and avoid
  assert.match(source,/restoreDraftFocus\(draftFocus\)/);
  assert.match(source,/class="direct-post"/,'inventory listing form should not be hidden under another disclosure');
 });
+
+test('Bazaar v20 uses alarm-driven deadlines with no idle SQLite rewrites',()=>{
+ const hub=readFileSync(join(root,'../../pocketnet/hub.mjs'),'utf8');
+ const game=readFileSync(join(root,'server/module.ts'),'utf8');
+ const app=readFileSync(join(root,'app.js'),'utf8');
+ assert.match(game,/onDeadline\(\{state,now=Date\.now\(\)\}\)/,'immutable rules must expose an unattended deadline handler');
+ assert.match(game,/serverNow:Date\.now\(\)/,'private projections include an authoritative clock');
+ assert.match(hub,/advanceBazaarDeadline\(room,now=Date\.now\(\)\)/);
+ assert.match(hub,/this\.ctx\.storage\.setAlarm\(next\)/,'alarm is rescheduled for pending turns');
+ assert.match(hub,/if\(command==='tick'\)return/,'heartbeat must not write state');
+ assert.match(hub,/if\(command==='sync'\)this\.emit\(room,\[\{type:'state',to:player\.id\}\]\)/,'sync is private and read-only');
+ assert.match(hub,/if\(room\)this\.advanceBazaarDeadline\(room,now\)/,'alarm processes unattended turns');
+ assert.match(app,/type:'time_ping',stamp:lastClockPing/,'new client sends a clock probe rather than a write-heavy tick');
+ assert.match(app,/serverClockOffset=pong\.serverNow-\(now\+pong\.stamp\)\/2/);
+});

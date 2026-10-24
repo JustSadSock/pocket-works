@@ -51,6 +51,7 @@ export class PocketNetHub {
     this.messageRates = new WeakMap();
     this.chyepukhaSyncAt = new WeakMap();
     this.zamazkaSyncAt = new WeakMap();
+    this.bazaarSyncAt = new WeakMap();
     ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY, id TEXT NOT NULL, name TEXT NOT NULL, expires INTEGER NOT NULL
     )`);
@@ -186,7 +187,7 @@ export class PocketNetHub {
   async applyKicks(room, events, actorId) {
     const zamazka=room.gameId==='zamazka'&&(room.state?.paused||room.state?.phase==='lobby')&&room.state?.host===actorId;
     const chyepukha=room.gameId==='chyepukha'&&['v6','v7'].includes(room.version)&&room.state?.host===actorId;
-    const bazaar=room.gameId==='black-bazaar'&&['v16','v17','v18','v19'].includes(room.version)&&room.state?.host===actorId;
+    const bazaar=room.gameId==='black-bazaar'&&['v16','v17','v18','v19','v20'].includes(room.version)&&room.state?.host===actorId;
     if(!zamazka&&!chyepukha&&!bazaar)return;
     let changed = false;
     for (const event of events ?? []) {
@@ -230,10 +231,24 @@ export class PocketNetHub {
     if(typeof mod?.onPresence!=='function')return;
     const onlineIds=this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean);
     const result=await mod.onPresence({state:copied(room.state),player,online,
-      ...(['v17','v18','v19'].includes(room.version)?{onlineIds}: {})});
+      ...(['v17','v18','v19','v20'].includes(room.version)?{onlineIds}: {})});
     if(result?.state&&result.events?.length){
       room.state=result.state;this.persist(room);this.emit(room,result.events);
     }
+  }
+  // The alarm and commands share the DO mutation queue. A deadline may advance
+  // a turn once, regardless of simultaneous clients, hibernation or late packets.
+  advanceBazaarDeadline(room,now=Date.now()){
+    if(room.gameId!=='black-bazaar'||room.version!=='v20')return false;
+    const mod=this.module(room.gameId,room.version);
+    if(!mod?.onDeadline)return false;
+    const priorRevision=room.state?.revision;
+    const result=mod.onDeadline({state:copied(room.state),now});
+    if(!result?.state||result.state.revision===priorRevision)return false;
+    room.state=result.state;
+    this.persist(room);
+    this.emit(room,result.events||[]);
+    return true;
   }
   async refreshZamazkaPresence(room){
     if(room.gameId!=='zamazka'||room.state?.resumable!==true)return;
@@ -344,7 +359,16 @@ export class PocketNetHub {
   ensureAlarm() {
     // Pending grants survive room closure and are retried until Pocket Social confirms them.
     const waiting=this.sql('SELECT 1 FROM achievement_outbox LIMIT 1').toArray().length>0;
-    if (this.countRooms()||waiting) this.ctx.storage.setAlarm(Date.now() + (waiting?20_000:ROOM_TTL)).catch(e=>console.error('pocketnet_alarm',String(e)));
+    if(!this.countRooms()&&!waiting)return;
+    const now=Date.now();
+    let next=now+(waiting?20_000:ROOM_TTL);
+    // Only v20 opts in to authoritative wakeups. Pinned older versions remain unchanged.
+    for(const row of this.sql('SELECT state FROM rooms WHERE game_id=? AND version=?','black-bazaar','v20').toArray()){
+      const state=JSON.parse(row.state);
+      if(state.phase==='play'&&!state.offlinePaused&&Number.isFinite(state.deadlineAt))
+        next=Math.min(next,Math.max(now+250,state.deadlineAt+5));
+    }
+    this.ctx.storage.setAlarm(next).catch(e=>console.error('pocketnet_alarm',String(e)));
   }
   recordZamazkaRewards(room, previous, next, events, actor) {
     if(room.gameId!=='zamazka')return;
@@ -618,7 +642,7 @@ export class PocketNetHub {
           const mod = this.module(room.gameId, room.version);
           if (!mod) throw new Error('room_version_unavailable');
           const previous = room.players.some(p => p.id === player.id);
-          if((room.gameId==='chyepukha'&&['v6','v7'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17','v18','v19'].includes(room.version)||room.gameId==='zamazka'&&Number(room.version.slice(1))>=37)&&
+          if((room.gameId==='chyepukha'&&['v6','v7'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17','v18','v19','v20'].includes(room.version)||room.gameId==='zamazka'&&Number(room.version.slice(1))>=37)&&
              ((room.state.bannedIds||[]).includes(player.id)||(member.accountId&&(room.state.bannedAccounts||[]).includes(member.accountId))))throw Error('room_kicked');
           if(room.gameId==='zamazka'&&Number(room.version.slice(1))>=37&&!previous&&room.state.phase!=='lobby'&&!room.state.participants?.some(p=>p.id===player.id))throw Error('room_in_progress');
           if (!previous && member.accountId && room.players.some(p => p.accountId === member.accountId)) {
@@ -657,7 +681,7 @@ export class PocketNetHub {
               if (Array.isArray(room.state?.players)) room.state.players = room.state.players.map(refresh);
                // v19 separates the trusted nickname from the chosen, room-owned SVG avatar.
                // Refresh the verified nickname without overwriting avatar selection.
-               if(room.gameId==='black-bazaar'&&room.version==='v19'){
+               if(room.gameId==='black-bazaar'&&['v19','v20'].includes(room.version)){
                  room.state.players=room.state.players.map(p=>p.id===player.id?{...p,name:member.name}:p);
                  room.state.contestants=room.state.contestants?.map(p=>p.id===player.id?{...p,name:member.name,character:member.name}:p)||[];
                  if(Array.isArray(room.state.ranking))room.state.ranking=room.state.ranking.map(p=>p.id===player.id?{...p,name:member.name,character:member.name}:p);
@@ -694,6 +718,21 @@ export class PocketNetHub {
         if (!mod) throw new Error('room_version_unavailable');
         // Read-only sync: project one private view without cloning, persisting
         // or broadcasting the manuscripts to the entire room.
+        // Bazaar v20: a heartbeat or time probe cannot rewrite the entire room.
+        // Sync is private and throttled; the DO alarm handles unattended deadlines.
+        if(msg.type==='game_message'&&room.gameId==='black-bazaar'&&room.version==='v20'&&
+           ['tick','sync','time_ping'].includes(msg.payload?.type)){
+          const command=msg.payload.type,now=Date.now();
+          this.advanceBazaarDeadline(room,now);
+          if(command==='tick')return;
+          if(now-(this.bazaarSyncAt.get(ws)||0)<1500)return;
+          this.bazaarSyncAt.set(ws,now);
+          if(command==='sync')this.emit(room,[{type:'state',to:player.id}]);
+          else if(Number.isFinite(msg.payload.stamp))
+            message(ws,'game_event',{roomId:room.id,event:{type:'time_pong',to:player.id,
+              payload:{stamp:msg.payload.stamp,serverNow:Date.now()}}});
+          return;
+        }
         if (msg.type === 'game_message' && isChyepukhaSync(room.gameId, msg.payload)) {
           const now = Date.now();
           if (canServeChyepukhaSync(this.chyepukhaSyncAt.get(ws), now)) {
@@ -763,7 +802,7 @@ export class PocketNetHub {
           }
           this.recordZamazkaRewards(room,prior,room.state,result.events ?? [],player.id);
           this.recordBlockiesRewards(room,prior,room.state);
-          const earlyKick=room.gameId==='chyepukha'&&['v6','v7'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17','v18','v19'].includes(room.version);
+          const earlyKick=room.gameId==='chyepukha'&&['v6','v7'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17','v18','v19','v20'].includes(room.version);
           if(earlyKick)await this.applyKicks(room,result.events ?? [],player.id);
           this.emit(room, result.events ?? []);
           if(!earlyKick)await this.applyKicks(room, result.events ?? [], player.id);
@@ -834,8 +873,7 @@ export class PocketNetHub {
     // External reward delivery can be slow and must stay outside the socket
     // queue. Actual room expiration, however, must serialize with join,
     // submission, and disconnect mutations to avoid closing a resumed room.
-    await this.flushAwards();
-    return this.run(async()=>{
+    const sweep=await this.run(async()=>{
       const now = Date.now();
       this.sql('DELETE FROM sessions WHERE expires < ?', now);
       const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
@@ -845,12 +883,19 @@ export class PocketNetHub {
           : room?.gameId==='chyepukha'&&['v5','v6','v7'].includes(room.version)&&room.state?.phase==='finished' ? 7*24*60*60_000
           : room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000
           : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000
-          : room?.gameId==='black-bazaar'&&['v17','v18','v19'].includes(room.version)&&room.state?.phase==='play'&&room.state?.offlinePaused
+          : room?.gameId==='black-bazaar'&&['v17','v18','v19','v20'].includes(room.version)&&room.state?.phase==='play'&&room.state?.offlinePaused
             ? 24*60*60_000 : ROOM_TTL;
-        if(now-row.updated_at<ttl||this.sockets(row.id).length)continue;
-        if(room)await this.closeRoom(room);
+        if(now-row.updated_at>=ttl&&!this.sockets(row.id).length){
+          if(room)await this.closeRoom(room);
+          continue;
+        }
+        // Fire a pending turn without waiting for a browser heartbeat.
+        if(room)this.advanceBazaarDeadline(room,now);
       }
       this.ensureAlarm();
     });
+    // An optional remote achievement delivery must never delay a game deadline.
+    await this.flushAwards();
+    return sweep;
   }
 }

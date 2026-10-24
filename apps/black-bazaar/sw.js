@@ -1,10 +1,10 @@
-const APP_VERSION='0.16.1';
+const APP_VERSION='0.17.0';
 const VERSION=APP_VERSION;
 const RELEASE_DATE='2026-10-24';
-const RELEASE_NOTES = ["Предложи цену прямо на столе без открытия панели.","Продавец принимает точную ставку рядом с товаром.","Поля цены и курсор не сбрасываются от сетевых событий."];
+const RELEASE_NOTES = ["Таймер на сервере работает независимо от браузера.","Обновления времени не переписывают состояние всей комнаты.","Сверка часов исправляет расхождения времени на устройствах."];
 const NOTES=RELEASE_NOTES;
-const CACHE='black-bazaar-v0.16.1';
-const CACHE_NAME='black-bazaar-v0.16.1';
+const CACHE='black-bazaar-v0.17.0';
+const CACHE_NAME='black-bazaar-v0.17.0';
 const PREFIX='black-bazaar-v';
 const FILES=[
  './','./index.html','./preview.html','./app.js','./debug-console.js','./debug-state.js','./economy.js','./art.js','./art/characters.js','./art/artifacts.js','./feedback.js','./art/forest.svg','./art/table.svg','./styles.css','./app.config.json',

@@ -1561,3 +1561,43 @@ test('Avatar selection persists when members rejoin and host returns to the lobb
  game.onMessage({state,player:players[0],payload:{type:'start'}});
  assert.equal(state.contestants.find(p=>p.id==='two').avatarId,'many_eyed_cat');
 });
+
+test('Server alarm advances an unattended expired turn exactly once and never spends a stale action',()=>{
+ const persons=Array.from({length:3},(_,i)=>({id:'alarm'+i,name:'Тестер '+i}));
+ const {state}=game.createRoom({player:persons[0]});
+ game.onJoin({state,players:persons,player:persons[2]});
+ game.onMessage({state,player:persons[0],players:persons,payload:{type:'start'}});
+ const previous=state.contestants[state.turnIndex],index=state.turnIndex,rev=state.revision;
+ const beforeGold=previous.resources.gold;
+ state.deadlineAt=Date.now()-1;
+ const first=game.onDeadline({state,now:Date.now()});
+ assert.equal(first.events[0].type,'state');
+ assert.equal(state.revision,rev+1);
+ assert.notEqual(state.turnIndex,index,'next seat selected without a client heartbeat');
+ assert.equal(previous.resources.gold,beforeGold);
+ const afterRevision=state.revision,afterRound=state.round,afterIndex=state.turnIndex;
+ const duplicate=game.onDeadline({state,now:Date.now()});
+ assert.deepEqual(duplicate.events,[]);
+ assert.equal(state.revision,afterRevision);
+ assert.equal(state.round,afterRound);
+ assert.equal(state.turnIndex,afterIndex);
+ const onTime=game.onDeadline({state,now:state.deadlineAt-1});
+ assert.deepEqual(onTime.events,[]);
+ assert.equal(state.revision,afterRevision);
+ const privateView=game.viewForPlayer({state,player:persons[1]});
+ assert.ok(Number.isFinite(privateView.serverNow),'projected server timestamp calibrates client clock');
+});
+test('Server deadline never advances offline-paused or finished rooms',()=>{
+ const people=[{id:'host-alarm',name:'А'},{id:'guest-alarm',name:'Б'}];
+ const {state}=game.createRoom({player:people[0]});
+ game.onJoin({state,players:people,player:people[1]});
+ game.onMessage({state,player:people[0],players:people,payload:{type:'start'}});
+ const rev=state.revision;
+ state.deadlineAt=Date.now()-1000;
+ state.offlinePaused=true;
+ assert.deepEqual(game.onDeadline({state,now:Date.now()}).events,[]);
+ assert.equal(state.revision,rev);
+ state.offlinePaused=false;state.phase='done';
+ assert.deepEqual(game.onDeadline({state,now:Date.now()}).events,[]);
+ assert.equal(state.revision,rev);
+});

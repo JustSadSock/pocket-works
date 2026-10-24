@@ -604,14 +604,14 @@ function action(s,id,v){
 }
 function viewForPlayer({state,player}){
   const s=state,me=player?.id?getPlayer(s,player.id):null;
-  if(s.phase==='lobby')return {phase:'lobby',host:s.host,players:s.players,revision:s.revision};
+  if(s.phase==='lobby')return {phase:'lobby',host:s.host,players:s.players,revision:s.revision,serverNow:Date.now()};
   const seller=getPlayer(s,s.listing?.seller);
   const listed=seller?.items.find(i=>i.id===s.listing?.itemId);
   const turn=s.contestants[s.turnIndex];
   // Hide other wallets and inventory while anonymity could be defeated by a visible change.
   // Direct resource trades remain possible, but choosing an unknown stranger's item is suspended.
   const veil=isBlackRound(s);
-  return {phase:s.phase,host:s.host,revision:s.revision,round:s.round,rounds:TOTAL_ROUNDS,deadlineAt:s.deadlineAt||null,connectionGraceUntil:s.connectionGraceUntil||null,offlinePaused:!!s.offlinePaused,
+  return {phase:s.phase,host:s.host,revision:s.revision,serverNow:Date.now(),round:s.round,rounds:TOTAL_ROUNDS,deadlineAt:s.deadlineAt||null,connectionGraceUntil:s.connectionGraceUntil||null,offlinePaused:!!s.offlinePaused,
     turnId:turn?.id||null,players:s.contestants.map(p=>({
       id:p.id,name:p.name,character:p.name,avatarId:p.avatarId,
       items:veil&&p.id!==me?.id?null:inventoryCount(s,p),
@@ -730,6 +730,15 @@ const game={
     }
     return {state,events:[]};
   },
+  onDeadline({state,now=Date.now()}){
+    if(state.phase!=='play'||state.offlinePaused||!Number.isFinite(state.deadlineAt)||now<state.deadlineAt)
+      return {state,events:[]};
+    const timed=state.contestants[state.turnIndex];
+    if(!timed)return {state,events:[]};
+    issue(state,'Лимит времени истёк. Ход «'+timed.name+'» завершён автоматически.');
+    nextTurn(state);
+    return success(state);
+  },
   onMessage({state,player,players,payload}){
     const v=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
     if(v.type==='select_avatar'){
@@ -756,14 +765,10 @@ const game={
       return {...result,events:[...(result.events||[]),{type:'player_kicked',to:target.id}]};
     }
     if(state.offlinePaused)return failure(state,player.id,'Партия ждёт переподключения участников.');
-    if(v.type==='sync'&&!(state.phase==='play'&&state.deadlineAt&&Date.now()>=state.deadlineAt))
-      return {state,events:[{type:'state',to:player.id,payload:{}}]};
-    if(state.phase==='play'&&state.deadlineAt&&Date.now()>=state.deadlineAt){
-      const timed=state.contestants[state.turnIndex];
-      issue(state,'Лимит времени истёк. Ход «'+timed.character+'» завершён автоматически.');
-      nextTurn(state);
-      return success(state);
-    }
+    // Expired commands must never perform their intended mutation.
+    if(state.phase==='play'&&Number.isFinite(state.deadlineAt)&&Date.now()>=state.deadlineAt)
+      return game.onDeadline({state,now:Date.now()});
+    if(v.type==='sync')return {state,events:[{type:'state',to:player.id,payload:{}}]};
     if(v.type==='tick')return {state,events:[]};
     if(v.type==='return_lobby'&&state.phase==='done'){
       if(player.id!==state.host)return failure(state,player.id,'Только ведущий может открыть новую комнату ожидания.');

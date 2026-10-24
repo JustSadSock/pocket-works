@@ -1,5 +1,5 @@
 // Real PocketNet integration: three authenticated WebSocket clients against
-// Wrangler's SQLite Durable Object and the immutable Bazaar v19 rules.
+// Wrangler's SQLite Durable Object and the immutable Bazaar v20 rules.
 import assert from 'node:assert/strict';
 import WebSocket from '../../../pocket-server/node_modules/ws/index.js';
 
@@ -85,7 +85,7 @@ try{
  host.send('create_room',{gameId:'black-bazaar'});
  const initial=await host.next('room_joined');
  roomId=initial.roomId;
- assert.equal(initial.version,'v19','new rooms must use immutable v19');
+ assert.equal(initial.version,'v20','new rooms must use immutable v20');
  assert.equal(initial.state.phase,'lobby');
  second.send('join_room',{roomId:roomId.slice(0,8).toUpperCase()});
  assert.equal((await second.next('room_joined')).state.players.length,2);
@@ -106,6 +106,18 @@ try{
  const start=await Promise.all(seats.map(c=>c.next('game_event',stateEvent('play'))));
  for(let n=0;n<3;n++)verifyPrivate(stateOf(start[n]),seats[n].id);
  const firstStart=stateOf(start[0]);
+ // A time probe is read-only and authenticated. No room-wide state event is needed.
+ const pingStamp=Date.now();
+ host.send('game_message',{payload:{type:'time_ping',stamp:pingStamp}});
+ const ping=await host.next('game_event',m=>m.event?.type==='time_pong'&&m.event.payload?.stamp===pingStamp);
+ assert.equal(ping.event.to,host.id);
+ assert.ok(Math.abs(ping.event.payload.serverNow-Date.now())<3000,'probe uses server clock');
+ host.send('game_message',{payload:{type:'sync'}});
+ const refreshed=stateOf(await host.next('game_event',stateEvent('play',view=>view.revision===firstStart.revision)));
+ assert.equal(refreshed.revision,firstStart.revision,'read-only sync must not bump revision');
+ assert.equal(refreshed.you.id,host.id,'sync is only projected to requesting seat');
+ host.send('game_message',{payload:{type:'tick'}});
+
  assert.ok(firstStart.players.every(p=>p.character===p.name),'verified nicknames replace roles');
  assert.equal(firstStart.players.find(p=>p.id===host.id).avatarId,'old_man');
  assert.equal(firstStart.players.find(p=>p.id===second.id).avatarId,'flower');
@@ -319,7 +331,7 @@ try{
  console.log('BAZAAR_LIVE_POCKETNET_PASS',JSON.stringify({
   module:initial.version,seats:3,privateViews:true,auction:true,
   activeSellerReconnect:true,deadlineGrace:true,noDuplicateTrade:true,
-  rejectedLateJoin:true,hostHandoff:true,lobbyKick:true,liveKick:true,bannedReconnect:true,allOfflineRecovery:true,completedRounds:snap.round||9,turns:commands
+  rejectedLateJoin:true,hostHandoff:true,lobbyKick:true,liveKick:true,bannedReconnect:true,allOfflineRecovery:true,readonlyClock:true,completedRounds:snap.round||9,turns:commands
  }));
 }finally{
  for(const c of clients)try{await c.close()}catch{}
