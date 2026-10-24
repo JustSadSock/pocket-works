@@ -978,7 +978,7 @@ $('premiere-local-file').onchange=async e=>{
 };
 $('premiere-repeat').onclick=()=>{pausePremiere();setPlayhead(0,true)};
 $('premiere-scrub').oninput=e=>{pausePremiere();setPlayhead(Number(e.target.value)/10,true)};
-$('premiere-back').onclick=()=>{stopPremiereExport();pausePremiere();if(mode==='solo')openEditor();else if(meHost())sendGame({type:'again'});else toast('Новую сцену начинает ведущий.')};
+$('premiere-back').onclick=()=>{if(mode==='solo'){stopPremiereExport();pausePremiere();openEditor()}else if(meHost()){stopPremiereExport();pausePremiere();sendGame({type:'again'})}else toast('Новую сцену начинает ведущий.')};
 for(const b of document.querySelectorAll('[data-back]'))b.onclick=async()=>{const to=b.dataset.back;if(view==='premiere')stopPremiereExport();if(view==='wait'&&mode!=='solo'){sendGame({type:'unready'});await openEditor()}else if(to==='home'){if(await resetRuntime()){leaveNetwork();show('home')}}else if(to==='library'){videoExportController?.abort();clearExportPreview();library()}else if(to==='editor')await openEditor()};
 $('stage-video').ontimeupdate=()=>{if(!scene)return;const t=time($('stage-video'));if(record?.replaceId&&t>=record.limit-.035)finishRecording();
 else if(t>=scene.duration-.05){if(record)finishRecording();else if(!$('stage-video').paused){stopAllPlayback();seekVideo($('stage-video'),scene.duration-.04)}}if(!record)updateClipSound(t,playing,false);renderPlayhead()};
