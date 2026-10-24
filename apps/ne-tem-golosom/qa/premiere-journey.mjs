@@ -37,6 +37,7 @@ try{
   await page.goto('http://127.0.0.1:'+server.address().port+'/__premiere_qa__');
   const result=await page.evaluate(async()=>{
    const {renderPremiere,voicePlan}=await import('/apps/ne-tem-golosom/premiere-export.js');
+   const {measureVideoDuration}=await import('/apps/ne-tem-golosom/media-lab.js');
    if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)
      return {unsupported:true};
    const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -102,7 +103,14 @@ try{
     video.onloadedmetadata=resolve;video.onerror=()=>reject(Error('Output video not decodable'));
    });
    const hasVideo=video.videoWidth>0&&video.videoHeight>0;
-   const exportedDuration=video.duration;
+   const exportedDuration=Number.isFinite(video.duration)?video.duration:await measureVideoDuration(video);
+   if(video.currentTime>.1){
+     await new Promise(resolve=>{
+       const timer=setTimeout(resolve,1500);
+       video.onseeked=()=>{clearTimeout(timer);resolve()};
+       video.currentTime=0;
+     });
+   }
    let audioTrackCount=null;
    if(typeof video.captureStream==='function'){
     await video.play();
