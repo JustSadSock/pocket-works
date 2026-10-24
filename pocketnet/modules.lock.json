@@ -1,6 +1,6 @@
 {
   "zamazka": {
-    "current": "v44",
+    "current": "v45",
     "versions": [
       "v1",
       "v2",
@@ -45,7 +45,8 @@
       "v41",
       "v42",
       "v43",
-      "v44"
+      "v44",
+      "v45"
     ]
   },
   "flagpost": {
@@ -211,7 +212,7 @@
     ]
   },
   "perekos": {
-    "current": "v19",
+    "current": "v20",
     "versions": [
       "v1",
       "v2",
@@ -231,7 +232,8 @@
       "v16",
       "v17",
       "v18",
-      "v19"
+      "v19",
+      "v20"
     ]
   },
   "throne-three": {

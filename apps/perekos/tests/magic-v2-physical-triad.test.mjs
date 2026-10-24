@@ -28,7 +28,7 @@ function install(s,id){
 test('PocketNet v16 executes all three new owned action runes in authoritative 2-seat combat',()=>{
  const before=Date.now;let now=1_000_000;Date.now=()=>now;
  try{
-  assert.equal(RULESET_VERSION,19);
+  assert.equal(RULESET_VERSION,20);
   for(const [school,id,collection,marker] of [
    ['stone','st_fault','waves','v2Fault'],
    ['fire','fi_lash','beams','v2Lash'],

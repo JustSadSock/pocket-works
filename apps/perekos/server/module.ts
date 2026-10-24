@@ -264,20 +264,32 @@ function harm(s,a,amount,from,depth=0){
 // Global per-caster allowance for concurrent DoTs and persistent hazards.
 // Primary spell impacts still do their full intended damage.
 const V2_SECONDARY_HP_BUDGET=12,V2_SECONDARY_WINDOW_TICKS=60;
-function harmSecondary(s,target,amount,source,depth=0){
- if(!s.magicModeV2||source==null)return harm(s,target,amount,source,depth);
+function harmSecondary(s,target,amount,source,depth=0,shieldDrain=0){
+ if(!s.magicModeV2||source==null){
+  if(Number.isFinite(shieldDrain)&&shieldDrain>0)target.shield=Math.max(0,target.shield-shieldDrain);
+  return harm(s,target,amount,source,depth);
+ }
  const caster=s.actors[source];
- if(!caster||!Number.isFinite(amount)||amount<=0)return 0;
+ if(!caster||!Number.isFinite(amount)||amount<0
+   ||!Number.isFinite(shieldDrain)||shieldDrain<0)return 0;
  const window=caster.v2SecondaryWindow||{start:s.ticks,spent:0};
  if(s.ticks<window.start||s.ticks-window.start>=V2_SECONDARY_WINDOW_TICKS){
   window.start=s.ticks;window.spent=0;
  }
  caster.v2SecondaryWindow=window;
- const permitted=Math.min(amount,Math.max(0,V2_SECONDARY_HP_BUDGET-window.spent));
- if(permitted<=0)return 0;
- // Shields/invulnerability spend budget too; cannot store unused damage.
- window.spent+=permitted;
- return harm(s,target,permitted,source,depth);
+ // The passive shield break and the ensuing damage are ONE secondary
+ // transaction. Neither can bypass the twelve-point-per-second allowance.
+ // Only shield that actually exists is eligible for the extra drain.
+ const available=Math.max(0,V2_SECONDARY_HP_BUDGET-window.spent);
+ const wantedDrain=Math.min(target.shield,shieldDrain);
+ const allowed=Math.min(available,amount+wantedDrain);
+ if(allowed<=0)return 0;
+ window.spent+=allowed;
+ const drained=Math.min(wantedDrain,allowed),before=target.shield;
+ target.shield=Math.max(0,target.shield-drained);
+ if(before>0&&target.shield===0)emit(s,'on_break',target.id,{from:source},depth);
+ const regular=Math.max(0,Math.min(amount,allowed-drained));
+ return regular>0?harm(s,target,regular,source,depth):0;
 }
 function markTarget(s,target,element,source,depth=0){
  if(s.magicModeV2)return null;
@@ -394,8 +406,7 @@ function v2ChainContact(s,owner,x,y){
    life:.24,width:3,element:'storm',style:'evo-beam',v2Chain:true});
  }
  caster.runeTimers[gate]=s.ticks+Math.ceil(.84/STEP);
- target.shield=Math.max(0,target.shield-1.4);
- const dealt=harmSecondary(s,target,3.8,owner,1);
+ const dealt=harmSecondary(s,target,3.8,owner,1,1.4);
  if(dealt>0){target.slow=Math.max(target.slow,.3);emit(s,'on_hit',owner,{secondary:true},1)}
  fx(s,'impact_arc',p.x,p.y);
 }
@@ -741,8 +752,7 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
    q.spherePulse=.38;
    const range=Math.hypot(a.x-q.x,a.y-q.y);
    if(range<=49&&range>q.r+11&&unobstructed(s,q.x,q.y,a.x,a.y,q.owner,7)){
-    a.shield=Math.max(0,a.shield-1);
-    const dealt=harmSecondary(s,a,2.3,q.owner,q.depth+1);
+    const dealt=harmSecondary(s,a,2.3,q.owner,q.depth+1,1);
     if(dealt>0){
      a.slow=Math.max(a.slow,.23);
      emit(s,'on_hit',q.owner,{secondary:true},q.depth+1);
@@ -831,8 +841,7 @@ for(let j=s.mines.length-1;j>=0;j--){
   if(mine.conduitCd<=0&&dist<=12+7&&target.hp>0
     &&unobstructed(world,u.x,u.y,v.x,v.y,mine.owner,7)
     &&unobstructed(world,nearestX,nearestY,target.x,target.y,mine.owner,7)){
-   target.shield=Math.max(0,target.shield-1.6);
-   const dealt=harmSecondary(s,target,mine.damage,mine.owner);
+   const dealt=harmSecondary(s,target,mine.damage,mine.owner,0,1.6);
    if(dealt>0){target.slow=Math.max(target.slow,.3);emit(s,'on_hit',mine.owner,{secondary:true})}
    fx(s,'impact_arc',target.x,target.y);
    mine.conduitCd=.42;
@@ -934,7 +943,7 @@ function validState(s){
  &&(!s.magicModeV2||(s.magicLoadouts?.length===2&&s.magicLoadouts.every(x=>v2SpellAllowed(x))))&&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=19;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=20;
 
 // ---- Immutable PocketNet ruleset 10: generated from reviewed magic-v2 runtime.
 // v9 is preserved separately; 10 retains all its legacy logic for old-style new rooms.
@@ -1872,7 +1881,7 @@ function viewForPlayer({state:s,player,players}){
  const match=s.match?.magicModeV2&&Array.isArray(s.match.magicLoadouts)
   ?{...s.match,magicLoadouts:s.match.magicLoadouts.map((book,seat)=>seat===i?book:null)}
   :s.match;
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:19,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:20,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],magicStage:s.magicStage||0,magicChoices:i>=0&&s.phase==='magic-offer'&&!s.magicPicked?.[i]?s.magicChoices[i]:[],magicPicked:i>=0&&!!s.magicPicked?.[i],magicOfferDeadline:s.phase==='magic-offer'?s.magicOfferAt+V13_DRAFT_LIMIT:0,
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};

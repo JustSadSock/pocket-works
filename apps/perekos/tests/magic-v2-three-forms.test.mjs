@@ -23,10 +23,10 @@ function equip(s,id){
   ...(id==='u_reform_base'?{}:{action:0})}});
  assert.ok(s.match.magicLoadouts[0].revision>book.revision,id+' must equip');
 }
-test('PocketNet v19 owns, simulates and shares visible state for all three new forms',()=>{
+test('PocketNet v20 owns, simulates and shares visible state for all three new forms',()=>{
  const old=Date.now;let now=1_000_000;Date.now=()=>now;
  try{
-  assert.equal(RULESET_VERSION,19);
+  assert.equal(RULESET_VERSION,20);
   for(const [school,id,origin,objects,marker] of [
    ['stone','st_form_spires','st_origin_below','waves','v2Spire'],
    ['fire','fi_form_whirl','fi_origin_sky','mines','v2Whirl'],
@@ -49,7 +49,7 @@ test('PocketNet v19 owns, simulates and shares visible state for all three new f
    const visible=module.viewForPlayer({state:s,player:q,players});
    assert.ok(visible.match[objects].some(obj=>obj[marker]),'combat state is public');
    assert.equal(visible.match.magicLoadouts[0],null,'enemy build stays private');
-   assert.equal(module.viewForPlayer({state:s,player:p,players}).rulesVersion,19);
+   assert.equal(module.viewForPlayer({state:s,player:p,players}).rulesVersion,20);
   }
  }finally{Date.now=old}
 });
