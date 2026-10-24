@@ -73,6 +73,12 @@ test('host controls remain available in v7 as well as existing v6 rooms',()=>{
  }
 });
 
+test('browser QA uses a server command relative to the Playwright config folder',()=>{
+ const config=repoFile('apps/chyepukha/playwright.config.ts');
+ assert.match(config,/command:'node qa\\/serve\\.mjs'/);
+ assert.doesNotMatch(config,/command:'node apps\\/chyepukha\\/qa\\/serve\\.mjs'/);
+});
+
 test('client, offline cache and release metadata agree on version 1.8.3',()=>{
  const config=JSON.parse(repoFile('apps/chyepukha/app.config.json'));
  const sw=repoFile('apps/chyepukha/sw.js');
