@@ -19,7 +19,7 @@ assert.match(rasterAuditCaption({matches:2,mismatches:1}),/2 совпадени�
 
 const bytes=Buffer.alloc(22000);
 bytes.write('RIFF',0);bytes.writeUInt32LE(bytes.length-8,4);bytes.write('WEBPVP8 ',8);
-bytes.writeUInt32LE(bytes.length-20,16);bytes[23]=157;bytes[24]=1;bytes[25]=42;
+bytes.writeUInt32LE(bytes.length-20,16);bytes[20]=0x10;bytes[21]=0x05;bytes[22]=0;bytes[23]=157;bytes[24]=1;bytes[25]=42;
 bytes.writeUInt16LE(3000,26);bytes.writeUInt16LE(450,28);
 const sprite='data:image/webp;base64,'+bytes.toString('base64');
 const selected=[11,14,19,26,33],assignment={art:19,variation:42,strokes:[]};
