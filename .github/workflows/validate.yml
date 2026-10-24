@@ -84,9 +84,9 @@ jobs:
         with:
           node-version: 22
       - name: Install application build dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
       - name: Match Playwright package to browser image
-        run: npm install --no-save --legacy-peer-deps --no-audit --no-fund @playwright/test@1.55.0
+        run: node -e "if(require('@playwright/test/package.json').version!=='1.55.0')process.exit(1)"
       - name: Assemble and validate published runtime assets
         run: npm run deploy:site
       - name: Verify iPhone launcher search, persistence and updates
@@ -138,7 +138,7 @@ jobs:
           node-version: 22
 
       - name: Install build dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
 
       - name: Test ZAMAZKA untimed round gallery progression
         run: node apps/zamazka/qa/round-review.mjs
@@ -267,7 +267,7 @@ jobs:
           node-version: 22
 
       - name: Install build dependencies
-        run: npm install --legacy-peer-deps --silent --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --silent --no-audit --no-fund
 
       - name: Generate, build and test Enhanced presets
         run: npm run test:forge:enhanced
@@ -298,7 +298,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
 
       - name: Install browser engines
         run: npx playwright install --with-deps chromium webkit
@@ -335,7 +335,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
 
       - name: Assemble Lighthouse site
         run: npm run build:quality-site
