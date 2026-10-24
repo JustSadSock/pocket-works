@@ -393,14 +393,13 @@ function render(){
   syncModerationTimer();return;
  }
  scene.innerHTML=(view?(view.phase==='lobby'?lobby():view.phase==='writing'?(view.waiting?waiting():writing()):view.phase==='finished'?results():waiting()):archiveOpen?archiveScreen():home())+(view?controlsBar(view,me,roomVersion,escape):'')+overlay();
- if(view?.paused){scene.querySelectorAll('#answerForm button[type="submit"]').forEach(b=>{b.disabled=true;b.title='Партія на паузі'});const area=scene.querySelector('.moderation-bar');if(area)area.insertAdjacentHTML('afterend','<div class="pause-banner">Редакція на паузі. Тексти збережено; надсилання тимчасово вимкнено.</div>')}
+ if(view?.paused){scene.querySelectorAll('#answerForm button[type="submit"]').forEach(b=>{b.disabled=true;b.title='Партія на паузі'});const area=scene.querySelector('.editor-progress, .dispatch-overline, .moderation-bar');if(area)area.insertAdjacentHTML('afterend','<div class="pause-banner">Редакція на паузі. Тексти збережено; надсилання тимчасово вимкнено.</div>')}
 
  if(view?.phase==='writing'&&!view.waiting)refreshWords();
  const reconnecting=view&&!IS_PREVIEW&&(!connected||!roomJoinedOnSocket);
  if(reconnecting){
   scene.querySelectorAll('#answerForm button[type="submit"]').forEach(button=>{button.disabled=true;button.title='Чекаємо підтвердження від PocketNet'});
-  const bar=scene.querySelector('.moderation-bar');
-  const anchor=bar||scene.firstElementChild;
+  const anchor=scene.querySelector('.editor-progress, .dispatch-overline, .room .paper .eyebrow, .reader-top, .moderation-bar')||scene.firstElementChild;
   if(anchor)anchor.insertAdjacentHTML('afterend','<div class="reconnect-banner" role="status">З’єднання з кімнатою відновлюється. Твоя чернетка збережена на пристрої; відправка стане доступною після підтвердження сервера.</div>');
  }
  syncModerationTimer();
