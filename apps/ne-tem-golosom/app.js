@@ -354,7 +354,8 @@ async function resetRuntime(){
  stopAllPlayback();
  if(projectKey&&scene&&!await draftWrite())return false;
  cleanAudios();localClips=[];remoteClips=[];
- editHistory=new TimelineHistory();selectedClip=null;projectKey='';
+ editHistory=new TimelineHistory();selectedClip=null;
+ writtenVideoByKey.delete(projectKey);projectKey='';
  restoreGeneration++;
  if(liveUrl){URL.revokeObjectURL(liveUrl);liveUrl=null}
  sourceBlob=null;scene=null;
