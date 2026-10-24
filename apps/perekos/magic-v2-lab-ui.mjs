@@ -27,7 +27,7 @@ const btn=(text,action,cls='')=>{
  n.type='button';n.addEventListener('click',action);
  return n;
 };
-export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoadout,isRemote=()=>false,onServerEdit=()=>false}){
+export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoadout,isRemote=()=>false,onServerEdit=()=>false,onServerPick=()=>false}){
  let selectedSlot=0,status='',targetAction=0;
  const feedback=message=>{status=message;render()};
  const panel=el('div','v2-stage');
@@ -190,5 +190,35 @@ export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoad
   // browsing their rune reserve back to the top of this scrollport.
   panel.scrollTop=previousScroll;
  }
- return {render,open:()=>{selectedSlot=0;status='';render()},setStatus:feedback};
+ function renderOffers(offers=[],stage=0){
+  panel.replaceChildren();
+  panel.append(el('div','v2-kicker','МАГИЯ 2.0 / ПОСЛЕ РАУНДА '+stage));
+  panel.append(el('h2','','Выбери усиление'));
+  panel.append(el('p','v2-copy',
+   'Выбери один из трёх пакетов. Две обычные руны дают больше вариантов, одна редкая усиливает специализацию. Выбор подтвердит сервер.'));
+  const notice=el('p','v2-notice','Выбор подтверждается сервером.');notice.setAttribute('role','status');
+  const list=el('div','v2-pack-list');
+  for(const pack of offers){
+   const item=el('div','v2-pack');
+   const names=(pack.runes||[]).map(id=>MAGIC_RUNE_INDEX.get(id)).filter(Boolean);
+   item.append(el('div','v2-pack-label',pack.kind==='bundle'?'ПАРА ОБЫЧНЫХ':'ОДНА РУНА · '+(RARITY[pack.rarity]||pack.rarity)));
+   for(const def of names){
+    const info=el('div','v2-pack-rune');
+    info.append(el('strong','',def.name),el('small','',KIND[def.kind]+' · '+RARITY[def.rarity]+' · '+def.effect));
+    item.append(info);
+   }
+   const choose=btn('Забрать '+(names.length>1?'обе руны':'руну')+' ↗',()=>{
+    choose.disabled=true;
+    if(!onServerPick(pack.index,stage)){choose.disabled=false;notice.textContent='Соединение недоступно. Повтори выбор после переподключения.'}
+   },'v2-pack-choose');
+   choose.disabled=names.length===0;
+   item.append(choose);list.append(item);
+  }
+  panel.append(list,notice);
+  panel.append(btn('Покинуть комнату',()=>{
+   if(window.confirm('Покинуть сетевую комнату?'))onClose();
+  },'v2-exit'));
+  panel.append(el('p','v2-hint','Если выбор не сделан за 45 секунд, сервер автоматически выдаст обычный пакет. Оба мага получают одинаковые уровни предложений.'));
+ }
+ return {render,renderOffers,open:()=>{selectedSlot=0;status='';render()},setStatus:feedback};
 }
