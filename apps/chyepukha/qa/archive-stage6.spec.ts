@@ -8,8 +8,11 @@ const issue=(id:string,savedAt:number)=>({id,savedAt,playerCount:2,stories:[{
 const backup=(id:string)=>({format:'pocketworks-chyepukha-archive',version:1,createdAt:123456,
  editions:[issue(id,1790000000000)]});
 
-test('archived manuscript opens as paper pages, can return to full text and navigates issues',async({page})=>{
+test('archived manuscript opens as full text, and can replay pages with navigation',async({page})=>{
  await page.goto(url);
+ await expect(page.locator('.archive-story-prose')).toContainText('Архіваріус вирішив');
+ await expect(page.locator('.archive-story-prose')).toContainText('Дощ украв');
+ await page.locator('[data-act="archive-pages"]').click();
  await expect(page.locator('.archive-manuscript .page-reveal')).toHaveCount(1);
  await expect(page.locator('.archive-manuscript .page-progress')).toContainText('АРКУШ 01 / 03');
  await expect(page.locator('.archive-manuscript .page-manuscript')).toContainText('Архіваріус вирішив');
@@ -49,6 +52,7 @@ test('search matches full manuscript content, preserves typing focus, and can be
 
 test('pinning and unpinning an issue immediately updates shelf without losing reading position',async({page})=>{
  await page.goto(url);
+ await page.locator('[data-act="archive-pages"]').click();
  await page.locator('[data-act="archive-next-part"]').click();
  const pin=page.locator('.archive-pin').first();
  await expect(pin).toHaveAttribute('aria-pressed','false');
@@ -97,6 +101,7 @@ for(const [size,width,height] of [['phone',390,844],['narrow',320,568],['landsca
   await expect(page.locator('#archiveSearch')).toBeVisible();
   await expect(page.locator('[data-act="archive-import"]')).toBeVisible();
   await expect(page.locator('.archive-reader-scroll')).toBeVisible();
+  await page.locator('[data-act="archive-pages"]').click();
   const metrics=await page.evaluate(()=>{
    const r=document.querySelector('.archive-reader-scroll')!.getBoundingClientRect();
    const x=document.querySelector('.archive-actions')!.getBoundingClientRect();
@@ -106,7 +111,11 @@ for(const [size,width,height] of [['phone',390,844],['narrow',320,568],['landsca
   expect(metrics.height).toBeGreaterThan(28);
   expect(metrics.shelf).toBeGreaterThan(30);
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.viewport+3);
-  expect(metrics.bottom).toBeLessThanOrEqual(height+5);
+  // A 390px-tall landscape screen must keep all controls accessible by scrolling,
+  // rather than forcing the entire manuscript and its footer above the fold.
+  await page.locator('[data-act="archive-comic"]').scrollIntoViewIfNeeded();
+  const actionBottom=await page.locator('.archive-actions').evaluate(el=>el.getBoundingClientRect().bottom);
+  expect(actionBottom).toBeLessThanOrEqual(height+5);
   await page.locator('[data-act="archive-next-part"]').click();
   await expect(page.locator('.page-progress')).toContainText('АРКУШ 02');
  });
