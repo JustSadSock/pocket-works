@@ -58,6 +58,6 @@ assert(pocketId.includes("request.headers.get('x-pw-public-portrait')!=='1'"));
 assert(social.includes("if(!publicPortraitRead)this.seed"),'guest reads never create an account');
 assert(social.includes("if(publicPortraitRead)return reply({profile:"),'guest response is public-only');
 assert(client.includes('data-action="player-profile"'),'room avatars open public profile cards');
-assert(client.includes('true,false,false,true)'),'edited candidate uses repair-only overlay');
+assert(client.includes('ballotSprite')&&client.includes('rasterBallots'),'protected voting uses an anonymous raster ballot rather than a unique edited candidate');
 assert(editor.includes('if(!overlayOnly)drawArtwork'),'original photo stays native-resolution');
 console.log('ZAMAZKA: three-player immediate expert stage, multipart receipt, 4 timer modes, guest portraits and source-resolution underlay OK');
