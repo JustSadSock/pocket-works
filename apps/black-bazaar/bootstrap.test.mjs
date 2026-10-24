@@ -85,3 +85,52 @@ test('cancellation closes old socket, clears resume token and restores entry sta
  assert.match(src,/catch\(e\)\{\s*if\(net!==client\)return;/,
   'A rejected abandoned connect must not overwrite a newer connection');
 });
+
+
+test('late PocketNet responses are closed and cannot create ghost rooms',async()=>{
+ const source=readFileSync(join(root,'app.js'),'utf8');
+ const cancel=source.slice(source.indexOf('function cancelConnect(){'),source.indexOf('function wire(client){'));
+ const connect=source.slice(source.indexOf('async function connect(kind,code='),source.indexOf('function request(payload){'));
+ assert.ok(cancel.startsWith('function cancelConnect(){'));
+ assert.ok(connect.startsWith('async function connect(kind,code='));
+ const tracker={clients:[],messages:[],rendered:0};
+ const build=new Function('tracker',[
+  'let debugPreview=false,connecting=false,connected=false,net=null,me=null,state=null,',
+  "roomId='',roomVersion=null,onlinePlayerIds=null,name='Тест';",
+  "const ORIGIN='/pocketnet',GAME_ID='black-bazaar';",
+  'const netStorage={removeItem(){}};',
+  'function renderHome(){tracker.rendered++}',
+  'function message(text){tracker.messages.push(text)}',
+  'function wire(){}',
+  'class PocketNet {',
+  'constructor(){this.closed=false;this.closeCount=0;this.createCount=0;tracker.clients.push(this)}',
+  'connect(){return new Promise((resolve,reject)=>{this.resolve=resolve;this.reject=reject})}',
+  'close(){this.closed=true;this.closeCount++}',
+  'createRoom(){this.createCount++}',
+  'joinRoom(){this.createCount++}',
+  '}',
+  cancel,connect,
+  'return {connect,cancelConnect,snapshot:()=>({connecting,net,roomId})}'
+ ].join('\n'));
+ const env=build(tracker);
+ const old=env.connect('create');
+ assert.equal(tracker.clients.length,1);
+ env.cancelConnect();
+ assert.equal(tracker.clients[0].closeCount,1);
+ const current=env.connect('create');
+ assert.equal(tracker.clients.length,2);
+ tracker.clients[0].resolve();
+ await old;
+ assert.equal(tracker.clients[0].createCount,0,'A canceled client must never create a room');
+ assert.ok(tracker.clients[0].closeCount>=2,'Late socket must be closed again');
+ assert.equal(env.snapshot().connecting,true,'New request still pending');
+ tracker.clients[1].resolve();
+ await current;
+ assert.equal(tracker.clients[1].createCount,1,'Current request may create its room');
+ env.cancelConnect();
+ const rejected=env.connect('create');
+ tracker.clients[2].reject(new Error('new session denied'));
+ await rejected;
+ assert.equal(env.snapshot().connecting,false,'A current failure re-enables the form');
+ assert.ok(tracker.messages.at(-1).includes('new session denied'));
+});
