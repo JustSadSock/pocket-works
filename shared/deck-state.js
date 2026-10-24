@@ -67,11 +67,19 @@ export function createDeckStateStore(options={}) {
   if(!Object.hasOwn(options,'database')){try{database=globalThis.indexedDB;}catch{database=null;}}
   let state=defaultDeckState(), stamp=0, revision=0, writeQueue=Promise.resolve(), warning='';
   const parse = raw => {try{return JSON.parse(raw||'null');}catch{return null;}};
-  let existing;
-  try {existing=parse(storage?.getItem(KEY));} catch {storage=null;}
-  if(existing?.schema===BACKUP_SCHEMA){state=cleanDeckState(existing.data);stamp=Number(existing.savedAt)||0;}
+  let accountId = null;
+  const validId = id => typeof id==='string'&&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id);
+  const storageKey = () => accountId ? KEY + ':account:' + accountId : KEY;
+  const dbKey = () => accountId ? 'layout:account:' + accountId : 'layout';
+  function loadScope(){
+    state=defaultDeckState();stamp=0;warning='';
+    let existing;
+    try{existing=parse(storage?.getItem(storageKey()));}catch{/* Browser storage may be blocked. */}
+    if(existing?.schema===BACKUP_SCHEMA){state=cleanDeckState(existing.data);stamp=Number(existing.savedAt)||0;}
+  }
+  loadScope();
   const envelope=()=>({schema:BACKUP_SCHEMA,savedAt:stamp,data:cleanDeckState(state)});
-  async function withDb(mode,record){
+  async function withDb(mode,record,key=dbKey()){
     if(!database?.open)throw Error('IndexedDB unavailable');
     const db=await new Promise((resolve,reject)=>{
       const req=database.open(DB,1);
@@ -80,27 +88,35 @@ export function createDeckStateStore(options={}) {
     });
     try{return await new Promise((resolve,reject)=>{
       const tx=db.transaction('state',mode);
-      const req=mode==='readonly'?tx.objectStore('state').get('layout'):tx.objectStore('state').put(record,'layout');
+      const req=mode==='readonly'?tx.objectStore('state').get(key):tx.objectStore('state').put(record,key);
       let data;req.onsuccess=()=>{data=req.result;};req.onerror=()=>reject(req.error);
       tx.oncomplete=()=>resolve(data);tx.onerror=()=>reject(tx.error);
     });}finally{db.close();}
   }
-  const saveLocal=record=>{try{storage?.setItem(KEY,JSON.stringify(record));warning='';return Boolean(storage);}catch{warning='Device storage unavailable; export your layout to keep changes.';return false;}};
+  const saveLocal=record=>{try{storage?.setItem(storageKey(),JSON.stringify(record));warning='';return Boolean(storage);}catch{warning='Device storage unavailable; export your layout to keep changes.';return false;}};
   function save(raw) {
     state=cleanDeckState(raw);revision++;stamp=Math.max(Date.now(),stamp+1);
-    const record=envelope();saveLocal(record);onChange({...state});
-    writeQueue=writeQueue.catch(()=>{}).then(()=>withDb('readwrite',record)).catch(()=>{});
+    const record=envelope(),recordKey=dbKey();saveLocal(record);onChange(get());
+    writeQueue=writeQueue.catch(()=>{}).then(()=>withDb('readwrite',record,recordKey)).catch(()=>{});
     return writeQueue;
   }
   async function hydrate(){
-    const before=revision;
+    const before=revision,recordKey=dbKey();
     try{
-      const remote=await withDb('readonly');
+      const remote=await withDb('readonly',undefined,recordKey);
+      if(recordKey!==dbKey())return get();
       if(remote?.schema===BACKUP_SCHEMA && Number(remote.savedAt)>stamp && before===revision) {
-        stamp=Number(remote.savedAt);state=cleanDeckState(remote.data);saveLocal(envelope());onChange({...state});
-      } else if(!remote&&before===revision) await withDb('readwrite',envelope());
+        stamp=Number(remote.savedAt);state=cleanDeckState(remote.data);saveLocal(envelope());onChange(get());
+      } else if(!remote&&before===revision) await withDb('readwrite',envelope(),recordKey);
     }catch{/* No IndexedDB in private browsing; local storage remains usable. */}
     return get();
+  }
+  function setAccount(id=null){
+    if(id!==null&&!validId(id))throw new TypeError('Invalid Pocket ID account');
+    const normalized=id?.toLowerCase()||null;
+    if(normalized===accountId)return Promise.resolve(get());
+    accountId=normalized;revision++;loadScope();onChange(get());
+    return hydrate();
   }
   function get(){return cleanDeckState(state);}
   function update(change){return save({...get(),...change});}
@@ -114,7 +130,7 @@ export function createDeckStateStore(options={}) {
     if(record?.schema!==BACKUP_SCHEMA || !Number.isFinite(record.savedAt)||record.savedAt<=stamp)return false;
     stamp=record.savedAt;revision++;state=cleanDeckState(record.data);onChange(get());return true;
   }
-  return {get,save,update,hydrate,flush:()=>writeQueue,exportBackup,importBackup,onStorage,getWarning:()=>warning};
+  return {get,save,update,hydrate,setAccount,getStorageKey:storageKey,flush:()=>writeQueue,exportBackup,importBackup,onStorage,getWarning:()=>warning};
 }
 
 export const DECK_WIDGET_KINDS = [

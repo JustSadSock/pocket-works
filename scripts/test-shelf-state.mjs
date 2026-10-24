@@ -92,4 +92,25 @@ assert.equal(newTab.acceptCrossTabRecord({
 assert.deepEqual(newTab.get().favorites, ['rivet']);
 assert.equal(newTab.get().sort, 'name');
 assert.ok(observed >= 2);
-console.log('Shelf migration, redundant persistence, quota fallback, backup import/export and tab convergence passed.');
+// Account-scoped shelves must not expose saved games or metadata from another Pocket ID.
+const alice='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const bob='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+await newTab.setAccount(alice);
+assert.deepEqual(newTab.get().favorites, [], 'signed-in profile never inherits an unknown guest shelf');
+await newTab.save({...newTab.get(),favorites:['alice-game'],recents:{'alice-game':777}});
+assert.equal(newTab.getStorageKey(),'pocket-works:shelf:v2:account:'+alice);
+await newTab.setAccount(bob);
+assert.deepEqual(newTab.get().favorites, [], 'second account starts independently');
+await newTab.save({...newTab.get(),favorites:['bob-game']});
+await newTab.setAccount(alice);
+assert.deepEqual(newTab.get().favorites, ['alice-game'], 'first account shelf restored');
+assert.equal(newTab.get().recents['alice-game'],777);
+await newTab.setAccount(bob);
+assert.deepEqual(newTab.get().favorites, ['bob-game'], 'second account shelf restored');
+await newTab.setAccount(null);
+assert.deepEqual(newTab.get().favorites, ['arena-shift','rivet','zastava'], 'guest shelf restores persisted device preferences without account data');
+assert.equal(newTab.getStorageKey(),'pocket-works:shelf:v2');
+assert.equal(indexed.rows.get('personal-shelf:account:'+alice).data.favorites[0],'alice-game');
+assert.equal(indexed.rows.get('personal-shelf:account:'+bob).data.favorites[0],'bob-game');
+assert.throws(()=>newTab.setAccount('not-a-uuid'),TypeError);
+console.log('Shelf migration, redundant persistence, quota fallback, backup import/export, cross-tab convergence and account isolation passed.');
