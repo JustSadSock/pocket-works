@@ -14,7 +14,7 @@ import {renderWriting} from './writing-view.js';
 import {chapterReader,reactionBar,clampPage,nextPage,previousPage} from './reader-reveal.js';
 import {screenSignature,transitionFor} from './editor-motion.js';
 import {handoffCount,handoffWords,hasMinimumDraft} from './writer-flow.js';
-import {readEditions,writeEditions,addFinishedEdition,removeEdition,storyText,searchEditions,toggleEditionFavorite,createArchiveBackup,parseArchiveBackup,mergeArchiveBackup,MAX_BACKUP_BYTES} from './story-library.js';
+import {readEditions,writeEditions,addFinishedEdition,planFinishedEdition,MAX_EDITIONS,removeEdition,storyText,searchEditions,toggleEditionFavorite,createArchiveBackup,parseArchiveBackup,mergeArchiveBackup,MAX_BACKUP_BYTES} from './story-library.js';
 import {renderArchive} from './archive-view.js';
 import {installScreenInspector,PREVIEW_PARAM} from './screen-inspector.js';
 import {demoView} from './preview-data.js';
@@ -37,6 +37,7 @@ let net=null,view=null,me='',room='',roomVersion='v4',connected=false,connecting
 let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',modal='',effectsEnabled=read('sound','off')==='on',musicEnabled=read('music','off')==='on',effectsVolume=Number(read('effectsVolume','.45')),musicVolume=Number(read('musicVolume','.22'));
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
 let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',readerPage=0,comicSource=null;
+let archiveSaveWarning='',archiveWarningShown='';
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='',archiveQuery='',archiveReaderMode='full',archiveReaderPage=0;
 let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false,joinSeatCode='',kickTarget='',skipTarget='',seatDecisionTarget='',kickFollowUpTarget='',transferTarget='',moderationTimer=null;
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
@@ -47,13 +48,38 @@ const sessionKey=()=>member()?pocketIdentitySessionKey(pocketIdentity):'chyepukh
 const archiveKey=()=>KEY+'archive:'+(member()?sessionKey():'guest:'+name.trim().toLocaleLowerCase());
 function editions(){if(IS_PREVIEW)return previewEditions;if(!identityReady)return [];try{return readEditions(localStorage,archiveKey())}catch{return []}}
 function archiveSelection(){const all=editions(),visible=searchEditions(all,archiveQuery),edition=visible.find(x=>x.id===archiveEditionId)||visible[0];return {all,visible,edition,story:edition?.stories.find(x=>x.id===archiveStoryId)||edition?.stories[0]}}
+function archiveWarning(message,issueId){
+ archiveSaveWarning=message;
+ const fingerprint=issueId+'|'+message;
+ if(fingerprint!==archiveWarningShown){archiveWarningShown=fingerprint;toast(message)}
+}
 function keepFinished(v){
  if(IS_PREVIEW||!identityReady||!room||v.phase!=='finished')return;
- const old=editions(),next=addFinishedEdition(old,room,v);
- if(next.length===old.length&&next.every((x,i)=>x.id===old[i].id))return;
- try{if(writeEditions(localStorage,archiveKey(),next))toast('Рукописи збережено на цьому пристрої.');
- else toast('Не вдалося зберегти архів. Скопіюй історії перед виходом.')}
- catch{toast('Немає доступу до локального архіву.')}
+ const plan=planFinishedEdition(editions(),room,v);
+ const key=room+':'+String(v.issue||v.revision);
+ if(plan.status==='already-saved'){archiveSaveWarning='';return}
+ if(plan.status==='full'){
+  archiveWarning('Архів заповнений ('+MAX_EDITIONS+'/'+MAX_EDITIONS+'). Цей випуск не збережено: завантаж копію нижче або звільни місце.',key);
+  return
+ }
+ if(plan.status!=='ready'){
+  archiveWarning('Не вдалося підготувати рукопис до збереження. Завантаж копію нижче.',key);
+  return
+ }
+ try{
+  if(writeEditions(localStorage,archiveKey(),plan.editions)){archiveSaveWarning='';toast('Рукописи збережено на цьому пристрої.')}
+  else archiveWarning('Недостатньо пам’яті для архіву. Старі випуски збережено; завантаж цей випуск окремо.',key);
+ }catch{
+  archiveWarning('Немає доступу до локального архіву. Завантаж цей випуск окремо.',key)
+ }
+}
+function downloadIssueBackup(editionsToSave,filename){
+ const json=createArchiveBackup(editionsToSave);
+ if(!JSON.parse(json).editions.length)throw Error('Немає готового рукопису для копії.');
+ const href=URL.createObjectURL(new Blob([json],{type:'application/json;charset=utf-8'}));
+ const link=document.createElement('a');
+ link.href=href;link.download=filename;document.body.append(link);link.click();link.remove();
+ setTimeout(()=>URL.revokeObjectURL(href),1000);
 }
 const portrait=()=>pocketAvatarMarkup(pocketIdentity?.artwork||pocketIdentity?.avatar,{accountId:pocketIdentity?.id||''});
 const draftKey=()=>KEY+'draft:'+sessionKey()+':'+room+':'+(view?.round??0)+':'+(view?.sheet?.id||'');
@@ -358,7 +384,7 @@ function results(){
  const st=view.stories.find(s=>s.id===storyId)||view.stories[0];storyId=st.id;const pos=view.stories.findIndex(x=>x.id===st.id);
  const nav='<nav class="chapters"><h3>Рукописи</h3>'+view.stories.map((s,i)=>'<button class="chapter '+(s.id===st.id?'active':'')+'" data-act="story" data-id="'+escape(s.id)+'"><small>ІСТОРІЯ '+String(i+1).padStart(2,'0')+'</small>'+escape(s.starter)+'</button>').join('')+'</nav>';
  const body=readerMode==='pages'?chapterReader(st,readerPage,escape):readerMode==='parts'?'<div class="reader-parts">'+st.fragments.map((f,i)=>'<section class="reader-fragment"><div class="reader-fragment-meta">РОЗДІЛ '+String(i+1).padStart(2,'0')+' · '+escape(f.author)+'</div><h3>'+escape(f.question)+'</h3><p>'+escape(f.answer)+'</p></section>').join('')+'</div>':'<div class="story-text reader-prose selectable-content">'+escape(st.text)+'</div>';
- return '<div class="results reader-layout">'+nav+'<article class="paper story-paper"><div class="progress"><span class="eyebrow">ФІНАЛЬНЕ РОЗКРИТТЯ</span><span class="stamp">ГОТОВО</span></div><div class="reader-top"><div><div class="story-pager" aria-label="Перемикання історій"><button type="button" data-act="prev-story" aria-label="Попередня історія">←</button><strong>Історія '+(pos+1)+' / '+view.stories.length+'</strong><button type="button" data-act="next-story" aria-label="Наступна історія">→</button></div><h2>Історія '+escape(st.starter)+'</h2><p class="mini">'+escape(st.setLabel)+' · '+escape(st.genre)+'</p></div><div class="reader-switch" role="group" aria-label="Режим читання">'+(roomVersion==='v9'?'<button type="button" data-act="reader-pages" aria-pressed="'+(readerMode==='pages')+'" class="'+(readerMode==='pages'?'active':'')+'">Аркуші</button>':'')+'<button type="button" data-act="reader-full" aria-pressed="'+(readerMode==='full')+'" class="'+(readerMode==='full'?'active':'')+'">Текст</button><button type="button" data-act="reader-parts" aria-pressed="'+(readerMode==='parts')+'" class="'+(readerMode==='parts'?'active':'')+'">Автори</button></div></div><div class="content reader-scroll" tabindex="0" aria-label="Текст історії">'+body+'</div>'+reactionBar({storyId:st.id,view,version:roomVersion,escape,connected:IS_PREVIEW||(connected&&roomJoinedOnSocket)})+'<div class="button-row reader-actions"><button class="button outline small" data-act="copy-story">Копіювати текст</button><button class="button small" data-act="comic">Комікс через ChatGPT ↗</button></div><div class="reader-footer">'+(view.host===me?'<button class="leave" data-act="again">Нова партія</button>':'<span class="mini">Ведучий може запустити нову партію.</span>')+'<button class="leave" data-act="leave">Вийти до меню</button></div></article></div>'+(finaleIntroActive?finaleCurtain({count:view.stories.length}):'');
+ return '<div class="results reader-layout">'+nav+'<article class="paper story-paper"><div class="progress"><span class="eyebrow">ФІНАЛЬНЕ РОЗКРИТТЯ</span><span class="stamp">ГОТОВО</span></div><div class="reader-top"><div><div class="story-pager" aria-label="Перемикання історій"><button type="button" data-act="prev-story" aria-label="Попередня історія">←</button><strong>Історія '+(pos+1)+' / '+view.stories.length+'</strong><button type="button" data-act="next-story" aria-label="Наступна історія">→</button></div><h2>Історія '+escape(st.starter)+'</h2><p class="mini">'+escape(st.setLabel)+' · '+escape(st.genre)+'</p></div><div class="reader-switch" role="group" aria-label="Режим читання">'+(roomVersion==='v9'?'<button type="button" data-act="reader-pages" aria-pressed="'+(readerMode==='pages')+'" class="'+(readerMode==='pages'?'active':'')+'">Аркуші</button>':'')+'<button type="button" data-act="reader-full" aria-pressed="'+(readerMode==='full')+'" class="'+(readerMode==='full'?'active':'')+'">Текст</button><button type="button" data-act="reader-parts" aria-pressed="'+(readerMode==='parts')+'" class="'+(readerMode==='parts'?'active':'')+'">Автори</button></div></div><div class="content reader-scroll" tabindex="0" aria-label="Текст історії">'+body+'</div>'+reactionBar({storyId:st.id,view,version:roomVersion,escape,connected:IS_PREVIEW||(connected&&roomJoinedOnSocket)})+(archiveSaveWarning?'<p class="archive-save-warning" role="alert">'+escape(archiveSaveWarning)+'</p>':'')+'<div class="button-row reader-actions"><button class="button outline small" data-act="copy-story">Копіювати текст</button><button class="button small" data-act="comic">Комікс через ChatGPT ↗</button><button class="button outline small" data-act="download-issue">Завантажити випуск ↓</button></div><div class="reader-footer">'+(view.host===me?'<button class="leave" data-act="again">Нова партія</button>':'<span class="mini">Ведучий може запустити нову партію.</span>')+'<button class="leave" data-act="leave">Вийти до меню</button></div></article></div>'+(finaleIntroActive?finaleCurtain({count:view.stories.length}):'');
 }
 function overlay(){
  if(modal==='moderation')return controlsDialog(view,me,escape);
@@ -581,12 +607,19 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
  if(act==='archive-export'){
   const all=editions();if(!all.length){toast('Немає рукописів для копії.');return}
   try{
-   const blob=new Blob([createArchiveBackup(all)],{type:'application/json;charset=utf-8'});
-   const href=URL.createObjectURL(blob),link=document.createElement('a');
-   link.href=href;link.download='chepukha-archive-'+new Date().toISOString().slice(0,10)+'.json';
-   document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(href),1000);
+   downloadIssueBackup(all,'chepukha-archive-'+new Date().toISOString().slice(0,10)+'.json');
    toast('Резервну копію підготовлено до збереження.');
   }catch{toast('Не вдалося створити резервну копію.')}
+  return
+ }
+ if(act==='download-issue'){
+  if(view?.phase!=='finished'||!view.stories?.length)return;
+  try{
+   const issueId=room+':'+(Number.isInteger(view.issue)&&view.issue>0?'issue-'+view.issue:String(view.revision||0));
+   const single={id:issueId,savedAt:Date.now(),playerCount:view.players?.length||2,stories:view.stories};
+   downloadIssueBackup([single],'chepukha-issue-'+String(room||'offline').replace(/[^a-zA-Z0-9-]/g,'').slice(0,12)+'.json');
+   toast('Копію цього випуску підготовлено до збереження.');
+  }catch{toast('Не вдалося завантажити рукопис. Скопіюй текст перед виходом.')}
   return
  }
  if(act==='archive-import'){$('archiveImportFile')?.click();return}
