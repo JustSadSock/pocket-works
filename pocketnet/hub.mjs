@@ -6,6 +6,7 @@ import {roomJoinView} from './room-join-view.mjs';
 import {shouldAnnounceSocketDeparture} from './disconnect-presence.mjs';
 import {prepareArtworkStorage} from './art-storage.mjs';
 import {reconcileZamazkaPresence} from './zamazka-presence.mjs';
+import {packPrivateZamazkaState} from './zamazka-state-stream.mjs';
 
 // All rooms share one small, hibernatable SQLite-backed coordinator. This matches
 // the personal/friends deployment (max 32 rooms / 48 sockets) without paid KV/D1.
@@ -134,8 +135,18 @@ export class PocketNetHub {
           if(!player)continue;
           const own={...event,payload:this.projectedState(room,player)};
           const packet={roomId:room.id,event:own};
-          if(bytes(packet)>MAX_EVENT_BYTES)throw Error('event_too_large');
-          message(ws,'game_event',packet);
+          if(bytes(packet)<=MAX_EVENT_BYTES){
+            message(ws,'game_event',packet);
+          }else if(room.gameId==='zamazka'){
+            // Project FIRST and split only this recipient's gallery. Streaming
+            // the unfiltered module event would disclose hidden originals,
+            // competing paintings and vote totals to other participants.
+            const chunks=packPrivateZamazkaState(room.id,own,{
+              maxPacketBytes:MAX_EVENT_BYTES,
+              maxStateBytes:MAX_ZAMAZKA_STATE_EVENT
+            });
+            for(const chunk of chunks)message(ws,'game_event',chunk);
+          }else throw Error('event_too_large');
         }
         continue;
       }
