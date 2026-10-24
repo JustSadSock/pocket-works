@@ -427,3 +427,31 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel{
 }
 #screen>.finale-reveal .finale-bonus>span{min-width:0;flex:1 1 auto}
 #screen>.finale-reveal .audit-line>strong{text-align:right;min-width:57px}
+
+/* Vote gallery: the five canvases become visible atomically. Controls are
+   inactive during compositing, so nobody can submit coins while the forgery
+   is still hidden behind the original-image fallback. */
+#screen>.expert-phase .vote-render-status,
+#screen>.expert-phase .vote-render-error:not([hidden]){
+ display:flex;align-items:center;justify-content:center;gap:12px;
+ margin:7px auto 0;padding:7px 12px;width:max-content;max-width:96%;
+ color:#e7d6b9;background:#493b2e;border:1px solid #806b50;
+ font:500 12px/1.35 system-ui,sans-serif;text-align:center;
+}
+#screen>.expert-phase .vote-render-error:not([hidden]){
+ flex-wrap:wrap;border-color:#b18b59;background:#59432f;
+}
+#screen>.expert-phase .vote-render-status[hidden],
+#screen>.expert-phase .vote-render-error[hidden]{display:none!important}
+#screen>.expert-phase .vote-render-error button{
+ min-height:34px!important;padding:5px 13px!important;
+ background:#e7d2ae!important;color:#392b20!important;
+ border:1px solid #b79d70!important;border-radius:3px!important;
+}
+#screen>.expert-phase .vote-render-error button:active{transform:translateY(1px)}
+@media(max-width:540px){
+ #screen>.expert-phase .vote-render-status,
+ #screen>.expert-phase .vote-render-error:not([hidden]){
+  max-width:calc(100% - 14px);font-size:11px;padding:5px 9px;
+ }
+}
