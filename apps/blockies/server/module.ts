@@ -751,7 +751,7 @@ function checkAllPlayersGameOver() {
   v.inputWindowCount+=ordered.length;
   for(const action of ordered){if(!v.gameOver)this.input(i,action);v.lastInputSeq=action.seq;}
  },
- snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,players:gameState.players.map(p=>({...p,canResume:!!p.blocked&&!gameState.isGameOver&&laneHasClearance(p)}))};}
+ snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,players:gameState.players.map(p=>({...p,canResume:!!p.blocked&&!p.offline&&!gameState.isGameOver&&laneHasClearance(p)}))};}
  };
 }
 const MAX_CLOCK_CATCHUP=1200,MAX_CLOCK_IDLE=3500;
