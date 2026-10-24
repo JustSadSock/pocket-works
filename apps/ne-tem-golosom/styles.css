@@ -234,3 +234,8 @@
  .premiere-export-button{width:100%}
  .premiere-viewport{max-height:42vh}
 }
+
+
+.premiere-local-fallback{display:flex;flex-direction:column;gap:7px;padding:10px 12px;background:#f3e8d7;border:1px dashed #a98064;font-size:11px;line-height:1.35;color:#68513e;font-weight:700}
+.premiere-local-fallback input[type=file]{width:100%;font-size:11px;color:#4b4b42}
+.premiere-local-fallback input::file-selector-button{background:#cba98d;color:#342b26;border:0;padding:8px 10px;margin-right:10px;font-weight:800}
