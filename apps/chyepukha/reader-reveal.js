@@ -10,7 +10,8 @@ export const nextPage=(current,length)=>clampPage(current+1,length);
 export const previousPage=(current,length)=>clampPage(current-1,length);
 export const supportsLiveReactions=version=>version==='v9';
 
-export function chapterReader(story,page,escape){
+export function chapterReader(story,page,escape,actions={}){
+ const prev=actions.prev||'prev-part',next=actions.next||'next-part',nextStory=actions.nextStory||'next-story';
  const chapters=Array.isArray(story?.fragments)?story.fragments:[];
  if(!chapters.length)return '<div class="reader-empty">Тут поки немає завершених фрагментів.</div>';
  const index=clampPage(page,chapters.length),fragment=chapters[index];
@@ -19,11 +20,11 @@ export function chapterReader(story,page,escape){
   '<h3>'+escape(fragment.question||'Наступна частина')+'</h3>'+
   '<p class="page-manuscript">'+escape(fragment.answer||'[Фрагмент не завершено]')+'</p>'+
   '<div class="page-turn-controls">'+
-  '<button type="button" data-act="prev-part"'+(index===0?' disabled':'')+'>← Назад</button>'+
+  '<button type="button" data-act="'+prev+'"'+(index===0?' disabled':'')+'>← Назад</button>'+
   (index===chapters.length-1?
-   '<span class="page-ending">КІНЕЦЬ РУКОПИСУ</span><button type="button" data-act="next-story" class="page-next-story">Наступна історія →</button>':
+   '<span class="page-ending">КІНЕЦЬ РУКОПИСУ</span><button type="button" data-act="'+nextStory+'" class="page-next-story">Наступна історія →</button>':
    '<span class="page-dots" aria-label="Прогрес читання">'+chapters.map((_,i)=>'<i class="'+(i===index?'current':i<index?'seen':'')+'"></i>').join('')+'</span>'+
-   '<button type="button" data-act="next-part" class="page-next">Далі →</button>')+
+   '<button type="button" data-act="'+next+'" class="page-next">Далі →</button>')+
   '</div></section>';
 }
 

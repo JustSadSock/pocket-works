@@ -14,7 +14,8 @@ import {renderWriting} from './writing-view.js';
 import {chapterReader,reactionBar,clampPage,nextPage,previousPage} from './reader-reveal.js';
 import {screenSignature,transitionFor} from './editor-motion.js';
 import {handoffCount,handoffWords,hasMinimumDraft} from './writer-flow.js';
-import {readEditions,writeEditions,addFinishedEdition,removeEdition,storyText} from './story-library.js';
+import {readEditions,writeEditions,addFinishedEdition,removeEdition,storyText,searchEditions,toggleEditionFavorite,createArchiveBackup,parseArchiveBackup,mergeArchiveBackup,MAX_BACKUP_BYTES} from './story-library.js';
+import {renderArchive} from './archive-view.js';
 import {installScreenInspector,PREVIEW_PARAM} from './screen-inspector.js';
 import {demoView} from './preview-data.js';
 installMobileRuntime();
@@ -36,7 +37,7 @@ let net=null,view=null,me='',room='',roomVersion='v4',connected=false,connecting
 let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',modal='',effectsEnabled=read('sound','off')==='on',musicEnabled=read('music','off')==='on',effectsVolume=Number(read('effectsVolume','.45')),musicVolume=Number(read('musicVolume','.22'));
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
 let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',readerPage=0,comicSource=null;
-let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='';
+let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='',archiveQuery='',archiveReaderMode='full',archiveReaderPage=0;
 let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false,joinSeatCode='',kickTarget='',skipTarget='',seatDecisionTarget='',kickFollowUpTarget='',transferTarget='',moderationTimer=null;
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
@@ -45,7 +46,7 @@ const playerName=()=>preferredPocketName(pocketIdentity,name.trim());
 const sessionKey=()=>member()?pocketIdentitySessionKey(pocketIdentity):'chyepukha-1';
 const archiveKey=()=>KEY+'archive:'+(member()?sessionKey():'guest:'+name.trim().toLocaleLowerCase());
 function editions(){if(IS_PREVIEW)return previewEditions;if(!identityReady)return [];try{return readEditions(localStorage,archiveKey())}catch{return []}}
-function archiveSelection(){const all=editions(),edition=all.find(x=>x.id===archiveEditionId)||all[0];return {all,edition,story:edition?.stories.find(x=>x.id===archiveStoryId)||edition?.stories[0]}}
+function archiveSelection(){const all=editions(),visible=searchEditions(all,archiveQuery),edition=visible.find(x=>x.id===archiveEditionId)||visible[0];return {all,visible,edition,story:edition?.stories.find(x=>x.id===archiveStoryId)||edition?.stories[0]}}
 function keepFinished(v){
  if(IS_PREVIEW||!identityReady||!room||v.phase!=='finished')return;
  const old=editions(),next=addFinishedEdition(old,room,v);
@@ -337,15 +338,9 @@ function home(){
  return '<div class="home home-edition"><section class="paper home-cover"><div class="home-binding" aria-hidden="true"></div><div class="eyebrow">ВИДАВНИЦТВО НЕЙМОВІРНИХ ПРИГОД</div><h1>ЧЕПУХА<span class="home-period">.</span></h1><p class="lead">Одна історія. Кілька авторів. Ніхто не знає, що було до нього.</p><div class="home-sketch">'+mark()+'<span class="sketch-seal" aria-hidden="true">ЦІЛКОМ ТАЄМНО</span></div><div class="home-colophon"><span>№ 01 / НЕЗАКІНЧЕНІ ІСТОРІЇ</span><span>2–8 АВТОРІВ</span></div></section><div class="home-entry">'+identityTile+(logged?'':field)+'<section class="slip slip-create"><div class="slip-index">01 / ВІДКРИТИ ІСТОРІЮ</div><h3>Нова кімната</h3><form id="createForm"><button class="button" type="submit"'+hold+'>Створити кімнату <span>↗</span></button></form></section><section class="slip slip-join"><div class="slip-index">02 / ДОЄДНАТИСЯ</div><h3>Вже є код?</h3><form id="joinForm"><label><span class="field-label">Код або посилання</span><input class="field" name="room" autocomplete="off" spellcheck="false" placeholder="8 символів" required value="'+escape(invitation)+'"></label><details class="seat-code-field"><summary>Є код заміни автора?</summary><label><span class="field-label">Код місця (необов’язково)</span><input class="field" name="claimCode" autocomplete="off" maxlength="12" placeholder="12 символів" value="'+escape(joinSeatCode)+'"></label></details><button class="button outline" type="submit"'+hold+'>Приєднатися <span>↗</span></button></form></section>'+(savedRoom()?'<button class="return-ticket" type="button" data-act="resume">Повернутися до кімнати <span>↗</span></button>':'')+'<button class="archive-ticket" type="button" data-act="archive"><span>Архів рукописів <small>Збережено на пристрої</small></span><b>'+editions().length+' →</b></button>'+(notice?'<p class="warning home-warning">'+escape(notice)+'</p>':'')+'</div></div>';
 }
 function archiveScreen(){
- const {all,edition,story}=archiveSelection();
- const back='<button class="button outline small archive-back" type="button" data-act="archive-back">← До меню</button>';
- const heading='<header class="archive-heading"><div><div class="eyebrow">ПРИВАТНА ПОЛИЦЯ</div><h2>Архів рукописів</h2><p class="mini">Лише на цьому пристрої · '+all.length+' видань</p></div>'+back+'</header>';
- if(!edition)return '<div class="archive-page">'+heading+'<section class="paper archive-empty"><div class="eyebrow">ПОЛИЦЯ ПОКИ ПОРОЖНЯ</div><h3>Спочатку створіть історію</h3><p class="lead">Завершені партії з’являються тут автоматично. Тексти лишаються на цьому пристрої, не в хмарі.</p><button class="button" type="button" data-act="archive-back">Повернутися до гри →</button></section></div>';
- archiveEditionId=edition.id;archiveStoryId=story?.id||'';
- const date=new Date(edition.savedAt).toLocaleDateString('uk-UA',{day:'2-digit',month:'short',year:'numeric'});
- const episodes=edition.stories.map((x,i)=>'<button type="button" class="archive-tab '+(x.id===story.id?'is-active':'')+'" data-act="archive-story" data-id="'+escape(x.id)+'">'+String(i+1).padStart(2,'0')+' · '+escape(x.starter)+'</button>').join('');
- const fragments=story.fragments.map((f,i)=>'<details class="fragment"><summary>№ '+(i+1)+' · '+escape(f.author)+' · '+escape(f.question)+'</summary><p>'+escape(f.answer)+'</p></details>').join('');
- return '<div class="archive-page">'+heading+'<div class="results archive-layout"><nav class="chapters archive-editions"><h3>Видання</h3>'+all.map((item,i)=>'<button type="button" class="chapter '+(item.id===edition.id?'active':'')+'" data-act="archive-edition" data-id="'+escape(item.id)+'"><small>№ '+String(all.length-i).padStart(2,'0')+' · '+new Date(item.savedAt).toLocaleDateString('uk-UA')+'</small>'+item.stories.length+' історій · '+item.playerCount+' авторів</button>').join('')+'</nav><article class="paper story-paper archive-manuscript"><div class="progress"><span class="eyebrow">ЗБЕРЕЖЕНЕ ВИДАННЯ</span><span class="mini">'+date+'</span></div><h3>Історія '+escape(story.starter)+'</h3><p class="mini">'+escape(story.setLabel)+' · '+escape(story.genre)+'</p><div class="archive-tabs">'+episodes+'</div><div class="content"><div class="story-text">'+escape(storyText(story))+'</div><details class="archive-credits"><summary>Автори фрагментів</summary>'+fragments+'</details></div><div class="button-row"><button type="button" class="button outline small" data-act="archive-copy">Копіювати текст</button><button type="button" class="button small" data-act="archive-comic">Комікс через ChatGPT ↗</button></div><button class="leave archive-delete" type="button" data-act="archive-ask-delete">Видалити це видання</button></article></div></div>';
+ const {all,visible,edition,story}=archiveSelection();
+ if(edition){archiveEditionId=edition.id;archiveStoryId=story?.id||'';}
+ return renderArchive({all,visible,edition,story,query:archiveQuery,readerMode:archiveReaderMode,readerPage:archiveReaderPage,escape});
 }
 function opts(arr,id){return arr.map(x=>'<option value="'+escape(x.id)+'" '+(id===x.id?'selected':'')+'>'+escape(x.label)+'</option>').join('')}
 function settingsForm(s){return '<form class="settings" id="settingsForm"><div class="two"><label><span class="field-label">Максимум гравців</span><select class="field" name="maxPlayers">'+[2,3,4,5,6,7,8].map(n=>'<option value="'+n+'" '+(n===s.maxPlayers?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label><span class="field-label">Передати слів</span><select class="field" name="visibleTailWords">'+[0,1,2,3,4,5,6,8,10,12].map(n=>'<option value="'+n+'" '+(n===s.visibleTailWords?'selected':'')+'>'+n+'</option>').join('')+'</select></label></div><label><span class="field-label">Сюжетний набір</span><select class="field" name="questionSet" id="questionSet">'+opts([...view.questionSets,{id:'random',label:'Випадковий'},{id:'perSheetRandom',label:'Різний для кожної історії'},{id:'custom',label:'Свої питання'}],s.questionSet)+'</select></label><label class="'+(s.questionSet==='custom'?'':'hidden')+'" id="customField"><span class="field-label">Свої питання (по одному на рядок)</span><textarea class="field" name="customQuestions" rows="4">'+escape(s.customQuestions?.join('\n')||'')+'</textarea></label><label><span class="field-label">Жанр</span><select class="field" name="genre" id="genre">'+opts([...view.genres,{id:'random',label:'Випадковий'},{id:'perSheetRandom',label:'Різний для кожної історії'},{id:'custom',label:'Свій жанр'}],s.genre)+'</select></label><label class="'+(s.genre==='custom'?'':'hidden')+'" id="customGenreField"><span class="field-label">Свій жанр</span><input class="field" name="customGenre" maxlength="60" value="'+escape(s.customGenre||'')+'"></label>'+(roomVersion==='v4'?'<label class="show-next"><input type="checkbox" name="showNextQuestion" '+(s.showNextQuestion!==false?'checked':'')+'> Показувати наступне питання при виборі слів</label>':'')+'<button class="button outline small" type="submit">Зберегти правила</button></form>'}
@@ -471,7 +466,34 @@ scene.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
     render();
  }else if(send({type:'submit',round:view.round,sheetId:view.sheet.id,answer,tailIndexes:chosen,gender,heroAnchor:meta.anchor||''}))tick(445);
  }});
-scene.addEventListener('input',e=>{if(e.target.id==='guestNick')name=e.target.value.slice(0,24);if(e.target.name==='room'&&e.target.closest('#joinForm'))invitation=e.target.value;if(e.target.id==='answer'){if(e.target.value!==loadDraft()){draftSelections[draftKey()]=[];saveWriterMeta({selection:[]})}saveDraft(e.target.value);refreshWords()}if(e.target.id==='heroAnchor')saveWriterMeta({anchor:e.target.value.slice(0,72)});if(e.target.name==='effectsEnabled'){effectsEnabled=e.target.checked;save('sound',effectsEnabled?'on':'off');soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});soundscape.unlock();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.')}if(e.target.name==='musicEnabled'){musicEnabled=e.target.checked;save('music',musicEnabled?'on':'off');soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});soundscape.unlock();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.')}if(e.target.name==='effectsVolume'){effectsVolume=Number(e.target.value)/100;save('effectsVolume',effectsVolume);$('effectsLevelOut').textContent=Math.round(effectsVolume*100)+'%';soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume})}if(e.target.name==='musicVolume'){musicVolume=Number(e.target.value)/100;save('musicVolume',musicVolume);$('musicLevelOut').textContent=Math.round(musicVolume*100)+'%';soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume})}if(e.target.id==='questionSet')$('customField')?.classList.toggle('hidden',e.target.value!=='custom');if(e.target.id==='genre')$('customGenreField')?.classList.toggle('hidden',e.target.value!=='custom')});
+scene.addEventListener('change',e=>{
+ if(e.target?.id!=='archiveImportFile')return;
+ const input=e.target,file=input.files?.[0];input.value='';
+ if(!file)return;
+ void (async()=>{
+  try{
+   if(file.size>MAX_BACKUP_BYTES)throw Error('Резервна копія перевищує 3 МБ.');
+   const incoming=parseArchiveBackup(await file.text());
+   const {editions:merged,added,skipped}=mergeArchiveBackup(editions(),incoming);
+   if(!added){toast(skipped?'Полиця повна (12 видань). Збережи резервну копію й звільни місце перед імпортом.':'У копії немає нових випусків для відновлення.');return}
+   // All-or-nothing storage write: never use quota-trimming writes for imports.
+   if(IS_PREVIEW)previewEditions=merged;
+   else try{localStorage.setItem(archiveKey(),JSON.stringify(merged))}
+    catch{throw Error('Недостатньо місця. Жодне наявне видання не видалено.')}
+   archiveEditionId='';archiveStoryId='';archiveQuery='';archiveReaderPage=0;
+   render();
+   toast('Відновлено '+added+' випусків.'+(skipped?' Ще '+skipped+' не вмістилися: полиця заповнена.':''));
+  }catch(error){toast(error instanceof Error?error.message:'Не вдалося відновити архів.')}
+ })();
+});
+scene.addEventListener('input',e=>{
+ if(e.target?.id==='archiveSearch'){
+  archiveQuery=e.target.value.slice(0,120);archiveEditionId='';archiveStoryId='';archiveReaderPage=0;
+  const start=e.target.selectionStart,end=e.target.selectionEnd;
+  render();
+  const field=$('archiveSearch');if(field){field.focus({preventScroll:true});field.setSelectionRange(start,end)}
+  return
+ }if(e.target.id==='guestNick')name=e.target.value.slice(0,24);if(e.target.name==='room'&&e.target.closest('#joinForm'))invitation=e.target.value;if(e.target.id==='answer'){if(e.target.value!==loadDraft()){draftSelections[draftKey()]=[];saveWriterMeta({selection:[]})}saveDraft(e.target.value);refreshWords()}if(e.target.id==='heroAnchor')saveWriterMeta({anchor:e.target.value.slice(0,72)});if(e.target.name==='effectsEnabled'){effectsEnabled=e.target.checked;save('sound',effectsEnabled?'on':'off');soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});soundscape.unlock();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.')}if(e.target.name==='musicEnabled'){musicEnabled=e.target.checked;save('music',musicEnabled?'on':'off');soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});soundscape.unlock();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.')}if(e.target.name==='effectsVolume'){effectsVolume=Number(e.target.value)/100;save('effectsVolume',effectsVolume);$('effectsLevelOut').textContent=Math.round(effectsVolume*100)+'%';soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume})}if(e.target.name==='musicVolume'){musicVolume=Number(e.target.value)/100;save('musicVolume',musicVolume);$('musicLevelOut').textContent=Math.round(musicVolume*100)+'%';soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume})}if(e.target.id==='questionSet')$('customField')?.classList.toggle('hidden',e.target.value!=='custom');if(e.target.id==='genre')$('customGenreField')?.classList.toggle('hidden',e.target.value!=='custom')});
 scene.addEventListener('change',e=>{if(e.target.name==='gender'&&e.target.checked)saveWriterMeta({gender:e.target.value})});
 // Focus mode only changes presentation. Never rerender or discard a live textarea.
 scene.addEventListener('focusin',e=>{
@@ -529,11 +551,45 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
  if(act==='close-seat'){send({type:'close_seat'});return}
  if(act==='copy-seat-code'){if(view?.claim?.code)copyText(view.claim.code);return}
  if(act==='vote-host'){send({type:'vote_host',seatId:b.dataset.id});return}
- if(act==='archive'){archiveOpen=true;archiveEditionId='';archiveStoryId='';render();return}
-  if(act==='archive-back'){archiveOpen=false;archiveEditionId='';archiveStoryId='';render();return}
-  if(act==='archive-edition'){archiveEditionId=b.dataset.id;archiveStoryId='';render();return}
-  if(act==='archive-story'){archiveStoryId=b.dataset.id;render();return}
-  if(act==='archive-copy'){const st=archiveSelection().story;if(st)copyText(storyText(st));return}
+ if(act==='archive'){archiveOpen=true;archiveEditionId='';archiveStoryId='';archiveQuery='';archiveReaderMode='full';archiveReaderPage=0;render();return}
+  if(act==='archive-back'){archiveOpen=false;archiveEditionId='';archiveStoryId='';archiveQuery='';archiveReaderPage=0;render();return}
+  if(act==='archive-edition'){archiveEditionId=b.dataset.id;archiveStoryId='';archiveReaderPage=0;render();return}
+  if(act==='archive-story'){archiveStoryId=b.dataset.id;archiveReaderPage=0;render();return}
+  if(act==='archive-copy'){const st=archiveSelection().story;if(st)void copyText(storyText(st));return}
+ if(act==='archive-pages'||act==='archive-full'){archiveReaderMode=act==='archive-pages'?'pages':'full';soundscape.fx('page');render();return}
+ if(act==='archive-prev-part'||act==='archive-next-part'){
+  const st=archiveSelection().story;if(!st)return;
+  archiveReaderPage=act==='archive-next-part'?nextPage(archiveReaderPage,st.fragments.length):previousPage(archiveReaderPage,st.fragments.length);
+  soundscape.fx('page');render();return
+ }
+ if(act==='archive-next-story'){
+  const {edition,story}=archiveSelection();if(!edition)return;
+  const index=edition.stories.findIndex(x=>x.id===story?.id);
+  archiveStoryId=edition.stories[(index+1)%edition.stories.length].id;
+  archiveReaderPage=0;soundscape.fx('page');render();return
+ }
+ if(act==='archive-clear-search'){archiveQuery='';archiveEditionId='';archiveStoryId='';archiveReaderPage=0;render();$('archiveSearch')?.focus();return}
+ if(act==='archive-pin'){
+  const updated=toggleEditionFavorite(editions(),b.dataset.id);
+  try{
+   if(IS_PREVIEW)previewEditions=updated;
+   else localStorage.setItem(archiveKey(),JSON.stringify(updated));
+   soundscape.fx('page');render();
+  }catch{toast('Не вдалося оновити вибране.')}
+  return
+ }
+ if(act==='archive-export'){
+  const all=editions();if(!all.length){toast('Немає рукописів для копії.');return}
+  try{
+   const blob=new Blob([createArchiveBackup(all)],{type:'application/json;charset=utf-8'});
+   const href=URL.createObjectURL(blob),link=document.createElement('a');
+   link.href=href;link.download='chepukha-archive-'+new Date().toISOString().slice(0,10)+'.json';
+   document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(href),1000);
+   toast('Резервну копію підготовлено до збереження.');
+  }catch{toast('Не вдалося створити резервну копію.')}
+  return
+ }
+ if(act==='archive-import'){$('archiveImportFile')?.click();return}
   if(act==='archive-ask-delete'){archivePendingDelete=archiveSelection().edition?.id||'';modal='archive-delete';render();return}
   if(act==='archive-confirm-delete'){
    if(archivePendingDelete){try{const remaining=removeEdition(editions(),archivePendingDelete);if(IS_PREVIEW)previewEditions=remaining;else if(remaining.length){if(!writeEditions(localStorage,archiveKey(),remaining)){toast('Не вдалося видалити видання.');modal='';render();return}}else localStorage.removeItem(archiveKey());toast('Видання видалено.')}catch{toast('Не вдалося видалити видання.')}}
