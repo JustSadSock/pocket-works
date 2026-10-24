@@ -95,3 +95,24 @@ test('server accepted before acknowledgement lost: reconnect confirms without du
  const pending=await page.evaluate(()=>Object.keys(localStorage).filter(x=>x.includes(':submit:')&&x.includes('chyepukha')));
  expect(pending).toHaveLength(0);
 });
+
+
+test('socket loss visibly blocks submission without losing a locally typed draft',async({page})=>{
+ await install(page);await start(page);
+ const draft='Архіваріус намалював секретну карту для мера';
+ await page.locator('#answer').fill(draft);
+ const immediately=await page.evaluate(()=>{
+  window.__v5Socket.close();
+  return {
+   banner:!!document.querySelector('.reconnect-banner'),
+   disabled:document.querySelector('#answerForm button[type=submit]')?.disabled,
+   value:document.querySelector('#answer')?.value,
+   network:document.querySelector('#network')?.textContent
+  };
+ });
+ expect(immediately.banner).toBe(true);
+ expect(immediately.disabled).toBe(true);
+ expect(immediately.value).toBe(draft);
+ expect(immediately.network).toContain('RECONNECTING');
+ await expect(page.locator('#answer')).toHaveValue(draft);
+});
