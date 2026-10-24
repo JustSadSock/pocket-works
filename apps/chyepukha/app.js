@@ -573,7 +573,7 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
   const updated=toggleEditionFavorite(editions(),b.dataset.id);
   try{
    if(IS_PREVIEW)previewEditions=updated;
-   else if(!writeEditions(localStorage,archiveKey(),updated)){toast('Не вдалося закріпити видання. Сховище переповнено.');return}
+   else localStorage.setItem(archiveKey(),JSON.stringify(updated));
    soundscape.fx('page');render();
   }catch{toast('Не вдалося оновити вибране.')}
   return
