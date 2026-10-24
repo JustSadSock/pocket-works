@@ -2,7 +2,7 @@
 const SETS=[{"id":"characterArc","label":"Цілісна історія"},{"id":"collapsingPlan","label":"Ланцюг провалів"},{"id":"detectiveCase","label":"Детективна справа"},{"id":"nightSurvival","label":"Ніч виживання"},{"id":"relationshipCrash","label":"Емоційний розлом"},{"id":"questAdventure","label":"Пригодницький квест"},{"id":"heistOperation","label":"Пограбування / операція"},{"id":"sciFiIncident","label":"Науково-фантастичний інцидент"},{"id":"roadTrip","label":"Дорожня пригода"},{"id":"courtroomScandal","label":"Суд і скандал"}];
 const GENRES=[{"id":"groundedDrama","label":"Приземлена драма"},{"id":"absurdComedy","label":"Абсурдна комедія"},{"id":"horror","label":"Горор"},{"id":"detectiveNoir","label":"Нуарний детектив"},{"id":"romanticMelodrama","label":"Романтична мелодрама"},{"id":"fantasyEpic","label":"Фентезійна епіка"},{"id":"sciFiParanoia","label":"Науково-фантастична параноя"},{"id":"cyberpunk","label":"Кіберпанк"},{"id":"cozyWhimsy","label":"Затишна дивина"},{"id":"postApocalypse","label":"Постапокаліпсис"},{"id":"mythicLegend","label":"Міф і легенда"},{"id":"satire","label":"Сатира"}];
 export function demoView(id){
- if(['results-v9','results-v9-second'].includes(id)){
+ if(['results-v9','results-v9-second','results-archive-unsaved'].includes(id)){
   const d=demoView('results');
   d.view.reactionTotals=Object.fromEntries(d.view.stories.map((s,i)=>[s.id,{
    laugh:i===0?2:i===1?1:0,surprised:i===1?2:0,heart:i===2?1:0
