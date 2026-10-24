@@ -138,7 +138,9 @@ try{
  let lotState=stateOf(await seller.next('game_event',stateEvent('play',s=>s.listing?.id===itemId)));
  assert.equal(lotState.listing.seller,seller.id);
  buyer.send('game_message',{payload:{type:'bid',offer:{gold:45,crystals:0,parts:0}}});
- lotState=stateOf(await buyer.next('game_event',stateEvent('play',s=>s.bids?.some(b=>b.buyer===buyer.id))));
+ const bidReply=await buyer.next('game_event',m=>m.event?.type==='notice'||stateEvent('play',s=>s.bids?.some(b=>b.buyer===buyer.id))(m));
+  if(bidReply.event.type==='notice')throw Error('Bazaar bid denied by server: '+JSON.stringify(bidReply.event.payload));
+  lotState=stateOf(bidReply);
  assert.equal(lotState.you.resources.gold,buyerGold,'bids must not debit before seller accepts');
  const bidRevision=lotState.revision;
 
