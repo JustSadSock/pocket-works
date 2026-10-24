@@ -11,6 +11,7 @@ on:
       - 'apps/zamazka/qa/final-transfer-recovery.mjs'
       - 'apps/zamazka/qa/eight-player-transfer.mjs'
       - 'apps/zamazka/qa/full-match-recovery.mjs'
+      - 'apps/zamazka/qa/security-stage1.mjs'
       - 'apps/zamazka/editor.js'
       - 'apps/zamazka/qa/editor-raster-invalidation.mjs'
       - 'apps/zamazka/qa/editor-geometry-compaction.mjs'
