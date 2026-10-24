@@ -102,6 +102,11 @@ export async function renderPremiere({
   const Context=window.AudioContext||window.webkitAudioContext;
   let ctx=null,recorder=null,capture=null,raf=0,frameCallback=false;
   let stallTimer=0,stopError=null,sources=[],mixedTrack=null;
+  // Start unlocking AudioContext while this call still belongs to the user's
+  // click. Waiting for metadata/decoding first loses activation on iOS Safari.
+  ctx=new Context();
+  const initialResume=ctx.resume();
+  void initialResume.catch(()=>{});
   let onVideoEnded=null,onVideoFailed=null;
   const stopRecording=error=>{
     if(error&&!stopError)stopError=error;
@@ -121,7 +126,6 @@ export async function renderPremiere({
     if(Number.isFinite(video.duration)&&video.duration>0&&video.duration+.12<until)
       throw Error('Выбранная сцена выходит за пределы видео.');
 
-    ctx=new Context();
     const destination=ctx.createMediaStreamDestination();
     const limiter=ctx.createDynamicsCompressor();
     limiter.threshold.value=-9;limiter.knee.value=12;
@@ -253,7 +257,8 @@ export async function renderPremiere({
         stopRecording(Error('Видео перестало воспроизводиться. Проверь файл или соединение.'));
     },2500);
     assertLive(effectiveSignal);
-    await ctx.resume();
+    await initialResume;
+    if(ctx.state!=='running')throw Error('Браузер остановил звуковой движок. Нажми «Сохранить видео» ещё раз.');
     recorder.start(1000);
     try{await video.play()}
     catch{
