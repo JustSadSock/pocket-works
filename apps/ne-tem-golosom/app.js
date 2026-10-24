@@ -466,7 +466,7 @@ async function connectRoom(action){if(net){try{net.close()}catch{}net=null}show(
  conn.on('error',e=>toast('Связь: '+(e.code||e.message||'ошибка')));
  conn.on('disconnected',()=>{setNetStatus('connecting','Переподключаемся…');toast('Соединение потеряно. Записи остались на устройстве.')});
  try{await conn.connect();if(action==='create')conn.createRoom('ne-tem-golosom');else conn.joinRoom(($('join-code').value||new URLSearchParams(location.search).get('room')||'').trim());}catch(e){toast('PocketNet недоступен: '+e.message);setNetStatus('offline','Нет связи');$('room-connection-status').textContent='Не удалось создать комнату. Проверь подключение и попробуй снова.';$('room-retry').classList.remove('hidden');roomUI()}}
-function leaveNetwork(){relayInbox.clear();relayQueue=Promise.resolve();for(const id of [...peers.keys()])closePeer(id);try{net?.leaveRoom();net?.close()}catch{}net=null;state=null;me='';room='';sentPremiere=false;}
+function leaveNetwork(){setNetStatus('idle','PocketNet');relayInbox.clear();relayQueue=Promise.resolve();for(const id of [...peers.keys()])closePeer(id);try{net?.leaveRoom();net?.close()}catch{}net=null;state=null;me='';room='';sentPremiere=false;}
 async function resetRuntime(){
  stopPremiereExport();premiereLocalCopy=null;videoExportController?.abort();encodedCache=null;clearExportPreview();cancelCountdown();
  if(record)finishRecording();
@@ -938,7 +938,7 @@ async function playPremiere(){if(receivedCount()<expectedCount())return;const v=
 $('sound-btn').onclick=toggleSound;
 $('solo-btn').onclick=()=>{mode='solo';library()};
 $('create-btn').onclick=()=>{mode='host';library()};
-$('join-btn').onclick=()=>{mode='guest';state=null;scene=null;show('room');roomUI();$('join-code').focus()};
+$('join-btn').onclick=()=>{mode='guest';state=null;scene=null;setNetStatus('idle','PocketNet');show('room');roomUI();$('join-code').focus()};
 $('scene-grid').onclick=e=>{const b=e.target.closest('[data-scene]');if(b){const s=LIBRARY.find(x=>x.id===b.dataset.scene);if(s)selectScene(s)}};
 $('video-file').onchange=e=>{uploadVideo(e.target.files[0]);e.target.value=''};
 trimRange=createTrimRange({video:$('trim-video'),onChange:({start,end})=>{
