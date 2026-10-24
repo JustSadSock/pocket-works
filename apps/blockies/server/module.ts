@@ -5,6 +5,7 @@ const BLOCK_SIZE = 25;
 const BASE_BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
 const SAFE_LANE_ROWS = 5; // safe headroom: piece plus three free rows
+const MAX_INPUT_BATCH = 12, MAX_ACTIONS_PER_SECOND = 48;
 const ADDITIONAL_COLUMNS_PER_PLAYER = 4;
 const PREVIEW_SIZE = 4;
 
@@ -286,6 +287,9 @@ class Player {
         this.position = { x: 0, y: 0 };
         this.gameOver = false;
         this.blocked = false;
+        this.lastInputSeq = 0;
+        this.inputWindowStart = 0;
+        this.inputWindowCount = 0;
         this.dropCounter = 0;
         this.dropInterval = 1000;
         this.lastTime = 0;
@@ -630,9 +634,27 @@ function checkAllPlayersGameOver() {
  step(ms){for(let t=0;t<ms;t+=50)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(50,ms-t));},
  resume(i){const v=gameState.players[i];if(!v||!v.blocked||gameState.isGameOver||!laneHasClearance(v))return false;v.gameOver=false;v.blocked=false;v.spawnPiece();return !v.gameOver;},
  input(i,p){const v=gameState.players[i];if(!v||v.gameOver)return;if(p.action==='move'&&[-1,1].includes(p.direction))v.move(p.direction,{broadcast:false});else if(['rotate','drop','hardDrop'].includes(p.action))v[p.action]({broadcast:false});else throw Error('Некорректная команда');},
+ acceptBatch(i,actions,now){
+  const v=gameState.players[i];if(!v||v.gameOver)return;
+  const valid=a=>a&&Number.isSafeInteger(a.seq)&&a.seq>0&&a.seq<=2147483647&&
+   (a.action==='move'?[-1,1].includes(a.direction):['rotate','drop','hardDrop'].includes(a.action));
+  if(!Array.isArray(actions)||!actions.length||actions.length>MAX_INPUT_BATCH||!actions.every(valid))
+   throw Error('Некорректный пакет команд');
+  const ordered=actions.filter(a=>a.seq>v.lastInputSeq);
+  if(!ordered.length)return;
+  if(ordered.some((a,j)=>a.seq!==(j?ordered[j-1].seq:v.lastInputSeq)+1))
+   throw Error('Пропущен порядковый номер команды');
+  if(!v.inputWindowStart||now-v.inputWindowStart>=1000||now<v.inputWindowStart){
+   v.inputWindowStart=now;v.inputWindowCount=0;
+  }
+  if(v.inputWindowCount+ordered.length>MAX_ACTIONS_PER_SECOND)throw Error('Слишком частые команды');
+  v.inputWindowCount+=ordered.length;
+  for(const action of ordered){if(!v.gameOver)this.input(i,action);v.lastInputSeq=action.seq;}
+ },
  snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,players:gameState.players.map(p=>({...p,canResume:!!p.blocked&&!gameState.isGameOver&&laneHasClearance(p)}))};}
  };
 }
+const MAX_CLOCK_CATCHUP=1200,MAX_CLOCK_IDLE=3500;
 const COLORS=['#FF1493','#00D9FF','#FFDB58','#39FF14'];
 const copy=s=>structuredClone(s),out=state=>({state,events:[{type:'state',payload:{}}]});
 function add(s,p){
@@ -640,6 +662,10 @@ function add(s,p){
  if(existing){existing.left=false;return;}
  if(s.started||s.players.length>=4)throw Error('Комната заполнена или игра уже началась');
  s.players.push({id:p.id,name:String(p.name||'Игрок').slice(0,24),color:COLORS.find(c=>!s.players.some(v=>v.color===c)),ready:false,left:false});
+}
+function boundedElapsed(now,previous){
+ const elapsed=Math.max(0,now-previous);
+ return elapsed>MAX_CLOCK_IDLE?0:Math.min(elapsed,MAX_CLOCK_CATCHUP);
 }
 function newMatch(state,connectedIds){
  state.seed=Date.now()>>>0;
@@ -663,7 +689,7 @@ function newMatch(state,connectedIds){
  }
 }
 export default {protocolVersion:1,
- createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
+ createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,inputBatchVersion:1,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
  onJoin({state,player}){state=copy(state);add(state,player);return out(state);},
  onLeave({state,player}){
   state=copy(state);
@@ -717,10 +743,11 @@ export default {protocolVersion:1,
     return out(state);
    }
    if(!state.paused&&!state.engine?.isGameOver){
-    const now=Date.now(),elapsed=Math.max(0,now-state.lastTick);
+    const now=Date.now(),elapsed=boundedElapsed(now,state.lastTick);
     const r=runtime(state.engine,state.seed);
-    r.step(Math.min(350,elapsed));
-    if(p?.type==='input')r.input(index,p.input||{});
+    r.step(elapsed);
+    if(p?.type==='input_batch')r.acceptBatch(index,p.actions,now);
+    else if(p?.type==='input')r.input(index,p.input||{});
     else if(p?.type==='resume')r.resume(index);
     else if(p?.type!=='pulse')throw Error('Игра уже началась');
     state.engine=r.snapshot();
