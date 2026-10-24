@@ -101,6 +101,9 @@ try{
   await page.locator('[data-clip="first"]').scrollIntoViewIfNeeded();
   let rect=await page.locator('[data-clip="first"]').boundingBox();
   assert(rect&&rect.x>=0&&rect.x+rect.width<=vp.width+2,'zoom must keep the selected clip reachable');
+  const hitClip=await page.evaluate(({x,y})=>document.elementFromPoint(x,y)?.closest('[data-clip]')?.dataset.clip,
+   {x:rect.x+rect.width/2,y:rect.y+rect.height/2});
+  assert.equal(hitClip,'first','the invisible seek slider must not cover voice clips');
   await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);
   await page.mouse.down();
   await page.mouse.move(rect.x+rect.width/2+20,rect.y+rect.height/2,{steps:5});
