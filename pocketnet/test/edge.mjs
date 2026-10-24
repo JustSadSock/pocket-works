@@ -260,7 +260,7 @@ try{
   const partnerID=(await blockiesPartner.next('authenticated')).player.id;
   blockiesHost.send('create_room',{gameId:'blockies'});
   const initialBlockies=await blockiesHost.next('room_joined');
-  assert.equal(initialBlockies.version,'v4');
+  assert.equal(initialBlockies.version,versionLock.blockies.current);
   const stableId=initialBlockies.roomId;
   blockiesPartner.send('join_room',{roomId:stableId});
   await blockiesPartner.next('room_joined');
