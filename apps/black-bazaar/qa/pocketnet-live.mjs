@@ -113,8 +113,8 @@ try{
  assert.equal(ping.event.to,host.id);
  assert.ok(Math.abs(ping.event.payload.serverNow-Date.now())<3000,'probe uses server clock');
  host.send('game_message',{payload:{type:'sync'}});
- const refreshed=stateOf(await host.next('game_event',stateEvent('play',view=>view.revision===firstStart.revision)));
- assert.equal(refreshed.revision,firstStart.revision,'read-only sync must not bump revision');
+ const refreshed=stateOf(await host.next('game_event',stateEvent('play',view=>view.revision===ping.event.payload.revision)));
+ assert.equal(refreshed.revision,ping.event.payload.revision,'read-only sync must not bump the server-observed revision');
  assert.equal(refreshed.you.id,host.id,'sync is only projected to requesting seat');
  host.send('game_message',{payload:{type:'tick'}});
 
