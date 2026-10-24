@@ -2119,7 +2119,7 @@ class UIManager {
         });
         // Each active piece gets a matching landing outline.
         for(const player of displayed){
-            if(!player.currentPiece||player.gameOver)continue;
+            if(!player.currentPiece||player.gameOver||player.offline)continue;
             let landingY=player.position.y;
             while(landingY<BOARD_HEIGHT&&!player.checkCollision(
                 player.currentPiece,{x:player.position.x,y:landingY+1}
@@ -2137,7 +2137,7 @@ class UIManager {
             ctx.restore();
         }
         for(const player of displayed){
-            if(!player.currentPiece||player.gameOver)continue;
+            if(!player.currentPiece||player.gameOver||player.offline)continue;
             for(let y=0;y<player.currentPiece.length;y++)for(let x=0;x<player.currentPiece[y].length;x++){
                 if(player.currentPiece[y][x])
                     this.paintBlock(ctx,player.position.x+x,player.position.y+y,player.color,true);
