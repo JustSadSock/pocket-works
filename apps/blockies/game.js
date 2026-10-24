@@ -1041,7 +1041,7 @@ class Player {
 
 function isCellOccupiedByOtherPiece(x, y, currentPlayerId) {
     return gameState.players.some(player => {
-        if (player.id === currentPlayerId || player.gameOver || !player.currentPiece) {
+        if (player.id === currentPlayerId || player.gameOver || player.offline || !player.currentPiece) {
             return false;
         }
 
@@ -1140,7 +1140,7 @@ class UIManager {
     
     // Helper method to check if a player can be controlled locally
     isPlayerControllable(player) {
-        if (player.gameOver) return false;
+        if (player.gameOver || player.offline) return false;
         if (this.isOnlineMode && (!networkManager.connected || networkManager.stale)) return false;
         // In online mode, only allow local player to be controlled
         if (this.isOnlineMode && player.id !== this.localPlayerIndex) {
@@ -2119,7 +2119,7 @@ class UIManager {
         });
         // Each active piece gets a matching landing outline.
         for(const player of displayed){
-            if(!player.currentPiece||player.gameOver)continue;
+            if(!player.currentPiece||player.gameOver||player.offline)continue;
             let landingY=player.position.y;
             while(landingY<BOARD_HEIGHT&&!player.checkCollision(
                 player.currentPiece,{x:player.position.x,y:landingY+1}
@@ -2137,7 +2137,7 @@ class UIManager {
             ctx.restore();
         }
         for(const player of displayed){
-            if(!player.currentPiece||player.gameOver)continue;
+            if(!player.currentPiece||player.gameOver||player.offline)continue;
             for(let y=0;y<player.currentPiece.length;y++)for(let x=0;x<player.currentPiece[y].length;x++){
                 if(player.currentPiece[y][x])
                     this.paintBlock(ctx,player.position.x+x,player.position.y+y,player.color,true);
@@ -2227,7 +2227,7 @@ class UIManager {
         const area=document.getElementById('blocked-lanes');
         if(!area)return;
         const blocked=gameState.isGameOver?[]:gameState.players.filter(p=>p.blocked);
-        const model=blocked.map(p=>({id:p.id,name:p.name||('Игрок '+(p.id+1)),ready:!!(this.isOnlineMode?p.canResume:laneHasClearance(p)),mine:!this.isOnlineMode||p.id===this.localPlayerIndex}));
+        const model=blocked.map(p=>({id:p.id,name:p.name||('Игрок '+(p.id+1)),offline:!!p.offline,ready:!!(this.isOnlineMode?p.canResume:laneHasClearance(p)),mine:!this.isOnlineMode||p.id===this.localPlayerIndex}));
         const signature=JSON.stringify([model,this.isOnlineMode&&networkManager.connected,this.isOnlineMode&&networkManager.stale,currentLanguage]);
         if(this.blockedLaneSignature===signature)return;
         this.blockedLaneSignature=signature;
@@ -2236,7 +2236,7 @@ class UIManager {
         for(const item of model){
             const row=document.createElement('div');row.className='blocked-lane';
             const message=document.createElement('span');message.className='blocked-lane__message';
-            message.textContent=item.name+': '+(item.ready?(currentLanguage==='ru'?'проход свободен':'lane clear'):(currentLanguage==='ru'?'проход пока занят':'lane blocked'));
+            message.textContent=item.name+': '+(item.offline?(currentLanguage==='ru'?'ожидает подключения':'waiting for connection'):item.ready?(currentLanguage==='ru'?'проход свободен':'lane clear'):(currentLanguage==='ru'?'проход пока занят':'lane blocked'));
             row.append(message);
             if(item.mine&&item.ready){
                 const btn=document.createElement('button');btn.type='button';btn.className='blocked-lane__resume';
@@ -2274,7 +2274,7 @@ class UIManager {
         if(isTouchOwner){
             const holdButton=this.touchControls?.querySelector('[data-action="hold"]');
             if(holdButton){
-                const unavailable=player.gameOver||player.holdUsed||
+                const unavailable=player.gameOver||player.offline||player.holdUsed||
                     (this.isOnlineMode&&(!networkManager.connected||networkManager.stale||networkManager.rulesVersion<3));
                 holdButton.disabled=!!unavailable;
                 holdButton.title=unavailable
@@ -2294,7 +2294,10 @@ class UIManager {
         const statusEl = document.getElementById(`status-${player.id}`);
         if (!statusEl) return;
 
-        if (player.gameOver) {
+        if (player.offline) {
+            statusEl.textContent = currentLanguage==='ru'?'Нет соединения':'Offline';
+            statusEl.classList.add('is-out');
+        } else if (player.gameOver) {
             statusEl.textContent = player.blocked?(currentLanguage==='ru'?'Ждёт проход':'Waiting'):t('out');
             statusEl.classList.add('is-out');
         } else {
@@ -2941,7 +2944,7 @@ class UIManager {
             name.textContent=player.name||((ru?'Игрок ':'Player ')+(player.id+1));
             const status=document.createElement('span');
             status.className='result-player__status';
-            status.textContent=player.gameOver?(ru?'Выбыл':'Out'):(ru?'На поле':'Playing');
+            status.textContent=player.offline?(ru?'Отключён':'Offline'):player.gameOver?(ru?'Выбыл':'Out'):(ru?'На поле':'Playing');
             entry.append(swatch,name,status);
             const contribution=gameState.sharedStats.contributions?.[player.id];
             if(isCoop&&contribution){

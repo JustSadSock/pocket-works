@@ -322,6 +322,8 @@ class Player {
         this.position = { x: 0, y: 0 };
         this.gameOver = false;
         this.blocked = false;
+        this.offline = false;
+        this.reentryType = null;
         this.bag=[];
         this.currentType=null;
         this.nextType=null;
@@ -640,7 +642,7 @@ class Player {
 
 function isCellOccupiedByOtherPiece(x, y, currentPlayerId) {
     return gameState.players.some(player => {
-        if (player.id === currentPlayerId || player.gameOver || !player.currentPiece) {
+        if (player.id === currentPlayerId || player.gameOver || player.offline || !player.currentPiece) {
             return false;
         }
 
@@ -685,13 +687,55 @@ function checkAllPlayersGameOver() {
  gameState.rng=rng;
  return {
  init(players){gameState.numPlayers=players.length;gameState.boardWidth=computeBoardWidth(players.length);gameState.board=createEmptyBoard();gameState.players=[];resetSharedStats();players.forEach((p,i)=>{const laneX=spawnLaneX(i,players.length,gameState.boardWidth);const v=new Player(i,p.color,{},laneX+2);v.spawnLaneX=laneX;v.name=p.name||('Игрок '+(i+1));v.init();gameState.players.push(v);});},
- step(ms){for(let t=0;t<ms;t+=50)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(50,ms-t));},
- resume(i){const v=gameState.players[i];if(!v||!v.blocked||gameState.isGameOver||!laneHasClearance(v))return false;v.gameOver=false;v.blocked=false;v.spawnPiece();
-  if(!v.gameOver&&gameState.sharedStats.contributions?.[i])gameState.sharedStats.contributions[i].returns++;
+ step(ms){for(let t=0;t<ms;t+=50)for(const p of gameState.players)if(!p.gameOver&&!p.offline)p.update(Math.min(50,ms-t));},
+ setPresence(rooms,connectedIds){
+  if(!Array.isArray(connectedIds))return;
+  const live=new Set(connectedIds);
+  for(let i=0;i<gameState.players.length;i++){
+   const seat=gameState.players[i],owner=rooms[i];
+   const connected=owner&&!owner.left&&live.has(owner.id);
+   if(!connected){seat.offline=true;continue;}
+   if(!seat.offline)continue;
+   // A disconnected figure is parked without occupying the team board.
+   // Rejoin at the same position only if the board is still collision-free.
+   seat.offline=false;
+   if(seat.gameOver||!seat.currentPiece)continue;
+   if(seat.checkCollision().collides){
+    seat.reentryType=seat.currentType||inferShapeType(seat.currentPiece);
+    seat.blocked=true;
+    seat.gameOver=true;
+    seat.currentPiece=null;
+    seat.dropCounter=0;
+    seat.lockCounter=0;
+   }
+  }
+ },
+ acceptLegacy(i,action,now){
+  const seat=gameState.players[i];
+  if(!seat||seat.gameOver||seat.offline)return;
+  if(!action||(action.action==='move'?![-1,1].includes(action.direction):
+      !['rotate','drop','hardDrop','hold'].includes(action.action)))
+    throw Error('Некорректная команда');
+  if(!seat.inputWindowStart||now-seat.inputWindowStart>=1000||now<seat.inputWindowStart){
+   seat.inputWindowStart=now;seat.inputWindowCount=0;
+  }
+  if(seat.inputWindowCount>=MAX_ACTIONS_PER_SECOND)throw Error('Слишком частые команды');
+  seat.inputWindowCount++;
+  this.input(i,action);
+ },
+ resume(i){const v=gameState.players[i];if(!v||v.offline||!v.blocked||gameState.isGameOver||!laneHasClearance(v))return false;
+  const holdUsed=v.holdUsed,preserved=v.reentryType;
+  v.gameOver=false;v.blocked=false;
+  if(preserved){v.spawnPiece(preserved,false);v.holdUsed=holdUsed;}
+  else v.spawnPiece();
+  if(!v.gameOver){
+   v.reentryType=null;
+   if(gameState.sharedStats.contributions?.[i])gameState.sharedStats.contributions[i].returns++;
+  }
   return !v.gameOver;},
  input(i,p){const v=gameState.players[i];if(!v||v.gameOver)return;if(p.action==='move'&&[-1,1].includes(p.direction))v.move(p.direction,{broadcast:false});else if(['rotate','drop','hardDrop'].includes(p.action))v[p.action]({broadcast:false});else if(p.action==='hold')v.holdPiece({broadcast:false});else throw Error('Некорректная команда');},
  acceptBatch(i,actions,now){
-  const v=gameState.players[i];if(!v||v.gameOver)return;
+  const v=gameState.players[i];if(!v||v.gameOver||v.offline)return;
   const valid=a=>a&&Number.isSafeInteger(a.seq)&&a.seq>0&&a.seq<=2147483647&&
    (a.action==='move'?[-1,1].includes(a.direction):['rotate','drop','hardDrop','hold'].includes(a.action));
   if(!Array.isArray(actions)||!actions.length||actions.length>MAX_INPUT_BATCH||!actions.every(valid))
@@ -707,7 +751,7 @@ function checkAllPlayersGameOver() {
   v.inputWindowCount+=ordered.length;
   for(const action of ordered){if(!v.gameOver)this.input(i,action);v.lastInputSeq=action.seq;}
  },
- snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,players:gameState.players.map(p=>({...p,canResume:!!p.blocked&&!gameState.isGameOver&&laneHasClearance(p)}))};}
+ snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,players:gameState.players.map(p=>({...p,canResume:!!p.blocked&&!p.offline&&!gameState.isGameOver&&laneHasClearance(p)}))};}
  };
 }
 const MAX_CLOCK_CATCHUP=1200,MAX_CLOCK_IDLE=3500;
@@ -738,6 +782,8 @@ function newMatch(state,connectedIds){
  if(Array.isArray(connectedIds)){
   state.engine.players.forEach((piece,index)=>{
    if(!connectedIds.includes(state.players[index].id)){
+    piece.offline=true;
+    piece.blocked=true;
     piece.gameOver=true;
     piece.currentPiece=null;
    }
@@ -755,7 +801,7 @@ export default {protocolVersion:1,
     state.players[index].left=true;
     state.players[index].ready=false;
     const piece=state.engine.players[index];
-    if(piece){piece.gameOver=true;piece.currentPiece=null;}
+    if(piece){piece.gameOver=true;piece.offline=true;piece.currentPiece=null;}
    }
    state.hostId=state.players.find(p=>!p.left)?.id||null;
    if(state.engine.players.every(p=>p.gameOver||!p.currentPiece)){
@@ -784,7 +830,8 @@ export default {protocolVersion:1,
    if(p?.type==='rematch'){
     if(player.id!==state.hostId||!state.engine?.isGameOver)throw Error('Только ведущий может начать новый раунд после завершения');
     state.players=state.players.filter(p=>!p.left);
-    if(state.players.length<2){
+    const live=state.players.filter(p=>!p.left&&(!Array.isArray(connectedIds)||connectedIds.includes(p.id)));
+    if(live.length<2){
      state.started=false;state.phase='lobby';state.engine=null;
      state.players.forEach(p=>p.ready=false);return out(state);
     }
@@ -801,9 +848,10 @@ export default {protocolVersion:1,
    if(!state.paused&&!state.engine?.isGameOver){
     const now=Date.now(),elapsed=boundedElapsed(now,state.lastTick);
     const r=runtime(state.engine,state.seed);
+    r.setPresence(state.players,connectedIds);
     r.step(elapsed);
     if(p?.type==='input_batch')r.acceptBatch(index,p.actions,now);
-    else if(p?.type==='input')r.input(index,p.input||{});
+    else if(p?.type==='input')r.acceptLegacy(index,p.input||{},now);
     else if(p?.type==='resume')r.resume(index);
     else if(p?.type!=='pulse')throw Error('Игра уже началась');
     state.engine=r.snapshot();
@@ -812,13 +860,19 @@ export default {protocolVersion:1,
    }else if(p?.type!=='pulse')throw Error('Игра приостановлена или завершена');
    return out(state);
   }
+  // An absent player must explicitly ready up again after reconnecting.
+  if(Array.isArray(connectedIds)){
+   const online=new Set(connectedIds);
+   state.players.forEach(seat=>{if(!online.has(seat.id))seat.ready=false;});
+  }
   if(p?.type==='nickname')v.name=String(p.name||'Игрок').slice(0,24);
   else if(p?.type==='color'){
    if(!COLORS.includes(p.color)||state.players.some(x=>x.id!==v.id&&x.color===p.color))throw Error('Цвет занят');
    v.color=p.color;
   }else if(p?.type==='ready'){
    v.ready=!v.ready;
-   if(state.players.length>=2 && state.players.every(p=>p.ready))newMatch(state,connectedIds);
+   const live=state.players.filter(p=>!p.left&&(!Array.isArray(connectedIds)||connectedIds.includes(p.id)));
+   if(live.length>=2 && live.every(p=>p.ready))newMatch(state,connectedIds);
   }else if(p?.type!=='sync')throw Error('Неизвестная команда');
   return out(state);
  },

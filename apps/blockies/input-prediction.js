@@ -8,7 +8,7 @@ function collision(piece,pos,board,players,ownerId){
   if(yy<0)continue;
   if(board[yy]?.[xx])return true;
   for(const player of players){
-   if(player.id===ownerId||player.gameOver||!player.currentPiece)continue;
+   if(player.id===ownerId||player.gameOver||player.offline||!player.currentPiece)continue;
    for(let py=0;py<player.currentPiece.length;py++)
     for(let px=0;px<player.currentPiece[py].length;px++)
      if(player.currentPiece[py][px]&&player.position.x+px===xx&&player.position.y+py===yy)return true;
