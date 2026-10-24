@@ -231,7 +231,10 @@ export async function renderPremiere({
       if(recorder?.state!=='recording')return;
       const t=Number.isFinite(position)?position:video.currentTime;
       if(t>lastPosition+.005){lastPosition=t;lastAdvance=performance.now()}
-      if(video.ended||t>=end-.03){stopRecording();return}
+      if(video.ended||t>=end-.03){
+        stopRecording(video.ended&&t<end-.2?Error('Видео закончилось до конца выбранной сцены.'):null);
+        return;
+      }
       try{
         painter.drawImage(video,0,0,canvas.width,canvas.height);
         if(manual)videoTrack.requestFrame();
@@ -248,7 +251,8 @@ export async function renderPremiere({
       paint(video.currentTime);
       if(recorder.state==='recording')raf=requestAnimationFrame(fallback);
     };
-    onVideoEnded=()=>{if(recorder?.state==='recording')stopRecording()};
+    onVideoEnded=()=>{if(recorder?.state==='recording')
+      stopRecording(video.currentTime<end-.2?Error('Видео закончилось до конца выбранной сцены.'):null)};
     video.addEventListener('ended',onVideoEnded);
     onVideoFailed=()=>stopRecording(Error('Ошибка чтения исходного видео во время экспорта.'));
     video.addEventListener('error',onVideoFailed);
@@ -258,7 +262,10 @@ export async function renderPremiere({
         stopRecording(Error('Видео перестало воспроизводиться. Проверь файл или соединение.'));
     },2500);
     assertLive(effectiveSignal);
-    await initialResume;
+    await Promise.race([
+      initialResume,
+      new Promise((_,reject)=>setTimeout(()=>reject(Error('Браузер не разрешил включить звук. Повтори сохранение после касания экрана.')),10000))
+    ]);
     if(ctx.state!=='running')throw Error('Браузер остановил звуковой движок. Нажми «Сохранить видео» ещё раз.');
     recorder.start(1000);
     try{await video.play()}
