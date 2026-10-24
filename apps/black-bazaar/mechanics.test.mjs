@@ -598,7 +598,7 @@ function specName(item){
  // original from the owner's item before escrow.
  const names={frog:'Золотая жаба',pig:'Жадная копилка',spider:'Паук-механик',crown:'Корона должника',
    mimic:'Сундук-мимик',cat:'Кот неудачи',mirror:'Зеркало зависти',gear:'Медная шестерня',lens:'Око рынка',
-   mushroom:'Гриб прибыли',hourglass:'Песочные часы',amulet:'Амулет расчёта'};
+   mushroom:'Гриб прибыли',hourglass:'Песочные часы',amulet:'Амулет расчёта',samovar:'Самовар желаний',quill:'Перо бюрократа',boot:'Сапог путешественника'};
  return names[item.key];
 }
 
