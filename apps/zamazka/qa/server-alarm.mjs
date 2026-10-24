@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
-import {ZAMAZKA_ALARM_VERSION,nextZamazkaDeadlineAt,shouldAdvanceZamazkaDeadline} from '../../pocketnet/zamazka-deadlines.mjs';
+import {ZAMAZKA_ALARM_VERSION,nextZamazkaDeadlineAt,shouldAdvanceZamazkaDeadline} from '../../../pocketnet/zamazka-deadlines.mjs';
 
 const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
-const pinned=readFileSync(new URL('../../pocketnet/module-versions/zamazka/v46.ts',import.meta.url),'utf8');
-const lock=JSON.parse(readFileSync(new URL('../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
+const pinned=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v46.ts',import.meta.url),'utf8');
+const lock=JSON.parse(readFileSync(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
 assert.equal(ZAMAZKA_ALARM_VERSION,'v46');
 assert.equal(lock.zamazka.current,ZAMAZKA_ALARM_VERSION);
 assert.equal(pinned,source,'new-room immutable snapshot must equal current module');
@@ -91,7 +91,7 @@ match.state.paused=true;match.state.deadline=clock+1000;
 assert.equal(nextZamazkaDeadlineAt(match.state),null);
 
 // Assert the hub gates the new behavior to v46 and serializes alarm mutations.
-const hub=readFileSync(new URL('../../pocketnet/hub.mjs',import.meta.url),'utf8');
+const hub=readFileSync(new URL('../../../pocketnet/hub.mjs',import.meta.url),'utf8');
 assert.match(hub,/room\.version!==ZAMAZKA_ALARM_VERSION/);
 assert.match(hub,/this\.advanceZamazkaDeadline\(room,now\)/);
 assert.match(hub,/this\.persist\(room\);\s*this\.recordZamazkaRewards\(room,previous,next/);
