@@ -396,7 +396,7 @@ function v2ChainContact(s,owner,x,y){
  caster.runeTimers[gate]=s.ticks+Math.ceil(.84/STEP);
  target.shield=Math.max(0,target.shield-1.4);
  const dealt=harmSecondary(s,target,3.8,owner,1);
- if(dealt>0){target.slow=Math.max(target.slow,.3);emit(s,'on_hit',owner,{},1)}
+ if(dealt>0){target.slow=Math.max(target.slow,.3);emit(s,'on_hit',owner,{secondary:true},1)}
  fx(s,'impact_arc',p.x,p.y);
 }
 function v2Contact(s,owner,impact,x,y){
@@ -745,7 +745,7 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
     const dealt=harmSecondary(s,a,2.3,q.owner,q.depth+1);
     if(dealt>0){
      a.slow=Math.max(a.slow,.23);
-     emit(s,'on_hit',q.owner,{},q.depth+1);
+     emit(s,'on_hit',q.owner,{secondary:true},q.depth+1);
      v2Contact(s,q.owner,q.v2Impact,a.x,a.y);
     }
     fx(s,'impact_arc',a.x,a.y);
@@ -808,7 +808,7 @@ for(let j=s.mines.length-1;j>=0;j--){
    if(dealt>0){
     if(mine.v2Rubble)target.slow=Math.max(target.slow,.65);
     else{target.burn=Math.max(target.burn||0,.58);target.burnSource=mine.owner}
-    emit(s,'on_hit',mine.owner);
+    emit(s,'on_hit',mine.owner,{secondary:true});
    }
    mine.afterCd=mine.v2Rubble?.65:.46;
    fx(s,mine.v2Rubble?'fracture':'flame',target.x,target.y);
@@ -833,7 +833,7 @@ for(let j=s.mines.length-1;j>=0;j--){
     &&unobstructed(world,nearestX,nearestY,target.x,target.y,mine.owner,7)){
    target.shield=Math.max(0,target.shield-1.6);
    const dealt=harmSecondary(s,target,mine.damage,mine.owner);
-   if(dealt>0){target.slow=Math.max(target.slow,.3);emit(s,'on_hit',mine.owner)}
+   if(dealt>0){target.slow=Math.max(target.slow,.3);emit(s,'on_hit',mine.owner,{secondary:true})}
    fx(s,'impact_arc',target.x,target.y);
    mine.conduitCd=.42;
   }
@@ -846,7 +846,7 @@ for(let j=s.mines.length-1;j>=0;j--){
     &&Math.hypot(target.x-mine.x,target.y-mine.y)<=mine.r+10
     &&unobstructed(s,mine.x,mine.y,target.x,target.y,mine.owner,7)){
    const dealt=harmSecondary(s,target,mine.damage,mine.owner);
-   if(dealt>0){target.burn=Math.max(target.burn||0,.48);target.burnSource=mine.owner;emit(s,'on_hit',mine.owner)}
+   if(dealt>0){target.burn=Math.max(target.burn||0,.48);target.burnSource=mine.owner;emit(s,'on_hit',mine.owner,{secondary:true})}
    mine.craterCd=.50;fx(s,'flame',target.x,target.y);
   }
   if(mine.life<=0)s.mines.splice(j,1);
@@ -874,7 +874,7 @@ for(let j=s.mines.length-1;j>=0;j--){
     const dealt=harmSecondary(s,target,mine.damage,mine.owner);
     if(dealt>0){
      target.burn=Math.max(target.burn||0,.68);target.burnSource=mine.owner;
-     emit(s,'on_hit',mine.owner);
+     emit(s,'on_hit',mine.owner,{secondary:true});
     }
     mine.whirlCd=.31;fx(s,'flame',target.x,target.y);
    }
@@ -1664,6 +1664,9 @@ function flushMagicV2Events(s){
   const ev=s.eventQueue.shift(),a=s.actors[ev.owner],rules=s.magicLoadouts?.[ev.owner];
   if(!a||!rules||ev.depth>=MAX_CHAIN_DEPTH)continue;
   const trigger=map[ev.kind];if(!trigger)continue;
+  // Hazard ticks, burn and orbital pulses may damage and invoke a defender's
+  // on_hurt but must not manufacture unlimited on_hit offensive reactions.
+  if(trigger==='u_on_hit'&&ev.payload?.secondary)continue;
   for(const spell of compileMagic(rules)){
    if(spell.trigger!==trigger)continue;
    const key='v2:'+spell.slotId;
