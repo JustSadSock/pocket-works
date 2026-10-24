@@ -86,7 +86,9 @@ export function mergeArchiveBackup(existing,imported){
  const incoming=normalizeEditions(imported);
  // Local changes win on duplicate issue IDs; backup restores missing issues only.
  const known=new Set(current.map(x=>x.id));
- const additions=incoming.filter(x=>!known.has(x.id));
+ const missing=incoming.filter(x=>!known.has(x.id));
+ // Existing manuscripts always win: a full library must never evict user data.
+ const additions=missing.slice(0,Math.max(0,MAX_EDITIONS-current.length));
  const editions=normalizeEditions([...current,...additions]);
- return {editions,added:editions.filter(x=>!known.has(x.id)).length};
+ return {editions,added:additions.length,skipped:missing.length-additions.length};
 }
