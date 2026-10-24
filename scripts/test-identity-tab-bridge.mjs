@@ -66,4 +66,12 @@ const pocketId=await readFile(new URL('../shared/pocket-id.js',import.meta.url),
 assert.match(pocketId,/createIdentityTabBridge\(/);
 assert.match(pocketId,/const result=await api\('me'\)/);
 assert.match(pocketId,/if\(requestVersion!==accountChangeVersion\)return/);
+const peerRefresh=pocketId.slice(
+  pocketId.indexOf('async function refreshVerifiedPeerAccount()'),
+  pocketId.indexOf('const tabBridge=createIdentityTabBridge(')
+);
+assert.match(peerRefresh,/publish\(result\.user\);/,'remote login refresh must update identity');
+assert.doesNotMatch(peerRefresh,/notifyPeers\s*:\s*true/,'remote login refresh must not broadcast again');
+assert.match(pocketId,/if\(!document\.hidden\)void refreshVerifiedPeerAccount\(\)/);
+assert.match(pocketId,/if\(event\.persisted\)void refreshVerifiedPeerAccount\(\)/);
 console.log('Pocket ID two-tab session invalidation, storage fallback, deduplication and verified refresh passed.');
