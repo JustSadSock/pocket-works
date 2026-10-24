@@ -61,9 +61,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
       - name: Install browser test dependencies
-        run: npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+        run: npm install --legacy-peer-deps --ignore-scripts --no-audit --no-fund
       - name: Install headless Chromium
         run: npx playwright install --with-deps chromium
       - name: Check video source selection, trim, transcoding and browser appearance
