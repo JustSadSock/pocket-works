@@ -746,12 +746,12 @@ async function connect(kind,code=''){
   if(kind!=='resume')storage.removeItem('pocket-net:'+ORIGIN);
   client=new PocketNet({serverUrl:ORIGIN,name,storage});net=client;wire(client);
   await client.connect();
-  if(net!==client)return;
+  if(net!==client){try{client.close();}catch{}return;}
   if(kind==='create')client.createRoom(GAME_ID);
   else if(kind==='join')client.joinRoom(code);
   else if(!client.roomId){connecting=false;renderHome();message('Сохранённая комната не найдена.',true);}
  }catch(e){
-  if(net!==client)return; // Ignore an abandoned attempt after cancellation or a newer retry.
+  if(net!==client){try{client?.close();}catch{}return;} // Ignore abandoned attempts and close late sockets.
   connecting=false;connected=false;
   if(net){net.close();net=null;}
   renderHome();message('Нет соединения: '+e.message,true);
