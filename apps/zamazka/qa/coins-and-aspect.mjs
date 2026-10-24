@@ -66,11 +66,18 @@ const context={
  setTimeout(fn){const id=nextTimer++;callbacks.set(id,fn);return id},
  clearTimeout(id){callbacks.delete(id)},
  screen:{
+  // Anonymous ballot image needs to be decoded before a vote can be sent.
+  firstElementChild:{dataset:{votePaintingsReady:'false'}},
   querySelectorAll:()=>[],
   querySelector:selector=>selector==='#coinVoteStatus'?{textContent:''}:null
  },
 };
 runInNewContext(actions,context);
+context.chips=[1,1,1,0,0];context.updateChips();
+assert.equal(callbacks.size,0,'third coin cannot submit while ballot paintings are not ready');
+assert.equal(records,0,'unrendered anonymous art never produces a vote');
+context.chips=[1,1,0,0,0];
+context.screen.firstElementChild.dataset.votePaintingsReady='true';
 context.updateChips();
 assert.equal(callbacks.size,0,'first two coins must not send');
 context.chips[2]=1;context.updateChips();
