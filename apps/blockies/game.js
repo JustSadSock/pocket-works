@@ -1936,9 +1936,14 @@ class UIManager {
 
             // Snapshots and direct inputs repaint online; do not draw the same
             // 20-row well at 60 fps when its authoritative pose has not changed.
-            if(!this.isOnlineMode&&((gameState.boardRevision||0)!==boardRevision||
+            if(this.isOnlineMode){
+                if(this.lastRenderedInputSeq!==networkManager.inputSeq){
+                    this.lastRenderedInputSeq=networkManager.inputSeq;
+                    this.drawBoard();
+                }
+            }else if((gameState.boardRevision||0)!==boardRevision||
                 gameState.players.some((p,i)=>p.position.x!==before[i][0]||
-                 p.position.y!==before[i][1]||p.currentPiece!==before[i][2]||p.gameOver!==before[i][3])))
+                 p.position.y!==before[i][1]||p.currentPiece!==before[i][2]||p.gameOver!==before[i][3]))
                 this.drawBoard();
             this.updateTeamStatsIfNeeded();
             this.updateBlockedLanes();
