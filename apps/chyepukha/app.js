@@ -474,15 +474,15 @@ scene.addEventListener('change',e=>{
   try{
    if(file.size>MAX_BACKUP_BYTES)throw Error('Резервна копія перевищує 3 МБ.');
    const incoming=parseArchiveBackup(await file.text());
-   const {editions:merged,added}=mergeArchiveBackup(editions(),incoming);
-   if(!added){toast('У копії немає нових випусків для відновлення.');return}
+   const {editions:merged,added,skipped}=mergeArchiveBackup(editions(),incoming);
+   if(!added){toast(skipped?'Полиця повна (12 видань). Збережи резервну копію й звільни місце перед імпортом.':'У копії немає нових випусків для відновлення.');return}
+   // All-or-nothing storage write: never use quota-trimming writes for imports.
    if(IS_PREVIEW)previewEditions=merged;
-   else if(!writeEditions(localStorage,archiveKey(),merged))throw Error('Не вдалося зберегти архів: сховище переповнено.');
-   const stored=editions();
-   const restored=stored.filter(x=>merged.some(y=>y.id===x.id)).length;
+   else try{localStorage.setItem(archiveKey(),JSON.stringify(merged))}
+    catch{throw Error('Недостатньо місця. Жодне наявне видання не видалено.')}
    archiveEditionId='';archiveStoryId='';archiveQuery='';archiveReaderPage=0;
    render();
-   toast('Відновлено '+added+' випусків.'+(restored<merged.length?' Частина старих випусків не вмістилася.':''));
+   toast('Відновлено '+added+' випусків.'+(skipped?' Ще '+skipped+' не вмістилися: полиця заповнена.':''));
   }catch(error){toast(error instanceof Error?error.message:'Не вдалося відновити архів.')}
  })();
 });
