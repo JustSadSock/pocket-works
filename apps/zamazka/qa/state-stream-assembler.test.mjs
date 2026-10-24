@@ -18,8 +18,9 @@ test('slow continuous large gallery stream survives beyond fifteen seconds',()=>
 });
 
 test('reordered and duplicate parts are collected once without corruption',()=>{
- const event={type:'state',payload:{mine:{strokes:'ё😊'.repeat(25_000)}}};
+ const event={type:'state',payload:{mine:{strokes:'ё😊'.repeat(60_000)}}};
  const parts=packPrivateZamazkaState('room',event,{streamId:()=> 'mixed'});
+ assert.ok(parts.length>2,'fixture must require stream packets');
  const decoder=createStateStreamAssembler();let result;
  const packets=[...parts.slice(1),parts[0]];
  for(let i=0;i<packets.length;i++){
