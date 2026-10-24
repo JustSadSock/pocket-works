@@ -1,4 +1,5 @@
 import { installTerrain17 } from './terrain17.js';
+import { uploadBallCenterUniform } from './render-uniforms.js';
 import { terrainHeightAt } from './terrain.js';
 import { isCourse18 } from './course18.js';
 import { appendSoftShadow, appendLineShadow } from './light-space.js';
@@ -469,6 +470,7 @@ export function installTerrain18(core, canvas) {
     gl.uniform2f(core.locations.viewport, core.width, core.height);
     gl.uniform1f(core.locations.scale, core.scale);
     gl.uniform2f(core.locations.offset, core.offsetX, core.offsetY);
+    uploadBallCenterUniform(gl, core.locations.ballCenter, core.currentBallCenter);
     gl.uniform2f(core.locations.parallax, core.parallaxX, core.parallaxY);
     gl.uniform1f(core.locations.rotation, core.cameraRotation || 0);
     gl.uniform2f(core.locations.cameraCenter, core.cameraX || 0, core.cameraY || 0);

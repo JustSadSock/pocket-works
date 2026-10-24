@@ -1,4 +1,5 @@
 import { BALL_RADIUS } from './physics.js';
+import { uploadBallCenterUniform } from './render-uniforms.js';
 import { levelBounds } from './levels.js';
 import { worldToScreenPoint, screenToWorldPoint, screenDeltaToWorld as inverseScreenVector } from './camera-space.js';
 import { makeStoneRimProfile } from './curb-profile.js';
@@ -704,8 +705,10 @@ void main() {
     // softly shaded opposite face. No painted height rings or dark patches.
     float hillside = smoothstep(.07, .36, length(n.xy));
     float lightFacing = dot(n.xy, normalize(lightDir.xy));
-    lit *= 1.0 + hillside * clamp(lightFacing, -.52, .52) * .20;
-    lit += vec3(.020, .023, .008) * hillside * max(lightFacing, 0.0);
+    // The underlying terrain pigment is already normal-dependent. A heavy
+    // second side-light pass produced diagonal light/dark slope bands.
+    lit *= 1.0 + hillside * clamp(lightFacing, -.52, .52) * .075;
+    lit += vec3(.007, .008, .003) * hillside * max(lightFacing, 0.0);
   }
   if (vMaterial > 1.5 && vMaterial < 2.5) {
     float glassNoise = valueNoise(vWorld.xy * .08 + vWorld.z * .035);
@@ -1089,7 +1092,7 @@ class WebGLDiorama {
     gl.uniform2f(this.locations.parallax, this.parallaxX, this.parallaxY);
     gl.uniform1f(this.locations.rotation, this.cameraRotation || 0);
     gl.uniform2f(this.locations.cameraCenter, this.cameraX || 0, this.cameraY || 0);
-    gl.uniform3f(this.locations.ballCenter, ...(this.currentBallCenter || [0, 0, 0]));
+    uploadBallCenterUniform(gl, this.locations.ballCenter, this.currentBallCenter);
     gl.uniform3f(this.locations.hole, level.hole.x, level.hole.y, level.hole.r * 1.03);
     gl.uniform1f(this.locations.time, time);
 
