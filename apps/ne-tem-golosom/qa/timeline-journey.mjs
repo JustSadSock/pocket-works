@@ -85,7 +85,9 @@ try{
   const before=await page.locator('[data-clip="first"]').evaluate(el=>({
     left:parseFloat(el.style.left),width:parseFloat(el.style.width)
   }));
+  await page.locator('[data-clip="first"]').scrollIntoViewIfNeeded();
   let rect=await page.locator('[data-clip="first"]').boundingBox();
+  assert(rect&&rect.x>=0&&rect.x+rect.width<=vp.width+2,'zoom must keep the selected clip reachable');
   await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);
   await page.mouse.down();
   await page.mouse.move(rect.x+rect.width/2+20,rect.y+rect.height/2,{steps:5});
