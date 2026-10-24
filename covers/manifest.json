@@ -1,15 +1,15 @@
 {
   "zamazka": {
-    "revision": "9f4db5c7d6ccd944919269e6e4da75be2129a243",
+    "revision": "2bc931d6be61e46a63d743352b3f45a74084c6e3",
     "qualityScore": 73,
     "visionScore": null,
     "prepared": false,
     "shot": 0,
-    "sha256": "9f1e1ab1cfcffe9f296fa8b5f929e33c2a26e13f970c1bb57da5424561fd9d9e",
+    "sha256": "ac343bd5d7f659e355c2ea978d2347ece8fa73c1c3b324ee52655c1484a53025",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "9f4db5c7d6ccd944919269e6e4da75be2129a243",
-    "lastAttemptAt": "2026-10-23T08:42:25.413Z",
+    "lastAttemptRevision": "2bc931d6be61e46a63d743352b3f45a74084c6e3",
+    "lastAttemptAt": "2026-10-24T08:15:11.316Z",
     "started": true,
     "gameplayEntry": [
       {
@@ -50,7 +50,7 @@
     "captureEngine": "safe-gameplay-v3"
   },
   "picto": {
-    "revision": "43d0e9446d52783e36a6059c6e6dfc8c9e8245c8",
+    "revision": "4d1afd514c3d0e1549e718dafd797fe18ccf4573",
     "qualityScore": 82,
     "visionScore": null,
     "prepared": false,
@@ -58,8 +58,8 @@
     "sha256": "14afe7611b3397ccbd2b95502f4fcfef5b520ea26356c36c154a3377f4183477",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "43d0e9446d52783e36a6059c6e6dfc8c9e8245c8",
-    "lastAttemptAt": "2026-10-23T08:41:51.189Z",
+    "lastAttemptRevision": "4d1afd514c3d0e1549e718dafd797fe18ccf4573",
+    "lastAttemptAt": "2026-10-24T08:17:16.177Z",
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
@@ -279,7 +279,7 @@
     "captureEngine": "safe-gameplay-v3"
   },
   "jam-tape": {
-    "revision": "6848de3c180f8204462c1422697e102f6ee4f4f2",
+    "revision": "fed8b4001b0e5aae8ff9e0da00ff04a2267f0bc2",
     "qualityScore": 74,
     "visionScore": null,
     "prepared": false,
@@ -287,8 +287,8 @@
     "sha256": "80ada270afc9f6a69864b34fab2fed167ee38161da3506d3aa344bcef562bf68",
     "imageVersion": 2,
     "status": "published",
-    "lastAttemptRevision": "6848de3c180f8204462c1422697e102f6ee4f4f2",
-    "lastAttemptAt": "2026-10-23T08:44:18.309Z",
+    "lastAttemptRevision": "fed8b4001b0e5aae8ff9e0da00ff04a2267f0bc2",
+    "lastAttemptAt": "2026-10-24T08:17:05.354Z",
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
@@ -390,18 +390,27 @@
     "lastAttemptAt": "2026-10-13T12:44:11.476Z"
   },
   "moss-marble": {
-    "revision": "47246dc0c25d9e15dd964a937d43b814788d18aa",
-    "qualityScore": 76,
+    "revision": "214bb72e98ed729634f86517a6839186f2346533",
+    "qualityScore": 69,
     "visionScore": null,
     "prepared": false,
-    "shot": 0,
-    "sha256": "4ce7b2337b35a9cfa633c34885124800f73432f77b85c2ecbcec4e0403f4d445",
+    "shot": 1,
+    "sha256": "eaa7f489948740050f5d7246fc9aecbcdc22726b54cee07cd108b6010f70392a",
     "imageVersion": 2,
-    "status": "preserved",
-    "lastAttemptRevision": "5803a09913bb2bb44a28409b429d986aa7a560b5",
-    "lastAttemptAt": "2026-10-23T08:40:31.544Z",
+    "status": "published",
+    "lastAttemptRevision": "214bb72e98ed729634f86517a6839186f2346533",
+    "lastAttemptAt": "2026-10-24T08:15:33.142Z",
     "note": "existing cover rated higher",
-    "captureEngine": "safe-gameplay-v3"
+    "captureEngine": "safe-gameplay-v3",
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "Начать длинную прогулку Лунка 1 · пар 6",
+        "id": "continueBtn",
+        "score": 74
+      }
+    ],
+    "diagnostic": null
   },
   "petlya-17": {
     "revision": "f677c4713bbbc38a27e2a679beac6e796aea0036",
@@ -3219,7 +3228,7 @@
     "imageVersion": 2
   },
   "ne-tem-golosom": {
-    "revision": "75bd7a7e977ae759176bd8f2efa6f8027998ab42",
+    "revision": "ddc0878ef0bf3ed6e5b59c4c76357f6281e71216",
     "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
@@ -3237,8 +3246,8 @@
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "75bd7a7e977ae759176bd8f2efa6f8027998ab42",
-    "lastAttemptAt": "2026-10-15T21:02:38.238Z"
+    "lastAttemptRevision": "ddc0878ef0bf3ed6e5b59c4c76357f6281e71216",
+    "lastAttemptAt": "2026-10-24T08:16:30.728Z"
   },
   "living-history": {
     "revision": "cb1bcfc8a5f9ef197adcbdca44d9984944b013f5",
@@ -3502,20 +3511,20 @@
     "note": "No frame passed image-content checks"
   },
   "chyepukha": {
-    "revision": "da4954a83f63d139834e9647e8b9a7e1e9eda54e",
-    "qualityScore": 77,
+    "revision": "0a2fedb9a6b85ebd5dac1ad1a086632bc480a81b",
+    "qualityScore": 80,
     "visionScore": null,
     "prepared": false,
     "started": false,
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "41a05dd5a19ab25504da17f9c158cc31f8dc6b1e6436d262701de41d78aad0e5",
+    "sha256": "275685bd7fbe5a9f70b1528313a7883a93c279d6ed70cc262dcf4341a818d6e3",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "da4954a83f63d139834e9647e8b9a7e1e9eda54e",
-    "lastAttemptAt": "2026-10-23T08:41:16.671Z"
+    "lastAttemptRevision": "0a2fedb9a6b85ebd5dac1ad1a086632bc480a81b",
+    "lastAttemptAt": "2026-10-24T08:16:07.076Z"
   },
   "not-dead-yet": {
     "note": "existing cover rated higher",
@@ -3557,8 +3566,8 @@
     "lastAttemptAt": "2026-10-18T19:20:51.934Z"
   },
   "perekos": {
-    "revision": "977c6246eb818fc789051769103fdaf5f4549421",
-    "qualityScore": 81,
+    "revision": "6dff040e70a0b4d6a7b5d026344a9651007d5737",
+    "qualityScore": 79,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3571,12 +3580,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "56e1a074a8ce112a4d4fad067b24447266d791c929ddb029b2f3dac09cb7732a",
+    "sha256": "0118e63f6911df40b7ce9965fd9385ebb09a9b2cd3291fabae69d2121174877b",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "977c6246eb818fc789051769103fdaf5f4549421",
-    "lastAttemptAt": "2026-10-23T08:41:28.603Z"
+    "lastAttemptRevision": "6dff040e70a0b4d6a7b5d026344a9651007d5737",
+    "lastAttemptAt": "2026-10-24T08:15:45.282Z"
   },
   "portal-lab": {
     "note": "existing cover rated higher",
@@ -3642,18 +3651,18 @@
       }
     ],
     "diagnostic": {
-      "bestScore": 71,
+      "bestScore": 70,
       "qualityReasons": [
         "low visual detail"
       ],
       "metrics": {
-        "bytes": 27851,
-        "variance": 99.08367582466556,
-        "entropy": 2.0786526641743674,
-        "edgeDensity": 0.08804563492063493,
-        "colorfulness": 19.789794921875,
+        "bytes": 29064,
+        "variance": 99.31041632233647,
+        "entropy": 2.0509885790939366,
+        "edgeDensity": 0.08916170634920635,
+        "colorfulness": 18.562255859375,
         "centerDetail": 46.410464672058204,
-        "meanLight": 143.88304101562773
+        "meanLight": 145.0481037109396
       },
       "gameplayEntry": {
         "started": true,
@@ -3665,15 +3674,15 @@
           }
         ]
       },
-      "url": "http://127.0.0.1:4173/apps/blockies/?pw-cover=1&pw_release=0.5.1&pw_fp=a9bdcb8bfdb03c2a4c410494"
+      "url": "http://127.0.0.1:4173/apps/blockies/?pw-cover=1&pw_release=0.5.9&pw_fp=d4f0f34c16a3220d3ac866e6"
     },
     "shot": 0,
     "sha256": "191a7abe88a94565a5c14a7c5b3d0666de349ce935ad6969a444bea437b2ed69",
     "imageVersion": 2,
     "status": "failed",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "f1f163899d20cb04d7348729a5eb123dd7c215ba",
-    "lastAttemptAt": "2026-10-23T08:40:43.240Z",
+    "lastAttemptRevision": "7c1eb01f00f9545f65acf1a332aa564b705a24cb",
+    "lastAttemptAt": "2026-10-24T08:16:18.868Z",
     "note": "No frame passed image-content checks"
   },
   "katana-echo": {
@@ -3798,8 +3807,8 @@
     "note": "existing cover rated higher"
   },
   "crown-laws": {
-    "revision": "7beb7cf54c74f50c4113b372e6e7526d14f77140",
-    "qualityScore": 55,
+    "revision": "0c51466a6ac1ad9b7c2f523d692538376706abbe",
+    "qualityScore": 68,
     "visionScore": null,
     "prepared": false,
     "started": true,
@@ -3812,12 +3821,12 @@
     ],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "29ed8aa013e396bf79a5d58509ab9a0663468cb0e498e545b2588fd0e4d03c61",
+    "sha256": "b58002c164088627837e618c0f77c055314a946699e42aea2d93b534e22b547e",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "7beb7cf54c74f50c4113b372e6e7526d14f77140",
-    "lastAttemptAt": "2026-10-23T08:40:55.105Z"
+    "lastAttemptRevision": "0c51466a6ac1ad9b7c2f523d692538376706abbe",
+    "lastAttemptAt": "2026-10-24T08:16:54.475Z"
   },
   "throne-three": {
     "note": "No frame passed image-content checks",
@@ -3906,13 +3915,14 @@
     "shot": 0,
     "sha256": "f5fa24c29657cf4981580cb91273904a0c99df032d2d1f7801a61d55bdd8f89e",
     "imageVersion": 2,
-    "status": "published",
+    "status": "preserved",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "7e484507fe02933eae62645550c03c40db855c2a",
-    "lastAttemptAt": "2026-10-23T08:41:05.839Z"
+    "lastAttemptRevision": "356834dcad97b1a24f96f9376156617fa7eb9947",
+    "lastAttemptAt": "2026-10-24T08:17:27.043Z",
+    "note": "existing cover rated higher"
   },
   "black-bazaar": {
-    "revision": "f64bd7aa17ebeff60e410b58bf168f54a8c58cc9",
+    "revision": "435864306b9acca0e3c301550dbd0aafece717df",
     "qualityScore": 82,
     "visionScore": null,
     "prepared": false,
@@ -3920,11 +3930,33 @@
     "gameplayEntry": [],
     "diagnostic": null,
     "shot": 0,
-    "sha256": "d4c47d0c85d2a1639ec81c183dc0bed90a16b11f8f540baab5ee1ed372d44708",
+    "sha256": "65ae900f522e83f52b894a19cee0185fe8f6bb54d53b045e0df22e6adbedc099",
     "imageVersion": 2,
     "status": "published",
     "captureEngine": "safe-gameplay-v3",
-    "lastAttemptRevision": "f64bd7aa17ebeff60e410b58bf168f54a8c58cc9",
-    "lastAttemptAt": "2026-10-23T08:42:01.953Z"
+    "lastAttemptRevision": "435864306b9acca0e3c301550dbd0aafece717df",
+    "lastAttemptAt": "2026-10-24T08:15:56.142Z"
+  },
+  "ne-zhmi": {
+    "revision": "60f55c408090f666871c7f08f0dd305c4ae30bf7",
+    "qualityScore": 74,
+    "visionScore": null,
+    "prepared": false,
+    "started": true,
+    "gameplayEntry": [
+      {
+        "label": "НАЧАТЬ ИСПЫТАНИЕ →",
+        "id": "start",
+        "score": 74
+      }
+    ],
+    "diagnostic": null,
+    "shot": 0,
+    "sha256": "ca0f4b33f4d1343e4607d946ba851488ed5d697bb7eb3de0f723c52858c37217",
+    "imageVersion": 2,
+    "status": "published",
+    "captureEngine": "safe-gameplay-v3",
+    "lastAttemptRevision": "60f55c408090f666871c7f08f0dd305c4ae30bf7",
+    "lastAttemptAt": "2026-10-24T08:16:42.617Z"
   }
 }
