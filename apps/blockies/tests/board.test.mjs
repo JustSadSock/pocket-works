@@ -4,9 +4,44 @@ import fs from 'node:fs/promises';
 const {default:game}=await import('data:text/javascript;base64,'+Buffer.from(await fs.readFile(new URL('../server/module.ts',import.meta.url),'utf8')).toString('base64'));
 const a={id:'a',name:'A'},b={id:'b',name:'B'};
 function start(players=[a]){let state=game.createRoom({player:players[0]}).state;for(const player of players.slice(1))state=game.onJoin({state,player}).state;for(const player of players)state=game.onMessage({state,player,payload:{type:'ready'}}).state;return state;}
-test('serialized shared board clears a complete line and awards team score',()=>{let state=start();const width=state.engine.boardWidth;state.engine.board=Array.from({length:20},()=>Array(width).fill(0));state.engine.board[19]=Array.from({length:width},(_,i)=>i<4?0:1);const p=state.engine.players[0];p.currentPiece=[[1,1,1,1]];p.position={x:0,y:0};state=game.onMessage({state:JSON.parse(JSON.stringify(state)),player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;assert.equal(state.engine.sharedStats.lines,1);assert.ok(state.engine.sharedStats.score>0);assert.ok(state.engine.board.every(row=>row.every(v=>v===0)));});
+test('serialized shared board clears a complete line and awards team score',()=>{let state=start([a,b]);const width=state.engine.boardWidth;state.engine.board=Array.from({length:20},()=>Array(width).fill(0));const p=state.engine.players[0];state.engine.board[19]=Array.from({length:width},(_,i)=>i>=p.spawnLaneX&&i<p.spawnLaneX+4?0:1);p.currentPiece=[[1,1,1,1]];p.position={x:p.spawnLaneX,y:0};state=game.onMessage({state:JSON.parse(JSON.stringify(state)),player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;assert.equal(state.engine.sharedStats.lines,1);assert.ok(state.engine.sharedStats.score>0);assert.ok(state.engine.board.every(row=>row.every(v=>v===0)));});
 test('two players share locked cells; foreign input cannot mutate the well',()=>{let state=start([a,b]);state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;assert.equal(state.engine.board.flat().filter(Boolean).length,4);assert.throws(()=>game.onMessage({state,player:{id:'intruder'},payload:{type:'input',input:{action:'hardDrop'}}}));assert.deepEqual(game.onJoin({state,player:b}).state.engine,state.engine);});
-test('blocked spawn reaches game over rather than continuing to accept pieces',()=>{let state=start();state.engine.board=state.engine.board.map((row,y)=>row.map((_,x)=>y<4&&x<row.length-1?1:0));state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;assert.equal(state.engine.isGameOver,true);});
+test('a risky entrance is suspended five rows early and does not consume the next piece',()=>{
+ let state=start([a,b]);const first=state.engine.players[0],x=first.spawnLaneX;
+ first.currentPiece=[[1,1,1,1]];first.position={x,y:0};const next=structuredClone(first.nextPiece);
+ for(let col=x;col<x+4;col++)state.engine.board[4][col]=1;
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;
+ assert.equal(state.engine.players[0].blocked,true);
+ assert.equal(state.engine.players[0].canResume,false);
+ assert.deepEqual(state.engine.players[0].nextPiece,next);
+ assert.equal(state.engine.isGameOver,false,'the second player may still save the lane');
+ state=game.onMessage({state,player:a,payload:{type:'resume'}}).state;
+ assert.equal(state.engine.players[0].blocked,true,'cannot force reentry into an unsafe gate');
+ for(let y=0;y<5;y++)for(let col=x;col<x+4;col++)state.engine.board[y][col]=0;
+ state=game.onMessage({state,player:b,payload:{type:'pulse'}}).state;
+ assert.equal(state.engine.players[0].canResume,true);
+ state=game.onMessage({state,player:a,payload:{type:'resume'}}).state;
+ assert.equal(state.engine.players[0].gameOver,false);
+ assert.equal(state.engine.players[0].blocked,false);
+ assert.deepEqual(state.engine.players[0].currentPiece,next);
+});
+test('the online lobby waits until at least two participants are ready',()=>{
+ let state=game.createRoom({player:a}).state;
+ state=game.onMessage({state,player:a,payload:{type:'ready'},connectedIds:['a']}).state;
+ assert.equal(state.started,false);
+ state=game.onJoin({state,player:b}).state;
+ state=game.onMessage({state,player:b,payload:{type:'ready'},connectedIds:['a','b']}).state;
+ assert.equal(state.started,true);
+});
+test('leaving the only remaining live piece ends the round and reopens lobby for one survivor',()=>{
+ let state=start([a,b]);state.engine.players[1].gameOver=true;state.engine.players[1].currentPiece=null;
+ state=game.onLeave({state,player:a}).state;
+ assert.equal(state.engine.isGameOver,true);
+ assert.equal(state.phase,'finished');
+ state=game.onMessage({state,player:b,payload:{type:'rematch'},connectedIds:['b']}).state;
+ assert.equal(state.started,false);
+ assert.equal(state.phase,'lobby');
+});
 
 
 
