@@ -84,7 +84,7 @@ test('client coalesces a rapid gesture and prunes predictions only after server 
  assert.equal(net.pendingInputs.length,2);
  net.startClock=()=>{};
  const originalDocument=globalThis.document;
- globalThis.document={querySelector:()=>null};
+ globalThis.document={querySelector:()=>null,getElementById:()=>null};
  try{
   const state={...start(),inputBatchVersion:1};
   state.engine.players[0].lastInputSeq=2;
