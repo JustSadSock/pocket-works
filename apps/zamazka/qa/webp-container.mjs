@@ -30,7 +30,7 @@ reject(b=>b[21]=0,'empty VP8 partition forbidden');
 reject(b=>b.writeUInt16LE(3001,26),'incorrect width');
 reject(b=>b.writeUInt16LE(449,28),'incorrect height');
 reject(b=>b.writeUInt32LE(b.length+100,16),'overrun chunk');
-reject(b=>b.writeUInt32LE(b.length-21,16),'unexpected extra bytes');
+reject(b=>b.writeUInt32LE(b.length-22,16),'unexpected extra bytes');
 reject(b=>b.write('ANIM',12),'animated WebP unsupported');
 reject(b=>b.write('EXIF',12),'embedded metadata unsupported');
 reject(b=>b.write('XMP ',12),'hidden text metadata unsupported');
