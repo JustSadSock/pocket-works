@@ -19,7 +19,7 @@ function startBallot(people=[curator,viewer]){
  now+=200_000;
  const state=game.createRoom({player:people[0]}).state;
  for(const p of people.slice(1))game.onJoin({state,player:p,players:people});
- const send=(p,payload)=>game.onMessage({state,player:p,players:people,payload});
+ const send=(p,payload)=>game.onMessage({state,player:p,players:people,payload:payload&&['vote','vote_draft'].includes(payload.type)?{...payload,round:state.round,turn:state.turn,targetId:state.participants[state.turn]?.id}:payload});
  send(people[0],{type:'start',rounds:1,drawingSeconds:60});
  now=state.deadline+1;send(people[0],{type:'pulse'});
  assert.equal(state.phase,'drawing');

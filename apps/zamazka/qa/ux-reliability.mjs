@@ -14,7 +14,7 @@ assert.equal(exports.RULESET_VERSION,21);
 const host={id:'host',name:'Host'},b={id:'b',name:'B'},c={id:'c',name:'C'};
 const players=[host,b,c],state=game.createRoom({player:host}).state;
 game.onJoin({state,player:b,players});game.onJoin({state,player:c,players});
-const send=(who,payload)=>game.onMessage({state,player:who,players,payload});
+const send=(who,payload)=>game.onMessage({state,player:who,players,payload:payload&&['vote','vote_draft'].includes(payload.type)?{...payload,round:state.round,turn:state.turn,targetId:state.participants[state.turn]?.id}:payload});
 send(host,{type:'start',preload:true,rounds:1,drawingSeconds:60});
 assert.equal(state.phase,'preparing','new rooms wait for selected art');
 assert.equal(state.selected.length,5);

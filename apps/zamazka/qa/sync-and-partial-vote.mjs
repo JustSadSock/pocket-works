@@ -79,7 +79,7 @@ assert.equal(api.RULESET_VERSION,21);
 const game=api.default,people=[{id:'a',name:'A'},{id:'b',name:'B'},{id:'c',name:'C'}];
 const state=game.createRoom({player:people[0]}).state;
 for(const p of people.slice(1))game.onJoin({state,player:p,players:people});
-const send=(id,payload)=>game.onMessage({state,player:people.find(p=>p.id===id),players:people,payload});
+const send=(id,payload)=>game.onMessage({state,player:people.find(p=>p.id===id),players:people,payload:payload&&['vote','vote_draft'].includes(payload.type)?{...payload,round:state.round,turn:state.turn,targetId:state.participants[state.turn]?.id}:payload});
 send('a',{type:'start',rounds:1,drawingSeconds:160});
 now=state.deadline+1;send('a',{type:'pulse'});
 assert.equal(state.phase,'drawing');

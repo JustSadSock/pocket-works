@@ -23,7 +23,7 @@ for(const who of people.slice(1))game.onJoin({state,player:who,players:people});
 const latencies=[];let inboundBytes=0,packetCount=0;
 const send=(who,payload)=>{
  const started=performance.now();
- const result=game.onMessage({state,player:who,players:people,payload});
+ const result=game.onMessage({state,player:who,players:people,payload:payload&&['vote','vote_draft'].includes(payload.type)?{...payload,round:state.round,turn:state.turn,targetId:state.participants[state.turn]?.id}:payload});
  latencies.push(performance.now()-started);
  inboundBytes+=Buffer.byteLength(JSON.stringify(payload));
  packetCount++;

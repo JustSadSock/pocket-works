@@ -19,7 +19,7 @@ function active(players=people){
  now+=200_000;
  const state=game.createRoom({player:players[0]}).state;
  for(const p of players.slice(1))game.onJoin({state,player:p,players});
- const send=(p,payload)=>game.onMessage({state,player:p,players,payload});
+ const send=(p,payload)=>game.onMessage({state,player:p,players,payload:payload&&['vote','vote_draft'].includes(payload.type)?{...payload,round:state.round,turn:state.turn,targetId:state.participants[state.turn]?.id}:payload});
  send(players[0],{type:'start',rounds:1,drawingSeconds:60});
  now=state.deadline+1;send(players[0],{type:'pulse'});
  assert.equal(state.phase,'drawing');

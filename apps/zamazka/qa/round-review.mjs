@@ -13,7 +13,7 @@ const game=exports.default;
 const host={id:'h',name:'Host'},guest={id:'g',name:'Guest'},players=[host,guest];
 const state=game.createRoom({player:host}).state;
 game.onJoin({state,player:guest,players});
-const send=(player,payload)=>game.onMessage({state,player,players,payload});
+const send=(player,payload)=>game.onMessage({state,player,players,payload:payload&&['vote','vote_draft'].includes(payload.type)?{...payload,round:state.round,turn:state.turn,targetId:state.participants[state.turn]?.id}:payload});
 send(host,{type:'start',rounds:3});
 assert.equal(state.phase,'preview');
 

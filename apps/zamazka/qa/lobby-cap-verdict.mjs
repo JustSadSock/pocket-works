@@ -13,7 +13,7 @@ const game=exports.default;
 const host={id:'host',name:'Host'},guest={id:'guest',name:'Guest'},players=[host,guest];
 const state=game.createRoom({player:host}).state;
 game.onJoin({state,player:guest,players});
-const send=(player,payload)=>game.onMessage({state,player,players,payload});
+const send=(player,payload)=>game.onMessage({state,player,players,payload:payload&&['vote','vote_draft'].includes(payload.type)?{...payload,round:state.round,turn:state.turn,targetId:state.participants[state.turn]?.id}:payload});
 const original={type:'board_delta',revision:0,k:'first',q:0,c:'#123456',s:4,p:[[1,2]]};
 assert.equal(send(host,original).events[0].type,'board_delta');
 for(let n=1;n<1200;n++){

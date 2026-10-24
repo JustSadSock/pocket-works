@@ -130,6 +130,9 @@ assert.equal(restore(999),300,'corrupt old draft data falls back to five minutes
 
 console.log('ZAMAZKA: five timed presets (2/3/4/5/10 min), 5-minute defaults, legacy drafts, untimed game and multi-round rules OK');
 
+// Stage 1 rejects stale ballots and unauthorized room access.
+import './security-stage1.mjs';
+
 // Deadline and final transfer regressions are part of the main timer gate.
 import './deadline-integrity.mjs';
 
