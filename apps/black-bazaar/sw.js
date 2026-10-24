@@ -1,10 +1,10 @@
-const APP_VERSION='0.15.1';
+const APP_VERSION='0.15.2';
 const VERSION=APP_VERSION;
 const RELEASE_DATE='2026-10-24';
-const RELEASE_NOTES = ["Отмена подключения и надёжный повторный вход при сетевой ошибке.","Игровое поле адаптируется к реальной высоте экрана и безопасным зонам.","Ведущий может открыть меню отключившегося игрока; улучшены мобильные кнопки."];
+const RELEASE_NOTES = ["Отменённое подключение не оставляет активный сетевой клиент.","При отключении сети таймер показывает «Нет связи», при серверной паузе — «Пауза».","Мобильные экраны и отключённые игроки включены в регрессионные проверки."];
 const NOTES=RELEASE_NOTES;
-const CACHE='black-bazaar-v0.15.1';
-const CACHE_NAME='black-bazaar-v0.15.1';
+const CACHE='black-bazaar-v0.15.2';
+const CACHE_NAME='black-bazaar-v0.15.2';
 const PREFIX='black-bazaar-v';
 const FILES=[
  './','./index.html','./preview.html','./app.js','./debug-console.js','./debug-state.js','./economy.js','./art.js','./art/characters.js','./art/artifacts.js','./feedback.js','./art/forest.svg','./art/table.svg','./styles.css','./app.config.json',
