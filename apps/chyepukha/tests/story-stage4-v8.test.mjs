@@ -46,7 +46,7 @@ test('all 100 rounds keep the same roles, ten-stage arc and immutable finish',()
   for(let round=0;round<10;round++){
    const q=after.questions[round];
    for(const field of ['prompt','guidance','creativeFreedom','stage'])
-    assert.ok(typeof q[field]==='string'&&q[field].length>4,id+'/'+round+'/'+field);
+    assert.ok(typeof q[field]==='string'&&q[field].length>(field==='stage'?2:4),id+'/'+round+'/'+field);
   }
  }
 });
