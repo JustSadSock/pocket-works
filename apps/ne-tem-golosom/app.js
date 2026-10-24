@@ -71,7 +71,7 @@ async function draftRead(key){
        let saved=null,media=null;
        tx.objectStore('drafts').get(key).onsuccess=e=>{saved=e.target.result||null};
        tx.objectStore('media').get(key).onsuccess=e=>{media=e.target.result||null};
-       tx.oncomplete=()=>resolve(saved?{...saved,video:media?.video||saved.video||null}:null);
+       tx.oncomplete=()=>resolve(saved?{...saved,video:media?.video||saved.video||null,videoInMedia:media?.video instanceof Blob}:null);
        tx.onerror=()=>reject(tx.error);
        tx.onabort=()=>reject(tx.error||Error('Не удалось прочитать черновик'));
      });
@@ -142,7 +142,7 @@ async function restore(key){
  const old=await draftRead(key);
  if(request!==restoreGeneration)return;
  projectKey=key;
- if(old?.scene?.id===scene?.id&&scene.custom&&old.video instanceof Blob)writtenVideoByKey.set(key,old.video);
+ if(old?.scene?.id===scene?.id&&scene.custom&&old.videoInMedia&&old.video instanceof Blob)writtenVideoByKey.set(key,old.video);
  if(old?.scene?.id===scene?.id&&Array.isArray(old?.timeline?.clips)){
    const restored=unpackTimeline(old.timeline,scene.duration);
    editHistory=restored.history;setClips(restored.clips,restored.selected);
