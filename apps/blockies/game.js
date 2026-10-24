@@ -2,7 +2,7 @@
 import {loadSolo,saveSolo,clearSolo} from './solo-save.js';
 import {BoardEffects,getNewLockedCells} from './board-effects.js';
 import {projectOwnPiece} from './input-prediction.js';
-import {SHAPES,PIECE_TYPES,LOCK_DELAY_MS,MAX_LOCK_RESETS,KICK_OFFSETS,SAFE_LANE_ROWS,rotatedClockwise,inferShapeType,checkPieceCollision,findRotationPlacement,isLaneClear} from './physics-core.js';
+import {SHAPES,PIECE_TYPES,LOCK_DELAY_MS,MAX_LOCK_RESETS,KICK_OFFSETS,SAFE_LANE_ROWS,rotatedClockwise,inferShapeType,checkPieceCollision,findRotationPlacement,isLaneClear,drawSevenBag,planHold,adjustLock,advanceLock,scoreLineClear,intervalAfterClear} from './physics-core.js';
 
 const TRANSLATIONS = {
     en: {
@@ -305,10 +305,6 @@ const BASE_BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
 const ADDITIONAL_COLUMNS_PER_PLAYER = 4;
 const PREVIEW_SIZE = 4;
-
-const BASE_LINE_SCORE = 100;
-const STREAK_BONUS_STEP = 0.1;
-const MULTI_LINE_BONUS_STEP = 0.2;
 
 // Sound design: soft mechanical movement, weighted lock, rising crystalline clears.
 // Pure Web Audio; no fetched assets, delayed game logic or sounds after mute.
@@ -703,15 +699,9 @@ class Player {
         this.spawnPiece();
     }
     randomType(){
-        if(!this.bag.length){
-            this.bag=PIECE_TYPES.slice();
-            // Fisher-Yates: every seven draws contains every tetromino once.
-            for(let i=this.bag.length-1;i>0;i--){
-                const j=Math.floor(randomFloat()*(i+1));
-                [this.bag[i],this.bag[j]]=[this.bag[j],this.bag[i]];
-            }
-        }
-        return this.bag.pop();
+        const next=drawSevenBag(this.bag,randomFloat);
+        this.bag=next.bag;
+        return next.type;
     }
     randomPiece(){return SHAPES[this.randomType()].map(row=>row.slice());}
 
@@ -805,9 +795,7 @@ class Player {
     }
 
     resetLockOnAdjustment(){
-        if(this.lockCounter>0 && this.lockResets<MAX_LOCK_RESETS){
-            this.lockCounter=0;this.lockResets++;
-        }
+        Object.assign(this,adjustLock(this.lockCounter,this.lockResets));
     }
     move(dir,{broadcast=true}={}){
         if(this.gameOver||!this.currentPiece||![-1,1].includes(dir))return false;
@@ -831,13 +819,11 @@ class Player {
         return true;
     }
     holdPiece({broadcast=true}={}){
-        if(this.gameOver||!this.currentPiece||this.holdUsed)return false;
-        const outgoing=this.currentType||inferShapeType(this.currentPiece);
-        if(!outgoing)return false;
-        const incoming=this.holdType;
-        this.holdType=outgoing;
-        if(incoming)this.spawnPiece(incoming,false);
-        else this.spawnPiece();
+        const exchange=planHold(this);
+        if(!exchange)return false;
+        this.holdType=exchange.outgoing;
+        if(exchange.consumeNext)this.spawnPiece();
+        else this.spawnPiece(exchange.incoming,false);
         this.holdUsed=true;
         if(broadcast&&window.uiManager?.isOnlineMode)networkManager.sendPlayerInput({action:'hold'});
         return true;
@@ -910,49 +896,23 @@ class Player {
         }
 
         if (linesCleared === 0) {
-            if (gameState.sharedStats.comboChain !== 0) {
-                gameState.sharedStats.comboChain = 0;
-                gameState.sharedStatsDirty = true;
-            }
-            gameState.sharedStats.lastClearDetail = null;
+            const hadCombo=gameState.sharedStats.comboChain!==0;
+            Object.assign(gameState.sharedStats,scoreLineClear(gameState.sharedStats,0));
+            if(hadCombo)gameState.sharedStatsDirty=true;
             return;
         }
 
         creditClearedRows(clearedRows,this.id);
-        const comboStep = gameState.sharedStats.comboChain || 0;
-        const comboMultiplier = 1 + STREAK_BONUS_STEP * comboStep;
-        const multiMultiplier = 1 + MULTI_LINE_BONUS_STEP * (linesCleared - 1);
-        const perLineScore = Math.round(BASE_LINE_SCORE * comboMultiplier * multiMultiplier);
-        const gained = perLineScore * linesCleared;
-
-        const streakBonusPercent = Math.round((comboMultiplier - 1) * 100);
-        const multiBonusPercent = Math.round((multiMultiplier - 1) * 100);
-
-        gameState.sharedStats.lines += linesCleared;
-        gameState.sharedStats.score += gained;
-        gameState.sharedStats.level = Math.floor(gameState.sharedStats.lines / 10) + 1;
-        gameState.sharedStats.comboChain = comboStep + 1;
-        gameState.sharedStats.lastClearDetail = {
-            linesCleared,
-            totalScore: gained,
-            perLineScore,
-            basePerLine: BASE_LINE_SCORE,
-            comboChain: gameState.sharedStats.comboChain,
-            comboMultiplier,
-            multiMultiplier,
-            streakBonusPercent,
-            multiBonusPercent
-        };
+        Object.assign(gameState.sharedStats,scoreLineClear(gameState.sharedStats,linesCleared));
 
         soundManager.lineClear(linesCleared,gameState.sharedStats.comboChain);
         window.uiManager?.onLinesCleared?.(clearedRows,gameState.sharedStats.lastClearDetail);
-
         this.lines = gameState.sharedStats.lines;
         this.score = gameState.sharedStats.score;
         this.level = gameState.sharedStats.level;
 
         gameState.players.forEach(player => {
-            player.dropInterval = Math.max(100, player.dropInterval * Math.pow(0.95, linesCleared));
+            player.dropInterval = intervalAfterClear(player.dropInterval,linesCleared);
             player.lines = gameState.sharedStats.lines;
             player.score = gameState.sharedStats.score;
             player.level = gameState.sharedStats.level;
@@ -967,10 +927,8 @@ class Player {
         if(this.dropCounter>=this.dropInterval)this.drop({broadcast:false});
         if(this.gameOver||!this.currentPiece)return;
         const landing=this.checkCollision(this.currentPiece,{x:this.position.x,y:this.position.y+1});
-        if(landing.withLocked){
-            this.lockCounter+=deltaTime;
-            if(this.lockCounter>=LOCK_DELAY_MS)this.lockPiece();
-        }else this.lockCounter=0;
+        this.lockCounter=advanceLock(this.lockCounter,deltaTime,landing.withLocked);
+        if(landing.withLocked&&this.lockCounter>=LOCK_DELAY_MS)this.lockPiece();
     }
 }
 

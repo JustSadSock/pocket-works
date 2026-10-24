@@ -30,3 +30,16 @@ test('line ownership credit remains equivalent locally and online',()=>{
  const from=source=>source.slice(source.indexOf(start),source.indexOf(end,source.indexOf(start)));
  assert.equal(from(client),from(server));
 });
+
+test('7-bag, Hold, lock and scoring are wired to the canonical rules',()=>{
+ const shared=['drawSevenBag','planHold','adjustLock','advanceLock','scoreLineClear','intervalAfterClear'];
+ for(const name of shared){
+  assert.match(physics,new RegExp('export function '+name+'\\('));
+  assert.match(client,new RegExp('\\b'+name+'\\('));
+  const generated=server.slice(server.indexOf(END)+END.length);
+  assert.match(generated,new RegExp('\\b'+name+'\\('));
+ }
+ assert.doesNotMatch(client,/const comboMultiplier\\s*=|const multiMultiplier\\s*=/);
+ assert.doesNotMatch(server.slice(server.indexOf(END)+END.length),
+  /const comboMultiplier\\s*=|const multiMultiplier\\s*=/);
+});
