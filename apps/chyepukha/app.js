@@ -483,7 +483,7 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
  if(act==='back-to-draft'){saveWriterMeta({step:'draft'});soundscape.fx('page');render();return}
  if(act==='toggle-editor-context'){
   const shell=b.closest('.writer-shell');if(!shell)return;
-  const opening=shell.dataset.contextOpen!=='true';
+  const opening=shell.dataset.contextOpen==='false';
   shell.dataset.contextOpen=String(opening);
   b.setAttribute('aria-expanded',String(opening));
   b.innerHTML=opening?'Сховати <span aria-hidden="true">⌃</span>':'Питання <span aria-hidden="true">⌄</span>';
