@@ -78,6 +78,22 @@
  .writer-shell #selectedStrip .handoff-chip{min-height:34px;padding:4px 7px;font-size:12px}
  .writer-shell .editor-submit .editor-primary{min-height:42px}
 }
+/* A folded tab is actionable even before the keyboard opens, not decorative.
+   First render shows the question; focusing the manuscript folds it. */
+@media(max-width:760px), (max-height:540px){
+ .writer-shell[data-context-open="false"] .editor-question,
+ .writer-shell[data-context-open="false"] .editorial-brief,
+ .writer-shell[data-context-open="false"] .hero-passport{display:none}
+}
+@media(min-width:761px) and (max-height:540px){
+ .writer-shell .editor-context-tab{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  padding:3px 9px;margin-inline:auto 0;min-height:30px;
+  border:1px solid #a58f6e;background:#e5d5b8;color:#365447;
+  font:800 11px/1 system-ui,sans-serif;
+ }
+ .writer-shell .editor-context-tab[aria-expanded="true"]{background:#365447;color:#fff1d9}
+}
 /* The floating room toolbar otherwise overlaps the folded question tab when
    visualViewport shrinks. The host controls return when the keyboard closes. */
 html.is-app-keyboard-open .scene:has(.writer-shell) .moderation-bar{display:none}
