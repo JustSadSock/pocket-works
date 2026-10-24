@@ -8,16 +8,17 @@ test('screen inspector has all stages and actual responsive app views',async({pa
  await page.keyboard.press('Backquote');
  const inspector=page.locator('.chy-qa');
  await expect(inspector).toBeVisible();
- await expect(inspector.locator('[data-screen]')).toHaveCount(22);
+ await expect(inspector.locator('[data-screen]')).toHaveCount(26);
  await inspector.locator('[data-device=phone]').click();
  await expect(inspector.locator('[data-size]')).toContainText('390 × 844');
  const frame=page.frameLocator('.chy-qa-frame');
  for(const [id,selector] of [
   ['home','.home-cover'],['home-member','.home-identity.is-member'],['invite','#joinForm'],['error','.warning'],['connecting','.waiting'],
   ['lobby-host','.room'],['lobby-guest','.room'],['lobby-ready','.room'],
-  ['lobby-custom','#customField:not(.hidden)'],
+  ['lobby-custom','#customField:not(.hidden)'],['moderation-v7','.moderation-sheet'],
   ['writing-first','#answerForm'],['writing-tail','.incoming'],
   ['writing-selection','.word.selected'],['writing-zero','.editor-primary'],
+  ['writing-v7','#answerForm'],['writing-v7-selection','.word.selected'],['writing-v7-final','.final-stage-note'],
   ['waiting','.wax'],['offline','#answerForm'],['leave','.comic-modal'],
   ['results','.story-paper'],['results-second','.story-paper'],['comic','.comic-actions'],
   ['archive','.archive-manuscript'],['archive-empty','.archive-empty'],['archive-delete','.comic-modal']
