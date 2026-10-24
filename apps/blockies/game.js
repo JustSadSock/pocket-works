@@ -297,6 +297,7 @@ import {spawnLaneX} from './spawn-bays.js';
 const BLOCK_SIZE = 25;
 const BASE_BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
+const SAFE_LANE_ROWS = 5;
 const ADDITIONAL_COLUMNS_PER_PLAYER = 4;
 const PREVIEW_SIZE = 4;
 
@@ -667,6 +668,7 @@ class Player {
         this.nextPiece = null;
         this.position = { x: 0, y: 0 };
         this.gameOver = false;
+        this.blocked = false;
         this.dropCounter = 0;
         this.dropInterval = 1000;
         this.lastTime = 0;
@@ -685,6 +687,11 @@ class Player {
     }
 
     spawnPiece() {
+        if(gameState.numPlayers>1&&!laneHasClearance(this)){
+            this.blocked=true;this.gameOver=true;this.currentPiece=null;
+            this.dropCounter=0;checkAllPlayersGameOver();return;
+        }
+        this.blocked=false;
         this.currentPiece = this.nextPiece;
         this.nextPiece = this.randomPiece();
         const pieceWidth=this.currentPiece[0].length;
@@ -695,6 +702,7 @@ class Player {
             this.position={x,y:0};
             if(this.checkCollision().collides){
                 this.gameOver=true;
+                this.blocked=true;
                 this.currentPiece=null;
                 checkAllPlayersGameOver();
             }
@@ -743,6 +751,12 @@ class Player {
         }
 
         this.dropCounter = 0;
+    }
+
+    resumeFromGate(){
+        if(!this.blocked||gameState.isGameOver||!laneHasClearance(this))return false;
+        this.gameOver=false;this.blocked=false;this.spawnPiece();
+        return !this.gameOver;
     }
 
     checkCollision(piece = this.currentPiece, pos = this.position) {
@@ -980,6 +994,15 @@ function isCellOccupiedByOtherPiece(x, y, currentPlayerId) {
 
         return false;
     });
+}
+
+function laneHasClearance(player){
+    if(gameState.numPlayers<=1)return true;
+    const x=Number.isInteger(player.spawnLaneX)?player.spawnLaneX:spawnLaneX(player.id,gameState.numPlayers,getBoardWidth());
+    for(let y=0;y<SAFE_LANE_ROWS;y++)for(let col=x;col<x+4;col++){
+        if(gameState.board[y]?.[col]||isCellOccupiedByOtherPiece(col,y,player.id))return false;
+    }
+    return true;
 }
 
 function checkAllPlayersGameOver() {
