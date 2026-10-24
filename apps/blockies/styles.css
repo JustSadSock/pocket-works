@@ -921,3 +921,21 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
  .blocked-lane__message{font-size:10px}
  .blocked-lane__resume{min-height:36px;font-size:10px}
 }
+
+/* Blockies v0.5.8: the reserve is part of each player's entry bay, not a floating panel. */
+.spawn-bay__preview{display:flex;align-items:stretch;overflow:hidden}
+.spawn-bay__preview .spawn-bay__next{flex:1 1 72%;width:72%;min-width:0;height:100%;object-fit:contain;background:transparent}
+.spawn-bay__held{display:block;flex:0 0 28%;width:28%;min-width:0;height:100%;object-fit:contain;image-rendering:auto;background:#10272c;border-left:1px solid color-mix(in srgb,var(--bay-color) 40%,transparent)}
+.spawn-bay__preview:has(.spawn-bay__held)::before{content:"H";position:absolute;z-index:4;right:2px;top:1px;color:#cadfd9;font:800 clamp(7px,1vw,10px) ui-monospace,monospace;pointer-events:none}
+.touch-hold{background:#dce6ee;border-color:#b9cbd7}
+.touch-hold:hover:not(:disabled){background:#d0e1ed}
+.touch-hold:disabled{opacity:.46;box-shadow:none;cursor:not-allowed}
+.next-piece-item--hold{background:#e4ede9;border-color:#c8d9d1}
+:root[data-theme="dark"] .touch-hold{background:#263c46;border-color:#537582;color:#d9efef}
+:root[data-theme="dark"] .next-piece-item--hold{background:#233531;border-color:#52645d}
+@media(max-width:760px){
+ .touch-actions .touch-row{gap:5px}
+ .touch-actions .touch-btn{min-height:52px;padding:5px 2px}
+ .touch-actions .touch-btn .key-symbol{font-size:clamp(18px,5vw,26px)}
+ .touch-actions .touch-btn>span:last-child:not(.key-symbol){font-size:10px}
+}
