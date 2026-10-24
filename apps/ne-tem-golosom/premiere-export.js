@@ -104,9 +104,7 @@ export async function renderPremiere({
   let stallTimer=0,stopError=null,sources=[],mixedTrack=null;
   // Start unlocking AudioContext while this call still belongs to the user's
   // click. Waiting for metadata/decoding first loses activation on iOS Safari.
-  ctx=new Context();
-  const initialResume=ctx.resume();
-  void initialResume.catch(()=>{});
+  let initialResume=null;
   let onVideoEnded=null,onVideoFailed=null;
   const stopRecording=error=>{
     if(error&&!stopError)stopError=error;
@@ -119,6 +117,9 @@ export async function renderPremiere({
   document.addEventListener('visibilitychange',hidden);
   if(signal?.aborted)abort();
   try{
+    ctx=new Context();
+    initialResume=ctx.resume();
+    void initialResume.catch(()=>{});
     await eventWait(video,'loadedmetadata','error',18000,effectiveSignal,
       'Не удалось открыть исходное видео. Для встроенного фильма может потребоваться доступ к его серверу.');
     assertLive(effectiveSignal);
