@@ -319,7 +319,7 @@ async function processMedia(){
       level:Number($('media-quality').value),keepAudio:$('media-keep-audio').checked,
       signal:controller.signal,
       onProgress:progress=>{
-        const pct=Math.round(progress*100);
+        const pct=progress>=1?100:Math.min(99,Math.round(progress*100));
         if(pct===lastShown)return;
         lastShown=pct;
         $('media-progress-bar').value=pct;
