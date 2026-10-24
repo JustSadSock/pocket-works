@@ -1,6 +1,7 @@
 // Localization
 import {loadSolo,saveSolo,clearSolo} from './solo-save.js';
 import {BoardEffects,getNewLockedCells} from './board-effects.js';
+import {projectOwnPiece} from './input-prediction.js';
 
 const TRANSLATIONS = {
     en: {
@@ -895,6 +896,7 @@ class Player {
                 }
             }
         }
+        gameState.boardRevision=(gameState.boardRevision||0)+1;
         return locked;
     }
 
@@ -1052,7 +1054,6 @@ class UIManager {
         }
         this.previousScreen = 'mainMenu'; // Track previous screen for settings navigation (matches screen key)
         this.isOnlineMode = false; // Flag for online multiplayer mode
-        this.networkPlayers = {}; // Map of network player IDs to local indices
         this.localPlayerIndex = -1; // Local player index in online mode
 
         this.moveRepeatInterval = 105;
@@ -1744,6 +1745,7 @@ class UIManager {
 
         container.appendChild(boardWrapper);
 
+        this.previewSignatures=new Map();
         for (let i = 0; i < numPlayers; i++) {
             const laneX=spawnLaneX(i,numPlayers,gameState.boardWidth);
             const spawnAnchor=numPlayers>1?laneX+2:gameState.boardWidth/2;
@@ -1910,6 +1912,8 @@ class UIManager {
             this.pollGamepads();
 
             let touchStatusNeedsUpdate = false;
+            const boardRevision=gameState.boardRevision||0;
+            const before=this.isOnlineMode?null:gameState.players.map(p=>[p.position.x,p.position.y,p.currentPiece,p.gameOver]);
             gameState.players.forEach(player => {
                 const wasGameOver = player.gameOver;
                 const isLocalPlayer = !this.isOnlineMode || player.id === this.localPlayerIndex;
@@ -1929,7 +1933,17 @@ class UIManager {
                 }
             });
 
-            this.drawBoard();
+            // Snapshots and direct inputs repaint online; do not draw the same
+            // 20-row well at 60 fps when its authoritative pose has not changed.
+            if(this.isOnlineMode){
+                if(this.lastRenderedInputSeq!==networkManager.inputSeq){
+                    this.lastRenderedInputSeq=networkManager.inputSeq;
+                    this.drawBoard();
+                }
+            }else if((gameState.boardRevision||0)!==boardRevision||
+                gameState.players.some((p,i)=>p.position.x!==before[i][0]||
+                 p.position.y!==before[i][1]||p.currentPiece!==before[i][2]||p.gameOver!==before[i][3]))
+                this.drawBoard();
             this.updateTeamStatsIfNeeded();
             this.updateBlockedLanes();
             if (!this.isOnlineMode) this.saveSoloCheckpoint();
@@ -1983,8 +1997,14 @@ class UIManager {
             }
         }
         if(gameState.numPlayers>1)this.drawSpawnEntryGuides(ctx);
+        const displayed=gameState.players.map(player=>{
+            if(!this.isOnlineMode||player.id!==this.localPlayerIndex||
+                !networkManager.connected||networkManager.stale)return player;
+            const pose=projectOwnPiece(player,gameState.board,gameState.players,networkManager.pendingInputs);
+            return pose?Object.assign(Object.create(Object.getPrototypeOf(player)),player,pose):player;
+        });
         // Each active piece gets a matching landing outline.
-        for(const player of gameState.players){
+        for(const player of displayed){
             if(!player.currentPiece||player.gameOver)continue;
             let landingY=player.position.y;
             while(landingY<BOARD_HEIGHT&&!player.checkCollision(
@@ -2002,7 +2022,7 @@ class UIManager {
             }
             ctx.restore();
         }
-        for(const player of gameState.players){
+        for(const player of displayed){
             if(!player.currentPiece||player.gameOver)continue;
             for(let y=0;y<player.currentPiece.length;y++)for(let x=0;x<player.currentPiece[y].length;x++){
                 if(player.currentPiece[y][x])
@@ -2060,6 +2080,10 @@ class UIManager {
     }
 
     drawNextPiece(player) {
+        if(!this.previewSignatures)this.previewSignatures=new Map();
+        const signature=[player.nextPiece?.map(row=>row.join('')).join('/'),player.color,player.gameOver&&!player.blocked].join(':');
+        if(this.previewSignatures.get(player.id)===signature)return;
+        this.previewSignatures.set(player.id,signature);
         for(const id of [`next-${player.id}`,`bay-next-${player.id}`]){
             const canvas=document.getElementById(id);
             if(!canvas)continue;
@@ -2686,7 +2710,6 @@ class UIManager {
         
         // Reset online mode flags
         this.isOnlineMode = false;
-        this.networkPlayers = {};
         this.localPlayerIndex = -1;
         
         this.showScreen('mainMenu');
@@ -3266,7 +3289,6 @@ class UIManager {
         const numPlayers = data.players.length;
         
         // Store network player info for synchronization
-        this.networkPlayers = {};
         this.localPlayerIndex = -1;
         this.isOnlineMode = true; // Flag to indicate online mode
         this.onlineParticipantNames=data.players.map(p=>p.name);
@@ -3274,7 +3296,6 @@ class UIManager {
         // Update game state with player colors from network and map IDs
         data.players.forEach((netPlayer, index) => {
             gameState.settings.colors[index] = netPlayer.color;
-            this.networkPlayers[netPlayer.id] = index;
             
             // Identify which player is the local player
             if (networkManager.socket && netPlayer.id === networkManager.socket.id) {
@@ -3286,61 +3307,12 @@ class UIManager {
         const seed = normalizeSeed(data.seed ?? Date.now());
         this.startGame(numPlayers, seed);
         
-        // Set up online synchronization
-        this.setupOnlineSync();
+        // Authoritative snapshots exclusively own remote piece movement.
         
         console.log('Online game started with players:', data.players);
         console.log('Local player index:', this.localPlayerIndex);
     }
     
-    setupOnlineSync() {
-        if (!networkManager.socket) return;
-        
-        const VALID_ACTIONS = ['move', 'rotate', 'drop', 'hardDrop'];
-        
-        // Listen for remote player inputs
-        networkManager.on('playerInput', (data) => {
-            // Validate input data
-            if (!data || typeof data.playerId !== 'string' || typeof data.action !== 'string') {
-                console.warn('Invalid player input data received:', data);
-                return;
-            }
-            
-            // Validate action type
-            if (!VALID_ACTIONS.includes(data.action)) {
-                console.warn('Invalid action type received:', data.action);
-                return;
-            }
-            
-            const playerIndex = this.networkPlayers[data.playerId];
-            if (playerIndex !== undefined && playerIndex !== this.localPlayerIndex) {
-                const player = gameState.players[playerIndex];
-                if (player && !player.gameOver) {
-                    // Apply the action from remote player
-                    switch (data.action) {
-                        case 'move':
-                            // Validate direction is -1 or 1
-                            if (typeof data.direction === 'number' && (data.direction === -1 || data.direction === 1)) {
-                                player.move(data.direction, { broadcast: false });
-                            } else {
-                                console.warn('Invalid move direction:', data.direction);
-                            }
-                            break;
-                        case 'rotate':
-                            player.rotate({ broadcast: false });
-                            break;
-                        case 'drop':
-                            player.drop({ broadcast: false });
-                            break;
-                        case 'hardDrop':
-                            player.hardDrop({ broadcast: false });
-                            break;
-                    }
-                }
-            }
-        });
-    }
-
     showStyledMessage(title, message, type = 'info') {
         // Create or get message overlay
         let overlay = document.getElementById('message-overlay');
