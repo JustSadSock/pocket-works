@@ -37,7 +37,7 @@ jobs:
         with:
           node-version: 22
       - name: Install build and screenshot dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Verify committed PocketNet snapshots before screenshot build
