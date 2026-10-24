@@ -181,4 +181,50 @@ assert(Object.values(retry.scores).every(s=>s.eye===0&&s.mask===0),'no player ga
  assert.equal(room.phase,'verdict','eight-seat anonymous vote completes normally');
  assert(Array.isArray(room.assignments[owner.id].strokes),'server preserves authentic vector work for scoring');
 }
+
+{
+ let clock=2_000_000;
+ class PartialClock extends Date{static now(){return clock}}
+ const exports41={};
+ runInNewContext(js,{exports:exports41,Date:PartialClock,Math,Array,Number,Object,Error,JSON,Set,Map,console});
+ const secure=exports41.default;
+ const seats=Array.from({length:4},(_,i)=>({id:'partial'+i,name:'Restorer '+i}));
+ const state=secure.createRoom({player:seats[0]}).state;
+ for(const seat of seats.slice(1))secure.onJoin({state,player:seat,players:seats});
+ const send=(who,payload)=>secure.onMessage({state,player:seats[who],players:seats,payload});
+ send(0,{type:'start',rounds:1,rasterBallots:true});
+ clock=state.deadline+1;send(0,{type:'pulse'});
+ for(let i=0;i<4;i++)send(i,{type:'submit',strokes:[]});
+ assert.equal(state.phase,'sealing');
+ for(const i of [0,2])for(const packet of packets)send(i,packet);
+ assert.equal(state.phase,'sealing');
+ clock=state.deadline+1;send(0,{type:'pulse'});
+ assert.equal(state.phase,'voting','partial WebP delivery still permits available exhibitions');
+ assert.equal(state.turn,0);
+ assert.equal(state.spriteFallback,false,'timeout must never enable legacy candidate exposure');
+ assert.deepEqual(Array.from(send(1,{type:'sync'}).events[0].payload.skippedBallots),['partial1','partial3']);
+ assert.equal(send(1,{type:'sync'}).events[0].payload.candidate,null);
+ assert.equal(send(1,{type:'sync'}).events[0].payload.ballotSprite,sample);
+ assert.equal(send(0,{type:'ballot_chunk',...packets[0]}).events.length,0,'uploads cannot mutate ballots after sealing');
+ for(let i=1;i<4;i++)send(i,{type:'vote',round:state.round,turn:0,targetId:'partial0',chips:[1,0,0,0,0]});
+ assert.equal(state.phase,'verdict');
+ clock=state.deadline+1;send(0,{type:'pulse'});
+ clock=state.deadline+1;send(0,{type:'pulse'});
+ assert.equal(state.phase,'voting');
+ assert.equal(state.turn,2,'missing second author skipped without opening a guess');
+ assert.equal(send(1,{type:'sync'}).events[0].payload.candidate,null);
+ assert.equal(send(1,{type:'sync'}).events[0].payload.ballotSprite,sample);
+ assert.equal(send(0,{type:'vote',round:state.round,turn:1,targetId:'partial1',chips:[1,0,0,0,0]}).events[0].type,'notice',
+  'a delayed packet targeting a missing author is rejected');
+ for(const i of [0,1,3])send(i,{type:'vote',round:state.round,turn:2,targetId:'partial2',chips:[1,0,0,0,0]});
+ assert.equal(state.phase,'verdict');
+ clock=state.deadline+1;send(0,{type:'pulse'});
+ clock=state.deadline+1;send(0,{type:'pulse'});
+ assert.equal(state.phase,'round-review','last safe image ends the review despite missing final author');
+ assert.equal(state.scores.partial1.mask,0,'skipped second artist receives no mask points');
+ assert.equal(state.scores.partial3.mask,0,'skipped fourth artist receives no mask points');
+ assert.equal(state.spriteFallback,false);
+ assert.deepEqual(Array.from(send(0,{type:'sync'}).events[0].payload.skippedBallots),['partial1','partial3']);
+}
+console.log('ZAMAZKA fail-closed: missing raster works skip safely, zero-raster rounds finish without points');
 console.log('ZAMAZKA raster ballot: WebP contract, five-surface sprite, private escrow, chunk replay, atomic activation and timeout recovery OK');
