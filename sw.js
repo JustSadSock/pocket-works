@@ -1,9 +1,11 @@
 const CACHE_PREFIX = 'pocket-works-launcher-';
-const CACHE_NAME = 'pocket-works-launcher-v0.13.4';
-const APP_VERSION = '0.13.4';
-const RELEASE_DATE = '2026-10-23';
+const CACHE_NAME = 'pocket-works-launcher-v0.13.5';
+const APP_VERSION = '0.13.5';
+const RELEASE_DATE = '2026-10-24';
 const CACHE_PROTOCOL = 8;
 const RELEASE_NOTES = [
+  'Pocket ID: независимые настройки каждого аккаунта, синхронизация входа между вкладками и сохранение гостевой коллекции.',
+  'PocketNet: хешированные игровые сессии с прозрачной миграцией, усиленные проверки релиза и защитные HTTP-заголовки.',
   'MASKOT: два отдельных персональных кода для диадемы тихого хаоса и белого кролика-телохранителя.',
   'Pocket ID: отдельная коллекция наград Замазки и Cantica с фильтрами и примеркой.',
   'MASKOT: компактный бацинет стража и два новых визуальных трофея Замазки — диадема и призрачное перо.',
