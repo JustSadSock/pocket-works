@@ -51,7 +51,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install browser test dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
       - name: Install browser engines
         run: npx playwright install --with-deps chromium webkit
       - name: Exercise all Chyepukha browser flows at desktop and mobile sizes
