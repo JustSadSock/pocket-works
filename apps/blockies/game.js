@@ -1484,13 +1484,16 @@ class UIManager {
         const p = gameState.players[0];
         if (!p?.currentPiece || !p.nextPiece) return;
         const checkpoint = {
-            version: 1, updatedAt: Date.now(),
+            version: 2, updatedAt: Date.now(),
             randomSeed: gameState.randomSeed, rngState: gameState.rng.getState(),
             board: gameState.board, sharedStats: gameState.sharedStats,
             player: {
                 currentPiece: p.currentPiece, nextPiece: p.nextPiece,
                 position: p.position, dropCounter: p.dropCounter,
-                dropInterval: p.dropInterval, spawnAnchor: p.spawnAnchor, color: p.color
+                dropInterval: p.dropInterval, spawnAnchor: p.spawnAnchor, color: p.color,
+                bag:p.bag, currentType:p.currentType, nextType:p.nextType,
+                holdType:p.holdType, holdUsed:p.holdUsed,
+                lockCounter:p.lockCounter, lockResets:p.lockResets
             }
         };
         if (saveSolo(checkpoint)) this.lastSoloSaveAt = now;
@@ -1517,6 +1520,14 @@ class UIManager {
         player.dropInterval = checkpoint.player.dropInterval;
         player.spawnAnchor = checkpoint.player.spawnAnchor;
         player.color = checkpoint.player.color;
+        player.currentType=checkpoint.player.currentType||inferShapeType(player.currentPiece);
+        player.nextType=checkpoint.player.nextType||inferShapeType(player.nextPiece);
+        player.bag=checkpoint.player.bag?.slice()||[];
+        player.holdType=checkpoint.player.holdType||null;
+        player.holdUsed=checkpoint.player.holdUsed===true;
+        player.lockCounter=checkpoint.player.lockCounter||0;
+        player.lockResets=checkpoint.player.lockResets||0;
+        this.previewSignatures?.delete(player.id);
         player.score = checkpoint.sharedStats.score;
         player.lines = checkpoint.sharedStats.lines;
         player.level = checkpoint.sharedStats.level;
