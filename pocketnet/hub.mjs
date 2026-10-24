@@ -23,7 +23,7 @@ const MAX_PLAYERS = 8;
 // Versioned game modules enforce these caps in onJoin; mirror them for accurate
 // discoverability before a player follows an invitation link.
 const GAME_SEATS=Object.freeze({'blind-pals':2,flagpost:2,'fog-of-conquest':2,'last-tile-duel':2,'kromka-duel':2,
-  folio:6,lipki:4,natyazhenie:5,komnatka:5,'uzel-party':6,'ne-tem-golosom':6,'fog-of-conquest':2});
+  folio:6,lipki:4,natyazhenie:5,komnatka:5,blockies:4,'uzel-party':6,'ne-tem-golosom':6,'fog-of-conquest':2});
 const ROOM_TTL = 30 * 60_000;
 const SESSION_TTL = 7 * 86400_000;
 const GAME_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -364,7 +364,8 @@ export class PocketNetHub {
     if(room.gameId!=='blockies'||!next?.started||!next?.engine)return;
     const row=this.sql('SELECT data FROM blockies_award_stats WHERE room_id=?',room.id).toArray()[0];
     let stats=null;try{stats=row?JSON.parse(row.data):null}catch{}
-    const result=assessBlockiesAwards(previous,next,stats,()=>crypto.randomUUID());
+    const connectedIds=[...new Set(this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean))];
+    const result=assessBlockiesAwards(previous,next,stats,()=>crypto.randomUUID(),connectedIds);
     if(!result.stats)return;
     if(result.awards.length||result.stats.round!==stats?.round){
       this.sql('INSERT INTO blockies_award_stats(room_id,data) VALUES(?,?) ON CONFLICT(room_id) DO UPDATE SET data=excluded.data',
