@@ -490,14 +490,14 @@ const module: PocketModule<State>={
         !Number.isInteger(a.differing)||a.differing<0||a.differing>100)
       return {state,events:notice(id,'Неверный результат сверки изображения.')};
      state.ballotAudits||={};state.ballotAudits[author.id]||={};
-     if(id in state.ballotAudits[author.id])return {state,events:[]};
+     if(id in state.ballotAudits[author.id])return {state,events:[{type:'audit_saved',to:id,payload:{round:state.round,targetId:author.id}}]};
      const report:RasterAudit={mae:a.mae,patch:a.patch,differing:a.differing,
       status:a.mae>28||a.patch>48?'mismatch':'match'};
      state.ballotAudits[author.id][id]=report;
      const counts=rasterAuditCounts(state,author.id);
-     return {state,events:members(state).map(member=>({
+     return {state,events:[...members(state).map(member=>({
       type:'audit_update',to:member.id,payload:{round:state.round,targetId:author.id,counts}
-     }))};
+     })),{type:'audit_saved',to:id,payload:{round:state.round,targetId:author.id}}]};
    }
    if(a.type==='ballot_chunk'&&state.rasterBallots&&(state.phase==='drawing'||state.phase==='sealing')){
      const item=state.assignments[id];
