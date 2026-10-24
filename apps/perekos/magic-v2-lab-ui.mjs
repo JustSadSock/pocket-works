@@ -208,8 +208,11 @@ export function installMagicV2Lab({root,onStart,onFight,onClose,getMatch,setLoad
     item.append(info);
    }
    const choose=btn('Забрать '+(names.length>1?'обе руны':'руну')+' ↗',()=>{
-    choose.disabled=true;
-    if(!onServerPick(pack.index,stage)){choose.disabled=false;notice.textContent='Соединение недоступно. Повтори выбор после переподключения.'}
+    // Keep retry available until PocketNet confirms the stage transition.
+    // The authoritative server rejects duplicate/stale picks.
+    if(!onServerPick(pack.index,stage))
+     notice.textContent='Соединение недоступно. Повтори выбор после переподключения.';
+    else notice.textContent='Выбор отправлен. Ждём подтверждения сервера…';
    },'v2-pack-choose');
    choose.disabled=names.length===0;
    item.append(choose);list.append(item);
