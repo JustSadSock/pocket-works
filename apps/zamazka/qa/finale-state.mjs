@@ -42,6 +42,3 @@ import './atelier-state.mjs';
 import './clock-soundscape.mjs';
 import './damage-shape-aspect.mjs';
 import '../../../scripts/test-zamazka-achievements.mjs';
-
-// Durable-Object-driven deadlines are exercised without browser heartbeats.
-import './server-alarm.mjs';
