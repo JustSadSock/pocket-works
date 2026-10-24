@@ -53,9 +53,9 @@ export function kickDialog(view,person,escape){
  return '<div class="comic-modal" role="dialog" aria-modal="true"><section class="comic-inner moderation-sheet"><div class="eyebrow">ПІДТВЕРДИТИ ДІЮ</div><h3>Виключити '+safe(person.name,escape)+'?</h3><p>Доступ до кімнати буде закрито. Уже написані фрагменти залишаться. Після виключення обери, що робити з місцем: замінити автора, пропустити його незданий фрагмент або залишити місце до повернення.</p><div class="button-row"><button type="button" data-act="manage-players" class="button outline">Назад</button><button type="button" data-act="confirm-kick" data-id="'+safe(person.id,escape)+'" class="button">Виключити</button></div></section></div>';
 }
 
-export function seatDecisionDialog(view,person,escape){
+export function seatDecisionDialog(view,person,me,escape){
  if(!person)return '';
- const opts=seatOptions(view,view.host,person.id);
+ const opts=seatOptions(view,me,person.id);
  return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Доля місця автора"><section class="comic-inner moderation-sheet"><div class="eyebrow">АВТОР ВИКЛЮЧЕНИЙ</div><h3>Що робити з місцем '+safe(person.name,escape)+'?</h3><p>Уже здані фрагменти збережено. Поточний раунд не рухатиметься далі, доки це місце не здасть свою частину або ведучий її не пропустить.</p><div class="seat-decision-actions">'+(opts.canReplace?'<button type="button" class="button" data-act="choice-replace" data-id="'+safe(person.id,escape)+'">Запросити заміну</button>':'')+(opts.canSkip?'<button type="button" class="button outline" data-act="choice-skip" data-id="'+safe(person.id,escape)+'">Пропустити незданий фрагмент</button>':'')+'<button type="button" class="button outline" data-act="choice-later">Вирішити пізніше</button></div></section></div>';
 }
 export function transferHostDialog(person,escape){
