@@ -27,7 +27,7 @@ test('v7 first, word handoff, final and host access follow actual render functio
  const select=screen('writing-v7-selection');
  assert.match(select.writer,/writer-selection/);
  assert.match(select.writer,/слова-зачіпки/);
- assert.match(select.writer,/Наступний автор/);
+ assert.match(select.writer,/НАСТУПНИЙ АВТОР/);
  const final=screen('writing-v7-final');
  assert.equal(final.state.view.round,final.state.view.total-1);
  assert.match(final.writer,/final-stage-note/);
