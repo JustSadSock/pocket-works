@@ -20,6 +20,13 @@ const status=document.querySelector('#status');
 const qs=new URLSearchParams(location.search);
 const hintRoom=(qs.get('room')||'').trim().toUpperCase();
 const names={gold:'золота',crystals:'кристаллов',parts:'деталей'};
+const currencyIcons={gold:'coin',crystals:'gem',parts:'parts'};
+function compactPrice(wallet){
+ return keys.filter(k=>(wallet?.[k]||0)>0).map(k=>
+  '<span class="lot-price-amount" title="'+(wallet[k]+' '+names[k])+'">'+
+  svgIcon(currencyIcons[k],13)+'<b>'+Number(wallet[k])+'</b></span>'
+ ).join('')||'<span class="lot-price-amount">0</span>';
+}
 const keys=['gold','crystals','parts'];
 // Separate durable token storage: never collide with another PocketWorks game.
 const netStorage={
@@ -607,7 +614,7 @@ function renderPlay(){
  }).join('');
  const listing=state.listing;
  const lot=listing?'<button type="button" class="artifact" data-action="open-item" data-kind="listing" data-id="'+esc(listing.id)+'" aria-label="Открыть лот '+esc(listing.name)+', цена '+esc(amounts(listing.ask))+', предложений: '+state.bids.length+'">'+
- artifactSVG(listing.name,listing.rarity)+'<strong>'+esc(listing.name)+'</strong><span class="lot-market-strip"><span>'+svgIcon('coin',16)+' '+esc(amounts(listing.ask))+'</span><span>'+svgIcon('gavel',16)+' '+state.bids.length+'</span></span></button>':
+ artifactSVG(listing.name,listing.rarity)+'<strong>'+esc(listing.name)+'</strong><span class="lot-market-strip"><span class="lot-price" aria-label="Цена: '+esc(amounts(listing.ask))+'">'+compactPrice(listing.ask)+'</span><span>'+svgIcon('gavel',16)+' '+state.bids.length+'</span></span></button>':
  '<div class="artifact-note">Нет лота</div>';
  const inventory=you.items.map(item=>{
   const reason=itemDormant(item,plan);
