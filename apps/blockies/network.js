@@ -24,6 +24,7 @@ export class NetworkManager {
     this.socket={id:null};
     this.started=false;
     this.finished=false;
+    this.paused=false;
     this.activeRound=0;
     this.lastPulseAt=0;
     this.code='';
@@ -158,9 +159,10 @@ export class NetworkManager {
       // The room host is the preferred heartbeat source. A follower only
       // takes over when it has not seen an authoritative update recently.
       const isHost=this.hostId===this.socket.id;
-      const interval=this.finished?1600:(isHost?240:750);
+      const interval=(this.finished||this.paused)?1600:(isHost?240:750);
       if(now-this.lastPulseAt<interval)return;
-      if(!isHost&&!this.finished&&!this.stale&&now-this.lastStateAt<700)return;
+      const passiveWindow=this.paused?2400:700;
+      if(!isHost&&!this.finished&&!this.stale&&now-this.lastStateAt<passiveWindow)return;
       this.lastPulseAt=now;
       this.send({type:'pulse'},true);
     },120);
@@ -176,6 +178,7 @@ export class NetworkManager {
     this.currentRoom=null;
     this.started=false;
     this.finished=false;
+    this.paused=false;
     this.activeRound=0;
     this.lastPulseAt=0;
     this.hostId=null;
@@ -221,6 +224,7 @@ export class NetworkManager {
       }
       this.started=true;
       this.finished=!!state.engine?.isGameOver;
+      this.paused=!!state.paused;
       this.activeRound=round;
       if(newRound)this.trigger('gameStart',{players:state.players,seed:state.seed});
       if(state.engine){
@@ -239,6 +243,7 @@ export class NetworkManager {
     }else{
       this.stopClock();
       this.finished=false;
+      this.paused=false;
       if(this.started){
         this.started=false;
         this.activeRound=0;
