@@ -16,6 +16,7 @@ const WIRE_VERSION = 1;
 const MAX_PAYLOAD = 16 * 1024;
 const MAX_EVENT_BYTES = 256 * 1024;
 const MAX_ZAMAZKA_STATE_EVENT = 5 * 1024 * 1024;
+const ZAMAZKA_SECURE_COMMANDS = new Set(['sync','time_ping','pulse','submit_begin','submit_resume','claim_host','kick_player','art_ready','board_delta','board_clear','emblem','start','draft_chunk','submit_chunk','draft','submit','vote','vote_draft','advance','continue','next']);
 const ZAMAZKA_ART_REF = '__zamazka_sqlite_art__';
 const MAX_STATE = 256 * 1024;
 const MAX_ROOMS = 32;
@@ -49,6 +50,7 @@ export class PocketNetHub {
     this.rates = new Map();
     this.messageRates = new WeakMap();
     this.chyepukhaSyncAt = new WeakMap();
+    this.zamazkaSyncAt = new WeakMap();
     ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY, id TEXT NOT NULL, name TEXT NOT NULL, expires INTEGER NOT NULL
     )`);
@@ -197,6 +199,10 @@ export class PocketNetHub {
       if (socket) {
         message(socket, 'room_kicked', { roomId: room.id, reason:chyepukha||bazaar?'host':'curator' });
         this.setRoom(socket, null);
+      }
+      if(zamazka&&Number(room.version.slice(1))>=37){
+        const accountId=room.players.find(p=>p.id===targetId)?.accountId;
+        if(accountId){room.state.bannedAccounts||=[];if(!room.state.bannedAccounts.includes(accountId))room.state.bannedAccounts.push(accountId);}
       }
       room.players = room.players.filter(p => p.id !== targetId);
       changed = true;
@@ -612,8 +618,9 @@ export class PocketNetHub {
           const mod = this.module(room.gameId, room.version);
           if (!mod) throw new Error('room_version_unavailable');
           const previous = room.players.some(p => p.id === player.id);
-          if((room.gameId==='chyepukha'&&['v6','v7'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17','v18'].includes(room.version))&&
+          if((room.gameId==='chyepukha'&&['v6','v7'].includes(room.version)||room.gameId==='black-bazaar'&&['v16','v17','v18'].includes(room.version)||room.gameId==='zamazka'&&Number(room.version.slice(1))>=37)&&
              ((room.state.bannedIds||[]).includes(player.id)||(member.accountId&&(room.state.bannedAccounts||[]).includes(member.accountId))))throw Error('room_kicked');
+          if(room.gameId==='zamazka'&&Number(room.version.slice(1))>=37&&!previous&&room.state.phase!=='lobby'&&!room.state.participants?.some(p=>p.id===player.id))throw Error('room_in_progress');
           if (!previous && member.accountId && room.players.some(p => p.accountId === member.accountId)) {
             throw new Error('account_already_in_room');
           }
@@ -687,6 +694,15 @@ export class PocketNetHub {
             this.emit(room, [{ type: 'state', to: player.id }]);
           }
           return;
+        }
+        if (msg.type === 'game_message'&&room.gameId==='zamazka'&&Number(room.version.slice(1))>=37){
+          const command=msg.payload?.type;
+          if(!ZAMAZKA_SECURE_COMMANDS.has(command))return;
+          if(command==='sync'){
+            const time=Date.now();
+            if(time-(this.zamazkaSyncAt.get(ws)||0)<1800)return;
+            this.zamazkaSyncAt.set(ws,time);
+          }
         }
         if (msg.type === 'game_message') {
           const result = await mod.onMessage({ state: copied(room.state), player: member,

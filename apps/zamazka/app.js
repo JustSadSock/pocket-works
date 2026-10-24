@@ -33,7 +33,7 @@ import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.27',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.28',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -636,12 +636,14 @@ function waiting(){
 }
 
 function voteToken(v){return [roomId,v.round,v.turn].join(':')}
+// Identify the exact author, round and ballot to prevent delayed votes.
+function voteContext(v){return {round:v.round,turn:v.turn,targetId:v.author?.id}}
 function attemptVote(force=false){
  if(!pendingVote||!net||!view||view.phase!=='voting'||voteToken(view)!==pendingVote.token)return;
  if(view.voted?.includes(me?.id)){pendingVote=null;persistVote();return}
  if(!force&&Date.now()-(pendingVote.sentAt||0)<5500)return;
  try{
-   net.sendGame({type:'vote',chips:[...pendingVote.chips]});
+   net.sendGame({type:'vote',chips:[...pendingVote.chips],...voteContext(view)});
    pendingVote.sentAt=Date.now();pendingVote.attempts=(pendingVote.attempts||0)+1;persistVote();
    const button=screen.querySelector('[data-action="vote"]');
    if(button){button.disabled=true;button.textContent='Подтверждаем фишки…'}
@@ -665,7 +667,7 @@ function chipDots(count){return '<span class="chip-dots">'+Array.from({length:co
 function saveVoteDraft(){
  if(!net||connectionLost||Number(roomModuleVersion.slice(1))<24||!view||view.phase!=='voting'||view.author?.id===me?.id||
     view.voted?.includes(me?.id)||pendingVote?.token===voteToken(view))return;
- try{net.sendGame({type:'vote_draft',chips:[...chips]})}catch{}
+ try{net.sendGame({type:'vote_draft',chips:[...chips],...voteContext(view)})}catch{}
 }
 function updateChips(){
  const total=chips.reduce((a,b)=>a+b,0);
@@ -1148,7 +1150,7 @@ async function connect(mode){
    client.on('error',error=>{
      if(client.closed)return;
      const code=String(error?.code||error?.message||'');
-     const messages={room_not_found:'Комната больше недоступна.',room_full:'В комнате уже восемь человек.',server_at_capacity:'Все игровые комнаты заняты.',game_unavailable:'Игра временно недоступна.',room_version_unavailable:'Эта версия комнаты недоступна.',message_too_large:'Сбой передачи · локальный рисунок сохранён',rate_limited:'Передаём слишком быстро · повторяем',not_in_room:'Восстанавливаем соединение с комнатой'};
+     const messages={room_not_found:'Комната больше недоступна.',room_full:'В комнате уже восемь человек.',server_at_capacity:'Все игровые комнаты заняты.',game_unavailable:'Игра временно недоступна.',room_version_unavailable:'Эта версия комнаты недоступна.',room_in_progress:'Матч уже идёт. Новые участники смогут войти в следующую комнату.',room_kicked:'Куратор исключил тебя из этой комнаты.',message_too_large:'Сбой передачи · локальный рисунок сохранён',rate_limited:'Передаём слишком быстро · повторяем',not_in_room:'Восстанавливаем соединение с комнатой'};
 
      if(code==='rate_limited'){
        activeDraftTransfer?.abort();activeDraftTransfer=null;
