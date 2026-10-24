@@ -63,6 +63,10 @@ try{
   await page.locator('#confirm-scene').click();
   await page.locator('#screen-editor:not(.hidden)').waitFor();
   assert.equal(await page.locator('.clip-bar').count(),2,'restores initial clips');
+  assert.equal(await page.locator('#draft-status').getAttribute('data-save-state'),'saved','draft status reflects restored editor');
+  assert.equal(await page.locator('#mic-meter').isHidden(),true,'voice meter is not a fake idle waveform');
+  assert.equal(await page.locator('#countdown').isHidden(),true,'countdown hidden until requested');
+  assert.equal(await page.locator('#record-elapsed').innerText(),'00:00','record timer resets before microphone use');
 
   // A timeupdate must not re-create the focused clip elements.
   assert.equal(await page.locator('#clip-lane').evaluate(el=>{
@@ -118,6 +122,7 @@ try{
   assert.equal(await page.locator('#erase-btn').isEnabled(),true);
   await page.locator('#erase-btn').click();
   assert.equal(await page.locator('.clip-bar').count(),1);
+  await page.locator('#draft-status[data-save-state="saved"]').waitFor({timeout:8000});
   await page.locator('#undo-btn').click();
   assert.equal(await page.locator('.clip-bar').count(),2);
   await page.locator('#redo-btn').click();
