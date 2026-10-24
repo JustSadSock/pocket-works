@@ -1,5 +1,6 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createTrimRange} from './trim-range.js';
+import {TimelineHistory,snapshotClips,spliceRecording,packTimeline,unpackTimeline} from './timeline-model.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {MAX_ROOM_VIDEO_BYTES,MAX_SOURCE_VIDEO_BYTES,formatVideoBytes,estimateVideoBytes,supportsVideoExport,measureVideoDuration,exportVideo} from './media-lab.js';
@@ -37,7 +38,7 @@ let sound=true,audioContext=null,identity=null,name='Гость',mode='solo',vie
 let relayQueue=Promise.resolve(),relayInbox=new Map();
 let videoExportController=null,videoExportBlob=null,videoExportUrl=null,trimRange=null;
 const qualityNames=['Экономное','Компактное','Сбалансированное','Высокое','Максимальное'];
-let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],undoHistory=[],selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',saving=false,initializedScene='',toastTimer=0;
+let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0;
 const roomsOrigin=location.origin+'/pocketnet';
 const sceneSource=s=>LIBRARY.find(x=>x.id===s?.id)?.src||null;
 const meHost=()=>!!state&&me===state.host;
@@ -50,13 +51,78 @@ try{sound=localStorage.getItem(STORE+'sound')!=='0'}catch{}$('sound-label').text
 
 function db(){return new Promise((resolve,reject)=>{const req=indexedDB.open(STORE+'drafts',1);req.onupgradeneeded=()=>req.result.createObjectStore('drafts',{keyPath:'key'});req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function draftRead(key){try{const d=await db();return await new Promise((resolve,reject)=>{const tx=d.transaction('drafts','readonly');const r=tx.objectStore('drafts').get(key);r.onsuccess=()=>{d.close();resolve(r.result)};r.onerror=()=>{d.close();reject(r.error)}})}catch{return null}}
-async function draftWrite(){if(!projectKey||!scene||saving)return;saving=true;try{const d=await db();await new Promise((resolve,reject)=>{const tx=d.transaction('drafts','readwrite');tx.objectStore('drafts').put({key:projectKey,scene,clips:localClips.map(c=>({id:c.id,start:c.start,end:c.end,offset:c.offset,blob:c.blob})),video:scene.custom?sourceBlob:null,updated:Date.now()});tx.oncomplete=resolve;tx.onerror=reject});d.close()}catch{toast('Не удалось сохранить черновик. Проверь свободное место.')}finally{saving=false}}
-function cleanAudios(){for(const c of [...localClips,...remoteClips]){try{c.audio?.pause()}catch{}if(c.url)URL.revokeObjectURL(c.url)}}
-function makeClip(base){const url=URL.createObjectURL(base.blob),audio=new Audio(url);audio.preload='auto';return {...base,url,audio}}
-function setClips(items){cleanAudios();localClips=items.map(makeClip);remoteClips=[];selectedClip=null;renderTimeline()}
-function rememberEdit(){undoHistory.push(localClips.map(c=>({id:c.id,start:c.start,end:c.end,offset:c.offset,owner:c.owner,blob:c.blob})));if(undoHistory.length>30)undoHistory.shift();}
-function undoEdit(){if(record||preroll||!undoHistory.length)return;const previous=undoHistory.pop();setClips(previous);renderTimeline();draftWrite();cue('stop')}
-async function restore(key){projectKey=key;undoHistory=[];const old=await draftRead(key);if(old&&old.scene?.id===scene?.id&&Array.isArray(old.clips)){setClips(old.clips.filter(c=>c.blob instanceof Blob));if(scene.custom&&old.video instanceof Blob){sourceBlob=old.video;setVideoSources()}}else setClips([])}
+// Save a complete immutable snapshot before queueing the IndexedDB transaction.
+// Writes for one (or several) projects are serialized, so an older write can
+// never finish after a newer edit and silently replace it.
+let saveQueue=Promise.resolve(),restoreGeneration=0;
+async function draftWrite(){
+ if(!projectKey||!scene)return true;
+ const entry={key:projectKey,scene:{...scene},timeline:packTimeline(localClips,editHistory,selectedClip),
+  video:scene.custom?sourceBlob:null,updated:Date.now()};
+ const operation=saveQueue.then(async()=>{
+   const d=await db();
+   try{
+     await new Promise((resolve,reject)=>{
+       const tx=d.transaction('drafts','readwrite');
+       tx.oncomplete=()=>resolve();
+       tx.onerror=()=>reject(tx.error||Error('Ошибка сохранения'));
+       tx.onabort=()=>reject(tx.error||Error('Запись отменена'));
+       tx.objectStore('drafts').put(entry);
+     });
+   }finally{d.close()}
+ });
+ saveQueue=operation.catch(()=>{});
+ try{await operation;return true}
+ catch{toast('Черновик не сохранился. Проверь свободное место.');return false}
+}
+function disposeLocalClips(){
+ for(const c of localClips){try{c.audio?.pause()}catch{}if(c.url)URL.revokeObjectURL(c.url)}
+}
+function cleanAudios(){
+ disposeLocalClips();
+ for(const c of remoteClips){try{c.audio?.pause()}catch{}if(c.url)URL.revokeObjectURL(c.url)}
+}
+function makeClip(base){
+ const url=URL.createObjectURL(base.blob),audio=new Audio(url);
+ audio.preload='auto';return {...base,url,audio};
+}
+function setClips(items,selection=null){
+ disposeLocalClips();
+ localClips=items.map(makeClip);
+ selectedClip=localClips.some(c=>c.id===selection)?selection:null;
+ renderTimeline();
+}
+function undoEdit(){
+ if(record||preroll||pendingRecording)return;
+ const previous=editHistory.undo(localClips);if(!previous)return;
+ stopAllPlayback();setClips(previous);void draftWrite();cue('stop');
+}
+function redoEdit(){
+ if(record||preroll||pendingRecording)return;
+ const next=editHistory.redo(localClips);if(!next)return;
+ stopAllPlayback();setClips(next);void draftWrite();cue('ready');
+}
+async function restore(key){
+ const request=++restoreGeneration;
+ // A just-finished recording may still be in the save queue.
+ await saveQueue;
+ const old=await draftRead(key);
+ if(request!==restoreGeneration)return;
+ projectKey=key;
+ if(old?.scene?.id===scene?.id&&Array.isArray(old?.timeline?.clips)){
+   const restored=unpackTimeline(old.timeline,scene.duration);
+   editHistory=restored.history;setClips(restored.clips,restored.selected);
+ }else if(old?.scene?.id===scene?.id&&Array.isArray(old?.clips)){
+   editHistory=new TimelineHistory();
+   const restored=unpackTimeline({clips:old.clips},scene.duration);
+   setClips(restored.clips);
+ }else{
+   editHistory=new TimelineHistory();setClips([]);
+ }
+ if(old?.scene?.id===scene?.id&&scene.custom&&old.video instanceof Blob){
+   sourceBlob=old.video;setVideoSources();
+ }
+}
 function setVideo(el,src){if(!src){el.removeAttribute('src');delete el.dataset.mediaSrc;el.load();return;}if(el.dataset.mediaSrc===src)return;el.dataset.mediaSrc=src;el.src=src;el.load()}
 let liveUrl=null;
 function setVideoSources(target){const src=scene?.custom?(sourceBlob?((liveUrl&&URL.revokeObjectURL(liveUrl)),liveUrl=URL.createObjectURL(sourceBlob),liveUrl):null):sceneSource(scene);
