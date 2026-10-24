@@ -24,7 +24,7 @@ test('v14 binary-exact snapshot, archived v13 and prior versions unchanged',asyn
  const previous=await readFile(new URL('../../../pocketnet/module-versions/perekos/v9.ts',import.meta.url),'utf8');
  const lock=JSON.parse(await readFile(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
  assert.equal(main,current);assert.notEqual(main,previous);assert.equal(RULESET_VERSION,14);
- assert.equal(lock.perekos.current,'v14');assert.ok(lock.perekos.versions.includes('v13'))assert.ok(lock.perekos.versions.includes('v9'));assert.ok(lock.perekos.versions.includes('v10'));assert.ok(lock.perekos.versions.includes('v11'));assert.ok(lock.perekos.versions.includes('v12'));
+ assert.equal(lock.perekos.current,'v14');assert.ok(lock.perekos.versions.includes('v13'));assert.ok(lock.perekos.versions.includes('v9'));assert.ok(lock.perekos.versions.includes('v10'));assert.ok(lock.perekos.versions.includes('v11'));assert.ok(lock.perekos.versions.includes('v12'));
  assert.match(previous,/RULESET_VERSION=9/);
 });
 test('two seats select isolated schools and get server-owned rune inventory',()=>{
