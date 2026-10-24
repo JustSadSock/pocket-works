@@ -3711,6 +3711,11 @@ class UIManager {
                         newKeys[i][action] = finalCode;
                     }
                 }
+                // Legacy settings and restricted control panels may lack Hold.
+                // Never silently erase a valid binding on Save.
+                if(!newKeys[i][action]){
+                    newKeys[i][action]=gameState.settings.keys[i]?.[action]||DEFAULT_KEYS[i][action];
+                }
             });
         }
 
