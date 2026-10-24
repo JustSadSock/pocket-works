@@ -157,14 +157,16 @@ export class PocketNetHub {
            size>MAX_ZAMAZKA_STATE_EVENT)throw new Error('event_too_large');
         const target=this.connected(event.to,room.id);
         if(!target)continue;
-        // Transparent per-player stream: other PocketNet games retain their
-        // original event format. Split only at Unicode codepoint boundaries.
-        const text=JSON.stringify(event),parts=text.match(/[\s\S]{1,12000}/gu)||[];
-        if(parts.length>512)throw new Error('event_too_large');
-        const stream=crypto.randomUUID();
-        parts.forEach((part,index)=>message(target,'game_event',{
-          roomId:room.id,event:{type:'state_stream',payload:{stream,index,total:parts.length,part}}
-        }));
+        // ZAMAZKA v35 and pinned earlier room versions send already-private
+        // state events through this legacy branch (not viewForPlayer).
+        // Chunk the actual wire payload by UTF-8 bytes, not JavaScript chars:
+        // multibyte player names and artwork metadata must never grow a
+        // WebSocket frame above the transport/client part limit.
+        const parts=packPrivateZamazkaState(room.id,event,{
+          maxPacketBytes:MAX_EVENT_BYTES,
+          maxStateBytes:MAX_ZAMAZKA_STATE_EVENT
+        });
+        for(const part of parts)message(target,'game_event',part);
         continue;
       }
       if (event.to) {
