@@ -5,9 +5,9 @@ import {DEBUG_ITEMS,DEBUG_ROLES,DEBUG_FX,DEBUG_SCENES,createDebugState,debugItem
 import {DEBUG_VIEWPORTS} from './debug-console.js';
 
 test('All visual modes have deterministic, usable state and no network identities',()=>{
- assert.equal(DEBUG_SCENES.length,14);
+ assert.equal(DEBUG_SCENES.length,15);
  const cases=new Set(DEBUG_SCENES.map(x=>x[0]));
- for(const id of ['home','lobby','two','four','six','buyer','seller','bids','black','deals','urgent','event','bankrupt','done'])assert.ok(cases.has(id));
+ for(const id of ['home','lobby','two','four','six','buyer','seller','bids','black','deals','urgent','event','bankrupt','done','offline'])assert.ok(cases.has(id));
  for(const [id] of DEBUG_SCENES){
   const state=createDebugState(id);
   if(id==='home'){assert.equal(state,null);continue;}
@@ -20,6 +20,9 @@ test('All visual modes have deterministic, usable state and no network identitie
  }
 });
 test('All item types and nine characters are browsable',()=>{
+ const offline=createDebugState('offline');
+ assert.equal(offline.players[1].connected,false);
+ assert.equal(offline.players[0].connected,true);
  assert.equal(DEBUG_ITEMS.length,13);
  assert.equal(DEBUG_ROLES.length,6);
  assert.equal(DEBUG_FX.length,15);
