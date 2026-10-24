@@ -62,3 +62,79 @@ assert.match(hub,/ZAMAZKA_SECURE_COMMANDS\.has\(command\)/,'PocketNet discards u
 const client=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 assert.match(client,/\.\.\.voteContext\(view\)/,'both vote sends include current author identity');
 console.log('ZAMAZKA security: member-only sync, rejected old ballots/drafts, idempotent vote, kick bans, late-join and broadcast guard OK');
+
+
+// The first verdict must not expose future authors' assignments.
+// A whole round can contain up to eight independent presentations.
+{
+ let clock=1_000_000;
+ class GalleryClock extends Date{static now(){return clock}}
+ const exp={};
+ runInNewContext(compiled,{exports:exp,Date:GalleryClock,Math,Array,Number,Object,Error,JSON,Set,Map,console});
+ const game2=exp.default;
+ const people2=[{id:'ga',name:'A'},{id:'gb',name:'B'},{id:'gc',name:'C'}];
+ const room=game2.createRoom({player:people2[0]}).state;
+ for(const person of people2.slice(1))game2.onJoin({state:room,player:person,players:people2});
+ const send2=(who,payload)=>game2.onMessage({state:room,player:people2.find(p=>p.id===who),players:people2,payload});
+ const observe=()=>send2('gb',{type:'sync'}).events[0].payload;
+ const cast=()=>{
+  const targetId=room.participants[room.turn].id;
+  for(const member of people2)if(member.id!==targetId)
+   send2(member.id,{type:'vote',round:room.round,turn:room.turn,targetId,chips:[1,0,0,0,0]});
+ };
+ send2('ga',{type:'start',rounds:1});
+ clock=room.deadline+1;send2('ga',{type:'pulse'});
+ for(const member of people2)send2(member.id,{type:'submit',strokes:[]});
+ assert.equal(room.phase,'voting');
+ assert.equal(observe().gallery,null,'voting does not send future galleries');
+ cast();
+ assert.equal(room.phase,'verdict');
+ let gallery=observe().gallery;
+ assert(gallery[0]&&Array.isArray(gallery[0].strokes),'first verdict shows its author');
+ assert.equal(gallery[1],null,'second author remains private before own vote');
+ assert.equal(gallery[2],null,'third author remains private before own vote');
+ clock=room.deadline+1;send2('ga',{type:'pulse'});
+ assert.equal(room.phase,'reveal');
+ gallery=observe().gallery;
+ assert(gallery[0]&&gallery[1]===null&&gallery[2]===null,'reveal does not send future images');
+ clock=room.deadline+1;send2('ga',{type:'pulse'});
+ assert.equal(room.phase,'voting');assert.equal(room.turn,1);
+ assert.equal(observe().gallery,null,'no leftover private images in next voting');
+ cast();
+ assert.equal(room.phase,'verdict');
+ gallery=observe().gallery;
+ assert(gallery[0]&&gallery[1]&&gallery[2]===null,'second verdict includes only already judged works');
+ clock=room.deadline+1;send2('ga',{type:'pulse'});
+ clock=room.deadline+1;send2('ga',{type:'pulse'});
+ cast();
+ assert.equal(room.phase,'verdict');
+ clock=room.deadline+1;send2('ga',{type:'pulse'});
+ clock=room.deadline+1;send2('ga',{type:'pulse'});
+ assert.equal(room.phase,'round-review');
+ assert(observe().gallery.every(g=>g&&Array.isArray(g.strokes)),'full gallery available after final reveal');
+}
+
+// Low-cost visual actions must never be able to amplify complete room states
+// while a match is active. Identical and rapid updates in the lobby are inert.
+{
+ let clock=10000;
+ class ReadyClock extends Date{static now(){return clock}}
+ const exp={};
+ runInNewContext(compiled,{exports:exp,Date:ReadyClock,Math,Array,Number,Object,Error,JSON,Set,Map,console});
+ const m=exp.default,first={id:'xx',name:'X'},second={id:'yy',name:'Y'};
+ const s=m.createRoom({player:first}).state;
+ m.onJoin({state:s,player:second,players:[first,second]});
+ const send=(id,payload)=>m.onMessage({state:s,player:id==='xx'?first:second,players:[first,second],payload});
+ const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==';
+ assert(send('xx',{type:'emblem',image:png}).events.some(e=>e.type==='state'));
+ assert.equal(send('xx',{type:'emblem',image:png}).events.length,0,'identical emblem generates no broadcast');
+ assert.equal(send('xx',{type:'emblem',image:null}).events.length,0,'rapid emblem toggle is throttled');
+ clock+=2000;
+ assert(send('xx',{type:'emblem',image:null}).events.some(e=>e.type==='state'),'later remove allowed');
+ send('xx',{type:'start',preload:true,rounds:1});
+ assert.equal(s.phase,'preparing');
+ assert.equal(send('xx',{type:'emblem',image:png}).events[0].type,'notice','emblem cannot broadcast galleries');
+ assert(send('xx',{type:'art_ready',round:1}).events.some(e=>e.type==='state'));
+ assert.equal(send('xx',{type:'art_ready',round:1}).events.length,0,'repeated ready does not broadcast');
+}
+console.log('ZAMAZKA privacy: future artwork remains private until its own verdict; decorative packet amplification blocked');
