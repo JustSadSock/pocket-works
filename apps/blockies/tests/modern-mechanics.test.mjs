@@ -78,7 +78,7 @@ test('rotation kicks away from an obstructing well wall and prediction agrees',(
  p.currentPiece=[[1],[1],[1],[1]];p.currentType='I';p.position={x:state.engine.boardWidth-1,y:8};
  const projected=projectOwnPiece(p,state.engine.board,state.engine.players,[{action:'rotate',seq:1}]);
  state=action(state,{action:'rotate'});
- assert.equal(state.engine.players[0].position.x,state.engine.boardWidth-2);
+ assert.equal(state.engine.players[0].position.x,state.engine.boardWidth-4);
  assert.deepEqual(projected.position,state.engine.players[0].position);
  assert.deepEqual(projected.currentPiece,state.engine.players[0].currentPiece);
 });
