@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - 'apps/zamazka/editor.js'
+      - 'apps/zamazka/fill-raster-region.js'
+      - 'apps/zamazka/qa/fill-colour-real-canvas.mjs'
+      - 'apps/zamazka/qa/responsive-viewports.mjs'
+      - 'apps/zamazka/qa/viewport-fit.mjs'
       - 'apps/zamazka/fill-core.js'
       - 'apps/zamazka/qa/fill-matching-colour.mjs'
       - 'apps/zamazka/qa/all-tools-matrix.mjs'
@@ -13,6 +17,10 @@ on:
     branches: [main]
     paths:
       - 'apps/zamazka/editor.js'
+      - 'apps/zamazka/fill-raster-region.js'
+      - 'apps/zamazka/qa/fill-colour-real-canvas.mjs'
+      - 'apps/zamazka/qa/responsive-viewports.mjs'
+      - 'apps/zamazka/qa/viewport-fit.mjs'
       - 'apps/zamazka/fill-core.js'
       - 'apps/zamazka/qa/all-tools-matrix.mjs'
       - 'apps/zamazka/qa/editor-input.mjs'
@@ -44,3 +52,7 @@ jobs:
           "$RUNNER_TEMP/zamazka-playwright/node_modules/.bin/playwright" install --with-deps chromium
       - name: Validate actual Canvas2D recolouring from saved strokes
         run: node apps/zamazka/qa/fill-colour-real-canvas.mjs
+      - name: Validate real UI viewport layouts across desktop tablet and mobile
+        run: |
+          node apps/zamazka/qa/responsive-viewports.mjs
+          node apps/zamazka/qa/viewport-fit.mjs
