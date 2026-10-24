@@ -344,9 +344,24 @@ function updateLobs(s,dt){
   if(range<q.radius+12&&unobstructed(s,q.tx,q.ty,target.x,target.y,q.owner,7)){
    const falloff=range<=13?1:Math.max(.36,1-(range-13)/(q.radius+12)*.65);
    const dealt=harm(s,target,q.damage*falloff,q.owner);
-   if(dealt>0){markTarget(s,target,q.element,q.owner);target.slow=Math.max(target.slow,.65);emit(s,'on_hit',q.owner)}
+   if(dealt>0){
+    markTarget(s,target,q.element,q.owner);
+    if(q.v2Comet){target.burn=Math.max(target.burn||0,1.45);target.burnSource=q.owner}
+    else target.slow=Math.max(target.slow,.65);
+    emit(s,'on_hit',q.owner);
+   }
   }
-  fx(s,'impact_rock',q.tx,q.ty);fx(s,'fracture',q.tx,q.ty);
+  if(q.v2Monolith&&s.barriers.length<10&&canStand(q.tx,q.ty,18)
+    &&!blocking(s,q.tx,q.ty,18)){
+   s.barriers.push({owner:q.owner,x:q.tx,y:q.ty,r:18,life:3.6,hp:38,v2Monolith:true});
+  }
+  if(q.v2Comet&&s.mines.length<14&&canStand(q.tx,q.ty,9)
+    &&!blocking(s,q.tx,q.ty,9)){
+   s.mines.push({owner:q.owner,x:q.tx,y:q.ty,r:36,life:2.25,
+    arm:.16,damage:2.5,element:'fire',v2Crater:true,craterCd:0});
+  }
+  fx(s,q.v2Comet?'impact_flame':'impact_rock',q.tx,q.ty);
+  if(!q.v2Comet)fx(s,'fracture',q.tx,q.ty);
   s.lobs.splice(i,1);
  }
 }
@@ -676,6 +691,15 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
    if(q.style==='rock')rockFracture(s,q,q.x,q.y);
    fx(s,'impact_'+(q.style||'orb'),q.x,q.y);s.shots.splice(j,1);done=true;continue;
   }
+  if(hit.type==='barrier'&&s.barriers[hit.index]?.v2Pylon){
+   const node=s.barriers[hit.index];
+   if(node.owner!==q.owner){
+    node.hp=Math.max(0,node.hp-(q.damage||5));
+    if(node.hp<=0){s.barriers.splice(hit.index,1);fx(s,'fracture',node.x,node.y)}
+   }
+   s.shots.splice(j,1);fx(s,'spark',hit.x,hit.y);
+   emit(s,'on_expire',q.owner,{},q.depth);done=true;continue;
+  }
   if(q.breach>0&&hit.type==='barrier'){const b=s.barriers[hit.index];b.hp=(b.hp??24)-q.breach;q.breach=0;if(b.hp<=0){s.barriers.splice(hit.index,1);fx(s,'fracture',b.x,b.y);q.x+=Math.sign(q.vx)*.15;q.y+=Math.sign(q.vy)*.15;remaining*=Math.max(0,1-hit.t);continue}}
   if(q.phase>0&&(hit.type==='wall'||hit.type==='barrier')){
    const pass=firstCollision(s,q.x,q.y,q.vx*.65,q.vy*.65,q.r,q.owner);const skip=Math.max(.001,pass?.exit??0);q.x+=q.vx*.65*skip+Math.sign(q.vx)*.08;q.y+=q.vy*.65*skip+Math.sign(q.vy)*.08;q.phase=0;
@@ -692,6 +716,42 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
 for(let j=s.echoes.length-1;j>=0;j--){const e=s.echoes[j];e.life-=dt;e.cast-=dt;const source=s.actors[e.owner];if(e.cast<=0){e.cast=.76;const target=s.actors[1-e.owner];spawnShot(s,source,Math.atan2(target.y-e.y,target.x-e.x),e.x,e.y,{clone:true,strong:!!e.extra});e.shots=(e.shots??2)-1}if(e.life<=0||e.shots<=0)s.echoes.splice(j,1)}
 for(let j=s.mines.length-1;j>=0;j--){
  const mine=s.mines[j];mine.life-=dt;const target=s.actors[1-mine.owner];
+ if(mine.v2Conduit){
+  const u=s.barriers.find(b=>b.v2Pylon&&b.owner===mine.owner&&b.nodeId===mine.aId&&b.hp>0);
+  const v=s.barriers.find(b=>b.v2Pylon&&b.owner===mine.owner&&b.nodeId===mine.bId&&b.hp>0);
+  if(!u||!v||mine.life<=0){s.mines.splice(j,1);continue}
+  mine.x=u.x;mine.y=u.y;mine.x2=v.x;mine.y2=v.y;
+  if(mine.arm>0){mine.arm=Math.max(0,mine.arm-dt);continue}
+  mine.conduitCd=Math.max(0,mine.conduitCd-dt);
+  const vx=v.x-u.x,vy=v.y-u.y,lengthSq=vx*vx+vy*vy;
+  const t=lengthSq>1?clamp(((target.x-u.x)*vx+(target.y-u.y)*vy)/lengthSq,0,1):0;
+  const nearestX=u.x+vx*t,nearestY=u.y+vy*t;
+  const dist=Math.hypot(target.x-nearestX,target.y-nearestY);
+  const world={...s,barriers:s.barriers.filter(b=>b!==u&&b!==v)};
+  if(mine.conduitCd<=0&&dist<=12+7&&target.hp>0
+    &&unobstructed(world,u.x,u.y,v.x,v.y,mine.owner,7)
+    &&unobstructed(world,nearestX,nearestY,target.x,target.y,mine.owner,7)){
+   target.shield=Math.max(0,target.shield-1.6);
+   const dealt=harm(s,target,mine.damage,mine.owner);
+   if(dealt>0){target.slow=Math.max(target.slow,.3);emit(s,'on_hit',mine.owner)}
+   fx(s,'impact_arc',target.x,target.y);
+   mine.conduitCd=.42;
+  }
+  continue;
+ }
+ if(mine.v2Crater){
+  if(mine.arm>0){mine.arm=Math.max(0,mine.arm-dt);continue}
+  mine.craterCd=Math.max(0,mine.craterCd-dt);
+  if(mine.craterCd<=0&&target.hp>0
+    &&Math.hypot(target.x-mine.x,target.y-mine.y)<=mine.r+10
+    &&unobstructed(s,mine.x,mine.y,target.x,target.y,mine.owner,7)){
+   const dealt=harm(s,target,mine.damage,mine.owner);
+   if(dealt>0){target.burn=Math.max(target.burn||0,.48);target.burnSource=mine.owner;emit(s,'on_hit',mine.owner)}
+   mine.craterCd=.50;fx(s,'flame',target.x,target.y);
+  }
+  if(mine.life<=0)s.mines.splice(j,1);
+  continue;
+ }
  if(mine.v2Whirl){
   // The angular sectors are the hit geometry, not a cosmetic spinning circle.
   // Rotating sectors can hit repeatedly only after their own bounded cooldown.
@@ -774,7 +834,7 @@ function validState(s){
  &&(!s.magicModeV2||(s.magicLoadouts?.length===2&&s.magicLoadouts.every(x=>v2SpellAllowed(x))))&&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=16;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=17;
 
 // ---- Immutable PocketNet ruleset 10: generated from reviewed magic-v2 runtime.
 // v9 is preserved separately; 10 retains all its legacy logic for old-style new rooms.
@@ -1112,15 +1172,15 @@ function migrateLegacyMagic(legacy,{confirmed=false,seed=1}={}){
 const MAGIC_V2_PRACTICE_RUNES=Object.freeze([
  'u_on_cast','u_on_hit','u_on_hurt','u_after_dash','u_after_guard',
  'u_guard','u_push','u_heal','u_afterimage','u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
- 'st_throw','st_shards','st_wall','st_spikes','st_fault','fi_ember','fi_scorch','fi_flamepatch','fi_cindermine','fi_lash','li_spark','li_arc','li_coil','li_discharge',
- 'u_reform_base','st_form_wave','st_form_spires','st_origin_self','st_origin_below',
- 'fi_form_stream','fi_form_whirl','fi_origin_self','fi_origin_sky',
+ 'st_throw','st_shards','st_wall','st_spikes','st_fault','fi_ember','fi_scorch','fi_flamepatch','fi_cindermine','fi_lash','li_spark','li_arc','li_pylon','li_link','li_coil','li_discharge',
+ 'u_reform_base','st_form_wave','st_form_spires','st_form_colossus','st_origin_self','st_origin_below',
+ 'fi_form_stream','fi_form_whirl','fi_form_comet','fi_origin_self','fi_origin_sky',
  'li_form_ray','li_form_sphere','li_origin_self','li_origin_pylon'
 ]);
 // Only verified modifiers appear as equippable buttons for a given action in
 // the current live laboratory. The full catalog is reserved for later phases.
 const V2_PRACTICE_MODS=Object.freeze({
- u_reform_base:['st_form_wave','st_form_spires','st_origin_self','st_origin_below','fi_form_stream','fi_form_whirl','fi_origin_self','fi_origin_sky','li_form_ray','li_form_sphere','li_origin_self','li_origin_pylon'],
+ u_reform_base:['st_form_wave','st_form_spires','st_form_colossus','st_origin_self','st_origin_below','fi_form_stream','fi_form_whirl','fi_form_comet','fi_origin_self','fi_origin_sky','li_form_ray','li_form_sphere','li_origin_self','li_origin_pylon'],
  u_guard:['u_size','u_efficient'],
  u_push:['u_size','u_efficient'],
  u_heal:['u_efficient'],
@@ -1138,7 +1198,9 @@ const V2_PRACTICE_MODS=Object.freeze({
  li_spark:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
  li_arc:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
  li_discharge:['u_size','u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet'],
- li_coil:['u_size','u_duration','u_efficient']
+ li_coil:['u_size','u_duration','u_efficient'],
+ li_pylon:['u_size','u_duration','u_efficient'],
+ li_link:['u_size','u_duration','u_efficient']
 });
 function magicV2PracticeModifierFits(action,modifier){
  return !!V2_PRACTICE_MODS[action]?.includes(modifier);
@@ -1156,7 +1218,30 @@ function magicV2Attack(s,a,target){
   return {x:a.x+Math.cos(angle)*d,y:a.y+Math.sin(angle)*d};
  };
  let fired=false,extraHeat=0;
- if(school==='stone'&&shape==='st_form_spires'&&s.waves.length<12){
+ if(school==='stone'&&shape==='st_form_colossus'&&s.lobs.length<12){
+  const self=origin==='st_origin_self',below=origin==='st_origin_below';
+  const at=forward(self?67:below?165:124,12);
+  // The future impact is public from the first frame. No remote placement
+  // through a wall; the projected crater and collision use the same point.
+  if(canStand(at.x,at.y,15)&&!blocking(s,at.x,at.y,16)){
+   const d=Math.hypot(at.x-a.x,at.y-a.y);
+   s.lobs.push({owner:a.id,sx:a.x,sy:a.y,x:a.x,y:a.y,
+    tx:at.x,ty:at.y,progress:0,duration:self?.53:below?.82:.71,
+    age:0,height:0,apex:below?99:78,radius:self?30:35,
+    damage:self?15:18,element:'stone',v2Monolith:true});
+   fired=true;extraHeat=12;fx(s,'hurl',a.x,a.y);
+  }
+ }else if(school==='fire'&&shape==='fi_form_comet'&&s.lobs.length<12){
+  const self=origin==='fi_origin_self',sky=origin==='fi_origin_sky';
+  const at=forward(self?87:sky?174:144,9);
+  if(canStand(at.x,at.y,12)&&!blocking(s,at.x,at.y,12)){
+   s.lobs.push({owner:a.id,sx:a.x,sy:a.y,x:a.x,y:a.y,
+    tx:at.x,ty:at.y,progress:0,duration:sky?.82:.62,
+    age:0,height:0,apex:sky?118:80,radius:sky?48:42,
+    damage:sky?16:14,element:'fire',v2Comet:true});
+   fired=true;extraHeat=11;fx(s,'hurl',a.x,a.y);
+  }
+ }else if(school==='stone'&&shape==='st_form_spires'&&s.waves.length<12){
   const self=origin==='st_origin_self',count=self?4:3;
   // A crown uses four directional spokes from the caster. The directional
   // crest is a series of individually warned ground eruptions; no relocation
@@ -1353,6 +1438,57 @@ function magicV2Action(s,a,act,mods,ev){
    });
    fx(s,'mine',x,y);break;
   }
+  case 'li_pylon':{
+   // A real destructible barrier-node, shared by movement/projectile
+   // collision and the wire geometry. Maximum three live nodes per owner.
+   const mineCount=s.barriers.filter(b=>b.owner===a.id&&b.v2Pylon).length;
+   const distance=82;
+   if(mineCount<3&&s.barriers.length<10
+     &&beamLength(s,a.x,a.y,angle,distance+8,a.id)>=distance-5){
+    const x=a.x+Math.cos(angle)*distance,y=a.y+Math.sin(angle)*distance,
+     r=size?17:13;
+    if(canStand(x,y,r)&&!blocking(s,x,y,r)){
+     s.barriers.push({owner:a.id,x,y,r,life:extend?7:5.3,
+      hp:size?37:26,v2Pylon:true,nodeId:++s.serial});
+     fx(s,'thunder',x,y);
+    }
+   }
+   break;
+  }
+  case 'li_link':{
+   const pylons=s.barriers.filter(b=>b.owner===a.id&&b.v2Pylon&&b.hp>0);
+   const pair=pylons.slice(-2);
+   if(pair.length===2&&s.mines.length<14){
+    const [u,v]=pair,dist=Math.hypot(v.x-u.x,v.y-u.y);
+    // Exclude only the endpoint nodes from the LOS test. A wall or a third
+    // barrier between endpoints must prevent the network from existing.
+    const world={...s,barriers:s.barriers.filter(b=>b!==u&&b!==v)};
+    if(dist<=225&&dist>32&&unobstructed(world,u.x,u.y,v.x,v.y,a.id,7)
+      &&!s.mines.some(m=>m.v2Conduit&&m.owner===a.id&&
+        ((m.aId===u.nodeId&&m.bId===v.nodeId)||(m.aId===v.nodeId&&m.bId===u.nodeId)))){
+     s.mines.push({owner:a.id,x:u.x,y:u.y,x2:v.x,y2:v.y,
+      aId:u.nodeId,bId:v.nodeId,life:extend?4.6:3.1,
+      arm:.24,damage:size?3.1:2.4,element:'storm',
+      v2Conduit:true,conduitCd:0});
+     fx(s,'thunder',u.x,u.y);
+    }
+   }else if(s.beams.length<16){
+    // With fewer than two nodes the spell is still useful but cannot
+    // produce an invisible or free link; show a short clipped fallback arc.
+    const length=beamLength(s,a.x,a.y,angle,96,a.id),width=6;
+    s.beams.push({owner:a.id,x:a.x,y:a.y,angle,length,life:.23,
+     width,element:'storm',style:'evo-beam',v2Fallback:true});
+    const dx=other.x-a.x,dy=other.y-a.y;
+    const along=dx*Math.cos(angle)+dy*Math.sin(angle);
+    const side=Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle));
+    if(along>=0&&along<=length+7&&side<=width+12){
+     other.shield=Math.max(0,other.shield-2);
+     const dealt=harm(s,other,4.5,a.id,ev.depth+1);
+     if(dealt>0)emit(s,'on_hit',a.id,{},ev.depth+1);
+    }
+   }
+   break;
+  }
   case 'li_coil':{
    // A physically planted, single-use electric charge. Its arming circle
    // and lifetime are server state, never an instantaneous invisible strike.
@@ -1419,7 +1555,7 @@ function flushMagicV2Events(s){
 const V2_START_POOL=Object.freeze([
  'u_on_cast','u_after_dash','u_on_hurt','u_guard','u_heal','u_push','u_size',
  'u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
- 'st_throw','st_shards','st_wall','st_spikes','st_fault','fi_ember','fi_scorch','fi_flamepatch','fi_cindermine','fi_lash','li_spark','li_arc','li_coil','li_discharge',
+ 'st_throw','st_shards','st_wall','st_spikes','st_fault','fi_ember','fi_scorch','fi_flamepatch','fi_cindermine','fi_lash','li_spark','li_arc','li_pylon','li_link','li_coil','li_discharge',
  'u_reform_base','st_form_wave','st_form_spires','st_origin_self','st_origin_below',
  'fi_form_stream','fi_form_whirl','fi_origin_self','fi_origin_sky',
  'li_form_ray','li_form_sphere','li_origin_self','li_origin_pylon'
@@ -1601,7 +1737,7 @@ function viewForPlayer({state:s,player,players}){
  const match=s.match?.magicModeV2&&Array.isArray(s.match.magicLoadouts)
   ?{...s.match,magicLoadouts:s.match.magicLoadouts.map((book,seat)=>seat===i?book:null)}
   :s.match;
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:16,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:17,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],magicStage:s.magicStage||0,magicChoices:i>=0&&s.phase==='magic-offer'&&!s.magicPicked?.[i]?s.magicChoices[i]:[],magicPicked:i>=0&&!!s.magicPicked?.[i],magicOfferDeadline:s.phase==='magic-offer'?s.magicOfferAt+V13_DRAFT_LIMIT:0,
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};
