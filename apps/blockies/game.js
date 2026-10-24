@@ -2,7 +2,7 @@
 import {loadSolo,saveSolo,clearSolo} from './solo-save.js';
 import {BoardEffects,getNewLockedCells} from './board-effects.js';
 import {projectOwnPiece} from './input-prediction.js';
-import {SHAPES,PIECE_TYPES,LOCK_DELAY_MS,MAX_LOCK_RESETS,KICK_OFFSETS,SAFE_LANE_ROWS,rotatedClockwise,inferShapeType,checkPieceCollision,findRotationPlacement,isLaneClear,drawSevenBag,planHold,adjustLock,advanceLock,scoreLineClear,intervalAfterClear} from './physics-core.js';
+import {SHAPES,PIECE_TYPES,LOCK_DELAY_MS,MAX_LOCK_RESETS,KICK_OFFSETS,SAFE_LANE_ROWS,rotatedClockwise,inferShapeType,checkPieceCollision,findRotationPlacement,isLaneClear,drawSevenBag,planHold,adjustLock,advanceLock,scoreLineClear,intervalAfterClear,planPieceSpawn,canPlayerResume,areAllSeatsEliminated} from './physics-core.js';
 
 const TRANSLATIONS = {
     en: {
@@ -706,6 +706,7 @@ class Player {
     randomPiece(){return SHAPES[this.randomType()].map(row=>row.slice());}
 
     spawnPiece(presetType=null,consumeNext=true) {
+        // Reject a dangerously shallow lane without consuming the queued shape.
         if(gameState.numPlayers>1&&!laneHasClearance(this)){
             this.blocked=true;this.gameOver=true;this.currentPiece=null;
             this.dropCounter=0;checkAllPlayersGameOver();return;
@@ -717,71 +718,22 @@ class Player {
             this.nextType=this.randomType();
             this.nextPiece=SHAPES[this.nextType].map(row=>row.slice());
         }
-        this.dropCounter=0;
-        this.lockCounter=0;
-        this.lockResets=0;
-        this.holdUsed=false;
-        const pieceWidth=this.currentPiece[0].length;
-        if(gameState.numPlayers>1){
-            const laneX=Number.isInteger(this.spawnLaneX)
-                ? this.spawnLaneX:spawnLaneX(this.id,gameState.numPlayers,getBoardWidth());
-            const x=laneX+Math.floor((4-pieceWidth)/2);
-            this.position={x,y:0};
-            if(this.checkCollision().collides){
-                this.gameOver=true;
-                this.blocked=true;
-                this.currentPiece=null;
-                checkAllPlayersGameOver();
-            }
-            this.dropCounter=0;
-            return;
-        }
-        const boardWidth = getBoardWidth();
-        const preferredX = Math.min(
-            boardWidth - pieceWidth,
-            Math.max(0, Math.round(this.spawnAnchor - pieceWidth / 2))
-        );
-
-        let spawnPosition = null;
-        const checked = new Set();
-
-        for (let offset = 0; offset < boardWidth; offset++) {
-            const candidates = [];
-            if (offset === 0) {
-                candidates.push(preferredX);
-            } else {
-                const left = preferredX - offset;
-                const right = preferredX + offset;
-
-                if (left >= 0) candidates.push(left);
-                if (right <= boardWidth - pieceWidth) candidates.push(right);
-            }
-
-            for (const candidate of candidates) {
-                if (checked.has(candidate)) continue;
-                checked.add(candidate);
-
-                if (!this.checkCollision(this.currentPiece, { x: candidate, y: 0 }).collides) {
-                    spawnPosition = { x: candidate, y: 0 };
-                    break;
-                }
-            }
-
-            if (spawnPosition) break;
-        }
-
-        this.position = spawnPosition || { x: preferredX, y: 0 };
-
-        if (!spawnPosition && this.checkCollision().collides) {
-            this.gameOver = true;
+        this.dropCounter=0;this.lockCounter=0;this.lockResets=0;this.holdUsed=false;
+        const seat={id:this.id,spawnAnchor:this.spawnAnchor,
+            spawnLaneX:Number.isInteger(this.spawnLaneX)?this.spawnLaneX:
+                spawnLaneX(this.id,gameState.numPlayers,getBoardWidth())};
+        const placement=planPieceSpawn(seat,this.currentType,gameState.board,
+            gameState.players,gameState.numPlayers,getBoardWidth());
+        this.position=placement.position||this.position;
+        if(!placement.allowed){
+            this.gameOver=true;
+            if(gameState.numPlayers>1){this.blocked=true;this.currentPiece=null;}
             checkAllPlayersGameOver();
         }
-
-        this.dropCounter = 0;
     }
 
     resumeFromGate(){
-        if(!this.blocked||gameState.isGameOver||!laneHasClearance(this))return false;
+        if(!canPlayerResume(this,gameState.board,gameState.players,gameState.numPlayers,gameState.isGameOver))return false;
         this.gameOver=false;this.blocked=false;this.spawnPiece();
         if(!this.gameOver&&gameState.sharedStats.contributions?.[this.id]){
             gameState.sharedStats.contributions[this.id].returns++;
@@ -941,7 +893,7 @@ function laneHasClearance(player){
 function checkAllPlayersGameOver() {
     if (!gameState.players.length) return;
 
-    if (gameState.players.every(player => player.gameOver)) {
+    if (areAllSeatsEliminated(gameState.players)) {
         gameState.isGameOver = true;
         soundManager.gameOver();
     }
