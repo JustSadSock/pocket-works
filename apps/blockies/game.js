@@ -19,6 +19,8 @@ const TRANSLATIONS = {
         roomCode: "Room code",joinRoom:"Join",orCreate:"OR CREATE YOUR OWN",
         inviteCode:"INVITE CODE",invite:"Share invite",linesLabel:"Lines",
         sharedBoard:"SHARED WELL",moveHint:"MOVE",actionsHint:"ACTIONS",
+        hold: "Hold",
+        repeatSpeed:"Move repeat",speedSlow:"Relaxed · 145 ms",speedNormal:"Normal · 105 ms",speedFast:"Fast · 70 ms",
         gestureHint:"On the board: tap to rotate · swipe to move",
         pauseDescription:"Your pieces stay right where you left them.",
         resumeSoloGame: "Continue saved game",
@@ -145,6 +147,8 @@ const TRANSLATIONS = {
         roomCode: "Код комнаты",joinRoom:"Войти",orCreate:"ИЛИ СОЗДАЙТЕ СВОЮ",
         inviteCode:"КОД ПРИГЛАШЕНИЯ",invite:"Поделиться",linesLabel:"Линии",
         sharedBoard:"ОБЩЕЕ ПОЛЕ",moveHint:"ДВИЖЕНИЕ",actionsHint:"ДЕЙСТВИЯ",
+        hold: "Запас",
+        repeatSpeed:"Повтор движения",speedSlow:"Размеренно · 145 мс",speedNormal:"Обычно · 105 мс",speedFast:"Быстро · 70 мс",
         gestureHint:"На поле: касание — поворот, свайп — движение",
         pauseDescription:"Фигуры останутся на своих местах.",
         resumeSoloGame: "Продолжить партию",
@@ -452,10 +456,10 @@ function suggestBrighterColor(hexColor) {
 
 // Default key bindings for players (keyboard layout agnostic using code values)
 const DEFAULT_KEYS = [
-    { left: 'ArrowLeft', right: 'ArrowRight', down: 'ArrowDown', rotate: 'ArrowUp', drop: 'Space' },
-    { left: 'KeyA', right: 'KeyD', down: 'KeyS', rotate: 'KeyW', drop: 'KeyQ' },
-    { left: 'KeyJ', right: 'KeyL', down: 'KeyK', rotate: 'KeyI', drop: 'KeyU' },
-    { left: 'KeyF', right: 'KeyH', down: 'KeyG', rotate: 'KeyT', drop: 'KeyR' }
+    {left:'ArrowLeft',right:'ArrowRight',down:'ArrowDown',rotate:'ArrowUp',drop:'Space',hold:'KeyC'},
+    {left:'KeyA',right:'KeyD',down:'KeyS',rotate:'KeyW',drop:'KeyQ',hold:'KeyE'},
+    {left:'KeyJ',right:'KeyL',down:'KeyK',rotate:'KeyI',drop:'KeyU',hold:'KeyO'},
+    {left:'KeyF',right:'KeyH',down:'KeyG',rotate:'KeyT',drop:'KeyR',hold:'KeyY'}
 ];
 
 // Deterministic PRNG for synchronized multiplayer (Mulberry32)
@@ -533,7 +537,8 @@ const GAMEPAD_BUTTON_MAP = {
     right: [15], // D-pad right
     down: [13], // D-pad down
     rotate: [0, 2], // A button (Xbox) or X button (PlayStation), X button (Xbox) or Square (PlayStation)
-    drop: [1, 3] // B button (Xbox) or Circle (PlayStation), Y button (Xbox) or Triangle (PlayStation)
+    drop: [1, 3],
+    hold: [4] // LB / L1
 };
 
 function scanGamepads() {
@@ -561,7 +566,8 @@ function createGamepadButtonState() {
         right: { pressed: false, wasPressed: false },
         down: { pressed: false, wasPressed: false },
         rotate: { pressed: false, wasPressed: false },
-        drop: { pressed: false, wasPressed: false }
+        drop: { pressed: false, wasPressed: false },
+        hold: { pressed: false, wasPressed: false }
     };
 }
 
@@ -657,6 +663,22 @@ function createActionState() {
 }
 
 // Player Class
+const PIECE_TYPES=Object.keys(SHAPES);
+const LOCK_DELAY_MS=450;
+const MAX_LOCK_RESETS=8;
+const KICK_OFFSETS=[[0,0],[-1,0],[1,0],[-2,0],[2,0],[-3,0],[3,0],[0,-1],[-1,-1],[1,-1]];
+function rotatedClockwise(piece){return piece[0].map((_,i)=>piece.map(row=>row[i]).reverse());}
+function inferShapeType(piece){
+ if(!Array.isArray(piece))return null;
+ for(const type of PIECE_TYPES){
+  let shape=SHAPES[type];
+  for(let i=0;i<4;i++){
+   if(JSON.stringify(shape)===JSON.stringify(piece))return type;
+   shape=rotatedClockwise(shape);
+  }
+ }
+ return null;
+}
 class Player {
     constructor(id, color, keys, spawnAnchor) {
         this.id = id;
@@ -670,31 +692,53 @@ class Player {
         this.position = { x: 0, y: 0 };
         this.gameOver = false;
         this.blocked = false;
+        this.bag=[];
+        this.currentType=null;
+        this.nextType=null;
+        this.holdType=null;
+        this.holdUsed=false;
+        this.lockCounter=0;
+        this.lockResets=0;
         this.dropCounter = 0;
         this.dropInterval = 1000;
         this.lastTime = 0;
         this.spawnAnchor = typeof spawnAnchor === 'number' ? spawnAnchor : getBoardWidth() / 2;
     }
 
-    init() {
-        this.nextPiece = this.randomPiece();
+    init(){
+        this.nextType=this.randomType();
+        this.nextPiece=SHAPES[this.nextType].map(row=>row.slice());
         this.spawnPiece();
     }
-
-    randomPiece() {
-        const shapes = Object.keys(SHAPES);
-        const shape = shapes[Math.floor(randomFloat() * shapes.length)];
-        return SHAPES[shape];
+    randomType(){
+        if(!this.bag.length){
+            this.bag=PIECE_TYPES.slice();
+            // Fisher-Yates: every seven draws contains every tetromino once.
+            for(let i=this.bag.length-1;i>0;i--){
+                const j=Math.floor(randomFloat()*(i+1));
+                [this.bag[i],this.bag[j]]=[this.bag[j],this.bag[i]];
+            }
+        }
+        return this.bag.pop();
     }
+    randomPiece(){return SHAPES[this.randomType()].map(row=>row.slice());}
 
-    spawnPiece() {
+    spawnPiece(presetType=null,consumeNext=true) {
         if(gameState.numPlayers>1&&!laneHasClearance(this)){
             this.blocked=true;this.gameOver=true;this.currentPiece=null;
             this.dropCounter=0;checkAllPlayersGameOver();return;
         }
         this.blocked=false;
-        this.currentPiece = this.nextPiece;
-        this.nextPiece = this.randomPiece();
+        this.currentType=presetType||this.nextType||inferShapeType(this.nextPiece);
+        this.currentPiece=SHAPES[this.currentType].map(row=>row.slice());
+        if(consumeNext){
+            this.nextType=this.randomType();
+            this.nextPiece=SHAPES[this.nextType].map(row=>row.slice());
+        }
+        this.dropCounter=0;
+        this.lockCounter=0;
+        this.lockResets=0;
+        this.holdUsed=false;
         const pieceWidth=this.currentPiece[0].length;
         if(gameState.numPlayers>1){
             const laneX=Number.isInteger(this.spawnLaneX)
@@ -799,87 +843,79 @@ class Player {
         return result;
     }
 
-    move(dir, { broadcast = true } = {}) {
-        this.position.x += dir;
-        if (this.checkCollision().collides) {
-            this.position.x -= dir;
-        } else {
-            soundManager.move();
-            // Send online update if in online game
-            if (broadcast && typeof networkManager !== 'undefined' && networkManager.connected && window.uiManager?.isOnlineMode) {
-                networkManager.sendPlayerInput({ action: 'move', direction: dir });
-            }
+    resetLockOnAdjustment(){
+        if(this.lockCounter>0 && this.lockResets<MAX_LOCK_RESETS){
+            this.lockCounter=0;this.lockResets++;
         }
     }
-
-    rotate({ broadcast = true } = {}) {
-        const rotated = this.currentPiece[0].map((_, i) =>
-            this.currentPiece.map(row => row[i]).reverse()
-        );
-
-        if (!this.checkCollision(rotated).collides) {
-            this.currentPiece = rotated;
+    move(dir,{broadcast=true}={}){
+        if(this.gameOver||!this.currentPiece||![-1,1].includes(dir))return false;
+        const at={x:this.position.x+dir,y:this.position.y};
+        if(this.checkCollision(this.currentPiece,at).collides)return false;
+        this.position=at;
+        this.resetLockOnAdjustment();
+        soundManager.move();
+        if(broadcast&&window.uiManager?.isOnlineMode)networkManager.sendPlayerInput({action:'move',direction:dir});
+        return true;
+    }
+    rotate({broadcast=true}={}){
+        if(this.gameOver||!this.currentPiece)return false;
+        const rotated=rotatedClockwise(this.currentPiece);
+        for(const [dx,dy] of KICK_OFFSETS){
+            const at={x:this.position.x+dx,y:this.position.y+dy};
+            if(this.checkCollision(rotated,at).collides)continue;
+            this.currentPiece=rotated;this.position=at;
+            this.resetLockOnAdjustment();
             soundManager.rotate();
-            // Send online update if in online game
-            if (broadcast && typeof networkManager !== 'undefined' && networkManager.connected && window.uiManager?.isOnlineMode) {
-                networkManager.sendPlayerInput({ action: 'rotate' });
-            }
+            if(broadcast&&window.uiManager?.isOnlineMode)networkManager.sendPlayerInput({action:'rotate'});
+            return true;
         }
+        return false;
+    }
+    holdPiece({broadcast=true}={}){
+        if(this.gameOver||!this.currentPiece||this.holdUsed)return false;
+        const outgoing=this.currentType||inferShapeType(this.currentPiece);
+        if(!outgoing)return false;
+        const incoming=this.holdType;
+        this.holdType=outgoing;
+        if(incoming)this.spawnPiece(incoming,false);
+        else this.spawnPiece();
+        this.holdUsed=true;
+        if(broadcast&&window.uiManager?.isOnlineMode)networkManager.sendPlayerInput({action:'hold'});
+        return true;
+    }
+    lockPiece(hard=false){
+        if(this.gameOver||!this.currentPiece)return;
+        const locked=this.merge();
+        soundManager.land(hard);
+        window.uiManager?.onPieceLocked?.(this,locked,hard);
+        this.clearLines();this.spawnPiece();
     }
 
-    drop({ broadcast = true } = {}) {
-        this.position.y++;
-        const collision = this.checkCollision();
-        if (collision.collides) {
-            this.position.y--;
-            if (collision.withLocked) {
-                const locked=this.merge();
-                soundManager.land(false);
-                window.uiManager?.onPieceLocked?.(this,locked,false);
-                this.clearLines();
-                this.spawnPiece();
-            }
+    drop({broadcast=true}={}){
+        if(this.gameOver||!this.currentPiece)return;
+        const next={x:this.position.x,y:this.position.y+1};
+        if(!this.checkCollision(this.currentPiece,next).collides){
+            this.position=next;
+            this.lockCounter=0;
         }
-        this.dropCounter = 0;
-        // Send online update if in online game
-        if (broadcast && typeof networkManager !== 'undefined' && networkManager.connected && window.uiManager?.isOnlineMode) {
-            networkManager.sendPlayerInput({ action: 'drop' });
-        }
+        this.dropCounter=0;
+        if(broadcast&&window.uiManager?.isOnlineMode)networkManager.sendPlayerInput({action:'drop'});
     }
 
-    hardDrop({ broadcast = true } = {}) {
-        let maxDrops = BOARD_HEIGHT; // Safety limit
-        let landedOnLocked = false;
-
-        while (maxDrops > 0) {
-            this.position.y++;
-            maxDrops--;
-
-            const collision = this.checkCollision();
-            if (!collision.collides) {
-                continue;
-            }
-
-            if (collision.withLocked) {
-                landedOnLocked = true;
-            }
-
-            this.position.y--;
-            break;
+    hardDrop({broadcast=true}={}){
+        if(this.gameOver||!this.currentPiece)return;
+        let remaining=BOARD_HEIGHT;
+        while(remaining-->0){
+            const next={x:this.position.x,y:this.position.y+1};
+            if(this.checkCollision(this.currentPiece,next).collides)break;
+            this.position=next;
         }
-
-        if (landedOnLocked) {
-            const locked=this.merge();
-            soundManager.land(true);
-            window.uiManager?.onPieceLocked?.(this,locked,true);
-            this.clearLines();
-            this.spawnPiece();
-        }
-        this.dropCounter = 0;
-        // Send online update if in online game
-        if (broadcast && typeof networkManager !== 'undefined' && networkManager.connected && window.uiManager?.isOnlineMode) {
-            networkManager.sendPlayerInput({ action: 'hardDrop' });
-        }
+        // An adjacent active piece is not a rigid surface: never merge into it.
+        if(this.checkCollision(this.currentPiece,{x:this.position.x,y:this.position.y+1}).withLocked)
+            this.lockPiece(true);
+        this.dropCounter=0;
+        if(broadcast&&window.uiManager?.isOnlineMode)networkManager.sendPlayerInput({action:'hardDrop'});
     }
 
     merge() {
@@ -966,13 +1002,16 @@ class Player {
         gameState.sharedStatsDirty = true;
     }
 
-    update(deltaTime) {
-        if (this.gameOver) return;
-
-        this.dropCounter += deltaTime;
-        if (this.dropCounter > this.dropInterval) {
-            this.drop();
-        }
+    update(deltaTime){
+        if(this.gameOver||!this.currentPiece)return;
+        this.dropCounter+=deltaTime;
+        if(this.dropCounter>=this.dropInterval)this.drop({broadcast:false});
+        if(this.gameOver||!this.currentPiece)return;
+        const landing=this.checkCollision(this.currentPiece,{x:this.position.x,y:this.position.y+1});
+        if(landing.withLocked){
+            this.lockCounter+=deltaTime;
+            if(this.lockCounter>=LOCK_DELAY_MS)this.lockPiece();
+        }else this.lockCounter=0;
     }
 }
 
@@ -1056,7 +1095,9 @@ class UIManager {
         this.isOnlineMode = false; // Flag for online multiplayer mode
         this.localPlayerIndex = -1; // Local player index in online mode
 
-        this.moveRepeatInterval = 105;
+        let repeatSpeed=105;
+        try{const saved=Number(localStorage.getItem('pocket-works:blockies:move-repeat'));if([70,105,145].includes(saved))repeatSpeed=saved;}catch{}
+        this.moveRepeatInterval=repeatSpeed;
         this.softDropInitialDelay = 0;
         this.softDropRepeatInterval = 55;
 
@@ -1177,6 +1218,9 @@ class UIManager {
             case 'drop':
                 player.hardDrop();
                 break;
+            case 'hold':
+                player.holdPiece();this.drawNextPiece(player);this.drawBoard();
+                break;
         }
     }
 
@@ -1189,6 +1233,16 @@ class UIManager {
             });
         }
         
+        const movementSpeed=document.getElementById('movement-speed');
+        if(movementSpeed){
+            movementSpeed.value=String(this.moveRepeatInterval);
+            movementSpeed.addEventListener('change',()=>{
+                const selected=Number(movementSpeed.value);
+                if(![70,105,145].includes(selected))return;
+                this.moveRepeatInterval=selected;
+                try{localStorage.setItem('pocket-works:blockies:move-repeat',String(selected));}catch{}
+            });
+        }
         // Mode selection - new menu structure
         document.getElementById('mode-single').addEventListener('click', () => {
             this.isOnlineMode = false;
@@ -1401,6 +1455,10 @@ class UIManager {
                 player.hardDrop();
                 requiresInfoUpdate = true;
                 break;
+            case 'hold':
+                player.holdPiece();
+                requiresInfoUpdate = true;
+                break;
             default:
                 break;
         }
@@ -1440,13 +1498,16 @@ class UIManager {
         const p = gameState.players[0];
         if (!p?.currentPiece || !p.nextPiece) return;
         const checkpoint = {
-            version: 1, updatedAt: Date.now(),
+            version: 2, updatedAt: Date.now(),
             randomSeed: gameState.randomSeed, rngState: gameState.rng.getState(),
             board: gameState.board, sharedStats: gameState.sharedStats,
             player: {
                 currentPiece: p.currentPiece, nextPiece: p.nextPiece,
                 position: p.position, dropCounter: p.dropCounter,
-                dropInterval: p.dropInterval, spawnAnchor: p.spawnAnchor, color: p.color
+                dropInterval: p.dropInterval, spawnAnchor: p.spawnAnchor, color: p.color,
+                bag:p.bag, currentType:p.currentType, nextType:p.nextType,
+                holdType:p.holdType, holdUsed:p.holdUsed,
+                lockCounter:p.lockCounter, lockResets:p.lockResets
             }
         };
         if (saveSolo(checkpoint)) this.lastSoloSaveAt = now;
@@ -1473,6 +1534,20 @@ class UIManager {
         player.dropInterval = checkpoint.player.dropInterval;
         player.spawnAnchor = checkpoint.player.spawnAnchor;
         player.color = checkpoint.player.color;
+        player.currentType=checkpoint.player.currentType||inferShapeType(player.currentPiece);
+        player.nextType=checkpoint.player.nextType||inferShapeType(player.nextPiece);
+        // Legacy v1 data allowed arbitrary matrices. Repair an unknown queued type
+        // without losing the historic board or active falling shape.
+        if(!player.nextType){
+            player.nextType=player.randomType();
+            player.nextPiece=SHAPES[player.nextType].map(row=>row.slice());
+        }
+        player.bag=checkpoint.player.bag?.slice()||[];
+        player.holdType=checkpoint.player.holdType||null;
+        player.holdUsed=checkpoint.player.holdUsed===true;
+        player.lockCounter=checkpoint.player.lockCounter||0;
+        player.lockResets=checkpoint.player.lockResets||0;
+        this.previewSignatures?.delete(player.id);
         player.score = checkpoint.sharedStats.score;
         player.lines = checkpoint.sharedStats.lines;
         player.level = checkpoint.sharedStats.level;
@@ -1830,7 +1905,12 @@ class UIManager {
         const preview=document.createElement('div');
         preview.className='spawn-bay__preview';
         next.setAttribute('role','img');
-        preview.append(next);
+        const held=document.createElement('canvas');
+        held.id=`bay-hold-${player.id}`;
+        held.className='spawn-bay__held';held.width=4*BLOCK_SIZE;held.height=2*BLOCK_SIZE;
+        held.setAttribute('aria-label','Запасная фигура: '+player.name);
+        held.setAttribute('role','img');
+        preview.append(next,held);
         const mouth=document.createElement('div');
         mouth.className='spawn-bay__mouth';
         mouth.setAttribute('aria-hidden','true');
@@ -1869,6 +1949,11 @@ class UIManager {
         item.prepend(label);
         if(this.isOnlineMode&&player.id===this.localPlayerIndex)item.classList.add('is-mine');
         container.appendChild(item);
+        const held=document.createElement('div');held.className='next-piece-item next-piece-item--hold';
+        const title=document.createElement('span');title.className='next-piece-label';title.textContent=t('hold');title.dataset.i18n='hold';
+        const canvas=document.createElement('canvas');canvas.id=`hold-${player.id}`;
+        canvas.width=PREVIEW_SIZE*BLOCK_SIZE;canvas.height=PREVIEW_SIZE*BLOCK_SIZE;
+        held.append(title,canvas);container.append(held);
     }
 
     createPlayerInfo(player, container) {
@@ -1913,7 +1998,7 @@ class UIManager {
 
             let touchStatusNeedsUpdate = false;
             const boardRevision=gameState.boardRevision||0;
-            const before=this.isOnlineMode?null:gameState.players.map(p=>[p.position.x,p.position.y,p.currentPiece,p.gameOver]);
+            const before=this.isOnlineMode?null:gameState.players.map(p=>[p.position.x,p.position.y,p.currentPiece,p.gameOver,p.lockCounter]);
             gameState.players.forEach(player => {
                 const wasGameOver = player.gameOver;
                 const isLocalPlayer = !this.isOnlineMode || player.id === this.localPlayerIndex;
@@ -1942,7 +2027,7 @@ class UIManager {
                 }
             }else if((gameState.boardRevision||0)!==boardRevision||
                 gameState.players.some((p,i)=>p.position.x!==before[i][0]||
-                 p.position.y!==before[i][1]||p.currentPiece!==before[i][2]||p.gameOver!==before[i][3]))
+                 p.position.y!==before[i][1]||p.currentPiece!==before[i][2]||p.gameOver!==before[i][3]||p.lockCounter!==before[i][4]))
                 this.drawBoard();
             this.updateTeamStatsIfNeeded();
             this.updateBlockedLanes();
@@ -2028,6 +2113,14 @@ class UIManager {
                 if(player.currentPiece[y][x])
                     this.paintBlock(ctx,player.position.x+x,player.position.y+y,player.color,true);
             }
+            if(player.lockCounter>0){
+                const progress=Math.min(1,Math.max(0,player.lockCounter/LOCK_DELAY_MS));
+                const bottom=player.position.y+player.currentPiece.length;
+                const x=player.position.x*BLOCK_SIZE;
+                const width=player.currentPiece[0].length*BLOCK_SIZE;
+                ctx.fillStyle='#f7c66e';
+                ctx.fillRect(x,bottom*BLOCK_SIZE-3,width*(1-progress),3);
+            }
         }
     }
 
@@ -2081,15 +2174,17 @@ class UIManager {
 
     drawNextPiece(player) {
         if(!this.previewSignatures)this.previewSignatures=new Map();
-        const signature=[player.nextPiece?.map(row=>row.join('')).join('/'),player.color,player.gameOver&&!player.blocked].join(':');
+        const signature=[player.nextType,player.nextPiece?.map(row=>row.join('')).join('/'),player.holdType,player.holdUsed,player.color,player.gameOver&&!player.blocked].join(':');
         if(this.previewSignatures.get(player.id)===signature)return;
         this.previewSignatures.set(player.id,signature);
-        for(const id of [`next-${player.id}`,`bay-next-${player.id}`]){
+        for(const id of [`next-${player.id}`,`bay-next-${player.id}`,`hold-${player.id}`,`bay-hold-${player.id}`]){
             const canvas=document.getElementById(id);
             if(!canvas)continue;
             const ctx=canvas.getContext('2d');
             ctx.clearRect(0,0,canvas.width,canvas.height);
-            const piece=player.nextPiece;
+            const isHold=id.startsWith('hold-')||id.startsWith('bay-hold-');
+            const piece=isHold?(player.holdType?SHAPES[player.holdType]:null):player.nextPiece;
+            canvas.style.opacity=isHold&&player.holdUsed?'0.46':'1';
             if(!piece||(player.gameOver&&!player.blocked))continue;
             const offsetX=Math.floor((canvas.width/BLOCK_SIZE-piece[0].length)/2);
             const offsetY=Math.floor((canvas.height/BLOCK_SIZE-piece.length)/2);
@@ -2133,6 +2228,18 @@ class UIManager {
     }
 
     updatePlayerInfo(player) {
+        const isTouchOwner=this.isOnlineMode?player.id===this.localPlayerIndex:player.id===this.touchPlayerIndex;
+        if(isTouchOwner){
+            const holdButton=this.touchControls?.querySelector('[data-action="hold"]');
+            if(holdButton){
+                const unavailable=player.gameOver||player.holdUsed||
+                    (this.isOnlineMode&&(!networkManager.connected||networkManager.stale||networkManager.rulesVersion<3));
+                holdButton.disabled=!!unavailable;
+                holdButton.title=unavailable
+                    ?(currentLanguage==='ru'?'Запас использован или недоступен':'Hold used or unavailable')
+                    :(currentLanguage==='ru'?'Отложить фигуру':'Hold this piece');
+            }
+        }
         const bay=document.getElementById(`spawn-bay-${player.id}`);
         if(bay){
             bay.classList.toggle('is-out',!!player.gameOver);
@@ -2611,6 +2718,11 @@ class UIManager {
                     boardNeedsRedraw = true;
                     infoUpdates.add(player);
                     break;
+                case 'hold':
+                    player.holdPiece();
+                    boardNeedsRedraw = true;
+                    infoUpdates.add(player);
+                    break;
                 default:
                     break;
             }
@@ -2902,6 +3014,11 @@ class UIManager {
                         <input type="text" id="coop-key-${i}-drop" value="${formatKeyLabel(keys.drop)}" 
                                data-key-code="${keys.drop}" readonly>
                     </div>
+                    <div class="key-binding">
+                        <label>${t('hold')}:</label>
+                        <input type="text" id="coop-key-${i}-hold" value="${formatKeyLabel(keys.hold||DEFAULT_KEYS[i].hold)}"
+                               data-key-code="${keys.hold||DEFAULT_KEYS[i].hold}" readonly>
+                    </div>
                 </div>
             `;
             
@@ -2910,7 +3027,7 @@ class UIManager {
             if(nickname)nickname.value=String(names[i]||'').slice(0,20);
 
             // Add event listener for key binding inputs
-            const actions = ['left', 'right', 'down', 'rotate', 'drop'];
+            const actions = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
             actions.forEach(action => {
                 const input = document.getElementById(`coop-key-${i}-${action}`);
                 if (input) {
@@ -3431,7 +3548,7 @@ class UIManager {
             const keysDiv = document.createElement('div');
             keysDiv.className = 'key-bindings';
             
-            const actions = ['left', 'right', 'down', 'rotate', 'drop'];
+            const actions = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
             
             actions.forEach((action, idx) => {
                 const bindingDiv = document.createElement('div');
@@ -3584,7 +3701,7 @@ class UIManager {
         // Collect key bindings
         for (let i = 0; i < numPlayersToSave; i++) {
             newKeys[i] = {};
-            const actions = ['left', 'right', 'down', 'rotate', 'drop'];
+            const actions = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
             actions.forEach(action => {
                 const keyInput = document.getElementById(`key-${i}-${action}`);
                 if (keyInput) {
@@ -3594,6 +3711,11 @@ class UIManager {
                         newKeys[i][action] = finalCode;
                     }
                 }
+                // Legacy settings and restricted control panels may lack Hold.
+                // Never silently erase a valid binding on Save.
+                if(!newKeys[i][action]){
+                    newKeys[i][action]=gameState.settings.keys[i]?.[action]||DEFAULT_KEYS[i][action];
+                }
             });
         }
 
@@ -3602,7 +3724,7 @@ class UIManager {
         const keyUsage = new Map(); // Map of key -> [{player, action}]
         
         for (let i = 0; i < numPlayersToSave; i++) {
-            const actions = ['left', 'right', 'down', 'rotate', 'drop'];
+            const actions = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
             actions.forEach(action => {
                 const key = newKeys[i]?.[action];
                 if (key) {
@@ -3716,6 +3838,9 @@ class UIManager {
         // Clear localStorage
         localStorage.removeItem('pocket-works:blockies:settings');
         localStorage.removeItem('pocket-works:blockies:gamepad-assignments');
+        localStorage.removeItem('pocket-works:blockies:move-repeat');
+        this.moveRepeatInterval=105;
+        const repeatControl=document.getElementById('movement-speed');if(repeatControl)repeatControl.value='105';
         
         // Show success message
         this.showStyledMessage(t('settingsReset'), t('settingsResetMsg'), 'success');
@@ -3770,7 +3895,7 @@ function init() {
                 }
 
                 if (Array.isArray(parsed.keys)) {
-                    const actions = ['left', 'right', 'down', 'rotate', 'drop'];
+                    const actions = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
                     const keysArray = parsed.keys.slice(0, DEFAULT_KEYS.length);
                     gameState.settings.keys = keysArray.map((keySet = {}, index) => {
                         const defaults = DEFAULT_KEYS[index] || DEFAULT_KEYS[0];
@@ -3791,7 +3916,7 @@ function init() {
     if (!Array.isArray(gameState.settings.keys)) {
         gameState.settings.keys = JSON.parse(JSON.stringify(DEFAULT_KEYS));
     } else {
-        const actions = ['left', 'right', 'down', 'rotate', 'drop'];
+        const actions = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
         gameState.settings.keys = gameState.settings.keys.slice(0, DEFAULT_KEYS.length);
         while (gameState.settings.keys.length < DEFAULT_KEYS.length) {
             const index = gameState.settings.keys.length;
@@ -3827,9 +3952,15 @@ if (document.readyState === 'loading') {
     init();
 }
 
-for(const [method,action] of [['move','move'],['rotate','rotate'],['drop','drop'],['hardDrop','hardDrop']]){
+for(const [method,action] of [['move','move'],['rotate','rotate'],['drop','drop'],['hardDrop','hardDrop'],['holdPiece','hold']]){
  const original=Player.prototype[method];
- Player.prototype[method]=function(...args){if(window.uiManager?.isOnlineMode){networkManager.sendPlayerInput({action,...(method==='move'?{direction:args[0]}:{})});return;}return original.apply(this,args);};
+ Player.prototype[method]=function(...args){
+    if(window.uiManager?.isOnlineMode){
+        if(action==='hold'&&networkManager.rulesVersion<3)return false;
+        return networkManager.sendPlayerInput({action,...(method==='move'?{direction:args[0]}:{})});
+    }
+    return original.apply(this,args);
+ };
 }
 function applyNetworkSnapshot(s){
   const ui=window.uiManager;

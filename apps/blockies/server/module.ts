@@ -274,6 +274,22 @@ function createActionState() {
 }
 
 // Player Class
+const PIECE_TYPES=Object.keys(SHAPES);
+const LOCK_DELAY_MS=450;
+const MAX_LOCK_RESETS=8;
+const KICK_OFFSETS=[[0,0],[-1,0],[1,0],[-2,0],[2,0],[-3,0],[3,0],[0,-1],[-1,-1],[1,-1]];
+function rotatedClockwise(piece){return piece[0].map((_,i)=>piece.map(row=>row[i]).reverse());}
+function inferShapeType(piece){
+ if(!Array.isArray(piece))return null;
+ for(const type of PIECE_TYPES){
+  let shape=SHAPES[type];
+  for(let i=0;i<4;i++){
+   if(JSON.stringify(shape)===JSON.stringify(piece))return type;
+   shape=rotatedClockwise(shape);
+  }
+ }
+ return null;
+}
 class Player {
     constructor(id, color, keys, spawnAnchor) {
         this.id = id;
@@ -287,6 +303,13 @@ class Player {
         this.position = { x: 0, y: 0 };
         this.gameOver = false;
         this.blocked = false;
+        this.bag=[];
+        this.currentType=null;
+        this.nextType=null;
+        this.holdType=null;
+        this.holdUsed=false;
+        this.lockCounter=0;
+        this.lockResets=0;
         this.lastInputSeq = 0;
         this.inputWindowStart = 0;
         this.inputWindowCount = 0;
@@ -296,26 +319,41 @@ class Player {
         this.spawnAnchor = typeof spawnAnchor === 'number' ? spawnAnchor : getBoardWidth() / 2;
     }
 
-    init() {
-        this.nextPiece = this.randomPiece();
+    init(){
+        this.nextType=this.randomType();
+        this.nextPiece=SHAPES[this.nextType].map(row=>row.slice());
         this.spawnPiece();
     }
-
-    randomPiece() {
-        const shapes = Object.keys(SHAPES);
-        const shape = shapes[Math.floor(randomFloat() * shapes.length)];
-        return SHAPES[shape];
+    randomType(){
+        if(!this.bag.length){
+            this.bag=PIECE_TYPES.slice();
+            // Fisher-Yates: every seven draws contains every tetromino once.
+            for(let i=this.bag.length-1;i>0;i--){
+                const j=Math.floor(randomFloat()*(i+1));
+                [this.bag[i],this.bag[j]]=[this.bag[j],this.bag[i]];
+            }
+        }
+        return this.bag.pop();
     }
+    randomPiece(){return SHAPES[this.randomType()].map(row=>row.slice());}
 
-    spawnPiece() {
+    spawnPiece(presetType=null,consumeNext=true) {
         // Keep the next piece while the personal lane is dangerously shallow.
         if(gameState.numPlayers>1&&!laneHasClearance(this)){
             this.blocked=true;this.gameOver=true;this.currentPiece=null;
             this.dropCounter=0;checkAllPlayersGameOver();return;
         }
         this.blocked=false;
-        this.currentPiece = this.nextPiece;
-        this.nextPiece = this.randomPiece();
+        this.currentType=presetType||this.nextType||inferShapeType(this.nextPiece);
+        this.currentPiece=SHAPES[this.currentType].map(row=>row.slice());
+        if(consumeNext){
+            this.nextType=this.randomType();
+            this.nextPiece=SHAPES[this.nextType].map(row=>row.slice());
+        }
+        this.dropCounter=0;
+        this.lockCounter=0;
+        this.lockResets=0;
+        this.holdUsed=false;
         const pieceWidth = this.currentPiece[0].length;
         if (gameState.numPlayers > 1) {
             // Cooperative pieces cannot escape a blocked personal entrance.
@@ -415,85 +453,77 @@ class Player {
         return result;
     }
 
-    move(dir, { broadcast = true } = {}) {
-        this.position.x += dir;
-        if (this.checkCollision().collides) {
-            this.position.x -= dir;
-        } else {
-            soundManager.move();
-            // Send online update if in online game
-            if (broadcast && typeof networkManager !== 'undefined' && networkManager.connected && window.uiManager?.isOnlineMode) {
-                networkManager.sendPlayerInput({ action: 'move', direction: dir });
-            }
+    resetLockOnAdjustment(){
+        if(this.lockCounter>0 && this.lockResets<MAX_LOCK_RESETS){
+            this.lockCounter=0;this.lockResets++;
         }
     }
-
-    rotate({ broadcast = true } = {}) {
-        const rotated = this.currentPiece[0].map((_, i) =>
-            this.currentPiece.map(row => row[i]).reverse()
-        );
-
-        if (!this.checkCollision(rotated).collides) {
-            this.currentPiece = rotated;
+    move(dir,{broadcast=true}={}){
+        if(this.gameOver||!this.currentPiece||![-1,1].includes(dir))return false;
+        const at={x:this.position.x+dir,y:this.position.y};
+        if(this.checkCollision(this.currentPiece,at).collides)return false;
+        this.position=at;
+        this.resetLockOnAdjustment();
+        soundManager.move();
+        
+        return true;
+    }
+    rotate({broadcast=true}={}){
+        if(this.gameOver||!this.currentPiece)return false;
+        const rotated=rotatedClockwise(this.currentPiece);
+        for(const [dx,dy] of KICK_OFFSETS){
+            const at={x:this.position.x+dx,y:this.position.y+dy};
+            if(this.checkCollision(rotated,at).collides)continue;
+            this.currentPiece=rotated;this.position=at;
+            this.resetLockOnAdjustment();
             soundManager.rotate();
-            // Send online update if in online game
-            if (broadcast && typeof networkManager !== 'undefined' && networkManager.connected && window.uiManager?.isOnlineMode) {
-                networkManager.sendPlayerInput({ action: 'rotate' });
-            }
+            
+            return true;
         }
+        return false;
+    }
+    holdPiece({broadcast=true}={}){
+        if(this.gameOver||!this.currentPiece||this.holdUsed)return false;
+        const outgoing=this.currentType||inferShapeType(this.currentPiece);
+        if(!outgoing)return false;
+        const incoming=this.holdType;
+        this.holdType=outgoing;
+        if(incoming)this.spawnPiece(incoming,false);
+        else this.spawnPiece();
+        this.holdUsed=true;
+        
+        return true;
+    }
+    lockPiece(hard=false){
+        if(this.gameOver||!this.currentPiece)return;
+        this.merge();soundManager.drop();
+        this.clearLines();this.spawnPiece();
     }
 
-    drop({ broadcast = true } = {}) {
-        this.position.y++;
-        const collision = this.checkCollision();
-        if (collision.collides) {
-            this.position.y--;
-            if (collision.withLocked) {
-                this.merge();
-                soundManager.drop();
-                this.clearLines();
-                this.spawnPiece();
-            }
+    drop({broadcast=true}={}){
+        if(this.gameOver||!this.currentPiece)return;
+        const next={x:this.position.x,y:this.position.y+1};
+        if(!this.checkCollision(this.currentPiece,next).collides){
+            this.position=next;
+            this.lockCounter=0;
         }
-        this.dropCounter = 0;
-        // Send online update if in online game
-        if (broadcast && typeof networkManager !== 'undefined' && networkManager.connected && window.uiManager?.isOnlineMode) {
-            networkManager.sendPlayerInput({ action: 'drop' });
-        }
+        this.dropCounter=0;
+        
     }
 
-    hardDrop({ broadcast = true } = {}) {
-        let maxDrops = BOARD_HEIGHT; // Safety limit
-        let landedOnLocked = false;
-
-        while (maxDrops > 0) {
-            this.position.y++;
-            maxDrops--;
-
-            const collision = this.checkCollision();
-            if (!collision.collides) {
-                continue;
-            }
-
-            if (collision.withLocked) {
-                landedOnLocked = true;
-            }
-
-            this.position.y--;
-            break;
+    hardDrop({broadcast=true}={}){
+        if(this.gameOver||!this.currentPiece)return;
+        let remaining=BOARD_HEIGHT;
+        while(remaining-->0){
+            const next={x:this.position.x,y:this.position.y+1};
+            if(this.checkCollision(this.currentPiece,next).collides)break;
+            this.position=next;
         }
-
-        if (landedOnLocked) {
-            this.merge();
-            soundManager.drop();
-            this.clearLines();
-            this.spawnPiece();
-        }
-        this.dropCounter = 0;
-        // Send online update if in online game
-        if (broadcast && typeof networkManager !== 'undefined' && networkManager.connected && window.uiManager?.isOnlineMode) {
-            networkManager.sendPlayerInput({ action: 'hardDrop' });
-        }
+        // An adjacent active piece is not a rigid surface: never merge into it.
+        if(this.checkCollision(this.currentPiece,{x:this.position.x,y:this.position.y+1}).withLocked)
+            this.lockPiece(true);
+        this.dropCounter=0;
+        
     }
 
     merge() {
@@ -574,13 +604,16 @@ class Player {
         gameState.sharedStatsDirty = true;
     }
 
-    update(deltaTime) {
-        if (this.gameOver) return;
-
-        this.dropCounter += deltaTime;
-        if (this.dropCounter > this.dropInterval) {
-            this.drop();
-        }
+    update(deltaTime){
+        if(this.gameOver||!this.currentPiece)return;
+        this.dropCounter+=deltaTime;
+        if(this.dropCounter>=this.dropInterval)this.drop({broadcast:false});
+        if(this.gameOver||!this.currentPiece)return;
+        const landing=this.checkCollision(this.currentPiece,{x:this.position.x,y:this.position.y+1});
+        if(landing.withLocked){
+            this.lockCounter+=deltaTime;
+            if(this.lockCounter>=LOCK_DELAY_MS)this.lockPiece();
+        }else this.lockCounter=0;
     }
 }
 
@@ -633,11 +666,11 @@ function checkAllPlayersGameOver() {
  init(players){gameState.numPlayers=players.length;gameState.boardWidth=computeBoardWidth(players.length);gameState.board=createEmptyBoard();gameState.players=[];resetSharedStats();players.forEach((p,i)=>{const laneX=spawnLaneX(i,players.length,gameState.boardWidth);const v=new Player(i,p.color,{},laneX+2);v.spawnLaneX=laneX;v.name=p.name||('Игрок '+(i+1));v.init();gameState.players.push(v);});},
  step(ms){for(let t=0;t<ms;t+=50)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(50,ms-t));},
  resume(i){const v=gameState.players[i];if(!v||!v.blocked||gameState.isGameOver||!laneHasClearance(v))return false;v.gameOver=false;v.blocked=false;v.spawnPiece();return !v.gameOver;},
- input(i,p){const v=gameState.players[i];if(!v||v.gameOver)return;if(p.action==='move'&&[-1,1].includes(p.direction))v.move(p.direction,{broadcast:false});else if(['rotate','drop','hardDrop'].includes(p.action))v[p.action]({broadcast:false});else throw Error('Некорректная команда');},
+ input(i,p){const v=gameState.players[i];if(!v||v.gameOver)return;if(p.action==='move'&&[-1,1].includes(p.direction))v.move(p.direction,{broadcast:false});else if(['rotate','drop','hardDrop'].includes(p.action))v[p.action]({broadcast:false});else if(p.action==='hold')v.holdPiece({broadcast:false});else throw Error('Некорректная команда');},
  acceptBatch(i,actions,now){
   const v=gameState.players[i];if(!v||v.gameOver)return;
   const valid=a=>a&&Number.isSafeInteger(a.seq)&&a.seq>0&&a.seq<=2147483647&&
-   (a.action==='move'?[-1,1].includes(a.direction):['rotate','drop','hardDrop'].includes(a.action));
+   (a.action==='move'?[-1,1].includes(a.direction):['rotate','drop','hardDrop','hold'].includes(a.action));
   if(!Array.isArray(actions)||!actions.length||actions.length>MAX_INPUT_BATCH||!actions.every(valid))
    throw Error('Некорректный пакет команд');
   const ordered=actions.filter(a=>a.seq>v.lastInputSeq);
@@ -689,7 +722,7 @@ function newMatch(state,connectedIds){
  }
 }
 export default {protocolVersion:1,
- createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,inputBatchVersion:1,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
+ createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,inputBatchVersion:1,rulesVersion:3,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
  onJoin({state,player}){state=copy(state);add(state,player);return out(state);},
  onLeave({state,player}){
   state=copy(state);

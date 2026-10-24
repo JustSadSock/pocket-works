@@ -246,7 +246,7 @@ test('full interface keeps all core navigation targets unique and actionable',as
   'resume-btn','restart-btn','play-again-btn','menu-btn','online-network-status'];
  for(const id of required)assert.ok(ids.includes(id),'missing functional target: '+id);
  const actions=[...html.matchAll(/\bdata-action="([^"]+)"/g)].map(x=>x[1]);
- assert.deepEqual(actions.sort(),['down','drop','left','right','rotate'].sort());
+ assert.deepEqual(actions.sort(),['down','drop','hold','left','right','rotate'].sort());
  assert.match(html,/viewport-fit=cover/);
 });
 test('new control deck fits both phone orientations and expands wide shared wells',async()=>{
