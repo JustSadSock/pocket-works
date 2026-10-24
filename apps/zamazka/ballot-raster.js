@@ -56,15 +56,16 @@ export function ballotRasterChecksum(raster){
  for(let i=0;i<raster.length;i++){hash^=raster.charCodeAt(i);hash=Math.imul(hash,16777619)>>>0}
  return hash.toString(16).padStart(8,'0');
 }
-export function ballotRasterPackets(raster,round,revision){
+export function ballotRasterPackets(raster,round,revision,sourceChecksum){
  if(!inspectBallotRaster(raster)||!Number.isInteger(round)||round<1||
-    typeof revision!=='string'||!/^r[a-z0-9-]{1,30}$/.test(revision))throw Error('invalid_ballot_raster');
+    typeof revision!=='string'||!/^r[a-z0-9-]{1,30}$/.test(revision)||
+    typeof sourceChecksum!=='string'||!/^[0-9a-f]{8}$/.test(sourceChecksum))throw Error('invalid_ballot_raster');
  const raw=raster.slice(PREFIX.length);
  const parts=Math.ceil(raw.length/BALLOT_PART_CHARS);
  if(parts<1||parts>BALLOT_MAX_PARTS)throw Error('ballot_raster_too_large');
  const checksum=ballotRasterChecksum(raster);
  return Array.from({length:parts},(_,index)=>({
-  type:'ballot_chunk',round,revision,checksum,index,parts,
+  type:'ballot_chunk',round,revision,checksum,sourceChecksum,index,parts,
   data:raw.slice(index*BALLOT_PART_CHARS,(index+1)*BALLOT_PART_CHARS)
  }));
 }
