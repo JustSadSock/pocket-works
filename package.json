@@ -57,7 +57,7 @@
     "sync:metadata": "node scripts/sync-app-metadata.mjs",
     "build:pocketnet": "node scripts/build-pocketnet-modules.mjs",
     "snapshot:pocketnet": "node scripts/build-pocketnet-modules.mjs --snapshot",
-    "pocketnet:check": "node scripts/sync-blockies-physics.mjs --check && node --test apps/blockies/tests/rules-parity.test.mjs apps/blockies/tests/shared-physics.test.mjs apps/blockies/tests/deterministic-replay.test.mjs && node scripts/build-pocketnet-modules.mjs --check && node --test pocketnet/test/session-tokens.test.mjs",
+    "pocketnet:check": "node scripts/sync-blockies-physics.mjs --check && node --test apps/blockies/tests/rules-parity.test.mjs apps/blockies/tests/shared-physics.test.mjs apps/blockies/tests/deterministic-replay.test.mjs apps/blockies/tests/spawn-transition.test.mjs apps/blockies/tests/soak-recovery.test.mjs && node scripts/build-pocketnet-modules.mjs --check && node --test pocketnet/test/session-tokens.test.mjs",
     "physics:blockies:sync": "node scripts/sync-blockies-physics.mjs",
     "test:pocketnet:release": "node --test scripts/build-pocketnet-modules.test.mjs",
     "test:blockies": "node --test apps/blockies/tests/*.test.mjs",
