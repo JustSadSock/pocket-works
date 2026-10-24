@@ -97,7 +97,24 @@
     <div id="selected-clip-info" class="selected-clip-info" role="status" aria-live="polite">Нажми на реплику, чтобы выбрать · перетаскивай для сдвига</div><div class="edit-controls"><button id="undo-btn" class="transport-btn" aria-label="Отменить изменение" title="Отменить (Ctrl+Z)" disabled>↶</button><button id="play-toggle" class="transport-btn" aria-label="Воспроизвести">▶</button><div class="record-combo"><button id="count-record-btn" type="button" aria-label="Начать запись через 3 секунды" title="Запись с отсчётом 3–2–1" class="count-record-btn">3<span class="count-mini">◷</span></button><button id="record-btn" type="button" class="record-btn" data-native-press><span class="record-dot"></span><span id="record-label">Записать</span></button></div><button id="redo-btn" class="transport-btn" aria-label="Повторить изменение" title="Повторить (Ctrl+Shift+Z)" disabled>↷</button></div><div class="editor-bottom"><div class="clip-actions"><button id="replace-clip-btn" class="text-action" disabled title="Записать только выбранную реплику">↻ Перезаписать</button><button id="erase-btn" class="text-action" disabled>Удалить</button></div><span id="clip-total" class="quiet">Пока нет записей</span><button id="finish-btn" class="done-btn">Готово →</button></div></div>
   </section>
   <section id="screen-wait" class="screen wait hidden"><button class="nav-back waiting-back" data-back="editor">←</button><div class="waiting-record"><span></span><span></span><span></span><div class="waiting-label">ПРЕМЬЕРА</div></div><h2>Дубль принят.</h2><p>Твои записи скрыты от остальных. Премьера откроется, когда все закончат.</p><div id="wait-roster" class="wait-roster"></div><button id="reveal-btn" class="action main-action bottom-action hidden">Открыть премьеру →</button><button id="unready-btn" class="quiet-button">Вернуться к записи</button></section>
-  <section id="screen-premiere" class="screen premiere hidden"><header class="topbar"><button class="nav-back" data-back="home">←</button><h2>Премьера</h2><span class="small-cap">03 / 03</span></header><div class="premiere-viewport"><video id="premiere-video" playsinline preload="auto"></video><div id="premiere-loading" class="premiere-loading">Сводим дорожки…</div></div><div class="premiere-credits" id="premiere-credits"></div><input id="premiere-scrub" type="range" min="0" max="600" value="0" aria-label="Перемотка премьеры"><div class="premiere-buttons"><button id="premiere-play" class="action main-action">▶ Смотреть премьеру</button><button id="premiere-repeat" class="action secondary-action">↺ С начала</button></div><button id="premiere-back" class="quiet-button">Вернуться к проекту</button></section>
+  <section id="screen-premiere" class="screen premiere hidden"><header class="topbar"><button class="nav-back" data-back="home">←</button><h2>Премьера</h2><span class="small-cap">03 / 03</span></header><div class="premiere-viewport"><video id="premiere-video" playsinline preload="auto"></video><div id="premiere-loading" class="premiere-loading">Сводим дорожки…</div></div><div class="premiere-credits" id="premiere-credits"></div><input id="premiere-scrub" type="range" min="0" max="600" value="0" aria-label="Перемотка премьеры"><div class="premiere-buttons"><button id="premiere-play" class="action main-action">▶ Смотреть премьеру</button><button id="premiere-repeat" class="action secondary-action">↺ С начала</button></div>
+<div class="premiere-save">
+  <div class="premiere-save-heading"><strong>Сохранить наш фильм</strong><span>Все голоса участников в одном видео</span></div>
+  <div class="premiere-save-actions">
+    <label class="premiere-original-option"><input id="premiere-film-audio" type="checkbox"> <span>Звук оригинального фильма</span></label>
+    <button id="premiere-export" class="action premiere-export-button" type="button" disabled>↓ Сохранить видео</button>
+  </div>
+  <div id="premiere-export-status" class="premiere-export-status" role="status" aria-live="polite">Кнопка станет доступна, когда все голоса будут получены.</div>
+  <div id="premiere-export-progress" class="premiere-export-progress hidden">
+    <progress id="premiere-export-bar" value="0" max="100" aria-label="Экспорт премьеры"></progress>
+    <button id="premiere-export-cancel" class="text-action" type="button">Отменить</button>
+  </div>
+  <div id="premiere-export-result" class="premiere-export-result hidden">
+    <span id="premiere-export-size">Видеофайл готов</span>
+    <a id="premiere-export-download" class="premiere-download-link" href="#" download>Скачать ещё раз ↓</a>
+  </div>
+</div>
+<button id="premiere-back" class="quiet-button">Вернуться к проекту</button></section>
 </main><div id="toast" role="status" aria-live="polite"></div>
 <script type="module" src="./app.js"></script>
 </body></html>
