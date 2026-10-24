@@ -551,7 +551,7 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
  if(act==='close-seat'){send({type:'close_seat'});return}
  if(act==='copy-seat-code'){if(view?.claim?.code)copyText(view.claim.code);return}
  if(act==='vote-host'){send({type:'vote_host',seatId:b.dataset.id});return}
- if(act==='archive'){archiveOpen=true;archiveEditionId='';archiveStoryId='';archiveQuery='';archiveReaderPage=0;render();return}
+ if(act==='archive'){archiveOpen=true;archiveEditionId='';archiveStoryId='';archiveQuery='';archiveReaderMode='full';archiveReaderPage=0;render();return}
   if(act==='archive-back'){archiveOpen=false;archiveEditionId='';archiveStoryId='';archiveQuery='';archiveReaderPage=0;render();return}
   if(act==='archive-edition'){archiveEditionId=b.dataset.id;archiveStoryId='';archiveReaderPage=0;render();return}
   if(act==='archive-story'){archiveStoryId=b.dataset.id;archiveReaderPage=0;render();return}
