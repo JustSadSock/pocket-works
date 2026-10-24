@@ -1133,3 +1133,16 @@ main.app-shell:has(.play-screen) #app>.play-screen{height:100%;max-height:100%;m
 @media(prefers-reduced-motion:reduce){
  .table-trade-actions>.table-quick-offer,.table-trade-actions>.table-quick-offer:hover{transform:none!important}
 }
+
+/* 0.16.1 QA hotfix — seat silhouettes must not intercept actionable tabletop controls. */
+.table-stage.has-trade-actions{z-index:5}
+.player-seats:has(.player-popover){z-index:9}
+@media(max-width:680px){
+ .play-field[data-player-count="4"] .player-seats{
+   grid-template-columns:repeat(4,minmax(0,1fr));
+   max-height:27%;
+ }
+ .play-field[data-player-count="4"] .seat{min-width:0}
+ .play-field[data-player-count="4"] .seat-portrait{height:clamp(32px,5.5vh,51px);width:min(100%,52px)}
+ .play-field[data-player-count="4"] .seat strong{max-width:100%;padding:2px 3px;font-size:9px}
+}
