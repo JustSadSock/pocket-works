@@ -527,8 +527,46 @@ function peer(id,initiator){if(!window.RTCPeerConnection)return toast('WebRTC н
 function ensurePeers(){if(!state||!me)return;for(const p of state.players){if(p.id===me)continue;if(meHost()){if(!peers.has(p.id))peer(p.id,true)}else if(p.id===state.host){if(!peers.has(p.id))peer(p.id,false)}}for(const id of [...peers.keys()])if(!state.players.some(p=>p.id===id))closePeer(id)}
 async function receiveSignal(data){if(!data||!state?.players.some(p=>p.id===data.from))return;const from=data.from,x=data.signal||{};let p=peers.get(from)||peer(from,false);if(!p)return;try{if(x.kind==='offer'&&typeof x.sdp==='string'){await p.pc.setRemoteDescription({type:'offer',sdp:x.sdp});const answer=await p.pc.createAnswer();await p.pc.setLocalDescription(answer);sendGame({type:'signal',to:from,signal:{kind:'answer',sdp:p.pc.localDescription.sdp}})}else if(x.kind==='answer'&&typeof x.sdp==='string'){await p.pc.setRemoteDescription({type:'answer',sdp:x.sdp})}else if(x.kind==='ice'&&x.candidate){if(!p.pc.remoteDescription)p.pending.push(x.candidate);else await p.pc.addIceCandidate(x.candidate)}if(p.pc.remoteDescription&&p.pending.length){for(const c of p.pending.splice(0))await p.pc.addIceCandidate(c).catch(()=>{})}}catch(e){toast('Ошибка соединения с актёром: '+e.message)}}
 function attachChannel(p,dc){p.dc=dc;dc.binaryType='arraybuffer';dc.bufferedAmountLowThreshold=128*1024;dc.onopen=()=>{flush(p);if(meHost()&&scene?.custom&&sourceBlob)sendVideoTo(p.id);if(state?.phase==='premiere'&&sentPremiere)sendOwnTo(p.id)};
- dc.onmessage=e=>onMedia(p,e.data);dc.onclose=()=>{p.dc=null};dc.onerror=()=>toast('Передача медиа была прервана.')}
-async function flush(p){if(p.busy||p.dc?.readyState!=='open')return;p.busy=true;try{while(p.queued.length&&p.dc?.readyState==='open'){const item=p.queued.shift(),blob=item.blob;if(blob.size>(item.kind==='video'?MAX_ROOM_VIDEO_BYTES:MAX_AUDIO_BYTES))continue;const token=uid();p.dc.send(JSON.stringify({kind:'begin',token,media:item.kind,size:blob.size,meta:item.meta}));const chunkSize=16000;for(let offset=0;offset<blob.size;offset+=chunkSize){while(p.dc.bufferedAmount>600000){await new Promise(resolve=>{const timer=setTimeout(resolve,180);p.dc.addEventListener('bufferedamountlow',()=>{clearTimeout(timer);resolve()},{once:true})});if(p.dc.readyState!=='open')throw Error('channel_closed')}p.dc.send(await blob.slice(offset,offset+chunkSize).arrayBuffer())}p.dc.send(JSON.stringify({kind:'end',token}));}}catch{toast('Не удалось отправить медиа. Повтори подключение.')}finally{p.busy=false}}
+ dc.onmessage=e=>onMedia(p,e.data);dc.onclose=()=>{p.dc=null;p.rx=null};dc.onerror=()=>toast('Передача медиа была прервана.')}
+async function flush(p){
+ if(p.busy||p.dc?.readyState!=='open')return;
+ p.busy=true;
+ let current=null;
+ try{
+  while(p.queued.length&&p.dc?.readyState==='open'){
+   current=p.queued.shift();
+   const {blob}=current;
+   if(blob.size>(current.kind==='video'?MAX_ROOM_VIDEO_BYTES:MAX_AUDIO_BYTES)){
+    current=null;continue;
+   }
+   const token=uid();
+   p.dc.send(JSON.stringify({kind:'begin',token,media:current.kind,size:blob.size,meta:current.meta}));
+   const chunkSize=16000;
+   for(let offset=0;offset<blob.size;offset+=chunkSize){
+    while(p.dc?.bufferedAmount>600000){
+     await new Promise(resolve=>{
+      const timer=setTimeout(resolve,180);
+      p.dc?.addEventListener('bufferedamountlow',()=>{clearTimeout(timer);resolve()},{once:true});
+     });
+    }
+    if(p.dc?.readyState!=='open')throw Error('channel_closed');
+    p.dc.send(await blob.slice(offset,offset+chunkSize).arrayBuffer());
+   }
+   if(p.dc?.readyState!=='open')throw Error('channel_closed');
+   p.dc.send(JSON.stringify({kind:'end',token}));
+   current=null;
+  }
+ }catch{
+  // A dropped direct connection must not strand the room forever.
+  if(current?.kind==='audio'&&state?.phase==='premiere'){
+   relayAudio(p.id,current.blob,current.meta);
+  }
+  toast('Прямая передача прервалась. Для голоса пробуем запасной канал.');
+ }finally{
+  p.busy=false;
+  if(p.dc?.readyState==='open'&&p.queued.length)void flush(p);
+ }
+}
 function queueMedia(id,kind,blob,meta){const p=peers.get(id);if(!p||!(blob instanceof Blob))return;p.queued.push({kind,blob,meta});flush(p)}
 function relayAudio(id,blob,meta){
  if(!net||!room||state?.phase!=='premiere'||blob.size>MAX_AUDIO_BYTES){toast('Голос не передался. Попробуй переподключиться.');return}
@@ -562,8 +600,9 @@ function receiveRelay(packet){
    players:state.players.map(p=>p.id),expected:state.counts,
    sender:from,host:state.host,receiver:me
   })||!canAcceptVoice({owner:d.meta.owner,local:localClips,remote:remoteClips,expected:state.counts}))return;
+  for(const [id,rx] of relayInbox)if(Date.now()-(rx.at||0)>150000)relayInbox.delete(id);
   if(relayInbox.size>=MAX_INCOMING_TRANSFERS)return;
-  relayInbox.set(key,{kind:'audio',size:d.size,received:0,parts:0,chunks:[],meta:d.meta||{}});
+  relayInbox.set(key,{kind:'audio',size:d.size,received:0,parts:0,chunks:[],meta:d.meta||{},at:Date.now()});
  }else if(d.action==='part'){
   const r=relayInbox.get(key);if(!r||d.part!==r.parts||typeof d.body!=='string'){relayInbox.delete(key);return}
   try{const bytes=atob(d.body),buf=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)buf[i]=bytes.charCodeAt(i);if(r.received+buf.length>r.size)throw Error('overflow');r.chunks.push(buf);r.received+=buf.length;r.parts++;}catch{relayInbox.delete(key)}
