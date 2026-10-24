@@ -28,6 +28,7 @@ const colors=['#db805f','#91ada4','#e5be6f','#ae9ec5','#8ca7c1','#c39f89'];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const fmt=t=>{t=Math.floor(Math.max(0,t)||0);return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')};
+const fmtFine=t=>{const tenths=Math.round(Math.max(0,t||0)*10);return String(Math.floor(tenths/600)).padStart(2,'0')+':'+String(Math.floor(tenths/10)%60).padStart(2,'0')+'.'+(tenths%10)};
 const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
 const mem=new Map(),session={
  getItem(k){try{return sessionStorage.getItem(STORE+k)}catch{return mem.get(k)||null}},
@@ -479,7 +480,7 @@ function renderTimeline(){
  ).join('');
  const picked=localClips.find(c=>c.id===selectedClip);
  $('selected-clip-info').textContent=picked
-  ? 'Реплика '+(localClips.indexOf(picked)+1)+' · '+fmt(picked.start)+'–'+fmt(picked.end)+' · двигай центр или подрезай края'
+  ? 'Реплика '+(localClips.indexOf(picked)+1)+' · '+fmtFine(picked.start)+'–'+fmtFine(picked.end)+' · двигай центр или подрезай края'
   : localClips.length?'Выбери реплику · перетаскивай для сдвига, края — для обрезки':'Запиши первую реплику';
  $('clip-total').textContent=localClips.length+' '+(localClips.length===1?'фрагмент':localClips.length>=2&&localClips.length<=4?'фрагмента':'фрагментов');
  $('undo-btn').disabled=!editHistory.canUndo;
@@ -741,7 +742,7 @@ $('clip-lane').onpointermove=e=>{
  if(c){
   drag.element.style.left=(c.start/scene.duration*100)+'%';
   drag.element.style.width=((c.end-c.start)/scene.duration*100)+'%';
-  $('selected-clip-info').textContent=fmt(c.start)+' – '+fmt(c.end)+' · '+(drag.kind==='move'?'перемещение':'подрезка');
+  $('selected-clip-info').textContent=fmtFine(c.start)+' – '+fmtFine(c.end)+' · '+(drag.kind==='move'?'перемещение':'подрезка');
  }
  drag.element.classList.add('dragging');
  e.preventDefault();
