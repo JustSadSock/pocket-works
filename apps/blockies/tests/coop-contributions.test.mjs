@@ -53,6 +53,23 @@ test('manual safety reentry increments comeback count without charging team scor
  assert.equal(state.engine.sharedStats.contributions[0].returns,1);
  assert.equal(state.engine.sharedStats.score,beforeScore,'return is not purchased with points');
 });
+test('contribution counts survive snapshots but start from zero on rematch',()=>{
+ const {people,connected}=start(2);let {state}=start(2);
+ const width=state.engine.boardWidth,one=state.engine.players[0],x=one.spawnLaneX;
+ state.engine.board[19]=Array.from({length:width},(_,col)=>col>=x&&col<x+4?0:2);
+ one.currentPiece=[[1,1,1,1]];one.currentType='I';one.position={x,y:17};
+ state=game.onMessage({state,player:people[0],payload:{type:'input_batch',
+  actions:[{seq:1,action:'hardDrop'}]},connectedIds:connected}).state;
+ const before=structuredClone(state.engine.sharedStats.contributions);
+ state=game.onMessage({state,player:people[1],payload:{type:'pulse'},connectedIds:connected}).state;
+ assert.deepEqual(state.engine.sharedStats.contributions,before);
+ state.engine.isGameOver=true;state.phase='finished';
+ state=game.onMessage({state,player:people[0],payload:{type:'rematch'},connectedIds:connected}).state;
+ assert.equal(state.engine.sharedStats.lines,0);
+ assert.deepEqual(state.engine.sharedStats.contributions,
+  Array.from({length:2},()=>({cellsCleared:0,linesHelped:0,finishes:0,returns:0})));
+});
+
 test('no contribution inflation from pulses, duplicate sequences, or empty line clears',()=>{
  const {people,connected}=start(2);
  let {state}=start(2);
