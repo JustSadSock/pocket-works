@@ -29,7 +29,7 @@ test('room selection, wire sender and receiver enforce the same video budget',()
 test('offline PWA retains the local encoder after reload',()=>{
   const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
   assert.match(sw,/\.\/media-lab\.js/);
-  assert.match(sw,/ne-tem-golosom-v1\.6\.0/);
+  assert.match(sw,/ne-tem-golosom-v1\.7\.0/);
 });
 
 test('instant source reuse does not transcode a video that fits the room',()=>{
