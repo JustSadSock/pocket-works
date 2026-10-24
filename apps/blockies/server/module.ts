@@ -643,11 +643,9 @@ class Player {
         }
 
         if (linesCleared === 0) {
-            if (gameState.sharedStats.comboChain !== 0) {
-                gameState.sharedStats.comboChain = 0;
-                gameState.sharedStatsDirty = true;
-            }
-            gameState.sharedStats.lastClearDetail = null;
+            const hadCombo=gameState.sharedStats.comboChain!==0;
+            Object.assign(gameState.sharedStats,scoreLineClear(gameState.sharedStats,0));
+            if(hadCombo)gameState.sharedStatsDirty=true;
             return;
         }
 
