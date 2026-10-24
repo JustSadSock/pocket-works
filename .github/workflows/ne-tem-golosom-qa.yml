@@ -6,13 +6,11 @@ on:
     paths:
       - 'apps/ne-tem-golosom/**'
       - 'pocketnet/module-versions/ne-tem-golosom/**'
-      - 'pocketnet/modules.lock.json'
       - '.github/workflows/ne-tem-golosom-qa.yml'
   pull_request:
     paths:
       - 'apps/ne-tem-golosom/**'
       - 'pocketnet/module-versions/ne-tem-golosom/**'
-      - 'pocketnet/modules.lock.json'
       - '.github/workflows/ne-tem-golosom-qa.yml'
   workflow_dispatch:
 
