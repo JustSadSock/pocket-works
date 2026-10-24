@@ -2066,7 +2066,7 @@ class UIManager {
             const ctx=canvas.getContext('2d');
             ctx.clearRect(0,0,canvas.width,canvas.height);
             const piece=player.nextPiece;
-            if(!piece||player.gameOver)continue;
+            if(!piece||(player.gameOver&&!player.blocked))continue;
             const offsetX=Math.floor((canvas.width/BLOCK_SIZE-piece[0].length)/2);
             const offsetY=Math.floor((canvas.height/BLOCK_SIZE-piece.length)/2);
             for(let y=0;y<piece.length;y++)for(let x=0;x<piece[y].length;x++){
@@ -3122,12 +3122,11 @@ class UIManager {
                 const roomDiv = document.createElement('div');
                 roomDiv.className = 'room-item';
                 roomDiv.innerHTML = `
-                    <div class="room-info">
-                        <h4>${room.name}</h4>
-                        <p>${room.players}/${room.maxPlayers} players</p>
-                    </div>
+                    <div class="room-info"><h4></h4><p></p></div>
                     <button class="btn btn-primary btn-small">Join</button>
                 `;
+                roomDiv.querySelector('h4').textContent=String(room.name||'Комната');
+                roomDiv.querySelector('p').textContent=`${Number(room.players)||0}/${Number(room.maxPlayers)||4} players`;
                 roomDiv.querySelector('.btn').addEventListener('click', () => this.joinRoom(room.id));
                 container.appendChild(roomDiv);
             });
