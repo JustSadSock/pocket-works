@@ -16,7 +16,7 @@ const WIRE_VERSION = 1;
 const MAX_PAYLOAD = 16 * 1024;
 const MAX_EVENT_BYTES = 256 * 1024;
 const MAX_ZAMAZKA_STATE_EVENT = 5 * 1024 * 1024;
-const ZAMAZKA_SECURE_COMMANDS = new Set(['sync','time_ping','pulse','submit_begin','submit_resume','claim_host','kick_player','art_ready','board_delta','board_clear','emblem','start','draft_chunk','submit_chunk','draft','submit','vote','vote_draft','advance','continue','next']);
+const ZAMAZKA_SECURE_COMMANDS = new Set(['sync','time_ping','pulse','submit_begin','submit_resume','claim_host','kick_player','art_ready','board_delta','board_clear','emblem','start','draft_chunk','submit_chunk','draft','submit','vote','vote_draft','advance','continue','next','ballot_chunk']);
 const ZAMAZKA_ART_REF = '__zamazka_sqlite_art__';
 const MAX_STATE = 256 * 1024;
 const MAX_ROOMS = 32;
@@ -303,10 +303,14 @@ export class PocketNetHub {
         if(kind==='final'&&state.assignments?.[user]?.strokes===ZAMAZKA_ART_REF)state.assignments[user].strokes=art;
         else if(kind==='draft'&&state.drafts?.[user]===ZAMAZKA_ART_REF)state.drafts[user]=art;
         else if(kind==='assembly'&&state.draftAssemblies?.[user]?.strokes===ZAMAZKA_ART_REF)state.draftAssemblies[user].strokes=art;
+        else if(kind==='ballot'&&state.ballotSprites?.[user]===ZAMAZKA_ART_REF)state.ballotSprites[user]=art;
+        else if(kind==='ballot-assembly'&&state.ballotAssemblies?.[user]===ZAMAZKA_ART_REF)state.ballotAssemblies[user]=art;
       }
       for(const item of Object.values(state.assignments||{}))if(item.strokes===ZAMAZKA_ART_REF)throw Error('room_art_missing');
       for(const item of Object.values(state.drafts||{}))if(item===ZAMAZKA_ART_REF)throw Error('room_art_missing');
       for(const item of Object.values(state.draftAssemblies||{}))if(item.strokes===ZAMAZKA_ART_REF)throw Error('room_art_missing');
+      for(const item of Object.values(state.ballotSprites||{}))if(item===ZAMAZKA_ART_REF)throw Error('room_ballot_missing');
+      for(const item of Object.values(state.ballotAssemblies||{}))if(item===ZAMAZKA_ART_REF)throw Error('room_ballot_missing');
     }
     return {id:row.id,gameId:row.game_id,version:row.version,
       state,players:roomPlayers,createdAt:row.created_at,updatedAt:row.updated_at};
@@ -804,7 +808,7 @@ export class PocketNetHub {
               result.events?.some(e=>e.type==='submission_saved')));
           if(!readOnlyZamazka){
             const artworkPacket=room.gameId==='zamazka'&&
-              ['draft_chunk','submit_chunk'].includes(msg.payload?.type)&&
+              ['draft_chunk','submit_chunk','ballot_chunk'].includes(msg.payload?.type)&&
               prior.phase===room.state.phase&&prior.round===room.state.round;
             this.persist(room,artworkPacket?{artOwner:player.id,skipAlarm:true}:{});
           }
@@ -816,7 +820,7 @@ export class PocketNetHub {
           if(!earlyKick)await this.applyKicks(room, result.events ?? [], player.id);
           // Deliver cosmetics independently of bulk artwork packets. Pending awards
           // are durably queued and retried by the existing alarm.
-          const bulkZamazka=room.gameId==='zamazka'&&['draft_chunk','submit_chunk','draft','submit_begin','submit_resume','sync','time_ping','pulse'].includes(msg.payload?.type);
+          const bulkZamazka=room.gameId==='zamazka'&&['draft_chunk','submit_chunk','draft','submit_begin','submit_resume','sync','time_ping','pulse','ballot_chunk'].includes(msg.payload?.type);
           if(!bulkZamazka)await this.flushAwards();
           if (result.finished) await this.closeRoom(room);
           return;
