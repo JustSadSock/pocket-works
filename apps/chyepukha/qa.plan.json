@@ -23,7 +23,8 @@
         "tests/scenario-boundaries.test.mjs",
         "tests/story-blind-play.test.mjs",
         "tests/release-v7.test.mjs",
-        "tests/reconnect-endurance.test.mjs"
+        "tests/reconnect-endurance.test.mjs",
+        "tests/v7-preview.test.mjs"
       ]
     },
     {
