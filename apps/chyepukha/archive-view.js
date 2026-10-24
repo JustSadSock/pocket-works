@@ -2,7 +2,7 @@ import {storyText} from './story-library.js';
 import {chapterReader} from './reader-reveal.js';
 
 /** The archive renderer is deliberately pure: app.js owns storage and actions. */
-export function renderArchive({all,visible,edition,story,query='',readerMode='pages',readerPage=0,escape}){
+export function renderArchive({all,visible,edition,story,query='',readerMode='full',readerPage=0,escape}){
  const back='<button class="button outline small archive-back" type="button" data-act="archive-back">← До меню</button>';
  const header='<header class="archive-heading"><div><div class="eyebrow">ПРИВАТНА ПОЛИЦЯ</div><h2>Архів рукописів</h2><p class="mini">Лише на цьому пристрої · '+all.length+' видань</p></div>'+back+'</header>';
  const tools='<div class="archive-toolbar">'+
