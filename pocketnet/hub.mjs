@@ -817,8 +817,10 @@ export class PocketNetHub {
           room.state = result.state;
           // Pure queries do not change room state. Avoid serializing and writing
           // the entire room for every time sync or reconnection snapshot.
+          const peerAudit=room.gameId==='zamazka'&&room.version==='v45'&&msg.payload?.type==='ballot_audit';
+          const acceptedPeerAudit=peerAudit&&result.events?.some(e=>e.type==='audit_update');
           const readOnlyZamazka=room.gameId==='zamazka'&&
-            (msg.payload?.type==='sync'||msg.payload?.type==='time_ping'||
+            ((peerAudit&&!acceptedPeerAudit)||msg.payload?.type==='sync'||msg.payload?.type==='time_ping'||
              (msg.payload?.type==='pulse'&&(result.events?.length||0)===0)||
              (msg.payload?.type==='submit_resume'&&
               result.events?.some(e=>e.type==='submission_saved')));
@@ -826,7 +828,11 @@ export class PocketNetHub {
             const artworkPacket=room.gameId==='zamazka'&&
               ['draft_chunk','submit_chunk','ballot_chunk'].includes(msg.payload?.type)&&
               prior.phase===room.state.phase&&prior.round===room.state.round;
-            this.persist(room,artworkPacket?{artOwner:player.id,skipAlarm:true}:{});
+            // Reports change only tiny diagnostic counters. They MUST NOT
+            // rewrite the eight full WebP images (or any final brush vectors).
+            this.persist(room,acceptedPeerAudit?{artOwner:'',skipAlarm:true}:
+              artworkPacket?{artOwner:player.id,skipAlarm:true}:{});
+
           }
           this.recordZamazkaRewards(room,prior,room.state,result.events ?? [],player.id);
           this.recordBlockiesRewards(room,prior,room.state);
@@ -836,7 +842,7 @@ export class PocketNetHub {
           if(!earlyKick)await this.applyKicks(room, result.events ?? [], player.id);
           // Deliver cosmetics independently of bulk artwork packets. Pending awards
           // are durably queued and retried by the existing alarm.
-          const bulkZamazka=room.gameId==='zamazka'&&['draft_chunk','submit_chunk','draft','submit_begin','submit_resume','sync','time_ping','pulse','ballot_chunk'].includes(msg.payload?.type);
+          const bulkZamazka=room.gameId==='zamazka'&&['draft_chunk','submit_chunk','draft','submit_begin','submit_resume','sync','time_ping','pulse','ballot_chunk','ballot_audit'].includes(msg.payload?.type);
           if(!bulkZamazka)await this.flushAwards();
           if (result.finished) await this.closeRoom(room);
           return;
