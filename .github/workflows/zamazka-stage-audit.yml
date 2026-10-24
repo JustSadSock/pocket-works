@@ -22,6 +22,7 @@ on:
       - 'apps/zamazka/app.js'
       - 'apps/zamazka/qa/visual-stage-regression.mjs'
       - 'apps/zamazka/fill-core.js'
+      - '.github/workflows/zamazka-stage-audit.yml'
 permissions:
   contents: read
 jobs:
