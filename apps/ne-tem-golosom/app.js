@@ -150,7 +150,7 @@ function updateMediaLab(){
   }else if(sourceBlob.size>MAX_ROOM_VIDEO_BYTES&&mode==='host'){
     $('media-note').textContent='Для комнаты размер нужно уменьшить до 96 МиБ. Сжатие происходит локально.';
   }else if(!videoExportBlob){
-    $('media-note').textContent='Обрежь отрывок или уменьши файл. После обработки появится предпросмотр реального качества.';
+    $('media-note').textContent='Можно продолжить без сжатия или подготовить меньший файл для быстрой передачи.';
   }
 }
 function exportBusy(busy){
