@@ -11,6 +11,14 @@ test('same account and tab retains resumable token',async()=>{
  saved();const storage=await tab.prepareSession(server,'Guest','chyepukha-1');
  assert.equal(JSON.parse(storage.getItem(key)).roomId,'abcd1234');
 });
+test('verified nickname changes preserve the room seat and migrate legacy tab ownership',async()=>{
+ saved('Marta','pocket-id:A');
+ const first=await tab.prepareSession(server,'New Name','pocket-id:A');
+ assert.equal(JSON.parse(first.getItem(key)).roomId,'abcd1234');
+ assert.equal(first.getItem('pocket-works:chyepukha:session-owner:'+server),'pocket-id:A');
+ const second=await tab.prepareSession(server,'Another Name','pocket-id:A');
+ assert.equal(JSON.parse(second.getItem(key)).roomId,'abcd1234');
+});
 test('guest name update clears old authentication',async()=>{
  saved();const storage=await tab.prepareSession(server,'Other','chyepukha-1');
  assert.equal(storage.getItem(key),null);
