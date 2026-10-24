@@ -513,6 +513,7 @@ async function playStage(){if(!scene||record||preroll||micPending||pendingRecord
 function mime(){const opts=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];return opts.find(x=>window.MediaRecorder?.isTypeSupported(x))||''}
 function updateRecordingControls(){
  $('count-record-btn').disabled=!!record||!!micPending||!!pendingRecording;
+ $('mute-film').disabled=!!record||!!preroll||!!micPending||!!pendingRecording;
  $('record-btn').disabled=!!micPending||!!pendingRecording||!!preroll;
  $('replace-clip-btn').disabled=!selectedClip||!!record||!!preroll||!!micPending||!!pendingRecording;
  $('count-record-btn').classList.toggle('counting',!!preroll?.countdown);
@@ -590,6 +591,7 @@ async function startRecord(countdown=0,replaceId=null){
     finally{
      stream.getTracks().forEach(t=>t.stop());
      $('record-badge').classList.add('hidden');
+     $('stage-video').muted=!filmSound;
      pendingRecording=null;renderTimeline();updateRecordingControls();active.resolve?.();
     }
    };
@@ -604,7 +606,8 @@ async function startRecord(countdown=0,replaceId=null){
   }catch(e){
    if(rec&&rec.state!=='inactive')rec.stop();else stream.getTracks().forEach(t=>t.stop());
    if(preroll===session)preroll=null;
-   record=null;$('countdown').classList.add('hidden');updateRecordingControls();
+   record=null;$('stage-video').muted=!filmSound;
+   $('countdown').classList.add('hidden');updateRecordingControls();
    toast('Не удалось запустить видео и запись.');
   }
  };
