@@ -52,6 +52,8 @@ on:
       - 'pocketnet/art-storage.mjs'
       - 'pocketnet/qa/art-storage.test.mjs'
       - 'pocketnet/zamazka-presence.mjs'
+      - 'pocketnet/zamazka-deadlines.mjs'
+      - 'apps/zamazka/qa/server-alarm.mjs'
       - 'pocketnet/qa/zamazka-presence.test.mjs'
       - 'pocketnet/modules.lock.json'
       - 'pocketnet/module-versions/zamazka/**'
@@ -105,6 +107,8 @@ jobs:
         run: node --test pocketnet/qa/room-join-view.test.mjs pocketnet/qa/disconnect-presence.test.mjs pocketnet/qa/art-storage.test.mjs pocketnet/qa/zamazka-presence.test.mjs pocketnet/qa/zamazka-state-stream.test.mjs
       - name: Verify immutable PocketNet module snapshot
         run: npm run pocketnet:check
+      - name: Advance all Zamazka phases without browser heartbeats
+        run: node apps/zamazka/qa/server-alarm.mjs
       - name: Reject stale votes and unauthorized room access
         run: node apps/zamazka/qa/security-stage1.mjs
       - name: Ensure indistinguishable five-card canvases and real retry
