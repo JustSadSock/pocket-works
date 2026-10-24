@@ -40,7 +40,7 @@ reject(b=>b.write('NOPE',8),'invalid format');
 const trailing=Buffer.concat([clean,Buffer.from([1])]);
 trailing.writeUInt32LE(trailing.length-8,4);
 assert(!validBallotWebp(encoded(trailing)),'extra byte is not a valid chunk');
-const padded=webp({bytes:4002,length:3981});
+const padded=webp({bytes:4004,length:3981});
 padded[4001]=0;
 assert(!validBallotWebp(encoded(padded)), 'dangling bytes after padding rejected');
 const future=Buffer.concat([clean,Buffer.alloc(80)]);
