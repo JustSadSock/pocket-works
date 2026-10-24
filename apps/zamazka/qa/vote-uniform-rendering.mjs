@@ -56,4 +56,10 @@ assert.match(app,/data-vote-canvas=/);
 assert.doesNotMatch(app,/examinedCanvas/,'no forged-only DOM node');
 assert.doesNotMatch(app,/canvas\.classList\.add\('is-ready'\)/,'readiness must be atomic');
 assert.match(app,/retry-vote-paintings/,'failed gallery can be retried');
+assert.match(app,/const paintingsReady=screen\.firstElementChild\?\.dataset\.votePaintingsReady==='true'/,
+ 'coins remain disabled until the five images appear');
+assert.match(app,/ballotScreen\.dataset\.votePaintingsReady=result\.ready\?'true':'false'/,
+ 'the gallery unlocks inputs only after atomic successful compositing');
+assert.match(app,/if\(automatic&&paintingsReady&&total===3/,
+ 'auto-voting cannot begin before the suspect images load');
 console.log('ZAMAZKA: five uniform canvases, one restoration, atomic reveal, retry and stale-screen guard OK');
