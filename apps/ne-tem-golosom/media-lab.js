@@ -27,10 +27,12 @@ export const supportsVideoExport = () => typeof MediaRecorder !== 'undefined'
   && typeof document.createElement('canvas').captureStream === 'function'
   && typeof MediaRecorder.isTypeSupported === 'function';
 
-function outputMime() {
+function outputMime(keepAudio) {
   if (!supportsVideoExport()) return '';
-  return ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/webm;codecs=vp8,opus',
-    'video/mp4', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type)) || '';
+  const kinds=keepAudio
+    ?['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/webm;codecs=vp8,opus','video/mp4','video/webm']
+    :['video/mp4;codecs=avc1.42E01E','video/webm;codecs=vp8','video/mp4','video/webm'];
+  return kinds.find(type => MediaRecorder.isTypeSupported(type)) || '';
 }
 function abortError() { return new DOMException('Обработка отменена', 'AbortError'); }
 /* MediaRecorder WebM may report duration=Infinity until its last frame has been sought. */
@@ -58,7 +60,7 @@ export async function measureVideoDuration(video) {
  */
 export async function exportVideo({ blob, start, duration, width, level, keepAudio = false, signal, onProgress = () => {} }) {
   if (!supportsVideoExport()) throw Error('Этот браузер не поддерживает локальное кодирование видео.');
-  const mimeType = outputMime();
+  const mimeType = outputMime(keepAudio);
   if (!mimeType) throw Error('В браузере нет подходящего видеокодека для экспорта.');
   if (!(blob instanceof Blob) || blob.size < 1 || !Number.isFinite(start)
     || !Number.isFinite(duration) || duration < 1 || duration > 90 || start < 0) throw Error('Неверный отрывок.');
@@ -71,7 +73,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
   video.muted = true; // Silent element playback is allowed after async metadata/seek; audio is routed separately.
   video.src = src;
   let recorder, frame = 0, audioContext, stream, cancelled = false;
-  let timer, started = false, captureMode = 'compatibility', watchdog = 0, clock = 0;
+  let timer, started = false, captureMode = 'compatibility', watchdog = 0;
   let lastMediaTime = start, lastAdvance = performance.now(), terminalError = null;
   const abort = () => { cancelled = true; video.pause(); if (recorder?.state === 'recording') recorder.stop(); };
   const hidden = () => { if (document.hidden) abort(); };
@@ -210,6 +212,8 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
     try { await video.play(); } catch {
       terminalError=Error('Браузер запретил обработку. Нажми «Сжать» ещё раз.');
       if(recorder.state==='recording')recorder.stop();
+      // Recorder callbacks can fire on another task; observe the rejection.
+      await completed.catch(()=>{});
       throw terminalError;
     }
     if(captureMode==='decoded-frames')
