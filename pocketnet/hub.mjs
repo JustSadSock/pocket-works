@@ -726,13 +726,19 @@ export class PocketNetHub {
           const command=msg.payload.type,now=Date.now();
           this.advanceBazaarDeadline(room,now);
           if(command==='tick')return;
-          const rateMap=command==='sync'?this.bazaarSyncAt:this.bazaarPingAt;
-          if(now-(rateMap.get(ws)||0)<1500)return;
-          rateMap.set(ws,now);
-          if(command==='sync')this.emit(room,[{type:'state',to:player.id}]);
-          else if(Number.isFinite(msg.payload.stamp))
+          if(command==='sync'){
+            const last=this.bazaarSyncAt.get(ws),revision=room.state.revision;
+            // Suppress duplicate snapshots only. A completed trade changes
+            // revision and must be immediately resyncable on the same socket.
+            if(last&&last.revision===revision&&now-last.at<1500)return;
+            this.bazaarSyncAt.set(ws,{at:now,revision});
+            this.emit(room,[{type:'state',to:player.id}]);
+          }else if(Number.isFinite(msg.payload.stamp)){
+            if(now-(this.bazaarPingAt.get(ws)||0)<1500)return;
+            this.bazaarPingAt.set(ws,now);
             message(ws,'game_event',{roomId:room.id,event:{type:'time_pong',to:player.id,
               payload:{stamp:msg.payload.stamp,serverNow:Date.now(),revision:room.state.revision}}});
+          }
           return;
         }
         if (msg.type === 'game_message' && isChyepukhaSync(room.gameId, msg.payload)) {
