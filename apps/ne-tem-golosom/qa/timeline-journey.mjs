@@ -82,6 +82,19 @@ try{
   assert.equal(await page.locator('#timeline-zoom-label').innerText(),'4×');
 
   // Move a voice clip with a pointer, then trim its right edge.
+  await page.evaluate(()=>{
+   window.__ntgPointerEvents=[];
+   const lane=document.querySelector('#clip-lane');
+   ['pointerdown','pointermove','pointerup','click'].forEach(type=>
+    lane.addEventListener(type,e=>{
+     if(window.__ntgPointerEvents.length<45)window.__ntgPointerEvents.push({
+      type,target:e.target?.className,button:e.button,
+      clip:e.target?.closest?.('[data-clip]')?.dataset.clip,
+      x:e.clientX,y:e.clientY
+     });
+    },true)
+   );
+  });
   const before=await page.locator('[data-clip="first"]').evaluate(el=>({
     left:parseFloat(el.style.left),width:parseFloat(el.style.width)
   }));
@@ -95,6 +108,19 @@ try{
   const moved=await page.locator('[data-clip="first"]').evaluate(el=>({
     left:parseFloat(el.style.left),width:parseFloat(el.style.width)
   }));
+  if(!(moved.left>before.left)){
+   const diagnostic=await page.evaluate(()=>({
+    lane:document.querySelector('#clip-lane').getBoundingClientRect().toJSON(),
+    button:document.querySelector('[data-clip="first"]').getBoundingClientRect().toJSON(),
+    events:window.__ntgPointerEvents,
+    pointerAt:document.elementFromPoint(
+     document.querySelector('[data-clip="first"]').getBoundingClientRect().x+40,
+     document.querySelector('[data-clip="first"]').getBoundingClientRect().y+15
+    )?.outerHTML.slice(0,200)
+   }));
+   console.log(vp.name,'POINTER_DEBUG',JSON.stringify({before,moved,rect,diagnostic}));
+   await page.screenshot({path:join(output,vp.name+'-drag-failure.png'),fullPage:true});
+  }
   assert(moved.left>before.left,'drag moves audio in time');
   assert(Math.abs(moved.width-before.width)<0.01,'moving preserves recording length');
   rect=await page.locator('[data-clip="first"]').boundingBox();
