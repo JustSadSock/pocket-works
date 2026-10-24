@@ -10,7 +10,8 @@ import {chromium} from '@playwright/test';
 const dir=process.env.ZAMAZKA_QA_ARTIFACT_DIR||join(tmpdir(),'zamazka-topology');
 mkdirSync(dir,{recursive:true});
 const source=readFileSync(new URL('../fill-core.js',import.meta.url),'utf8')
- .replace('export function floodFillRaster','function floodFillRaster');
+ .replaceAll('export function ','function ');
+assert(source.includes('function floodFillRaster(')&&!source.includes('export function'),'classic browser QA script must strip all ESM export tokens');
 const browser=await chromium.launch({headless:true});
 try{
  const page=await browser.newPage({viewport:{width:1260,height:1020},deviceScaleFactor:1});
