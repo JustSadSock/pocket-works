@@ -164,7 +164,20 @@ try{
     const acceptButton=frame.locator('.table-trade-actions.is-seller button[data-action="accept"][data-player="debug-1"]');
     if(await acceptButton.count()!==1||!await acceptButton.getAttribute('data-bid'))
      report.issues.push('seller cannot accept exact bid from the tabletop');
-    else await acceptButton.click();
+    else {
+     const hit=await frame.evaluate(()=>{
+      const b=document.querySelector('.table-trade-actions.is-seller button[data-action="accept"]');
+      const seat=document.querySelector('.player-seats');
+      const stage=document.querySelector('.table-stage');
+      const rail=document.querySelector('.table-trade-actions');
+      const rect=e=>{const r=e.getBoundingClientRect();return {x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}};
+      const bb=b.getBoundingClientRect(),x=bb.left+bb.width/2,y=bb.top+bb.height/2;
+      return {button:rect(b),rail:rect(rail),stage:rect(stage),seat:rect(seat),stageZ:getComputedStyle(stage).zIndex,seatsZ:getComputedStyle(seat).zIndex,
+       hit:document.elementsFromPoint(x,y).slice(0,5).map(el=>({tag:el.tagName,cl:el.className?.baseVal||el.className,action:el.dataset?.action}))};
+     });
+     console.log('Bazaar tabletop seller hit-test',id,JSON.stringify(hit));
+     await acceptButton.click({timeout:4000});
+    }
    }
    const accepted=await exercise({type:'tick'});
    const buyerBefore=before.players.find(p=>p.id==='debug-1');
