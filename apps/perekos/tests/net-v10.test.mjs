@@ -18,13 +18,13 @@ const equip=(s,player,id,slot,action)=>{
  assert.ok(own,id+' must be server-issued');
  return edit(s,player,{type:'equip',slot,instanceId:own.instanceId,...(action===undefined?{}:{action})});
 };
-test('v19 binary-exact snapshot, archived v13 and prior versions unchanged',async()=>{
+test('v20 binary-exact snapshot, archived v13 and prior versions unchanged',async()=>{
  const main=await readFile(new URL('../server/module.ts',import.meta.url),'utf8');
- const current=await readFile(new URL('../../../pocketnet/module-versions/perekos/v19.ts',import.meta.url),'utf8');
+ const current=await readFile(new URL('../../../pocketnet/module-versions/perekos/v20.ts',import.meta.url),'utf8');
  const previous=await readFile(new URL('../../../pocketnet/module-versions/perekos/v9.ts',import.meta.url),'utf8');
  const lock=JSON.parse(await readFile(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
- assert.equal(main,current);assert.notEqual(main,previous);assert.equal(RULESET_VERSION,19);
- assert.equal(lock.perekos.current,'v19');assert.ok(lock.perekos.versions.includes('v18'));assert.ok(lock.perekos.versions.includes('v17'));assert.ok(lock.perekos.versions.includes('v16'));assert.ok(lock.perekos.versions.includes('v15'));assert.ok(lock.perekos.versions.includes('v14'));assert.ok(lock.perekos.versions.includes('v13'));assert.ok(lock.perekos.versions.includes('v9'));assert.ok(lock.perekos.versions.includes('v10'));assert.ok(lock.perekos.versions.includes('v11'));assert.ok(lock.perekos.versions.includes('v12'));
+ assert.equal(main,current);assert.notEqual(main,previous);assert.equal(RULESET_VERSION,20);
+ assert.equal(lock.perekos.current,'v20');assert.ok(lock.perekos.versions.includes('v19'));assert.ok(lock.perekos.versions.includes('v18'));assert.ok(lock.perekos.versions.includes('v17'));assert.ok(lock.perekos.versions.includes('v16'));assert.ok(lock.perekos.versions.includes('v15'));assert.ok(lock.perekos.versions.includes('v14'));assert.ok(lock.perekos.versions.includes('v13'));assert.ok(lock.perekos.versions.includes('v9'));assert.ok(lock.perekos.versions.includes('v10'));assert.ok(lock.perekos.versions.includes('v11'));assert.ok(lock.perekos.versions.includes('v12'));
  assert.match(previous,/RULESET_VERSION=9/);
 });
 test('two seats select isolated schools and get server-owned rune inventory',()=>{
@@ -38,7 +38,7 @@ test('two seats select isolated schools and get server-owned rune inventory',()=
  assert.ok(one.reserve.some(r=>r.defId==='st_throw'));
  assert.ok(two.reserve.some(r=>r.defId==='fi_ember'));
  assert.ok(!two.reserve.some(r=>r.defId==='li_spark'));
- assert.equal(module.viewForPlayer({state:s,player:a,players}).rulesVersion,19);
+ assert.equal(module.viewForPlayer({state:s,player:a,players}).rulesVersion,20);
  assert.equal(module.viewForPlayer({state:s,player:b,players}).loadout.school,'fire');
 });
 test('untrusted clients cannot modify somebody else, forge card IDs, or skip typed 1/2/2 slots',()=>{

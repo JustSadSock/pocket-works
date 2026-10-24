@@ -88,8 +88,8 @@ test('two independently triggered rune guards share 1.65-second cooldown',()=>{
  assert.equal(s.actors[0].shield,28);
  assert.equal(validState(s),true);
 });
-test('PocketNet v19 retains byte-equivalent balance rules and private enemy books',()=>{
- assert.equal(RULESET_VERSION,19);
+test('PocketNet v20 retains byte-equivalent balance rules and private enemy books',()=>{
+ assert.equal(RULESET_VERSION,20);
  const a={id:'one'},b={id:'two'},players=[a,b];
  const send=(s,player,type,data={})=>server.onMessage({state:s,player,players,payload:{type,...data}});
  const s=server.createRoom({player:a}).state;
@@ -97,5 +97,5 @@ test('PocketNet v19 retains byte-equivalent balance rules and private enemy book
  send(s,a,'mode',{gameMode:'magic-v2'});send(s,a,'magic-school',{school:'fire'});
  send(s,a,'start',{gameMode:'magic-v2'});
  assert.equal(server.viewForPlayer({state:s,player:b,players}).match.magicLoadouts[0],null);
- assert.equal(server.viewForPlayer({state:s,player:a,players}).rulesVersion,19);
+ assert.equal(server.viewForPlayer({state:s,player:a,players}).rulesVersion,20);
 });
