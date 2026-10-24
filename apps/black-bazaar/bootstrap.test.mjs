@@ -267,7 +267,7 @@ test('Bazaar v22 black counters have matching UI and are not silently renamed',(
  assert.match(client,/data-form="black-counter"/);
  assert.match(client,/data-action="black-counter-accept"/);
  assert.match(client,/type:'black_counter_accept'/);
- assert.match(hub,/version IN \(\?,\?,\?\)/);
+ assert.match(hub,/version IN \(\?,\?,\?,\?\)/,'server alarms must cover v20-v23');
 });
 
 test('Version 0.19.1 offers real paths from pinned anonymous and direct inbox notifications',()=>{
