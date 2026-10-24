@@ -71,6 +71,12 @@ function verifyPrivate(state,selfId){
  assert.ok(!('contestants' in state),'authoritative contestant secrets are never sent');
 }
 async function sync(client,minRevision=0){
+ // v20 limits *private* sync to one per 1.5 seconds per connection. That is
+ // not a gameplay failure: the actual room state is still broadcast immediately.
+ // Pace explicit recovery probes instead of sending and awaiting a suppressed reply.
+ const now=Date.now(),remaining=1650-(now-(client.lastSyncAt||0));
+ if(remaining>0)await delay(remaining);
+ client.lastSyncAt=Date.now();
  client.send('game_message',{payload:{type:'sync'}});
  return stateOf(await client.next('game_event',stateEvent('play',s=>s.revision>=minRevision)));
 }
@@ -139,12 +145,6 @@ try{
  let lotState=stateOf(await seller.next('game_event',stateEvent('play',s=>s.listing?.id===itemId)));
  assert.equal(lotState.listing.seller,seller.id);
  buyer.send('game_message',{payload:{type:'bid',offer:{gold:45,crystals:0,parts:0}}});
- await delay(180);
- console.log('BAZAAR_BID_PROBE',JSON.stringify({buyer:buyer.id,seller:seller.id,
-   pending:buyer.queue.slice(-6).map(m=>m.type==='game_event'?
-     {type:m.type,eventType:m.event?.type,revision:m.event?.payload?.revision,
-      bids:m.event?.payload?.bids,notice:m.event?.type==='notice'?m.event.payload:null}:
-     {type:m.type,code:m.code,reason:m.reason})}));
  const bidReply=await buyer.next('game_event',m=>m.event?.type==='notice'||stateEvent('play',s=>s.bids?.some(b=>b.buyer===buyer.id))(m));
   if(bidReply.event.type==='notice')throw Error('Bazaar bid denied by server: '+JSON.stringify(bidReply.event.payload));
   lotState=stateOf(bidReply);
