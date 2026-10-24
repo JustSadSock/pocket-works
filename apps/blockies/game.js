@@ -664,7 +664,7 @@ function createActionState() {
 const PIECE_TYPES=Object.keys(SHAPES);
 const LOCK_DELAY_MS=450;
 const MAX_LOCK_RESETS=8;
-const KICK_OFFSETS=[[0,0],[-1,0],[1,0],[-2,0],[2,0],[0,-1],[-1,-1],[1,-1]];
+const KICK_OFFSETS=[[0,0],[-1,0],[1,0],[-2,0],[2,0],[-3,0],[3,0],[0,-1],[-1,-1],[1,-1]];
 function rotatedClockwise(piece){return piece[0].map((_,i)=>piece.map(row=>row[i]).reverse());}
 function inferShapeType(piece){
  if(!Array.isArray(piece))return null;
