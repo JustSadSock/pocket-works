@@ -462,7 +462,7 @@ async function resetRuntime(){
  if(pendingRecording)await pendingRecording;
  stopAllPlayback();
  if(projectKey&&scene&&!await draftWrite())return false;
- cleanAudios();localClips=[];remoteClips=[];
+ stopMicMonitor();cleanAudios();localClips=[];remoteClips=[];
  editHistory=new TimelineHistory();selectedClip=null;
  writtenVideoByKey.delete(projectKey);projectKey='';
  restoreGeneration++;
@@ -536,7 +536,7 @@ async function receivedMedia(p,rx,blob){if(rx.kind==='video'){if(!scene?.custom|
 }
 function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,mime:c.blob.type})}
 function sendAllOwn(){if(sentPremiere||mode==='solo')return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
-async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
+async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
 function stopAllPlayback(){playing=false;for(const id of ['stage-video','premiere-video','trim-video'])$(id).pause();for(const c of [...localClips,...remoteClips])c.audio?.pause();$('play-toggle').textContent='▶'}
 function updateClipSound(t,on,isPremiere=false){const items=isPremiere?[...localClips,...remoteClips]:localClips;for(const c of items){if(!c.audio)continue;const active=t>=c.start&&t<c.end&&on;const offset=clamp(t-c.start+c.offset,0,Math.max(0,c.blob.size?1e5:0));if(active){if(c.audio.paused||Math.abs(c.audio.currentTime-offset)>.25){try{c.audio.currentTime=offset}catch{}}if(c.audio.paused)c.audio.play().catch(()=>{})}else if(!c.audio.paused)c.audio.pause()}}
 // Video time updates move only the playhead. Clip buttons retain focus.
@@ -622,6 +622,8 @@ function updateRecordingControls(){
  $('count-record-btn').setAttribute('aria-label',preroll?.countdown?'Отменить отсчёт записи':'Начать запись через 3 секунды');
  $('record-label').textContent=record?'Стоп':'Записать';
  $('record-btn').classList.toggle('recording',!!record);
+ $('stage-video').closest('.stage-wrap')?.classList.toggle('is-recording',!!record);
+ if(!record)$('record-elapsed').textContent='00:00';
 }
 async function startRecord(countdown=0,replaceId=null){
  if(record){finishRecording();return}
@@ -649,9 +651,10 @@ async function startRecord(countdown=0,replaceId=null){
  }
  micPending=false;
  if(view!=='editor'||!scene){stream.getTracks().forEach(t=>t.stop());updateRecordingControls();return}
+ startMicMonitor(stream);
  let cancelled=false;
  const session={stream,countdown:countdown===3,cancel:()=>{
-  cancelled=true;stream.getTracks().forEach(t=>t.stop());
+  cancelled=true;stopMicMonitor();stream.getTracks().forEach(t=>t.stop());
  }};
  preroll=session;
  const launch=async()=>{
@@ -690,7 +693,7 @@ async function startRecord(countdown=0,replaceId=null){
      }else toast('Дубль слишком короткий, попробуй записать дольше.');
     }catch(e){toast('Не удалось сохранить запись: '+(e?.message||'ошибка'))}
     finally{
-     stream.getTracks().forEach(t=>t.stop());
+     stopMicMonitor();stream.getTracks().forEach(t=>t.stop());
      $('record-badge').classList.add('hidden');
      $('stage-video').muted=!filmSound;
      pendingRecording=null;renderTimeline();updateRecordingControls();active.resolve?.();
@@ -705,7 +708,7 @@ async function startRecord(countdown=0,replaceId=null){
    $('record-badge').classList.remove('hidden');
    updateRecordingControls();
   }catch(e){
-   if(rec&&rec.state!=='inactive')rec.stop();else stream.getTracks().forEach(t=>t.stop());
+   stopMicMonitor();if(rec&&rec.state!=='inactive')rec.stop();else stream.getTracks().forEach(t=>t.stop());
    if(preroll===session)preroll=null;
    record=null;$('stage-video').muted=!filmSound;
    $('countdown').classList.add('hidden');updateRecordingControls();
@@ -741,7 +744,7 @@ function finishRecording(){
  pendingRecording=new Promise(resolve=>{r.resolve=resolve});
  stopAllPlayback();
  if(r.rec.state!=='inactive')r.rec.stop();else{
-  r.stream.getTracks().forEach(t=>t.stop());r.resolve();pendingRecording=null;
+  stopMicMonitor();r.stream.getTracks().forEach(t=>t.stop());r.resolve();pendingRecording=null;
  }
  cue('stop');updateRecordingControls();
  return pendingRecording;
@@ -1001,7 +1004,7 @@ $('undo-btn').onclick=undoEdit;
 $('redo-btn').onclick=redoEdit;
 $('erase-btn').onclick=deleteClip;
 $('finish-btn').onclick=markReady;
-$('mute-film').onclick=()=>{filmSound=!filmSound;$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('stage-video').muted=!filmSound};
+$('mute-film').onclick=()=>{filmSound=!filmSound;$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound};
 $('editor-leave').onclick=async()=>{
  cancelCountdown();
  if(record)finishRecording();
