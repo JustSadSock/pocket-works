@@ -8,6 +8,7 @@ on:
       - 'apps/zamazka/qa/fill-colour-real-canvas.mjs'
       - 'apps/zamazka/qa/responsive-viewports.mjs'
       - 'apps/zamazka/qa/viewport-fit.mjs'
+      - 'apps/zamazka/qa/visual-stage-regression.mjs'
       - 'apps/zamazka/fill-core.js'
       - 'apps/zamazka/qa/fill-matching-colour.mjs'
       - 'apps/zamazka/qa/all-tools-matrix.mjs'
@@ -21,6 +22,7 @@ on:
       - 'apps/zamazka/qa/fill-colour-real-canvas.mjs'
       - 'apps/zamazka/qa/responsive-viewports.mjs'
       - 'apps/zamazka/qa/viewport-fit.mjs'
+      - 'apps/zamazka/qa/visual-stage-regression.mjs'
       - 'apps/zamazka/fill-core.js'
       - 'apps/zamazka/qa/all-tools-matrix.mjs'
       - 'apps/zamazka/qa/editor-input.mjs'
@@ -56,3 +58,5 @@ jobs:
         run: |
           node apps/zamazka/qa/responsive-viewports.mjs
           node apps/zamazka/qa/viewport-fit.mjs
+      - name: Validate real phase UI hierarchy and visual stage geometry
+        run: node apps/zamazka/qa/visual-stage-regression.mjs
