@@ -1,5 +1,6 @@
 import { POCKET_MODULES } from './generated-modules.mjs';
 import { sessionTokenKey, findSessionByToken, isSessionToken } from './session-tokens.mjs';
+import {AdmissionLimiter} from './admission-limits.mjs';
 import {assessZamazkaAwards} from './zamazka-awards.mjs';
 import {assessBlockiesAwards} from './blockies-awards.mjs';
 import {playerRoomView} from './private-views.mjs';
@@ -37,6 +38,13 @@ const encoder = new TextEncoder();
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }
 });
+const admissionDenied = decision => new Response(JSON.stringify({error:'rate_limited'}),{
+  status:429,headers:{
+    'content-type':'application/json; charset=utf-8',
+    'cache-control':'no-store',
+    'retry-after':String(decision.retryAfter)
+  }
+});
 const message = (ws, type, payload = {}) => {
   if (ws.readyState === 1) ws.send(JSON.stringify({ wireVersion: WIRE_VERSION, type, ...payload }));
 };
@@ -48,7 +56,11 @@ export class PocketNetHub {
     this.ctx = ctx;
     this.env = env;
     this.queue = Promise.resolve();
-    this.rates = new Map();
+    // 20 new sessions/minute and up to 120 WebSocket upgrades/minute per
+    // network IP. Separate counters prevent websocket churn blocking issuance.
+    // Each table is bounded, aged out and never exported with identifying keys.
+    this.sessionAdmission=new AdmissionLimiter({limit:20,maxKeys:2048});
+    this.socketAdmission=new AdmissionLimiter({limit:120,maxKeys:2048});
     this.messageRates = new WeakMap();
     this.chyepukhaSyncAt = new WeakMap();
     this.zamazkaSyncAt = new WeakMap();
@@ -462,6 +474,7 @@ export class PocketNetHub {
     if (origin && origin !== url.origin) return json({ error: 'origin_denied' }, 403);
     if (endpoint === '/health' && request.method === 'GET') {
       return json({ ok: true, transport: 'cloudflare-durable-objects', modules: Object.keys(POCKET_MODULES), rooms: this.countRooms(),
+        admission:{sessions:this.sessionAdmission.snapshot(),sockets:this.socketAdmission.snapshot()},
         games: Object.fromEntries(Object.entries(POCKET_MODULES).map(([id, entry]) =>
           [id, { version: entry.current, minPlayers: entry.versions[entry.current].MIN_PLAYERS ?? null,
             rulesVersion: entry.versions[entry.current].RULESET_VERSION ?? null }])) });
@@ -517,11 +530,9 @@ export class PocketNetHub {
     }
     if (endpoint === '/session' && request.method === 'POST') {
       const ip = request.headers.get('CF-Connecting-IP') || 'local';
-      const prior = this.rates.get(ip);
       const now = Date.now();
-      const rate = !prior || now - prior.start > 60_000 ? { start: now, count: 0 } : prior;
-      this.rates.set(ip, rate);
-      if (++rate.count > 20) return json({ error: 'rate_limited' }, 429);
+      const admission=this.sessionAdmission.check(ip,now);
+      if(!admission.allowed)return admissionDenied(admission);
       if (Number(request.headers.get('content-length') || 0) > 1024) return json({ error: 'request_too_large' }, 413);
       let body;
       try { const raw = await request.text(); if (bytes(raw) > 1024) throw Error(); body = JSON.parse(raw); }
@@ -541,6 +552,9 @@ export class PocketNetHub {
       return json({ token, verified: !!accountId, accountId });
     }
     if (endpoint === '/ws' && request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
+      // Rate-limit handshakes before allocating a server-side WebSocket.
+      const admission=this.socketAdmission.check(request.headers.get('CF-Connecting-IP') || 'local');
+      if(!admission.allowed)return admissionDenied(admission);
       if (this.ctx.getWebSockets().length >= MAX_CONNECTIONS) return json({ error: 'server_at_capacity' }, 503);
       const pair = new WebSocketPair();
       const [client, server] = Object.values(pair);
@@ -890,6 +904,8 @@ export class PocketNetHub {
     const sweep=await this.run(async()=>{
       const now = Date.now();
       this.sql('DELETE FROM sessions WHERE expires < ?', now);
+      this.sessionAdmission.sweep(now);
+      this.socketAdmission.sweep(now);
       const rows = this.sql('SELECT id, updated_at FROM rooms').toArray();
       for (const row of rows) {
         const room = this.readRoom(row.id);

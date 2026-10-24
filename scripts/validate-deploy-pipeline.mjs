@@ -23,7 +23,7 @@ const scripts = packageJson.scripts || {};
 const deployCommand = 'npm run pocketnet:check && npm run validate:launcher && npm run build:enhanced && npm run prepare:site && npm run validate:site';
 const fullCiCommand = 'npm run pocketnet:check && npm run validate:launcher && npm run prepare:sente-engine && npm run test:sente-ai && npm run health && npm run prepare:site && npm run validate:site';
 
-if (scripts['pocketnet:check'] !== 'node scripts/sync-blockies-physics.mjs --check && node --test apps/blockies/tests/rules-parity.test.mjs apps/blockies/tests/shared-physics.test.mjs apps/blockies/tests/deterministic-replay.test.mjs && node scripts/build-pocketnet-modules.mjs --check && node --test pocketnet/test/session-tokens.test.mjs') {
+if (scripts['pocketnet:check'] !== 'node scripts/sync-blockies-physics.mjs --check && node --test apps/blockies/tests/rules-parity.test.mjs apps/blockies/tests/shared-physics.test.mjs apps/blockies/tests/deterministic-replay.test.mjs && node scripts/build-pocketnet-modules.mjs --check && node --test pocketnet/test/session-tokens.test.mjs pocketnet/test/admission-limits.test.mjs') {
   errors.push('PocketNet preflight must verify immutable modules and session credential regressions before production builds start');
 }
 if (!scripts['validate:pipeline']?.includes('npm run test:pocketnet:release')) {
