@@ -23,7 +23,8 @@ type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[];full?:boolean};
 type DraftAssembly={checksum?:string;revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
 type SpriteAssembly={revision:string;checksum:string;parts:number;next:number;data:string};
-type State={rasterBallots?:boolean;spriteFallback?:boolean;ballotSprites?:Record<string,string>;ballotAssemblies?:Record<string,SpriteAssembly>;pendingFinals?:Record<string,number>;incompleteSubmissions?:string[];resumable?:boolean;balancedDamage?:boolean;shapeCorrected?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;bannedIds?:string[];emblemUpdatedAt?:Record<string,number>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type RasterAudit={mae:number;patch:number;differing:number;status:'match'|'mismatch'};
+type State={ballotAudits?:Record<string,Record<string,RasterAudit>>;rasterBallots?:boolean;spriteFallback?:boolean;ballotSprites?:Record<string,string>;ballotAssemblies?:Record<string,SpriteAssembly>;pendingFinals?:Record<string,number>;incompleteSubmissions?:string[];resumable?:boolean;balancedDamage?:boolean;shapeCorrected?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;bannedIds?:string[];emblemUpdatedAt?:Record<string,number>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const BALLOT_PREFIX='data:image/webp;base64,';
 const BALLOT_MAX_CHARS=450000;
@@ -69,6 +70,11 @@ function validBallotImage(value:string){
  }
  return width===3000&&height===450;
 }
+function rasterAuditCounts(s:State,authorId:string){
+ const reports=Object.values(s.ballotAudits?.[authorId]||{});
+ return {matches:reports.filter(r=>r.status==='match').length,
+  mismatches:reports.filter(r=>r.status==='mismatch').length};
+}
 function allSprites(s:State){return members(s).every(p=>validBallotImage(s.ballotSprites?.[p.id]||''))}
 function nextSpriteTurn(s:State,startingAt:number){
  return members(s).findIndex((p,i)=>i>=startingAt&&validBallotImage(s.ballotSprites?.[p.id]||''));
@@ -88,7 +94,7 @@ const strip=(s:State,id:string)=>({
  author:members(s)[s.turn]||null,
  candidate:s.phase==='voting'&&!s.rasterBallots?s.assignments[members(s)[s.turn]?.id]||null:null,
  ballotSprite:s.phase==='voting'&&s.rasterBallots?s.ballotSprites?.[members(s)[s.turn]?.id]||null:null,
- gallery:(s.phase==='verdict'||s.phase==='reveal'||s.phase==='round-review'||s.phase==='results')?members(s).map((p,i)=>(s.phase!=='verdict'&&s.phase!=='reveal')||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{},scoreAudit:s.timedScoring?scoreTurn(s,p.id):undefined}):null):null
+ gallery:(s.phase==='verdict'||s.phase==='reveal'||s.phase==='round-review'||s.phase==='results')?members(s).map((p,i)=>(s.phase!=='verdict'&&s.phase!=='reveal')||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{},rasterAudit:s.rasterBallots?rasterAuditCounts(s,p.id):undefined,scoreAudit:s.timedScoring?scoreTurn(s,p.id):undefined}):null):null
 });
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
 function notice(id:string,msg:string){return [{type:'notice',to:id,payload:msg}]}
@@ -96,7 +102,7 @@ function choose(s:State){
  s.selected=shuffled(Array.from({length:CATALOG_COUNT-1},(_,i)=>i+1).filter(id=>!EXCLUDED_PAINTINGS.has(id))).slice(0,5);
  // Assign each restorer independently from the same five previewed originals.
  // Two players may receive one painting but different damaged fragments.
- s.assignments={};s.ballotSprites={};s.ballotAssemblies={};s.spriteFallback=false;s.drafts={};s.draftAssemblies={};s.pendingFinals={};s.incompleteSubmissions=[];s.votes={};s.voteDrafts={};s.voteTiming={};s.turn=0;s.revealed=false;
+ s.assignments={};s.ballotSprites={};s.ballotAssemblies={};s.ballotAudits={};s.spriteFallback=false;s.drafts={};s.draftAssemblies={};s.pendingFinals={};s.incompleteSubmissions=[];s.votes={};s.voteDrafts={};s.voteTiming={};s.turn=0;s.revealed=false;
  members(s).forEach(p=>s.assignments[p.id]={art:s.selected[Math.floor(Math.random()*s.selected.length)],
   variation:s.shapeCorrected?0x200000000+Math.floor(Math.random()*0x100000000):s.balancedDamage?0x100000000+Math.floor(Math.random()*0x100000000):Math.floor(Math.random()*0xffffffff),strokes:null});
  s.readyPlayers=[];s.phase=s.artPreparationEnabled?'preparing':'preview';s.deadline=now()+(s.artPreparationEnabled?15000:25000);
@@ -302,7 +308,7 @@ function boardSegment(raw:Record<string,unknown>,u:string):BoardSegment|null{
 }
 const module: PocketModule<State>={
  protocolVersion:1,
- createRoom({player}){return {state:{rasterBallots:false,spriteFallback:false,ballotSprites:{},ballotAssemblies:{},resumable:true,balancedDamage:true,shapeCorrected:true,timedScoring:true,board:{revision:0,segments:[]},emblems:{},emblemUpdatedAt:{},bannedIds:[],host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},voteTiming:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
+ createRoom({player}){return {state:{ballotAudits:{},rasterBallots:false,spriteFallback:false,ballotSprites:{},ballotAssemblies:{},resumable:true,balancedDamage:true,shapeCorrected:true,timedScoring:true,board:{revision:0,segments:[]},emblems:{},emblemUpdatedAt:{},bannedIds:[],host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},voteTiming:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
  onJoin({state,player}){
    if(state.bannedIds?.includes(player.id))throw Error('room_kicked');
    if(state.phase!=='lobby'&&!state.participants.some(p=>p.id===player.id))throw Error('room_in_progress');
@@ -418,6 +424,8 @@ const module: PocketModule<State>={
      delete state.assignments[target];
      delete state.ballotSprites?.[target];
      delete state.ballotAssemblies?.[target];
+     delete state.ballotAudits?.[target];
+     for(const reports of Object.values(state.ballotAudits||{}))delete reports[target];
      delete state.drafts?.[target];
      delete state.draftAssemblies?.[target];
      state.readyPlayers=state.readyPlayers?.filter(p=>p!==target);
@@ -439,6 +447,33 @@ const module: PocketModule<State>={
      return {state,events:emit(state)};
    }
 
+   if(a.type==='ballot_audit'){
+     // Independent replay by a spectator after the author has been revealed.
+     // Reports are untrusted signals and never modify scoring or player rights.
+     if(!state.rasterBallots||!['reveal','round-review','results'].includes(state.phase)||
+        a.round!==state.round||!Number.isInteger(a.turn)||a.turn<0||a.turn>=members(state).length)
+      return {state,events:notice(id,'Проверка относится к другому раунду.')};
+     const author=members(state)[a.turn];
+     if(!author||a.targetId!==author.id||id===author.id||
+        (state.phase==='reveal'&&a.turn!==state.turn)||
+        !state.ballotSprites?.[author.id])
+      return {state,events:notice(id,'Полотно ещё не раскрыто или недоступно для проверки.')};
+     if(typeof a.spriteChecksum!=='string'||a.spriteChecksum!==spriteHash(state.ballotSprites[author.id]))
+      return {state,events:notice(id,'Изображение не совпадает с серверной копией.')};
+     if(!Number.isInteger(a.mae)||a.mae<0||a.mae>255||
+        !Number.isInteger(a.patch)||a.patch<0||a.patch>255||
+        !Number.isInteger(a.differing)||a.differing<0||a.differing>100)
+      return {state,events:notice(id,'Неверный результат сверки изображения.')};
+     state.ballotAudits||={};state.ballotAudits[author.id]||={};
+     if(id in state.ballotAudits[author.id])return {state,events:[]};
+     const report:RasterAudit={mae:a.mae,patch:a.patch,differing:a.differing,
+      status:a.mae>28||a.patch>48?'mismatch':'match'};
+     state.ballotAudits[author.id][id]=report;
+     const counts=rasterAuditCounts(state,author.id);
+     return {state,events:members(state).map(member=>({
+      type:'audit_update',to:member.id,payload:{round:state.round,targetId:author.id,counts}
+     }))};
+   }
    if(a.type==='ballot_chunk'&&state.rasterBallots&&(state.phase==='drawing'||state.phase==='sealing')){
      const item=state.assignments[id];
      if(!item||!Array.isArray(item.strokes)||a.round!==state.round)
@@ -653,7 +688,7 @@ const module: PocketModule<State>={
      else {state.phase='results';state.deadline=0;}
      changed=true;
    }else if(a.type==='next'&&state.phase==='results'&&id===state.host){
-     state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.board={revision:(state.board?.revision||0)+1,segments:[]};state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.drafts={};state.draftAssemblies={};state.pendingFinals={};state.incompleteSubmissions=[];state.votes={};state.ballotSprites={};state.ballotAssemblies={};state.selected=[];state.turn=0;
+     state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.board={revision:(state.board?.revision||0)+1,segments:[]};state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.drafts={};state.draftAssemblies={};state.pendingFinals={};state.incompleteSubmissions=[];state.votes={};state.ballotSprites={};state.ballotAssemblies={};state.ballotAudits={};state.selected=[];state.turn=0;
      changed=true;
    }
    return {state,events:changed?emit(state):[]};
