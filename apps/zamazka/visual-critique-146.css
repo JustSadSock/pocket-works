@@ -472,3 +472,17 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel{
 @media(max-width:600px){
  #screen>.phase-page .ballot-skipped-note{font-size:12px;margin:7px auto;padding:9px 12px}
 }
+
+/* Informational, independently reported pixel checks. These are player-device
+   observations, never a guilt badge or an automatic score penalty. */
+#screen .round-art-card .raster-audit-readout{
+ display:block;max-width:100%;padding:5px 10px 8px;text-align:center;
+ color:#675948;font:500 11px/1.35 system-ui,sans-serif;
+ letter-spacing:0;overflow-wrap:anywhere;
+}
+#screen .round-art-card:focus-visible .raster-audit-readout{color:#30251c}
+@media(max-width:600px){
+ #screen .round-art-card .raster-audit-readout{
+  font-size:10px;padding:4px 6px 7px;
+ }
+}
