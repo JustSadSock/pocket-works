@@ -234,13 +234,13 @@ async function connect(how,settings){
     notice='Несумісна версія кімнати. Створи нову.';try{c.leaveRoom()}catch{}
     room='';view=null;render();return;
    }
-   room=v.roomId;roomVersion=v.version;roomJoinedOnSocket=true;syncUrl();apply(v.state);send({type:'sync'});if(['v5','v6','v7'].includes(roomVersion))retryPending();
+   room=v.roomId;roomVersion=v.version;roomJoinedOnSocket=true;syncUrl();apply(v.state);if(['v5','v6','v7'].includes(roomVersion))retryPending();
   });
   c.on('game_event',v=>{if(net!==c)return;if(v.event?.type==='state')apply(v.event.payload);
    else if(v.event?.type==='receipt')acknowledgeReceipt(v.event.payload);
    else if(v.event?.type==='submission_rejected'){if(['v5','v6','v7'].includes(roomVersion)&&readPending()?.requestId===v.event.payload?.requestId){discardPending();render()}toast(v.event.payload?.reason||'Відповідь не прийнято.')}
    else if(v.event?.type==='notice')toast(v.event.payload)});
-  c.on('presence',()=>{if(net===c&&room&&connected)send({type:'sync'})});
+  c.on('presence',()=>{if(net===c&&room&&connected&&!['v6','v7'].includes(roomVersion))send({type:'sync'})});
   c.on('disconnected',()=>{if(net!==c)return;roomJoinedOnSocket=false;connected=false;connecting=true;netStatus()});
   c.on('room_kicked',()=>{if(net!==c)return;room='';view=null;modal='';connected=false;connecting=false;notice='Ведучий закрив доступ до кімнати або твоє місце передано іншому автору.';syncUrl();render()});
   c.on('room_closed',()=>{if(net!==c)return;room='';view=null;connected=false;connecting=false;syncUrl();notice='Кімнату закрито.';render()});
