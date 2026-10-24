@@ -46,7 +46,8 @@
         "qa/v7-critical.spec.ts",
         "qa/story-v8.spec.ts",
         "qa/finale-v9.spec.ts",
-        "qa/archive-stage6.spec.ts"
+        "qa/archive-stage6.spec.ts",
+        "qa/archive-stage7.spec.ts"
       ]
     }
   ]
