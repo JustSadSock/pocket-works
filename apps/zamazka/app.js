@@ -880,11 +880,17 @@ function reveal(local=false){
  (local?'<div class="stack"><button class="btn primary" data-action="practice">Новая реставрация</button><button class="btn ghost" data-action="collection">Моя галерея</button><button class="btn ghost" data-action="menu">В главное меню</button></div>':(me?.id===v.host?'<button class="btn primary" data-action="advance">Следующий экспонат ↗</button>':'<div class="stake-wait">Ожидаем следующий экспонат…</div>'))+
  '</div></div></section>','reveal');
   const source=screen.querySelector('#restCanvas'),original=screen.querySelector('#origCanvas'),stage=screen.querySelector('#unveilStage');
- if(!local)startRasterAudit(v,g,index);
  Promise.all([renderArtwork(original,g.art,0,null,false),renderArtwork(source,g.art,g.variation,g.strokes||[],true)]).then(()=>{
   stage?.closest('.reveal-phase')?.classList.add('is-composed');
   finishVoteTransition();
- }).catch(()=>{stage?.closest('.reveal-phase')?.classList.add('is-composed');finishVoteTransition()});
+ }).catch(()=>{
+  stage?.closest('.reveal-phase')?.classList.add('is-composed');
+  finishVoteTransition();
+ }).finally(()=>{
+  // Audit is secondary work. The actual reveal must paint and transition
+  // before the spectator begins five additional decoding/replay passes.
+  if(!local)startRasterAudit(v,g,index);
+ });
 }
 function roundReview(){
  if(!view?.gallery?.length)return;
