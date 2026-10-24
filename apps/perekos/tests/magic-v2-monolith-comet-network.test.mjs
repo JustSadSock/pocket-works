@@ -60,7 +60,9 @@ test('electric network is two destructible nodes with timed LOS-checked crossing
  step(s,{...controls,attack:true});
  assert.equal(s.barriers.filter(b=>b.v2Pylon).length,1);
  assert.ok(!s.mines.some(m=>m.v2Conduit),'one node alone cannot form a link');
- s.actors[0].y=550;s.actors[0].cast=0;
+ s.actors[0].y=550;
+ // A trigger has a real 1.08s cooldown: advance simulation rather than bypassing it.
+ for(let i=0;i<72;i++)step(s);
  step(s,{...controls,aim:{x:300,y:550},attack:true});
  const nodes=s.barriers.filter(b=>b.v2Pylon);
  assert.equal(nodes.length,2);

@@ -58,8 +58,15 @@ test('PocketNet v17 issues link nodes, creates a bounded wire and preserves priv
   equip(s,[['u_on_cast'],['li_pylon'],['li_link']]);
   for(let i=0;i<3;i++){now+=120;fire(s,i,{x:320,y:484})}
   assert.ok(s.match.barriers.some(b=>b.v2Pylon),'server owns first node');
-  s.match.actors[0].y=550;s.match.actors[0].cast=0;
-  now+=120;fire(s,3,{x:320,y:550});
+  s.match.actors[0].y=550;
+  // Real authoritative time and inputs advance the rune cooldown.
+  for(let i=3;i<80;i++){
+   now+=20;
+   const neutral={x:0,y:0,attack:false,shield:false,dash:false,aim:{x:320,y:550}};
+   send(s,host,'input',{seq:i,round:s.match.round,control:neutral});
+   send(s,guest,'input',{seq:i,round:s.match.round,control:neutral});
+  }
+  for(let i=80;i<84;i++){now+=120;fire(s,i,{x:320,y:550})}
   assert.equal(s.match.barriers.filter(b=>b.v2Pylon).length,2);
   assert.ok(s.match.mines.some(m=>m.v2Conduit),'wire created only between real nodes');
   assert.equal(module.viewForPlayer({state:s,player:guest,players}).match.magicLoadouts[0],null);

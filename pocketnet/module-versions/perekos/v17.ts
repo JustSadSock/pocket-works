@@ -1556,8 +1556,8 @@ const V2_START_POOL=Object.freeze([
  'u_on_cast','u_after_dash','u_on_hurt','u_guard','u_heal','u_push','u_size',
  'u_duration','u_speed','u_split','u_range','u_efficient','u_ricochet',
  'st_throw','st_shards','st_wall','st_spikes','st_fault','fi_ember','fi_scorch','fi_flamepatch','fi_cindermine','fi_lash','li_spark','li_arc','li_pylon','li_link','li_coil','li_discharge',
- 'u_reform_base','st_form_wave','st_form_spires','st_origin_self','st_origin_below',
- 'fi_form_stream','fi_form_whirl','fi_origin_self','fi_origin_sky',
+ 'u_reform_base','st_form_wave','st_form_spires','st_form_colossus','st_origin_self','st_origin_below',
+ 'fi_form_stream','fi_form_whirl','fi_form_comet','fi_origin_self','fi_origin_sky',
  'li_form_ray','li_form_sphere','li_origin_self','li_origin_pylon'
 ]);
 const V2_SEAT_MAGES=Object.freeze({stone:'pebble',fire:'kindle',storm:'wire'});
