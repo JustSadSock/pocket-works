@@ -71,7 +71,14 @@ test('normal mobile writing retains the question, hero passport, editor and hand
  await page.goto(preview('writing-v7'));
  await expect(page.locator('#editorQuestion')).toBeVisible();
  await expect(page.locator('#heroAnchor')).toHaveCount(1);
- await expect(page.locator('[data-act="toggle-editor-context"]')).toBeVisible();
+ const context=page.locator('[data-act="toggle-editor-context"]');
+ await expect(context).toBeVisible();
+ await expect(context).toHaveAttribute('aria-expanded','true');
+ await context.click();
+ await expect(page.locator('#editorQuestion')).toBeHidden();
+ await expect(context).toHaveAttribute('aria-expanded','false');
+ await context.click();
+ await expect(page.locator('#editorQuestion')).toBeVisible();
  await page.locator('#answer').fill('Дракон продав світловий годинник у музеї.');
  await page.locator('#answerForm button[type=submit]').click();
  await expect(page.locator('.writer-selection')).toBeVisible();
