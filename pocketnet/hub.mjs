@@ -7,6 +7,7 @@ import {shouldAnnounceSocketDeparture} from './disconnect-presence.mjs';
 import {prepareArtworkStorage} from './art-storage.mjs';
 import {reconcileZamazkaPresence} from './zamazka-presence.mjs';
 import {packPrivateZamazkaState} from './zamazka-state-stream.mjs';
+import {isChyepukhaSync,canServeChyepukhaSync,checkChyepukhaStateBudget} from './chyepukha-transport.mjs';
 
 // All rooms share one small, hibernatable SQLite-backed coordinator. This matches
 // the personal/friends deployment (max 32 rooms / 48 sockets) without paid KV/D1.
@@ -47,6 +48,7 @@ export class PocketNetHub {
     this.queue = Promise.resolve();
     this.rates = new Map();
     this.messageRates = new WeakMap();
+    this.chyepukhaSyncAt = new WeakMap();
     ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY, id TEXT NOT NULL, name TEXT NOT NULL, expires INTEGER NOT NULL
     )`);
@@ -675,6 +677,16 @@ export class PocketNetHub {
         if (!room || !room.players.some(p => p.id === player.id)) throw new Error('not_in_room');
         const mod = this.module(room.gameId, room.version);
         if (!mod) throw new Error('room_version_unavailable');
+        // Read-only sync: project one private view without cloning, persisting
+        // or broadcasting the manuscripts to the entire room.
+        if (msg.type === 'game_message' && isChyepukhaSync(room.gameId, msg.payload)) {
+          const now = Date.now();
+          if (canServeChyepukhaSync(this.chyepukhaSyncAt.get(ws), now)) {
+            this.chyepukhaSyncAt.set(ws, now);
+            this.emit(room, [{ type: 'state', to: player.id }]);
+          }
+          return;
+        }
         if (msg.type === 'game_message') {
           const result = await mod.onMessage({ state: copied(room.state), player: member,
             players: room.players, payload: msg.payload,
@@ -688,6 +700,20 @@ export class PocketNetHub {
           if (!Array.isArray(result.events ?? []) || result.events.length > 32) throw new Error('invalid_module_events');
           // Validate event payloads before modifying persistent game state.
           for (const event of result.events ?? []) if (bytes({ roomId: room.id, event }) > (room.gameId==='zamazka'&&event?.type==='state'&&event?.to?MAX_ZAMAZKA_STATE_EVENT:MAX_EVENT_BYTES)) throw new Error('event_too_large');
+          // Preserve the room-state budget before committing any new answer.
+          // An oversized candidate never replaces already accepted manuscripts.
+          if (room.gameId === 'chyepukha' &&
+              result.state?.revision !== room.state?.revision &&
+              !checkChyepukhaStateBudget(result.state, MAX_STATE).ok) {
+            const reason = 'Рукописи наблизились до ліміту кімнати. Скороти фрагмент та надішли ще раз — попередні відповіді збережені.';
+            const requestId = msg.payload?.requestId;
+            const event = msg.payload?.type === 'submit' &&
+              typeof requestId === 'string' && /^[a-zA-Z0-9_-]{12,96}$/.test(requestId)
+              ? {type:'submission_rejected', to:player.id, payload:{requestId, reason}}
+              : {type:'notice', to:player.id, payload:reason};
+            this.emit(room, [event]);
+            return;
+          }
           const prior=room.state;
           room.state = result.state;
           // Pure queries do not change room state. Avoid serializing and writing
