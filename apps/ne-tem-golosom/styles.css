@@ -109,3 +109,9 @@
   .trim-right .media-workbench{gap:5px;padding:8px}
   .trim-right .role-tags{gap:4px}
 }
+
+
+@media(min-width:820px){.trim-preview{max-height:min(44vh,450px)}}
+.trim-range-panel.range-locked .trim-range-track{pointer-events:none;opacity:.5}
+.trim-range-panel.previewing-output .trim-range-track{pointer-events:none;opacity:.6}
+.trim-range-panel.range-locked .trim-range-bound button,.trim-range-panel.previewing-output .trim-range-bound button{opacity:.45}
