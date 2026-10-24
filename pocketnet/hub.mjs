@@ -7,6 +7,7 @@ import {shouldAnnounceSocketDeparture} from './disconnect-presence.mjs';
 import {prepareArtworkStorage} from './art-storage.mjs';
 import {reconcileZamazkaPresence} from './zamazka-presence.mjs';
 import {packPrivateZamazkaState} from './zamazka-state-stream.mjs';
+import {isReadOnlyChyepukhaUpdate} from './chyepukha-persistence.mjs';
 
 // All rooms share one small, hibernatable SQLite-backed coordinator. This matches
 // the personal/friends deployment (max 32 rooms / 48 sockets) without paid KV/D1.
@@ -697,7 +698,7 @@ export class PocketNetHub {
              (msg.payload?.type==='pulse'&&(result.events?.length||0)===0)||
              (msg.payload?.type==='submit_resume'&&
               result.events?.some(e=>e.type==='submission_saved')));
-          if(!readOnlyZamazka){
+          if(!readOnlyZamazka&&!isReadOnlyChyepukhaUpdate(room,prior,room.state)){
             const artworkPacket=room.gameId==='zamazka'&&
               ['draft_chunk','submit_chunk'].includes(msg.payload?.type)&&
               prior.phase===room.state.phase&&prior.round===room.state.round;
