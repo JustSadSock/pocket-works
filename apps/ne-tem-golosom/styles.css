@@ -275,7 +275,6 @@
 @keyframes ntg-transport-click{0%{transform:translateY(0)}50%{transform:translateY(2px)}100%{transform:translateY(0)}}
 @keyframes ntg-count-pulse{0%{transform:scale(1.11);opacity:.65}65%{opacity:1}100%{transform:scale(1);opacity:1}}
 @keyframes ntg-record-lamp{0%,100%{opacity:1}50%{opacity:.42}}
-@keyframes ntg-reel-roll{from{transform:rotate(-13deg)}to{transform:rotate(347deg)}}
 @keyframes ntg-online-search{0%,100%{opacity:.5}50%{opacity:1}}
 .screen:not(.hidden){animation:ntg-screen-arrive .22s ease-out both}
 .action,.transport-btn,.record-btn,.count-record-btn,.done-btn,.nav-back,.scene-card,.room-player,.clip-bar{
@@ -328,7 +327,6 @@
 .network-pill[data-net-state="online"]:before{background:#45a576}
 .network-pill[data-net-state="offline"]{color:#a04135;background:#f1dcd3;border-color:#dfb9a7}
 .network-pill[data-net-state="offline"]:before{background:#d66a4b}
-.waiting-record{animation:ntg-reel-roll 24s linear infinite;will-change:transform}
 .wait-chip.ready{background:#d5e5d6;border-bottom-color:#669c7f}
 .premiere-export-button:not(:disabled):active{transform:translateY(2px)}
 @media(max-width:480px){
@@ -347,6 +345,6 @@
 }
 @media(prefers-reduced-motion:reduce){
  .screen:not(.hidden){animation:none}
- .waiting-record,.record-live-dot,.draft-status[data-save-state="saving"]:before,.network-pill[data-net-state="connecting"]:before,.editor .countdown.ntg-tick{animation:none}
+ .record-live-dot,.draft-status[data-save-state="saving"]:before,.network-pill[data-net-state="connecting"]:before,.editor .countdown.ntg-tick{animation:none}
  .action,.transport-btn,.record-btn,.count-record-btn,.done-btn,.nav-back,.scene-card,.room-player,.clip-bar,.mic-meter span,.stage-wrap{transition:none!important}
 }
