@@ -339,7 +339,7 @@ function overlay(){
  if(modal==='moderation')return controlsDialog(view,me,escape);
  if(modal==='kick-confirm')return kickDialog(view,view?.players?.find(p=>p.id===kickTarget),escape);
  if(modal==='skip-confirm')return skipDialog(view,view?.players?.find(p=>p.id===skipTarget),escape);
-  if(modal==='seat-choice')return seatDecisionDialog(view,view?.players?.find(p=>p.id===seatDecisionTarget),escape);
+  if(modal==='seat-choice')return seatDecisionDialog(view,view?.players?.find(p=>p.id===seatDecisionTarget),me,escape);
   if(modal==='transfer-confirm')return transferHostDialog(view?.players?.find(p=>p.id===transferTarget),escape);
  if(modal==='archive-delete')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Видалити видання"><section class="comic-inner"><div class="eyebrow">ПІДТВЕРДИТИ ВИДАЛЕННЯ</div><h3>Видалити це видання?</h3><p class="mini">Усі рукописи цього випуску буде видалено лише з цього пристрою. Дію не можна скасувати.</p><div class="button-row"><button class="button outline" type="button" data-act="cancel">Залишити</button><button class="button" type="button" data-act="archive-confirm-delete">Видалити</button></div></section></div>';
  if(modal==='leave'){
