@@ -101,3 +101,18 @@ test('archive has actual page navigation, full-text mode, search, backup and fav
  assert.match(noIssues,/ПОЛИЦЯ ПОКИ ПОРОЖНЯ/);
  assert.match(noIssues,/data-act="archive-import"/);
 });
+
+test('a full 12-issue shelf cannot lose even its oldest issue during restore',()=>{
+ const existing=Array.from({length:MAX_EDITIONS},(_,i)=>issue('kept-'+i,100+i));
+ const incoming=toggleEditionFavorite([issue('new-favorite',9999)],'new-favorite');
+ const before=normalizeEditions(existing);
+ const after=mergeArchiveBackup(existing,incoming);
+ assert.equal(after.added,0);
+ assert.equal(after.skipped,1);
+ assert.deepEqual(after.editions,before);
+ const partlyFull=mergeArchiveBackup(existing.slice(0,MAX_EDITIONS-1),[issue('new-1',300),issue('new-2',200)]);
+ assert.equal(partlyFull.added,1);
+ assert.equal(partlyFull.skipped,1);
+ assert.equal(partlyFull.editions.length,MAX_EDITIONS);
+ for(const item of existing.slice(0,MAX_EDITIONS-1))assert.ok(partlyFull.editions.some(x=>x.id===item.id));
+});
