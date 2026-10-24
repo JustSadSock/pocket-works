@@ -36,7 +36,7 @@ import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.32',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.33',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -741,8 +741,8 @@ function vote(){
  if(chipTarget!==sessionKey){chipTarget=sessionKey;chips=pendingVote?.token===voteToken(v)?[...pendingVote.chips]:[0,0,0,0,0]}
  const count=(v.voted||[]).length,expected=v.participants.length-1;
  const examined=v.candidate;
- const fallbackWarning=v.rasterBallots&&v.spriteFallback?'<div class="notice ballot-fallback-notice" role="status">Одна из картин не загрузилась вовремя. Продолжаем экспертизу в совместимом режиме.</div>':'';
- const spriteRenderer=v.rasterBallots&&!v.spriteFallback&&typeof v.ballotSprite==='string'?
+ const fallbackWarning=v.rasterBallots&&v.skippedBallots?.length?'<div class="notice ballot-fallback-notice" role="status">Некоторые работы не успели подготовиться. Они пропущены без начисления очков; правильный ответ остаётся скрытым.</div>':'';
+ const spriteRenderer=v.rasterBallots&&typeof v.ballotSprite==='string'?
     createAnonymousBallotPainter(v.ballotSprite,v.selected):null;
  change('<section class="phase-page expert-phase'+(isOwn||already?' is-vote-waiting':'')+'">'+head('ЭКСПЕРТИЗА · '+(v.turn+1)+' / '+v.participants.length,'Найди реставрацию',v.deadline)+
  '<div class="phase-body expert-round"><div class="expert-intro"><div><div class="expert-author">'+(target?memberSeal(target):'')+'<h3>'+esc(target?.name||'Реставратор')+'</h3></div><p class="phase-directive">Одна из пяти картин отреставрирована.</p></div><p class="expert-observers">Заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
@@ -826,6 +826,16 @@ function roundReview(){
  if(!view?.gallery?.length)return;
  const v=view;
  change(roundReviewMarkup(v,me?.id,ARTS,esc),'round-review');
+ if(v.rasterBallots&&v.skippedBallots?.length){
+  const missing=new Set(v.skippedBallots);
+  const labels=v.participants.filter(p=>missing.has(p.id)).map(p=>p.name).join(', ');
+  const note=document.createElement('div');
+  note.className='ballot-skipped-note';note.setAttribute('role','status');
+  note.textContent=missing.size===v.participants.length?
+   'Растровые бюллетени не удалось подготовить. Этот раунд завершён без голосования и без очков. Можно начать следующий.':
+   'Некоторые работы не участвовали в экспертизе и не получили очков: '+labels+'.';
+  (screen.querySelector('.phase-body')||screen.firstElementChild)?.prepend(note);
+ }
  exhibitFitter=mountExhibitFrames(screen);
  renderRoundThumbnails(screen,v,renderArtwork);
 }
@@ -996,7 +1006,7 @@ function renderView(){
  const key=view.phase+':'+view.round+':'+view.turn+':'+(view.done||[]).includes(me?.id)+':'+(view.voted||[]).includes(me?.id);
  if(page==='drawing'&&view.phase==='drawing'&&key===lastUiKey)return;
   if(page==='waiting'&&['drawing','sealing'].includes(view.phase)&&key===lastUiKey){
-   updateWaiting(screen,view.phase==='sealing'?(view.ballotReady||[]):(view.done||[]),view.participants||[]);
+   updateWaiting(screen,view.phase==='sealing'?(view.ballotReady||[]):(view.done||[]),view.participants||[],view.phase==='sealing');
    return;
  }
  if(page==='preparing'&&view.phase==='preparing'&&key===lastUiKey){
