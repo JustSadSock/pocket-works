@@ -7,6 +7,8 @@ on:
       - 'apps/zamazka/finale-ui.js'
       - 'apps/zamazka/app.js'
       - 'apps/zamazka/qa/visual-stage-regression.mjs'
+      - 'apps/zamazka/qa/responsive-viewports.mjs'
+      - 'apps/zamazka/qa/viewport-fit.mjs'
       - 'apps/zamazka/qa/fill-matching-colour.mjs'
       - 'apps/zamazka/fill-core.js'
       - 'apps/zamazka/museum-audio.js'
@@ -49,6 +51,12 @@ jobs:
         env:
           ZAMAZKA_QA_ARTIFACT_DIR: ${{ runner.temp }}/zamazka-visual-audit
         run: node apps/zamazka/qa/visual-stage-regression.mjs
+      - name: Audit phone tablet desktop and short-window stage geometry
+        env:
+          ZAMAZKA_QA_ARTIFACT_DIR: ${{ runner.temp }}/zamazka-visual-audit
+        run: |
+          node apps/zamazka/qa/responsive-viewports.mjs
+          node apps/zamazka/qa/viewport-fit.mjs
       - name: Preserve real-browser phase screenshots
         if: always()
         uses: actions/upload-artifact@v4
