@@ -80,8 +80,12 @@ assert.equal(send(voters[0].id,{...data,spriteChecksum:'bad'}).events[0].type,'n
 assert.equal(send(voters[0].id,{...data,mae:999}).events[0].type,'notice');
 const accepted=send(voters[0].id,{...data,status:'mismatch'});
 assert(accepted.events.some(x=>x.type==='audit_update'));
+assert(accepted.events.some(x=>x.type==='audit_saved'&&x.to===voters[0].id),
+ 'accepted peer report explicitly acknowledges delivery');
 assert.equal(room.ballotAudits[author][voters[0].id].status,'match');
-assert.equal(send(voters[0].id,data).events.length,0,'deduplicate');
+const repeated=send(voters[0].id,data).events;
+assert.equal(repeated.length,1,'duplicate only needs a tiny ack, not a new broadcast');
+assert.equal(repeated[0].type,'audit_saved','lost ack can be replayed safely');
 send(voters[1].id,{...data,mae:42,patch:80,differing:50,status:'match'});
 assert.equal(room.ballotAudits[author][voters[1].id].status,'mismatch',
  'server ignores spoofed labels and applies its own thresholds');
@@ -95,4 +99,16 @@ const client=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 assert(client.includes('startRasterAudit(v,g,index)')&&client.includes("type:'ballot_audit'"));
 const hub=readFileSync(new URL('../../../pocketnet/hub.mjs',import.meta.url),'utf8');
 assert(hub.includes("'ballot_audit'"));
+assert(hub.includes("acceptedPeerAudit?{artOwner:'',skipAlarm:true}"),
+ 'reports update room metadata without rewriting any raster blobs');
+assert(hub.includes("peerAudit&&!acceptedPeerAudit"),
+ 'duplicates and malformed reports do not trigger a SQLite persistence write');
+assert(client.includes("payload.sentAt=Date.now()"),
+ 'client keeps an unconfirmed report and backs off retries');
+assert(client.includes("event?.type==='audit_saved'"),
+ 'only server acknowledgment clears the outgoing audit queue');
+assert(client.includes("if(document.hidden){auditStarted.delete(key);return}"),
+ 'suspended background tabs can retry their never-started raster audit');
+assert(client.includes("resumeRasterAudits()"),
+ 'returning to the foreground resumes pending independent comparisons');
 console.log('ZAMAZKA post-reveal audit: 5 tiles, tamper detection, readback failures, anti-spoof, idempotence and unchanged scores OK');
