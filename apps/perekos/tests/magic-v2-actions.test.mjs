@@ -78,3 +78,53 @@ test('li_discharge creates three physical short arcs with normalized total damag
  assert.equal(s.shots.filter(q=>Math.abs(q.damage-17/3)<.01).length,0);
  assert.equal(validState(s),true);
 });
+
+test('st_fault is a slow, covered, sequential ground rupture with a visible warning',()=>{
+ const s=prepare(makeMagicV2Practice('stone',111),'st_fault');
+ advance(s,{...silent,attack:true});
+ const cracks=s.waves.filter(w=>w.v2Fault);
+ assert.equal(cracks.length,3);
+ assert.ok(cracks.every(w=>w.v2Element==='stone'&&w.damage===5&&w.warmup>0));
+ assert.ok(cracks[0].warmup<cracks[1].warmup&&cracks[1].warmup<cracks[2].warmup);
+ assert.ok(cracks[0].x<cracks[1].x&&cracks[1].x<cracks[2].x);
+ for(let i=0;i<95;i++)advance(s);
+ assert.equal(s.waves.filter(w=>w.v2Fault).length,0);
+ const covered=prepare(makeMagicV2Practice('stone',112),'st_fault');
+ covered.barriers.push({owner:1,x:103,y:484,r:20,life:4,hp:35});
+ advance(covered,{...silent,attack:true});
+ assert.equal(covered.waves.filter(w=>w.v2Fault).length,0,'cannot jump enemy cover');
+ assert.equal(validState(s)&&validState(covered),true);
+});
+test('fi_lash is a short actual fire beam that burns only through unobstructed space',()=>{
+ const s=prepare(makeMagicV2Practice('fire',121),'fi_lash');
+ s.actors[1].x=157;s.actors[1].y=484;
+ advance(s,{...silent,attack:true});
+ const lash=s.beams.find(b=>b.v2Lash);
+ assert.ok(lash&&lash.element==='fire'&&lash.length>90);
+ assert.ok(s.actors[1].hp<100&&s.actors[1].burn>0);
+ const shielded=prepare(makeMagicV2Practice('fire',122),'fi_lash');
+ shielded.actors[0].x=69;shielded.actors[0].y=210;
+ shielded.actors[1].x=214;shielded.actors[1].y=210;
+ const hp=shielded.actors[1].hp;
+ advance(shielded,{...silent,aim:{x:300,y:210},attack:true});
+ assert.ok(shielded.beams.find(b=>b.v2Lash).length<45,'solid arena wall clips lash');
+ assert.equal(shielded.actors[1].hp,hp,'no hit behind a wall');
+ assert.equal(shielded.actors[1].burn,0,'no burn through a wall');
+ assert.equal(validState(s)&&validState(shielded),true);
+});
+test('li_coil arms visibly, discharges once and drains shield before slowing the victim',()=>{
+ const s=prepare(makeMagicV2Practice('storm',131),'li_coil');
+ advance(s,{...silent,attack:true});
+ const charge=s.mines.find(m=>m.v2Charge);
+ assert.ok(charge&&charge.element==='storm'&&charge.arm>.45);
+ assert.ok(charge.life>=4&&charge.r>=35);
+ s.shots.length=0;
+ s.actors[1].x=charge.x;s.actors[1].y=charge.y;s.actors[1].shield=12;
+ for(let i=0;i<21;i++)advance(s);
+ assert.equal(s.actors[1].hp,100,'unarmed charge cannot hit');
+ for(let i=0;i<27;i++)advance(s);
+ assert.ok(s.actors[1].hp<100,'charge really depletes shield and damages HP');
+ assert.ok(s.actors[1].slow>0,'surviving victim is slowed');
+ assert.ok(!s.mines.some(m=>m.v2Charge),'charge detonates at most once');
+ assert.equal(validState(s),true);
+});

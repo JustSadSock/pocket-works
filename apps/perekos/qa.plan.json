@@ -28,7 +28,12 @@
         "tests/rupture.test.mjs",
         "tests/evolution.test.mjs",
         "tests/archetypes-forge.test.mjs",
-        "tests/wall-geometry.test.mjs"
+        "tests/wall-geometry.test.mjs",
+        "tests/magic-v2-actions.test.mjs",
+        "tests/magic-v2-forms.test.mjs",
+        "tests/magic-v2-draft.test.mjs",
+        "tests/magic-v2-physical-triad.test.mjs",
+        "tests/net-v10.test.mjs"
       ]
     },
     {
@@ -88,7 +93,8 @@
         "qa/kinetics.spec.js",
         "qa/rune-forge.spec.js",
         "qa/rupture.spec.js",
-        "qa/evolution.spec.js"
+        "qa/evolution.spec.js",
+        "qa/magic-v2-lab.spec.js"
       ]
     },
     {

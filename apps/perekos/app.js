@@ -654,6 +654,18 @@ function drawEvolutionMagic(s){
   ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=fire?5:7;
   const radius=wave.warmup>0?Math.max(12,wave.range*.38):Math.max(6,wave.reach);
   ctx.globalAlpha=wave.warmup>0?.64:Math.min(.87,Math.max(.27,wave.life*2.8));
+  if(wave.v2Fault){
+   ctx.save();ctx.strokeStyle=wave.warmup>0?'#a7a082':'#f2d1a0';
+   ctx.lineWidth=wave.warmup>0?2:4;
+   ctx.setLineDash(wave.warmup>0?[5,4]:[]);
+   const c=Math.cos(wave.angle),n=Math.sin(wave.angle);
+   ctx.beginPath();
+   ctx.moveTo(wave.x-c*19-n*5,wave.y-n*19+c*5);
+   ctx.lineTo(wave.x-c*5+n*4,wave.y-n*5-c*4);
+   ctx.lineTo(wave.x+c*8-n*4,wave.y+n*8+c*4);
+   ctx.lineTo(wave.x+c*19,wave.y+n*19);
+   ctx.stroke();ctx.setLineDash([]);ctx.restore();continue;
+  }
   if(wave.v2Spikes){
    ctx.save();ctx.globalAlpha=wave.warmup>0?.75:.95;
    ctx.fillStyle=wave.warmup>0?'#9d9777':'#d6c6a0';
@@ -725,6 +737,19 @@ function drawConstructs(s){
  }
  for(const m of s.mines){
   const bob=Math.sin(frame*.11+m.x)*2,life=Math.min(1,m.life);
+  if(m.v2Charge){
+   ctx.save();
+   ctx.globalAlpha=m.arm>0?.63:.96;
+   ctx.strokeStyle=m.arm>0?'#78a8ad':'#b6f0df';ctx.lineWidth=2;
+   ctx.setLineDash(m.arm>0?[4,4]:[]);
+   ctx.beginPath();ctx.arc(m.x,m.y,m.r,0,Math.PI*2);ctx.stroke();
+   ctx.setLineDash([]);
+   pixel(m.x-9,m.y-9,18,18,'#22494c');
+   pixel(m.x-2,m.y-13,4,25,'#b6e1d7');
+   pixel(m.x-8,m.y-2,16,4,'#b6e1d7');
+   if(m.arm<=0)pixel(m.x-3,m.y-3,6,6,'#f1f5cb');
+   ctx.restore();continue;
+  }
   if(m.v2Trap){
    ctx.save();ctx.globalAlpha=m.arm>0?.45+.15*Math.sin(frame*.13):.85;
    ctx.strokeStyle=m.arm>0?'#c79b64':'#ffc06b';ctx.lineWidth=2;
