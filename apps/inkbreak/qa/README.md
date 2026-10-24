@@ -1,0 +1,7 @@
+# Browser and visual sign-off
+
+Chromium 153 / WebKit 26.0: 393×852 touch portrait and 852×393 touch landscape. A player bot used genuine keyboard input to finish all three chapters and defeat the final editor; no test mutated gameplay state. Virtual-stick pointer capture, movement, strike, dash, pause/resume, defeat/retry, completion, chapter/record persistence and reduced motion were exercised. Chromium also reloaded the installed app with network disabled. All four browser/viewport results contain no page errors, error console messages or missing HTTP assets.
+
+Screenshots reviewed: first frame, fight entry, pause, chapter completion, final completion, reduced motion and both orientations. Recorded motion reviewed through the app-local WebM and extracted action contact sheet. Batched city geometry retains toon contours/print dots while avoiding per-window draw calls. The dialog launcher link was refined after screenshot inspection.
+
+Remote app checks at implementation commit 9c75561f: build, creative-direction, change-scope, platform-smoke, generate-app-assets and exploratory-mobile passed. Repository-wide health and enhanced-presets fail on existing unrelated app metadata and missing generated builds (no inkbreak errors in either log). Production-like local site assembly also requires other Enhanced apps to be built; the app and shared runtime were staged under dist-site for focused checks. Broad validation does not justify modifications to other apps in this PR.
