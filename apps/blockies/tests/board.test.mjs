@@ -75,21 +75,24 @@ test('pause is host-only, protects state and resumes without a time jump',()=>{
  assert.equal(state.paused,false);
  assert.ok(Date.now()-state.lastTick<1000);
 });
-test('only host can rematch a finished round; new round removes departed players',()=>{
+test('host-only replay returns a single survivor to lobby and starts after replacement joins',()=>{
  let state=start([a,b]);
  state=game.onLeave({state,player:a}).state;
- state.engine.isGameOver=true;
- state.phase='finished';
+ state.engine.isGameOver=true;state.phase='finished';
  assert.throws(()=>game.onMessage({state,player:a,payload:{type:'rematch'}}),/не в комнате/);
  const oldRound=state.round;
- state=game.onMessage({state,player:b,payload:{type:'rematch'}}).state;
- assert.equal(state.round,oldRound+1);
- assert.equal(state.started,true);
+ state=game.onMessage({state,player:b,payload:{type:'rematch'},connectedIds:['b']}).state;
+ assert.equal(state.round,oldRound);
+ assert.equal(state.started,false);
  assert.equal(state.players.length,1);
  assert.equal(state.players[0].id,'b');
- assert.equal(state.engine.players.length,1);
+ assert.equal(state.engine,null);
+ state=game.onJoin({state,player:a}).state;
+ state=game.onMessage({state,player:b,payload:{type:'ready'},connectedIds:['b','a']}).state;
+ state=game.onMessage({state,player:a,payload:{type:'ready'},connectedIds:['b','a']}).state;
+ assert.equal(state.round,oldRound+1);
+ assert.equal(state.started,true);
  assert.equal(state.engine.isGameOver,false);
- assert.equal(state.phase,'playing');
 });
 test('reconnect preserves the room and cannot introduce a fifth player',()=>{
  let state=start([a,b]);
