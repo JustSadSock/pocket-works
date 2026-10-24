@@ -5,7 +5,8 @@ test('host sees actionable moderation and one-time replacement ticket',async({pa
  await page.goto(preview('moderation-host'));
  await expect(page.locator('.moderation-sheet')).toBeVisible();
  await expect(page.locator('.moderation-person')).toHaveCount(4);
- await expect(page.locator('[data-act=transfer-host]')).toHaveCount(2);
+ await expect(page.locator('[data-act=ask-transfer-host]')).toHaveCount(2);
+ await expect(page.locator('[data-act=confirm-transfer-host]')).toHaveCount(0);
  await expect(page.locator('[data-act=open-seat]')).toHaveCount(1);
  await expect(page.locator('[data-act=ask-kick]')).toHaveCount(3);
  await expect(page.locator('[data-act=ask-skip]')).toHaveCount(1);
@@ -32,7 +33,7 @@ test('non-host cannot see kick, transfer, replacement ticket or pause controls',
  await expect(page.locator('.moderation-sheet')).toBeVisible();
  await expect(page.locator('[data-act=kick]')).toHaveCount(0);
  await expect(page.locator('[data-act=ask-kick]')).toHaveCount(0);
- await expect(page.locator('[data-act=transfer-host]')).toHaveCount(0);
+ await expect(page.locator('[data-act=ask-transfer-host]')).toHaveCount(0);
  await expect(page.locator('.moderation-ticket')).toHaveCount(0);
  await expect(page.locator('[data-act=vote-host]').first()).toBeVisible();
  await expect(page.locator('[data-act=pause]')).toHaveCount(0);
