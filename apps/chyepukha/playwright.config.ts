@@ -24,7 +24,7 @@ export default defineConfig({
   {name:'webkit-phone',use:{...devices['iPhone 13']}}
  ],
  webServer:{
-  command:'node apps/chyepukha/qa/serve.mjs',
+  command:'node qa/serve.mjs',
   url:'http://127.0.0.1:4174/apps/chyepukha/index.html',
   reuseExistingServer:!process.env.CI,
   timeout:30_000,
