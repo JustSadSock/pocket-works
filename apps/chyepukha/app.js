@@ -175,7 +175,7 @@ async function openPocketProfile(){
 function syncUrl(){if(IS_PREVIEW)return;const u=new URL(location.href);if(room)u.searchParams.set('room',room.slice(0,8));else u.searchParams.delete('room');history.replaceState({},'',u)}
 function copyText(t){if(navigator.clipboard?.writeText)return navigator.clipboard.writeText(t).then(()=>toast('Скопійовано.')).catch(()=>fallbackCopy(t));return fallbackCopy(t)}
 function fallbackCopy(t){const x=document.createElement('textarea');x.value=t;x.style.position='fixed';x.style.opacity='0';document.body.append(x);x.select();try{document.execCommand('copy');toast('Скопійовано.')}catch{toast('Копіювання недоступне.')}x.remove()}
-function send(payload){if(IS_PREVIEW)return demoSend(payload);if(!connected||!net?.roomId){toast('Немає зв’язку. Дочекайся відновлення.');return false}try{net.sendGame(payload);return true}catch{toast('Не вдалося надіслати.');return false}}
+function send(payload){if(IS_PREVIEW)return demoSend(payload);if(!connected||!net?.roomId||(view&&!roomJoinedOnSocket)){toast('Чекаємо підтвердження повернення до кімнати. Чернетка збережена.');return false}try{net.sendGame(payload);return true}catch{toast('Не вдалося надіслати.');return false}}
 function demoSend(payload){
  if(!connected){toast('Тестовий стан: PocketNet офлайн.');return false}
  if(!view)return false;
