@@ -90,6 +90,8 @@ export async function renderPremiere({
   if(!(source instanceof Blob)&&!(typeof source==='string'&&/^https:\/\//.test(source)))
     throw Error('Нет исходного видео для сохранения.');
   assertLive(signal);
+  const cancellation=new AbortController();
+  const effectiveSignal=cancellation.signal;
 
   const video=document.createElement('video');
   video.preload='auto';video.playsInline=true;video.muted=true;
@@ -105,14 +107,15 @@ export async function renderPremiere({
     video.pause();
     if(recorder?.state==='recording')recorder.stop();
   };
-  const abort=()=>stopRecording(abortError());
-  const hidden=()=>{if(document.hidden)stopRecording(abortError())};
+  const abort=()=>{cancellation.abort();stopRecording(abortError())};
+  const hidden=()=>{if(document.hidden)abort()};
   signal?.addEventListener('abort',abort,{once:true});
   document.addEventListener('visibilitychange',hidden);
+  if(signal?.aborted)abort();
   try{
-    await eventWait(video,'loadedmetadata','error',18000,signal,
+    await eventWait(video,'loadedmetadata','error',18000,effectiveSignal,
       'Не удалось открыть исходное видео. Для встроенного фильма может потребоваться доступ к его серверу.');
-    assertLive(signal);
+    assertLive(effectiveSignal);
     const until=scene.start+scene.duration;
     if(Number.isFinite(video.duration)&&video.duration>0&&video.duration+.12<until)
       throw Error('Выбранная сцена выходит за пределы видео.');
@@ -127,7 +130,7 @@ export async function renderPremiere({
     const decoded=new Map();
     onProgress({phase:'decoding',done:0,total:plan.length});
     for(let i=0;i<plan.length;i++){
-      assertLive(signal);
+      assertLive(effectiveSignal);
       const clip=plan[i];
       if(!decoded.has(clip.blob)){
         let buffer;
@@ -138,7 +141,7 @@ export async function renderPremiere({
       voiceWindow(clip,decoded.get(clip.blob).duration);
       onProgress({phase:'decoding',done:i+1,total:plan.length});
     }
-    assertLive(signal);
+    assertLive(effectiveSignal);
     // Video source audio is lowered relative to the voices, and is never
     // routed to speakers. The default export matches the muted premiere.
     if(keepFilmAudio){
@@ -148,14 +151,14 @@ export async function renderPremiere({
       film.connect(duck).connect(limiter);
     }
     if(Math.abs(video.currentTime-scene.start)>.025){
-      const waiting=eventWait(video,'seeked','error',16000,signal,
+      const waiting=eventWait(video,'seeked','error',16000,effectiveSignal,
         'Не удалось перейти к началу выбранной сцены.');
       video.currentTime=scene.start;
       await waiting;
     }
-    assertLive(signal);
+    assertLive(effectiveSignal);
     if(video.readyState<2)
-      await eventWait(video,'loadeddata','error',12000,signal,
+      await eventWait(video,'loadeddata','error',12000,effectiveSignal,
         'Видеокадр не загрузился. Попробуй другой формат файла.');
     const wantedWidth=Math.min(1280,Math.max(2,video.videoWidth||640));
     const ratio=Math.min(1,wantedWidth/Math.max(1,video.videoWidth));
@@ -240,16 +243,16 @@ export async function renderPremiere({
       if(performance.now()-lastAdvance>15000)
         stopRecording(Error('Видео перестало воспроизводиться. Проверь файл или соединение.'));
     },2500);
-    assertLive(signal);
+    assertLive(effectiveSignal);
     await ctx.resume();
     recorder.start(1000);
     try{await video.play()}
     catch{
-      stopRecording(signal?.aborted?abortError():Error('Браузер запретил запуск видео для экспорта.'));
+      stopRecording(effectiveSignal.aborted?abortError():Error('Браузер запретил запуск видео для экспорта.'));
       await done.catch(()=>{});
       throw stopError;
     }
-    assertLive(signal);
+    assertLive(effectiveSignal);
     // Schedule every line against one Web Audio clock after video starts.
     // Split clips reuse the same decoded audio but play distinct time windows.
     const current=Math.max(0,video.currentTime-scene.start);
