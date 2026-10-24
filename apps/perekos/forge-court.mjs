@@ -254,6 +254,19 @@ export function drawForgeConstructs(ctx,state,time=0,reduced=false){
  for(const mine of (state?.mines||[]).slice(0,20)){
   if(!Number.isFinite(mine.x)||!Number.isFinite(mine.y))continue;
   const x=Math.round(mine.x),y=Math.round(mine.y);
+  if(mine.v2Whirl){
+   ctx.save();ctx.globalAlpha=mine.arm>0?.55:.9;
+   ctx.strokeStyle=mine.arm>0?'#bf865b':'#f1bd79';
+   ctx.lineWidth=2;ctx.setLineDash(mine.arm>0?[5,5]:[]);
+   ctx.beginPath();ctx.arc(x,y,mine.r,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+   for(let i=0;i<3;i++){
+    const theta=mine.phase+i*2*Math.PI/3,dx=Math.cos(theta),dy=Math.sin(theta);
+    ctx.strokeStyle='#e7aa71';ctx.lineWidth=5;
+    ctx.beginPath();ctx.moveTo(x+dx*19,y+dy*19);
+    ctx.lineTo(x+dx*mine.r,y+dy*mine.r);ctx.stroke();
+   }
+   ctx.restore();continue;
+  }
   if(mine.v2Charge){
    ctx.save();ctx.globalAlpha=mine.arm>0?.58:.92;
    ctx.strokeStyle=mine.arm>0?'#77aeb5':'#b2ede2';

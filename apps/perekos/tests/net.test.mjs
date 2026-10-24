@@ -8,9 +8,9 @@ const send=(s,who,type,extra={})=>module.onMessage({state:s,player:who,players:[
 const input=(seq,round,changes={})=>({type:'input',seq,round,control:{x:0,y:0,aim:{x:200,y:300},attack:false,shield:false,dash:false,...changes}});
 function room(){const first=module.createRoom({player:p}).state;return module.onJoin({state:first,player:q,players:[p,q]}).state}
 function match(){const s=room();send(s,p,'mode',{gameMode:'duel'});send(s,p,'start');return s}
-test('server module is binary-exact to current immutable v15 snapshot',async()=>{
- const [main,snapshot]=await Promise.all([readFile(new URL('../server/module.ts',import.meta.url),'utf8'),readFile(new URL('../../../pocketnet/module-versions/perekos/v15.ts',import.meta.url),'utf8')]);
- assert.equal(main,snapshot);assert.equal(RULESET_VERSION,15);
+test('server module is binary-exact to current immutable v16 snapshot',async()=>{
+ const [main,snapshot]=await Promise.all([readFile(new URL('../server/module.ts',import.meta.url),'utf8'),readFile(new URL('../../../pocketnet/module-versions/perekos/v16.ts',import.meta.url),'utf8')]);
+ assert.equal(main,snapshot);assert.equal(RULESET_VERSION,16);
  assert.equal(module.protocolVersion,1);
 });
 test('rooms have two durable authenticated seats and host must start',()=>{
@@ -72,7 +72,7 @@ test('two server-side rune offers stay secret across room joined and state event
 });
 test('reconnect sync keeps the original side, score, runes, version and host',()=>{
  const s=match(),before=JSON.stringify(s.match),seat1=module.viewForPlayer({state:s,player:q,players:[p,q]});
- assert.equal(seat1.me,1);assert.equal(seat1.rulesVersion,15);
+ assert.equal(seat1.me,1);assert.equal(seat1.rulesVersion,16);
  s.seen[1]=0;const stale=module.viewForPlayer({state:s,player:p,players:[p,q]});assert.equal(stale.opponentConnected,false);
  const reply=send(s,q,'sync');assert.equal(reply.events[0].to,'second');
  assert.equal(JSON.stringify(s.match),before);assert.equal(module.viewForPlayer({state:s,player:q,players:[p,q]}).me,1);

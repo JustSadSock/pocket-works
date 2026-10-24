@@ -33,7 +33,8 @@
         "tests/magic-v2-forms.test.mjs",
         "tests/magic-v2-draft.test.mjs",
         "tests/magic-v2-physical-triad.test.mjs",
-        "tests/net-v10.test.mjs"
+        "tests/net-v10.test.mjs",
+        "tests/magic-v2-three-forms.test.mjs"
       ]
     },
     {

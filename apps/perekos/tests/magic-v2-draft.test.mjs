@@ -28,11 +28,11 @@ const moveToOffers=(s)=>{
  assert.equal(s.phase,'magic-offer');
  return s;
 };
-test('v15 offers are private, match-seeded, independently chosen and never cross-school',()=>{
+test('v16 offers are private, match-seeded, independently chosen and never cross-school',()=>{
  const clock=Date.now;let now=2_000_000;Date.now=()=>now;
  try{
   const s=moveToOffers(room()),original=JSON.parse(JSON.stringify(s));
-  assert.equal(RULESET_VERSION,15);
+  assert.equal(RULESET_VERSION,16);
   assert.equal(s.magicStage,1);
   assert.deepEqual(s.magicChoices.map(offers=>offers.map(o=>o.rarity)),[
    ['common','uncommon','rare'],['common','uncommon','rare']
@@ -109,7 +109,7 @@ test('v13 45-second timeout picks a safe common pack, preserving existing rune s
  }finally{Date.now=clock}
 });
 
-test('v15 projects only the recipient rune book throughout the network match',()=>{
+test('v16 projects only the recipient rune book throughout the network match',()=>{
  const s=room();
  const stone=s.match.magicLoadouts[0],fire=s.match.magicLoadouts[1];
  const inspect=()=>{
