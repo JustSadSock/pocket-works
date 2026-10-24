@@ -37,7 +37,7 @@ import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.37',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.38',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -692,7 +692,13 @@ function deliverRasterAudits(){
   if(payload.round!==view.round){auditOutgoing.delete(key);continue}
   if(!['reveal','round-review','results'].includes(view.phase))continue;
   if(view.phase==='reveal'&&view.author?.id!==payload.targetId)continue;
-  try{net.sendGame({type:'ballot_audit',...payload});auditOutgoing.delete(key)}catch{}
+  const acknowledged=Number(roomModuleVersion.slice(1))>=45;
+  if(acknowledged&&Date.now()-(payload.sentAt||0)<6000)continue;
+  try{
+   net.sendGame({type:'ballot_audit',...payload});
+   if(acknowledged)payload.sentAt=Date.now();
+   else auditOutgoing.delete(key); // Older pinned rooms did not send audit_saved.
+  }catch{}
  }
 }
 function startRasterAudit(v,g,turn){
@@ -704,7 +710,8 @@ function startRasterAudit(v,g,turn){
  // Wait until the visible comparison canvas has been mounted first.
  void (async()=>{
   await new Promise(resolve=>setTimeout(resolve,950));
-  if(roomId!==identity.room||document.hidden)return;
+  if(roomId!==identity.room)return;
+  if(document.hidden){auditStarted.delete(key);return}
   const result=await auditRevealedBallot({
    sprite,selected:[...v.selected],
    assignment:{art:g.art,variation:g.variation,strokes:g.strokes},
@@ -715,10 +722,21 @@ function startRasterAudit(v,g,turn){
   auditOutgoing.set(key,{
    round:identity.round,turn:identity.turn,targetId:identity.targetId,
    spriteChecksum:ballotRasterChecksum(sprite),
-   mae:result.mae,patch:result.patch,differing:result.differing
+   mae:result.mae,patch:result.patch,differing:result.differing,sentAt:0
   });
   deliverRasterAudits();
  })();
+}
+
+
+function resumeRasterAudits(){
+ if(document.hidden||!view||!view.rasterBallots||Number(roomModuleVersion.slice(1))<43||
+    !['reveal','round-review','results'].includes(view.phase))return;
+ for(let i=0;i<(view.gallery?.length||0);i++){
+  if(view.phase==='reveal'&&i!==view.turn)continue;
+  const work=view.gallery[i];
+  if(work?.id&&work.id!==me?.id&&Array.isArray(work.strokes))startRasterAudit(view,work,i);
+ }
 }
 
 function voteToken(v){return [roomId,v.round,v.turn].join(':')}
@@ -1225,6 +1243,11 @@ async function connect(mode){
         updateRasterAuditMarkers(screen,view);
        }
      }
+     else if(event?.type==='audit_saved'){
+       const key=auditKey(event.payload?.round,event.payload?.targetId);
+       auditOutgoing.delete(key);
+       voteAuditRasters.delete(key);
+     }
      else if(event?.type==='ballot_saved'){
        if(pendingBallot?.round===event.payload?.round)pendingBallot=null;
      }
@@ -1672,6 +1695,7 @@ function tick(){
  }
  if(pendingVote&&!view?.paused)attemptVote();
  if(!view?.paused)deliverRasterAudits();
+ if(!view?.paused)resumeRasterAudits();
  if(!view?.paused)maybeSendAnonymousBallot();
  const v=practice||view,clock=document.querySelector('#clock');
  const timed=(page==='preview'||page==='drawing')&&
@@ -1748,7 +1772,7 @@ if(!IS_DEBUG_FRAME)setInterval(()=>{
  if(pendingSubmit?.room===roomId&&pendingSubmit.round===view?.round)attemptSubmission();
  else backupDraft();
 },3600);
-if(!IS_DEBUG_FRAME)document.addEventListener('visibilitychange',()=>{if(page==='drawing')backupDraft(true);if(!document.hidden){lastTimePongAt=Date.now();tick()}});
+if(!IS_DEBUG_FRAME)document.addEventListener('visibilitychange',()=>{if(page==='drawing')backupDraft(true);if(!document.hidden){lastTimePongAt=Date.now();resumeRasterAudits();tick()}});
 if(!IS_DEBUG_FRAME)window.addEventListener('pagehide',()=>{if(page==='drawing')backupDraft(true)});
 async function refreshPocketBadge(){
  const prior=(pocketIdentity?.id||'')+':'+(pocketIdentity?.updatedAt||'');
