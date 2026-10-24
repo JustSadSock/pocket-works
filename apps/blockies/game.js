@@ -489,7 +489,8 @@ const TEAM_SCORE_TEMPLATE = {
     lines: 0,
     level: 1,
     comboChain: 0,
-    lastClearDetail: null
+    lastClearDetail: null,
+    contributions: []
 };
 
 function computeBoardWidth(numPlayers) {
@@ -572,10 +573,28 @@ function createGamepadButtonState() {
 }
 
 function resetSharedStats() {
-    gameState.sharedStats = { ...TEAM_SCORE_TEMPLATE };
+    gameState.sharedStats = { ...TEAM_SCORE_TEMPLATE,
+      contributions:Array.from({length:gameState.numPlayers},()=>({cellsCleared:0,linesHelped:0,finishes:0,returns:0})) };
     gameState.sharedStatsDirty = true;
 }
 
+// Attribution never modifies team scoring or the conditions for re-entry.
+function creditClearedRows(rows,finisherId){
+    const stats=gameState.sharedStats.contributions;
+    if(!Array.isArray(stats)||!rows.length)return;
+    for(const row of rows){
+        const owners=new Set();
+        for(const tile of row.cells){
+            const owner=tile-1;
+            if(Number.isInteger(owner)&&stats[owner]){
+                stats[owner].cellsCleared++;
+                owners.add(owner);
+            }
+        }
+        for(const owner of owners)stats[owner].linesHelped++;
+        if(stats[finisherId])stats[finisherId].finishes++;
+    }
+}
 function setRandomSeed(seed) {
     gameState.randomSeed = normalizeSeed(seed);
     gameState.rng = createPrng(gameState.randomSeed);
@@ -801,6 +820,10 @@ class Player {
     resumeFromGate(){
         if(!this.blocked||gameState.isGameOver||!laneHasClearance(this))return false;
         this.gameOver=false;this.blocked=false;this.spawnPiece();
+        if(!this.gameOver&&gameState.sharedStats.contributions?.[this.id]){
+            gameState.sharedStats.contributions[this.id].returns++;
+            gameState.sharedStatsDirty=true;
+        }
         return !this.gameOver;
     }
 
@@ -960,6 +983,7 @@ class Player {
             return;
         }
 
+        creditClearedRows(clearedRows,this.id);
         const comboStep = gameState.sharedStats.comboChain || 0;
         const comboMultiplier = 1 + STREAK_BONUS_STEP * comboStep;
         const multiMultiplier = 1 + MULTI_LINE_BONUS_STEP * (linesCleared - 1);
@@ -1978,6 +2002,11 @@ class UIManager {
 
         preview.appendChild(header);
         preview.appendChild(status);
+        const impact=document.createElement('span');
+        impact.className='preview-impact';
+        impact.id=`impact-${player.id}`;
+        impact.hidden=true;
+        preview.appendChild(impact);
         container.appendChild(preview);
     }
 
@@ -2228,6 +2257,19 @@ class UIManager {
     }
 
     updatePlayerInfo(player) {
+        if(gameState.numPlayers>1){
+            const impact=document.getElementById(`impact-${player.id}`);
+            if(impact){
+                const contribution=gameState.sharedStats.contributions?.[player.id];
+                impact.hidden=!contribution;
+                if(contribution){
+                    const description=currentLanguage==='ru'
+                        ?`Линий: ${contribution.linesHelped} · клеток: ${contribution.cellsCleared}`
+                        :`Lines helped: ${contribution.linesHelped} · cells: ${contribution.cellsCleared}`;
+                    if(impact.textContent!==description)impact.textContent=description;
+                }
+            }
+        }
         const isTouchOwner=this.isOnlineMode?player.id===this.localPlayerIndex:player.id===this.touchPlayerIndex;
         if(isTouchOwner){
             const holdButton=this.touchControls?.querySelector('[data-action="hold"]');
@@ -2901,6 +2943,15 @@ class UIManager {
             status.className='result-player__status';
             status.textContent=player.gameOver?(ru?'Выбыл':'Out'):(ru?'На поле':'Playing');
             entry.append(swatch,name,status);
+            const contribution=gameState.sharedStats.contributions?.[player.id];
+            if(isCoop&&contribution){
+                const summary=document.createElement('span');
+                summary.className='result-player__impact';
+                summary.textContent=ru
+                    ?`Вклад: ${contribution.linesHelped} лин. · ${contribution.cellsCleared} кл. · завершил ${contribution.finishes} · вернулся ${contribution.returns}`
+                    :`Helped: ${contribution.linesHelped} lines · ${contribution.cellsCleared} cells · completed ${contribution.finishes} · returned ${contribution.returns}`;
+                entry.append(summary);
+            }
             team.append(entry);
         }
         details.append(team);

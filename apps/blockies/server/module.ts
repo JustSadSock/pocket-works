@@ -96,7 +96,8 @@ const TEAM_SCORE_TEMPLATE = {
     lines: 0,
     level: 1,
     comboChain: 0,
-    lastClearDetail: null
+    lastClearDetail: null,
+    contributions: []
 };
 
 function computeBoardWidth(numPlayers) {
@@ -183,10 +184,28 @@ function createGamepadButtonState() {
 }
 
 function resetSharedStats() {
-    gameState.sharedStats = { ...TEAM_SCORE_TEMPLATE };
+    gameState.sharedStats = { ...TEAM_SCORE_TEMPLATE,
+      contributions:Array.from({length:gameState.numPlayers},()=>({cellsCleared:0,linesHelped:0,finishes:0,returns:0})) };
     gameState.sharedStatsDirty = true;
 }
 
+// Attribution never modifies team scoring or the conditions for re-entry.
+function creditClearedRows(rows,finisherId){
+    const stats=gameState.sharedStats.contributions;
+    if(!Array.isArray(stats)||!rows.length)return;
+    for(const row of rows){
+        const owners=new Set();
+        for(const tile of row.cells){
+            const owner=tile-1;
+            if(Number.isInteger(owner)&&stats[owner]){
+                stats[owner].cellsCleared++;
+                owners.add(owner);
+            }
+        }
+        for(const owner of owners)stats[owner].linesHelped++;
+        if(stats[finisherId])stats[finisherId].finishes++;
+    }
+}
 function setRandomSeed(seed) {
     gameState.randomSeed = normalizeSeed(seed);
     gameState.rng = createPrng(gameState.randomSeed);
@@ -544,6 +563,7 @@ class Player {
         let linesCleared = 0;
 
         const boardWidth = getBoardWidth();
+        const clearedRows=gameState.board.flatMap((row,y)=>row.every(Boolean)?[{y,cells:row.slice()}]:[]);
         for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
             if (gameState.board[y].every(cell => cell !== 0)) {
                 gameState.board.splice(y, 1);
@@ -562,7 +582,8 @@ class Player {
             return;
         }
 
-        // Play line clear sound
+        // Record actual ownership of removed cells, not just the final action.
+        creditClearedRows(clearedRows,this.id);
         soundManager.lineClear(linesCleared);
 
         const comboStep = gameState.sharedStats.comboChain || 0;
@@ -665,7 +686,9 @@ function checkAllPlayersGameOver() {
  return {
  init(players){gameState.numPlayers=players.length;gameState.boardWidth=computeBoardWidth(players.length);gameState.board=createEmptyBoard();gameState.players=[];resetSharedStats();players.forEach((p,i)=>{const laneX=spawnLaneX(i,players.length,gameState.boardWidth);const v=new Player(i,p.color,{},laneX+2);v.spawnLaneX=laneX;v.name=p.name||('Игрок '+(i+1));v.init();gameState.players.push(v);});},
  step(ms){for(let t=0;t<ms;t+=50)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(50,ms-t));},
- resume(i){const v=gameState.players[i];if(!v||!v.blocked||gameState.isGameOver||!laneHasClearance(v))return false;v.gameOver=false;v.blocked=false;v.spawnPiece();return !v.gameOver;},
+ resume(i){const v=gameState.players[i];if(!v||!v.blocked||gameState.isGameOver||!laneHasClearance(v))return false;v.gameOver=false;v.blocked=false;v.spawnPiece();
+  if(!v.gameOver&&gameState.sharedStats.contributions?.[i])gameState.sharedStats.contributions[i].returns++;
+  return !v.gameOver;},
  input(i,p){const v=gameState.players[i];if(!v||v.gameOver)return;if(p.action==='move'&&[-1,1].includes(p.direction))v.move(p.direction,{broadcast:false});else if(['rotate','drop','hardDrop'].includes(p.action))v[p.action]({broadcast:false});else if(p.action==='hold')v.holdPiece({broadcast:false});else throw Error('Некорректная команда');},
  acceptBatch(i,actions,now){
   const v=gameState.players[i];if(!v||v.gameOver)return;
@@ -722,7 +745,7 @@ function newMatch(state,connectedIds){
  }
 }
 export default {protocolVersion:1,
- createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,inputBatchVersion:1,rulesVersion:3,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
+ createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,inputBatchVersion:1,rulesVersion:3,contributionVersion:1,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
  onJoin({state,player}){state=copy(state);add(state,player);return out(state);},
  onLeave({state,player}){
   state=copy(state);
