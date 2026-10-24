@@ -261,6 +261,24 @@ function harm(s,a,amount,from,depth=0){
  if(blocked>0&&before>0&&a.shield===0)emit(s,'on_break',a.id,{from},depth);
  fx(s,'hit',a.x,a.y);return d;
 }
+// Global per-caster allowance for concurrent DoTs and persistent hazards.
+// Primary spell impacts still do their full intended damage.
+const V2_SECONDARY_HP_BUDGET=12,V2_SECONDARY_WINDOW_TICKS=60;
+function harmSecondary(s,target,amount,source,depth=0){
+ if(!s.magicModeV2||source==null)return harm(s,target,amount,source,depth);
+ const caster=s.actors[source];
+ if(!caster||!Number.isFinite(amount)||amount<=0)return 0;
+ const window=caster.v2SecondaryWindow||{start:s.ticks,spent:0};
+ if(s.ticks<window.start||s.ticks-window.start>=V2_SECONDARY_WINDOW_TICKS){
+  window.start=s.ticks;window.spent=0;
+ }
+ caster.v2SecondaryWindow=window;
+ const permitted=Math.min(amount,Math.max(0,V2_SECONDARY_HP_BUDGET-window.spent));
+ if(permitted<=0)return 0;
+ // Shields/invulnerability spend budget too; cannot store unused damage.
+ window.spent+=permitted;
+ return harm(s,target,permitted,source,depth);
+}
 function markTarget(s,target,element,source,depth=0){
  if(s.magicModeV2)return null;
  if(!isElement(element)||target.hp<=0)return null;
@@ -377,8 +395,8 @@ function v2ChainContact(s,owner,x,y){
  }
  caster.runeTimers[gate]=s.ticks+Math.ceil(.84/STEP);
  target.shield=Math.max(0,target.shield-1.4);
- const dealt=harm(s,target,3.8,owner,1);
- if(dealt>0){target.slow=Math.max(target.slow,.3);emit(s,'on_hit',owner,{},1)}
+ const dealt=harmSecondary(s,target,3.8,owner,1);
+ if(dealt>0){target.slow=Math.max(target.slow,.3);emit(s,'on_hit',owner,{secondary:true},1)}
  fx(s,'impact_arc',p.x,p.y);
 }
 function v2Contact(s,owner,impact,x,y){
@@ -679,7 +697,10 @@ function tick(s,input={},dt=STEP,otherInput=null){
   a.heat=Math.max(0,a.heat-7*dt);a.overloadCd=Math.max(0,a.overloadCd-dt);
   a.burn=Math.max(0,(a.burn||0)-dt);
   if(a.burn>0){a.burnTick=(a.burnTick||0)+dt;
-   if(a.burnTick>=.33){a.burnTick=0;harm(s,a,1.25,a.burnSource);fx(s,'ember',a.x,a.y)}}
+   if(a.burnTick>=.33){a.burnTick=0;
+    if(s.magicModeV2)harmSecondary(s,a,1.25,a.burnSource);
+    else harm(s,a,1.25,a.burnSource);
+    fx(s,'ember',a.x,a.y)}}
   else a.burnTick=0;
   a.haste=Math.max(0,a.haste-dt);a.slow=Math.max(0,a.slow-dt);a.markLife=Math.max(0,a.markLife-dt);a.reactionCd=Math.max(0,a.reactionCd-dt);if(a.markLife===0)a.mark='';
   if(s.ticks%120===0)emit(s,'on_clock',a.id);
@@ -721,10 +742,10 @@ for(let j=s.beams.length-1;j>=0;j--){s.beams[j].life-=dt;if(s.beams[j].life<=0)s
    const range=Math.hypot(a.x-q.x,a.y-q.y);
    if(range<=49&&range>q.r+11&&unobstructed(s,q.x,q.y,a.x,a.y,q.owner,7)){
     a.shield=Math.max(0,a.shield-1);
-    const dealt=harm(s,a,2.3,q.owner,q.depth+1);
+    const dealt=harmSecondary(s,a,2.3,q.owner,q.depth+1);
     if(dealt>0){
      a.slow=Math.max(a.slow,.23);
-     emit(s,'on_hit',q.owner,{},q.depth+1);
+     emit(s,'on_hit',q.owner,{secondary:true},q.depth+1);
      v2Contact(s,q.owner,q.v2Impact,a.x,a.y);
     }
     fx(s,'impact_arc',a.x,a.y);
@@ -783,11 +804,11 @@ for(let j=s.mines.length-1;j>=0;j--){
   if(mine.afterCd<=0&&target.hp>0
     &&Math.hypot(target.x-mine.x,target.y-mine.y)<=mine.r+12
     &&unobstructed(s,mine.x,mine.y,target.x,target.y,mine.owner,7)){
-   const dealt=harm(s,target,mine.damage,mine.owner);
+   const dealt=harmSecondary(s,target,mine.damage,mine.owner);
    if(dealt>0){
     if(mine.v2Rubble)target.slow=Math.max(target.slow,.65);
     else{target.burn=Math.max(target.burn||0,.58);target.burnSource=mine.owner}
-    emit(s,'on_hit',mine.owner);
+    emit(s,'on_hit',mine.owner,{secondary:true});
    }
    mine.afterCd=mine.v2Rubble?.65:.46;
    fx(s,mine.v2Rubble?'fracture':'flame',target.x,target.y);
@@ -811,8 +832,8 @@ for(let j=s.mines.length-1;j>=0;j--){
     &&unobstructed(world,u.x,u.y,v.x,v.y,mine.owner,7)
     &&unobstructed(world,nearestX,nearestY,target.x,target.y,mine.owner,7)){
    target.shield=Math.max(0,target.shield-1.6);
-   const dealt=harm(s,target,mine.damage,mine.owner);
-   if(dealt>0){target.slow=Math.max(target.slow,.3);emit(s,'on_hit',mine.owner)}
+   const dealt=harmSecondary(s,target,mine.damage,mine.owner);
+   if(dealt>0){target.slow=Math.max(target.slow,.3);emit(s,'on_hit',mine.owner,{secondary:true})}
    fx(s,'impact_arc',target.x,target.y);
    mine.conduitCd=.42;
   }
@@ -824,8 +845,8 @@ for(let j=s.mines.length-1;j>=0;j--){
   if(mine.craterCd<=0&&target.hp>0
     &&Math.hypot(target.x-mine.x,target.y-mine.y)<=mine.r+10
     &&unobstructed(s,mine.x,mine.y,target.x,target.y,mine.owner,7)){
-   const dealt=harm(s,target,mine.damage,mine.owner);
-   if(dealt>0){target.burn=Math.max(target.burn||0,.48);target.burnSource=mine.owner;emit(s,'on_hit',mine.owner)}
+   const dealt=harmSecondary(s,target,mine.damage,mine.owner);
+   if(dealt>0){target.burn=Math.max(target.burn||0,.48);target.burnSource=mine.owner;emit(s,'on_hit',mine.owner,{secondary:true})}
    mine.craterCd=.50;fx(s,'flame',target.x,target.y);
   }
   if(mine.life<=0)s.mines.splice(j,1);
@@ -850,10 +871,10 @@ for(let j=s.mines.length-1;j>=0;j--){
    }
    if(mine.whirlCd<=0&&sector&&distance<=mine.r+10&&distance>=19
      &&unobstructed(s,mine.x,mine.y,target.x,target.y,mine.owner,8)){
-    const dealt=harm(s,target,mine.damage,mine.owner);
+    const dealt=harmSecondary(s,target,mine.damage,mine.owner);
     if(dealt>0){
      target.burn=Math.max(target.burn||0,.68);target.burnSource=mine.owner;
-     emit(s,'on_hit',mine.owner);
+     emit(s,'on_hit',mine.owner,{secondary:true});
     }
     mine.whirlCd=.31;fx(s,'flame',target.x,target.y);
    }
@@ -913,7 +934,7 @@ function validState(s){
  &&(!s.magicModeV2||(s.magicLoadouts?.length===2&&s.magicLoadouts.every(x=>v2SpellAllowed(x))))&&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=18;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=19;
 
 // ---- Immutable PocketNet ruleset 10: generated from reviewed magic-v2 runtime.
 // v9 is preserved separately; 10 retains all its legacy logic for old-style new rooms.
@@ -1433,6 +1454,14 @@ function magicV2Action(s,a,act,mods,ev){
    }
   }
  };
+ // Cross-slot defensive action cooldowns: multiple triggers cannot
+ // alternate to bypass the defensive economy of a single loadout.
+ const shared=act==='u_guard'?'v2:shared-guard':
+  act==='u_heal'?'v2:shared-heal':null;
+ if(shared){
+  if(s.ticks<(a.runeTimers[shared]||0))return false;
+  a.runeTimers[shared]=s.ticks+Math.ceil((act==='u_guard'?1.65:2.4)/STEP);
+ }
  switch(act){
   case 'u_guard':a.shield=Math.min(80,a.shield+(size?22:14));fx(s,'shield',a.x,a.y);break;
   case 'u_heal':receiveHeal(s,a,8,ev.depth+1);break;
@@ -1635,6 +1664,9 @@ function flushMagicV2Events(s){
   const ev=s.eventQueue.shift(),a=s.actors[ev.owner],rules=s.magicLoadouts?.[ev.owner];
   if(!a||!rules||ev.depth>=MAX_CHAIN_DEPTH)continue;
   const trigger=map[ev.kind];if(!trigger)continue;
+  // Hazard ticks, burn and orbital pulses may damage and invoke a defender's
+  // on_hurt but must not manufacture unlimited on_hit offensive reactions.
+  if(trigger==='u_on_hit'&&ev.payload?.secondary)continue;
   for(const spell of compileMagic(rules)){
    if(spell.trigger!==trigger)continue;
    const key='v2:'+spell.slotId;
@@ -1840,7 +1872,7 @@ function viewForPlayer({state:s,player,players}){
  const match=s.match?.magicModeV2&&Array.isArray(s.match.magicLoadouts)
   ?{...s.match,magicLoadouts:s.match.magicLoadouts.map((book,seat)=>seat===i?book:null)}
   :s.match;
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:18,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match,
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:19,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],magicStage:s.magicStage||0,magicChoices:i>=0&&s.phase==='magic-offer'&&!s.magicPicked?.[i]?s.magicChoices[i]:[],magicPicked:i>=0&&!!s.magicPicked?.[i],magicOfferDeadline:s.phase==='magic-offer'?s.magicOfferAt+V13_DRAFT_LIMIT:0,
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};

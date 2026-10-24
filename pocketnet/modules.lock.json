@@ -210,7 +210,7 @@
     ]
   },
   "perekos": {
-    "current": "v18",
+    "current": "v19",
     "versions": [
       "v1",
       "v2",
@@ -229,7 +229,8 @@
       "v15",
       "v16",
       "v17",
-      "v18"
+      "v18",
+      "v19"
     ]
   },
   "throne-three": {

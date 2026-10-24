@@ -27,7 +27,7 @@ const fit=(s,ids)=>{
 test('v18 server evaluates motion plus a shape while keeping private builds hidden',()=>{
  const real=Date.now;let now=12_000_000;Date.now=()=>now;
  try{
-  assert.equal(RULESET_VERSION,18);
+  assert.equal(RULESET_VERSION,19);
   const s=makeRoom('storm');
   fit(s,[['u_reform_base'],['li_form_sphere',0],['li_motion_orbit',0]]);
   assert.equal(effectiveMagicForm(s.match.magicLoadouts[0]).motion,'li_motion_orbit');
@@ -41,14 +41,14 @@ test('v18 server evaluates motion plus a shape while keeping private builds hidd
   assert.ok(s.match.shots.some(q=>q.v2Sphere&&q.v2Orbit),'server simulates orbital sphere');
   const own=module.viewForPlayer({state:s,player:owner,players});
   const other=module.viewForPlayer({state:s,player:enemy,players});
-  assert.equal(own.rulesVersion,18);assert.equal(other.rulesVersion,18);
+  assert.equal(own.rulesVersion,19);assert.equal(other.rulesVersion,19);
   assert.equal(own.match.magicLoadouts[1],null);
   assert.equal(other.match.magicLoadouts[0],null);
   assert.ok(other.match.shots.some(q=>q.v2Sphere&&q.v2Orbit));
  }finally{Date.now=real}
 });
 test('v18 server accepts two different contact aspects only in their own schools',()=>{
- assert.equal(RULESET_VERSION,18);
+ assert.equal(RULESET_VERSION,19);
  for(const [school,shape,impact] of [
   ['stone','st_form_colossus','st_impact_rubble'],
   ['fire','fi_form_comet','fi_impact_wildfire']
