@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {isChyepukhaSync,canServeChyepukhaSync,checkChyepukhaStateBudget,
-  CHYEPUKHA_SYNC_COOLDOWN_MS,CHYEPUKHA_STATE_HEADROOM_BYTES} from '../chyepukha-transport.mjs';
+  CHYEPUKHA_SYNC_COOLDOWN_MS,CHYEPUKHA_STATE_HEADROOM_BYTES,checkChyepukhaViewBudget} from '../chyepukha-transport.mjs';
 const LIMIT=256*1024;
 
 test('private read-only sync is scoped to Chyepukha',()=>{
@@ -37,4 +37,12 @@ test('preflight does not mutate previously committed manuscript snapshots',()=>{
  const candidate={...accepted,sheets:[{fragments:[{answer:'界'.repeat(86000)}]}]};
  assert.equal(checkChyepukhaStateBudget(candidate,LIMIT).ok,false);
  assert.deepEqual(accepted,before);
+});
+
+test('final reader packet is measured independently of the stored manuscripts',()=>{
+ const room={id:'room',gameId:'chyepukha',version:'v7',players:[{id:'a',name:'Ірина'}]};
+ const ordinary={phase:'finished',stories:[{fragments:[{answer:'Кіт знайшов ключ',question:'Що сталося?'}]}]};
+ assert.equal(checkChyepukhaViewBudget(room,ordinary,LIMIT).ok,true);
+ const oversized={phase:'finished',stories:[{fragments:[{answer:'界'.repeat(88000),question:'Що сталося?'}]}]};
+ assert.equal(checkChyepukhaViewBudget(room,oversized,LIMIT).ok,false);
 });
