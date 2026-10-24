@@ -42,7 +42,7 @@ async function open(token){
    const index=queue.findIndex(p=>p.type===type&&match(p));
    if(index>=0)return Promise.resolve(queue.splice(index,1)[0]);
    return new Promise((resolve,reject)=>{
-    const origin=new Error().stack?.split('\n').slice(2,4).join(' ')||'?';
+    const origin=new Error().stack?.split('\n').slice(4,6).join(' ')||'?';
     const entry={type,match,resolve,reject};
     entry.timer=setTimeout(()=>{
      const i=waiters.indexOf(entry);if(i!==-1)waiters.splice(i,1);
