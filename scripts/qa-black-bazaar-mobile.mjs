@@ -32,7 +32,7 @@ try{
    addEventListener('message',receive);
    iframe.contentWindow.postMessage({source:'bazaar-debug-console',type:'scene',id,run:1,step:token},location.origin);
   }),scene);
-  await frame.evaluate(({width,height,play})=>{window.__bazaarQaExpected={width,height,play};},{width,height,play:!['home','lobby','done'].includes(scene)});
+  await frame.evaluate(({width,height,play,scene})=>{window.__bazaarQaExpected={width,height,play,scene};},{width,height,scene,play:!['home','lobby','done'].includes(scene)});
   const report=await frame.evaluate(()=>{
    const width=document.documentElement.clientWidth;
    const overflow=Math.max(0,document.documentElement.scrollWidth-width);
@@ -47,6 +47,15 @@ try{
    if(expected?.play&&(!document.querySelector('.play-field')||!document.querySelector('.workspace-tabs')))
      issues.push('game scene missing');
    if(document.querySelector('#app')?.textContent?.includes('Подключаемся…'))issues.push('loading placeholder');
+    if(['buyer','seller','bids'].includes(expected?.scene)){
+     if(!document.querySelector('.table-stage .seller-promise'))issues.push('public lot missing selected seller wording');
+     if(!document.querySelector('.sheet-page[data-sheet-page="market"] .merchant-passport'))issues.push('seller reputation not visible in marketplace');
+     if(!document.querySelector('.merchant-passport .passport-numbers'))issues.push('seller record missing server counters');
+    }
+    if(expected?.scene==='done'){
+     if(!document.querySelector('.bazaar-newspaper .paper-masthead'))issues.push('missing illustrated match newspaper');
+     if(document.querySelectorAll('.paper-nomination').length!==4)issues.push('incomplete match awards');
+    }
    if(width<=350&&document.documentElement.clientHeight<=600&&expected?.play){
     const actionPage=document.querySelector('[data-sheet-page="actions"]');
     const workButton=actionPage?.querySelector('form[data-form="work"] button[type="submit"]');

@@ -2,6 +2,8 @@
 // to artifactSVG: disguises must never reveal hidden server-side identities.
 const glyph={
  scroll:'<path d="M7 4h12v15H8a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4Zm0 0c-4 0-4 5 0 5h12M9 12h6M9 16h7"/>',
+ 'shield-check':'<path d="M12 2 3 6v6c0 5 4 9 9 10 5-1 9-5 9-10V6l-9-4Zm-4 10 3 3 5-6"/>',
+ tag:'<path d="M2 4h12l8 8-10 10L2 12V4Zm5 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/>',
  bag:'<path d="M4 8h16l-1 13H5L4 8ZM9 9V6a3 3 0 0 1 6 0v3M4 13h16"/>',
  trade:'<path d="m2 12 5-5 6 4-4 4-7-3Zm20 0-5-5-6 4 4 4 7-3ZM7 15l4 4 3-1 3-3M11 11l3 3"/>',
  gavel:'<path d="m4 6 5-4 9 9-5 5-9-10ZM12 9l-4 4M14 14l-8 8M4 21h15"/>',

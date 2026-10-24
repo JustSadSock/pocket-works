@@ -50,6 +50,10 @@ export function debugItem(index,id,round=1){
 }
 const publicItem=item=>({id:item.id,name:item.name,rarity:item.rarity});
 const fixtures=['Алиса','Борис','Варя','Даня','Ева','Федя'];
+const pitches=['Торг уместен','Не задавать вопросов','Проверял лично. Почти.','Из личной коллекции','Уникально, пока не купили','Возврат через другое измерение','Берите, пока я добрый'];
+const reputation=(sales=0,exchanges=0,withdrawals=0)=>({sales,exchanges,withdrawals,
+ title:withdrawals>=2&&withdrawals>sales?'Передумал и ушёл':sales>=4?'Легенда прилавка':sales>=2?'Бывалый торговец':sales>=1?'Первая удачная сделка':exchanges>=2?'Мастер обмена':'Новичок рынка'});
+
 const debugAvatars=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
 export function createDebugState(scene='four'){
  if(scene==='home')return null;
@@ -57,6 +61,7 @@ export function createDebugState(scene='four'){
  const people=Array.from({length:count},(_,i)=>({
   id:'debug-'+i,name:fixtures[i],character:fixtures[i],avatarId:debugAvatars[i],connected:true,
   strikes:i===3?1:0,bankrupt:false,urgent:false,items:2,
+   reputation:reputation(i===1?3:i===2?1:0,i===1?1:0,i===3?2:0),
   inventory:[publicItem(debugItem(i,'other-'+i))],
   resources:wallet(260-i*20,22+i,3+(i%3))
  }));
@@ -65,7 +70,7 @@ export function createDebugState(scene='four'){
  const owned=[debugItem(0,'owned-frog'),debugItem(11,'owned-amulet'),debugItem(7,'owned-gear')];
  const you={id:'debug-0',character:fixtures[0],avatarId:debugAvatars[0],resources:wallet(390,32,5),quota:wallet(430,26,3),
   items:owned,escrowItems:[],positiveTarget:'debug-1',negativeTarget:'debug-2',
-  legendary:null,urgent:null,worked:false,usedPawn:false,marketDeals:0,
+  legendary:null,urgent:null,worked:false,usedPawn:false,marketDeals:0,sellerPitches:pitches,
   inspections:[],inspectionPrices:{public:15,black:25},
   disguises:['Талисман достатка','Забытый сувенир','Тёмная реликвия','Дар неизвестного'],
   blackListedRound:0,bankrupt:false
@@ -85,7 +90,7 @@ export function createDebugState(scene='four'){
  };
  if(['buyer','seller','bids','two','four','six','urgent','event','bankrupt'].includes(scene)){
   const mine=scene==='seller',thing=mine?owned[0]:debugItem(5,'listing-cat');
-  state.listing={...publicItem(thing),seller:mine?'debug-0':'debug-1',ask:wallet(110,1,0)};
+  state.listing={...publicItem(thing),seller:mine?'debug-0':'debug-1',ask:wallet(110,1,0),pitch:pitches[mine?2:1]};
  }
  if(scene==='bids'||scene==='seller')state.bids=[{id:'bid-0',buyer:'debug-1',offer:wallet(125,0,0)}];
  if(scene==='buyer'){state.you.inspections=[{itemId:'listing-cat',negative:{type:'crystals',value:6},curse:null}];}
@@ -110,7 +115,8 @@ export function createDebugState(scene='four'){
  if(scene==='done'){
   state.phase='done';state.round=10;state.turnId=null;state.deadlineAt=null;
   state.report={publicSales:4,privateDeals:2,blackSales:1,inspections:3,repack:2,salvage:1,urgentMet:5,urgentMissed:2,wardUsed:1,curseFired:1};
-  state.ranking=people.map((p,i)=>({id:p.id,name:p.name,character:p.name,avatarId:p.avatarId,place:i+1,progress:100-i*16,complete:i<2,bankrupt:false}));
+  state.ranking=people.map((p,i)=>({id:p.id,name:p.name,character:p.name,avatarId:p.avatarId,place:i+1,progress:100-i*16,complete:i<2,bankrupt:false,
+    epithet:[{title:'Повелитель прилавка',detail:'4 · продажи'},{title:'Дипломат с карманами',detail:'3 · обмены'},{title:'Главный подозревающий',detail:'5 · экспертизы'},{title:'Министр красивых этикеток',detail:'2 · перепаковки'}][i%4]}));
  }
  return state;
 }
@@ -127,7 +133,7 @@ export function debugSetItem(state,index,kind='inventory'){
   state.blackMarket=true;
   state.blackLots=[{id:'selected-black',item:publicItem(item),ask:wallet(77),bidCount:0,mine:false,myBid:null,bids:[],inspection:null}];
  }else{
-  state.listing={...publicItem(item),seller:'debug-1',ask:wallet(75)};
+  state.listing={...publicItem(item),seller:'debug-1',ask:wallet(75),pitch:pitches[1]};
   state.bids=[];
  }
  state.revision++;
@@ -178,10 +184,11 @@ export function debugCommand(s,cmd){
  switch(type){
  case 'post':{
   const item=findItem(cmd.itemId);if(!item||s.listing)return {state:s,error:'Предмет уже выставлен или отсутствует'};
-  s.listing={...publicItem(item),seller:you.id,ask:cmd.ask||wallet(80)};
+  if(cmd.pitchId!==undefined&&(!Number.isInteger(cmd.pitchId)||cmd.pitchId<0||cmd.pitchId>=pitches.length))return {state:s,error:'Неизвестная бирка'};
+   s.listing={...publicItem(item),seller:you.id,ask:cmd.ask||wallet(80),pitch:pitches[cmd.pitchId??0]};
   s.bids=[];log='На столе появился новый лот.';break;
  }
- case 'cancel':s.listing=null;s.bids=[];log='Лот снят.';break;
+ case 'cancel':s.listing=null;s.bids=[];s.players[0].reputation.withdrawals++;s.players[0].reputation=reputation(s.players[0].reputation.sales,s.players[0].reputation.exchanges,s.players[0].reputation.withdrawals);log='Лот снят.';break;
  case 'inspect':{
   if(!s.listing)return {state:s,error:'Нет лота'};
   s.you.inspections=[{itemId:s.listing.id,negative:{type:'crystals',value:3}}];
@@ -218,7 +225,7 @@ export function debugCommand(s,cmd){
   you.items=you.items.filter(i=>i.id!==item.id);
   buyer.inventory=[...(buyer.inventory||[]),publicItem(item)];
   buyer.items=(buyer.items??buyer.inventory.length-1)+1;
-  you.marketDeals++;
+  you.marketDeals++;s.players[0].reputation=reputation(s.players[0].reputation.sales+1,s.players[0].reputation.exchanges,s.players[0].reputation.withdrawals);
   if(you.marketDeals===1)change(you.resources,wallet(0,0,1));
   log=buyer.character+' купил «'+s.listing.name+'» у '+you.character+'.';
   s.listing=null;s.bids=[];break;

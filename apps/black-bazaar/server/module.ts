@@ -127,6 +127,36 @@ const BLACK_INSPECTION_GOLD = 25;
 const REPACK_GOLD = 20;
 const REPACK_PARTS = 1;
 const turnDurationMs = seats => seats<=2?90_000:seats<=4?80_000:65_000;
+// A tag is advertising, not an appraisal: never grant an economic bonus or reveal a secret.
+const SELLER_PITCHES = Object.freeze([
+ 'Торг уместен', 'Не задавать вопросов', 'Проверял лично. Почти.',
+ 'Из личной коллекции', 'Уникально, пока не купили',
+ 'Возврат через другое измерение', 'Берите, пока я добрый'
+]);
+const emptyTradeStats=()=>({sales:0,exchanges:0,withdrawals:0,bids:0,inspections:0,repackages:0});
+function publicTradeStats(p){
+ const r=p.tradeStats||emptyTradeStats();
+ return {sales:r.sales||0,exchanges:r.exchanges||0,withdrawals:r.withdrawals||0};
+}
+function sellerReputation(p){
+ const r=publicTradeStats(p);
+ const title=r.withdrawals>=2&&r.withdrawals>r.sales?'Передумал и ушёл':
+   r.sales>=4?'Легенда прилавка':r.sales>=2?'Бывалый торговец':
+   r.sales>=1?'Первая удачная сделка':r.exchanges>=2?'Мастер обмена':'Новичок рынка';
+ return {...r,title,note:'По сделкам за эту партию, не по качеству товара'};
+}
+function comicEpithet(p){
+ const r=p.tradeStats||emptyTradeStats(),a=[
+  ['sales','Повелитель прилавка','продажи'],['exchanges','Дипломат с карманами','обмены'],
+  ['bids','Торговался даже с тенью','предложения'],
+  ['inspections','Главный подозревающий','экспертизы'],
+  ['repackages','Министр красивых этикеток','перепаковки'],
+  ['withdrawals','Вечное «я передумал»','снятые лоты']
+ ];
+ const best=a.reduce((picked,item)=>r[item[0]]>r[picked[0]]?item:picked,a[0]);
+ return r[best[0]]>0?{title:best[1],detail:r[best[0]]+' · '+best[2]}:
+  {title:'Таинственный наблюдатель',detail:'Ни одного торгового приключения'};
+}
 const isBlackRound = s => s.phase==='play' && BLACK_ROUNDS.includes(s.round);
 const itemLocked = (s,id) => s.blackLots?.some(l=>l.item.id===id) || s.listing?.itemId===id;
 const inventoryCount = (s,p) => p.items.length+(s.blackLots||[]).filter(l=>l.seller===p.id).length;
@@ -168,7 +198,8 @@ function rankPlayers(s){
     id:p.id,name:p.name,character:p.name,avatarId:p.avatarId,
     complete:RESOURCES.every(k=>p.resources[k]>=p.quota[k]),bankrupt:p.bankrupt,
     progress:Math.round(balance(p)*1000)/10,
-    wealth:p.resources.gold+8*p.resources.crystals+70*p.resources.parts
+    wealth:p.resources.gold+8*p.resources.crystals+70*p.resources.parts,
+    tradeStats:{...(p.tradeStats||emptyTradeStats())},epithet:comicEpithet(p)
   }));
   rows.sort((a,b)=>Number(a.bankrupt)-Number(b.bankrupt)||Number(b.complete)-Number(a.complete)||b.progress-a.progress||b.wealth-a.wealth||a.id.localeCompare(b.id));
   // A rare bond can claim second place, but cannot dethrone its target.
@@ -217,7 +248,7 @@ function openGame(s){
       items:[newItem(s),newItem(s)],urgentOffset:Math.floor(Math.random()*RESOURCES.length),
       positiveTarget:plus,negativeTarget:minus,
       legendary:null,positiveUsed:0,negativeUsed:0,urgent:null,strikes:0,bankrupt:false,
-      worked:false,usedPawn:false,marketDeals:0,blackListedRound:0,inspections:[],blackInspections:[]};
+      worked:false,usedPawn:false,marketDeals:0,blackListedRound:0,inspections:[],blackInspections:[],tradeStats:emptyTradeStats()};
   });
   if(s.contestants.length>=3 && Math.random()<.04){
     const lucky=sample(s.contestants),partner=sample(s.contestants.filter(p=>p.id!==lucky.id));
@@ -336,7 +367,7 @@ function onTrade(s,seller,buyer,item,price){
   if(!seller.items.some(x=>x.id===item.id))return false;
   add(buyer,price,-1);add(seller,price,+1);
   transferItem(s,seller,buyer,item);
-  seller.marketDeals++;increment(s,'publicSales');
+  seller.marketDeals++;increment(s,'publicSales');seller.tradeStats.sales++;
   // The first public sale pays one reusable spare part: trading generates
   // supply, rather than leaving parts dependent only on grinding a work action.
   if(seller.marketDeals===1)seller.resources.parts=Math.min(9999,seller.resources.parts+1);
@@ -380,6 +411,7 @@ function acceptDeal(s,deal){
   if(a)transferItem(s,from,to,a);
   if(b)transferItem(s,to,from,b);
   s.deals=s.deals.filter(d=>d.id!==deal.id);increment(s,'privateDeals');
+  from.tradeStats.exchanges++;to.tradeStats.exchanges++;
   issue(s,'Прямая сделка между '+from.character+' и '+to.character+' заключена.');
   return true;
 }
@@ -434,7 +466,7 @@ function action(s,id,v){
       return failure(s,id,'Недостаточно золота для экспертизы этого лота.');
     if(me.blackInspections.some(i=>i.itemId===lot.item.id))
       return failure(s,id,'Этот экземпляр уже проверен.');
-    me.resources.gold-=cost;increment(s,'inspections');
+    me.resources.gold-=cost;increment(s,'inspections');me.tradeStats.inspections++;
     me.blackInspections.push({itemId:lot.item.id,originalName:spec(lot.item).name,
       negative:spec(lot.item).negative,curse:inspectCurse(lot.item)});
     issue(s,'Покупатель оплатил независимую экспертизу.');
@@ -470,7 +502,7 @@ function action(s,id,v){
     const price=repackPrice(s);
     if(me.resources.gold<price.gold||me.resources.parts<price.parts)
       return failure(s,id,'Недостаточно ресурсов для перепаковки.');
-    me.resources.gold-=price.gold;me.resources.parts-=price.parts;increment(s,'repack');
+    me.resources.gold-=price.gold;me.resources.parts-=price.parts;increment(s,'repack');me.tradeStats.repackages++;
     item.alias=DISGUISES[v.aliasIndex];
     issue(s,me.character+' перепаковал один предмет.');
     return success(s);
@@ -514,7 +546,7 @@ function action(s,id,v){
     if(!s.listing||isTurn)return failure(s,id,'Сейчас нет чужого лота.');
     const price=wallet(v.offer);
     if(!price||!nonzero(price)||!has(me,price)||inventoryCount(s,me)>=MAX_ITEMS)return failure(s,id,'Недостаточно ресурсов или мест в инвентаре.');
-    s.bids=s.bids.filter(b=>b.buyer!==id);s.bids.push({id:'bid-'+(++s.bidSerial),buyer:id,offer:price});return success(s);
+    s.bids=s.bids.filter(b=>b.buyer!==id);s.bids.push({id:'bid-'+(++s.bidSerial),buyer:id,offer:price});me.tradeStats.bids++;return success(s);
   }
   if(v.type==='withdraw_bid'){
     s.bids=s.bids.filter(b=>b.buyer!==id);return success(s);
@@ -526,7 +558,7 @@ function action(s,id,v){
     if(me.inspections.some(i=>i.itemId===listing.itemId))return failure(s,id,'Этот экземпляр уже проверен.');
     const seller=getPlayer(s,listing.seller),item=seller?.items.find(i=>i.id===listing.itemId);
     if(!item)return failure(s,id,'Лот недоступен.');
-    me.resources.gold-=cost;increment(s,'inspections');me.inspections.push({itemId:item.id,negative:spec(item).negative,
+    me.resources.gold-=cost;increment(s,'inspections');me.tradeStats.inspections++;me.inspections.push({itemId:item.id,negative:spec(item).negative,
       curse:inspectCurse(item)});
     return success(s);
   }
@@ -562,11 +594,16 @@ function action(s,id,v){
   }
   if(v.type==='post'){
     if(me.marketDeals>=2)return failure(s,id,'Лимит: две продажи за ход.');
+    if(s.listing)return failure(s,id,'Сначала сними текущий лот, прежде чем выставить другой.');
+    if(v.pitchId!==undefined&&(!Number.isInteger(v.pitchId)||v.pitchId<0||v.pitchId>=SELLER_PITCHES.length))
+      return failure(s,id,'Неизвестная бирка продавца.');
     const item=me.items.find(x=>x.id===v.itemId),ask=wallet(v.ask);
     if(!item||item.acquiredRound===s.round||!ask||!nonzero(ask))return failure(s,id,'Неверный предмет или цена. Купленный в этом раунде товар продавать нельзя.');
-    s.listing={seller:id,itemId:item.id,ask};s.bids=[];return success(s);
+    s.listing={seller:id,itemId:item.id,ask,pitchId:v.pitchId??0};s.bids=[];return success(s);
   }
   if(v.type==='cancel'){
+    if(!s.listing||s.listing.seller!==id)return failure(s,id,'Снять можно только свой действующий лот.');
+    me.tradeStats.withdrawals++;
     s.listing=null;s.bids=[];return success(s);
   }
   if(v.type==='accept'){
@@ -613,7 +650,7 @@ function viewForPlayer({state,player}){
   const veil=isBlackRound(s);
   return {phase:s.phase,host:s.host,revision:s.revision,serverNow:Date.now(),round:s.round,rounds:TOTAL_ROUNDS,deadlineAt:s.deadlineAt||null,connectionGraceUntil:s.connectionGraceUntil||null,offlinePaused:!!s.offlinePaused,
     turnId:turn?.id||null,players:s.contestants.map(p=>({
-      id:p.id,name:p.name,character:p.name,avatarId:p.avatarId,
+      id:p.id,name:p.name,character:p.name,avatarId:p.avatarId,reputation:sellerReputation(p),
       items:veil&&p.id!==me?.id?null:inventoryCount(s,p),
       inventory:veil&&p.id!==me?.id?[]:p.items.map(item=>({
         ...publicItem(item),tradable:item.acquiredRound!==s.round&&s.listing?.itemId!==item.id
@@ -622,7 +659,8 @@ function viewForPlayer({state,player}){
       bankrupt:p.bankrupt,urgent:p.urgent?.status==='pending',
       connected:s.players.some(x=>x.id===p.id)
     })),
-    listing:listed?{...publicItem(listed),seller:s.listing.seller,ask:s.listing.ask}:null,
+    listing:listed?{...publicItem(listed),seller:s.listing.seller,ask:s.listing.ask,
+       pitch:SELLER_PITCHES[s.listing.pitchId]||SELLER_PITCHES[0]}:null,
     broker:s.brokerOffer?{...publicItem(s.brokerOffer),price:{gold:75,crystals:0,parts:0}}:null,
     event:eventCard(s),marketFeePercent:Math.round(blackFee(s)*100),
     salvageParts:salvageYield(s),repackCost:repackPrice(s),
@@ -647,7 +685,7 @@ function viewForPlayer({state,player}){
       urgent:me.urgent,worked:me.worked,usedPawn:me.usedPawn,marketDeals:me.marketDeals,
       inspections:me.inspections.filter(i=>i.itemId===s.listing?.itemId),
       inspectionPrices:{public:inspectionCost(me,false,s),black:inspectionCost(me,true,s)},
-      disguises:DISGUISES,blackListedRound:me.blackListedRound,
+      disguises:DISGUISES,sellerPitches:SELLER_PITCHES,blackListedRound:me.blackListedRound,
       escrowItems:(s.blackLots||[]).filter(l=>l.seller===me.id).map(l=>privateItem(l.item))}:null};
 }
 const game={

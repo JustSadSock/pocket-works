@@ -1,5 +1,5 @@
 // Real PocketNet integration: three authenticated WebSocket clients against
-// Wrangler's SQLite Durable Object and the immutable Bazaar v20 rules.
+// Wrangler's SQLite Durable Object and the immutable Bazaar v21 rules.
 import assert from 'node:assert/strict';
 import WebSocket from '../../../pocket-server/node_modules/ws/index.js';
 
@@ -71,7 +71,7 @@ function verifyPrivate(state,selfId){
  assert.ok(!('contestants' in state),'authoritative contestant secrets are never sent');
 }
 async function sync(client,minRevision=0){
- // v20 limits *private* sync to one per 1.5 seconds per connection. That is
+ // v21 uses private read-only sync with a short duplicate suppression window. That is
  // not a gameplay failure: the actual room state is still broadcast immediately.
  // Pace explicit recovery probes instead of sending and awaiting a suppressed reply.
  const now=Date.now(),remaining=1650-(now-(client.lastSyncAt||0));
@@ -92,7 +92,7 @@ try{
  host.send('create_room',{gameId:'black-bazaar'});
  const initial=await host.next('room_joined');
  roomId=initial.roomId;
- assert.equal(initial.version,'v20','new rooms must use immutable v20');
+ assert.equal(initial.version,'v21','new rooms must use immutable v21');
  assert.equal(initial.state.phase,'lobby');
  second.send('join_room',{roomId:roomId.slice(0,8).toUpperCase()});
  assert.equal((await second.next('room_joined')).state.players.length,2);
@@ -141,9 +141,13 @@ try{
  const buyerCount=buyerStart.you.items.length;
  const sellerGold=sellerStart.you.resources.gold,buyerGold=buyerStart.you.resources.gold;
  assert.equal(sellerStart.listing,null);
- seller.send('game_message',{payload:{type:'post',itemId,ask:{gold:45,crystals:0,parts:0}}});
+ seller.send('game_message',{payload:{type:'post',itemId,ask:{gold:45,crystals:0,parts:0},pitchId:2}});
  let lotState=stateOf(await seller.next('game_event',stateEvent('play',s=>s.listing?.id===itemId)));
  assert.equal(lotState.listing.seller,seller.id);
+ assert.equal(lotState.listing.pitch,'Проверял лично. Почти.','seller claim travels through private snapshots');
+ assert.equal(lotState.players.find(p=>p.id===seller.id).reputation.sales,0,'pending post is not a completed sale');
+ assert.ok(!('positive' in lotState.listing),'advertising must not disclose actual hidden attributes');
+ assert.equal(lotState.you.sellerPitches.length,7);
  buyer.send('game_message',{payload:{type:'bid',offer:{gold:45,crystals:0,parts:0}}});
  const bidReply=await buyer.next('game_event',m=>m.event?.type==='notice'||stateEvent('play',s=>s.bids?.some(b=>b.buyer===buyer.id))(m));
   if(bidReply.event.type==='notice')throw Error('Bazaar bid denied by server: '+JSON.stringify(bidReply.event.payload));
@@ -181,6 +185,8 @@ try{
  assert.equal(paid.you.resources.gold,buyerGold-45-(sellerStart.you.negativeTarget===buyer.id?20:0));
  assert.equal(sellerPaid.you.resources.gold,sellerGold+45);
  assert.equal(sellerPaid.you.marketDeals,1);
+ assert.equal(sellerPaid.players.find(p=>p.id===seller.id).reputation.sales,1);
+ assert.equal(sellerPaid.players.find(p=>p.id===seller.id).reputation.title,'Первая удачная сделка');
  assert.equal(sellerPaid.you.items.some(i=>i.id===itemId),false);
  assert.equal(paid.bids.length,0);
  sellerBack.send('game_message',{payload:{type:'accept',buyer:buyer.id,bidId:afterResume.bids.find(b=>b.buyer===buyer.id)?.id}});
@@ -220,6 +226,8 @@ try{
  }
  assert.equal(snap.phase,'done','all nine rounds completed after reconnection');
  assert.equal(snap.ranking.length,3);
+ assert.ok(snap.ranking.every(p=>typeof p.epithet?.title==='string'&&p.tradeStats),'all awards derive from server-side actions');
+ assert.equal(snap.ranking.find(p=>p.id===seller.id).tradeStats.sales,1);
  assert.equal(snap.report.publicSales>=1,true);
  // Host departure is distinct from a lost socket: host handoff must happen
  // immediately and the remaining members must keep playing.

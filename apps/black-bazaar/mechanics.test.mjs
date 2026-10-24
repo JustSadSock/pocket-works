@@ -1601,3 +1601,91 @@ test('Server deadline never advances offline-paused or finished rooms',()=>{
  assert.deepEqual(game.onDeadline({state,now:Date.now()}).events,[]);
  assert.equal(state.revision,rev);
 });
+
+test('v21 seller claims are chosen from an authoritative whitelist and are not appraisals',()=>{
+ const {state}=makeRoom(3);
+ const seller=state.contestants[state.turnIndex];
+ const buyer=state.contestants.find(p=>p.id!==seller.id);
+ const item=seller.items[0];
+ const revision=state.revision;
+ const bad=act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:70},pitchId:'2'});
+ assert.equal(state.revision,revision);
+ assert.equal(state.listing,null);
+ assert.match(bad.events[0].payload,/бирка/);
+ const forged=act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:70},pitchId:999});
+ assert.equal(forged.events[0].type,'notice');
+ assert.equal(state.listing,null);
+ const posted=act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:70},pitchId:2});
+ assert.equal(posted.events[0].type,'state');
+ const buyerView=game.viewForPlayer({state,player:{id:buyer.id}});
+ assert.equal(buyerView.listing.pitch,'Проверял лично. Почти.');
+ assert.equal(typeof buyerView.listing.name,'string');
+ assert.equal('positive' in buyerView.listing,false,'a seller slogan must not reveal a hidden good');
+ assert.equal('negative' in buyerView.listing,false);
+ assert.equal(buyerView.players.find(p=>p.id===seller.id).reputation.title,'Новичок рынка');
+ assert.equal(buyerView.you.sellerPitches.length,7);
+ assert.equal('tradeStats' in buyerView.players[0],false,'private cumulative figures are not blindly projected');
+ const duplicate=act(state,seller.id,{type:'post',itemId:seller.items[1].id,ask:{gold:80},pitchId:0});
+ assert.equal(duplicate.events[0].type,'notice','a seller cannot silently replace a pending public auction');
+ assert.equal(state.listing.itemId,item.id);
+ assert.equal(state.listing.pitchId,2);
+});
+test('v21 reputation follows only completed public transactions, and comic rankings use actual facts',()=>{
+ const {state}=makeRoom(3);
+ const seller=state.contestants[state.turnIndex];
+ const buyer=state.contestants.find(p=>p.id!==seller.id);
+ const item=seller.items[0];
+ act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:40},pitchId:5});
+ assert.equal(seller.tradeStats.withdrawals,0);
+ act(state,seller.id,{type:'cancel'});
+ assert.equal(seller.tradeStats.withdrawals,1);
+ assert.equal(game.viewForPlayer({state,player:{id:buyer.id}}).players.find(x=>x.id===seller.id).reputation.withdrawals,1);
+ act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:40},pitchId:6});
+ const offer=act(state,buyer.id,{type:'bid',offer:{gold:40}});
+ assert.equal(offer.events[0].type,'state');
+ assert.equal(seller.tradeStats.sales,0,'unaccepted bids are not sales');
+ const bid=state.bids.find(x=>x.buyer===buyer.id);
+ const completed=act(state,seller.id,{type:'accept',buyer:buyer.id,bidId:bid.id});
+ assert.equal(completed.events[0].type,'state');
+ assert.equal(seller.tradeStats.sales,1);
+ assert.equal(buyer.tradeStats.bids,1);
+ assert.equal(state.listing,null);
+ const buyerView=game.viewForPlayer({state,player:{id:buyer.id}});
+ const sellerBadge=buyerView.players.find(x=>x.id===seller.id).reputation;
+ assert.equal(sellerBadge.title,'Первая удачная сделка');
+ assert.deepEqual({sales:sellerBadge.sales,withdrawals:sellerBadge.withdrawals},{sales:1,withdrawals:1});
+ // The final newspaper must be based on recorded actions, not randomized awards.
+ for(let n=0;n<60&&state.phase==='play';n++){
+  const turn=state.contestants[state.turnIndex].id;
+  act(state,turn,{type:'end'});
+ }
+ assert.equal(state.phase,'done');
+ const final=game.viewForPlayer({state,player:{id:buyer.id}});
+ assert.equal(final.ranking.length,3);
+ const sellerResult=final.ranking.find(x=>x.id===seller.id);
+ assert.equal(sellerResult.tradeStats.sales,1);
+ assert.equal(sellerResult.epithet.title,'Повелитель прилавка');
+ assert.equal(sellerResult.epithet.detail,'1 · продажи');
+ assert.equal(final.ranking.find(x=>x.id===buyer.id).tradeStats.bids,1);
+});
+test('v21 anonymous sales do not update the named seller public reputation',()=>{
+ const {state}=makeRoom(3);
+ const seller=state.contestants[state.turnIndex];
+ const buyer=state.contestants.find(p=>p.id!==seller.id);
+ // Black market is available in rounds 2/5/8 and escrow hides identity.
+ state.round=2;
+ const item=seller.items[0];
+ const before=game.viewForPlayer({state,player:{id:buyer.id}});
+ const previous=before.players.find(x=>x.id===seller.id).reputation;
+ const p=act(state,seller.id,{type:'black_post',itemId:item.id,ask:{gold:50}});
+ assert.equal(p.events[0].type,'state');
+ const lot=state.blackLots[0];
+ assert.ok(lot);
+ assert.equal(JSON.stringify(game.viewForPlayer({state,player:{id:buyer.id}}).blackLots).includes(seller.id),false);
+ act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:50}});
+ const id=lot.bids[0].id;
+ act(state,seller.id,{type:'black_accept',lotId:lot.id,bidId:id});
+ const after=game.viewForPlayer({state,player:{id:buyer.id}});
+ assert.deepEqual(after.players.find(x=>x.id===seller.id).reputation,previous,
+  'a named badge must never reveal ownership of a closed anonymous auction');
+});
