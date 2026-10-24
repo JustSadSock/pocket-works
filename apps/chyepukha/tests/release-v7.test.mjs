@@ -80,7 +80,7 @@ test('client, offline cache and release metadata agree on the declared version',
  const config=JSON.parse(repoFile('apps/chyepukha/app.config.json'));
  const sw=repoFile('apps/chyepukha/sw.js');
  const html=repoFile('apps/chyepukha/index.html');
- assert.match(config.version,/^\\d+\\.\\d+\\.\\d+$/);
+ assert.ok(/^[0-9]+[.][0-9]+[.][0-9]+$/.test(config.version));
  assert.equal(config.cacheName,'chyepukha-v'+config.version);
  assert.ok(sw.includes("const APP_VERSION='"+config.version+"'"));
  assert.ok(sw.includes("CACHE='chyepukha-v"+config.version+"'"));
