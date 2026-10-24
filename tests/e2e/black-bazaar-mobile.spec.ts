@@ -138,3 +138,45 @@ test('pending connection is cancellable and a late rejection cannot cancel a ret
   await page.evaluate(()=>{for(const release of (window as any).__bazaarSessionPending||[])release();}).catch(()=>{});
  }
 });
+
+
+test('small-phone entrance exposes creation and join without scrolling',async({page})=>{
+ for(const [width,height] of [[320,568],[375,667]]){
+  await page.setViewportSize({width,height});
+  await page.goto(game);
+  await expect(page.locator('.entry-screen')).toBeVisible();
+  const limits=await page.evaluate(()=>{
+   const get=(sel:string)=>document.querySelector(sel)!.getBoundingClientRect();
+   const create=get('[data-action="create"]'),join=get('[data-action="join"]'),
+    art=get('.entry-art');
+   return {createBottom:create.bottom,joinBottom:join.bottom,joinTop:join.top,
+    artHeight:art.height,viewportHeight:innerHeight,
+    bodyWidth:document.documentElement.scrollWidth,viewportWidth:document.documentElement.clientWidth};
+  });
+  expect(limits.createBottom).toBeLessThan(limits.joinTop);
+  expect(limits.joinBottom,JSON.stringify({width,height,limits})).toBeLessThanOrEqual(limits.viewportHeight-5);
+  expect(limits.artHeight).toBeLessThan(130);
+  expect(limits.bodyWidth).toBeLessThanOrEqual(limits.viewportWidth+2);
+ }
+});
+
+test('multi-resource lot uses compact readable labels without leaking secrets',async({page})=>{
+ await page.setViewportSize({width:320,height:568});
+ await page.goto(game);
+ await expect(page.locator('.entry-screen')).toBeVisible();
+ await scene(page,'four');
+ const lot=page.locator('.table-stage .artifact');
+ await expect(lot).toHaveAttribute('aria-label',/110 золота, 1 кристаллов/);
+ const pair=lot.locator('.lot-price-amount');
+ await expect(pair).toHaveCount(2);
+ await expect(pair.first()).toContainText('110');
+ await expect(pair.nth(1)).toContainText('1');
+ const geometry=await page.evaluate(()=>{
+  const label=document.querySelector('.lot-market-strip')!.getBoundingClientRect();
+  const lot=document.querySelector('.table-stage .artifact')!.getBoundingClientRect();
+  const vw=document.documentElement.clientWidth;
+  return {labelWidth:label.width,labelLeft:label.left,labelRight:label.right,lotWidth:lot.width,vw};
+ });
+ expect(geometry.labelLeft).toBeGreaterThanOrEqual(-2);
+ expect(geometry.labelRight).toBeLessThanOrEqual(geometry.vw+2);
+});
