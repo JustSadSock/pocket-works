@@ -209,6 +209,7 @@ const magicV2Lab=installMagicV2Lab({
  root:$('magic-v2'),
  isRemote:()=>!!online?.active&&online.view?.gameMode==='magic-v2',
  onServerEdit:command=>online?.editMagic(command)||false,
+ onServerPick:(index,stage)=>online?.pickMagic(index,stage)||false,
  getMatch:()=>active,
  setLoadout:loadout=>{if(active?.magicModeV2){active.magicLoadouts[0]=loadout;remember()}},
  onStart:school=>{
@@ -850,7 +851,7 @@ function render(){
  combatPresentation.screen(ctx);
 }
 function handleEvents(){if(!active)return;let count=0;const played=new Set();for(const f of active.fx){if(f.id<=seen||count>=5||played.has(f.k))continue;sfx(f.k,active.actors.reduce((closest,a)=>!closest||Math.hypot(a.x-f.x,a.y-f.y)<Math.hypot(closest.x-f.x,closest.y-f.y)?a:closest,null)?.mageId?mage(active.actors.reduce((closest,a)=>!closest||Math.hypot(a.x-f.x,a.y-f.y)<Math.hypot(closest.x-f.x,closest.y-f.y)?a:closest,null).mageId).school:'fire');played.add(f.k);count++}seen=active.serial}
-function loop(now){const elapsed=Math.min(.13,(now-last)/1000||0);last=now;frame++;if(toastT>0){toastT-=elapsed;if(toastT<=0)$('toast').classList.remove('visible')}if(online?.active){if(!debugSession&&['draft','magic-build'].includes(online.view?.phase)&&now-netSyncAt>1700){netSyncAt=now;online.sync()}if(!debugSession&&active&&online.view?.phase==='fight'){online.sample(()=>mode==='fight'?playerInput():{x:0,y:0,aim:{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y},attack:false,shield:false,dash:false},active.round,now);handleEvents()}if(frame%5===0)updateHud();acc=0}else if(mode==='fight'&&active&&!debugSession){acc+=elapsed;let steps=0;while(acc>=STEP&&steps<8){tick(active,playerInput());acc-=STEP;steps++;if(active.phase!=='fight')break}handleEvents();if(frame%5===0)updateHud();if(frame%120===0)remember();if(active.phase!=='fight')transition()}else acc=0;render();requestAnimationFrame(loop)}
+function loop(now){const elapsed=Math.min(.13,(now-last)/1000||0);last=now;frame++;if(toastT>0){toastT-=elapsed;if(toastT<=0)$('toast').classList.remove('visible')}if(online?.active){if(!debugSession&&['draft','magic-build','magic-offer'].includes(online.view?.phase)&&now-netSyncAt>1700){netSyncAt=now;online.sync()}if(!debugSession&&active&&online.view?.phase==='fight'){online.sample(()=>mode==='fight'?playerInput():{x:0,y:0,aim:{x:active.actors[1-myIndex()].x,y:active.actors[1-myIndex()].y},attack:false,shield:false,dash:false},active.round,now);handleEvents()}if(frame%5===0)updateHud();acc=0}else if(mode==='fight'&&active&&!debugSession){acc+=elapsed;let steps=0;while(acc>=STEP&&steps<8){tick(active,playerInput());acc-=STEP;steps++;if(active.phase!=='fight')break}handleEvents();if(frame%5===0)updateHud();if(frame%120===0)remember();if(active.phase!=='fight')transition()}else acc=0;render();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
 // The authenticated avatar is presentation only: never serialize art into a
 // combat save. Switching profiles does not change the sprite mid-round.
@@ -953,6 +954,18 @@ function onlineView(view){
  void refreshRival(view);
  online.view=view;active=view.match||null;
  if(active?.magicModeV2)active.magicSeat=view.me;
+ if(view.gameMode==='magic-v2'&&view.phase==='magic-offer'){
+  const stamp=['magic-offer',view.me,view.magicStage,view.magicPicked?'picked':'choose'].join(':');
+  const desired=view.magicPicked?'net-wait':'magic-v2';
+  if(stamp===onlinePhase&&mode===desired)return;
+  onlinePhase=stamp;applyRival();
+  if(view.magicPicked)show('net-wait');
+  else{
+   if(mode!=='magic-v2')show('magic-v2');
+   magicV2Lab.renderOffers(view.magicChoices||[],view.magicStage||0);
+  }
+  return;
+ }
  if(view.gameMode==='magic-v2'&&view.phase==='magic-build'){
   // A room snapshot also arrives for connection keepalives and opponent input.
   // Rebuilding the editor on each snapshot detached a button while players
