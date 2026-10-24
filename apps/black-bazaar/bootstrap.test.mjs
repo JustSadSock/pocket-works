@@ -143,7 +143,7 @@ test('countdown distinguishes disconnected, server-paused and running sessions',
  const clock=src.slice(src.indexOf('function updateTurnClock(){'),src.indexOf('function eventBlock(){'));
  assert.ok(clock.startsWith('function updateTurnClock(){'));
  const run=new Function('config',[
-  'const connected=config.connected,debugPreview=config.debugPreview,state=config.state;',
+  'const connected=config.connected,debugPreview=config.debugPreview,state=config.state,serverTime=()=>Date.now();',
   'const node={textContent:"",setAttribute(k,v){this[k]=v}};',
   'const urgent={textContent:""};',
   "const document={querySelector:key=>key==='#turnClock'?node:key==='#urgentClock'?urgent:null};",
@@ -176,6 +176,7 @@ test('authenticated transport is not usable until room_joined',()=>{
   "function message(text){messages.push(text)}",
   "function render(){}",
   "function renderHome(){}",
+  "function calibrateServerClock(){}",
   "function closeRoom(){}",
   wire,
   "net={on:(name,cb)=>events[name]=cb,close(){}};",
@@ -199,8 +200,8 @@ test('voluntary offline exit clears token without pretending to notify server',(
  assert.ok(close.startsWith('function closeRoom(){'));
  const run=new Function('wasConnected',[
   'let cueTimer=null,activeSheet=null,selectedArtifact=null,playStarted=false;',
-  "const readDeals=new Set(),readTasks=new Set(),document={body:{classList:{remove(){}}}};",
-  "let connected=wasConnected,connecting=true,me={},state={},roomId='TABLE',roomVersion='v17',onlinePlayerIds=null;",
+  "const readOffers=new Set(),readTasks=new Set(),document={body:{classList:{remove(){}}}};",
+  "let connected=wasConnected,connecting=true,me={},state={},roomId='TABLE',roomVersion='v17',onlinePlayerIds=null,serverClockOffset=0,lastClockPing=0;",
   "const events=[],ORIGIN='/pocketnet',netStorage={removeItem:key=>events.push('clear:'+key)};",
   "let net={leaveRoom(){events.push('leave')},close(){events.push('close')}};",
   "function message(){events.push('message')}",
@@ -249,7 +250,8 @@ test('Bazaar v20 uses alarm-driven deadlines with no idle SQLite rewrites',()=>{
  assert.match(hub,/advanceBazaarDeadline\(room,now=Date\.now\(\)\)/);
  assert.match(hub,/this\.ctx\.storage\.setAlarm\(next\)/,'alarm is rescheduled for pending turns');
  assert.match(hub,/if\(command==='tick'\)return/,'heartbeat must not write state');
- assert.match(hub,/if\(command==='sync'\)this\.emit\(room,\[\{type:'state',to:player\.id\}\]\)/,'sync is private and read-only');
+ assert.match(hub,/if\(command==='sync'\)/,'sync must have its own read-only branch');
+ assert.ok(hub.includes("this.emit(room,[{type:'state',to:player.id}])"),'sync must send only a private view');
  assert.match(hub,/if\(room\)this\.advanceBazaarDeadline\(room,now\)/,'alarm processes unattended turns');
  assert.match(app,/type:'time_ping',stamp:lastClockPing/,'new client sends a clock probe rather than a write-heavy tick');
  assert.match(app,/serverClockOffset=pong\.serverNow-\(now\+pong\.stamp\)\/2/);
