@@ -46,3 +46,24 @@ for(const [screen,width,height] of [['phone',390,844],['small',320,568],['landsc
   expect(file.suggestedFilename()).toMatch(/chepukha-issue-.*\.json/);
  });
 }
+
+test('unsaved finished issue blocks accidental exit and offers a working rescue download',async({page})=>{
+ await page.goto(preview('results-archive-unsaved'));
+ await expect(page.locator('.archive-save-warning')).toContainText('12/12');
+ await page.locator('[data-act="leave"]').click();
+ const dialog=page.getByRole('dialog',{name:'Незбережений випуск'});
+ await expect(dialog).toBeVisible();
+ await expect(dialog).toContainText('Не втратити ці історії?');
+ const downloadPromise=page.waitForEvent('download');
+ await dialog.locator('[data-act="download-issue"]').click();
+ const dl=await downloadPromise;
+ const backup=JSON.parse(await readFile(await dl.path(),'utf8'));
+ expect(backup.editions[0].stories).toHaveLength(4);
+ await expect(dialog).toBeVisible();
+ await dialog.locator('[data-act="cancel"]').click();
+ await expect(dialog).toHaveCount(0);
+ await expect(page.locator('.reader-layout')).toBeVisible();
+ await page.locator('[data-act="leave"]').click();
+ await dialog.locator('[data-act="confirm-unsaved-action"]').click();
+ await expect(page.locator('.home-cover')).toBeVisible();
+});
