@@ -20,6 +20,8 @@ const fillCore=readFileSync(new URL('../fill-core.js',import.meta.url),'utf8')
  .replaceAll('export function ','function ');
 const contours=readFileSync(new URL('../fill-contours.js',import.meta.url),'utf8')
  .replaceAll('export function ','function ');
+const rasterRegion=readFileSync(new URL('../fill-raster-region.js',import.meta.url),'utf8')
+ .replaceAll('export function ','function ');
 assert(originalRenderer.includes('fillMatchingColorRaster({'),
  'production fillRegion must use visible-colour bucket algorithm');
 
@@ -35,7 +37,7 @@ try{
  await page.addScriptTag({content:
   'const W=600,H=450;\n'+
   'function damagePath(ctx){ctx.beginPath();ctx.rect(0,0,W,H);ctx.closePath()}\n'+
-  fillCore+'\n'+contours+'\n'+originalRenderer});
+  fillCore+'\n'+contours+'\n'+rasterRegion+'\n'+originalRenderer});
  const report=await page.evaluate(()=>{
   const canvas=document.getElementById('actual'),ctx=canvas.getContext('2d',{willReadFrequently:true});
   const zone={x:0,y:0,w:600,h:450};
