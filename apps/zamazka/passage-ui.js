@@ -72,10 +72,11 @@ export function updateReady(root,count,total){
 }
 export function waitingMarkup({view,ass,arts,escapeText,memberSeal,head,artFactsHtml}){
  const e=value=>escapeText(String(value??''));
- const finished=view.done||[],players=view.participants||[];
+ const sealing=view.phase==='sealing';
+ const finished=(sealing?view.ballotReady:view.done)||[],players=view.participants||[];
  const complete=finished.length,total=players.length||1;
  return '<section class="phase-page waiting-phase passage-waiting" data-passage="waiting">'+
-  head('РАУНД '+view.round+' · РАБОТА СДАНА','Твоя работа принята',view.deadline,artFactsHtml(ass.art),view.drawingSeconds===0)+
+  head('РАУНД '+view.round+(sealing?' · ПОДГОТОВКА ВЫСТАВКИ':' · РАБОТА СДАНА'),sealing?'Подготавливаем экспертизу':'Твоя работа принята',view.deadline,artFactsHtml(ass.art),view.drawingSeconds===0)+
   '<div class="phase-body waiting-layout passage-waiting-layout">'+
   '<div class="waiting-work passage-waiting-work"><div class="passage-waiting-heading">'+
   '<span class="section-label">СТОЛ РЕСТАВРАТОРА</span><h3>'+e(arts[ass.art]?.title||'Твоя картина')+'</h3></div>'+
@@ -85,7 +86,7 @@ export function waitingMarkup({view,ass,arts,escapeText,memberSeal,head,artFacts
   '<span class="unveil-label right">ОРИГИНАЛ</span><div class="unveil-ruler"></div></div>'+
   '<label class="unveil-control passage-compare-control" for="unveilRange">Сравнить <input id="unveilRange" type="range" min="0" max="100" value="50" aria-label="Сравнить мою реставрацию и оригинал"></label>'+
   '</div><aside class="waiting-progress passage-waiting-status"><header><span class="section-label">УЧАСТНИКИ</span>'+
-  '<h3>Ожидаем остальных</h3></header><div class="passage-ready-number"><strong id="readyCount">'+complete+' / '+total+'</strong><span>закончили реставрацию</span></div>'+
+  '<h3>'+(sealing?'Подготавливаем пять картин':'Ожидаем остальных')+'</h3></header><div class="passage-ready-number"><strong id="readyCount">'+complete+' / '+total+'</strong><span>'+(sealing?'растровых листов готово':'закончили реставрацию')+'</span></div>'+
   '<div class="passage-ready-track" id="waitingReadyTrack" role="progressbar" aria-label="Готовность игроков" aria-valuemin="0" aria-valuemax="'+total+'" aria-valuenow="'+complete+'" style="--passage-progress:'+(complete/total*100).toFixed(2)+'%"><i></i></div>'+
   '<div class="passage-roster-caption">Состояние игроков обновляется автоматически</div>'+
   '<div id="readyList" class="waiting-roster passage-roster">'+players.map(p=>'<div class="waiting-person'+(finished.includes(p.id)?' is-ready':'')+'" data-wait-player="'+e(p.id)+'">'+
