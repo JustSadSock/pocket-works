@@ -12,6 +12,9 @@ on:
       - 'apps/zamazka/qa/eight-player-transfer.mjs'
       - 'apps/zamazka/qa/full-match-recovery.mjs'
       - 'apps/zamazka/qa/security-stage1.mjs'
+      - 'apps/zamazka/vote-surfaces.js'
+      - 'apps/zamazka/qa/vote-uniform-rendering.mjs'
+      - 'apps/zamazka/qa/vote-aspect-fairness.mjs'
       - 'apps/zamazka/editor.js'
       - 'apps/zamazka/qa/editor-raster-invalidation.mjs'
       - 'apps/zamazka/qa/editor-geometry-compaction.mjs'
@@ -95,6 +98,8 @@ jobs:
         run: npm run pocketnet:check
       - name: Reject stale votes and unauthorized room access
         run: node apps/zamazka/qa/security-stage1.mjs
+      - name: Ensure indistinguishable five-card canvases and real retry
+        run: node apps/zamazka/qa/vote-uniform-rendering.mjs && node apps/zamazka/qa/vote-aspect-fairness.mjs
       - name: Prevent stale fill raster after stroke compaction
         run: node apps/zamazka/qa/editor-raster-invalidation.mjs
       - name: Preserve line corners during brush budget compaction
