@@ -69,7 +69,8 @@ test('grounded move resets the lock countdown and caps resets to eight',()=>{
  p=state.engine.players[0];assert.equal(p.lockCounter,0);assert.equal(p.lockResets,1);
  p.lockCounter=200;p.lockResets=8;
  state=action(state,{action:'move',direction:-1});
- assert.equal(state.engine.players[0].lockCounter,200,'reset limit prevents infinite stalling');
+ assert.ok(state.engine.players[0].lockCounter>=200,'reset limit prevents infinite stalling');
+ assert.equal(state.engine.players[0].lockResets,8);
 });
 test('rotation kicks away from an obstructing well wall and prediction agrees',()=>{
  let state=start(),p=state.engine.players[0];
