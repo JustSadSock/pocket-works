@@ -239,3 +239,32 @@
 .premiere-local-fallback{display:flex;flex-direction:column;gap:7px;padding:10px 12px;background:#f3e8d7;border:1px dashed #a98064;font-size:11px;line-height:1.35;color:#68513e;font-weight:700}
 .premiere-local-fallback input[type=file]{width:100%;font-size:11px;color:#4b4b42}
 .premiere-local-fallback input::file-selector-button{background:#cba98d;color:#342b26;border:0;padding:8px 10px;margin-right:10px;font-weight:800}
+
+
+/* Stage 5 responsive cinema: the actual movie remains the focus, while the
+ * export booth occupies a dedicated side rail. */
+.premiere-layout{display:flex;flex-direction:column;gap:12px;min-width:0}
+.premiere-film-column,.premiere-details-column{display:flex;flex-direction:column;gap:12px;min-width:0}
+.premiere-details-column .premiere-credits{flex-shrink:0}
+.premiere-details-column .premiere-back{margin-top:0}
+@media(min-width:820px){
+ .premiere{max-width:1220px;min-height:0;height:100dvh;overflow:hidden;padding:22px 30px;gap:14px}
+ .premiere-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(290px,.85fr);gap:22px;flex:1;min-height:0}
+ .premiere-film-column{min-height:0;justify-content:center;gap:12px}
+ .premiere-film-column .premiere-viewport{width:100%;max-height:none;min-height:0;flex:1;aspect-ratio:auto}
+ .premiere-film-column .premiere-viewport video{object-fit:contain}
+ .premiere-film-column .premiere-buttons{flex-shrink:0}
+ .premiere-film-column #premiere-scrub{flex-shrink:0}
+ .premiere-details-column{min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#c7ad94 transparent;gap:14px}
+ .premiere-details-column .premiere-credits{align-content:flex-start;flex:0 0 auto;max-height:32%;overflow-y:auto;min-height:0}
+ .premiere-details-column .premiere-save{flex:0 0 auto}
+ .premiere-details-column .premiere-back{align-self:stretch}
+ .premiere-save-actions{align-items:stretch;flex-direction:column;gap:10px}
+ .premiere-export-button{width:100%}
+}
+@media(max-width:819px){
+ .premiere-layout{gap:14px}
+ .premiere-film-column .premiere-viewport{max-height:43vh;aspect-ratio:16/9}
+ .premiere-details-column .premiere-credits{gap:6px}
+ .premiere-details-column .premiere-save{gap:9px}
+}
