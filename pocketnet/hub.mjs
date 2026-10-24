@@ -1,4 +1,5 @@
 import { POCKET_MODULES } from './generated-modules.mjs';
+import { sessionTokenKey, findSessionByToken, isSessionToken } from './session-tokens.mjs';
 import {assessZamazkaAwards} from './zamazka-awards.mjs';
 import {assessBlockiesAwards} from './blockies-awards.mjs';
 import {playerRoomView} from './private-views.mjs';
@@ -536,7 +537,7 @@ export class PocketNetHub {
       const name = accountId ? verifiedName : 'Гость · ' + guestName.slice(0, 24);
       const token = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
       this.sql('INSERT INTO sessions (token, id, name, expires, account_id, avatar) VALUES (?, ?, ?, ?, ?, ?)',
-        token, crypto.randomUUID(), name, now + SESSION_TTL, accountId, accountId ? avatar : null);
+        await sessionTokenKey(token), crypto.randomUUID(), name, now + SESSION_TTL, accountId, accountId ? avatar : null);
       return json({ token, verified: !!accountId, accountId });
     }
     if (endpoint === '/ws' && request.headers.get('upgrade')?.toLowerCase() === 'websocket') {
@@ -571,8 +572,8 @@ export class PocketNetHub {
         let player = ws.deserializeAttachment() || {};
         if (msg.type === 'auth') {
           if (player.id) throw new Error('already_authenticated');
-          if (typeof msg.token !== 'string' || msg.token.length !== 64) throw new Error('invalid_token');
-          const found = this.sql('SELECT id, name, account_id, avatar FROM sessions WHERE token = ? AND expires > ?', msg.token, Date.now()).toArray()[0];
+          if (!isSessionToken(msg.token)) throw new Error('invalid_token');
+          const found = await findSessionByToken((sql, ...params) => this.sql(sql, ...params), msg.token);
           if (!found || (found.account_id || null) !== (player.edgeAccountId || null)) throw new Error('invalid_token');
           // A linked user's nickname/portrait may have changed since token issuance.
           // Only edge-validated identity fields may refresh the durable record.
