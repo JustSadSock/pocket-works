@@ -2212,6 +2212,18 @@ class UIManager {
     }
 
     updatePlayerInfo(player) {
+        const isTouchOwner=this.isOnlineMode?player.id===this.localPlayerIndex:player.id===this.touchPlayerIndex;
+        if(isTouchOwner){
+            const holdButton=this.touchControls?.querySelector('[data-action="hold"]');
+            if(holdButton){
+                const unavailable=player.gameOver||player.holdUsed||
+                    (this.isOnlineMode&&(!networkManager.connected||networkManager.stale||networkManager.rulesVersion<3));
+                holdButton.disabled=!!unavailable;
+                holdButton.title=unavailable
+                    ?(currentLanguage==='ru'?'Запас использован или недоступен':'Hold used or unavailable')
+                    :(currentLanguage==='ru'?'Отложить фигуру':'Hold this piece');
+            }
+        }
         const bay=document.getElementById(`spawn-bay-${player.id}`);
         if(bay){
             bay.classList.toggle('is-out',!!player.gameOver);
