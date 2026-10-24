@@ -20,12 +20,28 @@ const [packageSource, wranglerSource, workflow, godotWorkflow, prepareSite, vali
 const packageJson = JSON.parse(packageSource);
 const wrangler = JSON.parse(wranglerSource);
 const scripts = packageJson.scripts || {};
-const deployCommand = 'npm run pocketnet:check && npm run validate:launcher && npm run build:enhanced && npm run prepare:site && npm run validate:site';
-const fullCiCommand = 'npm run pocketnet:check && npm run validate:launcher && npm run prepare:sente-engine && npm run test:sente-ai && npm run health && npm run prepare:site && npm run validate:site';
+const deployCommand = 'npm run validate:lock && npm run pocketnet:check && npm run validate:launcher && npm run build:enhanced && npm run prepare:site && npm run validate:site';
+const fullCiCommand = 'npm run validate:lock && npm run pocketnet:check && npm run validate:launcher && npm run prepare:sente-engine && npm run test:sente-ai && npm run health && npm run prepare:site && npm run validate:site';
 
-if (scripts['pocketnet:check'] !== 'node scripts/sync-blockies-physics.mjs --check && node --test apps/blockies/tests/rules-parity.test.mjs apps/blockies/tests/shared-physics.test.mjs apps/blockies/tests/deterministic-replay.test.mjs && node scripts/build-pocketnet-modules.mjs --check && node --test pocketnet/test/session-tokens.test.mjs pocketnet/test/admission-limits.test.mjs') {
-  errors.push('PocketNet preflight must verify immutable modules and session credential regressions before production builds start');
+// Keep the safety invariants stable as individual games add new regressions.
+// Previously an exact string comparison made each legitimate Blockies test
+// addition break the entire deployment pipeline, despite tests being stricter.
+const preflight=scripts['pocketnet:check']||'';
+const requiredPreflight=[
+  'node scripts/sync-blockies-physics.mjs --check',
+  'apps/blockies/tests/rules-parity.test.mjs',
+  'apps/blockies/tests/shared-physics.test.mjs',
+  'apps/blockies/tests/deterministic-replay.test.mjs',
+  'node scripts/build-pocketnet-modules.mjs --check',
+  'pocketnet/test/session-tokens.test.mjs',
+  'pocketnet/test/admission-limits.test.mjs'
+];
+for(const check of requiredPreflight) {
+  if(!preflight.includes(check))
+    errors.push('PocketNet preflight is missing required check: '+check);
 }
+if (!/node scripts\/build-pocketnet-modules\.mjs --check\s*&&\s*node --test pocketnet\/test\/session-tokens\.test\.mjs/.test(preflight))
+  errors.push('PocketNet module validation must precede its security regression tests');
 if (!scripts['validate:pipeline']?.includes('npm run test:pocketnet:release')) {
   errors.push('Pipeline validation must execute PocketNet snapshot regression tests');
 }
@@ -36,6 +52,13 @@ if (scripts['deploy:site'] !== deployCommand) {
 if (scripts['ci:full'] !== fullCiCommand) {
   errors.push(`package.json ci:full must retain the complete validation path: ${fullCiCommand}`);
 }
+
+if (scripts['validate:lock'] !== 'node --test scripts/validate-dependency-lock.test.mjs && node scripts/validate-dependency-lock.mjs')
+  errors.push('Root dependency lock verifier must run tests and verify package-lock.json');
+if (!workflow.includes('npm ci --legacy-peer-deps'))
+  errors.push('CI must use npm ci for reproducible root dependencies');
+if (!godotWorkflow.includes('npm ci --legacy-peer-deps'))
+  errors.push('Godot CI must use npm ci for reproducible root dependencies');
 
 if (scripts['build:site'] !== 'npm run deploy:site') {
   errors.push('package.json build:site must remain an alias of deploy:site');
