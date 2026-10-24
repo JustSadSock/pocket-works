@@ -162,3 +162,54 @@ test('countdown distinguishes disconnected, server-paused and running sessions',
  const preview=run({connected:false,debugPreview:true,state:active});
  assert.match(preview.text,/^\d+:\d{2}$/);
 });
+
+
+test('authenticated transport is not usable until room_joined',()=>{
+ const source=readFileSync(join(root,'app.js'),'utf8');
+ const wire=source.slice(source.indexOf('function wire(client){'),source.indexOf('async function connect(kind,code='));
+ assert.ok(wire.startsWith('function wire(client){'));
+ const harness=new Function('events',[
+  "let net=null,me=null,connected=false,state={phase:'play'},roomId='',roomVersion=null,onlinePlayerIds=null,connecting=true;",
+  "const messages=[],netStorage={removeItem(){}};",
+  "function message(text){messages.push(text)}",
+  "function render(){}",
+  "function renderHome(){}",
+  "function closeRoom(){}",
+  wire,
+  "net={on:(name,cb)=>events[name]=cb,close(){}};",
+  "wire(net);return {get:()=>({connected,roomId,connecting}),messages};"
+ ].join('\n'));
+ const handlers={},runtime=harness(handlers);
+ handlers.connected({player:{id:'me'}});
+ assert.equal(runtime.get().connected,false,'Authentication alone cannot authorize game actions');
+ assert.match(runtime.messages.at(-1),/Восстанавливаем комнату/);
+ handlers.room_joined({version:'v17',roomId:'TABLE1',state:{phase:'lobby',host:'me',players:[]}});
+ assert.equal(runtime.get().connected,true);
+ assert.equal(runtime.get().roomId,'TABLE1');
+ assert.equal(runtime.get().connecting,false);
+ handlers.disconnected();
+ assert.equal(runtime.get().connected,false);
+});
+
+test('voluntary offline exit clears token without pretending to notify server',()=>{
+ const src=readFileSync(join(root,'app.js'),'utf8');
+ const close=src.slice(src.indexOf('function closeRoom(){'),src.indexOf('function cancelConnect(){'));
+ assert.ok(close.startsWith('function closeRoom(){'));
+ const run=new Function('wasConnected',[
+  'let cueTimer=null,activeSheet=null,selectedArtifact=null,playStarted=false;',
+  "const readDeals=new Set(),readTasks=new Set(),document={body:{classList:{remove(){}}}};",
+  "let connected=wasConnected,connecting=true,me={},state={},roomId='TABLE',roomVersion='v17',onlinePlayerIds=null;",
+  "const events=[],ORIGIN='/pocketnet',netStorage={removeItem:key=>events.push('clear:'+key)};",
+  "let net={leaveRoom(){events.push('leave')},close(){events.push('close')}};",
+  "function message(){events.push('message')}",
+  "function renderHome(){events.push('home')}",
+  close,'closeRoom();return {events,roomId,net,connected}'
+ ].join('\n'));
+ const offline=run(false);
+ assert.equal(offline.events.includes('leave'),false);
+ assert.deepEqual(offline.events.slice(0,2),['close','clear:pocket-net:/pocketnet']);
+ assert.equal(offline.net,null);
+ assert.equal(offline.roomId,'');
+ const online=run(true);
+ assert.deepEqual(online.events.slice(0,3),['leave','close','clear:pocket-net:/pocketnet']);
+});
