@@ -202,3 +202,35 @@
  .media-audio-option{min-height:30px}
  .media-fast-status{padding:8px;font-size:11px}
 }
+
+
+/* Premiere: one unobtrusive render bench, not a second editor. */
+.premiere-save{display:flex;flex-direction:column;gap:10px;background:#e9ddcb;border:1px solid #c9b69c;border-left:4px solid #af7056;padding:13px 15px}
+.premiere-save-heading{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.premiere-save-heading strong{font:600 20px Oswald,sans-serif;letter-spacing:.01em;color:#322e2b}
+.premiere-save-heading span{color:#797063;font-size:11px}
+.premiere-save-actions{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.premiere-original-option{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#64574b;line-height:1.35;cursor:pointer}
+.premiere-original-option input{width:17px;height:17px;accent-color:#b2694b;flex:none}
+.premiere-export-button{background:#3c4945;color:#fff0da;border:0;padding:12px 20px;font-size:13px;white-space:nowrap;min-height:44px;font-weight:800}
+.premiere-export-button:disabled{opacity:.46}
+.premiere-export-status{font-size:11px;color:#665f54;line-height:1.45;min-height:15px}
+.premiere-export-progress{display:flex;align-items:center;gap:13px}
+.premiere-export-progress progress{width:100%;height:9px;accent-color:#b67355}
+.premiere-export-progress .text-action{white-space:nowrap;color:#934c33;font-size:11px;font-weight:800}
+.premiere-export-result{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;border-top:1px solid #cfbfa9;padding-top:9px}
+.premiere-export-result>span{color:#546658;font-size:12px;font-weight:800}
+.premiere-download-link{font-size:12px;font-weight:800;color:#85452f;text-decoration:underline;text-underline-offset:3px}
+@media(min-width:820px){
+ .premiere{max-width:1100px;gap:12px;min-height:100dvh}
+ .premiere-viewport{max-height:44vh}
+ .premiere-save{gap:8px;padding:10px 14px}
+}
+@media(max-width:600px){
+ .premiere{gap:11px}
+ .premiere-save{padding:12px}
+ .premiere-save-heading strong{font-size:18px}
+ .premiere-save-actions{align-items:stretch;flex-direction:column;gap:10px}
+ .premiere-export-button{width:100%}
+ .premiere-viewport{max-height:42vh}
+}
