@@ -268,3 +268,85 @@
  .premiere-details-column .premiere-credits{gap:6px}
  .premiere-details-column .premiere-save{gap:9px}
 }
+
+
+/* 1.7.0 — cinema desk finish. Feedback follows the actual state of the game. */
+@keyframes ntg-screen-arrive{from{opacity:.78;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ntg-transport-click{0%{transform:translateY(0)}50%{transform:translateY(2px)}100%{transform:translateY(0)}}
+@keyframes ntg-count-pulse{0%{transform:scale(1.11);opacity:.65}65%{opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes ntg-record-lamp{0%,100%{opacity:1}50%{opacity:.42}}
+@keyframes ntg-reel-roll{from{transform:rotate(-13deg)}to{transform:rotate(347deg)}}
+@keyframes ntg-online-search{0%,100%{opacity:.5}50%{opacity:1}}
+.screen:not(.hidden){animation:ntg-screen-arrive .22s ease-out both}
+.action,.transport-btn,.record-btn,.count-record-btn,.done-btn,.nav-back,.scene-card,.room-player,.clip-bar{
+ transition:background-color .14s ease,border-color .14s ease,box-shadow .14s ease,filter .14s ease;
+}
+.action:enabled:active,.transport-btn:enabled:active,.record-btn:enabled:active,.count-record-btn:enabled:active,.done-btn:enabled:active,.nav-back:enabled:active{filter:brightness(.92)}
+.scene-card:focus-visible{outline:3px solid #9b583d;outline-offset:3px}
+@media(hover:hover){
+ .scene-card:hover{filter:brightness(1.05)}
+ .clip-bar:hover{filter:brightness(1.12)}
+ .secondary-action:hover{background:#decbb1}
+ .text-action:not(:disabled):hover,.quiet-button:not(:disabled):hover{text-decoration:underline;text-underline-offset:4px}
+}
+.draft-status{display:inline-flex;align-items:center;gap:5px;min-width:0;white-space:nowrap;font-weight:800;font-size:10px;color:#c7b8a3;letter-spacing:0}
+.draft-status:before{content:'';width:6px;height:6px;border-radius:50%;background:#9aa0a0;flex:none}
+.draft-status[data-save-state="saving"]{color:#f3c68b}
+.draft-status[data-save-state="saving"]:before{background:#e6a968;animation:ntg-online-search 1s ease-in-out infinite}
+.draft-status[data-save-state="saved"]{color:#a7d8c0}
+.draft-status[data-save-state="saved"]:before{background:#77b499}
+.draft-status[data-save-state="error"]{color:#ffb3a9}
+.draft-status[data-save-state="error"]:before{background:#df6f59}
+.editor .time-row{gap:8px;align-items:center}
+.editor #editor-indicator{margin-left:auto;white-space:nowrap}
+.editor .stage-wrap{transition:border-color .18s ease,box-shadow .18s ease}
+.editor .stage-wrap.is-recording{box-shadow:inset 0 0 0 2px #ce6649}
+.editor .stage-wrap.is-recording:after{content:'';position:absolute;inset:0;border:2px solid #d85a3b;pointer-events:none;opacity:.55}
+.editor .record-badge{
+ display:flex;align-items:center;gap:8px;padding:7px 10px;z-index:5;
+ background:#b94a36;color:#fff8e6;border:1px solid #ffcab2;
+ box-shadow:0 3px 13px #0c0c0baa;letter-spacing:.12em;font-size:11px
+}
+.record-live-dot{width:8px;height:8px;flex:none;background:#ffe9bd;border-radius:50%;animation:ntg-record-lamp 1.15s linear infinite}
+.record-live-label{font-weight:800;letter-spacing:.16em}
+#record-elapsed{font-size:12px;font-variant-numeric:tabular-nums;letter-spacing:0;margin-right:2px}
+.mic-meter{height:24px;display:flex;align-items:center;gap:2px;border-left:1px solid #fff6d67a;padding-left:9px}
+.mic-meter span{height:3px;width:3px;border-radius:1px;background:#e6b899;transition:height .09s linear,background-color .09s ease}
+.mic-meter span.active{background:#fff9df}
+.editor .countdown{z-index:4;pointer-events:none;font-variant-numeric:tabular-nums;text-shadow:0 8px 36px #000a;backdrop-filter:blur(2px)}
+.editor .countdown.ntg-tick{animation:ntg-count-pulse .42s cubic-bezier(.17,.8,.26,1)}
+.editor .record-combo .record-btn.recording{box-shadow:inset 0 0 0 2px #fff4d1}
+.editor .count-record-btn.counting{box-shadow:0 0 0 2px #f0b58a inset}
+.editor .clip-bar.selected{box-shadow:inset 0 0 0 2px #fef3dc,0 0 12px #eaaa7544}
+.editor .clip-bar:focus-visible{outline:2px solid #fff5d3;outline-offset:2px}
+.editor .clip-bar.dragging{filter:brightness(1.15)}
+.network-pill{display:inline-flex;align-items:center;gap:7px;padding:6px 8px;background:#e6ddce;border:1px solid #d2c6b5;color:#615a50;font-variant-numeric:tabular-nums}
+.network-pill:before{content:'';display:block;flex:none;width:7px;height:7px;background:#9d9b90;border-radius:50%}
+.network-pill[data-net-state="connecting"]{color:#7c623e}
+.network-pill[data-net-state="connecting"]:before{background:#d0a05b;animation:ntg-online-search 1.2s ease-in-out infinite}
+.network-pill[data-net-state="online"]{color:#2c7552;background:#dbe7dc;border-color:#bed4c5}
+.network-pill[data-net-state="online"]:before{background:#45a576}
+.network-pill[data-net-state="offline"]{color:#a04135;background:#f1dcd3;border-color:#dfb9a7}
+.network-pill[data-net-state="offline"]:before{background:#d66a4b}
+.waiting-record{animation:ntg-reel-roll 24s linear infinite;will-change:transform}
+.wait-chip.ready{background:#d5e5d6;border-bottom-color:#669c7f}
+.premiere-export-button:not(:disabled):active{transform:translateY(2px)}
+@media(max-width:480px){
+ .editor #editor-indicator{display:none}
+ .draft-status{font-size:10px}
+ .editor .record-badge{left:9px;top:9px;padding:6px 8px;gap:6px}
+ .mic-meter{gap:2px;padding-left:6px}
+ .editor .edit-controls{gap:4px}
+ .editor .record-combo .record-btn{min-width:82px}
+}
+@media(max-height:620px) and (min-width:820px){
+ .editor-head{padding-bottom:5px}
+ .editor .editor-desk{padding-top:9px;padding-bottom:9px}
+ .editor .edit-controls{margin:6px 0}
+ .premiere .premiere-save{gap:6px}
+}
+@media(prefers-reduced-motion:reduce){
+ .screen:not(.hidden){animation:none}
+ .waiting-record,.record-live-dot,.draft-status[data-save-state="saving"]:before,.network-pill[data-net-state="connecting"]:before,.editor .countdown.ntg-tick{animation:none}
+ .action,.transport-btn,.record-btn,.count-record-btn,.done-btn,.nav-back,.scene-card,.room-player,.clip-bar,.mic-meter span,.stage-wrap{transition:none!important}
+}
