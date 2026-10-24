@@ -1,4 +1,5 @@
 import {confirmShell} from './shell-dialogs.js';
+import {createIdentityTabBridge} from './identity-tab-bridge.js';
 // Pocket ID launcher surface. Local app data remains untouched; cloud identity is optional.
 const $ = selector => document.querySelector(selector);
 const dialog = $('#pocket-id-dialog');
@@ -33,6 +34,7 @@ const activationInput = $('#pocket-id-activation-code');
 const activationStatus = $('#pocket-id-activation-status');
 const activationOwned = $('#pocket-id-activation-entitlements');
 let user=null,accountHost=null,beforeAccountLeave=null;
+let accountChangeVersion=0;
 const accountSections=[...dialog.children].filter(el=>!el.classList.contains('pw-id-dialog__top'));
 function unmountAccount(){if(!accountHost)return;for(const el of accountSections)dialog.append(el);accountHost=null;}
 function mountAccount(host,{beforeLeave}={}){
@@ -100,7 +102,8 @@ async function api(path,options={}) {
   }
   return data;
 }
-function publish(userValue) {
+function publish(userValue,{notifyPeers=false}={}) {
+  if(notifyPeers)accountChangeVersion++;
   user=userValue;
   const badge=trigger.querySelector('.pws-entry__count');
   trigger.innerHTML=user?.complete?avatar(user.avatar,'pw-id-nav-avatar'):'<span class="pw-id-nav-glyph" aria-hidden="true">◎</span>';
@@ -108,11 +111,31 @@ function publish(userValue) {
   trigger.setAttribute('aria-label',user?.complete?'Pocket ID: '+user.nickname:'Open Pocket ID');
   trigger.title=user?.complete?user.nickname:'Pocket ID';
   document.dispatchEvent(new CustomEvent('pocket-id:changed',{detail:{user}}));
+  if(notifyPeers)tabBridge.notify();
 }
+const tabBridge=createIdentityTabBridge({
+  async onChange(){
+    const requestVersion=++accountChangeVersion;
+    try{
+      const result=await api('me');
+      if(requestVersion!==accountChangeVersion)return;
+      publish(result.user,{notifyPeers:true});
+      if(!busy){
+        mode=user?(user.complete?'view':'onboarding'):'create';
+        if(dialog.open||accountHost)display();
+      }
+    }catch{/* Retain the verified last-known account while offline. */}
+  }
+});
 window.PocketID=Object.freeze({
   mountAccount,unmountAccount,
   getUser:()=>user?Object.freeze({...user}):null,
-  refresh:async()=>{const data=await api('me');publish(data.user);return data.user;},
+  refresh:async()=>{
+    const previous=user?.id||null;
+    const data=await api('me');
+    publish(data.user,{notifyPeers:previous!==(data.user?.id||null)});
+    return data.user;
+  },
   openAccount:()=>{mode=user?(user.complete?'view':'onboarding'):'create';openDialog()},
   openSignIn:()=>{mode='create';openDialog()}
 });
@@ -166,7 +189,7 @@ function showRecovery(key) {
 async function refresh() {
   const [state,settings]=await Promise.all([api('me'),api('config')]);
   config=settings;
-  publish(state.user);
+  publish(state.user,{notifyPeers:(user?.id||null)!==(state.user?.id||null)});
   if(user&&!user.complete) mode='onboarding';
   else if(mode!=='key') mode=user?'view':'create';
   display();
@@ -211,7 +234,7 @@ activationForm.addEventListener('submit',async event=>{
   activationStatus.dataset.kind='info';
   try{
     const result=await api('redeem',{method:'POST',body:JSON.stringify({code})});
-    publish(result.user);
+    publish(result.user,{notifyPeers:true});
     mode='view';
     activationInput.value='';
     display();
@@ -227,20 +250,20 @@ activationForm.addEventListener('submit',async event=>{
 signout.addEventListener('click',async()=>{
   if(accountHost&&beforeAccountLeave&&!await beforeAccountLeave())return;
   setBusy(true);
-  try {await api('logout',{method:'POST',body:'{}'});activationInput.value='';activationStatus.textContent='';activationDetails.open=false;publish(null);mode='create';display();message('Вход завершён. Игры и сохранения на месте.','success');}
+  try {await api('logout',{method:'POST',body:'{}'});activationInput.value='';activationStatus.textContent='';activationDetails.open=false;publish(null,{notifyPeers:true});mode='create';display();message('Вход завершён. Игры и сохранения на месте.','success');}
   catch(error){message(error.message,'error');}finally{setBusy(false);}
 });
 recoverButton.addEventListener('click',async()=>{
   setBusy(true);
   try { const result=await api('recover',{method:'POST',body:JSON.stringify({recoveryCode:recoverInput.value.trim()})});
-    publish(result.user);mode='view';recoverInput.value='';display();message('Вход выполнен.','success');if(result.user?.complete){dialog.close();window.PocketSocial?.open?.()}
+    publish(result.user,{notifyPeers:true});mode='view';recoverInput.value='';display();message('Вход выполнен.','success');if(result.user?.complete){dialog.close();window.PocketSocial?.open?.()}
   }catch(error){message(error.message,'error');}finally{setBusy(false);}
 });
 primary.addEventListener('click',async()=>{
   setBusy(true);
   try {
     const result=await api(user?'profile':'register',{method:'POST',body:JSON.stringify({nickname:nicknameInput.value.trim(),avatar:user?.avatar||'clay'})});
-    publish(result.user);
+    publish(result.user,{notifyPeers:true});
     if(result.recoveryCode) showRecovery(result.recoveryCode);
     else {mode='view';display();message('Профиль сохранён.','success');dialog.close();window.PocketSocial?.open?.()}
   }catch(error){message(error.message,'error');}finally{setBusy(false);}
