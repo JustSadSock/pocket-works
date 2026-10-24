@@ -134,3 +134,31 @@ test('late PocketNet responses are closed and cannot create ghost rooms',async()
  assert.equal(env.snapshot().connecting,false,'A current failure re-enables the form');
  assert.ok(tracker.messages.at(-1).includes('new session denied'));
 });
+
+
+test('countdown distinguishes disconnected, server-paused and running sessions',()=>{
+ const src=readFileSync(join(root,'app.js'),'utf8');
+ const clock=src.slice(src.indexOf('function updateTurnClock(){'),src.indexOf('function eventBlock(){'));
+ assert.ok(clock.startsWith('function updateTurnClock(){'));
+ const run=new Function('config',[
+  'const connected=config.connected,debugPreview=config.debugPreview,state=config.state;',
+  'const node={textContent:"",setAttribute(k,v){this[k]=v}};',
+  'const urgent={textContent:""};',
+  "const document={querySelector:key=>key==='#turnClock'?node:key==='#urgentClock'?urgent:null};",
+  clock,'updateTurnClock();return {text:node.textContent,aria:node["aria-label"],urgent:urgent.textContent}'
+ ].join('\n'));
+ const active={deadlineAt:Date.now()+80_000,offlinePaused:false};
+ const disconnected=run({connected:false,debugPreview:false,state:active});
+ assert.equal(disconnected.text,'Нет связи');
+ assert.equal(disconnected.urgent,'Нет связи');
+ const paused=run({connected:true,debugPreview:false,state:{...active,offlinePaused:true,deadlineAt:null}});
+ assert.equal(paused.text,'Пауза');
+ assert.equal(paused.aria,'Пауза');
+ const idle=run({connected:true,debugPreview:false,state:{deadlineAt:null}});
+ assert.equal(idle.text,'—');
+ const running=run({connected:true,debugPreview:false,state:active});
+ assert.match(running.text,/^\d+:\d{2}$/);
+ assert.equal(running.urgent,running.text);
+ const preview=run({connected:false,debugPreview:true,state:active});
+ assert.match(preview.text,/^\d+:\d{2}$/);
+});
