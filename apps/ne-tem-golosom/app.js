@@ -510,30 +510,137 @@ function setPlayhead(value,fromPremiere=false){
 }
 async function playStage(){if(!scene||record||preroll||scene.custom&&!sourceBlob)return toast('Видео пока не готово.');const video=$('stage-video');if(playing){stopAllPlayback();return}if(time(video)>=scene.duration-.1)seekVideo(video,0);try{updateClipSound(time(video),true,false);await video.play();playing=true;$('play-toggle').textContent='Ⅱ'}catch{updateClipSound(time(video),false,false);toast('Нажми воспроизведение ещё раз — браузер блокирует запуск.')}}
 function mime(){const opts=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];return opts.find(x=>window.MediaRecorder?.isTypeSupported(x))||''}
-async function startRecord(){if(record){finishRecording();return}if(preroll){cancelCountdown();return}if(!scene||scene.custom&&!sourceBlob)return toast('Ожидаем видео.');if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)return toast('Этот браузер не поддерживает запись звука.');stopAllPlayback();const video=$('stage-video');if(time(video)>=scene.duration-.1)seekVideo(video,0);const begin=time(video);let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})}catch{return toast('Разреши доступ к микрофону в настройках браузера.')};
- let left=3;$('countdown').classList.remove('hidden');$('countdown').textContent=String(left);$('record-label').textContent='Отменить';let cancelled=false;
- preroll={stream,cancel:()=>{cancelled=true;stream.getTracks().forEach(t=>t.stop())}};
- const tick=async()=>{if(cancelled||!preroll)return;left--;if(left>0){$('countdown').textContent=String(left);preroll.timer=setTimeout(tick,1000);return}
- $('countdown').classList.add('hidden');preroll=null;
- const rec=new MediaRecorder(stream,mime()?{mimeType:mime()}:undefined);let blobs=[];rec.ondataavailable=e=>{if(e.data.size)blobs.push(e.data)};rec.onerror=()=>toast('Ошибка записи микрофона.');let active={rec,stream,blobs,start:begin,stop:false};record=active;rec.onstop=async()=>{
- try{
-   const blob=new Blob(blobs,{type:rec.mimeType||blobs[0]?.type||'audio/webm'});
-   if(blob.size>0&&active.end-active.start>.1)
-     await replaceClip(active.start,active.end,blob);
- }catch(e){
-   toast('Не удалось завершить запись: '+(e?.message||'ошибка'));
- }finally{
-   stream.getTracks().forEach(t=>t.stop());
-   $('record-badge').classList.add('hidden');
-   $('record-label').textContent='Записать';
-   $('record-btn').classList.remove('recording');
-   pendingRecording=null;renderTimeline();active.resolve?.();
- }
-};try{video.muted=true;seekVideo(video,begin);await video.play();active.start=time(video);rec.start(250);playing=true;cue('start');$('record-badge').classList.remove('hidden');$('record-label').textContent='Стоп';$('record-btn').classList.add('recording')}catch{if(rec.state!=='inactive')rec.stop();else stream.getTracks().forEach(t=>t.stop());record=null;$('record-label').textContent='Записать';toast('Не удалось запустить видео и запись.')}};
- preroll.timer=setTimeout(tick,1000);
+function updateRecordingControls(){
+ $('count-record-btn').disabled=!!record||!!micPending||!!pendingRecording;
+ $('record-btn').disabled=!!micPending||!!pendingRecording||!!preroll;
+ $('replace-clip-btn').disabled=!selectedClip||!!record||!!preroll||!!micPending||!!pendingRecording;
+ $('count-record-btn').classList.toggle('counting',!!preroll?.countdown);
+ $('count-record-btn').innerHTML=preroll?.countdown?'×':'3<span class="count-mini">◷</span>';
+ $('count-record-btn').setAttribute('aria-label',preroll?.countdown?'Отменить отсчёт записи':'Начать запись через 3 секунды');
+ $('record-label').textContent=record?'Стоп':'Записать';
+ $('record-btn').classList.toggle('recording',!!record);
 }
-function cancelCountdown(){if(!preroll)return;clearTimeout(preroll.timer);preroll.cancel();preroll=null;$('countdown').classList.add('hidden');$('record-label').textContent='Записать'}
-function finishRecording(){if(!record)return;const r=record;record=null;r.end=Math.min(scene.duration,time($('stage-video')));pendingRecording=new Promise(resolve=>{r.resolve=resolve});stopAllPlayback();if(r.rec.state!=='inactive')r.rec.stop();else{r.resolve();pendingRecording=null}cue('stop');return pendingRecording}
+async function startRecord(countdown=0,replaceId=null){
+ if(record){finishRecording();return}
+ if(preroll){cancelCountdown();return}
+ if(micPending||pendingRecording)return;
+ if(!scene||scene.custom&&!sourceBlob)return toast('Ожидаем видео.');
+ if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)
+   return toast('Этот браузер не поддерживает запись звука.');
+ const video=$('stage-video');
+ const chosen=replaceId?localClips.find(c=>c.id===replaceId):null;
+ if(replaceId&&!chosen)return toast('Выбери реплику для перезаписи.');
+ stopAllPlayback();
+ if(chosen)seekVideo(video,chosen.start);
+ else if(time(video)>=scene.duration-.1)seekVideo(video,0);
+ const intendedStart=chosen?chosen.start:time(video);
+ micPending=true;updateRecordingControls();
+ let stream;
+ try{stream=await navigator.mediaDevices.getUserMedia({audio:{
+  echoCancellation:true,noiseSuppression:true,autoGainControl:true
+ }})}
+ catch{
+  micPending=false;updateRecordingControls();
+  toast('Разреши доступ к микрофону в настройках браузера.');
+  return;
+ }
+ micPending=false;
+ if(view!=='editor'||!scene){stream.getTracks().forEach(t=>t.stop());updateRecordingControls();return}
+ let cancelled=false;
+ const session={stream,countdown:countdown===3,cancel:()=>{
+  cancelled=true;stream.getTracks().forEach(t=>t.stop());
+ }};
+ preroll=session;
+ const launch=async()=>{
+  if(cancelled||preroll!==session)return;
+  session.countdown=false;
+  $('countdown').classList.add('hidden');
+  updateRecordingControls();
+  let rec;
+  try{
+   // A retake starts at the original left edge, never at an arbitrary playhead.
+   seekVideo(video,intendedStart);
+   if(video.seeking)await new Promise(resolve=>{
+    let done=false;
+    const finish=()=>{if(done)return;done=true;video.removeEventListener('seeked',finish);clearTimeout(id);resolve()};
+    video.addEventListener('seeked',finish,{once:true});
+    const id=setTimeout(finish,1200);
+   });
+   if(cancelled||preroll!==session)return;
+   rec=new MediaRecorder(stream,mime()?{mimeType:mime()}:undefined);
+   const blobs=[],active={
+    rec,stream,blobs,replaceId:chosen?.id||null,
+    limit:chosen?.end??scene.duration,start:intendedStart,end:intendedStart,resolve:null
+   };
+   rec.ondataavailable=e=>{if(e.data.size)blobs.push(e.data)};
+   rec.onerror=()=>toast('Ошибка записи микрофона.');
+   rec.onstop=async()=>{
+    try{
+     const blob=new Blob(blobs,{type:rec.mimeType||blobs[0]?.type||'audio/webm'});
+     if(blob.size&&active.end-active.start>=MIN_CLIP_SECONDS){
+      if(active.replaceId){
+       const id=uid();
+       const updated=replaceSelectedRecording(localClips,active.replaceId,blob,active.end-active.start,id);
+       if(updated){editHistory.remember(localClips);setClips(updated,id);await draftWrite()}
+       else toast('Получился слишком короткий дубль. Попробуй ещё раз.');
+      }else await replaceClip(active.start,active.end,blob);
+     }else toast('Дубль слишком короткий, попробуй записать дольше.');
+    }catch(e){toast('Не удалось сохранить запись: '+(e?.message||'ошибка'))}
+    finally{
+     stream.getTracks().forEach(t=>t.stop());
+     $('record-badge').classList.add('hidden');
+     pendingRecording=null;renderTimeline();updateRecordingControls();active.resolve?.();
+    }
+   };
+   video.muted=true;
+   await video.play();
+   if(cancelled||preroll!==session){video.pause();stream.getTracks().forEach(t=>t.stop());return}
+   active.start=time(video);
+   rec.start(250);record=active;preroll=null;
+   playing=true;cue('start');
+   $('record-badge').classList.remove('hidden');
+   updateRecordingControls();
+  }catch(e){
+   if(rec&&rec.state!=='inactive')rec.stop();else stream.getTracks().forEach(t=>t.stop());
+   if(preroll===session)preroll=null;
+   record=null;$('countdown').classList.add('hidden');updateRecordingControls();
+   toast('Не удалось запустить видео и запись.');
+  }
+ };
+ if(countdown===3){
+  let left=3;
+  $('countdown').textContent='3';$('countdown').classList.remove('hidden');
+  updateRecordingControls();
+  const tick=()=>{
+   if(cancelled||preroll!==session)return;
+   left--;
+   if(left>0){$('countdown').textContent=String(left);session.timer=setTimeout(tick,1000)}
+   else void launch();
+  };
+  session.timer=setTimeout(tick,1000);
+ }else{
+  updateRecordingControls();
+  await launch();
+ }
+}
+function cancelCountdown(){
+ if(!preroll)return;
+ clearTimeout(preroll.timer);preroll.cancel();
+ preroll=null;$('countdown').classList.add('hidden');
+ updateRecordingControls();
+}
+function finishRecording(){
+ if(!record)return pendingRecording;
+ const r=record;record=null;
+ r.end=Math.min(r.limit,scene.duration,time($('stage-video')));
+ pendingRecording=new Promise(resolve=>{r.resolve=resolve});
+ stopAllPlayback();
+ if(r.rec.state!=='inactive')r.rec.stop();else{
+  r.stream.getTracks().forEach(t=>t.stop());r.resolve();pendingRecording=null;
+ }
+ cue('stop');updateRecordingControls();
+ return pendingRecording;
+}
 async function replaceClip(a,b,blob){
  const id=uid(),owner=me||'solo';
  let next;
