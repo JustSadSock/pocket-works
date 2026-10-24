@@ -28,11 +28,12 @@ export function voiceWindow(clip,decodedDuration) {
     throw Error('Звуковая запись короче выбранной реплики. Перезапиши её.');
   return {when:clip.start,offset:clip.offset,length:Math.min(planned,available)};
 }
-export const premiereMime = supported => [
+const VIDEO_MIMES=[
   'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
   'video/webm;codecs=vp8,opus',
   'video/mp4','video/webm'
-].find(supported)||'';
+];
+export const premiereMime = supported => VIDEO_MIMES.find(supported)||'';
 export const premiereFilename = (title, mime) => {
   const name=String(title||'Премьера').replace(/[\\/:*?"<>|\x00-\x1f]+/g,' ')
     .replace(/\s+/g,' ').trim().slice(0,64)||'Премьера';
@@ -192,10 +193,18 @@ export async function renderPremiere({
     if(!audioTrack)throw Error('Не удалось создать звуковую дорожку.');
     mixedTrack=audioTrack;capture.addTrack(audioTrack);
 
-    recorder=new MediaRecorder(capture,{
-      mimeType:mime,videoBitsPerSecond:[800000,1900000,3500000,5200000,7000000][Math.max(0,Math.min(4,quality-1))],
-      audioBitsPerSecond:128000
-    });
+    let actualMime='';
+    const bitrate=[800000,1900000,3500000,5200000,7000000][Math.max(0,Math.min(4,quality-1))];
+    for(const candidate of VIDEO_MIMES.filter(supported)){
+      try{
+        recorder=new MediaRecorder(capture,{
+          mimeType:candidate,videoBitsPerSecond:bitrate,audioBitsPerSecond:128000
+        });
+        actualMime=candidate;
+        break;
+      }catch{/* A codec can claim support but reject a mixed stream. */}
+    }
+    if(!recorder)throw Error('Браузер не смог создать видеокодировщик со звуком.');
     const chunks=[];
     const done=new Promise((resolve,reject)=>{
       recorder.ondataavailable=e=>{if(e.data?.size)chunks.push(e.data)};
@@ -206,7 +215,7 @@ export async function renderPremiere({
       recorder.onstop=()=>{
         if(stopError)reject(stopError);
         else if(!chunks.length)reject(Error('Не удалось записать видеофайл.'));
-        else resolve(new Blob(chunks,{type:recorder.mimeType||mime}));
+        else resolve(new Blob(chunks,{type:recorder.mimeType||actualMime}));
       };
     });
     // Attach a handler immediately; aborts can happen during video.play().
