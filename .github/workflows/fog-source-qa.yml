@@ -26,7 +26,7 @@ jobs:
           mkdir -p /tmp/fog-tests
           cd /tmp/fog-tests
           npm init -y
-          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --no-audit --no-fund @playwright/test@1.55.0
           cd "$GITHUB_WORKSPACE"
           ln -s /tmp/fog-tests/node_modules node_modules
           node_modules/.bin/playwright install --with-deps chromium webkit
