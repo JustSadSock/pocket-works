@@ -19,6 +19,7 @@ const TRANSLATIONS = {
         roomCode: "Room code",joinRoom:"Join",orCreate:"OR CREATE YOUR OWN",
         inviteCode:"INVITE CODE",invite:"Share invite",linesLabel:"Lines",
         sharedBoard:"SHARED WELL",moveHint:"MOVE",actionsHint:"ACTIONS",
+        hold: "Hold",
         gestureHint:"On the board: tap to rotate · swipe to move",
         pauseDescription:"Your pieces stay right where you left them.",
         resumeSoloGame: "Continue saved game",
@@ -145,6 +146,7 @@ const TRANSLATIONS = {
         roomCode: "Код комнаты",joinRoom:"Войти",orCreate:"ИЛИ СОЗДАЙТЕ СВОЮ",
         inviteCode:"КОД ПРИГЛАШЕНИЯ",invite:"Поделиться",linesLabel:"Линии",
         sharedBoard:"ОБЩЕЕ ПОЛЕ",moveHint:"ДВИЖЕНИЕ",actionsHint:"ДЕЙСТВИЯ",
+        hold: "Запас",
         gestureHint:"На поле: касание — поворот, свайп — движение",
         pauseDescription:"Фигуры останутся на своих местах.",
         resumeSoloGame: "Продолжить партию",
@@ -452,10 +454,10 @@ function suggestBrighterColor(hexColor) {
 
 // Default key bindings for players (keyboard layout agnostic using code values)
 const DEFAULT_KEYS = [
-    { left: 'ArrowLeft', right: 'ArrowRight', down: 'ArrowDown', rotate: 'ArrowUp', drop: 'Space' },
-    { left: 'KeyA', right: 'KeyD', down: 'KeyS', rotate: 'KeyW', drop: 'KeyQ' },
-    { left: 'KeyJ', right: 'KeyL', down: 'KeyK', rotate: 'KeyI', drop: 'KeyU' },
-    { left: 'KeyF', right: 'KeyH', down: 'KeyG', rotate: 'KeyT', drop: 'KeyR' }
+    {left:'ArrowLeft',right:'ArrowRight',down:'ArrowDown',rotate:'ArrowUp',drop:'Space',hold:'KeyC'},
+    {left:'KeyA',right:'KeyD',down:'KeyS',rotate:'KeyW',drop:'KeyQ',hold:'KeyE'},
+    {left:'KeyJ',right:'KeyL',down:'KeyK',rotate:'KeyI',drop:'KeyU',hold:'KeyO'},
+    {left:'KeyF',right:'KeyH',down:'KeyG',rotate:'KeyT',drop:'KeyR',hold:'KeyY'}
 ];
 
 // Deterministic PRNG for synchronized multiplayer (Mulberry32)
@@ -533,7 +535,8 @@ const GAMEPAD_BUTTON_MAP = {
     right: [15], // D-pad right
     down: [13], // D-pad down
     rotate: [0, 2], // A button (Xbox) or X button (PlayStation), X button (Xbox) or Square (PlayStation)
-    drop: [1, 3] // B button (Xbox) or Circle (PlayStation), Y button (Xbox) or Triangle (PlayStation)
+    drop: [1, 3],
+    hold: [4] // LB / L1
 };
 
 function scanGamepads() {
@@ -561,7 +564,8 @@ function createGamepadButtonState() {
         right: { pressed: false, wasPressed: false },
         down: { pressed: false, wasPressed: false },
         rotate: { pressed: false, wasPressed: false },
-        drop: { pressed: false, wasPressed: false }
+        drop: { pressed: false, wasPressed: false },
+        hold: { pressed: false, wasPressed: false }
     };
 }
 
@@ -1210,6 +1214,9 @@ class UIManager {
             case 'drop':
                 player.hardDrop();
                 break;
+            case 'hold':
+                player.holdPiece();this.drawNextPiece(player);this.drawBoard();
+                break;
         }
     }
 
@@ -1432,6 +1439,10 @@ class UIManager {
                 break;
             case 'drop':
                 player.hardDrop();
+                requiresInfoUpdate = true;
+                break;
+            case 'hold':
+                player.holdPiece();
                 requiresInfoUpdate = true;
                 break;
             default:
@@ -1863,7 +1874,12 @@ class UIManager {
         const preview=document.createElement('div');
         preview.className='spawn-bay__preview';
         next.setAttribute('role','img');
-        preview.append(next);
+        const held=document.createElement('canvas');
+        held.id=`bay-hold-${player.id}`;
+        held.className='spawn-bay__held';held.width=4*BLOCK_SIZE;held.height=2*BLOCK_SIZE;
+        held.setAttribute('aria-label','Запасная фигура: '+player.name);
+        held.setAttribute('role','img');
+        preview.append(next,held);
         const mouth=document.createElement('div');
         mouth.className='spawn-bay__mouth';
         mouth.setAttribute('aria-hidden','true');
@@ -1902,6 +1918,11 @@ class UIManager {
         item.prepend(label);
         if(this.isOnlineMode&&player.id===this.localPlayerIndex)item.classList.add('is-mine');
         container.appendChild(item);
+        const held=document.createElement('div');held.className='next-piece-item next-piece-item--hold';
+        const title=document.createElement('span');title.className='next-piece-label';title.textContent=t('hold');
+        const canvas=document.createElement('canvas');canvas.id=`hold-${player.id}`;
+        canvas.width=PREVIEW_SIZE*BLOCK_SIZE;canvas.height=PREVIEW_SIZE*BLOCK_SIZE;
+        held.append(title,canvas);container.append(held);
     }
 
     createPlayerInfo(player, container) {
@@ -2114,15 +2135,17 @@ class UIManager {
 
     drawNextPiece(player) {
         if(!this.previewSignatures)this.previewSignatures=new Map();
-        const signature=[player.nextPiece?.map(row=>row.join('')).join('/'),player.color,player.gameOver&&!player.blocked].join(':');
+        const signature=[player.nextType,player.nextPiece?.map(row=>row.join('')).join('/'),player.holdType,player.holdUsed,player.color,player.gameOver&&!player.blocked].join(':');
         if(this.previewSignatures.get(player.id)===signature)return;
         this.previewSignatures.set(player.id,signature);
-        for(const id of [`next-${player.id}`,`bay-next-${player.id}`]){
+        for(const id of [`next-${player.id}`,`bay-next-${player.id}`,`hold-${player.id}`,`bay-hold-${player.id}`]){
             const canvas=document.getElementById(id);
             if(!canvas)continue;
             const ctx=canvas.getContext('2d');
             ctx.clearRect(0,0,canvas.width,canvas.height);
-            const piece=player.nextPiece;
+            const isHold=id.startsWith('hold-')||id.startsWith('bay-hold-');
+            const piece=isHold?(player.holdType?SHAPES[player.holdType]:null):player.nextPiece;
+            canvas.style.opacity=isHold&&player.holdUsed?'0.46':'1';
             if(!piece||(player.gameOver&&!player.blocked))continue;
             const offsetX=Math.floor((canvas.width/BLOCK_SIZE-piece[0].length)/2);
             const offsetY=Math.floor((canvas.height/BLOCK_SIZE-piece.length)/2);
@@ -2644,6 +2667,11 @@ class UIManager {
                     boardNeedsRedraw = true;
                     infoUpdates.add(player);
                     break;
+                case 'hold':
+                    player.holdPiece();
+                    boardNeedsRedraw = true;
+                    infoUpdates.add(player);
+                    break;
                 default:
                     break;
             }
@@ -2935,6 +2963,11 @@ class UIManager {
                         <input type="text" id="coop-key-${i}-drop" value="${formatKeyLabel(keys.drop)}" 
                                data-key-code="${keys.drop}" readonly>
                     </div>
+                    <div class="key-binding">
+                        <label>${t('hold')}:</label>
+                        <input type="text" id="coop-key-${i}-hold" value="${formatKeyLabel(keys.hold||DEFAULT_KEYS[i].hold)}"
+                               data-key-code="${keys.hold||DEFAULT_KEYS[i].hold}" readonly>
+                    </div>
                 </div>
             `;
             
@@ -2943,7 +2976,7 @@ class UIManager {
             if(nickname)nickname.value=String(names[i]||'').slice(0,20);
 
             // Add event listener for key binding inputs
-            const actions = ['left', 'right', 'down', 'rotate', 'drop'];
+            const actions = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
             actions.forEach(action => {
                 const input = document.getElementById(`coop-key-${i}-${action}`);
                 if (input) {
@@ -3464,7 +3497,7 @@ class UIManager {
             const keysDiv = document.createElement('div');
             keysDiv.className = 'key-bindings';
             
-            const actions = ['left', 'right', 'down', 'rotate', 'drop'];
+            const actions = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
             
             actions.forEach((action, idx) => {
                 const bindingDiv = document.createElement('div');
@@ -3617,7 +3650,7 @@ class UIManager {
         // Collect key bindings
         for (let i = 0; i < numPlayersToSave; i++) {
             newKeys[i] = {};
-            const actions = ['left', 'right', 'down', 'rotate', 'drop'];
+            const actions = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
             actions.forEach(action => {
                 const keyInput = document.getElementById(`key-${i}-${action}`);
                 if (keyInput) {
@@ -3635,7 +3668,7 @@ class UIManager {
         const keyUsage = new Map(); // Map of key -> [{player, action}]
         
         for (let i = 0; i < numPlayersToSave; i++) {
-            const actions = ['left', 'right', 'down', 'rotate', 'drop'];
+            const actions = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
             actions.forEach(action => {
                 const key = newKeys[i]?.[action];
                 if (key) {
@@ -3803,7 +3836,7 @@ function init() {
                 }
 
                 if (Array.isArray(parsed.keys)) {
-                    const actions = ['left', 'right', 'down', 'rotate', 'drop'];
+                    const actions = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
                     const keysArray = parsed.keys.slice(0, DEFAULT_KEYS.length);
                     gameState.settings.keys = keysArray.map((keySet = {}, index) => {
                         const defaults = DEFAULT_KEYS[index] || DEFAULT_KEYS[0];
@@ -3824,7 +3857,7 @@ function init() {
     if (!Array.isArray(gameState.settings.keys)) {
         gameState.settings.keys = JSON.parse(JSON.stringify(DEFAULT_KEYS));
     } else {
-        const actions = ['left', 'right', 'down', 'rotate', 'drop'];
+        const actions = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
         gameState.settings.keys = gameState.settings.keys.slice(0, DEFAULT_KEYS.length);
         while (gameState.settings.keys.length < DEFAULT_KEYS.length) {
             const index = gameState.settings.keys.length;
@@ -3860,7 +3893,7 @@ if (document.readyState === 'loading') {
     init();
 }
 
-for(const [method,action] of [['move','move'],['rotate','rotate'],['drop','drop'],['hardDrop','hardDrop']]){
+for(const [method,action] of [['move','move'],['rotate','rotate'],['drop','drop'],['hardDrop','hardDrop'],['holdPiece','hold']]){
  const original=Player.prototype[method];
  Player.prototype[method]=function(...args){if(window.uiManager?.isOnlineMode){networkManager.sendPlayerInput({action,...(method==='move'?{direction:args[0]}:{})});return;}return original.apply(this,args);};
 }
