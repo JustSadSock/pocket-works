@@ -20,7 +20,7 @@ test('trimming uses source offsets, never stretches a voice',()=>{
  const a=voiceWindow(clip('a',10,14,2),8);
  assert.deepEqual(a,{when:10,offset:2,length:4});
  const bWindow=voiceWindow(clip('b',10,14,2),5.9);
- assert.equal(bWindow.length,3.9);
+ assert(Math.abs(bWindow.length-3.9)<1e-6);
  assert.throws(()=>voiceWindow(clip('c',10,14,2),4),/короче/);
 });
 test('invalid clips and unfinished scenes are rejected before recording',()=>{
