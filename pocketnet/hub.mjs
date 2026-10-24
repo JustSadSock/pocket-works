@@ -732,7 +732,7 @@ export class PocketNetHub {
           if(command==='sync')this.emit(room,[{type:'state',to:player.id}]);
           else if(Number.isFinite(msg.payload.stamp))
             message(ws,'game_event',{roomId:room.id,event:{type:'time_pong',to:player.id,
-              payload:{stamp:msg.payload.stamp,serverNow:Date.now()}}});
+              payload:{stamp:msg.payload.stamp,serverNow:Date.now(),revision:room.state.revision}}});
           return;
         }
         if (msg.type === 'game_message' && isChyepukhaSync(room.gameId, msg.payload)) {
