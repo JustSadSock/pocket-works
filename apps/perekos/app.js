@@ -793,6 +793,19 @@ function drawConstructs(s){
  }
  for(const m of s.mines){
   const bob=Math.sin(frame*.11+m.x)*2,life=Math.min(1,m.life);
+  if(m.v2Rubble||m.v2Wildfire){
+   const stone=!!m.v2Rubble;
+   ctx.save();ctx.globalAlpha=m.arm>0?.54:.8;
+   ctx.strokeStyle=stone?'#cfccaa':'#efa66d';ctx.fillStyle=stone?'#7b8070':'#803d2b';
+   ctx.lineWidth=2;ctx.setLineDash(m.arm>0?[5,4]:[]);
+   ctx.beginPath();ctx.arc(m.x,m.y,m.r,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+   for(let i=0;i<(stone?5:4);i++){
+    const dir=i*2*Math.PI/(stone?5:4);
+    const x=m.x+Math.cos(dir)*m.r*.56,y=m.y+Math.sin(dir)*m.r*.56;
+    pixel(x-4,y-5,8,stone?8:11,stone?'#aaa992':'#f2aa68');
+   }
+   ctx.restore();continue;
+  }
   if(m.v2Conduit){
    ctx.save();ctx.globalAlpha=m.arm>0?.55:.92;
    ctx.strokeStyle=m.arm>0?'#659b9c':'#b4f6dd';ctx.lineWidth=m.arm>0?2:5;

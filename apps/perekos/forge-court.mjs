@@ -254,6 +254,20 @@ export function drawForgeConstructs(ctx,state,time=0,reduced=false){
  for(const mine of (state?.mines||[]).slice(0,20)){
   if(!Number.isFinite(mine.x)||!Number.isFinite(mine.y))continue;
   const x=Math.round(mine.x),y=Math.round(mine.y);
+  if(mine.v2Rubble||mine.v2Wildfire){
+   const stone=!!mine.v2Rubble;
+   ctx.save();ctx.globalAlpha=mine.arm>0?.5:.87;
+   ctx.strokeStyle=stone?'#c9c3a2':'#e9a46e';ctx.lineWidth=2;
+   ctx.setLineDash(mine.arm>0?[4,4]:[]);
+   ctx.beginPath();ctx.arc(x,y,mine.r,0,Math.PI*2);ctx.stroke();
+   ctx.setLineDash([]);ctx.restore();
+   for(let j=0;j<4;j++){
+    const t=j*Math.PI/2;
+    block(ctx,x+Math.cos(t)*mine.r*.55-4,y+Math.sin(t)*mine.r*.55-5,
+     8,stone?8:11,stone?'#979c83':'#eca66d');
+   }
+   continue;
+  }
   if(mine.v2Conduit){
    ctx.save();ctx.globalAlpha=mine.arm>0?.52:.91;
    ctx.strokeStyle=mine.arm>0?'#75a4a2':'#c3f5e4';
