@@ -1,10 +1,10 @@
-const APP_VERSION='0.15.5';
+const APP_VERSION='0.16.0';
 const VERSION=APP_VERSION;
 const RELEASE_DATE='2026-10-24';
-const RELEASE_NOTES = ["Нельзя подменить цену ставки перед подтверждением.","Перепакованные предметы сохраняют тайну в истории продаж.","Условия обмена и комиссия отображаются точно."];
+const RELEASE_NOTES = ["В лобби доступны все девять аватаров.","Во время игры отображаются ники участников, а не роли.","Сервер сохраняет выбор между раундами и после возвращения в комнату."];
 const NOTES=RELEASE_NOTES;
-const CACHE='black-bazaar-v0.15.5';
-const CACHE_NAME='black-bazaar-v0.15.5';
+const CACHE='black-bazaar-v0.16.0';
+const CACHE_NAME='black-bazaar-v0.16.0';
 const PREFIX='black-bazaar-v';
 const FILES=[
  './','./index.html','./preview.html','./app.js','./debug-console.js','./debug-state.js','./economy.js','./art.js','./art/characters.js','./art/artifacts.js','./feedback.js','./art/forest.svg','./art/table.svg','./styles.css','./app.config.json',

@@ -22,7 +22,9 @@ test('lobby retains player list, occupancy and controls in one expression',()=>{
  for(const action of ['copy-code','copy-url','kick-player','start','leave']){
   assert.ok(lobby.includes('data-action="'+action+'"'),'Missing lobby action '+action);
  }
- assert.match(lobby,/\.join\(''\)\+'<\/div>'\+\s*'<p class="muted">/,'Lobby occupancy line must be concatenated');
+ assert.match(lobby,/\.join\(''\)\+'<\/div>'\+/,'Lobby player cards and following sections must concatenate');
+ assert.ok(lobby.includes('data-action="select-avatar"'),'Lobby must provide actual avatar selection');
+ assert.ok(lobby.includes('aria-pressed'),'Selected portrait must expose its state');
 });
 
 
@@ -212,4 +214,13 @@ test('voluntary offline exit clears token without pretending to notify server',(
  assert.equal(offline.roomId,'');
  const online=run(true);
  assert.deepEqual(online.events.slice(0,3),['leave','close','clear:pocket-net:/pocketnet']);
+});
+
+test('Cosmetic selection is reachable only in the waiting room',()=>{
+ const source=readFileSync(join(root,'app.js'),'utf8');
+ assert.match(source,/if\(action==='select-avatar'\)/);
+ assert.match(source,/state\?\.phase!=='lobby'/);
+ assert.match(source,/request\(\{type:'select_avatar',avatarId\}\)/);
+ assert.match(source,/avatarOf\(p\)/);
+ assert.match(source,/return-lobby/);
 });

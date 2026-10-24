@@ -4,7 +4,8 @@ export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
 export const TOTAL_ROUNDS = 9;
 export const RESOURCES = ['gold','crystals','parts'];
-const CHARACTERS = ['Волшебник','Мак','Слайм','Мимик','Ведьма','Жабий барон'];
+const AVATARS=Object.freeze(['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man']);
+const avatarFor=(id,fallback=AVATARS[0])=>AVATARS.includes(id)?id:fallback;
 // Each quota is about 6.4–7.0 additional work-equivalent units
 // above the same 250 gold / 20 crystal / 3 parts starting wallet.
 // Different players NEED different things, without unequal total effort.
@@ -164,7 +165,7 @@ function balance(p){
 }
 function rankPlayers(s){
   const rows=s.contestants.map(p=>({
-    id:p.id,name:p.name,character:p.character,
+    id:p.id,name:p.name,character:p.name,avatarId:p.avatarId,
     complete:RESOURCES.every(k=>p.resources[k]>=p.quota[k]),bankrupt:p.bankrupt,
     progress:Math.round(balance(p)*1000)/10,
     wealth:p.resources.gold+8*p.resources.crystals+70*p.resources.parts
@@ -212,7 +213,7 @@ function openGame(s){
   s.contestants=s.players.map((p,i)=>{
     const targets=s.players.filter(x=>x.id!==p.id).map(x=>x.id);
     const plus=sample(targets),minus=sample(targets);
-    return {id:p.id,name:p.name,character:CHARACTERS[i],resources:{gold:250,crystals:20,parts:3},quota:{...QUOTAS[i]},
+    return {id:p.id,name:p.name,character:p.name,avatarId:avatarFor(p.avatarId,AVATARS[i%AVATARS.length]),resources:{gold:250,crystals:20,parts:3},quota:{...QUOTAS[i]},
       items:[newItem(s),newItem(s)],urgentOffset:Math.floor(Math.random()*RESOURCES.length),
       positiveTarget:plus,negativeTarget:minus,
       legendary:null,positiveUsed:0,negativeUsed:0,urgent:null,strikes:0,bankrupt:false,
@@ -612,7 +613,7 @@ function viewForPlayer({state,player}){
   const veil=isBlackRound(s);
   return {phase:s.phase,host:s.host,revision:s.revision,round:s.round,rounds:TOTAL_ROUNDS,deadlineAt:s.deadlineAt||null,connectionGraceUntil:s.connectionGraceUntil||null,offlinePaused:!!s.offlinePaused,
     turnId:turn?.id||null,players:s.contestants.map(p=>({
-      id:p.id,name:p.name,character:p.character,
+      id:p.id,name:p.name,character:p.name,avatarId:p.avatarId,
       items:veil&&p.id!==me?.id?null:inventoryCount(s,p),
       inventory:veil&&p.id!==me?.id?[]:p.items.map(item=>({
         ...publicItem(item),tradable:item.acquiredRound!==s.round&&s.listing?.itemId!==item.id
@@ -640,7 +641,7 @@ function viewForPlayer({state,player}){
       wantItem:d.wantItemId&&dealItem(getPlayer(s,d.to),d.wantItemId)?publicItem(dealItem(getPlayer(s,d.to),d.wantItemId)):null
     })):[],
     log:s.log,ranking:s.phase==='done'?s.ranking:undefined,
-    you:me?{id:me.id,character:me.character,resources:{...me.resources},quota:{...me.quota},
+    you:me?{id:me.id,character:me.name,avatarId:me.avatarId,resources:{...me.resources},quota:{...me.quota},
       items:me.items.map(privateItem),positiveTarget:me.positiveTarget,
       negativeTarget:me.negativeTarget,legendary:me.legendary,
       urgent:me.urgent,worked:me.worked,usedPawn:me.usedPawn,marketDeals:me.marketDeals,
@@ -652,7 +653,7 @@ function viewForPlayer({state,player}){
 const game={
   protocolVersion:1,viewForPlayer,
   createRoom({player}){return {state:{
-    host:player.id,players:[{id:player.id,name:player.name}],contestants:[],bannedIds:[],bannedAccounts:[],
+    host:player.id,players:[{id:player.id,name:player.name,avatarId:AVATARS[0]}],contestants:[],bannedIds:[],bannedAccounts:[],
     phase:'lobby',revision:0,round:0,turnIndex:0,deadlineAt:null,offlinePaused:false,offlinePausedAt:null,pauseRemainingMs:null,listing:null,
     eventSchedule:{},metrics:null,bids:[],bidSerial:0,brokerOffer:null,deals:[],dealSerial:0,blackLots:[],blackSeq:0,log:[],ranking:[],serial:0
   }};},
@@ -660,11 +661,11 @@ const game={
     if((state.bannedIds||[]).includes(player?.id)||player?.accountId&&(state.bannedAccounts||[]).includes(player.accountId))throw Error('room_kicked');
     if(state.phase!=='lobby'&&!state.contestants.some(p=>p.id===players.at(-1)?.id))throw Error('match_in_progress');
     if(players.length>MAX_PLAYERS)throw Error('room_full');
-    state.players=players.map(p=>({id:p.id,name:p.name}));
+    state.players=players.map((p,i)=>({id:p.id,name:p.name,avatarId:avatarFor(state.players.find(x=>x.id===p.id)?.avatarId,AVATARS[i%AVATARS.length])}));
     state.revision++;return {state,events:stateEvent()};
   },
   onLeave({state,player,players}){
-    state.players=players.map(p=>({id:p.id,name:p.name}));
+    state.players=players.map((p,i)=>({id:p.id,name:p.name,avatarId:avatarFor(state.players.find(x=>x.id===p.id)?.avatarId,AVATARS[i%AVATARS.length])}));
     if(!state.players.some(p=>p.id===state.host))state.host=state.players[0]?.id||state.host;
     if(state.phase==='lobby')state.contestants=[];
     state.deals=state.deals.filter(d=>state.players.some(p=>p.id===d.from)&&state.players.some(p=>p.id===d.to));
@@ -731,6 +732,14 @@ const game={
   },
   onMessage({state,player,players,payload}){
     const v=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:{};
+    if(v.type==='select_avatar'){
+      if(state.phase!=='lobby')return failure(state,player.id,'Выбирать аватар можно только до начала партии.');
+      const seat=state.players.find(p=>p.id===player.id);
+      if(!seat)return failure(state,player.id,'Участник отсутствует в комнате.');
+      if(typeof v.avatarId!=='string'||!AVATARS.includes(v.avatarId))return failure(state,player.id,'Недопустимый аватар.');
+      if(seat.avatarId===v.avatarId)return {state,events:[{type:'state',to:player.id,payload:{}}]};
+      seat.avatarId=v.avatarId;return success(state);
+    }
     if(v.type==='kick'){
       if(player.id!==state.host||!['lobby','play'].includes(state.phase))
         return failure(state,player.id,'Исключать участников может только ведущий активной комнаты.');
@@ -756,6 +765,12 @@ const game={
       return success(state);
     }
     if(v.type==='tick')return {state,events:[]};
+    if(v.type==='return_lobby'&&state.phase==='done'){
+      if(player.id!==state.host)return failure(state,player.id,'Только ведущий может открыть новую комнату ожидания.');
+      state.phase='lobby';state.deadlineAt=null;state.offlinePaused=false;state.offlinePausedAt=null;state.pauseRemainingMs=null;
+      state.contestants=[];state.ranking=[];state.log=[];state.bids=[];state.blackLots=[];state.listing=null;state.deals=[];
+      return success(state);
+    }
     if(v.type==='start'&&player.id===state.host&&(state.phase==='lobby'||state.phase==='done')){
       if(state.players.length<MIN_PLAYERS)return failure(state,player.id,'Нужно минимум два игрока.');
       state.players=shuffled(state.players);openGame(state);return success(state);

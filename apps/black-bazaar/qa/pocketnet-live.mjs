@@ -1,5 +1,5 @@
 // Real PocketNet integration: three authenticated WebSocket clients against
-// Wrangler's SQLite Durable Object and the immutable Bazaar v18 rules.
+// Wrangler's SQLite Durable Object and the immutable Bazaar v19 rules.
 import assert from 'node:assert/strict';
 import WebSocket from '../../../pocket-server/node_modules/ws/index.js';
 
@@ -85,16 +85,33 @@ try{
  host.send('create_room',{gameId:'black-bazaar'});
  const initial=await host.next('room_joined');
  roomId=initial.roomId;
- assert.equal(initial.version,'v18','new rooms must use immutable v18');
+ assert.equal(initial.version,'v19','new rooms must use immutable v19');
  assert.equal(initial.state.phase,'lobby');
  second.send('join_room',{roomId:roomId.slice(0,8).toUpperCase()});
  assert.equal((await second.next('room_joined')).state.players.length,2);
  third.send('join_room',{roomId});
  assert.equal((await third.next('room_joined')).state.players.length,3);
 
+ // Verify server-authoritative cosmetic choice before the round, including duplicate portraits.
+ host.send('game_message',{payload:{type:'select_avatar',avatarId:'old_man'}});
+ await host.next('game_event',stateEvent('lobby',v=>v.players.find(p=>p.id===host.id)?.avatarId==='old_man'));
+ second.send('game_message',{payload:{type:'select_avatar',avatarId:'flower'}});
+ await second.next('game_event',stateEvent('lobby',v=>v.players.find(p=>p.id===second.id)?.avatarId==='flower'));
+ third.send('game_message',{payload:{type:'select_avatar',avatarId:'flower'}});
+ const duplicated=stateOf(await third.next('game_event',stateEvent('lobby',v=>v.players.filter(p=>p.avatarId==='flower').length===2)));
+ assert.equal(duplicated.players.filter(p=>p.avatarId==='flower').length,2);
+ third.send('game_message',{payload:{type:'select_avatar',avatarId:'../../invalid'}});
+ assert.match(String((await third.next('game_event',m=>m.event?.type==='notice')).event.payload),/Недопустимый аватар/);
  host.send('game_message',{payload:{type:'start'}});
  const start=await Promise.all(seats.map(c=>c.next('game_event',stateEvent('play'))));
  for(let n=0;n<3;n++)verifyPrivate(stateOf(start[n]),seats[n].id);
+ const firstStart=stateOf(start[0]);
+ assert.ok(firstStart.players.every(p=>p.character===p.name),'verified nicknames replace roles');
+ assert.equal(firstStart.players.find(p=>p.id===host.id).avatarId,'old_man');
+ assert.equal(firstStart.players.find(p=>p.id===second.id).avatarId,'flower');
+ assert.equal(firstStart.players.find(p=>p.id===third.id).avatarId,'flower');
+ second.send('game_message',{payload:{type:'select_avatar',avatarId:'mage'}});
+ assert.match(String((await second.next('game_event',m=>m.event?.type==='notice')).event.payload),/только до начала/);
  let snap=stateOf(start[0]);
  assert.equal(snap.round,1);
  const seller=byId.get(snap.turnId),buyer=seats.find(c=>c.id!==seller.id);
@@ -126,6 +143,7 @@ try{
  const resumed=(await sellerBack.next('room_joined')).state;
  verifyPrivate(resumed,seller.id);
  assert.equal(resumed.you.items.some(i=>i.id===itemId),true);
+ assert.equal(resumed.players.find(p=>p.id===seller.id).avatarId,seller.id===host.id?'old_man':'flower');
  assert.equal(resumed.listing.id,itemId);
  assert.equal(resumed.bids.length,1);
  assert.equal(resumed.turnId,seller.id);

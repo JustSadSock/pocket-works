@@ -50,11 +50,12 @@ export function debugItem(index,id,round=1){
 }
 const publicItem=item=>({id:item.id,name:item.name,rarity:item.rarity});
 const fixtures=['Алиса','Борис','Варя','Даня','Ева','Федя'];
+const debugAvatars=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
 export function createDebugState(scene='four'){
  if(scene==='home')return null;
  const count=scene==='two'?2:scene==='six'?6:4;
  const people=Array.from({length:count},(_,i)=>({
-  id:'debug-'+i,name:fixtures[i],character:DEBUG_ROLES[i],connected:true,
+  id:'debug-'+i,name:fixtures[i],character:fixtures[i],avatarId:debugAvatars[i],connected:true,
   strikes:i===3?1:0,bankrupt:false,urgent:false,items:2,
   inventory:[publicItem(debugItem(i,'other-'+i))],
   resources:wallet(260-i*20,22+i,3+(i%3))
@@ -62,7 +63,7 @@ export function createDebugState(scene='four'){
  if(scene==='lobby')return {phase:'lobby',host:'debug-0',players:people,revision:1};
  if(scene==='offline')people[1].connected=false;
  const owned=[debugItem(0,'owned-frog'),debugItem(11,'owned-amulet'),debugItem(7,'owned-gear')];
- const you={id:'debug-0',character:DEBUG_ROLES[0],resources:wallet(390,32,5),quota:wallet(430,26,3),
+ const you={id:'debug-0',character:fixtures[0],avatarId:debugAvatars[0],resources:wallet(390,32,5),quota:wallet(430,26,3),
   items:owned,escrowItems:[],positiveTarget:'debug-1',negativeTarget:'debug-2',
   legendary:null,urgent:null,worked:false,usedPawn:false,marketDeals:0,
   inspections:[],inspectionPrices:{public:15,black:25},
@@ -109,7 +110,7 @@ export function createDebugState(scene='four'){
  if(scene==='done'){
   state.phase='done';state.round=10;state.turnId=null;state.deadlineAt=null;
   state.report={publicSales:4,privateDeals:2,blackSales:1,inspections:3,repack:2,salvage:1,urgentMet:5,urgentMissed:2,wardUsed:1,curseFired:1};
-  state.ranking=people.map((p,i)=>({id:p.id,name:p.name,character:p.character,place:i+1,progress:100-i*16,complete:i<2,bankrupt:false}));
+  state.ranking=people.map((p,i)=>({id:p.id,name:p.name,character:p.name,avatarId:p.avatarId,place:i+1,progress:100-i*16,complete:i<2,bankrupt:false}));
  }
  return state;
 }
@@ -141,7 +142,23 @@ export function debugCommand(s,cmd){
  if(!s)return {state:s,error:'Открой игровую сцену'};
  const type=cmd?.type;
  if(type==='tick')return {state:s,silent:true};
- if(type==='start')return {state:createDebugState('four')};
+ if(type==='start'){
+   if(s.phase!=='lobby'&&s.phase!=='done')return {state:s,error:'Уже играем'};
+   const next=createDebugState('four');
+   for(const p of next.players){const prior=s.players?.find(x=>x.id===p.id);if(prior)p.avatarId=prior.avatarId;}
+   next.you.avatarId=next.players[0].avatarId;
+   return {state:next};
+  }
+  if(type==='return_lobby'){
+    if(s.phase!=='done')return {state:s,error:'Партия не завершена'};
+    const lobby=createDebugState('lobby');
+    for(const p of lobby.players){const old=s.players.find(x=>x.id===p.id);if(old)p.avatarId=old.avatarId;}
+    return {state:lobby};
+  }
+  if(type==='select_avatar'){
+    if(s.phase!=='lobby'||!debugAvatars.includes(cmd.avatarId))return {state:s,error:'Недопустимый аватар'};
+    s.players[0].avatarId=cmd.avatarId;s.revision++;return {state:s};
+  }
  if(type==='kick'){
   const target=s.players.find(p=>p.id===cmd.targetId);
   if(s.host!=='debug-0'||!target||target.id==='debug-0'||target.bankrupt)

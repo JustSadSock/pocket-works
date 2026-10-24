@@ -140,3 +140,18 @@ test('Workshop rejects a repriced offer with the old immutable ID',()=>{
  assert.ok(debugCommand(s,{type:'accept',buyer:'debug-1',bidId:prior}).error);
  assert.ok(!debugCommand(s,{type:'accept',buyer:'debug-1',bidId:s.bids[0].id}).error);
 });
+
+test('Workshop avatar picker changes only the local seat and carries choice into game',()=>{
+ const room=createDebugState('lobby');
+ assert.equal(room.players.length,4);
+ assert.ok(room.players.every(p=>p.name===p.character));
+ assert.ok(debugCommand(room,{type:'select_avatar',avatarId:'made_up'}).error);
+ assert.ok(!debugCommand(room,{type:'select_avatar',avatarId:'old_man'}).error);
+ assert.equal(room.players[0].avatarId,'old_man');
+ assert.equal(room.players[1].avatarId,'mushroom');
+ const started=debugCommand(room,{type:'start'});
+ assert.equal(started.state.phase,'play');
+ assert.equal(started.state.players[0].avatarId,'old_man');
+ assert.equal(started.state.you.avatarId,'old_man');
+ assert.ok(debugCommand(started.state,{type:'select_avatar',avatarId:'mage'}).error);
+});

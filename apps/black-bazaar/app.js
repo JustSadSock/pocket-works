@@ -11,7 +11,7 @@ import {createDebugState,debugSetItem,debugCommand} from './debug-state.js';
 
 const debugPreview=new URLSearchParams(location.search).has('debugPreview');
 installMobileRuntime();
-if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.15.5',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.16.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -46,7 +46,9 @@ const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const amounts=w=>keys.filter(k=>w?.[k]).map(k=>w[k]+' '+names[k]).join(', ')||'ничего';
 const person=id=>state?.players?.find(p=>p.id===id);
 const playerOnline=p=>onlinePlayerIds?onlinePlayerIds.has(p.id):p.connected;
-const label=id=>person(id)?.character||person(id)?.name||'Игрок';
+const label=id=>person(id)?.name||person(id)?.character||'Игрок';
+const avatarKeys=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
+const avatarOf=p=>p?.avatarId&&avatarKeys.includes(p.avatarId)?p.avatarId:roleCharacter(p?.character);
 const formatEffect=(fx,minus=false)=>{
   if(!fx)return '—';
   const key=fx.type==='goldPercent'?'золота':names[fx.type]||fx.type;
@@ -71,7 +73,7 @@ function specialLine(t){
 }
 let onlinePlayerIds=null;
 let net=null,me=null,state=null,roomId='',mode='home',connecting=false,connected=false;
-let roomVersion=debugPreview?'v18':null;
+let roomVersion=debugPreview?'v19':null;
 let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
 const decorativeGuests=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
 let notice='';
@@ -168,26 +170,40 @@ function renderHome(){
  applyCharacterArt(app);
 }
 function renderLobby(){
- mode='lobby';activeSheet=null;selectedArtifact=null;playStarted=false;document.body.classList.remove('sheet-open');
- const all=state?.players||[],host=state?.host===me?.id,canKick=host&&['v16','v17','v18'].includes(roomVersion),short=roomId.slice(0,8).toUpperCase();
- app.innerHTML='<div class="lobby-screen"><div class="panel stack">'+
- '<h1>За одним столом</h1><p>Код комнаты</p><strong class="lobby-room">'+esc(short)+'</strong>'+
- '<div class="row"><button type="button" data-action="copy-code">'+svgIcon('box')+' Код</button>'+
- '<button type="button" data-action="copy-url">'+svgIcon('trade')+' Ссылка</button></div>'+
- '<div class="lobby-players">'+all.map((p,index)=>'<div class="lobby-player">'+
- characterMarkup(decorativeGuests[index%decorativeGuests.length],'lobby-portrait')+'<strong>'+esc(p.name)+'</strong>'+
- (p.id===state.host?'<br><small>Ведущий</small>':'')+
- (canKick&&p.id!==me?.id?'<button type="button" class="lobby-kick" data-action="kick-player" data-player="'+esc(p.id)+'">Исключить</button>':'')+
- '</div>').join('')+'</div>'+
- '<p class="muted">'+all.length+' из 6 игроков · старт от двух</p>'+
- (host?'<button type="button" class="primary" data-action="start" '+(all.length<2?'disabled':'')+'>Начать игру</button>':'<p>Начало — у создателя комнаты.</p>')+
- '<button type="button" data-action="leave">Покинуть комнату</button>'+
- '</div></div>';
- applyCharacterArt(app);
+  mode='lobby';activeSheet=null;selectedArtifact=null;playStarted=false;document.body.classList.remove('sheet-open');
+  const all=state?.players||[],host=state?.host===me?.id,canKick=host&&['v16','v17','v18','v19'].includes(roomVersion),short=roomId.slice(0,8).toUpperCase();
+  const modern=Number(roomVersion?.slice(1)||0)>=19;
+  const mine=all.find(p=>p.id===me?.id);
+  const chosen=avatarOf(mine);
+  const focusAvatar=app.querySelector('.avatar-choice:focus')?.dataset.avatar;
+  app.innerHTML='<div class="lobby-screen"><div class="panel stack">'+
+  '<h1>За одним столом</h1><div class="lobby-invite"><strong class="lobby-room">'+esc(short)+'</strong>'+
+  '<button type="button" data-action="copy-code">'+svgIcon('box')+' Код</button>'+
+  '<button type="button" data-action="copy-url">'+svgIcon('trade')+' Ссылка</button></div>'+
+  '<div class="lobby-players">'+all.map((p,index)=>'<div class="lobby-player">'+
+  characterMarkup(modern?avatarOf(p):decorativeGuests[index%decorativeGuests.length],'lobby-portrait')+
+  '<strong>'+esc(p.name)+'</strong>'+
+  (p.id===state.host?'<small>Ведущий</small>':'')+
+  (p.id===me?.id?'<small>Ты</small>':'')+
+  (canKick&&p.id!==me?.id?'<button type="button" class="lobby-kick" data-action="kick-player" data-player="'+esc(p.id)+'">Исключить</button>':'')+
+  '</div>').join('')+'</div>'+
+  (modern?'<section class="avatar-picker" aria-label="Выбор игрового аватара">'+
+    '<div class="avatar-picker-top"><div><h2>Твой аватар</h2><p class="muted">Выбери образ перед стартом. Повторы разрешены.</p></div>'+
+    '<div class="avatar-current">'+characterMarkup(chosen,'avatar-preview')+'<span>'+esc(mine?.name||'Игрок')+'</span></div></div>'+
+    '<div class="avatar-grid" role="group" aria-label="Девять доступных аватаров">'+
+    avatarKeys.map((id,i)=>'<button class="avatar-choice'+(chosen===id?' selected':'')+'" type="button" data-action="select-avatar" data-avatar="'+id+'" aria-label="Выбрать аватар '+(i+1)+' из 9" aria-pressed="'+(chosen===id)+'">'+
+    characterMarkup(id,'avatar-choice-art')+'<span class="avatar-number">'+(i+1)+'</span></button>').join('')+
+    '</div></section>':'')+
+  '<p class="muted">'+all.length+' из 6 игроков · старт от двух</p>'+
+  (host?'<button type="button" class="primary" data-action="start" '+(all.length<2?'disabled':'')+'>Начать игру</button>':'<p>Начало — у создателя комнаты.</p>')+
+  '<button type="button" data-action="leave">Покинуть комнату</button>'+
+  '</div></div>';
+  applyCharacterArt(app);
+  if(focusAvatar)app.querySelector('.avatar-choice[data-avatar="'+focusAvatar+'"]')?.focus({preventScroll:true});
 }
 function scoreBox(){
   return '<div class="panel"><h2>Участники</h2><table class="table"><thead><tr><th>Игрок</th><th>Ресурсы</th><th>Предметы</th><th>Штрафы</th></tr></thead><tbody>'+
-  state.players.map(p=>'<tr><td><strong>'+esc(p.character)+'</strong><br><small>'+esc(p.name)+(p.id===state.turnId?' · ходит':'')+'</small></td>'+
+  state.players.map(p=>'<tr><td><div class="score-player">'+characterMarkup(avatarOf(p),'score-avatar')+'<strong>'+esc(p.name||p.character)+'</strong>'+(p.id===state.turnId?'<small> · ходит</small>':'')+'</div></td>'+
     '<td>'+(p.resources?esc(amounts(p.resources)):'Скрыто')+'</td><td>'+(p.items??'Скрыто')+'</td><td>'+p.strikes+'/3'+(p.bankrupt?' · банкрот':'')+'</td></tr>').join('')+
     '</tbody></table></div>';
 }
@@ -294,7 +310,7 @@ function tradePanel(you){
   const wantItems=first.inventory.filter(i=>i.tradable);
   html+='<details class="quiet-details"'+(!inbox.length&&!outbox.length?' open':'')+'><summary>Предложить обмен</summary><form data-form="deal" class="stack">'+
     '<label>Кому<select name="to" id="dealTarget">'+recipients.map(p=>
-      '<option value="'+esc(p.id)+'">'+esc(p.character)+'</option>').join('')+'</select></label>'+
+      '<option value="'+esc(p.id)+'">'+esc(p.name||p.character)+'</option>').join('')+'</select></label>'+
     '<label>Какой предмет отдаёшь<select name="giveItemId">'+itemOptions(giveItems)+'</select></label>'+
     '<p>Отдаёшь ресурсы:</p>'+resourceFields('give')+
     '<label>Какой предмет хочешь получить<select name="wantItemId" id="dealWantItem">'+itemOptions(wantItems)+'</select></label>'+
@@ -605,12 +621,12 @@ function renderPlay(){
  const active=state.turnId===me?.id,plan=forecastEconomy(you.resources,you.items);
  const seats=state.players.map(p=>{
   const self=p.id===me?.id,available=!self&&playerOnline(p)&&!p.bankrupt&&!you.bankrupt;
-  const moderate=['v16','v17','v18'].includes(roomVersion)&&state.host===me?.id&&!self&&!p.bankrupt;
+  const moderate=['v16','v17','v18','v19'].includes(roomVersion)&&state.host===me?.id&&!self&&!p.bankrupt;
   return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(self?'is-me ':'')+
   '" data-action="'+(self?'open-sheet':'player-actions')+'" '+(self?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
-  (!self&&!available&&!moderate?' disabled':'')+' aria-label="'+esc(p.character)+' — '+esc(p.name)+'">'+
-  '<span class="seat-portrait">'+characterMarkup(roleCharacter(p.character),'seat-character')+'</span>'+
-  '<strong>'+esc(p.character)+'</strong><small>'+esc(p.name)+'</small></button>';
+  (!self&&!available&&!moderate?' disabled':'')+' aria-label="'+esc(p.name||p.character)+'">'+
+  '<span class="seat-portrait">'+characterMarkup(avatarOf(p),'seat-character')+'</span>'+
+  '<strong>'+esc(p.name||p.character)+'</strong></button>';
  }).join('');
  const listing=state.listing;
  const lot=listing?'<button type="button" class="artifact" data-action="open-item" data-kind="listing" data-id="'+esc(listing.id)+'" aria-label="Открыть лот '+esc(listing.name)+', цена '+esc(amounts(listing.ask))+', предложений: '+state.bids.length+'">'+
@@ -671,7 +687,7 @@ function renderDone(){
  const ranks=state.ranking||[];
  app.innerHTML='<section class="done-screen"><h1>Партия окончена</h1><p>Рейтинг по выполнению секретной квоты. Банкротство лишает права на победу; легендарная связь может изменить второе место.</p>'+
  '<div class="panel"><table class="table"><thead><tr><th>Место</th><th>Игрок</th><th>Квота</th><th>Итог</th></tr></thead><tbody>'+
- ranks.map(p=>'<tr><td>'+p.place+'</td><td>'+esc(p.character)+' · '+esc(p.name)+'</td><td>'+p.progress+'%</td><td>'+(p.bankrupt?'банкрот':p.complete?'выполнена':'не выполнена')+'</td></tr>').join('')+
+ ranks.map(p=>'<tr><td>'+p.place+'</td><td><div class="score-player">'+characterMarkup(avatarOf(p),'score-avatar')+'<strong>'+esc(p.name||p.character)+'</strong></div></td><td>'+p.progress+'%</td><td>'+(p.bankrupt?'банкрот':p.complete?'выполнена':'не выполнена')+'</td></tr>').join('')+
  '</tbody></table></div>'+
  (state.report?'<div class="panel"><h2>Итоги торговли за партию</h2><p>Публичные продажи: '+state.report.publicSales+
  '; частные сделки: '+state.report.privateDeals+'; продажи на чёрном рынке: '+state.report.blackSales+
@@ -681,8 +697,9 @@ function renderDone(){
  '; провалено: '+state.report.urgentMissed+
  '; заблокировано амулетом: '+state.report.wardUsed+
  '; проклятий сработало: '+state.report.curseFired+'.</p></div>':'')+
- '<div class="row">'+(state.host===me?.id?'<button type="button" data-action="start" class="primary">Новая партия</button>':'')+
+ '<div class="row">'+(state.host===me?.id?(Number(roomVersion?.slice(1)||0)>=19?'<button type="button" data-action="return-lobby" class="primary">Выбрать аватары и сыграть ещё</button>':'<button type="button" data-action="start" class="primary">Новая партия</button>'):'')+
  '<button type="button" data-action="leave">В меню</button></div></section>';
+  applyCharacterArt(app);
 }
 function render(){
  if(!state)return renderHome();
@@ -797,6 +814,12 @@ app.addEventListener('click',event=>{
  const btn=event.target.closest('button[data-action]');if(!btn||btn.disabled)return;
  const action=btn.dataset.action;
  if(action==='cancel-connect'){cancelConnect();return;}
+  if(action==='select-avatar'){
+    if(state?.phase!=='lobby'||Number(roomVersion?.slice(1)||0)<19)return;
+    const avatarId=btn.dataset.avatar;
+    if(avatarKeys.includes(avatarId))request({type:'select_avatar',avatarId});
+    return;
+  }
  if(action==='toggle-sound'){
   const enabled=sound.setEnabled(!sound.isEnabled());
   if(enabled){sound.unlock();sound.play('open');}
@@ -848,8 +871,8 @@ app.addEventListener('click',event=>{
    if(!player||player.id===me?.id)return;
    app.querySelector('.player-popover')?.remove();
    const pop=document.createElement('div');pop.className='player-popover';pop.setAttribute('role','dialog');
-   pop.innerHTML='<div class="player-popover-head"><strong>'+esc(player.character||player.name)+'</strong><button type="button" data-action="close-player-actions" aria-label="Закрыть">×</button></div>'+(!playerOnline(player)||player.bankrupt||state.you.bankrupt?'<p>Обмен недоступен</p>':'<button type="button" class="primary" data-action="trade-with" data-player="'+esc(player.id)+'">'+svgIcon('trade',20)+' Обмен / подарок</button>')+'<button type="button" data-action="open-sheet" data-sheet="players">'+svgIcon('people',19)+' Участники</button>'+
-   (['v16','v17','v18'].includes(roomVersion)&&state.host===me?.id&&!player.bankrupt?'<button type="button" class="kick-player" data-action="kick-player" data-player="'+esc(player.id)+'">'+'Исключить из партии</button>':'');
+   pop.innerHTML='<div class="player-popover-head"><strong>'+esc(player.name||player.character)+'</strong><button type="button" data-action="close-player-actions" aria-label="Закрыть">×</button></div>'+(!playerOnline(player)||player.bankrupt||state.you.bankrupt?'<p>Обмен недоступен</p>':'<button type="button" class="primary" data-action="trade-with" data-player="'+esc(player.id)+'">'+svgIcon('trade',20)+' Обмен / подарок</button>')+'<button type="button" data-action="open-sheet" data-sheet="players">'+svgIcon('people',19)+' Участники</button>'+
+   (['v16','v17','v18','v19'].includes(roomVersion)&&state.host===me?.id&&!player.bankrupt?'<button type="button" class="kick-player" data-action="kick-player" data-player="'+esc(player.id)+'">'+'Исключить из партии</button>':'');
    btn.closest('.player-seats')?.append(pop);sound.play('open');pop.querySelector('button')?.focus({preventScroll:true});return;
   }
   if(action==='close-player-actions'){app.querySelector('.player-popover')?.remove();return;}
@@ -921,7 +944,8 @@ app.addEventListener('click',event=>{
  if(action==='black-inspect')return request({type:'black_inspect',lotId:btn.dataset.id});
  if(action==='black-withdraw')return request({type:'black_withdraw',lotId:btn.dataset.id});
  if(action==='broker-buy')return request({type:'broker_buy'});
- if(action==='start')return request({type:'start'});
+ if(action==='return-lobby')return request({type:'return_lobby'});
+  if(action==='start')return request({type:'start'});
  if(action==='inspect')return request({type:'inspect'});
  if(action==='withdraw')return request({type:'withdraw_bid'});
  if(action==='cancel')return request({type:'cancel'});

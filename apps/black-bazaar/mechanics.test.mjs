@@ -1499,3 +1499,65 @@ test('Repacked items keep their original name private in the sale journal',()=>{
  assert.ok(view.log[0].includes('«Тёмная реликвия»'));
  assert.ok(!view.log[0].includes('«'+original+'»'));
 });
+
+test('Nine cosmetic avatars are individually selectable, duplicable and bound to the requesting seat',()=>{
+ const members=Array.from({length:6},(_,i)=>({id:'avatar-'+i,name:'Проверенный ник '+i}));
+ const {state}=game.createRoom({player:members[0]});
+ game.onJoin({state,players:members,player:members[5]});
+ const avatars=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
+ for(let i=0;i<6;i++){
+   const prior=state.revision;
+   const answer=game.onMessage({state,player:members[i],payload:{type:'select_avatar',avatarId:avatars[i]}});
+   assert.equal(answer.events[0].type,'state');
+   if(state.players[i].avatarId!==avatars[i])throw Error('Avatar not applied');
+   assert.ok(state.revision>=prior);
+ }
+ const before=JSON.stringify(state.players);
+ for(const invalid of [null,undefined,0,[],{},'custom','mage<script>','../../mage','']){
+   const denied=game.onMessage({state,player:members[0],payload:{type:'select_avatar',avatarId:invalid}});
+   assert.equal(denied.events[0].type,'notice');
+   assert.equal(JSON.stringify(state.players),before);
+ }
+ game.onMessage({state,player:members[0],payload:{type:'select_avatar',avatarId:'old_man'}});
+ game.onMessage({state,player:members[1],payload:{type:'select_avatar',avatarId:'old_man'}});
+ assert.equal(state.players[0].avatarId,'old_man');
+ assert.equal(state.players[1].avatarId,'old_man','duplicates are allowed');
+ assert.equal(state.players[2].avatarId,'fluffy_monster','choosing avatar cannot modify someone else');
+ game.onMessage({state,player:members[0],payload:{type:'start'}});
+ assert.equal(state.phase,'play');
+ for(const p of state.contestants){
+  assert.equal(p.name,members.find(m=>m.id===p.id).name);
+  assert.equal(p.character,p.name,'trade log display name must be the verified nickname');
+  assert.equal(p.avatarId,state.players.find(m=>m.id===p.id).avatarId);
+ }
+ const view=game.viewForPlayer({state,player:members[0]});
+ assert.equal(view.players.length,6);
+ assert.ok(view.players.every(p=>p.name===p.character&&avatars.includes(p.avatarId)));
+ assert.ok(!view.players.some(p=>'quota' in p||'positiveTarget' in p));
+ const pre=JSON.stringify(state.contestants.map(p=>p.avatarId));
+ const denied=game.onMessage({state,player:members[0],payload:{type:'select_avatar',avatarId:'mage'}});
+ assert.equal(denied.events[0].type,'notice');
+ assert.equal(JSON.stringify(state.contestants.map(p=>p.avatarId)),pre);
+});
+test('Avatar selection persists when members rejoin and host returns to the lobby',()=>{
+ const players=[{id:'one',name:'Ник одного'},{id:'two',name:'Ник второго'}];
+ const {state}=game.createRoom({player:players[0]});
+ game.onJoin({state,players,player:players[1]});
+ game.onMessage({state,player:players[1],payload:{type:'select_avatar',avatarId:'flower'}});
+ game.onJoin({state,players,player:players[1]});
+ assert.equal(state.players.find(p=>p.id==='two').avatarId,'flower');
+ game.onMessage({state,player:players[0],payload:{type:'start'}});
+ assert.equal(state.contestants.find(p=>p.id==='two').avatarId,'flower');
+ state.phase='done';
+ state.ranking=[...state.contestants.map(p=>({id:p.id,name:p.name,avatarId:p.avatarId}))];
+ const denied=game.onMessage({state,player:players[1],payload:{type:'return_lobby'}});
+ assert.equal(denied.events[0].type,'notice','non-host cannot return to lobby');
+ assert.equal(state.phase,'done');
+ game.onMessage({state,player:players[0],payload:{type:'return_lobby'}});
+ assert.equal(state.phase,'lobby');
+ assert.equal(state.players.find(p=>p.id==='two').avatarId,'flower');
+ game.onMessage({state,player:players[1],payload:{type:'select_avatar',avatarId:'many_eyed_cat'}});
+ assert.equal(state.players.find(p=>p.id==='two').avatarId,'many_eyed_cat');
+ game.onMessage({state,player:players[0],payload:{type:'start'}});
+ assert.equal(state.contestants.find(p=>p.id==='two').avatarId,'many_eyed_cat');
+});
