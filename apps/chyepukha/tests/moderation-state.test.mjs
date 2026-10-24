@@ -89,3 +89,8 @@ test('reconnection never sends game commands before room_joined',()=>{
  assert.match(client,/reconnect-banner/);
  assert.match(client,/button\.disabled=true/);
 });
+
+test('offline shell precaches the new moderation dependency',()=>{
+ const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+ assert.match(sw,/\.\/moderation-state\.js/);
+});
