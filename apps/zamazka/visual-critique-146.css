@@ -455,3 +455,20 @@ html[data-zamazka-appearance="new"] #screen>.museum-home .museum-wheel{
   max-width:calc(100% - 14px);font-size:11px;padding:5px 9px;
  }
 }
+
+/* A missing sealed ballot is an exhibition omission, not a secret-revealing
+   fallback. Present it plainly without covering the round gallery. */
+#screen>.review-phase .ballot-skipped-note,
+#screen>.phase-page .ballot-skipped-note{
+ width:calc(100% - 24px);max-width:820px;margin:12px auto;
+ padding:11px 15px;border:1px solid #bd9969;border-left:4px solid #a98653;
+ background:#ebdfc9;color:#4d3728;font:500 13px/1.45 system-ui,sans-serif;
+ box-shadow:0 3px 10px #26170917;
+}
+#screen>.expert-phase .ballot-fallback-notice{
+ max-width:780px;padding:8px 12px;border:1px solid #b39368;
+ color:#5d422d;background:#ecdfca;font-size:12px;line-height:1.4;
+}
+@media(max-width:600px){
+ #screen>.phase-page .ballot-skipped-note{font-size:12px;margin:7px auto;padding:9px 12px}
+}
