@@ -489,7 +489,8 @@ const TEAM_SCORE_TEMPLATE = {
     lines: 0,
     level: 1,
     comboChain: 0,
-    lastClearDetail: null
+    lastClearDetail: null,
+    contributions: []
 };
 
 function computeBoardWidth(numPlayers) {
@@ -572,10 +573,28 @@ function createGamepadButtonState() {
 }
 
 function resetSharedStats() {
-    gameState.sharedStats = { ...TEAM_SCORE_TEMPLATE };
+    gameState.sharedStats = { ...TEAM_SCORE_TEMPLATE,
+      contributions:Array.from({length:gameState.numPlayers},()=>({cellsCleared:0,linesHelped:0,finishes:0,returns:0})) };
     gameState.sharedStatsDirty = true;
 }
 
+// Attribution never modifies team scoring or the conditions for re-entry.
+function creditClearedRows(rows,finisherId){
+    const stats=gameState.sharedStats.contributions;
+    if(!Array.isArray(stats)||!rows.length)return;
+    for(const row of rows){
+        const owners=new Set();
+        for(const tile of row.cells){
+            const owner=tile-1;
+            if(Number.isInteger(owner)&&stats[owner]){
+                stats[owner].cellsCleared++;
+                owners.add(owner);
+            }
+        }
+        for(const owner of owners)stats[owner].linesHelped++;
+        if(stats[finisherId])stats[finisherId].finishes++;
+    }
+}
 function setRandomSeed(seed) {
     gameState.randomSeed = normalizeSeed(seed);
     gameState.rng = createPrng(gameState.randomSeed);
@@ -801,6 +820,10 @@ class Player {
     resumeFromGate(){
         if(!this.blocked||gameState.isGameOver||!laneHasClearance(this))return false;
         this.gameOver=false;this.blocked=false;this.spawnPiece();
+        if(!this.gameOver&&gameState.sharedStats.contributions?.[this.id]){
+            gameState.sharedStats.contributions[this.id].returns++;
+            gameState.sharedStatsDirty=true;
+        }
         return !this.gameOver;
     }
 
@@ -960,6 +983,7 @@ class Player {
             return;
         }
 
+        creditClearedRows(clearedRows,this.id);
         const comboStep = gameState.sharedStats.comboChain || 0;
         const comboMultiplier = 1 + STREAK_BONUS_STEP * comboStep;
         const multiMultiplier = 1 + MULTI_LINE_BONUS_STEP * (linesCleared - 1);
