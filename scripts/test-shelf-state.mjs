@@ -108,7 +108,7 @@ assert.equal(newTab.get().recents['alice-game'],777);
 await newTab.setAccount(bob);
 assert.deepEqual(newTab.get().favorites, ['bob-game'], 'second account shelf restored');
 await newTab.setAccount(null);
-assert.deepEqual(newTab.get().favorites, ['rivet'], 'guest shelf survives logout without account data');
+assert.deepEqual(newTab.get().favorites, ['arena-shift','rivet','zastava'], 'guest shelf restores persisted device preferences without account data');
 assert.equal(newTab.getStorageKey(),'pocket-works:shelf:v2');
 assert.equal(indexed.rows.get('personal-shelf:account:'+alice).data.favorites[0],'alice-game');
 assert.equal(indexed.rows.get('personal-shelf:account:'+bob).data.favorites[0],'bob-game');
