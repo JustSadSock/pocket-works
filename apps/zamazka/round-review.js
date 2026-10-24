@@ -6,6 +6,19 @@ const archiveViewState={scale:1,dx:0,dy:0,legacyFrame:false};
 export function closeRoundViewer(){
  if(viewerCleanup){const stop=viewerCleanup;viewerCleanup=null;stop();}
 }
+export function rasterAuditCaption(audit){
+ if(!audit)return '';
+ const matches=Math.max(0,Number(audit.matches)||0),mismatches=Math.max(0,Number(audit.mismatches)||0);
+ if(!matches&&!mismatches)return 'Пиксельная сверка пока не проведена';
+ return 'Независимая сверка: '+matches+' совпадений, '+mismatches+' расхождений';
+}
+export function updateRasterAuditMarkers(root,view){
+ if(!view?.rasterBallots)return;
+ for(const node of root?.querySelectorAll?.('[data-raster-audit]')||[]){
+  const g=view.gallery?.[Number(node.dataset.rasterAudit)];
+  if(g)node.textContent=rasterAuditCaption(g.rasterAudit);
+ }
+}
 export function roundReviewMarkup(v,hostId,arts,escapeText){
  const works=v.gallery||[],last=v.round>=v.rounds,host=v.host===hostId;
  const cards=works.map((g,i)=>{
@@ -13,7 +26,7 @@ export function roundReviewMarkup(v,hostId,arts,escapeText){
   const votes=Object.values(g.votes||{}).filter(Array.isArray),answer=v.selected.indexOf(g.art);
   const correct=votes.reduce((total,row)=>total+(row[answer]||0),0);
   const missed=votes.reduce((total,row)=>total+row.reduce((a,b)=>a+b,0)-(row[answer]||0),0);
-  return '<button class="round-art-card" type="button" data-review-open="'+i+'" aria-label="Открыть работу '+escapeText(g.name)+': '+escapeText(arts[g.art]?.title||'картина')+'"><div class="zam-exhibit-stage" data-exhibit-stage><div class="round-art-image zam-exhibit-rim">'+exhibitFacets()+'<canvas data-review-canvas="'+i+'" aria-hidden="true"></canvas></div>'+exhibitPlaque(arts[g.art]?.title||'Картина',g.name+' · '+correct+' верно · '+missed+' мимо')+'</div></button>';
+  return '<button class="round-art-card" type="button" data-review-open="'+i+'" aria-label="Открыть работу '+escapeText(g.name)+': '+escapeText(arts[g.art]?.title||'картина')+'"><div class="zam-exhibit-stage" data-exhibit-stage><div class="round-art-image zam-exhibit-rim">'+exhibitFacets()+'<canvas data-review-canvas="'+i+'" aria-hidden="true"></canvas></div>'+exhibitPlaque(arts[g.art]?.title||'Картина',g.name+' · '+correct+' верно · '+missed+' мимо')+(g.rasterAudit?'<small class="raster-audit-readout" data-raster-audit="'+i+'">'+escapeText(rasterAuditCaption(g.rasterAudit))+'</small>':'')+'</div></button>';
  }).join('');
  const countLabel=works.length+' '+(works.length===1?'работа':works.length<5?'работы':'работ');
  const columns=works.length<=4?Math.max(1,works.length):works.length<=6?3:4;

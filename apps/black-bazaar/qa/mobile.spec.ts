@@ -271,3 +271,46 @@ test('server-driven redraw keeps the focused price field and its edited value',a
  await expect(price).toHaveValue('73');
  await expect(price).toBeFocused();
 });
+
+test('incoming direct trade opens the actual response panel from a paper inbox slip',async({page})=>{
+ await page.setViewportSize({width:320,height:568});
+ await page.goto(game);await scene(page,'deals');
+ const slip=page.locator('.inbox-ticket');
+ await expect(slip).toBeVisible();
+ await expect(slip).toContainText('Предложение от Борис');
+ await expect(page.locator('.workspace-tab[data-sheet="deals"] .tab-count')).not.toBeHidden();
+ await slip.click();
+ await expect(page.locator('[data-sheet-page="deals"]')).toBeVisible();
+ await expect(page.locator('button[data-action="deal-accept"]')).toHaveCount(1);
+ await expect(page.locator('.workspace-tab[data-sheet="deals"] .tab-count')).toBeHidden();
+ const bounds=await page.evaluate(()=>{
+  const ticket=document.querySelector('.inbox-ticket')!.getBoundingClientRect();
+  const pane=document.querySelector('.workspace-panel')!.getBoundingClientRect();
+  const content=document.querySelector('.sheet-content')!.getBoundingClientRect();
+  return {inside:ticket.left>=pane.left-3&&ticket.right<=pane.right+3,
+   top:ticket.top,bottom:ticket.bottom,panelTop:pane.top,contentHeight:content.height,
+   scrollWidth:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth};
+ });
+ expect(bounds.inside).toBe(true);
+ expect(bounds.top).toBeGreaterThanOrEqual(bounds.panelTop-3);
+ expect(bounds.contentHeight).toBeGreaterThan(30);
+ expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.viewport+2);
+});
+
+test('sealed counteroffer goes straight to the expanded anonymous market without revealing a name',async({page})=>{
+ await page.setViewportSize({width:375,height:667});
+ await page.goto(game);await scene(page,'black');
+ const ticket=page.locator('.inbox-ticket');
+ await expect(ticket).toBeVisible();
+ await expect(ticket).toContainText('Посредник');
+ await expect(ticket).not.toContainText('Борис');
+ await expect(page.locator('.workspace-tab[data-sheet="market"] .tab-count')).not.toBeHidden();
+ await ticket.click();
+ await expect(page.locator('[data-sheet-page="market"]')).toBeVisible();
+ const card=page.locator('#bazaar-counter-black-lot-1');
+ await expect(card).toBeVisible();
+ await expect(card.locator('.anonymous-counter [data-action="black-counter-accept"]')).toBeEnabled();
+ await expect(card.locator('.anonymous-counter')).toContainText('встречную цену');
+ await expect(page.locator('.workspace-tab[data-sheet="market"] .tab-count')).toBeHidden();
+ await expect(page.locator('[data-sheet-page="market"] details.quiet-details')).toHaveAttribute('open','');
+});

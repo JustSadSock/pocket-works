@@ -12,7 +12,7 @@ import {BRUSH_CURSOR_NAMES,brushCursorSVG,getBrushCursorStyle,setBrushCursorStyl
 import {finaleVerdictMarkup,finaleResultsMarkup,finaleRevealAuditMarkup} from './finale-ui.js';
 import {admissionMarkup,connectionMarkup,setConnectionStep,preparingMarkup,updateArtLoad,updateReady,waitingMarkup,updateWaiting} from './passage-ui.js';
 import {cabinetMarkup,achievementDetailMarkup,settingsMarkup,setSettingsTab} from './atelier-collection.js';
-import {roundReviewMarkup,renderRoundThumbnails,openRoundViewer,closeRoundViewer} from './round-review.js';
+import {roundReviewMarkup,renderRoundThumbnails,openRoundViewer,closeRoundViewer,updateRasterAuditMarkers} from './round-review.js';
 import {getSavedEmblem,storeEmblem} from './emblem.js';
 import {createMuseumMotion} from './museum-motion.js';
 import {installGalleryLighting} from './museum-lighting.js';
@@ -30,13 +30,14 @@ import {zamazkaStore} from './storage.js';
 import {DEBUG_QUERY,DEBUG_SCREENS,isDebugKey,debugId,debugMatch,mountDebugGallery} from './debug-gallery.js';
 import {exhibitFacets,exhibitPlaque,mountExhibitFrames} from './exhibition-ui.js';
 import {paintVoteSurfaces} from './vote-surfaces.js';
-import {composeBallotRaster,ballotRasterPackets} from './ballot-raster.js';
+import {composeBallotRaster,ballotRasterPackets,ballotRasterChecksum} from './ballot-raster.js';
+import {auditRevealedBallot} from './ballot-audit.js';
 import {createAnonymousBallotPainter} from './ballot-sprite-view.js';
 import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.35',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.36',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -353,7 +354,7 @@ function home(skipLeave=false){
  if(!IS_DEBUG_FRAME)clearTabGuest();
  if(net){if(!skipLeave)try{net.leaveRoom()}catch{}net.close();net=null}
  clearTimeout(legacyDossierTimer);legacyDossierActive='';legacyDossiers.clear();
- view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';preparedRound='';preparingError='';loadedRound='';pendingVote=null;pendingBallot=null;if(!IS_DEBUG_FRAME)persistVote();connectionStatus('off');
+ view=null;roomId='';practice=null;boardResync=false;roomModuleVersion='v3';preparedRound='';preparingError='';loadedRound='';pendingVote=null;pendingBallot=null;voteAuditRasters.clear();auditStarted.clear();auditOutgoing.clear();if(!IS_DEBUG_FRAME)persistVote();connectionStatus('off');
  change('<section class="museum-home">'+
   
   '<div class="museum-headline"><h1>Подделай<br><em>шедевр.</em></h1></div>'+
@@ -673,6 +674,53 @@ function maybeSendAnonymousBallot(){
  })();
 }
 
+// A voting image is cached only on the spectator device. During reveal the
+// server discloses authoritative strokes, which an independent browser can
+// replay and compare. Reports NEVER change scores or apply punishments.
+const voteAuditRasters=new Map(),auditStarted=new Set(),auditOutgoing=new Map();
+const auditKey=(round,id)=>roomId+':'+round+':'+id;
+function rememberAuditRaster(state){
+ if(!state?.rasterBallots||state.phase!=='voting'||!state.author?.id||
+    typeof state.ballotSprite!=='string'||Number(roomModuleVersion.slice(1))<43)return;
+ const key=auditKey(state.round,state.author.id);
+ voteAuditRasters.set(key,state.ballotSprite);
+ while(voteAuditRasters.size>8)voteAuditRasters.delete(voteAuditRasters.keys().next().value);
+}
+function deliverRasterAudits(){
+ if(!net||connectionLost||!view)return;
+ for(const [key,payload] of auditOutgoing){
+  if(payload.round!==view.round){auditOutgoing.delete(key);continue}
+  if(!['reveal','round-review','results'].includes(view.phase))continue;
+  if(view.phase==='reveal'&&view.author?.id!==payload.targetId)continue;
+  try{net.sendGame({type:'ballot_audit',...payload});auditOutgoing.delete(key)}catch{}
+ }
+}
+function startRasterAudit(v,g,turn){
+ if(!v?.rasterBallots||Number(roomModuleVersion.slice(1))<43||g.id===me?.id)return;
+ const key=auditKey(v.round,g.id),sprite=voteAuditRasters.get(key);
+ if(!sprite||auditStarted.has(key))return;
+ auditStarted.add(key);
+ const identity={room:roomId,round:v.round,targetId:g.id,turn};
+ // Wait until the visible comparison canvas has been mounted first.
+ void (async()=>{
+  await new Promise(resolve=>setTimeout(resolve,950));
+  if(roomId!==identity.room||document.hidden)return;
+  const result=await auditRevealedBallot({
+   sprite,selected:[...v.selected],
+   assignment:{art:g.art,variation:g.variation,strokes:g.strokes},
+   render:renderArtwork
+  });
+  voteAuditRasters.delete(key);
+  if(roomId!==identity.room||result.status==='unavailable')return;
+  auditOutgoing.set(key,{
+   round:identity.round,turn:identity.turn,targetId:identity.targetId,
+   spriteChecksum:ballotRasterChecksum(sprite),
+   mae:result.mae,patch:result.patch,differing:result.differing
+  });
+  deliverRasterAudits();
+ })();
+}
+
 function voteToken(v){return [roomId,v.round,v.turn].join(':')}
 // Identify the exact author, round and ballot to prevent delayed votes.
 function voteContext(v){return {round:v.round,turn:v.turn,targetId:v.author?.id}}
@@ -835,12 +883,20 @@ function reveal(local=false){
  Promise.all([renderArtwork(original,g.art,0,null,false),renderArtwork(source,g.art,g.variation,g.strokes||[],true)]).then(()=>{
   stage?.closest('.reveal-phase')?.classList.add('is-composed');
   finishVoteTransition();
- }).catch(()=>{stage?.closest('.reveal-phase')?.classList.add('is-composed');finishVoteTransition()});
+ }).catch(()=>{
+  stage?.closest('.reveal-phase')?.classList.add('is-composed');
+  finishVoteTransition();
+ }).finally(()=>{
+  // Audit is secondary work. The actual reveal must paint and transition
+  // before the spectator begins five additional decoding/replay passes.
+  if(!local)startRasterAudit(v,g,index);
+ });
 }
 function roundReview(){
  if(!view?.gallery?.length)return;
  const v=view;
  change(roundReviewMarkup(v,me?.id,ARTS,esc),'round-review');
+ updateRasterAuditMarkers(screen,v);
  if(v.rasterBallots&&v.skippedBallots?.length){
   const missing=new Set(v.skippedBallots);
   const labels=v.participants.filter(p=>missing.has(p.id)).map(p=>p.name).join(', ');
@@ -1145,6 +1201,8 @@ async function connect(mode){
      if(event?.type==='state'){
        serverClock.observeState(event.payload?.serverNow);
        view=event.payload;
+       rememberAuditRaster(view);
+       deliverRasterAudits();
        if(pendingVote&&(view.phase!=='voting'||voteToken(view)!==pendingVote.token||view.voted?.includes(me?.id))){pendingVote=null;persistVote()}
        if(view?.mine&&view.done?.includes(me?.id)&&!view.incompleteSubmissions?.includes(me?.id))confirmSubmission(view.mine.art,view.round,view.mine.strokes?paintingChecksum(view.mine.strokes):null);
        if(view?.incompleteSubmissions?.includes(me?.id)&&pendingSubmit?.round===view.round){
@@ -1158,6 +1216,13 @@ async function connect(mode){
           pendingSubmit?.room===roomId&&pendingSubmit.round===view.round){
          const retryMs=view.deadline&&networkNow()>=view.deadline?3500:15000;
          if(!pendingSubmit.sentAt||Date.now()-pendingSubmit.sentAt>retryMs)attemptSubmission();
+       }
+     }
+     else if(event?.type==='audit_update'){
+       if(view?.round===event.payload?.round&&Array.isArray(view.gallery)){
+        const item=view.gallery.find(g=>g?.id===event.payload.targetId);
+        if(item)item.rasterAudit=event.payload.counts;
+        updateRasterAuditMarkers(screen,view);
        }
      }
      else if(event?.type==='ballot_saved'){
@@ -1606,6 +1671,7 @@ function tick(){
   const takeover=screen.querySelector('[data-action="claim-host"]:disabled');if(takeover)takeover.disabled=false;
  }
  if(pendingVote&&!view?.paused)attemptVote();
+ if(!view?.paused)deliverRasterAudits();
  if(!view?.paused)maybeSendAnonymousBallot();
  const v=practice||view,clock=document.querySelector('#clock');
  const timed=(page==='preview'||page==='drawing')&&

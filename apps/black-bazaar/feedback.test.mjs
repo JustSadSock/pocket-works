@@ -77,3 +77,17 @@ test('Auction tabletop shows asking price, live bid count, and urgent deadline t
 });
 
 test('Object transfers use measured stage and inventory coordinates',()=>{const src=readFileSync(new URL('./app.js',import.meta.url),'utf8');assert.match(src,/getBoundingClientRect/);assert.match(src,/--from-x/);assert.match(src,/--to-y/);});
+
+test('Incoming deal replacement alerts the recipient but not the sender',()=>{
+ const old=snapshot({deals:[{id:'deal-1',from:'me',to:'other'}]});
+ const next={...old,revision:13,deals:[{id:'deal-2',from:'other',to:'me'}]};
+ assert.deepEqual(classifyFeedback(old,next,'me'),{kind:'bid',label:'Тебе предложили обмен'});
+ assert.equal(classifyFeedback(old,{...old,revision:13,deals:[{id:'deal-2',from:'me',to:'other'}]},'me'),null);
+});
+test('Only the buyer receives an alert about a fresh anonymous counteroffer',()=>{
+ const prior={id:'black-1',mine:false,myBid:{gold:50},myCounter:null};
+ const old=snapshot({blackMarket:true,blackLots:[prior]});
+ const offered={...old,revision:13,blackLots:[{...prior,myCounter:{id:'c-2',offer:{gold:75}}}]};
+ assert.deepEqual(classifyFeedback(old,offered,'me'),{kind:'bid',label:'Посредник принёс встречную цену'});
+ assert.equal(classifyFeedback(offered,offered,'me'),null);
+});

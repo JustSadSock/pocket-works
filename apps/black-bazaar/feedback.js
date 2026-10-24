@@ -45,7 +45,13 @@ export function classifyFeedback(previous,next,myId){
      const prev=previousBlack.find(x=>x.id===l.id);
      return prev&&(l.bidCount>prev.bidCount||!same(l.myBid,prev.myBid)&&l.myBid);
    }))return fx('bid','Новая ставка');
- if(asArray(next.deals).length>asArray(previous.deals).length)return fx('bid','Обмен предложен');
+ // Counteroffers often replace a previous deal one-for-one, so array length
+ // alone cannot announce the message addressed to this player.
+ if(asArray(next.deals).some(d=>d.to===myId&&!asArray(previous.deals).some(p=>p.id===d.id)))
+  return fx('bid','Тебе предложили обмен');
+ if(nextBlack.some(l=>l.myCounter?.id&&!previousBlack.some(p=>
+   p.id===l.id&&p.myCounter?.id===l.myCounter.id)))
+  return fx('bid','Посредник принёс встречную цену');
  if(matching(/На анонимном рынке появился новый лот/))return fx('reveal','Новый лот');
  if(!previous.listing&&next.listing)return fx('reveal','Новый лот');
  if(previous.round!==next.round)return fx('round','Новый раунд');

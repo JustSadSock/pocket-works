@@ -17,6 +17,9 @@ on:
       - 'apps/zamazka/qa/vote-aspect-fairness.mjs'
       - 'apps/zamazka/ballot-raster.js'
       - 'apps/zamazka/ballot-sprite-view.js'
+      - 'apps/zamazka/ballot-audit.js'
+      - 'apps/zamazka/qa/ballot-audit.mjs'
+      - 'apps/zamazka/round-review.js'
       - 'apps/zamazka/qa/anonymous-ballot.mjs'
       - 'apps/zamazka/passage-ui.js'
       - 'apps/zamazka/editor.js'
@@ -106,6 +109,8 @@ jobs:
         run: node apps/zamazka/qa/vote-uniform-rendering.mjs && node apps/zamazka/qa/vote-aspect-fairness.mjs
       - name: Verify server-scored anonymous five-artwork raster ballots
         run: node apps/zamazka/qa/anonymous-ballot.mjs
+      - name: Audit disclosed WebP pixels on independent spectator clients
+        run: node apps/zamazka/qa/ballot-audit.mjs
       - name: Prevent stale fill raster after stroke compaction
         run: node apps/zamazka/qa/editor-raster-invalidation.mjs
       - name: Preserve line corners during brush budget compaction
@@ -137,6 +142,7 @@ jobs:
           node --check apps/zamazka/app.js
           node --check apps/zamazka/ballot-raster.js
           node --check apps/zamazka/ballot-sprite-view.js
+          node --check apps/zamazka/ballot-audit.js
           node --check apps/zamazka/draft-transfer.js
           node --check pocketnet/hub.mjs
       - name: Test large paintings and frame limits

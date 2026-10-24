@@ -92,6 +92,36 @@ try{
   // starting layout rather than a mutated post-trade or open-tabs state.
   if(['small','phone','desktop'].includes(id))
    await frame.locator('body').screenshot({path:out+'/'+scene+'-'+id+'-baseline.png'});
+  if(scene==='deals'||scene==='black'){
+   const slip=frame.locator('.inbox-ticket');
+   if(await slip.count()!==1)report.issues.push('incoming proposal missing one-tap paper notification');
+   else{
+    const layout=await frame.evaluate(()=>{
+     const a=document.querySelector('.inbox-ticket').getBoundingClientRect();
+     const b=document.querySelector('.workspace-panel').getBoundingClientRect();
+     const c=document.querySelector('.sheet-content').getBoundingClientRect();
+     return {inside:a.left>=b.left-3&&a.right<=b.right+3&&a.top>=b.top-3&&a.bottom<=b.bottom+3,
+      content:c.height,scroll:document.documentElement.scrollWidth,width:document.documentElement.clientWidth};
+    });
+    if(!layout.inside||layout.content<30||layout.scroll>layout.width+2)
+     report.issues.push('inbox slip clips or squeezes workspace '+JSON.stringify(layout));
+    const title=await slip.innerText();
+    if(scene==='black'&&(!title.includes('Посредник')||title.includes('Борис')))
+     report.issues.push('anonymous offer has wrong message');
+    if(scene==='deals'&&!title.includes('Предложение от'))
+     report.issues.push('private trade notification lacks sender context');
+    await slip.click({timeout:4000});
+    const expected=scene==='black'?'market':'deals';
+    if(!await frame.locator('[data-sheet-page="'+expected+'"]').isVisible())
+     report.issues.push('inbox slip failed to open response panel');
+    if(scene==='black'){
+     const counter=frame.locator('#bazaar-counter-black-lot-1 .anonymous-counter button[data-action="black-counter-accept"]');
+     if(await counter.count()!==1||!await counter.isVisible())
+      report.issues.push('anonymous counter still hidden after opening inbox');
+    }else if(await frame.locator('[data-sheet-page="deals"] button[data-action="deal-accept"]').count()!==1)
+     report.issues.push('direct inbox did not reveal an actionable offer');
+   }
+  }
   // Exercise the real tab delegation, not only static scene geometry.
   if(!['home','lobby','done'].includes(scene)){
    const tabs=await frame.evaluate(()=>{

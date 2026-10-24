@@ -27,7 +27,7 @@ jobs:
       - name: Install isolated Playwright client
         run: npm install --prefix /tmp/bazaar-playwright --no-save --no-audit --no-fund playwright@1.64.0
       - name: Run authoritative market and isolated UI fixture tests
-        run: node --test apps/black-bazaar/mechanics.test.mjs apps/black-bazaar/debug-state.test.mjs apps/black-bazaar/feedback.test.mjs
+        run: node --test apps/black-bazaar/mechanics.test.mjs apps/black-bazaar/debug-state.test.mjs apps/black-bazaar/feedback.test.mjs apps/black-bazaar/inbox.test.mjs apps/black-bazaar/bootstrap.test.mjs
       - name: Start local static preview
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/bazaar-preview.log 2>&1 &
