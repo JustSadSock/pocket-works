@@ -39,7 +39,8 @@ test('fractional cell layout matches one rail to the rendered canvas width witho
 
 test('previews fit inside the shared gantry; no duplicate visual cards or collision mutations',()=>{
   assert.match(js,/preview\.className='spawn-bay__preview'/);
-  assert.match(js,/preview\.append\(next\)/);
+  assert.match(js,/preview\.append\(next,held\)/);
+  assert.match(js,/held\.className='spawn-bay__held'/);
   assert.match(js,/bay\.append\(label,preview,mouth\)/);
   assert.match(css,/#spawn-rail::before/);
   assert.match(css,/background-size:var\(--bay-cell\) var\(--bay-cell\)/);
