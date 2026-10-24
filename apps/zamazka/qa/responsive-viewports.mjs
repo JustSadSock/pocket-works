@@ -78,7 +78,12 @@ try {
       assert(size.sw<=size.cw+2,`${viewport.width}x${viewport.height} ${screenName}: horizontal overflow ${JSON.stringify(size)}`);
       if(screenName==='home'){
         const action=await rect(page,'.start-restoration');
-        assert(action.width>=Math.min(viewport.width*.63,410),`${viewport.width}: primary action is tiny`);
+        // 700–1049px tablets use a real two-column museum, not the
+        // full-width phone CTA. Require a substantial share of its column.
+        const minAction=viewport.width>=700&&viewport.width<1050
+          ?Math.min(viewport.width*.36,330):Math.min(viewport.width*.63,410);
+        assert(action.width>=minAction,
+          `${viewport.width}: primary action is too narrow (${action.width.toFixed(1)}px; expected ${minAction.toFixed(1)}px)`);
         assert(action.height>=44,`${viewport.width}: primary action touch target`);
         if(viewport.width>=1200&&viewport.height>=620){
           const display=await rect(page,'.museum-display');
