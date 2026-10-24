@@ -7,6 +7,7 @@ import WebSocket from '../../../pocket-server/node_modules/ws/index.js';
 const base=process.env.POCKETNET_TEST_URL||'http://127.0.0.1:8787';
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const event=(phase,check=()=>true)=>p=>p.event?.type==='state'&&p.event.payload?.phase===phase&&check(p.event.payload);
+const sendGame=async(client,payload)=>{client.send('game_message',{payload});await delay(200)};
 async function health(){
  for(let i=0;i<100;i++){
   try{
@@ -44,10 +45,11 @@ async function actor(token){
    const i=messages.findIndex(p=>p.type===type&&match(p));
    if(i>=0)return Promise.resolve(messages.splice(i,1)[0]);
    return new Promise((resolve,reject)=>{
+    const callsite=new Error().stack?.split('\n').slice(2,4).join(' / ')||'?';
     const w={type,match,resolve,reject};
     w.timer=setTimeout(()=>{
      const i=waiters.indexOf(w);if(i!==-1)waiters.splice(i,1);
-     reject(Error('Missing '+type+': '+JSON.stringify(messages.slice(-4)).slice(0,1500)));
+     reject(Error('Missing '+type+' at '+callsite+': '+JSON.stringify(messages.slice(-5)).slice(0,1800)));
     },timeout);
     waiters.push(w);
    });
@@ -73,42 +75,42 @@ try{
  const joined=await guest.next('room_joined');
  assert.equal(joined.state.players.length,2);
  const scene={id:'qa-movie',title:'Test Clip',start:0,duration:14,roles:['Актёр','Режиссёр'],custom:true};
- host.send('game_message',{payload:{type:'scene',scene}});
+ await sendGame(host,{type:'scene',scene});
  const selected=await guest.next('game_event',event('lobby',s=>s.scene.id===scene.id));
  const epoch=selected.event.payload.mediaEpoch;
  assert(epoch>=2);
  assert.equal(selected.event.payload.mediaReady[guest.id],false);
- host.send('game_message',{payload:{type:'start'}});
+ await sendGame(host,{type:'start'});
  const denied=await host.next('game_event',p=>p.event?.type==='notice');
  assert.match(String(denied.event.payload),/видео/i);
- guest.send('game_message',{payload:{type:'media_ready',scene:scene.id,epoch:epoch-1}});
- guest.send('game_message',{payload:{type:'sync'}});
+ await sendGame(guest,{type:'media_ready',scene:scene.id,epoch:epoch-1});
+ await sendGame(guest,{type:'sync'});
  const stale=await guest.next('game_event',event('lobby',s=>s.scene.id===scene.id));
  assert.equal(stale.event.payload.mediaReady[guest.id],false);
- guest.send('game_message',{payload:{type:'media_ready',scene:scene.id,epoch}});
+ await sendGame(guest,{type:'media_ready',scene:scene.id,epoch});
  await guest.next('game_event',event('lobby',s=>s.mediaReady[guest.id]===true));
- host.send('game_message',{payload:{type:'start'}});
+ await sendGame(host,{type:'start'});
  const started=await host.next('game_event',event('recording'));
  assert.equal(started.event.payload.phase,'recording');
- guest.send('game_message',{payload:{type:'ready',count:0}});
+ await sendGame(guest,{type:'ready',count:0});
  assert.match(String((await guest.next('game_event',p=>p.event?.type==='notice')).event.payload),/фрагментов/i);
- host.send('game_message',{payload:{type:'ready',count:1}});
- guest.send('game_message',{payload:{type:'ready',count:1}});
+ await sendGame(host,{type:'ready',count:1});
+ await sendGame(guest,{type:'ready',count:1});
  await host.next('game_event',event('recording',s=>s.ready[host.id]&&s.ready[guest.id]));
- host.send('game_message',{payload:{type:'reveal'}});
+ await sendGame(host,{type:'reveal'});
  await guest.next('game_event',event('premiere'));
  const meta={id:'guest-voice-1',owner:guest.id,start:1,end:2,offset:0,epoch};
- guest.send('game_message',{payload:{type:'relay',to:host.id,data:{action:'begin',token:'qa-token-one',kind:'audio',size:1000,meta}}});
+ await sendGame(guest,{type:'relay',to:host.id,data:{action:'begin',token:'qa-token-one',kind:'audio',size:1000,meta}});
  const relay=await host.next('game_event',p=>p.event?.type==='relay');
  assert.equal(relay.event.payload.from,guest.id);
  assert.equal(relay.event.payload.data.meta.epoch,epoch);
- host.send('game_message',{payload:{type:'again'}});
+ await sendGame(host,{type:'again'});
  await guest.next('game_event',event('lobby',s=>s.mediaEpoch===epoch));
- host.send('game_message',{payload:{type:'scene',scene}});
+ await sendGame(host,{type:'scene',scene});
  const next=await guest.next('game_event',event('lobby',s=>s.mediaEpoch===epoch+1));
  assert.equal(next.event.payload.mediaReady[guest.id],false);
- guest.send('game_message',{payload:{type:'media_ready',scene:scene.id,epoch}});
- guest.send('game_message',{payload:{type:'sync'}});
+ await sendGame(guest,{type:'media_ready',scene:scene.id,epoch});
+ await sendGame(guest,{type:'sync'});
  assert.equal((await guest.next('game_event',event('lobby',s=>s.mediaEpoch===epoch+1))).event.payload.mediaReady[guest.id],false);
  console.log('PocketNet v3: authenticated join, scene receipts, ready, relay, repeat and epoch reset passed');
 }finally{
