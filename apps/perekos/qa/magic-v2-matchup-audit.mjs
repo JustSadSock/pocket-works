@@ -9,6 +9,7 @@ import {createMagicLoadout,grantEarnedMagicRune,applyMagicEdit,validateMagicStat
 
 export const SCHOOLS=Object.freeze(['stone','fire','storm']);
 export const PROFILES=Object.freeze(['starter','guard','pressure']);
+export const TACTICS=Object.freeze(['close','circle','range']);
 const MAGES={stone:'pebble',fire:'kindle',storm:'wire'};
 const PRESSURE={stone:'st_spikes',fire:'fi_lash',storm:'li_discharge'};
 const round=n=>Number(n.toFixed(3));
@@ -30,15 +31,17 @@ function profile(book,kind,school){
  assert.equal(validateMagicState(next).ok,true);
  return next;
 }
-function controls(self,enemy,seat,frame){
+function controls(self,enemy,seat,frame,tactic){
  const dx=enemy.x-self.x,dy=enemy.y-self.y,d=Math.hypot(dx,dy)||1;
- const chase=d>145?.67:d<80?-.33:.08;
- const strafe=(Math.floor(frame/210)+seat)%2===0?.46:-.46;
+ const goal=tactic==='close'?100:tactic==='circle'?175:250;
+ const chase=d>goal+30?.7:d<goal-25?-.62:.06;
+ const strafe=(Math.floor(frame/(tactic==='range'?155:210))+seat)%2===0?.46:-.46;
  return {x:dx/d*chase-dy/d*strafe,y:dy/d*chase+dx/d*strafe,
   aim:{x:enemy.x,y:enemy.y},attack:true,
   shield:frame%317===3,dash:frame%229===7};
 }
-export function simulate(left,right,kind,seed,frames=900){
+export function simulate(left,right,kind,seed,frames=900,tactic='close'){
+ assert.ok(TACTICS.includes(tactic));
  assert.ok(SCHOOLS.includes(left)&&SCHOOLS.includes(right));
  assert.ok(PROFILES.includes(kind)&&Number.isInteger(seed));
  const s=makeMagicV2Practice(left,seed);
@@ -50,7 +53,7 @@ export function simulate(left,right,kind,seed,frames=900){
  let elapsed=0,maxShots=0,maxMines=0,maxBarriers=0;
  for(let frame=0;frame<frames;frame++){
   const [a,b]=s.actors;
-  tick(s,controls(a,b,0,frame),STEP,controls(b,a,1,frame));
+  tick(s,controls(a,b,0,frame,tactic),STEP,controls(b,a,1,frame,tactic));
   elapsed=frame+1;
   maxShots=Math.max(maxShots,s.shots.length);
   maxMines=Math.max(maxMines,s.mines.length);
@@ -60,17 +63,17 @@ export function simulate(left,right,kind,seed,frames=900){
  }
  assert.equal(validState(s),true,'Invalid fixed-step Magic 2.0 state');
  const [a,b]=s.actors;
- return {left,right,profile:kind,seed,ticks:elapsed,
+ return {left,right,profile:kind,tactic,seed,ticks:elapsed,
   hp:[round(a.hp),round(b.hp)],shield:[round(a.shield),round(b.shield)],
   heat:[round(a.heat),round(b.heat)],
   knockout:a.hp<=0&&b.hp<=0?'double':a.hp<=0?'right':b.hp<=0?'left':'none',
   hpDelta:round(a.hp-b.hp),
   maxShots,maxMines,maxBarriers};
 }
-export function audit({seeds=[431,997],frames=900}={}){
+export function audit({seeds=[431,997],frames=900,tactics=TACTICS}={}){
  const matches=[];
- for(const kind of PROFILES)for(const seed of seeds)for(const left of SCHOOLS)for(const right of SCHOOLS){
-  matches.push(simulate(left,right,kind,seed,frames));
+ for(const tactic of tactics)for(const kind of PROFILES)for(const seed of seeds)for(const left of SCHOOLS)for(const right of SCHOOLS){
+  matches.push(simulate(left,right,kind,seed,frames,tactic));
  }
  const pairs=[];
  for(let i=0;i<SCHOOLS.length;i++)for(let j=i+1;j<SCHOOLS.length;j++){
@@ -79,14 +82,20 @@ export function audit({seeds=[431,997],frames=900}={}){
   const reversed=matches.filter(m=>m.left===b&&m.right===a);
   assert.equal(aligned.length,reversed.length);
   const neutral=aligned.map((m,k)=>(m.hpDelta-reversed[k].hpDelta)/2);
+  const byTactic=Object.fromEntries(tactics.map(tactic=>{
+   const subset=aligned.filter(m=>m.tactic===tactic);
+   const other=reversed.filter(m=>m.tactic===tactic);
+   const avg=subset.reduce((sum,m,k)=>sum+(m.hpDelta-other[k].hpDelta)/2,0)/subset.length;
+   return [tactic,round(avg)];
+  }));
   const advantage=round(neutral.reduce((x,y)=>x+y,0)/neutral.length);
-  pairs.push({a,b,samples:neutral.length,seatNeutralHpAdvantage:advantage,
+  pairs.push({a,b,samples:neutral.length,seatNeutralHpAdvantage:advantage,byTactic,
    warning:Math.abs(advantage)>20?'investigate':'within-observation-band'});
  }
  const seatAdvantage=round(matches.reduce((sum,m)=>sum+m.hpDelta,0)/matches.length);
  return {schema:1,kind:'deterministic-fixed-step-bot-proxy',rules:'Magic 2.0',
   description:'Not live PocketNet sessions; reports cannot establish human win rates.',
-  config:{schools:SCHOOLS,profiles:PROFILES,seeds,frames,seatOrders:'both'},
+  config:{schools:SCHOOLS,profiles:PROFILES,tactics,seeds,frames,seatOrders:'both'},
   samples:matches.length,seatOneMeanHpAdvantage:seatAdvantage,
   seatWarning:Math.abs(seatAdvantage)>15?'investigate':'within-observation-band',
   pairs,matches};
