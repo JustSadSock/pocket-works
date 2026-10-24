@@ -37,7 +37,8 @@
         "qa/editor-motion.spec.ts",
         "qa/finale-audio.spec.ts",
         "qa/room-safety-v5.spec.ts",
-        "qa/moderation-v6.spec.ts"
+        "qa/moderation-v6.spec.ts",
+        "qa/v7-critical.spec.ts"
       ]
     }
   ]
