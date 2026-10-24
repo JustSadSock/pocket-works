@@ -11,7 +11,7 @@ import {createDebugState,debugSetItem,debugCommand} from './debug-state.js';
 
 const debugPreview=new URLSearchParams(location.search).has('debugPreview');
 installMobileRuntime();
-if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.15.4',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.15.5',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -71,7 +71,7 @@ function specialLine(t){
 }
 let onlinePlayerIds=null;
 let net=null,me=null,state=null,roomId='',mode='home',connecting=false,connected=false;
-let roomVersion=debugPreview?'v17':null;
+let roomVersion=debugPreview?'v18':null;
 let name=(localStorage.getItem('black-bazaar:name')||'Игрок').slice(0,22);
 const decorativeGuests=['mage','mushroom','fluffy_monster','sheep_wolf','toy','prince','many_eyed_cat','flower','old_man'];
 let notice='';
@@ -235,7 +235,7 @@ function marketBlock(you,canAct){
  if(sellerIsMe){
   html+='<h3>Предложения покупателей</h3>'+
     (state.bids.length?state.bids.map(b=>'<div class="row"><span>'+esc(label(b.buyer))+' предлагает '+esc(amounts(b.offer))+'</span>'+
-     '<button type="button" data-action="accept" data-player="'+esc(b.buyer)+'">Принять</button></div>').join(''):'<p>Пока предложений нет.</p>')+
+     '<button type="button" data-action="accept" data-player="'+esc(b.buyer)+'" data-bid="'+esc(b.id||'')+'">Принять</button></div>').join(''):'<p>Пока предложений нет.</p>')+
     '<button type="button" data-action="cancel">Снять лот</button>';
  }else if(!you.bankrupt){
   html+='<form class="stack" data-form="bid"><h3>Предложить свою цену</h3>'+
@@ -516,11 +516,11 @@ function artifactDetailBlock(you){
    '<div class="detail-actions">'+
    (mine?
     (state.bids.length?state.bids.map(b=>'<div class="detail-bid"><span>'+esc(label(b.buyer))+' · '+esc(amounts(b.offer))+'</span>'+
-      '<button type="button" data-action="accept" data-player="'+esc(b.buyer)+'">Принять</button></div>').join(''):'<p class="muted">Пока нет предложений.</p>')+
+      '<button type="button" data-action="accept" data-player="'+esc(b.buyer)+'" data-bid="'+esc(b.id||'')+'">Принять</button></div>').join(''):'<p class="muted">Пока нет предложений.</p>')+
      '<button type="button" data-action="cancel">Снять лот</button>':
     (!locked?
      ((!checked?'<button type="button" data-action="inspect" '+(you.resources.gold<(you.inspectionPrices?.public??15)?'disabled':'')+'>'+svgIcon('eye')+' Проверить · '+(you.inspectionPrices?.public??15)+' золота</button>':'')+
-      '<button type="button" class="primary" data-action="bid-asking" '+(keys.every(k=>(you.resources[k]||0)>=(item.ask[k]||0))?'':'disabled')+'>'+svgIcon('check')+' Принять цену · '+esc(amounts(item.ask))+'</button><details class="quick-expand"><summary>'+svgIcon('gavel',18)+' Другая цена</summary><form class="detail-offer-form" data-form="detail-bid">'+resourceFields('offer',item.ask)+
+      '<button type="button" class="primary" data-action="bid-asking" '+(keys.every(k=>(you.resources[k]||0)>=(item.ask[k]||0))?'':'disabled')+'>'+svgIcon('check')+' Предложить цену продавца · '+esc(amounts(item.ask))+'</button><details class="quick-expand"><summary>'+svgIcon('gavel',18)+' Другая цена</summary><form class="detail-offer-form" data-form="detail-bid">'+resourceFields('offer',item.ask)+
       '<button type="submit" class="primary">'+svgIcon('gavel')+' Предложить</button></form></details>'+
       (state.bids.some(b=>b.buyer===me?.id)?'<button type="button" data-action="withdraw">Отозвать ставку</button>':'')):'<p class="muted">Торг недоступен после банкротства.</p>'))+
    '</div>';
@@ -897,13 +897,21 @@ app.addEventListener('click',event=>{
  }
  if(action==='deal-accept'){
   const d=(state.deals||[]).find(x=>x.id===btn.dataset.id);
-  if(d&&confirm('Подтвердить прямой обмен? '+label(d.from)+' отдаёт '+amounts(d.give)+'; '+label(d.to)+' отдаёт '+amounts(d.want)+'.'))
-    request({type:'deal_accept',dealId:btn.dataset.id});
+  if(d){
+    const side=(w,item)=>amounts(w)+(item?' и «'+item.name+'»':'');
+    const summary='Подтвердить прямой обмен?\n'+label(d.from)+' отдаёт '+side(d.give,d.giveItem)+';\n'+label(d.to)+' отдаёт '+side(d.want,d.wantItem)+'.';
+    if(confirm(summary))request({type:'deal_accept',dealId:d.id});
+   }
   return;
  }
  if(action==='deal-cancel')return request({type:'deal_cancel',dealId:btn.dataset.id});
  if(action==='black-accept'){
-  if(confirm('Принять закрытую ставку? Посредник удержит 10% комиссии.'))request({type:'black_accept',lotId:btn.dataset.id,bidId:btn.dataset.bid});
+  const lot=(state?.blackLots||[]).find(x=>x.id===btn.dataset.id);
+   const offer=lot?.bids?.find(b=>b.id===btn.dataset.bid)?.offer;
+   if(!offer){message('Ставка уже недоступна.',true);return;}
+   const fee=state.marketFeePercent??10;
+   const payout=Object.fromEntries(keys.map(k=>[k,offer[k]-Math.ceil(offer[k]*fee/100)]));
+   if(confirm('Принять закрытую ставку '+amounts(offer)+'? Комиссия '+fee+'%, к получению '+amounts(payout)+'.'))request({type:'black_accept',lotId:btn.dataset.id,bidId:btn.dataset.bid});
   return;
  }
  if(action==='black-cancel'){
@@ -918,7 +926,10 @@ app.addEventListener('click',event=>{
  if(action==='withdraw')return request({type:'withdraw_bid'});
  if(action==='cancel')return request({type:'cancel'});
  if(action==='accept'){
-  if(confirm('Подтвердить продажу по предложенной цене?'))request({type:'accept',buyer:btn.dataset.player});
+  const modern=Number(roomVersion?.slice(1)||0)>=18;
+   const bid=state?.bids?.find(b=>b.buyer===btn.dataset.player&&(!modern||b.id===btn.dataset.bid));
+   if(!bid){message('Ставка устарела. Откройте актуальное предложение.',true);return;}
+   if(confirm('Продать «'+(state.listing?.name||'предмет')+'» игроку '+label(bid.buyer)+' за '+amounts(bid.offer)+'?'))request({type:'accept',buyer:bid.buyer,...(modern?{bidId:bid.id}:{})});
   return;
  }
  if(action==='end'){

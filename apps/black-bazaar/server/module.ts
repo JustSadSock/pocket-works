@@ -222,7 +222,7 @@ function openGame(s){
     const lucky=sample(s.contestants),partner=sample(s.contestants.filter(p=>p.id!==lucky.id));
     lucky.legendary=partner.id;
   }
-  s.listing=null;s.bids=[];s.brokerOffer=null;s.deals=[];s.dealSerial=0;s.blackLots=[];s.blackSeq=0;s.log=[];startTurn(s);
+  s.listing=null;s.bids=[];s.bidSerial=0;s.brokerOffer=null;s.deals=[];s.dealSerial=0;s.blackLots=[];s.blackSeq=0;s.log=[];startTurn(s);
 }
 function resolveUrgent(s,p){
   if(!p.urgent)return;
@@ -339,7 +339,7 @@ function onTrade(s,seller,buyer,item,price){
   // The first public sale pays one reusable spare part: trading generates
   // supply, rather than leaving parts dependent only on grinding a work action.
   if(seller.marketDeals===1)seller.resources.parts=Math.min(9999,seller.resources.parts+1);
-  issue(s,buyer.character+' купил «'+spec(item).name+'» у '+seller.character+
+  issue(s,buyer.character+' купил «'+publicItem(item).name+'» у '+seller.character+
     (seller.marketDeals===1?' (продавец получил 1 деталь за первую продажу).':'')+'.');
   return true;
 }
@@ -513,7 +513,7 @@ function action(s,id,v){
     if(!s.listing||isTurn)return failure(s,id,'Сейчас нет чужого лота.');
     const price=wallet(v.offer);
     if(!price||!nonzero(price)||!has(me,price)||inventoryCount(s,me)>=MAX_ITEMS)return failure(s,id,'Недостаточно ресурсов или мест в инвентаре.');
-    s.bids=s.bids.filter(b=>b.buyer!==id);s.bids.push({buyer:id,offer:price});return success(s);
+    s.bids=s.bids.filter(b=>b.buyer!==id);s.bids.push({id:'bid-'+(++s.bidSerial),buyer:id,offer:price});return success(s);
   }
   if(v.type==='withdraw_bid'){
     s.bids=s.bids.filter(b=>b.buyer!==id);return success(s);
@@ -569,7 +569,8 @@ function action(s,id,v){
     s.listing=null;s.bids=[];return success(s);
   }
   if(v.type==='accept'){
-    const bid=s.bids.find(b=>b.buyer===v.buyer);
+    // Seller accepts only the exact bid ID they reviewed.
+    const bid=s.bids.find(b=>b.id===v.bidId&&b.buyer===v.buyer);
     const item=me.items.find(i=>i.id===s.listing?.itemId);
     const buyer=getPlayer(s,v.buyer);
     if(!bid||!item||!buyer||buyer.bankrupt||!onTrade(s,me,buyer,item,bid.offer))return failure(s,id,'Ставка уже недоступна.');
@@ -625,7 +626,7 @@ function viewForPlayer({state,player}){
     event:eventCard(s),marketFeePercent:Math.round(blackFee(s)*100),
     salvageParts:salvageYield(s),repackCost:repackPrice(s),
     report:s.phase==='done'?{...s.metrics,events:{...s.eventSchedule}}:null,
-    bids:s.bids.map(b=>({buyer:b.buyer,offer:b.offer})),
+    bids:s.bids.map(b=>({id:b.id,buyer:b.buyer,offer:{...b.offer}})),
     blackMarket:veil,
     blackLots:(s.blackLots||[]).map(l=>({
       id:l.id,item:{name:publicItem(l.item).name,rarity:spec(l.item).rarity},ask:{...l.ask},bidCount:l.bids.length,
@@ -653,7 +654,7 @@ const game={
   createRoom({player}){return {state:{
     host:player.id,players:[{id:player.id,name:player.name}],contestants:[],bannedIds:[],bannedAccounts:[],
     phase:'lobby',revision:0,round:0,turnIndex:0,deadlineAt:null,offlinePaused:false,offlinePausedAt:null,pauseRemainingMs:null,listing:null,
-    eventSchedule:{},metrics:null,bids:[],brokerOffer:null,deals:[],dealSerial:0,blackLots:[],blackSeq:0,log:[],ranking:[],serial:0
+    eventSchedule:{},metrics:null,bids:[],bidSerial:0,brokerOffer:null,deals:[],dealSerial:0,blackLots:[],blackSeq:0,log:[],ranking:[],serial:0
   }};},
   onJoin({state,players,player}){
     if((state.bannedIds||[]).includes(player?.id)||player?.accountId&&(state.bannedAccounts||[]).includes(player.accountId))throw Error('room_kicked');

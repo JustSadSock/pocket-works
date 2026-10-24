@@ -11,6 +11,7 @@ function makeRoom(n=4){
  return {state,players};
 }
 function act(state,id,payload){return game.onMessage({state,player:{id},payload});}
+function acceptOffer(state,buyer){return {type:'accept',buyer,bidId:state.bids.find(b=>b.buyer===buyer)?.id};}
 test('Room supports 2–6 players and starts with unique characters, wallets and secrets',()=>{
  for(const count of [2,3,4,5,6]){
   const {state}=makeRoom(count);
@@ -51,7 +52,7 @@ test('Seller lists an item, buyer can inspect its hidden downside and place a bi
  act(state,buyer.id,{type:'bid',offer:{gold:65,crystals:1,parts:0}});
  assert.equal(state.bids.length,1);
  const sellerBefore=seller.resources.gold;
- act(state,seller.id,{type:'accept',buyer:buyer.id});
+ act(state,seller.id,acceptOffer(state,buyer.id));
  assert.equal(state.listing,null);
  assert.equal(buyer.items.some(i=>i.id===item.id),true);
  assert.equal(seller.items.some(i=>i.id===item.id),false);
@@ -170,7 +171,7 @@ test('Private proposals cannot spend counterfeit balances and expire when their 
  assert.equal(stale.events[0].type,'notice');
  assert.equal(a.items.some(x=>x.id===item.id),true);
  act(state,b.id,{type:'bid',offer:{gold:20}});
- act(state,a.id,{type:'accept',buyer:b.id});
+ act(state,a.id,acceptOffer(state,b.id));
  assert.equal(state.deals.length,0);
 });
 test('Two simultaneous proposals cannot double-spend the same funds',()=>{
@@ -366,7 +367,7 @@ test('Simulated 2–6 person complete matches preserve invariants through barter
          act(state,owner.id,{type:'post',itemId:item.id,ask:{gold:20}});
          if(state.listing){
            act(state,buyer.id,{type:'bid',offer:{gold:18}});
-           const result=act(state,owner.id,{type:'accept',buyer:buyer.id});
+           const result=act(state,owner.id,acceptOffer(state,buyer.id));
            if(result.events[0]?.type==='state')stats.auctions++;
          }
        }
@@ -487,7 +488,7 @@ test('First successful public sale awards only one part to the seller per turn',
  for(const [index,buyer] of [buyer1,buyer2].entries()){
    act(state,seller.id,{type:'post',itemId:ids[index],ask:{gold:30}});
    act(state,buyer.id,{type:'bid',offer:{gold:30}});
-   const accepted=act(state,seller.id,{type:'accept',buyer:buyer.id});
+   const accepted=act(state,seller.id,acceptOffer(state,buyer.id));
    assert.equal(accepted.events[0].type,'state');
  }
  assert.equal(seller.marketDeals,2);
@@ -683,7 +684,7 @@ test('Delayed curse follows the physical frog across public trading and activate
  seller.items=[cursed];buyer.items=[];
  act(state,seller.id,{type:'post',itemId:cursed.id,ask:{gold:15}});
  act(state,buyer.id,{type:'bid',offer:{gold:15}});
- const sold=act(state,seller.id,{type:'accept',buyer:buyer.id});
+ const sold=act(state,seller.id,acceptOffer(state,buyer.id));
  assert.equal(sold.events[0].type,'state');
  assert.equal(buyer.items[0].curseDueRound,3);
  assert.equal(buyer.items[0].curseResolved,false);
@@ -762,7 +763,7 @@ test('Mirror bonus triggers for completed sales only and does not mint repeatedl
  const start=seller.resources.crystals;
  act(state,seller.id,{type:'post',itemId:mirror.id,ask:{gold:10}});
  act(state,buyer.id,{type:'bid',offer:{gold:10}});
- act(state,seller.id,{type:'accept',buyer:buyer.id});
+ act(state,seller.id,acceptOffer(state,buyer.id));
  assert.equal(seller.resources.crystals,start+3);
  assert.equal(mirror.tradeUsedRound,1);
  // The item can't be resold in the same round.
@@ -931,7 +932,7 @@ test('Final playtest metrics reflect only successful operations and hide live to
  assert.equal(bogus.events[0].type,'notice');
  assert.equal(state.metrics.publicSales,0);
  act(state,buyer.id,{type:'bid',offer:{gold:20}});
- act(state,seller.id,{type:'accept',buyer:buyer.id});
+ act(state,seller.id,acceptOffer(state,buyer.id));
  assert.equal(state.metrics.publicSales,1);
  let limit=0;
  while(state.phase==='play'&&limit++<50){
@@ -1054,7 +1055,7 @@ function qaAutoplay(size,run,stats){
     act(state,actor.id,{type:'post',itemId:item.id,ask:{gold:12}});
     const bid=act(state,buyer.id,{type:'bid',offer:{gold:12}});
     if(bid.events[0]?.type==='state'){
-      const traded=act(state,actor.id,{type:'accept',buyer:buyer.id});
+      const traded=act(state,actor.id,acceptOffer(state,buyer.id));
       if(traded.events[0]?.type==='state'){actions++;stats.public++;}
     }
    }
@@ -1147,14 +1148,14 @@ test('Replayed or unauthorized sale commands never mint additional resources',()
  act(state,buyer.id,{type:'bid',offer:{gold:55}});
  const sellerInitial=seller.resources.gold;
  const buyerInitial=buyer.resources.gold;
- const bad=act(state,outsider.id,{type:'accept',buyer:buyer.id});
+ const bad=act(state,outsider.id,acceptOffer(state,buyer.id));
  assert.equal(bad.events[0].type,'notice');
  assert.equal(seller.resources.gold,sellerInitial);
- const good=act(state,seller.id,{type:'accept',buyer:buyer.id});
+ const good=act(state,seller.id,acceptOffer(state,buyer.id));
  assert.equal(good.events[0].type,'state');
  const once=JSON.stringify({wallets:state.contestants.map(p=>p.resources),items:qaAssets(state),revision:state.revision});
  for(let i=0;i<10;i++){
-  const result=act(state,seller.id,{type:'accept',buyer:buyer.id});
+  const result=act(state,seller.id,acceptOffer(state,buyer.id));
   assert.equal(result.events[0].type,'notice');
  }
  assert.equal(JSON.stringify({wallets:state.contestants.map(p=>p.resources),items:qaAssets(state),revision:state.revision}),once);
@@ -1264,7 +1265,7 @@ test('Currency balances saturate at 9999 for urgent rewards, pawnshop and secret
   buyer.resources.crystals=9998;
   act(state,seller.id,{type:'post',itemId:seller.items[0].id,ask:{gold:1}});
   act(state,buyer.id,{type:'bid',offer:{gold:1}});
-  const sold=act(state,seller.id,{type:'accept',buyer:buyer.id});
+  const sold=act(state,seller.id,acceptOffer(state,buyer.id));
   assert.equal(sold.events[0].type,'state');
   assert.equal(buyer.resources.crystals,9999);
  }
@@ -1300,14 +1301,14 @@ test('Quick-price bid is only a bid; seller acceptance changes ownership exactly
  assert.equal(buyer.resources.gold,before);
  assert.equal(state.listing.itemId,item.id);
  assert.equal(state.bids.length,1);
- act(state,seller.id,{type:'accept',buyer:buyer.id});
+ act(state,seller.id,acceptOffer(state,buyer.id));
  // A seller's secret negative relationship applies an additional 20-gold
  // deduction after the bid settles, but never at the time of bidding.
  const relationshipPenalty=seller.negativeTarget===buyer.id&&seller.negativeUsed===state.round?20:0;
  assert.equal(buyer.resources.gold,before-85-relationshipPenalty);
  assert.equal(state.listing,null);
  assert.equal(buyer.items.filter(x=>x.id===item.id).length,1);
- const replay=act(state,seller.id,{type:'accept',buyer:buyer.id});
+ const replay=act(state,seller.id,acceptOffer(state,buyer.id));
  assert.equal(replay.events[0].type,'notice');
  assert.equal(buyer.items.filter(x=>x.id===item.id).length,1);
 });
@@ -1466,4 +1467,35 @@ test('Losing all members while non-active resumes without unfair forfeiture',()=
  assert.equal(state.offlinePaused,false);
  assert.equal(state.contestants[state.turnIndex].id,active.id);
  assert.ok(state.deadlineAt-Date.now()>=pausedTime-5);
+});
+
+test('Changed bids cannot be accepted using a stale public offer ID',()=>{
+ const {state}=makeRoom(2),[seller,buyer]=state.contestants;
+ const item=seller.items[0];
+ act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:90}});
+ act(state,buyer.id,{type:'bid',offer:{gold:80}});
+ const previous=game.viewForPlayer({state,player:{id:seller.id}}).bids[0];
+ assert.ok(previous.id.startsWith('bid-'));
+ act(state,buyer.id,{type:'bid',offer:{gold:1}});
+ const latest=game.viewForPlayer({state,player:{id:seller.id}}).bids[0];
+ assert.notEqual(previous.id,latest.id);
+ const gold=seller.resources.gold;
+ assert.equal(act(state,seller.id,{type:'accept',buyer:buyer.id,bidId:previous.id}).events[0].type,'notice');
+ assert.equal(seller.resources.gold,gold);
+ assert.equal(act(state,seller.id,{type:'accept',buyer:buyer.id,bidId:latest.id}).events[0].type,'state');
+ assert.equal(seller.resources.gold,gold+1);
+ assert.ok(buyer.items.some(x=>x.id===item.id));
+});
+test('Repacked items keep their original name private in the sale journal',()=>{
+ const {state}=makeRoom(2),[seller,buyer]=state.contestants;
+ const item=seller.items[0],original=game.viewForPlayer({state,player:{id:seller.id}}).you.items[0].originalName;
+ assert.equal(act(state,seller.id,{type:'repack',itemId:item.id,aliasIndex:2}).events[0].type,'state');
+ act(state,seller.id,{type:'post',itemId:item.id,ask:{gold:50}});
+ assert.equal(game.viewForPlayer({state,player:{id:buyer.id}}).listing.name,'Тёмная реликвия');
+ act(state,buyer.id,{type:'bid',offer:{gold:50}});
+ assert.equal(act(state,seller.id,acceptOffer(state,buyer.id)).events[0].type,'state');
+ const view=game.viewForPlayer({state,player:{id:buyer.id}});
+ assert.equal(view.you.items.find(x=>x.id===item.id).originalName,original);
+ assert.ok(view.log[0].includes('«Тёмная реликвия»'));
+ assert.ok(!view.log[0].includes('«'+original+'»'));
 });

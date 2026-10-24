@@ -1,5 +1,5 @@
 // Real PocketNet integration: three authenticated WebSocket clients against
-// Wrangler's SQLite Durable Object and the immutable Bazaar v17 rules.
+// Wrangler's SQLite Durable Object and the immutable Bazaar v18 rules.
 import assert from 'node:assert/strict';
 import WebSocket from '../../../pocket-server/node_modules/ws/index.js';
 
@@ -135,7 +135,7 @@ try{
  assert.equal(afterResume.connectionGraceUntil,null);
 
  const acceptRevision=afterResume.revision;
- sellerBack.send('game_message',{payload:{type:'accept',buyer:buyer.id}});
+ sellerBack.send('game_message',{payload:{type:'accept',buyer:buyer.id,bidId:afterResume.bids.find(b=>b.buyer===buyer.id)?.id}});
  const paid=stateOf(await buyer.next('game_event',stateEvent('play',s=>s.revision>acceptRevision&&s.listing===null&&s.you.items.some(i=>i.id===itemId))));
  const sellerPaid=await sync(sellerBack,paid.revision);
  assert.equal(paid.you.items.length,buyerCount+1);
@@ -144,7 +144,7 @@ try{
  assert.equal(sellerPaid.you.marketDeals,1);
  assert.equal(sellerPaid.you.items.some(i=>i.id===itemId),false);
  assert.equal(paid.bids.length,0);
- sellerBack.send('game_message',{payload:{type:'accept',buyer:buyer.id}});
+ sellerBack.send('game_message',{payload:{type:'accept',buyer:buyer.id,bidId:afterResume.bids.find(b=>b.buyer===buyer.id)?.id}});
  const duplicate=await sellerBack.next('game_event',m=>m.event?.type==='notice');
  assert.ok(duplicate,'stale accept must be rejected');
  const unchanged=await sync(buyer,paid.revision);
