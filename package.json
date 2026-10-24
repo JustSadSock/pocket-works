@@ -26,9 +26,9 @@
     "test:trace-mosaic": "node --test apps/trace-mosaic/*.test.mjs",
     "prepare:site": "node scripts/prepare-site.mjs",
     "validate:site": "node --test scripts/release-inventory.test.mjs && node scripts/validate-site.mjs",
-    "deploy:site": "npm run pocketnet:check && npm run validate:launcher && npm run build:enhanced && npm run prepare:site && npm run validate:site",
+    "deploy:site": "npm run validate:lock && npm run pocketnet:check && npm run validate:launcher && npm run build:enhanced && npm run prepare:site && npm run validate:site",
     "build:site": "npm run deploy:site",
-    "ci:full": "npm run pocketnet:check && npm run validate:launcher && npm run prepare:sente-engine && npm run test:sente-ai && npm run health && npm run prepare:site && npm run validate:site",
+    "ci:full": "npm run validate:lock && npm run pocketnet:check && npm run validate:launcher && npm run prepare:sente-engine && npm run test:sente-ai && npm run health && npm run prepare:site && npm run validate:site",
     "build:quality-site": "npm run prepare:sente-engine && npm run build:enhanced && npm run prepare:site && npm run validate:site",
     "preview:test": "node scripts/serve-site.mjs",
     "test:e2e": "playwright test",
@@ -57,11 +57,12 @@
     "sync:metadata": "node scripts/sync-app-metadata.mjs",
     "build:pocketnet": "node scripts/build-pocketnet-modules.mjs",
     "snapshot:pocketnet": "node scripts/build-pocketnet-modules.mjs --snapshot",
-    "pocketnet:check": "node scripts/sync-blockies-physics.mjs --check && node --test apps/blockies/tests/rules-parity.test.mjs apps/blockies/tests/shared-physics.test.mjs apps/blockies/tests/deterministic-replay.test.mjs apps/blockies/tests/spawn-transition.test.mjs apps/blockies/tests/soak-recovery.test.mjs apps/blockies/tests/lifecycle-rejoin.test.mjs apps/blockies/tests/heartbeat-lifecycle.test.mjs apps/blockies/tests/multiclient-protocol.test.mjs && node scripts/build-pocketnet-modules.mjs --check && node --test pocketnet/test/session-tokens.test.mjs",
+    "pocketnet:check": "node scripts/sync-blockies-physics.mjs --check && node --test apps/blockies/tests/rules-parity.test.mjs apps/blockies/tests/shared-physics.test.mjs apps/blockies/tests/deterministic-replay.test.mjs apps/blockies/tests/spawn-transition.test.mjs apps/blockies/tests/soak-recovery.test.mjs apps/blockies/tests/lifecycle-rejoin.test.mjs apps/blockies/tests/heartbeat-lifecycle.test.mjs apps/blockies/tests/multiclient-protocol.test.mjs && node scripts/build-pocketnet-modules.mjs --check && node --test pocketnet/test/session-tokens.test.mjs pocketnet/test/admission-limits.test.mjs",
     "physics:blockies:sync": "node scripts/sync-blockies-physics.mjs",
     "test:pocketnet:release": "node --test scripts/build-pocketnet-modules.test.mjs",
     "test:blockies": "node --test apps/blockies/tests/*.test.mjs",
-    "test:blockies:awards": "node scripts/test-blockies-achievements.mjs && node scripts/test-profile-rewards.mjs"
+    "test:blockies:awards": "node scripts/test-blockies-achievements.mjs && node scripts/test-profile-rewards.mjs",
+    "validate:lock": "node --test scripts/validate-dependency-lock.test.mjs && node scripts/validate-dependency-lock.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0",
@@ -74,7 +75,7 @@
   },
   "devDependencies": {
     "@lhci/cli": "^0.15.1",
-    "@playwright/test": "^1.55.0",
+    "@playwright/test": "1.55.0",
     "@types/node": "^24.0.0",
     "typescript": "^5.9.0",
     "vite": "^8.1.4",
