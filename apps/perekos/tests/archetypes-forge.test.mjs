@@ -66,7 +66,7 @@ test('forge training dummy is passive but combat-enabled bot setting makes a rea
  assert.ok(moved);
 });
 test('authoritative online player can choose role only before match',()=>{
- assert.equal(RULESET_VERSION,17);
+ assert.equal(RULESET_VERSION,18);
  const host={id:'a'},guest={id:'b'},s=server.createRoom({player:host}).state;
  server.onJoin({state:s,player:guest,players:[host,guest]});
  const send=(p,data)=>server.onMessage({state:s,player:p,payload:data});

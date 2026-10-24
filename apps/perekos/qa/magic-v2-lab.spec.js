@@ -186,3 +186,24 @@ test('heavy monolith/comet and conductive node/link cards are visible only in th
   }
  }
 });
+
+test('new contact and orbital aspects are owned by the correct elemental school in the actual rune forge',async({page})=>{
+ await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
+ await page.locator('#open-v2-lab').click();
+ const picker=page.locator('#magic-v2 > .v2-stage > .v2-schools');
+ const cases=[
+  ['stone',['Обвал'],['Пожарище','Орбита','Цепная реакция']],
+  ['fire',['Пожарище'],['Обвал','Орбита','Цепная реакция']],
+  ['storm',['Орбита','Цепная реакция'],['Обвал','Пожарище']]
+ ];
+ for(const [index,[school,own,foreign]] of cases.entries()){
+  await picker.locator('.v2-school.v2-'+school).click();
+  for(const name of own)await expect(page.locator('.v2-card').filter({hasText:name})).toHaveCount(1);
+  for(const name of foreign)await expect(page.locator('.v2-card').filter({hasText:name})).toHaveCount(0);
+  if(index<cases.length-1){
+   page.once('dialog',dialog=>dialog.accept());
+   await page.getByRole('button',{name:'Сменить стихию'}).click();
+   await expect(picker).toBeVisible();
+  }
+ }
+});

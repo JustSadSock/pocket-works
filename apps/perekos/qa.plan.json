@@ -35,7 +35,9 @@
         "tests/magic-v2-physical-triad.test.mjs",
         "tests/net-v10.test.mjs",
         "tests/magic-v2-three-forms.test.mjs",
-        "tests/magic-v2-live-network.test.mjs"
+        "tests/magic-v2-live-network.test.mjs",
+        "tests/magic-v2-motion-impact.test.mjs",
+        "tests/magic-v2-network-aspects.test.mjs"
       ]
     },
     {
