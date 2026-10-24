@@ -1093,7 +1093,9 @@ class UIManager {
         this.isOnlineMode = false; // Flag for online multiplayer mode
         this.localPlayerIndex = -1; // Local player index in online mode
 
-        this.moveRepeatInterval = 105;
+        let repeatSpeed=105;
+        try{const saved=Number(localStorage.getItem('pocket-works:blockies:move-repeat'));if([70,105,145].includes(saved))repeatSpeed=saved;}catch{}
+        this.moveRepeatInterval=repeatSpeed;
         this.softDropInitialDelay = 0;
         this.softDropRepeatInterval = 55;
 
@@ -1229,6 +1231,16 @@ class UIManager {
             });
         }
         
+        const movementSpeed=document.getElementById('movement-speed');
+        if(movementSpeed){
+            movementSpeed.value=String(this.moveRepeatInterval);
+            movementSpeed.addEventListener('change',()=>{
+                const selected=Number(movementSpeed.value);
+                if(![70,105,145].includes(selected))return;
+                this.moveRepeatInterval=selected;
+                try{localStorage.setItem('pocket-works:blockies:move-repeat',String(selected));}catch{}
+            });
+        }
         // Mode selection - new menu structure
         document.getElementById('mode-single').addEventListener('click', () => {
             this.isOnlineMode = false;
@@ -3793,6 +3805,9 @@ class UIManager {
         // Clear localStorage
         localStorage.removeItem('pocket-works:blockies:settings');
         localStorage.removeItem('pocket-works:blockies:gamepad-assignments');
+        localStorage.removeItem('pocket-works:blockies:move-repeat');
+        this.moveRepeatInterval=105;
+        const repeatControl=document.getElementById('movement-speed');if(repeatControl)repeatControl.value='105';
         
         // Show success message
         this.showStyledMessage(t('settingsReset'), t('settingsResetMsg'), 'success');
@@ -3906,7 +3921,13 @@ if (document.readyState === 'loading') {
 
 for(const [method,action] of [['move','move'],['rotate','rotate'],['drop','drop'],['hardDrop','hardDrop'],['holdPiece','hold']]){
  const original=Player.prototype[method];
- Player.prototype[method]=function(...args){if(window.uiManager?.isOnlineMode){networkManager.sendPlayerInput({action,...(method==='move'?{direction:args[0]}:{})});return;}return original.apply(this,args);};
+ Player.prototype[method]=function(...args){
+    if(window.uiManager?.isOnlineMode){
+        if(action==='hold'&&networkManager.rulesVersion<3)return false;
+        return networkManager.sendPlayerInput({action,...(method==='move'?{direction:args[0]}:{})});
+    }
+    return original.apply(this,args);
+ };
 }
 function applyNetworkSnapshot(s){
   const ui=window.uiManager;
