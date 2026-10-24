@@ -47,15 +47,29 @@ export function createShelfStateStore(options = {}) {
   let warning = '';
   const report = () => onStatus({ localOk, dbOk, warning, savedAt });
   const readJson = key => { try { return JSON.parse(storage?.getItem(key) || 'null'); } catch { return null; } };
-  const loaded = readJson(KEY);
-  if (loaded?.schema === SHELF_EXPORT_SCHEMA) {
-    state = cleanShelfState(loaded.data);
-    savedAt = Number(loaded.savedAt) || 0;
-    localOk = true;
-  } else {
-    state = cleanShelfState(readJson(LEGACY_KEY));
-    try { localOk = Boolean(storage); } catch { /* private browsing */ }
+  let accountId = null;
+  const validAccountId = id => typeof id === 'string' && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id);
+  const accountKey = () => accountId ? KEY + ':account:' + accountId : KEY;
+  const accountRecord = () => accountId ? RECORD_ID + ':account:' + accountId : RECORD_ID;
+
+  function loadScope() {
+    savedAt = 0;
+    localOk = false;
+    dbOk = false;
+    warning = '';
+    const loaded = readJson(accountKey());
+    if (loaded?.schema === SHELF_EXPORT_SCHEMA) {
+      state = cleanShelfState(loaded.data);
+      savedAt = Number(loaded.savedAt) || 0;
+      localOk = true;
+    } else {
+      // Legacy unscoped preferences belong to the guest, not to an
+      // arbitrarily chosen Pocket ID. Export/import is the explicit transfer.
+      state = cleanShelfState(accountId ? {} : readJson(LEGACY_KEY));
+      try { localOk = Boolean(storage); } catch { /* private browsing */ }
+    }
   }
+  loadScope();
 
   function openDatabase() {
     if (!database?.open) return Promise.reject(new Error('IndexedDB unavailable'));
@@ -70,14 +84,14 @@ export function createShelfStateStore(options = {}) {
       request.onerror = () => reject(request.error || new Error('IndexedDB open failed'));
     });
   }
-  async function indexed(mode, value) {
+  async function indexed(mode, value, recordId = accountRecord()) {
     const db = await openDatabase();
     try {
       return await new Promise((resolve, reject) => {
         const tx = db.transaction(STORE, mode);
         const request = mode === 'readonly'
-          ? tx.objectStore(STORE).get(RECORD_ID)
-          : tx.objectStore(STORE).put(value, RECORD_ID);
+          ? tx.objectStore(STORE).get(recordId)
+          : tx.objectStore(STORE).put(value, recordId);
         let result;
         request.onsuccess = () => { result = request.result; };
         request.onerror = () => reject(request.error || new Error('IndexedDB request failed'));
@@ -90,17 +104,21 @@ export function createShelfStateStore(options = {}) {
   const envelope = () => ({
     schema: SHELF_EXPORT_SCHEMA, savedAt, data: cleanShelfState(state)
   });
-  async function persistIdb(record) {
+  async function persistIdb(record, recordId = accountRecord()) {
     try {
-      await indexed('readwrite', record);
-      dbOk = true;
-      warning = '';
-      report();
+      await indexed('readwrite', record, recordId);
+      if (recordId === accountRecord()) {
+        dbOk = true;
+        warning = '';
+        report();
+      }
       return true;
     } catch (error) {
-      dbOk = false;
-      if (!localOk) warning = 'Personal shelf could not be saved. Export a backup before closing Pocket Works.';
-      report();
+      if (recordId === accountRecord()) {
+        dbOk = false;
+        if (!localOk) warning = 'Personal shelf could not be saved. Export a backup before closing Pocket Works.';
+        report();
+      }
       return false;
     }
   }
@@ -110,7 +128,7 @@ export function createShelfStateStore(options = {}) {
     savedAt = Math.max(Date.now(), savedAt + 1);
     const record = envelope();
     try {
-      storage.setItem(KEY, JSON.stringify(record));
+      storage?.setItem(accountKey(), JSON.stringify(record));
       localOk = true;
       warning = '';
     } catch {
@@ -119,32 +137,50 @@ export function createShelfStateStore(options = {}) {
     }
     onState({ ...state });
     report();
-    writeQueue = writeQueue.catch(() => false).then(() => persistIdb(record));
+    const recordId = accountRecord();
+    writeQueue = writeQueue.catch(() => false).then(() => persistIdb(record, recordId));
     return writeQueue;
   }
   async function hydrate() {
     const startRevision = revision;
+    const recordId = accountRecord();
     try {
-      const remote = await indexed('readonly');
+      const remote = await indexed('readonly', undefined, recordId);
+      if (recordId !== accountRecord()) return get();
       dbOk = true;
       if (remote?.schema === SHELF_EXPORT_SCHEMA &&
           Number(remote.savedAt) > savedAt && revision === startRevision) {
         savedAt = Number(remote.savedAt);
         state = cleanShelfState(remote.data);
         onState({ ...state });
-        try { storage.setItem(KEY, JSON.stringify(envelope())); localOk = true; }
+        try { storage?.setItem(accountKey(), JSON.stringify(envelope())); localOk = Boolean(storage); }
         catch { localOk = false; }
       } else if (!remote && revision === startRevision) {
         // Migrate an existing local v1 or v2 shelf into IndexedDB.
-        writeQueue = writeQueue.then(() => persistIdb(envelope()));
+        writeQueue = writeQueue.then(() => persistIdb(envelope(), recordId));
         await writeQueue;
       }
     } catch {
+      if (recordId !== accountRecord()) return get();
       dbOk = false;
       if (!localOk) warning = 'No persistent browser storage is available.';
     }
+    if (recordId === accountRecord()) report();
+    return get();
+  }
+  function setAccount(id = null) {
+    if (id !== null && !validAccountId(id)) throw new TypeError('Invalid Pocket ID account');
+    const normalized = id?.toLowerCase() || null;
+    if (normalized === accountId) return Promise.resolve(get());
+    accountId = normalized;
+    revision++;
+    loadScope();
+    onState(get());
     report();
-    return { ...state };
+    return hydrate();
+  }
+  function get() {
+    return { ...state, favorites: [...state.favorites], recents: { ...state.recents } };
   }
   function exportBackup() {
     return { schema: SHELF_EXPORT_SCHEMA, exportedAt: new Date().toISOString(), data: cleanShelfState(state) };
@@ -165,8 +201,8 @@ export function createShelfStateStore(options = {}) {
     return true;
   }
   return {
-    get: () => ({ ...state, favorites: [...state.favorites], recents: { ...state.recents } }),
-    save, hydrate, flush: () => writeQueue,
+    get, save, hydrate, setAccount,
+    getStorageKey: accountKey, flush: () => writeQueue,
     exportBackup, importBackup, acceptCrossTabRecord,
     getStatus: () => ({ localOk, dbOk, warning, savedAt })
   };

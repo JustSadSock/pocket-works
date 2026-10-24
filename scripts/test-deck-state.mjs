@@ -57,4 +57,23 @@ const blocked=createDeckStateStore({storage:{getItem:()=>null,setItem(){throw Er
 await blocked.update({view:'library'});
 assert.equal(blocked.get().view,'library');
 assert.match(blocked.getWarning(),/storage unavailable/i);
-console.log('Pocket Deck persistence, widget layout, archival state, import/export, cross-tab sync and quota fallback passed.');
+// Personal archives and project notes belong to one authenticated account.
+const alice='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const bob='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+await two.setAccount(alice);
+assert.deepEqual(two.get().archived,[],'unknown guest archive must not leak to Pocket ID');
+await two.update({archived:['alice-hidden'],projectNotes:{'alice-game':'Alice only'}});
+assert.equal(two.getStorageKey(),'pocket-works:deck:v1:account:'+alice);
+await two.setAccount(bob);
+assert.deepEqual(two.get().archived,[]);
+assert.equal(two.get().projectNotes['alice-game'],undefined);
+await two.update({archived:['bob-hidden']});
+await two.setAccount(alice);
+assert.deepEqual(two.get().archived,['alice-hidden']);
+assert.equal(two.get().projectNotes['alice-game'],'Alice only');
+await two.setAccount(bob);
+assert.deepEqual(two.get().archived,['bob-hidden']);
+await two.setAccount(null);
+assert.deepEqual(two.get().archived,['bad-prototype'],'guest archive restored after logout');
+assert.throws(()=>two.setAccount('invalid'),TypeError);
+console.log('Pocket Deck persistence, widget layout, archival state, import/export, tab sync, quota fallback and account isolation passed.');

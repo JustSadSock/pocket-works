@@ -650,7 +650,7 @@ export function installPocketDeck({
   for(const type of ['pointerup','pointercancel','pointerleave'])home.addEventListener(type,()=>{window.clearTimeout(holdTimer);holdXY=null;});
 
   window.addEventListener('storage',e=>{
-    if(e.key!=='pocket-works:deck:v1'||!e.newValue)return;
+    if(e.key!==store.getStorageKey()||!e.newValue)return;
     try{store.onStorage(JSON.parse(e.newValue));}catch{}
   });
   let returnView=null;
@@ -658,7 +658,12 @@ export function installPocketDeck({
   if(returnView&&['home','library','archive'].includes(returnView)){
     store.update({view:returnView});try{sessionStorage.removeItem('pocket-works:return-deck-view');}catch{}
   }
-  document.addEventListener('pocket-id:changed',()=>{
+  document.addEventListener('pocket-id:changed',event=>{
+    if(editing){
+      editing=false;editingLayout=null;
+      if(editor.open)editor.close();
+    }
+    void store.setAccount(event.detail?.user?.complete ? event.detail.user.id : null);
     refreshHomeIdentity();
     canManageGlobal=false;globalReady=false;globalRequest++;
     render();
@@ -698,7 +703,11 @@ export function installPocketDeck({
       else for(const slug of slugs){if(favoriteSet().has(slug)!==save)onFavorite(slug);}
     }
   });
-  render();document.documentElement.classList.add('has-pocket-deck');void store.hydrate();void loadCovers();void refreshGlobalArchive();
+  render();document.documentElement.classList.add('has-pocket-deck');
+  const initialAccount=window.PocketID?.getUser?.();
+  if(initialAccount?.complete)void store.setAccount(initialAccount.id);
+  else void store.hydrate();
+  void loadCovers();void refreshGlobalArchive();
   return {
     store, getView:()=>current().view, getState:current, setView, isPinned:slug=>globalPinned.has(slug),
     getVisibleList:()=>{
