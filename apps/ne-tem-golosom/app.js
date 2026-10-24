@@ -1,6 +1,6 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createTrimRange} from './trim-range.js';
-import {TimelineHistory,snapshotClips,spliceRecording,packTimeline,unpackTimeline} from './timeline-model.js';
+import {TimelineHistory,snapshotClips,spliceRecording,packTimeline,unpackTimeline,editClip,replaceSelectedRecording,MIN_CLIP_SECONDS} from './timeline-model.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {MAX_ROOM_VIDEO_BYTES,MAX_SOURCE_VIDEO_BYTES,formatVideoBytes,estimateVideoBytes,supportsVideoExport,measureVideoDuration,exportVideo} from './media-lab.js';
@@ -38,7 +38,7 @@ let sound=true,audioContext=null,identity=null,name='Гость',mode='solo',vie
 let relayQueue=Promise.resolve(),relayInbox=new Map();
 let videoExportController=null,videoExportBlob=null,videoExportUrl=null,trimRange=null;
 const qualityNames=['Экономное','Компактное','Сбалансированное','Высокое','Максимальное'];
-let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0;
+let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0,timelineZoom=1,clipDrag=null,skipTimelineClick=false,micPending=false;
 const roomsOrigin=location.origin+'/pocketnet';
 const sceneSource=s=>LIBRARY.find(x=>x.id===s?.id)?.src||null;
 const meHost=()=>!!state&&me===state.host;
@@ -447,26 +447,60 @@ function renderPlayhead(){
  $('stage-time').textContent=fmt(t)+' / '+fmt(duration);
  $('playhead').style.left=(t/duration*100)+'%';
 }
+function updateZoom(){
+ const levels=[1,2,4],i=levels.indexOf(timelineZoom);
+ $('timeline-content').style.width=(100*timelineZoom)+'%';
+ $('timeline-zoom-label').textContent=timelineZoom+'×';
+ $('timeline-zoom-out').disabled=i===0;
+ $('timeline-zoom-in').disabled=i===levels.length-1;
+}
+function zoomTimeline(direction){
+ const levels=[1,2,4],i=levels.indexOf(timelineZoom),next=levels[Math.max(0,Math.min(levels.length-1,i+direction))];
+ if(next===timelineZoom)return;
+ const viewport=$('timeline-viewport'),content=$('timeline-content');
+ const center=(viewport.scrollLeft+viewport.clientWidth/2)/Math.max(1,content.offsetWidth);
+ timelineZoom=next;updateZoom();
+ viewport.scrollLeft=Math.max(0,center*content.offsetWidth-viewport.clientWidth/2);
+}
 function renderTimeline(){
  if(!scene)return;
+ updateZoom();
  const duration=Math.max(.01,scene.duration);
  $('time-ruler').innerHTML=[0,.25,.5,.75,1].map(n=>'<span>'+fmt(n*duration)+'</span>').join('');
  $('clip-lane').innerHTML=localClips.map((c,i)=>
   '<button type="button" class="clip-bar '+(selectedClip===c.id?'selected':'')+
   '" data-clip="'+esc(c.id)+'" aria-pressed="'+(selectedClip===c.id)+'" style="left:'+
   (c.start/duration*100)+'%;width:'+((c.end-c.start)/duration*100)+
-  '%" title="'+fmt(c.start)+'–'+fmt(c.end)+
-  '" aria-label="Реплика '+(i+1)+' · '+fmt(c.start)+'–'+fmt(c.end)+'">'+(i+1)+'</button>'
+  '%" title="Перетащи реплику или её края · '+fmt(c.start)+'–'+fmt(c.end)+
+  '" aria-label="Реплика '+(i+1)+' · '+fmt(c.start)+'–'+fmt(c.end)+
+  '"><span class="clip-grip left" data-edge="left" aria-hidden="true"></span>'+
+  '<span class="clip-text">'+(i+1)+'</span>'+
+  '<span class="clip-grip right" data-edge="right" aria-hidden="true"></span></button>'
  ).join('');
  const picked=localClips.find(c=>c.id===selectedClip);
  $('selected-clip-info').textContent=picked
-  ? 'Реплика '+(localClips.indexOf(picked)+1)+' · '+fmt(picked.start)+'–'+fmt(picked.end)+' · выбрана'
-  : localClips.length?'Выбери реплику на ленте, чтобы удалить её':'Запиши первую реплику';
+  ? 'Реплика '+(localClips.indexOf(picked)+1)+' · '+fmt(picked.start)+'–'+fmt(picked.end)+' · двигай центр или подрезай края'
+  : localClips.length?'Выбери реплику · перетаскивай для сдвига, края — для обрезки':'Запиши первую реплику';
  $('clip-total').textContent=localClips.length+' '+(localClips.length===1?'фрагмент':localClips.length>=2&&localClips.length<=4?'фрагмента':'фрагментов');
  $('undo-btn').disabled=!editHistory.canUndo;
  $('redo-btn').disabled=!editHistory.canRedo;
  $('erase-btn').disabled=!picked;
+ $('replace-clip-btn').disabled=!picked;
  renderPlayhead();
+}
+function editClipResult(id,kind,delta,clips=localClips){
+ const target=clips.find(c=>c.id===id);
+ if(!target||!scene)return null;
+ const rawDuration=target.audio?.duration;
+ return editClip(snapshotClips(clips),id,kind,Math.round(delta*20)/20,scene.duration,rawDuration);
+}
+function commitClipEdit(result,id){
+ if(!result||record||preroll||pendingRecording||micPending)return false;
+ stopAllPlayback();
+ editHistory.remember(localClips);
+ setClips(result,id);
+ void draftWrite();
+ return true;
 }
 function setPlayhead(value,fromPremiere=false){
  const v=fromPremiere?$('premiere-video'):$('stage-video');
