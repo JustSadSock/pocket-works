@@ -151,3 +151,15 @@ test('backup import refuses silent loss from overfull, duplicate and truncated r
  assert.equal(saved.length,1);
  assert.equal(saved[0].id,'valid');
 });
+
+test('legacy backups without optional character fields remain readable without changing chapters',()=>{
+ const legacy=issue('legacy-file',1000);
+ delete legacy.stories[0].heroGender;
+ const raw=JSON.stringify({format:'pocketworks-chyepukha-archive',version:1,editions:[legacy]});
+ const read=parseArchiveBackup(raw);
+ assert.equal(read.length,1);
+ assert.equal(read[0].stories[0].fragments[0].answer,'Дракон купив місячну валізу');
+ const sparse={id:'sparse',stories:[{id:'sheet-0',fragments:[{answer:'Історія з давньої копії'}]}]};
+ const recovered=parseArchiveBackup(JSON.stringify({format:'pocketworks-chyepukha-archive',version:1,editions:[sparse]}));
+ assert.equal(recovered[0].stories[0].fragments[0].answer,'Історія з давньої копії');
+});
