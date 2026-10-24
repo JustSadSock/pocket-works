@@ -88,6 +88,13 @@ try{
   await page.locator('#screen-editor:not(.hidden)').waitFor();
   assert.equal(await page.locator('.clip-bar').count(),1,'draft survives navigation');
   assert.equal(await page.locator('#undo-btn').isEnabled(),true,'history survives navigation');
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.locator('#solo-btn').click();
+  await page.locator('[data-scene="wing-launch"]').click();
+  await page.locator('#confirm-scene').click();
+  await page.locator('#screen-editor:not(.hidden)').waitFor();
+  assert.equal(await page.locator('.clip-bar').count(),1,'draft survives full reload');
+  assert.equal(await page.locator('#undo-btn').isEnabled(),true,'undo stack survives reload');
   await page.locator('#undo-btn').click();
   assert.equal(await page.locator('.clip-bar').count(),2);
   assert.deepEqual(errors,[],vp.name+' must have no JS errors');
