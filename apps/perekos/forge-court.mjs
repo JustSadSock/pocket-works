@@ -254,6 +254,18 @@ export function drawForgeConstructs(ctx,state,time=0,reduced=false){
  for(const mine of (state?.mines||[]).slice(0,20)){
   if(!Number.isFinite(mine.x)||!Number.isFinite(mine.y))continue;
   const x=Math.round(mine.x),y=Math.round(mine.y);
+  if(mine.v2Charge){
+   ctx.save();ctx.globalAlpha=mine.arm>0?.58:.92;
+   ctx.strokeStyle=mine.arm>0?'#77aeb5':'#b2ede2';
+   ctx.lineWidth=2;ctx.setLineDash(mine.arm>0?[4,4]:[]);
+   ctx.beginPath();ctx.arc(x,y,Math.max(6,mine.r||36),0,Math.PI*2);
+   ctx.stroke();ctx.setLineDash([]);ctx.restore();
+   block(ctx,x-9,y-9,18,18,'#21464c');
+   block(ctx,x-2,y-13,4,25,'#acdcd3');
+   block(ctx,x-8,y-2,16,4,'#acdcd3');
+   if(mine.arm<=0)block(ctx,x-3,y-3,6,6,'#f6edbd');
+   continue;
+  }
   if(mine.v2Trap){
    // The textured forge renderer replaces the fallback, so it must show
    // the same physical arming circle as the regular world renderer.

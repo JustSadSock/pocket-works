@@ -1,6 +1,6 @@
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
-const GAME='perekos',RULES=14,COMPATIBLE_RULES=new Set([9,10,11,12,13,14]);
+const GAME='perekos',RULES=15,COMPATIBLE_RULES=new Set([9,10,11,12,13,14,15]);
 const CODE=/^[0-9a-f]{8}$/i;
 const FULL=/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i;
 const scopedStorage={getItem:k=>{try{return localStorage.getItem('perekos-net:'+k)}catch{return null}},setItem:(k,v)=>{try{localStorage.setItem('perekos-net:'+k,v)}catch{}}};
