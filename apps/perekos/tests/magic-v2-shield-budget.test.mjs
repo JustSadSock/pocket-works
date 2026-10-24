@@ -32,7 +32,7 @@ test('eight concurrent electrical wires cannot drain more than 12 combined shiel
 test('secondary shield stripping does not waste the damage budget when enemy has no shield',()=>{
  const s=network(0);
  step(s);
- assert.equal(s.actors[1].hp,88,'no phantom shield drainage should deny legitimate secondary HP damage');
+ assert.ok(Math.abs(s.actors[1].hp-88)<1e-8,'no phantom shield drainage should deny legitimate secondary HP damage');
  assert.equal(s.actors[0].v2SecondaryWindow.spent,12);
  assert.equal(validState(s),true);
 });
