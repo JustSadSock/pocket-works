@@ -33,6 +33,7 @@ export class NetworkManager {
     this.net=null;
     this.connecting=null;
     this.inputBatchVersion=0;
+    this.rulesVersion=0;
     this.inputSeq=0;
     this.pendingInputs=[];
     this.inputQueue=[];
@@ -170,6 +171,7 @@ export class NetworkManager {
     this.pendingInputs=[];
     this.inputSeq=0;
     this.inputBatchVersion=0;
+    this.rulesVersion=0;
     this.inputWindowStart=0;this.inputWindowCount=0;
     this.currentRoom=null;
     this.started=false;
@@ -192,6 +194,7 @@ export class NetworkManager {
       this.trigger('connectionHealth',{status:'online'});
     }
     this.inputBatchVersion=Number(state.inputBatchVersion)||0;
+    this.rulesVersion=Number(state.rulesVersion)||0;
     const players=state.players.filter(player=>!player.left);
     const room={
       ...state,players,id:this.code,name:'Blockies · '+this.code,maxPlayers:4,
@@ -311,7 +314,8 @@ export class NetworkManager {
   sendPlayerInput(input){
     if(!this.started||!this.connected||this.stale||this.finished)return false;
     if(!this.inputBatchVersion)return this.send({type:'input',input},true);
-    if(!input||!['move','rotate','drop','hardDrop'].includes(input.action))return false;
+    if(!input||!['move','rotate','drop','hardDrop','hold'].includes(input.action))return false;
+    if(input.action==='hold'&&this.rulesVersion<3)return false;
     if(input.action==='move'&&![-1,1].includes(input.direction))return false;
     const now=performance.now();
     if(!this.inputWindowStart||now-this.inputWindowStart>=1000||now<this.inputWindowStart){
