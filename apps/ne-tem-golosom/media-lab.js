@@ -73,7 +73,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
   video.muted = true; // Silent element playback is allowed after async metadata/seek; audio is routed separately.
   video.src = src;
   let recorder, frame = 0, audioContext, stream, cancelled = false;
-  let timer, started = false, captureMode = 'compatibility', watchdog = 0;
+  let timer, started = false, captureMode = 'compatibility', watchdog = 0, useVideoFrameCallback = false;
   let lastMediaTime = start, lastAdvance = performance.now(), terminalError = null;
   const abort = () => { cancelled = true; video.pause(); if (recorder?.state === 'recording') recorder.stop(); };
   const hidden = () => { if (document.hidden) abort(); };
@@ -111,6 +111,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
     if (!ctx) throw Error('Не удалось открыть видеохолст.');
     const preciseFrames = typeof video.requestVideoFrameCallback === 'function' &&
       typeof video.cancelVideoFrameCallback === 'function';
+    useVideoFrameCallback=preciseFrames;
     stream = canvas.captureStream(preciseFrames ? 0 : 24);
     const captureTrack = stream.getVideoTracks()[0];
     captureMode = frameCaptureMode(video,captureTrack);
@@ -216,7 +217,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
       await completed.catch(()=>{});
       throw terminalError;
     }
-    if(captureMode==='decoded-frames')
+    if(useVideoFrameCallback)
       frame=video.requestVideoFrameCallback(paintVideoFrame);
     else
       frame=requestAnimationFrame(paintFallback);
@@ -224,7 +225,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
     onProgress(1);
     return output;
   } finally {
-    if (captureMode === 'decoded-frames') video.cancelVideoFrameCallback?.(frame);
+    if (useVideoFrameCallback) video.cancelVideoFrameCallback?.(frame);
     else cancelAnimationFrame(frame);
     clearTimeout(timer);
     clearInterval(watchdog);
