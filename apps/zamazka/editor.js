@@ -1338,7 +1338,9 @@ export class Editor{
    const frameRevision=this.paintRevision||0;
    const frameStroke=this.working||null;
    const framePoints=frameStroke?.p?.length||0;
-   if(!resized&&this.lastPaintedRevision===frameRevision&&
+   const compositeReady=!!this.displayLayer&&
+     this.displayLayer.width===c.width&&this.displayLayer.height===c.height;
+   if(!resized&&compositeReady&&this.lastPaintedRevision===frameRevision&&
       this.lastPaintedStroke===frameStroke&&this.lastPaintedPoints===framePoints)return false;
    const makeLayer=()=>{
      const layer=document.createElement('canvas');layer.width=c.width;layer.height=c.height;
