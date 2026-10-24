@@ -52,8 +52,22 @@ function validBallotImage(value:string){
  const tag=String.fromCharCode(...head.slice(0,4)),webp=String.fromCharCode(...head.slice(8,12));
  const size=(head[4]|head[5]<<8|head[6]<<16|head[7]<<24)>>>0;
  const codec=String.fromCharCode(...head.slice(12,16));
- return tag==='RIFF'&&webp==='WEBP'&&size+8===bytes&&
-  (codec==='VP8 '||codec==='VP8L'||codec==='VP8X');
+ if(tag!=='RIFF'||webp!=='WEBP'||size+8!==bytes||head.length<30)return false;
+ const chunkSize=(head[16]|head[17]<<8|head[18]<<16|head[19]<<24)>>>0;
+ if(chunkSize<5||chunkSize+20>bytes)return false;
+ let width=0,height=0;
+ if(codec==='VP8 '){
+  if(head[23]!==0x9d||head[24]!==0x01||head[25]!==0x2a)return false;
+  width=(head[26]|head[27]<<8)&0x3fff;height=(head[28]|head[29]<<8)&0x3fff;
+ }else if(codec==='VP8L'){
+  if(head[20]!==0x2f)return false;
+  width=1+(head[21]|(head[22]&63)<<8);
+  height=1+((head[22]>>6)|(head[23]<<2)|((head[24]&15)<<10));
+ }else if(codec==='VP8X'){
+  width=1+head[24]+(head[25]<<8)+(head[26]<<16);
+  height=1+head[27]+(head[28]<<8)+(head[29]<<16);
+ }
+ return width===3000&&height===450;
 }
 function allSprites(s:State){return members(s).every(p=>validBallotImage(s.ballotSprites?.[p.id]||''))}
 
