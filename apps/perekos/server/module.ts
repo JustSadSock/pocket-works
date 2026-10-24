@@ -712,7 +712,7 @@ function validState(s){
  &&(!s.magicModeV2||(s.magicLoadouts?.length===2&&s.magicLoadouts.every(x=>v2SpellAllowed(x))))&&Array.isArray(s.elementCombos)&&s.elementCombos.length===2&&s.elementCombos.every(n=>Number.isInteger(n)&&n>=0)&&Array.isArray(s.score)&&s.score.every(n=>Number.isInteger(n)&&n>=0&&(s.gameMode==='rupture'?n<=10000:n<=4))&&['duel','rupture','forge',undefined].includes(s.gameMode);
 }
 
-export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=13;
+export const MIN_PLAYERS=2,MAX_PLAYERS=2,RULESET_VERSION=14;
 
 // ---- Immutable PocketNet ruleset 10: generated from reviewed magic-v2 runtime.
 // v9 is preserved separately; 10 retains all its legacy logic for old-style new rooms.
@@ -1439,7 +1439,12 @@ function readyNet(s,i,list){
 }
 function viewForPlayer({state:s,player,players}){
  const i=side(s,player.id);
- return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:13,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match:s.match,
+ // Each client sees only its own rune book. The authoritative match still
+ // retains both: spell execution and collisions are exclusively server-owned.
+ const match=s.match?.magicModeV2&&Array.isArray(s.match.magicLoadouts)
+  ?{...s.match,magicLoadouts:s.match.magicLoadouts.map((book,seat)=>seat===i?book:null)}
+  :s.match;
+ return {phase:s.phase,revision:s.revision,host:s.host,me:i,seats:s.seats,rulesVersion:14,gameMode:s.gameMode,schools:s.schools,magicAllowed:i>=0?s.match?.magicModeV2?V2_START_POOL.filter(id=>permittedRune(s.schools[i],id)):[]:[],loadout:i>=0?s.match?.magicLoadouts?.[i]||null:null,mages:s.mages,archetypes:s.archetypes,nextSeq:i>=0?s.seq[i]+1:0,match,
   players:players.map(p=>({id:p.id,name:p.name,avatar:p.avatar,verified:p.verified===true,accountId:p.verified===true&&typeof p.accountId==='string'?p.accountId:null})),
   offers:i>=0?s.offers[i]:[],picked:i>=0&&s.picked[i],ready:i>=0&&s.ready[i],magicStage:s.magicStage||0,magicChoices:i>=0&&s.phase==='magic-offer'&&!s.magicPicked?.[i]?s.magicChoices[i]:[],magicPicked:i>=0&&!!s.magicPicked?.[i],magicOfferDeadline:s.phase==='magic-offer'?s.magicOfferAt+V13_DRAFT_LIMIT:0,
   connected:i>=0&&clock()-s.seen[i]<2000,opponentConnected:i>=0&&clock()-s.seen[1-i]<2000};

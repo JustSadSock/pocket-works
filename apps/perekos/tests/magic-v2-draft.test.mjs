@@ -28,11 +28,11 @@ const moveToOffers=(s)=>{
  assert.equal(s.phase,'magic-offer');
  return s;
 };
-test('v13 offers are private, match-seeded, independently chosen and never cross-school',()=>{
+test('v14 offers are private, match-seeded, independently chosen and never cross-school',()=>{
  const clock=Date.now;let now=2_000_000;Date.now=()=>now;
  try{
   const s=moveToOffers(room()),original=JSON.parse(JSON.stringify(s));
-  assert.equal(RULESET_VERSION,13);
+  assert.equal(RULESET_VERSION,14);
   assert.equal(s.magicStage,1);
   assert.deepEqual(s.magicChoices.map(offers=>offers.map(o=>o.rarity)),[
    ['common','uncommon','rare'],['common','uncommon','rare']
@@ -107,4 +107,33 @@ test('v13 45-second timeout picks a safe common pack, preserving existing rune s
   send(s,host,'magic-pick',{stage:1,index:2});
   assert.equal(s.phase,'magic-build','stale post-deadline click rejected');
  }finally{Date.now=clock}
+});
+
+test('v14 projects only the recipient rune book throughout the network match',()=>{
+ const s=room();
+ const stone=s.match.magicLoadouts[0],fire=s.match.magicLoadouts[1];
+ const inspect=()=>{
+  const a=module.viewForPlayer({state:s,player:host,players});
+  const b=module.viewForPlayer({state:s,player:guest,players});
+  assert.equal(a.match.magicLoadouts[0].school,'stone');
+  assert.equal(a.match.magicLoadouts[1],null);
+  assert.equal(b.match.magicLoadouts[0],null);
+  assert.equal(b.match.magicLoadouts[1].school,'fire');
+  assert.equal(a.loadout,a.match.magicLoadouts[0]);
+  assert.equal(b.loadout,b.match.magicLoadouts[1]);
+  assert.ok(!JSON.stringify(a).includes('"fi_ember"'),'guest spell ID must stay private');
+  assert.ok(!JSON.stringify(b).includes('"st_throw"'),'host spell ID must stay private');
+  assert.equal(a.match.actors.length,2,'combat rendering still has both actors');
+ };
+ inspect();
+ assert.equal(s.match.magicLoadouts[0],stone,'projection must not modify authority');
+ assert.equal(s.match.magicLoadouts[1],fire);
+ moveToOffers(s);
+ inspect();
+ const outsider=module.viewForPlayer({state:s,player:{id:'unknown'},players});
+ assert.ok(outsider.match.magicLoadouts.every(book=>book===null),'unknown seat gets no rune books');
+ send(s,host,'magic-pick',{stage:s.magicStage,index:0});
+ inspect();
+ send(s,guest,'magic-pick',{stage:s.magicStage,index:0});
+ inspect();
 });
