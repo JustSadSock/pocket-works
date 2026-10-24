@@ -70,21 +70,24 @@ function validBallotImage(value:string){
  return width===3000&&height===450;
 }
 function allSprites(s:State){return members(s).every(p=>validBallotImage(s.ballotSprites?.[p.id]||''))}
+function nextSpriteTurn(s:State,startingAt:number){
+ return members(s).findIndex((p,i)=>i>=startingAt&&validBallotImage(s.ballotSprites?.[p.id]||''));
+}
 
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
 // The final durable painting, not the drawing clock, closes the restoration stage.
 const allCommitted=(s:State)=>members(s).length>0&&members(s).every(p=>Array.isArray(s.assignments[p.id]?.strokes));
 const strip=(s:State,id:string)=>({
- host:s.host,phase:s.phase,rasterBallots:Boolean(s.rasterBallots),spriteFallback:Boolean(s.spriteFallback),serverNow:now(),timedScoring:Boolean(s.timedScoring),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
+ host:s.host,phase:s.phase,rasterBallots:Boolean(s.rasterBallots),spriteFallback:Boolean(s.spriteFallback),skippedBallots:s.rasterBallots&&['voting','verdict','reveal','round-review','results'].includes(s.phase)?members(s).filter(p=>!s.ballotSprites?.[p.id]).map(p=>p.id):[],serverNow:now(),timedScoring:Boolean(s.timedScoring),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
  selected:s.selected,ballotReady:members(s).filter(p=>!!s.ballotSprites?.[p.id]).map(p=>p.id),participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  incompleteSubmissions:s.incompleteSubmissions||[],
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
  mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation,strokes:s.assignments[id].strokes,draft:s.drafts?.[id]??null}:null,
  author:members(s)[s.turn]||null,
- candidate:s.phase==='voting'&&(!s.rasterBallots||s.spriteFallback)?s.assignments[members(s)[s.turn]?.id]||null:null,
- ballotSprite:s.phase==='voting'&&s.rasterBallots&&!s.spriteFallback?s.ballotSprites?.[members(s)[s.turn]?.id]||null:null,
+ candidate:s.phase==='voting'&&!s.rasterBallots?s.assignments[members(s)[s.turn]?.id]||null:null,
+ ballotSprite:s.phase==='voting'&&s.rasterBallots?s.ballotSprites?.[members(s)[s.turn]?.id]||null:null,
  gallery:(s.phase==='verdict'||s.phase==='reveal'||s.phase==='round-review'||s.phase==='results')?members(s).map((p,i)=>(s.phase!=='verdict'&&s.phase!=='reveal')||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{},scoreAudit:s.timedScoring?scoreTurn(s,p.id):undefined}):null):null
 });
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
@@ -205,11 +208,15 @@ function step(s:State){
    if(allSprites(s))step(s);
   }else{s.phase='voting';s.turn=0;s.deadline=now()+VOTE_WINDOW_MS;}
  }else if(s.phase==='sealing'){
-  // Graceful degradation is explicit: an unavailable uploader cannot trap
-  // every participant permanently in a dead room.
-  s.spriteFallback=!allSprites(s);
+  // A late/missing image NEVER authorizes transmitting candidate.art.
+  // Hold a fair vote only for the authors whose anonymous image is ready.
+  s.spriteFallback=false;
   s.ballotAssemblies={};
-  s.phase='voting';s.turn=0;s.deadline=now()+VOTE_WINDOW_MS;
+  const first=nextSpriteTurn(s,0);
+  if(first<0){
+   // No safe ballot exists: close this round without guesses or awards.
+   completeVotes(s);s.phase='round-review';s.deadline=0;
+  }else{s.turn=first;s.phase='voting';s.deadline=now()+VOTE_WINDOW_MS;}
  }else if(s.phase==='voting'){
   // At the deadline, count 1- and 2-coin ballots as submitted votes.
   const target=members(s)[s.turn]?.id;
@@ -231,7 +238,8 @@ function step(s:State){
  }else if(s.phase==='verdict'){
   s.phase='reveal';s.deadline=now()+19000;
  }else if(s.phase==='reveal'){
-  if(s.turn<members(s).length-1){s.turn++;s.phase='voting';s.deadline=now()+VOTE_WINDOW_MS;}
+  const next=s.rasterBallots?nextSpriteTurn(s,s.turn+1):s.turn+1;
+  if(next>=0&&next<members(s).length){s.turn=next;s.phase='voting';s.deadline=now()+VOTE_WINDOW_MS;}
   else {
    completeVotes(s);
    // Untimed shared exhibition, advancing only when the host chooses.
