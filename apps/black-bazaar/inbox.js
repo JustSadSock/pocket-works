@@ -15,7 +15,7 @@ export function incomingOffers(state){
   for(const lot of state.blackLots||[]){
    if(lot.mine||!lot.myBid||!lot.myCounter?.id)continue;
    offers.push({key:'black:'+lot.id+':'+lot.myCounter.id,kind:'black',section:'market',
-    title:'Встречная цена от посредника',
+    title:'Посредник предлагает другую цену',
     detail:'Открыть закрытый торг',targetId:'bazaar-counter-'+lot.id});
   }
  }
