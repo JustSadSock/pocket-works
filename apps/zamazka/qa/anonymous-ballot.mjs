@@ -14,6 +14,9 @@ function fakeWebp(bytes=4200){
  buf.write('RIFF',0,'ascii');buf.writeUInt32LE(bytes-8,4);
  buf.write('WEBPVP8 ',8,'ascii');
  buf.writeUInt32LE(bytes-20,16);
+ // A structurally plausible, opaque, displayed VP8 keyframe with a
+ // non-empty first partition. Not a proof that the entire bitstream decodes.
+ buf[20]=0x10;buf[21]=0x05;buf[22]=0;
  // VP8 keyframe start code and the exact 3000×450 pixel canvas contract.
  buf[23]=0x9d;buf[24]=0x01;buf[25]=0x2a;
  buf.writeUInt16LE(3000,26);buf.writeUInt16LE(450,28);
