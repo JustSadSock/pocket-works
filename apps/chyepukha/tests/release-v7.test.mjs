@@ -9,24 +9,25 @@ const repoFile=path=>readFileSync(new URL('../../../'+path,import.meta.url),'utf
 const moduleSource=repoFile('apps/chyepukha/server/module.ts');
 const locked=JSON.parse(repoFile('pocketnet/modules.lock.json'));
 
-test('PocketNet v7 is pinned for new rooms; prior versions remain immutable',()=>{
- assert.equal(locked.chyepukha.current,'v7');
- assert.deepEqual(locked.chyepukha.versions,['v1','v2','v3','v4','v5','v6','v7']);
- assert.equal(repoFile('pocketnet/module-versions/chyepukha/v7.ts'),moduleSource);
+test('PocketNet v8 is pinned for new rooms; prior versions remain immutable',()=>{
+ assert.equal(locked.chyepukha.current,'v8');
+ assert.deepEqual(locked.chyepukha.versions,['v1','v2','v3','v4','v5','v6','v7','v8']);
+ assert.equal(repoFile('pocketnet/module-versions/chyepukha/v8.ts'),moduleSource);
+ assert.notEqual(repoFile('pocketnet/module-versions/chyepukha/v7.ts'),moduleSource);
  assert.notEqual(repoFile('pocketnet/module-versions/chyepukha/v6.ts'),moduleSource);
 });
 
-test('new v7 rooms retain checkpointing, presence and moderation in the hub',()=>{
+test('new v8 rooms retain checkpointing, presence and moderation in the hub',()=>{
  const hub=repoFile('pocketnet/hub.mjs');
- assert.match(hub,/\['v6','v7'\]\.includes\(room\.version\)/);
- assert.match(hub,/\['v5','v6','v7'\]\.includes\(room\.version\)/);
+ assert.match(hub,/\['v6','v7','v8'\]\.includes\(room\.version\)/);
+ assert.match(hub,/\['v5','v6','v7','v8'\]\.includes\(room\.version\)/);
  assert.ok(!/room\.version\s*(?:===|!==)\s*'v6'/.test(hub));
  const client=repoFile('apps/chyepukha/app.js');
- assert.match(client,/\['v1','v2','v3','v4','v5','v6','v7'\]/);
- assert.match(client,/\['v5','v6','v7'\]/);
+ assert.match(client,/\['v1','v2','v3','v4','v5','v6','v7','v8'\]/);
+ assert.match(client,/\['v5','v6','v7','v8'\]/);
 });
 
-test('v7 writing shows the passport and finishes without transferred words',()=>{
+test('v8 writing shows the passport and finishes without transferred words',()=>{
  const view={
   phase:'writing',host:'author',round:0,total:10,
   settings:{visibleTailWords:3},players:[],
@@ -67,19 +68,19 @@ test('word handoff gives an actionable hint and v7 avoids double genre instructi
 
 test('host controls remain available in v7 as well as existing v6 rooms',()=>{
  const view={phase:'writing',host:'author',round:1,total:10,paused:false};
- for(const version of ['v6','v7']){
+ for(const version of ['v6','v7','v8']){
   assert.match(controlsBar(view,'author',version,s=>String(s)),/data-act="pause"/);
   assert.match(controlsBar(view,'guest',version,s=>String(s)),/data-act="manage-players"/);
  }
 });
 
-test('client, offline cache and release metadata agree on version 1.8.5',()=>{
+test('client, offline cache and release metadata agree on version 1.8.6',()=>{
  const config=JSON.parse(repoFile('apps/chyepukha/app.config.json'));
  const sw=repoFile('apps/chyepukha/sw.js');
  const html=repoFile('apps/chyepukha/index.html');
- assert.equal(config.version,'1.8.5');
- assert.equal(config.cacheName,'chyepukha-v1.8.5');
- assert.match(sw,/const APP_VERSION='1\.8\.5'/);
- assert.match(sw,/__pw_build','chyepukha-1\.8\.5'/);
- assert.match(html,/data-app-version="1\.8\.5"/);
+ assert.equal(config.version,'1.8.6');
+ assert.equal(config.cacheName,'chyepukha-v1.8.6');
+ assert.match(sw,/const APP_VERSION='1\.8\.6'/);
+ assert.match(sw,/__pw_build','chyepukha-1\.8\.6'/);
+ assert.match(html,/data-app-version="1\.8\.6"/);
 });
