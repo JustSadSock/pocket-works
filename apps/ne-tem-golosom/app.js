@@ -127,12 +127,12 @@ function setClips(items,selection=null){
  renderTimeline();
 }
 function undoEdit(){
- if(record||preroll||pendingRecording)return;
+ if(record||preroll||micPending||pendingRecording)return;
  const previous=editHistory.undo(localClips);if(!previous)return;
  stopAllPlayback();setClips(previous);void draftWrite();cue('stop');
 }
 function redoEdit(){
- if(record||preroll||pendingRecording)return;
+ if(record||preroll||micPending||pendingRecording)return;
  const next=editHistory.redo(localClips);if(!next)return;
  stopAllPlayback();setClips(next);void draftWrite();cue('ready');
 }
@@ -435,7 +435,7 @@ async function receivedMedia(p,rx,blob){if(rx.kind==='video'){if(!scene?.custom|
 }
 function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,mime:c.blob.type})}
 function sendAllOwn(){if(sentPremiere||mode==='solo')return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
-async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
+async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
 function stopAllPlayback(){playing=false;for(const id of ['stage-video','premiere-video','trim-video'])$(id).pause();for(const c of [...localClips,...remoteClips])c.audio?.pause();$('play-toggle').textContent='▶'}
 function updateClipSound(t,on,isPremiere=false){const items=isPremiere?[...localClips,...remoteClips]:localClips;for(const c of items){if(!c.audio)continue;const active=t>=c.start&&t<c.end&&on;const offset=clamp(t-c.start+c.offset,0,Math.max(0,c.blob.size?1e5:0));if(active){if(c.audio.paused||Math.abs(c.audio.currentTime-offset)>.25){try{c.audio.currentTime=offset}catch{}}if(c.audio.paused)c.audio.play().catch(()=>{})}else if(!c.audio.paused)c.audio.pause()}}
 // Video time updates move only the playhead. Clip buttons retain focus.
@@ -508,7 +508,7 @@ function setPlayhead(value,fromPremiere=false){
  if(!fromPremiere)renderPlayhead();
  else $('premiere-scrub').value=String(Math.round(value*10));
 }
-async function playStage(){if(!scene||record||preroll||scene.custom&&!sourceBlob)return toast('Видео пока не готово.');const video=$('stage-video');if(playing){stopAllPlayback();return}if(time(video)>=scene.duration-.1)seekVideo(video,0);try{updateClipSound(time(video),true,false);await video.play();playing=true;$('play-toggle').textContent='Ⅱ'}catch{updateClipSound(time(video),false,false);toast('Нажми воспроизведение ещё раз — браузер блокирует запуск.')}}
+async function playStage(){if(!scene||record||preroll||micPending||pendingRecording||scene.custom&&!sourceBlob)return toast('Видео пока не готово.');const video=$('stage-video');if(playing){stopAllPlayback();return}if(time(video)>=scene.duration-.1)seekVideo(video,0);try{updateClipSound(time(video),true,false);await video.play();playing=true;$('play-toggle').textContent='Ⅱ'}catch{updateClipSound(time(video),false,false);toast('Нажми воспроизведение ещё раз — браузер блокирует запуск.')}}
 function mime(){const opts=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];return opts.find(x=>window.MediaRecorder?.isTypeSupported(x))||''}
 function updateRecordingControls(){
  $('count-record-btn').disabled=!!record||!!micPending||!!pendingRecording;
@@ -652,7 +652,7 @@ async function replaceClip(a,b,blob){
  return draftWrite();
 }
 async function deleteClip(){
- if(record||preroll||pendingRecording)return;
+ if(record||preroll||micPending||pendingRecording)return;
  const chosen=localClips.find(c=>c.id===selectedClip);
  if(!chosen){toast('Сначала выбери реплику на ленте.');return}
  if(!confirm('Удалить реплику '+fmt(chosen.start)+'–'+fmt(chosen.end)+'?'))return;
@@ -715,7 +715,7 @@ $('count-record-btn').onclick=()=>startRecord(3);
 $('replace-clip-btn').onclick=()=>{if(selectedClip)void startRecord(0,selectedClip)};
 $('timeline-zoom-in').onclick=()=>zoomTimeline(1);
 $('timeline-zoom-out').onclick=()=>zoomTimeline(-1);
-$('scrubber').oninput=e=>{if(record||preroll)return;setPlayhead(Number(e.target.value)/10)};
+$('scrubber').oninput=e=>{if(record||preroll||micPending||pendingRecording)return;setPlayhead(Number(e.target.value)/10)};
 $('clip-lane').onpointerdown=e=>{
  if(e.button!==0||record||preroll||micPending||pendingRecording)return;
  const button=e.target.closest('[data-clip]'),clip=localClips.find(c=>c.id===button?.dataset.clip);
@@ -794,7 +794,7 @@ $('premiere-scrub').oninput=e=>{pausePremiere();setPlayhead(Number(e.target.valu
 $('premiere-back').onclick=()=>{pausePremiere();if(mode==='solo')openEditor();else if(meHost())sendGame({type:'again'});else toast('Новую сцену начинает ведущий.')};
 for(const b of document.querySelectorAll('[data-back]'))b.onclick=async()=>{const to=b.dataset.back;if(view==='wait'&&mode!=='solo'){sendGame({type:'unready'});await openEditor()}else if(to==='home'){if(await resetRuntime()){leaveNetwork();show('home')}}else if(to==='library'){videoExportController?.abort();clearExportPreview();library()}else if(to==='editor')await openEditor()};
 $('stage-video').ontimeupdate=()=>{if(!scene)return;const t=time($('stage-video'));if(record?.replaceId&&t>=record.limit-.035)finishRecording();
-else if(t>=scene.duration-.05){if(record)finishRecording();else stopAllPlayback();seekVideo($('stage-video'),scene.duration-.04)}if(!record)updateClipSound(t,playing,false);renderPlayhead()};
+else if(t>=scene.duration-.05){if(record)finishRecording();else if(!$('stage-video').paused){stopAllPlayback();seekVideo($('stage-video'),scene.duration-.04)}}if(!record)updateClipSound(t,playing,false);renderPlayhead()};
 $('premiere-video').ontimeupdate=()=>{if(!scene)return;const t=time($('premiere-video'));$('premiere-scrub').value=String(Math.round(t*10));if(t>=scene.duration-.04){pausePremiere();seekVideo($('premiere-video'),scene.duration-.04)}else updateClipSound(t,!$('premiere-video').paused,true)};
 $('stage-video').onpause=()=>{if(!record){playing=false;$('play-toggle').textContent='▶';updateClipSound(time($('stage-video')),false)}};
 document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelCountdown();if(record)finishRecording();stopAllPlayback();pausePremiere()}});
