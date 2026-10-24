@@ -706,9 +706,13 @@ function zoomTimeline(direction){
  const levels=[1,2,4],i=levels.indexOf(timelineZoom),next=levels[Math.max(0,Math.min(levels.length-1,i+direction))];
  if(next===timelineZoom)return;
  const viewport=$('timeline-viewport'),content=$('timeline-content');
- const center=(viewport.scrollLeft+viewport.clientWidth/2)/Math.max(1,content.offsetWidth);
+ // Magnify the moment being edited, not the arbitrary center of the strip.
+ // Centering the strip after zoom hid recordings near time zero at 4×.
+ const active=localClips.find(c=>c.id===selectedClip);
+ const focus=active?active.start:time($('stage-video'));
+ const position=Math.max(0,Math.min(1,focus/Math.max(.1,scene?.duration||1)));
  timelineZoom=next;updateZoom();
- viewport.scrollLeft=Math.max(0,center*content.offsetWidth-viewport.clientWidth/2);
+ viewport.scrollLeft=Math.max(0,position*content.offsetWidth-viewport.clientWidth/2);
 }
 function renderTimeline(){
  if(!scene)return;
