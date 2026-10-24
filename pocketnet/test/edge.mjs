@@ -248,7 +248,7 @@ try{
 }
 
 
-/* Blockies v4: the same real Worker must elect the next host from live sockets,
+/* Blockies (current pinned ruleset): the same real Worker must elect the next host from live sockets,
    preserve the serialized playfield and let the old host reclaim its own seat. */
 const blockiesHostToken=await session('Blockies host');
 const blockiesPartnerToken=await session('Blockies partner');
@@ -260,7 +260,7 @@ try{
   const partnerID=(await blockiesPartner.next('authenticated')).player.id;
   blockiesHost.send('create_room',{gameId:'blockies'});
   const initialBlockies=await blockiesHost.next('room_joined');
-  assert.equal(initialBlockies.version,'v4');
+  assert.equal(initialBlockies.version,versionLock.blockies.current);
   const stableId=initialBlockies.roomId;
   blockiesPartner.send('join_room',{roomId:stableId});
   await blockiesPartner.next('room_joined');
@@ -301,7 +301,7 @@ try{
   blockiesPartner.send('leave_room');
   await sleep(75);
   assert.equal((await health()).rooms,0,'explicit departure of all Blockies members closes room');
-  console.log('PASS: Blockies v4 live socket failover, host pause, room and board preservation, same-token reconnect');
+  console.log('PASS: Blockies '+versionLock.blockies.current+' live socket failover, host pause, room and board preservation, same-token reconnect');
 }finally{
   if(blockiesHost)await close(blockiesHost);
   if(blockiesPartner)await close(blockiesPartner);
