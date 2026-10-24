@@ -24,23 +24,58 @@
     <div id="scene-license" class="license-note">Исходные фильмы: <a href="https://studio.blender.org/projects/wing-it/" target="_blank" rel="noopener noreferrer">Wing It! · Blender Studio</a> (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>); <a href="https://peach.blender.org/" target="_blank" rel="noopener noreferrer">Big Buck Bunny · Blender Foundation</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener noreferrer">CC BY 3.0</a>). Отрывки обрезаются и получают новую озвучку. Для собственных файлов нужны права на использование.</div>
   </section>
   <section id="screen-trim" class="screen trim hidden">
-    <header class="topbar"><button class="nav-back" data-back="library">←</button><h2>Подготовить сцену</h2><span class="small-cap">02 / 03</span></header>
-    <div class="trim-preview"><video id="trim-video" controls playsinline preload="metadata"></video></div>
-    <div class="trim-info"><label>Название <input id="scene-title" maxlength="55" placeholder="Название сцены"></label><div class="two-inputs"><label>От (сек.)<input id="trim-start" type="number" min="0" step="1" value="0"></label><label>Длина (сек.)<input id="trim-length" type="number" min="10" max="90" step="1" value="60"></label></div></div>
-    <div id="media-workbench" class="media-workbench hidden">
-      <div class="row-between"><h3>Монтаж видеосцены</h3><span id="media-source-size" class="media-stamp"></span></div>
-      <div class="media-controls">
-        <label>Качество <span id="media-quality-label">Высокое</span><input id="media-quality" type="range" min="1" max="5" value="4" step="1" aria-label="Качество видео"></label>
-        <label>Размер кадра<select id="media-resolution"><option value="640">До 640 пикс.</option><option value="960">До 960 пикс.</option><option value="1280" selected>До 1280 пикс.</option><option value="1920">До 1920 пикс.</option></select></label>
+    <header class="topbar"><button class="nav-back" data-back="library" aria-label="К выбору видео">←</button><h2>Подготовить сцену</h2><span class="small-cap">02 / 03</span></header>
+    <div class="trim-layout">
+      <div class="trim-left">
+        <div class="trim-preview" id="trim-preview">
+          <video id="trim-video" controls playsinline preload="metadata" aria-label="Исходное видео"></video>
+          <video id="media-output-preview" class="hidden" controls playsinline preload="metadata" aria-label="Обработанное видео"></video>
+          <div id="media-preview-switch" class="preview-switch hidden" role="group" aria-label="Сравнение качества">
+            <button type="button" id="preview-original" class="active" aria-pressed="true">Исходник</button>
+            <button type="button" id="preview-result" aria-pressed="false">Результат</button>
+          </div>
+        </div>
+        <div class="trim-range-panel" id="trim-range-root">
+          <div class="trim-range-heading"><strong>Выбери момент фильма</strong><span><b id="trim-current-time">00:00</b> / <span id="trim-total-time">00:00</span></span></div>
+          <div id="trim-range-track" class="trim-range-track" aria-label="Диапазон сцены. Перетаскивай края или выделенный участок">
+            <div class="trim-range-rail"></div>
+            <div class="trim-range-fill" id="trim-range-fill"></div>
+            <div class="trim-range-head" id="trim-range-head"></div>
+            <button id="trim-range-handle-start" class="trim-range-handle start" data-trim-handle="start" type="button" role="slider" aria-label="Начало сцены" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-orientation="horizontal"></button>
+            <button id="trim-range-handle-end" class="trim-range-handle end" data-trim-handle="end" type="button" role="slider" aria-label="Конец сцены" aria-valuemin="0" aria-valuemax="90" aria-valuenow="60" aria-orientation="horizontal"></button>
+          </div>
+          <div class="trim-range-ticks" id="trim-range-ticks"></div>
+          <div class="trim-range-bottom">
+            <div class="trim-range-bound"><span>НАЧАЛО</span><b id="trim-start-display">00:00</b><button id="trim-mark-start" type="button">Начало здесь</button></div>
+            <div class="trim-range-length"><span>ДЛИТЕЛЬНОСТЬ</span><b id="trim-range-length">01:00</b></div>
+            <div class="trim-range-bound end"><span>КОНЕЦ</span><b id="trim-end-display">01:00</b><button id="trim-mark-end" type="button">Конец здесь</button></div>
+          </div>
+          <input id="trim-start" type="hidden" value="0">
+          <input id="trim-length" type="hidden" value="60">
+        </div>
+        <p class="trim-instruction">Перетащи края выделения. Выделенный участок можно сдвинуть целиком; тонкая линия показывает позицию воспроизведения.</p>
       </div>
-      <div class="media-budget"><span id="media-estimate">Ожидаемый размер</span><small>В комнате максимум 96 МиБ · оценка приблизительная</small></div>
-      <button id="media-render" class="media-render" type="button">✂ Обрезать и сжать</button>
-      <div id="media-progress" class="media-progress hidden" role="status"><div class="row-between"><strong id="media-progress-label">Обработка · 0%</strong><button id="media-cancel" class="text-action" type="button">Отменить</button></div><progress id="media-progress-bar" max="100" value="0"></progress><small>Обработка идёт на устройстве. Не закрывай экран.</small></div>
-      <div id="media-result" class="media-result hidden"><div class="media-result-title"><b>Готовый фрагмент</b><span id="media-output-size"></span></div><video id="media-output-preview" controls playsinline preload="metadata"></video><div class="media-result-actions"><button id="media-accept" class="action main-action" type="button">Использовать фрагмент →</button><button id="media-discard" class="action secondary-action" type="button">Пересжать</button></div></div>
-      <p id="media-note" class="media-note" aria-live="polite">Укажи начало и длину сцены. Предпросмотр итогового качества появится после обработки.</p>
+      <div class="trim-right">
+        <div class="trim-info"><label for="scene-title">Название сцены<input id="scene-title" maxlength="55" placeholder="Название сцены"></label></div>
+        <div id="media-workbench" class="media-workbench hidden">
+          <div class="row-between"><h3>Видео для комнаты</h3><span id="media-source-size" class="media-stamp"></span></div>
+          <div class="media-controls">
+            <label>Качество <span id="media-quality-label">Высокое</span><input id="media-quality" type="range" min="1" max="5" value="4" step="1" aria-label="Качество видео"></label>
+            <label>Размер кадра<select id="media-resolution"><option value="640">До 640 пикс.</option><option value="960">До 960 пикс.</option><option value="1280" selected>До 1280 пикс.</option><option value="1920">До 1920 пикс.</option></select></label>
+          </div>
+          <div class="media-budget"><span id="media-estimate">Ожидаемый размер</span><small>Лимит комнаты — 96 МиБ</small></div>
+          <button id="media-render" class="media-render" type="button">Сжать для передачи</button>
+          <div id="media-progress" class="media-progress hidden" role="status"><div class="row-between"><strong id="media-progress-label">Обработка · 0%</strong><button id="media-cancel" class="text-action" type="button">Отменить</button></div><progress id="media-progress-bar" max="100" value="0"></progress><small>Обработка на устройстве. Не закрывай экран.</small></div>
+          <div id="media-result" class="media-result hidden">
+            <div class="media-result-title"><b>Обработанный фрагмент готов</b><span id="media-output-size"></span></div>
+            <button id="media-discard" class="text-action" type="button">Изменить параметры / пересжать ↻</button>
+          </div>
+          <p id="media-note" class="media-note" aria-live="polite">Если исходный файл помещается в комнату, сжимать его необязательно.</p>
+        </div>
+        <div class="role-builder"><div class="row-between"><h3>Персонажи</h3><button id="add-role" class="text-action">+ Добавить</button></div><div id="role-tags" class="role-tags"></div></div>
+      </div>
     </div>
-    <div class="role-builder"><div class="row-between"><h3>Персонажи</h3><button id="add-role" class="text-action">+ Добавить</button></div><div id="role-tags" class="role-tags"></div></div>
-    <button id="confirm-scene" class="action main-action bottom-action">Продолжить <span class="arrow">→</span></button>
+    <div class="trim-footer"><span id="trim-footer-hint">10–90 секунд · исходный ролик остаётся неизменным</span><button id="confirm-scene" class="action main-action">Продолжить с видео <span class="arrow">→</span></button></div>
   </section>
   <section id="screen-room" class="screen room hidden">
     <header class="topbar"><button class="nav-back" data-back="home">←</button><h2 id="room-heading">Комната</h2><span id="net-pill" class="network-pill">PocketNet</span></header>
