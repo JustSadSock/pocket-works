@@ -72,6 +72,10 @@
 .writer-shell .selected-words{min-height:54px}
 .writer-shell .writer-selection .editor-submit #chars{display:none}
 .writer-shell .writer-selection .editor-primary{flex:1 1 auto}
+/* Preview chips never cover the real submit button. */
+.writer-shell .writer-selection .selection-stage{overflow:hidden}
+.writer-shell .writer-selection .editor-submit{position:relative;z-index:3}
+.writer-shell #selectedStrip{pointer-events:none}
 @media(max-width:760px){
  #scene[data-motion="open"] .writer-shell .editor-paper,
  #scene[data-motion="receive"] .writer-shell .editor-paper{animation:chy-copy-arrive .28s cubic-bezier(.2,.75,.24,1) both}
@@ -95,8 +99,9 @@
  .writer-shell .writer-selection .selection-paper{min-height:45px}
  .writer-shell .editor-submit .editor-primary{min-height:40px}
  .writer-shell .editor-submit .editor-back{min-height:40px}
- .writer-shell .selected-words{min-height:38px;max-height:54px}
- .writer-shell .selection-stage.is-complete .selected-words:after{font-size:8px;padding:3px 5px;margin:3px 0 0}
+ .writer-shell .writer-selection .selected-words{flex:0 1 42px;min-height:0;max-height:42px;overflow-y:auto}
+ /* Preserve space for writing and submission on 390px landscape screens. */
+ .writer-shell .selection-stage.is-complete .selected-words:after{display:none}
 }
 html.is-app-keyboard-open .desk{
  height:var(--app-viewport-height,100dvh);min-height:0;overflow:hidden;

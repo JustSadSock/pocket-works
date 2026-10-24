@@ -13,7 +13,7 @@ async function session(name){
 }
 async function channel(token){
  const ws=new WebSocket(base.replace(/^http/,'ws')+'/pocketnet/ws',{origin:base});
- const inbox=[],waiters=[];
+ const inbox=[],waiters=[],received=[];
  const next=(type,filter=()=>true)=>new Promise((resolve,reject)=>{
   const i=inbox.findIndex(x=>x.type===type&&filter(x));
   if(i>=0){resolve(inbox.splice(i,1)[0]);return}
@@ -23,12 +23,13 @@ async function channel(token){
  });
  ws.on('message',raw=>{
   const data=JSON.parse(String(raw)),index=waiters.findIndex(x=>x.type===data.type&&x.filter(data));
+  received.push(data);
   if(index>=0)waiters.splice(index,1)[0].resolve(data);else inbox.push(data);
  });
  await new Promise((resolve,reject)=>{ws.once('open',resolve);ws.once('error',reject)});
  ws.send(JSON.stringify({wireVersion:1,type:'auth',token}));
  const auth=await next('authenticated');
- return {id:auth.player.id,ws,next,send:(type,extra={})=>ws.send(JSON.stringify({wireVersion:1,type,...extra}))};
+ return {id:auth.player.id,ws,next,received,send:(type,extra={})=>ws.send(JSON.stringify({wireVersion:1,type,...extra}))};
 }
 async function shutdown(c){
  if(c.ws.readyState===WebSocket.CLOSED)return;
@@ -60,9 +61,18 @@ try{
  const original=(await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.players.find(p=>p.id===hostId)?.submitted)).event.payload.revision;
  host.send('game_message',{payload:a});
  await host.next('game_event',m=>m.event?.type==='receipt'&&m.event.payload.requestId===a.requestId);
+ const beforePeerSync=guest.received.filter(m=>m.type==='game_event'&&m.event?.type==='state').length;
  host.send('game_message',{payload:{type:'sync'}});
  const afterReplay=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.revision===original);
  assert.equal(afterReplay.event.payload.revision,original);
+ // Read-only sync is private: the peer must not receive an extra snapshot.
+ await sleep(120);
+ assert.equal(guest.received.filter(m=>m.type==='game_event'&&m.event?.type==='state').length,beforePeerSync);
+ // Repeated syncs on this socket are coalesced instead of triggering new work.
+ const beforeBurst=host.received.filter(m=>m.type==='game_event'&&m.event?.type==='state').length;
+ for(let i=0;i<8;i++)host.send('game_message',{payload:{type:'sync'}});
+ await sleep(150);
+ assert.equal(host.received.filter(m=>m.type==='game_event'&&m.event?.type==='state').length,beforeBurst);
  const b=make(second.event.payload,'guest');
  guest.send('game_message',{payload:b});
  const roundTwo=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.round===1);
