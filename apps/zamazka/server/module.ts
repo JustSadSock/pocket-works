@@ -443,6 +443,10 @@ const module: PocketModule<State>={
      const item=state.assignments[id];
      if(!item||!Array.isArray(item.strokes)||a.round!==state.round)
       return {state,events:notice(id,'Растровый лист не относится к текущей сохранённой работе.')};
+     // The sprite must identify the exact server-committed vector revision.
+     // This rejects stale or cross-round uploads, but does not prove its pixels.
+     if(typeof a.sourceChecksum!=='string'||a.sourceChecksum!==paintingChecksum(item.strokes))
+      return {state,events:notice(id,'Растровый лист относится к другой версии рисунка.')};
      if(typeof a.revision!=='string'||!/^r[a-z0-9-]{1,30}$/.test(a.revision)||
         typeof a.checksum!=='string'||!/^[0-9a-f]{8}$/.test(a.checksum)||
         !Number.isInteger(a.parts)||a.parts<1||a.parts>60||
