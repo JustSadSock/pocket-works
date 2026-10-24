@@ -36,7 +36,7 @@ let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
 let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',comicSource=null;
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='';
-let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false,joinSeatCode='',kickTarget='',skipTarget='';
+let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false,joinSeatCode='',kickTarget='',skipTarget='',dialogReturnAction='';
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
 const member=()=>Boolean(pocketIdentity?.complete&&pocketIdentity?.nickname);
 const playerName=()=>preferredPocketName(pocketIdentity,name.trim());
@@ -341,6 +341,8 @@ function overlay(){
  return '';
 }
 function render(){
+ const previousDialog=scene.querySelector('[role="dialog"]');
+ if(modal&&!previousDialog)dialogReturnAction=document.activeElement?.dataset?.act||(document.activeElement?.id==='sound'?'sound':'');
  netStatus();syncIdentityBar();
  $('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.');
  soundscape.setScene(view?.phase==='lobby'?'lobby':view?.phase==='writing'?'writing':view?.phase==='finished'?'finished':'menu');
@@ -353,6 +355,12 @@ function render(){
   return;
  }
  scene.innerHTML=(view?(view.phase==='lobby'?lobby():view.phase==='writing'?(view.waiting?waiting():writing()):view.phase==='finished'?results():waiting()):archiveOpen?archiveScreen():home())+(view?controlsBar(view,me,roomVersion,escape):'')+overlay();
+ const dialog=scene.querySelector('[role="dialog"]');
+ if(dialog)dialog.querySelector('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled])')?.focus({preventScroll:true});
+ else if(previousDialog&&dialogReturnAction){
+  const returnTo=dialogReturnAction==='sound'?$('sound'):scene.querySelector('[data-act="'+dialogReturnAction+'"]');
+  returnTo?.focus({preventScroll:true});dialogReturnAction='';
+ }
  if(view?.paused){scene.querySelectorAll('#answerForm button[type="submit"]').forEach(b=>{b.disabled=true;b.title='Партія на паузі'});const area=scene.querySelector('.moderation-bar');if(area)area.insertAdjacentHTML('afterend','<div class="pause-banner">Редакція на паузі. Тексти збережено; надсилання тимчасово вимкнено.</div>')}
 
  if(view?.phase==='writing'&&!view.waiting)refreshWords();
@@ -461,6 +469,20 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
  if(act==='copy-story'){const st=view.stories.find(x=>x.id===storyId);if(st)copyText(st.text);return}
  if(act==='comic'||act==='archive-comic'){comicSource=act==='archive-comic'?archiveSelection().story:view?.stories?.find(x=>x.id===storyId);if(!comicSource){toast('Не знайдено історію.');return}modal='comic-prompt';tick(800);render();return}
  if(act==='close-comic'){modal='';comicSource=null;render();return}
+});
+document.addEventListener('keydown',e=>{
+ if(!modal)return;
+ const dialog=scene.querySelector('[role="dialog"]');if(!dialog)return;
+ if(e.key==='Escape'){
+  if(IS_PREVIEW)return; // The inspector reserves Escape to close its preview.
+  e.preventDefault();modal='';render();return;
+ }
+ if(e.key!=='Tab')return;
+ const focusable=[...dialog.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled])')].filter(el=>el.getClientRects().length);
+ if(!focusable.length){e.preventDefault();dialog.tabIndex=-1;dialog.focus();return}
+ const first=focusable[0],last=focusable.at(-1),active=document.activeElement;
+ if(e.shiftKey&&(active===first||!dialog.contains(active))){e.preventDefault();last.focus()}
+ else if(!e.shiftKey&&(active===last||!dialog.contains(active))){e.preventDefault();first.focus()}
 });
 $('sound').addEventListener('click',()=>{soundscape.unlock();modal='audio';render()});
 document.addEventListener('pointerdown',()=>{if(effectsEnabled||musicEnabled)soundscape.unlock()},{once:true});
