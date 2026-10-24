@@ -27,7 +27,7 @@ async function walkFiles(directory,prefix=''){
 
 for(const file of [
   'index.html','styles.css','deck-shell.css','launcher-performance.css','launcher-sync.css','app.js',
-  'launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js','launcher-new-app-focus.js','manifest.webmanifest','sw.js','apps.json','privacy.html','privacy.txt'
+  'launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js','launcher-new-app-focus.js','manifest.webmanifest','sw.js','apps.json','privacy.html','privacy.txt','_headers'
 ]){
   if(!(await exists(path.join(output,file))))errors.push(`dist-site is missing ${file}`);
 }

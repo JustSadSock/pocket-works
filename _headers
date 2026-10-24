@@ -1,0 +1,7 @@
+# Baseline protections for Cloudflare Pages/Workers static assets.
+# CSP is intentionally not imposed here until every app runtime is audited
+# for inline scripts, WASM and external resources.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN

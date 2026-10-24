@@ -197,6 +197,7 @@ for (const asset of [
   './deck-shell.css',
   './shared/deck-state.js',
   './shared/pocket-deck.js',
+  './shared/identity-tab-bridge.js',
   './covers/index.json',
   './apps.json'
 ]) {

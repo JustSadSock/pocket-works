@@ -936,9 +936,18 @@ deck = installPocketDeck({
 });
 installShelfTools({ store: shelfStore });
 updateSystemStatus();
-void shelfStore.hydrate();
+// Guest preferences remain in their legacy namespace. Signed-in users get
+// independent shelves; no unverified migration can leak another user's list.
+const initialShelfAccount=window.PocketID?.getUser?.();
+if(initialShelfAccount?.complete)void shelfStore.setAccount(initialShelfAccount.id);
+else void shelfStore.hydrate();
+document.addEventListener('pocket-id:changed',event=>{
+  shelfState.query='';
+  searchInput.value='';
+  void shelfStore.setAccount(event.detail?.user?.complete ? event.detail.user.id : null);
+});
 window.addEventListener('storage', (event) => {
-  if (event.key !== 'pocket-works:shelf:v2' || !event.newValue) return;
+  if (event.key !== shelfStore.getStorageKey() || !event.newValue) return;
   try { shelfStore.acceptCrossTabRecord(JSON.parse(event.newValue)); }
   catch { /* another tab has malformed shelf data */ }
 });
