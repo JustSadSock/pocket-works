@@ -83,30 +83,63 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
   let recorder, frame = 0, audioContext, stream, cancelled = false;
   let timer, started = false, captureMode = 'compatibility', watchdog = 0, useVideoFrameCallback = false;
   let lastMediaTime = start, lastAdvance = performance.now(), terminalError = null;
-  const abort = () => { cancelled = true; video.pause(); if (recorder?.state === 'recording') recorder.stop(); };
+  let cancelPendingWait = null;
+  const abort = () => {
+    cancelled = true;
+    cancelPendingWait?.();
+    video.pause();
+    if (recorder?.state === 'recording') recorder.stop();
+  };
   const hidden = () => { if (document.hidden) abort(); };
   signal?.addEventListener('abort', abort, {once: true});
   document.addEventListener('visibilitychange', hidden);
   try {
     await new Promise((resolve, reject) => {
-      const clear = () => { clearTimeout(timer); video.removeEventListener('loadedmetadata', loaded); video.removeEventListener('error', failed); };
-      const loaded = () => { clear(); resolve(); };
-      const failed = () => { clear(); reject(Error('Видео не декодируется этим браузером.')); };
-      video.addEventListener('loadedmetadata', loaded);
-      video.addEventListener('error', failed);
-      timer = setTimeout(() => { clear(); reject(Error('Не удалось открыть видео.')); }, 15000);
+      let waiting = true;
+      const clear = () => {
+        clearTimeout(timer);
+        video.removeEventListener('loadedmetadata',loaded);
+        video.removeEventListener('error',failed);
+        if(cancelPendingWait===aborted)cancelPendingWait=null;
+      };
+      const finish=(error)=>{
+        if(!waiting)return;
+        waiting=false;clear();
+        if(error)reject(error);else resolve();
+      };
+      const loaded=()=>finish();
+      const failed=()=>finish(Error('Видео не декодируется этим браузером.'));
+      const aborted=()=>finish(abortError());
+      cancelPendingWait=aborted;
+      video.addEventListener('loadedmetadata',loaded);
+      video.addEventListener('error',failed);
+      timer=setTimeout(()=>finish(Error('Не удалось открыть видео.')),15000);
       video.load();
+      if(cancelled)aborted();
     });
     if (cancelled) throw abortError();
     const fileDuration = await measureVideoDuration(video);
     if (!fileDuration || start + duration > fileDuration + 0.15)
       throw Error('Отрывок выходит за пределы файла.');
     if (start > 0.01 || video.currentTime > 0.01) {
-      await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => { video.removeEventListener('seeked', done); reject(Error('Не удалось перейти к началу отрывка.')); }, 12000);
-        const done = () => { clearTimeout(timeout); resolve(); };
-        video.addEventListener('seeked', done, {once: true});
-        video.currentTime = start;
+      await new Promise((resolve,reject)=>{
+        let waiting=true;
+        const clear=()=>{
+          clearTimeout(timeout);
+          video.removeEventListener('seeked',done);
+          if(cancelPendingWait===aborted)cancelPendingWait=null;
+        };
+        const finish=(error)=>{
+          if(!waiting)return;waiting=false;clear();
+          if(error)reject(error);else resolve();
+        };
+        const done=()=>finish();
+        const aborted=()=>finish(abortError());
+        cancelPendingWait=aborted;
+        video.addEventListener('seeked',done);
+        const timeout=setTimeout(()=>finish(Error('Не удалось перейти к началу отрывка.')),12000);
+        try{video.currentTime=start}catch(e){finish(e)}
+        if(cancelled)aborted();
       });
     }
     if (cancelled) throw abortError();
@@ -219,6 +252,10 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
       }
     },3000);
     try { await video.play(); } catch {
+      if(cancelled){
+        await completed.catch(()=>{});
+        throw abortError();
+      }
       terminalError=Error('Браузер запретил обработку. Нажми «Сжать» ещё раз.');
       if(recorder.state==='recording')recorder.stop();
       // Recorder callbacks can fire on another task; observe the rejection.
@@ -237,6 +274,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
     else cancelAnimationFrame(frame);
     clearTimeout(timer);
     clearInterval(watchdog);
+    cancelPendingWait=null;
     video.pause();
     video.removeAttribute('src');
     video.load();
