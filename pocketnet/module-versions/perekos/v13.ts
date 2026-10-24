@@ -1243,12 +1243,15 @@ function flushMagicV2Events(s){
    if(spell.trigger!==trigger)continue;
    const key='v2:'+spell.slotId;
    if(s.ticks<(a.runeTimers[key]||0))continue;
-   a.runeTimers[key]=s.ticks+Math.ceil(.65/STEP);
+   const cooldown=spell.trigger==='u_on_cast'?1.08:spell.trigger==='u_on_hit'?.57:.72;
+   a.runeTimers[key]=s.ticks+Math.ceil(cooldown/STEP);
    for(const action of spell.actions){
     if(reactions>=MAX_REACTIONS_PER_TICK)break;
     if(!MAGIC_V2_PRACTICE_RUNES.includes(action.id))continue;
-    magicV2Action(s,a,action.id,action.mods,ev);
-    reactions++;
+    if(magicV2Action(s,a,action.id,action.mods,ev)){
+     if(spell.trigger==='u_on_cast')addHeat(s,a,4,ev.depth+1);
+     reactions++;
+    }
    }
   }
  }
@@ -1325,7 +1328,7 @@ function v13Pool(book,rarity){
   return def?.rarity===rarity&&permittedRune(book.school,id)&&
    (def.aspect!=='origin'||hasForm);
  });
- return eligible.filter(id=>!owned.has(id)).length?eligible.filter(id=>!owned.has(id)):eligible;
+ return [...eligible.filter(id=>!owned.has(id)),...eligible.filter(id=>owned.has(id))];
 }
 function v13Deal(s,i){
  const book=s.match.magicLoadouts[i],stage=s.magicStage;
