@@ -32,7 +32,7 @@ test('line ownership credit remains equivalent locally and online',()=>{
 });
 
 test('7-bag, Hold, lock and scoring are wired to the canonical rules',()=>{
- const shared=['drawSevenBag','planHold','adjustLock','advanceLock','scoreLineClear','intervalAfterClear'];
+ const shared=['drawSevenBag','planHold','adjustLock','advanceLock','scoreLineClear','intervalAfterClear','planPieceSpawn','canPlayerResume','areAllSeatsEliminated'];
  for(const name of shared){
   assert.match(physics,new RegExp('export function '+name+'\\('));
   assert.match(client,new RegExp('\\b'+name+'\\('));
@@ -42,4 +42,14 @@ test('7-bag, Hold, lock and scoring are wired to the canonical rules',()=>{
  assert.doesNotMatch(client,/const comboMultiplier\\s*=|const multiMultiplier\\s*=/);
  assert.doesNotMatch(server.slice(server.indexOf(END)+END.length),
   /const comboMultiplier\\s*=|const multiMultiplier\\s*=/);
+});
+
+test('spawn placement no longer has duplicate search loops in the browser or server',()=>{
+ const generated=server.slice(server.indexOf(END)+END.length);
+ assert.doesNotMatch(client,/for \(let offset = 0; offset < boardWidth; offset\+\+\)/);
+ assert.doesNotMatch(generated,/for \(let offset = 0; offset < boardWidth; offset\+\+\)/);
+ for(const method of ['planPieceSpawn','canPlayerResume','areAllSeatsEliminated']){
+  assert.match(client,new RegExp('\\b'+method+'\\('));
+  assert.match(generated,new RegExp('\\b'+method+'\\('));
+ }
 });

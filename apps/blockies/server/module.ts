@@ -147,6 +147,46 @@ function scoreLineClear(stats,linesCleared) {
 function intervalAfterClear(interval,linesCleared) {
     return Math.max(100,interval*Math.pow(0.95,linesCleared));
 }
+
+/**
+ * Choose a legal spawn position without mutating the board, queue or RNG.
+ * A multiplayer seat may only enter inside its own safe four-column lane.
+ */
+function planPieceSpawn(seat,type,board,players,count,boardWidth){
+    const piece=SHAPES[type];
+    if(!piece||!Array.isArray(board)||!board.length)return {allowed:false,position:null};
+    const width=piece[0].length;
+    if(count>1){
+        const laneX=seat.spawnLaneX;
+        if(!Number.isInteger(laneX)||!isLaneClear(laneX,board,players,seat.id,count))
+            return {allowed:false,position:null};
+        const position={x:laneX+Math.floor((4-width)/2),y:0};
+        return {allowed:!checkPieceCollision(piece,position,board,players,seat.id).collides,position};
+    }
+    const anchor=Number.isFinite(seat.spawnAnchor)?seat.spawnAnchor:boardWidth/2;
+    const preferredX=Math.min(boardWidth-width,Math.max(0,Math.round(anchor-width/2)));
+    const checked=new Set();
+    for(let offset=0;offset<boardWidth;offset++){
+        const choices=offset===0?[preferredX]:[preferredX-offset,preferredX+offset];
+        for(const x of choices){
+            if(x<0||x>boardWidth-width||checked.has(x))continue;
+            checked.add(x);
+            const position={x,y:0};
+            if(!checkPieceCollision(piece,position,board,players,seat.id).collides)
+                return {allowed:true,position};
+        }
+    }
+    return {allowed:false,position:{x:preferredX,y:0}};
+}
+
+function canPlayerResume(seat,board,players,count,roundOver=false){
+    return !!seat&&seat.blocked&&!seat.offline&&!roundOver&&
+        isLaneClear(seat.spawnLaneX,board,players,seat.id,count);
+}
+
+function areAllSeatsEliminated(players){
+    return players.length>0&&players.every(player=>player.gameOver);
+}
 // END GENERATED BLOCKIES PHYSICS CORE
 
 // Game Configuration
@@ -470,7 +510,7 @@ class Player {
     randomPiece(){return SHAPES[this.randomType()].map(row=>row.slice());}
 
     spawnPiece(presetType=null,consumeNext=true) {
-        // Keep the next piece while the personal lane is dangerously shallow.
+        // Do not draw the queued piece while the personal entrance is unsafe.
         if(gameState.numPlayers>1&&!laneHasClearance(this)){
             this.blocked=true;this.gameOver=true;this.currentPiece=null;
             this.dropCounter=0;checkAllPlayersGameOver();return;
@@ -486,64 +526,17 @@ class Player {
         this.lockCounter=0;
         this.lockResets=0;
         this.holdUsed=false;
-        const pieceWidth = this.currentPiece[0].length;
-        if (gameState.numPlayers > 1) {
-            // Cooperative pieces cannot escape a blocked personal entrance.
-            const laneX = Number.isInteger(this.spawnLaneX)
-                ? this.spawnLaneX : spawnLaneX(this.id,gameState.numPlayers,getBoardWidth());
-            const x = laneX + Math.floor((4-pieceWidth)/2);
-            this.position = {x,y:0};
-            if(this.checkCollision().collides){
-                this.gameOver = true;
-                this.blocked = true;
-                this.currentPiece = null;
-                checkAllPlayersGameOver();
-            }
-            this.dropCounter = 0;
-            return;
-        }
-        const boardWidth = getBoardWidth();
-        const preferredX = Math.min(
-            boardWidth - pieceWidth,
-            Math.max(0, Math.round(this.spawnAnchor - pieceWidth / 2))
-        );
-
-        let spawnPosition = null;
-        const checked = new Set();
-
-        for (let offset = 0; offset < boardWidth; offset++) {
-            const candidates = [];
-            if (offset === 0) {
-                candidates.push(preferredX);
-            } else {
-                const left = preferredX - offset;
-                const right = preferredX + offset;
-
-                if (left >= 0) candidates.push(left);
-                if (right <= boardWidth - pieceWidth) candidates.push(right);
-            }
-
-            for (const candidate of candidates) {
-                if (checked.has(candidate)) continue;
-                checked.add(candidate);
-
-                if (!this.checkCollision(this.currentPiece, { x: candidate, y: 0 }).collides) {
-                    spawnPosition = { x: candidate, y: 0 };
-                    break;
-                }
-            }
-
-            if (spawnPosition) break;
-        }
-
-        this.position = spawnPosition || { x: preferredX, y: 0 };
-
-        if (!spawnPosition && this.checkCollision().collides) {
-            this.gameOver = true;
+        const seat={id:this.id,spawnAnchor:this.spawnAnchor,
+            spawnLaneX:Number.isInteger(this.spawnLaneX)?this.spawnLaneX:
+                spawnLaneX(this.id,gameState.numPlayers,getBoardWidth())};
+        const placement=planPieceSpawn(seat,this.currentType,gameState.board,
+            gameState.players,gameState.numPlayers,getBoardWidth());
+        this.position=placement.position||this.position;
+        if(!placement.allowed){
+            this.gameOver=true;
+            if(gameState.numPlayers>1){this.blocked=true;this.currentPiece=null;}
             checkAllPlayersGameOver();
         }
-
-        this.dropCounter = 0;
     }
 
     checkCollision(piece = this.currentPiece, pos = this.position) {
@@ -688,7 +681,7 @@ function laneHasClearance(player){
 function checkAllPlayersGameOver() {
     if (!gameState.players.length) return;
 
-    if (gameState.players.every(player => player.gameOver)) {
+    if (areAllSeatsEliminated(gameState.players)) {
         gameState.isGameOver = true;
         soundManager.gameOver();
     }
@@ -737,7 +730,7 @@ function checkAllPlayersGameOver() {
   seat.inputWindowCount++;
   this.input(i,action);
  },
- resume(i){const v=gameState.players[i];if(!v||v.offline||!v.blocked||gameState.isGameOver||!laneHasClearance(v))return false;
+ resume(i){const v=gameState.players[i];if(!canPlayerResume(v,gameState.board,gameState.players,gameState.numPlayers,gameState.isGameOver))return false;
   const holdUsed=v.holdUsed,preserved=v.reentryType;
   v.gameOver=false;v.blocked=false;
   if(preserved){v.spawnPiece(preserved,false);v.holdUsed=holdUsed;}
@@ -765,7 +758,7 @@ function checkAllPlayersGameOver() {
   v.inputWindowCount+=ordered.length;
   for(const action of ordered){if(!v.gameOver)this.input(i,action);v.lastInputSeq=action.seq;}
  },
- snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,players:gameState.players.map(p=>({...p,canResume:!!p.blocked&&!p.offline&&!gameState.isGameOver&&laneHasClearance(p)}))};}
+ snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,players:gameState.players.map(p=>({...p,canResume:canPlayerResume(p,gameState.board,gameState.players,gameState.numPlayers,gameState.isGameOver)}))};}
  };
 }
 const MAX_CLOCK_CATCHUP=1200,MAX_CLOCK_IDLE=3500;
