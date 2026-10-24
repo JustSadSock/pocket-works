@@ -76,8 +76,8 @@ for(const strokeWidth of [1,2,3]){
 const source=readFileSync(new URL('../editor.js',import.meta.url),'utf8');
 assert.match(source,/ctx\.save\(\);clipZone\(ctx,z\);ctx\.drawImage\(overlay,0,0,W,H\);ctx\.restore\(\)/,
  'final original comparison applies a single damage clip');
-assert.match(source,/composed\.ctx\.save\(\);clipZone\(composed\.ctx,this\.zone\);\s*composed\.ctx\.drawImage\(this\.inkLayer,0,0,W,H\);/,
- 'editor uses the same single damage clipping');
+assert.match(source,/composed\.save\(\);clipZone\(composed,this\.zone\);\s*composed\.drawImage\(this\.inkLayer,0,0,W,H\);composed\.restore\(\);/,
+ 'cached editor display clips committed ink to damage exactly once');
 assert.doesNotMatch(source,/lines\.ctx\.save\(\);clipZone\(lines\.ctx,zone\)/,
  'inside layer is not clipped a second time');
 console.log('ZAMAZKA: connected region fill, two-pixel edge underlap, no leakage and one antialiased contour OK');
