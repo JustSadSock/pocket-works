@@ -126,13 +126,14 @@ test('the rune forge composes named stone transformations and physical ground wa
 test('three newly physical rune families appear in their own offline school only',async({page})=>{
  await page.goto('/apps/perekos/',{waitUntil:'domcontentloaded'});
  await page.locator('#open-v2-lab').click();
+ const schoolPicker=page.locator('#magic-v2 > .v2-stage > .v2-schools');
  const cases=[
   ['stone','Разлом','Огненная плеть'],
   ['fire','Огненная плеть','Зарядная мина'],
   ['storm','Зарядная мина','Разлом']
  ];
  for(const [index,[school,label,foreign]] of cases.entries()){
-  await page.locator('.v2-school.v2-'+school).click();
+  await schoolPicker.locator('.v2-school.v2-'+school).click();
   await expect(page.locator('.v2-card').filter({hasText:label})).toHaveCount(1);
   await expect(page.locator('.v2-card').filter({hasText:foreign})).toHaveCount(0);
   if(index!==cases.length-1){
@@ -140,7 +141,7 @@ test('three newly physical rune families appear in their own offline school only
    // Reloading the same training session would correctly offer Resume instead.
    page.once('dialog',dialog=>dialog.accept());
    await page.getByRole('button',{name:'Сменить стихию'}).click();
-   await expect(page.locator('.v2-schools')).toBeVisible();
+   await expect(schoolPicker).toBeVisible();
   }
  }
 });
