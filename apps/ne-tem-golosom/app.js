@@ -95,8 +95,20 @@ const sceneSource=s=>LIBRARY.find(x=>x.id===s?.id)?.src||null;
 const meHost=()=>!!state&&me===state.host;
 const ownRole=()=>mode==='solo'?'Все роли':(state?.assignments?.[me]||'Актёр');
 function toast(s){const el=$('toast');el.textContent=s;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
-function cue(which){if(!sound)return;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;audioContext ||=new C();audioContext.resume();const now=audioContext.currentTime,o=audioContext.createOscillator(),n=audioContext.createBufferSource(),g=audioContext.createGain(),filter=audioContext.createBiquadFilter();const data=audioContext.createBuffer(1,2205,audioContext.sampleRate),arr=data.getChannelData(0);for(let i=0;i<arr.length;i++)arr[i]=(Math.random()*2-1)*Math.exp(-i/750);n.buffer=data;filter.type='bandpass';filter.frequency.value=which==='start'?1050:420;const f=which==='stop'?160:which==='ready'?600:300;o.type='triangle';o.frequency.setValueAtTime(f,now);o.frequency.exponentialRampToValueAtTime(f*.74,now+.12);g.gain.setValueAtTime(.02,now);g.gain.exponentialRampToValueAtTime(.0001,now+.17);o.connect(g);n.connect(filter).connect(g);g.connect(audioContext.destination);o.start(now);n.start(now);o.stop(now+.18);n.stop(now+.06)}catch{}}
-function show(id){view=id;for(const el of document.querySelectorAll('.screen'))el.classList.toggle('hidden',el.id!=='screen-'+id);document.body.classList.toggle('editing',id==='editor');window.scrollTo(0,0)}
+function cue(which){if(!sound)return;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;audioContext ||=new C();audioContext.resume();const now=audioContext.currentTime,o=audioContext.createOscillator(),n=audioContext.createBufferSource(),g=audioContext.createGain(),filter=audioContext.createBiquadFilter();const data=audioContext.createBuffer(1,2205,audioContext.sampleRate),arr=data.getChannelData(0);for(let i=0;i<arr.length;i++)arr[i]=(Math.random()*2-1)*Math.exp(-i/750);n.buffer=data;filter.type='bandpass';filter.frequency.value=which==='start'?1050:420;const f=which==='stop'?160:which==='ready'?600:which==='count'?780:300;o.type='triangle';o.frequency.setValueAtTime(f,now);o.frequency.exponentialRampToValueAtTime(f*.74,now+.12);g.gain.setValueAtTime(.02,now);g.gain.exponentialRampToValueAtTime(.0001,now+.17);o.connect(g);n.connect(filter).connect(g);g.connect(audioContext.destination);o.start(now);n.start(now);o.stop(now+.18);n.stop(now+.06)}catch{}}
+function show(id){
+ const changed=view!==id;
+ view=id;
+ for(const el of document.querySelectorAll('.screen'))
+   el.classList.toggle('hidden',el.id!=='screen-'+id);
+ document.body.classList.toggle('editing',id==='editor');
+ if(changed){
+   window.scrollTo(0,0);
+   const active=document.getElementById('screen-'+id);
+   active?.setAttribute('tabindex','-1');
+   active?.focus({preventScroll:true});
+ }
+}
 function toggleSound(){sound=!sound;try{localStorage.setItem(STORE+'sound',sound?'1':'0')}catch{}$('sound-label').textContent=sound?'вкл.':'выкл.';$('sound-btn').setAttribute('aria-pressed',String(sound))}
 try{sound=localStorage.getItem(STORE+'sound')!=='0'}catch{}$('sound-label').textContent=sound?'вкл.':'выкл.';$('sound-btn').setAttribute('aria-pressed',String(sound));
 
@@ -612,6 +624,15 @@ function setPlayhead(value,fromPremiere=false){
 }
 async function playStage(){if(!scene||record||preroll||micPending||pendingRecording||scene.custom&&!sourceBlob)return toast('Видео пока не готово.');const video=$('stage-video');if(playing){stopAllPlayback();return}if(time(video)>=scene.duration-.1)seekVideo(video,0);try{updateClipSound(time(video),true,false);await video.play();playing=true;$('play-toggle').textContent='Ⅱ'}catch{updateClipSound(time(video),false,false);toast('Нажми воспроизведение ещё раз — браузер блокирует запуск.')}}
 function mime(){const opts=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];return opts.find(x=>window.MediaRecorder?.isTypeSupported(x))||''}
+function countdownBeat(number){
+ const el=$('countdown');
+ el.textContent=String(number);
+ el.classList.remove('ntg-tick');
+ // Restart the short single-beat animation when the integer changes.
+ void el.offsetWidth;
+ el.classList.add('ntg-tick');
+ cue('count');
+}
 function updateRecordingControls(){
  $('count-record-btn').disabled=!!record||!!micPending||!!pendingRecording;
  $('mute-film').disabled=!!record||!!preroll||!!micPending||!!pendingRecording;
@@ -717,12 +738,12 @@ async function startRecord(countdown=0,replaceId=null){
  };
  if(countdown===3){
   let left=3;
-  $('countdown').textContent='3';$('countdown').classList.remove('hidden');
+  $('countdown').classList.remove('hidden');countdownBeat(3);
   updateRecordingControls();
   const tick=()=>{
    if(cancelled||preroll!==session)return;
    left--;
-   if(left>0){$('countdown').textContent=String(left);session.timer=setTimeout(tick,1000)}
+   if(left>0){countdownBeat(left);session.timer=setTimeout(tick,1000)}
    else void launch();
   };
   session.timer=setTimeout(tick,1000);
