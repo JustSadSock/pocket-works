@@ -3,7 +3,7 @@ import {createTrimRange} from './trim-range.js';
 import {TimelineHistory,snapshotClips,spliceRecording,packTimeline,unpackTimeline,editClip,replaceSelectedRecording,MIN_CLIP_SECONDS} from './timeline-model.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
-import {MAX_ROOM_VIDEO_BYTES,MAX_SOURCE_VIDEO_BYTES,formatVideoBytes,estimateVideoBytes,supportsVideoExport,measureVideoDuration,exportVideo} from './media-lab.js';
+import {MAX_ROOM_VIDEO_BYTES,MAX_SOURCE_VIDEO_BYTES,formatVideoBytes,estimateVideoBytes,planVideoPreparation,supportsVideoExport,measureVideoDuration,exportVideo} from './media-lab.js';
 installMobileRuntime();
 
 const $=id=>document.getElementById(id);
@@ -247,10 +247,15 @@ function updateMediaLab(){
   $('media-workbench').classList.toggle('hidden',!active);
   if(!active){clearExportPreview();updateConfirmAction();return}
   const length=Math.max(0,Number($('trim-length').value)||0);
-  const size=estimateVideoBytes(length,Number($('media-quality').value));
+  const keepAudio=$('media-keep-audio').checked;
+  const plan=planVideoPreparation({size:sourceBlob.size,mode});
+  const size=estimateVideoBytes(length,Number($('media-quality').value),keepAudio);
   $('media-source-size').textContent='Исходник · '+formatVideoBytes(sourceBlob.size);
   $('media-quality-label').textContent=qualityNames[Number($('media-quality').value)-1]||qualityNames[3];
   $('media-estimate').textContent='После обработки ≈ '+formatVideoBytes(size);
+  $('media-fast-status').textContent=plan.kind==='reuse'
+    ?(mode==='solo'?'Без сжатия · на этом устройстве':'Готово без сжатия · можно продолжить сразу')
+    :'Нужно подготовить фрагмент · весь файл слишком большой';
   $('media-render').disabled=!!videoExportController||!supportsVideoExport();
   $('media-render').classList.toggle('hidden',!!videoExportBlob);
   updateConfirmAction();
@@ -258,16 +263,16 @@ function updateMediaLab(){
     $('media-note').textContent='В этом браузере нет локального кодировщика. Можно использовать файл без обработки, если он меньше 96 МиБ.';
   }else if(videoExportBlob){
     // Keep the actual encoded result message until the user accepts or discards it.
-  }else if(sourceBlob.size>MAX_ROOM_VIDEO_BYTES&&mode==='host'){
-    $('media-note').textContent='Для комнаты размер нужно уменьшить до 96 МиБ. Сжатие происходит локально.';
+  }else if(plan.kind==='encode'){
+    $('media-note').textContent='Передача всего исходника превысит 96 МиБ. Кодируем только выбранный отрывок на твоём устройстве.';
   }else if(!videoExportBlob){
-    $('media-note').textContent='Можно продолжить без сжатия или подготовить меньший файл для быстрой передачи.';
+    $('media-note').textContent='Перейди дальше сразу, без обработки. Сжимай вручную, только если нужен файл меньшего размера.';
   }
 }
 function exportBusy(busy){
   $('media-render').disabled=busy||!supportsVideoExport();
   $('confirm-scene').disabled=busy;
-  for(const id of ['media-quality','media-resolution'])$(id).disabled=busy;
+  for(const id of ['media-quality','media-resolution','media-keep-audio'])$(id).disabled=busy;
   $('trim-range-root').classList.toggle('range-locked',busy);
   $('trim-mark-start').disabled=busy;$('trim-mark-end').disabled=busy;
   $('trim-range-handle-start').disabled=busy;
@@ -285,14 +290,26 @@ async function processMedia(){
   clearExportPreview();
   const controller=new AbortController();
   videoExportController=controller;
-  exportBusy(true);$('media-progress-bar').value=0;$('media-progress-label').textContent='Обработка · 0%';
+  const startedAt=performance.now();
+  let lastShown=-1;
+  exportBusy(true);$('media-progress-bar').value=0;
+  $('media-progress-label').textContent='Подготовка видео · 0%';
+  $('media-progress-help').textContent='Обработка идёт во время воспроизведения. Не закрывай экран.';
   try{
     const result=await exportVideo({blob:sourceBlob,start,duration,width:Number($('media-resolution').value),
-      level:Number($('media-quality').value),signal:controller.signal,
+      level:Number($('media-quality').value),keepAudio:$('media-keep-audio').checked,
+      signal:controller.signal,
       onProgress:progress=>{
         const pct=Math.round(progress*100);
+        if(pct===lastShown)return;
+        lastShown=pct;
         $('media-progress-bar').value=pct;
-        $('media-progress-label').textContent='Обработка · '+pct+'%';
+        const elapsed=(performance.now()-startedAt)/1000;
+        // The old pipeline also runs in real time; don't promise a fictional
+        // instant result. The estimate self-corrects as real progress arrives.
+        const remaining=progress>.05?Math.ceil(elapsed*(1-progress)/progress):null;
+        $('media-progress-label').textContent='Обработка · '+pct+'%'+
+          (remaining!==null&&pct<100?' · ≈ '+fmt(remaining)+' осталось':'');
       }});
     if(controller.signal.aborted)return;
     videoExportBlob=result;
@@ -300,13 +317,15 @@ async function processMedia(){
     $('media-output-preview').src=videoExportUrl;
     $('media-output-preview').load();
     $('media-output-size').textContent=formatVideoBytes(result.size)+' · '+fmt(duration);
+    const wallSeconds=Math.round((performance.now()-startedAt)/1000);
+    $('media-progress-help').textContent='Готово за '+fmt(wallSeconds)+'.';
     $('media-preview-switch').classList.remove('hidden');
     showTrimPreview('result');
     updateConfirmAction();
     $('media-result').classList.remove('hidden');
     $('media-note').textContent=result.size>MAX_ROOM_VIDEO_BYTES&&mode==='host'
-      ? 'Файл ещё слишком большой для комнаты. Уменьши качество и повтори обработку.'
-      : 'Сравни исходник сверху и обработанный фрагмент. Нажми «Использовать», когда результат устроит.';
+      ? 'Файл всё ещё слишком большой. Уменьши качество или разрешение и повтори.'
+      : 'Обработано за '+fmt(Math.round((performance.now()-startedAt)/1000))+'. Сравни качество и нажми «Использовать и продолжить».';
     cue('ready');
   }catch(e){
     if(e?.name!=='AbortError')toast(e?.message||'Не получилось обработать видео.');
@@ -687,6 +706,7 @@ trimRange=createTrimRange({video:$('trim-video'),onChange:({start,end})=>{
 }});
 $('media-quality').oninput=invalidateMediaResult;
 $('media-resolution').onchange=invalidateMediaResult;
+$('media-keep-audio').onchange=invalidateMediaResult;
 $('media-render').onclick=processMedia;
 $('media-cancel').onclick=()=>videoExportController?.abort();
 $('media-discard').onclick=()=>{clearExportPreview();updateMediaLab()};
