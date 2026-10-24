@@ -1998,7 +1998,7 @@ class UIManager {
 
             let touchStatusNeedsUpdate = false;
             const boardRevision=gameState.boardRevision||0;
-            const before=this.isOnlineMode?null:gameState.players.map(p=>[p.position.x,p.position.y,p.currentPiece,p.gameOver]);
+            const before=this.isOnlineMode?null:gameState.players.map(p=>[p.position.x,p.position.y,p.currentPiece,p.gameOver,p.lockCounter]);
             gameState.players.forEach(player => {
                 const wasGameOver = player.gameOver;
                 const isLocalPlayer = !this.isOnlineMode || player.id === this.localPlayerIndex;
@@ -2027,7 +2027,7 @@ class UIManager {
                 }
             }else if((gameState.boardRevision||0)!==boardRevision||
                 gameState.players.some((p,i)=>p.position.x!==before[i][0]||
-                 p.position.y!==before[i][1]||p.currentPiece!==before[i][2]||p.gameOver!==before[i][3]))
+                 p.position.y!==before[i][1]||p.currentPiece!==before[i][2]||p.gameOver!==before[i][3]||p.lockCounter!==before[i][4]))
                 this.drawBoard();
             this.updateTeamStatsIfNeeded();
             this.updateBlockedLanes();
@@ -2112,6 +2112,14 @@ class UIManager {
             for(let y=0;y<player.currentPiece.length;y++)for(let x=0;x<player.currentPiece[y].length;x++){
                 if(player.currentPiece[y][x])
                     this.paintBlock(ctx,player.position.x+x,player.position.y+y,player.color,true);
+            }
+            if(player.lockCounter>0){
+                const progress=Math.min(1,Math.max(0,player.lockCounter/LOCK_DELAY_MS));
+                const bottom=player.position.y+player.currentPiece.length;
+                const x=player.position.x*BLOCK_SIZE;
+                const width=player.currentPiece[0].length*BLOCK_SIZE;
+                ctx.fillStyle='#f7c66e';
+                ctx.fillRect(x,bottom*BLOCK_SIZE-3,width*(1-progress),3);
             }
         }
     }
