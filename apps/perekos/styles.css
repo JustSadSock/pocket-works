@@ -1034,3 +1034,24 @@
 .v2-form-summary strong{font:750 clamp(15px,3vw,19px)/1.15 Georgia,serif}
 .v2-form-summary p{font-size:12px}
 .v2-form-summary small{font-size:10px;color:#4a594b}
+
+/* v13: rarity draft = a compact rune tray, not three full-screen popups. */
+.v2-pack-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;align-items:stretch}
+.v2-pack{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:208px;padding:12px 10px;border:2px solid #9b8566;background:#efe0c3;color:#303c30;box-shadow:inset 3px 0 #a29b7f}
+.v2-pack:nth-child(2){box-shadow:inset 3px 0 #67847c}
+.v2-pack:nth-child(3){box-shadow:inset 3px 0 #8b6b9a}
+.v2-pack-label{font:800 10px/1.4 ui-monospace,monospace;letter-spacing:.04em;color:#715a46}
+.v2-pack-rune{display:grid;gap:5px;min-width:0;padding:7px 0;border-bottom:1px solid #c9b692}
+.v2-pack-rune strong{font:750 15px/1.2 Georgia,serif}
+.v2-pack-rune small{font:500 11px/1.45 system-ui;color:#615b4d}
+.v2-pack-choose{background:#335846;color:#fff3d6;border:1px solid #426c53;min-height:45px;padding:8px 6px;margin-top:auto;font-size:12px;font-weight:850}
+.v2-pack-choose:disabled{opacity:.4}
+@media(max-width:540px){
+ .v2-pack-list{grid-template-columns:1fr;gap:7px}
+ .v2-pack{min-height:0;padding:10px 12px;gap:5px}
+ .v2-pack-rune{gap:2px;padding:4px 0}
+ .v2-pack-rune strong{font-size:14px}
+ .v2-pack-rune small{font-size:10px}
+ .v2-pack-choose{min-height:38px}
+}
+@media(max-height:480px) and (orientation:landscape){.v2-pack-list{grid-template-columns:repeat(3,minmax(0,1fr))}}
