@@ -83,6 +83,8 @@ function renderRoles(){$('role-tags').innerHTML=selected.roles.map((role,i)=>'<d
 function validateScene(){const start=Number($('trim-start').value),duration=Number($('trim-length').value);const name=$('scene-title').value.trim();const roles=[...document.querySelectorAll('[data-role-index]')].map(el=>el.value.trim()).filter(Boolean);const v=$('trim-video');if(!name||!roles.length)return toast('Укажи название и хотя бы одного персонажа'),false;if(!Number.isFinite(start)||!Number.isFinite(duration)||start<0||duration<10||duration>90)return toast('Длина сцены — от 10 до 90 секунд.'),false;if(Number.isFinite(v.duration)&&v.duration>0&&start+duration>v.duration+.1)return toast('Отрывок выходит за пределы видео.'),false;scene={...selected,title:name,start,duration,roles};return true}
 async function confirmScene(){
  if(videoExportController)return toast('Сначала заверши обработку видео.');
+ // Validate before accepting so an invalid title/role never replaces the source.
+ if(!validateScene())return;
  if(videoExportBlob&&!acceptMedia())return;
  if(!validateScene())return;
  if(mode==='host'&&scene.custom&&sourceBlob?.size>MAX_ROOM_VIDEO_BYTES){
