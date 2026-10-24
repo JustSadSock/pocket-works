@@ -860,6 +860,11 @@ export default {protocolVersion:1,
    }else if(p?.type!=='pulse')throw Error('Игра приостановлена или завершена');
    return out(state);
   }
+  // An absent player must explicitly ready up again after reconnecting.
+  if(Array.isArray(connectedIds)){
+   const online=new Set(connectedIds);
+   state.players.forEach(seat=>{if(!online.has(seat.id))seat.ready=false;});
+  }
   if(p?.type==='nickname')v.name=String(p.name||'Игрок').slice(0,24);
   else if(p?.type==='color'){
    if(!COLORS.includes(p.color)||state.players.some(x=>x.id!==v.id&&x.color===p.color))throw Error('Цвет занят');
