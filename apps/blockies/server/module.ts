@@ -4,6 +4,7 @@ function runtime(saved,seed){const soundManager={move(){},rotate(){},drop(){},li
 const BLOCK_SIZE = 25;
 const BASE_BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
+const SAFE_LANE_ROWS = 5; // safe headroom: piece plus three free rows
 const ADDITIONAL_COLUMNS_PER_PLAYER = 4;
 const PREVIEW_SIZE = 4;
 
@@ -284,6 +285,7 @@ class Player {
         this.nextPiece = null;
         this.position = { x: 0, y: 0 };
         this.gameOver = false;
+        this.blocked = false;
         this.dropCounter = 0;
         this.dropInterval = 1000;
         this.lastTime = 0;
@@ -302,6 +304,12 @@ class Player {
     }
 
     spawnPiece() {
+        // Keep the next piece while the personal lane is dangerously shallow.
+        if(gameState.numPlayers>1&&!laneHasClearance(this)){
+            this.blocked=true;this.gameOver=true;this.currentPiece=null;
+            this.dropCounter=0;checkAllPlayersGameOver();return;
+        }
+        this.blocked=false;
         this.currentPiece = this.nextPiece;
         this.nextPiece = this.randomPiece();
         const pieceWidth = this.currentPiece[0].length;
@@ -313,6 +321,7 @@ class Player {
             this.position = {x,y:0};
             if(this.checkCollision().collides){
                 this.gameOver = true;
+                this.blocked = true;
                 this.currentPiece = null;
                 checkAllPlayersGameOver();
             }
@@ -593,6 +602,15 @@ function isCellOccupiedByOtherPiece(x, y, currentPlayerId) {
     });
 }
 
+function laneHasClearance(player){
+    if(gameState.numPlayers<=1)return true;
+    const x=Number.isInteger(player.spawnLaneX)?player.spawnLaneX:spawnLaneX(player.id,gameState.numPlayers,getBoardWidth());
+    for(let y=0;y<SAFE_LANE_ROWS;y++)for(let col=x;col<x+4;col++){
+        if(gameState.board[y]?.[col]||isCellOccupiedByOtherPiece(col,y,player.id))return false;
+    }
+    return true;
+}
+
 function checkAllPlayersGameOver() {
     if (!gameState.players.length) return;
 
@@ -610,8 +628,9 @@ function checkAllPlayersGameOver() {
  return {
  init(players){gameState.numPlayers=players.length;gameState.boardWidth=computeBoardWidth(players.length);gameState.board=createEmptyBoard();gameState.players=[];resetSharedStats();players.forEach((p,i)=>{const laneX=spawnLaneX(i,players.length,gameState.boardWidth);const v=new Player(i,p.color,{},laneX+2);v.spawnLaneX=laneX;v.name=p.name||('Игрок '+(i+1));v.init();gameState.players.push(v);});},
  step(ms){for(let t=0;t<ms;t+=50)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(50,ms-t));},
+ resume(i){const v=gameState.players[i];if(!v||!v.blocked||gameState.isGameOver||!laneHasClearance(v))return false;v.gameOver=false;v.blocked=false;v.spawnPiece();return !v.gameOver;},
  input(i,p){const v=gameState.players[i];if(!v||v.gameOver)return;if(p.action==='move'&&[-1,1].includes(p.direction))v.move(p.direction,{broadcast:false});else if(['rotate','drop','hardDrop'].includes(p.action))v[p.action]({broadcast:false});else throw Error('Некорректная команда');},
- snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,players:gameState.players.map(p=>({...p}))};}
+ snapshot(){return {board:gameState.board,boardWidth:gameState.boardWidth,numPlayers:gameState.numPlayers,sharedStats:gameState.sharedStats,isGameOver:gameState.isGameOver,rngState,players:gameState.players.map(p=>({...p,canResume:!!p.blocked&&!gameState.isGameOver&&laneHasClearance(p)}))};}
  };
 }
 const COLORS=['#FF1493','#00D9FF','#FFDB58','#39FF14'];
@@ -657,6 +676,9 @@ export default {protocolVersion:1,
     if(piece){piece.gameOver=true;piece.currentPiece=null;}
    }
    state.hostId=state.players.find(p=>!p.left)?.id||null;
+   if(state.engine.players.every(p=>p.gameOver||!p.currentPiece)){
+    state.engine.isGameOver=true;state.phase='finished';
+   }
    if(state.players.every(p=>p.left)){state.started=false;state.phase='lobby';state.engine=null;}
    return out(state);
   }
@@ -680,6 +702,10 @@ export default {protocolVersion:1,
    if(p?.type==='rematch'){
     if(player.id!==state.hostId||!state.engine?.isGameOver)throw Error('Только ведущий может начать новый раунд после завершения');
     state.players=state.players.filter(p=>!p.left);
+    if(state.players.length<2){
+     state.started=false;state.phase='lobby';state.engine=null;
+     state.players.forEach(p=>p.ready=false);return out(state);
+    }
     state.players.forEach(p=>p.ready=true);
     newMatch(state,connectedIds);
     return out(state);
@@ -695,6 +721,7 @@ export default {protocolVersion:1,
     const r=runtime(state.engine,state.seed);
     r.step(Math.min(350,elapsed));
     if(p?.type==='input')r.input(index,p.input||{});
+    else if(p?.type==='resume')r.resume(index);
     else if(p?.type!=='pulse')throw Error('Игра уже началась');
     state.engine=r.snapshot();
     state.lastTick=now;
@@ -708,7 +735,7 @@ export default {protocolVersion:1,
    v.color=p.color;
   }else if(p?.type==='ready'){
    v.ready=!v.ready;
-   if(state.players.length && state.players.every(p=>p.ready))newMatch(state,connectedIds);
+   if(state.players.length>=2 && state.players.every(p=>p.ready))newMatch(state,connectedIds);
   }else if(p?.type!=='sync')throw Error('Неизвестная команда');
   return out(state);
  },
