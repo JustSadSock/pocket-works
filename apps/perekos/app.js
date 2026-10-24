@@ -644,6 +644,15 @@ function drawEvolutionMagic(s){
  if(s?.gameMode!=='rupture'&&!s?.magicModeV2)return;
  const colors={fire:'#efa464',storm:'#7ce1de',stone:'#d1d4aa'};
  ctx.save();
+ // Impact marks use the exact landing coordinates from the fixed-step simulation.
+ for(const q of s.lobs||[])if(q.v2Monolith||q.v2Comet){
+  ctx.save();ctx.strokeStyle=q.v2Comet?'#f7b77b':'#d6cbb1';
+  ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.globalAlpha=.75;
+  ctx.beginPath();ctx.arc(q.tx,q.ty,q.radius,0,Math.PI*2);ctx.stroke();
+  ctx.setLineDash([]);ctx.fillStyle=q.v2Comet?'#e9a462':'#b5b098';
+  ctx.fillRect(Math.round(q.x-9),Math.round(q.y-11-(q.height||0)*.5),18,18);
+  ctx.restore();
+ }
  // Ruined-ground warning and moving front are gameplay data, not particles:
  // the same wave is advanced by the authoritative server and the offline tick.
  for(const wave of s.waves||[]){
@@ -761,6 +770,14 @@ function drawConstructs(s){
  for(const b of s.barriers){
   const wob=Math.sin(frame*.09+b.x*.13),r=b.r,life=Math.min(1,b.life/.5);
   ctx.save();ctx.globalAlpha=.7+.3*life;
+  if(b.v2Pylon||b.v2Monolith){
+   const p=b.v2Pylon;
+   circle(b.x+4,b.y+10,r+4,'#122925a6');
+   pixel(b.x-r,b.y-r-6,r*2,r*2+6,p?'#284a52':'#777763');
+   pixel(b.x-r+3,b.y-r-13,r*2-6,9,p?'#9cded1':'#d9d1aa');
+   pixel(b.x-3,b.y-r-19,6,9,p?'#e3f9e6':'#9e9b83');
+   ctx.restore();continue;
+  }
   circle(b.x+5,b.y+10,r+4,'#102621b6');
   pixel(b.x-r+1,b.y-r+6,r*2,r*2,'#263a32');
   pixel(b.x-r,b.y-r+1,r*2-2,r*1.76,'#526653');
@@ -776,6 +793,19 @@ function drawConstructs(s){
  }
  for(const m of s.mines){
   const bob=Math.sin(frame*.11+m.x)*2,life=Math.min(1,m.life);
+  if(m.v2Conduit){
+   ctx.save();ctx.globalAlpha=m.arm>0?.55:.92;
+   ctx.strokeStyle=m.arm>0?'#659b9c':'#b4f6dd';ctx.lineWidth=m.arm>0?2:5;
+   ctx.setLineDash(m.arm>0?[5,5]:[]);
+   ctx.beginPath();ctx.moveTo(m.x,m.y);ctx.lineTo(m.x2,m.y2);ctx.stroke();
+   ctx.setLineDash([]);ctx.restore();continue;
+  }
+  if(m.v2Crater){
+   ctx.save();ctx.globalAlpha=m.arm>0?.55:.86;
+   ctx.fillStyle='#69362c';ctx.strokeStyle='#ffc17a';ctx.lineWidth=3;
+   ctx.beginPath();ctx.arc(m.x,m.y,m.r,0,Math.PI*2);ctx.fill();ctx.stroke();
+   ctx.restore();continue;
+  }
   if(m.v2Whirl){
    ctx.save();
    ctx.globalAlpha=m.arm>0?.57:.87;ctx.strokeStyle='#f3bb7c';

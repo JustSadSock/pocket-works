@@ -57,7 +57,7 @@ test('elemental fusion changes projectile impact rather than only adding an icon
  assert.ok(s.fx.some(f=>f.k==='thunder')||b.hp<100);
 });
 test('server rejects forged mutation and accepts legitimate one-time authenticated choices',()=>{
- assert.equal(RULESET_VERSION,16);
+ assert.equal(RULESET_VERSION,17);
  const host={id:'host'},guest={id:'guest'},s=module.createRoom({player:host}).state;
  module.onJoin({state:s,player:guest,players:[host,guest]});
  const send=(player,payload)=>module.onMessage({state:s,player,payload});
