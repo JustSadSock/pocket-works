@@ -64,8 +64,10 @@
             <label>Размер кадра<select id="media-resolution"><option value="640">До 640 пикс.</option><option value="960">До 960 пикс.</option><option value="1280" selected>До 1280 пикс.</option><option value="1920">До 1920 пикс.</option></select></label>
           </div>
           <div class="media-budget"><span id="media-estimate">Ожидаемый размер</span><small>Лимит комнаты — 96 МиБ</small></div>
+          <label class="media-audio-option"><input id="media-keep-audio" type="checkbox"><span>Оставить оригинальный звук фильма</span></label>
+          <div id="media-fast-status" class="media-fast-status" role="status"></div>
           <button id="media-render" class="media-render" type="button">Сжать для передачи</button>
-          <div id="media-progress" class="media-progress hidden" role="status"><div class="row-between"><strong id="media-progress-label">Обработка · 0%</strong><button id="media-cancel" class="text-action" type="button">Отменить</button></div><progress id="media-progress-bar" max="100" value="0"></progress><small>Обработка на устройстве. Не закрывай экран.</small></div>
+          <div id="media-progress" class="media-progress hidden" role="status"><div class="row-between"><strong id="media-progress-label">Обработка · 0%</strong><button id="media-cancel" class="text-action" type="button">Отменить</button></div><progress id="media-progress-bar" max="100" value="0"></progress><small id="media-progress-help">Обработка идёт во время воспроизведения. Не закрывай экран.</small></div>
           <div id="media-result" class="media-result hidden">
             <div class="media-result-title"><b>Обработанный фрагмент готов</b><span id="media-output-size"></span></div>
             <button id="media-discard" class="text-action" type="button">Изменить параметры / пересжать ↻</button>
