@@ -45,6 +45,26 @@ test('leaving the only remaining live piece ends the round and reopens lobby for
 
 
 
+test('both gates blocked ends the team match instead of leaving an unwinnable room',()=>{
+ let state=start([a,b]);
+ for(const player of state.engine.players){
+  player.currentPiece=[[1,1,1,1]];player.position={x:player.spawnLaneX,y:0};
+  for(let col=player.spawnLaneX;col<player.spawnLaneX+4;col++)state.engine.board[4][col]=1;
+ }
+ state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;
+ assert.equal(state.engine.isGameOver,false);
+ state=game.onMessage({state,player:b,payload:{type:'input',input:{action:'hardDrop'}}}).state;
+ assert.equal(state.engine.isGameOver,true);
+ assert.equal(state.phase,'finished');
+});
+test('connected teammate inherits host controls if original host socket disappears',()=>{
+ let state=start([a,b]);
+ state=game.onMessage({state,player:b,payload:{type:'pulse'},connectedIds:['b']}).state;
+ assert.equal(state.hostId,'b');
+ state=game.onMessage({state,player:b,payload:{type:'pause'},connectedIds:['b']}).state;
+ assert.equal(state.paused,true);
+});
+
 test('leaving during a match preserves board, score and surviving players',()=>{
  let state=start([a,b]);
  state=game.onMessage({state,player:a,payload:{type:'input',input:{action:'hardDrop'}}}).state;
