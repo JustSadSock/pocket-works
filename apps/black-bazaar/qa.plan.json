@@ -26,7 +26,8 @@
       "kind": "node-test",
       "tier": "deep",
       "files": [
-        "mechanics.test.mjs"
+        "mechanics.test.mjs",
+        "qa/balance-audit.mjs"
       ]
     }
   ]

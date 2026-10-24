@@ -1,10 +1,10 @@
-const APP_VERSION='0.19.1';
+const APP_VERSION='0.19.2';
 const VERSION=APP_VERSION;
 const RELEASE_DATE='2026-10-24';
-const RELEASE_NOTES = ["Входящие предложения сразу видны в виде бумажной записки.","Один тап открывает приватную сделку или встречную цену посредника.","При новом встречном предложении звучит отдельное уведомление."];
+const RELEASE_NOTES = ["Честное перемешивание стартовых мест без преимущества исходного порядка.","Независимая проверка баланса для групп 2–6 игроков.","Торговля, события и правила победы остались прежними."];
 const NOTES=RELEASE_NOTES;
-const CACHE='black-bazaar-v0.19.1';
-const CACHE_NAME='black-bazaar-v0.19.1';
+const CACHE='black-bazaar-v0.19.2';
+const CACHE_NAME='black-bazaar-v0.19.2';
 const PREFIX='black-bazaar-v';
 const FILES=[
  './','./index.html','./preview.html','./app.js','./debug-console.js','./debug-state.js','./economy.js','./art.js','./art/characters.js','./art/artifacts.js','./feedback.js','./inbox.js','./art/forest.svg','./art/table.svg','./styles.css','./app.config.json',

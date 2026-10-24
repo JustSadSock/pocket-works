@@ -1,0 +1,48 @@
+name: Black Bazaar Balance Audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/black-bazaar/server/module.ts'
+      - 'apps/black-bazaar/qa/balance-audit.mjs'
+      - 'apps/black-bazaar/mechanics.test.mjs'
+      - 'pocketnet/module-versions/black-bazaar/**'
+      - 'pocketnet/modules.lock.json'
+      - '.github/workflows/black-bazaar-balance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: black-bazaar-balance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  economy-and-seating:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify immutable rules v23
+        run: |
+          node --input-type=module -e "import {readFileSync} from 'node:fs'; const src=readFileSync('apps/black-bazaar/server/module.ts','utf8'); const pin=readFileSync('pocketnet/module-versions/black-bazaar/v23.ts','utf8'); const lock=JSON.parse(readFileSync('pocketnet/modules.lock.json','utf8')); if(src!==pin||lock['black-bazaar'].current!=='v23')process.exit(1);"
+      - name: Validate economic rules and security invariants
+        run: node --experimental-strip-types --test apps/black-bazaar/mechanics.test.mjs
+      - name: Analyze 3600 randomized seat assignments and 1200 full matches
+        env:
+          BAZAAR_BALANCE_OUTPUT: ${{ runner.temp }}/black-bazaar-balance.json
+        run: node --experimental-strip-types apps/black-bazaar/qa/balance-audit.mjs
+      - name: Upload balance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: black-bazaar-balance
+          path: ${{ runner.temp }}/black-bazaar-balance.json
+          if-no-files-found: warn
+          retention-days: 30

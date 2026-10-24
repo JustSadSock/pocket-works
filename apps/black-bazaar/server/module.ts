@@ -178,7 +178,16 @@ const itemLocked = (s,id) => s.blackLots?.some(l=>l.item.id===id) || s.listing?.
 const inventoryCount = (s,p) => p.items.length+(s.blackLots||[]).filter(l=>l.seller===p.id).length;
 
 const sample = xs => xs[Math.floor(Math.random()*xs.length)];
-const shuffled = xs => [...xs].sort(()=>Math.random()-.5);
+// An RNG-driven comparator violates the sort contract and over-represents original
+// seating. Fisher-Yates gives every pregame ordering equal probability.
+function shuffled(xs){
+ const result=[...xs];
+ for(let i=result.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [result[i],result[j]]=[result[j],result[i]];
+ }
+ return result;
+}
 const zero = () => ({gold:0,crystals:0,parts:0});
 const clampInt = (value,max=2000) => Number.isInteger(value)&&value>=0&&value<=max?value:null;
 function wallet(input){
