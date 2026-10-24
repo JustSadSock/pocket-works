@@ -799,7 +799,20 @@ function newMatch(state,connectedIds){
 }
 export default {protocolVersion:1,
  createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,inputBatchVersion:1,rulesVersion:3,contributionVersion:1,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
- onJoin({state,player}){state=copy(state);add(state,player);return out(state);},
+ onJoin({state,player}){
+  state=copy(state);
+  const oldSeat=state.players.find(seat=>seat.id===player.id);
+  add(state,player);
+  if(oldSeat?.left===false&&state.started&&state.engine){
+   // An explicitly departed player has a parked piece; a fresh connection
+   // must still pass the usual manual safe-lane check.
+   const index=state.players.findIndex(seat=>seat.id===player.id);
+   const piece=state.engine.players[index];
+   if(piece?.offline&&piece.gameOver&&piece.currentPiece===null)
+    piece.blocked=true;
+  }
+  return out(state);
+ },
  onLeave({state,player}){
   state=copy(state);
   const index=state.players.findIndex(p=>p.id===player.id);
@@ -808,7 +821,17 @@ export default {protocolVersion:1,
     state.players[index].left=true;
     state.players[index].ready=false;
     const piece=state.engine.players[index];
-    if(piece){piece.gameOver=true;piece.offline=true;piece.currentPiece=null;}
+    if(piece){
+     // An explicit leave forfeits the falling position, not the player's
+     // reserved seat or the right to reenter once the lane is safe.
+     piece.reentryType=piece.currentPiece?(piece.currentType||inferShapeType(piece.currentPiece)):piece.reentryType;
+     piece.blocked=true;
+     piece.gameOver=true;
+     piece.offline=true;
+     piece.currentPiece=null;
+     piece.dropCounter=0;
+     piece.lockCounter=0;
+    }
    }
    state.hostId=state.players.find(p=>!p.left)?.id||null;
    if(state.engine.players.every(p=>p.gameOver||!p.currentPiece)){
