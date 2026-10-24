@@ -22,21 +22,55 @@ type ScoreAudit={byVoter:Record<string,{eye:number;base:number;speed:number;corr
 type BoardSegment={u:string;k:string;q:number;c:string;s:number;p:number[][]};
 type CommonsBoard={revision:number;segments:BoardSegment[];full?:boolean};
 type DraftAssembly={checksum?:string;revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
-type State={pendingFinals?:Record<string,number>;incompleteSubmissions?:string[];resumable?:boolean;balancedDamage?:boolean;shapeCorrected?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;bannedIds?:string[];emblemUpdatedAt?:Record<string,number>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type SpriteAssembly={revision:string;checksum:string;parts:number;next:number;data:string};
+type State={rasterBallots?:boolean;spriteFallback?:boolean;ballotSprites?:Record<string,string>;ballotAssemblies?:Record<string,SpriteAssembly>;pendingFinals?:Record<string,number>;incompleteSubmissions?:string[];resumable?:boolean;balancedDamage?:boolean;shapeCorrected?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;bannedIds?:string[];emblemUpdatedAt?:Record<string,number>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
+const BALLOT_PREFIX='data:image/webp;base64,';
+const BALLOT_MAX_CHARS=450000;
+function spriteHash(value:string){
+ let hash=2166136261;
+ for(let i=0;i<value.length;i++){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619)>>>0}
+ return hash.toString(16).padStart(8,'0');
+}
+function validBallotImage(value:string){
+ if(typeof value!=='string'||!value.startsWith(BALLOT_PREFIX)||value.length>BALLOT_MAX_CHARS)return false;
+ const raw=value.slice(BALLOT_PREFIX.length);
+ if(!raw||raw.length%4!==0||!/^[A-Za-z0-9+/]+={0,2}$/.test(raw))return false;
+ // Base64 starts with RIFF....WEBP and a normal VP8 family chunk. Strict
+ // raster bounds also prevent unexpected markup/data URLs reaching voters.
+ if(!raw.startsWith('UklGR'))return false;
+ const bytes=raw.length/4*3-(raw.endsWith('==')?2:raw.endsWith('=')?1:0);
+ if(bytes<20||bytes>337500)return false;
+ const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+ let n=0,bits=0,head:number[]=[];
+ for(const ch of raw.slice(0,40)){
+  if(ch==='=')break;
+  n=(n<<6)|alphabet.indexOf(ch);bits+=6;
+  if(bits>=8){bits-=8;head.push((n>>>bits)&255);n&=(1<<bits)-1}
+ }
+ if(head.length<16)return false;
+ const tag=String.fromCharCode(...head.slice(0,4)),webp=String.fromCharCode(...head.slice(8,12));
+ const size=(head[4]|head[5]<<8|head[6]<<16|head[7]<<24)>>>0;
+ const codec=String.fromCharCode(...head.slice(12,16));
+ return tag==='RIFF'&&webp==='WEBP'&&size+8===bytes&&
+  (codec==='VP8 '||codec==='VP8L'||codec==='VP8X');
+}
+function allSprites(s:State){return members(s).every(p=>validBallotImage(s.ballotSprites?.[p.id]||''))}
+
 const shuffled=<T>(a:T[]):T[]=>{const copy=[...a];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
 const members=(s:State)=>s.participants;
 // The final durable painting, not the drawing clock, closes the restoration stage.
 const allCommitted=(s:State)=>members(s).length>0&&members(s).every(p=>Array.isArray(s.assignments[p.id]?.strokes));
 const strip=(s:State,id:string)=>({
  host:s.host,phase:s.phase,serverNow:now(),timedScoring:Boolean(s.timedScoring),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
- selected:s.selected,participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
+ selected:s.selected,ballotReady:members(s).filter(p=>!!s.ballotSprites?.[p.id]).map(p=>p.id),participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  incompleteSubmissions:s.incompleteSubmissions||[],
  voted:Object.keys(s.votes[members(s)[s.turn]?.id]||{}),
  mine:s.assignments[id]?{art:s.assignments[id].art,variation:s.assignments[id].variation,strokes:s.assignments[id].strokes,draft:s.drafts?.[id]??null}:null,
  author:members(s)[s.turn]||null,
- candidate:s.phase==='voting'?s.assignments[members(s)[s.turn]?.id]||null:null,
+ candidate:s.phase==='voting'&&(!s.rasterBallots||s.spriteFallback)?s.assignments[members(s)[s.turn]?.id]||null:null,
+ ballotSprite:s.phase==='voting'&&s.rasterBallots&&!s.spriteFallback?s.ballotSprites?.[members(s)[s.turn]?.id]||null:null,
  gallery:(s.phase==='verdict'||s.phase==='reveal'||s.phase==='round-review'||s.phase==='results')?members(s).map((p,i)=>(s.phase!=='verdict'&&s.phase!=='reveal')||i<=s.turn?({id:p.id,name:p.name,...s.assignments[p.id],votes:s.votes[p.id]||{},scoreAudit:s.timedScoring?scoreTurn(s,p.id):undefined}):null):null
 });
 function emit(s:State){return members(s).map(p=>({type:'state',to:p.id,payload:strip(s,p.id)}))}
@@ -45,7 +79,7 @@ function choose(s:State){
  s.selected=shuffled(Array.from({length:CATALOG_COUNT-1},(_,i)=>i+1).filter(id=>!EXCLUDED_PAINTINGS.has(id))).slice(0,5);
  // Assign each restorer independently from the same five previewed originals.
  // Two players may receive one painting but different damaged fragments.
- s.assignments={};s.drafts={};s.draftAssemblies={};s.pendingFinals={};s.incompleteSubmissions=[];s.votes={};s.voteDrafts={};s.voteTiming={};s.turn=0;s.revealed=false;
+ s.assignments={};s.ballotSprites={};s.ballotAssemblies={};s.spriteFallback=false;s.drafts={};s.draftAssemblies={};s.pendingFinals={};s.incompleteSubmissions=[];s.votes={};s.voteDrafts={};s.voteTiming={};s.turn=0;s.revealed=false;
  members(s).forEach(p=>s.assignments[p.id]={art:s.selected[Math.floor(Math.random()*s.selected.length)],
   variation:s.shapeCorrected?0x200000000+Math.floor(Math.random()*0x100000000):s.balancedDamage?0x100000000+Math.floor(Math.random()*0x100000000):Math.floor(Math.random()*0xffffffff),strokes:null});
  s.readyPlayers=[];s.phase=s.artPreparationEnabled?'preparing':'preview';s.deadline=now()+(s.artPreparationEnabled?15000:25000);
@@ -152,6 +186,15 @@ function step(s:State){
   // In-flight chunks must not survive the deadline: their complete predecessor
   // is already installed, and keeping them can bloat a full eight-player room.
   s.draftAssemblies={};s.drafts={};
+  if(s.rasterBallots){
+   s.phase='sealing';s.deadline=now()+90000;
+   if(allSprites(s))step(s);
+  }else{s.phase='voting';s.turn=0;s.deadline=now()+VOTE_WINDOW_MS;}
+ }else if(s.phase==='sealing'){
+  // Graceful degradation is explicit: an unavailable uploader cannot trap
+  // every participant permanently in a dead room.
+  s.spriteFallback=!allSprites(s);
+  s.ballotAssemblies={};
   s.phase='voting';s.turn=0;s.deadline=now()+VOTE_WINDOW_MS;
  }else if(s.phase==='voting'){
   // At the deadline, count 1- and 2-coin ballots as submitted votes.
@@ -237,7 +280,7 @@ function boardSegment(raw:Record<string,unknown>,u:string):BoardSegment|null{
 }
 const module: PocketModule<State>={
  protocolVersion:1,
- createRoom({player}){return {state:{resumable:true,balancedDamage:true,shapeCorrected:true,timedScoring:true,board:{revision:0,segments:[]},emblems:{},emblemUpdatedAt:{},bannedIds:[],host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},voteTiming:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
+ createRoom({player}){return {state:{rasterBallots:false,spriteFallback:false,ballotSprites:{},ballotAssemblies:{},resumable:true,balancedDamage:true,shapeCorrected:true,timedScoring:true,board:{revision:0,segments:[]},emblems:{},emblemUpdatedAt:{},bannedIds:[],host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},voteTiming:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
  onJoin({state,player}){
    if(state.bannedIds?.includes(player.id))throw Error('room_kicked');
    if(state.phase!=='lobby'&&!state.participants.some(p=>p.id===player.id))throw Error('room_in_progress');
@@ -351,6 +394,8 @@ const module: PocketModule<State>={
      delete state.emblems?.[target];
      delete state.emblemUpdatedAt?.[target];
      delete state.assignments[target];
+     delete state.ballotSprites?.[target];
+     delete state.ballotAssemblies?.[target];
      delete state.drafts?.[target];
      delete state.draftAssemblies?.[target];
      state.readyPlayers=state.readyPlayers?.filter(p=>p!==target);
@@ -370,6 +415,44 @@ const module: PocketModule<State>={
      state.readyPlayers.push(id);
      if(members(state).every(p=>state.readyPlayers?.includes(p.id)))step(state);
      return {state,events:emit(state)};
+   }
+
+   if(a.type==='ballot_chunk'&&state.rasterBallots&&(state.phase==='drawing'||state.phase==='sealing')){
+     const item=state.assignments[id];
+     if(!item||!Array.isArray(item.strokes)||a.round!==state.round)
+      return {state,events:notice(id,'Растровый лист не относится к текущей сохранённой работе.')};
+     if(typeof a.revision!=='string'||!/^r[a-z0-9-]{1,30}$/.test(a.revision)||
+        typeof a.checksum!=='string'||!/^[0-9a-f]{8}$/.test(a.checksum)||
+        !Number.isInteger(a.parts)||a.parts<1||a.parts>60||
+        !Number.isInteger(a.index)||a.index<0||a.index>=a.parts||
+        typeof a.data!=='string'||a.data.length<1||a.data.length>8000||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(a.data))
+       return {state,events:notice(id,'Неверный формат защищённого изображения.')};
+     if(state.ballotSprites?.[id]){
+      return {state,events:[{type:'ballot_saved',to:id,payload:{round:state.round}}]};
+     }
+     state.ballotAssemblies||={};
+     let assembly=state.ballotAssemblies[id];
+     if(a.index===0){
+      assembly={revision:a.revision,checksum:a.checksum,parts:a.parts,next:0,data:''};
+      state.ballotAssemblies[id]=assembly;
+     }
+     if(!assembly||assembly.revision!==a.revision||assembly.checksum!==a.checksum||
+        assembly.parts!==a.parts||assembly.next!==a.index)
+      return {state,events:notice(id,'Части защищённого изображения пришли не по порядку.')};
+     if(assembly.data.length+a.data.length+BALLOT_PREFIX.length>BALLOT_MAX_CHARS){
+      delete state.ballotAssemblies[id];
+      return {state,events:notice(id,'Изображение превышает допустимый размер.')};
+     }
+     assembly.data+=a.data;assembly.next++;
+     if(assembly.next!==assembly.parts)return {state,events:[]};
+     const complete=BALLOT_PREFIX+assembly.data;
+     delete state.ballotAssemblies[id];
+     if(!validBallotImage(complete)||spriteHash(complete)!==assembly.checksum)
+      return {state,events:notice(id,'Изображение повреждено при передаче.')};
+     state.ballotSprites||={};state.ballotSprites[id]=complete;
+     if(state.phase==='sealing'&&allSprites(state))step(state);
+     return {state,events:[...emit(state),{type:'ballot_saved',to:id,payload:{round:state.round}}]};
    }
    if(a.type==='board_delta'&&state.phase==='lobby'){
      const board=state.board ||= {revision:0,segments:[]};
@@ -407,6 +490,7 @@ const module: PocketModule<State>={
      if(state.host!==id)return {state,events:notice(id,'Запустить матч может создатель комнаты.')};
      if(members(state).length<MIN_PLAYERS)return {state,events:notice(id,'Для онлайна нужны минимум два участника.')};
      state.round=1;state.rounds=[1,3,5].includes(Number(a.rounds))?Number(a.rounds):3;
+     state.rasterBallots=a.rasterBallots===true;
      state.drawingSeconds=typeof a.drawingSeconds==='number'&&DRAWING_TIMES.includes(a.drawingSeconds)?a.drawingSeconds:DEFAULT_DRAWING_SECONDS;
      state.artPreparationEnabled=a.preload===true;
      state.board={revision:(state.board?.revision||0)+1,segments:[]};
@@ -543,7 +627,7 @@ const module: PocketModule<State>={
      else {state.phase='results';state.deadline=0;}
      changed=true;
    }else if(a.type==='next'&&state.phase==='results'&&id===state.host){
-     state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.board={revision:(state.board?.revision||0)+1,segments:[]};state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.drafts={};state.draftAssemblies={};state.pendingFinals={};state.incompleteSubmissions=[];state.votes={};state.selected=[];state.turn=0;
+     state.participants=state.participants.filter(p=>players.some(online=>online.id===p.id));state.board={revision:(state.board?.revision||0)+1,segments:[]};state.phase='lobby';state.round=0;state.deadline=0;state.assignments={};state.drafts={};state.draftAssemblies={};state.pendingFinals={};state.incompleteSubmissions=[];state.votes={};state.ballotSprites={};state.ballotAssemblies={};state.selected=[];state.turn=0;
      changed=true;
    }
    return {state,events:changed?emit(state):[]};
