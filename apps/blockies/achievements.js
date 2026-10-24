@@ -51,6 +51,7 @@ async function refresh(){
   render();
 }
 function toggle(visible){
+  window.dispatchEvent(new CustomEvent('blockies:awards-visibility',{detail:{visible}}));
   modal.hidden=!visible;openButton.setAttribute('aria-expanded',String(visible));
   if(visible){void refresh();document.querySelector('#achievements-close').focus();}
   else openButton.focus();
