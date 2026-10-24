@@ -260,6 +260,7 @@ export class NetworkManager {
   sendPlayerInput(input){
     if(this.started&&this.connected&&!this.stale)this.send({type:'input',input},true);
   }
+  requestLaneResume(){return this.started&&!this.finished&&!this.stale&&this.send({type:'resume'});}
   togglePause(){this.send({type:'pause'});}
   requestRematch(){this.send({type:'rematch'});}
   disconnect(){
