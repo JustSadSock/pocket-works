@@ -37,7 +37,7 @@ let net=null,view=null,me='',room='',roomVersion='v4',connected=false,connecting
 let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''),invitation=new URLSearchParams(location.search).get('room')||'',draftSelections={},storyId='',modal='',effectsEnabled=read('sound','off')==='on',musicEnabled=read('music','off')==='on',effectsVolume=Number(read('effectsVolume','.45')),musicVolume=Number(read('musicVolume','.22'));
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
 let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',readerPage=0,comicSource=null;
-let archiveSaveWarning='',archiveWarningShown='';
+let archiveSaveWarning='',archiveWarningShown='',unsavedNextAction='';
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='',archiveQuery='',archiveReaderMode='full',archiveReaderPage=0;
 let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false,joinSeatCode='',kickTarget='',skipTarget='',seatDecisionTarget='',kickFollowUpTarget='',transferTarget='',moderationTimer=null;
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
@@ -387,6 +387,7 @@ function results(){
  return '<div class="results reader-layout">'+nav+'<article class="paper story-paper"><div class="progress"><span class="eyebrow">ФІНАЛЬНЕ РОЗКРИТТЯ</span><span class="stamp">ГОТОВО</span></div><div class="reader-top"><div><div class="story-pager" aria-label="Перемикання історій"><button type="button" data-act="prev-story" aria-label="Попередня історія">←</button><strong>Історія '+(pos+1)+' / '+view.stories.length+'</strong><button type="button" data-act="next-story" aria-label="Наступна історія">→</button></div><h2>Історія '+escape(st.starter)+'</h2><p class="mini">'+escape(st.setLabel)+' · '+escape(st.genre)+'</p></div><div class="reader-switch" role="group" aria-label="Режим читання">'+(roomVersion==='v9'?'<button type="button" data-act="reader-pages" aria-pressed="'+(readerMode==='pages')+'" class="'+(readerMode==='pages'?'active':'')+'">Аркуші</button>':'')+'<button type="button" data-act="reader-full" aria-pressed="'+(readerMode==='full')+'" class="'+(readerMode==='full'?'active':'')+'">Текст</button><button type="button" data-act="reader-parts" aria-pressed="'+(readerMode==='parts')+'" class="'+(readerMode==='parts'?'active':'')+'">Автори</button></div></div><div class="content reader-scroll" tabindex="0" aria-label="Текст історії">'+body+'</div>'+reactionBar({storyId:st.id,view,version:roomVersion,escape,connected:IS_PREVIEW||(connected&&roomJoinedOnSocket)})+(archiveSaveWarning?'<p class="archive-save-warning" role="alert">'+escape(archiveSaveWarning)+'</p>':'')+'<div class="button-row reader-actions"><button class="button outline small" data-act="copy-story">Копіювати текст</button><button class="button small" data-act="comic">Комікс через ChatGPT ↗</button><button class="button outline small" data-act="download-issue">Завантажити випуск ↓</button></div><div class="reader-footer">'+(view.host===me?'<button class="leave" data-act="again">Нова партія</button>':'<span class="mini">Ведучий може запустити нову партію.</span>')+'<button class="leave" data-act="leave">Вийти до меню</button></div></article></div>'+(finaleIntroActive?finaleCurtain({count:view.stories.length}):'');
 }
 function overlay(){
+ if(modal==='archive-unsaved')return '<div class="comic-modal" role="dialog" aria-modal="true" aria-label="Незбережений випуск"><section class="comic-inner"><div class="eyebrow">ВИПУСК НЕ ЗБЕРЕЖЕНО</div><h3>Не втратити ці історії?</h3><p class="mini">'+escape(archiveSaveWarning)+' Якщо вийти або розпочати наступну партію, поточний випуск залишиться без локальної копії.</p><div class="button-row"><button class="button" type="button" data-act="download-issue">Завантажити випуск ↓</button><button class="button outline" type="button" data-act="cancel">Повернутися до історій</button><button class="leave" type="button" data-act="confirm-unsaved-action">Продовжити без збереження</button></div></section></div>';
  if(modal==='moderation')return controlsDialog(view,me,escape);
  if(modal==='kick-confirm')return kickDialog(view,view?.players?.find(p=>p.id===kickTarget),escape);
  if(modal==='skip-confirm')return skipDialog(view,view?.players?.find(p=>p.id===skipTarget),escape);
@@ -631,8 +632,19 @@ scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)
   if(act==='profile'){void openPocketProfile();return}if(act==='invite-social'){void openPocketInvites();return}if(act==='cancel-connect'){cancelConnection({preserveRoom:Boolean(savedRoom())});return}
  if(act==='resume'){connect('resume');return}if(act==='copy-code'){if(IS_PREVIEW){toast('Це демонстраційна кімната.');return}copyText(room.slice(0,8).toUpperCase());return}
  if(act==='copy-link'){if(IS_PREVIEW){toast('Тестове посилання не створюється.');return}copyText(location.origin+location.pathname+'?room='+room.slice(0,8));return}
- if(act==='start'||act==='again'){send({type:act});return}
- if(act==='leave'){modal='leave';render();return}if(act==='cancel'){modal='';render();return}
+ if(act==='start'||act==='again'){
+  if(act==='again'&&view?.phase==='finished'&&archiveSaveWarning){unsavedNextAction='again';modal='archive-unsaved';render();return}
+  send({type:act});return
+ }
+ if(act==='leave'){
+  if(view?.phase==='finished'&&archiveSaveWarning){unsavedNextAction='leave';modal='archive-unsaved'}
+  else modal='leave';render();return
+ }
+ if(act==='confirm-unsaved-action'){
+  const next=unsavedNextAction;unsavedNextAction='';modal='';
+  if(next==='leave')leaveNow();else if(next==='again')send({type:'again'});else render();return
+ }
+ if(act==='cancel'){modal='';unsavedNextAction='';render();return}
  if(act==='disconnect-room'){disconnectRoom();return}
  if(act==='ask-early-end'){modal='early-end';render();return}
  if(act==='confirm-early-end'){modal='';send({type:'finish_early'});render();return}
@@ -671,7 +683,7 @@ if(IS_PREVIEW){
  if(PREVIEW_ID==='moderation-kicked')seatDecisionTarget='qa-guest';
  if(['writing-v7','writing-v7-selection','writing-v7-final'].includes(PREVIEW_ID))roomVersion='v7';
  if(['writing-v8','writing-v8-selection','writing-v8-final'].includes(PREVIEW_ID))roomVersion='v8';
- if(['results-v9','results-v9-second'].includes(PREVIEW_ID)){roomVersion='v9';readerMode='pages'}
+ if(['results-v9','results-v9-second','results-archive-unsaved'].includes(PREVIEW_ID)){roomVersion='v9';readerMode='pages';if(PREVIEW_ID==='results-archive-unsaved')archiveSaveWarning='Архів заповнений (12/12). Цей випуск не збережено.'}
  const d=demoView(PREVIEW_ID);
  view=d.view;me=d.me;room=d.room;connected=d.connected;connecting=d.connecting;
  notice=d.notice;invitation=d.invitation;storyId=d.storyId;modal=d.modal;previewDraft=d.answer;
