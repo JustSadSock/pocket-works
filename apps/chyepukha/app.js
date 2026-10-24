@@ -174,7 +174,7 @@ async function openPocketProfile(){
 }
 function syncUrl(){if(IS_PREVIEW)return;const u=new URL(location.href);if(room)u.searchParams.set('room',room.slice(0,8));else u.searchParams.delete('room');history.replaceState({},'',u)}
 function copyText(t){if(navigator.clipboard?.writeText)return navigator.clipboard.writeText(t).then(()=>toast('Скопійовано.')).catch(()=>fallbackCopy(t));return fallbackCopy(t)}
-function fallbackCopy(t){const x=document.createElement('textarea');x.value=t;x.style.position='fixed';x.style.opacity='0';document.body.append(x);x.select();try{document.execCommand('copy');toast('Скопійовано.')}catch{toast('Копіювання недоступне.')}x.remove()}
+function fallbackCopy(t){const x=document.createElement('textarea');x.value=t;x.style.position='fixed';x.style.opacity='0';document.body.append(x);x.select();try{const ok=document.execCommand('copy');toast(ok?'Скопійовано.':'Копіювання недоступне.')}catch{toast('Копіювання недоступне.')}x.remove()}
 function send(payload){if(IS_PREVIEW)return demoSend(payload);if(!connected||!net?.roomId){toast('Немає зв’язку. Дочекайся відновлення.');return false}try{net.sendGame(payload);return true}catch{toast('Не вдалося надіслати.');return false}}
 function demoSend(payload){
  if(!connected){toast('Тестовий стан: PocketNet офлайн.');return false}
@@ -243,7 +243,7 @@ async function connect(how,settings){
   c.on('presence',()=>{if(net===c&&room&&connected)send({type:'sync'})});
   c.on('disconnected',()=>{if(net!==c)return;roomJoinedOnSocket=false;connected=false;connecting=true;netStatus()});
   c.on('room_kicked',()=>{if(net!==c)return;room='';view=null;modal='';connected=false;connecting=false;notice='Ведучий закрив доступ до кімнати або твоє місце передано іншому автору.';syncUrl();render()});
-  c.on('room_closed',()=>{if(net!==c)return;room='';view=null;connected=false;connecting=false;syncUrl();notice='Кімнату закрито.';render()});
+  c.on('room_closed',()=>{if(net!==c)return;room='';view=null;modal='';connected=false;connecting=false;syncUrl();notice='Кімнату закрито.';render()});
   c.on('error',e=>{
    if(net!==c)return;connecting=false;clearRoomTimeout();
    const labels={room_not_found:'Кімната не існує або вже закрита.',room_full:'Усі місця зайняті.',match_in_progress:'Гра вже почалася.',room_version_unavailable:'Версія кімнати недоступна.',account_already_in_room:'Цей Pocket ID уже є в кімнаті.',server_at_capacity:'Сервер заповнений.',rate_limited:'Зачекай перед наступною дією.'};
