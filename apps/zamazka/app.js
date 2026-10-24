@@ -24,6 +24,7 @@ import {createExhibitionDirector,saveTone,animateCoinDeposit} from './exhibition
 import {setDressScene} from './scenography.js';
 import {createCommonsBoard,COMMONS_COLORS} from './commons-board.js';
 import {sendPaintingPaced,paintingChecksum} from './draft-transfer.js';
+import {createStateStreamAssembler} from './state-stream-assembler.js';
 import {createZamazkaCloud} from './cloud-sync.js';
 import {zamazkaStore} from './storage.js';
 import {DEBUG_QUERY,DEBUG_SCREENS,isDebugKey,debugId,debugMatch,mountDebugGallery} from './debug-gallery.js';
@@ -1025,6 +1026,7 @@ async function connect(mode){
      if(client.closed)return;
      connectionLost=false;connectionStatus('ok');
      roomId=msg.roomId;
+     stateStreams.clear();
      roomModuleVersion=msg.version||'v1';
      boardResync=true;
      client.sendGame({type:'sync'});
@@ -1036,25 +1038,18 @@ async function connect(mode){
    });
    // Big eight-player galleries arrive in ordered, bounded PocketNet frames.
    // Reconstruct only complete authoritative snapshots; never show partial art.
-   const stateStreams=new Map();
+   const stateStreams=createStateStreamAssembler();
    client.on('game_event',msg=>{
      if(client.closed)return;
      let event=msg.event;
      if(event?.type==='state_stream'){
-       const p=event.payload;
-       if(!p||typeof p.stream!=='string'||!Array.isArray(stateStreams.get(p.stream)?.parts)&&
-          (!Number.isInteger(p.total)||p.total<1||p.total>512))return;
-       if(!Number.isInteger(p.index)||p.index<0||p.index>=p.total||
-          typeof p.part!=='string'||p.part.length>15000)return;
-       const now=Date.now();
-       for(const [id,s] of stateStreams)if(now-s.created>15000)stateStreams.delete(id);
-       let entry=stateStreams.get(p.stream);
-       if(!entry){entry={created:now,total:p.total,parts:new Array(p.total),count:0};stateStreams.set(p.stream,entry)}
-       if(entry.total!==p.total)return;
-       if(entry.parts[p.index]===undefined){entry.parts[p.index]=p.part;entry.count++}
-       if(entry.count!==entry.total)return;
-       stateStreams.delete(p.stream);
-       try{event=JSON.parse(entry.parts.join(''))}catch{notify('Не удалось собрать данные выставки. Повторяем…');client.sendGame({type:'sync'});return}
+       const assembled=stateStreams.accept(event.payload);
+       if(assembled.status==='invalid'||assembled.status==='pending')return;
+       if(assembled.status==='error'){
+         notify('Не удалось собрать данные выставки. Повторяем…');
+         client.sendGame({type:'sync'});return;
+       }
+       event=assembled.event;
      }
      if(event?.type==='achievement_awarded'){
       const item=zamazkaAchievements.find(a=>a.id===event.payload?.id);
