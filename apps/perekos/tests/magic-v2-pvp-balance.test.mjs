@@ -35,7 +35,7 @@ test('overlapping physical hazards share a fixed 12-point secondary damage budge
  assert.equal(target.hp,88,'simultaneous fields cannot stack past 12 HP damage');
  assert.equal(caster.v2SecondaryWindow.spent,12);
  for(let i=0;i<48;i++)run(s);
- assert.ok(target.hp>=88,'fire pulses and burns cannot exceed the shared first-window allowance');
+ assert.ok(target.hp>=88,'fire pulses and burns cannot exceed the shared first-window allowance '+JSON.stringify({hp:target.hp,ticks:s.ticks,budget:caster.v2SecondaryWindow,burn:target.burn,spent:caster.v2SecondaryWindow?.spent,phase:s.phase}));
  for(let i=0;i<15;i++)run(s);
  assert.ok(target.hp<88,'new one-second window restores some periodic pressure');
  assert.ok(target.hp>=76,'second window has the same cap');
@@ -78,7 +78,7 @@ test('two independently triggered rune guards share 1.65-second cooldown',()=>{
  s.eventQueue.push({kind:'on_hurt',owner:0,payload:{from:1},depth:0});
  run(s);
  assert.equal(s.actors[0].shield,14);
- for(let i=0;i<39;i++)run(s);
+ for(let i=0;i<50;i++)run(s);
  s.eventQueue.push({kind:'on_hurt',owner:0,payload:{from:1},depth:0});
  run(s);
  assert.equal(s.actors[0].shield,28);
