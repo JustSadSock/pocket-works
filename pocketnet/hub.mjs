@@ -7,7 +7,7 @@ import {shouldAnnounceSocketDeparture} from './disconnect-presence.mjs';
 import {prepareArtworkStorage} from './art-storage.mjs';
 import {reconcileZamazkaPresence} from './zamazka-presence.mjs';
 import {packPrivateZamazkaState} from './zamazka-state-stream.mjs';
-import {isChyepukhaSync,canServeChyepukhaSync,checkChyepukhaStateBudget} from './chyepukha-transport.mjs';
+import {isChyepukhaSync,canServeChyepukhaSync,checkChyepukhaStateBudget,checkChyepukhaViewBudget} from './chyepukha-transport.mjs';
 
 // All rooms share one small, hibernatable SQLite-backed coordinator. This matches
 // the personal/friends deployment (max 32 rooms / 48 sockets) without paid KV/D1.
@@ -703,8 +703,15 @@ export class PocketNetHub {
           // Preserve the room-state budget before committing any new answer.
           // An oversized candidate never replaces already accepted manuscripts.
           if (room.gameId === 'chyepukha' &&
-              result.state?.revision !== room.state?.revision &&
-              !checkChyepukhaStateBudget(result.state, MAX_STATE).ok) {
+              result.state?.revision !== room.state?.revision) {
+            const stateFits = checkChyepukhaStateBudget(result.state, MAX_STATE).ok;
+            // A finished reader expands questions/attribution for every chapter.
+            // Check its largest join/state packet now, not after the final submit.
+            const finalViewFits = stateFits && (!result.state.sheets?.length ||
+              checkChyepukhaViewBudget(room, mod.viewForPlayer({
+                state:{...result.state,phase:'finished'}, player:member, players:room.players
+              }), MAX_EVENT_BYTES).ok);
+            if (!stateFits || !finalViewFits) {
             const reason = 'Рукописи наблизились до ліміту кімнати. Скороти фрагмент та надішли ще раз — попередні відповіді збережені.';
             const requestId = msg.payload?.requestId;
             const event = msg.payload?.type === 'submit' &&
@@ -713,6 +720,7 @@ export class PocketNetHub {
               : {type:'notice', to:player.id, payload:reason};
             this.emit(room, [event]);
             return;
+            }
           }
           const prior=room.state;
           room.state = result.state;
