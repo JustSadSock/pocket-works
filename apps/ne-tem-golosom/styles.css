@@ -143,3 +143,49 @@
  .editor .transport-btn{width:39px;min-width:39px;height:42px}
  .editor .record-btn{min-width:104px;padding:8px}
 }
+
+
+/* Stage 3 · tactile strip editor; precision editing without a desktop DAW UI. */
+.editor .timeline-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;color:#c9b69e;font-size:9px;font-weight:800;letter-spacing:.08em}
+.editor .zoom-buttons{display:flex;align-items:center;gap:0;background:#1c2223;border:1px solid #505956;border-radius:4px}
+.editor .zoom-buttons button{display:grid;place-items:center;width:31px;height:27px;padding:0;border:0;background:transparent;color:#e9cdb0;font-size:20px;touch-action:manipulation}
+.editor .zoom-buttons button:disabled{opacity:.3}
+.editor .zoom-buttons span{min-width:28px;text-align:center;font:700 12px system-ui;color:#fff3d8}
+.editor .timeline-viewport{width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#8d7665 #202728;border:1px solid #394241;margin:6px 0 5px}
+.editor .timeline{height:85px;min-width:100%;margin:0;touch-action:pan-x pan-y}
+.editor .clip-lane{height:36px;overflow:visible}
+.editor .clip-bar{height:36px;touch-action:none;overflow:visible;min-width:0;padding:0;background:#dd9270;border:1px solid #6e4333;border-radius:2px;cursor:grab;user-select:none;-webkit-user-select:none}
+.editor .clip-bar:active{cursor:grabbing}
+.editor .clip-bar .clip-text{position:absolute;inset:0 13px;display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;pointer-events:none}
+.editor .clip-bar .clip-grip{position:absolute;top:0;bottom:0;width:13px;z-index:2;cursor:ew-resize;touch-action:none;background:linear-gradient(90deg,#f4c99b,#d87e57)}
+.editor .clip-bar .clip-grip:after{content:'';position:absolute;top:10px;bottom:10px;left:5px;border-left:2px dotted #623e2e}
+.editor .clip-bar .clip-grip.left{left:0;border-right:1px solid #9c583e}
+.editor .clip-bar .clip-grip.right{right:0;border-left:1px solid #9c583e}
+.editor .clip-bar.selected .clip-grip{background:#f8dfb1}
+.editor .clip-bar.dragging{z-index:3;box-shadow:0 2px 15px #060a0a95,inset 0 0 0 2px #fff9df}
+.editor .playhead{height:62px;top:15px}
+.editor .timeline input[type=range]{height:23px;top:0}
+.editor .record-combo{display:flex;align-items:stretch;justify-content:center;gap:5px;min-width:0;max-width:216px;flex:1}
+.editor .record-combo .record-btn{height:50px;min-width:96px;max-width:none;flex:1;border-radius:3px}
+.editor .count-record-btn{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0;width:47px;min-width:47px;height:50px;border:1px solid #ad8069;border-radius:3px;background:#3a4140;color:#fae5cb;font:800 20px system-ui}
+.editor .count-record-btn .count-mini{font-size:12px;line-height:12px;font-weight:600}
+.editor .count-record-btn:disabled{opacity:.32}
+.editor .count-record-btn.counting{background:#9f5d3e;border-color:#efb17a}
+.editor .record-btn[disabled]{opacity:.55}
+.editor .clip-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.editor .clip-actions .text-action{min-height:34px;white-space:nowrap}
+.editor .clip-actions .text-action:first-child:not(:disabled){color:#f5c08c}
+.editor .selected-clip-info{font-size:11px;white-space:normal;line-height:1.3;min-height:20px}
+.editor .editor-bottom .quiet{text-align:center;font-size:10px}
+.editor button:focus-visible{outline:2px solid #ffe7bb;outline-offset:3px}
+@media(max-width:600px){
+ .editor .editor-desk{padding:9px 10px 5px}
+ .editor .edit-controls{gap:5px;margin:8px 0 5px}
+ .editor .transport-btn{width:37px;min-width:37px;height:43px;font-size:21px}
+ .editor .record-combo{max-width:204px}
+ .editor .record-combo .record-btn{min-width:80px;padding:7px;font-size:12px}
+ .editor .count-record-btn{width:42px;min-width:42px;height:47px}
+ .editor .clip-actions{gap:2px}
+ .editor .clip-actions .text-action{font-size:10px;padding:4px}
+ .editor .done-btn{padding:9px}
+}
