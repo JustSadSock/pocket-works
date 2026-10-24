@@ -60,7 +60,8 @@ jobs:
           npm run build:pocketnet
           node --check pocketnet/hub.mjs
           node --check pocketnet/session-tokens.mjs
-          node --test pocketnet/test/session-tokens.test.mjs
+          node --check pocketnet/admission-limits.mjs
+          node --test pocketnet/test/session-tokens.test.mjs pocketnet/test/admission-limits.test.mjs
           node --check pocketnet/worker.mjs
           node --check pocket-id/hub.mjs
           node --check pocket-cloud/hub.mjs
