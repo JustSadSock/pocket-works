@@ -62,7 +62,7 @@ jobs:
       - name: Install browser test dependencies
         run: npm install --legacy-peer-deps --ignore-scripts --no-audit --no-fund
       - name: Install headless Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
       - name: Check video source selection, trim, transcoding and browser appearance
         run: node apps/ne-tem-golosom/qa/video-journey.mjs
       - name: Check timeline gestures, draft recovery and Undo/Redo
