@@ -337,10 +337,34 @@ try{
  assert.equal(resumedHost.round,initialView.round);
  assert.ok(resumedHost.deadlineAt<=wakeState.deadlineAt+250,
   'late host reconnect must not grant a second complete turn');
+ // Real unattended deadline: three authenticated sockets stay connected but
+ // send ZERO game packets. The Durable Object alarm must advance the turn itself.
+ for(const c of clients)await c.close();
+ const idleSockets=await Promise.all(tokens.slice(0,3).map(async token=>{
+  const c=await open(token);clients.push(c);return c;
+ }));
+ const [idleHost,...idleGuests]=idleSockets;
+ idleHost.send('create_room',{gameId:'black-bazaar'});
+ const idleRoom=(await idleHost.next('room_joined')).roomId;
+ for(const guest of idleGuests){guest.send('join_room',{roomId:idleRoom});await guest.next('room_joined');}
+ idleHost.send('game_message',{payload:{type:'start'}});
+ const idleStart=stateOf(await idleHost.next('game_event',stateEvent('play')));
+ assert.equal(idleStart.players.length,3);
+ const deadline=idleStart.deadlineAt;
+ assert.ok(deadline-Date.now()>65_000,'three-seat turn should have an ordinary real deadline');
+ // No client-side tick, ping, sync, or other game_message is sent while waiting.
+ const advanced=stateOf(await idleHost.next('game_event',stateEvent('play',v=>
+  v.turnId!==idleStart.turnId&&v.revision>idleStart.revision),100_000));
+ assert.equal(advanced.round,idleStart.round,'alarm advances a turn, not the entire round');
+ assert.equal(advanced.revision,idleStart.revision+1,'one authoritative timeout gives one revision');
+ assert.ok(Date.now()>=deadline-2500,'alarm should not end a turn early');
+ assert.ok(advanced.deadlineAt>Date.now(),'the next player receives a new server deadline');
+ console.log('BAZAAR_UNATTENDED_ALARM_PASS',JSON.stringify({room:idleRoom,revision:advanced.revision,
+  elapsedMs:Date.now()-(deadline-80_000),noClientMessages:true}));
  console.log('BAZAAR_LIVE_POCKETNET_PASS',JSON.stringify({
   module:initial.version,seats:3,privateViews:true,auction:true,
   activeSellerReconnect:true,deadlineGrace:true,noDuplicateTrade:true,
-  rejectedLateJoin:true,hostHandoff:true,lobbyKick:true,liveKick:true,bannedReconnect:true,allOfflineRecovery:true,readonlyClock:true,completedRounds:snap.round||9,turns:commands
+  rejectedLateJoin:true,hostHandoff:true,lobbyKick:true,liveKick:true,bannedReconnect:true,allOfflineRecovery:true,readonlyClock:true,unattendedAlarm:true,completedRounds:snap.round||9,turns:commands
  }));
 }finally{
  for(const c of clients)try{await c.close()}catch{}
