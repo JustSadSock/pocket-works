@@ -18,7 +18,7 @@ const sharedGodotEngines=new Map();
 const rootFiles=[
   'index.html','styles.css','deck-shell.css','launcher-performance.css','launcher-sync.css','app.js',
   'launcher-update-all-v3.js','launcher-release-links.js','launcher-sync.js','launcher-new-app-focus.js',
-  'manifest.webmanifest','sw.js','privacy.html'
+  'manifest.webmanifest','sw.js','privacy.html','_headers'
 ];
 
 async function copyDirectoryFiltered(source,destination,shouldSkip,prefix=''){
