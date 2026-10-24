@@ -876,5 +876,16 @@ export default {protocolVersion:1,
   }else if(p?.type!=='sync')throw Error('Неизвестная команда');
   return out(state);
  },
- viewForPlayer({state}){return state;}
+ viewForPlayer({state,player}){
+  // A snapshot is a public projection, not the authoritative save.
+  // Keep positions, held/next pieces, score and the seat owner's acknowledgement.
+  if(!state.engine)return state;
+  const {rngState,...publicEngine}=state.engine;
+  const players=publicEngine.players.map((seat,index)=>{
+   const {bag,inputWindowStart,inputWindowCount,lastTime,keys,...publicSeat}=seat;
+   if(state.players[index]?.id!==player?.id)delete publicSeat.lastInputSeq;
+   return publicSeat;
+  });
+  return {...state,engine:{...publicEngine,players}};
+ }
 };
