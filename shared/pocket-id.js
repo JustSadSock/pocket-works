@@ -113,19 +113,26 @@ function publish(userValue,{notifyPeers=false}={}) {
   document.dispatchEvent(new CustomEvent('pocket-id:changed',{detail:{user}}));
   if(notifyPeers)tabBridge.notify();
 }
-const tabBridge=createIdentityTabBridge({
-  async onChange(){
-    const requestVersion=++accountChangeVersion;
-    try{
-      const result=await api('me');
-      if(requestVersion!==accountChangeVersion)return;
-      publish(result.user,{notifyPeers:true});
-      if(!busy){
-        mode=user?(user.complete?'view':'onboarding'):'create';
-        if(dialog.open||accountHost)display();
-      }
-    }catch{/* Retain the verified last-known account while offline. */}
-  }
+async function refreshVerifiedPeerAccount(){
+  const requestVersion=++accountChangeVersion;
+  try{
+    const result=await api('me');
+    if(requestVersion!==accountChangeVersion)return;
+    // A peer-triggered refresh must NEVER rebroadcast, or tabs ping-pong.
+    publish(result.user);
+    if(!busy){
+      mode=user?(user.complete?'view':'onboarding'):'create';
+      if(dialog.open||accountHost)display();
+    }
+  }catch{/* Retain the verified last-known account while offline. */}
+}
+const tabBridge=createIdentityTabBridge({onChange:refreshVerifiedPeerAccount});
+// Backgrounded iOS tabs may miss BroadcastChannel or storage notifications.
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden)void refreshVerifiedPeerAccount();
+});
+window.addEventListener('pageshow',event=>{
+  if(event.persisted)void refreshVerifiedPeerAccount();
 });
 window.PocketID=Object.freeze({
   mountAccount,unmountAccount,
