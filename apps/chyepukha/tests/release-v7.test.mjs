@@ -79,7 +79,7 @@ test('client, offline cache and release metadata agree on version 1.8.3',()=>{
  const html=repoFile('apps/chyepukha/index.html');
  assert.equal(config.version,'1.8.3');
  assert.equal(config.cacheName,'chyepukha-v1.8.3');
- assert.match(sw,/const APP_VERSION='1\.8\.2'/);
- assert.match(sw,/__pw_build','chyepukha-1\.8\.2'/);
- assert.match(html,/data-app-version="1\.8\.2"/);
+ assert.match(sw,/const APP_VERSION='1\.8\.3'/);
+ assert.match(sw,/__pw_build','chyepukha-1\.8\.3'/);
+ assert.match(html,/data-app-version="1\.8\.3"/);
 });
