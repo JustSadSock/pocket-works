@@ -81,3 +81,43 @@ jobs:
             /tmp/ntg-timeline-journey/
           if-no-files-found: ignore
           retention-days: 14
+
+  real-pocketnet:
+    needs: unit-and-server
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install WebSocket and module tooling
+        run: npm ci --prefix pocket-server --no-audit --no-fund
+      - name: Prepare isolated PocketNet modules
+        run: |
+          node scripts/build-pocketnet-modules.mjs --snapshot
+          node scripts/build-pocketnet-modules.mjs --check
+      - name: Install isolated Wrangler local runtime
+        run: npm install --prefix /tmp/ntg-wrangler --no-audit --no-fund wrangler@4
+      - name: Validate two real authenticated sockets and v3 relay
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-site
+          printf '<!doctype html><title>NTG PocketNet QA</title>' > dist-site/index.html
+          cp privacy.html dist-site/privacy.html
+          cp privacy.html dist-site/privacy.txt
+          /tmp/ntg-wrangler/node_modules/.bin/wrangler dev --local --port 8787 > /tmp/ntg-pocketnet-worker.log 2>&1 &
+          worker=$!
+          trap 'kill "$worker" 2>/dev/null || true; tail -n 90 /tmp/ntg-pocketnet-worker.log' EXIT
+          node apps/ne-tem-golosom/qa/pocketnet-live.mjs
+      - name: Save local PocketNet diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ne-tem-golosom-pocketnet-runtime
+          path: /tmp/ntg-pocketnet-worker.log
+          if-no-files-found: warn
+          retention-days: 14
