@@ -6,10 +6,15 @@ export function createIdentityTabBridge({
   onChange,
   BroadcastChannelType = globalThis.BroadcastChannel,
   windowTarget = typeof window === 'undefined' ? null : window,
-  storage = typeof localStorage === 'undefined' ? null : localStorage,
+  storage,
   clock = () => Date.now()
 } = {}) {
   if (typeof onChange !== 'function') throw new TypeError('onChange callback required');
+  // In sandboxed or privacy-restricted browsers the storage getter itself throws.
+  let safeStorage=storage ?? null;
+  if(storage===undefined){
+    try{safeStorage=windowTarget?.localStorage||null;}catch{safeStorage=null;}
+  }
   const channel = typeof BroadcastChannelType === 'function'
     ? new BroadcastChannelType('pocket-works:identity-session') : null;
   let lastSignal = -Infinity;
@@ -36,7 +41,7 @@ export function createIdentityTabBridge({
       if (closed) return;
       try { channel?.postMessage({type:'session-changed'}); } catch {}
       // Browsers without BroadcastChannel still receive the storage event.
-      try { storage?.setItem(ACCOUNT_SIGNAL_KEY, String(clock()) + ':' + crypto.randomUUID()); }
+      try { safeStorage?.setItem(ACCOUNT_SIGNAL_KEY, String(clock()) + ':' + crypto.randomUUID()); }
       catch { /* LocalStorage may be blocked; BroadcastChannel remains available. */ }
     },
     close() {
