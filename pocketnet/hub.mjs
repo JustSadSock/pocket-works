@@ -368,7 +368,7 @@ export class PocketNetHub {
     const now=Date.now();
     let next=now+(waiting?20_000:ROOM_TTL);
     // Only v20 opts in to authoritative wakeups. Pinned older versions remain unchanged.
-    for(const row of this.sql('SELECT state FROM rooms WHERE game_id=? AND version IN (?,?,?)','black-bazaar','v20','v21','v22','v22').toArray()){
+    for(const row of this.sql('SELECT state FROM rooms WHERE game_id=? AND version IN (?,?,?)','black-bazaar','v20','v21','v22').toArray()){
       const state=JSON.parse(row.state);
       if(state.phase==='play'&&!state.offlinePaused&&Number.isFinite(state.deadlineAt))
         next=Math.min(next,Math.max(now+250,state.deadlineAt+5));
