@@ -94,7 +94,7 @@ export function waitingMarkup({view,ass,arts,escapeText,memberSeal,head,artFacts
   '<div class="passage-waiting-foot"><span class="passage-breath" aria-hidden="true"></span><span id="waitingStatusMessage">'+(complete===total?'Все работы сданы. Переходим к экспертизе.':'Можно изучить результат, пока остальные рисуют.')+'</span></div>'+
   '</aside></div></section>';
 }
-export function updateWaiting(root,done=[],players=[]){
+export function updateWaiting(root,done=[],players=[],sealing=false){
  if(!root)return;
  const doneSet=new Set(done),total=players.length||1,ready=players.filter(p=>doneSet.has(p.id)).length;
  const count=root.querySelector('#readyCount');if(count)count.textContent=ready+' / '+total;
@@ -104,9 +104,9 @@ export function updateWaiting(root,done=[],players=[]){
   const active=doneSet.has(element.dataset.waitPlayer),prev=element.classList.contains('is-ready');
   if(active&&!prev){element.classList.add('just-ready');setTimeout(()=>element.classList.remove('just-ready'),440)}
   element.classList.toggle('is-ready',active);
-  const status=element.querySelector('strong');if(status)status.textContent=active?'Готово':'Рисует';
+  const status=element.querySelector('strong');if(status)status.textContent=active?'Готово':sealing?'Подготовка…':'Рисует';
  }
  const message=root.querySelector('#waitingStatusMessage');
- if(message)message.textContent=ready===total?'Все работы сданы. Переходим к экспертизе.':'Можно изучить результат, пока остальные рисуют.';
+ if(message)message.textContent=ready===total?'Все изображения подготовлены. Начинаем экспертизу.':sealing?'Собираем защищённые изображения; неподготовленные работы не будут выставлены на голосование.':'Можно изучить результат, пока остальные рисуют.';
  root.classList.toggle('passage-all-ready',ready===total);
 }
