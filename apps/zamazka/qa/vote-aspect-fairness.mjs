@@ -105,11 +105,12 @@ assert(css.includes('#screen>.expert-phase .stake-frame.zam-exhibit-rim>img,') &
 assert.match(css,/height:100%!important;[\s\S]*?object-fit:fill!important/);
 assert(app.includes('fitGalleryArtwork(cells)'),'preview shares a sizing rule with the vote');
 assert(ui.includes('fitGalleryArtwork(cells)'),'all voting cards are sized together');
-assert(app.includes("const canvas=screen.querySelector('#examinedCanvas')") &&
- app.includes('canvas.classList.add(\'is-ready\')'),
- 'edited candidate becomes visible only after genuine restoration rendering');
+assert(app.includes('paintVoteSurfaces(ballotScreen,v.selected,examined,{render:renderArtwork})'),
+ 'five suspect canvases are composited together before revealing the ballot');
+assert(app.includes('data-vote-canvas=') && !app.includes('examinedCanvas'),
+ 'all five framed suspects share exactly the same DOM shape');
 assert(app.includes('candidate-underlay') && css.includes('canvas.candidate-art.is-ready'),
- 'show identical original until edited canvas has decoded successfully');
+ 'original-image fallback remains until all five canvases are ready');
 
 // A new colour must replace both a previously filled canvas and prepainted
 // pigment without turning coloured pixels into new walls.
