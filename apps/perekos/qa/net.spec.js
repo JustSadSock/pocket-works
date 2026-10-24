@@ -80,20 +80,21 @@ test('friend accepts invite and joins on the second stable server seat',async({p
  await expect(page.locator('#menu')).toBeVisible();
 });
 
-test('PocketNet v10 permits two-player rune mode, server-owned editor commands and a real battle input stream',async({page})=>{
+test('PocketNet v13 links rune editor, physical combat and post-round server draft',async({page})=>{
  const pageErrors=[];page.on('pageerror',e=>pageErrors.push(e.message));
  await page.route('**/pocket-id/me',r=>r.fulfill({status:503,body:'offline'}));
  await page.route('**/pocketnet/session',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({token:'v10-mock'})}));
  await page.addInitScript(()=>{
   const roomId='aabbbccc-0000-4000-8000-000000000000';
   const players=[{id:'host',name:'Маг камня'},{id:'guest',name:'Маг огня'}];
-  const mock={mode:'rupture',schools:['fire','fire'],phase:'lobby',revision:0,commands:[],match:null,book:null,ready:false,socket:null};
+  const mock={mode:'rupture',schools:['fire','fire'],phase:'lobby',revision:0,commands:[],match:null,book:null,ready:false,socket:null,magicStage:0,magicChoices:[],magicPicked:false};
   const push=(type,data)=>mock.socket?.onmessage?.({data:JSON.stringify({wireVersion:1,type,...data})});
   const view=()=>({phase:mock.phase,revision:++mock.revision,host:'host',me:0,seats:['host','guest'],
-    rulesVersion:10,gameMode:mock.mode,schools:mock.schools,mages:['kindle','wire'],
+    rulesVersion:13,gameMode:mock.mode,schools:mock.schools,mages:['kindle','wire'],
     archetypes:['striker','shaper'],match:mock.match,loadout:mock.book,picked:false,
-    ready:mock.ready,nextSeq:0,players,connected:true,opponentConnected:true});
+    ready:mock.ready,magicStage:mock.magicStage,magicChoices:mock.magicChoices,magicPicked:mock.magicPicked,nextSeq:0,players,connected:true,opponentConnected:true});
   const refresh=()=>push('game_event',{roomId,event:{type:'state',payload:view()}});
+  mock.refresh=refresh;
   class WebSocketMock{
    constructor(){this.readyState=0;mock.socket=this;setTimeout(()=>{this.readyState=1;this.onopen?.()},8)}
    send(data){
@@ -121,6 +122,17 @@ test('PocketNet v10 permits two-player rune mode, server-owned editor commands a
     else if(p.type==='magic-edit'&&mock.phase==='magic-build'){
      const reply=window.__netMagic.applyMagicEdit(mock.book,p.command);
      if(reply.ok){mock.book=reply.state;mock.match.magicLoadouts[0]=mock.book;refresh()}
+    }
+    else if(p.type==='magic-pick'&&mock.phase==='magic-offer'){
+     const choice=mock.magicChoices[p.index];
+     if(p.stage!==mock.magicStage||!choice)return;
+     mock.magicPicked=true;refresh();
+     for(const id of choice.runes){
+      const added=window.__netMagic.grantEarnedMagicRune(mock.book,id);
+      if(added.ok)mock.book=added.state;
+     }
+     mock.match.magicLoadouts[0]=mock.book;
+     mock.magicChoices=[];mock.phase='magic-build';mock.magicPicked=false;refresh();
     }
     else if(p.type==='magic-ready'&&mock.phase==='magic-build'){
      mock.ready=true;refresh();
@@ -166,5 +178,21 @@ test('PocketNet v10 permits two-player rune mode, server-owned editor commands a
  await page.locator('.v2-play').click();
  await expect(page.locator('#hud')).toBeVisible({timeout:8000});
  await expect.poll(()=>page.evaluate(()=>window.__netV10.commands.filter(x=>x.payload?.type==='input').length),{timeout:5000}).toBeGreaterThan(0);
+ await page.evaluate(()=>{
+  const mock=window.__netV10;
+  mock.phase='magic-offer';mock.magicStage=1;mock.magicPicked=false;
+  mock.magicChoices=[
+   {index:0,kind:'bundle',rarity:'common',runes:['u_guard','u_size']},
+   {index:1,kind:'single',rarity:'uncommon',runes:['st_wall']},
+   {index:2,kind:'single',rarity:'rare',runes:['u_heal']}
+  ];
+  mock.refresh();
+ });
+ await expect(page.locator('.v2-pack')).toHaveCount(3);
+ await expect(page.locator('.v2-pack-rune')).toHaveCount(4);
+ await page.locator('.v2-pack-choose').nth(1).click();
+ await expect(page.locator('.v2-editor')).toBeVisible();
+ expect(await page.evaluate(()=>window.__netV10.commands.some(x=>
+  x.payload?.type==='magic-pick'&&x.payload?.index===1&&x.payload?.stage===1))).toBe(true);
  expect(pageErrors).toEqual([]);
 });
