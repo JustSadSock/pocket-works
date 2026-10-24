@@ -801,11 +801,11 @@ export default {protocolVersion:1,
  createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,inputBatchVersion:1,rulesVersion:3,contributionVersion:1,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
  onJoin({state,player}){
   state=copy(state);
-  const oldSeat=state.players.find(seat=>seat.id===player.id);
+  const wasLeft=state.players.some(seat=>seat.id===player.id&&seat.left);
   add(state,player);
-  if(oldSeat?.left===false&&state.started&&state.engine){
-   // An explicitly departed player has a parked piece; a fresh connection
-   // must still pass the usual manual safe-lane check.
+  if(wasLeft&&state.started&&state.engine){
+   // A returning participant keeps their original seat, but cannot
+   // bypass manual safe-lane confirmation.
    const index=state.players.findIndex(seat=>seat.id===player.id);
    const piece=state.engine.players[index];
    if(piece?.offline&&piece.gameOver&&piece.currentPiece===null)
