@@ -29,11 +29,12 @@ import {createZamazkaCloud} from './cloud-sync.js';
 import {zamazkaStore} from './storage.js';
 import {DEBUG_QUERY,DEBUG_SCREENS,isDebugKey,debugId,debugMatch,mountDebugGallery} from './debug-gallery.js';
 import {exhibitFacets,exhibitPlaque,mountExhibitFrames} from './exhibition-ui.js';
+import {paintVoteSurfaces} from './vote-surfaces.js';
 import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.29',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.30',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -705,25 +706,24 @@ function vote(){
  '<div class="phase-body expert-round"><div class="expert-intro"><div><div class="expert-author">'+(target?memberSeal(target):'')+'<h3>'+esc(target?.name||'Реставратор')+'</h3></div><p class="phase-directive">Одна из пяти картин отреставрирована.</p></div><p class="expert-observers">Заключений: <strong id="votesReady">'+count+' / '+expected+'</strong></p></div>'+
  '<div class="expert-ballot"><p class="hint">'+(isOwn?'Это твоя реставрация. Ставки на неё делают остальные.':already?'Твои фишки приняты. Можешь рассматривать картины, пока остальные голосуют.':(v.timedScoring?'Раньше угадаешь — больше очков. Поставленные монеты засчитываются в конце.':'Распредели до 3 монет. По окончании времени поставленные монеты засчитываются.'))+'</p>'+
  '<div class="stake-gallery suspect-gallery">'+v.selected.map((id,i)=>'<div class="stake-card" data-stake-card="'+i+'"><div class="zam-exhibit-stage" data-exhibit-stage><div class="stake-frame zam-exhibit-rim">'+exhibitFacets()+
- (examined?.art===id?'<img class="candidate-underlay" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="" aria-hidden="true" loading="eager"><canvas class="candidate-art" id="examinedCanvas" aria-label="Полотно № '+(i+1)+'"></canvas>':'<img data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="'+esc(ARTS[id]?.title||'Полотно')+'" loading="eager">')+
+ '<img class="candidate-underlay" data-art-id="'+id+'" src="'+artworkURL(id)+'" alt="" aria-hidden="true" loading="eager"><canvas class="candidate-art" data-vote-canvas="'+i+'" aria-label="Полотно № '+(i+1)+'"></canvas>'+
  '</div>'+exhibitPlaque(ARTS[id]?.title||'Картина',ARTS[id]?.artist||'')+
  (!isOwn&&!already?'<div class="stake-actions"><button data-chipsub="'+i+'" aria-label="Убрать фишку с полотна '+(i+1)+'">−</button><div class="stake-amount"><strong data-chip-count="'+i+'">0</strong><span data-chip-pips></span></div><button data-chipadd="'+i+'" aria-label="Поставить фишку на полотно '+(i+1)+'">＋</button></div>':'<span class="stake-locked">На проверке</span>')+'</div></div>').join('')+'</div>'+
  (!isOwn&&!already?'<div class="stake-tray"><div id="chipsRemaining">'+chipDots(3)+'<strong>3</strong> свободно</div>'+(localStorage.getItem(CONFIRM_VOTE_KEY)==='on'?'<button class="btn primary" data-action="vote" disabled>Подтвердить три фишки</button>':'<span class="coin-auto-status" id="coinVoteStatus" role="status" aria-live="polite">3 фишки — и голос учтён</span>')+'</div>':'<div class="stake-wait">Ожидаем завершения голосования…</div>')+
- '</div></div></section>','vote');
+ '</div><div class="vote-render-error" id="voteRenderError" hidden role="alert">Не удалось загрузить все пять картин. <button class="btn" type="button" data-action="retry-vote-paintings">Повторить загрузку</button></div></div></section>','vote');
  exhibitFitter=mountExhibitFrames(screen);
- if(examined){
-  const canvas=screen.querySelector('#examinedCanvas');
-  void renderArtwork(canvas,examined.art,examined.variation,examined.strokes||[],true,false,false,true)
-   .then(ok=>{
-    if(!canvas?.isConnected)return;
-    // Never reveal the forged slot through an unloaded or 4:3 placeholder.
-    // The same original image remains visible beneath until the edited
-    // canvas is fully painted at the source artwork's native proportions.
-    if(ok)canvas.classList.add('is-ready');
-    else notify('Не удалось отобразить реставрацию. Проверь соединение.');
-    exhibitFitter?.refresh();
-   });
- }
+ const ballotScreen=screen.firstElementChild;
+ void paintVoteSurfaces(ballotScreen,v.selected,examined,{render:renderArtwork}).then(result=>{
+  if(!ballotScreen?.isConnected)return;
+  if(!result.ready){
+   const error=ballotScreen.querySelector('#voteRenderError');
+   if(error)error.hidden=false;
+  }
+  exhibitFitter?.refresh();
+ }).catch(()=>{
+  const error=ballotScreen?.querySelector('#voteRenderError');
+  if(error)error.hidden=false;
+ });
  if(!isOwn&&!already)updateChips();
 }
 
@@ -1502,6 +1502,7 @@ screen.addEventListener('click',e=>{
  else if(action==='leave')modal('Выйти из комнаты?','<p class="hint">Другие реставраторы смогут продолжить без тебя.</p>',[['Выйти',()=>{closeDialog();home()},'primary'],['Отмена',closeDialog,'ghost']]);
  else if(action==='skip')practiceStep();
  else if(action==='submit')doSubmit();
+ else if(action==='retry-vote-paintings'&&view?.phase==='voting')vote()
  else if(action==='vote')submitVote()
  else if(action==='advance')net?.sendGame({type:'advance'});
  else if(action==='continue'&&view?.phase==='round-review'&&me?.id===view.host){b.disabled=true;try{net?.sendGame({type:'continue'})}catch{b.disabled=false;notify('Нет соединения с комнатой')}}
