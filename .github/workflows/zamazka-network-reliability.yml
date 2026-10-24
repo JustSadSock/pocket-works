@@ -25,6 +25,8 @@ on:
       - 'apps/zamazka/qa/editor-frame-idle.mjs'
       - 'apps/zamazka/qa/editor-pointer-dedup.mjs'
       - 'apps/zamazka/frame-performance.js'
+      - 'apps/zamazka/state-stream-assembler.js'
+      - 'apps/zamazka/qa/state-stream-assembler.test.mjs'
       - 'apps/zamazka/qa/frame-performance.test.mjs'
       - 'apps/zamazka/qa/large-painting.mjs'
       - 'pocketnet/hub.mjs'
@@ -114,6 +116,8 @@ jobs:
         run: node apps/zamazka/qa/editor-pointer-dedup.mjs
       - name: Verify opt-in mobile frame profiler and latency percentiles
         run: node --test apps/zamazka/qa/frame-performance.test.mjs
+      - name: Verify slow streamed gallery recovery and memory bounds
+        run: node --test apps/zamazka/qa/state-stream-assembler.test.mjs
       - name: Validate JavaScript syntax
         run: |
           node --check apps/zamazka/app.js
