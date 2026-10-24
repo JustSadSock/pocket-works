@@ -56,6 +56,11 @@ assert.match(app,/data-vote-canvas=/);
 assert.doesNotMatch(app,/examinedCanvas/,'no forged-only DOM node');
 assert.doesNotMatch(app,/canvas\.classList\.add\('is-ready'\)/,'readiness must be atomic');
 assert.match(app,/retry-vote-paintings/,'failed gallery can be retried');
+assert(app.includes("if(v.rasterBallots&&!spriteRenderer)"),'a missing anonymous raster must never silently render five unchanged originals');
+assert(app.includes("dataset.voteSpriteUnavailable='true'"),'an unavailable sprite must mark the screen as unready');
+assert(app.includes("view.rasterBallots&&screen.firstElementChild?.dataset.votePaintingsReady!=='true'"),
+ 'new votes cannot be submitted while the protected gallery is hidden');
+assert(app.includes("data-action=\"retry-vote-paintings\""),'missing sprite offers refresh through existing retry control');
 assert.match(app,/const paintingsReady=screen\.firstElementChild\?\.dataset\.votePaintingsReady==='true'/,
  'coins remain disabled until the five images appear');
 assert.match(app,/ballotScreen\.dataset\.votePaintingsReady=result\.ready\?'true':'false'/,
