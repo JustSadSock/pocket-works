@@ -83,4 +83,12 @@
  .archive-mode button{min-height:29px}
  .archive-manuscript .archive-delete{display:inline-block}
 }
+/* Wide but short landscape displays have too little height for a fixed reading panel.
+   Scroll the paper itself and keep every action reachable, without page-wide overflow. */
+@media(min-width:761px) and (max-height:560px){
+ .archive-manuscript{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+ .archive-manuscript .archive-reader-scroll{flex:none;min-height:86px;max-height:none;overflow:visible}
+ .archive-manuscript .archive-actions{flex:none}
+ .archive-manuscript .archive-delete{flex:none}
+}
 @media(prefers-reduced-motion:reduce){.archive-pin,.archive-mode button{transition:none}}
