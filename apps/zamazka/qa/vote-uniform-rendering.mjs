@@ -51,7 +51,7 @@ const c=make();c.canvases[0].isConnected=false;
 assert.equal((await paintVoteSurfaces(c.root,ids,edit,{render:async()=>true})).ready,false);
 
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
-assert.match(app,/paintVoteSurfaces\\(ballotScreen,v\\.selected,spriteRenderer\\?null:examined,\\{render:spriteRenderer\\|\\|renderArtwork\\}\\)/);
+assert(app.includes('paintVoteSurfaces(ballotScreen,v.selected,spriteRenderer?null:examined,{render:spriteRenderer||renderArtwork})'));
 assert.match(app,/data-vote-canvas=/);
 assert.doesNotMatch(app,/examinedCanvas/,'no forged-only DOM node');
 assert.doesNotMatch(app,/canvas\.classList\.add\('is-ready'\)/,'readiness must be atomic');
