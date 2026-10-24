@@ -62,7 +62,7 @@ const members=(s:State)=>s.participants;
 // The final durable painting, not the drawing clock, closes the restoration stage.
 const allCommitted=(s:State)=>members(s).length>0&&members(s).every(p=>Array.isArray(s.assignments[p.id]?.strokes));
 const strip=(s:State,id:string)=>({
- host:s.host,phase:s.phase,serverNow:now(),timedScoring:Boolean(s.timedScoring),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
+ host:s.host,phase:s.phase,rasterBallots:Boolean(s.rasterBallots),spriteFallback:Boolean(s.spriteFallback),serverNow:now(),timedScoring:Boolean(s.timedScoring),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
  selected:s.selected,ballotReady:members(s).filter(p=>!!s.ballotSprites?.[p.id]).map(p=>p.id),participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  incompleteSubmissions:s.incompleteSubmissions||[],
