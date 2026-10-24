@@ -71,6 +71,49 @@ try{
    return first===el.querySelector('.clip-bar');
   }),true,'timeupdate preserves clip DOM');
   assert.equal(await page.locator('#erase-btn').isDisabled(),true,'nothing deleted without explicit selection');
+  assert.equal(await page.locator('#record-btn').isEnabled(),true,'instant record is available');
+  assert.equal(await page.locator('#count-record-btn').isEnabled(),true,'3-second record is available');
+  await page.locator('#timeline-zoom-in').click();
+  await page.locator('#timeline-zoom-in').click();
+  assert.equal(await page.locator('#timeline-zoom-label').innerText(),'4×');
+
+  // Move a voice clip with a pointer, then trim its right edge.
+  const before=await page.locator('[data-clip="first"]').evaluate(el=>({
+    left:parseFloat(el.style.left),width:parseFloat(el.style.width)
+  }));
+  let rect=await page.locator('[data-clip="first"]').boundingBox();
+  await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);
+  await page.mouse.down();
+  await page.mouse.move(rect.x+rect.width/2+20,rect.y+rect.height/2,{steps:5});
+  await page.mouse.up();
+  const moved=await page.locator('[data-clip="first"]').evaluate(el=>({
+    left:parseFloat(el.style.left),width:parseFloat(el.style.width)
+  }));
+  assert(moved.left>before.left,'drag moves audio in time');
+  assert(Math.abs(moved.width-before.width)<0.01,'moving preserves recording length');
+  rect=await page.locator('[data-clip="first"]').boundingBox();
+  await page.mouse.move(rect.x+rect.width-4,rect.y+rect.height/2);
+  await page.mouse.down();
+  await page.mouse.move(rect.x+rect.width-26,rect.y+rect.height/2,{steps:5});
+  await page.mouse.up();
+  const trimmedWidth=await page.locator('[data-clip="first"]').evaluate(el=>parseFloat(el.style.width));
+  assert(trimmedWidth<moved.width,'dragging grip trims the line');
+  assert.equal(await page.locator('#replace-clip-btn').isEnabled(),true,'selected clip can be re-recorded');
+  await page.locator('#undo-btn').click();
+  await page.locator('#undo-btn').click();
+  assert.equal(await page.locator('.clip-bar').count(),2,'drag and trim both reversible');
+
+  // The three-second control can always be cancelled without opening the mic.
+  await page.evaluate(()=>{
+    Object.defineProperty(navigator,'mediaDevices',{configurable:true,
+      value:{getUserMedia:async()=>({getTracks:()=>[{stop(){}}]})}});
+  });
+  await page.locator('#count-record-btn').click();
+  await page.locator('#countdown').waitFor({state:'visible'});
+  await page.locator('#count-record-btn').click();
+  await page.locator('#countdown').waitFor({state:'hidden'});
+  assert.equal(await page.locator('#record-btn').isEnabled(),true,'cancelled countdown unlocks instant recording');
+
   await page.locator('[data-clip="first"]').click();
   assert.equal(await page.locator('#erase-btn').isEnabled(),true);
   await page.locator('#erase-btn').click();
