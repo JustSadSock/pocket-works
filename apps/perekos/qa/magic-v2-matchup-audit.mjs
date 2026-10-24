@@ -65,6 +65,7 @@ export function simulate(left,right,kind,seed,frames=900,tactic='close'){
  const [a,b]=s.actors;
  return {left,right,profile:kind,tactic,seed,ticks:elapsed,
   hp:[round(a.hp),round(b.hp)],shield:[round(a.shield),round(b.shield)],
+  damageDealt:[round(a.hit),round(b.hit)],
   heat:[round(a.heat),round(b.heat)],
   knockout:a.hp<=0&&b.hp<=0?'double':a.hp<=0?'right':b.hp<=0?'left':'none',
   hpDelta:round(a.hp-b.hp),
@@ -75,35 +76,45 @@ export function audit({seeds=[431,997],frames=900,tactics=TACTICS}={}){
  for(const tactic of tactics)for(const kind of PROFILES)for(const seed of seeds)for(const left of SCHOOLS)for(const right of SCHOOLS){
   matches.push(simulate(left,right,kind,seed,frames,tactic));
  }
+ const pairedDamage=m=>m.damageDealt.some(n=>n>0);
  const pairs=[];
  for(let i=0;i<SCHOOLS.length;i++)for(let j=i+1;j<SCHOOLS.length;j++){
   const a=SCHOOLS[i],b=SCHOOLS[j];
   const aligned=matches.filter(m=>m.left===a&&m.right===b);
   const reversed=matches.filter(m=>m.left===b&&m.right===a);
   assert.equal(aligned.length,reversed.length);
-  const neutral=aligned.map((m,k)=>(m.hpDelta-reversed[k].hpDelta)/2);
-  const byTactic=Object.fromEntries(tactics.map(tactic=>{
-   const subset=aligned.filter(m=>m.tactic===tactic);
-   const other=reversed.filter(m=>m.tactic===tactic);
-   const avg=subset.reduce((sum,m,k)=>sum+(m.hpDelta-other[k].hpDelta)/2,0)/subset.length;
-   return [tactic,round(avg)];
+  const paired=aligned.map((m,k)=>({
+   tactic:m.tactic,advantage:(m.hpDelta-reversed[k].hpDelta)/2,
+   hpExchange:pairedDamage(m)||pairedDamage(reversed[k])
   }));
-  const advantage=round(neutral.reduce((x,y)=>x+y,0)/neutral.length);
-  pairs.push({a,b,samples:neutral.length,seatNeutralHpAdvantage:advantage,byTactic,
-   warning:Math.abs(advantage)>20?'investigate':'within-observation-band'});
+  const active=paired.filter(x=>x.hpExchange);
+  const average=items=>items.length?round(items.reduce((sum,x)=>sum+x.advantage,0)/items.length):null;
+  const advantage=average(active);
+  const byTactic=Object.fromEntries(tactics.map(tactic=>{
+   const series=paired.filter(x=>x.tactic===tactic),activeSeries=series.filter(x=>x.hpExchange);
+   return [tactic,{hpExchangePairs:activeSeries.length,totalPairs:series.length,
+    hpAdvantage:average(activeSeries)}];
+  }));
+  pairs.push({a,b,samples:paired.length,hpExchangePairs:active.length,
+   seatNeutralHpAdvantage:advantage,byTactic,
+   warning:advantage===null?'no-hp-exchange':
+    Math.abs(advantage)>20?'investigate':'within-observation-band'});
  }
- const seatAdvantage=round(matches.reduce((sum,m)=>sum+m.hpDelta,0)/matches.length);
+ const activeMatches=matches.filter(pairedDamage);
+ const seatAdvantage=activeMatches.length?
+  round(activeMatches.reduce((sum,m)=>sum+m.hpDelta,0)/activeMatches.length):null;
  return {schema:1,kind:'deterministic-fixed-step-bot-proxy',rules:'Magic 2.0',
   description:'Not live PocketNet sessions; reports cannot establish human win rates.',
   config:{schools:SCHOOLS,profiles:PROFILES,tactics,seeds,frames,seatOrders:'both'},
-  samples:matches.length,seatOneMeanHpAdvantage:seatAdvantage,
-  seatWarning:Math.abs(seatAdvantage)>15?'investigate':'within-observation-band',
+  samples:matches.length,hpExchangeMatches:activeMatches.length,
+  seatOneMeanHpAdvantage:seatAdvantage,
+  seatWarning:seatAdvantage===null?'no-hp-exchange':Math.abs(seatAdvantage)>15?'investigate':'within-observation-band',
   pairs,matches};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const report=audit();
  const output=process.env.PEREKOS_AUDIT_OUT;
  if(output){mkdirSync(dirname(output),{recursive:true});writeFileSync(output,JSON.stringify(report,null,2)+'\n')}
- process.stdout.write(JSON.stringify({samples:report.samples,seatOneMeanHpAdvantage:report.seatOneMeanHpAdvantage,
+ process.stdout.write(JSON.stringify({samples:report.samples,hpExchangeMatches:report.hpExchangeMatches,seatOneMeanHpAdvantage:report.seatOneMeanHpAdvantage,
   seatWarning:report.seatWarning,pairs:report.pairs})+'\n');
 }
