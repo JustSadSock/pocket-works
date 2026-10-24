@@ -182,3 +182,30 @@ test('multi-resource lot uses compact readable labels without leaking secrets',a
  expect(geometry.labelLeft).toBeGreaterThanOrEqual(-2);
  expect(geometry.labelRight).toBeLessThanOrEqual(geometry.vw+2);
 });
+
+
+test('production entry and navigation fit a 320px phone',async({page})=>{
+ await page.setViewportSize({width:320,height:568});
+ const response=await page.goto('/apps/black-bazaar/');
+ expect(response?.ok()).toBe(true);
+ await expect(page.locator('.entry-screen')).toBeVisible();
+ const layout=await page.evaluate(()=>{
+  const vw=document.documentElement.clientWidth;
+  const header=document.querySelector('header')!;
+  const edges=[...header.querySelectorAll('a,button,.header-title')].map(el=>{
+   const b=el.getBoundingClientRect();
+   return {name:el.className, left:b.left,right:b.right,width:b.width};
+  });
+  const create=document.querySelector('[data-action="create"]')!.getBoundingClientRect();
+  const join=document.querySelector('[data-action="join"]')!.getBoundingClientRect();
+  return {vw,headerWidth:header.getBoundingClientRect().width,headerScroll:header.scrollWidth,
+   edges,joinBottom:join.bottom,createBottom:create.bottom,viewportHeight:innerHeight};
+ });
+ expect(layout.headerScroll,JSON.stringify(layout)).toBeLessThanOrEqual(layout.headerWidth+2);
+ for(const edge of layout.edges){
+  expect(edge.left,JSON.stringify(edge)).toBeGreaterThanOrEqual(-2);
+  expect(edge.right,JSON.stringify(edge)).toBeLessThanOrEqual(layout.vw+2);
+ }
+ expect(layout.createBottom).toBeLessThan(layout.joinBottom);
+ expect(layout.joinBottom).toBeLessThanOrEqual(layout.viewportHeight-5);
+});
