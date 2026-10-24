@@ -113,6 +113,29 @@ test('server and local lock timers advance identically on 50-ms simulation slice
   verify(local,state,'pulse '+delta);
  }
 });
+test('two shared lines award the identical team score and owner credit in browser and server',()=>{
+ const {state:initial,people,online}=startRoom(3);
+ let state=initial;const local=browserMirror(state);
+ const serverSeat=state.engine.players[0],localSeat=local.gameState.players[0];
+ const x=serverSeat.spawnLaneX;
+ for(const board of [state.engine.board,local.gameState.board]){
+  for(const y of [18,19])for(let col=0;col<board[0].length;col++)
+   board[y][col]=(col===x||col===x+1)?0:2;
+ }
+ for(const seat of [serverSeat,localSeat]){
+  seat.currentPiece=[[1,1],[1,1]];seat.currentType='O';
+  seat.position={x,y:16};
+ }
+ state.lastTick=Number.MAX_SAFE_INTEGER;
+ state=game.onMessage({state,player:people[0],
+  payload:{type:'input_batch',actions:[{seq:1,action:'hardDrop'}]},connectedIds:online}).state;
+ localAction(localSeat,{action:'hardDrop'});
+ verify(local,state,'two-line-clear');
+ assert.equal(state.engine.sharedStats.lines,2);
+ assert.equal(state.engine.sharedStats.score,240);
+ assert.equal(state.engine.sharedStats.contributions.reduce((n,c)=>n+c.cellsCleared,0),
+  state.engine.boardWidth*2);
+});
 test('canonical score transitions preserve combos and multi-line bonuses exactly',()=>{
  let stats={score:0,lines:0,level:1,comboChain:0};
  for(const cleared of [1,2,3,0,4,1,0,1]){
