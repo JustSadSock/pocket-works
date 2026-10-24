@@ -51,11 +51,22 @@ async function refresh(){
   render();
 }
 function toggle(visible){
+  window.dispatchEvent(new CustomEvent('blockies:awards-visibility',{detail:{visible}}));
   modal.hidden=!visible;openButton.setAttribute('aria-expanded',String(visible));
   if(visible){void refresh();document.querySelector('#achievements-close').focus();}
   else openButton.focus();
 }
-openButton.addEventListener('click',()=>toggle(true));
+openButton.addEventListener('click',()=>{
+  if(window.networkManager?.started&&!window.networkManager.finished){
+    window.uiManager?.showStyledMessage?.(
+      english()?'Achievements':'Награды',
+      english()?'Open the collection after the online round.':'Откройте коллекцию после сетевого раунда, чтобы не потерять управление.',
+      'info'
+    );
+    return;
+  }
+  toggle(true);
+});
 document.querySelector('#achievements-close').addEventListener('click',()=>toggle(false));
 refreshButton.addEventListener('click',()=>void refresh());
 modal.addEventListener('click',e=>{if(e.target===modal)toggle(false)});

@@ -38,3 +38,8 @@ console.log('Blockies server-achievements tests passed');
 // Two lines gained across different placements do not prove a double clear.
 const fakeBurst=assessBlockiesAwards(sample(1),sample(3,300,1,3,players,1),null,()=> 'third-round');
 assert.ok(!fakeBurst.awards.some(a=>a.achievementId==='blockies.double'));
+
+// Offline sockets cannot earn fresh rewards or count as a cooperative duo.
+const present=assessBlockiesAwards(sample(19,2000,0,4),sample(20,2200,1,4),null,()=> 'presence',['alpha']);
+assert.ok(present.awards.every(a=>a.playerId==='alpha'));
+assert.ok(!present.awards.some(a=>a.achievementId==='blockies.coop-twenty'));

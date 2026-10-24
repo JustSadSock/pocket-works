@@ -297,6 +297,7 @@ import {spawnLaneX} from './spawn-bays.js';
 const BLOCK_SIZE = 25;
 const BASE_BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
+const SAFE_LANE_ROWS = 5;
 const ADDITIONAL_COLUMNS_PER_PLAYER = 4;
 const PREVIEW_SIZE = 4;
 
@@ -667,6 +668,7 @@ class Player {
         this.nextPiece = null;
         this.position = { x: 0, y: 0 };
         this.gameOver = false;
+        this.blocked = false;
         this.dropCounter = 0;
         this.dropInterval = 1000;
         this.lastTime = 0;
@@ -685,6 +687,11 @@ class Player {
     }
 
     spawnPiece() {
+        if(gameState.numPlayers>1&&!laneHasClearance(this)){
+            this.blocked=true;this.gameOver=true;this.currentPiece=null;
+            this.dropCounter=0;checkAllPlayersGameOver();return;
+        }
+        this.blocked=false;
         this.currentPiece = this.nextPiece;
         this.nextPiece = this.randomPiece();
         const pieceWidth=this.currentPiece[0].length;
@@ -695,6 +702,7 @@ class Player {
             this.position={x,y:0};
             if(this.checkCollision().collides){
                 this.gameOver=true;
+                this.blocked=true;
                 this.currentPiece=null;
                 checkAllPlayersGameOver();
             }
@@ -743,6 +751,12 @@ class Player {
         }
 
         this.dropCounter = 0;
+    }
+
+    resumeFromGate(){
+        if(!this.blocked||gameState.isGameOver||!laneHasClearance(this))return false;
+        this.gameOver=false;this.blocked=false;this.spawnPiece();
+        return !this.gameOver;
     }
 
     checkCollision(piece = this.currentPiece, pos = this.position) {
@@ -980,6 +994,15 @@ function isCellOccupiedByOtherPiece(x, y, currentPlayerId) {
 
         return false;
     });
+}
+
+function laneHasClearance(player){
+    if(gameState.numPlayers<=1)return true;
+    const x=Number.isInteger(player.spawnLaneX)?player.spawnLaneX:spawnLaneX(player.id,gameState.numPlayers,getBoardWidth());
+    for(let y=0;y<SAFE_LANE_ROWS;y++)for(let col=x;col<x+4;col++){
+        if(gameState.board[y]?.[col]||isCellOccupiedByOtherPiece(col,y,player.id))return false;
+    }
+    return true;
 }
 
 function checkAllPlayersGameOver() {
@@ -1758,6 +1781,8 @@ class UIManager {
         }
 
         this.drawBoard();
+        this.blockedLaneSignature=null;
+        this.updateBlockedLanes();
 
         this.showScreen('gameScreen');
         if (!this.isOnlineMode && numPlayers === 1) this.saveSoloCheckpoint(true);
@@ -1906,6 +1931,7 @@ class UIManager {
 
             this.drawBoard();
             this.updateTeamStatsIfNeeded();
+            this.updateBlockedLanes();
             if (!this.isOnlineMode) this.saveSoloCheckpoint();
 
             if (touchStatusNeedsUpdate) {
@@ -2040,7 +2066,7 @@ class UIManager {
             const ctx=canvas.getContext('2d');
             ctx.clearRect(0,0,canvas.width,canvas.height);
             const piece=player.nextPiece;
-            if(!piece||player.gameOver)continue;
+            if(!piece||(player.gameOver&&!player.blocked))continue;
             const offsetX=Math.floor((canvas.width/BLOCK_SIZE-piece[0].length)/2);
             const offsetY=Math.floor((canvas.height/BLOCK_SIZE-piece.length)/2);
             for(let y=0;y<piece.length;y++)for(let x=0;x<piece[y].length;x++){
@@ -2049,12 +2075,45 @@ class UIManager {
         }
     }
 
+    updateBlockedLanes(){
+        const area=document.getElementById('blocked-lanes');
+        if(!area)return;
+        const blocked=gameState.isGameOver?[]:gameState.players.filter(p=>p.blocked);
+        const model=blocked.map(p=>({id:p.id,name:p.name||('Игрок '+(p.id+1)),ready:!!(this.isOnlineMode?p.canResume:laneHasClearance(p)),mine:!this.isOnlineMode||p.id===this.localPlayerIndex}));
+        const signature=JSON.stringify([model,this.isOnlineMode&&networkManager.connected,this.isOnlineMode&&networkManager.stale,currentLanguage]);
+        if(this.blockedLaneSignature===signature)return;
+        this.blockedLaneSignature=signature;
+        area.hidden=model.length===0;
+        area.replaceChildren();
+        for(const item of model){
+            const row=document.createElement('div');row.className='blocked-lane';
+            const message=document.createElement('span');message.className='blocked-lane__message';
+            message.textContent=item.name+': '+(item.ready?(currentLanguage==='ru'?'проход свободен':'lane clear'):(currentLanguage==='ru'?'проход пока занят':'lane blocked'));
+            row.append(message);
+            if(item.mine&&item.ready){
+                const btn=document.createElement('button');btn.type='button';btn.className='blocked-lane__resume';
+                btn.textContent=currentLanguage==='ru'?'Я готов — вернуться':'Ready — return';
+                btn.disabled=this.isOnlineMode&&(!networkManager.connected||networkManager.stale);
+                btn.addEventListener('click',()=>{
+                    if(this.isOnlineMode){networkManager.requestLaneResume();return;}
+                    const player=gameState.players[item.id];
+                    if(player?.resumeFromGate()){
+                        this.blockedLaneSignature=null;this.updatePlayerInfo(player);
+                        this.drawNextPiece(player);this.drawBoard();this.refreshTouchStatus();this.updateBlockedLanes();
+                    }
+                });
+                row.append(btn);
+            }
+            area.append(row);
+        }
+    }
+
     updatePlayerInfo(player) {
         const bay=document.getElementById(`spawn-bay-${player.id}`);
         if(bay){
             bay.classList.toggle('is-out',!!player.gameOver);
             bay.classList.toggle('is-owned',this.isOnlineMode&&player.id===this.localPlayerIndex&&!player.gameOver);
-            const accessibleName=player.name+(player.gameOver?' — выбыл':'');
+            const accessibleName=player.name+(player.blocked?' — проход занят':player.gameOver?' — выбыл':'');
             if(bay.getAttribute('aria-label')!==accessibleName)bay.setAttribute('aria-label',accessibleName);
             const label=bay.querySelector('.spawn-bay__name');
             if(label&&label.textContent!==player.name){label.textContent=player.name;label.title=player.name;}
@@ -2063,7 +2122,7 @@ class UIManager {
         if (!statusEl) return;
 
         if (player.gameOver) {
-            statusEl.textContent = t('out');
+            statusEl.textContent = player.blocked?(currentLanguage==='ru'?'Ждёт проход':'Waiting'):t('out');
             statusEl.classList.add('is-out');
         } else {
             statusEl.textContent = t('inPlay');
@@ -3063,12 +3122,11 @@ class UIManager {
                 const roomDiv = document.createElement('div');
                 roomDiv.className = 'room-item';
                 roomDiv.innerHTML = `
-                    <div class="room-info">
-                        <h4>${room.name}</h4>
-                        <p>${room.players}/${room.maxPlayers} players</p>
-                    </div>
+                    <div class="room-info"><h4></h4><p></p></div>
                     <button class="btn btn-primary btn-small">Join</button>
                 `;
+                roomDiv.querySelector('h4').textContent=String(room.name||'Комната');
+                roomDiv.querySelector('p').textContent=`${Number(room.players)||0}/${Number(room.maxPlayers)||4} players`;
                 roomDiv.querySelector('.btn').addEventListener('click', () => this.joinRoom(room.id));
                 container.appendChild(roomDiv);
             });
@@ -3832,7 +3890,7 @@ function applyNetworkSnapshot(s){
     soundManager.land(false);
   }
   if(!previousGameOver&&s.isGameOver)soundManager.gameOver();
-  ui.drawBoard();ui.updateTeamStatsIfNeeded();
+  ui.drawBoard();ui.updateTeamStatsIfNeeded();ui.updateBlockedLanes();
 }
 
 document.querySelector('#join-code-btn').onclick=()=>networkManager.joinRoom(document.querySelector('#join-code').value.trim());
@@ -3860,6 +3918,28 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 window.addEventListener('pagehide',()=>window.uiManager?.saveSoloCheckpoint(true));
+// Opening the collection must not allow solo/local pieces to fall behind the modal.
+window.addEventListener('blockies:awards-visibility',event=>{
+    const ui=window.uiManager;
+    if(!ui)return;
+    if(event.detail?.visible){
+        ui.awardsPausedLocal=!ui.isOnlineMode&&!gameState.isPaused&&!gameState.isGameOver&&
+            ui.screens.gameScreen.classList.contains('active');
+        if(ui.awardsPausedLocal){
+            ui.releaseTouchControls?.();
+            for(const states of gameState.inputStates.values())for(const state of Object.values(states)){
+                state.active=false;state.heldTime=0;state.hasFiredInitial=false;
+            }
+            ui.saveSoloCheckpoint(true);
+            gameState.isPaused=true;
+        }
+    }else if(ui.awardsPausedLocal){
+        ui.awardsPausedLocal=false;
+        if(!ui.isOnlineMode&&!gameState.isGameOver&&ui.screens.gameScreen.classList.contains('active')){
+            gameState.lastTime=performance.now();gameState.isPaused=false;
+        }
+    }
+});
 window.render_game_to_text=()=>JSON.stringify({coordinates:'cells, x right, y down, top-left origin',online:!!window.uiManager?.isOnlineMode,paused:gameState.isPaused,gameOver:gameState.isGameOver,board:gameState.board,score:gameState.sharedStats,players:gameState.players.map(p=>({id:p.id,position:p.position,piece:p.currentPiece,next:p.nextPiece,gameOver:p.gameOver}))});
 window.advanceTime=ms=>{if(window.uiManager&&!gameState.isPaused&&!window.uiManager.isOnlineMode){for(let t=0;t<ms;t+=16.667)for(const p of gameState.players)if(!p.gameOver)p.update(Math.min(16.667,ms-t));window.uiManager.drawBoard();}};
 

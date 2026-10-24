@@ -903,3 +903,21 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .results-content .result-board__canvas{max-height:95px}
   .results-content #play-again-btn{min-height:45px}
 }
+
+/* 0.5.6 — blocked personal entrances: visible condition and explicit re-entry. */
+.blocked-lanes{flex:0 0 auto;display:grid;gap:5px;max-height:150px;overflow-y:auto;min-width:0;padding:8px;border:1px solid #8bb8a7;border-radius:8px;background:#e2f0e7}
+.blocked-lanes[hidden]{display:none!important}
+.blocked-lane{display:flex;gap:8px;align-items:center;justify-content:space-between;min-width:0}
+.blocked-lane__message{font-size:11px;line-height:1.25;color:#20584b;font-weight:730;min-width:0}
+.blocked-lane__resume{flex-shrink:0;min-height:38px;padding:6px 11px;border:0;border-radius:6px;background:#176c5e;color:#fff;font-weight:750;font-size:11px;line-height:1.2;font-family:inherit;cursor:pointer}
+.blocked-lane__resume:hover:not(:disabled){background:#105448}
+.blocked-lane__resume:active:not(:disabled){transform:translateY(1px)}
+.blocked-lane__resume:disabled{opacity:.55;cursor:wait}
+.blocked-lane__resume:focus-visible{outline:3px solid #d4a742;outline-offset:2px}
+:root[data-theme="dark"] .blocked-lanes{background:#223a35;border-color:#487e6e}
+:root[data-theme="dark"] .blocked-lane__message{color:#bfecdb}
+@media(max-width:760px) and (orientation:portrait){
+ .blocked-lanes{padding:5px 7px;max-height:106px}
+ .blocked-lane__message{font-size:10px}
+ .blocked-lane__resume{min-height:36px;font-size:10px}
+}
