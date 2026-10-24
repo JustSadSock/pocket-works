@@ -11,7 +11,7 @@ import {createDebugState,debugSetItem,debugCommand} from './debug-state.js';
 
 const debugPreview=new URLSearchParams(location.search).has('debugPreview');
 installMobileRuntime();
-if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.15.1',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.15.2',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
