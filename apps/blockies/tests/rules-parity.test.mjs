@@ -24,7 +24,7 @@ test('core shapes, kick offsets, headroom and lock budgets match across client a
   if(start==='const SHAPES = {')assert.equal(a.split('};')[0],b.split('};')[0]);
   else if(start==='const PIECE_TYPES='){
    assert.equal(a,b);
-  }else assert.equal(a.split('\n')[0],b.split('\n')[0]);
+  }else assert.equal(a.split('\n')[0].replace(/\/\/.*$/,'').trim(),b.split('\n')[0].replace(/\/\/.*$/,'').trim());
  }
  for(const prefix of ['const LOCK_DELAY_MS=','const MAX_LOCK_RESETS=','const KICK_OFFSETS=']){
   const take=src=>src.slice(src.indexOf(prefix),src.indexOf('\n',src.indexOf(prefix)));
