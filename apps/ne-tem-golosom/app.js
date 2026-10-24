@@ -574,7 +574,9 @@ $('scrubber').oninput=e=>{if(record||preroll)return;setPlayhead(Number(e.target.
 $('clip-lane').onclick=e=>{
  const b=e.target.closest('[data-clip]');if(!b||record||preroll)return;
  const clip=localClips.find(c=>c.id===b.dataset.clip);if(!clip)return;
+ const wasFocused=document.activeElement===b;
  selectedClip=clip.id;setPlayhead(clip.start);renderTimeline();
+ if(wasFocused)[...$('clip-lane').querySelectorAll('[data-clip]')].find(el=>el.dataset.clip===clip.id)?.focus({preventScroll:true});
 };
 $('undo-btn').onclick=undoEdit;
 $('redo-btn').onclick=redoEdit;
