@@ -75,5 +75,5 @@ await two.setAccount(bob);
 assert.deepEqual(two.get().archived,['bob-hidden']);
 await two.setAccount(null);
 assert.deepEqual(two.get().archived,['bad-prototype'],'guest archive restored after logout');
-await assert.rejects(()=>two.setAccount('invalid'),TypeError);
+assert.throws(()=>two.setAccount('invalid'),TypeError);
 console.log('Pocket Deck persistence, widget layout, archival state, import/export, tab sync, quota fallback and account isolation passed.');
