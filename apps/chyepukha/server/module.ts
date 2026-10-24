@@ -187,6 +187,9 @@ const module={
    if(!seat)throw Error('match_in_progress');
    const current=players.find(p=>p.id===seat.id);
    if(current){seat.name=clean(current.name,24)||seat.name;seat.avatar=current.avatar||seat.avatar;}
+   // A returning original author owns this seat again. Expire any replacement
+   // ticket now so it cannot be redeemed after another brief disconnect.
+   if(s.claim?.seatId===seat.id)s.claim=null;
    s.revision++;return {state:s,events:events()};
   }
   if(players.length>s.settings.maxPlayers)throw Error('room_full');
@@ -206,6 +209,8 @@ const module={
  },
  viewForPlayer,
  onPresence({state:s,player,online,onlineIds,now}){
+  // Existing room members normally rejoin through presence, not onJoin.
+  if(online&&s.claim?.seatId===player.id)s.claim=null;
   if(s.phase==='lobby'||s.phase==='finished')return {state:s,events:events()};
   if(player.id===s.host){
    if(online){s.hostOfflineSince=0;s.hostVotes={};}
