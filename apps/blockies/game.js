@@ -1,6 +1,7 @@
 // Localization
 import {loadSolo,saveSolo,clearSolo} from './solo-save.js';
 import {BoardEffects,getNewLockedCells} from './board-effects.js';
+import {projectOwnPiece} from './input-prediction.js';
 
 const TRANSLATIONS = {
     en: {
@@ -895,6 +896,7 @@ class Player {
                 }
             }
         }
+        gameState.boardRevision=(gameState.boardRevision||0)+1;
         return locked;
     }
 
@@ -1744,6 +1746,7 @@ class UIManager {
 
         container.appendChild(boardWrapper);
 
+        this.previewSignatures=new Map();
         for (let i = 0; i < numPlayers; i++) {
             const laneX=spawnLaneX(i,numPlayers,gameState.boardWidth);
             const spawnAnchor=numPlayers>1?laneX+2:gameState.boardWidth/2;
@@ -1910,6 +1913,8 @@ class UIManager {
             this.pollGamepads();
 
             let touchStatusNeedsUpdate = false;
+            const boardRevision=gameState.boardRevision||0;
+            const before=this.isOnlineMode?null:gameState.players.map(p=>[p.position.x,p.position.y,p.currentPiece,p.gameOver]);
             gameState.players.forEach(player => {
                 const wasGameOver = player.gameOver;
                 const isLocalPlayer = !this.isOnlineMode || player.id === this.localPlayerIndex;
@@ -1929,7 +1934,12 @@ class UIManager {
                 }
             });
 
-            this.drawBoard();
+            // Snapshots and direct inputs repaint online; do not draw the same
+            // 20-row well at 60 fps when its authoritative pose has not changed.
+            if(!this.isOnlineMode&&((gameState.boardRevision||0)!==boardRevision||
+                gameState.players.some((p,i)=>p.position.x!==before[i][0]||
+                 p.position.y!==before[i][1]||p.currentPiece!==before[i][2]||p.gameOver!==before[i][3])))
+                this.drawBoard();
             this.updateTeamStatsIfNeeded();
             this.updateBlockedLanes();
             if (!this.isOnlineMode) this.saveSoloCheckpoint();
@@ -1983,8 +1993,14 @@ class UIManager {
             }
         }
         if(gameState.numPlayers>1)this.drawSpawnEntryGuides(ctx);
+        const displayed=gameState.players.map(player=>{
+            if(!this.isOnlineMode||player.id!==this.localPlayerIndex||
+                !networkManager.connected||networkManager.stale)return player;
+            const pose=projectOwnPiece(player,gameState.board,gameState.players,networkManager.pendingInputs);
+            return pose?Object.assign(Object.create(Object.getPrototypeOf(player)),player,pose):player;
+        });
         // Each active piece gets a matching landing outline.
-        for(const player of gameState.players){
+        for(const player of displayed){
             if(!player.currentPiece||player.gameOver)continue;
             let landingY=player.position.y;
             while(landingY<BOARD_HEIGHT&&!player.checkCollision(
@@ -2002,7 +2018,7 @@ class UIManager {
             }
             ctx.restore();
         }
-        for(const player of gameState.players){
+        for(const player of displayed){
             if(!player.currentPiece||player.gameOver)continue;
             for(let y=0;y<player.currentPiece.length;y++)for(let x=0;x<player.currentPiece[y].length;x++){
                 if(player.currentPiece[y][x])
@@ -2060,6 +2076,10 @@ class UIManager {
     }
 
     drawNextPiece(player) {
+        if(!this.previewSignatures)this.previewSignatures=new Map();
+        const signature=[player.nextPiece?.map(row=>row.join('')).join('/'),player.color,player.gameOver&&!player.blocked].join(':');
+        if(this.previewSignatures.get(player.id)===signature)return;
+        this.previewSignatures.set(player.id,signature);
         for(const id of [`next-${player.id}`,`bay-next-${player.id}`]){
             const canvas=document.getElementById(id);
             if(!canvas)continue;
