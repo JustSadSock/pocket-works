@@ -5,13 +5,14 @@ import {svgIcon,brandEmblem} from './art.js';
 import {artifactSVG} from './art/artifacts.js';
 import {forecastEconomy} from './economy.js';
 import {classifyFeedback,createAudioFeedback} from './feedback.js';
+import {incomingOffers,unreadOfferCount,bestInboxOffer} from './inbox.js';
 import {roleCharacter,characterMarkup,applyCharacterArt,loadCharacterArt} from './art/characters.js';
 import {createBazaarDebug} from './debug-console.js';
 import {createDebugState,debugSetItem,debugCommand} from './debug-state.js';
 
 const debugPreview=new URLSearchParams(location.search).has('debugPreview');
 installMobileRuntime();
-if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.19.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.19.1',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -84,7 +85,7 @@ const decorativeGuests=['mage','mushroom','fluffy_monster','sheep_wolf','toy','p
 let notice='';
 let activeSheet=null,lastSheetTrigger=null,selectedArtifact=null;
 let playStarted=false;
-const readDeals=new Set(),readTasks=new Set();
+const readOffers=new Set(),readTasks=new Set();
 const sound=createAudioFeedback(debugPreview?{storage:{getItem:()=>null,setItem(){}}}:{});
 let cueTimer=null;
 function message(m,isError=false){notice=m;status.textContent=m;status.className=isError?'error':'muted';}
@@ -374,7 +375,7 @@ function blackMarketBlock(you){
  '<p class="muted">Пока рынок открыт, чужие балансы и инвентари временно скрыты. Посредник удерживает '+(state.marketFeePercent??10)+'% с каждого полученного ресурса.</p>';
  for(const lot of state.blackLots||[]){
   const inspected=lot.inspection;
-  out+='<section class="offer black-object"><button type="button" class="inventory-object" data-action="open-item" data-kind="black" data-id="'+esc(lot.id)+'">'+
+  out+='<section class="offer black-object"'+(!lot.mine&&lot.myCounter?' id="bazaar-counter-'+esc(lot.id)+'" tabindex="-1"':'')+'><button type="button" class="inventory-object" data-action="open-item" data-kind="black" data-id="'+esc(lot.id)+'">'+
  '<span class="inventory-art">'+artifactSVG(lot.item.name,lot.item.rarity)+'</span><span class="inventory-copy"><strong>'+esc(lot.item.name)+'</strong><small>'+esc(lot.item.rarity)+' · закрытый торг</small></span>'+svgIcon('arrow',18)+'</button>'+
    '<p>Запрошено: '+esc(amounts(lot.ask))+' · Закрытых ставок: '+lot.bidCount+'</p>';
   if(inspected)out+='<p class="success">Экспертиза: '+esc(inspected.originalName)+
@@ -514,9 +515,22 @@ function taskKey(){
 }
 function unreadCount(section){
  if(!state?.you)return 0;
- if(section==='deals')return (state.deals||[]).filter(d=>d.to===state.you.id&&!readDeals.has(roomId+':'+d.id)).length;
+ if(section==='deals'||section==='market')return unreadOfferCount(incomingOffers(state),readOffers,roomId,section==='deals'?'deal':'black');
  if(section==='secret'){const key=taskKey();return key&&!readTasks.has(key)?1:0;}
  return 0;
+}
+function refreshInboxTicket(){
+ const ticket=app.querySelector('.inbox-ticket');
+ if(!ticket||!state)return;
+ const offers=incomingOffers(state),offer=bestInboxOffer(offers,readOffers,roomId);
+ if(!offer){ticket.remove();return;}
+ const count=unreadOfferCount(offers,readOffers,roomId);
+ ticket.dataset.section=offer.section;ticket.dataset.target=offer.targetId;
+ ticket.classList.toggle('is-new',count>0);
+ ticket.querySelector('.inbox-ticket-text strong').textContent=offer.title;
+ ticket.querySelector('.inbox-ticket-text small').textContent=offer.detail;
+ ticket.querySelector('.inbox-ticket-icon').innerHTML=svgIcon(offer.kind==='black'?'gavel':'mail-open',20);
+ ticket.setAttribute('aria-label',offer.title+'. '+offer.detail+(offers.length>1?'. Всего предложений: '+offers.length:''));
 }
 function unreadBadge(section){
  const value=unreadCount(section);
@@ -661,7 +675,8 @@ const sheetTitles={
 function openSheet(sheetName,focus=false,targetId=''){
  const sheet=document.querySelector('#bazaarSheet');if(!sheet)return;
  const name=sheetTitles[sheetName]?sheetName:'actions';activeSheet=name;
- if(focus&&name==='deals')for(const d of state.deals||[])if(d.to===state.you?.id)readDeals.add(roomId+':'+d.id);
+ if(focus&&(name==='deals'||name==='market'))for(const offer of incomingOffers(state))if(offer.section===name&&(!targetId||offer.targetId===targetId))readOffers.add(roomId+':'+offer.key);
+ if(focus&&(name==='deals'||name==='market'))refreshInboxTicket();
  if(focus&&name==='secret'&&taskKey())readTasks.add(taskKey());
  const detail=sheet.querySelector('[data-sheet-page="detail"]');
  if(focus&&name==='detail'&&detail&&state?.you)detail.innerHTML=artifactDetailBlock(state.you);
@@ -673,10 +688,14 @@ function openSheet(sheetName,focus=false,targetId=''){
   const badge=tab.querySelector('.tab-count');
   if(badge){const count=unreadCount(tab.dataset.sheet);badge.textContent=String(count);badge.hidden=!count;}
  }
+ if(focus&&name==='market'&&targetId){
+  const target=sheet.querySelector('[data-sheet-page="market"] #'+targetId);
+  const fold=target?.closest('details');if(fold)fold.open=true;
+ }
  if(focus){
   sheet.classList.remove('sheet-enter');void sheet.offsetWidth;sheet.classList.add('sheet-enter');
   const scroll=sheet.querySelector('.sheet-content');if(scroll)scroll.scrollTop=0;
-  if(targetId)requestAnimationFrame(()=>document.getElementById(targetId)?.scrollIntoView({block:'nearest'}));
+  if(targetId)requestAnimationFrame(()=>{const node=sheet.querySelector('[data-sheet-page="'+name+'"] #'+targetId);node?.scrollIntoView({block:'nearest'});node?.focus({preventScroll:true});});
  }
 }
 function resourceWallet(w,forecast){
@@ -699,6 +718,15 @@ function renderPlay(){
  if(!you){app.innerHTML='<p class="panel">Подключаемся…</p>';return;}
  if(!playStarted){playStarted=true;activeSheet='actions';}
  const active=state.turnId===me?.id,plan=forecastEconomy(you.resources,you.items);
+ const inbox=incomingOffers(state),priority=bestInboxOffer(inbox,readOffers,roomId);
+ const unopened=unreadOfferCount(inbox,readOffers,roomId);
+ const inboxTicket=priority?'<button type="button" class="inbox-ticket'+(unopened?' is-new':'')+
+  '" data-action="open-inbox" data-section="'+priority.section+'" data-target="'+esc(priority.targetId)+
+  '" aria-label="'+esc(priority.title+'. '+priority.detail+(inbox.length>1?'. Всего предложений: '+inbox.length:''))+'">'+
+  '<span class="inbox-ticket-icon">'+svgIcon(priority.kind==='black'?'gavel':'mail-open',20)+'</span>'+
+  '<span class="inbox-ticket-text"><strong>'+esc(priority.title)+'</strong><small>'+esc(priority.detail)+'</small></span>'+
+  (inbox.length>1?'<span class="inbox-ticket-count" aria-label="Всего предложений">'+inbox.length+'</span>':'')+
+  svgIcon('arrow',17)+'</button>':'';
  const seats=state.players.map(p=>{
   const self=p.id===me?.id,available=!self&&playerOnline(p)&&!p.bankrupt&&!you.bankrupt;
   const moderate=['v16','v17','v18','v19','v20','v21','v22'].includes(roomVersion)&&state.host===me?.id&&!self&&!p.bankrupt;
@@ -753,7 +781,7 @@ function renderPlay(){
  '</div><div class="bottom-ribbon">'+
  (active?'<button type="button" class="primary action-end" data-action="end">'+svgIcon('check')+' Завершить ход</button>':
  '<span class="turn-wait">Можешь торговаться в чужой ход</span>')+'</div></div>'+
- '<aside id="bazaarSheet" class="workspace-panel" aria-label="Разделы игры">'+
+ '<aside id="bazaarSheet" class="workspace-panel" aria-label="Разделы игры">'+inboxTicket+
  '<nav class="workspace-tabs" role="tablist" aria-label="Разделы">'+sections+'</nav>'+
  '<div class="sheet-heading"><h2 id="sheetTitle">Мой ход</h2></div>'+
  '<div class="sheet-content">'+pages+'</div></aside></div></div>';
@@ -764,7 +792,7 @@ function renderPlay(){
  applyCharacterArt(app);updateTurnClock();
 }
 function renderDone(){
- mode='done';activeSheet=null;selectedArtifact=null;playStarted=false;readDeals.clear();readTasks.clear();document.body.classList.remove('sheet-open');
+ mode='done';activeSheet=null;selectedArtifact=null;playStarted=false;readOffers.clear();readTasks.clear();document.body.classList.remove('sheet-open');
  const ranks=state.ranking||[],newFinal=Number(roomVersion?.slice(1)||0)>=21;
   const newspaper=newFinal?'<section class="bazaar-newspaper" aria-label="Номинации партии">'+
    '<div class="paper-masthead"><small>Официально. Почти.</small><h2>Биржевые сплетни</h2><p>Спецвыпуск после торгов · факты подтверждены, выводы сомнительны</p></div>'+
@@ -798,7 +826,7 @@ function render(){
 }
 function closeRoom(){
  clearTimeout(cueTimer);cueTimer=null;
- activeSheet=null;selectedArtifact=null;playStarted=false;readDeals.clear();readTasks.clear();document.body.classList.remove('sheet-open');
+ activeSheet=null;selectedArtifact=null;playStarted=false;readOffers.clear();readTasks.clear();document.body.classList.remove('sheet-open');
  if(net){try{if(connected)net.leaveRoom()}catch{}try{net.close()}catch{}}
  // A deliberate exit must never silently resume a reserved seat from local storage.
  netStorage.removeItem('pocket-net:'+ORIGIN);
@@ -962,6 +990,11 @@ app.addEventListener('click',event=>{
   if(action==='bid-asking'){
    const lot=state?.listing;if(!lot||lot.seller===me?.id||state.you.bankrupt||!keys.every(k=>(state.you.resources[k]||0)>=(lot.ask[k]||0)))return;
    request({type:'bid',offer:{...lot.ask}});return;
+  }
+  if(action==='open-inbox'){
+   const section=btn.dataset.section;
+   if(section!=='deals'&&section!=='market')return;
+   sound.play('open');openSheet(section,true,btn.dataset.target||'');return;
   }
   if(action==='player-actions'){
    const player=state?.players?.find(p=>p.id===btn.dataset.player);

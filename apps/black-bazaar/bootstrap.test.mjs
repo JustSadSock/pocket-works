@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {dirname,join} from 'node:path';
 
 const root=dirname(fileURLToPath(import.meta.url));
-const entrypoints=['app.js','art.js','economy.js','feedback.js','debug-console.js','debug-state.js','art/artifacts.js','art/characters.js','sw.js'];
+const entrypoints=['app.js','art.js','economy.js','feedback.js','inbox.js','debug-console.js','debug-state.js','art/artifacts.js','art/characters.js','sw.js'];
 
 for(const file of entrypoints){
  test('JavaScript parses: '+file,()=>{
@@ -266,4 +266,17 @@ test('Bazaar v22 black counters have matching UI and are not silently renamed',(
  assert.match(client,/data-action="black-counter-accept"/);
  assert.match(client,/type:'black_counter_accept'/);
  assert.match(hub,/version IN \(\?,\?,\?\)/);
+});
+
+test('Version 0.19.1 offers real paths from pinned anonymous and direct inbox notifications',()=>{
+ const ui=readFileSync(join(root,'app.js'),'utf8');
+ const inbox=readFileSync(join(root,'inbox.js'),'utf8');
+ const sw=readFileSync(join(root,'sw.js'),'utf8');
+ assert.match(ui,/data-action="open-inbox"/,'a message must provide a visible actionable ticket');
+ assert.match(ui,/openSheet\(section,true,btn\.dataset\.target\|\|''\)/,'ticket must navigate to the correct panel');
+ assert.match(ui,/closest\('details'\)/,'anonymous inbox must expand the nested black market');
+ assert.match(ui,/readOffers\.add\(roomId\+': '\+offer\.key\)|readOffers\.add\(roomId\+':'\+offer\.key\)/);
+ assert.match(inbox,/lot\.mine\|\|!lot\.myBid\|\|!lot\.myCounter\?\.id/,'anonymous offers must be addressed only to a buyer');
+ assert.match(inbox,/if\(deal\.to!==me\)continue/,'direct trade must be addressed only to the recipient');
+ assert.ok(sw.includes("'./inbox.js'"),'offline service-worker precache must contain this new imported module');
 });

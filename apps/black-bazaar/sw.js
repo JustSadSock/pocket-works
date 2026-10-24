@@ -1,13 +1,13 @@
-const APP_VERSION='0.19.0';
+const APP_VERSION='0.19.1';
 const VERSION=APP_VERSION;
 const RELEASE_DATE='2026-10-24';
-const RELEASE_NOTES = ["Встречные цены на анонимном рынке без раскрытия участников.","Три новых авторских предмета с оригинальными рисунками.","Событие пятого раунда: комиссия 3% и скидка на экспертизу."];
+const RELEASE_NOTES = ["Входящие предложения сразу видны в виде бумажной записки.","Один тап открывает приватную сделку или встречную цену посредника.","При новом встречном предложении звучит отдельное уведомление."];
 const NOTES=RELEASE_NOTES;
-const CACHE='black-bazaar-v0.19.0';
-const CACHE_NAME='black-bazaar-v0.19.0';
+const CACHE='black-bazaar-v0.19.1';
+const CACHE_NAME='black-bazaar-v0.19.1';
 const PREFIX='black-bazaar-v';
 const FILES=[
- './','./index.html','./preview.html','./app.js','./debug-console.js','./debug-state.js','./economy.js','./art.js','./art/characters.js','./art/artifacts.js','./feedback.js','./art/forest.svg','./art/table.svg','./styles.css','./app.config.json',
+ './','./index.html','./preview.html','./app.js','./debug-console.js','./debug-state.js','./economy.js','./art.js','./art/characters.js','./art/artifacts.js','./feedback.js','./inbox.js','./art/forest.svg','./art/table.svg','./styles.css','./app.config.json',
  './manifest.webmanifest','./icons/icon.svg',
  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
  '../../shared/update-manager.css','../../shared/update-manager.js',
