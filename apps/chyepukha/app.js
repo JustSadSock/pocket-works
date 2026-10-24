@@ -419,7 +419,10 @@ function refreshWords(){
  });
  if($('wordCount'))$('wordCount').textContent=chosen.length+' / '+needed;
  const strip=$('selectedStrip');
- if(strip)strip.innerHTML=chosen.length?handoffWords(text,chosen).map(w=>'<span class="handoff-chip">'+escape(w)+'</span>').join(''):'<span class="handoff-placeholder">Слів поки не вибрано</span>';
+ if(strip)strip.innerHTML=chosen.length?chosen.map(i=>{
+  const word=handoffWords(text,[i])[0]||'';
+  return '<button type="button" class="handoff-chip" data-act="remove-word" data-index="'+i+'" aria-label="Прибрати слово '+escape(word)+' із передачі">'+escape(word)+' <span aria-hidden="true">×</span></button>';
+ }).join(''):'<span class="handoff-placeholder">Слів поки не вибрано</span>';
 }
 function disconnectRoom(){
  ++connectionAttempt;clearRoomTimeout();releaseActive();
@@ -459,19 +462,46 @@ scene.addEventListener('submit',e=>{e.preventDefault();const f=e.target;
  }});
 scene.addEventListener('input',e=>{if(e.target.id==='guestNick')name=e.target.value.slice(0,24);if(e.target.name==='room'&&e.target.closest('#joinForm'))invitation=e.target.value;if(e.target.id==='answer'){if(e.target.value!==loadDraft()){draftSelections[draftKey()]=[];saveWriterMeta({selection:[]})}saveDraft(e.target.value);refreshWords()}if(e.target.id==='heroAnchor')saveWriterMeta({anchor:e.target.value.slice(0,72)});if(e.target.name==='effectsEnabled'){effectsEnabled=e.target.checked;save('sound',effectsEnabled?'on':'off');soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});soundscape.unlock();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.')}if(e.target.name==='musicEnabled'){musicEnabled=e.target.checked;save('music',musicEnabled?'on':'off');soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});soundscape.unlock();$('sound').textContent='Аудіо · '+(effectsEnabled||musicEnabled?'увімк.':'вимк.')}if(e.target.name==='effectsVolume'){effectsVolume=Number(e.target.value)/100;save('effectsVolume',effectsVolume);$('effectsLevelOut').textContent=Math.round(effectsVolume*100)+'%';soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume})}if(e.target.name==='musicVolume'){musicVolume=Number(e.target.value)/100;save('musicVolume',musicVolume);$('musicLevelOut').textContent=Math.round(musicVolume*100)+'%';soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume})}if(e.target.id==='questionSet')$('customField')?.classList.toggle('hidden',e.target.value!=='custom');if(e.target.id==='genre')$('customGenreField')?.classList.toggle('hidden',e.target.value!=='custom')});
 scene.addEventListener('change',e=>{if(e.target.name==='gender'&&e.target.checked)saveWriterMeta({gender:e.target.value})});
+// Focus mode only changes presentation. Never rerender or discard a live textarea.
+scene.addEventListener('focusin',e=>{
+ if(e.target?.id!=='answer')return;
+ const shell=e.target.closest('.writer-shell');
+ if(!shell)return;
+ shell.classList.add('is-typing');
+ shell.dataset.contextOpen='false';
+ const toggle=shell.querySelector('[data-act="toggle-editor-context"]');
+ if(toggle){toggle.setAttribute('aria-expanded','false');toggle.innerHTML='Питання <span aria-hidden="true">⌄</span>'}
+});
+scene.addEventListener('focusout',e=>{
+ if(e.target?.id!=='answer')return;
+ const shell=e.target.closest('.writer-shell');
+ if(shell&&e.relatedTarget?.dataset?.act!=='toggle-editor-context')shell.classList.remove('is-typing');
+});
 scene.addEventListener('animationend',e=>{if(e.target.classList?.contains('print-finale')){finaleIntroActive=false;e.target.remove()}});
 scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act;
  if(act==='skip-finale'){finaleIntroActive=false;scene.querySelector('.print-finale')?.remove();soundscape.fx('page');return}
  if(act==='back-to-draft'){saveWriterMeta({step:'draft'});soundscape.fx('page');render();return}
- if(act==='close-audio'){modal='';render();return}if(act==='copy-comic-direct'||act==='copy-comic-safe'){const txt=buildComicPrompt(comicSource,{adapt:act==='copy-comic-safe'});if(txt)void copyText(txt);else toast('Немає рукопису для промпту.');return}if(act==='word'){
+ if(act==='toggle-editor-context'){
+  const shell=b.closest('.writer-shell');if(!shell)return;
+  const opening=shell.dataset.contextOpen!=='true';
+  shell.dataset.contextOpen=String(opening);
+  b.setAttribute('aria-expanded',String(opening));
+  b.innerHTML=opening?'Сховати <span aria-hidden="true">⌃</span>':'Питання <span aria-hidden="true">⌄</span>';
+  soundscape.fx('page');return;
+ }
+ if(act==='close-audio'){modal='';render();return}if(act==='copy-comic-direct'||act==='copy-comic-safe'){const txt=buildComicPrompt(comicSource,{adapt:act==='copy-comic-safe'});if(txt)void copyText(txt);else toast('Немає рукопису для промпту.');return}if(act==='word'||act==='remove-word'){
  const i=Number(b.dataset.index),ids=indices();
  const needed=handoffCount({roomVersion,round:view.round,total:view.total,visibleTailWords:view.settings.visibleTailWords,answer:loadDraft()});
  const at=ids.indexOf(i);
  if(at>=0)ids.splice(at,1);
+ else if(act==='remove-word')return;
  else if(ids.length<needed)ids.push(i);
  else{toast('Вже вибрано '+needed+' слів.');return}
  draftSelections[draftKey()]=ids;saveWriterMeta({selection:ids});
- refreshWords();tick(650);b.focus({preventScroll:true});return;
+ refreshWords();tick(650);
+ if(act==='word')b.focus({preventScroll:true});
+ else $('selectedStrip')?.focus({preventScroll:true});
+ return;
 }
  if(act==='manage-players'){modal='moderation';render();return}
  if(act==='pause'||act==='unpause'){send({type:act});return}
