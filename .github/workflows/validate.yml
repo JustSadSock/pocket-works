@@ -23,6 +23,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Verify immutable root dependency graph
+        run: npm run validate:lock
       - name: Verify pinned PocketNet snapshots before expensive builds
         run: |
           npm run pocketnet:check
