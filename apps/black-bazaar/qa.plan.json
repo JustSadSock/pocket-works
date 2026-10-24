@@ -26,9 +26,14 @@
       "kind": "node-test",
       "tier": "deep",
       "files": [
-        "mechanics.test.mjs",
-        "qa/balance-audit.mjs"
+        "mechanics.test.mjs"
       ]
+    },
+    {
+      "id": "economic-audit",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/balance-audit.mjs"
     }
   ]
 }

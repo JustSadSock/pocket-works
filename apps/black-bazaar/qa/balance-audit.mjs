@@ -26,8 +26,14 @@ function chooseWork(p){
  const urgent=p.urgent?.status==='pending'&&resources.find(k=>p.resources[k]<(p.urgent.needs[k]||0));
  return urgent||resources.slice().sort((a,b)=>p.resources[a]/p.quota[a]-p.resources[b]/p.quota[b])[0];
 }
-function play(size,policy){
- const s=start(size),members=new Map(s.contestants.map((p,i)=>[p.id,i]));
+function play(size,policy,quotaShift=0){
+ const s=start(size);
+ // Counterfactual QA only: rotate the same quota set independently from seats.
+ // Production rooms always use shift=0, so this does not change game rules.
+ assert.ok(Number.isInteger(quotaShift)&&quotaShift>=0&&quotaShift<size);
+ const originalQuotas=s.contestants.map(p=>({...p.quota}));
+ s.contestants.forEach((p,i)=>{p.quota={...originalQuotas[(i+quotaShift)%size]};});
+ const members=new Map(s.contestants.map((p,i)=>[p.id,i]));
  let steps=0,marketDeals=0,brokers=0,work=0;
  while(s.phase==='play'){
   assert.ok(steps++<=TOTAL_ROUNDS*size+size,'simulated game must terminate');
@@ -63,7 +69,8 @@ function play(size,policy){
   assert.ok(rank);
   return {rank:rank.place,bankrupt:p.bankrupt,complete:rank.complete&&!p.bankrupt,
    quotas:resources.map(k=>p.resources[k]>=p.quota[k]),
-   ratios:resources.map(k=>p.resources[k]/p.quota[k]),slot:members.get(p.id)};
+   ratios:resources.map(k=>p.resources[k]/p.quota[k]),
+   slot:members.get(p.id),quotaSlot:(members.get(p.id)+quotaShift)%size};
  });
  return {results,marketDeals,brokers,work};
 }
@@ -111,6 +118,54 @@ function sampleReport(){
    }
   }
   assert.equal(result.totalGames,1200);
+  // In live play, quota index equals turn-order slot. That confounds the
+  // baseline ranking data: it cannot show WHICH factor caused an advantage.
+  // Diagnose the factors by rotating existing quota assignments across seats
+  // in QA-only matches. 120 trials are divisible by every supported size 2..6.
+  result.counterfactual={
+   purpose:'Isolate quota advantage from first-player advantage; QA-only, not live game rules',
+   games:0,styles:{},note:'The rotated-quota scenarios are experiments, not predicted human outcomes.'
+  };
+  const percent=(count,total)=>Number((100*count/total).toFixed(1));
+  const means=(values,count)=>values.map(v=>Number((v/count).toFixed(2)));
+  for(const policy of ['focus','market','broker']){
+   result.counterfactual.styles[policy]={};
+   for(const size of [2,3,4,5,6]){
+    const trials=120,seatRank=Array(size).fill(0),quotaRank=Array(size).fill(0);
+    const seatWins=Array(size).fill(0),quotaWins=Array(size).fill(0);
+    const quotaComplete=Array(size).fill(0),quotaBankrupt=Array(size).fill(0);
+    const cross=Array.from({length:size},()=>Array(size).fill(0));
+    for(let i=0;i<trials;i++){
+     const match=play(size,policy,i%size);
+     for(const p of match.results){
+      seatRank[p.slot]+=p.rank;quotaRank[p.quotaSlot]+=p.rank;
+      seatWins[p.slot]+=Number(p.rank===1);
+      quotaWins[p.quotaSlot]+=Number(p.rank===1);
+      quotaComplete[p.quotaSlot]+=Number(p.complete);
+      quotaBankrupt[p.quotaSlot]+=Number(p.bankrupt);
+      cross[p.slot][p.quotaSlot]++;
+     }
+    }
+    // Exactly 120 observations for each seat and each quota, with every
+    // seat/quota pairing occurring the same number of times.
+    for(const row of cross){
+     for(const n of row)assert.equal(n,trials/size,'unbalanced counterfactual seat/quota pairing');
+    }
+    assert.equal(seatWins.reduce(sum,0),trials);
+    assert.equal(quotaWins.reduce(sum,0),trials);
+    result.counterfactual.styles[policy][size]={
+     games:trials,quotaSeatPairingsPerCell:trials/size,
+     firstPlaceRateBySeat:seatWins.map(v=>percent(v,trials)),
+     firstPlaceRateByQuota:quotaWins.map(v=>percent(v,trials)),
+     averageRankBySeat:means(seatRank,trials),
+     averageRankByQuota:means(quotaRank,trials),
+     completionRateByQuota:quotaComplete.map(v=>percent(v,trials)),
+     bankruptcyRateByQuota:quotaBankrupt.map(v=>percent(v,trials))
+    };
+    result.counterfactual.games+=trials;
+   }
+  }
+  assert.equal(result.counterfactual.games,1800);
   assert.ok(result.styles.market['4'].publicTrades>0,'market bot must exercise public trades');
   assert.ok(result.styles.broker['4'].brokerPurchases>0,'broker bot must exercise broker purchases');
   return result;
