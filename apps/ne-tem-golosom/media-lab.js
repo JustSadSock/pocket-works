@@ -18,6 +18,14 @@ export function planVideoPreparation({size, mode = 'host', limit = MAX_ROOM_VIDE
   if (size <= limit) return {kind:'reuse',reason:'fits'};
   return {kind:'encode',reason:'room-limit'};
 }
+export const mediaSettingsKey = ({start,duration,width,level,keepAudio}) => [
+  Number(start).toFixed(3),
+  Number(duration).toFixed(3),
+  Number(width),
+  Number(level),
+  keepAudio?1:0
+].join('|');
+
 export const frameCaptureMode = (video,track) =>
   typeof video?.requestVideoFrameCallback === 'function' &&
   typeof video?.cancelVideoFrameCallback === 'function' &&
