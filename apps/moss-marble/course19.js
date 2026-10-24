@@ -1,5 +1,6 @@
 import { compileCourse18 as compileLegacy18, isCourse18 } from './course18.js';
 import { inspectCoursePassage, repairProceduralPassage } from './playability.js';
+import { visualTerrainNormal, finishTerrainPigment } from './terrain-finish.js';
 
 const STRIDE = 11;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -291,20 +292,7 @@ function buildField(level, blueprint) {
     const highlight = info.type === 'sand' ? palette.sandLight : info.type === 'moss' ? palette.mossLight :
       info.type === 'water' ? palette.waterLight : palette.grassLight;
     const materialColor = mixColor(target, highlight, clamp(.14 + broad * .25 + medium * .065, .08, .50));
-    // Wider pigment transition prevents an elliptical sticker/halo edge on
-    // sand and moss. Surface semantics and physics remain unchanged.
-    const blend = smoothstep(.035, .985, info.weight);
-    let color = mixColor(grass, materialColor, blend);
-    // Lighting stays anchored to actual field normals and elevation, but the
-    // shader owns directional diffuse shading so vertex colors remain gentle.
-    const sunSlope = normal[0] * .55 - normal[1] * .43;
-    const elevation = clamp((height - 9) / 44, -.48, 1.0);
-    const steepness = Math.hypot(normal[0], normal[1]);
-    // Convex crests and concave bowls read from actual height and normals,
-    // without fake ellipses or concentric contour overlays.
-    const slopeShade = clamp(.995 + sunSlope + elevation * .13 + steepness * .015, .68, 1.26);
-    color = [color[0] * slopeShade, color[1] * slopeShade, color[2] * slopeShade, color[3]];
-    return color;
+    return finishTerrainPigment(grass,materialColor,info,broad,medium,height,normal);
   };
   return { landforms, masks, heightAt, gradientAt, normalAt, surfaceAt, surfaceInfoAt, rampAt, colorAt };
 }
@@ -337,7 +325,7 @@ function sampleEndlessBanks(outline, rows) {
   });
 }
 
-function buildSurfaceMesh(level, field, along = 100, across = 23) {
+function buildSurfaceMesh(level, field, along = 100, across = 29) {
   const vertices = [];
   const boundaryLeft = [];
   const boundaryRight = [];
@@ -357,7 +345,8 @@ function buildSurfaceMesh(level, field, along = 100, across = 23) {
       const y = banks ? lerp(banks[row][0].y, banks[row][1].y, weight)
         : sample.y + sample.ny * bowed * halfWidth;
       const z = field.heightAt(x, y);
-      vertices.push({ x, y, z });
+      const visualNormal = visualTerrainNormal(field.heightAt,level.outline,x,y);
+      vertices.push({ x, y, z, visualNormal });
       if (column === 0) boundaryLeft.push({ x, y });
       if (column === across - 1) boundaryRight.push({ x, y });
     }
@@ -374,14 +363,17 @@ function buildSurfaceMesh(level, field, along = 100, across = 23) {
         // Material-specific specular effects start only at the solid interior
         // of a patch. Near its perimeter the pigment itself crossfades.
         const surfaceInfo = field.surfaceInfoAt(center.x, center.y);
-        const surface = surfaceInfo.weight > .90 ? surfaceInfo.type : 'grass';
-        // Sand and moss shades already blend per vertex in field.colorAt().
-        // Switching fragment materials per triangle produces sharp triangular
-        // borders in an otherwise continuous pigment transition.
-        const material = surface === 'water' ? 6 : 1;
+        // Reserve water animation for completely wet triangles. Near shore
+        // smooth pigment prevents diagonal material seams.
+        const deepWater=surfaceInfo.type==='water'&&surfaceInfo.weight>.94
+          &&triangle.every(index=>{
+            const p=vertices[index],info=field.surfaceInfoAt(p.x,p.y);
+            return info.type==='water'&&info.weight>.82;
+          });
+        const material=deepWater?6:1;
         for (const index of triangle) {
           const vertex = vertices[index];
-          const surfaceNormal = field.normalAt(vertex.x, vertex.y);
+          const surfaceNormal = vertex.visualNormal;
           const color = field.colorAt(vertex.x, vertex.y, vertex.z, surfaceNormal);
           data.push(vertex.x, vertex.y, vertex.z, ...surfaceNormal, ...color, material);
         }

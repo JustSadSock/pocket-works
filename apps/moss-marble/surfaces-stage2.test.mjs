@@ -4,6 +4,7 @@ import { compileCourse19, inspectCourse19, organicSandRadius } from './course19.
 import { generateEndlessLevel } from './procedural.js';
 import { LEVELS } from './levels.js';
 import { sampleSlopeFibers } from './slope-grass.js';
+import { visualTerrainNormal, finishTerrainPigment } from './terrain-finish.js';
 
 const square = [{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 200, y: 200 }, { x: 0, y: 200 }];
 assert.equal(Math.round(ringArea(square)), 40000);
@@ -30,6 +31,20 @@ for (let i = 0; i < 32; i++) {
 assert.ok(Math.max(...edges) - Math.min(...edges) > .10,
   'natural sand banks must not be perfect ellipses');
 
+const slope=(x,y)=>x*.06+y*.024+3;
+const n0=visualTerrainNormal(slope,square,0,100);
+const n1=visualTerrainNormal(slope,square,100,100);
+assert.ok(n0.every((v,i)=>Math.abs(v-n1[i])<1e-5),
+  'one-sided rim normal must agree with interior slope');
+let previous=null;
+for(let weight=0;weight<1.001;weight+=.02){
+  const color=finishTerrainPigment([.4,.5,.3,1],[.15,.38,.45,.88],{type:'water',weight},
+    .44,.57,12,[0,0,1]);
+  assert.ok(color.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
+  if(previous)assert.ok(color.every((v,i)=>Math.abs(v-previous[i])<.055),
+    'water edge pigment must vary smoothly, not jump per triangle');
+  previous=color;
+}
 let checked = 0;
 for (const raw of [
   ...LEVELS,
@@ -39,6 +54,12 @@ for (const raw of [
   const report = inspectCourse19(level);
   assert.equal(report.ok, true, `invalid course ${level.id}: ${report.issues.join(',')}`);
   const field = level.course18.field;
+  for(const sample of [level.start,level.hole,level.outline[0]]){
+    const n=visualTerrainNormal(field.heightAt,level.outline,sample.x,sample.y);
+    assert.ok(n.every(Number.isFinite)&&Math.abs(Math.hypot(...n)-1)<1e-4);
+    const c=field.colorAt(sample.x,sample.y,field.heightAt(sample.x,sample.y),n);
+    assert.ok(c.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
+  }
   const fibers = sampleSlopeFibers(level,field,96);
   assert.ok(fibers.length <= 96, 'bounded CPU and canvas slope-fiber budget');
   for(const fiber of fibers) {
