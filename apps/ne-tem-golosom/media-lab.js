@@ -154,11 +154,18 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
       typeof video.cancelVideoFrameCallback === 'function';
     useVideoFrameCallback=preciseFrames;
     stream = canvas.captureStream(preciseFrames ? 0 : 24);
-    const captureTrack = stream.getVideoTracks()[0];
+    let captureTrack = stream.getVideoTracks()[0];
     captureMode = frameCaptureMode(video,captureTrack);
-    if (preciseFrames && captureMode === 'compatibility') {
+    if(captureMode==='decoded-frames'){
+      // Some browsers expose requestFrame() but throw when used. Probe before
+      // the recorder starts so the entire export can fall back transparently.
+      try{captureTrack.requestFrame()}
+      catch{captureMode='compatibility'}
+    }
+    if(preciseFrames&&captureMode==='compatibility'){
       stream.getTracks().forEach(t=>t.stop());
-      stream = canvas.captureStream(24);
+      stream=canvas.captureStream(24);
+      captureTrack=stream.getVideoTracks()[0];
     }
     // Original audio is optional: dubbing premieres deliberately mute the film.
     // Bypassing Web Audio when unchecked reduces allocations and work on mobile.
@@ -205,7 +212,14 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
         return;
       }
       ctx.drawImage(video,0,0,canvas.width,canvas.height);
-      if (captureMode === 'decoded-frames') captureTrack.requestFrame();
+      if(captureMode==='decoded-frames'){
+        try{captureTrack.requestFrame()}
+        catch{
+          terminalError=Error('Браузер не смог захватить видеокадр. Попробуй другой браузер.');
+          video.pause();recorder.stop();
+          return;
+        }
+      }
       const elapsed = Math.max(0,position-start);
       onProgress(Math.min(.999,elapsed/duration));
     };
