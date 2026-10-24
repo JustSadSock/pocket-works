@@ -60,6 +60,7 @@ function db(){
    };
    req.onsuccess=()=>resolve(req.result);
    req.onerror=()=>reject(req.error);
+   req.onblocked=()=>reject(Error('Закрой другие вкладки игры, чтобы обновить хранилище.'));
  });
 }
 async function draftRead(key){
@@ -76,7 +77,7 @@ async function draftRead(key){
        tx.onabort=()=>reject(tx.error||Error('Не удалось прочитать черновик'));
      });
    }finally{d.close()}
- }catch{return null}
+ }catch(e){throw Error('Не удалось прочитать черновик. '+(e?.message||'Проверь доступ к хранилищу.'))}
 }
 // This tracks the Blob identity already persisted in the separate media store.
 // Editing a sentence never rewrites a 96 MiB source video.
@@ -137,10 +138,16 @@ function redoEdit(){
 }
 async function restore(key){
  const request=++restoreGeneration;
- // A just-finished recording may still be in the save queue.
- await saveQueue;
- const old=await draftRead(key);
- if(request!==restoreGeneration)return;
+ let old;
+ try{
+   // A just-finished recording may still be in the save queue.
+   await saveQueue;
+   old=await draftRead(key);
+ }catch(e){
+   if(request===restoreGeneration)toast(e?.message||'Не удалось открыть черновик.');
+   return false;
+ }
+ if(request!==restoreGeneration)return false;
  projectKey=key;
  if(old?.scene?.id===scene?.id&&scene.custom&&old.videoInMedia&&old.video instanceof Blob)writtenVideoByKey.set(key,old.video);
  if(old?.scene?.id===scene?.id&&Array.isArray(old?.timeline?.clips)){
@@ -156,6 +163,7 @@ async function restore(key){
  if(old?.scene?.id===scene?.id&&scene.custom&&old.video instanceof Blob){
    sourceBlob=old.video;setVideoSources();
  }
+ return true;
 }
 function setVideo(el,src){if(!src){el.removeAttribute('src');delete el.dataset.mediaSrc;el.load();return;}if(el.dataset.mediaSrc===src)return;el.dataset.mediaSrc=src;el.src=src;el.load()}
 let liveUrl=null;
@@ -427,7 +435,7 @@ async function receivedMedia(p,rx,blob){if(rx.kind==='video'){if(!scene?.custom|
 }
 function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,mime:c.blob.type})}
 function sendAllOwn(){if(sentPremiere||mode==='solo')return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
-async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;await restore(key);setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
+async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
 function stopAllPlayback(){playing=false;for(const id of ['stage-video','premiere-video','trim-video'])$(id).pause();for(const c of [...localClips,...remoteClips])c.audio?.pause();$('play-toggle').textContent='▶'}
 function updateClipSound(t,on,isPremiere=false){const items=isPremiere?[...localClips,...remoteClips]:localClips;for(const c of items){if(!c.audio)continue;const active=t>=c.start&&t<c.end&&on;const offset=clamp(t-c.start+c.offset,0,Math.max(0,c.blob.size?1e5:0));if(active){if(c.audio.paused||Math.abs(c.audio.currentTime-offset)>.25){try{c.audio.currentTime=offset}catch{}}if(c.audio.paused)c.audio.play().catch(()=>{})}else if(!c.audio.paused)c.audio.pause()}}
 // Video time updates move only the playhead. Clip buttons retain focus.
