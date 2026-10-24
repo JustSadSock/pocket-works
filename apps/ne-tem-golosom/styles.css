@@ -189,3 +189,16 @@
  .editor .clip-actions .text-action{font-size:10px;padding:4px}
  .editor .done-btn{padding:9px}
 }
+
+
+/* Stage 4 · choose the zero-encode route before spending a minute in MediaRecorder. */
+.media-audio-option{display:flex!important;flex-direction:row!important;align-items:center;gap:9px;font-size:11px;line-height:1.3;color:#5f584e;cursor:pointer}
+.media-audio-option input[type=checkbox]{accent-color:#a25e43;width:16px;height:16px;flex:none;margin:0}
+.media-fast-status{font-size:11px;line-height:1.35;font-weight:800;color:#336858;padding:7px 9px;background:#dcebdc;border-left:3px solid #648773}
+.media-fast-status:has(+ .media-render:not(.hidden)):empty{display:none}
+#media-progress-help{line-height:1.4;color:#766d5e}
+.media-progress progress{width:100%}
+@media(max-width:819px){
+ .media-audio-option{min-height:30px}
+ .media-fast-status{padding:8px;font-size:11px}
+}
