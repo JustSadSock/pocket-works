@@ -61,7 +61,8 @@ test('critical hidden-information boundaries are explicit',()=>{
  assert.match(bank.collapsingPlan.questions[1].creativeFreedom,/локацію/);
  assert.match(bank.collapsingPlan.questions[2].prompt,/Де саме/);
  assert.match(bank.nightSurvival.questions[1].prompt,/до ночі/);
- assert.match(bank.nightSurvival.questions[4].prompt,/перший явний знак/);
+ assert.match(bank.nightSurvival.questions[4].prompt,/новий знак/);
+ assert.match(bank.nightSurvival.questions[4].guidance,/сигнал/);
  assert.match(bank.detectiveCase.questions[1].creativeFreedom,/Місце/);
  assert.match(bank.roadTrip.questions[1].creativeFreedom,/куди/);
  assert.match(bank.courtroomScandal.questions[1].creativeFreedom,/вирок/);

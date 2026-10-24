@@ -3,7 +3,7 @@
 export const splitWords=text=>String(text??'').trim().split(/\s+/u).filter(Boolean);
 export const wordParts=text=>String(text??'').trim().match(/\s+|\S+/gu)||[];
 export function handoffCount({roomVersion='v4',round=0,total=10,visibleTailWords=3,answer=''}) {
-  if(['v4','v5','v6','v7'].includes(roomVersion)&&round===total-1)return 0;
+  if(['v4','v5','v6','v7','v8'].includes(roomVersion)&&round===total-1)return 0;
   return Math.min(Math.max(0,Number(visibleTailWords)||0),splitWords(answer).length);
 }
 export function handoffWords(answer,indices=[]) {
