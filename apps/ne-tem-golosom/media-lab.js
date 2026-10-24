@@ -6,7 +6,23 @@ export const videoBitrate = level => BITRATES[Math.max(0, Math.min(4, Number(lev
 export const formatVideoBytes = size => size >= 1024 * 1024
   ? (size / (1024 * 1024)).toFixed(1).replace(/\.0$/, '') + ' МиБ'
   : Math.max(1, Math.round(size / 1024)) + ' КиБ';
-export const estimateVideoBytes = (seconds, level) => Math.ceil(Math.max(0, seconds) * (videoBitrate(level) + 96000) / 8);
+export const estimateVideoBytes = (seconds, level, keepAudio = true) =>
+  Math.ceil(Math.max(0, seconds) * (videoBitrate(level) + (keepAudio ? 96000 : 0)) / 8);
+/** Reuse the original encoded bytes when the selected scene fits within the room
+ * limit: the source offsets already define its playback window. No re-encoding
+ * and no second lossy generation are needed. This works for MP4/WebM/MOV alike.
+ */
+export function planVideoPreparation({size, mode = 'host', limit = MAX_ROOM_VIDEO_BYTES}) {
+  if (!Number.isFinite(size) || size <= 0) return {kind:'invalid'};
+  if (mode !== 'host') return {kind:'reuse',reason:'local'};
+  if (size <= limit) return {kind:'reuse',reason:'fits'};
+  return {kind:'encode',reason:'room-limit'};
+}
+export const frameCaptureMode = (video,track) =>
+  typeof video?.requestVideoFrameCallback === 'function' &&
+  typeof video?.cancelVideoFrameCallback === 'function' &&
+  typeof track?.requestFrame === 'function' ? 'decoded-frames' : 'compatibility';
+
 export const supportsVideoExport = () => typeof MediaRecorder !== 'undefined'
   && typeof document.createElement('canvas').captureStream === 'function'
   && typeof MediaRecorder.isTypeSupported === 'function';
@@ -40,7 +56,7 @@ export async function measureVideoDuration(video) {
  * Export a precise segment with canvas-driven resolution and bitrate.
  * Encoding follows actual video playback; it must remain in the foreground.
  */
-export async function exportVideo({ blob, start, duration, width, level, signal, onProgress = () => {} }) {
+export async function exportVideo({ blob, start, duration, width, level, keepAudio = false, signal, onProgress = () => {} }) {
   if (!supportsVideoExport()) throw Error('Этот браузер не поддерживает локальное кодирование видео.');
   const mimeType = outputMime();
   if (!mimeType) throw Error('В браузере нет подходящего видеокодека для экспорта.');
@@ -55,7 +71,8 @@ export async function exportVideo({ blob, start, duration, width, level, signal,
   video.muted = true; // Silent element playback is allowed after async metadata/seek; audio is routed separately.
   video.src = src;
   let recorder, frame = 0, audioContext, stream, cancelled = false;
-  let timer, started = false;
+  let timer, started = false, captureMode = 'compatibility', watchdog = 0, clock = 0;
+  let lastMediaTime = start, lastAdvance = performance.now(), terminalError = null;
   const abort = () => { cancelled = true; video.pause(); if (recorder?.state === 'recording') recorder.stop(); };
   const hidden = () => { if (document.hidden) abort(); };
   signal?.addEventListener('abort', abort, {once: true});
@@ -90,9 +107,18 @@ export async function exportVideo({ blob, start, duration, width, level, signal,
     canvas.height = Math.max(2, Math.floor(video.videoHeight * scale / 2) * 2);
     const ctx = canvas.getContext('2d', {alpha: false});
     if (!ctx) throw Error('Не удалось открыть видеохолст.');
-    stream = canvas.captureStream(24);
-    // Try to retain the original soundtrack without sending it to speakers.
-    try {
+    const preciseFrames = typeof video.requestVideoFrameCallback === 'function' &&
+      typeof video.cancelVideoFrameCallback === 'function';
+    stream = canvas.captureStream(preciseFrames ? 0 : 24);
+    const captureTrack = stream.getVideoTracks()[0];
+    captureMode = frameCaptureMode(video,captureTrack);
+    if (preciseFrames && captureMode === 'compatibility') {
+      stream.getTracks().forEach(t=>t.stop());
+      stream = canvas.captureStream(24);
+    }
+    // Original audio is optional: dubbing premieres deliberately mute the film.
+    // Bypassing Web Audio when unchecked reduces allocations and work on mobile.
+    if (keepAudio) try {
       const Audio = window.AudioContext || window.webkitAudioContext;
       if (Audio) {
         audioContext = new Audio();
@@ -114,41 +140,90 @@ export async function exportVideo({ blob, start, duration, width, level, signal,
       recorder.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
       recorder.onerror = () => reject(Error('Кодирование видео прервалось.'));
       recorder.onstop = () => {
-        if (cancelled) reject(abortError());
+        if (terminalError) reject(terminalError);
+        else if (cancelled) reject(abortError());
         else if (!chunks.length) reject(Error('Кодек не создал видеоданные.'));
         else resolve(new Blob(chunks, {type: recorder.mimeType || mimeType}));
       };
     });
     const end = start + duration;
-    const paint = () => {
+    const captureFrame = (mediaTime = video.currentTime) => {
       if (cancelled || recorder.state !== 'recording') return;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const elapsed = Math.max(0, video.currentTime - start);
-      onProgress(Math.min(1, elapsed / duration));
-      if (video.ended || video.currentTime >= end - 0.035) {
+      const position = Number.isFinite(mediaTime) ? mediaTime : video.currentTime;
+      if (position > lastMediaTime + 0.001) {
+        lastMediaTime = position;
+        lastAdvance = performance.now();
+      }
+      // Stop at the selected cut, not the natural end of the source movie.
+      if (video.ended || position >= end - 0.035) {
         video.pause();
         recorder.stop();
-      } else frame = requestAnimationFrame(paint);
+        return;
+      }
+      ctx.drawImage(video,0,0,canvas.width,canvas.height);
+      if (captureMode === 'decoded-frames') captureTrack.requestFrame();
+      const elapsed = Math.max(0,position-start);
+      onProgress(Math.min(.999,elapsed/duration));
     };
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    if (cancelled) throw abortError();
+    const paintVideoFrame = (now,metadata) => {
+      if (cancelled || recorder.state !== 'recording') return;
+      captureFrame(metadata?.mediaTime);
+      if (!cancelled && recorder.state === 'recording')
+        frame = video.requestVideoFrameCallback(paintVideoFrame);
+    };
+    const paintFallback = () => {
+      if (cancelled || recorder.state !== 'recording') return;
+      captureFrame();
+      if (!cancelled && recorder.state === 'recording')
+        frame = requestAnimationFrame(paintFallback);
+    };
+    const stopAtEnd = () => {
+      if (!cancelled && recorder?.state === 'recording' &&
+          (video.ended || video.currentTime >= end - 0.035)) {
+        video.pause();recorder.stop();
+      }
+    };
+    video.addEventListener('timeupdate',stopAtEnd);
+    video.addEventListener('ended',stopAtEnd);
+    video.addEventListener('error',()=>{
+      if(recorder?.state==='recording'){
+        terminalError=Error('Видео перестало воспроизводиться во время обработки.');
+        recorder.stop();
+      }
+    },{once:true});
+    ctx.fillStyle='#000';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    if(cancelled)throw abortError();
     recorder.start(1000);
-    started = true;
-    // A failed play must stop the MediaRecorder, otherwise the promise would hang.
+    started=true;
+    if(captureMode==='decoded-frames')captureTrack.requestFrame();
+    // Local files should not stall. Detect a broken decoder rather than leaving
+    // a forever-running progress spinner and an unfinished recording.
+    watchdog=setInterval(()=>{
+      if(recorder?.state!=='recording'||video.paused||video.seeking)return;
+      if(performance.now()-lastAdvance>20000){
+        terminalError=Error('Видео перестало продвигаться. Попробуй меньший размер кадра.');
+        video.pause();recorder.stop();
+      }
+    },3000);
     try { await video.play(); } catch {
-      cancelled = true;
-      if (recorder.state === 'recording') recorder.stop();
-      throw Error('Браузер запретил воспроизведение для обработки. Нажми обработать ещё раз.');
+      terminalError=Error('Браузер запретил обработку. Нажми «Сжать» ещё раз.');
+      if(recorder.state==='recording')recorder.stop();
+      throw terminalError;
     }
-    frame = requestAnimationFrame(paint);
+    if(captureMode==='decoded-frames')
+      frame=video.requestVideoFrameCallback(paintVideoFrame);
+    else
+      frame=requestAnimationFrame(paintFallback);
     const output = await completed;
     onProgress(1);
     return output;
   } finally {
-    cancelAnimationFrame(frame);
+    if (captureMode === 'decoded-frames') video.cancelVideoFrameCallback?.(frame);
+    else cancelAnimationFrame(frame);
     clearTimeout(timer);
+    clearInterval(watchdog);
     video.pause();
     video.removeAttribute('src');
     video.load();
