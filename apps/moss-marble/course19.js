@@ -1,6 +1,7 @@
 import { compileCourse18 as compileLegacy18, isCourse18 } from './course18.js';
 import { inspectCoursePassage, repairProceduralPassage } from './playability.js';
 import { visualTerrainNormal, finishTerrainPigment } from './terrain-finish.js';
+import { planTerrainLanes, sampleVisualRelief } from './terrain-lanes.js';
 
 const STRIDE = 11;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -336,19 +337,28 @@ function buildSurfaceMesh(level, field, along = 100, across = 29) {
     const t = row / (along - 1);
     const sample = banks ? null : sampleSpline(level.centerline, t);
     const halfWidth = banks ? 0 : clamp(distanceToOutline(sample, level.outline) - 4, 92, 360);
+    const left=banks?banks[row][0]:{
+      x:sample.x-sample.nx*halfWidth,y:sample.y-sample.ny*halfWidth
+    };
+    const right=banks?banks[row][1]:{
+      x:sample.x+sample.nx*halfWidth,y:sample.y+sample.ny*halfWidth
+    };
+    // Allocate interior vertices around the waterline and hill shoulders.
+    // Keep the *identical* first and last vertices for every row so the
+    // game collision boundaries and limestone curb remain unchanged.
+    const stations=planTerrainLanes(field,left,right,across);
     for (let column = 0; column < across; column += 1) {
-      const lane = column / (across - 1) * 2 - 1;
-      const bowed = Math.sign(lane) * Math.pow(Math.abs(lane), 1.035);
-      const weight = (bowed + 1) * .5;
-      const x = banks ? lerp(banks[row][0].x, banks[row][1].x, weight)
-        : sample.x + sample.nx * bowed * halfWidth;
-      const y = banks ? lerp(banks[row][0].y, banks[row][1].y, weight)
-        : sample.y + sample.ny * bowed * halfWidth;
-      const z = field.heightAt(x, y);
-      const visualNormal = visualTerrainNormal(field.heightAt,level.outline,x,y);
-      vertices.push({ x, y, z, visualNormal });
-      if (column === 0) boundaryLeft.push({ x, y });
-      if (column === across - 1) boundaryRight.push({ x, y });
+      const station=stations[column];
+      const lane=station*2-1;
+      const bowed=Math.sign(lane)*Math.pow(Math.abs(lane),1.035);
+      const weight=(bowed+1)*.5;
+      const x=lerp(left.x,right.x,weight);
+      const y=lerp(left.y,right.y,weight);
+      const z=sampleVisualRelief(field,x,y);
+      const visualNormal=visualTerrainNormal(field.heightAt,level.outline,x,y);
+      vertices.push({x,y,z,visualNormal});
+      if(column===0)boundaryLeft.push({x,y});
+      if(column===across-1)boundaryRight.push({x,y});
     }
   }
   const indexOf = (row, column) => row * across + column;

@@ -5,6 +5,7 @@ import { generateEndlessLevel } from './procedural.js';
 import { LEVELS } from './levels.js';
 import { sampleSlopeFibers } from './slope-grass.js';
 import { visualTerrainNormal, finishTerrainPigment } from './terrain-finish.js';
+import { planTerrainLanes, sampleVisualRelief } from './terrain-lanes.js';
 
 const square = [{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 200, y: 200 }, { x: 0, y: 200 }];
 assert.equal(Math.round(ringArea(square)), 40000);
@@ -45,6 +46,23 @@ for(let weight=0;weight<1.001;weight+=.02){
     'water edge pigment must vary smoothly, not jump per triangle');
   previous=color;
 }
+// Independent synthetic coast: adaptive vertices concentrate where a shore
+// band crosses the row, without moving either stone boundary vertex.
+const synthetic={
+  surfaceInfoAt(x,y){const w=Math.max(0,Math.min(1,(x-95)/18));return {type:w>0?'water':'grass',weight:w};},
+  gradientAt(x,y){return {x:.12*Math.sin(x/24),y:.03};},
+  heightAt(x,y){return 8+3*Math.sin(x/75)+y*.015;}
+};
+const stations=planTerrainLanes(synthetic,{x:0,y:20},{x:200,y:20},29);
+assert.equal(stations.length,29);
+assert.equal(stations[0],0);
+assert.equal(stations.at(-1),1);
+assert.ok(stations.every((x,i)=>Number.isFinite(x)&&x>=0&&x<=1&&
+  (i===0||x>stations[i-1])),'strictly increasing lane stations');
+assert.ok(stations.some((x,i)=>i>0&&i<28&&Math.abs(x-i/28)>.001),
+  'geometry must actually adapt to shore rather than just re-coloring it');
+const sampled=stations.map(t=>sampleVisualRelief(synthetic,200*t,20));
+assert.ok(sampled.every(Number.isFinite));
 let checked = 0;
 for (const raw of [
   ...LEVELS,
@@ -54,6 +72,12 @@ for (const raw of [
   const report = inspectCourse19(level);
   assert.equal(report.ok, true, `invalid course ${level.id}: ${report.issues.join(',')}`);
   const field = level.course18.field;
+  const pA=level.outline[0],pB=level.outline[Math.floor(level.outline.length/2)];
+  const lanes=planTerrainLanes(field,pA,pB,29);
+  assert.ok(lanes.every((v,i)=>Number.isFinite(v)&&v>=0&&v<=1&&(i===0||v>lanes[i-1])),
+    'real course has a bounded monotonic visual cross-section');
+  assert.equal(lanes[0],0);
+  assert.equal(lanes.at(-1),1);
   for(const sample of [level.start,level.hole,level.outline[0]]){
     const n=visualTerrainNormal(field.heightAt,level.outline,sample.x,sample.y);
     assert.ok(n.every(Number.isFinite)&&Math.abs(Math.hypot(...n)-1)<1e-4);
