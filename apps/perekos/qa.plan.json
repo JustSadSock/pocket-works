@@ -93,8 +93,7 @@
         "qa/kinetics.spec.js",
         "qa/rune-forge.spec.js",
         "qa/rupture.spec.js",
-        "qa/evolution.spec.js",
-        "qa/magic-v2-lab.spec.js"
+        "qa/evolution.spec.js"
       ]
     },
     {
@@ -114,6 +113,14 @@
       "tier": "smoke",
       "files": [
         "qa/forge-world.spec.js"
+      ]
+    },
+    {
+      "id": "elemental-runes",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/magic-v2-lab.spec.js"
       ]
     }
   ]
