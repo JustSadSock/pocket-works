@@ -5,6 +5,7 @@ import ts from 'typescript';
 import {composeBallotRaster,inspectBallotRaster,ballotRasterPackets,ballotRasterChecksum} from '../ballot-raster.js';
 import {createAnonymousBallotPainter} from '../ballot-sprite-view.js';
 import {prepareArtworkStorage} from '../../../pocketnet/art-storage.mjs';
+import {paintingChecksum} from '../draft-transfer.js';
 
 // WebP RIFF envelope with a deliberately simple fake VP8 payload. This is a
 // transport fixture; pixel decoding is separately checked by the client.
@@ -28,10 +29,12 @@ const corruptDimensions=Buffer.from(sample.split(',')[1],'base64');
 corruptDimensions.writeUInt16LE(65535,26);
 assert(!inspectBallotRaster('data:image/webp;base64,'+corruptDimensions.toString('base64')),
  'WebP with huge dimensions cannot be submitted to spectators');
-const packets=ballotRasterPackets(sample,1,'rtest-01');
+const packets=ballotRasterPackets(sample,1,'rtest-01',paintingChecksum([]));
 assert(packets.length>1&&packets.every(p=>p.data.length<=8000));
 assert.equal(packets.map(p=>p.data).join(''),sample.split(',')[1]);
 assert(packets.every(p=>p.checksum===ballotRasterChecksum(sample)));
+assert(packets.every(p=>p.sourceChecksum===paintingChecksum([])));
+assert.throws(()=>ballotRasterPackets(sample,1,'rtest-01','incorrect'),/invalid_ballot_raster/);
 const selected=[11,14,19,26,33],candidate={art:19,variation:42,strokes:[{c:'#101010',t:'brush',s:4,p:[[20,10]]}]};
 const paintCalls=[],drawCalls=[];
 let sheet;
@@ -100,6 +103,8 @@ send('a',{type:'submit',strokes:[]});
 send('b',{type:'submit',strokes:[]});
 assert.equal(state.phase,'sealing','v39 with anonymous rasters does not leak candidate early');
 assert.equal(send('a',{type:'ballot_chunk',...packets[1]}).events[0].type,'notice','out of order upload rejected');
+assert.equal(send('a',{...packets[0],sourceChecksum:'00000000'}).events[0].type,'notice',
+ 'a sprite cannot be linked to uncommitted vector data');
 for(const packet of packets){
  const reply=send('a',packet);
  if(packet.index===packets.length-1)assert(reply.events.some(e=>e.type==='ballot_saved'));
