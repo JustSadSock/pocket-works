@@ -799,7 +799,8 @@ async function startRecord(countdown=0,replaceId=null){
    rec.onstop=async()=>{
     try{
      const blob=new Blob(blobs,{type:rec.mimeType||blobs[0]?.type||'audio/webm'});
-     if(blob.size&&active.end-active.start>=MIN_CLIP_SECONDS){
+     if(blob.size>MAX_AUDIO_BYTES){toast('Запись слишком большая для передачи. Сделай реплику короче.');}
+     else if(blob.size&&active.end-active.start>=MIN_CLIP_SECONDS){
       if(active.replaceId){
        const id=uid();
        const updated=replaceSelectedRecording(localClips,active.replaceId,blob,active.end-active.start,id);
@@ -897,6 +898,9 @@ async function markReady(){
   if(pendingRecording)await pendingRecording;
   stopAllPlayback();
   if(!localClips.length){toast('Запиши хотя бы один фрагмент.');return}
+  if(localClips.some(c=>c.blob.size>MAX_AUDIO_BYTES)){
+   toast('Есть слишком большой фрагмент. Перезапиши его коротким дублем.');return;
+  }
   if(!await draftWrite())return;
   if(mode==='solo'){beginPremiere();cue('ready');return}
   if(!state||state.phase!=='recording'){toast('Комната ещё не готова.');return}
