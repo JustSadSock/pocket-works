@@ -42,6 +42,54 @@ let videoExportController=null,videoExportBlob=null,videoExportUrl=null,trimRang
 let premiereExportController=null,premiereResultUrl=null,premiereExportGeneration=0,premiereLocalCopy=null,premiereExportNotice='';
 const qualityNames=['Экономное','Компактное','Сбалансированное','Высокое','Максимальное'];
 let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0,timelineZoom=1,clipDrag=null,skipTimelineClick=false,micPending=false;
+let micMonitor=null,saveRevision=0,readyPending=false;
+function setDraftStatus(state){
+ const copy={idle:'Локальный черновик',saving:'Сохраняем…',saved:'Сохранено',error:'Не сохранено'};
+ $('draft-status').dataset.saveState=state;
+ $('draft-status').textContent=copy[state]||copy.idle;
+}
+function setNetStatus(state,label){
+ $('net-pill').dataset.netState=state;
+ $('net-pill').textContent=label;
+}
+function stopMicMonitor(){
+ const m=micMonitor;micMonitor=null;
+ if(m){
+  cancelAnimationFrame(m.frame);
+  try{m.source.disconnect();m.analyser.disconnect()}catch{}
+  void m.context.close().catch(()=>{});
+ }
+ $('mic-meter').classList.add('hidden');
+}
+function startMicMonitor(stream){
+ stopMicMonitor();
+ let context=null;
+ try{
+  const Context=window.AudioContext||window.webkitAudioContext;
+  if(!Context)return;
+  context=new Context();
+  const source=context.createMediaStreamSource(stream),analyser=context.createAnalyser();
+  analyser.fftSize=256;analyser.smoothingTimeConstant=.8;
+  source.connect(analyser); // Never pipe live microphone audio to speakers.
+  const samples=new Uint8Array(analyser.fftSize);
+  const bars=[...$('mic-meter').children],m={context,source,analyser,frame:0};
+  micMonitor=m;$('mic-meter').classList.remove('hidden');
+  const measure=()=>{
+   if(micMonitor!==m)return;
+   analyser.getByteTimeDomainData(samples);
+   let total=0;for(const v of samples){const n=(v-128)/128;total+=n*n}
+   const level=Math.min(1,Math.sqrt(total/samples.length)*9);
+   for(let i=0;i<bars.length;i++){
+    const height=Math.max(3,Math.round(3+level*17*(1-.1*Math.abs(i-3))));
+    bars[i].style.height=height+'px';
+    bars[i].classList.toggle('active',level>.08&&height>5);
+   }
+   m.frame=requestAnimationFrame(measure);
+  };
+  void context.resume().catch(()=>{});
+  m.frame=requestAnimationFrame(measure);
+ }catch{if(context&&!micMonitor)void context.close().catch(()=>{});stopMicMonitor()}
+}
 const roomsOrigin=location.origin+'/pocketnet';
 const sceneSource=s=>LIBRARY.find(x=>x.id===s?.id)?.src||null;
 const meHost=()=>!!state&&me===state.host;
@@ -49,8 +97,8 @@ const ownRole=()=>mode==='solo'?'Все роли':(state?.assignments?.[me]||'А
 function toast(s){const el=$('toast');el.textContent=s;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function cue(which){if(!sound)return;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;audioContext ||=new C();audioContext.resume();const now=audioContext.currentTime,o=audioContext.createOscillator(),n=audioContext.createBufferSource(),g=audioContext.createGain(),filter=audioContext.createBiquadFilter();const data=audioContext.createBuffer(1,2205,audioContext.sampleRate),arr=data.getChannelData(0);for(let i=0;i<arr.length;i++)arr[i]=(Math.random()*2-1)*Math.exp(-i/750);n.buffer=data;filter.type='bandpass';filter.frequency.value=which==='start'?1050:420;const f=which==='stop'?160:which==='ready'?600:300;o.type='triangle';o.frequency.setValueAtTime(f,now);o.frequency.exponentialRampToValueAtTime(f*.74,now+.12);g.gain.setValueAtTime(.02,now);g.gain.exponentialRampToValueAtTime(.0001,now+.17);o.connect(g);n.connect(filter).connect(g);g.connect(audioContext.destination);o.start(now);n.start(now);o.stop(now+.18);n.stop(now+.06)}catch{}}
 function show(id){view=id;for(const el of document.querySelectorAll('.screen'))el.classList.toggle('hidden',el.id!=='screen-'+id);document.body.classList.toggle('editing',id==='editor');window.scrollTo(0,0)}
-function toggleSound(){sound=!sound;try{localStorage.setItem(STORE+'sound',sound?'1':'0')}catch{}$('sound-label').textContent=sound?'вкл.':'выкл.'}
-try{sound=localStorage.getItem(STORE+'sound')!=='0'}catch{}$('sound-label').textContent=sound?'вкл.':'выкл.';
+function toggleSound(){sound=!sound;try{localStorage.setItem(STORE+'sound',sound?'1':'0')}catch{}$('sound-label').textContent=sound?'вкл.':'выкл.';$('sound-btn').setAttribute('aria-pressed',String(sound))}
+try{sound=localStorage.getItem(STORE+'sound')!=='0'}catch{}$('sound-label').textContent=sound?'вкл.':'выкл.';$('sound-btn').setAttribute('aria-pressed',String(sound));
 
 function db(){
  return new Promise((resolve,reject)=>{
@@ -89,6 +137,8 @@ const writtenVideoByKey=new Map();
 async function draftWrite(){
  if(!projectKey||!scene)return true;
  const key=projectKey,video=scene.custom&&sourceBlob instanceof Blob?sourceBlob:null;
+ const revision=++saveRevision;
+ if(view==='editor')setDraftStatus('saving');
  const entry={key,scene:{...scene},timeline:packTimeline(localClips,editHistory,selectedClip),
   updated:Date.now()};
  const operation=saveQueue.then(async()=>{
@@ -109,8 +159,15 @@ async function draftWrite(){
    }finally{d.close()}
  });
  saveQueue=operation.catch(()=>{});
- try{await operation;return true}
- catch{toast('Черновик не сохранился. Проверь свободное место.');return false}
+ try{
+  await operation;
+  if(revision===saveRevision&&key===projectKey&&view==='editor')setDraftStatus('saved');
+  return true;
+ }catch{
+  if(revision===saveRevision&&key===projectKey&&view==='editor')setDraftStatus('error');
+  toast('Черновик не сохранился. Проверь свободное место.');
+  return false;
+ }
 }
 function disposeLocalClips(){
  for(const c of localClips){try{c.audio?.pause()}catch{}if(c.url)URL.revokeObjectURL(c.url)}
@@ -479,7 +536,7 @@ async function receivedMedia(p,rx,blob){if(rx.kind==='video'){if(!scene?.custom|
 }
 function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,mime:c.blob.type})}
 function sendAllOwn(){if(sentPremiere||mode==='solo')return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
-async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
+async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
 function stopAllPlayback(){playing=false;for(const id of ['stage-video','premiere-video','trim-video'])$(id).pause();for(const c of [...localClips,...remoteClips])c.audio?.pause();$('play-toggle').textContent='▶'}
 function updateClipSound(t,on,isPremiere=false){const items=isPremiere?[...localClips,...remoteClips]:localClips;for(const c of items){if(!c.audio)continue;const active=t>=c.start&&t<c.end&&on;const offset=clamp(t-c.start+c.offset,0,Math.max(0,c.blob.size?1e5:0));if(active){if(c.audio.paused||Math.abs(c.audio.currentTime-offset)>.25){try{c.audio.currentTime=offset}catch{}}if(c.audio.paused)c.audio.play().catch(()=>{})}else if(!c.audio.paused)c.audio.pause()}}
 // Video time updates move only the playhead. Clip buttons retain focus.
@@ -489,6 +546,7 @@ function renderPlayhead(){
  $('scrubber').max=String(Math.round(duration*10));
  $('scrubber').value=String(Math.round(t*10));
  $('stage-time').textContent=fmt(t)+' / '+fmt(duration);
+ if(record)$('record-elapsed').textContent=fmt(Math.max(0,t-record.start));
  $('playhead').style.left=(t/duration*100)+'%';
 }
 function updateZoom(){
