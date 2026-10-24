@@ -742,7 +742,9 @@ function updatePremiereStatus(){
 }
 function stopPremiereExport(clearResult=true){
  premiereExportGeneration++;
- premiereExportController?.abort();
+ const controller=premiereExportController;
+ premiereExportController=null;
+ controller?.abort();
  if(clearResult)resetPremiereResult();
  $('premiere-export-progress').classList.add('hidden');
  $('premiere-export-bar').value=0;
