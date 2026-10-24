@@ -1,6 +1,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createTrimRange} from './trim-range.js';
 import {meterHeights} from './studio-feedback.js';
+import {MAX_AUDIO_BYTES,MAX_INCOMING_TRANSFERS,validAudioEnvelope,validVideoEnvelope,canAcceptVoice} from './media-protocol.js';
 import {renderPremiere,supportsPremiereExport,premiereFilename} from './premiere-export.js';
 import {TimelineHistory,snapshotClips,spliceRecording,packTimeline,unpackTimeline,editClip,replaceSelectedRecording,MIN_CLIP_SECONDS} from './timeline-model.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
@@ -492,10 +493,10 @@ function ensurePeers(){if(!state||!me)return;for(const p of state.players){if(p.
 async function receiveSignal(data){if(!data||!state?.players.some(p=>p.id===data.from))return;const from=data.from,x=data.signal||{};let p=peers.get(from)||peer(from,false);if(!p)return;try{if(x.kind==='offer'&&typeof x.sdp==='string'){await p.pc.setRemoteDescription({type:'offer',sdp:x.sdp});const answer=await p.pc.createAnswer();await p.pc.setLocalDescription(answer);sendGame({type:'signal',to:from,signal:{kind:'answer',sdp:p.pc.localDescription.sdp}})}else if(x.kind==='answer'&&typeof x.sdp==='string'){await p.pc.setRemoteDescription({type:'answer',sdp:x.sdp})}else if(x.kind==='ice'&&x.candidate){if(!p.pc.remoteDescription)p.pending.push(x.candidate);else await p.pc.addIceCandidate(x.candidate)}if(p.pc.remoteDescription&&p.pending.length){for(const c of p.pending.splice(0))await p.pc.addIceCandidate(c).catch(()=>{})}}catch(e){toast('Ошибка соединения с актёром: '+e.message)}}
 function attachChannel(p,dc){p.dc=dc;dc.binaryType='arraybuffer';dc.bufferedAmountLowThreshold=128*1024;dc.onopen=()=>{flush(p);if(meHost()&&scene?.custom&&sourceBlob)sendVideoTo(p.id);if(state?.phase==='premiere'&&sentPremiere)sendOwnTo(p.id)};
  dc.onmessage=e=>onMedia(p,e.data);dc.onclose=()=>{p.dc=null};dc.onerror=()=>toast('Передача медиа была прервана.')}
-async function flush(p){if(p.busy||p.dc?.readyState!=='open')return;p.busy=true;try{while(p.queued.length&&p.dc?.readyState==='open'){const item=p.queued.shift(),blob=item.blob;if(blob.size>(item.kind==='video'?MAX_ROOM_VIDEO_BYTES:34*1024*1024))continue;const token=uid();p.dc.send(JSON.stringify({kind:'begin',token,media:item.kind,size:blob.size,meta:item.meta}));const chunkSize=16000;for(let offset=0;offset<blob.size;offset+=chunkSize){while(p.dc.bufferedAmount>600000){await new Promise(resolve=>{const timer=setTimeout(resolve,180);p.dc.addEventListener('bufferedamountlow',()=>{clearTimeout(timer);resolve()},{once:true})});if(p.dc.readyState!=='open')throw Error('channel_closed')}p.dc.send(await blob.slice(offset,offset+chunkSize).arrayBuffer())}p.dc.send(JSON.stringify({kind:'end',token}));}}catch{toast('Не удалось отправить медиа. Повтори подключение.')}finally{p.busy=false}}
+async function flush(p){if(p.busy||p.dc?.readyState!=='open')return;p.busy=true;try{while(p.queued.length&&p.dc?.readyState==='open'){const item=p.queued.shift(),blob=item.blob;if(blob.size>(item.kind==='video'?MAX_ROOM_VIDEO_BYTES:MAX_AUDIO_BYTES))continue;const token=uid();p.dc.send(JSON.stringify({kind:'begin',token,media:item.kind,size:blob.size,meta:item.meta}));const chunkSize=16000;for(let offset=0;offset<blob.size;offset+=chunkSize){while(p.dc.bufferedAmount>600000){await new Promise(resolve=>{const timer=setTimeout(resolve,180);p.dc.addEventListener('bufferedamountlow',()=>{clearTimeout(timer);resolve()},{once:true})});if(p.dc.readyState!=='open')throw Error('channel_closed')}p.dc.send(await blob.slice(offset,offset+chunkSize).arrayBuffer())}p.dc.send(JSON.stringify({kind:'end',token}));}}catch{toast('Не удалось отправить медиа. Повтори подключение.')}finally{p.busy=false}}
 function queueMedia(id,kind,blob,meta){const p=peers.get(id);if(!p||!(blob instanceof Blob))return;p.queued.push({kind,blob,meta});flush(p)}
 function relayAudio(id,blob,meta){
- if(!net||!room||state?.phase!=='premiere'||blob.size>3000000){toast('Голос не передался. Попробуй переподключиться.');return}
+ if(!net||!room||state?.phase!=='premiere'||blob.size>MAX_AUDIO_BYTES){toast('Голос не передался. Попробуй переподключиться.');return}
  const token=uid(),chunk=4000;
  relayQueue=relayQueue.catch(()=>{}).then(async()=>{
   sendGame({type:'relay',to:id,data:{action:'begin',token,kind:'audio',size:blob.size,meta}});
@@ -518,11 +519,15 @@ function sendAudio(id,blob,meta){
 }
 function receiveRelay(packet){
  const d=packet?.data,from=packet?.from;
- if(state?.phase!=='premiere'||!state.players.some(x=>x.id===from)||!d||typeof d.token!=='string')return;
+ if(state?.phase!=='premiere'||!state.players.some(x=>x.id===from)||!d||typeof d.token!=='string'||d.token.length>55)return;
  const key=from+':'+d.token;
  if(d.action==='begin'){
-  if(d.kind!=='audio'||!Number.isInteger(d.size)||d.size<1||d.size>3000000)return;
-  if(relayInbox.size>24)relayInbox.clear();
+  if(d.kind!=='audio'||!validAudioEnvelope({
+   meta:d.meta,bytes:d.size,scene,epoch:state.mediaEpoch,
+   players:state.players.map(p=>p.id),expected:state.counts,
+   sender:from,host:state.host,receiver:me
+  })||!canAcceptVoice({owner:d.meta.owner,local:localClips,remote:remoteClips,expected:state.counts}))return;
+  if(relayInbox.size>=MAX_INCOMING_TRANSFERS)return;
   relayInbox.set(key,{kind:'audio',size:d.size,received:0,parts:0,chunks:[],meta:d.meta||{}});
  }else if(d.action==='part'){
   const r=relayInbox.get(key);if(!r||d.part!==r.parts||typeof d.body!=='string'){relayInbox.delete(key);return}
@@ -533,19 +538,43 @@ function receiveRelay(packet){
  }
 }
 const videoSent=new Set();
-function sendVideoTo(id){if(!scene?.custom||!sourceBlob||!meHost())return;const key=id+':'+scene.id;if(videoSent.has(key))return;videoSent.add(key);queueMedia(id,'video',sourceBlob,{scene:scene.id,mime:sourceBlob.type||'video/mp4'})}
-function onMedia(p,data){if(typeof data==='string'){let m;try{m=JSON.parse(data)}catch{return}if(m.kind==='begin'){if(p.rx||!['video','audio'].includes(m.media)||!Number.isInteger(m.size)||m.size<1||m.size>(m.media==='video'?MAX_ROOM_VIDEO_BYTES:34*1024*1024))return;p.rx={kind:m.media,token:m.token,size:m.size,meta:m.meta||{},received:0,chunks:[]}}else if(m.kind==='end'&&p.rx?.token===m.token){const rx=p.rx;p.rx=null;if(rx.received===rx.size)receivedMedia(p,rx,new Blob(rx.chunks,{type:rx.meta.mime||'application/octet-stream'}))}return}
+function sendVideoTo(id){
+ if(!scene?.custom||!sourceBlob||!meHost()||sourceBlob.size>MAX_ROOM_VIDEO_BYTES)return;
+ const key=id+':'+scene.id+':'+state?.mediaEpoch;
+ if(videoSent.has(key))return;
+ videoSent.add(key);
+ queueMedia(id,'video',sourceBlob,{scene:scene.id,epoch:state.mediaEpoch,mime:sourceBlob.type||'video/mp4'});
+}
+function onMedia(p,data){if(typeof data==='string'){let m;try{m=JSON.parse(data)}catch{return}if(m.kind==='begin'){if(p.rx||!['video','audio'].includes(m.media)||!Number.isInteger(m.size)||m.size<1||m.size>(m.media==='video'?MAX_ROOM_VIDEO_BYTES:MAX_AUDIO_BYTES))return;p.rx={kind:m.media,token:m.token,size:m.size,meta:m.meta||{},received:0,chunks:[]}}else if(m.kind==='end'&&p.rx?.token===m.token){const rx=p.rx;p.rx=null;if(rx.received===rx.size)receivedMedia(p,rx,new Blob(rx.chunks,{type:rx.meta.mime||'application/octet-stream'}))}return}
  const rx=p.rx;const b=data instanceof ArrayBuffer?data:null;if(!rx||!b||rx.received+b.byteLength>rx.size){p.rx=null;return}rx.received+=b.byteLength;rx.chunks.push(b)}
-async function receivedMedia(p,rx,blob){if(rx.kind==='video'){if(!scene?.custom||rx.meta.scene!==scene.id||meHost())return;sourceBlob=blob;setVideoSources();sendGame({type:'media_ready'});toast('Видео получено. Можно начинать.');return}
- if(state?.phase!=='premiere')return;const m=rx.meta,owner=String(m.owner||'');if(!state.players.some(x=>x.id===owner)||!Number.isFinite(+m.start)||!Number.isFinite(+m.end)||+m.start<0||+m.end>scene.duration+.01||+m.end<=+m.start)return;
- if(!meHost()&&p.id!==state.host)return;
- if(meHost()&&owner!==p.id)return;
- if([...localClips,...remoteClips].some(x=>x.id===m.id&&x.owner===owner))return;
- remoteClips.push(makeClip({id:String(m.id).slice(0,48),owner,start:+m.start,end:+m.end,offset:+m.offset||0,blob}));
- if(meHost())for(const q of state.players)if(q.id!==me&&q.id!==owner)sendAudio(q.id,blob,m);
+async function receivedMedia(p,rx,blob){
+ if(!state||!scene||!(blob instanceof Blob))return;
+ if(rx.kind==='video'){
+  if(!validVideoEnvelope({
+   meta:rx.meta,bytes:blob.size,maxBytes:MAX_ROOM_VIDEO_BYTES,
+   scene,epoch:state.mediaEpoch,sender:p.id,host:state.host,receiver:me,phase:state.phase
+  }))return;
+  sourceBlob=blob;setVideoSources();
+  sendGame({type:'media_ready',scene:scene.id,epoch:state.mediaEpoch});
+  toast('Видео получено. Можно начинать.');
+  return;
+ }
+ if(state.phase!=='premiere'||rx.kind!=='audio')return;
+ const m=rx.meta;
+ if(!validAudioEnvelope({
+  meta:m,bytes:blob.size,scene,epoch:state.mediaEpoch,
+  players:state.players.map(player=>player.id),expected:state.counts,
+  sender:p.id,host:state.host,receiver:me
+ })||!canAcceptVoice({owner:m?.owner,local:localClips,remote:remoteClips,expected:state.counts}))return;
+ if([...localClips,...remoteClips].some(c=>c.id===m.id&&c.owner===m.owner))return;
+ remoteClips.push(makeClip({id:m.id,owner:m.owner,start:m.start,end:m.end,offset:m.offset,blob}));
+ if(meHost())for(const q of state.players)if(q.id!==me&&q.id!==m.owner)sendAudio(q.id,blob,m);
  updatePremiereStatus();
 }
-function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,mime:c.blob.type})}
+function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{
+ id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,
+ epoch:state?.mediaEpoch,mime:c.blob.type
+})}
 function sendAllOwn(){if(sentPremiere||mode==='solo')return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
 async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
 function stopAllPlayback(){playing=false;for(const id of ['stage-video','premiere-video','trim-video'])$(id).pause();for(const c of [...localClips,...remoteClips])c.audio?.pause();$('play-toggle').textContent='▶'}
@@ -971,7 +1000,7 @@ $('room-players').onchange=async e=>{
   const duration=await new Promise(resolve=>{test.preload='metadata';test.src=src;test.onloadedmetadata=()=>resolve(test.duration);test.onerror=()=>resolve(0);setTimeout(()=>resolve(0),8000)});
   test.removeAttribute('src');test.load();URL.revokeObjectURL(src);
   if(!Number.isFinite(duration)||duration<scene.start+scene.duration-.1)return toast('Это видео не подходит по продолжительности.');
-  sourceBlob=f;setVideoSources();sendGame({type:'media_ready'});toast('Видео подключено.');roomUI();return;
+  sourceBlob=f;setVideoSources();sendGame({type:'media_ready',scene:scene.id,epoch:state?.mediaEpoch});toast('Видео подключено.');roomUI();return;
  }
  const sel=e.target.closest('[data-assign]');if(sel)sendGame({type:'assign',target:sel.dataset.assign,role:sel.value});
 };
