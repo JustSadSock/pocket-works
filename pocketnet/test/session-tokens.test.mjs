@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { sessionTokenKey, findSessionByToken, isSessionToken } from '../session-tokens.mjs';
 
 const raw = 'abcdef0123456789'.repeat(4);
@@ -61,4 +62,13 @@ test('expired legacy sessions remain expired and are never upgraded', async () =
   assert.equal(await findSessionByToken(db.query,raw,1000),null);
   assert.equal(db.rows.has(raw),true);
   assert.equal(db.operations.some(op=>op.sql.startsWith('UPDATE')),false);
+});
+
+test('PocketNet profile refresh does not accidentally update a plaintext session key', async () => {
+  const hub = await readFile(new URL('../hub.mjs', import.meta.url), 'utf8');
+  assert.match(hub, /const storedToken = await sessionTokenKey\(msg\.token\)/);
+  assert.match(hub, /found\.name,found\.avatar,storedToken\)/);
+  assert.match(hub, /found\.name, storedToken\)/);
+  assert.doesNotMatch(hub, /found\.name,found\.avatar,msg\.token\)/);
+  assert.doesNotMatch(hub, /found\.name, msg\.token\)/);
 });
