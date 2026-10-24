@@ -2227,7 +2227,7 @@ class UIManager {
         const area=document.getElementById('blocked-lanes');
         if(!area)return;
         const blocked=gameState.isGameOver?[]:gameState.players.filter(p=>p.blocked);
-        const model=blocked.map(p=>({id:p.id,name:p.name||('Игрок '+(p.id+1)),ready:!!(this.isOnlineMode?p.canResume:laneHasClearance(p)),mine:!this.isOnlineMode||p.id===this.localPlayerIndex}));
+        const model=blocked.map(p=>({id:p.id,name:p.name||('Игрок '+(p.id+1)),offline:!!p.offline,ready:!!(this.isOnlineMode?p.canResume:laneHasClearance(p)),mine:!this.isOnlineMode||p.id===this.localPlayerIndex}));
         const signature=JSON.stringify([model,this.isOnlineMode&&networkManager.connected,this.isOnlineMode&&networkManager.stale,currentLanguage]);
         if(this.blockedLaneSignature===signature)return;
         this.blockedLaneSignature=signature;
@@ -2236,7 +2236,7 @@ class UIManager {
         for(const item of model){
             const row=document.createElement('div');row.className='blocked-lane';
             const message=document.createElement('span');message.className='blocked-lane__message';
-            message.textContent=item.name+': '+(item.ready?(currentLanguage==='ru'?'проход свободен':'lane clear'):(currentLanguage==='ru'?'проход пока занят':'lane blocked'));
+            message.textContent=item.name+': '+(item.offline?(currentLanguage==='ru'?'ожидает подключения':'waiting for connection'):item.ready?(currentLanguage==='ru'?'проход свободен':'lane clear'):(currentLanguage==='ru'?'проход пока занят':'lane blocked'));
             row.append(message);
             if(item.mine&&item.ready){
                 const btn=document.createElement('button');btn.type='button';btn.className='blocked-lane__resume';
@@ -2274,7 +2274,7 @@ class UIManager {
         if(isTouchOwner){
             const holdButton=this.touchControls?.querySelector('[data-action="hold"]');
             if(holdButton){
-                const unavailable=player.gameOver||player.holdUsed||
+                const unavailable=player.gameOver||player.offline||player.holdUsed||
                     (this.isOnlineMode&&(!networkManager.connected||networkManager.stale||networkManager.rulesVersion<3));
                 holdButton.disabled=!!unavailable;
                 holdButton.title=unavailable
