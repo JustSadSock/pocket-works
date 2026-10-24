@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {MAX_EDITIONS,storyText,normalizeEditions,addFinishedEdition,removeEdition,readEditions,writeEditions} from '../story-library.js';
+import {MAX_EDITIONS,storyText,normalizeEditions,addFinishedEdition,planFinishedEdition,removeEdition,readEditions,writeEditions} from '../story-library.js';
 const sample=(revision=41)=>({phase:'finished',revision,players:[{id:'a'},{id:'b'}],stories:[{
  id:'sheet-0',starter:'Марта',setLabel:'Пригода',genre:'Абсурдна комедія',
  fragments:[{question:'Хто?',author:'Марта',answer:'Кіт купив грозову хмару.'},{question:'Навіщо?',author:'Олеся',answer:'Щоб полити кактус.'}]
@@ -13,12 +13,15 @@ test('a finished game is archived once, restores authors and text and supports d
  assert.deepEqual(addFinishedEdition(first,'abcdef12',state,5000),first);
  assert.deepEqual(removeEdition(first,'abcdef12:41'),[]);
 });
-test('library separates games in the same room by revision and keeps newest 12',()=>{
+test('full library does not evict archived manuscripts when more games finish',()=>{
  let records=[];
  for(let i=0;i<MAX_EDITIONS+5;i++)records=addFinishedEdition(records,'abcdef12',sample(i),i*100);
  assert.equal(records.length,MAX_EDITIONS);
- assert.equal(records[0].id,'abcdef12:16');
- assert.equal(records.at(-1).id,'abcdef12:5');
+ assert.equal(records[0].id,'abcdef12:11');
+ assert.equal(records.at(-1).id,'abcdef12:0');
+ const full=planFinishedEdition(records,'abcdef12',sample(17),1700);
+ assert.equal(full.status,'full');
+ assert.deepEqual(full.editions,records);
 });
 test('untrusted or malformed local data cannot become executable markup or runaway storage',()=>{
  const records=normalizeEditions([{id:'bad',stories:[]},null,{id:'ok',savedAt:42,stories:[{
@@ -37,14 +40,30 @@ test('archive data is account-key isolated, survives reload and handles corrupt 
  assert.equal(readEditions(storage,'account:b').length,0);
  map.set('account:b','garbage');assert.deepEqual(readEditions(storage,'account:b'),[]);
 });
-test('quota pressure evicts oldest editions but retains most recent work',()=>{
+test('quota failure keeps every existing manuscript intact and reports failure',()=>{
  const data=Array.from({length:6},(_,i)=>addFinishedEdition([],String(i),sample(i),i*100)[0]).reverse();
- const map=new Map();
+ const prior=JSON.stringify(data.slice(0,2));
+ const map=new Map([['test',prior]]);
  const storage={getItem:k=>map.get(k)||null,setItem:(k,v)=>{if(v.length>1600)throw new Error('quota');map.set(k,v)}};
- assert.equal(writeEditions(storage,'test',data),true);
- const restored=readEditions(storage,'test');
- assert.ok(restored.length>=1&&restored.length<6);
- assert.equal(restored[0].savedAt,500);
+ assert.equal(writeEditions(storage,'test',data),false);
+ assert.equal(map.get('test'),prior);
+ assert.deepEqual(readEditions(storage,'test'),normalizeEditions(data.slice(0,2)));
+});
+test('duplicate IDs after truncation are rejected rather than creating ambiguous editions',()=>{
+ const same='i'.repeat(160);
+ const two=[{...sample().stories[0],id:'x'}];
+ const raw=[{id:same+'-one',savedAt:1,stories:two},{id:same+'-two',savedAt:2,stories:two}];
+ const normalized=normalizeEditions(raw);
+ assert.equal(normalized.length,1);
+ assert.equal(normalized[0].id,same);
+});
+test('a saved issue is not written again when its revision changes after reactions',()=>{
+ const once=addFinishedEdition([],'room',sample(2),100);
+ const another={...sample(3),issue:0};
+ assert.equal(planFinishedEdition(once,'room',another).status,'ready');
+ const v9={...sample(12),issue:7};
+ const original=addFinishedEdition([],'room',v9,100);
+ assert.equal(planFinishedEdition(original,'room',{...v9,revision:99}).status,'already-saved');
 });
 
 test('a v5 finished issue is saved only once even after the players leave and revision changes',()=>{
