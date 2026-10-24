@@ -13,6 +13,9 @@ function fakeWebp(bytes=4200){
  buf.write('RIFF',0,'ascii');buf.writeUInt32LE(bytes-8,4);
  buf.write('WEBPVP8 ',8,'ascii');
  buf.writeUInt32LE(bytes-20,16);
+ // VP8 keyframe start code and the exact 3000×450 pixel canvas contract.
+ buf[23]=0x9d;buf[24]=0x01;buf[25]=0x2a;
+ buf.writeUInt16LE(3000,26);buf.writeUInt16LE(450,28);
  return 'data:image/webp;base64,'+buf.toString('base64');
 }
 const sample=fakeWebp(20200);
@@ -21,6 +24,10 @@ assert(!inspectBallotRaster(sample.replace('image/webp','image/svg+xml')));
 assert(!inspectBallotRaster(sample+'AAAA'));
 assert(!inspectBallotRaster(sample.slice(0,100)));
 assert(!inspectBallotRaster('data:image/webp;base64,PHN2Zz4='));
+const corruptDimensions=Buffer.from(sample.split(',')[1],'base64');
+corruptDimensions.writeUInt16LE(65535,26);
+assert(!inspectBallotRaster('data:image/webp;base64,'+corruptDimensions.toString('base64')),
+ 'WebP with huge dimensions cannot be submitted to spectators');
 const packets=ballotRasterPackets(sample,1,'rtest-01');
 assert(packets.length>1&&packets.every(p=>p.data.length<=8000));
 assert.equal(packets.map(p=>p.data).join(''),sample.split(',')[1]);
