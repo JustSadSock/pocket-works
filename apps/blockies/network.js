@@ -123,7 +123,7 @@ export class NetworkManager {
   flushInputs(){
     if(this.inputFlushTimer){clearTimeout(this.inputFlushTimer);this.inputFlushTimer=null;}
     if(!this.inputQueue.length)return;
-    if(!this.connected||this.stale||!this.started){this.clearQueuedInputs();this.pendingInputs=[];return;}
+    if(!this.connected||this.stale||!this.started||this.paused||this.finished){this.clearQueuedInputs();this.pendingInputs=[];return;}
     const actions=this.inputQueue.splice(0,12);
     if(!this.send({type:'input_batch',actions},true)){
       this.clearQueuedInputs();this.pendingInputs=[];
@@ -225,6 +225,9 @@ export class NetworkManager {
       this.started=true;
       this.finished=!!state.engine?.isGameOver;
       this.paused=!!state.paused;
+      // The server rejects game commands after pause/game over. Any queued or
+      // optimistic actions must stop affecting the board immediately.
+      if(this.paused||this.finished){this.clearQueuedInputs();this.pendingInputs=[];}
       this.activeRound=round;
       if(newRound)this.trigger('gameStart',{players:state.players,seed:state.seed});
       if(state.engine){
@@ -317,7 +320,7 @@ export class NetworkManager {
     if(this.currentRoom&&!this.started)this.send({type:'nickname',name});
   }
   sendPlayerInput(input){
-    if(!this.started||!this.connected||this.stale||this.finished)return false;
+    if(!this.started||!this.connected||this.stale||this.finished||this.paused)return false;
     if(!this.inputBatchVersion)return this.send({type:'input',input},true);
     if(!input||!['move','rotate','drop','hardDrop','hold'].includes(input.action))return false;
     if(input.action==='hold'&&this.rulesVersion<3)return false;
@@ -337,7 +340,7 @@ export class NetworkManager {
     else if(!this.inputFlushTimer)this.inputFlushTimer=setTimeout(()=>this.flushInputs(),65);
     return true;
   }
-  requestLaneResume(){return this.started&&!this.finished&&!this.stale&&this.send({type:'resume'});}
+  requestLaneResume(){return this.started&&!this.finished&&!this.paused&&!this.stale&&this.send({type:'resume'});}
   togglePause(){this.send({type:'pause'});}
   requestRematch(){this.send({type:'rematch'});}
   disconnect(){

@@ -46,10 +46,14 @@ test('blocked personal entrance eliminates exactly its owner, with no fallback s
   assert.equal(state.engine.isGameOver,false);
   assert.doesNotThrow(()=>server.onMessage({state,player:players[1],payload:{type:'input',input:{action:'move',direction:1}}}));
 });
-test('solo retains legacy central spawn rules',()=>{
+test('one-seat online room remains in lobby; solo keeps a central 10-column spawn',async()=>{
   const state=start(1);
-  assert.equal(state.engine.boardWidth,10);
-  assert.equal(state.engine.players[0].gameOver,false);
+  assert.equal(state.started,false,'online requires at least two connected players');
+  assert.equal(state.engine,null,'a one-seat online lobby must not start a match');
+  assert.equal(state.players.length,1);
+  assert.equal(spawnLaneX(0,1,10),3,'solo entrance remains centred on a 10-column board');
+  const js=await fs.readFile(new URL('../game.js',import.meta.url),'utf8');
+  assert.match(js,/this\.startGame\(1\)/,'single-player mode uses the local engine');
 });
 test('UI has aligned physical bays, nicknames and the Backquote screen inspector',async()=>{
   const js=await fs.readFile(new URL('../game.js',import.meta.url),'utf8');
