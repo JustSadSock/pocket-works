@@ -78,6 +78,9 @@
  .writer-shell #selectedStrip .handoff-chip{min-height:34px;padding:4px 7px;font-size:12px}
  .writer-shell .editor-submit .editor-primary{min-height:42px}
 }
+/* The floating room toolbar otherwise overlaps the folded question tab when
+   visualViewport shrinks. The host controls return when the keyboard closes. */
+html.is-app-keyboard-open .scene:has(.writer-shell) .moderation-bar{display:none}
 /* The device's visual viewport, not a guessed keyboard height, drives this mode.
    Keep the actual question one tap away; leave the textarea mounted and focused. */
 html.is-app-keyboard-open .writer-shell.is-typing[data-context-open="false"] .editor-question,
