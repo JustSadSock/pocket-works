@@ -1,16 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SCHOOLS,PROFILES,simulate,audit} from '../qa/magic-v2-matchup-audit.mjs';
+import {SCHOOLS,PROFILES,TACTICS,simulate,audit} from '../qa/magic-v2-matchup-audit.mjs';
 
 test('Magic 2.0 seeded PvP proxy covers every elemental pair, both seats and three real runnable books',()=>{
  const report=audit();
- assert.equal(report.samples,SCHOOLS.length*SCHOOLS.length*PROFILES.length*2);
+ assert.equal(report.samples,SCHOOLS.length*SCHOOLS.length*PROFILES.length*TACTICS.length*2);
  assert.equal(report.pairs.length,3);
  assert.ok(report.matches.every(m=>Number.isFinite(m.hpDelta)&&m.ticks>0&&m.ticks<=900));
  assert.ok(report.matches.every(m=>m.hp.every(n=>Number.isFinite(n)&&n>=0&&n<=100)));
  assert.ok(report.matches.every(m=>m.knockout==='none'||m.knockout==='left'||m.knockout==='right'||m.knockout==='double'));
- for(const kind of PROFILES)for(const first of SCHOOLS)for(const second of SCHOOLS)
-  assert.equal(report.matches.filter(m=>m.profile===kind&&m.left===first&&m.right===second).length,2);
+ for(const tactic of TACTICS)for(const kind of PROFILES)for(const first of SCHOOLS)for(const second of SCHOOLS)
+  assert.equal(report.matches.filter(m=>m.tactic===tactic&&m.profile===kind&&m.left===first&&m.right===second).length,2);
  console.log('Perekos Magic 2.0 seat-neutral diagnostics:',JSON.stringify({
   seatMean:report.seatOneMeanHpAdvantage,seatWarning:report.seatWarning,pairs:report.pairs
  }));
