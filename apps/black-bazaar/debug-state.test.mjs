@@ -155,3 +155,24 @@ test('Workshop avatar picker changes only the local seat and carries choice into
  assert.equal(started.state.you.avatarId,'old_man');
  assert.ok(debugCommand(started.state,{type:'select_avatar',avatarId:'mage'}).error);
 });
+
+test('v22 preview demonstrates both sides of an anonymous counter without a real server',()=>{
+ const s=createDebugState('black');
+ const incoming=s.blackLots.find(l=>!l.mine),outgoing=s.blackLots.find(l=>l.mine);
+ assert.equal(incoming.myCounter.offer.gold,92);
+ assert.equal(outgoing.bids.length,2);
+ assert.equal(outgoing.bids[1].counter,null);
+ const invalid=debugCommand(s,{type:'black_counter',lotId:outgoing.id,bidId:'stale-bid',offer:{gold:110}});
+ assert.ok(invalid.error);
+ const offered=debugCommand(s,{type:'black_counter',lotId:outgoing.id,bidId:'sealed-bid-2',offer:{gold:96}});
+ assert.equal(offered.error,undefined);
+ assert.equal(outgoing.bids[1].counter.offer.gold,96);
+ const gold=s.you.resources.gold;
+ const confirmed=debugCommand(s,{type:'black_counter_accept',lotId:incoming.id,bidId:incoming.myCounter.bidId,counterId:incoming.myCounter.id});
+ assert.equal(confirmed.error,undefined);
+ assert.equal(s.you.resources.gold,gold-92);
+ assert.equal(s.blackLots.find(l=>l.id===incoming.id),undefined);
+ assert.ok(s.you.items.some(i=>i.id===incoming.id));
+ const replay=debugCommand(s,{type:'black_counter_accept',lotId:incoming.id,bidId:'bbid-buyer',counterId:'bcounter-fixture'});
+ assert.ok(replay.error);
+});

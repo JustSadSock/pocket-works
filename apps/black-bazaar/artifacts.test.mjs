@@ -7,10 +7,11 @@ const games=[
  ['Золотая жаба','frog'],['Жадная копилка','pig'],['Паук-механик','spider'],
  ['Корона должника','crown'],['Сундук-мимик','mimic'],['Кот неудачи','cat'],
  ['Зеркало зависти','mirror'],['Медная шестерня','gear'],['Око рынка','lens'],
- ['Гриб прибыли','mushroom'],['Песочные часы','hourglass'],['Амулет расчёта','amulet']
+ ['Гриб прибыли','mushroom'],['Песочные часы','hourglass'],['Амулет расчёта','amulet'],
+ ['Самовар желаний','samovar'],['Перо бюрократа','quill'],['Сапог путешественника','boot']
 ];
-test('Twelve individually drawn SVG silhouettes and full closing tags',()=>{
- assert.equal(new Set(games.map(x=>x[1])).size,12);
+test('Fifteen individually drawn SVG silhouettes and full closing tags',()=>{
+ assert.equal(new Set(games.map(x=>x[1])).size,15);
  for(const [name,expected] of games){
   assert.equal(artifactKind(name),expected);
   const svg=artifactSVG(name,'редкий');
@@ -48,9 +49,9 @@ test('All artifact motifs have transparent, independent silhouettes',()=>{
  }
 });
 
-test('All 13 art motifs render independently at every supported presentation size',()=>{
- const names=['Золотая жаба','Жадная копилка','Паук-механик','Корона должника','Сундук-мимик','Кот неудачи','Зеркало зависти','Медная шестерня','Око рынка','Гриб прибыли','Песочные часы','Амулет расчёта','Неизвестный предмет'];
- assert.equal(names.length,13);
+test('All 16 art motifs render independently at every supported presentation size',()=>{
+ const names=['Золотая жаба','Жадная копилка','Паук-механик','Корона должника','Сундук-мимик','Кот неудачи','Зеркало зависти','Медная шестерня','Око рынка','Гриб прибыли','Песочные часы','Амулет расчёта','Самовар желаний','Перо бюрократа','Сапог путешественника','Неизвестный предмет'];
+ assert.equal(names.length,16);
  for(const size of [40,80,180])for(const name of names){
   const svg=artifactSVG(name,'редкий');
   assert.match(svg,/viewBox="0 0 180 180"/);
@@ -68,4 +69,16 @@ test('Compact economic controls retain resource field names and accessible picto
  assert.match(ui,/aria-label/);
  assert.match(ui,/wallet-track/);
  assert.ok(ui.includes('progressbar'));
+});
+
+test('Secret-counter UX offers real commands but never renders the other bidders identities',()=>{
+ const ui=readFileSync(new URL('./app.js',import.meta.url),'utf8');
+ assert.match(ui,/function blackCounterSeller\(lot\)/);
+ assert.match(ui,/function blackCounterBuyer\(lot,you\)/);
+ assert.match(ui,/data-form="black-counter"/);
+ assert.match(ui,/data-action="black-counter-accept"/);
+ assert.match(ui,/type:'black_counter_accept'/);
+ assert.match(ui,/type:'black_counter'/);
+ assert.match(ui,/data-bid-id="/);
+ assert.doesNotMatch(ui,/blackCounterSeller[\s\S]{0,1500}label\(b\.buyer\)/);
 });

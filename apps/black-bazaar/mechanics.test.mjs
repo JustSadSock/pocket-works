@@ -1689,3 +1689,65 @@ test('v21 anonymous sales do not update the named seller public reputation',()=>
  assert.deepEqual(after.players.find(x=>x.id===seller.id).reputation,previous,
   'a named badge must never reveal ownership of a closed anonymous auction');
 });
+
+test('v22 secret counteroffers use verified bid IDs and settle atomically without identities',()=>{
+ const {state}=makeRoom(3);
+ const seller=state.contestants[state.turnIndex];
+ const buyer=state.contestants.find(x=>x.id!==seller.id);
+ const outsider=state.contestants.find(x=>x.id!==seller.id&&x.id!==buyer.id);
+ state.round=5; // Fixed event: cheaper midnight commission and inspection.
+ const view=game.viewForPlayer({state,player:{id:buyer.id}});
+ assert.equal(view.event.id,'shadow_fair');
+ assert.equal(view.marketFeePercent,3);
+ assert.equal(view.you.inspectionPrices.black,15);
+ const item=seller.items[0],startingGold=seller.resources.gold,buyerGold=buyer.resources.gold;
+ assert.equal(act(state,seller.id,{type:'black_post',itemId:item.id,ask:{gold:60}}).events[0].type,'state');
+ const lot=state.blackLots[0];
+ assert.equal(act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:45}}).events[0].type,'state');
+ const bid=lot.bids[0],before=state.revision;
+ assert.equal(act(state,outsider.id,{type:'black_counter',lotId:lot.id,bidId:bid.id,offer:{gold:75}}).events[0].type,'notice');
+ assert.equal(state.revision,before);
+ assert.equal(act(state,seller.id,{type:'black_counter',lotId:lot.id,bidId:'bbid-forged',offer:{gold:75}}).events[0].type,'notice');
+ assert.equal(act(state,seller.id,{type:'black_counter',lotId:lot.id,bidId:bid.id,offer:{gold:-1}}).events[0].type,'notice');
+ assert.equal(act(state,seller.id,{type:'black_counter',lotId:lot.id,bidId:bid.id,offer:{gold:75}}).events[0].type,'state');
+ const counter=bid.counter;
+ assert.match(counter.id,/^bcounter-/);
+ assert.equal(act(state,seller.id,{type:'black_counter',lotId:lot.id,bidId:bid.id,offer:{gold:500}}).events[0].type,'notice');
+ const sellerView=game.viewForPlayer({state,player:{id:seller.id}});
+ const buyerView=game.viewForPlayer({state,player:{id:buyer.id}});
+ const outsiderView=game.viewForPlayer({state,player:{id:outsider.id}});
+ assert.deepEqual(sellerView.blackLots[0].bids[0].counter.offer,{gold:75,crystals:0,parts:0});
+ assert.equal('buyer' in sellerView.blackLots[0].bids[0],false);
+ assert.deepEqual(buyerView.blackLots[0].myCounter,{bidId:bid.id,id:counter.id,offer:{gold:75,crystals:0,parts:0}});
+ assert.equal(outsiderView.blackLots[0].myCounter,null);
+ assert.deepEqual(outsiderView.blackLots[0].bids,[]);
+ assert.equal(JSON.stringify(buyerView.blackLots).includes(seller.id),false,'secret seller must not leak');
+ const stable=state.revision;
+ assert.equal(act(state,outsider.id,{type:'black_counter_accept',lotId:lot.id,bidId:bid.id,counterId:counter.id}).events[0].type,'notice');
+ assert.equal(act(state,buyer.id,{type:'black_counter_accept',lotId:lot.id,bidId:bid.id,counterId:'bcounter-fake'}).events[0].type,'notice');
+ assert.equal(state.revision,stable);
+ assert.equal(act(state,buyer.id,{type:'black_counter_accept',lotId:lot.id,bidId:bid.id,counterId:counter.id}).events[0].type,'state');
+ assert.equal(state.blackLots.length,0);
+ assert.equal(buyer.resources.gold,buyerGold-75);
+ assert.equal(seller.resources.gold,startingGold+72,'3% fee rounded up, seller gets 72');
+ assert.ok(buyer.items.some(x=>x.id===item.id));
+ assert.equal(buyer.items.find(x=>x.id===item.id).history.at(-1),'Анонимный рынок');
+ assert.equal(seller.tradeStats.sales,0,'counter settlement remains anonymous and does not change public reputation');
+ assert.equal(act(state,buyer.id,{type:'black_counter_accept',lotId:lot.id,bidId:bid.id,counterId:counter.id}).events[0].type,'notice');
+ assert.equal(seller.resources.gold,startingGold+72,'replay cannot double-pay');
+});
+test('v22 repricing a secret bid invalidates its previous counteroffer',()=>{
+ const {state}=makeRoom(3);state.round=2;
+ const seller=state.contestants[state.turnIndex],buyer=state.contestants.find(x=>x.id!==seller.id);
+ act(state,seller.id,{type:'black_post',itemId:seller.items[0].id,ask:{gold:50}});
+ const lot=state.blackLots[0];
+ act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:35}});
+ const original=lot.bids[0];
+ act(state,seller.id,{type:'black_counter',lotId:lot.id,bidId:original.id,offer:{gold:55}});
+ const old=original.counter.id;
+ act(state,buyer.id,{type:'black_bid',lotId:lot.id,offer:{gold:42}});
+ assert.notEqual(lot.bids[0].id,original.id);
+ assert.equal(game.viewForPlayer({state,player:{id:buyer.id}}).blackLots[0].myCounter,null);
+ assert.equal(act(state,buyer.id,{type:'black_counter_accept',lotId:lot.id,bidId:original.id,counterId:old}).events[0].type,'notice');
+ assert.equal(state.blackLots.length,1);
+});

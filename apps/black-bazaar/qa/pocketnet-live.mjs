@@ -1,5 +1,5 @@
 // Real PocketNet integration: three authenticated WebSocket clients against
-// Wrangler's SQLite Durable Object and the immutable Bazaar v21 rules.
+// Wrangler's SQLite Durable Object and the immutable Bazaar v22 rules.
 import assert from 'node:assert/strict';
 import WebSocket from '../../../pocket-server/node_modules/ws/index.js';
 
@@ -92,7 +92,7 @@ try{
  host.send('create_room',{gameId:'black-bazaar'});
  const initial=await host.next('room_joined');
  roomId=initial.roomId;
- assert.equal(initial.version,'v21','new rooms must use immutable v21');
+ assert.equal(initial.version,'v22','new rooms must use immutable v22');
  assert.equal(initial.state.phase,'lobby');
  second.send('join_room',{roomId:roomId.slice(0,8).toUpperCase()});
  assert.equal((await second.next('room_joined')).state.players.length,2);
@@ -345,6 +345,54 @@ try{
  assert.equal(resumedHost.round,initialView.round);
  assert.ok(resumedHost.deadlineAt<=wakeState.deadlineAt+250,
   'late host reconnect must not grant a second complete turn');
+ // Separate sealed-bid negotiation on the real Worker: accept via the
+ // private counter token, not by guessing an opponent's identity.
+ const secretSockets=await Promise.all(tokens.slice(0,3).map(async token=>{
+  const c=await open(token);clients.push(c);return c;
+ }));
+ const [secretHost,...secretGuests]=secretSockets;
+ secretHost.send('create_room',{gameId:'black-bazaar'});
+ const secretRoom=(await secretHost.next('room_joined')).roomId;
+ for(const guest of secretGuests){guest.send('join_room',{roomId:secretRoom});await guest.next('room_joined');}
+ secretHost.send('game_message',{payload:{type:'start'}});
+ let secretState=stateOf(await secretHost.next('game_event',stateEvent('play')));
+ // Advance three seats to the first anonymous-market wave.
+ for(let step=0;step<3;step++){
+  const actor=secretSockets.find(c=>c.id===secretState.turnId);
+  actor.send('game_message',{payload:{type:'end'}});
+  secretState=stateOf(await secretHost.next('game_event',stateEvent('play',v=>v.revision>secretState.revision)));
+ }
+ assert.equal(secretState.round,2);
+ assert.equal(secretState.blackMarket,true);
+ const secretSeller=secretSockets.find(c=>c.id===secretState.turnId);
+ const secretBuyer=secretSockets.find(c=>c.id!==secretSeller.id);
+ const secretStranger=secretSockets.find(c=>c.id!==secretSeller.id&&c.id!==secretBuyer.id);
+ const sellerPrivate=stateOf(await secretSeller.next('game_event',stateEvent('play',v=>v.round===2&&v.revision>=secretState.revision)));
+ const secretItem=sellerPrivate.you.items[0];
+ const sellerGoldBefore=sellerPrivate.you.resources.gold;
+ secretSeller.send('game_message',{payload:{type:'black_post',itemId:secretItem.id,ask:{gold:50}}});
+ const newBlack=stateOf(await secretSeller.next('game_event',stateEvent('play',v=>v.blackLots.length===1)));
+ const blackId=newBlack.blackLots[0].id;
+ secretBuyer.send('game_message',{payload:{type:'black_bid',lotId:blackId,offer:{gold:40}}});
+ const anonymousBids=stateOf(await secretSeller.next('game_event',stateEvent('play',v=>v.blackLots[0]?.bids.length===1)));
+ const sealedId=anonymousBids.blackLots[0].bids[0].id;
+ assert.equal(anonymousBids.blackLots[0].bids[0].buyer,undefined);
+ secretSeller.send('game_message',{payload:{type:'black_counter',lotId:blackId,bidId:sealedId,offer:{gold:65}}});
+ const secretQuote=stateOf(await secretBuyer.next('game_event',stateEvent('play',v=>v.blackLots[0]?.myCounter?.bidId===sealedId)));
+ assert.equal(secretQuote.blackLots[0].myCounter.offer.gold,65);
+ assert.equal(JSON.stringify(secretQuote.blackLots).includes(secretSeller.id),false);
+ const onlyBystander=stateOf(await secretStranger.next('game_event',stateEvent('play',v=>v.revision>=secretQuote.revision)));
+ assert.equal(onlyBystander.blackLots[0].myCounter,null);
+ assert.deepEqual(onlyBystander.blackLots[0].bids,[]);
+ const secretToken=secretQuote.blackLots[0].myCounter.id;
+ secretBuyer.send('game_message',{payload:{type:'black_counter_accept',lotId:blackId,bidId:sealedId,counterId:secretToken}});
+ const settledBlack=stateOf(await secretSeller.next('game_event',stateEvent('play',v=>v.blackLots.length===0&&v.revision>anonymousBids.revision)));
+ assert.equal(settledBlack.you.resources.gold,sellerGoldBefore+58);
+ assert.equal(settledBlack.you.reputation?.sales,undefined,'anonymous trade must not create a named seller badge');
+ secretBuyer.send('game_message',{payload:{type:'black_counter_accept',lotId:blackId,bidId:sealedId,counterId:secretToken}});
+ const staleCounter=await secretBuyer.next('game_event',m=>m.event?.type==='notice');
+ assert.match(String(staleCounter.event.payload),/недоступно/);
+ console.log('BAZAAR_ANONYMOUS_COUNTER_PASS',JSON.stringify({room:secretRoom,price:65,privateViews:true,replayRejected:true}));
  // Real unattended deadline: three authenticated sockets stay connected but
  // send ZERO game packets. The Durable Object alarm must advance the turn itself.
  for(const c of clients)await c.close();
@@ -372,7 +420,7 @@ try{
  console.log('BAZAAR_LIVE_POCKETNET_PASS',JSON.stringify({
   module:initial.version,seats:3,privateViews:true,auction:true,
   activeSellerReconnect:true,deadlineGrace:true,noDuplicateTrade:true,
-  rejectedLateJoin:true,hostHandoff:true,lobbyKick:true,liveKick:true,bannedReconnect:true,allOfflineRecovery:true,readonlyClock:true,unattendedAlarm:true,completedRounds:snap.round||9,turns:commands
+  rejectedLateJoin:true,hostHandoff:true,lobbyKick:true,liveKick:true,bannedReconnect:true,allOfflineRecovery:true,readonlyClock:true,unattendedAlarm:true,secretCounter:true,completedRounds:snap.round||9,turns:commands
  }));
 }finally{
  for(const c of clients)try{await c.close()}catch{}

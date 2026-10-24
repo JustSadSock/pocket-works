@@ -206,6 +206,33 @@ try{
    if(await frame.locator('.table-stage .artifact-note').count()===0)
     report.issues.push('sold item still displayed as active auction lot');
   }
+  if(scene==='black'&&actionSizes.includes(id)){
+   await frame.locator('button.workspace-tab[data-sheet="market"]').click();
+   const list=frame.locator('[data-sheet-page="market"] details.quiet-details').first();
+   if(await list.count()===1&&await list.evaluate(el=>!el.open))await list.locator('summary').first().click();
+   const counter=frame.locator('[data-sheet-page="market"] button[data-action="black-counter-accept"]');
+   if(await counter.count()!==1||await counter.isDisabled())
+    report.issues.push('anonymous buyer cannot accept private counteroffer');
+   else{
+    await counter.click({timeout:4000});
+    if(await frame.locator('[data-sheet-page="market"] [data-action="black-counter-accept"]').count())
+     report.issues.push('accepted anonymous counter still displayed');
+   }
+   const sellerList=frame.locator('[data-sheet-page="market"] details.quiet-details').first();
+   if(await sellerList.count()===1&&await sellerList.evaluate(el=>!el.open))
+    await sellerList.locator('summary').first().click();
+   const form=frame.locator('[data-sheet-page="market"] form[data-form="black-counter"][data-bid-id="sealed-bid-2"]');
+   if(await form.count()!==1)report.issues.push('anonymous seller cannot negotiate specific sealed bid');
+   else{
+    const sheet=form.locator('..');
+    if(await sheet.evaluate(el=>!el.open))await sheet.locator('summary').click();
+    await form.locator('input[name="offer_gold"]').fill('97');
+    await form.locator('button[type="submit"]').click({timeout:4000});
+    const sent=frame.locator('[data-sheet-page="market"] .counter-pending');
+    if(!await sent.allTextContents().then(xs=>xs.some(x=>x.includes('97'))))
+     report.issues.push('seller counteroffer not confirmed in market UI');
+   }
+  }
   if(scene==='lobby'&&['small','phone','desktop'].includes(id)){
    const before=await frame.locator('.lobby-player').count();
    const kick=frame.locator('button.lobby-kick').first();

@@ -65,6 +65,18 @@ const GOODS = [
   {key:'amulet',name:'Амулет расчёта',rarity:'обычный',variants:[
     [{type:'crystals',value:5},{type:'goldPercent',value:8}],
     [{type:'gold',value:30},{type:'crystals',value:2}]
+  ]},
+  {key:'samovar',name:'Самовар желаний',rarity:'редкий',variants:[
+    [{type:'gold',value:44},{type:'crystals',value:4}],
+    [{type:'crystals',value:8},{type:'gold',value:26}]
+  ]},
+  {key:'quill',name:'Перо бюрократа',rarity:'обычный',variants:[
+    [{type:'crystals',value:6},{type:'gold',value:22}],
+    [{type:'gold',value:36},{type:'parts',value:1}]
+  ]},
+  {key:'boot',name:'Сапог путешественника',rarity:'обычный',variants:[
+    [{type:'parts',value:1},{type:'crystals',value:5}],
+    [{type:'gold',value:39},{type:'crystals',value:3}]
   ]}
 ];
 // Each pair is [positive effect, upkeep]. The second entry is ALWAYS a cost.
@@ -75,7 +87,8 @@ const TRAITS = {
   hourglass:{kind:'curse',title:'Последний песок',effect:{type:'parts',value:2},delay:2},
   amulet:{kind:'ward',title:'Печать отсрочки',charges:1},
   mirror:{kind:'sellerBonus',title:'Эхо перепродажи',effect:{type:'crystals',value:3}},
-  lens:{kind:'appraisal',title:'Зоркий торговец',publicCost:8,blackCost:15}
+  lens:{kind:'appraisal',title:'Зоркий торговец',publicCost:8,blackCost:15},
+  boot:{kind:'ward',title:'Сапог уклонения',charges:1}
 };
 function trait(item){return item.variant===0?TRAITS[item.key]||null:null;}
 function inspectCurse(item){
@@ -97,7 +110,9 @@ function inspectionCost(p,black=false,s=null){
   const haveLens=p.items.some(i=>trait(i)?.kind==='appraisal');
   const normal=haveLens?(black?TRAITS.lens.blackCost:TRAITS.lens.publicCost):
     (black?BLACK_INSPECTION_GOLD:15);
-  return s&&eventIs(s,'audit_fair')?Math.ceil(normal/2):normal;
+  if(s&&eventIs(s,'audit_fair'))return Math.ceil(normal/2);
+  if(black&&s&&eventIs(s,'shadow_fair'))return Math.max(10,Math.ceil(normal*.6));
+  return normal;
 }
 // Each item starts with a full two-round delayed fuse. Buying or disguising
 // it never changes the due round. No second activation after it fires.
@@ -113,12 +128,13 @@ const EVENT_CARDS={
   salvage_boom:{title:'Ярмарка запчастей',description:'Разбор старого предмета приносит 3 детали вместо 2.'},
   mask_festival:{title:'Бал масок',description:'Перепаковка стоит 10 золота и не требует деталей.'},
   smuggler_holiday:{title:'Ночь контрабандистов',description:'Комиссия анонимного рынка снижена с 10% до 5%.'},
-  audit_fair:{title:'День экспертов',description:'Экспертиза стоит вдвое меньше (округление вверх).'}
+  audit_fair:{title:'День экспертов',description:'Экспертиза стоит вдвое меньше (округление вверх).'},
+  shadow_fair:{title:'Шёпот перекупщиков',description:'В раунде 5 комиссия анонимного рынка — 3%, экспертиза стоит дешевле.'}
 };
 const eventId=s=>s.eventSchedule?.[s.round]||null;
 const eventIs=(s,id)=>eventId(s)===id;
 const eventCard=s=>{const id=eventId(s);return id?{id,...EVENT_CARDS[id]}:null;};
-const blackFee=s=>eventIs(s,'smuggler_holiday') ? 0.05 : MARKET_COMMISSION;
+const blackFee=s=>eventIs(s,'shadow_fair')?0.03:eventIs(s,'smuggler_holiday')?0.05:MARKET_COMMISSION;
 const salvageYield=s=>eventIs(s,'salvage_boom')?3:2;
 const repackPrice=s=>eventIs(s,'mask_festival')?{gold:10,parts:0}:{gold:REPACK_GOLD,parts:REPACK_PARTS};
 const increment=(s,key)=>{if(s.metrics)s.metrics[key]=(s.metrics[key]||0)+1;};
@@ -238,7 +254,7 @@ function openGame(s){
   s.phase='play';s.round=1;s.turnIndex=0;s.serial=0;s.ranking=[];
   s.offlinePaused=false;s.offlinePausedAt=null;s.pauseRemainingMs=null;
   const middle=shuffled(['salvage_boom','mask_festival']);
-  s.eventSchedule={4:middle[0],6:middle[1],8:sample(['smuggler_holiday','audit_fair'])};
+  s.eventSchedule={4:middle[0],5:'shadow_fair',6:middle[1],8:sample(['smuggler_holiday','audit_fair'])};
   s.metrics={publicSales:0,privateDeals:0,blackSales:0,inspections:0,brokerSales:0,
     salvage:0,repack:0,urgentMet:0,urgentMissed:0,wardUsed:0,curseFired:0};
   s.contestants=s.players.map((p,i)=>{
@@ -419,6 +435,23 @@ const stateEvent=()=>[{type:'state',payload:{}}];
 const failure=(state,id,message)=>({state,events:[{type:'notice',to:id,payload:message}]});
 const success=s=>{s.revision++;return {state:s,events:stateEvent()};};
 const getPlayer=(s,id)=>s.contestants.find(p=>p.id===id);
+function settleBlackLot(s,lot,seller,buyer,price){
+ // Atomic settlement is shared by seller acceptance and buyer counteracceptance.
+ if(!lot||!seller||!buyer||seller.bankrupt||buyer.bankrupt||seller.id===buyer.id||
+    !s.players.some(p=>p.id===seller.id)||!s.players.some(p=>p.id===buyer.id)||
+    inventoryCount(s,buyer)>=MAX_ITEMS||!has(buyer,price)||lot.item.acquiredRound===s.round)
+    return false;
+ add(buyer,price,-1);
+ const net={gold:0,crystals:0,parts:0};
+ for(const k of RESOURCES)net[k]=price[k]-Math.ceil(price[k]*blackFee(s));
+ add(seller,net);
+ const item=lot.item;
+ item.history.push('Анонимный рынок');item.acquiredRound=s.round;
+ buyer.items.push(item);awardSaleTrait(s,seller,item,true);applyRelationship(s,seller,buyer);
+ s.blackLots=s.blackLots.filter(l=>l.id!==lot.id);increment(s,'blackSales');
+ issue(s,'Анонимный лот продан. Посредник удержал '+Math.round(blackFee(s)*100)+'% комиссии.');
+ return true;
+}
 function action(s,id,v){
   const me=getPlayer(s,id),active=s.contestants[s.turnIndex];
   if(!me)return failure(s,id,'Игрок не найден.');
@@ -459,6 +492,25 @@ function action(s,id,v){
     lot.bids=lot.bids.filter(b=>b.buyer!==id);
     return success(s);
   }
+  if(v.type==='black_counter'){
+    const lot=s.blackLots.find(l=>l.id===v.lotId);
+    if(!isBlackRound(s)||!lot||lot.seller!==id)return failure(s,id,'Встречную цену может предложить только анонимный продавец.');
+    const bid=lot.bids.find(b=>b.id===v.bidId);
+    if(!bid||bid.counter)return failure(s,id,'Ставка устарела или встречная цена уже отправлена.');
+    const offer=wallet(v.offer);
+    if(!offer||!nonzero(offer))return failure(s,id,'Встречная цена должна содержать положительную сумму.');
+    bid.counter={id:'bcounter-'+(++s.blackSeq),offer};
+    return success(s);
+  }
+  if(v.type==='black_counter_accept'){
+    const lot=s.blackLots.find(l=>l.id===v.lotId);
+    const bid=lot?.bids.find(b=>b.id===v.bidId&&b.buyer===id),counter=bid?.counter;
+    if(!isBlackRound(s)||!lot||!counter||counter.id!==v.counterId)
+      return failure(s,id,'Встречное предложение больше недоступно.');
+    if(!settleBlackLot(s,lot,getPlayer(s,lot.seller),me,counter.offer))
+      return failure(s,id,'Не хватает ресурсов, свободного места или предложение устарело.');
+    return success(s);
+  }
   if(v.type==='black_inspect'){
     const lot=s.blackLots.find(l=>l.id===v.lotId);
     const cost=inspectionCost(me,true,s);
@@ -476,21 +528,8 @@ function action(s,id,v){
     const lot=s.blackLots.find(l=>l.id===v.lotId);
     if(!lot||lot.seller!==id)return failure(s,id,'Только владелец может принять ставку.');
     const bid=lot.bids.find(b=>b.id===v.bidId),buyer=bid&&getPlayer(s,bid.buyer);
-    if(!buyer||buyer.bankrupt||!s.players.some(p=>p.id===buyer.id)||inventoryCount(s,buyer)>=MAX_ITEMS
-       ||!has(buyer,bid.offer)||lot.item.acquiredRound===s.round)
+    if(!bid||!settleBlackLot(s,lot,me,buyer,bid.offer))
       return failure(s,id,'Ставка устарела либо у покупателя нет ресурсов.');
-    add(buyer,bid.offer,-1);
-    const net={gold:0,crystals:0,parts:0};
-    for(const k of RESOURCES)net[k]=bid.offer[k]-Math.ceil(bid.offer[k]*blackFee(s));
-    add(me,net);
-    const item=lot.item;
-    // The buyer sees an anonymized provenance hop, never the intermediary's seller ID.
-    item.history.push('Анонимный рынок');item.acquiredRound=s.round;
-    buyer.items.push(item);
-    awardSaleTrait(s,me,item,true);
-    applyRelationship(s,me,buyer);
-    s.blackLots=s.blackLots.filter(l=>l.id!==lot.id);increment(s,'blackSales');
-    issue(s,'Анонимный лот продан. Посредник удержал '+Math.round(blackFee(s)*100)+'% комиссии.');
     return success(s);
   }
   if(v.type==='repack'){
@@ -671,7 +710,12 @@ function viewForPlayer({state,player}){
       id:l.id,item:{name:publicItem(l.item).name,rarity:spec(l.item).rarity},ask:{...l.ask},bidCount:l.bids.length,
       mine:l.seller===me?.id,
       myBid:l.bids.find(b=>b.buyer===me?.id)?.offer||null,
-      bids:l.seller===me?.id?l.bids.map(b=>({id:b.id,offer:{...b.offer}})):[],
+      myCounter:(()=>{
+        const bid=l.bids.find(b=>b.buyer===me?.id&&b.counter);
+        return bid?{bidId:bid.id,id:bid.counter.id,offer:{...bid.counter.offer}}:null;
+      })(),
+      bids:l.seller===me?.id?l.bids.map(b=>({id:b.id,offer:{...b.offer},
+        counter:b.counter?{id:b.counter.id,offer:{...b.counter.offer}}:null})):[],
       inspection:me?.blackInspections?.find(i=>i.itemId===l.item.id)||null
     })),
     deals:me?s.deals.filter(d=>d.from===me.id||d.to===me.id).map(d=>({

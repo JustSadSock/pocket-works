@@ -11,7 +11,7 @@ import {createDebugState,debugSetItem,debugCommand} from './debug-state.js';
 
 const debugPreview=new URLSearchParams(location.search).has('debugPreview');
 installMobileRuntime();
-if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.18.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
+if(!debugPreview)createWorkshopMode({appName:'Чёрная барахолка',version:'0.19.0',cachePrefix: 'black-bazaar-',storageNamespace: 'pocket-works:black-bazaar',onReset(){localStorage.removeItem('black-bazaar:name');}});
 
 const GAME_ID='black-bazaar';
 const ORIGIN=location.origin+'/pocketnet';
@@ -73,7 +73,7 @@ function specialLine(t){
 }
 let onlinePlayerIds=null;
 let net=null,me=null,state=null,roomId='',mode='home',connecting=false,connected=false;
-let roomVersion=debugPreview?'v21':null;
+let roomVersion=debugPreview?'v22':null;
 let serverClockOffset=0,lastClockPing=0;
 const serverTime=()=>Date.now()+serverClockOffset;
 function calibrateServerClock(snapshot){
@@ -176,7 +176,7 @@ function renderHome(){
 }
 function renderLobby(){
   mode='lobby';activeSheet=null;selectedArtifact=null;playStarted=false;document.body.classList.remove('sheet-open');
-  const all=state?.players||[],host=state?.host===me?.id,canKick=host&&['v16','v17','v18','v19','v20','v21'].includes(roomVersion),short=roomId.slice(0,8).toUpperCase();
+  const all=state?.players||[],host=state?.host===me?.id,canKick=host&&['v16','v17','v18','v19','v20','v21','v22'].includes(roomVersion),short=roomId.slice(0,8).toUpperCase();
   const modern=Number(roomVersion?.slice(1)||0)>=19;
   const mine=all.find(p=>p.id===me?.id);
   const chosen=avatarOf(mine);
@@ -343,6 +343,30 @@ function tradePanel(you){
  return html+'</div>';
 }
 
+function blackCounterSeller(lot){
+ if(!lot.bids?.length)return '<p class="muted">Пока нет предложений.</p>';
+ return lot.bids.map(b=>'<section class="anonymous-negotiation" data-counter-bid="'+esc(b.id)+'">'+
+  '<strong>Закрытая ставка · '+esc(amounts(b.offer))+'</strong>'+
+  '<button type="button" data-action="black-accept" data-id="'+esc(lot.id)+'" data-bid="'+esc(b.id)+'">Продать по исходной ставке</button>'+
+  (b.counter?'<p class="counter-pending">Встречная цена отправлена · '+esc(amounts(b.counter.offer))+'</p>':
+   '<details class="quick-expand"><summary>Запросить другую цену</summary>'+
+   '<form data-form="black-counter" data-lot-id="'+esc(lot.id)+'" data-bid-id="'+esc(b.id)+'" class="stack">'+
+   resourceFields('offer',b.offer)+'<button type="submit" class="primary">Отправить встречную цену</button></form></details>')+
+  '</section>').join('');
+}
+function blackCounterBuyer(lot,you){
+ const counter=lot.myCounter;
+ if(!counter)return '';
+ const affordable=keys.every(k=>(you.resources[k]||0)>=(counter.offer[k]||0));
+ const available=you.items.length+(you.escrowItems?.length||0)<4;
+ return '<div class="anonymous-counter" role="status">'+
+  '<strong>Посредник принёс встречную цену</strong>'+
+  '<p>'+esc(amounts(counter.offer))+' · исходная ставка остаётся действующей</p>'+
+  '<button type="button" class="primary" data-action="black-counter-accept" data-id="'+esc(lot.id)+'" data-bid="'+esc(counter.bidId)+'" data-counter="'+esc(counter.id)+'"'+
+   ((!affordable||!available)?' disabled':'')+'>'+svgIcon('check',17)+' Купить по встречной цене</button>'+
+  ((!affordable||!available)?'<small>Нужны ресурсы и свободное место в инвентаре.</small>':'')+
+  '<small>Не подходит? Отзови ставку или отправь новую.</small></div>';
+}
 function blackMarketBlock(you){
  if(!state.blackMarket)return '';
  let out='<div class="panel"><h2>Анонимный чёрный рынок · раунд '+state.round+'</h2>'+
@@ -358,10 +382,7 @@ function blackMarketBlock(you){
     (inspected.curse?'<p class="error">'+curseHint(inspected.curse)+'</p>':'');
   if(lot.mine){
    out+='<p><strong>Твой анонимный лот</strong></p>'+
-    (lot.bids.length?lot.bids.map(b=>'<div class="row"><span>Ставка '+esc(amounts(b.offer))+'</span>'+
-      '<button type="button" data-action="black-accept" data-id="'+esc(lot.id)+
-      '" data-bid="'+esc(b.id)+'">Продать по ставке</button></div>').join(''):
-      '<p class="muted">Пока предложений нет.</p>')+
+    blackCounterSeller(lot)+
     '<button type="button" data-action="black-cancel" data-id="'+esc(lot.id)+'">Снять с рынка</button>';
   }else if(!you.bankrupt){
    const cost=you.inspectionPrices?.black??25;
@@ -370,7 +391,7 @@ function blackMarketBlock(you){
    out+='<form data-form="black-bid" data-lot-id="'+esc(lot.id)+'" class="stack">'+
      '<p>Твоя закрытая ставка:</p>'+resourceFields('offer',lot.myBid||lot.ask)+
      '<button type="submit" class="primary">Отправить закрытую ставку</button></form>';
-   if(lot.myBid)out+='<button type="button" data-action="black-withdraw" data-id="'+esc(lot.id)+'">Отозвать свою ставку</button>';
+   if(lot.myBid)out+=blackCounterBuyer(lot,you)+'<button type="button" data-action="black-withdraw" data-id="'+esc(lot.id)+'">Отозвать свою ставку</button>';
   }
   out+='</section>';
  }
@@ -402,12 +423,12 @@ function actionsBlock(you){return quickActions(you,state.turnId===me?.id);}
 function captureDraftFocus(){
  const field=document.activeElement,form=field?.closest?.('form[data-form]');
  if(!form||!app.contains(form)||!field.name)return null;
- return {id:form.dataset.form+':'+(form.dataset.dealId||form.dataset.lotId||''),name:field.name,
+ return {id:form.dataset.form+':'+(form.dataset.dealId||form.dataset.lotId||'')+':'+(form.dataset.bidId||''),name:field.name,
   selection:field.tagName==='INPUT'&&field.type!=='number'&&typeof field.selectionStart==='number'?[field.selectionStart,field.selectionEnd]:null};
 }
 function restoreDraftFocus(focus){
  if(!focus)return;
- const form=[...app.querySelectorAll('form[data-form]')].find(f=>f.dataset.form+':'+(f.dataset.dealId||f.dataset.lotId||'')===focus.id);
+ const form=[...app.querySelectorAll('form[data-form]')].find(f=>f.dataset.form+':'+(f.dataset.dealId||f.dataset.lotId||'')+':'+(f.dataset.bidId||'')===focus.id);
  const field=[...(form?.elements||[])].find(x=>x.name===focus.name);
  if(!field||field.disabled||field.closest('[hidden]'))return;
  field.focus({preventScroll:true});
@@ -441,17 +462,17 @@ function tableTradeActions(you){
 function collectDrafts(){
  const current={};
  for(const form of app.querySelectorAll('form[data-form]')){
-  const id=form.dataset.form+':'+(form.dataset.dealId||form.dataset.lotId||'');
+  const id=form.dataset.form+':'+(form.dataset.dealId||form.dataset.lotId||'')+':'+(form.dataset.bidId||'');
   current[id]=Object.fromEntries(new FormData(form).entries());
-  if(form.dataset.form==='counter')current[id].expanded=form.closest('details')?.open;
+  if(['counter','black-counter'].includes(form.dataset.form))current[id].expanded=form.closest('details')?.open;
  }
  return current;
 }
 function restoreDrafts(drafts){
  for(const form of app.querySelectorAll('form[data-form]')){
-  const vals=drafts[form.dataset.form+':'+(form.dataset.dealId||form.dataset.lotId||'')];
+  const vals=drafts[form.dataset.form+':'+(form.dataset.dealId||form.dataset.lotId||'')+':'+(form.dataset.bidId||'')];
   if(!vals)continue;
-  if(form.dataset.form==='counter'&&vals.expanded)form.closest('details').open=true;
+  if(['counter','black-counter'].includes(form.dataset.form)&&vals.expanded)form.closest('details').open=true;
   if(form.dataset.form==='deal'&&vals.to){
    const target=state?.players?.find(p=>p.id===vals.to);
    const requested=form.querySelector('#dealWantItem');
@@ -620,14 +641,13 @@ function artifactDetailBlock(you){
    artifactFacts(ownEscrow||inspected||{},{showPositive:!!ownEscrow,showNegative:!!(ownEscrow||inspected),inspection:!ownEscrow})+
    '<div class="detail-actions">'+
    (lot.mine?
-     (lot.bids?.length?lot.bids.map(b=>'<div class="detail-bid"><span>'+esc(amounts(b.offer))+'</span>'+
-        '<button type="button" data-action="black-accept" data-id="'+esc(lot.id)+'" data-bid="'+esc(b.id)+'">Принять</button></div>').join(''):'<p class="muted">Пока нет ставок.</p>')+
-      '<button type="button" data-action="black-cancel" data-id="'+esc(lot.id)+'">Вернуть предмет</button>':
+     blackCounterSeller(lot)+
+       '<button type="button" data-action="black-cancel" data-id="'+esc(lot.id)+'">Вернуть предмет</button>':
      (!locked?
        (!inspected?'<button type="button" data-action="black-inspect" data-id="'+esc(lot.id)+'" '+(you.resources.gold<(you.inspectionPrices?.black??25)?'disabled':'')+'>'+svgIcon('eye')+' Экспертиза · '+(you.inspectionPrices?.black??25)+'</button>':'')+
        '<button type="button" class="primary" data-action="black-bid-asking" data-id="'+esc(lot.id)+'" '+(keys.every(k=>(you.resources[k]||0)>=(lot.ask[k]||0))?'':'disabled')+'>'+svgIcon('check')+' Предложить цену · '+esc(amounts(lot.ask))+'</button><details class="quick-expand"><summary>'+svgIcon('gavel',18)+' Другая цена</summary><form class="detail-offer-form" data-form="detail-black-bid" data-lot-id="'+esc(lot.id)+'">'+
        resourceFields('offer',lot.myBid||lot.ask)+'<button type="submit" class="primary">Предложить</button></form></details>'+
-       (lot.myBid?'<button type="button" data-action="black-withdraw" data-id="'+esc(lot.id)+'">Отозвать ставку</button>':'')
+       (lot.myBid?blackCounterBuyer(lot,you)+'<button type="button" data-action="black-withdraw" data-id="'+esc(lot.id)+'">Отозвать ставку</button>':'')
        :'<p class="muted">Ставки недоступны.</p>'))+
    '</div>';
  }else return '<div class="panel">Предмет не найден.</div>';
@@ -681,7 +701,7 @@ function renderPlay(){
  const active=state.turnId===me?.id,plan=forecastEconomy(you.resources,you.items);
  const seats=state.players.map(p=>{
   const self=p.id===me?.id,available=!self&&playerOnline(p)&&!p.bankrupt&&!you.bankrupt;
-  const moderate=['v16','v17','v18','v19','v20','v21'].includes(roomVersion)&&state.host===me?.id&&!self&&!p.bankrupt;
+  const moderate=['v16','v17','v18','v19','v20','v21','v22'].includes(roomVersion)&&state.host===me?.id&&!self&&!p.bankrupt;
   return '<button type="button" class="seat '+(p.id===state.turnId?'is-turn ':'')+(self?'is-me ':'')+
   '" data-action="'+(self?'open-sheet':'player-actions')+'" '+(self?'data-sheet="inventory"':'data-player="'+esc(p.id)+'"')+
   (!self&&!available&&!moderate?' disabled':'')+' aria-label="'+esc(p.name||p.character)+'">'+
@@ -949,7 +969,7 @@ app.addEventListener('click',event=>{
    app.querySelector('.player-popover')?.remove();
    const pop=document.createElement('div');pop.className='player-popover';pop.setAttribute('role','dialog');
    pop.innerHTML='<div class="player-popover-head"><strong>'+esc(player.name||player.character)+'</strong><button type="button" data-action="close-player-actions" aria-label="Закрыть">×</button></div>'+reputationBlock(player)+(!playerOnline(player)||player.bankrupt||state.you.bankrupt?'<p>Обмен недоступен</p>':'<button type="button" class="primary" data-action="trade-with" data-player="'+esc(player.id)+'">'+svgIcon('trade',20)+' Обмен / подарок</button>')+'<button type="button" data-action="open-sheet" data-sheet="players">'+svgIcon('people',19)+' Участники</button>'+
-   (['v16','v17','v18','v19','v20','v21'].includes(roomVersion)&&state.host===me?.id&&!player.bankrupt?'<button type="button" class="kick-player" data-action="kick-player" data-player="'+esc(player.id)+'">'+'Исключить из партии</button>':'');
+   (['v16','v17','v18','v19','v20','v21','v22'].includes(roomVersion)&&state.host===me?.id&&!player.bankrupt?'<button type="button" class="kick-player" data-action="kick-player" data-player="'+esc(player.id)+'">'+'Исключить из партии</button>':'');
    btn.closest('.player-seats')?.append(pop);sound.play('open');pop.querySelector('button')?.focus({preventScroll:true});return;
   }
   if(action==='close-player-actions'){app.querySelector('.player-popover')?.remove();return;}
@@ -1005,7 +1025,16 @@ app.addEventListener('click',event=>{
   return;
  }
  if(action==='deal-cancel')return request({type:'deal_cancel',dealId:btn.dataset.id});
- if(action==='black-accept'){
+ if(action==='black-counter-accept'){
+   const lot=(state?.blackLots||[]).find(x=>x.id===btn.dataset.id);
+   const counter=lot?.myCounter;
+   if(!counter||counter.id!==btn.dataset.counter||counter.bidId!==btn.dataset.bid)return;
+   const fee=state.marketFeePercent??10;
+   if(confirm('Купить анонимный лот за '+amounts(counter.offer)+'? Продавец получит цену за вычетом '+fee+'% комиссии.'))
+    request({type:'black_counter_accept',lotId:lot.id,bidId:counter.bidId,counterId:counter.id});
+   return;
+  }
+  if(action==='black-accept'){
   const lot=(state?.blackLots||[]).find(x=>x.id===btn.dataset.id);
    const offer=lot?.bids?.find(b=>b.id===btn.dataset.bid)?.offer;
    if(!offer){message('Ставка уже недоступна.',true);return;}
@@ -1065,6 +1094,7 @@ app.addEventListener('submit',event=>{
  });
  if(type==='black-post')return request({type:'black_post',itemId:data.get('itemId'),ask:wallet('ask')});
  if(type==='black-bid')return request({type:'black_bid',lotId:form.dataset.lotId,offer:wallet('offer')});
+  if(type==='black-counter')return request({type:'black_counter',lotId:form.dataset.lotId,bidId:form.dataset.bidId,offer:wallet('offer')});
  if(type==='repack')return request({type:'repack',itemId:data.get('itemId'),aliasIndex:Number(data.get('aliasIndex'))});
  if(type==='deal')return request({type:'deal_propose',
    to:data.get('to'),give:wallet('give'),want:wallet('want'),

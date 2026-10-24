@@ -96,11 +96,15 @@ export function createDebugState(scene='four'){
  if(scene==='buyer'){state.you.inspections=[{itemId:'listing-cat',negative:{type:'crystals',value:6},curse:null}];}
  if(scene==='black'){
   const mine=debugItem(2,'escrow-spider');
+  // Keep a spare slot so the fixture can complete an incoming counteroffer.
+  you.items=owned.slice(0,2);
   you.escrowItems=[mine];
   state.blackLots=[
-   {id:'black-lot-1',item:{name:'Тёмная реликвия',rarity:'редкий'},ask:wallet(85),bidCount:2,mine:false,myBid:null,bids:[],inspection:null},
-   {id:'black-lot-2',item:publicItem(mine),ask:wallet(95),bidCount:1,mine:true,myBid:null,
-    bids:[{id:'sealed-bid',offer:wallet(105)}],inspection:null}
+   {id:'black-lot-1',item:{name:'Тёмная реликвия',rarity:'редкий'},ask:wallet(85),bidCount:2,mine:false,
+    myBid:wallet(70),myCounter:{id:'bcounter-fixture',bidId:'bbid-buyer',offer:wallet(92)},bids:[],inspection:null},
+   {id:'black-lot-2',item:publicItem(mine),ask:wallet(95),bidCount:2,mine:true,myBid:null,myCounter:null,
+    bids:[{id:'sealed-bid',offer:wallet(105),counter:{id:'bcounter-sent',offer:wallet(115)}},
+     {id:'sealed-bid-2',offer:wallet(80),counter:null}],inspection:null}
   ];
   state.players.slice(1).forEach(p=>{p.resources=null;p.inventory=[];p.items=null});
  }
@@ -297,7 +301,24 @@ export function debugCommand(s,cmd){
   if(lot){lot.myBid=null;lot.bidCount=Math.max(0,lot.bidCount-1)}
   log='Ставка отозвана.';break;
  }
- case 'black_inspect':{
+ case 'black_counter':{
+   const lot=s.blackLots.find(x=>x.id===cmd.lotId),bid=lot?.bids?.find(x=>x.id===cmd.bidId);
+   if(!lot?.mine||!bid||bid.counter)return {state:s,error:'Предложение недоступно'};
+   if(!cmd.offer||!['gold','crystals','parts'].some(k=>(cmd.offer[k]||0)>0))return {state:s,error:'Цена должна быть ненулевой'};
+   bid.counter={id:'bcounter-'+(s.revision+1),offer:{...cmd.offer}};
+   log='Посредник доставил встречную цену.';break;
+  }
+  case 'black_counter_accept':{
+   const lot=s.blackLots.find(x=>x.id===cmd.lotId),counter=lot?.myCounter;
+   if(!lot||lot.mine||!counter||counter.id!==cmd.counterId||counter.bidId!==cmd.bidId)return {state:s,error:'Встречная цена устарела'};
+   if(!['gold','crystals','parts'].every(k=>(you.resources[k]||0)>=(counter.offer[k]||0))||you.items.length+you.escrowItems.length>=4)
+    return {state:s,error:'Недостаточно ресурсов или мест'};
+   change(you.resources,counter.offer,-1);
+   you.items.push(debugItem(4,lot.id,s.round));
+   s.blackLots=s.blackLots.filter(x=>x.id!==lot.id);
+   log='Анонимный лот куплен по встречной цене.';break;
+  }
+  case 'black_inspect':{
   const lot=s.blackLots.find(x=>x.id===cmd.lotId);if(!lot)return {state:s,error:'Лот исчез'};
   lot.inspection={originalName:'Сундук-мимик',negative:{type:'gold',value:25}};
   change(you.resources,wallet(25),-1);log='Покупатель оплатил независимую экспертизу.';break;

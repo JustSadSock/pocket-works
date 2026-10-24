@@ -254,3 +254,16 @@ test('Bazaar v20 uses alarm-driven deadlines with no idle SQLite rewrites',()=>{
  assert.match(app,/type:'time_ping',stamp:lastClockPing/,'new client sends a clock probe rather than a write-heavy tick');
  assert.match(app,/serverClockOffset=pong\.serverNow-\(now\+pong\.stamp\)\/2/);
 });
+
+test('Bazaar v22 black counters have matching UI and are not silently renamed',()=>{
+ const server=readFileSync(join(root,'server/module.ts'),'utf8');
+ const client=readFileSync(join(root,'app.js'),'utf8');
+ const hub=readFileSync(join(root,'../../pocketnet/hub.mjs'),'utf8');
+ assert.match(server,/if\(v\.type==='black_counter'\)/);
+ assert.match(server,/if\(v\.type==='black_counter_accept'\)/);
+ assert.match(server,/function settleBlackLot\(/);
+ assert.match(client,/data-form="black-counter"/);
+ assert.match(client,/data-action="black-counter-accept"/);
+ assert.match(client,/type:'black_counter_accept'/);
+ assert.match(hub,/version IN \(\?,\?,\?\)/);
+});
