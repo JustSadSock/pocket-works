@@ -27,7 +27,8 @@
         "tests/v7-preview.test.mjs",
         "tests/story-stage4-v8.test.mjs",
         "tests/finale-v9.test.mjs",
-        "tests/archive-stage6.test.mjs"
+        "tests/archive-stage6.test.mjs",
+        "tests/stress-stage8-v10.test.mjs"
       ]
     },
     {

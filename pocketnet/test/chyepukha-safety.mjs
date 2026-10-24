@@ -152,6 +152,32 @@ try{
   const release=await replacement.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='finished');
   assert.equal(release.event.payload.stories.length,2);
  }finally{await shutdown(replacement)}
+ // A reconnecting author cancels the stale one-time seat ticket. This must
+ // stay cancelled after that author disconnects again (real Durable Object).
+ host.send('leave_room');
+ await sleep(80);
+ host.send('create_room',{gameId:'chyepukha'});
+ const recoveryRoom=await host.next('room_joined',m=>m.roomId!==modRoom);
+ guest.send('join_room',{roomId:recoveryRoom.roomId});
+ await guest.next('room_joined',m=>m.roomId===recoveryRoom.roomId);
+ host.send('game_message',{payload:{type:'start'}});
+ await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.phase==='writing'&&m.roomId===recoveryRoom.roomId);
+ guest.send('leave_room');
+ await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.players.some(p=>p.id===guestId&&p.departed)&&m.roomId===recoveryRoom.roomId);
+ host.send('game_message',{payload:{type:'open_seat',seatId:guestId}});
+ const claimEvent=await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.claim?.code&&m.roomId===recoveryRoom.roomId);
+ const staleTicket=claimEvent.event.payload.claim.code;
+ guest.send('join_room',{roomId:recoveryRoom.roomId});
+ const authorReturn=await guest.next('room_joined',m=>m.roomId===recoveryRoom.roomId);
+ assert.equal(authorReturn.state.claim,null,'rejoining author cancels replacement claim');
+ guest.send('leave_room');
+ await host.next('game_event',m=>m.event?.type==='state'&&m.event.payload.players.some(p=>p.id===guestId&&p.departed)&&m.roomId===recoveryRoom.roomId&&m.event.payload.claim===null);
+ const hijacker=await channel(await session('Chy Stale Code'));
+ try{
+  hijacker.send('join_room',{roomId:recoveryRoom.roomId,claimCode:staleTicket});
+  const denied=await hijacker.next('error',m=>m.code==='invalid_replacement_code');
+  assert.equal(denied.code,'invalid_replacement_code');
+ }finally{await shutdown(hijacker)}
  console.log('Chyepukha current: safe pause, server-authorized kick, no rejoin and one-time seat replacement');
  console.log('Chyepukha current: durable seat rejoin, idempotent receipts and partial story survive');
 }finally{await Promise.allSettled([shutdown(host),shutdown(guest)])}

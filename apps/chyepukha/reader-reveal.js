@@ -8,7 +8,7 @@ export const clampPage=(requested,length)=>Math.max(0,Math.min(Math.max(0,length
  Number.isFinite(requested)?Math.trunc(requested):0));
 export const nextPage=(current,length)=>clampPage(current+1,length);
 export const previousPage=(current,length)=>clampPage(current-1,length);
-export const supportsLiveReactions=version=>version==='v9';
+export const supportsLiveReactions=version=>version==='v9'||version==='v10';
 
 export function chapterReader(story,page,escape,actions={}){
  const prev=actions.prev||'prev-part',next=actions.next||'next-part',nextStory=actions.nextStory||'next-story';

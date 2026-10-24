@@ -89,3 +89,17 @@ for(const [label,width,height] of [['mobile',390,844],['small',320,568],['landsc
   await expect(page.locator('[data-act="react-story"][data-reaction="heart"]')).toHaveAttribute('aria-pressed','true');
  });
 }
+
+test('v10 keeps the page-turner and live reactions on the restored version',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(preview('results-v10'));
+ await expect(page.locator('[data-act="reader-pages"]')).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('.page-progress')).toContainText('АРКУШ 01 / 03');
+ await page.locator('[data-act="next-part"]').click();
+ await expect(page.locator('.page-progress')).toContainText('АРКУШ 02 / 03');
+ const like=page.locator('[data-act="react-story"][data-reaction="heart"]');
+ await like.click();
+ await expect(like).toHaveAttribute('aria-pressed','true');
+ await page.locator('[data-act="next-story"]').first().click();
+ await expect(page.locator('.page-progress')).toContainText('АРКУШ 01 / 03');
+});

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {chapterReader,reactionBar,clampPage,nextPage,previousPage,REACTION_OPTIONS,supportsLiveReactions} from '../reader-reveal.js';
 const file=path=>readFileSync(new URL('../../../'+path,import.meta.url),'utf8');
-const source=file('apps/chyepukha/server/module.ts');
+const source=file('pocketnet/module-versions/chyepukha/v9.ts');
 const game=new Function(source.replace(/export const /g,'const ').replace(/export default module;/,'return module;'))();
 const players=Array.from({length:4},(_,i)=>({id:'player-'+i,name:'Автор '+i}));
 const make=count=>{
@@ -27,11 +27,11 @@ const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>'
 
 test('v9 adds a snapshot only and maintains older room rules',()=>{
  const lock=JSON.parse(file('pocketnet/modules.lock.json'));
- assert.equal(lock.chyepukha.current,'v9');
- assert.deepEqual(lock.chyepukha.versions,Array.from({length:9},(_,i)=>'v'+(i+1)));
+ assert.ok(lock.chyepukha.versions.includes('v9'));
+ assert.deepEqual(lock.chyepukha.versions.slice(0,9),Array.from({length:9},(_,i)=>'v'+(i+1)));
  assert.equal(file('pocketnet/module-versions/chyepukha/v9.ts'),source);
  assert.notEqual(file('pocketnet/module-versions/chyepukha/v8.ts'),source);
- assert.match(file('pocketnet/hub.mjs'),/\['v6','v7','v8','v9'\]/);
+ assert.match(file('pocketnet/hub.mjs'),/\['v6','v7','v8','v9','v10'\]/);
 });
 
 test('all reader modes preserve full text and the pager cannot overrun an issue',()=>{
@@ -113,6 +113,7 @@ test('live reaction controls are v9-only, accessible and visually track personal
  assert.deepEqual(REACTION_OPTIONS.map(x=>x.id),['laugh','surprised','heart']);
  assert.equal(supportsLiveReactions('v8'),false);
  assert.equal(supportsLiveReactions('v9'),true);
+ assert.equal(supportsLiveReactions('v10'),true);
  const view={reactionTotals:{'sheet-0':{laugh:3,surprised:1,heart:0}},myReactions:{'sheet-0':'laugh'}};
  assert.equal(reactionBar({storyId:'sheet-0',view,version:'v8',escape}),'');
  const html=reactionBar({storyId:'sheet-0',view,version:'v9',escape});
