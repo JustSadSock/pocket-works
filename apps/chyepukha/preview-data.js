@@ -2,7 +2,7 @@
 const SETS=[{"id":"characterArc","label":"Цілісна історія"},{"id":"collapsingPlan","label":"Ланцюг провалів"},{"id":"detectiveCase","label":"Детективна справа"},{"id":"nightSurvival","label":"Ніч виживання"},{"id":"relationshipCrash","label":"Емоційний розлом"},{"id":"questAdventure","label":"Пригодницький квест"},{"id":"heistOperation","label":"Пограбування / операція"},{"id":"sciFiIncident","label":"Науково-фантастичний інцидент"},{"id":"roadTrip","label":"Дорожня пригода"},{"id":"courtroomScandal","label":"Суд і скандал"}];
 const GENRES=[{"id":"groundedDrama","label":"Приземлена драма"},{"id":"absurdComedy","label":"Абсурдна комедія"},{"id":"horror","label":"Горор"},{"id":"detectiveNoir","label":"Нуарний детектив"},{"id":"romanticMelodrama","label":"Романтична мелодрама"},{"id":"fantasyEpic","label":"Фентезійна епіка"},{"id":"sciFiParanoia","label":"Науково-фантастична параноя"},{"id":"cyberpunk","label":"Кіберпанк"},{"id":"cozyWhimsy","label":"Затишна дивина"},{"id":"postApocalypse","label":"Постапокаліпсис"},{"id":"mythicLegend","label":"Міф і легенда"},{"id":"satire","label":"Сатира"}];
 export function demoView(id){
- if(['moderation-host','moderation-paused','moderation-guest'].includes(id)){
+ if(['moderation-host','moderation-paused','moderation-guest','moderation-v7'].includes(id)){
   const d=demoView('writing-first');
   d.view.paused=id==='moderation-paused';
   d.view.host='qa-host';d.view.hostOfflineSince=id==='moderation-guest'?Date.now()-330000:0;
@@ -36,7 +36,7 @@ export function demoView(id){
   d.storyId=id==='results-second'?'sheet-1':'sheet-0';
   if(id==='comic')d.modal='comic-prompt';
  }else{
-  v.phase='writing';v.round=['writing-first','writing-selection','writing-zero','leave'].includes(id)?0:1;v.total=3;
+  v.phase='writing';v.round=['writing-first','writing-selection','writing-zero','leave','writing-v7','writing-v7-selection'].includes(id)?0:id==='writing-v7-final'?2:1;v.total=3;
   v.players=people;v.settings={...settings,visibleTailWords:id==='writing-zero'?0:3};
   v.sheet={id:'sheet-0',starter:'Марта',set:'collapsingPlan',setLabel:'Ланцюг провалів',genre:'absurdComedy',genreLabel:'Абсурдна комедія',gender:v.round?'female':null,tail:v.round?'директора дощ валізу':'',
    nextQuestion:v.round?'Як герої намагалися виправити ситуацію?':'Який задум спав герою на думку?',question:v.round?{prompt:'Що або хто внесли перший серйозний збій?',guidance:'Додай несподіваний поворот.',creativeFreedom:'Залиши простір для інших.'}:{prompt:'Хто вліз у цю авантюру?',guidance:'Представ героя.',creativeFreedom:'Можеш додати дивну дрібницю.'}};
@@ -44,8 +44,17 @@ export function demoView(id){
   if(v.waiting)v.players.forEach((p,i)=>{p.submitted=i!==2});
   if(id==='offline')d.connected=false;
   if(id==='leave')d.modal='leave';
-  if(id==='writing-selection'){d.writerStep='select';d.answer='Архіваріус вирішив продати вчорашній дощ як музейний експонат але передумав';d.selection=[0,2,4];}
+  if(id==='writing-selection'||id==='writing-v7-selection'){d.writerStep='select';d.answer='Архіваріус вирішив продати вчорашній дощ як музейний експонат але передумав';d.selection=[0,2,4];}
   if(id==='writing-zero')d.answer='Маленький цирк вирішив переїхати на Місяць просто у неділю.';
+  if(id==='writing-v7'||id==='writing-v7-selection') {
+    v.sheet.question={prompt:'Хто вирішив утнути щось ризиковане?',guidance:'Назви лише героя й одну кумедну рису. Одна влучна безглузда деталь краща за довге пояснення жарту.',creativeFreedom:'Не розкривай план, місце дії, перебіг подій чи фінал.',stage:'Авантюрист'};
+    v.sheet.nextQuestion='Що саме герой задумав зробити?';
+  }
+  if(id==='writing-v7-final') {
+    v.sheet.question={prompt:'Яким став остаточний результат усієї авантюри?',guidance:'Закрий історію конкретним наслідком і комічним післясмаком. Заверши все конкретним абсурдним наслідком; не пояснюй жарт.',creativeFreedom:'Не запускай нову сюжетну лінію — завершуй уже розпочату.',stage:'Фінал'};
+    v.sheet.nextQuestion='';
+    d.answer='Усе закінчилося тим, що відчайдушного героя обрали директором музею провалів.';
+  }
  }
  return d;
 }
