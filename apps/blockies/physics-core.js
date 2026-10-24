@@ -83,3 +83,64 @@ export function isLaneClear(laneX,board,players,ownerId,numPlayers) {
             if(board[y]?.[x]||otherPieceOccupies(x,y,players,ownerId))return false;
     return true;
 }
+
+/** Pull one tetromino from a 7-bag without mutating the supplied bag. */
+export function drawSevenBag(bag,random) {
+    const remaining=bag.length?bag.slice():PIECE_TYPES.slice();
+    if(!bag.length){
+        for(let i=remaining.length-1;i>0;i--){
+            const j=Math.floor(random()*(i+1));
+            [remaining[i],remaining[j]]=[remaining[j],remaining[i]];
+        }
+    }
+    return {type:remaining.pop(),bag:remaining};
+}
+
+/** Hold never consumes the next piece when exchanging with an occupied slot. */
+export function planHold(seat){
+    if(seat.gameOver||!seat.currentPiece||seat.holdUsed)return null;
+    const outgoing=seat.currentType||inferShapeType(seat.currentPiece);
+    if(!outgoing)return null;
+    return {outgoing,incoming:seat.holdType||null,consumeNext:!seat.holdType};
+}
+
+export function adjustLock(counter,resets) {
+    return counter>0&&resets<MAX_LOCK_RESETS
+        ?{lockCounter:0,lockResets:resets+1}
+        :{lockCounter:counter,lockResets:resets};
+}
+
+export function advanceLock(counter,elapsed,isOnLockedSurface) {
+    return isOnLockedSurface?counter+elapsed:0;
+}
+
+/** Same score contract for local co-op and server-authoritative co-op. */
+export function scoreLineClear(stats,linesCleared) {
+    if(linesCleared===0)return {
+        score:stats.score,lines:stats.lines,level:stats.level,
+        comboChain:0,lastClearDetail:null
+    };
+    const comboStep=stats.comboChain||0;
+    const comboMultiplier=1+0.1*comboStep;
+    const multiMultiplier=1+0.2*(linesCleared-1);
+    const perLineScore=Math.round(100*comboMultiplier*multiMultiplier);
+    const gained=perLineScore*linesCleared;
+    const lines=stats.lines+linesCleared;
+    const comboChain=comboStep+1;
+    return {
+        score:stats.score+gained,
+        lines,
+        level:Math.floor(lines/10)+1,
+        comboChain,
+        lastClearDetail:{
+            linesCleared,totalScore:gained,perLineScore,basePerLine:100,
+            comboChain,comboMultiplier,multiMultiplier,
+            streakBonusPercent:Math.round((comboMultiplier-1)*100),
+            multiBonusPercent:Math.round((multiMultiplier-1)*100)
+        }
+    };
+}
+
+export function intervalAfterClear(interval,linesCleared) {
+    return Math.max(100,interval*Math.pow(0.95,linesCleared));
+}
