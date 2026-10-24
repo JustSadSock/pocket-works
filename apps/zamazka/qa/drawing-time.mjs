@@ -17,7 +17,7 @@ function setup(){
  const message=(player,payload)=>module.onMessage({state,player,players,payload});
  return {state,message};
 }
-for(const seconds of [60,90,120,160,240,300,600]){
+for(const seconds of [120,180,240,300,600]){
  current=10_000;
  const {state,message}=setup();
  message(host,{type:'start',rounds:3,drawingSeconds:seconds});
@@ -55,16 +55,16 @@ for(const seconds of [60,90,120,160,240,300,600]){
  assert.equal(state.phase,'drawing');
  assert.equal(state.deadline-current,seconds*1000,'second round keeps same duration');
 }
-for(const invalid of [-1,45,360,601,NaN,'invalid',null]){
+for(const invalid of [-1,45,60,90,160,360,601,NaN,'invalid',null]){
  const {state,message}=setup();message(host,{type:'start',rounds:1,drawingSeconds:invalid});
- assert.equal(state.drawingSeconds,160,'invalid duration falls back to 2:40');
+ assert.equal(state.drawingSeconds,300,'invalid duration falls back to 5:00');
 }
 const {state:defaultState,message:defaultMessage}=setup();
 defaultMessage(guest,{type:'start',rounds:1,drawingSeconds:300});
 assert.equal(defaultState.phase,'lobby','guest cannot change the rules or start');
 defaultMessage(host,{type:'start',rounds:1});
-assert.equal(defaultState.drawingSeconds,160,'legacy client falls back to 2:40');
-// Zero is an intentional rule, not a missing setting or 2:40 fallback.
+assert.equal(defaultState.drawingSeconds,300,'legacy client falls back to 5:00');
+// Zero is an intentional rule, not a missing setting or 5:00 fallback.
 current=10_000;
 const untimed=setup(),U=untimed.state,M=untimed.message;
 M(host,{type:'start',rounds:3,drawingSeconds:0});
@@ -97,6 +97,8 @@ const ui=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 assert.match(ui,/id="drawingSeconds"/,'curator has a drawing duration control');
 assert.match(ui,/id="soloDrawingSeconds"/,'solo duration setting exists');
 assert.match(ui,/\[600,'10 минут'\]/,'ten minutes appears in shared online and solo duration choices');
+assert.match(ui,/\[180,'3 минуты'\]/,'three-minute duration is offered');
+assert.match(ui,/\[300,'5 минут · стандарт'\]/,'five minutes is visibly the default');
 assert.match(ui,/const DURATION_VALUES=DRAWING_TIME_OPTIONS\.map/,'solo validation derives from displayed timer options');
 assert.match(ui,/practice\.deadline>0/,'zero-deadline solo mode never advances from a timer');
 assert.match(ui,/view\.phase!=='drawing'\|\|!view\.deadline/,'zero-deadline online mode cannot auto-submit');
@@ -111,9 +113,22 @@ const normalizeClient=runInNewContext('(()=>{const DRAWING_TIME_OPTIONS='+displa
  ';const DURATION_VALUES=DRAWING_TIME_OPTIONS.map(([seconds])=>seconds);return '+normalizeExpression+';})()');
 assert.equal(normalizeClient(600),600,'solo selection keeps a 10-minute numeric choice');
 assert.equal(normalizeClient('600'),600,'solo saved choice of 10 minutes survives storage reload');
-assert.equal(normalizeClient(601),160,'unsupported times still fall back to 2:40');
+assert.equal(normalizeClient(601),300,'unsupported time falls back to 5:00');
+assert.equal(normalizeClient(160),300,'old 2:40 preference becomes new five-minute default');
+assert.equal(normalizeClient(60),300,'unsupported one-minute preference falls back to five minutes');
+assert.equal(normalizeClient(180),180,'three-minute setting is supported');
+assert.equal(Number(ui.match(/^let drawingSecondsChoice=(\d+);$/m)?.[1]),300,'new online room defaults to five minutes');
+assert.equal(Number(ui.match(/^let soloDrawingSecondsChoice=normalizedDuration\(localStorage\.getItem\(SOLO_DURATION_KEY\)\?\?(\d+)\);$/m)?.[1]),300,'solo game defaults to five minutes');
+const legacyValues=ui.match(/^const LEGACY_DURATION_VALUES=(\[[^\n]+\]);$/m)?.[1];
+const restoredExpression=ui.match(/^const restoredPracticeDuration=(.+);$/m)?.[1];
+assert.ok(legacyValues&&restoredExpression,'legacy solo draft parser must exist');
+const restore=runInNewContext('(()=>{const LEGACY_DURATION_VALUES='+legacyValues+';return '+restoredExpression+';})()');
+assert.equal(restore(160),160,'unfinished legacy 2:40 draft keeps its setting');
+assert.equal(restore(90),90,'unfinished 1:30 draft keeps its setting');
+assert.equal(restore(0),0,'unfinished untimed draft remains untimed');
+assert.equal(restore(999),300,'corrupt old draft data falls back to five minutes');
 
-console.log('ZAMAZKA: seven timed presets including 10 minutes, untimed all-player confirmation, solo duration, invalid fallback, and multi-round rules OK');
+console.log('ZAMAZKA: five timed presets (2/3/4/5/10 min), 5-minute defaults, legacy drafts, untimed game and multi-round rules OK');
 
 // Deadline and final transfer regressions are part of the main timer gate.
 import './deadline-integrity.mjs';

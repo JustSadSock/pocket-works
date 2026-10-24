@@ -35,9 +35,9 @@ assert.equal(state.phase,'preview');
 now=state.deadline+1;
 game.onMessage({state,player,players,payload:{type:'pulse'}});
 assert.equal(state.phase,'drawing');
-assert.equal(state.deadline-now,160000,'drawing time must be 2:40');
+assert.equal(state.deadline-now,300000,'drawing time must be 5:00');
 assert.ok(readFileSync(new URL('../app.js',import.meta.url),'utf8').includes('practice.deadline=practice.drawingSeconds===0?0:Date.now()+practice.drawingSeconds*1000'),'practice follows selected duration, including unlimited');
-console.log('ZAMAZKA: 160s online/practice, 108 origins, and independently labeled creation cities OK');
+console.log('ZAMAZKA: 300s online/practice defaults, 108 origins, and independently labeled creation cities OK');
 
 // Every selected reproduction, CDN shard and archive migration is checked here.
 import './curated-gallery.mjs';

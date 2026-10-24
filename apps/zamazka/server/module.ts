@@ -7,8 +7,8 @@ export const RULESET_VERSION=21;
 const CATALOG_COUNT=136; // 72 old originals + 36 first selection + 28 second selection
 const EXCLUDED_PAINTINGS=new Set([2,4,5,9,10,14,17,18,19,22,24,27,30,32,34,36,38,43,49,51,54,55,61,62,65,69,115]); // The user's 26 rejected historical originals; IDs retained.
 // 0 = untimed drawing; only committed submissions from every participant end it.
-const DRAWING_TIMES=[0,60,90,120,160,240,300,600];
-const DEFAULT_DRAWING_SECONDS=160;
+const DRAWING_TIMES=[0,120,180,240,300,600];
+const DEFAULT_DRAWING_SECONDS=300;
 // At 0:00 freeze client painting, then accept in-flight multipart submissions.
 // This is transport grace, not extra drawing time; never expose early results.
 export const FINAL_SUBMISSION_GRACE_MS=25000;

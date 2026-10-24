@@ -33,7 +33,7 @@ import {fitGalleryArtwork} from './gallery-proportions.js';
 const DEBUG_SCENE = new URLSearchParams(location.search).get(DEBUG_QUERY);
 const IS_DEBUG_FRAME = Boolean(DEBUG_SCENE&&window.parent!==window);
 if(!IS_DEBUG_FRAME)installMobileRuntime();
-if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.26',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
+if(!IS_DEBUG_FRAME)createWorkshopMode({appName:'ЗАМАЗКА',version:'1.40.27',cachePrefix: 'zamazka-',storageNamespace: 'pocket-works:zamazka',onReset(){try{sessionStorage.removeItem('pocket-net:'+location.origin+'/pocketnet')}catch{}for(const storage of [localStorage,sessionStorage])try{for(let i=storage.length-1;i>=0;i--){const key=storage.key(i);if(key?.startsWith('pocket-works:zamazka:'))storage.removeItem(key)}}catch{}location.reload()}});
 const screen=document.querySelector('#screen'),dialog=document.querySelector('#dialog'),toast=document.querySelector('#toast');
 const exhibitionDirector=createExhibitionDirector(screen);
 installGalleryLighting(screen);
@@ -380,12 +380,15 @@ function setup(mode,error='',roomValue=invitedRoom){
 }
 
 let roundsChoice=3;
-let drawingSecondsChoice=160;
-const DRAWING_TIME_OPTIONS=[[60,'1 минута'],[90,'1:30'],[120,'2 минуты'],[160,'2:40 · стандарт'],[240,'4 минуты'],[300,'5 минут'],[600,'10 минут'],[0,'Без ограничения']];
+let drawingSecondsChoice=300;
+const DRAWING_TIME_OPTIONS=[[120,'2 минуты'],[180,'3 минуты'],[240,'4 минуты'],[300,'5 минут · стандарт'],[600,'10 минут'],[0,'Без ограничения']];
 const DURATION_VALUES=DRAWING_TIME_OPTIONS.map(([seconds])=>seconds);
+// Existing unfinished solo drafts retain the duration with which they began.
+const LEGACY_DURATION_VALUES=[0,60,90,120,160,240,300,600];
 const SOLO_DURATION_KEY=NS+'solo-drawing-seconds';
-const normalizedDuration=value=>value!==''&&value!=null&&DURATION_VALUES.includes(Number(value))?Number(value):160;
-let soloDrawingSecondsChoice=normalizedDuration(localStorage.getItem(SOLO_DURATION_KEY)??160);
+const normalizedDuration=value=>value!==''&&value!=null&&DURATION_VALUES.includes(Number(value))?Number(value):300;
+const restoredPracticeDuration=value=>value!==''&&value!=null&&LEGACY_DURATION_VALUES.includes(Number(value))?Number(value):300;
+let soloDrawingSecondsChoice=normalizedDuration(localStorage.getItem(SOLO_DURATION_KEY)??300);
 const durationOptionsHtml=selected=>DRAWING_TIME_OPTIONS.map(([seconds,label])=>'<option value="'+seconds+'" '+(selected===seconds?'selected':'')+'>'+label+'</option>').join('');
 function practiceSettings(){
  modal('Одиночная реставрация','<label class="field" for="soloDrawingSeconds">Время рисования</label><select class="input" id="soloDrawingSeconds">'+durationOptionsHtml(soloDrawingSecondsChoice)+'</select><p class="hint">Без ограничения: закончи реставрацию кнопкой «Сдать работу».</p>',[
@@ -900,7 +903,7 @@ function resumePractice(){try{const p=JSON.parse(sessionStorage.getItem(PRACTICE
  p.selected=p.selected.map(art=>normalizeArchiveEntry({art,edition:p.edition}).art);
  p.edition=ARCHIVE_EDITION;
  }
- practice=p;practice.drawingSeconds=normalizedDuration(p.drawingSeconds??160);if(p.deadline>0&&p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else if(p.phase==='preparing'){preparedRound='';preparing(true)}else preview(true)}catch{newPractice()}}
+ practice=p;practice.drawingSeconds=restoredPracticeDuration(p.drawingSeconds??300);if(p.deadline>0&&p.deadline<Date.now())practice.deadline=Date.now()+30000;if(p.phase==='drawing')drawing(true);else if(p.phase==='preparing'){preparedRound='';preparing(true)}else preview(true)}catch{newPractice()}}
 function practiceStep(){if(!practice)return;if(practice.phase==='preview'){practice.phase='drawing';practice.deadline=practice.drawingSeconds===0?0:Date.now()+practice.drawingSeconds*1000;persistPractice();drawing(true)}else if(practice.phase==='drawing')finishPractice()}
 function finishPractice(){if(!practice||practice.phase!=='drawing')return;practice.strokes=editor?editor.getData():[];saveArtwork(practice.mine.art,practice.mine.variation,practice.strokes);editor?.clearDraft();practice.phase='reveal';practice.deadline=0;try{localStorage.removeItem(PRACTICE_KEY)}catch{}try{sessionStorage.removeItem(PRACTICE_KEY)}catch{}storedPractice=null;void zamazkaStore.remove('practice').catch(()=>{});reveal(true)}
 let previousVisualPhase='',lastPhaseCue='',voteScreenToken='',voteTransitionLayer=null,voteTransitionTimeout=null;
@@ -1493,7 +1496,7 @@ screen.addEventListener('click',e=>{
  else if(action==='connect')connect(b.dataset.mode);
  else if(action==='share')share();
  else if(action==='copy-code')copyText(inviteCode(roomId),'Код комнаты скопирован');
- else if(action==='start')net?.sendGame({type:'start',preload:true,rounds:Number(screen.querySelector('#rounds')?.value||3),drawingSeconds:Number(screen.querySelector('#drawingSeconds')?.value??160)});
+ else if(action==='start')net?.sendGame({type:'start',preload:true,rounds:Number(screen.querySelector('#rounds')?.value||3),drawingSeconds:Number(screen.querySelector('#drawingSeconds')?.value??300)});
  else if(action==='leave')modal('Выйти из комнаты?','<p class="hint">Другие реставраторы смогут продолжить без тебя.</p>',[['Выйти',()=>{closeDialog();home()},'primary'],['Отмена',closeDialog,'ghost']]);
  else if(action==='skip')practiceStep();
  else if(action==='submit')doSubmit();
