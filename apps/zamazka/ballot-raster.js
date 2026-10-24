@@ -27,14 +27,29 @@ export function inspectBallotRaster(raster){
   value=(value<<6)|n;bits+=6;
   if(bits>=8){bits-=8;head.push((value>>>bits)&255);value&=(1<<bits)-1}
  }
- if(head.length<16)return false;
+ if(head.length<30)return false;
  if(String.fromCharCode(...head.slice(0,4))!=='RIFF'||String.fromCharCode(...head.slice(8,12))!=='WEBP')return false;
  const len=(head[4]|head[5]<<8|head[6]<<16|head[7]<<24)>>>0;
  // A RIFF WebP has an even byte length and no hidden trailing payload.
  const bytes=raw.length/4*3-(raw.endsWith('==')?2:raw.endsWith('=')?1:0);
  if(len+8!==bytes||bytes>337500||bytes<20)return false;
  const chunk=String.fromCharCode(...head.slice(12,16));
- return chunk==='VP8 '||chunk==='VP8L'||chunk==='VP8X';
+ if(head.length<30)return false;
+ const chunkSize=(head[16]|head[17]<<8|head[18]<<16|head[19]<<24)>>>0;
+ if(chunkSize<5||chunkSize+20>bytes)return false;
+ let width=0,height=0;
+ if(chunk==='VP8 '){
+  if(head[23]!==0x9d||head[24]!==0x01||head[25]!==0x2a)return false;
+  width=(head[26]|head[27]<<8)&0x3fff;height=(head[28]|head[29]<<8)&0x3fff;
+ }else if(chunk==='VP8L'){
+  if(head[20]!==0x2f)return false;
+  width=1+(head[21]|(head[22]&63)<<8);
+  height=1+((head[22]>>6)|(head[23]<<2)|((head[24]&15)<<10));
+ }else if(chunk==='VP8X'){
+  width=1+head[24]+(head[25]<<8)+(head[26]<<16);
+  height=1+head[27]+(head[28]<<8)+(head[29]<<16);
+ }
+ return width===BALLOT_IMAGE_WIDTH&&height===BALLOT_IMAGE_HEIGHT;
 }
 export function ballotRasterChecksum(raster){
  let hash=2166136261;
