@@ -73,13 +73,19 @@ test('host controls remain available in v7 as well as existing v6 rooms',()=>{
  }
 });
 
-test('client, offline cache and release metadata agree on version 1.8.2',()=>{
+test('browser QA uses a server command relative to the Playwright config folder',()=>{
+ const config=repoFile('apps/chyepukha/playwright.config.ts');
+ assert.ok(config.includes("command:'node qa/serve.mjs'"));
+ assert.ok(!config.includes("command:'node apps/chyepukha/qa/serve.mjs'"));
+});
+
+test('client, offline cache and release metadata agree on version 1.8.3',()=>{
  const config=JSON.parse(repoFile('apps/chyepukha/app.config.json'));
  const sw=repoFile('apps/chyepukha/sw.js');
  const html=repoFile('apps/chyepukha/index.html');
- assert.equal(config.version,'1.8.2');
- assert.equal(config.cacheName,'chyepukha-v1.8.2');
- assert.match(sw,/const APP_VERSION='1\.8\.2'/);
- assert.match(sw,/__pw_build','chyepukha-1\.8\.2'/);
- assert.match(html,/data-app-version="1\.8\.2"/);
+ assert.equal(config.version,'1.8.3');
+ assert.equal(config.cacheName,'chyepukha-v1.8.3');
+ assert.match(sw,/const APP_VERSION='1\.8\.3'/);
+ assert.match(sw,/__pw_build','chyepukha-1\.8\.3'/);
+ assert.match(html,/data-app-version="1\.8\.3"/);
 });
