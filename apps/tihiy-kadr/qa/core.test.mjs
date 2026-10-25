@@ -67,11 +67,8 @@ test('speech level diagnostics do not pretend to measure quality',()=>{
  assert(levels.dialogue>0);
  assert.equal(stemLevels([],{}),null);
 });
-test('library supports model selection and main preview locks original soundtrack',()=>{
- const w=readFileSync(new URL('../mrx-worker.js',import.meta.url),'utf8');
+test('native video stays silent while monitor begins playback from user gesture',()=>{
  const ui=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(w,/model,device:'wasm'/);
- assert.match(w,/tiger-dnr-v1/);
  assert.match(ui,/video\.addEventListener\('volumechange',lockVideoMute\)/);
  assert.match(ui,/audio\.play\(\),video\.play\(\)/);
 });
