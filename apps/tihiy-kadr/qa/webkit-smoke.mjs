@@ -58,6 +58,14 @@ try{
   page.waitForSelector('#error:not(.hidden)',{timeout:180000}).then(()=>false)
  ]);
  if(!outcome)throw Error('MRX WebKit failure: '+await page.locator('#error').innerText()+'; errors='+JSON.stringify(errors));
+ await page.evaluate(()=>{
+  window.__monitorStarted=false;
+  document.getElementById('monitor').addEventListener('playing',()=>{window.__monitorStarted=true},{once:true});
+ });
+ await page.locator('#listen-btn').click();
+ await page.waitForFunction(()=>window.__monitorStarted===true,null,{timeout:9000});
+ assert.equal(await page.locator('#result-video').evaluate(v=>v.muted),true);
+ await page.locator('#listen-btn').click();
  const download=page.waitForEvent('download',{timeout:20000});
  await page.locator('#wav-btn').click();
  assert.match((await download).suggestedFilename(),/no-dialogue\.wav$/);
