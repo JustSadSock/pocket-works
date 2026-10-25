@@ -763,7 +763,12 @@ function checkAllPlayersGameOver() {
 }
 const MAX_CLOCK_CATCHUP=1200,MAX_CLOCK_IDLE=3500;
 const COLORS=['#FF1493','#00D9FF','#FFDB58','#39FF14'];
-const copy=s=>structuredClone(s),out=state=>({state,events:[{type:'state',payload:{}}]});
+const copy=s=>structuredClone(s),out=state=>{
+ // Every authoritative transition advances the revision, including lobby,
+ // pause, rematch and clock ticks. Clients can discard delayed snapshots.
+ state.revision=(Number.isSafeInteger(state.revision)&&state.revision>=0?state.revision:0)+1;
+ return {state,events:[{type:'state',payload:{}}]};
+};
 function add(s,p){
  const existing=s.players.find(v=>v.id===p.id);
  if(existing){existing.left=false;return;}
@@ -798,7 +803,7 @@ function newMatch(state,connectedIds){
  }
 }
 export default {protocolVersion:1,
- createRoom({player}){const s={phase:'lobby',hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,inputBatchVersion:1,rulesVersion:3,contributionVersion:1,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
+ createRoom({player}){const s={phase:'lobby',revision:0,hostId:player.id,players:[],started:false,paused:false,round:0,seed:0,inputBatchVersion:1,rulesVersion:3,contributionVersion:1,engine:null,lastTick:Date.now()};add(s,player);return out(s);},
  onJoin({state,player}){
   state=copy(state);
   const wasLeft=state.players.some(seat=>seat.id===player.id&&seat.left);
@@ -857,6 +862,13 @@ export default {protocolVersion:1,
    if(successor)state.hostId=successor.id;
   }
   if(state.started){
+   // Current clients label game commands with their round. Reject queued
+   // actions from prior rounds instead of applying them after a rematch.
+   // Untagged legacy packets remain supported for clients already in flight.
+   if(p&&['input','input_batch','resume','pause','rematch'].includes(p.type)&&
+      Object.prototype.hasOwnProperty.call(p,'round')&&
+      (!Number.isSafeInteger(p.round)||p.round!==state.round))
+    throw Error('Команда относится к другому раунду');
    if(p?.type==='rematch'){
     if(player.id!==state.hostId||!state.engine?.isGameOver)throw Error('Только ведущий может начать новый раунд после завершения');
     state.players=state.players.filter(p=>!p.left);
