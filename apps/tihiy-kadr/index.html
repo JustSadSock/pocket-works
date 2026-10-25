@@ -11,20 +11,21 @@
 <label class="drop" id="drop-zone" for="file-input"><input id="file-input" type="file" accept="video/*,.mp4,.mov,.m4v,.webm,.mkv" hidden><span class="drop-icon">＋</span><span><strong>Выбрать видео</strong><small>MP4, MOV, WebM · только на устройстве</small></span></label>
 <div id="input-details" class="hidden"><video id="source-video" playsinline preload="metadata" muted controls></video><div class="fields"><label>Начало фрагмента, сек.<input id="start-seconds" type="number" min="0" step="0.1" value="0"></label><label>Длительность, сек.<input id="duration-seconds" type="number" min="1" max="90" step="1" value="20"></label></div><p id="range-note" class="hint"></p></div>
 <div class="panel-title second"><h2>02 / Обработка</h2><span class="chip">MERL · 31 МБ</span></div>
-<div class="fields"><label>Режим<input value="MRX · речь / музыка / эффекты" disabled aria-label="Модель MRX"></label><label>Размер задачи<select id="chunk-size"><option value="5">Для телефона · по 5 сек</option><option value="10">Умеренная память · по 10 сек</option><option value="20" selected>Быстрее на ПК · по 20 сек</option></select></label></div>
+<div class="fields"><label>Нейросеть<input value="MRX · речь / музыка / эффекты" disabled aria-label="Модель MRX"></label><label>Размер задачи<select id="chunk-size"><option value="5">Для телефона · по 5 сек</option><option value="10">Умеренная память · по 10 сек</option><option value="20" selected>Быстрее на ПК · по 20 сек</option></select></label></div>
 <button id="process-btn" type="button" class="primary" disabled>Убрать речь →</button>
 <div id="progress-wrap" class="progress hidden" role="status" aria-live="polite"><div class="progress-top"><b id="progress-heading">Подготовка...</b><button id="cancel-btn" type="button" class="cancel">Прервать</button></div><progress id="progress-bar"></progress><p id="progress-detail" class="hint"></p></div>
-<p id="error" class="error hidden" role="alert"></p><p class="hint fine">ИИ работает на этом устройстве. В первый раз загружает модель ~31 МБ. На телефоне рекомендуется режим по 5 секунд: он расходует меньше памяти. Safari должен иметь доступ к серверу загрузки MRX и ONNX.</p>
+<p id="error" class="error hidden" role="alert"></p><p class="hint fine">ИИ работает на этом устройстве. В первый раз загружает модель ~31 МБ. На телефоне рекомендуется режим по 5 секунд. Чтобы сравнить режимы, начни с 5–10 секунд мультфильма. Safari должен иметь доступ к серверу загрузки MRX и ONNX.</p>
 </section>
 <section class="panel result" aria-labelledby="result-heading">
 <div class="panel-title"><h2 id="result-heading">03 / Результат</h2><span class="muted" id="result-state">Ожидание обработки</span></div>
 <div id="empty-state" class="empty"><div class="wave">∿ ∿ ∿</div><p>Здесь появится видео с новой звуковой дорожкой.</p></div>
 <div id="result-details" class="hidden">
-<video id="result-video" muted playsinline preload="metadata" controls></video><audio id="monitor" preload="auto" hidden></audio>
-<div class="comparison"><button id="original-btn" class="secondary" type="button">Оригинал</button><button id="clean-btn" class="secondary selected" type="button">Без голосов</button></div>
+<video id="result-video" muted playsinline preload="metadata" aria-label="Видео без собственной звуковой дорожки"></video>
+<div class="playback-control"><button id="listen-btn" type="button" class="secondary">▶ Слушать результат</button><input id="result-seek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Позиция в обработанном фрагменте"><span id="result-position">0:00</span></div><audio id="monitor" preload="auto" hidden></audio>
+<div class="comparison"><button id="original-btn" class="secondary" type="button">Оригинал</button><button id="clean-btn" class="secondary selected" type="button">Оригинал − речь</button><button id="stems-btn" class="secondary" type="button">Музыка + эффекты</button><button id="speech-btn" class="secondary" type="button">Только речь</button></div>
 <div class="stems"><label>Оригинальная речь <output id="dialogue-value">0%</output><input id="dialogue-gain" type="range" min="0" max="100" step="5" value="0"></label><label>Музыка <output id="music-value">100%</output><input id="music-gain" type="range" min="0" max="150" step="5" value="100"></label><label>Эффекты <output id="effects-value">100%</output><input id="effects-gain" type="range" min="0" max="150" step="5" value="100"></label></div>
-<div class="metrics"><div><small>Обработка MRX</small><strong id="inference-time">—</strong></div><div><small>Скорость</small><strong id="speed-factor">—</strong></div><div><small>Длина сцены</small><strong id="scene-length">—</strong></div></div>
-<div class="downloads"><button id="wav-btn" class="primary" type="button">Скачать звук WAV</button><button id="video-btn" class="secondary" type="button">Сохранить видео со звуком</button></div><p id="export-status" class="hint"></p>
+<div class="metrics"><div><small>Обработка MRX</small><strong id="inference-time">—</strong></div><div><small>Скорость</small><strong id="speed-factor">—</strong></div><div><small>Длина сцены</small><strong id="scene-length">—</strong></div></div><p id="stem-diagnostics" class="hint" role="status"></p>
+<div class="downloads"><button id="wav-btn" class="primary" type="button">Скачать текущий микс WAV</button><button id="video-btn" class="secondary" type="button">Сохранить видео со звуком</button></div><p id="export-status" class="hint"></p>
 </div>
 </section>
 </div>

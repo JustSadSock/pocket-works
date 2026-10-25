@@ -73,11 +73,39 @@ try{
  if(!result)throw Error('MRX failure: '+await page.locator('#error').innerText());
  assert.match(await page.locator('#inference-time').innerText(),/с|мин/);
  assert.match(await page.locator('#speed-factor').innerText(),/×/);
+ await page.evaluate(()=>{
+  window.__monitorStarted=false;
+  document.getElementById('monitor').addEventListener('playing',()=>{window.__monitorStarted=true},{once:true});
+ });
+ await page.locator('#listen-btn').click();
+ await page.waitForFunction(()=>window.__monitorStarted===true,null,{timeout:9000});
+ assert.equal(await page.locator('#result-video').evaluate(v=>v.muted),true);
+ await page.locator('#listen-btn').click();
  assert(await page.locator('#result-video').isVisible());
  const downloaded=page.waitForEvent('download',{timeout:25000});
  await page.locator('#wav-btn').click();
  const output=await downloaded;
  assert.match(output.suggestedFilename(),/no-dialogue\.wav$/);
+
+ // Force native video unmute and prove its soundtrack cannot leak.
+ await page.evaluate(()=>{
+  const v=document.getElementById('result-video');
+  v.muted=false;v.volume=1;
+ });
+ // HTMLMediaElement.volumechange is asynchronous; wait for the lock event.
+ await page.waitForFunction(()=>{
+  const v=document.getElementById('result-video');
+  return v.muted&&v.volume===0;
+ },null,{timeout:3500});
+ await page.locator('#speech-btn').click();
+ const speechDownload=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#wav-btn').click();
+ assert.match((await speechDownload).suggestedFilename(),/isolated-dialogue\.wav$/);
+ await page.locator('#stems-btn').click();
+ const effectsDownload=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#wav-btn').click();
+ assert.match((await effectsDownload).suggestedFilename(),/music-effects\.wav$/);
+ assert.match(await page.locator('#stem-diagnostics').innerText(),/Выделенная речь/);
  assert.deepEqual(runtimeErrors,[]);
- console.log('Real Chromium MRX split on synthetic video succeeded:',await page.locator('#inference-time').innerText());
+ console.log('Real Chromium MRX preview, speech, M&E exports verified:',await page.locator('#inference-time').innerText());
 }finally{await browser.close();await new Promise(r=>server.close(r))}
