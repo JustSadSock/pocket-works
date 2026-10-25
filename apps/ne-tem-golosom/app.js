@@ -634,7 +634,7 @@ async function connectRoom(action,checkpoint=null){
   networkInterrupted=true;connectionNotice();
   toast('PocketNet недоступен: '+e.message);
   setNetStatus('offline','Нет связи');
-  $('room-connection-status').textContent='Соединение не установлено. Проверь интернет и повтори попытку.';
+  $('room-connection-status').textContent=action==='create'?'Не удалось создать комнату. Проверь подключение и попробуй снова.':'Соединение не установлено. Проверь интернет и повтори попытку.';
   $('room-retry').classList.remove('hidden');roomUI();
  }
 }
