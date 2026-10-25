@@ -78,6 +78,33 @@ try{
  await page.locator('#wav-btn').click();
  const output=await downloaded;
  assert.match(output.suggestedFilename(),/no-dialogue\.wav$/);
+
+ // Force native video unmute and prove its soundtrack cannot leak.
+ const mute=await page.evaluate(()=>{
+  const v=document.getElementById('result-video');
+  v.muted=false;v.volume=1;
+  return {muted:v.muted,volume:v.volume};
+ });
+ assert(mute.muted&&mute.volume===0,'original soundtrack must remain muted');
+ await page.locator('#speech-btn').click();
+ const speechDownload=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#wav-btn').click();
+ assert.match((await speechDownload).suggestedFilename(),/isolated-dialogue\.wav$/);
+ await page.locator('#stems-btn').click();
+ const effectsDownload=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#wav-btn').click();
+ assert.match((await effectsDownload).suggestedFilename(),/music-effects\.wav$/);
+ assert.match(await page.locator('#stem-diagnostics').innerText(),/Выделенная речь/);
+ const mrxTime=await page.locator('#inference-time').innerText();
+ // Quality mode must load TIGER weights and actually infer, not just show a new label.
+ await page.locator('#model-choice').selectOption('tiger');
+ await page.locator('#process-btn').click();
+ const tiger=await Promise.race([
+  page.waitForSelector('#result-details:not(.hidden)',{timeout:180000}).then(()=>true),
+  page.waitForSelector('#error:not(.hidden)',{timeout:180000}).then(()=>false)
+ ]);
+ if(!tiger)throw Error('TIGER failure: '+await page.locator('#error').innerText());
+ assert.match(await page.locator('#result-state').innerText(),/TIGER/);
  assert.deepEqual(runtimeErrors,[]);
- console.log('Real Chromium MRX split on synthetic video succeeded:',await page.locator('#inference-time').innerText());
+ console.log('Real Chromium MRX+TIGER inference: MRX '+mrxTime+' TIGER '+await page.locator('#inference-time').innerText());
 }finally{await browser.close();await new Promise(r=>server.close(r))}
