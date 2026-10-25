@@ -1,0 +1,20 @@
+{
+  "id": "/apps/tihiy-kadr/",
+  "name": "ТИХИЙ КАДР",
+  "short_name": "M&E LAB",
+  "description": "Локальная проверка нейросети MRX: убрать диалоги из видео, оставить музыку и эффекты, сравнить и сохранить результат.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eee9de",
+  "theme_color": "#eee9de",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
