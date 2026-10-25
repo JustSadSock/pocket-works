@@ -1215,7 +1215,9 @@ async function downloadPremiere(){
    signal:controller.signal,
    onProgress:step=>{
     if(generation!==premiereExportGeneration)return;
-    if(step.phase==='decoding'){
+    if(step.phase==='paused'){
+     status.textContent='Экспорт на паузе · вернись на эту вкладку для продолжения без потери прогресса.';
+    }else if(step.phase==='decoding'){
      const frac=step.total?step.done/step.total:0;
      bar.value=Math.round(frac*12);
      status.textContent='Подготавливаем голоса · '+step.done+'/'+step.total;
@@ -1453,7 +1455,26 @@ $('stage-video').ontimeupdate=()=>{if(!scene)return;const t=time($('stage-video'
 else if(t>=scene.duration-.05){if(record)finishRecording();else if(!$('stage-video').paused){stopAllPlayback();seekVideo($('stage-video'),scene.duration-.04)}}if(!record)updateClipSound(t,playing,false);renderPlayhead()};
 $('premiere-video').ontimeupdate=()=>{if(!scene)return;const t=time($('premiere-video'));$('premiere-scrub').value=String(Math.round(t*10));if(t>=scene.duration-.04){pausePremiere();seekVideo($('premiere-video'),scene.duration-.04)}else updateClipSound(t,!$('premiere-video').paused,true)};
 $('stage-video').onpause=()=>{if(!record){playing=false;$('play-toggle').textContent='▶';updateClipSound(time($('stage-video')),false)}};
-document.addEventListener('visibilitychange',()=>{if(document.hidden){premiereExportController?.abort();cancelCountdown();if(record)finishRecording();stopAllPlayback();pausePremiere()}});
+// Browser throttling prevents reliable frame encoding when a tab is hidden.
+// Keep the active take pending without committing or dropping it.
+document.addEventListener('visibilitychange',()=>{
+ const video=$('stage-video');
+ if(document.hidden){
+  if(record&&record.rec?.state==='recording'){
+   record.pausedForTab=true;
+   try{video.pause();record.rec.pause()}catch{}
+  }
+ }else{
+  if(record?.pausedForTab&&record.rec?.state==='paused'){
+   const current=record;current.pausedForTab=false;
+   void (async()=>{
+    try{await video.play();current.rec.resume()}
+    catch{toast('Запись приостановлена браузером. Нажми «Стоп», чтобы сохранить готовую часть.')}
+   })();
+  }
+  if(voiceFxContext?.state==='suspended')void voiceFxContext.resume().catch(()=>{});
+ }
+});
 window.addEventListener('pagehide',()=>{premiereExportController?.abort();if(record)finishRecording();draftWrite()});
 document.addEventListener('keydown',e=>{
  if(view!=='editor'||e.target.matches('input,select,textarea,[contenteditable="true"]'))return;
