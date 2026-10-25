@@ -2,13 +2,14 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
-import {ZAMAZKA_ALARM_VERSION,nextZamazkaDeadlineAt,shouldAdvanceZamazkaDeadline} from '../../../pocketnet/zamazka-deadlines.mjs';
+import {ZAMAZKA_ALARM_VERSION,ZAMAZKA_ALARM_VERSIONS,nextZamazkaDeadlineAt,shouldAdvanceZamazkaDeadline} from '../../../pocketnet/zamazka-deadlines.mjs';
 
 const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
-const pinned=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/v46.ts',import.meta.url),'utf8');
 const lock=JSON.parse(readFileSync(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'));
+const pinned=readFileSync(new URL('../../../pocketnet/module-versions/zamazka/'+lock.zamazka.current+'.ts',import.meta.url),'utf8');
 assert.equal(ZAMAZKA_ALARM_VERSION,'v46');
-assert.equal(lock.zamazka.current,ZAMAZKA_ALARM_VERSION);
+assert.ok(ZAMAZKA_ALARM_VERSIONS.includes(lock.zamazka.current));
+assert.ok(ZAMAZKA_ALARM_VERSIONS.includes('v46'),'older v46 alarms must remain scheduled');
 assert.equal(pinned,source,'new-room immutable snapshot must equal current module');
 
 let clock=10_000;
@@ -92,9 +93,9 @@ assert.equal(nextZamazkaDeadlineAt(match.state),null);
 
 // Assert the hub gates the new behavior to v46 and serializes alarm mutations.
 const hub=readFileSync(new URL('../../../pocketnet/hub.mjs',import.meta.url),'utf8');
-assert.match(hub,/room\.version!==ZAMAZKA_ALARM_VERSION/);
+assert.match(hub,/!ZAMAZKA_ALARM_VERSIONS\.includes\(room\.version\)/);
 assert.match(hub,/this\.advanceZamazkaDeadline\(room,now\)/);
 assert.match(hub,/this\.persist\(room\);\s*this\.recordZamazkaRewards\(room,previous,next/);
-assert.match(hub,/\['v45','v46'\]\.includes\(room\.version\)/,
+assert.match(hub,/\['v45','v46','v47'\]\.includes\(room\.version\)/,
  'v46 audit reports must retain metadata-only persistence');
 console.log('ZAMAZKA server alarms: complete no-pulse round, 25s/120s grace, fail-closed raster, untimed/paused and pinned versions OK');
