@@ -311,7 +311,7 @@ async function connect(how,settings){
   const c=new PocketNet({serverUrl:ORIGIN,name:nick,storage,identityKey:sessionKey()});
   net=c;
   if(how!=='resume'){c.roomId=null;c.persist()}
-  c.on('connected',v=>{if(net!==c)return;me=v.player?.id||'';connected=true;connecting=false;markActive(ORIGIN,c.token);netStatus();if(roomJoinedOnSocket)retryPending()});
+  c.on('connected',v=>{if(net!==c)return;me=v.player?.id||'';connected=true;connecting=false;markActive(ORIGIN,c.token);netStatus();if(roomJoinedOnSocket){retryPending();render()}});
   c.on('room_joined',v=>{
    if(net!==c)return;
    clearRoomTimeout();
