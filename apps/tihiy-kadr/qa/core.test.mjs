@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,wavPCM16,safeName} from '../audio-utils.js';
+import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,suppressStereoCenter,wavPCM16,safeName} from '../audio-utils.js';
 const a=x=>Float32Array.from(x);
 const fixture={
  input:[a([.2,.4,-.3,.7])],
@@ -71,4 +71,36 @@ test('native video stays silent while monitor begins playback from user gesture'
  const ui=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(ui,/video\.addEventListener\('volumechange',lockVideoMute\)/);
  assert.match(ui,/audio\.play\(\),video\.play\(\)/);
+});
+
+test('stereo centre filter attenuates shared speech-band signal, but keeps anti-phase ambience',()=>{
+ const N=44100,center=new Float32Array(N),anti=new Float32Array(N);
+ for(let i=0;i<N;i++){
+  center[i]=.25*Math.sin(2*Math.PI*1300*i/44100);
+  anti[i]=.25*Math.sin(2*Math.PI*1300*i/44100);
+ }
+ const rms=x=>Math.sqrt(x.reduce((n,s)=>n+s*s,0)/x.length);
+ const filtered=suppressStereoCenter([center,center],70);
+ assert(filtered[0]!==center&&filtered[1]!==center);
+ assert(rms(filtered[0])<rms(center)*.65);
+ const spread=suppressStereoCenter([anti,anti.map(v=>-v)],100);
+ assert(rms(spread[0])>=rms(anti)*.999);
+});
+test('centre filter off/mono never changes waveform; input cannot be mutated',()=>{
+ const original=[a([0,.1,.5,-.2])];
+ assert.equal(suppressStereoCenter(original,100),original);
+ const stereo=[a([0,.1,.5,-.2]),a([.1,0,-.2,.3])];
+ assert.equal(suppressStereoCenter(stereo,0),stereo);
+ const before=stereo.map(c=>[...c]);
+ const filtered=suppressStereoCenter(stereo,40);
+ assert.deepEqual(stereo.map(c=>[...c]),before);
+ assert(filtered.every(c=>[...c].every(Number.isFinite)));
+ assert.throws(()=>suppressStereoCenter(stereo,120),/от 0 до 100/);
+ assert.throws(()=>suppressStereoCenter(stereo,-1),/от 0 до 100/);
+});
+test('optional centre filter is applied to export and preview but not original or speech solo',()=>{
+ const ui=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(ui,/return suppressStereoCenter\(separated/);
+ assert.match(ui,/if\(mode==='original'\)return original/);
+ assert.match(ui,/if\(mode==='speech'\)return stems.dialogue/);
 });
