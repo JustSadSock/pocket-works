@@ -44,7 +44,19 @@ try{
   return [...new Uint8Array(await new Blob(parts).arrayBuffer())];
  });
  await page.locator('#file-input').setInputFiles({name:'fixture.webm',mimeType:'video/webm',buffer:Buffer.from(bytes)});
- await page.waitForFunction(()=>!document.querySelector('#process-btn').disabled,{timeout:15000});
+ try{
+  await page.waitForFunction(()=>!document.querySelector('#process-btn').disabled,null,{timeout:15000});
+ }catch{
+  const diagnostics=await page.evaluate(()=>({
+   uiError:document.querySelector('#error').textContent,
+   hasError:!document.querySelector('#error').classList.contains('hidden'),
+   duration:document.querySelector('#source-video').duration,
+   ready:document.querySelector('#source-video').readyState,
+   mediaError:document.querySelector('#source-video').error?.message,
+   file:document.querySelector('#file-detail').textContent
+  }));
+  throw Error('Video fixture setup failed: '+JSON.stringify(diagnostics));
+ }
  await page.locator('#duration-seconds').fill('1');
  await page.locator('#process-btn').click();
  const result=await Promise.race([
