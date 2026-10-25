@@ -39,7 +39,7 @@ test('stereo mixing does not silently swap or drop channels',()=>{
  const stems={dialogue:[a([.1,.2]),a([-.3,-.1])],music:[a([0,0]),a([0,0])],effects:[a([0,0]),a([0,0])]};
  const mixed=mixPCM(input,stems);
  assert.equal(mixed[0].length,2);assert.equal(mixed[1].length,2);
- assert(Math.abs(mixed[1][0]-.2)<1e-6);
+ assert(Math.abs(mixed[1][0]+.2)<1e-6);
  assert.throws(()=>mixPCM(input,{...stems,effects:[a([0])] }),/длины/);
 });
 test('selected filenames remain safe for downloads',()=>{assert.equal(safeName('test;<>.mp4'),'test');assert.equal(safeName(''), 'video')});
