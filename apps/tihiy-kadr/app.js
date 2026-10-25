@@ -1,4 +1,4 @@
-import {RATE,MAX_SECONDS,validRange,mixPCM,wavPCM16,elapsed,safeName} from './audio-utils.js';
+import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,wavPCM16,elapsed,safeName} from './audio-utils.js';
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
 const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
  (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -9,13 +9,13 @@ const text=(id,msg)=>$(id).textContent=String(msg),show=(id,on)=>$(id).classList
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),revoke=url=>{if(url)URL.revokeObjectURL(url)};
 function error(msg){text('error',msg);show('error',true)}
 function clearError(){show('error',false)}
-function uiBusy(active){$('process-btn').disabled=active||!file||!length;$('file-input').disabled=active;$('start-seconds').disabled=active;$('duration-seconds').disabled=active;$('chunk-size').disabled=active;show('progress-wrap',active)}
+function uiBusy(active){$('process-btn').disabled=active||!file||!length;$('file-input').disabled=active;$('start-seconds').disabled=active;$('duration-seconds').disabled=active;$('chunk-size').disabled=active;$('model-choice').disabled=active;show('progress-wrap',active)}
 function step(title,detail='',ratio=null){text('progress-heading',title);text('progress-detail',detail);if(ratio===null)$('progress-bar').removeAttribute('value');else $('progress-bar').value=ratio}
 function pause(){video.pause();sourceVideo.pause();audio.pause()}
 function reset(){
  pause();revoke(audioURL);audioURL='';audio.removeAttribute('src');audio.load();
  video.removeAttribute('src');video.load();original=null;stems=null;range=null;
- show('result-details',false);show('empty-state',true);text('result-state','Ожидание обработки');text('export-status','');
+ show('result-details',false);show('empty-state',true);text('result-state','Ожидание обработки');text('export-status','');text('stem-diagnostics','');text('result-position','0:00');$('result-seek').value=0;text('listen-btn','▶ Слушать результат');
 }
 function cancel(){
  serial++;worker?.terminate();worker=null;abort?.abort();abort=null;
@@ -132,9 +132,9 @@ function readableModelError(packet){
   return 'Сетевой сбой ('+phase+'): не удалось получить компоненты MRX. Проверь интернет, блокировщики контента или VPN и повтори. Техническая причина: '+reason;
  if(/memory|allocation|out of bounds|memory access/i.test(reason))
   return 'Не хватает памяти для нейросети. Выбери режим по 5 секунд и попробуй более короткую сцену. '+reason;
- return 'MRX ('+phase+'): '+reason;
+ return 'Нейросеть ('+phase+'): '+reason;
 }
-function separate(channels,chunk,id){
+function separate(channels,chunk,id,model){
  return new Promise((resolve,reject)=>{
   const w=new Worker('./mrx-worker.js',{type:'module'});worker=w;
   w.onerror=e=>{e.preventDefault();w.terminate();if(worker===w)worker=null;reject(Error('Ошибка подключения нейросети: '+(e.message||'скрипт Worker не запустился')+'. Проверь сеть и разрешение доступа к внешним CDN.'))};
@@ -142,14 +142,14 @@ function separate(channels,chunk,id){
   w.onmessage=e=>{
    const p=e.data||{};if(p.id!==id)return;
    if(p.stage==='library')step('Подключаем нейросеть',p.detail);
-   if(p.stage==='model')step('MRX разделяет дорожки',p.detail);
+   if(p.stage==='model')step('Нейросеть разделяет дорожки',p.detail);
    if(p.stage==='done'||p.stage==='error'){
     w.terminate();if(worker===w)worker=null;
     p.stage==='done'?resolve(p):reject(Error(readableModelError(p)));
    }
   };
   const copies=channels.map(ch=>ch.slice());
-  w.postMessage({id,channels:copies,chunk},copies.map(c=>c.buffer));
+  w.postMessage({id,channels:copies,chunk,model},copies.map(c=>c.buffer));
  });
 }
 async function process(){
@@ -162,15 +162,27 @@ async function process(){
   if(signal.signal.aborted||id!==serial)return;
   const start=performance.now();
   timer=setInterval(()=>text('progress-detail','Разделяем '+elapsed(selected.duration)+' звука · прошло '+elapsed((performance.now()-start)/1000)),500);
-  const result=await separate(original,Number($('chunk-size').value),id);
+  const model=$('model-choice').value;
+  const result=await separate(original,Number($('chunk-size').value),id,model);
   if(signal.signal.aborted||id!==serial)return;
   stems=result.stems;inferenceTime=result.seconds;
   step('Готово','Дорожки разделены.',1);
   text('inference-time',elapsed(inferenceTime));
   text('speed-factor',(selected.duration/Math.max(.001,inferenceTime)).toFixed(2)+'×');
-  text('scene-length',elapsed(selected.duration));text('result-state','Три дорожки готовы');
+  text('scene-length',elapsed(selected.duration));text('result-state',(model==='tiger'?'TIGER':'MRX')+' · три дорожки готовы');
+  const levels=stemLevels(original,stems);
+  text('stem-diagnostics',levels
+   ?'Выделенная речь: '+levels.dialogueRelativeDb.toFixed(1)+' дБ относительно оригинала. Это уровень выделенной дорожки, не оценка точности модели.'+
+    (levels.dialogueRelativeDb < -24?' Модель почти не обнаружила речь — заметного удаления может не быть.':'')
+   :'Уровень дорожек определить не удалось.');
   show('empty-state',false);show('result-details',true);
+  video.muted=true;
+  try{video.volume=0}catch{}
   video.src=fileURL;video.load();mode='clean';
+  $('result-seek').min='0';$('result-seek').max=String(selected.duration);
+  $('result-seek').step='.05';$('result-seek').value='0';
+  video.addEventListener('loadedmetadata',()=>{if(range)video.currentTime=range.start},{once:true});
+  updateListeningButtons();
   await previewAudio();text('export-status','Прослушай результат и сравни оригинал с очищенной дорожкой.');
  }catch(e){
   if(e.name!=='AbortError'&&id===serial)error(e.message||String(e));
@@ -178,48 +190,106 @@ async function process(){
  }finally{if(timer)clearInterval(timer);if(abort===signal)abort=null;if(serial===id)uiBusy(false)}
 }
 $('process-btn').onclick=()=>{void process()};$('cancel-btn').onclick=cancel;
+
 function gains(){return {dialogue:Number($('dialogue-gain').value)/100,music:Number($('music-gain').value)/100,effects:Number($('effects-gain').value)/100}}
-function getMix(){return mixPCM(original,stems,gains())}
+function getMix(){
+ if(!original||!stems)throw Error('Нет звуковых дорожек');
+ if(mode==='original')return original;
+ if(mode==='speech')return stems.dialogue.map(channel=>channel.slice());
+ return mixPCM(original,stems,gains(),mode==='stems'?'stems':'residual');
+}
+function updateListeningButtons(){
+ for(const [name,value] of [['original','original'],['clean','clean'],['stems','stems'],['speech','speech']])
+  $(name+'-btn').classList.toggle('selected',mode===value);
+}
+function audioFailure(reason){
+ error('Не удалось воспроизвести обработанный звук: '+(reason?.message||String(reason))+
+  '. Нажми «Слушать результат» ещё раз.');
+}
 async function previewAudio(){
  if(!stems||!range)return;
  const wasPlaying=!video.paused,offset=Math.max(0,video.currentTime-range.start);
  audio.pause();revoke(audioURL);
  try{
-  audioURL=URL.createObjectURL(wavPCM16(mode==='original'?original:getMix()));
+  audioURL=URL.createObjectURL(wavPCM16(getMix()));
   audio.src=audioURL;audio.load();
-  if(video.readyState>=1){audio.currentTime=Math.min(offset,range.duration-.01);if(wasPlaying)await audio.play().catch(()=>{})}
+  if(video.readyState>=1){
+   audio.currentTime=Math.min(offset,range.duration-.01);
+   if(wasPlaying)await audio.play().catch(audioFailure);
+  }
  }catch(e){error('Не удалось подготовить аудио: '+e.message)}
 }
-function setMode(value){mode=value;$('original-btn').classList.toggle('selected',value==='original');$('clean-btn').classList.toggle('selected',value==='clean');void previewAudio()}
-$('original-btn').onclick=()=>setMode('original');$('clean-btn').onclick=()=>setMode('clean');
+function setMode(value){
+ mode=value;updateListeningButtons();
+ void previewAudio();
+}
+$('original-btn').onclick=()=>setMode('original');
+$('clean-btn').onclick=()=>setMode('clean');
+$('stems-btn').onclick=()=>setMode('stems');
+$('speech-btn').onclick=()=>setMode('speech');
 for(const name of ['dialogue','music','effects']){
  $(name+'-gain').oninput=()=>{
   text(name+'-value',$(name+'-gain').value+'%');
-  mode='clean';$('original-btn').classList.remove('selected');$('clean-btn').classList.add('selected');
-  clearTimeout(editTimer);editTimer=setTimeout(()=>{void previewAudio()},250);
+  mode='clean';updateListeningButtons();
+  clearTimeout(editTimer);editTimer=setTimeout(()=>{void previewAudio()},220);
  };
 }
+// Never allow the original audio from <video> to mix into the neural stems.
+function lockVideoMute(){
+ if(!video.muted)video.muted=true;
+ try{if(video.volume!==0)video.volume=0}catch{}
+}
+video.addEventListener('volumechange',lockVideoMute);
+lockVideoMute();
 async function sync(play){
  if(!range||!audio.src)return;
  const at=Math.max(0,Math.min(range.duration,video.currentTime-range.start));
  if(Math.abs(audio.currentTime-at)>.2)audio.currentTime=at;
- if(play&&video.currentTime<range.start+range.duration)await audio.play().catch(()=>{});else audio.pause();
+ if(play&&video.currentTime<range.start+range.duration)
+  await audio.play().catch(audioFailure);
+ else audio.pause();
 }
-video.addEventListener('play',()=>{void sync(true)});
-video.addEventListener('pause',()=>{void sync(false)});
+async function toggleListening(){
+ if(!stems||!range)return;
+ if(!video.paused){video.pause();return}
+ clearError();
+ lockVideoMute();
+ if(video.currentTime<range.start||video.currentTime>=range.start+range.duration-.06)
+  video.currentTime=range.start;
+ const position=Math.max(0,Math.min(range.duration,video.currentTime-range.start));
+ audio.currentTime=position;
+ // Both play promises originate in the same real user gesture (Safari).
+ const requests=[audio.play(),video.play()];
+ const states=await Promise.allSettled(requests);
+ const failure=states.find(state=>state.status==='rejected');
+ if(failure){pause();audioFailure(failure.reason)}
+}
+$('listen-btn').onclick=()=>{void toggleListening()};
+$('result-seek').oninput=()=>{
+ if(!range)return;
+ const position=Number($('result-seek').value);
+ video.currentTime=range.start+position;
+ if(audio.src)audio.currentTime=position;
+ text('result-position',Math.floor(position/60)+':'+String(Math.floor(position%60)).padStart(2,'0'));
+};
+video.addEventListener('play',()=>{text('listen-btn','⏸ Пауза');void sync(true)});
+video.addEventListener('pause',()=>{text('listen-btn','▶ Слушать результат');void sync(false)});
 video.addEventListener('seeked',()=>{void sync(!video.paused)});
 video.addEventListener('timeupdate',()=>{
  if(!range)return;
  if(video.currentTime<range.start-.1){video.currentTime=range.start;return}
+ const position=Math.max(0,Math.min(range.duration,video.currentTime-range.start));
+ $('result-seek').value=String(position);
+ text('result-position',Math.floor(position/60)+':'+String(Math.floor(position%60)).padStart(2,'0'));
  if(video.currentTime>=range.start+range.duration-.07){video.pause();audio.pause()}
- else if(Math.abs(audio.currentTime-(video.currentTime-range.start))>.38)void sync(!video.paused);
+ else if(Math.abs(audio.currentTime-position)>.38)void sync(!video.paused);
 });
 function download(blob,name){
  const url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=name;document.body.append(a);a.click();a.remove();
  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
-$('wav-btn').onclick=()=>{if(!stems)return;try{download(wavPCM16(getMix()),fileName+'-no-dialogue.wav')}catch(e){error(e.message)}};
+$('wav-btn').onclick=()=>{if(!stems)return;try{download(wavPCM16(getMix()),fileName+'-'+(mode==='speech'?'isolated-dialogue':mode==='original'?'original':mode==='stems'?'music-effects':'no-dialogue')+'.wav')}catch(e){error(e.message)}};
 function movieMime(){
  return ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4'].find(type=>MediaRecorder.isTypeSupported(type));
 }
@@ -264,7 +334,7 @@ async function exportVideo(){
   if(controller.signal.aborted)throw new DOMException('Прервано','AbortError');
   if(output.size<15000)throw Error('Не удалось записать видеокадры. Скачай WAV отдельно.');
   const ext=mime.startsWith('video/mp4')?'mp4':'webm';
-  download(output,fileName+'-no-dialogue.'+ext);
+  download(output,fileName+'-'+(mode==='speech'?'dialogue':mode==='original'?'original':mode==='stems'?'music-effects':'no-dialogue')+'.'+ext);
   text('export-status','Сохранено '+(output.size/1048576).toFixed(1)+' МиБ · '+ext.toUpperCase());
  }catch(e){if(e.name!=='AbortError')error(e.message);else text('export-status','Экспорт прерван.')}
  finally{cancelAnimationFrame(frame);video.pause();if(recorder?.state==='recording')try{recorder.stop()}catch{}stream?.getTracks().forEach(t=>t.stop());if(ctx)await ctx.close().catch(()=>{});if(abort===controller)abort=null;exporting=false;$('video-btn').disabled=false;$('wav-btn').disabled=false}
