@@ -108,7 +108,7 @@ export async function renderPremiere({
   video.src=localUrl||source;
   const Context=window.AudioContext||window.webkitAudioContext;
   let ctx=null,recorder=null,capture=null,raf=0,frameCallback=false;
-  let stallTimer=0,stopError=null,sources=[],mixedTrack=null;
+  let stallTimer=0,stopError=null,sources=[],mixedTrack=null,resumePaint=null;
   // Start unlocking AudioContext while this call still belongs to the user's
   // click. Waiting for metadata/decoding first loses activation on iOS Safari.
   let initialResume=null;
@@ -116,7 +116,7 @@ export async function renderPremiere({
   const stopRecording=error=>{
     if(error&&!stopError)stopError=error;
     video.pause();
-    if(recorder?.state==='recording')recorder.stop();
+    if(recorder?.state==='recording'||recorder?.state==='paused')recorder.stop();
   };
   const abort=()=>{cancellation.abort();stopRecording(abortError())};
   const hidden=()=>{if(document.hidden&&recorder?.state==='recording'){
@@ -127,7 +127,10 @@ export async function renderPremiere({
    }else if(!document.hidden&&recorder?.state==='paused'){
     // Resume on foreground. Real-time video export cannot be guaranteed to
     // advance while the operating system throttles background tabs.
-    void (async()=>{try{await ctx?.resume();recorder.resume();await video.play()}catch{stopRecording(Error('Не удалось возобновить экспорт после возврата в приложение.'))}})();
+    void (async()=>{try{
+      await ctx?.resume();recorder.resume();await video.play();
+      resumePaint?.();
+    }catch{stopRecording(Error('Не удалось возобновить экспорт после возврата в приложение.'))}})();
    }};
   signal?.addEventListener('abort',abort,{once:true});
   document.addEventListener('visibilitychange',hidden);
@@ -277,6 +280,7 @@ export async function renderPremiere({
       if(performance.now()-lastAdvance>15000)
         stopRecording(Error('Видео перестало воспроизводиться. Проверь файл или соединение.'));
     },2500);
+    resumePaint=()=>{if(frameCallback)raf=video.requestVideoFrameCallback(callback);else raf=requestAnimationFrame(fallback)};
     assertLive(effectiveSignal);
     await Promise.race([
       initialResume,
@@ -313,8 +317,7 @@ export async function renderPremiere({
       sources.push(node);
     }
     decoded.clear();
-    if(hasFrameCallback)raf=video.requestVideoFrameCallback(callback);
-    else raf=requestAnimationFrame(fallback);
+    resumePaint();
     const result=await done;
     onProgress({phase:'encoding',fraction:1});
     return result;
