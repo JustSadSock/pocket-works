@@ -73,6 +73,14 @@ try{
  if(!result)throw Error('MRX failure: '+await page.locator('#error').innerText());
  assert.match(await page.locator('#inference-time').innerText(),/с|мин/);
  assert.match(await page.locator('#speed-factor').innerText(),/×/);
+ await page.evaluate(()=>{
+  window.__monitorStarted=false;
+  document.getElementById('monitor').addEventListener('playing',()=>{window.__monitorStarted=true},{once:true});
+ });
+ await page.locator('#listen-btn').click();
+ await page.waitForFunction(()=>window.__monitorStarted===true,null,{timeout:9000});
+ assert.equal(await page.locator('#result-video').evaluate(v=>v.muted),true);
+ await page.locator('#listen-btn').click();
  assert(await page.locator('#result-video').isVisible());
  const downloaded=page.waitForEvent('download',{timeout:25000});
  await page.locator('#wav-btn').click();
