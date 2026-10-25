@@ -4,7 +4,7 @@ import {assetSource,handleMrxAsset} from '../../../pocketnet/mrx-assets.mjs';
 
 const endpoint=path=>'https://pocketworks.example'+path;
 test('only MRX weights and pinned ONNX binaries can be requested',()=>{
- assert.equal(assetSource('/ai-assets/mrx-v1/mrx.int8.onnx').kind,'model');
+ assert.equal(assetSource('/ai-assets/mrx-v1/mrx/mrx.int8.onnx').kind,'model');
  assert.equal(assetSource('/ai-assets/ort-1.30.0/ort-wasm-simd-threaded.jsep.wasm').kind,'wasm');
  assert.equal(assetSource('/ai-assets/ort-1.30.0/ort-wasm-simd-threaded.jsep.mjs').kind,'script');
  for(const path of [
@@ -45,7 +45,7 @@ test('unknown asset and write requests are refused',async()=>{
  let called=false;const fetchImpl=async()=>{called=true;throw Error('should not fetch')};
  const invalid=await handleMrxAsset(new Request(endpoint('/ai-assets/../../private')),{fetchImpl});
  assert.equal(invalid.status,404);
- const posted=await handleMrxAsset(new Request(endpoint('/ai-assets/mrx-v1/mrx.int8.onnx'),{method:'POST'}),{fetchImpl});
+ const posted=await handleMrxAsset(new Request(endpoint('/ai-assets/mrx-v1/mrx/mrx.int8.onnx'),{method:'POST'}),{fetchImpl});
  assert.equal(posted.status,405);
  assert.equal(called,false);
 });
