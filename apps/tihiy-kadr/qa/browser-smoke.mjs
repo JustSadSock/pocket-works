@@ -4,12 +4,19 @@ import {createServer} from 'node:http';
 import {readFileSync,statSync} from 'node:fs';
 import {extname,resolve,join,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {handleMrxAsset} from '../../../pocketnet/mrx-assets.mjs';
 import {chromium} from '@playwright/test';
 const root=resolve(fileURLToPath(new URL('../../../',import.meta.url)));
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
-const server=createServer((req,res)=>{
+const server=createServer(async(req,res)=>{
  try{
   const url=new URL(req.url,'http://127.0.0.1'),file=resolve(root,'.'+decodeURIComponent(url.pathname));
+  if(url.pathname.startsWith('/ai-assets/')){
+   const upstream=await handleMrxAsset(new Request(url.href));
+   res.writeHead(upstream.status,Object.fromEntries(upstream.headers));
+   if(upstream.body)for await(const chunk of upstream.body)res.write(Buffer.from(chunk));
+   return res.end();
+  }
   if(!file.startsWith(root+sep)){res.writeHead(403);return res.end()}
   const path=statSync(file).isDirectory()?join(file,'index.html'):file;
   res.writeHead(200,{'Content-Type':mime[extname(path)]||'application/octet-stream','Cache-Control':'no-store'});

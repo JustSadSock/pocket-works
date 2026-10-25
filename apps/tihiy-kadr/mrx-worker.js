@@ -3,9 +3,11 @@
 // resolve reliably in Safari, which can report only "Load failed".
 // Pin to the unmodified upstream version, independently of the JS bundle.
 const LIBRARY='https://esm.sh/@audio/neural-separate@0.7.0?bundle&target=es2022';
+const ROOT=new URL('/',self.location.origin);
+const MODEL_ASSETS=new URL('/ai-assets/mrx-v1/',ROOT).href;
 const RUNTIME_ASSETS=[
- 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/',
- 'https://unpkg.com/onnxruntime-web@1.30.0/dist/'
+ new URL('/ai-assets/ort-1.30.0/',ROOT).href,
+ 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/'
 ];
 const describe=e=>{
  const detail=e?.message||String(e);
@@ -28,7 +30,7 @@ self.onmessage=async event=>{
   for(let i=0;i<RUNTIME_ASSETS.length;i++){
    const wasmPaths=RUNTIME_ASSETS[i];
    try{
-    status('model',i?'Повторяем запуск с резервного CDN ONNX…':'Загружаем MRX и ONNX WebAssembly. Первый запуск ~31 МБ.');
+    status('model',i?'Повторяем запуск с резервного CDN ONNX…':'Загружаем модель через PocketWorks (~31 МБ один раз).');
     const started=performance.now();
     const result=await separate(channels,{
      sampleRate:44100,model:'mrx',device:'wasm',
@@ -36,6 +38,7 @@ self.onmessage=async event=>{
      chunk:[5,10,20].includes(chunk)?chunk:10,
      overlap:2,
      wasmPaths,
+     weights:MODEL_ASSETS,
      progress:({chunk:part,totalChunks})=>{
       if(totalChunks>1)status('model','MRX · фрагмент '+part+' из '+totalChunks);
      }
