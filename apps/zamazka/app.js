@@ -1618,9 +1618,19 @@ screen.addEventListener('click',e=>{
   if(!view?.paused||(view.onlineIds||[]).includes(view.host)||networkNow()-(view.pausedAt||networkNow())<60000)return;
   net?.sendGame({type:'claim_host'});return;
  }
+ if(action==='pause-continue'){
+  if(!view?.protectedPresence||!view.paused||view.host!==me?.id)return;
+  if(networkNow()-(view.pausedAt||networkNow())<18000)return;
+  if((view.onlineIds||[]).length<2){notify('Для продолжения нужны хотя бы два подключённых реставратора');return}
+  modal('Продолжить без отсутствующих?','<p class="hint">Используем только подтверждённые сервером рисунки и голоса. Отсутствующие смогут вернуться на свои места; если отключится ещё один игрок, выставка снова остановится.</p>',[
+   ['Продолжить',()=>{closeDialog();net?.sendGame({type:'resume_with_absent'})},'primary'],
+   ['Ждать',closeDialog,'ghost']
+  ]);return;
+ }
  if(action==='pause-kick'){
   const target=b.dataset.playerId,player=view?.participants?.find(p=>p.id===target);
   if(!view?.paused||view.host!==me?.id||!player||(view.onlineIds||[]).includes(target))return;
+  if(view.protectedPresence&&networkNow()-(view.pausedAt||networkNow())<18000)return;
   if(view.participants.length<=2){notify('В комнате должны остаться минимум двое');return}
   modal('Исключить отсутствующего?','<p class="hint">'+esc(player.name)+' не подключён. Его результаты будут исключены.</p>',[
    ['Исключить',()=>{closeDialog();net?.sendGame({type:'kick_player',targetId:target})},'primary'],
@@ -1690,6 +1700,12 @@ screen.addEventListener('click',e=>{
 // Clockmaker A strikes exactly at 10, 5 and 0; suppressed in untimed stages.
 let clockSoundState=null;
 function tick(){
+ if(view?.paused&&view.protectedPresence){
+  const seconds=Math.max(0,Math.ceil((18000-(networkNow()-(view.pausedAt||networkNow())))/1000));
+  const countdown=screen.querySelector('[data-pause-recovery]');
+  if(countdown)countdown.textContent=seconds?'Восстановление связи: '+seconds+' с':'Можно продолжить с сохранёнными работами или подождать.';
+  if(!seconds)for(const control of screen.querySelectorAll('[data-action="pause-continue"],[data-action="pause-kick"]'))control.disabled=false;
+ }
  if(view?.paused&&view.pausedAt&&networkNow()-view.pausedAt>=60000){
   const takeover=screen.querySelector('[data-action="claim-host"]:disabled');if(takeover)takeover.disabled=false;
  }
@@ -1798,19 +1814,28 @@ async function refreshPocketBadge(){
 function renderPauseOverlay(){
  const prior=screen.querySelector('.zam-pause-cover');
  if(!view?.paused||!roomId||page==='home'){prior?.remove();return}
- const offline=(view.participants||[]).filter(p=>!(view.onlineIds||[]).includes(p.id));
- const names=offline.map(p=>'<li>'+esc(p.name)+(me?.id===view.host&&p.id!==me.id&&view.participants.length>2?
-  '<button type="button" data-action="pause-kick" data-player-id="'+esc(p.id)+'">Исключить</button>':'')+'</li>').join('');
+ const online=view.onlineIds||[],offline=(view.participants||[]).filter(p=>!online.includes(p.id));
+ const curator=me?.id===view.host;
+ const grace=view.protectedPresence?Math.max(0,18000-(networkNow()-(view.pausedAt||networkNow()))):0;
+ const waiting=grace>0;
+ const canContinue=view.protectedPresence&&curator&&online.length>=2&&offline.length>0;
+ const names=offline.map(p=>'<li>'+esc(p.name)+(curator&&p.id!==me.id&&view.participants.length>2?
+  '<button type="button" data-action="pause-kick" data-player-id="'+esc(p.id)+'"'+(waiting?' disabled':'')+'>Исключить</button>':'')+'</li>').join('');
  const paused=prior||document.createElement('aside');
  paused.className='zam-pause-cover';paused.setAttribute('role','status');
  paused.innerHTML='<div class="zam-pause-panel"><span class="section-label">СВЯЗЬ ПРЕРВАНА</span>'+
-  '<h2>Выставка на паузе</h2><p>Время и работы сохранены. Продолжим, когда все вернутся, или куратор исключит отсутствующих.</p>'+
+  '<h2>Выставка на паузе</h2><p>Время и подтверждённые работы сохранены. '+
+  (view.protectedPresence?'Участник может вернуться без потери места.':'Продолжим, когда все вернутся, или куратор исключит отсутствующих.')+'</p>'+
   '<ul>'+names+'</ul>'+
-  (me?.id!==view.host&&!(view.onlineIds||[]).includes(view.host)?
+  (view.protectedPresence?'<p class="zam-pause-grace" data-pause-recovery>'+
+   (waiting?'Восстановление связи: '+Math.ceil(grace/1000)+' с':'Можно продолжить с сохранёнными работами или подождать.')+'</p>':'')+
+  (canContinue?'<button type="button" class="zam-pause-continue" data-action="pause-continue"'+(waiting?' disabled':'')+'>Продолжить без отсутствующих</button>':'')+
+  (view.protectedPresence&&online.length<2?'<p>Для продолжения необходимо хотя бы два подключённых игрока.</p>':'')+
+  (me?.id!==view.host&&!online.includes(view.host)?
     '<button type="button" data-action="claim-host"'+
      (networkNow()-(view.pausedAt||networkNow())<60000?' disabled':'')+
      '>Стать куратором и восстановить матч</button>':'')+
-  '<small>Подключено: '+(view.onlineIds||[]).length+' / '+view.participants.length+'</small></div>';
+  '<small>Подключено: '+online.length+' / '+view.participants.length+'</small></div>';
  if(!paused.isConnected)screen.appendChild(paused);
 }
 // The debug gallery previews the real stage renderers in a separate iframe.
