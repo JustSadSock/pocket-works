@@ -83,7 +83,7 @@ clock=300_000;
  assert.match(send(participants[1],{type:'kick_player',targetId:'p2'}).events[0].payload,/куратор/i);
  const out=send(participants[0],{type:'kick_player',targetId:'p2'});
  assert.equal(out.events.filter(e=>e.type==='player_kicked').length,1);
- assert.ok(!state.assignments.p2,'kicked author's private painting removed');
+ assert.ok(!state.assignments.p2,"kicked author\'s private painting removed");
  reconcileZamazkaPresence(state,['p0','p1'],clock);
  assert.equal(state.paused,false);
  assert.equal(state.participants.length,2);
