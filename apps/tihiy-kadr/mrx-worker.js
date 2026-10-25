@@ -24,7 +24,6 @@ self.onmessage=async event=>{
   const packageModule=await import(LIBRARY);
   const separate=packageModule.default||packageModule.separate;
   if(typeof separate!=='function')throw Error('В модуле нет функции separate.');
-  const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   let lastError;
   for(let i=0;i<RUNTIME_ASSETS.length;i++){
    const wasmPaths=RUNTIME_ASSETS[i];
@@ -34,7 +33,7 @@ self.onmessage=async event=>{
     const result=await separate(channels,{
      sampleRate:44100,model:'mrx',device:'wasm',
      // Safari and iOS need a smaller per-inference allocation.
-     chunk:isMobile?Math.min(chunk===20?20:chunk===10?10:5,10):chunk,
+     chunk:[5,10,20].includes(chunk)?chunk:10,
      overlap:2,
      wasmPaths,
      progress:({chunk:part,totalChunks})=>{
