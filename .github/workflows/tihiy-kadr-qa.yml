@@ -59,6 +59,7 @@ jobs:
         run: |
           npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
           npx playwright install --with-deps webkit
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
           ffmpeg -version
       - name: Run MRX in WebKit mobile viewport with actual video and ONNX WASM
         run: node apps/tihiy-kadr/qa/webkit-smoke.mjs
