@@ -111,7 +111,7 @@ export function unpackTimeline(data,duration=Infinity) {
 
 /* Stage 3: every editing gesture is one atomic timeline transaction.
  * "move" shifts a whole line without changing the recorded voice; "left" and
- * "right" trim its edges. A clip may not overlap its neighbors or leave the film.
+ * "right" trim its edges. Clips may overlap, but never leave the film.
  * We never extend beyond recorded audio, even if the browser hasn't decoded
  * the source duration yet.
  */
@@ -150,7 +150,7 @@ export function replaceSelectedRecording(clips,targetId,blob,duration,newId){
  const at=clips.findIndex(c=>c.id===targetId);
  if(at<0||!blob||!newId||!Number.isFinite(duration)||duration<=0)return null;
  const old=clips[at];
- const end=Math.min(old.start+duration,Math.max(old.end,old.start+duration));
+ const end=old.start+duration;
  if(end-old.start<MIN_CLIP_SECONDS)return null;
  const next=clips.slice();
  next[at]={id:newId,owner:old.owner,start:old.start,end,offset:0,blob,fx:old.fx||'clean'};
