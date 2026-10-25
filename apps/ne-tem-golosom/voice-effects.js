@@ -58,7 +58,7 @@ export function pitchShiftGraph(ctx,input,output,semitones,own,activeSources){
  if(!Number.isFinite(semitones)||semitones<-12||semitones>12)
   throw Error('Недопустимая высота голоса.');
  const ratio=Math.pow(2,semitones/12);
- const rate=ctx.sampleRate,frames=Math.max(512,Math.round(rate*.095));
+ const rate=ctx.sampleRate,grainSeconds=semitones>=6?.11:.095,frames=Math.max(512,Math.round(rate*grainSeconds));
  const duration=frames/rate,delta=(1-ratio)*duration;
  const baseDelay=.018+Math.max(0,-delta);
  const ramp=ctx.createBuffer(1,frames,rate),window=ctx.createBuffer(1,frames,rate);
