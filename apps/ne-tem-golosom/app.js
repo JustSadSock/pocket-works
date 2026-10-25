@@ -589,7 +589,7 @@ async function connectRoom(action,checkpoint=null){
  conn.on('presence',m=>{
   if(m.roomId!==room||!Array.isArray(m.onlineIds))return;
   onlineIds=new Set(m.onlineIds);
-  connectionNotice();
+  ensurePeers();connectionNotice();
   if(view==='room')roomUI();
   if(view==='wait')waitUI();
  });
@@ -618,6 +618,7 @@ async function connectRoom(action,checkpoint=null){
  conn.on('disconnected',()=>{
   if(net!==conn)return;
   networkInterrupted=true;onlineIds?.delete(me);
+  for(const id of [...peers.keys()])closePeer(id);
   setNetStatus('connecting','Переподключаемся…');
   connectionNotice();
   toast('Соединение потеряно. Записи остались на устройстве.');
@@ -659,7 +660,16 @@ function peer(id,initiator){if(!window.RTCPeerConnection)return toast('WebRTC н
  pc.ondatachannel=e=>attachChannel(p,e.channel);
  if(initiator){const dc=pc.createDataChannel('footage',{ordered:true});attachChannel(p,dc);pc.createOffer().then(o=>pc.setLocalDescription(o)).then(()=>sendGame({type:'signal',to:id,signal:{kind:'offer',sdp:pc.localDescription.sdp}})).catch(()=>toast('Не удалось создать соединение для видео.'))}
  return p}
-function ensurePeers(){if(!state||!me)return;for(const p of state.players){if(p.id===me)continue;if(meHost()){if(!peers.has(p.id))peer(p.id,true)}else if(p.id===state.host){if(!peers.has(p.id))peer(p.id,false)}}for(const id of [...peers.keys()])if(!state.players.some(p=>p.id===id))closePeer(id)}
+function ensurePeers(){
+ if(!state||!me)return;
+ for(const p of state.players){
+  if(p.id===me||(onlineIds&&!onlineIds.has(p.id)))continue;
+  if(meHost()){if(!peers.has(p.id))peer(p.id,true)}
+  else if(p.id===state.host){if(!peers.has(p.id))peer(p.id,false)}
+ }
+ for(const id of [...peers.keys()])
+  if(!state.players.some(p=>p.id===id)||(onlineIds&&!onlineIds.has(id)))closePeer(id);
+}
 async function receiveSignal(data){if(!data||!state?.players.some(p=>p.id===data.from))return;const from=data.from,x=data.signal||{};let p=peers.get(from)||peer(from,false);if(!p)return;try{if(x.kind==='offer'&&typeof x.sdp==='string'){await p.pc.setRemoteDescription({type:'offer',sdp:x.sdp});const answer=await p.pc.createAnswer();await p.pc.setLocalDescription(answer);sendGame({type:'signal',to:from,signal:{kind:'answer',sdp:p.pc.localDescription.sdp}})}else if(x.kind==='answer'&&typeof x.sdp==='string'){await p.pc.setRemoteDescription({type:'answer',sdp:x.sdp})}else if(x.kind==='ice'&&x.candidate){if(!p.pc.remoteDescription)p.pending.push(x.candidate);else await p.pc.addIceCandidate(x.candidate)}if(p.pc.remoteDescription&&p.pending.length){for(const c of p.pending.splice(0))await p.pc.addIceCandidate(c).catch(()=>{})}}catch(e){toast('Ошибка соединения с актёром: '+e.message)}}
 function attachChannel(p,dc){p.dc=dc;dc.binaryType='arraybuffer';dc.bufferedAmountLowThreshold=128*1024;dc.onopen=()=>{flush(p);if(meHost()&&scene?.custom&&sourceBlob)sendVideoTo(p.id);if(state?.phase==='premiere'&&sentPremiere)sendOwnTo(p.id)};
  dc.onmessage=e=>onMedia(p,e.data);dc.onclose=()=>{p.dc=null;p.rx=null};dc.onerror=()=>toast('Передача медиа была прервана.')}
