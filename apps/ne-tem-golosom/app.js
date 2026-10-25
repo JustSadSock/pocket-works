@@ -1435,4 +1435,3 @@ async function initializeIdentityAndRecovery(){
  }
 }
 void initializeIdentityAndRecovery();
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));

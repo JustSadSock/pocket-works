@@ -1,7 +1,7 @@
 const CACHE_PREFIX='mezha-';
 const CACHE_NAME='mezha-v1.2.0';
 const APP_VERSION='1.2.0',RELEASE_DATE='2026-10-15',CACHE_PROTOCOL=2;
-const RELEASE_NOTES=['Поле боя расширено до 1440×930: путь войск стал длиннее.','Все слои игры рисуются в единой пиксельной сетке без сглаживания.','Перенос сохранений и проверка 64 сценариев.'];
+const RELEASE_NOTES=["Мир боя увеличен до 1440×930: походы между владениями стали длиннее без ускорения отрядов.","Карта, постройки, солдаты, знамена и боевые эффекты собираются в общей пиксельной сетке без сглаживания.","Переправы, камеры, миникарта и осады перенастроены для расширенного мира; старые сохранения переносит миграция координат.","64 полные симуляции и Playwright-проверки десктопного и мобильного интерфейса."];
 const FILES=['./','./index.html','./app.js','./engine.js','./render.js','./styles.css','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/pwa-utils.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 const scope=new URL('./',self.registration.scope),build=APP_VERSION+'-p'+CACHE_PROTOCOL;
 const paths=new Map(FILES.map(f=>{const url=new URL(f,scope);return[url.pathname,url.href]}));

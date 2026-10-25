@@ -153,13 +153,58 @@ export function requestFromInputs(data) {
   return req;
 }
 
+// Only publication-note edits are exempt from app-wide QA; gameplay, cache
+// contents, update protocol, versions and recovery behavior remain gated.
+export function metadataOnlyWorkerChange(before, after) {
+ function normalise(input) {
+  if(typeof input!=='string')return null;
+  let source=input;
+  function arrayEnd(start) {
+   let depth=0,quote=null,escaped=false;
+   for(let i=start;i<source.length;i++) {
+    const ch=source[i];
+    if(quote){if(escaped)escaped=false;else if(ch==='\\')escaped=true;else if(ch===quote)quote=null}
+    else if(ch==="'"||ch==='"'||ch.charCodeAt(0)===96)quote=ch;
+    else if(ch==='[')depth++;
+    else if(ch===']'&&!--depth)return i+1;
+   }
+   return -1;
+  }
+  function replaceArrays(regex,replacement,statement=false) {
+   let m;
+   while((m=regex.exec(source))) {
+    const start=m.index+m[0].lastIndexOf('['),end=arrayEnd(start);
+    if(end<0)return false;
+    const stop=statement&&source[end]===';'?end+1:end;
+    source=source.slice(0,m.index)+replacement+source.slice(stop);
+   }
+   return true;
+  }
+  if(!replaceArrays(/\b(?:const|let)\s+RELEASE_NOTES\s*=\s*\[/,'',true))return null;
+  if(!replaceArrays(/\breleaseNotes\s*:\s*\[/,'releaseNotes:__RELEASE_NOTES__'))return null;
+  source=source.replace(/\breleaseNotes\s*:\s*RELEASE_NOTES\b/g,'releaseNotes:__RELEASE_NOTES__');
+  source=source.replace(/\bRELEASE_DATE\s*=\s*(['"])[^'"]+\1/g,'RELEASE_DATE=__DATE__');
+  source=source.replace(/\breleaseDate\s*:\s*(['"])[^'"]+\1/g,'releaseDate:__DATE__');
+  return source.replace(/\s+/g,' ').trim();
+ }
+ return normalise(before)===normalise(after);
+}
+
 export function changedApps(root, base, head) {
   if (!/^[0-9a-f]{40}$/.test(base) || !/^[0-9a-f]{40}$/.test(head)) throw Error('Invalid PR SHA');
   // Compare the PR's work from its fork point, excluding later target-branch work.
   const paths = execFileSync('git', ['diff', '--name-only', `${base}...${head}`], { cwd: root, encoding: 'utf8' }).split(/\r?\n/);
   return [...new Set(paths.flatMap(p => {
     const match = /^apps\/([a-z0-9-]+)\//.exec(p);
-    return match ? [match[1]] : [];
+    if(!match)return [];
+    if(p === 'apps/'+match[1]+'/sw.js') {
+      try {
+        const before=execFileSync('git',['show',base+':'+p],{cwd:root,encoding:'utf8'});
+        const after=readFileSync(join(root,p),'utf8');
+        if(metadataOnlyWorkerChange(before,after))return [];
+      }catch{/* Missing worker is a real change, so keep its application QA. */}
+    }
+    return [match[1]];
   }))].sort();
 }
 

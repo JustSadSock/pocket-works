@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { requestFromEvent, requestFromInputs, loadSuites, resolveTasks, partition, ISSUE_TITLE } from './plan.mjs';
+import { requestFromEvent, requestFromInputs, loadSuites, resolveTasks, partition, metadataOnlyWorkerChange, ISSUE_TITLE } from './plan.mjs';
 import { summarize, reportMarkdown } from './aggregate.mjs';
 
 const createFixture = () => {
@@ -95,4 +95,18 @@ test('aggregate fails closed when reports are missing or failed', () => {
     writeFileSync(join(good, 'result.json'), '{"app":"test-app","suite":"visual","success":false}');
     assert.equal(summarize(f.root, ['x']).success, false);
   } finally { f.cleanup(); }
+});
+
+test('service worker release metadata alone does not fan out into game QA',()=>{
+ const old="const VERSION='1.0.0';const RELEASE_DATE='2026-10-24';const RELEASE_NOTES=['Old notes'];self.addEventListener('message',e=>{if(e.data?.type==='GET_UPDATE_INFO')e.ports?.[0]?.postMessage({version:VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES});});";
+ const changed="const VERSION='1.0.0';const RELEASE_DATE='2026-10-25';const RELEASE_NOTES=['New notes','More notes'];self.addEventListener('message',e=>{if(e.data?.type==='GET_UPDATE_INFO')e.ports?.[0]?.postMessage({version:VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES});});";
+ assert.equal(metadataOnlyWorkerChange(old,changed),true);
+ assert.equal(metadataOnlyWorkerChange(old,changed.replace("VERSION='1.0.0'","VERSION='1.0.1'")),false,'version change must run QA');
+ assert.equal(metadataOnlyWorkerChange(old,changed.replace("e.ports?.[0]","self.clients")),false,'reply transport change must run QA');
+ assert.equal(metadataOnlyWorkerChange(old,changed.replace("RELEASE_DATE='2026-10-25'","RELEASE_DATE=getDate()")),false,'computed date is not metadata-only');
+ assert.equal(metadataOnlyWorkerChange(old,changed+"const ASSETS=['new-runtime-file'];"),false,'precache change must run QA');
+ const before="const VERSION='1.0.0';self.addEventListener('message',event=>event.ports?.[0]?.postMessage({releaseNotes:['Original']}));";
+ const after="const RELEASE_NOTES=['Latest'];\nconst VERSION='1.0.0';self.addEventListener('message',event=>event.ports?.[0]?.postMessage({releaseNotes:RELEASE_NOTES}));";
+ assert.equal(metadataOnlyWorkerChange(before,after),true,'an inline array moved into RELEASE_NOTES remains metadata-only');
+ assert.equal(metadataOnlyWorkerChange(before,after.replace('releaseNotes:RELEASE_NOTES','releaseNotes:missingVar')),false);
 });

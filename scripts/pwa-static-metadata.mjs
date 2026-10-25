@@ -23,3 +23,8 @@ export function staticString(source,name) {
  }
  return null;
 }
+
+// Accept equivalent MessageEvent binding names while retaining an actual MessagePort reply.
+export function hasUpdatePortReply(messageHandler) {
+ return /\b[A-Za-z_$][\w$]*\.ports\?\.\[0\]\?\.postMessage\s*\(/.test(messageHandler);
+}
