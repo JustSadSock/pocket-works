@@ -34,5 +34,49 @@
 </div>
 </section>
 </div>
+<section class="panel study-panel" aria-labelledby="study-heading">
+<div class="panel-title"><h2 id="study-heading">04 / СРАВНЕНИЕ АЛГОРИТМОВ</h2><span class="chip">ЛАБОРАТОРНЫЙ РЕЖИМ</span></div>
+<p class="hint">Все способы сравниваются на одном и том же фрагменте. Измерения громкости не являются показателями точности удаления речи.</p>
+<div class="study-grid">
+ <div class="study-step">
+  <h3>Исходник и 5.1</h3>
+  <p class="hint">Сохрани звук выбранного фрагмента и обработай его в другом инструменте. Для дорожек 5.1/7.1 можно попробовать убрать центральный канал без нейросети.</p>
+  <button id="study-source-wav" class="secondary" type="button" disabled>Скачать исходный звук WAV</button>
+  <label class="study-input-label" for="study-surround-file">Импорт многоканального WAV (5.1 / 7.1)</label>
+  <input id="study-surround-file" type="file" accept=".wav,audio/wav,audio/x-wav">
+  <div id="study-surround-options" class="hidden">
+   <label>Сколько оставить центрального канала <output id="study-center-value">0%</output>
+   <input id="study-center-gain" type="range" value="0" min="0" max="100" step="5"></label>
+  </div>
+  <p id="study-surround-status" class="hint" role="status">Стерео MP4 не превращается автоматически в настоящую дорожку 5.1.</p>
+ </div>
+ <div class="study-step">
+  <h3>Другие нейросети</h3>
+  <p class="hint">Обработай скачанный WAV отдельно, затем загрузи результат сюда. Можно импортировать готовую дорожку «без речи» или две дорожки: музыка и эффекты.</p>
+  <label>Источник результата
+   <select id="study-method">
+    <option value="dnr-scnet">MVSep · DnR v3 SCNet</option>
+    <option value="dnr-ensemble">MVSep · DnR v3 Mel + SCNet</option>
+    <option value="bandit">MVSep · BandIt v2</option>
+    <option value="sam">SAM Audio · residual</option>
+    <option value="other">Другая модель</option>
+   </select>
+  </label>
+  <div class="study-inputs">
+   <label>Готовый фон M&amp;E <input id="study-me-file" type="file" accept=".wav,.flac,.mp3,.m4a,audio/*"></label>
+   <span class="hint">или две отдельные дорожки</span>
+   <label>Музыка <input id="study-music-file" type="file" accept=".wav,.flac,.mp3,.m4a,audio/*"></label>
+   <label>Эффекты <input id="study-effects-file" type="file" accept=".wav,.flac,.mp3,.m4a,audio/*"></label>
+  </div>
+  <label>Время обработки вне лаборатории, секунд <input id="study-external-seconds" type="number" min="0" step="0.1" placeholder="Неизвестно"></label>
+  <button id="study-import" type="button" class="primary">Добавить результат к сравнению</button>
+  <p id="study-import-status" class="hint" role="status"></p>
+  <p class="hint">Внешние модели: <a href="https://mvsep.com/en" target="_blank" rel="noopener noreferrer">MVSep</a> · <a href="https://github.com/facebookresearch/sam-audio" target="_blank" rel="noopener noreferrer">SAM Audio</a>. Файлы загружаются туда только твоим отдельным действием.</p>
+ </div>
+</div>
+<div class="study-results-head"><h3>Результаты одной сцены</h3><button id="study-csv" class="secondary" type="button" disabled>Экспорт сравнений CSV</button></div>
+<div id="study-results" class="study-results" role="list"><p class="hint">Выбери сцену и обработай MRX, извлеки 5.1 или импортируй готовые дорожки. Здесь появятся результаты и их скорость.</p></div>
+<p id="study-active-status" class="hint" role="status">После выбора результата используй обычные кнопки просмотра и экспорта выше.</p>
+</section>
 <footer>MRX by Mitsubishi Electric Research Laboratories · MIT · ONNX export by audiojs. Оригинальное видео не загружается на сервер. Используйте материалы, на которые у вас есть права.</footer>
 </main><script type="module" src="./app.js"></script></body></html>
