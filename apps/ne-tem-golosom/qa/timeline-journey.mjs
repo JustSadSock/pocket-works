@@ -134,6 +134,17 @@ try{
   const trimmedWidth=await page.locator('[data-clip="first"]').evaluate(el=>parseFloat(el.style.width));
   assert(trimmedWidth<moved.width,'dragging grip trims the line');
   assert.equal(await page.locator('#replace-clip-btn').isEnabled(),true,'selected clip can be re-recorded');
+  assert.equal(await page.locator('#voice-effects').isVisible(),true,'voice effect strip appears for selected clip');
+  await page.locator('[data-voice-fx="radio"]').click();
+  assert.equal(await page.locator('[data-voice-fx="radio"]').getAttribute('aria-pressed'),'true','radio effect applies to selected clip');
+  await page.locator('[data-voice-fx="clean"]').click();
+  assert.equal(await page.locator('[data-voice-fx="clean"]').getAttribute('aria-pressed'),'true','original voice can be restored without re-recording');
+  await page.locator('#timeline-zoom-in').click();
+  await page.locator('#timeline-zoom-in').click();
+  assert.equal(await page.locator('#timeline-zoom-label').innerText(),'16×','timeline zoom supports precise editing');
+  await page.locator('#timeline-zoom-out').click();
+  await page.locator('#timeline-zoom-out').click();
+
   await page.locator('#undo-btn').click();
   await page.locator('#undo-btn').click();
   assert.equal(await page.locator('.clip-bar').count(),2,'drag and trim both reversible');
