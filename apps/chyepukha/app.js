@@ -120,15 +120,25 @@ function saveWriterMeta(patch){
 const pendingStorageKey=()=>KEY+'submit:'+sessionKey()+':'+room;
 function readPending(){
  if(IS_PREVIEW)return null;
- try{const v=JSON.parse(localStorage.getItem(pendingStorageKey())||'null');return validPending(v)?v:null}
+ try{const v=JSON.parse(draftStore.read(pendingStorageKey())||'null');return validPending(v)?v:null}
  catch{return null}
 }
-function savePending(record){if(IS_PREVIEW)return true;try{localStorage.setItem(pendingStorageKey(),JSON.stringify(record));return true}catch{toast('Не вдалося зберегти відправку на цьому пристрої.');return false}}
-function discardPending(){if(IS_PREVIEW)return;try{localStorage.removeItem(pendingStorageKey())}catch{}}
+function savePending(record){
+ if(IS_PREVIEW)return true;
+ const mode=draftStore.write(pendingStorageKey(),JSON.stringify(record));
+ if(mode==='memory'){
+  draftStore.remove(pendingStorageKey());
+  toast('Не вдалося зберегти відправку навіть у вкладці. Скопіюй текст та звільни місце.');
+  return false;
+ }
+ if(mode==='tab')toast('Підтвердження відправки захищено лише в цій вкладці. Не закривай її.');
+ return true;
+}
+function discardPending(){if(IS_PREVIEW)return;draftStore.remove(pendingStorageKey())}
 function acknowledgeReceipt(receipt){
  const p=readPending();
  if(!['v5','v6','v7','v8','v9','v10'].includes(roomVersion)||!isSafeReceipt(receipt,p))return false;
- draftStore.remove(p.draftStorageKey);draftStore.remove(p.draftStorageKey+':editor');try{localStorage.removeItem(pendingStorageKey())}catch{}
+ draftStore.remove(p.draftStorageKey);draftStore.remove(p.draftStorageKey+':editor');draftStore.remove(pendingStorageKey())
  delete draftSelections[p.draftStorageKey];
  return true;
 }
