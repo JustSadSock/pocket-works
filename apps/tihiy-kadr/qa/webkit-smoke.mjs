@@ -7,6 +7,7 @@ import {extname,resolve,join,sep} from 'node:path';
 import {tmpdir} from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import {handleMrxAsset} from '../../../pocketnet/mrx-assets.mjs';
 import {webkit} from '@playwright/test';
 const root=resolve(fileURLToPath(new URL('../../../',import.meta.url)));
 const temp=mkdtempSync(join(tmpdir(),'tihiy-mrx-'));
@@ -20,9 +21,15 @@ const command=spawnSync('ffmpeg',[
  ],{encoding:'utf8'});
 if(command.status!==0)throw Error('ffmpeg test fixture unavailable: '+command.stderr);
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
-const server=createServer((req,res)=>{
+const server=createServer(async(req,res)=>{
  try{
   const u=new URL(req.url,'http://127.0.0.1');
+  if(u.pathname.startsWith('/ai-assets/')){
+   const upstream=await handleMrxAsset(new Request(u.href));
+   res.writeHead(upstream.status,Object.fromEntries(upstream.headers));
+   if(upstream.body)for await(const chunk of upstream.body)res.write(Buffer.from(chunk));
+   return res.end();
+  }
   const target=resolve(root,'.'+decodeURIComponent(u.pathname));
   if(!target.startsWith(root+sep)){res.writeHead(403);return res.end()}
   const local=statSync(target).isDirectory()?join(target,'index.html'):target;
