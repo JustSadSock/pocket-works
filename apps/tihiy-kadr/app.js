@@ -9,7 +9,7 @@ const text=(id,msg)=>$(id).textContent=String(msg),show=(id,on)=>$(id).classList
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),revoke=url=>{if(url)URL.revokeObjectURL(url)};
 function error(msg){text('error',msg);show('error',true)}
 function clearError(){show('error',false)}
-function uiBusy(active){$('process-btn').disabled=active||!file||!length;$('file-input').disabled=active;$('start-seconds').disabled=active;$('duration-seconds').disabled=active;$('chunk-size').disabled=active;$('model-choice').disabled=active;show('progress-wrap',active)}
+function uiBusy(active){$('process-btn').disabled=active||!file||!length;$('file-input').disabled=active;$('start-seconds').disabled=active;$('duration-seconds').disabled=active;$('chunk-size').disabled=active;show('progress-wrap',active)}
 function step(title,detail='',ratio=null){text('progress-heading',title);text('progress-detail',detail);if(ratio===null)$('progress-bar').removeAttribute('value');else $('progress-bar').value=ratio}
 function pause(){video.pause();sourceVideo.pause();audio.pause()}
 function reset(){
@@ -134,7 +134,7 @@ function readableModelError(packet){
   return 'Не хватает памяти для нейросети. Выбери режим по 5 секунд и попробуй более короткую сцену. '+reason;
  return 'Нейросеть ('+phase+'): '+reason;
 }
-function separate(channels,chunk,id,model){
+function separate(channels,chunk,id){
  return new Promise((resolve,reject)=>{
   const w=new Worker('./mrx-worker.js',{type:'module'});worker=w;
   w.onerror=e=>{e.preventDefault();w.terminate();if(worker===w)worker=null;reject(Error('Ошибка подключения нейросети: '+(e.message||'скрипт Worker не запустился')+'. Проверь сеть и разрешение доступа к внешним CDN.'))};
@@ -149,7 +149,7 @@ function separate(channels,chunk,id,model){
    }
   };
   const copies=channels.map(ch=>ch.slice());
-  w.postMessage({id,channels:copies,chunk,model},copies.map(c=>c.buffer));
+  w.postMessage({id,channels:copies,chunk},copies.map(c=>c.buffer));
  });
 }
 async function process(){
@@ -162,14 +162,13 @@ async function process(){
   if(signal.signal.aborted||id!==serial)return;
   const start=performance.now();
   timer=setInterval(()=>text('progress-detail','Разделяем '+elapsed(selected.duration)+' звука · прошло '+elapsed((performance.now()-start)/1000)),500);
-  const model=$('model-choice').value;
-  const result=await separate(original,Number($('chunk-size').value),id,model);
+  const result=await separate(original,Number($('chunk-size').value),id);
   if(signal.signal.aborted||id!==serial)return;
   stems=result.stems;inferenceTime=result.seconds;
   step('Готово','Дорожки разделены.',1);
   text('inference-time',elapsed(inferenceTime));
   text('speed-factor',(selected.duration/Math.max(.001,inferenceTime)).toFixed(2)+'×');
-  text('scene-length',elapsed(selected.duration));text('result-state',(model==='tiger'?'TIGER':'MRX')+' · три дорожки готовы');
+  text('scene-length',elapsed(selected.duration));text('result-state','MRX · три дорожки готовы');
   const levels=stemLevels(original,stems);
   text('stem-diagnostics',levels
    ?'Выделенная речь: '+levels.dialogueRelativeDb.toFixed(1)+' дБ относительно оригинала. Это уровень выделенной дорожки, не оценка точности модели.'+
