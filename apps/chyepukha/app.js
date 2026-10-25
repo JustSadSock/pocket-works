@@ -16,6 +16,7 @@ import {screenSignature,transitionFor} from './editor-motion.js';
 import {handoffCount,handoffWords,hasMinimumDraft} from './writer-flow.js';
 import {readEditions,writeEditions,addFinishedEdition,planFinishedEdition,MAX_EDITIONS,removeEdition,storyText,searchEditions,toggleEditionFavorite,createArchiveBackup,parseArchiveBackup,mergeArchiveBackup,MAX_BACKUP_BYTES} from './story-library.js';
 import {renderArchive} from './archive-view.js';
+import {createDraftStore,worstDraftMode,draftStorageLabel} from './draft-rescue.js';
 import {installScreenInspector,PREVIEW_PARAM} from './screen-inspector.js';
 import {demoView} from './preview-data.js';
 installMobileRuntime();
@@ -38,6 +39,11 @@ let name=(IS_PREVIEW?'':storageForTab().getItem(KEY+'tab-name'))||read('name',''
 const soundscape=createSoundscape();soundscape.config({effectsEnabled,musicEnabled,effectsLevel:effectsVolume,musicLevel:musicVolume});
 let previewDraft='',previewEditions=[],previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};let readerMode='full',readerPage=0,comicSource=null;
 let archiveSaveWarning='',archiveWarningShown='',unsavedNextAction='';
+const draftStore=createDraftStore(
+ {getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)},
+ {getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}
+);
+let lastDraftStorageMode='local';
 let archiveOpen=false,archiveEditionId='',archiveStoryId='',archivePendingDelete='',archiveQuery='',archiveReaderMode='full',archiveReaderPage=0;
 let lastScreenSignature='',finaleIntroActive=false,roomJoinedOnSocket=false,joinSeatCode='',kickTarget='',skipTarget='',seatDecisionTarget='',kickFollowUpTarget='',transferTarget='',moderationTimer=null;
 let pocketIdentity=null,identityReady=false,netHealth='checking',netHealthConfirmedAt=0,identityRefresh=0,connectionAttempt=0,roomTimeout=null;
@@ -83,12 +89,23 @@ function downloadIssueBackup(editionsToSave,filename){
 }
 const portrait=()=>pocketAvatarMarkup(pocketIdentity?.artwork||pocketIdentity?.avatar,{accountId:pocketIdentity?.id||''});
 const draftKey=()=>KEY+'draft:'+sessionKey()+':'+room+':'+(view?.round??0)+':'+(view?.sheet?.id||'');
-const loadDraft=()=>{if(IS_PREVIEW)return previewDraft;try{return localStorage.getItem(draftKey())||''}catch{return ''}};
-const saveDraft=x=>{if(IS_PREVIEW){previewDraft=x;return}try{localStorage.setItem(draftKey(),x)}catch{}};
+const loadDraft=()=>IS_PREVIEW?previewDraft:draftStore.read(draftKey())||'';
+const draftMode=()=>IS_PREVIEW?'local':worstDraftMode(draftStore.mode(draftKey()),draftStore.mode(writerMetaKey()));
+function updateDraftStorageNotice(){
+ const mode=draftMode(),el=$('draftStorageNotice');
+ if(el){el.hidden=mode==='local';const label=el.querySelector('.draft-storage-label');if(label)label.textContent=draftStorageLabel(mode)}
+ if(mode!==lastDraftStorageMode&&mode!=='local')toast(draftStorageLabel(mode));
+ lastDraftStorageMode=mode;
+}
+const saveDraft=x=>{
+ if(IS_PREVIEW){previewDraft=x;return}
+ draftStore.write(draftKey(),x);
+ updateDraftStorageNotice();
+};
 const writerMetaKey=()=>draftKey()+':editor';
 function readWriterMeta(){
  if(IS_PREVIEW)return previewWriterMeta;
- try{const v=JSON.parse(localStorage.getItem(writerMetaKey())||'null');
+ try{const v=JSON.parse(draftStore.read(writerMetaKey())||'null');
   if(v&&typeof v==='object')return {step:v.step==='select'?'select':'draft',anchor:String(v.anchor||'').slice(0,72),gender:String(v.gender||'unspecified'),selection:Array.isArray(v.selection)?v.selection.filter(Number.isInteger):[]};
  }catch{}
  return {step:'draft',anchor:'',gender:read('gender','unspecified'),selection:[]};
@@ -96,7 +113,8 @@ function readWriterMeta(){
 function saveWriterMeta(patch){
  const value={...readWriterMeta(),...patch};
  if(IS_PREVIEW){previewWriterMeta=value;return value}
- try{localStorage.setItem(writerMetaKey(),JSON.stringify(value))}catch{}
+ draftStore.write(writerMetaKey(),JSON.stringify(value));
+ updateDraftStorageNotice();
  return value;
 }
 const pendingStorageKey=()=>KEY+'submit:'+sessionKey()+':'+room;
@@ -110,7 +128,7 @@ function discardPending(){if(IS_PREVIEW)return;try{localStorage.removeItem(pendi
 function acknowledgeReceipt(receipt){
  const p=readPending();
  if(!['v5','v6','v7','v8','v9','v10'].includes(roomVersion)||!isSafeReceipt(receipt,p))return false;
- try{localStorage.removeItem(p.draftStorageKey);localStorage.removeItem(p.draftStorageKey+':editor');localStorage.removeItem(pendingStorageKey())}catch{}
+ draftStore.remove(p.draftStorageKey);draftStore.remove(p.draftStorageKey+':editor');try{localStorage.removeItem(pendingStorageKey())}catch{}
  delete draftSelections[p.draftStorageKey];
  return true;
 }
@@ -119,7 +137,7 @@ function retryPending(){
  if(!['v5','v6','v7','v8','v9','v10'].includes(roomVersion)||!p||!canRetry(p,view)||!connected||!net?.roomId)return false;
  return send(outgoingPacket(p));
 }
-const clearDraft=()=>{if(IS_PREVIEW){previewDraft='';previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};return}try{localStorage.removeItem(draftKey());localStorage.removeItem(writerMetaKey())}catch{}};
+const clearDraft=()=>{if(IS_PREVIEW){previewDraft='';previewWriterMeta={step:'draft',anchor:'',gender:'unspecified'};return}draftStore.remove(draftKey());draftStore.remove(writerMetaKey());};
 function toast(x){toastEl.textContent=String(x);toastEl.classList.add('show');clearTimeout(toastEl.timer);toastEl.timer=setTimeout(()=>toastEl.classList.remove('show'),3200)}
 function tick(f=580){soundscape.fx(f>=750?'reveal':f>=680?'turn':f>=620?'word':f<500?'seal':'tap')}
 function netStatus(){
@@ -202,7 +220,7 @@ async function openPocketProfile(){
 }
 function syncUrl(){if(IS_PREVIEW)return;const u=new URL(location.href);if(room)u.searchParams.set('room',room.slice(0,8));else u.searchParams.delete('room');history.replaceState({},'',u)}
 function copyText(t){if(navigator.clipboard?.writeText)return navigator.clipboard.writeText(t).then(()=>toast('Скопійовано.')).catch(()=>fallbackCopy(t));return fallbackCopy(t)}
-function fallbackCopy(t){const x=document.createElement('textarea');x.value=t;x.style.position='fixed';x.style.opacity='0';document.body.append(x);x.select();try{document.execCommand('copy');toast('Скопійовано.')}catch{toast('Копіювання недоступне.')}x.remove()}
+function fallbackCopy(t){const x=document.createElement('textarea');x.value=t;x.style.position='fixed';x.style.opacity='0';document.body.append(x);x.select();try{if(document.execCommand('copy')!==true)throw Error('copy rejected');toast('Скопійовано.')}catch{toast('Копіювання недоступне. Виділи текст і скопіюй вручну.')}finally{x.remove()}}
 function send(payload){if(IS_PREVIEW)return demoSend(payload);if(!connected||!net?.roomId||(view&&!roomJoinedOnSocket)){toast('Чекаємо підтвердження повернення до кімнати. Чернетка збережена.');return false}try{net.sendGame(payload);return true}catch{toast('Не вдалося надіслати.');return false}}
 function demoSend(payload){
  if(!connected){toast('Тестовий стан: PocketNet офлайн.');return false}
@@ -377,7 +395,7 @@ function turnProgress(){
  return '<div class="turn-progress" id="turnProgress" aria-label="Готові фрагменти: '+ready+' із '+total+'"><div class="turn-progress-count"><strong>'+ready+' / '+total+'</strong><span>готово</span></div><div class="turn-progress-authors">'+view.players.map(p=>'<span class="turn-progress-author '+(p.submitted?'is-ready':'')+'" title="'+escape(p.name)+' — '+(p.submitted?'готово':'пише')+'"><i aria-hidden="true">'+(p.submitted?'✓':'·')+'</i><span>'+escape(p.name)+'</span></span>').join('')+'</div></div>';
 }
 function lobby(){const host=view.host===me,s=view.settings;return '<div class="room"><section class="paper"><div class="eyebrow">ЗБІР АВТОРІВ</div><h2>Чекаємо на хаос</h2><div class="mini">Код кімнати</div><div class="code">'+room.slice(0,8).toUpperCase()+'</div><div class="button-row"><button class="button outline small" data-act="copy-code">Копіювати код</button><button class="button outline small" data-act="copy-link">Посилання друзям</button></div><div class="roster">'+roster()+'</div>'+(member()?'<button type="button" class="invite-people" data-act="invite-social" data-social-invite>Запросити друзів із Pocket ID <span>↗</span></button>':'')+'<p class="mini">'+view.players.length+'/'+s.maxPlayers+' учасників. '+(view.players.length===s.maxPlayers?'Усі місця заповнено.':'Почати можна від двох авторів.')+'</p>'+(host?'<button class="button" data-act="start" '+(view.players.length<2?'disabled':'')+'>Почати писати <span>→</span></button>':'<p class="mini">Ведучий почне, коли всі зберуться.</p>')+(view.message?'<p class="warning">'+escape(view.message)+'</p>':'')+'<button class="leave" data-act="leave">Залишити кімнату</button></section><aside class="room-aside"><div class="eyebrow">ПРАВИЛА РЕДАКЦІЇ</div><h3>Аркуші підуть по колу</h3><p class="lobby-hint">У кожному раунді ти пишеш свою частину. Наступний автор побачить лише кілька обраних тобою слів. У фіналі історії відкриються повністю.</p>'+(host?settingsForm(s):'<p class="mini">Жанр і питання визначає ведучий. Ніхто не бачить приховані фрагменти.</p>')+'</aside></div>'}
-function writing(){return renderWriting({view,roomVersion,draft:loadDraft(),meta:readWriterMeta(),chosen:indices(),pending:['v5','v6','v7','v8','v9','v10'].includes(roomVersion)&&Boolean(readPending()),escape,rosterCompact,turnProgress,genres:GENRE_TONES,genders:GENDERS})}
+function writing(){return renderWriting({view,roomVersion,draft:loadDraft(),meta:readWriterMeta(),draftMode:draftMode(),chosen:indices(),pending:['v5','v6','v7','v8','v9','v10'].includes(roomVersion)&&Boolean(readPending()),escape,rosterCompact,turnProgress,genres:GENRE_TONES,genders:GENDERS})}
 function waiting(){return renderWaiting({players:view?.players||[],myId:me,escape,round:view?.round||0,totalRounds:view?.total||0})}
 function results(){
  if(!view.stories?.length)return waiting();
@@ -540,6 +558,7 @@ scene.addEventListener('focusout',e=>{
 scene.addEventListener('animationend',e=>{if(e.target.classList?.contains('print-finale')){finaleIntroActive=false;e.target.remove()}});
 scene.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act;
  if(act==='skip-finale'){finaleIntroActive=false;scene.querySelector('.print-finale')?.remove();soundscape.fx('page');return}
+ if(act==='copy-draft'){const text=$('answer')?.value??loadDraft();if(text)void copyText(text);else toast('Чернетка порожня.');return}
  if(act==='back-to-draft'){saveWriterMeta({step:'draft'});soundscape.fx('page');render();return}
  if(act==='toggle-editor-context'){
   const shell=b.closest('.writer-shell');if(!shell)return;
