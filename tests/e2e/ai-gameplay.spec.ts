@@ -484,6 +484,23 @@ test.describe('AI exploratory mobile gameplay', () => {
       // behavior is covered separately by its dedicated Playwright fixtures.
       // This avoids a WebKit-origin error from an endpoint absent in preview.
       if(app.slug==='chyepukha'){
+        // WebKit can raise an access-control page error for /pocket-id/me
+        // even when page.route fulfills the request. Intercept at fetch()
+        // before the browser network layer; the static preview has no API.
+        await page.addInitScript(()=>{
+          const original=window.fetch.bind(window);
+          window.fetch=(input,init)=>{
+            const target=typeof input==='string'?input:input instanceof Request?input.url:String(input);
+            const pathname=new URL(target,location.href).pathname;
+            if(pathname==='/pocket-id/me'||pathname==='/pocket-social/me'){
+              const body=pathname==='/pocket-id/me'?{user:null}:{profile:null};
+              return Promise.resolve(new Response(JSON.stringify(body),{
+                status:200,headers:{'Content-Type':'application/json'}
+              }));
+            }
+            return original(input,init);
+          };
+        });
         await page.route('**/pocket-id/me',route=>route.fulfill({
           status:200,contentType:'application/json',body:JSON.stringify({user:null})
         }));
