@@ -53,7 +53,7 @@ try{
  if(!outcome)throw Error('MRX WebKit failure: '+await page.locator('#error').innerText()+'; errors='+JSON.stringify(errors));
  const download=page.waitForEvent('download',{timeout:20000});
  await page.locator('#wav-btn').click();
- assert.match((await download).suggestedFilename(),/no-dialogue\\.wav$/);
+ assert.match((await download).suggestedFilename(),/no-dialogue\.wav$/);
  assert.deepEqual(errors,[]);
  console.log('WebKit mobile MRX passed · '+await page.locator('#inference-time').innerText());
 }finally{
