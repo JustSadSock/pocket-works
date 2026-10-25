@@ -5,11 +5,13 @@ import {assetSource,handleMrxAsset} from '../../../pocketnet/mrx-assets.mjs';
 const endpoint=path=>'https://pocketworks.example'+path;
 test('only MRX weights and pinned ONNX binaries can be requested',()=>{
  assert.equal(assetSource('/ai-assets/mrx-v1/mrx/mrx.int8.onnx').kind,'model');
+ assert.equal(assetSource('/ai-assets/tiger-dnr-v1/tiger/tiger.int8.onnx').kind,'model');
+ assert.equal(assetSource('/ai-assets/tiger-dnr-v1/tiger/tiger.int8.onnx').size,7320735);
  assert.equal(assetSource('/ai-assets/ort-1.30.0/ort-wasm-simd-threaded.jsep.wasm').kind,'wasm');
  assert.equal(assetSource('/ai-assets/ort-1.30.0/ort-wasm-simd-threaded.jsep.mjs').kind,'script');
  for(const path of [
   '/ai-assets/', '/ai-assets/mrx-v1/../private.env',
-  '/ai-assets/mrx-v1/other.onnx', '/ai-assets/ort-1.30.0/../api.js',
+  '/ai-assets/mrx-v1/other.onnx', '/ai-assets/tiger-dnr-v1/tiger/custom.int8.onnx', '/ai-assets/ort-1.30.0/../api.js',
   '/ai-assets/ort-1.30.0/custom.js', '/ai-assets/ort-1.30.0/ort-wasm.zip'
  ])assert.equal(assetSource(path),null,path);
 });
