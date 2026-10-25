@@ -17,13 +17,15 @@ const context={
  currentTime:0,
  createWaveShaper:()=>mockNode('shaper'),createBiquadFilter:()=>mockNode('filter'),
  createGain:()=>mockNode('gain'),createDelay:()=>mockNode('delay'),
- createOscillator:()=>mockNode('oscillator')
+ createOscillator:()=>mockNode('oscillator'),
+ createBufferSource:()=>mockNode('buffer-source'),
+ createBuffer:(channels,frames)=>({getChannelData:()=>new Float32Array(frames)})
 };
 test('all expanded voice presets are unique, whitelisted, and grouped',()=>{
  const ids=VOICE_EFFECTS.map(fx=>fx.id),categories=new Set(['main',...VOICE_EFFECT_GROUPS.map(x=>x.id)]);
- assert.equal(VOICE_EFFECTS.length,17);
+ assert.equal(VOICE_EFFECTS.length,22);
  assert.equal(ids.length,new Set(ids).size);
- assert.deepEqual(ids.slice(0,5),['clean','radio','robot','echo','monster']);
+ assert.deepEqual(ids.slice(0,6),['clean','female','male','child','high','deep']);
  assert(VOICE_EFFECTS.every(fx=>categories.has(fx.category)&&fx.label));
  for(const id of ids)assert.equal(normalizeVoiceEffect(id),id);
  assert.equal(normalizeVoiceEffect('unexpected'),'clean');
@@ -51,6 +53,18 @@ test('modulated special effects really allocate clocked oscillators',()=>{
   const cleanup=connectVoiceEffect(context,mockNode('source'),mockNode('output'),id,1.5);
   assert(allNodes.some(n=>n.kind==='oscillator'&&n.started===1),id+' modulation is real');
   cleanup();
+ }
+});
+test('natural voices use genuine two-grain pitch shifting without changing timeline speed',()=>{
+ for(const [id,semitones] of [['female',4],['male',-4],['child',7],['high',3],['deep',-6]]){
+  const fx=VOICE_EFFECTS.find(item=>item.id===id);
+  assert.equal(fx.semitones,semitones);
+  allNodes.length=0;
+  const cleanup=connectVoiceEffect({...context,sampleRate:44100},mockNode('source'),mockNode('output'),id);
+  assert.equal(allNodes.filter(n=>n.kind==='buffer-source').length,4);
+  assert(allNodes.filter(n=>n.kind==='buffer-source').every(n=>n.started===1));
+  cleanup();
+  assert(allNodes.filter(n=>n.kind==='buffer-source').every(n=>n.stopped===1));
  }
 });
 test('voice filters are applied in editor monitoring, synchronized premiere and remain saved',()=>{
