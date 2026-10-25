@@ -1,20 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SCHOOLS,PROFILES,TACTICS,simulate,audit} from '../qa/magic-v2-matchup-audit.mjs';
+import {SCHOOLS,PROFILES,TACTICS,AIM_MODES,simulate,audit} from '../qa/magic-v2-matchup-audit.mjs';
 
 test('Magic 2.0 seeded PvP proxy covers every elemental pair, both seats and three real runnable books',()=>{
  const report=audit();
- assert.equal(report.samples,SCHOOLS.length*SCHOOLS.length*PROFILES.length*TACTICS.length*2);
+ assert.equal(report.samples,SCHOOLS.length*SCHOOLS.length*PROFILES.length*TACTICS.length*AIM_MODES.length*2);
  assert.equal(report.pairs.length,3);
- assert.ok(report.hpExchangeMatches>0,'At least one policy must exchange real HP damage');
+ assert.ok(report.hpExchangeMatches>report.samples*.5,'More than half of bouts should exchange actual HP damage');
  assert.ok(report.pairs.every(p=>p.hpExchangePairs>0),'No matchup may be evaluated solely through non-damaging movement');
- assert.ok(report.pairs.every(p=>Object.values(p.byTactic).every(v=>v.totalPairs===PROFILES.length*2)));
+ assert.ok(report.pairs.every(p=>Object.values(p.byTactic).every(v=>v.totalPairs===PROFILES.length*AIM_MODES.length*2)));
+ assert.ok(report.pairs.every(p=>Object.values(p.byAimMode).every(v=>v.totalPairs===PROFILES.length*TACTICS.length*2)));
  assert.ok(report.pairs.every(p=>p.seatNeutralHpAdvantage!==null),'Do not infer balance from inactive matchups');
  assert.ok(report.matches.every(m=>Number.isFinite(m.hpDelta)&&m.ticks>0&&m.ticks<=900));
  assert.ok(report.matches.every(m=>m.hp.every(n=>Number.isFinite(n)&&n>=0&&n<=100)));
  assert.ok(report.matches.every(m=>m.knockout==='none'||m.knockout==='left'||m.knockout==='right'||m.knockout==='double'));
- for(const tactic of TACTICS)for(const kind of PROFILES)for(const first of SCHOOLS)for(const second of SCHOOLS)
-  assert.equal(report.matches.filter(m=>m.tactic===tactic&&m.profile===kind&&m.left===first&&m.right===second).length,2);
+ for(const aimMode of AIM_MODES)for(const tactic of TACTICS)for(const kind of PROFILES)for(const first of SCHOOLS)for(const second of SCHOOLS)
+  assert.equal(report.matches.filter(m=>m.aimMode===aimMode&&m.tactic===tactic&&m.profile===kind&&m.left===first&&m.right===second).length,2);
  console.log('Perekos Magic 2.0 seat-neutral diagnostics:',JSON.stringify({
   seatMean:report.seatOneMeanHpAdvantage,seatWarning:report.seatWarning,pairs:report.pairs
  }));
@@ -30,4 +31,15 @@ test('swapping schools also swaps their physical loadouts, never silently inheri
  assert.equal(a.left,'stone');assert.equal(a.right,'storm');
  assert.equal(b.left,'storm');assert.equal(b.right,'stone');
  assert.equal(a.ticks,120);assert.equal(b.ticks,120);
+});
+
+test('leading-aim tactic tracks visible movement and stays deterministic per school',()=>{
+ for(const school of SCHOOLS){
+  const direct=simulate(school,'fire','starter',881,420,'circle','direct');
+  const lead=simulate(school,'fire','starter',881,420,'circle','lead');
+  const replay=simulate(school,'fire','starter',881,420,'circle','lead');
+  assert.equal(lead.aimMode,'lead');
+  assert.deepEqual(lead,replay);
+  assert.ok(Number.isFinite(direct.hpDelta)&&Number.isFinite(lead.hpDelta));
+ }
 });
