@@ -1,21 +1,32 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {TimelineHistory,MAX_CLIPS,HISTORY_LIMIT,snapshotClips,spliceRecording,packTimeline,unpackTimeline}
+import {TimelineHistory,MAX_CLIPS,HISTORY_LIMIT,snapshotClips,spliceRecording,layerTimeline,editClip,packTimeline,unpackTimeline}
  from '../timeline-model.js';
 
 const sound=(text='one')=>new Blob([text],{type:'audio/webm'});
 const clip=(id,start,end,blob=sound(id),offset=0)=>({id,start,end,offset,owner:'solo',blob});
 
-test('overlapping recording splits the first and last clip, preserving audio offsets',()=>{
+test('overlapping recordings coexist without trimming any neighbour or source offset',()=>{
  const a=clip('a',0,20),b=clip('b',30,60);
  let n=0;
  const next=spliceRecording([a,b],{id:'new',start:10,end:40,owner:'solo',blob:sound('new')},()=>String(++n));
  assert.deepEqual(next.map(c=>[c.id,c.start,c.end,c.offset]),[
-  ['1',0,10,0],['new',10,40,0],['2',40,60,10]
+  ['a',0,20,0],['new',10,40,0],['b',30,60,0]
  ]);
  assert.equal(next[0].blob,a.blob);
  assert.equal(next[2].blob,b.blob);
+ assert.equal(layerTimeline(next).lanes,2);
+ assert.notEqual(layerTimeline(next).assignments.get('a'),layerTimeline(next).assignments.get('new'));
+});
+test('parallel clips stay in distinct visible lanes and independent moves can overlap',()=>{
+ const clips=[clip('first',0,10),clip('second',9,15),clip('third',15,25)];
+ const layout=layerTimeline(clips);
+ assert.equal(layout.lanes,2);
+ assert.equal(layout.assignments.get('third'),layout.assignments.get('first'));
+ const shifted=editClip(clips,'third','move',-9,30);
+ assert(shifted.find(c=>c.id==='third').start<shifted.find(c=>c.id==='second').end);
+ assert.equal(layerTimeline(shifted).lanes,3);
 });
 test('undo and redo are reversible and fresh edits invalidate redo',()=>{
  const h=new TimelineHistory(),a=[clip('a',0,5)],b=[clip('b',5,10)];
@@ -80,4 +91,13 @@ test('editor consumes model and no longer reconstructs clip buttons on each tick
  assert.match(html,/id="redo-btn"/);
  assert.match(html,/id="selected-clip-info"/);
  assert.match(html,/id="erase-btn"[^>]*disabled/);
+});
+
+test('undo snapshots and IndexedDB roundtrips retain selected non-destructive voice effect',()=>{
+ const a={...clip('one',1,4),fx:'robot'};
+ const h=new TimelineHistory([[a]]);
+ const archive=packTimeline([a],h,'one'),restored=unpackTimeline(structuredClone(archive),10);
+ assert.equal(restored.clips[0].fx,'robot');
+ assert.equal(restored.history.past[0][0].fx,'robot');
+ assert.equal(restored.selected,'one');
 });
