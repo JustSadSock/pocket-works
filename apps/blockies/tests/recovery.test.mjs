@@ -143,14 +143,14 @@ test('manual reconnect closes transport but preserves saved room and token',()=>
 test('version pin and hub relay use server-trusted connection IDs',async()=>{
   const [server,pin,hub,locks,net,game]=await Promise.all([
     fs.readFile(new URL('../server/module.ts',import.meta.url),'utf8'),
-    fs.readFile(new URL('../../../pocketnet/module-versions/blockies/v14.ts',import.meta.url),'utf8'),
+    fs.readFile(new URL('../../../pocketnet/module-versions/blockies/v15.ts',import.meta.url),'utf8'),
     fs.readFile(new URL('../../../pocketnet/hub.mjs',import.meta.url),'utf8'),
     fs.readFile(new URL('../../../pocketnet/modules.lock.json',import.meta.url),'utf8'),
     fs.readFile(new URL('../network.js',import.meta.url),'utf8'),
     fs.readFile(new URL('../game.js',import.meta.url),'utf8')
   ]);
   assert.equal(pin,server);
-  assert.equal(JSON.parse(locks).blockies.current,'v14');
+  assert.equal(JSON.parse(locks).blockies.current,'v15');
   assert.match(hub,/this\.sockets\(room\.id\)\.map\(peer=>peer\.deserializeAttachment\(\)\?\.id\)/);
   assert.match(server,/connectedIds\.includes\(state\.hostId\)/);
   assert.match(net,/\(this\.finished\|\|this\.paused\)\?1600/);

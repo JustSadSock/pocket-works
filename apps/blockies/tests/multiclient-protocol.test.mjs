@@ -109,7 +109,9 @@ test('rematch with only one connected person returns to lobby; quorum can start 
   sys.pulse(1);
   assert.equal(sys.state.hostId,'wire1');
   sys.state.engine.isGameOver=true;sys.state.phase='finished';
-  sys.deliver();
+  // Apply a real authoritative transition: v15 clients reject same-revision
+  // snapshots instead of trusting local test mutations.
+  sys.pulse(1);
   assert.equal(b.finished,true);
   b.requestRematch();
   assert.equal(sys.state.started,false);
@@ -124,4 +126,97 @@ test('rematch with only one connected person returns to lobby; quorum can start 
   assert.equal(a.started,true);
   assert.equal(b.started,true);
  }finally{sys.cleanup();}
+});
+
+test('new PocketNet room revisions only advance and are exposed to every client',()=>{
+ const sys=system(2);
+ try{
+  const [a,b]=sys.clients;
+  const initial=sys.state.revision;
+  assert.ok(Number.isSafeInteger(initial)&&initial>0);
+  a.toggleReady();b.toggleReady();
+  assert.ok(sys.state.revision>initial);
+  assert.equal(a.lastRevision,sys.state.revision);
+  assert.equal(b.lastRevision,sys.state.revision);
+  const before=sys.state.revision;
+  sys.pulse(0);
+  assert.equal(sys.state.revision,before+1);
+  assert.equal(game.viewForPlayer({state:sys.state,player:people[0]}).revision,sys.state.revision);
+  assert.equal(game.viewForPlayer({state:sys.state,player:people[1]}).revision,sys.state.revision);
+ }finally{sys.cleanup();}
+});
+
+test('delayed duplicate, pause, finish and old-round snapshots never rewind the client',()=>{
+ const sys=system(2);
+ try{
+  const [a,b]=sys.clients;
+  let starts=0,snapshots=0,backToLobby=0;
+  a.on('gameStart',()=>starts++);
+  a.on('snapshot',()=>snapshots++);
+  a.on('backToLobby',()=>backToLobby++);
+  a.toggleReady();b.toggleReady();
+  assert.equal(a.activeRound,1);
+  const first=structuredClone(game.viewForPlayer({state:sys.state,player:people[0]}));
+  sys.pulse(0);
+  const currentRevision=a.lastRevision;
+  const updates=snapshots;
+  a.apply(first);a.apply({...first,revision:currentRevision});
+  assert.equal(a.lastRevision,currentRevision);
+  assert.equal(snapshots,updates,'duplicate and out-of-order snapshots must be ignored');
+  assert.equal(starts,1);
+  a.togglePause();
+  assert.equal(a.paused,true);
+  const pausedRevision=a.lastRevision;
+  a.apply(first);
+  assert.equal(a.paused,true,'older running snapshot cannot resume a paused room');
+  assert.equal(a.lastRevision,pausedRevision);
+  a.togglePause();
+  assert.equal(a.paused,false);
+  sys.state.engine.isGameOver=true;sys.state.phase='finished';
+  sys.pulse(1);
+  assert.equal(a.finished,true);
+  const finished=structuredClone(game.viewForPlayer({state:sys.state,player:people[0]}));
+  a.requestRematch();
+  assert.equal(a.activeRound,2);
+  assert.equal(a.finished,false);
+  assert.equal(starts,2);
+  const freshRevision=a.lastRevision;
+  a.apply(finished);a.apply(first);
+  assert.equal(a.lastRevision,freshRevision);
+  assert.equal(a.activeRound,2);
+  assert.equal(a.finished,false);
+  assert.equal(starts,2,'old snapshots must not trigger duplicate gameStart');
+  assert.equal(backToLobby,0);
+ }finally{sys.cleanup();}
+});
+
+test('server rejects tagged commands from earlier rounds before evaluating their action sequences',()=>{
+ let state=game.createRoom({player:people[0]}).state;
+ state=game.onJoin({state,player:people[1]}).state;
+ for(const player of people.slice(0,2))
+  state=game.onMessage({state,player,payload:{type:'ready'},connectedIds:['wire0','wire1']}).state;
+ assert.equal(state.round,1);
+ const oldInput={type:'input_batch',round:1,actions:[{seq:1,action:'move',direction:1}]};
+ state=game.onMessage({state,player:people[0],payload:oldInput,connectedIds:['wire0','wire1']}).state;
+ assert.equal(state.engine.players[0].lastInputSeq,1);
+ state.engine.isGameOver=true;state.phase='finished';
+ state=game.onMessage({state,player:people[0],payload:{type:'rematch',round:1},
+  connectedIds:['wire0','wire1']}).state;
+ assert.equal(state.round,2);
+ assert.equal(state.engine.players[0].lastInputSeq,0);
+ const frozen=structuredClone(state);
+ for(const payload of [
+  oldInput,
+  {type:'pause',round:1},
+  {type:'resume',round:1},
+  {type:'rematch',round:1},
+  {type:'input',round:-7,input:{action:'hardDrop'}}
+ ]){
+  assert.throws(()=>game.onMessage({state,player:people[0],payload,
+   connectedIds:['wire0','wire1']}),/другому раунду/);
+  assert.deepEqual(state,frozen,'invalid command must not mutate saved authoritative state');
+ }
+ state=game.onMessage({state,player:people[0],payload:{type:'input_batch',round:2,
+  actions:[{seq:1,action:'rotate'}]},connectedIds:['wire0','wire1']}).state;
+ assert.equal(state.engine.players[0].lastInputSeq,1,'current round may reuse sequence 1');
 });

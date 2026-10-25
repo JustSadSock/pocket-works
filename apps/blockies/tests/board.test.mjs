@@ -219,6 +219,7 @@ test('network round snapshots initialize once and subsequent snapshots refresh t
 });
 test('network distinguishes disconnection and blocks stale player inputs',()=>{
  const net=new NetworkManager();
+ net.activeRound=1;
  const outgoing=[];
  net.started=true;
  net.connected=true;
@@ -230,7 +231,7 @@ test('network distinguishes disconnection and blocks stale player inputs',()=>{
  net.stale=false;
  net.sendPlayerInput({action:'move',direction:1});
  assert.equal(outgoing.length,1);
- assert.deepEqual(outgoing[0],{type:'input',input:{action:'rotate'}});
+ assert.deepEqual(outgoing[0],{type:'input',input:{action:'rotate'},round:1});
 });
 
 

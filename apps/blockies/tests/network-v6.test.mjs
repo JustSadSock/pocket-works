@@ -95,9 +95,11 @@ test('client coalesces a rapid gesture and prunes predictions only after server 
   net.flushInputs();
   assert.deepEqual(net.pendingInputs.map(a=>a.seq),[3,4]);
   state.engine.players[0].lastInputSeq=3;
+  state.revision++;
   net.apply(state);
   assert.deepEqual(net.pendingInputs.map(a=>a.seq),[4],'unconfirmed input must survive older snapshot');
   state.engine.players[0].lastInputSeq=4;
+  state.revision++;
   net.apply(state);
   assert.equal(net.pendingInputs.length,0,'acknowledgement reconciles optimistic movement');
   net.resetRoom();

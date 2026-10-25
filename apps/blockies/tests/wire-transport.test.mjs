@@ -17,7 +17,7 @@ function wireHarness(){
   document:globalThis.document,location:globalThis.location,
   sessionStorage:globalThis.sessionStorage};
  const storage=new Map(),tokens=new Map(),sockets=new Set();
- const participants=[];let serial=0,room=null;
+ const participants=[],commands=[];let serial=0,room=null;
  globalThis.document={
   hidden:false,
   querySelector:()=>null,
@@ -90,6 +90,7 @@ function wireHarness(){
      broadcast();
      return;
     case 'game_message':
+     commands.push({playerId:this.player?.id,...packet.payload});
      try{
       room=game.onMessage({state:room,player:this.player,payload:packet.payload,
        connectedIds:present()}).state;
@@ -118,6 +119,7 @@ function wireHarness(){
  return {
   get room(){return room;},
   get sockets(){return sockets;},
+  get commands(){return commands;},
   storage,
   restore(){
    for(const socket of [...sockets])socket.close();
@@ -152,17 +154,24 @@ test('PocketNet wire: independently authenticated clients play, pause, ACK, leav
   a.flushInputs();await settle();
   assert.equal(wire.room.engine.players[0].lastInputSeq,1);
   assert.equal(a.pendingInputs.length,0);
+  assert.equal(wire.commands.find(p=>p.type==='input_batch').round,1,
+   'real WebSocket payload must bind the action to round one');
   assert.equal(a.currentRoom.engine.players[0].lastInputSeq,1);
   assert.equal(b.currentRoom.engine.players[0].lastInputSeq,undefined,
    'foreign ACK must not cross the wire');
 
   a.togglePause();await settle();
   assert.equal(wire.room.paused,true);
+  assert.equal(wire.commands.find(p=>p.type==='pause').round,1);
   assert.equal(a.paused,true);
   assert.equal(b.paused,true);
   assert.equal(a.sendPlayerInput({action:'rotate'}),false,
    'paused clients must not enqueue a command the server rejects');
   assert.equal(a.inputQueue.length,0);
+  const pausedRevision=a.lastRevision;
+  a.net.socket.onmessage({data:JSON.stringify({type:'game_event',roomId:ROOM,
+   event:{type:'state',payload:{...a.currentRoom,paused:false,revision:pausedRevision-1}}})});
+  assert.equal(a.paused,true,'delayed JSON socket frame cannot roll back pause');
   a.togglePause();await settle();
   assert.equal(a.paused,false);
   assert.equal(a.sendPlayerInput({action:'rotate'}),true,
