@@ -15,10 +15,10 @@ test('moving voices preserves pitch, original sound offset and duration',()=>{
  assert.equal(get(edited,'b').blob,clips[1].blob);
  assert.equal(clips[1].start,12,'original not mutated');
 });
-test('clamps entire-clip drag at neighbors and film bounds',()=>{
+test('dragging can overlap neighboring clips but stays inside film bounds',()=>{
  const clips=lane();
- assert.equal(get(editClip(clips,'b','move',-500,60),'b').start,8);
- assert.equal(get(editClip(clips,'b','move',500,60),'b').end,28);
+ assert.equal(get(editClip(clips,'b','move',-500,60),'b').start,0);
+ assert.equal(get(editClip(clips,'b','move',500,60),'b').end,60);
  assert.equal(get(editClip(clips,'a','move',-500,60),'a').start,0);
  assert.equal(get(editClip(clips,'c','move',500,60),'c').end,60);
 });
@@ -37,17 +37,17 @@ test('left trim cannot overrun the current clip or previous recording',()=>{
  assert.ok(Math.abs(get(almost,'b').end-get(almost,'b').start-MIN_CLIP_SECONDS)<1e-6);
  assert.equal(editClip(clips,'b','left',-2,60),null,'no undocumented source audio');
 });
-test('right trim never extends past source recording or the next voice',()=>{
+test('right trim never extends past source recording or the end of the film',()=>{
  const clips=lane();
  const cut=editClip(clips,'b','right',-2,60);
  assert.equal(get(cut,'b').end,17);
  const regrow=editClip(cut,'b','right',2,60,7);
  assert.equal(get(regrow,'b').end,19);
  const expand=editClip(clips,'b','right',99,60,60);
- assert.equal(get(expand,'b').end,28);
+ assert.equal(get(expand,'b').end,60);
  assert.equal(editClip(clips,'b','right',3,60),null,'unknown source duration cannot invent sound');
 });
-test('a targeted re-record replaces only its selected clip and leaves a gap if shorter',()=>{
+test('targeted re-record replaces only its selected clip, preserving all neighbors',()=>{
  const clips=lane(),replacement=audio('take-two');
  const next=replaceSelectedRecording(clips,'b',replacement,3.6,'retake');
  assert.deepEqual(next.map(c=>[c.id,c.start,c.end]),[['a',2,8],['retake',12,15.6],['c',28,36]]);

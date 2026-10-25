@@ -3,7 +3,8 @@ import {createTrimRange} from './trim-range.js';
 import {meterHeights} from './studio-feedback.js';
 import {MAX_AUDIO_BYTES,MAX_INCOMING_TRANSFERS,validAudioEnvelope,validVideoEnvelope,canAcceptVoice} from './media-protocol.js';
 import {renderPremiere,supportsPremiereExport,premiereFilename} from './premiere-export.js';
-import {TimelineHistory,snapshotClips,spliceRecording,packTimeline,unpackTimeline,editClip,replaceSelectedRecording,MIN_CLIP_SECONDS} from './timeline-model.js';
+import {TimelineHistory,snapshotClips,spliceRecording,layerTimeline,packTimeline,unpackTimeline,editClip,replaceSelectedRecording,MIN_CLIP_SECONDS} from './timeline-model.js';
+import {VOICE_EFFECTS,normalizeVoiceEffect,connectVoiceEffect} from './voice-effects.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {createRoomRecovery} from './room-recovery.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
@@ -45,7 +46,7 @@ let videoExportController=null,videoExportBlob=null,videoExportUrl=null,trimRang
 let premiereExportController=null,premiereResultUrl=null,premiereExportGeneration=0,premiereLocalCopy=null,premiereExportNotice='';
 const qualityNames=['Экономное','Компактное','Сбалансированное','Высокое','Максимальное'];
 let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0,timelineZoom=1,clipDrag=null,skipTimelineClick=false,micPending=false;
-let micMonitor=null,saveRevision=0,readyPending=false;
+let micMonitor=null,saveRevision=0,readyPending=false,voiceFxContext=null;
 let onlineIds=null,networkInterrupted=false,retryRoomAction='create',retryCheckpoint=null;
 function roomCheckpoint(){
  const identityKey=identity?.accountId||'guest';
@@ -221,16 +222,31 @@ async function draftWrite(){
   return false;
  }
 }
-function disposeLocalClips(){
- for(const c of localClips){try{c.audio?.pause()}catch{}if(c.url)URL.revokeObjectURL(c.url)}
+function disposeClip(c){
+ try{c.audio?.pause();c.fxCleanup?.()}catch{}
+ if(c.url)URL.revokeObjectURL(c.url);
 }
+function disposeLocalClips(){for(const c of localClips)disposeClip(c)}
 function cleanAudios(){
  disposeLocalClips();
- for(const c of remoteClips){try{c.audio?.pause()}catch{}if(c.url)URL.revokeObjectURL(c.url)}
+ for(const c of remoteClips)disposeClip(c);
 }
 function makeClip(base){
  const url=URL.createObjectURL(base.blob),audio=new Audio(url);
- audio.preload='auto';return {...base,url,audio};
+ audio.preload='auto';return {...base,fx:normalizeVoiceEffect(base.fx),url,audio};
+}
+function ensureClipVoice(c){
+ if(c.fxReady===c.fx)return;
+ try{
+  const Context=window.AudioContext||window.webkitAudioContext;
+  if(!Context)return;
+  voiceFxContext ||=new Context();
+  if(!c.fxSource)c.fxSource=voiceFxContext.createMediaElementSource(c.audio);
+  c.fxCleanup?.();
+  c.fxCleanup=connectVoiceEffect(voiceFxContext,c.fxSource,voiceFxContext.destination,c.fx);
+  c.fxReady=c.fx;
+  void voiceFxContext.resume().catch(()=>{});
+ }catch(e){console.warn('Voice effect unavailable',e)}
 }
 function setClips(items,selection=null){
  disposeLocalClips();
@@ -818,18 +834,31 @@ async function receivedMedia(p,rx,blob){
   sender:p.id,host:state.host,receiver:me
  })||!canAcceptVoice({owner:m?.owner,local:localClips,remote:remoteClips,expected:state.counts}))return;
  if([...localClips,...remoteClips].some(c=>c.id===m.id&&c.owner===m.owner))return;
- remoteClips.push(makeClip({id:m.id,owner:m.owner,start:m.start,end:m.end,offset:m.offset,blob}));
+ remoteClips.push(makeClip({id:m.id,owner:m.owner,start:m.start,end:m.end,offset:m.offset,fx:normalizeVoiceEffect(m.fx),blob}));
  if(meHost())for(const q of state.players)if(q.id!==me&&q.id!==m.owner)sendAudio(q.id,blob,m);
  updatePremiereStatus();
 }
 function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{
- id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,
+ id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,fx:normalizeVoiceEffect(c.fx),
  epoch:state?.mediaEpoch,mime:c.blob.type
 })}
 function sendAllOwn(){if(sentPremiere||mode==='solo')return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
 async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}if(mode!=='solo'&&state?.phase!=='recording')return;setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
 function stopAllPlayback(){playing=false;for(const id of ['stage-video','premiere-video','trim-video'])$(id).pause();for(const c of [...localClips,...remoteClips])c.audio?.pause();$('play-toggle').textContent='▶'}
-function updateClipSound(t,on,isPremiere=false){const items=isPremiere?[...localClips,...remoteClips]:localClips;for(const c of items){if(!c.audio)continue;const active=t>=c.start&&t<c.end&&on;const offset=clamp(t-c.start+c.offset,0,Math.max(0,c.blob.size?1e5:0));if(active){if(c.audio.paused||Math.abs(c.audio.currentTime-offset)>.25){try{c.audio.currentTime=offset}catch{}}if(c.audio.paused)c.audio.play().catch(()=>{})}else if(!c.audio.paused)c.audio.pause()}}
+function updateClipSound(t,on,isPremiere=false){
+ const items=isPremiere?[...localClips,...remoteClips]:localClips;
+ for(const c of items){
+  if(!c.audio)continue;
+  const active=t>=c.start&&t<c.end&&on;
+  const offset=clamp(t-c.start+c.offset,0,Math.max(0,c.blob.size?1e5:0));
+  if(active){
+   ensureClipVoice(c);
+   if(c.audio.paused||Math.abs(c.audio.currentTime-offset)>.25)
+    try{c.audio.currentTime=offset}catch{}
+   if(c.audio.paused)c.audio.play().catch(()=>{});
+  }else if(!c.audio.paused)c.audio.pause();
+ }
+}
 // Video time updates move only the playhead. Clip buttons retain focus.
 function renderPlayhead(){
  if(!scene)return;
@@ -841,14 +870,14 @@ function renderPlayhead(){
  $('playhead').style.left=(t/duration*100)+'%';
 }
 function updateZoom(){
- const levels=[1,2,4],i=levels.indexOf(timelineZoom);
+ const levels=[1,2,4,8,16],i=levels.indexOf(timelineZoom);
  $('timeline-content').style.width=(100*timelineZoom)+'%';
  $('timeline-zoom-label').textContent=timelineZoom+'×';
  $('timeline-zoom-out').disabled=i===0;
  $('timeline-zoom-in').disabled=i===levels.length-1;
 }
 function zoomTimeline(direction){
- const levels=[1,2,4],i=levels.indexOf(timelineZoom),next=levels[Math.max(0,Math.min(levels.length-1,i+direction))];
+ const levels=[1,2,4,8,16],i=levels.indexOf(timelineZoom),next=levels[Math.max(0,Math.min(levels.length-1,i+direction))];
  if(next===timelineZoom)return;
  const viewport=$('timeline-viewport'),content=$('timeline-content');
  // Magnify the moment being edited, not the arbitrary center of the strip.
@@ -863,26 +892,40 @@ function renderTimeline(){
  if(!scene)return;
  updateZoom();
  const duration=Math.max(.01,scene.duration);
- $('time-ruler').innerHTML=[0,.25,.5,.75,1].map(n=>'<span>'+fmt(n*duration)+'</span>').join('');
- $('clip-lane').innerHTML=localClips.map((c,i)=>
-  '<button type="button" class="clip-bar '+(selectedClip===c.id?'selected':'')+
-  '" data-clip="'+esc(c.id)+'" aria-pressed="'+(selectedClip===c.id)+'" style="left:'+
-  (c.start/duration*100)+'%;width:'+((c.end-c.start)/duration*100)+
-  '%" title="Перетащи реплику или её края · '+fmt(c.start)+'–'+fmt(c.end)+
-  '" aria-label="Реплика '+(i+1)+' · '+fmt(c.start)+'–'+fmt(c.end)+
-  '"><span class="clip-grip left" data-edge="left" aria-hidden="true"></span>'+
-  '<span class="clip-text">'+(i+1)+'</span>'+
-  '<span class="clip-grip right" data-edge="right" aria-hidden="true"></span></button>'
- ).join('');
+ const step=duration<=30?5:duration<=60?10:15;
+ const markers=[];
+ for(let t=0;t<=duration+.001;t+=step)markers.push('<span class="ruler-tick" style="left:'+(t/duration*100)+'%">'+fmt(t)+'</span>');
+ if((duration%step)>0.05)markers.push('<span class="ruler-tick end" style="left:100%">'+fmt(duration)+'</span>');
+ $('time-ruler').innerHTML=markers.join('');
+ const tracks=layerTimeline(localClips),laneHeight=40,visibleLanes=tracks.lanes;
+ $('clip-lane').style.height=(visibleLanes*laneHeight+6)+'px';
+ $('playhead').style.height=(visibleLanes*laneHeight+28)+'px';
+ $('timeline-content').style.height=(visibleLanes*laneHeight+40)+'px';
+ $('clip-lane').innerHTML=localClips.map((c,i)=>{
+  const row=tracks.assignments.get(c.id)||0,selected=selectedClip===c.id;
+  return '<button type="button" class="clip-bar '+(selected?'selected':'')+
+   '" data-clip="'+esc(c.id)+'" aria-pressed="'+selected+'" style="left:'+
+   (c.start/duration*100)+'%;width:'+((c.end-c.start)/duration*100)+
+   '%;top:'+(4+row*laneHeight)+'px" title="Реплика '+(i+1)+' · '+fmt(c.start)+'–'+fmt(c.end)+' · слой '+(row+1)+
+   '" aria-label="Реплика '+(i+1)+' · '+fmt(c.start)+'–'+fmt(c.end)+' · слой '+(row+1)+
+   '"><span class="clip-grip left" data-edge="left" aria-hidden="true"></span>'+
+   '<span class="clip-text">'+(i+1)+'</span>'+
+   '<span class="clip-grip right" data-edge="right" aria-hidden="true"></span></button>';
+ }).join('');
  const picked=localClips.find(c=>c.id===selectedClip);
  $('selected-clip-info').textContent=picked
-  ? 'Реплика '+(localClips.indexOf(picked)+1)+' · '+fmtFine(picked.start)+'–'+fmtFine(picked.end)+' · двигай центр или подрезай края'
-  : localClips.length?'Выбери реплику · перетаскивай для сдвига, края — для обрезки':'Запиши первую реплику';
+  ? 'Реплика '+(localClips.indexOf(picked)+1)+' · '+fmtFine(picked.start)+'–'+fmtFine(picked.end)+' · можно накладывать на другие'
+  : localClips.length?'Выбери реплику · можно накладывать, двигать и обрезать':'Запиши первую реплику';
  $('clip-total').textContent=localClips.length+' '+(localClips.length===1?'фрагмент':localClips.length>=2&&localClips.length<=4?'фрагмента':'фрагментов');
  $('undo-btn').disabled=!editHistory.canUndo;
  $('redo-btn').disabled=!editHistory.canRedo;
  $('erase-btn').disabled=!picked;
  $('replace-clip-btn').disabled=!picked||!!record||!!preroll||!!micPending||!!pendingRecording;
+ $('voice-effects').classList.toggle('hidden',!picked);
+ if(picked)for(const b of $('voice-effects-options').querySelectorAll('[data-voice-fx]')){
+  const active=b.dataset.voiceFx===normalizeVoiceEffect(picked.fx);
+  b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));
+ }
  renderPlayhead();
 }
 function editClipResult(id,kind,delta,clips=localClips){
@@ -980,7 +1023,7 @@ async function startRecord(countdown=0,replaceId=null){
    rec=new MediaRecorder(stream,mime()?{mimeType:mime()}:undefined);
    const blobs=[],active={
     rec,stream,blobs,replaceId:chosen?.id||null,
-    limit:chosen?.end??scene.duration,start:intendedStart,end:intendedStart,resolve:null
+    limit:scene.duration,start:intendedStart,end:intendedStart,resolve:null
    };
    rec.ondataavailable=e=>{if(e.data.size)blobs.push(e.data)};
    rec.onerror=()=>toast('Ошибка записи микрофона.');
@@ -1162,7 +1205,7 @@ async function downloadPremiere(){
  $('premiere-film-audio').disabled=true;$('premiere-local-file').disabled=true;
  status.textContent='Подготавливаем звук…';
  const audioClips=[...localClips,...remoteClips].map(c=>({
-  id:c.id,start:c.start,end:c.end,offset:c.offset,owner:c.owner,blob:c.blob
+  id:c.id,start:c.start,end:c.end,offset:c.offset,owner:c.owner,fx:normalizeVoiceEffect(c.fx),blob:c.blob
  }));
  const sceneCopy={...scene},input=premiereLocalCopy||(scene.custom?sourceBlob:sceneSource(scene));
  try{
@@ -1172,7 +1215,9 @@ async function downloadPremiere(){
    signal:controller.signal,
    onProgress:step=>{
     if(generation!==premiereExportGeneration)return;
-    if(step.phase==='decoding'){
+    if(step.phase==='paused'){
+     status.textContent='Экспорт на паузе · вернись на эту вкладку для продолжения без потери прогресса.';
+    }else if(step.phase==='decoding'){
      const frac=step.total?step.done/step.total:0;
      bar.value=Math.round(frac*12);
      status.textContent='Подготавливаем голоса · '+step.done+'/'+step.total;
@@ -1275,8 +1320,29 @@ $('play-toggle').onclick=playStage;
 $('record-btn').onclick=()=>startRecord(0);
 $('count-record-btn').onclick=()=>startRecord(3);
 $('replace-clip-btn').onclick=()=>{if(selectedClip)void startRecord(0,selectedClip)};
+$('voice-effects-options').innerHTML=VOICE_EFFECTS.map(fx=>
+ '<button type="button" data-voice-fx="'+fx.id+'" aria-pressed="false">'+fx.label+'</button>').join('');
+$('voice-effects-options').onclick=e=>{
+ const btn=e.target.closest('[data-voice-fx]');
+ if(!btn||record||preroll||micPending||pendingRecording)return;
+ const current=localClips.find(c=>c.id===selectedClip);
+ if(!current)return;
+ const fx=normalizeVoiceEffect(btn.dataset.voiceFx);
+ if(current.fx===fx)return;
+ editHistory.remember(localClips);stopAllPlayback();
+ current.fx=fx;current.fxReady=null;
+ renderTimeline();void draftWrite();cue('ready');
+};
 $('timeline-zoom-in').onclick=()=>zoomTimeline(1);
 $('timeline-zoom-out').onclick=()=>zoomTimeline(-1);
+$('timeline-viewport').addEventListener('wheel',e=>{
+ if(view!=='editor'||!scene)return;
+ if(e.ctrlKey||e.metaKey){
+  e.preventDefault();zoomTimeline(e.deltaY<0?1:-1);
+ }else if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){
+  e.preventDefault();$('timeline-viewport').scrollLeft+=e.deltaY;
+ }
+},{passive:false});
 $('scrubber').oninput=e=>{if(record||preroll||micPending||pendingRecording)return;setPlayhead(Number(e.target.value)/10)};
 $('clip-lane').onpointerdown=e=>{
  if(e.button!==0||record||preroll||micPending||pendingRecording)return;
@@ -1385,11 +1451,30 @@ $('premiere-repeat').onclick=()=>{pausePremiere();setPlayhead(0,true)};
 $('premiere-scrub').oninput=e=>{pausePremiere();setPlayhead(Number(e.target.value)/10,true)};
 $('premiere-back').onclick=()=>{if(mode==='solo'){stopPremiereExport();pausePremiere();openEditor()}else if(meHost()){stopPremiereExport();pausePremiere();sendGame({type:'again'})}else toast('Новую сцену начинает ведущий.')};
 for(const b of document.querySelectorAll('[data-back]'))b.onclick=async()=>{const to=b.dataset.back;if(view==='premiere')stopPremiereExport();if(view==='wait'&&mode!=='solo'){sendGame({type:'unready'});await openEditor()}else if(to==='home'){if(await resetRuntime()){leaveNetwork();show('home')}}else if(to==='library'){videoExportController?.abort();clearExportPreview();library()}else if(to==='editor')await openEditor()};
-$('stage-video').ontimeupdate=()=>{if(!scene)return;const t=time($('stage-video'));if(record?.replaceId&&t>=record.limit-.035)finishRecording();
+$('stage-video').ontimeupdate=()=>{if(!scene)return;const t=time($('stage-video'));if(record&&t>=record.limit-.035)finishRecording();
 else if(t>=scene.duration-.05){if(record)finishRecording();else if(!$('stage-video').paused){stopAllPlayback();seekVideo($('stage-video'),scene.duration-.04)}}if(!record)updateClipSound(t,playing,false);renderPlayhead()};
 $('premiere-video').ontimeupdate=()=>{if(!scene)return;const t=time($('premiere-video'));$('premiere-scrub').value=String(Math.round(t*10));if(t>=scene.duration-.04){pausePremiere();seekVideo($('premiere-video'),scene.duration-.04)}else updateClipSound(t,!$('premiere-video').paused,true)};
 $('stage-video').onpause=()=>{if(!record){playing=false;$('play-toggle').textContent='▶';updateClipSound(time($('stage-video')),false)}};
-document.addEventListener('visibilitychange',()=>{if(document.hidden){premiereExportController?.abort();cancelCountdown();if(record)finishRecording();stopAllPlayback();pausePremiere()}});
+// Browser throttling prevents reliable frame encoding when a tab is hidden.
+// Keep the active take pending without committing or dropping it.
+document.addEventListener('visibilitychange',()=>{
+ const video=$('stage-video');
+ if(document.hidden){
+  if(record&&record.rec?.state==='recording'){
+   record.pausedForTab=true;
+   try{video.pause();record.rec.pause()}catch{}
+  }
+ }else{
+  if(record?.pausedForTab&&record.rec?.state==='paused'){
+   const current=record;current.pausedForTab=false;
+   void (async()=>{
+    try{await video.play();current.rec.resume()}
+    catch{toast('Запись приостановлена браузером. Нажми «Стоп», чтобы сохранить готовую часть.')}
+   })();
+  }
+  if(voiceFxContext?.state==='suspended')void voiceFxContext.resume().catch(()=>{});
+ }
+});
 window.addEventListener('pagehide',()=>{premiereExportController?.abort();if(record)finishRecording();draftWrite()});
 document.addEventListener('keydown',e=>{
  if(view!=='editor'||e.target.matches('input,select,textarea,[contenteditable="true"]'))return;

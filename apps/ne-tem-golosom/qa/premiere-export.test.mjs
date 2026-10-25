@@ -53,3 +53,15 @@ test('export uses the same offsets as browser playback and never reads unfinishe
  assert.match(html,/id="premiere-film-audio" type="checkbox"/);
  assert.match(sw,/\.\/premiere-export\.js/);
 });
+
+test('legacy sub-50ms cut remnants no longer invalidate a complete premiere',()=>{
+ const clips=[clip('voice-1',0,3),clip('micro-15',5,5.012),clip('voice-16',4,9)];
+ const plan=voicePlan(clips,90);
+ assert.deepEqual(plan.map(c=>c.id),['voice-1','voice-16']);
+ assert.throws(()=>voicePlan([clip('micro',4,4.009)],90),/пригодных/);
+});
+test('export carries voice effect metadata without confusing overlapping actors',()=>{
+ const xs=voicePlan([{...clip('a',1,4),fx:'radio'},{...clip('b',1,4),fx:'echo'}],90);
+ assert.equal(xs.length,2);
+ assert.deepEqual(xs.map(c=>c.fx),['radio','echo']);
+});

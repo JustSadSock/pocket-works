@@ -1,3 +1,4 @@
+import {connectVoiceEffect,normalizeVoiceEffect} from './voice-effects.js';
 // The premiere recorder deliberately uses the same start/end/offset values as
 // the playback timeline. No binary voice data is uploaded to PocketNet.
 export const MAX_PREMIERE_CLIPS = 540;
@@ -6,16 +7,22 @@ export const voicePlan = (clips,duration) => {
   if(!Number.isFinite(duration)||duration<.1||duration>90)throw Error('Неверная длительность премьеры.');
   if(!Array.isArray(clips)||!clips.length)throw Error('В премьере ещё нет голосовых записей.');
   if(clips.length>MAX_PREMIERE_CLIPS)throw Error('Слишком много голосовых записей для экспорта.');
-  return clips.map((c,i)=>{
+  const valid=[];
+  for(let i=0;i<clips.length;i++){
+    const c=clips[i];
     if(!(c?.blob instanceof Blob)||!c.blob.size||
        !Number.isFinite(c.start)||!Number.isFinite(c.end)||
        !Number.isFinite(c.offset)||c.start<0||c.offset<0||
-       c.end<=c.start||c.end>duration+.1)
+       c.end<c.start-.00001||c.end>duration+.1)
       throw Error('Запись '+(i+1)+' повреждена или имеет неправильное время.');
     const start=Math.max(0,c.start),end=Math.min(duration,c.end);
-    if(end-start<.05)throw Error('Запись '+(i+1)+' слишком короткая.');
-    return {id:c.id,start,end,offset:c.offset,blob:c.blob,owner:c.owner||'solo'};
-  }).sort((a,b)=>a.start-b.start);
+    // Old editors occasionally generated slivers < 50ms when two takes
+    // crossed. They have no audible value and must not veto a 90s premiere.
+    if(end-start<.05)continue;
+    valid.push({id:c.id,start,end,offset:c.offset,blob:c.blob,fx:normalizeVoiceEffect(c.fx),owner:c.owner||'solo'});
+  }
+  if(!valid.length)throw Error('Нет пригодных голосовых фрагментов для экспорта.');
+  return valid.sort((a,b)=>a.start-b.start);
 };
 // Exact sample window of one clip inside the *decoded* recording.
 export function voiceWindow(clip,decodedDuration) {
@@ -101,7 +108,7 @@ export async function renderPremiere({
   video.src=localUrl||source;
   const Context=window.AudioContext||window.webkitAudioContext;
   let ctx=null,recorder=null,capture=null,raf=0,frameCallback=false;
-  let stallTimer=0,stopError=null,sources=[],mixedTrack=null;
+  let stallTimer=0,stopError=null,sources=[],mixedTrack=null,resumePaint=null;
   // Start unlocking AudioContext while this call still belongs to the user's
   // click. Waiting for metadata/decoding first loses activation on iOS Safari.
   let initialResume=null;
@@ -109,10 +116,22 @@ export async function renderPremiere({
   const stopRecording=error=>{
     if(error&&!stopError)stopError=error;
     video.pause();
-    if(recorder?.state==='recording')recorder.stop();
+    if(recorder?.state==='recording'||recorder?.state==='paused')recorder.stop();
   };
   const abort=()=>{cancellation.abort();stopRecording(abortError())};
-  const hidden=()=>{if(document.hidden)abort()};
+  const hidden=()=>{if(document.hidden&&recorder?.state==='recording'){
+    // Background tabs cannot reliably paint video frames. Pause encoding
+    // without discarding the mixed soundtrack or the user's completed work.
+    try{video.pause();recorder.pause();ctx?.suspend().catch(()=>{})}catch{}
+    onProgress({phase:'paused'});
+   }else if(!document.hidden&&recorder?.state==='paused'){
+    // Resume on foreground. Real-time video export cannot be guaranteed to
+    // advance while the operating system throttles background tabs.
+    void (async()=>{try{
+      await ctx?.resume();recorder.resume();await video.play();
+      resumePaint?.();
+    }catch{stopRecording(Error('Не удалось возобновить экспорт после возврата в приложение.'))}})();
+   }};
   signal?.addEventListener('abort',abort,{once:true});
   document.addEventListener('visibilitychange',hidden);
   if(signal?.aborted)abort();
@@ -257,10 +276,11 @@ export async function renderPremiere({
     onVideoFailed=()=>stopRecording(Error('Ошибка чтения исходного видео во время экспорта.'));
     video.addEventListener('error',onVideoFailed);
     stallTimer=setInterval(()=>{
-      if(recorder?.state!=='recording'||video.paused||video.seeking)return;
+      if(recorder?.state!=='recording'||video.paused||video.seeking||document.hidden)return;
       if(performance.now()-lastAdvance>15000)
         stopRecording(Error('Видео перестало воспроизводиться. Проверь файл или соединение.'));
     },2500);
+    resumePaint=()=>{if(frameCallback)raf=video.requestVideoFrameCallback(callback);else raf=requestAnimationFrame(fallback)};
     assertLive(effectiveSignal);
     await Promise.race([
       initialResume,
@@ -291,13 +311,13 @@ export async function renderPremiere({
       const node=ctx.createBufferSource();
       node.buffer=decodedAudio;
       const gain=ctx.createGain();gain.gain.value=.85;
-      node.connect(gain).connect(limiter);
+      node.connect(gain);
+      connectVoiceEffect(ctx,gain,limiter,clip.fx,when);
       node.start(when,segment.offset+late,length);
       sources.push(node);
     }
     decoded.clear();
-    if(hasFrameCallback)raf=video.requestVideoFrameCallback(callback);
-    else raf=requestAnimationFrame(fallback);
+    resumePaint();
     const result=await done;
     onProgress({phase:'encoding',fraction:1});
     return result;

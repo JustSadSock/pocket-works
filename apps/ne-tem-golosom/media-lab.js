@@ -83,14 +83,33 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
   let recorder, frame = 0, audioContext, stream, cancelled = false;
   let timer, started = false, captureMode = 'compatibility', watchdog = 0, useVideoFrameCallback = false;
   let lastMediaTime = start, lastAdvance = performance.now(), terminalError = null;
-  let cancelPendingWait = null;
+  let cancelPendingWait = null, resumeCapture = null;
   const abort = () => {
     cancelled = true;
     cancelPendingWait?.();
     video.pause();
     if (recorder?.state === 'recording') recorder.stop();
   };
-  const hidden = () => { if (document.hidden) abort(); };
+  let pausedByTab=false;
+  const hidden=()=>{
+    if(document.hidden&&recorder?.state==='recording'){
+      try{pausedByTab=true;video.pause();recorder.pause();void audioContext?.suspend().catch(()=>{})}catch{}
+    }else if(!document.hidden&&pausedByTab&&recorder?.state==='paused'){
+      pausedByTab=false;
+      void (async()=>{
+        try{
+          await audioContext?.resume();
+          recorder.resume();
+          await video.play();
+          lastAdvance=performance.now();
+          resumeCapture?.();
+        }catch{
+          terminalError=Error('Не удалось возобновить обработку видео после возвращения на вкладку.');
+          if(recorder?.state==='recording'||recorder?.state==='paused')recorder.stop();
+        }
+      })();
+    }
+  };
   signal?.addEventListener('abort', abort, {once: true});
   document.addEventListener('visibilitychange', hidden);
   try {
@@ -234,6 +253,10 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
       captureFrame();
       if (!cancelled && recorder.state === 'recording')
         frame = requestAnimationFrame(paintFallback);
+    };
+    resumeCapture=()=>{
+      if(useVideoFrameCallback)frame=video.requestVideoFrameCallback(paintVideoFrame);
+      else frame=requestAnimationFrame(paintFallback);
     };
     const stopAtEnd = () => {
       if (!cancelled && recorder?.state === 'recording' &&

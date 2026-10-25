@@ -1,8 +1,8 @@
 // Pure, DOM-free model for the voice-only editing lane. One actor owns one lane.
 export const HISTORY_LIMIT = 40;
 export const MAX_CLIPS = 90;
-export const snapshotClips = clips => clips.map(({id,start,end,offset,owner,blob}) =>
-  ({id,start,end,offset,owner,blob}));
+export const snapshotClips = clips => clips.map(({id,start,end,offset,owner,blob,fx='clean'}) =>
+  ({id,start,end,offset,owner,blob,fx}));
 
 export class TimelineHistory {
   constructor(past = [], future = []) {
@@ -30,25 +30,29 @@ export class TimelineHistory {
   get canRedo() { return this.future.length > 0; }
 }
 
-export function spliceRecording(clips, incoming, createId) {
-  const {start:a,end:b,blob,id,owner} = incoming;
-  if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b <= a ||
-    !blob || !id || typeof createId !== 'function') throw Error('Неверный дубль.');
-  const result = [];
-  for (const clip of clips) {
-    if (clip.end <= a || clip.start >= b) {
-      result.push(clip);
-      continue;
-    }
-    if (clip.start < a) result.push({...clip,id:createId(),end:a});
-    if (clip.end > b) result.push({
-      ...clip,id:createId(),start:b,offset:clip.offset+(b-clip.start)
-    });
-  }
-  result.push({id,start:a,end:b,offset:0,owner,blob});
-  result.sort((x,y)=>x.start-y.start || x.end-y.end);
-  if (result.length > MAX_CLIPS) throw Error('Слишком много фрагментов (максимум 90).');
-  return result;
+// Recordings are *layers*, not cutouts. An overlap must remain audible and
+// visible rather than chopping a previous clip into near-zero fragments.
+export function spliceRecording(clips,incoming,createId) {
+ const {start:a,end:b,blob,id,owner} = incoming;
+ if (!Number.isFinite(a)||!Number.isFinite(b)||a<0||b-a<MIN_CLIP_SECONDS||
+     !blob||!id||typeof createId!=='function')throw Error('Неверный дубль.');
+ if(clips.length>=MAX_CLIPS)throw Error('Слишком много реплик (максимум 90).');
+ if(clips.some(c=>c.id===id))throw Error('Повтор идентификатора дубля.');
+ return [...clips,{id,start:a,end:b,offset:0,owner,blob,fx:'clean'}]
+  .sort((x,y)=>x.start-y.start||x.end-y.end);
+}
+
+// Greedy interval partitioning: overlapping clips always occupy different
+// lanes. Independent of DOM size/zoom, so mobile and desktop match.
+export function layerTimeline(clips){
+ const laneEnds=[],assignments=new Map();
+ for(const clip of [...clips].sort((a,b)=>a.start-b.start||a.end-b.end)){
+  let lane=laneEnds.findIndex(end=>end<=clip.start+.000001);
+  if(lane<0){lane=laneEnds.length;laneEnds.push(clip.end)}
+  else laneEnds[lane]=clip.end;
+  assignments.set(clip.id,lane);
+ }
+ return {lanes:Math.max(1,laneEnds.length),assignments};
 }
 
 const validClip = (c, duration) =>
@@ -95,7 +99,7 @@ export function unpackTimeline(data,duration=Infinity) {
   };
   const unpack = list => sanitized((Array.isArray(list)?list:[]).map(raw => ({
     id:raw?.id,start:raw?.start,end:raw?.end,offset:raw?.offset,
-    owner:raw?.owner,blob:data.assets[raw?.asset]
+    owner:raw?.owner,fx:raw?.fx||'clean',blob:data.assets[raw?.asset]
   })),duration);
   const clips=unpack(data.clips);
   const past=(Array.isArray(data.past)?data.past:[]).slice(-HISTORY_LIMIT).map(unpack);
@@ -107,7 +111,7 @@ export function unpackTimeline(data,duration=Infinity) {
 
 /* Stage 3: every editing gesture is one atomic timeline transaction.
  * "move" shifts a whole line without changing the recorded voice; "left" and
- * "right" trim its edges. A clip may not overlap its neighbors or leave the film.
+ * "right" trim its edges. Clips may overlap, but never leave the film.
  * We never extend beyond recorded audio, even if the browser hasn't decoded
  * the source duration yet.
  */
@@ -117,8 +121,8 @@ export function editClip(clips,id,kind,delta,sceneDuration,audioDuration=NaN){
  if(!['move','left','right'].includes(kind)||!Number.isFinite(delta)||!Number.isFinite(sceneDuration)||sceneDuration<=0)return null;
  const index=clips.findIndex(c=>c.id===id);
  if(index<0)return null;
- const original=clips[index],prev=clips[index-1],next=clips[index+1];
- const lower=Math.max(0,prev?.end??0),upper=Math.min(sceneDuration,next?.start??sceneDuration);
+ const original=clips[index];
+ const lower=0,upper=sceneDuration;
  if(upper-lower<MIN_CLIP_SECONDS)return null;
  let start=original.start,end=original.end,offset=original.offset;
  if(kind==='move'){
@@ -146,9 +150,9 @@ export function replaceSelectedRecording(clips,targetId,blob,duration,newId){
  const at=clips.findIndex(c=>c.id===targetId);
  if(at<0||!blob||!newId||!Number.isFinite(duration)||duration<=0)return null;
  const old=clips[at];
- const end=Math.min(old.end,old.start+duration);
+ const end=old.start+duration;
  if(end-old.start<MIN_CLIP_SECONDS)return null;
  const next=clips.slice();
- next[at]={id:newId,owner:old.owner,start:old.start,end,offset:0,blob};
+ next[at]={id:newId,owner:old.owner,start:old.start,end,offset:0,blob,fx:old.fx||'clean'};
  return next;
 }
