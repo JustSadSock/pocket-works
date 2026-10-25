@@ -65,6 +65,8 @@ try{
  await page.locator('#listen-btn').click();
  await page.waitForFunction(()=>window.__monitorStarted===true,null,{timeout:9000});
  assert.equal(await page.locator('#result-video').evaluate(v=>v.muted),true);
+ await page.locator('#center-suppression').fill('35');
+ assert.equal(await page.locator('#center-value').innerText(),'35%');
  await page.locator('#listen-btn').click();
  const download=page.waitForEvent('download',{timeout:20000});
  await page.locator('#wav-btn').click();

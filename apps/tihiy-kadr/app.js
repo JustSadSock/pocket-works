@@ -1,4 +1,4 @@
-import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,wavPCM16,elapsed,safeName} from './audio-utils.js';
+import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,suppressStereoCenter,wavPCM16,elapsed,safeName} from './audio-utils.js';
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
 const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
  (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -170,6 +170,11 @@ async function process(){
   text('speed-factor',(selected.duration/Math.max(.001,inferenceTime)).toFixed(2)+'×');
   text('scene-length',elapsed(selected.duration));text('result-state','MRX · три дорожки готовы');
   const levels=stemLevels(original,stems);
+  const isStereo=original.length===2;
+  $('center-suppression').disabled=!isStereo;
+  text('center-note',isStereo
+   ?'Экспериментальный фильтр. Попробуй 35–50%, если голос попал в музыку и эффекты. Он также может приглушить центральные звуки и музыку.'
+   :'Исходный звук моно: центральный канал отделить невозможно. Дополнительный фильтр недоступен.');
   text('stem-diagnostics',levels
    ?'Выделенная речь: '+levels.dialogueRelativeDb.toFixed(1)+' дБ относительно оригинала. Это уровень выделенной дорожки, не оценка точности модели.'+
     (levels.dialogueRelativeDb < -24?' Модель почти не обнаружила речь — заметного удаления может не быть.':'')
@@ -195,7 +200,8 @@ function getMix(){
  if(!original||!stems)throw Error('Нет звуковых дорожек');
  if(mode==='original')return original;
  if(mode==='speech')return stems.dialogue.map(channel=>channel.slice());
- return mixPCM(original,stems,gains(),mode==='stems'?'stems':'residual');
+ const separated=mixPCM(original,stems,gains(),mode==='stems'?'stems':'residual');
+ return suppressStereoCenter(separated,Number($('center-suppression').value),RATE);
 }
 function updateListeningButtons(){
  for(const [name,value] of [['original','original'],['clean','clean'],['stems','stems'],['speech','speech']])
@@ -233,6 +239,11 @@ for(const name of ['dialogue','music','effects']){
   clearTimeout(editTimer);editTimer=setTimeout(()=>{void previewAudio()},220);
  };
 }
+$('center-suppression').oninput=()=>{
+ text('center-value',$('center-suppression').value+'%');
+ if(mode==='speech'||mode==='original'){mode='stems';updateListeningButtons();}
+ clearTimeout(editTimer);editTimer=setTimeout(()=>{void previewAudio()},220);
+};
 // Never allow the original audio from <video> to mix into the neural stems.
 function lockVideoMute(){
  if(!video.muted)video.muted=true;

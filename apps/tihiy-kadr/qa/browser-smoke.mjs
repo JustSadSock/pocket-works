@@ -106,6 +106,12 @@ try{
  await page.locator('#wav-btn').click();
  assert.match((await effectsDownload).suggestedFilename(),/music-effects\.wav$/);
  assert.match(await page.locator('#stem-diagnostics').innerText(),/Выделенная речь/);
+ assert.equal(await page.locator('#center-suppression').isDisabled(),false);
+ await page.locator('#center-suppression').fill('45');
+ assert.equal(await page.locator('#center-value').innerText(),'45%');
+ const boosted=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#wav-btn').click();
+ assert.match((await boosted).suggestedFilename(),/music-effects\.wav$/);
  assert.deepEqual(runtimeErrors,[]);
  console.log('Real Chromium MRX preview, speech, M&E exports verified:',await page.locator('#inference-time').innerText());
 }finally{await browser.close();await new Promise(r=>server.close(r))}
