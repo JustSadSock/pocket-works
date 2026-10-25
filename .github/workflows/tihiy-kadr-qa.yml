@@ -45,3 +45,21 @@ jobs:
           npx playwright install chromium
       - name: Separate synthetic video using actual 31 MB MRX ONNX model
         run: node apps/tihiy-kadr/qa/browser-smoke.mjs
+
+  webkit-mrx:
+    needs: syntax-unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install WebKit engine and media decoder
+        run: |
+          npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps webkit
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          ffmpeg -version
+      - name: Run MRX in WebKit mobile viewport with actual video and ONNX WASM
+        run: node apps/tihiy-kadr/qa/webkit-smoke.mjs

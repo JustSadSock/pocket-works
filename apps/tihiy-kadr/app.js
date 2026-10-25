@@ -1,5 +1,7 @@
 import {RATE,MAX_SECONDS,validRange,mixPCM,wavPCM16,elapsed,safeName} from './audio-utils.js';
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
+const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
+ (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 let sourceVideo=$('source-video');
 let file=null,fileURL='',audioURL='',length=0,range=null,original=null,stems=null,inferenceTime=0;
 let worker=null,abort=null,serial=0,exporting=false,editTimer=null,mode='clean',fileName='video';
@@ -122,17 +124,28 @@ async function pcm(selected,signal){
  try{return await decode(selected,signal)}
  catch(e){if(signal.aborted)throw e;return await capture(selected,signal)}
 }
+function readableModelError(packet){
+ const reason=packet.message||'Неизвестная ошибка модели.';
+ const phase=packet.phase==='library'?'подключение библиотеки':
+  packet.phase==='model'?'загрузка весов или ONNX WebAssembly':'обработка звука';
+ if(/load failed|failed to fetch|fetch failed|networkerror|failed to load/i.test(reason))
+  return 'Сетевой сбой ('+phase+'): не удалось получить компоненты MRX. Проверь интернет, блокировщики контента или VPN и повтори. Техническая причина: '+reason;
+ if(/memory|allocation|out of bounds|memory access/i.test(reason))
+  return 'Не хватает памяти для нейросети. Выбери режим по 5 секунд и попробуй более короткую сцену. '+reason;
+ return 'MRX ('+phase+'): '+reason;
+}
 function separate(channels,chunk,id){
  return new Promise((resolve,reject)=>{
   const w=new Worker('./mrx-worker.js',{type:'module'});worker=w;
-  w.onerror=e=>{e.preventDefault();w.terminate();if(worker===w)worker=null;reject(Error('Модель не загрузилась: проверь сеть и доступ к esm.sh и Hugging Face.'))};
+  w.onerror=e=>{e.preventDefault();w.terminate();if(worker===w)worker=null;reject(Error('Ошибка подключения нейросети: '+(e.message||'скрипт Worker не запустился')+'. Проверь сеть и разрешение доступа к внешним CDN.'))};
+  w.onmessageerror=()=>{w.terminate();if(worker===w)worker=null;reject(Error('Safari не смог передать звуковые данные в Worker. Попробуй более короткий фрагмент.'))};
   w.onmessage=e=>{
    const p=e.data||{};if(p.id!==id)return;
    if(p.stage==='library')step('Подключаем нейросеть',p.detail);
    if(p.stage==='model')step('MRX разделяет дорожки',p.detail);
    if(p.stage==='done'||p.stage==='error'){
     w.terminate();if(worker===w)worker=null;
-    p.stage==='done'?resolve(p):reject(Error(p.message));
+    p.stage==='done'?resolve(p):reject(Error(readableModelError(p)));
    }
   };
   const copies=channels.map(ch=>ch.slice());
@@ -258,4 +271,5 @@ async function exportVideo(){
 }
 $('video-btn').onclick=()=>{void exportVideo()};
 window.addEventListener('pagehide',()=>{worker?.terminate();abort?.abort();pause();revoke(fileURL);revoke(audioURL)});
+if(mobile)$('chunk-size').value='5';
 uiBusy(false);
