@@ -83,7 +83,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
   let recorder, frame = 0, audioContext, stream, cancelled = false;
   let timer, started = false, captureMode = 'compatibility', watchdog = 0, useVideoFrameCallback = false;
   let lastMediaTime = start, lastAdvance = performance.now(), terminalError = null;
-  let cancelPendingWait = null;
+  let cancelPendingWait = null, resumeCapture = null;
   const abort = () => {
     cancelled = true;
     cancelPendingWait?.();
@@ -102,8 +102,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
           recorder.resume();
           await video.play();
           lastAdvance=performance.now();
-          if(useVideoFrameCallback)frame=video.requestVideoFrameCallback(paintVideoFrame);
-          else frame=requestAnimationFrame(paintFallback);
+          resumeCapture?.();
         }catch{
           terminalError=Error('Не удалось возобновить обработку видео после возвращения на вкладку.');
           if(recorder?.state==='recording'||recorder?.state==='paused')recorder.stop();
@@ -254,6 +253,10 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
       captureFrame();
       if (!cancelled && recorder.state === 'recording')
         frame = requestAnimationFrame(paintFallback);
+    };
+    resumeCapture=()=>{
+      if(useVideoFrameCallback)frame=video.requestVideoFrameCallback(paintVideoFrame);
+      else frame=requestAnimationFrame(paintFallback);
     };
     const stopAtEnd = () => {
       if (!cancelled && recorder?.state === 'recording' &&
