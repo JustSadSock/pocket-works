@@ -1418,7 +1418,7 @@ async function initializeIdentityAndRecovery(){
   identity=await getPocketIdentity();
   name=identity?.complete?identity.nickname:(session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900))));
  }catch{
-  name=session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900));
+  name=session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900)));
  }
  if(!identity?.complete)session.setItem('name',name);
  const incoming=new URLSearchParams(location.search).get('room');
