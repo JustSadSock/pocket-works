@@ -3,10 +3,14 @@ export { PocketNetHub } from './hub.mjs';
 export { PocketIdentity } from '../pocket-id/hub.mjs';
 export { PocketCloud } from '../pocket-cloud/hub.mjs';
 export { PocketSocial } from '../pocket-social/hub.mjs';
+import { handleMrxAsset } from './mrx-assets.mjs';
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/ai-assets/')) {
+      return handleMrxAsset(request,{cache:globalThis.caches?.default||null,waitUntil:ctx?.waitUntil?.bind(ctx)});
+    }
     if (url.pathname === '/privacy' && (request.method === 'GET' || request.method === 'HEAD')) {
       // Avoid Cloudflare's .html -> extensionless redirect loop.
       const asset = await env.ASSETS.fetch(new Request(new URL('/privacy.txt', url), request));
