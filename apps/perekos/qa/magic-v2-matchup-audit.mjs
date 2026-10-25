@@ -129,7 +129,7 @@ export function audit({seeds=[431,997],frames=900,tactics=TACTICS,aimModes=AIM_M
   const reversed=matches.filter(m=>m.left===b&&m.right===a);
   assert.equal(aligned.length,reversed.length);
   const paired=aligned.map((m,k)=>({
-   tactic:m.tactic,aimMode:m.aimMode,advantage:(m.hpDelta-reversed[k].hpDelta)/2,
+   tactic:m.tactic,aimMode:m.aimMode,profile:m.profile,advantage:(m.hpDelta-reversed[k].hpDelta)/2,
    hpExchange:pairedDamage(m)||pairedDamage(reversed[k])
   }));
   const active=paired.filter(x=>x.hpExchange);
@@ -145,8 +145,13 @@ export function audit({seeds=[431,997],frames=900,tactics=TACTICS,aimModes=AIM_M
    return [aimMode,{hpExchangePairs:engaged.length,totalPairs:subset.length,
     hpAdvantage:average(engaged)}];
   }));
+  const byProfile=Object.fromEntries(PROFILES.map(profile=>{
+   const subset=paired.filter(x=>x.profile===profile),engaged=subset.filter(x=>x.hpExchange);
+   return [profile,{hpExchangePairs:engaged.length,totalPairs:subset.length,
+    hpAdvantage:average(engaged)}];
+  }));
   pairs.push({a,b,samples:paired.length,hpExchangePairs:active.length,
-   seatNeutralHpAdvantage:advantage,byTactic,byAimMode,
+   seatNeutralHpAdvantage:advantage,byTactic,byAimMode,byProfile,
    warning:advantage===null?'no-hp-exchange':
     Math.abs(advantage)>20?'investigate':'within-observation-band'});
  }
