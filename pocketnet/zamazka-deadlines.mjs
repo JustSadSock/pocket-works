@@ -1,7 +1,8 @@
 // PocketNet v46: schedule timed Zamazka phases without a client heartbeat.
 // This is a pure projection of the immutable module's existing pulse rules.
 // No alarm may shorten the 25s final grace or 120s recoverable transfer.
-export const ZAMAZKA_ALARM_VERSION='v46';
+export const ZAMAZKA_ALARM_VERSION='v46'; // first supported immutable alarm edition
+export const ZAMAZKA_ALARM_VERSIONS=Object.freeze(['v46','v47']);
 export const ZAMAZKA_FINAL_GRACE_MS=25_000;
 export const ZAMAZKA_FINAL_RECOVERY_MS=120_000;
 const TIMED_PHASES=new Set(['preparing','preview','drawing','sealing','voting','verdict','reveal']);
