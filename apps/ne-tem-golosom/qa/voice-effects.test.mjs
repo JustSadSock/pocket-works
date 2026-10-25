@@ -5,7 +5,7 @@ import {VOICE_EFFECTS,VOICE_EFFECT_GROUPS,normalizeVoiceEffect,connectVoiceEffec
 const allNodes=[];
 const mockNode=type=>{
  const node={
-  type,frequency:{value:0},Q:{value:0},gain:{value:0},delayTime:{value:0},
+  type,kind:type,frequency:{value:0},Q:{value:0},gain:{value:0},delayTime:{value:0},
   oversample:'none',curve:null,edges:[],started:0,stopped:0,
   connect(next){this.edges.push(next);return next},disconnect(){this.edges.length=0},
   start(){this.started++},stop(){this.stopped++}
@@ -35,13 +35,13 @@ test('each Web Audio preset builds and disposes a real non-empty graph',()=>{
   const from=mockNode('source'),out=mockNode('destination');
   const cleanup=connectVoiceEffect(context,from,out,id);
   assert(from.edges.length,'FX '+id+' must connect input to effect graph');
-  const oscillatorCount=allNodes.filter(n=>n.type==='oscillator').length;
-  assert.equal(allNodes.filter(n=>n.type==='oscillator'&&n.started!==1).length,0);
+  const oscillatorCount=allNodes.filter(n=>n.kind==='oscillator').length;
+  assert.equal(allNodes.filter(n=>n.kind==='oscillator'&&n.started!==1).length,0);
   assert.equal(typeof cleanup,'function');
   cleanup();
   assert.equal(from.edges.length,0,'no original source connections left');
   assert(allNodes.every(node=>node.edges.length===0),'FX '+id+' has no leaked feedback or LFO edges');
-  assert.equal(allNodes.filter(n=>n.type==='oscillator'&&n.stopped===1).length,oscillatorCount);
+  assert.equal(allNodes.filter(n=>n.kind==='oscillator'&&n.stopped===1).length,oscillatorCount);
   cleanup();
  }
 });
@@ -49,7 +49,7 @@ test('modulated special effects really allocate clocked oscillators',()=>{
  for(const id of ['ghost','alien','glitch','cassette','chorus','cosmos']){
   allNodes.length=0;
   const cleanup=connectVoiceEffect(context,mockNode('source'),mockNode('output'),id,1.5);
-  assert(allNodes.some(n=>n.type==='oscillator'&&n.started===1),id+' modulation is real');
+  assert(allNodes.some(n=>n.kind==='oscillator'&&n.started===1),id+' modulation is real');
   cleanup();
  }
 });
