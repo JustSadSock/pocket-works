@@ -414,7 +414,7 @@ const module: PocketModule<State>={
    if(a.type==='pulse')return {state,events:
      state.phase!==phaseBeforePulse||state.turn!==turnBeforePulse||state.round!==roundBeforePulse
        ?emit(state):[]};
-    if(state.paused&&a.type!=='kick_player'&&a.type!=='claim_host')return {state,events:notice(id,'Матч на паузе. Дождитесь участников или исключите отсутствующего игрока.')};
+    if(state.paused&&a.type!=='kick_player'&&a.type!=='claim_host'&&a.type!=='resume_with_absent')return {state,events:notice(id,'Матч на паузе. Дождитесь участников или исключите отсутствующего игрока.')};
    if(a.type==='claim_host'&&state.paused){
     if((state.onlineIds||[]).includes(state.host)||state.host===id)
      return {state,events:notice(id,'Организатор уже в комнате.')};
