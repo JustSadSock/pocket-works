@@ -4,7 +4,7 @@ import {meterHeights} from './studio-feedback.js';
 import {MAX_AUDIO_BYTES,MAX_INCOMING_TRANSFERS,validAudioEnvelope,validVideoEnvelope,canAcceptVoice} from './media-protocol.js';
 import {renderPremiere,supportsPremiereExport,premiereFilename} from './premiere-export.js';
 import {TimelineHistory,snapshotClips,spliceRecording,layerTimeline,packTimeline,unpackTimeline,editClip,replaceSelectedRecording,MIN_CLIP_SECONDS} from './timeline-model.js';
-import {VOICE_EFFECTS,normalizeVoiceEffect,connectVoiceEffect} from './voice-effects.js';
+import {VOICE_EFFECTS,VOICE_EFFECT_GROUPS,normalizeVoiceEffect,connectVoiceEffect} from './voice-effects.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {createRoomRecovery} from './room-recovery.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
@@ -46,7 +46,7 @@ let videoExportController=null,videoExportBlob=null,videoExportUrl=null,trimRang
 let premiereExportController=null,premiereResultUrl=null,premiereExportGeneration=0,premiereLocalCopy=null,premiereExportNotice='';
 const qualityNames=['Экономное','Компактное','Сбалансированное','Высокое','Максимальное'];
 let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0,timelineZoom=1,clipDrag=null,skipTimelineClick=false,micPending=false;
-let micMonitor=null,saveRevision=0,readyPending=false,voiceFxContext=null;
+let micMonitor=null,saveRevision=0,readyPending=false,voiceFxContext=null,voiceFxExpanded=false;
 let onlineIds=null,networkInterrupted=false,retryRoomAction='create',retryCheckpoint=null;
 function roomCheckpoint(){
  const identityKey=identity?.accountId||'guest';
@@ -922,6 +922,13 @@ function renderTimeline(){
  $('erase-btn').disabled=!picked;
  $('replace-clip-btn').disabled=!picked||!!record||!!preroll||!!micPending||!!pendingRecording;
  $('voice-effects').classList.toggle('hidden',!picked);
+ if(picked&&VOICE_EFFECTS.find(f=>f.id===normalizeVoiceEffect(picked.fx))?.category!=='main')
+  voiceFxExpanded=true;
+ $('voice-fx-extra').classList.toggle('hidden',!voiceFxExpanded);
+ $('voice-fx-more').setAttribute('aria-expanded',String(voiceFxExpanded));
+ $('voice-fx-more').textContent=voiceFxExpanded?'Свернуть эффекты ↑':'Ещё '+VOICE_EFFECTS.filter(f=>f.category!=='main').length+' эффектов ↓';
+ $('voice-fx-current').textContent=picked
+  ?'· '+VOICE_EFFECTS.find(f=>f.id===normalizeVoiceEffect(picked.fx))?.label:'';
  if(picked)for(const b of $('voice-effects-options').querySelectorAll('[data-voice-fx]')){
   const active=b.dataset.voiceFx===normalizeVoiceEffect(picked.fx);
   b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));
@@ -1320,17 +1327,44 @@ $('play-toggle').onclick=playStage;
 $('record-btn').onclick=()=>startRecord(0);
 $('count-record-btn').onclick=()=>startRecord(3);
 $('replace-clip-btn').onclick=()=>{if(selectedClip)void startRecord(0,selectedClip)};
-$('voice-effects-options').innerHTML=VOICE_EFFECTS.map(fx=>
- '<button type="button" data-voice-fx="'+fx.id+'" aria-pressed="false">'+fx.label+'</button>').join('');
+// Main presets stay visible; additional circuits are grouped in a compact
+// expandable shelf rather than creating a second bulky editing screen.
+const fxButton=fx=>'<button type="button" data-voice-fx="'+fx.id+'" aria-pressed="false">'+fx.label+'</button>';
+$('voice-effects-options').innerHTML=
+ '<div class="voice-fx-primary">'+VOICE_EFFECTS.filter(fx=>fx.category==='main').map(fxButton).join('')+'</div>'+
+ '<div class="voice-fx-toolbar"><button id="voice-fx-more" type="button" aria-controls="voice-fx-extra" aria-expanded="false">Ещё эффекты ↓</button>'+
+ '<button id="voice-fx-audition" type="button" title="Послушать выбранную реплику с текущим эффектом">▶ Послушать</button></div>'+
+ '<div id="voice-fx-extra" class="voice-fx-extra hidden">'+VOICE_EFFECT_GROUPS.map(group=>
+  '<div class="voice-fx-group"><span>'+group.label+'</span><div class="voice-fx-buttons">'+
+  VOICE_EFFECTS.filter(fx=>fx.category===group.id).map(fxButton).join('')+'</div></div>'
+ ).join('')+'</div>';
 $('voice-effects-options').onclick=e=>{
+ const more=e.target.closest('#voice-fx-more');
+ if(more){
+  voiceFxExpanded=!voiceFxExpanded;
+  $('voice-fx-extra').classList.toggle('hidden',!voiceFxExpanded);
+  more.setAttribute('aria-expanded',String(voiceFxExpanded));
+  more.textContent=voiceFxExpanded?'Свернуть эффекты ↑':'Ещё '+VOICE_EFFECTS.filter(f=>f.category!=='main').length+' эффектов ↓';
+  return;
+ }
+ const listen=e.target.closest('#voice-fx-audition');
+ if(listen){
+  const clip=localClips.find(c=>c.id===selectedClip);
+  if(!clip||record||preroll||micPending||pendingRecording)return;
+  setPlayhead(clip.start);
+  void playStage();return;
+ }
  const btn=e.target.closest('[data-voice-fx]');
  if(!btn||record||preroll||micPending||pendingRecording)return;
  const current=localClips.find(c=>c.id===selectedClip);
  if(!current)return;
  const fx=normalizeVoiceEffect(btn.dataset.voiceFx);
  if(current.fx===fx)return;
- editHistory.remember(localClips);stopAllPlayback();
+ editHistory.remember(localClips);
+ // Reconnect the clip's Web Audio nodes without stopping the playing film.
+ // This makes preset switching audible immediately during preview.
  current.fx=fx;current.fxReady=null;
+ if(current.fxSource)ensureClipVoice(current);
  renderTimeline();void draftWrite();cue('ready');
 };
 $('timeline-zoom-in').onclick=()=>zoomTimeline(1);
