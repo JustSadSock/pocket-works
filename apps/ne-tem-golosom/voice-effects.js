@@ -3,10 +3,15 @@
 // Each effect is an audible circuit, not a label-only preset.
 export const VOICE_EFFECTS=Object.freeze([
  {id:'clean',label:'Без эффекта',category:'main'},
- {id:'radio',label:'Рация',category:'main'},
- {id:'robot',label:'Робот',category:'main'},
- {id:'echo',label:'Эхо',category:'main'},
- {id:'monster',label:'Монстр',category:'main'},
+ {id:'female',label:'Женский',category:'main',semitones:4},
+ {id:'male',label:'Мужской',category:'main',semitones:-4},
+ {id:'child',label:'Детский',category:'main',semitones:7},
+ {id:'high',label:'Выше',category:'main',semitones:3},
+ {id:'deep',label:'Ниже',category:'main',semitones:-6},
+ {id:'radio',label:'Рация',category:'classic'},
+ {id:'robot',label:'Робот',category:'classic'},
+ {id:'echo',label:'Эхо',category:'classic'},
+ {id:'monster',label:'Монстр',category:'classic'},
  {id:'phone',label:'Телефон',category:'color'},
  {id:'megaphone',label:'Мегафон',category:'color'},
  {id:'underwater',label:'Под водой',category:'color'},
@@ -21,6 +26,7 @@ export const VOICE_EFFECTS=Object.freeze([
  {id:'cosmos',label:'Космос',category:'space'}
 ]);
 export const VOICE_EFFECT_GROUPS=Object.freeze([
+ {id:'classic',label:'Классические'},
  {id:'color',label:'Тембр и устройства'},
  {id:'fantasy',label:'Фантастика'},
  {id:'space',label:'Пространство'}
@@ -40,13 +46,51 @@ const distortion=(ctx,amount,steps=0)=>{
 };
 
 /**
+ * Two-grain overlap-add pitch shifter using *native* Web Audio delay lines.
+ * Opposite Hann windows cancel discontinuities between the moving read heads.
+ * The input keeps its duration; changing pitch does not change timeline speed.
+ * Lightweight on phones and works equally in real-time and offline export.
+ *
+ * Not formant-preserving: the gender/age presets are stylized pitch shifts,
+ * not AI voice identities.
+ */
+export function pitchShiftGraph(ctx,input,output,semitones,own,activeSources){
+ if(!Number.isFinite(semitones)||semitones<-12||semitones>12)
+  throw Error('Недопустимая высота голоса.');
+ const ratio=Math.pow(2,semitones/12);
+ const rate=ctx.sampleRate,frames=Math.max(512,Math.round(rate*.095));
+ const duration=frames/rate,delta=(1-ratio)*duration;
+ const baseDelay=.018+Math.max(0,-delta);
+ const ramp=ctx.createBuffer(1,frames,rate),window=ctx.createBuffer(1,frames,rate);
+ const rampData=ramp.getChannelData(0),envelope=window.getChannelData(0);
+ for(let i=0;i<frames;i++){
+  const phase=i/frames;
+  rampData[i]=delta*phase;
+  envelope[i]=Math.sin(Math.PI*phase)**2;
+ }
+ for(const phaseOffset of [0,duration/2]){
+  const voiceDelay=own(ctx.createDelay(.5));
+  voiceDelay.delayTime.value=baseDelay;
+  const gate=own(ctx.createGain());gate.gain.value=0;
+  const slope=own(ctx.createBufferSource());slope.buffer=ramp;slope.loop=true;
+  const amplitude=own(ctx.createBufferSource());amplitude.buffer=window;amplitude.loop=true;
+  const scale=own(ctx.createGain());scale.gain.value=1;
+  input.connect(voiceDelay);voiceDelay.connect(gate);gate.connect(output);
+  slope.connect(scale);scale.connect(voiceDelay.delayTime);
+  amplitude.connect(gate.gain);
+  slope.start(ctx.currentTime,phaseOffset);amplitude.start(ctx.currentTime,phaseOffset);
+  activeSources.push(slope,amplitude);
+ }
+}
+
+/**
  * Connect one decoded voice to preview or premiere mix.
  * `when` is the AudioContext clock of the clip's first sample. LFOs therefore
  * have the same phase in preview and final export, and pause with AudioContext.
  * The returned cleanup releases sources, oscillators and feedback loops.
  */
 export function connectVoiceEffect(ctx,input,output,id='clean',when=ctx.currentTime){
- const fx=normalizeVoiceEffect(id),nodes=[],oscillators=[];
+ const fx=normalizeVoiceEffect(id),nodes=[],oscillators=[],activeSources=[];
  const own=node=>(nodes.push(node),node);
  const chain=(...items)=>{for(let i=0;i<items.length-1;i++)items[i].connect(items[i+1]);return items.at(-1)};
  const biquad=(kind,frequency,q)=>{
@@ -72,7 +116,13 @@ export function connectVoiceEffect(ctx,input,output,id='clean',when=ctx.currentT
   chain(input,gain(dry),output);
   for(const [seconds,level] of entries)chain(input,delay(seconds),gain(level),output);
  };
- if(fx==='radio'){
+ if(['female','male','child','high','deep'].includes(fx)){
+  const semitones=VOICE_EFFECTS.find(p=>p.id===fx).semitones;
+  const shaped=biquad('peaking',fx==='female'||fx==='child'?2550:fx==='male'||fx==='deep'?310:1400,.65);
+  shaped.gain.value=fx==='female'||fx==='child'?3.5:fx==='male'||fx==='deep'?4:2;
+  pitchShiftGraph(ctx,input,shaped,semitones,own,activeSources);
+  shaped.connect(output);
+ }else if(fx==='radio'){
   chain(input,biquad('highpass',470),biquad('lowpass',2900),output);
  }else if(fx==='robot'){
   chain(input,biquad('bandpass',1200,.6),shape(14),output);
@@ -134,7 +184,7 @@ export function connectVoiceEffect(ctx,input,output,id='clean',when=ctx.currentT
  let removed=false;
  return ()=>{
   if(removed)return;removed=true;
-  for(const oscillator of oscillators)try{oscillator.stop()}catch{}
+  for(const oscillator of [...oscillators,...activeSources])try{oscillator.stop()}catch{}
   try{input.disconnect()}catch{}
   for(const node of nodes)try{node.disconnect()}catch{}
  };
