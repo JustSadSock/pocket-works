@@ -56,6 +56,7 @@ function checkInvariants(s){
   found.add(lot.item.id);
  }
 }
+const occupied=(s,p)=>p.items.length+(s.blackLots||[]).filter(l=>l.seller===p.id).length;
 function candidates(s,sellerId){
  const others=s.contestants.filter(p=>p.id!==sellerId&&!p.bankrupt);
  // Fisher–Yates avoids favouring fixed IDs with an invalid random comparator.
@@ -76,7 +77,7 @@ function tradePublic(s,me,profile,stats){
  for(const buyer of candidates(s,me.id)){
   if(!roll(profile.visit))continue;
   stats.visits++;
-  if(buyer.items.length>=4){stats.noSpace++;continue;}
+  if(occupied(s,buyer)>=4){stats.noSpace++;continue;}
   const preview=view(s,buyer.id),listing=preview.listing;
   assert.ok(listing&&listing.seller===me.id);
   const perceived=(listing.rarity==='редкий'?92:72)+randomInt(-25,25);
@@ -133,7 +134,7 @@ function tradeBlack(s,me,profile,stats){
    'anonymous lot must not leak competing offers to buyer');
   assert.equal(v.players.find(p=>p.id===me.id).resources,null,
    'anonymous round must mask seller wallet');
-  if(buyer.items.length>=4){stats.noSpace++;continue;}
+  if(occupied(s,buyer)>=4){stats.noSpace++;continue;}
   if(!roll(profile.offer)){stats.declined++;continue;}
   const ask=publicLot.ask.gold;
   const offer=Math.floor(ask*(.62+Math.random()*.4));
@@ -175,7 +176,7 @@ function oneGame(size,profile,stats){
    tradePublic(s,me,profile,stats);
    tradePrivate(s,me,profile,stats);
    tradeBlack(s,me,profile,stats);
-   if(s.brokerOffer&&me.items.length<4&&me.resources.gold>=180&&roll(profile.broker)){
+   if(s.brokerOffer&&occupied(s,me)<4&&me.resources.gold>=180&&roll(profile.broker)){
     send(s,me.id,{type:'broker_buy'});stats.brokerSales++;
    }
   }
