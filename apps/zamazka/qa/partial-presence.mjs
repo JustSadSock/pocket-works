@@ -104,6 +104,9 @@ clock=300_000;
 }
 const hub=readFileSync(new URL('../../../pocketnet/hub.mjs',import.meta.url),'utf8');
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const local=readFileSync(new URL('../../../pocket-server/src/main.mjs',import.meta.url),'utf8');
+assert.match(local,/reconcileZamazkaPresence\(state,active\.map\(p=>p\.id\),Date\.now\(\)\)/,'local host shares the exact v47 pause rules');
+assert.match(local,/changed&&state\.protectedPresence===true/,'local host broadcasts the same immediate pause snapshot');
 assert.match(hub,/resume_with_absent/);
 assert.match(hub,/changed&&room\.version==='v47'/,'live peers get immediate pause/resume snapshot');
 assert.match(app,/data-action="pause-continue"/);
