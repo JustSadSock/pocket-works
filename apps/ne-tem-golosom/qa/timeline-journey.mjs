@@ -177,6 +177,34 @@ try{
     return generated;
    });
    assert.equal(rendered.length,22,'all 22 presets render PCM in a real browser');
+   const pitchMeasurements=await page.evaluate(async()=>{
+    const {connectVoiceEffect}=await import('./voice-effects.js');
+    const rate=14700,seconds=1.05,sourceHz=230;
+    const score=(samples,frequency)=>{
+     let re=0,im=0;
+     for(let i=Math.round(rate*.24);i<Math.round(rate*.9);i++){
+      const phase=2*Math.PI*frequency*i/rate;
+      re+=samples[i]*Math.cos(phase);im+=samples[i]*Math.sin(phase);
+     }
+     return Math.hypot(re,im);
+    };
+    const answer=[];
+    for(const [id,semitones] of [['female',4],['male',-4],['child',7],['high',3],['deep',-6]]){
+     const ctx=new OfflineAudioContext(1,Math.round(rate*seconds),rate),buffer=ctx.createBuffer(1,Math.round(rate*seconds),rate);
+     const input=buffer.getChannelData(0);
+     for(let i=0;i<input.length;i++)input[i]=.18*Math.sin(2*Math.PI*sourceHz*i/rate);
+     const src=ctx.createBufferSource();src.buffer=buffer;
+     const end=ctx.createGain();end.connect(ctx.destination);
+     connectVoiceEffect(ctx,src,end,id,0);src.start(0);
+     const output=(await ctx.startRendering()).getChannelData(0),target=sourceHz*Math.pow(2,semitones/12);
+     answer.push({id,targetScore:score(output,target),originalScore:score(output,sourceHz)});
+    }
+    return answer;
+   });
+   for(const result of pitchMeasurements){
+    assert(result.targetScore>result.originalScore*1.15,
+     'pitch '+result.id+' must shift tone instead of only equalizing it; scores '+JSON.stringify(result));
+   }
    for(const effect of rendered){
     assert(effect.rms>.003,'effect '+effect.id+' must not mute the voice');
     if(effect.id!=='clean')assert(effect.difference>.004,'effect '+effect.id+' must audibly change voice');
