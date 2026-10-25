@@ -870,14 +870,14 @@ function renderPlayhead(){
  $('playhead').style.left=(t/duration*100)+'%';
 }
 function updateZoom(){
- const levels=[1,2,4],i=levels.indexOf(timelineZoom);
+ const levels=[1,2,4,8,16],i=levels.indexOf(timelineZoom);
  $('timeline-content').style.width=(100*timelineZoom)+'%';
  $('timeline-zoom-label').textContent=timelineZoom+'×';
  $('timeline-zoom-out').disabled=i===0;
  $('timeline-zoom-in').disabled=i===levels.length-1;
 }
 function zoomTimeline(direction){
- const levels=[1,2,4],i=levels.indexOf(timelineZoom),next=levels[Math.max(0,Math.min(levels.length-1,i+direction))];
+ const levels=[1,2,4,8,16],i=levels.indexOf(timelineZoom),next=levels[Math.max(0,Math.min(levels.length-1,i+direction))];
  if(next===timelineZoom)return;
  const viewport=$('timeline-viewport'),content=$('timeline-content');
  // Magnify the moment being edited, not the arbitrary center of the strip.
@@ -892,26 +892,40 @@ function renderTimeline(){
  if(!scene)return;
  updateZoom();
  const duration=Math.max(.01,scene.duration);
- $('time-ruler').innerHTML=[0,.25,.5,.75,1].map(n=>'<span>'+fmt(n*duration)+'</span>').join('');
- $('clip-lane').innerHTML=localClips.map((c,i)=>
-  '<button type="button" class="clip-bar '+(selectedClip===c.id?'selected':'')+
-  '" data-clip="'+esc(c.id)+'" aria-pressed="'+(selectedClip===c.id)+'" style="left:'+
-  (c.start/duration*100)+'%;width:'+((c.end-c.start)/duration*100)+
-  '%" title="Перетащи реплику или её края · '+fmt(c.start)+'–'+fmt(c.end)+
-  '" aria-label="Реплика '+(i+1)+' · '+fmt(c.start)+'–'+fmt(c.end)+
-  '"><span class="clip-grip left" data-edge="left" aria-hidden="true"></span>'+
-  '<span class="clip-text">'+(i+1)+'</span>'+
-  '<span class="clip-grip right" data-edge="right" aria-hidden="true"></span></button>'
- ).join('');
+ const step=duration<=30?5:duration<=60?10:15;
+ const markers=[];
+ for(let t=0;t<=duration+.001;t+=step)markers.push('<span class="ruler-tick" style="left:'+(t/duration*100)+'%">'+fmt(t)+'</span>');
+ if((duration%step)>0.05)markers.push('<span class="ruler-tick end" style="left:100%">'+fmt(duration)+'</span>');
+ $('time-ruler').innerHTML=markers.join('');
+ const tracks=layerTimeline(localClips),laneHeight=40,visibleLanes=tracks.lanes;
+ $('clip-lane').style.height=(visibleLanes*laneHeight+6)+'px';
+ $('playhead').style.height=(visibleLanes*laneHeight+28)+'px';
+ $('timeline-content').style.height=(visibleLanes*laneHeight+40)+'px';
+ $('clip-lane').innerHTML=localClips.map((c,i)=>{
+  const row=tracks.assignments.get(c.id)||0,selected=selectedClip===c.id;
+  return '<button type="button" class="clip-bar '+(selected?'selected':'')+
+   '" data-clip="'+esc(c.id)+'" aria-pressed="'+selected+'" style="left:'+
+   (c.start/duration*100)+'%;width:'+((c.end-c.start)/duration*100)+
+   '%;top:'+(4+row*laneHeight)+'px" title="Реплика '+(i+1)+' · '+fmt(c.start)+'–'+fmt(c.end)+' · слой '+(row+1)+
+   '" aria-label="Реплика '+(i+1)+' · '+fmt(c.start)+'–'+fmt(c.end)+' · слой '+(row+1)+
+   '"><span class="clip-grip left" data-edge="left" aria-hidden="true"></span>'+
+   '<span class="clip-text">'+(i+1)+'</span>'+
+   '<span class="clip-grip right" data-edge="right" aria-hidden="true"></span></button>';
+ }).join('');
  const picked=localClips.find(c=>c.id===selectedClip);
  $('selected-clip-info').textContent=picked
-  ? 'Реплика '+(localClips.indexOf(picked)+1)+' · '+fmtFine(picked.start)+'–'+fmtFine(picked.end)+' · двигай центр или подрезай края'
-  : localClips.length?'Выбери реплику · перетаскивай для сдвига, края — для обрезки':'Запиши первую реплику';
+  ? 'Реплика '+(localClips.indexOf(picked)+1)+' · '+fmtFine(picked.start)+'–'+fmtFine(picked.end)+' · можно накладывать на другие'
+  : localClips.length?'Выбери реплику · можно накладывать, двигать и обрезать':'Запиши первую реплику';
  $('clip-total').textContent=localClips.length+' '+(localClips.length===1?'фрагмент':localClips.length>=2&&localClips.length<=4?'фрагмента':'фрагментов');
  $('undo-btn').disabled=!editHistory.canUndo;
  $('redo-btn').disabled=!editHistory.canRedo;
  $('erase-btn').disabled=!picked;
  $('replace-clip-btn').disabled=!picked||!!record||!!preroll||!!micPending||!!pendingRecording;
+ $('voice-effects').classList.toggle('hidden',!picked);
+ if(picked)for(const b of $('voice-effects-options').querySelectorAll('[data-voice-fx]')){
+  const active=b.dataset.voiceFx===normalizeVoiceEffect(picked.fx);
+  b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));
+ }
  renderPlayhead();
 }
 function editClipResult(id,kind,delta,clips=localClips){
@@ -1304,8 +1318,29 @@ $('play-toggle').onclick=playStage;
 $('record-btn').onclick=()=>startRecord(0);
 $('count-record-btn').onclick=()=>startRecord(3);
 $('replace-clip-btn').onclick=()=>{if(selectedClip)void startRecord(0,selectedClip)};
+$('voice-effects-options').innerHTML=VOICE_EFFECTS.map(fx=>
+ '<button type="button" data-voice-fx="'+fx.id+'" aria-pressed="false">'+fx.label+'</button>').join('');
+$('voice-effects-options').onclick=e=>{
+ const btn=e.target.closest('[data-voice-fx]');
+ if(!btn||record||preroll||micPending||pendingRecording)return;
+ const current=localClips.find(c=>c.id===selectedClip);
+ if(!current)return;
+ const fx=normalizeVoiceEffect(btn.dataset.voiceFx);
+ if(current.fx===fx)return;
+ editHistory.remember(localClips);stopAllPlayback();
+ current.fx=fx;current.fxReady=null;
+ renderTimeline();void draftWrite();cue('ready');
+};
 $('timeline-zoom-in').onclick=()=>zoomTimeline(1);
 $('timeline-zoom-out').onclick=()=>zoomTimeline(-1);
+$('timeline-viewport').addEventListener('wheel',e=>{
+ if(view!=='editor'||!scene)return;
+ if(e.ctrlKey||e.metaKey){
+  e.preventDefault();zoomTimeline(e.deltaY<0?1:-1);
+ }else if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){
+  e.preventDefault();$('timeline-viewport').scrollLeft+=e.deltaY;
+ }
+},{passive:false});
 $('scrubber').oninput=e=>{if(record||preroll||micPending||pendingRecording)return;setPlayhead(Number(e.target.value)/10)};
 $('clip-lane').onpointerdown=e=>{
  if(e.button!==0||record||preroll||micPending||pendingRecording)return;
