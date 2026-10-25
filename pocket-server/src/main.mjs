@@ -4,6 +4,7 @@ import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promise
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import { ModuleRegistry } from './modules.mjs';
+import {reconcileZamazkaPresence} from '../../pocketnet/zamazka-presence.mjs';
 import { GAME_ID, MAX_MESSAGE_BYTES, parseMessage, send, tokenFor, verifyToken } from './protocol.mjs';
 
 const production = process.env.NODE_ENV === 'production';
@@ -73,17 +74,11 @@ async function refreshZamazkaPresence(room){
  if(room.gameId!=='zamazka'||room.state?.resumable!==true)return;
  const state=room.state,active=activeRoomMembers(room);
  if(!Array.isArray(state?.participants))return;
- const live=new Set(active.map(p=>p.id));
- state.onlineIds=state.participants.filter(p=>live.has(p.id)).map(p=>p.id);
- if(state.phase!=='lobby'&&state.phase!=='results'&&!state.paused&&!state.onlineIds.length){
-  state.paused=true;state.pausedAt=Date.now();state.pauseRemainingMs=state.deadline?Math.max(0,state.deadline-Date.now()):null;
- }else if(state.paused&&state.participants.every(p=>live.has(p.id))){
-  state.paused=false;
-  if(state.deadline&&Number.isFinite(state.pauseRemainingMs))state.deadline=Date.now()+state.pauseRemainingMs;
-  state.pauseRemainingMs=null;
- }
- await saveRoom(room);
- if(!state.paused){
+ const {changed,resumed}=reconcileZamazkaPresence(state,active.map(p=>p.id),Date.now());
+ if(changed)await saveRoom(room);
+ // v47 peers must see the first single-person disconnect immediately.
+ // Older pinned rooms retain their original reconnect-only publication.
+ if(resumed||(changed&&state.protectedPresence===true)){
   for(const p of active)await transition(room,'message',p,{type:'sync'});
  }
 }
