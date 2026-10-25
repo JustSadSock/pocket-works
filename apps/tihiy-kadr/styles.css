@@ -10,3 +10,10 @@
 .comparison button{font-size:12px}
 #stem-diagnostics{border-left:3px solid var(--accent);background:#f2ece3;margin:7px 0 13px;padding:9px 12px}
 @media(max-width:440px){.playback-control{grid-template-columns:1fr auto}.playback-control input{grid-column:1/-1;grid-row:2}.comparison button{font-size:11px;padding:9px 6px}}
+
+.center-filter{background:#f2ece3;border-left:3px solid #aa6b43;padding:11px 12px;margin:14px 0}
+.center-filter label{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:750}
+.center-filter input{width:100%;accent-color:var(--accent);margin:10px 0 0}
+.center-filter input:disabled{opacity:.35}
+.center-filter output{font-variant-numeric:tabular-nums}
+.center-filter .hint{margin:5px 0 0}
