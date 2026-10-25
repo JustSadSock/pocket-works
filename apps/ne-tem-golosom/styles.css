@@ -403,3 +403,19 @@
  .editor .timeline-viewport{max-height:188px}
  .editor .voice-effects-options button{padding:6px 9px}
 }
+
+
+/* Voice FX shelf: five one-tap favourites, optional categorized circuits. */
+.editor #voice-fx-current{color:#efd5ae;letter-spacing:0;font-size:10px;font-weight:800}
+.editor .voice-fx-primary,.editor .voice-fx-buttons{display:flex;gap:6px;flex-wrap:wrap}
+.editor .voice-fx-toolbar{display:flex;justify-content:space-between;gap:8px;margin-top:8px}
+.editor .voice-fx-toolbar button{min-height:32px;background:transparent;border:1px solid #54635e;color:#e6c4a4;font:750 11px Manrope,Arial,sans-serif;padding:5px 10px;cursor:pointer}
+.editor #voice-fx-audition{color:#f8e6cd;background:#35403c}
+.editor .voice-fx-extra{margin-top:10px;display:flex;flex-direction:column;gap:11px;max-height:152px;overflow-y:auto;overscroll-behavior:contain;padding:3px 1px 5px;scrollbar-width:thin;scrollbar-color:#ad805e #222e2d}
+.editor .voice-fx-extra.hidden{display:none}
+.editor .voice-fx-group>span{display:block;margin-bottom:6px;color:#b8c8bd;font:750 10px Manrope,Arial,sans-serif}
+.editor .voice-fx-options button:focus-visible,.editor .voice-effects-options button:focus-visible{outline:2px solid #f8dfb1;outline-offset:2px}
+@media(max-width:520px){
+ .editor .voice-fx-extra{max-height:116px}
+ .editor .voice-effects-options button{font-size:11px}
+}
