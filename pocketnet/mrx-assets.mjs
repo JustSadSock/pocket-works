@@ -7,9 +7,6 @@
 const MODEL_SHA256='d876c92d224f5d8cd2207d528b23369da895a6de71fb24132416fcb16f9f8424';
 const MODEL_BYTES=31287081;
 const MODEL_PREFIX='/ai-assets/mrx-v1/mrx/';
-const TIGER_PREFIX='/ai-assets/tiger-dnr-v1/tiger/';
-const TIGER_SHA256='2189859ac7e89cf4d9d284c6f393e737aaa2b3233ed7ee424ad622012bce7bca';
-const TIGER_BYTES=7320735;
 const ORT_PREFIX='/ai-assets/ort-1.30.0/';
 const ORT_FILE=/^ort-wasm-[a-z0-9.-]+\.(?:wasm|mjs)$/;
 const ORT_HOSTS=[
@@ -17,10 +14,6 @@ const ORT_HOSTS=[
  'https://unpkg.com/onnxruntime-web@1.30.0/dist/'
 ];
 export function assetSource(pathname){
- if(pathname===TIGER_PREFIX+'tiger.int8.onnx')return {
-  kind:'model',size:TIGER_BYTES,sha256:TIGER_SHA256,
-  urls:['https://huggingface.co/audiojs/tiger-dnr/resolve/main/tiger.int8.onnx']
- };
  if(pathname===MODEL_PREFIX+'mrx.int8.onnx')return {
   kind:'model',size:MODEL_BYTES,sha256:MODEL_SHA256,
   urls:['https://huggingface.co/audiojs/mrx/resolve/main/mrx.int8.onnx']
