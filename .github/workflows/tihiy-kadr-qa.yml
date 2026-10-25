@@ -1,0 +1,47 @@
+name: Tihiy Kadr MRX Laboratory
+on:
+  pull_request:
+    paths:
+      - 'apps/tihiy-kadr/**'
+      - '.github/workflows/tihiy-kadr-qa.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/tihiy-kadr/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tihiy-kadr-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  syntax-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and audio logic
+        run: |
+          node --check apps/tihiy-kadr/app.js
+          node --check apps/tihiy-kadr/mrx-worker.js
+          node --check apps/tihiy-kadr/audio-utils.js
+          node --test apps/tihiy-kadr/qa/*.test.mjs
+          npm run validate:configs
+  real-mrx:
+    needs: syntax-unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test browser
+        run: |
+          npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+          npx playwright install chromium
+      - name: Separate synthetic video using actual 31 MB MRX ONNX model
+        run: node apps/tihiy-kadr/qa/browser-smoke.mjs
