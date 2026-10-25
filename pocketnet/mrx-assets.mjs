@@ -6,7 +6,7 @@
 // User video/audio never passes through this endpoint.
 const MODEL_SHA256='d876c92d224f5d8cd2207d528b23369da895a6de71fb24132416fcb16f9f8424';
 const MODEL_BYTES=31287081;
-const MODEL_PREFIX='/ai-assets/mrx-v1/';
+const MODEL_PREFIX='/ai-assets/mrx-v1/mrx/';
 const ORT_PREFIX='/ai-assets/ort-1.30.0/';
 const ORT_FILE=/^ort-wasm-[a-z0-9.-]+\.(?:wasm|mjs)$/;
 const ORT_HOSTS=[
