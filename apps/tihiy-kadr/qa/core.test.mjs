@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {RATE,MAX_SECONDS,validRange,mixPCM,wavPCM16,safeName} from '../audio-utils.js';
+import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,wavPCM16,safeName} from '../audio-utils.js';
 const a=x=>Float32Array.from(x);
 const fixture={
  input:[a([.2,.4,-.3,.7])],
@@ -49,4 +49,29 @@ test('separation runs the actual 3-stem MRX, not a fake filter',()=>{
  assert.match(w,/await separate\(channels/);
  assert.match(w,/model:'mrx'/);
  for(const name of ['dialogue','music','effects'])assert(w.includes("'"+name+"'"));
+});
+
+test('direct M&E mix discards the model residual and never re-adds unseparated dialogue',()=>{
+ const src=[a([.5,.1])];
+ const stems={dialogue:[a([.2,.3])],music:[a([.1,-.1])],effects:[a([.05,.15])]};
+ const safe=mixPCM(src,stems,{dialogue:0,music:1,effects:1},'stems');
+ assert(Math.abs(safe[0][0]-.15)<1e-6);
+ assert(Math.abs(safe[0][1]-.05)<1e-6);
+ const residual=mixPCM(src,stems,{dialogue:0,music:1,effects:1},'residual');
+ assert(Math.abs(residual[0][0]-.3)<1e-6);
+ assert.throws(()=>mixPCM(src,stems,{dialogue:0,music:1,effects:1},'wrong'),/Неизвестный/);
+});
+test('speech level diagnostics do not pretend to measure quality',()=>{
+ const levels=stemLevels(fixture.input,fixture.stems);
+ assert(Number.isFinite(levels.dialogueRelativeDb));
+ assert(levels.dialogue>0);
+ assert.equal(stemLevels([],{}),null);
+});
+test('library supports model selection and main preview locks original soundtrack',()=>{
+ const w=readFileSync(new URL('../mrx-worker.js',import.meta.url),'utf8');
+ const ui=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(w,/model,device:'wasm'/);
+ assert.match(w,/tiger-dnr-v1/);
+ assert.match(ui,/video\.addEventListener\('volumechange',lockVideoMute\)/);
+ assert.match(ui,/audio\.play\(\),video\.play\(\)/);
 });
