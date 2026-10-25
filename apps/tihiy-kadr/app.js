@@ -230,7 +230,7 @@ $('speech-btn').onclick=()=>setMode('speech');
 for(const name of ['dialogue','music','effects']){
  $(name+'-gain').oninput=()=>{
   text(name+'-value',$(name+'-gain').value+'%');
-  mode='clean';updateListeningButtons();
+  mode=mode==='stems'?'stems':'clean';updateListeningButtons();
   clearTimeout(editTimer);editTimer=setTimeout(()=>{void previewAudio()},220);
  };
 }
