@@ -10,7 +10,8 @@
         "economy.test.mjs",
         "debug-state.test.mjs",
         "artifacts.test.mjs",
-        "feedback.test.mjs"
+        "feedback.test.mjs",
+        "qa/negotiation.test.mjs"
       ]
     },
     {
@@ -34,6 +35,12 @@
       "kind": "node",
       "tier": "deep",
       "entry": "qa/balance-audit.mjs"
+    },
+    {
+      "id": "negotiation-audit",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/negotiation-audit.mjs"
     }
   ]
 }
