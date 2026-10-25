@@ -931,6 +931,10 @@ export class PocketNetHub {
           await this.updateChyepukhaPresence(room,{id:info.id},false);
         }
         await this.refreshZamazkaPresence(room);
+        // The 12-hour recovery window starts at the last disconnection, not
+        // at the most recent game action (actors may edit for many hours).
+        if(room.gameId==='ne-tem-golosom'&&!this.sockets(room.id).length)
+          this.persist(room);
         this.ensureAlarm();
       }
     }
