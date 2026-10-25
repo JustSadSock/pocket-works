@@ -134,6 +134,23 @@ try{
   const trimmedWidth=await page.locator('[data-clip="first"]').evaluate(el=>parseFloat(el.style.width));
   assert(trimmedWidth<moved.width,'dragging grip trims the line');
   assert.equal(await page.locator('#replace-clip-btn').isEnabled(),true,'selected clip can be re-recorded');
+  // Main character presets are one click away, without opening the full shelf.
+  for(const preset of ['female','male','child','high','deep']){
+   const button=page.locator('[data-voice-fx="'+preset+'"]');
+   assert.equal(await button.isVisible(),true,'basic voice preset '+preset+' is immediately visible');
+   await button.click();
+   assert.equal(await button.getAttribute('aria-pressed'),'true');
+  }
+  const geometry=await page.evaluate(()=>{
+   const stage=document.querySelector('.stage-wrap').getBoundingClientRect();
+   const desk=document.querySelector('.editor-desk').getBoundingClientRect();
+   const viewport=document.documentElement.clientHeight;
+   return {stage:{top:stage.top,bottom:stage.bottom,height:stage.height},desk:{top:desk.top,bottom:desk.bottom,height:desk.height},viewport};
+  });
+  assert(geometry.stage.height>=Math.min(115,geometry.viewport*.2),'movie has usable visible area');
+  assert(geometry.desk.height>80,'editor controls have usable space');
+  assert(geometry.stage.bottom<=geometry.desk.top+3,'movie and timeline are adjacent, no unused gap');
+
   // All presets have to render distinct audible PCM, not merely update UI.
   if(vp.name==='desktop'){
    const rendered=await page.evaluate(async()=>{
@@ -159,7 +176,7 @@ try{
     }
     return generated;
    });
-   assert.equal(rendered.length,17,'all 17 presets render PCM in a real browser');
+   assert.equal(rendered.length,22,'all 22 presets render PCM in a real browser');
    for(const effect of rendered){
     assert(effect.rms>.003,'effect '+effect.id+' must not mute the voice');
     if(effect.id!=='clean')assert(effect.difference>.004,'effect '+effect.id+' must audibly change voice');
