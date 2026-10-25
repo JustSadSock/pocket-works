@@ -2,7 +2,7 @@
 // Authenticated players may recover after a complete browser restart; guests
 // only use per-tab session storage to avoid sharing their identity across tabs.
 export const ROOM_RECOVERY_TTL_MS = 12 * 60 * 60 * 1000;
-export const ROOM_RECOVERY_KEY = 'room-recovery-v1';
+export const ROOM_RECOVERY_KEY = 'pocket-works:ne-tem-golosom:room-recovery-v1';
 const ROOM_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 export function createRoomRecovery({storage, identityKey, now = () => Date.now()}) {
  const read = () => {
