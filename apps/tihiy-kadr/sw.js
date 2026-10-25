@@ -1,8 +1,8 @@
 const CACHE_PREFIX='tihiy-kadr-';
-const CACHE='tihiy-kadr-v1.0.0';
-const APP_VERSION='1.0.0';
+const CACHE='tihiy-kadr-v1.0.1';
+const APP_VERSION='1.0.1';
 const RELEASE_DATE='2026-10-25';
-const RELEASE_NOTES=['Нейросеть MRX удаляет диалоги локально','Три звуковые дорожки, настройки баланса и сравнение','Экспорт WAV и видео с новым звуком'];
+const RELEASE_NOTES=['Исправлена загрузка ONNX WebAssembly на iPhone и в Safari','Резервный CDN для WebAssembly и понятные сетевые ошибки','Новый режим малой памяти для мобильных устройств','Нейросеть MRX удаляет диалоги локально','Три звуковые дорожки, настройки баланса и сравнение','Экспорт WAV и видео с новым звуком'];
 const OWN=['./','./index.html','./app.js','./audio-utils.js','./mrx-worker.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.css'];
 const SCOPE=new URL('./',self.registration.scope);
 const URLS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
