@@ -419,3 +419,51 @@
  .editor .voice-fx-extra{max-height:116px}
  .editor .voice-effects-options button{font-size:11px}
 }
+
+
+/* Editorial layout: the film claims all remaining available screen space.
+ * The audio workstation owns a bounded, independently scrolling lower shelf.
+ * Prevents the previous 42dvh stage cap leaving a vacant upper region. */
+@media(min-width:820px){
+ .screen.editor{
+  display:flex;flex-direction:column;height:100dvh;min-height:0;max-height:100dvh;
+  gap:7px;overflow:hidden;
+  padding:calc(9px + env(safe-area-inset-top)) 16px calc(10px + env(safe-area-inset-bottom));
+ }
+ .editor .editor-head{flex:0 0 auto;padding:0 0 4px}
+ .editor .stage-wrap{
+  display:flex;flex:1 1 auto;grid-area:auto;min-height:0;height:auto;
+  max-height:none;width:100%;align-self:stretch;
+  border:4px solid #363d40;
+ }
+ .editor .stage-wrap video{max-height:100%;max-width:100%;object-fit:contain}
+ .editor .editor-desk{
+  flex:0 1 auto;grid-area:auto;justify-content:flex-start;
+  width:100%;min-height:0;max-height:48dvh;overflow-y:auto;
+  padding:10px 18px 9px;scrollbar-width:thin;scrollbar-color:#8d7665 #202728;
+ }
+ .editor .timeline-viewport{max-height:180px}
+ .editor .edit-controls{margin:6px 0}
+ .editor .voice-fx-extra{max-height:135px}
+}
+@media(max-width:819px){
+ .screen.editor{
+  height:100dvh;min-height:0;max-height:100dvh;display:flex;flex-direction:column;
+  overflow:hidden;padding-top:calc(7px + env(safe-area-inset-top));
+  padding-bottom:calc(6px + env(safe-area-inset-bottom));
+ }
+ .editor .editor-head{flex:0 0 auto;padding-bottom:7px}
+ .editor .stage-wrap{
+  flex:0 1 auto;width:100%;height:auto;aspect-ratio:16/9;
+  min-height:0;max-height:min(42dvh,calc(100vw * 9 / 16));
+ }
+ .editor .editor-desk{
+  flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;
+  overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#8d7665 #202728;
+ }
+ .editor .timeline-viewport{max-height:205px}
+}
+@media(max-height:580px){
+ .editor .voice-fx-extra{max-height:94px}
+ .editor .stage-wrap{min-height:0}
+}

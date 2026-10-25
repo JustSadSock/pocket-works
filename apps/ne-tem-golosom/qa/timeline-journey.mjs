@@ -134,6 +134,23 @@ try{
   const trimmedWidth=await page.locator('[data-clip="first"]').evaluate(el=>parseFloat(el.style.width));
   assert(trimmedWidth<moved.width,'dragging grip trims the line');
   assert.equal(await page.locator('#replace-clip-btn').isEnabled(),true,'selected clip can be re-recorded');
+  // Main character presets are one click away, without opening the full shelf.
+  for(const preset of ['female','male','child','high','deep']){
+   const button=page.locator('[data-voice-fx="'+preset+'"]');
+   assert.equal(await button.isVisible(),true,'basic voice preset '+preset+' is immediately visible');
+   await button.click();
+   assert.equal(await button.getAttribute('aria-pressed'),'true');
+  }
+  const geometry=await page.evaluate(()=>{
+   const stage=document.querySelector('.stage-wrap').getBoundingClientRect();
+   const desk=document.querySelector('.editor-desk').getBoundingClientRect();
+   const viewport=document.documentElement.clientHeight;
+   return {stage:{top:stage.top,bottom:stage.bottom,height:stage.height},desk:{top:desk.top,bottom:desk.bottom,height:desk.height},viewport};
+  });
+  assert(geometry.stage.height>=Math.min(115,geometry.viewport*.2),'movie has usable visible area');
+  assert(geometry.desk.height>80,'editor controls have usable space');
+  assert(geometry.stage.bottom<=geometry.desk.top+3,'movie and timeline are adjacent, no unused gap');
+
   // All presets have to render distinct audible PCM, not merely update UI.
   if(vp.name==='desktop'){
    const rendered=await page.evaluate(async()=>{
@@ -159,7 +176,36 @@ try{
     }
     return generated;
    });
-   assert.equal(rendered.length,17,'all 17 presets render PCM in a real browser');
+   assert.equal(rendered.length,22,'all 22 presets render PCM in a real browser');
+   const pitchMeasurements=await page.evaluate(async()=>{
+    const {connectVoiceEffect}=await import('./voice-effects.js');
+    const rate=14700,seconds=1.05,sourceHz=230;
+    const score=(samples,frequency)=>{
+     let re=0,im=0;
+     for(let i=Math.round(rate*.24);i<Math.round(rate*.9);i++){
+      const phase=2*Math.PI*frequency*i/rate;
+      re+=samples[i]*Math.cos(phase);im+=samples[i]*Math.sin(phase);
+     }
+     return Math.hypot(re,im);
+    };
+    const answer=[];
+    for(const [id,semitones] of [['female',4],['male',-4],['child',7],['high',3],['deep',-6]]){
+     const ctx=new OfflineAudioContext(1,Math.round(rate*seconds),rate),buffer=ctx.createBuffer(1,Math.round(rate*seconds),rate);
+     const input=buffer.getChannelData(0);
+     for(let i=0;i<input.length;i++)input[i]=.18*Math.sin(2*Math.PI*sourceHz*i/rate);
+     const src=ctx.createBufferSource();src.buffer=buffer;
+     const end=ctx.createGain();end.connect(ctx.destination);
+     connectVoiceEffect(ctx,src,end,id,0);src.start(0);
+     const output=(await ctx.startRendering()).getChannelData(0),target=sourceHz*Math.pow(2,semitones/12);
+     answer.push({id,targetScore:score(output,target),originalScore:score(output,sourceHz)});
+    }
+    return answer;
+   });
+   console.log('PITCH_METRICS',JSON.stringify(pitchMeasurements));
+   for(const result of pitchMeasurements){
+    assert(result.targetScore>result.originalScore*1.15,
+     'pitch '+result.id+' must shift tone instead of only equalizing it; scores '+JSON.stringify(result));
+   }
    for(const effect of rendered){
     assert(effect.rms>.003,'effect '+effect.id+' must not mute the voice');
     if(effect.id!=='clean')assert(effect.difference>.004,'effect '+effect.id+' must audibly change voice');
