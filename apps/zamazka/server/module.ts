@@ -24,7 +24,7 @@ type CommonsBoard={revision:number;segments:BoardSegment[];full?:boolean};
 type DraftAssembly={checksum?:string;revision:string;kind:'draft_chunk'|'submit_chunk';parts:number;next:number;prefix:number;strokes:Stroke[]};
 type SpriteAssembly={revision:string;checksum:string;parts:number;next:number;data:string};
 type RasterAudit={mae:number;patch:number;differing:number;status:'match'|'mismatch'};
-type State={ballotAudits?:Record<string,Record<string,RasterAudit>>;rasterBallots?:boolean;spriteFallback?:boolean;ballotSprites?:Record<string,string>;ballotAssemblies?:Record<string,SpriteAssembly>;pendingFinals?:Record<string,number>;incompleteSubmissions?:string[];resumable?:boolean;balancedDamage?:boolean;shapeCorrected?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;bannedIds?:string[];emblemUpdatedAt?:Record<string,number>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
+type State={ballotAudits?:Record<string,Record<string,RasterAudit>>;rasterBallots?:boolean;spriteFallback?:boolean;ballotSprites?:Record<string,string>;ballotAssemblies?:Record<string,SpriteAssembly>;pendingFinals?:Record<string,number>;incompleteSubmissions?:string[];resumable?:boolean;protectedPresence?:boolean;allowedAbsentIds?:string[];balancedDamage?:boolean;shapeCorrected?:boolean;paused?:boolean;pausedAt?:number;pauseRemainingMs?:number;onlineIds?:string[];artPreparationEnabled?:boolean;readyPlayers?:string[];draftAssemblies?:Record<string,DraftAssembly>;bannedIds?:string[];emblemUpdatedAt?:Record<string,number>;board?:CommonsBoard;emblems?:Record<string,string>;host:string;phase:string;round:number;rounds:number;drawingSeconds:number;deadline:number;selected:number[];participants:{id:string;name:string}[];assignments:Record<string,Assignment>;drafts?:Record<string,Stroke[]>;votes:Record<string,Record<string,Chips>>;voteDrafts?:Record<string,Record<string,Chips>>;voteTiming?:VoteTiming;timedScoring?:boolean;scores:Record<string,{mask:number;eye:number}>;turn:number;revealed:boolean};
 const now=()=>Date.now();
 const BALLOT_PREFIX='data:image/webp;base64,';
 const BALLOT_MAX_CHARS=450000;
@@ -110,7 +110,7 @@ const members=(s:State)=>s.participants;
 // The final durable painting, not the drawing clock, closes the restoration stage.
 const allCommitted=(s:State)=>members(s).length>0&&members(s).every(p=>Array.isArray(s.assignments[p.id]?.strokes));
 const strip=(s:State,id:string)=>({
- host:s.host,phase:s.phase,rasterBallots:Boolean(s.rasterBallots),spriteFallback:Boolean(s.spriteFallback),skippedBallots:s.rasterBallots&&['voting','verdict','reveal','round-review','results'].includes(s.phase)?members(s).filter(p=>!s.ballotSprites?.[p.id]).map(p=>p.id):[],serverNow:now(),timedScoring:Boolean(s.timedScoring),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
+ host:s.host,phase:s.phase,rasterBallots:Boolean(s.rasterBallots),spriteFallback:Boolean(s.spriteFallback),skippedBallots:s.rasterBallots&&['voting','verdict','reveal','round-review','results'].includes(s.phase)?members(s).filter(p=>!s.ballotSprites?.[p.id]).map(p=>p.id):[],serverNow:now(),timedScoring:Boolean(s.timedScoring),protectedPresence:Boolean(s.protectedPresence),paused:Boolean(s.paused),pausedAt:s.paused?s.pausedAt:undefined,pauseRemainingMs:s.paused?s.pauseRemainingMs:undefined,onlineIds:s.onlineIds||[],round:s.round,rounds:s.rounds,drawingSeconds:s.drawingSeconds??DEFAULT_DRAWING_SECONDS,deadline:s.deadline,readyCount:s.readyPlayers?.length||0,
  selected:s.selected,ballotReady:members(s).filter(p=>!!s.ballotSprites?.[p.id]).map(p=>p.id),participants:s.participants,emblems:s.emblems||{},board:s.phase==='lobby'?(s.board||{revision:0,segments:[]}):undefined,turn:s.turn,scores:s.scores,
  done:members(s).filter(p=>Array.isArray(s.assignments[p.id]?.strokes)).map(p=>p.id),
  incompleteSubmissions:s.incompleteSubmissions||[],
@@ -333,7 +333,7 @@ function boardSegment(raw:Record<string,unknown>,u:string):BoardSegment|null{
 }
 const module: PocketModule<State>={
  protocolVersion:1,
- createRoom({player}){return {state:{ballotAudits:{},rasterBallots:false,spriteFallback:false,ballotSprites:{},ballotAssemblies:{},resumable:true,balancedDamage:true,shapeCorrected:true,timedScoring:true,board:{revision:0,segments:[]},emblems:{},emblemUpdatedAt:{},bannedIds:[],host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},voteTiming:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
+ createRoom({player}){return {state:{ballotAudits:{},rasterBallots:false,spriteFallback:false,ballotSprites:{},ballotAssemblies:{},resumable:true,protectedPresence:true,allowedAbsentIds:[],balancedDamage:true,shapeCorrected:true,timedScoring:true,board:{revision:0,segments:[]},emblems:{},emblemUpdatedAt:{},bannedIds:[],host:player.id,phase:'lobby',round:0,rounds:3,drawingSeconds:DEFAULT_DRAWING_SECONDS,deadline:0,selected:[],participants:[player],assignments:{},drafts:{},draftAssemblies:{},votes:{},voteTiming:{},scores:{[player.id]:{mask:0,eye:0}},turn:0,revealed:false}};},
  onJoin({state,player}){
    if(state.bannedIds?.includes(player.id))throw Error('room_kicked');
    if(state.phase!=='lobby'&&!state.participants.some(p=>p.id===player.id))throw Error('room_in_progress');
@@ -414,13 +414,29 @@ const module: PocketModule<State>={
    if(a.type==='pulse')return {state,events:
      state.phase!==phaseBeforePulse||state.turn!==turnBeforePulse||state.round!==roundBeforePulse
        ?emit(state):[]};
-    if(state.paused&&a.type!=='kick_player'&&a.type!=='claim_host')return {state,events:notice(id,'Матч на паузе. Дождитесь участников или исключите отсутствующего игрока.')};
+    if(state.paused&&a.type!=='kick_player'&&a.type!=='claim_host'&&a.type!=='resume_with_absent')return {state,events:notice(id,'Матч на паузе. Дождитесь участников или исключите отсутствующего игрока.')};
    if(a.type==='claim_host'&&state.paused){
     if((state.onlineIds||[]).includes(state.host)||state.host===id)
      return {state,events:notice(id,'Организатор уже в комнате.')};
     if(now()-(state.pausedAt||now())<60000)
      return {state,events:notice(id,'Переназначение организатора доступно через минуту паузы.')};
     state.host=id;return {state,events:emit(state)};
+   }
+   if(a.type==='resume_with_absent'&&state.protectedPresence){
+     if(!state.paused)return {state,events:notice(id,'Матч уже продолжается.')};
+     if(state.host!==id)return {state,events:notice(id,'Продолжить выставку может только куратор.')};
+     if(now()-(state.pausedAt||now())<18000)
+       return {state,events:notice(id,'Сначала дождитесь 18 секунд на переподключение.')};
+     const connected=new Set(state.onlineIds||[]);
+     const offline=members(state).filter(p=>!connected.has(p.id)).map(p=>p.id);
+     if(connected.size<2)return {state,events:notice(id,'Для продолжения нужны хотя бы два подключённых реставратора.')};
+     if(!offline.length)return {state,events:notice(id,'Все участники уже вернулись.')};
+     state.allowedAbsentIds=offline;
+     state.paused=false;
+     if(state.deadline&&Number.isFinite(state.pauseRemainingMs))
+       state.deadline=now()+Number(state.pauseRemainingMs);
+     state.pauseRemainingMs=null;state.pausedAt=0;
+     return {state,events:emit(state)};
    }
    if(a.type==='kick_player'){
      if(state.phase!=='lobby'&&!state.paused)return {state,events:notice(id,'Исключать игроков можно в зале ожидания или когда матч приостановлен.')};
@@ -429,6 +445,8 @@ const module: PocketModule<State>={
      if(!target||target===id||!players.some(p=>p.id===target)||!members(state).some(p=>p.id===target))
        return {state,events:notice(id,'Этот участник уже вышел или его нельзя исключить.')};
      if(state.paused){
+       if(state.protectedPresence&&now()-(state.pausedAt||now())<18000)
+        return {state,events:notice(id,'Сначала дождитесь 18 секунд на переподключение.')};
        if((state.onlineIds||[]).includes(target))return {state,events:notice(id,'Этот игрок уже подключился.')};
        if(members(state).length<=2)return {state,events:notice(id,'Для продолжения выставки нужно хотя бы два игрока.')};
       }
@@ -443,6 +461,7 @@ const module: PocketModule<State>={
        delete state.votes[target];
       }
       state.onlineIds=state.onlineIds?.filter(p=>p!==target);
+      state.allowedAbsentIds=state.allowedAbsentIds?.filter(p=>p!==target);
      delete state.scores[target];
      delete state.emblems?.[target];
      delete state.emblemUpdatedAt?.[target];

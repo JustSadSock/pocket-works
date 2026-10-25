@@ -316,3 +316,22 @@
 @media(max-width:699px){
  #screen>.mobile-preview .gallery.exhibition-grid{padding-top:0!important;padding-bottom:0!important}
 }
+
+/* Recovery controls stay physical and readable, without an extra phase page. */
+#screen .zam-pause-panel .zam-pause-continue{
+ width:100%;min-height:43px;margin:7px 0 12px;padding:10px 14px;
+ border:1px solid #766047;background:#423529;color:#f6e7c9;
+ font:600 13px/1.35 system-ui;cursor:pointer;
+}
+#screen .zam-pause-panel .zam-pause-continue:active:not(:disabled){
+ transform:translateY(1px);background:#65533e;
+}
+#screen .zam-pause-panel button:disabled{
+ opacity:.48;cursor:not-allowed;
+}
+#screen .zam-pause-panel .zam-pause-grace{
+ margin:5px 0;color:#6a543a;font-weight:600;
+}
+@media(prefers-reduced-motion:reduce){
+ #screen .zam-pause-panel button{transition:none!important}
+}

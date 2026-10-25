@@ -8,7 +8,7 @@ import {roomJoinView} from './room-join-view.mjs';
 import {shouldAnnounceSocketDeparture} from './disconnect-presence.mjs';
 import {prepareArtworkStorage} from './art-storage.mjs';
 import {reconcileZamazkaPresence} from './zamazka-presence.mjs';
-import {ZAMAZKA_ALARM_VERSION,nextZamazkaDeadlineAt,shouldAdvanceZamazkaDeadline} from './zamazka-deadlines.mjs';
+import {ZAMAZKA_ALARM_VERSIONS,nextZamazkaDeadlineAt,shouldAdvanceZamazkaDeadline} from './zamazka-deadlines.mjs';
 import {packPrivateZamazkaState} from './zamazka-state-stream.mjs';
 import {isChyepukhaSync,canServeChyepukhaSync,checkChyepukhaStateBudget,checkChyepukhaViewBudget} from './chyepukha-transport.mjs';
 
@@ -19,7 +19,7 @@ const WIRE_VERSION = 1;
 const MAX_PAYLOAD = 16 * 1024;
 const MAX_EVENT_BYTES = 256 * 1024;
 const MAX_ZAMAZKA_STATE_EVENT = 5 * 1024 * 1024;
-const ZAMAZKA_SECURE_COMMANDS = new Set(['sync','time_ping','pulse','submit_begin','submit_resume','claim_host','kick_player','art_ready','board_delta','board_clear','emblem','start','draft_chunk','submit_chunk','draft','submit','vote','vote_draft','advance','continue','next','ballot_chunk','ballot_audit']);
+const ZAMAZKA_SECURE_COMMANDS = new Set(['sync','time_ping','pulse','submit_begin','submit_resume','resume_with_absent','claim_host','kick_player','art_ready','board_delta','board_clear','emblem','start','draft_chunk','submit_chunk','draft','submit','vote','vote_draft','advance','continue','next','ballot_chunk','ballot_audit']);
 const ZAMAZKA_ART_REF = '__zamazka_sqlite_art__';
 const MAX_STATE = 256 * 1024;
 const MAX_ROOMS = 32;
@@ -269,7 +269,7 @@ export class PocketNetHub {
   // mutation queue. Reuse the pinned module's ordinary pulse transition,
   // including its unfinished-submission checks and private event projection.
   advanceZamazkaDeadline(room,at=Date.now()){
-    if(room.gameId!=='zamazka'||room.version!==ZAMAZKA_ALARM_VERSION||
+    if(room.gameId!=='zamazka'||!ZAMAZKA_ALARM_VERSIONS.includes(room.version)||
        !shouldAdvanceZamazkaDeadline(room.state,at))return false;
     const actor=room.players.find(p=>room.state.participants?.some(member=>member.id===p.id));
     if(!actor)return false;
@@ -298,7 +298,7 @@ export class PocketNetHub {
     const {changed,resumed}=reconcileZamazkaPresence(state,ids,Date.now());
     if(changed)this.persist(room);
     // Send each participant their private snapshot, preserving hidden art.
-    if(resumed){
+    if(resumed||(changed&&room.version==='v47')){
       const mod=this.module(room.gameId,room.version);
       for(const p of room.players){
         if(!active.has(p.id))continue;
@@ -413,7 +413,7 @@ export class PocketNetHub {
     }
     // New Zamazka rooms advance even if every browser stops sending pulse.
     // Immutable v1–v45 rooms keep their existing wake/heartbeat behavior.
-    for(const row of this.sql('SELECT state FROM rooms WHERE game_id=? AND version=?','zamazka',ZAMAZKA_ALARM_VERSION).toArray()){
+    for(const row of this.sql('SELECT state FROM rooms WHERE game_id=? AND version IN (?,?)','zamazka',...ZAMAZKA_ALARM_VERSIONS).toArray()){
       const due=nextZamazkaDeadlineAt(JSON.parse(row.state));
       if(due!==null)next=Math.min(next,Math.max(now+250,due+5));
     }
@@ -848,7 +848,7 @@ export class PocketNetHub {
           room.state = result.state;
           // Pure queries do not change room state. Avoid serializing and writing
           // the entire room for every time sync or reconnection snapshot.
-          const peerAudit=room.gameId==='zamazka'&&['v45','v46'].includes(room.version)&&msg.payload?.type==='ballot_audit';
+          const peerAudit=room.gameId==='zamazka'&&['v45','v46','v47'].includes(room.version)&&msg.payload?.type==='ballot_audit';
           const acceptedPeerAudit=peerAudit&&result.events?.some(e=>e.type==='audit_update');
           const readOnlyZamazka=room.gameId==='zamazka'&&
             ((peerAudit&&!acceptedPeerAudit)||msg.payload?.type==='sync'||msg.payload?.type==='time_ping'||
