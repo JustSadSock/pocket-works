@@ -26,6 +26,7 @@ export class NetworkManager {
     this.finished=false;
     this.paused=false;
     this.activeRound=0;
+    this.lastRevision=null;
     this.lastPulseAt=0;
     this.code='';
     this.roomId=null;
@@ -125,7 +126,7 @@ export class NetworkManager {
     if(!this.inputQueue.length)return;
     if(!this.connected||this.stale||!this.started||this.paused||this.finished){this.clearQueuedInputs();this.pendingInputs=[];return;}
     const actions=this.inputQueue.splice(0,12);
-    if(!this.send({type:'input_batch',actions},true)){
+    if(!this.send({type:'input_batch',actions,round:this.activeRound},true)){
       this.clearQueuedInputs();this.pendingInputs=[];
       return;
     }
@@ -180,6 +181,7 @@ export class NetworkManager {
     this.finished=false;
     this.paused=false;
     this.activeRound=0;
+    this.lastRevision=null;
     this.lastPulseAt=0;
     this.hostId=null;
     this.code='';
@@ -191,6 +193,16 @@ export class NetworkManager {
   }
   apply(state,joined=false){
     if(!state||!Array.isArray(state.players))return;
+    const revision=Number.isSafeInteger(state.revision)&&state.revision>=0?state.revision:null;
+    // PocketNet v15 carries an authoritative monotonic revision. Delayed
+    // snapshots, even from a paused or finished round, must not rewind a board.
+    if(this.currentRoom){
+      if(revision!==null&&this.lastRevision!==null&&revision<=this.lastRevision)return;
+      if(revision===null&&this.lastRevision!==null)return;
+      if(Number.isSafeInteger(state.round)&&Number.isSafeInteger(this.currentRoom.round)&&
+        state.round<this.currentRoom.round)return;
+    }
+    if(revision!==null)this.lastRevision=revision;
     this.lastStateAt=performance.now();
     if(this.stale){
       this.stale=false;
@@ -321,7 +333,7 @@ export class NetworkManager {
   }
   sendPlayerInput(input){
     if(!this.started||!this.connected||this.stale||this.finished||this.paused)return false;
-    if(!this.inputBatchVersion)return this.send({type:'input',input},true);
+    if(!this.inputBatchVersion)return this.send({type:'input',input,round:this.activeRound},true);
     if(!input||!['move','rotate','drop','hardDrop','hold'].includes(input.action))return false;
     if(input.action==='hold'&&this.rulesVersion<3)return false;
     if(input.action==='move'&&![-1,1].includes(input.direction))return false;
@@ -340,9 +352,9 @@ export class NetworkManager {
     else if(!this.inputFlushTimer)this.inputFlushTimer=setTimeout(()=>this.flushInputs(),65);
     return true;
   }
-  requestLaneResume(){return this.started&&!this.finished&&!this.paused&&!this.stale&&this.send({type:'resume'});}
-  togglePause(){this.send({type:'pause'});}
-  requestRematch(){this.send({type:'rematch'});}
+  requestLaneResume(){return this.started&&!this.finished&&!this.paused&&!this.stale&&this.send({type:'resume',round:this.activeRound});}
+  togglePause(){this.send({type:'pause',round:this.activeRound});}
+  requestRematch(){this.send({type:'rematch',round:this.activeRound});}
   disconnect(){
     this.stopClock();
     this.net?.close();
