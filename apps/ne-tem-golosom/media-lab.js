@@ -90,7 +90,27 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
     video.pause();
     if (recorder?.state === 'recording') recorder.stop();
   };
-  const hidden = () => { if (document.hidden) abort(); };
+  let pausedByTab=false;
+  const hidden=()=>{
+    if(document.hidden&&recorder?.state==='recording'){
+      try{pausedByTab=true;video.pause();recorder.pause();void audioContext?.suspend().catch(()=>{})}catch{}
+    }else if(!document.hidden&&pausedByTab&&recorder?.state==='paused'){
+      pausedByTab=false;
+      void (async()=>{
+        try{
+          await audioContext?.resume();
+          recorder.resume();
+          await video.play();
+          lastAdvance=performance.now();
+          if(useVideoFrameCallback)frame=video.requestVideoFrameCallback(paintVideoFrame);
+          else frame=requestAnimationFrame(paintFallback);
+        }catch{
+          terminalError=Error('Не удалось возобновить обработку видео после возвращения на вкладку.');
+          if(recorder?.state==='recording'||recorder?.state==='paused')recorder.stop();
+        }
+      })();
+    }
+  };
   signal?.addEventListener('abort', abort, {once: true});
   document.addEventListener('visibilitychange', hidden);
   try {
