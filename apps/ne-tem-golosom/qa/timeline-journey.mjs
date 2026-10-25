@@ -203,7 +203,7 @@ try{
    });
    console.log('PITCH_METRICS',JSON.stringify(pitchMeasurements));
    for(const result of pitchMeasurements){
-    assert(result.targetScore>result.originalScore*1.03,
+    assert(result.targetScore>result.originalScore*1.15,
      'pitch '+result.id+' must shift tone instead of only equalizing it; scores '+JSON.stringify(result));
    }
    for(const effect of rendered){
