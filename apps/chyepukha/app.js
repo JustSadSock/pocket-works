@@ -499,7 +499,7 @@ scene.addEventListener('change',e=>{
  if(!file)return;
  void (async()=>{
   try{
-   if(file.size>MAX_BACKUP_BYTES)throw Error('Резервна копія перевищує 3 МБ.');
+   if(file.size>MAX_BACKUP_BYTES)throw Error('Резервна копія перевищує 8 МБ.');
    const incoming=parseArchiveBackup(await file.text());
    const {editions:merged,added,skipped}=mergeArchiveBackup(editions(),incoming);
    if(!added){toast(skipped?'Полиця повна (12 видань). Збережи резервну копію й звільни місце перед імпортом.':'У копії немає нових випусків для відновлення.');return}

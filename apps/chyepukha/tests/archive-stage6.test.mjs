@@ -116,3 +116,50 @@ test('a full 12-issue shelf cannot lose even its oldest issue during restore',()
  assert.equal(partlyFull.editions.length,MAX_EDITIONS);
  for(const item of existing.slice(0,MAX_EDITIONS-1))assert.ok(partlyFull.editions.some(x=>x.id===item.id));
 });
+
+
+test('a legitimate full shelf with long UTF-8 chapters remains importable after export',()=>{
+ const complex='漢'.repeat(800);
+ const chapters=Array.from({length:16},(_,i)=>({question:'Яка подія?',author:'Учасник',answer:complex}));
+ const data=Array.from({length:MAX_EDITIONS},(_,i)=>({
+  id:'room:'+i,savedAt:i,playerCount:8,
+  stories:Array.from({length:8},(_,j)=>({
+   id:'sheet-'+j,starter:'Марта',setLabel:'Ланцюг провалів',
+   genre:'Абсурдна комедія',heroGender:'unspecified',fragments:chapters
+  }))
+ }));
+ const json=createArchiveBackup(data,1234);
+ const bytes=new TextEncoder().encode(json).length;
+ assert.ok(bytes>3_000_000,'the old 3 MB import cap rejected this valid self-export');
+ assert.ok(bytes<=MAX_BACKUP_BYTES,'the app must accept its own maximum shelf export');
+ const imported=parseArchiveBackup(json);
+ assert.equal(imported.length,MAX_EDITIONS);
+ assert.equal(imported[0].stories.length,8);
+ assert.equal(imported[0].stories[0].fragments.length,16);
+ assert.equal(imported[0].stories[0].fragments[0].answer,complex);
+});
+
+test('backup import refuses silent loss from overfull, duplicate and truncated records',()=>{
+ const wrap=editions=>JSON.stringify({format:'pocketworks-chyepukha-archive',version:1,createdAt:1,editions});
+ const one=normalizeEditions([issue('valid')])[0];
+ assert.throws(()=>parseArchiveBackup(wrap(Array.from({length:MAX_EDITIONS+1},(_,i)=>({...one,id:'edition-'+i})))),/12 випусків/);
+ assert.throws(()=>parseArchiveBackup(wrap([one,{...one}])),/повторювані/);
+ assert.throws(()=>parseArchiveBackup(wrap([{...one,stories:[{...one.stories[0],fragments:[{...one.stories[0].fragments[0],answer:'x'.repeat(801)}]}]}])),/обрізані фрагменти/);
+ assert.throws(()=>parseArchiveBackup(wrap([{...one,stories:[one.stories[0],one.stories[0]]}])),/пошкоджені історії/);
+ // A malformed backup cannot change the valid archive, because parsing is pure.
+ const saved=normalizeEditions([one]);
+ assert.equal(saved.length,1);
+ assert.equal(saved[0].id,'valid');
+});
+
+test('legacy backups without optional character fields remain readable without changing chapters',()=>{
+ const legacy=issue('legacy-file',1000);
+ delete legacy.stories[0].heroGender;
+ const raw=JSON.stringify({format:'pocketworks-chyepukha-archive',version:1,editions:[legacy]});
+ const read=parseArchiveBackup(raw);
+ assert.equal(read.length,1);
+ assert.equal(read[0].stories[0].fragments[0].answer,'Дракон купив місячну валізу');
+ const sparse={id:'sparse',stories:[{id:'sheet-0',fragments:[{answer:'Історія з давньої копії'}]}]};
+ const recovered=parseArchiveBackup(JSON.stringify({format:'pocketworks-chyepukha-archive',version:1,editions:[sparse]}));
+ assert.equal(recovered[0].stories[0].fragments[0].answer,'Історія з давньої копії');
+});
