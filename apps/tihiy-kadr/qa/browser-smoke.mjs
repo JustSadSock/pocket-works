@@ -80,12 +80,15 @@ try{
  assert.match(output.suggestedFilename(),/no-dialogue\.wav$/);
 
  // Force native video unmute and prove its soundtrack cannot leak.
- const mute=await page.evaluate(()=>{
+ await page.evaluate(()=>{
   const v=document.getElementById('result-video');
   v.muted=false;v.volume=1;
-  return {muted:v.muted,volume:v.volume};
  });
- assert(mute.muted&&mute.volume===0,'original soundtrack must remain muted');
+ // HTMLMediaElement.volumechange is asynchronous; wait for the lock event.
+ await page.waitForFunction(()=>{
+  const v=document.getElementById('result-video');
+  return v.muted&&v.volume===0;
+ },null,{timeout:3500});
  await page.locator('#speech-btn').click();
  const speechDownload=page.waitForEvent('download',{timeout:25000});
  await page.locator('#wav-btn').click();
