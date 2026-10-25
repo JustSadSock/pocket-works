@@ -1,15 +1,27 @@
 import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,suppressStereoCenter,wavPCM16,elapsed,safeName} from './audio-utils.js';
+import {STUDY_METHODS,researchMethod,decodeWav,resamplePCM,channelSummary,multichannelME,stereoPCM,sumMusicEffects,matchResultToSegment,comparisonMetrics,comparisonRecord} from './research-core.js';
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
 const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
  (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 let sourceVideo=$('source-video');
 let file=null,fileURL='',audioURL='',length=0,range=null,original=null,stems=null,inferenceTime=0;
 let worker=null,abort=null,serial=0,exporting=false,editTimer=null,mode='clean',fileName='video';
+const studyResults=new Map();let activeStudy=null,studySurround=null,studySurroundRate=0,studySignature='',studyBusy=false;
 const text=(id,msg)=>$(id).textContent=String(msg),show=(id,on)=>$(id).classList.toggle('hidden',!on);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),revoke=url=>{if(url)URL.revokeObjectURL(url)};
 function error(msg){text('error',msg);show('error',true)}
 function clearError(){show('error',false)}
-function uiBusy(active){$('process-btn').disabled=active||!file||!length;$('file-input').disabled=active;$('start-seconds').disabled=active;$('duration-seconds').disabled=active;$('chunk-size').disabled=active;show('progress-wrap',active)}
+function uiBusy(active){
+ $('process-btn').disabled=active||studyBusy||!file||!length;
+ $('file-input').disabled=active||studyBusy;
+ $('start-seconds').disabled=active||studyBusy;
+ $('duration-seconds').disabled=active||studyBusy;
+ $('chunk-size').disabled=active;
+ show('progress-wrap',active);
+ $('study-source-wav').disabled=active||studyBusy||!file||!length;
+ $('study-import').disabled=active||studyBusy||!file||!length;
+ $('study-surround-file').disabled=active||studyBusy||!file||!length;
+}
 function step(title,detail='',ratio=null){text('progress-heading',title);text('progress-detail',detail);if(ratio===null)$('progress-bar').removeAttribute('value');else $('progress-bar').value=ratio}
 function pause(){video.pause();sourceVideo.pause();audio.pause()}
 function reset(){
@@ -32,7 +44,7 @@ function metadata(v){
 async function choose(f){
  if(!f)return;
  if(exporting)return error('Дождись завершения сохранения видео.');
- if(worker)cancel();reset();clearError();length=0;
+ if(worker)cancel();reset();clearStudy();clearError();length=0;
  if(f.size>512*1048576)return error('Тестовый лимит исходного видео — 512 МиБ.');
  if(!f.size)return error('Невозможно обработать пустой файл.');
  file=f;fileName=safeName(f.name);uiBusy(true);
@@ -187,6 +199,9 @@ async function process(){
   $('result-seek').step='.05';$('result-seek').value='0';
   video.addEventListener('loadedmetadata',()=>{if(range)video.currentTime=range.start},{once:true});
   updateListeningButtons();
+  const clean=mixPCM(original,stems,{dialogue:0,music:1,effects:1},'stems');
+  registerStudyResult('mrx',clean,Math.max(0,inferenceTime*1000),{source:'local',label:'MRX · M&E'});
+  selectStudyResult('mrx',false);
   await previewAudio();text('export-status','Прослушай результат и сравни оригинал с очищенной дорожкой.');
  }catch(e){
   if(e.name!=='AbortError'&&id===serial)error(e.message||String(e));
@@ -197,22 +212,37 @@ $('process-btn').onclick=()=>{void process()};$('cancel-btn').onclick=cancel;
 
 function gains(){return {dialogue:Number($('dialogue-gain').value)/100,music:Number($('music-gain').value)/100,effects:Number($('effects-gain').value)/100}}
 function getMix(){
- if(!original||!stems)throw Error('Нет звуковых дорожек');
- if(mode==='original')return original;
+ if(!original||!activeStudy)throw Error('Нет выбранного результата обработки');
+ if(mode==='original')return stereoPCM(original);
+ if(activeStudy!=='mrx'){
+  const clean=studyResults.get(activeStudy)?.clean;
+  if(!clean)throw Error('Дорожка для сравнения потеряна.');
+  if(mode==='speech')return clean.map((channel,i)=>{
+   const out=new Float32Array(channel.length),src=original[Math.min(i,original.length-1)];
+   for(let j=0;j<out.length;j++)out[j]=(src[j]||0)-channel[j];
+   return out;
+  });
+  return suppressStereoCenter(clean,Number($('center-suppression').value),RATE);
+ }
+ if(!stems)throw Error('Не удалось загрузить дорожки MRX.');
  if(mode==='speech')return stems.dialogue.map(channel=>channel.slice());
  const separated=mixPCM(original,stems,gains(),mode==='stems'?'stems':'residual');
  return suppressStereoCenter(separated,Number($('center-suppression').value),RATE);
 }
 function updateListeningButtons(){
- for(const [name,value] of [['original','original'],['clean','clean'],['stems','stems'],['speech','speech']])
+ for(const [name,value] of [['original','original'],['clean','clean'],['stems','stems'],['speech','speech']]){
   $(name+'-btn').classList.toggle('selected',mode===value);
+  $(name+'-btn').disabled=!activeStudy||activeStudy!=='mrx'&&name==='stems';
+ }
+ $('clean-btn').textContent=activeStudy==='mrx'?'Оригинал − речь':'Результат модели';
+ $('speech-btn').textContent=activeStudy==='mrx'?'Только речь':'Удалённая часть';
 }
 function audioFailure(reason){
  error('Не удалось воспроизвести обработанный звук: '+(reason?.message||String(reason))+
   '. Нажми «Слушать результат» ещё раз.');
 }
 async function previewAudio(){
- if(!stems||!range)return;
+ if(!activeStudy||!range)return;
  const wasPlaying=!video.paused,offset=Math.max(0,video.currentTime-range.start);
  audio.pause();revoke(audioURL);
  try{
@@ -241,7 +271,7 @@ for(const name of ['dialogue','music','effects']){
 }
 $('center-suppression').oninput=()=>{
  text('center-value',$('center-suppression').value+'%');
- if(mode==='speech'||mode==='original'){mode='stems';updateListeningButtons();}
+ if(mode==='speech'||mode==='original'){mode=activeStudy==='mrx'?'stems':'clean';updateListeningButtons();}
  clearTimeout(editTimer);editTimer=setTimeout(()=>{void previewAudio()},220);
 };
 // Never allow the original audio from <video> to mix into the neural stems.
@@ -260,7 +290,7 @@ async function sync(play){
  else audio.pause();
 }
 async function toggleListening(){
- if(!stems||!range)return;
+ if(!activeStudy||!range)return;
  if(!video.paused){video.pause();return}
  clearError();
  lockVideoMute();
@@ -299,12 +329,12 @@ function download(blob,name){
  a.href=url;a.download=name;document.body.append(a);a.click();a.remove();
  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
-$('wav-btn').onclick=()=>{if(!stems)return;try{download(wavPCM16(getMix()),fileName+'-'+(mode==='speech'?'isolated-dialogue':mode==='original'?'original':mode==='stems'?'music-effects':'no-dialogue')+'.wav')}catch(e){error(e.message)}};
+$('wav-btn').onclick=()=>{if(!activeStudy)return;try{download(wavPCM16(getMix()),fileName+'-'+(mode==='speech'?'isolated-dialogue':mode==='original'?'original':mode==='stems'?'music-effects':'no-dialogue')+'.wav')}catch(e){error(e.message)}};
 function movieMime(){
  return ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4'].find(type=>MediaRecorder.isTypeSupported(type));
 }
 async function exportVideo(){
- if(!stems||!range||exporting)return;
+ if(!activeStudy||!range||exporting)return;
  if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)return error('В этом браузере нет MediaRecorder или Canvas Capture. Доступен экспорт WAV.');
  const mime=movieMime();if(!mime)return error('Браузер не поддерживает видеоэкспорт. Можно скачать WAV.');
  clearError();pause();exporting=true;$('video-btn').disabled=true;$('wav-btn').disabled=true;
