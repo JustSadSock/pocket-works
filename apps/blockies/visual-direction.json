@@ -98,6 +98,11 @@
         "slug": "moss-marble",
         "spatialDifference": "Moss & Marble frames a mini-golf course as a navigable sculpted outdoor landscape with depth, course walls and a ball trajectory; Blockies concentrates on a fixed shared vertical well with four-cell entry gantries and compact network recovery controls.",
         "interactionDifference": "Golf swings and course geometry are turn-by-turn physics challenges, while Blockies uses simultaneous keyboard/touch falling-block movement, deterministic locking and server-authoritative recovery of entire co-op rounds."
+      },
+      {
+        "slug": "chyepukha",
+        "spatialDifference": "Chyepukha uses prompt-and-answer storytelling screens and readable text stages. Blockies instead dedicates its limited phone area to one shared 20-row grid, precise colored 4-cell player entries and thumb-reachable controls.",
+        "interactionDifference": "Chyepukha advances turn-based comic or story prompts, whereas Blockies demands continuous synchronized player input, gravity ticks, and server-reconciled positions within one shared board."
       }
     ]
   },
