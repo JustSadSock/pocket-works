@@ -452,6 +452,11 @@ async function attachDiagnostics(page: Page, testInfo: TestInfo, data: unknown) 
 const targets = loadTargets();
 
 test.describe('AI exploratory mobile gameplay', () => {
+  // This online exploratory suite mocks app-specific APIs through page.route.
+  // An existing PWA Service Worker can intercept requests before Playwright,
+  // leading to sporadic WebKit /pocket-id/me access-control errors.
+  // Offline and SW behavior have dedicated tests; keep these routes deterministic.
+  test.use({ serviceWorkers: 'block' });
   test.skip(targets.length === 0, 'No Pocket Works app targets were available for exploratory QA.');
 
   for (const app of targets) {
