@@ -35,9 +35,18 @@ async function choose(f){
  file=f;fileName=safeName(f.name);uiBusy(true);
  try{
   revoke(fileURL);fileURL=URL.createObjectURL(f);
-  sourceVideo.src=fileURL;sourceVideo.load();await metadata(sourceVideo);
-  if(!Number.isFinite(sourceVideo.duration)||sourceVideo.duration<1)throw Error('Видео должно иметь известную длительность от одной секунды.');
-  length=sourceVideo.duration;
+  const loaded=metadata(sourceVideo);
+  sourceVideo.src=fileURL;sourceVideo.load();await loaded;
+  let actualDuration=sourceVideo.duration;
+  if(!Number.isFinite(actualDuration)){
+   // MediaRecorder often emits WebM without a duration header. The browser
+   // discovers its last timestamp when it seeks beyond the end.
+   await seek(sourceVideo,1e8);
+   actualDuration=Number.isFinite(sourceVideo.duration)?sourceVideo.duration:sourceVideo.currentTime;
+   await seek(sourceVideo,0);
+  }
+  if(!Number.isFinite(actualDuration)||actualDuration<1)throw Error('Браузер не смог определить длительность этого видео.');
+  length=actualDuration;
   $('start-seconds').value='0';$('duration-seconds').value=String(Math.round(Math.min(20,length)*10)/10);
   text('file-detail',f.name+' · '+(f.size/1048576).toFixed(1)+' МиБ');
   text('range-note','Всего '+elapsed(length)+'. Обработка одного фрагмента: 1–90 секунд.');
