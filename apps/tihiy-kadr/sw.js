@@ -1,8 +1,8 @@
 const CACHE_PREFIX='tihiy-kadr-';
-const CACHE='tihiy-kadr-v1.0.2';
-const APP_VERSION='1.0.2';
+const CACHE='tihiy-kadr-v1.1.0';
+const APP_VERSION='1.1.0';
 const RELEASE_DATE='2026-10-25';
-const RELEASE_NOTES=['MRX и WebAssembly теперь загружаются через PocketWorks','Резервная загрузка ONNX и более понятные ошибки соединения','Исправлена загрузка ONNX WebAssembly на iPhone и в Safari','Резервный CDN для WebAssembly и понятные сетевые ошибки','Новый режим малой памяти для мобильных устройств','Нейросеть MRX удаляет диалоги локально','Три звуковые дорожки, настройки баланса и сравнение','Экспорт WAV и видео с новым звуком'];
+const RELEASE_NOTES=['Воспроизведение без примеси исходных диалогов','Четыре режима прослушивания и уровень выделенной речи','Более точная TIGER-DnR как альтернативная нейросеть','MRX и WebAssembly теперь загружаются через PocketWorks','Резервная загрузка ONNX и более понятные ошибки соединения','Исправлена загрузка ONNX WebAssembly на iPhone и в Safari','Резервный CDN для WebAssembly и понятные сетевые ошибки','Новый режим малой памяти для мобильных устройств','Нейросеть MRX удаляет диалоги локально','Три звуковые дорожки, настройки баланса и сравнение','Экспорт WAV и видео с новым звуком'];
 const OWN=['./','./index.html','./app.js','./audio-utils.js','./mrx-worker.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.css'];
 const SCOPE=new URL('./',self.registration.scope);
 const URLS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
