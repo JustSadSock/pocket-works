@@ -116,3 +116,49 @@ test('socket loss visibly blocks submission without losing a locally typed draft
  expect(immediately.network).toContain('RECONNECTING');
  await expect(page.locator('#answer')).toHaveValue(draft);
 });
+
+
+test('a full persistent store falls back to tab storage across page reload and review',async({page})=>{
+ await page.addInitScript(()=>{
+  const previous=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(key,value){
+   if(this===localStorage&&String(key).includes(':draft:'))throw new DOMException('Quota exceeded','QuotaExceededError');
+   return previous.call(this,key,value);
+  };
+ });
+ await install(page);await start(page);
+ const answer='Архіваріус придумав страшенно дивний закон про веселі шкарпетки';
+ await page.locator('#answer').fill(answer);
+ await expect(page.locator('#draftStorageNotice')).toBeVisible();
+ await expect(page.locator('#draftStorageNotice')).toContainText('тільки в цій вкладці');
+ const tabCopy=await page.evaluate(()=>Object.entries(sessionStorage).filter(([k])=>k.includes(':draft:')).map(([k,v])=>v));
+ expect(tabCopy).toContain(answer);
+ await page.reload();
+ await expect(page.locator('#answer')).toHaveValue(answer);
+ await expect(page.locator('#draftStorageNotice')).toBeVisible();
+ await page.locator('#answerForm button[type=submit]').click();
+ await expect(page.locator('.writer-selection')).toBeVisible();
+ await expect(page.locator('#draftStorageNotice [data-act="copy-draft"]')).toBeVisible();
+ await page.locator('[data-act="back-to-draft"]').click();
+ await expect(page.locator('#answer')).toHaveValue(answer);
+});
+
+test('complete storage denial keeps the live manuscript through review and warns against reload',async({page})=>{
+ await page.addInitScript(()=>{
+  const previous=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(key,value){
+   if(String(key).includes(':draft:'))throw new DOMException('Storage denied','QuotaExceededError');
+   return previous.call(this,key,value);
+  };
+ });
+ await install(page);await start(page);
+ const answer='Весела комісія продала старий трон сусідньому селу';
+ await page.locator('#answer').fill(answer);
+ await expect(page.locator('#draftStorageNotice')).toContainText('лише на цьому екрані');
+ await page.locator('#answerForm button[type=submit]').click();
+ await expect(page.locator('.writer-selection')).toBeVisible();
+ await expect(page.locator('.selection-paper')).toContainText('комісія');
+ await expect(page.locator('#draftStorageNotice [data-act="copy-draft"]')).toBeVisible();
+ await page.locator('[data-act="back-to-draft"]').click();
+ await expect(page.locator('#answer')).toHaveValue(answer);
+});
