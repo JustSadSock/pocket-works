@@ -252,7 +252,7 @@ test('Bazaar v20 uses alarm-driven deadlines with no idle SQLite rewrites',()=>{
  assert.match(hub,/if\(command==='tick'\)return/,'heartbeat must not write state');
  assert.match(hub,/if\(command==='sync'\)/,'sync must have its own read-only branch');
  assert.ok(hub.includes("this.emit(room,[{type:'state',to:player.id}])"),'sync must send only a private view');
- assert.match(hub,/if\(room\)this\.advanceBazaarDeadline\(room,now\)/,'alarm processes unattended turns');
+ assert.match(hub,/if\(room\)\{this\.advanceBazaarDeadline\(room,now\);/,'alarm processes unattended turns within the shared deadline sweep');
  assert.match(app,/type:'time_ping',stamp:lastClockPing/,'new client sends a clock probe rather than a write-heavy tick');
  assert.match(app,/serverClockOffset=pong\.serverNow-\(now\+pong\.stamp\)\/2/);
 });
