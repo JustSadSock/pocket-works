@@ -109,7 +109,9 @@ test('rematch with only one connected person returns to lobby; quorum can start 
   sys.pulse(1);
   assert.equal(sys.state.hostId,'wire1');
   sys.state.engine.isGameOver=true;sys.state.phase='finished';
-  sys.deliver();
+  // Apply a real authoritative transition: v15 clients reject same-revision
+  // snapshots instead of trusting local test mutations.
+  sys.pulse(1);
   assert.equal(b.finished,true);
   b.requestRematch();
   assert.equal(sys.state.started,false);
