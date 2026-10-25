@@ -134,7 +134,46 @@ try{
   const trimmedWidth=await page.locator('[data-clip="first"]').evaluate(el=>parseFloat(el.style.width));
   assert(trimmedWidth<moved.width,'dragging grip trims the line');
   assert.equal(await page.locator('#replace-clip-btn').isEnabled(),true,'selected clip can be re-recorded');
+  // All presets have to render distinct audible PCM, not merely update UI.
+  if(vp.name==='desktop'){
+   const rendered=await page.evaluate(async()=>{
+    const {VOICE_EFFECTS,connectVoiceEffect}=await import('./voice-effects.js');
+    const rate=14700,length=rate;
+    const generated=[];
+    for(const effect of VOICE_EFFECTS){
+     const ctx=new OfflineAudioContext(1,length,rate),buffer=ctx.createBuffer(1,length,rate);
+     const dry=buffer.getChannelData(0);
+     for(let i=0;i<length;i++)dry[i]=.16*Math.sin(2*Math.PI*440*i/rate)+.09*Math.sin(2*Math.PI*1700*i/rate);
+     const src=ctx.createBufferSource();src.buffer=buffer;
+     const output=ctx.createGain();output.connect(ctx.destination);
+     connectVoiceEffect(ctx,src,output,effect.id,0);
+     src.start(0);
+     const pcm=(await ctx.startRendering()).getChannelData(0);
+     let sum=0,diff=0;
+     for(let i=0;i<length;i++){
+      if(!Number.isFinite(pcm[i]))throw Error('Non-finite samples in '+effect.id);
+      sum+=pcm[i]*pcm[i];
+      diff+=(pcm[i]-dry[i])**2;
+     }
+     generated.push({id:effect.id,rms:Math.sqrt(sum/length),difference:Math.sqrt(diff/length)});
+    }
+    return generated;
+   });
+   assert.equal(rendered.length,17,'all 17 presets render PCM in a real browser');
+   for(const effect of rendered){
+    assert(effect.rms>.003,'effect '+effect.id+' must not mute the voice');
+    if(effect.id!=='clean')assert(effect.difference>.004,'effect '+effect.id+' must audibly change voice');
+   }
+  }
+
   assert.equal(await page.locator('#voice-effects').isVisible(),true,'voice effect strip appears for selected clip');
+  await page.locator('#voice-fx-more').click();
+  assert.equal(await page.locator('#voice-fx-more').getAttribute('aria-expanded'),'true');
+  assert.equal(await page.locator('#voice-fx-extra').isVisible(),true);
+  await page.locator('[data-voice-fx="alien"]').click();
+  assert.equal(await page.locator('[data-voice-fx="alien"]').getAttribute('aria-pressed'),'true','new alien preset applies');
+  assert.match(await page.locator('#voice-fx-current').innerText(),/Пришелец/);
+  assert.equal(await page.locator('#voice-fx-audition').isEnabled(),true,'one-tap preview is available');
   await page.locator('[data-voice-fx="radio"]').click();
   assert.equal(await page.locator('[data-voice-fx="radio"]').getAttribute('aria-pressed'),'true','radio effect applies to selected clip');
   await page.locator('[data-voice-fx="clean"]').click();
