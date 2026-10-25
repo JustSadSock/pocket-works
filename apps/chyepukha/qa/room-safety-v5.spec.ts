@@ -122,7 +122,7 @@ test('a full persistent store falls back to tab storage across page reload and r
  await page.addInitScript(()=>{
   const previous=Storage.prototype.setItem;
   Storage.prototype.setItem=function(key,value){
-   if(this===localStorage&&String(key).includes(':draft:'))throw new DOMException('Quota exceeded','QuotaExceededError');
+   if(this===localStorage&&(String(key).includes(':draft:')||String(key).includes(':submit:')))throw new DOMException('Quota exceeded','QuotaExceededError');
    return previous.call(this,key,value);
   };
  });
@@ -141,6 +141,11 @@ test('a full persistent store falls back to tab storage across page reload and r
  await expect(page.locator('#draftStorageNotice [data-act="copy-draft"]')).toBeVisible();
  await page.locator('[data-act="back-to-draft"]').click();
  await expect(page.locator('#answer')).toHaveValue(answer);
+ await page.locator('#answerForm button[type=submit]').click();
+ for(const i of [0,2,4])await page.locator('.word').nth(i).click();
+ await page.locator('#answerForm button[type=submit]').click();
+ await expect(page.locator('.dispatch-room')).toBeVisible();
+ expect(await page.evaluate(()=>Object.keys(sessionStorage).filter(k=>k.includes(':submit:')))).toHaveLength(0);
 });
 
 test('complete storage denial keeps the live manuscript through review and warns against reload',async({page})=>{
