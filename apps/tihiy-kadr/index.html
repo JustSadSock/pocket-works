@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#eee9de">
+<title>Тихий кадр · MRX лаборатория</title><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"></head>
+<body><main data-app-shell class="lab">
+<header class="top"><a class="back" href="../../" aria-label="Вернуться в PocketWorks">← PocketWorks</a><span class="tag">ЭКСПЕРИМЕНТ · MRX 1.0</span></header>
+<section class="intro"><div><p class="eyebrow">НЕЙРОСЕТЕВАЯ ЛАБОРАТОРИЯ</p><h1>ТИХИЙ <em>КАДР</em></h1><p class="lead">Убери чужие голоса. Оставь музыку и эффекты. Проверь, насколько быстро MRX справится с твоим видео.</p></div><div class="mark" aria-hidden="true"><span class="line"></span><span class="cross">×</span><span class="line short"></span></div></section>
+<div class="layout">
+<section class="panel source" aria-labelledby="source-heading">
+<div class="panel-title"><h2 id="source-heading">01 / Исходный файл</h2><span id="file-detail" class="muted">Файл не выбран</span></div>
+<label class="drop" id="drop-zone" for="file-input"><input id="file-input" type="file" accept="video/*,.mp4,.mov,.m4v,.webm,.mkv" hidden><span class="drop-icon">＋</span><span><strong>Выбрать видео</strong><small>MP4, MOV, WebM · только на устройстве</small></span></label>
+<div id="input-details" class="hidden"><video id="source-video" playsinline preload="metadata" muted controls></video><div class="fields"><label>Начало фрагмента, сек.<input id="start-seconds" type="number" min="0" step="0.1" value="0"></label><label>Длительность, сек.<input id="duration-seconds" type="number" min="1" max="90" step="1" value="20"></label></div><p id="range-note" class="hint"></p></div>
+<div class="panel-title second"><h2>02 / Обработка</h2><span class="chip">MERL · 31 МБ</span></div>
+<div class="fields"><label>Режим<input value="MRX · речь / музыка / эффекты" disabled aria-label="Модель MRX"></label><label>Размер задачи<select id="chunk-size"><option value="10">Меньше памяти · по 10 сек</option><option value="20" selected>Рекомендуемый · по 20 сек</option></select></label></div>
+<button id="process-btn" type="button" class="primary" disabled>Убрать речь →</button>
+<div id="progress-wrap" class="progress hidden" role="status" aria-live="polite"><div class="progress-top"><b id="progress-heading">Подготовка...</b><button id="cancel-btn" type="button" class="cancel">Прервать</button></div><progress id="progress-bar"></progress><p id="progress-detail" class="hint"></p></div>
+<p id="error" class="error hidden" role="alert"></p><p class="hint fine">ИИ работает на этом устройстве. В первый раз загружает модель ~31 МБ. На телефоне обработка может быть заметно медленнее.</p>
+</section>
+<section class="panel result" aria-labelledby="result-heading">
+<div class="panel-title"><h2 id="result-heading">03 / Результат</h2><span class="muted" id="result-state">Ожидание обработки</span></div>
+<div id="empty-state" class="empty"><div class="wave">∿ ∿ ∿</div><p>Здесь появится видео с новой звуковой дорожкой.</p></div>
+<div id="result-details" class="hidden">
+<video id="result-video" muted playsinline preload="metadata" controls></video><audio id="monitor" preload="auto" hidden></audio>
+<div class="comparison"><button id="original-btn" class="secondary" type="button">Оригинал</button><button id="clean-btn" class="secondary selected" type="button">Без голосов</button></div>
+<div class="stems"><label>Оригинальная речь <output id="dialogue-value">0%</output><input id="dialogue-gain" type="range" min="0" max="100" step="5" value="0"></label><label>Музыка <output id="music-value">100%</output><input id="music-gain" type="range" min="0" max="150" step="5" value="100"></label><label>Эффекты <output id="effects-value">100%</output><input id="effects-gain" type="range" min="0" max="150" step="5" value="100"></label></div>
+<div class="metrics"><div><small>Обработка MRX</small><strong id="inference-time">—</strong></div><div><small>Скорость</small><strong id="speed-factor">—</strong></div><div><small>Длина сцены</small><strong id="scene-length">—</strong></div></div>
+<div class="downloads"><button id="wav-btn" class="primary" type="button">Скачать звук WAV</button><button id="video-btn" class="secondary" type="button">Сохранить видео со звуком</button></div><p id="export-status" class="hint"></p>
+</div>
+</section>
+</div>
+<footer>MRX by Mitsubishi Electric Research Laboratories · MIT · ONNX export by audiojs. Оригинальное видео не загружается на сервер. Используйте материалы, на которые у вас есть права.</footer>
+</main><script type="module" src="./app.js"></script></body></html>
