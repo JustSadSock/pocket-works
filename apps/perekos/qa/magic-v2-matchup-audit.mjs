@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {dirname} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {makeMagicV2Practice,tick,STEP,validState} from '../core.mjs';
+import {makeMagicV2Practice,tick,STEP,validState,canStand} from '../core.mjs';
+import {rayCollision} from '../collision-geometry.mjs';
 import {createMagicLoadout,grantEarnedMagicRune,applyMagicEdit,validateMagicState} from '../magic-v2-rules.mjs';
 
 export const SCHOOLS=Object.freeze(['stone','fire','storm']);
@@ -31,13 +32,26 @@ function profile(book,kind,school){
  assert.equal(validateMagicState(next).ok,true);
  return next;
 }
-function controls(self,enemy,seat,frame,tactic){
+// Use the actual court geometry: when line of sight is lost, seek the open
+// mid-lane instead of strafing forever behind an obstacle.
+function controls(s,self,enemy,seat,frame,tactic){
  const dx=enemy.x-self.x,dy=enemy.y-self.y,d=Math.hypot(dx,dy)||1;
- const goal=tactic==='close'?100:tactic==='circle'?175:250;
- const chase=d>goal+30?.7:d<goal-25?-.62:.06;
- const strafe=(Math.floor(frame/(tactic==='range'?155:210))+seat)%2===0?.46:-.46;
- return {x:dx/d*chase-dy/d*strafe,y:dy/d*chase+dx/d*strafe,
-  aim:{x:enemy.x,y:enemy.y},attack:true,
+ const angle=Math.atan2(dy,dx);
+ const visible=rayCollision(s,self.x,self.y,angle,d,6,seat).length>=d-17;
+ const target=visible?enemy:{x:200,y:310};
+ const tx=target.x-self.x,ty=target.y-self.y,length=Math.hypot(tx,ty)||1;
+ const goal=tactic==='close'?75:tactic==='circle'?115:165;
+ const chase=!visible?1:d>goal+15?.78:d<goal-12?-.46:.09;
+ const strafe=(Math.floor(frame/(tactic==='range'?175:230))+seat)%2===0?
+   (tactic==='circle'?.45:.25):(tactic==='circle'?-.45:-.25);
+ let x=tx/length*chase-ty/length*strafe,y=ty/length*chase+tx/length*strafe;
+ // Don't steer through a wall; pick the safer unobstructed move.
+ if(!canStand(self.x+x*10,self.y+y*10,12)){
+  if(canStand(self.x+tx/length*10,self.y+ty/length*10,12)){x=tx/length;y=ty/length}
+  else if(canStand(self.x-ty/length*10,self.y+tx/length*10,12)){x=-ty/length;y=tx/length}
+  else {x=ty/length;y=-tx/length}
+ }
+ return {x,y,aim:{x:enemy.x,y:enemy.y},attack:true,
   shield:frame%317===3,dash:frame%229===7};
 }
 export function simulate(left,right,kind,seed,frames=900,tactic='close'){
@@ -49,12 +63,20 @@ export function simulate(left,right,kind,seed,frames=900,tactic='close'){
  s.magicLoadouts[1]=profile(createMagicLoadout(right,{seed:seed+911,starter:'attack'}),kind,right);
  s.actors[1].magicSchool=right;
  s.actors[1].mageId=MAGES[right];
+ // Symmetric mid-court openings provide real contact at close, medium and
+ // long casting ranges. Keep the seat positions identical when swapping schools.
+ const offset=seed%2===0?-12:12;
+ s.actors[0].x=121;s.actors[0].y=310+offset;
+ s.actors[1].x=279;s.actors[1].y=310-offset;
+ assert.ok(s.actors.every(a=>canStand(a.x,a.y,12)));
  s.phase='fight';
- let elapsed=0,maxShots=0,maxMines=0,maxBarriers=0;
+ let elapsed=0,maxShots=0,maxMines=0,maxBarriers=0,visibleFrames=0;
  for(let frame=0;frame<frames;frame++){
   const [a,b]=s.actors;
-  tick(s,controls(a,b,0,frame,tactic),STEP,controls(b,a,1,frame,tactic));
+  tick(s,controls(s,a,b,0,frame,tactic),STEP,controls(s,b,a,1,frame,tactic));
   elapsed=frame+1;
+  const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+  if(rayCollision(s,a.x,a.y,Math.atan2(dy,dx),d,6,0).length>=d-17)visibleFrames++;
   maxShots=Math.max(maxShots,s.shots.length);
   maxMines=Math.max(maxMines,s.mines.length);
   maxBarriers=Math.max(maxBarriers,s.barriers.length);
@@ -69,7 +91,7 @@ export function simulate(left,right,kind,seed,frames=900,tactic='close'){
   heat:[round(a.heat),round(b.heat)],
   knockout:a.hp<=0&&b.hp<=0?'double':a.hp<=0?'right':b.hp<=0?'left':'none',
   hpDelta:round(a.hp-b.hp),
-  maxShots,maxMines,maxBarriers};
+  visibleFrames,maxShots,maxMines,maxBarriers};
 }
 export function audit({seeds=[431,997],frames=900,tactics=TACTICS}={}){
  const matches=[];
