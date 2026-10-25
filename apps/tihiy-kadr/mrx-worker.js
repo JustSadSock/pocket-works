@@ -4,7 +4,10 @@
 // Pin to the unmodified upstream version, independently of the JS bundle.
 const LIBRARY='https://esm.sh/@audio/neural-separate@0.7.0?bundle&target=es2022';
 const ROOT=new URL('/',self.location.origin);
-const MODEL_ASSETS=new URL('/ai-assets/mrx-v1/',ROOT).href;
+const MODEL_ASSETS={
+ mrx:new URL('/ai-assets/mrx-v1/',ROOT).href,
+ tiger:new URL('/ai-assets/tiger-dnr-v1/',ROOT).href
+};
 const RUNTIME_ASSETS=[
  new URL('/ai-assets/ort-1.30.0/',ROOT).href,
  'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/'
@@ -15,7 +18,8 @@ const describe=e=>{
  return (cause&&cause!==detail?detail+' ('+cause+')':detail).slice(0,400);
 };
 self.onmessage=async event=>{
- const {id,channels,chunk}=event.data||{};
+ const {id,channels,chunk,model='mrx'}=event.data||{};
+ if(!Object.hasOwn(MODEL_ASSETS,model))return self.postMessage({id,stage:'error',phase:'input',message:'Неизвестная модель'});
  if(!id||!Array.isArray(channels))return;
  let phase='library';
  const status=(stage,detail)=>{
@@ -30,15 +34,15 @@ self.onmessage=async event=>{
   for(let i=0;i<RUNTIME_ASSETS.length;i++){
    const wasmPaths=RUNTIME_ASSETS[i];
    try{
-    status('model',i?'Повторяем запуск с резервного CDN ONNX…':'Загружаем модель через PocketWorks (~31 МБ один раз).');
+    status('model',i?'Повторяем запуск с резервного CDN ONNX…':'Загружаем '+(model==='mrx'?'MRX · 31 МБ':'TIGER · 7 МБ')+' через PocketWorks.');
     const started=performance.now();
     const result=await separate(channels,{
-     sampleRate:44100,model:'mrx',device:'wasm',
+     sampleRate:44100,model,device:'wasm',
      // Safari and iOS need a smaller per-inference allocation.
      chunk:[5,10,20].includes(chunk)?chunk:10,
      overlap:2,
      wasmPaths,
-     weights:MODEL_ASSETS,
+     weights:MODEL_ASSETS[model],
      progress:({chunk:part,totalChunks})=>{
       if(totalChunks>1)status('model','MRX · фрагмент '+part+' из '+totalChunks);
      }
