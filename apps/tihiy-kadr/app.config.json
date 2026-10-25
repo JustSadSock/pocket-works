@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "tihiy-kadr",
+  "name": "ТИХИЙ КАДР",
+  "shortName": "M&E LAB",
+  "description": "Локальная проверка нейросети MRX: убрать диалоги из видео, оставить музыку и эффекты, сравнить и сохранить результат.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-25",
+  "releaseDateTime": "2026-10-25T19:17:00+02:00",
+  "changelog": [
+    "Рабочая лаборатория MRX для разделения диалогов, музыки и эффектов непосредственно в браузере.",
+    "Поддержка пользовательских видео, диапазона сцены, обработки и сравнительного воспроизведения.",
+    "Результат в WAV и видео WebM/MP4 с новым сопровождением, метрики скорости обработки."
+  ],
+  "status": "experimental",
+  "preset": "audio",
+  "accent": "#d87938",
+  "backgroundColor": "#eee9de",
+  "themeColor": "#eee9de",
+  "orientation": "any",
+  "cacheName": "tihiy-kadr-v1.0.0",
+  "storageNamespace": "pocket-works:tihiy-kadr",
+  "tags": [
+    "utility",
+    "audio",
+    "video",
+    "ai",
+    "creative"
+  ],
+  "order": 356
+}
