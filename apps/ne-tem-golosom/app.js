@@ -543,13 +543,101 @@ function stateChanged(s){
   }else updatePremiereStatus();
  }
 }
-async function connectRoom(action){if(net){try{net.close()}catch{}net=null}show('room');setNetStatus('connecting','Подключаемся…');room=null;state=null;$('room-connection-status').textContent='Подключаемся к PocketNet…';$('room-retry').classList.add('hidden');roomUI();const conn=new PocketNet({serverUrl:roomsOrigin,name,identityKey:identity?.accountId||'guest',storage:session});net=conn;conn.roomId=null;conn.persist();conn.on('connected',m=>{me=m.player?.id||'';setNetStatus('online','PocketNet · онлайн')});
- conn.on('room_joined',m=>{room=m.roomId;if(action==='create'){state=m.state;roomUI();sendGame({type:'scene',scene:sceneForServer()})}else{stateChanged(m.state);if(me)sendGame({type:'sync'})}ensurePeers()});
- conn.on('game_event',m=>{if(m.event?.type==='state'){const s=m.event.payload;stateChanged(s);ensurePeers()}else if(m.event?.type==='notice')toast(m.event.payload);else if(m.event?.type==='signal')receiveSignal(m.event.payload);else if(m.event?.type==='relay')receiveRelay(m.event.payload)});
- conn.on('error',e=>toast('Связь: '+(e.code||e.message||'ошибка')));
- conn.on('disconnected',()=>{setNetStatus('connecting','Переподключаемся…');toast('Соединение потеряно. Записи остались на устройстве.')});
- try{await conn.connect();if(action==='create')conn.createRoom('ne-tem-golosom');else conn.joinRoom(($('join-code').value||new URLSearchParams(location.search).get('room')||'').trim());}catch(e){toast('PocketNet недоступен: '+e.message);setNetStatus('offline','Нет связи');$('room-connection-status').textContent='Не удалось создать комнату. Проверь подключение и попробуй снова.';$('room-retry').classList.remove('hidden');roomUI()}}
-function leaveNetwork(){setNetStatus('idle','PocketNet');relayInbox.clear();relayQueue=Promise.resolve();for(const id of [...peers.keys()])closePeer(id);try{net?.leaveRoom();net?.close()}catch{}net=null;state=null;me='';room='';sentPremiere=false;}
+async function connectRoom(action,checkpoint=null){
+ if(net){try{net.close()}catch{}net=null}
+ retryRoomAction=action;retryCheckpoint=checkpoint;
+ show('room');setNetStatus('connecting','Подключаемся…');
+ room=null;state=null;onlineIds=null;networkInterrupted=false;
+ $('room-connection-status').textContent='Подключаемся к PocketNet…';
+ $('room-retry').classList.add('hidden');roomUI();connectionNotice();
+ const conn=new PocketNet({
+  serverUrl:roomsOrigin,name,identityKey:identity?.accountId||'guest',
+  token:action==='resume'?checkpoint?.token:undefined,storage:session
+ });
+ net=conn;
+ // Only a verified recovery checkpoint may request an automatic seat reclaim.
+ conn.roomId=action==='resume'?checkpoint?.roomId||null:null;
+ conn.persist();
+ let initializedNewRoom=false;
+ conn.on('connected',m=>{me=m.player?.id||'';setNetStatus('online','PocketNet · онлайн')});
+ conn.on('room_joined',async m=>{
+  if(net!==conn)return;
+  room=m.roomId;
+  onlineIds=Array.isArray(m.onlineIds)?new Set(m.onlineIds):null;
+  networkInterrupted=false;
+  if(action==='create'&&!initializedNewRoom){
+   initializedNewRoom=true;
+   state=m.state;roomUI();
+   // Save custom source before anyone starts playing, not only at the first voice take.
+   if(scene?.custom&&sourceBlob){
+    projectKey=sceneDraftKey();
+    if(!await draftWrite())toast('Видео не удалось сохранить для восстановления.');
+   }
+   saveRoomCheckpoint();
+   sendGame({type:'scene',scene:sceneForServer()});
+  }else{
+   initializedNewRoom=true;
+   stateChanged(m.state);
+   saveRoomCheckpoint();
+   if(m.state?.phase==='lobby')await restoreLobbyMedia();
+   if(net!==conn)return;
+   sendGame({type:'sync'});
+  }
+  if(net!==conn)return;
+  ensurePeers();connectionNotice();
+ });
+ conn.on('presence',m=>{
+  if(m.roomId!==room||!Array.isArray(m.onlineIds))return;
+  onlineIds=new Set(m.onlineIds);
+  connectionNotice();
+  if(view==='room')roomUI();
+  if(view==='wait')waitUI();
+ });
+ conn.on('game_event',m=>{
+  if(m.event?.type==='state'){stateChanged(m.event.payload);ensurePeers()}
+  else if(m.event?.type==='notice')toast(m.event.payload);
+  else if(m.event?.type==='signal')receiveSignal(m.event.payload);
+  else if(m.event?.type==='relay')receiveRelay(m.event.payload);
+ });
+ const endRoom=(reason)=>{
+  if(net!==conn)return;
+  clearRoomCheckpoint();conn.close();net=null;room=null;state=null;
+  onlineIds=null;networkInterrupted=false;connectionNotice();
+  setNetStatus('offline','Комната недоступна');show('home');toast(reason);
+ };
+ conn.on('room_closed',()=>endRoom('Комната закрыта. Сохранённые черновики остались на устройстве.'));
+ conn.on('room_kicked',()=>endRoom('Ты больше не участник комнаты. Локальные записи сохранены.'));
+ conn.on('error',e=>{
+  const code=e.code||e.message||'ошибка';
+  if(code==='room_not_found'||code==='room_version_unavailable'){
+   endRoom('Комната больше недоступна. Локальные записи не удалены.');
+   return;
+  }
+  toast('Связь: '+code);
+ });
+ conn.on('disconnected',()=>{
+  if(net!==conn)return;
+  networkInterrupted=true;onlineIds?.delete(me);
+  setNetStatus('connecting','Переподключаемся…');
+  connectionNotice();
+  toast('Соединение потеряно. Записи остались на устройстве.');
+ });
+ try{
+  await conn.connect();
+  if(net!==conn)return;
+  if(action==='create')conn.createRoom('ne-tem-golosom');
+  else if(action==='join')conn.joinRoom(($('join-code').value||new URLSearchParams(location.search).get('room')||'').trim());
+  // 'resume' is joined automatically by PocketNet upon authentication.
+ }catch(e){
+  if(net!==conn)return;
+  networkInterrupted=true;connectionNotice();
+  toast('PocketNet недоступен: '+e.message);
+  setNetStatus('offline','Нет связи');
+  $('room-connection-status').textContent='Соединение не установлено. Проверь интернет и повтори попытку.';
+  $('room-retry').classList.remove('hidden');roomUI();
+ }
+}
+function leaveNetwork(){clearRoomCheckpoint();networkInterrupted=false;onlineIds=null;connectionNotice();setNetStatus('idle','PocketNet');relayInbox.clear();relayQueue=Promise.resolve();for(const id of [...peers.keys()])closePeer(id);try{net?.leaveRoom();net?.close()}catch{}net=null;state=null;me='';room='';sentPremiere=false;}
 async function resetRuntime(){
  stopPremiereExport();premiereLocalCopy=null;videoExportController?.abort();encodedCache=null;clearExportPreview();cancelCountdown();
  if(record)finishRecording();
@@ -1151,7 +1239,7 @@ $('role-tags').onclick=e=>{const b=e.target.closest('[data-remove-role]');if(!b)
 $('role-tags').oninput=e=>{if(e.target.matches('[data-role-index]'))selected.roles[Number(e.target.dataset.roleIndex)]=e.target.value};
 $('confirm-scene').onclick=confirmScene;
 
-$('room-retry').onclick=()=>connectRoom('create');
+$('room-retry').onclick=()=>connectRoom(retryRoomAction,retryCheckpoint);
 $('enter-room').onclick=()=>{const code=$('join-code').value.trim();if(!/^[a-f0-9-]{8,36}$/i.test(code))return toast('Введи код из приглашения.');connectRoom('join')};
 $('copy-invite').onclick=()=>{if(!room)return;const url=new URL(location.href);url.search='?room='+room.slice(0,8).toUpperCase();const text=url.href;navigator.clipboard?.writeText(text).then(()=>toast('Ссылка скопирована')).catch(()=>toast('Код: '+room.slice(0,8).toUpperCase()))};
 $('room-players').onchange=async e=>{
@@ -1162,7 +1250,13 @@ $('room-players').onchange=async e=>{
   const duration=await new Promise(resolve=>{test.preload='metadata';test.src=src;test.onloadedmetadata=()=>resolve(test.duration);test.onerror=()=>resolve(0);setTimeout(()=>resolve(0),8000)});
   test.removeAttribute('src');test.load();URL.revokeObjectURL(src);
   if(!Number.isFinite(duration)||duration<scene.start+scene.duration-.1)return toast('Это видео не подходит по продолжительности.');
-  sourceBlob=f;setVideoSources();sendGame({type:'media_ready',scene:scene.id,epoch:state?.mediaEpoch});toast('Видео подключено.');roomUI();return;
+  sourceBlob=f;setVideoSources();
+  if(meHost()){
+   projectKey=sceneDraftKey();
+   if(!await draftWrite())return;
+   for(const p of state?.players||[])if(p.id!==me)sendVideoTo(p.id);
+  }else sendGame({type:'media_ready',scene:scene.id,epoch:state?.mediaEpoch});
+  toast('Видео подключено.');roomUI();return;
  }
  const sel=e.target.closest('[data-assign]');if(sel)sendGame({type:'assign',target:sel.dataset.assign,role:sel.value});
 };
@@ -1309,7 +1403,26 @@ document.addEventListener('keydown',e=>{
    else if(selectedClip){selectedClip=null;renderTimeline();}
  }
 });
-getPocketIdentity().then(p=>{identity=p;name=p?.complete?p.nickname:(session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900))));if(!p?.complete)session.setItem('name',name);}).catch(()=>{name=session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900)));session.setItem('name',name)});
-const incoming=new URLSearchParams(location.search).get('room');
-if(incoming){mode='guest';$('join-code').value=incoming.toUpperCase();roomUI();connectRoom('join')}
+async function initializeIdentityAndRecovery(){
+ try{
+  identity=await getPocketIdentity();
+  name=identity?.complete?identity.nickname:(session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900))));
+ }catch{
+  name=session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900));
+ }
+ if(!identity?.complete)session.setItem('name',name);
+ const incoming=new URLSearchParams(location.search).get('room');
+ const checkpoint=roomCheckpoint().read();
+ if(incoming){
+  if(checkpoint&&checkpoint.roomId.slice(0,8).toLowerCase()===incoming.slice(0,8).toLowerCase()){
+   mode=checkpoint.mode;$('join-code').value=checkpoint.roomId;void connectRoom('resume',checkpoint);
+  }else{
+   mode='guest';$('join-code').value=incoming.toUpperCase();void connectRoom('join');
+  }
+ }else if(checkpoint){
+  mode=checkpoint.mode;$('join-code').value=checkpoint.roomId;
+  void connectRoom('resume',checkpoint);
+ }
+}
+void initializeIdentityAndRecovery();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
