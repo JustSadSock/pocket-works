@@ -29,7 +29,7 @@ jobs:
           node --check apps/tihiy-kadr/mrx-worker.js
           node --check apps/tihiy-kadr/audio-utils.js
           node --test apps/tihiy-kadr/qa/*.test.mjs
-          npm run validate:configs
+          node --input-type=module -e "import{readFileSync as r}from'node:fs';const a=JSON.parse(r('apps/tihiy-kadr/app.config.json'));const m=JSON.parse(r('apps/tihiy-kadr/manifest.webmanifest'));if(m.name!==a.name||m.description!==a.description||m.id!=='/apps/'+a.slug+'/')process.exit(1)"
   real-mrx:
     needs: syntax-unit
     runs-on: ubuntu-latest
