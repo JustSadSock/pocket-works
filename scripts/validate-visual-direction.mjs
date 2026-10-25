@@ -37,6 +37,12 @@ export function mobileOnlyHtmlChange(before, after) {
       .replace(/\sdata-native-press(?=[\s>])/g, '')
       .replace(/\sdata-app-shell(?=[\s>])/g, '')
       .replace(/\s*<link rel="stylesheet" href="\.\.\/\.\.\/shared\/mobile-runtime\.css"\s*\/?>/g, '')
+      // A managed update migration changes plumbing, not the scene's design.
+      // Strip only the exact non-visual manager markup and legacy one-line
+      // registration; all other changed HTML remains subject to design review.
+      .replace(/\s*<link rel="stylesheet" href="\.\.\/\.\.\/shared\/update-manager\.css"\s*\/?>/g, '')
+      .replace(/\s*<script type="module" src="\.\.\/\.\.\/shared\/update-manager\.js" data-update-manager data-service-worker="\.\/sw\.js" data-app-name="[^"<]*" data-app-version="[0-9]+\.[0-9]+\.[0-9]+"><\/script>/g, '')
+      .replace(/\s*<script type="module">\s*if\('serviceWorker' in navigator\) addEventListener\('load',\(\)=>navigator\.serviceWorker\.register\('\.\/sw\.js',\{scope:'\.\/'\}\)\.catch\(\(\)=>\{\}\)\);\s*<\/script>/g, '')
       .replace(/<script type="module" src="\.\/app\.js"><\/script>/g, '<script src="./app.js" defer></script>')
       .replace(/>\s+</g, '><').trim();
     return text;

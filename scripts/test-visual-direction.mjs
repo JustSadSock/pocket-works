@@ -62,4 +62,15 @@ assert.equal(mobileOnlyHtmlChange(beforeMobile,afterMobile.replace('>Back</a>','
 assert.equal(mobileOnlyHtmlChange(beforeMobile,afterMobile.replace('data-native-press','style="display:none"')),false,'hidden controls cannot bypass review');
 assert.equal(mobileOnlyHtmlChange('<body><main>Play</main></body>','<body data-app-shell><main>Play</main></body>'),true);
 assert.equal(mobileOnlyHtmlChange('<main>Play</main>','<main>Play</main><button>New action</button>'),false);
+const oldUpdateMarkup='<head><link rel="stylesheet" href="../../shared/mobile-runtime.css"></head>'+
+ '<body><main>Play</main><script type="module" src="./app.js"></script>'+
+ '<script type="module">if(\'serviceWorker\' in navigator) addEventListener(\'load\',()=>navigator.serviceWorker.register(\'./sw.js\',{scope:\'./\'}).catch(()=>{}));</script></body>';
+const managedUpdateMarkup='<head><link rel="stylesheet" href="../../shared/mobile-runtime.css">'+
+ '<link rel="stylesheet" href="../../shared/update-manager.css"></head><body><main>Play</main>'+
+ '<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="MEAT.EXE" data-app-version="1.9.5"></script>'+
+ '<script type="module" src="./app.js"></script></body>';
+assert.equal(mobileOnlyHtmlChange(oldUpdateMarkup,managedUpdateMarkup),true,'managed-update-only changes must not demand a visual redesign');
+assert.equal(mobileOnlyHtmlChange(oldUpdateMarkup,managedUpdateMarkup.replace('<main>Play</main>','<main>Changed gameplay</main>')),false,'changed game visuals remain subject to design direction');
+assert.equal(mobileOnlyHtmlChange(oldUpdateMarkup,managedUpdateMarkup.replace('data-update-manager','data-update-manager style="display:none"')),false,'arbitrary extra behavior cannot hide inside an exempted manager script');
+
 console.log('Creative brief, generic-copy rejection, template detection and changed-app scope passed.');
