@@ -5,6 +5,7 @@ import {MAX_AUDIO_BYTES,MAX_INCOMING_TRANSFERS,validAudioEnvelope,validVideoEnve
 import {renderPremiere,supportsPremiereExport,premiereFilename} from './premiere-export.js';
 import {TimelineHistory,snapshotClips,spliceRecording,packTimeline,unpackTimeline,editClip,replaceSelectedRecording,MIN_CLIP_SECONDS} from './timeline-model.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
+import {createRoomRecovery} from './room-recovery.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {MAX_ROOM_VIDEO_BYTES,MAX_SOURCE_VIDEO_BYTES,formatVideoBytes,estimateVideoBytes,planVideoPreparation,mediaSettingsKey,supportsVideoExport,measureVideoDuration,exportVideo} from './media-lab.js';
 installMobileRuntime();
@@ -45,6 +46,45 @@ let premiereExportController=null,premiereResultUrl=null,premiereExportGeneratio
 const qualityNames=['Экономное','Компактное','Сбалансированное','Высокое','Максимальное'];
 let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0,timelineZoom=1,clipDrag=null,skipTimelineClick=false,micPending=false;
 let micMonitor=null,saveRevision=0,readyPending=false;
+let onlineIds=null,networkInterrupted=false,retryRoomAction='create',retryCheckpoint=null;
+function roomCheckpoint(){
+ const identityKey=identity?.accountId||'guest';
+ let storage=session;
+ if(identityKey!=='guest')try{storage=localStorage}catch{}
+ return createRoomRecovery({storage,identityKey});
+}
+function saveRoomCheckpoint(){
+ if(room&&net?.token&&['host','guest'].includes(mode))
+  roomCheckpoint().save({roomId:room,token:net.token,mode});
+}
+function clearRoomCheckpoint(){roomCheckpoint().clear()}
+function sceneDraftKey(){
+ return scene&&room?room+'::'+scene.id+'::'+scene.start+'::'+scene.duration:'';
+}
+function connectionNotice(){
+ const offline=state?.players?.filter(p=>p.id!==me&&onlineIds&&!onlineIds.has(p.id))||[];
+ const message=networkInterrupted
+  ?'Связь потеряна · восстанавливаем комнату. Сохранённые реплики на устройстве.'
+  :offline.length
+   ?'Нет связи: '+offline.map(p=>p.name).join(', ')+' · места сохранены, можно дождаться возвращения.'
+   :'';
+ const banner=$('connection-banner');
+ banner.textContent=message;
+ banner.classList.toggle('hidden',!message);
+}
+async function restoreLobbyMedia(){
+ if(!room||!scene?.custom||sourceBlob)return;
+ const key=sceneDraftKey();
+ try {
+  const old=await draftRead(key);
+  if(old?.video instanceof Blob){
+   sourceBlob=old.video;writtenVideoByKey.set(key,sourceBlob);setVideoSources();
+   if(meHost())for(const p of state.players)if(p.id!==me)sendVideoTo(p.id);
+  }
+ }catch{}
+ if(!sourceBlob&&meHost())toast('Видео не найдено на устройстве. Выбери исходный файл в комнате повторно.');
+ if(state?.phase==='lobby')roomUI();
+}
 function setDraftStatus(state){
  const copy={idle:'Локальный черновик',saving:'Сохраняем…',saved:'Сохранено',error:'Не сохранено'};
  $('draft-status').dataset.saveState=state;
@@ -445,16 +485,16 @@ function acceptMedia(){
 function sceneForServer(){if(!scene)return null;const {id,title,start,duration,roles,custom}=scene;return {id,title,start,duration,roles,custom:!!custom}}
 function sendGame(data){if(!net||!room)return;try{net.sendGame(data)}catch{toast('Нет соединения. Переподключаемся…')}}
 function roomUI(){
- const s=state;show('room');if(scene)setVideoSources(null);$('join-panel').classList.toggle('hidden',!!s||mode!=='guest');$('room-connection').classList.toggle('hidden',!!s||mode!=='host');
+ const s=state;show('room');if(scene)setVideoSources(null);$('join-panel').classList.toggle('hidden',!!s||mode!=='guest');$('room-connection').classList.toggle('hidden',!!s||(mode!=='host'&&!networkInterrupted));
  $('room-heading').textContent=s?'Ваша команда':mode==='host'?'Создать комнату':'Войти в комнату';$('room-code').textContent=s?room.slice(0,8).toUpperCase():'—';
  $('room-ticket').style.display=s?'flex':'none';$('player-count').textContent=s?s.players.length+'/6':'';
  $('room-phase-note').textContent=s?'Ожидаем актёров':'';
  if(!s){$('room-players').innerHTML='';$('room-help').textContent=mode==='host'?'Подключение требуется для передачи видео другим участникам.':'Введите код, которым поделился ведущий.';$('room-start').classList.add('hidden');return}
  const roleOptions=[...s.scene.roles];for(let i=0;i<s.scene.roles.length;i++)for(let j=i+1;j<s.scene.roles.length;j++)roleOptions.push(s.scene.roles[i]+' + '+s.scene.roles[j]);roleOptions.push('Все роли');for(const name of Object.values(s.assignments))if(name&&!roleOptions.includes(name))roleOptions.push(name);
- $('room-players').innerHTML=s.players.map((p,i)=>'<div class="room-player" style="border-left-color:'+colors[i%colors.length]+'"><span><b>'+esc(p.name)+(p.id===me?' (ты)':'')+'</b><small>'+(p.id===s.host?'Ведущий':'Актёр')+(s.mediaReady?.[p.id]?' · Видео получено':' · Загружаем видео')+'</small></span>'+(meHost()?'<select data-assign="'+esc(p.id)+'">'+roleOptions.map(r=>'<option value="'+esc(r)+'" '+(r===s.assignments[p.id]?'selected':'')+'>'+esc(r)+'</option>').join('')+'</select>':'<b>'+esc(s.assignments[p.id]||'Актёр')+'</b>')+'</div>').join('')+(s.scene.custom&&!sourceBlob&&!meHost()?'<label class="upload-card" style="margin:8px 0"><input data-room-video type="file" accept="video/*" hidden><span class="upload-icon">＋</span><span><b>Видео не передалось?</b><small>Выбери тот же файл на своём устройстве.</small></span></label>':'');
- $('room-help').textContent=esc(s.scene.title)+' · '+fmt(s.scene.duration)+' · '+(s.scene.custom?'личное видео':'CC BY, Blender Studio');$('room-start').classList.toggle('hidden',!meHost());$('room-start').disabled=s.players.length<2||!s.players.every(p=>s.mediaReady?.[p.id]);
+ $('room-players').innerHTML=s.players.map((p,i)=>'<div class="room-player" style="border-left-color:'+colors[i%colors.length]+'"><span><b>'+esc(p.name)+(p.id===me?' (ты)':'')+'</b><small>'+(p.id===s.host?'Ведущий':'Актёр')+(onlineIds&&!onlineIds.has(p.id)?' · Нет связи':s.mediaReady?.[p.id]?' · Видео получено':' · Загружаем видео')+'</small></span>'+(meHost()?'<select data-assign="'+esc(p.id)+'">'+roleOptions.map(r=>'<option value="'+esc(r)+'" '+(r===s.assignments[p.id]?'selected':'')+'>'+esc(r)+'</option>').join('')+'</select>':'<b>'+esc(s.assignments[p.id]||'Актёр')+'</b>')+'</div>').join('')+(s.scene.custom&&!sourceBlob?'<label class="upload-card" style="margin:8px 0"><input data-room-video type="file" accept="video/*" hidden><span class="upload-icon">＋</span><span><b>Видео не передалось?</b><small>Выбери тот же файл на своём устройстве.</small></span></label>':'');
+ $('room-help').textContent=esc(s.scene.title)+' · '+fmt(s.scene.duration)+' · '+(s.scene.custom?'личное видео':'CC BY, Blender Studio');$('room-start').classList.toggle('hidden',!meHost());$('room-start').disabled=s.players.length<2||!s.players.every(p=>s.mediaReady?.[p.id])||(s.scene.custom&&meHost()&&!sourceBlob);
 }
-function waitUI(){show('wait');$('wait-roster').innerHTML=(state?.players||[{id:'solo',name:name}]).map(p=>'<span class="wait-chip '+(mode==='solo'||state?.ready?.[p.id]?'ready':'')+'">'+esc(p.name)+' · '+(mode==='solo'||state?.ready?.[p.id]?'Готов':'Записывает')+'</span>').join('');$('reveal-btn').classList.toggle('hidden',mode==='solo'||!meHost()||!state?.players.every(p=>state.ready?.[p.id]));$('unready-btn').classList.toggle('hidden',mode==='solo')}
+function waitUI(){show('wait');$('wait-roster').innerHTML=(state?.players||[{id:'solo',name:name}]).map(p=>'<span class="wait-chip '+(mode==='solo'||state?.ready?.[p.id]?'ready':'')+'">'+esc(p.name)+' · '+(onlineIds&&!onlineIds.has(p.id)?'Нет связи':mode==='solo'||state?.ready?.[p.id]?'Готов':'Записывает')+'</span>').join('');$('reveal-btn').classList.toggle('hidden',mode==='solo'||!meHost()||!state?.players.every(p=>state.ready?.[p.id]));$('unready-btn').classList.toggle('hidden',mode==='solo')}
 function disposeRemoteClips(){
  for(const c of remoteClips){try{c.audio?.pause()}catch{}if(c.url)URL.revokeObjectURL(c.url)}
  remoteClips=[];
@@ -466,6 +506,7 @@ function stateChanged(s){
  const sceneChanged=!scene||scene.id!==s.scene.id||scene.start!==s.scene.start||
    scene.duration!==s.scene.duration||epochChanged;
  state=s;
+ connectionNotice();
  if(epochChanged||leftPremiere){
   stopPremiereExport();stopAllPlayback();disposeRemoteClips();
   relayInbox.clear();sentPremiere=false;
@@ -489,20 +530,115 @@ function stateChanged(s){
   if(scene.custom&&meHost()&&sourceBlob)
     for(const id of peers.keys())sendVideoTo(id);
  }else if(s.phase==='recording'){
-  if(!prev||prev.phase!=='recording')void openEditor();
+  if(!prev||prev.phase!=='recording'||!['editor','wait'].includes(view))
+   void openEditor().then(()=>{if(state?.phase==='recording'&&state.ready?.[me])waitUI()});
+  else if(view==='wait'&&!s.ready?.[me])void openEditor();
   else if(view==='wait')waitUI();
  }else if(s.phase==='premiere'){
-  if(!prev||prev.phase!=='premiere'){sentPremiere=false;beginPremiere()}
-  else updatePremiereStatus();
+  if(!prev||prev.phase!=='premiere'){
+   sentPremiere=false;
+   if(!localClips.length&&sceneDraftKey())
+    void restore(sceneDraftKey()).then(()=>{if(state?.phase==='premiere')beginPremiere()});
+   else beginPremiere();
+  }else updatePremiereStatus();
  }
 }
-async function connectRoom(action){if(net){try{net.close()}catch{}net=null}show('room');setNetStatus('connecting','Подключаемся…');room=null;state=null;$('room-connection-status').textContent='Подключаемся к PocketNet…';$('room-retry').classList.add('hidden');roomUI();const conn=new PocketNet({serverUrl:roomsOrigin,name,identityKey:identity?.accountId||'guest',storage:session});net=conn;conn.roomId=null;conn.persist();conn.on('connected',m=>{me=m.player?.id||'';setNetStatus('online','PocketNet · онлайн')});
- conn.on('room_joined',m=>{room=m.roomId;if(action==='create'){state=m.state;roomUI();sendGame({type:'scene',scene:sceneForServer()})}else{stateChanged(m.state);if(me)sendGame({type:'sync'})}ensurePeers()});
- conn.on('game_event',m=>{if(m.event?.type==='state'){const s=m.event.payload;stateChanged(s);ensurePeers()}else if(m.event?.type==='notice')toast(m.event.payload);else if(m.event?.type==='signal')receiveSignal(m.event.payload);else if(m.event?.type==='relay')receiveRelay(m.event.payload)});
- conn.on('error',e=>toast('Связь: '+(e.code||e.message||'ошибка')));
- conn.on('disconnected',()=>{setNetStatus('connecting','Переподключаемся…');toast('Соединение потеряно. Записи остались на устройстве.')});
- try{await conn.connect();if(action==='create')conn.createRoom('ne-tem-golosom');else conn.joinRoom(($('join-code').value||new URLSearchParams(location.search).get('room')||'').trim());}catch(e){toast('PocketNet недоступен: '+e.message);setNetStatus('offline','Нет связи');$('room-connection-status').textContent='Не удалось создать комнату. Проверь подключение и попробуй снова.';$('room-retry').classList.remove('hidden');roomUI()}}
-function leaveNetwork(){setNetStatus('idle','PocketNet');relayInbox.clear();relayQueue=Promise.resolve();for(const id of [...peers.keys()])closePeer(id);try{net?.leaveRoom();net?.close()}catch{}net=null;state=null;me='';room='';sentPremiere=false;}
+async function connectRoom(action,checkpoint=null){
+ if(net){try{net.close()}catch{}net=null}
+ retryRoomAction=action;retryCheckpoint=checkpoint;
+ show('room');setNetStatus('connecting','Подключаемся…');
+ room=null;state=null;onlineIds=null;networkInterrupted=false;
+ $('room-connection-status').textContent='Подключаемся к PocketNet…';
+ $('room-retry').classList.add('hidden');roomUI();connectionNotice();
+ const conn=new PocketNet({
+  serverUrl:roomsOrigin,name,identityKey:identity?.accountId||'guest',
+  token:action==='resume'?checkpoint?.token:undefined,storage:session
+ });
+ net=conn;
+ // Only a verified recovery checkpoint may request an automatic seat reclaim.
+ conn.roomId=action==='resume'?checkpoint?.roomId||null:null;
+ conn.persist();
+ let initializedNewRoom=false;
+ conn.on('connected',m=>{me=m.player?.id||'';setNetStatus('online','PocketNet · онлайн')});
+ conn.on('room_joined',async m=>{
+  if(net!==conn)return;
+  room=m.roomId;
+  onlineIds=Array.isArray(m.onlineIds)?new Set(m.onlineIds):null;
+  networkInterrupted=false;
+  if(action==='create'&&!initializedNewRoom){
+   initializedNewRoom=true;
+   state=m.state;roomUI();
+   // Save custom source before anyone starts playing, not only at the first voice take.
+   if(scene?.custom&&sourceBlob){
+    projectKey=sceneDraftKey();
+    if(!await draftWrite())toast('Видео не удалось сохранить для восстановления.');
+   }
+   saveRoomCheckpoint();
+   sendGame({type:'scene',scene:sceneForServer()});
+  }else{
+   initializedNewRoom=true;
+   stateChanged(m.state);
+   saveRoomCheckpoint();
+   if(m.state?.phase==='lobby')await restoreLobbyMedia();
+   if(net!==conn)return;
+   sendGame({type:'sync'});
+  }
+  if(net!==conn)return;
+  ensurePeers();connectionNotice();
+ });
+ conn.on('presence',m=>{
+  if(m.roomId!==room||!Array.isArray(m.onlineIds))return;
+  onlineIds=new Set(m.onlineIds);
+  ensurePeers();connectionNotice();
+  if(view==='room')roomUI();
+  if(view==='wait')waitUI();
+ });
+ conn.on('game_event',m=>{
+  if(m.event?.type==='state'){stateChanged(m.event.payload);ensurePeers()}
+  else if(m.event?.type==='notice')toast(m.event.payload);
+  else if(m.event?.type==='signal')receiveSignal(m.event.payload);
+  else if(m.event?.type==='relay')receiveRelay(m.event.payload);
+ });
+ const endRoom=(reason)=>{
+  if(net!==conn)return;
+  clearRoomCheckpoint();conn.close();net=null;room=null;state=null;
+  onlineIds=null;networkInterrupted=false;connectionNotice();
+  setNetStatus('offline','Комната недоступна');show('home');toast(reason);
+ };
+ conn.on('room_closed',()=>endRoom('Комната закрыта. Сохранённые черновики остались на устройстве.'));
+ conn.on('room_kicked',()=>endRoom('Ты больше не участник комнаты. Локальные записи сохранены.'));
+ conn.on('error',e=>{
+  const code=e.code||e.message||'ошибка';
+  if(code==='room_not_found'||code==='room_version_unavailable'){
+   endRoom('Комната больше недоступна. Локальные записи не удалены.');
+   return;
+  }
+  toast('Связь: '+code);
+ });
+ conn.on('disconnected',()=>{
+  if(net!==conn)return;
+  networkInterrupted=true;onlineIds?.delete(me);
+  for(const id of [...peers.keys()])closePeer(id);
+  setNetStatus('connecting','Переподключаемся…');
+  connectionNotice();
+  toast('Соединение потеряно. Записи остались на устройстве.');
+ });
+ try{
+  await conn.connect();
+  if(net!==conn)return;
+  if(action==='create')conn.createRoom('ne-tem-golosom');
+  else if(action==='join')conn.joinRoom(($('join-code').value||new URLSearchParams(location.search).get('room')||'').trim());
+  // 'resume' is joined automatically by PocketNet upon authentication.
+ }catch(e){
+  if(net!==conn)return;
+  networkInterrupted=true;connectionNotice();
+  toast('PocketNet недоступен: '+e.message);
+  setNetStatus('offline','Нет связи');
+  $('room-connection-status').textContent=action==='create'?'Не удалось создать комнату. Проверь подключение и попробуй снова.':'Соединение не установлено. Проверь интернет и повтори попытку.';
+  $('room-retry').classList.remove('hidden');roomUI();
+ }
+}
+function leaveNetwork(){clearRoomCheckpoint();networkInterrupted=false;onlineIds=null;connectionNotice();setNetStatus('idle','PocketNet');relayInbox.clear();relayQueue=Promise.resolve();for(const id of [...peers.keys()])closePeer(id);try{net?.leaveRoom();net?.close()}catch{}net=null;state=null;me='';room='';sentPremiere=false;}
 async function resetRuntime(){
  stopPremiereExport();premiereLocalCopy=null;videoExportController?.abort();encodedCache=null;clearExportPreview();cancelCountdown();
  if(record)finishRecording();
@@ -524,7 +660,16 @@ function peer(id,initiator){if(!window.RTCPeerConnection)return toast('WebRTC н
  pc.ondatachannel=e=>attachChannel(p,e.channel);
  if(initiator){const dc=pc.createDataChannel('footage',{ordered:true});attachChannel(p,dc);pc.createOffer().then(o=>pc.setLocalDescription(o)).then(()=>sendGame({type:'signal',to:id,signal:{kind:'offer',sdp:pc.localDescription.sdp}})).catch(()=>toast('Не удалось создать соединение для видео.'))}
  return p}
-function ensurePeers(){if(!state||!me)return;for(const p of state.players){if(p.id===me)continue;if(meHost()){if(!peers.has(p.id))peer(p.id,true)}else if(p.id===state.host){if(!peers.has(p.id))peer(p.id,false)}}for(const id of [...peers.keys()])if(!state.players.some(p=>p.id===id))closePeer(id)}
+function ensurePeers(){
+ if(!state||!me)return;
+ for(const p of state.players){
+  if(p.id===me||(onlineIds&&!onlineIds.has(p.id)))continue;
+  if(meHost()){if(!peers.has(p.id))peer(p.id,true)}
+  else if(p.id===state.host){if(!peers.has(p.id))peer(p.id,false)}
+ }
+ for(const id of [...peers.keys()])
+  if(!state.players.some(p=>p.id===id)||(onlineIds&&!onlineIds.has(id)))closePeer(id);
+}
 async function receiveSignal(data){if(!data||!state?.players.some(p=>p.id===data.from))return;const from=data.from,x=data.signal||{};let p=peers.get(from)||peer(from,false);if(!p)return;try{if(x.kind==='offer'&&typeof x.sdp==='string'){await p.pc.setRemoteDescription({type:'offer',sdp:x.sdp});const answer=await p.pc.createAnswer();await p.pc.setLocalDescription(answer);sendGame({type:'signal',to:from,signal:{kind:'answer',sdp:p.pc.localDescription.sdp}})}else if(x.kind==='answer'&&typeof x.sdp==='string'){await p.pc.setRemoteDescription({type:'answer',sdp:x.sdp})}else if(x.kind==='ice'&&x.candidate){if(!p.pc.remoteDescription)p.pending.push(x.candidate);else await p.pc.addIceCandidate(x.candidate)}if(p.pc.remoteDescription&&p.pending.length){for(const c of p.pending.splice(0))await p.pc.addIceCandidate(c).catch(()=>{})}}catch(e){toast('Ошибка соединения с актёром: '+e.message)}}
 function attachChannel(p,dc){p.dc=dc;dc.binaryType='arraybuffer';dc.bufferedAmountLowThreshold=128*1024;dc.onopen=()=>{flush(p);if(meHost()&&scene?.custom&&sourceBlob)sendVideoTo(p.id);if(state?.phase==='premiere'&&sentPremiere)sendOwnTo(p.id)};
  dc.onmessage=e=>onMedia(p,e.data);dc.onclose=()=>{p.dc=null;p.rx=null};dc.onerror=()=>toast('Передача медиа была прервана.')}
@@ -682,7 +827,7 @@ function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{
  epoch:state?.mediaEpoch,mime:c.blob.type
 })}
 function sendAllOwn(){if(sentPremiere||mode==='solo')return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
-async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
+async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}if(mode!=='solo'&&state?.phase!=='recording')return;setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
 function stopAllPlayback(){playing=false;for(const id of ['stage-video','premiere-video','trim-video'])$(id).pause();for(const c of [...localClips,...remoteClips])c.audio?.pause();$('play-toggle').textContent='▶'}
 function updateClipSound(t,on,isPremiere=false){const items=isPremiere?[...localClips,...remoteClips]:localClips;for(const c of items){if(!c.audio)continue;const active=t>=c.start&&t<c.end&&on;const offset=clamp(t-c.start+c.offset,0,Math.max(0,c.blob.size?1e5:0));if(active){if(c.audio.paused||Math.abs(c.audio.currentTime-offset)>.25){try{c.audio.currentTime=offset}catch{}}if(c.audio.paused)c.audio.play().catch(()=>{})}else if(!c.audio.paused)c.audio.pause()}}
 // Video time updates move only the playhead. Clip buttons retain focus.
@@ -947,6 +1092,7 @@ async function markReady(){
   if(!await draftWrite())return;
   if(mode==='solo'){beginPremiere();cue('ready');return}
   if(!state||state.phase!=='recording'){toast('Комната ещё не готова.');return}
+  if(net?.socket?.readyState!==WebSocket.OPEN){toast('Нет связи. Реплики сохранены — дождись переподключения.');return}
   sendGame({type:'ready',count:localClips.length});
   waitUI();cue('ready');
  }finally{
@@ -1103,7 +1249,7 @@ $('role-tags').onclick=e=>{const b=e.target.closest('[data-remove-role]');if(!b)
 $('role-tags').oninput=e=>{if(e.target.matches('[data-role-index]'))selected.roles[Number(e.target.dataset.roleIndex)]=e.target.value};
 $('confirm-scene').onclick=confirmScene;
 
-$('room-retry').onclick=()=>connectRoom('create');
+$('room-retry').onclick=()=>connectRoom(retryRoomAction,retryCheckpoint);
 $('enter-room').onclick=()=>{const code=$('join-code').value.trim();if(!/^[a-f0-9-]{8,36}$/i.test(code))return toast('Введи код из приглашения.');connectRoom('join')};
 $('copy-invite').onclick=()=>{if(!room)return;const url=new URL(location.href);url.search='?room='+room.slice(0,8).toUpperCase();const text=url.href;navigator.clipboard?.writeText(text).then(()=>toast('Ссылка скопирована')).catch(()=>toast('Код: '+room.slice(0,8).toUpperCase()))};
 $('room-players').onchange=async e=>{
@@ -1114,7 +1260,13 @@ $('room-players').onchange=async e=>{
   const duration=await new Promise(resolve=>{test.preload='metadata';test.src=src;test.onloadedmetadata=()=>resolve(test.duration);test.onerror=()=>resolve(0);setTimeout(()=>resolve(0),8000)});
   test.removeAttribute('src');test.load();URL.revokeObjectURL(src);
   if(!Number.isFinite(duration)||duration<scene.start+scene.duration-.1)return toast('Это видео не подходит по продолжительности.');
-  sourceBlob=f;setVideoSources();sendGame({type:'media_ready',scene:scene.id,epoch:state?.mediaEpoch});toast('Видео подключено.');roomUI();return;
+  sourceBlob=f;setVideoSources();
+  if(meHost()){
+   projectKey=sceneDraftKey();
+   if(!await draftWrite())return;
+   for(const p of state?.players||[])if(p.id!==me)sendVideoTo(p.id);
+  }else sendGame({type:'media_ready',scene:scene.id,epoch:state?.mediaEpoch});
+  toast('Видео подключено.');roomUI();return;
  }
  const sel=e.target.closest('[data-assign]');if(sel)sendGame({type:'assign',target:sel.dataset.assign,role:sel.value});
 };
@@ -1261,7 +1413,26 @@ document.addEventListener('keydown',e=>{
    else if(selectedClip){selectedClip=null;renderTimeline();}
  }
 });
-getPocketIdentity().then(p=>{identity=p;name=p?.complete?p.nickname:(session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900))));if(!p?.complete)session.setItem('name',name);}).catch(()=>{name=session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900)));session.setItem('name',name)});
-const incoming=new URLSearchParams(location.search).get('room');
-if(incoming){mode='guest';$('join-code').value=incoming.toUpperCase();roomUI();connectRoom('join')}
+async function initializeIdentityAndRecovery(){
+ try{
+  identity=await getPocketIdentity();
+  name=identity?.complete?identity.nickname:(session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900))));
+ }catch{
+  name=session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900)));
+ }
+ if(!identity?.complete)session.setItem('name',name);
+ const incoming=new URLSearchParams(location.search).get('room');
+ const checkpoint=roomCheckpoint().read();
+ if(incoming){
+  if(checkpoint&&checkpoint.roomId.slice(0,8).toLowerCase()===incoming.slice(0,8).toLowerCase()){
+   mode=checkpoint.mode;$('join-code').value=checkpoint.roomId;void connectRoom('resume',checkpoint);
+  }else{
+   mode='guest';$('join-code').value=incoming.toUpperCase();void connectRoom('join');
+  }
+ }else if(checkpoint){
+  mode=checkpoint.mode;$('join-code').value=checkpoint.roomId;
+  void connectRoom('resume',checkpoint);
+ }
+}
+void initializeIdentityAndRecovery();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));

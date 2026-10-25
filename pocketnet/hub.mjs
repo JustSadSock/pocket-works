@@ -136,7 +136,10 @@ export class PocketNetHub {
        bytes({roomId:room.id,gameId:room.gameId,version:room.version,state,players:room.players})>MAX_EVENT_BYTES)
       throw Error('room_view_too_large');
     message(ws,'room_joined',{roomId:room.id,gameId:room.gameId,version:room.version,
-      state,players:room.players});
+      state,players:room.players,
+      onlineIds:room.gameId==='ne-tem-golosom'
+        ?this.sockets(room.id).map(s=>s.deserializeAttachment()?.id).filter(Boolean)
+        :undefined});
   }
   emit(room, events) {
     if (!Array.isArray(events) || events.length > 32) throw new Error('invalid_module_events');
@@ -225,7 +228,7 @@ export class PocketNetHub {
     }
     if (changed) {
       this.persist(room);
-      this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
+      this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: ['black-bazaar','ne-tem-golosom'].includes(room.gameId)?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
       await this.refreshZamazkaPresence(room);
     }
   }
@@ -739,7 +742,7 @@ export class PocketNetHub {
                  if(Array.isArray(room.state.ranking))room.state.ranking=room.state.ranking.map(p=>p.id===player.id?{...p,name:member.name,character:member.name}:p);
                }
               this.persist(room);
-              this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
+              this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: ['black-bazaar','ne-tem-golosom'].includes(room.gameId)?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
             }
             this.setRoom(ws, room.id);
             await this.updateBazaarPresence(room,member,true);
@@ -747,7 +750,7 @@ export class PocketNetHub {
             await this.refreshZamazkaPresence(room);
             await this.updateChyepukhaPresence(room,member,true);
           }
-          this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
+          this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: ['black-bazaar','ne-tem-golosom'].includes(room.gameId)?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
           return;
         }
         // Time echoes must not deserialize up to eight large SQL artwork
@@ -892,7 +895,7 @@ export class PocketNetHub {
           else {
             this.persist(room);
             this.emit(room, result.events ?? []);
-            this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
+            this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: ['black-bazaar','ne-tem-golosom'].includes(room.gameId)?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined });
           }
           return;
         }
@@ -923,11 +926,15 @@ export class PocketNetHub {
         const stillConnected=!!this.connected(info.id,room.id);
         if(!stillConnected){
           if(shouldAnnounceSocketDeparture(info,stillConnected))
-            this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: room.gameId==='black-bazaar'?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined, disconnected: info.id });
+            this.broadcast(room, 'presence', { roomId: room.id, players: room.players, onlineIds: ['black-bazaar','ne-tem-golosom'].includes(room.gameId)?this.sockets(room.id).map(ws=>ws.deserializeAttachment()?.id).filter(Boolean):undefined, disconnected: info.id });
           await this.updateBazaarPresence(room,{id:info.id},false);
           await this.updateChyepukhaPresence(room,{id:info.id},false);
         }
         await this.refreshZamazkaPresence(room);
+        // The 12-hour recovery window starts at the last disconnection, not
+        // at the most recent game action (actors may edit for many hours).
+        if(room.gameId==='ne-tem-golosom'&&!this.sockets(room.id).length)
+          this.persist(room);
         this.ensureAlarm();
       }
     }
@@ -950,6 +957,7 @@ export class PocketNetHub {
           : room?.gameId==='chyepukha'&&['v5','v6','v7','v8','v9','v10'].includes(room.version)&&room.state?.phase==='finished' ? 7*24*60*60_000
           : room?.gameId==='fog-of-conquest'&&room.state?.phase==='battle' ? 6*24*60*60_000
           : room?.gameId==='zamazka'&&room.state?.paused ? 12*60*60_000
+          : room?.gameId==='ne-tem-golosom' ? 12*60*60_000
           : room?.gameId==='black-bazaar'&&['v17','v18','v19','v20','v21','v22','v23'].includes(room.version)&&room.state?.phase==='play'&&room.state?.offlinePaused
             ? 24*60*60_000 : ROOM_TTL;
         if(now-row.updated_at>=ttl&&!this.sockets(row.id).length){

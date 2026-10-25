@@ -64,8 +64,9 @@ const clients=[];
 const ready=await health();
 assert(ready.modules.includes('ne-tem-golosom'),'PocketNet must publish Ne Tem Golosom');
 try{
- const [host,guest]=await Promise.all(['NTG Host','NTG Guest'].map(async name=>{
-  const c=await actor(await getToken(name));clients.push(c);return c;
+ const tokens=await Promise.all(['NTG Host','NTG Guest'].map(getToken));
+ let [host,guest]=await Promise.all(tokens.map(async token=>{
+  const c=await actor(token);clients.push(c);return c;
  }));
  host.send('create_room',{gameId:'ne-tem-golosom'});
  const room=await host.next('room_joined');
@@ -89,6 +90,21 @@ try{
  assert.equal(stale.event.payload.mediaReady[guest.id],false);
  await sendGame(guest,{type:'media_ready',scene:scene.id,epoch});
  await guest.next('game_event',event('lobby',s=>s.mediaReady[guest.id]===true));
+ // A dropped guest keeps their seat and acknowledged video, rather than
+ // triggering onLeave/onJoin which would reset the current scene.
+ const guestId=guest.id,guestOffline=host.next('presence',p=>
+  p.disconnected===guestId&&Array.isArray(p.onlineIds)&&!p.onlineIds.includes(guestId));
+ guest.close();
+ await guestOffline;
+ guest=await actor(tokens[1]);clients.push(guest);
+ assert.equal(guest.id,guestId);
+ guest.send('join_room',{roomId});
+ const resumedLobby=await guest.next('room_joined');
+ assert.equal(resumedLobby.state.scene.id,scene.id);
+ assert.equal(resumedLobby.state.mediaEpoch,epoch);
+ assert.equal(resumedLobby.state.mediaReady[guestId],true);
+ assert.equal(resumedLobby.state.players.length,2);
+ assert(resumedLobby.onlineIds.includes(guestId));
  await sendGame(host,{type:'start'});
  const started=await host.next('game_event',event('recording'));
  assert.equal(started.event.payload.phase,'recording');
@@ -97,6 +113,21 @@ try{
  await sendGame(host,{type:'ready',count:1});
  await sendGame(guest,{type:'ready',count:1});
  await host.next('game_event',event('recording',s=>s.ready[host.id]&&s.ready[guest.id]));
+ // Even after both voice actors have finished, reconnecting the host must
+ // not reset readiness, promote a new host or create a replacement room.
+ const hostId=host.id,hostOffline=guest.next('presence',p=>
+  p.disconnected===hostId&&Array.isArray(p.onlineIds)&&!p.onlineIds.includes(hostId));
+ host.close();
+ await hostOffline;
+ host=await actor(tokens[0]);clients.push(host);
+ assert.equal(host.id,hostId);
+ host.send('join_room',{roomId});
+ const resumedRecording=await host.next('room_joined');
+ assert.equal(resumedRecording.state.phase,'recording');
+ assert.equal(resumedRecording.state.mediaEpoch,epoch);
+ assert.equal(resumedRecording.state.host,hostId);
+ assert.equal(resumedRecording.state.ready[hostId],true);
+ assert.equal(resumedRecording.state.ready[guestId],true);
  await sendGame(host,{type:'reveal'});
  await guest.next('game_event',event('premiere'));
  const meta={id:'guest-voice-1',owner:guest.id,start:1,end:2,offset:0,epoch};
@@ -112,7 +143,7 @@ try{
  await sendGame(guest,{type:'media_ready',scene:scene.id,epoch});
  await sendGame(guest,{type:'sync'});
  assert.equal((await guest.next('game_event',event('lobby',s=>s.mediaEpoch===epoch+1))).event.payload.mediaReady[guest.id],false);
- console.log('PocketNet v3: authenticated join, scene receipts, ready, relay, repeat and epoch reset passed');
+ console.log('PocketNet v3: authenticated join, seat recovery, offline presence, scene receipts, ready, relay, repeat and epoch reset passed');
 }finally{
  for(const c of clients)c.close();
 }
