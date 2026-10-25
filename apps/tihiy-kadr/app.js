@@ -1,5 +1,6 @@
 import {RATE,MAX_SECONDS,validRange,mixPCM,wavPCM16,elapsed,safeName} from './audio-utils.js';
-const $=id=>document.getElementById(id),video=$('result-video'),sourceVideo=$('source-video'),audio=$('monitor');
+const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
+let sourceVideo=$('source-video');
 let file=null,fileURL='',audioURL='',length=0,range=null,original=null,stems=null,inferenceTime=0;
 let worker=null,abort=null,serial=0,exporting=false,editTimer=null,mode='clean',fileName='video';
 const text=(id,msg)=>$(id).textContent=String(msg),show=(id,on)=>$(id).classList.toggle('hidden',!on);
@@ -90,6 +91,7 @@ async function capture(selected,signal){
   await seek(sourceVideo,selected.start);
   node=ctx.createMediaElementSource(sourceVideo);
   processor=ctx.createScriptProcessor(4096,2,2);node.connect(processor);processor.connect(ctx.destination);
+  sourceVideo.muted=false;
   processor.onaudioprocess=e=>{
    const n=Math.min(e.inputBuffer.length,Math.max(0,size-count));
    for(let i=0;i<2;i++){
@@ -108,7 +110,13 @@ async function capture(selected,signal){
   }
   if(count<size*.7)throw Error('Браузер не может извлечь аудиодорожку. Попробуй MP4 с AAC или WebM с Opus.');
   return pieces.map(parts=>{const result=new Float32Array(size);let at=0;for(const p of parts){result.set(p,at);at+=p.length}return result});
- }finally{sourceVideo.pause();processor?.disconnect();node?.disconnect();await ctx.close().catch(()=>{})}
+ }finally{
+  sourceVideo.pause();processor?.disconnect();node?.disconnect();await ctx.close().catch(()=>{});
+  // Once a MediaElementSource is bound it cannot be rebound to a new context.
+  // Replace the video element for the next input or retry.
+  const fresh=sourceVideo.cloneNode(false);fresh.muted=true;
+  sourceVideo.replaceWith(fresh);sourceVideo=fresh;
+ }
 }
 async function pcm(selected,signal){
  try{return await decode(selected,signal)}
