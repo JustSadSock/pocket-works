@@ -9,10 +9,11 @@ import {chromium} from '@playwright/test';
 
 const dir=process.env.ZAMAZKA_QA_ARTIFACT_DIR||join(tmpdir(),'zamazka-fill-playwright');
 mkdirSync(dir,{recursive:true});
-const fillSource=readFileSync(new URL('../fill-core.js',import.meta.url),'utf8').replace('export function ','function ');
+const fillSource=readFileSync(new URL('../fill-core.js',import.meta.url),'utf8').replaceAll('export function ','function ');
+assert(fillSource.includes('function floodFillRaster(')&&!fillSource.includes('export function'),'classic browser QA script must expose every raster function without ESM export tokens');
 const editorSource=readFileSync(new URL('../editor.js',import.meta.url),'utf8');
-const section=editorSource.slice(editorSource.indexOf('export function preservePaintContours('),editorSource.indexOf('function fillRegion('));
-assert(section.includes('useWallPigment'));
+const section=editorSource.slice(editorSource.indexOf('export function preservePaintContours('),editorSource.indexOf('export function fillRegion('));
+assert(section.includes('useWallPigment')&&!section.trimEnd().endsWith('export'),'inject complete contour helper, not a dangling ESM keyword');
 const browser=await chromium.launch({headless:true});
 try{
  const page=await browser.newPage({viewport:{width:980,height:720},deviceScaleFactor:1});
@@ -30,6 +31,7 @@ try{
   <article><h2>Повторная заливка · синий</h2><canvas id="right" width="400" height="250"></canvas></article></section>
   <footer>Две независимые области · сохранённый контур · повторное окрашивание</footer>`);
  await page.addScriptTag({content:fillSource+'\n'+section.replace('export function','function')});
+ await page.evaluate(()=>{if(typeof floodFillRaster!=='function'||typeof preservePaintContours!=='function')throw Error('QA raster and contour helpers were not injected');});
  for(const kind of ['curved','thin','nested','edge','diagonal','crossing']){
   const result=await page.evaluate(kind=>{
    const W=400,H=250,at=(x,y)=>(y*W+x)*4,wall=document.createElement('canvas'),wc=wall.getContext('2d');

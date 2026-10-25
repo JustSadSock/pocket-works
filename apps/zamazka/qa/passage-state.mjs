@@ -50,7 +50,8 @@ assert.equal(count.textContent,'8 / 8');
 assert.equal(meter.attrs['aria-valuenow'],'8');
 assert.equal(meter.style.values['--passage-progress'],'100.00%');
 assert(ui.classList['passage-all-ready']);
-assert(readyMsg.textContent.includes('Все работы сданы'));
+assert(readyMsg.textContent.includes('Все изображения подготовлены'),'full readiness indicates the image handoff, not premature voting');
+assert(!readyMsg.textContent.includes('Переходим к экспертизе.'),'waiting room does not imply a finished ballot while images are pending');
 const rootPaint={querySelector(s){
  if(s==='#artLoadTrack')return meter;
  if(s==='#artLoadCount')return count;
