@@ -10,6 +10,7 @@ test('Magic 2.0 seeded PvP proxy covers every elemental pair, both seats and thr
  assert.ok(report.pairs.every(p=>p.hpExchangePairs>0),'No matchup may be evaluated solely through non-damaging movement');
  assert.ok(report.pairs.every(p=>Object.values(p.byTactic).every(v=>v.totalPairs===PROFILES.length*AIM_MODES.length*2)));
  assert.ok(report.pairs.every(p=>Object.values(p.byAimMode).every(v=>v.totalPairs===PROFILES.length*TACTICS.length*2)));
+ assert.ok(report.pairs.every(p=>Object.values(p.byProfile).every(v=>v.totalPairs===TACTICS.length*AIM_MODES.length*2)));
  assert.ok(report.pairs.every(p=>p.seatNeutralHpAdvantage!==null),'Do not infer balance from inactive matchups');
  assert.ok(report.matches.every(m=>Number.isFinite(m.hpDelta)&&m.ticks>0&&m.ticks<=900));
  assert.ok(report.matches.every(m=>m.hp.every(n=>Number.isFinite(n)&&n>=0&&n<=100)));
