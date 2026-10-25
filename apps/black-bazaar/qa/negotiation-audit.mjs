@@ -80,7 +80,7 @@ function tradePublic(s,me,profile,stats){
   const preview=view(s,buyer.id),listing=preview.listing;
   assert.ok(listing&&listing.seller===me.id);
   const perceived=(listing.rarity==='редкий'?92:72)+randomInt(-25,25);
-  if(roll(profile.inspect)&&buyer.resources.gold>=preview.you.inspectionPrices.public){
+  if(roll(profile.inspect)&&!preview.you.inspections.some(i=>i.itemId===listing.id)&&buyer.resources.gold>=preview.you.inspectionPrices.public){
    send(s,buyer.id,{type:'inspect'});stats.publicInspections++;
    const result=view(s,buyer.id).you.inspections[0];
    if(result?.curse)stats.cursesDiscovered++;
@@ -118,7 +118,7 @@ function tradePrivate(s,me,profile,stats){
 }
 function tradeBlack(s,me,profile,stats){
  if(![2,5,8].includes(s.round)||me.blackListedRound===s.round||!roll(profile.black))return;
- const available=me.items.filter(i=>i.acquiredRound!==s.round);
+ const available=me.items.filter(i=>i.acquiredRound!==s.round&&i.id!==s.listing?.itemId);
  if(!available.length)return;
  const item=available[randomInt(0,available.length-1)];
  send(s,me.id,{type:'black_post',itemId:item.id,ask:gold(randomInt(35,100))});
@@ -138,7 +138,7 @@ function tradeBlack(s,me,profile,stats){
   const ask=publicLot.ask.gold;
   const offer=Math.floor(ask*(.62+Math.random()*.4));
   if(buyer.resources.gold-offer<remainingGold(buyer)){stats.noLiquidity++;continue;}
-  if(roll(profile.inspect)&&buyer.resources.gold>=v.you.inspectionPrices.black){
+  if(roll(profile.inspect)&&!publicLot.inspection&&buyer.resources.gold>=v.you.inspectionPrices.black){
    send(s,buyer.id,{type:'black_inspect',lotId:lot.id});stats.blackInspections++;
   }
   send(s,buyer.id,{type:'black_bid',lotId:lot.id,offer:gold(offer)});stats.blackOffers++;
