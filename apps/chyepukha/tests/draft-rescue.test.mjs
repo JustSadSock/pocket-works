@@ -68,3 +68,15 @@ test('the editor exposes a real copy rescue action only when persistence is degr
  assert.match(volatile,/перед виходом або перезавантаженням/);
  assert.doesNotMatch(volatile,/id="draftStorageNotice"[^>]*hidden/);
 });
+
+test('receipt outbox uses tab persistence if local quota is full and clears both copies',()=>{
+ const primary=storage({failWrite:true}),tab=storage(),key='pocket-works:chyepukha:submit:seat:room';
+ const payload=JSON.stringify({requestId:'1234-5678-9abc',sheetId:'sheet-0',answer:'Не губити відповідь'});
+ const store=createDraftStore(primary,tab);
+ assert.equal(store.write(key,payload),'tab');
+ assert.equal(createDraftStore(primary,tab).read(key),payload);
+ const reopened=createDraftStore(primary,tab);
+ reopened.remove(key);
+ assert.equal(reopened.read(key),null);
+ assert.equal(tab.getItem(key),null);
+});
