@@ -26,7 +26,7 @@ function step(title,detail='',ratio=null){text('progress-heading',title);text('p
 function pause(){video.pause();sourceVideo.pause();audio.pause()}
 function reset(){
  pause();revoke(audioURL);audioURL='';audio.removeAttribute('src');audio.load();
- video.removeAttribute('src');video.load();original=null;stems=null;range=null;
+ video.removeAttribute('src');video.load();original=null;stems=null;range=null;activeStudy=null;
  show('result-details',false);show('empty-state',true);text('result-state','Ожидание обработки');text('export-status','');text('stem-diagnostics','');text('result-position','0:00');$('result-seek').value=0;text('listen-btn','▶ Слушать результат');
 }
 function cancel(){
@@ -90,6 +90,13 @@ async function decode(selected,signal){
   const buffer=await ctx.decodeAudioData(await file.arrayBuffer());
   if(signal.aborted)throw new DOMException('Прервано','AbortError');
   if(!buffer.numberOfChannels||!buffer.length)throw Error('Нет звуковых дорожек.');
+  if([6,8].includes(buffer.numberOfChannels)){
+   // Capture real surround channels BEFORE stereo downmix in OfflineAudioContext.
+   const from=Math.floor(selected.start*buffer.sampleRate),to=Math.min(buffer.length,from+Math.round(selected.duration*buffer.sampleRate));
+   studySurround=resamplePCM(Array.from({length:buffer.numberOfChannels},(_,i)=>buffer.getChannelData(i).slice(from,to)),
+    buffer.sampleRate,RATE);
+   studySurroundRate=RATE;
+  }
   const offline=new OfflineAudioContext(Math.min(2,buffer.numberOfChannels),Math.floor(selected.duration*RATE),RATE);
   const node=offline.createBufferSource();node.buffer=buffer;node.connect(offline.destination);
   node.start(0,selected.start,selected.duration);
@@ -170,7 +177,11 @@ async function process(){
  uiBusy(true);let timer=null;
  try{
   const selected=validRange(Number($('start-seconds').value),Number($('duration-seconds').value),length);
+  const signature=selected.start.toFixed(3)+'|'+selected.duration.toFixed(3);
+  if(studySignature!==signature)clearStudy();
+  studySignature=signature;
   range=selected;original=await pcm(selected,signal.signal);
+  if(studySurround?.length>=6)registerSurround(true);
   if(signal.signal.aborted||id!==serial)return;
   const start=performance.now();
   timer=setInterval(()=>text('progress-detail','Разделяем '+elapsed(selected.duration)+' звука · прошло '+elapsed((performance.now()-start)/1000)),500);
