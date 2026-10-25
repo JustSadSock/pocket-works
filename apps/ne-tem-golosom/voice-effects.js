@@ -12,7 +12,7 @@ const IDS=new Set(VOICE_EFFECTS.map(x=>x.id));
 export const normalizeVoiceEffect=value=>IDS.has(value)?value:'clean';
 const distortion=(ctx,amount)=>{
  const node=ctx.createWaveShaper(),n=256,curve=new Float32Array(n),k=amount;
- for(let i=0;i<n;i++){const x=2*i/(n-1)-1;curve[i]=(3+k)*x*20/(Math.PI+k*Math.abs(x))}
+ for(let i=0;i<n;i++){const x=2*i/(n-1)-1;curve[i]=(3+k)*x*20*(Math.PI/180)/(Math.PI+k*Math.abs(x))}
  node.curve=curve;node.oversample='2x';return node;
 };
 // Returns reusable cleanup for effects with feedback paths.
