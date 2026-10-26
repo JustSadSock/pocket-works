@@ -69,6 +69,8 @@ try{
     assert(await page.locator('#media-workbench').isVisible(),'video controls not displayed');
     assert.match(await page.locator('#media-fast-status').innerText(),/без сжатия/i,'small import should take the fast path');
     assert.equal(await page.locator('#media-keep-audio').isChecked(),false,'soundtrack processing off by default');
+    assert.equal(await page.locator('input[name="film-clean-mode"]:checked').inputValue(),'umx','Open-Unmix must be the default model');
+    await page.locator('#film-skip').check(); // Fixture has no audio; skip AI here, covered by separate neural test.
     if(viewport.name==='desktop'){
       const layout=await page.evaluate(()=>{
         const footer=document.querySelector('#confirm-scene').getBoundingClientRect();
