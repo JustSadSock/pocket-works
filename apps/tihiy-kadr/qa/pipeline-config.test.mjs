@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {ROUTES,routeById,planRoute,planCustom,makeRunKey,calculateSpeed} from '../pipeline-config.js';
+import {ROUTES,routeById,planRoute,planCustom,makeRunKey,makeInputKey,calculateSpeed} from '../pipeline-config.js';
 
 test('all seven pipelines use three real ONNX architectures, not placebo labels',()=>{
  assert.equal(ROUTES.length,7);
@@ -29,6 +29,25 @@ test('window stride and input identity control cache keys safely',()=>{
  assert.equal(planCustom('unknown','original',1),null);
  assert.equal(planCustom('umxhq','original',1).model,'umxhq');
  assert.throws(()=>makeRunKey('scnet','original',.3));
+});
+test('tuning vocal subtraction changes downstream cache identity without rerunning its source',()=>{
+ const source='scnet|mrx|original|1';
+ const first=makeInputKey(source,.8),adjusted=makeInputKey(source,.4);
+ assert.notEqual(first,adjusted);
+ assert.equal(first,makeInputKey(source,.8));
+ assert.equal(makeInputKey(source),source);
+ assert.notEqual(makeRunKey('mrx',first),makeRunKey('mrx',adjusted));
+ assert.throws(()=>makeInputKey(source,1.01));
+ assert.throws(()=>makeInputKey(source,-.1));
+});
+test('cancelled Worker rejects its pending promise so route intervals can finish',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/pendingWorkerReject\?\.\(new DOMException/);
+ assert.match(app,/pendingWorkerReject=rejectPending/);
+ assert.match(app,/inputKey=run\.key/);
+ assert.match(app,/studyResults\.get\(inputId\)\?\.inputKey/);
+ assert.match(app,/subtractResidualVocals\(cached\.base,cached\.vocals,strength\)/);
+ assert.match(app,/strength:preview\.strength/);
 });
 test('runtime projections remain estimates, not fabricated elapsed timings',()=>{
  const estimate=calculateSpeed(20,198000);

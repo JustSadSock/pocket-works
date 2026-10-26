@@ -12,6 +12,13 @@ export const ROUTES=Object.freeze([
 ]);
 export const routeById=id=>ROUTES.find(x=>x.id===id)||null;
 export const validScnetStep=v=>[.25,.5,1].includes(v);
+// Revised gain yields a different input key, preventing stale chained output.
+export const makeInputKey=(runKey,strength=null)=>{
+ if(typeof runKey!=='string'||!runKey)throw Error('Неизвестная звуковая дорожка.');
+ if(strength===null)return runKey;
+ if(!Number.isFinite(strength)||strength<0||strength>1)throw Error('Некорректная сила удаления вокала.');
+ return runKey+'|gain:'+strength.toFixed(3);
+};
 export const makeRunKey=(model,inputKey,step=null)=>{
  if(!['mrx','scnet','umxhq'].includes(model)||typeof inputKey!=='string'||!inputKey||model==='scnet'&&!validScnetStep(step))
   throw Error('Неизвестный шаг модели.');
