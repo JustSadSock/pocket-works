@@ -1,5 +1,6 @@
 import './agent-hub-shell.mjs';
 import {mountAgentCockpit} from './agent-cockpit.mjs';
+import {showWorkbenchDialog,closeWorkbenchDialogs} from './ui-navigation.mjs';
 import {warmStartCombatFromWorld} from './agent-transfer.mjs';
 import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm,recordCombatNeural} from './agent-career.mjs';
 import {listModels,loadModel} from './model-store.mjs';
@@ -109,6 +110,7 @@ async function restore(c,domain){
  notify(adapted?'Навыки обхода опасностей из мира перенесены в первую боевую стратегию.':snapshot?'Загружен мозг '+c.name+' · '+TITLES[domain]:'Для '+TITLES[domain]+' создан чистый мозг');
 }
 function advancedMode(value){
+ closeWorkbenchDialogs();
  advanced=value;document.body.classList.toggle('hub-advanced',value);
  for(const [key,id] of Object.entries({grid:'labPanel',combat:'combatPanel',race:'racePanel',perekos:'perekosPanel'})){
   const pane=$(id);pane.hidden=!(value&&key===mode);
@@ -135,7 +137,7 @@ function ask(action,title,value){
   $('hubDialogTitle').textContent=title;$('hubDialogConfirm').textContent=action==='new'?'Создать':'Переименовать';
   input.value=value||'';
   const close=()=>{dlg.removeEventListener('close',close);resolve(dlg.returnValue==='confirm'&&input.value.trim()?input.value.trim():null);};
-  dlg.addEventListener('close',close);dlg.showModal();input.focus();input.select();
+  dlg.addEventListener('close',close);showWorkbenchDialog(dlg);input.focus();input.select();
  });
 }
 async function switchAgent(id){
@@ -181,7 +183,7 @@ async function importOld(){
   }catch(e){notify('Ошибка загрузки: '+e.message);}
   finally{pending=false;lock();}
  };
- dlg.showModal();
+ showWorkbenchDialog(dlg);
 }
 async function manage(){
  if(busy||pending)return;
@@ -213,7 +215,7 @@ async function manage(){
   d.append(btn);
  }
  const close=document.createElement('button');close.textContent='Закрыть';close.onclick=()=>{d.close();d.remove();};
- d.append(close);document.body.append(d);d.addEventListener('cancel',()=>d.remove(),{once:true});d.showModal();
+ d.append(close);document.body.append(d);d.addEventListener('cancel',()=>d.remove(),{once:true});showWorkbenchDialog(d);
 }
 $('hubAgents').onchange=e=>void switchAgent(e.target.value);
 $('hubManage').onclick=()=>void manage();
