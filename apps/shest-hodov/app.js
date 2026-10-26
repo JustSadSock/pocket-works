@@ -129,6 +129,7 @@ function render(){
   if(state.kind==='influence')boardInfluence();
   else if(state.kind==='protocol'){if(state.phase!=='pass')boardProtocol();$('score').textContent=`Очки: ${state.scores[0]} — ${state.scores[1]}`;}
   else boardGrid();
+  if(state.kind==='infection')$('score').textContent='Фишки: '+state.cells.filter(v=>v===0).length+' — '+state.cells.filter(v=>v===1).length;
   controls();
   $('message').textContent=notification;
   $('reset').textContent=restartArmed?'Подтвердить новую партию':'Новая партия';
