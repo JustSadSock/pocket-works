@@ -1,14 +1,14 @@
-import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,suppressStereoCenter,wavPCM16,elapsed,safeName} from './audio-utils.js';
+import {RATE,MAX_SECONDS,validRange,suppressStereoCenter,wavPCM16,elapsed,safeName} from './audio-utils.js';
 import {stereoPCM,comparisonMetrics,subtractResidualVocals} from './research-core.js';
-import {ROUTES,routeById,planRoute,planCustom,makeRunKey,makeInputKey,calculateSpeed} from './pipeline-config.js';
+import {ROUTES,routeById,makeRunKey,calculateSpeed} from './pipeline-config.js';
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
 const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
  (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 let sourceVideo=$('source-video');
-let file=null,fileURL='',audioURL='',length=0,range=null,original=null,stems=null,inferenceTime=0;
+let file=null,fileURL='',audioURL='',length=0,range=null,original=null;
 let worker=null,pendingWorkerReject=null,abort=null,serial=0,exporting=false,editTimer=null,mode='clean',fileName='video';
-let scnetVocals=null,scnetBase=null,scnetTime=0;
-const pipelineRuns=new Map();let customCounter=0;
+let scnetVocals=null,scnetBase=null;
+const pipelineRuns=new Map();
 const studyResults=new Map();let activeStudy=null,studySurround=null,studySurroundRate=0,studySignature='',studyBusy=false;
 const text=(id,msg)=>$(id).textContent=String(msg),show=(id,on)=>$(id).classList.toggle('hidden',!on);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),revoke=url=>{if(url)URL.revokeObjectURL(url)};
@@ -22,18 +22,14 @@ function uiBusy(active){
  $('quality-mode').disabled=busy;
  $('chunk-size').disabled=busy;
  $('scene-gravity').disabled=busy||!file||length<149;
- $('pipeline-run').disabled=busy||!file||!length;
- $('pipeline-input').disabled=busy;
- $('pipeline-model').disabled=busy;
- $('pipeline-step').disabled=busy||$('pipeline-model').value==='mrx';
  show('progress-wrap',active);
 }
 function step(title,detail='',ratio=null){text('progress-heading',title);text('progress-detail',detail);if(ratio===null)$('progress-bar').removeAttribute('value');else $('progress-bar').value=ratio}
 function pause(){video.pause();sourceVideo.pause();audio.pause()}
 function reset(){
  pause();revoke(audioURL);audioURL='';audio.removeAttribute('src');audio.load();
- video.removeAttribute('src');video.load();original=null;stems=null;range=null;activeStudy=null;
- scnetVocals=null;scnetBase=null;scnetTime=0;show('scnet-tuning',false);
+ video.removeAttribute('src');video.load();original=null;range=null;activeStudy=null;
+ scnetVocals=null;scnetBase=null;show('scnet-tuning',false);
  show('result-details',false);show('empty-state',true);text('result-state','Ожидание обработки');text('export-status','');text('stem-diagnostics','');text('result-position','0:00');$('result-seek').value=0;text('listen-btn','▶ Слушать результат');
 }
 function cancel(){
@@ -173,7 +169,7 @@ function readableModelError(packet){
   return 'Не хватает памяти для нейросети. Выбери режим по 5 секунд и попробуй более короткую сцену. '+reason;
  return 'Нейросеть ('+phase+'): '+reason;
 }
-function separate(channels,chunk,id,kind='mrx',scnetStep=.25){
+function separate(channels,chunk,id,kind='umxhq',scnetStep=1){
  return new Promise((resolve,reject)=>{
   const w=new Worker('./mrx-worker.js',{type:'module'});worker=w;
   const finish=()=>{w.terminate();if(worker===w)worker=null;if(pendingWorkerReject===rejectPending)pendingWorkerReject=null};
@@ -184,7 +180,7 @@ function separate(channels,chunk,id,kind='mrx',scnetStep=.25){
   w.onmessage=e=>{
    const p=e.data||{};if(p.id!==id)return;
    if(p.stage==='library')step('Подключаем нейросеть',p.detail);
-   if(p.stage==='model')step(kind==='scnet'?'SCNet ищет оставшиеся голоса':kind==='umxhq'?'Open-Unmix ищет вокал':'MRX разделяет дорожки',p.detail);
+   if(p.stage==='model')step(kind==='scnet'?'SCNet ищет вокал':'Open-Unmix ищет вокал',p.detail);
    if(p.stage==='done'||p.stage==='error'){
     finish();
     p.stage==='done'?resolve(p):reject(Error(readableModelError(p)));
