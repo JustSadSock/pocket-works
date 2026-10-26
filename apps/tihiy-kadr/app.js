@@ -571,7 +571,7 @@ function renderStudyResults(){
 async function selectStudyResult(id,rebuild=true){
  const item=studyResults.get(id);
  if(!item||!original||!range)return;
- pause();activeStudy=id;mode='clean';
+ pause();activeStudy=id;mode=id==='mrx'?'stems':'clean';
  show('empty-state',false);show('result-details',true);
  $('video-btn').disabled=false;$('wav-btn').disabled=false;
  const mrxisolated=id==='mrx'&&!!stems;
