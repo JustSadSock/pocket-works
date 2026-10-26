@@ -70,7 +70,7 @@ try{
  }));
  host.send('create_room',{gameId:'ne-tem-golosom'});
  const room=await host.next('room_joined');
- assert.equal(room.version,'v3','new rooms must use hardened server snapshot');
+ assert.equal(room.version,'v4','new rooms must use hardened server snapshot');
  const roomId=room.roomId;
  guest.send('join_room',{roomId:roomId.slice(0,8).toUpperCase()});
  const joined=await guest.next('room_joined');
