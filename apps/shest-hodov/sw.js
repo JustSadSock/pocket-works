@@ -1,7 +1,7 @@
 const CACHE_PREFIX='shest-hodov-';
 const CACHE_NAME='shest-hodov-v1.1.0-p1';
 const VERSION='1.1.0',RELEASE_DATE='2026-10-26';
-const ASSETS=['./','./index.html','./styles.css','./app.js','./core.js','./ai.js','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
+const ASSETS=['./','./index.html','./styles.css','./app.js','./core.js','./ai.js','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/update-manager.css','../../shared/update-manager.js'];
 const ROOT=new URL('./',self.registration.scope),MAP=new Map(ASSETS.map(x=>{const u=new URL(x,ROOT);return[u.pathname,u.href]}));
 const fresh=async input=>{const u=new URL(input instanceof Request?input.url:input,ROOT);u.searchParams.set('pw_build',VERSION+'p1');const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('Fetch '+r.status);return r};
 self.addEventListener('install',e=>e.waitUntil((async()=>{const cache=await caches.open(CACHE_NAME);await Promise.all([...new Set(MAP.values())].map(async u=>cache.put(u,await fresh(u))))})()));
