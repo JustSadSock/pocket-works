@@ -144,7 +144,11 @@ const roomsOrigin=location.origin+'/pocketnet';
 const sceneSource=s=>LIBRARY.find(x=>x.id===s?.id)?.src||null;
 const meHost=()=>!!state&&me===state.host;
 const ownRole=()=>mode==='solo'?'Все роли':(state?.assignments?.[me]||'Актёр');
-function toast(s){const el=$('toast');el.textContent=s;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
+let lastToastText='',lastToastAt=0;
+function toast(s){
+ if(s===lastToastText&&Date.now()-lastToastAt<8000)return;
+ lastToastText=s;lastToastAt=Date.now();
+ const el=$('toast');el.textContent=s;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function cue(which){if(!sound)return;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;audioContext ||=new C();audioContext.resume();const now=audioContext.currentTime,o=audioContext.createOscillator(),n=audioContext.createBufferSource(),g=audioContext.createGain(),filter=audioContext.createBiquadFilter();const data=audioContext.createBuffer(1,2205,audioContext.sampleRate),arr=data.getChannelData(0);for(let i=0;i<arr.length;i++)arr[i]=(Math.random()*2-1)*Math.exp(-i/750);n.buffer=data;filter.type='bandpass';filter.frequency.value=which==='start'?1050:420;const f=which==='stop'?160:which==='ready'?600:which==='count'?780:300;o.type='triangle';o.frequency.setValueAtTime(f,now);o.frequency.exponentialRampToValueAtTime(f*.74,now+.12);g.gain.setValueAtTime(.02,now);g.gain.exponentialRampToValueAtTime(.0001,now+.17);o.connect(g);n.connect(filter).connect(g);g.connect(audioContext.destination);o.start(now);n.start(now);o.stop(now+.18);n.stop(now+.06)}catch{}}
 function show(id){
  const changed=view!==id;
@@ -757,7 +761,7 @@ async function flush(p){
 }
 function queueMedia(id,kind,blob,meta){const p=peers.get(id);if(!p||!(blob instanceof Blob))return;p.queued.push({kind,blob,meta});flush(p)}
 function relayAudio(id,blob,meta){
- if(!net||!room||state?.phase!=='premiere'||blob.size>MAX_AUDIO_BYTES){toast('Голос не передался. Попробуй переподключиться.');return}
+ if(!net||!room||state?.phase!=='premiere'||blob.size>MAX_AUDIO_BYTES){networkInterrupted=true;connectionNotice();return}
  const token=uid(),chunk=4000;
  relayQueue=relayQueue.catch(()=>{}).then(async()=>{
   sendGame({type:'relay',to:id,data:{action:'begin',token,kind:'audio',size:blob.size,meta}});
@@ -769,7 +773,7 @@ function relayAudio(id,blob,meta){
    await new Promise(resolve=>setTimeout(resolve,95));
   }
   sendGame({type:'relay',to:id,data:{action:'end',token}});
- }).catch(()=>toast('Ошибка запасной передачи голоса.'));
+ }).catch(()=>{networkInterrupted=true;connectionNotice()});
 }
 function sendAudio(id,blob,meta){
  const p=peers.get(id);
