@@ -82,3 +82,10 @@ Next: resolve live-browser regressions, measure Shpilka parity/performance on re
 - Agent switching commits its selected identity only after its stored brain successfully loads; old identity remains selected if restore fails.
 - New Node regression covers injected IndexedDB transaction failures, partial-import rollback, rename/delete safety. Browser coverage includes first-open Perekos runtime and switching agents, along with existing training/reload/duel journeys.
 - CI runs on PRs and main, with all PetriForge Node unit tests and a wider Chromium Playwright suite. Local browser smoke and hardware/WebKit checks remain subject to CI results; do not interpret these changes as completion of future PPO/NEAT phases.
+
+2026-10-26 — **PetriForge 0.9.0 / этап 2: библиотека агентов и наблюдение**:
+- К существующему главному полю добавлены реальные карточки агентов со специализациями, последними результатами, выбором активного исследователя, клонированием вместе с его мозгами и историей и архивом с восстановлением.
+- Клоны используют собственные IndexedDB-слоты и копируются атомарно; изменение потомка не переписывает исходного агента. Архив не удаляет модели и предотвращает архивирование последнего активного агента.
+- На постоянном пульте есть быстрый вызов игрового повтора и панель наблюдения: фактический тип модели, количество сохранённых состояний/параметров, результат последнего занятия. В режиме клеточного мира можно показать реальную область наблюдения 7×7; это не заявляется как лучевой сенсор нейросети.
+- Исправлена мобильная компоновка элементов наблюдения и каталога; ключевые операции проверяются Node и Chromium Playwright.
+- Важно: сами Q-learning и эволюционные параметрические политики не превращены в нейросети. Настоящий нейросетевой движок запланирован на этап 3.
