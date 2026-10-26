@@ -488,3 +488,14 @@
  .clip-mixer label{flex:1 1 30%;font-size:10px}
  .premiere-buttons .action{font-size:12px;min-width:0;padding:10px}
 }
+
+/* Mixer expansion must scroll the editor desk, never collapse the timeline
+   into a non-hittable strip. Keeps trim grips reachable after selecting a take. */
+.editor .timeline-tools,
+.editor .timeline-viewport,
+.editor .selected-clip-info,
+.editor .clip-mixer,
+.editor .edit-controls,
+.editor .editor-bottom{flex-shrink:0}
+.editor .timeline-viewport{min-height:105px;flex:0 0 auto}
+.editor .clip-mixer{flex-shrink:0}
