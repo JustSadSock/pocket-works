@@ -61,7 +61,7 @@ function createWorkerTask(url,packet,signal,onProgress,{transferInputs=false}={}
 }
 async function decodeAudioFromVideo(blob,start,duration,signal,onProgress){
  live(signal);
- const ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:FILM_RATE});
+ let ctx=null;
  try{
   // Try a compressed-audio-only fast path before any whole-file decode.
   // This reads AAC packets from MP4 without decoding video or the entire blob.
@@ -73,6 +73,7 @@ async function decodeAudioFromVideo(blob,start,duration,signal,onProgress){
    if(signal.aborted||e?.name==='AbortError')throw e;
    onProgress({stage:'decode',detail:'Быстрый AAC-декодер недоступен: '+(e.message||'формат')+'. Пробуем резервный способ.'});
   }
+  ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:FILM_RATE});
   // decodeAudioData is substantially faster than realtime capture when the
   // platform accepts the video container. Avoid loading a 512 MiB video
   // into a second decoded buffer on memory-constrained phones.
@@ -134,7 +135,7 @@ async function decodeAudioFromVideo(blob,start,duration,signal,onProgress){
   }finally{
    v.pause();processor?.disconnect();source?.disconnect();v.removeAttribute('src');v.load();URL.revokeObjectURL(url);
   }
- }finally{await ctx.close().catch(()=>{})}
+ }finally{await ctx?.close().catch(()=>{})}
 }
 export async function cleanFilmSound({blob,start,duration,mode='umx',lowMemory=false,signal,onProgress=()=>{}}){
  validateFilmMode(mode);
