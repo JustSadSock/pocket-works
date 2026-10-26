@@ -7,21 +7,23 @@ const KEY='pocket-works:shest-hodov:v1';
 const $=id=>document.getElementById(id);
 const names=['Красные','Синие'];
 let state=null,open=false,draft=[0,0,0,0,0],commands=[null,null],direction=1,notification='',restartArmed=false;
-let chosenOpponent='ai',chosenDifficulty='normal',aiTimer=null;
+let chosenOpponent='ai',chosenDifficulty='normal',aiTimer=null,aiErrorLocked=false;
 try{const stored=JSON.parse(localStorage.getItem(KEY)||'null');if(validateStored(stored))state=stored;}catch{}
 const save=()=>{try{if(state)localStorage.setItem(KEY,JSON.stringify(state));else localStorage.removeItem(KEY)}catch{}};
 function resetDraft(){draft=[0,0,0,0,0];commands=[null,null];}
 function stopAI(){if(aiTimer!==null){clearTimeout(aiTimer);aiTimer=null}}
 function queueAI(){
-  if(!open||!isAITurn(state)||aiTimer!==null)return;
+  if(!open||!isAITurn(state)||aiTimer!==null||aiErrorLocked)return;
   aiTimer=setTimeout(()=>{
     aiTimer=null;
     if(!open||!isAITurn(state))return;
     try{
       const action=chooseAIAction(state,state.difficulty);
-      if(!action){notification='ИИ не нашёл допустимый ход';render();return}
-      play(action);
-    }catch(error){notification='Ошибка вычисления ИИ. Вернитесь в меню и начните новую партию.';console.error('Six Duels AI:',error);render()}
+      if(!action){aiErrorLocked=true;notification='ИИ не нашёл допустимый ход';render();return}
+      const next=apply(state,action);
+      if(!next.ok){aiErrorLocked=true;notification='Ошибка хода ИИ: '+next.reason;render();return}
+      state=next.state;notification='';restartArmed=false;resetDraft();save();render();
+    }catch(error){aiErrorLocked=true;notification='Ошибка вычисления ИИ. Начните новую партию.';console.error('Six Duels AI:',error);render()}
   },80);
 }
 function play(action){
@@ -33,7 +35,7 @@ function play(action){
 }
 const el=(name,props={},children='')=>{const x=document.createElement(name);Object.assign(x,props);if(children)x.innerHTML=children;return x;};
 function choose(kind,opponent=chosenOpponent,difficulty=chosenDifficulty){
-  stopAI();state=start(kind);state.opponent=opponent==='ai'?'ai':'local';state.difficulty=['easy','normal','hard'].includes(difficulty)?difficulty:'normal';
+  stopAI();aiErrorLocked=false;state=start(kind);state.opponent=opponent==='ai'?'ai':'local';state.difficulty=['easy','normal','hard'].includes(difficulty)?difficulty:'normal';
   open=true;notification='';resetDraft();restartArmed=false;save();render();
 }
 function turnText(){
