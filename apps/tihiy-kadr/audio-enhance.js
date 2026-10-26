@@ -34,11 +34,12 @@ function spectralCorrections(clean,vocals,progress=()=>{}){
  const frames=clean[0].length,channels=clean.length;
  const spectral=[],reconstruct=[];
  const window=Float64Array.from({length:SIZE},(_,i)=>Math.sin(Math.PI*(i+.5)/SIZE)**2);
- const norm=new Float64Array(frames);
- for(let start=-SIZE/2;start<frames;start+=HOP)
-  for(let j=0;j<SIZE;j++){
-   const at=start+j;if(at>=0&&at<frames)norm[at]+=window[j]*window[j];
-  }
+ // 50%-overlapped Hann frames contribute exactly two squared windows at
+ // every sample, including the edges covered by our initial negative frame.
+ // A periodic 512-entry normalization table avoids a 90-second Float64
+ // buffer (~63 MiB) on mobile devices.
+ const norm=Float64Array.from({length:HOP},(_,i)=>
+  window[i]*window[i]+window[i+HOP]*window[i+HOP]);
  for(let ch=0;ch<channels;ch++){
   const src=clean[ch],vocal=vocals[ch];
   const spec=new Float32Array(frames),soft=new Float32Array(frames);
@@ -67,7 +68,7 @@ function spectralCorrections(clean,vocals,progress=()=>{}){
    fft(sr,si,true);fft(wr,wi,true);
    for(let j=0;j<SIZE;j++){
     const at=start+j;if(at<0||at>=frames)continue;
-    const scale=window[j]/Math.max(norm[at],1e-9);
+    const scale=window[j]/Math.max(norm[at%HOP],1e-9);
     spec[at]+=sr[j]*scale;soft[at]+=wr[j]*scale;
    }
    if((++counter&127)===0)progress((ch+(start+SIZE/2)/frames)/channels);
