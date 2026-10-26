@@ -57,3 +57,23 @@ for(const viewport of [{width:1280,height:800},{width:390,height:844},{width:844
   }finally{await ctx.close();}
  });
 }
+test('Perekos controller is ready before any replay and survives switching agents',async({page})=>{
+ test.setTimeout(60000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:15000});
+ await expect.poll(async()=>page.evaluate(()=>typeof window.PetriForgeRuntime?.perekos?.setModel)).toBe('function');
+ await page.locator('[data-cp-mode="perekos"]').click();
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ const first=await page.evaluate(()=>window.PetriForgeRuntime.perekos.getModel());
+ expect(first.type||first.version).toBeTruthy();
+ await page.locator('#cpProfile').click();
+ await page.locator('#cpCreate').click();
+ await page.locator('#hubDialogName').fill('Маг проверки');
+ await page.locator('#hubDialogConfirm').click();
+ await expect(page.locator('#cpAgent option')).toHaveCount(2,{timeout:15000});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ const second=await page.evaluate(()=>window.PetriForgeRuntime.perekos.getModel());
+ expect(second).toBeTruthy();
+ expect(errors).toEqual([]);
+});

@@ -7,10 +7,8 @@ test('one named agent learns repeatedly, persists brain and has separate combat 
  await expect(page.locator('#agentHub')).toBeVisible();
  await expect(page.locator('#hubAgents option')).toHaveCount(1,{timeout:25000});
  await expect(page.locator('#labPanel')).toBeHidden();
- await page.locator('#hubVariant').selectOption('corridor');
- await page.locator('#cpSetup').click();
- await page.locator('#cpBatch').selectOption('100');
- await page.locator('#cpSetupDialog [data-cp-close]').click();
+ await page.locator('#cpQuickScenario').selectOption('corridor');
+ await page.locator('#cpQuickBatch').selectOption('100');
  await page.locator('#cpTrain').click();
  await expect(page.locator('#hubRuns')).toHaveText('1',{timeout:45000});
  const afterFirst=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
@@ -26,9 +24,7 @@ test('one named agent learns repeatedly, persists brain and has separate combat 
  await page.locator('[data-cp-mode="combat"]:visible, [data-world-mode="combat"]:visible').first().click();
  await expect(page.locator('#hubWorldTitle')).toHaveText('Боевая арена');
  await expect(page.locator('#hubRuns')).toHaveText('0');
- await page.locator('#cpSetup').click();
- await page.locator('#cpBatch').selectOption('8');
- await page.locator('#cpSetupDialog [data-cp-close]').click();
+ await page.locator('#cpQuickBatch').selectOption('8');
  await page.locator('#cpTrain').click();
  await expect(page.locator('#hubRuns')).toHaveText('1',{timeout:50000});
  await page.locator('[data-cp-mode="grid"]:visible, [data-world-mode="grid"]:visible').first().click();
@@ -41,9 +37,7 @@ test('two agents keep independent brains, progress and names across restart',asy
  await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
  await expect(page.locator('#hubAgents option')).toHaveCount(1,{timeout:20000});
  const firstId=await page.locator('#hubAgents').inputValue();
- await page.locator('#cpSetup').click();
- await page.locator('#cpBatch').selectOption('100');
- await page.locator('#cpSetupDialog [data-cp-close]').click();
+ await page.locator('#cpQuickBatch').selectOption('100');
  await page.locator('#cpTrain').click();
  await expect(page.locator('#hubRuns')).toHaveText('1',{timeout:45000});
  await page.locator('#cpProfile').click();
@@ -55,7 +49,7 @@ test('two agents keep independent brains, progress and names across restart',asy
  await expect(page.locator('#hubRuns')).toHaveText('0');
  const secondSnapshot=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
  expect(secondSnapshot.q).toHaveLength(0);
- await page.locator('#hubAgents').selectOption(firstId);
+ await page.locator('#cpAgent').selectOption(firstId);
  await expect(page.locator('#hubRuns')).toHaveText('1');
  const firstSnapshot=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
  expect(firstSnapshot.q.length).toBeGreaterThan(0);
@@ -75,7 +69,7 @@ test('advanced tools are reversible without hiding the playable arena',async({pa
  await expect(page.locator('#agentHub')).toBeVisible();
  await page.locator('[data-cp-mode="combat"]:visible, [data-world-mode="combat"]:visible').first().click();
  await expect(page.locator('#agentHub')).toBeVisible();
- await page.locator('#hubEdit').click();
+ await page.locator('#cpExpert').click();
  await expect(page.locator('#combatPanel')).toBeVisible();
  await expect(page.locator('#studioEdit')).toBeVisible();
  await page.locator('#combatPanel .hub-back').click();

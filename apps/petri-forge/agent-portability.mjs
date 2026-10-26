@@ -1,5 +1,5 @@
 // Portable personal agent package: one identity, all genuinely trained specialist brains.
-import {DOMAINS,KINDS,assertCareer,createCareer,readBrain,writeBrain,writeCareer} from './agent-career.mjs';
+import {DOMAINS,assertCareer,freshCareer,newCareerId,readBrain,writeCareerBundle} from './agent-career.mjs';
 import {QAgent} from './lab-core.mjs';
 import {validPolicy} from './combat-core.mjs';
 import {validatePerekosPolicy} from './perekos-policy.mjs';
@@ -43,23 +43,19 @@ export function validatePackage(pkg){
 }
 export async function unpackCareer(pkg){
  validatePackage(pkg);
- // A new unique identity is always created; never overwrite another agent.
- const c=await createCareer(pkg.profile.name);
- try{
-  for(const domain of DOMAINS){
-   const src=pkg.profile.branches[domain],b=c.branches[domain];
-   b.sessions=src.sessions;b.units=src.units;b.imported=!!src.imported;
-   b.trainedAt=Number.isFinite(src.trainedAt)?src.trainedAt:null;
-   b.history=structuredClone(src.history);
-   const brain=pkg.brains[domain]??null;
-   if(brain)await writeBrain(c,domain,brain);
-  }
-  await writeCareer(c);
-  return c;
- }catch(e){
-  // Partial imports remain recoverable as local profiles, never overwrite existing ones.
-  throw Error('Не удалось импортировать все навыки: '+e.message);
+ // Validate before writing anything. The imported identity and its four brains
+ // become visible together, or the transaction aborts without orphan profiles.
+ const c=freshCareer(pkg.profile.name,newCareerId());
+ const brains={};
+ for(const domain of DOMAINS){
+  const src=pkg.profile.branches[domain],b=c.branches[domain];
+  b.sessions=src.sessions;b.units=src.units;b.imported=!!src.imported;
+  b.trainedAt=Number.isFinite(src.trainedAt)?src.trainedAt:null;
+  b.history=structuredClone(src.history);
+  if(pkg.brains[domain]!=null)brains[domain]=pkg.brains[domain];
  }
+ try{return await writeCareerBundle(c,brains);}
+ catch(e){throw Error('Импорт отменён без частично сохранённого агента: '+e.message);}
 }
 export function savePackageFile(pkg){
  validatePackage(pkg);
