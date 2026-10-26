@@ -334,6 +334,107 @@ function selectScene(item,blob=null){
 }
 function renderRoles(){$('role-tags').innerHTML=selected.roles.map((role,i)=>'<div class="role-tag"><input maxlength="35" aria-label="Персонаж '+(i+1)+'" data-role-index="'+i+'" value="'+esc(role)+'"><button data-remove-role="'+i+'" aria-label="Удалить роль">×</button></div>').join('')}
 function validateScene(){const start=Number($('trim-start').value),duration=Number($('trim-length').value);const name=$('scene-title').value.trim();const roles=[...document.querySelectorAll('[data-role-index]')].map(el=>el.value.trim()).filter(Boolean);const v=$('trim-video');if(!name||!roles.length)return toast('Укажи название и хотя бы одного персонажа'),false;if(!Number.isFinite(start)||!Number.isFinite(duration)||start<0||duration<10||duration>90)return toast('Длина сцены — от 10 до 90 секунд.'),false;if(Number.isFinite(v.duration)&&v.duration>0&&start+duration>v.duration+.1)return toast('Отрывок выходит за пределы видео.'),false;scene={...selected,title:name,start,duration,roles};return true}
+function filmMode(){
+ return document.querySelector('input[name="film-clean-mode"]:checked')?.value||'umx';
+}
+function updateFilmCleaner(){
+ const duration=Math.max(0,Number($('trim-length').value)||selected?.duration||0);
+ const estimate=estimateFilmTimes(duration);
+ const baseline=Math.max(.1,estimate.umx);
+ for(const choice of FILM_MODES){
+  const seconds=estimate[choice.id];
+  $('film-time-'+choice.id).textContent=seconds?'≈ '+fmt(Math.ceil(seconds)):'—';
+  $('film-ratio-'+choice.id).textContent=choice.id==='umx'?'1×':
+   '≈ '+Math.round(seconds/baseline)+'× дольше';
+ }
+ const ready=!!selected&&!filmCleanController&&!videoExportController;
+ $('film-clean-start').disabled=!ready||!supportsVideoExport();
+ document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.disabled=!!filmCleanController||!!videoExportController);
+ $('film-clean-cancel').classList.toggle('hidden',!filmCleanController);
+ $('film-clean-progress').classList.toggle('hidden',!filmCleanController);
+ if(!filmCleanController&&filmPreparedBlob&&videoExportBlob===filmPreparedBlob){
+  $('film-clean-status').textContent='Очищенный саундтрек готов и встроен в видео. Проверь результат и продолжай.';
+ }
+}
+async function prepareFilmScene(){
+ if(!selected||filmCleanController||videoExportController)return false;
+ if(!supportsVideoExport()){
+  $('film-clean-status').textContent='Нужен браузер с MediaRecorder и Web Audio для подготовки видео.';
+  return false;
+ }
+ const start=Number($('trim-start').value),duration=Number($('trim-length').value);
+ if(!Number.isFinite(start)||start<0||!Number.isFinite(duration)||duration<10||duration>90){
+  toast('Выбери фрагмент длиной от 10 до 90 секунд.');return false;
+ }
+ const controller=new AbortController();filmCleanController=controller;
+ const status=$('film-clean-status'),bar=$('film-clean-bar'),button=$('film-clean-start');
+ const selectedMode=filmMode(),startedAt=performance.now();
+ const progress=(detail,value)=>{
+  status.textContent=detail;bar.value=Math.max(0,Math.min(100,value));
+ };
+ progress('Подготавливаем исходный звук…',1);
+ clearExportPreview();exportBusy(true);updateFilmCleaner();
+ button.textContent='Обрабатываем…';
+ try{
+  let blob=sourceBlob||filmLocalSource;
+  if(!blob){
+   const src=sceneSource(selected);
+   if(!src)throw Error('У выбранной сцены нет видео.');
+   progress('Загружаем встроенный фильм для локальной обработки…',3);
+   try{
+    const response=await fetch(src,{signal:controller.signal});
+    if(!response.ok)throw Error('HTTP '+response.status);
+    const header=Number(response.headers.get('content-length'));
+    if(header>MAX_SOURCE_VIDEO_BYTES)throw Error('Встроенное видео слишком большое. Используй локальный отрывок.');
+    blob=await response.blob();
+   }catch(err){
+    if(controller.signal.aborted)throw err;
+    $('film-local-fallback').classList.remove('hidden');
+    throw Error('Не удалось получить аудиодорожку встроенного фильма (возможно, CORS). Выбери локальную копию этого видео ниже. '+(err?.message||''));
+   }
+  }
+  if(!(blob instanceof Blob)||!blob.size||blob.size>MAX_SOURCE_VIDEO_BYTES)
+   throw Error('Нужен видеофайл до 512 МиБ.');
+  const plan=await cleanFilmSound({blob,start,duration,mode:selectedMode,signal:controller.signal,
+   onProgress:p=>{
+    const stage=p.stage||'';
+    const value=stage==='decode'?10:stage==='scnet'?41:stage==='umx'?25:stage==='buzz'?52:stage==='skip'?59:13;
+    progress((p.detail||'Разделяем аудио…')+' · '+fmt((performance.now()-startedAt)/1000)+' прошло',value);
+   }});
+  if(controller.signal.aborted)return false;
+  progress('Кодируем видео с очищенным фоном · 0%',60);
+  const result=await exportVideo({blob,start,duration,width:Number($('media-resolution').value),
+   level:Number($('media-quality').value),keepAudio:false,audioPCM:plan.channels,
+   signal:controller.signal,onProgress:p=>{
+    progress('Кодируем видео с очищенным фоном · '+Math.round(p*100)+'%',60+Math.round(p*40));
+   }});
+  if(controller.signal.aborted)return false;
+  if(mode==='host'&&result.size>MAX_ROOM_VIDEO_BYTES)
+   throw Error('Очищенное видео '+formatVideoBytes(result.size)+
+    ' превышает лимит комнаты 96 МиБ. Уменьши качество/разрешение и повтори.');
+  videoExportBlob=result;filmPreparedBlob=result;
+  videoExportUrl=URL.createObjectURL(result);
+  const preview=$('media-output-preview');preview.src=videoExportUrl;preview.load();
+  $('media-output-size').textContent=formatVideoBytes(result.size)+' · '+fmt(duration);
+  $('media-preview-switch').classList.remove('hidden');
+  showTrimPreview('result');
+  $('media-result').classList.remove('hidden');
+  const detail=plan.segments.length?' · SCNet улучшила '+plan.segments.length+' проблемных участка':'';
+  progress('Готово · '+fmt((performance.now()-startedAt)/1000)+detail,100);
+  $('media-note').textContent='Голоса фильма подавлены. Прослушай вариант с музыкой и выбери «Использовать и продолжить».';
+  cue('ready');return true;
+ }catch(e){
+  if(e?.name==='AbortError'||controller.signal.aborted){
+   status.textContent='Обработка отменена. Исходный фильм не изменён.';
+  }else{
+   status.textContent=e?.message||'Не получилось удалить голоса.';
+  }
+  return false;
+ }finally{
+  filmCleanController=null;button.textContent='Подготовить звук без голосов';
+  exportBusy(false);updateMediaLab();updateFilmCleaner();updateConfirmAction();
+ }
+}
 async function confirmScene(){
  if(videoExportController||filmCleanController)return toast('Сначала заверши обработку видео.');
  // Validate before accepting so an invalid title/role never replaces the source.
