@@ -167,7 +167,7 @@ try{
  assert((await page.locator('#study-results .study-choice').count())>=6);
  const umxWav=page.waitForEvent('download',{timeout:25000});
  await page.locator('#wav-btn').click();
- assert.match((await umxWav).suggestedFilename(),/no-dialogue\\.wav$/);
+ assert.match((await umxWav).suggestedFilename(),/no-dialogue\.wav$/);
  // Reuse cached MRX, then run an actual UMX-HQ on its cleaned track.
  await page.locator('#quality-mode').selectOption('mrx-umxhq');
  await page.locator('#process-btn').click();
