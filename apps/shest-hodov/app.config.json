@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "shest-hodov",
+  "name": "ШЕСТЬ ХОДОВ",
+  "shortName": "Шесть ходов",
+  "description": "Шесть чистых соревновательных настольных стратегий на двоих: Мост, Заражение, Пропасть, Поворот, Влияние и Протокол.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-26",
+  "releaseDateTime": "2026-10-26T02:45:00+02:00",
+  "changelog": [
+    "Шесть самостоятельных стратегических мини-игр без случайности.",
+    "Локальная партия на одном экране для двух игроков, тайные ходы с передачей устройства.",
+    "Автосохранение, установка PWA и работа офлайн."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#ce644f",
+  "backgroundColor": "#efeee6",
+  "themeColor": "#efeee6",
+  "orientation": "any",
+  "cacheName": "shest-hodov-v1.0.0-p1",
+  "storageNamespace": "pocket-works:shest-hodov",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "strategy",
+    "local multiplayer",
+    "turn-based",
+    "logic",
+    "touch"
+  ],
+  "order": 93
+}

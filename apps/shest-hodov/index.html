@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#efeee6"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Шесть ходов"><title>Шесть ходов · PocketWorks</title>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="./styles.css">
+</head><body><main class="app-shell" data-app-shell data-ui>
+<header class="topbar"><a class="exit" href="../../" data-app-control>← PocketWorks</a><strong>ШЕСТЬ ХОДОВ</strong><button id="back" hidden type="button" data-native-press>Все игры</button></header>
+<section id="menu" class="menu">
+<h1>Шесть игр.<br>Один принцип.</h1><p>Два игрока · Без случайности · На одном устройстве</p>
+<button id="resume" type="button" class="resume" hidden data-native-press>Продолжить партию →</button>
+<div id="catalog" class="catalog" aria-label="Выбор игры"></div></section>
+<section id="match" class="match" hidden><header class="match-head">
+<div><h1 id="title"></h1><p id="subtitle"></p></div>
+<div id="turn" class="turn" aria-live="polite"></div></header>
+<div class="meta"><span id="round"></span><span id="score"></span></div>
+<div id="board" class="board-area" aria-label="Игровое поле"></div>
+<div id="actions" class="actions"></div><p id="message" class="message" role="status" aria-live="polite"></p>
+<details class="rules"><summary>Правила</summary><p id="rules"></p></details>
+<button id="reset" type="button" class="reset">Новая партия</button>
+</section></main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Шесть ходов" data-app-version="1.0.0"></script>
+<script src="./app.js" type="module"></script>
+</body></html>
