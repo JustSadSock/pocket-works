@@ -147,9 +147,9 @@ async function switchAgent(id){
   // Commit the visible identity only after its brain was loaded successfully.
   await restore(next,mode);
   active=next;localStorage.setItem(LAST,next.id);
-  lastEval='';profiles();refresh();
+  lastEval='';profiles();refresh();return true;
  }
- catch(e){notify('Ошибка агента: '+e.message);}
+ catch(e){notify('Ошибка агента: '+e.message);return false;}
  finally{pending=false;lock();}
 }
 async function create(){
