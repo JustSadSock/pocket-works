@@ -21,7 +21,11 @@ export function mountNeuralCombat(api){
     <option value="open">Открытая арена</option><option value="cover" selected>Укрытия</option>
     <option value="hazards">Ловушки</option>
    </select></label>
-   <label>Противник<select id="cpNeuroOpponent">
+   <label>Режим обучения<select id="cpNeuroMethod">
+    <option value="train">Обычная тренировка</option>
+    <option value="league">Лига поколений · self-play</option>
+   </select></label>
+   <label id="cpNeuroOpponentLabel">Противник<select id="cpNeuroOpponent">
     <option value="baseline">Обычный боевой ИИ</option>
     <option value="self">Сохранённая версия себя</option>
     <option value="saved">Нейросеть другого агента</option>
@@ -32,6 +36,7 @@ export function mountNeuralCombat(api){
     <option value="30">30 · обычная</option><option value="60">60 · длительная</option>
    </select></label>
   </div>
+  <p id="cpNeuroLeagueIntro" class="cp-neuro-league-intro" hidden>Каждые 6 боёв — новая замороженная версия бойца. Противники чередуются: обычный ИИ, начальная нейросеть, последняя версия и архив. Проверка на трёх аренах не обучает мозг.</p>
   <p id="cpNeuroIdentity" class="cp-neuro-identity">Мозг бойца хранится отдельно от старой тактической политики.</p>
   <div class="cp-neuro-actions">
    <button id="cpNeuroTrain" class="cp-primary" type="button">Обучать бойца</button>
@@ -40,6 +45,12 @@ export function mountNeuralCombat(api){
   <progress id="cpNeuroProgress" max="100" value="0" hidden></progress>
   <div id="cpNeuroStatus" role="status" aria-live="polite">Выберите класс и начните обучение.</div>
   <div id="cpNeuroTrainingResult" class="cp-neuro-results"></div>
+  <section id="cpNeuroLeagueHistory" class="cp-neuro-league-history" hidden>
+   <h3>История поколений</h3>
+   <div id="cpNeuroLeaguePlot" class="cp-neuro-league-plot"></div>
+   <div id="cpNeuroLeagueRows" class="cp-neuro-league-rows"></div>
+   <p>Контроль: по 2 боя на каждой из трёх арен, без обновления весов. Малая выборка показывает тенденции, а не доказывает преимущество.</p>
+  </section>
   <button id="cpNeuroRetry" type="button" hidden>Повторить сохранение мозга</button>
   <section class="cp-neuro-duel">
    <h3>Контрольный поединок · обучение выключено</h3>
@@ -60,8 +71,32 @@ export function mountNeuralCombat(api){
   <p class="cp-neuro-note">Обучение PPO происходит в браузере. Класс определяет доступное оружие; заранее запрограммированной боевой тактики у нейросети нет. Результат отдельной тренировки не гарантирует победу.</p>
  </dialog>`);
  let worker=null,mode=null,startedAt=0,trainedEpisodes=0,unsaved=null;
- let lastRosterSignature='';
+ let lastRosterSignature='',lastLeagueShown='',leagueGenerations=[];
  const status=message=>{$('cpNeuroStatus').textContent=message;};
+ function showLeague(generations){
+  const rows=$('cpNeuroLeagueRows'),plot=$('cpNeuroLeaguePlot');
+  rows.replaceChildren();plot.replaceChildren();
+  $('cpNeuroLeagueHistory').hidden=!generations?.length;
+  if(!generations?.length)return;
+  for(const g of generations){
+   const item=document.createElement('div');item.className='cp-neuro-league-row';
+   const label=document.createElement('span');label.textContent='Поколение '+g.generation;
+   const value=document.createElement('strong');value.textContent=pc(g.validation.winRate);
+   const meta=document.createElement('small');meta.textContent=g.episodes+' боёв · '+g.updates+' обновлений';
+   item.append(label,value,meta);rows.append(item);
+   const bar=document.createElement('div');bar.className='cp-neuro-league-bar';
+   bar.title='Поколение '+g.generation+': '+pc(g.validation.winRate);
+   const fill=document.createElement('span');fill.style.height=Math.max(3,g.validation.winRate*100)+'%';
+   bar.append(fill);plot.append(bar);
+  }
+ }
+ function updateMethod(){
+  const league=$('cpNeuroMethod').value==='league';
+  $('cpNeuroOpponentLabel').hidden=league;
+  $('cpNeuroLeagueIntro').hidden=!league;
+  $('cpNeuroOpponentRow').hidden=league||$('cpNeuroOpponent').value!=='saved';
+  $('cpNeuroTrain').textContent=league?'Начать лигу поколений':'Обучать бойца';
+ }
  function refresh(){
   const state=api.state(),careers=state.careers.filter(c=>!c.archived),active=state.active;
   $('cpNeurocombat').hidden=state.mode!=='combat';
@@ -81,23 +116,29 @@ export function mountNeuralCombat(api){
   $('cpNeuroIdentity').textContent=(active?.name||'Агент')+
    ' · лучник: '+(active?.combatNeural?.archer?.episodes||0)+
    ' эп. · мечник: '+(active?.combatNeural?.swordsman?.episodes||0)+' эп.';
-  $('cpNeuroOpponentRow').hidden=$('cpNeuroOpponent').value!=='saved';
+  updateMethod();
+  const role=$('cpNeuroRole').value,entry=active?.combatNeural?.[role]?.history?.at(-1),key=active?.id+'|'+role+'|'+(entry?.at||'');
+  if(key!==lastLeagueShown){
+   lastLeagueShown=key;
+   showLeague(entry?.league?.generations||null);
+  }
  }
  function lock(locked,task){
   mode=locked?task:null;
   api.onBusy(locked);
-  for(const id of ['cpNeuroRole','cpNeuroEnemyRole','cpNeuroArena','cpNeuroOpponent',
+  for(const id of ['cpNeuroRole','cpNeuroEnemyRole','cpNeuroArena','cpNeuroOpponent','cpNeuroMethod',
    'cpNeuroOpponentAgent','cpNeuroEpisodes','cpNeuroTrain','cpNeuroDuel',
    'cpNeuroFighterA','cpNeuroFighterB','cpNeuroFighterRoleA','cpNeuroFighterRoleB'])
    $(id).disabled=locked;
   $('cpNeuroClose').disabled=locked;
-  $('cpNeuroStop').hidden=!locked||task!=='train';
+  $('cpNeuroStop').hidden=!locked||!['train','league'].includes(task);
  }
  function release(){worker?.terminate();worker=null;lock(false);}
  $('cpNeurocombat').onclick=()=>{refresh();showWorkbenchDialog($('cpNeuroDialog'));};
  $('cpNeuroClose').onclick=()=>$('cpNeuroDialog').close();
  $('cpNeuroDialog').addEventListener('cancel',event=>{if(worker)event.preventDefault();});
- $('cpNeuroOpponent').onchange=refresh;
+ $('cpNeuroOpponent').onchange=updateMethod;
+ $('cpNeuroMethod').onchange=updateMethod;
  $('cpNeuroRole').onchange=()=>{
   $('cpNeuroFighterRoleA').value=$('cpNeuroRole').value;
   refresh();
@@ -110,27 +151,51 @@ export function mountNeuralCombat(api){
   worker.onerror=event=>{release();status('Worker остановлен: '+(event.message||'ошибка вычисления'));};
   worker.onmessage=async event=>{
    const result=event.data||{};
-   if(result.type==='started'){
+   if(result.type==='league-started'){
+    status('Лига началась · начальная доля побед на контрольных аренах: '+pc(result.baseline.winRate));
+    leagueGenerations=[{generation:0,episodes:0,updates:0,validation:result.baseline}];showLeague(leagueGenerations);
+   }else if(result.type==='league-progress'){
+    trainedEpisodes=result.completed;
+    $('cpNeuroProgress').value=Math.round(100*result.completed/result.episodes);
+    status('Лига · бой '+result.completed+'/'+result.episodes+
+     ' · поколение '+Math.ceil(result.completed/6)+
+     ' · противник: '+({baseline:'обычный ИИ',initial:'начальная версия',latest:'последняя версия',archive:'архив'}[result.record.opponent])+
+     ' · обновлений весов '+result.updates);
+   }else if(result.type==='league-generation'){
+    const g=result.generation;
+    const live=[...leagueGenerations.filter(row=>row.generation!==g.generation),g];
+    leagueGenerations=live;
+    showLeague(live);
+    status('Поколение '+g.generation+' завершено · контрольная доля побед '+pc(g.validation.winRate)+
+      ' · всего '+g.episodes+' боёв.');
+   }else if(result.type==='started'){
     status('Проверка до обучения: '+pc(result.baseline.winRate)+' побед на '+result.baseline.count+' боях.');
    }else if(result.type==='progress'){
     trainedEpisodes=result.completed;
     $('cpNeuroProgress').value=Math.round(100*result.completed/result.episodes);
     status('Обучение: '+result.completed+' / '+result.episodes+' боёв · побед '+result.wins+
      ' · обновлений весов '+result.updates);
-   }else if(result.type==='trained'||result.type==='stopped'){
-    if(result.completed){
+   }else if(['trained','stopped','league-complete','league-stopped'].includes(result.type)){
+    const league=result.type.startsWith('league-');
+    const data=league?result.report:result,validation=league?data.after:data.validation,
+      baseline=data.baseline||data.initial,completed=data.completed;
+    if(completed){
+     const save={role:$('cpNeuroRole').value,model:data.model,
+      report:{episodes:completed,winRate:validation.winRate,
+       ...(league?{league:{generations:data.generations.map(g=>({
+        generation:g.generation,episodes:g.episodes,updates:g.updates,validation:g.validation
+       })),seed:data.seed,role:data.role}}:{})}};
      try{
-      const save={role:$('cpNeuroRole').value,model:result.model,report:{episodes:result.completed,winRate:result.validation.winRate}};
       await api.saveNeural(save.role,save.model,save.report);
       unsaved=null;$('cpNeuroRetry').hidden=true;
-      const panel=$('cpNeuroTrainingResult');
-      panel.textContent='До: '+pc(result.baseline.winRate)+' · после: '+pc(result.validation.winRate)+
-       ' · контроль: '+result.validation.count+' боёв · урон '+result.validation.damage.toFixed(1)+
-       ' · обновлений весов '+result.model.updates+'.';
-      status(result.type==='trained'?'Обучение завершено. Мозг сохранён.':'Остановлено. Полученный опыт сохранён.');
-     }catch(e){unsaved={role:$('cpNeuroRole').value,model:result.model,report:{episodes:result.completed,winRate:result.validation.winRate}};
-      $('cpNeuroRetry').hidden=false;
-      status('Не удалось сохранить модель: '+e.message+'. Нажмите «Повторить сохранение», обученные веса ещё в памяти.');}
+      $('cpNeuroTrainingResult').textContent='До: '+pc(baseline.winRate)+' · после: '+pc(validation.winRate)+
+       ' · контроль: '+validation.count+' боёв · урон '+validation.damage.toFixed(1)+
+       ' · обновлений весов '+data.model.updates+'.';
+      if(league)showLeague(data.generations);
+      status(data.stopped||result.type==='stopped'?'Остановлено. Полученный опыт сохранён.':
+       'Обучение завершено. Мозг сохранён.');
+     }catch(e){unsaved=save;$('cpNeuroRetry').hidden=false;
+      status('Не удалось сохранить модель: '+e.message+'. Повторите сохранение — обученные веса ещё в памяти.');}
     }else status('Остановлено до первого боя. Старый мозг не изменён.');
     release();refresh();
    }else if(result.type==='duel'){
@@ -164,7 +229,9 @@ export function mountNeuralCombat(api){
    const snapshot=await readCombatNeural(active,role);
    const opponent=$('cpNeuroOpponent').value;
    let enemySnapshot=null;
-   if(opponent==='self'){
+   if($('cpNeuroMethod').value==='league'){
+    // League opponents are generated by the worker; no external model required.
+   }else if(opponent==='self'){
     if(!snapshot)throw Error('Сначала обучите бойца против обычного ИИ, затем используйте его прошлую версию.');
     enemySnapshot=snapshot;
    }else if(opponent==='saved'){
@@ -173,12 +240,15 @@ export function mountNeuralCombat(api){
     enemySnapshot=await readCombatNeural(other,enemyRole);
     if(!enemySnapshot)throw Error('У выбранного агента ещё нет обученного мозга этого класса.');
    }
+   const league=$('cpNeuroMethod').value==='league';
+   if(league)enemySnapshot=null; // Archive opponents are frozen copies of this learner.
    $('cpNeuroTrainingResult').textContent='';$('cpNeuroProgress').hidden=false;$('cpNeuroProgress').value=0;
-   beginWorker('train',{role,enemyRole,arena:$('cpNeuroArena').value,
-    episodes:Number($('cpNeuroEpisodes').value),seed:411,snapshot,enemySnapshot});
+   leagueGenerations=[];if(league)showLeague(null);
+   beginWorker(league?'league':'train',{role,enemyRole,arena:$('cpNeuroArena').value,
+    episodes:Number($('cpNeuroEpisodes').value),seed:411+(active?.combatNeural?.[role]?.episodes||0)*977,snapshot,enemySnapshot});
   }catch(e){status('Нельзя начать обучение: '+e.message);}
  };
- $('cpNeuroStop').onclick=()=>{if(worker&&mode==='train')worker.postMessage({type:'stop'});};
+ $('cpNeuroStop').onclick=()=>{if(worker&&['train','league'].includes(mode))worker.postMessage({type:'stop'});};
  $('cpNeuroDuel').onclick=async()=>{
   if(worker)return;
   const state=api.state(),a=state.careers.find(c=>c.id===$('cpNeuroFighterA').value),
