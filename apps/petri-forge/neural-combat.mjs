@@ -21,9 +21,9 @@ export function combatTrainingOptions(options={}){
   snapshot:options.snapshot??null,enemySnapshot:options.enemySnapshot??null};
 }
 export function battleNeuralEpisode({role='archer',enemyRole='swordsman',arena='cover',seed=41,
- policy,opponent=null,learn=null,side=0,maxSeconds=20,record=false,stochastic=true}={}){
+ policy,opponent=null,learn=null,learnOpponent=null,side=0,maxSeconds=20,record=false,stochastic=true}={}){
  validateRole(role);validateRole(enemyRole);validateArena(arena);
- if(!(policy instanceof PpoPolicy)||opponent&&!(opponent instanceof PpoPolicy)||![0,1].includes(side))
+ if(!(policy instanceof PpoPolicy)||opponent&&!(opponent instanceof PpoPolicy)||learnOpponent&&!opponent||![0,1].includes(side))
   throw Error('Ошибка нейросетевого боя');
  const loadouts=side===0?[classes(role),classes(enemyRole)]:[classes(enemyRole),classes(role)];
  const state=createBattle({arena,seed,teamSize:1,loadouts,maxSeconds});
@@ -33,12 +33,14 @@ export function battleNeuralEpisode({role='archer',enemyRole='swordsman',arena='
  while(!state.done){
   const observation=neuralBattleObservation(state,hero);
   const oldDamage=state.scores[side],oldHealth=hero.hp;
+  const oldEnemyDamage=state.scores[1-side],oldEnemyHealth=foe.hp;
   const oldDistance=Math.hypot(hero.x-foe.x,hero.y-foe.y);
   const choice=learn?policy.sample(observation):stochastic?policy.sample(observation):null;
   const actionIndex=choice?choice.actionIndex:
     policy.forward(observation).probabilities.indexOf(Math.max(...policy.forward(observation).probabilities));
   const theirObs=opponent?neuralBattleObservation(state,foe):null;
-  const rivalChoice=opponent?
+  const rivalSample=learnOpponent?opponent.sample(theirObs):null;
+  const rivalChoice=rivalSample?rivalSample.actionIndex:opponent?
     (stochastic?opponent.sample(theirObs).actionIndex:
      opponent.forward(theirObs).probabilities.indexOf(Math.max(...opponent.forward(theirObs).probabilities))):null;
   const controllers={};
@@ -58,6 +60,17 @@ export function battleNeuralEpisode({role='archer',enemyRole='swordsman',arena='
     clamp((beforeGap-afterGap)*.003,-.15,.15)-.008+
     (state.done?(state.winner===side?7:state.winner===-1?0:-7):0);
   if(learn)learn.add(observation,{reward,done:state.done},actionIndex,choice.logProb,choice.value);
+  if(learnOpponent){
+   const otherPreferred=enemyRole==='archer'?225:55;
+   const oldOtherGap=Math.abs(oldDistance-otherPreferred);
+   const newOtherGap=Math.abs(newDistance-otherPreferred);
+   const otherReward=(state.scores[1-side]-oldEnemyDamage)*.045-
+     Math.max(0,oldEnemyHealth-foe.hp)*.055+
+     clamp((oldOtherGap-newOtherGap)*.003,-.15,.15)-.008+
+     (state.done?(state.winner===1-side?7:state.winner===-1?0:-7):0);
+   learnOpponent.add(theirObs,{reward:otherReward,done:state.done},
+    rivalSample.actionIndex,rivalSample.logProb,rivalSample.value);
+  }
   moves++;damage+=damageDelta;taken+=damageTaken;rewardTotal+=reward;lastAction=actionIndex;
  }
  return {winner:state.winner,won:state.winner===side,draw:state.winner===-1,
