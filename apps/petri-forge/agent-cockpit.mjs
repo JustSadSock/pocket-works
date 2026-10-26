@@ -9,7 +9,7 @@ export function mountAgentCockpit(api){
  const menus=['cpSetupDialog','cpProfileDialog','cpDuelDialog'];
  const closeAll=()=>{for(const id of menus){const dlg=$(id);if(dlg.open)dlg.close();}};
  for(const button of document.querySelectorAll('[data-cp-close]'))button.onclick=()=>$(button.dataset.cpClose).close();
- let fightWorker=null,fighting=false,lastMode=null,postBusy=false;
+ let fightWorker=null,fighting=false,lastMode=null,lastObservedAgent=null,postBusy=false;
  let libraryFilter='active',observerOpen=false,vision=false,observerTicket=0;
  const setStatus=(text)=>{$('cpState').textContent=text;api.notify(text);};
  function state(){return api.state();}
@@ -258,7 +258,7 @@ export function mountAgentCockpit(api){
  window.addEventListener('petri:finished',()=>{queueMicrotask(redraw);if(observerOpen)void renderObserver();});
  window.addEventListener('petri:evaluated',()=>queueMicrotask(redraw));
  window.addEventListener('petri:error',()=>queueMicrotask(redraw));
- window.addEventListener('petri:cockpit-sync',()=>{redraw();if(observerOpen&&lastMode!==state().mode){lastMode=state().mode;void renderObserver();}});
+ window.addEventListener('petri:cockpit-sync',()=>{redraw();const current=state();if(observerOpen&&(lastMode!==current.mode||lastObservedAgent!==current.active?.id)){lastMode=current.mode;lastObservedAgent=current.active?.id;void renderObserver();}});
  redraw();
  return {redraw,closeAll};
 }
