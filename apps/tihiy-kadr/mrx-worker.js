@@ -5,7 +5,6 @@
 const LIBRARY='https://esm.sh/@audio/neural-separate@0.7.0?bundle&target=es2022';
 const ROOT=new URL('/',self.location.origin);
 const MODEL_ASSETS={
- mrx:new URL('/ai-assets/mrx-v1/',ROOT).href,
  scnet:new URL('/ai-assets/scnet-v1/',ROOT).href,
  umxhq:new URL('/ai-assets/umxhq-v1/vocals.onnx',ROOT).href
 };
@@ -19,8 +18,8 @@ const describe=e=>{
  return (cause&&cause!==detail?detail+' ('+cause+')':detail).slice(0,400);
 };
 self.onmessage=async event=>{
- const {id,channels,chunk,kind='mrx',scnetStep=.25}=event.data||{};
- if(!['mrx','scnet','umxhq'].includes(kind))return self.postMessage({id,stage:'error',phase:'input',message:'Неизвестная модель'});
+ const {id,channels,chunk,kind='umxhq',scnetStep=.25}=event.data||{};
+ if(!['scnet','umxhq'].includes(kind))return self.postMessage({id,stage:'error',phase:'input',message:'Неизвестная модель'});
  if(!id||!Array.isArray(channels))return;
  if(kind==='scnet'&&![.25,.5,1].includes(scnetStep))return self.postMessage({id,stage:'error',phase:'input',message:'Некорректный шаг окон SCNet'});
  let phase='library';
@@ -37,10 +36,10 @@ self.onmessage=async event=>{
    const wasmPaths=RUNTIME_ASSETS[i];
    try{
     status('model',i?'Повторяем запуск с резервного CDN ONNX…':
-  kind==='mrx'?'Загружаем MRX (~31 МБ).':kind==='scnet'?'Загружаем SCNet (~13 МБ).':'Загружаем Open-Unmix UMX-HQ (~18 МБ).');
+  kind==='scnet'?'Загружаем SCNet (~13 МБ).':'Загружаем Open-Unmix UMX-HQ (~18 МБ).');
     const started=performance.now();
     const result=await separate(channels,{
-     sampleRate:44100,model:kind==='umxhq'?{vocals:MODEL_ASSETS.umxhq}:kind,device:'wasm',
+     sampleRate:44100,model:kind==='umxhq'?{vocals:MODEL_ASSETS.umxhq}:'scnet',device:'wasm',
      // Safari and iOS need a smaller per-inference allocation.
      chunk:[5,10,20].includes(chunk)?chunk:10,
      overlap:2,
@@ -48,11 +47,11 @@ self.onmessage=async event=>{
      weights:MODEL_ASSETS[kind],
      ...(kind==='scnet'?{targets:['vocals'],step:scnetStep}:kind==='umxhq'?{targets:['vocals'],modelType:'openunmix'}:{ }),
      progress:({chunk:part,totalChunks})=>{
-      if(totalChunks>1)status('model',(kind==='mrx'?'MRX':kind==='scnet'?'SCNet':'Open-Unmix')+' · фрагмент '+part+' из '+totalChunks);
+      if(totalChunks>1)status('model',(kind==='scnet'?'SCNet':'Open-Unmix')+' · фрагмент '+part+' из '+totalChunks);
      }
     });
     const stems=result?.stems;
-    const required=kind==='mrx'?['dialogue','music','effects']:['vocals'];
+    const required=['vocals'];
     if(!stems||!required.every(name=>Array.isArray(stems[name])&&stems[name].length))
      throw Error('Модель вернула неполные дорожки: '+required.join(', '));
     const outgoing={},transfer=[];

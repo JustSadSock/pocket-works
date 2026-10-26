@@ -1,4 +1,4 @@
-// WebKit (mobile viewport) end-to-end MRX test. Linux WebKit is not iOS,
+// WebKit (mobile viewport) end-to-end Open-Unmix test. Linux WebKit is not iOS,
 // but it catches WebKit WASM path failures that Chromium does not expose.
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -10,7 +10,7 @@ import {fileURLToPath} from 'node:url';
 import {handleMrxAsset} from '../../../pocketnet/mrx-assets.mjs';
 import {webkit} from '@playwright/test';
 const root=resolve(fileURLToPath(new URL('../../../',import.meta.url)));
-const temp=mkdtempSync(join(tmpdir(),'tihiy-mrx-'));
+const temp=mkdtempSync(join(tmpdir(),'tihiy-umx-'));
 const file=join(temp,'tone.mp4');
 const command=spawnSync('ffmpeg',[
  '-hide_banner','-loglevel','error',
@@ -52,12 +52,13 @@ try{
  await page.locator('#file-input').setInputFiles(file);
  await page.waitForFunction(()=>!document.querySelector('#process-btn').disabled,null,{timeout:16000});
  await page.locator('#duration-seconds').fill('1');
+ assert.equal(await page.locator('#quality-mode').inputValue(),'umxhq-direct');
  await page.locator('#process-btn').click();
  const outcome=await Promise.race([
   page.waitForSelector('#result-details:not(.hidden)',{timeout:180000}).then(()=>true),
   page.waitForSelector('#error:not(.hidden)',{timeout:180000}).then(()=>false)
  ]);
- if(!outcome)throw Error('MRX WebKit failure: '+await page.locator('#error').innerText()+'; errors='+JSON.stringify(errors));
+ if(!outcome)throw Error('Open-Unmix WebKit failure: '+await page.locator('#error').innerText()+'; errors='+JSON.stringify(errors));
  await page.evaluate(()=>{
   window.__monitorStarted=false;
   document.getElementById('monitor').addEventListener('playing',()=>{window.__monitorStarted=true},{once:true});
@@ -70,9 +71,9 @@ try{
  await page.locator('#listen-btn').click();
  const download=page.waitForEvent('download',{timeout:20000});
  await page.locator('#wav-btn').click();
- assert.match((await download).suggestedFilename(),/music-effects\.wav$/);
+ assert.match((await download).suggestedFilename(),/no-dialogue\.wav$/);
  assert.deepEqual(errors,[]);
- console.log('WebKit mobile MRX passed · '+await page.locator('#inference-time').innerText());
+ console.log('WebKit mobile Open-Unmix passed · '+await page.locator('#inference-time').innerText());
 }finally{
  await browser.close();
  await new Promise(ok=>server.close(ok));

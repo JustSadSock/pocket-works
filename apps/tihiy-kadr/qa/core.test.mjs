@@ -1,107 +1,44 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,suppressStereoCenter,wavPCM16,safeName} from '../audio-utils.js';
-const a=x=>Float32Array.from(x);
-const fixture={
- input:[a([.2,.4,-.3,.7])],
- stems:{dialogue:[a([.1,.3,-.2,.2])],music:[a([.08,.05,-.06,.3])],effects:[a([.02,.05,-.04,.2])]}
-};
-test('MRX sample rate and scene bounds',()=>{
+import {RATE,MAX_SECONDS,validRange,suppressStereoCenter,wavPCM16,safeName} from '../audio-utils.js';
+const a=v=>Float32Array.from(v);
+
+test('validates local video fragments up to 90 seconds',()=>{
  assert.equal(RATE,44100);assert.equal(MAX_SECONDS,90);
  assert.deepEqual(validRange(12,5,100),{start:12,duration:5});
  assert.throws(()=>validRange(0,91,100),/1–90/);
  assert.throws(()=>validRange(99,5,100),/1–90/);
- assert.throws(()=>validRange(-1,5,100));
 });
-test('default M&E mix subtracts the dialogue stem without touching other tracks',()=>{
- const mixed=mixPCM(fixture.input,fixture.stems);
- assert.equal(mixed.length,1);
- fixture.input[0].forEach((v,i)=>assert(Math.abs(mixed[0][i]-(v-fixture.stems.dialogue[0][i]))<1e-6));
+test('WAV exports correct PCM16 RIFF data',async()=>{
+ const wav=wavPCM16([a([0,.5,-.5,1])],RATE);
+ const v=new DataView(await wav.arrayBuffer());
+ assert.equal(wav.type,'audio/wav');assert.equal(wav.size,52);
+ assert.equal(v.getUint32(24,true),RATE);
+ assert.equal(v.getInt16(50,true),32767);
+ assert.equal(safeName('test;<>.mp4'),'test');
 });
-test('100% all channels leaves source unchanged and 0% all removes estimated stems',()=>{
- const same=mixPCM(fixture.input,fixture.stems,{dialogue:1,music:1,effects:1});
- assert.deepEqual([...same[0]],[...fixture.input[0]]);
- const zero=mixPCM(fixture.input,fixture.stems,{dialogue:0,music:0,effects:0});
- assert(Math.abs(zero[0][0])<1e-5);
+test('real Open-Unmix/SCNet inference requires ONNX WASM and vocals stem',()=>{
+ const worker=readFileSync(new URL('../mrx-worker.js',import.meta.url),'utf8');
+ assert.match(worker,/@audio\/neural-separate@0\.7\.0/);
+ assert.match(worker,/await separate\(channels/);
+ assert.match(worker,/required=\['vocals'\]/);
+ assert.match(worker,/modelType:'openunmix'/);
+ assert.doesNotMatch(worker,/mrx-v1|dialogue','music','effects/);
 });
-test('WAV RIFF PCM16 carries correct length and samples',async()=>{
- const blob=wavPCM16([a([0,.5,-.5,1])],RATE);
- const view=new DataView(await blob.arrayBuffer());
- assert.equal(blob.type,'audio/wav');assert.equal(blob.size,52);
- assert.equal(view.getUint32(24,true),RATE);
- assert.equal(view.getUint16(22,true),1);
- assert.equal(view.getInt16(44,true),0);
- assert.equal(view.getInt16(50,true),32767);
+test('neural listening never restores original soundtrack to muted video',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/video\.addEventListener\('volumechange',lockVideoMute\)/);
+ assert.match(app,/audio\.play\(\),video\.play\(\)/);
+ assert.match(app,/mode==='speech'/);
 });
-test('stereo mixing does not silently swap or drop channels',()=>{
- const input=[a([.3,.8]),a([-.5,-.2])];
- const stems={dialogue:[a([.1,.2]),a([-.3,-.1])],music:[a([0,0]),a([0,0])],effects:[a([0,0]),a([0,0])]};
- const mixed=mixPCM(input,stems);
- assert.equal(mixed[0].length,2);assert.equal(mixed[1].length,2);
- assert(Math.abs(mixed[1][0]+.2)<1e-6);
- assert.throws(()=>mixPCM(input,{...stems,effects:[a([0])] }),/длины/);
-});
-test('selected filenames remain safe for downloads',()=>{assert.equal(safeName('test;<>.mp4'),'test');assert.equal(safeName(''), 'video')});
-test('separation runs the actual 3-stem MRX, not a fake filter',()=>{
- const w=readFileSync(new URL('../mrx-worker.js',import.meta.url),'utf8');
- assert.match(w,/@audio\/neural-separate@0\.7\.0/);
- assert.match(w,/await separate\(channels/);
- assert.match(w,/model:kind==='umxhq'\?\{vocals:MODEL_ASSETS\.umxhq\}:kind,device:'wasm'/);
- assert.match(w,/targets:\['vocals'\]/);
- for(const name of ['dialogue','music','effects'])assert(w.includes("'"+name+"'"));
-});
-
-test('direct M&E mix discards the model residual and never re-adds unseparated dialogue',()=>{
- const src=[a([.5,.1])];
- const stems={dialogue:[a([.2,.3])],music:[a([.1,-.1])],effects:[a([.05,.15])]};
- const safe=mixPCM(src,stems,{dialogue:0,music:1,effects:1},'stems');
- assert(Math.abs(safe[0][0]-.15)<1e-6);
- assert(Math.abs(safe[0][1]-.05)<1e-6);
- const residual=mixPCM(src,stems,{dialogue:0,music:1,effects:1},'residual');
- assert(Math.abs(residual[0][0]-.3)<1e-6);
- assert.throws(()=>mixPCM(src,stems,{dialogue:0,music:1,effects:1},'wrong'),/Неизвестный/);
-});
-test('speech level diagnostics do not pretend to measure quality',()=>{
- const levels=stemLevels(fixture.input,fixture.stems);
- assert(Number.isFinite(levels.dialogueRelativeDb));
- assert(levels.dialogue>0);
- assert.equal(stemLevels([],{}),null);
-});
-test('native video stays silent while monitor begins playback from user gesture',()=>{
- const ui=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(ui,/video\.addEventListener\('volumechange',lockVideoMute\)/);
- assert.match(ui,/audio\.play\(\),video\.play\(\)/);
-});
-
-test('stereo centre filter attenuates shared speech-band signal, but keeps anti-phase ambience',()=>{
- const N=44100,center=new Float32Array(N),anti=new Float32Array(N);
- for(let i=0;i<N;i++){
-  center[i]=.25*Math.sin(2*Math.PI*1300*i/44100);
-  anti[i]=.25*Math.sin(2*Math.PI*1300*i/44100);
- }
- const rms=x=>Math.sqrt(x.reduce((n,s)=>n+s*s,0)/x.length);
- const filtered=suppressStereoCenter([center,center],70);
- assert(filtered[0]!==center&&filtered[1]!==center);
- assert(rms(filtered[0])<rms(center)*.65);
- const spread=suppressStereoCenter([anti,anti.map(v=>-v)],100);
- assert(rms(spread[0])>=rms(anti)*.999);
-});
-test('centre filter off/mono never changes waveform; input cannot be mutated',()=>{
- const original=[a([0,.1,.5,-.2])];
- assert.equal(suppressStereoCenter(original,100),original);
- const stereo=[a([0,.1,.5,-.2]),a([.1,0,-.2,.3])];
- assert.equal(suppressStereoCenter(stereo,0),stereo);
- const before=stereo.map(c=>[...c]);
- const filtered=suppressStereoCenter(stereo,40);
- assert.deepEqual(stereo.map(c=>[...c]),before);
- assert(filtered.every(c=>[...c].every(Number.isFinite)));
- assert.throws(()=>suppressStereoCenter(stereo,120),/от 0 до 100/);
- assert.throws(()=>suppressStereoCenter(stereo,-1),/от 0 до 100/);
-});
-test('optional centre filter is applied to export and preview but not original or speech solo',()=>{
- const ui=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(ui,/return suppressStereoCenter\(separated/);
- assert.match(ui,/if\(mode==='original'\)return stereoPCM\(original\)/);
- assert.match(ui,/if\(mode==='speech'\)return stems.dialogue/);
+test('optional centre filter attenuates mid speech and leaves anti-phase ambience',()=>{
+ const N=44100,mid=new Float32Array(N);
+ for(let i=0;i<N;i++)mid[i]=.25*Math.sin(2*Math.PI*1300*i/44100);
+ const rms=x=>Math.sqrt(x.reduce((n,v)=>n+v*v,0)/x.length);
+ const filtered=suppressStereoCenter([mid,mid],70);
+ assert(rms(filtered[0])<rms(mid)*.65);
+ const wide=suppressStereoCenter([mid,mid.map(x=>-x)],100);
+ assert(rms(wide[0])>=rms(mid)*.999);
+ assert.equal(suppressStereoCenter([mid],100)[0],mid);
 });

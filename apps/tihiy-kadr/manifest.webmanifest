@@ -2,7 +2,7 @@
   "id": "/apps/tihiy-kadr/",
   "name": "ТИХИЙ КАДР",
   "short_name": "M&E LAB",
-  "description": "Три реальные ONNX-модели MRX, SCNet и Open-Unmix UMX-HQ для сравнения удаления речи непосредственно в браузере.",
+  "description": "Две локальные ONNX-модели удаления голосов: быстрое Open-Unmix и более тщательное SCNet.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

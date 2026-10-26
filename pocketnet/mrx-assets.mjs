@@ -4,9 +4,6 @@
 // PocketWorks itself loads. This edge relay fetches only the explicitly
 // allowlisted model/wasm files: it is not an arbitrary URL proxy.
 // User video/audio never passes through this endpoint.
-const MODEL_SHA256='d876c92d224f5d8cd2207d528b23369da895a6de71fb24132416fcb16f9f8424';
-const MODEL_BYTES=31287081;
-const MODEL_PREFIX='/ai-assets/mrx-v1/mrx/';
 const SCNET_PREFIX='/ai-assets/scnet-v1/scnet/';
 const SCNET_BYTES=12900277;
 const SCNET_SHA256='98228931494151762a1c4ab1ec7899a894b1f81fd4a509921a9d2f9bacc50845';
@@ -27,10 +24,6 @@ export function assetSource(pathname){
  if(pathname===SCNET_PREFIX+'scnet.int8.onnx')return {
   kind:'model',size:SCNET_BYTES,sha256:SCNET_SHA256,
   urls:['https://huggingface.co/audiojs/scnet/resolve/e71bcdb/scnet.int8.onnx']
- };
- if(pathname===MODEL_PREFIX+'mrx.int8.onnx')return {
-  kind:'model',size:MODEL_BYTES,sha256:MODEL_SHA256,
-  urls:['https://huggingface.co/audiojs/mrx/resolve/main/mrx.int8.onnx']
  };
  if(pathname.startsWith(ORT_PREFIX)){
   const filename=pathname.slice(ORT_PREFIX.length);

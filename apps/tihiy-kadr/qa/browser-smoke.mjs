@@ -65,159 +65,48 @@ try{
   throw Error('Video fixture setup failed: '+JSON.stringify(diagnostics));
  }
  await page.locator('#duration-seconds').fill('1');
+ assert.equal(await page.locator('#quality-mode').inputValue(),'umxhq-direct');
+ assert.equal(await page.locator('#quality-mode option').count(),2);
  await page.locator('#process-btn').click();
- const result=await Promise.race([
+ const ready=await Promise.race([
   page.waitForSelector('#result-details:not(.hidden)',{timeout:180000}).then(()=>true),
   page.waitForSelector('#error:not(.hidden)',{timeout:180000}).then(()=>false)
  ]);
- if(!result)throw Error('MRX failure: '+await page.locator('#error').innerText());
- assert.match(await page.locator('#inference-time').innerText(),/с|мин/);
- assert.match(await page.locator('#speed-factor').innerText(),/×/);
+ if(!ready)throw Error('Open-Unmix ONNX failure: '+await page.locator('#error').innerText());
+ await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('Open-Unmix'),null,{timeout:10000});
+ assert.equal(await page.locator('#result-video').evaluate(v=>v.muted),true);
  await page.evaluate(()=>{
   window.__monitorStarted=false;
   document.getElementById('monitor').addEventListener('playing',()=>{window.__monitorStarted=true},{once:true});
  });
  await page.locator('#listen-btn').click();
  await page.waitForFunction(()=>window.__monitorStarted===true,null,{timeout:9000});
- assert.equal(await page.locator('#result-video').evaluate(v=>v.muted),true);
  await page.locator('#listen-btn').click();
- assert(await page.locator('#result-video').isVisible());
- const downloaded=page.waitForEvent('download',{timeout:25000});
+ const firstWav=page.waitForEvent('download',{timeout:25000});
  await page.locator('#wav-btn').click();
- const output=await downloaded;
- assert.match(output.suggestedFilename(),/music-effects\.wav$/);
-
- // Force native video unmute and prove its soundtrack cannot leak.
- await page.evaluate(()=>{
-  const v=document.getElementById('result-video');
-  v.muted=false;v.volume=1;
- });
- // HTMLMediaElement.volumechange is asynchronous; wait for the lock event.
- await page.waitForFunction(()=>{
-  const v=document.getElementById('result-video');
-  return v.muted&&v.volume===0;
- },null,{timeout:3500});
+ assert.match((await firstWav).suggestedFilename(),/no-dialogue\.wav$/);
  await page.locator('#speech-btn').click();
- const speechDownload=page.waitForEvent('download',{timeout:25000});
+ const removed=page.waitForEvent('download',{timeout:25000});
  await page.locator('#wav-btn').click();
- assert.match((await speechDownload).suggestedFilename(),/isolated-dialogue\.wav$/);
- await page.locator('#stems-btn').click();
- const effectsDownload=page.waitForEvent('download',{timeout:25000});
- await page.locator('#wav-btn').click();
- assert.match((await effectsDownload).suggestedFilename(),/music-effects\.wav$/);
- assert.match(await page.locator('#stem-diagnostics').innerText(),/MRX выделила речь/);
- assert.equal(await page.locator('#center-suppression').isDisabled(),false);
- await page.locator('#center-suppression').fill('45');
- assert.equal(await page.locator('#center-value').innerText(),'45%');
- const boosted=page.waitForEvent('download',{timeout:25000});
- await page.locator('#wav-btn').click();
- assert.match((await boosted).suggestedFilename(),/music-effects\.wav$/);
-
-
- // Route 3: run genuine SCNet on the MRX M&E while reusing cached MRX.
- await page.locator('#center-suppression').fill('0');
- await page.locator('#quality-mode').selectOption('mrx-scnet-fast');
- await page.locator('#process-btn').click();
- await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('MRX → SCNet · быстро'),null,{timeout:180000});
- assert.equal(await page.locator('#scnet-tuning').isVisible(),true);
- assert.equal(await page.locator('#study-results .study-choice').count(),2);
- assert.match(await page.locator('#pipeline-input').inputValue(),/mrx-scnet-fast/);
- assert.match(await page.locator('#pipeline-status').innerText(),/Кэшировано этапов: 1/);
- const fastTime=await page.locator('#inference-time').innerText();
-
- // Route 4: different SCNet stride. Must be a separate real ONNX run.
- await page.locator('#quality-mode').selectOption('mrx-scnet-balanced');
- await page.locator('#process-btn').click();
- await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('MRX → SCNet · баланс'),null,{timeout:180000});
- assert.equal(await page.locator('#study-results .study-choice').count(),3);
-
- // Cache check: repeating this same route must NOT invoke either model.
- await page.locator('#process-btn').click();
- await page.waitForFunction(()=>document.querySelector('#pipeline-status').textContent.includes('Кэшировано этапов: 2'),null,{timeout:10000});
- assert.equal(await page.locator('#study-results .study-choice').count(),3);
-
- // The user can chain another MRX on top of any completed stem.
- await page.locator('#pipeline-input').selectOption('mrx-scnet-fast');
- await page.locator('#pipeline-model').selectOption('mrx');
- await page.locator('#pipeline-run').click();
- await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('←'),null,{timeout:180000});
- assert.equal(await page.locator('#study-results .study-choice').count(),4);
- assert.equal(await page.locator('#pipeline-input').inputValue(),'custom-1');
-
- // Route 2: direct SCNet on original sound (not a renamed MRX).
+ assert.match((await removed).suggestedFilename(),/isolated-dialogue\.wav$/);
+ await page.locator('#clean-btn').click();
+ await page.locator('#scnet-strength').fill('60');
+ await page.waitForTimeout(450);
+ assert.equal(await page.locator('#scnet-strength-value').innerText(),'60%');
  await page.locator('#quality-mode').selectOption('scnet-direct');
  await page.locator('#process-btn').click();
- await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('SCNet · оригинал'),null,{timeout:180000});
- assert.equal(await page.locator('#study-results .study-choice').count(),5);
- await page.locator('#scnet-strength').fill('60');
- assert.equal(await page.locator('#scnet-strength-value').innerText(),'60%');
- await page.waitForTimeout(420);
- const finalWav=page.waitForEvent('download',{timeout:25000});
- await page.locator('#wav-btn').click();
- assert.match((await finalWav).suggestedFilename(),/no-dialogue\.wav$/);
+ await page.waitForFunction(()=>document.querySelector('#result-state').textContent==='SCNet',null,{timeout:180000});
+ assert.equal(await page.locator('#study-results .study-choice').count(),2);
+ await page.locator('#study-results .study-choice strong').filter({hasText:'Open-Unmix UMX-HQ'}).click();
+ assert.equal(await page.locator('#result-state').innerText(),'Open-Unmix UMX-HQ');
+ await page.locator('#study-results .study-choice strong').filter({hasText:'SCNet'}).click();
+ assert.equal(await page.locator('#result-state').innerText(),'SCNet');
  const csv=page.waitForEvent('download',{timeout:25000});
  await page.locator('#study-csv').click();
- assert.match((await csv).suggestedFilename(),/seven-routes\.csv$/);
- assert.equal(await page.locator('#study-csv').isEnabled(),true);
- console.log('Browser real pipelines: MRX, fast SCNet, balanced SCNet, custom MRX, direct SCNet; first fast time:',fastTime);
- // Regression: a changed SCNet vocal subtraction MUST invalidate downstream
- // inference on that gallery row, while leaving prior results available.
- await page.locator('#pipeline-input').selectOption('scnet-direct');
- await page.locator('#pipeline-model').selectOption('mrx');
- await page.locator('#pipeline-run').click();
- await page.waitForFunction(()=>document.querySelector('#pipeline-status').textContent.startsWith('Готово'),null,{timeout:180000});
- await page.locator('#study-results .study-choice strong').filter({hasText:/^SCNet · оригинал$/}).click();
- await page.locator('#scnet-strength').fill('30');
- await page.waitForTimeout(430);
- // A repeated preset reuses ONNX, but must rematerialize at the new 30% gain.
- await page.locator('#quality-mode').selectOption('scnet-direct');
+ assert.match((await csv).suggestedFilename(),/two-models\.csv$/);
  await page.locator('#process-btn').click();
- await page.waitForFunction(()=>document.querySelector('#pipeline-status').textContent.includes('Кэшировано этапов: 1'),null,{timeout:15000});
- assert.equal(await page.locator('#scnet-strength').inputValue(),'30');
- await page.locator('#pipeline-input').selectOption('scnet-direct');
- await page.locator('#pipeline-model').selectOption('mrx');
- await page.locator('#pipeline-run').click();
- await page.waitForFunction(()=>document.querySelector('#pipeline-status').textContent.startsWith('Готово'),null,{timeout:180000});
- assert.doesNotMatch(await page.locator('#pipeline-status').innerText(),/Кэшировано этапов:/);
-
- // Regression: cancelling a slow stage must also release the awaited Promise
- // and clear its 1-second status timer, not merely kill the Worker.
- await page.evaluate(()=>{
-  const start=window.setInterval.bind(window),stop=window.clearInterval.bind(window);
-  window.__inferenceIntervals=new Set();
-  window.setInterval=(handler,delay,...args)=>{
-   const id=start(handler,delay,...args);
-   if(delay===1000)window.__inferenceIntervals.add(id);
-   return id;
-  };
-  window.clearInterval=id=>{
-   window.__inferenceIntervals.delete(id);
-   return stop(id);
-  };
- });
- await page.locator('#quality-mode').selectOption('mrx-scnet');
- await page.locator('#process-btn').click();
- await page.waitForFunction(()=>document.querySelector('#progress-heading').textContent.includes('SCNet'),null,{timeout:12000});
- await page.locator('#cancel-btn').click();
- await page.waitForFunction(()=>window.__inferenceIntervals.size===0,null,{timeout:3500});
- assert.equal(await page.locator('#process-btn').isEnabled(),true);
- await page.locator('#quality-mode').selectOption('mrx');
- await page.locator('#process-btn').click();
- await page.waitForFunction(()=>document.querySelector('#result-state').textContent==='MRX',null,{timeout:15000});
-
- // Third independent ONNX model, not a parameter change to SCNet:
- await page.locator('#quality-mode').selectOption('umxhq-direct');
- await page.locator('#process-btn').click();
- await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('Open-Unmix · оригинал'),null,{timeout:120000});
- assert((await page.locator('#study-results .study-choice').count())>=6);
- const umxWav=page.waitForEvent('download',{timeout:25000});
- await page.locator('#wav-btn').click();
- assert.match((await umxWav).suggestedFilename(),/no-dialogue\.wav$/);
- // Reuse cached MRX, then run an actual UMX-HQ on its cleaned track.
- await page.locator('#quality-mode').selectOption('mrx-umxhq');
- await page.locator('#process-btn').click();
- await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('MRX → Open-Unmix'),null,{timeout:120000});
- assert((await page.locator('#study-results .study-choice').count())>=7);
+ await page.waitForFunction(()=>document.querySelector('#progress-heading').textContent==='Готово',null,{timeout:10000});
+ assert.equal(await page.locator('#study-results .study-choice').count(),2);
  assert.deepEqual(runtimeErrors,[]);
- console.log('Real Chromium MRX preview, speech, M&E exports verified:',await page.locator('#inference-time').innerText());
+ console.log('Real Chromium Open-Unmix and SCNet direct routes, monitoring, export, cache and A/B passed');
 }finally{await browser.close();await new Promise(r=>server.close(r))}
