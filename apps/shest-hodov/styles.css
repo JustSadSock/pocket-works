@@ -48,3 +48,11 @@ button:disabled{cursor:default}.app-shell{min-height:var(--app-viewport-height,1
 @media(min-width:720px){.catalog{grid-template-columns:repeat(3,1fr)}.game-option{min-height:150px}.board-area{min-height:380px}}
 @media(max-width:350px){.game-option{padding:9px;gap:6px;min-height:104px}.game-copy b{font-size:1rem}.game-copy small{font-size:.72rem}.turn{min-width:97px;font-size:.71rem}.gridboard{width:92vw}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+/* Compact opponent configuration above the six game tiles */
+.game-setup{display:grid;gap:10px;margin:4px 0 16px;}
+.opponent-choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.setup-option{min-height:47px;border:1px solid var(--ink);background:var(--panel);color:var(--ink);border-radius:3px;font-weight:700}
+.setup-option.active{background:var(--ink);color:#fff}
+.difficulty{display:flex;justify-content:space-between;align-items:center;gap:14px;font-weight:600;font-size:.87rem;color:var(--muted)}
+.difficulty select{min-height:45px;min-width:135px;border:1px solid var(--line);border-radius:3px;background:var(--panel);color:var(--ink);padding:8px 12px;font:inherit;font-size:16px}
+.ai-status{padding:12px 0;color:var(--muted);font-weight:700}
