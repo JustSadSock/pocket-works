@@ -190,15 +190,9 @@ function separate(channels,chunk,id,kind='umxhq',scnetStep=1){
   w.postMessage({id,channels:copies,chunk,kind,scnetStep},copies.map(c=>c.buffer));
  });
 }
-// Every route is browser-only. Intermediate neural runs are cached under the
-// *actual input result* and SCNet's window stride, avoiding duplicate inference.
-function stageAudio(id){
- if(id==='original')return original;
- return studyResults.get(id)?.clean||null;
-}
+// Both independent models process the same decoded original.
 function initPlayer(selected){
- range=selected;
- video.muted=true;try{video.volume=0}catch{}
+ range=selected;video.muted=true;try{video.volume=0}catch{}
  if(video.src!==fileURL){
   video.src=fileURL;video.load();
   video.addEventListener('loadedmetadata',()=>{if(range)video.currentTime=range.start},{once:true});
@@ -206,170 +200,78 @@ function initPlayer(selected){
  $('result-seek').min='0';$('result-seek').max=String(selected.duration);
  $('result-seek').step='.05';$('result-seek').value='0';
 }
-async function modelStage(model,inputId,inputPCM,stepSize,id,inputKey=inputId){
- const scnetStep=model==='scnet'?stepSize:null;
- // Cache the exact audio provenance, not a mutable gallery row identifier.
- const key=makeRunKey(model,inputKey,scnetStep);
- if(pipelineRuns.has(key)){
-  const cached=pipelineRuns.get(key);
-  if(model==='mrx')return {...cached,cached:true};
-  // ONNX vocals are reusable, but the audible mix depends on the CURRENT
-  // strength. Rebuild PCM without running the model a second time.
-  const strength=Number($('scnet-strength').value)/100;
-  return {...cached,clean:subtractResidualVocals(cached.base,cached.vocals,strength),strength,cached:true};
- }
- const actualPCM=stereoPCM(inputPCM);
- // SCNet has its own fixed 11-second context windows; keep an outer 20s
- // chunk on desktop or the 'step' choice is masked by 5-10s outer chunks.
- // Mobile respects the chosen 5s task and never exceeds 10s for SCNet.
- const selectedChunk=Number($('chunk-size').value);
- const piece=model==='scnet'&&mobile?Math.min(10,selectedChunk):selectedChunk;
- const response=await separate(actualPCM,piece,id,model,scnetStep??.25);
+async function modelStage(model,id){
+ const key=makeRunKey(model),cached=pipelineRuns.get(key);
+ if(cached)return {...cached,cached:true};
+ const input=stereoPCM(original);
+ const response=await separate(input,Number($('chunk-size').value),id,model,1);
  if(id!==serial||abort?.signal.aborted)throw new DOMException('Прервано','AbortError');
- let run;
- if(model==='mrx'){
-  const clean=mixPCM(actualPCM,response.stems,{dialogue:0,music:1,effects:1},'stems');
-  run={model,key,clean,stems:response.stems,timeMs:response.seconds*1000};
-  if(inputId==='original'){stems=response.stems;inferenceTime=response.seconds}
- }else{
-  const vocals=response.stems.vocals;
-  const strength=Number($('scnet-strength').value)/100;
-  const clean=subtractResidualVocals(actualPCM,vocals,strength);
-  run={model,key,clean,vocals,base:actualPCM,strength,timeMs:response.seconds*1000,step:scnetStep};
- }
+ const run={model,key,vocals:response.stems.vocals,base:input,timeMs:response.seconds*1000};
  pipelineRuns.set(key,run);
- if(pipelineRuns.size>(mobile?5:12)){
-  const old=[...pipelineRuns.keys()].find(k=>k!=='mrx|original'&&k!==key);
-  if(old)pipelineRuns.delete(old);
- }
  return {...run,cached:false};
 }
-async function executeRoute(routeId=null,custom=null){
+async function executeRoute(routeId){
  if(!file||worker||exporting||studyBusy)return;
  clearError();
- const controller=new AbortController();abort=controller;const id=++serial;
- let freshMs=0,cacheHits=0,preview=null;
- const isPreset=!!routeId;
- const route=isPreset?routeById(routeId):null;
- if(isPreset&&!route)return error('Выбран неизвестный маршрут.');
- if(!isPreset&&!custom)return error('Выбери модель и входной результат.');
- const task=isPreset?planRoute(routeId):[custom];
- const targetId=isPreset?routeId:'custom-'+(++customCounter);
+ const route=routeById(routeId);
+ if(!route)return error('Выбери доступную нейросеть.');
+ const controller=new AbortController();abort=controller;
+ const id=++serial;
  studyBusy=true;uiBusy(true);
- text('pipeline-status','Вычисляем реальные дорожки…');
  try{
   const selected=validRange(Number($('start-seconds').value),Number($('duration-seconds').value),length);
   const signature=selected.start.toFixed(3)+'|'+selected.duration.toFixed(3);
-  if(studySignature!==signature){
-   reset();clearStudy();studySignature=signature;
-  }
+  if(studySignature!==signature){reset();clearStudy();studySignature=signature}
   if(!original){
    range=selected;original=await pcm(selected,controller.signal);
    if(controller.signal.aborted||id!==serial)return;
-   if(!original?.length)throw Error('Не удалось извлечь звук выбранного фрагмента.');
   }
   initPlayer(selected);
-  let inputId='original',inputKey='original',inputPCM=original,totalMs=0;
-  if(!isPreset){
-   inputId=custom.input;
-   inputPCM=stageAudio(inputId);
-   inputKey=inputId==='original'?'original':studyResults.get(inputId)?.inputKey;
-   if(!inputPCM||!inputKey)throw Error('Исходная версия недоступна: выбери другую дорожку.');
-  }
-  for(const [i,part] of task.entries()){
-   if(part.input==='original'){inputId='original';inputKey='original';inputPCM=original}
-   else if(part.input==='previous'&&!inputPCM)throw Error('Не найден предыдущий результат.');
-   const label=part.model==='mrx'?'MRX':part.model==='umxhq'?'Open-Unmix UMX-HQ':'SCNet · окна '+Math.round(part.step*100)+'%';
-   step('Этап '+(i+1)+'/'+task.length+' · '+label,
-    'Обрабатываем '+elapsed(selected.duration)+' · время зависит от CPU и количества пересечений окон.');
-   const stageStarted=performance.now();
-   const tick=setInterval(()=>{
-    if(worker&&id===serial)text('progress-detail','Стадия '+(i+1)+'/'+task.length+
-     ' · '+label+' · прошло '+elapsed((performance.now()-stageStarted)/1000)+
-     '. Нажми «Прервать», если обработка слишком долгая.');
-   },1000);
-   let run;
-   try{run=await modelStage(part.model,inputId,inputPCM,part.step??null,id,inputKey)}
-   finally{clearInterval(tick)}
-   if(controller.signal.aborted||id!==serial)return;
-   totalMs+=run.timeMs;if(run.cached)cacheHits++;else freshMs+=run.timeMs;
-   inputPCM=run.clean;
-   inputKey=run.key;
-   preview=run;
-   if(part.model==='mrx'&&inputId==='original'&&!studyResults.has('mrx')){
-    registerStudyResult('mrx',run.clean,run.timeMs,
-     {source:'local',label:'MRX · быстрый ориентир',meta:{model:'mrx',runKey:run.key,input:'original'}});
-    // Keep the first-pass result audible, even if an optional follow-up
-    // cannot finish or the user cancels its slow CPU inference.
-    await selectStudyResult('mrx');
-   }
-   // A preset MRX stage is a stable named intermediate input for later
-   // routes; a custom pass must not silently become that intermediate.
-   inputId=part.model==='mrx'&&part.input==='original'?'mrx':targetId+':stage'+i;
-  }
-  if(!preview)throw Error('Модель не вернула обработанный звук.');
-  const display=isPreset?route.label:
-   (custom.model==='mrx'?'MRX':custom.model==='umxhq'?'Open-Unmix UMX-HQ':'SCNet '+Math.round(custom.step*100)+'%')+
-   ' ← '+(custom.input==='original'?'Оригинал':studyResults.get(custom.input)?.label||'Дорожка');
-  registerStudyResult(targetId,inputPCM,totalMs,{
-   source:'local',label:display,
-   meta:{model:preview.model,input:!isPreset?custom.input:task[0].input,
-    step:preview.step,runKey:preview.key,
-    vocals:preview.vocals,base:preview.base,strength:preview.strength,spentMs:freshMs,cached:cacheHits,route:routeId}
+  const model=route.steps[0].model;
+  step('Удаляем голоса · '+route.label,'Подготовка модели и анализ '+elapsed(selected.duration));
+  const started=performance.now();
+  const tick=setInterval(()=>{
+   if(worker&&id===serial)text('progress-detail',route.label+' · прошло '+elapsed((performance.now()-started)/1000));
+  },1000);
+  let run;
+  try{run=await modelStage(model,id)}finally{clearInterval(tick)}
+  if(controller.signal.aborted||id!==serial)return;
+  const strength=Number($('scnet-strength').value)/100;
+  const clean=subtractResidualVocals(run.base,run.vocals,strength);
+  registerStudyResult(routeId,clean,run.timeMs,{
+   label:route.label,meta:{model,runKey:run.key,vocals:run.vocals,base:run.base,strength,cached:run.cached}
   });
-  await selectStudyResult(targetId);
-  step('Готово',cacheHits?'Повторно использовано этапов: '+cacheHits+'.':'Новый результат готов.',1);
-  text('pipeline-status','Готово · '+display+'. Этот результат можно подать в любую модель следующим проходом.'+
-   (cacheHits?' Кэшировано этапов: '+cacheHits+'.':''));
-  text('export-status','Сравни все версии на той же секунде; скачивание использует выбранный вариант.');
+  await selectStudyResult(routeId);
+  step('Готово',run.cached?'Использован кэш модели.':'Новая версия готова.',1);
+  text('export-status','Выбранный результат доступен для сравнения, прослушивания и экспорта.');
  }catch(e){
-  if(id===serial&&e.name!=='AbortError'){
-   error(e.message||String(e));
-   text('pipeline-status','Ошибка модели: '+(e.message||String(e))+
-    '. Уже готовые результаты сохранены — можно выбрать другой маршрут.');
-  }
+  if(id===serial&&e.name!=='AbortError')error(e.message||String(e));
  }finally{
   if(abort===controller)abort=null;
-  if(serial===id){studyBusy=false;uiBusy(false)}
+  if(id===serial){studyBusy=false;uiBusy(false)}
  }
 }
 $('process-btn').onclick=()=>{void executeRoute($('quality-mode').value)};
 $('cancel-btn').onclick=cancel;
-$('pipeline-model').onchange=()=>{
- $('pipeline-step').disabled=$('pipeline-model').value!=='scnet';
-};
-$('pipeline-run').onclick=()=>{
- const request=planCustom($('pipeline-model').value,$('pipeline-input').value,Number($('pipeline-step').value));
- if(!request)return error('Параметры обработки некорректны.');
- void executeRoute(null,request);
-};
-
-function gains(){return {dialogue:Number($('dialogue-gain').value)/100,music:Number($('music-gain').value)/100,effects:Number($('effects-gain').value)/100}}
 function getMix(){
- if(!original||!activeStudy)throw Error('Нет выбранного результата обработки');
+ if(!original||!activeStudy)throw Error('Нет выбранного результата.');
  if(mode==='original')return stereoPCM(original);
- if(activeStudy!=='mrx'){
-  const clean=studyResults.get(activeStudy)?.clean;
-  if(!clean)throw Error('Дорожка для сравнения потеряна.');
-  if(mode==='speech')return clean.map((channel,i)=>{
-   const out=new Float32Array(channel.length),src=original[Math.min(i,original.length-1)];
-   for(let j=0;j<out.length;j++)out[j]=(src[j]||0)-channel[j];
-   return out;
-  });
-  return suppressStereoCenter(clean,Number($('center-suppression').value),RATE);
- }
- if(!stems)throw Error('Не удалось загрузить дорожки MRX.');
- if(mode==='speech')return stems.dialogue.map(channel=>channel.slice());
- const separated=mixPCM(original,stems,gains(),mode==='stems'?'stems':'residual');
- return suppressStereoCenter(separated,Number($('center-suppression').value),RATE);
+ const clean=studyResults.get(activeStudy)?.clean;
+ if(!clean)throw Error('Результат недоступен.');
+ if(mode==='speech')return clean.map((channel,i)=>{
+  const out=new Float32Array(channel.length),src=original[Math.min(i,original.length-1)];
+  for(let j=0;j<out.length;j++)out[j]=(src[j]||0)-channel[j];
+  return out;
+ });
+ return suppressStereoCenter(clean,Number($('center-suppression').value),RATE);
 }
 function updateListeningButtons(){
- for(const [name,value] of [['original','original'],['clean','clean'],['stems','stems'],['speech','speech']]){
-  $(name+'-btn').classList.toggle('selected',mode===value);
-  $(name+'-btn').disabled=!activeStudy||activeStudy!=='mrx'&&name==='stems';
+ for(const name of ['original','clean','speech']){
+  $(name+'-btn').classList.toggle('selected',mode===name);
+  $(name+'-btn').disabled=!activeStudy;
  }
- $('clean-btn').textContent=activeStudy==='mrx'?'Оригинал − речь':'Результат модели';
- $('speech-btn').textContent=activeStudy==='mrx'?'Только речь':'Удалённая часть';
+ $('clean-btn').textContent='Без голосов';
+ $('speech-btn').textContent='Удалённая часть';
 }
 function audioFailure(reason){
  error('Не удалось воспроизвести обработанный звук: '+(reason?.message||String(reason))+
