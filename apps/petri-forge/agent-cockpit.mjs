@@ -66,7 +66,7 @@ export function mountAgentCockpit(api){
    card.append(note);
    const actions=document.createElement('div');actions.className='cp-specimen-actions';
    if(!archived)actions.append(makeButton(c.id===v.active?.id?'Выбран':'Выбрать',async()=>{
-    await performLibrary(async()=>{await api.switchAgent(c.id);drawProfile();},'Не удалось выбрать агента');
+    await performLibrary(async()=>{if(await api.switchAgent(c.id)===false)throw Error('Мозг агента не загрузился');drawProfile();},'Не удалось выбрать агента');
    },!!v.busy||!!v.pending||c.id===v.active?.id));
    actions.append(makeButton('Клон',async()=>{
     await performLibrary(async()=>{await api.clone(c.id);drawProfile();},'Не удалось клонировать агента');
