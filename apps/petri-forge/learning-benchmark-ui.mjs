@@ -49,6 +49,7 @@ export function mountLearningBenchmark(api){
  const setStatus=text=>{$('cpBenchStatus').textContent=text;};
  function lock(locked){
   busy=locked;
+  api.onBusyChange?.(locked);
   for(const id of ['cpBenchWorld','cpBenchEpisodes','cpBenchRuns','cpBenchStart'])$(id).disabled=locked;
   $('cpBenchStop').hidden=!locked;$('cpBenchExport').disabled=locked||!report;
   $('cpBenchmark').disabled=locked&&api.state().busy;
@@ -96,6 +97,7 @@ export function mountLearningBenchmark(api){
  $('cpBenchClose').onclick=()=>$('cpBenchmarkDialog').close();
  $('cpBenchStart').onclick=()=>{
   if(busy)return;
+  if(api.state().busy||api.state().pending){setStatus('Сначала завершите обучение или испытание агента.');return;}
   report=null;$('cpBenchExport').disabled=true;
   $('cpBenchResults').innerHTML='<p class="cp-bench-empty">Идёт обучение трёх свежих мозгов. Ваши сохранения не меняются.</p>';
   progress=0;$('cpBenchProgress').hidden=false;$('cpBenchProgress').value=0;
