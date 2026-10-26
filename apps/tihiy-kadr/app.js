@@ -396,6 +396,7 @@ function updateHybridUI(){
  const busy=studyBusy||exporting||!!worker;
  $('target-scnet-run').disabled=!usable||busy;
  $('target-scnet-budget').disabled=!usable||busy;
+ $('target-scnet-mode').disabled=!usable||busy;
  const hybrid=isUMX?item.meta.hybrid:null;
  $('target-scnet-enabled').disabled=!hybrid||busy;
  $('target-scnet-enabled').checked=!!hybrid?.enabled;
@@ -403,7 +404,7 @@ function updateHybridUI(){
  if(!isUMX)return;
  if(hybrid){
   const ranges=hybrid.segments.map(p=>elapsed(p.start/RATE)+'–'+elapsed(p.end/RATE)).join(', ');
-  text('target-scnet-status','SCNet '+elapsed(hybrid.timeMs/1000)+' · обработано исходника '+
+  text('target-scnet-status', (hybrid.cached?'SCNet из кэша':'SCNet '+elapsed(hybrid.timeMs/1000))+' · обработано исходника '+
     elapsed(hybrid.packedSeconds)+' (целевые '+elapsed(hybrid.selectedSeconds)+') · '+ranges+
     '. '+(hybrid.enabled?'Гибрид включён.':'Сейчас звучит только Open-Unmix.'));
  }else if(!usable)text('target-scnet-status','Для автоматического поиска нужен фрагмент не короче 3 секунд.');
@@ -418,7 +419,13 @@ async function runSelectiveSCNet(){
  const previous=item.meta.hybrid;
  try{
   step('Ищем остатки голоса','Анализируем локальную оценку вокала и тональных артефактов.');
-  const segments=selectProblemSegments(item.meta.base,item.meta.vocals,item.meta.layers.artifact,{
+  let segments;
+  if($('target-scnet-mode').value==='manual'){
+   const cursor=Math.max(0,Math.min(range.duration,video.currentTime-range.start));
+   const duration=Math.min(5,range.duration),frames=Math.round(duration*RATE);
+   const start=Math.max(0,Math.min(item.meta.base[0].length-frames,Math.round((cursor-duration/2)*RATE)));
+   segments=[{start,end:start+frames,score:1}];
+  }else segments=selectProblemSegments(item.meta.base,item.meta.vocals,item.meta.layers.artifact,{
    budgetSeconds:Number($('target-scnet-budget').value),rate:RATE
   });
   if(!segments.length){
@@ -432,10 +439,21 @@ async function runSelectiveSCNet(){
    ', включая контекст и паузы между участками.');
   step('Точечная SCNet','Анализ '+segments.length+' участков исходного звука · '+elapsed(payload.packedSeconds));
   // SCNet takes ORIGINAL excerpts, not UMX-cleaned audio: it is trained on mixtures.
-  const reply=await separate(payload.packed,mobile?5:10,id,'scnet',1);
+  // Reuse a previous full independent SCNet stem when present in this scene.
+  const fullSCNet=pipelineRuns.get(makeRunKey('scnet'));
+  let scnetVocals,seconds;
+  if(fullSCNet){
+   scnetVocals=payload.packed.map(ch=>new Float32Array(ch.length));
+   for(const section of payload.layout)for(let ch=0;ch<scnetVocals.length;ch++)
+    scnetVocals[ch].set(fullSCNet.vocals[ch].subarray(section.sourceStart,section.sourceEnd),section.packedOffset);
+   seconds=0;
+  }else{
+   const reply=await separate(payload.packed,mobile?5:10,id,'scnet',1);
+   scnetVocals=reply.stems.vocals;seconds=reply.seconds;
+  }
   if(controller.signal.aborted||id!==serial)return;
-  const patches=composeSelectivePatches(payload.layout,reply.stems.vocals,item.meta.vocals,{rate:RATE});
-  item.meta.hybrid={patches,segments,timeMs:reply.seconds*1000,
+  const patches=composeSelectivePatches(payload.layout,scnetVocals,item.meta.vocals,{rate:RATE});
+  item.meta.hybrid={patches,segments,timeMs:seconds*1000,cached:!!fullSCNet,
    packedSeconds:payload.packedSeconds,selectedSeconds:payload.selectedSeconds,enabled:true};
   text('export-status','Точечная SCNet готова: можно переключать и экспортировать итоговый гибрид.');
   await previewAudio();
