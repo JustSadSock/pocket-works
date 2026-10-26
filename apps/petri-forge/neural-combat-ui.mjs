@@ -1,4 +1,5 @@
 import {readCombatNeural} from './agent-career.mjs';
+import {showWorkbenchDialog} from './ui-navigation.mjs';
 const $=id=>document.getElementById(id);
 const pc=v=>(100*v).toFixed(0)+'%';
 export function mountNeuralCombat(api){
@@ -59,17 +60,23 @@ export function mountNeuralCombat(api){
   <p class="cp-neuro-note">Обучение PPO происходит в браузере. Класс определяет доступное оружие; заранее запрограммированной боевой тактики у нейросети нет. Результат отдельной тренировки не гарантирует победу.</p>
  </dialog>`);
  let worker=null,mode=null,startedAt=0,trainedEpisodes=0,unsaved=null;
+ let lastRosterSignature='';
  const status=message=>{$('cpNeuroStatus').textContent=message;};
  function refresh(){
   const state=api.state(),careers=state.careers.filter(c=>!c.archived),active=state.active;
   $('cpNeurocombat').hidden=state.mode!=='combat';
   $('cpNeurocombat').disabled=!!(state.busy||state.pending);
   if(worker)return;
-  for(const id of ['cpNeuroOpponentAgent','cpNeuroFighterA','cpNeuroFighterB']){
-   const el=$(id),previous=el.value;el.replaceChildren();
-   for(const c of careers){const o=document.createElement('option');o.value=c.id;o.textContent=c.name;el.append(o);}
-   if(careers.some(c=>c.id===previous))el.value=previous;
-   else el.value=id==='cpNeuroFighterB'?careers.find(c=>c.id!==active?.id)?.id||active?.id||'':active?.id||'';
+  // Do not destroy native select menus on every training progress / state sync.
+  const rosterSignature=JSON.stringify(careers.map(c=>[c.id,c.name]));
+  if(rosterSignature!==lastRosterSignature){
+   for(const id of ['cpNeuroOpponentAgent','cpNeuroFighterA','cpNeuroFighterB']){
+    const el=$(id),previous=el.value;el.replaceChildren();
+    for(const c of careers){const o=document.createElement('option');o.value=c.id;o.textContent=c.name;el.append(o);}
+    if(careers.some(c=>c.id===previous))el.value=previous;
+    else el.value=id==='cpNeuroFighterB'?careers.find(c=>c.id!==active?.id)?.id||active?.id||'':active?.id||'';
+   }
+   lastRosterSignature=rosterSignature;
   }
   $('cpNeuroIdentity').textContent=(active?.name||'Агент')+
    ' · лучник: '+(active?.combatNeural?.archer?.episodes||0)+
@@ -87,7 +94,7 @@ export function mountNeuralCombat(api){
   $('cpNeuroStop').hidden=!locked||task!=='train';
  }
  function release(){worker?.terminate();worker=null;lock(false);}
- $('cpNeurocombat').onclick=()=>{refresh();$('cpNeuroDialog').showModal();};
+ $('cpNeurocombat').onclick=()=>{refresh();showWorkbenchDialog($('cpNeuroDialog'));};
  $('cpNeuroClose').onclick=()=>$('cpNeuroDialog').close();
  $('cpNeuroDialog').addEventListener('cancel',event=>{if(worker)event.preventDefault();});
  $('cpNeuroOpponent').onchange=refresh;

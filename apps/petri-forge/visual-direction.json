@@ -3,14 +3,14 @@
   "status": "ready",
   "product": "petri-forge",
   "direction": {
-    "premise": "A field-first simulation laboratory now capable of training real PPO fighters on the existing physics arena and replaying genuine contests.",
-    "composition": "A dominant world viewport paired with one compact control rail. A single algorithm selector reveals whether the saved brain is a Q table or an MLP, with no speculative training statistics.",
+    "premise": "A stable, usable PetriForge laboratory: one uninterrupted physical world with a bounded instrument rail, predictable navigation and native dialogs that never stack.",
+    "composition": "On desktop a large live world and a narrow vertically scrollable experiment rail sit side by side, neither overflowing. On mobile the world stays above a bounded command sheet.",
     "shapeLanguage": "Sharp laboratory tiles and small squared control clusters frame the simulation; specimen identities use initials in dark mineral-green tiles rather than decorative character portraits.",
     "surfaceAndMaterial": "Flat opaque cell pigments retain the source renderer. Muted teal instrument metal surrounds a near-black culture surface without glass effects.",
     "paletteLogic": "Blue marks the learner and spawn, green marks the goal, red the harmful cells, and yellow the rewards. Grey walls preserve legibility over a dark empty grid.",
     "typography": "System sans-serif labels keep controls legible at compact sizes. The product name is a small bench label rather than a decorative title.",
-    "signature": "Two neural combat specimens — ranged and melee — separately learn attack timing and movement, then face each other in a frozen four-leg challenge with exchanged sides.",
-    "distinction": "Unlike the video processing console or turn-based board, PetriForge makes the live world primary, backed by a persistent library of independently trained policy specimens."
+    "signature": "One specimen, one world, one active experiment. Tabs and preserved controls keep each task coherent while stateful worker training runs independently.",
+    "distinction": "Unlike crowded floating-dock experiments, the physical simulation remains continuously visible and controls never cover the arena."
   },
   "architecture": {
     "spatialLayout": "open-workbench",
@@ -18,9 +18,9 @@
     "navigation": "editor-toolbox",
     "chromeTopology": "tiled-grid",
     "dominantMotion": "none",
-    "primaryVerb": "Train a Q or neural grid agent, or enter real neural combat to develop an archer and swordsman and watch an actual frozen match.",
-    "physicalFeedback": "Combat training rewards correspond to projectile/melee damage, incoming hits, tactical positioning and game winner; neither match results nor weights are fabricated.",
-    "spatialRationale": "The previous stage's field-first desktop and stacked portrait layout remains intact; an algorithm row appears only when a grid experiment is selected, avoiding controls for algorithms unsupported by other worlds.",
+    "primaryVerb": "Pick an agent and simulation, adjust settings that persist across visits, run real learning and watch the environment without panel collision.",
+    "physicalFeedback": "A mode switch is committed only after its model is restored; a failed load returns to the previously selected world without losing the brain.",
+    "spatialRationale": "No fixed 148px footer. The arena and the rail each own a bounded grid region; native modal windows use a shared exclusive top-layer navigation mechanism.",
     "comparisons": [
       {
         "slug": "fog-of-conquest",
@@ -77,9 +77,9 @@
     "character": "Discrete and immediate: state changes occur on cell boundaries because the learner samples one action at a time.",
     "action": "Training follows live per-bout feedback without simulating every frame in the UI; the result opens a recorded real arena duel.",
     "anticipation": "The selected tool and tile value expose the pending edit before the pointer touches the culture.",
-    "response": "Neural fighters use five chosen macros to move and attack in the existing physical simulation; a completed duel produces physical replay frames.",
+    "response": "Dropdown controls preserve DOM identity through progress updates; each modal replaces the previous modal and resets on navigation.",
     "followThrough": "The user can replay the latest recorded attempt or test when none exists and can verify cloned skills after reload.",
-    "interruption": "Training can be stopped; model switches await worker confirmation; the specimen library reports write failures instead of pretending success.",
+    "interruption": "Failed world changes roll back the visual station; active worker experiments retain stop controls and cannot be hidden behind unrelated dialogs.",
     "reducedMotion": "There are no decorative transitions to remove; discrete cell changes retain all simulation information."
   },
   "evidence": {

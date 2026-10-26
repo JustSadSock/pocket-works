@@ -1,7 +1,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createWorkshopMode} from '../../shared/workshop-mode.js';
 installMobileRuntime();
-createWorkshopMode({appName:'PetriForge',version:'0.13.0',cachePrefix: 'petri-forge-',storageNamespace: 'pocket-works:petri-forge'});
+createWorkshopMode({appName:'PetriForge',version:'0.14.0',cachePrefix: 'petri-forge-',storageNamespace: 'pocket-works:petri-forge'});
 
 import {GridEnvironment as Env,WIDTH,HEIGHT,TILE,createScenario,validateScene,QAgent} from './lab-core.mjs';
 import {listModels,saveModel,loadModel,deleteModel} from './model-store.mjs';

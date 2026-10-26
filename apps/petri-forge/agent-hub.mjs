@@ -1,11 +1,25 @@
 import './agent-hub-shell.mjs';
 import {mountAgentCockpit} from './agent-cockpit.mjs';
+import {showWorkbenchDialog,closeWorkbenchDialogs} from './ui-navigation.mjs';
 import {warmStartCombatFromWorld} from './agent-transfer.mjs';
 import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm,recordCombatNeural} from './agent-career.mjs';
 import {listModels,loadModel} from './model-store.mjs';
 
 const $=id=>document.getElementById(id),runtime=()=>window.PetriForgeRuntime||{};
 const LAST='pocket-works:petri-forge:career-last-v1';
+const CHOICES_KEY='pocket-works:petri-forge:choices-v1';
+let storedChoices={};
+try{
+ const saved=JSON.parse(localStorage.getItem(CHOICES_KEY)||'{}');
+ if(saved&&typeof saved==='object'&&!Array.isArray(saved))storedChoices=saved;
+}catch{/* browser storage disabled: preferences remain in the session */}
+function saveChoices(){
+ const setup=cfg[mode];
+ if(!setup)return;
+ storedChoices[mode]={variant:document.getElementById('hubVariant').value,
+  batch:document.getElementById('hubBatch').value};
+ try{localStorage.setItem(CHOICES_KEY,JSON.stringify(storedChoices));}catch{/* allowed */}
+}
 async function migratePreviousAutosaves(c){
  const legacy={grid:'autosave',combat:'combat-autosave',race:'race-autosave',perekos:'perekos-autosave'};
  let restored=0;
@@ -90,7 +104,11 @@ function choices(){
  const data=cfg[mode],select=$('hubVariant'),batch=$('hubBatch');select.replaceChildren();batch.replaceChildren();
  for(const [value,label] of data.variants){const option=document.createElement('option');option.value=value;option.textContent=label;select.append(option);}
  for(const n of data.counts){const option=document.createElement('option');option.value=String(n);option.textContent=fmt(n)+' '+data.units;batch.append(option);}
- select.value=data.first;batch.value=String(data.counts[1]||data.counts[0]);
+ const saved=storedChoices[mode]||{};
+ select.value=data.variants.some(([value])=>value===saved.variant)?saved.variant:data.first;
+ const defaultBatch=String(data.counts[1]||data.counts[0]);
+ batch.value=data.counts.some(n=>String(n)===saved.batch)?saved.batch:defaultBatch;
+ saveChoices();
 }
 async function persist(c,domain){
  const r=runtime()[domain];if(!r||r.isBusy?.())return;
@@ -109,6 +127,7 @@ async function restore(c,domain){
  notify(adapted?'Навыки обхода опасностей из мира перенесены в первую боевую стратегию.':snapshot?'Загружен мозг '+c.name+' · '+TITLES[domain]:'Для '+TITLES[domain]+' создан чистый мозг');
 }
 function advancedMode(value){
+ closeWorkbenchDialogs();
  advanced=value;document.body.classList.toggle('hub-advanced',value);
  for(const [key,id] of Object.entries({grid:'labPanel',combat:'combatPanel',race:'racePanel',perekos:'perekosPanel'})){
   const pane=$(id);pane.hidden=!(value&&key===mode);
@@ -119,15 +138,21 @@ function advancedMode(value){
  }
 }
 async function changeMode(next){
- if(!DOMAINS.includes(next)||!active||busy)return;
+ if(!DOMAINS.includes(next)||!active||busy||pending)return;
  if(next!==mode){
   pending=true;lock();
   const from=mode;
-  try{await persist(active,from);mode=next;await restore(active,next);}
-  catch(e){notify('Ошибка среды: '+e.message);}
-  finally{pending=false;}
- }
- advancedMode(false);lastEval='';choices();refresh();lock();
+  try{
+   await persist(active,from);
+   await restore(active,next);
+   mode=next;
+   advancedMode(false);lastEval='';choices();refresh();
+  }catch(e){
+   // Keep the stored agent, selected mode, controls, and visible world aligned.
+   window.dispatchEvent(new CustomEvent('petri:mode-rollback',{detail:{mode:from}}));
+   notify('Не удалось открыть среду: '+e.message);
+  }finally{pending=false;lock();}
+ }else{advancedMode(false);lock();}
 }
 function ask(action,title,value){
  return new Promise(resolve=>{
@@ -135,7 +160,7 @@ function ask(action,title,value){
   $('hubDialogTitle').textContent=title;$('hubDialogConfirm').textContent=action==='new'?'Создать':'Переименовать';
   input.value=value||'';
   const close=()=>{dlg.removeEventListener('close',close);resolve(dlg.returnValue==='confirm'&&input.value.trim()?input.value.trim():null);};
-  dlg.addEventListener('close',close);dlg.showModal();input.focus();input.select();
+  dlg.addEventListener('close',close);showWorkbenchDialog(dlg);input.focus();input.select();
  });
 }
 async function switchAgent(id){
@@ -181,7 +206,7 @@ async function importOld(){
   }catch(e){notify('Ошибка загрузки: '+e.message);}
   finally{pending=false;lock();}
  };
- dlg.showModal();
+ showWorkbenchDialog(dlg);
 }
 async function manage(){
  if(busy||pending)return;
@@ -213,14 +238,14 @@ async function manage(){
   d.append(btn);
  }
  const close=document.createElement('button');close.textContent='Закрыть';close.onclick=()=>{d.close();d.remove();};
- d.append(close);document.body.append(d);d.addEventListener('cancel',()=>d.remove(),{once:true});d.showModal();
+ d.append(close);document.body.append(d);d.addEventListener('cancel',()=>d.remove(),{once:true});showWorkbenchDialog(d);
 }
 $('hubAgents').onchange=e=>void switchAgent(e.target.value);
 $('hubManage').onclick=()=>void manage();
 $('hubEdit').onclick=()=>advancedMode(true);
 $('hubTools').onclick=()=>advancedMode(true);
-$('hubBatch').onchange=refresh;
-$('hubVariant').onchange=()=>notify('Испытание выбрано. Нажмите «Обучить», чтобы применить настройки.');
+$('hubBatch').onchange=()=>{saveChoices();refresh();};
+$('hubVariant').onchange=()=>{saveChoices();notify('Испытание выбрано. Нажмите «Обучить», чтобы применить настройки.');};
 $('hubTrain').onclick=()=>{
  if(busy||pending||!active)return;
  const r=runtime()[mode];if(!r){notify('Среда загружается');return;}
@@ -388,7 +413,7 @@ const cockpit=mountAgentCockpit({
   if(busy||pending)return;
   if(type==='variant')$('hubVariant').value=value;
   else if(type==='batch')$('hubBatch').value=value;
-  refresh();
+  saveChoices();refresh();
  },
  importCareer:async c=>{
   if(busy||pending)return;
