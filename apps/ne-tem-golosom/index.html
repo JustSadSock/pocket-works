@@ -26,7 +26,7 @@
     <div id="scene-license" class="license-note">Исходные фильмы: <a href="https://studio.blender.org/projects/wing-it/" target="_blank" rel="noopener noreferrer">Wing It! · Blender Studio</a> (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>); <a href="https://peach.blender.org/" target="_blank" rel="noopener noreferrer">Big Buck Bunny · Blender Foundation</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener noreferrer">CC BY 3.0</a>). Отрывки обрезаются и получают новую озвучку. Для собственных файлов нужны права на использование.</div>
   </section>
   <section id="screen-trim" class="screen trim hidden">
-    <header class="topbar"><button class="nav-back" data-back="library" aria-label="К выбору видео">←</button><h2 id="trim-stage-title">1 / 2 · Выбрать отрывок</h2><span id="trim-stage-counter" class="small-cap">СНАЧАЛА МОНТАЖ</span></header>
+    <header class="topbar"><button class="nav-back" data-back="library" aria-label="К выбору видео">←</button><h2 id="trim-stage-title">1 / 3 · Выбрать отрывок</h2><span id="trim-stage-counter" class="small-cap">СНАЧАЛА МОНТАЖ</span></header>
     <div class="trim-layout">
       <div class="trim-left">
         <div class="trim-preview" id="trim-preview">
@@ -85,6 +85,18 @@
   <input id="film-local-file" type="file" accept="video/*,.mp4,.webm,.mov">
  </label>
  </section>
+ <section id="film-review" class="film-review hidden" aria-labelledby="film-review-title">
+  <header class="film-review-head"><span class="film-review-mark">03 / 03 · КОНТРОЛЬНАЯ</span><h3 id="film-review-title">Проверь сцену</h3></header>
+  <p id="film-review-description">Просмотри и прослушай результат перед тем, как отправить его в комнату.</p>
+  <div class="film-review-info"><small>ВЫБРАННОЕ ВИДЕО</small><b id="film-review-source">—</b><strong id="film-review-method">—</strong><span id="film-review-meta">—</span></div>
+  <button type="button" id="review-retry" class="review-option review-option-primary"><strong>Другая нейросеть или настройки</strong><span>Вернуться к выбору обработки</span></button>
+  <div class="film-review-alternatives">
+   <button type="button" id="review-mute" class="review-option"><strong>Сделать без звука</strong><span>Убрать всю оригинальную дорожку</span></button>
+   <button type="button" id="review-original" class="review-option"><strong>Оставить исходный звук</strong><span>Без нейросети</span></button>
+  </div>
+  <button type="button" id="review-change-video" class="text-action review-change-video">Заменить исходный файл…</button>
+  <p class="film-review-assurance">Ничего не отправляется другим игрокам, пока ты не подтвердил результат.</p>
+ </section>
  <div id="media-workbench" class="media-workbench hidden">
           <div class="row-between"><h3>Видео для комнаты</h3><span id="media-source-size" class="media-stamp"></span></div>
           <div class="media-controls">
@@ -105,14 +117,14 @@
         <div id="trim-roles" class="role-builder hidden"><div class="row-between"><h3>Персонажи</h3><button id="add-role" class="text-action">+ Добавить</button></div><div id="role-tags" class="role-tags"></div></div>
       </div>
     </div>
-    <div class="trim-footer"><span id="trim-footer-hint">Шаг 1 из 2 · выбери 10–90 секунд</span><button id="confirm-scene" class="action main-action">К настройке звука <span class="arrow">→</span></button></div>
+    <div class="trim-footer"><span id="trim-footer-hint">Шаг 1 из 3 · выбери 10–90 секунд</span><button id="confirm-scene" class="action main-action">К настройке звука <span class="arrow">→</span></button></div>
   </section>
   <section id="screen-room" class="screen room hidden">
     <header class="topbar"><button class="nav-back" data-back="home">←</button><h2 id="room-heading">Комната</h2><span id="net-pill" class="network-pill" data-net-state="idle" role="status" aria-live="polite">PocketNet</span></header>
     <div id="room-ticket" class="room-ticket"><span class="tiny-overline">КОД КОМНАТЫ</span><strong id="room-code">········</strong><button id="copy-invite" class="text-action">Скопировать приглашение ↗</button></div>
     <div id="room-connection" class="room-connection hidden" role="status" aria-live="polite"><strong id="room-connection-status">Подключаемся к комнате…</strong><button id="room-retry" class="action secondary-action hidden" type="button">Повторить подключение ↻</button></div>
     <div id="join-panel" class="join-panel hidden"><label>Код приглашения <input id="join-code" maxlength="36" autocapitalize="characters" placeholder="8 символов"></label><button id="enter-room" class="action main-action">Подключиться →</button></div>
-    <div class="room-scene-control"><div><small>СЦЕНА КОМНАТЫ</small><strong id="room-scene-title">Видео ещё не выбрано</strong></div><button id="room-change-scene" class="action secondary-action hidden" type="button">Выбрать / сменить видео</button></div><div class="row-between"><h3>Актёры <span id="player-count"></span></h3><span id="room-phase-note" class="quiet"></span></div>
+    <div class="room-scene-control"><div><small>СЦЕНА КОМНАТЫ</small><strong id="room-scene-title">Видео ещё не выбрано</strong></div><button id="room-change-scene" class="action secondary-action hidden" type="button">Выбрать видео</button></div><div class="row-between"><h3>Актёры <span id="player-count"></span></h3><span id="room-phase-note" class="quiet"></span></div>
     <div id="room-players" class="room-players"></div>
     <p class="room-help" id="room-help">У каждого своя роль; чужие записи нельзя услышать до премьеры.</p>
     <button id="room-start" class="action main-action bottom-action hidden">Начать озвучку →</button>

@@ -570,3 +570,25 @@
  .film-sound-choice{min-height:45px;padding:6px 9px}
  .film-sound-choice small{font-size:9px}
 }
+
+/* NTG 1.14.1 — deliberate third step: a projection-room approval screen. */
+.film-review{display:flex;flex-direction:column;gap:13px;min-width:0;padding:17px;background:#e8ddcb;border:1px solid #b9a48a;border-top:4px solid #4f6460}
+.film-review-head{display:flex;flex-direction:column;gap:5px}
+.film-review-mark{font-size:10px;font-weight:900;letter-spacing:.09em;color:#596e67}
+.film-review-head h3{font:700 26px Oswald,Arial,sans-serif;margin:0;line-height:1.1;color:#262e2c}
+.film-review>p{font-size:12px;line-height:1.5;color:#61584c;margin:0}
+.film-review-info{display:flex;flex-direction:column;gap:4px;padding:12px 13px;background:#f8f0e2;border-left:3px solid #607b71}
+.film-review-info small{font-size:9px;font-weight:850;letter-spacing:.1em;color:#85796a}.film-review-info b{font-size:14px;overflow-wrap:anywhere;color:#282e2b}.film-review-info strong{font-size:12px;color:#466156}
+.film-review-info span{font-size:11px;color:#716456;font-variant-numeric:tabular-nums}
+.review-option{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;padding:12px 13px;min-height:57px;text-align:left;border:1px solid #bfaa91;background:#f6ecdb;color:#2e3331;cursor:pointer}
+.review-option strong{font-size:13px;font-weight:850}
+.review-option span{font-size:11px;color:#74685a;line-height:1.35}
+.review-option-primary{border-color:#536f66;background:#dce5dc}
+.review-option:hover{border-color:#91664e;background:#fff5e4}
+.review-option:active{transform:translateY(1px)}
+.film-review-alternatives{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.film-review .review-change-video{align-self:flex-start;padding:4px 0;font-size:12px;color:#81533d;text-decoration:underline;text-underline-offset:3px}
+.film-review .film-review-assurance{font-size:10px;color:#7b7064;border-top:1px solid #cfc0ae;padding-top:10px}
+.trim .trim-right:has(.film-review:not(.hidden)) .trim-info{display:none}
+.trim .trim-right:has(.film-review:not(.hidden)) .film-review{flex:1}
+@media(max-width:620px){.film-review{padding:14px;gap:11px}.film-review-alternatives{grid-template-columns:1fr 1fr}.review-option{padding:10px;min-height:60px}.film-review-head h3{font-size:23px}}

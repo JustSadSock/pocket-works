@@ -91,8 +91,10 @@ try{
  const labels=await Promise.all(['umx','hybrid','scnet'].map(k=>page.locator('#film-time-'+k).innerText()));
  assert(labels.every(x=>/≈/.test(x)),'all three modes must expose relative time estimates');
  await page.locator('#film-clean-start').click();
- await page.waitForSelector('#media-result:not(.hidden)',{timeout:180000});
- assert.match(await page.locator('#film-clean-status').innerText(),/готов|Готово/);
+ await page.waitForSelector('#film-review:not(.hidden)',{timeout:180000});
+ assert(await page.locator('#screen-room').evaluate(el=>el.classList.contains('hidden')),'worker must not enter the room automatically');
+ assert.equal(await page.locator('#media-output-preview').isVisible(),true,'result must be the first review preview');
+ assert.match(await page.locator('#film-review-method').innerText(),/Open-Unmix/);
  const first=await page.locator('#media-output-preview').evaluate(async v=>{
   await new Promise((resolve,reject)=>{
    if(v.readyState>=1)return resolve();
@@ -103,19 +105,26 @@ try{
  });
  assert(first.width>0&&first.duration>9);
  for(const value of ['hybrid','scnet']){
+  await page.locator('#review-retry').click();
+  assert(await page.locator('#film-cleaner').isVisible(),'review can return to the model picker');
   await page.locator('input[name="film-clean-mode"][value="'+value+'"]').check();
   assert(await page.locator('#media-result').evaluate(el=>el.classList.contains('hidden')),
    'switching model invalidates old encoded result');
   await page.locator('#film-clean-start').click();
-  await page.waitForSelector('#media-result:not(.hidden)',{timeout:240000});
-  assert.match(await page.locator('#film-clean-status').innerText(),/готов|Готово/);
+  await page.waitForSelector('#film-review:not(.hidden)',{timeout:240000});
+  assert.match(await page.locator('#film-review-method').innerText(),/SCNet/);
  }
  // Low-memory pipeline must also finish and yield playable video.
+ await page.locator('#review-retry').click();
  await page.locator('input[name="film-clean-mode"][value="umx"]').check();
  await page.locator('#film-low-memory').check();
  await page.locator('#film-clean-start').click();
- await page.waitForSelector('#media-result:not(.hidden)',{timeout:240000});
- assert.match(await page.locator('#film-clean-status').innerText(),/готов|Готово/);
+ await page.waitForSelector('#film-review:not(.hidden)',{timeout:240000});
+ assert.match(await page.locator('#film-review-method').innerText(),/Open-Unmix/);
+ await page.locator('#preview-original').click();
+ assert(await page.locator('#trim-video').isVisible(),'A/B can preview the source');
+ await page.locator('#preview-result').click();
+ assert(await page.locator('#media-output-preview').isVisible(),'A/B restores the processed scene');
  await page.locator('#confirm-scene').click();
  await page.waitForSelector('#screen-room:not(.hidden)',{timeout:20000});
  assert.match(await page.locator('#room-scene-title').innerText(),/voice-fixture/);

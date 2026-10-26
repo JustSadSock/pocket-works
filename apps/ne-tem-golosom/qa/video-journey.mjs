@@ -97,15 +97,18 @@ try{
     await page.locator('#media-quality').evaluate(input=>{input.value='2';input.dispatchEvent(new Event('input',{bubbles:true}))});
     await page.screenshot({path:join(out,viewport.name+'-source.png'),fullPage:true});
     await page.locator('#media-render').click();
-    await page.waitForSelector('#media-result:not(.hidden)',{timeout:60000});
+    await page.waitForSelector('#film-review:not(.hidden)',{timeout:60000});
+    assert(await page.locator('#screen-room').evaluate(el=>el.classList.contains('hidden')),'no room before approval');
+    assert(await page.locator('#media-output-preview').isVisible(),'video must be visible on the review stage');
     assert(await page.locator('#media-output-preview').evaluate(v=>Boolean(v.currentSrc)),'no output preview');
     // Running the same settings again must be immediate: a cached Blob should
     // replace the previously expensive live encoding stage.
     const initialResult=await page.locator('#media-output-size').innerText();
+    await page.locator('#review-retry').click();
     await page.locator('#media-discard').click();
     const cacheStart=Date.now();
     await page.locator('#media-render').click();
-    await page.waitForSelector('#media-result:not(.hidden)',{timeout:3000});
+    await page.waitForSelector('#film-review:not(.hidden)',{timeout:3000});
     assert(Date.now()-cacheStart<3000,'cached encoding should be available immediately');
     assert.equal(await page.locator('#media-output-size').innerText(),initialResult);
     assert.match(await page.locator('#media-note').innerText(),/из памяти/);
@@ -123,7 +126,7 @@ try{
     const resultSize=await page.locator('#media-output-size').innerText();
     assert(resultSize.includes('МиБ')||resultSize.includes('КиБ'),'output size missing');
     await page.screenshot({path:join(out,viewport.name+'-review.png'),fullPage:true});
-    assert.match(await page.locator('#confirm-scene').innerText(),/Использовать и продолжить/);
+    assert.match(await page.locator('#confirm-scene').innerText(),/Подтвердить и продолжить/);
     await page.locator('#preview-original').click();
     assert(await page.locator('#trim-video').isVisible(),'can compare original');
     await page.locator('#preview-result').click();
