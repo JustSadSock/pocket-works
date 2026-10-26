@@ -1,12 +1,14 @@
 // Portable personal agent package: one identity, all genuinely trained specialist brains.
-import {DOMAINS,assertCareer,freshCareer,newCareerId,readBrain,writeCareerBundle} from './agent-career.mjs';
+import {DOMAINS,assertCareer,freshCareer,newCareerId,readBrain,readGridBrain,writeCareerBundle} from './agent-career.mjs';
 import {QAgent} from './lab-core.mjs';
+import {validateNeuralPolicy} from './neural-policy.mjs';
 import {validPolicy} from './combat-core.mjs';
 import {validatePerekosPolicy} from './perekos-policy.mjs';
 const MAX_JSON=20_000_000;
 export function validBrain(domain,brain){
  if(brain==null)return true;
  if(domain==='grid'){try{new QAgent(1).load(brain);return true;}catch{return false;}}
+ if(domain==='gridNeural')return validateNeuralPolicy(brain);
  if(domain==='combat')return validPolicy(brain);
  if(domain==='perekos')return validatePerekosPolicy(brain);
  if(domain==='race')return Array.isArray(brain)&&brain.length===9&&brain.every(n=>Number.isFinite(n)&&Math.abs(n)<=2);
@@ -16,17 +18,24 @@ export async function packCareer(c){
  assertCareer(c);
  const brains={};
  for(const domain of DOMAINS){
-  const snapshot=await readBrain(c,domain);
+  const snapshot=domain==='grid'?await readGridBrain(c,'qlearning'):await readBrain(c,domain);
   if(snapshot&&!validBrain(domain,snapshot))throw Error('Повреждённый мозг '+domain);
   brains[domain]=snapshot;
  }
+ const neural=await readGridBrain(c,'neural');
+ if(neural&&!validBrain('gridNeural',neural))throw Error('Повреждённая нейросеть');
+ if(neural)brains.gridNeural=neural;
  return {format:'petri-forge-career',version:1,profile:{name:c.name,createdAt:c.createdAt,
-  branches:structuredClone(c.branches)},brains};
+  algorithms:{grid:c.algorithms?.grid||'qlearning'},branches:structuredClone(c.branches)},brains};
 }
 export function validatePackage(pkg){
  if(!pkg||pkg.format!=='petri-forge-career'||pkg.version!==1||!pkg.profile||!pkg.brains)throw Error('Это не файл агента PetriForge');
  const name=pkg.profile.name;
  if(typeof name!=='string'||!name.trim()||name.length>42)throw Error('Неверное имя агента');
+ const algorithm=pkg.profile.algorithms?.grid||'qlearning';
+ if(!['qlearning','neural'].includes(algorithm))throw Error('Неизвестный алгоритм профиля');
+ if(pkg.brains.gridNeural!=null&&!validBrain('gridNeural',pkg.brains.gridNeural))throw Error('Несовместимая нейросеть');
+ if(algorithm==='neural'&&!pkg.brains.gridNeural)throw Error('Профиль с нейросетью без сохранённого мозга');
  const branches=pkg.profile.branches;
  if(!branches||typeof branches!=='object')throw Error('Файл не содержит историю обучения');
  for(const domain of DOMAINS){
@@ -46,6 +55,7 @@ export async function unpackCareer(pkg){
  // Validate before writing anything. The imported identity and its four brains
  // become visible together, or the transaction aborts without orphan profiles.
  const c=freshCareer(pkg.profile.name,newCareerId());
+ c.algorithms={grid:pkg.profile.algorithms?.grid||'qlearning'};
  const brains={};
  for(const domain of DOMAINS){
   const src=pkg.profile.branches[domain],b=c.branches[domain];
@@ -54,6 +64,7 @@ export async function unpackCareer(pkg){
   b.history=structuredClone(src.history);
   if(pkg.brains[domain]!=null)brains[domain]=pkg.brains[domain];
  }
+ if(pkg.brains.gridNeural)brains.gridNeural=pkg.brains.gridNeural;
  try{return await writeCareerBundle(c,brains);}
  catch(e){throw Error('Импорт отменён без частично сохранённого агента: '+e.message);}
 }

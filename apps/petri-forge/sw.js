@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'petri-forge-';
-const CACHE_NAME = 'petri-forge-v0.9.0';
-const APP_VERSION = '0.9.0';
+const CACHE_NAME = 'petri-forge-v0.10.0';
+const APP_VERSION = '0.10.0';
 const RELEASE_DATE = '2026-10-26';
 const CACHE_PROTOCOL = 8;
-const RELEASE_NOTES = ["Библиотека агентов с клонами и архивом.","Просмотр сохранённых моделей и повторов.","Визуализация наблюдений 7×7 в клеточном мире."];
+const RELEASE_NOTES = ["Нейросетевой Actor–Critic в браузерном Worker.","Q-learning и нейросеть сохраняются независимо.","Обучение и экспорт с поддержкой нейронных весов."];
 const APP_SHELL = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const APP_SHELL = [
   './app.js',
   './lab-core.mjs',
   './lab-worker.mjs',
+  './neural-policy.mjs',
   './model-store.mjs',
   './agent-career.mjs',
   './agent-hub-shell.mjs',

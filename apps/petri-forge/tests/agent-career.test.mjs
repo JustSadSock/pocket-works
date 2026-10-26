@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {DOMAINS,freshCareer,assertCareer,brainId,createCareer,listCareers,writeBrain,readBrain,recordTraining,renameCareer,eraseCareer,cloneCareer,setCareerArchived} from '../agent-career.mjs';
+import {DOMAINS,freshCareer,assertCareer,brainId,createCareer,listCareers,writeBrain,readBrain,recordTraining,renameCareer,eraseCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm,readGridBrain} from '../agent-career.mjs';
+import {NeuralActorCritic} from '../neural-policy.mjs';
 import {packCareer,unpackCareer,validatePackage} from '../agent-portability.mjs';
 
 // Minimal asynchronous IndexedDB contract: tests the same repository methods without
@@ -180,4 +181,34 @@ test('cloning fails atomically if any model write fails',async()=>{
  failKind='qlearning';
  try{await assert.rejects(cloneCareer(c));}finally{failKind=null;}
  assert.equal((await listCareers()).length,count,'failed clone must not leave a partial career');
+});
+
+test('neural and Q brains survive independent selection, cloning and JSON portability',async()=>{
+ const q={type:'qlearning',version:1,q:[['s',[4,0,0,0,0]]]};
+ const origin=await createCareer('Два алгоритма','a-neural-origin');
+ await writeBrain(origin,'grid',q);
+ const neuralProfile=await setCareerGridAlgorithm(origin,'neural');
+ const neural=new NeuralActorCritic(8);
+ const o={tiles:Array.from({length:7},()=>Array(7).fill(0)),pos:[3,3],goalVec:[5,5]};
+ neural.learn(o,neural.act(o,true),1,o,false);
+ const trained=await recordTraining(neuralProfile,'grid',neural.serialize(),{units:100,label:'Нейросеть учится'});
+ assert.equal(trained.algorithms.grid,'neural');
+ assert.equal((await readBrain(trained,'grid')).type,'neural-actor-critic');
+ assert.deepEqual(await readGridBrain(trained,'qlearning'),q);
+ const copy=await cloneCareer(trained);
+ assert.equal(copy.algorithms.grid,'neural');
+ assert.deepEqual(await readGridBrain(copy,'neural'),await readBrain(trained,'grid'));
+ assert.deepEqual(await readGridBrain(copy,'qlearning'),q);
+ const packed=await packCareer(trained);
+ assert.equal(packed.brains.grid.type,'qlearning');
+ assert.equal(packed.brains.gridNeural.type,'neural-actor-critic');
+ assert.equal(validatePackage(packed),packed);
+ const restored=await unpackCareer(packed);
+ assert.equal(restored.algorithms.grid,'neural');
+ assert.deepEqual(await readBrain(restored,'grid'),packed.brains.gridNeural);
+ assert.deepEqual(await readGridBrain(restored,'qlearning'),q);
+ const qProfile=await setCareerGridAlgorithm(restored,'qlearning');
+ assert.equal((await readBrain(qProfile,'grid')).type,'qlearning');
+ const qAgain=await setCareerGridAlgorithm(qProfile,'neural');
+ assert.equal((await readBrain(qAgain,'grid')).updates,1);
 });

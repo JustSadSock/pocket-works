@@ -1,7 +1,7 @@
 import './agent-hub-shell.mjs';
 import {mountAgentCockpit} from './agent-cockpit.mjs';
 import {warmStartCombatFromWorld} from './agent-transfer.mjs';
-import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer,cloneCareer,setCareerArchived} from './agent-career.mjs';
+import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm} from './agent-career.mjs';
 import {listModels,loadModel} from './model-store.mjs';
 
 const $=id=>document.getElementById(id),runtime=()=>window.PetriForgeRuntime||{};
@@ -105,7 +105,7 @@ async function restore(c,domain){
   const transfer=warmStartCombatFromWorld(grid);
   if(transfer){snapshot=transfer.policy;await writeBrain(c,'combat',snapshot);adapted=true;}
  }
- await r.setModel(snapshot);
+ await r.setModel(snapshot,domain==='grid'?(c.algorithms?.grid||'qlearning'):undefined);
  notify(adapted?'Навыки обхода опасностей из мира перенесены в первую боевую стратегию.':snapshot?'Загружен мозг '+c.name+' · '+TITLES[domain]:'Для '+TITLES[domain]+' создан чистый мозг');
 }
 function advancedMode(value){
@@ -318,6 +318,29 @@ const cockpit=mountAgentCockpit({
   }finally{pending=false;lock();}
  },
  legacy:importOld,
+ selectAlgorithm:async algorithm=>{
+  if(mode!=='grid'||busy||pending)return false;
+  if(!['qlearning','neural'].includes(algorithm))return false;
+  if((active.algorithms?.grid||'qlearning')===algorithm)return true;
+  const previous=active;
+  pending=true;lock();
+  try{
+   await persist(previous,'grid');
+   const candidate=structuredClone(previous);
+   candidate.algorithms={...(candidate.algorithms||{}),grid:algorithm};
+   await restore(candidate,'grid');
+   const updated=await setCareerGridAlgorithm(candidate,algorithm);
+   active=updated;
+   careers=careers.map(c=>c.id===updated.id?updated:c);
+   lastEval='';profiles();refresh();
+   notify(algorithm==='neural'?'Включена настоящая нейросеть · actor–critic':'Восстановлена отдельная Q-таблица');
+   return true;
+  }catch(error){
+   await restore(previous,'grid').catch(()=>{});
+   notify('Не удалось переключить алгоритм: '+error.message);
+   return false;
+  }finally{pending=false;lock();}
+ },
  clone:async id=>{
   if(busy||pending)throw Error('Дождитесь окончания текущей операции');
   const source=careers.find(c=>c.id===id);
@@ -373,4 +396,7 @@ const cockpit=mountAgentCockpit({
  whenMode:async next=>{await chain;if(mode!==next)throw Error('Не удалось открыть арену');}
 });
 void start();
-window.PetriForgeAgentHub=()=>({agent:active?.name,id:active?.id,mode,busy,advanced,profiles:careers.length,archived:careers.filter(c=>c.archived).length,sessions:active?.branches?.[mode]?.sessions||0});
+window.addEventListener('petri:grid-algorithm-request',event=>{
+ if(event.detail?.algorithm&&mode==='grid')void cockpit.selectAlgorithm(event.detail.algorithm);
+});
+window.PetriForgeAgentHub=()=>({agent:active?.name,id:active?.id,mode,busy,advanced,algorithm:active?.algorithms?.grid||'qlearning',profiles:careers.length,archived:careers.filter(c=>c.archived).length,sessions:active?.branches?.[mode]?.sessions||0});

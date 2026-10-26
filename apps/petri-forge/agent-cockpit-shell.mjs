@@ -18,3 +18,12 @@ document.querySelector('#agentHub .cp-insights').insertAdjacentHTML('beforeend',
   <div id="cpObserverPractice">Обучение ещё не запускалось.</div>
   <button id="cpVision" type="button" aria-pressed="false" hidden>Область восприятия 7×7</button>
  </div>`);
+
+document.querySelector('#agentHub .cp-live-fields').insertAdjacentHTML('beforebegin',`
+ <label id="cpAlgorithmRow" class="cp-algorithm-select" for="cpAlgorithm">
+  <span>АЛГОРИТМ ОБУЧЕНИЯ</span>
+  <select id="cpAlgorithm" aria-label="Алгоритм клеточного мира">
+   <option value="qlearning">Q-learning · таблица</option>
+   <option value="neural">Нейросеть · Actor–Critic</option>
+  </select>
+ </label>`);
