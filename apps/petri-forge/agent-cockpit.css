@@ -204,3 +204,57 @@ body.hub-on:not(.hub-advanced) .race-viewport{height:auto;min-height:0!important
  #agentHub .cockpit-train{min-height:44px}
  #agentHub .cp-insights{margin:5px 10px}
 }
+
+
+/* 0.9 — specimen index / observation rail, without another navigation layer. */
+#agentHub .cockpit-main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:8px;row-gap:9px}
+#agentHub .cp-intro,#agentHub .cp-live-fields,#agentHub .cockpit-train,#agentHub .cockpit-duel,#agentHub .cockpit-icon{grid-column:1/-1}
+#agentHub .cockpit-secondary{width:100%;min-width:0}
+#agentHub #cpReplay{background:#e4eddf;color:#315a46;border-color:#b4cbb5}
+#agentHub #cpReplay:hover:not(:disabled){background:#d4e6d6}
+#agentHub .cp-observe-toggle{width:100%;padding:9px 10px;margin-top:2px;background:#f2f7ed;border:1px solid #bed2bd;text-align:left;color:#356749;font-size:11px;font-weight:750;min-height:37px}
+#agentHub .cp-observe-toggle[aria-expanded="true"]{background:#d4e5d7;border-color:#92b89a}
+#agentHub .cp-observer{padding:10px;border:1px solid #bdd0c0;background:#f7faf3;display:grid;gap:7px;font-size:11px;line-height:1.4;color:#315343}
+#agentHub .cp-observer[hidden]{display:none!important}
+#agentHub #cpObserverModel{font-weight:750}
+#agentHub #cpObserverPractice{color:#5e7867}
+#agentHub #cpVision{min-height:35px;border:1px solid #a8c5b4;background:#e4f0e9;color:#315344;font-weight:700;font-size:11px}
+#agentHub #cpVision[aria-pressed="true"]{background:#315b46;color:#edfbed}
+#agentHub #cpVision[hidden]{display:none!important}
+
+#cpProfileDialog{width:min(680px,calc(100vw - 20px));max-width:min(680px,calc(100vw - 20px))}
+.cp-library{padding:12px 0 13px;border-top:1px solid #c8d8c9;border-bottom:1px solid #c8d8c9}
+.cp-library-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:11px}
+.cp-library-head>strong{font-size:14px;color:#284b38}
+.cp-library-tabs{display:flex;gap:3px;background:#d9e6d8;padding:3px;border-radius:7px}
+.cp-dialog .cp-library-tabs button{min-height:32px;border:0;background:transparent;padding:6px 10px;font-size:11px;font-weight:750;border-radius:5px;color:#64816e}
+.cp-dialog .cp-library-tabs button[aria-pressed="true"]{background:#fcfff8;color:#24563a;box-shadow:0 1px 4px #234c291f}
+.cp-library-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-height:270px;overflow:auto;overscroll-behavior:contain}
+.cp-specimen{min-width:0;border:1px solid #c6d7c6;background:#f5faf2;padding:10px;border-radius:9px;display:flex;flex-direction:column;gap:10px}
+.cp-specimen-selected{border-color:#4e9571;box-shadow:inset 3px 0 #4a9670}
+.cp-specimen-head{display:flex;align-items:center;gap:9px;min-width:0}
+.cp-specimen-mark{width:37px;height:37px;flex:0 0 37px;display:grid;place-items:center;font-weight:850;font-size:13px;letter-spacing:-.05em;color:#eff9ed;background:#345a45;border-radius:7px}
+.cp-specimen-identity{display:flex;flex-direction:column;gap:3px;min-width:0}
+.cp-specimen-identity strong{font-size:13px;color:#284734;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cp-specimen-identity span{font-size:10px;color:#647d6b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cp-specimen-skills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}
+.cp-specimen-skills span{border:1px solid #d5e1d4;background:#e9f0e7;color:#829787;text-align:center;padding:5px 2px;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-specimen-skills span.cp-skill-trained{background:#d0e6d6;color:#2d6a45;border-color:#a5c7ae;font-weight:750}
+.cp-dialog .cp-specimen-note{flex:1;line-height:1.45;font-size:10px;color:#687d69;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cp-specimen-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.cp-specimen-actions button{min-width:0;min-height:35px!important;padding:4px 5px!important;font-size:10px!important;font-weight:750;white-space:normal}
+.cp-specimen-actions button:disabled{opacity:.6}
+.cp-library-empty{color:#738777;font-size:12px;grid-column:1/-1;padding:16px 8px}
+#cpLibraryStatus{font-size:11px;color:#37634a;min-height:12px;margin-top:5px}
+@media(max-width:780px) and (orientation:portrait){
+ #agentHub .cockpit-main{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ #agentHub .cockpit-duel{grid-column:1/-1}
+ #agentHub .cp-insights{padding:8px;margin-top:0}
+ #agentHub .cockpit-last{margin-top:0}
+}
+@media(max-width:510px){
+ .cp-library-list{grid-template-columns:minmax(0,1fr);max-height:37dvh}
+ .cp-library-head>strong{font-size:12px}
+ .cp-dialog .cp-library-tabs button{font-size:10px;padding:6px 8px}
+ #agentHub #cpReplay,#agentHub #cpTest{font-size:11px}
+}

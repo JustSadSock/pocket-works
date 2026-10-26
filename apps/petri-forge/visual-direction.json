@@ -3,14 +3,14 @@
   "status": "ready",
   "product": "petri-forge",
   "direction": {
-    "premise": "A small computational petri dish: construct an environment and watch a single blue learner discover its consequences.",
-    "composition": "The rectangular cell culture occupies the central work surface. A wrapping instrument strip sits above it and only step/reward counters sit below.",
-    "shapeLanguage": "Hard square cells and compact rectangular instrument buttons match the discrete world. The icon places that grid inside a circular specimen dish.",
+    "premise": "An instrumented Petri dish: observe a learner inside a real world, collect independent specimens and compare how training changes their brains.",
+    "composition": "A dominant live simulation field and a compact pale-sage command rail; the specimen index lives in a dedicated dialog, with compact real-model diagnostics only when requested.",
+    "shapeLanguage": "Sharp laboratory tiles and small squared control clusters frame the simulation; specimen identities use initials in dark mineral-green tiles rather than decorative character portraits.",
     "surfaceAndMaterial": "Flat opaque cell pigments retain the source renderer. Muted teal instrument metal surrounds a near-black culture surface without glass effects.",
     "paletteLogic": "Blue marks the learner and spawn, green marks the goal, red the harmful cells, and yellow the rewards. Grey walls preserve legibility over a dark empty grid.",
     "typography": "System sans-serif labels keep controls legible at compact sizes. The product name is a small bench label rather than a decorative title.",
-    "signature": "Draw an obstacle with a finger and immediately send the learner one step into the edited environment; reward changes remain visible in the bottom counter.",
-    "distinction": "FOG uses geographic orders and ZAMAZKA uses painted fragments; PetriForge keeps every editable element aligned to a fixed discrete laboratory grid."
+    "signature": "Clone a trained specimen, archive a branch without deleting its brain, then expose the real 7×7 observed environment around the learner while replaying its actions.",
+    "distinction": "Unlike the video processing console or turn-based board, PetriForge makes the live world primary, backed by a persistent library of independently trained policy specimens."
   },
   "architecture": {
     "spatialLayout": "open-workbench",
@@ -18,9 +18,9 @@
     "navigation": "editor-toolbox",
     "chromeTopology": "tiled-grid",
     "dominantMotion": "none",
-    "primaryVerb": "Paint individual cells or generator patterns, then advance or run a learner against the resulting rewards and walls.",
-    "physicalFeedback": "A painted cell changes immediately and persists until undo; the agent advances in discrete steps with no interpolated movement to obscure its sampled state.",
-    "spatialRationale": "The whole 30 by 20 environment remains visible when fitted to the phone width; the wrapping tool strip allows direct editing without a modal navigation stack.",
+    "primaryVerb": "Choose a specimen and training program, watch its real environment, clone or archive its learned brain, and inspect the physical 7×7 observation window.",
+    "physicalFeedback": "Training updates genuine saved brain weights or Q values, model inspection reports actual persisted size; cloning creates an independent brain and archiving can be reversed.",
+    "spatialRationale": "Desktop devotes most width to the environment with a narrow control rail; portrait keeps the world above a bounded, scrollable rail, while specimen cards appear in an intentional dialog.",
     "comparisons": [
       {
         "slug": "fog-of-conquest",
@@ -75,11 +75,11 @@
   },
   "motion": {
     "character": "Discrete and immediate: state changes occur on cell boundaries because the learner samples one action at a time.",
-    "action": "Painting a wall or advancing the agent is the primary visible interaction.",
+    "action": "Starting training updates the rail's real progress; a specimen selection loads its actual model; activating perception reveals the agent's sampled neighborhood.",
     "anticipation": "The selected tool and tile value expose the pending edit before the pointer touches the culture.",
-    "response": "Pointer input changes the cell pigment immediately; a worker action changes the blue learner position and reward counter.",
-    "followThrough": "Edited cells remain until an explicit undo or another paint operation; the completed episode stops the run control.",
-    "interruption": "Pointer cancellation releases the current stroke; repeated run input toggles execution while a single pending worker request prevents backlogs.",
+    "response": "Every training or library action changes persistent data and visible feedback; archiving moves a specimen between live and archived tabs.",
+    "followThrough": "The user can replay the latest recorded attempt or test when none exists and can verify cloned skills after reload.",
+    "interruption": "Training can be stopped; model switches await worker confirmation; the specimen library reports write failures instead of pretending success.",
     "reducedMotion": "There are no decorative transitions to remove; discrete cell changes retain all simulation information."
   },
   "evidence": {

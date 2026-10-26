@@ -1,7 +1,7 @@
 import './agent-hub-shell.mjs';
 import {mountAgentCockpit} from './agent-cockpit.mjs';
 import {warmStartCombatFromWorld} from './agent-transfer.mjs';
-import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer} from './agent-career.mjs';
+import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer,cloneCareer,setCareerArchived} from './agent-career.mjs';
 import {listModels,loadModel} from './model-store.mjs';
 
 const $=id=>document.getElementById(id),runtime=()=>window.PetriForgeRuntime||{};
@@ -140,16 +140,16 @@ function ask(action,title,value){
 }
 async function switchAgent(id){
  if(!id||busy||pending||id===active?.id)return;
- const next=careers.find(c=>c.id===id);if(!next)return;
+ const next=careers.find(c=>c.id===id&&!c.archived);if(!next)return;
  pending=true;lock();
  try{
   if(active)await persist(active,mode);
   // Commit the visible identity only after its brain was loaded successfully.
   await restore(next,mode);
   active=next;localStorage.setItem(LAST,next.id);
-  lastEval='';profiles();refresh();
+  lastEval='';profiles();refresh();return true;
  }
- catch(e){notify('Ошибка агента: '+e.message);}
+ catch(e){notify('Ошибка агента: '+e.message);return false;}
  finally{pending=false;lock();}
 }
 async function create(){
@@ -288,7 +288,8 @@ async function start(){
   if(!careers.length){
    const first=await createCareer('Искра');await migratePreviousAutosaves(first);careers=[first];
   }
-  active=careers.find(c=>c.id===localStorage.getItem(LAST))||careers[0];
+  active=careers.find(c=>c.id===localStorage.getItem(LAST)&&!c.archived)||careers.find(c=>!c.archived);
+  if(!active){const first=await createCareer('Искра');careers.unshift(first);active=first;}
   await restore(active,mode);profiles();choices();refresh();
  }catch(e){notify('Не удалось открыть агентов: '+e.message);}
  finally{pending=false;lock();}
@@ -312,11 +313,46 @@ const cockpit=mountAgentCockpit({
   pending=true;lock();
   try{
    await eraseCareer(active);careers=careers.filter(c=>c.id!==active.id);
-   if(!careers.length)careers.push(await createCareer('Искра'));
-   active=careers[0];localStorage.setItem(LAST,active.id);await restore(active,mode);profiles();refresh();
+   if(!careers.some(c=>!c.archived))careers.unshift(await createCareer('Искра'));
+   active=careers.find(c=>!c.archived);localStorage.setItem(LAST,active.id);await restore(active,mode);profiles();refresh();
   }finally{pending=false;lock();}
  },
  legacy:importOld,
+ clone:async id=>{
+  if(busy||pending)throw Error('Дождитесь окончания текущей операции');
+  const source=careers.find(c=>c.id===id);
+  if(!source)throw Error('Исходный агент не найден');
+  pending=true;lock();
+  try{
+   if(active?.id===id)await persist(active,mode);
+   const copy=await cloneCareer(source);
+   await restore(copy,mode);
+   careers.unshift(copy);active=copy;localStorage.setItem(LAST,copy.id);
+   profiles();lastEval='';refresh();notify('Создана независимая копия «'+source.name+'»');
+   return copy;
+  }finally{pending=false;lock();}
+ },
+ archive:async(id,archived)=>{
+  if(busy||pending)throw Error('Дождитесь окончания текущей операции');
+  const source=careers.find(c=>c.id===id);
+  if(!source)throw Error('Агент не найден');
+  if(!!source.archived===!!archived)return source;
+  pending=true;lock();
+  try{
+   if(archived&&source.id===active?.id){
+    const replacement=careers.find(c=>c.id!==id&&!c.archived);
+    if(!replacement)throw Error('Нельзя архивировать последнего активного агента. Сначала создайте второго.');
+    await persist(active,mode);
+    await restore(replacement,mode);
+    active=replacement;localStorage.setItem(LAST,replacement.id);
+   }
+   const updated=await setCareerArchived(source,archived);
+   careers=careers.map(c=>c.id===id?updated:c);
+   profiles();refresh();
+   notify(archived?'Агент перемещён в архив. Его мозги сохранены.':'Агент возвращён из архива.');
+   return updated;
+  }finally{pending=false;lock();}
+ },
  expert:()=>advancedMode(true),
  persist:async()=>{if(active)await persist(active,mode);},
  updateChoice:(type,value)=>{
@@ -337,4 +373,4 @@ const cockpit=mountAgentCockpit({
  whenMode:async next=>{await chain;if(mode!==next)throw Error('Не удалось открыть арену');}
 });
 void start();
-window.PetriForgeAgentHub=()=>({agent:active?.name,id:active?.id,mode,busy,advanced,profiles:careers.length,sessions:active?.branches?.[mode]?.sessions||0});
+window.PetriForgeAgentHub=()=>({agent:active?.name,id:active?.id,mode,busy,advanced,profiles:careers.length,archived:careers.filter(c=>c.archived).length,sessions:active?.branches?.[mode]?.sessions||0});
