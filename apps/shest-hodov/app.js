@@ -16,7 +16,7 @@ function play(action){
   if(state.kind==='influence'||state.kind==='protocol')resetDraft();
   save();render();return true;
 }
-const el=(name,props={},children='')=>{const x=document.createElement(name);Object.assign(x,props);x.innerHTML=children;return x;};
+const el=(name,props={},children='')=>{const x=document.createElement(name);Object.assign(x,props);if(children)x.innerHTML=children;return x;};
 function choose(kind){state=start(kind);open=true;notification='';resetDraft();restartArmed=false;save();render();}
 function turnText(){
   if(state.finished)return state.winner===-1?'Ничья':`Победа: ${names[state.winner]}`;
