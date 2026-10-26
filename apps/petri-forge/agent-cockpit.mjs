@@ -2,6 +2,7 @@
 import {packCareer,unpackCareer,savePackageFile,readPackageFile} from './agent-portability.mjs';
 import {readBrain,KINDS} from './agent-career.mjs';
 import {validPolicy} from './combat-core.mjs';
+import {mountNeuralCombat} from './neural-combat-ui.mjs';
 import {mountLearningBenchmark} from './learning-benchmark-ui.mjs';
 import './agent-cockpit-shell.mjs';
 const $=id=>document.getElementById(id);
@@ -12,6 +13,10 @@ export function mountAgentCockpit(api){
  for(const button of document.querySelectorAll('[data-cp-close]'))button.onclick=()=>$(button.dataset.cpClose).close();
  let fightWorker=null,fighting=false,lastMode=null,lastObservedAgent=null,postBusy=false;
  let libraryFilter='active',observerOpen=false,vision=false,observerTicket=0,benchmarkActive=false;
+ const neuro=mountNeuralCombat({...api,onBusy:api.onNeuralBusy,replay:match=>{
+  window.PetriForgeRuntime.combat.showExternalDuel({summary:match.matches[0].summary,frames:match.matches[0].frames});
+  const play=document.getElementById('battlePlay');if(play&&!play.disabled)play.click();
+ }});
  const benchmark=mountLearningBenchmark({...api,onBusyChange:active=>{benchmarkActive=active;redraw();}});
  const setStatus=(text)=>{$('cpState').textContent=text;api.notify(text);};
  function state(){return api.state();}
@@ -127,6 +132,7 @@ export function mountAgentCockpit(api){
   const current=v.mode,setting=v.config[current],variant=$('hubVariant').selectedOptions[0]?.textContent||'Сцена';
   $('cpGoal').textContent=variant;
   benchmark.update();
+  neuro.refresh();
   $('cpTrainingCount').textContent=v.active.branches[current].sessions+' '+(v.active.branches[current].sessions===1?'тренировка':'тренировок');
   $('cpLastResult').textContent=v.active.branches[current].history.at(-1)?.label||'Пока без опыта. Нажмите «Обучить», чтобы агент начал учиться.';
   $('cpBatchLabel').textContent=fmt($('hubBatch').value)+' '+setting.units;

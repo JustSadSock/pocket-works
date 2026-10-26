@@ -224,3 +224,37 @@ test('benchmark can be cancelled without reporting a fabricated winner',async({p
  await expect(page.locator('#cpBenchStart')).toBeEnabled();
  await expect(page.locator('#cpBenchExport')).toBeDisabled();
 });
+
+test('neural combat trains separate archer and swordsman PPO brains and replays a frozen duel',async({page})=>{
+ test.setTimeout(150000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ await page.locator('[data-cp-mode="combat"]').click();
+ await expect(page.locator('#cpNeurocombat')).toBeVisible();
+ await page.locator('#cpNeurocombat').click();
+ await expect(page.locator('#cpNeuroDialog')).toBeVisible();
+ await page.locator('#cpNeuroEpisodes').selectOption('6');
+ await page.locator('#cpNeuroTrain').click();
+ await expect(page.locator('#cpNeuroStatus')).toContainText('Мозг сохранён',{timeout:110000});
+ await expect(page.locator('#cpNeuroTrainingResult')).toContainText('До:');
+ await expect(page.locator('#cpNeuroIdentity')).toContainText('лучник: 6');
+ await page.locator('#cpNeuroRole').selectOption('swordsman');
+ await page.locator('#cpNeuroEnemyRole').selectOption('archer');
+ await page.locator('#cpNeuroOpponent').selectOption('saved');
+ await page.locator('#cpNeuroTrain').click();
+ await expect(page.locator('#cpNeuroStatus')).toContainText('Мозг сохранён',{timeout:110000});
+ await expect(page.locator('#cpNeuroIdentity')).toContainText('мечник: 6');
+ await page.locator('#cpNeuroFighterRoleA').selectOption('archer');
+ await page.locator('#cpNeuroFighterRoleB').selectOption('swordsman');
+ await page.locator('#cpNeuroDuel').click();
+ await expect(page.locator('#cpNeuroDuelResult')).toContainText('Счёт',{timeout:85000});
+ await expect(page.locator('#cpNeuroDialog')).not.toBeVisible();
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ await page.locator('[data-cp-mode="combat"]').click();
+ await page.locator('#cpNeurocombat').click();
+ await expect(page.locator('#cpNeuroIdentity')).toContainText('лучник: 6');
+ await expect(page.locator('#cpNeuroIdentity')).toContainText('мечник: 6');
+ expect(errors).toEqual([]);
+});

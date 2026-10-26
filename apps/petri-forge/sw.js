@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'petri-forge-';
-const CACHE_NAME = 'petri-forge-v0.12.0';
-const APP_VERSION = '0.12.0';
+const CACHE_NAME = 'petri-forge-v0.13.0';
+const APP_VERSION = '0.13.0';
 const RELEASE_DATE = '2026-10-26';
 const CACHE_PROTOCOL = 8;
-const RELEASE_NOTES = ["Новая лаборатория сравнений: Q-learning, Actor–Critic и PPO обучаются на одинаковых картах и стартовых позициях без изменения сохранённых агентов.","Проверка на отложенных картах до и после обучения: честные доли побед, награды, скорость и число шагов, доступные для экспорта JSON.","Браузерные эксперименты выполняются в отдельном Worker, поддерживают отмену и восстановление последнего завершённого сравнения."];
+const RELEASE_NOTES = ["Нейробой: лучник и мечник обучаются через PPO непосредственно на физике Combat Forge, выбирая движение и момент атаки.","Обычные бойцы, сохранённые нейросети и собственная прошлая версия доступны как тренировочные противники; классы сохраняются независимо.","Контрольные поединки PPO-бойцов со сменой сторон, настоящими исходами и повтором; нейромодели поддерживают клонирование и экспорт профиля."];
 const APP_SHELL = [
   './',
   './index.html',
@@ -32,6 +32,9 @@ const APP_SHELL = [
   './world-modes.mjs',
   './world-modes.css',
   './combat-core.mjs',
+  './neural-combat.mjs',
+  './neural-combat-worker.mjs',
+  './neural-combat-ui.mjs',
   './combat-worker.mjs',
   './combat-rules.mjs',
   './combat-editor.mjs',

@@ -1,7 +1,7 @@
 import './agent-hub-shell.mjs';
 import {mountAgentCockpit} from './agent-cockpit.mjs';
 import {warmStartCombatFromWorld} from './agent-transfer.mjs';
-import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm} from './agent-career.mjs';
+import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm,recordCombatNeural} from './agent-career.mjs';
 import {listModels,loadModel} from './model-store.mjs';
 
 const $=id=>document.getElementById(id),runtime=()=>window.PetriForgeRuntime||{};
@@ -295,6 +295,12 @@ async function start(){
  finally{pending=false;lock();}
 }
 const cockpit=mountAgentCockpit({
+ onNeuralBusy:flag=>{pending=!!flag;lock();},
+ saveNeural:async(role,model,report)=>{
+  const next=await recordCombatNeural(active,role,model,report);
+  active=next;careers=careers.map(c=>c.id===next.id?next:c);
+  profiles();refresh();return next;
+ },
  state:()=>({mode,active,careers,busy,pending,advanced,config:cfg,lastEval}),
  notify,
  setEvaluation:value=>{lastEval=value;refresh();},

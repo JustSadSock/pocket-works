@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {DOMAINS,freshCareer,assertCareer,brainId,createCareer,listCareers,writeBrain,readBrain,recordTraining,renameCareer,eraseCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm,readGridBrain} from '../agent-career.mjs';
+import {DOMAINS,freshCareer,assertCareer,brainId,createCareer,listCareers,writeBrain,readBrain,recordTraining,renameCareer,eraseCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm,readGridBrain,recordCombatNeural,readCombatNeural} from '../agent-career.mjs';
 import {NeuralActorCritic} from '../neural-policy.mjs';
 import {PpoPolicy} from '../ppo.mjs';
 import {packCareer,unpackCareer,validatePackage} from '../agent-portability.mjs';
@@ -249,4 +249,37 @@ test('PPO is independent from Q and previous actor-critic across clone, delete a
  assert.equal((await readBrain(back,'grid')).type,'qlearning');
  const restored=await setCareerGridAlgorithm(back,'ppo');
  assert.equal((await readBrain(restored,'grid')).type,'neural-ppo');
+});
+
+test('combat neural classes are independent, transactional and portable with old tactical brain',async()=>{
+ const original=await createCareer('Нейробоец','a-combat-neural-test');
+ const archer=new (await import('../ppo.mjs')).PpoPolicy(6).serialize();
+ const swordsman=new (await import('../ppo.mjs')).PpoPolicy(7).serialize();
+ const oldCombat={type:'combat-policy',version:1,name:'balanced',weights:Array(8).fill(.5)};
+ await writeBrain(original,'combat',oldCombat);
+ const afterA=await recordCombatNeural(original,'archer',archer,{episodes:6,winRate:.5});
+ const afterS=await recordCombatNeural(afterA,'swordsman',swordsman,{episodes:12,winRate:.75});
+ assert.deepEqual(await readCombatNeural(afterS,'archer'),archer);
+ assert.deepEqual(await readCombatNeural(afterS,'swordsman'),swordsman);
+ assert.deepEqual(await readBrain(afterS,'combat'),oldCombat);
+ assert.equal(afterS.combatNeural.archer.episodes,6);
+ assert.equal(afterS.combatNeural.swordsman.episodes,12);
+ const clone=await cloneCareer(afterS);
+ assert.deepEqual(await readCombatNeural(clone,'archer'),archer);
+ assert.deepEqual(await readCombatNeural(clone,'swordsman'),swordsman);
+ const pkg=await packCareer(afterS);
+ assert.deepEqual(pkg.brains.combatArcher,archer);
+ assert.deepEqual(pkg.brains.combatSwordsman,swordsman);
+ const imported=await unpackCareer(pkg);
+ assert.deepEqual(await readCombatNeural(imported,'archer'),archer);
+ assert.deepEqual(await readCombatNeural(imported,'swordsman'),swordsman);
+ assert.equal(imported.combatNeural.archer.sessions,1);
+ await eraseCareer(clone);
+ assert.deepEqual(await readCombatNeural(afterS,'archer'),archer);
+ const before=(await listCareers()).length;
+ failKind='neural-ppo';
+ try{await assert.rejects(recordCombatNeural(afterS,'archer',archer,{episodes:4,winRate:1}));}
+ finally{failKind=null;}
+ assert.equal((await listCareers()).length,before);
+ assert.equal((await listCareers()).find(x=>x.id===afterS.id).combatNeural.archer.episodes,6);
 });
