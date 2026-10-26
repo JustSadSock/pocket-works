@@ -138,7 +138,7 @@ function advancedMode(value){
  }
 }
 async function changeMode(next){
- if(!DOMAINS.includes(next)||!active||busy)return;
+ if(!DOMAINS.includes(next)||!active||busy||pending)return;
  if(next!==mode){
   pending=true;lock();
   const from=mode;
