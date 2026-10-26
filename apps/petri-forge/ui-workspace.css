@@ -1,0 +1,118 @@
+/* PetriForge 0.14 — permanent, bounded workspace instead of a 148px overlay.
+   Only one scrollable command rail, one live world, and native modal layers. */
+body.hub-on:not(.hub-advanced) #workspace{
+ display:grid!important;grid-template-columns:minmax(0,1fr) clamp(315px,27vw,390px)!important;
+ grid-template-rows:minmax(0,1fr)!important;padding:0!important;min-height:0;
+ overflow:hidden!important;gap:0;
+}
+body.hub-on:not(.hub-advanced) #workspace>section:not([hidden]){
+ grid-column:1!important;grid-row:1!important;min-width:0;min-height:0!important;
+ width:100%;height:100%!important;
+}
+body.hub-on:not(.hub-advanced) #agentHub{
+ position:relative!important;grid-column:2;grid-row:1;
+ inset:auto!important;width:100%;max-width:none;height:100%!important;
+ min-height:0!important;min-width:0;
+ display:flex!important;flex-direction:column;overflow-y:auto!important;overflow-x:hidden!important;
+ background:#e8efe4!important;border-left:1px solid #91ae9d!important;
+ box-shadow:none!important;overscroll-behavior:contain;
+ scrollbar-width:thin;scrollbar-color:#a1b9a6 transparent;
+}
+#agentHub .cockpit{
+ height:auto!important;min-height:100%;width:100%;display:flex;flex-direction:column;
+ padding:15px 14px 18px!important;gap:13px!important;
+ background:transparent;box-shadow:none!important;border-top:0!important;
+}
+#agentHub .cockpit-first{
+ height:auto!important;min-height:0!important;display:grid!important;grid-template-columns:1fr;
+ align-items:stretch;gap:12px!important;
+}
+#agentHub .cockpit-identity{max-width:none;min-height:38px;width:100%;}
+#agentHub #cpAgent{min-height:40px;height:40px;border-radius:7px;padding:6px 9px}
+#agentHub #cpProfile{min-height:40px;height:40px;width:42px;}
+#agentHub .cockpit-worlds{justify-content:stretch;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px!important}
+#agentHub .cockpit-worlds>.cockpit-heading,#agentHub .cockpit-world-sep{display:none!important}
+#agentHub .cockpit-mode-pair{min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:3px}
+#agentHub .cockpit-mode-pair button{min-width:0;min-height:39px;height:auto;font-size:12px;padding:8px 3px}
+#agentHub .cockpit-main{
+ display:grid!important;flex:0 0 auto;grid-template-columns:repeat(2,minmax(0,1fr));
+ align-items:stretch;gap:9px!important;min-height:0!important;
+}
+#agentHub .cp-intro,#agentHub #cpAlgorithmRow,#agentHub .cp-live-fields,
+#agentHub .cockpit-target,#agentHub .cockpit-train,
+#agentHub .cockpit-duel,#agentHub .cockpit-icon,#agentHub #cpNeurocombat,
+#agentHub .cp-bench-entry{grid-column:1/-1}
+#agentHub .cp-intro{margin:2px 0 0}
+#agentHub .cp-live-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:0}
+#agentHub .cp-live-fields label{min-width:0}
+#agentHub .cp-live-fields select{min-width:0;width:100%;max-width:100%}
+#agentHub .cockpit-target{min-height:45px;min-width:0}
+#agentHub .cockpit-train{
+ flex:auto!important;min-width:0!important;min-height:56px;font-size:15px;
+ justify-content:center;white-space:normal
+}
+#agentHub .cockpit-train small{display:inline}
+#agentHub #cpStop[hidden],#agentHub #cpTrain[hidden]{display:none!important}
+#agentHub .cockpit-secondary{min-height:42px;min-width:0;padding:8px 5px;font-size:11px}
+#agentHub .cockpit-icon{width:100%;height:38px;min-height:38px;font-size:13px}
+#agentHub #cpNeurocombat{width:100%}
+#agentHub .cp-insights{flex:0 0 auto;margin:0!important}
+#agentHub .cockpit-last{height:auto!important;max-height:none!important;min-height:30px;align-items:flex-start}
+#agentHub #cpState{white-space:normal;overflow-wrap:anywhere;line-height:1.5;font-size:11px}
+#agentHub #cpDetails{min-height:30px;white-space:nowrap}
+#agentHub #cpBenchmark{margin-top:8px}
+#agentHub #cpObserver{max-height:240px;overflow:auto}
+/* All dialogs live in the browser top layer; never inherit the clipped rail. */
+dialog.cp-dialog[open],dialog#hubDialog[open],dialog.hub-manage-dialog[open]{
+ position:fixed;inset:0;margin:auto;z-index:1000;
+ max-height:min(88dvh,800px);overscroll-behavior:contain;
+}
+dialog.cp-dialog:not([open]),dialog#hubDialog:not([open]),dialog.hub-manage-dialog:not([open]){display:none!important}
+.cp-dialog-head{position:sticky;top:-20px;z-index:2;background:#edf4e8;padding:8px 0 10px;margin-top:-8px;border-bottom:1px solid #c9d8c9}
+.cp-dialog-head button{flex:0 0 40px;min-height:40px!important}
+.cp-dialog .cp-library-list{max-height:min(35dvh,300px);overscroll-behavior:contain}
+body.hub-on:not(.hub-advanced) #worldPanel,
+body.hub-on:not(.hub-advanced) .extra-world{min-height:0!important;overflow:hidden!important;}
+body.hub-on:not(.hub-advanced) #stage,
+body.hub-on:not(.hub-advanced) .arena-canvas-wrap,
+body.hub-on:not(.hub-advanced) .perekos-stage,
+body.hub-on:not(.hub-advanced) .race-viewport{min-height:0!important;max-height:100%;flex:1;overflow:hidden}
+body.hub-on:not(.hub-advanced) #cv{width:auto;max-width:100%;max-height:100%;height:auto}
+body.hub-on:not(.hub-advanced) .arena-topline{min-height:40px}
+@media(max-width:810px){
+ body.hub-on:not(.hub-advanced) #workspace{
+  display:flex!important;flex-direction:column!important;gap:0!important;
+  height:100%;padding:0!important;overflow:hidden!important;
+ }
+ body.hub-on:not(.hub-advanced) #workspace>section:not([hidden]){
+  flex:1 1 0!important;min-height:155px!important;height:auto!important;max-width:100%;
+ }
+ body.hub-on:not(.hub-advanced) #agentHub{
+  position:relative!important;flex:0 0 auto!important;height:clamp(235px,42dvh,390px)!important;
+  max-height:48dvh!important;overflow-y:auto!important;
+  border-left:0!important;border-top:1px solid #8dab98!important;
+ }
+ #agentHub .cockpit{padding:10px 12px 17px!important;min-height:0}
+ #agentHub .cockpit-first{display:flex!important;flex-direction:column;gap:9px!important}
+ #agentHub .cockpit-identity{max-width:none;flex:0 0 auto}
+ #agentHub .cockpit-worlds{display:grid;grid-template-columns:1fr 1fr;flex:0 0 auto;width:100%}
+ #agentHub .cockpit-main{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px!important}
+ #agentHub .cp-live-fields{grid-template-columns:1fr 1fr}
+ body.hub-on:not(.hub-advanced) #stage,
+ body.hub-on:not(.hub-advanced) .arena-canvas-wrap{height:auto!important;min-height:0!important;flex:1}
+ body.hub-on:not(.hub-advanced) .perekos-stage,
+ body.hub-on:not(.hub-advanced) .race-viewport{height:auto!important;min-height:0!important;flex:1}
+}
+@media(max-width:420px){
+ #agentHub .cockpit{padding:9px 9px 14px!important}
+ #agentHub .cockpit-heading{display:inline}
+ #agentHub .cockpit-mode-pair button{font-size:11px}
+ #agentHub .cockpit-main{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #agentHub .cp-live-fields select{font-size:12px}
+ #agentHub .cockpit-train small{display:none}
+ dialog.cp-dialog[open]{width:calc(100vw - 16px);max-width:calc(100vw - 16px);padding:16px}
+ .cp-dialog-head{top:-16px}
+}
+@media(prefers-reduced-motion:reduce){
+ #agentHub .cockpit *{transition:none!important;animation:none!important}
+}
