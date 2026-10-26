@@ -31,11 +31,10 @@ const other=p=>1-p;
 function connected(s,p){
   const n=7,seen=new Set(),queue=[];
   for(let i=0;i<n;i++){const id=p===0?i*n:i;if(s.cells[id]===p){seen.add(id);queue.push(id)}}
-  const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,-1],[-1,1]];
   while(queue.length){
     const id=queue.shift(),r=Math.floor(id/n),c=id%n;
     if(p===0&&c===n-1||p===1&&r===n-1)return true;
-    for(const next of adjacent(id,n,dirs))if(!seen.has(next)&&s.cells[next]===p){seen.add(next);queue.push(next)}
+    for(const next of adjacent(id,n,r%2?[[0,-1],[0,1],[-1,0],[-1,1],[1,0],[1,1]]:[[0,-1],[0,1],[-1,-1],[-1,0],[1,-1],[1,0]]))if(!seen.has(next)&&s.cells[next]===p){seen.add(next);queue.push(next)}
   }
   return false;
 }
