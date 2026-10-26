@@ -2,7 +2,7 @@
   "id": "/apps/tihiy-kadr/",
   "name": "ТИХИЙ КАДР",
   "short_name": "M&E LAB",
-  "description": "Удаление речи прямо из видео: быстрый MRX или экспериментальная MRX + SCNet без внешних сервисов.",
+  "description": "Пять локальных браузерных маршрутов MRX и SCNet, цепочки обработки, сравнение качества и скорости.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
