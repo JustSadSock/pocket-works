@@ -56,6 +56,16 @@
         "slug": "blockies",
         "spatialDifference": "Blockies is organized around a compact cooperative block-placement board and hand controls. PetriForge centers on a large grid laboratory, instrument strip and analytical side rail.",
         "interactionDifference": "Blockies places and moves blocks during a party match; PetriForge edits a world, steps agent simulation and observes training results."
+      },
+      {
+        "slug": "tihiy-kadr",
+        "spatialDifference": "«Тихий кадр» организует монтажно-аудиоаналитическую рабочую поверхность с плеером и боковыми переключателями; PetriForge отдаёт центр постоянно активной игровой симуляции и оставляет настройки вне сцены.",
+        "interactionDifference": "«Тихий кадр» обрабатывает загруженный файл и переключает звуковые дорожки; в PetriForge пользователь запускает серии самостоятельных испытаний агента, сохраняет мозги и сравнивает поведение."
+      },
+      {
+        "slug": "shest-hodov",
+        "spatialDifference": "«Шесть ходов» показывает компактную настольную сетку с прямым нажатием на клетки; PetriForge использует крупную непрерывную арену, где во время headless-тренировки игровое поле не требует ходов пользователя.",
+        "interactionDifference": "«Шесть ходов» предполагает выбор отдельных допустимых ходов человеком или ИИ; PetriForge автоматически выполняет множество эпизодов, сохраняет экспериментальные модели и воспроизводит действия агента."
       }
     ]
   },
