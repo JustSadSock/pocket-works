@@ -72,10 +72,6 @@ jobs:
         run: npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
       - name: Install headless Chromium
         run: npx playwright install chromium
-      - name: Install local FFmpeg for real AAC MP4 fast-decode fixture
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
       - name: Verify real Open-Unmix, regional SCNet and full SCNet soundtrack exports
         run: node apps/ne-tem-golosom/qa/film-neural-journey.mjs
       - name: Check video source selection, trim, transcoding and browser appearance
