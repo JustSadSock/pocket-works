@@ -738,12 +738,14 @@ async function processMedia(){
 function acceptMedia(){
   if(!(videoExportBlob instanceof Blob)||videoExportController)return false;
   if(mode==='host'&&videoExportBlob.size>MAX_ROOM_VIDEO_BYTES){toast('Нужно уменьшить размер до 96 МиБ.');return false}
-  const cleaned=selectedSound()!=='original';
+  // Only neural processing yields a useful background track by default.
+  // Fully muted output must stay muted in the editor and premiere.
+  const cleaned=selectedSound()==='neural';
   const length=Number($('trim-length').value),type=videoExportBlob.type;
   const extension=type.includes('mp4')?'mp4':'webm';
   sourceBlob=new File([videoExportBlob],(selected.title||'scene')+'-cut.'+extension,{type});
   selected.custom=true;
-  selected.id=(cleaned?'clean-':'cut-')+uid();selected.cleaned=cleaned;
+  selected.id=(cleaned?'clean-':selectedSound()==='mute'?'mute-':'cut-')+uid();selected.cleaned=cleaned;
   encodedCache=null;
   selected.start=0;selected.duration=length;selected.totalDuration=length;
   scene={...selected,start:0,duration:length};
