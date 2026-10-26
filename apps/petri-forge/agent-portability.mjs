@@ -2,6 +2,7 @@
 import {DOMAINS,assertCareer,freshCareer,newCareerId,readBrain,readGridBrain,writeCareerBundle} from './agent-career.mjs';
 import {QAgent} from './lab-core.mjs';
 import {validateNeuralPolicy} from './neural-policy.mjs';
+import {validatePpoPolicy} from './ppo.mjs';
 import {validPolicy} from './combat-core.mjs';
 import {validatePerekosPolicy} from './perekos-policy.mjs';
 const MAX_JSON=20_000_000;
@@ -9,6 +10,7 @@ export function validBrain(domain,brain){
  if(brain==null)return true;
  if(domain==='grid'){try{new QAgent(1).load(brain);return true;}catch{return false;}}
  if(domain==='gridNeural')return validateNeuralPolicy(brain);
+ if(domain==='gridPpo')return validatePpoPolicy(brain);
  if(domain==='combat')return validPolicy(brain);
  if(domain==='perekos')return validatePerekosPolicy(brain);
  if(domain==='race')return Array.isArray(brain)&&brain.length===9&&brain.every(n=>Number.isFinite(n)&&Math.abs(n)<=2);
@@ -25,6 +27,9 @@ export async function packCareer(c){
  const neural=await readGridBrain(c,'neural');
  if(neural&&!validBrain('gridNeural',neural))throw Error('Повреждённая нейросеть');
  if(neural)brains.gridNeural=neural;
+ const ppo=await readGridBrain(c,'ppo');
+ if(ppo&&!validBrain('gridPpo',ppo))throw Error('Повреждённый PPO-мозг');
+ if(ppo)brains.gridPpo=ppo;
  return {format:'petri-forge-career',version:1,profile:{name:c.name,createdAt:c.createdAt,
   algorithms:{grid:c.algorithms?.grid||'qlearning'},branches:structuredClone(c.branches)},brains};
 }
@@ -33,9 +38,11 @@ export function validatePackage(pkg){
  const name=pkg.profile.name;
  if(typeof name!=='string'||!name.trim()||name.length>42)throw Error('Неверное имя агента');
  const algorithm=pkg.profile.algorithms?.grid||'qlearning';
- if(!['qlearning','neural'].includes(algorithm))throw Error('Неизвестный алгоритм профиля');
+ if(!['qlearning','neural','ppo'].includes(algorithm))throw Error('Неизвестный алгоритм профиля');
  if(pkg.brains.gridNeural!=null&&!validBrain('gridNeural',pkg.brains.gridNeural))throw Error('Несовместимая нейросеть');
  if(algorithm==='neural'&&!pkg.brains.gridNeural)throw Error('Профиль с нейросетью без сохранённого мозга');
+ if(pkg.brains.gridPpo!=null&&!validBrain('gridPpo',pkg.brains.gridPpo))throw Error('Несовместимый PPO-мозг');
+ if(algorithm==='ppo'&&!pkg.brains.gridPpo)throw Error('Профиль PPO без сохранённого мозга');
  const branches=pkg.profile.branches;
  if(!branches||typeof branches!=='object')throw Error('Файл не содержит историю обучения');
  for(const domain of DOMAINS){
@@ -65,6 +72,7 @@ export async function unpackCareer(pkg){
   if(pkg.brains[domain]!=null)brains[domain]=pkg.brains[domain];
  }
  if(pkg.brains.gridNeural)brains.gridNeural=pkg.brains.gridNeural;
+ if(pkg.brains.gridPpo)brains.gridPpo=pkg.brains.gridPpo;
  try{return await writeCareerBundle(c,brains);}
  catch(e){throw Error('Импорт отменён без частично сохранённого агента: '+e.message);}
 }
