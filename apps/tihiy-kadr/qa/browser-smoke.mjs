@@ -56,7 +56,7 @@ try{
   const done=new Promise(r=>recorder.onstop=r);
   const start=performance.now();const draw=setInterval(()=>{c.fillStyle='#182f40';c.fillRect(0,0,320,180);c.fillStyle='#ea964e';c.fillRect(40+(performance.now()-start)/15,65,42,42)},40);
   await ctx.resume();recorder.start(300);oscillator.start();
-  await new Promise(r=>setTimeout(r,2100));
+  await new Promise(r=>setTimeout(r,5300));
   recorder.stop();await done;clearInterval(draw);oscillator.stop();
   stream.getTracks().forEach(t=>t.stop());await ctx.close();
   return [...new Uint8Array(await new Blob(parts).arrayBuffer())];
@@ -75,7 +75,7 @@ try{
   }));
   throw Error('Video fixture setup failed: '+JSON.stringify(diagnostics));
  }
- await page.locator('#duration-seconds').fill('1');
+ await page.locator('#duration-seconds').fill('4');
  assert.equal(await page.locator('#quality-mode').inputValue(),'umxhq-direct');
  assert.equal(await page.locator('#quality-mode option').count(),2);
  await page.locator('#process-btn').click();
@@ -139,6 +139,17 @@ try{
  await page.locator('#scnet-strength').fill('135');
  await page.waitForTimeout(450);
  assert.equal(await page.locator('#scnet-strength-value').innerText(),'135%');
+ assert.equal(await page.locator('#target-scnet-run').isEnabled(),true);
+ await page.locator('#target-scnet-mode').selectOption('manual');
+ await page.locator('#target-scnet-run').click();
+ await page.waitForFunction(()=>document.querySelector('#target-scnet-enabled').disabled===false,null,{timeout:180000});
+ assert.equal(await page.locator('#target-scnet-enabled').isChecked(),true);
+ assert.match(await page.locator('#target-scnet-status').innerText(),/целевые/);
+ await page.locator('#target-scnet-enabled').uncheck();
+ assert.equal(await page.locator('#target-scnet-enabled').isChecked(),false);
+ await page.locator('#target-scnet-enabled').check();
+ assert.deepEqual(await page.evaluate(()=>[window.__modelRuns,window.__dspRuns]),[2,1],
+  'hybrid A/B must reuse one regional SCNet inference without new FFT');
  await page.locator('#quality-mode').selectOption('scnet-direct');
  await page.locator('#process-btn').click();
  await page.waitForFunction(()=>document.querySelector('#result-state').textContent==='SCNet',null,{timeout:180000});
@@ -153,7 +164,7 @@ try{
  await page.locator('#process-btn').click();
  await page.waitForFunction(()=>document.querySelector('#progress-heading').textContent==='Готово',null,{timeout:10000});
  assert.equal(await page.locator('#study-results .study-choice').count(),2);
- assert.deepEqual(await page.evaluate(()=>[window.__modelRuns,window.__dspRuns]),[2,2],
+ assert.deepEqual(await page.evaluate(()=>[window.__modelRuns,window.__dspRuns]),[3,2],
   'cached A/B of the same two models must not rerun any workers');
  assert.deepEqual(runtimeErrors,[]);
  console.log('Real Chromium Open-Unmix and SCNet direct routes, monitoring, export, cache and A/B passed');
