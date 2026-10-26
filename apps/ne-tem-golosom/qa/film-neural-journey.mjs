@@ -71,13 +71,13 @@ try{
   const fast=await page.evaluate(async()=>{
    const {extractMp4AAC}=await import('/apps/ne-tem-golosom/mp4-audio.js');
    const blob=await (await fetch('/__qa_fast_aac.mp4')).blob();
-   const before=performance.now(),data=await extractMp4AAC(blob,0,10);
-   if(!data)return null;
+   const trace=[],before=performance.now(),data=await extractMp4AAC(blob,0,10,{onProgress:p=>trace.push(p.detail)});
+   if(!data)return {failed:true,trace,webcodecs:typeof AudioDecoder};
    let energy=0;
    for(let i=0;i<data[0].length;i+=512)energy+=Math.abs(data[0][i]);
    return {length:data[0].length,energy,seconds:(performance.now()-before)/1000};
   });
-  assert(fast,'real AAC MP4 must use fast demux/decode path');
+  assert(fast&&!fast.failed,'real AAC MP4 must use fast demux/decode path: '+JSON.stringify(fast));
   assert.equal(fast.length,441000);
   assert(fast.energy>1,'decoded AAC must carry real non-silent audio');
   console.log('Fast MP4 AAC extraction',fast.seconds.toFixed(2),'seconds for 10 seconds');
