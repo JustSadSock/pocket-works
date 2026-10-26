@@ -125,11 +125,17 @@ async function changeMode(next){
  if(next!==mode){
   pending=true;lock();
   const from=mode;
-  try{await persist(active,from);mode=next;await restore(active,next);}
-  catch(e){notify('Ошибка среды: '+e.message);}
-  finally{pending=false;}
- }
- advancedMode(false);lastEval='';choices();refresh();lock();
+  try{
+   await persist(active,from);
+   await restore(active,next);
+   mode=next;
+   advancedMode(false);lastEval='';choices();refresh();
+  }catch(e){
+   // Keep the stored agent, selected mode, controls, and visible world aligned.
+   window.dispatchEvent(new CustomEvent('petri:mode-rollback',{detail:{mode:from}}));
+   notify('Не удалось открыть среду: '+e.message);
+  }finally{pending=false;lock();}
+ }else{advancedMode(false);lock();}
 }
 function ask(action,title,value){
  return new Promise(resolve=>{
