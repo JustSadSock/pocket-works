@@ -3,6 +3,7 @@
 // Only the host prepares a cleaned VIDEO; guests receive the encoded video
 // with its soundtrack and never have to rerun neural inference.
 import {selectProblemSegments,packProblemSegments,composeSelectivePatches,mixSelectivePatches} from '../tihiy-kadr/selective-scnet.js';
+import {extractMp4AAC} from './mp4-audio.js';
 export const FILM_RATE=44100;
 export const FILM_MODES=Object.freeze([
  {id:'umx',name:'Open-Unmix',detail:'Быстро · основной вариант'},
@@ -10,6 +11,13 @@ export const FILM_MODES=Object.freeze([
  {id:'scnet',name:'SCNet',detail:'Обрабатывает всю сцену'}
 ]);
 const aborted=()=>new DOMException('Обработка отменена','AbortError');
+export function lowMemoryRecommended(memory,cores){
+ return (Number.isFinite(memory)&&memory<=4)||(Number.isFinite(cores)&&cores<=4);
+}
+export function estimatePreparationTimes(duration,mode,opts={}){
+ const e=estimateFilmTimes(duration,opts),neural=e[mode]||e.umx;
+ return {neural,encoding:duration,decodeFallback:duration,totalFast:neural+duration,totalSlow:neural+duration*2};
+}
 function live(signal){if(signal?.aborted)throw aborted()}
 export function estimateFilmTimes(duration,{umx90=5,scnet90=150,targetSeconds=10}={}){
  const length=Math.min(90,Math.max(0,Number(duration)||0));
@@ -25,7 +33,7 @@ export function validateFilmMode(mode){
  return mode;
 }
 function monoToStereo(pcm){return pcm.length===1?[pcm[0],pcm[0].slice()]:pcm.slice(0,2)}
-function createWorkerTask(url,packet,signal,onProgress){
+function createWorkerTask(url,packet,signal,onProgress,{transferInputs=false}={}){
  return new Promise((resolve,reject)=>{
   live(signal);
   const w=new Worker(url,{type:'module'});
@@ -44,7 +52,7 @@ function createWorkerTask(url,packet,signal,onProgress){
    else if(p.stage==='done')finish(null,p);
    else if(p.stage==='model'||p.stage==='library'||p.stage==='progress')onProgress(p);
   };
-  const payload={...packet,channels:packet.channels?.map(ch=>ch.slice()),
+  const payload=transferInputs?packet:{...packet,channels:packet.channels?.map(ch=>ch.slice()),
     base:packet.base?.map(ch=>ch.slice()),vocals:packet.vocals?.map(ch=>ch.slice())};
   const buffers=[...(payload.channels||[]),...(payload.base||[]),...(payload.vocals||[])].map(x=>x.buffer);
   w.postMessage(payload,buffers);
@@ -55,10 +63,20 @@ async function decodeAudioFromVideo(blob,start,duration,signal,onProgress){
  live(signal);
  const ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:FILM_RATE});
  try{
+  // Try a compressed-audio-only fast path before any whole-file decode.
+  // This reads AAC packets from MP4 without decoding video or the entire blob.
+  try{
+   onProgress({stage:'decode',detail:'Ищем сжатую аудиодорожку MP4 для быстрого извлечения'});
+   const fast=await extractMp4AAC(blob,start,duration,{signal,onProgress});
+   if(fast)return fast;
+  }catch(e){
+   if(signal.aborted||e?.name==='AbortError')throw e;
+   onProgress({stage:'decode',detail:'Быстрый AAC-декодер недоступен: '+(e.message||'формат')+'. Пробуем резервный способ.'});
+  }
   // decodeAudioData is substantially faster than realtime capture when the
   // platform accepts the video container. Avoid loading a 512 MiB video
   // into a second decoded buffer on memory-constrained phones.
-  if(blob.size<=100*1048576){
+  if(blob.size<=32*1048576){
    try{
     onProgress({stage:'decode',detail:'Извлекаем звуковую дорожку'});
     const decoded=await ctx.decodeAudioData(await blob.arrayBuffer());live(signal);
@@ -72,7 +90,7 @@ async function decodeAudioFromVideo(blob,start,duration,signal,onProgress){
   }
   // Fallback for MP4 containers that decodeAudioData rejects. Capture from
   // media element in REALTIME, routing silence to the speakers.
-  onProgress({stage:'decode',detail:'Браузер декодирует звук из видео в реальном времени'});
+  onProgress({stage:'decode',detail:'Резервный захват звука: до '+Math.ceil(duration)+' секунд в реальном времени. Не работа нейросети.'});
   const url=URL.createObjectURL(blob),v=document.createElement('video');
   const samples=Math.round(duration*FILM_RATE),tracks=[new Float32Array(samples),new Float32Array(samples)];
   let processor=null,source=null,read=0;
