@@ -32,8 +32,8 @@ try{
     const page=await ctx.newPage();
     const errors=[];
     page.on('pageerror',error=>errors.push(error.message));
-    await page.goto(origin+'/apps/ne-tem-golosom/',{waitUntil:'domcontentloaded'});
-    await page.locator('#create-btn').click();
+    await page.goto(origin+'/apps/ne-tem-golosom/?debug=play&screen=room',{waitUntil:'domcontentloaded'});
+    await page.locator('#room-change-scene:not(.hidden)').click();
     await page.waitForSelector('#screen-library:not(.hidden)');
     // Generate a short real WebM on this device. Unlike a mocked File object,
     // this verifies that the imported clip is decoded and can actually be transcoded.
@@ -123,8 +123,9 @@ try{
     await page.locator('#confirm-scene').click();
     assert.equal(await page.locator('#trim-start').inputValue(),'0');
     await page.waitForSelector('#screen-room:not(.hidden)',{timeout:10000});
-    await page.waitForSelector('#room-retry:not(.hidden)',{timeout:12000});
-    assert.match(await page.locator('#room-connection-status').innerText(),/Не удалось создать комнату/);
+    await page.waitForSelector('#room-start:not(:disabled)',{timeout:12000});
+    assert.match(await page.locator('#room-scene-title').innerText(),/local-test/i);
+    assert.equal(await page.locator('#room-code').innerText(),'D3B6A1F2');
     await page.screenshot({path:join(out,viewport.name+'-room.png'),fullPage:true});
     assert.deepEqual(errors,[],viewport.name+' browser errors');
     console.log(viewport.name,resultSize,'validated');
