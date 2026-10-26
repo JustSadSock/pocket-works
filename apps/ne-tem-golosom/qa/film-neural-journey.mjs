@@ -55,22 +55,31 @@ try{
   return [...new Uint8Array(await new Blob(chunks).arrayBuffer())];
  });
  const fast=await page.evaluate(async()=>{
-  const [{syntheticAACMP4},{extractMp4AAC}]=await Promise.all([
+  const [{syntheticAACMP4},{extractMp4AAC,inspectMp4AAC}]=await Promise.all([
    import('/apps/ne-tem-golosom/qa/aac-fixture.mjs'),
    import('/apps/ne-tem-golosom/mp4-audio.js')
   ]);
   const blob=await syntheticAACMP4();
+  const inspection=await inspectMp4AAC(blob);
   const trace=[],before=performance.now();
   const data=await extractMp4AAC(blob,0,.25,{onProgress:p=>trace.push(p.detail)});
-  if(!data)return {failed:true,trace,webcodecs:typeof AudioDecoder};
+  if(!data)return {unavailable:true,trace,inspection,webcodecs:typeof AudioDecoder};
   let energy=0;
   for(let i=0;i<data[0].length;i+=256)energy+=Math.abs(data[0][i]);
-  return {length:data[0].length,energy,seconds:(performance.now()-before)/1000};
+  return {length:data[0].length,energy,seconds:(performance.now()-before)/1000,inspection};
  });
- assert(fast&&!fast.failed,'real AAC MP4 must use fast demux/decode path: '+JSON.stringify(fast));
- assert.equal(fast.length,Math.round(.25*44100));
- assert(fast.energy>1,'decoded AAC fixture should be audible');
- console.log('Fast MP4 AAC extraction',fast.seconds.toFixed(2),'seconds for 0.25 sec of audio');
+ assert(fast?.inspection,'real AAC MP4 must expose a parseable compressed audio track: '+JSON.stringify(fast));
+ assert.equal(fast.inspection.sampleRate,48000);
+ assert.equal(fast.inspection.channels,1);
+ assert(fast.inspection.sampleCount>10,'must map AAC samples from the real MP4');
+ if(fast.unavailable){
+  assert.match(fast.trace.join(' '),/decoder unsupported/,'only platform codec support can skip direct AAC decode');
+  console.log('AAC MP4 metadata validated; native AAC decoder unavailable in Linux Chromium');
+ }else{
+  assert.equal(fast.length,Math.round(.25*44100));
+  assert(fast.energy>1,'decoded AAC fixture should be audible');
+  console.log('Fast MP4 AAC extraction',fast.seconds.toFixed(2),'seconds for 0.25 sec of audio');
+ }
  await page.locator('#video-file').setInputFiles({name:'voice-fixture.webm',mimeType:'video/webm',buffer:Buffer.from(bytes)});
  await page.waitForSelector('#screen-trim:not(.hidden)',{timeout:20000});
  const options=page.locator('input[name="film-clean-mode"]');
