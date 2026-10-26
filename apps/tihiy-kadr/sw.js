@@ -1,9 +1,9 @@
 const CACHE_PREFIX='tihiy-kadr-';
-const CACHE='tihiy-kadr-v1.1.1';
-const APP_VERSION='1.1.1';
-const RELEASE_DATE='2026-10-25';
-const RELEASE_NOTES=['Дополнительный регулируемый фильтр центра стерео','Повторное прослушивание и экспорт улучшенного звука','Для моно фильтр отключается автоматически','Воспроизведение без примеси исходных диалогов','Четыре режима прослушивания и уровень выделенной речи','MRX и WebAssembly теперь загружаются через PocketWorks','Резервная загрузка ONNX и более понятные ошибки соединения','Исправлена загрузка ONNX WebAssembly на iPhone и в Safari','Резервный CDN для WebAssembly и понятные сетевые ошибки','Новый режим малой памяти для мобильных устройств','Нейросеть MRX удаляет диалоги локально','Три звуковые дорожки, настройки баланса и сравнение','Экспорт WAV и видео с новым звуком'];
-const OWN=['./','./index.html','./app.js','./audio-utils.js','./mrx-worker.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.css'];
+const CACHE='tihiy-kadr-v1.2.0';
+const APP_VERSION='1.2.0';
+const RELEASE_DATE='2026-10-26';
+const RELEASE_NOTES=['Сравнение MRX с DnR v3, BandIt v2 и SAM Audio по импортированным результатам','Разделение 5.1 и 7.1 с контролем центрального канала','Замеры скорости и звуковых уровней с экспортом CSV','Дополнительный регулируемый фильтр центра стерео','Повторное прослушивание и экспорт улучшенного звука','Для моно фильтр отключается автоматически','Воспроизведение без примеси исходных диалогов','Четыре режима прослушивания и уровень выделенной речи','MRX и WebAssembly теперь загружаются через PocketWorks','Резервная загрузка ONNX и более понятные ошибки соединения','Исправлена загрузка ONNX WebAssembly на iPhone и в Safari','Резервный CDN для WebAssembly и понятные сетевые ошибки','Новый режим малой памяти для мобильных устройств','Нейросеть MRX удаляет диалоги локально','Три звуковые дорожки, настройки баланса и сравнение','Экспорт WAV и видео с новым звуком'];
+const OWN=['./','./index.html','./app.js','./audio-utils.js','./research-core.js','./mrx-worker.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.css'];
 const SCOPE=new URL('./',self.registration.scope);
 const URLS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 async function fresh(url){const u=new URL(url);u.searchParams.set('__pw_build',APP_VERSION);const r=await fetch(u.href,{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r}
