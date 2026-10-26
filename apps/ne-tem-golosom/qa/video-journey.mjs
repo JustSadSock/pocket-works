@@ -66,11 +66,8 @@ try{
       input.dispatchEvent(new Event('change',{bubbles:true}));
     });
     await page.waitForSelector('#screen-trim:not(.hidden)',{timeout:20000});
-    assert(await page.locator('#media-workbench').isVisible(),'video controls not displayed');
-    assert.match(await page.locator('#media-fast-status').innerText(),/без сжатия/i,'small import should take the fast path');
-    assert.equal(await page.locator('#media-keep-audio').isChecked(),false,'soundtrack processing off by default');
-    assert.equal(await page.locator('input[name="film-clean-mode"]:checked').inputValue(),'umx','Open-Unmix must be the default model');
-    await page.locator('#film-skip').check(); // Fixture has no audio; skip AI here, covered by separate neural test.
+    assert.equal(await page.locator('#film-cleaner').isVisible(),false,'no sound settings before trim');
+    assert(await page.locator('#trim-range-root').isVisible(),'trim tool is the first step');
     if(viewport.name==='desktop'){
       const layout=await page.evaluate(()=>{
         const footer=document.querySelector('#confirm-scene').getBoundingClientRect();
@@ -88,6 +85,15 @@ try{
     await page.locator('#trim-range-handle-end').focus();
     await page.locator('#trim-range-handle-end').press('Home');
     assert.equal(await page.locator('#trim-length').inputValue(),'10','visual trim handle updates scene duration');
+    await page.locator('#confirm-scene').click();
+    assert.equal(await page.locator('#trim-range-root').isVisible(),false,'range is locked during soundtrack choice');
+    assert(await page.locator('#film-cleaner').isVisible(),'sound stage opens after trim');
+    assert(await page.locator('#media-workbench').isVisible(),'encoding options appear on sound stage');
+    assert.equal(await page.locator('input[name="film-sound-choice"]:checked').inputValue(),'neural');
+    assert.equal(await page.locator('input[name="film-clean-mode"]:checked').inputValue(),'umx');
+    await page.locator('input[name="film-sound-choice"][value="mute"]').check();
+    assert.equal(await page.locator('#film-neural-options').isVisible(),false,'mute does not show model controls');
+    assert.match(await page.locator('#media-fast-status').innerText(),/без сжатия/i);
     await page.locator('#media-quality').evaluate(input=>{input.value='2';input.dispatchEvent(new Event('input',{bubbles:true}))});
     await page.screenshot({path:join(out,viewport.name+'-source.png'),fullPage:true});
     await page.locator('#media-render').click();
