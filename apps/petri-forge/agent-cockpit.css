@@ -265,3 +265,32 @@ body.hub-on:not(.hub-advanced) .race-viewport{height:auto;min-height:0!important
 #agentHub .cp-algorithm-select[hidden]{display:none!important}
 #agentHub .cp-algorithm-select select{width:100%;min-width:0;min-height:40px;border:1px solid #91b6a2;background:#e0eee3;color:#214a34;border-radius:6px;font-size:13px;font-weight:750;letter-spacing:normal;padding:7px 10px;cursor:pointer}
 #agentHub .cp-algorithm-select select:focus-visible{outline:2px solid #316949;outline-offset:2px}
+
+
+/* Scientific comparison, not a decorative score screen. */
+#agentHub #cpBenchmark{border-color:#a1baa1;background:#e7ebdc;color:#375343}
+#agentHub #cpBenchmark[hidden]{display:none!important}
+#cpBenchmarkDialog{width:min(830px,calc(100vw - 22px));max-width:min(830px,calc(100vw - 22px));max-height:min(90dvh,800px);overflow:auto;overscroll-behavior:contain}
+.cp-bench-explain,.cp-bench-caveat{font-size:12px;line-height:1.5;color:#54705c;margin:4px 0 12px}
+.cp-bench-caveat{font-size:11px;color:#72877a;margin-top:13px}
+.cp-bench-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.cp-bench-fields label{min-width:0;display:flex;flex-direction:column;gap:4px;font-size:11px;color:#43614d;font-weight:750}
+.cp-bench-fields select{min-width:0;width:100%;min-height:41px;background:#f6faf3;border:1px solid #adc8b2;padding:7px;border-radius:6px;font-size:12px;color:#234637}
+.cp-bench-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:13px}
+.cp-dialog .cp-bench-controls button{flex:1 1 auto;min-width:120px;min-height:39px}
+.cp-dialog #cpBenchStop{background:#f7e8d9;color:#86542d;border:1px solid #dbb694}
+#cpBenchStop[hidden]{display:none!important}
+#cpBenchStatus{font-size:12px;font-weight:700;color:#345745;margin:12px 0 6px;min-height:17px}
+#cpBenchProgress{width:100%;height:9px;accent-color:#538969}
+#cpBenchProgress[hidden]{display:none}
+.cp-bench-results{overflow:auto;margin-top:12px;border:1px solid #c5d6c4;border-radius:7px;background:#f7faf4}
+.cp-bench-results table{border-collapse:collapse;width:100%;min-width:590px;table-layout:auto;font-size:12px;color:#355440;font-variant-numeric:tabular-nums}
+.cp-bench-results th{text-align:left;color:#57705e;background:#e5eee2;font-size:10px;letter-spacing:.04em;text-transform:uppercase;padding:9px 8px;white-space:nowrap}
+.cp-bench-results td{border-top:1px solid #d7e4d6;padding:8px;white-space:nowrap}
+.cp-bench-results td:first-child{font-weight:800;color:#264e34}
+.cp-bench-results .cp-bench-detail{font-size:10px;font-weight:500;color:#6a8271;padding-top:0;white-space:normal;line-height:1.5}
+.cp-bench-up{color:#236a40;font-weight:850}
+.cp-bench-down{color:#ac573c;font-weight:850}
+.cp-bench-empty,.cp-bench-note{padding:12px;font-size:12px;line-height:1.5;color:#607961}
+.cp-bench-note{border-top:1px solid #c5d6c4;font-size:10px;margin:0}
+@media(max-width:580px){.cp-bench-fields{grid-template-columns:1fr}.cp-bench-controls{gap:6px}.cp-bench-results{max-height:38dvh}}
