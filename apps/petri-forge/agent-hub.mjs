@@ -320,7 +320,7 @@ const cockpit=mountAgentCockpit({
  legacy:importOld,
  selectAlgorithm:async algorithm=>{
   if(mode!=='grid'||busy||pending)return false;
-  if(!['qlearning','neural'].includes(algorithm))return false;
+  if(!['qlearning','neural','ppo'].includes(algorithm))return false;
   if((active.algorithms?.grid||'qlearning')===algorithm)return true;
   const previous=active;
   pending=true;lock();
@@ -333,7 +333,7 @@ const cockpit=mountAgentCockpit({
    active=updated;
    careers=careers.map(c=>c.id===updated.id?updated:c);
    lastEval='';profiles();refresh();
-   notify(algorithm==='neural'?'Включена настоящая нейросеть · actor–critic':'Восстановлена отдельная Q-таблица');
+   notify(algorithm==='ppo'?'Включена нейросеть PPO · обучение с GAE':algorithm==='neural'?'Включена настоящая нейросеть · actor–critic':'Восстановлена отдельная Q-таблица');
    return true;
   }catch(error){
    await restore(previous,'grid').catch(()=>{});
