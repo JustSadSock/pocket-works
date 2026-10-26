@@ -18,11 +18,13 @@ function historyEntry(report){
 }
 export function freshCareer(name,id){
  if(!validId(id)||!goodName(name))throw Error('Укажите имя агента (до 42 символов)');
- return {version:1,id,name:name.trim(),createdAt:Date.now(),updatedAt:Date.now(),
+ return {version:1,id,name:name.trim(),archived:false,createdAt:Date.now(),updatedAt:Date.now(),
   branches:Object.fromEntries(DOMAINS.map(domain=>[domain,{sessions:0,units:0,history:[],trainedAt:null}]))};
 }
 export function assertCareer(c){
- if(!c||c.version!==1||!validId(c.id)||!goodName(c.name)||!c.branches)throw Error('Повреждённый профиль агента');
+ if(!c||c.version!==1||!validId(c.id)||!goodName(c.name)||!c.branches||
+ (c.archived!==undefined&&typeof c.archived!=='boolean')||
+ (c.parentId!==undefined&&!validId(c.parentId)))throw Error('Повреждённый профиль агента');
  for(const domain of DOMAINS)if(!c.branches[domain]||!Array.isArray(c.branches[domain].history))throw Error('Некорректная история '+domain);
  return c;
 }
@@ -87,4 +89,25 @@ export async function renameCareer(c,name){
 export async function eraseCareer(c){
  assertCareer(c);
  await commitModels({deletes:[...DOMAINS.map(domain=>brainId(c.id,domain)),'career:'+c.id]});
+}
+// Archive is reversible and does not delete the learned brains.
+// Old v1 profiles lacking 'archived' remain active.
+export async function setCareerArchived(c,archived){
+ assertCareer(c);
+ const next=structuredClone(c);next.archived=!!archived;
+ return writeCareer(next);
+}
+// Clone all four specialist models and their actual learning records in one
+// transaction. The new career has its own model slots and can diverge freely.
+export async function cloneCareer(c,name){
+ assertCareer(c);
+ const next=freshCareer(name||('Копия '+c.name).slice(0,42),newCareerId());
+ next.parentId=c.id;
+ next.branches=structuredClone(c.branches);
+ const brains={};
+ for(const domain of DOMAINS){
+  const brain=await readBrain(c,domain);
+  if(brain!=null)brains[domain]=structuredClone(brain);
+ }
+ return writeCareerBundle(next,brains);
 }
