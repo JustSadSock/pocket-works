@@ -407,8 +407,8 @@ function updateHybridUI(){
     elapsed(hybrid.packedSeconds)+' (целевые '+elapsed(hybrid.selectedSeconds)+') · '+ranges+
     '. '+(hybrid.enabled?'Гибрид включён.':'Сейчас звучит только Open-Unmix.'));
  }else if(!usable)text('target-scnet-status','Для автоматического поиска нужен фрагмент не короче 3 секунд.');
- else text('target-scnet-status',busy?'Выполняется обработка...':
-  'Поиск по вокальной дорожке и остаточным артефактам. SCNet получит только найденные отрывки исходного видео.');
+ else text('target-scnet-status',item.meta.hybridMessage|| (busy?'Выполняется обработка...':
+  'Поиск по вокальной дорожке и остаточным артефактам. SCNet получит только найденные отрывки исходного видео.'));
 }
 async function runSelectiveSCNet(){
  const item=studyResults.get(activeStudy);
@@ -422,9 +422,11 @@ async function runSelectiveSCNet(){
    budgetSeconds:Number($('target-scnet-budget').value),rate:RATE
   });
   if(!segments.length){
-   text('target-scnet-status','Не найдено достаточно убедительных речевых артефактов. Open-Unmix сохранён без изменений.');
+   item.meta.hybridMessage='Не найдено достаточно убедительных речевых артефактов. Open-Unmix сохранён без изменений.';
+   text('target-scnet-status',item.meta.hybridMessage);
    return;
   }
+  item.meta.hybridMessage='';
   const payload=packProblemSegments(item.meta.base,segments,{rate:RATE});
   text('target-scnet-status','Выбрано '+segments.length+' участков · SCNet получит '+elapsed(payload.packedSeconds)+
    ', включая контекст и паузы между участками.');
