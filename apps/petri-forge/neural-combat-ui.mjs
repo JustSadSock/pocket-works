@@ -39,6 +39,7 @@ export function mountNeuralCombat(api){
   <progress id="cpNeuroProgress" max="100" value="0" hidden></progress>
   <div id="cpNeuroStatus" role="status" aria-live="polite">Выберите класс и начните обучение.</div>
   <div id="cpNeuroTrainingResult" class="cp-neuro-results"></div>
+  <button id="cpNeuroRetry" type="button" hidden>Повторить сохранение мозга</button>
   <section class="cp-neuro-duel">
    <h3>Контрольный поединок · обучение выключено</h3>
    <p>Столкните сохранённые нейросети на одной арене. Четыре настоящих боя с обменом сторон.</p>
@@ -57,7 +58,7 @@ export function mountNeuralCombat(api){
   </section>
   <p class="cp-neuro-note">Обучение PPO происходит в браузере. Класс определяет доступное оружие; заранее запрограммированной боевой тактики у нейросети нет. Результат отдельной тренировки не гарантирует победу.</p>
  </dialog>`);
- let worker=null,mode=null,startedAt=0,trainedEpisodes=0;
+ let worker=null,mode=null,startedAt=0,trainedEpisodes=0,unsaved=null;
  const status=message=>{$('cpNeuroStatus').textContent=message;};
  function refresh(){
   const state=api.state(),careers=state.careers.filter(c=>!c.archived),active=state.active;
@@ -96,6 +97,7 @@ export function mountNeuralCombat(api){
  };
  function beginWorker(task,payload){
   if(worker||api.state().busy||api.state().pending){status('Завершите предыдущую операцию.');return false;}
+  if(unsaved){status('Сначала повторите сохранение предыдущего мозга, чтобы не потерять его.');return false;}
   worker=new Worker(new URL('./neural-combat-worker.mjs',import.meta.url),{type:'module'});
   lock(true,task);startedAt=Date.now();trainedEpisodes=0;
   worker.onerror=event=>{release();status('Worker остановлен: '+(event.message||'ошибка вычисления'));};
@@ -111,15 +113,17 @@ export function mountNeuralCombat(api){
    }else if(result.type==='trained'||result.type==='stopped'){
     if(result.completed){
      try{
-      await api.saveNeural($('cpNeuroRole').value,result.model,{
-       episodes:result.completed,winRate:result.validation.winRate
-      });
+      const save={role:$('cpNeuroRole').value,model:result.model,report:{episodes:result.completed,winRate:result.validation.winRate}};
+      await api.saveNeural(save.role,save.model,save.report);
+      unsaved=null;$('cpNeuroRetry').hidden=true;
       const panel=$('cpNeuroTrainingResult');
       panel.textContent='До: '+pc(result.baseline.winRate)+' · после: '+pc(result.validation.winRate)+
        ' · контроль: '+result.validation.count+' боёв · урон '+result.validation.damage.toFixed(1)+
        ' · обновлений весов '+result.model.updates+'.';
       status(result.type==='trained'?'Обучение завершено. Мозг сохранён.':'Остановлено. Полученный опыт сохранён.');
-     }catch(e){status('Не удалось сохранить модель: '+e.message+'. Повторите обучение или экспортируйте позже.');}
+     }catch(e){unsaved={role:$('cpNeuroRole').value,model:result.model,report:{episodes:result.completed,winRate:result.validation.winRate}};
+      $('cpNeuroRetry').hidden=false;
+      status('Не удалось сохранить модель: '+e.message+'. Нажмите «Повторить сохранение», обученные веса ещё в памяти.');}
     }else status('Остановлено до первого боя. Старый мозг не изменён.');
     release();refresh();
    }else if(result.type==='duel'){
@@ -136,8 +140,18 @@ export function mountNeuralCombat(api){
   worker.postMessage({type:task,payload});
   return true;
  }
+ $('cpNeuroRetry').onclick=async()=>{
+  if(!unsaved||worker)return;
+  $('cpNeuroRetry').disabled=true;
+  try{
+   await api.saveNeural(unsaved.role,unsaved.model,unsaved.report);
+   unsaved=null;$('cpNeuroRetry').hidden=true;
+   status('Нейромозг успешно сохранён.');refresh();
+  }catch(e){status('Сохранение снова не удалось: '+e.message);}
+  finally{$('cpNeuroRetry').disabled=false;}
+ };
  $('cpNeuroTrain').onclick=async()=>{
-  if(worker)return;
+  if(worker||unsaved){if(unsaved)status('Сначала повторите сохранение предыдущего мозга.');return;}
   const active=api.state().active,role=$('cpNeuroRole').value,enemyRole=$('cpNeuroEnemyRole').value;
   try{
    const snapshot=await readCombatNeural(active,role);
