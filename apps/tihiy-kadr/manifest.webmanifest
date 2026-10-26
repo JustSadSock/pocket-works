@@ -2,7 +2,7 @@
   "id": "/apps/tihiy-kadr/",
   "name": "ТИХИЙ КАДР",
   "short_name": "M&E LAB",
-  "description": "Удаление речи из видео в PocketWorks: MRX или MRX + SCNet прямо в браузере.",
+  "description": "Удаление речи прямо из видео: быстрый MRX или экспериментальная MRX + SCNet без внешних сервисов.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
