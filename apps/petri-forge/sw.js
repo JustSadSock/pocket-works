@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'petri-forge-';
-const CACHE_NAME = 'petri-forge-v0.10.0';
-const APP_VERSION = '0.10.0';
+const CACHE_NAME = 'petri-forge-v0.11.0';
+const APP_VERSION = '0.11.0';
 const RELEASE_DATE = '2026-10-26';
 const CACHE_PROTOCOL = 8;
-const RELEASE_NOTES = ["Нейросетевой Actor–Critic в браузерном Worker.","Q-learning и нейросеть сохраняются независимо.","Обучение и экспорт с поддержкой нейронных весов."];
+const RELEASE_NOTES = ["PPO-Clip и GAE обучают настоящую нейросеть.","Три независимых метода: Q-learning, Actor–Critic, PPO.","Контрольные испытания, checkpoint и импорт PPO."];
 const APP_SHELL = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const APP_SHELL = [
   './lab-core.mjs',
   './lab-worker.mjs',
   './neural-policy.mjs',
+  './ppo.mjs',
   './model-store.mjs',
   './agent-career.mjs',
   './agent-hub-shell.mjs',
