@@ -863,7 +863,7 @@ function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{
  id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,fx:normalizeVoiceEffect(c.fx),...clipMix(c),
  epoch:state?.mediaEpoch,mime:c.blob.type
 })}
-function sendAllOwn(){if(sentPremiere||mode==='solo')return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
+function sendAllOwn(){if(sentPremiere||mode==='solo'||debugPlay)return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
 async function openEditor(){if(!scene)return;stopAllPlayback();const key=mode==='solo'?(debugPlay?'debug::':'')+'solo::'+scene.id+'::'+scene.start+'::'+scene.duration:sceneDraftKey();if(!await restore(key)){if(mode==='solo')library();else roomUI();return}if(mode!=='solo'&&state?.phase!=='recording')return;setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
 function stopAllPlayback(){playing=false;for(const id of ['stage-video','premiere-video','trim-video'])$(id).pause();for(const c of [...localClips,...remoteClips])c.audio?.pause();$('play-toggle').textContent='▶'}
 function updateClipSound(t,on,isPremiere=false){
@@ -1680,6 +1680,7 @@ async function startDebugPlay(){
  if(requested==='library'){mode='solo';library();return}
  if(requested==='trim'){mode='solo';selectScene(LIBRARY[0]);return}
  if(requested.startsWith('room')||requested==='wait'||requested==='premiere'||requested==='premiere-export'){
+  if(requested==='wait'||requested.startsWith('premiere'))scene={...LIBRARY[0],roles:[...LIBRARY[0].roles]};
   mockConnect();
   if(requested==='room-offline'){
    networkInterrupted=true;connectionNotice();setNetStatus('offline','Тест: нет связи');
@@ -1687,6 +1688,8 @@ async function startDebugPlay(){
   if(requested==='wait'){
    const next={...state,phase:'recording',ready:{[me]:true,'debug-guest':false},counts:{[me]:1}};
    state=next;waitUI();
+  }else if(requested.startsWith('premiere')){
+   state={...state,phase:'premiere',counts:{},ready:{}};beginPremiere();
   }
   return;
  }
