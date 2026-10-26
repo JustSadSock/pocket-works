@@ -56,8 +56,10 @@ export function selectProblemSegments(original,vocals,artifact,{budgetSeconds=12
    const endSec=Math.min(duration,sec+SECTION_SECONDS),endBin=Math.min(scores.length,Math.ceil(endSec/BLOCK_SECONDS));
    const avg=(full[endBin]-full[i])/Math.max(1,endBin-i);
    if(avg<.033)continue;
-   const center=(sec+endSec)/2;
-   if(chosen.some(x=>Math.abs((x.start+x.end)/2-center)<SECTION_SECONDS+2*CONTEXT_SECONDS+.02))continue;
+   const candidateStart=Math.round(sec*rate),candidateEnd=Math.min(total,Math.round(endSec*rate));
+   const context=Math.round(CONTEXT_SECONDS*rate);
+   if(chosen.some(x=>Math.max(0,x.start-context)<Math.min(total,candidateEnd+context)&&
+      Math.max(0,candidateStart-context)<Math.min(total,x.end+context)))continue;
    if(avg>bestScore){bestScore=avg;best=i}
   }
   if(best<0)break;
