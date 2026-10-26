@@ -1,4 +1,5 @@
 import {ACTIONS,RandomAgent,createScenario,GridEnvironment,makeAgent,playEpisode,seeded,validateScene} from './lab-core.mjs';
+import {NeuralActorCritic} from './neural-policy.mjs';
 
 let agent=makeAgent('qlearning',17),kind='qlearning',active=null,jobId=0;
 const emit=(type,data={})=>postMessage({type,...data});
@@ -43,7 +44,8 @@ function pickSpawn(scene,r){
 }
 function metrics(results){return {count:results.length,success:results.filter(x=>x.success).length/results.length,average:results.reduce((n,x)=>n+x.reward,0)/results.length,steps:results.reduce((n,x)=>n+x.steps,0)/results.length};}
 function testAgent(scene,seed,count,snapshot){
-  const evaluator=makeAgent(kind,seed+932);if(kind==='qlearning')evaluator.load(snapshot);
+  const evaluator=kind==='neural'?new NeuralActorCritic(seed+932):makeAgent(kind,seed+932);
+ if(kind==='qlearning'||kind==='neural')evaluator.load(snapshot);
   const r=seeded(seed),results=[];
   for(let i=0;i<count;i++)results.push(playEpisode(evaluator,scene,{spawn:i===0?undefined:pickSpawn(scene,r),learn:false,trace:i===0}));
   return {metrics:metrics(results),replay:{scene,trace:results[0].trace,success:results[0].success,reward:results[0].reward}};
@@ -53,10 +55,10 @@ onmessage=event=>{
   try{
     if(type==='loadAgent'){
       if(active)throw Error('Остановите обучение перед сменой модели');
-      kind=payload.name==='random'?'random':'qlearning';
-      agent=makeAgent(kind,Number(payload.seed)||17);
-      if(payload.snapshot&&kind==='qlearning')agent.load(payload.snapshot);
-      emit('loaded',{kind,states:agent.q?.size||0,requestId:payload.requestId??null});
+      kind=['random','neural'].includes(payload.name)?payload.name:'qlearning';
+      agent=kind==='neural'?new NeuralActorCritic(Number(payload.seed)||17):makeAgent(kind,Number(payload.seed)||17);
+      if(payload.snapshot&&kind!=='random')agent.load(payload.snapshot);
+      emit('loaded',{kind,states:agent.q?.size||0,parameters:kind==='neural'?agent.serialize().weights.reduce((n,layer)=>n+layer.reduce((t,row)=>t+row.length,0),0):0,requestId:payload.requestId??null});
     }else if(type==='act'){
       if(active)return;
       const action=agent.act(payload.obs,false);
@@ -66,7 +68,7 @@ onmessage=event=>{
       agent.learn?.(payload.tr.s,payload.tr.a,payload.tr.r,payload.tr.s2,payload.tr.done);
     }else if(type==='train'){
       if(active)throw Error('Обучение уже выполняется');
-      if(kind==='random')throw Error('Random не обучается: выберите Q-learning');
+      if(kind==='random')throw Error('Random не обучается: выберите Q-learning или нейросеть');
       const scene=validateScene(payload.scene);
       const episodes=Math.min(5000,Math.max(1,Math.floor(Number(payload.episodes)||400)));
       const maxSteps=Math.min(800,Math.max(30,Math.floor(Number(payload.maxSteps)||320)));
