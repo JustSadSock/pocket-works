@@ -113,67 +113,53 @@ try{
  await page.locator('#wav-btn').click();
  assert.match((await boosted).suggestedFilename(),/music-effects\.wav$/);
 
- await page.locator('#study-advanced summary').click();
- assert.equal(await page.locator('#study-source-wav').isVisible(),true);
- // Manual model import: reuse ACTUAL MRX-generated WAV as a known audio
- // fixture. Name the route "other", never claim DnR/SAM inference was run.
- const sourceDownload=page.waitForEvent('download',{timeout:25000});
- await page.locator('#study-source-wav').click();
- assert.match((await sourceDownload).suggestedFilename(),/source\.wav$/);
- await page.locator('#study-method').selectOption('other');
- await page.locator('#study-me-file').setInputFiles({
-  name:'external-me.wav',mimeType:'audio/wav',buffer:readFileSync(await output.path())
- });
- await page.locator('#study-import').click();
- await page.waitForFunction(()=>document.querySelector('#study-import-status').textContent.includes('Импортировано.'),null,{timeout:18000});
- assert.match(await page.locator('#result-state').innerText(),/Другой алгоритм/);
- assert((await page.locator('.study-choice').count())>=2);
- const csvExport=page.waitForEvent('download',{timeout:25000});
- await page.locator('#study-csv').click();
- assert.match((await csvExport).suggestedFilename(),/methods\.csv$/);
- // Real 6-channel PCM, center carries a synthetic dialogue signal.
- const surroundBuffer=Buffer.alloc(44+8000*6*2);
- surroundBuffer.write('RIFF',0);surroundBuffer.writeUInt32LE(surroundBuffer.length-8,4);
- surroundBuffer.write('WAVEfmt ',8);surroundBuffer.writeUInt32LE(16,16);
- surroundBuffer.writeUInt16LE(1,20);surroundBuffer.writeUInt16LE(6,22);
- surroundBuffer.writeUInt32LE(8000,24);surroundBuffer.writeUInt32LE(8000*12,28);
- surroundBuffer.writeUInt16LE(12,32);surroundBuffer.writeUInt16LE(16,34);
- surroundBuffer.write('data',36);surroundBuffer.writeUInt32LE(8000*12,40);
- for(let i=0;i<8000;i++)for(let ch=0;ch<6;ch++){
-  const value=(ch===2?.6:.14)*Math.sin(2*Math.PI*(ch===2?600:120+ch*90)*i/8000);
-  surroundBuffer.writeInt16LE(Math.round(value*32767),44+i*12+ch*2);
- }
- await page.locator('#study-surround-file').setInputFiles({
-  name:'surround-5.1.wav',mimeType:'audio/wav',buffer:surroundBuffer
- });
- await page.waitForFunction(()=>document.querySelector('#study-surround-status').textContent.includes('6 каналов'),null,{timeout:18000});
- assert.match(await page.locator('#result-state').innerText(),/5\.1/);
- await page.locator('#study-center-gain').fill('30');
- assert.equal(await page.locator('#study-center-value').innerText(),'30%');
- const surroundWav=page.waitForEvent('download',{timeout:25000});
- await page.locator('#wav-btn').click();
- assert.match((await surroundWav).suggestedFilename(),/no-dialogue\.wav$/);
- // Activating the MRX result after independent alternative tests still works.
- await page.locator('.study-choice').first().click();
- assert.match(await page.locator('#result-state').innerText(),/5\.1|MRX|Другой/);
 
- // Fully inside PocketWorks: invoke the real second SCNet network, not an
- // imported external WAV masquerading as an AI model.
- await page.locator('#quality-mode').selectOption('scnet');
+ // Route 3: run genuine SCNet on the MRX M&E while reusing cached MRX.
+ await page.locator('#center-suppression').fill('0');
+ await page.locator('#quality-mode').selectOption('mrx-scnet-fast');
  await page.locator('#process-btn').click();
- const advanced=await Promise.race([
-  page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('MRX + SCNet'),null,{timeout:180000}).then(()=>true),
-  page.waitForSelector('#error:not(.hidden)',{timeout:180000}).then(()=>false)
- ]);
- if(!advanced)throw Error('Local SCNet inference failed: '+await page.locator('#error').innerText());
+ await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('MRX → SCNet · быстро'),null,{timeout:180000});
  assert.equal(await page.locator('#scnet-tuning').isVisible(),true);
- assert((await page.locator('.study-choice').count())>=2);
+ assert.equal(await page.locator('#study-results .study-choice').count(),2);
+ assert.match(await page.locator('#pipeline-input').inputValue(),/mrx-scnet-fast/);
+ assert.match(await page.locator('#pipeline-status').innerText(),/Кэшировано этапов: 1/);
+ const fastTime=await page.locator('#inference-time').innerText();
+
+ // Route 4: different SCNet stride. Must be a separate real ONNX run.
+ await page.locator('#quality-mode').selectOption('mrx-scnet-balanced');
+ await page.locator('#process-btn').click();
+ await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('MRX → SCNet · баланс'),null,{timeout:180000});
+ assert.equal(await page.locator('#study-results .study-choice').count(),3);
+
+ // Cache check: repeating this same route must NOT invoke either model.
+ await page.locator('#process-btn').click();
+ await page.waitForFunction(()=>document.querySelector('#pipeline-status').textContent.includes('Кэшировано этапов: 2'),null,{timeout:10000});
+ assert.equal(await page.locator('#study-results .study-choice').count(),3);
+
+ // The user can chain another MRX on top of any completed stem.
+ await page.locator('#pipeline-input').selectOption('mrx-scnet-fast');
+ await page.locator('#pipeline-model').selectOption('mrx');
+ await page.locator('#pipeline-run').click();
+ await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('←'),null,{timeout:180000});
+ assert.equal(await page.locator('#study-results .study-choice').count(),4);
+ assert.equal(await page.locator('#pipeline-input').inputValue(),'custom-1');
+
+ // Route 2: direct SCNet on original sound (not a renamed MRX).
+ await page.locator('#quality-mode').selectOption('scnet-direct');
+ await page.locator('#process-btn').click();
+ await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('SCNet · оригинал'),null,{timeout:180000});
+ assert.equal(await page.locator('#study-results .study-choice').count(),5);
  await page.locator('#scnet-strength').fill('60');
  assert.equal(await page.locator('#scnet-strength-value').innerText(),'60%');
- await page.waitForFunction(()=>document.querySelector('#scnet-tuning')&&!document.querySelector('#scnet-tuning').classList.contains('hidden'),null,{timeout:5000});
- const cleanedDownload=page.waitForEvent('download',{timeout:25000});
+ await page.waitForTimeout(420);
+ const finalWav=page.waitForEvent('download',{timeout:25000});
  await page.locator('#wav-btn').click();
- assert.match((await cleanedDownload).suggestedFilename(),/no-dialogue\.wav$/);
+ assert.match((await finalWav).suggestedFilename(),/no-dialogue\.wav$/);
+ const csv=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#study-csv').click();
+ assert.match((await csv).suggestedFilename(),/five-routes\.csv$/);
+ assert.equal(await page.locator('#study-csv').isEnabled(),true);
+ console.log('Browser real pipelines: MRX, fast SCNet, balanced SCNet, custom MRX, direct SCNet; first fast time:',fastTime);
  assert.deepEqual(runtimeErrors,[]);
  console.log('Real Chromium MRX preview, speech, M&E exports verified:',await page.locator('#inference-time').innerText());
 }finally{await browser.close();await new Promise(r=>server.close(r))}
