@@ -77,8 +77,12 @@ try{
  await page.locator('#scnet-strength').fill('120');
  assert.equal(await page.locator('#scnet-strength-value').innerText(),'120%');
 
- await page.locator('#center-suppression').fill('35');
- assert.equal(await page.locator('#center-value').innerText(),'35%');
+ await page.locator('#repair-level').fill('75');
+ assert.equal(await page.locator('#repair-level-value').innerText(),'75%');
+ await page.locator('#legacy-filters summary').click();
+ assert.equal(await page.locator('#enhance-spectral').isVisible(),true);
+ await page.locator('#enhance-spectral').check();
+ assert.equal(await page.locator('#enhance-spectral').isChecked(),true);
  await page.locator('#listen-btn').click();
  const download=page.waitForEvent('download',{timeout:20000});
  await page.locator('#wav-btn').click();
