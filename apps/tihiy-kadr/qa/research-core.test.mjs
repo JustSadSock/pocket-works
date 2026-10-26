@@ -87,8 +87,8 @@ test('real SCNet vocal estimate is subtracted from the real MRX M&E, not from or
  const me=[new Float32Array([.5,.25,.1])],vocals=[new Float32Array([.2,.1,.05])];
  const fixed=subtractResidualVocals(me,vocals,.8);
  assert(Math.abs(fixed[0][0]-.34)<1e-6);
- assert.deepEqual([...me[0]],[.5,.25,.1]);
- assert.deepEqual([...subtractResidualVocals(me,vocals,0)[0]],[.5,.25,.1]);
+ assert.deepEqual([...me[0]],[...new Float32Array([.5,.25,.1])]);
+ assert.deepEqual([...subtractResidualVocals(me,vocals,0)[0]],[...me[0]]);
  assert.throws(()=>subtractResidualVocals(me,vocals,2),/0–100/);
 });
 test('specialist import stays closed by default, simple model choice drives inference',()=>{
