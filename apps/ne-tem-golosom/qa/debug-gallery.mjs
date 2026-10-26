@@ -47,7 +47,7 @@ try{
   await page.waitForFunction(()=>{
    const el=document.querySelector('.ntg-debug-device-shell iframe');
    const width=el?.getBoundingClientRect().width||0;
-   return width>=320&&width<=390;
+   return width>=380&&width<=402;
   },null,{timeout:3000});
   await page.locator('[data-debug-device="desktop"]').click();
   await page.locator('[data-debug-close]').click();
