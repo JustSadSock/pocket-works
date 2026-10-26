@@ -139,7 +139,7 @@ export async function setCareerGridAlgorithm(c,algorithm){
 }
 export async function readGridBrain(c,algorithm){
  assertCareer(c);
- if(!['qlearning','neural'].includes(algorithm))throw Error('Неизвестный алгоритм');
+ if(!['qlearning','neural','ppo'].includes(algorithm))throw Error('Неизвестный алгоритм');
  const id=algorithm==='ppo'?ppoBrainId(c.id):algorithm==='neural'?neuralBrainId(c.id):brainId(c.id,'grid');
  const row=await loadModel(id);
  if(!row)return null;
