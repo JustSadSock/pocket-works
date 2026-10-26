@@ -31,7 +31,7 @@ page.on('pageerror',e=>runtimeErrors.push(e.message));
 page.on('console',msg=>{if(msg.type()==='error')console.error('[browser]',msg.text().slice(0,600))});
 try{
  await page.goto('http://127.0.0.1:'+server.address().port+'/apps/tihiy-kadr/',{waitUntil:'load'});
- assert.equal(await page.title(),'Тихий кадр · MRX лаборатория');
+ assert.equal(await page.title(),'Тихий кадр · удаление диалогов');
  const bytes=await page.evaluate(async()=>{
   const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;
   const c=canvas.getContext('2d'),ctx=new AudioContext(),dest=ctx.createMediaStreamDestination();
@@ -155,6 +155,23 @@ try{
  await page.locator('.study-choice').first().click();
  assert.match(await page.locator('#result-state').innerText(),/5\.1|MRX|Другой/);
 
+ // Fully inside PocketWorks: invoke the real second SCNet network, not an
+ // imported external WAV masquerading as an AI model.
+ await page.locator('#quality-mode').selectOption('scnet');
+ await page.locator('#process-btn').click();
+ const advanced=await Promise.race([
+  page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('MRX + SCNet'),null,{timeout:180000}).then(()=>true),
+  page.waitForSelector('#error:not(.hidden)',{timeout:180000}).then(()=>false)
+ ]);
+ if(!advanced)throw Error('Local SCNet inference failed: '+await page.locator('#error').innerText());
+ assert.equal(await page.locator('#scnet-tuning').isVisible(),true);
+ assert((await page.locator('.study-choice').count())>=2);
+ await page.locator('#scnet-strength').fill('60');
+ assert.equal(await page.locator('#scnet-strength-value').innerText(),'60%');
+ await page.waitForFunction(()=>document.querySelector('#scnet-tuning')&&!document.querySelector('#scnet-tuning').classList.contains('hidden'),null,{timeout:5000});
+ const cleanedDownload=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#wav-btn').click();
+ assert.match((await cleanedDownload).suggestedFilename(),/no-dialogue\.wav$/);
  assert.deepEqual(runtimeErrors,[]);
  console.log('Real Chromium MRX preview, speech, M&E exports verified:',await page.locator('#inference-time').innerText());
 }finally{await browser.close();await new Promise(r=>server.close(r))}
