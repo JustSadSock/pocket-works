@@ -18,6 +18,7 @@ function uiBusy(active){
  $('start-seconds').disabled=active||studyBusy;
  $('duration-seconds').disabled=active||studyBusy;
  $('chunk-size').disabled=active;
+ $('quality-mode').disabled=active;
  show('progress-wrap',active);
  $('study-source-wav').disabled=active||studyBusy||!file||!length;
  $('study-import').disabled=active||studyBusy||!file||!length;
@@ -414,6 +415,7 @@ $('video-btn').onclick=()=>{void exportVideo()};
 // Comparative bench. The only automatic inference is the verified local MRX.
 // External DnR/BandIt/SAM tracks are genuine user-provided audio, never fake AI.
 function clearStudy(){
+ scnetVocals=null;scnetBase=null;scnetTime=0;
  studyResults.clear();studySignature='';activeStudy=null;studySurround=null;studySurroundRate=0;
  $('study-surround-file').value='';$('study-me-file').value='';$('study-music-file').value='';
  $('study-effects-file').value='';$('study-external-seconds').value='';
@@ -520,6 +522,7 @@ async function selectStudyResult(id,rebuild=true){
  show('empty-state',false);show('result-details',true);
  $('video-btn').disabled=false;$('wav-btn').disabled=false;
  const isMRX=id==='mrx'&&!!stems;
+ show('scnet-tuning',id==='mrx-scnet'&&!!scnetVocals);
  for(const name of ['dialogue','music','effects'])$(name+'-gain').disabled=!isMRX;
  $('center-suppression').disabled=original.length!==2;
  text('result-state',item.label);
@@ -608,6 +611,19 @@ async function runImport(){
   text('study-import-status','Ошибка: '+(e.message||String(e)));
  }finally{studyBusy=false;uiBusy(false)}
 }
+$('scnet-strength').oninput=()=>{
+ text('scnet-strength-value',$('scnet-strength').value+'%');
+ if(!scnetBase||!scnetVocals||!range||!original)return;
+ clearTimeout(editTimer);
+ editTimer=setTimeout(()=>{
+  try{
+   const adjusted=subtractResidualVocals(scnetBase,scnetVocals,Number($('scnet-strength').value)/100);
+   registerStudyResult('mrx-scnet',adjusted,(inferenceTime+scnetTime)*1000,
+    {source:'local',label:'MRX + SCNet · пробная очистка'});
+   if(activeStudy==='mrx-scnet')void selectStudyResult('mrx-scnet');
+  }catch(e){error(e.message)}
+ },180);
+};
 $('study-import').onclick=()=>{void runImport()};
 $('study-surround-file').onchange=e=>{void importSurround(e.target.files?.[0])};
 $('study-center-gain').oninput=()=>{
