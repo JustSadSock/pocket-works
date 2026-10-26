@@ -258,3 +258,90 @@ test('neural combat trains separate archer and swordsman PPO brains and replays 
  await expect(page.locator('#cpNeuroIdentity')).toContainText('мечник: 6');
  expect(errors).toEqual([]);
 });
+
+test('workbench occupies a bounded desktop rail, without overlaying the live arena',async({page})=>{
+ await page.setViewportSize({width:1280,height:800});
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ const rects=await page.evaluate(()=>{
+  const rect=id=>{const r=document.querySelector(id).getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
+  return {arena:rect('#worldPanel'),dock:rect('#agentHub'),workspace:rect('#workspace'),
+    train:rect('#cpTrain'),last:rect('#cpLastResult')};
+ });
+ expect(rects.arena.right).toBeLessThanOrEqual(rects.dock.x+1);
+ expect(rects.dock.width).toBeGreaterThan(300);
+ expect(rects.dock.height).toBeLessThanOrEqual(rects.workspace.height+1);
+ expect(rects.train.x).toBeGreaterThanOrEqual(rects.dock.x);
+ expect(rects.last.right).toBeLessThanOrEqual(rects.dock.right+2);
+ await expect(page.locator('#cpAlgorithm')).toBeVisible();
+ await expect(page.locator('#cpBenchmark')).toBeVisible();
+ await expect(page.locator('#cpNeurocombat')).toBeHidden();
+});
+
+test('portrait mobile retains a usable world and a separate scrollable command rail',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ const bounds=await page.evaluate(()=>{
+  const world=document.querySelector('#worldPanel').getBoundingClientRect();
+  const rail=document.querySelector('#agentHub').getBoundingClientRect();
+  return {worldBottom:world.bottom,railTop:rail.top,railHeight:rail.height,
+   screen:innerHeight,railScroll:document.querySelector('#agentHub').scrollHeight};
+ });
+ expect(bounds.worldBottom).toBeLessThanOrEqual(bounds.railTop+2);
+ expect(bounds.railHeight).toBeGreaterThan(200);
+ expect(bounds.railHeight).toBeLessThan(bounds.screen*.51);
+ expect(bounds.railScroll).toBeGreaterThan(bounds.railHeight);
+ await page.locator('#cpProfile').click();
+ await expect(page.locator('#cpProfileDialog')).toBeVisible();
+ await expect(page.locator('#cpProfileDialog')).toBeInViewport();
+ await page.locator('#cpProfileDialog [data-cp-close]').click();
+ await page.locator('[data-cp-mode="combat"]').click();
+ await expect(page.locator('#cpNeurocombat')).toBeVisible();
+ await expect(page.locator('#cpBenchmark')).toBeHidden();
+});
+
+test('modal manager prevents stale dialogs and remembers world choices after navigation',async({page})=>{
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ await page.locator('#cpQuickScenario').selectOption('hazards');
+ await page.locator('#cpQuickBatch').selectOption('100');
+ await page.locator('#cpProfile').click();
+ await expect(page.locator('dialog[open]')).toHaveCount(1);
+ // Simulate secondary UI opening while first modal is active: only one survives.
+ await page.evaluate(()=>document.querySelector('#cpSetup').click());
+ await expect(page.locator('dialog[open]')).toHaveCount(1);
+ await expect(page.locator('#cpSetupDialog')).toBeVisible();
+ await expect(page.locator('#cpProfileDialog')).not.toBeVisible();
+ await page.locator('#cpSetupDialog [data-cp-close]').first().click();
+ const before=await page.locator('#cpQuickScenario option').first().evaluate(el=>el.dataset.testToken='stable');
+ await page.evaluate(()=>window.dispatchEvent(new Event('petri:progress')));
+ expect(await page.locator('#cpQuickScenario option').first().getAttribute('data-test-token')).toBe('stable');
+ await page.locator('[data-cp-mode="combat"]').click();
+ await expect(page.locator('[data-cp-mode="combat"]')).toHaveClass(/cp-selected/);
+ await page.locator('#cpQuickScenario').selectOption('open');
+ await page.locator('[data-cp-mode="grid"]').click();
+ await expect(page.locator('#cpQuickScenario')).toHaveValue('hazards');
+ await expect(page.locator('#cpQuickBatch')).toHaveValue('100');
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpQuickScenario')).toHaveValue('hazards',{timeout:20000});
+ await expect(page.locator('#cpQuickBatch')).toHaveValue('100');
+});
+
+test('a failed world-model load rolls back the visible world and can be retried',async({page})=>{
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ await page.evaluate(()=>{
+  const combat=window.PetriForgeRuntime.combat;
+  const original=combat.setModel;
+  combat.setModel=async function(...args){combat.setModel=original;throw Error('Injected model load error');};
+ });
+ await page.locator('[data-cp-mode="combat"]').click();
+ await expect(page.locator('[data-cp-mode="grid"]')).toHaveClass(/cp-selected/,{timeout:20000});
+ await expect(page.locator('#worldPanel')).toBeVisible();
+ await expect(page.locator('#combatWorld')).toBeHidden();
+ await expect(page.locator('#cpTrain')).toBeEnabled();
+ await page.locator('[data-cp-mode="combat"]').click();
+ await expect(page.locator('[data-cp-mode="combat"]')).toHaveClass(/cp-selected/,{timeout:20000});
+ await expect(page.locator('#combatWorld')).toBeVisible();
+});
