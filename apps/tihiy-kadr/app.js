@@ -445,7 +445,7 @@ function renderStudyResults(){
  const root=$('study-results');root.replaceChildren();
  if(!studyResults.size){
   const p=document.createElement('p');p.className='hint';
-  p.textContent='Пока нет результатов. Выбери маршрут и запусти обработку.';
+  p.textContent='Пока нет результатов. Выбери нейросеть и запусти обработку.';
   root.append(p);
  }else{
   for(const item of studyResults.values()){
@@ -459,9 +459,9 @@ function renderStudyResults(){
    time.textContent=item.timeMs===null?'Время не измерено':
     'Инференс '+elapsed(item.timeMs/1000)+' · RTF '+item.timing.rtf.toFixed(2)+
     ' · на 90 с ≈ '+elapsed(item.timing.at90Seconds);
-   const parent=document.createElement('span');
-   parent.textContent=item.meta?.input?'Вход: '+(item.meta.input==='original'?'оригинал':studyResults.get(item.meta.input)?.label||item.meta.input):'';
-   b.append(name,diff,time,parent);
+   const source=document.createElement('span');
+   source.textContent=item.meta?.cached?'Повторное использование модели':'Независимый проход по оригиналу';
+   b.append(name,diff,time,source);
    b.onclick=()=>{void selectStudyResult(item.id)};
    root.append(b);
   }
