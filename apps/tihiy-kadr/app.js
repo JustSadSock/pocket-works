@@ -635,6 +635,11 @@ $('study-csv').onclick=()=>{
 };
 renderStudyResults();
 
+// Install the versioned app service worker. The shell does not register an
+// isolated quick app's SW on its behalf.
+if('serviceWorker' in navigator)
+ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+
 window.addEventListener('pagehide',()=>{worker?.terminate();abort?.abort();pause();revoke(fileURL);revoke(audioURL)});
 if(mobile)$('chunk-size').value='5';
 uiBusy(false);
