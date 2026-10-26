@@ -385,6 +385,9 @@ function updateFilmReview(){
  const kind=selectedSound();
  const method=kind==='neural'?(FILM_MODES.find(x=>x.id===filmMode())?.name||'Нейросеть'):
   kind==='mute'?'Без оригинального звука':'Исходный звук';
+ $('film-review-description').textContent=videoExportBlob?
+  'Послушай отрывок и сравни исходный и готовый варианты кнопками над видео.':
+  'Ты выбрал исходный звук без нейросети. Проверь отрывок перед подтверждением.';
  $('film-review-source').textContent=selected?.title||'Сцена';
  $('film-review-method').textContent=method;
  const duration=Number($('trim-length').value);
@@ -1701,6 +1704,14 @@ $('media-resolution').onchange=invalidateMediaResult;
 $('media-render').onclick=()=>{void prepareSelectedScene()};
 $('media-cancel').onclick=()=>videoExportController?.abort();
 $('media-discard').onclick=()=>{clearExportPreview();setScenePrepStep('sound');updateMediaLab()};
+$('trim-video').addEventListener('timeupdate',()=>{
+ if(view!=='trim'||scenePrepareStep!=='review'||$('trim-video').classList.contains('hidden'))return;
+ const v=$('trim-video'),start=Number($('trim-start').value)||0;
+ const end=start+(Number($('trim-length').value)||0);
+ if(v.currentTime>=end-.04&&end>start){
+  v.pause();try{v.currentTime=start}catch{}
+ }else if(v.currentTime<start-.04){try{v.currentTime=start}catch{}}
+});
 $('preview-original').onclick=()=>showTrimPreview('source');
 $('preview-result').onclick=()=>showTrimPreview('result');
 $('add-role').onclick=()=>{if(selected.roles.length>=12)return toast('Максимум 12 персонажей.');selected.roles.push('Новый персонаж');renderRoles()};
