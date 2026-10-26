@@ -66,13 +66,16 @@ export async function measureVideoDuration(video) {
  * Export a precise segment with canvas-driven resolution and bitrate.
  * Encoding follows actual video playback; it must remain in the foreground.
  */
-export async function exportVideo({ blob, start, duration, width, level, keepAudio = false, signal, onProgress = () => {} }) {
+export async function exportVideo({ blob, start, duration, width, level, keepAudio = false, audioPCM = null, signal, onProgress = () => {} }) {
   if (!supportsVideoExport()) throw Error('Этот браузер не поддерживает локальное кодирование видео.');
-  const mimeType = outputMime(keepAudio);
+  const mimeType = outputMime(keepAudio||!!audioPCM);
   if (!mimeType) throw Error('В браузере нет подходящего видеокодека для экспорта.');
   if (!(blob instanceof Blob) || blob.size < 1 || !Number.isFinite(start)
     || !Number.isFinite(duration) || duration < 1 || duration > 90 || start < 0) throw Error('Неверный отрывок.');
   if (signal?.aborted) throw abortError();
+  if(audioPCM&&(!Array.isArray(audioPCM)||audioPCM.length!==2||
+    audioPCM.some(ch=>!(ch instanceof Float32Array)||Math.abs(ch.length-duration*44100)>4410)))
+    throw Error('Неверная длина или формат очищенного саундтрека.');
 
   const video = document.createElement('video');
   const src = URL.createObjectURL(blob);
@@ -80,7 +83,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
   video.playsInline = true;
   video.muted = true; // Silent element playback is allowed after async metadata/seek; audio is routed separately.
   video.src = src;
-  let recorder, frame = 0, audioContext, stream, cancelled = false;
+  let recorder, frame = 0, audioContext, audioSource, stream, cancelled = false;
   let timer, started = false, captureMode = 'compatibility', watchdog = 0, useVideoFrameCallback = false;
   let lastMediaTime = start, lastAdvance = performance.now(), terminalError = null;
   let cancelPendingWait = null, resumeCapture = null;
@@ -188,7 +191,20 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
     }
     // Original audio is optional: dubbing premieres deliberately mute the film.
     // Bypassing Web Audio when unchecked reduces allocations and work on mobile.
-    if (keepAudio) try {
+    if (audioPCM) {
+      const Audio=window.AudioContext||window.webkitAudioContext;
+      if(!Audio)throw Error('Браузер не поддерживает локальное сведение очищенного звука.');
+      audioContext=new Audio();
+      const buffer=audioContext.createBuffer(2,audioPCM[0].length,44100);
+      for(let ch=0;ch<2;ch++)buffer.getChannelData(ch).set(audioPCM[ch]);
+      audioSource=audioContext.createBufferSource();audioSource.buffer=buffer;
+      const destination=audioContext.createMediaStreamDestination();
+      audioSource.connect(destination);
+      const track=destination.stream.getAudioTracks()[0];
+      if(!track)throw Error('Не удалось создать очищенную аудиодорожку.');
+      stream.addTrack(track);
+      await audioContext.resume();
+    } else if (keepAudio) try {
       const Audio = window.AudioContext || window.webkitAudioContext;
       if (Audio) {
         audioContext = new Audio();
@@ -288,7 +304,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
         video.pause();recorder.stop();
       }
     },3000);
-    try { await video.play(); } catch {
+    try { await video.play(); audioSource?.start(); } catch {
       if(cancelled){
         await completed.catch(()=>{});
         throw abortError();
@@ -316,6 +332,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
     video.removeAttribute('src');
     video.load();
     if (started && recorder?.state === 'recording') { cancelled = true; recorder.stop(); }
+    try{audioSource?.stop()}catch{}
     stream?.getTracks().forEach(track => track.stop());
     await audioContext?.close().catch(() => {});
     URL.revokeObjectURL(src);

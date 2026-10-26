@@ -5,11 +5,17 @@ on:
     branches: [main]
     paths:
       - 'apps/ne-tem-golosom/**'
+      - 'apps/tihiy-kadr/mrx-worker.js'
+      - 'apps/tihiy-kadr/artifact-repair.js'
+      - 'apps/tihiy-kadr/selective-scnet.js'
       - 'pocketnet/module-versions/ne-tem-golosom/**'
       - '.github/workflows/ne-tem-golosom-qa.yml'
   pull_request:
     paths:
       - 'apps/ne-tem-golosom/**'
+      - 'apps/tihiy-kadr/mrx-worker.js'
+      - 'apps/tihiy-kadr/artifact-repair.js'
+      - 'apps/tihiy-kadr/selective-scnet.js'
       - 'pocketnet/module-versions/ne-tem-golosom/**'
       - '.github/workflows/ne-tem-golosom-qa.yml'
   workflow_dispatch:
@@ -37,6 +43,8 @@ jobs:
           node --check apps/ne-tem-golosom/app.js
           node --check apps/ne-tem-golosom/screen-debug.js
           node --check apps/ne-tem-golosom/media-lab.js
+          node --check apps/ne-tem-golosom/film-cleanup.js
+          node --check apps/ne-tem-golosom/film-buzz-worker.js
           node --check apps/ne-tem-golosom/timeline-model.js
           node --check apps/ne-tem-golosom/trim-range.js
           node --check apps/ne-tem-golosom/studio-feedback.js
@@ -66,6 +74,8 @@ jobs:
         run: npx playwright install chromium
       - name: Check video source selection, trim, transcoding and browser appearance
         run: node apps/ne-tem-golosom/qa/video-journey.mjs
+      - name: Verify real Open-Unmix, regional SCNet and full SCNet soundtrack exports
+        run: node apps/ne-tem-golosom/qa/film-neural-journey.mjs
       - name: Check timeline gestures, draft recovery and Undo/Redo
         run: node apps/ne-tem-golosom/qa/timeline-journey.mjs
       - name: Inspect all screen states on desktop and phone without room side effects
