@@ -578,7 +578,7 @@
 .film-review-head h3{font:700 26px Oswald,Arial,sans-serif;margin:0;line-height:1.1;color:#262e2c}
 .film-review>p{font-size:12px;line-height:1.5;color:#61584c;margin:0}
 .film-review-info{display:flex;flex-direction:column;gap:4px;padding:12px 13px;background:#f8f0e2;border-left:3px solid #607b71}
-.film-review-info strong{font-size:14px;color:#273530}
+.film-review-info small{font-size:9px;font-weight:850;letter-spacing:.1em;color:#85796a}.film-review-info b{font-size:14px;overflow-wrap:anywhere;color:#282e2b}.film-review-info strong{font-size:12px;color:#466156}
 .film-review-info span{font-size:11px;color:#716456;font-variant-numeric:tabular-nums}
 .review-option{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;padding:12px 13px;min-height:57px;text-align:left;border:1px solid #bfaa91;background:#f6ecdb;color:#2e3331;cursor:pointer}
 .review-option strong{font-size:13px;font-weight:850}
