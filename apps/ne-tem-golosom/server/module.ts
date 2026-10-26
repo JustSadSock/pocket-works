@@ -71,7 +71,7 @@ const module={
     const start=Number(x.start),duration=Number(x.duration);
     if(!Number.isFinite(start)||!Number.isFinite(duration)||start<0||duration<10||duration>90||start>3600)return {state,events:notice(player.id,'Длина сцены должна быть от 10 до 90 секунд.')};
     if(!Array.isArray(x.roles)||x.roles.length<1||x.roles.length>12||!x.roles.every(validRole))return {state,events:notice(player.id,'Добавь корректные роли.')};
-    state.scene={id:x.id,title:x.title,start,duration,roles:x.roles.map(z=>z.trim()),custom:x.custom===true};
+    state.scene={id:x.id,title:x.title,start,duration,roles:x.roles.map(z=>z.trim()),custom:x.custom===true,cleaned:x.custom===true&&x.cleaned===true};
     state.assignments=assignRoles(state.players,state.scene.roles);
     state.mediaReady=Object.fromEntries(state.players.map(p=>[p.id,!state.scene.custom||p.id===state.host]));
     state.ready={};state.counts={};state.configured=true;state.mediaEpoch=(state.mediaEpoch||0)+1;state.revision++;
