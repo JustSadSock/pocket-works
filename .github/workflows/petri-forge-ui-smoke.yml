@@ -3,6 +3,9 @@ name: PetriForge UI Smoke
 on:
   push:
     branches: [main]
+    paths:
+      - 'apps/petri-forge/**'
+      - '.github/workflows/petri-forge-ui-smoke.yml'
   pull_request:
     branches: [main]
     paths:
