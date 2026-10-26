@@ -179,3 +179,46 @@ test('PPO produces gradient updates, persists exactly and retains independent Q/
  expect(await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel())).toEqual(learned);
  expect(errors).toEqual([]);
 });
+
+test('fair experiment compares fresh algorithms, keeps agent unchanged and restores results',async({page})=>{
+ test.setTimeout(150000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ const previous=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
+ await page.locator('#cpBenchmark').click();
+ await expect(page.locator('#cpBenchmarkDialog')).toBeVisible();
+ await page.locator('#cpBenchEpisodes').selectOption('10');
+ await page.locator('#cpBenchWorld').selectOption('corridor');
+ await page.locator('#cpBenchStart').click();
+ await expect(page.locator('#cpBenchProgress')).toBeVisible();
+ await expect(page.locator('#cpBenchExport')).toBeEnabled({timeout:120000});
+ await expect(page.locator('#cpBenchResults tbody tr[data-algorithm]')).toHaveCount(3);
+ const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pocket-works:petri-forge:benchmark:last')));
+ expect(saved.type).toBe('petri-forge-learning-benchmark');
+ expect(saved.completed).toBe(true);
+ expect(saved.options.episodes).toBe(10);
+ expect(saved.summary.ppo.after.winRate).toBeGreaterThanOrEqual(0);
+ expect(saved.summary.ppo.after.winRate).toBeLessThanOrEqual(1);
+ expect(saved.runs[0].results.ppo.updates).toBeGreaterThan(0);
+ expect(await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel())).toEqual(previous);
+ await page.locator('#cpBenchClose').click();
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpBenchmark')).toBeEnabled({timeout:20000});
+ await page.locator('#cpBenchmark').click();
+ await expect(page.locator('#cpBenchResults tbody tr[data-algorithm]')).toHaveCount(3);
+ await expect(page.locator('#cpBenchStatus')).toContainText('Восстановлен');
+ expect(errors).toEqual([]);
+});
+
+test('benchmark can be cancelled without reporting a fabricated winner',async({page})=>{
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpBenchmark')).toBeEnabled({timeout:20000});
+ await page.locator('#cpBenchmark').click();
+ await page.locator('#cpBenchEpisodes').selectOption('200');
+ await page.locator('#cpBenchStart').click();
+ await page.locator('#cpBenchStop').click();
+ await expect(page.locator('#cpBenchStatus')).toContainText('остановлено');
+ await expect(page.locator('#cpBenchStart')).toBeEnabled();
+ await expect(page.locator('#cpBenchExport')).toBeDisabled();
+});
