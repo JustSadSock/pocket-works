@@ -9,11 +9,9 @@ test('one prominent field, compact dock, separate simulation and personal agent 
  await expect(page.locator('#labPanel')).toBeHidden();
  await expect(page.locator('#cpScenario')).toBeHidden();
  await expect(page.locator('#cpTrain')).toBeVisible();
- await page.locator('#cpSetup').click();
- await expect(page.locator('#cpSetupDialog')).toBeVisible();
- await page.locator('#cpScenario').selectOption('hazards');
- await page.locator('#cpBatch').selectOption('100');
- await page.locator('#cpSetupDialog [data-cp-close]').click();
+ await expect(page.locator('#cpQuickScenario')).toBeVisible();
+ await page.locator('#cpQuickScenario').selectOption('hazards');
+ await page.locator('#cpQuickBatch').selectOption('100');
  await expect(page.locator('#cpGoal')).toContainText('Опасная');
  await page.locator('#cpTrain').click();
  await expect(page.locator('#hubRuns')).toHaveText('1',{timeout:45000});
@@ -34,9 +32,7 @@ test('export whole agent, import as a distinct preserved identity',async({page})
  test.setTimeout(85000);
  await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
  await expect(page.locator('#cpAgent option')).toHaveCount(1,{timeout:22000});
- await page.locator('#cpSetup').click();
- await page.locator('#cpBatch').selectOption('100');
- await page.locator('#cpSetupDialog [data-cp-close]').click();
+ await page.locator('#cpQuickBatch').selectOption('100');
  await page.locator('#cpTrain').click();
  await expect(page.locator('#hubRuns')).toHaveText('1',{timeout:45000});
  await page.locator('#cpProfile').click();
@@ -59,9 +55,7 @@ test('two distinct trained agent policies fight on original Combat Forge rules',
  await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
  await expect(page.locator('#cpAgent option')).toHaveCount(1,{timeout:22000});
  await page.locator('[data-cp-mode="combat"]').click();
- await page.locator('#cpSetup').click();
- await page.locator('#cpBatch').selectOption('8');
- await page.locator('#cpSetupDialog [data-cp-close]').click();
+ await page.locator('#cpQuickBatch').selectOption('8');
  await page.locator('#cpTrain').click();
  await expect(page.locator('#hubRuns')).toHaveText('1',{timeout:55000});
  const first=await page.locator('#cpAgent').inputValue();
