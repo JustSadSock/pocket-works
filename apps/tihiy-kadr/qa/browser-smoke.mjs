@@ -169,6 +169,11 @@ try{
  await page.locator('#study-results .study-choice').filter({hasText:'SCNet · оригинал'}).click();
  await page.locator('#scnet-strength').fill('30');
  await page.waitForTimeout(430);
+ // A repeated preset reuses ONNX, but must rematerialize at the new 30% gain.
+ await page.locator('#quality-mode').selectOption('scnet-direct');
+ await page.locator('#process-btn').click();
+ await page.waitForFunction(()=>document.querySelector('#pipeline-status').textContent.includes('Кэшировано этапов: 1'),null,{timeout:15000});
+ assert.equal(await page.locator('#scnet-strength').inputValue(),'30');
  await page.locator('#pipeline-input').selectOption('scnet-direct');
  await page.locator('#pipeline-model').selectOption('mrx');
  await page.locator('#pipeline-run').click();
