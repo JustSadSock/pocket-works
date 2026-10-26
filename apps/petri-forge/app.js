@@ -5,6 +5,7 @@ createWorkshopMode({appName:'PetriForge',version:'0.9.0',cachePrefix: 'petri-for
 
 import {GridEnvironment as Env,WIDTH,HEIGHT,TILE,createScenario,validateScene,QAgent} from './lab-core.mjs';
 import {listModels,saveModel,loadModel,deleteModel} from './model-store.mjs';
+import {NeuralActorCritic,validateNeuralPolicy} from './neural-policy.mjs';
 const GRID_W=WIDTH,GRID_H=HEIGHT,TILE_SIZE=24;
 const COLORS={
   [TILE.EMPTY]:'#26372f',[TILE.WALL]:'#66766b',
@@ -406,14 +407,18 @@ function controlsEnabled(isTraining){
   if(isTraining){running=false;pendingAction=false;playBtn.textContent='▶ Наблюдать';stopReplay();}
 }
 async function autosave(snapshot){
-  if(snapshot.type!=='qlearning')return;
-  try{await saveModel({id:'autosave',name:'Автосохранение',kind:'qlearning',snapshot,states:snapshot.q.length});await refreshLibrary();$('stateCount').textContent=snapshot.q.length.toLocaleString('ru-RU')+' состояний';}
-  catch(error){status('Автосохранение: '+error.message);}
+  if(!['qlearning','neural-actor-critic'].includes(snapshot?.type))return;
+  const neural=snapshot.type==='neural-actor-critic';
+  const states=neural?snapshot.weights.reduce((n,layer)=>n+layer.reduce((sum,row)=>sum+row.length,0),0):snapshot.q.length;
+  try{
+   await saveModel({id:neural?'autosave-neural':'autosave',name:neural?'Автосохранение нейросети':'Автосохранение',kind:snapshot.type,snapshot,states});
+   await refreshLibrary();$('stateCount').textContent=states.toLocaleString('ru-RU')+(neural?' весов':' состояний');
+  }catch(error){status('Автосохранение: '+error.message);}
 }
 worker.addEventListener('error',event=>{if(agentLoadWaiter){const w=agentLoadWaiter;agentLoadWaiter=null;w.reject(Error('Ошибка загрузки модели'));}controlsEnabled(false);pendingAction=false;status('Ошибка модуля обучения');window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'grid',message:event.message}}));console.error(event.message);});
 worker.onmessage=event=>{
   const d=event.data||{};
-  if(d.type==='loaded'){pendingAction=false;status('Агент: '+(d.kind==='random'?'случайный':'Q-learning'));$('stateCount').textContent=(d.states||0)+' состояний';if(agentLoadWaiter&&d.requestId===agentLoadWaiter.id){const w=agentLoadWaiter;agentLoadWaiter=null;w.resolve();}}
+  if(d.type==='loaded'){pendingAction=false;status('Агент: '+(d.kind==='random'?'случайный':d.kind==='neural'?'нейросеть actor–critic':'Q-learning'));$('stateCount').textContent=d.kind==='neural'?(d.parameters||0)+' весов':(d.states||0)+' состояний';if(agentLoadWaiter&&d.requestId===agentLoadWaiter.id){const w=agentLoadWaiter;agentLoadWaiter=null;w.resolve();}}
   else if(d.type==='action'){
     pendingAction=false;if(!training&&replayTimer===null)stepWithAction(d.action);
   }else if(d.type==='training'){controlsEnabled(true);status('Обучение запущено');window.dispatchEvent(new CustomEvent('petri:progress',{detail:{mode:'grid',busy:true,text:'Учится находить путь…'}}));}
@@ -428,7 +433,7 @@ worker.onmessage=event=>{
     if(d.snapshot)void autosave(d.snapshot);
     window.dispatchEvent(new CustomEvent('petri:finished',{detail:{mode:'grid',snapshot:d.snapshot,
       report:{units:d.complete,after:d.success,before:d.history?.[0]?.rate!=null?d.history[0].rate/100:null,
-        label:'Достиг цели в '+Math.round((d.success||0)*100)+'% учебных эпизодов · '+(d.snapshot?.q?.length||0)+' изученных состояний',
+        label:'Достиг цели в '+Math.round((d.success||0)*100)+'% учебных эпизодов · '+(d.snapshot?.type==='neural-actor-critic'?'нейросеть, '+(d.snapshot?.updates||0)+' обновлений весов':(d.snapshot?.q?.length||0)+' изученных состояний'),
         outcome:d.type==='stopped'?'stopped':'completed'}}}));
   }else if(d.type==='evaluated'){
     const a=d.train,b=d.holdout;
@@ -496,14 +501,15 @@ window.PetriForgeRuntime.grid={
     if(training||snapshotRequest){reject(Error('Мозг занят обучением'));return;}
     snapshotRequest=resolve;worker.postMessage({type:'snapshot'});
   }),
-  setModel:async snapshot=>{
+  setModel:async (snapshot,selectedAlgorithm='qlearning')=>{
     if(training||agentLoadWaiter)throw Error('Модуль занят загрузкой модели');
-    agentSelect.value='qlearning';stopReplay();
+    const algorithm=snapshot?.type==='neural-actor-critic'||selectedAlgorithm==='neural'?'neural':'qlearning';
+    agentSelect.value=algorithm;stopReplay();
     const id=++agentLoadSerial;
     await new Promise((resolve,reject)=>{
       const timeout=setTimeout(()=>{if(agentLoadWaiter?.id===id){agentLoadWaiter=null;reject(Error('Истекло время загрузки мозга'));}},7000);
       agentLoadWaiter={id,resolve:()=>{clearTimeout(timeout);resolve();},reject:e=>{clearTimeout(timeout);reject(e);}};
-      loadAgent('qlearning',snapshot||new QAgent(17).serialize(),id);
+      loadAgent(algorithm,snapshot||(algorithm==='neural'?new NeuralActorCritic(17).serialize():new QAgent(17).serialize()),id);
     });
     $('modelName').value='Активный исследователь';
   },
@@ -541,7 +547,7 @@ $('trainBtn').onclick=()=>{
   if(training)return;
   stopReplay();running=false;pendingAction=false;
   playBtn.textContent='▶ Наблюдать';
-  if(agentSelect.value==='random'){status('Для обучения выберите Q-learning');return;}
+  if(agentSelect.value==='random'){status('Для обучения выберите Q-learning или нейросеть');return;}
   try{
     const scene=validateScene(sceneNow()),episodes=Number($('episodeCount').value);
     $('metricEpisodes').textContent='0';$('metricSuccess').textContent='—';$('metricReward').textContent='—';$('progressFill').style.width='0%';
@@ -578,7 +584,7 @@ $('heatToggle').onchange=redraw;
 async function refreshLibrary(){
   const select=$('modelSelect'),selected=select.value;
   try{
-    const records=(await listModels()).filter(record=>['qlearning','random'].includes(record.kind)&&!record.id.startsWith('career-v1:'));select.replaceChildren();
+    const records=(await listModels()).filter(record=>['qlearning','random','neural-actor-critic'].includes(record.kind)&&!record.id.startsWith('career-v1:'));select.replaceChildren();
     if(!records.length){const option=document.createElement('option');option.value='';option.textContent='Нет сохранённых моделей';select.append(option);}
     for(const item of records){const option=document.createElement('option');option.value=item.id;option.textContent=item.name+' · '+(item.states||0)+' состояний';select.append(option);}
     if(records.some(m=>m.id===selected))select.value=selected;
@@ -597,8 +603,8 @@ $('loadBrain').onclick=async()=>{
   if(training)return;
   const id=$('modelSelect').value;if(!id){status('Выберите сохранённую модель');return;}
   try{
-    const item=await loadModel(id);if(!item||!['qlearning','random'].includes(item.kind)||!['qlearning','random'].includes(item.snapshot?.type))throw Error('Эта модель предназначена для другой лаборатории');
-    stopReplay();agentSelect.value=item.snapshot.type==='random'?'random':'qlearning';
+    const item=await loadModel(id);if(!item||!['qlearning','random','neural-actor-critic'].includes(item.kind)||!['qlearning','random','neural-actor-critic'].includes(item.snapshot?.type))throw Error('Эта модель предназначена для другой лаборатории');
+    stopReplay();agentSelect.value=item.snapshot.type==='random'?'random':item.snapshot.type==='neural-actor-critic'?'neural':'qlearning';
     loadAgent(agentSelect.value,item.snapshot);$('modelName').value=item.name;
     status('Модель загружена: '+item.name);
   }catch(error){status('Не удалось загрузить: '+error.message);}
@@ -624,12 +630,13 @@ $('importBrain').onchange=async event=>{
     const data=JSON.parse(await file.text());
     if(data?.format!=='petri-forge-agent'||data.version!==1||!data.snapshot)throw Error('Несовместимый файл');
     const kind=data.snapshot.type;
-    if(!['qlearning','random'].includes(kind))throw Error('Алгоритм не поддерживается');
+    if(!['qlearning','random','neural-actor-critic'].includes(kind))throw Error('Алгоритм не поддерживается');
     if(kind==='qlearning'){const validator=new QAgent(1);validator.load(data.snapshot);}
+    else if(kind==='neural-actor-critic'&&!validateNeuralPolicy(data.snapshot))throw Error('Повреждённая нейросеть');
     else if(data.snapshot.version!==1)throw Error('Версия модели не поддерживается');
     const name=String(data.name||'Импортированный мозг').slice(0,64);
     // Validate the checkpoint in the Worker before saving it.
-    stopReplay();agentSelect.value=kind;loadAgent(kind,data.snapshot);
+    stopReplay();agentSelect.value=kind==='neural-actor-critic'?'neural':kind;loadAgent(agentSelect.value,data.snapshot);
     const id='import-'+Date.now().toString(36);
     await saveModel({id,name,kind,snapshot:data.snapshot,states:data.snapshot.q?.length||0});
     await refreshLibrary();$('modelSelect').value=id;$('modelName').value=name;status('Модель импортирована: '+name);
