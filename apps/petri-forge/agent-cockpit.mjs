@@ -4,15 +4,17 @@ import {readBrain,KINDS} from './agent-career.mjs';
 import {validPolicy} from './combat-core.mjs';
 import {mountNeuralCombat} from './neural-combat-ui.mjs';
 import {mountLearningBenchmark} from './learning-benchmark-ui.mjs';
+import {showWorkbenchDialog,closeWorkbenchDialogs} from './ui-navigation.mjs';
 import './agent-cockpit-shell.mjs';
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString('ru-RU');
 export function mountAgentCockpit(api){
  const menus=['cpSetupDialog','cpProfileDialog','cpDuelDialog'];
- const closeAll=()=>{for(const id of menus){const dlg=$(id);if(dlg.open)dlg.close();}};
+ const closeAll=()=>closeWorkbenchDialogs();
  for(const button of document.querySelectorAll('[data-cp-close]'))button.onclick=()=>$(button.dataset.cpClose).close();
  let fightWorker=null,fighting=false,lastMode=null,lastObservedAgent=null,postBusy=false;
  let libraryFilter='active',observerOpen=false,vision=false,observerTicket=0,benchmarkActive=false;
+ let lastChoicesSignature='';
  const neuro=mountNeuralCombat({...api,onBusy:api.onNeuralBusy,replay:match=>{
   window.PetriForgeRuntime.combat.showExternalDuel({summary:match.matches[0].summary,frames:match.matches[0].frames});
   const play=document.getElementById('battlePlay');if(play&&!play.disabled)play.click();
@@ -20,14 +22,22 @@ export function mountAgentCockpit(api){
  const benchmark=mountLearningBenchmark({...api,onBusyChange:active=>{benchmarkActive=active;redraw();}});
  const setStatus=(text)=>{$('cpState').textContent=text;api.notify(text);};
  function state(){return api.state();}
+ let lastProfilesSignature='';
  function profileOptions(){
   const {careers:all,active}=state(),careers=all.filter(c=>!c.archived);
-  for(const id of ['cpAgent','cpProfileAgent','cpDuelA','cpDuelB']){
-   const select=$(id),previous=select.value;select.replaceChildren();
-   for(const c of careers){const o=document.createElement('option');o.value=c.id;o.textContent=c.name;select.append(o);}
-   if(careers.some(c=>c.id===previous))select.value=previous;
-   else select.value=id==='cpDuelB'&&careers.length>1?careers.find(c=>c.id!==active?.id)?.id||careers[0]?.id:active?.id||'';
+  const signature=JSON.stringify(careers.map(c=>[c.id,c.name]));
+  if(signature!==lastProfilesSignature){
+   for(const id of ['cpAgent','cpProfileAgent','cpDuelA','cpDuelB']){
+    const select=$(id),previous=select.value;select.replaceChildren();
+    for(const c of careers){const o=document.createElement('option');o.value=c.id;o.textContent=c.name;select.append(o);}
+    if(careers.some(c=>c.id===previous))select.value=previous;
+    else select.value=id==='cpDuelB'&&careers.length>1?careers.find(c=>c.id!==active?.id)?.id||careers[0]?.id:active?.id||'';
+   }
+   lastProfilesSignature=signature;
   }
+  // Selection follows the real loaded model, never a stale previous option.
+  $('cpAgent').value=active?.id||'';
+  if(!$('cpProfileDialog').open)$('cpProfileAgent').value=active?.id||'';
  }
  const modelLabels={grid:'Q-learning · таблица состояний',combat:'Эволюция · тактическая политика',race:'Эволюция · управление машиной',perekos:'Эволюция · тактика мага'};
  const modelName=(mode,career)=>mode==='grid'&&career?.algorithms?.grid==='ppo'?'Нейросеть · PPO-Clip + GAE':mode==='grid'&&career?.algorithms?.grid==='neural'?'Нейросеть · Actor–Critic (градиенты)':modelLabels[mode];
@@ -140,6 +150,9 @@ export function mountAgentCockpit(api){
   $('cpStop').hidden=!v.busy;$('cpTrain').hidden=v.busy;
   const locked=v.busy||v.pending||fighting||benchmarkActive;
   $('cpAlgorithmRow').hidden=current!=='grid';
+  $('cpDuel').hidden=current!=='combat';
+  $('cpBenchmark').hidden=current!=='grid';
+  $('cpNeurocombat').hidden=current!=='combat';
   $('cpAlgorithm').value=v.active.algorithms?.grid||'qlearning';
   $('cpAlgorithm').disabled=locked;
   for(const id of ['cpAgent','cpProfile','cpSetup','cpTest','cpDuel','cpExpert','cpTrain','cpDetails','cpReplay','cpInspect','cpVision'])$(id).disabled=locked;
@@ -150,11 +163,20 @@ export function mountAgentCockpit(api){
   $('cpState').textContent=benchmarkActive?'Идёт независимое сравнение алгоритмов. Пульт обучения временно заблокирован.':v.busy?$('hubProgressText').textContent:v.lastEval||v.active.branches[current].history.at(-1)?.label||'Выберите задачу и начните обучение.';
   $('cpBar').hidden=!v.busy;
   if(v.busy)$('cpBarFill').style.width=$('hubProgressFill').style.width;
-  $('cpScenario').replaceChildren();$('cpQuickScenario').replaceChildren();
-  for(const [value,text] of setting.variants){for(const id of ['cpScenario','cpQuickScenario']){const o=document.createElement('option');o.value=value;o.textContent=text;$(id).append(o);}}
+  // Rebuild option nodes only when the environment changes. Replacing them on
+  // every progress update collapses native mobile pickers and loses focus.
+  const key=current+JSON.stringify(setting.variants)+JSON.stringify(setting.counts);
+  if(key!==lastChoicesSignature){
+   for(const id of ['cpScenario','cpQuickScenario','cpBatch','cpQuickBatch'])$(id).replaceChildren();
+   for(const [value,text] of setting.variants)for(const id of ['cpScenario','cpQuickScenario']){
+    const o=document.createElement('option');o.value=value;o.textContent=text;$(id).append(o);
+   }
+   for(const n of setting.counts)for(const id of ['cpBatch','cpQuickBatch']){
+    const o=document.createElement('option');o.value=String(n);o.textContent=fmt(n)+' '+setting.units;$(id).append(o);
+   }
+   lastChoicesSignature=key;
+  }
   $('cpScenario').value=$('hubVariant').value;$('cpQuickScenario').value=$('hubVariant').value;
-  $('cpBatch').replaceChildren();$('cpQuickBatch').replaceChildren();
-  for(const n of setting.counts){for(const id of ['cpBatch','cpQuickBatch']){const o=document.createElement('option');o.value=String(n);o.textContent=fmt(n)+' '+setting.units;$(id).append(o);}}
   $('cpBatch').value=$('hubBatch').value;$('cpQuickBatch').value=$('hubBatch').value;
   if(observerOpen){$('cpObserverPractice').textContent=v.active.branches[current].history.at(-1)?.label||'В этой среде нет тренировок.';}
   $('cpSetupHelp').textContent=current==='grid'?(v.active.algorithms?.grid==='neural'?'Эпизод — одна попытка пройти мир. Actor–Critic обновляет веса нейросети по ошибке прогноза; это ещё не PPO.':v.active.algorithms?.grid==='ppo'?'PPO копит собственные действия и обновляет политику партиями с GAE, ограничением изменения стратегии и несколькими эпохами.':'Эпизод — одна попытка пройти мир. Повторное обучение продолжит изученную Q-таблицу.'):
@@ -186,7 +208,7 @@ export function mountAgentCockpit(api){
  $('cpShowActive').onclick=()=>{libraryFilter='active';renderLibrary();};
  $('cpShowArchived').onclick=()=>{libraryFilter='archived';renderLibrary();};
  $('cpExpert').onclick=()=>{closeAll();api.expert();};
- $('cpSetup').onclick=()=>{$('cpSetupDialog').showModal();};
+ $('cpSetup').onclick=()=>{showWorkbenchDialog($('cpSetupDialog'));};
  $('cpScenario').onchange=e=>{api.updateChoice('variant',e.target.value);$('cpGoal').textContent=e.target.selectedOptions[0]?.textContent||'Сцена';};
  $('cpAlgorithm').onchange=async e=>{
   const selection=e.target.value;
@@ -199,14 +221,14 @@ export function mountAgentCockpit(api){
  $('cpQuickScenario').onchange=e=>api.updateChoice('variant',e.target.value);
  $('cpQuickBatch').onchange=e=>api.updateChoice('batch',e.target.value);
  $('cpGuide').onclick=()=>{
-  $('cpSetupDialog').showModal();
+  showWorkbenchDialog($('cpSetupDialog'));
   $('cpSetupHelp').textContent='Выберите задачу и число попыток. «Обучить» улучшает сохранённый мозг. «Проверить» запускает испытание без обучения. «Бой агентов» сравнивает двух персонажей. Профиль хранит и экспортирует их опыт.';
  };
  $('cpBatch').onchange=e=>api.updateChoice('batch',e.target.value);
  $('cpEditWorld').onclick=()=>{closeAll();api.expert();};
- $('cpProfile').onclick=()=>{libraryFilter='active';drawProfile();$('cpProfileStatus').textContent='';$('cpLibraryStatus').textContent='';$('cpProfileDialog').showModal();};
- $('cpDetails').onclick=()=>{libraryFilter='active';drawProfile();$('cpProfileStatus').textContent='';$('cpLibraryStatus').textContent='';$('cpProfileDialog').showModal();};
- $('cpProfileAgent').onchange=e=>{void api.switchAgent(e.target.value).then(()=>{drawProfile();redraw();});};
+ $('cpProfile').onclick=()=>{libraryFilter='active';drawProfile();$('cpProfileStatus').textContent='';$('cpLibraryStatus').textContent='';showWorkbenchDialog($('cpProfileDialog'));};
+ $('cpDetails').onclick=()=>{libraryFilter='active';drawProfile();$('cpProfileStatus').textContent='';$('cpLibraryStatus').textContent='';showWorkbenchDialog($('cpProfileDialog'));};
+ $('cpProfileAgent').onchange=e=>{void api.switchAgent(e.target.value).then(ok=>{if(ok)drawProfile();redraw();$('cpProfileAgent').value=state().active?.id||'';});};
  $('cpCreate').onclick=async()=>{closeAll();await api.create();redraw();};
  $('cpRename').onclick=async()=>{closeAll();await api.rename();redraw();};
  $('cpDelete').onclick=async()=>{closeAll();await api.delete();redraw();};
@@ -237,7 +259,7 @@ export function mountAgentCockpit(api){
   $('cpFight').disabled=!enough;
   $('cpDuelInfo').textContent=enough?'Два настоящих боя со сменой сторон. Используются боевые навыки выбранных персонажей.':
    'Создайте второго агента через профиль, затем обучите обоих в режиме «Бой».';
-  $('cpDuelDialog').showModal();
+  showWorkbenchDialog($('cpDuelDialog'));
  };
  $('cpFight').onclick=async()=>{
   if(fighting||state().busy||state().pending)return;
@@ -276,6 +298,7 @@ export function mountAgentCockpit(api){
  };
 
  window.addEventListener('petri:mode',()=>queueMicrotask(redraw));
+ window.addEventListener('petri:ui-reset',()=>{observerOpen=false;$('cpObserver').hidden=true;$('cpInspect').setAttribute('aria-expanded','false');$('cpInspect').textContent='Наблюдение · открыть';});
  window.addEventListener('petri:progress',()=>queueMicrotask(redraw));
  window.addEventListener('petri:finished',()=>{queueMicrotask(redraw);if(observerOpen)void renderObserver();});
  window.addEventListener('petri:evaluated',()=>queueMicrotask(redraw));
