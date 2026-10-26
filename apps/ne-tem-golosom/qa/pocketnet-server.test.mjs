@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const file=new URL('../server/module.ts',import.meta.url);
-const version=new URL('../../../pocketnet/module-versions/ne-tem-golosom/v3.ts',import.meta.url);
+const version=new URL('../../../pocketnet/module-versions/ne-tem-golosom/v4.ts',import.meta.url);
 const source=readFileSync(file,'utf8');
 const {default:game}=await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(source));
 const a={id:'host',name:'Host'},b={id:'guest',name:'Guest'};
@@ -12,10 +12,10 @@ const setup=()=>{
  const initial=game.createRoom({player:a}).state;
  return game.onJoin({state:initial,players:[a,b],player:b}).state;
 };
-test('server v3 is identical to pinned version and is selected in lock',()=>{
+test('server v4 is identical to pinned version and is selected in lock',()=>{
  assert.equal(source,readFileSync(version,'utf8'));
  const lock=JSON.parse(readFileSync(new URL('../../../pocketnet/modules.lock.json',import.meta.url)));
- assert.equal(lock['ne-tem-golosom'].current,'v3');
+ assert.equal(lock['ne-tem-golosom'].current,'v4');
 });
 test('room phases and current video epoch are enforced',()=>{
  const state=setup();
