@@ -1,4 +1,5 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {MODES,start,apply,legal,validateStored,POINTS,ownerOfRegion,scoreOfRegions} from './core.js';
 import {chooseAIAction,isAITurn} from './ai.js';
 installMobileRuntime();
@@ -192,3 +193,14 @@ $('resume').hidden=!state;
 $('catalog').replaceChildren(...Object.entries(MODES).map(([key,game],i)=>el('button',{type:'button',className:'game-option'},`<span class="game-number">${i+1}</span><span class="game-copy"><b>${game.name}</b><small>${game.subtitle}</small></span><span class="arrow">→</span>`)));
 [...$('catalog').children].forEach((item,i)=>item.dataset.game=Object.keys(MODES)[i]);
 render();
+
+createWorkshopMode({
+  appName:'ШЕСТЬ ХОДОВ',
+  version:'1.1.0',
+  cachePrefix: 'shest-hodov-',
+  storageNamespace: 'pocket-works:shest-hodov',
+  onReset(){
+    stopAI();try{localStorage.removeItem(KEY)}catch{}
+    state=null;open=false;notification='';window.location.reload();
+  }
+});
