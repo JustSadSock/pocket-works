@@ -95,7 +95,13 @@ export function mountLearningBenchmark(api){
   worker?.terminate();worker=null;lock(false);
  }
  $('cpBenchmark').onclick=()=>{showWorkbenchDialog($('cpBenchmarkDialog'));};
- $('cpBenchClose').onclick=()=>$('cpBenchmarkDialog').close();
+ $('cpBenchClose').onclick=()=>{
+  if(busy){cleanWorker();setStatus('Эксперимент остановлен при закрытии окна.');}
+  $('cpBenchmarkDialog').close();
+ };
+ $('cpBenchmarkDialog').addEventListener('close',()=>{
+  if(busy){cleanWorker();setStatus('Эксперимент остановлен при закрытии окна.');}
+ });
  $('cpBenchStart').onclick=()=>{
   if(busy)return;
   if(api.state().busy||api.state().pending){setStatus('Сначала завершите обучение или испытание агента.');return;}
