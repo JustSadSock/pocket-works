@@ -88,8 +88,8 @@ export function neuralDuel({a,b,roleA='archer',roleB='swordsman',arena='cover',s
   const episode=battleNeuralEpisode({role:roleA,enemyRole:roleB,arena,seed:seed+Math.floor(i/2)*977,
    policy:fighter,opponent:rival,side,maxSeconds:22,record:i===0,stochastic:true});
   const winner=episode.summary.winner<0?-1:episode.summary.winner===side?0:1;
-  points[winner<0?0:winner]+=winner<0?.5:1;
-  if(winner<0)points[1]+=.5;
+  if(winner<0){points[0]+=.5;points[1]+=.5;}
+  else points[winner]+=1;
   matches.push({winner,seconds:episode.summary.seconds,damage:episode.damage,taken:episode.taken,
    summary:episode.summary,frames:i===0?episode.frames:[]});
  }
