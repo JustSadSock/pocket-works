@@ -8,7 +8,20 @@
 </head><body><main class="app-shell" data-app-shell data-ui>
 <header class="topbar"><a class="exit" href="../../" data-app-control>← PocketWorks</a><strong>ШЕСТЬ ХОДОВ</strong><button id="back" hidden type="button" data-native-press>Все игры</button></header>
 <section id="menu" class="menu">
-<h1>Шесть игр.<br>Один принцип.</h1><p>Два игрока · Без случайности · На одном устройстве</p>
+<h1>Шесть игр.<br>Один принцип.</h1><p>Чистая стратегия · Без случайности</p>
+<div class="game-setup" aria-label="Выберите соперника">
+  <div class="opponent-choice">
+    <button id="aiChoice" type="button" class="setup-option active">Против ИИ</button>
+    <button id="duelChoice" type="button" class="setup-option">На двоих</button>
+  </div>
+  <label id="difficultyWrap" class="difficulty">Сложность ИИ
+    <select id="difficulty" aria-label="Сложность искусственного интеллекта">
+      <option value="easy">Простой</option>
+      <option value="normal" selected>Обычный</option>
+      <option value="hard">Сложный</option>
+    </select>
+  </label>
+</div>
 <button id="resume" type="button" class="resume" hidden data-native-press>Продолжить партию →</button>
 <div id="catalog" class="catalog" aria-label="Выбор игры"></div></section>
 <section id="match" class="match" hidden><header class="match-head">
@@ -20,6 +33,6 @@
 <details class="rules"><summary>Правила</summary><p id="rules"></p></details>
 <button id="reset" type="button" class="reset">Новая партия</button>
 </section></main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Шесть ходов" data-app-version="1.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Шесть ходов" data-app-version="1.1.0"></script>
 <script src="./app.js" type="module"></script>
 </body></html>
