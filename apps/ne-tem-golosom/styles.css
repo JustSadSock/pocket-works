@@ -499,3 +499,9 @@
 .editor .editor-bottom{flex-shrink:0}
 .editor .timeline-viewport{min-height:105px;flex:0 0 auto}
 .editor .clip-mixer{flex-shrink:0}
+
+/* Favorite voice effects are a small shelf, not a second settings screen. */
+.editor .voice-fx-favorites{display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%;padding:6px 0 8px;margin-bottom:6px;border-bottom:1px dashed #68736d}
+.editor .voice-fx-favorites.hidden{display:none}
+.editor .voice-fx-favorites:before{content:"ИЗБРАННОЕ";font:800 9px Manrope,Arial,sans-serif;letter-spacing:.08em;color:#e7b58d;margin-right:5px}
+.editor #voice-fx-pin[aria-pressed=true]{background:#d2a379;color:#282d2d;border-color:#f0c49e}
