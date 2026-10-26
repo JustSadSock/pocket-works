@@ -80,7 +80,7 @@ test('browser app wires active routes into real monitor and video export',()=>{
  assert.match(app,/await modelStage/);
  assert.match(app,/activeStudy/);
  assert.match(app,/if\(!activeStudy\|\|!range\|\|exporting\)return/);
- assert.match(app,/await selectStudyResult\(targetId\)/);
+ assert.match(app,/await selectStudyResult\(routeId\)/);
 });
 test('a model vocal estimate is subtracted from its source without mutating original',()=>{
  const me=[new Float32Array([.5,.25,.1])],vocals=[new Float32Array([.2,.1,.05])];
