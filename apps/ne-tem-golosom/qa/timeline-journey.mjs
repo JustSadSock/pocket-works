@@ -146,6 +146,11 @@ try{
    await button.click();
    assert.equal(await button.getAttribute('aria-pressed'),'true');
   }
+  // Frequently used effects can be pinned without changing the selected take.
+  await page.locator('#voice-fx-pin').click();
+  assert.equal(await page.locator('#voice-fx-pin').getAttribute('aria-pressed'),'true','selected effect pinned');
+  assert.equal(await page.locator('.voice-fx-favorites [data-voice-fx="deep"]').count(),1,'favorites ribbon contains deep voice');
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('pocket-works:ne-tem-golosom:favorite-voices')||'[]').includes('deep')),true,'favorites persist locally');
   const geometry=await page.evaluate(()=>{
    const stage=document.querySelector('.stage-wrap').getBoundingClientRect();
    const desk=document.querySelector('.editor-desk').getBoundingClientRect();
