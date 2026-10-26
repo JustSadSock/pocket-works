@@ -122,6 +122,7 @@ export async function cloneCareer(c,name){
  next.parentId=c.id;
  next.branches=structuredClone(c.branches);
  next.algorithms=structuredClone(c.algorithms||{grid:'qlearning'});
+ next.combatNeural=structuredClone(c.combatNeural||{});
  const brains={};
  for(const domain of DOMAINS){
   const row=await loadModel(brainId(c.id,domain));
@@ -161,16 +162,25 @@ export async function readCombatNeural(c,role){
  if(row.kind!=='neural-ppo'||row.snapshot?.type!=='neural-ppo')throw Error('Повреждённый боевой нейромозг');
  return row.snapshot;
 }
-export async function recordCombatNeural(c,role,snapshot,{episodes=0,winRate=0}={}){
+export async function recordCombatNeural(c,role,snapshot,{episodes=0,winRate=0,league=null}={}){
  assertCareer(c);
  if(!['archer','swordsman'].includes(role)||snapshot?.type!=='neural-ppo')throw Error('Неверное сохранение нейробоя');
  if(!Number.isInteger(episodes)||episodes<0||episodes>150||!Number.isFinite(winRate)||winRate<0||winRate>1)
   throw Error('Некорректные результаты обучения');
+ if(league!==null){
+  if(!league||!Array.isArray(league.generations)||league.generations.length>26||
+   !Number.isSafeInteger(league.seed)||league.seed<1||
+   league.generations.some(g=>!Number.isInteger(g.generation)||g.generation<0||
+    !Number.isInteger(g.episodes)||g.episodes<0||
+    !Number.isInteger(g.updates)||g.updates<0||
+    !Number.isFinite(g.validation?.winRate)||g.validation.winRate<0||g.validation.winRate>1))
+   throw Error('Некорректная история нейросетевой лиги');
+ }
  const next=structuredClone(c),at=Date.now();
  next.combatNeural??={};
  const prev=next.combatNeural[role]||{sessions:0,episodes:0,history:[]};
  next.combatNeural[role]={sessions:prev.sessions+1,episodes:prev.episodes+episodes,
-  history:[...(prev.history||[]),{at,episodes,winRate}].slice(-30)};
+  history:[...(prev.history||[]),{at,episodes,winRate,...(league?{league:structuredClone(league)}:{})}].slice(-30)};
  await writeCareerBundle(next,{[role==='archer'?'combatArcher':'combatSwordsman']:snapshot});
  return next;
 }
