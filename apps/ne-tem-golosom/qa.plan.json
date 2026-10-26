@@ -24,7 +24,7 @@
         },
         {
           "action": "click",
-          "selector": "#create-btn"
+          "selector": "#solo-btn"
         },
         {
           "action": "visible",
