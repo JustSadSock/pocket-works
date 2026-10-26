@@ -18,7 +18,7 @@ function pcmWav(channels,rate=8000){
  return b;
 }
 test('model registry distinguishes local, channel, imported services (without pretending to execute them)',()=>{
- assert.deepEqual(STUDY_METHODS.filter(x=>x.type==='local').map(x=>x.id),['mrx','mrx-scnet']);
+ assert.deepEqual(STUDY_METHODS.filter(x=>x.type==='local').map(x=>x.id),['umxhq-direct','scnet-direct']);
  assert.deepEqual(STUDY_METHODS.filter(x=>x.type==='surround').map(x=>x.id),['surround']);
  for(const id of ['dnr-scnet','dnr-ensemble','bandit','sam'])assert.equal(researchMethod(id)?.type,'import');
  assert.equal(researchMethod('fake'),null);
@@ -82,7 +82,7 @@ test('browser app wires active routes into real monitor and video export',()=>{
  assert.match(app,/if\(!activeStudy\|\|!range\|\|exporting\)return/);
  assert.match(app,/await selectStudyResult\(targetId\)/);
 });
-test('real SCNet vocal estimate is subtracted from the real MRX M&E, not from original',()=>{
+test('a model vocal estimate is subtracted from its source without mutating original',()=>{
  const me=[new Float32Array([.5,.25,.1])],vocals=[new Float32Array([.2,.1,.05])];
  const fixed=subtractResidualVocals(me,vocals,.8);
  assert(Math.abs(fixed[0][0]-.34)<1e-6);
@@ -90,14 +90,11 @@ test('real SCNet vocal estimate is subtracted from the real MRX M&E, not from or
  assert.deepEqual([...subtractResidualVocals(me,vocals,0)[0]],[...me[0]]);
  assert.throws(()=>subtractResidualVocals(me,vocals,2),/0–100/);
 });
-test('five browser routes replace external upload as the first-class UX',()=>{
+test('only two independent browser routes are first-class',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(html,/value="scnet-direct"/);
- assert.match(html,/value="mrx-scnet-fast"/);
- assert.match(html,/value="mrx-scnet-balanced"/);
- assert.match(html,/value="mrx-scnet"/);
- assert.doesNotMatch(html,/id="study-me-file"/);
- assert.match(app,/makeRunKey/);
+ assert.match(html,/value="umxhq-direct"/);
+ assert.doesNotMatch(html,/value="mrx|id="pipeline-input"/);
  assert.match(app,/await modelStage/);
 });
