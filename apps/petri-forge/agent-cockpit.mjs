@@ -14,7 +14,7 @@ export function mountAgentCockpit(api){
  for(const button of document.querySelectorAll('[data-cp-close]'))button.onclick=()=>$(button.dataset.cpClose).close();
  let fightWorker=null,fighting=false,lastMode=null,lastObservedAgent=null,postBusy=false;
  let libraryFilter='active',observerOpen=false,vision=false,observerTicket=0,benchmarkActive=false;
- let lastChoicesSignature='';
+ let lastChoicesSignature='',lastDisplayedMode=null;
  const neuro=mountNeuralCombat({...api,onBusy:api.onNeuralBusy,replay:match=>{
   window.PetriForgeRuntime.combat.showExternalDuel({summary:match.matches[0].summary,frames:match.matches[0].frames});
   const play=document.getElementById('battlePlay');if(play&&!play.disabled)play.click();
@@ -140,6 +140,13 @@ export function mountAgentCockpit(api){
   const v=state();if(!v.active)return;
   profileOptions();
   const current=v.mode,setting=v.config[current],variant=$('hubVariant').selectedOptions[0]?.textContent||'Сцена';
+  if(lastDisplayedMode!==null&&lastDisplayedMode!==current){
+   $('agentHub').scrollTop=0;
+   observerOpen=false;$('cpObserver').hidden=true;
+   $('cpInspect').setAttribute('aria-expanded','false');
+   $('cpInspect').textContent='Наблюдение · открыть';
+  }
+  lastDisplayedMode=current;
   $('cpGoal').textContent=variant;
   benchmark.update();
   neuro.refresh();
