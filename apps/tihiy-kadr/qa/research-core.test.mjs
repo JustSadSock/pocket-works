@@ -74,15 +74,14 @@ test('invalid WAV and unmatched durations cannot silently replace clean audio',(
  assert.throws(()=>matchResultToSegment(decoded.channels,8000,0,3,8000),/короче/);
  assert.throws(()=>decodeWav(wav,{start:99}),/пределами/);
 });
-test('browser app actually binds external imports to original video monitor and video export',()=>{
- const js=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(js,/registerStudyResult\('mrx'/);
- assert.match(js,/mixed=sumMusicEffects\(/);
- assert.match(js,/activeStudy/);
- assert.match(js,/if\(!activeStudy\|\|!range\|\|exporting\)return/);
- assert.match(js,/await selectStudyResult\(method\)/);
+test('browser app wires active routes into real monitor and video export',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(app,/async function executeRoute/);
+ assert.match(app,/await modelStage/);
+ assert.match(app,/activeStudy/);
+ assert.match(app,/if\(!activeStudy\|\|!range\|\|exporting\)return/);
+ assert.match(app,/await selectStudyResult\(targetId\)/);
 });
-
 test('real SCNet vocal estimate is subtracted from the real MRX M&E, not from original',()=>{
  const me=[new Float32Array([.5,.25,.1])],vocals=[new Float32Array([.2,.1,.05])];
  const fixed=subtractResidualVocals(me,vocals,.8);
@@ -91,11 +90,14 @@ test('real SCNet vocal estimate is subtracted from the real MRX M&E, not from or
  assert.deepEqual([...subtractResidualVocals(me,vocals,0)[0]],[...me[0]]);
  assert.throws(()=>subtractResidualVocals(me,vocals,2),/0–100/);
 });
-test('specialist import stays closed by default, simple model choice drives inference',()=>{
+test('five browser routes replace external upload as the first-class UX',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
- const js=readFileSync(new URL('../app.js',import.meta.url),'utf8');
- assert.match(html,/<details id="study-advanced"/);
- assert.match(html,/value="scnet"/);
- assert.match(js,/if\(\$\('quality-mode'\)\.value==='scnet'\)/);
- assert.match(js,/await separate\(clean,Math\.min\(10/);
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(html,/value="scnet-direct"/);
+ assert.match(html,/value="mrx-scnet-fast"/);
+ assert.match(html,/value="mrx-scnet-balanced"/);
+ assert.match(html,/value="mrx-scnet"/);
+ assert.doesNotMatch(html,/id="study-me-file"/);
+ assert.match(app,/makeRunKey/);
+ assert.match(app,/await modelStage/);
 });

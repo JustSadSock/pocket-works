@@ -1,5 +1,6 @@
 import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,suppressStereoCenter,wavPCM16,elapsed,safeName} from './audio-utils.js';
-import {STUDY_METHODS,researchMethod,decodeWav,resamplePCM,channelSummary,multichannelME,stereoPCM,sumMusicEffects,matchResultToSegment,comparisonMetrics,comparisonRecord,subtractResidualVocals} from './research-core.js';
+import {stereoPCM,comparisonMetrics,subtractResidualVocals} from './research-core.js';
+import {ROUTES,routeById,planRoute,planCustom,makeRunKey,calculateSpeed} from './pipeline-config.js';
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
 const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
  (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -7,22 +8,25 @@ let sourceVideo=$('source-video');
 let file=null,fileURL='',audioURL='',length=0,range=null,original=null,stems=null,inferenceTime=0;
 let worker=null,abort=null,serial=0,exporting=false,editTimer=null,mode='clean',fileName='video';
 let scnetVocals=null,scnetBase=null,scnetTime=0;
+const pipelineRuns=new Map();let customCounter=0;
 const studyResults=new Map();let activeStudy=null,studySurround=null,studySurroundRate=0,studySignature='',studyBusy=false;
 const text=(id,msg)=>$(id).textContent=String(msg),show=(id,on)=>$(id).classList.toggle('hidden',!on);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),revoke=url=>{if(url)URL.revokeObjectURL(url)};
 function error(msg){text('error',msg);show('error',true)}
 function clearError(){show('error',false)}
 function uiBusy(active){
- $('process-btn').disabled=active||studyBusy||!file||!length;
- $('file-input').disabled=active||studyBusy;
- $('start-seconds').disabled=active||studyBusy;
- $('duration-seconds').disabled=active||studyBusy;
- $('chunk-size').disabled=active;
- $('quality-mode').disabled=active;
+ const busy=active||studyBusy||exporting;
+ $('file-input').disabled=busy;
+ for(const name of ['process-btn','start-seconds','duration-seconds'])
+  $(name).disabled=busy||!file||!length;
+ $('quality-mode').disabled=busy;
+ $('chunk-size').disabled=busy;
+ $('scene-gravity').disabled=busy||!file||length<149;
+ $('pipeline-run').disabled=busy||!file||!length;
+ $('pipeline-input').disabled=busy;
+ $('pipeline-model').disabled=busy;
+ $('pipeline-step').disabled=busy||$('pipeline-model').value==='mrx';
  show('progress-wrap',active);
- $('study-source-wav').disabled=active||studyBusy||!file||!length;
- $('study-import').disabled=active||studyBusy||!file||!length;
- $('study-surround-file').disabled=active||studyBusy||!file||!length;
 }
 function step(title,detail='',ratio=null){text('progress-heading',title);text('progress-detail',detail);if(ratio===null)$('progress-bar').removeAttribute('value');else $('progress-bar').value=ratio}
 function pause(){video.pause();sourceVideo.pause();audio.pause()}
@@ -34,7 +38,7 @@ function reset(){
 }
 function cancel(){
  serial++;worker?.terminate();worker=null;abort?.abort();abort=null;
- uiBusy(false);step('Остановлено','Можно обработать файл повторно.');
+ studyBusy=false;uiBusy(false);step('Остановлено','Можно обработать файл повторно.');
 }
 function metadata(v){
  return new Promise((resolve,reject)=>{
@@ -69,10 +73,19 @@ async function choose(f){
   text('file-detail',f.name+' · '+(f.size/1048576).toFixed(1)+' МиБ');
   text('range-note','Всего '+elapsed(length)+'. Обработка одного фрагмента: 1–90 секунд.');
   show('input-details',true);
+  $('scene-gravity').disabled=length<149;
+  text('route-hint',routeById($('quality-mode').value)?.detail||'');
  }catch(e){error(e.message);file=null;length=0;show('input-details',false)}
  finally{uiBusy(false)}
 }
 $('file-input').addEventListener('change',e=>{void choose(e.target.files?.[0]);e.target.value=''});
+$('scene-gravity').onclick=()=>{
+ if(!file||length<149||worker)return;
+ $('start-seconds').value='148';
+ $('duration-seconds').value=String(Math.min(20,Math.floor(length-148)));
+ text('range-note','Тест · Gravity Falls · 2:28, '+$('duration-seconds').value+' сек. При следующем запуске фрагмент обновится.');
+};
+$('quality-mode').onchange=()=>text('route-hint',routeById($('quality-mode').value)?.detail||'');
 const drop=$('drop-zone');
 drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('dragging')});
 drop.addEventListener('dragleave',()=>drop.classList.remove('dragging'));
@@ -156,7 +169,7 @@ function readableModelError(packet){
   return 'Не хватает памяти для нейросети. Выбери режим по 5 секунд и попробуй более короткую сцену. '+reason;
  return 'Нейросеть ('+phase+'): '+reason;
 }
-function separate(channels,chunk,id,kind='mrx'){
+function separate(channels,chunk,id,kind='mrx',scnetStep=.25){
  return new Promise((resolve,reject)=>{
   const w=new Worker('./mrx-worker.js',{type:'module'});worker=w;
   w.onerror=e=>{e.preventDefault();w.terminate();if(worker===w)worker=null;reject(Error('Ошибка подключения нейросети: '+(e.message||'скрипт Worker не запустился')+'. Проверь сеть и разрешение доступа к внешним CDN.'))};
@@ -171,75 +184,151 @@ function separate(channels,chunk,id,kind='mrx'){
    }
   };
   const copies=channels.map(ch=>ch.slice());
-  w.postMessage({id,channels:copies,chunk,kind},copies.map(c=>c.buffer));
+  w.postMessage({id,channels:copies,chunk,kind,scnetStep},copies.map(c=>c.buffer));
  });
 }
-async function process(){
- if(!file||worker||exporting)return;
- clearError();reset();const signal=new AbortController();abort=signal;const id=++serial;
- uiBusy(true);let timer=null;
+// Every route is browser-only. Intermediate neural runs are cached under the
+// *actual input result* and SCNet's window stride, avoiding duplicate inference.
+function stageAudio(id){
+ if(id==='original')return original;
+ return studyResults.get(id)?.clean||null;
+}
+function initPlayer(selected){
+ range=selected;
+ video.muted=true;try{video.volume=0}catch{}
+ if(video.src!==fileURL){
+  video.src=fileURL;video.load();
+  video.addEventListener('loadedmetadata',()=>{if(range)video.currentTime=range.start},{once:true});
+ }
+ $('result-seek').min='0';$('result-seek').max=String(selected.duration);
+ $('result-seek').step='.05';$('result-seek').value='0';
+}
+async function modelStage(model,inputId,inputPCM,stepSize,id){
+ const scnetStep=model==='scnet'?stepSize:null;
+ const key=makeRunKey(model,inputId,scnetStep);
+ if(pipelineRuns.has(key))return {...pipelineRuns.get(key),cached:true};
+ const actualPCM=stereoPCM(inputPCM);
+ // SCNet has its own fixed 11-second context windows; keep an outer 20s
+ // chunk on desktop or the 'step' choice is masked by 5-10s outer chunks.
+ // Mobile respects the chosen 5s task and never exceeds 10s for SCNet.
+ const selectedChunk=Number($('chunk-size').value);
+ const piece=model==='scnet'&&mobile?Math.min(10,selectedChunk):selectedChunk;
+ const response=await separate(actualPCM,piece,id,model,scnetStep??.25);
+ if(id!==serial||abort?.signal.aborted)throw new DOMException('Прервано','AbortError');
+ let run;
+ if(model==='mrx'){
+  const clean=mixPCM(actualPCM,response.stems,{dialogue:0,music:1,effects:1},'stems');
+  run={model,key,clean,stems:response.stems,timeMs:response.seconds*1000};
+  if(inputId==='original'){stems=response.stems;inferenceTime=response.seconds}
+ }else{
+  const vocals=response.stems.vocals;
+  const clean=subtractResidualVocals(actualPCM,vocals,Number($('scnet-strength').value)/100);
+  run={model,key,clean,vocals,base:actualPCM,timeMs:response.seconds*1000,step:scnetStep};
+ }
+ pipelineRuns.set(key,run);
+ if(pipelineRuns.size>(mobile?5:12)){
+  const old=[...pipelineRuns.keys()].find(k=>k!=='mrx|original'&&k!==key);
+  if(old)pipelineRuns.delete(old);
+ }
+ return {...run,cached:false};
+}
+async function executeRoute(routeId=null,custom=null){
+ if(!file||worker||exporting||studyBusy)return;
+ clearError();
+ const controller=new AbortController();abort=controller;const id=++serial;
+ let freshMs=0,cacheHits=0,preview=null;
+ const isPreset=!!routeId;
+ const route=isPreset?routeById(routeId):null;
+ if(isPreset&&!route)return error('Выбран неизвестный маршрут.');
+ if(!isPreset&&!custom)return error('Выбери модель и входной результат.');
+ const task=isPreset?planRoute(routeId):[custom];
+ const targetId=isPreset?routeId:'custom-'+(++customCounter);
+ studyBusy=true;uiBusy(true);
+ text('pipeline-status','Вычисляем реальные дорожки…');
  try{
   const selected=validRange(Number($('start-seconds').value),Number($('duration-seconds').value),length);
   const signature=selected.start.toFixed(3)+'|'+selected.duration.toFixed(3);
-  if(studySignature!==signature)clearStudy();
-  studySignature=signature;
-  range=selected;original=await pcm(selected,signal.signal);
-  if(studySurround?.length>=6)registerSurround(true);
-  if(signal.signal.aborted||id!==serial)return;
-  const start=performance.now();
-  timer=setInterval(()=>text('progress-detail','Разделяем '+elapsed(selected.duration)+' звука · прошло '+elapsed((performance.now()-start)/1000)),500);
-  const result=await separate(original,Number($('chunk-size').value),id);
-  if(signal.signal.aborted||id!==serial)return;
-  stems=result.stems;inferenceTime=result.seconds;
-  step('Готово','Дорожки разделены.',1);
-  text('inference-time',elapsed(inferenceTime));
-  text('speed-factor',(selected.duration/Math.max(.001,inferenceTime)).toFixed(2)+'×');
-  text('scene-length',elapsed(selected.duration));text('result-state','MRX · три дорожки готовы');
-  const levels=stemLevels(original,stems);
-  const isStereo=original.length===2;
-  $('center-suppression').disabled=!isStereo;
-  text('center-note',isStereo
-   ?'Экспериментальный фильтр. Попробуй 35–50%, если голос попал в музыку и эффекты. Он также может приглушить центральные звуки и музыку.'
-   :'Исходный звук моно: центральный канал отделить невозможно. Дополнительный фильтр недоступен.');
-  text('stem-diagnostics',levels
-   ?'Выделенная речь: '+levels.dialogueRelativeDb.toFixed(1)+' дБ относительно оригинала. Это уровень выделенной дорожки, не оценка точности модели.'+
-    (levels.dialogueRelativeDb < -24?' Модель почти не обнаружила речь — заметного удаления может не быть.':'')
-   :'Уровень дорожек определить не удалось.');
-  show('empty-state',false);show('result-details',true);
-  video.muted=true;
-  try{video.volume=0}catch{}
-  video.src=fileURL;video.load();mode='clean';
-  $('result-seek').min='0';$('result-seek').max=String(selected.duration);
-  $('result-seek').step='.05';$('result-seek').value='0';
-  video.addEventListener('loadedmetadata',()=>{if(range)video.currentTime=range.start},{once:true});
-  updateListeningButtons();
-  const clean=mixPCM(original,stems,{dialogue:0,music:1,effects:1},'stems');
-  registerStudyResult('mrx',clean,Math.max(0,inferenceTime*1000),{source:'local',label:'MRX · M&E'});
-  await selectStudyResult('mrx');
-  if($('quality-mode').value==='scnet'){
-   // A genuine second model analyzes the *remaining M&E*, not the original.
-   // SCNet is a vocals separator trained on music; on cartoons it may
-   // mistakenly suppress effects. Both results remain available for A/B.
-   step('Проверяем остатки речи','SCNet · отдельная модель, около 13 МБ; может работать медленно.');
-   const follow=await separate(clean,Math.min(10,Number($('chunk-size').value)),id,'scnet');
-   if(signal.signal.aborted||id!==serial)return;
-   scnetVocals=follow.stems.vocals;scnetBase=clean;scnetTime=follow.seconds;
-   const adjusted=subtractResidualVocals(scnetBase,scnetVocals,Number($('scnet-strength').value)/100);
-   registerStudyResult('mrx-scnet',adjusted,(inferenceTime+scnetTime)*1000,
-    {source:'local',label:'MRX + SCNet · пробная очистка'});
-   await selectStudyResult('mrx-scnet');
-   step('Готово','Оба настоящих результата доступны для A/B-сравнения.',1);
-   text('export-status','Сравни MRX и MRX + SCNet: особенно голос Мэйбл, музыку и звуковые эффекты.');
-  }else{
-   step('Готово','Дорожки разделены.',1);
-   text('export-status','Режим MRX готов. Для дополнительного теста выбери MRX + SCNet перед обработкой.');
+  if(studySignature!==signature){
+   reset();clearStudy();studySignature=signature;
   }
+  if(!original){
+   range=selected;original=await pcm(selected,controller.signal);
+   if(controller.signal.aborted||id!==serial)return;
+   if(!original?.length)throw Error('Не удалось извлечь звук выбранного фрагмента.');
+  }
+  initPlayer(selected);
+  let inputId='original',inputPCM=original,totalMs=0;
+  if(!isPreset){
+   inputId=custom.input;
+   inputPCM=stageAudio(inputId);
+   if(!inputPCM)throw Error('Исходная версия недоступна: выбери другую дорожку.');
+  }
+  for(const [i,part] of task.entries()){
+   if(part.input==='original'){inputId='original';inputPCM=original}
+   else if(part.input==='previous'&&!inputPCM)throw Error('Не найден предыдущий результат.');
+   const label=part.model==='mrx'?'MRX':'SCNet · окна '+Math.round(part.step*100)+'%';
+   step('Этап '+(i+1)+'/'+task.length+' · '+label,
+    'Обрабатываем '+elapsed(selected.duration)+' · время зависит от CPU и количества пересечений окон.');
+   const stageStarted=performance.now();
+   const tick=setInterval(()=>{
+    if(worker&&id===serial)text('progress-detail','Стадия '+(i+1)+'/'+task.length+
+     ' · '+label+' · прошло '+elapsed((performance.now()-stageStarted)/1000)+
+     '. Нажми «Прервать», если обработка слишком долгая.');
+   },1000);
+   let run;
+   try{run=await modelStage(part.model,inputId,inputPCM,part.step??null,id)}
+   finally{clearInterval(tick)}
+   if(controller.signal.aborted||id!==serial)return;
+   totalMs+=run.timeMs;if(run.cached)cacheHits++;else freshMs+=run.timeMs;
+   inputPCM=run.clean;
+   preview=run;
+   if(part.model==='mrx'&&inputId==='original'&&!studyResults.has('mrx')){
+    registerStudyResult('mrx',run.clean,run.timeMs,
+     {source:'local',label:'MRX · быстрый ориентир',meta:{model:'mrx',runKey:run.key,input:'original'}});
+    // Keep the first-pass result audible, even if an optional follow-up
+    // cannot finish or the user cancels its slow CPU inference.
+    await selectStudyResult('mrx');
+   }
+   // A preset MRX stage is a stable named intermediate input for later
+   // routes; a custom pass must not silently become that intermediate.
+   inputId=part.model==='mrx'&&part.input==='original'?'mrx':targetId+':stage'+i;
+  }
+  if(!preview)throw Error('Модель не вернула обработанный звук.');
+  const display=isPreset?route.label:
+   (custom.model==='mrx'?'MRX':'SCNet '+Math.round(custom.step*100)+'%')+
+   ' ← '+(custom.input==='original'?'Оригинал':studyResults.get(custom.input)?.label||'Дорожка');
+  registerStudyResult(targetId,inputPCM,totalMs,{
+   source:'local',label:display,
+   meta:{model:preview.model,input:!isPreset?custom.input:task[0].input,
+    step:preview.step,runKey:preview.key,
+    vocals:preview.vocals,base:preview.base,spentMs:freshMs,cached:cacheHits,route:routeId}
+  });
+  await selectStudyResult(targetId);
+  step('Готово',cacheHits?'Повторно использовано этапов: '+cacheHits+'.':'Новый результат готов.',1);
+  text('pipeline-status','Готово · '+display+'. Этот результат можно подать в любую модель следующим проходом.'+
+   (cacheHits?' Кэшировано этапов: '+cacheHits+'.':''));
+  text('export-status','Сравни все версии на той же секунде; скачивание использует выбранный вариант.');
  }catch(e){
-  if(e.name!=='AbortError'&&id===serial)error(e.message||String(e));
-  if(!stems)reset();
- }finally{if(timer)clearInterval(timer);if(abort===signal)abort=null;if(serial===id)uiBusy(false)}
+  if(id===serial&&e.name!=='AbortError'){
+   error(e.message||String(e));
+   text('pipeline-status','Ошибка модели: '+(e.message||String(e))+
+    '. Уже готовые результаты сохранены — можно выбрать другой маршрут.');
+  }
+ }finally{
+  if(abort===controller)abort=null;
+  if(serial===id){studyBusy=false;uiBusy(false)}
+ }
 }
-$('process-btn').onclick=()=>{void process()};$('cancel-btn').onclick=cancel;
+$('process-btn').onclick=()=>{void executeRoute($('quality-mode').value)};
+$('cancel-btn').onclick=cancel;
+$('pipeline-model').onchange=()=>{
+ $('pipeline-step').disabled=$('pipeline-model').value==='mrx';
+};
+$('pipeline-run').onclick=()=>{
+ const request=planCustom($('pipeline-model').value,$('pipeline-input').value,Number($('pipeline-step').value));
+ if(!request)return error('Параметры обработки некорректны.');
+ void executeRoute(null,request);
+};
 
 function gains(){return {dialogue:Number($('dialogue-gain').value)/100,music:Number($('music-gain').value)/100,effects:Number($('effects-gain').value)/100}}
 function getMix(){
@@ -412,248 +501,144 @@ async function exportVideo(){
 }
 $('video-btn').onclick=()=>{void exportVideo()};
 
-// Comparative bench. The only automatic inference is the verified local MRX.
-// External DnR/BandIt/SAM tracks are genuine user-provided audio, never fake AI.
+// Stage results are held in memory for the selected scene only. Switching
+// media or time range clears results and intermediate neural caches.
 function clearStudy(){
+ studyResults.clear();pipelineRuns.clear();customCounter=0;
+ studySignature='';activeStudy=null;stems=null;inferenceTime=0;
  scnetVocals=null;scnetBase=null;scnetTime=0;
- studyResults.clear();studySignature='';activeStudy=null;studySurround=null;studySurroundRate=0;
- $('study-surround-file').value='';$('study-me-file').value='';$('study-music-file').value='';
- $('study-effects-file').value='';$('study-external-seconds').value='';
- $('study-surround-options').classList.add('hidden');
- text('study-surround-status','5.1/7.1 WAV можно загрузить отдельно, не отправляя на сервер.');
- $('study-csv').disabled=true;
- text('study-import-status','');text('study-active-status','Для сравнения используй один и тот же фрагмент.');
+ show('scnet-tuning',false);$('study-csv').disabled=true;
+ text('study-active-status','Готовые версии одной сцены появятся здесь.');
+ text('pipeline-status','Выбирай оригинал или любую полученную версию.');
  renderStudyResults();
 }
-function studyScene(){
- if(!file||!length)throw Error('Сначала выбери исходное видео.');
- const selected=validRange(Number($('start-seconds').value),Number($('duration-seconds').value),length);
- const signature=selected.start.toFixed(3)+'|'+selected.duration.toFixed(3);
- if(studySignature&&studySignature!==signature){
-  reset();clearStudy();
- }
- studySignature=signature;
- return selected;
-}
-async function prepareStudySource(){
- if(original&&range&&studySignature===range.start.toFixed(3)+'|'+range.duration.toFixed(3))
-  return;
- if(!file||studyBusy||worker||exporting)throw Error('Сначала закончи текущую обработку.');
- const selected=studyScene(),controller=new AbortController();
- studyBusy=true;uiBusy(true);text('study-active-status','Декодируем исходный звук выбранного фрагмента…');
- try{
-  range=selected;original=await pcm(selected,controller.signal);
-  if(!original?.length)throw Error('Браузер не смог извлечь исходную дорожку.');
-  if(studySurround?.length>=6)registerSurround(true);
-  video.muted=true;try{video.volume=0}catch{}
-  video.src=fileURL;video.load();
-  video.addEventListener('loadedmetadata',()=>{if(range)video.currentTime=range.start},{once:true});
-  $('result-seek').min='0';$('result-seek').max=String(range.duration);
-  $('result-seek').step='.05';$('result-seek').value='0';
-  text('study-active-status','Исходный звук готов. Можно импортировать результаты других моделей.');
- }finally{studyBusy=false;uiBusy(false)}
-}
-async function ensureResearchSource(){
- if(original&&range&&file)return;
- await prepareStudySource();
-}
-function registerStudyResult(id,clean,processingMs=null,{source='external',label=null}={}){
- if(!researchMethod(id))throw Error('Неизвестный алгоритм для сравнения.');
- if(!original?.length||!range)throw Error('Нет исходной сцены для сравнения.');
+function registerStudyResult(id,clean,processingMs=null,{source='local',label=null,meta={}}={}){
+ if(!routeById(id)&&!id.startsWith('custom-'))
+  throw Error('Недопустимый идентификатор результата.');
+ if(!original?.length||!range)throw Error('Нет исходного звука сцены.');
  const canonical=stereoPCM(clean),target=Math.round(range.duration*RATE);
- if(canonical.some(c=>Math.abs(c.length-target)>Math.round(.20*RATE)))
-  throw Error('Дорожка не совпадает по времени с исходной сценой.');
- const normalized=canonical.map(c=>{
-  const out=new Float32Array(target);out.set(c.subarray(0,target));return out;
+ if(canonical.some(ch=>Math.abs(ch.length-target)>.2*RATE))
+  throw Error('Нейросеть вернула несовпадающую длительность.');
+ const normalized=canonical.map(ch=>{
+  const arr=new Float32Array(target);arr.set(ch.subarray(0,target));return arr;
  });
  const metrics=comparisonMetrics(stereoPCM(original),normalized,RATE);
- const elapsedMs=processingMs===null?null:Number(processingMs);
- const timing=elapsedMs===null?null:comparisonRecord(id,range.duration,elapsedMs,metrics);
- // Keep the mobile memory budget predictable for 90-second float32 stems.
- if(!studyResults.has(id)&&studyResults.size>=(mobile?3:7)){
-  const evict=[...studyResults.keys()].find(key=>key!=='mrx'&&key!==activeStudy)
-   ||[...studyResults.keys()].find(key=>key!==activeStudy);
-  if(evict)studyResults.delete(evict);
+ const timeMs=processingMs===null?null:Number(processingMs);
+ const timing=timeMs===null?null:calculateSpeed(range.duration,timeMs);
+ if(!studyResults.has(id)&&studyResults.size>=(mobile?4:10)){
+  const old=[...studyResults.keys()].find(k=>k!=='mrx'&&k!==activeStudy)||[...studyResults.keys()][0];
+  if(old)studyResults.delete(old);
  }
- studyResults.set(id,{id,label:label||researchMethod(id).name,source,clean:normalized,
-  timeMs:elapsedMs,metrics,timing});
+ studyResults.set(id,{id,label:label||routeById(id)?.label||id,source,clean:normalized,
+  timeMs,metrics,timing,meta});
  renderStudyResults();
- $('study-csv').disabled=studyResults.size===0;
-}
-function registerSurround(silent=false){
- if(!studySurround?.length||!original||!range)return;
- const center=Number($('study-center-gain').value)/100;
- const started=performance.now();
- const clean=multichannelME(studySurround,center);
- const processingMs=performance.now()-started;
- registerStudyResult('surround',clean,processingMs,{source:'channels',label:'5.1/7.1 · центр '+Math.round(center*100)+'%'});
- $('study-surround-options').classList.remove('hidden');
- const profile=channelSummary(studySurround,studySurroundRate||RATE);
- const fmtDb=n=>(20*Math.log10(Math.max(n,1e-9))).toFixed(1)+' дБ';
- text('study-surround-status',profile.length+' каналов. Центральный (C): '+fmtDb(profile[2].rms)+
-  ', боковые L/R: '+fmtDb(profile[0].rms)+' / '+fmtDb(profile[1].rms)+
-  '. Разделение центра может удалить и важные звуковые эффекты.');
- if(!silent||activeStudy==='surround')selectStudyResult('surround');
+ $('study-csv').disabled=!studyResults.size;
 }
 function renderStudyResults(){
  const root=$('study-results');root.replaceChildren();
- if(studyResults.size===0){
+ if(!studyResults.size){
   const p=document.createElement('p');p.className='hint';
-  p.textContent='Пока нет результатов. Обработай MRX, извлеки каналы 5.1 или импортируй WAV.';
-  root.append(p);return;
+  p.textContent='Пока нет результатов. Выбери маршрут и запусти обработку.';
+  root.append(p);
+ }else{
+  for(const item of studyResults.values()){
+   const b=document.createElement('button');b.type='button';
+   b.className='study-choice'+(activeStudy===item.id?' selected':'');
+   b.setAttribute('role','listitem');b.setAttribute('aria-pressed',String(activeStudy===item.id));
+   const name=document.createElement('strong');name.textContent=item.label;
+   const diff=document.createElement('span');diff.textContent='Уровень '+(item.metrics.changeDb>0?'+':'')+
+    item.metrics.changeDb.toFixed(1)+' дБ относительно оригинала';
+   const time=document.createElement('span');
+   time.textContent=item.timeMs===null?'Время не измерено':
+    'Инференс '+elapsed(item.timeMs/1000)+' · RTF '+item.timing.rtf.toFixed(2)+
+    ' · на 90 с ≈ '+elapsed(item.timing.at90Seconds);
+   const parent=document.createElement('span');
+   parent.textContent=item.meta?.input?'Вход: '+(item.meta.input==='original'?'оригинал':studyResults.get(item.meta.input)?.label||item.meta.input):'';
+   b.append(name,diff,time,parent);
+   b.onclick=()=>{void selectStudyResult(item.id)};
+   root.append(b);
+  }
  }
- for(const {id,label,source,metrics,timeMs,timing} of studyResults.values()){
-  const b=document.createElement('button');b.type='button';b.className='study-choice'+(activeStudy===id?' selected':'');
-  b.setAttribute('role','listitem');b.setAttribute('aria-pressed',String(activeStudy===id));
-  const title=document.createElement('strong');title.textContent=label;
-  const info=document.createElement('span');info.textContent=
-   'Уровень относительно исходника '+(metrics.changeDb>0?'+':'')+metrics.changeDb.toFixed(1)+' дБ · пик '+metrics.peakDb.toFixed(1)+' дБ';
-  const time=document.createElement('span');time.textContent=timeMs===null?'Время модели не измерено':
-   (source==='channels'?'Канальное сведение '+(timeMs/1000).toFixed(3)+' с · RTF '+timing.realTimeFactor.toFixed(3):
-    'Затрачено '+elapsed(timeMs/1000)+' · RTF '+timing.realTimeFactor.toFixed(2));
-  b.append(title,info,time);b.onclick=()=>{void selectStudyResult(id)};
-  root.append(b);
+ const select=$('pipeline-input'),selected=select.value;
+ select.replaceChildren();
+ const originalOption=document.createElement('option');originalOption.value='original';
+ originalOption.textContent='Исходный звук видео';select.append(originalOption);
+ for(const item of studyResults.values()){
+  const option=document.createElement('option');option.value=item.id;
+  option.textContent=item.label;select.append(option);
  }
+ select.value=[...select.options].some(o=>o.value===selected)?selected:'original';
 }
 async function selectStudyResult(id,rebuild=true){
  const item=studyResults.get(id);
  if(!item||!original||!range)return;
- pause();activeStudy=id;mode='clean';
+ pause();activeStudy=id;mode=id==='mrx'?'stems':'clean';
  show('empty-state',false);show('result-details',true);
  $('video-btn').disabled=false;$('wav-btn').disabled=false;
- const isMRX=id==='mrx'&&!!stems;
- show('scnet-tuning',id==='mrx-scnet'&&!!scnetVocals);
- for(const name of ['dialogue','music','effects'])$(name+'-gain').disabled=!isMRX;
+ const mrxisolated=id==='mrx'&&!!stems;
+ for(const name of ['dialogue','music','effects'])
+  $(name+'-gain').disabled=!mrxisolated;
+ const vocal=!!item.meta?.vocals;
+ scnetVocals=vocal?item.meta.vocals:null;
+ scnetBase=vocal?item.meta.base:null;
+ scnetTime=0;
+ show('scnet-tuning',vocal);
+ if(vocal){
+  $('scnet-strength').value=String(Math.round((item.meta.strength??.8)*100));
+  text('scnet-strength-value',$('scnet-strength').value+'%');
+ }
  $('center-suppression').disabled=original.length!==2;
  text('result-state',item.label);
  text('inference-time',item.timeMs===null?'—':elapsed(item.timeMs/1000));
- text('speed-factor',item.timing?item.timing.realTimeFactor.toFixed(2)+'× RTF':'—');
+ text('speed-factor',item.timing?item.timing.rtf.toFixed(2)+'× RTF':'—');
  text('scene-length',elapsed(range.duration));
- const levels=isMRX?stemLevels(original,stems):null;
- text('stem-diagnostics',isMRX&&levels
-  ?'Выделенная речь: '+levels.dialogueRelativeDb.toFixed(1)+' дБ относительно оригинала. Это уровень выделенной дорожки, а не показатель качества разделения.'
-  :'Внешний/канальный M&E: «Удалённая часть» = исходник − результат, не обязательно чистая речь.');
- text('study-active-status','Активный метод: '+item.label+
-  '. Прослушивание и кнопки скачивания выше используют именно его результат.');
+ const levels=mrxisolated?stemLevels(original,stems):null;
+ text('stem-diagnostics',levels?
+  'MRX выделила речь: '+levels.dialogueRelativeDb.toFixed(1)+' дБ относительно оригинала. Это не показатель точности.':
+  '«Удалённая часть» — разница исходного звука и выбранной версии, не всегда исключительно речь.');
+ text('study-active-status','Сейчас слушаешь '+item.label+'. Выбери любую версию и отправь на следующий проход.');
  updateListeningButtons();renderStudyResults();
- if(!video.src||video.src!==fileURL){
+ $('pipeline-input').value=id; // a single click is all it takes to chain.
+ if(video.src!==fileURL){
   video.src=fileURL;video.load();
   video.addEventListener('loadedmetadata',()=>{if(range)video.currentTime=range.start},{once:true});
  }
  if(rebuild)await previewAudio();
 }
-async function importSurround(f){
- if(!f)return;
- const selected=studyScene();
- text('study-surround-status','Читаем каналы WAV…');
- try{
-  const decoded=decodeWav(await f.arrayBuffer(),{
-   start:0,duration:null
-  });
-  if(![6,8].includes(decoded.channels.length))throw Error('Нужен именно шестиканальный 5.1 или восьмиканальный 7.1 WAV.');
-  await ensureResearchSource();
-  const at=decoded.meta.duration>=selected.start+selected.duration-.15&&selected.start>1?selected.start:0;
-  const frames=decoded.channels[0].length,from=Math.floor(at*decoded.meta.rate);
-  if(frames-from<Math.floor((selected.duration-.15)*decoded.meta.rate))
-   throw Error('Многоканальная дорожка не покрывает выбранные секунды фильма.');
-  const to=Math.min(frames,from+Math.round(selected.duration*decoded.meta.rate));
-  studySurround=resamplePCM(decoded.channels.map(ch=>ch.subarray(from,to)),decoded.meta.rate,RATE);
-  studySurroundRate=RATE;
-  registerSurround();
- }catch(e){text('study-surround-status','Ошибка: '+(e.message||String(e)))}
-}
-async function externalAudio(f){
- if(!f)throw Error('Выбери WAV либо музыку и эффекты.');
- if(f.size>220*1048576)throw Error('Для испытания нужен звуковой файл не больше 220 МиБ.');
- const raw=await f.arrayBuffer();
- try{
-  const decoded=decodeWav(raw);return {channels:decoded.channels,rate:decoded.meta.rate};
- }catch(e){
-  if(/\.wav$/i.test(f.name))throw e;
-  const ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:RATE});
-  try{
-   const decoded=await ctx.decodeAudioData(raw);
-   return {channels:Array.from({length:Math.min(decoded.numberOfChannels,2)},(_,i)=>decoded.getChannelData(i).slice()),rate:decoded.sampleRate};
-  }finally{await ctx.close().catch(()=>{})}
- }
-}
-async function runImport(){
- if(worker||exporting||studyBusy)return;
- clearError();
- studyBusy=true;uiBusy(true);
- text('study-import-status','Декодируем внешние дорожки на устройстве…');
- try{
-  const method=$('study-method').value;
-  if(!researchMethod(method)||researchMethod(method).type!=='import')throw Error('Выбери доступную внешнюю модель.');
-  const me=$('study-me-file').files[0],music=$('study-music-file').files[0],effects=$('study-effects-file').files[0];
-  if(!me&&(!music||!effects))throw Error('Загрузи готовый M&E либо обе дорожки: музыку и эффекты.');
-  const selected=studyScene();
-  // source prepare explicitly allows an external model without running MRX.
-  studyBusy=false;uiBusy(false);await ensureResearchSource();
-  studyBusy=true;uiBusy(true);
-  let mixed;
-  if(me){
-   const audioData=await externalAudio(me);
-   mixed=matchResultToSegment(audioData.channels,audioData.rate,selected.start,selected.duration,RATE);
-  }else{
-   const m=await externalAudio(music),e=await externalAudio(effects);
-   mixed=sumMusicEffects(
-    matchResultToSegment(m.channels,m.rate,selected.start,selected.duration,RATE),
-    matchResultToSegment(e.channels,e.rate,selected.start,selected.duration,RATE));
-  }
-  const sec=$('study-external-seconds').value.trim();
-  const measured=sec===''?null:Number(sec)*1000;
-  if(measured!==null&&(!Number.isFinite(measured)||measured<0))throw Error('Неверное время внешней обработки.');
-  registerStudyResult(method,mixed,measured,{source:'external',label:researchMethod(method).name});
-  await selectStudyResult(method);
-  text('study-import-status','Импортировано. Нажми «Слушать результат», сравни с MRX и сохрани CSV.');
- }catch(e){
-  text('study-import-status','Ошибка: '+(e.message||String(e)));
- }finally{studyBusy=false;uiBusy(false)}
-}
 $('scnet-strength').oninput=()=>{
+ const item=studyResults.get(activeStudy);
  text('scnet-strength-value',$('scnet-strength').value+'%');
- if(!scnetBase||!scnetVocals||!range||!original)return;
+ if(!item?.meta?.vocals||!item.meta.base)return;
  clearTimeout(editTimer);
  editTimer=setTimeout(()=>{
   try{
-   const adjusted=subtractResidualVocals(scnetBase,scnetVocals,Number($('scnet-strength').value)/100);
-   registerStudyResult('mrx-scnet',adjusted,(inferenceTime+scnetTime)*1000,
-    {source:'local',label:'MRX + SCNet · пробная очистка'});
-   if(activeStudy==='mrx-scnet')void selectStudyResult('mrx-scnet');
+   const strength=Number($('scnet-strength').value)/100;
+   const adjusted=subtractResidualVocals(item.meta.base,item.meta.vocals,strength);
+   registerStudyResult(item.id,adjusted,item.timeMs,{
+    label:item.label,source:item.source,meta:{...item.meta,strength}
+   });
+   if(activeStudy===item.id)void previewAudio();
   }catch(e){error(e.message)}
- },180);
-};
-$('study-import').onclick=()=>{void runImport()};
-$('study-surround-file').onchange=e=>{void importSurround(e.target.files?.[0])};
-$('study-center-gain').oninput=()=>{
- text('study-center-value',$('study-center-gain').value+'%');
- if(studySurround&&original)registerSurround();
-};
-$('study-source-wav').onclick=()=>{
- void (async()=>{
-  if(studyBusy||worker||exporting)return;
-  try{
-   clearError();await ensureResearchSource();
-   download(wavPCM16(stereoPCM(original)),fileName+'-'+
-    Math.round(range.start)+'s-'+Math.round(range.duration)+'s-source.wav');
-   text('study-active-status','Исходный WAV скачан. Загрузи его в MVSep и затем импортируй M&E сюда.');
-  }catch(e){error(e.message)}
- })();
+ },190);
 };
 $('study-csv').onclick=()=>{
- if(!studyResults.size)return;
- const quote=x=>'"'+String(x??'').replaceAll('"','""')+'"';
- const rows=[['Метод','Сцена, с','Обработка, с','RTF','Изменение RMS, дБ','Пик результата, дБ','Уровень удалённого звука, дБ']];
- for(const x of studyResults.values())rows.push([
-  x.label,range.duration,x.timeMs===null?'':(x.timeMs/1000).toFixed(2),
-  x.timing?.realTimeFactor.toFixed(3)||'',
-  x.metrics.changeDb,x.metrics.peakDb.toFixed(2),x.metrics.removedRmsDb.toFixed(2)
+ if(!studyResults.size||!range)return;
+ const q=x=>'"'+String(x??'').replaceAll('"','""')+'"';
+ const rows=[['Маршрут','Фрагмент, с','Время модели, с','RTF','Оценка 90 с, с','Изменение RMS, дБ','Пик результата, дБ','Вход','Шаг SCNet']];
+ for(const item of studyResults.values())rows.push([
+  item.label,range.duration,item.timeMs===null?'':(item.timeMs/1000).toFixed(2),
+  item.timing?.rtf.toFixed(3)||'',item.timing?.at90Seconds.toFixed(2)||'',
+  item.metrics.changeDb,item.metrics.peakDb.toFixed(2),item.meta?.input||'',item.meta?.step??''
  ]);
- download(new Blob(['\uFEFF'+rows.map(row=>row.map(quote).join(',')).join('\r\n')],{
-  type:'text/csv;charset=utf-8'}),fileName+'-methods.csv');
+ download(new Blob(['\uFEFF'+rows.map(row=>row.map(q).join(',')).join('\r\n')],{
+  type:'text/csv;charset=utf-8'}),fileName+'-five-routes.csv');
 };
 renderStudyResults();
+
+// Install the versioned app service worker. The shell does not register an
+// isolated quick app's SW on its behalf.
+if('serviceWorker' in navigator)
+ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 
 window.addEventListener('pagehide',()=>{worker?.terminate();abort?.abort();pause();revoke(fileURL);revoke(audioURL)});
 if(mobile)$('chunk-size').value='5';

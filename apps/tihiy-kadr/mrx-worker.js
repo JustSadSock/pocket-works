@@ -18,9 +18,10 @@ const describe=e=>{
  return (cause&&cause!==detail?detail+' ('+cause+')':detail).slice(0,400);
 };
 self.onmessage=async event=>{
- const {id,channels,chunk,kind='mrx'}=event.data||{};
+ const {id,channels,chunk,kind='mrx',scnetStep=.25}=event.data||{};
  if(!['mrx','scnet'].includes(kind))return self.postMessage({id,stage:'error',phase:'input',message:'Неизвестная модель'});
  if(!id||!Array.isArray(channels))return;
+ if(kind==='scnet'&&![.25,.5,1].includes(scnetStep))return self.postMessage({id,stage:'error',phase:'input',message:'Некорректный шаг окон SCNet'});
  let phase='library';
  const status=(stage,detail)=>{
   phase=stage;self.postMessage({id,stage,detail});
@@ -44,7 +45,7 @@ self.onmessage=async event=>{
      overlap:2,
      wasmPaths,
      weights:MODEL_ASSETS[kind],
-     ...(kind==='scnet'?{targets:['vocals']}:{ }),
+     ...(kind==='scnet'?{targets:['vocals'],step:scnetStep}:{ }),
      progress:({chunk:part,totalChunks})=>{
       if(totalChunks>1)status('model',(kind==='mrx'?'MRX':'SCNet')+' · фрагмент '+part+' из '+totalChunks);
      }
