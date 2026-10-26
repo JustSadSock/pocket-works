@@ -19,24 +19,24 @@ function play(action){
 const el=(name,props={},children='')=>{const x=document.createElement(name);Object.assign(x,props);x.innerHTML=children;return x;};
 function choose(kind){state=start(kind);open=true;notification='';resetDraft();restartArmed=false;save();render();}
 function turnText(){
-  if(state.finished)return state.winner===-1?'Ничья':\`Победа: \${names[state.winner]}\`;
+  if(state.finished)return state.winner===-1?'Ничья':`Победа: ${names[state.winner]}`;
   if(['influence','protocol'].includes(state.kind)){
     if(state.phase==='pass')return 'Передайте устройство';
     if(state.phase==='reveal')return 'Раунд завершён';
-    return \`Планирует: \${names[state.planner]}\`;
+    return `Планирует: ${names[state.planner]}`;
   }
-  return \`Ход: \${names[state.turn]}\`;
+  return `Ход: ${names[state.turn]}`;
 }
 function boardGrid(){
   const n=state.kind==='infection'?8:state.kind==='rotate'?6:7;
-  const kind=state.kind,container=el('div',{className:\`gridboard \${kind}\`});
+  const kind=state.kind,container=el('div',{className:`gridboard ${kind}`});
   container.style.setProperty('--n',n);
   const moves=new Set(legal(state));
   for(let i=0;i<n*n;i++){
     const v=state.cells[i],row=Math.floor(i/n),col=i%n;
     const selectable=kind==='rotate'&&state.stage==='rotate'||moves.has(i);
-    const button=el('button',{type:'button',className:\`cell \${v===-2?'gone':v===0?'red':v===1?'blue':'empty'} \${selectable?'legal':''}\`,disabled:!selectable||state.finished});
-    button.dataset.id=String(i);button.setAttribute('aria-label',\`Строка \${row+1}, столбец \${col+1}\`);
+    const button=el('button',{type:'button',className:`cell ${v===-2?'gone':v===0?'red':v===1?'blue':'empty'} ${selectable?'legal':''}`,disabled:!selectable||state.finished});
+    button.dataset.id=String(i);button.setAttribute('aria-label',`Строка ${row+1}, столбец ${col+1}`);
     if(kind==='bridge')button.style.setProperty('--row',row%2);
     if(kind==='rotate'&&state.stage==='rotate'){button.dataset.block=String(Math.floor(row/2)*3+Math.floor(col/2));button.classList.add('quarter');if(row%2===0)button.classList.add('qtop');if(col%2===0)button.classList.add('qleft');}
     if(selectable&&v===-1&&kind!=='bridge')button.classList.add('available');
@@ -47,7 +47,7 @@ function boardGrid(){
 function boardProtocol(){
   const b=el('div',{className:'gridboard protocol'});b.style.setProperty('--n',5);
   for(let i=0;i<25;i++){
-    const v=state.positions.indexOf(i),cell=el('div',{className:\`cell \${POINTS.includes(i)?'point':''} \${v===0?'red':v===1?'blue':''}\`});
+    const v=state.positions.indexOf(i),cell=el('div',{className:`cell ${POINTS.includes(i)?'point':''} ${v===0?'red':v===1?'blue':''}`});
     cell.textContent=POINTS.includes(i)&&v<0?'·':'';
     b.append(cell);
   }
@@ -58,23 +58,23 @@ function boardInfluence(){
   const score=scoreOfRegions(state);
   for(let i=0;i<5;i++){
     const [a,c]=state.regions[i],owner=ownerOfRegion(state,i);
-    const card=el('section',{className:\`region \${owner===0?'red':owner===1?'blue':''}\`},
-      \`<div class="region-top"><b>Регион \${i+1}</b><span>\${owner<0?'Нейтральный':names[owner]}</span></div><div class="region-score"><strong>\${a}</strong> : <strong>\${c}</strong></div>\`);
+    const card=el('section',{className:`region ${owner===0?'red':owner===1?'blue':''}`},
+      `<div class="region-top"><b>Регион ${i+1}</b><span>${owner<0?'Нейтральный':names[owner]}</span></div><div class="region-score"><strong>${a}</strong> : <strong>${c}</strong></div>`);
     if(state.phase==='plan'&&!state.finished)card.append(el('div',{className:'allocation'},
-      \`<button type="button" data-inc="\${i}" aria-label="Добавить в регион \${i+1}">+</button><span>+\${draft[i]}</span><button type="button" data-dec="\${i}" aria-label="Убрать из региона \${i+1}">−</button>\`));
+      `<button type="button" data-inc="${i}" aria-label="Добавить в регион ${i+1}">+</button><span>+${draft[i]}</span><button type="button" data-dec="${i}" aria-label="Убрать из региона ${i+1}">−</button>`));
     b.append(card);
   }
   $('board').append(b);
-  $('score').textContent=\`Регионы: \${score[0]} — \${score[1]}\`;
+  $('score').textContent=`Регионы: ${score[0]} — ${score[1]}`;
 }
 function button(label,action,disabled=false,cls=''){
-  const b=el('button',{type:'button',className:\`action \${cls}\`,textContent:label,disabled});
+  const b=el('button',{type:'button',className:`action ${cls}`,textContent:label,disabled});
   b.addEventListener('click',action);return b;
 }
 function controls(){
   const box=$('actions');
   if(state.finished){
-    if(state.kind==='protocol')$('score').textContent=\`Очки: \${state.scores[0]} — \${state.scores[1]}\`;
+    if(state.kind==='protocol')$('score').textContent=`Очки: ${state.scores[0]} — ${state.scores[1]}`;
     if(state.kind==='influence'&&state.last)box.append(el('p',{className:'note',textContent:'Последний раунд: '+state.last.map(a=>a.join(' · ')).join(' / ')}));
     box.append(button('Сыграть ещё',()=>choose(state.kind)));return;
   }
@@ -89,7 +89,7 @@ function controls(){
   }
   if(state.kind==='bridge'||state.kind==='infection'||state.kind==='void')return;
   if(state.phase==='pass'){
-    $('board').replaceChildren(el('div',{className:'handoff'},\`<h2>Передайте устройство</h2><p>План первого игрока скрыт. Следующим ходит второй игрок.</p>\`));
+    $('board').replaceChildren(el('div',{className:'handoff'},`<h2>Передайте устройство</h2><p>План первого игрока скрыт. Следующим ходит второй игрок.</p>`));
     box.append(button('Я второй игрок — начать',()=>play({type:'continue'})));return;
   }
   if(state.phase==='reveal'){
@@ -99,13 +99,13 @@ function controls(){
   }
   if(state.kind==='influence'){
     const total=draft.reduce((a,b)=>a+b,0);
-    box.append(el('p',{className:'note',textContent:\`Выбрано \${total} из 3 жетонов. Красный и синий счётчики — накопленное влияние.\`}));
+    box.append(el('p',{className:'note',textContent:`Выбрано ${total} из 3 жетонов. Красный и синий счётчики — накопленное влияние.`}));
     box.append(button('Зафиксировать распределение',()=>play({type:'submit',alloc:draft}),total!==3));return;
   }
   const grid=el('div',{className:'plan'});const dirs=['up','left','stay','right','down'];
   for(let step=0;step<2;step++){
     const row=el('div',{className:'command-row'});
-    row.append(el('b',{textContent:\`Шаг \${step+1}\`}));
+    row.append(el('b',{textContent:`Шаг ${step+1}`}));
     for(const dir of dirs)row.append(button(commandLabels[dir],()=>{commands[step]=dir;render()},false,commands[step]===dir?'selected':''));
     grid.append(row);
   }
@@ -114,6 +114,7 @@ function controls(){
 }
 const commandLabels={up:'↑',down:'↓',left:'←',right:'→',stay:'•'};
 function render(){
+  $('resume').hidden=!state;
   $('menu').hidden=open;
   $('match').hidden=!open;
   $('back').hidden=!open;
@@ -121,12 +122,12 @@ function render(){
   $('title').textContent=MODES[state.kind].name;
   $('subtitle').textContent=MODES[state.kind].subtitle;
   $('turn').textContent=turnText();
-  $('turn').className=\`turn \${state.finished?'':names[(state.kind==='protocol'||state.kind==='influence')?state.planner:state.turn]==='Красные'?'red':'blue'}\`;
+  $('turn').className=`turn ${state.finished?'':names[(state.kind==='protocol'||state.kind==='influence')?state.planner:state.turn]==='Красные'?'red':'blue'}`;
   $('rules').textContent=MODES[state.kind].rule;
   $('board').replaceChildren();$('actions').replaceChildren();$('score').textContent='';
-  $('round').textContent=['influence','protocol'].includes(state.kind)?\`Раунд \${Math.min(8,state.round+1)} из 8\`:'';
+  $('round').textContent=['influence','protocol'].includes(state.kind)?`Раунд ${Math.min(8,state.round+1)} из 8`:'';
   if(state.kind==='influence')boardInfluence();
-  else if(state.kind==='protocol'){if(state.phase!=='pass')boardProtocol();$('score').textContent=\`Очки: \${state.scores[0]} — \${state.scores[1]}\`;}
+  else if(state.kind==='protocol'){if(state.phase!=='pass')boardProtocol();$('score').textContent=`Очки: ${state.scores[0]} — ${state.scores[1]}`;}
   else boardGrid();
   controls();
   $('message').textContent=notification;
@@ -155,6 +156,6 @@ $('board').addEventListener('click',e=>{
 window.addEventListener('pagehide',save);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
 $('resume').hidden=!state;
-$('catalog').replaceChildren(...Object.entries(MODES).map(([key,game],i)=>el('button',{type:'button',className:'game-option'},\`<span class="game-number">\${i+1}</span><span class="game-copy"><b>\${game.name}</b><small>\${game.subtitle}</small></span><span class="arrow">→</span>\`)));
+$('catalog').replaceChildren(...Object.entries(MODES).map(([key,game],i)=>el('button',{type:'button',className:'game-option'},`<span class="game-number">${i+1}</span><span class="game-copy"><b>${game.name}</b><small>${game.subtitle}</small></span><span class="arrow">→</span>`)));
 [...$('catalog').children].forEach((item,i)=>item.dataset.game=Object.keys(MODES)[i]);
 render();
