@@ -7,15 +7,16 @@ self.onmessage=e=>{
  try{
   const started=performance.now();
   const layers=createEnhancementLayers(base,vocals,{
-   progress:fraction=>self.postMessage({id,stage:'progress',fraction})
+   progress:fraction=>self.postMessage({id,stage:'progress',fraction:.5*fraction})
   });
   const clean=base.map((ch,i)=>Float32Array.from(ch,(x,j)=>x-vocals[i][j]));
   const artifact=prepareBuzzLayer(clean,vocals,fraction=>self.postMessage({
-   id,stage:'progress',fraction:.55+.4*fraction
+   id,stage:'progress',fraction:.5+.45*fraction
   }));
   const preparedTexture=prepareTextureLayer(clean,vocals);
   layers.artifact=artifact;layers.texture=preparedTexture.channels;
   const coverage=preparedTexture.coverage;
+  self.postMessage({id,stage:'progress',fraction:1});
   const transfer=[];
   for(const key of ['spectral','reconstruct','center','artifact','texture'])
    for(const channel of layers[key])transfer.push(channel.buffer);
