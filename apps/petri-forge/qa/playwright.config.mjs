@@ -4,7 +4,7 @@ const repositoryRoot=fileURLToPath(new URL('../../../',import.meta.url));
 
 export default defineConfig({
  testDir:'.',
- testMatch:'cockpit-smoke.spec.js',
+ testMatch:['cockpit-smoke.spec.js','agent-journey.spec.js','field-cockpit.spec.js','perekos.spec.js'],
  timeout:60_000,
  expect:{timeout:12_000},
  workers:1,
