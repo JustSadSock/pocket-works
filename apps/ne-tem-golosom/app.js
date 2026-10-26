@@ -434,6 +434,7 @@ function updateFilmCleaner(){
  const ready=!!selected&&scenePrepareStep==='sound'&&!filmCleanController&&!videoExportController;
  $('film-clean-start').disabled=!ready||!supportsVideoExport();
  $('film-clean-start').textContent=selectedSound()==='neural'?'Подготовить без диалогов':selectedSound()==='mute'?'Создать видео без звука':'Подготовить с исходным звуком';
+ $('media-render').disabled=!ready||!supportsVideoExport();
  $('film-low-memory').disabled=selectedSound()!=='neural'||!!filmCleanController||!!videoExportController;
  document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.disabled=!!filmCleanController||!!videoExportController);
  $('film-clean-cancel').classList.toggle('hidden',!filmCleanController);
@@ -1601,19 +1602,21 @@ $('film-low-memory').onchange=()=>{
  updateFilmCleaner();
 };
 document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.onchange=()=>{
- if(filmPreparedBlob)clearExportPreview();
+ if(videoExportBlob)clearExportPreview();
  updateFilmCleaner();
  $('film-clean-status').textContent='Выбран '+(FILM_MODES.find(x=>x.id===filmMode())?.name||'Open-Unmix')+
   '. Нажми «Подготовить звук без голосов» либо продолжи — обработка начнётся перед переходом.';
 });
-$('film-skip').onchange=()=>{
- if(filmPreparedBlob)clearExportPreview();
- updateFilmCleaner();updateConfirmAction();
- $('film-clean-status').textContent=$('film-skip').checked?
-  'Нейросеть пропущена. Если в исходном видео есть голоса, они не будут удалены.':
-  'Удаление голосов снова включено. Подготовь звук или продолжи со сценой.';
+document.querySelectorAll('input[name="film-sound-choice"]').forEach(input=>{
+ input.onchange=updateSoundChoice;
+});
+$('trim-edit-range').onclick=()=>{
+ if(videoExportController||filmCleanController)return;
+ if(videoExportBlob)clearExportPreview();
+ setScenePrepStep('trim');
 };
-$('film-clean-start').onclick=()=>{void prepareFilmScene()};
+
+$('film-clean-start').onclick=()=>{void prepareSelectedScene()};
 $('film-clean-cancel').onclick=()=>filmCleanController?.abort();
 $('film-local-file').onchange=e=>{
  const file=e.target.files?.[0];if(!file)return;
@@ -1624,8 +1627,7 @@ $('film-local-file').onchange=e=>{
 };
 $('media-quality').oninput=invalidateMediaResult;
 $('media-resolution').onchange=invalidateMediaResult;
-$('media-keep-audio').onchange=invalidateMediaResult;
-$('media-render').onclick=processMedia;
+$('media-render').onclick=()=>{void prepareSelectedScene()};
 $('media-cancel').onclick=()=>videoExportController?.abort();
 $('media-discard').onclick=()=>{clearExportPreview();updateMediaLab()};
 $('preview-original').onclick=()=>showTrimPreview('source');
