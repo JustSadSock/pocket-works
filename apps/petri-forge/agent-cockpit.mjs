@@ -23,7 +23,7 @@ export function mountAgentCockpit(api){
   }
  }
  const modelLabels={grid:'Q-learning · таблица состояний',combat:'Эволюция · тактическая политика',race:'Эволюция · управление машиной',perekos:'Эволюция · тактика мага'};
- const modelName=(mode,career)=>mode==='grid'&&career?.algorithms?.grid==='neural'?'Нейросеть · Actor–Critic (градиенты)':modelLabels[mode];
+ const modelName=(mode,career)=>mode==='grid'&&career?.algorithms?.grid==='ppo'?'Нейросеть · PPO-Clip + GAE':mode==='grid'&&career?.algorithms?.grid==='neural'?'Нейросеть · Actor–Critic (градиенты)':modelLabels[mode];
  const worldLabels={grid:'Мир',combat:'Бой',race:'Гонка',perekos:'Магия'};
  function makeButton(text,action,disabled=false){
   const button=document.createElement('button');button.type='button';button.textContent=text;
@@ -97,7 +97,7 @@ export function mountAgentCockpit(api){
   try{
    const model=await readBrain(v.active,v.mode);
    if(ticket!==observerTicket||state().active?.id!==v.active.id||state().mode!==v.mode)return;
-   const neural=model?.type==='neural-actor-critic';
+   const neural=['neural-actor-critic','neural-ppo'].includes(model?.type);
    const size=neural?model.weights.reduce((n,layer)=>n+layer.reduce((sum,row)=>sum+row.length,0),0):v.mode==='grid'?model?.q?.length:v.mode==='race'?(Array.isArray(model)?model.length:null):model?.weights?.length;
    const label=model?(neural?size+' весов · '+(model.updates||0)+' обновлений':v.mode==='grid'?size+' изученных состояний':size+' параметров политики'):'модель ещё не сохранена';
    $('cpObserverModel').textContent=modelName(v.mode,v.active)+' · '+label;
@@ -148,7 +148,7 @@ export function mountAgentCockpit(api){
   for(const n of setting.counts){for(const id of ['cpBatch','cpQuickBatch']){const o=document.createElement('option');o.value=String(n);o.textContent=fmt(n)+' '+setting.units;$(id).append(o);}}
   $('cpBatch').value=$('hubBatch').value;$('cpQuickBatch').value=$('hubBatch').value;
   if(observerOpen){$('cpObserverPractice').textContent=v.active.branches[current].history.at(-1)?.label||'В этой среде нет тренировок.';}
-  $('cpSetupHelp').textContent=current==='grid'?(v.active.algorithms?.grid==='neural'?'Эпизод — одна попытка пройти мир. Actor–Critic обновляет веса нейросети по ошибке прогноза; это ещё не PPO.':'Эпизод — одна попытка пройти мир. Повторное обучение продолжит изученную Q-таблицу.'):
+  $('cpSetupHelp').textContent=current==='grid'?(v.active.algorithms?.grid==='neural'?'Эпизод — одна попытка пройти мир. Actor–Critic обновляет веса нейросети по ошибке прогноза; это ещё не PPO.':v.active.algorithms?.grid==='ppo'?'PPO копит собственные действия и обновляет политику партиями с GAE, ограничением изменения стратегии и несколькими эпохами.':'Эпизод — одна попытка пройти мир. Повторное обучение продолжит изученную Q-таблицу.'):
    current==='combat'?'Поколение — серия боёв. Агент сохраняет только выбранные изменения тактики.':
    current==='race'?'Кандидат — новый вариант управления настоящим автомобилем.':
    'Поколение — боевые раунды против соперников и контрольная оценка.';

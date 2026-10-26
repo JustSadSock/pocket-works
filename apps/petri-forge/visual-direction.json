@@ -3,13 +3,13 @@
   "status": "ready",
   "product": "petri-forge",
   "direction": {
-    "premise": "An experimental petri dish for an independently trainable Q-agent or a genuine backpropagating neural actor-critic, observed in the same simulation.",
+    "premise": "A laboratory for independently saved Q tables and real neural policies, now including PPO-Clip learning on collected on-policy experience.",
     "composition": "A dominant world viewport paired with one compact control rail. A single algorithm selector reveals whether the saved brain is a Q table or an MLP, with no speculative training statistics.",
     "shapeLanguage": "Sharp laboratory tiles and small squared control clusters frame the simulation; specimen identities use initials in dark mineral-green tiles rather than decorative character portraits.",
     "surfaceAndMaterial": "Flat opaque cell pigments retain the source renderer. Muted teal instrument metal surrounds a near-black culture surface without glass effects.",
     "paletteLogic": "Blue marks the learner and spawn, green marks the goal, red the harmful cells, and yellow the rewards. Grey walls preserve legibility over a dark empty grid.",
     "typography": "System sans-serif labels keep controls legible at compact sizes. The product name is a small bench label rather than a decorative title.",
-    "signature": "Switch between the inherited Q-table and a separately checkpointed trainable neural brain, observe the same 7x7 scene, then compare actual holdout outcomes.",
+    "signature": "Select PPO in the same petri-dish world and watch the policy learn across batches without overwriting the historic Q or actor–critic brain.",
     "distinction": "Unlike the video processing console or turn-based board, PetriForge makes the live world primary, backed by a persistent library of independently trained policy specimens."
   },
   "architecture": {
@@ -18,8 +18,8 @@
     "navigation": "editor-toolbox",
     "chromeTopology": "tiled-grid",
     "dominantMotion": "none",
-    "primaryVerb": "Choose one saved researcher, select Q-learning or neural actor-critic, train in the simulated world, save, evaluate and inspect actual weights.",
-    "physicalFeedback": "During neural learning the same simulation awards actual rewards; the worker modifies stored float weights by analytic gradients, and the rail reports saved weight count and update count.",
+    "primaryVerb": "Select a learning algorithm, run real simulation episodes, pause/stop, inspect the learned brain, compare archived agents and validate on unseen scenarios.",
+    "physicalFeedback": "Policy gradients update true stored weights; rollouts, KL divergence and optimization rounds reflect actual computation, never decorative charts.",
     "spatialRationale": "The previous stage's field-first desktop and stacked portrait layout remains intact; an algorithm row appears only when a grid experiment is selected, avoiding controls for algorithms unsupported by other worlds.",
     "comparisons": [
       {
@@ -77,7 +77,7 @@
     "character": "Discrete and immediate: state changes occur on cell boundaries because the learner samples one action at a time.",
     "action": "Starting training updates the rail's real progress; a specimen selection loads its actual model; activating perception reveals the agent's sampled neighborhood.",
     "anticipation": "The selected tool and tile value expose the pending edit before the pointer touches the culture.",
-    "response": "Changing algorithm loads the independent saved brain asynchronously with a worker acknowledgement. Old Q-values stay intact and the neural network's actual weights evolve.",
+    "response": "PPO collects samples before changing the policy, reports headless-training progress, and persists its own checkpoint after an entire session.",
     "followThrough": "The user can replay the latest recorded attempt or test when none exists and can verify cloned skills after reload.",
     "interruption": "Training can be stopped; model switches await worker confirmation; the specimen library reports write failures instead of pretending success.",
     "reducedMotion": "There are no decorative transitions to remove; discrete cell changes retain all simulation information."

@@ -146,3 +146,36 @@ test('real neural actor-critic trains, saves, restores and preserves the separat
  expect(swapped).toEqual(learned);
  expect(errors).toEqual([]);
 });
+
+test('PPO produces gradient updates, persists exactly and retains independent Q/actor brains',async({page})=>{
+ test.setTimeout(150000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ await page.locator('#cpAlgorithm').selectOption('ppo');
+ await expect.poll(async()=>page.evaluate(()=>window.PetriForgeRuntime.grid.getModel().then(s=>s.type)),{timeout:18000}).toBe('neural-ppo');
+ await page.locator('#cpQuickBatch').selectOption('100');
+ const initial=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
+ await page.locator('#cpTrain').click();
+ await expect(page.locator('#hubRuns')).toHaveText('1',{timeout:130000});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:10000});
+ const learned=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
+ expect(learned.type).toBe('neural-ppo');
+ expect(learned.updates).toBeGreaterThan(0);
+ expect(learned.weights).not.toEqual(initial.weights);
+ expect(learned.training.algorithm).toBe('ppo-clip');
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:25000});
+ await expect(page.locator('#cpAlgorithm')).toHaveValue('ppo');
+ expect(await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel())).toEqual(learned);
+ await page.locator('#cpInspect').click();
+ await expect(page.locator('#cpObserverModel')).toContainText('PPO');
+ await page.locator('#cpAlgorithm').selectOption('qlearning');
+ await expect.poll(async()=>page.evaluate(()=>window.PetriForgeRuntime.grid.getModel().then(s=>s.type))).toBe('qlearning');
+ await page.locator('#cpAlgorithm').selectOption('neural');
+ await expect.poll(async()=>page.evaluate(()=>window.PetriForgeRuntime.grid.getModel().then(s=>s.type))).toBe('neural-actor-critic');
+ await page.locator('#cpAlgorithm').selectOption('ppo');
+ await expect.poll(async()=>page.evaluate(()=>window.PetriForgeRuntime.grid.getModel().then(s=>s.type))).toBe('neural-ppo');
+ expect(await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel())).toEqual(learned);
+ expect(errors).toEqual([]);
+});

@@ -24,6 +24,6 @@ document.querySelector('#agentHub .cp-live-fields').insertAdjacentHTML('beforebe
   <span>АЛГОРИТМ ОБУЧЕНИЯ</span>
   <select id="cpAlgorithm" aria-label="Алгоритм клеточного мира">
    <option value="qlearning">Q-learning · таблица</option>
-   <option value="neural">Нейросеть · Actor–Critic</option>
+   <option value="neural">Нейросеть · Actor–Critic</option><option value="ppo">PPO · с GAE</option>
   </select>
  </label>`);

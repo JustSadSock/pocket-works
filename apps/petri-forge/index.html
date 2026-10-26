@@ -54,7 +54,7 @@
         <button id="playPause" class="btn-primary">▶ Наблюдать</button>
         <button id="step">Шаг</button>
         <button id="reset">Вернуть на старт</button>
-        <label>Агент <select id="agentSelect"><option value="qlearning">Q-learning</option><option value="neural">Нейросеть · Actor–Critic</option><option value="random">Случайный</option></select></label>
+        <label>Агент <select id="agentSelect"><option value="qlearning">Q-learning</option><option value="neural">Нейросеть · Actor–Critic</option><option value="ppo">Нейросеть · PPO</option><option value="random">Случайный</option></select></label>
         <div class="hud-stat">Шаги <b id="steps">0</b></div>
         <div class="hud-stat">Награда <b id="trew">0</b></div>
       </div>
@@ -103,7 +103,7 @@
   </div>
   <div class="footnote">Синяя точка — агент. Перетаскивайте старт и зелёную цель. Обучение работает локально, без сервера. <span id="footFeedback"></span></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="PetriForge" data-app-version="0.10.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="PetriForge" data-app-version="0.11.0"></script>
 <script src="./app.js" type="module"></script>
 <script src="./world-modes.mjs" type="module"></script>
 <script src="./agent-hub.mjs" type="module"></script>
