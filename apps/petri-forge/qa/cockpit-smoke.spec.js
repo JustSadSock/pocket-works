@@ -115,3 +115,34 @@ test('specimen library clones and archives real training without losing either b
  expect(await page.evaluate(()=>window.PetriForgeRuntime.grid.setObservationOverlay(false))).toBe(false);
  expect(errors).toEqual([]);
 });
+
+test('real neural actor-critic trains, saves, restores and preserves the separate Q brain',async({page})=>{
+ test.setTimeout(120000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ expect((await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel())).type).toBe('qlearning');
+ await page.locator('#cpAlgorithm').selectOption('neural');
+ await expect.poll(async()=>page.evaluate(()=>window.PetriForgeRuntime.grid.getModel().then(m=>m.type))).toBe('neural-actor-critic');
+ await expect(page.locator('#cpTrain')).toBeEnabled();
+ await page.locator('#cpQuickBatch').selectOption('100');
+ await page.locator('#cpTrain').click();
+ await expect(page.locator('#hubRuns')).toHaveText('1',{timeout:85000});
+ const learned=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
+ expect(learned.type).toBe('neural-actor-critic');
+ expect(learned.updates).toBeGreaterThan(0);
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ await expect(page.locator('#cpAlgorithm')).toHaveValue('neural');
+ const reloaded=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
+ expect(reloaded).toEqual(learned);
+ await page.locator('#cpInspect').click();
+ await expect(page.locator('#cpObserverModel')).toContainText('весов');
+ await page.locator('#cpAlgorithm').selectOption('qlearning');
+ await expect.poll(async()=>page.evaluate(()=>window.PetriForgeRuntime.grid.getModel().then(m=>m.type))).toBe('qlearning');
+ await page.locator('#cpAlgorithm').selectOption('neural');
+ await expect.poll(async()=>page.evaluate(()=>window.PetriForgeRuntime.grid.getModel().then(m=>m.type))).toBe('neural-actor-critic');
+ const swapped=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
+ expect(swapped).toEqual(learned);
+ expect(errors).toEqual([]);
+});
