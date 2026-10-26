@@ -1,5 +1,6 @@
-import {RATE,MAX_SECONDS,validRange,suppressStereoCenter,wavPCM16,elapsed,safeName} from './audio-utils.js';
+import {RATE,MAX_SECONDS,validRange,wavPCM16,elapsed,safeName} from './audio-utils.js';
 import {stereoPCM,comparisonMetrics,subtractResidualVocals} from './research-core.js';
+import {renderEnhancedPCM} from './audio-enhance.js';
 import {ROUTES,routeById,makeRunKey,calculateSpeed} from './pipeline-config.js';
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
 const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
@@ -29,7 +30,7 @@ function pause(){video.pause();sourceVideo.pause();audio.pause()}
 function reset(){
  pause();revoke(audioURL);audioURL='';audio.removeAttribute('src');audio.load();
  video.removeAttribute('src');video.load();original=null;range=null;activeStudy=null;
- scnetVocals=null;scnetBase=null;show('scnet-tuning',false);
+ scnetVocals=null;scnetBase=null;show('scnet-tuning',false);updateEnhancementUI();
  show('result-details',false);show('empty-state',true);text('result-state','Ожидание обработки');text('export-status','');text('stem-diagnostics','');text('result-position','0:00');$('result-seek').value=0;text('listen-btn','▶ Слушать результат');
 }
 function cancel(){
@@ -200,13 +201,36 @@ function initPlayer(selected){
  $('result-seek').min='0';$('result-seek').max=String(selected.duration);
  $('result-seek').step='.05';$('result-seek').value='0';
 }
+function prepareEffects(base,vocals,id){
+ return new Promise((resolve,reject)=>{
+  const w=new Worker('./enhance-worker.js',{type:'module'});worker=w;
+  const finish=()=>{w.terminate();if(worker===w)worker=null;if(pendingWorkerReject===rejectPending)pendingWorkerReject=null};
+  const rejectPending=reason=>{finish();reject(reason)};
+  pendingWorkerReject=rejectPending;
+  w.onerror=e=>{e.preventDefault();rejectPending(Error('Не удалось подготовить DSP-фильтры: '+(e.message||'ошибка Worker')))};
+  w.onmessageerror=()=>rejectPending(Error('Браузер не смог передать подготовленные звуковые фильтры.'));
+  w.onmessage=e=>{
+   const p=e.data||{};if(p.id!==id)return;
+   if(p.stage==='progress')step('Готовим A/B-фильтры','Спектральная обработка '+Math.round(p.fraction*100)+'%',p.fraction);
+   if(p.stage==='error')rejectPending(Error(p.message||'Ошибка спектральной обработки'));
+   if(p.stage==='done'){finish();resolve(p)}
+  };
+  // Keep the original cached PCM and model output intact on the main thread.
+  const input=base.map(ch=>ch.slice()),voice=vocals.map(ch=>ch.slice());
+  w.postMessage({id,base:input,vocals:voice},[...input,...voice].map(ch=>ch.buffer));
+ });
+}
 async function modelStage(model,id){
  const key=makeRunKey(model),cached=pipelineRuns.get(key);
  if(cached)return {...cached,cached:true};
  const input=stereoPCM(original);
  const response=await separate(input,Number($('chunk-size').value),id,model,1);
  if(id!==serial||abort?.signal.aborted)throw new DOMException('Прервано','AbortError');
- const run={model,key,vocals:response.stems.vocals,base:input,timeMs:response.seconds*1000};
+ step('Готовим три DSP-фильтра','Нейросеть завершила проход. Подготавливаем A/B без повторного инференса.');
+ const prepared=await prepareEffects(input,response.stems.vocals,id);
+ if(id!==serial||abort?.signal.aborted)throw new DOMException('Прервано','AbortError');
+ const run={model,key,vocals:response.stems.vocals,base:input,layers:prepared.layers,
+  timeMs:response.seconds*1000,dspMs:prepared.seconds*1000};
  pipelineRuns.set(key,run);
  return {...run,cached:false};
 }
@@ -237,9 +261,11 @@ async function executeRoute(routeId){
   try{run=await modelStage(model,id)}finally{clearInterval(tick)}
   if(controller.signal.aborted||id!==serial)return;
   const strength=Number($('scnet-strength').value)/100;
-  const clean=subtractResidualVocals(run.base,run.vocals,strength);
+  const effects={strength,spectral:true,reconstruct:true,center:true,centerAmount:35};
+  const clean=renderEnhancedPCM(run.base,run.vocals,run.layers,effects);
   registerStudyResult(routeId,clean,run.timeMs,{
-   label:route.label,meta:{model,runKey:run.key,vocals:run.vocals,base:run.base,strength,cached:run.cached}
+   label:route.label,meta:{model,runKey:run.key,vocals:run.vocals,base:run.base,layers:run.layers,
+    effects,dspMs:run.dspMs,cached:run.cached}
   });
   await selectStudyResult(routeId);
   step('Готово',run.cached?'Использован кэш модели.':'Новая версия готова.',1);
@@ -256,14 +282,15 @@ $('cancel-btn').onclick=cancel;
 function getMix(){
  if(!original||!activeStudy)throw Error('Нет выбранного результата.');
  if(mode==='original')return stereoPCM(original);
- const clean=studyResults.get(activeStudy)?.clean;
- if(!clean)throw Error('Результат недоступен.');
+ const item=studyResults.get(activeStudy);
+ if(!item?.meta?.layers)throw Error('DSP-дорожки ещё не подготовлены.');
+ const clean=renderEnhancedPCM(item.meta.base,item.meta.vocals,item.meta.layers,item.meta.effects);
  if(mode==='speech')return clean.map((channel,i)=>{
   const out=new Float32Array(channel.length),src=original[Math.min(i,original.length-1)];
   for(let j=0;j<out.length;j++)out[j]=(src[j]||0)-channel[j];
   return out;
  });
- return suppressStereoCenter(clean,Number($('center-suppression').value),RATE);
+ return clean;
 }
 function updateListeningButtons(){
  for(const name of ['original','clean','speech']){
@@ -297,10 +324,50 @@ function setMode(value){
 $('original-btn').onclick=()=>setMode('original');
 $('clean-btn').onclick=()=>setMode('clean');
 $('speech-btn').onclick=()=>setMode('speech');
-$('center-suppression').oninput=()=>{
+function updateEnhancementUI(){
+ const item=studyResults.get(activeStudy),state=item?.meta?.effects;
+ const available=!!item?.meta?.layers;
+ for(const [key,id] of [['spectral','enhance-spectral'],['reconstruct','enhance-reconstruct'],['center','enhance-center']]){
+  $(id).disabled=!available||(key==='center'&&original?.length!==2);
+  $(id).checked=state?.[key]??true;
+ }
+ const centerAvailable=available&&original?.length===2;
+ $('center-suppression').disabled=!centerAvailable||!state?.center;
+ $('center-suppression').value=String(state?.centerAmount??35);
  text('center-value',$('center-suppression').value+'%');
- if(mode==='speech'||mode==='original'){mode='clean';updateListeningButtons();}
- clearTimeout(editTimer);editTimer=setTimeout(()=>{void previewAudio()},220);
+ $('scnet-strength').disabled=!available;
+ $('enhance-disable-all').disabled=!available;
+ const enabled=available&&(state.spectral||state.center&&centerAvailable||state.reconstruct);
+ text('enhance-disable-all',enabled?'Выключить все фильтры':'Включить все фильтры');
+ text('enhance-ready',available?'Готово · без нового инференса':'После обработки');
+ text('enhance-info',available?
+  'DSP: '+elapsed((item.meta.dspMs||0)/1000)+'. Переключатели меняют только сведение аудио, без расчёта модели или спектральных масок.':
+  'После обработки подготовим все варианты один раз.');
+}
+function refreshEnhancedPreview(){
+ if(!activeStudy||!studyResults.get(activeStudy)?.meta?.layers)return;
+ if(mode!=='clean'){mode='clean';updateListeningButtons();}
+ clearTimeout(editTimer);
+ editTimer=setTimeout(()=>{void previewAudio()},80);
+}
+for(const [key,id] of [['spectral','enhance-spectral'],['center','enhance-center'],['reconstruct','enhance-reconstruct']]){
+ $(id).onchange=()=>{
+  const item=studyResults.get(activeStudy);if(!item?.meta?.effects)return;
+  item.meta.effects[key]=$(id).checked;
+  updateEnhancementUI();refreshEnhancedPreview();
+ };
+}
+$('enhance-disable-all').onclick=()=>{
+ const item=studyResults.get(activeStudy);if(!item?.meta?.effects)return;
+ const state=item.meta.effects;
+ const next=!(state.spectral||state.reconstruct||(state.center&&original?.length===2));
+ state.spectral=next;state.reconstruct=next;state.center=next;
+ updateEnhancementUI();refreshEnhancedPreview();
+};
+$('center-suppression').oninput=()=>{
+ const item=studyResults.get(activeStudy);if(!item?.meta?.effects)return;
+ item.meta.effects.centerAmount=Number($('center-suppression').value);
+ updateEnhancementUI();refreshEnhancedPreview();
 };
 // Never allow the original audio from <video> to mix into the neural stems.
 function lockVideoMute(){
@@ -415,7 +482,7 @@ function clearStudy(){
  studyResults.clear();pipelineRuns.clear();
  studySignature='';activeStudy=null;
  scnetVocals=null;scnetBase=null;
- show('scnet-tuning',false);$('study-csv').disabled=true;
+ show('scnet-tuning',false);$('study-csv').disabled=true;updateEnhancementUI();
  text('study-active-status','Готовые версии одной сцены появятся здесь.');
  renderStudyResults();
 }
@@ -457,7 +524,7 @@ function renderStudyResults(){
     item.metrics.changeDb.toFixed(1)+' дБ относительно оригинала';
    const time=document.createElement('span');
    time.textContent=item.timeMs===null?'Время не измерено':
-    'Инференс '+elapsed(item.timeMs/1000)+' · RTF '+item.timing.rtf.toFixed(2)+
+    'Нейросеть '+elapsed(item.timeMs/1000)+' + DSP '+elapsed((item.meta?.dspMs||0)/1000)+' · RTF '+item.timing.rtf.toFixed(2)+
     ' · на 90 с ≈ '+elapsed(item.timing.at90Seconds);
    const source=document.createElement('span');
    source.textContent=item.meta?.cached?'Повторное использование модели':'Независимый проход по оригиналу';
@@ -478,14 +545,12 @@ async function selectStudyResult(id,rebuild=true){
  scnetBase=vocal?item.meta.base:null;
   show('scnet-tuning',vocal);
  text('vocal-strength-label',item.meta?.model==='umxhq'?'Удаление вокала Open-Unmix':'Удаление голосов SCNet');
- text('vocal-warning',item.meta?.model==='umxhq'?
-  'Open-Unmix обучалась на музыкальном вокале: может затронуть музыку и эффекты. Силу можно менять без нового инференса.':
-  'SCNet обучалась на музыкальном вокале: может затронуть музыку и эффекты. Силу можно менять без нового инференса.');
+ text('vocal-warning','100% — полное вычитание вокального стема. 105–150% — усиление с риском искажения музыки. Нейросеть повторно не запускается.');
  if(vocal){
-  $('scnet-strength').value=String(Math.round((item.meta.strength??.8)*100));
+  $('scnet-strength').value=String(Math.round((item.meta.effects?.strength??1)*100));
   text('scnet-strength-value',$('scnet-strength').value+'%');
  }
- $('center-suppression').disabled=original.length!==2;
+ updateEnhancementUI();
  text('result-state',item.label);
  text('inference-time',item.timeMs===null?'—':elapsed(item.timeMs/1000));
  text('speed-factor',item.timing?item.timing.rtf.toFixed(2)+'× RTF':'—');
@@ -500,29 +565,21 @@ async function selectStudyResult(id,rebuild=true){
  if(rebuild)await previewAudio();
 }
 $('scnet-strength').oninput=()=>{
- const item=studyResults.get(activeStudy);
+ const item=studyResults.get(activeStudy);if(!item?.meta?.effects)return;
+ item.meta.effects.strength=Number($('scnet-strength').value)/100;
  text('scnet-strength-value',$('scnet-strength').value+'%');
- if(!item?.meta?.vocals||!item.meta.base)return;
- clearTimeout(editTimer);
- editTimer=setTimeout(()=>{
-  try{
-   const strength=Number($('scnet-strength').value)/100;
-   const adjusted=subtractResidualVocals(item.meta.base,item.meta.vocals,strength);
-   registerStudyResult(item.id,adjusted,item.timeMs,{
-    label:item.label,source:item.source,meta:{...item.meta,strength}
-   });
-   if(activeStudy===item.id)void previewAudio();
-  }catch(e){error(e.message)}
- },190);
+ refreshEnhancedPreview();
 };
 $('study-csv').onclick=()=>{
  if(!studyResults.size||!range)return;
  const q=x=>'"'+String(x??'').replaceAll('"','""')+'"';
- const rows=[['Модель','Фрагмент, с','Время модели, с','RTF','Оценка 90 с, с','Изменение RMS, дБ','Пик результата, дБ','Из кэша','Удаление голоса, %']];
+ const rows=[['Модель','Фрагмент, с','Время модели, с','Время DSP, с','RTF','Оценка 90 с, с','Изменение RMS, дБ','Пик результата, дБ','Из кэша','Удаление голоса, %','Спектр','Адаптивный центр','Реконструкция','Центр, %']];
  for(const item of studyResults.values())rows.push([
-  item.label,range.duration,item.timeMs===null?'':(item.timeMs/1000).toFixed(2),
+  item.label,range.duration,item.timeMs===null?'':(item.timeMs/1000).toFixed(2),(item.meta?.dspMs/1000||0).toFixed(2),
   item.timing?.rtf.toFixed(3)||'',item.timing?.at90Seconds.toFixed(2)||'',
-  item.metrics.changeDb,item.metrics.peakDb.toFixed(2),item.meta?.cached?'да':'нет',Math.round((item.meta?.strength??.8)*100)
+  item.metrics.changeDb,item.metrics.peakDb.toFixed(2),item.meta?.cached?'да':'нет',
+  Math.round((item.meta?.effects?.strength??1)*100),item.meta?.effects?.spectral?'да':'нет',
+  item.meta?.effects?.center?'да':'нет',item.meta?.effects?.reconstruct?'да':'нет',item.meta?.effects?.centerAmount??35
  ]);
  download(new Blob(['\uFEFF'+rows.map(row=>row.map(q).join(',')).join('\r\n')],{
   type:'text/csv;charset=utf-8'}),fileName+'-two-models.csv');
