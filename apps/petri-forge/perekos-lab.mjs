@@ -119,7 +119,11 @@ function showReplay(next){
  $('pkSeek').max=String(Math.max(0,frames.length-1));$('pkSeek').value='0';
  $('pkSeek').disabled=frames.length===0;$('pkPlay').disabled=frames.length===0;
  $('pkOutcome').textContent=next.finished?'ИТОГ '+(next.winner===0?'ПОБЕДА':next.winner===1?'ПОРАЖЕНИЕ':'НИЧЬЯ'):'ЛИМИТ ВРЕМЕНИ · НЕ ЗАВЕРШЁН';
- if(frames.length)paintFrame(frames[0]);else window.PetriForgeRuntime=window.PetriForgeRuntime||{};
+ if(frames.length)paintFrame(frames[0]);else paintIdle();
+}
+// Register immediately at module initialization, not only after a first replay.
+// The agent hub restores its brain at startup before any Perekos match exists.
+window.PetriForgeRuntime=window.PetriForgeRuntime||{};
 window.PetriForgeRuntime.perekos={
  getModel:async()=>structuredClone(policy),
  setModel:async snapshot=>{
@@ -141,8 +145,6 @@ window.PetriForgeRuntime.perekos={
  configure:variant=>{$('pkCurriculum').value=variant||'balanced';},
  batch:count=>{$('pkGenerations').value=String(count);}
 };
-paintIdle();drawLearning();
-}
 function seek(n){
  if(!replay?.frames.length)return;
  cursor=clamp(Math.floor(n),0,replay.frames.length-1);$('pkSeek').value=String(cursor);paintFrame(replay.frames[cursor]);
@@ -216,11 +218,20 @@ worker.onmessage=async event=>{
   }else if(d.type==='perekos-compared'){
    lock(false);$('pkTransferInfo').textContent='Сравнение на одинаковых контрольных раундах: ваш мозг '+fmt(d.mine.fitness)+' очков / урон '+fmt(d.mine.damageMargin)+'; переносимый '+fmt(d.other.fitness)+' очков / урон '+fmt(d.other.damageMargin)+'. Это не подтверждает преимущество в полных матчах.';
    notify('Сравнение переноса завершено');
-  }else if(d.type==='perekos-loaded'){lock(false);policy=d.policy;notify('Мозг загружен');if(mageAck&&d.requestId===mageAck.id){const ack=mageAck;mageAck=null;ack.resolve();}}
+  }else if(d.type==='perekos-loaded'){
+   // A stale worker acknowledgement must never replace the selected agent.
+   if(mageAck&&d.requestId!==mageAck.id)return;
+   policy=d.policy;lock(false);notify('Мозг загружен');
+   if(mageAck){const ack=mageAck;mageAck=null;ack.resolve();}
+  }
   else if(d.type==='perekos-error'){if(mageAck){const ack=mageAck;mageAck=null;ack.reject(Error(d.message));}lock(false);notify('Ошибка: '+d.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'perekos',message:d.message}}));}
  }catch(e){lock(false);notify('Ошибка сохранения: '+e.message);}
 };
-worker.addEventListener('error',e=>{lock(false);notify('Ошибка вычислительного Worker: '+e.message);window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'perekos',message:e.message}}));});
+worker.addEventListener('error',e=>{
+ if(mageAck){const ack=mageAck;mageAck=null;ack.reject(Error(e.message||'Worker Перекоса остановился'));}
+ lock(false);notify('Ошибка вычислительного Worker: '+e.message);
+ window.dispatchEvent(new CustomEvent('petri:error',{detail:{mode:'perekos',message:e.message}}));
+});
 $('pkTrain').onclick=()=>{try{const cfg=settings();stopPlayback();lock(true,true);$('pkProgress').style.width='0%';send('perekos-train',{...cfg,generations:Number($('pkGenerations').value),policy});notify('Идёт обучение на реальных матчах...');}catch(e){lock(false);notify(e.message);}};
 $('pkStop').onclick=()=>send('perekos-stop');
 $('pkTest').onclick=()=>{try{lock(true);send('perekos-test',{...settings(),rivalStyle:$('pkRivalStyle').value,policy});notify('Запущен реальный матч...');}catch(e){lock(false);notify(e.message);}};
@@ -262,4 +273,4 @@ export function openPerekosLab(){
 }
 export function pausePerekosLab(){stopPlayback();}
 window.petriForgePerekosDiagnostics=()=>({ready:true,busy,training,cursor,frames:replay?.frames.length||0,policySource:policy.source,score:replay?.score,finished:replay?.finished});
-paintIdle();
+paintIdle();drawLearning();
