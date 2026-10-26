@@ -110,24 +110,30 @@ export function createEnhancementLayers(base,vocals,{rate=44100,progress=()=>{}}
  return {spectral,reconstruct,center};
 }
 export function renderEnhancedPCM(base,vocals,layers,{
- strength=1,spectral=true,reconstruct=true,center=true,centerAmount=35
+ strength=1,spectral=false,reconstruct=false,center=false,centerAmount=35,
+ artifact=true,texture=true,artifactAmount=85,textureAmount=45
 }={}){
  checkAudio(base,vocals);
  if(!Number.isFinite(strength)||strength<0||strength>1.5||
-    !Number.isFinite(centerAmount)||centerAmount<0||centerAmount>100)
+    !Number.isFinite(centerAmount)||centerAmount<0||centerAmount>100||
+    !Number.isFinite(artifactAmount)||artifactAmount<0||artifactAmount>100||
+    !Number.isFinite(textureAmount)||textureAmount<0||textureAmount>100)
   throw Error('Недопустимая интенсивность очистки.');
- for(const key of ['spectral','reconstruct','center']){
+ for(const key of ['spectral','reconstruct','center','artifact','texture']){
   if(!Array.isArray(layers?.[key])||layers[key].length!==base.length||
    layers[key].some((a,i)=>!(a instanceof Float32Array)||a.length!==base[i].length))
    throw Error('Дополнительная обработка не подготовлена: '+key);
  }
  return base.map((src,ch)=>{
   const out=new Float32Array(src.length),v=vocals[ch],
-    s=layers.spectral[ch],w=layers.reconstruct[ch],c=layers.center[ch];
+    s=layers.spectral[ch],w=layers.reconstruct[ch],c=layers.center[ch],
+    b=layers.artifact[ch],t=layers.texture[ch];
   const centerScale=center?strength*centerAmount/100:0;
   for(let i=0;i<src.length;i++)
    out[i]=src[i]-strength*v[i]+
-    (spectral?strength*s[i]:0)+(reconstruct?strength*w[i]:0)+centerScale*c[i];
+    (spectral?strength*s[i]:0)+(reconstruct?strength*w[i]:0)+centerScale*c[i]+
+    (artifact?Math.min(strength,1)*artifactAmount/100*b[i]:0)+
+    (texture?Math.min(strength,1)*textureAmount/100*t[i]:0);
   return out;
  });
 }

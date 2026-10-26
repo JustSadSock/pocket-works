@@ -93,3 +93,13 @@
 .enhancement-lab .secondary{min-height:35px;padding:7px 12px;margin-top:12px;font-size:11px}
 .enhancement-lab #enhance-info{margin:9px 0 0}
 @media(max-width:440px){.enhancement-lab{padding:11px}.enhance-toggle{gap:9px}}
+
+/* Artifact repair is the primary lab surface; unsuccessful legacy filters
+   remain discoverable under a native, keyboard-accessible details disclosure. */
+.legacy-filters{margin-top:16px;border-top:1px solid var(--line);padding-top:11px}
+.legacy-filters summary{font-size:12px;font-weight:700;cursor:pointer;padding:7px 0;list-style-position:inside;user-select:none}
+.legacy-filters summary:hover{color:var(--accent)}
+.legacy-filters summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.legacy-filters[open]{padding-bottom:4px}
+.enhancement-lab #repair-note{margin:9px 0 4px;font-size:11px;line-height:1.45}
+.enhancement-lab #repair-off-all{min-height:38px}

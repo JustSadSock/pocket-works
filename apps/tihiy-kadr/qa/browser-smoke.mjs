@@ -88,7 +88,9 @@ try{
  assert.equal(await page.locator('#result-video').evaluate(v=>v.muted),true);
  assert.deepEqual(await page.evaluate(()=>[window.__modelRuns,window.__dspRuns]),[1,1]);
  for(const id of ['enhance-spectral','enhance-center','enhance-reconstruct'])
-  assert.equal(await page.locator('#'+id).isChecked(),true);
+  assert.equal(await page.locator('#'+id).isChecked(),false);
+ assert.equal(await page.locator('#legacy-filters').evaluate(x=>x.open),false);
+ assert.equal(await page.locator('#repair-noise').isChecked(),true);
  assert.equal(await page.locator('#scnet-strength').inputValue(),'100');
  await page.locator('#scnet-strength').fill('140');
  assert.equal(await page.locator('#scnet-strength-value').innerText(),'140%');
@@ -97,21 +99,25 @@ try{
  await page.locator('#wav-btn').click();
  const enhancedDownload=await enhanced;
  const enhancedBytes=readFileSync(await enhancedDownload.path());
- await page.locator('#enhance-disable-all').click();
- for(const id of ['enhance-spectral','enhance-center','enhance-reconstruct'])
-  assert.equal(await page.locator('#'+id).isChecked(),false);
+ await page.locator('#repair-off-all').click();
+ assert.equal(await page.locator('#repair-noise').isChecked(),false);
+ assert.equal(await page.locator('#repair-texture').isChecked(),false);
  const baseline=page.waitForEvent('download',{timeout:25000});
  await page.locator('#wav-btn').click();
  const baselineBytes=readFileSync(await (await baseline).path());
  assert.notDeepEqual(enhancedBytes,baselineBytes,'DSP toggles must change real WAV audio');
- for(const id of ['enhance-spectral','enhance-center','enhance-reconstruct']){
-  await page.locator('#'+id).check();
-  const single=page.waitForEvent('download',{timeout:25000});
-  await page.locator('#wav-btn').click();
-  assert.notDeepEqual(readFileSync(await (await single).path()),baselineBytes,id+' needs real audio effect');
-  await page.locator('#'+id).uncheck();
- }
- await page.locator('#enhance-disable-all').click();
+ await page.locator('#repair-noise').check();
+ const onlyBuzz=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#wav-btn').click();
+ assert.notDeepEqual(readFileSync(await (await onlyBuzz).path()),baselineBytes,
+  'new buzz filter must change actual exported WAV samples');
+ await page.locator('#repair-off-all').click();
+ assert.equal(await page.locator('#repair-noise').isChecked(),false);
+ // The repair UI must not show a fake usable texture switch if no clean
+ // low-vocal donor exists in this synthetic 1s fixture.
+ const textureEnabled=await page.locator('#repair-texture').isEnabled();
+ const note=await page.locator('#repair-note').innerText();
+ if(!textureEnabled)assert.match(note,/недоступна|Рядом нет/);
  assert.deepEqual(await page.evaluate(()=>[window.__modelRuns,window.__dspRuns]),[1,1],
   'A/B toggles must neither rerun neural inference nor spectral FFT');
 

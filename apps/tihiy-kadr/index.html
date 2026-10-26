@@ -36,14 +36,24 @@
  <p class="hint" id="vocal-warning">Больше 100% — экспериментальное усиление вычитания. Возможны искажения музыки.</p>
 </div>
 <div class="enhancement-lab" id="enhancement-lab" aria-labelledby="enhance-heading">
- <div class="enhancement-head"><h3 id="enhance-heading">Эксперименты со звуком</h3><span id="enhance-ready">После обработки</span></div>
- <p class="hint">Три фильтра рассчитываются один раз после нейросети. Переключай их на том же фрагменте без нового запуска модели.</p>
- <label class="enhance-toggle"><span><strong>Спектральная очистка</strong><small>Убирает остатки в частотах, где модель обнаружила вокал.</small></span><input id="enhance-spectral" type="checkbox" role="switch" checked disabled></label>
- <label class="enhance-toggle"><span><strong>Адаптивный центр стерео</strong><small>Подавляет центральные голоса во время обнаруженного вокала. Только стерео.</small></span><input id="enhance-center" type="checkbox" role="switch" checked disabled></label>
- <label class="enhance-center-level" for="center-suppression">Сила адаптивного центра <output id="center-value">35%</output><input id="center-suppression" type="range" min="0" max="100" step="5" value="35" disabled></label>
- <label class="enhance-toggle"><span><strong>Мягкая реконструкция спектра</strong><small>Дополнительная DSP-маска. Не изменяет внутренние итерации Wiener Open-Unmix.</small></span><input id="enhance-reconstruct" type="checkbox" role="switch" checked disabled></label>
- <button class="secondary" id="enhance-disable-all" type="button" disabled>Выключить все фильтры</button>
- <p id="enhance-info" class="hint" role="status">При первом прогоне подготовим переключаемые дорожки.</p>
+ <div class="enhancement-head"><h3 id="enhance-heading">Устранение артефактов</h3><span id="enhance-ready">После обработки</span></div>
+ <p class="hint">Новые фильтры против жужжащих и металлических остатков голоса. Их дорожки готовятся один раз — слушай с обработкой и без неё, не перезапуская нейросеть.</p>
+ <label class="enhance-toggle"><span><strong>Подавление речевого жужжания</strong><small>Находит узкие и нестабильные тона в спектре с подсказкой вокальной модели и плавно их подавляет.</small></span><input id="repair-noise" type="checkbox" role="switch" checked disabled></label>
+ <label class="enhance-center-level" for="repair-level">Сила подавления призвуков <output id="repair-level-value">85%</output><input id="repair-level" type="range" min="0" max="100" step="5" value="85" disabled></label>
+ <label class="enhance-toggle"><span><strong>Подстановка фоновой текстуры</strong><small>В речевых участках подмешивает короткие соседние фрагменты с малой вероятностью вокала. Может менять музыку.</small></span><input id="repair-texture" type="checkbox" role="switch" checked disabled></label>
+ <label class="enhance-center-level" for="texture-level">Сила фоновой подстановки <output id="texture-level-value">45%</output><input id="texture-level" type="range" min="0" max="100" step="5" value="45" disabled></label>
+ <button class="secondary" id="repair-off-all" type="button" disabled>Отключить оба новых фильтра</button>
+ <p id="repair-note" class="hint" role="status">Подготовка начнётся после запуска Open-Unmix или SCNet.</p>
+ <details class="legacy-filters" id="legacy-filters">
+  <summary>Старые фильтры · расширенные эксперименты</summary>
+  <p class="hint">Оставлены для сравнения, но теперь по умолчанию выключены — в прошлых тестах они не дали слышимого улучшения.</p>
+  <label class="enhance-toggle"><span><strong>Спектральная очистка (старая)</strong><small>Прежняя мягкая частотная маска.</small></span><input id="enhance-spectral" type="checkbox" role="switch" disabled></label>
+  <label class="enhance-toggle"><span><strong>Адаптивный центр стерео (старый)</strong><small>Прежнее подавление общей L/R составляющей.</small></span><input id="enhance-center" type="checkbox" role="switch" disabled></label>
+  <label class="enhance-center-level" for="center-suppression">Сила старого центра <output id="center-value">35%</output><input id="center-suppression" type="range" min="0" max="100" step="5" value="35" disabled></label>
+  <label class="enhance-toggle"><span><strong>Мягкая реконструкция (старая)</strong><small>Прежняя дополнительная энергетическая маска, не настройка Wiener внутри модели.</small></span><input id="enhance-reconstruct" type="checkbox" role="switch" disabled></label>
+  <button class="secondary" id="enhance-disable-all" type="button" disabled>Включить все старые фильтры</button>
+ </details>
+ <p id="enhance-info" class="hint" role="status">Исходник и оценка голоса останутся в памяти для быстрого сравнения.</p>
 </div>
 <div class="metrics"><div><small>Время обработки</small><strong id="inference-time">—</strong></div><div><small>Скорость</small><strong id="speed-factor">—</strong></div><div><small>Длина сцены</small><strong id="scene-length">—</strong></div></div><p id="stem-diagnostics" class="hint" role="status"></p>
 <div class="downloads"><button id="wav-btn" class="primary" type="button">Скачать текущий микс WAV</button><button id="video-btn" class="secondary" type="button">Сохранить видео со звуком</button></div><p id="export-status" class="hint"></p>

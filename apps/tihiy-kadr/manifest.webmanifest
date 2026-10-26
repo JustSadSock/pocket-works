@@ -2,7 +2,7 @@
   "id": "/apps/tihiy-kadr/",
   "name": "ТИХИЙ КАДР",
   "short_name": "M&E LAB",
-  "description": "Две локальные ONNX-модели удаления голосов: быстрое Open-Unmix и более тщательное SCNet.",
+  "description": "Локальное подавление вокала Open-Unmix/SCNet с переключаемым устранением речевого жужжания и подстановкой фона.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
