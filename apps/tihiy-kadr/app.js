@@ -266,7 +266,7 @@ async function executeRoute(routeId=null,custom=null){
   for(const [i,part] of task.entries()){
    if(part.input==='original'){inputId='original';inputPCM=original}
    else if(part.input==='previous'&&!inputPCM)throw Error('Не найден предыдущий результат.');
-   const label=part.model==='mrx'?'MRX':'SCNet · окна '+Math.round(part.step*100)+'%';
+   const label=part.model==='mrx'?'MRX':part.model==='umxhq'?'Open-Unmix UMX-HQ':'SCNet · окна '+Math.round(part.step*100)+'%';
    step('Этап '+(i+1)+'/'+task.length+' · '+label,
     'Обрабатываем '+elapsed(selected.duration)+' · время зависит от CPU и количества пересечений окон.');
    const stageStarted=performance.now();
@@ -295,7 +295,7 @@ async function executeRoute(routeId=null,custom=null){
   }
   if(!preview)throw Error('Модель не вернула обработанный звук.');
   const display=isPreset?route.label:
-   (custom.model==='mrx'?'MRX':'SCNet '+Math.round(custom.step*100)+'%')+
+   (custom.model==='mrx'?'MRX':custom.model==='umxhq'?'Open-Unmix UMX-HQ':'SCNet '+Math.round(custom.step*100)+'%')+
    ' ← '+(custom.input==='original'?'Оригинал':studyResults.get(custom.input)?.label||'Дорожка');
   registerStudyResult(targetId,inputPCM,totalMs,{
    source:'local',label:display,
