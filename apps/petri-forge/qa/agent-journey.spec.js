@@ -49,7 +49,7 @@ test('two agents keep independent brains, progress and names across restart',asy
  await expect(page.locator('#hubRuns')).toHaveText('0');
  const secondSnapshot=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
  expect(secondSnapshot.q).toHaveLength(0);
- await page.locator('#hubAgents').selectOption(firstId);
+ await page.locator('#cpAgent').selectOption(firstId);
  await expect(page.locator('#hubRuns')).toHaveText('1');
  const firstSnapshot=await page.evaluate(()=>window.PetriForgeRuntime.grid.getModel());
  expect(firstSnapshot.q.length).toBeGreaterThan(0);
