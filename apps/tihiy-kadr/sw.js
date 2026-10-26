@@ -1,9 +1,9 @@
 const CACHE_PREFIX='tihiy-kadr-';
-const CACHE='tihiy-kadr-v1.8.0';
-const APP_VERSION='1.8.0';
+const CACHE='tihiy-kadr-v1.9.0';
+const APP_VERSION='1.9.0';
 const RELEASE_DATE='2026-10-26';
-const RELEASE_NOTES=["Добавлены переключаемые фильтры тонального жужжания и восстановления фона из соседних безречевых фрагментов.","Прежняя тройка DSP-фильтров сохранена в сворачиваемых расширенных настройках и выключена по умолчанию.","Исходная нейросеть запускается один раз; оба новых варианта вычисляются до прослушивания, A/B и экспорт работают с готовыми слоями."];
-const OWN=['./','./index.html','./app.js','./audio-utils.js','./audio-enhance.js','./artifact-repair.js','./enhance-worker.js','./research-core.js','./pipeline-config.js','./mrx-worker.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.css'];
+const RELEASE_NOTES=["Добавлена точечная SCNet: поиск речевых артефактов в уже обработанном Open-Unmix аудио и запуск тяжёлой модели только на наиболее проблемных исходных отрывках.","Выбранные отрывки пакетируются в один прогон SCNet с контекстом; переходы к Open-Unmix плавные, сравнение гибрида A/B не требует нового инференса.","Подстановка фоновой текстуры по умолчанию выключена после пользовательских тестов; фильтр жужжания оставлен включённым."];
+const OWN=['./','./index.html','./app.js','./audio-utils.js','./audio-enhance.js','./artifact-repair.js','./selective-scnet.js','./enhance-worker.js','./research-core.js','./pipeline-config.js','./mrx-worker.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.css'];
 const SCOPE=new URL('./',self.registration.scope);
 const URLS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 async function fresh(url){const u=new URL(url);u.searchParams.set('__pw_build',APP_VERSION);const r=await fetch(u.href,{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r}
