@@ -1475,6 +1475,13 @@ document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.
  $('film-clean-status').textContent='Выбран '+(FILM_MODES.find(x=>x.id===filmMode())?.name||'Open-Unmix')+
   '. Нажми «Подготовить звук без голосов» либо продолжи — обработка начнётся перед переходом.';
 });
+$('film-skip').onchange=()=>{
+ if(filmPreparedBlob)clearExportPreview();
+ updateFilmCleaner();updateConfirmAction();
+ $('film-clean-status').textContent=$('film-skip').checked?
+  'Нейросеть пропущена. Если в исходном видео есть голоса, они не будут удалены.':
+  'Удаление голосов снова включено. Подготовь звук или продолжи со сценой.';
+};
 $('film-clean-start').onclick=()=>{void prepareFilmScene()};
 $('film-clean-cancel').onclick=()=>filmCleanController?.abort();
 $('film-local-file').onchange=e=>{
