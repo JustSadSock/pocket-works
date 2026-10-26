@@ -20,12 +20,13 @@
   <link rel="stylesheet" href="./perekos-lab.css">
   <link rel="stylesheet" href="./agent-hub.css">
   <link rel="stylesheet" href="./agent-cockpit.css">
+  <link rel="stylesheet" href="./ui-workspace.css">
 </head>
 <body data-app-preset="canvas">
 <main id="wrap" data-app-shell>
   <header class="toolbar">
     <a href="../../" class="exit" data-native-press aria-label="Вернуться в PocketWorks">← PocketWorks</a>
-    <div class="brand"><span class="brand-mark" aria-hidden="true">◈</span><strong>PETRIFORGE</strong><small>Лаборатория агентов <b>0.8.1</b></small></div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true">◈</span><strong>PETRIFORGE</strong><small>Лаборатория агентов <b>0.14.0</b></small></div>
     <div class="spacer"></div>
     <span class="pill" id="status" role="status" aria-live="polite">Лаборатория готова</span>
     <button type="button" class="btn-outline" data-workshop-trigger data-native-press aria-label="Диагностика PetriForge" title="Диагностика">Диагностика</button>
@@ -103,7 +104,7 @@
   </div>
   <div class="footnote">Синяя точка — агент. Перетаскивайте старт и зелёную цель. Обучение работает локально, без сервера. <span id="footFeedback"></span></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="PetriForge" data-app-version="0.13.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="PetriForge" data-app-version="0.14.0"></script>
 <script src="./app.js" type="module"></script>
 <script src="./world-modes.mjs" type="module"></script>
 <script src="./agent-hub.mjs" type="module"></script>
