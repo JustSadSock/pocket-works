@@ -66,7 +66,9 @@ test('media preparation UX shows the fast route and keeps the source soundtrack 
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const media=readFileSync(new URL('../media-lab.js',import.meta.url),'utf8');
   assert.match(html,/id="media-fast-status"/);
-  assert.match(html,/id="media-keep-audio" type="checkbox"/);
+  assert.match(html,/name="film-sound-choice" value="original"/);
+  assert.match(html,/name="film-sound-choice" value="mute"/);
+  assert.match(app,/keepAudio:selectedSound\(\)==='original'/);
   assert.match(app,/planVideoPreparation\(\{size:sourceBlob\.size,mode\}\)/);
   assert.match(app,/encodedCache\?\.source===sourceBlob/);
   assert.match(media,/requestVideoFrameCallback/);

@@ -38,7 +38,7 @@ test('three UI models default to UMX and display three relative estimates',()=>{
  assert.match(html,/name="film-clean-mode" value="umx" checked/);
  assert.match(html,/name="film-clean-mode" value="hybrid"/);
  assert.match(html,/name="film-clean-mode" value="scnet"/);
- for(const id of ['film-time-umx','film-time-hybrid','film-time-scnet','film-clean-cancel','film-skip','film-low-memory'])assert(html.includes('id="'+id+'"'));
+ for(const id of ['film-time-umx','film-time-hybrid','film-time-scnet','film-clean-cancel','film-low-memory','trim-edit-range','trim-sound-summary'])assert(html.includes('id="'+id+'"'));
 });
 test('multiplayer server module and deployed v4 snapshot are identical',()=>{
  const live=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
@@ -71,4 +71,17 @@ test('fast MP4 AAC extraction avoids full video ArrayBuffer and video capture',(
  assert.match(code,/const cut=original\.map\(ch=>ch\.slice\(begin,end\)\)/);
  const dsp=readFileSync(new URL('../film-buzz-worker.js',import.meta.url),'utf8');
  assert.match(dsp,/const channels=keepOriginal\?diff:base/);
+});
+
+test('trim is mandatory before audio, with distinct neural, mute and original outcomes',()=>{
+ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ for(const type of ['neural','mute','original'])
+  assert(html.includes('name="film-sound-choice" value="'+type+'"'));
+ assert.match(app,/if\(scenePrepareStep==='trim'\)/);
+ assert.match(app,/setScenePrepStep\('sound'\);return/);
+ assert.match(app,/selectedSound\(\)==='neural'\?await prepareFilmScene\(\):await processMedia\(\)/);
+ assert.match(app,/keepAudio:selectedSound\(\)==='original'/);
+ assert.match(app,/const cleaned=selectedSound\(\)==='neural'/);
+ assert.match(html,/id="film-cleaner" class="film-cleaner hidden"/);
 });

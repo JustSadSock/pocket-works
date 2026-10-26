@@ -26,7 +26,7 @@
     <div id="scene-license" class="license-note">Исходные фильмы: <a href="https://studio.blender.org/projects/wing-it/" target="_blank" rel="noopener noreferrer">Wing It! · Blender Studio</a> (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>); <a href="https://peach.blender.org/" target="_blank" rel="noopener noreferrer">Big Buck Bunny · Blender Foundation</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener noreferrer">CC BY 3.0</a>). Отрывки обрезаются и получают новую озвучку. Для собственных файлов нужны права на использование.</div>
   </section>
   <section id="screen-trim" class="screen trim hidden">
-    <header class="topbar"><button class="nav-back" data-back="library" aria-label="К выбору видео">←</button><h2>Подготовить сцену</h2><span class="small-cap">02 / 03</span></header>
+    <header class="topbar"><button class="nav-back" data-back="library" aria-label="К выбору видео">←</button><h2 id="trim-stage-title">1 / 2 · Выбрать отрывок</h2><span id="trim-stage-counter" class="small-cap">СНАЧАЛА МОНТАЖ</span></header>
     <div class="trim-layout">
       <div class="trim-left">
         <div class="trim-preview" id="trim-preview">
@@ -55,22 +55,30 @@
           <input id="trim-start" type="hidden" value="0">
           <input id="trim-length" type="hidden" value="60">
         </div>
-        <p class="trim-instruction">Перетащи края выделения. Выделенный участок можно сдвинуть целиком; тонкая линия показывает позицию воспроизведения.</p>
+        <p id="trim-instruction" class="trim-instruction">Выдели нужные 10–90 секунд. Сначала монтаж, затем работа со звуком.</p>
+        <div id="trim-sound-summary" class="trim-sound-summary hidden"><span>ВЫБРАННЫЙ ОТРЫВОК <strong id="trim-sound-times">00:00 – 01:00 · 01:00</strong></span><button id="trim-edit-range" type="button">← Изменить отрывок</button></div>
       </div>
       <div class="trim-right">
         <div class="trim-info"><label for="scene-title">Название сцены<input id="scene-title" maxlength="55" placeholder="Название сцены"></label></div>
-        <section id="film-cleaner" class="film-cleaner" aria-labelledby="film-clean-title">
- <div class="film-clean-head"><h3 id="film-clean-title">Звук фильма без диалогов</h3><span>ЛОКАЛЬНО · ONNX</span></div>
- <p class="film-clean-intro">Оставляем музыку и фоновые звуки, убираем голоса персонажей до начала озвучки.</p>
- <div class="film-mode-list" role="radiogroup" aria-label="Модель удаления голосов">
+        <div id="trim-stage-note" class="trim-stage-note"><b>01 · Видеофрагмент</b><p>Выдели часть фильма длиной до полутора минут. Нейросеть пока не запускается, оригинал не изменяется.</p><span>ДАЛЬШЕ — ЗВУК</span></div>
+        <section id="film-cleaner" class="film-cleaner hidden" aria-labelledby="film-clean-title">
+ <div class="film-clean-head"><h3 id="film-clean-title">02 · Звук отрывка</h3><span>ПОСЛЕ ОБРЕЗКИ</span></div>
+ <p class="film-clean-intro">Выбери, что оставить в выделенном фрагменте. Изменения затронут только эти секунды.</p>
+ <div class="film-sound-choices" role="radiogroup" aria-label="Звук выбранного видеофрагмента">
+   <label class="film-sound-choice"><input type="radio" name="film-sound-choice" value="neural" checked><span><strong>Убрать голоса нейросетью</strong><small>Сохранить музыку и эффекты, удалить речь</small></span></label>
+   <label class="film-sound-choice"><input type="radio" name="film-sound-choice" value="mute"><span><strong>Убрать весь звук</strong><small>Полностью немое видео для новой озвучки</small></span></label>
+   <label class="film-sound-choice"><input type="radio" name="film-sound-choice" value="original"><span><strong>Оставить исходный звук</strong><small>Без удаления голосов и без нейросети</small></span></label>
+  </div>
+  <div id="film-neural-options" class="film-neural-options">
+  <div class="film-mode-list" role="radiogroup" aria-label="Модель удаления голосов">
   <label class="film-mode"><input type="radio" name="film-clean-mode" value="umx" checked><span class="film-mode-copy"><strong>Open-Unmix <small>БЫСТРО</small></strong><span>Базовое удаление голосов</span></span><span class="film-mode-timing"><b id="film-time-umx">—</b><i id="film-ratio-umx">1×</i></span></label>
   <label class="film-mode"><input type="radio" name="film-clean-mode" value="hybrid"><span class="film-mode-copy"><strong>Open-Unmix + SCNet</strong><span>SCNet только на проблемных местах</span></span><span class="film-mode-timing"><b id="film-time-hybrid">—</b><i id="film-ratio-hybrid">—</i></span></label>
   <label class="film-mode"><input type="radio" name="film-clean-mode" value="scnet"><span class="film-mode-copy"><strong>SCNet полностью</strong><span>Более тщательная обработка всей сцены</span></span><span class="film-mode-timing"><b id="film-time-scnet">—</b><i id="film-ratio-scnet">—</i></span></label>
  </div>
  <label class="film-low-memory"><input id="film-low-memory" type="checkbox"> <span><strong>Защита памяти</strong><small>Для слабого ПК: обработка короткими частями. Медленнее, но снижает риск аварийного закрытия вкладки.</small></span></label>
- <label class="film-skip"><input id="film-skip" type="checkbox"> <span>В видео уже нет диалогов — не запускать нейросеть</span></label>
+ </div>
  <p class="film-clean-footnote" id="film-time-explain">Оценка нейросетей — по замерам на мощном ПК. На слабом устройстве время может быть значительно больше. Извлечение звука и кодирование видео показаны отдельно.</p>
- <div class="film-clean-actions"><button id="film-clean-start" type="button" class="action secondary-action">Подготовить звук без голосов</button><button id="film-clean-cancel" type="button" class="text-action hidden">Отменить</button></div>
+ <div class="film-clean-actions"><button id="film-clean-start" type="button" class="action secondary-action">Подготовить выбранный отрывок</button><button id="film-clean-cancel" type="button" class="text-action hidden">Отменить</button></div>
  <div id="film-clean-progress" class="film-clean-progress hidden"><progress id="film-clean-bar" max="100" value="0"></progress></div>
  <p id="film-clean-status" class="film-clean-status" role="status" aria-live="polite">Выбран Open-Unmix. Обработка создаёт видео с очищенным звуком для всех участников.</p>
  <label id="film-local-fallback" class="film-local-fallback hidden">Встроенное видео не загрузилось для очистки? Укажи локальную копию фильма.
@@ -84,9 +92,9 @@
             <label>Размер кадра<select id="media-resolution"><option value="640">До 640 пикс.</option><option value="960">До 960 пикс.</option><option value="1280" selected>До 1280 пикс.</option><option value="1920">До 1920 пикс.</option></select></label>
           </div>
           <div class="media-budget"><span id="media-estimate">Ожидаемый размер</span><small>Лимит комнаты — 96 МиБ</small></div>
-          <label class="media-audio-option"><input id="media-keep-audio" type="checkbox"><span>Сохранить оригинальный звук при сжатии</span></label>
+          <p class="media-audio-explainer">Звук выбирается выше. Здесь можно уменьшить размер готового видео.</p>
           <div id="media-fast-status" class="media-fast-status" role="status"></div>
-          <button id="media-render" class="media-render" type="button">Сжать для передачи</button>
+          <button id="media-render" class="media-render" type="button">Подготовить с текущим качеством</button>
           <div id="media-progress" class="media-progress hidden" role="status"><div class="row-between"><strong id="media-progress-label">Обработка · 0%</strong><button id="media-cancel" class="text-action" type="button">Отменить</button></div><progress id="media-progress-bar" max="100" value="0"></progress><small id="media-progress-help">Обработка идёт во время воспроизведения. Не закрывай экран.</small></div>
           <div id="media-result" class="media-result hidden">
             <div class="media-result-title"><b>Обработанный фрагмент готов</b><span id="media-output-size"></span></div>
@@ -94,10 +102,10 @@
           </div>
           <p id="media-note" class="media-note" aria-live="polite">Если исходный файл помещается в комнату, сжимать его необязательно.</p>
         </div>
-        <div class="role-builder"><div class="row-between"><h3>Персонажи</h3><button id="add-role" class="text-action">+ Добавить</button></div><div id="role-tags" class="role-tags"></div></div>
+        <div id="trim-roles" class="role-builder hidden"><div class="row-between"><h3>Персонажи</h3><button id="add-role" class="text-action">+ Добавить</button></div><div id="role-tags" class="role-tags"></div></div>
       </div>
     </div>
-    <div class="trim-footer"><span id="trim-footer-hint">10–90 секунд · исходный ролик остаётся неизменным</span><button id="confirm-scene" class="action main-action">Продолжить с видео <span class="arrow">→</span></button></div>
+    <div class="trim-footer"><span id="trim-footer-hint">Шаг 1 из 2 · выбери 10–90 секунд</span><button id="confirm-scene" class="action main-action">К настройке звука <span class="arrow">→</span></button></div>
   </section>
   <section id="screen-room" class="screen room hidden">
     <header class="topbar"><button class="nav-back" data-back="home">←</button><h2 id="room-heading">Комната</h2><span id="net-pill" class="network-pill" data-net-state="idle" role="status" aria-live="polite">PocketNet</span></header>

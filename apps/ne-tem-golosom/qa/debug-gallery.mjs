@@ -56,7 +56,8 @@ try{
   await page.locator('[data-debug-page="room"]').click();
   await preview.locator('#room-change-scene:not(.hidden)').click();
   await preview.locator('[data-scene="wing-launch"]').click();
-  await preview.locator('#film-skip').check(); // Debug UI deliberately bypasses model inference.
+  await preview.locator('#confirm-scene').click();
+   await preview.locator('input[name="film-sound-choice"][value="original"]').check();
    await preview.locator('#confirm-scene').click();
   await preview.locator('#room-start:not(:disabled)').click();
   await preview.locator('#screen-editor:not(.hidden)').waitFor();
