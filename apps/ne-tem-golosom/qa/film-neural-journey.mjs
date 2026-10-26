@@ -82,6 +82,9 @@ try{
  }
  await page.locator('#video-file').setInputFiles({name:'voice-fixture.webm',mimeType:'video/webm',buffer:Buffer.from(bytes)});
  await page.waitForSelector('#screen-trim:not(.hidden)',{timeout:20000});
+ assert.equal(await page.locator('#film-cleaner').isVisible(),false);
+ await page.locator('#confirm-scene').click();
+ assert.equal(await page.locator('#film-cleaner').isVisible(),true);
  const options=page.locator('input[name="film-clean-mode"]');
  assert.equal(await options.count(),3);
  assert.equal(await page.locator('input[name="film-clean-mode"]:checked').inputValue(),'umx');
