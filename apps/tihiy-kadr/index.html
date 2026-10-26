@@ -3,21 +3,28 @@
 <title>Тихий кадр · удаление диалогов</title><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"></head>
 <body><main data-app-shell class="lab">
-<header class="top"><a class="back" href="../../" aria-label="Вернуться в PocketWorks">← PocketWorks</a><span class="tag">MRX / SCNET · ЛОКАЛЬНО</span></header>
-<section class="intro"><div><p class="eyebrow">НЕЙРОСЕТЕВАЯ ЛАБОРАТОРИЯ</p><h1>ТИХИЙ <em>КАДР</em></h1><p class="lead">Загрузи видео и попробуй убрать диалоги. Обработка внутри приложения — без отдельных сайтов и повторной загрузки файлов.</p></div><div class="mark" aria-hidden="true"><span class="line"></span><span class="cross">×</span><span class="line short"></span></div></section>
+<header class="top"><a class="back" href="../../" aria-label="Вернуться в PocketWorks">← PocketWorks</a><span class="tag">5 МАРШРУТОВ · ЛОКАЛЬНО</span></header>
+<section class="intro"><div><p class="eyebrow">НЕЙРОСЕТЕВАЯ ЛАБОРАТОРИЯ</p><h1>ТИХИЙ <em>КАДР</em></h1><p class="lead">Испытывай MRX и SCNet на одном фрагменте. Меняй порядок, скорость и входную дорожку — всё работает в браузере.</p></div><div class="mark" aria-hidden="true"><span class="line"></span><span class="cross">×</span><span class="line short"></span></div></section>
 <div class="layout">
 <section class="panel source" aria-labelledby="source-heading">
 <div class="panel-title"><h2 id="source-heading">01 / Исходный файл</h2><span id="file-detail" class="muted">Файл не выбран</span></div>
 <label class="drop" id="drop-zone" for="file-input"><input id="file-input" type="file" accept="video/*,.mp4,.mov,.m4v,.webm,.mkv" hidden><span class="drop-icon">＋</span><span><strong>Выбрать видео</strong><small>MP4, MOV, WebM · только на устройстве</small></span></label>
-<div id="input-details" class="hidden"><video id="source-video" playsinline preload="metadata" muted controls></video><div class="fields"><label>Начало фрагмента, сек.<input id="start-seconds" type="number" min="0" step="0.1" value="0"></label><label>Длительность, сек.<input id="duration-seconds" type="number" min="1" max="90" step="1" value="20"></label></div><p id="range-note" class="hint"></p></div>
+<div id="input-details" class="hidden"><video id="source-video" playsinline preload="metadata" muted controls></video><div class="fields"><label>Начало фрагмента, сек.<input id="start-seconds" type="number" min="0" step="0.1" value="0"></label><label>Длительность, сек.<input id="duration-seconds" type="number" min="1" max="90" step="1" value="20"></label></div>
+<div class="scene-shortcut"><button id="scene-gravity" type="button" class="secondary" disabled>К сцене 2:28</button><span>Для твоего теста Gravity Falls · 148-я секунда</span></div>
+<p id="range-note" class="hint"></p></div>
 <div class="panel-title second"><h2>02 / Обработка</h2><span class="chip">ЛОКАЛЬНО</span></div>
-<div class="fields"><label>Качество<select id="quality-mode" aria-label="Режим очистки">
-<option value="mrx" selected>Быстро · MRX (31 МБ)</option>
-<option value="scnet">Дополнительно · MRX + SCNet (+13 МБ)</option>
+<div class="fields"><label>Маршрут обработки<select id="quality-mode" aria-label="Маршрут обработки">
+<option value="mrx" selected>1 · MRX — быстрый ориентир</option>
+<option value="scnet-direct">2 · SCNet — прямо на оригинале, быстрые окна</option>
+<option value="mrx-scnet-fast">3 · MRX → SCNet — экспресс</option>
+<option value="mrx-scnet-balanced">4 · MRX → SCNet — баланс</option>
+<option value="mrx-scnet">5 · MRX → SCNet — максимум (прежнее качество)</option>
 </select></label><label>Размер задачи<select id="chunk-size"><option value="5">Для телефона · по 5 сек</option><option value="10">Умеренная память · по 10 сек</option><option value="20" selected>Быстрее на ПК · по 20 сек</option></select></label></div>
-<button id="process-btn" type="button" class="primary" disabled>Убрать речь →</button>
+<button id="process-btn" type="button" class="primary" disabled>Запустить выбранный маршрут →</button>
 <div id="progress-wrap" class="progress hidden" role="status" aria-live="polite"><div class="progress-top"><b id="progress-heading">Подготовка...</b><button id="cancel-btn" type="button" class="cancel">Прервать</button></div><progress id="progress-bar"></progress><p id="progress-detail" class="hint"></p></div>
-<p id="error" class="error hidden" role="alert"></p><p class="hint fine">Обычный режим быстрее. Дополнительная SCNet ищет оставшиеся голоса после MRX, но может забирать часть музыки и эффектов. Начни с 5–10 секунд. В первый раз загружаются веса 31 МБ + 13 МБ при дополнительном режиме.</p>
+<p id="error" class="error hidden" role="alert"></p>
+<p id="route-hint" class="hint fine">Сначала проверь MRX. Затем испытайте быстрый второй проход SCNet: результаты MRX будут повторно использованы без пересчёта.</p>
+<p class="hint fine">Только браузер · без сервера обработки, API и GPU-исполнителя. SCNet скачивает 13 МБ весов единожды. «Экспресс» и «Баланс» уменьшают число повторных вычислений; точное качество нужно прослушать.</p>
 </section>
 <section class="panel result" aria-labelledby="result-heading">
 <div class="panel-title"><h2 id="result-heading">03 / Результат</h2><span class="muted" id="result-state">Ожидание обработки</span></div>
@@ -28,9 +35,9 @@
 <div class="comparison"><button id="original-btn" class="secondary" type="button">Оригинал</button><button id="clean-btn" class="secondary selected" type="button">Оригинал − речь</button><button id="stems-btn" class="secondary" type="button">Музыка + эффекты</button><button id="speech-btn" class="secondary" type="button">Только речь</button></div>
 <div class="stems"><label>Оригинальная речь <output id="dialogue-value">0%</output><input id="dialogue-gain" type="range" min="0" max="100" step="5" value="0"></label><label>Музыка <output id="music-value">100%</output><input id="music-gain" type="range" min="0" max="150" step="5" value="100"></label><label>Эффекты <output id="effects-value">100%</output><input id="effects-gain" type="range" min="0" max="150" step="5" value="100"></label></div>
 <div id="scnet-tuning" class="scnet-tuning hidden">
- <label for="scnet-strength">Удаление остаточных голосов SCNet <output id="scnet-strength-value">80%</output></label>
+ <label for="scnet-strength">Удаление голосов SCNet в выбранном результате <output id="scnet-strength-value">80%</output></label>
  <input id="scnet-strength" type="range" min="0" max="100" step="10" value="80">
- <p class="hint">Эксперимент: SCNet обучалась на музыкальном вокале и может ослаблять звуковые эффекты. Меняй силу и сравни с чистой MRX ниже.</p>
+ <p class="hint">SCNet обучалась на музыкальном вокале: возможна потеря музыки и эффектов. Изменение силы не запускает нейросеть заново.</p>
 </div>
 <div class="center-filter">
 <label for="center-suppression">Дополнительное подавление центра стерео <output id="center-value">0%</output></label>
@@ -43,49 +50,21 @@
 </section>
 </div>
 <section class="panel study-panel" aria-labelledby="study-heading">
-<div class="panel-title"><h2 id="study-heading">04 / СРАВНЕНИЕ РЕЗУЛЬТАТОВ</h2><span class="chip">A/B · ОДНА СЦЕНА</span></div>
-<p class="hint">Здесь можно переключаться между MRX и усиленной очисткой SCNet. Звук, видео и CSV сохраняются для выбранного результата.</p>
-<div class="study-results-head"><h3>Результаты одной сцены</h3><button id="study-csv" class="secondary" type="button" disabled>Экспорт сравнений CSV</button></div>
-<div id="study-results" class="study-results" role="list"><p class="hint">Выбери сцену и обработай MRX, извлеки 5.1 или импортируй готовые дорожки. Здесь появятся результаты и их скорость.</p></div>
-<p id="study-active-status" class="hint" role="status">После выбора результата используй обычные кнопки просмотра и экспорта выше.</p>
-<details id="study-advanced" class="study-advanced"><summary>Дополнительные инструменты · импорт внешних результатов и 5.1</summary><p class="hint">Для обычного удаления речи ничего здесь делать не нужно. Просто выбери MRX или MRX + SCNet вверху.</p><div class="study-grid">
- <div class="study-step">
-  <h3>Исходник и 5.1</h3>
-  <p class="hint">Эта проверка доступна только для настоящего многоканального 5.1/7.1. Обычный WAV, скачанный ниже, является стерео и здесь не подойдёт.</p>
-  <button id="study-source-wav" class="secondary" type="button" disabled>Скачать стерео WAV для исследовательских тестов</button>
-  <label class="study-input-label" for="study-surround-file">Загрузить исходный 5.1 / 7.1 WAV (6 или 8 каналов)</label>
-  <input id="study-surround-file" type="file" accept=".wav,audio/wav,audio/x-wav">
-  <div id="study-surround-options" class="hidden">
-   <label>Сколько оставить центрального канала <output id="study-center-value">0%</output>
-   <input id="study-center-gain" type="range" value="0" min="0" max="100" step="5"></label>
-  </div>
-  <p id="study-surround-status" class="hint" role="status">Стерео MP4 не превращается автоматически в настоящую дорожку 5.1.</p>
- </div>
- <div class="study-step">
-  <h3>Другие нейросети</h3>
-  <p class="hint">Это необязательные инструменты для исследователей. Они не запускают перечисленные нейросети в PocketWorks: только принимают уже готовые дорожки.</p>
-  <label>Источник результата
-   <select id="study-method">
-    <option value="dnr-scnet">MVSep · DnR v3 SCNet</option>
-    <option value="dnr-ensemble">MVSep · DnR v3 Mel + SCNet</option>
-    <option value="bandit">MVSep · BandIt v2</option>
-    <option value="sam">SAM Audio · residual</option>
-    <option value="other">Другая модель</option>
-   </select>
-  </label>
-  <div class="study-inputs">
-   <label>Готовый фон M&amp;E <input id="study-me-file" type="file" accept=".wav,.flac,.mp3,.m4a,audio/*"></label>
-   <span class="hint">или две отдельные дорожки</span>
-   <label>Музыка <input id="study-music-file" type="file" accept=".wav,.flac,.mp3,.m4a,audio/*"></label>
-   <label>Эффекты <input id="study-effects-file" type="file" accept=".wav,.flac,.mp3,.m4a,audio/*"></label>
-  </div>
-  <label>Время обработки вне лаборатории, секунд <input id="study-external-seconds" type="number" min="0" step="0.1" placeholder="Неизвестно"></label>
-  <button id="study-import" type="button" class="primary">Добавить результат к сравнению</button>
-  <p id="study-import-status" class="hint" role="status"></p>
-  <p class="hint">Внешние модели: <a href="https://mvsep.com/en" target="_blank" rel="noopener noreferrer">MVSep</a> · <a href="https://github.com/facebookresearch/sam-audio" target="_blank" rel="noopener noreferrer">SAM Audio</a>. Файлы загружаются туда только твоим отдельным действием.</p>
- </div>
+<div class="panel-title"><h2 id="study-heading">04 / СРАВНЕНИЕ И ЦЕПОЧКИ</h2><span class="chip">ОДНА СЦЕНА · 5 МАРШРУТОВ</span></div>
+<p class="hint">Любой результат можно выбрать, прослушать и отправить на следующий проход. Повторно уже вычисленные этапы берутся из памяти, а не запускаются заново.</p>
+<div class="study-results-head"><h3>Полученные версии</h3><button id="study-csv" class="secondary" type="button" disabled>CSV с замерами</button></div>
+<div id="study-results" class="study-results" role="list"><p class="hint">Загрузи видео и запусти первый маршрут. Каждый следующий результат будет здесь.</p></div>
+<div class="pipeline-builder">
+<div class="pipeline-builder-head"><icon name="workflow" aria-hidden="true"></icon><h3>Следующий проход — на любой дорожке</h3></div>
+<div class="pipeline-fields">
+ <label>Входной звук<select id="pipeline-input"><option value="original">Исходный звук видео</option></select></label>
+ <label>Нейросеть<select id="pipeline-model"><option value="scnet">SCNet · удалить вокал</option><option value="mrx">MRX · речь / музыка / эффекты</option></select></label>
+ <label>Перекрытие окон SCNet<select id="pipeline-step"><option value="1">Быстро · без дополнительных проходов</option><option value="0.5" selected>Баланс · 50%</option><option value="0.25">Максимум · 25%</option></select></label>
 </div>
-</details>
+<button id="pipeline-run" class="secondary" type="button" disabled>Обработать выбранную дорожку →</button>
+<p id="pipeline-status" role="status" class="hint">Выбирай оригинал или любую полученную версию. Чем меньше шаг окон, тем дольше работает SCNet.</p>
+</div>
+<p id="study-active-status" class="hint" role="status">Выбранный результат используется в плеере и при скачивании WAV/видео.</p>
 </section>
 <footer>MRX by Mitsubishi Electric Research Laboratories · MIT · ONNX export by audiojs. Оригинальное видео не загружается на сервер. Используйте материалы, на которые у вас есть права.</footer>
 </main><script type="module" src="./app.js"></script></body></html>
