@@ -105,10 +105,23 @@ async function metadata(blob,signal){
    count:u32(moov,stts.body+8+i*8),delta:u32(moov,stts.body+12+i*8)
   }));
   if(durations.length>100000||durations.some(x=>x.delta<1))continue;
-  const edit=child(moov,trak,'edts');
-  // Nontrivial edit lists require movie/track time realignment.
-  if(edit&&child(moov,edit,'elst'))continue;
-  return {timescale,sampleRate,channels,asc,sizesCount,sizeAt,offsets,maps,durations};
+  const edit=child(moov,trak,'edts'),list=edit&&child(moov,edit,'elst');
+  let mediaShift=0;
+  if(list){
+   const version=moov.getUint8(list.body),entries=u32(moov,list.body+4);
+   // Handle the common MP4 encoder delay / single-entry edit. Multi-edit
+   // tracks need a full editor and deliberately fall back to compatibility.
+   if(entries!==1)continue;
+   const at=list.body+8,offset=version===1?8:4;
+   if(at+offset*2+4>list.end)continue;
+   const mediaTime=version===1?
+    (u32(moov,at+8)*4294967296+u32(moov,at+12)):moov.getInt32(at+4,false);
+   if(!Number.isSafeInteger(mediaTime)||mediaTime<0)continue;
+   const rate=moov.getInt16(at+offset*2,false);
+   if(rate!==1)continue;
+   mediaShift=mediaTime/timescale;
+  }
+  return {timescale,sampleRate,channels,asc,sizesCount,sizeAt,offsets,maps,durations,mediaShift};
  }
  return null;
 }
@@ -121,7 +134,7 @@ export async function extractMp4AAC(blob,start,duration,{signal,onProgress=()=>{
  let supported;
  try{supported=await AudioDecoder.isConfigSupported(config)}catch{return null}
  if(!supported?.supported)return null;
- const end=start+duration,lead=Math.max(0,start-.12),samples=[];
+ const end=start+duration,lead=start-.12,samples=[];
  let ordinal=0,t=0,di=0,within=0;
  for(let ci=0;ci<meta.offsets.length;ci++){
   let sampleOffset=meta.offsets[ci];
@@ -132,7 +145,7 @@ export async function extractMp4AAC(blob,start,duration,{signal,onProgress=()=>{
    while(di<meta.durations.length&&within>=meta.durations[di].count){di++;within=0}
    const step=meta.durations[di]?.delta;
    if(!step||!size||size>1000000)return null;
-   const time=t/meta.timescale;
+   const time=t/meta.timescale-meta.mediaShift;
    if(time>=lead&&time<end+.1)samples.push({offset:sampleOffset,size,time});
    sampleOffset+=size;t+=step;within++;ordinal++;
   }
