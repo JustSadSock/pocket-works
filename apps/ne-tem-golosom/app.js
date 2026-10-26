@@ -63,7 +63,7 @@ function saveRoomCheckpoint(){
 }
 function clearRoomCheckpoint(){roomCheckpoint().clear()}
 function sceneDraftKey(){
- return scene&&room?room+'::'+scene.id+'::'+scene.start+'::'+scene.duration+'::'+(state?.mediaEpoch||1)+'::'+(state?.round||1):'';
+ return scene&&room?(debugPlay?'debug::':'')+room+'::'+scene.id+'::'+scene.start+'::'+scene.duration+'::'+(state?.mediaEpoch||1)+'::'+(state?.round||1):'';
 }
 function connectionNotice(){
  const offline=state?.players?.filter(p=>p.id!==me&&onlineIds&&!onlineIds.has(p.id))||[];
@@ -558,6 +558,9 @@ function stateChanged(s){
   setVideoSources();
  }
  if(s.phase==='lobby'){
+  if(sceneChanged&&scene.custom&&meHost()&&sourceBlob){
+   projectKey=sceneDraftKey();void draftWrite();
+  }
   if(pendingScenePicker&&meHost())library();else roomUI();
   if(scene.custom&&meHost()&&sourceBlob)
     for(const id of peers.keys())sendVideoTo(id);
@@ -861,7 +864,7 @@ function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{
  epoch:state?.mediaEpoch,mime:c.blob.type
 })}
 function sendAllOwn(){if(sentPremiere||mode==='solo')return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
-async function openEditor(){if(!scene)return;stopAllPlayback();const key=mode==='solo'?'solo::'+scene.id+'::'+scene.start+'::'+scene.duration:sceneDraftKey();if(!await restore(key)){if(mode==='solo')library();else roomUI();return}if(mode!=='solo'&&state?.phase!=='recording')return;setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
+async function openEditor(){if(!scene)return;stopAllPlayback();const key=mode==='solo'?(debugPlay?'debug::':'')+'solo::'+scene.id+'::'+scene.start+'::'+scene.duration:sceneDraftKey();if(!await restore(key)){if(mode==='solo')library();else roomUI();return}if(mode!=='solo'&&state?.phase!=='recording')return;setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
 function stopAllPlayback(){playing=false;for(const id of ['stage-video','premiere-video','trim-video'])$(id).pause();for(const c of [...localClips,...remoteClips])c.audio?.pause();$('play-toggle').textContent='▶'}
 function updateClipSound(t,on,isPremiere=false){
  const items=isPremiere?[...localClips,...remoteClips]:localClips;
@@ -1635,5 +1638,60 @@ async function initializeIdentityAndRecovery(){
   void connectRoom('resume',checkpoint);
  }
 }
+
+function mockConnect(){
+ room='D3B6A1F2';me='debug-host';name='Тестовый ведущий';mode='host';
+ const s=sceneForServer()||{id:'wing',title:'Видео не выбрано',start:44,duration:55,roles:['Кот','Пёс','Курица'],custom:false};
+ state={phase:'lobby',host:me,players:[{id:me,name:'Тестовый ведущий'},{id:'debug-guest',name:'Тестовый актёр'}],
+  scene:s,configured:!!scene,round:1,mediaEpoch:1,revision:1,assignments:{[me]:'Кот','debug-guest':'Пёс'},
+  mediaReady:{[me]:true,'debug-guest':true},ready:{},counts:{}};
+ setNetStatus('online','Демо · локально');roomUI();
+}
+function mockGame(msg){
+ if(!state)return;
+ const next={...state,assignments:{...state.assignments},mediaReady:{...state.mediaReady},
+  ready:{...state.ready},counts:{...state.counts},revision:state.revision+1};
+ if(msg.type==='scene'&&next.phase==='lobby'){
+  next.scene={...msg.scene};next.configured=true;next.mediaEpoch++;
+  next.assignments={[me]:msg.scene.roles[0]||'Актёр','debug-guest':msg.scene.roles[1]||msg.scene.roles[0]||'Актёр'};
+  next.mediaReady={[me]:true,'debug-guest':true};
+ }else if(msg.type==='start'&&next.phase==='lobby'&&next.configured){
+  next.phase='recording';next.counts={};next.ready={};
+ }else if(msg.type==='ready'&&next.phase==='recording'){
+  next.ready[me]=true;next.ready['debug-guest']=true;next.counts[me]=msg.count;next.counts['debug-guest']=0;
+ }else if(msg.type==='unready'&&next.phase==='recording'){
+  delete next.ready[me];delete next.counts[me];
+ }else if(msg.type==='reveal'&&next.phase==='recording'){
+  next.phase='premiere';
+ }else if(msg.type==='again'&&next.phase==='premiere'){
+  next.phase='lobby';next.ready={};next.counts={};next.round++;
+ }else if(msg.type==='assign'&&next.phase==='lobby'){
+  next.assignments[msg.target]=msg.role;
+ }else return;
+ stateChanged(next);
+}
+async function startDebugPlay(){
+ const requested=new URLSearchParams(location.search).get('screen')||'home';
+ // Visual QA runs the actual application code, but never opens a real socket.
+ if(requested==='home')return;
+ if(requested==='library'){mode='solo';library();return}
+ if(requested==='trim'){mode='solo';selectScene(LIBRARY[0]);return}
+ if(requested.startsWith('room')||requested==='wait'||requested==='premiere'||requested==='premiere-export'){
+  mockConnect();
+  if(requested==='room-offline'){
+   networkInterrupted=true;connectionNotice();setNetStatus('offline','Тест: нет связи');
+  }
+  if(requested==='wait'){
+   const next={...state,phase:'recording',ready:{[me]:true,'debug-guest':false},counts:{[me]:1}};
+   state=next;waitUI();
+  }
+  return;
+ }
+ if(requested.startsWith('editor')){
+  mode='solo';scene={...LIBRARY[0],roles:[...LIBRARY[0].roles]};
+  await openEditor();
+ }
+}
 void initializeIdentityAndRecovery();
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+if(debugPlay)void startDebugPlay();
+if(!debugPlay&&'serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
