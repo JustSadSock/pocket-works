@@ -268,7 +268,15 @@ async function executeRoute(routeId=null,custom=null){
    const label=part.model==='mrx'?'MRX':'SCNet · окна '+Math.round(part.step*100)+'%';
    step('Этап '+(i+1)+'/'+task.length+' · '+label,
     'Обрабатываем '+elapsed(selected.duration)+' · время зависит от CPU и количества пересечений окон.');
-   const run=await modelStage(part.model,inputId,inputPCM,part.step??null,id);
+   const stageStarted=performance.now();
+   const tick=setInterval(()=>{
+    if(worker&&id===serial)text('progress-detail','Стадия '+(i+1)+'/'+task.length+
+     ' · '+label+' · прошло '+elapsed((performance.now()-stageStarted)/1000)+
+     '. Нажми «Прервать», если обработка слишком долгая.');
+   },1000);
+   let run;
+   try{run=await modelStage(part.model,inputId,inputPCM,part.step??null,id)}
+   finally{clearInterval(tick)}
    if(controller.signal.aborted||id!==serial)return;
    totalMs+=run.timeMs;if(run.cached)cacheHits++;else freshMs+=run.timeMs;
    inputPCM=run.clean;
@@ -276,6 +284,9 @@ async function executeRoute(routeId=null,custom=null){
    if(part.model==='mrx'&&inputId==='original'&&!studyResults.has('mrx')){
     registerStudyResult('mrx',run.clean,run.timeMs,
      {source:'local',label:'MRX · быстрый ориентир',meta:{model:'mrx',runKey:run.key,input:'original'}});
+    // Keep the first-pass result audible, even if an optional follow-up
+    // cannot finish or the user cancels its slow CPU inference.
+    await selectStudyResult('mrx');
    }
    // A preset MRX stage is a stable named intermediate input for later
    // routes; a custom pass must not silently become that intermediate.
