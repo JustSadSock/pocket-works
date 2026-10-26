@@ -67,6 +67,7 @@
   <label class="film-mode"><input type="radio" name="film-clean-mode" value="hybrid"><span class="film-mode-copy"><strong>Open-Unmix + SCNet</strong><span>SCNet только на проблемных местах</span></span><span class="film-mode-timing"><b id="film-time-hybrid">—</b><i id="film-ratio-hybrid">—</i></span></label>
   <label class="film-mode"><input type="radio" name="film-clean-mode" value="scnet"><span class="film-mode-copy"><strong>SCNet полностью</strong><span>Более тщательная обработка всей сцены</span></span><span class="film-mode-timing"><b id="film-time-scnet">—</b><i id="film-ratio-scnet">—</i></span></label>
  </div>
+ <label class="film-skip"><input id="film-skip" type="checkbox"> <span>В видео уже нет диалогов — не запускать нейросеть</span></label>
  <p class="film-clean-footnote" id="film-time-explain">Время работы нейросетей — оценка по замерам на ПК, без подготовки видео. Действительная скорость зависит от устройства.</p>
  <div class="film-clean-actions"><button id="film-clean-start" type="button" class="action secondary-action">Подготовить звук без голосов</button><button id="film-clean-cancel" type="button" class="text-action hidden">Отменить</button></div>
  <div id="film-clean-progress" class="film-clean-progress hidden"><progress id="film-clean-bar" max="100" value="0"></progress></div>
