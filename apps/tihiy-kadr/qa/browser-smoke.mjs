@@ -85,7 +85,7 @@ try{
  const downloaded=page.waitForEvent('download',{timeout:25000});
  await page.locator('#wav-btn').click();
  const output=await downloaded;
- assert.match(output.suggestedFilename(),/no-dialogue\.wav$/);
+ assert.match(output.suggestedFilename(),/music-effects\.wav$/);
 
  // Force native video unmute and prove its soundtrack cannot leak.
  await page.evaluate(()=>{
