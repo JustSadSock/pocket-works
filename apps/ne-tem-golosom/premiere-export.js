@@ -1,4 +1,5 @@
 import {connectVoiceEffect,normalizeVoiceEffect} from './voice-effects.js';
+import {clipMix,scheduleEnvelope} from './clip-mix.js';
 // The premiere recorder deliberately uses the same start/end/offset values as
 // the playback timeline. No binary voice data is uploaded to PocketNet.
 export const MAX_PREMIERE_CLIPS = 540;
@@ -19,7 +20,7 @@ export const voicePlan = (clips,duration) => {
     // Old editors occasionally generated slivers < 50ms when two takes
     // crossed. They have no audible value and must not veto a 90s premiere.
     if(end-start<.05)continue;
-    valid.push({id:c.id,start,end,offset:c.offset,blob:c.blob,fx:normalizeVoiceEffect(c.fx),owner:c.owner||'solo'});
+    valid.push({id:c.id,start,end,offset:c.offset,blob:c.blob,fx:normalizeVoiceEffect(c.fx),owner:c.owner||'solo',...clipMix(c)});
   }
   if(!valid.length)throw Error('Нет пригодных голосовых фрагментов для экспорта.');
   return valid.sort((a,b)=>a.start-b.start);
