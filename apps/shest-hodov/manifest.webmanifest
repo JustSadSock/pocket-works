@@ -1,0 +1,24 @@
+{
+  "id": "/apps/shest-hodov/",
+  "name": "ШЕСТЬ ХОДОВ",
+  "short_name": "Шесть ходов",
+  "description": "Шесть простых стратегических игр без случайности",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#efeee6",
+  "theme_color": "#efeee6",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
