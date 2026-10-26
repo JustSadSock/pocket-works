@@ -143,7 +143,54 @@ function policyControl(s,a,t,walls){
  }
  return {mx:mx*strength,my:my*strength};
 }
-export function stepBattle(s){
+export const NEURAL_COMBAT_CLASSES=Object.freeze({
+ archer:Object.freeze({label:'Лучник',loadout:['bolt','dash','shield']}),
+ swordsman:Object.freeze({label:'Мечник',loadout:['strike','dash','shield']})
+});
+export const NEURAL_COMBAT_ACTIONS=Object.freeze(['АТАКА','СБЛИЖЕНИЕ','ОТСТУПЛЕНИЕ','ОБХОД ВЛЕВО','ОБХОД ВПРАВО']);
+// The same real battle state is projected to 7x7 semantic observations.
+// A neural fighter sees local geometry and projectiles, plus the relative
+// position of its closest live opponent, but never its enemy's neural weights.
+export function neuralBattleObservation(s,a){
+ const tiles=[];
+ const target=targetFor(s,a,battleWalls(s));
+ const walls=battleWalls(s),scale=70;
+ for(let row=-3;row<=3;row++){
+  const line=[];
+  for(let col=-3;col<=3;col++){
+   const x=a.x+col*scale,y=a.y+row*scale;
+   let tile=0;
+   if(x<15||y<15||x>CW-15||y>CH-15||touchesWall(x,y,16,walls))tile=1;
+   else if(s.agents.some(b=>b.alive&&b.team!==a.team&&Math.hypot(b.x-x,b.y-y)<scale*.52))tile=2;
+   else if(s.shots.some(p=>s.agents[p.owner]?.team!==a.team&&Math.hypot(p.x-x,p.y-y)<scale*.45)||
+    s.mines.some(m=>s.agents[m.owner]?.team!==a.team&&Math.hypot(m.x-x,m.y-y)<m.r)||
+    s.arena==='hazards'&&Math.hypot(x-400,y-240)<84)tile=3;
+   else if(s.agents.some(b=>b.alive&&b.id!==a.id&&b.team===a.team&&Math.hypot(b.x-x,b.y-y)<scale*.52))tile=4;
+   line.push(tile);
+  }
+  tiles.push(line);
+ }
+ return {tiles,pos:[a.x/CW*30,a.y/CH*20],
+  goalVec:target?[(target.x-a.x)/CW*30,(target.y-a.y)/CH*20]:[0,0]};
+}
+// Five learned macro-actions affect actual combat physics. The opponent's
+// position determines target direction, but the brain chooses WHEN to attack.
+export function neuralBattleControl(s,a,t,walls,actionIndex){
+ const dx=t.x-a.x,dy=t.y-a.y,d=Math.hypot(dx,dy)||1;
+ const ux=dx/d,uy=dy/d,action=Number.isInteger(actionIndex)?actionIndex:0;
+ let mx=0,my=0;
+ if(action===1){mx=ux;my=uy;}
+ else if(action===2){mx=-ux;my=-uy;}
+ else if(action===3){mx=-uy;my=ux;}
+ else if(action===4){mx=uy;my=-ux;}
+ else if(action===0){
+  const skill=a.loadout.includes('strike')?'strike':'bolt';
+  if(skill==='strike'?d<=78:!lineBlocked(a,t,walls))
+   cast(s,a,skill,t,dx,dy,walls);
+ }
+ return {mx,my};
+}
+export function stepBattle(s,controllers=null){
  if(s.done)return s;
  s.events=[];s.ticks++;s.time=s.ticks*DT;const walls=safe(s);
  for(const a of s.agents){
@@ -153,7 +200,9 @@ export function stepBattle(s){
   const t=targetFor(s,a,walls);if(!t)continue;
   const dx=t.x-a.x,dy=t.y-a.y;
   a.face=Math.atan2(dy,dx);
-  const control=policyControl(s,a,t,walls),v=a.topSpeed*(a.loadout.includes('dash')?1.08:1);
+  const controller=controllers?.[a.id];
+  const control=typeof controller==='function'?controller(s,a,t,walls):policyControl(s,a,t,walls);
+  const v=a.topSpeed*(a.loadout.includes('dash')?1.08:1);
   a.vx+=((control.mx*v)-a.vx)*Math.min(1,DT*8);
   a.vy+=((control.my*v)-a.vy)*Math.min(1,DT*8);
   move(a,a.vx*DT,a.vy*DT,walls);
