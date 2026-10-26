@@ -1,4 +1,5 @@
 import {readCombatNeural} from './agent-career.mjs';
+import {showWorkbenchDialog} from './ui-navigation.mjs';
 const $=id=>document.getElementById(id);
 const pc=v=>(100*v).toFixed(0)+'%';
 export function mountNeuralCombat(api){
@@ -87,7 +88,7 @@ export function mountNeuralCombat(api){
   $('cpNeuroStop').hidden=!locked||task!=='train';
  }
  function release(){worker?.terminate();worker=null;lock(false);}
- $('cpNeurocombat').onclick=()=>{refresh();$('cpNeuroDialog').showModal();};
+ $('cpNeurocombat').onclick=()=>{refresh();showWorkbenchDialog($('cpNeuroDialog'));};
  $('cpNeuroClose').onclick=()=>$('cpNeuroDialog').close();
  $('cpNeuroDialog').addEventListener('cancel',event=>{if(worker)event.preventDefault();});
  $('cpNeuroOpponent').onchange=refresh;
