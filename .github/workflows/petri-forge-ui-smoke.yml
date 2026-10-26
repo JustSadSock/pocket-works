@@ -3,6 +3,8 @@ name: PetriForge UI Smoke
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
     paths:
       - 'apps/petri-forge/**'
       - '.github/workflows/petri-forge-ui-smoke.yml'
@@ -18,7 +20,7 @@ concurrency:
 jobs:
   browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,12 +30,11 @@ jobs:
         run: npm ci --no-audit --no-fund --legacy-peer-deps
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Syntax and model tests
+      - name: Syntax and full model regression suite
         run: |
-          node --check apps/petri-forge/agent-hub.mjs
-          node --check apps/petri-forge/agent-cockpit.mjs
-          node --test apps/petri-forge/tests/agent-career.test.mjs
-      - name: Playwright cockpit smoke
+          for file in apps/petri-forge/*.mjs; do node --check "$file"; done
+          node --test apps/petri-forge/tests/*.test.mjs
+      - name: Playwright agent lifecycle, duels and Perekos smoke
         run: npx playwright test --config apps/petri-forge/qa/playwright.config.mjs
       - name: Failure screenshots and traces
         if: failure()
