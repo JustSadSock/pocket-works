@@ -316,7 +316,7 @@ $('raceLoad').onclick=async()=>{
 };
 $('raceDelete').onclick=async()=>{const id=$('raceModels').value;if(!id)return;if(!confirm('Удалить сохранённого гонщика?'))return;try{await deleteModel(id);await refreshLibraries();status('Гонщик удалён');}catch(e){notifyError(e);}};
 frame.addEventListener('error',()=>{$('raceConnect').textContent='Ошибка загрузки Шпильки';status('Не удалось открыть гоночный движок');});
-function openMode(mode){
+function openMode(mode,{notify=true}={}){
  if(mode!=='race')stopRacePlayback();
  const grid=mode==='grid',combat=mode==='combat',race=mode==='race';
  for(const [id,show] of [['worldPanel',grid],['labPanel',grid],['combatWorld',combat],['combatPanel',combat],['raceWorld',race],['racePanel',race],['perekosWorld',mode==='perekos'],['perekosPanel',mode==='perekos']])$(id).hidden=!show;
@@ -324,13 +324,20 @@ function openMode(mode){
  if(!grid&&$('playPause').textContent.includes('Пауза'))$('playPause').click();
  if(combat&&!battleReplay&&!editor.isEditing()&&!document.body.classList.contains('hub-on'))sendCombat('combat-test',{config:sceneConfig(),seed:41});
  if(mode==='perekos')openPerekosLab();else pausePerekosLab();
- window.dispatchEvent(new CustomEvent('petri:mode',{detail:{mode}}));
+ if(notify)window.dispatchEvent(new CustomEvent('petri:mode',{detail:{mode}}));
  if(race&&!frame.src.includes('petri=1')){
   $('raceConnect').textContent='Подключение физики Шпильки...';
   connectRace();
  }
 }
-for(const b of document.querySelectorAll('[data-world-mode]'))b.onclick=()=>openMode(b.dataset.worldMode);
+for(const b of document.querySelectorAll('[data-world-mode]'))b.onclick=()=>{
+ if(b.disabled)return;
+ openMode(b.dataset.worldMode);
+};
+window.addEventListener('petri:mode-rollback',event=>{
+ const restored=event.detail?.mode;
+ if(['grid','combat','race','perekos'].includes(restored))openMode(restored,{notify:false});
+});
 openMode('grid');raceLock(false);
 void refreshLibraries();
 
