@@ -1533,6 +1533,7 @@ document.addEventListener('keydown',e=>{
  }
 });
 async function initializeIdentityAndRecovery(){
+ if(new URLSearchParams(location.search).get('debug')==='1')return; // QA preview must never auto-join a saved room.
  try{
   identity=await getPocketIdentity();
   name=identity?.complete?identity.nickname:(session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900))));
