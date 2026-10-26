@@ -43,8 +43,12 @@ try{
   }
   await page.locator('[data-debug-device="phone"]').click();
   assert.equal(await page.locator('[data-debug-device-shell]').getAttribute('data-device'),'phone');
-  const size=await page.locator('.ntg-debug-device-shell iframe').evaluate(el=>Math.round(el.getBoundingClientRect().width));
-  assert(size<=390&&size>=320,'phone preview width is realistic');
+  // The device shell has a short width transition; inspect its settled size.
+  await page.waitForFunction(()=>{
+   const el=document.querySelector('.ntg-debug-device-shell iframe');
+   const width=el?.getBoundingClientRect().width||0;
+   return width>=320&&width<=390;
+  },null,{timeout:3000});
   await page.locator('[data-debug-device="desktop"]').click();
   await page.locator('[data-debug-close]').click();
   assert.equal(await page.locator('.ntg-debug-overlay').count(),0);
