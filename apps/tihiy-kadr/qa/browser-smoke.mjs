@@ -160,6 +160,46 @@ try{
  assert.match((await csv).suggestedFilename(),/seven-routes\.csv$/);
  assert.equal(await page.locator('#study-csv').isEnabled(),true);
  console.log('Browser real pipelines: MRX, fast SCNet, balanced SCNet, custom MRX, direct SCNet; first fast time:',fastTime);
+ // Regression: a changed SCNet vocal subtraction MUST invalidate downstream
+ // inference on that gallery row, while leaving prior results available.
+ await page.locator('#pipeline-input').selectOption('scnet-direct');
+ await page.locator('#pipeline-model').selectOption('mrx');
+ await page.locator('#pipeline-run').click();
+ await page.waitForFunction(()=>document.querySelector('#pipeline-status').textContent.startsWith('Готово'),null,{timeout:180000});
+ await page.locator('#study-results .study-choice').filter({hasText:'SCNet · оригинал'}).click();
+ await page.locator('#scnet-strength').fill('30');
+ await page.waitForTimeout(430);
+ await page.locator('#pipeline-input').selectOption('scnet-direct');
+ await page.locator('#pipeline-model').selectOption('mrx');
+ await page.locator('#pipeline-run').click();
+ await page.waitForFunction(()=>document.querySelector('#pipeline-status').textContent.startsWith('Готово'),null,{timeout:180000});
+ assert.doesNotMatch(await page.locator('#pipeline-status').innerText(),/Кэшировано этапов:/);
+
+ // Regression: cancelling a slow stage must also release the awaited Promise
+ // and clear its 1-second status timer, not merely kill the Worker.
+ await page.evaluate(()=>{
+  const start=window.setInterval,stop=window.clearInterval;
+  window.__inferenceIntervals=new Set();
+  window.setInterval=(handler,delay,...args)=>{
+   const id=start(handler,delay,...args);
+   if(delay===1000)window.__inferenceIntervals.add(id);
+   return id;
+  };
+  window.clearInterval=id=>{
+   window.__inferenceIntervals.delete(id);
+   return stop(id);
+  };
+ });
+ await page.locator('#quality-mode').selectOption('mrx-scnet');
+ await page.locator('#process-btn').click();
+ await page.waitForFunction(()=>document.querySelector('#progress-heading').textContent.includes('SCNet'),null,{timeout:12000});
+ await page.locator('#cancel-btn').click();
+ await page.waitForFunction(()=>window.__inferenceIntervals.size===0,null,{timeout:3500});
+ assert.equal(await page.locator('#process-btn').isEnabled(),true);
+ await page.locator('#quality-mode').selectOption('mrx');
+ await page.locator('#process-btn').click();
+ await page.waitForFunction(()=>document.querySelector('#result-state').textContent==='MRX',null,{timeout:15000});
+
  // Third independent ONNX model, not a parameter change to SCNet:
  await page.locator('#quality-mode').selectOption('umxhq-direct');
  await page.locator('#process-btn').click();
