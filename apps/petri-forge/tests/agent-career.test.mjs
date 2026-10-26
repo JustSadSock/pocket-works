@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DOMAINS,freshCareer,assertCareer,brainId,createCareer,listCareers,writeBrain,readBrain,recordTraining,renameCareer,eraseCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm,readGridBrain} from '../agent-career.mjs';
 import {NeuralActorCritic} from '../neural-policy.mjs';
+import {PpoPolicy} from '../ppo.mjs';
 import {packCareer,unpackCareer,validatePackage} from '../agent-portability.mjs';
 
 // Minimal asynchronous IndexedDB contract: tests the same repository methods without
@@ -211,4 +212,41 @@ test('neural and Q brains survive independent selection, cloning and JSON portab
  assert.equal((await readBrain(qProfile,'grid')).type,'qlearning');
  const qAgain=await setCareerGridAlgorithm(qProfile,'neural');
  assert.equal((await readBrain(qAgain,'grid')).updates,1);
+});
+
+test('PPO is independent from Q and previous actor-critic across clone, delete and JSON roundtrip',async()=>{
+ const original=await createCareer('Три мозга','a-ppo-triple');
+ const q={type:'qlearning',version:1,q:[['origin',[3,1,0,0,0]]]};
+ await writeBrain(original,'grid',q);
+ const n=await setCareerGridAlgorithm(original,'neural');
+ const actor=new NeuralActorCritic(13).serialize();
+ await recordTraining(n,'grid',actor,{units:3,label:'actor'});
+ const p=await setCareerGridAlgorithm(n,'ppo');
+ const ppo=new PpoPolicy(31);
+ const obs={tiles:Array.from({length:7},()=>Array(7).fill(0)),pos:[2,2],goalVec:[3,3]};
+ const action=ppo.sample(obs);
+ const trainer=new (await import('../ppo.mjs')).PpoTrainer(ppo,{rolloutSteps:1,epochs:1,minibatchSize:1});
+ trainer.add(obs,{reward:1,done:true},action.actionIndex,action.logProb,action.value);
+ trainer.optimize();
+ const trained=await recordTraining(p,'grid',ppo.serialize(),{units:5,label:'PPO'});
+ assert.equal(trained.algorithms.grid,'ppo');
+ assert.deepEqual(await readBrain(trained,'grid'),ppo.serialize());
+ assert.deepEqual(await readGridBrain(trained,'qlearning'),q);
+ assert.deepEqual(await readGridBrain(trained,'neural'),actor);
+ const clone=await cloneCareer(trained);
+ assert.equal(clone.algorithms.grid,'ppo');
+ assert.deepEqual(await readGridBrain(clone,'ppo'),ppo.serialize());
+ const packaged=await packCareer(trained);
+ assert.deepEqual(packaged.brains.gridPpo,ppo.serialize());
+ const reimported=await unpackCareer(packaged);
+ assert.equal(reimported.algorithms.grid,'ppo');
+ assert.deepEqual(await readBrain(reimported,'grid'),ppo.serialize());
+ assert.deepEqual(await readGridBrain(reimported,'qlearning'),q);
+ assert.deepEqual(await readGridBrain(reimported,'neural'),actor);
+ await eraseCareer(clone);
+ assert.deepEqual(await readBrain(trained,'grid'),ppo.serialize());
+ const back=await setCareerGridAlgorithm(trained,'qlearning');
+ assert.equal((await readBrain(back,'grid')).type,'qlearning');
+ const restored=await setCareerGridAlgorithm(back,'ppo');
+ assert.equal((await readBrain(restored,'grid')).type,'neural-ppo');
 });
