@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {chromium} from '@playwright/test';
 import {handleMrxAsset} from '../../../pocketnet/mrx-assets.mjs';
 const root=resolve(fileURLToPath(new URL('../../../',import.meta.url)));
-const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json',
+const mime={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json',
  '.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const server=createServer(async(req,res)=>{
  try{
