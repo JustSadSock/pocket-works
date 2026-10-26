@@ -1065,6 +1065,25 @@ async function startRecord(countdown=0,replaceId=null){
    rec.onstop=async()=>{
     try{
      const blob=new Blob(blobs,{type:rec.mimeType||blobs[0]?.type||'audio/webm'});
+     // Reconcile wall-clock video time with actual encoded microphone duration.
+     // If a browser truncated audio, warn immediately instead of silently
+     // dropping several seconds on the timeline and final premiere.
+     if(blob.size&&active.end>active.start){
+      let duration=NaN,ctx=null;
+      try{
+       const Context=window.AudioContext||window.webkitAudioContext;
+       if(Context){
+        ctx=new Context();
+        duration=(await ctx.decodeAudioData(await blob.arrayBuffer())).duration;
+       }
+      }catch{/* Unsupported browser codecs are validated again during export. */}
+      finally{if(ctx)void ctx.close().catch(()=>{})}
+      const expected=active.end-active.start;
+      if(Number.isFinite(duration)&&duration>=MIN_CLIP_SECONDS&&duration<expected-.20){
+       active.end=Math.min(scene.duration,active.start+duration);
+       toast('Записано меньше звука, чем шло видео. Конец реплики исправлен — прослушай дубль.');
+      }
+     }
      if(blob.size>MAX_AUDIO_BYTES){toast('Запись слишком большая для передачи. Сделай реплику короче.');}
      else if(blob.size&&active.end-active.start>=MIN_CLIP_SECONDS){
       if(active.replaceId){
