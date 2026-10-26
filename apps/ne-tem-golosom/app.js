@@ -5,6 +5,7 @@ import {MAX_AUDIO_BYTES,MAX_INCOMING_TRANSFERS,validAudioEnvelope,validVideoEnve
 import {renderPremiere,supportsPremiereExport,premiereFilename} from './premiere-export.js';
 import {TimelineHistory,snapshotClips,spliceRecording,layerTimeline,packTimeline,unpackTimeline,editClip,replaceSelectedRecording,MIN_CLIP_SECONDS} from './timeline-model.js';
 import {VOICE_EFFECTS,VOICE_EFFECT_GROUPS,normalizeVoiceEffect,connectVoiceEffect} from './voice-effects.js';
+import {clipMix,envelopeGain} from './clip-mix.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {createRoomRecovery} from './room-recovery.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
@@ -13,6 +14,7 @@ installMobileRuntime();
 
 const $=id=>document.getElementById(id);
 const STORE='pocket-works:ne-tem-golosom:';
+const debugPlay=new URLSearchParams(location.search).get('debug')==='play';
 const LIBRARY=[
  {id:'wing-launch',title:'WING IT! · ПОЛЁТ',sub:'2023 · Blender Studio · CC BY 4.0',short:'WING / 01',duration:55,start:44,roles:['Кот','Пёс','Курица'],src:'https://commons.wikimedia.org/wiki/Special:Redirect/file/WING_IT!_-_Blender_Open_Movie-full_movie.webm'},
  {id:'wing-chaos',title:'WING IT! · ХАОС',sub:'2023 · Blender Studio · CC BY 4.0',short:'WING / 02',duration:60,start:120,roles:['Кот','Пёс','Курица'],src:'https://commons.wikimedia.org/wiki/Special:Redirect/file/WING_IT!_-_Blender_Open_Movie-full_movie.webm'},
@@ -60,7 +62,7 @@ function saveRoomCheckpoint(){
 }
 function clearRoomCheckpoint(){roomCheckpoint().clear()}
 function sceneDraftKey(){
- return scene&&room?room+'::'+scene.id+'::'+scene.start+'::'+scene.duration:'';
+ return scene&&room?room+'::'+scene.id+'::'+scene.start+'::'+scene.duration+'::'+(state?.mediaEpoch||1)+'::'+(state?.round||1):'';
 }
 function connectionNotice(){
  const offline=state?.players?.filter(p=>p.id!==me&&onlineIds&&!onlineIds.has(p.id))||[];
@@ -223,7 +225,7 @@ async function draftWrite(){
  }
 }
 function disposeClip(c){
- try{c.audio?.pause();c.fxCleanup?.()}catch{}
+ try{c.audio?.pause();c.fxCleanup?.();c.fxGain?.disconnect()}catch{}
  if(c.url)URL.revokeObjectURL(c.url);
 }
 function disposeLocalClips(){for(const c of localClips)disposeClip(c)}
@@ -233,7 +235,7 @@ function cleanAudios(){
 }
 function makeClip(base){
  const url=URL.createObjectURL(base.blob),audio=new Audio(url);
- audio.preload='auto';return {...base,fx:normalizeVoiceEffect(base.fx),url,audio};
+ audio.preload='auto';return {...base,...clipMix(base),fx:normalizeVoiceEffect(base.fx),url,audio};
 }
 function ensureClipVoice(c){
  if(c.fxReady===c.fx)return;
@@ -242,8 +244,9 @@ function ensureClipVoice(c){
   if(!Context)return;
   voiceFxContext ||=new Context();
   if(!c.fxSource)c.fxSource=voiceFxContext.createMediaElementSource(c.audio);
+  if(!c.fxGain){c.fxGain=voiceFxContext.createGain();c.fxGain.connect(voiceFxContext.destination)}
   c.fxCleanup?.();
-  c.fxCleanup=connectVoiceEffect(voiceFxContext,c.fxSource,voiceFxContext.destination,c.fx);
+  c.fxCleanup=connectVoiceEffect(voiceFxContext,c.fxSource,c.fxGain,c.fx);
   c.fxReady=c.fx;
   void voiceFxContext.resume().catch(()=>{});
  }catch(e){console.warn('Voice effect unavailable',e)}
@@ -834,16 +837,16 @@ async function receivedMedia(p,rx,blob){
   sender:p.id,host:state.host,receiver:me
  })||!canAcceptVoice({owner:m?.owner,local:localClips,remote:remoteClips,expected:state.counts}))return;
  if([...localClips,...remoteClips].some(c=>c.id===m.id&&c.owner===m.owner))return;
- remoteClips.push(makeClip({id:m.id,owner:m.owner,start:m.start,end:m.end,offset:m.offset,fx:normalizeVoiceEffect(m.fx),blob}));
+ remoteClips.push(makeClip({id:m.id,owner:m.owner,start:m.start,end:m.end,offset:m.offset,fx:normalizeVoiceEffect(m.fx),...clipMix(m),blob}));
  if(meHost())for(const q of state.players)if(q.id!==me&&q.id!==m.owner)sendAudio(q.id,blob,m);
  updatePremiereStatus();
 }
 function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{
- id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,fx:normalizeVoiceEffect(c.fx),
+ id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,fx:normalizeVoiceEffect(c.fx),...clipMix(c),
  epoch:state?.mediaEpoch,mime:c.blob.type
 })}
 function sendAllOwn(){if(sentPremiere||mode==='solo')return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
-async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}if(mode!=='solo'&&state?.phase!=='recording')return;setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
+async function openEditor(){if(!scene)return;stopAllPlayback();const key=mode==='solo'?'solo::'+scene.id+'::'+scene.start+'::'+scene.duration:sceneDraftKey();if(!await restore(key)){if(mode==='solo')library();else roomUI();return}if(mode!=='solo'&&state?.phase!=='recording')return;setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
 function stopAllPlayback(){playing=false;for(const id of ['stage-video','premiere-video','trim-video'])$(id).pause();for(const c of [...localClips,...remoteClips])c.audio?.pause();$('play-toggle').textContent='▶'}
 function updateClipSound(t,on,isPremiere=false){
  const items=isPremiere?[...localClips,...remoteClips]:localClips;
@@ -853,10 +856,12 @@ function updateClipSound(t,on,isPremiere=false){
   const offset=clamp(t-c.start+c.offset,0,Math.max(0,c.blob.size?1e5:0));
   if(active){
    ensureClipVoice(c);
+    if(c.fxGain)c.fxGain.gain.setTargetAtTime(.85*envelopeGain(c,t-c.start),voiceFxContext.currentTime,.012);
    if(c.audio.paused||Math.abs(c.audio.currentTime-offset)>.25)
     try{c.audio.currentTime=offset}catch{}
    if(c.audio.paused)c.audio.play().catch(()=>{});
   }else if(!c.audio.paused)c.audio.pause();
+   if(!active&&c.fxGain)c.fxGain.gain.value=0;
  }
 }
 // Video time updates move only the playhead. Clip buttons retain focus.
@@ -922,6 +927,13 @@ function renderTimeline(){
  $('erase-btn').disabled=!picked;
  $('replace-clip-btn').disabled=!picked||!!record||!!preroll||!!micPending||!!pendingRecording;
  $('voice-effects').classList.toggle('hidden',!picked);
+  $('clip-mixer').classList.toggle('hidden',!picked);
+  if(picked){
+    const mix=clipMix(picked);
+    for(const [id,value,label] of [['clip-volume',Math.round(mix.volume*100),Math.round(mix.volume*100)+'%'],['clip-fade-in',Math.round(mix.fadeIn*100),mix.fadeIn.toFixed(2)+' с'],['clip-fade-out',Math.round(mix.fadeOut*100),mix.fadeOut.toFixed(2)+' с']]){
+      $(id).value=String(value);$(id+'-label').textContent=label;
+    }
+  }
  if(picked&&VOICE_EFFECTS.find(f=>f.id===normalizeVoiceEffect(picked.fx))?.category!=='main')
   voiceFxExpanded=true;
  $('voice-fx-extra').classList.toggle('hidden',!voiceFxExpanded);
@@ -1212,7 +1224,7 @@ async function downloadPremiere(){
  $('premiere-film-audio').disabled=true;$('premiere-local-file').disabled=true;
  status.textContent='Подготавливаем звук…';
  const audioClips=[...localClips,...remoteClips].map(c=>({
-  id:c.id,start:c.start,end:c.end,offset:c.offset,owner:c.owner,fx:normalizeVoiceEffect(c.fx),blob:c.blob
+  id:c.id,start:c.start,end:c.end,offset:c.offset,owner:c.owner,fx:normalizeVoiceEffect(c.fx),...clipMix(c),blob:c.blob
  }));
  const sceneCopy={...scene},input=premiereLocalCopy||(scene.custom?sourceBlob:sceneSource(scene));
  try{
