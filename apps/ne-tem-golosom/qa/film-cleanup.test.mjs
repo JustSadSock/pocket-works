@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {FILM_MODES,estimateFilmTimes,validateFilmMode} from '../film-cleanup.js';
+import {FILM_MODES,estimateFilmTimes,lowMemoryRecommended,estimatePreparationTimes,validateFilmMode} from '../film-cleanup.js';
 test('three film models are genuine independent choices',()=>{
  assert.deepEqual(FILM_MODES.map(x=>x.id),['umx','hybrid','scnet']);
  for(const m of FILM_MODES)assert.equal(validateFilmMode(m.id),m.id);
@@ -29,7 +29,7 @@ test('cleaned PCM really replaces source audio in exported video',()=>{
 test('regional hybrid passes only selected original PCM, full SCNet passes whole scene',()=>{
  const code=readFileSync(new URL('../film-cleanup.js',import.meta.url),'utf8');
  assert.match(code,/const sc=await model\(original,'scnet'\)/);
- assert.match(code,/selectProblemSegments\(original,vocals,buzz\.artifact/);
+ assert.match(code,/selectProblemSegments\(original,vocals,buzzLayer/);
  assert.match(code,/const sc=await model\(packed\.packed,'scnet'\)/);
  assert.match(code,/mixSelectivePatches\(clean,patches,1\)/);
 });
@@ -38,11 +38,37 @@ test('three UI models default to UMX and display three relative estimates',()=>{
  assert.match(html,/name="film-clean-mode" value="umx" checked/);
  assert.match(html,/name="film-clean-mode" value="hybrid"/);
  assert.match(html,/name="film-clean-mode" value="scnet"/);
- for(const id of ['film-time-umx','film-time-hybrid','film-time-scnet','film-clean-cancel','film-skip'])assert(html.includes('id="'+id+'"'));
+ for(const id of ['film-time-umx','film-time-hybrid','film-time-scnet','film-clean-cancel','film-skip','film-low-memory'])assert(html.includes('id="'+id+'"'));
 });
 test('multiplayer server module and deployed v4 snapshot are identical',()=>{
  const live=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
  const pin=readFileSync(new URL('../../../pocketnet/module-versions/ne-tem-golosom/v4.ts',import.meta.url),'utf8');
  assert.equal(live,pin);
  assert.match(live,/cleaned:x\.custom===true&&x\.cleaned===true/);
+});
+
+test('low-memory plan is chosen by observable device limits, not old desktop benchmark',()=>{
+ assert(lowMemoryRecommended(4,8));
+ assert(lowMemoryRecommended(8,2));
+ assert(!lowMemoryRecommended(16,12));
+ assert(!lowMemoryRecommended(undefined,undefined));
+ const slow=estimatePreparationTimes(90,'umx');
+ assert.equal(slow.neural,5);
+ assert.equal(slow.encoding,90);
+ assert.equal(slow.totalSlow,185);
+});
+test('fast MP4 AAC extraction avoids full video ArrayBuffer and video capture',()=>{
+ const mp4=readFileSync(new URL('../mp4-audio.js',import.meta.url),'utf8');
+ const code=readFileSync(new URL('../film-cleanup.js',import.meta.url),'utf8');
+ assert.match(mp4,/export async function extractMp4AAC/);
+ assert.match(mp4,/blob\.slice\(/);
+ assert.match(mp4,/new AudioDecoder/);
+ assert.doesNotMatch(mp4,/blob\.arrayBuffer\(\)/);
+ assert.match(code,/await extractMp4AAC\(blob,start,duration/);
+ assert.match(code,/if\(blob\.size<=32\*1048576\)/);
+ assert.match(code,/transferInputs:true/);
+ assert.match(code,/if\(lowMemory\)/);
+ assert.match(code,/const cut=original\.map\(ch=>ch\.slice\(begin,end\)\)/);
+ const dsp=readFileSync(new URL('../film-buzz-worker.js',import.meta.url),'utf8');
+ assert.match(dsp,/const channels=keepOriginal\?diff:base/);
 });
