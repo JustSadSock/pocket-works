@@ -1,5 +1,6 @@
 import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,suppressStereoCenter,wavPCM16,elapsed,safeName} from './audio-utils.js';
-import {STUDY_METHODS,researchMethod,decodeWav,resamplePCM,channelSummary,multichannelME,stereoPCM,sumMusicEffects,matchResultToSegment,comparisonMetrics,comparisonRecord,subtractResidualVocals} from './research-core.js';
+import {stereoPCM,comparisonMetrics,subtractResidualVocals} from './research-core.js';
+import {ROUTES,routeById,planRoute,planCustom,makeRunKey,calculateSpeed} from './pipeline-config.js';
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
 const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
  (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -7,22 +8,24 @@ let sourceVideo=$('source-video');
 let file=null,fileURL='',audioURL='',length=0,range=null,original=null,stems=null,inferenceTime=0;
 let worker=null,abort=null,serial=0,exporting=false,editTimer=null,mode='clean',fileName='video';
 let scnetVocals=null,scnetBase=null,scnetTime=0;
+const pipelineRuns=new Map();let customCounter=0;
 const studyResults=new Map();let activeStudy=null,studySurround=null,studySurroundRate=0,studySignature='',studyBusy=false;
 const text=(id,msg)=>$(id).textContent=String(msg),show=(id,on)=>$(id).classList.toggle('hidden',!on);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),revoke=url=>{if(url)URL.revokeObjectURL(url)};
 function error(msg){text('error',msg);show('error',true)}
 function clearError(){show('error',false)}
 function uiBusy(active){
- $('process-btn').disabled=active||studyBusy||!file||!length;
- $('file-input').disabled=active||studyBusy;
- $('start-seconds').disabled=active||studyBusy;
- $('duration-seconds').disabled=active||studyBusy;
- $('chunk-size').disabled=active;
- $('quality-mode').disabled=active;
+ const busy=active||studyBusy||exporting;
+ for(const name of ['process-btn','file-input','start-seconds','duration-seconds'])
+  $(name).disabled=busy||!file||!length;
+ $('quality-mode').disabled=busy;
+ $('chunk-size').disabled=busy;
+ $('scene-gravity').disabled=busy||!file||length<149;
+ $('pipeline-run').disabled=busy||!file||!length;
+ $('pipeline-input').disabled=busy;
+ $('pipeline-model').disabled=busy;
+ $('pipeline-step').disabled=busy||$('pipeline-model').value==='mrx';
  show('progress-wrap',active);
- $('study-source-wav').disabled=active||studyBusy||!file||!length;
- $('study-import').disabled=active||studyBusy||!file||!length;
- $('study-surround-file').disabled=active||studyBusy||!file||!length;
 }
 function step(title,detail='',ratio=null){text('progress-heading',title);text('progress-detail',detail);if(ratio===null)$('progress-bar').removeAttribute('value');else $('progress-bar').value=ratio}
 function pause(){video.pause();sourceVideo.pause();audio.pause()}
@@ -69,10 +72,19 @@ async function choose(f){
   text('file-detail',f.name+' · '+(f.size/1048576).toFixed(1)+' МиБ');
   text('range-note','Всего '+elapsed(length)+'. Обработка одного фрагмента: 1–90 секунд.');
   show('input-details',true);
+  $('scene-gravity').disabled=length<149;
+  text('route-hint',routeById($('quality-mode').value)?.detail||'');
  }catch(e){error(e.message);file=null;length=0;show('input-details',false)}
  finally{uiBusy(false)}
 }
 $('file-input').addEventListener('change',e=>{void choose(e.target.files?.[0]);e.target.value=''});
+$('scene-gravity').onclick=()=>{
+ if(!file||length<149||worker)return;
+ $('start-seconds').value='148';
+ $('duration-seconds').value=String(Math.min(20,Math.floor(length-148)));
+ text('range-note','Тест · Gravity Falls · 2:28, '+$('duration-seconds').value+' сек. При следующем запуске фрагмент обновится.');
+};
+$('quality-mode').onchange=()=>text('route-hint',routeById($('quality-mode').value)?.detail||'');
 const drop=$('drop-zone');
 drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('dragging')});
 drop.addEventListener('dragleave',()=>drop.classList.remove('dragging'));
@@ -156,7 +168,7 @@ function readableModelError(packet){
   return 'Не хватает памяти для нейросети. Выбери режим по 5 секунд и попробуй более короткую сцену. '+reason;
  return 'Нейросеть ('+phase+'): '+reason;
 }
-function separate(channels,chunk,id,kind='mrx'){
+function separate(channels,chunk,id,kind='mrx',scnetStep=.25){
  return new Promise((resolve,reject)=>{
   const w=new Worker('./mrx-worker.js',{type:'module'});worker=w;
   w.onerror=e=>{e.preventDefault();w.terminate();if(worker===w)worker=null;reject(Error('Ошибка подключения нейросети: '+(e.message||'скрипт Worker не запустился')+'. Проверь сеть и разрешение доступа к внешним CDN.'))};
@@ -171,75 +183,136 @@ function separate(channels,chunk,id,kind='mrx'){
    }
   };
   const copies=channels.map(ch=>ch.slice());
-  w.postMessage({id,channels:copies,chunk,kind},copies.map(c=>c.buffer));
+  w.postMessage({id,channels:copies,chunk,kind,scnetStep},copies.map(c=>c.buffer));
  });
 }
-async function process(){
- if(!file||worker||exporting)return;
- clearError();reset();const signal=new AbortController();abort=signal;const id=++serial;
- uiBusy(true);let timer=null;
+// Every route is browser-only. Intermediate neural runs are cached under the
+// *actual input result* and SCNet's window stride, avoiding duplicate inference.
+function stageAudio(id){
+ if(id==='original')return original;
+ return studyResults.get(id)?.clean||null;
+}
+function initPlayer(selected){
+ range=selected;
+ video.muted=true;try{video.volume=0}catch{}
+ if(video.src!==fileURL){
+  video.src=fileURL;video.load();
+  video.addEventListener('loadedmetadata',()=>{if(range)video.currentTime=range.start},{once:true});
+ }
+ $('result-seek').min='0';$('result-seek').max=String(selected.duration);
+ $('result-seek').step='.05';$('result-seek').value='0';
+}
+async function modelStage(model,inputId,inputPCM,stepSize,id){
+ const scnetStep=model==='scnet'?stepSize:null;
+ const key=makeRunKey(model,inputId,scnetStep);
+ if(pipelineRuns.has(key))return {...pipelineRuns.get(key),cached:true};
+ const actualPCM=stereoPCM(inputPCM);
+ const piece=model==='scnet'?Math.min(10,Number($('chunk-size').value)):Number($('chunk-size').value);
+ const response=await separate(actualPCM,piece,id,model,scnetStep??.25);
+ if(id!==serial||abort?.signal.aborted)throw new DOMException('Прервано','AbortError');
+ let run;
+ if(model==='mrx'){
+  const clean=mixPCM(actualPCM,response.stems,{dialogue:0,music:1,effects:1},'stems');
+  run={model,key,clean,stems:response.stems,timeMs:response.seconds*1000};
+  if(inputId==='original'){stems=response.stems;inferenceTime=response.seconds}
+ }else{
+  const vocals=response.stems.vocals;
+  const clean=subtractResidualVocals(actualPCM,vocals,Number($('scnet-strength').value)/100);
+  run={model,key,clean,vocals,base:actualPCM,timeMs:response.seconds*1000,step:scnetStep};
+ }
+ pipelineRuns.set(key,run);
+ if(pipelineRuns.size>(mobile?5:12)){
+  const old=[...pipelineRuns.keys()].find(k=>k!=='mrx|original'&&k!==key);
+  if(old)pipelineRuns.delete(old);
+ }
+ return {...run,cached:false};
+}
+async function executeRoute(routeId=null,custom=null){
+ if(!file||worker||exporting||studyBusy)return;
+ clearError();
+ const controller=new AbortController();abort=controller;const id=++serial;
+ let freshMs=0,cacheHits=0,preview=null;
+ const isPreset=!!routeId;
+ const route=isPreset?routeById(routeId):null;
+ if(isPreset&&!route)return error('Выбран неизвестный маршрут.');
+ if(!isPreset&&!custom)return error('Выбери модель и входной результат.');
+ const task=isPreset?planRoute(routeId):[custom];
+ const targetId=isPreset?routeId:'custom-'+(++customCounter);
+ studyBusy=true;uiBusy(true);
+ text('pipeline-status','Вычисляем реальные дорожки…');
  try{
   const selected=validRange(Number($('start-seconds').value),Number($('duration-seconds').value),length);
   const signature=selected.start.toFixed(3)+'|'+selected.duration.toFixed(3);
-  if(studySignature!==signature)clearStudy();
-  studySignature=signature;
-  range=selected;original=await pcm(selected,signal.signal);
-  if(studySurround?.length>=6)registerSurround(true);
-  if(signal.signal.aborted||id!==serial)return;
-  const start=performance.now();
-  timer=setInterval(()=>text('progress-detail','Разделяем '+elapsed(selected.duration)+' звука · прошло '+elapsed((performance.now()-start)/1000)),500);
-  const result=await separate(original,Number($('chunk-size').value),id);
-  if(signal.signal.aborted||id!==serial)return;
-  stems=result.stems;inferenceTime=result.seconds;
-  step('Готово','Дорожки разделены.',1);
-  text('inference-time',elapsed(inferenceTime));
-  text('speed-factor',(selected.duration/Math.max(.001,inferenceTime)).toFixed(2)+'×');
-  text('scene-length',elapsed(selected.duration));text('result-state','MRX · три дорожки готовы');
-  const levels=stemLevels(original,stems);
-  const isStereo=original.length===2;
-  $('center-suppression').disabled=!isStereo;
-  text('center-note',isStereo
-   ?'Экспериментальный фильтр. Попробуй 35–50%, если голос попал в музыку и эффекты. Он также может приглушить центральные звуки и музыку.'
-   :'Исходный звук моно: центральный канал отделить невозможно. Дополнительный фильтр недоступен.');
-  text('stem-diagnostics',levels
-   ?'Выделенная речь: '+levels.dialogueRelativeDb.toFixed(1)+' дБ относительно оригинала. Это уровень выделенной дорожки, не оценка точности модели.'+
-    (levels.dialogueRelativeDb < -24?' Модель почти не обнаружила речь — заметного удаления может не быть.':'')
-   :'Уровень дорожек определить не удалось.');
-  show('empty-state',false);show('result-details',true);
-  video.muted=true;
-  try{video.volume=0}catch{}
-  video.src=fileURL;video.load();mode='clean';
-  $('result-seek').min='0';$('result-seek').max=String(selected.duration);
-  $('result-seek').step='.05';$('result-seek').value='0';
-  video.addEventListener('loadedmetadata',()=>{if(range)video.currentTime=range.start},{once:true});
-  updateListeningButtons();
-  const clean=mixPCM(original,stems,{dialogue:0,music:1,effects:1},'stems');
-  registerStudyResult('mrx',clean,Math.max(0,inferenceTime*1000),{source:'local',label:'MRX · M&E'});
-  await selectStudyResult('mrx');
-  if($('quality-mode').value==='scnet'){
-   // A genuine second model analyzes the *remaining M&E*, not the original.
-   // SCNet is a vocals separator trained on music; on cartoons it may
-   // mistakenly suppress effects. Both results remain available for A/B.
-   step('Проверяем остатки речи','SCNet · отдельная модель, около 13 МБ; может работать медленно.');
-   const follow=await separate(clean,Math.min(10,Number($('chunk-size').value)),id,'scnet');
-   if(signal.signal.aborted||id!==serial)return;
-   scnetVocals=follow.stems.vocals;scnetBase=clean;scnetTime=follow.seconds;
-   const adjusted=subtractResidualVocals(scnetBase,scnetVocals,Number($('scnet-strength').value)/100);
-   registerStudyResult('mrx-scnet',adjusted,(inferenceTime+scnetTime)*1000,
-    {source:'local',label:'MRX + SCNet · пробная очистка'});
-   await selectStudyResult('mrx-scnet');
-   step('Готово','Оба настоящих результата доступны для A/B-сравнения.',1);
-   text('export-status','Сравни MRX и MRX + SCNet: особенно голос Мэйбл, музыку и звуковые эффекты.');
-  }else{
-   step('Готово','Дорожки разделены.',1);
-   text('export-status','Режим MRX готов. Для дополнительного теста выбери MRX + SCNet перед обработкой.');
+  if(studySignature!==signature){
+   reset();clearStudy();studySignature=signature;
   }
+  if(!original){
+   range=selected;original=await pcm(selected,controller.signal);
+   if(controller.signal.aborted||id!==serial)return;
+   if(!original?.length)throw Error('Не удалось извлечь звук выбранного фрагмента.');
+  }
+  initPlayer(selected);
+  let inputId='original',inputPCM=original,totalMs=0;
+  if(!isPreset){
+   inputId=custom.input;
+   inputPCM=stageAudio(inputId);
+   if(!inputPCM)throw Error('Исходная версия недоступна: выбери другую дорожку.');
+  }
+  for(const [i,part] of task.entries()){
+   if(part.input==='original'){inputId='original';inputPCM=original}
+   else if(part.input==='previous'&&!inputPCM)throw Error('Не найден предыдущий результат.');
+   const label=part.model==='mrx'?'MRX':'SCNet · окна '+Math.round(part.step*100)+'%';
+   step('Этап '+(i+1)+'/'+task.length+' · '+label,
+    'Обрабатываем '+elapsed(selected.duration)+' · время зависит от CPU и количества пересечений окон.');
+   const run=await modelStage(part.model,inputId,inputPCM,part.step??null,id);
+   if(controller.signal.aborted||id!==serial)return;
+   totalMs+=run.timeMs;if(run.cached)cacheHits++;else freshMs+=run.timeMs;
+   inputPCM=run.clean;
+   preview=run;
+   if(part.model==='mrx'&&inputId==='original'&&!studyResults.has('mrx')){
+    registerStudyResult('mrx',run.clean,run.timeMs,
+     {source:'local',label:'MRX · быстрый ориентир',meta:{model:'mrx',runKey:run.key,input:'original'}});
+   }
+   // A preset MRX stage is a stable named intermediate input for later
+   // routes; a custom pass must not silently become that intermediate.
+   inputId=part.model==='mrx'&&part.input==='original'?'mrx':targetId+':stage'+i;
+  }
+  if(!preview)throw Error('Модель не вернула обработанный звук.');
+  const display=isPreset?route.label:
+   (custom.model==='mrx'?'MRX':'SCNet '+Math.round(custom.step*100)+'%')+
+   ' ← '+(custom.input==='original'?'Оригинал':studyResults.get(custom.input)?.label||'Дорожка');
+  registerStudyResult(targetId,inputPCM,totalMs,{
+   source:'local',label:display,
+   meta:{model:preview.model,input:!isPreset?custom.input:task[0].input,
+    step:preview.step,runKey:preview.key,
+    vocals:preview.vocals,base:preview.base,spentMs:freshMs,cached:cacheHits,route:routeId}
+  });
+  await selectStudyResult(targetId);
+  step('Готово',cacheHits?'Повторно использовано этапов: '+cacheHits+'.':'Новый результат готов.',1);
+  text('pipeline-status','Готово · '+display+'. Этот результат можно подать в любую модель следующим проходом.'+
+   (cacheHits?' Кэшировано этапов: '+cacheHits+'.':''));
+  text('export-status','Сравни все версии на той же секунде; скачивание использует выбранный вариант.');
  }catch(e){
-  if(e.name!=='AbortError'&&id===serial)error(e.message||String(e));
-  if(!stems)reset();
- }finally{if(timer)clearInterval(timer);if(abort===signal)abort=null;if(serial===id)uiBusy(false)}
+  if(id===serial&&e.name!=='AbortError'){
+   error(e.message||String(e));
+   text('pipeline-status','Ошибка модели: '+(e.message||String(e))+
+    '. Уже готовые результаты сохранены — можно выбрать другой маршрут.');
+  }
+ }finally{
+  if(abort===controller)abort=null;
+  if(serial===id){studyBusy=false;uiBusy(false)}
+ }
 }
-$('process-btn').onclick=()=>{void process()};$('cancel-btn').onclick=cancel;
+$('process-btn').onclick=()=>{void executeRoute($('quality-mode').value)};
+$('cancel-btn').onclick=cancel;
+$('pipeline-model').onchange=()=>{
+ $('pipeline-step').disabled=$('pipeline-model').value==='mrx';
+};
+$('pipeline-run').onclick=()=>{
+ const request=planCustom($('pipeline-model').value,$('pipeline-input').value,Number($('pipeline-step').value));
+ if(!request)return error('Параметры обработки некорректны.');
+ void executeRoute(null,request);
+};
 
 function gains(){return {dialogue:Number($('dialogue-gain').value)/100,music:Number($('music-gain').value)/100,effects:Number($('effects-gain').value)/100}}
 function getMix(){
