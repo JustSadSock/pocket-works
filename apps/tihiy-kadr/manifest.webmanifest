@@ -2,7 +2,7 @@
   "id": "/apps/tihiy-kadr/",
   "name": "ТИХИЙ КАДР",
   "short_name": "M&E LAB",
-  "description": "Лаборатория сравнения удаления диалогов: MRX, многоканальные 5.1/7.1 и результаты DnR v3, BandIt и SAM Audio.",
+  "description": "Удаление речи из видео в PocketWorks: MRX или MRX + SCNet прямо в браузере.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
