@@ -3,8 +3,8 @@
 <title>Тихий кадр · удаление диалогов</title><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"></head>
 <body><main data-app-shell class="lab">
-<header class="top"><a class="back" href="../../" aria-label="Вернуться в PocketWorks">← PocketWorks</a><span class="tag">5 МАРШРУТОВ · ЛОКАЛЬНО</span></header>
-<section class="intro"><div><p class="eyebrow">НЕЙРОСЕТЕВАЯ ЛАБОРАТОРИЯ</p><h1>ТИХИЙ <em>КАДР</em></h1><p class="lead">Испытывай MRX и SCNet на одном фрагменте. Меняй порядок, скорость и входную дорожку — всё работает в браузере.</p></div><div class="mark" aria-hidden="true"><span class="line"></span><span class="cross">×</span><span class="line short"></span></div></section>
+<header class="top"><a class="back" href="../../" aria-label="Вернуться в PocketWorks">← PocketWorks</a><span class="tag">3 МОДЕЛИ · ЛОКАЛЬНО</span></header>
+<section class="intro"><div><p class="eyebrow">НЕЙРОСЕТЕВАЯ ЛАБОРАТОРИЯ</p><h1>ТИХИЙ <em>КАДР</em></h1><p class="lead">Испытывай три нейросети — MRX, SCNet и Open-Unmix — на одном фрагменте. Меняй порядок, скорость и входную дорожку — всё работает в браузере.</p></div><div class="mark" aria-hidden="true"><span class="line"></span><span class="cross">×</span><span class="line short"></span></div></section>
 <div class="layout">
 <section class="panel source" aria-labelledby="source-heading">
 <div class="panel-title"><h2 id="source-heading">01 / Исходный файл</h2><span id="file-detail" class="muted">Файл не выбран</span></div>
@@ -19,12 +19,14 @@
 <option value="mrx-scnet-fast">3 · MRX → SCNet — экспресс</option>
 <option value="mrx-scnet-balanced">4 · MRX → SCNet — баланс</option>
 <option value="mrx-scnet">5 · MRX → SCNet — максимум (прежнее качество)</option>
+<option value="umxhq-direct">6 · Open-Unmix UMX-HQ — оригинал</option>
+<option value="mrx-umxhq">7 · MRX → Open-Unmix UMX-HQ</option>
 </select></label><label>Размер задачи<select id="chunk-size"><option value="5">Для телефона · по 5 сек</option><option value="10">Умеренная память · по 10 сек</option><option value="20" selected>Быстрее на ПК · по 20 сек</option></select></label></div>
 <button id="process-btn" type="button" class="primary" disabled>Запустить выбранный маршрут →</button>
 <div id="progress-wrap" class="progress hidden" role="status" aria-live="polite"><div class="progress-top"><b id="progress-heading">Подготовка...</b><button id="cancel-btn" type="button" class="cancel">Прервать</button></div><progress id="progress-bar"></progress><p id="progress-detail" class="hint"></p></div>
 <p id="error" class="error hidden" role="alert"></p>
 <p id="route-hint" class="hint fine">Сначала проверь MRX. Затем испытайте быстрый второй проход SCNet: результаты MRX будут повторно использованы без пересчёта.</p>
-<p class="hint fine">Только браузер · без сервера обработки, API и GPU-исполнителя. SCNet скачивает 13 МБ весов единожды. «Экспресс» и «Баланс» уменьшают число повторных вычислений; точное качество нужно прослушать.</p>
+<p class="hint fine">Только браузер · без сервера обработки, API и GPU-исполнителя. SCNet скачивает около 13 МБ, Open-Unmix — около 18 МБ. Веса кэшируются. «Экспресс» и «Баланс» уменьшают число повторных вычислений; точное качество нужно прослушать.</p>
 </section>
 <section class="panel result" aria-labelledby="result-heading">
 <div class="panel-title"><h2 id="result-heading">03 / Результат</h2><span class="muted" id="result-state">Ожидание обработки</span></div>
@@ -50,7 +52,7 @@
 </section>
 </div>
 <section class="panel study-panel" aria-labelledby="study-heading">
-<div class="panel-title"><h2 id="study-heading">04 / СРАВНЕНИЕ И ЦЕПОЧКИ</h2><span class="chip">ОДНА СЦЕНА · 5 МАРШРУТОВ</span></div>
+<div class="panel-title"><h2 id="study-heading">04 / СРАВНЕНИЕ И ЦЕПОЧКИ</h2><span class="chip">ОДНА СЦЕНА · 7 МАРШРУТОВ</span></div>
 <p class="hint">Любой результат можно выбрать, прослушать и отправить на следующий проход. Повторно уже вычисленные этапы берутся из памяти, а не запускаются заново.</p>
 <div class="study-results-head"><h3>Полученные версии</h3><button id="study-csv" class="secondary" type="button" disabled>CSV с замерами</button></div>
 <div id="study-results" class="study-results" role="list"><p class="hint">Загрузи видео и запусти первый маршрут. Каждый следующий результат будет здесь.</p></div>
@@ -58,7 +60,7 @@
 <div class="pipeline-builder-head"><span class="pipeline-mark" aria-hidden="true">◈</span><h3>Следующий проход — на любой дорожке</h3></div>
 <div class="pipeline-fields">
  <label>Входной звук<select id="pipeline-input"><option value="original">Исходный звук видео</option></select></label>
- <label>Нейросеть<select id="pipeline-model"><option value="scnet">SCNet · удалить вокал</option><option value="mrx">MRX · речь / музыка / эффекты</option></select></label>
+ <label>Нейросеть<select id="pipeline-model"><option value="scnet">SCNet · удалить вокал</option><option value="umxhq">Open-Unmix · выделить вокал</option><option value="mrx">MRX · речь / музыка / эффекты</option></select></label>
  <label>Перекрытие окон SCNet<select id="pipeline-step"><option value="1">Быстро · без дополнительных проходов</option><option value="0.5" selected>Баланс · 50%</option><option value="0.25">Максимум · 25%</option></select></label>
 </div>
 <button id="pipeline-run" class="secondary" type="button" disabled>Обработать выбранную дорожку →</button>
