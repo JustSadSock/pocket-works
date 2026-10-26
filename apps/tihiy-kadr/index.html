@@ -27,6 +27,11 @@
 <div class="playback-control"><button id="listen-btn" type="button" class="secondary">▶ Слушать результат</button><input id="result-seek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Позиция в обработанном фрагменте"><span id="result-position">0:00</span></div><audio id="monitor" preload="auto" hidden></audio>
 <div class="comparison"><button id="original-btn" class="secondary" type="button">Оригинал</button><button id="clean-btn" class="secondary selected" type="button">Оригинал − речь</button><button id="stems-btn" class="secondary" type="button">Музыка + эффекты</button><button id="speech-btn" class="secondary" type="button">Только речь</button></div>
 <div class="stems"><label>Оригинальная речь <output id="dialogue-value">0%</output><input id="dialogue-gain" type="range" min="0" max="100" step="5" value="0"></label><label>Музыка <output id="music-value">100%</output><input id="music-gain" type="range" min="0" max="150" step="5" value="100"></label><label>Эффекты <output id="effects-value">100%</output><input id="effects-gain" type="range" min="0" max="150" step="5" value="100"></label></div>
+<div id="scnet-tuning" class="scnet-tuning hidden">
+ <label for="scnet-strength">Удаление остаточных голосов SCNet <output id="scnet-strength-value">80%</output></label>
+ <input id="scnet-strength" type="range" min="0" max="100" step="10" value="80">
+ <p class="hint">Эксперимент: SCNet обучалась на музыкальном вокале и может ослаблять звуковые эффекты. Меняй силу и сравни с чистой MRX ниже.</p>
+</div>
 <div class="center-filter">
 <label for="center-suppression">Дополнительное подавление центра стерео <output id="center-value">0%</output></label>
 <input id="center-suppression" type="range" min="0" max="100" step="5" value="0">
