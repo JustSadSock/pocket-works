@@ -166,7 +166,7 @@ try{
  await page.locator('#pipeline-model').selectOption('mrx');
  await page.locator('#pipeline-run').click();
  await page.waitForFunction(()=>document.querySelector('#pipeline-status').textContent.startsWith('Готово'),null,{timeout:180000});
- await page.locator('#study-results .study-choice').filter({hasText:'SCNet · оригинал'}).click();
+ await page.locator('#study-results .study-choice strong').filter({hasText:/^SCNet · оригинал$/}).click();
  await page.locator('#scnet-strength').fill('30');
  await page.waitForTimeout(430);
  // A repeated preset reuses ONNX, but must rematerialize at the new 30% gain.
@@ -183,7 +183,7 @@ try{
  // Regression: cancelling a slow stage must also release the awaited Promise
  // and clear its 1-second status timer, not merely kill the Worker.
  await page.evaluate(()=>{
-  const start=window.setInterval,stop=window.clearInterval;
+  const start=window.setInterval.bind(window),stop=window.clearInterval.bind(window);
   window.__inferenceIntervals=new Set();
   window.setInterval=(handler,delay,...args)=>{
    const id=start(handler,delay,...args);
