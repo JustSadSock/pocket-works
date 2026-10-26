@@ -1,9 +1,9 @@
 const CACHE_PREFIX='tihiy-kadr-';
-const CACHE='tihiy-kadr-v1.6.0';
-const APP_VERSION='1.6.0';
+const CACHE='tihiy-kadr-v1.7.0';
+const APP_VERSION='1.7.0';
 const RELEASE_DATE='2026-10-26';
-const RELEASE_NOTES=["Два прямых режима вместо семи: быстрый Open-Unmix по умолчанию и тщательный SCNet.","MRX и последовательные цепочки нейросетей удалены как неэффективные по результатам пользовательских тестов.","Сохранены A/B-прослушивание, кэш повторного запуска, интенсивность удаления голоса и экспорт WAV/видео."];
-const OWN=['./','./index.html','./app.js','./audio-utils.js','./research-core.js','./pipeline-config.js','./mrx-worker.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.css'];
+const RELEASE_NOTES=["Независимые тумблеры спектральной очистки, адаптивного подавления центра и мягкой спектральной реконструкции.","Дополнительные DSP-дорожки рассчитываются один раз сразу после нейросети; A/B-переключение не запускает новый ONNX или FFT.","Ползунок удаления вокала расширен до 150%; видео/WAV сохраняют текущий набор эффектов."];
+const OWN=['./','./index.html','./app.js','./audio-utils.js','./audio-enhance.js','./enhance-worker.js','./research-core.js','./pipeline-config.js','./mrx-worker.js','./styles.css','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.css'];
 const SCOPE=new URL('./',self.registration.scope);
 const URLS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 async function fresh(url){const u=new URL(url);u.searchParams.set('__pw_build',APP_VERSION);const r=await fetch(u.href,{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);return r}
