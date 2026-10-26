@@ -210,8 +210,9 @@ async function modelStage(model,inputId,inputPCM,stepSize,id){
  const actualPCM=stereoPCM(inputPCM);
  // SCNet has its own fixed 11-second context windows; keep an outer 20s
  // chunk on desktop or the 'step' choice is masked by 5-10s outer chunks.
- // Mobile retains a 10s memory cap, and may not benefit much from stride.
- const piece=model==='scnet'?(mobile?10:20):Number($('chunk-size').value);
+ // Mobile respects the chosen 5s task and never exceeds 10s for SCNet.
+ const selectedChunk=Number($('chunk-size').value);
+ const piece=model==='scnet'&&mobile?Math.min(10,selectedChunk):selectedChunk;
  const response=await separate(actualPCM,piece,id,model,scnetStep??.25);
  if(id!==serial||abort?.signal.aborted)throw new DOMException('Прервано','AbortError');
  let run;
