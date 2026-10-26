@@ -38,19 +38,19 @@ test('all three DSP layers are precomputed once, independent and finite',()=>{
 });
 test('every A/B switch changes ONLY its own cached correction, no new model call',()=>{
  const {base,vocals}=scene(),layers=buildLayers(base,vocals);
- const bare=renderEnhancedPCM(base,vocals,layers,{strength:1,spectral:false,reconstruct:false,center:false});
+ const bare=renderEnhancedPCM(base,vocals,layers,{strength:1,spectral:false,reconstruct:false,center:false,artifact:false,texture:false});
  for(let i=0;i<N;i+=409)assert(Math.abs(bare[0][i]-(base[0][i]-vocals[0][i]))<1e-7);
  for(const feature of ['spectral','reconstruct','center']){
-  const result=renderEnhancedPCM(base,vocals,layers,{strength:1,spectral:false,reconstruct:false,center:false,[feature]:true,centerAmount:60});
+  const result=renderEnhancedPCM(base,vocals,layers,{strength:1,spectral:false,reconstruct:false,center:false,artifact:false,texture:false,[feature]:true,centerAmount:60});
   assert(rms(Float32Array.from(result[0],(x,i)=>x-bare[0][i]))>.00001,feature);
  }
  const original=renderEnhancedPCM(base,vocals,layers,{strength:0});
  assert.deepEqual(original,base);
 });
 test('up to 150% vocal subtraction is supported and >150 rejected',()=>{
- const {base,vocals}=scene(),layers=createEnhancementLayers(base,vocals);
- const increased=renderEnhancedPCM(base,vocals,layers,{strength:1.5,spectral:false,reconstruct:false,center:false});
- const normal=renderEnhancedPCM(base,vocals,layers,{strength:1,spectral:false,reconstruct:false,center:false});
+ const {base,vocals}=scene(),layers=buildLayers(base,vocals);
+ const increased=renderEnhancedPCM(base,vocals,layers,{strength:1.5,spectral:false,reconstruct:false,center:false,artifact:false,texture:false});
+ const normal=renderEnhancedPCM(base,vocals,layers,{strength:1,spectral:false,reconstruct:false,center:false,artifact:false,texture:false});
  assert(rms(Float32Array.from(increased[0],(v,i)=>v-normal[0][i]))>.03);
  assert.throws(()=>renderEnhancedPCM(base,vocals,layers,{strength:1.55}),/интенсивность/);
  assert.throws(()=>renderEnhancedPCM(base,vocals,layers,{centerAmount:-1}),/интенсивность/);
