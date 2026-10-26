@@ -47,7 +47,7 @@ test('separation runs the actual 3-stem MRX, not a fake filter',()=>{
  const w=readFileSync(new URL('../mrx-worker.js',import.meta.url),'utf8');
  assert.match(w,/@audio\/neural-separate@0\.7\.0/);
  assert.match(w,/await separate\(channels/);
- assert.match(w,/model:kind,device:'wasm'/);
+ assert.match(w,/model:kind==='umxhq'\?\{vocals:MODEL_ASSETS\.umxhq\}:kind,device:'wasm'/);
  assert.match(w,/targets:\['vocals'\]/);
  for(const name of ['dialogue','music','effects'])assert(w.includes("'"+name+"'"));
 });
