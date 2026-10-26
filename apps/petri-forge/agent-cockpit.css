@@ -342,3 +342,10 @@ body.hub-on:not(.hub-advanced) .race-viewport{height:auto;min-height:0!important
 .cp-neuro-league-row strong{font-size:17px;color:#28583e;font-variant-numeric:tabular-nums}
 .cp-neuro-league-row small{font-size:9px;color:#7e9680}
 #cpNeuroRetry:not([hidden]){min-height:39px;width:100%;background:#f1e4d1;border:1px solid #c6a986;color:#674525}
+
+
+/* Coevolution: paired learner evidence instead of an artificial winner graph. */
+.cp-neuro-league-bar.cp-neuro-duo-bar{gap:2px;background:#d7e4d3;padding:0 2px}
+.cp-neuro-duo-bar>span{width:50%;min-width:2px}
+#cpNeuroDuoIntro[hidden]{display:none!important}
+#cpNeuroLeagueHistory .cp-neuro-league-row strong{font-variant-numeric:tabular-nums}
