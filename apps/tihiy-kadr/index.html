@@ -44,7 +44,17 @@
  <label class="enhance-center-level" for="texture-level">Сила фоновой подстановки <output id="texture-level-value">45%</output><input id="texture-level" type="range" min="0" max="100" step="5" value="45" disabled></label>
  <button class="secondary" id="repair-off-all" type="button" disabled>Отключить оба новых фильтра</button>
  <p id="repair-note" class="hint" role="status">Подготовка начнётся после запуска Open-Unmix или SCNet.</p>
- <details class="legacy-filters" id="legacy-filters">
+ <section id="target-scnet-panel" class="target-scnet-panel hidden" aria-labelledby="target-scnet-title">
+ <div class="target-scnet-head"><h3 id="target-scnet-title">Точечная SCNet</h3><span>ПОСЛЕ OPEN-UNMIX</span></div>
+ <p class="hint">Найти участки с наиболее заметным речевым жужжанием, прогнать через SCNet только их и мягко подменить звук. Остальное видео остаётся от Open-Unmix.</p>
+ <div class="target-scnet-actions">
+  <label>Максимум точечной обработки<select id="target-scnet-budget" aria-label="Бюджет точечной SCNet"><option value="8">До 5 с</option><option value="12" selected>До 10 с</option><option value="18">До 15 с</option><option value="24">До 20 с</option></select></label>
+  <button id="target-scnet-run" type="button" class="secondary" disabled>Найти и обработать участки</button>
+ </div>
+ <label class="enhance-toggle target-scnet-ab"><span><strong>Использовать улучшенные участки</strong><small>Выключи, чтобы моментально сравнить с чистым результатом Open-Unmix.</small></span><input id="target-scnet-enabled" type="checkbox" role="switch" disabled></label>
+ <p class="hint" id="target-scnet-status" role="status">Сначала обработай видео через Open-Unmix.</p>
+</section>
+<details class="legacy-filters" id="legacy-filters">
   <summary>Старые фильтры · расширенные эксперименты</summary>
   <p class="hint">Оставлены для сравнения, но теперь по умолчанию выключены — в прошлых тестах они не дали слышимого улучшения.</p>
   <label class="enhance-toggle"><span><strong>Спектральная очистка (старая)</strong><small>Прежняя мягкая частотная маска.</small></span><input id="enhance-spectral" type="checkbox" role="switch" disabled></label>
