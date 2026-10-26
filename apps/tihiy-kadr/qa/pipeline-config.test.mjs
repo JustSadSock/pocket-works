@@ -46,6 +46,8 @@ test('cancelled Worker rejects its pending promise so route intervals can finish
  assert.match(app,/pendingWorkerReject=rejectPending/);
  assert.match(app,/inputKey=run\.key/);
  assert.match(app,/studyResults\.get\(inputId\)\?\.inputKey/);
+ assert.match(app,/subtractResidualVocals\(cached\.base,cached\.vocals,strength\)/);
+ assert.match(app,/strength:preview\.strength/);
 });
 test('runtime projections remain estimates, not fabricated elapsed timings',()=>{
  const estimate=calculateSpeed(20,198000);
