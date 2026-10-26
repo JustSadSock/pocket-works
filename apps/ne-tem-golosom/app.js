@@ -970,6 +970,7 @@ function renderTimeline(){
  $('voice-fx-more').textContent=voiceFxExpanded?'Свернуть эффекты ↑':'Ещё '+VOICE_EFFECTS.filter(f=>f.category!=='main').length+' эффектов ↓';
  $('voice-fx-current').textContent=picked
   ?'· '+VOICE_EFFECTS.find(f=>f.id===normalizeVoiceEffect(picked.fx))?.label:'';
+ if(picked)renderFavoriteVoiceEffects();
  if(picked)for(const b of $('voice-effects-options').querySelectorAll('[data-voice-fx]')){
   const active=b.dataset.voiceFx===normalizeVoiceEffect(picked.fx);
   b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));
@@ -1394,15 +1395,39 @@ $('replace-clip-btn').onclick=()=>{if(selectedClip)void startRecord(0,selectedCl
 // Main presets stay visible; additional circuits are grouped in a compact
 // expandable shelf rather than creating a second bulky editing screen.
 const fxButton=fx=>'<button type="button" data-voice-fx="'+fx.id+'" aria-pressed="false">'+fx.label+'</button>';
+const favoriteVoiceIds=(()=>{try{return JSON.parse(localStorage.getItem(STORE+'favorite-voices')||'[]').filter(id=>VOICE_EFFECTS.some(fx=>fx.id===id)).slice(0,8)}catch{return []}})();
 $('voice-effects-options').innerHTML=
+ '<div id="voice-fx-favorites" class="voice-fx-favorites hidden" aria-label="Избранные эффекты"></div>'+ 
  '<div class="voice-fx-primary">'+VOICE_EFFECTS.filter(fx=>fx.category==='main').map(fxButton).join('')+'</div>'+
  '<div class="voice-fx-toolbar"><button id="voice-fx-more" type="button" aria-controls="voice-fx-extra" aria-expanded="false">Ещё эффекты ↓</button>'+
- '<button id="voice-fx-audition" type="button" title="Послушать выбранную реплику с текущим эффектом">▶ Послушать</button></div>'+
+ '<button id="voice-fx-audition" type="button" title="Послушать выбранную реплику с текущим эффектом">▶ Послушать</button>'+ 
+ '<button id="voice-fx-pin" type="button" title="Добавить текущий эффект в избранное" aria-pressed="false">☆ Избранное</button></div>'+
  '<div id="voice-fx-extra" class="voice-fx-extra hidden">'+VOICE_EFFECT_GROUPS.map(group=>
   '<div class="voice-fx-group"><span>'+group.label+'</span><div class="voice-fx-buttons">'+
   VOICE_EFFECTS.filter(fx=>fx.category===group.id).map(fxButton).join('')+'</div></div>'
  ).join('')+'</div>';
+function renderFavoriteVoiceEffects(){
+ const shelf=$('voice-fx-favorites');
+ shelf.classList.toggle('hidden',!favoriteVoiceIds.length);
+ shelf.innerHTML=favoriteVoiceIds.map(id=>VOICE_EFFECTS.find(f=>f.id===id)).filter(Boolean).map(fxButton).join('');
+ const current=localClips.find(c=>c.id===selectedClip);
+ const pinned=!!current&&favoriteVoiceIds.includes(normalizeVoiceEffect(current.fx));
+ const button=$('voice-fx-pin');
+ button.setAttribute('aria-pressed',String(pinned));
+ button.textContent=pinned?'★ В избранном':'☆ Избранное';
+}
+renderFavoriteVoiceEffects();
 $('voice-effects-options').onclick=e=>{
+ if(e.target.closest('#voice-fx-pin')){
+  const current=localClips.find(c=>c.id===selectedClip);
+  if(!current)return;
+  const id=normalizeVoiceEffect(current.fx),at=favoriteVoiceIds.indexOf(id);
+  if(at>=0)favoriteVoiceIds.splice(at,1);
+  else if(favoriteVoiceIds.length<8)favoriteVoiceIds.unshift(id);
+  else return toast('Можно закрепить не больше 8 эффектов.');
+  try{localStorage.setItem(STORE+'favorite-voices',JSON.stringify(favoriteVoiceIds))}catch{}
+  renderFavoriteVoiceEffects();renderTimeline();return;
+ }
  const more=e.target.closest('#voice-fx-more');
  if(more){
   voiceFxExpanded=!voiceFxExpanded;
