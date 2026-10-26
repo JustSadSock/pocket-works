@@ -136,12 +136,12 @@ async function decodeAudioFromVideo(blob,start,duration,signal,onProgress){
   }
  }finally{await ctx.close().catch(()=>{})}
 }
-export async function cleanFilmSound({blob,start,duration,mode='umx',signal,onProgress=()=>{}}){
+export async function cleanFilmSound({blob,start,duration,mode='umx',lowMemory=false,signal,onProgress=()=>{}}){
  validateFilmMode(mode);
  if(!(blob instanceof Blob)||!blob.size||!Number.isFinite(start)||start<0||
   !Number.isFinite(duration)||duration<3||duration>90)throw Error('Неверный фильм или длина сцены.');
  live(signal);
- const original=await decodeAudioFromVideo(blob,start,duration,signal,onProgress);
+ let original=await decodeAudioFromVideo(blob,start,duration,signal,onProgress);
  const nextId=()=>Math.random().toString(36).slice(2);
  async function model(channels,kind){
   onProgress({stage:kind,detail:kind==='scnet'?'SCNet разделяет звук':'Open-Unmix разделяет звук'});
@@ -153,7 +153,49 @@ export async function cleanFilmSound({blob,start,duration,mode='umx',signal,onPr
   return response;
  }
  const started=performance.now();
- let vocals,times=[],segments=[],packedSeconds=0;
+ let vocals,times=[],segments=[],packedSeconds=0,clean,buzzLayer;
+ if(lowMemory){
+  // Keep ONNX allocations bounded on older PCs. The output is accumulated,
+  // not 90-second stems and DSP buffers. Regional SCNet retains only the
+  // two stem estimates it needs for hotspot selection.
+  const length=original[0].length,step=Math.round(FILM_RATE*8),
+    blend=Math.round(FILM_RATE*.12),total=Math.ceil(length/step);
+  clean=original.map(ch=>new Float32Array(ch.length));
+  if(mode==='hybrid'){
+   vocals=original.map(ch=>new Float32Array(ch.length));
+   buzzLayer=original.map(ch=>new Float32Array(ch.length));
+  }
+  for(let k=0;k<total;k++){
+   live(signal);
+   const pos=k*step,begin=Math.max(0,pos-blend),end=Math.min(length,(k+1)*step+blend);
+   onProgress({stage:'lowmem',detail:'Бережная обработка памяти · отрывок '+(k+1)+' из '+total});
+   const cut=original.map(ch=>ch.slice(begin,end));
+   const kind=mode==='scnet'?'scnet':'umx';
+   const result=await model(cut,kind);
+   times.push({name:kind==='umx'?'Open-Unmix':'SCNet',seconds:result.seconds});
+   const kept=mode==='hybrid';
+   const res=await createWorkerTask(new URL('./film-buzz-worker.js',import.meta.url),{
+    id:nextId(),base:cut,vocals:result.stems.vocals,keepStems:kept
+   },signal,onProgress,{transferInputs:true});
+   for(let ch=0;ch<clean.length;ch++){
+    const out=clean[ch],pcm=res.channels[ch],v=res.vocals?.[ch],b=res.artifact?.[ch];
+    for(let at=begin;at<end;at++){
+     const j=at-begin,fade=k&&at<pos+blend?
+      Math.max(0,Math.min(1,(at-(pos-blend))/(2*blend))):1;
+     if(k&&at<pos+blend){
+      out[at]=out[at]*(1-fade)+pcm[j]*fade;
+      if(kept){
+       vocals[ch][at]=vocals[ch][at]*(1-fade)+v[j]*fade;
+       buzzLayer[ch][at]=buzzLayer[ch][at]*(1-fade)+b[j]*fade;
+      }
+     }else{
+      out[at]=pcm[j];
+      if(kept){vocals[ch][at]=v[j];buzzLayer[ch][at]=b[j]}
+     }
+    }
+   }
+  }
+ }else{
  if(mode==='scnet'){
   const sc=await model(original,'scnet');
   vocals=sc.stems.vocals;times.push({name:'SCNet',seconds:sc.seconds});
@@ -161,15 +203,20 @@ export async function cleanFilmSound({blob,start,duration,mode='umx',signal,onPr
   const umx=await model(original,'umx');
   vocals=umx.stems.vocals;times.push({name:'Open-Unmix',seconds:umx.seconds});
  }
- // Predict recurrent high-frequency tonal leftovers even in direct SCNet mode.
+ // Transfer ownership of the long PCM buffers to the DSP worker. The worker
+ // reuses the original arrays instead of producing multiple extra copies.
  onProgress({stage:'buzz',detail:'Подавляем металлические остатки голоса'});
+ const keepStems=mode==='hybrid';
  const buzz=await createWorkerTask(new URL('./film-buzz-worker.js',import.meta.url),{
-  id:nextId(),base:original,vocals
- },signal,onProgress);
+  id:nextId(),base:original,vocals,keepStems,keepOriginal:keepStems
+ },signal,onProgress,{transferInputs:true});
  live(signal);
- const clean=original.map((ch,i)=>Float32Array.from(ch,(x,j)=>x-vocals[i][j]+.85*buzz.artifact[i][j]));
+ clean=buzz.channels;
+ if(keepStems){original=buzz.base;vocals=buzz.vocals;buzzLayer=buzz.artifact}
+ }
+
  if(mode==='hybrid'){
-  segments=selectProblemSegments(original,vocals,buzz.artifact,{budgetSeconds:12,rate:FILM_RATE});
+  segments=selectProblemSegments(original,vocals,buzzLayer,{budgetSeconds:12,rate:FILM_RATE});
   if(segments.length){
    const packed=packProblemSegments(original,segments,{rate:FILM_RATE});
    packedSeconds=packed.packedSeconds;
@@ -181,5 +228,5 @@ export async function cleanFilmSound({blob,start,duration,mode='umx',signal,onPr
   }else onProgress({stage:'skip',detail:'Остаточного речевого жужжания мало — точечная SCNet не потребовалась'});
  }
  live(signal);
- return {channels:clean,mode,times,segments,packedSeconds,elapsed:(performance.now()-started)/1000};
+ return {channels:clean,mode,times,segments,packedSeconds,lowMemory,elapsed:(performance.now()-started)/1000};
 }
