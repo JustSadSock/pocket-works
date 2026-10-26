@@ -210,7 +210,7 @@ function prepareEffects(base,vocals,id){
   w.onmessageerror=()=>rejectPending(Error('Браузер не смог передать подготовленные звуковые фильтры.'));
   w.onmessage=e=>{
    const p=e.data||{};if(p.id!==id)return;
-   if(p.stage==='progress')step('Готовим A/B-фильтры','Спектральная обработка '+Math.round(p.fraction*100)+'%',p.fraction);
+   if(p.stage==='progress')step('Готовим A/B-фильтры','Анализ и подавление артефактов · '+Math.round(p.fraction*100)+'%',p.fraction);
    if(p.stage==='error')rejectPending(Error(p.message||'Ошибка спектральной обработки'));
    if(p.stage==='done'){finish();resolve(p)}
   };
@@ -225,11 +225,11 @@ async function modelStage(model,id){
  const input=stereoPCM(original);
  const response=await separate(input,Number($('chunk-size').value),id,model,1);
  if(id!==serial||abort?.signal.aborted)throw new DOMException('Прервано','AbortError');
- step('Готовим три DSP-фильтра','Нейросеть завершила проход. Подготавливаем A/B без повторного инференса.');
+ step('Готовим DSP и подавление призвуков','Нейросеть завершила проход. Подготавливаем A/B без повторного инференса.');
  const prepared=await prepareEffects(input,response.stems.vocals,id);
  if(id!==serial||abort?.signal.aborted)throw new DOMException('Прервано','AbortError');
  const run={model,key,vocals:response.stems.vocals,base:input,layers:prepared.layers,
-  timeMs:response.seconds*1000,dspMs:prepared.seconds*1000};
+  timeMs:response.seconds*1000,dspMs:prepared.seconds*1000,textureCoverage:prepared.coverage};
  pipelineRuns.set(key,run);
  return {...run,cached:false};
 }
@@ -260,11 +260,12 @@ async function executeRoute(routeId){
   try{run=await modelStage(model,id)}finally{clearInterval(tick)}
   if(controller.signal.aborted||id!==serial)return;
   const strength=Number($('scnet-strength').value)/100;
-  const effects={strength,spectral:true,reconstruct:true,center:true,centerAmount:35};
+  const effects={strength,spectral:false,reconstruct:false,center:false,centerAmount:35,
+   artifact:true,texture:true,artifactAmount:85,textureAmount:45};
   const clean=renderEnhancedPCM(run.base,run.vocals,run.layers,effects);
   registerStudyResult(routeId,clean,run.timeMs,{
    label:route.label,meta:{model,runKey:run.key,vocals:run.vocals,base:run.base,layers:run.layers,
-    effects,dspMs:run.dspMs,cached:run.cached}
+    effects,dspMs:run.dspMs,textureCoverage:run.textureCoverage,cached:run.cached}
   });
   await selectStudyResult(routeId);
   step('Готово',run.cached?'Использован кэш модели.':'Новая версия готова.',1);
@@ -337,8 +338,25 @@ function updateEnhancementUI(){
  $('scnet-strength').disabled=!available;
  $('enhance-disable-all').disabled=!available;
  const enabled=available&&(state.spectral||state.center&&centerAvailable||state.reconstruct);
- text('enhance-disable-all',enabled?'Выключить все фильтры':'Включить все фильтры');
- text('enhance-ready',available?'Готово · без нового инференса':'После обработки');
+ text('enhance-disable-all',enabled?'Выключить все старые фильтры':'Включить все старые фильтры');
+ const textureFound=available&&(item.meta.textureCoverage??0)>0;
+ for(const [key,id] of [['artifact','repair-noise'],['texture','repair-texture']]){
+  $(id).disabled=!available||(key==='texture'&&!textureFound);
+  $(id).checked=!!state?.[key]&&(key!=='texture'||textureFound);
+ }
+ for(const [key,id,label] of [['artifactAmount','repair-level','repair-level-value'],
+  ['textureAmount','texture-level','texture-level-value']]){
+  $(id).value=String(state?.[key]??(key==='artifactAmount'?85:45));
+  $(id).disabled=!available||(key==='artifactAmount'?!state?.artifact:!state?.texture||!textureFound);
+  text(label,$(id).value+'%');
+ }
+ $('repair-off-all').disabled=!available;
+ text('repair-off-all',state?.artifact||(state?.texture&&textureFound)?
+  'Отключить оба новых фильтра':'Включить новые фильтры');
+ text('repair-note',!available?'После разделения аудио подготовим оба варианта.':
+  textureFound?'Фон найден для '+Math.round(item.meta.textureCoverage*100)+'% коротких окон сцены. Новые фильтры можно сравнивать без повторного прогона.':
+   'Рядом нет надёжных участков без вокала. Подстановка фона недоступна для этого фрагмента, подавление призвуков работает.');
+ text('enhance-ready',available?'5 DSP-слоёв готовы':'После обработки');
  text('enhance-info',available?
   'DSP: '+elapsed((item.meta.dspMs||0)/1000)+'. Переключатели меняют только сведение аудио, без расчёта модели или спектральных масок.':
   'После обработки подготовим все варианты один раз.');
@@ -366,6 +384,28 @@ $('enhance-disable-all').onclick=()=>{
 $('center-suppression').oninput=()=>{
  const item=studyResults.get(activeStudy);if(!item?.meta?.effects)return;
  item.meta.effects.centerAmount=Number($('center-suppression').value);
+ updateEnhancementUI();refreshEnhancedPreview();
+};
+// The two new algorithms only mix cached correction channels.
+for(const [key,id] of [['artifact','repair-noise'],['texture','repair-texture']]){
+ $(id).onchange=()=>{
+  const item=studyResults.get(activeStudy);if(!item?.meta?.effects)return;
+  item.meta.effects[key]=$(id).checked;
+  updateEnhancementUI();refreshEnhancedPreview();
+ };
+}
+for(const [key,id] of [['artifactAmount','repair-level'],['textureAmount','texture-level']]){
+ $(id).oninput=()=>{
+  const item=studyResults.get(activeStudy);if(!item?.meta?.effects)return;
+  item.meta.effects[key]=Number($(id).value);
+  updateEnhancementUI();refreshEnhancedPreview();
+ };
+}
+$('repair-off-all').onclick=()=>{
+ const item=studyResults.get(activeStudy);if(!item?.meta?.effects)return;
+ const state=item.meta.effects;
+ const next=!(state.artifact||(state.texture&&(item.meta.textureCoverage??0)>0));
+ state.artifact=next;state.texture=next;
  updateEnhancementUI();refreshEnhancedPreview();
 };
 // Never allow the original audio from <video> to mix into the neural stems.
@@ -571,13 +611,16 @@ $('scnet-strength').oninput=()=>{
 $('study-csv').onclick=()=>{
  if(!studyResults.size||!range)return;
  const q=x=>'"'+String(x??'').replaceAll('"','""')+'"';
- const rows=[['Модель','Фрагмент, с','Время модели, с','Время DSP, с','RTF','Оценка 90 с, с','Изменение RMS, дБ','Пик результата, дБ','Из кэша','Удаление голоса, %','Спектр','Адаптивный центр','Реконструкция','Центр, %']];
+ const rows=[['Модель','Фрагмент, с','Время модели, с','Время DSP, с','RTF','Оценка 90 с, с','Изменение RMS, дБ','Пик результата, дБ','Из кэша','Удаление голоса, %','Спектр','Адаптивный центр','Реконструкция','Центр, %','Призвуки','Сила призвуков, %','Фон','Сила фона, %','Покрытие фоном, %']];
  for(const item of studyResults.values())rows.push([
   item.label,range.duration,item.timeMs===null?'':(item.timeMs/1000).toFixed(2),(item.meta?.dspMs/1000||0).toFixed(2),
   item.timing?.rtf.toFixed(3)||'',item.timing?.at90Seconds.toFixed(2)||'',
   item.metrics.changeDb,item.metrics.peakDb.toFixed(2),item.meta?.cached?'да':'нет',
   Math.round((item.meta?.effects?.strength??1)*100),item.meta?.effects?.spectral?'да':'нет',
-  item.meta?.effects?.center?'да':'нет',item.meta?.effects?.reconstruct?'да':'нет',item.meta?.effects?.centerAmount??35
+  item.meta?.effects?.center?'да':'нет',item.meta?.effects?.reconstruct?'да':'нет',item.meta?.effects?.centerAmount??35,
+  item.meta?.effects?.artifact?'да':'нет',item.meta?.effects?.artifactAmount??85,
+  item.meta?.effects?.texture?'да':'нет',item.meta?.effects?.textureAmount??45,
+  Math.round((item.meta?.textureCoverage||0)*100)
  ]);
  download(new Blob(['\uFEFF'+rows.map(row=>row.map(q).join(',')).join('\r\n')],{
   type:'text/csv;charset=utf-8'}),fileName+'-two-models.csv');
