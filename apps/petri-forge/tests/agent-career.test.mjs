@@ -283,3 +283,26 @@ test('combat neural classes are independent, transactional and portable with old
  assert.equal((await listCareers()).length,before);
  assert.equal((await listCareers()).find(x=>x.id===afterS.id).combatNeural.archer.episodes,6);
 });
+
+test('self-play generation measurements survive cloning, package export, import and are validated before write',async()=>{
+ const profile=await createCareer('Лига','a-combat-league-test');
+ const model=new PpoPolicy(72).serialize();
+ const report={episodes:12,winRate:.5,league:{seed:481,role:'archer',generations:[
+  {generation:0,episodes:0,updates:0,validation:{winRate:0}},
+  {generation:1,episodes:6,updates:3,validation:{winRate:.33}},
+  {generation:2,episodes:12,updates:7,validation:{winRate:.5}}
+ ]}};
+ const saved=await recordCombatNeural(profile,'archer',model,report);
+ const history=saved.combatNeural.archer.history.at(-1);
+ assert.deepEqual(history.league,report.league);
+ const copied=await cloneCareer(saved);
+ assert.deepEqual(copied.combatNeural.archer.history.at(-1).league,report.league);
+ const pkg=await packCareer(saved),imported=await unpackCareer(pkg);
+ assert.deepEqual(imported.combatNeural.archer.history.at(-1).league,report.league);
+ assert.deepEqual(await readCombatNeural(imported,'archer'),model);
+ const old=(await listCareers()).find(x=>x.id===saved.id);
+ await assert.rejects(recordCombatNeural(saved,'archer',model,{...report,league:{seed:1,generations:[{
+  generation:1,episodes:12,updates:0,validation:{winRate:Infinity}
+ }]}}),/история/);
+ assert.deepEqual((await listCareers()).find(x=>x.id===saved.id),old);
+});
