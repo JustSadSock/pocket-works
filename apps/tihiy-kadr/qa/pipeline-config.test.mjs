@@ -3,29 +3,31 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {ROUTES,routeById,planRoute,planCustom,makeRunKey,calculateSpeed} from '../pipeline-config.js';
 
-test('all five pipelines are actual MRX/SCNet inference routes, not placebo labels',()=>{
- assert.equal(ROUTES.length,5);
- assert.equal(new Set(ROUTES.map(x=>x.id)).size,5);
+test('all seven pipelines use three real ONNX architectures, not placebo labels',()=>{
+ assert.equal(ROUTES.length,7);
+ assert.equal(new Set(ROUTES.map(x=>x.id)).size,7);
  for(const route of ROUTES){
   assert(route.steps.length>=1);
   assert.deepEqual(planRoute(route.id),route.steps);
-  assert(route.steps.every(s=>['mrx','scnet'].includes(s.model)));
+  assert(route.steps.every(s=>['mrx','scnet','umxhq'].includes(s.model)));
   assert(route.steps.every(s=>s.model!=='scnet'||[1,.5,.25].includes(s.step)));
  }
  assert.deepEqual(ROUTES.map(x=>x.id),[
-  'mrx','scnet-direct','mrx-scnet-fast','mrx-scnet-balanced','mrx-scnet'
+  'mrx','scnet-direct','mrx-scnet-fast','mrx-scnet-balanced','mrx-scnet','umxhq-direct','mrx-umxhq'
  ]);
  assert.equal(routeById('nonexistent'),null);
  assert.throws(()=>planRoute('nonexistent'));
 });
 test('window stride and input identity control cache keys safely',()=>{
  assert.equal(makeRunKey('mrx','original'),'mrx|original');
+ assert.equal(makeRunKey('umxhq','original'),'umxhq|original');
  assert.equal(makeRunKey('scnet','mrx',1),'scnet|mrx|1');
  assert.equal(makeRunKey('scnet','mrx',.25),'scnet|mrx|0.25');
  assert.notEqual(makeRunKey('scnet','original',1),makeRunKey('scnet','mrx',1));
  assert.deepEqual(planCustom('scnet','custom-12',.5),{model:'scnet',input:'custom-12',step:.5});
  assert.equal(planCustom('scnet','original',.3),null);
  assert.equal(planCustom('unknown','original',1),null);
+ assert.equal(planCustom('umxhq','original',1).model,'umxhq');
  assert.throws(()=>makeRunKey('scnet','original',.3));
 });
 test('runtime projections remain estimates, not fabricated elapsed timings',()=>{

@@ -5,6 +5,10 @@ import {assetSource,handleMrxAsset} from '../../../pocketnet/mrx-assets.mjs';
 const endpoint=path=>'https://pocketworks.example'+path;
 test('only MRX weights and pinned ONNX binaries can be requested',()=>{
  assert.equal(assetSource('/ai-assets/mrx-v1/mrx/mrx.int8.onnx').kind,'model');
+ const umx=assetSource('/ai-assets/umxhq-v1/vocals.onnx');
+ assert.equal(umx.kind,'model');
+ assert.equal(umx.size,17820856);
+ assert.equal(umx.sha256,'3d05709ff7197bbd4a33aee759e4e82002acb491f41c94770227ab57507b6ccb');
  const scnet=assetSource('/ai-assets/scnet-v1/scnet/scnet.int8.onnx');
  assert.equal(scnet.kind,'model');
  assert.equal(scnet.size,12900277);
@@ -13,7 +17,7 @@ test('only MRX weights and pinned ONNX binaries can be requested',()=>{
  assert.equal(assetSource('/ai-assets/ort-1.30.0/ort-wasm-simd-threaded.jsep.mjs').kind,'script');
  for(const path of [
   '/ai-assets/', '/ai-assets/mrx-v1/../private.env',
-  '/ai-assets/mrx-v1/other.onnx','/ai-assets/scnet-v1/hidden.onnx', '/ai-assets/ort-1.30.0/../api.js',
+  '/ai-assets/mrx-v1/other.onnx','/ai-assets/scnet-v1/hidden.onnx','/ai-assets/umxhq-v1/secrets.env', '/ai-assets/ort-1.30.0/../api.js',
   '/ai-assets/ort-1.30.0/custom.js', '/ai-assets/ort-1.30.0/ort-wasm.zip'
  ])assert.equal(assetSource(path),null,path);
 });

@@ -2,7 +2,7 @@
   "id": "/apps/tihiy-kadr/",
   "name": "ТИХИЙ КАДР",
   "short_name": "M&E LAB",
-  "description": "Пять локальных браузерных маршрутов MRX и SCNet, цепочки обработки, сравнение качества и скорости.",
+  "description": "Три реальные ONNX-модели MRX, SCNet и Open-Unmix UMX-HQ для сравнения удаления речи непосредственно в браузере.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
