@@ -985,7 +985,7 @@ function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{
  epoch:state?.mediaEpoch,mime:c.blob.type
 })}
 function sendAllOwn(){if(sentPremiere||mode==='solo'||debugPlay)return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
-async function openEditor(){if(!scene)return;stopAllPlayback();const key=mode==='solo'?(debugPlay?'debug::':'')+'solo::'+scene.id+'::'+scene.start+'::'+scene.duration:sceneDraftKey();if(!await restore(key)){if(mode==='solo')library();else roomUI();return}if(mode!=='solo'&&state?.phase!=='recording')return;setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
+async function openEditor(){if(!scene)return;stopAllPlayback();if(scene.cleaned)filmSound=true;const key=mode==='solo'?(debugPlay?'debug::':'')+'solo::'+scene.id+'::'+scene.start+'::'+scene.duration:sceneDraftKey();if(!await restore(key)){if(mode==='solo')library();else roomUI();return}if(mode!=='solo'&&state?.phase!=='recording')return;setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
 function stopAllPlayback(){playing=false;for(const id of ['stage-video','premiere-video','trim-video'])$(id).pause();for(const c of [...localClips,...remoteClips])c.audio?.pause();$('play-toggle').textContent='▶'}
 function updateClipSound(t,on,isPremiere=false){
  const items=isPremiere?[...localClips,...remoteClips]:localClips;
@@ -1447,9 +1447,13 @@ async function downloadPremiere(){
   }
  }
 }
-function beginPremiere(){stopPremiereExport();premiereExportNotice='';premiereLocalCopy=null;$('premiere-local-fallback').classList.add('hidden');stopAllPlayback();setVideoSources('premiere-video');$('premiere-video').muted=true;$('premiere-credits').innerHTML=(state?.players||[{id:'solo',name}]).map((p,i)=>'<span class="credit" style="border-left-color:'+colors[i%colors.length]+'">'+esc(p.name)+' · '+esc(state?.assignments?.[p.id]||'Все роли')+'</span>').join('')+(scene.custom?'':'<span class="credit">© '+(scene.id.startsWith('bunny')?'Blender Foundation · CC BY 3.0':'Blender Studio · CC BY 4.0')+' · Голоса изменены</span>');$('premiere-scrub').max=String(Math.round(scene.duration*10));$('premiere-scrub').value='0';premiereAB='dub';$('premiere-ab').setAttribute('aria-pressed','false');$('premiere-ab').textContent='A/B · Оригинал';$('premiere-new-scene').classList.toggle('hidden',!meHost());show('premiere');seekVideo($('premiere-video'),0);updatePremiereStatus();sendAllOwn()}
+function beginPremiere(){
+ $('premiere-film-audio').checked=!!scene?.cleaned;
+ document.querySelector('#premiere-film-audio + span').textContent=scene?.cleaned?
+  'Фоновая музыка и эффекты без оригинальных реплик':'Звук оригинального фильма';
+ stopPremiereExport();premiereExportNotice='';premiereLocalCopy=null;$('premiere-local-fallback').classList.add('hidden');stopAllPlayback();setVideoSources('premiere-video');$('premiere-video').muted=!scene?.cleaned;$('premiere-credits').innerHTML=(state?.players||[{id:'solo',name}]).map((p,i)=>'<span class="credit" style="border-left-color:'+colors[i%colors.length]+'">'+esc(p.name)+' · '+esc(state?.assignments?.[p.id]||'Все роли')+'</span>').join('')+(scene.custom?'':'<span class="credit">© '+(scene.id.startsWith('bunny')?'Blender Foundation · CC BY 3.0':'Blender Studio · CC BY 4.0')+' · Голоса изменены</span>');$('premiere-scrub').max=String(Math.round(scene.duration*10));$('premiere-scrub').value='0';premiereAB='dub';$('premiere-ab').setAttribute('aria-pressed','false');$('premiere-ab').textContent='A/B · Оригинал';$('premiere-new-scene').classList.toggle('hidden',!meHost());show('premiere');seekVideo($('premiere-video'),0);updatePremiereStatus();sendAllOwn()}
 function pausePremiere(){const v=$('premiere-video');v.pause();updateClipSound(time(v),false,true);$('premiere-play').textContent='▶ Смотреть премьеру'}
-async function playPremiere(){if(receivedCount()<expectedCount())return;const v=$('premiere-video');if(!v.paused){pausePremiere();return}if(time(v)>=scene.duration-.08)seekVideo(v,0);try{v.muted=premiereAB==='dub';updateClipSound(time(v),premiereAB==='dub',true);await v.play();$('premiere-play').textContent='Ⅱ Пауза'}catch{toast('Нажми ещё раз для запуска со звуком.')}}
+async function playPremiere(){if(receivedCount()<expectedCount())return;const v=$('premiere-video');if(!v.paused){pausePremiere();return}if(time(v)>=scene.duration-.08)seekVideo(v,0);try{v.muted=premiereAB==='dub'&&!scene?.cleaned;updateClipSound(time(v),premiereAB==='dub',true);await v.play();$('premiere-play').textContent='Ⅱ Пауза'}catch{toast('Нажми ещё раз для запуска со звуком.')}}
 
 $('sound-btn').onclick=toggleSound;
 $('solo-btn').onclick=()=>{mode='solo';library()};
@@ -1462,8 +1466,23 @@ trimRange=createTrimRange({video:$('trim-video'),onChange:({start,end})=>{
  $('trim-start').value=String(start);
  $('trim-length').value=String(end-start);
  if(videoExportBlob)clearExportPreview();
- updateMediaLab();
+ updateMediaLab();updateFilmCleaner();
 }});
+document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.onchange=()=>{
+ if(filmPreparedBlob)clearExportPreview();
+ updateFilmCleaner();
+ $('film-clean-status').textContent='Выбран '+(FILM_MODES.find(x=>x.id===filmMode())?.name||'Open-Unmix')+
+  '. Нажми «Подготовить звук без голосов» либо продолжи — обработка начнётся перед переходом.';
+});
+$('film-clean-start').onclick=()=>{void prepareFilmScene()};
+$('film-clean-cancel').onclick=()=>filmCleanController?.abort();
+$('film-local-file').onchange=e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ if(file.size>MAX_SOURCE_VIDEO_BYTES)return toast('Локальная копия должна быть не больше 512 МиБ.');
+ filmLocalSource=file;
+ $('film-local-fallback').classList.add('hidden');
+ $('film-clean-status').textContent='Локальная копия загружена. Теперь нажми «Подготовить звук без голосов».';
+};
 $('media-quality').oninput=invalidateMediaResult;
 $('media-resolution').onchange=invalidateMediaResult;
 $('media-keep-audio').onchange=invalidateMediaResult;
@@ -1708,7 +1727,7 @@ $('premiere-ab').onclick=()=>{
    premiereAB=premiereAB==='dub'?'original':'dub';
    $('premiere-ab').setAttribute('aria-pressed',String(premiereAB==='original'));
    $('premiere-ab').textContent=premiereAB==='dub'?'A/B · Оригинал':'A/B · Наш дубляж';
-   $('premiere-video').muted=premiereAB==='dub';
+   $('premiere-video').muted=premiereAB==='dub'&&!scene?.cleaned;
    updateClipSound(time($('premiere-video')),premiereAB==='dub'&&!$('premiere-video').paused,true);
 };
 $('premiere-scrub').oninput=e=>{pausePremiere();setPlayhead(Number(e.target.value)/10,true)};
@@ -1742,7 +1761,7 @@ document.addEventListener('visibilitychange',()=>{
   if(voiceFxContext?.state==='suspended')void voiceFxContext.resume().catch(()=>{});
  }
 });
-window.addEventListener('pagehide',()=>{premiereExportController?.abort();if(record)finishRecording();draftWrite()});
+window.addEventListener('pagehide',()=>{filmCleanController?.abort();premiereExportController?.abort();if(record)finishRecording();draftWrite()});
 document.addEventListener('keydown',e=>{
  if(view!=='editor'||e.target.matches('input,select,textarea,[contenteditable="true"]'))return;
  if((e.ctrlKey||e.metaKey)&&e.code==='KeyZ'){
