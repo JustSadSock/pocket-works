@@ -1,6 +1,7 @@
 import {RATE,MAX_SECONDS,validRange,wavPCM16,elapsed,safeName} from './audio-utils.js';
 import {stereoPCM,comparisonMetrics} from './research-core.js';
 import {renderEnhancedPCM} from './audio-enhance.js';
+import {selectProblemSegments,packProblemSegments,composeSelectivePatches,mixSelectivePatches} from './selective-scnet.js';
 import {ROUTES,routeById,makeRunKey,calculateSpeed} from './pipeline-config.js';
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
 const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
@@ -29,7 +30,7 @@ function pause(){video.pause();sourceVideo.pause();audio.pause()}
 function reset(){
  pause();revoke(audioURL);audioURL='';audio.removeAttribute('src');audio.load();
  video.removeAttribute('src');video.load();original=null;range=null;activeStudy=null;
- show('scnet-tuning',false);updateEnhancementUI();
+ show('scnet-tuning',false);updateEnhancementUI();updateHybridUI();
  show('result-details',false);show('empty-state',true);text('result-state','Ожидание обработки');text('export-status','');text('stem-diagnostics','');text('result-position','0:00');$('result-seek').value=0;text('listen-btn','▶ Слушать результат');
 }
 function cancel(){
@@ -38,7 +39,7 @@ function cancel(){
  // Terminating a Worker alone leaves its pending Promise unresolved.
  pendingWorkerReject?.(new DOMException('Обработка отменена','AbortError'));
  worker?.terminate();worker=null;
- studyBusy=false;uiBusy(false);step('Остановлено','Можно обработать файл повторно.');
+ studyBusy=false;uiBusy(false);updateHybridUI();step('Остановлено','Можно обработать файл повторно.');
 }
 function metadata(v){
  return new Promise((resolve,reject)=>{
@@ -261,7 +262,7 @@ async function executeRoute(routeId){
   if(controller.signal.aborted||id!==serial)return;
   const strength=Number($('scnet-strength').value)/100;
   const effects={strength,spectral:false,reconstruct:false,center:false,centerAmount:35,
-   artifact:true,texture:true,artifactAmount:85,textureAmount:45};
+   artifact:true,texture:false,artifactAmount:85,textureAmount:45};
   const clean=renderEnhancedPCM(run.base,run.vocals,run.layers,effects);
   registerStudyResult(routeId,clean,run.timeMs,{
    label:route.label,meta:{model,runKey:run.key,vocals:run.vocals,base:run.base,layers:run.layers,
@@ -274,7 +275,7 @@ async function executeRoute(routeId){
   if(id===serial&&e.name!=='AbortError')error(e.message||String(e));
  }finally{
   if(abort===controller)abort=null;
-  if(id===serial){studyBusy=false;uiBusy(false)}
+  if(id===serial){studyBusy=false;uiBusy(false);updateHybridUI()}
  }
 }
 $('process-btn').onclick=()=>{void executeRoute($('quality-mode').value)};
@@ -285,6 +286,7 @@ function getMix(){
  const item=studyResults.get(activeStudy);
  if(!item?.meta?.layers)throw Error('DSP-дорожки ещё не подготовлены.');
  const clean=renderEnhancedPCM(item.meta.base,item.meta.vocals,item.meta.layers,item.meta.effects);
+ if(item.meta?.hybrid?.enabled)mixSelectivePatches(clean,item.meta.hybrid.patches,item.meta.effects.strength);
  if(mode==='speech')return clean.map((channel,i)=>{
   const out=new Float32Array(channel.length),src=original[Math.min(i,original.length-1)];
   for(let j=0;j<out.length;j++)out[j]=(src[j]||0)-channel[j];
@@ -352,7 +354,7 @@ function updateEnhancementUI(){
  }
  $('repair-off-all').disabled=!available;
  text('repair-off-all',state?.artifact||(state?.texture&&textureFound)?
-  'Отключить оба новых фильтра':'Включить новые фильтры');
+  'Выключить новые фильтры':'Включить подавление жужжания');
  text('repair-note',!available?'После разделения аудио подготовим оба варианта.':
   textureFound?'Фон найден для '+Math.round(item.meta.textureCoverage*100)+'% коротких окон сцены. Новые фильтры можно сравнивать без повторного прогона.':
    'Рядом нет надёжных участков без вокала. Подстановка фона недоступна для этого фрагмента, подавление призвуков работает.');
@@ -386,6 +388,73 @@ $('center-suppression').oninput=()=>{
  item.meta.effects.centerAmount=Number($('center-suppression').value);
  updateEnhancementUI();refreshEnhancedPreview();
 };
+function updateHybridUI(){
+ const item=studyResults.get(activeStudy);
+ const isUMX=!!item&&item.meta?.model==='umxhq';
+ show('target-scnet-panel',isUMX);
+ const usable=isUMX&&!!item.meta?.layers&&!!range&&range.duration>=3;
+ const busy=studyBusy||exporting||!!worker;
+ $('target-scnet-run').disabled=!usable||busy;
+ $('target-scnet-budget').disabled=!usable||busy;
+ const hybrid=isUMX?item.meta.hybrid:null;
+ $('target-scnet-enabled').disabled=!hybrid||busy;
+ $('target-scnet-enabled').checked=!!hybrid?.enabled;
+ text('target-scnet-run',hybrid?'Пересчитать выбранные участки':'Найти и обработать участки');
+ if(!isUMX)return;
+ if(hybrid){
+  const ranges=hybrid.segments.map(p=>elapsed(p.start/RATE)+'–'+elapsed(p.end/RATE)).join(', ');
+  text('target-scnet-status','SCNet '+elapsed(hybrid.timeMs/1000)+' · обработано исходника '+
+    elapsed(hybrid.packedSeconds)+' (целевые '+elapsed(hybrid.selectedSeconds)+') · '+ranges+
+    '. '+(hybrid.enabled?'Гибрид включён.':'Сейчас звучит только Open-Unmix.'));
+ }else if(!usable)text('target-scnet-status','Для автоматического поиска нужен фрагмент не короче 3 секунд.');
+ else text('target-scnet-status',busy?'Выполняется обработка...':
+  'Поиск по вокальной дорожке и остаточным артефактам. SCNet получит только найденные отрывки исходного видео.');
+}
+async function runSelectiveSCNet(){
+ const item=studyResults.get(activeStudy);
+ if(!item||item.meta?.model!=='umxhq'||worker||studyBusy||exporting||!range)return;
+ clearError();const controller=new AbortController();abort=controller;
+ const id=++serial;studyBusy=true;uiBusy(true);updateHybridUI();
+ const previous=item.meta.hybrid;
+ try{
+  step('Ищем остатки голоса','Анализируем локальную оценку вокала и тональных артефактов.');
+  const segments=selectProblemSegments(item.meta.base,item.meta.vocals,item.meta.layers.artifact,{
+   budgetSeconds:Number($('target-scnet-budget').value),rate:RATE
+  });
+  if(!segments.length){
+   text('target-scnet-status','Не найдено достаточно убедительных речевых артефактов. Open-Unmix сохранён без изменений.');
+   return;
+  }
+  const payload=packProblemSegments(item.meta.base,segments,{rate:RATE});
+  text('target-scnet-status','Выбрано '+segments.length+' участков · SCNet получит '+elapsed(payload.packedSeconds)+
+   ', включая контекст и паузы между участками.');
+  step('Точечная SCNet','Анализ '+segments.length+' участков исходного звука · '+elapsed(payload.packedSeconds));
+  // SCNet takes ORIGINAL excerpts, not UMX-cleaned audio: it is trained on mixtures.
+  const reply=await separate(payload.packed,mobile?5:10,id,'scnet',1);
+  if(controller.signal.aborted||id!==serial)return;
+  const patches=composeSelectivePatches(payload.layout,reply.stems.vocals,item.meta.vocals,{rate:RATE});
+  item.meta.hybrid={patches,segments,timeMs:reply.seconds*1000,
+   packedSeconds:payload.packedSeconds,selectedSeconds:payload.selectedSeconds,enabled:true};
+  text('export-status','Точечная SCNet готова: можно переключать и экспортировать итоговый гибрид.');
+  await previewAudio();
+  step('Готово','Гибрид Open-Unmix + точечная SCNet подготовлен.',1);
+ }catch(e){
+  if(id===serial&&e.name!=='AbortError'){
+   item.meta.hybrid=previous;
+   error('Точечная SCNet: '+(e.message||String(e)));
+  }
+ }finally{
+  if(abort===controller)abort=null;
+  if(id===serial){studyBusy=false;uiBusy(false);updateHybridUI()}
+ }
+}
+$('target-scnet-run').onclick=()=>{void runSelectiveSCNet()};
+$('target-scnet-enabled').onchange=()=>{
+ const item=studyResults.get(activeStudy);
+ if(!item?.meta?.hybrid)return;
+ item.meta.hybrid.enabled=$('target-scnet-enabled').checked;
+ updateHybridUI();refreshEnhancedPreview();
+};
 // The two new algorithms only mix cached correction channels.
 for(const [key,id] of [['artifact','repair-noise'],['texture','repair-texture']]){
  $(id).onchange=()=>{
@@ -405,7 +474,7 @@ $('repair-off-all').onclick=()=>{
  const item=studyResults.get(activeStudy);if(!item?.meta?.effects)return;
  const state=item.meta.effects;
  const next=!(state.artifact||(state.texture&&(item.meta.textureCoverage??0)>0));
- state.artifact=next;state.texture=next;
+ state.artifact=next;state.texture=false; // Poor musical texture substitutions stay opt-in.
  updateEnhancementUI();refreshEnhancedPreview();
 };
 // Never allow the original audio from <video> to mix into the neural stems.
@@ -520,7 +589,7 @@ $('video-btn').onclick=()=>{void exportVideo()};
 function clearStudy(){
  studyResults.clear();pipelineRuns.clear();
  studySignature='';activeStudy=null;
- show('scnet-tuning',false);$('study-csv').disabled=true;updateEnhancementUI();
+ show('scnet-tuning',false);$('study-csv').disabled=true;updateEnhancementUI();updateHybridUI();
  text('study-active-status','Готовые версии одной сцены появятся здесь.');
  renderStudyResults();
 }
@@ -588,7 +657,7 @@ async function selectStudyResult(id,rebuild=true){
   $('scnet-strength').value=String(Math.round((item.meta.effects?.strength??1)*100));
   text('scnet-strength-value',$('scnet-strength').value+'%');
  }
- updateEnhancementUI();
+ updateEnhancementUI();updateHybridUI();
  text('result-state',item.label);
  text('inference-time',item.timeMs===null?'—':elapsed(item.timeMs/1000));
  text('speed-factor',item.timing?item.timing.rtf.toFixed(2)+'× RTF':'—');
