@@ -35,6 +35,7 @@ jobs:
       - name: Syntax check every production module
         run: |
           node --check apps/ne-tem-golosom/app.js
+          node --check apps/ne-tem-golosom/screen-debug.js
           node --check apps/ne-tem-golosom/media-lab.js
           node --check apps/ne-tem-golosom/timeline-model.js
           node --check apps/ne-tem-golosom/trim-range.js
@@ -67,6 +68,8 @@ jobs:
         run: node apps/ne-tem-golosom/qa/video-journey.mjs
       - name: Check timeline gestures, draft recovery and Undo/Redo
         run: node apps/ne-tem-golosom/qa/timeline-journey.mjs
+      - name: Inspect all screen states on desktop and phone without room side effects
+        run: node apps/ne-tem-golosom/qa/debug-gallery.mjs
       - name: Generate and decode real two-actor premiere movie
         run: node apps/ne-tem-golosom/qa/premiere-journey.mjs
       - name: Retain media and desktop/mobile screenshots
