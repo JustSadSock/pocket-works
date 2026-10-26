@@ -2,17 +2,21 @@
 // with Ne Tem Golosom video encoding. Uses actual pinned ONNX weights.
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
-import {readFileSync,statSync} from 'node:fs';
+import {readFileSync,writeFileSync,statSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import {tmpdir} from 'node:os';
 import {resolve,join,extname,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {chromium} from '@playwright/test';
 import {handleMrxAsset} from '../../../pocketnet/mrx-assets.mjs';
 const root=resolve(fileURLToPath(new URL('../../../',import.meta.url)));
+let fastMp4=null;
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json',
  '.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const server=createServer(async(req,res)=>{
  try{
   const url=new URL(req.url,'http://127.0.0.1');
+  if(url.pathname==='/__qa_fast_aac.mp4'&&fastMp4){res.writeHead(200,{'content-type':'video/mp4'});res.end(fastMp4);return}
   if(url.pathname.startsWith('/ai-assets/')){
    const response=await handleMrxAsset(new Request(url.href));
    res.writeHead(response.status,Object.fromEntries(response.headers));
@@ -54,7 +58,31 @@ try{
   os.stop();harmonic.stop();stream.getTracks().forEach(t=>t.stop());await ctx.close();
   return [...new Uint8Array(await new Blob(chunks).arrayBuffer())];
  });
- await page.locator('#video-file').setInputFiles({name:'voice-fixture.webm',mimeType:'video/webm',buffer:Buffer.from(bytes)});
+ // Generate a real AAC MP4 from the synthetic clip to prove the extractor
+ // does not need video playback or the 100 MiB whole-file decoder path.
+ const input=join(tmpdir(),'ntg-fast-audio-source-'+process.pid+'.webm');
+ const output=join(tmpdir(),'ntg-fast-audio-source-'+process.pid+'.mp4');
+ writeFileSync(input,Buffer.from(bytes));
+ const transcoded=spawnSync('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,
+  '-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p','-c:a','aac',
+  '-b:a','96k','-movflags','+faststart',output],{timeout:35000});
+ if(transcoded.status===0){
+  fastMp4=readFileSync(output);
+  const fast=await page.evaluate(async()=>{
+   const {extractMp4AAC}=await import('/apps/ne-tem-golosom/mp4-audio.js');
+   const blob=await (await fetch('/__qa_fast_aac.mp4')).blob();
+   const before=performance.now(),data=await extractMp4AAC(blob,0,10);
+   if(!data)return null;
+   let energy=0;
+   for(let i=0;i<data[0].length;i+=512)energy+=Math.abs(data[0][i]);
+   return {length:data[0].length,energy,seconds:(performance.now()-before)/1000};
+  });
+  assert(fast,'real AAC MP4 must use fast demux/decode path');
+  assert.equal(fast.length,441000);
+  assert(fast.energy>1,'decoded AAC must carry real non-silent audio');
+  console.log('Fast MP4 AAC extraction',fast.seconds.toFixed(2),'seconds for 10 seconds');
+ }else console.warn('FFmpeg fixture conversion unavailable; WebM real neural tests still run.');
+  await page.locator('#video-file').setInputFiles({name:'voice-fixture.webm',mimeType:'video/webm',buffer:Buffer.from(bytes)});
  await page.waitForSelector('#screen-trim:not(.hidden)',{timeout:20000});
  const options=page.locator('input[name="film-clean-mode"]');
  assert.equal(await options.count(),3);
@@ -81,6 +109,12 @@ try{
   await page.waitForSelector('#media-result:not(.hidden)',{timeout:240000});
   assert.match(await page.locator('#film-clean-status').innerText(),/готов|Готово/);
  }
+ // Low-memory pipeline must also finish and yield playable video.
+ await page.locator('input[name="film-clean-mode"][value="umx"]').check();
+ await page.locator('#film-low-memory').check();
+ await page.locator('#film-clean-start').click();
+ await page.waitForSelector('#media-result:not(.hidden)',{timeout:240000});
+ assert.match(await page.locator('#film-clean-status').innerText(),/готов|Готово/);
  await page.locator('#confirm-scene').click();
  await page.waitForSelector('#screen-room:not(.hidden)',{timeout:20000});
  assert.match(await page.locator('#room-scene-title').innerText(),/voice-fixture/);
