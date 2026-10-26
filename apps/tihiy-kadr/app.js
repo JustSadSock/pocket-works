@@ -1,5 +1,5 @@
 import {RATE,MAX_SECONDS,validRange,wavPCM16,elapsed,safeName} from './audio-utils.js';
-import {stereoPCM,comparisonMetrics,subtractResidualVocals} from './research-core.js';
+import {stereoPCM,comparisonMetrics} from './research-core.js';
 import {renderEnhancedPCM} from './audio-enhance.js';
 import {ROUTES,routeById,makeRunKey,calculateSpeed} from './pipeline-config.js';
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
@@ -8,7 +8,6 @@ const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
 let sourceVideo=$('source-video');
 let file=null,fileURL='',audioURL='',length=0,range=null,original=null;
 let worker=null,pendingWorkerReject=null,abort=null,serial=0,exporting=false,editTimer=null,mode='clean',fileName='video';
-let scnetVocals=null,scnetBase=null;
 const pipelineRuns=new Map();
 const studyResults=new Map();let activeStudy=null,studySurround=null,studySurroundRate=0,studySignature='',studyBusy=false;
 const text=(id,msg)=>$(id).textContent=String(msg),show=(id,on)=>$(id).classList.toggle('hidden',!on);
@@ -30,7 +29,7 @@ function pause(){video.pause();sourceVideo.pause();audio.pause()}
 function reset(){
  pause();revoke(audioURL);audioURL='';audio.removeAttribute('src');audio.load();
  video.removeAttribute('src');video.load();original=null;range=null;activeStudy=null;
- scnetVocals=null;scnetBase=null;show('scnet-tuning',false);updateEnhancementUI();
+ show('scnet-tuning',false);updateEnhancementUI();
  show('result-details',false);show('empty-state',true);text('result-state','Ожидание обработки');text('export-status','');text('stem-diagnostics','');text('result-position','0:00');$('result-seek').value=0;text('listen-btn','▶ Слушать результат');
 }
 function cancel(){
@@ -481,7 +480,6 @@ $('video-btn').onclick=()=>{void exportVideo()};
 function clearStudy(){
  studyResults.clear();pipelineRuns.clear();
  studySignature='';activeStudy=null;
- scnetVocals=null;scnetBase=null;
  show('scnet-tuning',false);$('study-csv').disabled=true;updateEnhancementUI();
  text('study-active-status','Готовые версии одной сцены появятся здесь.');
  renderStudyResults();
@@ -503,7 +501,9 @@ function registerStudyResult(id,clean,processingMs=null,{source='local',label=nu
   const old=[...studyResults.keys()].find(k=>k!==activeStudy)||[...studyResults.keys()][0];
   if(old)studyResults.delete(old);
  }
- studyResults.set(id,{id,label:label||routeById(id)?.label||id,source,clean:normalized,
+ // Avoid retaining a redundant 32 MiB PCM copy per 90-second stereo model.
+ // The result is synthesized from cached source, vocals and DSP layers.
+ studyResults.set(id,{id,label:label||routeById(id)?.label||id,source,
   timeMs,metrics,timing,meta});
  renderStudyResults();
  $('study-csv').disabled=!studyResults.size;
@@ -541,8 +541,6 @@ async function selectStudyResult(id,rebuild=true){
  show('empty-state',false);show('result-details',true);
  $('video-btn').disabled=false;$('wav-btn').disabled=false;
  const vocal=!!item.meta?.vocals;
- scnetVocals=vocal?item.meta.vocals:null;
- scnetBase=vocal?item.meta.base:null;
   show('scnet-tuning',vocal);
  text('vocal-strength-label',item.meta?.model==='umxhq'?'Удаление вокала Open-Unmix':'Удаление голосов SCNet');
  text('vocal-warning','100% — полное вычитание вокального стема. 105–150% — усиление с риском искажения музыки. Нейросеть повторно не запускается.');
