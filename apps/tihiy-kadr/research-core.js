@@ -2,6 +2,7 @@
 // No uploaded media is sent to PocketWorks servers or third parties.
 export const STUDY_METHODS=Object.freeze([
  {id:'mrx',name:'MRX',type:'local',detail:'Локально в браузере, компактная эталонная модель'},
+ {id:'mrx-scnet',name:'MRX + SCNet',type:'local',detail:'Последовательная очистка: SCNet ищет остатки голосов после MRX'},
  {id:'surround',name:'5.1 / 7.1',type:'surround',detail:'Извлечение M&E из многоканального WAV, без нейросети'},
  {id:'dnr-scnet',name:'DnR v3 · SCNet',type:'import',detail:'MVSep, DnR v3 SCNet Large (56 / 0)'},
  {id:'dnr-ensemble',name:'DnR v3 · Ensemble',type:'import',detail:'MVSep, Mel + SCNet (56 / 2)'},
@@ -10,6 +11,19 @@ export const STUDY_METHODS=Object.freeze([
  {id:'other',name:'Другой алгоритм',type:'import',detail:'Любой M&E-результат в WAV / FLAC / MP3'}
 ]);
 export function researchMethod(id){return STUDY_METHODS.find(x=>x.id===id)||null}
+// Second pass is optional. The vocal model was trained on MUSIC vocal stems,
+// not cinematic dialogue. Expose the result as an experiment, never a promise.
+export function subtractResidualVocals(me,vocals,strength=.8){
+ if(!me?.length||!vocals?.length||me.length!==vocals.length||
+    me.some((a,i)=>!(a instanceof Float32Array)||!(vocals[i] instanceof Float32Array)||a.length!==vocals[i].length))
+  throw Error('SCNet вернула несовместимую звуковую дорожку.');
+ if(!Number.isFinite(strength)||strength<0||strength>1)throw Error('Допустимое удаление голоса — 0–100%.');
+ return me.map((channel,index)=>{
+  const removed=vocals[index],out=new Float32Array(channel.length);
+  for(let i=0;i<out.length;i++)out[i]=channel[i]-strength*removed[i];
+  return out;
+ });
+}
 export function wavMetadata(buffer){
  const view=new DataView(buffer),n=view.byteLength;
  const four=(p)=>String.fromCharCode(...new Uint8Array(buffer,p,4));

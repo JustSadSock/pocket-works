@@ -41,3 +41,14 @@
 .study-choice.selected{border:2px solid var(--accent);padding:9px 11px;background:#fff1e3}
 #study-active-status{margin:10px 0 0}
 @media(max-width:700px){.study-grid{grid-template-columns:1fr}.study-results-head{align-items:stretch;flex-direction:column}.study-choice{min-height:74px}}
+
+
+/* The main user journey is one local button; specialist imports stay opt-in. */
+.study-advanced{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.study-advanced summary{cursor:pointer;font-size:12px;font-weight:750;color:var(--ink);padding:9px 0}
+.study-advanced[open] summary{margin-bottom:8px}
+.study-advanced .study-grid{margin-top:10px}
+.scnet-tuning{border-left:3px solid #d16c31;background:#f4eee5;padding:10px 12px;margin:10px 0}
+.scnet-tuning>label{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:800}
+.scnet-tuning input{width:100%;accent-color:var(--accent);cursor:pointer}
+.scnet-tuning p{margin:5px 0 0}

@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
- STUDY_METHODS,researchMethod,wavMetadata,decodeWav,resamplePCM,channelSummary,
+ STUDY_METHODS,researchMethod,subtractResidualVocals,wavMetadata,decodeWav,resamplePCM,channelSummary,
  multichannelME,stereoPCM,sumMusicEffects,matchResultToSegment,comparisonMetrics,comparisonRecord
 } from '../research-core.js';
 import {wavPCM16} from '../audio-utils.js';
@@ -18,7 +18,7 @@ function pcmWav(channels,rate=8000){
  return b;
 }
 test('model registry distinguishes local, channel, imported services (without pretending to execute them)',()=>{
- assert.deepEqual(STUDY_METHODS.filter(x=>x.type==='local').map(x=>x.id),['mrx']);
+ assert.deepEqual(STUDY_METHODS.filter(x=>x.type==='local').map(x=>x.id),['mrx','mrx-scnet']);
  assert.deepEqual(STUDY_METHODS.filter(x=>x.type==='surround').map(x=>x.id),['surround']);
  for(const id of ['dnr-scnet','dnr-ensemble','bandit','sam'])assert.equal(researchMethod(id)?.type,'import');
  assert.equal(researchMethod('fake'),null);
@@ -81,4 +81,21 @@ test('browser app actually binds external imports to original video monitor and 
  assert.match(js,/activeStudy/);
  assert.match(js,/if\(!activeStudy\|\|!range\|\|exporting\)return/);
  assert.match(js,/await selectStudyResult\(method\)/);
+});
+
+test('real SCNet vocal estimate is subtracted from the real MRX M&E, not from original',()=>{
+ const me=[new Float32Array([.5,.25,.1])],vocals=[new Float32Array([.2,.1,.05])];
+ const fixed=subtractResidualVocals(me,vocals,.8);
+ assert(Math.abs(fixed[0][0]-.34)<1e-6);
+ assert.deepEqual([...me[0]],[...new Float32Array([.5,.25,.1])]);
+ assert.deepEqual([...subtractResidualVocals(me,vocals,0)[0]],[...me[0]]);
+ assert.throws(()=>subtractResidualVocals(me,vocals,2),/0–100/);
+});
+test('specialist import stays closed by default, simple model choice drives inference',()=>{
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const js=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+ assert.match(html,/<details id="study-advanced"/);
+ assert.match(html,/value="scnet"/);
+ assert.match(js,/if\(\$\('quality-mode'\)\.value==='scnet'\)/);
+ assert.match(js,/await separate\(clean,Math\.min\(10/);
 });
