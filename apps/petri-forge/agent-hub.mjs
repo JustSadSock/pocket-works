@@ -396,4 +396,7 @@ const cockpit=mountAgentCockpit({
  whenMode:async next=>{await chain;if(mode!==next)throw Error('Не удалось открыть арену');}
 });
 void start();
-window.PetriForgeAgentHub=()=>({agent:active?.name,id:active?.id,mode,busy,advanced,profiles:careers.length,archived:careers.filter(c=>c.archived).length,sessions:active?.branches?.[mode]?.sessions||0});
+window.addEventListener('petri:grid-algorithm-request',event=>{
+ if(event.detail?.algorithm&&mode==='grid')void cockpit.selectAlgorithm(event.detail.algorithm);
+});
+window.PetriForgeAgentHub=()=>({agent:active?.name,id:active?.id,mode,busy,advanced,algorithm:active?.algorithms?.grid||'qlearning',profiles:careers.length,archived:careers.filter(c=>c.archived).length,sessions:active?.branches?.[mode]?.sessions||0});
