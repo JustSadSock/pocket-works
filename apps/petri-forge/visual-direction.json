@@ -66,6 +66,11 @@
         "slug": "shest-hodov",
         "spatialDifference": "«Шесть ходов» показывает компактную настольную сетку с прямым нажатием на клетки; PetriForge использует крупную непрерывную арену, где во время headless-тренировки игровое поле не требует ходов пользователя.",
         "interactionDifference": "«Шесть ходов» предполагает выбор отдельных допустимых ходов человеком или ИИ; PetriForge автоматически выполняет множество эпизодов, сохраняет экспериментальные модели и воспроизводит действия агента."
+      },
+      {
+        "slug": "ne-tem-golosom",
+        "spatialDifference": "«Не тем голосом» keeps a recording and dubbing editing workflow with timeline-like editing controls, while PetriForge anchors a physically simulated agent arena beside a bounded experimental command rail.",
+        "interactionDifference": "«Не тем голосом» records, recompresses and exports collaborative voice-video sessions. PetriForge runs numerical self-play training in Workers, freezes historical neural policies and evaluates each generation on fresh combat arenas."
       }
     ]
   },
