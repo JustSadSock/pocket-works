@@ -8,7 +8,7 @@ import {VOICE_EFFECTS,VOICE_EFFECT_GROUPS,normalizeVoiceEffect,connectVoiceEffec
 import {clipMix,envelopeGain} from './clip-mix.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {createRoomRecovery} from './room-recovery.js';
-import {FILM_MODES,estimateFilmTimes,cleanFilmSound} from './film-cleanup.js';
+import {FILM_MODES,estimateFilmTimes,estimatePreparationTimes,lowMemoryRecommended,cleanFilmSound} from './film-cleanup.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {MAX_ROOM_VIDEO_BYTES,MAX_SOURCE_VIDEO_BYTES,formatVideoBytes,estimateVideoBytes,planVideoPreparation,mediaSettingsKey,supportsVideoExport,measureVideoDuration,exportVideo} from './media-lab.js';
 installMobileRuntime();
@@ -47,6 +47,28 @@ let sound=true,audioContext=null,identity=null,name='Гость',mode='solo',vie
 let relayQueue=Promise.resolve(),relayInbox=new Map();
 let videoExportController=null,videoExportBlob=null,videoExportUrl=null,trimRange=null,encodedCache=null;
 let filmCleanController=null,filmPreparedBlob=null,filmLocalSource=null;
+const FILM_BENCH_KEY=STORE+'film-bench-v2';
+let filmBench={};
+try{const value=JSON.parse(localStorage.getItem(FILM_BENCH_KEY)||'{}');
+ if(value&&typeof value==='object')filmBench=value;
+}catch{}
+const filmBenchmarkOpts=()=>({
+ umx90:Number.isFinite(filmBench.umx90)&&filmBench.umx90>0?filmBench.umx90:5,
+ scnet90:Number.isFinite(filmBench.scnet90)&&filmBench.scnet90>0?filmBench.scnet90:150
+});
+function rememberFilmTimes(plan,duration){
+ for(const name of ['Open-Unmix','SCNet']){
+  const seconds=plan.times.filter(x=>x.name===name).reduce((n,x)=>n+x.seconds,0);
+  if(!seconds)continue;
+  const modeled=name==='Open-Unmix'||plan.mode==='scnet'?duration:plan.packedSeconds;
+  if(modeled<3)continue;
+  const estimate=Math.round(Math.min(3600,Math.max(1,seconds*90/modeled)));
+  const key=name==='Open-Unmix'?'umx90':'scnet90';
+  // Keep the latest measured device runtime, not an ideal desktop benchmark.
+  filmBench[key]=estimate;
+ }
+ try{localStorage.setItem(FILM_BENCH_KEY,JSON.stringify(filmBench))}catch{}
+}
 let premiereExportController=null,premiereResultUrl=null,premiereExportGeneration=0,premiereLocalCopy=null,premiereExportNotice='';
 const qualityNames=['Экономное','Компактное','Сбалансированное','Высокое','Максимальное'];
 let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0,timelineZoom=1,clipDrag=null,skipTimelineClick=false,micPending=false;
@@ -324,6 +346,11 @@ function time(video){return scene?clamp((video.currentTime||scene.start)-scene.s
 function library(){document.querySelector('#screen-library [data-back]').dataset.back=room&&mode==='host'?'room':'home';const grid=$('scene-grid');$('scene-license').innerHTML='Озвученные отрывки являются переработкой оригиналов. Авторы: <a href="https://commons.wikimedia.org/wiki/File:WING_IT!_-_Blender_Open_Movie-full_movie.webm" target="_blank" rel="noopener">WING IT! — Blender Studio (CC BY 4.0)</a>, <a href="https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm" target="_blank" rel="noopener">Sprite Fright — Blender Studio (CC BY 4.0)</a>, <a href="https://peach.blender.org/about/" target="_blank" rel="noopener">Big Buck Bunny — Blender Foundation (CC BY 3.0)</a>. <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.';grid.innerHTML=LIBRARY.map((s,i)=>'<button class="scene-card" data-scene="'+esc(s.id)+'"><div class="scene-thumb">'+(POSTERS[s.id]?'<img src="'+esc(POSTERS[s.id])+'" loading="lazy" alt="Кадр фильма">':'')+'<strong>'+esc(s.short)+'</strong><span class="duration">'+fmt(s.duration)+'</span></div><b>'+esc(s.title)+'</b><small>'+esc(s.sub)+'</small></button>').join('');show('library')}
 function selectScene(item,blob=null){
  if(filmCleanController)filmCleanController.abort();filmLocalSource=null;filmPreparedBlob=null;$('film-skip').checked=false;
+ $('film-low-memory').checked=lowMemoryRecommended(navigator.deviceMemory,navigator.hardwareConcurrency);
+ if($('film-low-memory').checked){
+  if(Number($('media-resolution').value)>640)$('media-resolution').value='640';
+  if(Number($('media-quality').value)>3)$('media-quality').value='3';
+ }
  selected={...item,roles:[...item.roles]};sourceBlob=blob;encodedCache=null;
  if(blob&&selected.custom)selected.id='custom-'+uid();
  $('scene-title').value=selected.title;
@@ -339,7 +366,7 @@ function filmMode(){
 }
 function updateFilmCleaner(){
  const duration=Math.max(0,Number($('trim-length').value)||selected?.duration||0);
- const estimate=estimateFilmTimes(duration);
+ const estimate=estimateFilmTimes(duration,filmBenchmarkOpts());
  const baseline=Math.max(.1,estimate.umx);
  for(const choice of FILM_MODES){
   const seconds=estimate[choice.id];
@@ -347,8 +374,17 @@ function updateFilmCleaner(){
   $('film-ratio-'+choice.id).textContent=choice.id==='umx'?'1×':
    '≈ '+Math.round(seconds/baseline)+'× дольше';
  }
+ const likely=estimatePreparationTimes(duration,filmMode(),filmBenchmarkOpts());
+ $('film-time-explain').textContent='Оценка моделей: '+(filmBench.umx90||filmBench.scnet90?
+  'по замерам на этом устройстве':'по замерам на мощном ПК')+
+  '. '+($('film-low-memory').checked?'Защита памяти: нейросеть идёт короткими отрывками и может быть существенно медленнее. ':'')+
+  'Дополнительно: кодирование видео ≈ '+fmt(duration)+
+  ', извлечение звука может занять до '+fmt(duration)+' при резервном захвате. Итого: от ≈ '+
+  fmt(Math.ceil(likely.totalFast))+' до ≈ '+fmt(Math.ceil(likely.totalSlow))+
+  ' на измеренном ПК; на слабом устройстве медленнее.';
  const ready=!!selected&&!filmCleanController&&!videoExportController;
  $('film-clean-start').disabled=!ready||!supportsVideoExport()||$('film-skip').checked;
+ $('film-low-memory').disabled=!!filmCleanController||!!videoExportController;
  document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.disabled=!!filmCleanController||!!videoExportController||$('film-skip').checked);
  $('film-clean-cancel').classList.toggle('hidden',!filmCleanController);
  $('film-clean-progress').classList.toggle('hidden',!filmCleanController);
@@ -368,7 +404,7 @@ async function prepareFilmScene(){
  }
  const controller=new AbortController();filmCleanController=controller;
  const status=$('film-clean-status'),bar=$('film-clean-bar'),button=$('film-clean-start');
- const selectedMode=filmMode(),startedAt=performance.now();
+ const selectedMode=filmMode(),lowMemory=$('film-low-memory').checked,startedAt=performance.now();
  const progress=(detail,value)=>{
   status.textContent=detail;bar.value=Math.max(0,Math.min(100,value));
  };
@@ -395,14 +431,15 @@ async function prepareFilmScene(){
   }
   if(!(blob instanceof Blob)||!blob.size||blob.size>MAX_SOURCE_VIDEO_BYTES)
    throw Error('Нужен видеофайл до 512 МиБ.');
-  const plan=await cleanFilmSound({blob,start,duration,mode:selectedMode,signal:controller.signal,
+  const plan=await cleanFilmSound({blob,start,duration,mode:selectedMode,lowMemory,signal:controller.signal,
    onProgress:p=>{
     const stage=p.stage||'';
-    const value=stage==='decode'?10:stage==='scnet'?41:stage==='umx'?25:stage==='buzz'?52:stage==='skip'?59:13;
+    const value=stage==='decode'?10:stage==='scnet'?41:stage==='umx'?25:stage==='lowmem'?24:stage==='buzz'?52:stage==='skip'?59:13;
     progress((p.detail||'Разделяем аудио…')+' · '+fmt((performance.now()-startedAt)/1000)+' прошло',value);
    }});
   if(controller.signal.aborted)return false;
-  progress('Кодируем видео с очищенным фоном · 0%',60);
+  rememberFilmTimes(plan,duration);updateFilmCleaner();
+  progress('Нейросеть готова · создаём видео с фоновым звуком',60);
   const result=await exportVideo({blob,start,duration,width:Number($('media-resolution').value),
    level:Number($('media-quality').value),keepAudio:false,audioPCM:plan.channels,
    signal:controller.signal,onProgress:p=>{
@@ -1470,6 +1507,14 @@ trimRange=createTrimRange({video:$('trim-video'),onChange:({start,end})=>{
  if(videoExportBlob)clearExportPreview();
  updateMediaLab();updateFilmCleaner();
 }});
+$('film-low-memory').onchange=()=>{
+ if($('film-low-memory').checked){
+  if(Number($('media-resolution').value)>640)$('media-resolution').value='640';
+  if(Number($('media-quality').value)>3)$('media-quality').value='3';
+  invalidateMediaResult();
+ }
+ updateFilmCleaner();
+};
 document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.onchange=()=>{
  if(filmPreparedBlob)clearExportPreview();
  updateFilmCleaner();

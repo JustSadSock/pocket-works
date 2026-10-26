@@ -3,6 +3,7 @@
 // Only the host prepares a cleaned VIDEO; guests receive the encoded video
 // with its soundtrack and never have to rerun neural inference.
 import {selectProblemSegments,packProblemSegments,composeSelectivePatches,mixSelectivePatches} from '../tihiy-kadr/selective-scnet.js';
+import {extractMp4AAC} from './mp4-audio.js';
 export const FILM_RATE=44100;
 export const FILM_MODES=Object.freeze([
  {id:'umx',name:'Open-Unmix',detail:'Быстро · основной вариант'},
@@ -10,6 +11,13 @@ export const FILM_MODES=Object.freeze([
  {id:'scnet',name:'SCNet',detail:'Обрабатывает всю сцену'}
 ]);
 const aborted=()=>new DOMException('Обработка отменена','AbortError');
+export function lowMemoryRecommended(memory,cores){
+ return (Number.isFinite(memory)&&memory<=4)||(Number.isFinite(cores)&&cores<=4);
+}
+export function estimatePreparationTimes(duration,mode,opts={}){
+ const e=estimateFilmTimes(duration,opts),neural=e[mode]||e.umx;
+ return {neural,encoding:duration,decodeFallback:duration,totalFast:neural+duration,totalSlow:neural+duration*2};
+}
 function live(signal){if(signal?.aborted)throw aborted()}
 export function estimateFilmTimes(duration,{umx90=5,scnet90=150,targetSeconds=10}={}){
  const length=Math.min(90,Math.max(0,Number(duration)||0));
@@ -25,7 +33,7 @@ export function validateFilmMode(mode){
  return mode;
 }
 function monoToStereo(pcm){return pcm.length===1?[pcm[0],pcm[0].slice()]:pcm.slice(0,2)}
-function createWorkerTask(url,packet,signal,onProgress){
+function createWorkerTask(url,packet,signal,onProgress,{transferInputs=false}={}){
  return new Promise((resolve,reject)=>{
   live(signal);
   const w=new Worker(url,{type:'module'});
@@ -44,7 +52,7 @@ function createWorkerTask(url,packet,signal,onProgress){
    else if(p.stage==='done')finish(null,p);
    else if(p.stage==='model'||p.stage==='library'||p.stage==='progress')onProgress(p);
   };
-  const payload={...packet,channels:packet.channels?.map(ch=>ch.slice()),
+  const payload=transferInputs?packet:{...packet,channels:packet.channels?.map(ch=>ch.slice()),
     base:packet.base?.map(ch=>ch.slice()),vocals:packet.vocals?.map(ch=>ch.slice())};
   const buffers=[...(payload.channels||[]),...(payload.base||[]),...(payload.vocals||[])].map(x=>x.buffer);
   w.postMessage(payload,buffers);
@@ -53,12 +61,23 @@ function createWorkerTask(url,packet,signal,onProgress){
 }
 async function decodeAudioFromVideo(blob,start,duration,signal,onProgress){
  live(signal);
- const ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:FILM_RATE});
+ let ctx=null;
  try{
+  // Try a compressed-audio-only fast path before any whole-file decode.
+  // This reads AAC packets from MP4 without decoding video or the entire blob.
+  try{
+   onProgress({stage:'decode',detail:'Ищем сжатую аудиодорожку MP4 для быстрого извлечения'});
+   const fast=await extractMp4AAC(blob,start,duration,{signal,onProgress});
+   if(fast)return fast;
+  }catch(e){
+   if(signal.aborted||e?.name==='AbortError')throw e;
+   onProgress({stage:'decode',detail:'Быстрый AAC-декодер недоступен: '+(e.message||'формат')+'. Пробуем резервный способ.'});
+  }
+  ctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:FILM_RATE});
   // decodeAudioData is substantially faster than realtime capture when the
   // platform accepts the video container. Avoid loading a 512 MiB video
   // into a second decoded buffer on memory-constrained phones.
-  if(blob.size<=100*1048576){
+  if(blob.size<=32*1048576){
    try{
     onProgress({stage:'decode',detail:'Извлекаем звуковую дорожку'});
     const decoded=await ctx.decodeAudioData(await blob.arrayBuffer());live(signal);
@@ -72,7 +91,7 @@ async function decodeAudioFromVideo(blob,start,duration,signal,onProgress){
   }
   // Fallback for MP4 containers that decodeAudioData rejects. Capture from
   // media element in REALTIME, routing silence to the speakers.
-  onProgress({stage:'decode',detail:'Браузер декодирует звук из видео в реальном времени'});
+  onProgress({stage:'decode',detail:'Резервный захват звука: до '+Math.ceil(duration)+' секунд в реальном времени. Не работа нейросети.'});
   const url=URL.createObjectURL(blob),v=document.createElement('video');
   const samples=Math.round(duration*FILM_RATE),tracks=[new Float32Array(samples),new Float32Array(samples)];
   let processor=null,source=null,read=0;
@@ -116,14 +135,14 @@ async function decodeAudioFromVideo(blob,start,duration,signal,onProgress){
   }finally{
    v.pause();processor?.disconnect();source?.disconnect();v.removeAttribute('src');v.load();URL.revokeObjectURL(url);
   }
- }finally{await ctx.close().catch(()=>{})}
+ }finally{await ctx?.close().catch(()=>{})}
 }
-export async function cleanFilmSound({blob,start,duration,mode='umx',signal,onProgress=()=>{}}){
+export async function cleanFilmSound({blob,start,duration,mode='umx',lowMemory=false,signal,onProgress=()=>{}}){
  validateFilmMode(mode);
  if(!(blob instanceof Blob)||!blob.size||!Number.isFinite(start)||start<0||
   !Number.isFinite(duration)||duration<3||duration>90)throw Error('Неверный фильм или длина сцены.');
  live(signal);
- const original=await decodeAudioFromVideo(blob,start,duration,signal,onProgress);
+ let original=await decodeAudioFromVideo(blob,start,duration,signal,onProgress);
  const nextId=()=>Math.random().toString(36).slice(2);
  async function model(channels,kind){
   onProgress({stage:kind,detail:kind==='scnet'?'SCNet разделяет звук':'Open-Unmix разделяет звук'});
@@ -135,7 +154,49 @@ export async function cleanFilmSound({blob,start,duration,mode='umx',signal,onPr
   return response;
  }
  const started=performance.now();
- let vocals,times=[],segments=[],packedSeconds=0;
+ let vocals,times=[],segments=[],packedSeconds=0,clean,buzzLayer;
+ if(lowMemory){
+  // Keep ONNX allocations bounded on older PCs. The output is accumulated,
+  // not 90-second stems and DSP buffers. Regional SCNet retains only the
+  // two stem estimates it needs for hotspot selection.
+  const length=original[0].length,step=Math.round(FILM_RATE*8),
+    blend=Math.round(FILM_RATE*.12),total=Math.ceil(length/step);
+  clean=original.map(ch=>new Float32Array(ch.length));
+  if(mode==='hybrid'){
+   vocals=original.map(ch=>new Float32Array(ch.length));
+   buzzLayer=original.map(ch=>new Float32Array(ch.length));
+  }
+  for(let k=0;k<total;k++){
+   live(signal);
+   const pos=k*step,begin=Math.max(0,pos-blend),end=Math.min(length,(k+1)*step+blend);
+   onProgress({stage:'lowmem',detail:'Бережная обработка памяти · отрывок '+(k+1)+' из '+total});
+   const cut=original.map(ch=>ch.slice(begin,end));
+   const kind=mode==='scnet'?'scnet':'umx';
+   const result=await model(cut,kind);
+   times.push({name:kind==='umx'?'Open-Unmix':'SCNet',seconds:result.seconds});
+   const kept=mode==='hybrid';
+   const res=await createWorkerTask(new URL('./film-buzz-worker.js',import.meta.url),{
+    id:nextId(),base:cut,vocals:result.stems.vocals,keepStems:kept
+   },signal,onProgress,{transferInputs:true});
+   for(let ch=0;ch<clean.length;ch++){
+    const out=clean[ch],pcm=res.channels[ch],v=res.vocals?.[ch],b=res.artifact?.[ch];
+    for(let at=begin;at<end;at++){
+     const j=at-begin,fade=k&&at<pos+blend?
+      Math.max(0,Math.min(1,(at-(pos-blend))/(2*blend))):1;
+     if(k&&at<pos+blend){
+      out[at]=out[at]*(1-fade)+pcm[j]*fade;
+      if(kept){
+       vocals[ch][at]=vocals[ch][at]*(1-fade)+v[j]*fade;
+       buzzLayer[ch][at]=buzzLayer[ch][at]*(1-fade)+b[j]*fade;
+      }
+     }else{
+      out[at]=pcm[j];
+      if(kept){vocals[ch][at]=v[j];buzzLayer[ch][at]=b[j]}
+     }
+    }
+   }
+  }
+ }else{
  if(mode==='scnet'){
   const sc=await model(original,'scnet');
   vocals=sc.stems.vocals;times.push({name:'SCNet',seconds:sc.seconds});
@@ -143,15 +204,20 @@ export async function cleanFilmSound({blob,start,duration,mode='umx',signal,onPr
   const umx=await model(original,'umx');
   vocals=umx.stems.vocals;times.push({name:'Open-Unmix',seconds:umx.seconds});
  }
- // Predict recurrent high-frequency tonal leftovers even in direct SCNet mode.
+ // Transfer ownership of the long PCM buffers to the DSP worker. The worker
+ // reuses the original arrays instead of producing multiple extra copies.
  onProgress({stage:'buzz',detail:'Подавляем металлические остатки голоса'});
+ const keepStems=mode==='hybrid';
  const buzz=await createWorkerTask(new URL('./film-buzz-worker.js',import.meta.url),{
-  id:nextId(),base:original,vocals
- },signal,onProgress);
+  id:nextId(),base:original,vocals,keepStems,keepOriginal:keepStems
+ },signal,onProgress,{transferInputs:true});
  live(signal);
- const clean=original.map((ch,i)=>Float32Array.from(ch,(x,j)=>x-vocals[i][j]+.85*buzz.artifact[i][j]));
+ clean=buzz.channels;
+ if(keepStems){original=buzz.base;vocals=buzz.vocals;buzzLayer=buzz.artifact}
+ }
+
  if(mode==='hybrid'){
-  segments=selectProblemSegments(original,vocals,buzz.artifact,{budgetSeconds:12,rate:FILM_RATE});
+  segments=selectProblemSegments(original,vocals,buzzLayer,{budgetSeconds:12,rate:FILM_RATE});
   if(segments.length){
    const packed=packProblemSegments(original,segments,{rate:FILM_RATE});
    packedSeconds=packed.packedSeconds;
@@ -163,5 +229,5 @@ export async function cleanFilmSound({blob,start,duration,mode='umx',signal,onPr
   }else onProgress({stage:'skip',detail:'Остаточного речевого жужжания мало — точечная SCNet не потребовалась'});
  }
  live(signal);
- return {channels:clean,mode,times,segments,packedSeconds,elapsed:(performance.now()-started)/1000};
+ return {channels:clean,mode,times,segments,packedSeconds,lowMemory,elapsed:(performance.now()-started)/1000};
 }
