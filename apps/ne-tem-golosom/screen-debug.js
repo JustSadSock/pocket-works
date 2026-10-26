@@ -189,13 +189,21 @@ function openInspector(){
  overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','Просмотр экранов НЕ ТЕМ ГОЛОСОМ');
  overlay.innerHTML='<header class="ntg-debug-top"><div><small>NTG / QA</small><strong>Все экраны</strong></div><div class="ntg-debug-devices" role="group" aria-label="Размер устройства"><button data-debug-device="desktop" type="button">ПК</button><button data-debug-device="phone" type="button">Телефон</button></div><button class="ntg-debug-exit" type="button" data-debug-close aria-label="Закрыть дебаг-режим">✕ Закрыть</button></header>'+
  '<div class="ntg-debug-grid"><nav class="ntg-debug-nav" aria-label="Экраны приложения">'+PAGES.map((p,i)=>'<button type="button" data-debug-page="'+p.id+'"><span>'+String(i+1).padStart(2,'0')+'</span>'+p.name+'</button>').join('')+'</nav>'+
- '<section class="ntg-debug-work"><div class="ntg-debug-heading"><b data-debug-title></b><span>Демонстрационные данные · без изменения комнаты и записей</span></div><div class="ntg-debug-canvas"><div class="ntg-debug-device-shell" data-debug-device-shell><iframe title="Предпросмотр экрана" sandbox="" referrerpolicy="no-referrer" loading="eager"></iframe></div></div></section></div>';
+ '<section class="ntg-debug-work"><div class="ntg-debug-heading"><b data-debug-title></b><button type="button" class="ntg-debug-live" data-debug-live aria-pressed="false">Интерактивный режим · выкл.</button><span data-debug-subtitle>Снимок состояния, действия отключены</span></div><div class="ntg-debug-canvas"><div class="ntg-debug-device-shell" data-debug-device-shell><iframe title="Предпросмотр экрана" sandbox="" allow="microphone" loading="eager"></iframe></div></div></section></div>';
  document.body.append(overlay);document.body.classList.add('ntg-debug-open');
  frame=overlay.querySelector('iframe');
  overlay.addEventListener('click',e=>{
   const page=e.target.closest('[data-debug-page]'),dev=e.target.closest('[data-debug-device]');
   if(page)selectPage(page.dataset.debugPage);
   if(dev)setDevice(dev.dataset.debugDevice);
+  if(e.target.closest('[data-debug-live]')){
+   interactive=!interactive;
+   const button=overlay.querySelector('[data-debug-live]');
+   button.setAttribute('aria-pressed',String(interactive));
+   button.textContent=interactive?'Интерактивный режим · вкл.':'Интерактивный режим · выкл.';
+   overlay.querySelector('[data-debug-subtitle]').textContent=interactive?'Настоящие кнопки, микрофон и локальная демо-комната':'Снимок состояния, действия отключены';
+   selectPage(active);
+  }
   if(e.target.closest('[data-debug-close]'))closeInspector();
  });
  setDevice(device);selectPage(active);
