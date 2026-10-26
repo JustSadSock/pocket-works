@@ -110,17 +110,27 @@ async function metadata(blob,signal,diagnostics=[]){
   let mediaShift=0;
   if(list){
    const version=moov.getUint8(list.body),entries=u32(moov,list.body+4);
-   // Handle the common MP4 encoder delay / single-entry edit. Multi-edit
-   // tracks need a full editor and deliberately fall back to compatibility.
-   if(entries!==1){diagnostics.push('edit-count:'+entries);continue}
-   const at=list.body+8,offset=version===1?8:4;
-   if(at+offset*2+4>list.end)continue;
-   const mediaTime=version===1?
-    (u32(moov,at+8)*4294967296+u32(moov,at+12)):moov.getInt32(at+4,false);
-   if(!Number.isSafeInteger(mediaTime)||mediaTime<0){diagnostics.push('edit-time:'+mediaTime);continue}
-   const rate=moov.getInt16(at+offset*2,false);
-   if(rate!==1){diagnostics.push('edit-rate:'+rate);continue}
-   mediaShift=mediaTime/timescale;
+   const mvhd=child(moov,root,'mvhd');
+   const movieRate=mvhd&&u32(moov,mvhd.body+(moov.getUint8(mvhd.body)===1?20:12));
+   if(entries<1||entries>2||!movieRate){diagnostics.push('edit-count:'+entries);continue}
+   const word=version===1?8:4,stride=word*2+4;
+   let leading=0,ok=true,found=false;
+   for(let i=0;i<entries;i++){
+    const at=list.body+8+i*stride;
+    if(at+stride>list.end){ok=false;break}
+    const readTime=p=>word===8?
+      Number(moov.getBigInt64(p,false)):moov.getInt32(p,false);
+    const length=word===8?
+      u32(moov,at)*4294967296+u32(moov,at+4):u32(moov,at);
+    const mediaTime=readTime(at+word),rate=moov.getInt16(at+word*2,false);
+    if(!Number.isSafeInteger(mediaTime)||!Number.isSafeInteger(length)||rate!==1){ok=false;break}
+    if(mediaTime===-1&&i===0){leading+=length/movieRate;continue}
+    // One real media interval, optionally preceded by initial silence.
+    if(mediaTime<0||i!==entries-1){ok=false;break}
+    mediaShift=mediaTime/timescale-leading;
+    found=true;
+   }
+   if(!ok||!found){diagnostics.push('unsupported-edit-list');continue}
   }
   diagnostics.push('aac-meta-ok');
   return {timescale,sampleRate,channels,asc,sizesCount,sizeAt,offsets,maps,durations,mediaShift};
