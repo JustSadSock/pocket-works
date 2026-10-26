@@ -1024,7 +1024,7 @@ async function startRecord(countdown=0,replaceId=null){
  micPending=true;updateRecordingControls();
  let stream;
  try{stream=await navigator.mediaDevices.getUserMedia({audio:{
-  echoCancellation:true,noiseSuppression:true,autoGainControl:true
+  echoCancellation:true,noiseSuppression:true,autoGainControl:false
  }})}
  catch{
   micPending=false;updateRecordingControls();
@@ -1396,6 +1396,28 @@ $('voice-effects-options').onclick=e=>{
  if(current.fxSource)ensureClipVoice(current);
  renderTimeline();void draftWrite();cue('ready');
 };
+// Deliberate, local mixing: keep soft and loud acting intact.
+let mixBefore=null,mixClipId=null;
+for(const [id,field] of [['clip-volume','volume'],['clip-fade-in','fadeIn'],['clip-fade-out','fadeOut']]){
+ const el=$(id);
+ const begin=()=>{mixClipId=selectedClip;mixBefore=snapshotClips(localClips)};
+ el.addEventListener('pointerdown',begin);el.addEventListener('focus',begin);
+ el.addEventListener('input',()=>{
+  const c=localClips.find(c=>c.id===selectedClip);if(!c)return;
+  c[field]=Number(el.value)/100;
+  $(id+'-label').textContent=field==='volume'?Math.round(c.volume*100)+'%':c[field].toFixed(2)+' с';
+  if(playing||!$('premiere-video').paused)updateClipSound(time(view==='premiere'?$('premiere-video'):$('stage-video')),true,view==='premiere');
+ });
+ el.addEventListener('change',()=>{
+  const c=localClips.find(c=>c.id===selectedClip);if(!c)return;
+  if(mixBefore&&mixClipId===selectedClip){
+   const old=mixBefore.find(x=>x.id===selectedClip);
+   if(old&&old[field]!==c[field])editHistory.remember(mixBefore);
+  }
+  mixBefore=null;mixClipId=null;
+  renderTimeline();void draftWrite();
+ });
+}
 $('timeline-zoom-in').onclick=()=>zoomTimeline(1);
 $('timeline-zoom-out').onclick=()=>zoomTimeline(-1);
 $('timeline-viewport').addEventListener('wheel',e=>{
