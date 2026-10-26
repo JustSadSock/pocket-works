@@ -31,14 +31,19 @@
 <div class="playback-control"><button id="listen-btn" type="button" class="secondary">▶ Слушать результат</button><input id="result-seek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Позиция в обработанном фрагменте"><span id="result-position">0:00</span></div><audio id="monitor" preload="auto" hidden></audio>
 <div class="comparison"><button id="original-btn" class="secondary" type="button">Оригинал</button><button id="clean-btn" class="secondary selected" type="button">Оригинал − речь</button><button id="speech-btn" class="secondary" type="button">Только речь</button></div>
 <div id="scnet-tuning" class="scnet-tuning hidden">
- <label for="scnet-strength"><span id="vocal-strength-label">Удаление голосов вокальной моделью</span> <output id="scnet-strength-value">80%</output></label>
- <input id="scnet-strength" type="range" min="0" max="100" step="10" value="80">
- <p class="hint" id="vocal-warning">Вокальные модели могут затронуть музыку и эффекты. Изменение силы не запускает нейросеть заново.</p>
+ <label for="scnet-strength"><span id="vocal-strength-label">Интенсивность удаления вокала</span> <output id="scnet-strength-value">100%</output></label>
+ <input id="scnet-strength" type="range" min="0" max="150" step="5" value="100">
+ <p class="hint" id="vocal-warning">Больше 100% — экспериментальное усиление вычитания. Возможны искажения музыки.</p>
 </div>
-<div class="center-filter">
-<label for="center-suppression">Дополнительное подавление центра стерео <output id="center-value">0%</output></label>
-<input id="center-suppression" type="range" min="0" max="100" step="5" value="0">
-<p id="center-note" class="hint">Экспериментальный фильтр. Попробуй 35–50%, если голос попал в музыку и эффекты. Он также может приглушить музыку и звуковые эффекты, расположенные в центре.</p>
+<div class="enhancement-lab" id="enhancement-lab" aria-labelledby="enhance-heading">
+ <div class="enhancement-head"><h3 id="enhance-heading">Эксперименты со звуком</h3><span id="enhance-ready">После обработки</span></div>
+ <p class="hint">Три фильтра рассчитываются один раз после нейросети. Переключай их на том же фрагменте без нового запуска модели.</p>
+ <label class="enhance-toggle"><span><strong>Спектральная очистка</strong><small>Убирает остатки в частотах, где модель обнаружила вокал.</small></span><input id="enhance-spectral" type="checkbox" role="switch" checked disabled></label>
+ <label class="enhance-toggle"><span><strong>Адаптивный центр стерео</strong><small>Подавляет центральные голоса во время обнаруженного вокала. Только стерео.</small></span><input id="enhance-center" type="checkbox" role="switch" checked disabled></label>
+ <label class="enhance-center-level" for="center-suppression">Сила адаптивного центра <output id="center-value">35%</output><input id="center-suppression" type="range" min="0" max="100" step="5" value="35" disabled></label>
+ <label class="enhance-toggle"><span><strong>Мягкая реконструкция спектра</strong><small>Дополнительная DSP-маска. Не изменяет внутренние итерации Wiener Open-Unmix.</small></span><input id="enhance-reconstruct" type="checkbox" role="switch" checked disabled></label>
+ <button class="secondary" id="enhance-disable-all" type="button" disabled>Выключить все фильтры</button>
+ <p id="enhance-info" class="hint" role="status">При первом прогоне подготовим переключаемые дорожки.</p>
 </div>
 <div class="metrics"><div><small>Время обработки</small><strong id="inference-time">—</strong></div><div><small>Скорость</small><strong id="speed-factor">—</strong></div><div><small>Длина сцены</small><strong id="scene-length">—</strong></div></div><p id="stem-diagnostics" class="hint" role="status"></p>
 <div class="downloads"><button id="wav-btn" class="primary" type="button">Скачать текущий микс WAV</button><button id="video-btn" class="secondary" type="button">Сохранить видео со звуком</button></div><p id="export-status" class="hint"></p>
