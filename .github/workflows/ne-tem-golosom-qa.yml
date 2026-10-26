@@ -72,10 +72,10 @@ jobs:
         run: npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
       - name: Install headless Chromium
         run: npx playwright install chromium
-      - name: Verify real Open-Unmix, regional SCNet and full SCNet soundtrack exports
-        run: node apps/ne-tem-golosom/qa/film-neural-journey.mjs
       - name: Check video source selection, trim, transcoding and browser appearance
         run: node apps/ne-tem-golosom/qa/video-journey.mjs
+      - name: Verify real Open-Unmix, regional SCNet and full SCNet soundtrack exports
+        run: node apps/ne-tem-golosom/qa/film-neural-journey.mjs
       - name: Check timeline gestures, draft recovery and Undo/Redo
         run: node apps/ne-tem-golosom/qa/timeline-journey.mjs
       - name: Inspect all screen states on desktop and phone without room side effects
