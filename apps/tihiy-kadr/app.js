@@ -322,7 +322,7 @@ async function executeRoute(routeId=null,custom=null){
 $('process-btn').onclick=()=>{void executeRoute($('quality-mode').value)};
 $('cancel-btn').onclick=cancel;
 $('pipeline-model').onchange=()=>{
- $('pipeline-step').disabled=$('pipeline-model').value==='mrx';
+ $('pipeline-step').disabled=$('pipeline-model').value!=='scnet';
 };
 $('pipeline-run').onclick=()=>{
  const request=planCustom($('pipeline-model').value,$('pipeline-input').value,Number($('pipeline-step').value));
@@ -583,6 +583,7 @@ async function selectStudyResult(id,rebuild=true){
  scnetBase=vocal?item.meta.base:null;
  scnetTime=0;
  show('scnet-tuning',vocal);
+ text('vocal-strength-label',item.meta?.model==='umxhq'?'Удаление вокала Open-Unmix':'Удаление голосов SCNet');
  if(vocal){
   $('scnet-strength').value=String(Math.round((item.meta.strength??.8)*100));
   text('scnet-strength-value',$('scnet-strength').value+'%');
