@@ -311,7 +311,8 @@ export async function renderPremiere({
       if(length<.04)continue;
       const node=ctx.createBufferSource();
       node.buffer=decodedAudio;
-      const gain=ctx.createGain();gain.gain.value=.85;
+      const gain=ctx.createGain();
+       scheduleEnvelope(gain.gain,{...clip,volume:clipMix(clip).volume*.85},when,late,length);
       node.connect(gain);
       connectVoiceEffect(ctx,gain,limiter,clip.fx,when);
       node.start(when,segment.offset+late,length);
