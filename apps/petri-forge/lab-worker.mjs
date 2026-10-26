@@ -1,5 +1,6 @@
 import {ACTIONS,RandomAgent,createScenario,GridEnvironment,makeAgent,playEpisode,seeded,validateScene} from './lab-core.mjs';
 import {NeuralActorCritic} from './neural-policy.mjs';
+import {PpoPolicy,PpoTrainer,ppoEpisode} from './ppo.mjs';
 
 let agent=makeAgent('qlearning',17),kind='qlearning',active=null,jobId=0;
 const emit=(type,data={})=>postMessage({type,...data});
@@ -7,13 +8,14 @@ function trainBatch(){
   const job=active;
   if(!job)return;
   try{
-    for(let j=0;j<14&&job.complete<job.episodes;j++){
+    for(let j=0;j<(job.ppo?2:14)&&job.complete<job.episodes;j++){
       if(active!==job)return;
       const episode=job.complete;
       const spawn=episode===0?null:pickSpawn(job.scene,job.random);
       const episodeOptions={learn:true,maxSteps:job.maxSteps,spawn,trace:episode%25===0};
       // First episode tests the authored spawn, the rest train on varied feasible starts.
-      const result=playEpisode(agent,job.scene,episodeOptions);
+      const result=job.ppo?ppoEpisode(job.ppo,job.scene,episodeOptions):playEpisode(agent,job.scene,episodeOptions);
+      if(job.ppo?.ready)job.ppoStats=job.ppo.optimize();
       job.complete++;job.successes+=Number(result.success);job.totalReward+=result.reward;job.totalSteps+=result.steps;
       job.window.push(Number(result.success));if(job.window.length>80)job.window.shift();
       if(result.trace){
@@ -26,11 +28,12 @@ function trainBatch(){
     if(job.complete%42<14||job.complete===job.episodes){
       job.history.push({episode:job.complete,rate:Math.round(100*job.window.reduce((a,b)=>a+b,0)/job.window.length),average:job.totalReward/job.complete});
       if(job.history.length>160)job.history.shift();
-      emit('progress',{complete:job.complete,episodes:job.episodes,success:job.successes/job.complete,average:job.totalReward/job.complete,steps:job.totalSteps/job.complete,history:job.history,heat:job.heat});
+      emit('progress',{complete:job.complete,episodes:job.episodes,success:job.successes/job.complete,average:job.totalReward/job.complete,steps:job.totalSteps/job.complete,history:job.history,heat:job.heat,ppo:job.ppoStats||null});
     }
     if(job.complete>=job.episodes){
+      if(job.ppo?.buffer.length)job.ppoStats=job.ppo.optimize();
       active=null;
-      emit('trained',{complete:job.complete,episodes:job.episodes,success:job.successes/job.complete,average:job.totalReward/job.complete,steps:job.totalSteps/job.complete,history:job.history,heat:job.heat,best:job.best,worst:job.worst,snapshot:agent.serialize()});
+      emit('trained',{complete:job.complete,episodes:job.episodes,success:job.successes/job.complete,average:job.totalReward/job.complete,steps:job.totalSteps/job.complete,history:job.history,heat:job.heat,best:job.best,worst:job.worst,ppo:job.ppoStats||null,snapshot:agent.serialize()});
     }else setTimeout(trainBatch,0);
   }catch(error){active=null;emit('error',{message:String(error.message||error)});}
 }
@@ -44,8 +47,8 @@ function pickSpawn(scene,r){
 }
 function metrics(results){return {count:results.length,success:results.filter(x=>x.success).length/results.length,average:results.reduce((n,x)=>n+x.reward,0)/results.length,steps:results.reduce((n,x)=>n+x.steps,0)/results.length};}
 function testAgent(scene,seed,count,snapshot){
-  const evaluator=kind==='neural'?new NeuralActorCritic(seed+932):makeAgent(kind,seed+932);
- if(kind==='qlearning'||kind==='neural')evaluator.load(snapshot);
+  const evaluator=kind==='ppo'?new PpoPolicy(seed+932):kind==='neural'?new NeuralActorCritic(seed+932):makeAgent(kind,seed+932);
+ if(['qlearning','neural','ppo'].includes(kind))evaluator.load(snapshot);
   const r=seeded(seed),results=[];
   for(let i=0;i<count;i++)results.push(playEpisode(evaluator,scene,{spawn:i===0?undefined:pickSpawn(scene,r),learn:false,trace:i===0}));
   return {metrics:metrics(results),replay:{scene,trace:results[0].trace,success:results[0].success,reward:results[0].reward}};
@@ -55,10 +58,10 @@ onmessage=event=>{
   try{
     if(type==='loadAgent'){
       if(active)throw Error('Остановите обучение перед сменой модели');
-      kind=['random','neural'].includes(payload.name)?payload.name:'qlearning';
-      agent=kind==='neural'?new NeuralActorCritic(Number(payload.seed)||17):makeAgent(kind,Number(payload.seed)||17);
+      kind=['random','neural','ppo'].includes(payload.name)?payload.name:'qlearning';
+      agent=kind==='ppo'?new PpoPolicy(Number(payload.seed)||17):kind==='neural'?new NeuralActorCritic(Number(payload.seed)||17):makeAgent(kind,Number(payload.seed)||17);
       if(payload.snapshot&&kind!=='random')agent.load(payload.snapshot);
-      emit('loaded',{kind,states:agent.q?.size||0,parameters:kind==='neural'?agent.serialize().weights.reduce((n,layer)=>n+layer.reduce((t,row)=>t+row.length,0),0):0,requestId:payload.requestId??null});
+      emit('loaded',{kind,states:agent.q?.size||0,parameters:kind==='neural'||kind==='ppo'?agent.serialize().weights.reduce((n,layer)=>n+layer.reduce((t,row)=>t+row.length,0),0):0,requestId:payload.requestId??null});
     }else if(type==='act'){
       if(active)return;
       const action=agent.act(payload.obs,false);
@@ -73,11 +76,11 @@ onmessage=event=>{
       const episodes=Math.min(5000,Math.max(1,Math.floor(Number(payload.episodes)||400)));
       const maxSteps=Math.min(800,Math.max(30,Math.floor(Number(payload.maxSteps)||320)));
       const random=seeded(Number(payload.seed)||41);
-      active={scene,episodes,maxSteps,random,complete:0,successes:0,totalReward:0,totalSteps:0,window:[],history:[],heat:Array(scene.grid.length*scene.grid[0].length).fill(0),best:null,worst:null};
+      active={scene,episodes,maxSteps,random,complete:0,successes:0,totalReward:0,totalSteps:0,window:[],history:[],heat:Array(scene.grid.length*scene.grid[0].length).fill(0),best:null,worst:null,ppo:kind==='ppo'?new PpoTrainer(agent,{seed:Number(payload.seed)||41}):null,ppoStats:null};
       emit('training',{episodes});
       setTimeout(trainBatch,0);
     }else if(type==='stop'){
-      if(active){const job=active;active=null;emit('stopped',{complete:job.complete,episodes:job.episodes,success:job.complete?job.successes/job.complete:0,average:job.complete?job.totalReward/job.complete:0,steps:job.complete?job.totalSteps/job.complete:0,history:job.history,heat:job.heat,best:job.best,worst:job.worst,snapshot:agent.serialize()});}
+      if(active){const job=active;active=null;if(job.ppo?.buffer.length)job.ppoStats=job.ppo.optimize();emit('stopped',{complete:job.complete,episodes:job.episodes,success:job.complete?job.successes/job.complete:0,average:job.complete?job.totalReward/job.complete:0,steps:job.complete?job.totalSteps/job.complete:0,history:job.history,heat:job.heat,best:job.best,worst:job.worst,ppo:job.ppoStats||null,snapshot:agent.serialize()});}
     }else if(type==='snapshot'){
       emit('snapshot',{snapshot:agent.serialize()});
     }else if(type==='evaluate'){
