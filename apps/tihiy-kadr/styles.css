@@ -17,3 +17,27 @@
 .center-filter input:disabled{opacity:.35}
 .center-filter output{font-variant-numeric:tabular-nums}
 .center-filter .hint{margin:5px 0 0}
+
+
+/* A purposeful testing bench, not another decorative dashboard. */
+.study-panel{margin-top:18px}
+.study-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.study-step{padding:14px 16px;border:1px solid var(--line);background:#f1eee6;display:flex;flex-direction:column;align-items:stretch;gap:10px}
+.study-step h3,.study-results-head h3{font-size:14px;line-height:1.35;margin:0}
+.study-step p{margin:0}
+.study-step label{display:flex;flex-direction:column;font-weight:720;font-size:11px;gap:6px}
+.study-step input[type=file],.study-step input[type=number],.study-step select{width:100%;min-height:38px;background:white;border:1px solid #bcb5a7;color:var(--ink);border-radius:0;padding:6px 8px;font:inherit}
+.study-step input[type=file]{font-size:11px}
+.study-step input[type=range]{width:100%;accent-color:var(--accent)}
+.study-step .study-input-label{font-size:11px}
+.study-inputs{display:grid;gap:8px}
+.study-step a{color:#a84f26;text-decoration:underline}
+.study-results-head{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);margin:18px 0 10px;padding-top:14px}
+.study-results-head .secondary{font-size:11px;min-height:36px}
+.study-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
+.study-choice{display:flex;flex-direction:column;gap:5px;text-align:left;padding:10px 12px;background:white;border:1px solid var(--line);color:var(--ink);font:inherit;min-height:83px}
+.study-choice strong{font-size:13px}
+.study-choice span{font-size:10px;color:var(--muted)}
+.study-choice.selected{border:2px solid var(--accent);padding:9px 11px;background:#fff1e3}
+#study-active-status{margin:10px 0 0}
+@media(max-width:700px){.study-grid{grid-template-columns:1fr}.study-results-head{align-items:stretch;flex-direction:column}.study-choice{min-height:74px}}
