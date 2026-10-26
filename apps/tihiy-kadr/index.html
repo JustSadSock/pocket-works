@@ -40,7 +40,7 @@
  <p class="hint">Новые фильтры против жужжащих и металлических остатков голоса. Их дорожки готовятся один раз — слушай с обработкой и без неё, не перезапуская нейросеть.</p>
  <label class="enhance-toggle"><span><strong>Подавление речевого жужжания</strong><small>Находит узкие и нестабильные тона в спектре с подсказкой вокальной модели и плавно их подавляет.</small></span><input id="repair-noise" type="checkbox" role="switch" checked disabled></label>
  <label class="enhance-center-level" for="repair-level">Сила подавления призвуков <output id="repair-level-value">85%</output><input id="repair-level" type="range" min="0" max="100" step="5" value="85" disabled></label>
- <label class="enhance-toggle"><span><strong>Подстановка фоновой текстуры</strong><small>В речевых участках подмешивает короткие соседние фрагменты с малой вероятностью вокала. Может менять музыку.</small></span><input id="repair-texture" type="checkbox" role="switch" checked disabled></label>
+ <label class="enhance-toggle"><span><strong>Подстановка фоновой текстуры</strong><small>В речевых участках подмешивает короткие соседние фрагменты с малой вероятностью вокала. Может менять музыку.</small></span><input id="repair-texture" type="checkbox" role="switch" disabled></label>
  <label class="enhance-center-level" for="texture-level">Сила фоновой подстановки <output id="texture-level-value">45%</output><input id="texture-level" type="range" min="0" max="100" step="5" value="45" disabled></label>
  <button class="secondary" id="repair-off-all" type="button" disabled>Отключить оба новых фильтра</button>
  <p id="repair-note" class="hint" role="status">Подготовка начнётся после запуска Open-Unmix или SCNet.</p>
