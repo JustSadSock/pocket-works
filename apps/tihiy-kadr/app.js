@@ -296,18 +296,10 @@ function setMode(value){
 }
 $('original-btn').onclick=()=>setMode('original');
 $('clean-btn').onclick=()=>setMode('clean');
-$('stems-btn').onclick=()=>setMode('stems');
 $('speech-btn').onclick=()=>setMode('speech');
-for(const name of ['dialogue','music','effects']){
- $(name+'-gain').oninput=()=>{
-  text(name+'-value',$(name+'-gain').value+'%');
-  mode=mode==='stems'?'stems':'clean';updateListeningButtons();
-  clearTimeout(editTimer);editTimer=setTimeout(()=>{void previewAudio()},220);
- };
-}
 $('center-suppression').oninput=()=>{
  text('center-value',$('center-suppression').value+'%');
- if(mode==='speech'||mode==='original'){mode=activeStudy==='mrx'?'stems':'clean';updateListeningButtons();}
+ if(mode==='speech'||mode==='original'){mode='clean';updateListeningButtons();}
  clearTimeout(editTimer);editTimer=setTimeout(()=>{void previewAudio()},220);
 };
 // Never allow the original audio from <video> to mix into the neural stems.
@@ -365,7 +357,7 @@ function download(blob,name){
  a.href=url;a.download=name;document.body.append(a);a.click();a.remove();
  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
-$('wav-btn').onclick=()=>{if(!activeStudy)return;try{download(wavPCM16(getMix()),fileName+'-'+(mode==='speech'?'isolated-dialogue':mode==='original'?'original':mode==='stems'?'music-effects':'no-dialogue')+'.wav')}catch(e){error(e.message)}};
+$('wav-btn').onclick=()=>{if(!activeStudy)return;try{download(wavPCM16(getMix()),fileName+'-'+(mode==='speech'?'isolated-dialogue':mode==='original'?'original':'no-dialogue')+'.wav')}catch(e){error(e.message)}};
 function movieMime(){
  return ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4'].find(type=>MediaRecorder.isTypeSupported(type));
 }
@@ -410,7 +402,7 @@ async function exportVideo(){
   if(controller.signal.aborted)throw new DOMException('Прервано','AbortError');
   if(output.size<15000)throw Error('Не удалось записать видеокадры. Скачай WAV отдельно.');
   const ext=mime.startsWith('video/mp4')?'mp4':'webm';
-  download(output,fileName+'-'+(mode==='speech'?'dialogue':mode==='original'?'original':mode==='stems'?'music-effects':'no-dialogue')+'.'+ext);
+  download(output,fileName+'-'+(mode==='speech'?'dialogue':mode==='original'?'original':'no-dialogue')+'.'+ext);
   text('export-status','Сохранено '+(output.size/1048576).toFixed(1)+' МиБ · '+ext.toUpperCase());
  }catch(e){if(e.name!=='AbortError')error(e.message);else text('export-status','Экспорт прерван.')}
  finally{cancelAnimationFrame(frame);video.pause();if(recorder?.state==='recording')try{recorder.stop()}catch{}stream?.getTracks().forEach(t=>t.stop());if(ctx)await ctx.close().catch(()=>{});if(abort===controller)abort=null;exporting=false;$('video-btn').disabled=false;$('wav-btn').disabled=false}
@@ -420,16 +412,15 @@ $('video-btn').onclick=()=>{void exportVideo()};
 // Stage results are held in memory for the selected scene only. Switching
 // media or time range clears results and intermediate neural caches.
 function clearStudy(){
- studyResults.clear();pipelineRuns.clear();customCounter=0;
- studySignature='';activeStudy=null;stems=null;inferenceTime=0;
- scnetVocals=null;scnetBase=null;scnetTime=0;
+ studyResults.clear();pipelineRuns.clear();
+ studySignature='';activeStudy=null;
+ scnetVocals=null;scnetBase=null;
  show('scnet-tuning',false);$('study-csv').disabled=true;
  text('study-active-status','Готовые версии одной сцены появятся здесь.');
- text('pipeline-status','Выбирай оригинал или любую полученную версию.');
  renderStudyResults();
 }
 function registerStudyResult(id,clean,processingMs=null,{source='local',label=null,meta={}}={}){
- if(!routeById(id)&&!id.startsWith('custom-'))
+ if(!routeById(id))
   throw Error('Недопустимый идентификатор результата.');
  if(!original?.length||!range)throw Error('Нет исходного звука сцены.');
  const canonical=stereoPCM(clean),target=Math.round(range.duration*RATE);
@@ -442,11 +433,10 @@ function registerStudyResult(id,clean,processingMs=null,{source='local',label=nu
  const timeMs=processingMs===null?null:Number(processingMs);
  const timing=timeMs===null?null:calculateSpeed(range.duration,timeMs);
  if(!studyResults.has(id)&&studyResults.size>=(mobile?4:10)){
-  const old=[...studyResults.keys()].find(k=>k!=='mrx'&&k!==activeStudy)||[...studyResults.keys()][0];
+  const old=[...studyResults.keys()].find(k=>k!==activeStudy)||[...studyResults.keys()][0];
   if(old)studyResults.delete(old);
  }
- const inputKey=meta.runKey?makeInputKey(meta.runKey,meta.vocals?(meta.strength??.8):null):id;
- studyResults.set(id,{id,inputKey,label:label||routeById(id)?.label||id,source,clean:normalized,
+ studyResults.set(id,{id,label:label||routeById(id)?.label||id,source,clean:normalized,
   timeMs,metrics,timing,meta});
  renderStudyResults();
  $('study-csv').disabled=!studyResults.size;
@@ -476,30 +466,17 @@ function renderStudyResults(){
    root.append(b);
   }
  }
- const select=$('pipeline-input'),selected=select.value;
- select.replaceChildren();
- const originalOption=document.createElement('option');originalOption.value='original';
- originalOption.textContent='Исходный звук видео';select.append(originalOption);
- for(const item of studyResults.values()){
-  const option=document.createElement('option');option.value=item.id;
-  option.textContent=item.label;select.append(option);
- }
- select.value=[...select.options].some(o=>o.value===selected)?selected:'original';
 }
 async function selectStudyResult(id,rebuild=true){
  const item=studyResults.get(id);
  if(!item||!original||!range)return;
- pause();activeStudy=id;mode=id==='mrx'?'stems':'clean';
+ pause();activeStudy=id;mode='clean';
  show('empty-state',false);show('result-details',true);
  $('video-btn').disabled=false;$('wav-btn').disabled=false;
- const mrxisolated=id==='mrx'&&!!stems;
- for(const name of ['dialogue','music','effects'])
-  $(name+'-gain').disabled=!mrxisolated;
  const vocal=!!item.meta?.vocals;
  scnetVocals=vocal?item.meta.vocals:null;
  scnetBase=vocal?item.meta.base:null;
- scnetTime=0;
- show('scnet-tuning',vocal);
+  show('scnet-tuning',vocal);
  text('vocal-strength-label',item.meta?.model==='umxhq'?'Удаление вокала Open-Unmix':'Удаление голосов SCNet');
  text('vocal-warning',item.meta?.model==='umxhq'?
   'Open-Unmix обучалась на музыкальном вокале: может затронуть музыку и эффекты. Силу можно менять без нового инференса.':
@@ -513,13 +490,9 @@ async function selectStudyResult(id,rebuild=true){
  text('inference-time',item.timeMs===null?'—':elapsed(item.timeMs/1000));
  text('speed-factor',item.timing?item.timing.rtf.toFixed(2)+'× RTF':'—');
  text('scene-length',elapsed(range.duration));
- const levels=mrxisolated?stemLevels(original,stems):null;
- text('stem-diagnostics',levels?
-  'MRX выделила речь: '+levels.dialogueRelativeDb.toFixed(1)+' дБ относительно оригинала. Это не показатель точности.':
-  '«Удалённая часть» — разница исходного звука и выбранной версии, не всегда исключительно речь.');
- text('study-active-status','Сейчас слушаешь '+item.label+'. Выбери любую версию и отправь на следующий проход.');
+ text('stem-diagnostics','«Удалённая часть» — оценка модели, не гарантированно исключительно речь.');
+ text('study-active-status','Сейчас слушаешь '+item.label+'. Выбери другую версию для сравнения.');
  updateListeningButtons();renderStudyResults();
- $('pipeline-input').value=id; // a single click is all it takes to chain.
  if(video.src!==fileURL){
   video.src=fileURL;video.load();
   video.addEventListener('loadedmetadata',()=>{if(range)video.currentTime=range.start},{once:true});
@@ -545,14 +518,14 @@ $('scnet-strength').oninput=()=>{
 $('study-csv').onclick=()=>{
  if(!studyResults.size||!range)return;
  const q=x=>'"'+String(x??'').replaceAll('"','""')+'"';
- const rows=[['Маршрут','Фрагмент, с','Время модели, с','RTF','Оценка 90 с, с','Изменение RMS, дБ','Пик результата, дБ','Вход','Шаг SCNet']];
+ const rows=[['Модель','Фрагмент, с','Время модели, с','RTF','Оценка 90 с, с','Изменение RMS, дБ','Пик результата, дБ','Из кэша','Удаление голоса, %']];
  for(const item of studyResults.values())rows.push([
   item.label,range.duration,item.timeMs===null?'':(item.timeMs/1000).toFixed(2),
   item.timing?.rtf.toFixed(3)||'',item.timing?.at90Seconds.toFixed(2)||'',
-  item.metrics.changeDb,item.metrics.peakDb.toFixed(2),item.meta?.input||'',item.meta?.step??''
+  item.metrics.changeDb,item.metrics.peakDb.toFixed(2),item.meta?.cached?'да':'нет',Math.round((item.meta?.strength??.8)*100)
  ]);
  download(new Blob(['\uFEFF'+rows.map(row=>row.map(q).join(',')).join('\r\n')],{
-  type:'text/csv;charset=utf-8'}),fileName+'-seven-routes.csv');
+  type:'text/csv;charset=utf-8'}),fileName+'-two-models.csv');
 };
 renderStudyResults();
 
