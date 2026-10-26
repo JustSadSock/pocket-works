@@ -462,8 +462,10 @@ function registerStudyResult(id,clean,processingMs=null,{source='external',label
 function registerSurround(silent=false){
  if(!studySurround?.length||!original||!range)return;
  const center=Number($('study-center-gain').value)/100;
+ const started=performance.now();
  const clean=multichannelME(studySurround,center);
- registerStudyResult('surround',clean,0,{source:'channels',label:'5.1/7.1 · центр '+Math.round(center*100)+'%'});
+ const processingMs=performance.now()-started;
+ registerStudyResult('surround',clean,processingMs,{source:'channels',label:'5.1/7.1 · центр '+Math.round(center*100)+'%'});
  $('study-surround-options').classList.remove('hidden');
  const profile=channelSummary(studySurround,studySurroundRate||RATE);
  const fmtDb=n=>(20*Math.log10(Math.max(n,1e-9))).toFixed(1)+' дБ';
@@ -486,8 +488,8 @@ function renderStudyResults(){
   const info=document.createElement('span');info.textContent=
    'Уровень относительно исходника '+(metrics.changeDb>0?'+':'')+metrics.changeDb.toFixed(1)+' дБ · пик '+metrics.peakDb.toFixed(1)+' дБ';
   const time=document.createElement('span');time.textContent=timeMs===null?'Время модели не измерено':
-   (source==='channels'?'Обработка каналов (без нейросети)':
-    'Обработка '+elapsed(timeMs/1000)+' · '+timing.realTimeFactor.toFixed(2)+'× от реального времени');
+   (source==='channels'?'Канальное сведение '+(timeMs/1000).toFixed(3)+' с · RTF '+timing.realTimeFactor.toFixed(3):
+    'Затрачено '+elapsed(timeMs/1000)+' · RTF '+timing.realTimeFactor.toFixed(2));
   b.append(title,info,time);b.onclick=()=>{void selectStudyResult(id)};
   root.append(b);
  }
