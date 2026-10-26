@@ -113,6 +113,8 @@ try{
  await page.locator('#wav-btn').click();
  assert.match((await boosted).suggestedFilename(),/music-effects\.wav$/);
 
+ await page.locator('#study-advanced summary').click();
+ assert.equal(await page.locator('#study-source-wav').isVisible(),true);
  // Manual model import: reuse ACTUAL MRX-generated WAV as a known audio
  // fixture. Name the route "other", never claim DnR/SAM inference was run.
  const sourceDownload=page.waitForEvent('download',{timeout:25000});
