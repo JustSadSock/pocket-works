@@ -309,7 +309,7 @@ function setVideoSources(target){const src=scene?.custom?(sourceBlob?((liveUrl&&
 function seekVideo(video,local){if(!scene||!video.readyState)return;try{const limit=Number.isFinite(video.duration)?Math.max(0,video.duration-.03):scene.start+scene.duration;video.currentTime=clamp(scene.start+local,0,limit)}catch{}}
 function time(video){return scene?clamp((video.currentTime||scene.start)-scene.start,0,scene.duration):0}
 
-function library(){const grid=$('scene-grid');$('scene-license').innerHTML='Озвученные отрывки являются переработкой оригиналов. Авторы: <a href="https://commons.wikimedia.org/wiki/File:WING_IT!_-_Blender_Open_Movie-full_movie.webm" target="_blank" rel="noopener">WING IT! — Blender Studio (CC BY 4.0)</a>, <a href="https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm" target="_blank" rel="noopener">Sprite Fright — Blender Studio (CC BY 4.0)</a>, <a href="https://peach.blender.org/about/" target="_blank" rel="noopener">Big Buck Bunny — Blender Foundation (CC BY 3.0)</a>. <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.';grid.innerHTML=LIBRARY.map((s,i)=>'<button class="scene-card" data-scene="'+esc(s.id)+'"><div class="scene-thumb">'+(POSTERS[s.id]?'<img src="'+esc(POSTERS[s.id])+'" loading="lazy" alt="Кадр фильма">':'')+'<strong>'+esc(s.short)+'</strong><span class="duration">'+fmt(s.duration)+'</span></div><b>'+esc(s.title)+'</b><small>'+esc(s.sub)+'</small></button>').join('');show('library')}
+function library(){document.querySelector('#screen-library [data-back]').dataset.back=room&&mode==='host'?'room':'home';const grid=$('scene-grid');$('scene-license').innerHTML='Озвученные отрывки являются переработкой оригиналов. Авторы: <a href="https://commons.wikimedia.org/wiki/File:WING_IT!_-_Blender_Open_Movie-full_movie.webm" target="_blank" rel="noopener">WING IT! — Blender Studio (CC BY 4.0)</a>, <a href="https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm" target="_blank" rel="noopener">Sprite Fright — Blender Studio (CC BY 4.0)</a>, <a href="https://peach.blender.org/about/" target="_blank" rel="noopener">Big Buck Bunny — Blender Foundation (CC BY 3.0)</a>. <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.';grid.innerHTML=LIBRARY.map((s,i)=>'<button class="scene-card" data-scene="'+esc(s.id)+'"><div class="scene-thumb">'+(POSTERS[s.id]?'<img src="'+esc(POSTERS[s.id])+'" loading="lazy" alt="Кадр фильма">':'')+'<strong>'+esc(s.short)+'</strong><span class="duration">'+fmt(s.duration)+'</span></div><b>'+esc(s.title)+'</b><small>'+esc(s.sub)+'</small></button>').join('');show('library')}
 function selectScene(item,blob=null){
  selected={...item,roles:[...item.roles]};sourceBlob=blob;encodedCache=null;
  if(blob&&selected.custom)selected.id='custom-'+uid();
@@ -337,7 +337,7 @@ async function confirmScene(){
  if(mode==='host'){
     if(room&&state?.phase==='lobby'){
       if(scene.custom&&sourceBlob){projectKey=sceneDraftKey();if(!await draftWrite())return;}
-      sendGame({type:'scene',scene:sceneForServer()});roomUI();return;
+      pendingScenePicker=false;sendGame({type:'scene',scene:sceneForServer()});roomUI();return;
     }
     await connectRoom('create');return;
   }
@@ -1148,7 +1148,10 @@ function finishRecording(){
  r.end=Math.min(r.limit,scene.duration,time($('stage-video')));
  pendingRecording=new Promise(resolve=>{r.resolve=resolve});
  stopAllPlayback();
- if(r.rec.state!=='inactive')r.rec.stop();else{
+ if(r.rec.state!=='inactive'){
+   try{if(r.rec.state==='recording')r.rec.requestData()}catch{}
+   r.rec.stop();
+  }else{
   stopMicMonitor();r.stream.getTracks().forEach(t=>t.stop());r.resolve();pendingRecording=null;
  }
  cue('stop');updateRecordingControls();
