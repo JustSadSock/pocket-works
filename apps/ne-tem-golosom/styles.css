@@ -467,3 +467,24 @@
  .editor .voice-fx-extra{max-height:94px}
  .editor .stage-wrap{min-height:0}
 }
+
+/* Persistent lobby setup and per-take mixing controls. */
+.room-scene-control{display:flex;align-items:center;justify-content:space-between;gap:16px;background:#e6d9c8;border-left:4px solid #b56a4a;padding:13px 15px}
+.room-scene-control>div{display:flex;flex-direction:column;min-width:0;gap:4px}
+.room-scene-control small{font-size:9px;font-weight:800;letter-spacing:.13em;color:#796b59}
+.room-scene-control strong{font:700 19px Oswald,Impact,sans-serif;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.room-scene-control .action{min-height:45px;max-width:225px;font-size:12px;padding:9px 12px;flex:0 1 auto}
+.clip-mixer{display:flex;align-items:center;gap:15px;margin:9px 0;padding:11px 10px;background:#182122;border:1px solid #53605c}
+.clip-mixer label{display:grid;gap:6px;min-width:0;flex:1;color:#ead9c4;font:750 11px Manrope,Arial,sans-serif}
+.clip-mixer label input{width:100%;min-height:26px;accent-color:#e3b17d}
+.clip-mixer label output{color:#e9bd91;font-size:10px;font-variant-numeric:tabular-nums}
+.premiere-buttons{flex-wrap:wrap}
+.premiere-buttons #premiere-ab{min-height:45px;flex:1}
+#premiere-new-scene{width:100%;text-align:center;margin-top:4px;background:#eadbc7;border:1px solid #ccbaa1}
+@media(max-width:620px){
+ .room-scene-control{flex-direction:column;align-items:stretch;gap:9px}
+ .room-scene-control .action{width:100%;max-width:none}
+ .clip-mixer{flex-wrap:wrap;gap:8px}
+ .clip-mixer label{flex:1 1 30%;font-size:10px}
+ .premiere-buttons .action{font-size:12px;min-width:0;padding:10px}
+}
