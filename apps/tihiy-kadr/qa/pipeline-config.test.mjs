@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {ROUTES,routeById,planRoute,planCustom,makeRunKey,calculateSpeed} from '../pipeline-config.js';
 
-test('all five pipelines are actual MRX/SCNet inference routes, not placebo labels',()=>{
+test('all seven pipelines use three real ONNX architectures, not placebo labels',()=>{
  assert.equal(ROUTES.length,7);
- assert.equal(new Set(ROUTES.map(x=>x.id)).size,5);
+ assert.equal(new Set(ROUTES.map(x=>x.id)).size,7);
  for(const route of ROUTES){
   assert(route.steps.length>=1);
   assert.deepEqual(planRoute(route.id),route.steps);
