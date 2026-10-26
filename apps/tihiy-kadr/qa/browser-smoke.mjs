@@ -105,7 +105,7 @@ try{
  const effectsDownload=page.waitForEvent('download',{timeout:25000});
  await page.locator('#wav-btn').click();
  assert.match((await effectsDownload).suggestedFilename(),/music-effects\.wav$/);
- assert.match(await page.locator('#stem-diagnostics').innerText(),/Выделенная речь/);
+ assert.match(await page.locator('#stem-diagnostics').innerText(),/MRX выделила речь/);
  assert.equal(await page.locator('#center-suppression').isDisabled(),false);
  await page.locator('#center-suppression').fill('45');
  assert.equal(await page.locator('#center-value').innerText(),'45%');
