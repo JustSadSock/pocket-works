@@ -76,11 +76,17 @@ function connectionNotice(){
  banner.textContent=message;
  banner.classList.toggle('hidden',!message);
 }
+async function draftReadCompatible(key){
+ const saved=await draftRead(key);
+ if(saved||debugPlay||state?.round||!scene||!room)return saved;
+ // Migrate existing v3 sessions that predate round/epoch draft keys.
+ return draftRead(room+'::'+scene.id+'::'+scene.start+'::'+scene.duration);
+}
 async function restoreLobbyMedia(){
  if(!room||!scene?.custom||sourceBlob)return;
  const key=sceneDraftKey();
  try {
-  const old=await draftRead(key);
+  const old=await draftReadCompatible(key);
   if(old?.video instanceof Blob){
    sourceBlob=old.video;writtenVideoByKey.set(key,sourceBlob);setVideoSources();
    if(meHost())for(const p of state.players)if(p.id!==me)sendVideoTo(p.id);
@@ -518,13 +524,13 @@ function roomUI(){
  const s=state;show('room');if(scene)setVideoSources(null);$('join-panel').classList.toggle('hidden',!!s||mode!=='guest');$('room-connection').classList.toggle('hidden',!!s||(mode!=='host'&&!networkInterrupted));
  $('room-heading').textContent=s?'Ваша команда':mode==='host'?'Создать комнату':'Войти в комнату';$('room-code').textContent=s?room.slice(0,8).toUpperCase():'—';
  $('room-ticket').style.display=s?'flex':'none';
-  $('room-scene-title').textContent=s?.configured?s.scene.title:'Сцена не выбрана';
+  $('room-scene-title').textContent=s&&s.configured!==false&&s.scene.id!=='wing'?s.scene.title:'Сцена не выбрана';
   $('room-change-scene').classList.toggle('hidden',!s||!meHost()||s.phase!=='lobby');$('player-count').textContent=s?s.players.length+'/6':'';
  $('room-phase-note').textContent=s?'Ожидаем актёров':'';
  if(!s){$('room-players').innerHTML='';$('room-help').textContent=mode==='host'?'Подключение требуется для передачи видео другим участникам.':'Введите код, которым поделился ведущий.';$('room-start').classList.add('hidden');return}
  const roleOptions=[...s.scene.roles];for(let i=0;i<s.scene.roles.length;i++)for(let j=i+1;j<s.scene.roles.length;j++)roleOptions.push(s.scene.roles[i]+' + '+s.scene.roles[j]);roleOptions.push('Все роли');for(const name of Object.values(s.assignments))if(name&&!roleOptions.includes(name))roleOptions.push(name);
  $('room-players').innerHTML=s.players.map((p,i)=>'<div class="room-player" style="border-left-color:'+colors[i%colors.length]+'"><span><b>'+esc(p.name)+(p.id===me?' (ты)':'')+'</b><small>'+(p.id===s.host?'Ведущий':'Актёр')+(onlineIds&&!onlineIds.has(p.id)?' · Нет связи':s.mediaReady?.[p.id]?' · Видео получено':' · Загружаем видео')+'</small></span>'+(meHost()?'<select data-assign="'+esc(p.id)+'">'+roleOptions.map(r=>'<option value="'+esc(r)+'" '+(r===s.assignments[p.id]?'selected':'')+'>'+esc(r)+'</option>').join('')+'</select>':'<b>'+esc(s.assignments[p.id]||'Актёр')+'</b>')+'</div>').join('')+(s.scene.custom&&!sourceBlob?'<label class="upload-card" style="margin:8px 0"><input data-room-video type="file" accept="video/*" hidden><span class="upload-icon">＋</span><span><b>Видео не передалось?</b><small>Выбери тот же файл на своём устройстве.</small></span></label>':'');
- $('room-help').textContent=esc(s.scene.title)+' · '+fmt(s.scene.duration)+' · '+(s.scene.custom?'личное видео':'CC BY, Blender Studio');$('room-start').classList.toggle('hidden',!meHost());$('room-start').disabled=!s.configured||s.players.length<2||!s.players.every(p=>s.mediaReady?.[p.id])||(s.scene.custom&&meHost()&&!sourceBlob);
+ $('room-help').textContent=esc(s.scene.title)+' · '+fmt(s.scene.duration)+' · '+(s.scene.custom?'личное видео':'CC BY, Blender Studio');$('room-start').classList.toggle('hidden',!meHost());$('room-start').disabled=s.configured===false||s.players.length<2||!s.players.every(p=>s.mediaReady?.[p.id])||(s.scene.custom&&meHost()&&!sourceBlob);
 }
 function waitUI(){show('wait');$('wait-roster').innerHTML=(state?.players||[{id:'solo',name:name}]).map(p=>'<span class="wait-chip '+(mode==='solo'||state?.ready?.[p.id]?'ready':'')+'">'+esc(p.name)+' · '+(onlineIds&&!onlineIds.has(p.id)?'Нет связи':mode==='solo'||state?.ready?.[p.id]?'Готов':'Записывает')+'</span>').join('');$('reveal-btn').classList.toggle('hidden',mode==='solo'||!meHost()||!state?.players.every(p=>state.ready?.[p.id]));$('unready-btn').classList.toggle('hidden',mode==='solo')}
 function disposeRemoteClips(){
