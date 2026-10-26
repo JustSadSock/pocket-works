@@ -1,0 +1,43 @@
+/* Developer screen inspector: non-production, isolated snapshots in a sandboxed iframe. */
+body.ntg-debug-open{overflow:hidden}
+.ntg-debug-overlay{--qa-bg:#e9e1d5;--qa-ink:#262a2b;--qa-rule:#cbbca9;position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;background:var(--qa-bg);color:var(--qa-ink);font-family:Manrope,Arial,sans-serif;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.ntg-debug-overlay *{box-sizing:border-box}
+.ntg-debug-top{display:flex;align-items:center;gap:20px;justify-content:space-between;flex:none;padding:13px 18px;background:#252b2d;color:#f2e6d7}
+.ntg-debug-top>div:first-child{display:flex;flex-direction:column;gap:1px}
+.ntg-debug-top small{font:800 10px Manrope,Arial,sans-serif;letter-spacing:.17em;color:#d0ab8b}
+.ntg-debug-top strong{font:700 25px Oswald,Impact,sans-serif}
+.ntg-debug-devices{display:flex;gap:4px;padding:4px;background:#3d4443}
+.ntg-debug-devices button{background:none;color:#d7cfbf;min-height:34px;border:0;padding:6px 14px;font:800 12px Manrope,Arial,sans-serif}
+.ntg-debug-devices button[aria-pressed=true]{background:#e6bd90;color:#282827}
+.ntg-debug-exit{border:1px solid #67716d;background:#363d3d;color:#f2e6d7;min-height:40px;padding:7px 12px;font:800 12px Manrope,Arial,sans-serif}
+.ntg-debug-grid{display:grid;grid-template-columns:224px minmax(0,1fr);min-height:0;flex:1}
+.ntg-debug-nav{display:flex;flex-direction:column;overflow:auto;background:#dfd2be;padding:13px 8px;gap:4px;border-right:1px solid var(--qa-rule);overscroll-behavior:contain}
+.ntg-debug-nav button{display:flex;align-items:center;gap:11px;text-align:left;border:0;background:transparent;color:#3e4240;font:750 12px Manrope,Arial,sans-serif;padding:11px 9px;min-height:39px}
+.ntg-debug-nav button:hover{background:#eacfb2}
+.ntg-debug-nav button.active{background:#272e30;color:#f7ebd8}
+.ntg-debug-nav button span{font:750 10px Manrope,Arial,sans-serif;opacity:.56;font-variant-numeric:tabular-nums}
+.ntg-debug-work{min-width:0;min-height:0;display:flex;flex-direction:column}
+.ntg-debug-heading{flex:none;display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--qa-rule)}
+.ntg-debug-heading b{font:700 23px Oswald,Impact,sans-serif}
+.ntg-debug-heading span{font:650 11px Manrope,Arial,sans-serif;color:#766d62}
+.ntg-debug-canvas{min-height:0;flex:1;overflow:auto;padding:16px;display:flex;justify-content:center;align-items:flex-start;overscroll-behavior:contain;background:repeating-linear-gradient(45deg,#eae2d6 0,#eae2d6 12px,#e5dccc 12px,#e5dccc 24px)}
+.ntg-debug-device-shell{background:#f2ebdc;flex:none;box-shadow:0 14px 38px #372f2940;border:7px solid #303637;overflow:hidden;transition:width .18s ease}
+.ntg-debug-device-shell[data-device=desktop]{width:min(100%,1100px);height:100%;min-height:480px}
+.ntg-debug-device-shell[data-device=phone]{width:390px;height:780px;max-width:100%}
+.ntg-debug-device-shell iframe{display:block;width:100%;height:100%;border:0;background:#f2ebdc}
+@media(max-width:760px){
+ .ntg-debug-top{padding:8px 9px;gap:6px;flex-wrap:wrap}
+ .ntg-debug-top strong{font-size:20px}
+ .ntg-debug-devices button{padding:6px 10px}
+ .ntg-debug-exit{padding:5px 9px;font-size:11px}
+ .ntg-debug-grid{display:flex;flex-direction:column}
+ .ntg-debug-nav{flex:none;flex-direction:row;overflow-x:auto;overflow-y:hidden;border-right:0;border-bottom:1px solid var(--qa-rule);padding:8px;gap:4px;scroll-snap-type:x proximity}
+ .ntg-debug-nav button{flex:none;min-height:37px;padding:8px 10px;white-space:nowrap;scroll-snap-align:start}
+ .ntg-debug-heading{padding:8px 12px;align-items:center}
+ .ntg-debug-heading b{font-size:19px}
+ .ntg-debug-heading span{font-size:10px;max-width:50%;text-align:right}
+ .ntg-debug-canvas{padding:10px}
+ .ntg-debug-device-shell[data-device=desktop]{width:1024px;height:680px}
+ .ntg-debug-device-shell[data-device=phone]{height:740px}
+}
+@media(prefers-reduced-motion:reduce){.ntg-debug-device-shell{transition:none}}
