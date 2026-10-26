@@ -1,4 +1,4 @@
-name: Tihiy Kadr MRX Laboratory
+name: Tihiy Kadr Neural Laboratory
 on:
   pull_request:
     paths:
@@ -30,7 +30,7 @@ jobs:
           node --check apps/tihiy-kadr/audio-utils.js
           node --test apps/tihiy-kadr/qa/*.test.mjs
           node --input-type=module -e "import{readFileSync as r}from'node:fs';const a=JSON.parse(r('apps/tihiy-kadr/app.config.json'));const m=JSON.parse(r('apps/tihiy-kadr/manifest.webmanifest'));if(m.name!==a.name||m.description!==a.description||m.id!=='/apps/'+a.slug+'/')process.exit(1)"
-  real-mrx:
+  real-separation:
     needs: syntax-unit
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -43,10 +43,10 @@ jobs:
         run: |
           npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
           npx playwright install chromium
-      - name: Separate synthetic video using actual 31 MB MRX ONNX model
+      - name: Separate synthetic video using actual Open-Unmix and SCNet ONNX models
         run: node apps/tihiy-kadr/qa/browser-smoke.mjs
 
-  webkit-mrx:
+  webkit-separation:
     needs: syntax-unit
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -61,5 +61,5 @@ jobs:
           npx playwright install --with-deps webkit
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
           ffmpeg -version
-      - name: Run MRX in WebKit mobile viewport with actual video and ONNX WASM
+      - name: Run Open-Unmix in WebKit mobile viewport with actual video and ONNX WASM
         run: node apps/tihiy-kadr/qa/webkit-smoke.mjs
