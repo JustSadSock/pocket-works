@@ -39,14 +39,14 @@
 <div id="scnet-tuning" class="scnet-tuning hidden">
  <label for="scnet-strength"><span id="vocal-strength-label">Удаление голосов вокальной моделью</span> <output id="scnet-strength-value">80%</output></label>
  <input id="scnet-strength" type="range" min="0" max="100" step="10" value="80">
- <p class="hint">SCNet обучалась на музыкальном вокале: возможна потеря музыки и эффектов. Изменение силы не запускает нейросеть заново.</p>
+ <p class="hint" id="vocal-warning">Вокальные модели могут затронуть музыку и эффекты. Изменение силы не запускает нейросеть заново.</p>
 </div>
 <div class="center-filter">
 <label for="center-suppression">Дополнительное подавление центра стерео <output id="center-value">0%</output></label>
 <input id="center-suppression" type="range" min="0" max="100" step="5" value="0">
 <p id="center-note" class="hint">Экспериментальный фильтр. Попробуй 35–50%, если голос попал в музыку и эффекты. Он также может приглушить музыку и звуковые эффекты, расположенные в центре.</p>
 </div>
-<div class="metrics"><div><small>MRX · модель и вычисления</small><strong id="inference-time">—</strong></div><div><small>Скорость</small><strong id="speed-factor">—</strong></div><div><small>Длина сцены</small><strong id="scene-length">—</strong></div></div><p id="stem-diagnostics" class="hint" role="status"></p>
+<div class="metrics"><div><small>Модели · вычисления</small><strong id="inference-time">—</strong></div><div><small>Скорость</small><strong id="speed-factor">—</strong></div><div><small>Длина сцены</small><strong id="scene-length">—</strong></div></div><p id="stem-diagnostics" class="hint" role="status"></p>
 <div class="downloads"><button id="wav-btn" class="primary" type="button">Скачать текущий микс WAV</button><button id="video-btn" class="secondary" type="button">Сохранить видео со звуком</button></div><p id="export-status" class="hint"></p>
 </div>
 </section>
