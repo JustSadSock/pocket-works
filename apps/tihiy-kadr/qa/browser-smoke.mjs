@@ -112,6 +112,49 @@ try{
  const boosted=page.waitForEvent('download',{timeout:25000});
  await page.locator('#wav-btn').click();
  assert.match((await boosted).suggestedFilename(),/music-effects\.wav$/);
+
+ // Manual model import: reuse ACTUAL MRX-generated WAV as a known audio
+ // fixture. Name the route "other", never claim DnR/SAM inference was run.
+ const sourceDownload=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#study-source-wav').click();
+ assert.match((await sourceDownload).suggestedFilename(),/source\.wav$/);
+ await page.locator('#study-method').selectOption('other');
+ await page.locator('#study-me-file').setInputFiles({
+  name:'external-me.wav',mimeType:'audio/wav',buffer:readFileSync(await output.path())
+ });
+ await page.locator('#study-import').click();
+ await page.waitForFunction(()=>document.querySelector('#study-import-status').textContent.includes('Импортировано.'),null,{timeout:18000});
+ assert.match(await page.locator('#result-state').innerText(),/Другой алгоритм/);
+ assert((await page.locator('.study-choice').count())>=2);
+ const csvExport=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#study-csv').click();
+ assert.match((await csvExport).suggestedFilename(),/methods\.csv$/);
+ // Real 6-channel PCM, center carries a synthetic dialogue signal.
+ const surroundBuffer=Buffer.alloc(44+8000*6*2);
+ surroundBuffer.write('RIFF',0);surroundBuffer.writeUInt32LE(surroundBuffer.length-8,4);
+ surroundBuffer.write('WAVEfmt ',8);surroundBuffer.writeUInt32LE(16,16);
+ surroundBuffer.writeUInt16LE(1,20);surroundBuffer.writeUInt16LE(6,22);
+ surroundBuffer.writeUInt32LE(8000,24);surroundBuffer.writeUInt32LE(8000*12,28);
+ surroundBuffer.writeUInt16LE(12,32);surroundBuffer.writeUInt16LE(16,34);
+ surroundBuffer.write('data',36);surroundBuffer.writeUInt32LE(8000*12,40);
+ for(let i=0;i<8000;i++)for(let ch=0;ch<6;ch++){
+  const value=(ch===2?.6:.14)*Math.sin(2*Math.PI*(ch===2?600:120+ch*90)*i/8000);
+  surroundBuffer.writeInt16LE(Math.round(value*32767),44+i*12+ch*2);
+ }
+ await page.locator('#study-surround-file').setInputFiles({
+  name:'surround-5.1.wav',mimeType:'audio/wav',buffer:surroundBuffer
+ });
+ await page.waitForFunction(()=>document.querySelector('#study-surround-status').textContent.includes('6 каналов'),null,{timeout:18000});
+ assert.match(await page.locator('#result-state').innerText(),/5\.1/);
+ await page.locator('#study-center-gain').fill('30');
+ assert.equal(await page.locator('#study-center-value').innerText(),'30%');
+ const surroundWav=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#wav-btn').click();
+ assert.match((await surroundWav).suggestedFilename(),/no-dialogue\.wav$/);
+ // Activating the MRX result after independent alternative tests still works.
+ await page.locator('.study-choice').first().click();
+ assert.match(await page.locator('#result-state').innerText(),/5\.1|MRX|Другой/);
+
  assert.deepEqual(runtimeErrors,[]);
  console.log('Real Chromium MRX preview, speech, M&E exports verified:',await page.locator('#inference-time').innerText());
 }finally{await browser.close();await new Promise(r=>server.close(r))}
