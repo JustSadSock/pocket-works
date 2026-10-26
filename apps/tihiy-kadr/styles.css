@@ -72,3 +72,24 @@
  .pipeline-builder{padding:12px}
  .scene-shortcut{flex-wrap:wrap}
 }
+
+/* DSP A/B bench: compact switches, never decorative fake settings. */
+.enhancement-lab{margin:13px 0;padding:13px 14px;background:#f1eee6;border:1px solid var(--line)}
+.enhancement-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px}
+.enhancement-head h3{font-size:14px;margin:0;letter-spacing:-.025em}
+.enhancement-head span{font-size:10px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.enhance-toggle{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.enhance-toggle strong,.enhance-toggle small{display:block}
+.enhance-toggle strong{font-size:12px}
+.enhance-toggle small{font-size:10px;color:var(--muted);font-weight:400;max-width:410px;line-height:1.5;margin-top:3px}
+.enhance-toggle input[role=switch]{appearance:none;position:relative;flex:0 0 auto;width:42px;height:24px;border:1px solid #99988f;border-radius:12px;background:#cecac0;cursor:pointer;margin:0;transition:background .15s}
+.enhance-toggle input[role=switch]:before{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:white;box-shadow:0 1px 3px #0003;transition:transform .15s}
+.enhance-toggle input[role=switch]:checked{background:var(--accent);border-color:var(--accent)}
+.enhance-toggle input[role=switch]:checked:before{transform:translateX(18px)}
+.enhance-toggle input[role=switch]:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.enhance-toggle input[role=switch]:disabled{opacity:.45;cursor:not-allowed}
+.enhance-center-level{display:grid;grid-template-columns:1fr auto;gap:5px;margin:11px 0 6px;font-size:11px;font-weight:700}
+.enhance-center-level input{grid-column:1/-1;width:100%;accent-color:var(--accent);cursor:pointer}
+.enhancement-lab .secondary{min-height:35px;padding:7px 12px;margin-top:12px;font-size:11px}
+.enhancement-lab #enhance-info{margin:9px 0 0}
+@media(max-width:440px){.enhancement-lab{padding:11px}.enhance-toggle{gap:9px}}

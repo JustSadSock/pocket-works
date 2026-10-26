@@ -35,7 +35,7 @@ test('simple UI has no MRX, chain builder or external upload form',()=>{
  assert.match(html,/value="umxhq-direct"/);
  assert.match(html,/value="scnet-direct"/);
  assert.doesNotMatch(html,/value="mrx|id="pipeline-|id="stems-btn"/);
- assert.match(app,/subtractResidualVocals\(run\.base,run\.vocals,strength\)/);
+ assert.match(app,/renderEnhancedPCM\(run\.base,run\.vocals,run\.layers,effects\)/);
  assert.match(app,/pipelineRuns\.get\(key\)/);
  assert.match(worker,/device:'wasm'/);
  assert.doesNotMatch(worker,/kind==='mrx'/);

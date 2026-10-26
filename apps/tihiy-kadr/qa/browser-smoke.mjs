@@ -30,6 +30,17 @@ const runtimeErrors=[];
 page.on('pageerror',e=>runtimeErrors.push(e.message));
 page.on('console',msg=>{if(msg.type()==='error')console.error('[browser]',msg.text().slice(0,600))});
 try{
+ await page.addInitScript(()=>{
+  window.__modelRuns=0;window.__dspRuns=0;
+  const NativeWorker=window.Worker;
+  window.Worker=new Proxy(NativeWorker,{
+   construct(target,args){
+    if(String(args[0]).includes('mrx-worker.js'))window.__modelRuns++;
+    if(String(args[0]).includes('enhance-worker.js'))window.__dspRuns++;
+    return Reflect.construct(target,args);
+   }
+  });
+ });
  await page.goto('http://127.0.0.1:'+server.address().port+'/apps/tihiy-kadr/',{waitUntil:'load'});
  assert.equal(await page.title(),'Тихий кадр · удаление диалогов');
  const bytes=await page.evaluate(async()=>{
@@ -75,6 +86,35 @@ try{
  if(!ready)throw Error('Open-Unmix ONNX failure: '+await page.locator('#error').innerText());
  await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('Open-Unmix'),null,{timeout:10000});
  assert.equal(await page.locator('#result-video').evaluate(v=>v.muted),true);
+ assert.deepEqual(await page.evaluate(()=>[window.__modelRuns,window.__dspRuns]),[1,1]);
+ for(const id of ['enhance-spectral','enhance-center','enhance-reconstruct'])
+  assert.equal(await page.locator('#'+id).isChecked(),true);
+ assert.equal(await page.locator('#scnet-strength').inputValue(),'100');
+ await page.locator('#scnet-strength').fill('140');
+ assert.equal(await page.locator('#scnet-strength-value').innerText(),'140%');
+ await page.locator('#scnet-strength').fill('100');
+ const enhanced=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#wav-btn').click();
+ const enhancedDownload=await enhanced;
+ const enhancedBytes=readFileSync(await enhancedDownload.path());
+ await page.locator('#enhance-disable-all').click();
+ for(const id of ['enhance-spectral','enhance-center','enhance-reconstruct'])
+  assert.equal(await page.locator('#'+id).isChecked(),false);
+ const baseline=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#wav-btn').click();
+ const baselineBytes=readFileSync(await (await baseline).path());
+ assert.notDeepEqual(enhancedBytes,baselineBytes,'DSP toggles must change real WAV audio');
+ for(const id of ['enhance-spectral','enhance-center','enhance-reconstruct']){
+  await page.locator('#'+id).check();
+  const single=page.waitForEvent('download',{timeout:25000});
+  await page.locator('#wav-btn').click();
+  assert.notDeepEqual(readFileSync(await (await single).path()),baselineBytes,id+' needs real audio effect');
+  await page.locator('#'+id).uncheck();
+ }
+ await page.locator('#enhance-disable-all').click();
+ assert.deepEqual(await page.evaluate(()=>[window.__modelRuns,window.__dspRuns]),[1,1],
+  'A/B toggles must neither rerun neural inference nor spectral FFT');
+
  await page.evaluate(()=>{
   window.__monitorStarted=false;
   document.getElementById('monitor').addEventListener('playing',()=>{window.__monitorStarted=true},{once:true});
@@ -90,9 +130,9 @@ try{
  await page.locator('#wav-btn').click();
  assert.match((await removed).suggestedFilename(),/isolated-dialogue\.wav$/);
  await page.locator('#clean-btn').click();
- await page.locator('#scnet-strength').fill('60');
+ await page.locator('#scnet-strength').fill('135');
  await page.waitForTimeout(450);
- assert.equal(await page.locator('#scnet-strength-value').innerText(),'60%');
+ assert.equal(await page.locator('#scnet-strength-value').innerText(),'135%');
  await page.locator('#quality-mode').selectOption('scnet-direct');
  await page.locator('#process-btn').click();
  await page.waitForFunction(()=>document.querySelector('#result-state').textContent==='SCNet',null,{timeout:180000});
@@ -107,6 +147,8 @@ try{
  await page.locator('#process-btn').click();
  await page.waitForFunction(()=>document.querySelector('#progress-heading').textContent==='Готово',null,{timeout:10000});
  assert.equal(await page.locator('#study-results .study-choice').count(),2);
+ assert.deepEqual(await page.evaluate(()=>[window.__modelRuns,window.__dspRuns]),[2,2],
+  'cached A/B of the same two models must not rerun any workers');
  assert.deepEqual(runtimeErrors,[]);
  console.log('Real Chromium Open-Unmix and SCNet direct routes, monitoring, export, cache and A/B passed');
 }finally{await browser.close();await new Promise(r=>server.close(r))}

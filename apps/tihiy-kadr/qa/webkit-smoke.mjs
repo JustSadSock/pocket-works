@@ -66,6 +66,15 @@ try{
  await page.locator('#listen-btn').click();
  await page.waitForFunction(()=>window.__monitorStarted===true,null,{timeout:9000});
  assert.equal(await page.locator('#result-video').evaluate(v=>v.muted),true);
+ for(const id of ['enhance-spectral','enhance-center','enhance-reconstruct'])
+  assert.equal(await page.locator('#'+id).isChecked(),true);
+ await page.locator('#enhance-disable-all').click();
+ for(const id of ['enhance-spectral','enhance-center','enhance-reconstruct'])
+  assert.equal(await page.locator('#'+id).isChecked(),false);
+ await page.locator('#enhance-disable-all').click();
+ await page.locator('#scnet-strength').fill('120');
+ assert.equal(await page.locator('#scnet-strength-value').innerText(),'120%');
+
  await page.locator('#center-suppression').fill('35');
  assert.equal(await page.locator('#center-value').innerText(),'35%');
  await page.locator('#listen-btn').click();
