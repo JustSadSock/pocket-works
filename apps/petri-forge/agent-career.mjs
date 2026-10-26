@@ -184,3 +184,34 @@ export async function recordCombatNeural(c,role,snapshot,{episodes=0,winRate=0,l
  await writeCareerBundle(next,{[role==='archer'?'combatArcher':'combatSwordsman']:snapshot});
  return next;
 }
+
+export async function recordCombatCoevolution(c,roleA,modelA,roleB,modelB,{episodes=0,report=null}={}){
+ assertCareer(c);
+ if(!['archer','swordsman'].includes(roleA)||!['archer','swordsman'].includes(roleB)||roleA===roleB||
+  modelA?.type!=='neural-ppo'||modelB?.type!=='neural-ppo')throw Error('Нужны два разных PPO-бойца');
+ if(!Number.isInteger(episodes)||episodes<1||episodes>150||
+  !report||!Array.isArray(report.generations)||report.generations.length<2||report.generations.length>26||
+  !Number.isSafeInteger(report.seed)||report.seed<1||
+  report.generations.some(g=>!Number.isInteger(g.generation)||g.generation<0||
+   !Number.isInteger(g.episodes)||g.episodes<0||
+   !Number.isInteger(g.updatesA)||g.updatesA<0||
+   !Number.isInteger(g.updatesB)||g.updatesB<0||
+   !Number.isFinite(g.evaluation?.fixed?.[roleA]?.winRate)||
+   !Number.isFinite(g.evaluation?.fixed?.[roleB]?.winRate)))
+  throw Error('Некорректная история совместного обучения');
+ const next=structuredClone(c),at=Date.now();
+ next.combatNeural??={};
+ for(const role of [roleA,roleB]){
+  const prev=next.combatNeural[role]||{sessions:0,episodes:0,history:[]};
+  const winRate=report.generations.at(-1).evaluation.fixed[role].winRate;
+  next.combatNeural[role]={sessions:prev.sessions+1,episodes:prev.episodes+episodes,
+   history:[...(prev.history||[]),{at,episodes,winRate,
+    coevolution:structuredClone({roles:[roleA,roleB],seed:report.seed,
+     generations:report.generations})}].slice(-30)};
+ }
+ await writeCareerBundle(next,{
+  [roleA==='archer'?'combatArcher':'combatSwordsman']:modelA,
+  [roleB==='archer'?'combatArcher':'combatSwordsman']:modelB
+ });
+ return next;
+}
