@@ -345,3 +345,39 @@ test('a failed world-model load rolls back the visible world and can be retried'
  await expect(page.locator('[data-cp-mode="combat"]')).toHaveClass(/cp-selected/,{timeout:20000});
  await expect(page.locator('#combatWorld')).toBeVisible();
 });
+
+test('self-play league trains real PPO generations, displays results and persists timeline',async({page})=>{
+ test.setTimeout(160000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ await page.locator('[data-cp-mode="combat"]').click();
+ await expect(page.locator('#cpNeurocombat')).toBeVisible();
+ await page.locator('#cpNeurocombat').click();
+ await page.locator('#cpNeuroMethod').selectOption('league');
+ await expect(page.locator('#cpNeuroLeagueIntro')).toBeVisible();
+ await expect(page.locator('#cpNeuroOpponentLabel')).toBeHidden();
+ await expect(page.locator('#cpNeuroTrain')).toContainText('лигу поколений');
+ await page.locator('#cpNeuroEpisodes').selectOption('6');
+ await page.locator('#cpNeuroTrain').click();
+ await expect(page.locator('#cpNeuroStatus')).toContainText('Мозг сохранён',{timeout:140000});
+ await expect(page.locator('#cpNeuroLeagueRows .cp-neuro-league-row')).toHaveCount(2);
+ await expect(page.locator('#cpNeuroLeaguePlot .cp-neuro-league-bar')).toHaveCount(2);
+ await expect(page.locator('#cpNeuroTrainingResult')).toContainText('после:');
+ const before=await page.evaluate(async()=>{
+  const id=window.PetriForgeAgentHub().id;
+  const {loadModel}=await import('/apps/petri-forge/model-store.mjs');
+  const [model,profile]=await Promise.all([loadModel('career-v1:'+id+':combat-ppo-archer'),loadModel('career:'+id)]);
+  return {updates:model.snapshot.updates,history:profile.snapshot.combatNeural.archer.history.at(-1)};
+ });
+ expect(before.updates).toBeGreaterThan(0);
+ expect(before.history.league.generations).toHaveLength(2);
+ await page.locator('#cpNeuroClose').click();
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:25000});
+ await page.locator('[data-cp-mode="combat"]').click();
+ await page.locator('#cpNeurocombat').click();
+ await expect(page.locator('#cpNeuroLeagueRows .cp-neuro-league-row')).toHaveCount(2);
+ await expect(page.locator('#cpNeuroIdentity')).toContainText('лучник: 6');
+ expect(errors).toEqual([]);
+});

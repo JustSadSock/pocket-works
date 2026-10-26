@@ -1,10 +1,16 @@
 // Independent combat training worker; never mutates a saved profile directly.
 import {PpoPolicy,PpoTrainer} from './ppo.mjs';
 import {combatTrainingOptions,battleNeuralEpisode,runCombatEvaluation,neuralDuel} from './neural-combat.mjs';
+import {NeuralCombatLeague} from './neural-league.mjs';
 let job=null,jobId=0;
 const emit=(type,fields={})=>postMessage({type,...fields});
 const finish=(stopped=false)=>{
  const current=job;if(!current)return;job=null;
+ if(current.kind==='league'){
+  const report=current.league.finish(stopped);
+  emit(stopped?'league-stopped':'league-complete',{report});
+  return;
+ }
  if(current.trainer.buffer.length)current.lastPpo=current.trainer.optimize();
  const model=current.policy.serialize();
  const validation=runCombatEvaluation(model,{role:current.options.role,enemyRole:current.options.enemyRole,
@@ -16,6 +22,14 @@ const finish=(stopped=false)=>{
 function train(){
  const current=job;if(!current)return;
  try{
+  if(current.kind==='league'){
+   const step=current.league.step();
+   emit('league-progress',{completed:step.completed,episodes:step.total,wins:step.wins,
+    updates:step.updates,record:step.record});
+   if(step.generation)emit('league-generation',{generation:step.generation});
+   if(step.completed===step.total){finish();return;}
+   setTimeout(train,0);return;
+  }
   const {options,policy,trainer}=current;
   const index=current.completed;
   if(index>=options.episodes){finish();return;}
@@ -34,7 +48,13 @@ function train(){
 onmessage=({data})=>{
  const {type,payload={}}=data||{};
  try{
-  if(type==='train'){
+  if(type==='league'){
+   if(job)throw Error('Нейробой уже обучается');
+   const league=new NeuralCombatLeague(payload);
+   job={kind:'league',league,id:++jobId};
+   emit('league-started',{episodes:league.options.episodes,baseline:league.baseline});
+   setTimeout(train,0);
+  }else if(type==='train'){
    if(job)throw Error('Нейробой уже обучается');
    const options=combatTrainingOptions(payload),policy=new PpoPolicy(options.seed+19);
    if(options.snapshot)policy.load(options.snapshot);

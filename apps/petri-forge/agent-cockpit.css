@@ -323,3 +323,22 @@ body.hub-on:not(.hub-advanced) .race-viewport{height:auto;min-height:0!important
 #cpNeuroDuel{width:100%;margin:12px 0 4px;min-height:42px;font-weight:800;background:#e2e9db;border:1px solid #b4c9ad;color:#30533b}
 #cpNeuroDuelResult{font-size:12px;color:#335742;line-height:1.6;min-height:16px}
 @media(max-width:540px){.cp-neuro-grid,.cp-neuro-duel-fields{grid-template-columns:1fr}.cp-neuro-grid{gap:8px}.cp-neuro-actions{flex-direction:column}}
+
+
+/* Neurocombat 0.15: the experiment's timeline, not an invented skill graph. */
+#cpNeuroDialog .cp-neuro-grid #cpNeuroOpponentLabel[hidden],
+#cpNeuroDialog .cp-neuro-league-intro[hidden],
+#cpNeuroDialog .cp-neuro-league-history[hidden]{display:none!important}
+.cp-neuro-league-intro{background:#dce9d5;color:#355b3d;border-left:3px solid #65946c;padding:9px 11px;font-size:11px;line-height:1.55;margin:11px 0}
+.cp-neuro-league-history{border:1px solid #b8cfb3;border-radius:7px;background:#f0f6ea;margin:13px 0 10px;padding:10px}
+.cp-neuro-league-history>h3{font-size:13px!important;color:#284938!important;margin:3px 0 10px!important;letter-spacing:0!important;text-transform:none!important}
+.cp-neuro-league-history>p{font-size:10px!important;line-height:1.55;color:#637d69;margin:8px 0 0!important}
+.cp-neuro-league-plot{display:flex;align-items:flex-end;gap:4px;height:78px;padding:6px 0 2px;border-bottom:1px solid #adc4ae}
+.cp-neuro-league-bar{flex:1;min-width:8px;max-width:50px;height:100%;display:flex;align-items:flex-end;background:#dce7d5;border:1px solid #c5d5c0;border-radius:3px 3px 0 0;overflow:hidden}
+.cp-neuro-league-bar>span{width:100%;display:block;background:#4d9166;min-height:3px;transition:height .2s}
+.cp-neuro-league-bar:first-child>span{background:#92aa8d}
+.cp-neuro-league-rows{margin-top:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;max-height:180px;overflow-y:auto}
+.cp-neuro-league-row{display:grid;gap:1px;padding:6px 7px;background:#f8fbf4;border:1px solid #cfdfce;border-radius:4px;font-size:11px;color:#4e6d56}
+.cp-neuro-league-row strong{font-size:17px;color:#28583e;font-variant-numeric:tabular-nums}
+.cp-neuro-league-row small{font-size:9px;color:#7e9680}
+#cpNeuroRetry:not([hidden]){min-height:39px;width:100%;background:#f1e4d1;border:1px solid #c6a986;color:#674525}
