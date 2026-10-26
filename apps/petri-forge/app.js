@@ -455,7 +455,18 @@ function stepWithAction(a){
   if(done){running=false;playBtn.textContent='▶ Наблюдать';status(env.success?'Цель достигнута':'Лимит шагов');}
 }
 loadAgent(agentSelect.value);
-agentSelect.onchange=()=>{if(training)return;stopReplay();loadAgent(agentSelect.value);};
+agentSelect.onchange=()=>{
+  if(training)return;
+  if(document.body.classList.contains('hub-on')){
+   if(agentSelect.value==='random'){
+    agentSelect.value=window.PetriForgeAgentHub?.().algorithm||'qlearning';
+    status('Случайная политика не сохраняется в профиль агента');return;
+   }
+   window.dispatchEvent(new CustomEvent('petri:grid-algorithm-request',{detail:{algorithm:agentSelect.value}}));
+   return;
+  }
+  stopReplay();loadAgent(agentSelect.value);
+ };
 
 /* ===================== Controls ===================== */
 playBtn.onclick = ()=>{
