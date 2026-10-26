@@ -343,7 +343,7 @@ function setVideoSources(target){const src=scene?.custom?(sourceBlob?((liveUrl&&
 function seekVideo(video,local){if(!scene||!video.readyState)return;try{const limit=Number.isFinite(video.duration)?Math.max(0,video.duration-.03):scene.start+scene.duration;video.currentTime=clamp(scene.start+local,0,limit)}catch{}}
 function time(video){return scene?clamp((video.currentTime||scene.start)-scene.start,0,scene.duration):0}
 
-function library(){document.querySelector('#screen-library [data-back]').dataset.back=room&&mode==='host'?'room':'home';const grid=$('scene-grid');$('scene-license').innerHTML='Озвученные отрывки являются переработкой оригиналов. Авторы: <a href="https://commons.wikimedia.org/wiki/File:WING_IT!_-_Blender_Open_Movie-full_movie.webm" target="_blank" rel="noopener">WING IT! — Blender Studio (CC BY 4.0)</a>, <a href="https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm" target="_blank" rel="noopener">Sprite Fright — Blender Studio (CC BY 4.0)</a>, <a href="https://peach.blender.org/about/" target="_blank" rel="noopener">Big Buck Bunny — Blender Foundation (CC BY 3.0)</a>. <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.';grid.innerHTML=LIBRARY.map((s,i)=>'<button class="scene-card" data-scene="'+esc(s.id)+'"><div class="scene-thumb">'+(POSTERS[s.id]?'<img src="'+esc(POSTERS[s.id])+'" loading="lazy" alt="Кадр фильма">':'')+'<strong>'+esc(s.short)+'</strong><span class="duration">'+fmt(s.duration)+'</span></div><b>'+esc(s.title)+'</b><small>'+esc(s.sub)+'</small></button>').join('');show('library')}
+function library(backToReview=false){document.querySelector('#screen-library [data-back]').dataset.back=backToReview?'trim':room&&mode==='host'?'room':'home';const grid=$('scene-grid');$('scene-license').innerHTML='Озвученные отрывки являются переработкой оригиналов. Авторы: <a href="https://commons.wikimedia.org/wiki/File:WING_IT!_-_Blender_Open_Movie-full_movie.webm" target="_blank" rel="noopener">WING IT! — Blender Studio (CC BY 4.0)</a>, <a href="https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm" target="_blank" rel="noopener">Sprite Fright — Blender Studio (CC BY 4.0)</a>, <a href="https://peach.blender.org/about/" target="_blank" rel="noopener">Big Buck Bunny — Blender Foundation (CC BY 3.0)</a>. <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.';grid.innerHTML=LIBRARY.map((s,i)=>'<button class="scene-card" data-scene="'+esc(s.id)+'"><div class="scene-thumb">'+(POSTERS[s.id]?'<img src="'+esc(POSTERS[s.id])+'" loading="lazy" alt="Кадр фильма">':'')+'<strong>'+esc(s.short)+'</strong><span class="duration">'+fmt(s.duration)+'</span></div><b>'+esc(s.title)+'</b><small>'+esc(s.sub)+'</small></button>').join('');show('library')}
 function selectScene(item,blob=null){
  if(filmCleanController)filmCleanController.abort();filmLocalSource=null;filmPreparedBlob=null;
  document.querySelector('input[name="film-sound-choice"][value="neural"]').checked=true;
@@ -385,6 +385,7 @@ function updateFilmReview(){
  const kind=selectedSound();
  const method=kind==='neural'?(FILM_MODES.find(x=>x.id===filmMode())?.name||'Нейросеть'):
   kind==='mute'?'Без оригинального звука':'Исходный звук';
+ $('film-review-source').textContent=selected?.title||'Сцена';
  $('film-review-method').textContent=method;
  const duration=Number($('trim-length').value);
  $('film-review-meta').textContent=fmt(duration)+' · '+
@@ -1650,9 +1651,9 @@ $('film-low-memory').onchange=()=>{
  if($('film-low-memory').checked){
   if(Number($('media-resolution').value)>640)$('media-resolution').value='640';
   if(Number($('media-quality').value)>3)$('media-quality').value='3';
-  invalidateMediaResult();
  }
- updateFilmCleaner();
+ // Different memory/encoding settings require a new result.
+ invalidateMediaResult();updateFilmCleaner();
 };
 document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.onchange=()=>{
  if(videoExportBlob)clearExportPreview();
@@ -1683,7 +1684,7 @@ $('review-mute').onclick=()=>{void reviewWithSound('mute')};
 $('review-original').onclick=()=>{void reviewWithSound('original')};
 $('review-change-video').onclick=()=>{
  if(!window.confirm('Выбрать другой исходный файл? Эта сцена останется доступна до выбора нового видео.'))return;
- library();
+ library(true);
 };
 
 $('film-clean-start').onclick=()=>{void prepareSelectedScene()};
@@ -1953,7 +1954,7 @@ for(const b of document.querySelectorAll('[data-back]'))b.onclick=async()=>{
   if(scenePrepareStep==='sound'){setScenePrepStep('trim');return;}
   if(videoExportBlob&&!window.confirm('Выйти из монтажа? Готовый фрагмент не будет использован.'))return;
  }
- const to=b.dataset.back;if(view==='premiere')stopPremiereExport();if(view==='wait'&&mode!=='solo'){sendGame({type:'unready'});await openEditor()}else if(to==='room'&&room){pendingScenePicker=false;roomUI()}else if(to==='home'){if(await resetRuntime()){leaveNetwork();show('home')}}else if(to==='library'){videoExportController?.abort();clearExportPreview();library()}else if(to==='editor')await openEditor()};
+ const to=b.dataset.back;if(view==='premiere')stopPremiereExport();if(view==='wait'&&mode!=='solo'){sendGame({type:'unready'});await openEditor()}else if(to==='room'&&room){pendingScenePicker=false;roomUI()}else if(to==='home'){if(await resetRuntime()){leaveNetwork();show('home')}}else if(to==='library'){videoExportController?.abort();clearExportPreview();library()}else if(to==='trim'){show('trim');setVideoSources('trim-video');setScenePrepStep('review')}else if(to==='editor')await openEditor()};
 $('stage-video').ontimeupdate=()=>{if(!scene)return;const t=time($('stage-video'));if(record&&t>=record.limit-.035)finishRecording();
 else if(t>=scene.duration-.05){if(record)finishRecording();else if(!$('stage-video').paused){stopAllPlayback();seekVideo($('stage-video'),scene.duration-.04)}}if(!record)updateClipSound(t,playing,false);renderPlayhead()};
 $('premiere-video').ontimeupdate=()=>{if(!scene)return;const t=time($('premiere-video'));$('premiere-scrub').value=String(Math.round(t*10));if(t>=scene.duration-.04){pausePremiere();seekVideo($('premiere-video'),scene.duration-.04)}else updateClipSound(t,premiereAB==='dub'&&!$('premiere-video').paused,true)};
