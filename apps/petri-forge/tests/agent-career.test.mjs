@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {DOMAINS,freshCareer,assertCareer,brainId,createCareer,listCareers,writeBrain,readBrain,recordTraining,renameCareer,eraseCareer} from '../agent-career.mjs';
+import {DOMAINS,freshCareer,assertCareer,brainId,createCareer,listCareers,writeBrain,readBrain,recordTraining,renameCareer,eraseCareer,cloneCareer,setCareerArchived} from '../agent-career.mjs';
 import {packCareer,unpackCareer,validatePackage} from '../agent-portability.mjs';
 
 // Minimal asynchronous IndexedDB contract: tests the same repository methods without
@@ -139,4 +139,45 @@ test('renaming and deleting profiles do not lose other agent brains',async()=>{
  assert.equal((await readBrain(renamed,'grid')).q[0][1][0],2);
  await eraseCareer(renamed);
  assert.equal((await readBrain(b,'grid')).q[0][1][0],3);
+});
+
+test('cloning a trained agent produces independent weights and history across reload',async()=>{
+ const parent=await createCareer('Предок','a-specimen-parent');
+ const original=await recordTraining(parent,'grid',
+  {type:'qlearning',version:1,q:[['start',[4,0,0,0,0]]]},{units:100,label:'Выучил маршрут'});
+ const combat={type:'combat-policy',version:1,weights:Array(8).fill(.12)};
+ await writeBrain(original,'combat',combat);
+ const child=await cloneCareer(original);
+ assert.notEqual(child.id,parent.id);
+ assert.equal(child.parentId,parent.id);
+ assert.equal(child.archived,false);
+ assert.equal(child.branches.grid.sessions,1);
+ assert.deepEqual(await readBrain(child,'grid'),await readBrain(original,'grid'));
+ assert.deepEqual(await readBrain(child,'combat'),combat);
+ await writeBrain(child,'grid',{type:'qlearning',version:1,q:[['start',[8,0,0,0,0]]]});
+ assert.equal((await readBrain(original,'grid')).q[0][1][0],4,'parent weights cannot change when child trains');
+ const stored=(await listCareers()).find(c=>c.id===child.id);
+ assert.equal(stored.branches.grid.units,100);
+ assert.equal(stored.parentId,parent.id);
+});
+
+test('archive can be restored without changing any learned brain',async()=>{
+ const c=await createCareer('Архивный','a-archive');
+ await writeBrain(c,'grid',{type:'qlearning',version:1,q:[['s',[7,0,0,0,0]]]});
+ const archived=await setCareerArchived(c,true);
+ assert.equal(archived.archived,true);
+ assert.equal((await listCareers()).find(x=>x.id===c.id).archived,true);
+ assert.equal((await readBrain(archived,'grid')).q[0][1][0],7);
+ const returned=await setCareerArchived(archived,false);
+ assert.equal(returned.archived,false);
+ assert.equal((await readBrain(returned,'grid')).q[0][1][0],7);
+});
+
+test('cloning fails atomically if any model write fails',async()=>{
+ const c=await createCareer('Родитель','a-clone-error');
+ await writeBrain(c,'grid',{type:'qlearning',version:1,q:[['s',[1,0,0,0,0]]]});
+ const count=(await listCareers()).length;
+ failKind='qlearning';
+ try{await assert.rejects(cloneCareer(c));}finally{failKind=null;}
+ assert.equal((await listCareers()).length,count,'failed clone must not leave a partial career');
 });
