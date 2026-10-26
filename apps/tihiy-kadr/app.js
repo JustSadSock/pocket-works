@@ -1,12 +1,12 @@
 import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,suppressStereoCenter,wavPCM16,elapsed,safeName} from './audio-utils.js';
 import {stereoPCM,comparisonMetrics,subtractResidualVocals} from './research-core.js';
-import {ROUTES,routeById,planRoute,planCustom,makeRunKey,calculateSpeed} from './pipeline-config.js';
+import {ROUTES,routeById,planRoute,planCustom,makeRunKey,makeInputKey,calculateSpeed} from './pipeline-config.js';
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
 const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
  (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 let sourceVideo=$('source-video');
 let file=null,fileURL='',audioURL='',length=0,range=null,original=null,stems=null,inferenceTime=0;
-let worker=null,abort=null,serial=0,exporting=false,editTimer=null,mode='clean',fileName='video';
+let worker=null,pendingWorkerReject=null,abort=null,serial=0,exporting=false,editTimer=null,mode='clean',fileName='video';
 let scnetVocals=null,scnetBase=null,scnetTime=0;
 const pipelineRuns=new Map();let customCounter=0;
 const studyResults=new Map();let activeStudy=null,studySurround=null,studySurroundRate=0,studySignature='',studyBusy=false;
@@ -37,7 +37,11 @@ function reset(){
  show('result-details',false);show('empty-state',true);text('result-state','Ожидание обработки');text('export-status','');text('stem-diagnostics','');text('result-position','0:00');$('result-seek').value=0;text('listen-btn','▶ Слушать результат');
 }
 function cancel(){
- serial++;worker?.terminate();worker=null;abort?.abort();abort=null;
+ serial++;
+ abort?.abort();abort=null;
+ // Terminating a Worker alone leaves its pending Promise unresolved.
+ pendingWorkerReject?.(new DOMException('Обработка отменена','AbortError'));
+ worker?.terminate();worker=null;
  studyBusy=false;uiBusy(false);step('Остановлено','Можно обработать файл повторно.');
 }
 function metadata(v){
@@ -164,7 +168,7 @@ function readableModelError(packet){
  const phase=packet.phase==='library'?'подключение библиотеки':
   packet.phase==='model'?'загрузка весов или ONNX WebAssembly':'обработка звука';
  if(/load failed|failed to fetch|fetch failed|networkerror|failed to load/i.test(reason))
-  return 'Сетевой сбой ('+phase+'): не удалось получить компоненты MRX. Проверь интернет, блокировщики контента или VPN и повтори. Техническая причина: '+reason;
+  return 'Сетевой сбой ('+phase+'): не удалось получить компоненты выбранной модели. Проверь интернет, блокировщики контента или VPN и повтори. Техническая причина: '+reason;
  if(/memory|allocation|out of bounds|memory access/i.test(reason))
   return 'Не хватает памяти для нейросети. Выбери режим по 5 секунд и попробуй более короткую сцену. '+reason;
  return 'Нейросеть ('+phase+'): '+reason;
@@ -172,14 +176,17 @@ function readableModelError(packet){
 function separate(channels,chunk,id,kind='mrx',scnetStep=.25){
  return new Promise((resolve,reject)=>{
   const w=new Worker('./mrx-worker.js',{type:'module'});worker=w;
-  w.onerror=e=>{e.preventDefault();w.terminate();if(worker===w)worker=null;reject(Error('Ошибка подключения нейросети: '+(e.message||'скрипт Worker не запустился')+'. Проверь сеть и разрешение доступа к внешним CDN.'))};
-  w.onmessageerror=()=>{w.terminate();if(worker===w)worker=null;reject(Error('Safari не смог передать звуковые данные в Worker. Попробуй более короткий фрагмент.'))};
+  const finish=()=>{w.terminate();if(worker===w)worker=null;if(pendingWorkerReject===rejectPending)pendingWorkerReject=null};
+  const rejectPending=reason=>{finish();reject(reason)};
+  pendingWorkerReject=rejectPending;
+  w.onerror=e=>{e.preventDefault();rejectPending(Error('Ошибка подключения нейросети: '+(e.message||'скрипт Worker не запустился')+'. Проверь сеть и разрешение доступа к внешним CDN.'))};
+  w.onmessageerror=()=>rejectPending(Error('Safari не смог передать звуковые данные в Worker. Попробуй более короткий фрагмент.'));
   w.onmessage=e=>{
    const p=e.data||{};if(p.id!==id)return;
    if(p.stage==='library')step('Подключаем нейросеть',p.detail);
-   if(p.stage==='model')step(kind==='scnet'?'SCNet ищет оставшиеся голоса':'MRX разделяет дорожки',p.detail);
+   if(p.stage==='model')step(kind==='scnet'?'SCNet ищет оставшиеся голоса':kind==='umxhq'?'Open-Unmix ищет вокал':'MRX разделяет дорожки',p.detail);
    if(p.stage==='done'||p.stage==='error'){
-    w.terminate();if(worker===w)worker=null;
+    finish();
     p.stage==='done'?resolve(p):reject(Error(readableModelError(p)));
    }
   };
@@ -203,9 +210,10 @@ function initPlayer(selected){
  $('result-seek').min='0';$('result-seek').max=String(selected.duration);
  $('result-seek').step='.05';$('result-seek').value='0';
 }
-async function modelStage(model,inputId,inputPCM,stepSize,id){
+async function modelStage(model,inputId,inputPCM,stepSize,id,inputKey=inputId){
  const scnetStep=model==='scnet'?stepSize:null;
- const key=makeRunKey(model,inputId,scnetStep);
+ // Cache the exact audio provenance, not a mutable gallery row identifier.
+ const key=makeRunKey(model,inputKey,scnetStep);
  if(pipelineRuns.has(key))return {...pipelineRuns.get(key),cached:true};
  const actualPCM=stereoPCM(inputPCM);
  // SCNet has its own fixed 11-second context windows; keep an outer 20s
@@ -257,14 +265,15 @@ async function executeRoute(routeId=null,custom=null){
    if(!original?.length)throw Error('Не удалось извлечь звук выбранного фрагмента.');
   }
   initPlayer(selected);
-  let inputId='original',inputPCM=original,totalMs=0;
+  let inputId='original',inputKey='original',inputPCM=original,totalMs=0;
   if(!isPreset){
    inputId=custom.input;
    inputPCM=stageAudio(inputId);
-   if(!inputPCM)throw Error('Исходная версия недоступна: выбери другую дорожку.');
+   inputKey=inputId==='original'?'original':studyResults.get(inputId)?.inputKey;
+   if(!inputPCM||!inputKey)throw Error('Исходная версия недоступна: выбери другую дорожку.');
   }
   for(const [i,part] of task.entries()){
-   if(part.input==='original'){inputId='original';inputPCM=original}
+   if(part.input==='original'){inputId='original';inputKey='original';inputPCM=original}
    else if(part.input==='previous'&&!inputPCM)throw Error('Не найден предыдущий результат.');
    const label=part.model==='mrx'?'MRX':part.model==='umxhq'?'Open-Unmix UMX-HQ':'SCNet · окна '+Math.round(part.step*100)+'%';
    step('Этап '+(i+1)+'/'+task.length+' · '+label,
@@ -276,11 +285,12 @@ async function executeRoute(routeId=null,custom=null){
      '. Нажми «Прервать», если обработка слишком долгая.');
    },1000);
    let run;
-   try{run=await modelStage(part.model,inputId,inputPCM,part.step??null,id)}
+   try{run=await modelStage(part.model,inputId,inputPCM,part.step??null,id,inputKey)}
    finally{clearInterval(tick)}
    if(controller.signal.aborted||id!==serial)return;
    totalMs+=run.timeMs;if(run.cached)cacheHits++;else freshMs+=run.timeMs;
    inputPCM=run.clean;
+   inputKey=run.key;
    preview=run;
    if(part.model==='mrx'&&inputId==='original'&&!studyResults.has('mrx')){
     registerStudyResult('mrx',run.clean,run.timeMs,
@@ -529,7 +539,8 @@ function registerStudyResult(id,clean,processingMs=null,{source='local',label=nu
   const old=[...studyResults.keys()].find(k=>k!=='mrx'&&k!==activeStudy)||[...studyResults.keys()][0];
   if(old)studyResults.delete(old);
  }
- studyResults.set(id,{id,label:label||routeById(id)?.label||id,source,clean:normalized,
+ const inputKey=meta.runKey?makeInputKey(meta.runKey,meta.vocals?(meta.strength??.8):null):id;
+ studyResults.set(id,{id,inputKey,label:label||routeById(id)?.label||id,source,clean:normalized,
   timeMs,metrics,timing,meta});
  renderStudyResults();
  $('study-csv').disabled=!studyResults.size;
@@ -584,6 +595,9 @@ async function selectStudyResult(id,rebuild=true){
  scnetTime=0;
  show('scnet-tuning',vocal);
  text('vocal-strength-label',item.meta?.model==='umxhq'?'Удаление вокала Open-Unmix':'Удаление голосов SCNet');
+ text('vocal-warning',item.meta?.model==='umxhq'?
+  'Open-Unmix обучалась на музыкальном вокале: может затронуть музыку и эффекты. Силу можно менять без нового инференса.':
+  'SCNet обучалась на музыкальном вокале: может затронуть музыку и эффекты. Силу можно менять без нового инференса.');
  if(vocal){
   $('scnet-strength').value=String(Math.round((item.meta.strength??.8)*100));
   text('scnet-strength-value',$('scnet-strength').value+'%');
@@ -632,7 +646,7 @@ $('study-csv').onclick=()=>{
   item.metrics.changeDb,item.metrics.peakDb.toFixed(2),item.meta?.input||'',item.meta?.step??''
  ]);
  download(new Blob(['\uFEFF'+rows.map(row=>row.map(q).join(',')).join('\r\n')],{
-  type:'text/csv;charset=utf-8'}),fileName+'-five-routes.csv');
+  type:'text/csv;charset=utf-8'}),fileName+'-seven-routes.csv');
 };
 renderStudyResults();
 
