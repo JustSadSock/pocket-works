@@ -82,6 +82,6 @@ test('trim is mandatory before audio, with distinct neural, mute and original ou
  assert.match(app,/setScenePrepStep\('sound'\);return/);
  assert.match(app,/selectedSound\(\)==='neural'\?await prepareFilmScene\(\):await processMedia\(\)/);
  assert.match(app,/keepAudio:selectedSound\(\)==='original'/);
- assert.match(app,/const cleaned=selectedSound\(\)!=='original'/);
+ assert.match(app,/const cleaned=selectedSound\(\)==='neural'/);
  assert.match(html,/id="film-cleaner" class="film-cleaner hidden"/);
 });
