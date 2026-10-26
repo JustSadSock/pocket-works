@@ -400,6 +400,7 @@ function clearStudy(){
  $('study-effects-file').value='';$('study-external-seconds').value='';
  $('study-surround-options').classList.add('hidden');
  text('study-surround-status','5.1/7.1 WAV можно загрузить отдельно, не отправляя на сервер.');
+ $('study-csv').disabled=true;
  text('study-import-status','');text('study-active-status','Для сравнения используй один и тот же фрагмент.');
  renderStudyResults();
 }
@@ -447,6 +448,12 @@ function registerStudyResult(id,clean,processingMs=null,{source='external',label
  const metrics=comparisonMetrics(stereoPCM(original),normalized,RATE);
  const elapsedMs=processingMs===null?null:Number(processingMs);
  const timing=elapsedMs===null?null:comparisonRecord(id,range.duration,elapsedMs,metrics);
+ // Keep the mobile memory budget predictable for 90-second float32 stems.
+ if(!studyResults.has(id)&&studyResults.size>=(mobile?3:7)){
+  const evict=[...studyResults.keys()].find(key=>key!=='mrx'&&key!==activeStudy)
+   ||[...studyResults.keys()].find(key=>key!==activeStudy);
+  if(evict)studyResults.delete(evict);
+ }
  studyResults.set(id,{id,label:label||researchMethod(id).name,source,clean:normalized,
   timeMs:elapsedMs,metrics,timing});
  renderStudyResults();
