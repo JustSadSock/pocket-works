@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DOMAINS,freshCareer,assertCareer,brainId,createCareer,listCareers,writeBrain,readBrain,recordTraining,renameCareer,eraseCareer} from '../agent-career.mjs';
+import {packCareer,unpackCareer,validatePackage} from '../agent-portability.mjs';
 
 // Minimal asynchronous IndexedDB contract: tests the same repository methods without
 // requiring a browser or an external fake-indexeddb dependency.
-const memory=new Map();let opened=false;
+const memory=new Map();let opened=false,failId=null,failKind=null;
 globalThis.indexedDB={
  open(){
   const request={result:null};
@@ -12,22 +13,41 @@ globalThis.indexedDB={
    request.result={
     createObjectStore(){opened=true;},
     close(){},
-    transaction(){
-     const tx={error:null};
-     const call=fn=>{
-      const req={result:undefined};
+    transaction(_store,mode){
+     const staged=new Map([...memory].map(([k,v])=>[k,structuredClone(v)]));
+     let pending=0,aborted=false,completeScheduled=false;
+     const tx={
+      error:null,
+      abort(){if(aborted)return;aborted=true;queueMicrotask(()=>tx.onabort?.());},
+      objectStore:()=>({
+       get:key=>call(()=>structuredClone(staged.get(key))),
+       getAll:()=>call(()=>[...staged.values()].map(x=>structuredClone(x))),
+       put:record=>call(()=>{
+        if(record.id===failId||record.kind===failKind)throw Error('Injected disk failure');
+        staged.set(record.id,structuredClone(record));return record.id;
+       }),
+       delete:key=>call(()=>{staged.delete(key);})
+      })
+     };
+     const settle=()=>{
+      if(pending||aborted||completeScheduled)return;
+      completeScheduled=true;
       queueMicrotask(()=>{
-       try{req.result=fn();req.onsuccess?.();tx.oncomplete?.();}
-       catch(e){tx.error=e;tx.onerror?.();}
+       if(pending||aborted)return;
+       if(mode==='readwrite'){memory.clear();for(const [k,v] of staged)memory.set(k,v);}
+       tx.oncomplete?.();
+      });
+     };
+     const call=fn=>{
+      const req={result:undefined};pending++;
+      queueMicrotask(()=>{
+       if(aborted)return;
+       try{req.result=fn();req.onsuccess?.();}
+       catch(e){tx.error=e;aborted=true;tx.onabort?.();return;}
+       pending--;settle();
       });
       return req;
      };
-     tx.objectStore=()=>({
-      get:key=>call(()=>memory.get(key)),
-      getAll:()=>call(()=>[...memory.values()]),
-      put:record=>call(()=>{memory.set(record.id,structuredClone(record));return record.id;}),
-      delete:key=>call(()=>{memory.delete(key);return undefined;})
-     });
      return tx;
     }
    };
@@ -78,4 +98,45 @@ test('repeated training updates a stable model slot, not detached models',async(
  assert.equal(memory.has('career-v1:a-repeat:grid'),true);
  assert.equal(memory.size,[...memory.keys()].length);
  assert.equal((await listCareers()).find(x=>x.id===a.id).branches.grid.units,1200);
+});
+test('profile and brain changes are atomic if IndexedDB aborts a write',async()=>{
+ const c=await createCareer('Транзакция','a-atomic');
+ const before={type:'qlearning',version:1,q:[['start',[1,0,0,0,0]]]};
+ await writeBrain(c,'grid',before);
+ failId='career:'+c.id;
+ try{
+  await assert.rejects(recordTraining(c,'grid',{type:'qlearning',version:1,q:[['start',[9,0,0,0,0]]]},{units:99}));
+ }finally{failId=null;}
+ assert.deepEqual(await readBrain(c,'grid'),before,'failed profile write must roll back brain update');
+ const stored=(await listCareers()).find(x=>x.id===c.id);
+ assert.equal(stored.branches.grid.sessions,0,'failed transaction must not increment history');
+ assert.equal(stored.branches.grid.units,0);
+});
+
+test('career import is all-or-nothing and never creates an orphan profile',async()=>{
+ const source=await createCareer('Экспорт','a-export');
+ const trained=await recordTraining(source,'grid',{type:'qlearning',version:1,q:[['start',[1,0,0,0,0]]]},{units:10});
+ const pkg=await packCareer(trained);
+ const count=(await listCareers()).length;
+ failKind='qlearning';
+ try{await assert.rejects(unpackCareer(pkg),/Импорт отменён/);}
+ finally{failKind=null;}
+ assert.equal((await listCareers()).length,count,'failed import must not leave a profile behind');
+ const restored=await unpackCareer(pkg);
+ assert.notEqual(restored.id,source.id);
+ assert.equal(restored.branches.grid.sessions,1);
+ assert.deepEqual(await readBrain(restored,'grid'),pkg.brains.grid);
+ assert.equal((await listCareers()).length,count+1);
+ assert.throws(()=>validatePackage({...pkg,brains:{...pkg.brains,grid:{type:'unknown'}}}),/Несовместимый мозг/);
+});
+
+test('renaming and deleting profiles do not lose other agent brains',async()=>{
+ const a=await createCareer('Три','a-safe-rename'),b=await createCareer('Четыре','a-safe-peer');
+ await writeBrain(a,'grid',{type:'qlearning',version:1,q:[['s',[2,0,0,0,0]]]});
+ await writeBrain(b,'grid',{type:'qlearning',version:1,q:[['p',[3,0,0,0,0]]]});
+ const renamed=await renameCareer(a,'Переименован');
+ assert.equal(renamed.name,'Переименован');
+ assert.equal((await readBrain(renamed,'grid')).q[0][1][0],2);
+ await eraseCareer(renamed);
+ assert.equal((await readBrain(b,'grid')).q[0][1][0],3);
 });
