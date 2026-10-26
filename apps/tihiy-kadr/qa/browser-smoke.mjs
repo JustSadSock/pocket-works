@@ -160,6 +160,19 @@ try{
  assert.match((await csv).suggestedFilename(),/five-routes\.csv$/);
  assert.equal(await page.locator('#study-csv').isEnabled(),true);
  console.log('Browser real pipelines: MRX, fast SCNet, balanced SCNet, custom MRX, direct SCNet; first fast time:',fastTime);
+ // Third independent ONNX model, not a parameter change to SCNet:
+ await page.locator('#quality-mode').selectOption('umxhq-direct');
+ await page.locator('#process-btn').click();
+ await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('Open-Unmix · оригинал'),null,{timeout:120000});
+ assert((await page.locator('#study-results .study-choice').count())>=6);
+ const umxWav=page.waitForEvent('download',{timeout:25000});
+ await page.locator('#wav-btn').click();
+ assert.match((await umxWav).suggestedFilename(),/no-dialogue\\.wav$/);
+ // Reuse cached MRX, then run an actual UMX-HQ on its cleaned track.
+ await page.locator('#quality-mode').selectOption('mrx-umxhq');
+ await page.locator('#process-btn').click();
+ await page.waitForFunction(()=>document.querySelector('#result-state').textContent.includes('MRX → Open-Unmix'),null,{timeout:120000});
+ assert((await page.locator('#study-results .study-choice').count())>=7);
  assert.deepEqual(runtimeErrors,[]);
  console.log('Real Chromium MRX preview, speech, M&E exports verified:',await page.locator('#inference-time').innerText());
 }finally{await browser.close();await new Promise(r=>server.close(r))}
