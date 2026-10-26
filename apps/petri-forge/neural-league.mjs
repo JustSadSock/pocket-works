@@ -92,7 +92,7 @@ export class NeuralCombatLeague {
   const spec=this.chooseOpponent(this.completed);
   const opponent=spec.snapshot?frozenPolicy(spec.snapshot,this.options.seed+93+this.completed):null;
   const o=this.options;
-  const result=battleNeuralEpisode({role:o.role,enemyRole:o.enemyRole,arena:spec.arena,
+  const result=battleNeuralEpisode({role:o.role,enemyRole:spec.snapshot?o.role:o.enemyRole,arena:spec.arena,
    seed:spec.seed,side:spec.side,policy:this.policy,opponent,learn:this.trainer,maxSeconds:18});
   this.completed++;this.wins+=Number(result.won);this.damage+=result.damage;
   const record={episode:this.completed,arena:spec.arena,opponent:spec.opponent,
@@ -119,6 +119,6 @@ export class NeuralCombatLeague {
    protocol:{generationSize:LEAGUE_GENERATION_SIZE,
     archivesAreFrozen:true,trainingArenas:'open, cover, hazards',
     validation:'6 frozen games on 3 arenas with fixed, non-training seeds',
-    note:'A small holdout is illustrative, not proof of statistically significant improvement.'}};
+    note:'Frozen archive opponents mirror the learner class. Baseline enemies use the selected role; six holdout games are illustrative, not proof of significant improvement.'}};
  }
 }
