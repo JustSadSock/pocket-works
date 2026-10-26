@@ -505,8 +505,9 @@ async function selectStudyResult(id,rebuild=true){
  text('inference-time',item.timeMs===null?'—':elapsed(item.timeMs/1000));
  text('speed-factor',item.timing?item.timing.realTimeFactor.toFixed(2)+'× RTF':'—');
  text('scene-length',elapsed(range.duration));
- text('stem-diagnostics',isMRX
-  ?'MRX: отдельные речь, музыка и эффекты. При A/B убедись, что голос не попал в эффекты.'
+ const levels=isMRX?stemLevels(original,stems):null;
+ text('stem-diagnostics',isMRX&&levels
+  ?'Выделенная речь: '+levels.dialogueRelativeDb.toFixed(1)+' дБ относительно оригинала. Это уровень выделенной дорожки, а не показатель качества разделения.'
   :'Внешний/канальный M&E: «Удалённая часть» = исходник − результат, не обязательно чистая речь.');
  text('study-active-status','Активный метод: '+item.label+
   '. Прослушивание и кнопки скачивания выше используют именно его результат.');
