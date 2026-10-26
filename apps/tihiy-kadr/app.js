@@ -214,7 +214,14 @@ async function modelStage(model,inputId,inputPCM,stepSize,id,inputKey=inputId){
  const scnetStep=model==='scnet'?stepSize:null;
  // Cache the exact audio provenance, not a mutable gallery row identifier.
  const key=makeRunKey(model,inputKey,scnetStep);
- if(pipelineRuns.has(key))return {...pipelineRuns.get(key),cached:true};
+ if(pipelineRuns.has(key)){
+  const cached=pipelineRuns.get(key);
+  if(model==='mrx')return {...cached,cached:true};
+  // ONNX vocals are reusable, but the audible mix depends on the CURRENT
+  // strength. Rebuild PCM without running the model a second time.
+  const strength=Number($('scnet-strength').value)/100;
+  return {...cached,clean:subtractResidualVocals(cached.base,cached.vocals,strength),strength,cached:true};
+ }
  const actualPCM=stereoPCM(inputPCM);
  // SCNet has its own fixed 11-second context windows; keep an outer 20s
  // chunk on desktop or the 'step' choice is masked by 5-10s outer chunks.
@@ -230,8 +237,9 @@ async function modelStage(model,inputId,inputPCM,stepSize,id,inputKey=inputId){
   if(inputId==='original'){stems=response.stems;inferenceTime=response.seconds}
  }else{
   const vocals=response.stems.vocals;
-  const clean=subtractResidualVocals(actualPCM,vocals,Number($('scnet-strength').value)/100);
-  run={model,key,clean,vocals,base:actualPCM,timeMs:response.seconds*1000,step:scnetStep};
+  const strength=Number($('scnet-strength').value)/100;
+  const clean=subtractResidualVocals(actualPCM,vocals,strength);
+  run={model,key,clean,vocals,base:actualPCM,strength,timeMs:response.seconds*1000,step:scnetStep};
  }
  pipelineRuns.set(key,run);
  if(pipelineRuns.size>(mobile?5:12)){
@@ -311,7 +319,7 @@ async function executeRoute(routeId=null,custom=null){
    source:'local',label:display,
    meta:{model:preview.model,input:!isPreset?custom.input:task[0].input,
     step:preview.step,runKey:preview.key,
-    vocals:preview.vocals,base:preview.base,spentMs:freshMs,cached:cacheHits,route:routeId}
+    vocals:preview.vocals,base:preview.base,strength:preview.strength,spentMs:freshMs,cached:cacheHits,route:routeId}
   });
   await selectStudyResult(targetId);
   step('Готово',cacheHits?'Повторно использовано этапов: '+cacheHits+'.':'Новый результат готов.',1);
