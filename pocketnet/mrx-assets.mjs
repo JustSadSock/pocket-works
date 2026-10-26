@@ -10,6 +10,9 @@ const MODEL_PREFIX='/ai-assets/mrx-v1/mrx/';
 const SCNET_PREFIX='/ai-assets/scnet-v1/scnet/';
 const SCNET_BYTES=12900277;
 const SCNET_SHA256='98228931494151762a1c4ab1ec7899a894b1f81fd4a509921a9d2f9bacc50845';
+const UMX_PREFIX='/ai-assets/umxhq-v1/';
+const UMX_BYTES=17820856;
+const UMX_SHA256='3d05709ff7197bbd4a33aee759e4e82002acb491f41c94770227ab57507b6ccb';
 const ORT_PREFIX='/ai-assets/ort-1.30.0/';
 const ORT_FILE=/^ort-wasm-[a-z0-9.-]+\.(?:wasm|mjs)$/;
 const ORT_HOSTS=[
@@ -17,6 +20,10 @@ const ORT_HOSTS=[
  'https://unpkg.com/onnxruntime-web@1.30.0/dist/'
 ];
 export function assetSource(pathname){
+ if(pathname===UMX_PREFIX+'vocals.onnx')return {
+  kind:'model',size:UMX_BYTES,sha256:UMX_SHA256,
+  urls:['https://huggingface.co/edgetools/umx-hq/resolve/main/vocals.onnx']
+ };
  if(pathname===SCNET_PREFIX+'scnet.int8.onnx')return {
   kind:'model',size:SCNET_BYTES,sha256:SCNET_SHA256,
   urls:['https://huggingface.co/audiojs/scnet/resolve/e71bcdb/scnet.int8.onnx']
