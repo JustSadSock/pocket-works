@@ -535,6 +535,7 @@ function exportBusy(busy){
   $('trim-range-handle-end').disabled=busy;
   updateConfirmAction();
   $('media-progress').classList.toggle('hidden',!busy);
+  updateFilmCleaner();
 }
 async function processMedia(){
   if(videoExportController||!selected?.custom||!(sourceBlob instanceof Blob))return;
