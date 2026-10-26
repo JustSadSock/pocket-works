@@ -60,8 +60,9 @@ try{
   });
   await page.locator('#solo-btn').click();
   await page.locator('[data-scene="wing-launch"]').click();
-  await page.locator('#film-skip').check(); // Visual/editor test uses a remote film with no AI source.
   await page.locator('#confirm-scene').click();
+   await page.locator('input[name="film-sound-choice"][value="original"]').check();
+   await page.locator('#confirm-scene').click();
   await page.locator('#screen-editor:not(.hidden)').waitFor();
   assert.equal(await page.locator('.clip-bar').count(),2,'restores initial clips');
   assert.equal(await page.locator('#draft-status').getAttribute('data-save-state'),'saved','draft status reflects restored editor');
@@ -270,16 +271,18 @@ try{
   await page.locator('#editor-leave').click();
   await page.locator('#screen-library:not(.hidden)').waitFor();
   await page.locator('[data-scene="wing-launch"]').click();
-  await page.locator('#film-skip').check(); // Visual/editor test uses a remote film with no AI source.
   await page.locator('#confirm-scene').click();
+   await page.locator('input[name="film-sound-choice"][value="original"]').check();
+   await page.locator('#confirm-scene').click();
   await page.locator('#screen-editor:not(.hidden)').waitFor();
   assert.equal(await page.locator('.clip-bar').count(),1,'draft survives navigation');
   assert.equal(await page.locator('#undo-btn').isEnabled(),true,'history survives navigation');
   await page.reload({waitUntil:'domcontentloaded'});
   await page.locator('#solo-btn').click();
   await page.locator('[data-scene="wing-launch"]').click();
-  await page.locator('#film-skip').check(); // Visual/editor test uses a remote film with no AI source.
   await page.locator('#confirm-scene').click();
+   await page.locator('input[name="film-sound-choice"][value="original"]').check();
+   await page.locator('#confirm-scene').click();
   await page.locator('#screen-editor:not(.hidden)').waitFor();
   assert.equal(await page.locator('.clip-bar').count(),1,'draft survives full reload');
   assert.equal(await page.locator('#undo-btn').isEnabled(),true,'undo stack survives reload');
