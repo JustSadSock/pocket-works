@@ -1,5 +1,6 @@
 // The experiment panel is deliberately separate from career training:
 // benchmarking uses fresh, temporary brains and never mutates an agent profile.
+import {showWorkbenchDialog} from './ui-navigation.mjs';
 const STORAGE='pocket-works:petri-forge:benchmark:last';
 const NAMES={qlearning:'Q-learning',neural:'Actor–Critic',ppo:'PPO-Clip'};
 const fmtRate=value=>(100*value).toFixed(1)+'%';
@@ -93,7 +94,7 @@ export function mountLearningBenchmark(api){
  function cleanWorker(){
   worker?.terminate();worker=null;lock(false);
  }
- $('cpBenchmark').onclick=()=>{$('cpBenchmarkDialog').showModal();};
+ $('cpBenchmark').onclick=()=>{showWorkbenchDialog($('cpBenchmarkDialog'));};
  $('cpBenchClose').onclick=()=>$('cpBenchmarkDialog').close();
  $('cpBenchStart').onclick=()=>{
   if(busy)return;
