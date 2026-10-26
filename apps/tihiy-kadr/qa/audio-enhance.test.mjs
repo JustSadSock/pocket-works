@@ -65,7 +65,7 @@ test('experiment UI exposes genuine switches and cached DSP, not fake Wiener set
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(html,/id="repair-noise"[^>]*checked/);
- assert.match(html,/id="repair-texture"[^>]*checked/);
+ assert.doesNotMatch(html,/id="repair-texture"[^>]*checked/);
  assert.match(html,/<details class="legacy-filters"/);
  assert.doesNotMatch(html,/id="enhance-spectral"[^>]*checked/);
  assert.match(html,/id="enhance-center"[^>]*disabled/);
