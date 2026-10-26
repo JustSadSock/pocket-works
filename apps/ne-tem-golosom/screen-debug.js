@@ -32,7 +32,7 @@ const PREVIEW_CSS=[
  '.debug-fixture-screen .clip-bar{box-sizing:border-box}',
  '.debug-fixture-screen .voice-effects{display:block!important}'
 ].join('\n');
-let overlay=null,frame=null,active='home',device='desktop',restoreFocus=null;
+let overlay=null,frame=null,active='home',device='desktop',restoreFocus=null,interactive=false;
 const byId=(root,id)=>root.querySelector('[id="'+id+'"]');
 function content(root,id,html){
  const el=byId(root,id);if(el)el.innerHTML=html;
@@ -139,6 +139,14 @@ function decorate(root,page){
  }
 }
 function preview(page){
+ if(interactive){
+  frame.removeAttribute('sandbox');frame.removeAttribute('srcdoc');
+  const url=new URL(location.pathname,location.href);
+  url.searchParams.set('debug','play');url.searchParams.set('screen',page.id);
+  frame.src=url.href;
+  return;
+ }
+ frame.setAttribute('sandbox','');frame.removeAttribute('src');
  const source=document.getElementById('screen-'+page.screen);
  if(!source||!frame)return;
  const clone=source.cloneNode(true);
