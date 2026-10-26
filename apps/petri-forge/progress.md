@@ -73,3 +73,12 @@ Next: resolve live-browser regressions, measure Shpilka parity/performance on re
 - Added headless unit tests for learned-prior transfer and real dual-sided fights and Playwright workflows for field-centric layout, settings, identity export/import, peer duels, and mobile viewports. Existing browser QA adapted to the new focused/advanced navigation.
 - Verification done in this chat: source syntax/DOM/cache checks, native Combat Forge duel V8 test (2 legs, 350 frames in first leg), round-trip export/import retaining separate identities and brain contents, learned-grid-to-combat valid policy, and explicit Worker load acknowledgment wiring. **Actual Playwright/browser/visual mobile test run remains unperformed** because a browser/test runner is not available in this container.
 - Remaining priorities: live mobile visual acceptance, advanced training effectiveness, richer shared multi-task representations and tournaments beyond 2-agent duels.
+
+
+2026-10-26 — **PetriForge 0.8.2 / neural roadmap stage 1 (reliability)**:
+- Perekos runtime is now registered on initial load, not only when showing a replay; empty replays preserve idle rendering and actual replay frames remain visible. A failed worker now rejects any pending model-load handshake.
+- Agent model store supports atomic IndexedDB transactions over multiple writes/deletes. Training checkpoints and their session histories, profile rename metadata, deletion, and full career imports use a single batch rather than partially completed writes.
+- Failed package imports never leave an incomplete new agent behind. Existing career-v1 IDs, 0.8.x schemas, standalone model libraries and JSON package format remain supported.
+- Agent switching commits its selected identity only after its stored brain successfully loads; old identity remains selected if restore fails.
+- New Node regression covers injected IndexedDB transaction failures, partial-import rollback, rename/delete safety. Browser coverage includes first-open Perekos runtime and switching agents, along with existing training/reload/duel journeys.
+- CI runs on PRs and main, with all PetriForge Node unit tests and a wider Chromium Playwright suite. Local browser smoke and hardware/WebKit checks remain subject to CI results; do not interpret these changes as completion of future PPO/NEAT phases.
