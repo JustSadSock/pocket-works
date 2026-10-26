@@ -103,3 +103,19 @@
 .legacy-filters[open]{padding-bottom:4px}
 .enhancement-lab #repair-note{margin:9px 0 4px;font-size:11px;line-height:1.45}
 .enhancement-lab #repair-off-all{min-height:38px}
+
+/* Targeted SCNet is a separate opt-in second inference, not a default
+   postprocessing toggle. Transparent costs and measured regions are visible. */
+.target-scnet-panel{margin-top:14px;padding:14px 14px 10px;border:1px solid #b1a38b;background:#e9e3d7}
+.target-scnet-panel.hidden{display:none}
+.target-scnet-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.target-scnet-head h3{font-size:14px;letter-spacing:-.025em;margin:0}
+.target-scnet-head span{font-size:10px;color:#796a50;font-weight:700;white-space:nowrap}
+.target-scnet-panel .hint{font-size:11px;line-height:1.5;margin:9px 0}
+.target-scnet-actions{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;margin:12px 0 4px}
+.target-scnet-actions label{display:grid;gap:5px;flex:1 1 160px;font-size:11px;font-weight:700}
+.target-scnet-actions select{min-height:38px;width:100%;border:1px solid var(--line);padding:6px;background:#f7f4ef;color:var(--ink)}
+.target-scnet-actions button{min-height:38px;flex:1 1 180px;padding:8px;font-size:12px}
+.target-scnet-ab{margin-top:8px}
+.target-scnet-panel #target-scnet-status{font-variant-numeric:tabular-nums}
+@media(max-width:440px){.target-scnet-panel{padding:11px}.target-scnet-head span{font-size:9px}}
