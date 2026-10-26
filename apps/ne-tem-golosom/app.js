@@ -599,11 +599,11 @@ function updateConfirmAction(){
 }
 function invalidateMediaResult(){if(videoExportBlob)clearExportPreview();updateMediaLab()}
 function updateMediaLab(){
-  const active=!!selected?.custom&&sourceBlob instanceof Blob;
+  const active=scenePrepareStep==='sound'&&!!selected?.custom&&sourceBlob instanceof Blob;
   $('media-workbench').classList.toggle('hidden',!active);
   if(!active){if(!filmPreparedBlob)clearExportPreview();updateConfirmAction();return}
   const length=Math.max(0,Number($('trim-length').value)||0);
-  const keepAudio=$('media-keep-audio').checked;
+  const keepAudio=selectedSound()==='original';
   const plan=planVideoPreparation({size:sourceBlob.size,mode});
   const size=estimateVideoBytes(length,Number($('media-quality').value),keepAudio);
   $('media-source-size').textContent='Исходник · '+formatVideoBytes(sourceBlob.size);
@@ -628,7 +628,8 @@ function updateMediaLab(){
 function exportBusy(busy){
   $('media-render').disabled=busy||!supportsVideoExport();
   $('confirm-scene').disabled=busy;
-  for(const id of ['media-quality','media-resolution','media-keep-audio'])$(id).disabled=busy;
+  for(const id of ['media-quality','media-resolution'])$(id).disabled=busy;
+  document.querySelectorAll('input[name="film-sound-choice"]').forEach(x=>x.disabled=busy);
   $('trim-range-root').classList.toggle('range-locked',busy);
   $('trim-mark-start').disabled=busy;$('trim-mark-end').disabled=busy;
   $('trim-range-handle-start').disabled=busy;
@@ -638,14 +639,16 @@ function exportBusy(busy){
   updateFilmCleaner();
 }
 async function processMedia(){
-  if(videoExportController||!selected?.custom||!(sourceBlob instanceof Blob))return;
+  if(videoExportController||filmCleanController||!selected||scenePrepareStep!=='sound')return false;
+  if(selectedSound()==='neural')return prepareFilmScene();
   const start=Number($('trim-start').value),duration=Number($('trim-length').value);
-  if(!Number.isFinite(start)||start<0||!Number.isFinite(duration)||duration<10||duration>90)
-    return toast('Выбери отрывок от 10 до 90 секунд.');
+  if(!Number.isFinite(start)||start<0||!Number.isFinite(duration)||duration<10||duration>90){
+    toast('Выбери отрывок от 10 до 90 секунд.');return false;
+  }
   const total=$('trim-video').duration;
-  if(Number.isFinite(total)&&start+duration>total+.1)return toast('Отрывок выходит за пределы видео.');
+  if(Number.isFinite(total)&&start+duration>total+.1){toast('Отрывок выходит за пределы видео.');return false;}
   const settings={start,duration,width:Number($('media-resolution').value),
-    level:Number($('media-quality').value),keepAudio:$('media-keep-audio').checked};
+    level:Number($('media-quality').value),keepAudio:selectedSound()==='original'};
   const key=mediaSettingsKey(settings);
   if(encodedCache?.source===sourceBlob&&encodedCache.key===key){
     clearExportPreview();
@@ -661,7 +664,7 @@ async function processMedia(){
     $('media-note').textContent='Готовый фрагмент взят из памяти — повторное сжатие не требуется.';
     updateMediaLab();
     cue('ready');
-    return;
+    return true;
   }
   clearExportPreview();
   const controller=new AbortController();
@@ -672,8 +675,26 @@ async function processMedia(){
   $('media-progress-label').textContent='Подготовка видео · 0%';
   $('media-progress-help').textContent='Обработка идёт во время воспроизведения. Не закрывай экран.';
   try{
-    const result=await exportVideo({blob:sourceBlob,start,duration,width:Number($('media-resolution').value),
-      level:Number($('media-quality').value),keepAudio:$('media-keep-audio').checked,
+    let blob=sourceBlob||filmLocalSource;
+    if(!blob){
+      const src=sceneSource(selected);
+      if(!src)throw Error('Видео для подготовки не найдено.');
+      $('media-progress-label').textContent='Загружаем видео для выбранного отрывка…';
+      try{
+       const response=await fetch(src,{signal:controller.signal});
+       if(!response.ok)throw Error('HTTP '+response.status);
+       const limit=Number(response.headers.get('content-length'));
+       if(limit>MAX_SOURCE_VIDEO_BYTES)throw Error('Встроенное видео больше 512 МиБ.');
+       blob=await response.blob();
+      }catch(e){
+       if(controller.signal.aborted)throw e;
+       $('film-local-fallback').classList.remove('hidden');
+       throw Error('Не удалось открыть встроенное видео. Выбери локальную копию ниже. '+(e.message||''));
+      }
+    }
+    if(!(blob instanceof Blob)||blob.size>MAX_SOURCE_VIDEO_BYTES)throw Error('Видео должно быть не больше 512 МиБ.');
+    const result=await exportVideo({blob,start,duration,width:Number($('media-resolution').value),
+      level:Number($('media-quality').value),keepAudio:selectedSound()==='original',
       signal:controller.signal,
       onProgress:progress=>{
         const pct=progress>=1?100:Math.min(99,Math.round(progress*100));
@@ -689,7 +710,7 @@ async function processMedia(){
       }});
     if(controller.signal.aborted)return;
     videoExportBlob=result;
-    if(result.size<=MAX_ROOM_VIDEO_BYTES)
+    if(sourceBlob&&result.size<=MAX_ROOM_VIDEO_BYTES)
       encodedCache={source:sourceBlob,key,blob:result};
     videoExportUrl=URL.createObjectURL(result);
     $('media-output-preview').src=videoExportUrl;
@@ -704,10 +725,11 @@ async function processMedia(){
     $('media-note').textContent=result.size>MAX_ROOM_VIDEO_BYTES&&mode==='host'
       ? 'Файл всё ещё слишком большой. Уменьши качество или разрешение и повтори.'
       : 'Обработано за '+fmt(Math.round((performance.now()-startedAt)/1000))+'. Сравни качество и нажми «Использовать и продолжить».';
-    cue('ready');
+    cue('ready');return true;
   }catch(e){
     if(e?.name!=='AbortError')toast(e?.message||'Не получилось обработать видео.');
     $('media-note').textContent=e?.name==='AbortError'?'Обработка отменена. Исходное видео не изменилось.':'Исходное видео сохранено. Попробуй другие параметры.';
+    return false;
   }finally{
     videoExportController=null;exportBusy(false);updateMediaLab();
   }
@@ -715,12 +737,12 @@ async function processMedia(){
 function acceptMedia(){
   if(!(videoExportBlob instanceof Blob)||videoExportController)return false;
   if(mode==='host'&&videoExportBlob.size>MAX_ROOM_VIDEO_BYTES){toast('Нужно уменьшить размер до 96 МиБ.');return false}
-  const cleaned=videoExportBlob===filmPreparedBlob;
+  const cleaned=selectedSound()!=='original';
   const length=Number($('trim-length').value),type=videoExportBlob.type;
   const extension=type.includes('mp4')?'mp4':'webm';
   sourceBlob=new File([videoExportBlob],(selected.title||'scene')+'-cut.'+extension,{type});
   selected.custom=true;
-  if(cleaned){selected.id='clean-'+uid();selected.cleaned=true;}
+  selected.id=(cleaned?'clean-':'cut-')+uid();selected.cleaned=cleaned;
   encodedCache=null;
   selected.start=0;selected.duration=length;selected.totalDuration=length;
   scene={...selected,start:0,duration:length};
