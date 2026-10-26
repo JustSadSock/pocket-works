@@ -32,7 +32,7 @@ function table(v,b,word=4){
   return u32(v,at);
  });
 }
-async function metadata(blob,signal){
+async function metadata(blob,signal,diagnostics=[]){
  let moov=null;
  for(let at=0;at<blob.size;){
   if(signal?.aborted)throw new DOMException('Обработка отменена','AbortError');
@@ -49,15 +49,16 @@ async function metadata(blob,signal){
   }
   at+=size;
  }
- if(!moov)return null;
+ if(!moov){diagnostics.push('no-moov');return null}
  const root=boxes(moov).find(x=>x.type==='moov');
- if(!root)return null;
+ if(!root){diagnostics.push('bad-moov');return null}
  for(const trak of boxes(moov,root.body,root.end).filter(x=>x.type==='trak')){
   const mdia=child(moov,trak,'mdia'),hdlr=mdia&&child(moov,mdia,'hdlr');
   if(!hdlr||str(moov,hdlr.body+8)!=='soun')continue;
+  diagnostics.push('audio-track');
   const mdhd=child(moov,mdia,'mdhd'),minf=child(moov,mdia,'minf'),
    stbl=minf&&child(moov,minf,'stbl');
-  if(!mdhd||!stbl)continue;
+  if(!mdhd||!stbl){diagnostics.push('no-stbl');continue}
   const version=moov.getUint8(mdhd.body);
   const timescale=u32(moov,mdhd.body+(version===1?20:12));
   if(timescale<1)continue;
@@ -65,14 +66,14 @@ async function metadata(blob,signal){
    stsc=child(moov,stbl,'stsc'),stts=child(moov,stbl,'stts');
   const offsets=table(moov,child(moov,stbl,'stco'))||
    table(moov,child(moov,stbl,'co64'),8);
-  if(!stsd||!stsz||!stsc||!stts||!offsets?.length)continue;
+  if(!stsd||!stsz||!stsc||!stts||!offsets?.length){diagnostics.push('missing-stbl-tables');continue}
   const entry=boxes(moov,stsd.body+8,stsd.end)[0];
-  if(entry?.type!=='mp4a'||entry.body+28>entry.end)continue;
+  if(entry?.type!=='mp4a'||entry.body+28>entry.end){diagnostics.push('entry:'+String(entry?.type));continue}
   const channels=moov.getUint16(entry.body+16);
   const sampleRate=u32(moov,entry.body+24)>>>16;
   if(channels<1||channels>2||sampleRate<8000||sampleRate>192000)continue;
   const esds=boxes(moov,entry.body+28,entry.end).find(x=>x.type==='esds');
-  if(!esds)continue;
+  if(!esds){diagnostics.push('no-esds');continue}
   let asc=null;
   for(let p=esds.body+4;p+3<esds.end;p++){
    if(moov.getUint8(p)!==5)continue;
@@ -86,15 +87,15 @@ async function metadata(blob,signal){
     asc=new Uint8Array(moov.buffer.slice(q,q+size));break;
    }
   }
-  if(!asc)continue;
+  if(!asc){diagnostics.push('no-asc');continue}
   const codecType=(asc[0]>>3)&31;
-  if(codecType!==2&&codecType!==5&&codecType!==29)continue;
+  if(codecType!==2&&codecType!==5&&codecType!==29){diagnostics.push('aac-object:'+codecType);continue}
   const sizesCount=u32(moov,stsz.body+8),constant=u32(moov,stsz.body+4);
-  if(sizesCount<1||sizesCount>1000000)continue;
+  if(sizesCount<1||sizesCount>1000000){diagnostics.push('sample-count:'+sizesCount);continue}
   if(!constant&&stsz.body+12+sizesCount*4>stsz.end)continue;
   const sizeAt=i=>constant||u32(moov,stsz.body+12+i*4);
   const mappings=table(moov,stsc,12); // custom record parsing below
-  if(!mappings||mappings.length<1)continue;
+  if(!mappings||mappings.length<1){diagnostics.push('stsc-invalid');continue}
   const maps=Array.from({length:u32(moov,stsc.body+4)},(_,i)=>({
    first:u32(moov,stsc.body+8+i*12),
    count:u32(moov,stsc.body+12+i*12),
@@ -111,16 +112,17 @@ async function metadata(blob,signal){
    const version=moov.getUint8(list.body),entries=u32(moov,list.body+4);
    // Handle the common MP4 encoder delay / single-entry edit. Multi-edit
    // tracks need a full editor and deliberately fall back to compatibility.
-   if(entries!==1)continue;
+   if(entries!==1){diagnostics.push('edit-count:'+entries);continue}
    const at=list.body+8,offset=version===1?8:4;
    if(at+offset*2+4>list.end)continue;
    const mediaTime=version===1?
     (u32(moov,at+8)*4294967296+u32(moov,at+12)):moov.getInt32(at+4,false);
-   if(!Number.isSafeInteger(mediaTime)||mediaTime<0)continue;
+   if(!Number.isSafeInteger(mediaTime)||mediaTime<0){diagnostics.push('edit-time:'+mediaTime);continue}
    const rate=moov.getInt16(at+offset*2,false);
-   if(rate!==1)continue;
+   if(rate!==1){diagnostics.push('edit-rate:'+rate);continue}
    mediaShift=mediaTime/timescale;
   }
+  diagnostics.push('aac-meta-ok');
   return {timescale,sampleRate,channels,asc,sizesCount,sizeAt,offsets,maps,durations,mediaShift};
  }
  return null;
@@ -128,12 +130,13 @@ async function metadata(blob,signal){
 export async function extractMp4AAC(blob,start,duration,{signal,onProgress=()=>{}}={}){
  if(typeof AudioDecoder==='undefined'||typeof EncodedAudioChunk==='undefined')return null;
  if(!/mp4|quicktime|octet-stream|^$/.test(blob.type)&&!/(\.mp4|\.m4v|\.mov)$/i.test(blob.name||''))return null;
- const meta=await metadata(blob,signal);
- if(!meta)return null;
+ const diagnostic=[];
+ const meta=await metadata(blob,signal,diagnostic);
+ if(!meta){onProgress({stage:'decode',detail:'AAC metadata: '+diagnostic.join(',')});return null}
  const config={codec:'mp4a.40.2',description:meta.asc,sampleRate:meta.sampleRate,numberOfChannels:meta.channels};
  let supported;
  try{supported=await AudioDecoder.isConfigSupported(config)}catch{return null}
- if(!supported?.supported)return null;
+ if(!supported?.supported){onProgress({stage:'decode',detail:'AAC decoder unsupported '+meta.sampleRate+'Hz/'+meta.channels+'ch'});return null}
  const end=start+duration,lead=start-.12,samples=[];
  let ordinal=0,t=0,di=0,within=0;
  for(let ci=0;ci<meta.offsets.length;ci++){
