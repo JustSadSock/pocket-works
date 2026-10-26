@@ -107,7 +107,7 @@ export function composeSelectivePatches(layout,scnetVocals,umxVocals,{rate=SAMPL
    const weight=Math.sin(.5*Math.PI*clamp(n))**2;
    for(let ch=0;ch<2;ch++){
     const correction=(base[ch][item.start+i]-repaired[ch][offset+i])*weight;
-    delta[ch][i]=Number.isFinite(correction)?correction:0;
+    delta[ch][i]=weight===0?0:(Number.isFinite(correction)?correction:0);
    }
   }
   patches.push({start:item.start,end:item.end,score:item.score,delta});
