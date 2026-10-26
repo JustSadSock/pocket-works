@@ -157,7 +157,7 @@ try{
  assert.match((await finalWav).suggestedFilename(),/no-dialogue\.wav$/);
  const csv=page.waitForEvent('download',{timeout:25000});
  await page.locator('#study-csv').click();
- assert.match((await csv).suggestedFilename(),/five-routes\.csv$/);
+ assert.match((await csv).suggestedFilename(),/seven-routes\.csv$/);
  assert.equal(await page.locator('#study-csv').isEnabled(),true);
  console.log('Browser real pipelines: MRX, fast SCNet, balanced SCNet, custom MRX, direct SCNet; first fast time:',fastTime);
  // Third independent ONNX model, not a parameter change to SCNet:
