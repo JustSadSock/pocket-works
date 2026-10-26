@@ -37,7 +37,7 @@
 <div class="comparison"><button id="original-btn" class="secondary" type="button">Оригинал</button><button id="clean-btn" class="secondary selected" type="button">Оригинал − речь</button><button id="stems-btn" class="secondary" type="button">Музыка + эффекты</button><button id="speech-btn" class="secondary" type="button">Только речь</button></div>
 <div class="stems"><label>Оригинальная речь <output id="dialogue-value">0%</output><input id="dialogue-gain" type="range" min="0" max="100" step="5" value="0"></label><label>Музыка <output id="music-value">100%</output><input id="music-gain" type="range" min="0" max="150" step="5" value="100"></label><label>Эффекты <output id="effects-value">100%</output><input id="effects-gain" type="range" min="0" max="150" step="5" value="100"></label></div>
 <div id="scnet-tuning" class="scnet-tuning hidden">
- <label for="scnet-strength">Удаление голосов SCNet в выбранном результате <output id="scnet-strength-value">80%</output></label>
+ <label for="scnet-strength"><span id="vocal-strength-label">Удаление голосов вокальной моделью</span> <output id="scnet-strength-value">80%</output></label>
  <input id="scnet-strength" type="range" min="0" max="100" step="10" value="80">
  <p class="hint">SCNet обучалась на музыкальном вокале: возможна потеря музыки и эффектов. Изменение силы не запускает нейросеть заново.</p>
 </div>
