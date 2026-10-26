@@ -36,7 +36,7 @@ env.reset(spawn,goal);
 
 // Each drawing gesture is a single reversible edit.
 let tool='brush',drawing=false,startX=0,startY=0,panStart=null;
-let heatData=[],replayData=null,replayIndex=0,replayTimer=null;
+let heatData=[],replayData=null,replayIndex=0,replayTimer=null,showObservation=false;
 let undoStack=[],redoStack=[],operation=null;
 let view={x:0,y:0,scale:1};
 toolSelect.onchange=()=>{tool=toolSelect.value;};
@@ -203,6 +203,21 @@ function redraw(){
     for(let i=0;i<=limit;i++){const p=trace[i];if(i===0)ctx.moveTo((p.x+.5)*TILE_SIZE,(p.y+.5)*TILE_SIZE);else ctx.lineTo((p.x+.5)*TILE_SIZE,(p.y+.5)*TILE_SIZE);}
     ctx.strokeStyle='#edcf7e';ctx.lineWidth=2;ctx.stroke();
     const p=trace[limit];ctx.fillStyle='#fff1a8';ctx.beginPath();ctx.arc((p.x+.5)*TILE_SIZE,(p.y+.5)*TILE_SIZE,7,0,Math.PI*2);ctx.fill();
+  }
+  // The blue inspection grid visualizes real Environment.observe(): 7x7
+  // cells around the current position. It does not invent lidar sensors.
+  if(showObservation){
+    const observation=env.observe(),size=observation.tiles.length;
+    const radius=Math.floor(size/2);
+    ctx.fillStyle='rgba(118,189,241,.10)';
+    for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
+      const x=env.ax+dx,y=env.ay+dy;
+      if(x>=0&&x<GRID_W&&y>=0&&y<GRID_H)
+       ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE-1,TILE_SIZE-1);
+    }
+    ctx.strokeStyle='#91d5f0';ctx.lineWidth=2;ctx.setLineDash([5,4]);
+    ctx.strokeRect((env.ax-radius)*TILE_SIZE,(env.ay-radius)*TILE_SIZE,size*TILE_SIZE,size*TILE_SIZE);
+    ctx.setLineDash([]);
   }
   ctx.fillStyle = "#4fd18a";
   ctx.fillRect(env.gx*TILE_SIZE, env.gy*TILE_SIZE, TILE_SIZE-1, TILE_SIZE-1);
@@ -476,6 +491,7 @@ document.querySelector('#generate').onchange=e=>{const v=e.target.value;if(v)han
 document.addEventListener('visibilitychange',()=>{if(document.hidden){running=false;playBtn.textContent='▶ Наблюдать';stopReplay();}});
 window.PetriForgeRuntime=window.PetriForgeRuntime||{};
 window.PetriForgeRuntime.grid={
+  setObservationOverlay:enabled=>{showObservation=!!enabled;redraw();return showObservation;},
   getModel:()=>new Promise((resolve,reject)=>{
     if(training||snapshotRequest){reject(Error('Мозг занят обучением'));return;}
     snapshotRequest=resolve;worker.postMessage({type:'snapshot'});
