@@ -347,8 +347,10 @@ function library(){document.querySelector('#screen-library [data-back]').dataset
 function selectScene(item,blob=null){
  if(filmCleanController)filmCleanController.abort();filmLocalSource=null;filmPreparedBlob=null;$('film-skip').checked=false;
  $('film-low-memory').checked=lowMemoryRecommended(navigator.deviceMemory,navigator.hardwareConcurrency);
- if($('film-low-memory').checked&&Number($('media-resolution').value)>960)
-  $('media-resolution').value='960';
+ if($('film-low-memory').checked){
+  if(Number($('media-resolution').value)>640)$('media-resolution').value='640';
+  if(Number($('media-quality').value)>3)$('media-quality').value='3';
+ }
  selected={...item,roles:[...item.roles]};sourceBlob=blob;encodedCache=null;
  if(blob&&selected.custom)selected.id='custom-'+uid();
  $('scene-title').value=selected.title;
@@ -375,7 +377,8 @@ function updateFilmCleaner(){
  const likely=estimatePreparationTimes(duration,filmMode(),filmBenchmarkOpts());
  $('film-time-explain').textContent='Оценка моделей: '+(filmBench.umx90||filmBench.scnet90?
   'по замерам на этом устройстве':'по замерам на мощном ПК')+
-  '. Дополнительно: кодирование видео ≈ '+fmt(duration)+
+  '. '+($('film-low-memory').checked?'Защита памяти: нейросеть идёт короткими отрывками и может быть существенно медленнее. ':'')+
+  'Дополнительно: кодирование видео ≈ '+fmt(duration)+
   ', извлечение звука может занять до '+fmt(duration)+' при резервном захвате. Итого: от ≈ '+
   fmt(Math.ceil(likely.totalFast))+' до ≈ '+fmt(Math.ceil(likely.totalSlow))+
   ' на измеренном ПК; на слабом устройстве медленнее.';
@@ -1504,7 +1507,14 @@ trimRange=createTrimRange({video:$('trim-video'),onChange:({start,end})=>{
  if(videoExportBlob)clearExportPreview();
  updateMediaLab();updateFilmCleaner();
 }});
-$('film-low-memory').onchange=updateFilmCleaner;
+$('film-low-memory').onchange=()=>{
+ if($('film-low-memory').checked){
+  if(Number($('media-resolution').value)>640)$('media-resolution').value='640';
+  if(Number($('media-quality').value)>3)$('media-quality').value='3';
+  invalidateMediaResult();
+ }
+ updateFilmCleaner();
+};
 document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.onchange=()=>{
  if(filmPreparedBlob)clearExportPreview();
  updateFilmCleaner();
