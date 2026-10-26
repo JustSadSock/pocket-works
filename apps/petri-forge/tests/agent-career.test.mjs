@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {DOMAINS,freshCareer,assertCareer,brainId,createCareer,listCareers,writeBrain,readBrain,recordTraining,renameCareer,eraseCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm,readGridBrain,recordCombatNeural,readCombatNeural} from '../agent-career.mjs';
+import {DOMAINS,freshCareer,assertCareer,brainId,createCareer,listCareers,writeBrain,readBrain,recordTraining,renameCareer,eraseCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm,readGridBrain,recordCombatNeural,readCombatNeural,recordCombatCoevolution} from '../agent-career.mjs';
 import {NeuralActorCritic} from '../neural-policy.mjs';
 import {PpoPolicy} from '../ppo.mjs';
 import {packCareer,unpackCareer,validatePackage} from '../agent-portability.mjs';
@@ -305,4 +305,34 @@ test('self-play generation measurements survive cloning, package export, import 
   generation:1,episodes:12,updates:0,validation:{winRate:Infinity}
  }]}}),/история/);
  assert.deepEqual((await listCareers()).find(x=>x.id===saved.id),old);
+});
+
+test('two coevolving brains and both histories commit atomically, clone, export and rollback',async()=>{
+ const original=await createCareer('Совместные бойцы','a-two-brains-test');
+ const a=new PpoPolicy(101).serialize(),b=new PpoPolicy(202).serialize();
+ const gen=[
+  {generation:0,episodes:0,updatesA:0,updatesB:0,evaluation:{fixed:{archer:{winRate:0},swordsman:{winRate:0}}}},
+  {generation:1,episodes:6,updatesA:5,updatesB:6,evaluation:{fixed:{archer:{winRate:.33},swordsman:{winRate:.67}}}}
+ ];
+ const props={episodes:6,report:{seed:781,generations:gen}};
+ const saved=await recordCombatCoevolution(original,'archer',a,'swordsman',b,props);
+ assert.deepEqual(await readCombatNeural(saved,'archer'),a);
+ assert.deepEqual(await readCombatNeural(saved,'swordsman'),b);
+ assert.equal(saved.combatNeural.archer.episodes,6);
+ assert.equal(saved.combatNeural.swordsman.episodes,6);
+ assert.deepEqual(saved.combatNeural.archer.history.at(-1).coevolution.generations,gen);
+ const clone=await cloneCareer(saved);
+ assert.deepEqual(clone.combatNeural.archer.history.at(-1).coevolution.generations,gen);
+ assert.deepEqual(await readCombatNeural(clone,'swordsman'),b);
+ const imported=await unpackCareer(await packCareer(saved));
+ assert.equal(imported.combatNeural.swordsman.episodes,6);
+ assert.deepEqual(await readCombatNeural(imported,'archer'),a);
+ const before=(await listCareers()).find(x=>x.id===saved.id);
+ failId='career-v1:'+saved.id+':combat-ppo-swordsman';
+ try{await assert.rejects(recordCombatCoevolution(saved,'archer',a,'swordsman',b,props));}
+ finally{failId=null;}
+ assert.deepEqual((await listCareers()).find(x=>x.id===saved.id),before);
+ assert.deepEqual(await readCombatNeural(saved,'archer'),a);
+ assert.deepEqual(await readCombatNeural(saved,'swordsman'),b);
+ await assert.rejects(recordCombatCoevolution(saved,'archer',a,'archer',b,props),/два разных/);
 });
