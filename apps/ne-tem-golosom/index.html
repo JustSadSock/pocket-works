@@ -59,7 +59,23 @@
       </div>
       <div class="trim-right">
         <div class="trim-info"><label for="scene-title">Название сцены<input id="scene-title" maxlength="55" placeholder="Название сцены"></label></div>
-        <div id="media-workbench" class="media-workbench hidden">
+        <section id="film-cleaner" class="film-cleaner" aria-labelledby="film-clean-title">
+ <div class="film-clean-head"><h3 id="film-clean-title">Звук фильма без диалогов</h3><span>ЛОКАЛЬНО · ONNX</span></div>
+ <p class="film-clean-intro">Оставляем музыку и фоновые звуки, убираем голоса персонажей до начала озвучки.</p>
+ <div class="film-mode-list" role="radiogroup" aria-label="Модель удаления голосов">
+  <label class="film-mode"><input type="radio" name="film-clean-mode" value="umx" checked><span class="film-mode-copy"><strong>Open-Unmix <small>БЫСТРО</small></strong><span>Базовое удаление голосов</span></span><span class="film-mode-timing"><b id="film-time-umx">—</b><i id="film-ratio-umx">1×</i></span></label>
+  <label class="film-mode"><input type="radio" name="film-clean-mode" value="hybrid"><span class="film-mode-copy"><strong>Open-Unmix + SCNet</strong><span>SCNet только на проблемных местах</span></span><span class="film-mode-timing"><b id="film-time-hybrid">—</b><i id="film-ratio-hybrid">—</i></span></label>
+  <label class="film-mode"><input type="radio" name="film-clean-mode" value="scnet"><span class="film-mode-copy"><strong>SCNet полностью</strong><span>Более тщательная обработка всей сцены</span></span><span class="film-mode-timing"><b id="film-time-scnet">—</b><i id="film-ratio-scnet">—</i></span></label>
+ </div>
+ <p class="film-clean-footnote" id="film-time-explain">Время работы нейросетей — оценка по замерам на ПК, без подготовки видео. Действительная скорость зависит от устройства.</p>
+ <div class="film-clean-actions"><button id="film-clean-start" type="button" class="action secondary-action">Подготовить звук без голосов</button><button id="film-clean-cancel" type="button" class="text-action hidden">Отменить</button></div>
+ <div id="film-clean-progress" class="film-clean-progress hidden"><progress id="film-clean-bar" max="100" value="0"></progress></div>
+ <p id="film-clean-status" class="film-clean-status" role="status" aria-live="polite">Выбран Open-Unmix. Обработка создаёт видео с очищенным звуком для всех участников.</p>
+ <label id="film-local-fallback" class="film-local-fallback hidden">Встроенное видео не загрузилось для очистки? Укажи локальную копию фильма.
+  <input id="film-local-file" type="file" accept="video/*,.mp4,.webm,.mov">
+ </label>
+ </section>
+ <div id="media-workbench" class="media-workbench hidden">
           <div class="row-between"><h3>Видео для комнаты</h3><span id="media-source-size" class="media-stamp"></span></div>
           <div class="media-controls">
             <label>Качество <span id="media-quality-label">Высокое</span><input id="media-quality" type="range" min="1" max="5" value="4" step="1" aria-label="Качество видео"></label>
