@@ -101,6 +101,6 @@ test('centre filter off/mono never changes waveform; input cannot be mutated',()
 test('optional centre filter is applied to export and preview but not original or speech solo',()=>{
  const ui=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(ui,/return suppressStereoCenter\(separated/);
- assert.match(ui,/if\(mode==='original'\)return original/);
+ assert.match(ui,/if\(mode==='original'\)return stereoPCM\(original\)/);
  assert.match(ui,/if\(mode==='speech'\)return stems.dialogue/);
 });
