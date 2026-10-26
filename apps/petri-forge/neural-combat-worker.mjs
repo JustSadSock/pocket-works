@@ -2,10 +2,16 @@
 import {PpoPolicy,PpoTrainer} from './ppo.mjs';
 import {combatTrainingOptions,battleNeuralEpisode,runCombatEvaluation,neuralDuel} from './neural-combat.mjs';
 import {NeuralCombatLeague} from './neural-league.mjs';
+import {NeuralCoevolution} from './neural-coevolution.mjs';
 let job=null,jobId=0;
 const emit=(type,fields={})=>postMessage({type,...fields});
 const finish=(stopped=false)=>{
  const current=job;if(!current)return;job=null;
+ if(current.kind==='duo'){
+  const report=current.duo.finish(stopped);
+  emit(stopped?'duo-stopped':'duo-complete',{report});
+  return;
+ }
  if(current.kind==='league'){
   const report=current.league.finish(stopped);
   emit(stopped?'league-stopped':'league-complete',{report});
@@ -22,6 +28,14 @@ const finish=(stopped=false)=>{
 function train(){
  const current=job;if(!current)return;
  try{
+  if(current.kind==='duo'){
+   const step=current.duo.step();
+   emit('duo-progress',{completed:step.completed,episodes:step.total,
+    arena:step.arena,winner:step.winner,updatesA:step.updatesA,updatesB:step.updatesB});
+   if(step.generation)emit('duo-generation',{generation:step.generation});
+   if(step.completed===step.total){finish();return;}
+   setTimeout(train,0);return;
+  }
   if(current.kind==='league'){
    const step=current.league.step();
    emit('league-progress',{completed:step.completed,episodes:step.total,wins:step.wins,
@@ -48,7 +62,13 @@ function train(){
 onmessage=({data})=>{
  const {type,payload={}}=data||{};
  try{
-  if(type==='league'){
+  if(type==='duo'){
+   if(job)throw Error('Нейробой уже обучается');
+   const duo=new NeuralCoevolution(payload);
+   job={kind:'duo',duo,id:++jobId};
+   emit('duo-started',{episodes:duo.options.episodes,baseline:duo.initial});
+   setTimeout(train,0);
+  }else if(type==='league'){
    if(job)throw Error('Нейробой уже обучается');
    const league=new NeuralCombatLeague(payload);
    job={kind:'league',league,id:++jobId};

@@ -2,7 +2,7 @@ import './agent-hub-shell.mjs';
 import {mountAgentCockpit} from './agent-cockpit.mjs';
 import {showWorkbenchDialog,closeWorkbenchDialogs} from './ui-navigation.mjs';
 import {warmStartCombatFromWorld} from './agent-transfer.mjs';
-import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm,recordCombatNeural} from './agent-career.mjs';
+import {DOMAINS,KINDS,TITLES,listCareers,createCareer,readBrain,writeBrain,recordTraining,renameCareer,eraseCareer,writeCareer,cloneCareer,setCareerArchived,setCareerGridAlgorithm,recordCombatNeural,recordCombatCoevolution} from './agent-career.mjs';
 import {listModels,loadModel} from './model-store.mjs';
 
 const $=id=>document.getElementById(id),runtime=()=>window.PetriForgeRuntime||{};
@@ -321,6 +321,11 @@ async function start(){
 }
 const cockpit=mountAgentCockpit({
  onNeuralBusy:flag=>{pending=!!flag;lock();},
+ saveNeuralDuo:async(roleA,modelA,roleB,modelB,report)=>{
+  const next=await recordCombatCoevolution(active,roleA,modelA,roleB,modelB,report);
+  active=next;careers=careers.map(c=>c.id===next.id?next:c);
+  profiles();refresh();return next;
+ },
  saveNeural:async(role,model,report)=>{
   const next=await recordCombatNeural(active,role,model,report);
   active=next;careers=careers.map(c=>c.id===next.id?next:c);

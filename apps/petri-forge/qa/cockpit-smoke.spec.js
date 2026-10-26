@@ -381,3 +381,46 @@ test('self-play league trains real PPO generations, displays results and persist
  await expect(page.locator('#cpNeuroIdentity')).toContainText('лучник: 6');
  expect(errors).toEqual([]);
 });
+
+test('two PPO fighters coevolve in same arena, display independent metrics and reload both brains',async({page})=>{
+ test.setTimeout(175000);
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('/apps/petri-forge/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:20000});
+ await page.locator('[data-cp-mode="combat"]').click();
+ await expect(page.locator('#cpNeurocombat')).toBeVisible();
+ await page.locator('#cpNeurocombat').click();
+ await page.locator('#cpNeuroMethod').selectOption('duo');
+ await expect(page.locator('#cpNeuroDuoIntro')).toBeVisible();
+ await expect(page.locator('#cpNeuroOpponentLabel')).toBeHidden();
+ await page.locator('#cpNeuroEpisodes').selectOption('6');
+ await page.locator('#cpNeuroTrain').click();
+ await expect(page.locator('#cpNeuroStatus')).toContainText('Оба мозга и история поколений сохранены',{timeout:150000});
+ await expect(page.locator('#cpNeuroLeagueRows .cp-neuro-league-row')).toHaveCount(2);
+ await expect(page.locator('#cpNeuroLeaguePlot .cp-neuro-duo-bar')).toHaveCount(2);
+ const result=await page.evaluate(async()=>{
+  const id=window.PetriForgeAgentHub().id;
+  const {loadModel}=await import('/apps/petri-forge/model-store.mjs');
+  const prefix='career-v1:'+id+':combat-ppo-';
+  const [archer,swordsman,profile]=await Promise.all([
+   loadModel(prefix+'archer'),loadModel(prefix+'swordsman'),loadModel('career:'+id)
+  ]);
+  return {a:archer.snapshot.updates,b:swordsman.snapshot.updates,
+   epochs:profile.snapshot.combatNeural.archer.history.at(-1).coevolution.generations.length,
+   sessionsA:profile.snapshot.combatNeural.archer.sessions,
+   sessionsB:profile.snapshot.combatNeural.swordsman.sessions};
+ });
+ expect(result.a).toBeGreaterThan(0);expect(result.b).toBeGreaterThan(0);
+ expect(result.epochs).toBe(2);
+ expect(result.sessionsA).toBe(1);expect(result.sessionsB).toBe(1);
+ await page.locator('#cpNeuroClose').click();
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#cpTrain')).toBeEnabled({timeout:22000});
+ await page.locator('[data-cp-mode="combat"]').click();
+ await page.locator('#cpNeurocombat').click();
+ await page.locator('#cpNeuroRole').selectOption('archer');
+ await expect(page.locator('#cpNeuroLeagueRows .cp-neuro-league-row')).toHaveCount(2);
+ await expect(page.locator('#cpNeuroIdentity')).toContainText('лучник: 6');
+ await expect(page.locator('#cpNeuroIdentity')).toContainText('мечник: 6');
+ expect(errors).toEqual([]);
+});
