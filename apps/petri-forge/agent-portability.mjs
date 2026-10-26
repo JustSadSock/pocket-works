@@ -1,5 +1,5 @@
 // Portable personal agent package: one identity, all genuinely trained specialist brains.
-import {DOMAINS,assertCareer,freshCareer,newCareerId,readBrain,readGridBrain,writeCareerBundle} from './agent-career.mjs';
+import {DOMAINS,assertCareer,freshCareer,newCareerId,readBrain,readGridBrain,readCombatNeural,writeCareerBundle} from './agent-career.mjs';
 import {QAgent} from './lab-core.mjs';
 import {validateNeuralPolicy} from './neural-policy.mjs';
 import {validatePpoPolicy} from './ppo.mjs';
@@ -10,7 +10,7 @@ export function validBrain(domain,brain){
  if(brain==null)return true;
  if(domain==='grid'){try{new QAgent(1).load(brain);return true;}catch{return false;}}
  if(domain==='gridNeural')return validateNeuralPolicy(brain);
- if(domain==='gridPpo')return validatePpoPolicy(brain);
+ if(domain==='gridPpo'||domain==='combatArcher'||domain==='combatSwordsman')return validatePpoPolicy(brain);
  if(domain==='combat')return validPolicy(brain);
  if(domain==='perekos')return validatePerekosPolicy(brain);
  if(domain==='race')return Array.isArray(brain)&&brain.length===9&&brain.every(n=>Number.isFinite(n)&&Math.abs(n)<=2);
@@ -30,8 +30,14 @@ export async function packCareer(c){
  const ppo=await readGridBrain(c,'ppo');
  if(ppo&&!validBrain('gridPpo',ppo))throw Error('Повреждённый PPO-мозг');
  if(ppo)brains.gridPpo=ppo;
+ for(const role of ['archer','swordsman']){
+  const model=await readCombatNeural(c,role);
+  const key=role==='archer'?'combatArcher':'combatSwordsman';
+  if(model&&!validBrain(key,model))throw Error('Повреждённая боевая нейросеть');
+  if(model)brains[key]=model;
+ }
  return {format:'petri-forge-career',version:1,profile:{name:c.name,createdAt:c.createdAt,
-  algorithms:{grid:c.algorithms?.grid||'qlearning'},branches:structuredClone(c.branches)},brains};
+  algorithms:{grid:c.algorithms?.grid||'qlearning'},combatNeural:structuredClone(c.combatNeural||{}),branches:structuredClone(c.branches)},brains};
 }
 export function validatePackage(pkg){
  if(!pkg||pkg.format!=='petri-forge-career'||pkg.version!==1||!pkg.profile||!pkg.brains)throw Error('Это не файл агента PetriForge');
@@ -43,6 +49,16 @@ export function validatePackage(pkg){
  if(algorithm==='neural'&&!pkg.brains.gridNeural)throw Error('Профиль с нейросетью без сохранённого мозга');
  if(pkg.brains.gridPpo!=null&&!validBrain('gridPpo',pkg.brains.gridPpo))throw Error('Несовместимый PPO-мозг');
  if(algorithm==='ppo'&&!pkg.brains.gridPpo)throw Error('Профиль PPO без сохранённого мозга');
+ for(const key of ['combatArcher','combatSwordsman'])
+  if(pkg.brains[key]!=null&&!validBrain(key,pkg.brains[key]))throw Error('Несовместимый нейробоец: '+key);
+ const stats=pkg.profile.combatNeural||{};
+ for(const role of ['archer','swordsman']){
+  const row=stats[role];
+  if(!row)continue;
+  if(!Number.isInteger(row.sessions)||row.sessions<0||row.sessions>1e6||
+   !Number.isInteger(row.episodes)||row.episodes<0||row.episodes>1e7||
+   !Array.isArray(row.history)||row.history.length>30)throw Error('Некорректная история нейробоя');
+ }
  const branches=pkg.profile.branches;
  if(!branches||typeof branches!=='object')throw Error('Файл не содержит историю обучения');
  for(const domain of DOMAINS){
@@ -63,6 +79,7 @@ export async function unpackCareer(pkg){
  // become visible together, or the transaction aborts without orphan profiles.
  const c=freshCareer(pkg.profile.name,newCareerId());
  c.algorithms={grid:pkg.profile.algorithms?.grid||'qlearning'};
+ c.combatNeural=structuredClone(pkg.profile.combatNeural||{});
  const brains={};
  for(const domain of DOMAINS){
   const src=pkg.profile.branches[domain],b=c.branches[domain];
@@ -73,6 +90,7 @@ export async function unpackCareer(pkg){
  }
  if(pkg.brains.gridNeural)brains.gridNeural=pkg.brains.gridNeural;
  if(pkg.brains.gridPpo)brains.gridPpo=pkg.brains.gridPpo;
+ for(const key of ['combatArcher','combatSwordsman'])if(pkg.brains[key])brains[key]=pkg.brains[key];
  try{return await writeCareerBundle(c,brains);}
  catch(e){throw Error('Импорт отменён без частично сохранённого агента: '+e.message);}
 }
