@@ -1,11 +1,12 @@
 import {RATE,MAX_SECONDS,validRange,mixPCM,stemLevels,suppressStereoCenter,wavPCM16,elapsed,safeName} from './audio-utils.js';
-import {STUDY_METHODS,researchMethod,decodeWav,resamplePCM,channelSummary,multichannelME,stereoPCM,sumMusicEffects,matchResultToSegment,comparisonMetrics,comparisonRecord} from './research-core.js';
+import {STUDY_METHODS,researchMethod,decodeWav,resamplePCM,channelSummary,multichannelME,stereoPCM,sumMusicEffects,matchResultToSegment,comparisonMetrics,comparisonRecord,subtractResidualVocals} from './research-core.js';
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
 const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
  (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 let sourceVideo=$('source-video');
 let file=null,fileURL='',audioURL='',length=0,range=null,original=null,stems=null,inferenceTime=0;
 let worker=null,abort=null,serial=0,exporting=false,editTimer=null,mode='clean',fileName='video';
+let scnetVocals=null,scnetBase=null,scnetTime=0;
 const studyResults=new Map();let activeStudy=null,studySurround=null,studySurroundRate=0,studySignature='',studyBusy=false;
 const text=(id,msg)=>$(id).textContent=String(msg),show=(id,on)=>$(id).classList.toggle('hidden',!on);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),revoke=url=>{if(url)URL.revokeObjectURL(url)};
@@ -27,6 +28,7 @@ function pause(){video.pause();sourceVideo.pause();audio.pause()}
 function reset(){
  pause();revoke(audioURL);audioURL='';audio.removeAttribute('src');audio.load();
  video.removeAttribute('src');video.load();original=null;stems=null;range=null;activeStudy=null;
+ scnetVocals=null;scnetBase=null;scnetTime=0;show('scnet-tuning',false);
  show('result-details',false);show('empty-state',true);text('result-state','Ожидание обработки');text('export-status','');text('stem-diagnostics','');text('result-position','0:00');$('result-seek').value=0;text('listen-btn','▶ Слушать результат');
 }
 function cancel(){
@@ -153,7 +155,7 @@ function readableModelError(packet){
   return 'Не хватает памяти для нейросети. Выбери режим по 5 секунд и попробуй более короткую сцену. '+reason;
  return 'Нейросеть ('+phase+'): '+reason;
 }
-function separate(channels,chunk,id){
+function separate(channels,chunk,id,kind='mrx'){
  return new Promise((resolve,reject)=>{
   const w=new Worker('./mrx-worker.js',{type:'module'});worker=w;
   w.onerror=e=>{e.preventDefault();w.terminate();if(worker===w)worker=null;reject(Error('Ошибка подключения нейросети: '+(e.message||'скрипт Worker не запустился')+'. Проверь сеть и разрешение доступа к внешним CDN.'))};
@@ -161,14 +163,14 @@ function separate(channels,chunk,id){
   w.onmessage=e=>{
    const p=e.data||{};if(p.id!==id)return;
    if(p.stage==='library')step('Подключаем нейросеть',p.detail);
-   if(p.stage==='model')step('Нейросеть разделяет дорожки',p.detail);
+   if(p.stage==='model')step(kind==='scnet'?'SCNet ищет оставшиеся голоса':'MRX разделяет дорожки',p.detail);
    if(p.stage==='done'||p.stage==='error'){
     w.terminate();if(worker===w)worker=null;
     p.stage==='done'?resolve(p):reject(Error(readableModelError(p)));
    }
   };
   const copies=channels.map(ch=>ch.slice());
-  w.postMessage({id,channels:copies,chunk},copies.map(c=>c.buffer));
+  w.postMessage({id,channels:copies,chunk,kind},copies.map(c=>c.buffer));
  });
 }
 async function process(){
@@ -212,8 +214,25 @@ async function process(){
   updateListeningButtons();
   const clean=mixPCM(original,stems,{dialogue:0,music:1,effects:1},'stems');
   registerStudyResult('mrx',clean,Math.max(0,inferenceTime*1000),{source:'local',label:'MRX · M&E'});
-  selectStudyResult('mrx',false);
-  await previewAudio();text('export-status','Прослушай результат и сравни оригинал с очищенной дорожкой.');
+  await selectStudyResult('mrx');
+  if($('quality-mode').value==='scnet'){
+   // A genuine second model analyzes the *remaining M&E*, not the original.
+   // SCNet is a vocals separator trained on music; on cartoons it may
+   // mistakenly suppress effects. Both results remain available for A/B.
+   step('Проверяем остатки речи','SCNet · отдельная модель, около 13 МБ; может работать медленно.');
+   const follow=await separate(clean,Math.min(10,Number($('chunk-size').value)),id,'scnet');
+   if(signal.signal.aborted||id!==serial)return;
+   scnetVocals=follow.stems.vocals;scnetBase=clean;scnetTime=follow.seconds;
+   const adjusted=subtractResidualVocals(scnetBase,scnetVocals,Number($('scnet-strength').value)/100);
+   registerStudyResult('mrx-scnet',adjusted,(inferenceTime+scnetTime)*1000,
+    {source:'local',label:'MRX + SCNet · пробная очистка'});
+   await selectStudyResult('mrx-scnet');
+   step('Готово','Оба настоящих результата доступны для A/B-сравнения.',1);
+   text('export-status','Сравни MRX и MRX + SCNet: особенно голос Мэйбл, музыку и звуковые эффекты.');
+  }else{
+   step('Готово','Дорожки разделены.',1);
+   text('export-status','Режим MRX готов. Для дополнительного теста выбери MRX + SCNet перед обработкой.');
+  }
  }catch(e){
   if(e.name!=='AbortError'&&id===serial)error(e.message||String(e));
   if(!stems)reset();
