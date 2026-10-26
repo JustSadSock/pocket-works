@@ -192,7 +192,9 @@ test('fair experiment compares fresh algorithms, keeps agent unchanged and resto
  await page.locator('#cpBenchWorld').selectOption('corridor');
  await page.locator('#cpBenchStart').click();
  await expect(page.locator('#cpBenchProgress')).toBeVisible();
+ await expect(page.locator('#cpTrain')).toBeDisabled();
  await expect(page.locator('#cpBenchExport')).toBeEnabled({timeout:120000});
+ await expect(page.locator('#cpTrain')).toBeEnabled();
  await expect(page.locator('#cpBenchResults tbody tr[data-algorithm]')).toHaveCount(3);
  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pocket-works:petri-forge:benchmark:last')));
  expect(saved.type).toBe('petri-forge-learning-benchmark');
