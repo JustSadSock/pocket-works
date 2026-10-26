@@ -323,7 +323,7 @@ function time(video){return scene?clamp((video.currentTime||scene.start)-scene.s
 
 function library(){document.querySelector('#screen-library [data-back]').dataset.back=room&&mode==='host'?'room':'home';const grid=$('scene-grid');$('scene-license').innerHTML='Озвученные отрывки являются переработкой оригиналов. Авторы: <a href="https://commons.wikimedia.org/wiki/File:WING_IT!_-_Blender_Open_Movie-full_movie.webm" target="_blank" rel="noopener">WING IT! — Blender Studio (CC BY 4.0)</a>, <a href="https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm" target="_blank" rel="noopener">Sprite Fright — Blender Studio (CC BY 4.0)</a>, <a href="https://peach.blender.org/about/" target="_blank" rel="noopener">Big Buck Bunny — Blender Foundation (CC BY 3.0)</a>. <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.';grid.innerHTML=LIBRARY.map((s,i)=>'<button class="scene-card" data-scene="'+esc(s.id)+'"><div class="scene-thumb">'+(POSTERS[s.id]?'<img src="'+esc(POSTERS[s.id])+'" loading="lazy" alt="Кадр фильма">':'')+'<strong>'+esc(s.short)+'</strong><span class="duration">'+fmt(s.duration)+'</span></div><b>'+esc(s.title)+'</b><small>'+esc(s.sub)+'</small></button>').join('');show('library')}
 function selectScene(item,blob=null){
- if(filmCleanController)filmCleanController.abort();filmLocalSource=null;filmPreparedBlob=null;
+ if(filmCleanController)filmCleanController.abort();filmLocalSource=null;filmPreparedBlob=null;$('film-skip').checked=false;
  selected={...item,roles:[...item.roles]};sourceBlob=blob;encodedCache=null;
  if(blob&&selected.custom)selected.id='custom-'+uid();
  $('scene-title').value=selected.title;
@@ -348,8 +348,8 @@ function updateFilmCleaner(){
    '≈ '+Math.round(seconds/baseline)+'× дольше';
  }
  const ready=!!selected&&!filmCleanController&&!videoExportController;
- $('film-clean-start').disabled=!ready||!supportsVideoExport();
- document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.disabled=!!filmCleanController||!!videoExportController);
+ $('film-clean-start').disabled=!ready||!supportsVideoExport()||$('film-skip').checked;
+ document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.disabled=!!filmCleanController||!!videoExportController||$('film-skip').checked);
  $('film-clean-cancel').classList.toggle('hidden',!filmCleanController);
  $('film-clean-progress').classList.toggle('hidden',!filmCleanController);
  if(!filmCleanController&&filmPreparedBlob&&videoExportBlob===filmPreparedBlob){
@@ -357,7 +357,7 @@ function updateFilmCleaner(){
  }
 }
 async function prepareFilmScene(){
- if(!selected||filmCleanController||videoExportController)return false;
+ if(!selected||filmCleanController||videoExportController||$('film-skip').checked)return false;
  if(!supportsVideoExport()){
   $('film-clean-status').textContent='Нужен браузер с MediaRecorder и Web Audio для подготовки видео.';
   return false;
@@ -439,7 +439,7 @@ async function confirmScene(){
  if(videoExportController||filmCleanController)return toast('Сначала заверши обработку видео.');
  // Validate before accepting so an invalid title/role never replaces the source.
  if(!validateScene())return;
- if(videoExportBlob!==filmPreparedBlob||!filmPreparedBlob){
+ if(!$('film-skip').checked&&(videoExportBlob!==filmPreparedBlob||!filmPreparedBlob)){
   if(!await prepareFilmScene())return;
  }
  if(videoExportBlob&&!acceptMedia())return;
@@ -492,6 +492,7 @@ function updateConfirmAction(){
  b.disabled=!!videoExportController||!!filmCleanController||(result&&mode==='host'&&videoExportBlob.size>MAX_ROOM_VIDEO_BYTES);
  let label='Продолжить с видео';
  if(result)label='Использовать и продолжить';
+ else if(!$('film-skip').checked&&selected)label='Убрать голоса и продолжить';
  else if(oversized)label='Подготовить видео';
  b.innerHTML=label+' <span class="arrow">→</span>';
  $('trim-footer-hint').textContent=result?'Результат готов · исходник не изменён':oversized?'Для комнаты нужен файл до 96 МиБ':'Сцена 10–90 секунд · сжатие необязательно';
