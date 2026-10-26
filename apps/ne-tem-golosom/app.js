@@ -5,6 +5,7 @@ import {MAX_AUDIO_BYTES,MAX_INCOMING_TRANSFERS,validAudioEnvelope,validVideoEnve
 import {renderPremiere,supportsPremiereExport,premiereFilename} from './premiere-export.js';
 import {TimelineHistory,snapshotClips,spliceRecording,layerTimeline,packTimeline,unpackTimeline,editClip,replaceSelectedRecording,MIN_CLIP_SECONDS} from './timeline-model.js';
 import {VOICE_EFFECTS,VOICE_EFFECT_GROUPS,normalizeVoiceEffect,connectVoiceEffect} from './voice-effects.js';
+import {clipMix,envelopeGain} from './clip-mix.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
 import {createRoomRecovery} from './room-recovery.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
@@ -13,6 +14,7 @@ installMobileRuntime();
 
 const $=id=>document.getElementById(id);
 const STORE='pocket-works:ne-tem-golosom:';
+const debugPlay=new URLSearchParams(location.search).get('debug')==='play';
 const LIBRARY=[
  {id:'wing-launch',title:'WING IT! · ПОЛЁТ',sub:'2023 · Blender Studio · CC BY 4.0',short:'WING / 01',duration:55,start:44,roles:['Кот','Пёс','Курица'],src:'https://commons.wikimedia.org/wiki/Special:Redirect/file/WING_IT!_-_Blender_Open_Movie-full_movie.webm'},
  {id:'wing-chaos',title:'WING IT! · ХАОС',sub:'2023 · Blender Studio · CC BY 4.0',short:'WING / 02',duration:60,start:120,roles:['Кот','Пёс','Курица'],src:'https://commons.wikimedia.org/wiki/Special:Redirect/file/WING_IT!_-_Blender_Open_Movie-full_movie.webm'},
@@ -48,6 +50,7 @@ const qualityNames=['Экономное','Компактное','Сбаланс�
 let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0,timelineZoom=1,clipDrag=null,skipTimelineClick=false,micPending=false;
 let micMonitor=null,saveRevision=0,readyPending=false,voiceFxContext=null,voiceFxExpanded=false;
 let onlineIds=null,networkInterrupted=false,retryRoomAction='create',retryCheckpoint=null;
+let pendingScenePicker=false,premiereAB='dub';
 function roomCheckpoint(){
  const identityKey=identity?.accountId||'guest';
  let storage=session;
@@ -60,7 +63,7 @@ function saveRoomCheckpoint(){
 }
 function clearRoomCheckpoint(){roomCheckpoint().clear()}
 function sceneDraftKey(){
- return scene&&room?room+'::'+scene.id+'::'+scene.start+'::'+scene.duration:'';
+ return scene&&room?(debugPlay?'debug::':'')+room+'::'+scene.id+'::'+scene.start+'::'+scene.duration+'::'+(state?.mediaEpoch||1)+'::'+(state?.round||1):'';
 }
 function connectionNotice(){
  const offline=state?.players?.filter(p=>p.id!==me&&onlineIds&&!onlineIds.has(p.id))||[];
@@ -73,11 +76,17 @@ function connectionNotice(){
  banner.textContent=message;
  banner.classList.toggle('hidden',!message);
 }
+async function draftReadCompatible(key){
+ const saved=await draftRead(key);
+ if(saved||debugPlay||state?.round||!scene||!room)return saved;
+ // Migrate existing v3 sessions that predate round/epoch draft keys.
+ return draftRead(room+'::'+scene.id+'::'+scene.start+'::'+scene.duration);
+}
 async function restoreLobbyMedia(){
  if(!room||!scene?.custom||sourceBlob)return;
  const key=sceneDraftKey();
  try {
-  const old=await draftRead(key);
+  const old=await draftReadCompatible(key);
   if(old?.video instanceof Blob){
    sourceBlob=old.video;writtenVideoByKey.set(key,sourceBlob);setVideoSources();
    if(meHost())for(const p of state.players)if(p.id!==me)sendVideoTo(p.id);
@@ -135,7 +144,11 @@ const roomsOrigin=location.origin+'/pocketnet';
 const sceneSource=s=>LIBRARY.find(x=>x.id===s?.id)?.src||null;
 const meHost=()=>!!state&&me===state.host;
 const ownRole=()=>mode==='solo'?'Все роли':(state?.assignments?.[me]||'Актёр');
-function toast(s){const el=$('toast');el.textContent=s;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
+let lastToastText='',lastToastAt=0;
+function toast(s){
+ if(s===lastToastText&&Date.now()-lastToastAt<8000)return;
+ lastToastText=s;lastToastAt=Date.now();
+ const el=$('toast');el.textContent=s;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function cue(which){if(!sound)return;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;audioContext ||=new C();audioContext.resume();const now=audioContext.currentTime,o=audioContext.createOscillator(),n=audioContext.createBufferSource(),g=audioContext.createGain(),filter=audioContext.createBiquadFilter();const data=audioContext.createBuffer(1,2205,audioContext.sampleRate),arr=data.getChannelData(0);for(let i=0;i<arr.length;i++)arr[i]=(Math.random()*2-1)*Math.exp(-i/750);n.buffer=data;filter.type='bandpass';filter.frequency.value=which==='start'?1050:420;const f=which==='stop'?160:which==='ready'?600:which==='count'?780:300;o.type='triangle';o.frequency.setValueAtTime(f,now);o.frequency.exponentialRampToValueAtTime(f*.74,now+.12);g.gain.setValueAtTime(.02,now);g.gain.exponentialRampToValueAtTime(.0001,now+.17);o.connect(g);n.connect(filter).connect(g);g.connect(audioContext.destination);o.start(now);n.start(now);o.stop(now+.18);n.stop(now+.06)}catch{}}
 function show(id){
  const changed=view!==id;
@@ -223,7 +236,7 @@ async function draftWrite(){
  }
 }
 function disposeClip(c){
- try{c.audio?.pause();c.fxCleanup?.()}catch{}
+ try{c.audio?.pause();c.fxCleanup?.();c.fxGain?.disconnect()}catch{}
  if(c.url)URL.revokeObjectURL(c.url);
 }
 function disposeLocalClips(){for(const c of localClips)disposeClip(c)}
@@ -233,7 +246,7 @@ function cleanAudios(){
 }
 function makeClip(base){
  const url=URL.createObjectURL(base.blob),audio=new Audio(url);
- audio.preload='auto';return {...base,fx:normalizeVoiceEffect(base.fx),url,audio};
+ audio.preload='auto';return {...base,...clipMix(base),fx:normalizeVoiceEffect(base.fx),url,audio};
 }
 function ensureClipVoice(c){
  if(c.fxReady===c.fx)return;
@@ -242,8 +255,9 @@ function ensureClipVoice(c){
   if(!Context)return;
   voiceFxContext ||=new Context();
   if(!c.fxSource)c.fxSource=voiceFxContext.createMediaElementSource(c.audio);
+  if(!c.fxGain){c.fxGain=voiceFxContext.createGain();c.fxGain.connect(voiceFxContext.destination)}
   c.fxCleanup?.();
-  c.fxCleanup=connectVoiceEffect(voiceFxContext,c.fxSource,voiceFxContext.destination,c.fx);
+  c.fxCleanup=connectVoiceEffect(voiceFxContext,c.fxSource,c.fxGain,c.fx);
   c.fxReady=c.fx;
   void voiceFxContext.resume().catch(()=>{});
  }catch(e){console.warn('Voice effect unavailable',e)}
@@ -305,7 +319,7 @@ function setVideoSources(target){const src=scene?.custom?(sourceBlob?((liveUrl&&
 function seekVideo(video,local){if(!scene||!video.readyState)return;try{const limit=Number.isFinite(video.duration)?Math.max(0,video.duration-.03):scene.start+scene.duration;video.currentTime=clamp(scene.start+local,0,limit)}catch{}}
 function time(video){return scene?clamp((video.currentTime||scene.start)-scene.start,0,scene.duration):0}
 
-function library(){const grid=$('scene-grid');$('scene-license').innerHTML='Озвученные отрывки являются переработкой оригиналов. Авторы: <a href="https://commons.wikimedia.org/wiki/File:WING_IT!_-_Blender_Open_Movie-full_movie.webm" target="_blank" rel="noopener">WING IT! — Blender Studio (CC BY 4.0)</a>, <a href="https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm" target="_blank" rel="noopener">Sprite Fright — Blender Studio (CC BY 4.0)</a>, <a href="https://peach.blender.org/about/" target="_blank" rel="noopener">Big Buck Bunny — Blender Foundation (CC BY 3.0)</a>. <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.';grid.innerHTML=LIBRARY.map((s,i)=>'<button class="scene-card" data-scene="'+esc(s.id)+'"><div class="scene-thumb">'+(POSTERS[s.id]?'<img src="'+esc(POSTERS[s.id])+'" loading="lazy" alt="Кадр фильма">':'')+'<strong>'+esc(s.short)+'</strong><span class="duration">'+fmt(s.duration)+'</span></div><b>'+esc(s.title)+'</b><small>'+esc(s.sub)+'</small></button>').join('');show('library')}
+function library(){document.querySelector('#screen-library [data-back]').dataset.back=room&&mode==='host'?'room':'home';const grid=$('scene-grid');$('scene-license').innerHTML='Озвученные отрывки являются переработкой оригиналов. Авторы: <a href="https://commons.wikimedia.org/wiki/File:WING_IT!_-_Blender_Open_Movie-full_movie.webm" target="_blank" rel="noopener">WING IT! — Blender Studio (CC BY 4.0)</a>, <a href="https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm" target="_blank" rel="noopener">Sprite Fright — Blender Studio (CC BY 4.0)</a>, <a href="https://peach.blender.org/about/" target="_blank" rel="noopener">Big Buck Bunny — Blender Foundation (CC BY 3.0)</a>. <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.';grid.innerHTML=LIBRARY.map((s,i)=>'<button class="scene-card" data-scene="'+esc(s.id)+'"><div class="scene-thumb">'+(POSTERS[s.id]?'<img src="'+esc(POSTERS[s.id])+'" loading="lazy" alt="Кадр фильма">':'')+'<strong>'+esc(s.short)+'</strong><span class="duration">'+fmt(s.duration)+'</span></div><b>'+esc(s.title)+'</b><small>'+esc(s.sub)+'</small></button>').join('');show('library')}
 function selectScene(item,blob=null){
  selected={...item,roles:[...item.roles]};sourceBlob=blob;encodedCache=null;
  if(blob&&selected.custom)selected.id='custom-'+uid();
@@ -330,7 +344,13 @@ async function confirmScene(){
  }
  setVideoSources();
  if(mode==='solo'){await openEditor();return}
- if(mode==='host'){await connectRoom('create');return}
+ if(mode==='host'){
+    if(room&&state?.phase==='lobby'){
+      if(scene.custom&&sourceBlob){projectKey=sceneDraftKey();if(!await draftWrite())return;}
+      pendingScenePicker=false;sendGame({type:'scene',scene:sceneForServer()});roomUI();return;
+    }
+    await connectRoom('create');return;
+  }
  show('room');
 }
 async function uploadVideo(file){if(!file)return;if(file.size>MAX_SOURCE_VIDEO_BYTES)return toast('Исходный файл не должен превышать 512 МиБ.');if(!file.type.startsWith('video/')&&!/\.(mp4|mov|webm)$/i.test(file.name))return toast('Нужен видеофайл.');const url=URL.createObjectURL(file),v=$('trim-video');const meta=await new Promise(resolve=>{const tmp=document.createElement('video');tmp.preload='metadata';tmp.src=url;let done=false;const finish=x=>{if(!done){done=true;resolve(x);tmp.src=''}};tmp.onloadedmetadata=()=>measureVideoDuration(tmp).then(finish).catch(()=>finish(0));tmp.onerror=()=>finish(0);setTimeout(()=>finish(0),8000)});URL.revokeObjectURL(url);if(!meta)return toast('Этот видеоформат не поддерживается браузером.');if(meta<10)return toast('Видео должно быть длиной хотя бы 10 секунд.');selectScene({id:'custom',title:file.name.replace(/\.[^.]+$/,'').slice(0,55),start:0,duration:Math.min(60,Math.floor(meta)),totalDuration:meta,custom:true,roles:['Персонаж 1','Персонаж 2']},file)}
@@ -499,16 +519,22 @@ function acceptMedia(){
 }
 
 function sceneForServer(){if(!scene)return null;const {id,title,start,duration,roles,custom}=scene;return {id,title,start,duration,roles,custom:!!custom}}
-function sendGame(data){if(!net||!room)return;try{net.sendGame(data)}catch{toast('Нет соединения. Переподключаемся…')}}
+function sendGame(data){
+ if(debugPlay){mockGame(data);return}
+ if(!net||!room)return;
+ try{net.sendGame(data)}catch{networkInterrupted=true;connectionNotice();setNetStatus('connecting','Переподключаемся…')}
+}
 function roomUI(){
  const s=state;show('room');if(scene)setVideoSources(null);$('join-panel').classList.toggle('hidden',!!s||mode!=='guest');$('room-connection').classList.toggle('hidden',!!s||(mode!=='host'&&!networkInterrupted));
  $('room-heading').textContent=s?'Ваша команда':mode==='host'?'Создать комнату':'Войти в комнату';$('room-code').textContent=s?room.slice(0,8).toUpperCase():'—';
- $('room-ticket').style.display=s?'flex':'none';$('player-count').textContent=s?s.players.length+'/6':'';
+ $('room-ticket').style.display=s?'flex':'none';
+  $('room-scene-title').textContent=s&&s.configured!==false&&s.scene.id!=='wing'?s.scene.title:'Сцена не выбрана';
+  $('room-change-scene').classList.toggle('hidden',!s||!meHost()||s.phase!=='lobby');$('player-count').textContent=s?s.players.length+'/6':'';
  $('room-phase-note').textContent=s?'Ожидаем актёров':'';
  if(!s){$('room-players').innerHTML='';$('room-help').textContent=mode==='host'?'Подключение требуется для передачи видео другим участникам.':'Введите код, которым поделился ведущий.';$('room-start').classList.add('hidden');return}
  const roleOptions=[...s.scene.roles];for(let i=0;i<s.scene.roles.length;i++)for(let j=i+1;j<s.scene.roles.length;j++)roleOptions.push(s.scene.roles[i]+' + '+s.scene.roles[j]);roleOptions.push('Все роли');for(const name of Object.values(s.assignments))if(name&&!roleOptions.includes(name))roleOptions.push(name);
  $('room-players').innerHTML=s.players.map((p,i)=>'<div class="room-player" style="border-left-color:'+colors[i%colors.length]+'"><span><b>'+esc(p.name)+(p.id===me?' (ты)':'')+'</b><small>'+(p.id===s.host?'Ведущий':'Актёр')+(onlineIds&&!onlineIds.has(p.id)?' · Нет связи':s.mediaReady?.[p.id]?' · Видео получено':' · Загружаем видео')+'</small></span>'+(meHost()?'<select data-assign="'+esc(p.id)+'">'+roleOptions.map(r=>'<option value="'+esc(r)+'" '+(r===s.assignments[p.id]?'selected':'')+'>'+esc(r)+'</option>').join('')+'</select>':'<b>'+esc(s.assignments[p.id]||'Актёр')+'</b>')+'</div>').join('')+(s.scene.custom&&!sourceBlob?'<label class="upload-card" style="margin:8px 0"><input data-room-video type="file" accept="video/*" hidden><span class="upload-icon">＋</span><span><b>Видео не передалось?</b><small>Выбери тот же файл на своём устройстве.</small></span></label>':'');
- $('room-help').textContent=esc(s.scene.title)+' · '+fmt(s.scene.duration)+' · '+(s.scene.custom?'личное видео':'CC BY, Blender Studio');$('room-start').classList.toggle('hidden',!meHost());$('room-start').disabled=s.players.length<2||!s.players.every(p=>s.mediaReady?.[p.id])||(s.scene.custom&&meHost()&&!sourceBlob);
+ $('room-help').textContent=esc(s.scene.title)+' · '+fmt(s.scene.duration)+' · '+(s.scene.custom?'личное видео':'CC BY, Blender Studio');$('room-start').classList.toggle('hidden',!meHost());$('room-start').disabled=s.configured===false||s.players.length<2||!s.players.every(p=>s.mediaReady?.[p.id])||(s.scene.custom&&meHost()&&!sourceBlob);
 }
 function waitUI(){show('wait');$('wait-roster').innerHTML=(state?.players||[{id:'solo',name:name}]).map(p=>'<span class="wait-chip '+(mode==='solo'||state?.ready?.[p.id]?'ready':'')+'">'+esc(p.name)+' · '+(onlineIds&&!onlineIds.has(p.id)?'Нет связи':mode==='solo'||state?.ready?.[p.id]?'Готов':'Записывает')+'</span>').join('');$('reveal-btn').classList.toggle('hidden',mode==='solo'||!meHost()||!state?.players.every(p=>state.ready?.[p.id]));$('unready-btn').classList.toggle('hidden',mode==='solo')}
 function disposeRemoteClips(){
@@ -542,7 +568,10 @@ function stateChanged(s){
   setVideoSources();
  }
  if(s.phase==='lobby'){
-  roomUI();
+  if(sceneChanged&&scene.custom&&meHost()&&sourceBlob){
+   projectKey=sceneDraftKey();void draftWrite();
+  }
+  if(pendingScenePicker&&meHost())library();else roomUI();
   if(scene.custom&&meHost()&&sourceBlob)
     for(const id of peers.keys())sendVideoTo(id);
  }else if(s.phase==='recording'){
@@ -560,6 +589,7 @@ function stateChanged(s){
  }
 }
 async function connectRoom(action,checkpoint=null){
+ if(debugPlay){mockConnect();return}
  if(net){try{net.close()}catch{}net=null}
  retryRoomAction=action;retryCheckpoint=checkpoint;
  show('room');setNetStatus('connecting','Подключаемся…');
@@ -590,7 +620,7 @@ async function connectRoom(action,checkpoint=null){
     if(!await draftWrite())toast('Видео не удалось сохранить для восстановления.');
    }
    saveRoomCheckpoint();
-   sendGame({type:'scene',scene:sceneForServer()});
+   if(scene)sendGame({type:'scene',scene:sceneForServer()});
   }else{
    initializedNewRoom=true;
    stateChanged(m.state);
@@ -629,7 +659,8 @@ async function connectRoom(action,checkpoint=null){
    endRoom('Комната больше недоступна. Локальные записи не удалены.');
    return;
   }
-  toast('Связь: '+code);
+  // Transient socket errors use one persistent status, not toast spam.
+   networkInterrupted=true;setNetStatus('connecting','Восстанавливаем связь');connectionNotice();
  });
  conn.on('disconnected',()=>{
   if(net!==conn)return;
@@ -637,7 +668,7 @@ async function connectRoom(action,checkpoint=null){
   for(const id of [...peers.keys()])closePeer(id);
   setNetStatus('connecting','Переподключаемся…');
   connectionNotice();
-  toast('Соединение потеряно. Записи остались на устройстве.');
+  // Persistent banner already explains the loss; do not spam toasts.
  });
  try{
   await conn.connect();
@@ -730,7 +761,7 @@ async function flush(p){
 }
 function queueMedia(id,kind,blob,meta){const p=peers.get(id);if(!p||!(blob instanceof Blob))return;p.queued.push({kind,blob,meta});flush(p)}
 function relayAudio(id,blob,meta){
- if(!net||!room||state?.phase!=='premiere'||blob.size>MAX_AUDIO_BYTES){toast('Голос не передался. Попробуй переподключиться.');return}
+ if(!net||!room||state?.phase!=='premiere'||blob.size>MAX_AUDIO_BYTES){networkInterrupted=true;connectionNotice();return}
  const token=uid(),chunk=4000;
  relayQueue=relayQueue.catch(()=>{}).then(async()=>{
   sendGame({type:'relay',to:id,data:{action:'begin',token,kind:'audio',size:blob.size,meta}});
@@ -742,7 +773,7 @@ function relayAudio(id,blob,meta){
    await new Promise(resolve=>setTimeout(resolve,95));
   }
   sendGame({type:'relay',to:id,data:{action:'end',token}});
- }).catch(()=>toast('Ошибка запасной передачи голоса.'));
+ }).catch(()=>{networkInterrupted=true;connectionNotice()});
 }
 function sendAudio(id,blob,meta){
  const p=peers.get(id);
@@ -834,29 +865,32 @@ async function receivedMedia(p,rx,blob){
   sender:p.id,host:state.host,receiver:me
  })||!canAcceptVoice({owner:m?.owner,local:localClips,remote:remoteClips,expected:state.counts}))return;
  if([...localClips,...remoteClips].some(c=>c.id===m.id&&c.owner===m.owner))return;
- remoteClips.push(makeClip({id:m.id,owner:m.owner,start:m.start,end:m.end,offset:m.offset,fx:normalizeVoiceEffect(m.fx),blob}));
+ remoteClips.push(makeClip({id:m.id,owner:m.owner,start:m.start,end:m.end,offset:m.offset,fx:normalizeVoiceEffect(m.fx),...clipMix(m),blob}));
  if(meHost())for(const q of state.players)if(q.id!==me&&q.id!==m.owner)sendAudio(q.id,blob,m);
  updatePremiereStatus();
 }
 function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{
- id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,fx:normalizeVoiceEffect(c.fx),
+ id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,fx:normalizeVoiceEffect(c.fx),...clipMix(c),
  epoch:state?.mediaEpoch,mime:c.blob.type
 })}
-function sendAllOwn(){if(sentPremiere||mode==='solo')return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
-async function openEditor(){if(!scene)return;stopAllPlayback();const key=(mode==='solo'?'solo':room)+'::'+scene.id+'::'+scene.start+'::'+scene.duration;if(!await restore(key)){if(mode==='solo')library();else roomUI();return}if(mode!=='solo'&&state?.phase!=='recording')return;setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
+function sendAllOwn(){if(sentPremiere||mode==='solo'||debugPlay)return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
+async function openEditor(){if(!scene)return;stopAllPlayback();const key=mode==='solo'?(debugPlay?'debug::':'')+'solo::'+scene.id+'::'+scene.start+'::'+scene.duration:sceneDraftKey();if(!await restore(key)){if(mode==='solo')library();else roomUI();return}if(mode!=='solo'&&state?.phase!=='recording')return;setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
 function stopAllPlayback(){playing=false;for(const id of ['stage-video','premiere-video','trim-video'])$(id).pause();for(const c of [...localClips,...remoteClips])c.audio?.pause();$('play-toggle').textContent='▶'}
 function updateClipSound(t,on,isPremiere=false){
  const items=isPremiere?[...localClips,...remoteClips]:localClips;
+  if(isPremiere&&premiereAB==='original')on=false;
  for(const c of items){
   if(!c.audio)continue;
   const active=t>=c.start&&t<c.end&&on;
   const offset=clamp(t-c.start+c.offset,0,Math.max(0,c.blob.size?1e5:0));
   if(active){
    ensureClipVoice(c);
+    if(c.fxGain)c.fxGain.gain.setTargetAtTime(.85*envelopeGain(c,t-c.start),voiceFxContext.currentTime,.012);
    if(c.audio.paused||Math.abs(c.audio.currentTime-offset)>.25)
     try{c.audio.currentTime=offset}catch{}
    if(c.audio.paused)c.audio.play().catch(()=>{});
   }else if(!c.audio.paused)c.audio.pause();
+   if(!active&&c.fxGain)c.fxGain.gain.value=0;
  }
 }
 // Video time updates move only the playhead. Clip buttons retain focus.
@@ -922,6 +956,13 @@ function renderTimeline(){
  $('erase-btn').disabled=!picked;
  $('replace-clip-btn').disabled=!picked||!!record||!!preroll||!!micPending||!!pendingRecording;
  $('voice-effects').classList.toggle('hidden',!picked);
+  $('clip-mixer').classList.toggle('hidden',!picked);
+  if(picked){
+    const mix=clipMix(picked);
+    for(const [id,value,label] of [['clip-volume',Math.round(mix.volume*100),Math.round(mix.volume*100)+'%'],['clip-fade-in',Math.round(mix.fadeIn*100),mix.fadeIn.toFixed(2)+' с'],['clip-fade-out',Math.round(mix.fadeOut*100),mix.fadeOut.toFixed(2)+' с']]){
+      $(id).value=String(value);$(id+'-label').textContent=label;
+    }
+  }
  if(picked&&VOICE_EFFECTS.find(f=>f.id===normalizeVoiceEffect(picked.fx))?.category!=='main')
   voiceFxExpanded=true;
  $('voice-fx-extra').classList.toggle('hidden',!voiceFxExpanded);
@@ -929,6 +970,7 @@ function renderTimeline(){
  $('voice-fx-more').textContent=voiceFxExpanded?'Свернуть эффекты ↑':'Ещё '+VOICE_EFFECTS.filter(f=>f.category!=='main').length+' эффектов ↓';
  $('voice-fx-current').textContent=picked
   ?'· '+VOICE_EFFECTS.find(f=>f.id===normalizeVoiceEffect(picked.fx))?.label:'';
+ if(picked)renderFavoriteVoiceEffects();
  if(picked)for(const b of $('voice-effects-options').querySelectorAll('[data-voice-fx]')){
   const active=b.dataset.voiceFx===normalizeVoiceEffect(picked.fx);
   b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));
@@ -996,7 +1038,7 @@ async function startRecord(countdown=0,replaceId=null){
  micPending=true;updateRecordingControls();
  let stream;
  try{stream=await navigator.mediaDevices.getUserMedia({audio:{
-  echoCancellation:true,noiseSuppression:true,autoGainControl:true
+  echoCancellation:true,noiseSuppression:true,autoGainControl:false
  }})}
  catch{
   micPending=false;updateRecordingControls();
@@ -1037,6 +1079,25 @@ async function startRecord(countdown=0,replaceId=null){
    rec.onstop=async()=>{
     try{
      const blob=new Blob(blobs,{type:rec.mimeType||blobs[0]?.type||'audio/webm'});
+     // Reconcile wall-clock video time with actual encoded microphone duration.
+     // If a browser truncated audio, warn immediately instead of silently
+     // dropping several seconds on the timeline and final premiere.
+     if(blob.size&&active.end>active.start){
+      let duration=NaN,ctx=null;
+      try{
+       const Context=window.AudioContext||window.webkitAudioContext;
+       if(Context){
+        ctx=new Context();
+        duration=(await ctx.decodeAudioData(await blob.arrayBuffer())).duration;
+       }
+      }catch{/* Unsupported browser codecs are validated again during export. */}
+      finally{if(ctx)void ctx.close().catch(()=>{})}
+      const expected=active.end-active.start;
+      if(Number.isFinite(duration)&&duration>=MIN_CLIP_SECONDS&&duration<expected-.20){
+       active.end=Math.min(scene.duration,active.start+duration);
+       toast('Записано меньше звука, чем шло видео. Конец реплики исправлен — прослушай дубль.');
+      }
+     }
      if(blob.size>MAX_AUDIO_BYTES){toast('Запись слишком большая для передачи. Сделай реплику короче.');}
      else if(blob.size&&active.end-active.start>=MIN_CLIP_SECONDS){
       if(active.replaceId){
@@ -1098,7 +1159,10 @@ function finishRecording(){
  r.end=Math.min(r.limit,scene.duration,time($('stage-video')));
  pendingRecording=new Promise(resolve=>{r.resolve=resolve});
  stopAllPlayback();
- if(r.rec.state!=='inactive')r.rec.stop();else{
+ if(r.rec.state!=='inactive'){
+   try{if(r.rec.state==='recording')r.rec.requestData()}catch{}
+   r.rec.stop();
+  }else{
   stopMicMonitor();r.stream.getTracks().forEach(t=>t.stop());r.resolve();pendingRecording=null;
  }
  cue('stop');updateRecordingControls();
@@ -1142,7 +1206,7 @@ async function markReady(){
   if(!await draftWrite())return;
   if(mode==='solo'){beginPremiere();cue('ready');return}
   if(!state||state.phase!=='recording'){toast('Комната ещё не готова.');return}
-  if(net?.socket?.readyState!==WebSocket.OPEN){toast('Нет связи. Реплики сохранены — дождись переподключения.');return}
+  if(!debugPlay&&net?.socket?.readyState!==WebSocket.OPEN){toast('Нет связи. Реплики сохранены — дождись переподключения.');return}
   sendGame({type:'ready',count:localClips.length});
   waitUI();cue('ready');
  }finally{
@@ -1212,7 +1276,7 @@ async function downloadPremiere(){
  $('premiere-film-audio').disabled=true;$('premiere-local-file').disabled=true;
  status.textContent='Подготавливаем звук…';
  const audioClips=[...localClips,...remoteClips].map(c=>({
-  id:c.id,start:c.start,end:c.end,offset:c.offset,owner:c.owner,fx:normalizeVoiceEffect(c.fx),blob:c.blob
+  id:c.id,start:c.start,end:c.end,offset:c.offset,owner:c.owner,fx:normalizeVoiceEffect(c.fx),...clipMix(c),blob:c.blob
  }));
  const sceneCopy={...scene},input=premiereLocalCopy||(scene.custom?sourceBlob:sceneSource(scene));
  try{
@@ -1272,14 +1336,15 @@ async function downloadPremiere(){
   }
  }
 }
-function beginPremiere(){stopPremiereExport();premiereExportNotice='';premiereLocalCopy=null;$('premiere-local-fallback').classList.add('hidden');stopAllPlayback();setVideoSources('premiere-video');$('premiere-video').muted=true;$('premiere-credits').innerHTML=(state?.players||[{id:'solo',name}]).map((p,i)=>'<span class="credit" style="border-left-color:'+colors[i%colors.length]+'">'+esc(p.name)+' · '+esc(state?.assignments?.[p.id]||'Все роли')+'</span>').join('')+(scene.custom?'':'<span class="credit">© '+(scene.id.startsWith('bunny')?'Blender Foundation · CC BY 3.0':'Blender Studio · CC BY 4.0')+' · Голоса изменены</span>');$('premiere-scrub').max=String(Math.round(scene.duration*10));$('premiere-scrub').value='0';show('premiere');seekVideo($('premiere-video'),0);updatePremiereStatus();sendAllOwn()}
+function beginPremiere(){stopPremiereExport();premiereExportNotice='';premiereLocalCopy=null;$('premiere-local-fallback').classList.add('hidden');stopAllPlayback();setVideoSources('premiere-video');$('premiere-video').muted=true;$('premiere-credits').innerHTML=(state?.players||[{id:'solo',name}]).map((p,i)=>'<span class="credit" style="border-left-color:'+colors[i%colors.length]+'">'+esc(p.name)+' · '+esc(state?.assignments?.[p.id]||'Все роли')+'</span>').join('')+(scene.custom?'':'<span class="credit">© '+(scene.id.startsWith('bunny')?'Blender Foundation · CC BY 3.0':'Blender Studio · CC BY 4.0')+' · Голоса изменены</span>');$('premiere-scrub').max=String(Math.round(scene.duration*10));$('premiere-scrub').value='0';premiereAB='dub';$('premiere-ab').setAttribute('aria-pressed','false');$('premiere-ab').textContent='A/B · Оригинал';$('premiere-new-scene').classList.toggle('hidden',!meHost());show('premiere');seekVideo($('premiere-video'),0);updatePremiereStatus();sendAllOwn()}
 function pausePremiere(){const v=$('premiere-video');v.pause();updateClipSound(time(v),false,true);$('premiere-play').textContent='▶ Смотреть премьеру'}
-async function playPremiere(){if(receivedCount()<expectedCount())return;const v=$('premiere-video');if(!v.paused){pausePremiere();return}if(time(v)>=scene.duration-.08)seekVideo(v,0);try{updateClipSound(time(v),true,true);await v.play();$('premiere-play').textContent='Ⅱ Пауза'}catch{toast('Нажми ещё раз для запуска со звуком.')}}
+async function playPremiere(){if(receivedCount()<expectedCount())return;const v=$('premiere-video');if(!v.paused){pausePremiere();return}if(time(v)>=scene.duration-.08)seekVideo(v,0);try{v.muted=premiereAB==='dub';updateClipSound(time(v),premiereAB==='dub',true);await v.play();$('premiere-play').textContent='Ⅱ Пауза'}catch{toast('Нажми ещё раз для запуска со звуком.')}}
 
 $('sound-btn').onclick=toggleSound;
 $('solo-btn').onclick=()=>{mode='solo';library()};
-$('create-btn').onclick=()=>{mode='host';library()};
+$('create-btn').onclick=()=>{mode='host';scene=null;sourceBlob=null;void connectRoom('create')};
 $('join-btn').onclick=()=>{mode='guest';state=null;scene=null;setNetStatus('idle','PocketNet');show('room');roomUI();$('join-code').focus()};
+$('room-change-scene').onclick=()=>{if(meHost()&&state?.phase==='lobby'){pendingScenePicker=false;library()}};
 $('scene-grid').onclick=e=>{const b=e.target.closest('[data-scene]');if(b){const s=LIBRARY.find(x=>x.id===b.dataset.scene);if(s)selectScene(s)}};
 $('video-file').onchange=e=>{uploadVideo(e.target.files[0]);e.target.value=''};
 trimRange=createTrimRange({video:$('trim-video'),onChange:({start,end})=>{
@@ -1330,15 +1395,39 @@ $('replace-clip-btn').onclick=()=>{if(selectedClip)void startRecord(0,selectedCl
 // Main presets stay visible; additional circuits are grouped in a compact
 // expandable shelf rather than creating a second bulky editing screen.
 const fxButton=fx=>'<button type="button" data-voice-fx="'+fx.id+'" aria-pressed="false">'+fx.label+'</button>';
+const favoriteVoiceIds=(()=>{try{return JSON.parse(localStorage.getItem(STORE+'favorite-voices')||'[]').filter(id=>VOICE_EFFECTS.some(fx=>fx.id===id)).slice(0,8)}catch{return []}})();
 $('voice-effects-options').innerHTML=
+ '<div id="voice-fx-favorites" class="voice-fx-favorites hidden" aria-label="Избранные эффекты"></div>'+ 
  '<div class="voice-fx-primary">'+VOICE_EFFECTS.filter(fx=>fx.category==='main').map(fxButton).join('')+'</div>'+
  '<div class="voice-fx-toolbar"><button id="voice-fx-more" type="button" aria-controls="voice-fx-extra" aria-expanded="false">Ещё эффекты ↓</button>'+
- '<button id="voice-fx-audition" type="button" title="Послушать выбранную реплику с текущим эффектом">▶ Послушать</button></div>'+
+ '<button id="voice-fx-audition" type="button" title="Послушать выбранную реплику с текущим эффектом">▶ Послушать</button>'+ 
+ '<button id="voice-fx-pin" type="button" title="Добавить текущий эффект в избранное" aria-pressed="false">☆ Избранное</button></div>'+
  '<div id="voice-fx-extra" class="voice-fx-extra hidden">'+VOICE_EFFECT_GROUPS.map(group=>
   '<div class="voice-fx-group"><span>'+group.label+'</span><div class="voice-fx-buttons">'+
   VOICE_EFFECTS.filter(fx=>fx.category===group.id).map(fxButton).join('')+'</div></div>'
  ).join('')+'</div>';
+function renderFavoriteVoiceEffects(){
+ const shelf=$('voice-fx-favorites');
+ shelf.classList.toggle('hidden',!favoriteVoiceIds.length);
+ shelf.innerHTML=favoriteVoiceIds.map(id=>VOICE_EFFECTS.find(f=>f.id===id)).filter(Boolean).map(fxButton).join('');
+ const current=localClips.find(c=>c.id===selectedClip);
+ const pinned=!!current&&favoriteVoiceIds.includes(normalizeVoiceEffect(current.fx));
+ const button=$('voice-fx-pin');
+ button.setAttribute('aria-pressed',String(pinned));
+ button.textContent=pinned?'★ В избранном':'☆ Избранное';
+}
+renderFavoriteVoiceEffects();
 $('voice-effects-options').onclick=e=>{
+ if(e.target.closest('#voice-fx-pin')){
+  const current=localClips.find(c=>c.id===selectedClip);
+  if(!current)return;
+  const id=normalizeVoiceEffect(current.fx),at=favoriteVoiceIds.indexOf(id);
+  if(at>=0)favoriteVoiceIds.splice(at,1);
+  else if(favoriteVoiceIds.length<8)favoriteVoiceIds.unshift(id);
+  else return toast('Можно закрепить не больше 8 эффектов.');
+  try{localStorage.setItem(STORE+'favorite-voices',JSON.stringify(favoriteVoiceIds))}catch{}
+  renderFavoriteVoiceEffects();renderTimeline();return;
+ }
  const more=e.target.closest('#voice-fx-more');
  if(more){
   voiceFxExpanded=!voiceFxExpanded;
@@ -1367,6 +1456,28 @@ $('voice-effects-options').onclick=e=>{
  if(current.fxSource)ensureClipVoice(current);
  renderTimeline();void draftWrite();cue('ready');
 };
+// Deliberate, local mixing: keep soft and loud acting intact.
+let mixBefore=null,mixClipId=null;
+for(const [id,field] of [['clip-volume','volume'],['clip-fade-in','fadeIn'],['clip-fade-out','fadeOut']]){
+ const el=$(id);
+ const begin=()=>{mixClipId=selectedClip;mixBefore=snapshotClips(localClips)};
+ el.addEventListener('pointerdown',begin);el.addEventListener('focus',begin);
+ el.addEventListener('input',()=>{
+  const c=localClips.find(c=>c.id===selectedClip);if(!c)return;
+  c[field]=Number(el.value)/100;
+  $(id+'-label').textContent=field==='volume'?Math.round(c.volume*100)+'%':c[field].toFixed(2)+' с';
+  if(playing||!$('premiere-video').paused)updateClipSound(time(view==='premiere'?$('premiere-video'):$('stage-video')),true,view==='premiere');
+ });
+ el.addEventListener('change',()=>{
+  const c=localClips.find(c=>c.id===selectedClip);if(!c)return;
+  if(mixBefore&&mixClipId===selectedClip){
+   const old=mixBefore.find(x=>x.id===selectedClip);
+   if(old&&old[field]!==c[field])editHistory.remember(mixBefore);
+  }
+  mixBefore=null;mixClipId=null;
+  renderTimeline();void draftWrite();
+ });
+}
 $('timeline-zoom-in').onclick=()=>zoomTimeline(1);
 $('timeline-zoom-out').onclick=()=>zoomTimeline(-1);
 $('timeline-viewport').addEventListener('wheel',e=>{
@@ -1482,12 +1593,23 @@ $('premiere-local-file').onchange=async e=>{
  }finally{video.pause();video.removeAttribute('src');video.load();URL.revokeObjectURL(url)}
 };
 $('premiere-repeat').onclick=()=>{pausePremiere();setPlayhead(0,true)};
+$('premiere-ab').onclick=()=>{
+   premiereAB=premiereAB==='dub'?'original':'dub';
+   $('premiere-ab').setAttribute('aria-pressed',String(premiereAB==='original'));
+   $('premiere-ab').textContent=premiereAB==='dub'?'A/B · Оригинал':'A/B · Наш дубляж';
+   $('premiere-video').muted=premiereAB==='dub';
+   updateClipSound(time($('premiere-video')),premiereAB==='dub'&&!$('premiere-video').paused,true);
+};
 $('premiere-scrub').oninput=e=>{pausePremiere();setPlayhead(Number(e.target.value)/10,true)};
+$('premiere-new-scene').onclick=()=>{
+   if(!meHost()||state?.phase!=='premiere')return;
+   pendingScenePicker=true;sendGame({type:'again'});
+};
 $('premiere-back').onclick=()=>{if(mode==='solo'){stopPremiereExport();pausePremiere();openEditor()}else if(meHost()){stopPremiereExport();pausePremiere();sendGame({type:'again'})}else toast('Новую сцену начинает ведущий.')};
-for(const b of document.querySelectorAll('[data-back]'))b.onclick=async()=>{const to=b.dataset.back;if(view==='premiere')stopPremiereExport();if(view==='wait'&&mode!=='solo'){sendGame({type:'unready'});await openEditor()}else if(to==='home'){if(await resetRuntime()){leaveNetwork();show('home')}}else if(to==='library'){videoExportController?.abort();clearExportPreview();library()}else if(to==='editor')await openEditor()};
+for(const b of document.querySelectorAll('[data-back]'))b.onclick=async()=>{const to=b.dataset.back;if(view==='premiere')stopPremiereExport();if(view==='wait'&&mode!=='solo'){sendGame({type:'unready'});await openEditor()}else if(to==='room'&&room){pendingScenePicker=false;roomUI()}else if(to==='home'){if(await resetRuntime()){leaveNetwork();show('home')}}else if(to==='library'){videoExportController?.abort();clearExportPreview();library()}else if(to==='editor')await openEditor()};
 $('stage-video').ontimeupdate=()=>{if(!scene)return;const t=time($('stage-video'));if(record&&t>=record.limit-.035)finishRecording();
 else if(t>=scene.duration-.05){if(record)finishRecording();else if(!$('stage-video').paused){stopAllPlayback();seekVideo($('stage-video'),scene.duration-.04)}}if(!record)updateClipSound(t,playing,false);renderPlayhead()};
-$('premiere-video').ontimeupdate=()=>{if(!scene)return;const t=time($('premiere-video'));$('premiere-scrub').value=String(Math.round(t*10));if(t>=scene.duration-.04){pausePremiere();seekVideo($('premiere-video'),scene.duration-.04)}else updateClipSound(t,!$('premiere-video').paused,true)};
+$('premiere-video').ontimeupdate=()=>{if(!scene)return;const t=time($('premiere-video'));$('premiere-scrub').value=String(Math.round(t*10));if(t>=scene.duration-.04){pausePremiere();seekVideo($('premiere-video'),scene.duration-.04)}else updateClipSound(t,premiereAB==='dub'&&!$('premiere-video').paused,true)};
 $('stage-video').onpause=()=>{if(!record){playing=false;$('play-toggle').textContent='▶';updateClipSound(time($('stage-video')),false)}};
 // Browser throttling prevents reliable frame encoding when a tab is hidden.
 // Keep the active take pending without committing or dropping it.
@@ -1533,14 +1655,14 @@ document.addEventListener('keydown',e=>{
  }
 });
 async function initializeIdentityAndRecovery(){
- if(new URLSearchParams(location.search).get('debug')==='1')return; // QA preview must never auto-join a saved room.
+ if(['1','play'].includes(new URLSearchParams(location.search).get('debug')))return; // QA preview must never auto-join a saved room.
  try{
   identity=await getPocketIdentity();
   name=identity?.complete?identity.nickname:(session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900))));
  }catch{
   name=session.getItem('name')||('Гость '+String(Math.floor(100+Math.random()*900)));
  }
- if(!identity?.complete)session.setItem('name',name);
+ if(!identity?.complete&&!debugPlay)session.setItem('name',name);
  const incoming=new URLSearchParams(location.search).get('room');
  const checkpoint=roomCheckpoint().read();
  if(incoming){
@@ -1554,5 +1676,63 @@ async function initializeIdentityAndRecovery(){
   void connectRoom('resume',checkpoint);
  }
 }
+
+function mockConnect(){
+ room='D3B6A1F2';me='debug-host';name='Тестовый ведущий';mode='host';
+ const s=sceneForServer()||{id:'wing',title:'Видео не выбрано',start:44,duration:55,roles:['Кот','Пёс','Курица'],custom:false};
+ state={phase:'lobby',host:me,players:[{id:me,name:'Тестовый ведущий'},{id:'debug-guest',name:'Тестовый актёр'}],
+  scene:s,configured:!!scene,round:1,mediaEpoch:1,revision:1,assignments:{[me]:'Кот','debug-guest':'Пёс'},
+  mediaReady:{[me]:true,'debug-guest':true},ready:{},counts:{}};
+ setNetStatus('online','Демо · локально');roomUI();
+}
+function mockGame(msg){
+ if(!state)return;
+ const next={...state,assignments:{...state.assignments},mediaReady:{...state.mediaReady},
+  ready:{...state.ready},counts:{...state.counts},revision:state.revision+1};
+ if(msg.type==='scene'&&next.phase==='lobby'){
+  next.scene={...msg.scene};next.configured=true;next.mediaEpoch++;
+  next.assignments={[me]:msg.scene.roles[0]||'Актёр','debug-guest':msg.scene.roles[1]||msg.scene.roles[0]||'Актёр'};
+  next.mediaReady={[me]:true,'debug-guest':true};
+ }else if(msg.type==='start'&&next.phase==='lobby'&&next.configured){
+  next.phase='recording';next.counts={};next.ready={};
+ }else if(msg.type==='ready'&&next.phase==='recording'){
+  next.ready[me]=true;next.ready['debug-guest']=true;next.counts[me]=msg.count;next.counts['debug-guest']=0;
+ }else if(msg.type==='unready'&&next.phase==='recording'){
+  delete next.ready[me];delete next.counts[me];
+ }else if(msg.type==='reveal'&&next.phase==='recording'){
+  next.phase='premiere';
+ }else if(msg.type==='again'&&next.phase==='premiere'){
+  next.phase='lobby';next.ready={};next.counts={};next.round++;
+ }else if(msg.type==='assign'&&next.phase==='lobby'){
+  next.assignments[msg.target]=msg.role;
+ }else return;
+ stateChanged(next);
+}
+async function startDebugPlay(){
+ const requested=new URLSearchParams(location.search).get('screen')||'home';
+ // Visual QA runs the actual application code, but never opens a real socket.
+ if(requested==='home')return;
+ if(requested==='library'){mode='solo';library();return}
+ if(requested==='trim'){mode='solo';selectScene(LIBRARY[0]);return}
+ if(requested.startsWith('room')||requested==='wait'||requested==='premiere'||requested==='premiere-export'){
+  if(requested==='wait'||requested.startsWith('premiere'))scene={...LIBRARY[0],roles:[...LIBRARY[0].roles]};
+  mockConnect();
+  if(requested==='room-offline'){
+   networkInterrupted=true;connectionNotice();setNetStatus('offline','Тест: нет связи');
+  }
+  if(requested==='wait'){
+   const next={...state,phase:'recording',ready:{[me]:true,'debug-guest':false},counts:{[me]:1}};
+   state=next;waitUI();
+  }else if(requested.startsWith('premiere')){
+   state={...state,phase:'premiere',counts:{},ready:{}};beginPremiere();
+  }
+  return;
+ }
+ if(requested.startsWith('editor')){
+  mode='solo';scene={...LIBRARY[0],roles:[...LIBRARY[0].roles]};
+  await openEditor();
+ }
+}
 void initializeIdentityAndRecovery();
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+if(debugPlay)void startDebugPlay();
+if(!debugPlay&&'serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));

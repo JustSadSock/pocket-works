@@ -45,9 +45,9 @@ jobs:
           node --check apps/ne-tem-golosom/sw.js
       - name: Run game, transport, and PocketNet module regression
         run: node --test apps/ne-tem-golosom/qa/*.test.mjs
-      - name: Assert the production server snapshot matches the pinned v3 module
+      - name: Assert the production server snapshot matches the pinned v4 module
         run: |
-          node --input-type=module -e "import {readFileSync} from 'node:fs';const live=readFileSync('apps/ne-tem-golosom/server/module.ts','utf8');const pin=readFileSync('pocketnet/module-versions/ne-tem-golosom/v3.ts','utf8');const lock=JSON.parse(readFileSync('pocketnet/modules.lock.json','utf8'));if(live!==pin||lock['ne-tem-golosom'].current!=='v3')process.exit(1);"
+          node --input-type=module -e "import {readFileSync} from 'node:fs';const live=readFileSync('apps/ne-tem-golosom/server/module.ts','utf8');const pin=readFileSync('pocketnet/module-versions/ne-tem-golosom/v4.ts','utf8');const lock=JSON.parse(readFileSync('pocketnet/modules.lock.json','utf8'));if(live!==pin||lock['ne-tem-golosom'].current!=='v4')process.exit(1);"
 
   real-browser:
     needs: unit-and-server

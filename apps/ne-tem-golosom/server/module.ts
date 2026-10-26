@@ -1,6 +1,6 @@
 export const MIN_PLAYERS=2;
 export const MAX_PLAYERS=6;
-export const RULESET_VERSION=2;
+export const RULESET_VERSION=3;
 export const MAX_AUDIO_BYTES=3_000_000;
 const allowed=/^[\p{L}\p{N} .,!?:()_-]{1,35}$/u;
 const notice=(id,s)=>[{type:'notice',to:id,payload:s}];
@@ -24,7 +24,7 @@ const module={
  createRoom({player}){
   const scene={id:'wing',title:'WING IT!',start:50,duration:60,roles:['Кот','Пёс','Курица'],custom:false};
   return {state:{phase:'lobby',host:player.id,players:[player],scene,
-   assignments:{[player.id]:'Кот'},mediaReady:{[player.id]:true},ready:{},counts:{},mediaEpoch:1,revision:1}};
+   assignments:{[player.id]:'Кот'},mediaReady:{[player.id]:true},ready:{},counts:{},mediaEpoch:1,round:1,configured:false,revision:1}};
  },
  onJoin({state,players,player}){
   if(players.length>MAX_PLAYERS)throw Error('room_full');
@@ -74,7 +74,7 @@ const module={
     state.scene={id:x.id,title:x.title,start,duration,roles:x.roles.map(z=>z.trim()),custom:x.custom===true};
     state.assignments=assignRoles(state.players,state.scene.roles);
     state.mediaReady=Object.fromEntries(state.players.map(p=>[p.id,!state.scene.custom||p.id===state.host]));
-    state.ready={};state.counts={};state.mediaEpoch=(state.mediaEpoch||0)+1;state.revision++;
+    state.ready={};state.counts={};state.configured=true;state.mediaEpoch=(state.mediaEpoch||0)+1;state.revision++;
     return {state,events:emit(serial(state))};
   }
   if(v.type==='assign'&&state.phase==='lobby'&&player.id===state.host){
@@ -89,7 +89,8 @@ const module={
     state.revision++;return {state,events:emit(serial(state))};
   }
   if(v.type==='start'&&state.phase==='lobby'&&player.id===state.host){
-    if(state.players.length<MIN_PLAYERS||!state.players.every(p=>state.mediaReady[p.id]))return {state,events:notice(player.id,'Нужны два участника и видео у каждого.')};
+    if(!state.configured)return {state,events:notice(player.id,'Ведущий ещё не выбрал сцену.')};
+     if(state.players.length<MIN_PLAYERS||!state.players.every(p=>state.mediaReady[p.id]))return {state,events:notice(player.id,'Нужны два участника и видео у каждого.')};
     state.phase='recording';state.ready={};state.counts={};state.revision++;
     return {state,events:emit(serial(state))};
   }
@@ -109,7 +110,7 @@ const module={
     return {state,events:emit(serial(state))};
   }
   if(v.type==='again'&&state.phase==='premiere'&&player.id===state.host){
-    state.phase='lobby';state.ready={};state.counts={};
+    state.phase='lobby';state.ready={};state.counts={};state.round=(state.round||1)+1;
     state.revision++;return {state,events:emit(serial(state))};
   }
   return {state,events:[]};

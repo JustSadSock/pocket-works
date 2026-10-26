@@ -126,12 +126,17 @@ try{
   }
   assert(moved.left>before.left,'drag moves audio in time');
   assert(Math.abs(moved.width-before.width)<0.01,'moving preserves recording length');
-  rect=await page.locator('[data-clip="first"]').boundingBox();
-  await page.mouse.move(rect.x+rect.width-4,rect.y+rect.height/2);
+  await page.evaluate(()=>{window.__ntgPointerEvents=[]});
+  const rightGrip=page.locator('[data-clip="first"] [data-edge="right"]');
+  await rightGrip.scrollIntoViewIfNeeded();
+  rect=await rightGrip.boundingBox();
+  assert(rect&&rect.width>0,'visible right trim grip');
+  await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);
   await page.mouse.down();
-  await page.mouse.move(rect.x+rect.width-26,rect.y+rect.height/2,{steps:5});
+  await page.mouse.move(rect.x+rect.width/2-22,rect.y+rect.height/2,{steps:5});
   await page.mouse.up();
   const trimmedWidth=await page.locator('[data-clip="first"]').evaluate(el=>parseFloat(el.style.width));
+  if(!(trimmedWidth<moved.width))console.log(vp.name,'TRIM_DEBUG',JSON.stringify({before,moved,trimmedWidth,grip:rect,events:await page.evaluate(()=>window.__ntgPointerEvents),hit:await page.evaluate(({x,y})=>document.elementFromPoint(x,y)?.outerHTML.slice(0,200),{x:rect.x+rect.width/2,y:rect.y+rect.height/2})}));
   assert(trimmedWidth<moved.width,'dragging grip trims the line');
   assert.equal(await page.locator('#replace-clip-btn').isEnabled(),true,'selected clip can be re-recorded');
   // Main character presets are one click away, without opening the full shelf.
@@ -141,6 +146,11 @@ try{
    await button.click();
    assert.equal(await button.getAttribute('aria-pressed'),'true');
   }
+  // Frequently used effects can be pinned without changing the selected take.
+  await page.locator('#voice-fx-pin').click();
+  assert.equal(await page.locator('#voice-fx-pin').getAttribute('aria-pressed'),'true','selected effect pinned');
+  assert.equal(await page.locator('.voice-fx-favorites [data-voice-fx="deep"]').count(),1,'favorites ribbon contains deep voice');
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('pocket-works:ne-tem-golosom:favorite-voices')||'[]').includes('deep')),true,'favorites persist locally');
   const geometry=await page.evaluate(()=>{
    const stage=document.querySelector('.stage-wrap').getBoundingClientRect();
    const desk=document.querySelector('.editor-desk').getBoundingClientRect();

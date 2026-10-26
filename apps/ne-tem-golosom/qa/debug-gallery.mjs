@@ -47,9 +47,21 @@ try{
   await page.waitForFunction(()=>{
    const el=document.querySelector('.ntg-debug-device-shell iframe');
    const width=el?.getBoundingClientRect().width||0;
-   return width>=320&&width<=390;
+   return width>=380&&width<=402;
   },null,{timeout:3000});
   await page.locator('[data-debug-device="desktop"]').click();
+  // The interactive mode runs the actual app with a local mocked room.
+  await page.locator('[data-debug-live]').click();
+  assert.equal(await page.locator('[data-debug-live]').getAttribute('aria-pressed'),'true');
+  await page.locator('[data-debug-page="room"]').click();
+  await preview.locator('#room-change-scene:not(.hidden)').click();
+  await preview.locator('[data-scene="wing-launch"]').click();
+  await preview.locator('#confirm-scene').click();
+  await preview.locator('#room-start:not(:disabled)').click();
+  await preview.locator('#screen-editor:not(.hidden)').waitFor();
+  assert.equal(await preview.locator('#record-btn').isEnabled(),true,'real record control reachable from debug room');
+  await page.locator('[data-debug-live]').click();
+  assert.equal(await page.locator('[data-debug-live]').getAttribute('aria-pressed'),'false');
   await page.locator('[data-debug-close]').click();
   assert.equal(await page.locator('.ntg-debug-overlay').count(),0);
   await page.keyboard.press('Backquote');

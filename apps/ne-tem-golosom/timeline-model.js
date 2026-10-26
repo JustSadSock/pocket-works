@@ -1,8 +1,9 @@
 // Pure, DOM-free model for the voice-only editing lane. One actor owns one lane.
 export const HISTORY_LIMIT = 40;
 export const MAX_CLIPS = 90;
-export const snapshotClips = clips => clips.map(({id,start,end,offset,owner,blob,fx='clean'}) =>
-  ({id,start,end,offset,owner,blob,fx}));
+import {clipMix} from './clip-mix.js';
+export const snapshotClips = clips => clips.map(({id,start,end,offset,owner,blob,fx='clean',...mix}) =>
+  ({id,start,end,offset,owner,blob,fx,...clipMix(mix)}));
 
 export class TimelineHistory {
   constructor(past = [], future = []) {
@@ -38,7 +39,7 @@ export function spliceRecording(clips,incoming,createId) {
      !blob||!id||typeof createId!=='function')throw Error('Неверный дубль.');
  if(clips.length>=MAX_CLIPS)throw Error('Слишком много реплик (максимум 90).');
  if(clips.some(c=>c.id===id))throw Error('Повтор идентификатора дубля.');
- return [...clips,{id,start:a,end:b,offset:0,owner,blob,fx:'clean'}]
+ return [...clips,{id,start:a,end:b,offset:0,owner,blob,fx:'clean',...clipMix()}]
   .sort((x,y)=>x.start-y.start||x.end-y.end);
 }
 
@@ -99,7 +100,7 @@ export function unpackTimeline(data,duration=Infinity) {
   };
   const unpack = list => sanitized((Array.isArray(list)?list:[]).map(raw => ({
     id:raw?.id,start:raw?.start,end:raw?.end,offset:raw?.offset,
-    owner:raw?.owner,fx:raw?.fx||'clean',blob:data.assets[raw?.asset]
+    owner:raw?.owner,fx:raw?.fx||'clean',...clipMix(raw),blob:data.assets[raw?.asset]
   })),duration);
   const clips=unpack(data.clips);
   const past=(Array.isArray(data.past)?data.past:[]).slice(-HISTORY_LIMIT).map(unpack);
@@ -153,6 +154,6 @@ export function replaceSelectedRecording(clips,targetId,blob,duration,newId){
  const end=old.start+duration;
  if(end-old.start<MIN_CLIP_SECONDS)return null;
  const next=clips.slice();
- next[at]={id:newId,owner:old.owner,start:old.start,end,offset:0,blob,fx:old.fx||'clean'};
+ next[at]={id:newId,owner:old.owner,start:old.start,end,offset:0,blob,fx:old.fx||'clean',...clipMix(old)};
  return next;
 }
