@@ -385,7 +385,10 @@ function setScenePrepStep(step){
  $('trim-range-root').classList.toggle('hidden',soundStep);
  $('trim-sound-summary').classList.toggle('hidden',!soundStep);
  $('trim-stage-note').classList.toggle('hidden',soundStep);
+ $('trim-instruction').classList.toggle('hidden',soundStep);
  $('film-cleaner').classList.toggle('hidden',!soundStep);
+ $('film-neural-options').classList.toggle('hidden',soundStep&&selectedSound()!=='neural');
+ $('film-time-explain').classList.toggle('hidden',soundStep&&selectedSound()!=='neural');
  $('trim-roles').classList.toggle('hidden',!soundStep);
  $('trim-stage-title').textContent=soundStep?'2 / 2 · Настроить звук':'1 / 2 · Выбрать отрывок';
  $('trim-stage-counter').textContent=soundStep?'ПОСЛЕ МОНТАЖА':'СНАЧАЛА МОНТАЖ';
@@ -398,6 +401,7 @@ function setScenePrepStep(step){
 function updateSoundChoice(){
  const isNeural=selectedSound()==='neural';
  $('film-neural-options').classList.toggle('hidden',!isNeural);
+ $('film-time-explain').classList.toggle('hidden',!isNeural);
  $('film-clean-status').textContent=isNeural?
   'Open-Unmix уберёт речь из выбранного отрывка. Музыка и эффекты останутся.':
   selectedSound()==='mute'?'Звуковая дорожка будет полностью удалена из выбранного отрывка.':
