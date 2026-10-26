@@ -1,8 +1,8 @@
 const CACHE_PREFIX='ne-tem-golosom-';
-const CACHE='ne-tem-golosom-v1.13.1';
-const APP_VERSION='1.13.1';
+const CACHE='ne-tem-golosom-v1.14.0';
+const APP_VERSION='1.14.0';
 const RELEASE_DATE='2026-10-26';
-const RELEASE_NOTES=["Исправлена возможная авария вкладки Chrome на слабых ПК: последовательная ONNX-обработка короткими отрывками, ограничение памяти и передача аудиобуферов без лишних копий.","Быстрое извлечение AAC-аудио из MP4/MOV через WebCodecs без декодирования видеокадров; резервный извлекатель остаётся для несовместимых форматов.","На слабых устройствах автоматически включается защита памяти и понижается разрешение подготовки; выбор можно изменить вручную.","Прогноз длительности учитывает подготовку аудио и видеокодирование, а после первого запуска адаптируется по реальной скорости этого компьютера."];
+const RELEASE_NOTES=["Подготовка сцены разделена на два последовательных шага: сначала обрезать видео до 10–90 секунд, затем выбрать работу со звуком.","На втором шаге доступны три осмысленных варианта: убрать весь звук, сохранить исходный либо удалить голоса нейросетью; Open-Unmix по умолчанию, гибрид и SCNet сохранены.","Звук и видео кодируются только для выбранного фрагмента; можно вернуться к обрезке, отменить обработку, прослушать результат и передать подготовленный отрывок в комнату."];
 const OWN=['./','./index.html','./app.js','./film-cleanup.js','./mp4-audio.js','./film-buzz-worker.js','../tihiy-kadr/mrx-worker.js','../tihiy-kadr/artifact-repair.js','../tihiy-kadr/selective-scnet.js','./clip-mix.js','./room-recovery.js','./media-lab.js','./premiere-export.js','./studio-feedback.js','./media-protocol.js','./trim-range.js','./timeline-model.js','./voice-effects.js','./styles.css','./screen-debug.css','./screen-debug.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/capabilities/net.js','../../shared/capabilities/identity.js'];
 const SCOPE=new URL('./',self.registration.scope);
 const URLS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
