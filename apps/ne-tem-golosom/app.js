@@ -46,7 +46,7 @@ const mem=new Map(),session={
 let sound=true,audioContext=null,identity=null,name='Гость',mode='solo',view='home',selected=null,sourceBlob=null,scene=null;
 let relayQueue=Promise.resolve(),relayInbox=new Map();
 let videoExportController=null,videoExportBlob=null,videoExportUrl=null,trimRange=null,encodedCache=null;
-let filmCleanController=null,filmPreparedBlob=null,filmLocalSource=null;
+let filmCleanController=null,filmPreparedBlob=null,filmLocalSource=null,scenePrepareStep='trim';
 const FILM_BENCH_KEY=STORE+'film-bench-v2';
 let filmBench={};
 try{const value=JSON.parse(localStorage.getItem(FILM_BENCH_KEY)||'{}');
@@ -345,7 +345,9 @@ function time(video){return scene?clamp((video.currentTime||scene.start)-scene.s
 
 function library(){document.querySelector('#screen-library [data-back]').dataset.back=room&&mode==='host'?'room':'home';const grid=$('scene-grid');$('scene-license').innerHTML='Озвученные отрывки являются переработкой оригиналов. Авторы: <a href="https://commons.wikimedia.org/wiki/File:WING_IT!_-_Blender_Open_Movie-full_movie.webm" target="_blank" rel="noopener">WING IT! — Blender Studio (CC BY 4.0)</a>, <a href="https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm" target="_blank" rel="noopener">Sprite Fright — Blender Studio (CC BY 4.0)</a>, <a href="https://peach.blender.org/about/" target="_blank" rel="noopener">Big Buck Bunny — Blender Foundation (CC BY 3.0)</a>. <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.';grid.innerHTML=LIBRARY.map((s,i)=>'<button class="scene-card" data-scene="'+esc(s.id)+'"><div class="scene-thumb">'+(POSTERS[s.id]?'<img src="'+esc(POSTERS[s.id])+'" loading="lazy" alt="Кадр фильма">':'')+'<strong>'+esc(s.short)+'</strong><span class="duration">'+fmt(s.duration)+'</span></div><b>'+esc(s.title)+'</b><small>'+esc(s.sub)+'</small></button>').join('');show('library')}
 function selectScene(item,blob=null){
- if(filmCleanController)filmCleanController.abort();filmLocalSource=null;filmPreparedBlob=null;$('film-skip').checked=false;
+ if(filmCleanController)filmCleanController.abort();filmLocalSource=null;filmPreparedBlob=null;
+ document.querySelector('input[name="film-sound-choice"][value="neural"]').checked=true;
+ document.querySelector('input[name="film-clean-mode"][value="umx"]').checked=true;
  $('film-low-memory').checked=lowMemoryRecommended(navigator.deviceMemory,navigator.hardwareConcurrency);
  if($('film-low-memory').checked){
   if(Number($('media-resolution').value)>640)$('media-resolution').value='640';
@@ -357,10 +359,57 @@ function selectScene(item,blob=null){
  scene={...selected};clearExportPreview();setVideoSources('trim-video');renderRoles();show('trim');
  const start=selected.start||0,duration=selected.duration||60;
  trimRange.setRange(start,start+duration,selected.totalDuration||Math.max(90,start+duration));
- updateMediaLab();updateFilmCleaner();
+ setScenePrepStep('trim');
 }
 function renderRoles(){$('role-tags').innerHTML=selected.roles.map((role,i)=>'<div class="role-tag"><input maxlength="35" aria-label="Персонаж '+(i+1)+'" data-role-index="'+i+'" value="'+esc(role)+'"><button data-remove-role="'+i+'" aria-label="Удалить роль">×</button></div>').join('')}
 function validateScene(){const start=Number($('trim-start').value),duration=Number($('trim-length').value);const name=$('scene-title').value.trim();const roles=[...document.querySelectorAll('[data-role-index]')].map(el=>el.value.trim()).filter(Boolean);const v=$('trim-video');if(!name||!roles.length)return toast('Укажи название и хотя бы одного персонажа'),false;if(!Number.isFinite(start)||!Number.isFinite(duration)||start<0||duration<10||duration>90)return toast('Длина сцены — от 10 до 90 секунд.'),false;if(Number.isFinite(v.duration)&&v.duration>0&&start+duration>v.duration+.1)return toast('Отрывок выходит за пределы видео.'),false;scene={...selected,title:name,start,duration,roles};return true}
+function selectedSound(){
+ return document.querySelector('input[name="film-sound-choice"]:checked')?.value||'neural';
+}
+function validTrim(){
+ const start=Number($('trim-start').value),duration=Number($('trim-length').value);
+ const video=$('trim-video');
+ if(!Number.isFinite(start)||start<0||!Number.isFinite(duration)||duration<10||duration>90){
+  toast('Выбери отрывок длиной от 10 до 90 секунд.');return false;
+ }
+ if(Number.isFinite(video.duration)&&video.duration>0&&start+duration>video.duration+.1){
+  toast('Выбранный отрывок выходит за пределы видео.');return false;
+ }
+ return true;
+}
+function setScenePrepStep(step){
+ if(step!=='trim'&&step!=='sound')throw Error('Неизвестный шаг подготовки');
+ if(filmCleanController||videoExportController)return;
+ scenePrepareStep=step;
+ const soundStep=step==='sound';
+ $('trim-range-root').classList.toggle('hidden',soundStep);
+ $('trim-sound-summary').classList.toggle('hidden',!soundStep);
+ $('trim-stage-note').classList.toggle('hidden',soundStep);
+ $('film-cleaner').classList.toggle('hidden',!soundStep);
+ $('trim-roles').classList.toggle('hidden',!soundStep);
+ $('trim-stage-title').textContent=soundStep?'2 / 2 · Настроить звук':'1 / 2 · Выбрать отрывок';
+ $('trim-stage-counter').textContent=soundStep?'ПОСЛЕ МОНТАЖА':'СНАЧАЛА МОНТАЖ';
+ if(soundStep){
+  const start=Number($('trim-start').value),length=Number($('trim-length').value);
+  $('trim-sound-times').textContent=fmt(start)+' – '+fmt(start+length)+' · '+fmt(length);
+ }
+ updateFilmCleaner();updateMediaLab();updateConfirmAction();
+}
+function updateSoundChoice(){
+ const isNeural=selectedSound()==='neural';
+ $('film-neural-options').classList.toggle('hidden',!isNeural);
+ $('film-clean-status').textContent=isNeural?
+  'Open-Unmix уберёт речь из выбранного отрывка. Музыка и эффекты останутся.':
+  selectedSound()==='mute'?'Звуковая дорожка будет полностью удалена из выбранного отрывка.':
+  'В выбранном отрывке сохранится оригинальный звук. Нейросеть не запускается.';
+ if(videoExportBlob)clearExportPreview();
+ updateFilmCleaner();updateMediaLab();updateConfirmAction();
+}
+async function prepareSelectedScene(){
+ if(scenePrepareStep!=='sound')return false;
+ if(!validTrim())return false;
+ return selectedSound()==='neural'?await prepareFilmScene():await processMedia();
+}
 function filmMode(){
  return document.querySelector('input[name="film-clean-mode"]:checked')?.value||'umx';
 }
@@ -382,10 +431,11 @@ function updateFilmCleaner(){
   ', извлечение звука может занять до '+fmt(duration)+' при резервном захвате. Итого: от ≈ '+
   fmt(Math.ceil(likely.totalFast))+' до ≈ '+fmt(Math.ceil(likely.totalSlow))+
   ' на измеренном ПК; на слабом устройстве медленнее.';
- const ready=!!selected&&!filmCleanController&&!videoExportController;
- $('film-clean-start').disabled=!ready||!supportsVideoExport()||$('film-skip').checked;
- $('film-low-memory').disabled=!!filmCleanController||!!videoExportController;
- document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.disabled=!!filmCleanController||!!videoExportController||$('film-skip').checked);
+ const ready=!!selected&&scenePrepareStep==='sound'&&!filmCleanController&&!videoExportController;
+ $('film-clean-start').disabled=!ready||!supportsVideoExport();
+ $('film-clean-start').textContent=selectedSound()==='neural'?'Подготовить без диалогов':selectedSound()==='mute'?'Создать видео без звука':'Подготовить с исходным звуком';
+ $('film-low-memory').disabled=selectedSound()!=='neural'||!!filmCleanController||!!videoExportController;
+ document.querySelectorAll('input[name="film-clean-mode"]').forEach(input=>input.disabled=!!filmCleanController||!!videoExportController);
  $('film-clean-cancel').classList.toggle('hidden',!filmCleanController);
  $('film-clean-progress').classList.toggle('hidden',!filmCleanController);
  if(!filmCleanController&&filmPreparedBlob&&videoExportBlob===filmPreparedBlob){
@@ -393,7 +443,7 @@ function updateFilmCleaner(){
  }
 }
 async function prepareFilmScene(){
- if(!selected||filmCleanController||videoExportController||$('film-skip').checked)return false;
+ if(!selected||scenePrepareStep!=='sound'||selectedSound()!=='neural'||filmCleanController||videoExportController)return false;
  if(!supportsVideoExport()){
   $('film-clean-status').textContent='Нужен браузер с MediaRecorder и Web Audio для подготовки видео.';
   return false;
@@ -468,19 +518,26 @@ async function prepareFilmScene(){
   }
   return false;
  }finally{
-  filmCleanController=null;button.textContent='Подготовить звук без голосов';
+  filmCleanController=null;
   exportBusy(false);updateMediaLab();updateFilmCleaner();updateConfirmAction();
  }
 }
 async function confirmScene(){
  if(videoExportController||filmCleanController)return toast('Сначала заверши обработку видео.');
- // Validate before accepting so an invalid title/role never replaces the source.
+ if(scenePrepareStep==='trim'){
+  if(!validTrim())return;
+  setScenePrepStep('sound');return;
+ }
  if(!validateScene())return;
- if(!$('film-skip').checked&&(videoExportBlob!==filmPreparedBlob||!filmPreparedBlob)){
-  if(!await prepareFilmScene())return;
+ // A remote licensed scene can retain its original soundtrack without any
+ // video encoding, because trimming start/duration are part of the scene.
+ const remoteOriginal=selectedSound()==='original'&&!sourceBlob&&!filmLocalSource;
+ if(!videoExportBlob&&!remoteOriginal){
+  if(!await prepareSelectedScene())return;
  }
  if(videoExportBlob&&!acceptMedia())return;
  if(!validateScene())return;
+ if(remoteOriginal){scene.cleaned=false;selected.cleaned=false;}
  if(mode==='host'&&scene.custom&&sourceBlob?.size>MAX_ROOM_VIDEO_BYTES){
    if(supportsVideoExport()){toast('Файл больше 96 МиБ. Готовим отрывок для комнаты.');await processMedia();}
    else toast('Файл больше 96 МиБ, а сжатие не поддерживается браузером.');
@@ -525,14 +582,20 @@ function clearExportPreview(){
 }
 function updateConfirmAction(){
  const b=$('confirm-scene'),result=videoExportBlob instanceof Blob;
+ const stage=scenePrepareStep;
  const oversized=mode==='host'&&scene?.custom&&sourceBlob?.size>MAX_ROOM_VIDEO_BYTES;
- b.disabled=!!videoExportController||!!filmCleanController||(result&&mode==='host'&&videoExportBlob.size>MAX_ROOM_VIDEO_BYTES);
- let label='Продолжить с видео';
- if(result)label='Использовать и продолжить';
- else if(!$('film-skip').checked&&selected)label='Убрать голоса и продолжить';
- else if(oversized)label='Подготовить видео';
+ b.disabled=!!videoExportController||!!filmCleanController||
+  (result&&mode==='host'&&videoExportBlob.size>MAX_ROOM_VIDEO_BYTES);
+ let label;
+ if(stage==='trim')label='Далее · настроить звук';
+ else if(result)label='Использовать и продолжить';
+ else label=selectedSound()==='mute'?'Убрать звук и продолжить':
+  selectedSound()==='original'?'Сохранить звук и продолжить':'Убрать голоса и продолжить';
  b.innerHTML=label+' <span class="arrow">→</span>';
- $('trim-footer-hint').textContent=result?'Результат готов · исходник не изменён':oversized?'Для комнаты нужен файл до 96 МиБ':'Сцена 10–90 секунд · сжатие необязательно';
+ $('trim-footer-hint').textContent=stage==='trim'?'Шаг 1 из 2 · выбери 10–90 секунд':
+  result?'Шаг 2 из 2 · результат готов · исходник сохранён':
+  oversized?'Шаг 2 из 2 · нужен файл до 96 МиБ':
+  'Шаг 2 из 2 · '+fmt(Number($('trim-length').value))+' выбранного видео';
 }
 function invalidateMediaResult(){if(videoExportBlob)clearExportPreview();updateMediaLab()}
 function updateMediaLab(){
