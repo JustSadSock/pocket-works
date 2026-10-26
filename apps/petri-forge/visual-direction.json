@@ -3,13 +3,13 @@
   "status": "ready",
   "product": "petri-forge",
   "direction": {
-    "premise": "A field-first experiment lab where researchers can test whether genuine neural policy learning improves on hidden environments, not merely watch growing scores.",
+    "premise": "A field-first simulation laboratory now capable of training real PPO fighters on the existing physics arena and replaying genuine contests.",
     "composition": "A dominant world viewport paired with one compact control rail. A single algorithm selector reveals whether the saved brain is a Q table or an MLP, with no speculative training statistics.",
     "shapeLanguage": "Sharp laboratory tiles and small squared control clusters frame the simulation; specimen identities use initials in dark mineral-green tiles rather than decorative character portraits.",
     "surfaceAndMaterial": "Flat opaque cell pigments retain the source renderer. Muted teal instrument metal surrounds a near-black culture surface without glass effects.",
     "paletteLogic": "Blue marks the learner and spawn, green marks the goal, red the harmful cells, and yellow the rewards. Grey walls preserve legibility over a dark empty grid.",
     "typography": "System sans-serif labels keep controls legible at compact sizes. The product name is a small bench label rather than a decorative title.",
-    "signature": "An isolated three-algorithm race: all fresh brains train on identical starts, then frozen models compete only with their past performance on seeded unseen maps.",
+    "signature": "Two neural combat specimens — ranged and melee — separately learn attack timing and movement, then face each other in a frozen four-leg challenge with exchanged sides.",
     "distinction": "Unlike the video processing console or turn-based board, PetriForge makes the live world primary, backed by a persistent library of independently trained policy specimens."
   },
   "architecture": {
@@ -18,8 +18,8 @@
     "navigation": "editor-toolbox",
     "chromeTopology": "tiled-grid",
     "dominantMotion": "none",
-    "primaryVerb": "Train a chosen persistent agent or run an independent reproducible comparison of three algorithms and export the true experiment outcomes.",
-    "physicalFeedback": "The comparison derives win rates and rewards from actual game episodes; elapsed worker time and action counts are measured rather than decorative.",
+    "primaryVerb": "Train a Q or neural grid agent, or enter real neural combat to develop an archer and swordsman and watch an actual frozen match.",
+    "physicalFeedback": "Combat training rewards correspond to projectile/melee damage, incoming hits, tactical positioning and game winner; neither match results nor weights are fabricated.",
     "spatialRationale": "The previous stage's field-first desktop and stacked portrait layout remains intact; an algorithm row appears only when a grid experiment is selected, avoiding controls for algorithms unsupported by other worlds.",
     "comparisons": [
       {
@@ -75,9 +75,9 @@
   },
   "motion": {
     "character": "Discrete and immediate: state changes occur on cell boundaries because the learner samples one action at a time.",
-    "action": "Starting training updates the rail's real progress; a specimen selection loads its actual model; activating perception reveals the agent's sampled neighborhood.",
+    "action": "Training follows live per-bout feedback without simulating every frame in the UI; the result opens a recorded real arena duel.",
     "anticipation": "The selected tool and tile value expose the pending edit before the pointer touches the culture.",
-    "response": "A headless comparison streams real progress, can be cancelled safely, and restores the most recent completed result after reload.",
+    "response": "Neural fighters use five chosen macros to move and attack in the existing physical simulation; a completed duel produces physical replay frames.",
     "followThrough": "The user can replay the latest recorded attempt or test when none exists and can verify cloned skills after reload.",
     "interruption": "Training can be stopped; model switches await worker confirmation; the specimen library reports write failures instead of pretending success.",
     "reducedMotion": "There are no decorative transitions to remove; discrete cell changes retain all simulation information."
