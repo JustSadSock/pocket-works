@@ -81,7 +81,7 @@ try{
   assert.equal(fast.length,441000);
   assert(fast.energy>1,'decoded AAC must carry real non-silent audio');
   console.log('Fast MP4 AAC extraction',fast.seconds.toFixed(2),'seconds for 10 seconds');
- }else console.warn('FFmpeg fixture conversion unavailable; WebM real neural tests still run.');
+ }else throw Error('FFmpeg AAC MP4 fixture failed: '+(transcoded.error?.message||String(transcoded.stderr||'Unknown encoder error')));
   await page.locator('#video-file').setInputFiles({name:'voice-fixture.webm',mimeType:'video/webm',buffer:Buffer.from(bytes)});
  await page.waitForSelector('#screen-trim:not(.hidden)',{timeout:20000});
  const options=page.locator('input[name="film-clean-mode"]');
