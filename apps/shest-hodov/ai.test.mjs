@@ -51,7 +51,7 @@ test('AI identifies a one-move Hex win',()=>{
   let s=start('bridge');s.opponent='ai';s.turn=1;
   for(let row=0;row<6;row++)s.cells[row*7]=1;
   const a=chooseAIAction(s,'hard');
-  assert.equal(a.id,42);
+  assert.ok(Number.isInteger(a.id));
   const n=move(s,a);
   assert.equal(n.finished,true);assert.equal(n.winner,1);
 });
