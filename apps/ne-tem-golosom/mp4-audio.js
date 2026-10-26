@@ -137,6 +137,10 @@ async function metadata(blob,signal,diagnostics=[]){
  }
  return null;
 }
+export async function inspectMp4AAC(blob){
+ const m=await metadata(blob,null,[]);
+ return m?{codec:'mp4a.40.2',sampleRate:m.sampleRate,channels:m.channels,timescale:m.timescale,sampleCount:m.sizesCount,chunkCount:m.offsets.length,mediaShift:m.mediaShift}:null;
+}
 export async function extractMp4AAC(blob,start,duration,{signal,onProgress=()=>{}}={}){
  if(typeof AudioDecoder==='undefined'||typeof EncodedAudioChunk==='undefined')return null;
  if(!/mp4|quicktime|octet-stream|^$/.test(blob.type)&&!/(\.mp4|\.m4v|\.mov)$/i.test(blob.name||''))return null;
