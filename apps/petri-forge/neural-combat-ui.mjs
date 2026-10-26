@@ -103,6 +103,8 @@ export function mountNeuralCombat(api){
  function updateMethod(){
   const league=$('cpNeuroMethod').value==='league';
   const duo=$('cpNeuroMethod').value==='duo';
+  if(duo&&$('cpNeuroRole').value===$('cpNeuroEnemyRole').value)
+   $('cpNeuroEnemyRole').value=$('cpNeuroRole').value==='archer'?'swordsman':'archer';
   $('cpNeuroOpponentLabel').hidden=league||duo;
   $('cpNeuroLeagueIntro').hidden=!league;
   $('cpNeuroDuoIntro').hidden=!duo;
