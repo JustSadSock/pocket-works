@@ -142,7 +142,13 @@ async function switchAgent(id){
  if(!id||busy||pending||id===active?.id)return;
  const next=careers.find(c=>c.id===id);if(!next)return;
  pending=true;lock();
- try{if(active)await persist(active,mode);active=next;localStorage.setItem(LAST,next.id);await restore(next,mode);lastEval='';profiles();refresh();}
+ try{
+  if(active)await persist(active,mode);
+  // Commit the visible identity only after its brain was loaded successfully.
+  await restore(next,mode);
+  active=next;localStorage.setItem(LAST,next.id);
+  lastEval='';profiles();refresh();
+ }
  catch(e){notify('Ошибка агента: '+e.message);}
  finally{pending=false;lock();}
 }
