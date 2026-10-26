@@ -67,11 +67,13 @@ try{
  await page.waitForFunction(()=>window.__monitorStarted===true,null,{timeout:9000});
  assert.equal(await page.locator('#result-video').evaluate(v=>v.muted),true);
  for(const id of ['enhance-spectral','enhance-center','enhance-reconstruct'])
-  assert.equal(await page.locator('#'+id).isChecked(),true);
- await page.locator('#enhance-disable-all').click();
- for(const id of ['enhance-spectral','enhance-center','enhance-reconstruct'])
   assert.equal(await page.locator('#'+id).isChecked(),false);
- await page.locator('#enhance-disable-all').click();
+ assert.equal(await page.locator('#legacy-filters').evaluate(x=>x.open),false);
+ assert.equal(await page.locator('#repair-noise').isChecked(),true);
+ await page.locator('#repair-off-all').click();
+ assert.equal(await page.locator('#repair-noise').isChecked(),false);
+ await page.locator('#repair-off-all').click();
+ assert.equal(await page.locator('#repair-noise').isChecked(),true);
  await page.locator('#scnet-strength').fill('120');
  assert.equal(await page.locator('#scnet-strength-value').innerText(),'120%');
 
