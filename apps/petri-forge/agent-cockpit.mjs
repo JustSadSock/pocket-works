@@ -273,5 +273,5 @@ export function mountAgentCockpit(api){
  window.addEventListener('petri:error',()=>queueMicrotask(redraw));
  window.addEventListener('petri:cockpit-sync',()=>{redraw();const current=state();if(observerOpen&&(lastMode!==current.mode||lastObservedAgent!==current.active?.id)){lastMode=current.mode;lastObservedAgent=current.active?.id;void renderObserver();}});
  redraw();
- return {redraw,closeAll};
+ return {redraw,closeAll,selectAlgorithm:api.selectAlgorithm};
 }
