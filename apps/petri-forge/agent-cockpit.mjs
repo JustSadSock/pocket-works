@@ -2,6 +2,7 @@
 import {packCareer,unpackCareer,savePackageFile,readPackageFile} from './agent-portability.mjs';
 import {readBrain,KINDS} from './agent-career.mjs';
 import {validPolicy} from './combat-core.mjs';
+import {mountLearningBenchmark} from './learning-benchmark-ui.mjs';
 import './agent-cockpit-shell.mjs';
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString('ru-RU');
@@ -11,6 +12,7 @@ export function mountAgentCockpit(api){
  for(const button of document.querySelectorAll('[data-cp-close]'))button.onclick=()=>$(button.dataset.cpClose).close();
  let fightWorker=null,fighting=false,lastMode=null,lastObservedAgent=null,postBusy=false;
  let libraryFilter='active',observerOpen=false,vision=false,observerTicket=0;
+ const benchmark=mountLearningBenchmark(api);
  const setStatus=(text)=>{$('cpState').textContent=text;api.notify(text);};
  function state(){return api.state();}
  function profileOptions(){
@@ -124,6 +126,7 @@ export function mountAgentCockpit(api){
   profileOptions();
   const current=v.mode,setting=v.config[current],variant=$('hubVariant').selectedOptions[0]?.textContent||'Сцена';
   $('cpGoal').textContent=variant;
+  benchmark.update();
   $('cpTrainingCount').textContent=v.active.branches[current].sessions+' '+(v.active.branches[current].sessions===1?'тренировка':'тренировок');
   $('cpLastResult').textContent=v.active.branches[current].history.at(-1)?.label||'Пока без опыта. Нажмите «Обучить», чтобы агент начал учиться.';
   $('cpBatchLabel').textContent=fmt($('hubBatch').value)+' '+setting.units;
