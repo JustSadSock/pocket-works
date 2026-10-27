@@ -237,6 +237,10 @@ try{
   assert.equal(await page.locator('#voice-fx-audition').isEnabled(),true,'one-tap preview is available');
   await page.locator('[data-voice-fx="radio"]').click();
   assert.equal(await page.locator('[data-voice-fx="radio"]').getAttribute('aria-pressed'),'true','radio effect applies to selected clip');
+  // Desktop extras replace the quick-preset surface without growing the dock.
+  // Return to primary presets before choosing an unprocessed voice.
+  if(!await page.locator('[data-voice-fx="clean"]').isVisible())
+   await page.locator('#voice-fx-more').click();
   await page.locator('[data-voice-fx="clean"]').click();
   assert.equal(await page.locator('[data-voice-fx="clean"]').getAttribute('aria-pressed'),'true','original voice can be restored without re-recording');
   await page.locator('#timeline-zoom-in').click();
