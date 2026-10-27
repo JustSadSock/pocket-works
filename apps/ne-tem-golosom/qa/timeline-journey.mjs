@@ -251,8 +251,11 @@ try{
 
   // The three-second control can always be cancelled without opening the mic.
   await page.evaluate(()=>{
+    const track={stop(){},getSettings(){return {}},addEventListener(){}};
     Object.defineProperty(navigator,'mediaDevices',{configurable:true,
-      value:{getUserMedia:async()=>({getTracks:()=>[{stop(){}}]})}});
+      value:{getSupportedConstraints:()=>({}),getUserMedia:async()=>({
+       getTracks:()=>[track],getAudioTracks:()=>[track]
+      })}});
   });
   await page.locator('#count-record-btn').click();
   await page.locator('#countdown').waitFor({state:'visible'});
@@ -277,6 +280,8 @@ try{
   await page.locator('#confirm-scene').click();
    await page.locator('input[name="film-sound-choice"][value="original"]').check();
    await page.locator('#confirm-scene').click();
+   await page.locator('#film-review:not(.hidden)').waitFor();
+   await page.locator('#confirm-scene').click();
   await page.locator('#screen-editor:not(.hidden)').waitFor();
   assert.equal(await page.locator('.clip-bar').count(),1,'draft survives navigation');
   assert.equal(await page.locator('#undo-btn').isEnabled(),true,'history survives navigation');
@@ -285,6 +290,8 @@ try{
   await page.locator('[data-scene="wing-launch"]').click();
   await page.locator('#confirm-scene').click();
    await page.locator('input[name="film-sound-choice"][value="original"]').check();
+   await page.locator('#confirm-scene').click();
+   await page.locator('#film-review:not(.hidden)').waitFor();
    await page.locator('#confirm-scene').click();
   await page.locator('#screen-editor:not(.hidden)').waitFor();
   assert.equal(await page.locator('.clip-bar').count(),1,'draft survives full reload');
