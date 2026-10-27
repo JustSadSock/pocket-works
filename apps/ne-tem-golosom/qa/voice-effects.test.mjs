@@ -77,12 +77,14 @@ test('voice filters are applied in editor monitoring, synchronized premiere and 
  assert.match(app,/fx:normalizeVoiceEffect\(m.fx\)/);
  assert.match(model,/fx:raw\?\.fx\|\|'clean'/);
 });
-test('tab visibility never cancels in-flight voice recording or transcodes',()=>{
+test('backgrounding safely saves mobile microphone recordings, while video exports resume',()=>{
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  const studio=readFileSync(new URL('../media-lab.js',import.meta.url),'utf8');
  const premiere=readFileSync(new URL('../premiere-export.js',import.meta.url),'utf8');
- assert.match(app,/record.pausedForTab=true/);
- assert.match(app,/current.rec.resume\(\)/);
+ assert.match(app,/document.hidden&&record/);
+ assert.match(app,/interruptedVoiceTake=true/);
+ assert.match(app,/finishRecording\(\)/);
+ assert.doesNotMatch(app,/record.pausedForTab=true/);
  assert.doesNotMatch(studio,/if\s*\(document.hidden\)\s*abort\(\)/);
  assert.match(studio,/recorder\.resume\(\)/);
  assert.match(premiere,/recorder\.resume\(\)/);
