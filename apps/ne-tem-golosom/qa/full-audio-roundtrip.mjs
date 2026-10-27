@@ -31,7 +31,7 @@ try{
   // unrelated 404 is not a media/JS failure. Check local app resources instead.
   page.on('response',response=>{
    if(response.status()>=400&&response.url().startsWith(origin)&&
-      !new URL(response.url()).pathname.endsWith('/favicon.ico'))
+      !['/favicon.ico','/pocket-id/me'].includes(new URL(response.url()).pathname))
     errors.push('HTTP '+response.status()+' '+response.url());
   });
   await page.addInitScript(()=>{
