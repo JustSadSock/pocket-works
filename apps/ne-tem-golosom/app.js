@@ -1380,6 +1380,11 @@ async function startRecord(countdown=0,replaceId=null){
  if(settings.noiseSuppression===true||settings.echoCancellation===true)
   toast('Телефон принудительно обрабатывает микрофон. Для чистой записи попробуй гарнитуру.');
  if(view!=='editor'||!scene){stream.getTracks().forEach(t=>t.stop());updateRecordingControls();return}
+ if(!stream.getAudioTracks?.().length){
+  stream.getTracks().forEach(t=>t.stop());
+  toast('Микрофон не предоставил звуковую дорожку. Выбери другой источник записи.');
+  updateRecordingControls();return;
+ }
  startMicMonitor(stream);
  let cancelled=false;
  const session={stream,countdown:countdown===3,cancel:()=>{
@@ -2044,6 +2049,10 @@ $('stage-video').onpause=()=>{
 // iOS/Android may suspend the recorder without emitting pause/resume data.
 // Save a bounded partial take rather than appending seconds of holes.
 document.addEventListener('visibilitychange',()=>{
+ if(document.hidden&&preroll){
+  cancelCountdown();
+  interruptedVoiceTake=true;
+ }
  if(document.hidden&&record){
   interruptedVoiceTake=true;
   finishRecording();
