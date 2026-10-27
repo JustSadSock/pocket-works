@@ -27,7 +27,13 @@ try{
   const context=await browser.newContext({viewport:{width:vp.width,height:vp.height},isMobile:!!vp.mobile,hasTouch:!!vp.mobile});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
-  page.on('console',message=>{if(message.type()==='error')errors.push('console: '+message.text())});
+  // Browsers may request /favicon.ico in this isolated QA server; an
+  // unrelated 404 is not a media/JS failure. Check local app resources instead.
+  page.on('response',response=>{
+   if(response.status()>=400&&response.url().startsWith(origin)&&
+      !new URL(response.url()).pathname.endsWith('/favicon.ico'))
+    errors.push('HTTP '+response.status()+' '+response.url());
+  });
   await page.addInitScript(()=>{
    const media=navigator.mediaDevices;
    Object.defineProperty(media,'getSupportedConstraints',{configurable:true,value:()=>({
