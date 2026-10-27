@@ -173,7 +173,9 @@ export async function renderPremiere({
     if(keepFilmAudio){
       const film=ctx.createMediaElementSource(video);
       const duck=ctx.createGain();
-      duck.gain.value=.27;
+      // The neural-cleaned bed has no dialogue to mask, unlike raw film.
+      // The previous unconditional 27% made every cleaned scene sound muffled.
+      duck.gain.value=scene.cleaned===true?.85:.27;
       film.connect(duck).connect(limiter);
     }
     if(Math.abs(video.currentTime-scene.start)>.025){
