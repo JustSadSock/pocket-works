@@ -1,6 +1,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createTrimRange} from './trim-range.js';
 import {meterHeights} from './studio-feedback.js';
+import {microphoneRequest,createVoiceRecorder,reconcileRecordingEnd} from './recording-audio.js';
 import {MAX_AUDIO_BYTES,MAX_INCOMING_TRANSFERS,validAudioEnvelope,validVideoEnvelope,canAcceptVoice} from './media-protocol.js';
 import {renderPremiere,supportsPremiereExport,premiereFilename} from './premiere-export.js';
 import {TimelineHistory,snapshotClips,spliceRecording,layerTimeline,packTimeline,unpackTimeline,editClip,replaceSelectedRecording,MIN_CLIP_SECONDS} from './timeline-model.js';
@@ -72,7 +73,7 @@ function rememberFilmTimes(plan,duration){
 let premiereExportController=null,premiereResultUrl=null,premiereExportGeneration=0,premiereLocalCopy=null,premiereExportNotice='';
 const qualityNames=['Экономное','Компактное','Сбалансированное','Высокое','Максимальное'];
 let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0,timelineZoom=1,clipDrag=null,skipTimelineClick=false,micPending=false;
-let micMonitor=null,saveRevision=0,readyPending=false,voiceFxContext=null,voiceFxExpanded=false;
+let micMonitor=null,saveRevision=0,readyPending=false,voiceFxContext=null,voiceFxExpanded=false,interruptedVoiceTake=false;
 let onlineIds=null,networkInterrupted=false,retryRoomAction='create',retryCheckpoint=null;
 let pendingScenePicker=false,premiereAB='dub';
 function roomCheckpoint(){
@@ -1287,7 +1288,6 @@ function setPlayhead(value,fromPremiere=false){
  else $('premiere-scrub').value=String(Math.round(value*10));
 }
 async function playStage(){if(!scene||record||preroll||micPending||pendingRecording||scene.custom&&!sourceBlob)return toast('Видео пока не готово.');const video=$('stage-video');if(playing){stopAllPlayback();return}if(time(video)>=scene.duration-.1)seekVideo(video,0);try{updateClipSound(time(video),true,false);await video.play();playing=true;$('play-toggle').textContent='Ⅱ'}catch{updateClipSound(time(video),false,false);toast('Нажми воспроизведение ещё раз — браузер блокирует запуск.')}}
-function mime(){const opts=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'];return opts.find(x=>window.MediaRecorder?.isTypeSupported(x))||''}
 function countdownBeat(number){
  const el=$('countdown');
  el.textContent=String(number);
@@ -1326,15 +1326,24 @@ async function startRecord(countdown=0,replaceId=null){
  const intendedStart=chosen?chosen.start:time(video);
  micPending=true;updateRecordingControls();
  let stream;
- try{stream=await navigator.mediaDevices.getUserMedia({audio:{
-  echoCancellation:true,noiseSuppression:true,autoGainControl:false
- }})}
- catch{
-  micPending=false;updateRecordingControls();
-  toast('Разреши доступ к микрофону в настройках браузера.');
-  return;
+ try{
+  stream=await navigator.mediaDevices.getUserMedia(
+   microphoneRequest(navigator.mediaDevices.getSupportedConstraints?.()||{}));
+ }catch(e){
+  // Older mobile implementations may reject even ideal constraints.
+  if(['OverconstrainedError','NotSupportedError','TypeError'].includes(e?.name)){
+   try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{}
+  }
+  if(!stream){
+   micPending=false;updateRecordingControls();
+   toast(e?.name==='NotAllowedError'?'Разреши доступ к микрофону в настройках браузера.':'Микрофон недоступен. Проверь разрешение и не занят ли он другой программой.');
+   return;
+  }
  }
  micPending=false;
+ const settings=stream.getAudioTracks()[0]?.getSettings?.()||{};
+ if(settings.noiseSuppression===true||settings.echoCancellation===true)
+  toast('Телефон принудительно обрабатывает микрофон. Для чистой записи попробуй гарнитуру.');
  if(view!=='editor'||!scene){stream.getTracks().forEach(t=>t.stop());updateRecordingControls();return}
  startMicMonitor(stream);
  let cancelled=false;
@@ -1358,14 +1367,17 @@ async function startRecord(countdown=0,replaceId=null){
     const id=setTimeout(finish,1200);
    });
    if(cancelled||preroll!==session)return;
-   rec=new MediaRecorder(stream,mime()?{mimeType:mime()}:undefined);
+   rec=createVoiceRecorder(stream);
    const blobs=[],active={
     rec,stream,blobs,replaceId:chosen?.id||null,
-    limit:scene.duration,start:intendedStart,end:intendedStart,resolve:null
+    limit:scene.duration,start:intendedStart,end:intendedStart,resolve:null,
+    finalized:false,stopTimer:null
    };
-   rec.ondataavailable=e=>{if(e.data.size)blobs.push(e.data)};
-   rec.onerror=()=>toast('Ошибка записи микрофона.');
+   rec.ondataavailable=e=>{if(e.data?.size)blobs.push(e.data)};
+   rec.onerror=()=>{toast('Микрофон прервал запись. Сохраняем полученный фрагмент.');if(record?.rec===rec)finishRecording()};
    rec.onstop=async()=>{
+    if(active.finalized)return;
+    active.finalized=true;clearTimeout(active.stopTimer);
     try{
      const blob=new Blob(blobs,{type:rec.mimeType||blobs[0]?.type||'audio/webm'});
      // Reconcile wall-clock video time with actual encoded microphone duration.
@@ -1381,10 +1393,10 @@ async function startRecord(countdown=0,replaceId=null){
        }
       }catch{/* Unsupported browser codecs are validated again during export. */}
       finally{if(ctx)void ctx.close().catch(()=>{})}
-      const expected=active.end-active.start;
-      if(Number.isFinite(duration)&&duration>=MIN_CLIP_SECONDS&&duration<expected-.20){
-       active.end=Math.min(scene.duration,active.start+duration);
-       toast('Записано меньше звука, чем шло видео. Конец реплики исправлен — прослушай дубль.');
+      const timing=reconcileRecordingEnd(active.start,active.end,duration);
+      if(timing.short){
+       active.end=Math.min(scene.duration,timing.end);
+       toast('Микрофон записал меньше звука, чем шло видео. Дубль не растянут — прослушай его.');
       }
      }
      if(blob.size>MAX_AUDIO_BYTES){toast('Запись слишком большая для передачи. Сделай реплику короче.');}
@@ -1408,7 +1420,12 @@ async function startRecord(countdown=0,replaceId=null){
    await video.play();
    if(cancelled||preroll!==session){video.pause();stream.getTracks().forEach(t=>t.stop());return}
    active.start=time(video);
-   rec.start(250);record=active;preroll=null;
+   // One final container chunk: MediaRecorder timeslices and requestData()
+   // can create unplayable fragmented MP4/AAC on iOS Safari.
+   rec.start();record=active;preroll=null;
+   for(const track of stream.getAudioTracks())track.addEventListener('ended',()=>{
+    if(record?.rec===rec){toast('Микрофон отключился. Сохраняем уже записанное.');finishRecording()}
+   },{once:true});
    playing=true;cue('start');
    $('record-badge').classList.remove('hidden');
    updateRecordingControls();
@@ -1449,11 +1466,13 @@ function finishRecording(){
  pendingRecording=new Promise(resolve=>{r.resolve=resolve});
  stopAllPlayback();
  if(r.rec.state!=='inactive'){
-   try{if(r.rec.state==='recording')r.rec.requestData()}catch{}
-   r.rec.stop();
-  }else{
-  stopMicMonitor();r.stream.getTracks().forEach(t=>t.stop());r.resolve();pendingRecording=null;
+  try{r.rec.stop()}catch{ /* The browser may already be finishing. */ }
  }
+ // In rare mobile WebKit failures onstop is never dispatched. Release the
+ // editor without hanging forever; any received chunk is still preserved.
+ r.stopTimer=setTimeout(()=>{
+  if(!r.finalized){toast('Браузер не завершил запись. Проверяем доступный фрагмент.');void r.rec.onstop?.()}
+ },5000);
  cue('stop');updateRecordingControls();
  return pendingRecording;
 }
@@ -1969,26 +1988,25 @@ for(const b of document.querySelectorAll('[data-back]'))b.onclick=async()=>{
 $('stage-video').ontimeupdate=()=>{if(!scene)return;const t=time($('stage-video'));if(record&&t>=record.limit-.035)finishRecording();
 else if(t>=scene.duration-.05){if(record)finishRecording();else if(!$('stage-video').paused){stopAllPlayback();seekVideo($('stage-video'),scene.duration-.04)}}if(!record)updateClipSound(t,playing,false);renderPlayhead()};
 $('premiere-video').ontimeupdate=()=>{if(!scene)return;const t=time($('premiere-video'));$('premiere-scrub').value=String(Math.round(t*10));if(t>=scene.duration-.04){pausePremiere();seekVideo($('premiere-video'),scene.duration-.04)}else updateClipSound(t,premiereAB==='dub'&&!$('premiere-video').paused,true)};
-$('stage-video').onpause=()=>{if(!record){playing=false;$('play-toggle').textContent='▶';updateClipSound(time($('stage-video')),false)}};
-// Browser throttling prevents reliable frame encoding when a tab is hidden.
-// Keep the active take pending without committing or dropping it.
+$('stage-video').onpause=()=>{
+ if(record&&!document.hidden){
+  // Paused/stalled video must never keep consuming the microphone clock.
+  finishRecording();
+  toast('Видео остановилось. Записанный фрагмент сохраняется отдельно.');
+ }else if(!record){playing=false;$('play-toggle').textContent='▶';updateClipSound(time($('stage-video')),false)}
+};
+// iOS/Android may suspend the recorder without emitting pause/resume data.
+// Save a bounded partial take rather than appending seconds of holes.
 document.addEventListener('visibilitychange',()=>{
- const video=$('stage-video');
- if(document.hidden){
-  if(record&&record.rec?.state==='recording'){
-   record.pausedForTab=true;
-   try{video.pause();record.rec.pause()}catch{}
-  }
- }else{
-  if(record?.pausedForTab&&record.rec?.state==='paused'){
-   const current=record;current.pausedForTab=false;
-   void (async()=>{
-    try{await video.play();current.rec.resume()}
-    catch{toast('Запись приостановлена браузером. Нажми «Стоп», чтобы сохранить готовую часть.')}
-   })();
-  }
-  if(voiceFxContext?.state==='suspended')void voiceFxContext.resume().catch(()=>{});
+ if(document.hidden&&record){
+  interruptedVoiceTake=true;
+  finishRecording();
+ }else if(!document.hidden&&interruptedVoiceTake){
+  interruptedVoiceTake=false;
+  toast('Запись прервалась при сворачивании. Готовая часть сохранена, продолжи новым дублем.');
  }
+ if(!document.hidden&&voiceFxContext?.state==='suspended')
+  void voiceFxContext.resume().catch(()=>{});
 });
 window.addEventListener('pagehide',()=>{filmCleanController?.abort();premiereExportController?.abort();if(record)finishRecording();draftWrite()});
 document.addEventListener('keydown',e=>{
