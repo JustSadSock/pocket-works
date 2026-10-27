@@ -59,6 +59,8 @@ try{
   await preview.locator('#confirm-scene').click();
    await preview.locator('input[name="film-sound-choice"][value="original"]').check();
    await preview.locator('#confirm-scene').click();
+   await preview.locator('#film-review:not(.hidden)').waitFor();
+   await preview.locator('#confirm-scene').click();
   await preview.locator('#room-start:not(:disabled)').click();
   await preview.locator('#screen-editor:not(.hidden)').waitFor();
   assert.equal(await preview.locator('#record-btn').isEnabled(),true,'real record control reachable from debug room');
