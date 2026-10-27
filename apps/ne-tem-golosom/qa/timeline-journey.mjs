@@ -63,6 +63,9 @@ try{
   await page.locator('#confirm-scene').click();
    await page.locator('input[name="film-sound-choice"][value="original"]').check();
    await page.locator('#confirm-scene').click();
+   // v1.14.1 added a mandatory review step even for untouched sound.
+   await page.locator('#film-review:not(.hidden)').waitFor();
+   await page.locator('#confirm-scene').click();
   await page.locator('#screen-editor:not(.hidden)').waitFor();
   assert.equal(await page.locator('.clip-bar').count(),2,'restores initial clips');
   assert.equal(await page.locator('#draft-status').getAttribute('data-save-state'),'saved','draft status reflects restored editor');
