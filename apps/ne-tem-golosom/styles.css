@@ -592,3 +592,115 @@
 .trim .trim-right:has(.film-review:not(.hidden)) .trim-info{display:none}
 .trim .trim-right:has(.film-review:not(.hidden)) .film-review{flex:1}
 @media(max-width:620px){.film-review{padding:14px;gap:11px}.film-review-alternatives{grid-template-columns:1fr 1fr}.review-option{padding:10px;min-height:60px}.film-review-head h3{font-size:23px}}
+
+/* v1.14.3 — desktop dubbing workbench. Stable two-column console:
+ * stage stays large, timeline/mixer do not fight for height, FX never grow
+ * the lower dock. Mobile keeps its touch-friendly stacked inspector. */
+.editor .editor-workspace{min-width:0}
+.editor .editor-cutting,.editor .editor-inspector{min-width:0}
+.editor .clip-inspector-empty{display:flex;flex-direction:column;justify-content:center;gap:9px;flex:1;
+  border:1px dashed #65716b;padding:20px;color:#d3c4ae;background:#1e2828}
+.editor .clip-inspector-empty strong{font:600 24px Oswald,sans-serif;color:#f1d8b8}
+.editor .clip-inspector-empty span{font:600 12px/1.6 Manrope,Arial,sans-serif;max-width:320px}
+@media(min-width:820px){
+ .screen.editor{gap:7px;overflow:hidden}
+ .editor .stage-wrap{min-height:110px;flex:1 1 0}
+ .editor .editor-desk{
+  display:block;flex:0 0 clamp(335px,56dvh,485px);height:clamp(335px,56dvh,485px);
+  max-height:none;min-height:0;width:100%;overflow:hidden;
+  padding:10px 13px 11px;
+ }
+ .editor .editor-workspace{
+  display:grid;grid-template-columns:minmax(0,1.35fr) minmax(365px,.8fr);
+  gap:14px;height:100%;min-height:0;
+ }
+ .editor .editor-cutting{
+  display:flex;flex-direction:column;justify-content:flex-start;
+  gap:3px;min-height:0;overflow:hidden;
+  border-right:1px solid #465451;padding-right:13px;
+ }
+ .editor .editor-inspector{
+  display:flex;flex-direction:column;gap:6px;overflow:hidden;min-height:0;
+ }
+ .editor .time-row{flex:0 0 20px}
+ .editor .timeline-tools{flex:0 0 29px;margin-top:2px}
+ .editor .timeline-viewport{
+  flex:1 1 auto;min-height:115px;max-height:none;overflow-x:auto;overflow-y:auto;
+  scrollbar-width:thin;
+ }
+ .editor .selected-clip-info{
+  flex:0 0 22px;min-height:22px;max-height:22px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+ }
+ .editor .edit-controls{flex:0 0 50px;margin:2px 0;gap:9px}
+ .editor .editor-bottom{flex:0 0 41px;min-height:41px}
+ .editor .clip-actions{flex-wrap:nowrap}
+ .editor .clip-mixer{
+  display:flex;flex:0 0 73px;min-height:73px;align-items:center;gap:9px;
+  margin:0;padding:8px 9px;border-color:#4e615c;
+ }
+ .editor .clip-mixer.hidden{display:none}
+ .editor .clip-mixer label{font-size:10px;gap:2px;min-width:0;white-space:nowrap}
+ .editor .clip-mixer label input{min-height:19px}
+ .editor .voice-effects{
+  flex:1 1 auto;min-height:0;margin:0;padding:8px 10px;
+  display:flex;flex-direction:column;gap:3px;overflow:hidden;
+ }
+ .editor .voice-effects.hidden{display:none}
+ .editor .voice-effects>span{flex:none;margin-bottom:3px}
+ .editor .voice-effects-options{
+  min-height:0;flex:1 1 auto;display:flex;flex-direction:column;gap:3px;
+ }
+ .editor .voice-fx-favorites{
+  flex:0 0 auto;min-height:0;margin:0 0 3px;padding:3px 0;
+  flex-wrap:nowrap;max-height:30px;overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:thin;
+ }
+ .editor .voice-fx-favorites:before{flex:none}
+ .editor .voice-fx-favorites button{flex:none}
+ .editor .voice-fx-stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden}
+ .editor .voice-fx-primary{
+  position:absolute;inset:0;display:flex;align-content:start;align-items:flex-start;
+  flex-wrap:wrap;gap:6px;
+ }
+ .editor .voice-fx-primary button{min-height:30px;flex:1 1 29%;padding:4px 5px}
+ .editor .voice-effects.fx-expanded .voice-fx-primary{display:none}
+ .editor .voice-fx-extra{
+  position:absolute;inset:0;margin:0;padding:2px 0 0;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:repeat(2,minmax(0,1fr));gap:7px 10px;
+  max-height:none;overflow:hidden;
+ }
+ .editor .voice-fx-group{min-width:0;min-height:0;overflow:hidden}
+ .editor .voice-fx-group>span{margin-bottom:4px;font-size:9px;white-space:nowrap}
+ .editor .voice-fx-buttons{gap:4px;align-items:flex-start;align-content:flex-start}
+ .editor .voice-fx-buttons button{min-height:26px;padding:3px 7px;font-size:10px;flex:1 1 auto}
+ .editor .voice-fx-toolbar{flex:0 0 32px;min-height:32px;margin:0;gap:5px}
+ .editor .voice-fx-toolbar button{min-height:32px;padding:4px 8px;font-size:10px;white-space:nowrap}
+ .editor .voice-fx-toolbar button:first-child{margin-right:auto}
+}
+@media(min-width:820px) and (max-height:690px){
+ .editor .editor-desk{flex-basis:clamp(315px,59dvh,390px);height:clamp(315px,59dvh,390px);padding:7px 11px}
+ .editor .editor-workspace{gap:10px}
+ .editor .editor-cutting{gap:1px}
+ .editor .timeline-tools{flex-basis:27px}
+ .editor .clip-mixer{flex-basis:63px;min-height:63px}
+ .editor .voice-fx-buttons button{min-height:24px;padding:2px 5px}
+ .editor .voice-fx-extra{gap:3px 6px}
+}
+@media(max-width:819px){
+ .editor .editor-desk{display:flex;flex-direction:column}
+ .editor .editor-workspace,.editor .editor-cutting,.editor .editor-inspector{display:contents}
+ .editor .time-row{order:1}
+ .editor .timeline-tools{order:2}
+ .editor .timeline-viewport{order:3}
+ .editor .selected-clip-info{order:4}
+ .editor .clip-inspector-empty{order:5;flex:0 0 auto;min-height:68px;padding:10px 12px}
+ .editor .clip-inspector-empty strong{font-size:15px}
+ .editor .clip-inspector-empty span{font-size:10px}
+ .editor .clip-mixer{order:5}
+ .editor .voice-effects{order:6}
+ .editor .edit-controls{order:7}
+ .editor .editor-bottom{order:8}
+ .editor .voice-fx-stage{display:contents}
+}

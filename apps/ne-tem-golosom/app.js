@@ -15,6 +15,39 @@ import {MAX_ROOM_VIDEO_BYTES,MAX_SOURCE_VIDEO_BYTES,formatVideoBytes,estimateVid
 installMobileRuntime();
 
 const $=id=>document.getElementById(id);
+
+// The editor's two coordinated work surfaces share one fixed-size desktop
+// dock. Reparent existing elements; keep their IDs, listeners and real logic.
+function mountEditorWorkspace(){
+ const desk=$('screen-editor')?.querySelector('.editor-desk');
+ if(!desk||desk.querySelector('.editor-workspace'))return;
+ const workspace=document.createElement('div');
+ workspace.className='editor-workspace';
+ const cutting=document.createElement('div');
+ cutting.className='editor-cutting';
+ const inspector=document.createElement('aside');
+ inspector.className='editor-inspector';
+ inspector.setAttribute('aria-label','Настройки выбранной реплики');
+ for(const selector of ['.time-row','.timeline-tools','.timeline-viewport','.selected-clip-info','.edit-controls','.editor-bottom']){
+  const node=desk.querySelector(':scope > '+selector);
+  if(!node)throw Error('Не найден элемент монтажного пульта: '+selector);
+  cutting.append(node);
+ }
+ const empty=document.createElement('div');
+ empty.id='clip-inspector-empty';
+ empty.className='clip-inspector-empty';
+ empty.innerHTML='<strong>Настройки реплики</strong><span>Выбери запись на ленте: здесь появятся громкость, плавные переходы и эффекты голоса.</span>';
+ inspector.append(empty);
+ for(const id of ['clip-mixer','voice-effects']){
+  const node=$(id);
+  if(!node)throw Error('Не найдена панель '+id);
+  inspector.append(node);
+ }
+ workspace.append(cutting,inspector);
+ desk.replaceChildren(workspace);
+}
+mountEditorWorkspace();
+
 const STORE='pocket-works:ne-tem-golosom:';
 const debugPlay=new URLSearchParams(location.search).get('debug')==='play';
 const LIBRARY=[
@@ -1246,6 +1279,7 @@ function renderTimeline(){
  $('erase-btn').disabled=!picked;
  $('replace-clip-btn').disabled=!picked||!!record||!!preroll||!!micPending||!!pendingRecording;
  $('voice-effects').classList.toggle('hidden',!picked);
+ $('clip-inspector-empty').classList.toggle('hidden',!!picked);
   $('clip-mixer').classList.toggle('hidden',!picked);
   if(picked){
     const mix=clipMix(picked);
@@ -1256,6 +1290,7 @@ function renderTimeline(){
  if(picked&&VOICE_EFFECTS.find(f=>f.id===normalizeVoiceEffect(picked.fx))?.category!=='main')
   voiceFxExpanded=true;
  $('voice-fx-extra').classList.toggle('hidden',!voiceFxExpanded);
+ $('voice-effects').classList.toggle('fx-expanded',voiceFxExpanded);
  $('voice-fx-more').setAttribute('aria-expanded',String(voiceFxExpanded));
  $('voice-fx-more').textContent=voiceFxExpanded?'Свернуть эффекты ↑':'Ещё '+VOICE_EFFECTS.filter(f=>f.category!=='main').length+' эффектов ↓';
  $('voice-fx-current').textContent=picked
@@ -1780,6 +1815,14 @@ $('voice-effects-options').innerHTML=
   '<div class="voice-fx-group"><span>'+group.label+'</span><div class="voice-fx-buttons">'+
   VOICE_EFFECTS.filter(fx=>fx.category===group.id).map(fxButton).join('')+'</div></div>'
  ).join('')+'</div>';
+// Primary circuits and the grouped shelf occupy one reserved space on
+// desktop. Opening the shelf never resizes the workspace or video frame.
+const effectStage=document.createElement('div');
+effectStage.className='voice-fx-stage';
+$('voice-fx-primary')?.remove(); // no-op for older cached DOM
+const primaryEffects=$('voice-effects-options').querySelector('.voice-fx-primary');
+primaryEffects.before(effectStage);
+effectStage.append(primaryEffects,$('voice-fx-extra'));
 function renderFavoriteVoiceEffects(){
  const shelf=$('voice-fx-favorites');
  shelf.classList.toggle('hidden',!favoriteVoiceIds.length);
@@ -1806,6 +1849,7 @@ $('voice-effects-options').onclick=e=>{
  if(more){
   voiceFxExpanded=!voiceFxExpanded;
   $('voice-fx-extra').classList.toggle('hidden',!voiceFxExpanded);
+  $('voice-effects').classList.toggle('fx-expanded',voiceFxExpanded);
   more.setAttribute('aria-expanded',String(voiceFxExpanded));
   more.textContent=voiceFxExpanded?'Свернуть эффекты ↑':'Ещё '+VOICE_EFFECTS.filter(f=>f.category!=='main').length+' эффектов ↓';
   return;
