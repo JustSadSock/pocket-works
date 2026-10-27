@@ -1426,7 +1426,9 @@ async function startRecord(countdown=0,replaceId=null){
    for(const track of stream.getAudioTracks())track.addEventListener('ended',()=>{
     if(record?.rec===rec){toast('Микрофон отключился. Сохраняем уже записанное.');finishRecording()}
    },{once:true});
-   playing=true;cue('start');
+   // No speaker cue after the microphone starts: AEC is disabled by design,
+   // and the former beep leaked into the first syllable on phone speakers.
+   playing=true;
    $('record-badge').classList.remove('hidden');
    updateRecordingControls();
   }catch(e){
