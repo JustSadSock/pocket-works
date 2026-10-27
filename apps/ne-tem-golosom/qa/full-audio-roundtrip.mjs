@@ -107,7 +107,9 @@ try{
     v.onloadedmetadata=resolve;v.onerror=()=>reject(Error('Export media cannot be decoded'));
     v.load();
    });
-   const meta={size:blob.size,mime:blob.type,width:v.videoWidth,height:v.videoHeight,duration:v.duration};
+   const {measureVideoDuration}=await import('/apps/ne-tem-golosom/media-lab.js');
+   const duration=Number.isFinite(v.duration)&&v.duration>0?v.duration:await measureVideoDuration(v);
+   const meta={size:blob.size,mime:blob.type,width:v.videoWidth,height:v.videoHeight,duration};
    const ctx=new AudioContext(),src=ctx.createMediaElementSource(v),analyser=ctx.createAnalyser(),silent=ctx.createGain();
    analyser.fftSize=1024;silent.gain.value=0;
    src.connect(analyser).connect(silent).connect(ctx.destination);
