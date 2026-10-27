@@ -73,6 +73,10 @@ jobs:
         run: npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
       - name: Install headless Chromium
         run: npx playwright install chromium
+      - name: Validate fixed desktop workbench and all controls at six screen sizes
+        run: node apps/ne-tem-golosom/qa/editor-workbench-journey.mjs
+      - name: Full movie-to-microphone-to-premiere audio roundtrip on desktop and phone
+        run: node apps/ne-tem-golosom/qa/full-audio-roundtrip.mjs
       - name: Check timeline gestures, draft recovery and Undo/Redo
         run: node apps/ne-tem-golosom/qa/timeline-journey.mjs
       - name: Inspect all screen states on desktop and phone without room side effects
