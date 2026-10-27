@@ -71,6 +71,14 @@ try{
    const video=document.getElementById('stage-video');
    window.__qaMovie=URL.createObjectURL(new Blob(chunks,{type:'video/webm'}));
    video.src=window.__qaMovie;video.load();
+   // The debug library scene starts at 44s; map the short synthetic file
+   // onto that clock without waiting 44 real seconds for a video fixture.
+   const nativeTime=Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype,'currentTime');
+   Object.defineProperty(video,'currentTime',{configurable:true,
+    get(){return nativeTime.get.call(this)+44},
+    set(value){nativeTime.set.call(this,Math.max(0,value-44))}
+   });
+   Object.defineProperty(video,'duration',{configurable:true,get(){return 60}});
    await new Promise((resolve,reject)=>{
     if(video.readyState>=1)return resolve();
     video.onloadedmetadata=resolve;video.onerror=()=>reject(Error('local test movie unreadable'));
