@@ -7,7 +7,7 @@
   "description": "Совместная слепая переозвучка кино: каждый записывает свои реплики на таймлайне, а голоса встречаются на премьере.",
   "version": "1.14.2",
   "releaseDate": "2026-10-27",
-  "releaseDateTime": "2026-10-27T20:30:00+02:00",
+  "releaseDateTime": "2026-10-27T19:44:00+02:00",
   "changelog": [
     "Запись с телефона без браузерного эхоподавления и шумоподавления: меньше обрывов речи при озвучке приглушённого фильма.",
     "Запись микрофона создаёт один непрерывный контейнер вместо дробления MediaRecorder; запасные кодеки для iOS Safari, Android и ПК.",
@@ -83,7 +83,7 @@
   "backgroundColor": "#f2ebdc",
   "themeColor": "#f2ebdc",
   "orientation": "any",
-  "cacheName": "ne-tem-golosom-v1.14.0",
+  "cacheName": "ne-tem-golosom-v1.14.2",
   "storageNamespace": "pocket-works:ne-tem-golosom",
   "tags": [
     "game",
