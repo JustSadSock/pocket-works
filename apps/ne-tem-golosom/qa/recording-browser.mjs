@@ -142,6 +142,37 @@ try{
   await page.waitForFunction(()=>document.querySelector('#draft-status')?.dataset.saveState==='saved',null,{timeout:10000});
   results=await checkMic();
   assert(results.clips>=2,'both original and interrupted takes must survive');
+  // Permission failure must not leave the record button spinning or delete takes.
+  await page.evaluate(()=>{
+   window.__realMic=navigator.mediaDevices.getUserMedia;
+   Object.defineProperty(navigator.mediaDevices,'getUserMedia',{configurable:true,value:async()=>{
+    throw Object.assign(Error('Permission denied'),{name:'NotAllowedError'});
+   }});
+  });
+  await page.locator('#record-btn').click();
+  await page.waitForFunction(()=>document.querySelector('#record-btn')?.disabled===false);
+  assert.match(await page.locator('#toast').innerText(),/Разреши доступ к микрофону/);
+  // Empty MediaStream is not a valid recording even if permission was granted.
+  await page.evaluate(()=>Object.defineProperty(navigator.mediaDevices,'getUserMedia',{
+   configurable:true,value:async()=>({getAudioTracks:()=>[],getTracks:()=>[]})
+  }));
+  await page.locator('#record-btn').click();
+  await page.waitForFunction(()=>document.querySelector('#record-btn')?.disabled===false);
+  assert.match(await page.locator('#toast').innerText(),/не предоставил звуковую дорожку/);
+  // Minimized while 3-2-1 is running: cancel safely, never start a ghost take.
+  await page.evaluate(()=>Object.defineProperty(navigator.mediaDevices,'getUserMedia',{
+   configurable:true,value:window.__realMic
+  }));
+  await page.locator('#count-record-btn').click();
+  await page.locator('#countdown').waitFor({state:'visible',timeout:6000});
+  await page.evaluate(()=>{
+   Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});
+   document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.locator('#countdown').waitFor({state:'hidden',timeout:5000});
+  await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'))});
+  assert.equal(await page.locator('#record-btn').isEnabled(),true);
+  assert.equal(await page.locator('.clip-bar').count(),2,'interrupted countdown cannot create another clip');
   assert.deepEqual(errors,[],vp.name+' page errors');
   console.log(vp.name,'real audio track preserved',JSON.stringify(results.durations));
   await context.close();
