@@ -40,6 +40,7 @@ jobs:
           node-version: '22'
       - name: Syntax check every production module
         run: |
+          node --check apps/ne-tem-golosom/recording-audio.js
           node --check apps/ne-tem-golosom/app.js
           node --check apps/ne-tem-golosom/screen-debug.js
           node --check apps/ne-tem-golosom/media-lab.js
@@ -76,6 +77,8 @@ jobs:
         run: node apps/ne-tem-golosom/qa/video-journey.mjs
       - name: Verify real Open-Unmix, regional SCNet and full SCNet soundtrack exports
         run: node apps/ne-tem-golosom/qa/film-neural-journey.mjs
+      - name: Record actual microphone audio in desktop and mobile browser emulation
+        run: node apps/ne-tem-golosom/qa/recording-browser.mjs
       - name: Check timeline gestures, draft recovery and Undo/Redo
         run: node apps/ne-tem-golosom/qa/timeline-journey.mjs
       - name: Inspect all screen states on desktop and phone without room side effects
