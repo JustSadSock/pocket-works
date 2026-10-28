@@ -26,7 +26,7 @@ test('Gear pitch distance and ratio remain coherent',()=>{
 });
 test('rejects invalid and malicious input',()=>{
   for(const input of [
-    {type:'gear_pair',teeth_a:0}, {...DEFAULTS.gear_pair, bore_mm:24},
+    {type:'gear_pair',teeth_a:0}, {...DEFAULTS.gear_pair, module_mm:1.5, bore_mm:24},
     {...DEFAULTS.tray,wall_mm:6,width_mm:10},
     {...DEFAULTS.spacer,bore_mm:50},
     {type:'abc'}, null, {...DEFAULTS.gear_pair,teeth_a:Infinity}
