@@ -42,6 +42,12 @@ try{
     let s=await state(page);
     assert.equal(s.campaign.diplomacy.relations[2],-12);
     await page.locator('[data-view="court"]').click();
+    if(screen.touch){
+      assert.equal(await page.locator('.campaign-map-wrap').isVisible(),false,'royal council uses whole mobile workspace');
+      const panel=await page.locator('.campaign-province').boundingBox();
+      assert(panel&&panel.height>300,'mobile council must not be cramped into a short bottom strip');
+    }
+    await capture(page,key,'council-open');
     await page.locator('[data-court-side="2"]').click();
     await page.locator('[data-political-action="truce"]').click();
     await page.locator('[data-action="commitPolitical"]').click();
