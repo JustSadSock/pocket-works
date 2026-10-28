@@ -295,12 +295,17 @@ function enemyOrder(s,side){
   choices.sort((a,b)=>b.value-a.value || a.id-b.id || a.army.id.localeCompare(b.army.id));
   const pick=choices[0];
   if(pick&&pick.value>0){
-    const {army,id}=pick;
-    if(isStronghold(s,id) && s.provinces[id].owner!==army.side &&
-      army.strength<=defensePower(s,id)+4 &&
-      supplyNetwork(s,army.side).has(army.province)){
+    const {army,id}=pick,p=s.provinces[id],defense=defensePower(s,id);
+    const supply=supplyNetwork(s,army.side).has(army.province);
+    if(isStronghold(s,id) && p.owner!==army.side && supply &&
+       army.strength<=defense+4 && army.strength>=4){
       s.sieges.push({armyId:army.id,side,from:army.province,to:id,progress:0});
       army.used=true;note(s,FACTIONS[side].short+' осаждает '+PROVINCES[id].name+'.');
+    }else if(p.owner===0 && !isStronghold(s,id) && army.strength<defense+1 && supply &&
+      army.strength>=4 && armiesAt(s,id).length===0 && (p.raidedUntil||0)<=s.season){
+      army.strength=Math.max(1,army.strength-1);army.used=true;
+      p.garrison=Math.max(0,p.garrison-2);p.raidedUntil=s.season+2;
+      note(s,FACTIONS[side].short+' совершает набег на '+PROVINCES[id].name+'.');
     }else moveEnemy(s,army,id);
   }
 }
