@@ -7,7 +7,8 @@
       "tier": "smoke",
       "files": [
         "rules.test.mjs",
-        "campaign.test.mjs"
+        "campaign.test.mjs",
+        "diplomacy.test.mjs"
       ]
     },
     {
@@ -123,6 +124,12 @@
       "kind": "browser-node",
       "tier": "smoke",
       "entry": "qa/war-stage3-browser.mjs"
+    },
+    {
+      "id": "campaign-court-flow",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/court-stage4-browser.mjs"
     }
   ]
 }

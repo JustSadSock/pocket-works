@@ -122,3 +122,93 @@
  .campaign-statuses span{font-size:8px}
  .map-actions button{font-size:9px;min-height:33px}
 }
+
+/* Royal council — narrow metal seals and engraved agreements, not chat cards. */
+.campaign-tabs{position:sticky;top:-27px;z-index:3;display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#26362f;padding:0 0 10px;margin:0 0 5px}
+.campaign-tabs button{min-height:40px;cursor:pointer;background:#33473c;color:#c6d0bc;border:1px solid #637966;font-size:10px;font-weight:900;letter-spacing:.11em}
+.campaign-tabs button.chosen{background:#ad7656;border-color:#d6ad89;color:#fff7e7}
+.court-intro{padding-bottom:11px;border-bottom:1px solid #6a7c6d}
+.court-intro>span:first-child{font:800 9px/1.6 system-ui,sans-serif;letter-spacing:.16em;color:#b8c5ad}
+.court-intro h2{font:normal 27px/1.1 Georgia,serif;color:#f6e6c9;margin:2px 0 6px}
+.court-intro p{font:italic 12px/1.42 Georgia,serif;color:#becdbf;margin:0}
+.court-counter,.court-league,.court-tribute{display:inline-block;padding:2px 5px;margin:3px 4px 2px 0;border:1px solid #637865;color:#e6d9b6;font:750 9px system-ui,sans-serif!important;letter-spacing:.03em!important}
+.court-league{border-color:#b98168!important;color:#f1baa2!important}
+.court-tribute{border-color:#87ac99!important;color:#c5e7d6!important}
+.court-seals{display:grid;gap:6px;margin-top:12px}
+.court-seal{display:flex;align-items:center;text-align:left;gap:8px;width:100%;min-height:52px;padding:6px;border:1px solid #708575;background:#31483c;color:#eee2c8;cursor:pointer}
+.court-seal.selected{border-color:#e0cc9d;background:#455949;box-shadow:inset 3px 0 #d9c79c}
+.court-seal-symbol{display:grid;place-items:center;flex:0 0 35px;height:36px;font-size:25px;background:#7e5041;color:#e7c2ad;border:1px solid #c49681}
+.court-seal-symbol.court-stone{background:#746d57;color:#e7d9ad;border-color:#a9a183}
+.court-seal>span:nth-child(2){min-width:0;flex:1}
+.court-seal strong,.court-seal small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.court-seal strong{font:normal 16px Georgia,serif}
+.court-seal small{font-size:10px;color:#c7ccbd;margin-top:2px}
+.court-seal b{font:19px Georgia,serif;font-variant-numeric:tabular-nums}
+.court-tally{display:flex;justify-content:space-between;gap:4px;padding:10px 1px 3px;color:#e2d3b6;font-size:10px;font-weight:750}
+.court-status{margin:6px 0 8px;padding:7px;border-top:1px solid #6f8473;border-bottom:1px solid #6f8473;color:#c8d6c5;font:italic 12px/1.35 Georgia,serif}
+.court-actions{display:grid;gap:5px}
+.court-action{cursor:pointer;width:100%;display:flex;align-items:center;justify-content:space-between;gap:7px;min-height:46px;padding:6px 9px;text-align:left;background:#40503f;color:#f2e7ce;border:1px solid #778a71}
+.court-action>span:first-child{min-width:0}.court-action strong,.court-action small{display:block}
+.court-action strong{font-size:11px;line-height:1.3}.court-action small{margin-top:2px;font-size:9px;line-height:1.2;color:#c7c8ac}
+.court-action:disabled{opacity:.5;cursor:not-allowed;background:#303b34}
+.court-action:disabled small{color:#e0ae9f}
+.court-arrow{font:22px Georgia,serif;color:#e4caa4}
+.court-footnote{font:italic 11px/1.4 Georgia,serif;color:#adbdac;border-top:1px solid #596d5e;padding-top:10px;margin:12px 0}
+.province-treaty{font:bold 12px system-ui,sans-serif;fill:#f6e5c5;pointer-events:none;letter-spacing:.05em}
+@media(max-width:780px){
+ .campaign-tabs{top:-10px;padding-bottom:5px;margin-bottom:4px}
+ .campaign-tabs button{min-height:30px;font-size:9px;letter-spacing:.04em}
+ .court-intro h2{font-size:18px}.court-intro p{font-size:10px}
+ .court-seals{margin-top:6px;gap:4px}
+ .court-seal{min-height:42px;padding:4px}.court-seal-symbol{flex-basis:25px;height:28px;font-size:17px}
+ .court-seal strong{font-size:12px}.court-seal small{font-size:8px}.court-seal b{font-size:15px}
+ .court-tally{font-size:9px;padding:5px 0 0}
+ .court-status{font-size:10px;padding:4px 0}
+ .court-actions{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+ .court-action{padding:5px;min-height:43px}.court-action strong{font-size:9px}.court-action small{font-size:8px}.court-arrow{font-size:13px}
+ .court-footnote{font-size:9px}
+ .court-counter,.court-league,.court-tribute{font-size:8px!important}
+}
+@media(max-width:375px){
+ .court-intro h2{font-size:15px}.court-intro p{font-size:9px}
+ .court-seal{min-height:36px}
+}
+@media(prefers-reduced-motion:reduce){.court-seal,.court-action{transition:none}}
+
+/* The diplomatic council becomes its own readable workspace on narrow displays. */
+@media(max-width:780px){
+ #campaignView.court-active .campaign-workspace{display:flex;flex-direction:column;min-height:0}
+ #campaignView.court-active .campaign-map-wrap{display:none}
+ #campaignView.court-active .campaign-command{display:flex;flex-direction:column;flex:1;max-height:none;min-height:0}
+ #campaignView.court-active .campaign-province{flex:1;min-height:0;overflow-y:auto;padding:14px 17px;scrollbar-width:thin}
+ #campaignView.court-active .campaign-tabs{position:sticky;top:-14px;padding:0 0 9px;margin-bottom:7px}
+ #campaignView.court-active .campaign-tabs button{min-height:41px}
+ #campaignView.court-active .court-intro h2{font-size:26px}
+ #campaignView.court-active .court-intro p{font-size:12px}
+ #campaignView.court-active .court-seals{grid-template-columns:1fr 1fr;gap:7px;margin:12px 0}
+ #campaignView.court-active .court-seal{min-width:0;min-height:58px;padding:7px 6px}
+ #campaignView.court-active .court-seal strong{font-size:13px}
+ #campaignView.court-active .court-seal small{font-size:9px}
+ #campaignView.court-active .court-tally{padding:10px 0 3px;font-size:11px}
+ #campaignView.court-active .court-status{font-size:13px;padding:8px 2px}
+ #campaignView.court-active .court-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ #campaignView.court-active .court-action{min-height:61px;padding:9px}
+ #campaignView.court-active .court-action strong{font-size:11px}
+ #campaignView.court-active .court-action small{font-size:10px}
+ #campaignView.court-active .campaign-bottom{display:grid;flex:none;min-height:0;max-height:none;padding:10px 17px 13px;border-left:0;border-top:1px solid #738373;background:#25372e}
+ #campaignView.court-active .campaign-ticker{min-height:0;margin:0 0 7px;font-size:11px;line-height:1.2}
+ #campaignView.court-active .campaign-end-season{min-height:43px;height:43px;padding:8px 12px}
+}
+@media(max-width:375px){
+ #campaignView.court-active .campaign-province{padding:8px 11px}
+ #campaignView.court-active .campaign-tabs{top:-8px}
+ #campaignView.court-active .campaign-tabs button{min-height:34px}
+ #campaignView.court-active .court-intro h2{font-size:20px}
+ #campaignView.court-active .court-intro p{font-size:10px}
+ #campaignView.court-active .court-seals{gap:4px}
+ #campaignView.court-active .court-seal-symbol{display:none}
+ #campaignView.court-active .court-action{min-height:50px;padding:5px}
+ #campaignView.court-active .court-action strong{font-size:10px}
+ #campaignView.court-active .court-action small{font-size:9px}
+ #campaignView.court-active .campaign-bottom{padding:5px 10px}
+}

@@ -1,5 +1,6 @@
 // Чёрные знамёна · campaign rules. Pure deterministic strategic layer.
 import { createBattle, TYPES } from './rules.mjs';
+import {createDiplomacy,ensureDiplomacy,diplomacyValid,freePassage,warDiplomacy,recordWar,nextPoliticalSeason,tributeIncome,vassal,negotiate} from './diplomacy.mjs';
 
 export const CAMPAIGN_VERSION = 1;
 export const MAX_STRENGTH = 18;
@@ -46,22 +47,28 @@ export function createCampaign(){
       {id:'army-5',side:2,province:2,strength:9,used:false},
       {id:'army-6',side:2,province:6,strength:7,used:false}
     ],
-    sieges:[],pending:null,winner:null,report:null,
+    sieges:[],diplomacy:createDiplomacy(),pending:null,winner:null,report:null,
     history:['Весна первого года. Три державы готовятся к войне.']
   };
 }
 function copy(s){
-  return {...s,provinces:s.provinces.map(p=>({...p})),armies:s.armies.map(a=>({...a})),sieges:(s.sieges||[]).map(x=>({...x})),history:[...s.history],
+  return {...s,provinces:s.provinces.map(p=>({...p})),armies:s.armies.map(a=>({...a})),sieges:(s.sieges||[]).map(x=>({...x})),diplomacy:s.diplomacy?{relations:{...s.diplomacy.relations},treaties:s.diplomacy.treaties.map(t=>({...t})),coalitionUntil:s.diplomacy.coalitionUntil??0}:createDiplomacy(),history:[...s.history],
     pending:s.pending?{...s.pending}:null,report:s.report?{...s.report}:null};
 }
 function note(s,text){s.history.unshift(text);s.history=s.history.slice(0,12);}
 function error(state,text){return {state,error:text};}
 function canAct(s){return s.winner===null && !s.pending && s.actions>0;}
 function finish(s){
-  if(s.provinces[3].owner===0 && s.provinces[11].owner===0){s.winner=0;note(s,'Оба вражеских престола покорены. Союз победил.');}
+  if((s.provinces[3].owner===0||(s.provinces[3].owner===2&&vassal(s,2))) &&
+    (s.provinces[11].owner===0||(s.provinces[11].owner===1&&vassal(s,1)))){s.winner=0;note(s,'Оба вражеских престола покорены. Союз победил.');}
   if(s.provinces[0].owner!==0){s.winner=1;note(s,'Северный оплот пал. Союз потерял войну.');}
 }
-export function income(s){return s.provinces.reduce((n,p)=>n+(p.owner===0?Math.max(0,PROVINCES[p.id].income-(p.raidedUntil>s.season?2:0)):0),0);}
+export function income(s){return s.provinces.reduce((n,p)=>n+(p.owner===0?Math.max(0,PROVINCES[p.id].income-(p.raidedUntil>s.season?2:0)):0),0)+tributeIncome(s);}
+export function politicalOrder(s,side,action){
+ const result=negotiate(s,side,action);
+ if(!result.error)finish(result.state);
+ return result;
+}
 export function upkeep(s){return s.armies.filter(a=>a.side===0).reduce((n,a)=>n+Math.ceil(a.strength/6),0);}
 export function recruit(state,id,armyId=null){
   if(!canAct(state))return error(state,'Сейчас нельзя собирать войска');
@@ -110,6 +117,7 @@ export function march(state,armyId,to){
   const target=state.provinces[to];
   if(!target)return error(state,'Неизвестная земля');
   if(target.owner===0 && armiesAt(state,to,0).length>=2)return error(state,'Две армии уже занимают эту область');
+  if(target.owner!==0&&!warDiplomacy(state,target.owner,0))return error(state,'Действующий договор запрещает нападение на эту державу');
   const s=copy(state),a=s.armies.find(x=>x.id===armyId);
   s.actions--;a.used=true;
   if(besieging)s.sieges=s.sieges.filter(x=>x.armyId!==armyId);
@@ -117,6 +125,7 @@ export function march(state,armyId,to){
     a.province=to;
     note(s,'Дружина перешла в '+PROVINCES[to].name+'.');
   }else{
+    recordWar(s,0,target.owner);
     s.pending={kind:'invasion',attackerId:armyId,from:a.province,to,attackerSide:0,defenderSide:target.owner,attackerStrength:a.strength,
       defenderStrength:defensePower(s,to),defenderGarrison:target.garrison};
     note(s,'Начался штурм: '+PROVINCES[to].name+'.');
@@ -133,6 +142,7 @@ export function validCampaign(c){
     !Number.isInteger(c.coins)||c.coins<0||c.coins>9999||!Number.isInteger(c.actions)||c.actions<0||c.actions>2||
     !Array.isArray(c.provinces)||c.provinces.length!==PROVINCES.length || !Array.isArray(c.armies) || c.armies.length>100 ||
     ![null,0,1].includes(c.winner)||!Number.isInteger(c.nextArmy)||c.nextArmy<1 ||
+    !diplomacyValid(c)||
     !Array.isArray(c.history)||c.history.length>16 || !c.history.every(v=>typeof v==='string'&&v.length<300))return false;
   const ids=new Set();
   if(!c.provinces.every((p,id)=>p.id===id&&[0,1,2,3].includes(p.owner)&&Number.isInteger(p.garrison)&&p.garrison>=0&&p.garrison<=10&&Number.isInteger(p.fort)&&p.fort>=0&&p.fort<=2&&
@@ -253,9 +263,11 @@ export function retreatCampaignBattle(state){
 }
 function moveEnemy(s,army,to){
   const p=s.provinces[to],from=army.province;
+  if(!warDiplomacy(s,p.owner,army.side))return;
   army.used=true;
   if(p.owner===army.side){army.province=to;return;}
   if(p.owner===0){
+    recordWar(s,army.side,0);
     s.pending={kind:'counterattack',attackerId:army.id,from,to,attackerSide:army.side,defenderSide:0,
       attackerStrength:army.strength,defenderStrength:defensePower(s,to),defenderGarrison:p.garrison};
     note(s,'Враг приближается к '+PROVINCES[to].name+'. Защищай владение!');
@@ -284,6 +296,7 @@ function enemyOrder(s,side){
   for(const army of armies)for(const id of neighbors(army.province)){
     const p=s.provinces[id];
     let value=0;
+    if(!warDiplomacy(s,p.owner,side))continue;
     if(p.owner===0)value=130+(id===0?32:0)-(defensePower(s,id)*3);
     else if(p.owner===3)value=100-defensePower(s,id)*6;
     else if(p.owner!==side)value=65-defensePower(s,id)*5;
@@ -321,6 +334,7 @@ export function endSeason(state){
     note(s,'В казне недостача: армии теряют людей из-за нехватки снабжения.');
   }
   s.season++;s.actions=2;
+  nextPoliticalSeason(s);
   resolveSieges(s);
   applyIsolation(s);
   s.armies.forEach(a=>{a.used=false;});
@@ -344,7 +358,7 @@ export function supplyNetwork(s,side){
   if(blocked.has(origin))return new Set();
   const seen=new Set([origin]),queue=[origin];
   for(const id of queue)for(const n of neighbors(id)){
-    if(seen.has(n)||blocked.has(n)||s.provinces[n].owner!==side)continue;
+    if(seen.has(n)||blocked.has(n)||!freePassage(s,side,s.provinces[n].owner))continue;
     seen.add(n);queue.push(n);
   }
   return seen;
@@ -357,6 +371,7 @@ export function siegeByArmy(s,id){return (s.sieges||[]).find(x=>x.armyId===id)||
 export function campaignUpgrade(s){
   if(!validCampaign(s))return null;
   const out=copy(s);
+  ensureDiplomacy(out);
   out.sieges=(s.sieges||[]).map(x=>({...x}));
   for(const p of out.provinces)p.raidedUntil??=0;
   return validCampaign(out)?out:null;
@@ -366,6 +381,7 @@ export function startSiege(state,armyId,to){
   const army=state.armies.find(a=>a.id===armyId && a.side===0&&a.strength>0);
   if(!army||army.used)return error(state,'Для блокады нужна свободная дружина');
   if(!neighbors(army.province).includes(to)||state.provinces[to].owner===0)return error(state,'Осада возможна лишь в соседней чужой области');
+  if(!warDiplomacy(state,state.provinces[to].owner,0))return error(state,'Договор не позволяет осаждать союзную крепость');
   if(!isStronghold(state,to))return error(state,'Здесь нет укреплений. Совершите обычное вторжение');
   if(siegeAt(state,to)||siegeByArmy(state,armyId))return error(state,'Эта дружина уже связана осадой');
   if(!supplyNetwork(state,0).has(army.province))return error(state,'Без снабжения осадную блокаду не удержать');
@@ -373,6 +389,7 @@ export function startSiege(state,armyId,to){
   const s=copy(state);s.actions--;
   s.armies.find(a=>a.id===armyId).used=true;
   s.sieges.push({armyId,side:0,from:army.province,to,progress:0});
+  recordWar(s,0,s.provinces[to].owner);
   note(s,'Знамёна сомкнули кольцо вокруг '+PROVINCES[to].name+'.');
   return {state:s,error:null};
 }
@@ -389,6 +406,7 @@ export function raid(state,armyId,to){
   const army=state.armies.find(a=>a.id===armyId&&a.side===0);
   if(!army||army.used||army.strength<4)return error(state,'Рейд требует свободную дружину из четырёх воинов');
   if(!neighbors(army.province).includes(to)||state.provinces[to].owner===0)return error(state,'Выберите соседнюю вражескую землю');
+  if(!warDiplomacy(state,state.provinces[to].owner,0))return error(state,'Набег нарушит действующий договор');
   if(PROVINCES[to].capital!==undefined)return error(state,'Столицу невозможно разграбить без настоящего штурма');
   if(siegeByArmy(state,armyId)||siegeAt(state,to))return error(state,'Блокада исключает рейд');
   if(!supplyNetwork(state,0).has(army.province))return error(state,'Нет снабжения для глубокого рейда');
@@ -398,6 +416,7 @@ export function raid(state,armyId,to){
   const s=copy(state);const a=s.armies.find(a=>a.id===armyId),p=s.provinces[to];
   a.strength--;a.used=true;s.actions--;s.coins=Math.min(9999,s.coins+4);
   p.garrison=Math.max(0,p.garrison-2);p.raidedUntil=s.season+2;
+  recordWar(s,0,p.owner);
   note(s,'Рейд на '+PROVINCES[to].name+': +4 серебра, гарнизон ослаблен, доход сожжён на два сезона.');
   return {state:s,error:null};
 }
