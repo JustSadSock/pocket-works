@@ -1,4 +1,4 @@
-import {DEFINITIONS,DEFAULTS,normalizeJob,build,stlBuffer,gearOutline,transformedTriangle} from './geometry.js';
+import {DEFINITIONS,DEFAULTS,normalizeJob,build,stlBuffer,gearOutline,transformedTriangle} from './geometry.js';\nimport { installMobileRuntime } from '../../shared/mobile-runtime.js';\nimport { createWorkshopMode } from '../../shared/workshop-mode.js';\ninstallMobileRuntime();
 
 const $=id=>document.getElementById(id);
 const KEY='pocket-works:print-forge:v1';
@@ -242,7 +242,7 @@ $('modeMechanics').addEventListener('click',()=>setView('mechanics'));
 $('zoomIn').addEventListener('click',()=>{state.zoom=Math.min(2.8,state.zoom*1.2);requestRender()});
 $('zoomOut').addEventListener('click',()=>{state.zoom=Math.max(.45,state.zoom/1.2);requestRender()});
 $('resetCamera').addEventListener('click',()=>{state.zoom=1;state.yaw=.52;state.pitch=.67;requestRender();toast('Вид восстановлен')});
-$('newProject').addEventListener('click',()=>{if(!confirm('Сбросить текущие параметры изделия?'))return;state.job={...DEFAULTS.gear_pair};state.view='3d';state.zoom=1;state.theta=0;state.running=false;refresh();toast('Новый проект создан')});
+$('newProject').addEventListener('click',()=>$('resetDialog').showModal());\n$('cancelReset').addEventListener('click',()=>$('resetDialog').close());\n$('acceptReset').addEventListener('click',()=>{state.job={...DEFAULTS.gear_pair};state.view='3d';state.zoom=1;state.theta=0;state.running=false;refresh();$('resetDialog').close();toast('Новый проект создан')});
 $('rpm').addEventListener('input',e=>{state.rpm=Number(e.target.value);updateMotionInfo();requestRender()});
 $('playMotion').addEventListener('click',()=>{state.running=!state.running;state.last=0;updateMotionInfo();requestRender()});
 $('reverseMotion').addEventListener('click',()=>{state.direction*=-1;updateMotionInfo();requestRender();toast('Направление вращения изменено')});
@@ -305,3 +305,4 @@ document.addEventListener('visibilitychange',()=>{state.last=0;if(!document.hidd
 if(!ctx){$('errors').textContent='Canvas 2D недоступен в этом браузере';$('errors').hidden=false;}else{
   refresh();const observer=new ResizeObserver(resize);observer.observe(stage);resize();
 }
+\ncreateWorkshopMode({appName:'Pocket Forge 3D',version:'1.0.0',cachePrefix:'print-forge-',storageNamespace:'pocket-works:print-forge',onReset:()=>{state.job={...DEFAULTS.gear_pair};state.running=false;state.theta=0;state.view='3d';refresh()}});\n
