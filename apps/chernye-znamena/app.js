@@ -629,7 +629,7 @@ if(typeof ResizeObserver==='function')new ResizeObserver(resize).observe($('canv
 createWorkshopMode({
   appName:'Чёрные знамёна',version:'0.2.0',
   cachePrefix: 'chernye-znamena-',
-  storageNamespace:'pocket-works:chernye-znamena',
+  storageNamespace: 'pocket-works:chernye-znamena',
   onReset(){
     for(const key of [STORAGE,CAMPAIGN_KEY,LINKED_BATTLE_KEY,PREFS]){
       try{localStorage.removeItem(key);}catch{}
