@@ -1,4 +1,5 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import {createBattle,MAPS,TYPES,WIDTH,HEIGHT,distance,terrainAt,unitAt,leader,commanded,reachable,attackPreview,issue,endTurn,aiAction,validSaved} from './rules.mjs';
 import {createCampaign,validCampaign,march,recruit,fortify,endSeason,startCampaignBattle,concludeCampaignBattle,retreatCampaignBattle,PROVINCES,FACTIONS,neighbors,armiesAt} from './campaign.mjs';
 import {campaignMapSvg,campaignInfo,campaignHeader} from './campaign-ui.mjs';
@@ -625,5 +626,18 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeo
 window.addEventListener('pagehide',()=>{clearTimeout(aiTimer);persist();persistCampaign();});
 window.addEventListener('resize',()=>{if(screen==='campaign')renderStrategic();else resize();});
 if(typeof ResizeObserver==='function')new ResizeObserver(resize).observe($('canvasFrame'));
+createWorkshopMode({
+  appName:'Чёрные знамёна',version:'0.2.0',
+  cachePrefix: 'chernye-znamena-',
+  storageNamespace:'pocket-works:chernye-znamena',
+  onReset(){
+    for(const key of [STORAGE,CAMPAIGN_KEY,LINKED_BATTLE_KEY,PREFS]){
+      try{localStorage.removeItem(key);}catch{}
+    }
+    game=createBattle();campaign=null;linkedSave=null;selectedProvince=1;selectedArmy='army-1';
+    selected=null;marchMode=false;audioEnabled=false;
+    modal('home');
+  }
+});
 window.__blackBannersTestState=()=>({screen,game,selected,tool,campaign,marchMode,selectedArmy,selectedProvince});
 update();resize();modal('home');
