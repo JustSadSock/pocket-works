@@ -91,3 +91,10 @@
  .campaign-map-legend{bottom:0}
 }
 @media(prefers-reduced-motion:reduce){.map-region,.map-region path:first-child,.map-actions button{transition:none}}
+
+/* Pocket Works diagnostics is functional but subordinate to the battle verbs. */
+.mast-tools{display:flex;align-items:center;justify-self:end;gap:4px}
+.mast-tools .workshop-trigger{height:36px;min-width:34px;display:grid;place-items:center;padding:0 4px;background:transparent;color:#d6dfcf;border:1px solid #687a6b;font:24px/1 Georgia,serif}
+.mast-tools .workshop-trigger:active{background:#47604c}
+@media(max-width:780px){.mast{grid-template-columns:72px minmax(0,1fr) 96px}.mast-tools .workshop-trigger{height:36px;min-width:34px}.brand strong{font-size:clamp(11.5px,3vw,15px)}}
+@media(max-width:375px){.mast{grid-template-columns:66px minmax(0,1fr) 96px}.return{font-size:9px}.brand-emblem{width:23px}.brand strong{font-size:12px}.brand{gap:2px}}
