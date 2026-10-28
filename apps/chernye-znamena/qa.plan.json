@@ -6,7 +6,8 @@
       "kind": "node-test",
       "tier": "smoke",
       "files": [
-        "rules.test.mjs"
+        "rules.test.mjs",
+        "campaign.test.mjs"
       ]
     },
     {
@@ -62,6 +63,60 @@
       "kind": "browser-node",
       "tier": "smoke",
       "entry": "qa/war-table-browser.mjs"
+    },
+    {
+      "id": "campaign-visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "[data-action='startCampaign']",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='startCampaign']"
+        },
+        {
+          "action": "visible",
+          "selector": "#campaignMap .map-region"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#campaignMap [data-province='4']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#openMenu"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-action='returnCampaign']"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "campaign-real-flow",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/campaign-browser.mjs"
     }
   ]
 }

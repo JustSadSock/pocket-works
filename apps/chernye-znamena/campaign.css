@@ -1,0 +1,103 @@
+/* An engraved borderland atlas, composed as an instrument rather than a scroll. */
+#battleLayout[hidden],#campaignView[hidden]{display:none!important}
+.campaign-view{flex:1;min-height:0;display:flex;flex-direction:column;background:#283a32;color:#eee3ca;overflow:hidden}
+.campaign-top{height:82px;flex:none;padding:10px 18px 11px;display:flex;align-items:center;justify-content:space-between;gap:16px;background:linear-gradient(90deg,#25382d,#35493e);border-bottom:2px solid #7a8d72}
+.campaign-eyebrow span{font:700 9px/1.5 system-ui,sans-serif;letter-spacing:.23em;color:#c1bba1;display:block}
+.campaign-eyebrow strong{font:normal 24px/1.1 Georgia,serif;letter-spacing:.06em;white-space:nowrap}
+.campaign-counters{display:flex;gap:0;align-items:center}
+.campaign-stat{padding:0 clamp(10px,2.2vw,22px);border-left:1px solid #788c7d;min-width:69px;display:grid;justify-items:center}
+.campaign-stat small{font-size:9px;font-weight:800;color:#cad0bc;letter-spacing:.11em}.campaign-stat strong{font:24px/1.2 Georgia,serif;color:#f1e2c4;font-variant-numeric:tabular-nums}.campaign-stat em{font-size:10px;color:#c8d2bf;font-style:normal}
+.campaign-workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,340px)}
+.campaign-map-wrap{position:relative;min-width:0;min-height:0;overflow:hidden;background:radial-gradient(ellipse at 50% 40%,#627967 0%,#2e433a 87%);border-right:1px solid #829280}
+.campaign-map{height:100%;width:100%;display:flex;align-items:center;justify-content:center}
+.campaign-atlas-svg{height:100%;width:100%;display:block;filter:drop-shadow(0 10px 16px #14271b)}
+.map-region{cursor:pointer;transition:filter .15s;outline:none}
+.map-region path:first-child{transition:fill .17s,stroke-width .17s;stroke-linejoin:round}
+.map-region.selected path:first-child{stroke:#f8e2b3;stroke-width:8;filter:drop-shadow(0 0 8px #e5d6a477)}
+.map-region.reachable path:first-child{stroke:#bbdfce;stroke-width:7;stroke-dasharray:10 7}
+.map-region:focus-visible path:first-child{stroke:#e6d5b0;stroke-width:9}
+.province-label{font:700 21px/1 Georgia,serif;fill:#f4eedb;paint-order:stroke;stroke:#202d28;stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.province-hint{font:700 11px/1 system-ui,sans-serif;letter-spacing:.1em;fill:#e2dcca;pointer-events:none}
+.campaign-map-legend{position:absolute;left:50%;bottom:11px;transform:translateX(-50%);display:flex;gap:clamp(7px,1.5vw,18px);align-items:center;justify-content:center;max-width:95%;padding:7px 12px;background:#1e2d26df;border:1px solid #7d8b78;color:#d4ddce;font-size:10px;white-space:nowrap}
+.campaign-map-legend span{display:flex;align-items:center;gap:5px}
+.campaign-map-legend i{width:10px;height:10px;display:inline-block;transform:rotate(45deg)}
+.legend-north{background:#89bab0}.legend-order{background:#c8886a}.legend-stone{background:#c9b68e}.legend-free{background:#9ca7a0}
+.campaign-command{min-height:0;display:flex;flex-direction:column;background:#27362e;box-shadow:inset 3px 0 #ffffff08}
+.campaign-province{min-height:0;overflow-y:auto;padding:27px 19px 12px;scrollbar-width:thin;scrollbar-color:#6c8372 transparent}
+.map-local-name small{display:block;color:#bbbea9;font-size:9px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+.map-local-name h2{margin:5px 0;font:normal 30px/1.08 Georgia,serif;color:#f2e3c8}.map-local-name>span{color:#bccbbb;font-size:11px;line-height:1.35;display:block}
+.map-field-armies{margin:18px 0 12px;border-top:1px solid #6b8071;padding-top:12px;display:grid;gap:7px}
+.field-army{display:flex;align-items:center;justify-content:space-between;gap:5px;text-align:left;padding:10px 9px;color:#dce3d2;background:#33473b;border:1px solid #657867;min-height:48px}
+.field-army.chosen{border-color:#d6c29b;background:#4e604b}.field-army span{font-size:12px;font-weight:700}.field-army b{font-size:10px;white-space:nowrap;color:#e6d3b4}
+.map-empty{font:italic 12px/1.4 Georgia,serif;color:#9db2a6;margin:0}
+.map-actions{display:grid;gap:9px}.map-actions button{width:100%;min-height:48px;padding:8px 12px;border:1px solid #9cad93;background:#364b3c;color:#e4e7d1;text-align:left;font-size:12px;font-weight:750;transition:transform .12s}.map-actions button:active:not(:disabled){transform:translateY(2px)}.map-actions button:disabled{opacity:.4}.map-actions .map-main{background:#a16d4f;border-color:#c99e7e;color:#fff6dd}.map-actions .map-quiet{background:transparent}
+.map-instruction{font:italic 13px/1.45 Georgia,serif;color:#c3caba;margin:0 0 3px}
+.campaign-bottom{border-top:1px solid #697f6d;padding:13px 17px 19px;margin-top:auto}
+.campaign-ticker{font:italic 13px/1.4 Georgia,serif;color:#b9c5b5;min-height:39px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:11px}
+.campaign-end-season{height:52px;width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;background:#b37354;border:1px solid #d3b295;color:#fff4dc;font-size:12px;font-weight:850;letter-spacing:.08em;box-shadow:0 3px 0 #5a3c2e}
+.campaign-end-season:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 #5a3c2e}
+.campaign-end-season span{font:24px Georgia,serif}
+.campaign-end-season:disabled{opacity:.45}
+.campaign-error{color:#f3b7a7!important}
+@media(max-width:780px){
+ .campaign-top{height:65px;padding:5px 8px;gap:5px}
+ .campaign-eyebrow span{font-size:7px;letter-spacing:.09em}
+ .campaign-eyebrow strong{font-size:clamp(12px,3.8vw,17px);letter-spacing:.005em}
+ .campaign-counters{margin-left:auto}
+ .campaign-stat{padding:0 6px;min-width:39px}
+ .campaign-stat small{font-size:7px;letter-spacing:0}
+ .campaign-stat strong{font-size:16px}
+ .campaign-stat em{font-size:8px}
+ .campaign-workspace{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(176px,auto)}
+ .campaign-map-wrap{border-right:0;border-bottom:1px solid #748771;min-height:0}
+ .campaign-map-legend{bottom:4px;font-size:8px;gap:7px;padding:4px 8px}.campaign-map-legend i{width:7px;height:7px}
+ .campaign-command{display:grid;grid-template-columns:minmax(0,1fr) 150px;max-height:235px;min-height:0}
+ .campaign-province{padding:10px 12px;min-height:0}
+ .map-local-name h2{font-size:clamp(17px,4vw,23px);margin:3px 0}.map-local-name small{font-size:8px}.map-local-name>span{font-size:9px}
+ .map-field-armies{margin:7px 0 7px;padding-top:6px;gap:4px}
+ .field-army{padding:6px;min-height:35px;display:block}
+ .field-army span{font-size:10px}.field-army b{display:block;font-size:9px}
+ .map-actions{gap:5px}.map-actions button{min-height:37px;padding:6px;font-size:10px}
+ .map-instruction{font-size:11px}
+ .campaign-bottom{padding:9px 9px;border-left:1px solid #6c7f6b;border-top:0;display:flex;flex-direction:column;justify-content:flex-end}
+ .campaign-ticker{font-size:11px;min-height:0;flex:1;margin-bottom:8px}
+ .campaign-end-season{min-height:48px;height:auto;padding:10px 7px;font-size:10px;line-height:1.25;letter-spacing:.02em}
+ .campaign-end-season span{font-size:17px}
+}
+@media(max-width:375px){
+ .campaign-top{height:56px}
+ .campaign-eyebrow strong{font-size:12px}
+ .campaign-eyebrow span{font-size:6px}
+ .campaign-stat{padding:0 4px;min-width:34px}
+ .campaign-stat strong{font-size:14px}
+ .campaign-stat small{font-size:6px}
+ .campaign-stat em{display:none}
+ .campaign-command{grid-template-columns:minmax(0,1fr) 121px;max-height:190px}
+ .campaign-bottom{padding:6px}
+ .campaign-end-season{font-size:9px;padding:6px 4px;min-height:44px}
+}
+@media(max-height:630px) and (max-width:780px){
+ .campaign-top{height:47px}
+ .campaign-command{max-height:155px;grid-template-columns:minmax(0,1fr) 118px}
+ .map-local-name>span{display:none}
+ .campaign-province{padding:5px 8px}
+ .campaign-bottom{padding:5px}
+ .campaign-ticker{font-size:9px;line-height:1.2}
+ .campaign-end-season{font-size:9px;min-height:42px}
+ .map-local-name h2{font-size:16px}
+ .map-field-armies{margin:4px 0;padding-top:4px}
+ .field-army{min-height:30px;padding:4px}
+ .map-actions button{min-height:30px;padding:4px;font-size:10px}
+ .campaign-map-legend{bottom:0}
+}
+@media(prefers-reduced-motion:reduce){.map-region,.map-region path:first-child,.map-actions button{transition:none}}
+
+/* Pocket Works diagnostics is functional but subordinate to the battle verbs. */
+.mast-tools{display:flex;align-items:center;justify-self:end;gap:4px}
+.mast-tools .workshop-trigger{height:36px;min-width:34px;display:grid;place-items:center;padding:0 4px;background:transparent;color:#d6dfcf;border:1px solid #687a6b;font:24px/1 Georgia,serif}
+.mast-tools .workshop-trigger:active{background:#47604c}
+@media(max-width:780px){.mast{grid-template-columns:72px minmax(0,1fr) 96px}.mast-tools .workshop-trigger{height:36px;min-width:34px}.brand strong{font-size:clamp(11.5px,3vw,15px)}}
+@media(max-width:375px){.mast{grid-template-columns:66px minmax(0,1fr) 96px}.return{font-size:9px}.brand-emblem{width:23px}.brand strong{font-size:12px}.brand{gap:2px}}
+
+@media(max-width:780px){.mast .return{white-space:nowrap;font-size:9px;letter-spacing:-.025em}}
+@media(max-width:375px){.mast .return{font-size:8.5px}}
