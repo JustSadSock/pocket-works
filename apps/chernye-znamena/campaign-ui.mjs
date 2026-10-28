@@ -92,7 +92,7 @@ export function campaignInfo(s,selected,selectedArmy,marchMode){
  }else{
   primary='<p class="map-instruction">Владение '+safe(owner.name)+'. Чтобы вторгнуться, выбери свою армию и отдай приказ на марш.</p>';
  }
- return '<div class="map-local-name"><small>'+safe(owner.name)+' · '+safe(world.type.toUpperCase())+'</small><h2>'+safe(world.name)+'</h2><span>Гарнизон '+province.garrison+' · оборона '+defensePower(s,selected)+' · доход '+world.income+' серебра</span></div>'+
+ return '<div class="map-local-name"><small>'+safe(owner.name)+' · '+safe(landNames[world.type]||world.type)+'</small><h2>'+safe(world.name)+'</h2><span>Гарнизон '+province.garrison+' · оборона '+defensePower(s,selected)+' · доход '+world.income+' серебра</span></div>'+
  '<div class="map-field-armies">'+(commands||'<p class="map-empty">В этой области нет твоих полевых армий.</p>')+'</div>'+
  '<div class="map-actions">'+primary+'</div>';
 }
