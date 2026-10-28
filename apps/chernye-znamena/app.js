@@ -1,11 +1,15 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import {createBattle,MAPS,TYPES,WIDTH,HEIGHT,distance,terrainAt,unitAt,leader,commanded,reachable,attackPreview,issue,endTurn,aiAction,validSaved} from './rules.mjs';
+import {createCampaign,validCampaign,march,recruit,fortify,endSeason,startCampaignBattle,concludeCampaignBattle,retreatCampaignBattle,PROVINCES,FACTIONS,neighbors,armiesAt} from './campaign.mjs';
+import {campaignMapSvg,campaignInfo,campaignHeader} from './campaign-ui.mjs';
 installMobileRuntime();
 
 const $=id=>document.getElementById(id);
 const canvas=$('board'), ctx=canvas.getContext('2d'), veil=$('veil'), veilContent=$('veilContent');
 const STORAGE='pocket-works:chernye-znamena:save-v1';
 const PREFS='pocket-works:chernye-znamena:prefs-v1';
+const CAMPAIGN_KEY='pocket-works:chernye-znamena:campaign-v1';
+const LINKED_BATTLE_KEY='pocket-works:chernye-znamena:linked-battle-v1';
 const SIDES=['Северный союз','Багровый орден'];
 const SIDE_COLORS=['#76b9b5','#c9805c'];
 const TERRAIN_COLORS={grass:'#778973',hill:'#a19d7f',forest:'#63785c',river:'#547778',ford:'#758887',marsh:'#576d62'};
@@ -15,14 +19,117 @@ let size=30,originX=0,originY=0,viewWidth=400,viewHeight=400,dpr=1,portraitBoard
 let pointerStart=null;
 let loadError='';
 let previousModal='home';
+let campaign=null,linkedSave=null,selectedProvince=1,selectedArmy='army-1',marchMode=false,marchDestination=null;
 try{const s=JSON.parse(localStorage.getItem(STORAGE)||'null');if(s && validSaved(s))game=s;else if(s)loadError='Старое сохранение повреждено и не загружено';}
 catch{loadError='Сохранение недоступно';}
 try{audioEnabled=JSON.parse(localStorage.getItem(PREFS)||'{}').sound===true;}catch{}
+try{const c=JSON.parse(localStorage.getItem(CAMPAIGN_KEY)||'null');if(c&&validCampaign(c))campaign=c;else if(c)loadError='Сохранение кампании повреждено';}catch{loadError='Не удалось прочитать кампанию';}
+try{const b=JSON.parse(localStorage.getItem(LINKED_BATTLE_KEY)||'null');if(b&&validSaved(b)&&b.campaignContext)linkedSave=b;}catch{}
 const esc = s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function persist(){
-  try{localStorage.setItem(STORAGE,JSON.stringify(game));return true;}catch{showNotice('Не удалось сохранить бой');return false;}
+  try{localStorage.setItem(game.campaignContext?LINKED_BATTLE_KEY:STORAGE,JSON.stringify(game));return true;}catch{showNotice('Не удалось сохранить бой');return false;}
 }
 function writePrefs(){try{localStorage.setItem(PREFS,JSON.stringify({sound:audioEnabled}));}catch{}}
+function persistCampaign(){
+  try{if(campaign)localStorage.setItem(CAMPAIGN_KEY,JSON.stringify(campaign));return true;}
+  catch{showNotice('Кампания не сохранилась: проверь свободное место');return false;}
+}
+function setStage(section){
+  const isMap=section==='campaign';
+  $('battleLayout').hidden=isMap;
+  $('campaignView').hidden=!isMap;
+  document.body.dataset.stage=section;
+  if(!isMap)requestAnimationFrame(resize);
+}
+function campaignAction(result){
+  if(result.error){showNotice(result.error);sound('error');return false;}
+  campaign=result.state;persistCampaign();sound('move');
+  selectedArmy=campaign.armies.some(a=>a.id===selectedArmy)?selectedArmy:
+    (campaign.armies.find(a=>a.side===0)?.id||null);
+  if(campaign.pending){launchLinkedBattle(false);return true;}
+  marchMode=false;renderStrategic();return true;
+}
+function renderStrategic(){
+  if(!campaign)return;
+  setStage('campaign');
+  const portrait=window.matchMedia('(max-width:780px)').matches;
+  $('campaignCounters').innerHTML=campaignHeader(campaign);
+  $('campaignMap').innerHTML=campaignMapSvg(campaign,selectedProvince,selectedArmy,marchMode,portrait);
+  $('campaignDetails').innerHTML=campaignInfo(campaign,selectedProvince,selectedArmy,marchMode);
+  $('campaignTicker').textContent=campaign.history[0]||'Приказы ждут полководца.';
+  $('campaignEndSeason').disabled=!!campaign.pending||campaign.winner!==null;
+}
+function openStrategic(){
+  if(!campaign)campaign=createCampaign();
+  if(campaign.pending){launchLinkedBattle(true);return;}
+  marchMode=false;
+  screen='campaign';
+  veil.classList.add('hidden');
+  renderStrategic();
+  if(campaign.winner!==null)modal('campaignEnd');
+}
+function launchLinkedBattle(warning){
+  if(!campaign?.pending)return;
+  const match=linkedSave?.campaignContext?.to===campaign.pending.to && linkedSave?.campaignContext?.playerStrength===
+    (campaign.pending.attackerSide===0?campaign.pending.attackerStrength:campaign.pending.defenderStrength);
+  game=match?linkedSave:startCampaignBattle(campaign);
+  linkedSave=game;
+  selected=null;tool='move';
+  setStage('battle');persist();
+  if(game.winner!==null){modal('result');return;}
+  if(warning){modal('campaignWarning');return;}
+  screen='battle';veil.classList.add('hidden');resize();update();scheduleAi();
+}
+function finishLinkedBattle(){
+  if(!campaign?.pending)return;
+  const outcome=concludeCampaignBattle(campaign,game);
+  if(outcome.error){showNotice(outcome.error);return;}
+  campaign=outcome.state;selectedProvince=campaign.report?.province??selectedProvince;
+  linkedSave=null;persistCampaign();
+  try{localStorage.removeItem(LINKED_BATTLE_KEY);}catch{}
+}
+function sendArmy(to){
+  if(!campaign || !selectedArmy)return;
+  const a=campaign.armies.find(a=>a.id===selectedArmy && a.side===0);
+  if(!a){showNotice('Сначала выбери свою дружину');return;}
+  if(!neighbors(a.province).includes(to)){showNotice('Выбери соседнюю область');return;}
+  if(campaign.provinces[to].owner!==0){
+    marchDestination=to;modal('campaignMarchConfirm');return;
+  }
+  selectedProvince=to;
+  campaignAction(march(campaign,a.id,to));
+}
+$('campaignMap').addEventListener('click',event=>{
+  const region=event.target.closest('[data-province]');if(!region || screen!=='campaign')return;
+  const id=Number(region.dataset.province);
+  if(marchMode){sendArmy(id);return;}
+  selectedProvince=id;
+  const stationed=armiesAt(campaign,id,0);
+  if(stationed.length)selectedArmy=stationed[0].id;
+  renderStrategic();sound('move');
+});
+$('campaignMap').addEventListener('keydown',event=>{
+  if((event.key==='Enter'||event.key===' ')&&event.target.closest('[data-province]')){
+    event.preventDefault();event.target.click();
+  }
+});
+$('campaignDetails').addEventListener('click',event=>{
+  const button=event.target.closest('button');
+  if(!button || screen!=='campaign'||!campaign)return;
+  if(button.dataset.army){selectedArmy=button.dataset.army;renderStrategic();return;}
+  const cmd=button.dataset.cmd;
+  if(cmd==='march'){marchMode=true;renderStrategic();return;}
+  if(cmd==='cancel-march'){marchMode=false;renderStrategic();return;}
+  if(cmd==='recruit')campaignAction(recruit(campaign,selectedProvince,selectedArmy));
+  if(cmd==='raise')campaignAction(recruit(campaign,selectedProvince));
+  if(cmd==='fortify')campaignAction(fortify(campaign,selectedProvince));
+});
+$('campaignEndSeason').addEventListener('click',()=>{
+  if(screen!=='campaign'||!campaign)return;
+  campaignAction(endSeason(campaign));
+  if(campaign?.winner!==null)modal('campaignEnd');
+});
+
 function sound(kind){
   if(!audioEnabled)return;
   try {
@@ -309,7 +416,9 @@ function scheduleAi(){
 }
 const sceneArt='<svg class="modal-art" viewBox="0 0 400 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="400" height="120" fill="#526357"/><path d="M0 78 80 48 144 66 210 24 270 54 332 19 400 54v67H0" fill="#3a5146"/><path d="M0 107q75-31 154-9 72-22 131-12 69-25 115-4v40H0" fill="#263b31"/><path d="M200 92V3" stroke="#d4c0a5" stroke-width="5"/><path d="M202 7 287 20 255 55 202 48Z" fill="#b66b54" stroke="#ddb99f" stroke-width="2"/><path d="M218 20V43M210 31h25" stroke="#f0dfca" stroke-width="4"/><path d="M45 99V64l22-18 24 18v35" fill="#a8ae99" stroke="#304239" stroke-width="3"/><path d="M41 65V52l28-22 28 23v14" fill="#4b5c51"/><path d="M320 101V65l20-15 20 15v35" fill="#a5ab96" stroke="#304239" stroke-width="3"/><path d="M317 69V54l24-20 23 19v16" fill="#455c4d"/><path d="M0 115h400" stroke="#b5b89e" stroke-width="2"/></svg>';
 function modal(kind){
-  clearTimeout(aiTimer);screen=kind;
+  clearTimeout(aiTimer);
+  if(kind==='result'&&game.campaignContext){finishLinkedBattle();kind='campaignBattleResult';}
+  screen=kind;
   veil.classList.remove('hidden');
   let html='';
   if(kind==='home'){
@@ -323,11 +432,82 @@ function modal(kind){
     '<button class="secondary" data-action="rules">Правила</button><button class="secondary" data-action="sound">Звук: '+(audioEnabled?'включён':'выключен')+'</button><a href="../../" data-app-control>← Вернуться в Pocket Works</a></div>'+
     (loadError?'<p class="modal-alert">'+esc(loadError)+'</p>':'');
   }
+  if(kind==='home'){
+    html=html.replace('<button class="primary" data-action="new">Начать сражение</button>',
+      '<button class="primary" data-action="startCampaign">'+(campaign?.winner===null?'Продолжить кампанию':'Начать кампанию')+'</button>'+
+      (campaign?'<button class="secondary" data-action="restartCampaign">Новая кампания</button>':'')+
+      '<button data-action="new">Отдельная битва</button>');
+  }
   if(kind==='pause'){
     html='<div class="modal-kicker">СТОЯНКА ПОЛКОВ</div><h1 id="modalTitle">Совет полководца</h1><p>Бой сохранён. Ты можешь вернуться к нему позднее.</p><div class="modal-actions">'+
     '<button class="primary" data-action="resume">Вернуться в бой</button><button data-action="rules">Правила и тактика</button>'+
     '<button data-action="sound">Звук: '+(audioEnabled?'включён':'выключен')+'</button>'+
     '<button class="danger" data-action="confirmRestart">Начать другой бой</button><a href="../../" data-app-control>← Вернуться в Pocket Works</a></div>';
+  }
+  if(kind==='pause'&&game.campaignContext){
+    html=html.replace('<button class="danger" data-action="confirmRestart">Начать другой бой</button>',
+      campaign?.pending?.attackerSide===0?'<button class="danger" data-action="withdraw">Отступить с потерями</button>':'');
+  }
+  if(kind==='campaignPause'){
+    html='<div class="modal-kicker">СТРАТЕГИЧЕСКИЙ СОВЕТ</div><h1 id="modalTitle">На карте королевств</h1>'+
+    '<p>Война сохраняется после каждого приказа. Захвати Угольный мыс и Багровый трон, чтобы объединить пограничье.</p>'+
+    '<div class="modal-actions"><button class="primary" data-action="returnCampaign">Вернуться к карте</button>'+
+    '<button data-action="campaignRules">Правила кампании</button>'+
+    '<button data-action="sound">Звук: '+(audioEnabled?'включён':'выключен')+'</button>'+
+    '<button class="danger" data-action="restartCampaign">Начать новую кампанию</button>'+
+    '<a href="../../" data-app-control>← Вернуться в Pocket Works</a></div>';
+  }
+  if(kind==='campaignRules'){
+    html='<div class="modal-kicker">УСТАВ ГРАНИЦЫ</div><h1 id="modalTitle">Как вести войну</h1>'+
+    '<div class="modal-rules"><p><b>1.</b> Выбери свою область и одну из дружин. Прикажи ей марш, затем коснись соседней земли. Вражеское владение запускает настоящую тактическую битву.</p>'+
+    '<p><b>2.</b> Доступны два стратегических приказа за сезон. Одна дружина может идти или пополняться лишь один раз за сезон. Победа приносит землю, но потери остаются с армией.</p>'+
+    '<p><b>3.</b> Новая дружина стоит 9 серебра, пополнение +4 — 6, гарнизон +3 — 5. Сезон приносит доход земель и списывает содержание армий.</p>'+
+    '<p><b>4.</b> Орден и Князья ходят после каждого сезона. Вражеское нападение на наши земли требует лично защитить провинцию.</p>'+
+    '<p><b>5.</b> Захвати обе столицы врага: Угольный мыс и Багровый трон. Если падёт Северный оплот — война проиграна.</p></div>'+
+    '<div class="modal-actions"><button class="primary" data-action="returnCampaign">На карту</button></div>';
+  }
+  if(kind==='campaignMarchConfirm'){
+    const dest=PROVINCES[marchDestination];
+    html='<div class="modal-kicker">ПРИКАЗ О НАСТУПЛЕНИИ</div><h1 id="modalTitle">'+esc(dest.name)+'</h1>'+
+    '<p>Войска встретят сопротивление. Захват или оборона этой области будут решены на тактическом поле. Потери не исчезнут после боя.</p>'+
+    '<div class="modal-actions"><button class="primary" data-action="commitMarch">Начать наступление</button>'+
+    '<button data-action="returnCampaign">Отменить приказ</button></div>';
+  }
+  if(kind==='campaignWarning'){
+    const p=campaign?.pending;
+    html='<div class="modal-kicker">ВОЙНА ПРИШЛА НА ПОРОГ</div><h1 id="modalTitle">'+esc(PROVINCES[p.to].name)+'</h1>'+
+    '<p>'+esc(FACTIONS[p.attackerSide].name)+' ведёт армию силой '+p.attackerStrength+'. Защитники располагают '+p.defenderStrength+' силами. Исход изменит границу.</p>'+
+    '<div class="modal-actions"><button class="primary" data-action="resume">Оборонять владение</button>'+
+    '<button data-action="rules">Правила боя</button></div>';
+  }
+  if(kind==='campaignBattleResult'){
+    const rep=campaign?.report,place=rep?PROVINCES[rep.province]:null;
+    html='<div class="modal-kicker">ИСХОД ПОХОДА</div><h1 id="modalTitle">'+(rep?.playerWon?'Знамя устояло':'Тяжёлый исход')+'</h1>'+
+    '<p>'+(rep?.retreat?'Войско отошло. ':rep?.victory?'Область сменила владельца. ':'Защитники удержали землю. ')+
+    esc(place?.name||'')+'. Потери наступавших: '+(rep?.attackerLoss||0)+', защитников: '+(rep?.defenderLoss||0)+'.</p>'+
+    '<div class="modal-actions"><button class="primary" data-action="returnCampaign">Вернуться к карте</button>'+
+    '<a href="../../" data-app-control>← Вернуться в Pocket Works</a></div>';
+  }
+  if(kind==='campaignEnd'){
+    html='<div class="modal-kicker">ПОСЛЕДНЯЯ ХРОНИКА</div><h1 id="modalTitle">'+
+      (campaign?.winner===0?'Три короны объединены':'Северный союз пал')+'</h1>'+
+      '<p>Война длилась '+(campaign?.season||0)+' сезонов. Завоёвано областей: '+
+      (campaign?.provinces.filter(p=>p.owner===0).length||0)+'. Начни новую историю или изучи карту последнего года.</p>'+
+      '<div class="modal-actions"><button class="primary" data-action="returnCampaign">Осмотреть карту</button>'+
+      '<button data-action="restartCampaign">Новая кампания</button>'+
+      '<a href="../../" data-app-control>← Вернуться в Pocket Works</a></div>';
+  }
+  if(kind==='confirmCampaignRestart'){
+    html='<div class="modal-kicker">ПОДТВЕРЖДЕНИЕ</div><h1 id="modalTitle">Стереть историю войны?</h1>'+
+    '<p>Текущая кампания, её армии, территории и хронология будут безвозвратно заменены новой.</p>'+
+    '<div class="modal-actions"><button class="danger" data-action="restartCampaignConfirmed">Начать новую войну</button>'+
+    '<button class="primary" data-action="home">Не стирать</button></div>';
+  }
+  if(kind==='withdrawConfirm'){
+    html='<div class="modal-kicker">ТЯЖЁЛОЕ РЕШЕНИЕ</div><h1 id="modalTitle">Приказать отход?</h1>'+
+    '<p>Нападение будет сорвано. Армия сохранит только около двух третей своей силы. Отменить последствия нельзя.</p>'+
+    '<div class="modal-actions"><button class="danger" data-action="withdrawConfirmed">Отступить</button>'+
+    '<button class="primary" data-action="resume">Остаться в бою</button></div>';
   }
   if(kind==='rules'){
     html='<div class="modal-kicker">ПОЛЕВОЙ УСТАВ</div><h1 id="modalTitle">Порядок битвы</h1>'+
@@ -366,14 +546,46 @@ function syncOptions(){
   veilContent.querySelectorAll('[data-map]').forEach(el=>el.classList.toggle('chosen',el.dataset.map===pickMap));
   if($('mapDescription'))$('mapDescription').textContent=MAPS[pickMap].description;
 }
-function closeModal(){screen='battle';veil.classList.add('hidden');update();scheduleAi();}
-$('openMenu').addEventListener('click',()=>modal(screen==='home'?'home':screen==='result'?'result':'pause'));
+function closeModal(){setStage('battle');screen='battle';veil.classList.add('hidden');resize();update();scheduleAi();}
+$('openMenu').addEventListener('click',()=>{
+ if(screen==='campaign')modal('campaignPause');
+ else if(screen==='home')modal('home');
+ else if(screen==='campaignEnd'||screen==='campaignBattleResult')modal(screen);
+ else modal('pause');
+});
 veilContent.addEventListener('click',event=>{
   const el=event.target.closest('button');if(!el)return;
   if(el.dataset.map){pickMap=el.dataset.map;syncOptions();sound('move');return;}
   if(el.dataset.mode){pickMode=el.dataset.mode;syncOptions();sound('move');return;}
   const action=el.dataset.action;
   if(action==='sound'){audioEnabled=!audioEnabled;writePrefs();sound('turn');modal(screen);return;}
+  if(action==='startCampaign'){
+    if(!campaign||campaign.winner!==null){campaign=createCampaign();selectedArmy='army-1';selectedProvince=1;persistCampaign();}
+    openStrategic();return;
+  }
+  if(action==='restartCampaign'){modal('confirmCampaignRestart');return;}
+  if(action==='restartCampaignConfirmed'){
+    campaign=createCampaign();selectedProvince=1;selectedArmy='army-1';linkedSave=null;persistCampaign();
+    try{localStorage.removeItem(LINKED_BATTLE_KEY);}catch{}
+    openStrategic();return;
+  }
+  if(action==='returnCampaign'){openStrategic();return;}
+  if(action==='campaignRules'){previousModal=screen;modal('campaignRules');return;}
+  if(action==='commitMarch'){
+    const a=campaign?.armies.find(a=>a.id===selectedArmy);
+    if(!a){openStrategic();return;}
+    selectedProvince=marchDestination;
+    campaignAction(march(campaign,a.id,marchDestination));return;
+  }
+  if(action==='withdraw'){modal('withdrawConfirm');return;}
+  if(action==='withdrawConfirmed'){
+    const result=retreatCampaignBattle(campaign);
+    if(result.error){showNotice(result.error);modal('pause');return;}
+    campaign=result.state;linkedSave=null;persistCampaign();
+    try{localStorage.removeItem(LINKED_BATTLE_KEY);}catch{}
+    modal('campaignBattleResult');return;
+  }
+
   if(action==='new' && readSaveExists() && game.winner===null){
     modal('confirmNew');return;
   }
@@ -381,23 +593,28 @@ veilContent.addEventListener('click',event=>{
     game=createBattle(action==='replay'?game.mapId:pickMap,action==='replay'?game.mode:pickMode);
     selected=null;tool='move';persist();sound('turn');closeModal();showNotice('Веди войска к срединному камню');return;
   }
-  if(action==='continue'||action==='resume'){closeModal();return;}
+  if(action==='continue'||action==='resume'){
+    if(action==='continue'){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||'null');if(saved&&validSaved(saved))game=saved;}catch{}}
+    closeModal();return;
+  }
   if(action==='rules'){previousModal=screen;modal('rules');return;}
   if(action==='back'){modal(previousModal||'home');return;}
   if(action==='confirmRestart'){modal('confirmRestart');return;}
   if(action==='home'){modal('home');return;}
 });
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape' && screen==='battle')modal('pause');
+  if(e.key==='Escape' && screen==='campaign')modal('campaignPause');
+  else if(e.key==='Escape' && screen==='campaignPause')openStrategic();
+  else if(e.key==='Escape' && screen==='battle')modal('pause');
   else if(e.key==='Escape' && screen==='pause')closeModal();
   else if(screen==='battle'&&['1','2','3','4','5'].includes(e.key) && activeTurn()){
     const units=game.units.filter(u=>u.side===game.turn&&u.hp>0);
     if(units[Number(e.key)-1])selectUnit(units[Number(e.key)-1]);
   }
 });
-document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(aiTimer);persist();}else{resize();scheduleAi();}});
-window.addEventListener('pagehide',()=>{clearTimeout(aiTimer);persist();});
-window.addEventListener('resize',resize);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(aiTimer);persist();persistCampaign();}else{if(screen==='campaign')renderStrategic();else{resize();scheduleAi();}}});
+window.addEventListener('pagehide',()=>{clearTimeout(aiTimer);persist();persistCampaign();});
+window.addEventListener('resize',()=>{if(screen==='campaign')renderStrategic();else resize();});
 if(typeof ResizeObserver==='function')new ResizeObserver(resize).observe($('canvasFrame'));
-window.__blackBannersTestState=()=>({screen,game,selected,tool});
+window.__blackBannersTestState=()=>({screen,game,selected,tool,campaign,marchMode,selectedArmy,selectedProvince});
 update();resize();modal('home');
