@@ -37,11 +37,11 @@ function persistCampaign(){
   catch{showNotice('Кампания не сохранилась: проверь свободное место');return false;}
 }
 function setStage(section){
-  const isMap=section==='campaign';
-  $('battleLayout').hidden=isMap;
+  const isMap=section==='campaign',isBattle=section==='battle';
+  $('battleLayout').hidden=!isBattle;
   $('campaignView').hidden=!isMap;
   document.body.dataset.stage=section;
-  if(!isMap)requestAnimationFrame(resize);
+  if(isBattle)requestAnimationFrame(resize);
 }
 function campaignAction(result){
   if(result.error){showNotice(result.error);$('campaignTicker').textContent=result.error; sound('error');return false;}
@@ -420,6 +420,7 @@ const sceneArt='<svg class="modal-art" viewBox="0 0 400 120" preserveAspectRatio
 function modal(kind){
   clearTimeout(aiTimer);
   if(kind==='result'&&game.campaignContext){finishLinkedBattle();kind='campaignBattleResult';}
+  if(kind==='home')setStage('home');
   screen=kind;
   veil.classList.remove('hidden');
   let html='';
