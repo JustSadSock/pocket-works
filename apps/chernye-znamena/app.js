@@ -57,6 +57,7 @@ function campaignAction(result){
 function renderStrategic(){
   if(!campaign)return;
   setStage('campaign');
+  $('campaignView').classList.toggle('court-active',courtOpen);
   const portrait=window.matchMedia('(max-width:780px)').matches;
   $('campaignCounters').innerHTML=campaignHeader(campaign);
   $('campaignMap').innerHTML=campaignMapSvg(campaign,selectedProvince,selectedArmy,marchMode,portrait);
