@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createCampaign,PROVINCES,FACTIONS,neighbors,armiesAt,validCampaign,march,recruit,fortify,endSeason,
-  startCampaignBattle,concludeCampaignBattle,retreatCampaignBattle,defensePower,MAX_STRENGTH,income,upkeep} from './campaign.mjs';
+  startCampaignBattle,concludeCampaignBattle,retreatCampaignBattle,defensePower,MAX_STRENGTH,income,upkeep,supplyNetwork,isStronghold,raid,startSiege,siegeAt,siegeByArmy,liftSiege,campaignUpgrade} from './campaign.mjs';
 function invasion(){
  const s=createCampaign();
  const r=march(s,'army-1',5);
@@ -146,4 +146,117 @@ test('corrupted or impossible saved campaigns are rejected',()=>{
  assert.equal(validCampaign({...s,provinces:[...s.provinces.slice(1)]}),false);
  assert.equal(validCampaign({...s,armies:[...s.armies,s.armies[0]]}),false);
  assert.equal(validCampaign({...s,season:0}),false);
+});
+
+function preparedSiege(){
+ const s=createCampaign();
+ s.provinces[2].owner=0;
+ s.provinces[2].garrison=3;
+ s.armies=s.armies.filter(a=>a.side===0);
+ s.armies.find(a=>a.id==='army-1').province=2;
+ assert.ok(validCampaign(s));
+ return s;
+}
+test('capital supply travels only through friendly provinces',()=>{
+ const s=createCampaign();
+ assert.deepEqual([...supplyNetwork(s,0)].sort((a,b)=>a-b),[0,1,4]);
+ s.provinces[1].owner=2;
+ assert.equal(supplyNetwork(s,0).has(1),false);
+ assert.equal(supplyNetwork(s,0).has(4),true);
+ s.provinces[5].owner=0;
+ assert.equal(supplyNetwork(s,0).has(5),true,'supply can pass through province four');
+ s.provinces[4].owner=3;
+ assert.equal(supplyNetwork(s,0).has(5),false,'isolated province cannot draw supply through enemy lands');
+});
+test('siege cannot begin in open country or from a disconnected army',()=>{
+ const s=createCampaign();
+ assert.ok(startSiege(s,'army-1',5).error,'ordinary crossing is not a stronghold');
+ const good=preparedSiege();
+ assert.equal(isStronghold(good,3),true);
+ assert.equal(startSiege(good,'army-1',3).error,null);
+ assert.ok(validCampaign(startSiege(good,'army-1',3).state));
+});
+test('siege wears down the garrison and captures a capital after several seasons',()=>{
+ let s=preparedSiege();
+ const start=startSiege(s,'army-1',3);
+ assert.equal(start.error,null);s=start.state;
+ assert.equal(s.actions,1);
+ assert.equal(siegeAt(s,3).progress,0);
+ assert.equal(siegeByArmy(s,'army-1').to,3);
+ assert.equal(s.provinces[3].owner,2);
+ for(let i=0;i<4&&siegeAt(s,3);i++){
+   const result=endSeason(s);assert.equal(result.error,null);
+   s=result.state;
+   assert.ok(validCampaign(s));
+   assert.equal(s.pending,null,'no hostile field army should derail scenario');
+ }
+ assert.equal(s.provinces[3].owner,0,'capital capitulates after loss of supplies and garrison');
+ assert.equal(siegeAt(s,3),null);
+ assert.equal(s.armies.find(a=>a.id==='army-1').province,3);
+ assert.equal(s.report?.siege,true);
+});
+test('a besieger can storm the fortress on a later turn and switches to a proper castle map',()=>{
+ let s=startSiege(preparedSiege(),'army-1',3).state;
+ s=endSeason(s).state;
+ const attack=march(s,'army-1',3);
+ assert.equal(attack.error,null);
+ assert.equal(siegeAt(attack.state,3),null);
+ assert.equal(attack.state.pending.to,3);
+ const battle=startCampaignBattle(attack.state);
+ assert.equal(battle.mapId,'bastion');
+ assert.ok(battle.units.some(u=>u.side===1&&u.hp>0));
+});
+test('player can lift the blockade without spending the remaining strategic order',()=>{
+ const s=startSiege(preparedSiege(),'army-1',3).state;
+ const r=liftSiege(s,'army-1');
+ assert.equal(r.error,null);
+ assert.equal(r.state.actions,s.actions);
+ assert.equal(r.state.sieges.length,0);
+ assert.equal(s.sieges.length,1,'original must be unchanged');
+});
+test('raids are distinct from conquest and reduce target garrison at an explicit price',()=>{
+ const s=createCampaign();
+ const startCoin=s.coins,oldStrength=s.armies[0].strength;
+ const r=raid(s,'army-1',5);
+ assert.equal(r.error,null);
+ assert.equal(r.state.coins,startCoin+4);
+ assert.equal(r.state.armies[0].strength,oldStrength-1);
+ assert.equal(r.state.provinces[5].owner,3);
+ assert.equal(r.state.provinces[5].garrison,s.provinces[5].garrison-2);
+ assert.ok(r.state.provinces[5].raidedUntil>r.state.season);
+ assert.ok(raid(r.state,'army-1',5).error,'same unit may not raid again immediately');
+ assert.ok(raid(r.state,'army-2',5).error,'scorched land cannot be plundered repeatedly');
+ assert.ok(validCampaign(r.state));
+});
+test('cut-off troops lose manpower on seasonal attrition and cannot recruit',()=>{
+ let s=createCampaign();
+ s.provinces[5].owner=0;
+ s.armies=s.armies.filter(a=>a.side===0);
+ s.armies[0].province=5;
+ // Both approaches to province five have fallen.
+ s.provinces[1].owner=2;s.provinces[4].owner=2;
+ s.armies[1].province=0;
+ assert.equal(supplyNetwork(s,0).has(5),false);
+ assert.ok(recruit(s,5,s.armies[0].id).error);
+ const before=s.armies[0].strength,defBefore=s.provinces[5].garrison;
+ s=endSeason(s).state;
+ assert.equal(s.armies[0].strength,before-2);
+ assert.equal(s.provinces[5].garrison,defBefore-1);
+});
+test('old v0.2 saves are migrated with sieges and raid status defaults',()=>{
+ const s=createCampaign();
+ for(const p of s.provinces)delete p.raidedUntil;
+ delete s.sieges;
+ const upgraded=campaignUpgrade(s);
+ assert.ok(upgraded);
+ assert.ok(validCampaign(upgraded));
+ assert.deepEqual(upgraded.sieges,[]);
+ assert.equal(upgraded.provinces[0].raidedUntil,0);
+});
+test('invalid duplicated or dangling siege armies are rejected',()=>{
+ const s=preparedSiege();
+ s.sieges=[{armyId:'army-1',side:0,from:2,to:3,progress:0}];
+ assert.ok(validCampaign(s));
+ assert.equal(validCampaign({...s,sieges:[s.sieges[0],s.sieges[0]]}),false);
+ assert.equal(validCampaign({...s,sieges:[{...s.sieges[0],armyId:'army-999'}]}),false);
 });
