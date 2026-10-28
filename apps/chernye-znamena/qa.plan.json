@@ -117,6 +117,12 @@
       "kind": "browser-node",
       "tier": "smoke",
       "entry": "qa/campaign-browser.mjs"
+    },
+    {
+      "id": "campaign-war-flow",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/war-stage3-browser.mjs"
     }
   ]
 }
