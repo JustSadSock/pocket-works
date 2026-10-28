@@ -63,6 +63,8 @@ try{
     await page.locator('[data-action="returnCampaign"]').click();
     s=await state(page);
     assert.equal(s.screen,'campaign');assert.equal(s.campaign.pending,null);
+    assert.equal(await page.evaluate(()=>localStorage.getItem('pocket-works:chernye-znamena:linked-battle-v1')),null,
+      'concluded retreat must clear its old tactical save');
     assert.equal(s.campaign.provinces[5].owner,3);
     assert.ok(s.campaign.armies.find(a=>a.id==='army-1').strength<old);
     await snap(page,key,'atlas-after-retreat');
@@ -72,8 +74,10 @@ try{
     await page.locator('#campaignEndSeason').click();
     s=await state(page);assert.equal(s.campaign.season,2);
     await snap(page,key,'next-season');
+    const neededNewBattle=!!s.campaign.pending;
     await page.reload({waitUntil:'domcontentloaded'});
-    assert.equal(await page.evaluate(()=>localStorage.getItem('pocket-works:chernye-znamena:linked-battle-v1')),null,'finished campaign combat must not resurrect on reload');
+    assert.equal(!!(await page.evaluate(()=>localStorage.getItem('pocket-works:chernye-znamena:linked-battle-v1'))),neededNewBattle,
+      'linked tactical save should exist exactly when a NEW invasion is pending');
     await page.locator('[data-action="startCampaign"]').click();
     s=await state(page);
     assert.equal(s.campaign.season,2);
