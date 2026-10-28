@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="../../shared/update-manager.css">
 <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./campaign.css">
 </head>
 <body>
 <main id="app" class="app-shell" data-app-shell data-fullscreen-app>
@@ -22,7 +23,7 @@
   <div class="brand"><div class="brand-emblem" aria-hidden="true"><svg viewBox="0 0 42 42"><path d="M20 4v31M21 7l17 3-7 12-10-2" fill="#a66049" stroke="#e0c8a1" stroke-width="1.8"/><path d="M11 36h20M17 39h7" stroke="#d3c3a0" stroke-width="3"/></svg></div><div><strong>ЧЁРНЫЕ ЗНАМЁНА</strong><span>ВОЙНА ЗА СРЕДИННЫЙ КАМЕНЬ</span></div></div>
   <button type="button" id="openMenu" class="mast-menu" data-native-press aria-label="Меню битвы">МЕНЮ</button>
  </header>
- <div class="battle-layout">
+ <div class="battle-layout" id="battleLayout">
   <section class="battle-stage" aria-label="Тактическое поле">
    <div class="battle-topline" data-ui><strong id="battleName">Пепельный перевал</strong><span id="roundLabel">РАУНД I</span></div>
    <div class="canvas-frame" id="canvasFrame">
@@ -57,6 +58,25 @@
    <div class="dispatch" id="dispatch">Сражение начинается. Займи возвышенности перед ударом.</div>
   </aside>
  </div>
+<section class="campaign-view" id="campaignView" hidden aria-label="Карта кампании">
+  <div class="campaign-top" data-ui>
+    <div class="campaign-eyebrow"><span>АТЛАС ПОГРАНИЧЬЯ</span><strong>ВОЙНА ТРЁХ КОРОН</strong></div>
+    <div class="campaign-counters" id="campaignCounters"></div>
+  </div>
+  <div class="campaign-workspace">
+    <div class="campaign-map-wrap">
+      <div class="campaign-map" id="campaignMap" aria-label="Стратегическая карта областей"></div>
+      <div class="campaign-map-legend" data-ui><span><i class="legend-north"></i> Север</span><span><i class="legend-order"></i> Орден</span><span><i class="legend-stone"></i> Князья</span><span><i class="legend-free"></i> Вольные</span></div>
+    </div>
+    <aside class="campaign-command" data-ui>
+      <div class="campaign-province" id="campaignDetails"></div>
+      <div class="campaign-bottom">
+        <div class="campaign-ticker" id="campaignTicker" role="status" aria-live="polite"></div>
+        <button class="campaign-end-season" id="campaignEndSeason" type="button" data-native-press>ЗАВЕРШИТЬ СЕЗОН <span>→</span></button>
+      </div>
+    </aside>
+  </div>
+</section>
  <div class="veil" id="veil">
   <div class="veil-content" id="veilContent" role="dialog" aria-modal="true" aria-labelledby="modalTitle"></div>
  </div>
