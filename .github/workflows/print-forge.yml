@@ -1,0 +1,100 @@
+name: Print Forge CAD
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "App slug containing print-jobs/*.json"
+        required: true
+        default: print-forge
+        type: string
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - "apps/*/print-jobs/**"
+  pull_request:
+    paths:
+      - ".github/workflows/print-forge.yml"
+      - "tools/print-forge/**"
+      - "docs/PRINT-FORGE.md"
+
+permissions:
+  contents: read
+
+jobs:
+  print-forge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install pinned CAD toolchain
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'cadquery==2.5.2' 'trimesh==4.9.0'
+      - name: Generate and validate models
+        shell: bash
+        env:
+          REQUESTED_APP: ${{ inputs.app }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            mkdir -p /tmp/print-forge-smoke
+            cat > /tmp/print-forge-smoke/job.json <<'EOF'
+          {"type":"gear_pair","teeth_a":18,"teeth_b":36,"module_mm":2,"thickness_mm":7,"bore_mm":5}
+          EOF
+            python tools/print-forge/build.py --job /tmp/print-forge-smoke/job.json --out /tmp/print-forge-smoke/out
+            cat > /tmp/print-forge-smoke/tray.json <<'EOF'
+          {"type":"tray","width_mm":80,"depth_mm":60,"height_mm":25,"wall_mm":2}
+          EOF
+            python tools/print-forge/build.py --job /tmp/print-forge-smoke/tray.json --out /tmp/print-forge-smoke/tray
+            cat > /tmp/print-forge-smoke/bracket.json <<'EOF'
+          {"type":"bracket","width_mm":50,"length_mm":40,"height_mm":35,"thickness_mm":4,"hole_mm":5}
+          EOF
+            python tools/print-forge/build.py --job /tmp/print-forge-smoke/bracket.json --out /tmp/print-forge-smoke/bracket
+            exit 0
+          fi
+          if [[ "$GITHUB_REF_NAME" == "main" ]]; then
+            echo "Refuse generated writes on main"
+            exit 1
+          fi
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            [[ "$REQUESTED_APP" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || exit 1
+            apps=("$REQUESTED_APP")
+          else
+            mapfile -t apps < <(git diff --name-only "${{ github.event.before }}" HEAD -- 'apps/*/print-jobs/**' | awk -F/ 'NF>=4 {print $2}' | sort -u)
+          fi
+          for app in "${apps[@]}"; do
+            [[ -d "apps/$app/print-jobs" ]] || continue
+            while IFS= read -r -d '' job; do
+              name="$(basename "$job" .json)"
+              [[ "$name" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || exit 1
+              python tools/print-forge/build.py --job "$job" --out "apps/$app/print-exports/$name"
+            done < <(find "apps/$app/print-jobs" -maxdepth 1 -name '*.json' -type f -print0 | sort -z)
+          done
+      - name: Upload CAD results
+        uses: actions/upload-artifact@v4
+        with:
+          name: print-forge-${{ github.run_id }}
+          path: |
+            apps/*/print-exports/**
+            /tmp/print-forge-smoke/**
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Commit generated results to feature branch
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- 'apps/*/print-exports/'
+          if git diff --cached --quiet; then
+            echo "Models are up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Build validated Print Forge STL and STEP models"
+          git push origin "HEAD:$GITHUB_REF_NAME"
