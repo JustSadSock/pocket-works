@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e9e9e3">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Pocket Forge 3D — мастерская</title>
+  <meta name="description" content="Параметрическое 3D-моделирование, проверка кинематики и экспорт STL для печати.">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="workbench">
+    <header class="topbar">
+      <a href="../../" class="back" aria-label="Назад в PocketWorks">← <span>POCKET WORKS</span></a>
+      <div class="identity"><img src="./icons/icon.svg" width="35" height="35" alt=""><div><strong>POCKET FORGE</strong><small>3D / ПЕЧАТНАЯ МАСТЕРСКАЯ</small></div></div>
+      <div class="topright"><span class="offline-indicator" title="Рендер и экспорт работают без сервера"><i></i> ЛОКАЛЬНО</span><button id="newProject" class="text-button">Новый проект</button></div>
+    </header>
+
+    <main class="workspace" data-app-shell>
+      <section class="visual-section" aria-label="Рабочая область">
+        <div class="section-top">
+          <div><span class="eyebrow">ЧЕРТЁЖ / 001</span><h1 id="modelTitle">Зубчатая передача</h1><p id="modelSubtitle">Параметрическая модель, готовая к проверке</p></div>
+          <div class="view-mode" role="group" aria-label="Режим просмотра"><button id="mode3d" class="active" aria-pressed="true">Объём</button><button id="modeMechanics" aria-pressed="false">Механика</button></div>
+        </div>
+        <div class="stage-wrap">
+          <canvas data-gesture-surface data-block-callout id="stage" aria-label="3D-просмотр изделия и интерактивная кинематическая схема" tabindex="0"></canvas>
+          <div class="canvas-head"><span id="stageMode">ИЗОМЕТРИЯ / ММ</span><span id="canvasHint">Потяни, чтобы повернуть модель</span></div>
+          <div class="canvas-tools"><button id="zoomOut" aria-label="Уменьшить масштаб" title="Уменьшить">−</button><button id="zoomIn" aria-label="Увеличить масштаб" title="Увеличить">+</button><button id="resetCamera" aria-label="Вернуть вид" title="Вернуть вид">⌖</button></div>
+          <div class="scale-mark"><span></span><small id="scaleLabel">10 мм</small></div>
+        </div>
+
+        <div class="mechanics-dock" id="mechanicsDock" hidden>
+          <div class="motion-header"><b>Кинематический стенд</b><span>Модель без трения, инерции и силового расчёта</span></div>
+          <div class="drive-controls">
+            <button id="playMotion" class="drive-main">▶ Запустить</button>
+            <button id="reverseMotion" class="drive-secondary" title="Реверс">↶ Реверс</button>
+            <button id="zeroMotion" class="drive-secondary" title="Вернуть в исходное положение">⟲ Ноль</button>
+            <label class="speed-control"><span>ОБ/МИН <strong id="rpmValue">30</strong></span><input id="rpm" type="range" min="1" max="120" step="1" value="30"></label>
+          </div>
+          <div class="motion-metrics"><div><small>ВЕДУЩАЯ</small><strong id="driveRpm">30 об/мин</strong></div><div><small>ВЕДОМАЯ</small><strong id="drivenRpm">−15 об/мин</strong></div><div><small>ОТНОШЕНИЕ</small><strong id="gearRatio">1 : 2</strong></div></div>
+        </div>
+
+        <div class="report-strip">
+          <div class="report-heading"><span class="eyebrow">ПРОВЕРКА ГЕОМЕТРИИ</span><span id="checkFlag" class="pass">ПРОЙДЕНА</span></div>
+          <div id="reportFacts" class="report-facts"></div>
+          <p id="reportNote" class="report-note">Это проверка построенной сетки. Прочность и печатаемость на конкретном принтере не гарантируются.</p>
+        </div>
+      </section>
+
+      <aside class="controls-section" aria-label="Редактор изделия">
+        <div class="panel-top"><div><span class="eyebrow">01 / КОНСТРУКЦИЯ</span><h2>Изделие</h2></div><span class="edition">ПАРАМЕТРИКА</span></div>
+        <div id="templateButtons" class="template-switch" role="group" aria-label="Тип модели"></div>
+        <div id="modelFields" class="params"></div>
+        <div id="errors" role="alert" class="validation-error" hidden></div>
+        <div class="part-extras" id="partExtras"></div>
+        <div class="deliverables">
+          <div class="panel-top small"><div><span class="eyebrow">02 / ПРОИЗВОДСТВО</span><h2>Экспорт</h2></div></div>
+          <label class="select-label" for="partSelect">ДЕТАЛЬ ДЛЯ ПЕЧАТИ</label>
+          <select id="partSelect" class="part-select" aria-label="Деталь для STL"></select>
+          <button id="exportSTL" class="export-button">↓ Скачать STL</button>
+          <p>STL в миллиметрах, бинарный формат. Каждая шестерня экспортируется отдельно.</p>
+          <div class="minor-actions"><button id="exportSpec" class="outline-button">↓ CAD-задание JSON</button><button id="importSpec" class="outline-button">↑ Открыть проект</button></div>
+          <input id="importFile" type="file" accept="application/json,.json" hidden>
+        </div>
+        <footer class="panel-footer"><button class="outline-button" type="button" data-workshop-trigger>Диагностика мастерской</button><br>Pocket Forge 3D <span>v1.0.0</span><br><span>Модели сохраняются на этом устройстве</span></footer>
+      </aside>
+    </main>
+    <dialog id="resetDialog" class="reset-dialog" aria-labelledby="resetTitle"><h2 id="resetTitle">Новый проект</h2><p>Заменить текущие параметры изделия настройками по умолчанию?</p><div class="dialog-actions"><button type="button" id="cancelReset" class="outline-button">Отмена</button><button type="button" id="acceptReset" class="export-button">Создать новый</button></div></dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Pocket Forge 3D" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

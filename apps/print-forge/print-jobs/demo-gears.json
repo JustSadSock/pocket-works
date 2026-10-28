@@ -1,0 +1,8 @@
+{
+  "type": "gear_pair",
+  "teeth_a": 18,
+  "teeth_b": 36,
+  "module_mm": 2,
+  "thickness_mm": 7,
+  "bore_mm": 5
+}
