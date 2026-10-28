@@ -27,6 +27,8 @@ try{const c=JSON.parse(localStorage.getItem(CAMPAIGN_KEY)||'null');if(c&&validCa
 try{const b=JSON.parse(localStorage.getItem(LINKED_BATTLE_KEY)||'null');if(b&&validSaved(b)&&b.campaignContext)linkedSave=b;}catch{}
 const esc = s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function persist(){
+  // A concluded campaign battle must never resurrect itself on pagehide or reload.
+  if(game.campaignContext && (!campaign?.pending || game.campaignContext.to!==campaign.pending.to))return true;
   try{localStorage.setItem(game.campaignContext?LINKED_BATTLE_KEY:STORAGE,JSON.stringify(game));return true;}catch{showNotice('Не удалось сохранить бой');return false;}
 }
 function writePrefs(){try{localStorage.setItem(PREFS,JSON.stringify({sound:audioEnabled}));}catch{}}
