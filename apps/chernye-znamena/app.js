@@ -47,7 +47,7 @@ function setStage(section){
   if(isBattle)requestAnimationFrame(resize);
 }
 function campaignAction(result){
-  if(result.error){showNotice(result.error);$('campaignTicker').textContent=result.error; sound('error');return false;}
+  if(result.error){showNotice(result.error);$('campaignTicker').textContent=result.error;$('campaignTicker').classList.add('campaign-error');sound('error');return false;}
   campaign=result.state;persistCampaign();sound('move');
   selectedArmy=campaign.armies.some(a=>a.id===selectedArmy)?selectedArmy:
     (campaign.armies.find(a=>a.side===0)?.id||null);
@@ -66,6 +66,7 @@ function renderStrategic(){
     '<button type="button" role="tab" data-view="court" aria-selected="'+courtOpen+'" class="'+(courtOpen?'chosen':'')+'">ДЕРЖАВЫ</button></div>'+
     (courtOpen?courtMarkup(campaign,courtSide):campaignInfo(campaign,selectedProvince,selectedArmy,marchMode,warMode));
   $('campaignTicker').textContent=campaign.history[0]||'Приказы ждут полководца.';
+  $('campaignTicker').classList.remove('campaign-error');
   $('campaignEndSeason').disabled=!!campaign.pending||campaign.winner!==null;
 }
 function openStrategic(showEnding=true){
@@ -97,17 +98,22 @@ function finishLinkedBattle(){
   linkedSave=null;persistCampaign();
   try{localStorage.removeItem(LINKED_BATTLE_KEY);}catch{}
 }
+function strategyNotice(message){
+ showNotice(message);
+ $('campaignTicker').textContent=message;
+ $('campaignTicker').classList.add('campaign-error');
+}
 function sendArmy(to){
   if(!campaign || !selectedArmy)return;
   const a=campaign.armies.find(a=>a.id===selectedArmy && a.side===0);
-  if(!a){showNotice('Сначала выбери свою дружину');return;}
-  if(!neighbors(a.province).includes(to)){showNotice('Выбери соседнюю область');return;}
+  if(!a){strategyNotice('Сначала выбери свою дружину');return;}
+  if(!neighbors(a.province).includes(to)){strategyNotice('Выбери соседнюю область');return;}
   if(!warDiplomacy(campaign,campaign.provinces[to].owner,0)){
-    showNotice('Грамота защищает эту землю. Открой «Державы» для разрыва договора');return;
+    strategyNotice('Договор запрещает нападение. Открой «Державы» для разрыва');return;
   }
   const enemy=campaign.provinces[to].owner!==0;
-  if(warMode==='siege'&&(!enemy||!isStronghold(campaign,to))){showNotice('Блокада возможна только у чужой крепости');return;}
-  if(warMode==='raid'&&!enemy){showNotice('Нельзя совершить рейд на собственные земли');return;}
+  if(warMode==='siege'&&(!enemy||!isStronghold(campaign,to))){strategyNotice('Блокада возможна только у чужой крепости');return;}
+  if(warMode==='raid'&&!enemy){strategyNotice('Нельзя совершить рейд на собственные земли');return;}
   marchDestination=to;
   if(enemy){modal(warMode==='raid'?'campaignRaidConfirm':warMode==='siege'?'campaignSiegeConfirm':'campaignMarchConfirm');return;}
   selectedProvince=to;campaignAction(march(campaign,a.id,to));
