@@ -98,3 +98,6 @@
 .mast-tools .workshop-trigger:active{background:#47604c}
 @media(max-width:780px){.mast{grid-template-columns:72px minmax(0,1fr) 96px}.mast-tools .workshop-trigger{height:36px;min-width:34px}.brand strong{font-size:clamp(11.5px,3vw,15px)}}
 @media(max-width:375px){.mast{grid-template-columns:66px minmax(0,1fr) 96px}.return{font-size:9px}.brand-emblem{width:23px}.brand strong{font-size:12px}.brand{gap:2px}}
+
+@media(max-width:780px){.mast .return{white-space:nowrap;font-size:9px;letter-spacing:-.025em}}
+@media(max-width:375px){.mast .return{font-size:8.5px}}
