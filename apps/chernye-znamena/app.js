@@ -475,9 +475,9 @@ function modal(kind){
   }
   if(kind==='campaignWarning'){
     const p=campaign?.pending;
-    html='<div class="modal-kicker">ВОЙНА ПРИШЛА НА ПОРОГ</div><h1 id="modalTitle">'+esc(PROVINCES[p.to].name)+'</h1>'+
+    html='<div class="modal-kicker">'+(p.attackerSide===0?'ПОХОД НЕ ЗАВЕРШЁН':'ВОЙНА ПРИШЛА НА ПОРОГ')+'</div><h1 id="modalTitle">'+esc(PROVINCES[p.to].name)+'</h1>'+
     '<p>'+esc(FACTIONS[p.attackerSide].name)+' ведёт армию силой '+p.attackerStrength+'. Защитники располагают '+p.defenderStrength+' силами. Исход изменит границу.</p>'+
-    '<div class="modal-actions"><button class="primary" data-action="resume">Оборонять владение</button>'+
+    '<div class="modal-actions"><button class="primary" data-action="resume">'+(p.attackerSide===0?'Продолжить штурм':'Оборонять владение')+'</button>'+
     '<button data-action="rules">Правила боя</button></div>';
   }
   if(kind==='campaignBattleResult'){
@@ -540,7 +540,7 @@ function modal(kind){
   if(kind==='home')syncOptions();
   update();
 }
-function readSaveExists(){try{return !!localStorage.getItem(STORAGE) && validSaved(game);}catch{return false;}}
+function readSaveExists(){try{const raw=localStorage.getItem(STORAGE);return !!raw && validSaved(JSON.parse(raw));}catch{return false;}}
 function syncOptions(){
   veilContent.querySelectorAll('[data-mode]').forEach(el=>el.classList.toggle('chosen',el.dataset.mode===pickMode));
   veilContent.querySelectorAll('[data-map]').forEach(el=>el.classList.toggle('chosen',el.dataset.map===pickMap));
