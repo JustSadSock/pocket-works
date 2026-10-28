@@ -448,6 +448,8 @@ function applyIsolation(s){
       note(s,FACTIONS[side].short+': дружина в '+PROVINCES[a.province].name+' отрезана от снабжения.');
     }
     for(const p of s.provinces.filter(p=>p.owner===side&&!connected.has(p.id))){
+      // Besieged garrisons already lose manpower in resolveSieges.
+      if(siegeAt(s,p.id))continue;
       p.garrison=Math.max(0,p.garrison-1);
     }
   }
