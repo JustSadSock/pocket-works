@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "rules",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "rules.test.mjs"
+      ]
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "[data-action='new']",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='new']"
+        },
+        {
+          "action": "visible",
+          "selector": "#board"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#openMenu"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-action='resume']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='resume']"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "real-flow",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/war-table-browser.mjs"
+    }
+  ]
+}
