@@ -60,10 +60,20 @@ export function gearOutline(teeth,module){
 // Annular extrusion of a star-shaped CCW outline, with an independent round bore.
 function ring(outer,innerRadius,height){
   const out=mesh(),n=outer.length;
+  // Multiple involute-root vertices can share a polar angle. A tiny ordered
+  // spread along the bore avoids zero-area faces and non-manifold edges.
+  let previous=-Infinity,turn=0;
+  const bore=outer.map(([x,y])=>{
+    const base=Math.atan2(y,x);
+    while(base+turn*TAU<previous-Math.PI)turn++;
+    let angle=base+turn*TAU;
+    if(angle<=previous+0.0003)angle=previous+0.0003;
+    previous=angle;
+    return pt(innerRadius,angle);
+  });
   for(let i=0;i<n;i++){
     const j=(i+1)%n, a=outer[i],b=outer[j];
-    const ar=Math.hypot(...a),br=Math.hypot(...b);
-    const ai=[a[0]*innerRadius/ar,a[1]*innerRadius/ar],bi=[b[0]*innerRadius/br,b[1]*innerRadius/br];
+    const ai=bore[i],bi=bore[j];
     const oa=[...a,height],ob=[...b,height],ia=[...ai,height],ib=[...bi,height];
     const oaz=[...a,0],obz=[...b,0],iaz=[...ai,0],ibz=[...bi,0];
     quad(out,oa,ob,ib,ia); // upward annular top
