@@ -1,0 +1,25 @@
+{
+  "id": "/apps/chernye-znamena/",
+  "name": "ЧЁРНЫЕ ЗНАМЁНА",
+  "short_name": "Знамёна",
+  "description": "Пошаговая средневековая тактика: пять отрядов, знамёна командования, манёвры, фланги и рельеф. Против ИИ или вдвоём на одном устройстве.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#242a26",
+  "theme_color": "#242a26",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
