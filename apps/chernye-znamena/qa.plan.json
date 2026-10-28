@@ -8,7 +8,8 @@
       "files": [
         "rules.test.mjs",
         "campaign.test.mjs",
-        "diplomacy.test.mjs"
+        "diplomacy.test.mjs",
+        "strategy-stage5.test.mjs"
       ]
     },
     {
@@ -130,6 +131,12 @@
       "kind": "browser-node",
       "tier": "smoke",
       "entry": "qa/court-stage4-browser.mjs"
+    },
+    {
+      "id": "campaign-development-flow",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/development-stage5-browser.mjs"
     }
   ]
 }
