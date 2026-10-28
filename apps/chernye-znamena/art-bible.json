@@ -143,6 +143,9 @@
   },
   "verification": {
     "states": [
+      "initial",
+      "action",
+      "settled",
       "campaign-first-frame",
       "campaign-march",
       "tactical-battle",
