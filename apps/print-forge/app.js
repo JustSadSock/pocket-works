@@ -1,7 +1,12 @@
-import {DEFINITIONS,DEFAULTS,normalizeJob,build,stlBuffer,gearOutline,transformedTriangle} from './geometry.js';\nimport { installMobileRuntime } from '../../shared/mobile-runtime.js';\nimport { createWorkshopMode } from '../../shared/workshop-mode.js';\ninstallMobileRuntime();
+import {DEFINITIONS,DEFAULTS,normalizeJob,build,stlBuffer,gearOutline,transformedTriangle} from './geometry.js';
+import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
+installMobileRuntime();
 
 const $=id=>document.getElementById(id);
-const KEY='pocket-works:print-forge:v1';\nconst MATERIALS={PLA:1.24,PETG:1.27,ABS:1.04,TPU:1.21};\nfunction loadMaterial(){try{const id=localStorage.getItem(KEY+':material');return Object.hasOwn(MATERIALS,id)?id:'PLA'}catch{return 'PLA'}}
+const KEY='pocket-works:print-forge:v1';
+const MATERIALS={PLA:1.24,PETG:1.27,ABS:1.04,TPU:1.21};
+function loadMaterial(){try{const id=localStorage.getItem(KEY+':material');return Object.hasOwn(MATERIALS,id)?id:'PLA'}catch{return 'PLA'}}
 const stage=$('stage'),ctx=stage.getContext('2d',{alpha:false});
 const colors=['#d5dbcf','#d79a70','#d7b88a'];
 const icons={
@@ -65,7 +70,8 @@ function showReport(){
     ['ДЕТАЛЕЙ',String(m.parts.length)],
     ['ТРЕУГОЛЬНИКОВ',fmt(total,0)],
     ['ОБЪЁМ',fmt(volume/1000,1)+' см³'],
-    ['ЗАЦЕПЛЕНИЕ',m.job.type==='gear_pair'?fmt(m.facts.center_mm)+' мм':'—'],\n    ['МАССА · 100%',fmt(volume/1000*MATERIALS[state.material],1)+' г']
+    ['ЗАЦЕПЛЕНИЕ',m.job.type==='gear_pair'?fmt(m.facts.center_mm)+' мм':'—'],
+    ['МАССА · 100%',fmt(volume/1000*MATERIALS[state.material],1)+' г']
   ];
   $('reportFacts').replaceChildren(...slots.map(([name,value])=>{
     const box=document.createElement('div'),cap=document.createElement('small'),val=document.createElement('strong');
@@ -85,7 +91,13 @@ function showReport(){
     strong.textContent='Радиальная стенка '+fmt(m.facts.radial_wall_mm,2)+' мм';
     message.textContent='Втулка с отверстием · Проверь посадочный зазор под реальный вал.';
   }
-  $('partExtras').append(strong,message);\n  const materialLabel=document.createElement('label');materialLabel.className='material-field';materialLabel.textContent='МАТЕРИАЛ ДЛЯ РАСЧЁТА МАССЫ';\n  const materialSelect=document.createElement('select');materialSelect.setAttribute('aria-label','Материал для расчёта массы');\n  for(const id of Object.keys(MATERIALS)){const option=document.createElement('option');option.value=id;option.textContent=id+' · '+MATERIALS[id]+' г/см³';materialSelect.append(option)}\n  materialSelect.value=state.material;\n  materialSelect.addEventListener('change',()=>{state.material=materialSelect.value;try{localStorage.setItem(KEY+':material',state.material)}catch{}showReport();toast('Оценка массы обновлена')});\n  materialLabel.append(materialSelect);$('partExtras').append(materialLabel);
+  $('partExtras').append(strong,message);
+  const materialLabel=document.createElement('label');materialLabel.className='material-field';materialLabel.textContent='МАТЕРИАЛ ДЛЯ РАСЧЁТА МАССЫ';
+  const materialSelect=document.createElement('select');materialSelect.setAttribute('aria-label','Материал для расчёта массы');
+  for(const id of Object.keys(MATERIALS)){const option=document.createElement('option');option.value=id;option.textContent=id+' · '+MATERIALS[id]+' г/см³';materialSelect.append(option)}
+  materialSelect.value=state.material;
+  materialSelect.addEventListener('change',()=>{state.material=materialSelect.value;try{localStorage.setItem(KEY+':material',state.material)}catch{}showReport();toast('Оценка массы обновлена')});
+  materialLabel.append(materialSelect);$('partExtras').append(materialLabel);
   $('modelTitle').textContent=DEFINITIONS[m.job.type].title;
   $('modelSubtitle').textContent=DEFINITIONS[m.job.type].description;
   $('modeMechanics').hidden=m.job.type!=='gear_pair';
@@ -242,7 +254,9 @@ $('modeMechanics').addEventListener('click',()=>setView('mechanics'));
 $('zoomIn').addEventListener('click',()=>{state.zoom=Math.min(2.8,state.zoom*1.2);requestRender()});
 $('zoomOut').addEventListener('click',()=>{state.zoom=Math.max(.45,state.zoom/1.2);requestRender()});
 $('resetCamera').addEventListener('click',()=>{state.zoom=1;state.yaw=.52;state.pitch=.67;requestRender();toast('Вид восстановлен')});
-$('newProject').addEventListener('click',()=>$('resetDialog').showModal());\n$('cancelReset').addEventListener('click',()=>$('resetDialog').close());\n$('acceptReset').addEventListener('click',()=>{state.job={...DEFAULTS.gear_pair};state.view='3d';state.zoom=1;state.theta=0;state.running=false;refresh();$('resetDialog').close();toast('Новый проект создан')});
+$('newProject').addEventListener('click',()=>$('resetDialog').showModal());
+$('cancelReset').addEventListener('click',()=>$('resetDialog').close());
+$('acceptReset').addEventListener('click',()=>{state.job={...DEFAULTS.gear_pair};state.view='3d';state.zoom=1;state.theta=0;state.running=false;refresh();$('resetDialog').close();toast('Новый проект создан')});
 $('rpm').addEventListener('input',e=>{state.rpm=Number(e.target.value);updateMotionInfo();requestRender()});
 $('playMotion').addEventListener('click',()=>{state.running=!state.running;state.last=0;updateMotionInfo();requestRender()});
 $('reverseMotion').addEventListener('click',()=>{state.direction*=-1;updateMotionInfo();requestRender();toast('Направление вращения изменено')});
@@ -305,4 +319,5 @@ document.addEventListener('visibilitychange',()=>{state.last=0;if(!document.hidd
 if(!ctx){$('errors').textContent='Canvas 2D недоступен в этом браузере';$('errors').hidden=false;}else{
   refresh();const observer=new ResizeObserver(resize);observer.observe(stage);resize();
 }
-\ncreateWorkshopMode({appName:'Pocket Forge 3D',version:'1.0.0',cachePrefix:'print-forge-',storageNamespace:'pocket-works:print-forge',onReset:()=>{state.job={...DEFAULTS.gear_pair};state.running=false;state.theta=0;state.view='3d';refresh()}});\n
+
+createWorkshopMode({appName:'Pocket Forge 3D',version:'1.0.0',cachePrefix:'print-forge-',storageNamespace:'pocket-works:print-forge',onReset:()=>{state.job={...DEFAULTS.gear_pair};state.running=false;state.theta=0;state.view='3d';refresh()}});
