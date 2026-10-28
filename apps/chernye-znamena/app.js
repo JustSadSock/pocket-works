@@ -1,7 +1,7 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import {createBattle,MAPS,TYPES,WIDTH,HEIGHT,distance,terrainAt,unitAt,leader,commanded,reachable,attackPreview,issue,endTurn,aiAction,validSaved} from './rules.mjs';
-import {createCampaign,validCampaign,campaignUpgrade,march,recruit,fortify,endSeason,startCampaignBattle,concludeCampaignBattle,retreatCampaignBattle,politicalOrder,raid,startSiege,liftSiege,siegeAt,siegeByArmy,supplyNetwork,isStronghold,PROVINCES,FACTIONS,neighbors,armiesAt} from './campaign.mjs';
+import {createCampaign,validCampaign,campaignUpgrade,march,recruit,fortify,buildImprovement,IMPROVEMENTS,endSeason,startCampaignBattle,concludeCampaignBattle,retreatCampaignBattle,politicalOrder,raid,startSiege,liftSiege,siegeAt,siegeByArmy,supplyNetwork,isStronghold,PROVINCES,FACTIONS,neighbors,armiesAt} from './campaign.mjs';
 import {campaignMapSvg,campaignInfo,campaignHeader} from './campaign-ui.mjs';
 import {courtMarkup,courtTitle,politicalConfirmation} from './diplomacy-ui.mjs';
 import {agreement,warDiplomacy} from './diplomacy.mjs';
@@ -22,7 +22,7 @@ let size=30,originX=0,originY=0,viewWidth=400,viewHeight=400,dpr=1,portraitBoard
 let pointerStart=null;
 let loadError='';
 let previousModal='home';
-let campaign=null,linkedSave=null,selectedProvince=1,selectedArmy='army-1',marchMode=false,marchDestination=null,warMode='march',courtOpen=false,courtSide=1,politicalAction=null;
+let campaign=null,linkedSave=null,selectedProvince=1,selectedArmy='army-1',marchMode=false,marchDestination=null,warMode='march',courtOpen=false,courtSide=1,politicalAction=null,buildType=null;
 try{const s=JSON.parse(localStorage.getItem(STORAGE)||'null');if(s && validSaved(s))game=s;else if(s)loadError='Старое сохранение повреждено и не загружено';}
 catch{loadError='Сохранение недоступно';}
 try{audioEnabled=JSON.parse(localStorage.getItem(PREFS)||'{}').sound===true;}catch{}
@@ -140,6 +140,7 @@ $('campaignDetails').addEventListener('click',event=>{
   if(button.dataset.view){courtOpen=button.dataset.view==='court';marchMode=false;renderStrategic();sound('move');return;}
   if(button.dataset.courtSide){courtSide=Number(button.dataset.courtSide);renderStrategic();sound('move');return;}
   if(button.dataset.politicalAction){politicalAction=button.dataset.politicalAction;modal('politicalConfirm');return;}
+  if(button.dataset.build){buildType=button.dataset.build;modal('campaignBuildConfirm');return;}
   if(button.dataset.army){selectedArmy=button.dataset.army;renderStrategic();return;}
   const cmd=button.dataset.cmd;
   if(['march','raid','siege'].includes(cmd)){warMode=cmd;marchMode=true;renderStrategic();return;}
@@ -506,6 +507,16 @@ function modal(kind){
       '<p>'+esc(terms.content)+'</p><div class="modal-actions"><button class="'+(politicalAction==='break'?'danger':'primary')+'" data-action="commitPolitical">'+esc(terms.confirm)+'</button>'+
       '<button data-action="returnCourt">Вернуться без изменений</button></div>';
   }
+  if(kind==='campaignBuildConfirm'){
+    const info=IMPROVEMENTS[buildType],province=PROVINCES[selectedProvince];
+    const benefit=buildType==='market'?'Ежесезонный доход этой земли увеличится на 2 серебра.':
+      buildType==='barracks'?'Каждый сезон пополняет местную дружину на 2 воина либо гарнизон на 1.':
+      'Оборона провинции увеличится на 2. Гарнизон получает преимущество в решающем бою.';
+    html='<div class="modal-kicker">ПОСТРОЙКА НА ГРАНИЦЕ</div><h1 id="modalTitle">'+esc(info?.name||'Сооружение')+'</h1>'+
+      '<p>'+esc(province.name)+'. '+esc(benefit)+' Строительство занимает один приказ, стоит '+(info?.cost||0)+' серебра. На одной земле может быть только одна специализация.</p>'+
+      '<div class="modal-actions"><button class="primary" data-action="commitBuild">Построить</button>'+
+      '<button data-action="returnCampaign">Отмена</button></div>';
+  }
   if(kind==='campaignRules'){
     html='<div class="modal-kicker">УСТАВ ГРАНИЦЫ</div><h1 id="modalTitle">Как вести войну</h1>'+
     '<div class="modal-rules"><p><b>1.</b> Выбери свою область и одну из дружин. Прикажи ей марш, затем коснись соседней земли. Вражеское владение запускает настоящую тактическую битву.</p>'+
@@ -514,8 +525,9 @@ function modal(kind){
     '<p><b>4.</b> Непрерывная цепь своих земель от столицы доставляет снабжение. Отрезанные дружины теряют по два воина за сезон, гарнизоны по одному. Набор и укрепления в изоляции недоступны.</p>'+
     '<p><b>5.</b> У стен можно начать осаду: блокада каждый сезон сокращает гарнизон, пока крепость не капитулирует. Штурм немедленно открывает поле с крепостными укрытиями. Набег ослабляет гарнизон и экономику без захвата.</p>'+
     '<p><b>6.</b> Орден и Князья ходят после каждого сезона. Вражеское нападение на наши земли требует лично защитить провинцию.</p>'+
-    '<p><b>7.</b> Доверие растёт от посольств. Перемирия запрещают войну на три сезона, союзы на четыре сезона обеспечивают безопасные дороги для обозов и торговый доход. Подчинение ослабленной державы требует славы; вассалы присягают короне и платят дань, но могут восстать при низкой верности.</p>'+
-    '<p><b>8.</b> Захвати обе столицы врага: Угольный мыс и Багровый трон. Если падёт Северный оплот — война проиграна.</p></div>'+
+    '<p><b>7.</b> Торговый двор приносит +2 серебра за сезон, ратный двор пополняет местную дружину на +2, сторожевая башня даёт +2 к обороне. Строить можно в снабжаемой собственной земле; только одна постройка в каждой провинции. Вражеские державы тоже нанимают войска и развивают территории из собственной казны.</p>'+
+    '<p><b>8.</b> Доверие растёт от посольств. Перемирия запрещают войну на три сезона, союзы на четыре сезона обеспечивают безопасные дороги для обозов и торговый доход. Подчинение ослабленной державы требует славы; вассалы присягают короне и платят дань, но могут восстать при низкой верности.</p>'+
+    '<p><b>9.</b> Захвати обе столицы врага: Угольный мыс и Багровый трон. Если падёт Северный оплот — война проиграна.</p></div>'+
     '<div class="modal-actions"><button class="primary" data-action="returnCampaign">На карту</button></div>';
   }
   if(kind==='campaignMarchConfirm'){
@@ -659,6 +671,11 @@ veilContent.addEventListener('click',event=>{
     return;
   }
   if(action==='campaignRules'){previousModal=screen;modal('campaignRules');return;}
+  if(action==='commitBuild'){
+    const result=buildImprovement(campaign,selectedProvince,buildType);
+    if(result.error){openStrategic(false);strategyNotice(result.error);return;}
+    campaignAction(result);openStrategic(false);return;
+  }
   if(action==='commitSiege'||action==='commitRaid'){
     const a=campaign?.armies.find(a=>a.id===selectedArmy);
     if(!a){openStrategic();return;}
@@ -725,9 +742,9 @@ createWorkshopMode({
       try{localStorage.removeItem(key);}catch{}
     }
     game=createBattle();campaign=null;linkedSave=null;selectedProvince=1;selectedArmy='army-1';
-    selected=null;marchMode=false;courtOpen=false;audioEnabled=false;
+    selected=null;marchMode=false;courtOpen=false;buildType=null;audioEnabled=false;
     modal('home');
   }
 });
-window.__blackBannersTestState=()=>({screen,game,selected,tool,campaign,marchMode,warMode,courtOpen,courtSide,selectedArmy,selectedProvince});
+window.__blackBannersTestState=()=>({screen,game,selected,tool,campaign,marchMode,warMode,courtOpen,courtSide,selectedArmy,selectedProvince,buildType});
 update();resize();modal('home');

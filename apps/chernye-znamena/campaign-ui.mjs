@@ -1,5 +1,5 @@
 // Compact procedural engraved map; all polygons share the same coordinate grid.
-import {PROVINCES,FACTIONS,neighbors,armiesAt,income,upkeep,defensePower,supplyNetwork,siegeAt,siegeByArmy,isStronghold} from './campaign.mjs';
+import {PROVINCES,FACTIONS,neighbors,armiesAt,income,upkeep,defensePower,supplyNetwork,siegeAt,siegeByArmy,isStronghold,provinceRevenue,IMPROVEMENTS} from './campaign.mjs';
 import {agreement,league} from './diplomacy.mjs';
 const safe=text=>String(text).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function point(c,r,portrait){
@@ -67,10 +67,13 @@ export function campaignMapSvg(s,selection,selectedArmy,marchMode,portrait){
   const accord=pact?'<g aria-hidden="true"><rect x="'+(c.x-57)+'" y="'+(c.y-77)+'" width="114" height="21" rx="1" fill="'+(pact.kind==='vassal'?'#826d50':'#375c4d')+'" stroke="#e2d2a9" stroke-width="2"/>'+
     '<text x="'+c.x+'" y="'+(c.y-62)+'" text-anchor="middle" class="province-treaty">'+
     (pact.kind==='vassal'?'ВАССАЛ':pact.kind==='alliance'?'СОЮЗ':'ПЕРЕМИРИЕ')+'</text></g>':'';
+  const crest=at.development?'<g aria-hidden="true"><rect x="'+(c.x-49)+'" y="'+(c.y+35)+'" width="98" height="20" fill="#c1a987" stroke="#453f32" stroke-width="2"/>'+
+    '<text x="'+c.x+'" y="'+(c.y+49)+'" font-family="system-ui" font-weight="800" font-size="10" text-anchor="middle" fill="#293e32">'+
+    (at.development==='market'?'ТОРГ':at.development==='barracks'?'РАТЬ':'ДОЗОР')+'</text></g>':'';
   const capital=p.capital!==undefined?'<path d="M'+(c.x-17)+','+(c.y-70)+'v-24l18 8 17-9v25Z" fill="#e9d8af" stroke="#4b5343" stroke-width="3"/>':'';
   return '<g class="map-region'+(active?' selected':'')+(reachable?' reachable':'')+'" data-province="'+p.id+'" role="button" tabindex="0" aria-label="'+safe(p.name)+', '+safe(FACTIONS[at.owner].name)+', гарнизон '+at.garrison+'">'+
    '<path d="'+polygon(p.id,portrait)+'" fill="'+getColor(p.id)+'" stroke="#a4a992" stroke-width="3"/>'+
-   relief(p.id,portrait)+capital+encircled+isolation+raided+accord+
+   relief(p.id,portrait)+capital+encircled+isolation+raided+accord+crest+
    '<text x="'+c.x+'" y="'+(c.y-1)+'" class="province-label" text-anchor="middle">'+safe(p.name)+'</text>'+
    '<text x="'+c.x+'" y="'+(c.y+25)+'" class="province-hint" text-anchor="middle">ГАРНИЗОН '+at.garrison+'</text>'+shield+
    (active?'<circle cx="'+c.x+'" cy="'+(c.y-38)+'" r="6" fill="#f9e6c5"/>':'')+'</g>';
@@ -113,12 +116,22 @@ export function campaignInfo(s,selected,selectedArmy,marchMode,warMode='march'){
     primary='<button class="map-main" data-cmd="raise"'+((s.coins<9||s.actions<1||!supply||province.raidedUntil>s.season)?' disabled':'')+'>Собрать новую дружину · 9</button>';
   }
   primary+='<button data-cmd="fortify"'+((s.coins<5||s.actions<1||province.garrison>=10||!supply)?' disabled':'')+'>Укрепить гарнизон · 5</button>';
+  if(!province.development){
+   primary+='<div class="map-build-heading">РАЗВИТИЕ ЗЕМЛИ · ОДНА ПОСТРОЙКА</div>'+
+    Object.entries(IMPROVEMENTS).map(([key,info])=>
+      '<button data-build="'+key+'"'+((s.coins<info.cost||s.actions<1||!supply||province.raidedUntil>s.season)?' disabled':'')+'>'+
+      safe(info.name)+' · '+info.cost+'</button>').join('');
+  }else{
+   primary+='<div class="map-build-status"><strong>'+safe(IMPROVEMENTS[province.development].name)+'</strong><span>'+
+    (province.development==='market'?'Торговля: +2 серебра за сезон':province.development==='barracks'?'Восстановление: +2 воина или +1 гарнизон':'Дозор: +2 к обороне')+
+    '</span></div>';
+  }
  }else{
   primary='<p class="map-instruction">Владение '+safe(owner.name)+
    '. Для войны выбери свою дружину в соседней земле. Крепость можно окружить блокадой.</p>';
  }
  return '<div class="map-local-name"><small>'+safe(owner.name)+' · '+safe(landNames[world.type]||world.type)+'</small>'+
- '<h2>'+safe(world.name)+'</h2><span>Гарнизон '+province.garrison+' · оборона '+defensePower(s,selected)+' · доход '+world.income+' серебра</span></div>'+
+ '<h2>'+safe(world.name)+'</h2><span>Гарнизон '+province.garrison+' · оборона '+defensePower(s,selected)+' · доход '+provinceRevenue(s,selected)+' серебра</span></div>'+
  status+'<div class="map-field-armies">'+(commands||'<p class="map-empty">Полевых армий Севера здесь нет.</p>')+'</div>'+
  '<div class="map-actions">'+primary+'</div>';
 }

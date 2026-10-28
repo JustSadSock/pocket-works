@@ -212,3 +212,15 @@
  #campaignView.court-active .court-action small{font-size:9px}
  #campaignView.court-active .campaign-bottom{padding:5px 10px}
 }
+
+/* Provincial works are carved into the same slate command surface. */
+.map-build-heading{grid-column:1/-1;border-top:1px solid #778574;padding:9px 1px 2px;margin:4px 0 0;font:800 10px/1.2 system-ui,sans-serif;color:#d8c59e;letter-spacing:.09em}
+.map-build-status{grid-column:1/-1;padding:9px 10px;border:1px solid #b09c75;background:#4c5240;color:#f3e4c1;display:flex;flex-direction:column;gap:4px}
+.map-build-status strong{font:normal 17px/1.2 Georgia,serif}.map-build-status span{font:11px/1.35 system-ui,sans-serif;color:#d3d7be}
+.map-actions button[data-build]{border-color:#8b9378;background:#405341;color:#efe0c3}
+.map-actions button[data-build]:disabled{opacity:.42}
+@media(max-width:780px){
+ .map-build-heading{padding:6px 1px 2px;margin-top:2px;font-size:9px}
+ .map-build-status{padding:6px 8px;gap:2px}
+ .map-build-status strong{font-size:14px}.map-build-status span{font-size:10px}
+}

@@ -1,9 +1,11 @@
 // Чёрные знамёна · campaign rules. Pure deterministic strategic layer.
 import { createBattle, TYPES } from './rules.mjs';
+import {evaluateWarOrder} from './strategy-ai.mjs';
 import {createDiplomacy,ensureDiplomacy,diplomacyValid,freePassage,warDiplomacy,recordWar,nextPoliticalSeason,tributeIncome,vassal,negotiate} from './diplomacy.mjs';
 
 export const CAMPAIGN_VERSION = 1;
 export const MAX_STRENGTH = 18;
+export const IMPROVEMENTS=Object.freeze({market:{name:'Торговый двор',cost:8},barracks:{name:'Ратный двор',cost:8},watchtower:{name:'Сторожевая башня',cost:7}});
 export const PROVINCES = Object.freeze([
   {id:0,name:'Северный оплот',type:'highland',capital:0,income:3},
   {id:1,name:'Кедровая марка',type:'forest',income:2},
@@ -37,8 +39,8 @@ export function createCampaign(){
   const owners=[0,0,2,2,0,3,2,1,3,3,1,1];
   const garrisons=[5,3,5,7,3,3,4,5,2,3,4,7];
   return {
-    version:CAMPAIGN_VERSION,season:1,coins:16,renown:0,actions:2,nextArmy:7,
-    provinces:owners.map((owner,id)=>({id,owner,garrison:garrisons[id],fort:PROVINCES[id].capital!==undefined?1:0,raidedUntil:0})),
+    version:CAMPAIGN_VERSION,season:1,coins:16,renown:0,actions:2,nextArmy:7,treasury:{1:12,2:12},
+    provinces:owners.map((owner,id)=>({id,owner,garrison:garrisons[id],fort:PROVINCES[id].capital!==undefined?1:0,raidedUntil:0,development:null})),
     armies:[
       {id:'army-1',side:0,province:1,strength:11,used:false},
       {id:'army-2',side:0,province:4,strength:8,used:false},
@@ -52,7 +54,7 @@ export function createCampaign(){
   };
 }
 function copy(s){
-  return {...s,provinces:s.provinces.map(p=>({...p})),armies:s.armies.map(a=>({...a})),sieges:(s.sieges||[]).map(x=>({...x})),diplomacy:s.diplomacy?{relations:{...s.diplomacy.relations},treaties:s.diplomacy.treaties.map(t=>({...t})),coalitionUntil:s.diplomacy.coalitionUntil??0}:createDiplomacy(),history:[...s.history],
+  return {...s,treasury:{1:s.treasury?.[1]??12,2:s.treasury?.[2]??12},provinces:s.provinces.map(p=>({...p})),armies:s.armies.map(a=>({...a})),sieges:(s.sieges||[]).map(x=>({...x})),diplomacy:s.diplomacy?{relations:{...s.diplomacy.relations},treaties:s.diplomacy.treaties.map(t=>({...t})),coalitionUntil:s.diplomacy.coalitionUntil??0}:createDiplomacy(),history:[...s.history],
     pending:s.pending?{...s.pending}:null,report:s.report?{...s.report}:null};
 }
 function note(s,text){s.history.unshift(text);s.history=s.history.slice(0,12);}
@@ -63,7 +65,24 @@ function finish(s){
     (s.provinces[11].owner===0||(s.provinces[11].owner===1&&vassal(s,1)))){s.winner=0;note(s,'Оба вражеских престола покорены. Союз победил.');}
   if(s.provinces[0].owner!==0){s.winner=1;note(s,'Северный оплот пал. Союз потерял войну.');}
 }
-export function income(s){return s.provinces.reduce((n,p)=>n+(p.owner===0?Math.max(0,PROVINCES[p.id].income-(p.raidedUntil>s.season?2:0)):0),0)+tributeIncome(s);}
+export function provinceRevenue(s,id){
+ const p=s.provinces[id];const unburned=(p.raidedUntil||0)<=s.season;
+ return Math.max(0,PROVINCES[id].income+(p.development==='market'&&unburned?2:0)-(unburned?0:2));
+}
+export function income(s){return s.provinces.reduce((n,p)=>n+(p.owner===0?provinceRevenue(s,p.id):0),0)+tributeIncome(s);}
+export function buildImprovement(state,id,type){
+ if(!canAct(state))return error(state,'В этом сезоне нет приказов на строительство');
+ const recipe=IMPROVEMENTS[type],p=state.provinces[id];
+ if(!recipe)return error(state,'Неизвестное сооружение');
+ if(!p||p.owner!==0)return error(state,'Строить можно только в своей провинции');
+ if(p.development)return error(state,'В провинции уже есть постройка; выберите другую землю');
+ if(!supplyNetwork(state,0).has(id))return error(state,'Материалы не пройдут через отрезанную дорогу');
+ if((p.raidedUntil||0)>state.season)return error(state,'На разорённой земле нельзя строить');
+ if(state.coins<recipe.cost)return error(state,'Не хватает серебра: '+recipe.cost);
+ const s=copy(state);s.actions--;s.coins-=recipe.cost;s.provinces[id].development=type;
+ note(s,'В '+PROVINCES[id].name+' построен '+recipe.name.toLowerCase()+'.');
+ return {state:s,error:null};
+}
 export function politicalOrder(s,side,action){
  const result=negotiate(s,side,action);
  if(!result.error)finish(result.state);
@@ -135,7 +154,7 @@ export function march(state,armyId,to){
 export function defensePower(s,id){
   const p=s.provinces[id];
   const field=armiesAt(s,id,p.owner).reduce((sum,a)=>sum+a.strength,0);
-  return Math.max(1,p.garrison+field+Math.min(2,p.fort));
+  return Math.max(1,p.garrison+field+Math.min(2,p.fort)+(p.development==='watchtower'?2:0));
 }
 export function validCampaign(c){
   if(!c || c.version!==CAMPAIGN_VERSION || !Number.isInteger(c.season) || c.season<1 || c.season>10000 ||
@@ -143,10 +162,12 @@ export function validCampaign(c){
     !Array.isArray(c.provinces)||c.provinces.length!==PROVINCES.length || !Array.isArray(c.armies) || c.armies.length>100 ||
     ![null,0,1].includes(c.winner)||!Number.isInteger(c.nextArmy)||c.nextArmy<1 ||
     !diplomacyValid(c)||
+    (c.treasury!==undefined&&(!c.treasury||![1,2].every(side=>Number.isInteger(c.treasury[side])&&c.treasury[side]>=0&&c.treasury[side]<=9999)))||
     !Array.isArray(c.history)||c.history.length>16 || !c.history.every(v=>typeof v==='string'&&v.length<300))return false;
   const ids=new Set();
   if(!c.provinces.every((p,id)=>p.id===id&&[0,1,2,3].includes(p.owner)&&Number.isInteger(p.garrison)&&p.garrison>=0&&p.garrison<=10&&Number.isInteger(p.fort)&&p.fort>=0&&p.fort<=2&&
-    (p.raidedUntil===undefined||(Number.isInteger(p.raidedUntil)&&p.raidedUntil>=0&&p.raidedUntil<=10002))))return false;
+    (p.raidedUntil===undefined||(Number.isInteger(p.raidedUntil)&&p.raidedUntil>=0&&p.raidedUntil<=10002))&&
+    (p.development===undefined||p.development===null||Object.hasOwn(IMPROVEMENTS,p.development))))return false;
   if(c.sieges!==undefined) {
     if(!Array.isArray(c.sieges)||c.sieges.length>12)return false;
     const byArmy=new Set(),byTarget=new Set();
@@ -227,6 +248,7 @@ export function concludeCampaignBattle(state,battle){
     target.owner=p.attackerSide;
     target.garrison=Math.max(1,Math.min(3,Math.floor(attackersLeft/4)));
     target.fort=Math.max(0,target.fort-1);
+    target.development=null;
     if(attacker.strength>0)attacker.province=p.to;
     // Retreating defenders cannot remain inside a newly conquered province.
     for(const a of defenders){
@@ -278,50 +300,39 @@ function moveEnemy(s,army,to){
   army.strength=Math.max(1,army.strength-Math.ceil(resist*.6));
   const losers=s.armies.filter(a=>a.province===to&&a.side===p.owner);
   for(const loser of losers){const retreat=neighbors(to).find(n=>s.provinces[n].owner===loser.side);if(retreat!==undefined)loser.province=retreat;else loser.strength=0;}
-  p.owner=army.side;p.garrison=1;p.fort=Math.max(0,p.fort-1);army.province=to;
+  p.owner=army.side;p.garrison=1;p.fort=Math.max(0,p.fort-1);p.development=null;army.province=to;
   note(s,FACTIONS[army.side].short+' занимает '+PROVINCES[to].name+'.');
 }
-function distanceToOpponent(s,start,side){
-  const queue=[[start,0]],seen=new Set([start]);
-  for(let i=0;i<queue.length;i++){
-    const [id,d]=queue[i];
-    if(s.provinces[id].owner===0)return d;
-    for(const n of neighbors(id))if(!seen.has(n)){seen.add(n);queue.push([n,d+1]);}
-  }
-  return 99;
-}
-function enemyOrder(s,side){
-  const armies=s.armies.filter(a=>a.side===side&&a.strength>0).sort((a,b)=>b.strength-a.strength);
-  let choices=[];
-  for(const army of armies)for(const id of neighbors(army.province)){
-    const p=s.provinces[id];
-    let value=0;
-    if(!warDiplomacy(s,p.owner,side))continue;
-    if(p.owner===0)value=130+(id===0?32:0)-(defensePower(s,id)*3);
-    else if(p.owner===3)value=100-defensePower(s,id)*6;
-    else if(p.owner!==side)value=65-defensePower(s,id)*5;
-    else value=10-distanceToOpponent(s,id,side)*3;
-    if(p.owner!==0 && p.owner!==side&&army.strength<=defensePower(s,id)+1 && !isStronghold(s,id))continue;
-    if((s.sieges||[]).some(x=>x.armyId===army.id||x.to===id))continue;
-    if(p.owner===side && armiesAt(s,id,side).length>=2)continue;
-    choices.push({army,id,value});
-  }
-  choices.sort((a,b)=>b.value-a.value || a.id-b.id || a.army.id.localeCompare(b.army.id));
-  const pick=choices[0];
-  if(pick&&pick.value>0){
-    const {army,id}=pick,p=s.provinces[id],defense=defensePower(s,id);
-    const supply=supplyNetwork(s,army.side).has(army.province);
-    if(isStronghold(s,id) && p.owner!==army.side && supply &&
-       army.strength<=defense+4 && army.strength>=4){
-      s.sieges.push({armyId:army.id,side,from:army.province,to:id,progress:0});
-      army.used=true;note(s,FACTIONS[side].short+' осаждает '+PROVINCES[id].name+'.');
-    }else if(p.owner===0 && !isStronghold(s,id) && army.strength<defense+1 && supply &&
-      army.strength>=4 && p.garrison>=2 && armiesAt(s,id).length===0 && (p.raidedUntil||0)<=s.season){
-      army.strength=Math.max(1,army.strength-1);army.used=true;
-      p.garrison=Math.max(0,p.garrison-2);p.raidedUntil=s.season+2;
-      note(s,FACTIONS[side].short+' совершает набег на '+PROVINCES[id].name+'.');
-    }else moveEnemy(s,army,id);
-  }
+export function enemyOrder(s,side){
+ if(vassal(s,side))return null;
+ const intent=evaluateWarOrder(s,side,{neighbors,defensePower,supplyNetwork,isStronghold,warDiplomacy,armiesAt,MAX_STRENGTH});
+ if(!intent)return null;
+ const a=s.armies.find(u=>u.id===intent.armyId),p=s.provinces[intent.province??intent.to];
+ const pay=amount=>{if((s.treasury?.[side]??0)<amount)return false;s.treasury[side]-=amount;return true;};
+ if(intent.kind==='recruit'&&a&&pay(6)){
+  a.strength=Math.min(MAX_STRENGTH,a.strength+4);a.used=true;
+  note(s,FACTIONS[side].short+' пополняет дружину в '+PROVINCES[a.province].name+'.');
+ }else if(intent.kind==='raise'&&pay(9)){
+  if(s.armies.length<100){
+   s.armies.push({id:'army-'+s.nextArmy++,side,province:intent.province,strength:6,used:true});
+   note(s,FACTIONS[side].short+' собирает новую дружину в '+PROVINCES[intent.province].name+'.');
+  }else s.treasury[side]+=9;
+ }else if(intent.kind==='garrison'&&pay(5)){
+  p.garrison=Math.min(10,p.garrison+3);
+  note(s,FACTIONS[side].short+' укрепляет '+PROVINCES[p.id].name+'.');
+ }else if(intent.kind==='develop'&&pay(IMPROVEMENTS[intent.type].cost)){
+  p.development=intent.type;note(s,FACTIONS[side].short+' строит '+IMPROVEMENTS[intent.type].name.toLowerCase()+' в '+PROVINCES[p.id].name+'.');
+ }else if(intent.kind==='siege'&&a){
+  s.sieges.push({armyId:a.id,side,from:a.province,to:intent.to,progress:0});a.used=true;
+  note(s,FACTIONS[side].short+' начинает осаду '+PROVINCES[intent.to].name+'.');
+ }else if(intent.kind==='raid'&&a){
+  a.strength=Math.max(1,a.strength-1);a.used=true;p.garrison=Math.max(0,p.garrison-2);p.raidedUntil=s.season+2;
+  s.treasury[side]=Math.min(9999,s.treasury[side]+4);
+  note(s,FACTIONS[side].short+' совершает набег на '+PROVINCES[intent.to].name+'.');
+ }else if((intent.kind==='move'||intent.kind==='attack')&&a){
+  moveEnemy(s,a,intent.to);
+ }
+ return intent;
 }
 export function endSeason(state){
   if(state.winner!==null)return error(state,'Кампания закончена');
@@ -333,10 +344,20 @@ export function endSeason(state){
     for(const a of s.armies.filter(a=>a.side===0))a.strength=Math.max(1,a.strength-1);
     note(s,'В казне недостача: армии теряют людей из-за нехватки снабжения.');
   }
+  // Both AI kingdoms use actual tax receipts, unit upkeep and a persistent treasury.
+  for(const side of [1,2]){
+   const revenue=s.provinces.filter(p=>p.owner===side).reduce((total,p)=>total+provinceRevenue(s,p.id),0);
+   const cost=s.armies.filter(a=>a.side===side).reduce((total,a)=>total+Math.ceil(a.strength/6),0);
+   const prior=s.treasury[side];s.treasury[side]=Math.min(9999,Math.max(0,prior+revenue-cost));
+   if(prior+revenue<cost)for(const a of s.armies.filter(a=>a.side===side)){
+     a.strength=Math.max(1,a.strength-1);
+   }
+  }
   s.season++;s.actions=2;
   nextPoliticalSeason(s);
   resolveSieges(s);
   applyIsolation(s);
+  resolveDevelopment(s);
   s.armies.forEach(a=>{a.used=false;});
   note(s,'Сезон '+s.season+'. Доход '+funds+', содержание '+expenses+'.');
   for(const side of [1,2]){
@@ -373,7 +394,8 @@ export function campaignUpgrade(s){
   const out=copy(s);
   ensureDiplomacy(out);
   out.sieges=(s.sieges||[]).map(x=>({...x}));
-  for(const p of out.provinces)p.raidedUntil??=0;
+  for(const p of out.provinces){p.raidedUntil??=0;p.development??=null;}
+  out.treasury={1:s.treasury?.[1]??12,2:s.treasury?.[2]??12};
   return validCampaign(out)?out:null;
 }
 export function startSiege(state,armyId,to){
@@ -426,7 +448,7 @@ function captureBySiege(s,siege,army){
     const retreat=neighbors(siege.to).find(n=>s.provinces[n].owner===defender);
     if(retreat===undefined)a.strength=0;else a.province=retreat;
   }
-  target.owner=siege.side;target.fort=Math.max(0,target.fort-1);target.garrison=2;target.raidedUntil=0;
+  target.owner=siege.side;target.fort=Math.max(0,target.fort-1);target.garrison=2;target.raidedUntil=0;target.development=null;
   army.province=siege.to;
   s.sieges=s.sieges.filter(x=>x!==siege);
   s.sieges=s.sieges.filter(x=>x.from!==siege.to && x.to!==siege.to);
@@ -475,4 +497,16 @@ function applyIsolation(s){
   }
   s.armies=s.armies.filter(a=>a.strength>0);
   s.sieges=s.sieges.filter(x=>s.armies.some(a=>a.id===x.armyId));
+}
+
+function resolveDevelopment(s){
+ for(const p of s.provinces){
+  if(p.development!=='barracks'||p.owner===3||(p.raidedUntil||0)>s.season)continue;
+  if(!supplyNetwork(s,p.owner).has(p.id))continue;
+  const field=armiesAt(s,p.id,p.owner);
+  if(field.length){
+   const a=[...field].sort((a,b)=>a.strength-b.strength)[0];
+   a.strength=Math.min(MAX_STRENGTH,a.strength+2);
+  }else p.garrison=Math.min(7,p.garrison+1);
+ }
 }
