@@ -276,3 +276,10 @@ test('besieging camp is lost after a hostile counterattack captures its origin',
  assert.equal(result.state.sieges.length,0,'no stranded besiegers inside enemy province');
  assert.ok(validCampaign(result.state));
 });
+
+test('barren provinces cannot be used as an infinite silver-minting raid loop',()=>{
+ const s=createCampaign();
+ s.provinces[5].garrison=1;
+ assert.ok(raid(s,'army-1',5).error);
+ assert.equal(s.coins,16);
+});
