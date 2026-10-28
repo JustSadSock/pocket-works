@@ -22,7 +22,14 @@ const url='http://127.0.0.1:'+server.address().port+'/apps/chernye-znamena/';
 const report={cases:[],failures:[],version:'0.1.0'};
 const frames=[{id:'phone',w:390,h:844,touch:true},{id:'desktop',w:1366,h:768,touch:false},{id:'short-phone',w:320,h:568,touch:true}];
 function coord(rect,q,r){
- const size=Math.max(6,Math.min((rect.width-18)/(Math.sqrt(3)*(7+2.5)+1),(rect.height-22)/(1.5*4+2.3)));
+ const portrait=rect.width<740 && rect.height>rect.width*1.05;
+ const size=Math.max(6,portrait
+  ? Math.min((rect.width-24)/8.4,(rect.height-36)/16.2)
+  : Math.min((rect.width-18)/(Math.sqrt(3)*(7+2.5)+1),(rect.height-22)/(1.5*4+2.3)));
+ if(portrait) return {
+  x:rect.x+rect.width/2-1.5*size*(r-2),
+  y:rect.y+rect.height/2+Math.sqrt(3)*size*(q+r/2-4)
+ };
  const worldWidth=Math.sqrt(3)*size*(7+2.5-1)+size*1.9;
  const worldHeight=1.5*size*4+size*2;
  const x=(rect.width-worldWidth)/2+size*.92+Math.sqrt(3)*size*(q+r/2);
