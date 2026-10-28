@@ -101,3 +101,24 @@
 
 @media(max-width:780px){.mast .return{white-space:nowrap;font-size:9px;letter-spacing:-.025em}}
 @media(max-width:375px){.mast .return{font-size:8.5px}}
+
+/* Campaign war-state overlays: rope barricade, interrupted roads and embargo marks. */
+.campaign-siege{pointer-events:none}
+.campaign-siege-caption{fill:#fff0d4;paint-order:stroke;stroke:#4e352d;stroke-width:4px;letter-spacing:.08em;font:800 13px system-ui,sans-serif}
+.campaign-warning{fill:#f6c9ad;paint-order:stroke;stroke:#523c34;stroke-width:3px;font:800 11px system-ui,sans-serif;letter-spacing:.12em;pointer-events:none}
+.campaign-statuses{display:flex;flex-wrap:wrap;gap:5px 7px;margin:11px 0 2px}
+.campaign-statuses span{font:700 10px/1.2 system-ui,sans-serif;letter-spacing:.025em;padding:5px 7px;border:1px solid #708472;background:#364d3c}
+.campaign-statuses .supply-connected{border-color:#92bda9;color:#c5f1d7}
+.campaign-statuses .supply-cut,.campaign-statuses .campaign-warning-text{border-color:#c48f78;background:#5b443b;color:#f7d0bc}
+@media(max-width:780px){
+ .campaign-statuses{margin:6px 0 2px;gap:4px}
+ .campaign-statuses span{font-size:9px;padding:3px 5px}
+ .map-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+ .map-actions .map-instruction,.map-actions .map-quiet{grid-column:1/-1}
+ .map-actions button{font-size:10px;line-height:1.12;min-height:35px}
+ .campaign-province{scrollbar-width:thin}
+}
+@media(max-width:375px){
+ .campaign-statuses span{font-size:8px}
+ .map-actions button{font-size:9px;min-height:33px}
+}
