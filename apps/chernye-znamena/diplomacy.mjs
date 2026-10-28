@@ -166,6 +166,11 @@ export function nextPoliticalSeason(s){
  ensureDiplomacy(s);
  const d=s.diplomacy;
  for(const t of [...d.treaties]){
+  if(owned(s,t.side)===0){
+   d.treaties=d.treaties.filter(x=>x!==t);
+   record(s,'Дом '+NAME[t.side]+' лишился владений: его договоры утратили силу.');
+   continue;
+  }
   if(t.kind!=='vassal' && t.until<s.season){
    d.treaties=d.treaties.filter(x=>x!==t);
    record(s,pactName(t)+' с '+NAME[t.side]+' завершено.');
@@ -193,6 +198,9 @@ export function nextPoliticalSeason(s){
   [1,2].every(side=>owned(s,side)>0&&!peace(s,side));
  if(canCoalition && d.coalitionUntil===0){
   d.coalitionUntil=s.season+2;
+  // The pact also ends battles of attrition between its signatories.
+  s.sieges=s.sieges.filter(x=>!([1,2].includes(x.side) &&
+    [1,2].includes(s.provinces[x.to].owner)));
   record(s,'Орден и Князья образуют оборонительную лигу против Севера.');
  }
  return s;
