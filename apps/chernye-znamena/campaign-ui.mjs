@@ -1,5 +1,6 @@
 // Compact procedural engraved map; all polygons share the same coordinate grid.
 import {PROVINCES,FACTIONS,neighbors,armiesAt,income,upkeep,defensePower,supplyNetwork,siegeAt,siegeByArmy,isStronghold} from './campaign.mjs';
+import {agreement,league} from './diplomacy.mjs';
 const safe=text=>String(text).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function point(c,r,portrait){
   const x=portrait?45+r*203:c*232+36;
@@ -62,10 +63,14 @@ export function campaignMapSvg(s,selection,selectedArmy,marchMode,portrait){
   const encircled=siege?'<g class="campaign-siege" aria-hidden="true"><circle cx="'+c.x+'" cy="'+(c.y-8)+'" r="74" fill="none" stroke="#efbe89" stroke-width="5" stroke-dasharray="12 8"/><text x="'+c.x+'" y="'+(c.y-49)+'" text-anchor="middle" class="campaign-siege-caption">ОСАДА '+siege.progress+'</text></g>':'';
   const isolation=!supplied?'<text x="'+c.x+'" y="'+(c.y+62)+'" class="campaign-warning" text-anchor="middle">НЕТ ОБОЗА</text>':'';
   const raided=at.raidedUntil>s.season?'<text x="'+c.x+'" y="'+(c.y+72)+'" class="campaign-warning" text-anchor="middle">РАЗОРЕНО</text>':'';
+  const pact=at.owner===1||at.owner===2?agreement(s,at.owner):null;
+  const accord=pact?'<g aria-hidden="true"><rect x="'+(c.x-57)+'" y="'+(c.y-77)+'" width="114" height="21" rx="1" fill="'+(pact.kind==='vassal'?'#826d50':'#375c4d')+'" stroke="#e2d2a9" stroke-width="2"/>'+
+    '<text x="'+c.x+'" y="'+(c.y-62)+'" text-anchor="middle" class="province-treaty">'+
+    (pact.kind==='vassal'?'ВАССАЛ':pact.kind==='alliance'?'СОЮЗ':'ПЕРЕМИРИЕ')+'</text></g>':'';
   const capital=p.capital!==undefined?'<path d="M'+(c.x-17)+','+(c.y-70)+'v-24l18 8 17-9v25Z" fill="#e9d8af" stroke="#4b5343" stroke-width="3"/>':'';
   return '<g class="map-region'+(active?' selected':'')+(reachable?' reachable':'')+'" data-province="'+p.id+'" role="button" tabindex="0" aria-label="'+safe(p.name)+', '+safe(FACTIONS[at.owner].name)+', гарнизон '+at.garrison+'">'+
    '<path d="'+polygon(p.id,portrait)+'" fill="'+getColor(p.id)+'" stroke="#a4a992" stroke-width="3"/>'+
-   relief(p.id,portrait)+capital+encircled+isolation+raided+
+   relief(p.id,portrait)+capital+encircled+isolation+raided+accord+
    '<text x="'+c.x+'" y="'+(c.y-1)+'" class="province-label" text-anchor="middle">'+safe(p.name)+'</text>'+
    '<text x="'+c.x+'" y="'+(c.y+25)+'" class="province-hint" text-anchor="middle">ГАРНИЗОН '+at.garrison+'</text>'+shield+
    (active?'<circle cx="'+c.x+'" cy="'+(c.y-38)+'" r="6" fill="#f9e6c5"/>':'')+'</g>';
