@@ -260,3 +260,19 @@ test('invalid duplicated or dangling siege armies are rejected',()=>{
  assert.equal(validCampaign({...s,sieges:[s.sieges[0],s.sieges[0]]}),false);
  assert.equal(validCampaign({...s,sieges:[{...s.sieges[0],armyId:'army-999'}]}),false);
 });
+
+test('besieging camp is lost after a hostile counterattack captures its origin',()=>{
+ let s=startSiege(preparedSiege(),'army-1',3).state;
+ s.armies.push({id:'army-7',side:2,province:3,strength:9,used:false});
+ s.pending={kind:'counterattack',attackerId:'army-7',from:3,to:2,attackerSide:2,defenderSide:0,
+  attackerStrength:9,defenderStrength:defensePower(s,2),defenderGarrison:s.provinces[2].garrison};
+ assert.ok(validCampaign(s));
+ const b=startCampaignBattle(s);
+ b.units.filter(u=>u.side===0).forEach(u=>u.hp=0);
+ b.winner=1;
+ const result=concludeCampaignBattle(s,b);
+ assert.equal(result.error,null);
+ assert.equal(result.state.provinces[2].owner,2);
+ assert.equal(result.state.sieges.length,0,'no stranded besiegers inside enemy province');
+ assert.ok(validCampaign(result.state));
+});
