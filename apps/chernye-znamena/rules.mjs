@@ -19,6 +19,16 @@ export const MAPS = Object.freeze({
       '3,1': 'river', '3,2': 'ford', '3,3': 'river', '5,1': 'forest'
     }
   },
+  bastion: {
+    name: 'Каменная твердыня',
+    description: 'Стены укрывают защитника. Через воротный пролом можно прорваться конницей.',
+    terrain: {
+      '1,0': 'forest', '1,4': 'forest', '2,1': 'hill', '2,3': 'hill',
+      '3,0': 'marsh', '3,4': 'marsh', '4,0': 'fort', '4,1': 'fort',
+      '4,2': 'ford', '4,3': 'fort', '4,4': 'fort',
+      '5,0': 'fort', '5,1': 'fort', '5,3': 'fort', '5,4': 'fort'
+    }
+  },
   moor: {
     name: 'Туманный пустошь',
     description: 'Болота замедляют всадников. Высоты позволяют лучникам держать центр.',
@@ -61,6 +71,7 @@ export function movementCost(state,unit,q,r) {
   const t=terrainAt(state,q,r);
   if (t==='river' || t==='marsh') return unit.type==='knight' ? 3 : 2;
   if (t==='forest' && unit.type==='knight') return 2;
+  if(t==='fort')return unit.type==='knight'?3:2;
   return 1;
 }
 export function reachable(state,unitId) {
@@ -87,7 +98,7 @@ export function canAttack(state,attacker,target) {
     if(d<2 || d>3) return false;
     // A forest between archer and victim blocks the line of sight.
     for(let q=0;q<WIDTH;q++) for(let r=0;r<HEIGHT;r++) {
-      if(terrainAt(state,q,r)==='forest' && distance(attacker,{q,r})<d && distance({q,r},target)<d &&
+      if(['forest','fort'].includes(terrainAt(state,q,r)) && distance(attacker,{q,r})<d && distance({q,r},target)<d &&
         distance(attacker,{q,r})+distance({q,r},target)===d) return false;
     }
     return true;
@@ -98,7 +109,7 @@ export function attackPreview(state,attacker,target) {
   if (!canAttack(state,attacker,target)) return null;
   const adjacent=state.units.filter(u=>u.hp>0 && u.side===attacker.side && u.id!==attacker.id && distance(u,target)===1).length;
   const terrain=terrainAt(state,target.q,target.r);
-  const cover=(terrain==='hill' || terrain==='forest') ? 1 : 0;
+  const cover=terrain==='fort'?2:(terrain==='hill'||terrain==='forest'?1:0);
   const guard=target.guard ? 1 : 0;
   let matchup=0;
   if(attacker.type==='spear' && target.type==='knight') matchup+=2;
