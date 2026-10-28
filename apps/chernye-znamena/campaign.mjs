@@ -232,7 +232,8 @@ export function concludeCampaignBattle(state,battle){
     note(s,'Штурм '+PROVINCES[p.to].name+' отбит.');
   }
   s.armies=s.armies.filter(a=>a.strength>0);
-  s.sieges=(s.sieges||[]).filter(x=>x.to!==p.to&&x.armyId!==p.attackerId);
+  s.sieges=(s.sieges||[]).filter(x=>x.to!==p.to&&x.from!==p.to&&x.armyId!==p.attackerId &&
+    s.provinces[x.from].owner===x.side && s.armies.some(a=>a.id===x.armyId&&a.side===x.side&&a.province===x.from));
   s.pending=null;
   s.report={province:p.to,victory:attackerWins,playerWon:attackerWins?(p.attackerSide===0):(p.defenderSide===0),
     attackerLoss:p.attackerStrength-attackersLeft,defenderLoss:p.defenderStrength-defendersLeft,season:s.season};
