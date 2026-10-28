@@ -303,7 +303,7 @@ function enemyOrder(s,side){
       s.sieges.push({armyId:army.id,side,from:army.province,to:id,progress:0});
       army.used=true;note(s,FACTIONS[side].short+' осаждает '+PROVINCES[id].name+'.');
     }else if(p.owner===0 && !isStronghold(s,id) && army.strength<defense+1 && supply &&
-      army.strength>=4 && armiesAt(s,id).length===0 && (p.raidedUntil||0)<=s.season){
+      army.strength>=4 && p.garrison>=2 && armiesAt(s,id).length===0 && (p.raidedUntil||0)<=s.season){
       army.strength=Math.max(1,army.strength-1);army.used=true;
       p.garrison=Math.max(0,p.garrison-2);p.raidedUntil=s.season+2;
       note(s,FACTIONS[side].short+' совершает набег на '+PROVINCES[id].name+'.');
@@ -393,6 +393,7 @@ export function raid(state,armyId,to){
   if(siegeByArmy(state,armyId)||siegeAt(state,to))return error(state,'Блокада исключает рейд');
   if(!supplyNetwork(state,0).has(army.province))return error(state,'Нет снабжения для глубокого рейда');
   if(armiesAt(state,to).length)return error(state,'Полевые дружины противника прикрывают дорогу. Требуется сражение');
+  if(state.provinces[to].garrison<2)return error(state,'Здесь уже нечего грабить: гарнизон и запасы истощены');
   if((state.provinces[to].raidedUntil||0)>state.season)return error(state,'Эта земля уже разграблена');
   const s=copy(state);const a=s.armies.find(a=>a.id===armyId),p=s.provinces[to];
   a.strength--;a.used=true;s.actions--;s.coins=Math.min(9999,s.coins+4);
