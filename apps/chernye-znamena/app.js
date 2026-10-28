@@ -433,10 +433,16 @@ function modal(kind){
     (loadError?'<p class="modal-alert">'+esc(loadError)+'</p>':'');
   }
   if(kind==='home'){
-    html=html.replace('<button class="primary" data-action="new">Начать сражение</button>',
-      '<button class="primary" data-action="startCampaign">'+(campaign?.winner===null?'Продолжить кампанию':'Начать кампанию')+'</button>'+
+    html=html.replace('КНИГА I · ТАКТИЧЕСКИЙ ПРОЛОГ','КНИГА II · ВОЙНА ТРЁХ КОРОН');
+    html=html.replace('Пять отрядов. Три приказа за ход. Удержи срединный камень два хода или уничтожь войско противника.',
+      'Три державы и двенадцать областей. Веди дружины по карте королевств, захватывай столицы и решай исход похода на гексагональном поле боя.');
+    html=html.replace('<div class="modal-kicker">ПРОТИВНИК</div>',
+      '<div class="modal-actions"><button class="primary" data-action="startCampaign">'+
+      (campaign?.winner===null?'Продолжить кампанию':'Начать кампанию')+'</button>'+
       (campaign?'<button class="secondary" data-action="restartCampaign">Новая кампания</button>':'')+
-      '<button data-action="new">Отдельная битва</button>');
+      '</div><div class="modal-kicker" style="margin-top:16px">ОТДЕЛЬНАЯ БИТВА · ПРОТИВНИК</div>');
+    html=html.replace('<button class="primary" data-action="new">Начать сражение</button>',
+      '<button data-action="new">Начать отдельное сражение</button>');
   }
   if(kind==='pause'){
     html='<div class="modal-kicker">СТОЯНКА ПОЛКОВ</div><h1 id="modalTitle">Совет полководца</h1><p>Бой сохранён. Ты можешь вернуться к нему позднее.</p><div class="modal-actions">'+
