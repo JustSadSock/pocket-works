@@ -80,10 +80,10 @@ export function campaignMapSvg(s,selection,selectedArmy,marchMode,portrait){
 export function campaignInfo(s,selected,selectedArmy,marchMode,warMode='march'){
  const landNames={highland:'возвышенность',forest:'лес',river:'переправа',plain:'равнина',fort:'крепость'};
  const province=s.provinces[selected],world=PROVINCES[selected],owner=FACTIONS[province.owner],a=s.armies.find(x=>x.id===selectedArmy);
- const stationed=armiesAt(s,selected),own=province.owner===0,supply=supplyNetwork(s,province.owner).has(selected);
+ const stationed=armiesAt(s,selected),own=province.owner===0,supply=province.owner===3||supplyNetwork(s,province.owner).has(selected);
  const siege=siegeAt(s,selected),ownSiege=a?siegeByArmy(s,a.id):null;
  const commands=stationed.filter(u=>u.side===0).map(u=>'<button type="button" class="field-army'+(u.id===selectedArmy?' chosen':'')+'" data-army="'+u.id+'" aria-pressed="'+(u.id===selectedArmy)+'"><span>⚑ Дружина '+u.id.split('-')[1]+'</span><b>'+u.strength+' воинов'+(u.used?' · ход сделан':'')+'</b></button>').join('');
- const status='<div class="campaign-statuses"><span class="'+(supply?'supply-connected':'supply-cut')+'">'+(supply?'Обозы из столицы':'Снабжение отрезано')+'</span>'+
+ const status='<div class="campaign-statuses"><span class="'+(supply?'supply-connected':'supply-cut')+'">'+(province.owner===3?'Вольная дорога':supply?'Обозы из столицы':'Снабжение отрезано')+'</span>'+
  (siege?'<span class="campaign-warning-text">Блокада: '+siege.progress+' сез.</span>':'')+
  (province.raidedUntil>s.season?'<span class="campaign-warning-text">Разорено до сезона '+province.raidedUntil+'</span>':'')+'</div>';
  let primary='';
