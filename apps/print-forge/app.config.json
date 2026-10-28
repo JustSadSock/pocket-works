@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "print-forge",
+  "name": "Pocket Forge 3D",
+  "shortName": "Print Forge",
+  "description": "Параметрические модели для 3D-печати: STL, CAD-задания, проверка геометрии и интерактивная зубчатая передача.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-28",
+  "releaseDateTime": "2026-10-28T12:00:00+02:00",
+  "changelog": [
+    "Новая мастерская Pocket Forge 3D: шестерни, корпус-лоток и втулка с размерами в миллиметрах.",
+    "Интерактивная кинематика зубчатой пары: запуск, пауза, реверс, регулировка скорости и вращение вручную.",
+    "Экспорт бинарного STL отдельных деталей, проверка замкнутости сетки, JSON-задания для CAD-сборщика и сохранение параметров."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#b9673b",
+  "backgroundColor": "#e9e9e3",
+  "themeColor": "#e9e9e3",
+  "orientation": "any",
+  "cacheName": "print-forge-v1.0.0-p1",
+  "storageNamespace": "pocket-works:print-forge",
+  "tags": [
+    "utility",
+    "3d",
+    "cad",
+    "stl",
+    "3d-printing",
+    "mechanics",
+    "gears",
+    "offline",
+    "engineering"
+  ],
+  "order": 268
+}
