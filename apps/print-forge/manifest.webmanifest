@@ -1,0 +1,20 @@
+{
+  "id": "/apps/print-forge/",
+  "name": "Pocket Forge 3D",
+  "short_name": "Print Forge",
+  "description": "3D-печать, моделирование и механика.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#e9e9e3",
+  "theme_color": "#e9e9e3",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
