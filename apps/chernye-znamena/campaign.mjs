@@ -104,13 +104,15 @@ export function march(state,armyId,to){
   if(!canAct(state))return error(state,'Поход невозможен до завершения битвы или нового сезона');
   const army=state.armies.find(a=>a.id===armyId && a.side===0&&a.strength>0);
   if(!army||army.used)return error(state,'Выберите свободную дружественную армию');
-  if((state.sieges||[]).some(x=>x.armyId===armyId))return error(state,'Армия ведёт осаду: сначала прекратите блокаду');
+  const besieging=(state.sieges||[]).find(x=>x.armyId===armyId);
+  if(besieging && besieging.to!==to)return error(state,'Армия держит блокаду: можно лишь штурмовать осаждённую крепость');
   if(!neighbors(army.province).includes(to))return error(state,'Марш возможен лишь в соседнюю область');
   const target=state.provinces[to];
   if(!target)return error(state,'Неизвестная земля');
   if(target.owner===0 && armiesAt(state,to,0).length>=2)return error(state,'Две армии уже занимают эту область');
   const s=copy(state),a=s.armies.find(x=>x.id===armyId);
   s.actions--;a.used=true;
+  if(besieging)s.sieges=s.sieges.filter(x=>x.armyId!==armyId);
   if(target.owner===0){
     a.province=to;
     note(s,'Дружина перешла в '+PROVINCES[to].name+'.');
