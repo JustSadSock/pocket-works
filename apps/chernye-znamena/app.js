@@ -11,7 +11,7 @@ const SIDE_COLORS=['#76b9b5','#c9805c'];
 const TERRAIN_COLORS={grass:'#778973',hill:'#a19d7f',forest:'#63785c',river:'#547778',ford:'#758887',marsh:'#576d62'};
 let game=createBattle(), selected=null, tool='move', screen='home', pickMap='pass',pickMode='ai';
 let audioEnabled=false,audio=null,aiTimer=null,noticeTimer=null,impact=null;
-let size=30,originX=0,originY=0,viewWidth=400,viewHeight=400,dpr=1;
+let size=30,originX=0,originY=0,viewWidth=400,viewHeight=400,dpr=1,portraitBoard=false;
 let pointerStart=null;
 let loadError='';
 let previousModal='home';
@@ -50,9 +50,13 @@ function showNotice(message){
   clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>el.classList.remove('show'),2300);
 }
 function hexPoint(q,r){
+  if(portraitBoard)return {
+    x:originX-1.5*size*(r-(HEIGHT-1)/2),
+    y:originY+Math.sqrt(3)*size*(q+r/2-((WIDTH-1)/2+(HEIGHT-1)/4))
+  };
   return {x:originX+Math.sqrt(3)*size*(q+r/2),y:originY+1.5*size*r};
 }
-function poly(x,y,r,angle=-Math.PI/2){
+function poly(x,y,r,angle=portraitBoard?0:-Math.PI/2){
   ctx.beginPath();for(let i=0;i<6;i++){
     const a=angle+i*Math.PI/3,px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;
     if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
@@ -170,10 +174,13 @@ function paintUnit(u){
 function draw(){
   if(!ctx)return;
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,viewWidth,viewHeight);backdrop();
-  const width=Math.sqrt(3)*size*(WIDTH+HEIGHT/2-1)+size*1.9;
-  const height=1.5*size*(HEIGHT-1)+size*2;
-  originX=(viewWidth-width)/2+size*.92;
-  originY=(viewHeight-height)/2+size;
+  if(portraitBoard){originX=viewWidth/2;originY=viewHeight/2;}
+  else {
+    const width=Math.sqrt(3)*size*(WIDTH+HEIGHT/2-1)+size*1.9;
+    const height=1.5*size*(HEIGHT-1)+size*2;
+    originX=(viewWidth-width)/2+size*.92;
+    originY=(viewHeight-height)/2+size;
+  }
   for(let r=0;r<HEIGHT;r++)for(let q=0;q<WIDTH;q++)paintTile(q,r);
   const b=selected?game.units.find(u=>u.id===selected):null;
   if(b?.banner && b.hp>0){
@@ -181,7 +188,7 @@ function draw(){
       const p=hexPoint(q,r);poly(p.x,p.y,size*.85);ctx.strokeStyle='#ece4bf55';ctx.lineWidth=1.3;ctx.stroke();
     }
   }
-  for(const unit of game.units.filter(u=>u.hp>0).sort((a,b)=>a.r-b.r))paintUnit(unit);
+  for(const unit of game.units.filter(u=>u.hp>0).sort((a,b)=>hexPoint(a.q,a.r).y-hexPoint(b.q,b.r).y))paintUnit(unit);
   if(impact){
     const u=game.units.find(u=>u.id===impact.targetId),p=u?hexPoint(u.q,u.r):impact.p;
     if(p){ctx.strokeStyle='#ffd9aa';ctx.lineWidth=Math.max(2,size*.085);ctx.beginPath();ctx.arc(p.x,p.y,size*.6,0,Math.PI*2);ctx.stroke();}
@@ -192,7 +199,10 @@ function resize(){
   viewWidth=Math.max(1,rect.width);viewHeight=Math.max(1,rect.height);
   dpr=Math.min(2,window.devicePixelRatio||1);
   canvas.width=Math.round(viewWidth*dpr);canvas.height=Math.round(viewHeight*dpr);
-  size=Math.min((viewWidth-18)/(Math.sqrt(3)*(WIDTH+HEIGHT/2)+1),(viewHeight-22)/(1.5*(HEIGHT-1)+2.3));
+  portraitBoard=viewWidth<740 && viewHeight>viewWidth*1.05;
+  size=portraitBoard
+    ? Math.min((viewWidth-24)/8.4,(viewHeight-36)/16.2)
+    : Math.min((viewWidth-18)/(Math.sqrt(3)*(WIDTH+HEIGHT/2)+1),(viewHeight-22)/(1.5*(HEIGHT-1)+2.3));
   size=Math.max(6,size);draw();
 }
 function update(){
