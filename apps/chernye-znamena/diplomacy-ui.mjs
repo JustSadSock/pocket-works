@@ -42,7 +42,7 @@ export function courtMarkup(s,selectedSide=1){
    '<span><strong>'+info.label+'</strong><small>'+esc(option.ok?info.cost:option.reason)+'</small></span>'+
    '<span class="court-arrow">↗</span></button>';
  }).join('');
- return '<div class="court-intro"><span>СОВЕТ ТРЁХ КОРОН</span><h2>Хрупкая присяга</h2><p>Решения стоят один стратегический приказ. Слава зарабатывается военными победами. Договоры имеют последствия для военных путей и доходов.</p></div>'+
+ return '<div class="court-intro"><span>СОВЕТ ТРЁХ КОРОН</span>'+courtTitle(s)<h2>Хрупкая присяга</h2><p>Решения стоят один стратегический приказ. Слава зарабатывается военными победами. Договоры имеют последствия для военных путей и доходов.</p></div>'+
  '<div class="court-seals">'+states+'</div>'+
  '<div class="court-tally"><span>'+countryCount+' владений · '+force+' воинов</span><span>Доверие '+(score>0?'+':'')+score+'</span></div>'+
  status+'<div class="court-actions">'+actions+'</div>'+
