@@ -1,5 +1,5 @@
 // Compact procedural engraved map; all polygons share the same coordinate grid.
-import {PROVINCES,FACTIONS,neighbors,armiesAt,income,upkeep,defensePower} from './campaign.mjs';
+import {PROVINCES,FACTIONS,neighbors,armiesAt,income,upkeep,defensePower,supplyNetwork,siegeAt,siegeByArmy,isStronghold} from './campaign.mjs';
 const safe=text=>String(text).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function point(c,r,portrait){
   const x=portrait?45+r*203:c*232+36;
@@ -58,10 +58,14 @@ export function campaignMapSvg(s,selection,selectedArmy,marchMode,portrait){
   const active=p.id===selection,reachable=!!(marchMode&&army&&neighbors(army.province).includes(p.id));
   const main=units.find(a=>a.side===0)||units[0];
   const shield=main?'<g transform="translate('+(c.x+64)+' '+(c.y+47)+')"><path d="M-31-28h62v46l-31 18-31-18Z" fill="'+FACTIONS[main.side].dark+'" stroke="#e4d5b2" stroke-width="3"/><text x="0" y="9" font-size="25" fill="#f1e8d5" text-anchor="middle" font-weight="700">'+main.strength+'</text></g>':'';
+  const siege=siegeAt(s,p.id),supplied=at.owner===3||supplyNetwork(s,at.owner).has(p.id);
+  const encircled=siege?'<g class="campaign-siege" aria-hidden="true"><circle cx="'+c.x+'" cy="'+(c.y-8)+'" r="74" fill="none" stroke="#efbe89" stroke-width="5" stroke-dasharray="12 8"/><text x="'+c.x+'" y="'+(c.y-49)+'" text-anchor="middle" class="campaign-siege-caption">ОСАДА '+siege.progress+'</text></g>':'';
+  const isolation=!supplied?'<text x="'+c.x+'" y="'+(c.y+62)+'" class="campaign-warning" text-anchor="middle">НЕТ ОБОЗА</text>':'';
+  const raided=at.raidedUntil>s.season?'<text x="'+c.x+'" y="'+(c.y+72)+'" class="campaign-warning" text-anchor="middle">РАЗОРЕНО</text>':'';
   const capital=p.capital!==undefined?'<path d="M'+(c.x-17)+','+(c.y-70)+'v-24l18 8 17-9v25Z" fill="#e9d8af" stroke="#4b5343" stroke-width="3"/>':'';
   return '<g class="map-region'+(active?' selected':'')+(reachable?' reachable':'')+'" data-province="'+p.id+'" role="button" tabindex="0" aria-label="'+safe(p.name)+', '+safe(FACTIONS[at.owner].name)+', гарнизон '+at.garrison+'">'+
    '<path d="'+polygon(p.id,portrait)+'" fill="'+getColor(p.id)+'" stroke="#a4a992" stroke-width="3"/>'+
-   relief(p.id,portrait)+capital+
+   relief(p.id,portrait)+capital+encircled+isolation+raided+
    '<text x="'+c.x+'" y="'+(c.y-1)+'" class="province-label" text-anchor="middle">'+safe(p.name)+'</text>'+
    '<text x="'+c.x+'" y="'+(c.y+25)+'" class="province-hint" text-anchor="middle">ГАРНИЗОН '+at.garrison+'</text>'+shield+
    (active?'<circle cx="'+c.x+'" cy="'+(c.y-38)+'" r="6" fill="#f9e6c5"/>':'')+'</g>';
@@ -73,28 +77,44 @@ export function campaignMapSvg(s,selection,selectedArmy,marchMode,portrait){
  '<rect width="'+width+'" height="'+height+'" fill="url(#atlaslight)"/><rect width="'+width+'" height="'+height+'" fill="url(#atlaslines)"/>'+
  river+routes.join('')+tiles+'<path d="M20 20H'+(width-20)+'V'+(height-20)+'H20Z" fill="none" stroke="#d9c6a3" stroke-width="3" opacity=".45"/></svg>';
 }
-export function campaignInfo(s,selected,selectedArmy,marchMode){
+export function campaignInfo(s,selected,selectedArmy,marchMode,warMode='march'){
  const landNames={highland:'возвышенность',forest:'лес',river:'переправа',plain:'равнина',fort:'крепость'};
  const province=s.provinces[selected],world=PROVINCES[selected],owner=FACTIONS[province.owner],a=s.armies.find(x=>x.id===selectedArmy);
- const stationed=armiesAt(s,selected);
- const own=province.owner===0;
- const commands=stationed.filter(u=>u.side===0).map(u=>'<button type="button" class="field-army'+(u.id===selectedArmy?' chosen':'')+'" data-army="'+u.id+'" aria-pressed="'+(u.id===selectedArmy)+'"><span>⚑ Дружина '+u.id.split('-')[1]+'</span><b>'+u.strength+' солдат'+(u.used?' · ход сделан':'')+'</b></button>').join('');
+ const stationed=armiesAt(s,selected),own=province.owner===0,supply=province.owner===3||supplyNetwork(s,province.owner).has(selected);
+ const siege=siegeAt(s,selected),ownSiege=a?siegeByArmy(s,a.id):null;
+ const commands=stationed.filter(u=>u.side===0).map(u=>'<button type="button" class="field-army'+(u.id===selectedArmy?' chosen':'')+'" data-army="'+u.id+'" aria-pressed="'+(u.id===selectedArmy)+'"><span>⚑ Дружина '+u.id.split('-')[1]+'</span><b>'+u.strength+' воинов'+(u.used?' · ход сделан':'')+'</b></button>').join('');
+ const status='<div class="campaign-statuses"><span class="'+(supply?'supply-connected':'supply-cut')+'">'+(province.owner===3?'Вольная дорога':supply?'Обозы из столицы':'Снабжение отрезано')+'</span>'+
+ (siege?'<span class="campaign-warning-text">Блокада: '+siege.progress+' сез.</span>':'')+
+ (province.raidedUntil>s.season?'<span class="campaign-warning-text">Разорено до сезона '+province.raidedUntil+'</span>':'')+'</div>';
  let primary='';
  if(marchMode){
-  primary='<p class="map-instruction">Выбери соседнюю область на карте. Отмеченные границы доступны для марша.</p><button class="map-quiet" data-cmd="cancel-march">Отменить поход</button>';
+  const verbs={march:'Марш',siege:'Начало блокады',raid:'Набег'};
+  primary='<p class="map-instruction">'+verbs[warMode]+': выбери соседнее владение на карте, подсвеченное светлой границей.</p>'+
+   '<button class="map-quiet" data-cmd="cancel-march">Отменить выбор цели</button>';
  }else if(own){
   if(a&&a.side===0&&a.province===selected){
-   primary='<button class="map-main" data-cmd="march"'+((a.used||s.actions<1)?' disabled':'')+'>Отдать приказ на марш</button>'+
-    '<button data-cmd="recruit"'+((a.used||s.coins<6||s.actions<1||a.strength>=18)?' disabled':'')+'>Пополнить дружину · 6</button>';
+    if(ownSiege){
+      primary='<p class="map-instruction">Дружина блокирует '+safe(PROVINCES[ownSiege.to].name)+
+        '. Крепость теряет гарнизон каждый сезон. Затем она капитулирует.</p>'+
+       '<button class="map-main" data-cmd="storm"'+((a.used||s.actions<1)?' disabled':'')+'>Штурмовать сейчас</button>'+
+       '<button data-cmd="lift-siege">Снять осаду</button>';
+    }else{
+      primary='<button class="map-main" data-cmd="march"'+((a.used||s.actions<1)?' disabled':'')+'>Марш / штурм</button>'+
+       '<button data-cmd="siege"'+((a.used||s.actions<1||a.strength<4||!supply)?' disabled':'')+'>Начать осаду</button>'+
+       '<button data-cmd="raid"'+((a.used||s.actions<1||a.strength<4||!supply)?' disabled':'')+'>Совершить набег</button>'+
+       '<button data-cmd="recruit"'+((a.used||s.coins<6||s.actions<1||a.strength>=18||!supply||province.raidedUntil>s.season)?' disabled':'')+'>Пополнить дружину · 6</button>';
+    }
   } else if(stationed.length===0){
-   primary='<button class="map-main" data-cmd="raise"'+((s.coins<9||s.actions<1)?' disabled':'')+'>Собрать новую дружину · 9</button>';
+    primary='<button class="map-main" data-cmd="raise"'+((s.coins<9||s.actions<1||!supply||province.raidedUntil>s.season)?' disabled':'')+'>Собрать новую дружину · 9</button>';
   }
-  primary+='<button data-cmd="fortify"'+((s.coins<5||s.actions<1||province.garrison>=10)?' disabled':'')+'>Укрепить гарнизон · 5</button>';
+  primary+='<button data-cmd="fortify"'+((s.coins<5||s.actions<1||province.garrison>=10||!supply)?' disabled':'')+'>Укрепить гарнизон · 5</button>';
  }else{
-  primary='<p class="map-instruction">Владение '+safe(owner.name)+'. Чтобы вторгнуться, выбери свою армию и отдай приказ на марш.</p>';
+  primary='<p class="map-instruction">Владение '+safe(owner.name)+
+   '. Для войны выбери свою дружину в соседней земле. Крепость можно окружить блокадой.</p>';
  }
- return '<div class="map-local-name"><small>'+safe(owner.name)+' · '+safe(landNames[world.type]||world.type)+'</small><h2>'+safe(world.name)+'</h2><span>Гарнизон '+province.garrison+' · оборона '+defensePower(s,selected)+' · доход '+world.income+' серебра</span></div>'+
- '<div class="map-field-armies">'+(commands||'<p class="map-empty">В этой области нет твоих полевых армий.</p>')+'</div>'+
+ return '<div class="map-local-name"><small>'+safe(owner.name)+' · '+safe(landNames[world.type]||world.type)+'</small>'+
+ '<h2>'+safe(world.name)+'</h2><span>Гарнизон '+province.garrison+' · оборона '+defensePower(s,selected)+' · доход '+world.income+' серебра</span></div>'+
+ status+'<div class="map-field-armies">'+(commands||'<p class="map-empty">Полевых армий Севера здесь нет.</p>')+'</div>'+
  '<div class="map-actions">'+primary+'</div>';
 }
 export function campaignHeader(s){

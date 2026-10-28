@@ -1,7 +1,7 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import {createBattle,MAPS,TYPES,WIDTH,HEIGHT,distance,terrainAt,unitAt,leader,commanded,reachable,attackPreview,issue,endTurn,aiAction,validSaved} from './rules.mjs';
-import {createCampaign,validCampaign,march,recruit,fortify,endSeason,startCampaignBattle,concludeCampaignBattle,retreatCampaignBattle,PROVINCES,FACTIONS,neighbors,armiesAt} from './campaign.mjs';
+import {createCampaign,validCampaign,campaignUpgrade,march,recruit,fortify,endSeason,startCampaignBattle,concludeCampaignBattle,retreatCampaignBattle,raid,startSiege,liftSiege,siegeAt,siegeByArmy,supplyNetwork,isStronghold,PROVINCES,FACTIONS,neighbors,armiesAt} from './campaign.mjs';
 import {campaignMapSvg,campaignInfo,campaignHeader} from './campaign-ui.mjs';
 installMobileRuntime();
 
@@ -13,18 +13,18 @@ const CAMPAIGN_KEY='pocket-works:chernye-znamena:campaign-v1';
 const LINKED_BATTLE_KEY='pocket-works:chernye-znamena:linked-battle-v1';
 const SIDES=['Северный союз','Багровый орден'];
 const SIDE_COLORS=['#76b9b5','#c9805c'];
-const TERRAIN_COLORS={grass:'#778973',hill:'#a19d7f',forest:'#63785c',river:'#547778',ford:'#758887',marsh:'#576d62'};
+const TERRAIN_COLORS={grass:'#778973',hill:'#a19d7f',forest:'#63785c',river:'#547778',ford:'#758887',marsh:'#576d62',fort:'#768077'};
 let game=createBattle(), selected=null, tool='move', screen='home', pickMap='pass',pickMode='ai';
 let audioEnabled=false,audio=null,aiTimer=null,noticeTimer=null,impact=null;
 let size=30,originX=0,originY=0,viewWidth=400,viewHeight=400,dpr=1,portraitBoard=false;
 let pointerStart=null;
 let loadError='';
 let previousModal='home';
-let campaign=null,linkedSave=null,selectedProvince=1,selectedArmy='army-1',marchMode=false,marchDestination=null;
+let campaign=null,linkedSave=null,selectedProvince=1,selectedArmy='army-1',marchMode=false,marchDestination=null,warMode='march';
 try{const s=JSON.parse(localStorage.getItem(STORAGE)||'null');if(s && validSaved(s))game=s;else if(s)loadError='Старое сохранение повреждено и не загружено';}
 catch{loadError='Сохранение недоступно';}
 try{audioEnabled=JSON.parse(localStorage.getItem(PREFS)||'{}').sound===true;}catch{}
-try{const c=JSON.parse(localStorage.getItem(CAMPAIGN_KEY)||'null');if(c&&validCampaign(c))campaign=c;else if(c)loadError='Сохранение кампании повреждено';}catch{loadError='Не удалось прочитать кампанию';}
+try{const c=JSON.parse(localStorage.getItem(CAMPAIGN_KEY)||'null');if(c&&validCampaign(c))campaign=campaignUpgrade(c);else if(c)loadError='Сохранение кампании повреждено';}catch{loadError='Не удалось прочитать кампанию';}
 try{const b=JSON.parse(localStorage.getItem(LINKED_BATTLE_KEY)||'null');if(b&&validSaved(b)&&b.campaignContext)linkedSave=b;}catch{}
 const esc = s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function persist(){
@@ -50,7 +50,7 @@ function campaignAction(result){
   selectedArmy=campaign.armies.some(a=>a.id===selectedArmy)?selectedArmy:
     (campaign.armies.find(a=>a.side===0)?.id||null);
   if(campaign.pending){launchLinkedBattle(campaign.pending.attackerSide!==0);return true;}
-  marchMode=false;renderStrategic();return true;
+  marchMode=false;warMode='march';renderStrategic();return true;
 }
 function renderStrategic(){
   if(!campaign)return;
@@ -58,14 +58,14 @@ function renderStrategic(){
   const portrait=window.matchMedia('(max-width:780px)').matches;
   $('campaignCounters').innerHTML=campaignHeader(campaign);
   $('campaignMap').innerHTML=campaignMapSvg(campaign,selectedProvince,selectedArmy,marchMode,portrait);
-  $('campaignDetails').innerHTML=campaignInfo(campaign,selectedProvince,selectedArmy,marchMode);
+  $('campaignDetails').innerHTML=campaignInfo(campaign,selectedProvince,selectedArmy,marchMode,warMode);
   $('campaignTicker').textContent=campaign.history[0]||'Приказы ждут полководца.';
   $('campaignEndSeason').disabled=!!campaign.pending||campaign.winner!==null;
 }
 function openStrategic(showEnding=true){
   if(!campaign)campaign=createCampaign();
   if(campaign.pending){launchLinkedBattle(true);return;}
-  marchMode=false;
+  marchMode=false;warMode='march';
   screen='campaign';
   veil.classList.add('hidden');
   renderStrategic();
@@ -96,11 +96,12 @@ function sendArmy(to){
   const a=campaign.armies.find(a=>a.id===selectedArmy && a.side===0);
   if(!a){showNotice('Сначала выбери свою дружину');return;}
   if(!neighbors(a.province).includes(to)){showNotice('Выбери соседнюю область');return;}
-  if(campaign.provinces[to].owner!==0){
-    marchDestination=to;modal('campaignMarchConfirm');return;
-  }
-  selectedProvince=to;
-  campaignAction(march(campaign,a.id,to));
+  const enemy=campaign.provinces[to].owner!==0;
+  if(warMode==='siege'&&(!enemy||!isStronghold(campaign,to))){showNotice('Блокада возможна только у чужой крепости');return;}
+  if(warMode==='raid'&&!enemy){showNotice('Нельзя совершить рейд на собственные земли');return;}
+  marchDestination=to;
+  if(enemy){modal(warMode==='raid'?'campaignRaidConfirm':warMode==='siege'?'campaignSiegeConfirm':'campaignMarchConfirm');return;}
+  selectedProvince=to;campaignAction(march(campaign,a.id,to));
 }
 $('campaignMap').addEventListener('click',event=>{
   const region=event.target.closest('[data-province]');if(!region || screen!=='campaign')return;
@@ -121,8 +122,13 @@ $('campaignDetails').addEventListener('click',event=>{
   if(!button || screen!=='campaign'||!campaign)return;
   if(button.dataset.army){selectedArmy=button.dataset.army;renderStrategic();return;}
   const cmd=button.dataset.cmd;
-  if(cmd==='march'){marchMode=true;renderStrategic();return;}
-  if(cmd==='cancel-march'){marchMode=false;renderStrategic();return;}
+  if(['march','raid','siege'].includes(cmd)){warMode=cmd;marchMode=true;renderStrategic();return;}
+  if(cmd==='storm'){
+    const siege=siegeByArmy(campaign,selectedArmy);
+    if(siege){marchDestination=siege.to;modal('campaignMarchConfirm');}return;
+  }
+  if(cmd==='lift-siege'){modal('campaignLiftConfirm');return;}
+  if(cmd==='cancel-march'){marchMode=false;warMode='march';renderStrategic();return;}
   if(cmd==='recruit')campaignAction(recruit(campaign,selectedProvince,selectedArmy));
   if(cmd==='raise')campaignAction(recruit(campaign,selectedProvince));
   if(cmd==='fortify')campaignAction(fortify(campaign,selectedProvince));
@@ -209,6 +215,11 @@ function paintTile(q,r){
   const seed=(q*43+r*97+3);
   for(let i=0;i<5;i++){const tx=x+Math.sin(seed+i*13)*size*.68,ty=y+Math.cos(seed+i*7)*size*.6;disc(tx,ty,size*.028,'#d7d8bc22');}
   ctx.restore();
+  if(terrain==='fort'){
+    ctx.fillStyle='#d3c6a8';ctx.fillRect(x-size*.56,y-size*.38,size*1.1,size*.53);
+    ctx.fillStyle='#4a5851';for(let i=0;i<4;i++)ctx.fillRect(x+size*(-.54+i*.27),y-size*.52,size*.16,size*.14);
+    line(x-size*.52,y+size*.16,x+size*.54,y+size*.16,'#485b4c',size*.09);
+  }
   if(terrain==='hill'){
     ctx.fillStyle='#4d5f53';
     ctx.beginPath();ctx.moveTo(x-size*.5,y+size*.33);ctx.lineTo(x-size*.1,y-size*.45);ctx.lineTo(x+size*.44,y+size*.24);ctx.closePath();ctx.fill();
@@ -472,8 +483,10 @@ function modal(kind){
     '<div class="modal-rules"><p><b>1.</b> Выбери свою область и одну из дружин. Прикажи ей марш, затем коснись соседней земли. Вражеское владение запускает настоящую тактическую битву.</p>'+
     '<p><b>2.</b> Доступны два стратегических приказа за сезон. Одна дружина может идти или пополняться лишь один раз за сезон. Победа приносит землю, но потери остаются с армией.</p>'+
     '<p><b>3.</b> Новая дружина стоит 9 серебра, пополнение +4 — 6, гарнизон +3 — 5. Сезон приносит доход земель и списывает содержание армий.</p>'+
-    '<p><b>4.</b> Орден и Князья ходят после каждого сезона. Вражеское нападение на наши земли требует лично защитить провинцию.</p>'+
-    '<p><b>5.</b> Захвати обе столицы врага: Угольный мыс и Багровый трон. Если падёт Северный оплот — война проиграна.</p></div>'+
+    '<p><b>4.</b> Непрерывная цепь своих земель от столицы доставляет снабжение. Отрезанные дружины теряют по два воина за сезон, гарнизоны по одному. Набор и укрепления в изоляции недоступны.</p>'+
+    '<p><b>5.</b> У стен можно начать осаду: блокада каждый сезон сокращает гарнизон, пока крепость не капитулирует. Штурм немедленно открывает поле с крепостными укрытиями. Набег ослабляет гарнизон и экономику без захвата.</p>'+
+    '<p><b>6.</b> Орден и Князья ходят после каждого сезона. Вражеское нападение на наши земли требует лично защитить провинцию.</p>'+
+    '<p><b>7.</b> Захвати обе столицы врага: Угольный мыс и Багровый трон. Если падёт Северный оплот — война проиграна.</p></div>'+
     '<div class="modal-actions"><button class="primary" data-action="returnCampaign">На карту</button></div>';
   }
   if(kind==='campaignMarchConfirm'){
@@ -482,6 +495,29 @@ function modal(kind){
     '<p>Войска встретят сопротивление. Захват или оборона этой области будут решены на тактическом поле. Потери не исчезнут после боя.</p>'+
     '<div class="modal-actions"><button class="primary" data-action="commitMarch">Начать наступление</button>'+
     '<button data-action="returnCampaign">Отменить приказ</button></div>';
+  }
+  if(kind==='campaignSiegeConfirm'){
+    const dest=PROVINCES[marchDestination],p=campaign?.provinces[marchDestination];
+    html='<div class="modal-kicker">ПОСТАВИТЬ ЛАГЕРЬ</div><h1 id="modalTitle">Осада: '+esc(dest.name)+'</h1>'+
+      '<p>Дружина останется на своей земле. Каждый сезон осадное кольцо сокращает вражеский гарнизон. Противник может перерезать твои обозы. Капитуляция наступит, когда гарнизон истощён.</p>'+
+      '<p>Оборона крепости: '+(p?.garrison??0)+' воинов. Начало блокады стоит один приказ.</p>'+
+      '<div class="modal-actions"><button class="primary" data-action="commitSiege">Сомкнуть кольцо</button>'+
+      '<button data-action="returnCampaign">Отмена</button></div>';
+  }
+  if(kind==='campaignRaidConfirm'){
+    const dest=PROVINCES[marchDestination];
+    html='<div class="modal-kicker">НАЛЁТ НА ОКРАИНУ</div><h1 id="modalTitle">'+esc(dest.name)+'</h1>'+
+      '<p>Разорить обозы и деревни: +4 серебра, −2 к гарнизону противника и два сезона с пониженным доходом. Собственная дружина потеряет одного воина. Территория не будет захвачена.</p>'+
+      '<div class="modal-actions"><button class="primary" data-action="commitRaid">Отправить налётчиков</button>'+
+      '<button data-action="returnCampaign">Отмена</button></div>';
+  }
+  if(kind==='campaignLiftConfirm'){
+    const siege=siegeByArmy(campaign,selectedArmy);
+    html='<div class="modal-kicker">ВОЕННЫЙ СОВЕТ</div><h1 id="modalTitle">Снять блокаду?</h1>'+
+      '<p>Осадные лагеря будут разобраны. Весь накопленный прогресс блокады пропадёт, но дружина сможет вновь двигаться в следующем сезоне.</p>'+
+      '<p>'+(siege?esc(PROVINCES[siege.to].name):'')+'</p>'+
+      '<div class="modal-actions"><button class="danger" data-action="commitLift">Снять осаду</button>'+
+      '<button class="primary" data-action="returnCampaign">Сохранить блокаду</button></div>';
   }
   if(kind==='campaignWarning'){
     const p=campaign?.pending;
@@ -581,6 +617,18 @@ veilContent.addEventListener('click',event=>{
   }
   if(action==='returnCampaign'){openStrategic(false);return;}
   if(action==='campaignRules'){previousModal=screen;modal('campaignRules');return;}
+  if(action==='commitSiege'||action==='commitRaid'){
+    const a=campaign?.armies.find(a=>a.id===selectedArmy);
+    if(!a){openStrategic();return;}
+    const result=action==='commitSiege'?startSiege(campaign,a.id,marchDestination):raid(campaign,a.id,marchDestination);
+    if(result.error){openStrategic();showNotice(result.error);$('campaignTicker').textContent=result.error;return;}
+    selectedProvince=marchDestination;campaignAction(result);openStrategic(false);return;
+  }
+  if(action==='commitLift'){
+    const result=liftSiege(campaign,selectedArmy);
+    if(result.error){openStrategic();showNotice(result.error);return;}
+    campaign=result.state;persistCampaign();openStrategic(false);return;
+  }
   if(action==='commitMarch'){
     const a=campaign?.armies.find(a=>a.id===selectedArmy);
     if(!a){openStrategic();return;}
@@ -639,5 +687,5 @@ createWorkshopMode({
     modal('home');
   }
 });
-window.__blackBannersTestState=()=>({screen,game,selected,tool,campaign,marchMode,selectedArmy,selectedProvince});
+window.__blackBannersTestState=()=>({screen,game,selected,tool,campaign,marchMode,warMode,selectedArmy,selectedProvince});
 update();resize();modal('home');
