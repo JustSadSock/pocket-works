@@ -57,6 +57,7 @@ try{
     assert.equal(s.campaign.coins,10);
     assert.equal(await page.locator('.map-region .province-treaty').count()>0,true,'treaty markers');
     await capture(page,key,'peace-and-seals');
+    await page.locator('[data-view="war"]').click();
     await page.locator('#campaignMap [data-province="1"]').click();
     await page.locator('[data-cmd="march"]').click();
     await page.locator('#campaignMap [data-province="2"]').click();
