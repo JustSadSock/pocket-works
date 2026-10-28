@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="./icons/icon.svg">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 <link rel="stylesheet" href="./styles.css">
 <link rel="stylesheet" href="./campaign.css">
 </head>
@@ -21,7 +22,7 @@
  <header class="mast" data-ui>
   <a class="return" href="../../" data-app-control data-native-press>← Pocket Works</a>
   <div class="brand"><div class="brand-emblem" aria-hidden="true"><svg viewBox="0 0 42 42"><path d="M20 4v31M21 7l17 3-7 12-10-2" fill="#a66049" stroke="#e0c8a1" stroke-width="1.8"/><path d="M11 36h20M17 39h7" stroke="#d3c3a0" stroke-width="3"/></svg></div><div><strong>ЧЁРНЫЕ ЗНАМЁНА</strong><span>ВОЙНА ЗА СРЕДИННЫЙ КАМЕНЬ</span></div></div>
-  <button type="button" id="openMenu" class="mast-menu" data-native-press aria-label="Меню битвы">МЕНЮ</button>
+  <div class="mast-tools"><button class="workshop-trigger" type="button" data-workshop-trigger data-native-press aria-label="Мастерская диагностики">⋯</button><button type="button" id="openMenu" class="mast-menu" data-native-press aria-label="Меню битвы">МЕНЮ</button></div>
  </header>
  <div class="battle-layout" id="battleLayout">
   <section class="battle-stage" aria-label="Тактическое поле">
