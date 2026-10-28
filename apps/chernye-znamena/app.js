@@ -654,6 +654,7 @@ veilContent.addEventListener('click',event=>{
     courtOpen=true;
     campaignAction(result);
     if(campaign.winner!==null)modal('campaignEnd');
+    else openStrategic(false);
     return;
   }
   if(action==='campaignRules'){previousModal=screen;modal('campaignRules');return;}
