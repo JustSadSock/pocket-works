@@ -184,14 +184,14 @@ test('siege wears down the garrison and captures a capital after several seasons
  assert.equal(siegeAt(s,3).progress,0);
  assert.equal(siegeByArmy(s,'army-1').to,3);
  assert.equal(s.provinces[3].owner,2);
- for(let i=0;i<4&&siegeAt(s,3);i++){
+ for(let i=0;i<4&&siegeByArmy(s,'army-1');i++){
    const result=endSeason(s);assert.equal(result.error,null);
    s=result.state;
    assert.ok(validCampaign(s));
    assert.equal(s.pending,null,'no hostile field army should derail scenario');
  }
  assert.equal(s.provinces[3].owner,0,'capital capitulates after loss of supplies and garrison');
- assert.equal(siegeAt(s,3),null);
+ assert.equal(siegeByArmy(s,'army-1'),null,'our siege concluded; a new enemy counter-siege may begin');
  assert.equal(s.armies.find(a=>a.id==='army-1').province,3);
  assert.equal(s.report?.siege,true);
 });
