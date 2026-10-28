@@ -1,7 +1,7 @@
 import {DEFINITIONS,DEFAULTS,normalizeJob,build,stlBuffer,gearOutline,transformedTriangle} from './geometry.js';\nimport { installMobileRuntime } from '../../shared/mobile-runtime.js';\nimport { createWorkshopMode } from '../../shared/workshop-mode.js';\ninstallMobileRuntime();
 
 const $=id=>document.getElementById(id);
-const KEY='pocket-works:print-forge:v1';
+const KEY='pocket-works:print-forge:v1';\nconst MATERIALS={PLA:1.24,PETG:1.27,ABS:1.04,TPU:1.21};\nfunction loadMaterial(){try{const id=localStorage.getItem(KEY+':material');return Object.hasOwn(MATERIALS,id)?id:'PLA'}catch{return 'PLA'}}
 const stage=$('stage'),ctx=stage.getContext('2d',{alpha:false});
 const colors=['#d5dbcf','#d79a70','#d7b88a'];
 const icons={
@@ -10,7 +10,7 @@ const icons={
   spacer:'<ellipse cx="12" cy="7" rx="9" ry="5"/><ellipse cx="12" cy="7" rx="3.5" ry="1.7"/><path d="M3 7v10c0 7 18 7 18 0V7"/>'
 };
 function loadJob(){try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');return normalizeJob(saved)}catch{return {...DEFAULTS.gear_pair}}}
-const state={job:loadJob(),model:null,view:'3d',zoom:1,yaw:.52,pitch:.67,
+const state={job:loadJob(),material:loadMaterial(),model:null,view:'3d',zoom:1,yaw:.52,pitch:.67,
   running:false,rpm:30,direction:1,theta:0,last:0,drag:null,frame:false,
   cwidth:0,cheight:0,scale:1};
 let toastTimer=null;
@@ -65,13 +65,13 @@ function showReport(){
     ['ДЕТАЛЕЙ',String(m.parts.length)],
     ['ТРЕУГОЛЬНИКОВ',fmt(total,0)],
     ['ОБЪЁМ',fmt(volume/1000,1)+' см³'],
-    ['ЗАЦЕПЛЕНИЕ',m.job.type==='gear_pair'?fmt(m.facts.center_mm)+' мм':'—']
+    ['ЗАЦЕПЛЕНИЕ',m.job.type==='gear_pair'?fmt(m.facts.center_mm)+' мм':'—'],\n    ['МАССА · 100%',fmt(volume/1000*MATERIALS[state.material],1)+' г']
   ];
   $('reportFacts').replaceChildren(...slots.map(([name,value])=>{
     const box=document.createElement('div'),cap=document.createElement('small'),val=document.createElement('strong');
     cap.textContent=name;val.textContent=value;box.append(cap,val);return box;
   }));
-  $('reportNote').textContent=(m.warnings.join(' ')||'STL проверен на замкнутость и ориентацию поверхности.')+' Прочность, допуски и печатаемость требуют проверки на принтере.';
+  $('reportNote').textContent=(m.warnings.join(' ')||'STL проверен на замкнутость и ориентацию поверхности.')+' Масса — оценка для сплошного тела без заполнения/поддержек. Прочность и печатаемость требуют проверки на принтере.';
   $('partExtras').replaceChildren();
   const strong=document.createElement('strong');
   const message=document.createElement('div');
@@ -85,7 +85,7 @@ function showReport(){
     strong.textContent='Радиальная стенка '+fmt(m.facts.radial_wall_mm,2)+' мм';
     message.textContent='Втулка с отверстием · Проверь посадочный зазор под реальный вал.';
   }
-  $('partExtras').append(strong,message);
+  $('partExtras').append(strong,message);\n  const materialLabel=document.createElement('label');materialLabel.className='material-field';materialLabel.textContent='МАТЕРИАЛ ДЛЯ РАСЧЁТА МАССЫ';\n  const materialSelect=document.createElement('select');materialSelect.setAttribute('aria-label','Материал для расчёта массы');\n  for(const id of Object.keys(MATERIALS)){const option=document.createElement('option');option.value=id;option.textContent=id+' · '+MATERIALS[id]+' г/см³';materialSelect.append(option)}\n  materialSelect.value=state.material;\n  materialSelect.addEventListener('change',()=>{state.material=materialSelect.value;try{localStorage.setItem(KEY+':material',state.material)}catch{}showReport();toast('Оценка массы обновлена')});\n  materialLabel.append(materialSelect);$('partExtras').append(materialLabel);
   $('modelTitle').textContent=DEFINITIONS[m.job.type].title;
   $('modelSubtitle').textContent=DEFINITIONS[m.job.type].description;
   $('modeMechanics').hidden=m.job.type!=='gear_pair';
