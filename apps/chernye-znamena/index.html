@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#242a26">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Чёрные знамёна">
+<meta name="description" content="Короткие средневековые тактические битвы на гексах: строй, фланги, рельеф и командование.">
+<title>Чёрные знамёна — Pocket Works</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main id="app" class="app-shell" data-app-shell data-fullscreen-app>
+ <header class="mast" data-ui>
+  <a class="return" href="../../" data-app-control data-native-press>← Pocket Works</a>
+  <div class="brand"><div class="brand-emblem" aria-hidden="true"><svg viewBox="0 0 42 42"><path d="M20 4v31M21 7l17 3-7 12-10-2" fill="#a66049" stroke="#e0c8a1" stroke-width="1.8"/><path d="M11 36h20M17 39h7" stroke="#d3c3a0" stroke-width="3"/></svg></div><div><strong>ЧЁРНЫЕ ЗНАМЁНА</strong><span>ВОЙНА ЗА СРЕДИННЫЙ КАМЕНЬ</span></div></div>
+  <button type="button" id="openMenu" class="mast-menu" data-native-press aria-label="Меню битвы">МЕНЮ</button>
+ </header>
+ <div class="battle-layout">
+  <section class="battle-stage" aria-label="Тактическое поле">
+   <div class="battle-topline" data-ui><strong id="battleName">Пепельный перевал</strong><span id="roundLabel">РАУНД I</span></div>
+   <div class="canvas-frame" id="canvasFrame">
+    <canvas id="board" data-gesture-surface data-block-callout tabindex="0" role="application" aria-label="Поле боя: выберите свой отряд, затем клетку для передвижения или противника для атаки"></canvas>
+    <div class="canvas-noise" aria-hidden="true"></div>
+    <div id="battleNotice" class="battle-notice" role="status" aria-live="polite"></div>
+    <div class="map-corner corner-nw"></div><div class="map-corner corner-ne"></div><div class="map-corner corner-sw"></div><div class="map-corner corner-se"></div>
+   </div>
+   <div class="terrain-key" data-ui><span><i class="key-hill"></i> Высота +1</span><span><i class="key-forest"></i> Лес +1</span><span><i class="key-stone"></i> Центр: 2 хода</span></div>
+  </section>
+  <aside class="war-desk" data-ui>
+   <div class="status-strip">
+    <div><small id="turnSmall">ХОД СЕВЕРА</small><strong id="turnName">Северный союз</strong></div>
+    <div class="order-count"><strong id="orders">3</strong><small>ПРИКАЗА</small></div>
+   </div>
+   <div class="war-detail">
+    <div class="unit-mark" id="unitMark" aria-hidden="true">✦</div>
+    <div class="unit-intro"><small id="unitEyebrow">ОТРЯД НЕ ВЫБРАН</small><strong id="unitName">Выбери войско</strong><p id="unitDescription">Коснись своего отряда на поле. Цветные контуры подскажут возможные действия.</p></div>
+   </div>
+   <div class="orders-panel">
+    <div class="orders-title">ПРИКАЗЫ <span id="rangeHint">—</span></div>
+    <div class="order-buttons">
+     <button type="button" id="moveBtn" data-native-press><span class="order-symbol">↗</span><span>Марш</span></button>
+     <button type="button" id="attackBtn" data-native-press><span class="order-symbol">⚔</span><span>Удар</span></button>
+     <button type="button" id="guardBtn" data-native-press><span class="order-symbol">◈</span><span>Оборона</span></button>
+    </div>
+   </div>
+   <div class="battle-bottom">
+    <p id="tacticalHint" class="tactical-hint" role="status" aria-live="polite">Знамя управляет отрядами в радиусе двух клеток.</p>
+    <button id="endTurn" class="primary-turn" type="button" data-native-press>ЗАВЕРШИТЬ ХОД <span>→</span></button>
+   </div>
+   <div class="dispatch" id="dispatch">Сражение начинается. Займи возвышенности перед ударом.</div>
+  </aside>
+ </div>
+ <div class="veil" id="veil">
+  <div class="veil-content" id="veilContent" role="dialog" aria-modal="true" aria-labelledby="modalTitle"></div>
+ </div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Чёрные знамёна" data-app-version="0.1.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

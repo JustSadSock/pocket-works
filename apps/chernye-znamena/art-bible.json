@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "product": "chernye-znamena",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "horugvi",
+      "evidence": "apps/horugvi/index.html and styles.css inspected in source; no new screenshot captured",
+      "lesson": "Не повторять светлый пергаментный книжный театр и историю трёх последовательных битв."
+    },
+    {
+      "slug": "perekos",
+      "evidence": "apps/perekos/app.config.json and existing project history",
+      "lesson": "Не повторять пиксельную магическую дуэль и нижнюю полосу активных способностей."
+    },
+    {
+      "slug": "venets",
+      "evidence": "apps/venets/visual-direction.json inspected in source",
+      "lesson": "Отделить короткую войну полков от политического манускрипта."
+    },
+    {
+      "slug": "zastava",
+      "evidence": "apps/zastava/app.config.json reviewed in source",
+      "lesson": "Не превращать плоский тактический прототип в трёхмерную жизнь поселения."
+    },
+    {
+      "slug": "trace-mosaic",
+      "evidence": "apps/trace-mosaic/visual-direction.json inspected in source",
+      "lesson": "Избегать музейной светлой керамики и drag-and-drop частей картины."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://www.badnorth.com/press-kit",
+      "inspectedAt": "2026-10-28T09:30:00Z",
+      "observation": "Малочисленные отряды читаются через позиционирование на небольших территориях и удержание проходов.",
+      "principle": "Положение отряда важнее плотного списка характеристик.",
+      "application": "Пять миниатюр, три действия, явно видимая позиция на гексе.",
+      "avoid": "Не воспроизводить острова, модели и фирменный арт Bad North."
+    },
+    {
+      "url": "https://battlebrothersgame.com/tactical-combat/",
+      "inspectedAt": "2026-10-28T09:30:00Z",
+      "observation": "Позиционирование, география, линия видимости и защитная роль рельефа создают тактические решения.",
+      "principle": "Локальная география влияет на стоимость перемещения и силу боя.",
+      "application": "Лес/холмы/брод/топь меняют движение и бой.",
+      "avoid": "Не копировать энциклопедию перков, травм и вооружения."
+    },
+    {
+      "url": "https://www.redblobgames.com/grids/hexagons/",
+      "inspectedAt": "2026-10-28T09:30:00Z",
+      "observation": "Аксиальная сетка определяет расстояния и шесть направлений без визуальной двусмысленности.",
+      "principle": "Один набор координат для боя, ввода и отрисовки.",
+      "application": "Детерминированные distance, DIRECTIONS, canvas hit testing.",
+      "avoid": "Не копировать схемы страницы и её SVG изображения."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "slate-war-table",
+      "medium": "Canvas 2D объёмная сланцевая гексагональная диорама с геометрическими миниатюрами.",
+      "composition": "Поле доминирует; управляющая полка сбоку или двумя строками снизу.",
+      "interaction": "Точное касание фигур и подсвеченных гексов для приказов.",
+      "motion": "Короткий импульс после удара, немедленная фиксация нового строя.",
+      "rationale": "Выбрано: читается на телефоне, показывает средневековую материальность без сетевой 3D-зависимости."
+    },
+    {
+      "id": "gothic-3d-siege",
+      "medium": "WebGL крупный 3D замок со свободной камерой.",
+      "composition": "Сцена на весь экран, трёхмерные всплывающие команды.",
+      "interaction": "Поворот камеры и выбор части стены или армии.",
+      "motion": "Разваливающиеся камни и медленные пролёты камеры.",
+      "rationale": "Отложено: дорого и скрывает конкретный гекс при касании."
+    },
+    {
+      "id": "illuminated-chronicle",
+      "medium": "SVG пергаментная военная хроника с символами армий.",
+      "composition": "Вертикальная книга с историческими сценами и приказами внизу.",
+      "interaction": "Выбирать действие на странице и перелистывать итог.",
+      "motion": "Перелистывание глав и каллиграфические росчерки.",
+      "rationale": "Отложено: слишком похоже на уже существующие Хоругви."
+    }
+  ],
+  "selection": {
+    "concept": "slate-war-table",
+    "reason": "Максимальная читаемость положения и командования плюс собственная строгая эстетика без заимствования референсов.",
+    "rejected": [
+      {
+        "concept": "gothic-3d-siege",
+        "reason": "Для этапа проверки тактического ядра важнее чёткий ввод, чем камера и стоимость контента."
+      },
+      {
+        "concept": "illuminated-chronicle",
+        "reason": "Повторяет уже занятый рукописный визуальный язык Хоругвей."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "canvas2d",
+      "availability": "available",
+      "reason": "Стандартный браузерный Canvas 2D; процедурная векторная миниатюра без внешнего ассета."
+    },
+    {
+      "id": "svg",
+      "availability": "available",
+      "reason": "Авторский SVG-герб со знаменем хранится в icons/icon.svg."
+    },
+    {
+      "id": "blender",
+      "availability": "unverified",
+      "reason": "Пакет Blender не проверен для этой сессии.",
+      "fallback": "Используется целостное процедурное 2.5D оформление, без заимствованных примитивов 3D сцены."
+    },
+    {
+      "id": "browser-qa",
+      "availability": "unverified",
+      "reason": "Playwright поддерживается GitHub Actions в репозитории, но проверка конкретной ветки выполняется отдельно.",
+      "fallback": "Использовать GitHub CI и вынести неподтверждённые устройства в QA список."
+    }
+  ],
+  "assets": [
+    {
+      "id": "banner-icon",
+      "tool": "svg",
+      "source": "icons/source.svg",
+      "output": "icons/icon.svg",
+      "role": "Реальное приложение и его военное знамя в Pocket Works.",
+      "acceptance": "Щит и треугольная хоругвь читаются в 48px, без буквенного монограмного шаблона.",
+      "integration": "index.html, manifest.webmanifest, sw.js",
+      "provenance": "Исходный векторный рисунок в icons/source.svg; экспорт в icons/icon.svg для оболочки и PWA.",
+      "maxBytes": 6000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Компактная панель не должна перекрывать гексы на телефоне.",
+      "При перемещении знамени атакующие вне радиуса получают понятную причину.",
+      "После перезапуска сохранённая битва должна открываться из меню."
+    ],
+    "comparisons": [
+      "horugvi",
+      "perekos",
+      "venets"
+    ]
+  }
+}
