@@ -73,6 +73,7 @@ try{
     s=await state(page);assert.equal(s.campaign.season,2);
     await snap(page,key,'next-season');
     await page.reload({waitUntil:'domcontentloaded'});
+    assert.equal(await page.evaluate(()=>localStorage.getItem('pocket-works:chernye-znamena:linked-battle-v1')),null,'finished campaign combat must not resurrect on reload');
     await page.locator('[data-action="startCampaign"]').click();
     s=await state(page);
     assert.equal(s.campaign.season,2);
