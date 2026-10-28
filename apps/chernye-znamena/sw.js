@@ -1,8 +1,8 @@
 const CACHE_PREFIX='chernye-znamena-';
-const CACHE_NAME='chernye-znamena-v0.1.0';
-const APP_VERSION='0.1.0',RELEASE_DATE='2026-10-28',CACHE_PROTOCOL=2;
-const RELEASE_NOTES=["Первый играбельный этап: тактические бои на 7×5 гексах с четырьмя классами войск и тремя приказами за ход.","Командование через знамя, детерминированный урон, рельеф, фланги, оборона и два поля сражения.","Противник-ИИ, локальная игра вдвоём, сохранение хода, автономная PWA и оригинальная 2.5D миниатюра."];
-const APP_SHELL=['./','./index.html','./styles.css','./app.js','./rules.mjs','./app.config.json','./manifest.webmanifest','./icons/icon.svg',
+const CACHE_NAME='chernye-znamena-v0.2.0';
+const APP_VERSION='0.2.0',RELEASE_DATE='2026-10-28',CACHE_PROTOCOL=2;
+const RELEASE_NOTES=["Этап II: отдельная стратегическая кампания на политической карте 12 провинций с тремя державами и нейтральными землями.","Независимые полевые армии, марш через общие границы, 2 приказа за сезон, набор, укрепления, казна, доход и содержание войск.","Вторжения и оборона переходят в существующие гексагональные сражения; потери и результаты возвращаются в кампанию, меняют контроль провинций, влияют на исход войны.","Искусственный интеллект соперников расширяет владения между сезонами. Кампания и бои сохраняются отдельно; отдельный тактический режим не затронут.","Создан адаптивный военный атлас, проверяемая модель кампании и браузерные тесты."];
+const APP_SHELL=['./','./index.html','./styles.css','./app.js','./rules.mjs','./campaign.mjs','./campaign-ui.mjs','./campaign.css','./app.config.json','./manifest.webmanifest','./icons/icon.svg',
 '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/pwa-utils.js',
 '../../shared/capabilities/storage.js','../../shared/capabilities/motion.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];
 const SCOPE_URL=new URL('./',self.registration.scope);
