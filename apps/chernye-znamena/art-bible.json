@@ -123,12 +123,12 @@
     {
       "id": "banner-icon",
       "tool": "svg",
-      "source": "icons/icon.svg",
+      "source": "icons/source.svg",
       "output": "icons/icon.svg",
       "role": "Реальное приложение и его военное знамя в Pocket Works.",
       "acceptance": "Щит и треугольная хоругвь читаются в 48px, без буквенного монограмного шаблона.",
       "integration": "index.html, manifest.webmanifest, sw.js",
-      "provenance": "Оригинальный SVG, созданный в рамках приложения.",
+      "provenance": "Исходный векторный рисунок в icons/source.svg; экспорт в icons/icon.svg для оболочки и PWA.",
       "maxBytes": 6000
     }
   ],
