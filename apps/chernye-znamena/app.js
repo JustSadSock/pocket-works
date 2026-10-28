@@ -42,11 +42,11 @@ function setStage(section){
   if(!isMap)requestAnimationFrame(resize);
 }
 function campaignAction(result){
-  if(result.error){showNotice(result.error);sound('error');return false;}
+  if(result.error){showNotice(result.error);$('campaignTicker').textContent=result.error; sound('error');return false;}
   campaign=result.state;persistCampaign();sound('move');
   selectedArmy=campaign.armies.some(a=>a.id===selectedArmy)?selectedArmy:
     (campaign.armies.find(a=>a.side===0)?.id||null);
-  if(campaign.pending){launchLinkedBattle(false);return true;}
+  if(campaign.pending){launchLinkedBattle(campaign.pending.attackerSide!==0);return true;}
   marchMode=false;renderStrategic();return true;
 }
 function renderStrategic(){
@@ -59,14 +59,14 @@ function renderStrategic(){
   $('campaignTicker').textContent=campaign.history[0]||'Приказы ждут полководца.';
   $('campaignEndSeason').disabled=!!campaign.pending||campaign.winner!==null;
 }
-function openStrategic(){
+function openStrategic(showEnding=true){
   if(!campaign)campaign=createCampaign();
   if(campaign.pending){launchLinkedBattle(true);return;}
   marchMode=false;
   screen='campaign';
   veil.classList.add('hidden');
   renderStrategic();
-  if(campaign.winner!==null)modal('campaignEnd');
+  if(campaign.winner!==null&&showEnding)modal('campaignEnd');
 }
 function launchLinkedBattle(warning){
   if(!campaign?.pending)return;
@@ -569,7 +569,7 @@ veilContent.addEventListener('click',event=>{
     try{localStorage.removeItem(LINKED_BATTLE_KEY);}catch{}
     openStrategic();return;
   }
-  if(action==='returnCampaign'){openStrategic();return;}
+  if(action==='returnCampaign'){openStrategic(false);return;}
   if(action==='campaignRules'){previousModal=screen;modal('campaignRules');return;}
   if(action==='commitMarch'){
     const a=campaign?.armies.find(a=>a.id===selectedArmy);
