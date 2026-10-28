@@ -51,7 +51,6 @@ def gear_outline(teeth, module, pressure_degrees=20):
         def point(r, a):
             return (r * math.cos(center + a), r * math.sin(center + a))
         # Left flank rises; tip crosses; right flank descends.
-        result.append(point(root, -math.pi / teeth))
         result.append(point(root, -half_base))
         for k in range(1, 9):
             radius = root + (tip - root) * k / 8
