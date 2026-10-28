@@ -12,7 +12,9 @@ const TERRAIN_COLORS={grass:'#778973',hill:'#a19d7f',forest:'#63785c',river:'#54
 let game=createBattle(), selected=null, tool='move', screen='home', pickMap='pass',pickMode='ai';
 let audioEnabled=false,audio=null,aiTimer=null,noticeTimer=null,impact=null;
 let size=30,originX=0,originY=0,viewWidth=400,viewHeight=400,dpr=1;
+let pointerStart=null;
 let loadError='';
+let previousModal='home';
 try{const s=JSON.parse(localStorage.getItem(STORAGE)||'null');if(s && validSaved(s))game=s;else if(s)loadError='Старое сохранение повреждено и не загружено';}
 catch{loadError='Сохранение недоступно';}
 try{audioEnabled=JSON.parse(localStorage.getItem(PREFS)||'{}').sound===true;}catch{}
@@ -246,7 +248,13 @@ function perform(action){
   if(game.orders===0){showNotice('Приказы исчерпаны — завершите ход');}
   return true;
 }
+canvas.addEventListener('pointerdown',event=>{pointerStart={id:event.pointerId,x:event.clientX,y:event.clientY};});
+canvas.addEventListener('pointercancel',()=>{pointerStart=null;});
 canvas.addEventListener('pointerup',event=>{
+  if(!pointerStart||pointerStart.id!==event.pointerId)return;
+  const moved=Math.hypot(event.clientX-pointerStart.x,event.clientY-pointerStart.y);
+  pointerStart=null;
+  if(moved>12)return;
   if(!activeTurn()||veil.classList.contains('hidden')===false)return;
   const rect=canvas.getBoundingClientRect(),p=hitHex(event.clientX-rect.left,event.clientY-rect.top);
   if(!p)return;
@@ -332,6 +340,9 @@ function modal(kind){
     '<p>'+esc(game.reason)+'. Север сохранил '+score0+' здоровья войска, Юг — '+score1+'.</p>'+
     '<div class="modal-actions"><button class="primary" data-action="replay">Переиграть битву</button><button data-action="home">Выбрать другое поле</button><a href="../../" data-app-control>← Вернуться в Pocket Works</a></div>';
   }
+  if(kind==='confirmNew'){
+    html='<div class="modal-kicker">ПОДТВЕРЖДЕНИЕ</div><h1 id="modalTitle">Забыть прежнюю битву?</h1><p>Новое сражение заменит сохранённый поход. Это действие невозможно отменить.</p><div class="modal-actions"><button class="danger" data-action="newConfirmed">Да, начать новую битву</button><button class="primary" data-action="home">Вернуться к выбору</button></div>';
+  }
   if(kind==='confirmRestart'){
     html='<div class="modal-kicker">ПОДТВЕРЖДЕНИЕ</div><h1 id="modalTitle">Покинуть поход?</h1><p>Текущий бой будет заменён новым. Его ход уже нельзя будет восстановить.</p><div class="modal-actions"><button class="danger" data-action="home">Да, завершить этот бой</button><button class="primary" data-action="resume">Нет, вернуться</button></div>';
   }
@@ -353,13 +364,16 @@ veilContent.addEventListener('click',event=>{
   if(el.dataset.mode){pickMode=el.dataset.mode;syncOptions();sound('move');return;}
   const action=el.dataset.action;
   if(action==='sound'){audioEnabled=!audioEnabled;writePrefs();sound('turn');modal(screen);return;}
-  if(action==='new'||action==='replay'){
+  if(action==='new' && readSaveExists() && game.winner===null){
+    modal('confirmNew');return;
+  }
+  if(action==='newConfirmed'||action==='new'||action==='replay'){
     game=createBattle(action==='replay'?game.mapId:pickMap,action==='replay'?game.mode:pickMode);
     selected=null;tool='move';persist();sound('turn');closeModal();showNotice('Веди войска к срединному камню');return;
   }
   if(action==='continue'||action==='resume'){closeModal();return;}
-  if(action==='rules'){window.__previousBlackBannersModal=screen;modal('rules');return;}
-  if(action==='back'){modal(window.__previousBlackBannersModal||'home');return;}
+  if(action==='rules'){previousModal=screen;modal('rules');return;}
+  if(action==='back'){modal(previousModal||'home');return;}
   if(action==='confirmRestart'){modal('confirmRestart');return;}
   if(action==='home'){modal('home');return;}
 });
