@@ -77,9 +77,9 @@ try{
     s=await gameState(page);assert.equal(s.campaign.pending,null);
     assert.equal(s.campaign.provinces[3].owner,2);
     // Fresh campaign: raid must really reduce garrison, but must not transfer land.
-    await page.evaluate(()=>localStorage.removeItem('pocket-works:chernye-znamena:campaign-v1'));
-    await page.reload({waitUntil:'domcontentloaded'});
-    await page.locator('[data-action="startCampaign"]').click();
+    await page.locator('#openMenu').click();
+    await page.locator('[data-action="restartCampaign"]').click();
+    await page.locator('[data-action="restartCampaignConfirmed"]').click();
     await page.locator('#campaignMap [data-province="1"]').click();
     await page.locator('[data-cmd="raid"]').click();
     await page.locator('#campaignMap [data-province="5"]').click();
