@@ -74,6 +74,7 @@ export function campaignMapSvg(s,selection,selectedArmy,marchMode,portrait){
  river+routes.join('')+tiles+'<path d="M20 20H'+(width-20)+'V'+(height-20)+'H20Z" fill="none" stroke="#d9c6a3" stroke-width="3" opacity=".45"/></svg>';
 }
 export function campaignInfo(s,selected,selectedArmy,marchMode){
+ const landNames={highland:'возвышенность',forest:'лес',river:'переправа',plain:'равнина',fort:'крепость'};
  const province=s.provinces[selected],world=PROVINCES[selected],owner=FACTIONS[province.owner],a=s.armies.find(x=>x.id===selectedArmy);
  const stationed=armiesAt(s,selected);
  const own=province.owner===0;
