@@ -1,6 +1,6 @@
 // Чёрные знамёна · campaign rules. Pure deterministic strategic layer.
 import { createBattle, TYPES } from './rules.mjs';
-import {createDiplomacy,ensureDiplomacy,diplomacyValid,freePassage,warDiplomacy,recordWar,nextPoliticalSeason,tributeIncome,vassal} from './diplomacy.mjs';
+import {createDiplomacy,ensureDiplomacy,diplomacyValid,freePassage,warDiplomacy,recordWar,nextPoliticalSeason,tributeIncome,vassal,negotiate} from './diplomacy.mjs';
 
 export const CAMPAIGN_VERSION = 1;
 export const MAX_STRENGTH = 18;
@@ -64,6 +64,11 @@ function finish(s){
   if(s.provinces[0].owner!==0){s.winner=1;note(s,'Северный оплот пал. Союз потерял войну.');}
 }
 export function income(s){return s.provinces.reduce((n,p)=>n+(p.owner===0?Math.max(0,PROVINCES[p.id].income-(p.raidedUntil>s.season?2:0)):0),0)+tributeIncome(s);}
+export function politicalOrder(s,side,action){
+ const result=negotiate(s,side,action);
+ if(!result.error)finish(result.state);
+ return result;
+}
 export function upkeep(s){return s.armies.filter(a=>a.side===0).reduce((n,a)=>n+Math.ceil(a.strength/6),0);}
 export function recruit(state,id,armyId=null){
   if(!canAct(state))return error(state,'Сейчас нельзя собирать войска');
