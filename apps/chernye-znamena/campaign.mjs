@@ -120,7 +120,7 @@ export function march(state,armyId,to){
 export function defensePower(s,id){
   const p=s.provinces[id];
   const field=armiesAt(s,id,p.owner).reduce((sum,a)=>sum+a.strength,0);
-  return p.garrison+field+Math.min(2,p.fort);
+  return Math.max(1,p.garrison+field+Math.min(2,p.fort));
 }
 export function validCampaign(c){
   if(!c || c.version!==CAMPAIGN_VERSION || !Number.isInteger(c.season) || c.season<1 || c.season>10000 ||
