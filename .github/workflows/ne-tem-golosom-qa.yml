@@ -53,6 +53,7 @@ jobs:
           node --check apps/ne-tem-golosom/studio-feedback.js
           node --check apps/ne-tem-golosom/media-protocol.js
           node --check apps/ne-tem-golosom/premiere-export.js
+          node --check apps/ne-tem-golosom/premiere-fast.js
           node --check apps/ne-tem-golosom/sw.js
       - name: Ensure real MP4 media test tools are available
         run: command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; }
