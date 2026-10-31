@@ -29,7 +29,7 @@ function mountEditorWorkspace(){
  const inspector=document.createElement('aside');
  inspector.className='editor-inspector';
  inspector.setAttribute('aria-label','Настройки выбранной реплики');
- for(const selector of ['.time-row','.timeline-tools','.timeline-viewport','.selected-clip-info','.edit-controls','.editor-bottom']){
+ for(const selector of ['.time-row','.timeline-tools','.timeline-viewport','.selected-clip-info','.edit-controls','.mic-capture-control','.editor-bottom']){
   const node=desk.querySelector(':scope > '+selector);
   if(!node)throw Error('Не найден элемент монтажного пульта: '+selector);
   cutting.append(node);
