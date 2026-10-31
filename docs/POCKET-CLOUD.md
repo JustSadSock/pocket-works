@@ -1,4 +1,4 @@
-# Pocket Cloud — stage B (FOLIO and ЗАМАЗКА only)
+# Pocket Cloud — account-owned sync for FOLIO, ЗАМАЗКА and РОЗКЛАД ТРОЯНД
 
 Pocket Cloud is an optional, account-owned sync service in the existing Cloudflare
 Worker. No separate R2 bucket, D1 database, subscription or OAuth scope is required.
@@ -12,6 +12,7 @@ Pocket ID account (`POCKET_CLOUD`, migration `pocket-cloud-sqlite-v1`).
   is updated in the background. A paper-style status/action strip in the
   album allows manual sync. Opening FOLIO on a second signed-in device
   downloads missing pages automatically.
+- **РОЗКЛАД ТРОЯНД 1.2**: separate account-owned documents per episode (`episode-N`) and profile settings/nicknames (`profile`), with CAS revision checks, local-first autosave, account-scoped local data, and recoverable copies of same-episode conflicts. Both panel layout and offline/guest ratings remain available without sign-in.
 - **ЗАМАЗКА 1.11**: local restoration archive (including saved brush strokes,
   selected artwork/variation and creation time) and separately the hand-drawn
   personal seal (editable strokes and raster preview). The archive merges
@@ -53,7 +54,7 @@ can be added later without changing the public user identity.
 ## API
 
 - `GET /pocket-cloud/usage`: authenticated, cross-app per-account usage including used/free/total bytes, active item slots, per-app totals and individual item titles/sizes (no payloads). Used by the Pocket ID profile meter.
-- `GET /pocket-cloud/list?app=folio|zamazka`: metadata, revisions,
+- `GET /pocket-cloud/list?app=folio|zamazka|rose-ranking-15`: metadata, revisions,
   tombstones, size usage and quota. No content is exposed until a signed-in user
   calls `GET /pocket-cloud/item?app=...&id=...`.
 - `POST /pocket-cloud/item?app=...&id=...`: conditional create/update with
@@ -62,7 +63,7 @@ can be added later without changing the public user identity.
   `{baseRevision}` that retains a tombstone.
 
 Transport/codec: `shared/capabilities/cloud.js`. App integrations live in
-`apps/folio/cloud-sync.js` and `apps/zamazka/cloud-sync.js`.
+`apps/folio/cloud-sync.js`, `apps/zamazka/cloud-sync.js` and `apps/rose-ranking-15/cloud-sync.js`.
 The cloud stores compressed editable projects, **not only PNG thumbnails**.
 
 ## Verification
