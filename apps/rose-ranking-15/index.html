@@ -32,9 +32,18 @@
     </div>
     <button type="button" id="nextEpisode" class="episode-arrow" data-native-press aria-label="Следующая серия">›</button>
   </div>
-  <div class="edition-line" data-ui><div class="edition-progress"><span id="progressBar"></span></div><span id="progressText">0 из 23 распределены</span><span id="saveStatus" role="status" aria-live="polite">Сохранено</span></div>
-  <div id="board" class="board" aria-label="Рейтинг участниц"></div>
-  <p class="board-foot">Нажми на фото ⤢, чтобы рассмотреть кадр целиком. Нажми на имя, чтобы выбрать тир и записать впечатление. Карточки можно переносить за ручку.</p>
+  <div class="edition-line" data-ui><div class="edition-progress"><span id="progressBar"></span></div><span id="progressText">0 из 23 распределены</span><span id="saveStatus" role="status" aria-live="polite">Сохранено</span><div class="cloud-controls"><span id="cloudStatus" aria-live="polite">Проверяем Pocket ID…</span><button id="cloudAction" type="button" data-native-press>Синхронизировать</button></div></div>
+  <div id="workbench" class="ranking-workbench" aria-label="Рабочее поле тир-листа">
+    <aside class="candidate-rail" aria-label="Список ещё не распределённых участниц">
+      <div class="rail-sticky"><div class="rail-heading"><div><span class="pane-kicker">КАРТОТЕКА</span><strong>Участницы</strong></div><small>Все 23</small></div><label class="rail-search"><span aria-hidden="true">⌕</span><input id="candidateSearch" type="search" placeholder="Найти участницу" autocomplete="off" aria-label="Поиск участницы"></label></div>
+      <div id="candidateList" class="candidate-list"></div>
+    </aside>
+    <section class="ranking-column" aria-label="Тир-лист">
+      <div class="ranking-heading"><div><span class="pane-kicker">МОЙ РЕЙТИНГ</span><strong>Тир-лист</strong></div><span>От S до F</span></div>
+      <div id="board" class="board" aria-label="Рейтинг участниц"></div>
+    </section>
+  </div>
+  <p class="board-foot">Левая колонка — все участницы и их текущие тиры, правая — твой рейтинг. Переноси за ручку ⠿ или нажми на имя и выбери S–F. Значок ⤢ раскрывает фото целиком.</p>
   <div class="sources-foot">Фото: <a href="https://viva.ua/news/20629-15-istoriy-15-harakteriv-i-borotba-za-kohannya-znayomimosya-z-uchasnitsyami-shou-holostyak" target="_blank" rel="noreferrer">Viva!</a>, <a href="https://tabloid.pravda.com.ua/celebrity/holostyak-15-yak-proyshlo-znayomstvo-v-yacheslava-kravcova-iz-uchasnicyami-ta-yak-yogo-divuvali-2018391/" target="_blank" rel="noreferrer">ТаблоID</a>. Список включает выбывших; личные оценки не зависят от результатов шоу.</div>
 </section>
 <div id="rankDock" class="rank-dock" hidden aria-label="Быстрое перетаскивание в тир">
@@ -72,6 +81,6 @@
 <div class="technical-tools" data-ui><button type="button" data-workshop-trigger data-native-press aria-label="Открыть диагностику Pocket Works">Диагностика приложения</button></div>
 <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="РОЗКЛАД ТРОЯНД" data-app-version="1.1.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="РОЗКЛАД ТРОЯНД" data-app-version="1.2.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
