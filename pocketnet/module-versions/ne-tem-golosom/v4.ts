@@ -11,7 +11,7 @@ const validAudioMeta=(state,meta)=>{
  if(!meta||typeof meta!=='object'||Array.isArray(meta))return false;
  if(typeof meta.id!=='string'||meta.id.length<1||meta.id.length>80||
     typeof meta.owner!=='string'||!state.players.some(p=>p.id===meta.owner)||
-    meta.epoch!==state.mediaEpoch)return false;
+    meta.epoch!==state.mediaEpoch||meta.round!==state.round)return false;
  if(!Number.isFinite(meta.start)||!Number.isFinite(meta.end)||!Number.isFinite(meta.offset)||
     meta.start<0||meta.end<=meta.start||meta.end>state.scene.duration+.02||
     meta.offset<0||meta.offset>state.scene.duration+1)return false;
