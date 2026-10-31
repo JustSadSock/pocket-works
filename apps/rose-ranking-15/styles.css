@@ -109,3 +109,7 @@ img[src*="imgnewtabl.pravda.com.ua"]{object-position:80% 50%!important}
   .photo-viewer-bar,.photo-viewer-footer{padding-left:max(16px,calc((100vw - 900px)/2));padding-right:max(16px,calc((100vw - 900px)/2))}
   .photo-viewer-heading strong{font-size:24px}
 }
+
+.technical-tools{max-width:810px;margin:0 auto;text-align:right;padding:0 16px 12px}
+.technical-tools button{min-height:44px;padding:6px 8px;border:0;background:transparent;color:#9d8887;font-size:11px;text-decoration:underline;text-underline-offset:2px}
+.technical-tools button:active{color:var(--wine)}
