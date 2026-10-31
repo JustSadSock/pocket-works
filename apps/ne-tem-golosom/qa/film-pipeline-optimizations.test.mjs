@@ -38,17 +38,20 @@ test('low-memory neural chunks reuse one worker and do not terminate it between 
  assert.match(film,/finally\{sharedModelWorker\.terminate\(\)\}/);
 });
 test('small original scene keeps source quality, oversized file still gets a real cut',()=>{
- const start=app.indexOf('function canSkipSceneEncoding(){');
+ const start=app.indexOf('function canUseLosslessCut(){');
  const end=app.indexOf('function hasSceneReview(){',start);
  assert.ok(start>=0&&end>start);
  const context={
-  Blob,mode:'host',sourceBlob:new Blob([new Uint8Array(1024)]),
+  Blob,mode:'host',selected:{totalDuration:60},sourceBlob:new Blob([new Uint8Array(1024)]),
   selectedSound:()=> 'original',
   MAX_ROOM_VIDEO_BYTES,estimateVideoBytes,
-  $:id=>({value:id==='trim-length'?'60':'5'})
+  $:id=>id==='trim-video'?{videoWidth:1280}:{value:id==='trim-length'?'60':id==='trim-start'?'0':id==='media-resolution'?'1920':'5'}
  };
  runInNewContext(app.slice(start,end),context);
  assert.equal(context.canSkipSceneEncoding(),true);
+ context.selected.totalDuration=120; // A short excerpt must be really cut, not share the full film.
+ assert.equal(context.canSkipSceneEncoding(),false);
+ context.selected.totalDuration=60;
  const oversized=new Blob([]);Object.defineProperty(oversized,'size',{value:220*1048576});
  context.sourceBlob=oversized;
  assert.equal(context.canSkipSceneEncoding(),false);
