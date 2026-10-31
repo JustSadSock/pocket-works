@@ -425,9 +425,13 @@ function canSkipSceneEncoding(){
  // and with zero re-encoding. Larger films still need an actual short export.
  if(selectedSound()!=='original'||!(sourceBlob instanceof Blob)||!canUseLosslessCut())return false;
  const length=Number($('trim-length').value);
- if(!Number.isFinite(length)||length<10||length>90)return false;
- return mode!=='host'||(sourceBlob.size<=MAX_ROOM_VIDEO_BYTES&&
-  sourceBlob.size<=estimateVideoBytes(length,Number($('media-quality').value),true));
+ const start=Number($('trim-start').value);
+ const total=Number(selected?.totalDuration||$('trim-video').duration);
+ if(!Number.isFinite(length)||length<10||length>90||
+  !Number.isFinite(start)||start>.05||!Number.isFinite(total)||
+  Math.abs(total-length)>.15)return false;
+ // Never send a full source as a "trim" when the user selected only a part.
+ return mode!=='host'||sourceBlob.size<=MAX_ROOM_VIDEO_BYTES;
 }
 function hasSceneReview(){
  return canSkipSceneEncoding()||videoExportBlob instanceof Blob||
