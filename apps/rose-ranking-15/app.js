@@ -327,7 +327,7 @@ function initialize(){
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){persist();disposeDrag();}});
  window.addEventListener('pagehide',()=>{persist();disposeDrag();});
  window.addEventListener('appdatareset',()=>{state=normalizeState(null,IDS);render();closeSheet();showNotice('Данные приложения сброшены');});
- createWorkshopMode({appName:'РОЗКЛАД ТРОЯНД',version:'1.0.0',cachePrefix:'rose-ranking-15-',storageNamespace:APP,onReset(){storage.reset();}});
+ createWorkshopMode({appName:'РОЗКЛАД ТРОЯНД',version:'1.0.0',cachePrefix:'rose-ranking-15-',storageNamespace:APP,onReset(){storage.reset();window.dispatchEvent(new CustomEvent('appdatareset'));}});
  rankDock();render();
  document.documentElement.dataset.roseRankingReady='1';
 }
