@@ -2,7 +2,7 @@ import { installMobileRuntime, setDocumentScrollLocked } from '../../shared/mobi
 import { createVersionedStore } from '../../shared/capabilities/storage.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { CONTESTANTS } from './contestants.js';
-import { TIERS, createFirst, normalizeState, ensureEpisode, findTier, movePerson, countRated, rankChanges } from './model.js';
+import { TIERS, createFirst, normalizeState, ensureEpisode, findTier, movePerson, countRated, rankChanges, eliminatedBeforeEpisode, visibleInEpisode } from './model.js';
 
 installMobileRuntime();
 
@@ -22,7 +22,7 @@ const $=id=>document.getElementById(id);
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const current=()=>state.episodes[state.current];
 const safePerson=id=>PEOPLE.get(id);
-const visiblePerson=id=>{const person=safePerson(id);return person&&(state.showAll||!person.exit||person.exit>state.current);};
+const visiblePerson=id=>visibleInEpisode(safePerson(id),state.current,state.showAll);
 const initials=name=>String(name).split(' ').map(x=>x[0]).slice(0,2).join('');
 const episodeLabel=n=>String(n).padStart(2,'0');
 const episodeDate=n=>n<=3?new Intl.DateTimeFormat('ru-RU',{timeZone:'UTC',day:'numeric',month:'long'}).format(new Date(Date.UTC(2026,9,16+7*(n-1)))):'Личный рейтинг будущей серии';
@@ -41,13 +41,14 @@ function touchEpisode(){current().edited=Date.now();persist();}
 function personCard(id,changes){
  const p=safePerson(id);if(!p)return '';
  const nick=state.nicknames[id]||'';
- const out=p.exit&&p.exit<=state.current;
+ const out=eliminatedBeforeEpisode(p,state.current);
  const delta=changes[id]||'';
  return `<article class="person" data-id="${escapeHtml(id)}">
   <button type="button" class="person-button" data-open-person="${escapeHtml(id)}" aria-label="${escapeHtml(p.name)}: выбрать тир и посмотреть описание" data-native-press>
     <span class="person-photo"><img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async"><span class="photo-fallback">${escapeHtml(initials(p.name))}</span></span>
     <span class="person-bottom"><span class="person-name">${escapeHtml(p.short)}${p.name!==p.short?' '+escapeHtml(p.name.split(' ').slice(1).join(' ')):''}</span>${nick?`<span class="person-nick">${escapeHtml(nick)}</span>`:''}</span>
   </button>
+  <button type="button" class="photo-expand-button" data-open-photo="${escapeHtml(id)}" aria-label="Просмотреть фотографию ${escapeHtml(p.name)} на весь экран" data-native-press><span aria-hidden="true">⤢</span></button>
   ${out?`<span class="person-exit">Выбыла · ${p.exit} серия</span>`:''}
   ${delta?`<span class="person-delta" data-change="${delta}" aria-label="${delta==='up'?'Поднялась':delta==='down'?'Опустилась':delta==='new'?'Новая оценка':'Без оценки'}">${delta==='up'?'↑':delta==='down'?'↓':delta==='new'?'＋':'·'}</span>`:''}
   <button type="button" class="person-grip" data-drag-id="${escapeHtml(id)}" title="Перетащить карточку" aria-label="Перетащить ${escapeHtml(p.name)}" data-gesture-surface data-block-callout>⠿</button>
@@ -118,8 +119,8 @@ function closeSheet(){
 function openPerson(id){
  const p=safePerson(id);if(!p)return;
  modal={type:'person',id};
- const selected=findTier(current().rows,id),rank=current().rows[selected],index=rank.indexOf(id),out=p.exit&&p.exit<=state.current;
- const img=`<img class="profile-photo" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="eager" decoding="async"><div class="profile-fallback" hidden>${escapeHtml(initials(p.name))}</div>`;
+ const selected=findTier(current().rows,id),rank=current().rows[selected],index=rank.indexOf(id),out=eliminatedBeforeEpisode(p,state.current);
+ const img=`<button type="button" class="profile-photo-button" data-open-photo="${escapeHtml(id)}" aria-label="Увеличить фото ${escapeHtml(p.name)}" data-native-press><img class="profile-photo" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="eager" decoding="async"><div class="profile-fallback" hidden>${escapeHtml(initials(p.name))}</div><span class="profile-photo-caption">⤢ Смотреть целиком</span></button>`;
  createSheet(p.name,'УЧАСТНИЦА · СЕРИЯ '+episodeLabel(state.current),
  `<div class="profile"><div class="profile-image">${img}</div><div><div class="person-meta">${escapeHtml(p.subtitle)}</div><p class="person-fact">${escapeHtml(p.fact)}</p>${out?`<div class="person-elimination">Выбыла в ${p.exit}-й серии · можно продолжить оценивать</div>`:''}</div></div>
  <span class="sheet-label">МОЁ МЕСТО В РЕЙТИНГЕ</span>
@@ -202,6 +203,7 @@ function handleTools(action){
 function handleSheetClick(event){
  const target=event.target.closest('button');if(!target)return;
  if(target.matches('[data-close-sheet]')){closeSheet();return;}
+ if(target.hasAttribute('data-open-photo')){openPhoto(target.dataset.openPhoto);return;}
  if(target.matches('[data-open-person]')){openPerson(target.dataset.openPerson);return;}
  if(modal.type==='person'){
   const id=modal.id;
@@ -318,6 +320,8 @@ function initialize(){
  $('openTools').addEventListener('click',openTools);
  $('board').addEventListener('click',event=>{
   if(drag)return;
+  const photo=event.target.closest('[data-open-photo]');
+  if(photo){openPhoto(photo.dataset.openPhoto);return;}
   const button=event.target.closest('[data-open-person]');
   if(button)openPerson(button.dataset.openPerson);
  });
@@ -331,11 +335,12 @@ function initialize(){
  $('modalRoot').addEventListener('change',event=>{if(event.target.id==='restoreInput')void importBackup(event.target.files?.[0]);});
  document.addEventListener('error',photoError,true);
  document.addEventListener('load',photoLoad,true);
- document.addEventListener('keydown',event=>{if(event.key==='Escape'&&modal.type)closeSheet();if(event.key==='ArrowRight'&&!modal.type&&event.altKey)changeEpisode(1);if(event.key==='ArrowLeft'&&!modal.type&&event.altKey)changeEpisode(-1);});
+ document.addEventListener('keydown',event=>{if(photoState){if(event.key==='Escape'){event.preventDefault();closePhoto();}else if(event.key==='Tab')trapPhotoFocus(event);return;}if(event.key==='Escape'&&modal.type)closeSheet();if(event.key==='ArrowRight'&&!modal.type&&event.altKey)changeEpisode(1);if(event.key==='ArrowLeft'&&!modal.type&&event.altKey)changeEpisode(-1);});
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){persist();disposeDrag();}});
  window.addEventListener('pagehide',()=>{persist();disposeDrag();});
- window.addEventListener('appdatareset',()=>{state=normalizeState(null,IDS);render();closeSheet();showNotice('Данные приложения сброшены');});
- createWorkshopMode({appName:'РОЗКЛАД ТРОЯНД',version:'1.0.0',cachePrefix:'rose-ranking-15-',storageNamespace:APP,onReset(){storage.reset();window.dispatchEvent(new CustomEvent('appdatareset'));}});
+ window.addEventListener('appdatareset',()=>{closePhoto();state=normalizeState(null,IDS);render();closeSheet();showNotice('Данные приложения сброшены');});
+ createWorkshopMode({appName:'РОЗКЛАД ТРОЯНД',version:'1.1.0',cachePrefix:'rose-ranking-15-',storageNamespace:APP,onReset(){storage.reset();window.dispatchEvent(new CustomEvent('appdatareset'));}});
+ installPhotoViewer();
  rankDock();render();
  document.documentElement.dataset.roseRankingReady='1';
 }
