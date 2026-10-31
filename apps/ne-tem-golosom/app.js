@@ -928,11 +928,30 @@ function disposeRemoteClips(){
 function stateChanged(s){
  if(!s||!['lobby','recording','premiere'].includes(s.phase)||!Array.isArray(s.players)||!s.scene)return;
  const prev=state,epochChanged=!!prev&&prev.mediaEpoch!==s.mediaEpoch;
+ const roundChanged=!!prev&&Number.isInteger(prev.round)&&Number.isInteger(s.round)&&prev.round!==s.round;
+ // Ignore late snapshots from the previous round on a reconnecting socket.
+ if(prev&&Number.isInteger(prev.round)&&Number.isInteger(s.round)&&s.round<prev.round)return;
  // Presence and reconnect snapshots must not interrupt the host's local film preparation.
  const hostPreparing=mode==='host'&&prev?.phase==='lobby'&&s.phase==='lobby'&&['library','trim'].includes(view);
  const leftPremiere=prev?.phase==='premiere'&&s.phase!=='premiere';
  const sceneChanged=!scene||scene.id!==s.scene.id||scene.start!==s.scene.start||
    scene.duration!==s.scene.duration||epochChanged;
+ const newVoiceSession=roundChanged||(!!prev&&sceneChanged&&!hostPreparing);
+ if(newVoiceSession){
+  // Save the previous round under its OLD projectKey, then discard its audio
+  // before any new scene/epoch can write a draft. The source video stays.
+  if(projectKey&&scene)void draftWrite();
+  restoreGeneration++; // Invalidate an in-flight restore from the old round.
+  stopAllPlayback();
+  cleanAudios();
+  localClips=[];remoteClips=[];
+  editHistory=new TimelineHistory();
+  selectedClip=null;
+  projectKey='';
+  sentPremiere=false;
+  // A late voice transfer from an earlier round cannot enter this mix.
+  relayInbox.clear();
+ }
  state=s;
  connectionNotice();
  if(epochChanged||leftPremiere){
@@ -955,6 +974,8 @@ function stateChanged(s){
  }
  if(s.phase==='lobby'){
   if(sceneChanged&&!hostPreparing&&scene.custom&&meHost()&&sourceBlob){
+   // Keep the media for the new scene, but never write old voice clips
+   // into the new round's draft.
    projectKey=sceneDraftKey();void draftWrite();
   }
   if(pendingScenePicker&&meHost()){pendingScenePicker=false;library()}
