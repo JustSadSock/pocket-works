@@ -45,7 +45,7 @@ function personCard(id,changes){
  const delta=changes[id]||'';
  return `<article class="person" data-id="${escapeHtml(id)}">
   <button type="button" class="person-button" data-open-person="${escapeHtml(id)}" aria-label="${escapeHtml(p.name)}: выбрать тир и посмотреть описание" data-native-press>
-    <span class="person-photo"><img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async"><span class="photo-fallback" hidden>${escapeHtml(initials(p.name))}</span></span>
+    <span class="person-photo"><img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async"><span class="photo-fallback">${escapeHtml(initials(p.name))}</span></span>
     <span class="person-bottom"><span class="person-name">${escapeHtml(p.short)}${p.name!==p.short?' '+escapeHtml(p.name.split(' ').slice(1).join(' ')):''}</span>${nick?`<span class="person-nick">${escapeHtml(nick)}</span>`:''}</span>
   </button>
   ${out?`<span class="person-exit">Выбыла · ${p.exit} серия</span>`:''}
@@ -232,6 +232,13 @@ function handleSheetInput(event){
   touchEpisode();
  }
 }
+function photoLoad(event){
+ const image=event.target;
+ if(!image.matches('.person-photo img'))return;
+ image.classList.add('loaded');
+ const fallback=image.nextElementSibling;
+ if(fallback?.classList.contains('photo-fallback'))fallback.hidden=true;
+}
 function photoError(event){
  const image=event.target;if(!image.matches('img'))return;
  const fallback=image.nextElementSibling;
@@ -323,6 +330,7 @@ function initialize(){
  $('modalRoot').addEventListener('input',handleSheetInput);
  $('modalRoot').addEventListener('change',event=>{if(event.target.id==='restoreInput')void importBackup(event.target.files?.[0]);});
  document.addEventListener('error',photoError,true);
+ document.addEventListener('load',photoLoad,true);
  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&modal.type)closeSheet();if(event.key==='ArrowRight'&&!modal.type&&event.altKey)changeEpisode(1);if(event.key==='ArrowLeft'&&!modal.type&&event.altKey)changeEpisode(-1);});
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){persist();disposeDrag();}});
  window.addEventListener('pagehide',()=>{persist();disposeDrag();});
