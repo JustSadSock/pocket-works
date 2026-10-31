@@ -11,4 +11,5 @@ const raw=new TextEncoder().encode(JSON.stringify(doc));
 assert.ok(compressed.payload.length<raw.length*1.5,'Compression unexpectedly larger than input');
 assert.throws(()=>new PocketCloudClient('wrong'),/Invalid cloud app/);
 assert.equal(new PocketCloudClient('folio').app,'folio');
+assert.equal(new PocketCloudClient('rose-ranking-15').app,'rose-ranking-15');
 console.log('PASS: FOLIO document gzip encoding/decoding, typed cloud clients');
