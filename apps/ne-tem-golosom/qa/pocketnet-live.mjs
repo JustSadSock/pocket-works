@@ -130,7 +130,7 @@ try{
  assert.equal(resumedRecording.state.ready[guestId],true);
  await sendGame(host,{type:'reveal'});
  await guest.next('game_event',event('premiere'));
- const meta={id:'guest-voice-1',owner:guest.id,start:1,end:2,offset:0,epoch};
+ const meta={id:'guest-voice-1',owner:guest.id,start:1,end:2,offset:0,epoch,round:resumedRecording.state.round};
  await sendGame(guest,{type:'relay',to:host.id,data:{action:'begin',token:'qa-token-one',kind:'audio',size:1000,meta}});
  const relay=await host.next('game_event',p=>p.event?.type==='relay');
  assert.equal(relay.event.payload.from,guest.id);
