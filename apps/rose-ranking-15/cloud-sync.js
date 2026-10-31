@@ -155,6 +155,9 @@ export function createRoseCloudSync({ids,getState,setCloudDocument,activateAccou
   window.addEventListener('online',()=>schedule(300));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)void sync()});
   window.addEventListener('focus',()=>{void sync()});
+  // Keep two simultaneously open devices converged without manual refresh.
+  // Hidden tabs do not poll; foregrounding them performs an immediate sync.
+  setInterval(()=>{if(enabled&&!document.hidden&&navigator.onLine)void sync();},30000);
   button.addEventListener('click',()=>{
    if(!identity){location.assign('/?pocket-id=login');return;}
    void sync({manual:true});
