@@ -1,9 +1,10 @@
 // Manual, per-take mixer. No automatic loudness normalization.
+export const MAX_CLIP_GAIN=8;
 export const DEFAULT_MIX=Object.freeze({volume:1,fadeIn:.06,fadeOut:.14});
 const bound=(v,min,max,fallback)=>Number.isFinite(Number(v))?Math.min(max,Math.max(min,Number(v))):fallback;
 export function clipMix(clip={}){
  return {
-  volume:bound(clip.volume,0,2,DEFAULT_MIX.volume),
+  volume:bound(clip.volume,0,MAX_CLIP_GAIN,DEFAULT_MIX.volume),
   fadeIn:bound(clip.fadeIn,0,2,DEFAULT_MIX.fadeIn),
   fadeOut:bound(clip.fadeOut,0,2,DEFAULT_MIX.fadeOut)
  };
