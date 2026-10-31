@@ -88,6 +88,11 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
   let timer, started = false, captureMode = 'compatibility', watchdog = 0, useVideoFrameCallback = false;
   let lastMediaTime = start, lastAdvance = performance.now(), terminalError = null;
   let cancelPendingWait = null, resumeCapture = null;
+  // Decoder stalls must pause the neural bed even without new video frames.
+  const filmBedPaused=()=>filmBedSync?.pause();
+  const filmBedPlaying=()=>{if(recorder?.state==='recording')filmBedSync?.sync(true)};
+  for(const event of ['pause','waiting','stalled','seeking'])video.addEventListener(event,filmBedPaused);
+  video.addEventListener('playing',filmBedPlaying);
   const abort = () => {
     cancelled = true;
     cancelPendingWait?.();
@@ -335,6 +340,8 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
     video.load();
     if (started && recorder?.state === 'recording') { cancelled = true; recorder.stop(); }
     filmBedSync?.dispose();
+    for(const event of ['pause','waiting','stalled','seeking'])video.removeEventListener(event,filmBedPaused);
+    video.removeEventListener('playing',filmBedPlaying);
     stream?.getTracks().forEach(track => track.stop());
     await audioContext?.close().catch(() => {});
     URL.revokeObjectURL(src);
