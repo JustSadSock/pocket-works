@@ -17,8 +17,8 @@ test('time estimates use measured comparative runtime without promising fixed re
 test('cleaned PCM really replaces source audio in exported video',()=>{
  const code=readFileSync(new URL('../media-lab.js',import.meta.url),'utf8');
  assert.match(code,/audioPCM\s*=\s*null/);
- assert.match(code,/audioSource\.connect\(destination\)/);
- assert.match(code,/audioSource\?\.start\(\)/);
+ assert.match(code,/filmBedSync=createFilmBedSync/);
+ assert.match(code,/filmBedSync\?\.sync\(true\)/);
  assert.match(code,/else if \(keepAudio\)/);
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/await cleanFilmSound\(/);
