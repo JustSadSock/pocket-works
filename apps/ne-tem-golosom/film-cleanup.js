@@ -33,14 +33,16 @@ export function validateFilmMode(mode){
  return mode;
 }
 function monoToStereo(pcm){return pcm.length===1?[pcm[0],pcm[0].slice()]:pcm.slice(0,2)}
-function createWorkerTask(url,packet,signal,onProgress,{transferInputs=false}={}){
+function createWorkerTask(url,packet,signal,onProgress,{transferInputs=false,worker=null}={}){
  return new Promise((resolve,reject)=>{
   live(signal);
-  const w=new Worker(url,{type:'module'});
+  const w=worker||new Worker(url,{type:'module'});
   let settled=false;
   const finish=(err,result)=>{
    if(settled)return;settled=true;signal?.removeEventListener('abort',stop);
-   w.terminate();err?reject(err):resolve(result);
+   if(worker){w.onmessage=null;w.onerror=null;w.onmessageerror=null}
+   else w.terminate();
+   err?reject(err):resolve(result);
   };
   const stop=()=>finish(aborted());
   signal?.addEventListener('abort',stop,{once:true});
@@ -144,12 +146,12 @@ export async function cleanFilmSound({blob,start,duration,mode='umx',lowMemory=f
  live(signal);
  let original=await decodeAudioFromVideo(blob,start,duration,signal,onProgress);
  const nextId=()=>Math.random().toString(36).slice(2);
- async function model(channels,kind){
+ async function model(channels,kind,sharedWorker=null){
   onProgress({stage:kind,detail:kind==='scnet'?'SCNet разделяет звук':'Open-Unmix разделяет звук'});
   const response=await createWorkerTask(new URL('../tihiy-kadr/mrx-worker.js',import.meta.url),{
    id:nextId(),channels,chunk:/iPhone|Android/i.test(navigator.userAgent)?5:10,
    kind:kind==='scnet'?'scnet':'umxhq',scnetStep:1
-  },signal,onProgress);
+  },signal,onProgress,{worker:sharedWorker});
   live(signal);
   return response;
  }
@@ -166,13 +168,17 @@ export async function cleanFilmSound({blob,start,duration,mode='umx',lowMemory=f
    vocals=original.map(ch=>new Float32Array(ch.length));
    buzzLayer=original.map(ch=>new Float32Array(ch.length));
   }
+  // One Worker for the entire chunked run: avoid a fresh module/WASM startup
+  // every eight seconds, while retaining the bounded per-chunk memory budget.
+  const sharedModelWorker=new Worker(new URL('../tihiy-kadr/mrx-worker.js',import.meta.url),{type:'module'});
+  try{
   for(let k=0;k<total;k++){
    live(signal);
    const pos=k*step,begin=Math.max(0,pos-blend),end=Math.min(length,(k+1)*step+blend);
    onProgress({stage:'lowmem',detail:'Бережная обработка памяти · отрывок '+(k+1)+' из '+total});
    const cut=original.map(ch=>ch.slice(begin,end));
    const kind=mode==='scnet'?'scnet':'umx';
-   const result=await model(cut,kind);
+   const result=await model(cut,kind,sharedModelWorker);
    times.push({name:kind==='umx'?'Open-Unmix':'SCNet',seconds:result.seconds});
    const kept=mode==='hybrid';
    const res=await createWorkerTask(new URL('./film-buzz-worker.js',import.meta.url),{
@@ -196,6 +202,7 @@ export async function cleanFilmSound({blob,start,duration,mode='umx',lowMemory=f
     }
    }
   }
+  }finally{sharedModelWorker.terminate()}
  }else{
  if(mode==='scnet'){
   const sc=await model(original,'scnet');
