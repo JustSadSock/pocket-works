@@ -4,13 +4,14 @@ export const MAX_AUDIO_BYTES = 3_000_000;
 export const MAX_VOICE_CLIPS = 90;
 export const MAX_INCOMING_TRANSFERS = 12;
 
-export function validAudioEnvelope({meta,bytes,scene,epoch,players,expected,sender,host,receiver}) {
+export function validAudioEnvelope({meta,bytes,scene,epoch,round,players,expected,sender,host,receiver}) {
   if(!meta||!scene||!Array.isArray(players)||!Number.isInteger(bytes)||
      bytes<=0||bytes>MAX_AUDIO_BYTES) return false;
   if(typeof meta.id!=='string'||meta.id.length<1||meta.id.length>80||
      typeof meta.owner!=='string'||!players.includes(meta.owner)||meta.owner===receiver)
     return false;
-  if(!Number.isInteger(meta.epoch)||meta.epoch!==epoch) return false;
+  if(!Number.isInteger(meta.epoch)||meta.epoch!==epoch||
+    !Number.isInteger(meta.round)||meta.round!==round)return false;
   if(!Number.isFinite(meta.start)||!Number.isFinite(meta.end)||!Number.isFinite(meta.offset)||
      meta.start<0||meta.end<=meta.start||meta.end>scene.duration+.02||
      meta.offset<0||meta.offset>scene.duration+1) return false;
