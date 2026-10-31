@@ -53,7 +53,8 @@ test('starting another movie in the same PocketNet room discards previous host v
  assert.equal(h.context.localClips.length,0);
  assert.equal(h.context.remoteClips.length,0);
  assert.equal(h.context.selectedClip,null);
- assert.equal(h.context.projectKey,'');
+ assert.equal(h.context.projectKey,'round-5-draft');
+ assert(h.calls.some(x=>Array.isArray(x)&&x[1]==='round-5-draft'&&x[2].length===0));
  assert.equal(h.context.restoreGeneration,13);
  assert(h.calls.some(x=>Array.isArray(x)&&x[0]==='saved'&&x[1]==='round-4-draft'&&x[2].includes('old-voice')));
  h.update(5,'recording');
