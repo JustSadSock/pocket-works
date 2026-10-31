@@ -1,5 +1,5 @@
-const CACHE_PREFIX='rose-ranking-15-';const CACHE_NAME='rose-ranking-15-v1.0.0';const APP_VERSION='1.0.0';const RELEASE_DATE='2026-10-31';const CACHE_PROTOCOL=2;
-const RELEASE_NOTES=['Тир-листы с отдельным сохранением для каждой серии','23 участницы с настоящими фотографиями','Перетаскивание, прозвища, заметки и резервное копирование'];
+const CACHE_PREFIX='rose-ranking-15-';const CACHE_NAME='rose-ranking-15-v1.1.0';const APP_VERSION='1.1.0';const RELEASE_DATE='2026-10-31';const CACHE_PROTOCOL=2;
+const RELEASE_NOTES=['Фото на весь экран без обрезки и с увеличением','Выбывания отображаются со следующей серии','Тир-листы с отдельным сохранением для каждой серии','23 участницы с настоящими фотографиями','Перетаскивание, прозвища, заметки и резервное копирование'];
 const ASSETS=['./','./index.html','./styles.css','./app.js','./model.js','./contestants.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js','../../shared/workshop-mode.css','../../shared/workshop-mode.js','../../shared/capabilities/storage.js','../../shared/pwa-utils.js','../../shared/capabilities/motion.js','../../shared/capabilities/transfer.js','../../shared/capabilities/diagnostics.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js'];
 const BASE=new URL('./',self.registration.scope);
 const paths=new Map(ASSETS.map(path=>{const u=new URL(path,BASE);return [u.pathname,u.href]}));
