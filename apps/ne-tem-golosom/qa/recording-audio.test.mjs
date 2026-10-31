@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {AUDIO_MIMES,microphoneRequest,createVoiceRecorder,reconcileRecordingEnd} from '../recording-audio.js';
+import {AUDIO_MIMES,microphoneRequest,createVoiceRecorder,reconcileRecordingEnd,normalizeMicMode} from '../recording-audio.js';
 
 test('phone, Android, Safari and desktop requests disable destructive voice gating',()=>{
  for(const device of [{},{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:true}]){
@@ -48,4 +48,14 @@ test('mobile microphone tracks flush once, save at stop, and stop on interruptio
  assert.match(source,/document\.hidden&&record/);
  assert.match(source,/r\.rec\.onstop\?\.\(\)/);
  assert.match(source,/track\.addEventListener\('ended'/);
+});
+
+test('each recording can explicitly opt into noise suppression without changing AEC or AGC',()=>{
+ assert.equal(normalizeMicMode('noise-reduced'),'noise-reduced');
+ assert.equal(normalizeMicMode('bogus'),'raw');
+ const support={echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:true};
+ assert.deepEqual(microphoneRequest(support,'noise-reduced').audio,{
+  echoCancellation:false,noiseSuppression:true,autoGainControl:false,channelCount:{ideal:1}
+ });
+ assert.equal(microphoneRequest(support,'raw').audio.noiseSuppression,false);
 });
