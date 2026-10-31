@@ -33,9 +33,10 @@ const episodeDate=n=>n<=3?new Intl.DateTimeFormat('ru-RU',{timeZone:'UTC',day:'n
 
 
 const FIRST_OWNER=APP+':first-account-owner';
+const LAST_ACCOUNT=APP+':last-active-account';
 async function activateAccount(accountId){
  closePhoto();if(modal.type)closeSheet();
- if(!accountId){activeStorage=guestStorage;state=normalizeState(guestStorage.get('data'),IDS);render();return;}
+ if(!accountId){try{localStorage.removeItem(LAST_ACCOUNT)}catch{}activeStorage=guestStorage;state=normalizeState(guestStorage.get('data'),IDS);render();return;}
  const next=createVersionedStore({namespace:APP+':account:'+accountId,version:1,defaults:{data:null}});
  let raw=next.get('data');
  let owner=null;try{owner=localStorage.getItem(FIRST_OWNER)}catch{}
@@ -44,6 +45,7 @@ async function activateAccount(accountId){
   try{localStorage.setItem(FIRST_OWNER,accountId)}catch{}
   if(raw)next.set('data',raw);
  }
+ try{localStorage.setItem(LAST_ACCOUNT,accountId)}catch{}
  activeStorage=next;state=normalizeState(raw,IDS);render();
 }
 async function applyCloudDocument(id,doc){
@@ -555,6 +557,15 @@ function initialize(){
  window.addEventListener('appdatareset',()=>{closePhoto();state=normalizeState(null,IDS);render();closeSheet();showNotice('Данные приложения сброшены');});
  createWorkshopMode({appName:'РОЗКЛАД ТРОЯНД',version:'1.2.0',cachePrefix: 'rose-ranking-15-', storageNamespace: 'pocket-works:rose-ranking-15',onReset(){activeStorage.reset();window.dispatchEvent(new CustomEvent('appdatareset'));}});
  installPhotoViewer();
+ // Offline PWA can edit its last verified Pocket ID's locally cached ratings.
+ // Network authorization still gates every subsequent server request.
+ if(!navigator.onLine){
+  let last=null;try{last=localStorage.getItem(LAST_ACCOUNT)}catch{}
+  if(last&&/^[a-f0-9-]{36}$/i.test(last)){
+   activeStorage=createVersionedStore({namespace:APP+':account:'+last,version:1,defaults:{data:null}});
+   state=normalizeState(activeStorage.get('data'),IDS);
+  }
+ }
  cloud=createRoseCloudSync({ids:IDS,getState:()=>state,setCloudDocument:applyCloudDocument,activateAccount,notify:showNotice});
  rankDock();render();cloud.start();
  document.documentElement.dataset.roseRankingReady='1';
