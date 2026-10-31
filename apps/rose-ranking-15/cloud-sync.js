@@ -58,7 +58,9 @@ export function createRoseCloudSync({ids,getState,setCloudDocument,activateAccou
  async function authorize(){
   const user=await getPocketIdentity({force:true});
   if(!user?.complete){
-   if(identity){identity=null;client=null;enabled=false;epoch++;await activateAccount(null);}
+   let cachedAccount=false;
+   try{cachedAccount=Boolean(localStorage.getItem('pocket-works:rose-ranking-15:last-active-account'))}catch{}
+   if(identity||cachedAccount){identity=null;client=null;enabled=false;epoch++;await activateAccount(null);}
    identity=null;client=null;enabled=false;
    setStatus('Только на устройстве · войди в Pocket ID');
    return false;
