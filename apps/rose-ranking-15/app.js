@@ -340,7 +340,7 @@ function trapPhotoFocus(event){
 function photoDistance(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
 function photoMidpoint(a,b){return {x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
 function pointerPhotoDown(event){
- if(!photoState||(event.pointerType==='mouse'&&event.button!==0))return;
+ if(!photoState||(event.pointerType==='mouse'&&event.button!==0)||event.target.closest('.photo-failed-actions'))return;
  event.preventDefault();
  try{event.currentTarget.setPointerCapture(event.pointerId);}catch{}
  photoPointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
@@ -389,7 +389,7 @@ function installPhotoViewer(){
   if(action==='retry'){
    $('photoFailed').hidden=true;$('photoLoading').hidden=false;
    const src=$('photoSource').href;
-   image.src='';
+   image.removeAttribute('src');
    image.src=src;
    if(image.complete&&image.naturalWidth>0)photoSucceeded();
   }
