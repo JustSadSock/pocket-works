@@ -1,7 +1,7 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {createTrimRange} from './trim-range.js';
 import {meterHeights} from './studio-feedback.js';
-import {microphoneRequest,createVoiceRecorder,reconcileRecordingEnd} from './recording-audio.js';
+import {microphoneRequest,createVoiceRecorder,reconcileRecordingEnd,normalizeMicMode} from './recording-audio.js';
 import {MAX_AUDIO_BYTES,MAX_INCOMING_TRANSFERS,validAudioEnvelope,validVideoEnvelope,canAcceptVoice} from './media-protocol.js';
 import {renderPremiere,supportsPremiereExport,premiereFilename} from './premiere-export.js';
 import {TimelineHistory,snapshotClips,spliceRecording,layerTimeline,packTimeline,unpackTimeline,editClip,replaceSelectedRecording,MIN_CLIP_SECONDS} from './timeline-model.js';
@@ -107,7 +107,7 @@ function rememberFilmTimes(plan,duration){
 let premiereExportController=null,premiereResultUrl=null,premiereExportGeneration=0,premiereLocalCopy=null,premiereExportNotice='';
 const qualityNames=['Экономное','Компактное','Сбалансированное','Высокое','Максимальное'];
 let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0,timelineZoom=1,clipDrag=null,skipTimelineClick=false,micPending=false;
-let micMonitor=null,saveRevision=0,readyPending=false,voiceFxContext=null,voiceFxExpanded=false,interruptedVoiceTake=false;
+let micMonitor=null,saveRevision=0,readyPending=false,voiceFxContext=null,voiceFxLimiter=null,voiceFxExpanded=false,interruptedVoiceTake=false;
 let onlineIds=null,networkInterrupted=false,retryRoomAction='create',retryCheckpoint=null;
 let pendingScenePicker=false,premiereAB='dub';
 function roomCheckpoint(){
@@ -315,7 +315,13 @@ function ensureClipVoice(c){
   if(!Context)return;
   voiceFxContext ||=new Context();
   if(!c.fxSource)c.fxSource=voiceFxContext.createMediaElementSource(c.audio);
-  if(!c.fxGain){c.fxGain=voiceFxContext.createGain();c.fxGain.connect(voiceFxContext.destination)}
+  if(!voiceFxLimiter){
+   voiceFxLimiter=voiceFxContext.createDynamicsCompressor();
+   voiceFxLimiter.threshold.value=-4;voiceFxLimiter.knee.value=4;
+   voiceFxLimiter.ratio.value=12;voiceFxLimiter.attack.value=.003;voiceFxLimiter.release.value=.12;
+   voiceFxLimiter.connect(voiceFxContext.destination);
+  }
+  if(!c.fxGain){c.fxGain=voiceFxContext.createGain();c.fxGain.connect(voiceFxLimiter)}
   c.fxCleanup?.();
   c.fxCleanup=connectVoiceEffect(voiceFxContext,c.fxSource,c.fxGain,c.fx);
   c.fxReady=c.fx;
@@ -1421,11 +1427,17 @@ async function startRecord(countdown=0,replaceId=null){
  let stream;
  try{
   stream=await navigator.mediaDevices.getUserMedia(
-   microphoneRequest(navigator.mediaDevices.getSupportedConstraints?.()||{}));
+   microphoneRequest(navigator.mediaDevices.getSupportedConstraints?.()||{},normalizeMicMode($('mic-capture-mode').value)));
  }catch(e){
   // Older mobile implementations may reject even ideal constraints.
   if(['OverconstrainedError','NotSupportedError','TypeError'].includes(e?.name)){
-   try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch{}
+   try{
+    stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    await stream.getAudioTracks()[0]?.applyConstraints?.({
+     echoCancellation:false,autoGainControl:false,
+     noiseSuppression:normalizeMicMode($('mic-capture-mode').value)==='noise-reduced'
+    }).catch(()=>{});
+   }catch{}
   }
   if(!stream){
    micPending=false;updateRecordingControls();
@@ -1435,8 +1447,11 @@ async function startRecord(countdown=0,replaceId=null){
  }
  micPending=false;
  const settings=stream.getAudioTracks()[0]?.getSettings?.()||{};
- if(settings.noiseSuppression===true||settings.echoCancellation===true)
-  toast('Телефон принудительно обрабатывает микрофон. Для чистой записи попробуй гарнитуру.');
+ if(normalizeMicMode($('mic-capture-mode').value)==='raw'&&
+    (settings.noiseSuppression===true||settings.echoCancellation===true||settings.autoGainControl===true))
+  toast('Устройство принудительно обрабатывает микрофон. Попробуй другую гарнитуру или браузер.');
+ if(normalizeMicMode($('mic-capture-mode').value)==='noise-reduced'&&settings.noiseSuppression===false)
+  toast('Этот микрофон не поддерживает подавление шума — записываем исходный звук.');
  if(view!=='editor'||!scene){stream.getTracks().forEach(t=>t.stop());updateRecordingControls();return}
  if(!stream.getAudioTracks?.().length){
   stream.getTracks().forEach(t=>t.stop());
@@ -1752,6 +1767,15 @@ function beginPremiere(){
 function pausePremiere(){const v=$('premiere-video');v.pause();updateClipSound(time(v),false,true);$('premiere-play').textContent='▶ Смотреть премьеру'}
 async function playPremiere(){if(receivedCount()<expectedCount())return;const v=$('premiere-video');if(!v.paused){pausePremiere();return}if(time(v)>=scene.duration-.08)seekVideo(v,0);try{v.muted=premiereAB==='dub'&&!scene?.cleaned;updateClipSound(time(v),premiereAB==='dub',true);await v.play();$('premiere-play').textContent='Ⅱ Пауза'}catch{toast('Нажми ещё раз для запуска со звуком.')}}
 
+$('mic-capture-mode').value=normalizeMicMode((()=>{try{return localStorage.getItem(STORE+'mic-mode')}catch{return 'raw'}})());
+$('mic-capture-mode').onchange=()=>{
+ const mode=normalizeMicMode($('mic-capture-mode').value);
+ try{localStorage.setItem(STORE+'mic-mode',mode)}catch{}
+ $('mic-capture-hint').textContent=mode==='raw'
+  ?'Запишутся и речь, и фоновые звуки. Ранее записанные реплики не меняются.'
+  :'Браузер попробует подавить фон только у следующей записи. Перезапись изменит выбранную реплику.';
+};
+$('mic-capture-mode').onchange();
 $('sound-btn').onclick=toggleSound;
 $('solo-btn').onclick=()=>{mode='solo';library()};
 $('create-btn').onclick=()=>{mode='host';scene=null;sourceBlob=null;void connectRoom('create')};
