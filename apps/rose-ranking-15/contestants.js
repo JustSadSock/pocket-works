@@ -141,7 +141,7 @@ export const CONTESTANTS = [
     "short": "Ольга",
     "subtitle": "40 · модельна агенція",
     "fact": "Подарувала скриньку зі спогадами.",
-    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/e/1/280279/e1abde0b8eb478d201bb3efde8d636331792220086.jpg?q=85&w=600",
+    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/e/1/280279/e1abde0b8eb478d201bb3efde8d636331792220086.jpg?q=90&w=1200",
     "exit": 2
   },
   {
@@ -150,7 +150,7 @@ export const CONTESTANTS = [
     "short": "Тетяна",
     "subtitle": "26 · підприємиця",
     "fact": "Власниця магазину для дорослих.",
-    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/9/6/280283/9640e41a50a502d40d05f9d104921f751792220374.jpg?q=85&w=600",
+    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/9/6/280283/9640e41a50a502d40d05f9d104921f751792220374.jpg?q=90&w=1200",
     "exit": 2
   },
   {
@@ -159,7 +159,7 @@ export const CONTESTANTS = [
     "short": "Марина",
     "subtitle": "25 · акторка і режисерка",
     "fact": "Презентувала картину, намальовану власним тілом.",
-    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/d/9/280290/d908597becdd1c8ea7acec406d87376b1792220868.jpg?q=85&w=600",
+    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/d/9/280290/d908597becdd1c8ea7acec406d87376b1792220868.jpg?q=90&w=1200",
     "exit": 2
   },
   {
@@ -168,7 +168,7 @@ export const CONTESTANTS = [
     "short": "Марія",
     "subtitle": "31 · бренд одягу",
     "fact": "Подарувала баскетбольний м’яч зі стразами.",
-    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/0/9/280289/092af65a7c1817e0380cc7e122a64bbc1792220790.jpg?q=85&w=600",
+    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/0/9/280289/092af65a7c1817e0380cc7e122a64bbc1792220790.jpg?q=90&w=1200",
     "exit": 2
   },
   {
@@ -177,7 +177,7 @@ export const CONTESTANTS = [
     "short": "Катерина",
     "subtitle": "27 · організаторка івентів",
     "fact": "Приїхала на зустріч із куркою.",
-    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/3/f/280287/3f8966d38106b1f10761c2d12137d4521792220638.jpg?q=85&w=600",
+    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/3/f/280287/3f8966d38106b1f10761c2d12137d4521792220638.jpg?q=90&w=1200",
     "exit": 2
   },
   {
@@ -186,7 +186,7 @@ export const CONTESTANTS = [
     "short": "Інна",
     "subtitle": "24 · косметологиня",
     "fact": "Заспівала Холостяку, сидячи в нього на руках.",
-    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/7/d/280284/7da8414de55f008e3ce18a9681b3b3221792220432.jpg?q=85&w=600",
+    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/7/d/280284/7da8414de55f008e3ce18a9681b3b3221792220432.jpg?q=90&w=1200",
     "exit": 2
   },
   {
@@ -195,7 +195,7 @@ export const CONTESTANTS = [
     "short": "Христина",
     "subtitle": "24 · відеографка",
     "fact": "Подарувала картки-запитання для знайомства.",
-    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/3/d/280285/3d1903997c986bfe1ec843b4896548b81792220496.jpg?q=85&w=600",
+    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/3/d/280285/3d1903997c986bfe1ec843b4896548b81792220496.jpg?q=90&w=1200",
     "exit": 2
   },
   {
@@ -204,7 +204,7 @@ export const CONTESTANTS = [
     "short": "Катерина",
     "subtitle": "25 · бодибілдерка",
     "fact": "Сама розстелила собі червону доріжку.",
-    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/9/1/280274/91f79f0da85d85ca14f47dd21ec7a2c91792219758.jpg?q=85&w=600",
+    "image": "https://imgnewtabl.pravda.com.ua/tabloid/system/MediaPhoto/photo/9/1/280274/91f79f0da85d85ca14f47dd21ec7a2c91792219758.jpg?q=90&w=1200",
     "exit": 2
   }
 ];
