@@ -14,6 +14,11 @@ export async function renderPremiereFast({source,scene,plan,keepFilmAudio=false,
  const spec=await inspectFastDubMP4(source,signal);
  if(!spec||!([44100,48000].includes(spec.sampleRate))||
     ![1,2].includes(spec.channels)||!spec.asc||((spec.asc[0]>>3)&31)!==2)return null;
+ // The MP4 track keeps its original sample description. Do not spend time
+ // mixing 90 seconds of audio unless WebCodecs AAC-LC can match that ASC.
+ const index=spec.sampleRate===44100?4:3;
+ const expectedASC=new Uint8Array([(2<<3)|(index>>1),((index&1)<<7)|(spec.channels<<3)]);
+ if(spec.asc.length!==2||spec.asc.some((x,i)=>x!==expectedASC[i]))return null;
  const config={codec:'mp4a.40.2',sampleRate:spec.sampleRate,
   numberOfChannels:spec.channels,bitrate:128000};
  let supported;
