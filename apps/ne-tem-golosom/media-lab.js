@@ -88,9 +88,21 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
   let timer, started = false, captureMode = 'compatibility', watchdog = 0, useVideoFrameCallback = false;
   let lastMediaTime = start, lastAdvance = performance.now(), terminalError = null;
   let cancelPendingWait = null, resumeCapture = null;
-  // Decoder stalls must pause the neural bed even without new video frames.
-  const filmBedPaused=()=>filmBedSync?.pause();
-  const filmBedPlaying=()=>{if(recorder?.state==='recording')filmBedSync?.sync(true)};
+  // A stalled decoder must pause both clocks, not silently extend the
+  // captured file while the selected media position stands still.
+  let pausedByDecoder=false;
+  const filmBedPaused=e=>{
+    filmBedSync?.pause();
+    if((e.type==='waiting'||e.type==='stalled')&&recorder?.state==='recording'){
+      try{recorder.pause();pausedByDecoder=true}catch{}
+    }
+  };
+  const filmBedPlaying=()=>{
+    if(pausedByDecoder&&recorder?.state==='paused'&&!document.hidden){
+      try{recorder.resume();pausedByDecoder=false}catch{}
+    }
+    if(recorder?.state==='recording')filmBedSync?.sync(true);
+  };
   for(const event of ['pause','waiting','stalled','seeking'])video.addEventListener(event,filmBedPaused);
   video.addEventListener('playing',filmBedPlaying);
   const abort = () => {
