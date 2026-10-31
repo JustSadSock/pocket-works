@@ -27,15 +27,19 @@ function sampleAudio(blob){
  const trak=boxes(v,moov.body,moov.end).filter(x=>x.type==='trak').find(x=>STR(v,sub(v,sub(v,x,'mdia'),'hdlr').body+8)==='soun');
  const mdia=sub(v,trak,'mdia'),stbl=sub(v,sub(v,mdia,'minf'),'stbl');
  const sizes=sub(v,stbl,'stsz'),offsets=sub(v,stbl,'stco'),mapping=sub(v,stbl,'stsc');
- assert.equal(U32(v,mapping.body+4),1,'one chunk mapping in fixture');
  const count=U32(v,sizes.body+8);
  const sizeAt=i=>U32(v,sizes.body+4)||U32(v,sizes.body+12+i*4);
  const chunkCount=U32(v,offsets.body+4);
- const perChunk=U32(v,mapping.body+12);
+ const patterns=Array.from({length:U32(v,mapping.body+4)},(_,i)=>({
+  first:U32(v,mapping.body+8+i*12),
+  per:U32(v,mapping.body+12+i*12)
+ }));
  const frames=[];
  for(let c=0;c<chunkCount;c++){
+  const pattern=patterns.filter(p=>p.first<=c+1).at(-1);
+  assert.ok(pattern);
   let offset=U32(v,offsets.body+8+c*4);
-  for(let j=0;j<perChunk&&frames.length<count;j++){
+  for(let j=0;j<pattern.per&&frames.length<count;j++){
    const size=sizeAt(frames.length);
    frames.push(new Uint8Array(blob.buffer,blob.byteOffset+offset,size).slice());
    offset+=size;
