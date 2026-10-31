@@ -13,10 +13,10 @@
     "distinction": "Это не универсальный список, а редакторская доска реальных портретов с персональными оценками по неделям. Использует серверный Pocket Cloud для синхронизации аккаунта без игровых комнат."
   },
   "architecture": {
-    "spatialLayout": "dual-scroll-catalog-and-tier-board",
+    "spatialLayout": "split-workspace",
     "controlLocation": "direct-on-object",
     "navigation": "page-turn",
-    "chromeTopology": "parallel-workbench",
+    "chromeTopology": "tiled-grid",
     "dominantMotion": "sliding",
     "primaryVerb": "Выбрать фотографию и тир, перетаскивать и сортировать карточки, перелистывать независимые серии с автосохранением.",
     "physicalFeedback": "Портрет поднимается под пальцем, исходная карточка затеняется, целевая полоса подсвечивается; после отпускания состав тира и счётчик изменяются.",
