@@ -290,14 +290,14 @@ export async function renderPremiere({
       new Promise((_,reject)=>setTimeout(()=>reject(Error('Браузер не разрешил включить звук. Повтори сохранение после касания экрана.')),10000))
     ]);
     if(ctx.state!=='running')throw Error('Браузер остановил звуковой движок. Нажми «Сохранить видео» ещё раз.');
-    recorder.start(1000);
+    // Wait until the actual video playback has started before recording:
+    // MediaRecorder otherwise encodes a silent/static pre-roll on slow devices.
     try{await video.play()}
     catch{
-      stopRecording(effectiveSignal.aborted?abortError():Error('Браузер запретил запуск видео для экспорта.'));
-      await done.catch(()=>{});
-      throw stopError;
+      throw effectiveSignal.aborted?abortError():Error('Браузер запретил запуск видео для экспорта.');
     }
     assertLive(effectiveSignal);
+    recorder.start(1000);
     // Schedule every line against one Web Audio clock after video starts.
     // Split clips reuse the same decoded audio but play distinct time windows.
     const current=Math.max(0,video.currentTime-scene.start);
