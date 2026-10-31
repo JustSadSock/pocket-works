@@ -38,7 +38,7 @@ export async function unpackCloudData(row){
  return JSON.parse(new TextDecoder().decode(bytes));
 }
 export class PocketCloudClient{
- constructor(app,accountId=null){if(!['folio','zamazka'].includes(app))throw Error('Invalid cloud app');this.app=app;this.accountId=accountId;}
+ constructor(app,accountId=null){if(!['folio','zamazka','rose-ranking-15'].includes(app))throw Error('Invalid cloud app');this.app=app;this.accountId=accountId;}
  url(path,id=null){const p=new URL('/pocket-cloud/'+path,location.origin);p.searchParams.set('app',this.app);if(id)p.searchParams.set('id',id);return p;}
  async call(path,{id=null,method='GET',body}={}){
   const controller=new AbortController();const clock=setTimeout(()=>controller.abort(),20000);
