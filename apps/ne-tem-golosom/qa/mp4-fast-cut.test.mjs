@@ -42,6 +42,27 @@ test('AVC/AAC MP4 smart cut preserves decodable video/audio and respects scene l
   assert.equal(await fastCutMP4({blob,start:1,duration:2,keepAudio:false,signal:{aborted:true}}),null);
   assert.equal(await fastCutMP4({blob:new Blob(['garbage']),start:1,duration:2,keepAudio:false}),null);
 });
+test('lossless copy handles H.264 B-frames, arbitrary seek and edit-list offsets',
+ {skip:!available},async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'pocket-bframe-'));
+  t.after(()=>rm(dir,{recursive:true,force:true}));
+  const source=join(dir,'source.mp4');
+  cmd('ffmpeg',['-hide_banner','-loglevel','error',
+   '-f','lavfi','-i','testsrc2=size=160x90:rate=30',
+   '-f','lavfi','-i','sine=frequency=330:sample_rate=48000',
+   '-t','5','-c:v','libx264','-preset','veryfast','-crf','28',
+   '-g','60','-pix_fmt','yuv420p','-c:a','aac','-b:a','48k',
+   '-movflags','+faststart','-y',source]);
+  const blob=new Blob([await readFile(source)],{type:'video/mp4'});
+  for(const start of [0.2,1.4,2.7]){
+   const result=await fastCutMP4({blob,start,duration:1.3,keepAudio:true});
+   assert.ok(result,'fast cutter supports B-frames at '+start);
+   const target=join(dir,'cut-'+start+'.mp4');
+   await writeFile(target,new Uint8Array(await result.arrayBuffer()));
+   assert.ok(Math.abs(Number(inspect(target).format.duration)-1.3)<0.15);
+   cmd('ffmpeg',['-v','error','-i',target,'-f','null','-']);
+  }
+});
 test('UI can use lossless copy only when export settings preserve original resolution',()=>{
  const code=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(code,/import \{fastCutMP4\} from '\.\/mp4-fast-cut\.js'/);
