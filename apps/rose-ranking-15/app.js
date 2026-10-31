@@ -494,7 +494,7 @@ function initialize(){
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){persist();disposeDrag();}});
  window.addEventListener('pagehide',()=>{persist();disposeDrag();});
  window.addEventListener('appdatareset',()=>{closePhoto();state=normalizeState(null,IDS);render();closeSheet();showNotice('Данные приложения сброшены');});
- createWorkshopMode({appName:'РОЗКЛАД ТРОЯНД',version:'1.1.0',cachePrefix:'rose-ranking-15-',storageNamespace:APP,onReset(){storage.reset();window.dispatchEvent(new CustomEvent('appdatareset'));}});
+ createWorkshopMode({appName:'РОЗКЛАД ТРОЯНД',version:'1.1.0',cachePrefix: 'rose-ranking-15-', storageNamespace: 'pocket-works:rose-ranking-15',onReset(){storage.reset();window.dispatchEvent(new CustomEvent('appdatareset'));}});
  installPhotoViewer();
  rankDock();render();
  document.documentElement.dataset.roseRankingReady='1';
