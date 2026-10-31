@@ -30,7 +30,8 @@ function preserveConflict(account,id,local){
  const history=readConflicts(account);
  if(history.some(record=>record.id===id&&same(record.data,local)))return;
  history.unshift({id,data:clone(local),at:Date.now()});
- try{localStorage.setItem(CONFLICTS+account,JSON.stringify(history.slice(0,20)))}catch{}
+ try{localStorage.setItem(CONFLICTS+account,JSON.stringify(history.slice(0,20)))}
+ catch{throw Error('Не удалось сохранить конфликтную копию. Локальные изменения не заменены. Сделай JSON-архив.');}
 }
 function docsFromState(state){
  const docs=new Map();
@@ -88,7 +89,7 @@ export function createRoseCloudSync({ids,getState,setCloudDocument,activateAccou
    const original=getMeta(account);
    const meta={...original};
    const docs=docsFromState(getState());
-   const items=new Map(remote.items.filter(item=>!item.deleted).map(item=>[item.id,item]));
+   const items=new Map(remote.items.map(item=>[item.id,item]));
    let uploads=0,downloads=0,conflicts=0;
    for(const id of new Set([...docs.keys(),...items.keys()])){
     if(epoch!==runEpoch)return;
@@ -97,6 +98,14 @@ export function createRoseCloudSync({ids,getState,setCloudDocument,activateAccou
     const local=docs.get(id);
     // Keep a text snapshot of our last confirmed common revision.
     const dirty=local && (!before||!same(local,before.snapshot));
+    if(row?.deleted){
+     // Tombstones are never resurrected by a stale offline device. Local
+     // ratings stay accessible and a new edit may explicitly revive them.
+     if(local&&before&&before.revision!==row.revision&&!same(local,before.snapshot))preserveConflict(account,id,local);
+     meta[id]={revision:row.revision,snapshot:local||null};
+     saveMeta(account,meta);
+     continue;
+    }
     if(!row){
      if(!local)continue;
      try{
