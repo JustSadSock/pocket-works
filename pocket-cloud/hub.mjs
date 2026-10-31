@@ -3,7 +3,7 @@
 const MAX_ITEM_BYTES=1_000_000;
 const MAX_USER_BYTES=16_000_000;
 const MAX_ROWS=160;
-const allowedApps=new Set(['folio','zamazka']);
+const allowedApps=new Set(['folio','zamazka','rose-ranking-15']);
 const encoder=new TextEncoder();
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers});
