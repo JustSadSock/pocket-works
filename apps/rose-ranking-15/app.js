@@ -233,12 +233,12 @@ async function importBackup(file){
 }
 function handleTools(action){
  if(action==='toggle'){state.showAll=!state.showAll;touchProfile();render();openTools();return;}
- if(action==='cloud'){closeSheet();void cloud?.sync();return;}
+ if(action==='cloud'){closeSheet();if(!cloud?.account())location.assign('/?pocket-id=login');else void cloud.sync();return;}
  if(action==='restore-conflict'){
   const backup=cloud?.conflicts()[0];if(!backup)return;
   confirmAction('Восстановить версию?', 'Будет восстановлена сохранённая версия. Остальные серии не изменятся.','Восстановить',()=>{
-   if(backup.id==='profile'){state.nicknames={...backup.data.nicknames};state.showAll=backup.data.showAll;touchProfile();}
-   else{const n=Number(backup.id.slice(8));if(n>=1&&n<=100){state.episodes[n]=cleanEpisode(backup.data.data,IDS);state.episodes[n].edited=Date.now();persist();}}
+   if(backup.id==='profile'){state.nicknames={...backup.data.nicknames};state.showAll=backup.data.showAll;state.current=backup.data.current;ensureEpisode(state,state.current,IDS);touchProfile();}
+   else{const n=Number(backup.id.slice(8));if(n>=1&&n<=100){state.episodes[n]=cleanEpisode(backup.data.data,IDS);state.episodes[n].edited=Date.now();state.current=n;state.profileEdited=Date.now();persist();}}
    cloud.clearConflict(0);closeSheet();render();showNotice('Конфликтная копия восстановлена');
   });return;
  }
