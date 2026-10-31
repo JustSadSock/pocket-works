@@ -104,7 +104,7 @@ function rememberFilmTimes(plan,duration){
  }
  try{localStorage.setItem(FILM_BENCH_KEY,JSON.stringify(filmBench))}catch{}
 }
-let premiereExportController=null,premiereResultUrl=null,premiereExportGeneration=0,premiereLocalCopy=null,premiereExportNotice='';
+let premiereExportController=null,premiereResultUrl=null,premiereExportGeneration=0,premiereLocalCopy=null,premiereExportNotice='',premiereExportCache=null;
 const qualityNames=['Экономное','Компактное','Сбалансированное','Высокое','Максимальное'];
 let net=null,me='',room='',state=null,peers=new Map(),localClips=[],remoteClips=[],editHistory=new TimelineHistory(),selectedClip=null,record=null,pendingRecording=null,preroll=null,playing=false,wasPlaying=false,filmSound=false,sentPremiere=false,projectKey='',initializedScene='',toastTimer=0,timelineZoom=1,clipDrag=null,skipTimelineClick=false,micPending=false;
 let micMonitor=null,saveRevision=0,readyPending=false,voiceFxContext=null,voiceFxLimiter=null,voiceFxExpanded=false,interruptedVoiceTake=false;
@@ -948,6 +948,7 @@ function stateChanged(s){
   editHistory=new TimelineHistory();
   selectedClip=null;
   projectKey='';
+  premiereExportCache=null;
   sentPremiere=false;
   // A late voice transfer from an earlier round cannot enter this mix.
   relayInbox.clear();
@@ -1095,7 +1096,7 @@ async function connectRoom(action,checkpoint=null){
 }
 function leaveNetwork(){clearRoomCheckpoint();networkInterrupted=false;onlineIds=null;connectionNotice();setNetStatus('idle','PocketNet');relayInbox.clear();relayQueue=Promise.resolve();for(const id of [...peers.keys()])closePeer(id);try{net?.leaveRoom();net?.close()}catch{}net=null;state=null;me='';room='';sentPremiere=false;}
 async function resetRuntime(){
- stopPremiereExport();premiereLocalCopy=null;videoExportController?.abort();encodedCache=null;filmCleanCache=null;clearExportPreview();cancelCountdown();
+ stopPremiereExport();premiereExportCache=null;premiereLocalCopy=null;videoExportController?.abort();encodedCache=null;filmCleanCache=null;clearExportPreview();cancelCountdown();
  if(record)finishRecording();
  if(pendingRecording)await pendingRecording;
  stopAllPlayback();
@@ -1688,7 +1689,7 @@ function updatePremiereStatus(){
       ?'Исходное видео ещё не получено.'
       :premiereResultUrl
         ?'Файл готов. Можешь скачать его ещё раз.'
-        :premiereExportNotice||('Сохраним изображение и '+got+' '+(got===1?'реплику':'реплик')+' в один файл. Обработка займёт примерно время сцены.');
+        :premiereExportNotice||('Сохраним изображение и '+got+' '+(got===1?'реплику':'реплик')+' в один файл. Для MP4 доступна быстрая сборка без перекодирования кадров, в других случаях — обычный экспорт.');
 }
 function stopPremiereExport(clearResult=true){
  premiereExportGeneration++;
@@ -1725,15 +1726,28 @@ async function downloadPremiere(){
   id:c.id,start:c.start,end:c.end,offset:c.offset,owner:c.owner,fx:normalizeVoiceEffect(c.fx),...clipMix(c),blob:c.blob
  }));
  const sceneCopy={...scene},input=premiereLocalCopy||(scene.custom?sourceBlob:sceneSource(scene));
+ const keepFilmAudio=$('premiere-film-audio').checked;
+ const signature=JSON.stringify([
+  room||'solo',state?.mediaEpoch||0,state?.round||0,
+  sceneCopy.id,sceneCopy.start,sceneCopy.duration,keepFilmAudio,
+  audioClips.map(c=>[c.id,c.owner,c.start,c.end,c.offset,c.fx,c.volume,c.fadeIn,c.fadeOut,c.blob.size])
+ ]);
  try{
-  const result=await renderPremiere({
+  const reused=premiereExportCache?.source===input&&premiereExportCache?.signature===signature;
+  if(reused)status.textContent='Готовый файл найден — повторно кодировать не нужно.';
+  const result=reused?premiereExportCache.result:await renderPremiere({
    source:input,scene:sceneCopy,clips:audioClips,
-   keepFilmAudio:$('premiere-film-audio').checked,
+   keepFilmAudio,
    signal:controller.signal,
    onProgress:step=>{
     if(generation!==premiereExportGeneration)return;
     if(step.phase==='paused'){
      status.textContent='Экспорт на паузе · вернись на эту вкладку для продолжения без потери прогресса.';
+    }else if(step.phase==='fast'){
+     bar.value=12+Math.round(Math.max(0,Math.min(1,step.fraction))*88);
+     status.textContent='Быстрая сборка MP4 · '+Math.round(step.fraction*100)+'% · без перекодирования видеокадров';
+    }else if(step.phase==='fallback'){
+     status.textContent='Для этого файла требуется обычный экспорт в реальном времени.';
     }else if(step.phase==='decoding'){
      const frac=step.total?step.done/step.total:0;
      bar.value=Math.round(frac*12);
@@ -1747,6 +1761,7 @@ async function downloadPremiere(){
    }
   });
   if(generation!==premiereExportGeneration||controller.signal.aborted)return;
+  if(!reused)premiereExportCache={source:input,signature,result};
   if(!result.size)throw Error('Получился пустой файл.');
   premiereResultUrl=URL.createObjectURL(result);
   const link=$('premiere-export-download');
