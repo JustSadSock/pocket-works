@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "rose-ranking-15",
+  "name": "РОЗКЛАД ТРОЯНД",
+  "shortName": "Розклад троянд",
+  "description": "Тир-листы 23 участниц «Холостяка-15» с фотографиями, заметками и отдельной историей каждой серии.",
+  "version": "1.0.0",
+  "releaseDate": "2026-10-31",
+  "releaseDateTime": "2026-10-31T15:31:00+02:00",
+  "changelog": [
+    "23 участницы 15 сезона: фотографии, факты и карточки с личными прозвищами.",
+    "Серийные рейтинги S–F с автосохранением и копированием предыдущего выпуска.",
+    "Перетаскивание карточек и точное перемещение через мобильную панель.",
+    "Локальный архив серий, сравнение с прошлой неделей и JSON-бэкап."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#a3394c",
+  "backgroundColor": "#f8f2e8",
+  "themeColor": "#43232b",
+  "orientation": "any",
+  "cacheName": "rose-ranking-15-v1.0.0",
+  "storageNamespace": "pocket-works:rose-ranking-15",
+  "tags": [
+    "tier-list",
+    "series",
+    "tv",
+    "collection",
+    "offline"
+  ],
+  "order": 191
+}
