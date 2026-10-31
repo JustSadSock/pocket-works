@@ -412,8 +412,17 @@ function validTrim(){
  }
  return true;
 }
+function canSkipSceneEncoding(){
+ // A small, already compressed original can be shared at higher fidelity
+ // and with zero re-encoding. Larger films still need an actual short export.
+ if(selectedSound()!=='original'||!(sourceBlob instanceof Blob))return false;
+ const length=Number($('trim-length').value);
+ if(!Number.isFinite(length)||length<10||length>90)return false;
+ return mode!=='host'||(sourceBlob.size<=MAX_ROOM_VIDEO_BYTES&&
+  sourceBlob.size<=estimateVideoBytes(length,Number($('media-quality').value),true));
+}
 function hasSceneReview(){
- return videoExportBlob instanceof Blob||
+ return canSkipSceneEncoding()||videoExportBlob instanceof Blob||
   (selectedSound()==='original'&&!sourceBlob&&!filmLocalSource&&!!sceneSource(selected));
 }
 function updateFilmReview(){
@@ -422,12 +431,14 @@ function updateFilmReview(){
   kind==='mute'?'Без оригинального звука':'Исходный звук';
  $('film-review-description').textContent=videoExportBlob?
   'Послушай отрывок и сравни исходный и готовый варианты кнопками над видео.':
+  canSkipSceneEncoding()?'Файл уже достаточно компактный: оставляем оригинальное качество без перекодирования. В комнате будет воспроизводиться только выбранный отрывок.':
   'Ты выбрал исходный звук без нейросети. Проверь отрывок перед подтверждением.';
  $('film-review-source').textContent=selected?.title||'Сцена';
  $('film-review-method').textContent=method;
  const duration=Number($('trim-length').value);
  $('film-review-meta').textContent=fmt(duration)+' · '+
   (videoExportBlob?formatVideoBytes(videoExportBlob.size)+' · готово к отправке':
+   canSkipSceneEncoding()?formatVideoBytes(sourceBlob.size)+' · оригинальный файл, без перекодирования':
    'Встроенная сцена · без перекодирования');
  $('review-mute').classList.toggle('hidden',kind==='mute');
  $('review-original').classList.toggle('hidden',kind==='original');
@@ -474,6 +485,7 @@ function updateSoundChoice(){
 async function prepareSelectedScene(){
  if(scenePrepareStep!=='sound')return false;
  if(!validTrim())return false;
+ if(canSkipSceneEncoding()){setScenePrepStep('review');return true;}
  if(selectedSound()==='original'&&!sourceBlob&&!filmLocalSource){
   setScenePrepStep('review');
   return true;
@@ -699,8 +711,10 @@ function updateMediaLab(){
   $('media-source-size').textContent='Исходник · '+formatVideoBytes(sourceBlob.size);
   $('media-quality-label').textContent=qualityNames[Number($('media-quality').value)-1]||qualityNames[3];
   $('media-estimate').textContent='После обработки ≈ '+formatVideoBytes(size);
-  $('media-fast-status').textContent=plan.kind==='reuse'
-    ?(mode==='solo'?'Без сжатия · на этом устройстве':'Готово без сжатия · можно продолжить сразу')
+  $('media-fast-status').textContent=canSkipSceneEncoding()
+    ?'Можно использовать исходное качество без перекодирования'
+    :plan.kind==='reuse'
+    ?'Исходник помещается в комнату, но обрезка уменьшит объём передачи'
     :'Нужно подготовить фрагмент · весь файл слишком большой';
   $('media-render').disabled=!!videoExportController||!supportsVideoExport();
   $('media-render').classList.toggle('hidden',!!videoExportBlob);
