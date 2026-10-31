@@ -14,7 +14,9 @@ test('manual fades preserve deliberate soft and loud delivery',()=>{
  assert.equal(envelopeGain(c,1),1.75);
  assert(Math.abs(envelopeGain(c,2.625)-.875)<1e-9);
  assert.equal(envelopeGain(c,3),0);
- assert.equal(clipMix({volume:6,fadeIn:-1,fadeOut:NaN}).volume,2);
+ assert.equal(clipMix({volume:6,fadeIn:-1,fadeOut:NaN}).volume,6);
+ assert.equal(clipMix({volume:99}).volume,8);
+ assert.equal(envelopeGain({start:0,end:2,volume:8},1),8);
 });
 test('offline/export gain schedule uses the same envelope and offsets',()=>{
  const events=[],gain={
@@ -29,15 +31,15 @@ test('offline/export gain schedule uses the same envelope and offsets',()=>{
 });
 test('mixer and original audio metadata survive draft roundtrip',()=>{
  const blob=new Blob(['encoded'],{type:'audio/webm'});
- const originals=[{id:'clip',start:1,end:2,offset:0,owner:'me',blob,fx:'robot',volume:.35,fadeIn:.3,fadeOut:.7}];
+ const originals=[{id:'clip',start:1,end:2,offset:0,owner:'me',blob,fx:'robot',volume:6.5,fadeIn:.3,fadeOut:.7}];
  const packed=packTimeline(originals,new TimelineHistory(),originals[0].id);
  const restored=unpackTimeline(packed,20);
- assert.equal(restored.clips[0].volume,.35);
+ assert.equal(restored.clips[0].volume,6.5);
  assert.equal(restored.clips[0].fadeIn,.3);
  assert.equal(restored.clips[0].fadeOut,.7);
  assert.equal(restored.clips[0].fx,'robot');
- assert.equal(voicePlan(restored.clips,20)[0].volume,.35);
- assert.equal(snapshotClips(restored.clips)[0].volume,.35);
+ assert.equal(voicePlan(restored.clips,20)[0].volume,6.5);
+ assert.equal(snapshotClips(restored.clips)[0].volume,6.5);
 });
 test('persistent room rejects starting before configuration and isolates rounds',()=>{
  const host={id:'h',name:'Host'},guest={id:'g',name:'Guest'};
