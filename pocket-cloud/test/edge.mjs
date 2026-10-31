@@ -72,4 +72,38 @@ assert.equal(result.body.byApp.find(x=>x.app==='zamazka').items,1);
 assert.equal(result.body.byApp.find(x=>x.app==='folio').items,1);
 result=await call(a,'folio','item','bad/path','POST',packed);assert.equal(result.status,400);
 result=await call(a,'folio','item','page_2','POST',packed,{'origin':'https://evil.invalid'});assert.equal(result.status,403);
-console.log('PASS: Pocket Cloud isolated users, two app namespaces, revisions, safe deletes, tombstones, spoofing, same-origin');
+
+const rating=(episode,tier,updatedAt)=>({
+ type:'episode',number:episode,
+ data:{rows:{S:tier==='S'?['hornyak']:[],A:tier==='A'?['hornyak']:[],B:[],C:[],D:[],F:[],'?':[]},notes:{hornyak:'Понравилась'},edited:updatedAt}
+});
+const encodeDoc=(document,baseRevision=0)=>({
+ baseRevision,updatedAt:Date.now(),title:'Рейтинг серии '+document.number,
+ encoding:'json-base64',payload:Buffer.from(JSON.stringify(document)).toString('base64')
+});
+const ep2=rating(2,'S',Date.now());
+const ep3=rating(3,'A',Date.now());
+result=await call(a,'rose-ranking-15','list');assert.equal(result.status,200);
+assert.equal(result.body.items.length,0);
+result=await call(a,'rose-ranking-15','item','episode-2','POST',encodeDoc(ep2));
+assert.equal(result.status,200);
+result=await call(a,'rose-ranking-15','item','episode-3','POST',encodeDoc(ep3));
+assert.equal(result.status,200);
+result=await call(b,'rose-ranking-15','list');
+assert.equal(result.body.items.length,0,'Another Pocket ID cannot read account-owned rankings');
+result=await call(a,'folio','list');
+assert.equal(result.body.items.filter(x=>x.id.startsWith('episode-')).length,0,'Rankings must never appear in Folio');
+const changed2=rating(2,'A',Date.now());
+result=await call(a,'rose-ranking-15','item','episode-2','POST',encodeDoc(changed2,1));
+assert.equal(result.status,200);assert.equal(result.body.item.revision,2);
+result=await call(a,'rose-ranking-15','item','episode-3');
+assert.equal(result.status,200);
+assert.deepEqual(JSON.parse(Buffer.from(result.body.payload,'base64').toString('utf8')),ep3,
+ 'Updating episode 2 must never change episode 3');
+result=await call(a,'rose-ranking-15','item','episode-2','POST',encodeDoc(ep2,1));
+assert.equal(result.status,409,'Stale device write must be rejected');
+result=await call(a,'rose-ranking-15','usage');
+assert.equal(result.status,200);
+assert.equal(result.body.byApp.find(x=>x.app==='rose-ranking-15').items,2);
+
+console.log('PASS: Pocket Cloud isolated users, three app namespaces and separate episodes, revisions, safe deletes, tombstones, spoofing, same-origin');
