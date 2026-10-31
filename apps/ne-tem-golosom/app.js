@@ -141,17 +141,18 @@ async function draftReadCompatible(key){
  return draftRead(room+'::'+scene.id+'::'+scene.start+'::'+scene.duration);
 }
 async function restoreLobbyMedia(){
- if(!room||!scene?.custom||sourceBlob)return;
+ if(!room||!scene?.custom||sourceBlob||mode==='host'&&['library','trim'].includes(view))return;
  const key=sceneDraftKey();
  try {
   const old=await draftReadCompatible(key);
+  if(mode==='host'&&['library','trim'].includes(view))return;
   if(old?.video instanceof Blob){
    sourceBlob=old.video;writtenVideoByKey.set(key,sourceBlob);setVideoSources();
    if(meHost())for(const p of state.players)if(p.id!==me)sendVideoTo(p.id);
   }
  }catch{}
  if(!sourceBlob&&meHost())toast('Видео не найдено на устройстве. Выбери исходный файл в комнате повторно.');
- if(state?.phase==='lobby')roomUI();
+ if(state?.phase==='lobby'&&view==='room')roomUI();
 }
 function setDraftStatus(state){
  const copy={idle:'Локальный черновик',saving:'Сохраняем…',saved:'Сохранено',error:'Не сохранено'};
@@ -867,6 +868,8 @@ function disposeRemoteClips(){
 function stateChanged(s){
  if(!s||!['lobby','recording','premiere'].includes(s.phase)||!Array.isArray(s.players)||!s.scene)return;
  const prev=state,epochChanged=!!prev&&prev.mediaEpoch!==s.mediaEpoch;
+ // Presence and reconnect snapshots must not interrupt the host's local film preparation.
+ const hostPreparing=mode==='host'&&prev?.phase==='lobby'&&s.phase==='lobby'&&['library','trim'].includes(view);
  const leftPremiere=prev?.phase==='premiere'&&s.phase!=='premiere';
  const sceneChanged=!scene||scene.id!==s.scene.id||scene.start!==s.scene.start||
    scene.duration!==s.scene.duration||epochChanged;
@@ -885,17 +888,18 @@ function stateChanged(s){
   for(const c of dropped){try{c.audio?.pause()}catch{}if(c.url)URL.revokeObjectURL(c.url)}
   remoteClips=remoteClips.filter(c=>validOwners.has(c.owner));
  }
- if(sceneChanged){
+ if(sceneChanged&&!hostPreparing){
   scene={...s.scene};
   if(!scene.custom||(epochChanged&&me!==s.host))sourceBlob=null;
   setVideoSources();
  }
  if(s.phase==='lobby'){
-  if(sceneChanged&&scene.custom&&meHost()&&sourceBlob){
+  if(sceneChanged&&!hostPreparing&&scene.custom&&meHost()&&sourceBlob){
    projectKey=sceneDraftKey();void draftWrite();
   }
-  if(pendingScenePicker&&meHost())library();else roomUI();
-  if(scene.custom&&meHost()&&sourceBlob)
+  if(pendingScenePicker&&meHost()){pendingScenePicker=false;library()}
+  else if(!hostPreparing)roomUI();
+  if(!hostPreparing&&scene.custom&&meHost()&&sourceBlob)
     for(const id of peers.keys())sendVideoTo(id);
  }else if(s.phase==='recording'){
   if(!prev||prev.phase!=='recording'||!['editor','wait'].includes(view))
