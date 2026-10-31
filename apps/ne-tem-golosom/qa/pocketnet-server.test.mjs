@@ -47,10 +47,11 @@ test('audio relay enforces the current actor, position, and encoded size',()=>{
  send(state,a,{type:'ready',count:1});
  send(state,b,{type:'ready',count:1});
  send(state,a,{type:'reveal'});
- const meta={id:'clip-1',owner:'guest',start:2,end:4,offset:0,epoch:state.mediaEpoch};
+ const meta={id:'clip-1',owner:'guest',start:2,end:4,offset:0,epoch:state.mediaEpoch,round:state.round};
  const begin=data=>send(state,b,{type:'relay',to:'host',data:{action:'begin',token:'voice-token',kind:'audio',size:1234,meta,...data}});
  assert.equal(events(begin({}))[0].type,'relay');
  assert.equal(events(begin({meta:{...meta,epoch:1}})).length,0);
+ assert.equal(events(begin({meta:{...meta,round:meta.round-1}})).length,0);
  assert.equal(events(begin({meta:{...meta,owner:'host'}})).length,0);
  assert.equal(events(begin({meta:{...meta,end:20}})).length,0);
  assert.equal(events(begin({size:3000001})).length,0);
