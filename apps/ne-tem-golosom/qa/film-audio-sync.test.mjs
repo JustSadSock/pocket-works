@@ -84,4 +84,15 @@ test('neural export uses the synchronizer for initial play, frames and tab resum
  assert.match(src,/filmBedSync\?\.pause\(\)/);
  assert.match(src,/\['pause','waiting','stalled','seeking'\]/);
  assert.doesNotMatch(src,/audioSource\?\.start\(\)/);
+ const start=src.indexOf('// Do not start recording a static frame');
+ const segment=src.slice(start,src.indexOf('if(useVideoFrameCallback)',start));
+ assert(start>0);
+ assert(segment.indexOf('await video.play()')>=0);
+ assert(segment.indexOf('await video.play()')<segment.indexOf('recorder.start(1000)'),
+  'video playback must start before MediaRecorder to avoid silent preroll');
+ const premiere=readFileSync(new URL('../premiere-export.js',import.meta.url),'utf8');
+ const begin=premiere.indexOf('// Wait until the actual video playback');
+ const beforeMix=premiere.slice(begin,premiere.indexOf('// Schedule every line against',begin));
+ assert(begin>0&&beforeMix.indexOf('await video.play()')<beforeMix.indexOf('recorder.start(1000)'));
+
 });
