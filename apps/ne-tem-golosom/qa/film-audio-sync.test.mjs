@@ -78,8 +78,10 @@ test('neural export uses the synchronizer for initial play, frames and tab resum
  const src=readFileSync(new URL('../media-lab.js',import.meta.url),'utf8');
  assert.match(src,/import \{createFilmBedSync\}/);
  assert.match(src,/filmBedSync=createFilmBedSync\(\{context:audioContext,buffer,destination,video,sceneStart:start\}\)/);
- assert.match(src,/await video\.play\(\); filmBedSync\?\.sync\(true\)/);
+ assert.match(src,/await video\.play\(\)/);
+ assert.match(src,/recorder\.start\(1000\);\s*started=true;\s*filmBedSync\?\.sync\(true\)/);
  assert.match(src,/filmBedSync\?\.sync\(\)/);
  assert.match(src,/filmBedSync\?\.pause\(\)/);
+ assert.match(src,/\['pause','waiting','stalled','seeking'\]/);
  assert.doesNotMatch(src,/audioSource\?\.start\(\)/);
 });
