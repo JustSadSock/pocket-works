@@ -1359,6 +1359,7 @@ function renderTimeline(){
  $('voice-fx-more').textContent=voiceFxExpanded?'Свернуть эффекты ↑':'Ещё '+VOICE_EFFECTS.filter(f=>f.category!=='main').length+' эффектов ↓';
  $('voice-fx-current').textContent=picked
   ?'· '+VOICE_EFFECTS.find(f=>f.id===normalizeVoiceEffect(picked.fx))?.label:'';
+ updateMicCaptureHint();
  if(picked)renderFavoriteVoiceEffects();
  if(picked)for(const b of $('voice-effects-options').querySelectorAll('[data-voice-fx]')){
   const active=b.dataset.voiceFx===normalizeVoiceEffect(picked.fx);
@@ -1417,6 +1418,7 @@ async function startRecord(countdown=0,replaceId=null){
  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)
    return toast('Этот браузер не поддерживает запись звука.');
  const video=$('stage-video');
+ const captureMode=normalizeMicMode($('mic-capture-mode').value);
  const chosen=replaceId?localClips.find(c=>c.id===replaceId):null;
  if(replaceId&&!chosen)return toast('Выбери реплику для перезаписи.');
  stopAllPlayback();
@@ -1427,7 +1429,7 @@ async function startRecord(countdown=0,replaceId=null){
  let stream;
  try{
   stream=await navigator.mediaDevices.getUserMedia(
-   microphoneRequest(navigator.mediaDevices.getSupportedConstraints?.()||{},normalizeMicMode($('mic-capture-mode').value)));
+   microphoneRequest(navigator.mediaDevices.getSupportedConstraints?.()||{},captureMode));
  }catch(e){
   // Older mobile implementations may reject even ideal constraints.
   if(['OverconstrainedError','NotSupportedError','TypeError'].includes(e?.name)){
@@ -1435,7 +1437,7 @@ async function startRecord(countdown=0,replaceId=null){
     stream=await navigator.mediaDevices.getUserMedia({audio:true});
     await stream.getAudioTracks()[0]?.applyConstraints?.({
      echoCancellation:false,autoGainControl:false,
-     noiseSuppression:normalizeMicMode($('mic-capture-mode').value)==='noise-reduced'
+     noiseSuppression:captureMode==='noise-reduced'
     }).catch(()=>{});
    }catch{}
   }
@@ -1447,10 +1449,10 @@ async function startRecord(countdown=0,replaceId=null){
  }
  micPending=false;
  const settings=stream.getAudioTracks()[0]?.getSettings?.()||{};
- if(normalizeMicMode($('mic-capture-mode').value)==='raw'&&
+ if(captureMode==='raw'&&
     (settings.noiseSuppression===true||settings.echoCancellation===true||settings.autoGainControl===true))
   toast('Устройство принудительно обрабатывает микрофон. Попробуй другую гарнитуру или браузер.');
- if(normalizeMicMode($('mic-capture-mode').value)==='noise-reduced'&&settings.noiseSuppression===false)
+ if(captureMode==='noise-reduced'&&settings.noiseSuppression===false)
   toast('Этот микрофон не поддерживает подавление шума — записываем исходный звук.');
  if(view!=='editor'||!scene){stream.getTracks().forEach(t=>t.stop());updateRecordingControls();return}
  if(!stream.getAudioTracks?.().length){
@@ -1483,7 +1485,7 @@ async function startRecord(countdown=0,replaceId=null){
    rec=createVoiceRecorder(stream);
    const blobs=[],active={
     rec,stream,blobs,replaceId:chosen?.id||null,
-    limit:scene.duration,start:intendedStart,end:intendedStart,resolve:null,
+    limit:scene.duration,start:intendedStart,end:intendedStart,captureMode,resolve:null,
     finalized:false,stopTimer:null
    };
    rec.ondataavailable=e=>{if(e.data?.size)blobs.push(e.data)};
@@ -1516,10 +1518,10 @@ async function startRecord(countdown=0,replaceId=null){
      else if(blob.size&&active.end-active.start>=MIN_CLIP_SECONDS){
       if(active.replaceId){
        const id=uid();
-       const updated=replaceSelectedRecording(localClips,active.replaceId,blob,active.end-active.start,id);
+       const updated=replaceSelectedRecording(localClips,active.replaceId,blob,active.end-active.start,id,active.captureMode);
        if(updated){editHistory.remember(localClips);setClips(updated,id);await draftWrite()}
        else toast('Получился слишком короткий дубль. Попробуй ещё раз.');
-      }else await replaceClip(active.start,active.end,blob);
+      }else await replaceClip(active.start,active.end,blob,active.captureMode);
      }else toast('Дубль слишком короткий, попробуй записать дольше.');
     }catch(e){toast('Не удалось сохранить запись: '+(e?.message||'ошибка'))}
     finally{
@@ -1591,10 +1593,10 @@ function finishRecording(){
  cue('stop');updateRecordingControls();
  return pendingRecording;
 }
-async function replaceClip(a,b,blob){
+async function replaceClip(a,b,blob,captureMode='raw'){
  const id=uid(),owner=me||'solo';
  let next;
- try{next=spliceRecording(snapshotClips(localClips),{id,start:a,end:b,blob,owner},uid)}
+ try{next=spliceRecording(snapshotClips(localClips),{id,start:a,end:b,blob,owner,captureMode},uid)}
  catch(e){toast(e.message||'Не получилось сохранить дубль.');return false}
  editHistory.remember(localClips);
  stopAllPlayback();
@@ -1768,12 +1770,20 @@ function pausePremiere(){const v=$('premiere-video');v.pause();updateClipSound(t
 async function playPremiere(){if(receivedCount()<expectedCount())return;const v=$('premiere-video');if(!v.paused){pausePremiere();return}if(time(v)>=scene.duration-.08)seekVideo(v,0);try{v.muted=premiereAB==='dub'&&!scene?.cleaned;updateClipSound(time(v),premiereAB==='dub',true);await v.play();$('premiere-play').textContent='Ⅱ Пауза'}catch{toast('Нажми ещё раз для запуска со звуком.')}}
 
 $('mic-capture-mode').value=normalizeMicMode((()=>{try{return localStorage.getItem(STORE+'mic-mode')}catch{return 'raw'}})());
+function updateMicCaptureHint(){
+ const picked=localClips.find(c=>c.id===selectedClip);
+ const was=picked?(picked.captureMode==='noise-reduced'?'с шумоподавлением':'без обработки'):'';
+ const next=normalizeMicMode($('mic-capture-mode').value);
+ $('mic-capture-hint').textContent=(picked?'Выбранная реплика записана '+was+'. ':'')+
+  (next==='raw'
+   ?'Следующая запись сохранит все звуки, если устройство разрешает.'
+   :'Шумоподавление будет применено только к следующей записи.')+
+  ' Для изменения уже записанного звука нужна перезапись.';
+}
 $('mic-capture-mode').onchange=()=>{
  const mode=normalizeMicMode($('mic-capture-mode').value);
  try{localStorage.setItem(STORE+'mic-mode',mode)}catch{}
- $('mic-capture-hint').textContent=mode==='raw'
-  ?'Запишутся и речь, и фоновые звуки. Ранее записанные реплики не меняются.'
-  :'Браузер попробует подавить фон только у следующей записи. Перезапись изменит выбранную реплику.';
+ updateMicCaptureHint();
 };
 $('mic-capture-mode').onchange();
 $('sound-btn').onclick=toggleSound;
