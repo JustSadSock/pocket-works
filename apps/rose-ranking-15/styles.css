@@ -231,3 +231,28 @@ img[src*="imgnewtabl.pravda.com.ua"]{object-position:80% 50%!important}
  .ranking-column .tier-section:not([data-tier="?"]) .person{width:calc((100% - 5px)/2);flex-basis:calc((100% - 5px)/2)}
  .cloud-controls span{max-width:180px;font-size:10px}
 }
+
+
+.rail-sticky{position:sticky;top:0;z-index:6;background:#f3e8de;border-bottom:1px solid #dbc6bf}
+.rail-sticky .rail-heading{position:static;border-bottom:0;padding-bottom:3px}
+.rail-search{height:40px;display:flex;align-items:center;gap:7px;margin:0 10px 9px;padding:0 9px;background:#fffaf3;border:1px solid #d2bdb4}
+.rail-search span{font-size:21px;color:#9b6670}
+.rail-search input{width:100%;min-width:0;height:35px;background:transparent;border:0;color:var(--ink);font-size:13px;outline-offset:0}
+.rail-search input::placeholder{color:#a18a82}
+.candidate-list .catalog-rank{
+ position:absolute;left:0;bottom:33px;z-index:3;
+ min-width:25px;padding:2px 6px;font:italic 18px/1.2 Georgia,serif;
+ background:#803145;color:#fff9f4;pointer-events:none;
+}
+.candidate-list .catalog-rank[data-rank="A"]{background:#ae6370}
+.candidate-list .catalog-rank[data-rank="B"]{background:#bb8e78}
+.candidate-list .catalog-rank[data-rank="C"]{background:#9b9692}
+.candidate-list .catalog-rank[data-rank="D"]{background:#868b84}
+.candidate-list .catalog-rank[data-rank="F"]{background:#6c747a}
+.candidate-list .catalog-person .person-bottom{border-top:1px solid #dbc8bf}
+@media(max-width:780px){
+ .rail-search{height:35px;margin:0 5px 6px;padding:0 5px;gap:3px}
+ .rail-search span{font-size:15px}
+ .rail-search input{height:33px;font-size:10px}
+ .candidate-list .catalog-rank{font-size:15px;bottom:28px;min-width:21px;padding:1px 4px}
+}
