@@ -299,8 +299,17 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
     ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.drawImage(video,0,0,canvas.width,canvas.height);
     if(cancelled)throw abortError();
+    // Do not start recording a static frame while video.play() is waiting for
+    // the decoder: that would insert silent pre-roll before the actual scene.
+    try{await video.play()}
+    catch{
+      if(cancelled)throw abortError();
+      throw Error('Браузер запретил обработку. Нажми «Сжать» ещё раз.');
+    }
+    if(cancelled)throw abortError();
     recorder.start(1000);
     started=true;
+    filmBedSync?.sync(true);
     if(captureMode==='decoded-frames')captureTrack.requestFrame();
     // Local files should not stall. Detect a broken decoder rather than leaving
     // a forever-running progress spinner and an unfinished recording.
@@ -311,17 +320,6 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
         video.pause();recorder.stop();
       }
     },3000);
-    try { await video.play(); filmBedSync?.sync(true); } catch {
-      if(cancelled){
-        await completed.catch(()=>{});
-        throw abortError();
-      }
-      terminalError=Error('Браузер запретил обработку. Нажми «Сжать» ещё раз.');
-      if(recorder.state==='recording')recorder.stop();
-      // Recorder callbacks can fire on another task; observe the rejection.
-      await completed.catch(()=>{});
-      throw terminalError;
-    }
     if(useVideoFrameCallback)
       frame=video.requestVideoFrameCallback(paintVideoFrame);
     else
