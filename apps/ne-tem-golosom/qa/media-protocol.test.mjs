@@ -2,8 +2,8 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {MAX_AUDIO_BYTES,validAudioEnvelope,validVideoEnvelope,canAcceptVoice} from '../media-protocol.js';
 
-const base={meta:{id:'clip-1',owner:'guest',start:2,end:5,offset:0,epoch:7},
- bytes:120000,scene:{id:'scene',duration:20,custom:true},epoch:7,
+const base={meta:{id:'clip-1',owner:'guest',start:2,end:5,offset:0,epoch:7,round:4},
+ bytes:120000,scene:{id:'scene',duration:20,custom:true},epoch:7,round:4,
  players:['host','guest','third'],expected:{host:1,guest:2,third:1},
  sender:'guest',host:'host',receiver:'host'};
 
@@ -12,6 +12,8 @@ test('voice direction and current scene',()=>{
  assert(validAudioEnvelope({...base,sender:'host',receiver:'third'}));
  assert(!validAudioEnvelope({...base,sender:'third'}));
  assert(!validAudioEnvelope({...base,epoch:8}));
+ assert(!validAudioEnvelope({...base,round:5}));
+ assert(!validAudioEnvelope({...base,meta:{...base.meta,round:3}}));
  assert(!validAudioEnvelope({...base,meta:{...base.meta,epoch:8}}));
 });
 test('voice metadata and size boundaries',()=>{
