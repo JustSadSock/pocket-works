@@ -1,0 +1,24 @@
+{
+  "id": "/apps/rose-ranking-15/",
+  "name": "РОЗКЛАД ТРОЯНД",
+  "short_name": "Розклад троянд",
+  "description": "Тир-листы участниц «Холостяка-15» по сериям",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#f8f2e8",
+  "theme_color": "#43232b",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

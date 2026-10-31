@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#43232b"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Розклад троянд">
+<meta name="description" content="Личный рейтинг участниц Холостяка-15 по сериям. Фотографии, тиры и история мнений.">
+<title>РОЗКЛАД ТРОЯНД · Холостяк 15</title>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body><main class="app-shell" data-app-shell data-keyboard-aware>
+<header class="mast" data-ui>
+  <a class="home-link" href="../../" data-app-control data-native-press><span aria-hidden="true">←</span> Pocket Works</a>
+  <div class="mast-brand"><span class="brand-mark" aria-hidden="true">✳</span><span>РОЗКЛАД <em>ТРОЯНД</em></span></div>
+  <button type="button" id="openTools" class="tool-button" data-native-press aria-label="Меню и сохранения">⋯</button>
+</header>
+<section class="editor">
+  <div class="season-heading" data-ui>
+    <span class="eyebrow">ХОЛОСТЯК · СЕЗОН 15</span>
+    <span class="season-sub">В’ячеслав Кравцов <span class="season-separator">/</span> 2026</span>
+  </div>
+  <div class="episode-switch" data-ui>
+    <button type="button" id="previousEpisode" class="episode-arrow" data-native-press aria-label="Предыдущая серия">‹</button>
+    <div class="episode-center">
+      <span class="episode-small">ВАШ РЕЙТИНГ ПОСЛЕ</span>
+      <strong id="episodeTitle">01 <small>серии</small></strong>
+      <span id="episodeDate">16 октября</span>
+    </div>
+    <button type="button" id="nextEpisode" class="episode-arrow" data-native-press aria-label="Следующая серия">›</button>
+  </div>
+  <div class="edition-line" data-ui><div class="edition-progress"><span id="progressBar"></span></div><span id="progressText">0 из 23 распределены</span><span id="saveStatus" role="status" aria-live="polite">Сохранено</span></div>
+  <div id="board" class="board" aria-label="Рейтинг участниц"></div>
+  <p class="board-foot">Нажми на фотографию, чтобы выбрать тир или оставить заметку. Карточки можно перетаскивать за ручку.</p>
+  <div class="sources-foot">Фото: <a href="https://viva.ua/news/20629-15-istoriy-15-harakteriv-i-borotba-za-kohannya-znayomimosya-z-uchasnitsyami-shou-holostyak" target="_blank" rel="noreferrer">Viva!</a>, <a href="https://tabloid.pravda.com.ua/celebrity/holostyak-15-yak-proyshlo-znayomstvo-v-yacheslava-kravcova-iz-uchasnicyami-ta-yak-yogo-divuvali-2018391/" target="_blank" rel="noreferrer">ТаблоID</a>. Список включает выбывших; личные оценки не зависят от результатов шоу.</div>
+</section>
+<div id="rankDock" class="rank-dock" hidden aria-label="Быстрое перетаскивание в тир">
+  <div class="rank-dock-title">ПЕРЕНЕСТИ В ТИР</div><div class="rank-dock-buttons"></div>
+</div>
+<div id="modalRoot" class="modal-root" hidden></div>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="РОЗКЛАД ТРОЯНД" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body></html>
