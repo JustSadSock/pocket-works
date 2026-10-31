@@ -49,7 +49,8 @@ test('small original scene keeps source quality, oversized file still gets a rea
  };
  runInNewContext(app.slice(start,end),context);
  assert.equal(context.canSkipSceneEncoding(),true);
- context.sourceBlob={size:220*1048576};
+ const oversized=new Blob([]);Object.defineProperty(oversized,'size',{value:220*1048576});
+ context.sourceBlob=oversized;
  assert.equal(context.canSkipSceneEncoding(),false);
  context.sourceBlob=new Blob([new Uint8Array(1024)]);
  context.selectedSound=()=> 'neural';
