@@ -974,6 +974,11 @@ function stateChanged(s){
   setVideoSources();
  }
  if(s.phase==='lobby'){
+  if(roundChanged&&!sceneChanged&&s.phase==='lobby'){
+   // Replace any contaminated next-round draft with an empty timeline.
+   // Reconnects within the same round never enter this branch.
+   projectKey=sceneDraftKey();void draftWrite();
+  }
   if(sceneChanged&&!hostPreparing&&scene.custom&&meHost()&&sourceBlob){
    // Keep the media for the new scene, but never write old voice clips
    // into the new round's draft.
@@ -1197,7 +1202,7 @@ function receiveRelay(packet){
  const key=from+':'+d.token;
  if(d.action==='begin'){
   if(d.kind!=='audio'||!validAudioEnvelope({
-   meta:d.meta,bytes:d.size,scene,epoch:state.mediaEpoch,
+   meta:d.meta,bytes:d.size,scene,epoch:state.mediaEpoch,round:state.round,
    players:state.players.map(p=>p.id),expected:state.counts,
    sender:from,host:state.host,receiver:me
   })||!canAcceptVoice({owner:d.meta.owner,local:localClips,remote:remoteClips,expected:state.counts}))return;
@@ -1233,7 +1238,7 @@ function onMedia(p,data){
    const metadata=packet.meta;
    if(packet.media==='audio'){
     if(state?.phase!=='premiere'||!validAudioEnvelope({
-     meta:metadata,bytes:packet.size,scene,epoch:state?.mediaEpoch,
+     meta:metadata,bytes:packet.size,scene,epoch:state?.mediaEpoch,round:state?.round,
      players:state?.players?.map(player=>player.id),expected:state?.counts,
      sender:p.id,host:state?.host,receiver:me
     })||!canAcceptVoice({owner:metadata?.owner,local:localClips,remote:remoteClips,expected:state?.counts}))return;
@@ -1269,7 +1274,7 @@ async function receivedMedia(p,rx,blob){
  if(state.phase!=='premiere'||rx.kind!=='audio')return;
  const m=rx.meta;
  if(!validAudioEnvelope({
-  meta:m,bytes:blob.size,scene,epoch:state.mediaEpoch,
+  meta:m,bytes:blob.size,scene,epoch:state.mediaEpoch,round:state.round,
   players:state.players.map(player=>player.id),expected:state.counts,
   sender:p.id,host:state.host,receiver:me
  })||!canAcceptVoice({owner:m?.owner,local:localClips,remote:remoteClips,expected:state.counts}))return;
@@ -1280,7 +1285,7 @@ async function receivedMedia(p,rx,blob){
 }
 function sendOwnTo(id){for(const c of localClips)sendAudio(id,c.blob,{
  id:c.id,owner:me,start:c.start,end:c.end,offset:c.offset,fx:normalizeVoiceEffect(c.fx),...clipMix(c),
- epoch:state?.mediaEpoch,mime:c.blob.type
+ epoch:state?.mediaEpoch,round:state?.round,mime:c.blob.type
 })}
 function sendAllOwn(){if(sentPremiere||mode==='solo'||debugPlay)return;sentPremiere=true;for(const p of state.players)if(p.id!==me&&(meHost()||p.id===state.host))sendOwnTo(p.id)}
 async function openEditor(){if(!scene)return;stopAllPlayback();if(scene.cleaned)filmSound=true;const key=mode==='solo'?(debugPlay?'debug::':'')+'solo::'+scene.id+'::'+scene.start+'::'+scene.duration:sceneDraftKey();if(!await restore(key)){if(mode==='solo')library();else roomUI();return}if(mode!=='solo'&&state?.phase!=='recording')return;setVideoSources('stage-video');$('editor-scene').textContent=scene.title;$('editor-role').textContent=ownRole();$('mute-film').textContent='Звук фильма: '+(filmSound?'вкл.':'выкл.');$('mute-film').setAttribute('aria-pressed',String(filmSound));$('stage-video').muted=!filmSound;$('premiere-video').muted=true;show('editor');seekVideo($('stage-video'),0);renderTimeline();updateRecordingControls();setDraftStatus('saved');if(scene.custom&&!sourceBlob){$('stage-placeholder').textContent='Ожидаем видео от ведущего…';$('stage-placeholder').classList.remove('hidden')}}
