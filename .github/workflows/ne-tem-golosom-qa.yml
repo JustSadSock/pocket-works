@@ -44,6 +44,7 @@ jobs:
           node --check apps/ne-tem-golosom/app.js
           node --check apps/ne-tem-golosom/screen-debug.js
           node --check apps/ne-tem-golosom/media-lab.js
+          node --check apps/ne-tem-golosom/film-audio-sync.js
           node --check apps/ne-tem-golosom/mp4-fast-cut.js
           node --check apps/ne-tem-golosom/film-cleanup.js
           node --check apps/ne-tem-golosom/film-buzz-worker.js
