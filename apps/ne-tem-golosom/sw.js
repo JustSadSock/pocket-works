@@ -1,9 +1,9 @@
 const CACHE_PREFIX='ne-tem-golosom-';
-const CACHE='ne-tem-golosom-v1.14.5';
-const APP_VERSION='1.14.5';
+const CACHE='ne-tem-golosom-v1.14.6';
+const APP_VERSION='1.14.6';
 const RELEASE_DATE='2026-10-31';
-const RELEASE_NOTES=["Нейросеть не перезапускается между короткими кусками в экономном режиме.","Повторное изменение качества видео использует уже очищенную дорожку без повторной нейросети.","Компактные оригиналы можно использовать без перекодирования, если это выгоднее.","Обновления комнаты не прерывают монтаж ведущего."];
-const OWN=['./','./index.html','./app.js','./film-cleanup.js','./mp4-audio.js','./film-buzz-worker.js','../tihiy-kadr/mrx-worker.js','../tihiy-kadr/artifact-repair.js','../tihiy-kadr/selective-scnet.js','./clip-mix.js','./room-recovery.js','./media-lab.js','./premiere-export.js','./studio-feedback.js','./recording-audio.js','./media-protocol.js','./trim-range.js','./timeline-model.js','./voice-effects.js','./styles.css','./screen-debug.css','./screen-debug.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/capabilities/net.js','../../shared/capabilities/identity.js'];
+const RELEASE_NOTES=["MP4 H.264/AAC обрезается без долгого перекодирования, когда это совместимо с настройками.","Удаление звука при быстрой обрезке сохраняет исходное качество видео.","Для остальных форматов работает прежний кодировщик с защитой от ошибок.","Настройка видео ведущим не прерывается изменениями состава комнаты."];
+const OWN=['./','./index.html','./app.js','./film-cleanup.js','./mp4-audio.js','./film-buzz-worker.js','../tihiy-kadr/mrx-worker.js','../tihiy-kadr/artifact-repair.js','../tihiy-kadr/selective-scnet.js','./clip-mix.js','./room-recovery.js','./media-lab.js','./mp4-fast-cut.js','./premiere-export.js','./studio-feedback.js','./recording-audio.js','./media-protocol.js','./trim-range.js','./timeline-model.js','./voice-effects.js','./styles.css','./screen-debug.css','./screen-debug.js','./manifest.webmanifest','./app.config.json','./icons/icon.svg','../../shared/mobile-runtime.js','../../shared/mobile-runtime.css','../../shared/capabilities/net.js','../../shared/capabilities/identity.js'];
 const SCOPE=new URL('./',self.registration.scope);
 const URLS=new Map(OWN.map(p=>{const u=new URL(p,SCOPE);return [u.pathname,u.href]}));
 async function fetchCurrent(url){const u=new URL(url);u.searchParams.set('__pw_build',APP_VERSION);const r=await fetch(u.href,{cache:'no-store',credentials:'same-origin'});if(!r.ok)throw Error('HTTP '+r.status);return r}
