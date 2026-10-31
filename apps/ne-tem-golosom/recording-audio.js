@@ -8,10 +8,15 @@ export const AUDIO_MIMES=Object.freeze([
  'audio/webm',
  'audio/ogg;codecs=opus'
 ]);
-export function microphoneRequest(supported={}){
+export const MIC_MODES=Object.freeze([
+ {id:'raw',label:'Чистая запись · без обработки'},
+ {id:'noise-reduced',label:'Уменьшать фоновый шум'}
+]);
+export const normalizeMicMode=value=>MIC_MODES.some(x=>x.id===value)?value:'raw';
+export function microphoneRequest(supported={},mode='raw'){
  const audio={};
  for(const name of ['echoCancellation','noiseSuppression','autoGainControl']){
-  if(supported[name]!==false)audio[name]=false;
+  if(supported[name]!==false)audio[name]=name==='noiseSuppression'&&normalizeMicMode(mode)==='noise-reduced';
  }
  if(supported.channelCount!==false)audio.channelCount={ideal:1};
  return {audio:Object.keys(audio).length?audio:true};
