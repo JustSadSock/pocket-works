@@ -20,6 +20,7 @@ let modal={type:null,id:null};
 let pendingImport=null;
 let noticeTimeout=0;
 let drag=null;
+let catalogQuery='';
 
 const $=id=>document.getElementById(id);
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -69,17 +70,19 @@ function persist(){
 }
 function touchEpisode(){current().edited=Date.now();persist();}
 function touchProfile(){state.profileEdited=Date.now();persist();}
-function personCard(id,changes){
+function personCard(id,changes,{catalog=false}={}){
  const p=safePerson(id);if(!p)return '';
  const nick=state.nicknames[id]||'';
  const out=eliminatedBeforeEpisode(p,state.current);
- const delta=changes[id]||'';
- return `<article class="person" data-id="${escapeHtml(id)}">
+ const delta=catalog?'':changes[id]||'';
+ const rank=catalog?findTier(current().rows,id):'?';
+ return `<article class="person${catalog?' catalog-person':''}" data-id="${escapeHtml(id)}">
   <button type="button" class="person-button" data-open-person="${escapeHtml(id)}" aria-label="${escapeHtml(p.name)}: выбрать тир и посмотреть описание" data-native-press>
     <span class="person-photo"><img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async"><span class="photo-fallback">${escapeHtml(initials(p.name))}</span></span>
     <span class="person-bottom"><span class="person-name">${escapeHtml(p.short)}${p.name!==p.short?' '+escapeHtml(p.name.split(' ').slice(1).join(' ')):''}</span>${nick?`<span class="person-nick">${escapeHtml(nick)}</span>`:''}</span>
   </button>
   <button type="button" class="photo-expand-button" data-open-photo="${escapeHtml(id)}" aria-label="Просмотреть фотографию ${escapeHtml(p.name)} на весь экран" data-native-press><span aria-hidden="true">⤢</span></button>
+  ${catalog&&rank!=='?'?`<span class="catalog-rank" data-rank="${rank}" aria-label="Текущий тир ${rank}">${rank}</span>`:''}
   ${out?`<span class="person-exit">Выбыла · ${p.exit} серия</span>`:''}
   ${delta?`<span class="person-delta" data-change="${delta}" aria-label="${delta==='up'?'Поднялась':delta==='down'?'Опустилась':delta==='new'?'Новая оценка':'Без оценки'}">${delta==='up'?'↑':delta==='down'?'↓':delta==='new'?'＋':'·'}</span>`:''}
   <button type="button" class="person-grip" data-drag-id="${escapeHtml(id)}" title="Перетащить карточку" aria-label="Перетащить ${escapeHtml(p.name)}" data-gesture-surface data-block-callout>⠿</button>
@@ -93,11 +96,20 @@ function tierHtml(tier,changes){
  <div class="tier-content" data-tier-content="${tier}">${ids.length?ids.map(id=>personCard(id,changes)).join(''):`<div class="tier-empty">${tier==='?'?'Все участницы распределены':'Нажми на карточку или перетащи сюда'}</div>`}</div>
  </section>`;
 }
+
+function catalogHtml(){
+ const query=catalogQuery.trim().toLocaleLowerCase();
+ const ids=IDS.filter(id=>visiblePerson(id)&&(!query||((PEOPLE.get(id)?.name||'')+' '+(state.nicknames[id]||'')).toLocaleLowerCase().includes(query)));
+ return `<section class="tier-section catalog-section" data-tier="?" aria-label="Каталог участниц; перенос сюда снимает оценку">
+   <div class="tier-content" data-tier-content="?">${ids.length?ids.map(id=>personCard(id,{}, {catalog:true})).join(''):'<div class="tier-empty">Никого не найдено. Измени поиск или включи показ выбывших.</div>'}</div>
+ </section>`;
+}
+
 function render(){
  const ep=current();
  const prev=state.episodes[state.current-1]?.rows;
  const changes=rankChanges(ep.rows,prev);
- $('candidateList').innerHTML=tierHtml('?',changes);
+ $('candidateList').innerHTML=catalogHtml();
  $('board').innerHTML=DISPLAY_ORDER.filter(tier=>tier!=='?').map(tier=>tierHtml(tier,changes)).join('');
  $('episodeTitle').innerHTML=episodeLabel(state.current)+' <small>серии</small>';
  $('episodeDate').textContent=episodeDate(state.current);
@@ -519,6 +531,7 @@ function initialize(){
  $('previousEpisode').addEventListener('click',()=>changeEpisode(-1));
  $('nextEpisode').addEventListener('click',()=>changeEpisode(1));
  $('openTools').addEventListener('click',openTools);
+ $('candidateSearch').addEventListener('input',event=>{catalogQuery=event.target.value;$('candidateList').innerHTML=catalogHtml();});
  $('workbench').addEventListener('click',event=>{
   if(drag)return;
   const photo=event.target.closest('[data-open-photo]');
