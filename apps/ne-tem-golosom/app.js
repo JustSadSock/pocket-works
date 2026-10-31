@@ -12,6 +12,7 @@ import {createRoomRecovery} from './room-recovery.js';
 import {FILM_MODES,estimateFilmTimes,estimatePreparationTimes,lowMemoryRecommended,cleanFilmSound} from './film-cleanup.js';
 import {getPocketIdentity} from '../../shared/capabilities/identity.js';
 import {MAX_ROOM_VIDEO_BYTES,MAX_SOURCE_VIDEO_BYTES,formatVideoBytes,estimateVideoBytes,planVideoPreparation,mediaSettingsKey,supportsVideoExport,measureVideoDuration,exportVideo} from './media-lab.js';
+import {fastCutMP4} from './mp4-fast-cut.js';
 installMobileRuntime();
 
 const $=id=>document.getElementById(id);
@@ -412,10 +413,17 @@ function validTrim(){
  }
  return true;
 }
+function canUseLosslessCut(){
+ // Copying encoded frames can preserve source fidelity, not downscale them.
+ // Respect explicit lower-quality/resolution settings instead of ignoring them.
+ const width=Number($('media-resolution').value),originalWidth=$('trim-video').videoWidth;
+ return Number($('media-quality').value)>=4&&
+  Number.isFinite(originalWidth)&&originalWidth>0&&width>=originalWidth;
+}
 function canSkipSceneEncoding(){
  // A small, already compressed original can be shared at higher fidelity
  // and with zero re-encoding. Larger films still need an actual short export.
- if(selectedSound()!=='original'||!(sourceBlob instanceof Blob))return false;
+ if(selectedSound()!=='original'||!(sourceBlob instanceof Blob)||!canUseLosslessCut())return false;
  const length=Number($('trim-length').value);
  if(!Number.isFinite(length)||length<10||length>90)return false;
  return mode!=='host'||(sourceBlob.size<=MAX_ROOM_VIDEO_BYTES&&
@@ -713,6 +721,8 @@ function updateMediaLab(){
   $('media-estimate').textContent='После обработки ≈ '+formatVideoBytes(size);
   $('media-fast-status').textContent=canSkipSceneEncoding()
     ?'Можно использовать исходное качество без перекодирования'
+    :canUseLosslessCut()&&['original','mute'].includes(selectedSound())
+    ?'MP4 H.264/AAC: попробуем быстро вырезать без перекодирования'
     :plan.kind==='reuse'
     ?'Исходник помещается в комнату, но обрезка уменьшит объём передачи'
     :'Нужно подготовить фрагмент · весь файл слишком большой';
@@ -778,7 +788,7 @@ async function processMedia(){
   let lastShown=-1,prepared=false;
   exportBusy(true);$('media-progress-bar').value=0;
   $('media-progress-label').textContent='Подготовка видео · 0%';
-  $('media-progress-help').textContent='Обработка идёт во время воспроизведения. Не закрывай экран.';
+  $('media-progress-help').textContent='Сначала пробуем быструю обрезку MP4. Для других форматов доступно обычное кодирование.';
   try{
     let blob=sourceBlob||filmLocalSource;
     if(!blob){
@@ -798,7 +808,24 @@ async function processMedia(){
       }
     }
     if(!(blob instanceof Blob)||blob.size>MAX_SOURCE_VIDEO_BYTES)throw Error('Видео должно быть не больше 512 МиБ.');
-    const result=await exportVideo({blob,start,duration,width:Number($('media-resolution').value),
+    let result=null,lossless=false;
+    if(canUseLosslessCut()&&['original','mute'].includes(selectedSound())){
+      $('media-progress-label').textContent='Проверяем MP4 для быстрого монтажа…';
+      try{
+        const quick=await fastCutMP4({blob,start,duration,keepAudio:selectedSound()==='original',signal:controller.signal});
+        if(quick&&(mode!=='host'||quick.size<=MAX_ROOM_VIDEO_BYTES)){
+          result=quick;lossless=true;
+          $('media-progress-label').textContent='Вырезали фрагмент без повторного кодирования.';
+        }
+      }catch(error){
+        if(controller.signal.aborted)throw error;
+        console.warn('MP4 fast cut unavailable, using browser encoder',error);
+      }
+    }
+    if(controller.signal.aborted)return false;
+    if(!result){
+     $('media-progress-help').textContent='Формат не поддерживает быструю обрезку, либо фрагмент велик. Кодируем выбранную сцену.';
+     result=await exportVideo({blob,start,duration,width:Number($('media-resolution').value),
       level:Number($('media-quality').value),keepAudio:selectedSound()==='original',
       signal:controller.signal,
       onProgress:progress=>{
@@ -813,6 +840,7 @@ async function processMedia(){
         $('media-progress-label').textContent='Обработка · '+pct+'%'+
           (remaining!==null&&pct<100?' · ≈ '+fmt(remaining)+' осталось':'');
       }});
+    }
     if(controller.signal.aborted)return;
     videoExportBlob=result;
     if(sourceBlob&&result.size<=MAX_ROOM_VIDEO_BYTES)
@@ -829,7 +857,8 @@ async function processMedia(){
     $('media-result').classList.remove('hidden');
     $('media-note').textContent=result.size>MAX_ROOM_VIDEO_BYTES&&mode==='host'
       ? 'Файл всё ещё слишком большой. Уменьши качество или разрешение и повтори.'
-      : 'Обработано за '+fmt(Math.round((performance.now()-startedAt)/1000))+'. Сравни качество и нажми «Использовать и продолжить».';
+      : lossless?'Без перекодирования: исходное качество сохранено, фрагмент обрезан до выбранного диапазона. Проверь начало и конец.':
+        'Обработано за '+fmt(Math.round((performance.now()-startedAt)/1000))+'. Сравни качество и нажми «Использовать и продолжить».';
     cue('ready');prepared=true;return true;
   }catch(e){
     if(e?.name!=='AbortError')toast(e?.message||'Не получилось обработать видео.');
