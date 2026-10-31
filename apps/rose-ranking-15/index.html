@@ -34,15 +34,43 @@
   </div>
   <div class="edition-line" data-ui><div class="edition-progress"><span id="progressBar"></span></div><span id="progressText">0 из 23 распределены</span><span id="saveStatus" role="status" aria-live="polite">Сохранено</span></div>
   <div id="board" class="board" aria-label="Рейтинг участниц"></div>
-  <p class="board-foot">Нажми на фотографию, чтобы выбрать тир или оставить заметку. Карточки можно перетаскивать за ручку.</p>
+  <p class="board-foot">Нажми на фото ⤢, чтобы рассмотреть кадр целиком. Нажми на имя, чтобы выбрать тир и записать впечатление. Карточки можно переносить за ручку.</p>
   <div class="sources-foot">Фото: <a href="https://viva.ua/news/20629-15-istoriy-15-harakteriv-i-borotba-za-kohannya-znayomimosya-z-uchasnitsyami-shou-holostyak" target="_blank" rel="noreferrer">Viva!</a>, <a href="https://tabloid.pravda.com.ua/celebrity/holostyak-15-yak-proyshlo-znayomstvo-v-yacheslava-kravcova-iz-uchasnicyami-ta-yak-yogo-divuvali-2018391/" target="_blank" rel="noreferrer">ТаблоID</a>. Список включает выбывших; личные оценки не зависят от результатов шоу.</div>
 </section>
 <div id="rankDock" class="rank-dock" hidden aria-label="Быстрое перетаскивание в тир">
   <div class="rank-dock-title">ПЕРЕНЕСТИ В ТИР</div><div class="rank-dock-buttons"></div>
 </div>
 <div id="modalRoot" class="modal-root" hidden></div>
+<div id="photoViewer" class="photo-viewer" hidden role="dialog" aria-modal="true" aria-label="Просмотр фотографии">
+  <header class="photo-viewer-bar" data-ui>
+    <button id="photoClose" type="button" class="photo-back" data-photo-action="close" data-native-press>← Назад</button>
+    <div class="photo-viewer-heading"><strong id="photoPersonName"></strong><small id="photoEpisode"></small></div>
+    <div class="photo-viewer-icon" aria-hidden="true">✳</div>
+  </header>
+  <div id="photoStage" class="photo-stage" data-gesture-surface data-block-callout aria-label="Фотография целиком; можно увеличивать жестом двумя пальцами">
+    <img id="photoFull" class="photo-full" alt="" draggable="false" hidden>
+    <div id="photoLoading" class="photo-loading" role="status">Загрузка фотографии…</div>
+    <div id="photoFailed" class="photo-failed" hidden>
+      <strong id="photoFailedName"></strong>
+      <p>Фото не загрузилось. Проверь подключение или открой исходный снимок.</p>
+      <div class="photo-failed-actions">
+        <button type="button" data-photo-action="retry">Повторить</button>
+        <a id="photoSource" target="_blank" rel="noopener noreferrer">Оригинал ↗</a>
+      </div>
+    </div>
+  </div>
+  <footer class="photo-viewer-footer" data-ui>
+    <div class="photo-zoom-controls" role="group" aria-label="Масштаб фотографии">
+      <button type="button" id="photoZoomOut" data-photo-action="minus" aria-label="Уменьшить">−</button>
+      <button type="button" id="photoZoomFit" data-photo-action="fit">Вписать</button>
+      <button type="button" id="photoZoomIn" data-photo-action="plus" aria-label="Увеличить">+</button>
+    </div>
+    <p>Полный кадр без обрезки · Увеличение двумя пальцами</p>
+  </footer>
+</div>
+
 <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="РОЗКЛАД ТРОЯНД" data-app-version="1.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="РОЗКЛАД ТРОЯНД" data-app-version="1.1.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
