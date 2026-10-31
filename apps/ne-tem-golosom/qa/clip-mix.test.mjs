@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {clipMix,envelopeGain,scheduleEnvelope} from '../clip-mix.js';
-import {snapshotClips,packTimeline,unpackTimeline,TimelineHistory} from '../timeline-model.js';
+import {snapshotClips,packTimeline,unpackTimeline,TimelineHistory,replaceSelectedRecording,spliceRecording} from '../timeline-model.js';
 import {voicePlan} from '../premiere-export.js';
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../server/module.ts',import.meta.url),'utf8');
@@ -62,4 +62,20 @@ test('persistent room rejects starting before configuration and isolates rounds'
  assert.equal(state.round,previous+1);
  assert.equal(state.scene.id,'scene');
  assert.equal(state.configured,true);
+});
+
+
+test('microphone noise policy belongs to each take and survives history and retakes',()=>{
+ const b=new Blob(['take'],{type:'audio/webm'});
+ const clips=spliceRecording([],{id:'a',owner:'host',start:1,end:3,blob:b,captureMode:'noise-reduced'},()=> 'spare');
+ const untouched=spliceRecording(clips,{id:'b',owner:'host',start:5,end:7,blob:b,captureMode:'raw'},()=> 'spare');
+ const packed=packTimeline(untouched,new TimelineHistory(),clips[0].id);
+ const restored=unpackTimeline(packed,20);
+ assert.deepEqual(restored.clips.map(c=>c.captureMode),['noise-reduced','raw']);
+ const retaken=replaceSelectedRecording(restored.clips,'a',b,2,'a2','raw');
+ assert.equal(retaken[0].captureMode,'raw');
+ assert.equal(retaken[1].captureMode,'raw');
+ const reversed=replaceSelectedRecording(retaken,'b',b,2,'b2','noise-reduced');
+ assert.equal(reversed[1].captureMode,'noise-reduced');
+ assert.equal(reversed[0].captureMode,'raw');
 });
