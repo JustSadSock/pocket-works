@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TIERS, makeState, normalizeState, ensureEpisode, movePerson, findTier, countRated, rankChanges } from './model.js';
+import { TIERS, makeState, normalizeState, ensureEpisode, movePerson, findTier, countRated, rankChanges, eliminatedBeforeEpisode, visibleInEpisode } from './model.js';
 import { CONTESTANTS } from './contestants.js';
 
 const ids=CONTESTANTS.map(person=>person.id);
@@ -70,4 +70,28 @@ test('scoreboard and change indicators respect unranked people',()=>{
  assert.equal(rankChanges(state.episodes[2].rows,state.episodes[1].rows)[ids[1]],'new');
  assert.equal(countRated(state.episodes[2].rows),2);
  assert.deepEqual(TIERS,['S','A','B','C','D','F','?']);
+});
+
+test('episode three never reveals a departure that happens in episode three',()=>{
+ const person={id:'third-exit',exit:3};
+ assert.equal(eliminatedBeforeEpisode(person,1),false);
+ assert.equal(eliminatedBeforeEpisode(person,2),false);
+ assert.equal(eliminatedBeforeEpisode(person,3),false);
+ assert.equal(eliminatedBeforeEpisode(person,4),true);
+ assert.equal(eliminatedBeforeEpisode(person,5),true);
+ assert.equal(visibleInEpisode(person,3,false),true);
+ assert.equal(visibleInEpisode(person,4,false),false);
+ assert.equal(visibleInEpisode(person,4,true),true);
+});
+
+test('earlier exits are revealed only beginning with the following episode',()=>{
+ const person={id:'second-exit',exit:2};
+ assert.equal(eliminatedBeforeEpisode(person,1),false);
+ assert.equal(eliminatedBeforeEpisode(person,2),false);
+ assert.equal(eliminatedBeforeEpisode(person,3),true);
+ assert.equal(visibleInEpisode(person,2,false),true);
+ assert.equal(visibleInEpisode(person,3,false),false);
+ assert.equal(eliminatedBeforeEpisode({exit:null},99),false);
+ assert.equal(eliminatedBeforeEpisode({exit:3},0),false);
+ assert.equal(visibleInEpisode(null,4,true),false);
 });

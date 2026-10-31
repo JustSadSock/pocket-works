@@ -2,7 +2,7 @@ import { installMobileRuntime, setDocumentScrollLocked } from '../../shared/mobi
 import { createVersionedStore } from '../../shared/capabilities/storage.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { CONTESTANTS } from './contestants.js';
-import { TIERS, createFirst, normalizeState, ensureEpisode, findTier, movePerson, countRated, rankChanges } from './model.js';
+import { TIERS, createFirst, normalizeState, ensureEpisode, findTier, movePerson, countRated, rankChanges, eliminatedBeforeEpisode, visibleInEpisode } from './model.js';
 
 installMobileRuntime();
 
@@ -22,7 +22,7 @@ const $=id=>document.getElementById(id);
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const current=()=>state.episodes[state.current];
 const safePerson=id=>PEOPLE.get(id);
-const visiblePerson=id=>{const person=safePerson(id);return person&&(state.showAll||!person.exit||person.exit>state.current);};
+const visiblePerson=id=>visibleInEpisode(safePerson(id),state.current,state.showAll);
 const initials=name=>String(name).split(' ').map(x=>x[0]).slice(0,2).join('');
 const episodeLabel=n=>String(n).padStart(2,'0');
 const episodeDate=n=>n<=3?new Intl.DateTimeFormat('ru-RU',{timeZone:'UTC',day:'numeric',month:'long'}).format(new Date(Date.UTC(2026,9,16+7*(n-1)))):'Личный рейтинг будущей серии';
@@ -41,13 +41,14 @@ function touchEpisode(){current().edited=Date.now();persist();}
 function personCard(id,changes){
  const p=safePerson(id);if(!p)return '';
  const nick=state.nicknames[id]||'';
- const out=p.exit&&p.exit<=state.current;
+ const out=eliminatedBeforeEpisode(p,state.current);
  const delta=changes[id]||'';
  return `<article class="person" data-id="${escapeHtml(id)}">
   <button type="button" class="person-button" data-open-person="${escapeHtml(id)}" aria-label="${escapeHtml(p.name)}: выбрать тир и посмотреть описание" data-native-press>
     <span class="person-photo"><img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async"><span class="photo-fallback">${escapeHtml(initials(p.name))}</span></span>
     <span class="person-bottom"><span class="person-name">${escapeHtml(p.short)}${p.name!==p.short?' '+escapeHtml(p.name.split(' ').slice(1).join(' ')):''}</span>${nick?`<span class="person-nick">${escapeHtml(nick)}</span>`:''}</span>
   </button>
+  <button type="button" class="photo-expand-button" data-open-photo="${escapeHtml(id)}" aria-label="Просмотреть фотографию ${escapeHtml(p.name)} на весь экран" data-native-press><span aria-hidden="true">⤢</span></button>
   ${out?`<span class="person-exit">Выбыла · ${p.exit} серия</span>`:''}
   ${delta?`<span class="person-delta" data-change="${delta}" aria-label="${delta==='up'?'Поднялась':delta==='down'?'Опустилась':delta==='new'?'Новая оценка':'Без оценки'}">${delta==='up'?'↑':delta==='down'?'↓':delta==='new'?'＋':'·'}</span>`:''}
   <button type="button" class="person-grip" data-drag-id="${escapeHtml(id)}" title="Перетащить карточку" aria-label="Перетащить ${escapeHtml(p.name)}" data-gesture-surface data-block-callout>⠿</button>
@@ -118,8 +119,8 @@ function closeSheet(){
 function openPerson(id){
  const p=safePerson(id);if(!p)return;
  modal={type:'person',id};
- const selected=findTier(current().rows,id),rank=current().rows[selected],index=rank.indexOf(id),out=p.exit&&p.exit<=state.current;
- const img=`<img class="profile-photo" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="eager" decoding="async"><div class="profile-fallback" hidden>${escapeHtml(initials(p.name))}</div>`;
+ const selected=findTier(current().rows,id),rank=current().rows[selected],index=rank.indexOf(id),out=eliminatedBeforeEpisode(p,state.current);
+ const img=`<button type="button" class="profile-photo-button" data-open-photo="${escapeHtml(id)}" aria-label="Увеличить фото ${escapeHtml(p.name)}" data-native-press><img class="profile-photo" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="eager" decoding="async"><div class="profile-fallback" hidden>${escapeHtml(initials(p.name))}</div><span class="profile-photo-caption">⤢ Смотреть целиком</span></button>`;
  createSheet(p.name,'УЧАСТНИЦА · СЕРИЯ '+episodeLabel(state.current),
  `<div class="profile"><div class="profile-image">${img}</div><div><div class="person-meta">${escapeHtml(p.subtitle)}</div><p class="person-fact">${escapeHtml(p.fact)}</p>${out?`<div class="person-elimination">Выбыла в ${p.exit}-й серии · можно продолжить оценивать</div>`:''}</div></div>
  <span class="sheet-label">МОЁ МЕСТО В РЕЙТИНГЕ</span>
@@ -202,6 +203,7 @@ function handleTools(action){
 function handleSheetClick(event){
  const target=event.target.closest('button');if(!target)return;
  if(target.matches('[data-close-sheet]')){closeSheet();return;}
+ if(target.hasAttribute('data-open-photo')){openPhoto(target.dataset.openPhoto);return;}
  if(target.matches('[data-open-person]')){openPerson(target.dataset.openPerson);return;}
  if(modal.type==='person'){
   const id=modal.id;
@@ -245,6 +247,161 @@ function photoError(event){
  if(fallback&&fallback.classList.contains('photo-fallback')){image.hidden=true;fallback.hidden=false;}
  if(fallback&&fallback.classList.contains('profile-fallback')){image.hidden=true;fallback.hidden=false;}
 }
+
+/* Full-viewport photo reading keeps the original aspect ratio, regardless of
+   the intentionally cropped small profile cards. This overlay is independent
+   from the person editor so notes and unsaved input focus survive a photo view. */
+let photoState=null;
+const photoPointers=new Map();
+const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
+
+function applyPhotoTransform() {
+ if(!photoState)return;
+ const img=$('photoFull');
+ const stage=$('photoStage');
+ const w=stage.clientWidth||window.innerWidth;
+ const h=stage.clientHeight||window.innerHeight;
+ if(img.naturalWidth&&img.naturalHeight&&w&&h){
+  const width=Math.min(w,h*img.naturalWidth/img.naturalHeight);
+  const height=Math.min(h,w*img.naturalHeight/img.naturalWidth);
+  photoState.x=clamp(photoState.x,-Math.max(0,(width*photoState.zoom-w)/2),Math.max(0,(width*photoState.zoom-w)/2));
+  photoState.y=clamp(photoState.y,-Math.max(0,(height*photoState.zoom-h)/2),Math.max(0,(height*photoState.zoom-h)/2));
+ }else if(photoState.zoom===1){photoState.x=0;photoState.y=0;}
+ img.style.transform='translate3d('+photoState.x+'px,'+photoState.y+'px,0) scale('+photoState.zoom+')';
+ $('photoZoomOut').disabled=photoState.zoom<=1.001||img.hidden;
+ $('photoZoomFit').disabled=photoState.zoom<=1.001||img.hidden;
+ $('photoZoomIn').disabled=photoState.zoom>=3.999||img.hidden;
+}
+function setPhotoZoom(zoom){
+ if(!photoState)return;
+ photoState.zoom=clamp(zoom,1,4);
+ if(photoState.zoom===1){photoState.x=0;photoState.y=0;}
+ applyPhotoTransform();
+}
+function photoSucceeded(){
+ if(!photoState||$('photoViewer').hidden)return;
+ const img=$('photoFull');
+ img.hidden=false;
+ $('photoLoading').hidden=true;
+ $('photoFailed').hidden=true;
+ applyPhotoTransform();
+}
+function photoFailed(){
+ if(!photoState||$('photoViewer').hidden)return;
+ $('photoFull').hidden=true;
+ $('photoLoading').hidden=true;
+ $('photoFailed').hidden=false;
+ applyPhotoTransform();
+}
+function openPhoto(id){
+ const person=safePerson(id);
+ if(!person)return;
+ if(photoState)closePhoto();
+ const focus=document.activeElement;
+ photoState={id,focus,zoom:1,x:0,y:0,pinch:null};
+ photoPointers.clear();
+ const viewer=$('photoViewer');
+ viewer.hidden=false;
+ viewer.setAttribute('aria-label','Фотография: '+person.name);
+ $('photoPersonName').textContent=person.name;
+ $('photoEpisode').textContent='Серия '+episodeLabel(state.current)+' · оригинальный кадр';
+ $('photoLoading').hidden=false;
+ $('photoFailed').hidden=true;
+ $('photoFailedName').textContent=person.name;
+ $('photoSource').href=person.image;
+ const img=$('photoFull');
+ img.hidden=true;
+ img.style.transform='';
+ img.alt=person.name+' — фото целиком';
+ img.src=person.image;
+ if(img.complete&&img.naturalWidth>0)photoSucceeded();
+ applyPhotoTransform();
+ if(!$('modalRoot').hidden)$('modalRoot').inert=true;
+ setDocumentScrollLocked(true);
+ $('photoClose').focus({preventScroll:true});
+}
+function closePhoto(){
+ if(!photoState)return;
+ const oldFocus=photoState.focus;
+ photoPointers.clear();
+ photoState=null;
+ $('photoViewer').hidden=true;
+ $('modalRoot').inert=false;
+ if($('modalRoot').hidden)setDocumentScrollLocked(false);
+ if(oldFocus?.isConnected)oldFocus.focus({preventScroll:true});
+}
+function trapPhotoFocus(event){
+ const controls=[...$('photoViewer').querySelectorAll('button:not(:disabled),a[href]')].filter(item=>!item.hidden&&item.offsetParent!==null);
+ if(!controls.length)return;
+ const first=controls[0],last=controls[controls.length-1],active=document.activeElement;
+ if(event.shiftKey&&(active===first||!controls.includes(active))){event.preventDefault();last.focus();}
+ else if(!event.shiftKey&&(active===last||!controls.includes(active))){event.preventDefault();first.focus();}
+}
+function photoDistance(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+function photoMidpoint(a,b){return {x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
+function pointerPhotoDown(event){
+ if(!photoState||(event.pointerType==='mouse'&&event.button!==0)||event.target.closest('.photo-failed-actions'))return;
+ event.preventDefault();
+ try{event.currentTarget.setPointerCapture(event.pointerId);}catch{}
+ photoPointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+ if(photoPointers.size===2){
+  const [a,b]=[...photoPointers.values()];
+  photoState.pinch={distance:Math.max(1,photoDistance(a,b)),startZoom:photoState.zoom,
+   x:photoState.x,y:photoState.y,midpoint:photoMidpoint(a,b)};
+ }
+}
+function pointerPhotoMove(event){
+ if(!photoState||!photoPointers.has(event.pointerId))return;
+ event.preventDefault();
+ const original=photoPointers.get(event.pointerId);
+ const dx=event.clientX-original.x,dy=event.clientY-original.y;
+ photoPointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+ if(photoPointers.size>=2){
+  const [a,b]=[...photoPointers.values()];
+  const start=photoState.pinch;
+  if(!start)return;
+  const mid=photoMidpoint(a,b);
+  photoState.zoom=clamp(start.startZoom*photoDistance(a,b)/start.distance,1,4);
+  photoState.x=start.x+(mid.x-start.midpoint.x);
+  photoState.y=start.y+(mid.y-start.midpoint.y);
+ }else if(photoState.zoom>1){
+  photoState.x+=dx;photoState.y+=dy;
+ }else return;
+ applyPhotoTransform();
+}
+function pointerPhotoEnd(event){
+ if(!photoState)return;
+ photoPointers.delete(event.pointerId);
+ photoState.pinch=null;
+}
+function installPhotoViewer(){
+ const viewer=$('photoViewer'),stage=$('photoStage'),image=$('photoFull');
+ image.addEventListener('load',photoSucceeded);
+ image.addEventListener('error',photoFailed);
+ viewer.addEventListener('click',event=>{
+  const button=event.target.closest('button[data-photo-action]');
+  if(!button||!photoState)return;
+  const action=button.dataset.photoAction;
+  if(action==='close')closePhoto();
+  if(action==='plus')setPhotoZoom(photoState.zoom+.5);
+  if(action==='minus')setPhotoZoom(photoState.zoom-.5);
+  if(action==='fit')setPhotoZoom(1);
+  if(action==='retry'){
+   $('photoFailed').hidden=true;$('photoLoading').hidden=false;
+   const src=$('photoSource').href;
+   image.removeAttribute('src');
+   image.src=src;
+   if(image.complete&&image.naturalWidth>0)photoSucceeded();
+  }
+ });
+ stage.addEventListener('pointerdown',pointerPhotoDown);
+ stage.addEventListener('pointermove',pointerPhotoMove,{passive:false});
+ stage.addEventListener('pointerup',pointerPhotoEnd);
+ stage.addEventListener('pointercancel',pointerPhotoEnd);
+ stage.addEventListener('lostpointercapture',pointerPhotoEnd);
+ window.addEventListener('resize',applyPhotoTransform);
+}
+
 function rankDock(){const dock=$('rankDock');dock.querySelector('.rank-dock-buttons').innerHTML=TIERS.map(t=>`<span data-dock-tier="${t}">${t}</span>`).join('');}
 function pointerAt(x,y){
  document.querySelectorAll('.drag-over,.target-card,.hovered').forEach(node=>node.classList.remove('drag-over','target-card','hovered'));
@@ -318,6 +475,8 @@ function initialize(){
  $('openTools').addEventListener('click',openTools);
  $('board').addEventListener('click',event=>{
   if(drag)return;
+  const photo=event.target.closest('[data-open-photo]');
+  if(photo){openPhoto(photo.dataset.openPhoto);return;}
   const button=event.target.closest('[data-open-person]');
   if(button)openPerson(button.dataset.openPerson);
  });
@@ -331,11 +490,12 @@ function initialize(){
  $('modalRoot').addEventListener('change',event=>{if(event.target.id==='restoreInput')void importBackup(event.target.files?.[0]);});
  document.addEventListener('error',photoError,true);
  document.addEventListener('load',photoLoad,true);
- document.addEventListener('keydown',event=>{if(event.key==='Escape'&&modal.type)closeSheet();if(event.key==='ArrowRight'&&!modal.type&&event.altKey)changeEpisode(1);if(event.key==='ArrowLeft'&&!modal.type&&event.altKey)changeEpisode(-1);});
+ document.addEventListener('keydown',event=>{if(photoState){if(event.key==='Escape'){event.preventDefault();closePhoto();}else if(event.key==='Tab')trapPhotoFocus(event);return;}if(event.key==='Escape'&&modal.type)closeSheet();if(event.key==='ArrowRight'&&!modal.type&&event.altKey)changeEpisode(1);if(event.key==='ArrowLeft'&&!modal.type&&event.altKey)changeEpisode(-1);});
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){persist();disposeDrag();}});
  window.addEventListener('pagehide',()=>{persist();disposeDrag();});
- window.addEventListener('appdatareset',()=>{state=normalizeState(null,IDS);render();closeSheet();showNotice('Данные приложения сброшены');});
- createWorkshopMode({appName:'РОЗКЛАД ТРОЯНД',version:'1.0.0',cachePrefix:'rose-ranking-15-',storageNamespace:APP,onReset(){storage.reset();window.dispatchEvent(new CustomEvent('appdatareset'));}});
+ window.addEventListener('appdatareset',()=>{closePhoto();state=normalizeState(null,IDS);render();closeSheet();showNotice('Данные приложения сброшены');});
+ createWorkshopMode({appName:'РОЗКЛАД ТРОЯНД',version:'1.1.0',cachePrefix: 'rose-ranking-15-', storageNamespace: 'pocket-works:rose-ranking-15',onReset(){storage.reset();window.dispatchEvent(new CustomEvent('appdatareset'));}});
+ installPhotoViewer();
  rankDock();render();
  document.documentElement.dataset.roseRankingReady='1';
 }

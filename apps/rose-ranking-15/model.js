@@ -9,3 +9,15 @@ export function findTier(rows,id){return TIERS.find(t=>rows[t].includes(id))||'?
 export function movePerson(rows,id,target,index=Infinity){if(!TIERS.includes(target))return false;const tier=findTier(rows,id);const before=rows[tier].indexOf(id);if(before<0)return false;rows[tier].splice(before,1);let next=Number.isFinite(index)?Math.trunc(index):rows[target].length;if(target===tier&&next>before)next--;next=Math.max(0,Math.min(next,rows[target].length));rows[target].splice(next,0,id);return tier!==target||before!==next;}
 export function countRated(rows){return TIERS.filter(t=>t!=='?').reduce((sum,t)=>sum+rows[t].length,0);}
 export function rankChanges(current,previous){if(!previous)return {};const result={};for(const id of Object.values(current).flat()){const a=TIERS.indexOf(findTier(current,id)),b=TIERS.indexOf(findTier(previous,id));if(a!==b)result[id]=b===TIERS.length-1?'new':a===TIERS.length-1?'none':b-a>0?'up':'down';}return result;}
+
+/**
+ * A departure becomes known when the viewer advances past the episode
+ * in which it happened. Never reveal an episode's elimination in its own view.
+ */
+export function eliminatedBeforeEpisode(person, episode) {
+ return Number.isInteger(person?.exit) && person.exit > 0
+   && Number.isInteger(episode) && episode > person.exit;
+}
+export function visibleInEpisode(person, episode, includeEliminated=true) {
+ return Boolean(person) && (includeEliminated || !eliminatedBeforeEpisode(person, episode));
+}
