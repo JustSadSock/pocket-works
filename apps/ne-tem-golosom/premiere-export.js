@@ -1,5 +1,6 @@
 import {connectVoiceEffect,normalizeVoiceEffect} from './voice-effects.js';
 import {clipMix,scheduleEnvelope} from './clip-mix.js';
+import {renderPremiereFast} from './premiere-fast.js';
 // The premiere recorder deliberately uses the same start/end/offset values as
 // the playback timeline. No binary voice data is uploaded to PocketNet.
 export const MAX_PREMIERE_CLIPS = 540;
@@ -98,6 +99,20 @@ export async function renderPremiere({
   const plan=voicePlan(clips,scene.duration);
   if(!(source instanceof Blob)&&!(typeof source==='string'&&/^https:\/\//.test(source)))
     throw Error('Нет исходного видео для сохранения.');
+  assertLive(signal);
+  if(source instanceof Blob){
+    try{
+      const fast=await renderPremiereFast({
+       source,scene,plan,keepFilmAudio,voiceWindow,signal,onProgress
+      });
+      if(fast?.size)return fast;
+    }catch(error){
+      if(signal?.aborted||error?.name==='AbortError')throw error;
+      // Fast mux is an optimization, never a reason to lose a premiere.
+      console.warn('Fast MP4 premiere unavailable, using realtime recorder',error);
+    }
+    onProgress({phase:'fallback'});
+  }
   assertLive(signal);
   const cancellation=new AbortController();
   const effectiveSignal=cancellation.signal;
