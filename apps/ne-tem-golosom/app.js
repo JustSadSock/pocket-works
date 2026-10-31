@@ -80,7 +80,7 @@ const mem=new Map(),session={
 let sound=true,audioContext=null,identity=null,name='Гость',mode='solo',view='home',selected=null,sourceBlob=null,scene=null;
 let relayQueue=Promise.resolve(),relayInbox=new Map();
 let videoExportController=null,videoExportBlob=null,videoExportUrl=null,trimRange=null,encodedCache=null;
-let filmCleanController=null,filmPreparedBlob=null,filmLocalSource=null,scenePrepareStep='trim';
+let filmCleanController=null,filmPreparedBlob=null,filmLocalSource=null,filmCleanCache=null,scenePrepareStep='trim';
 const FILM_BENCH_KEY=STORE+'film-bench-v2';
 let filmBench={};
 try{const value=JSON.parse(localStorage.getItem(FILM_BENCH_KEY)||'{}');
@@ -380,7 +380,7 @@ function time(video){return scene?clamp((video.currentTime||scene.start)-scene.s
 
 function library(backToReview=false){document.querySelector('#screen-library [data-back]').dataset.back=backToReview?'trim':room&&mode==='host'?'room':'home';const grid=$('scene-grid');$('scene-license').innerHTML='Озвученные отрывки являются переработкой оригиналов. Авторы: <a href="https://commons.wikimedia.org/wiki/File:WING_IT!_-_Blender_Open_Movie-full_movie.webm" target="_blank" rel="noopener">WING IT! — Blender Studio (CC BY 4.0)</a>, <a href="https://commons.wikimedia.org/wiki/File:Sprite_Fright_-_Open_Movie_by_Blender_Studio.webm" target="_blank" rel="noopener">Sprite Fright — Blender Studio (CC BY 4.0)</a>, <a href="https://peach.blender.org/about/" target="_blank" rel="noopener">Big Buck Bunny — Blender Foundation (CC BY 3.0)</a>. <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.';grid.innerHTML=LIBRARY.map((s,i)=>'<button class="scene-card" data-scene="'+esc(s.id)+'"><div class="scene-thumb">'+(POSTERS[s.id]?'<img src="'+esc(POSTERS[s.id])+'" loading="lazy" alt="Кадр фильма">':'')+'<strong>'+esc(s.short)+'</strong><span class="duration">'+fmt(s.duration)+'</span></div><b>'+esc(s.title)+'</b><small>'+esc(s.sub)+'</small></button>').join('');show('library')}
 function selectScene(item,blob=null){
- if(filmCleanController)filmCleanController.abort();filmLocalSource=null;filmPreparedBlob=null;
+ if(filmCleanController)filmCleanController.abort();filmLocalSource=null;filmPreparedBlob=null;filmCleanCache=null;
  document.querySelector('input[name="film-sound-choice"][value="neural"]').checked=true;
  document.querySelector('input[name="film-clean-mode"][value="umx"]').checked=true;
  $('film-low-memory').checked=lowMemoryRecommended(navigator.deviceMemory,navigator.hardwareConcurrency);
@@ -553,12 +553,19 @@ async function prepareFilmScene(){
   }
   if(!(blob instanceof Blob)||!blob.size||blob.size>MAX_SOURCE_VIDEO_BYTES)
    throw Error('Нужен видеофайл до 512 МиБ.');
-  const plan=await cleanFilmSound({blob,start,duration,mode:selectedMode,lowMemory,signal:controller.signal,
+  const cached=filmCleanCache?.blob===blob&&filmCleanCache.start===start&&
+   filmCleanCache.duration===duration&&filmCleanCache.mode===selectedMode&&
+   filmCleanCache.lowMemory===lowMemory;
+  const plan=cached?filmCleanCache.plan:await cleanFilmSound({blob,start,duration,mode:selectedMode,lowMemory,signal:controller.signal,
    onProgress:p=>{
     const stage=p.stage||'';
     const value=stage==='decode'?10:stage==='scnet'?41:stage==='umx'?25:stage==='lowmem'?24:stage==='buzz'?52:stage==='skip'?59:13;
     progress((p.detail||'Разделяем аудио…')+' · '+fmt((performance.now()-startedAt)/1000)+' прошло',value);
    }});
+  // Keep the cleaned PCM until the scene is accepted. Re-encoding to a different
+  // bitrate/resolution must not repeat neural inference.
+  if(!cached)filmCleanCache={blob,start,duration,mode:selectedMode,lowMemory,plan};
+  else progress('Очищенный звук уже готов · перекодируем только видео',60);
   if(controller.signal.aborted)return false;
   rememberFilmTimes(plan,duration);updateFilmCleaner();
   progress('Нейросеть готова · создаём видео с фоновым звуком',60);
@@ -579,7 +586,7 @@ async function prepareFilmScene(){
   showTrimPreview('result');
   $('media-result').classList.remove('hidden');
   const detail=plan.segments.length?' · SCNet улучшила '+plan.segments.length+' проблемных участка':'';
-  progress('Готово · '+fmt((performance.now()-startedAt)/1000)+detail,100);
+  progress('Готово · '+fmt((performance.now()-startedAt)/1000)+detail+(cached?' · звук из памяти':''),100);
   $('media-note').textContent='Голоса фильма подавлены. Прослушай вариант с музыкой и выбери «Использовать и продолжить».';
   cue('ready');prepared=true;return true;
  }catch(e){
@@ -830,7 +837,7 @@ function acceptMedia(){
   sourceBlob=new File([videoExportBlob],(selected.title||'scene')+'-cut.'+extension,{type});
   selected.custom=true;
   selected.id=(cleaned?'clean-':selectedSound()==='mute'?'mute-':'cut-')+uid();selected.cleaned=cleaned;
-  encodedCache=null;
+  encodedCache=null;filmCleanCache=null;
   selected.start=0;selected.duration=length;selected.totalDuration=length;
   scene={...selected,start:0,duration:length};
   clearExportPreview();
@@ -1014,7 +1021,7 @@ async function connectRoom(action,checkpoint=null){
 }
 function leaveNetwork(){clearRoomCheckpoint();networkInterrupted=false;onlineIds=null;connectionNotice();setNetStatus('idle','PocketNet');relayInbox.clear();relayQueue=Promise.resolve();for(const id of [...peers.keys()])closePeer(id);try{net?.leaveRoom();net?.close()}catch{}net=null;state=null;me='';room='';sentPremiere=false;}
 async function resetRuntime(){
- stopPremiereExport();premiereLocalCopy=null;videoExportController?.abort();encodedCache=null;clearExportPreview();cancelCountdown();
+ stopPremiereExport();premiereLocalCopy=null;videoExportController?.abort();encodedCache=null;filmCleanCache=null;clearExportPreview();cancelCountdown();
  if(record)finishRecording();
  if(pendingRecording)await pendingRecording;
  stopAllPlayback();
