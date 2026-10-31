@@ -1,3 +1,4 @@
+import {createFilmBedSync} from './film-audio-sync.js';
 // Local, real-time video export. Source footage never leaves the browser during editing.
 export const MAX_ROOM_VIDEO_BYTES = 96 * 1024 * 1024;
 export const MAX_SOURCE_VIDEO_BYTES = 512 * 1024 * 1024;
@@ -83,7 +84,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
   video.playsInline = true;
   video.muted = true; // Silent element playback is allowed after async metadata/seek; audio is routed separately.
   video.src = src;
-  let recorder, frame = 0, audioContext, audioSource, stream, cancelled = false;
+  let recorder, frame = 0, audioContext, filmBedSync, stream, cancelled = false;
   let timer, started = false, captureMode = 'compatibility', watchdog = 0, useVideoFrameCallback = false;
   let lastMediaTime = start, lastAdvance = performance.now(), terminalError = null;
   let cancelPendingWait = null, resumeCapture = null;
@@ -96,7 +97,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
   let pausedByTab=false;
   const hidden=()=>{
     if(document.hidden&&recorder?.state==='recording'){
-      try{pausedByTab=true;video.pause();recorder.pause();void audioContext?.suspend().catch(()=>{})}catch{}
+      try{pausedByTab=true;filmBedSync?.pause();video.pause();recorder.pause();void audioContext?.suspend().catch(()=>{})}catch{}
     }else if(!document.hidden&&pausedByTab&&recorder?.state==='paused'){
       pausedByTab=false;
       void (async()=>{
@@ -104,6 +105,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
           await audioContext?.resume();
           recorder.resume();
           await video.play();
+          filmBedSync?.sync(true);
           lastAdvance=performance.now();
           resumeCapture?.();
         }catch{
@@ -197,9 +199,8 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
       audioContext=new Audio();
       const buffer=audioContext.createBuffer(2,audioPCM[0].length,44100);
       for(let ch=0;ch<2;ch++)buffer.getChannelData(ch).set(audioPCM[ch]);
-      audioSource=audioContext.createBufferSource();audioSource.buffer=buffer;
       const destination=audioContext.createMediaStreamDestination();
-      audioSource.connect(destination);
+      filmBedSync=createFilmBedSync({context:audioContext,buffer,destination,video,sceneStart:start});
       const track=destination.stream.getAudioTracks()[0];
       if(!track)throw Error('Не удалось создать очищенную аудиодорожку.');
       stream.addTrack(track);
@@ -255,6 +256,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
           return;
         }
       }
+      filmBedSync?.sync();
       const elapsed = Math.max(0,position-start);
       onProgress(Math.min(.999,elapsed/duration));
     };
@@ -304,7 +306,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
         video.pause();recorder.stop();
       }
     },3000);
-    try { await video.play(); audioSource?.start(); } catch {
+    try { await video.play(); filmBedSync?.sync(true); } catch {
       if(cancelled){
         await completed.catch(()=>{});
         throw abortError();
@@ -332,7 +334,7 @@ export async function exportVideo({ blob, start, duration, width, level, keepAud
     video.removeAttribute('src');
     video.load();
     if (started && recorder?.state === 'recording') { cancelled = true; recorder.stop(); }
-    try{audioSource?.stop()}catch{}
+    filmBedSync?.dispose();
     stream?.getTracks().forEach(track => track.stop());
     await audioContext?.close().catch(() => {});
     URL.revokeObjectURL(src);
