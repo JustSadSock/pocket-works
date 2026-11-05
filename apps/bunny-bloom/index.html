@@ -10,6 +10,7 @@
 <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body data-fullscreen-app>
@@ -22,7 +23,7 @@
 <symbol id="frog" viewBox="0 0 64 64"><circle cx="18" cy="19" r="13" fill="#9ad1a4" stroke="#537963" stroke-width="4"/><circle cx="46" cy="19" r="13" fill="#9ad1a4" stroke="#537963" stroke-width="4"/><ellipse cx="32" cy="39" rx="26" ry="21" fill="#83c798" stroke="#537963" stroke-width="4"/><circle cx="21" cy="23" r="5" fill="#fff7df"/><circle cx="43" cy="23" r="5" fill="#fff7df"/><circle cx="22" cy="23" r="3" fill="#4c4252"/><circle cx="42" cy="23" r="3" fill="#4c4252"/><path d="M27 43q5 5 10 0" stroke="#626a54" fill="none" stroke-width="3"/></symbol>
 <symbol id="fox" viewBox="0 0 64 64"><path d="M10 33 7 5l19 13h12L57 5l-4 28Z" fill="#e79565" stroke="#87566b" stroke-width="4"/><ellipse cx="32" cy="40" rx="27" ry="21" fill="#efa06f" stroke="#87566b" stroke-width="4"/><path d="M7 41q5 19 25 19t25-19L40 52H24Z" fill="#fff0d6"/><circle cx="22" cy="39" r="3" fill="#42364b"/><circle cx="43" cy="39" r="3" fill="#42364b"/><path d="m29 46 3 2 3-2" stroke="#69485c" stroke-width="2"/></symbol>
 </defs></svg>
-<header data-ui><a class="back" href="../../" data-app-control>POCKET WORKS</a><div class="bank" id="bank">✦ 0</div></header>
+<header data-ui><a class="back" href="../../" data-app-control>POCKET WORKS</a><button class="workshop-trigger" type="button" data-workshop-trigger data-native-press title="Сервис и диагностика" aria-label="Сервис и диагностика">⋮</button><div class="bank" id="bank">✦ 0</div></header>
 <section class="world" id="world" aria-label="Магическая полянка">
 <h1><small>МАЛЕНЬКАЯ ЖИВАЯ ИГРА</small>Пух и пыльца</h1>
 <div class="moon"></div>
@@ -42,5 +43,6 @@
 <section id="sheet" class="sheet" role="dialog" aria-modal="true" aria-label="Лесные компаньоны" hidden><div class="panel"><div class="panel-head"><h2>Лесные гости</h2><button type="button" id="close" class="close" aria-label="Закрыть">×</button></div><p>Цветы приносят звёзды, а звёзды привлекают друзей.</p><div id="friendsList"></div><a href="../../" data-app-control style="display:block;margin-top:16px;text-align:center;color:#9b7486;font-size:12px">Вернуться в Pocket Works</a></div></section>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Пух и пыльца" data-app-version="1.0.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
