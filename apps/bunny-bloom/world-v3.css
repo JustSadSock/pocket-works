@@ -20,3 +20,12 @@
 @media(prefers-reduced-motion:reduce){.world.starfall-active::before,.catch-star svg{animation:none!important}}
 
 .stargazing-stats{display:block;margin:0 0 10px;padding:9px 12px;border-radius:11px;background:#f4d5e1;color:#76566e;font-size:12px;font-weight:900;border:2px solid #dbadc1}
+
+/* Keep every touch hitbox stationary; only artwork moves. */
+.bunny,.friend{animation:none!important}
+.bunny img{animation:bunny-sway 2s ease-in-out infinite}
+.bunny.jumping img{animation:none!important}
+.friend svg{animation:friend-float 2.6s ease-in-out infinite}
+@keyframes bunny-sway{50%{transform:translateY(-7px)}}
+@keyframes friend-float{50%{transform:translateY(-5px)}}
+@media(prefers-reduced-motion:reduce){.bunny img,.friend svg{animation:none!important}}
