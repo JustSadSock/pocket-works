@@ -12,5 +12,6 @@ document.getElementById('butter1').src=BUTTER_SRC;document.getElementById('butte
 
 import {mountGarden} from './garden-v2.js';
 import {mountMeadow} from './world-v3.js';
+import {bunnyPogoGif} from './pogo-asset.js';
 const garden = mountGarden({flowerGif:FLOWER_SRC});
-mountMeadow({garden,pogoGif:window.__BUNNY_POGO_GIF__||null});
+mountMeadow({garden,pogoGif:bunnyPogoGif});
