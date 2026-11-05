@@ -41,6 +41,14 @@
           "action": "screenshot"
         }
       ]
+    },
+    {
+      "id": "starfall-regression",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/starfall.spec.js"
+      ]
     }
   ]
 }
