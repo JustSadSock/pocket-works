@@ -1,1 +1,41 @@
-const PREFIX='bunny-bloom-',CACHE='bunny-bloom-v1.0.0';const FILES=['./','./index.html','./app.js','./styles.css','./app.config.json','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.js','../../shared/workshop-mode.js','../../shared/workshop-mode.css','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'];self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x.startsWith(PREFIX)&&x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:'1.0.0',appVersion:'1.0.0',releaseDate:'2026-11-05',releaseNotes:['Первый релиз: сад, анимации, коллекция зверят, день и ночь.'],cacheProtocol:1,cacheName:CACHE})});self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==self.location.origin)return;if(!u.pathname.includes('/apps/bunny-bloom/')&&!u.pathname.endsWith('/shared/mobile-runtime.js')&&!u.pathname.endsWith('/shared/mobile-runtime.css'))return;e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request).then(r=>{if(r.ok)caches.open(CACHE).then(cache=>cache.put(e.request,r.clone()));return r}).catch(()=>caches.match('./index.html'))))});
+const CACHE_PREFIX = 'bunny-bloom-';
+const APP_VERSION = "1.1.0";
+const RELEASE_DATE = "2026-11-05";
+const RELEASE_NOTES = [
+  "Три вида цветов с реальным временем роста, выбором семян и разными наградами.",
+  "Книга заданий, новые награды и уникальные способности компаньонов.",
+  "Сохранение и миграция предыдущего сада, эффекты роста и улучшенная мобильная панель."
+];
+const CACHE_PROTOCOL = 2;
+const CACHE_NAME = 'bunny-bloom-v1.1.0';
+const SHELL = [
+ './','./index.html','./app.config.json','./styles.css','./garden-v2.css','./app.js','./garden-v2.js','./manifest.webmanifest','./icons/icon.svg',
+ '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.js','../../shared/update-manager.css',
+ '../../shared/workshop-mode.css','../../shared/workshop-mode.js',
+ '../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js',
+ '../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'
+];
+const APP_URL = new URL('./',self.registration.scope);
+const URLS = new Map(SHELL.map(path=>{const url=new URL(path,APP_URL);return [url.pathname,url.href]}));
+self.addEventListener('install',event=>event.waitUntil((async()=>{
+ const cache=await caches.open(CACHE_NAME);
+ await Promise.all([...new Set(URLS.values())].map(async url=>{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error('Asset '+r.status+': '+url);await cache.put(url,r)}));
+ await self.skipWaiting();
+})()));
+self.addEventListener('activate',event=>event.waitUntil((async()=>{
+ const keys=await caches.keys();await Promise.all(keys.filter(x=>x.startsWith(CACHE_PREFIX)&&x!==CACHE_NAME).map(x=>caches.delete(x)));
+ await self.clients.claim();
+})()));
+self.addEventListener('message',event=>{
+ if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
+ if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,appVersion:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:CACHE_PROTOCOL,cacheName:CACHE_NAME});
+});
+async function fresh(request,key) {
+ try {const r=await fetch(request);if(!r||!r.ok)throw new Error('Network response unavailable');const cache=await caches.open(CACHE_NAME);await cache.put(key,r.clone());return r}
+ catch {return (await caches.match(key)) || (await caches.match(APP_URL.href)) || new Response('Не удалось открыть приложение без сети',{status:503,headers:{'Content-Type':'text/plain;charset=utf-8'}})}
+}
+self.addEventListener('fetch',event=>{
+ const request=event.request;if(request.method!=='GET')return;const url=new URL(request.url);if(url.origin!==self.location.origin)return;
+ if(request.mode==='navigate'&&url.pathname.startsWith(APP_URL.pathname)){event.respondWith(fresh(request,APP_URL.href));return}
+ const key=URLS.get(url.pathname);if(key)event.respondWith(fresh(request,key));
+});
