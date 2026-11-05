@@ -1,8 +1,8 @@
 .sky-event[hidden]{display:none!important}
 .sky-event{position:absolute;inset:0;z-index:9;pointer-events:none}
 .event-banner{position:absolute;top:93px;left:50%;transform:translateX(-50%);white-space:nowrap;color:#fff6d2;background:#5b436a;border:2px solid #ffcb91;border-radius:11px;padding:7px 12px;box-shadow:0 3px #322b4a88;font-size:11px;font-weight:900;letter-spacing:1px}
-.catch-star{position:absolute;left:var(--x);top:var(--y);width:54px;height:54px;display:grid;place-items:center;padding:0;border:0;background:none;pointer-events:auto;transform:translate(-50%,-50%);filter:drop-shadow(0 0 8px #ffd779) drop-shadow(0 4px 0 #603d71);animation:stardance 1.25s ease-in-out infinite alternate}
-.catch-star svg{display:block;width:47px;height:47px;image-rendering:pixelated}
+.catch-star{position:absolute;left:var(--x);top:var(--y);width:54px;height:54px;display:grid;place-items:center;padding:0;border:0;background:none;pointer-events:auto;transform:translate(-50%,-50%);filter:drop-shadow(0 0 8px #ffd779) drop-shadow(0 4px 0 #603d71);animation:none}
+.catch-star svg{display:block;width:47px;height:47px;image-rendering:pixelated;animation:stardance 1.25s ease-in-out infinite alternate}
 .catch-star:active{transform:translate(-50%,-50%) scale(.83)}
 .catch-star.caught{pointer-events:none;animation:star-catch .28s ease-out forwards}
 .catch-star:focus-visible{outline:3px solid #fff7c0;outline-offset:3px;border-radius:12px}
@@ -13,10 +13,10 @@
 .world.starfall-active .moon{box-shadow:0 0 55px #ffeba69a}
 .bunny.jumping{animation:none!important}
 .bunny.jumping img{width:132px;height:134px;object-fit:contain;image-rendering:pixelated}
-@keyframes stardance{0%{transform:translate(-50%,-47%) rotate(-7deg) scale(.96)}100%{transform:translate(-50%,-58%) rotate(8deg) scale(1.07)}}
+@keyframes stardance{0%{transform:translateY(-2px) rotate(-7deg) scale(.96)}100%{transform:translateY(-8px) rotate(8deg) scale(1.07)}}
 @keyframes star-catch{to{opacity:0;transform:translate(-50%,-65%) scale(1.5)}}
 @keyframes sky-pulse{from{opacity:.5;transform:translateX(-5px)}to{opacity:1;transform:translateX(7px)}}
 @media(max-height:720px){.event-banner{top:67px;font-size:10px;padding:5px 8px}.catch-star{height:46px;width:46px}.catch-star svg{height:44px;width:44px}.harvest-progress small{font-size:9px}}
-@media(prefers-reduced-motion:reduce){.world.starfall-active::before,.catch-star{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.world.starfall-active::before,.catch-star svg{animation:none!important}}
 
 .stargazing-stats{display:block;margin:0 0 10px;padding:9px 12px;border-radius:11px;background:#f4d5e1;color:#76566e;font-size:12px;font-weight:900;border:2px solid #dbadc1}
