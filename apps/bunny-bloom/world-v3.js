@@ -17,6 +17,7 @@ export function mountMeadow({garden,pogoGif}){
     lastMilestone:stored?safeInt(stored.lastMilestone,999999):initialMilestone,
     starsCaught:stored?safeInt(stored.starsCaught,999999):0,
     showers:stored?safeInt(stored.showers,999999):0,
+    queued:stored?safeInt(stored.queued,100):0,
     active:null
   };
   if(stored?.active&&typeof stored.active==='object'){
@@ -39,7 +40,7 @@ export function mountMeadow({garden,pogoGif}){
   function paint(){
     const now=Date.now();
     const a=model.active;
-    if(a&&a.until<=now){model.active=null;store();}
+    if(a&&a.until<=now){model.active=null;store();if(model.queued>0){model.queued--;begin();return;}}
     const active=!!model.active;
     const remainder=4-garden.state.harvests%4;
     counter.textContent=active?'Звездопад!':'До звездопада: '+remainder;
@@ -82,7 +83,7 @@ export function mountMeadow({garden,pogoGif}){
   }
   function onHarvest(){
     const current=Math.floor(garden.state.harvests/4);
-    if(current>model.lastMilestone){model.lastMilestone=current;store();begin();}
+    if(current>model.lastMilestone){const extra=current-model.lastMilestone;model.lastMilestone=current;if(model.active){model.queued=Math.min(100,model.queued+extra);}else{model.queued=Math.min(100,model.queued+Math.max(0,extra-1));begin();}store();}
     else paint();
   }
   const jump=()=>{
@@ -103,5 +104,5 @@ export function mountMeadow({garden,pogoGif}){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)paint()});
   window.addEventListener('pagehide',store);
   store();paint();
-  return {state:model,paint,triggerForTest:begin,dispose:()=>{clearInterval(ticker);clearTimeout(jumpTimer);window.removeEventListener('bunny-bloom:harvest',handleHarvest)}};
+  return {state:model,paint,dispose:()=>{clearInterval(ticker);clearTimeout(jumpTimer);window.removeEventListener('bunny-bloom:harvest',handleHarvest)}};
 }
