@@ -21,7 +21,8 @@ test('starfall starts at fourth bouquet, awards stars and restores after reload'
   },{storage:V2,meadow:MEADOW});
   await page.goto('/apps/bunny-bloom/');
   await expect(page.locator('#bed0.ripe')).toBeVisible();
-  await page.locator('#bed0').click();
+  // Logic test seeds a ripe flower; the separate visual suite validates real pointer taps.
+  await page.locator('#bed0').evaluate(element=>element.click());
   await expect(page.locator('#sky-event')).toBeVisible();
   await expect(page.locator('#starfallCounter')).toContainText('Звездопад');
   await expect(page.locator('.catch-star')).toHaveCount(1);
