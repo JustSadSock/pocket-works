@@ -64,6 +64,7 @@ export function mountGarden({flowerGif}) {
   function render(){const now=Date.now();$('bank').textContent='✦ '+s.stars;
     $('harvests').textContent=s.harvests+' '+(s.harvests%10===1&&s.harvests%100!==11?'букет':s.harvests%10>=2&&s.harvests%10<=4&&(s.harvests%100<12||s.harvests%100>14)?'букета':'букетов');
     document.body.classList.toggle('day',!s.night);$('weather').textContent=s.night?'☀ Рассвет':'☾ Ночь';
+    $('hint').textContent=s.beds.some(b=>b&&b.readyAt<=now)?'Цветок готов! Собери его и получи звёзды':s.beds.some(b=>b&&!b.watered)?'Полей семечко — оно вырастет быстрее':s.beds.some(b=>b&&b.readyAt>now)?'Растения растут сами, даже когда игра закрыта':'Выбери семя и коснись горшка';
     for(const k of species){const bt=$('seed-'+k.id),locked=s.harvests<k.unlocks;bt.classList.toggle('chosen',s.seed===k.id&&!locked);bt.classList.toggle('locked',locked);bt.setAttribute('aria-pressed',String(s.seed===k.id&&!locked));bt.querySelector('small').textContent=locked?`${k.unlocks} букетов`:`${k.seconds} с · +${k.yield} ✦`;}
     beds.forEach((el,i)=>{const b=s.beds[i],plant=el.querySelector('.plant');let status='empty',label='Посадить',progress=0;
       if(b){const k=species.find(x=>x.id===b.kind)||species[0];progress=Math.max(0,Math.min(1,(now-b.plantedAt)/Math.max(1,b.readyAt-b.plantedAt)));
