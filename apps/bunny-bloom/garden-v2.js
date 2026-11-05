@@ -55,7 +55,7 @@ export function mountGarden({flowerGif}) {
   for(const k of species){const btn=document.createElement('button');btn.className='seed-option';btn.type='button';btn.id='seed-'+k.id;btn.dataset.seed=k.id;btn.innerHTML=`<i class="seed-dot" style="--seed-color:${k.tint}"></i><span>${k.short}</span><small></small>`;btn.addEventListener('click',()=>{if(s.harvests<k.unlocks){announce(`Откроется после ${k.unlocks} букетов`);return;}s.seed=k.id;persist();render();announce('Выбран '+k.name)});seedbar.appendChild(btn)}
   const beds=[];for(let i=0;i<3;i++){const b=document.createElement('button');b.id='bed'+i;b.className='bed';b.type='button';b.setAttribute('data-native-press','');b.innerHTML='<div class="plant"></div><svg class="pot" viewBox="0 0 64 64"><use href="#pot"/></svg><strong>Посадить</strong><span class="growth-meter"><span></span></span>';b.addEventListener('click',()=>touchBed(i,b));$('beds').appendChild(b);beds.push(b)}
   function touchBed(i,el){const now=Date.now(),b=s.beds[i];if(!b){const k=species.find(x=>x.id===s.seed)||species[0];if(s.harvests<k.unlocks){announce('Этот цветок ещё закрыт');return;}s.beds[i]={kind:k.id,plantedAt:now,readyAt:now+k.seconds*1000,watered:false};announce(k.name+' посажен!');}
-    else if(now>=b.readyAt){const k=species.find(x=>x.id===b.kind)||species[0];s.beds[i]=null;s.harvests++;s.counts[k.id]++;s.stars+=k.yield;announce(`+${k.yield} звёзд · ${k.name}`);burst(el,13);}
+    else if(now>=b.readyAt){const k=species.find(x=>x.id===b.kind)||species[0];s.beds[i]=null;s.harvests++;s.counts[k.id]++;s.stars+=k.yield;window.dispatchEvent(new CustomEvent('bunny-bloom:harvest',{detail:{harvests:s.harvests,kind:k.id}}));announce(`+${k.yield} звёзд · ${k.name}`);burst(el,13);}
     else if(speedup(b,now)){announce('Полито! Рост ускорился');burst(el,6)}
     else{announce('Цветок растёт сам · ещё '+Math.ceil((b.readyAt-now)/1000)+' с')}
     el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');persist();render();
@@ -92,5 +92,5 @@ export function mountGarden({flowerGif}) {
   window.addEventListener('pagehide',persist);
   const ticker=setInterval(()=>{if(!document.hidden)render()},500);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
-  persist();render();return {state:s,render,dispose:()=>clearInterval(ticker)};
+  persist();render();return {state:s,render,save:persist,dispose:()=>clearInterval(ticker)};
 }
