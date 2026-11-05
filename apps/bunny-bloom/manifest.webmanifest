@@ -1,0 +1,20 @@
+{
+  "id": "/apps/bunny-bloom/",
+  "name": "Пух и пыльца — Pocket Works",
+  "short_name": "Пух и пыльца",
+  "description": "Сказочная полянка со зверятами и цветами",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#302a4a",
+  "theme_color": "#302a4a",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

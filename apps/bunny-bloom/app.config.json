@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "bunny-bloom",
+  "name": "Пух и пыльца",
+  "shortName": "Пух",
+  "description": "Живой пиксельный сад: выращивай три вида цветов, ускоряй их поливом, собирай звёзды и дружи со зверятами.",
+  "version": "1.2.0",
+  "releaseDate": "2026-11-05",
+  "releaseDateTime": "2026-11-05T10:45:00Z",
+  "changelog": [
+    "На поляне появляются звездопады каждые четыре букета — лови светящиеся звёзды и получай награды.",
+    "Заяц получил новую покадровую анимацию прыжка от ImageGen при нажатии.",
+    "Добавлена коллекционная статистика ночных событий, адаптация под мобильный экран и улучшенные визуальные эффекты."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#f4a0b7",
+  "backgroundColor": "#302a4a",
+  "themeColor": "#302a4a",
+  "orientation": "portrait",
+  "cacheName": "bunny-bloom-v1.2.0",
+  "storageNamespace": "pocket-works:bunny-bloom",
+  "tags": [
+    "PWA",
+    "offline",
+    "game",
+    "casual",
+    "pixel-art",
+    "touch"
+  ],
+  "order": 86
+}

@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "garden-flow",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#bed0",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#bed0"
+        },
+        {
+          "action": "visible",
+          "selector": "#bed0.growing"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#bed0"
+        },
+        {
+          "action": "click",
+          "selector": "#journal"
+        },
+        {
+          "action": "visible",
+          "selector": "#journalSheet"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "starfall-regression",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/starfall.spec.js"
+      ]
+    }
+  ]
+}
