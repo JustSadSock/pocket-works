@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="../../shared/update-manager.css">
 <link rel="stylesheet" href="./styles.css">
 <link rel="stylesheet" href="./garden-v2.css">
+<link rel="stylesheet" href="./world-v3.css">
 </head>
 <body data-fullscreen-app>
 <main class="app-shell" data-app-shell>
@@ -29,6 +30,7 @@
 <section class="world" id="world" aria-label="Магическая полянка">
 <h1><small>МАЛЕНЬКАЯ ЖИВАЯ ИГРА</small>Пух и пыльца</h1>
 <div class="moon"></div>
+<div class="sky-event" id="sky-event" hidden><div id="event-banner" class="event-banner"></div><div id="starfall-stars"></div></div>
 <svg class="hills" viewBox="0 0 390 360" preserveAspectRatio="none" aria-hidden="true"><path d="M0 200 52 150 102 195 153 105 219 180 312 110 390 200V360H0Z" fill="#534a80"/><path d="M0 280Q75 219 160 280T390 261V360H0Z" fill="#6d7190"/><path d="M0 330Q96 267 194 330T390 294V360H0Z" fill="#7ab58c"/><path d="M0 345Q90 305 190 340T390 332V360H0Z" fill="#5a9b70"/></svg>
 <svg class="tree" viewBox="0 0 220 310" aria-hidden="true"><path d="M40 310Q65 246 68 166L42 115l26 9 22 39 32-48 22-9-37 79 5 125Z" fill="#72546d" stroke="#57405e" stroke-width="9" stroke-linejoin="round"/><g fill="#f3a5bd" stroke="#cb7ea8" stroke-width="4"><circle cx="42" cy="100" r="38"/><circle cx="85" cy="57" r="47"/><circle cx="135" cy="77" r="43"/><circle cx="168" cy="117" r="45"/><circle cx="89" cy="130" r="42"/><circle cx="29" cy="153" r="28"/></g><g fill="#ffccdd"><circle cx="46" cy="84" r="12"/><circle cx="82" cy="37" r="12"/><circle cx="153" cy="64" r="10"/><circle cx="120" cy="122" r="13"/><circle cx="42" cy="143" r="8"/></g></svg>
 <div class="lantern"></div><div class="petal" style="left:17%"></div><div class="petal p2"></div><div class="petal p3"></div>
@@ -39,7 +41,7 @@
 <button type="button" class="friend" id="frogFriend" aria-label="Погладить лягушонка" hidden><svg viewBox="0 0 64 64"><use href="#frog"/></svg></button>
 <button type="button" class="friend" id="foxFriend" aria-label="Погладить лисёнка" hidden><svg viewBox="0 0 64 64"><use href="#fox"/></svg></button>
 </section>
-<section class="garden" data-ui><div class="garden-title"><div><small>ТВОЙ КРОШЕЧНЫЙ МИР</small><h2>Волшебные клумбы ✿</h2></div><b id="harvests">0 букетов</b></div>
+<section class="garden" data-ui><div class="garden-title"><div><small>ТВОЙ КРОШЕЧНЫЙ МИР</small><h2>Волшебные клумбы ✿</h2></div><div class="harvest-progress"><b id="harvests">0 букетов</b><small id="starfallCounter">До звездопада: 4</small></div></div>
 <nav class="seedbar" id="seedbar" aria-label="Выбор семян"></nav>
 <div class="beds" id="beds"></div><p class="hint" id="hint">Выбери семя и коснись горшка</p></section>
 <footer class="dock" data-ui><button id="shop" type="button" data-native-press>✿ Компаньоны</button><button id="journal" type="button" data-native-press>▤ Задания</button><button id="weather" type="button" data-native-press>☾ Сменить небо</button></footer>
@@ -49,6 +51,6 @@
 </section>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Пух и пыльца" data-app-version="1.1.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Пух и пыльца" data-app-version="1.2.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
