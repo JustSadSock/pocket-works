@@ -11,7 +11,9 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="../../shared/workshop-mode.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
 <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./garden-v2.css">
 </head>
 <body data-fullscreen-app>
 <main class="app-shell" data-app-shell>
@@ -38,11 +40,15 @@
 <button type="button" class="friend" id="foxFriend" aria-label="Погладить лисёнка" hidden><svg viewBox="0 0 64 64"><use href="#fox"/></svg></button>
 </section>
 <section class="garden" data-ui><div class="garden-title"><div><small>ТВОЙ КРОШЕЧНЫЙ МИР</small><h2>Волшебные клумбы ✿</h2></div><b id="harvests">0 букетов</b></div>
+<nav class="seedbar" id="seedbar" aria-label="Выбор семян"></nav>
 <div class="beds" id="beds"></div><p class="hint" id="hint">Нажми на горшок, чтобы посадить семечко!</p></section>
-<footer class="dock" data-ui><button id="shop" type="button" data-native-press>✿ Компаньоны</button><button id="weather" type="button" data-native-press>☾ Сменить небо</button></footer>
+<footer class="dock" data-ui><button id="shop" type="button" data-native-press>✿ Компаньоны</button><button id="journal" type="button" data-native-press>▤ Задания</button><button id="weather" type="button" data-native-press>☾ Сменить небо</button></footer>
 <section id="sheet" class="sheet" role="dialog" aria-modal="true" aria-label="Лесные компаньоны" hidden><div class="panel"><div class="panel-head"><h2>Лесные гости</h2><button type="button" id="close" class="close" aria-label="Закрыть">×</button></div><p>Цветы приносят звёзды, а звёзды привлекают друзей.</p><div id="friendsList"></div><a href="../../" data-app-control style="display:block;margin-top:16px;text-align:center;color:#9b7486;font-size:12px">Вернуться в Pocket Works</a></div></section>
+<section id="journalSheet" class="journal-sheet" role="dialog" aria-label="Задания сада" aria-modal="true" hidden>
+<div class="journal-panel" data-ui><div class="journal-header"><h2>Книга садовника</h2><button type="button" class="close" id="journalClose" aria-label="Закрыть">×</button></div><p class="journal-intro">Выращивай новые цветы и получай награды за открытия.</p><div id="journalList"></div><a href="../../" data-app-control class="shop-exit">Вернуться в Pocket Works</a></div>
+</section>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Пух и пыльца" data-app-version="1.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Пух и пыльца" data-app-version="1.1.0"></script>
 <script type="module" src="./app.js"></script>
 </body></html>
