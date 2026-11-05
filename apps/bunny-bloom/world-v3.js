@@ -44,6 +44,7 @@ export function mountMeadow({garden,pogoGif}){
     const active=!!model.active;
     const remainder=4-garden.state.harvests%4;
     counter.textContent=active?'Звездопад!':'До звездопада: '+remainder;
+    $('festivalStats').textContent='Звездопадов: '+model.showers+' · Поймано звёзд: '+model.starsCaught;
     event.hidden=!active;world.classList.toggle('starfall-active',active);
     if(!active){if(lastPaint!==''){stars.replaceChildren();lastPaint=''}return}
     const f=model.active;
@@ -79,6 +80,7 @@ export function mountMeadow({garden,pogoGif}){
     else announce('+2 ✦ За пойманную звезду!');
     garden.save();garden.render();store();
     button.classList.add('caught');
+    if(!model.active&&model.queued>0){model.queued--;begin();}
     lastPaint='';paint();
   }
   function onHarvest(){
