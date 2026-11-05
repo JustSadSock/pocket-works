@@ -9,6 +9,8 @@ test('starfall starts at fourth bouquet, awards stars and restores after reload'
   page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(({storage,meadow})=>{
     try{
+      if(sessionStorage.getItem('bunny-qa-initialized'))return;
+      sessionStorage.setItem('bunny-qa-initialized','1');
       const now=Date.now();
       localStorage.setItem(storage,JSON.stringify({
         stars:0,harvests:3,beds:[{kind:'rose',plantedAt:now-12000,readyAt:now-2000,watered:true},null,null],
@@ -36,8 +38,7 @@ test('starfall starts at fourth bouquet, awards stars and restores after reload'
   // The init script deliberately replaces storage on navigation, so inspect current storage before reloading.
   const saved=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)),MEADOW);
   expect(saved.starsCaught).toBe(1);
-  // Preserve actual progress through reload by removing storage seeding script.
-  await page.addInitScript(()=>{});
+  // The initial seeding script runs only once per browser session.
   await page.reload();
   await expect(page.locator('#sky-event')).toBeVisible();
   const persisted=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)),MEADOW);
