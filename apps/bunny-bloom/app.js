@@ -11,4 +11,6 @@ document.getElementById('bunny-art').src=BUNNY_SRC;document.getElementById('fire
 document.getElementById('butter1').src=BUTTER_SRC;document.getElementById('butter2').src=BUTTER_SRC;
 
 import {mountGarden} from './garden-v2.js';
-mountGarden({flowerGif:FLOWER_SRC});
+import {mountMeadow} from './world-v3.js';
+const garden = mountGarden({flowerGif:FLOWER_SRC});
+mountMeadow({garden,pogoGif:window.__BUNNY_POGO_GIF__||null});
