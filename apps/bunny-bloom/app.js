@@ -9,30 +9,6 @@ const FIRE_SRC='data:image/gif;base64,R0lGODlhJgAmAIEAAAAAAP/////xqwAAACH/C05FVF
 const FLOWER_SRC='data:image/gif;base64,R0lGODlhNgA2AIIAAAAAAP/ief+fyWC4gEqvdthrnLeDVkKGYCH/C05FVFNDQVBFMi4wAwEAAAAh+QQJHgAAACwAAAAANgA2AAAI/wABCBxIsKDBgwgTKlzIsKHDhxAjSpxIsaLFixYLaCyAsePGjx0rFhBAsqQAjiEjjjRZUmPKhCAFrmR5EuVLghpNfqTZ0ubNnCw38iTp8iYAoDSRJvUZUmnSoUV/zuQ5VWfMplWDGtga9CPTjFlLbh3LVWjPlE5Jbg3Alu3WsDU9hjXQtq4BuFEvOqVbty1XqC+98u0b4C9VtIIJuzUw9CRWloP7Gk4ql+dau3ehfpWYVu3lwnfT5hUJVwDZsTWnjibd+KTmjYFLu6a6uTLtxqsfdy2dWzdRs7SNFryKt7ZwnJqPMwxrXPnAA157OxdIgMAB6LCnJ6xe/bp2hty7fzhfGN76eIXhvZ9feP3AgPfw1xe8Dr/+APnP3dt/j19gewD19ZffAQIe9F+BCCao4IIMNujggw8FBAAh+QQJHgAAACwPAAUAHQApAIIAAAD/4nn/n8lguIBKr3bYa5y3g1ZChmAI/wABCBxIsGCBgwUKKlxoECFChhAJFhBAsaKAgxEFPtQ40WLFhBAdPjzo8WPIkhc7ory4UGVJly9brrw4k2XDmSRRgry5MufLjRxxGhhqwKLInT5LEiVKMSlGjSiHBpg6lanOgTAFSKVatehVjiq3cq2KE6tDsWO9fkVYES1XtTEBwHRLFa7HhFm1Gkg7tKfcvHrfGsiLManHpX3ZfgRp2ChhhxIBp9S50yDOsgwJ16zcUKVivxmBAn6a0TLl0gobk0Y98MCBo6wLEiDg+jXQ2ABmz66NW6Hu3Qd6y/7tWjhB4sWNF6w9oLlz5a6dSx9gPPr05tWLS1cOgDd3gt5RBwEEACH5BAkeAAAALA0ABQAeACkAggAAAP/ief+fyWC4gEqvdthrnLeDVkKGYAj/AAEIHEiwYIGDBQoqXLgQoUOGEA0KmEhRQMKIAx8CKFCx4kGMDhFu7EjxI0SOJA+SLHlRocqUKFeadBnTY82OMwm+lLnSYkuDNz321KgzaEUDSHGGLNoTqdOkO30CJYk0gFWrSWX+DGrgqlcDQ39ujNnV69WsMAW+RFjWbAC0SsdSdYsVrNaoFNuahWvT6MSqX+2m9SvA6VkDeCdeJFz4KVKENjP2VOyXqNrKiRWfNJqZ8ua+hHPSDNlZKkaaQ083rKy6oczWDEmLhQ2AAIEDB0TSLmjbNu7dC3v7Bq5Q+G3ivHv/Rq4Q94EB0KMzxx29+gDk1K1Dx/67OnMAzr8XBAyvOiAAIfkECR4AAAAsDAAGAB4AKACCAAAA/+J5/5/JYLiASq922Guct4NWQoZgCP8AAQgcSLAggAIICxhcyHAgQgEQBSBsWDChQocRM16kaHHiwYwaNxp8CDIhyJALSZ5UuVKkwwInIbIs6fIgzJgSb8b0SHBmSZw8e+qMaaBoy5o+IRZdajRix4pDlRoIQJVqUZMaoYKcWrWqgahOtUrt2tUA0JcwExYl6xWoQp9r2QYwu/MtUa5s6R7FKSCuV70rP/L1u5Sv3cFMr4KVKHCx08UdgzqW6DbhSMh8GTfEmnOy5s2RPdekiLEuaYaOg55+2XI1aIuuGxIgADv2wtmzD9iWjZuA7t0Ge/sGHhz3gd/EDR4/MKC58+QAjjufPiC5dOrNrR8HMB169O3eCS4DXx0QADs=';
 document.getElementById('bunny-art').src=BUNNY_SRC;document.getElementById('firefly1').src=FIRE_SRC;document.getElementById('firefly2').src=FIRE_SRC;
 document.getElementById('butter1').src=BUTTER_SRC;document.getElementById('butter2').src=BUTTER_SRC;
-const key='pocket-works:bunny-bloom:v1';
-const defaults=()=>({stars:0,harvests:0,beds:[0,0,0],friends:[],night:true,bonuses:{}});
-let s=defaults();try{const x=JSON.parse(localStorage.getItem(key));if(x&&Array.isArray(x.beds)&&x.beds.length===3)s={stars:Number.isFinite(x.stars)?Math.max(0,x.stars|0):0,harvests:Number.isFinite(x.harvests)?Math.max(0,x.harvests|0):0,beds:x.beds.map(v=>[0,1,2,3].includes(v)?v:0),friends:Array.isArray(x.friends)?x.friends.filter(id=>['bee','frog','fox'].includes(id)):[],night:typeof x.night==='boolean'?x.night:true,bonuses:x.bonuses&&typeof x.bonuses==='object'?x.bonuses:{}}}catch{}
-const $=id=>document.getElementById(id);
-const save=()=>{try{localStorage.setItem(key,JSON.stringify(s))}catch{}};
-let timer;const say=m=>{const el=$('toast');el.textContent=m;el.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>el.classList.remove('show'),1700)};
-const friends=[{id:'bee',name:'Пчёлка Биби',cost:8,desc:'Любит цветочную пыльцу'},{id:'frog',name:'Лягушонок Плюх',cost:16,desc:'Умеет вызывать капельки росы'},{id:'fox',name:'Лисёнок Рыжик',cost:28,desc:'Приносит уют и удачу'}];
-const stages=['Посадить','Полить','Вырасти','Собрать'];
-function render(){
- $('bank').textContent='✦ '+s.stars;$('harvests').textContent=s.harvests+' букетов';document.body.classList.toggle('day',!s.night);
- for(let i=0;i<3;i++){
-  let el=$('bed'+i),art=el.querySelector('.plant');
-  art.replaceChildren();const step=s.beds[i];
-  if(step===1||step===2){art.innerHTML='<svg viewBox="0 0 64 64"><use href="#'+(step===1?'seed':'sprout')+'"/></svg>';}
-  if(step===3){const img=document.createElement('img');img.src=FLOWER_SRC;img.alt='Цветок';art.appendChild(img)}
-  el.querySelector('strong').textContent=stages[step];el.setAttribute('aria-label','Клумба '+(i+1)+': '+stages[step]);
- }
- for(const f of friends){$(f.id+'Friend').hidden=!s.friends.includes(f.id)}
-}
-for(let i=0;i<3;i++){const b=document.createElement('button');b.id='bed'+i;b.className='bed';b.type='button';b.setAttribute('data-native-press','');b.innerHTML='<div class="plant"></div><svg class="pot" viewBox="0 0 64 64"><use href="#pot"/></svg><strong>Посадить</strong>';b.onclick=()=>{let n=s.beds[i];if(n===3){s.beds[i]=0;s.stars+=3;s.harvests++;say('+3 звезды! Букет собран')}else{s.beds[i]=n+1;say(['Семечко посажено!','Росток проснулся!','Цветок расцвёл!'][n])} $('hint').textContent=['Посади новое семечко','Полей семечко','Помоги ростку вырасти','Собери цветок'][s.beds[i]];save();render()};$('beds').appendChild(b)}
-function openShop(){const list=$('friendsList');list.replaceChildren();for(const f of friends){let owned=s.friends.includes(f.id);let row=document.createElement('div');row.className='row';row.innerHTML='<svg viewBox="0 0 64 64"><use href="#'+f.id+'"/></svg><span><strong>'+f.name+'</strong><small>'+f.desc+'</small></span>';let bt=document.createElement('button');bt.type='button';bt.disabled=owned||s.stars<f.cost;bt.textContent=owned?'Живёт здесь':'✦ '+f.cost;bt.onclick=()=>{if(s.stars<f.cost||s.friends.includes(f.id))return;s.stars-=f.cost;s.friends.push(f.id);save();render();openShop();say(f.name+' поселился на поляне!')};row.appendChild(bt);list.appendChild(row)}$('sheet').hidden=false;$('close').focus()}
-$('shop').onclick=openShop;$('close').onclick=()=>{$('sheet').hidden=true;$('shop').focus()};$('sheet').addEventListener('click',e=>{if(e.target===$('sheet'))$('close').click()});
-$('weather').onclick=()=>{s.night=!s.night;save();render();say(s.night?'На поляне ночь':'Доброе солнечное утро!')};
-$('bunny').onclick=()=>say('Пух рад тебя видеть!');
-for(const f of friends){$(f.id+'Friend').onclick=()=>{if(!s.friends.includes(f.id))return;const now=Date.now();if(now-Number(s.bonuses[f.id]||0)<20000){say(f.name+' отдыхает');return}s.bonuses[f.id]=now;s.stars++;save();render();say(f.name+' дарит звёздочку!')}}
-window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('sheet').hidden)$('close').click()});
-render();
+
+import {mountGarden} from './garden-v2.js';
+mountGarden({flowerGif:FLOWER_SRC});
