@@ -6,3 +6,7 @@
 @keyframes bloom-particle{to{opacity:0;transform:rotate(var(--angle)) translateY(calc(-1 * var(--dist))) scale(.2)}}@keyframes bloom-breathe{50%{transform:rotate(4deg) scale(1.05)}}@keyframes bloom-glow{50%{filter:drop-shadow(0 0 9px #ffdc89)}}@keyframes bed-pulse{50%{transform:scale(.94)}}
 @media(max-height:730px){.seed-option{min-height:41px}.bed{height:102px}.bed .plant{height:40px}.bed .plant img,.plant .bloom-vector{height:50px;width:50px}.bed .pot{height:34px}.dock button{height:47px}.garden{padding-top:6px}}@media(max-height:610px){.seed-option{min-height:37px}.bed{height:89px}.garden-title h2{font-size:17px}}
 @media(prefers-reduced-motion:reduce){.plant .bloom-vector,.bed.ripe .plant,.bed.pop,.garden-burst i{animation:none!important}.seed-option,.growth-meter span{transition:none!important}}
+
+.journal-panel .shop-exit{display:block;margin-top:15px;padding:13px 12px;min-height:44px;background:#f9ddca;border:2px solid #c49ba0;border-radius:12px;text-align:center;color:#75536b;text-decoration:none;font-size:13px;font-weight:850;box-shadow:0 3px #d1adab}
+.journal-panel .shop-exit:active{transform:translateY(2px);box-shadow:0 1px #d1adab}
+.journal-panel .shop-exit:focus-visible{outline:3px solid #f4b1ba;outline-offset:3px}
