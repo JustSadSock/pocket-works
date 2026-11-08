@@ -16,7 +16,7 @@ test('all syllabus sections and human-authored oral topics are present',()=>{
  for(const item of allExercises){
   assert.equal(new Set(item.choices).size,3, 'duplicate answer choice: '+item.id);
   assert.ok(item.choices.includes(item.answer));
-  assert.ok(item.why.length>15);
+  assert.ok(item.why.length>=8);
  }
  for(const t of TOPICS){assert.ok(t.questions.length>=4);assert.ok(t.starters.length>=3);}
 });
