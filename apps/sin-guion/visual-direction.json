@@ -13,11 +13,11 @@
     "distinction": "Не анкета выбора героев rivals-dna, не иллюстрированный сад bunny-bloom и не тёплый карточный рейтинг rose-ranking-15; одна настольная лабораторная консоль с речью и повторениями."
   },
   "architecture": {
-    "spatialLayout": "instrument-workbench",
+    "spatialLayout": "open-workbench",
     "controlLocation": "contextual",
-    "navigation": "stable-rail-to-bottom-tabs",
-    "chromeTopology": "device-rail-and-stage",
-    "dominantMotion": "short-press-and-record-pulse",
+    "navigation": "other",
+    "chromeTopology": "framed-stage",
+    "dominantMotion": "immediate",
     "primaryVerb": "Произнести новый самостоятельный ответ по вопросу и закрепить грамматику через упражнения.",
     "physicalFeedback": "Правильный выбор оттеняется зелёным и раскрывает объяснение; неверный красным. В записи отдельное кольцо времени; после стопа интерфейс превращается в самопроверку.",
     "spatialRationale": "На телефоне одна цель под пальцем и навигация у нижнего края; на ПК узкая постоянная навигация и большой рабочий пульт.",
