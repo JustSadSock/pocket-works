@@ -24,33 +24,29 @@
         },
         {
           "action": "click",
-          "selector": "[data-action='go'][data-view='grammar']"
-        },
-        {
-          "action": "visible",
-          "selector": ".grammar-list"
-        },
-        {
-          "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "[data-action='lesson'][data-id='past']"
-        },
-        {
-          "action": "visible",
-          "selector": ".rule-console"
-        },
-        {
-          "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "[data-action='quiz-group'][data-id='past']"
+          "selector": ".action-row[data-action='quiz-mixed']"
         },
         {
           "action": "visible",
           "selector": ".answer-board"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": ".answer-choice:first-child"
+        },
+        {
+          "action": "visible",
+          "selector": ".feedback"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='next-answer']"
         },
         {
           "action": "screenshot"
