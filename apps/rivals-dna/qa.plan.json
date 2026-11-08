@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "engine",
+      "kind": "node-test",
+      "files": [
+        "tests/engine.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "journey",
+      "kind": "browser-node",
+      "entry": "qa/journey.mjs",
+      "tier": "smoke"
+    }
+  ]
+}

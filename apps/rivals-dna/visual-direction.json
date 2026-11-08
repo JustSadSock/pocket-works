@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "rivals-dna",
+  "direction": {
+    "premise": "An identity-detection instrument for Marvel Rivals: instead of a superhero personality quiz, the player reads their own combat style like a classified tactical dossier.",
+    "composition": "The phone opens with a large numbered crosshair insignia and one primary action; questions become full-height field notes with a single high-contrast answer cluster. Results unfold as a ranked case-file with a prominent inked hero monogram plate, skill signature and ten numbered strips.",
+    "shapeLanguage": "Severed corner cuts, fine survey grid, wide horizontal strike lines, numbered roster stamps and abstract insignias derived from actual hero initials.",
+    "surfaceAndMaterial": "Matte pale mineral paper and deep forest-green ink, subtle halftone stripes, opaque tactical olive overlays. No neon, no glass, no borrowed movie stills.",
+    "paletteLogic": "Ivory ground and evergreen primary ink; pale sage records selections and data; muted apricot differentiates duelists; every color used to encode a real interaction or role.",
+    "typography": "Condensed industrial display for heroic titles, compact monospaced dossier serials and direct readable Arial for answers.",
+    "signature": "A colored tactical encounter diagram with ally/enemy positioning interrupts the question flow; decisions change the latent fingerprint and reveal a real ranked roster.",
+    "distinction": "Unlike rivals-fit-lab's dual-ended psychometric questionnaire and blue typography, RIVALS DNA uses contextual four-option choices and arena decision diagrams with a separate ease-vs-enjoyment ranking. Unlike rivals-roulette's random spinning pick, the list always follows explicit player answers."
+  },
+  "architecture": {
+    "spatialLayout": "document-spread",
+    "controlLocation": "contextual",
+    "navigation": "page-turn",
+    "chromeTopology": "single-surface",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Choose how you actually want to fight across twenty context-rich questions, then inspect ranked hero dossiers and rate what worked in matches.",
+    "physicalFeedback": "The selected answer inks over immediately; progress advances to the next numbered file. Opening a ranked hero lifts a dense performance dossier with separate score and feedback controls.",
+    "spatialRationale": "The active question or tactical diagram takes the top half while four full-width tactile options fill the phone's reachable area. Rankings are a scrollable reading collection, not a fake single-screen game.",
+    "comparisons": [
+      {
+        "slug": "rivals-fit-lab",
+        "spatialDifference": "RIVALS DNA presents field-case-choice panels with one numbered question at a time; rivals-fit-lab uses a different survey reading structure.",
+        "interactionDifference": "This app asks live tactical-choice situations and collects post-match votes that update the ranking rather than only continuous paired scales."
+      },
+      {
+        "slug": "rivals-roulette",
+        "spatialDifference": "RIVALS DNA is a matte archival instrument with dense dossier strips, not a large center wheel and random selection stage.",
+        "interactionDifference": "This app calculates stable fitted rankings and role-complementary pairs rather than spinning or banning random heroes."
+      },
+      {
+        "slug": "bunny-bloom",
+        "spatialDifference": "Bunny Bloom occupies its phone screen with continuous illustrated flower-pots and garden graphics. RIVALS DNA instead divides the screen into sequential numbered tactical questions and compact case-file rankings.",
+        "interactionDifference": "Bunny Bloom grows plants by pressing illustrated pots. RIVALS DNA tracks four-way battle decisions, recalculates hero compatibility and lets players rate matches."
+      },
+      {
+        "slug": "ne-tem-golosom",
+        "spatialDifference": "Ne Tem Golosom centers a dark cinema display and an audio-editing timeline; RIVALS DNA has an ivory paper dossier with a narrow status rail, tactile choices, and vertical hero rankings.",
+        "interactionDifference": "Ne Tem Golosom records audio and edits video clips. RIVALS DNA uses sequential selection, slider preferences and contextual tactical scenarios to classify hero compatibility."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "App-owned static semantic DOM with embedded authored SVG battlefield diagrams and bespoke abstract initial-based hero insignias; no remote image dependency.",
+    "focalAsset": "A custom crosshair/fingerprint vector icon and distinct angled rectangular sigils generated from each known hero name."
+  },
+  "motion": {
+    "character": "Fast pressed answer response and slight tactile displacement; category progress advances without animation debt.",
+    "action": "Select one battle response or set a difficulty slider.",
+    "anticipation": "Unselected paper buttons have outlined index slots and suggest an immediate direct choice.",
+    "response": "Choice turns sage, check mark and saved score appear immediately, next action unlocks.",
+    "followThrough": "A new numbered case file replaces the old one; results unfold into a ranked file on completion.",
+    "interruption": "Rapid repeated inputs update one answer; every state persists before moving; pressing back restores the selected answer.",
+    "reducedMotion": "All CSS transitions and animation disappear while selection and progress remain readable."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "[data-action=\"start-full\"]"
+    },
+    "expectedChange": "The first of 20 questions appears with selectable tactical preferences.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
