@@ -8,8 +8,8 @@ import {
 
 installMobileRuntime();
 createWorkshopMode({
- appName:'Sin Guion',version:'1.0.0',cachePrefix:'sin-guion-',
- storageNamespace:'pocket-works:sin-guion',
+ appName:'Sin Guion',version:'1.0.0',cachePrefix: 'sin-guion-',
+ storageNamespace: 'pocket-works:sin-guion',
  onReset(){
   try{
    localStorage.removeItem('pocket-works:sin-guion:v1');
