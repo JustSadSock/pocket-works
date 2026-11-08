@@ -37,7 +37,7 @@ for(const sample of samples){
  page.on('response',res=>{if(res.url().startsWith(base)&&res.status()>=400)failed.push(res.status()+' '+res.url());});
  await page.goto(base+'/apps/rivals-dna/',{waitUntil:'domcontentloaded'});
  await page.locator('.landing').waitFor();
- assert.match(await page.locator('.landing').innerText(),/54\s+героя/);
+ assert.match(await page.locator('.landing').innerText(),/54\s+героя/i);
  await page.screenshot({path:path.join(output,sample.name+'-initial.png')});
  await page.locator('[data-action="start-full"]').click();
  assert.equal(await page.locator('.question-screen').count(),1);
