@@ -294,7 +294,7 @@ audio,textarea,.example strong,.phrase-list b,.rule-console p,.flash-card h1{use
  .screen-main{padding:0 16px calc(100px + var(--safe-bottom))}
  .home-screen{padding-top:22px}
  .home-head{margin-bottom:17px}.home-head .eyebrow{font-size:10px}
- .stamp{font-size:8px}
+ .stamp{display:none}
  .home-grid{grid-template-columns:1fr;gap:19px}
  .hero-copy{padding:3px 0 0}
  .hero-copy h1{font-size:clamp(55px,13vw,77px)}
