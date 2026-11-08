@@ -188,7 +188,7 @@ function startOral(topicId=null,mode='solo'){
  const ids=mode==='exam'?uniqueTopics(state,TOPICS.map(t=>t.id),3):[topicId||TOPICS[(state.oral.length+currentDay(state))%TOPICS.length].id];
  const queue=ids.map((id,i)=>makeOralItem(id,i));
  ui.oral={mode,queue,index:0,stage:'prepare',seconds:0,checklist:[false,false,false,false,false],
-  note:'',audioId:null,audioUrl:null,hasAudio:false,micAvailable:true,start:0};
+  note:'',audioId:null,audioUrl:null,hasAudio:false,micAvailable:true,processing:false,start:0};
  ui.examResults=[];ui.view='speaking';render();startTimer(30,()=>{const label=document.querySelector('#timer-caption');if(label)label.textContent='Время подготовки вышло. Можно начинать.';});
 }
 function oral(){
@@ -224,7 +224,7 @@ function reviewPanel(){
  '" aria-pressed="'+Boolean(o.checklist[i])+'" class="review-check '+(o.checklist[i]?'checked':'')+'" data-native-press>'+
  '<span class="check-square">'+(o.checklist[i]?icon('check'):'')+'</span>'+esc(l)+'</button>').join('')+'</div>'+
  '<label class="note-label" for="oral-note">Что было сложно? (необязательно)</label><textarea id="oral-note" maxlength="1600" rows="2" placeholder="Например: перепутал subjuntivo и futuro...">'+esc(o.note)+'</textarea>'+
- '<div class="review-submit">'+button(o.mode==='exam'&&o.index<2?'Сохранить и следующий вопрос':'Сохранить результат','save-oral',{className:'primary',post:'arrow'})+'</div></section>';
+ '<div class="review-submit">'+button(o.processing?'Сохраняем аудио…':o.mode==='exam'&&o.index<2?'Сохранить и следующий вопрос':'Сохранить результат','save-oral',{className:'primary',post:'arrow',disabled:o.processing})+'</div></section>';
 }
 function oralResult(){
  const entry=state.oral.at(-1);
@@ -384,6 +384,7 @@ async function startSpeaking(){
     try{await saveAudio(id,blob);o.hasAudio=true;}
     catch{showToast('Не удалось сохранить аудио на устройство. В этой сессии оно доступно.');o.hasAudio=false;}
    }
+   o.processing=false;
    if(o.stage==='review')render();
   };
   recorder.start(1000);
@@ -397,12 +398,14 @@ function stopSpeaking(){
  const o=ui.oral;if(!o||o.stage!=='speaking')return;
  clearTimer();o.seconds=Math.max(1,Math.min(90,Math.ceil((Date.now()-o.start)/1000)));
  o.stage='review';
- if(ui.recording?.state==='recording')try{ui.recording.stop();}catch{}
+ o.processing=ui.recording?.state==='recording';
+ if(ui.recording?.state==='recording')try{ui.recording.stop();}catch{o.processing=false;}
  if(ui.stream){ui.stream.getTracks().forEach(t=>t.stop());ui.stream=null;}
  render();
 }
 function finishOral(){
  const o=ui.oral;if(!o||o.stage!=='review')return;
+ if(o.processing){showToast('Аудио ещё сохраняется.');return;}
  const item=o.queue[o.index];
  const entry={id:o.audioId||'oral-'+Date.now()+'-'+o.index,topic:item.topicId,question:item.question,
   grammar:item.grammar,seconds:o.seconds,checklist:[...o.checklist],note:o.note,at:Date.now(),
@@ -413,7 +416,7 @@ function finishOral(){
  teardownAudio();
  if(next){
   o.index++;o.stage='prepare';o.checklist=[false,false,false,false,false];o.note='';
-  o.seconds=0;o.start=0;o.audioId=null;o.audioUrl=null;o.hasAudio=false;
+  o.seconds=0;o.start=0;o.audioId=null;o.audioUrl=null;o.hasAudio=false;o.processing=false;
   ui.view='speaking';render();startTimer(30,()=>{const caption=document.querySelector('#timer-caption');if(caption)caption.textContent='Время подготовки вышло. Можно начинать.';});
  }else{ui.view=o.mode==='exam'?'examDone':'oralResult';ui.oral=null;render();}
 }
