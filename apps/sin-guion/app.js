@@ -1,4 +1,5 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { GRAMMAR, TOPICS, PHRASES, DAY_PLAN, TOTAL_QUESTIONS } from './content.js';
 import {
  loadState,saveState,allExercises,allPhrases,seededChoices,currentDay,dueExercises,
@@ -6,6 +7,17 @@ import {
 } from './engine.js';
 
 installMobileRuntime();
+createWorkshopMode({
+ appName:'Sin Guion',version:'1.0.0',cachePrefix:'sin-guion-',
+ storageNamespace:'pocket-works:sin-guion',
+ onReset(){
+  try{
+   localStorage.removeItem('pocket-works:sin-guion:v1');
+   indexedDB.deleteDatabase('pocket-works:sin-guion:recordings');
+  }catch{}
+  location.reload();
+ }
+});
 let state=loadState();
 const $app=document.querySelector('#app');
 const $toast=document.querySelector('#toast');
