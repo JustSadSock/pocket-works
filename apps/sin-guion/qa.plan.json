@@ -52,6 +52,58 @@
           "action": "screenshot"
         }
       ]
+    },
+    {
+      "id": "oral-flow",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#app .home-screen",
+      "steps": [
+        {
+          "action": "click",
+          "selector": ".action-row[data-action='start-random-oral']"
+        },
+        {
+          "action": "visible",
+          "selector": ".oral-stage"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='start-speaking']"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-action='stop-speaking']"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='stop-speaking']"
+        },
+        {
+          "action": "visible",
+          "selector": ".review-checks"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": ".review-check:first-child"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
     }
   ]
 }
