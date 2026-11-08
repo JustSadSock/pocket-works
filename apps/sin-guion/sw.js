@@ -1,9 +1,10 @@
 const CACHE_NAME='sin-guion-v1.0.0',CACHE_PREFIX='sin-guion-',APP_VERSION='1.0.0',
- RELEASE_DATE='2026-11-08',RELEASE_NOTES=[
+ RELEASE_DATE='2026-11-08',CACHE_PROTOCOL=2;
+const RELEASE_NOTES=[
   "Шесть разделов грамматики с 60 заданиями и мгновенной проверкой.",
   "Семь тем устного модуля, запись ответов и честная самопроверка.",
   "Карточки речевых шаблонов, локальное интервальное повторение и трёхвопросный пробный экзамен."
-],CACHE_PROTOCOL=2;
+];
 const ROOT=new URL('./',self.registration.scope);
 const PATHS=['./','./index.html','./app.config.json','./styles.css','./app.js','./engine.js','./content.js',
  './manifest.webmanifest','./icons/icon.svg',
