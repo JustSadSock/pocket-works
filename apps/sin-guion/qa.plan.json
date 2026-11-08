@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "engine",
+      "kind": "node-test",
+      "files": [
+        "tests/engine.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#app .home-screen",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='go'][data-view='grammar']"
+        },
+        {
+          "action": "visible",
+          "selector": ".grammar-list"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='lesson'][data-id='past']"
+        },
+        {
+          "action": "visible",
+          "selector": ".rule-console"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='quiz-group'][data-id='past']"
+        },
+        {
+          "action": "visible",
+          "selector": ".answer-board"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}
