@@ -15,9 +15,9 @@
 
 ## Сборка
 Quick runtime без сторонних зависимостей. Для тестов:
-\`\`\`bash
+```bash
 node --test apps/rivals-dna/tests/engine.test.mjs
-\`\`\`
+```
 
 ## Хранение
-\`pocket-works:rivals-dna:state:v1\` — локальное состояние. Синхронизация между устройствами не заявлена: пока её заменяет безопасный экспорт/импорт JSON. PWA offline cache: \`rivals-dna-v1.0.0\`.
+`pocket-works:rivals-dna:state:v1` — локальное состояние. Синхронизация между устройствами не заявлена: пока её заменяет безопасный экспорт/импорт JSON. PWA offline cache: `rivals-dna-v1.0.0`.

@@ -76,7 +76,7 @@ function renderQuestion(){
 }
 function start(mode){
  const p=active();
- if(p.order.length&&!p.complete&&Object.keys(p.answers).length){
+ if(p.order.length&&Object.keys(p.answers).length){
    confirmAction={type:'restart',mode};return render();
  }
  restart(mode);
