@@ -102,6 +102,17 @@
         },
         {
           "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-action='save-oral']"
+        },
+        {
+          "action": "visible",
+          "selector": ".result-screen"
+        },
+        {
+          "action": "screenshot"
         }
       ]
     }
