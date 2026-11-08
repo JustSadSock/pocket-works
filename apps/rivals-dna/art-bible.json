@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "product": "rivals-dna",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "rivals-fit-lab",
+      "evidence": "Reviewed apps/rivals-fit-lab/README.md, hero-data.js, and app.config.json on this repository; did not obtain a rendered screenshot.",
+      "lesson": "The predecessor provides quantitative hero vectors and paired-choice testing; the new application must distinguish tactical choice and mechanical comfort instead of copying the questionnaire."
+    },
+    {
+      "slug": "rivals-roulette",
+      "evidence": "Reviewed apps/rivals-roulette/app.config.json and documented wheel interaction; rendered screenshot was unavailable.",
+      "lesson": "A spinning selection wheel favors random discovery; this product should create ranked, explainable results and direct interaction with a character dossier rather than a randomized pick."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://www.marvelrivals.com/heroes/teamup.html",
+      "inspectedAt": "2026-11-08",
+      "observation": "The official game organizes its roster into distinct characters and team interactions; role and ability differences underpin selection.",
+      "principle": "Recommendations need character-specific mechanical profiles instead of pop-culture personality types.",
+      "application": "Provide one indexed roster, distinct role labels, and ability-feature explanations for every character.",
+      "avoid": "Do not copy official hero art into a local offline bundle without an appropriate license."
+    },
+    {
+      "url": "https://www.marvelrivals.com/",
+      "inspectedAt": "2026-11-08",
+      "observation": "The live game's hero lineup and roles change across releases, so a recommendation model needs a dated roster snapshot.",
+      "principle": "A static offline knowledge model must disclose its update period and avoid presenting predicted win rates.",
+      "application": "Label the date and character count, test dataset integrity and keep the model entirely playable offline.",
+      "avoid": "Do not pretend manually scored character attributes are developer-certified gameplay statistics."
+    },
+    {
+      "url": "https://github.com/JustSadSock/pocket-works/tree/main/apps/rivals-fit-lab",
+      "inspectedAt": "2026-11-08",
+      "observation": "The existing Pocket Works Fit Lab stores thirteen-dimensional hero vectors and paired-choice questions for fifty-three heroes.",
+      "principle": "Reuse game-specific factual structure while designing a new player interaction and an updated roster.",
+      "application": "Expand to fifty-four profiles, split ease from enjoyment and ask four battlefield decision scenarios.",
+      "avoid": "Avoid reproducing the Fit Lab's paired-choice interface or implying identical scoring to that application."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "tactical-dossier",
+      "medium": "Native HTML semantic controls with app-authored CSS and embedded vector tactical schematics.",
+      "composition": "A tall numbered page that treats a single question as the main tactical exhibit, followed by a ranked record of heroes.",
+      "interaction": "Choose one of four action cards or drag a real preference slider, then inspect a character dossier with match feedback.",
+      "motion": "Immediate ink-like selection and a subtle horizontal press shift, progressing to the next numbered case file.",
+      "rationale": "Chosen because real quiz readability and immediate choices benefit from robust phone controls while vector battle scenarios provide a unique recognizable signature."
+    },
+    {
+      "id": "hero-poster-deck",
+      "medium": "Large painted raster character illustrations on swipeable fullscreen posters.",
+      "composition": "One full-screen hero occupies the majority of the frame while questions hide behind each poster.",
+      "interaction": "Swipe between illustrated heroes and reveal proposed personality matches by turning their posters.",
+      "motion": "Long lateral poster flips and springlike overshoot during chapter navigation.",
+      "rationale": "Rejected because posters consume the vertical phone area needed for detailed question choices and imply copyrighted character artwork."
+    },
+    {
+      "id": "arena-first",
+      "medium": "Custom canvas tactical arena with movable unit markers and a controllable map camera.",
+      "composition": "The player looks down onto a full-screen battle map while situational questions appear as map labels.",
+      "interaction": "Drag allied and enemy markers across a map to register the desired combat style and positioning.",
+      "motion": "Dragged objects spring to nearby hexes with animated movement arcs and particle impacts.",
+      "rationale": "Rejected because a map-heavy mini-game obscures the simple value judgment needed for twenty fast questions and raises accessibility complexity."
+    }
+  ],
+  "selection": {
+    "concept": "tactical-dossier",
+    "reason": "Text remains immediately readable, tactical diagrams stand out during battlefield scenarios, and user feedback updates results without loading a complex renderer.",
+    "rejected": [
+      {
+        "concept": "hero-poster-deck",
+        "reason": "Too much reliance on large media and theatrical presentation at the expense of question density and offline responsiveness."
+      },
+      {
+        "concept": "arena-first",
+        "reason": "A freely draggable battle map would be a separate simulation and no longer accurately measure the player's preferred decisions."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "svg-dom",
+      "availability": "available",
+      "reason": "The created installation icon is real authored SVG and the interactive battlefield diagrams are vector markup embedded in app-owned JavaScript."
+    }
+  ],
+  "assets": [
+    {
+      "id": "rivals-dna-icon",
+      "tool": "svg-dom",
+      "source": "asset-source/icon-master.svg",
+      "output": "icons/icon.svg",
+      "role": "Standalone fingerprint and targeting-reticle icon for the Pocket Works app shelf and installed shortcut.",
+      "acceptance": "Legible contrasting fingerprint-reticle shape at very small launcher sizes, with no generic letter monogram.",
+      "integration": "Referenced in the local web manifest, favicon and Apple touch icon, with the export cached by the offline service worker.",
+      "provenance": "Original SVG drawing authored within this app, based on abstract reticle and DNA motifs with no third-party artwork.",
+      "maxBytes": 4000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Long Russian answers can wrap on short portrait screens and bury the next question control.",
+      "On a phone the result lists must remain readable next to role insignia and numerical fit scores."
+    ],
+    "comparisons": [
+      "Inspect initial versus first answered question at 390x844 and 1366x768 against the game quiz's intended hierarchy.",
+      "Inspect the complete 10-hero result next to character detail/modal and duo display on phone and desktop."
+    ]
+  }
+}

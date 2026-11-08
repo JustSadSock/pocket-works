@@ -13,11 +13,11 @@
     "distinction": "Unlike rivals-fit-lab's dual-ended psychometric questionnaire and blue typography, RIVALS DNA uses contextual four-option choices and arena decision diagrams with a separate ease-vs-enjoyment ranking. Unlike rivals-roulette's random spinning pick, the list always follows explicit player answers."
   },
   "architecture": {
-    "spatialLayout": "instrument-dossier",
-    "controlLocation": "question-inline",
-    "navigation": "sequential-case-files",
-    "chromeTopology": "minimal-top-rail",
-    "dominantMotion": "selection-lock-and-record",
+    "spatialLayout": "document-spread",
+    "controlLocation": "contextual",
+    "navigation": "page-turn",
+    "chromeTopology": "single-surface",
+    "dominantMotion": "immediate",
     "primaryVerb": "Choose how you actually want to fight across twenty context-rich questions, then inspect ranked hero dossiers and rate what worked in matches.",
     "physicalFeedback": "The selected answer inks over immediately; progress advances to the next numbered file. Opening a ranked hero lifts a dense performance dossier with separate score and feedback controls.",
     "spatialRationale": "The active question or tactical diagram takes the top half while four full-width tactile options fill the phone's reachable area. Rankings are a scrollable reading collection, not a fake single-screen game.",
@@ -31,6 +31,16 @@
         "slug": "rivals-roulette",
         "spatialDifference": "RIVALS DNA is a matte archival instrument with dense dossier strips, not a large center wheel and random selection stage.",
         "interactionDifference": "This app calculates stable fitted rankings and role-complementary pairs rather than spinning or banning random heroes."
+      },
+      {
+        "slug": "bunny-bloom",
+        "spatialDifference": "Bunny Bloom occupies its phone screen with continuous illustrated flower-pots and garden graphics. RIVALS DNA instead divides the screen into sequential numbered tactical questions and compact case-file rankings.",
+        "interactionDifference": "Bunny Bloom grows plants by pressing illustrated pots. RIVALS DNA tracks four-way battle decisions, recalculates hero compatibility and lets players rate matches."
+      },
+      {
+        "slug": "ne-tem-golosom",
+        "spatialDifference": "Ne Tem Golosom centers a dark cinema display and an audio-editing timeline; RIVALS DNA has an ivory paper dossier with a narrow status rail, tactile choices, and vertical hero rankings.",
+        "interactionDifference": "Ne Tem Golosom records audio and edits video clips. RIVALS DNA uses sequential selection, slider preferences and contextual tactical scenarios to classify hero compatibility."
       }
     ]
   },
