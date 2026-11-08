@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "rivals-dna",
+  "name": "RIVALS DNA",
+  "shortName": "RIVALS DNA",
+  "description": "Тактический тест игрового почерка: 20 вопросов, адаптивные сценарии и топ-10 из 54 героев Marvel Rivals.",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-08",
+  "releaseDateTime": "2026-11-08T13:31:00+02:00",
+  "changelog": [
+    "Новый тест: быстрый и полный режимы, 4 боевых сценария и 2 адаптивных уточнения.",
+    "Топ-10 по интересу и удобству освоения с объяснениями сильных и слабых совпадений.",
+    "Профили игроков, сравнение дуэтов, отзывы после матчей, экспорт и импорт результатов."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#27473c",
+  "backgroundColor": "#efeee6",
+  "themeColor": "#efeee6",
+  "orientation": "any",
+  "cacheName": "rivals-dna-v1.0.0",
+  "storageNamespace": "pocket-works:rivals-dna",
+  "tags": [
+    "marvel rivals",
+    "heroes",
+    "quiz",
+    "matchmaking",
+    "offline",
+    "strategy",
+    "recommendations"
+  ],
+  "order": 86
+}

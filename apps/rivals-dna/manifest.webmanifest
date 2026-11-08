@@ -1,0 +1,20 @@
+{
+  "name": "RIVALS DNA",
+  "short_name": "RIVALS DNA",
+  "description": "Подбор героев Marvel Rivals по игровому стилю.",
+  "id": "/apps/rivals-dna/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#efeee6",
+  "theme_color": "#efeee6",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
