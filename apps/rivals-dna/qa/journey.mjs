@@ -39,6 +39,9 @@ for(const sample of samples){
  await page.locator('.landing').waitFor();
  assert.match(await page.locator('.landing').innerText(),/54\s+героя/i);
  await page.screenshot({path:path.join(output,sample.name+'-initial.png')});
+ await page.locator('[data-workshop-trigger]').click();
+ assert.equal(await page.locator('.workshop-mode.is-open').count(),1);
+ await page.locator('.workshop-mode [data-workshop-close]').first().click();
  await page.locator('[data-action="start-full"]').click();
  assert.equal(await page.locator('.question-screen').count(),1);
  await page.screenshot({path:path.join(output,sample.name+'-question.png')});

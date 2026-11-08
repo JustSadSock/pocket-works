@@ -1,9 +1,15 @@
 
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { HEROES, SNAPSHOT } from './hero-data.js';
 import { byId, sequenceFor } from './questions.js';
 import { AXIS_TITLES, ROLE_NAMES, isValidAnswer, chooseAdaptive, answeredCount, rankHeroes, resultsSummary, explanation, pairRecommendations, verifyDataset } from './engine.js';
 installMobileRuntime();
+createWorkshopMode({
+  appName:'RIVALS DNA', version:'1.0.0',
+  cachePrefix: 'rivals-dna-', storageNamespace: 'pocket-works:rivals-dna',
+  onReset:()=>{ location.reload(); }
+});
 
 const KEY='pocket-works:rivals-dna:state:v1';
 const $=selector=>document.querySelector(selector);

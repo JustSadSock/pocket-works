@@ -3,9 +3,9 @@ const CACHE_PREFIX = 'rivals-dna-';
 const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-11-08';
 const RELEASE_NOTES = [
-  'Новый тактический тест игрового почерка с 54 героями.',
-  'Адаптивный топ-10, корректировки после матчей и сравнение дуэтов.',
-  'Локальные профили, импорт и экспорт результатов.'
+  'Новый тест: быстрый и полный режимы, 4 боевых сценария и 2 адаптивных уточнения.',
+  'Топ-10 по интересу и удобству освоения с объяснениями сильных и слабых совпадений.',
+  'Профили игроков, сравнение дуэтов, отзывы после матчей, экспорт и импорт результатов.'
 ];
 const CACHE_PROTOCOL = 2;
 const ROOT = new URL('./', self.registration.scope);
@@ -13,7 +13,15 @@ const PATHS = [
  './','./index.html','./app.config.json','./styles.css','./app.js','./engine.js',
  './hero-data.js','./questions.js','./manifest.webmanifest','./icons/icon.svg',
  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
- '../../shared/update-manager.css','../../shared/update-manager.js'
+ '../../shared/update-manager.css','../../shared/update-manager.js',
+ '../../shared/workshop-mode.js',
+ '../../shared/workshop-mode.css',
+ '../../shared/capabilities/motion.js',
+ '../../shared/capabilities/storage.js',
+ '../../shared/capabilities/transfer.js',
+ '../../shared/capabilities/audio.js',
+ '../../shared/capabilities/device.js',
+ '../../shared/capabilities/diagnostics.js'
 ];
 const LOOKUP = new Map(PATHS.map(path => {const u=new URL(path, ROOT);return [u.pathname,u.href];}));
 function versioned(request) {

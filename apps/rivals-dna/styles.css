@@ -262,3 +262,9 @@ button,[data-ui]{-webkit-user-select:none;user-select:none}
 }
 @media(max-height:680px) and (min-width:800px){.question-screen{min-height:unset}.question-copy{margin-bottom:14px}.choice{min-height:54px}.question-nav{margin-top:12px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* An always-accessible platform diagnostic, quieter than the content controls. */
+.workshop-trigger{position:fixed;z-index:25;bottom:max(10px,env(safe-area-inset-bottom,0px));right:max(12px,env(safe-area-inset-right,0px));width:38px;height:38px;display:grid;place-items:center;background:#edf0e4;border:1px solid #9eb6a6;color:#406b51;font-size:17px;opacity:.8;box-shadow:0 1px 5px #152b2726}
+.workshop-trigger:active{transform:translateY(2px);opacity:1}
+.workshop-trigger:hover,.workshop-trigger:focus-visible{opacity:1}
+@media(max-width:500px){.workshop-trigger{width:34px;height:34px;opacity:.68}}
