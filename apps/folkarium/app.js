@@ -4,7 +4,7 @@ installMobileRuntime();
 const $=id=>document.getElementById(id);
 const KEY='pocket-works:folkarium:folio-v1';
 let folio=restore();
-let section=1,selected='vielle',drawing=null,playing=null,ctx=null,pendingDelete=null,busy=false;
+let section=1,selected='vielle',drawing=null,drawMode=false,playing=null,ctx=null,pendingDelete=null,busy=false;
 const byId=id=>folio.songs.find(s=>s.id===id);
 const song=()=>byId(folio.active);
 const selectedTrack=()=>song().tracks.find(t=>t.id===selected);
@@ -115,19 +115,20 @@ function renderTracks(){
   }).join('');
 }
 function renderGrid(){
-  const t=selectedTrack(),pattern=t.patterns[section],rows=pitches(song().mode);
+  const t=selectedTrack(),pattern=t.patterns[section],rows=selected==='drum'?[{d:2,label:'Звон'},{d:1,label:'Хлопок'},{d:0,label:'Бас'}]:pitches(song().mode).map(p=>({...p,label:pitchLabel(p.midi)}));
   $('selectedTrackLabel').textContent=INSTRUMENTS.find(i=>i.id===selected).label;
   let html='<span class="grid-corner">Нота / шаг</span>';
   for(let c=0;c<STEPS;c++)html+='<span class="step-label '+(c===0||c===8?'bar-start':'')+'">'+(c+1)+'</span>';
   for(const pitch of rows){
-    html+='<span class="pitch-label">'+pitchLabel(pitch.midi)+'</span>';
+    html+='<span class="pitch-label">'+pitch.label+'</span>';
     for(let c=0;c<STEPS;c++){
       const hit=pattern[c]&&pattern[c].d===pitch.d;
-      html+='<button type="button" class="note-cell '+(hit?'written ':'')+(c===0||c===8?'bar-start ':'')+'" data-step="'+c+'" data-degree="'+pitch.d+'" aria-pressed="'+!!hit+'" aria-label="'+pitchLabel(pitch.midi)+', доля '+(c+1)+'" title="'+pitchLabel(pitch.midi)+'"></button>';
+      html+='<button type="button" class="note-cell '+(hit?'written ':'')+(c===0||c===8?'bar-start ':'')+'" data-step="'+c+'" data-degree="'+pitch.d+'" aria-pressed="'+!!hit+'" aria-label="'+pitch.label+', доля '+(c+1)+'" title="'+pitch.label+'"></button>';
     }
   }
   $('scoreGrid').innerHTML=html;
   $('scoreGrid').classList.toggle('is-drum',selected==='drum');
+  $('scoreGrid').classList.toggle('drawing-enabled',drawMode);
 }
 function updateGridColumn(step){
   const n=selectedTrack().patterns[section][step];
@@ -225,22 +226,40 @@ $('tracksList').addEventListener('click',e=>{
 const grid=$('scoreGrid');
 grid.addEventListener('pointerdown',e=>{
   const cell=e.target.closest('.note-cell');if(!cell||e.button!==0)return;
-  e.preventDefault();drawing={id:e.pointerId,seen:new Set()};
-  grid.setPointerCapture(e.pointerId);
-  const step=Number(cell.dataset.step);drawing.seen.add(step);
-  writeNote(step,Number(cell.dataset.degree),true);
+  const step=Number(cell.dataset.step),degree=Number(cell.dataset.degree);
+  drawing={id:e.pointerId,seen:new Set(),startX:e.clientX,startY:e.clientY,step,degree,moved:false};
+  if(drawMode){
+    e.preventDefault();grid.setPointerCapture(e.pointerId);
+    drawing.seen.add(step);writeNote(step,degree,true);
+  }
 });
 grid.addEventListener('pointermove',e=>{
   if(!drawing||drawing.id!==e.pointerId)return;
+  if(!drawMode){
+    if(Math.hypot(e.clientX-drawing.startX,e.clientY-drawing.startY)>8)drawing.moved=true;
+    return;
+  }
   const cell=document.elementFromPoint(e.clientX,e.clientY)?.closest('.note-cell');
   if(!cell||!grid.contains(cell))return;
   const step=Number(cell.dataset.step);
   if(drawing.seen.has(step))return;
   drawing.seen.add(step);writeNote(step,Number(cell.dataset.degree),false);
 });
+grid.addEventListener('pointerup',e=>{
+  if(!drawing||drawing.id!==e.pointerId)return;
+  if(!drawMode&&!drawing.moved)writeNote(drawing.step,drawing.degree,true);
+  drawing=null;
+});
 function endDraw(e){if(drawing&&(!e||e.pointerId===drawing.id))drawing=null}
-grid.addEventListener('pointerup',endDraw);grid.addEventListener('pointercancel',endDraw);
+grid.addEventListener('pointercancel',endDraw);
 grid.addEventListener('lostpointercapture',endDraw);
+$('drawModeBtn').addEventListener('click',()=>{
+  drawMode=!drawMode;drawing=null;
+  $('drawModeBtn').setAttribute('aria-pressed',String(drawMode));
+  $('drawModeBtn').classList.toggle('active',drawMode);
+  grid.classList.toggle('drawing-enabled',drawMode);
+  info(drawMode?'Режим рисования: веди пальцем по нотам':'Режим касания: листай партитуру горизонтально');
+});
 grid.addEventListener('click',e=>{
   if(e.detail!==0)return;
   const cell=e.target.closest('.note-cell');if(cell)writeNote(Number(cell.dataset.step),Number(cell.dataset.degree),true);

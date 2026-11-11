@@ -46,14 +46,14 @@
         <section class="folio-sheet" aria-label="Редактор партитуры">
           <div class="folio-sheet-head">
             <div><span class="eyebrow">Ладовая партитура</span><h2 id="selectedTrackLabel">Виела</h2></div>
-            <button id="rerollTrackBtn" class="subtle-action" type="button" data-native-press>↻ Новый мотив</button>
+            <div class="score-actions"><button id="drawModeBtn" class="subtle-action" type="button" aria-pressed="false" data-native-press>✎ Рисовать</button><button id="rerollTrackBtn" class="subtle-action" type="button" data-native-press>↻ Мотив</button></div>
           </div>
           <div class="score-frame" id="scoreScroll" data-touch-action="pan-x" tabindex="0" aria-label="Редактор нот с горизонтальной прокруткой">
             <div class="score-grid" id="scoreGrid"></div>
           </div>
           <div class="folio-sheet-foot">
             <span class="ornament" aria-hidden="true">❧</span>
-            <span>Нажми на ноту, чтобы записать или стереть её. Веди пальцем, чтобы нарисовать мелодию.</span>
+            <span>Нажми на клетку для ноты. Включи «Рисовать», чтобы провести мелодическую линию.</span>
             <span class="ornament" aria-hidden="true">❧</span>
           </div>
         </section>
