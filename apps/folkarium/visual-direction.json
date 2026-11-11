@@ -15,17 +15,27 @@
   "architecture": {
     "spatialLayout": "split-workspace",
     "controlLocation": "direct-on-object",
-    "navigation": "tabbed-spread",
-    "chromeTopology": "workspace-ribbon",
-    "dominantMotion": "sweeping",
+    "navigation": "editor-toolbox",
+    "chromeTopology": "layered-panels",
+    "dominantMotion": "immediate",
     "primaryVerb": "Write and replace pitches directly on a living music page.",
     "physicalFeedback": "Immediate pigment fill for a note, moving vertical playhead, playback highlight and optional audible preview.",
     "spatialRationale": "The score occupies the largest surface; track ribbons and musical alchemy flank it and collapse below on phones.",
     "comparisons": [
       {
+        "slug": "sin-guion",
+        "spatialDifference": "Sin Guion focuses on one language practice stage and recording controls; Folkarium keeps a scrollable modal note score as the constant central object, with instrument selectors and audio configuration at its edges.",
+        "interactionDifference": "Instead of choosing answers and recording a spoken response, musicians write pitches on a step grid and audition independently authored musical voices."
+      },
+      {
+        "slug": "rivals-dna",
+        "spatialDifference": "Rivals DNA is a narrow single-screen tactical questionnaire; Folkarium uses a wide manuscript composition desk with three working columns and an editable note field.",
+        "interactionDifference": "Notes change the synthesized score and exported musical file, rather than advancing character-choice questions and rating calculations."
+      },
+      {
         "slug": "trace-mosaic",
-        "spatialDifference": "Manuscript grid and audio transport instead of square puzzle workbench.",
-        "interactionDifference": "Direct note writing, no dragging fragments."
+        "spatialDifference": "Trace Mosaic uses a puzzle square and participant tile tray; Folkarium is a landscape-leaning parchment musical notation spread.",
+        "interactionDifference": "Changing pitch cells changes audio and MIDI events rather than positioning picture fragments on a board."
       }
     ]
   },
