@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "folkarium",
+  "name": "Folkarium — мастерская менестреля",
+  "shortName": "Folkarium",
+  "description": "Создавай средневековый фолк: мелодические узоры, шесть инструментов, партитуры и экспорт аудио и MIDI.",
+  "version": "0.1.0",
+  "releaseDate": "2026-11-11",
+  "releaseDateTime": "2026-11-11T13:24:00+02:00",
+  "changelog": [
+    "Первая рабочая мастерская: четыре части композиции, шесть инструментальных партий и генератор мелодий.",
+    "Редактор нот по ладовой сетке, прослушивание, независимое обновление партий и запись в локальную библиотеку.",
+    "Экспорт готовой композиции в WAV и MIDI, офлайн-PWA и мобильный интерфейс."
+  ],
+  "status": "experimental",
+  "preset": "vanilla",
+  "accent": "#ae6e41",
+  "backgroundColor": "#eee3c8",
+  "themeColor": "#234039",
+  "orientation": "any",
+  "cacheName": "folkarium-v0.1.0",
+  "storageNamespace": "pocket-works:folkarium",
+  "tags": [
+    "music",
+    "creative",
+    "offline",
+    "utility"
+  ],
+  "order": 255
+}

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "folkarium",
+  "direction": {
+    "premise": "A playable illuminated folio: draw on a manuscript and listen to six live parts, with a finished arrangement rather than a loop toy.",
+    "composition": "Landscape workspace with an open parchment score at center, narrow vertical track ribbon left and instrument inspector right; mobile stacks score and editorial controls beneath a persistent transport.",
+    "shapeLanguage": "Thin ink rules, square manuscript page corners, notched tab edges, wax-tone corner ornaments; restrained oval seals only for active actions.",
+    "surfaceAndMaterial": "Aged vellum and pressed pine with deep malachite ink and muted terracotta notes. No generic dark dashboard cards.",
+    "paletteLogic": "Parchment #eee3c8, deep green #234039, chestnut #ae6e41, ink #292c25.",
+    "typography": "Editorial Georgia display lettering and precise system UI labels in compact sizes.",
+    "signature": "The staff grid itself is the instrument: touch a pitch to write it, then watch a moving ink playhead sound out the composition.",
+    "distinction": "Unlike prior arcade and strategy projects, no fullscreen arena or bottom HUD; this is a tactile page-oriented composition desk."
+  },
+  "architecture": {
+    "spatialLayout": "split-workspace",
+    "controlLocation": "direct-on-object",
+    "navigation": "tabbed-spread",
+    "chromeTopology": "workspace-ribbon",
+    "dominantMotion": "sweeping",
+    "primaryVerb": "Write and replace pitches directly on a living music page.",
+    "physicalFeedback": "Immediate pigment fill for a note, moving vertical playhead, playback highlight and optional audible preview.",
+    "spatialRationale": "The score occupies the largest surface; track ribbons and musical alchemy flank it and collapse below on phones.",
+    "comparisons": [
+      {
+        "slug": "trace-mosaic",
+        "spatialDifference": "Manuscript grid and audio transport instead of square puzzle workbench.",
+        "interactionDifference": "Direct note writing, no dragging fragments."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Native DOM score grid, CSS vellum and Web Audio API. Bespoke local vector fiddle/folio icon.",
+    "focalAsset": "Lined parchment score itself; instrument rails drawn with typography and vector geometry."
+  },
+  "motion": {
+    "character": "Ink strokes settle quickly; playback traverses note cells in real time.",
+    "action": "Tap or drag modal pitches; play, stop, and change instruments.",
+    "anticipation": "Hover or finger focus highlights the note cell.",
+    "response": "Note ink appears immediately and preview sounds when audio is unlocked.",
+    "followThrough": "Playhead passes the edited phrase; changed song auto-saves.",
+    "interruption": "Cancelling drag stops painting; page visibility suspends playback.",
+    "reducedMotion": "No animations except essential playhead position in reduced motion."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#playBtn"
+    },
+    "expectedChange": "Music starts after the explicit play gesture; transport becomes Stop and the playhead moves.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}

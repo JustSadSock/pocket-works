@@ -1,0 +1,25 @@
+{
+  "id": "/apps/folkarium/",
+  "name": "Folkarium — мастерская менестреля",
+  "short_name": "Folkarium",
+  "description": "Создавай средневековый фолк: мелодические узоры, шесть инструментов, партитуры и экспорт аудио и MIDI.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#eee3c8",
+  "theme_color": "#234039",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

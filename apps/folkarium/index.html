@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#234039">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Folkarium">
+<title>Folkarium · Мастерская менестреля</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main class="app-shell" data-app-shell data-keyboard-aware>
+  <div class="desk">
+    <header class="masthead" data-ui>
+      <a href="../../" class="home-link" data-app-control data-native-press aria-label="Вернуться в Pocket Works">← Pocket Works</a>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">𝄞</span><span><strong>Folkarium</strong><small>Музыкальная мастерская</small></span></div>
+      <button type="button" class="folio-open" id="folioBtn" data-native-press>Сборник <span id="folioCount">1</span></button>
+    </header>
+    <section class="composition">
+      <div class="work-heading">
+        <div class="work-title">
+          <label class="eyebrow" for="titleInput">Название партитуры</label>
+          <input id="titleInput" type="text" maxlength="72" spellcheck="false" autocomplete="off" aria-label="Название композиции">
+          <span class="byline">Сочинено в Folkarium · сохраняется автоматически</span>
+        </div>
+        <div class="transport" data-ui>
+          <button id="playBtn" class="play" type="button" data-native-press aria-label="Играть композицию"><span id="playGlyph">▶</span> <span id="playLabel">Слушать</span></button>
+          <button id="midiBtn" type="button" data-native-press title="Скачать ноты в MIDI">MIDI ↓</button>
+          <button id="wavBtn" type="button" data-native-press title="Скачать композицию в WAV">WAV ↓</button>
+        </div>
+      </div>
+      <nav class="section-tabs" id="sectionTabs" aria-label="Части композиции" data-ui></nav>
+      <div class="workbench">
+        <aside class="instrument-rail" data-ui>
+          <div class="side-title"><h2>Голоса</h2><span>06</span></div>
+          <div id="tracksList" class="tracks-list"></div>
+          <p class="aside-help">Выбери инструмент, чтобы изменить его музыкальную строку.</p>
+        </aside>
+        <section class="folio-sheet" aria-label="Редактор партитуры">
+          <div class="folio-sheet-head">
+            <div><span class="eyebrow">Ладовая партитура</span><h2 id="selectedTrackLabel">Виела</h2></div>
+            <button id="rerollTrackBtn" class="subtle-action" type="button" data-native-press>↻ Новый мотив</button>
+          </div>
+          <div class="score-frame" id="scoreScroll" data-touch-action="pan-x" tabindex="0" aria-label="Редактор нот с горизонтальной прокруткой">
+            <div class="score-grid" id="scoreGrid"></div>
+          </div>
+          <div class="folio-sheet-foot">
+            <span class="ornament" aria-hidden="true">❧</span>
+            <span>Нажми на ноту, чтобы записать или стереть её. Веди пальцем, чтобы нарисовать мелодию.</span>
+            <span class="ornament" aria-hidden="true">❧</span>
+          </div>
+        </section>
+        <aside class="alchemy" data-ui>
+          <div class="side-title"><h2>Алхимия звука</h2><span>✧</span></div>
+          <label for="moodSelect">Характер</label>
+          <select id="moodSelect">
+            <option value="ballad">Баллада</option>
+            <option value="dance">Деревенская пляска</option>
+            <option value="lament">Плач</option>
+            <option value="march">Военный поход</option>
+          </select>
+          <label for="modeSelect">Лад</label>
+          <select id="modeSelect">
+            <option value="dorian">Дорийский</option>
+            <option value="aeolian">Эолийский</option>
+            <option value="mixolydian">Миксолидийский</option>
+            <option value="phrygian">Фригийский</option>
+          </select>
+          <div class="range-heading"><label for="tempoRange">Темп</label><output id="tempoValue">96 BPM</output></div>
+          <input type="range" id="tempoRange" min="55" max="180" step="1">
+          <div class="range-heading"><label for="densityRange">Плотность мотивов</label><output id="densityValue">56%</output></div>
+          <input type="range" id="densityRange" min="0" max="100" step="1">
+          <div class="range-heading"><label for="levelRange">Голос инструмента</label><output id="levelValue">82%</output></div>
+          <input type="range" id="levelRange" min="0" max="100" step="1">
+          <button id="rerollSectionBtn" class="side-button" type="button" data-native-press>↻ Переделать раздел</button>
+          <button id="regenerateBtn" class="side-button emphasis" type="button" data-native-press>✦ Новая вариация</button>
+          <p class="aside-help">Мелодия меняется вместе с характером. Изменение темпа и лада слышно сразу после запуска.</p>
+        </aside>
+      </div>
+      <div class="statusline" aria-live="polite" data-ui><span id="statusText">Партитура готова</span><span id="durationText">00:00</span></div>
+    </section>
+    <footer class="desk-footer" data-ui><span>FOLKARIUM · MMXXVI</span><span>Локальная мастерская · без интернета</span></footer>
+  </div>
+</main>
+<dialog id="folioDialog" class="folio-dialog" aria-labelledby="folioTitle">
+  <div class="dialog-head"><div><span class="eyebrow">Библиотека</span><h2 id="folioTitle">Сборник песен</h2></div><button type="button" id="closeFolio" class="square-btn" aria-label="Закрыть сборник">×</button></div>
+  <p>Все композиции хранятся на этом устройстве.</p>
+  <button type="button" id="newSongBtn" class="side-button emphasis">＋ Новая партитура</button>
+  <div id="folioList" class="folio-list"></div>
+</dialog>
+<dialog id="confirmDialog" class="confirm-dialog" aria-labelledby="confirmTitle">
+  <h2 id="confirmTitle">Удалить партитуру?</h2>
+  <p id="confirmBody">Это действие нельзя отменить.</p>
+  <div class="confirm-actions"><button type="button" id="cancelDelete">Отмена</button><button type="button" id="confirmDelete" class="danger">Удалить</button></div>
+</dialog>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Folkarium" data-app-version="0.1.0"></script>
+<script src="./app.js" type="module"></script>
+</body>
+</html>
