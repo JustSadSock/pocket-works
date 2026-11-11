@@ -119,7 +119,7 @@ export function buildEvents(song){
         if(!track.on||track.level===0)return;
         for(let local=0;local<8;local++){
           const step=(bar%2)*8+local,n=track.patterns[s][step];
-          if(!n)return;
+          if(!n)continue;
           // In the quieter bookends, keep each part but leave room between entries.
           if((s===0||s===3)&&(track.id==='flute'||track.id==='drum')&&bar%2===0)continue;
           result.push({track:track.id,midi:track.id==='drum'?[36,38,42][Math.min(2,n.d)]:degreeToMidi(n.d,song.mode),

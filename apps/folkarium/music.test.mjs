@@ -21,7 +21,7 @@ test('regeneration changes only requested part and retains valid score',()=>{
 test('events are chronological, bounded by song length and obey enabled tracks',()=>{
   const song=makeSong({seed:7});
   const events=buildEvents(song);
-  assert.ok(events.length>40);
+  assert.ok(events.length>200, 'rest notes must not skip the remainder of a track');
   assert.ok(events.every((e,i)=>e.at>=0&&e.len>0&&(i===0||e.at>=events[i-1].at)));
   assert.ok(events.every(e=>e.at+e.len<=SECTIONS.reduce((a,s)=>a+s.bars*8,0)));
   song.tracks.forEach(t=>t.on=false);
