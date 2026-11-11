@@ -13,14 +13,14 @@
     "distinction": "Unlike prior arcade and strategy projects, no fullscreen arena or bottom HUD; this is a tactile page-oriented composition desk."
   },
   "architecture": {
-    "spatialLayout": "split-workspace",
+    "spatialLayout": "document-spread",
     "controlLocation": "direct-on-object",
-    "navigation": "page-turn",
+    "navigation": "editor-toolbox",
     "chromeTopology": "layered-panels",
     "dominantMotion": "sliding",
     "primaryVerb": "Write and replace pitches directly on a living music page.",
     "physicalFeedback": "Immediate pigment fill for a note, moving vertical playhead, playback highlight and optional audible preview.",
-    "spatialRationale": "Each numbered song section behaves as an independent page of an illuminated score; the working page scrolls horizontally under a playhead and instrument tools flank it on wide screens.",
+    "spatialRationale": "The score is physically presented as a wide manuscript spread; multiple independent instrument tools are arranged at the outer edges while the melody is entered directly on the page. Numbered tabs switch movements without changing the working surface.",
     "comparisons": [
       {
         "slug": "sin-guion",
