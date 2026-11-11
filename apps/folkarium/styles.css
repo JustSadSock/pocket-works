@@ -91,7 +91,11 @@ button:disabled{cursor:default;opacity:.52}
 .alchemy select{width:100%;border:1px solid #b5a382;border-radius:0;min-height:41px;background:#f7ecd5;color:#244237;padding:0 9px;font-size:13px;margin-bottom:18px}
 .range-heading{display:flex;justify-content:space-between;align-items:center;margin-top:5px}
 .range-heading output{font:12px Georgia,serif;color:#986a4c}
-.alchemy input[type=range]{display:block;width:100%;margin:4px 0 20px;accent-color:#315745;min-height:29px}
+.alchemy input[type=range]{display:block;width:100%;margin:4px 0 20px;min-height:29px;background:transparent;appearance:none;-webkit-appearance:none;accent-color:#9b6340}
+.alchemy input[type=range]::-webkit-slider-runnable-track{height:5px;border:0;background:#c8b694}
+.alchemy input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:19px;height:19px;border-radius:50%;margin-top:-7px;background:#9b6340;border:3px solid #f7edd6;box-shadow:0 0 0 1px #8a7458,0 2px 4px #75624e55}
+.alchemy input[type=range]::-moz-range-track{height:5px;border:0;background:#c8b694}
+.alchemy input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#9b6340;border:3px solid #f7edd6;box-shadow:0 0 0 1px #8a7458}
 .side-button{display:block;width:100%;min-height:45px;border:1px solid #988869;background:#eee2c6;color:#3c4d3e;font-size:12px;font-weight:750;margin-top:9px;padding:8px}
 .side-button.emphasis{background:#365847;border-color:#365847;color:#f4e5c5}
 .side-button:active:not(:disabled){transform:translateY(2px);filter:brightness(.94)}
