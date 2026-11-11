@@ -15,12 +15,12 @@
   "architecture": {
     "spatialLayout": "split-workspace",
     "controlLocation": "direct-on-object",
-    "navigation": "editor-toolbox",
+    "navigation": "page-turn",
     "chromeTopology": "layered-panels",
-    "dominantMotion": "immediate",
+    "dominantMotion": "sliding",
     "primaryVerb": "Write and replace pitches directly on a living music page.",
     "physicalFeedback": "Immediate pigment fill for a note, moving vertical playhead, playback highlight and optional audible preview.",
-    "spatialRationale": "The score occupies the largest surface; track ribbons and musical alchemy flank it and collapse below on phones.",
+    "spatialRationale": "Each numbered song section behaves as an independent page of an illuminated score; the working page scrolls horizontally under a playhead and instrument tools flank it on wide screens.",
     "comparisons": [
       {
         "slug": "sin-guion",
