@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "product": "sin-guion",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "rivals-dna",
+      "evidence": "Reviewed application config, HTML, icon, visual-direction and CSS in the repository; screenshot not available at authoring.",
+      "lesson": "Avoid tactical-paper dossier and ink-grid language for the learning instrument."
+    },
+    {
+      "slug": "bunny-bloom",
+      "evidence": "Reviewed application configuration and art direction; rendered motion evidence unavailable.",
+      "lesson": "Avoid decorative character-first framing; primary activity must be visible instantly."
+    },
+    {
+      "slug": "rose-ranking-15",
+      "evidence": "Reviewed release config and feature structure; no rendered gallery screenshot acquired.",
+      "lesson": "Avoid photo-first split gallery. Show one speech-task action at a time."
+    },
+    {
+      "slug": "rivals-fit-lab",
+      "evidence": "Reviewed CSS and application config; screenshots unavailable.",
+      "lesson": "Avoid dense survey scaffolding; put Spanish phrasing in a reading-friendly serif."
+    },
+    {
+      "slug": "ne-tem-golosom",
+      "evidence": "Reviewed release context and app architecture; no claim of screenshot review.",
+      "lesson": "Avoid cinematic editing console and waveform-timeline interface."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://ave.cervantes.es/grama-expres/cursos-gramatica-espanola-en-linea-grama-expres.html",
+      "inspectedAt": "2026-11-08",
+      "observation": "Instituto Cervantes structures grammar revision as individually chosen short explanatory modules plus self-correcting activities.",
+      "principle": "Short grammar explanations directly linked to answerable examples.",
+      "application": "Each of six chapters moves from a compact Russian explanation to 8 auto-checked Spanish sentences.",
+      "avoid": "Do not copy Cervantes lesson texts, course screens or proprietary activities."
+    },
+    {
+      "url": "https://docs.ankiweb.net/background.html",
+      "inspectedAt": "2026-11-08",
+      "observation": "Anki describes active recall and spaced repetition as the two pillars of efficient memorisation.",
+      "principle": "Require recall before showing answers and reschedule weak phrases.",
+      "application": "The 25 speech-phrase cards reveal translations only after a user action; scheduling is deterministic locally.",
+      "avoid": "Do not claim full Anki FSRS scheduling or reproduce its deck visuals."
+    },
+    {
+      "url": "https://blog.duolingo.com/covering-all-the-bases-duolingos-approach-to-speaking-skills/",
+      "inspectedAt": "2026-11-08",
+      "observation": "The speech-practice article emphasises short spoken activities and separate speaking sessions.",
+      "principle": "Speaking is an independent practical act, not a final text quiz.",
+      "application": "Use a literal 30-second preparation, 90-second speech and listening/self-review flow.",
+      "avoid": "Do not copy characters or imply AI transcription when no AI is installed."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "lab-console",
+      "medium": "Semantic browser DOM, authored CSS mechanical switches and single master SVG icon.",
+      "composition": "Desktop instrument bench with narrow nav rail and one large active stage; phone stacks blue daily module beneath headline.",
+      "interaction": "Tap through self-corrected grammar drills; start a timed oral recording that transforms into a five-point review.",
+      "motion": "Brief tactile displacement and a pulse on the real recording ring only.",
+      "rationale": "Chosen: readable Spanish question typography and a real audio workflow suit the language lab metaphor."
+    },
+    {
+      "id": "metro-route",
+      "medium": "Large transit-map vector and colored stops.",
+      "composition": "Entire weekly syllabus drawn as one horizontal metro map with seven day stops.",
+      "interaction": "Jump from stop to stop and unlock carriages of exercises.",
+      "motion": "Sliding train shows completed stations.",
+      "rationale": "Rejected: daily navigation would dominate the practical sentence interface and look more like a travel app."
+    },
+    {
+      "id": "radio-dial",
+      "medium": "Custom canvas-based broadcast tuner and spinning knobs.",
+      "composition": "A wall of analogue instruments and narrow scrolling text display.",
+      "interaction": "Tune to random topics by turning the dial and record microphone speech.",
+      "motion": "Spring-based rotary dial response with needle inertia.",
+      "rationale": "Rejected: attractive but impractical one-handed interactions on a small iPhone and poor a11y."
+    }
+  ],
+  "selection": {
+    "concept": "lab-console",
+    "reason": "Correct balance of visibly physical speech practice and reliable phone reading/controls.",
+    "rejected": [
+      {
+        "concept": "metro-route",
+        "reason": "Too much visual emphasis on the weekly route rather than conversation."
+      },
+      {
+        "concept": "radio-dial",
+        "reason": "Fragile and slow custom canvas input for a quiz-heavy product."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "svg-dom",
+      "availability": "available",
+      "reason": "The installation icon is an original authored SVG; all other display elements are DOM/CSS without external art dependencies."
+    },
+    {
+      "id": "browser-audio",
+      "availability": "available",
+      "reason": "Standard MediaRecorder and IndexedDB are feature-detected, with timer-only fallback when unsupported or denied."
+    }
+  ],
+  "assets": [
+    {
+      "id": "sin-guion-voice-mark",
+      "tool": "svg-dom",
+      "source": "asset-source/icon-master.svg",
+      "output": "icons/icon.svg",
+      "role": "App shortcut and PocketWorks launcher identity; oscillator trace on a blue hardware display.",
+      "acceptance": "Legible at icon size, no ambiguous letter monogram or copied brand.",
+      "integration": "Referenced from app HTML, web manifest and versioned offline Service Worker cache.",
+      "provenance": "Original SVG authored for the app without third-party assets.",
+      "maxBytes": 3000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Text wrapping for Spanish prompts in 320px portrait views.",
+      "Permission denial or recording API absence must not block an oral answer.",
+      "iOS safe-area and keyboard inset when reviewing a spoken answer."
+    ],
+    "comparisons": [
+      "Review home and grammar screens on 390x844 and 1366x768 in Playwright.",
+      "Review record stage and 5-item self-check on phone; verify audio playback and toast on denial."
+    ]
+  }
+}

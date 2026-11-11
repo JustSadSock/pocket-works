@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "sin-guion",
+  "name": "Sin Guion",
+  "shortName": "Sin Guion",
+  "description": "Офлайн-тренажёр устного испанского: 60 грамматических упражнений, 7 разговорных тем, записи голоса и пробный модуль без ИИ.",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-08",
+  "releaseDateTime": "2026-11-08T23:54:00+02:00",
+  "changelog": [
+    "Шесть разделов грамматики с 60 заданиями и мгновенной проверкой.",
+    "Семь тем устного модуля, запись ответов и честная самопроверка.",
+    "Карточки речевых шаблонов, локальное интервальное повторение и трёхвопросный пробный экзамен."
+  ],
+  "status": "active",
+  "preset": "interactive",
+  "accent": "#2058a2",
+  "backgroundColor": "#e9eeec",
+  "themeColor": "#e9eeec",
+  "orientation": "any",
+  "cacheName": "sin-guion-v1.0.0",
+  "storageNamespace": "pocket-works:sin-guion",
+  "tags": [
+    "education",
+    "spanish",
+    "language",
+    "oral",
+    "grammar",
+    "offline",
+    "module",
+    "study"
+  ],
+  "order": 90
+}

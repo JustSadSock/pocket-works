@@ -1,0 +1,20 @@
+{
+  "id": "/apps/sin-guion/",
+  "name": "Sin Guion",
+  "short_name": "Sin Guion",
+  "description": "Испанский устный модуль без ИИ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e9eeec",
+  "theme_color": "#e9eeec",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
