@@ -1,4 +1,5 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {INSTRUMENTS,MODES,MOODS,SECTIONS,STEPS,makeSong,validSong,regenerate,pitches,pitchLabel,degreeToMidi,buildEvents,stepSeconds,durationSeconds,totalSteps,playEvent,schedulePreview,renderWav,renderMidi} from './music.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id);
@@ -319,3 +320,18 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('pagehide',()=>{persist();stopPlayback()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopPlayback()});
 render();persist();
+createWorkshopMode({
+  appName:'Folkarium',
+  version:'0.1.0',
+  cachePrefix: 'folkarium-',
+  storageNamespace: 'pocket-works:folkarium',
+  onReset(){
+    stopPlayback();
+    folio=restore();
+    selected='vielle';section=1;drawing=null;
+    if($('folioDialog').open)$('folioDialog').close();
+    if($('confirmDialog').open)$('confirmDialog').close();
+    render();persist();
+    info('Локальный сборник очищен');
+  }
+});

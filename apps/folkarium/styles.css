@@ -3,6 +3,7 @@
   --forest:#234039;--deep:#172e29;--ink:#29342c;--oak:#a65f3a;--gold:#bb895b;
   --vellum:#eee3c8;--page:#f6ebd1;--line:#c8bc9d;--muted:#777564;
   --app-background-color:var(--forest);
+  --workshop-bg:var(--vellum);--workshop-fg:var(--ink);--workshop-muted:var(--muted);--workshop-accent:var(--oak);
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--deep);color:var(--ink)}
@@ -102,6 +103,9 @@ button:disabled{cursor:default;opacity:.52}
 .statusline{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #c4b18e;background:#eee1c3;color:#736b5a;font:12px Georgia,serif;padding:11px clamp(16px,3vw,43px)}
 #statusText{overflow-wrap:anywhere}
 .desk-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:41px;background:#254238;color:#d3bd96;font:10px system-ui,sans-serif;letter-spacing:.13em;padding:7px clamp(16px,2.2vw,32px)}
+.workshop-link{border:1px solid #b49d7655;background:transparent;color:#e2cda5;font:10px system-ui,sans-serif;letter-spacing:.06em;min-height:35px;padding:0 12px}
+.workshop-link:active{background:#45614e}
+@media(max-width:520px){.desk-footer .offline-caption{display:none}}
 dialog{border:2px solid #927654;border-radius:0;background:#f4e8cd;color:var(--ink);box-shadow:0 24px 85px #0a1a13aa;max-height:min(85dvh,850px);overflow:auto}
 dialog::backdrop{background:#10251dcc;backdrop-filter:blur(3px)}
 .folio-dialog{width:min(610px,calc(100vw - 24px));padding:23px}

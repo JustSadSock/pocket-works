@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="./icons/icon.svg">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -86,7 +87,7 @@
       </div>
       <div class="statusline" aria-live="polite" data-ui><span id="statusText">Партитура готова</span><span id="durationText">00:00</span></div>
     </section>
-    <footer class="desk-footer" data-ui><span>FOLKARIUM · MMXXVI</span><span>Локальная мастерская · без интернета</span></footer>
+    <footer class="desk-footer" data-ui><span>FOLKARIUM · MMXXVI</span><span class="offline-caption">Локальная мастерская · без интернета</span><button type="button" data-workshop-trigger data-native-press class="workshop-link" title="Диагностика приложения">Диагностика</button></footer>
   </div>
 </main>
 <dialog id="folioDialog" class="folio-dialog" aria-labelledby="folioTitle">
