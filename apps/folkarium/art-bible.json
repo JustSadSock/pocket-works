@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "product": "folkarium",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "sin-guion",
+      "evidence": "Inspected apps/sin-guion/art-bible.json and application architectural notes in the repository; no screenshot represented as reviewed.",
+      "lesson": "Avoid copying its compact language-lab controls and lesson-by-lesson reading surface; this app must show real notes and playable instrument parts."
+    },
+    {
+      "slug": "rivals-dna",
+      "evidence": "Inspected apps/rivals-dna/visual-direction.json and product structure; current screenshot evidence unavailable during drafting.",
+      "lesson": "Even though both use pale mineral surfaces, avoid tactical file typography and a question-card progression: Folkarium is an open editing desk."
+    },
+    {
+      "slug": "trace-mosaic",
+      "evidence": "Inspected apps/trace-mosaic/visual-direction.json and art-bible.json; no downloaded capture was inspected.",
+      "lesson": "Avoid the tile-restoration scene and spatial route gestures; preserve live audible step-grid editing and unique manuscript material."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://handbook.musescore.org/en_gb/basics/entering-notes-and-rests",
+      "inspectedAt": "2026-11-11",
+      "observation": "MuseScore's handbook documents distinct note-entry and rest-entry modes, keyboard and mouse pitch entry, and a visible note-entry cursor.",
+      "principle": "Writing musical pitches should remain direct and reversible, with mode distinction made visible rather than hiding an editor gesture.",
+      "application": "Each pitch/time cell toggles the note of an instrument; a separate drawing-mode button makes drag-to-paint distinct from horizontal score navigation.",
+      "avoid": "Do not copy MuseScore's notation editor layout or licensed visual assets; retain a simplified folk-specific modal grid."
+    },
+    {
+      "url": "https://midi.org/standard-midi-files",
+      "inspectedAt": "2026-11-11",
+      "observation": "The MIDI Association describes time-stamped MIDI data streams, tracks and tempo information as the interchange basis for a Standard MIDI File.",
+      "principle": "Export editable musical events with explicit tempo and distinct track streams instead of calling raw audio a MIDI score.",
+      "application": "Export a type-1 MIDI file with six independent instrument tracks, a tempo meta track, note durations and instrument program changes.",
+      "avoid": "Do not present MIDI as recorded instrument audio or promise that different synthesizers use the exact same timbre."
+    },
+    {
+      "url": "https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API",
+      "inspectedAt": "2026-11-11",
+      "observation": "MDN documents the modular audio context, oscillators, gain envelopes, filters and accurate scheduling for sequencers.",
+      "principle": "Use browser-native scheduled voices so playback, stopping and local export have one consistent event model and no CDN.",
+      "application": "The app schedules generated folk motifs ahead using AudioContext and renders WAV off-thread through OfflineAudioContext when supported.",
+      "avoid": "Do not pretend generic oscillators are sampled medieval instruments; the release notes call them synthesized approximations."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "illuminated-folio",
+      "medium": "Native browser DOM and CSS parchment score with a bespoke editable vector fiddle-and-manuscript icon.",
+      "composition": "Score occupies a broad central parchment work surface; selectable instrument rail and musical alchemy flanks keep meaningful controls near their object.",
+      "interaction": "Tap individual pitch cells, optionally draw a note contour, change section or voice and instantly audition a four-part folk composition.",
+      "motion": "An immediate ink stamp marks each new pitch, and the playing time cursor follows the notes while the section changes.",
+      "rationale": "Chosen because the main product experience is interacting with a musical manuscript, not controlling a general-purpose workstation."
+    },
+    {
+      "id": "wax-cylinder",
+      "medium": "3D canvas gramophone and wooden cylindrical step-sequencer with physically rotating pegs.",
+      "composition": "Large perspective music box in the center with instrument slots around a cylindrical spool and hidden advanced settings.",
+      "interaction": "Rotate the wheel, punch note holes and hear mechanical tones until a wax record is complete.",
+      "motion": "A motor spins continuously while peg impacts trigger note gates and mechanical gestures.",
+      "rationale": "Rejected because three-dimensional peg precision would be unreliable on touch screens, and a constant animation conflicts with long editing sessions."
+    },
+    {
+      "id": "ballad-map",
+      "medium": "Vector-illustrated ink landscape with villages and ruins as music arrangement waypoints.",
+      "composition": "Full-width medieval road map where separate landmarks represent tracks, sections and resulting music variations.",
+      "interaction": "Travel the road, choose landmarks and generate chapters of a song through narrative decisions.",
+      "motion": "The journey pans a map as verses appear at different geographic destinations.",
+      "rationale": "Rejected because musical editing would be hidden behind spatial travel and lack the exact note control promised in the core experience."
+    }
+  ],
+  "selection": {
+    "concept": "illuminated-folio",
+    "reason": "The note editing grid remains immediately visible on phones and desktop, lets users hear the result of every change, and makes composition feel like writing a living songbook.",
+    "rejected": [
+      {
+        "concept": "wax-cylinder",
+        "reason": "The motor and 3D control geometry would make tactile note input imprecise and increase hardware demand."
+      },
+      {
+        "concept": "ballad-map",
+        "reason": "A travel narrative would sacrifice predictable pitch/time control and hide actual editable score data."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "inline-svg",
+      "availability": "available",
+      "reason": "The source icon is authored in plain SVG and stored within the application repository for deterministic local rendering."
+    },
+    {
+      "id": "browser-audio",
+      "availability": "available",
+      "reason": "Web Audio nodes and OfflineAudioContext provide locally generated playback and WAV export without external services."
+    },
+    {
+      "id": "css-dom",
+      "availability": "available",
+      "reason": "Native layout, responsive CSS and pointer events render the manuscript score with no remote images or build dependencies."
+    }
+  ],
+  "assets": [
+    {
+      "id": "manuscript-vielle-mark",
+      "tool": "inline-svg",
+      "source": "icons/source.svg",
+      "output": "icons/icon.svg",
+      "role": "Original letterless fiddle silhouette on an illuminated notation page, used for the launcher shortcut and installed application icon.",
+      "acceptance": "Readably distinct from app text at 48px and consistent with its cream, forest green and terracotta working palette.",
+      "integration": "Manifest, HTML favicon and scoped offline Service Worker cache reference icons/icon.svg directly.",
+      "provenance": "Original hand-authored vector geometry created for this application with no third-party image or licensed instrument photograph.",
+      "maxBytes": 8192
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "iPhone portrait must permit horizontal score scrolling without accidentally drawing notes; drawing mode must retain precise pointer cancellation.",
+      "Large score grids must not push primary transport buttons outside the first viewport.",
+      "Progressive WAV export must not freeze normal music state after a failed offline-audio render."
+    ],
+    "comparisons": [
+      "Capture 390x844 portrait initial, score edit and playback highlight states; compare against desktop 1366x768 to check dominant score size.",
+      "Compare Folkarium's manuscript score against sin-guion's lesson stage and rivals-dna's quiz spread for spatial identity and text density."
+    ]
+  }
+}

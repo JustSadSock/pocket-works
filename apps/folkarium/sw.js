@@ -1,0 +1,13 @@
+const APP_VERSION='0.1.0';
+const RELEASE_DATE='2026-11-11';
+const CACHE_PROTOCOL=2;
+const PREFIX='folkarium-';
+const CACHE='folkarium-v0.1.0';
+const RELEASE_NOTES = ["Первая рабочая мастерская: четыре части композиции, шесть инструментальных партий и генератор мелодий.","Редактор нот по ладовой сетке, прослушивание, независимое обновление партий и запись в локальную библиотеку.","Экспорт готовой композиции в WAV и MIDI, офлайн-PWA и мобильный интерфейс."];
+const SHELL=["./","./index.html","./app.js","./music.js","./styles.css","./manifest.webmanifest","./app.config.json","./icons/icon.svg","../../shared/mobile-runtime.js","../../shared/mobile-runtime.css","../../shared/update-manager.js","../../shared/update-manager.css","../../shared/workshop-mode.js","../../shared/workshop-mode.css","../../shared/capabilities/motion.js","../../shared/capabilities/storage.js","../../shared/capabilities/transfer.js","../../shared/capabilities/audio.js","../../shared/capabilities/device.js","../../shared/capabilities/diagnostics.js"];
+const SCOPE=new URL('./',self.registration.scope);
+const entries=new Map(SHELL.map(s=>{const u=new URL(s,SCOPE);return [u.pathname,u.href]}));
+self.addEventListener('install',e=>e.waitUntil((async()=>{const c=await caches.open(CACHE);await Promise.all([...new Set(entries.values())].map(async u=>{const r=await fetch(u,{cache:'reload'});if(!r.ok)throw Error('precache '+u);await c.put(u,r)}));})()));
+self.addEventListener('activate',e=>e.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith(PREFIX)&&k!==CACHE).map(k=>caches.delete(k)));await self.clients.claim()})()));
+self.addEventListener('message',event=>{if(event.data?.type==='GET_UPDATE_INFO')event.ports?.[0]?.postMessage({version:APP_VERSION,releaseDate:RELEASE_DATE,releaseNotes:RELEASE_NOTES,cacheProtocol:CACHE_PROTOCOL,cacheName:CACHE});if(event.data?.type==='SKIP_WAITING')self.skipWaiting()});
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;const k=e.request.mode==='navigate'?SCOPE.href:entries.get(u.pathname);if(!k)return;e.respondWith((async()=>{try{const response=await fetch(e.request);if(response.ok){const c=await caches.open(CACHE);await c.put(k,response.clone())}return response}catch{return await caches.match(k)||await caches.match(SCOPE.href)||Response.error()}})())});

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Folkarium">
+<rect width="512" height="512" rx="94" fill="#24443a"/>
+<path d="M88 91h336v330H88z" fill="#ead8ac" stroke="#bb895b" stroke-width="9"/>
+<path d="M104 104h304v305H104z" fill="none" stroke="#496f5e" stroke-width="3"/>
+<path d="M143 161h225 M143 186h225 M143 211h225 M143 236h225" stroke="#74806b" stroke-width="5" stroke-linecap="round" opacity=".6"/>
+<path d="M230 107c46-1 69 24 61 73-5 33-45 54-46 90-3 22 17 33 22 51 8 31-5 61-35 73-30 11-62-8-69-33-8-28 17-51 40-49 18 2 27 22 17 38-7 10-19 8-24 3 7 18 34 20 47 1 18-27-5-50-20-75-29-50 0-76 22-110 13-20 17-42-15-45z" fill="#a45c38" stroke="#6a3929" stroke-width="5"/>
+<path d="M259 131L318 76" stroke="#6a3929" stroke-width="9" stroke-linecap="round"/>
+<path d="M248 162L311 103 M253 179l68-62 M257 197l76-67" stroke="#f4dfa5" stroke-width="3"/>
+<circle cx="229" cy="332" r="14" fill="#e3bc77"/>
+<path d="M330 300l37 0m-18-18v37" stroke="#6f7d62" stroke-width="8" stroke-linecap="round"/>
+<path d="M115 112l24 0-24 24z M397 112l-24 0 24 24z M115 399l24 0-24-24z M397 399l-24 0 24-24z" fill="#8a5d3e"/>
+</svg>
