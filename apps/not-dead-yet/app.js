@@ -1,5 +1,11 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 installMobileRuntime();
+// Secondary diagnostics are opened only from menu or pause screens.
+createWorkshopMode({
+ appName:'NOT DEAD YET',version:'2.2.3',
+ cachePrefix: 'not-dead-yet-',storageNamespace: 'pocket-works:not-dead-yet'
+});
 const chapter=new URLSearchParams(location.search).has('chapter');
 if(chapter){
  document.title='NOT DEAD YET — Квартира №17';

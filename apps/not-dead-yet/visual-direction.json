@@ -130,6 +130,16 @@
         "slug": "perekos",
         "spatialDifference": "A continuous first-person Soviet family apartment with physical radio, furniture and localized perception differs from Perekos's compact pixel-art wizard-duel battleground.",
         "interactionDifference": "The player navigates rooms, collects memory fragments and tunes a radio to resolve a personal story instead of composing competitive conditional rune chains and resolving 1v1 spell tactics."
+      },
+      {
+        "slug": "black-bazaar",
+        "spatialDifference": "Black Bazaar is a bright document grid of market bids, resources and trading controls; Not Dead Yet is an almost full-bleed dark 3D first-person view of a cramped Soviet apartment.",
+        "interactionDifference": "Black Bazaar accepts private bids in a timed market, while Not Dead Yet moves through dynamic hallways, aims a torch and faces vision-based survival events."
+      },
+      {
+        "slug": "picto",
+        "spatialDifference": "Picto uses a pale freeform storyboard for placing semantic stamps; Not Dead Yet fills the viewport with a continuous camera projection of physical interior walls and objects.",
+        "interactionDifference": "Picto authors and deciphers stories by manipulating symbols; Not Dead Yet navigates and survives a procedural world where doors and passages change behind the player."
       }
     ]
   }
