@@ -81,3 +81,24 @@ jobs:
           path: qa-artifacts/perekos-journey/
           retention-days: 14
           if-no-files-found: warn
+
+  balance-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Measure mirrored school matchups with seeded bot policies
+        env:
+          PEREKOS_AUDIT_OUT: qa-artifacts/perekos-matchups/report.json
+        run: node apps/perekos/qa/magic-v2-matchup-audit.mjs
+      - name: Save machine-readable matchup evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perekos-magic-v2-matchups
+          path: qa-artifacts/perekos-matchups/report.json
+          retention-days: 14
+          if-no-files-found: warn
