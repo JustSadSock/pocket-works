@@ -2,17 +2,19 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { createZip, readZip, extractEntry, prettyBytes } from './zip.mjs';
 import { compressImage, compressVideo, videoSupport } from './media.mjs';
+import { compressAny, uniqueBundlePaths } from './smart.mjs';
 
 installMobileRuntime();
 const $ = id => document.getElementById(id);
 const COPY = {
   photo: { title: 'Уменьшить фото', desc: 'Меньше мегабайтов, та же фотография. Без загрузки на сервер.', index: '01', drop: 'Добавить фотографии', subtitle: 'JPEG, PNG, HEIC, WebP и AVIF', action: 'Сжать фото' },
   video: { title: 'Уменьшить видео', desc: 'Перекодировка с выбранным качеством. Время обработки зависит от длительности ролика.', index: '02', drop: 'Добавить видео', subtitle: 'MP4, MOV, WebM — если браузер умеет их открыть', action: 'Сжать видео' },
-  pack: { title: 'Создать ZIP', desc: 'Несколько файлов или папка в одном архиве. Исходники не меняются.', index: '03', drop: 'Собрать файлы в ZIP', subtitle: 'Любые файлы — вместе с именами и папками', action: 'Создать архив' },
-  unpack: { title: 'Распаковать ZIP', desc: 'Открой архив, проверь содержимое и сохрани нужные файлы.', index: '04', drop: 'Открыть ZIP-архив', subtitle: 'Обычные ZIP без пароля и ZIP64', action: 'Распаковать' }
+  smart: { title: 'Сжать любые файлы', desc: 'Добавь фото, видео и документы вместе. Способ обработки выбирается для каждого файла.', index: '03', drop: 'Добавить любые файлы', subtitle: 'Фото · видео · PDF · документы · аудио · другое', action: 'Обработать файлы' },
+  pack: { title: 'Создать ZIP', desc: 'Несколько файлов или папка в одном архиве. Исходники не меняются.', index: '04', drop: 'Собрать файлы в ZIP', subtitle: 'Любые файлы — вместе с именами и папками', action: 'Создать архив' },
+  unpack: { title: 'Распаковать ZIP', desc: 'Открой архив, проверь содержимое и сохрани нужные файлы.', index: '05', drop: 'Открыть ZIP-архив', subtitle: 'Обычные ZIP без пароля и ZIP64', action: 'Распаковать' }
 };
-const queues = { photo: [], video: [], pack: [], unpack: [] };
-const messages = { photo: 'Добавь фотографии, чтобы начать.', video: 'Добавь видео, чтобы начать.', pack: 'Выбери файлы для архива.', unpack: 'Выбери один ZIP-архив.' };
+const queues = { photo: [], video: [], smart: [], pack: [], unpack: [] };
+const messages = { photo: 'Добавь фотографии, чтобы начать.', video: 'Добавь видео, чтобы начать.', smart: 'Выбери файлы любых типов.', pack: 'Выбери файлы для архива.', unpack: 'Выбери один ZIP-архив.' };
 let mode = 'photo', busy = false, controller = null, serial = 0;
 let packed = null, unpacked = [], bundle = null;
 const cached = (() => { try { return JSON.parse(localStorage.getItem('pocket-works:press:prefs') || '{}'); } catch { return {}; } })();
@@ -92,8 +94,9 @@ function renderQueue() {
       isResult ? (difference > 0 ? prettyBytes(item.file.size) + ' → ' + prettyBytes(item.result.size) + ' · −' + Math.round(difference / item.file.size * 100) + '%' : 'Уже оптимально · ' + prettyBytes(item.file.size)) :
       prettyBytes(item.file.size) + (mode === 'pack' && item.path !== item.file.name ? ' · ' + item.path : '');
     $('queue').append(fileRow({
-      title: item.file.name, sub, label: extension(item.file.name), error: Boolean(item.error),
-      onDownload: isResult && (mode === 'photo' || mode === 'video') ? () => download(item.result, item.resultName) : null,
+      title: item.file.name, sub, detail: mode === 'smart' && isResult ? item.note : null,
+      label: extension(item.file.name), error: Boolean(item.error),
+      onDownload: isResult && (mode === 'photo' || mode === 'video' || mode === 'smart') ? () => download(item.result, item.resultName) : null,
       onRemove: !busy ? () => {
         queues[mode] = current().filter(entry => entry.id !== item.id);
         if (mode === 'pack') packed = null;
@@ -119,7 +122,7 @@ function renderResult() {
   const finished = items.filter(item => item.result);
   const before = finished.reduce((n, item) => n + item.file.size, 0);
   const after = finished.reduce((n, item) => n + item.result.size, 0);
-  const report = mode === 'photo' || mode === 'video';
+  const report = mode === 'photo' || mode === 'video' || mode === 'smart';
   $('sizeReport').classList.toggle('hidden', !report || !finished.length);
   if (report && finished.length) {
     $('beforeSize').textContent = prettyBytes(before);
@@ -131,11 +134,11 @@ function renderResult() {
   const all = $('allBtn');
   if (mode === 'pack' && packed) { all.classList.remove('hidden'); all.textContent = 'Скачать ' + packed.name; }
   else if (mode === 'unpack' && unpacked.length) { all.classList.remove('hidden'); all.textContent = canShareFiles() ? 'Поделиться распакованными' : typeof window.showDirectoryPicker === 'function' ? 'Сохранить всё в папку' : 'Сохранить всё ZIP'; }
-  else if (bundle && (mode === 'photo' || mode === 'video')) { all.classList.remove('hidden'); all.textContent = 'Скачать всё одним ZIP'; }
+  else if (bundle && (mode === 'photo' || mode === 'video' || mode === 'smart')) { all.classList.remove('hidden'); all.textContent = 'Скачать всё одним ZIP'; }
   else all.classList.add('hidden');
 }
 function render() {
-  const copy = COPY[mode], packMode = mode === 'pack', unpackMode = mode === 'unpack', videoMode = mode === 'video';
+  const copy = COPY[mode], packMode = mode === 'pack', unpackMode = mode === 'unpack', videoMode = mode === 'video', smartMode = mode === 'smart';
   document.querySelectorAll('[data-mode]').forEach(button => {
     const active = button.dataset.mode === mode;
     button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active));
@@ -143,7 +146,7 @@ function render() {
   $('modeTitle').textContent = copy.title;
   $('modeTitle').append(element('span', 'period', '.'));
   $('modeDesc').textContent = copy.desc;
-  $('modeIndex').textContent = 'ОПЕРАЦИЯ ' + copy.index + ' / 04';
+  $('modeIndex').textContent = 'ОПЕРАЦИЯ ' + copy.index + ' / 05';
   $('dropTitle').textContent = copy.drop;
   $('dropSubtitle').textContent = copy.subtitle;
   $('queueTitle').textContent = unpackMode ? 'Выбранный архив' : 'Файлы';
@@ -151,12 +154,12 @@ function render() {
   $('packSettings').classList.toggle('hidden', !packMode);
   $('unpackSettings').classList.toggle('hidden', !unpackMode);
   $('format').classList.toggle('hidden', videoMode);
-  $('formatCaption').textContent = videoMode ? (videoSupport().supported ? videoSupport().extension.toUpperCase() + ' · выбран браузером' : 'НЕ ПОДДЕРЖИВАЕТСЯ') : 'WEBP / JPEG';
-  $('audioWrap').classList.toggle('hidden', !videoMode);
-  $('folderBtn').classList.toggle('hidden', !packMode || !('webkitdirectory' in $('folderPicker')));
-  $('techHint').textContent = videoMode ? 'Видео перекодируется в реальном времени; обработка ролика займёт примерно столько же, сколько его длительность. Не закрывай экран.' : 'Если сжатый файл выходит больше исходного, сохраняется оригинал. Прозрачность сохраняется в WebP.';
+  $('formatCaption').textContent = videoMode ? (videoSupport({ keepAudio: $('keepAudio').checked }).supported ? videoSupport({ keepAudio: $('keepAudio').checked }).extension.toUpperCase() + ' · выбран браузером' : 'НЕ ПОДДЕРЖИВАЕТСЯ') : smartMode ? 'ФОТО → WEBP / JPEG' : 'WEBP / JPEG';
+  $('audioWrap').classList.toggle('hidden', !(videoMode || smartMode));
+  $('folderBtn').classList.toggle('hidden', !(packMode || smartMode) || !('webkitdirectory' in $('folderPicker')));
+  $('techHint').textContent = smartMode ? 'Фото уменьшаются, видео перекодируются при поддержке браузера, документы и другие файлы сжимаются в ZIP без потерь. Если размер не уменьшился, останется оригинал.' : videoMode ? 'Видео перекодируется в реальном времени. MP4 / MOV / WebM работают, если браузер их декодирует. Не закрывай экран.' : 'Если сжатый файл выходит больше исходного, сохраняется оригинал. Прозрачность сохраняется в WebP.';
   $('picker').multiple = !unpackMode;
-  $('picker').accept = mode === 'photo' ? 'image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,.heic,.heif' : mode === 'video' ? 'video/*,.mov,.mp4,.webm,.m4v' : unpackMode ? '.zip,application/zip' : '';
+  $('picker').accept = mode === 'photo' ? 'image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,.heic,.heif' : mode === 'video' ? 'video/*,.mov,.mp4,.webm,.m4v,.mkv,.avi,.mpeg,.3gp' : unpackMode ? '.zip,application/zip' : '';
   $('stateMsg').textContent = messages[mode];
   $('actionBtn').disabled = busy || !current().length;
   $('actionBtn').firstChild.textContent = copy.action + ' ';
@@ -164,7 +167,7 @@ function render() {
 }
 function validForMode(file) {
   if (mode === 'photo') return /\.(png|jpe?g|webp|heic|heif|avif)$/i.test(file.name) || /^image\/(jpeg|png|webp|heic|heif|avif)$/.test(file.type);
-  if (mode === 'video') return /^video\//.test(file.type) || /\.(mp4|mov|webm|m4v|ogv)$/i.test(file.name);
+  if (mode === 'video') return /^video\//.test(file.type) || /\.(mp4|mov|webm|m4v|ogv|mkv|avi|mpeg|mpg|3gp)$/i.test(file.name);
   if (mode === 'unpack') return /\.zip$/i.test(file.name) || file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
   return true;
 }
@@ -175,8 +178,8 @@ function addFiles(files) {
   if (mode === 'unpack') { queues.unpack = []; unpacked = []; }
   for (const file of Array.from(files || [])) {
     if (!validForMode(file)) { rejected++; continue; }
-    if (current().length >= (mode === 'pack' ? 1024 : 128)) { rejected++; continue; }
-    const path = mode === 'pack' ? (file.webkitRelativePath || file.name) : file.name;
+    if (current().length >= ((mode === 'pack' || mode === 'smart') ? 1024 : 128)) { rejected++; continue; }
+    const path = (mode === 'pack' || mode === 'smart') ? (file.webkitRelativePath || file.name) : file.name;
     const key = path + ':' + file.size + ':' + file.lastModified;
     if (existing.has(key)) continue;
     existing.add(key);
@@ -225,18 +228,18 @@ async function handleAction() {
       message('Распаковано ' + results.length + ' файлов. Проверка CRC32 пройдена.');
     } else {
       bundle = null;
-      const media = activeMode === 'photo' ? compressImage : compressVideo;
+      const media = activeMode === 'photo' ? compressImage : activeMode === 'video' ? compressVideo : compressAny;
       for (let i = 0; i < items.length; i++) {
         if (controller.signal.aborted) { cancelled = true; break; }
         const item = items[i];
-        item.error = null; item.result = null;
+        item.error = null; item.result = null; item.note = null;
         try {
           const result = await media(item.file, {
             quality: $('quality').value, format: $('format').value, keepAudio: $('keepAudio').checked,
             signal: controller.signal, monitor: $('videoMonitor'),
-            onProgress: fraction => indicate((i + fraction) / items.length, 'Видео: ' + item.file.name)
+            onProgress: fraction => indicate((i + fraction) / items.length, 'Обработка: ' + item.file.name)
           });
-          item.result = result.blob; item.resultName = result.name;
+          item.result = result.blob; item.resultName = result.name; item.note = result.note || null;
         } catch (error) {
           item.error = error?.message || String(error); failed++;
         }
@@ -247,13 +250,14 @@ async function handleAction() {
       if (done.length > 1 && !controller.signal.aborted) {
         message('Собираем ZIP с готовыми файлами…');
         try {
-          const blob = await createZip(done.map(item => ({ blob: item.result, path: item.resultName })), { signal: controller.signal });
+          const blob = await createZip(uniqueBundlePaths(done), { signal: controller.signal });
           bundle = { blob, name: 'Пресс — готовые файлы.zip' };
         } catch { bundle = null; }
       }
       if (controller.signal.aborted) cancelled = true;
+      const untouched = activeMode === 'smart' ? done.filter(item => item.result === item.file).length : 0;
       message(cancelled ? 'Обработка отменена. Готовые файлы сохранены в списке.' :
-        'Готово: ' + done.length + ' из ' + items.length + (failed ? '. Ошибок: ' + failed + '. Проверь строки файлов.' : '.') );
+        'Готово: ' + done.length + ' из ' + items.length + (untouched ? '. Без уменьшения: ' + untouched : '') + (failed ? '. Ошибок: ' + failed + '. Проверь строки файлов.' : '.') );
     }
   } catch (error) {
     message(controller.signal.aborted ? 'Операция отменена.' : 'Ошибка: ' + (error?.message || error));
@@ -307,7 +311,7 @@ $('allBtn').addEventListener('click', () => {
   else if (bundle) download(bundle.blob, bundle.name);
 });
 createWorkshopMode({
-  appName: 'Пресс', version: '1.0.0', cachePrefix: 'press-', storageNamespace: 'pocket-works:press',
+  appName: 'Пресс', version: '1.1.0', cachePrefix: 'press-', storageNamespace: 'pocket-works:press',
   onReset() { try { localStorage.removeItem('pocket-works:press:prefs'); } catch {} location.reload(); }
 });
 render();
