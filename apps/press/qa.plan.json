@@ -6,7 +6,8 @@
       "kind": "node-test",
       "tier": "smoke",
       "files": [
-        "zip.test.mjs"
+        "zip.test.mjs",
+        "smart.test.mjs"
       ]
     },
     {
