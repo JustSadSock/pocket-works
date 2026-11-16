@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "product": "press",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "folkarium",
+      "evidence": "apps/folkarium/visual-direction.json (2026-11-11)",
+      "lesson": "Avoid vellum, music staff and warm book layouts."
+    },
+    {
+      "slug": "sin-guion",
+      "evidence": "apps/sin-guion/visual-direction.json (2026-11-08)",
+      "lesson": "Avoid cobalt station controls and rehearsal charts."
+    },
+    {
+      "slug": "rivals-dna",
+      "evidence": "apps/rivals-dna/visual-direction.json (2026-11-08)",
+      "lesson": "Avoid field dossiers, angled parchment and military classification."
+    },
+    {
+      "slug": "bunny-bloom",
+      "evidence": "apps/bunny-bloom/visual-direction.json (2026-11-05)",
+      "lesson": "Avoid illustrated garden worlds and round pots."
+    },
+    {
+      "slug": "trace-mosaic",
+      "evidence": "apps/trace-mosaic/visual-direction.json (2026-10-19)",
+      "lesson": "Avoid museum tile board and brass mosaic trays."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://imageoptim.com/mac",
+      "observation": "Official ImageOptim page foregrounds drag-and-drop, reduction of file bytes and removal of hidden metadata.",
+      "principle": "Keep input and real savings legible rather than requiring a technical encoding tutorial.",
+      "application": "Immediate drop well, row-level file sizes and total before/after meter.",
+      "avoid": "Do not copy its identity or imply the same lossless algorithms.",
+      "inspectedAt": "2026-11-16T13:45:00Z"
+    },
+    {
+      "url": "https://handbrake.fr/docs/en/latest/technical/official-presets.html",
+      "observation": "HandBrake documents presets for intended device and file-size quality, with resolution and frame-rate caps.",
+      "principle": "Expose useful quality targets while hiding codec minutiae.",
+      "application": "Three quality modes with concrete resolution/bitrate ceilings and a text note explaining realtime encoding.",
+      "avoid": "Do not claim full HandBrake codec support or fixed target output sizes.",
+      "inspectedAt": "2026-11-16T13:45:00Z"
+    },
+    {
+      "url": "https://www.7-zip.org/",
+      "observation": "7-Zip separates archive packing from unpacking and documents format-specific support.",
+      "principle": "Make archive operations explicit and disclose unsupported archive variants.",
+      "application": "Create ZIP and Unpack ZIP are separate operations with exact unsupported variants shown.",
+      "avoid": "Do not copy 7-Zip branding or claim RAR/7z/ZIP64 support.",
+      "inspectedAt": "2026-11-16T13:45:00Z"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "file-press",
+      "medium": "Opaque lightweight DOM/CSS workbench with a unique press icon and measured result bars.",
+      "composition": "Fixed graphite vertical mode rail, wide file input/ledger, narrower size measurement panel; phone folds rail into a four-part horizontal selector.",
+      "interaction": "Drop or pick files, choose compression strength, process each, save outputs.",
+      "motion": "Short row insertion and measured bar transition when a real byte result completes.",
+      "rationale": "Chosen: direct and distinctive utility with truthful file outputs and clear touch actions."
+    },
+    {
+      "id": "liquid-pipeline",
+      "medium": "Canvas fluid simulation representing each file as flowing pixels.",
+      "composition": "Full-screen colorful current with floating control bubbles and no fixed file queue.",
+      "interaction": "Swipe a media blob into a pipeline to set quality.",
+      "motion": "Water flow, splashes and stretchy droplets.",
+      "rationale": "Rejected: movement obscures bytes and increases battery consumption."
+    },
+    {
+      "id": "archive-cabinet",
+      "medium": "Physical pseudo-3D drawer models in WebGL.",
+      "composition": "Filing cabinet drawers separated by format with files on wooden shelves.",
+      "interaction": "Drag objects into drawers and slam them shut to archive.",
+      "motion": "3D drawer springs and paper shuffling.",
+      "rationale": "Rejected: complex handling for a basic filesystem workflow."
+    }
+  ],
+  "selection": {
+    "concept": "file-press",
+    "reason": "The measurable, tactile press metaphor increases task clarity without delaying processing or requiring GPU assets.",
+    "rejected": [
+      {
+        "concept": "liquid-pipeline",
+        "reason": "Decorative simulation would hide technical outcomes."
+      },
+      {
+        "concept": "archive-cabinet",
+        "reason": "Physical drawers introduce unnecessary gestures."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "dom-svg",
+      "availability": "available",
+      "reason": "Native HTML/CSS and self-authored SVG assets work offline and are editable."
+    },
+    {
+      "id": "canvas-mediarecorder",
+      "availability": "browser-dependent",
+      "reason": "Runtime feature detection governs video and HEIC conversion; report a clear unsupported state rather than faking a result."
+    },
+    {
+      "id": "browser-qa",
+      "availability": "available",
+      "reason": "Repository QA workflow and local Chromium available for checks."
+    }
+  ],
+  "assets": [
+    {
+      "id": "press-icon",
+      "tool": "dom-svg",
+      "source": "icons/source.svg",
+      "output": "icons/icon.svg",
+      "role": "Original press-plate vector identity used in PWA/launcher.",
+      "acceptance": "At 48px two cream plates and orange compressed bar remain recognizable on graphite.",
+      "integration": "Local manifest and header symbol; no remote asset dependency.",
+      "provenance": "Authored specifically for Press using SVG paths and rectangles.",
+      "maxBytes": 8192
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 60
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Safari may not support MediaRecorder/Canvas.captureStream combination.",
+      "Unzipping a large archive needs memory and should cap output size.",
+      "On small phones the settings panel should remain reachable below the file queue."
+    ],
+    "comparisons": [
+      "Folkarium page compositor versus Press mechanical rail.",
+      "Sin Guion technical console versus Press byte-measuring pane."
+    ]
+  },
+  "styleRevision": "compressed-ledger-v1"
+}

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f3f0e8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Пресс">
+  <meta name="description" content="Уменьшение фото и видео, упаковка и распаковка ZIP на устройстве.">
+  <title>Пресс · Pocket Works</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="../../shared/workshop-mode.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-preset="interactive">
+  <main class="app-shell" data-app-shell data-keyboard-aware>
+    <aside class="side" data-ui>
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none"><path d="M13 13H51V51H13Z" stroke="currentColor" stroke-width="2"/><path d="M22 15V29M42 15V29M22 49V35M42 49V35" stroke="currentColor" stroke-width="5" stroke-linecap="square"/><path d="M22 32H42" stroke="#ce632d" stroke-width="6" stroke-linecap="square"/></svg>
+        </span>
+        <span><strong>ПРЕСС</strong><small>FILE STUDIO / 01</small></span>
+      </div>
+      <nav class="modes" aria-label="Операции с файлами">
+        <button class="mode active" data-mode="photo" data-native-press aria-pressed="true"><span class="mode-num">01</span><span>Фото</span><span class="mode-arrow">↗</span></button>
+        <button class="mode" data-mode="video" data-native-press aria-pressed="false"><span class="mode-num">02</span><span>Видео</span><span class="mode-arrow">↗</span></button>
+        <button class="mode" data-mode="pack" data-native-press aria-pressed="false"><span class="mode-num">03</span><span>Создать ZIP</span><span class="mode-arrow">↗</span></button>
+        <button class="mode" data-mode="unpack" data-native-press aria-pressed="false"><span class="mode-num">04</span><span>Распаковать</span><span class="mode-arrow">↗</span></button>
+      </nav>
+      <div class="side-foot"><span class="local-dot"></span>ФАЙЛЫ ОСТАЮТСЯ У ТЕБЯ</div>
+      <a class="back" href="../../" data-app-control>← В Pocket Works</a>
+      <button class="workshop-trigger" data-workshop-trigger type="button" data-native-press>Мастерская</button>
+    </aside>
+    <section class="workspace">
+      <header class="topline" data-ui><span>POCKET WORKS / УТИЛИТЫ</span><span id="sessionState">ЛОКАЛЬНАЯ ОБРАБОТКА</span></header>
+      <div class="workhead">
+        <div><p class="eyebrow" id="modeIndex">ОПЕРАЦИЯ 01 / 04</p><h1 id="modeTitle">Уменьшить фото<span class="period">.</span></h1><p id="modeDesc" class="mode-desc">Меньше мегабайтов, та же фотография. Без загрузки на сервер.</p></div>
+        <div class="press-symbol" aria-hidden="true"><span></span><span></span><span></span></div>
+      </div>
+      <div class="workgrid">
+        <div class="left-column">
+          <div id="drop" class="dropzone" tabindex="0" aria-label="Добавить файлы">
+            <span class="drop-figure" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M32 8V40M20 28L32 40L44 28" stroke="currentColor" stroke-width="3"/><path d="M10 45V55H54V45" stroke="currentColor" stroke-width="3"/><path d="M12 13H21M43 13H52" stroke="#ce632d" stroke-width="3"/></svg></span>
+            <strong id="dropTitle">Добавить фотографии</strong>
+            <span class="drop-secondary" id="dropSubtitle">Перетащи сюда или выбери на устройстве</span>
+            <button id="chooseBtn" class="choose" type="button" data-native-press>Выбрать файлы <span aria-hidden="true">＋</span></button>
+            <button id="folderBtn" class="folder-btn hidden" type="button" data-native-press>Добавить папку</button>
+          </div>
+          <input id="picker" type="file" multiple hidden>
+          <input id="folderPicker" type="file" webkitdirectory directory multiple hidden>
+          <div class="queue-head"><h2 id="queueTitle">Файлы</h2><span id="queueCount">0 ФАЙЛОВ</span></div>
+          <div id="empty" class="empty-state">Здесь появятся выбранные файлы и результаты обработки.</div>
+          <ul id="queue" class="file-list" aria-label="Очередь файлов"></ul>
+          <div id="archiveBox" class="archive-box hidden"><div class="queue-head"><h2>Внутри архива</h2><span id="archiveCount"></span></div><ul id="archiveEntries" class="file-list"></ul></div>
+        </div>
+        <aside class="inspector">
+          <div class="inspector-head"><span>ПАРАМЕТРЫ</span><span class="unit-mark">P/01</span></div>
+          <div id="mediaSettings">
+            <label for="quality" class="setting-label">Степень сжатия</label>
+            <select id="quality" class="control" data-native-press>
+              <option value="high">Бережное · высокое качество</option>
+              <option value="balanced" selected>Баланс · рекомендовано</option>
+              <option value="small">Максимальное уменьшение</option>
+            </select>
+            <div class="setting-pair"><span>Формат результата</span><span id="formatCaption">WEBP / JPEG</span></div>
+            <select id="format" class="control" aria-label="Формат фото"><option value="webp">WebP</option><option value="jpeg">JPEG</option></select>
+            <label id="audioWrap" class="audio-switch hidden"><input id="keepAudio" type="checkbox" checked><span>Сохранить звук видео</span></label>
+            <p id="techHint" class="tech-hint">WebP обычно занимает меньше места, чем JPEG. Если файл уже меньше результата, останется оригинал.</p>
+          </div>
+          <div id="packSettings" class="hidden"><label for="archiveName" class="setting-label">Название архива</label><input class="control" id="archiveName" type="text" value="Мой архив" maxlength="90" autocomplete="off" spellcheck="false"><p class="tech-hint">Файлы сохраняют свои имена и структуру папок. ZIP сжимается без потери качества.</p></div>
+          <div id="unpackSettings" class="hidden"><p class="tech-hint">Поддерживаются обычные ZIP с методами STORE и DEFLATE. Пароли и ZIP64 не поддерживаются.</p></div>
+          <div class="spacer"></div>
+          <div id="sizeReport" class="size-report hidden">
+            <div class="report-head"><span>РЕЗУЛЬТАТ</span><strong id="saving">−0%</strong></div>
+            <div class="measure-row"><span>Было</span><strong id="beforeSize">—</strong></div>
+            <div class="measure-meter before"><span></span></div>
+            <div class="measure-row"><span>Стало</span><strong id="afterSize">—</strong></div>
+            <div class="measure-meter after"><span id="resultBar"></span></div>
+          </div>
+          <p id="stateMsg" class="state-msg" aria-live="polite">Добавь файл, чтобы начать.</p>
+          <div id="progress" class="progress hidden" role="progressbar" aria-label="Выполнение" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="progressBar"></span></div>
+          <button id="actionBtn" class="main-action" type="button" disabled data-native-press>Сжать фото <span>→</span></button>
+          <button id="stopBtn" class="stop hidden" type="button" data-native-press>Отменить обработку</button>
+          <button id="allBtn" class="secondary-action hidden" type="button" data-native-press>Скачать всё одним ZIP</button>
+          <div id="videoMonitor" class="video-monitor hidden"></div>
+          <p class="privacy"><span class="privacy-lock">◇</span> Обработка происходит на этом устройстве. Ничего не отправляется в интернет.</p>
+        </aside>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Пресс" data-app-version="1.0.0"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
