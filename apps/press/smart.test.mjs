@@ -67,3 +67,11 @@ test('cancelled processing stops before reading any file', async () => {
   controller.abort();
   await assert.rejects(() => compressAny(file('text', 'notes.txt'), { signal: controller.signal }), /отменена/i);
 });
+
+test('unsupported image decoding retains the original in all-files mode', async () => {
+  const original = file('not a real HEIC', 'photo.heic', 'image/heic');
+  const result = await compressAny(original);
+  assert.strictEqual(result.blob, original);
+  assert.equal(result.unchanged, true);
+  assert.match(result.note, /без изменений/i);
+});
