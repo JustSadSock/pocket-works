@@ -52,6 +52,7 @@ For implementation work, this guide is only the diversity/originality layer. Rep
 - Canvas/procedural 2D: `CANVAS-2D.md`;
 - HUD/product/game interface: `GAME-UI.md`;
 - motion/juice/interaction feel: `MOTION-GAME-FEEL.md`;
+- drag/swipe/fling/hold, sheets and interrupted touch interactions: `GESTURES.md`;
 - 3D presentation: `3D-SCENE.md`;
 - before merge: `VISUAL-QA.md`.
 
