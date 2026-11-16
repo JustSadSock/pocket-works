@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "physics",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "tests/physics.test.mjs"
+      ]
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "#field",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#fireButton"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#pauseButton"
+        },
+        {
+          "action": "visible",
+          "selector": "#pauseScreen"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#resumeButton"
+        },
+        {
+          "action": "visible",
+          "selector": "#board"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "real-flow",
+      "kind": "browser-node",
+      "tier": "smoke",
+      "entry": "qa/real-flow.mjs"
+    }
+  ]
+}
