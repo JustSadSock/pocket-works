@@ -10,7 +10,7 @@ export function classifyFile(file) {
   const name = file?.name || '';
   const type = file?.type || '';
   if (IMAGE.test(name) || /^image\/(?:jpeg|png|webp|heic|heif|avif)$/.test(type)) return 'photo';
-  // Animated GIF, APNG and SVG must not be flattened into a still image.
+  // GIF and SVG are not flattened into a still image.
   if (VIDEO.test(name) || /^video\//.test(type)) return 'video';
   return 'other';
 }
@@ -36,8 +36,14 @@ export async function compressAny(file, options = {}) {
   if (options.signal?.aborted) throw new Error('Операция отменена.');
   const kind = classifyFile(file);
   if (kind === 'photo') {
-    const result = await compressImage(file, options);
-    return { ...result, kind: 'Фото', note: result.unchanged ? 'Уже оптимально: оставлен оригинал' : 'Изображение перекодировано' };
+    try {
+      const result = await compressImage(file, options);
+      return { ...result, kind: 'Фото', note: result.unchanged ? 'Уже оптимально: оставлен оригинал' : 'Изображение перекодировано' };
+    } catch (error) {
+      if (options.signal?.aborted) throw error;
+      return { blob: file, name: file.name, unchanged: true, kind: 'Фото',
+        note: 'Фото оставлено без изменений: ' + (error?.message || String(error)) };
+    }
   }
   if (kind === 'video') {
     const support = videoSupport({ keepAudio: options.keepAudio !== false });
