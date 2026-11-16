@@ -39,6 +39,10 @@ for(const [name,engine] of Object.entries({chromium,webkit})){
   await page.screenshot({path:path.join(output,`${prefix}-action.png`)});
   await page.locator('#heroDialog .close').click();
   await page.waitForFunction(()=>document.activeElement?.dataset.rosterHero==='Loki');
+  if(viewport.width<800){
+   await page.locator('[data-roster-jump]').click();
+   await page.waitForFunction(()=>document.activeElement?.id==='roster-b');
+  }
   await page.locator('.roster-b [data-roster-hero="Invisible Woman"]').click();
   assert.match(await page.locator('#heroDetail').innerText(),/Invisible Woman/);
   await page.locator('#heroDialog .close').click();
