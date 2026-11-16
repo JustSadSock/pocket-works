@@ -358,13 +358,14 @@ Before creating or materially changing visible output:
    - `docs/agent-skills/CANVAS-2D.md` for Canvas 2D, procedural illustration, pixel art, sprite rendering, top-down scenes or custom 2D rendering.
    - `docs/agent-skills/GAME-UI.md` for HUDs, menus, dialogue, overlays, controls, onboarding and other product/game interface work.
    - `docs/agent-skills/MOTION-GAME-FEEL.md` for transitions, animation, VFX, camera feedback, interaction feel, hit response and sound-linked feedback.
+   - `docs/agent-skills/GESTURES.md` for drag, swipe, fling, pull, long-press and gesture-controlled UI, including sheets, sortable items, swipe dismissal and gesture performance issues.
    - `docs/agent-skills/3D-SCENE.md` for Babylon/WebGL/Godot 3D scenes, lighting, materials, environment dressing, camera composition and authored 3D presentation.
 3. Before visual sign-off, read and follow `docs/agent-skills/VISUAL-QA.md`.
 4. The index and provenance notes live in `docs/agent-skills/README.md`.
 
 ### Application rule
 
-Do not copy external skill text or blindly apply a fashionable style. Translate the relevant guidance into the current product's explicit brief, audience, runtime, device constraints and existing identity. User-provided references and Pocket Works product requirements are authoritative.
+Gestures guidance is required when direct manipulation is involved, even if the task is described as a usability or bug fix rather than an animation task. Do not copy external skill text or blindly apply a fashionable style. Translate the relevant guidance into the current product's explicit brief, audience, runtime, device constraints and existing identity. User-provided references and Pocket Works product requirements are authoritative.
 
 A visual task is not done because the CSS/render code is sophisticated. It is done only when the rendered states have been inspected at target viewport sizes and the result is readable, distinct, coherent and functionally complete.
 
