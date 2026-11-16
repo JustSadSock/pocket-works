@@ -38,7 +38,7 @@
     {
       "id": "journey",
       "kind": "playwright",
-      "tier": "deep",
+      "tier": "smoke",
       "files": [
         "qa/flow.spec.ts"
       ]
