@@ -62,6 +62,8 @@ try{
     assert.equal((await page.evaluate(()=>window.__AI_TEST_STATE__.shots)),3);
     if(output)await page.screenshot({path:join(output,'bzyn-flight-'+viewport.width+'.png')});
     await evidence(page,'flight',viewport);
+    await page.waitForTimeout(880);
+    await evidence(page,'impact',viewport);
     await page.locator('#pauseButton').click();
     assert.equal(await page.locator('#pauseScreen').isVisible(),true);
     const pausedAt=await page.evaluate(()=>window.__AI_TEST_STATE__.puck);

@@ -462,6 +462,10 @@ function draw(){
   const sx=canvas.width/WORLD.width,sy=canvas.height/WORLD.height;
   ctx.setTransform(sx,0,0,sy,0,0);
   ctx.clearRect(0,0,WORLD.width,WORLD.height);
+  ctx.save();
+  if(!reducedMotion.matches&&stage.impulse>0){
+    ctx.translate(Math.sin(stage.clock*80)*stage.impulse*3,Math.cos(stage.clock*68)*stage.impulse*2);
+  }
   background();
   for(const t of stage.waveData.targets)drawTarget(t);
   stage.waveData.bumpers.forEach((b,i)=>drawBumper(b,i,false));
@@ -478,6 +482,7 @@ function draw(){
   if(stage.mode==='transition'&&!reducedMotion.matches){
     ctx.globalAlpha=.08+Math.sin(stage.clock*15)*.04;ctx.fillStyle='#ffe9ad';ctx.fillRect(21,20,317,529);ctx.globalAlpha=1;
   }
+  ctx.restore();
   publish();
 }
 function frame(now){
