@@ -25,6 +25,7 @@ function persist() {
   try { localStorage.setItem('pocket-works:press:prefs', JSON.stringify({ quality: $('quality').value, format: $('format').value, keepAudio: $('keepAudio').checked })); } catch {}
 }
 ['quality', 'format', 'keepAudio'].forEach(id => $(id).addEventListener('change', persist));
+$('keepAudio').addEventListener('change', () => { if (mode === 'video') render(); });
 const current = () => queues[mode];
 function message(text) { messages[mode] = text; $('stateMsg').textContent = text; }
 function indicate(value, detail) {
