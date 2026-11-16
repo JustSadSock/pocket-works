@@ -37,3 +37,26 @@ test('Photo compression and result comparison', async ({ page }) => {
   await page.locator('#format').selectOption('jpeg');
   await expect(page.locator('#format')).toHaveValue('jpeg');
 });
+
+test('All-files mode handles documents, audio and archives without data loss', async ({ page }) => {
+  await page.goto('/apps/press/');
+  await page.locator('[data-mode="smart"]').click();
+  await expect(page.locator('#modeTitle')).toContainText('Сжать любые файлы');
+  await expect(page.locator('#picker')).toHaveAttribute('accept', '');
+  await page.locator('#picker').setInputFiles([
+    { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('Повторяющийся документ. '.repeat(1000)) },
+    { name: 'audio.mp3', mimeType: 'audio/mpeg', buffer: Buffer.from([0xff, 0xfb, 0x90, 0x64]) },
+    { name: 'table.csv', mimeType: 'text/csv', buffer: Buffer.from('id,name\\n'.repeat(400)) }
+  ]);
+  await expect(page.locator('#queue .file-row')).toHaveCount(3);
+  await page.locator('#actionBtn').click();
+  await expect(page.locator('#stateMsg')).toContainText('Готово: 3 из 3');
+  await expect(page.locator('#queue .download')).toHaveCount(3);
+  await expect(page.locator('#queue')).toContainText('ZIP без потерь');
+  await expect(page.locator('#queue')).toContainText('оставлен оригинал');
+  await expect(page.locator('#allBtn')).toBeVisible();
+  const download = page.waitForEvent('download');
+  await page.locator('#allBtn').click();
+  const result = await download;
+  expect(result.suggestedFilename()).toContain('.zip');
+});

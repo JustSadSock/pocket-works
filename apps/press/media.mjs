@@ -62,19 +62,23 @@ export async function compressImage(file, { quality = 'balanced', format = 'webp
     return { blob, name: outputName(file.name, format === 'jpeg' ? 'jpg' : 'webp'), unchanged: false };
   } finally { image.cleanup(); }
 }
-export function videoSupport() {
-  if (typeof MediaRecorder === 'undefined' || typeof HTMLCanvasElement === 'undefined' || typeof HTMLCanvasElement.prototype.captureStream !== 'function') {
-    return { supported: false, message: 'Браузер не поддерживает перекодировку видео через Canvas и MediaRecorder.' };
+export function videoSupport({ keepAudio = true } = {}) {
+  if (typeof MediaRecorder === 'undefined' || typeof HTMLCanvasElement === 'undefined' ||
+      typeof HTMLCanvasElement.prototype.captureStream !== 'function') {
+    return { supported: false, message: 'На этом устройстве нет необходимых API для сжатия видео. Оригинал можно сохранить или добавить в ZIP.' };
   }
-  const types = ['video/mp4;codecs="avc1.42E01E,mp4a.40.2"', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  // A silent stream must not require an audio codec; Safari generally prefers MP4, Chromium WebM.
+  const types = keepAudio
+    ? ['video/mp4;codecs="avc1.42E01E,mp4a.40.2"', 'video/mp4', 'video/webm;codecs="vp9,opus"', 'video/webm;codecs="vp8,opus"', 'video/webm']
+    : ['video/mp4;codecs="avc1.42E01E"', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
   const mime = types.find(type => {
     try { return MediaRecorder.isTypeSupported(type); } catch { return false; }
   });
   return mime ? { supported: true, mime, extension: mime.startsWith('video/mp4') ? 'mp4' : 'webm' } :
-    { supported: false, message: 'Этот браузер не предоставляет видеоформат для записи.' };
+    { supported: false, message: 'Для этого браузера не найден подходящий видеокодировщик. Попробуй другой браузер.' };
 }
 export async function compressVideo(file, { quality = 'balanced', keepAudio = true, signal, onProgress = () => {}, monitor } = {}) {
-  const support = videoSupport();
+  const support = videoSupport({ keepAudio });
   if (!support.supported) throw new Error(support.message);
   if (file.size > 512 * 1024 * 1024) throw new Error('Видео больше 512 МБ. Выбери файл меньшего размера.');
   ensureActive(signal);

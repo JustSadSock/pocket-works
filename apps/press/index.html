@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Пресс">
-  <meta name="description" content="Уменьшение фото и видео, упаковка и распаковка ZIP на устройстве.">
+  <meta name="description" content="Уменьшение фото и видео, сжатие документов и других файлов, упаковка и распаковка ZIP на устройстве.">
   <title>Пресс · Pocket Works</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
@@ -29,8 +29,9 @@
       <nav class="modes" aria-label="Операции с файлами">
         <button class="mode active" data-mode="photo" data-native-press aria-pressed="true"><span class="mode-num">01</span><span>Фото</span><span class="mode-arrow">↗</span></button>
         <button class="mode" data-mode="video" data-native-press aria-pressed="false"><span class="mode-num">02</span><span>Видео</span><span class="mode-arrow">↗</span></button>
-        <button class="mode" data-mode="pack" data-native-press aria-pressed="false"><span class="mode-num">03</span><span>Создать ZIP</span><span class="mode-arrow">↗</span></button>
-        <button class="mode" data-mode="unpack" data-native-press aria-pressed="false"><span class="mode-num">04</span><span>Распаковать</span><span class="mode-arrow">↗</span></button>
+        <button class="mode" data-mode="smart" data-native-press aria-pressed="false"><span class="mode-num">03</span><span>Все файлы</span><span class="mode-arrow">↗</span></button>
+        <button class="mode" data-mode="pack" data-native-press aria-pressed="false"><span class="mode-num">04</span><span>Создать ZIP</span><span class="mode-arrow">↗</span></button>
+        <button class="mode" data-mode="unpack" data-native-press aria-pressed="false"><span class="mode-num">05</span><span>Распаковать</span><span class="mode-arrow">↗</span></button>
       </nav>
       <div class="side-foot"><span class="local-dot"></span>ФАЙЛЫ ОСТАЮТСЯ У ТЕБЯ</div>
       <a class="back" href="../../" data-app-control>← В Pocket Works</a>
@@ -39,7 +40,7 @@
     <section class="workspace">
       <header class="topline" data-ui><span>POCKET WORKS / УТИЛИТЫ</span><span id="sessionState">ЛОКАЛЬНАЯ ОБРАБОТКА</span><a class="mobile-back" href="../../" data-app-control>← Pocket Works</a></header>
       <div class="workhead">
-        <div><p class="eyebrow" id="modeIndex">ОПЕРАЦИЯ 01 / 04</p><h1 id="modeTitle">Уменьшить фото<span class="period">.</span></h1><p id="modeDesc" class="mode-desc">Меньше мегабайтов, та же фотография. Без загрузки на сервер.</p></div>
+        <div><p class="eyebrow" id="modeIndex">ОПЕРАЦИЯ 01 / 05</p><h1 id="modeTitle">Уменьшить фото<span class="period">.</span></h1><p id="modeDesc" class="mode-desc">Меньше мегабайтов, та же фотография. Без загрузки на сервер.</p></div>
         <div class="press-symbol" aria-hidden="true"><span></span><span></span><span></span></div>
       </div>
       <div class="workgrid">
@@ -93,7 +94,7 @@
       </div>
     </section>
   </main>
-  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Пресс" data-app-version="1.0.0"></script>
+  <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Пресс" data-app-version="1.1.0"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>

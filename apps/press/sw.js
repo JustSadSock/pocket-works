@@ -1,16 +1,16 @@
 const CACHE_PREFIX = 'press-';
-const CACHE_NAME = 'press-v1.0.0';
-const APP_VERSION = '1.0.0';
+const CACHE_NAME = 'press-v1.1.0';
+const APP_VERSION = '1.1.0';
 const RELEASE_DATE = '2026-11-16';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  "Сжатие изображений JPEG и WebP с настройками качества и разрешения.",
-  "Локальная перекодировка видео там, где браузер поддерживает MediaRecorder и захват Canvas.",
-  "Упаковка файлов и папок в ZIP и распаковка стандартных ZIP с проверкой целостности.",
-  "Офлайн-PWA, сравнение исходного и конечного размера, очередь и экспорт результатов."
+  "Режим «Все файлы»: смешанная очередь фото, видео, документов, аудио и любых других форматов.",
+  "Автовыбор обработки: фото и доступные видео перекодируются, остальные файлы сжимаются в ZIP без потерь.",
+  "Несжимаемые или неподдерживаемые файлы сохраняются оригиналами с пояснением; папки и имена сохраняются при общем экспорте.",
+  "Видеокодировщик выбирается с учётом настройки сохранения звука, улучшена мобильная навигация."
 ];
 const APP_SHELL = [
-  './', './index.html', './app.config.json', './styles.css', './app.js', './media.mjs', './zip.mjs', './manifest.webmanifest',
+  './', './index.html', './app.config.json', './styles.css', './app.js', './media.mjs', './smart.mjs', './zip.mjs', './manifest.webmanifest',
   './icons/icon.svg', '../../shared/mobile-runtime.css', '../../shared/mobile-runtime.js', '../../shared/pwa-utils.js',
   '../../shared/update-manager.css', '../../shared/update-manager.js', '../../shared/workshop-mode.css',
   '../../shared/workshop-mode.js', '../../shared/capabilities/motion.js', '../../shared/capabilities/storage.js',
