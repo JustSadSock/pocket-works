@@ -1,9 +1,9 @@
 const CACHE_PREFIX = 'rivals-field-notes-';
-const CACHE_NAME = 'rivals-field-notes-v1.1.0';
-const APP_VERSION = '1.1.0';
-const RELEASE_DATE = '2026-10-21';
+const CACHE_NAME = 'rivals-field-notes-v1.2.0';
+const APP_VERSION = '1.2.0';
+const RELEASE_DATE = '2026-11-16';
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = ["Первый экран теперь прямо называет лидеров по результату и относительно игроков на том же герое.", "Добавлены отдельная метрика Damage Blocked, её источник и ограничения; защита больше не теряется за уроном и лечением."];
+const RELEASE_NOTES = ["Два топ‑10 героев на новом первом экране.", "Обновлены герои, сезоны, дуэты, карты и рекомендации с учётом S11.", "Входящий урон по героям показан отдельно от блокирования."];
 const APP_SHELL = [
   './',
   './index.html',
@@ -18,9 +18,31 @@ const APP_SHELL = [
   './extended.js',
   './extended.css',
   './pocket.css',
-  './verdict.js',
   './strength.js',
   './strength.css',
+  './snapshot.js',
+  './roster.js',
+  './roster.css',
+  './assets/roster/1016.png',
+  './assets/roster/1018.png',
+  './assets/roster/1023.png',
+  './assets/roster/1025.png',
+  './assets/roster/1026.png',
+  './assets/roster/1027.png',
+  './assets/roster/1029.png',
+  './assets/roster/1032.png',
+  './assets/roster/1036.png',
+  './assets/roster/1038.png',
+  './assets/roster/1040.png',
+  './assets/roster/1042.png',
+  './assets/roster/1043.png',
+  './assets/roster/1046.png',
+  './assets/roster/1047.png',
+  './assets/roster/1050.png',
+  './assets/roster/1051.png',
+  './assets/roster/1054.png',
+  './assets/roster/1058.png',
+  './assets/roster/1060.png',
 
   './manifest.webmanifest',
   './icons/icon.svg',

@@ -13,15 +13,15 @@ test('ranked and career verdicts use explicit, different cohorts',()=>{
  assert.equal(run('outcomeLeaders("a","ranked",20)[0].hero'),'Gambit');
  assert.equal(run('outcomeLeaders("a","all",50)[0].hero'),'Adam Warlock');
  assert.equal(run('outcomeLeaders("a","all",20)[0].hero'),'Ultron');
- assert.equal(run('outcomeLeaders("b","ranked",20)[0].hero'),'Cloak & Dagger');
+ assert.equal(run('outcomeLeaders("b","ranked",20)[0].hero'),'Scarlet Witch');
  const b=run('outcomeLeaders("b","all",50)');
- assert.deepEqual(b.slice(0,2).map(r=>r.hero),['Cloak & Dagger','Magik']);
- assert.ok(Math.abs(b[0].wr-b[1].wr)<0.2,'career difference is not a meaningful winner by itself');
+ assert.deepEqual(b.slice(0,2).map(r=>r.hero),['Magik','Cloak & Dagger']);
+ assert.equal(b[0].n,158);
  assert.deepEqual(run('outcomeLeaders("a","ranked",1000)'),[]);
 });
 test('relative leaders depend on the metric, not an invented overall score',()=>{
  assert.equal(run('relativeLeaders("a","wrTop")[0].hero'),'Gambit');
- assert.equal(run('relativeLeaders("a","dpmTop")[0].hero'),'Doctor Strange');
+ assert.equal(run('relativeLeaders("a","dpmTop")[0].hero'),'Gambit');
  assert.equal(run('relativeLeaders("b","hpmTop")[0].hero'),'Cloak & Dagger');
  assert.equal(run('relativeLeaders("b","kdaTop")[0].hero'),'Cloak & Dagger');
  assert.ok(run('relativeLeaders("b","wrTop")').every(r=>r.wrTop>=50),'no verified above-midpoint WR hero on B');
@@ -35,6 +35,6 @@ test('account defense never becomes fabricated hero data',()=>{
  assert.equal(d.a.matches,1536);
  assert.equal(d.b.matches,1516);
  assert.ok(!run('DATA.a').some(r=>Object.hasOwn(r,'blocked')));
- assert.match(source,/нет данных по герою/);
+ assert.ok(run('DATA.a').some(r=>r.takenPm>0));
  assert.match(source,/не как ноль/);
 });
