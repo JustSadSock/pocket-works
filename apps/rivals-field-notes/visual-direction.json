@@ -4,33 +4,38 @@
   "product": "rivals-field-notes",
   "direction": {
     "premise": "A personal scouting notebook for two friends who want to understand years of shared matches, with measured evidence rather than competitive ranking between them.",
-    "composition": "The first phone view names the selected player's strongest ranked result before three contextual evidence verdicts. A cream reading surface and chapter rail retain the existing document layout; detailed metrics stay in disclosures and adjacent controls.",
-    "shapeLanguage": "Square evidence tables, thin ruled dividers, open editorial whitespace and an acid-green cut-corner player dossier distinguish observations from narrative.",
-    "surfaceAndMaterial": "Flat printed-paper surfaces and ink-colored text; hero portraits are small secondary identifiers, not decorative background art.",
+    "composition": "Two independent ten-slot lineup sheets share the desktop spread and stack on phones; player labels combine name and career count. The chapter rail is secondary to the lineups.",
+    "shapeLanguage": "Ruled lineups with compact numbered portrait slots, rectangular color strips and match count bars drawn directly beneath the names.",
+    "surfaceAndMaterial": "Warm uncoated paper, saturated ink straps in pine and brick, and locally cached portrait crops.",
     "paletteLogic": "Cream supports extended reading, dark green groups navigation, lime marks selected context, muted rust marks a small sample rather than a losing player.",
     "typography": "Large tight headings introduce chapters, compact sans-serif tables use tabular numeric context, and small uppercase source labels separate claims from qualifications.",
-    "signature": "A direct first-screen verdict distinguishes the ranked winner, career winner and same-hero benchmark; changing a sample threshold redraws the explanatory ranking instead of inventing an impact score.",
-    "distinction": "Perekos and Katana Echo center combat arenas; this product centers a readable evolving dossier, with chapter navigation and filterable evidence rather than thumb combat controls."
+    "signature": "Tap a portrait row to open the correct player and hero dossier directly; inspect the breakdown then return to the same row.",
+    "distinction": "Unlike the Rivals DNA questionnaire, this opens directly on two independent ranked-by-frequency lineup sheets. Folkarium has an editor canvas and playback transport; neither dominates this data viewer."
   },
   "architecture": {
     "spatialLayout": "document-spread",
-    "controlLocation": "contextual",
-    "navigation": "page-turn",
+    "controlLocation": "direct-on-object",
+    "navigation": "overlay-list",
     "chromeTopology": "single-surface",
     "dominantMotion": "immediate",
-    "primaryVerb": "Inspect a hero or shared pairing, then change season or mode to test whether the conclusion survives a narrower evidence slice.",
-    "physicalFeedback": "The active tab changes immediately and the evidence table and plot redraw synchronously; repeat input replaces the current selection without delayed motion.",
-    "spatialRationale": "A long-form analytical document genuinely needs vertical reading; compact horizontal chapter tabs preserve phone width while controls remain next to the evidence they alter.",
+    "primaryVerb": "Inspect numbered slots directly to open either player’s hero dossier, then return to the same slot or follow it into the seasonal chart.",
+    "physicalFeedback": "A press shifts that slot by one pixel and lights its left edge; the dossier overlays the current scroll position and returns focus to the original slot on close.",
+    "spatialRationale": "Two separate lineup sheets dominate the wide screen. Phones stack the same two lists, with a direct jump to Yasia’s lineup. Each slot is its own entry point to the dossier overlay.",
     "comparisons": [
       {
-        "slug": "perekos",
-        "spatialDifference": "Perekos fills the phone with a top-down duel and perimeter health; this notebook gives most pixels to readable evidence columns and ruled chapter content.",
-        "interactionDifference": "Hero selection and table filtering replace two-thumb movement, spell aiming and real-time projectile avoidance."
+        "slug": "folkarium",
+        "spatialDifference": "The score editor reserves a track rail and instrument inspector around a canvas; here the two player lineups themselves are the main reading surfaces.",
+        "interactionDifference": "Opening a slot retrieves one player’s evidence without writing pitches or maintaining playback."
       },
       {
-        "slug": "crumple-yard",
-        "spatialDifference": "Crumple Yard centers a third-person deforming vehicle and crash course; this notebook has an editorial document and scrollable numeric evidence.",
-        "interactionDifference": "Selecting an account and inspecting historical seasons has no continuous steering or garage-to-world camera transitions."
+        "slug": "sin-guion",
+        "spatialDifference": "The language trainer stages one exercise under a timer; both complete player lineups remain directly scannable on this home screen.",
+        "interactionDifference": "A hero opens an optional dossier and returns to its exact source slot; exercise answers do not drive sequential progression."
+      },
+      {
+        "slug": "rivals-dna",
+        "spatialDifference": "The hero matching app brings forward one context question at a time; this app begins with both full rosters, labelled match and win columns, and no questionnaire.",
+        "interactionDifference": "Select a hero on the roster to inspect recorded games in an overlay; nothing must be answered to unlock it."
       }
     ]
   },
@@ -40,10 +45,10 @@
   },
   "motion": {
     "character": "Precise and immediate context changes keep repeated analytical filtering comfortable and avoid presenting animation as statistical significance.",
-    "action": "Choose the second account in the persistent account switch and observe the entire document adopt that player context.",
-    "anticipation": "Button press darkens in the first frame; there is no artificial delay before changing a data context.",
-    "response": "The pressed account becomes dark and the headline, dossier name and hero pool change together.",
-    "followThrough": "The selected account stays visibly marked while the reader moves through chapters; graphs keep their axis and sample annotations.",
+    "action": "Tap Loki in the JustSadSock lineup to open his career dossier.",
+    "anticipation": "The row compresses inward by one pixel and gains a colored spine on press.",
+    "response": "Native dialog opens immediately over the lineup with Loki selected and his career evidence in view.",
+    "followThrough": "Closing the dialog restores focus to the tapped slot without losing the scroll position.",
     "interruption": "Rapid chapter or account changes overwrite the current render immediately rather than queuing transitions.",
     "reducedMotion": "Reduced-motion disables smooth scrolling and transitions; the same selection, account state and evidence remain visible."
   },
@@ -51,9 +56,9 @@
     "entry": "./",
     "interaction": {
       "type": "click",
-      "selector": "[data-account=\"b\"]"
+      "selector": "[data-roster-hero=\"Loki\"]"
     },
-    "expectedChange": "The selected player changes from JustSadSock to Hioydfts: the first-screen ranked verdict changes from Gambit to Cloak & Dagger and the career and benchmark explanations update together.",
+    "expectedChange": "Loki career dialog opens and displays his current total matches, role mechanics and incoming damage.",
     "capture": [
       "initial",
       "action",
