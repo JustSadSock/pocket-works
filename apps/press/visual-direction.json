@@ -15,8 +15,8 @@
   "architecture": {
     "spatialLayout": "split-workspace",
     "controlLocation": "contextual",
-    "navigation": "operation-rail",
-    "chromeTopology": "sidebar-workbench",
+    "navigation": "other",
+    "chromeTopology": "other",
     "dominantMotion": "immediate",
     "primaryVerb": "Choose photos, videos, files or a ZIP; process on-device; save actual output.",
     "physicalFeedback": "File rows appear on selection, real processing percentage and size reports update, verified outputs enable download; errors remain on failed rows.",
@@ -46,6 +46,16 @@
         "slug": "trace-mosaic",
         "spatialDifference": "Mechanical side rail plus vertical file conveyor instead of framed mosaic board.",
         "interactionDifference": "Batch file processing instead of spatial image tile dragging."
+      },
+      {
+        "slug": "bzyn",
+        "spatialDifference": "Bzyn has an enameled full-height arcade board; Press uses a technical file ledger, a mechanical operations rail and a byte ruler.",
+        "interactionDifference": "Bzyn depends on direct finger-controlled physics; Press only handles file encoding and download."
+      },
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "Rivals Field Notes uses two stacked player lineups and dossiers; Press uses file import and output panes with parallel byte measurements.",
+        "interactionDifference": "No player profiling or interactive dossiers, only local processing of selected files."
       }
     ]
   },
