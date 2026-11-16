@@ -326,7 +326,7 @@ function update(dt){
     }
     const speed=magnitude(stage.puck.vx,stage.puck.vy);
     stage.still=speed<48?stage.still+dt:0;
-    if(stage.mode==='flying'&&(stage.still>.75&&stage.flight>1.3||stage.flight>9.8))completeFlight();
+    if(stage.mode==='flying'&&(stage.still>.75&&stage.flight>1.3||stage.flight>7.4))completeFlight();
   }
   if(stage.mode==='respawn'){stage.respawn-=dt;if(stage.respawn<=0){
     stage.mode='ready';stage.puck={x:DOCK.x,y:DOCK.y,vx:0,vy:0,r:WORLD.radius};stage.trail.length=0;syncUI();
@@ -477,6 +477,7 @@ function draw(){
   if(stage.mode==='transition'&&!reducedMotion.matches){
     ctx.globalAlpha=.08+Math.sin(stage.clock*15)*.04;ctx.fillStyle='#ffe9ad';ctx.fillRect(21,20,317,529);ctx.globalAlpha=1;
   }
+  publish();
 }
 function frame(now){
   raf=null;
