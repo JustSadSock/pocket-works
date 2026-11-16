@@ -1,0 +1,24 @@
+{
+  "id": "/apps/bzyn/",
+  "name": "БЗЫНЬ!",
+  "short_name": "БЗЫНЬ",
+  "description": "Карманная аркада про рикошеты и резиновый шар",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#f1d8a3",
+  "theme_color": "#f1d8a3",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
