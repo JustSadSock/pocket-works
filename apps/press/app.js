@@ -53,7 +53,10 @@ function addButton(parent, title, classname, handler, disabled = false) {
   button.disabled = disabled; button.addEventListener('click', handler); parent.append(button);
   return button;
 }
-function canShareFiles() {\n  try { return typeof navigator.canShare === 'function' && navigator.canShare({ files: [new File(['x'], 'probe.txt', { type: 'text/plain' })] }); } catch { return false; }\n}\nfunction download(blob, name) {
+function canShareFiles() {
+  try { return typeof navigator.canShare === 'function' && navigator.canShare({ files: [new File(['x'], 'probe.txt', { type: 'text/plain' })] }); } catch { return false; }
+}
+function download(blob, name) {
   const url = URL.createObjectURL(blob), link = document.createElement('a');
   link.href = url; link.download = name; link.style.display = 'none';
   document.body.append(link); link.click(); link.remove();
@@ -283,7 +286,24 @@ $('actionBtn').addEventListener('click', handleAction);
 $('stopBtn').addEventListener('click', () => controller?.abort());
 $('allBtn').addEventListener('click', () => {
   if (mode === 'pack' && packed) download(packed.blob, packed.name);
-  else if (mode === 'unpack' && unpacked.length) {\n    if (canShareFiles() && typeof navigator.share === 'function') {\n      const files = unpacked.map(item => new File([item.blob], item.name.split('/').pop(), { type:'application/octet-stream' }));\n      navigator.share({ files, title:'Распакованные файлы' }).catch(error => { if (error?.name !== 'AbortError') message('Не получилось поделиться: ' + error.message); });\n    } else if (typeof window.showDirectoryPicker === 'function') {\n      (async () => {\n        const root = await window.showDirectoryPicker();\n        let folder = await root.getDirectoryHandle('Пресс - ' + Date.now(), { create: true });\n        for (const item of unpacked) {\n          const parts = item.name.split('/'); let dir = folder;\n          for (const name of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(name, { create: true });\n          const handle = await dir.getFileHandle(parts.at(-1), { create: true });\n          const writer = await handle.createWritable(); await writer.write(item.blob); await writer.close();\n        }\n        message('Файлы сохранены в выбранную папку.');\n      })().catch(error => { if (error?.name !== 'AbortError') message('Ошибка сохранения: ' + error.message); });\n    } else download(current()[0].file, current()[0].file.name);\n  }
+  else if (mode === 'unpack' && unpacked.length) {
+    if (canShareFiles() && typeof navigator.share === 'function') {
+      const files = unpacked.map(item => new File([item.blob], item.name.split('/').pop(), { type:'application/octet-stream' }));
+      navigator.share({ files, title:'Распакованные файлы' }).catch(error => { if (error?.name !== 'AbortError') message('Не получилось поделиться: ' + error.message); });
+    } else if (typeof window.showDirectoryPicker === 'function') {
+      (async () => {
+        const root = await window.showDirectoryPicker();
+        let folder = await root.getDirectoryHandle('Пресс - ' + Date.now(), { create: true });
+        for (const item of unpacked) {
+          const parts = item.name.split('/'); let dir = folder;
+          for (const name of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(name, { create: true });
+          const handle = await dir.getFileHandle(parts.at(-1), { create: true });
+          const writer = await handle.createWritable(); await writer.write(item.blob); await writer.close();
+        }
+        message('Файлы сохранены в выбранную папку.');
+      })().catch(error => { if (error?.name !== 'AbortError') message('Ошибка сохранения: ' + error.message); });
+    } else download(current()[0].file, current()[0].file.name);
+  }
   else if (bundle) download(bundle.blob, bundle.name);
 });
 createWorkshopMode({
