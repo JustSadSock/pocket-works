@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "zip-regression",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "zip.test.mjs"
+      ]
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#chooseBtn",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-mode=\"pack\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#archiveName"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "journey",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/flow.spec.ts"
+      ]
+    }
+  ]
+}

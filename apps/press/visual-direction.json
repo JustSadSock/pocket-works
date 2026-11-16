@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "press",
+  "direction": {
+    "premise": "Compact offline file workshop: bytes are physically compressed between two plates; privacy and measurable savings dominate the utility.",
+    "composition": "A dark, narrow operation rail sits to the left of a light editorial workspace. Files stack as narrow ledger rows; a right-hand measuring press compares original/result byte lengths.",
+    "shapeLanguage": "Squarish mechanical stamps, narrow technical rules, angular plates and precise flat edges; no rounded cards.",
+    "surfaceAndMaterial": "Warm light limestone workstation with an opaque graphite press rail and flat oxidized orange mechanical lever. No paper texture, glass or dark neon.",
+    "paletteLogic": "Ivory #f3f0e8 preserves image neutrality; graphite #242924 is operation equipment; restrained rust-orange #ce632d denotes active force and live progress; green signals verified savings.",
+    "typography": "Bold practical Trebuchet title, reliable neutral body type, compact monospace metadata and file sizes.",
+    "signature": "A physical two-plate glyph and measured before/after parallel tracks: size reduction is the central interaction and measurable consequence.",
+    "distinction": "Unlike Folkarium's page and music notation, Sin Guion's blue panels, Rivals DNA's paper dossier, Bunny Bloom's illustrated garden, and Trace Mosaic's copper restoration board, this is a spare utilitarian file press with a permanent operation rail and physical compression measure."
+  },
+  "architecture": {
+    "spatialLayout": "split-workspace",
+    "controlLocation": "contextual",
+    "navigation": "other",
+    "chromeTopology": "other",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Choose photos, videos, files or a ZIP; process on-device; save actual output.",
+    "physicalFeedback": "File rows appear on selection, real processing percentage and size reports update, verified outputs enable download; errors remain on failed rows.",
+    "spatialRationale": "Desktop keeps four operations in a fixed vertical rail and settings beside the queue; phone folds the rail to four single-tap operation tabs and stacks settings below files.",
+    "comparisons": [
+      {
+        "slug": "folkarium",
+        "spatialDifference": "Permanent dark tool rail and mineral surface instead of a wide vellum score.",
+        "interactionDifference": "Batch processing, encoding, saving files rather than editing musical notes."
+      },
+      {
+        "slug": "sin-guion",
+        "spatialDifference": "Light open queue with a narrow graphite rail, not blue station screens.",
+        "interactionDifference": "File selection, progress and byte totals rather than language drills."
+      },
+      {
+        "slug": "rivals-dna",
+        "spatialDifference": "Operational file rows and a results ruler rather than full-page dossiers.",
+        "interactionDifference": "No questions or ranking; direct filesystem workflow."
+      },
+      {
+        "slug": "bunny-bloom",
+        "spatialDifference": "Dense editorial workstation rather than an illustrated garden world.",
+        "interactionDifference": "Compression actions with measurable file outputs rather than growing a flower."
+      },
+      {
+        "slug": "trace-mosaic",
+        "spatialDifference": "Mechanical side rail plus vertical file conveyor instead of framed mosaic board.",
+        "interactionDifference": "Batch file processing instead of spatial image tile dragging."
+      },
+      {
+        "slug": "bzyn",
+        "spatialDifference": "Bzyn has an enameled full-height arcade board; Press uses a technical file ledger, a mechanical operations rail and a byte ruler.",
+        "interactionDifference": "Bzyn depends on direct finger-controlled physics; Press only handles file encoding and download."
+      },
+      {
+        "slug": "rivals-field-notes",
+        "spatialDifference": "Rivals Field Notes uses two stacked player lineups and dossiers; Press uses file import and output panes with parallel byte measurements.",
+        "interactionDifference": "No player profiling or interactive dossiers, only local processing of selected files."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Static semantic DOM and CSS, local author-generated SVG press icon, JS Canvas for encoding, browser-native ZIP streams.",
+    "focalAsset": "Two compression plates squeeze a small orange data bar in a square vector icon."
+  },
+  "motion": {
+    "character": "Compressed press feedback: rows insert from a short 5px offset and byte meter settles when real work finishes.",
+    "action": "Choose files, select quality, process, and download.",
+    "anticipation": "Drop border responds immediately to files dragged over.",
+    "response": "Live progress and updated results; controls lock only while processing.",
+    "followThrough": "Measured savings replaces the neutral settings area and output controls become available.",
+    "interruption": "Cancel uses AbortController and retains results already completed; no unstable auto-resume of video after backgrounding.",
+    "reducedMotion": "Animation and transition durations forced to zero."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "[data-mode=\"pack\"]"
+    },
+    "expectedChange": "Workspace visibly switches to ZIP creation, exposes folder selector and archive filename.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
