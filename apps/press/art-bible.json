@@ -27,6 +27,16 @@
       "slug": "trace-mosaic",
       "evidence": "apps/trace-mosaic/visual-direction.json (2026-10-19)",
       "lesson": "Avoid museum tile board and brass mosaic trays."
+    },
+    {
+      "slug": "bzyn",
+      "evidence": "apps/bzyn/visual-direction.json",
+      "lesson": "Avoid its enamel arcade board and bouncy physics metaphors."
+    },
+    {
+      "slug": "rivals-field-notes",
+      "evidence": "apps/rivals-field-notes/visual-direction.json",
+      "lesson": "Avoid stacked player sheets and dossier presentation."
     }
   ],
   "references": [
@@ -103,8 +113,9 @@
     },
     {
       "id": "canvas-mediarecorder",
-      "availability": "browser-dependent",
-      "reason": "Runtime feature detection governs video and HEIC conversion; report a clear unsupported state rather than faking a result."
+      "availability": "unverified",
+      "reason": "Runtime feature detection governs video and HEIC conversion; report a clear unsupported state rather than faking a result.",
+      "fallback": "If Canvas.captureStream, MediaRecorder or the necessary codecs are unavailable, show an explicit unsupported message while photo and ZIP modes remain fully usable."
     },
     {
       "id": "browser-qa",
