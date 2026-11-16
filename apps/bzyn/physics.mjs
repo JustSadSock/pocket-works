@@ -1,5 +1,5 @@
 // Deterministic 120 Hz physics and layout. No DOM or browser dependencies.
-export const WORLD={width:360,height:580,radius:14,dockX:180,dockY:509};
+export const WORLD={width:360,height:580,radius:14,dockX:180,dockY:450};
 export const FIXED_STEP=1/120;
 export const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
 export const magnitude=(x,y)=>Math.hypot(x,y);
@@ -22,7 +22,7 @@ export function buildWave(index){
   }));
   const bumpers=[{x:77,y:374,r:23},{x:288,y:372,r:23},{x:267,y:291,r:18}];
   if(n>=3)bumpers.push({x:54,y:282,r:16});
-  return {targets,bumpers,spinner:n>=2?{x:185,y:422,r:19,range:61,speed:1.2+n*.08}:null};
+  return {targets,bumpers,spinner:n>=2?{x:185,y:388,r:19,range:61,speed:1.2+n*.08}:null};
 }
 
 export function rubber(distance,limit=115,elastic=.2){
