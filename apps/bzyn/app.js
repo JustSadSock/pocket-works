@@ -81,6 +81,7 @@ function newRound(){
   stage.particles.length=0;stage.numbers.length=0;stage.trail.length=0;
   ui.pause.hidden=true;ui.end.hidden=true;ui.flash.hidden=true;
   setupWave(1);
+  if(document.activeElement?.closest('.overlay'))canvas.focus({preventScroll:true});
   announce('Новый раунд. Потяните красный шар и отпустите.');
 }
 function setupWave(number){
@@ -211,8 +212,8 @@ function pointerMove(event){
   const p=screenPoint(event),deltaX=p.x-input.start.x,deltaY=p.y-input.start.y;
   if(input.kind==='sling'){
     const raw=magnitude(deltaX,deltaY),range=rubber(raw,113,.16)/Math.max(raw,.001);
-    stage.puck.x=clamp(input.startBall.x+deltaX*range,36,324);
-    stage.puck.y=clamp(input.startBall.y+deltaY*range,40,541);
+    stage.puck.x=clamp(input.startBall.x+deltaX*range,38,322);
+    stage.puck.y=clamp(input.startBall.y+deltaY*range,39,536);
   }else{
     stage.puck.x=clamp(input.startBall.x+deltaX,38,322);
     stage.puck.y=clamp(input.startBall.y+deltaY,39,536);
