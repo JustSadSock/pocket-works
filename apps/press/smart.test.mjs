@@ -4,7 +4,7 @@ import { compressAny, classifyFile, uniqueBundlePaths } from './smart.mjs';
 import { readZip, extractEntry } from './zip.mjs';
 
 function file(data, name, type = 'application/octet-stream') {
-  return new File([data], name, { type });
+  return Object.assign(new Blob([data], { type }), { name });
 }
 
 test('auto classification covers images, browsers video names, and arbitrary files', () => {
