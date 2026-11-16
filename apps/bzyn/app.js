@@ -77,7 +77,7 @@ function syncUI(){
   publish();
 }
 function newRound(){
-  stage.wave=1;stage.score=0;stage.popped=0;stage.shots=4;stage.angle=0;stage.paused=false;
+  stage.wave=1;stage.score=0;stage.popped=0;stage.shots=4;stage.angle=0;stage.paused=false;stage.combo=0;stage.comboClock=0;
   stage.particles.length=0;stage.numbers.length=0;stage.trail.length=0;
   ui.pause.hidden=true;ui.end.hidden=true;ui.flash.hidden=true;
   setupWave(1);
@@ -373,7 +373,7 @@ function background(){
     ctx.beginPath();ctx.arc(x,465,34,Math.PI*1.1,Math.PI*1.9);ctx.stroke();
   }
   ctx.globalAlpha=1;
-  rounded(110,481,140,61,24,'#173f45','#65928b',2);
+  rounded(110,421,140,89,24,'#173f45','#65928b',2);
   disk(DOCK.x,DOCK.y,31,'#214d53','#b18b55',2);
   disk(DOCK.x,DOCK.y,23,null,'#4d7c78',1.5);
   ctx.strokeStyle='#a27b4b';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(DOCK.x-25,DOCK.y+25);ctx.lineTo(DOCK.x+25,DOCK.y+25);ctx.stroke();
