@@ -89,6 +89,23 @@ try{
     assert.equal(await page.evaluate(()=>window.__AI_TEST_STATE__.mode),'ready');
     assert.equal(await page.locator('#pauseScreen').isVisible(),false);
     if(output)await page.screenshot({path:join(output,'bzyn-restart-'+viewport.width+'.png')});
+    if(viewport.width===390){
+      // Full playable loop: four successive launches that cannot clear all targets.
+      await page.locator('#field').focus();
+      for(let angle=0;angle<7;angle++)await page.keyboard.press('ArrowRight');
+      for(let shot=1;shot<=4;shot++){
+        await page.locator('#fireButton').click();
+        await page.waitForFunction(expected=>window.__AI_TEST_STATE__?.shots===expected,4-shot);
+        await page.waitForFunction(()=>['ready','end'].includes(window.__AI_TEST_STATE__?.mode),null,{timeout:12000});
+      }
+      assert.equal(await page.locator('#endScreen').isVisible(),true,'game-over screen must be reachable');
+      assert.equal(await page.evaluate(()=>window.__AI_TEST_STATE__.mode),'end');
+      await evidence(page,'end',viewport);
+      await page.locator('#againButton').click();
+      assert.equal(await page.evaluate(()=>window.__AI_TEST_STATE__.mode),'ready');
+      assert.equal(await page.evaluate(()=>window.__AI_TEST_STATE__.shots),4);
+      assert.equal(await page.locator('#endScreen').isVisible(),false);
+    }
     assert.deepEqual(errors,[],'page errors');
     assert.deepEqual(missing,[],'missing app requests');
     passed++;
