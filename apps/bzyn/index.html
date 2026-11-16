@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f1d8a3">
+  <meta name="description" content="БЗЫНЬ! — карманная игра про рикошеты, колокольчики и резиновый шарик.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="БЗЫНЬ!">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+  <link rel="apple-touch-icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="../../shared/mobile-runtime.css">
+  <link rel="stylesheet" href="../../shared/update-manager.css">
+  <link rel="stylesheet" href="./styles.css">
+  <title>БЗЫНЬ! — Pocket Works</title>
+</head>
+<body data-fullscreen-app>
+<main class="machine" id="app" data-app-shell>
+  <header class="topbar">
+    <a href="../../" class="exit-button" data-app-control data-native-press aria-label="Вернуться в Pocket Works">PW<span class="exit-arrow" aria-hidden="true">↖</span></a>
+    <div class="logo"><span class="logo-mark" aria-hidden="true">✳</span><h1>БЗЫНЬ!</h1><span class="logo-tag">карманный рикошет</span></div>
+    <div class="top-actions">
+      <button id="soundButton" class="icon-button" type="button" data-native-press aria-label="Выключить звук" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="sound-wave" d="M17 9q3 3 0 6M19.5 6q5 6 0 12"/></svg></button>
+      <button id="pauseButton" class="icon-button" type="button" data-native-press aria-label="Пауза"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
+    </div>
+  </header>
+  <section class="readouts" aria-label="Счёт игры">
+    <div class="readout"><span>СЧЁТ</span><strong id="score">0000</strong></div>
+    <div class="readout readout-center"><span>ВОЛНА</span><strong id="wave">01</strong></div>
+    <div class="readout"><span>ЗАПУСКИ</span><strong id="shots">● ● ● ●</strong></div>
+  </section>
+  <section class="board-area" aria-label="Игровое поле">
+    <div class="board-frame" id="board">
+      <canvas id="field" data-gesture-surface data-block-callout tabindex="0" role="application" aria-label="Игровая доска. Перетащите красный шар вниз и отпустите. Стрелками изменяйте направление; пробел запускает."></canvas>
+      <div class="board-badge" id="catchBadge" hidden>ПЕРЕХВАТ ДОСТУПЕН</div>
+      <div class="flash-message" id="waveFlash" aria-live="polite" hidden></div>
+    </div>
+  </section>
+  <section class="bottom-bar" aria-label="Управление">
+    <div class="instruction"><strong id="hint">ПОТЯНИ КРАСНЫЙ ШАР ВНИЗ</strong><span id="hintSub">Отпусти, чтобы запустить. В полёте можно поймать.</span></div>
+    <button id="fireButton" class="fire-button" type="button" data-native-press aria-label="Запустить шар без перетаскивания"><span>ПУСК</span><span aria-hidden="true">↗</span></button>
+  </section>
+  <div class="overlay" id="pauseScreen" hidden>
+    <section class="panel" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+      <span class="eyebrow">НА ПАУЗЕ</span>
+      <h2 id="pauseTitle">Передышка!</h2>
+      <p>Шарик никуда не убежит. Пока что.</p>
+      <button id="resumeButton" type="button" class="panel-primary" data-native-press>ПРОДОЛЖИТЬ <span>→</span></button>
+      <button id="restartButton" type="button" class="panel-secondary" data-native-press>НАЧАТЬ ЗАНОВО</button>
+      <a href="../../" class="panel-link" data-app-control data-native-press>В POCKET WORKS ↗</a>
+    </section>
+  </div>
+  <div class="overlay" id="endScreen" hidden>
+    <section class="panel" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+      <span class="eyebrow">ЗАПУСКИ ЗАКОНЧИЛИСЬ</span>
+      <h2 id="endTitle">Ну бзынь!</h2>
+      <div class="end-score" id="finalScore">0</div>
+      <p id="endDetails">Сбито колокольчиков: 0</p>
+      <p class="record" id="recordText"></p>
+      <button id="againButton" type="button" class="panel-primary" data-native-press>ЕЩЁ РАЗ <span>→</span></button>
+      <a href="../../" class="panel-link" data-app-control data-native-press>В POCKET WORKS ↗</a>
+    </section>
+  </div>
+  <p class="sr-only" id="a11yStatus" role="status" aria-live="polite"></p>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="БЗЫНЬ!" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

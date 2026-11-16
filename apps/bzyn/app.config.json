@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "bzyn",
+  "name": "БЗЫНЬ!",
+  "shortName": "БЗЫНЬ",
+  "description": "Карманный кинетический пинбол. Оттяни резиновый шар, сбей колокольчики и поймай его прямо в полёте.",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-16",
+  "releaseDateTime": "2026-11-16T15:30:00+02:00",
+  "changelog": [
+    "Первая версия: физические рикошеты, волны мишеней, очки и комбо.",
+    "Жестовый запуск с упругим натяжением и один перехват каждого летящего шарика.",
+    "Локальный рекорд, оригинальные звуки, офлайн-PWA и управление с клавиатуры."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#ea6249",
+  "backgroundColor": "#f1d8a3",
+  "themeColor": "#f1d8a3",
+  "orientation": "portrait",
+  "cacheName": "bzyn-v1.0.0",
+  "storageNamespace": "pocket-works:bzyn",
+  "tags": [
+    "PWA",
+    "offline",
+    "arcade",
+    "gestures",
+    "physics",
+    "touch",
+    "canvas",
+    "audio"
+  ],
+  "order": 441
+}
