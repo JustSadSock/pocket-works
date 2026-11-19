@@ -12,6 +12,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -19,7 +20,8 @@
   <header class="topbar">
     <a class="exit" href="../../" data-app-control data-native-press aria-label="Вернуться в Pocket Works"><span aria-hidden="true">‹</span><span>Pocket Works</span></a>
     <div class="identity"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong>КАСКАД <small>УЗОРЫ</small></strong></div>
-    <button class="text-control" id="galleryBtn" type="button" data-native-press>Архив <span class="archive-indicator" id="archiveCount">0</span></button>
+    <div class="mast-tools"><button type="button" class="workshop-diagnostics" data-workshop-trigger data-native-press aria-label="Диагностика приложения" title="Диагностика">⋮</button>
+    <button class="text-control" id="galleryBtn" type="button" data-native-press>Архив <span class="archive-indicator" id="archiveCount">0</span></button></div>
   </header>
   <nav class="mode-strip" aria-label="Тип симуляции" id="modeTabs">
     <button type="button" class="mode active" data-mode="sand" data-native-press><span class="mode-number">01</span> Песок</button>
