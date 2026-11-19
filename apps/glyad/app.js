@@ -3,6 +3,7 @@ import {DEPTH_W,DEPTH_H,clamp,brush,stamp,fresh,stereogram} from './core.mjs';
 installMobileRuntime();
 const $=id=>document.getElementById(id),shell=document.querySelector('.app-shell');
 const editor=$('depthCanvas'),stereo=$('stereoCanvas'),ectx=editor.getContext('2d',{alpha:false}),sctx=stereo.getContext('2d',{alpha:false});
+shell.dataset.view='edit';
 const KEY='pocket-works:glyad:relief-v1';
 let layer=stamp('heart'),mode='brush',size=14,height=85,seed=12742,palette='mono',stack=[],painting=false,pointerId=null,renderRequested=false;
 let toastTimeout=null;
