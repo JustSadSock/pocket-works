@@ -7,14 +7,14 @@ export const MODES = Object.freeze({
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 function random(w) {let x=w.seed|0;x^=x<<13;x^=x>>>17;x^=x<<5;w.seed=x|0;return (x>>>0)/4294967296;}
 function defaults(mode) {
-  if(mode==='sand') return {feed:200,neighbors:4};
+  if(mode==='sand') return {feed:40,neighbors:4};
   if(mode==='ant') return {rule:'RL',ants:1};
   return {feed:0.0545,kill:0.062};
 }
 export function createWorld(mode='sand',seed=0x71b246a9) {
   if(!MODES[mode]) throw Error('Неизвестный мир');
   const n=MODES[mode].size,w={mode,n,seed:seed|0,ticks:0,params:defaults(mode),a:new Uint8Array(n*n),ants:[]};
-  if(mode==='sand'){w.a=new Uint16Array(n*n); addSand(w,Math.floor(n/2),Math.floor(n/2),30000);}
+  if(mode==='sand'){w.a=new Uint32Array(n*n); initSandQueue(w); addSand(w,Math.floor(n/2),Math.floor(n/2),1800); relaxSand(w,100000);}
   if(mode==='ant'){
     w.ants=[{x:Math.floor(n/2),y:Math.floor(n/2),d:0}];
     for(let i=0;i<5500;i++)stepAnt(w);
@@ -29,29 +29,41 @@ export function createWorld(mode='sand',seed=0x71b246a9) {
 }
 const DIR4=[[-1,0],[1,0],[0,-1],[0,1]];
 const DIR8=[...DIR4,[-1,-1],[-1,1],[1,-1],[1,1]];
+function initSandQueue(w){
+  w.queue=[];w.qHead=0;w.queued=new Uint8Array(w.n*w.n);
+}
+function enqueueSand(w,i){
+  if(!w.queued[i]){w.queued[i]=1;w.queue.push(i);}
+}
 export function addSand(w,x,y,amount=1000) {
-  if(w.mode!=='sand')return;
-  const n=w.n,dirs=w.params.neighbors===8?DIR8:DIR4,threshold=dirs.length;
-  if(x<0||y<0||x>=n||y>=n)return;
-  const index=y*n+x;
-  w.a[index]+=amount;
-  const queue=[index],queued=new Uint8Array(n*n);
-  queued[index]=1;
-  for(let head=0;head<queue.length;head++){
-    const i=queue[head];queued[i]=0;
-    const v=w.a[i],times=Math.floor(v/threshold);
-    if(times===0)continue;
-    w.a[i]=v%threshold;
-    const px=i%n,py=Math.floor(i/n);
-    for(const [dx,dy] of dirs){
-      const xx=px+dx,yy=py+dy;
-      if(xx<0||yy<0||xx>=n||yy>=n)continue;
-      const k=yy*n+xx;
-      w.a[k]+=times;
-      if(w.a[k]>=threshold&&!queued[k]){queued[k]=1;queue.push(k);}
-    }
-  }
+  if(w.mode!=='sand'||x<0||y<0||x>=w.n||y>=w.n)return;
+  const index=y*w.n+x;
+  w.a[index]+=amount;enqueueSand(w,index);
   w.ticks+=amount;
+  relaxSand(w,1800);
+}
+export function relaxSand(w,budget=4500) {
+  if(w.mode!=='sand')return 0;
+  const n=w.n,dirs=w.params.neighbors===8?DIR8:DIR4,threshold=dirs.length;
+  let count=0;
+  while(w.qHead<w.queue.length && count<budget){
+    const index=w.queue[w.qHead++];w.queued[index]=0;
+    const v=w.a[index],times=Math.floor(v/threshold);
+    if(times===0)continue;
+    w.a[index]=v%threshold;
+    const px=index%n,py=Math.floor(index/n);
+    for(const [dx,dy] of dirs){
+      const x=px+dx,y=py+dy;
+      if(x<0||y<0||x>=n||y>=n)continue;
+      const k=y*n+x;
+      w.a[k]+=times;
+      if(w.a[k]>=threshold)enqueueSand(w,k);
+    }
+    count++;
+  }
+  if(w.qHead>=w.queue.length){w.queue=[];w.qHead=0;}
+  else if(w.qHead>8192){w.queue=w.queue.slice(w.qHead);w.qHead=0;}
+  return count;
 }
 function stepAnt(w) {
   const n=w.n,r=w.params.rule;
@@ -94,14 +106,15 @@ export function stepWorld(w,amount=1) {
   amount=clamp(Math.floor(amount),1,500);
   if(w.mode==='sand'){
     const center=Math.floor(w.n/2);
-    for(let i=0;i<amount;i++)addSand(w,center,center,w.params.feed);
+    addSand(w,center,center,amount*w.params.feed);
+    relaxSand(w,4500);
   }else if(w.mode==='ant'){
     for(let i=0;i<amount;i++)stepAnt(w);
   }else for(let i=0;i<amount;i++)stepReaction(w);
 }
 export function inject(w,x,y) {
   x=clamp(Math.round(x),0,w.n-1);y=clamp(Math.round(y),0,w.n-1);
-  if(w.mode==='sand')addSand(w,x,y,Math.max(400,w.params.feed*18));
+  if(w.mode==='sand')addSand(w,x,y,Math.max(220,w.params.feed*8));
   if(w.mode==='ant'){if(w.ants.length<12){w.ants.push({x,y,d:Math.floor(random(w)*4)});w.params.ants=w.ants.length;}}
   if(w.mode==='reaction')seedReaction(w,x,y,6);
 }
