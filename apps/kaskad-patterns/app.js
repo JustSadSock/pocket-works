@@ -176,7 +176,118 @@ function range(name,title,min,max,step,value,format){
   return '<div class="setting"><label class="setting-top" for="law-'+name+'"><span>'+title+'</span><output id="out-'+name+'">'+text+'</output></label>'+
     '<input type="range" id="law-'+name+'" data-law="'+name+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+value+'"></div>';
 }
+
+const escapeText=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function recordHistory(label='Наблюдение'){
+  history.push({label,ticks:worlds[activeWorld]?.ticks||0,worlds:worlds.map(serialize),activeWorld,at:Date.now()});
+  if(history.length>24)history.shift();
+  $('historyCount').textContent=String(history.length);
+  lastHistoryAt=performance.now();
+}
+function refreshBrushes(){
+  if(mode!=='studio')return;
+  const w=worlds[activeWorld];if(!w)return;
+  const names=studioStateNames(w.params),colors=PALETTES[palette].colors;
+  brushState=Math.min(brushState,names.length-1);
+  $('editStates').innerHTML=names.map((name,i)=>{
+    const color=w.params.family==='spread'?[colors[0],colors[2],colors[5],colors[1]][i]:colors[Math.round(i/Math.max(1,names.length-1)*5)];
+    return '<button type="button" data-state="'+i+'" class="'+(brushState===i?'active':'')+'" aria-pressed="'+(brushState===i)+'"><i class="state-swatch" style="background:'+color+'"></i>'+escapeText(name)+'</button>';
+  }).join('');
+}
+function historyDialog(){
+  const w=worlds[activeWorld];let summary='';
+  if(mode==='studio'){
+    const stats=studioReport(w),colors=PALETTES[palette].colors;
+    const names=studioStateNames(w.params);
+    const segments=stats.counts.map((count,i)=>{
+      const c=w.params.family==='spread'?[colors[0],colors[2],colors[5],colors[1]][i]:colors[Math.round(i/Math.max(1,stats.counts.length-1)*5)];
+      return '<i title="'+escapeText(names[i])+': '+count+'" style="background:'+c+';width:'+(count/w.a.length*100).toFixed(3)+'%"></i>';
+    }).join('');
+    summary='<div class="studio-metrics"><div><b>'+number(stats.occupied)+'</b><small>занято клеток</small></div><div><b>'+stats.diversity+'/'+w.params.states+'</b><small>различных состояний</small></div><div><b>'+stats.entropy.toFixed(2)+'</b><small>энтропия, бит</small></div></div><div class="studio-bars">'+segments+'</div>';
+  }
+  const list=history.map((h,i)=>({h,i})).reverse().map(({h,i})=>
+    '<div class="history-row"><div><b>'+escapeText(h.label)+'</b><small>'+number(h.ticks)+' шагов · '+h.worlds.length+' мир(а)</small></div><button type="button" data-restore="'+i+'">Вернуться</button></div>').join('');
+  openSheet('ХРОНОЛОГИЯ ЭКСПЕРИМЕНТА','История и измерения',summary+'<p>Каждая отметка хранит точную конфигурацию поля и законов. Возврат отбросит более поздние отметки.</p>'+list,body=>{
+    body.querySelectorAll('[data-restore]').forEach(button=>button.addEventListener('click',()=>{
+      const index=Number(button.dataset.restore),entry=history[index];if(!entry)return;
+      try{
+        const restored=entry.worlds.map(deserialize);
+        if(!restored.length||restored.some(x=>x.mode!==mode))throw Error('Режим изменился');
+        worlds=restored;activeWorld=Math.min(restored.length-1,entry.activeWorld||0);history=history.slice(0,index+1);
+        running=false;editing=false;rebuildStage();updateUI();persist();closeSheet();notify('Возврат к '+number(entry.ticks)+' шагам');
+      }catch(error){notify('Не удалось восстановить: '+error.message);}
+    }));
+  });
+}
+function libraryDialog(){
+  const choices=Object.entries(STUDIO_PRESETS).map(([id,p])=>
+    '<button type="button" data-studio-preset="'+id+'" class="'+(worlds[activeWorld]?.params.name===p.name?'selected':'')+'">'+escapeText(p.name)+'<small>'+STUDIO_FAMILIES[p.family]+'</small></button>').join('');
+  openSheet('БИБЛИОТЕКА ПРАВИЛ','Семь исходных миров',
+    '<p>Каждый пример — работающий алгоритм. Выбирай образец, меняй его законы и рисуй свои начальные условия.</p><div class="workshop-presets">'+choices+'</div><div class="sheet-buttons"><button id="customFromHere" class="alt">Редактировать текущие законы</button></div>',body=>{
+      body.querySelectorAll('[data-studio-preset]').forEach(btn=>btn.addEventListener('click',()=>presetConfirm(btn.dataset.studioPreset)));
+      body.querySelector('#customFromHere').addEventListener('click',studioLaws);
+    });
+}
+function presetConfirm(id){
+  const preset=STUDIO_PRESETS[id];if(!preset)return;
+  openSheet('СМЕНА ЭКСПЕРИМЕНТА','Запустить «'+preset.name+'»?',
+    '<p>Начальные условия и правила выбранного мира заменятся. Его прежнее состояние останется в истории.</p><div class="sheet-buttons"><button id="applyStudioPreset">Запустить образец</button><button id="cancelStudioPreset" class="alt">Назад к примерам</button></div>',body=>{
+      body.querySelector('#applyStudioPreset').addEventListener('click',()=>{
+        recordHistory('Перед сменой сценария');worlds[activeWorld]=createWorld('studio',freshSeed(),id);running=false;editing=true;brushState=1;
+        rebuildStage();updateUI();persist();closeSheet();notify('Образец запущен · настрой правила');
+      });
+      body.querySelector('#cancelStudioPreset').addEventListener('click',libraryDialog);
+    });
+}
+function studioLaws(){
+  const w=worlds[activeWorld],r=w.params;
+  let html='<p>Это вычисляемые клеточные автоматы. Переключение типа закона сохраняет клетки, но меняет их смысл. Изменения видны в реальном времени.</p>';
+  if(worlds.length===2)html+='<div class="setting"><label class="setting-top" for="worldChoice">Настраиваемый мир</label><select id="worldChoice"><option value="0"'+(activeWorld===0?' selected':'')+'>Мир A</option><option value="1"'+(activeWorld===1?' selected':'')+'>Мир B</option></select></div>';
+  html+='<div class="setting"><label class="setting-top" for="law-family">Механика перехода</label><select id="law-family" data-law="family">'+Object.entries(STUDIO_FAMILIES).map(([id,name])=>'<option value="'+id+'"'+(r.family===id?' selected':'')+'>'+name+'</option>').join('')+'</select></div>';
+  html+='<div class="setting"><label class="setting-top" for="law-neighbors">Соседи</label><select id="law-neighbors" data-law="neighbors"><option value="4"'+(r.neighbors===4?' selected':'')+'>4 · стороны</option><option value="8"'+(r.neighbors===8?' selected':'')+'>8 · стороны и диагонали</option></select></div>';
+  html+='<div class="setting"><label class="setting-top" for="law-wrap">Граница поля</label><select id="law-wrap" data-law="wrap"><option value="true"'+(r.wrap?' selected':'')+'>Замкнутый мир · тор</option><option value="false"'+(!r.wrap?' selected':'')+'>Открытые края</option></select></div>';
+  if(r.family!=='spread')html+=range('states','Количество состояний',r.family==='cyclic'?3:2,6,1,r.states,v=>String(v));
+  if(r.family==='life')for(const [type,label] of [['birth','Рождение'],['survive','Выживание']]){
+    html+='<div class="setting"><div class="setting-top">'+label+' · число живых соседей</div><div class="rules-counts" role="group" aria-label="'+label+'">';
+    for(let i=0;i<=r.neighbors;i++)html+='<button type="button" class="rule-count '+(r[type].includes(i)?'selected':'')+'" data-count="'+i+'" data-count-type="'+type+'" aria-pressed="'+r[type].includes(i)+'">'+i+'</button>';
+    html+='</div></div>';
+  }
+  if(r.family==='cyclic')html+=range('threshold','Минимум соседей следующего вида',1,r.neighbors,1,r.threshold,v=>String(v));
+  if(r.family==='spread'){
+    html+=range('spread','Вероятность заражения',.001,1,.001,r.spread,v=>(v*100).toFixed(1)+'%');
+    html+=range('duration','Угасание активного',.001,1,.001,r.duration,v=>(v*100).toFixed(1)+'%');
+    html+=range('recover','Восстановление территории',0,1,.001,r.recover,v=>(v*100).toFixed(1)+'%');
+    html+=range('regrow','Появление нового ресурса',0,.08,.0005,r.regrow,v=>(v*100).toFixed(2)+'%');
+  }
+  html+='<div class="rule-note">Правила считаются синхронно: все клетки видят одно и то же предыдущее состояние. Можно экспериментировать и с остановленным полем.</div><div class="sheet-buttons"><button type="button" id="openStudioLibrary" class="alt">Библиотека примеров</button><button type="button" id="openStudioHistory" class="alt">Статистика и история</button></div>';
+  openSheet('РЕДАКТОР ПРАВИЛ','Законы · Мир '+(activeWorld===0?'A':'B'),html,body=>{
+    const choice=body.querySelector('#worldChoice');if(choice)choice.addEventListener('change',e=>{activeWorld=Number(e.target.value);updateSelection();updateHUD();studioLaws();});
+    body.querySelectorAll('[data-law]').forEach(input=>{
+      input.addEventListener('pointerdown',()=>recordHistory('Перед изменением закона'),{once:true});
+      input.addEventListener(input.tagName==='SELECT'?'change':'input',()=>{
+        const key=input.dataset.law,old=worlds[activeWorld],applied=setRule(old,key,input.value);
+        if(!applied)return;
+        if(key==='family'||key==='neighbors'||key==='states'){refreshBrushes();studioLaws();}
+        else if(input.tagName!=='SELECT'){
+          const output=body.querySelector('#out-'+key);if(output)output.textContent=key==='threshold'?String(old.params[key]):(old.params[key]*100).toFixed(key==='regrow'?2:1)+'%';
+        }
+        paintAll();updateHUD();
+      });
+    });
+    body.querySelectorAll('[data-count]').forEach(button=>button.addEventListener('click',()=>{
+      const key=button.dataset.countType,value=Number(button.dataset.count),current=worlds[activeWorld].params[key];
+      recordHistory('Правило '+(key==='birth'?'рождения':'выживания'));
+      const next=current.includes(value)?current.filter(n=>n!==value):[...current,value].sort((a,b)=>a-b);
+      setRule(worlds[activeWorld],key,next);button.classList.toggle('selected',next.includes(value));button.setAttribute('aria-pressed',String(next.includes(value)));
+      paintAll();updateHUD();
+    }));
+    body.querySelector('#openStudioLibrary').addEventListener('click',libraryDialog);
+    body.querySelector('#openStudioHistory').addEventListener('click',historyDialog);
+  });
+}
+
 function ruleDialog(){
+  if(mode==='studio')return studioLaws();
   const w=worlds[activeWorld];
   let markup='<p>Изменения применяются к живой системе. '+(worlds.length>1?'Выбранный мир можно менять независимо от второго.':'Попробуй поменять один закон и посмотреть на результат.')+'</p>';
   if(worlds.length===2)markup+='<div class="setting"><label class="setting-top" for="worldChoice">Настраиваемый мир</label><select id="worldChoice"><option value="0"'+(activeWorld===0?' selected':'')+'>Мир A</option><option value="1"'+(activeWorld===1?' selected':'')+'>Мир B</option></select></div>';
