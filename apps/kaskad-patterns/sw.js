@@ -1,7 +1,7 @@
 const PREFIX='kaskad-patterns-';
-const CACHE='kaskad-patterns-v1.0.0';
-const VERSION='1.0.0',RELEASE='2026-11-20';
-const CORE=['./','./index.html','./styles.css','./app.js','./engine.js','./renderer.js','./exporters.js','./manifest.webmanifest','./app.config.json','./sw.js','./icons/icon.svg','./icons/source.svg','./visual-direction.json','./art-bible.json','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.js','../../shared/update-manager.css'];
+const CACHE='kaskad-patterns-v1.1.0';
+const VERSION='1.1.0',RELEASE='2026-11-20';
+const CORE=['./','./index.html','./styles.css','./app.js','./engine.js','./studio.js','./renderer.js','./exporters.js','./manifest.webmanifest','./app.config.json','./sw.js','./icons/icon.svg','./icons/source.svg','./visual-direction.json','./art-bible.json','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.js','../../shared/update-manager.css'];
 const SCOPE=new URL('./',self.registration.scope);
 const URLS=new Map(CORE.map(p=>{const u=new URL(p,SCOPE);return[u.pathname,u.href];}));
 const unique=[...new Set(URLS.values())];
@@ -21,7 +21,7 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
 })()));
 self.addEventListener('message',event=>{
   if(event.data?.type==='GET_UPDATE_INFO'){
-    event.ports?.[0]?.postMessage({version:VERSION,releaseDate:RELEASE,releaseNotes:['Три модели эмерджентности, раздвоение миров, архив и экспорт.'],cacheProtocol:2,cacheName:CACHE});
+    event.ports?.[0]?.postMessage({version:VERSION,releaseDate:RELEASE,releaseNotes:['Мастерская законов: семь сценариев, редактор поля, история и JSON-файлы.'],cacheProtocol:2,cacheName:CACHE});
   }
   if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
 });
