@@ -32,7 +32,7 @@ test('Conway glider moves diagonally without side effects',()=>{
 });
 test('different neighborhood and birth/survival rules have a real effect',()=>{
   const a=createWorld('studio',14,'life');a.a.fill(0);
-  for(const [x,y] of [[47,48],[49,48],[48,47],[48,49]])paintStudio(a,x,y);
+  for(const [x,y] of [[47,48],[49,48],[48,47],[47,47]])paintStudio(a,x,y);
   const b=cloneWorld(a);
   setRule(b,'neighbors',4);
   stepWorld(a,1);stepWorld(b,1);
