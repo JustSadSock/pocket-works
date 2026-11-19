@@ -1,25 +1,21 @@
 import { cloneWorld, stepWorld } from './engine.js';
 import { rasterize } from './renderer.js';
 const little=(a,n)=>{a.push(n&255,(n>>8)&255);};
+// Intentionally bounded 9-bit GIF LZW blocks. Reset before a code-width change:
+// portable across iOS WebKit and desktop decoders, with no dictionary ambiguity.
 function lzw(indices) {
-  const bytes=[];let bits=0,pending=0,size=9,next=258;
-  const clear=256,end=257,dict=new Map();
-  const put=(code)=>{pending|=code<<bits;bits+=size;while(bits>=8){bytes.push(pending&255);pending>>>=8;bits-=8;}};
-  const reset=()=>{dict.clear();size=9;next=258;};
-  put(clear);
-  let previous=indices[0];
-  for(let i=1;i<indices.length;i++){
-    const value=indices[i],key=previous*256+value;
-    if(dict.has(key)){previous=dict.get(key);continue;}
-    put(previous);
-    if(next<4096){
-      dict.set(key,next++);
-      if(next===(1<<size)&&size<12)size++;
-    }else{put(clear);reset();}
-    previous=value;
+  const bytes=[];let bits=0,pending=0;
+  const put=code=>{
+    pending|=code<<bits;bits+=9;
+    while(bits>=8){bytes.push(pending&255);pending>>>=8;bits-=8;}
+  };
+  put(256);
+  for(let i=0;i<indices.length;i++){
+    if(i>0 && i%240===0)put(256);
+    put(indices[i]);
   }
-  put(previous);put(end);
-  if(bits>0)bytes.push(pending&255);
+  put(257);
+  if(bits)bytes.push(pending&255);
   return bytes;
 }
 export function makeGif(world,palette,frames=22) {
