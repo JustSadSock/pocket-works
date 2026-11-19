@@ -123,20 +123,24 @@ const bytesToB64 = bytes => {
 };
 const b64ToBytes = s => Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 export function serialize(w) {
-  const data=w.mode==='reaction'
-    ? (()=>{const u=new Uint8Array(w.a.length*2);for(let i=0;i<w.a.length;i++){u[i]=Math.round(clamp(w.a[i],0,1)*255);u[i+w.a.length]=Math.round(clamp(w.b[i],0,1)*255);}return u;})()
-    : Uint8Array.from(w.a, v=>clamp(v,0,255));
-  return {v:1,mode:w.mode,seed:w.seed,ticks:w.ticks,params:{...w.params},ants:w.ants.map(a=>({...a})),cells:bytesToB64(data)};
+  let bytes;
+  if(w.mode==='reaction'){
+    bytes=new Uint8Array(w.a.byteLength+w.b.byteLength);
+    bytes.set(new Uint8Array(w.a.buffer,w.a.byteOffset,w.a.byteLength));
+    bytes.set(new Uint8Array(w.b.buffer,w.b.byteOffset,w.b.byteLength),w.a.byteLength);
+  }else bytes=new Uint8Array(w.a.buffer,w.a.byteOffset,w.a.byteLength).slice();
+  return {v:2,mode:w.mode,seed:w.seed,ticks:w.ticks,params:{...w.params},ants:w.ants.map(a=>({...a})),cells:bytesToB64(bytes)};
 }
 export function deserialize(snapshot) {
-  if(!snapshot||snapshot.v!==1||!MODES[snapshot.mode]||typeof snapshot.cells!=='string')throw Error('Несовместимое сохранение');
-  const mode=snapshot.mode,n=MODES[mode].size,data=b64ToBytes(snapshot.cells);
-  if(data.length!==n*n*(mode==='reaction'?2:1))throw Error('Повреждённый мир');
+  if(!snapshot||snapshot.v!==2||!MODES[snapshot.mode]||typeof snapshot.cells!=='string')throw Error('Несовместимое сохранение');
+  const mode=snapshot.mode,n=MODES[mode].size,data=b64ToBytes(snapshot.cells),length=n*n;
+  if(data.length!==length*(mode==='reaction'?8:mode==='sand'?2:1))throw Error('Повреждённый мир');
   const w={mode,n,seed:Number(snapshot.seed)|0,ticks:clamp(Number(snapshot.ticks)||0,0,1e12),params:defaults(mode),ants:[]};
   if(mode==='reaction'){
-    w.a=new Float32Array(n*n);w.b=new Float32Array(n*n);w.na=new Float32Array(n*n);w.nb=new Float32Array(n*n);
-    for(let i=0;i<n*n;i++){w.a[i]=data[i]/255;w.b[i]=data[i+n*n]/255;}
-  }else w.a=mode==='sand'?Uint16Array.from(data):data;
+    w.a=new Float32Array(data.buffer.slice(0,length*4));
+    w.b=new Float32Array(data.buffer.slice(length*4,length*8));
+    w.na=new Float32Array(length);w.nb=new Float32Array(length);
+  }else w.a=mode==='sand'?new Uint16Array(data.buffer.slice(0)):data;
   for(const [k,v] of Object.entries(snapshot.params||{}))setRule(w,k,v);
   if(mode==='ant'){w.ants=(Array.isArray(snapshot.ants)?snapshot.ants:[]).slice(0,12).filter(a=>Number.isInteger(a.x)&&Number.isInteger(a.y)&&a.x>=0&&a.x<n&&a.y>=0&&a.y<n&&Number.isInteger(a.d)&&a.d>=0&&a.d<4).map(a=>({...a}));if(!w.ants.length)w.ants.push({x:n>>1,y:n>>1,d:0});w.params.ants=w.ants.length;}
   return w;
