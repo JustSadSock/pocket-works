@@ -1,4 +1,5 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { MODES,createWorld,stepWorld,inject,setRule,mutate,serialize,deserialize,cloneWorld,density } from './engine.js';
 import { PALETTES,paint } from './renderer.js';
 import { STUDIO_PRESETS,STUDIO_FAMILIES,studioStateNames,paintStudio,scatterStudio,studioReport } from './studio.js';
@@ -502,3 +503,15 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)persist();e
 window.addEventListener('pagehide',persist);
 setInterval(()=>{if(!document.hidden)persist();},9000);
 load();if(!history.length)recordHistory('Начало наблюдения');rebuildStage();updateUI();requestAnimationFrame(animate);
+createWorkshopMode({
+  appName:'Каскад: Узоры',
+  version:'1.1.0',
+  cachePrefix: 'kaskad-patterns-',
+  storageNamespace: 'pocket-works:kaskad-patterns',
+  onReset(){
+    localStorage.removeItem(KEY);
+    modeCache={};archive=[];history=[];mode='sand';
+    worlds=[createWorld('sand',freshSeed())];running=true;speed=3;palette='mineral';activeWorld=0;editing=false;
+    recordHistory('Новый сеанс');rebuildStage();updateUI();notify('Данные Каскада сброшены');
+  }
+});
