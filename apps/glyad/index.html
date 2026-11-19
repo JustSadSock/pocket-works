@@ -13,6 +13,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 <link rel="stylesheet" href="./styles.css">
 <title>ГЛЯДЬ — оптическая мастерская</title>
 </head>
@@ -21,7 +22,7 @@
 <header class="mast">
  <a class="back" href="../../" data-app-control data-native-press>← Pocket Works</a>
  <div class="brand"><svg aria-hidden="true" viewBox="0 0 64 64"><path d="M5 32Q32 3 59 32Q32 61 5 32Z" fill="none" stroke="currentColor" stroke-width="4"/><circle cx="32" cy="32" r="13" fill="#ce5a37"/><circle cx="32" cy="32" r="5" fill="#dbe9e1"/></svg><div><h1>ГЛЯДЬ</h1><p>мастерская второго взгляда</p></div></div>
- <button class="plain-button help" id="help" data-native-press type="button">Как увидеть 3D <span aria-hidden="true">↗</span></button>
+ <div class="mast-actions"><button class="workshop-trigger" type="button" data-workshop-trigger data-native-press aria-label="Мастерская" title="Мастерская"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M7 4v6M4 17h16M17 14v6"/><circle cx="7" cy="7" r="2.5" fill="var(--paper)"/><circle cx="17" cy="17" r="2.5" fill="var(--paper)"/></svg></button><button class="plain-button help" id="help" data-native-press type="button">Как увидеть 3D <span aria-hidden="true">↗</span></button></div>
 </header>
 <section class="work" aria-label="Рабочее пространство">
  <div class="worktop">
