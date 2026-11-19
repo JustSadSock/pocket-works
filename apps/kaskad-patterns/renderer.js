@@ -25,6 +25,13 @@ export function rasterize(world,palette='mineral'){
         if(x>=0&&x<n&&y>=0&&y<n)assign(y*n+x,dx===0&&dy===0?[255,248,220]:c[5]);
       }
     }
+  }else if(world.mode==='studio'){
+    const r=world.params,m=r.states;
+    for(let i=0;i<n*n;i++){
+      const v=world.a[i];
+      if(r.family==='spread')assign(i,v===0?c[0]:v===1?c[2]:v===2?c[5]:c[1]);
+      else assign(i,v===0&&r.family==='life'?c[0]:c[Math.round(v/(m-1)*5)]);
+    }
   }else{
     for(let i=0;i<n*n;i++){
       const t=clamp(world.b[i]*3,0,1)*5,k=Math.min(4,Math.floor(t)),f=t-k;
