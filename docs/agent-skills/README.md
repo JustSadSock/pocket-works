@@ -14,6 +14,7 @@ For any task that creates or materially changes visible output:
    - `GAME-UI.md` for HUDs, menus, overlays, inventory, dialogue, controls, onboarding, and other in-game UI.
    - `MOTION-GAME-FEEL.md` for animation, transitions, VFX, hit feedback, tactile response, camera response, or sound-linked motion.
    - `GESTURES.md` for drag, swipe, fling, gestures on sheets/cards, hold-to-confirm, touch conflicts, or broken gesture physics and performance.
+   - `UNSLOP.md` for all new or materially redesigned app interfaces and for polishing generic or inconsistent screens; audit the rendered UI and refine it without losing product identity.
    - `3D-SCENE.md` for WebGL/Babylon/Godot scenes, authored models, lighting, materials, camera composition, or environmental dressing.
 3. Read `AI-VISUAL-PRODUCTION.md` when an AI agent authors, revises or selects pixel art, sprites, SVG, 2.5D or 3D assets. It defines the medium choice, editable-source pipeline, provenance and in-game visual acceptance contract.
 4. Read `VISUAL-QA.md` before final sign-off.
@@ -30,6 +31,7 @@ The guidance was synthesized from:
 - Impeccable by Paul Bakaus, especially its distinction between product operation, visual craft, audit, polish, layout, motion, and responsive adaptation.
 - Community UI/UX agent-skill patterns that separate design tokens, accessibility, layout, typography, motion, and visual QA.
 - Public game-development agent skills covering game feel/juice and browser-game UI.
+- Damir Sokolovsky's Unslop skill (CC BY 4.0): product-specific visual direction, systematic UI audit, and ordered refinement passes. Credit: https://heydamir.design/unslop .
 - Emil Kowalski's Gestures skill (MIT, 2026): direct pointer tracking, velocity-aware release, interruptibility, linked drag progress and accessible touch interactions. Pocket Works implements these principles in framework-neutral guidance.
 - Practitioner reports from Claude/Codex users: use concrete references and anti-references, define tokens before broad implementation, keep art data separate from game logic, constrain palette and dimensions for procedural/pixel art, and use screenshot review instead of trusting code-only completion.
 
@@ -52,6 +54,7 @@ Reference material:
 - https://github.com/anthropics/claude-code/blob/main/plugins/frontend-design/skills/frontend-design/SKILL.md
 - https://github.com/pbakaus/impeccable
 - https://github.com/emilkowalski/skills/blob/main/skills/gestures/SKILL.md
+- https://github.com/heydamir/unslop/blob/main/skills/unslop/SKILL.md
 - https://github.com/gamedev-skills/awesome-gamedev-agent-skills/blob/main/skills/disciplines/game-feel/SKILL.md
 - https://github.com/openai/plugins/blob/main/plugins/game-studio/skills/game-ui-frontend/SKILL.md
 - https://www.reddit.com/r/ClaudeAI/comments/1q4l76k/
