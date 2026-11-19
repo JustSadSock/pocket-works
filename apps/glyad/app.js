@@ -72,8 +72,8 @@ requestAnimationFrame(()=>repaint());announce('Рисуй по рельефу ·
 createWorkshopMode({
   appName:'ГЛЯДЬ',
   version:'1.0.0',
-  cachePrefix:'glyad-',
-  storageNamespace:'pocket-works:glyad',
+  cachePrefix: 'glyad-',
+  storageNamespace: 'pocket-works:glyad',
   onReset(){
     localStorage.removeItem(KEY);
     layer=stamp('heart');
