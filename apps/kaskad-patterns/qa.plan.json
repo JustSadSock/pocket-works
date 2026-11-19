@@ -40,6 +40,54 @@
         },
         {
           "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#closeSheet"
+        },
+        {
+          "action": "click",
+          "selector": "[data-mode=\"ant\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-mode=\"reaction\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#focusBtn"
+        },
+        {
+          "action": "visible",
+          "selector": ".focus-mode"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#focusBtn"
+        },
+        {
+          "action": "click",
+          "selector": "#saveBtn"
+        },
+        {
+          "action": "click",
+          "selector": "#galleryBtn"
+        },
+        {
+          "action": "visible",
+          "selector": ".gallery-row"
+        },
+        {
+          "action": "screenshot"
         }
       ]
     }
