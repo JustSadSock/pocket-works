@@ -121,7 +121,12 @@ export function inject(w,x,y) {
 export function setRule(w,key,value) {
   if(w.mode==='sand'){
     if(key==='feed')w.params.feed=clamp(Math.round(Number(value)),10,800);
-    if(key==='neighbors' && [4,8].includes(Number(value))){w.params.neighbors=Number(value);if(Number(value)===4)for(let i=0;i<w.a.length;i++)if(w.a[i]>=4){const x=i%w.n,y=(i/w.n)|0;const count=w.a[i];w.a[i]=0;addSand(w,x,y,count);}}
+    if(key==='neighbors' && [4,8].includes(Number(value))){
+      w.params.neighbors=Number(value);
+      const threshold=w.params.neighbors;
+      for(let i=0;i<w.a.length;i++)if(w.a[i]>=threshold)enqueueSand(w,i);
+      relaxSand(w,4500);
+    }
   }
   if(w.mode==='ant'){
     if(key==='rule'&&/^[RL]{2,8}$/.test(String(value))){w.params.rule=value;for(let i=0;i<w.a.length;i++)w.a[i]%=value.length;}
@@ -151,19 +156,27 @@ export function serialize(w) {
     bytes.set(new Uint8Array(w.a.buffer,w.a.byteOffset,w.a.byteLength));
     bytes.set(new Uint8Array(w.b.buffer,w.b.byteOffset,w.b.byteLength),w.a.byteLength);
   }else bytes=new Uint8Array(w.a.buffer,w.a.byteOffset,w.a.byteLength).slice();
-  return {v:2,mode:w.mode,seed:w.seed,ticks:w.ticks,params:{...w.params},ants:w.ants.map(a=>({...a})),cells:bytesToB64(bytes)};
+  return {v:2,mode:w.mode,seed:w.seed,ticks:w.ticks,params:{...w.params},ants:w.ants.map(a=>({...a})),cells:bytesToB64(bytes),...(w.mode==='sand'?{pending:w.queue.slice(w.qHead)}:{})};
 }
 export function deserialize(snapshot) {
   if(!snapshot||snapshot.v!==2||!MODES[snapshot.mode]||typeof snapshot.cells!=='string')throw Error('Несовместимое сохранение');
   const mode=snapshot.mode,n=MODES[mode].size,data=b64ToBytes(snapshot.cells),length=n*n;
-  if(data.length!==length*(mode==='reaction'?8:mode==='sand'?2:1))throw Error('Повреждённый мир');
+  if(data.length!==length*(mode==='reaction'?8:mode==='sand'?4:1))throw Error('Повреждённый мир');
   const w={mode,n,seed:Number(snapshot.seed)|0,ticks:clamp(Number(snapshot.ticks)||0,0,1e12),params:defaults(mode),ants:[]};
   if(mode==='reaction'){
     w.a=new Float32Array(data.buffer.slice(0,length*4));
     w.b=new Float32Array(data.buffer.slice(length*4,length*8));
     w.na=new Float32Array(length);w.nb=new Float32Array(length);
-  }else w.a=mode==='sand'?new Uint16Array(data.buffer.slice(0)):data;
-  for(const [k,v] of Object.entries(snapshot.params||{}))setRule(w,k,v);
+  }else w.a=mode==='sand'?new Uint32Array(data.buffer.slice(0)):data;
+  if(mode==='sand')initSandQueue(w);
+  for(const [k,v] of Object.entries(snapshot.params||{})){
+    if(mode==='sand' && k==='neighbors' && [4,8].includes(Number(v))){w.params.neighbors=Number(v);continue;}
+    setRule(w,k,v);
+  }
+  if(mode==='sand'){
+    if(Array.isArray(snapshot.pending))for(const i of snapshot.pending){if(Number.isInteger(i)&&i>=0&&i<length)enqueueSand(w,i);}
+    for(let i=0;i<length;i++)if(w.a[i]>=w.params.neighbors)enqueueSand(w,i);
+  }
   if(mode==='ant'){w.ants=(Array.isArray(snapshot.ants)?snapshot.ants:[]).slice(0,12).filter(a=>Number.isInteger(a.x)&&Number.isInteger(a.y)&&a.x>=0&&a.x<n&&a.y>=0&&a.y<n&&Number.isInteger(a.d)&&a.d>=0&&a.d<4).map(a=>({...a}));if(!w.ants.length)w.ants.push({x:n>>1,y:n>>1,d:0});w.params.ants=w.ants.length;}
   w.seed=Number(snapshot.seed)|0;
   return w;
