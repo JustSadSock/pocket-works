@@ -180,7 +180,7 @@ function range(name,title,min,max,step,value,format){
 const escapeText=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function recordHistory(label='Наблюдение'){
   history.push({label,ticks:worlds[activeWorld]?.ticks||0,worlds:worlds.map(serialize),activeWorld,at:Date.now()});
-  if(history.length>24)history.shift();
+  if(history.length>(mode==='reaction'?6:24))history.shift();
   $('historyCount').textContent=String(history.length);
   lastHistoryAt=performance.now();
 }
@@ -347,22 +347,45 @@ function paletteDialog(){
     body.querySelectorAll('[data-palette]').forEach(b=>b.addEventListener('click',()=>{palette=b.dataset.palette;paintAll();updateUI();persist();closeSheet();notify('Палитра: '+PALETTES[palette].label);}));
   });
 }
-function saveDiscovery(){
+function saveDiscovery(customName=''){
   try{
     paintAll();
     const thumb=stageCanvases[activeWorld]?.toDataURL('image/png')||'';
     const stamp=new Date();
-    archive.unshift({id:String(Date.now())+'-'+Math.floor(Math.random()*10000),mode,title:MODES[mode].label+' · '+stamp.toLocaleDateString('ru-RU',{day:'numeric',month:'short'}),ticks:worlds[activeWorld].ticks,created:stamp.toISOString(),palette,preview:thumb,worlds:worlds.map(serialize)});
+    archive.unshift({id:String(Date.now())+'-'+Math.floor(Math.random()*10000),mode,title:customName.trim().slice(0,64)||MODES[mode].label+' · '+stamp.toLocaleDateString('ru-RU',{day:'numeric',month:'short'}),ticks:worlds[activeWorld].ticks,created:stamp.toISOString(),palette,preview:thumb,worlds:worlds.map(serialize)});
     archive=archive.slice(0,8);persist();updateUI();notify('Открытие сохранено в архиве');
   }catch(error){notify('Не удалось сохранить: '+error.message);}
 }
+function saveScenarioDialog(){
+  openSheet('СОХРАНЕНИЕ СЦЕНАРИЯ','Назови своё открытие',
+    '<p>Сохраняются клетки, правила, шаги и обе ветви мира, если включено сравнение.</p><div class="setting"><label class="setting-top" for="scenarioName">Название сценария</label><input type="text" id="scenarioName" maxlength="64" value="Мой эксперимент" autocomplete="off"></div><div class="sheet-buttons"><button id="confirmSave">Сохранить в архив</button><button id="cancelSave" class="alt">Отмена</button></div>',body=>{
+      const field=body.querySelector('#scenarioName');
+      const save=()=>{saveDiscovery(field.value);closeSheet();};
+      body.querySelector('#confirmSave').addEventListener('click',save);
+      field.addEventListener('keydown',e=>{if(e.key==='Enter')save();});
+      body.querySelector('#cancelSave').addEventListener('click',closeSheet);
+  });
+}
 function galleryDialog(){
   const html=archive.length?archive.map(item=>
-    '<article class="gallery-row" data-entry="'+item.id+'"><img src="'+item.preview+'" alt="Снимок сохранённой симуляции"><div><h3>'+item.title+'</h3><p>'+number(item.ticks)+' шагов · '+(item.worlds.length===2?'два мира':'один мир')+'</p></div><div class="gallery-actions"><button type="button" data-load="'+item.id+'">Открыть</button><button type="button" data-delete="'+item.id+'">Удалить</button></div></article>').join(''):'<div class="empty-note">Пока нет сохранённых миров.<br>Нажми «Сохранить открытие» под симуляцией.</div>';
-  openSheet('МОИ ОТКРЫТИЯ','Архив миров',html,body=>{
+    '<article class="gallery-row" data-entry="'+escapeText(item.id)+'"><img src="'+escapeText(item.preview)+'" alt="Снимок сохранённой симуляции"><div><h3>'+escapeText(item.title)+'</h3><p>'+number(item.ticks)+' шагов · '+(item.worlds.length===2?'два мира':'один мир')+'</p></div><div class="gallery-actions"><button type="button" data-load="'+item.id+'">Открыть</button><button type="button" data-delete="'+item.id+'">Удалить</button></div></article>').join(''):'<div class="empty-note">Пока нет сохранённых миров.<br>Нажми «Сохранить открытие» под симуляцией.</div>';
+  const importer='<div class="workshop-file"><label for="importScenario">Открыть сценарий JSON с устройства</label><input type="file" id="importScenario" accept="application/json,.json" aria-label="Импорт сценария"></div>';
+  openSheet('МОИ ОТКРЫТИЯ','Архив миров',importer+html,body=>{
+    body.querySelector('#importScenario').addEventListener('change',async event=>{
+      const file=event.target.files?.[0];if(!file)return;
+      try{
+        if(file.size>2000000)throw Error('Файл больше 2 МБ');
+        const data=JSON.parse(await file.text());
+        if(data.format!=='kaskad-studio-scenario'||data.version!==1||!Array.isArray(data.worlds)||data.worlds.length<1||data.worlds.length>2)throw Error('Неизвестный формат');
+        const restored=data.worlds.map(deserialize);
+        if(restored.some(w=>w.mode!=='studio'))throw Error('Это не сценарий Мастерской');
+        mode='studio';worlds=restored;activeWorld=Math.min(restored.length-1,Number(data.activeWorld)||0);running=false;editing=true;history=[];
+        rebuildStage();recordHistory('Импорт сценария');updateUI();persist();closeSheet();notify('Сценарий импортирован');
+      }catch(error){notify('Не удалось импортировать: '+error.message);event.target.value='';}
+    });
     body.querySelectorAll('[data-load]').forEach(b=>b.addEventListener('click',()=>{
       const item=archive.find(s=>s.id===b.dataset.load);if(!item)return;
-      try{mode=item.mode;worlds=item.worlds.map(deserialize);palette=item.palette in PALETTES?item.palette:palette;activeWorld=0;running=false;rebuildStage();updateUI();persist();closeSheet();notify('Мир восстановлен · пауза');}catch{notify('Сохранение повреждено');}
+      try{mode=item.mode;worlds=item.worlds.map(deserialize);palette=item.palette in PALETTES?item.palette:palette;activeWorld=0;running=false;editing=mode==='studio';history=[];rebuildStage();recordHistory('Мир из архива');updateUI();persist();closeSheet();notify('Мир восстановлен · пауза');}catch{notify('Сохранение повреждено');}
     }));
     body.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>{
       const item=archive.find(s=>s.id===b.dataset.delete);if(!item)return;
@@ -375,11 +398,12 @@ function galleryDialog(){
 }
 function splitWorld(){
   if(worlds.length===1){
-    worlds.push(mutate(worlds[0]));activeWorld=1;rebuildStage();updateUI();persist();notify('Мир B создан с изменённым законом');return;
+    recordHistory('До раздвоения');
+    worlds.push(mutate(worlds[0]));activeWorld=1;recordHistory('Мир B · мутация');rebuildStage();updateUI();persist();notify('Мир B создан с изменённым законом');return;
   }
   openSheet('РАЗДВОЕНИЕ','Какой мир оставить?','<p>Оба мира развивались независимо. Выбери один для продолжения наблюдения.</p><div class="sheet-buttons"><button id="keepA">Оставить A</button><button id="keepB">Оставить B</button><button id="stay" class="alt">Отмена</button></div>',body=>{
     for(let i=0;i<2;i++)body.querySelector(i?'#keepB':'#keepA').addEventListener('click',()=>{
-      worlds=[worlds[i]];activeWorld=0;rebuildStage();updateUI();persist();closeSheet();notify('Наблюдение продолжается');
+      recordHistory('До объединения');worlds=[worlds[i]];activeWorld=0;recordHistory('Продолжен мир '+(i===0?'A':'B'));rebuildStage();updateUI();persist();closeSheet();notify('Наблюдение продолжается');
     });
     body.querySelector('#stay').addEventListener('click',closeSheet);
   });
@@ -387,7 +411,7 @@ function splitWorld(){
 function resetDialog(){
   openSheet('НОВАЯ ВСЕЛЕННАЯ','Начать заново?','<p>Текущее состояние заменится новым миром. Перед этим можно сохранить открытие в архив.</p><div class="sheet-buttons"><button id="freshWorld">Создать новый мир</button><button id="saveFirst" class="alt">Сначала сохранить</button><button id="cancelReset" class="alt">Отмена</button></div>',body=>{
     body.querySelector('#freshWorld').addEventListener('click',()=>{
-      worlds=[createWorld(mode,freshSeed())];activeWorld=0;running=true;rebuildStage();updateUI();persist();closeSheet();notify('Запущена новая вселенная');
+      recordHistory('До нового мира');worlds=[createWorld(mode,freshSeed())];activeWorld=0;running=mode!=='studio';editing=mode==='studio';recordHistory('Новый мир');rebuildStage();updateUI();persist();closeSheet();notify('Запущена новая вселенная');
     });
     body.querySelector('#saveFirst').addEventListener('click',()=>{saveDiscovery();closeSheet();});
     body.querySelector('#cancelReset').addEventListener('click',closeSheet);
