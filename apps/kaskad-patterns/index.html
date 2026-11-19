@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#e8e6e0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="Каскад: Узоры — наблюдай за эмерджентностью и меняй законы собственной вселенной.">
+<title>Каскад: Узоры · Лаборатория эмерджентности</title>
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main class="app-shell" data-app-shell data-fullscreen-app data-ui>
+  <header class="topbar">
+    <a class="exit" href="../../" data-app-control data-native-press aria-label="Вернуться в Pocket Works"><span aria-hidden="true">‹</span><span>Pocket Works</span></a>
+    <div class="identity"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong>КАСКАД <small>УЗОРЫ</small></strong></div>
+    <button class="text-control" id="galleryBtn" type="button" data-native-press>Архив <span class="archive-indicator" id="archiveCount">0</span></button>
+  </header>
+  <nav class="mode-strip" aria-label="Тип симуляции" id="modeTabs">
+    <button type="button" class="mode active" data-mode="sand" data-native-press><span class="mode-number">01</span> Песок</button>
+    <button type="button" class="mode" data-mode="ant" data-native-press><span class="mode-number">02</span> Муравьи</button>
+    <button type="button" class="mode" data-mode="reaction" data-native-press><span class="mode-number">03</span> Реакции</button>
+    <span class="mode-hint">ЛАБОРАТОРИЯ ЛОКАЛЬНЫХ ПРАВИЛ</span>
+  </nav>
+  <section id="stage" class="stage" aria-label="Интерактивные поля симуляций" data-gesture-surface data-block-callout></section>
+  <footer class="control-desk">
+    <div class="readout">
+      <div class="readout-main"><span class="live-dot" id="liveDot"></span><b id="worldStatus">МИР A · РАЗВИВАЕТСЯ</b><span id="worldCount">0 шагов</span></div>
+      <span class="readout-note" id="worldHint">Коснись поля, чтобы добавить песок</span>
+    </div>
+    <div class="transport">
+      <button type="button" class="primary-action" id="playBtn" data-native-press><span id="playSymbol">Ⅱ</span><span id="playText">Пауза</span></button>
+      <button type="button" class="tool-action" id="stepBtn" data-native-press aria-label="Один шаг"><span class="button-glyph">↦</span><span>Шаг</span></button>
+      <label class="tempo-box"><span>СКОРОСТЬ <b id="speedLabel">×8</b></span><input type="range" id="speed" min="1" max="6" step="1" value="3" aria-label="Скорость симуляции"></label>
+      <button type="button" class="tool-action" id="splitBtn" data-native-press><span class="button-glyph">⧉</span><span id="splitText">Раздвоить</span></button>
+      <button type="button" class="tool-action" id="lawsBtn" data-native-press><span class="button-glyph">⚙</span><span>Законы</span></button>
+    </div>
+    <div class="secondary-actions">
+      <button id="paletteBtn" type="button" data-native-press>Палитра <span class="mini-swatch" id="paletteSwatch"></span></button>
+      <button id="saveBtn" type="button" data-native-press>Сохранить открытие</button>
+      <button id="exportBtn" type="button" data-native-press>Экспорт ↗</button>
+      <button id="resetBtn" type="button" data-native-press>Новый мир</button>
+    </div>
+  </footer>
+  <div id="overlay" class="overlay" hidden>
+    <div class="backdrop" id="backdrop"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+      <header class="sheet-head"><div><span class="eyebrow" id="sheetKicker">НАСТРОЙКИ МИРА</span><h2 id="sheetTitle">Законы</h2></div><button class="close-btn" id="closeSheet" aria-label="Закрыть" type="button">×</button></header>
+      <div id="sheetBody" class="sheet-body"></div>
+    </section>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</main>
+<script type="module" src="./app.js"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Каскад: Узоры" data-app-version="1.0.0"></script>
+</body>
+</html>
