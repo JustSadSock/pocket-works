@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "skol-siege",
+  "name": "СКОЛ",
+  "shortName": "СКОЛ",
+  "description": "Настольная средневековая осада: наведи требушет, учти ветер, пробей ворота и обрушь донжон.",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-19",
+  "releaseDateTime": "2026-11-19T19:55:00+02:00",
+  "changelog": [
+    "Три тактические осады с разрушаемой каменной крепостью и разными ветрами.",
+    "Три боеприпаса, жестовое наведение, физический полёт, каменные осколки и звуковой отклик.",
+    "Сохранение прохождения, рекорды, управление с клавиатуры и автономная работа."
+  ],
+  "status": "active",
+  "preset": "game-2d",
+  "accent": "#a65038",
+  "backgroundColor": "#d6c39c",
+  "themeColor": "#d6c39c",
+  "orientation": "portrait",
+  "cacheName": "skol-siege-v1.0.0",
+  "storageNamespace": "pocket-works:skol-siege",
+  "tags": ["game", "strategy", "siege", "medieval", "gestures", "canvas", "offline", "PWA"],
+  "order": 460
+}

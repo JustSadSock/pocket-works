@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "suites": [
+    { "id": "model", "kind": "node-test", "tier": "smoke", "files": ["tests/model.test.mjs"] },
+    {
+      "id": "visual", "kind": "visual", "tier": "smoke", "viewports": ["mobile", "desktop"], "engines": ["chromium", "webkit"], "ready": "#scene",
+      "steps": [
+        { "action": "screenshot" },
+        { "action": "click", "selector": "#begin" },
+        { "action": "visible", "selector": "#fire" },
+        { "action": "screenshot" },
+        { "action": "click", "selector": "#fire" },
+        { "action": "screenshot" },
+        { "action": "click", "selector": "#menu" },
+        { "action": "visible", "selector": "#menu-overlay" },
+        { "action": "screenshot" }
+      ]
+    }
+  ]
+}

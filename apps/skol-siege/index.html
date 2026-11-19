@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#d6c39c">
+<meta name="description" content="СКОЛ — миниатюрная тактическая осада. Наведи орудие, учти ветер и обрушь цитадель.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="СКОЛ">
+<title>СКОЛ — настольная осада · Pocket Works</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body data-fullscreen-app>
+<main id="app" class="game" data-app-shell>
+  <canvas id="scene" aria-label="Трёхмерная миниатюрная крепость. Коснитесь крепости или проведите по полю, чтобы прицелиться." tabindex="0" data-gesture-surface data-block-callout></canvas>
+  <div class="paper-vignette" aria-hidden="true"></div>
+  <header class="mast">
+    <a class="back" href="../../" aria-label="Вернуться в Pocket Works" data-app-control data-native-press>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5 7.5 12l7 7M8 12h13"/></svg>
+      <span>POCKET WORKS</span>
+    </a>
+    <div class="brand" aria-label="СКОЛ — настольная осада">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M6 28V12h6V7h7v5h5V7h7v21H6Z"/><path d="m18 13-4 8 5-1-3 9"/></svg></span>
+      <span class="brand-word">СКОЛ</span>
+      <small>настольная осада</small>
+    </div>
+    <div class="mast-tools">
+      <button class="tool-button" id="sound" type="button" aria-label="Выключить звук" aria-pressed="true" data-native-press>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="waves" d="M17 9q4 3 0 6M20 6q6 6 0 12"/><path class="muted-stroke" d="m17 8 5 8"/></svg>
+      </button>
+      <button class="tool-button" id="menu" type="button" aria-label="Карты и настройки" data-native-press>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="objective" aria-live="polite">
+    <span class="objective-index" id="act">ОСАДА 01 / 03</span>
+    <h1 id="mission">Каменные врата</h1>
+    <p id="mission-hint">Врата защищают донжон</p>
+    <div class="goal-rail" aria-label="Прочность главных укреплений">
+      <div><span>Врата</span><span class="bars" id="gate-bars"></span></div>
+      <div><span>Донжон</span><span class="bars" id="keep-bars"></span></div>
+    </div>
+  </section>
+
+  <div class="wind-box" aria-live="polite"><span>ВЕТЕР</span><strong id="wind-number">0</strong><svg class="wind-arrow" id="wind-arrow" viewBox="0 0 46 15" aria-hidden="true"><path d="M2 7.5h40m-9-6 9 6-9 6"/></svg></div>
+  <div class="aim-note" id="aim-note">Коснись стены, чтобы навести орудие</div>
+  <div class="feedback" id="feedback" role="status" aria-live="polite" hidden></div>
+
+  <section class="ordnance" aria-label="Боеприпасы и выстрел">
+    <div class="ordnance-types" role="group" aria-label="Выбор боеприпаса">
+      <button class="round is-selected" id="ammo-stone" type="button" data-ammo="stone" aria-pressed="true" data-native-press>
+        <span class="round-symbol stone" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="m8 13 11-8 13 6 4 14-12 11-15-6-5-10z"/><path d="m8 13 12 5 12-7m-12 7 4 18m-4-18 16 7"/></svg></span>
+        <span class="round-name">Камень</span><span class="count" id="stock-stone">3</span>
+      </button>
+      <button class="round" id="ammo-fire" type="button" data-ammo="fire" aria-pressed="false" data-native-press>
+        <span class="round-symbol fire" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M10 15h20l2 16-12 5-12-5zM12 15l-2-7h20l-2 7"/><path d="M20 5q-8 5 0 12 8-4 0-12Z"/></svg></span>
+        <span class="round-name">Горшок</span><span class="count" id="stock-fire">1</span>
+      </button>
+      <button class="round" id="ammo-bolt" type="button" data-ammo="bolt" aria-pressed="false" data-native-press>
+        <span class="round-symbol bolt" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M6 21h25l5-8-1 16-4-8M13 16v10M7 12l6 4M7 30l6-4"/></svg></span>
+        <span class="round-name">Болт</span><span class="count" id="stock-bolt">1</span>
+      </button>
+    </div>
+    <button class="fire-button" id="fire" type="button" data-native-press>
+      <span class="fire-button__kicker" id="shot-count">5 ЗАРЯДОВ</span><span class="fire-button__text">ВЫСТРЕЛ</span>
+      <svg viewBox="0 0 28 28" aria-hidden="true"><path d="M3 14h21m-8-8 8 8-8 8"/></svg>
+    </button>
+  </section>
+
+  <div class="veil" id="intro">
+    <section class="sheet intro-sheet" role="dialog" aria-modal="true" aria-labelledby="intro-title">
+      <p class="eyebrow">ПОЛЕВАЯ МИНИАТЮРА · I</p>
+      <h2 id="intro-title">Один удачный<br>пролом решает всё.</h2>
+      <p>Наводи прицел прямо на крепость. Учитывай ветер и береги снаряды. Сначала разбей врата, потом донжон.</p>
+      <button class="primary" id="begin" type="button" data-native-press>НАЧАТЬ ОСАДУ <span aria-hidden="true">→</span></button>
+    </section>
+  </div>
+
+  <div class="veil" id="result" hidden>
+    <section class="sheet result-sheet" role="dialog" aria-modal="true" aria-labelledby="result-title">
+      <p class="eyebrow" id="result-kicker">КРЕПОСТЬ ПАЛА</p>
+      <h2 id="result-title">Пролом!</h2>
+      <p id="result-text">Осада завершена.</p>
+      <div class="result-stat"><span>Снарядов осталось</span><strong id="result-stock">0</strong></div>
+      <button class="primary" id="next" type="button" data-native-press>СЛЕДУЮЩАЯ КРЕПОСТЬ <span aria-hidden="true">→</span></button>
+      <button class="secondary" id="again" type="button" data-native-press>ПЕРЕИГРАТЬ ОСАДУ</button>
+    </section>
+  </div>
+
+  <div class="veil" id="menu-overlay" hidden>
+    <section class="sheet menu-sheet" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+      <div class="sheet-head"><p class="eyebrow">АРХИВ ПОХОДА</p><button class="close" id="close-menu" type="button" aria-label="Закрыть меню">×</button></div>
+      <h2 id="menu-title">Выбор осады</h2>
+      <div id="level-list" class="level-list"></div>
+      <button class="secondary" id="workshop-trigger" data-workshop-trigger type="button" data-native-press>Диагностика</button>
+      <button class="secondary reset" id="reset" type="button" data-native-press>СБРОСИТЬ ПРОГРЕСС</button>
+    </section>
+  </div>
+  <div class="veil confirm-veil" id="confirm" hidden>
+    <section class="sheet confirm-sheet" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <h2 id="confirm-title">Стереть прогресс?</h2>
+      <p>Открытые крепости и рекорды будут удалены.</p>
+      <button class="danger" id="confirm-reset" type="button">СБРОСИТЬ</button>
+      <button class="secondary" id="cancel-reset" type="button">ОТМЕНА</button>
+    </section>
+  </div>
+  <p class="sr-only" id="a11y" role="status" aria-live="polite"></p>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="СКОЛ" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

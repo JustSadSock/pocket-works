@@ -1,0 +1,14 @@
+{
+  "id": "/apps/skol-siege/",
+  "name": "СКОЛ — настольная осада",
+  "short_name": "СКОЛ",
+  "description": "Тактическая миниатюрная осада с ветром, ограниченными снарядами и разрушаемым замком.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#d6c39c",
+  "theme_color": "#d6c39c",
+  "icons": [{ "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
