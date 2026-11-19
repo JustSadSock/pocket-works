@@ -13,11 +13,11 @@
     "distinction": "Не дублирует «ПРЕЛОМ» (трассировка лучей), «N·SPACE» (геометрические проекции) и «ПАРАЛЛАКС» (управление линзой): генерирует настоящую скрытую пространственную картину, которую воспринимают два глаза."
   },
   "architecture": {
-    "spatialLayout": "paired-optical-plates",
-    "controlLocation": "below-artwork",
-    "navigation": "two-surface-toggle",
-    "chromeTopology": "technical-frame",
-    "dominantMotion": "instant-feedback",
+    "spatialLayout": "split-workspace",
+    "controlLocation": "direct-on-object",
+    "navigation": "editor-toolbox",
+    "chromeTopology": "tiled-grid",
+    "dominantMotion": "immediate",
     "primaryVerb": "Рисовать высоту и смотреть объём внутри стереограммы",
     "physicalFeedback": "Кисть изменяет карту под пальцем без инерции; результат синтезируется при завершении жеста.",
     "spatialRationale": "Соседние оптические листы дают мгновенное сравнение на ПК, на телефоне один лист сохраняет правильный масштаб для комфортного зрения.",
@@ -36,6 +36,16 @@
         "slug": "n-space",
         "spatialDifference": "Полутоновая матрица и зерно вместо векторной фигуры.",
         "interactionDifference": "Пользователь лепит произвольный рельеф вместо выбора измерения."
+      },
+      {
+        "slug": "skol-siege",
+        "spatialDifference": "Две печатные оптические пластины вместо открытой диорамы крепости.",
+        "interactionDifference": "Непрерывный рисунок глубины вместо прицельных выстрелов по замку."
+      },
+      {
+        "slug": "press",
+        "spatialDifference": "Точечные зрительные поверхности вместо списка файлов и операций сжатия.",
+        "interactionDifference": "Лепка стереорельефа вместо загрузки и обработки документов."
       }
     ]
   },
