@@ -9,7 +9,7 @@ function random(w) {let x=w.seed|0;x^=x<<13;x^=x>>>17;x^=x<<5;w.seed=x|0;return 
 function defaults(mode) {
   if(mode==='sand') return {feed:200,neighbors:4};
   if(mode==='ant') return {rule:'RL',ants:1};
-  return {feed:0.0367,kill:0.0649};
+  return {feed:0.0545,kill:0.062};
 }
 export function createWorld(mode='sand',seed=0x71b246a9) {
   if(!MODES[mode]) throw Error('Неизвестный мир');
@@ -75,8 +75,8 @@ function stepReaction(w) {
       const lapA= -a[i]+.2*(a[y*n+l]+a[y*n+r]+a[up*n+x]+a[down*n+x])+.05*(a[up*n+l]+a[up*n+r]+a[down*n+l]+a[down*n+r]);
       const lapB= -b[i]+.2*(b[y*n+l]+b[y*n+r]+b[up*n+x]+b[down*n+x])+.05*(b[up*n+l]+b[up*n+r]+b[down*n+l]+b[down*n+r]);
       const ab=a[i]*b[i]*b[i];
-      na[i]=clamp(a[i]+.95*(.16*lapA-ab+F*(1-a[i])),0,1);
-      nb[i]=clamp(b[i]+.95*(.08*lapB+ab-(K+F)*b[i]),0,1);
+      na[i]=clamp(a[i]+.95*(1.0*lapA-ab+F*(1-a[i])),0,1);
+      nb[i]=clamp(b[i]+.95*(.5*lapB+ab-(K+F)*b[i]),0,1);
     }
   }
   w.a=na;w.b=nb;w.na=a;w.nb=b;w.ticks++;
@@ -99,7 +99,7 @@ export function inject(w,x,y) {
 export function setRule(w,key,value) {
   if(w.mode==='sand'){
     if(key==='feed')w.params.feed=clamp(Math.round(Number(value)),10,800);
-    if(key==='neighbors' && [4,8].includes(Number(value))){w.params.neighbors=Number(value);if(value===4)for(let i=0;i<w.a.length;i++)if(w.a[i]>=4){const x=i%w.n,y=(i/w.n)|0;const count=w.a[i];w.a[i]=0;addSand(w,x,y,count);}}
+    if(key==='neighbors' && [4,8].includes(Number(value))){w.params.neighbors=Number(value);if(Number(value)===4)for(let i=0;i<w.a.length;i++)if(w.a[i]>=4){const x=i%w.n,y=(i/w.n)|0;const count=w.a[i];w.a[i]=0;addSand(w,x,y,count);}}
   }
   if(w.mode==='ant'){
     if(key==='rule'&&/^[RL]{2,8}$/.test(String(value))){w.params.rule=value;for(let i=0;i<w.a.length;i++)w.a[i]%=value.length;}
