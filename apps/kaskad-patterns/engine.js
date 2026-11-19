@@ -187,6 +187,7 @@ export function deserialize(snapshot) {
     for(let i=0;i<length;i++)if(w.a[i]>=w.params.neighbors)enqueueSand(w,i);
   }
   if(mode==='ant'){w.ants=(Array.isArray(snapshot.ants)?snapshot.ants:[]).slice(0,12).filter(a=>Number.isInteger(a.x)&&Number.isInteger(a.y)&&a.x>=0&&a.x<n&&a.y>=0&&a.y<n&&Number.isInteger(a.d)&&a.d>=0&&a.d<4).map(a=>({...a}));if(!w.ants.length)w.ants.push({x:n>>1,y:n>>1,d:0});w.params.ants=w.ants.length;}
+  if(mode==='studio')for(const cell of w.a)if(cell>=w.params.states)throw Error('Повреждённые состояния клеток');
   w.seed=Number(snapshot.seed)|0;
   return w;
 }
