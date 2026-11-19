@@ -1,19 +1,23 @@
-// Kaskad: three independent deterministic local-rule engines. No DOM or networking.
+// Kaskad: deterministic local-rule engines and the user-authored automata workshop.
+import {studioParams,seedStudio,stepStudio,setStudioRule,paintStudio,mutateStudio} from './studio.js';
 export const MODES = Object.freeze({
   sand: { label: 'Песок', size: 161 },
   ant: { label: 'Муравьи', size: 181 },
-  reaction: { label: 'Реакции', size: 128 }
+  reaction: { label: 'Реакции', size: 128 },
+  studio: { label: 'Мастерская', size: 96 }
 });
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 function random(w) {let x=w.seed|0;x^=x<<13;x^=x>>>17;x^=x<<5;w.seed=x|0;return (x>>>0)/4294967296;}
 function defaults(mode) {
   if(mode==='sand') return {feed:40,neighbors:4};
   if(mode==='ant') return {rule:'RL',ants:1};
+  if(mode==='studio')return studioParams();
   return {feed:0.0545,kill:0.062};
 }
-export function createWorld(mode='sand',seed=0x71b246a9) {
+export function createWorld(mode='sand',seed=0x71b246a9,preset='life') {
   if(!MODES[mode]) throw Error('Неизвестный мир');
   const n=MODES[mode].size,w={mode,n,seed:seed|0,ticks:0,params:defaults(mode),a:new Uint8Array(n*n),ants:[]};
+  if(mode==='studio'){w.params=studioParams(preset);seedStudio(w,preset);}
   if(mode==='sand'){w.a=new Uint32Array(n*n); initSandQueue(w); addSand(w,Math.floor(n/2),Math.floor(n/2),1800); relaxSand(w,100000);}
   if(mode==='ant'){
     w.ants=[{x:Math.floor(n/2),y:Math.floor(n/2),d:0}];
@@ -110,15 +114,18 @@ export function stepWorld(w,amount=1) {
     relaxSand(w,4500);
   }else if(w.mode==='ant'){
     for(let i=0;i<amount;i++)stepAnt(w);
-  }else for(let i=0;i<amount;i++)stepReaction(w);
+  }else if(w.mode==='studio')stepStudio(w,amount);
+  else for(let i=0;i<amount;i++)stepReaction(w);
 }
 export function inject(w,x,y) {
   x=clamp(Math.round(x),0,w.n-1);y=clamp(Math.round(y),0,w.n-1);
   if(w.mode==='sand')addSand(w,x,y,Math.max(220,w.params.feed*8));
   if(w.mode==='ant'){if(w.ants.length<12){w.ants.push({x,y,d:Math.floor(random(w)*4)});w.params.ants=w.ants.length;}}
   if(w.mode==='reaction')seedReaction(w,x,y,6);
+  if(w.mode==='studio')paintStudio(w,x,y,w.params.family==='spread'?2:1,2);
 }
 export function setRule(w,key,value) {
+  if(w.mode==='studio')return setStudioRule(w,key,value);
   if(w.mode==='sand'){
     if(key==='feed')w.params.feed=clamp(Math.round(Number(value)),10,800);
     if(key==='neighbors' && [4,8].includes(Number(value))){
@@ -141,6 +148,7 @@ export function mutate(w) {
   const copy=cloneWorld(w);
   if(w.mode==='sand')setRule(copy,'feed',Math.round(w.params.feed*(w.params.feed<400?1.7:.63)));
   else if(w.mode==='ant'){const r=w.params.rule;setRule(copy,'rule',r.length<4?'RLLR':r.split('').map((c,i)=>i===0?(c==='R'?'L':'R'):c).join(''));}
+  else if(w.mode==='studio')mutateStudio(copy);
   else{setRule(copy,'feed',clamp(w.params.feed+.003,.012,.095));setRule(copy,'kill',clamp(w.params.kill-.0015,.035,.077));}
   return copy;
 }
@@ -169,6 +177,7 @@ export function deserialize(snapshot) {
     w.na=new Float32Array(length);w.nb=new Float32Array(length);
   }else w.a=mode==='sand'?new Uint32Array(data.buffer.slice(0)):data;
   if(mode==='sand')initSandQueue(w);
+  if(mode==='studio')w.next=new Uint8Array(length);
   for(const [k,v] of Object.entries(snapshot.params||{})){
     if(mode==='sand' && k==='neighbors' && [4,8].includes(Number(v))){w.params.neighbors=Number(v);continue;}
     setRule(w,k,v);
