@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "product": "kaskad-patterns",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "press",
+      "evidence": "apps/press/visual-direction.json and app.config.json inspected; no real screenshot reviewed yet",
+      "lesson": "The recent file-conveyor interface relies on a work ledger, so a mathematical lattice must replace document cards and file operation rails."
+    },
+    {
+      "slug": "bzyn",
+      "evidence": "apps/bzyn/visual-direction.json and app.config.json inspected; no real screenshot reviewed yet",
+      "lesson": "The recent arcade uses a tall enameled physical-board toy; our field is a detached precise square matrix and can split into two specimens."
+    },
+    {
+      "slug": "folkarium",
+      "evidence": "apps/folkarium/visual-direction.json and app.config.json inspected; no real screenshot reviewed yet",
+      "lesson": "The parchment music score and horizontal instrument editor are not reused; emergent geometry remains a continuously animated canvas object."
+    },
+    {
+      "slug": "sin-guion",
+      "evidence": "apps/sin-guion/visual-direction.json and app.config.json inspected; no real screenshot reviewed yet",
+      "lesson": "Spoken study cards are absent; readable UI copy appears only beside actual rules and persistent state controls."
+    },
+    {
+      "slug": "rivals-dna",
+      "evidence": "apps/rivals-dna/visual-direction.json and app.config.json inspected; no real screenshot reviewed yet",
+      "lesson": "Sequential survey dossiers are replaced by simultaneous spatial comparison and direct intervention in mathematical worlds."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://en.wikipedia.org/wiki/Abelian_sandpile_model",
+      "observation": "The BTW model propagates local topplings through four neighbors and has a recognizable deterministic lattice appearance.",
+      "principle": "Display stable heights as discrete pigments rather than artificially illustrating fractal shapes.",
+      "application": "Exact four/eight-neighbor redistribution in a 161 by 161 grid, rendered as integer square cells.",
+      "avoid": "Do not copy encyclopedia photographs, color maps, illustrations or text descriptions.",
+      "inspectedAt": "2026-11-20T00:15:00+02:00"
+    },
+    {
+      "url": "https://mathworld.wolfram.com/LangtonsAnt.html",
+      "observation": "A black and white tile rule turns a moving ant and eventually produces a repeating directional highway.",
+      "principle": "Let deterministic stepping expose structure rather than prepainting trails or predicting outcomes.",
+      "application": "Changeable R/L rule strings, multi-ant positions and direct injections on a bounded periodic grid.",
+      "avoid": "Do not reproduce the exact Wolfram screenshots or branded graph presentation.",
+      "inspectedAt": "2026-11-20T00:15:00+02:00"
+    },
+    {
+      "url": "https://www.karlsims.com/rd.html",
+      "observation": "Gray-Scott reaction diffusion updates two local concentration fields and varied feed and kill constants yield spots, splitting cells and coral patterns.",
+      "principle": "Provide distinct feed/kill presets but keep the real numerical update continuously visible.",
+      "application": "Directly seed reagent B and adjust Gray-Scott constants with named preset choices.",
+      "avoid": "Do not copy Karl Sims's rendered media, specific lighting effects or page structure.",
+      "inspectedAt": "2026-11-20T00:15:00+02:00"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "mineral-microscope",
+      "medium": "Pure cell-grid Canvas 2D on a mineral instrument panel with a geometric icon authored in editable SVG.",
+      "composition": "One square observation stage dominates and splits into two specimens vertically on phones.",
+      "interaction": "Inject local disturbances and fork the entire current state by changing one law in a second universe.",
+      "motion": "Every pixel change is a mathematically calculated simulation step; restrained immediate mechanical control response.",
+      "rationale": "Selected because the user primarily wants uninterrupted observation, simple knobs and rigorous emergence."
+    },
+    {
+      "id": "clockwork-toppler",
+      "medium": "Mechanical procedural SVG schematic with thousands of real physical tile objects and a rotating crank.",
+      "composition": "A circular apparatus with radial controls replaces the uninterrupted square canvas.",
+      "interaction": "Turn a crank to add grains manually and push physical levers between toppling modes.",
+      "motion": "Individual tiles physically lift and lower using timed interpolation and metallic mechanical feedback.",
+      "rationale": "Rejected because dimensional ornament and per-tile DOM animation would obscure large grid dynamics and slow mobile phones."
+    },
+    {
+      "id": "biology-atlas",
+      "medium": "Illustrated archival notebook with static cell diagrams and transition panels arranged into chapter pages.",
+      "composition": "A two-column visual taxonomy and explanatory captions rather than an immersive simulation instrument.",
+      "interaction": "Turn illustrated chapters, reveal scientific explanations and compare saved images without manipulating live rules.",
+      "motion": "Paper chapter folding and sequential gallery transitions carry navigation rather than computational time.",
+      "rationale": "Rejected because written exposition would compete with the explicitly requested visual observation."
+    }
+  ],
+  "selection": {
+    "concept": "mineral-microscope",
+    "reason": "The real-time specimen is the most meaningful image and two simultaneous live worlds give an immediate experimental counterfactual.",
+    "rejected": [
+      {
+        "concept": "clockwork-toppler",
+        "reason": "A large mechanical crank makes interaction decorative and adds latency to what should be instant mathematical stepping."
+      },
+      {
+        "concept": "biology-atlas",
+        "reason": "Explanatory folio pages are static and prevent direct exploration, which is the user's primary goal."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "custom-svg",
+      "availability": "available",
+      "reason": "Handwritten app-owned SVG source is supported by the browser and has already been authored as editable vector geometry."
+    },
+    {
+      "id": "canvas2d",
+      "availability": "available",
+      "reason": "Canvas 2D ImageData and deterministic JavaScript state allow actual simulation output with no external assets."
+    }
+  ],
+  "assets": [
+    {
+      "id": "app-icon",
+      "tool": "custom-svg",
+      "source": "icons/source.svg",
+      "output": "icons/icon.svg",
+      "role": "Four-direction redistribution is translated into a distinctive centered plus-shaped icon with four colored receiver cells.",
+      "acceptance": "The four-lobe redistribution silhouette must remain readable at 48 CSS pixels and be different from the previous particle app icon.",
+      "integration": "The exported SVG is loaded through the document icon link and scoped PWA manifest without external requests.",
+      "provenance": "Original geometric SVG authored specifically for this app with no third-party imagery.",
+      "maxBytes": 8192
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 30
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "On a short iPhone the two square worlds may become too small; verify practical split viewing.",
+      "ImageData updates and sandpile topplings may exceed the frame budget on weak mobile devices."
+    ],
+    "comparisons": [
+      "Compare initial stage area against Bzyn's portrait framed board.",
+      "Compare mathematical split specimens against Press's desktop file-processing two-column ledger."
+    ]
+  }
+}
