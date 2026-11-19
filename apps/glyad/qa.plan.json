@@ -30,6 +30,12 @@
           "action": "screenshot"
         }
       ]
+    },
+    {
+      "id": "production",
+      "kind": "node",
+      "tier": "deep",
+      "entry": "qa/production-verify.mjs"
     }
   ]
 }
