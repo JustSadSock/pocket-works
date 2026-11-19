@@ -18,7 +18,7 @@ function load(){
   try{
     const raw=localStorage.getItem(KEY);if(!raw)return;
     const data=JSON.parse(raw);
-    if(Array.isArray(data.archive))archive=data.archive.filter(s=>s&&s.id&&s.mode&&Array.isArray(s.worlds)).slice(0,12);
+    if(Array.isArray(data.archive))archive=data.archive.filter(s=>s&&s.id&&s.mode&&Array.isArray(s.worlds)).slice(0,8);
     if(data.modeCache&&typeof data.modeCache==='object')modeCache=data.modeCache;
     if(data.palette in PALETTES)palette=data.palette;
     if(Number.isInteger(data.speed))speed=Math.max(0,Math.min(5,data.speed));
@@ -212,7 +212,7 @@ function saveDiscovery(){
     const thumb=stageCanvases[activeWorld]?.toDataURL('image/png')||'';
     const stamp=new Date();
     archive.unshift({id:String(Date.now())+'-'+Math.floor(Math.random()*10000),mode,title:MODES[mode].label+' · '+stamp.toLocaleDateString('ru-RU',{day:'numeric',month:'short'}),ticks:worlds[activeWorld].ticks,created:stamp.toISOString(),palette,preview:thumb,worlds:worlds.map(serialize)});
-    archive=archive.slice(0,12);persist();updateUI();notify('Открытие сохранено в архиве');
+    archive=archive.slice(0,8);persist();updateUI();notify('Открытие сохранено в архиве');
   }catch(error){notify('Не удалось сохранить: '+error.message);}
 }
 function galleryDialog(){
