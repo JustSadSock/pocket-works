@@ -1,4 +1,15 @@
+import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { AMMO, LEVELS, createLevel, currentWind, findStructure, resolveShot, shotsLeft, validState } from './model.mjs';
+
+installMobileRuntime();
+createWorkshopMode({
+  appName: 'СКОЛ',
+  version: '1.0.0',
+  cachePrefix: 'skol-siege-',
+  storageNamespace: 'pocket-works:skol-siege',
+  onReset: () => location.reload()
+});
 
 const $ = id => document.getElementById(id);
 const canvas = $('scene');
