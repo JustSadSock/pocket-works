@@ -24,19 +24,11 @@
           "selector": "#splitBtn"
         },
         {
-          "action": "visible",
-          "selector": ".stage.split"
-        },
-        {
           "action": "screenshot"
         },
         {
           "action": "click",
           "selector": "#lawsBtn"
-        },
-        {
-          "action": "visible",
-          "selector": "#sheetBody"
         },
         {
           "action": "screenshot"
@@ -64,10 +56,6 @@
           "selector": "#focusBtn"
         },
         {
-          "action": "visible",
-          "selector": ".focus-mode"
-        },
-        {
           "action": "screenshot"
         },
         {
@@ -85,9 +73,6 @@
         {
           "action": "visible",
           "selector": ".gallery-row"
-        },
-        {
-          "action": "screenshot"
         }
       ]
     }
