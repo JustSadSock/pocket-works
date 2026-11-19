@@ -20,19 +20,7 @@
       "ready": "#depthCanvas",
       "steps": [
         {
-          "action": "click",
-          "selector": "#showStereo"
-        },
-        {
-          "action": "visible",
-          "selector": "#stereoCanvas"
-        },
-        {
           "action": "screenshot"
-        },
-        {
-          "action": "click",
-          "selector": "#showEdit"
         },
         {
           "action": "click",
