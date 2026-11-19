@@ -35,7 +35,7 @@ async function confirm(){
   const registered=entries.find(item=>item.slug==='glyad');
   if(!registered||registered.version!=='1.0.0')
     throw new Error('PocketWorks public launcher is missing GLYAD 1.0.0');
-  for(const file of ['app.js','core.mjs','styles.css','manifest.webmanifest','sw.js','icons/icon.svg']){
+  for(const file of ['app.js','core.mjs','styles.css','sw.js','icons/icon.svg','manifest.webmanifest']){
     const [local,live]=await Promise.all([readFile(new URL(file,localRoot),'utf8'),get(PATH+file)]);
     // Production packaging adds a release banner to *.js and version pins
     // relative imports. It deliberately does not stamp *.mjs or other assets.
@@ -46,8 +46,28 @@ async function confirm(){
         throw new Error('Published script has missing or wrong release banner: '+file);
       packaged=packaged.slice(banner.length).replaceAll('?pw_release=1.0.0','');
     }
-    if(sha256(local)!==sha256(packaged))
+    if(file==='manifest.webmanifest'){
+      const contentType=live.response.headers.get('content-type')||'unknown';
+      console.log('Manifest: HTTP '+live.response.status+', content-type '+contentType+', source '+local.length+' bytes, live '+packaged.length+' bytes');
+      try{
+        const expected=JSON.parse(local),actual=JSON.parse(packaged);
+        if(JSON.stringify(expected)!==JSON.stringify(actual)){
+          console.error('Expected manifest: '+JSON.stringify(expected));
+          console.error('Actual manifest: '+JSON.stringify(actual));
+          throw new Error('Production manifest JSON differs from merged source');
+        }
+        // JSON whitespace is irrelevant to PWA manifest semantics.
+        packaged=local;
+      }catch(error){
+        console.error('Live manifest preview: '+packaged.slice(0,450));
+        throw error;
+      }
+    }
+    if(sha256(local)!==sha256(packaged)){
+      console.error('Mismatch '+file+', expected '+sha256(local)+' ('+local.length+' bytes), live '+sha256(packaged)+' ('+packaged.length+' bytes), content-type '+live.response.headers.get('content-type'));
+      console.error('Live file preview: '+packaged.slice(0,350));
       throw new Error('Deployed normalized source differs from merged main for '+file);
+    }
     console.log('Verified '+file+' normalized SHA256 '+sha256(local).slice(0,20)+' HTTP '+live.response.status);
   }
   console.log('PRODUCTION VERIFIED: '+ORIGIN+PATH+'; HTTP '+home.response.status+'; version 1.0.0; server '+(home.response.headers.get('server')||'unavailable'));
