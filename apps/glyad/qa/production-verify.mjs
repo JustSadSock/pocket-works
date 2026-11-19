@@ -37,9 +37,18 @@ async function confirm(){
     throw new Error('PocketWorks public launcher is missing GLYAD 1.0.0');
   for(const file of ['app.js','core.mjs','styles.css','manifest.webmanifest','sw.js','icons/icon.svg']){
     const [local,live]=await Promise.all([readFile(new URL(file,localRoot),'utf8'),get(PATH+file)]);
-    if(sha256(local)!==sha256(live.text))
-      throw new Error('Deployed bytes differ from merged main for '+file);
-    console.log('Verified '+file+' SHA256 '+sha256(local).slice(0,20)+' HTTP '+live.response.status);
+    // Production packaging adds a release banner to *.js and version pins
+    // relative imports. It deliberately does not stamp *.mjs or other assets.
+    let packaged=live.text;
+    if(file.endsWith('.js')){
+      const banner='/* pocket-works-release:glyad@1.0.0:'+file+' */\n';
+      if(!packaged.startsWith(banner))
+        throw new Error('Published script has missing or wrong release banner: '+file);
+      packaged=packaged.slice(banner.length).replaceAll('?pw_release=1.0.0','');
+    }
+    if(sha256(local)!==sha256(packaged))
+      throw new Error('Deployed normalized source differs from merged main for '+file);
+    console.log('Verified '+file+' normalized SHA256 '+sha256(local).slice(0,20)+' HTTP '+live.response.status);
   }
   console.log('PRODUCTION VERIFIED: '+ORIGIN+PATH+'; HTTP '+home.response.status+'; version 1.0.0; server '+(home.response.headers.get('server')||'unavailable'));
   console.log('Live Cloudflare-hosted app, release and registry match repository source.');
