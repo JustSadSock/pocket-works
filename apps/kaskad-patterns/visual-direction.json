@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "kaskad-patterns",
+  "direction": {
+    "premise": "A microscope for mathematical emergence: local rules are instruments and the evolving geometry, not the controls, is the hero.",
+    "composition": "A nearly full-height black mineral observation chamber, narrow scientific switchboard above and a shallow transport desk below; dual worlds contract the chamber into two synchronized specimens.",
+    "shapeLanguage": "Hard-edge square cellular pixels and precise rectangular controls; a small diamond cross marks the four-neighbor avalanche without decorative cards.",
+    "surfaceAndMaterial": "Dry ceramic and basalt scientific apparatus: flat muted surrounding alloy, inset charcoal observation glass and sparse metallic etched typography, without glassmorphism.",
+    "paletteLogic": "Muted gray chalk surrounds the experiment; mineral pigments identify cell states while amber marks changing controls; alternative palettes preserve color-state distinctions.",
+    "typography": "Compact functional sans for actions, engineering monospace for live step counters and rules, and restrained serif only within the explanatory laws sheet.",
+    "signature": "One tap buds a second real universe from the precise same simulation state, changes one local law, and renders both specimens progressing side by side.",
+    "distinction": "KASKAD's older particle-forces workshop is a scene builder; this sibling exposes three exact discrete mathematical automata. Press has a document-processing rail and Bzyn has a launcher toy; neither is a doubled mathematical specimen."
+  },
+  "architecture": {
+    "spatialLayout": "single-instrument",
+    "controlLocation": "perimeter",
+    "navigation": "scene-zoom",
+    "chromeTopology": "unframed-scene",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Tap or stroke a living lattice to inject a disturbance, then change the mathematical rule and observe the true evolving consequences.",
+    "physicalFeedback": "A perturbation appears on the touched cell immediately; pause, one-step, palette, branch and saved state redraw directly without fake progress.",
+    "spatialRationale": "The lattice occupies every available minute of phone height between the mode rail and playback controls, and dual specimens divide vertically rather than hiding either simulation.",
+    "comparisons": [
+      {
+        "slug": "press",
+        "spatialDifference": "Press splits a physical file-work ledger and operation rail, while this app is a continuous, mostly unframed scientific observation chamber.",
+        "interactionDifference": "Press batches bytes into encoded outputs; this app modifies mathematical cell laws and evolves live dual universes under touch."
+      },
+      {
+        "slug": "bzyn",
+        "spatialDifference": "Bzyn features a tall framed spring toy with a red projectile; this product presents square pixel fields that become vertically paired microscope specimens.",
+        "interactionDifference": "Bzyn fires and catches a physical puck; this app feeds automata, edits neighbor rules, saves exact lattice states and forks experiments."
+      },
+      {
+        "slug": "folkarium",
+        "spatialDifference": "Folkarium arranges a manuscript score in a wide editable folio; here a dark square scientific specimen takes almost all attention.",
+        "interactionDifference": "Folkarium authors pitches and synthesizes music; this app evolves local cellular rules without notes or a timeline."
+      },
+      {
+        "slug": "sin-guion",
+        "spatialDifference": "Sin Guion has a spoken quiz station with dense language prompts; this app is a single live mathematical surface with minimal text.",
+        "interactionDifference": "Sin Guion evaluates oral exercises while this app branches persistent simulation worlds and produces animated GIF evidence."
+      },
+      {
+        "slug": "rivals-dna",
+        "spatialDifference": "Rivals DNA uses consecutive dossier pages and rating lists; this surface has no questionnaires, panels or deck navigation.",
+        "interactionDifference": "Rivals DNA ranks selected heroes; here a user injects local perturbations, changes diffusion constants and compares outcomes."
+      }
+    ]
+  },
+  "production": {
+    "renderer": "Three deterministic pure-JavaScript model engines produce compact cell arrays; Canvas ImageData displays genuine state with crisp sand/ant pixels and organic reaction interpolation.",
+    "focalAsset": "A four-way toppling-cell motif in bespoke app-local SVG source and final icon, together with a live zero-asset computational field."
+  },
+  "motion": {
+    "character": "Continuous mathematically derived change inside a fixed chamber with immediate precision inputs, not bouncing cards or ambient oscillation.",
+    "action": "A single branch button turns one uninterrupted world into two side-by-side evolving specimens without losing the original state.",
+    "anticipation": "The pressed branch control depresses instantly and the new chamber space is calculated before both representations are painted.",
+    "response": "Two exact copies appear immediately; the mutant fork receives one changed parameter and thereafter follows its own real computation.",
+    "followThrough": "Subsequent frames display divergence from the same initial state, and independent taps add local changes to the selected world.",
+    "interruption": "All pointer input targets the current world instance, cancellation ends painting, and continuous animation pauses on hidden tabs.",
+    "reducedMotion": "The simulation remains legible as sequential still states; nonessential modal movement is disabled when reduced motion is requested."
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#splitBtn"
+    },
+    "expectedChange": "A second world specimen is visible and the interface displays two independently evolving mathematical grids after the branch action.",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
