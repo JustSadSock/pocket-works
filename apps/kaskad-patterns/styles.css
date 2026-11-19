@@ -137,3 +137,5 @@ button:active{transform:translateY(1px)}button:disabled{opacity:.4;cursor:not-al
   .workshop-presets{grid-template-columns:1fr}
 }
 .focus-mode .history-button{top:calc(12px + env(safe-area-inset-top,0px))}
+
+@media(max-width:370px){.mode{min-width:0;padding:0 9px;font-size:.73rem}.mode-number{display:none}.mode:first-child{padding-left:2px}.mode:first-child.active:after{left:0}}
