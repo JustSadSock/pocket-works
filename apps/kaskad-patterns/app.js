@@ -121,7 +121,7 @@ function bindCanvas(panel,canvas,index){
   return w=>{if(userCamera||points.size)return;const target=recommendedZoom(w);if(Math.abs(target-zoom)>.005){zoom+=(target-zoom)*.1;apply();}};
 }
 function rebuildStage(){
-  const stage=$('stage');stage.replaceChildren();stage.classList.toggle('split',worlds.length===2);
+  const stage=$('stage');const focus=$('focusBtn');stage.replaceChildren();stage.append(focus);stage.classList.toggle('split',worlds.length===2);
   stageCanvases=[];stageCameras=[];
   worlds.forEach((world,i)=>{const view=wrapStage(world,i);stage.append(view.panel);stageCanvases.push(view.canvas);stageCameras.push(view.camera);});
   updateSelection();paintAll();
@@ -294,6 +294,9 @@ function animate(t){
     if(t-lastHud>220){updateHUD();lastHud=t;}
   }catch(error){running=false;updateUI();notify('Симуляция остановлена: '+error.message);console.error(error);}
 }
+let focused=false;
+function toggleFocus(value=!focused){focused=value;document.querySelector('.app-shell').classList.toggle('focus-mode',focused);$('focusLabel').textContent=focused?'Выйти':'На весь экран';$('focusBtn').setAttribute('aria-label',focused?'Вернуться к управлению':'Наблюдение на весь экран');}
+$('focusBtn').addEventListener('click',()=>toggleFocus());
 $('modeTabs').addEventListener('click',e=>{const button=e.target.closest('[data-mode]');if(button)switchMode(button.dataset.mode);});
 $('playBtn').addEventListener('click',()=>{running=!running;updateUI();persist();});
 $('stepBtn').addEventListener('click',()=>{running=false;worlds.forEach(w=>stepWorld(w,1));paintAll();updateUI();persist();});
@@ -308,7 +311,7 @@ $('resetBtn').addEventListener('click',resetDialog);
 $('exportBtn').addEventListener('click',exportDialog);
 $('closeSheet').addEventListener('click',closeSheet);
 $('backdrop').addEventListener('click',closeSheet);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('overlay').hidden)closeSheet();if(e.code==='Space'&&$('overlay').hidden&&!['INPUT','BUTTON','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();running=!running;updateUI();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('overlay').hidden)closeSheet();else if(focused)toggleFocus(false);}if(e.code==='Space'&&$('overlay').hidden&&!['INPUT','BUTTON','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();running=!running;updateUI();}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)persist();else paintTime=0;});
 window.addEventListener('pagehide',persist);
 setInterval(()=>{if(!document.hidden)persist();},9000);
