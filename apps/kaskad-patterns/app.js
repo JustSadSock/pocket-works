@@ -1,14 +1,16 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { MODES,createWorld,stepWorld,inject,setRule,mutate,serialize,deserialize,cloneWorld,density } from './engine.js';
 import { PALETTES,paint } from './renderer.js';
+import { STUDIO_PRESETS,STUDIO_FAMILIES,studioStateNames,paintStudio,scatterStudio,studioReport } from './studio.js';
 import { makeGif,makePng,saveBlob } from './exporters.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id);
 const KEY='pocket-works:kaskad-patterns:session-v1';
-const RATE={sand:[1,1,2,4,8,16],ant:[4,16,64,256,1024,4096],reaction:[1,1,2,3,4,6]};
-const HINTS={sand:'Коснись поля, чтобы насыпать песок',ant:'Коснись поля, чтобы выпустить муравья',reaction:'Проведи пальцем, чтобы добавить реагент'};
-const TITLE={sand:'ПЕСЧАНАЯ КУЧА',ant:'МУРАВЬИ ЛЭНГТОНА',reaction:'РЕАКЦИИ ГРЕЯ — СКОТТА'};
+const RATE={sand:[1,1,2,4,8,16],ant:[4,16,64,256,1024,4096],reaction:[1,1,2,3,4,6],studio:[1,2,3,5,8,14]};
+const HINTS={sand:'Коснись поля, чтобы насыпать песок',ant:'Коснись поля, чтобы выпустить муравья',reaction:'Проведи пальцем, чтобы добавить реагент',studio:'Изменяй правила и создавай начальные условия'};
+const TITLE={sand:'ПЕСЧАНАЯ КУЧА',ant:'МУРАВЬИ ЛЭНГТОНА',reaction:'РЕАКЦИИ ГРЕЯ — СКОТТА',studio:'МАСТЕРСКАЯ ЗАКОНОВ'};
 let mode='sand',worlds=[createWorld('sand')],modeCache={},archive=[],running=true,speed=3,palette='mineral',activeWorld=0,stageCanvases=[],stageCameras=[],paintTime=0,lastHud=0,lastFocus=null,toastTimer=0;
+let editing=false,brushState=1,brushRadius=1,symmetry='none',history=[],lastHistoryAt=0;
 const number=n=>new Intl.NumberFormat('ru-RU',{notation:n>=1e7?'compact':'standard',maximumFractionDigits:0}).format(Math.floor(n));
 function notify(message){
   const el=$('toast');el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);
@@ -28,12 +30,14 @@ function load(){
     }
     activeWorld=Math.min(worlds.length-1,Number(data.activeWorld)||0);
     running=data.running!==false;
+    editing=mode==='studio'&&data.editing===true;
+    if(Array.isArray(data.history))history=data.history.filter(x=>x&&Array.isArray(x.worlds)&&x.worlds.length<=2).slice(-24);
   }catch(error){console.warn('Состояние лаборатории сброшено:',error);}
 }
 function persist(){
   try{
     modeCache[mode]=worlds.map(serialize);
-    localStorage.setItem(KEY,JSON.stringify({mode,worlds:modeCache[mode],modeCache,palette,speed,running,activeWorld,archive}));
+    localStorage.setItem(KEY,JSON.stringify({mode,worlds:modeCache[mode],modeCache,palette,speed,running,activeWorld,archive,editing,history}));
   }catch(error){
     if(archive.length>1){archive=archive.slice(0,Math.max(1,Math.floor(archive.length/2)));try{localStorage.setItem(KEY,JSON.stringify({mode,worlds:worlds.map(serialize),palette,speed,running,archive}));return;}catch{}}
     console.warn('Сохранение недоступно:',error);
@@ -43,12 +47,12 @@ function freshSeed(){try{const arr=new Uint32Array(1);crypto.getRandomValues(arr
 function switchMode(next){
   if(!MODES[next]||next===mode)return;
   modeCache[mode]=worlds.map(serialize);
-  mode=next;activeWorld=0;
+  mode=next;activeWorld=0;editing=next==='studio';if(editing)running=false;history=[];
   try{
     const saved=modeCache[next];
     worlds=Array.isArray(saved)&&saved.length?saved.map(deserialize):[createWorld(next,freshSeed())];
   }catch{worlds=[createWorld(next,freshSeed())];}
-  rebuildStage();updateUI();persist();
+  rebuildStage();recordHistory('Начало · '+MODES[mode].label);updateUI();persist();
 }
 function recommendedZoom(w){
   if(w.mode==='reaction')return 1;
@@ -92,7 +96,9 @@ function bindCanvas(panel,canvas,index){
     if(x<0||x>=w.n||y<0||y>=w.n)return;
     const cell=y*w.n+x,now=performance.now();
     if(lastCell===cell||now-lastStroke<(w.mode==='sand'?95:27))return;
-    lastCell=cell;lastStroke=now;activeWorld=index;inject(w,x,y);
+    lastCell=cell;lastStroke=now;activeWorld=index;
+    if(w.mode==='studio'&&editing){if(!paintStudio(w,x,y,brushState,brushRadius,symmetry))return;}
+    else inject(w,x,y);
     updateSelection();paintAll();updateHUD();
   }
   const distance=()=>{const a=[...points.values()];return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);};
@@ -102,7 +108,7 @@ function bindCanvas(panel,canvas,index){
     panel.setPointerCapture?.(e.pointerId);
     points.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(points.size===2){userCamera=true;pinch={distance:Math.max(1,distance()),center:center(),zoom,tx,ty};}
-    else if(points.size===1){lastCell=-1;brush(e);}
+    else if(points.size===1){lastCell=-1;if(mode==='studio')recordHistory(editing?'Перед рисованием':'Воздействие');brush(e);}
   });
   panel.addEventListener('pointermove',e=>{
     if(!points.has(e.pointerId))return;
@@ -121,7 +127,7 @@ function bindCanvas(panel,canvas,index){
   return w=>{if(userCamera||points.size)return;const target=recommendedZoom(w);if(Math.abs(target-zoom)>.005){zoom+=(target-zoom)*.1;apply();}};
 }
 function rebuildStage(){
-  const stage=$('stage');const focus=$('focusBtn');stage.replaceChildren();stage.append(focus);stage.classList.toggle('split',worlds.length===2);
+  const stage=$('stage'),focus=$('focusBtn'),historyButton=$('historyBtn'),tools=$('editTools');stage.replaceChildren();stage.append(focus,historyButton,tools);stage.classList.toggle('split',worlds.length===2);
   stageCanvases=[];stageCameras=[];
   worlds.forEach((world,i)=>{const view=wrapStage(world,i);stage.append(view.panel);stageCanvases.push(view.canvas);stageCameras.push(view.camera);});
   updateSelection();paintAll();
@@ -134,7 +140,8 @@ function updateHUD(){
   $('liveDot').classList.toggle('paused',!running);
   $('worldStatus').textContent=(worlds.length===2?'A + B':'МИР A')+' · '+(running?'РАЗВИВАЕТСЯ':'ПАУЗА');
   $('worldCount').textContent=number(worlds[activeWorld]?.ticks||0)+' шагов';
-  $('worldHint').textContent=worlds.length===2?'Выбран мир '+(activeWorld===0?'A':'B')+' · изменяй его законы':HINTS[mode];
+  const custom=mode==='studio'?studioReport(worlds[activeWorld]):null;
+  $('worldHint').textContent=custom?'Живых '+number(custom.active)+' · состояний '+custom.diversity+'/'+worlds[activeWorld].params.states+(editing?' · рисование':''):worlds.length===2?'Выбран мир '+(activeWorld===0?'A':'B')+' · изменяй его законы':HINTS[mode];
 }
 function updateUI(){
   for(const button of $('modeTabs').querySelectorAll('[data-mode]')){
@@ -145,6 +152,11 @@ function updateUI(){
   $('speed').value=String(speed+1);$('speedLabel').textContent='×'+RATE[mode][speed];
   $('splitText').textContent=worlds.length===2?'Сравнение':'Раздвоить';
   $('archiveCount').textContent=String(archive.length);
+  $('historyCount').textContent=String(history.length);
+  $('studioBtn').hidden=mode!=='studio';$('studioBtn').textContent=editing?'Наблюдать':'Рисовать';
+  const showEditor=mode==='studio'&&editing;
+  $('editTools').hidden=!showEditor;$('stage').classList.toggle('editing',showEditor);
+  if(showEditor)refreshBrushes();
   $('paletteSwatch').style.background=PALETTES[palette].colors[4];
   updateHUD();
 }
