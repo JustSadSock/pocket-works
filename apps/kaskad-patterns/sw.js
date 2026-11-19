@@ -1,7 +1,9 @@
 const PREFIX='kaskad-patterns-';
 const CACHE='kaskad-patterns-v1.1.0';
-const VERSION='1.1.0',RELEASE='2026-11-20';
-const CORE=['./','./index.html','./styles.css','./app.js','./engine.js','./studio.js','./renderer.js','./exporters.js','./manifest.webmanifest','./app.config.json','./sw.js','./icons/icon.svg','./icons/source.svg','./visual-direction.json','./art-bible.json','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.js','../../shared/update-manager.css'];
+const APP_VERSION='1.1.0';
+const VERSION=APP_VERSION,RELEASE='2026-11-20';
+const RELEASE_NOTES=["Мастерская законов: создавай собственные клеточные автоматы, выбирай семейство правил, соседство, состояния и граничные условия.","Семь работающих сценариев: Игра жизни, Высшая жизнь, Мозг Брайана, рост кристаллов, циклические хищники, лесной пожар и эпидемия.","Рисование клеток, симметрия, случайное заполнение, точная история/откат, живая статистика, экспорт и импорт JSON.","Сохранены три прежних движка, раздвоение, архив, GIF/PNG и офлайн-режим."];
+const CORE=['./','./index.html','./styles.css','./app.js','./engine.js','./studio.js','./renderer.js','./exporters.js','./manifest.webmanifest','./app.config.json','./sw.js','./icons/icon.svg','./icons/source.svg','./visual-direction.json','./art-bible.json','../../shared/workshop-mode.js','../../shared/workshop-mode.css','../../shared/capabilities/motion.js','../../shared/capabilities/storage.js','../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js','../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.js','../../shared/update-manager.css'];
 const SCOPE=new URL('./',self.registration.scope);
 const URLS=new Map(CORE.map(p=>{const u=new URL(p,SCOPE);return[u.pathname,u.href];}));
 const unique=[...new Set(URLS.values())];
@@ -21,7 +23,7 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
 })()));
 self.addEventListener('message',event=>{
   if(event.data?.type==='GET_UPDATE_INFO'){
-    event.ports?.[0]?.postMessage({version:VERSION,releaseDate:RELEASE,releaseNotes:['Мастерская законов: семь сценариев, редактор поля, история и JSON-файлы.'],cacheProtocol:2,cacheName:CACHE});
+    event.ports?.[0]?.postMessage({version:VERSION,releaseDate:RELEASE,releaseNotes:RELEASE_NOTES,cacheProtocol:2,cacheName:CACHE});
   }
   if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
 });
