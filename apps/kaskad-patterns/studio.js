@@ -44,7 +44,12 @@ export function seedStudio(w,key='life') {
     const glider=[[1,0],[2,1],[0,2],[1,2],[2,2]];
     const rp=[[1,0],[2,0],[0,1],[1,1],[1,2]];
     const oscillator=[[0,0],[1,0],[2,0]];
-    stamp(w,18,19,glider);stamp(w,50,39,rp);stamp(w,66,65,oscillator);
+    // Period-3 pulsar specimens are large enough to inspect even on narrow screens.
+    const pulsar=['..###...###..','.............','#....#.#....#','#....#.#....#','#....#.#....#','..###...###..','.............','..###...###..','#....#.#....#','#....#.#....#','#....#.#....#','.............','..###...###..'];
+    for(const [cx,cy] of [[12,11],[60,56],[18,63]]){
+      for(let py=0;py<pulsar.length;py++)for(let px=0;px<pulsar[py].length;px++)if(pulsar[py][px]==='#')spot(w,cx+px,cy+py,1);
+    }
+    stamp(w,40,22,glider);stamp(w,50,39,rp);stamp(w,66,65,oscillator);
     stamp(w,20,66,glider);stamp(w,68,18,rp);
     if(key==='highlife')for(let i=0;i<25;i++)spot(w,35+Math.floor(rng(w)*25),49+Math.floor(rng(w)*19),1);
   }
