@@ -14,3 +14,11 @@
 @media(max-width:370px){.worktop h2{font-size:20px}.brand p{display:none}.subtle span{display:none}.toolbox{gap:6px}.presets-row button{font-size:11px}.canvas-caption{font-size:9px}.keyline{font-size:9px}}
 @media(max-height:720px) and (min-width:801px){.app-shell{gap:9px}.mast{padding-bottom:7px}.worktop h2{font-size:23px}.pane-heading{min-height:36px}.pane h3{font-size:20px}.toolbox{padding:8px 11px}.canvas-wrap{max-height:40vh;aspect-ratio:3/2}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+/* Native workshop remains a quiet secondary control, never a dummy setting. */
+.mast-actions{display:flex;align-items:center;justify-self:end;gap:12px}
+.workshop-trigger{border:1px solid var(--ink);background:transparent;color:var(--ink);width:44px;height:44px;display:flex;align-items:center;justify-content:center;transition:background .16s}
+.workshop-trigger svg{width:22px;height:22px}
+.workshop-trigger:hover{background:#c5dcd0}
+@media(max-width:800px){.mast{gap:5px}.mast-actions{gap:6px}.brand p{letter-spacing:.09em}.workshop-trigger{width:37px;height:44px;min-width:37px}.workshop-trigger svg{width:20px;height:20px}}
+@media(max-width:370px){.brand{gap:4px}.brand h1{font-size:24px}.mast-actions{gap:4px}}
