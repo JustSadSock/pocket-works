@@ -148,7 +148,7 @@
     {
       "id": "studio-saves",
       "kind": "visual",
-      "tier": "deep",
+      "tier": "smoke",
       "viewports": [
         "mobile",
         "desktop"
