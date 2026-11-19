@@ -12,6 +12,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css">
 <link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -19,15 +20,29 @@
   <header class="topbar">
     <a class="exit" href="../../" data-app-control data-native-press aria-label="Вернуться в Pocket Works"><span aria-hidden="true">‹</span><span>Pocket Works</span></a>
     <div class="identity"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong>КАСКАД <small>УЗОРЫ</small></strong></div>
-    <button class="text-control" id="galleryBtn" type="button" data-native-press>Архив <span class="archive-indicator" id="archiveCount">0</span></button>
+    <div class="mast-tools"><button type="button" class="workshop-diagnostics" data-workshop-trigger data-native-press aria-label="Диагностика приложения" title="Диагностика">⋮</button>
+    <button class="text-control" id="galleryBtn" type="button" data-native-press>Архив <span class="archive-indicator" id="archiveCount">0</span></button></div>
   </header>
   <nav class="mode-strip" aria-label="Тип симуляции" id="modeTabs">
     <button type="button" class="mode active" data-mode="sand" data-native-press><span class="mode-number">01</span> Песок</button>
     <button type="button" class="mode" data-mode="ant" data-native-press><span class="mode-number">02</span> Муравьи</button>
     <button type="button" class="mode" data-mode="reaction" data-native-press><span class="mode-number">03</span> Реакции</button>
+    <button type="button" class="mode" data-mode="studio" data-native-press><span class="mode-number">04</span> Мастерская</button>
     <span class="mode-hint">ЛАБОРАТОРИЯ ЛОКАЛЬНЫХ ПРАВИЛ</span>
   </nav>
-  <section id="stage" class="stage" aria-label="Интерактивные поля симуляций" data-gesture-surface data-block-callout><button class="focus-button" id="focusBtn" type="button" data-native-press aria-label="Наблюдение на весь экран">⤢ <span id="focusLabel">На весь экран</span></button></section>
+  <section id="stage" class="stage" aria-label="Интерактивные поля симуляций" data-gesture-surface data-block-callout><button class="focus-button" id="focusBtn" type="button" data-native-press aria-label="Наблюдение на весь экран">⤢ <span id="focusLabel">На весь экран</span></button>
+    <button class="history-button" id="historyBtn" type="button" data-native-press>↶ История <span id="historyCount">0</span></button>
+    <div class="edit-tools" id="editTools" hidden>
+      <div class="edit-head"><b>КИСТЬ · СОСТОЯНИЕ</b><button type="button" id="studioLibrary">Примеры ↗</button></div>
+      <div class="edit-colors" id="editStates" role="group" aria-label="Состояние кисти"></div>
+      <div class="edit-bottom">
+        <label>Размер <select id="brushSize"><option value="1">1 клетка</option><option value="2">3×3</option><option value="4">7×7</option></select></label>
+        <label>Зеркало <select id="symmetry"><option value="none">Нет</option><option value="mirror">↔</option><option value="four">✣</option></select></label>
+        <button type="button" id="scatterBtn">Рассеять</button>
+        <button type="button" id="clearFieldBtn">Очистить</button>
+      </div>
+    </div>
+  </section>
   <footer class="control-desk">
     <div class="readout">
       <div class="readout-main"><span class="live-dot" id="liveDot"></span><b id="worldStatus">МИР A · РАЗВИВАЕТСЯ</b><span id="worldCount">0 шагов</span></div>
@@ -42,6 +57,7 @@
     </div>
     <div class="secondary-actions">
       <button id="paletteBtn" type="button" data-native-press>Палитра <span class="mini-swatch" id="paletteSwatch"></span></button>
+      <button id="studioBtn" type="button" data-native-press hidden>Рисовать</button>
       <button id="saveBtn" type="button" data-native-press>Сохранить открытие</button>
       <button id="exportBtn" type="button" data-native-press>Экспорт ↗</button>
       <button id="resetBtn" type="button" data-native-press>Новый мир</button>
@@ -57,6 +73,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </main>
 <script type="module" src="./app.js"></script>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Каскад: Узоры" data-app-version="1.0.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Каскад: Узоры" data-app-version="1.1.0"></script>
 </body>
 </html>

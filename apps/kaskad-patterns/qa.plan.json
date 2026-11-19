@@ -5,7 +5,8 @@
       "id": "engine",
       "kind": "node-test",
       "files": [
-        "engine.test.mjs"
+        "engine.test.mjs",
+        "studio.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -73,6 +74,125 @@
         {
           "action": "visible",
           "selector": ".gallery-row"
+        }
+      ]
+    },
+    {
+      "id": "studio-workshop",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#stage",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-mode=\"studio\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#editTools"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#studioLibrary"
+        },
+        {
+          "action": "visible",
+          "selector": ".workshop-presets"
+        },
+        {
+          "action": "click",
+          "selector": "[data-studio-preset=\"cyclic\"]"
+        },
+        {
+          "action": "click",
+          "selector": "#applyStudioPreset"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#studioBtn"
+        },
+        {
+          "action": "click",
+          "selector": "#splitBtn"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#lawsBtn"
+        },
+        {
+          "action": "click",
+          "selector": "#closeSheet"
+        },
+        {
+          "action": "click",
+          "selector": "#historyBtn"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "studio-saves",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#stage",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-mode=\"studio\"]"
+        },
+        {
+          "action": "click",
+          "selector": "#saveBtn"
+        },
+        {
+          "action": "fill",
+          "selector": "#scenarioName",
+          "value": "Мой автомат B36"
+        },
+        {
+          "action": "click",
+          "selector": "#confirmSave"
+        },
+        {
+          "action": "click",
+          "selector": "#galleryBtn"
+        },
+        {
+          "action": "visible",
+          "selector": ".gallery-row"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-load]"
+        },
+        {
+          "action": "visible",
+          "selector": "#editTools"
+        },
+        {
+          "action": "screenshot"
         }
       ]
     }

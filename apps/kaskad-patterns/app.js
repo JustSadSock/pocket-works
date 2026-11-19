@@ -1,14 +1,17 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import { MODES,createWorld,stepWorld,inject,setRule,mutate,serialize,deserialize,cloneWorld,density } from './engine.js';
 import { PALETTES,paint } from './renderer.js';
+import { STUDIO_PRESETS,STUDIO_FAMILIES,studioStateNames,paintStudio,scatterStudio,studioReport } from './studio.js';
 import { makeGif,makePng,saveBlob } from './exporters.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id);
 const KEY='pocket-works:kaskad-patterns:session-v1';
-const RATE={sand:[1,1,2,4,8,16],ant:[4,16,64,256,1024,4096],reaction:[1,1,2,3,4,6]};
-const HINTS={sand:'Коснись поля, чтобы насыпать песок',ant:'Коснись поля, чтобы выпустить муравья',reaction:'Проведи пальцем, чтобы добавить реагент'};
-const TITLE={sand:'ПЕСЧАНАЯ КУЧА',ant:'МУРАВЬИ ЛЭНГТОНА',reaction:'РЕАКЦИИ ГРЕЯ — СКОТТА'};
+const RATE={sand:[1,1,2,4,8,16],ant:[4,16,64,256,1024,4096],reaction:[1,1,2,3,4,6],studio:[1,2,3,5,8,14]};
+const HINTS={sand:'Коснись поля, чтобы насыпать песок',ant:'Коснись поля, чтобы выпустить муравья',reaction:'Проведи пальцем, чтобы добавить реагент',studio:'Изменяй правила и создавай начальные условия'};
+const TITLE={sand:'ПЕСЧАНАЯ КУЧА',ant:'МУРАВЬИ ЛЭНГТОНА',reaction:'РЕАКЦИИ ГРЕЯ — СКОТТА',studio:'МАСТЕРСКАЯ ЗАКОНОВ'};
 let mode='sand',worlds=[createWorld('sand')],modeCache={},archive=[],running=true,speed=3,palette='mineral',activeWorld=0,stageCanvases=[],stageCameras=[],paintTime=0,lastHud=0,lastFocus=null,toastTimer=0;
+let editing=false,brushState=1,brushRadius=1,symmetry='none',history=[],lastHistoryAt=0;
 const number=n=>new Intl.NumberFormat('ru-RU',{notation:n>=1e7?'compact':'standard',maximumFractionDigits:0}).format(Math.floor(n));
 function notify(message){
   const el=$('toast');el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);
@@ -28,12 +31,14 @@ function load(){
     }
     activeWorld=Math.min(worlds.length-1,Number(data.activeWorld)||0);
     running=data.running!==false;
+    editing=mode==='studio'&&data.editing===true;
+    if(Array.isArray(data.history))history=data.history.filter(x=>x&&Array.isArray(x.worlds)&&x.worlds.length<=2).slice(-24);
   }catch(error){console.warn('Состояние лаборатории сброшено:',error);}
 }
 function persist(){
   try{
     modeCache[mode]=worlds.map(serialize);
-    localStorage.setItem(KEY,JSON.stringify({mode,worlds:modeCache[mode],modeCache,palette,speed,running,activeWorld,archive}));
+    localStorage.setItem(KEY,JSON.stringify({mode,worlds:modeCache[mode],modeCache,palette,speed,running,activeWorld,archive,editing,history}));
   }catch(error){
     if(archive.length>1){archive=archive.slice(0,Math.max(1,Math.floor(archive.length/2)));try{localStorage.setItem(KEY,JSON.stringify({mode,worlds:worlds.map(serialize),palette,speed,running,archive}));return;}catch{}}
     console.warn('Сохранение недоступно:',error);
@@ -43,12 +48,12 @@ function freshSeed(){try{const arr=new Uint32Array(1);crypto.getRandomValues(arr
 function switchMode(next){
   if(!MODES[next]||next===mode)return;
   modeCache[mode]=worlds.map(serialize);
-  mode=next;activeWorld=0;
+  mode=next;activeWorld=0;editing=next==='studio';if(editing)running=false;history=[];
   try{
     const saved=modeCache[next];
     worlds=Array.isArray(saved)&&saved.length?saved.map(deserialize):[createWorld(next,freshSeed())];
   }catch{worlds=[createWorld(next,freshSeed())];}
-  rebuildStage();updateUI();persist();
+  rebuildStage();recordHistory('Начало · '+MODES[mode].label);updateUI();persist();
 }
 function recommendedZoom(w){
   if(w.mode==='reaction')return 1;
@@ -92,7 +97,10 @@ function bindCanvas(panel,canvas,index){
     if(x<0||x>=w.n||y<0||y>=w.n)return;
     const cell=y*w.n+x,now=performance.now();
     if(lastCell===cell||now-lastStroke<(w.mode==='sand'?95:27))return;
-    lastCell=cell;lastStroke=now;activeWorld=index;inject(w,x,y);
+    lastCell=cell;lastStroke=now;const previous=activeWorld;activeWorld=index;
+    if(previous!==index&&w.mode==='studio'&&editing)refreshBrushes();
+    if(w.mode==='studio'&&editing){if(!paintStudio(w,x,y,brushState,brushRadius,symmetry))return;}
+    else inject(w,x,y);
     updateSelection();paintAll();updateHUD();
   }
   const distance=()=>{const a=[...points.values()];return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);};
@@ -102,7 +110,7 @@ function bindCanvas(panel,canvas,index){
     panel.setPointerCapture?.(e.pointerId);
     points.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(points.size===2){userCamera=true;pinch={distance:Math.max(1,distance()),center:center(),zoom,tx,ty};}
-    else if(points.size===1){lastCell=-1;brush(e);}
+    else if(points.size===1){lastCell=-1;if(mode==='studio')recordHistory(editing?'Перед рисованием':'Воздействие');brush(e);}
   });
   panel.addEventListener('pointermove',e=>{
     if(!points.has(e.pointerId))return;
@@ -121,7 +129,7 @@ function bindCanvas(panel,canvas,index){
   return w=>{if(userCamera||points.size)return;const target=recommendedZoom(w);if(Math.abs(target-zoom)>.005){zoom+=(target-zoom)*.1;apply();}};
 }
 function rebuildStage(){
-  const stage=$('stage');const focus=$('focusBtn');stage.replaceChildren();stage.append(focus);stage.classList.toggle('split',worlds.length===2);
+  const stage=$('stage'),focus=$('focusBtn'),historyButton=$('historyBtn'),tools=$('editTools');stage.replaceChildren();stage.append(focus,historyButton,tools);stage.classList.toggle('split',worlds.length===2);
   stageCanvases=[];stageCameras=[];
   worlds.forEach((world,i)=>{const view=wrapStage(world,i);stage.append(view.panel);stageCanvases.push(view.canvas);stageCameras.push(view.camera);});
   updateSelection();paintAll();
@@ -134,7 +142,8 @@ function updateHUD(){
   $('liveDot').classList.toggle('paused',!running);
   $('worldStatus').textContent=(worlds.length===2?'A + B':'МИР A')+' · '+(running?'РАЗВИВАЕТСЯ':'ПАУЗА');
   $('worldCount').textContent=number(worlds[activeWorld]?.ticks||0)+' шагов';
-  $('worldHint').textContent=worlds.length===2?'Выбран мир '+(activeWorld===0?'A':'B')+' · изменяй его законы':HINTS[mode];
+  const custom=mode==='studio'?studioReport(worlds[activeWorld]):null;
+  $('worldHint').textContent=custom?'Живых '+number(custom.active)+' · состояний '+custom.diversity+'/'+worlds[activeWorld].params.states+(editing?' · рисование':''):worlds.length===2?'Выбран мир '+(activeWorld===0?'A':'B')+' · изменяй его законы':HINTS[mode];
 }
 function updateUI(){
   for(const button of $('modeTabs').querySelectorAll('[data-mode]')){
@@ -145,6 +154,11 @@ function updateUI(){
   $('speed').value=String(speed+1);$('speedLabel').textContent='×'+RATE[mode][speed];
   $('splitText').textContent=worlds.length===2?'Сравнение':'Раздвоить';
   $('archiveCount').textContent=String(archive.length);
+  $('historyCount').textContent=String(history.length);
+  $('studioBtn').hidden=mode!=='studio';$('studioBtn').textContent=editing?'Наблюдать':'Рисовать';
+  const showEditor=mode==='studio'&&editing;
+  $('editTools').hidden=!showEditor;$('stage').classList.toggle('editing',showEditor);
+  if(showEditor)refreshBrushes();
   $('paletteSwatch').style.background=PALETTES[palette].colors[4];
   updateHUD();
 }
@@ -164,7 +178,118 @@ function range(name,title,min,max,step,value,format){
   return '<div class="setting"><label class="setting-top" for="law-'+name+'"><span>'+title+'</span><output id="out-'+name+'">'+text+'</output></label>'+
     '<input type="range" id="law-'+name+'" data-law="'+name+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+value+'"></div>';
 }
+
+const escapeText=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function recordHistory(label='Наблюдение'){
+  history.push({label,ticks:worlds[activeWorld]?.ticks||0,worlds:worlds.map(serialize),activeWorld,at:Date.now()});
+  if(history.length>(mode==='reaction'?6:24))history.shift();
+  $('historyCount').textContent=String(history.length);
+  lastHistoryAt=performance.now();
+}
+function refreshBrushes(){
+  if(mode!=='studio')return;
+  const w=worlds[activeWorld];if(!w)return;
+  const names=studioStateNames(w.params),colors=PALETTES[palette].colors;
+  brushState=Math.min(brushState,names.length-1);
+  $('editStates').innerHTML=names.map((name,i)=>{
+    const color=w.params.family==='spread'?[colors[0],colors[2],colors[5],colors[1]][i]:colors[Math.round(i/Math.max(1,names.length-1)*5)];
+    return '<button type="button" data-state="'+i+'" class="'+(brushState===i?'active':'')+'" aria-pressed="'+(brushState===i)+'"><i class="state-swatch" style="background:'+color+'"></i>'+escapeText(name)+'</button>';
+  }).join('');
+}
+function historyDialog(){
+  const w=worlds[activeWorld];let summary='';
+  if(mode==='studio'){
+    const stats=studioReport(w),colors=PALETTES[palette].colors;
+    const names=studioStateNames(w.params);
+    const segments=stats.counts.map((count,i)=>{
+      const c=w.params.family==='spread'?[colors[0],colors[2],colors[5],colors[1]][i]:colors[Math.round(i/Math.max(1,stats.counts.length-1)*5)];
+      return '<i title="'+escapeText(names[i])+': '+count+'" style="background:'+c+';width:'+(count/w.a.length*100).toFixed(3)+'%"></i>';
+    }).join('');
+    summary='<div class="studio-metrics"><div><b>'+number(stats.occupied)+'</b><small>занято клеток</small></div><div><b>'+stats.diversity+'/'+w.params.states+'</b><small>различных состояний</small></div><div><b>'+stats.entropy.toFixed(2)+'</b><small>энтропия, бит</small></div></div><div class="studio-bars">'+segments+'</div>';
+  }
+  const list=history.map((h,i)=>({h,i})).reverse().map(({h,i})=>
+    '<div class="history-row"><div><b>'+escapeText(h.label)+'</b><small>'+number(h.ticks)+' шагов · '+h.worlds.length+' мир(а)</small></div><button type="button" data-restore="'+i+'">Вернуться</button></div>').join('');
+  openSheet('ХРОНОЛОГИЯ ЭКСПЕРИМЕНТА','История и измерения',summary+'<p>Каждая отметка хранит точную конфигурацию поля и законов. Возврат отбросит более поздние отметки.</p>'+list,body=>{
+    body.querySelectorAll('[data-restore]').forEach(button=>button.addEventListener('click',()=>{
+      const index=Number(button.dataset.restore),entry=history[index];if(!entry)return;
+      try{
+        const restored=entry.worlds.map(deserialize);
+        if(!restored.length||restored.some(x=>x.mode!==mode))throw Error('Режим изменился');
+        worlds=restored;activeWorld=Math.min(restored.length-1,entry.activeWorld||0);history=history.slice(0,index+1);
+        running=false;editing=false;rebuildStage();updateUI();persist();closeSheet();notify('Возврат к '+number(entry.ticks)+' шагам');
+      }catch(error){notify('Не удалось восстановить: '+error.message);}
+    }));
+  });
+}
+function libraryDialog(){
+  const choices=Object.entries(STUDIO_PRESETS).map(([id,p])=>
+    '<button type="button" data-studio-preset="'+id+'" class="'+(worlds[activeWorld]?.params.name===p.name?'selected':'')+'">'+escapeText(p.name)+'<small>'+STUDIO_FAMILIES[p.family]+'</small></button>').join('');
+  openSheet('БИБЛИОТЕКА ПРАВИЛ','Семь исходных миров',
+    '<p>Каждый пример — работающий алгоритм. Выбирай образец, меняй его законы и рисуй свои начальные условия.</p><div class="workshop-presets">'+choices+'</div><div class="sheet-buttons"><button id="customFromHere" class="alt">Редактировать текущие законы</button></div>',body=>{
+      body.querySelectorAll('[data-studio-preset]').forEach(btn=>btn.addEventListener('click',()=>presetConfirm(btn.dataset.studioPreset)));
+      body.querySelector('#customFromHere').addEventListener('click',studioLaws);
+    });
+}
+function presetConfirm(id){
+  const preset=STUDIO_PRESETS[id];if(!preset)return;
+  openSheet('СМЕНА ЭКСПЕРИМЕНТА','Запустить «'+preset.name+'»?',
+    '<p>Начальные условия и правила выбранного мира заменятся. Его прежнее состояние останется в истории.</p><div class="sheet-buttons"><button id="applyStudioPreset">Запустить образец</button><button id="cancelStudioPreset" class="alt">Назад к примерам</button></div>',body=>{
+      body.querySelector('#applyStudioPreset').addEventListener('click',()=>{
+        recordHistory('Перед сменой сценария');worlds[activeWorld]=createWorld('studio',freshSeed(),id);running=false;editing=true;brushState=1;
+        rebuildStage();updateUI();persist();closeSheet();notify('Образец запущен · настрой правила');
+      });
+      body.querySelector('#cancelStudioPreset').addEventListener('click',libraryDialog);
+    });
+}
+function studioLaws(){
+  const w=worlds[activeWorld],r=w.params;
+  let html='<p>Это вычисляемые клеточные автоматы. Переключение типа закона сохраняет клетки, но меняет их смысл. Изменения видны в реальном времени.</p>';
+  if(worlds.length===2)html+='<div class="setting"><label class="setting-top" for="worldChoice">Настраиваемый мир</label><select id="worldChoice"><option value="0"'+(activeWorld===0?' selected':'')+'>Мир A</option><option value="1"'+(activeWorld===1?' selected':'')+'>Мир B</option></select></div>';
+  html+='<div class="setting"><label class="setting-top" for="law-family">Механика перехода</label><select id="law-family" data-law="family">'+Object.entries(STUDIO_FAMILIES).map(([id,name])=>'<option value="'+id+'"'+(r.family===id?' selected':'')+'>'+name+'</option>').join('')+'</select></div>';
+  html+='<div class="setting"><label class="setting-top" for="law-neighbors">Соседи</label><select id="law-neighbors" data-law="neighbors"><option value="4"'+(r.neighbors===4?' selected':'')+'>4 · стороны</option><option value="8"'+(r.neighbors===8?' selected':'')+'>8 · стороны и диагонали</option></select></div>';
+  html+='<div class="setting"><label class="setting-top" for="law-wrap">Граница поля</label><select id="law-wrap" data-law="wrap"><option value="true"'+(r.wrap?' selected':'')+'>Замкнутый мир · тор</option><option value="false"'+(!r.wrap?' selected':'')+'>Открытые края</option></select></div>';
+  if(r.family!=='spread')html+=range('states','Количество состояний',r.family==='cyclic'?3:2,6,1,r.states,v=>String(v));
+  if(r.family==='life')for(const [type,label] of [['birth','Рождение'],['survive','Выживание']]){
+    html+='<div class="setting"><div class="setting-top">'+label+' · число живых соседей</div><div class="rules-counts" role="group" aria-label="'+label+'">';
+    for(let i=0;i<=r.neighbors;i++)html+='<button type="button" class="rule-count '+(r[type].includes(i)?'selected':'')+'" data-count="'+i+'" data-count-type="'+type+'" aria-pressed="'+r[type].includes(i)+'">'+i+'</button>';
+    html+='</div></div>';
+  }
+  if(r.family==='cyclic')html+=range('threshold','Минимум соседей следующего вида',1,r.neighbors,1,r.threshold,v=>String(v));
+  if(r.family==='spread'){
+    html+=range('spread','Вероятность заражения',.001,1,.001,r.spread,v=>(v*100).toFixed(1)+'%');
+    html+=range('duration','Угасание активного',.001,1,.001,r.duration,v=>(v*100).toFixed(1)+'%');
+    html+=range('recover','Восстановление территории',0,1,.001,r.recover,v=>(v*100).toFixed(1)+'%');
+    html+=range('regrow','Появление нового ресурса',0,.08,.0005,r.regrow,v=>(v*100).toFixed(2)+'%');
+  }
+  html+='<div class="rule-note">Правила считаются синхронно: все клетки видят одно и то же предыдущее состояние. Можно экспериментировать и с остановленным полем.</div><div class="sheet-buttons"><button type="button" id="openStudioLibrary" class="alt">Библиотека примеров</button><button type="button" id="openStudioHistory" class="alt">Статистика и история</button></div>';
+  openSheet('РЕДАКТОР ПРАВИЛ','Законы · Мир '+(activeWorld===0?'A':'B'),html,body=>{
+    const choice=body.querySelector('#worldChoice');if(choice)choice.addEventListener('change',e=>{activeWorld=Number(e.target.value);updateSelection();updateHUD();studioLaws();});
+    body.querySelectorAll('[data-law]').forEach(input=>{
+      input.addEventListener('pointerdown',()=>recordHistory('Перед изменением закона'),{once:true});
+      input.addEventListener(input.tagName==='SELECT'?'change':'input',()=>{
+        const key=input.dataset.law,old=worlds[activeWorld],applied=setRule(old,key,input.value);
+        if(!applied)return;
+        if(key==='family'||key==='neighbors'||key==='states'){refreshBrushes();studioLaws();}
+        else if(input.tagName!=='SELECT'){
+          const output=body.querySelector('#out-'+key);if(output)output.textContent=key==='threshold'?String(old.params[key]):(old.params[key]*100).toFixed(key==='regrow'?2:1)+'%';
+        }
+        paintAll();updateHUD();
+      });
+    });
+    body.querySelectorAll('[data-count]').forEach(button=>button.addEventListener('click',()=>{
+      const key=button.dataset.countType,value=Number(button.dataset.count),current=worlds[activeWorld].params[key];
+      recordHistory('Правило '+(key==='birth'?'рождения':'выживания'));
+      const next=current.includes(value)?current.filter(n=>n!==value):[...current,value].sort((a,b)=>a-b);
+      setRule(worlds[activeWorld],key,next);button.classList.toggle('selected',next.includes(value));button.setAttribute('aria-pressed',String(next.includes(value)));
+      paintAll();updateHUD();
+    }));
+    body.querySelector('#openStudioLibrary').addEventListener('click',libraryDialog);
+    body.querySelector('#openStudioHistory').addEventListener('click',historyDialog);
+  });
+}
+
 function ruleDialog(){
+  if(mode==='studio')return studioLaws();
   const w=worlds[activeWorld];
   let markup='<p>Изменения применяются к живой системе. '+(worlds.length>1?'Выбранный мир можно менять независимо от второго.':'Попробуй поменять один закон и посмотреть на результат.')+'</p>';
   if(worlds.length===2)markup+='<div class="setting"><label class="setting-top" for="worldChoice">Настраиваемый мир</label><select id="worldChoice"><option value="0"'+(activeWorld===0?' selected':'')+'>Мир A</option><option value="1"'+(activeWorld===1?' selected':'')+'>Мир B</option></select></div>';
@@ -224,22 +349,45 @@ function paletteDialog(){
     body.querySelectorAll('[data-palette]').forEach(b=>b.addEventListener('click',()=>{palette=b.dataset.palette;paintAll();updateUI();persist();closeSheet();notify('Палитра: '+PALETTES[palette].label);}));
   });
 }
-function saveDiscovery(){
+function saveDiscovery(customName=''){
   try{
     paintAll();
     const thumb=stageCanvases[activeWorld]?.toDataURL('image/png')||'';
     const stamp=new Date();
-    archive.unshift({id:String(Date.now())+'-'+Math.floor(Math.random()*10000),mode,title:MODES[mode].label+' · '+stamp.toLocaleDateString('ru-RU',{day:'numeric',month:'short'}),ticks:worlds[activeWorld].ticks,created:stamp.toISOString(),palette,preview:thumb,worlds:worlds.map(serialize)});
+    archive.unshift({id:String(Date.now())+'-'+Math.floor(Math.random()*10000),mode,title:customName.trim().slice(0,64)||MODES[mode].label+' · '+stamp.toLocaleDateString('ru-RU',{day:'numeric',month:'short'}),ticks:worlds[activeWorld].ticks,created:stamp.toISOString(),palette,preview:thumb,worlds:worlds.map(serialize)});
     archive=archive.slice(0,8);persist();updateUI();notify('Открытие сохранено в архиве');
   }catch(error){notify('Не удалось сохранить: '+error.message);}
 }
+function saveScenarioDialog(){
+  openSheet('СОХРАНЕНИЕ СЦЕНАРИЯ','Назови своё открытие',
+    '<p>Сохраняются клетки, правила, шаги и обе ветви мира, если включено сравнение.</p><div class="setting"><label class="setting-top" for="scenarioName">Название сценария</label><input type="text" id="scenarioName" maxlength="64" value="Мой эксперимент" autocomplete="off"></div><div class="sheet-buttons"><button id="confirmSave">Сохранить в архив</button><button id="cancelSave" class="alt">Отмена</button></div>',body=>{
+      const field=body.querySelector('#scenarioName');
+      const save=()=>{saveDiscovery(field.value);closeSheet();};
+      body.querySelector('#confirmSave').addEventListener('click',save);
+      field.addEventListener('keydown',e=>{if(e.key==='Enter')save();});
+      body.querySelector('#cancelSave').addEventListener('click',closeSheet);
+  });
+}
 function galleryDialog(){
   const html=archive.length?archive.map(item=>
-    '<article class="gallery-row" data-entry="'+item.id+'"><img src="'+item.preview+'" alt="Снимок сохранённой симуляции"><div><h3>'+item.title+'</h3><p>'+number(item.ticks)+' шагов · '+(item.worlds.length===2?'два мира':'один мир')+'</p></div><div class="gallery-actions"><button type="button" data-load="'+item.id+'">Открыть</button><button type="button" data-delete="'+item.id+'">Удалить</button></div></article>').join(''):'<div class="empty-note">Пока нет сохранённых миров.<br>Нажми «Сохранить открытие» под симуляцией.</div>';
-  openSheet('МОИ ОТКРЫТИЯ','Архив миров',html,body=>{
+    '<article class="gallery-row" data-entry="'+escapeText(item.id)+'"><img src="'+escapeText(item.preview)+'" alt="Снимок сохранённой симуляции"><div><h3>'+escapeText(item.title)+'</h3><p>'+number(item.ticks)+' шагов · '+(item.worlds.length===2?'два мира':'один мир')+'</p></div><div class="gallery-actions"><button type="button" data-load="'+item.id+'">Открыть</button><button type="button" data-delete="'+item.id+'">Удалить</button></div></article>').join(''):'<div class="empty-note">Пока нет сохранённых миров.<br>Нажми «Сохранить открытие» под симуляцией.</div>';
+  const importer='<div class="workshop-file"><label for="importScenario">Открыть сценарий JSON с устройства</label><input type="file" id="importScenario" accept="application/json,.json" aria-label="Импорт сценария"></div>';
+  openSheet('МОИ ОТКРЫТИЯ','Архив миров',importer+html,body=>{
+    body.querySelector('#importScenario').addEventListener('change',async event=>{
+      const file=event.target.files?.[0];if(!file)return;
+      try{
+        if(file.size>2000000)throw Error('Файл больше 2 МБ');
+        const data=JSON.parse(await file.text());
+        if(data.format!=='kaskad-studio-scenario'||data.version!==1||!Array.isArray(data.worlds)||data.worlds.length<1||data.worlds.length>2)throw Error('Неизвестный формат');
+        const restored=data.worlds.map(deserialize);
+        if(restored.some(w=>w.mode!=='studio'))throw Error('Это не сценарий Мастерской');
+        mode='studio';worlds=restored;activeWorld=Math.min(restored.length-1,Number(data.activeWorld)||0);running=false;editing=true;history=[];
+        rebuildStage();recordHistory('Импорт сценария');updateUI();persist();closeSheet();notify('Сценарий импортирован');
+      }catch(error){notify('Не удалось импортировать: '+error.message);event.target.value='';}
+    });
     body.querySelectorAll('[data-load]').forEach(b=>b.addEventListener('click',()=>{
       const item=archive.find(s=>s.id===b.dataset.load);if(!item)return;
-      try{mode=item.mode;worlds=item.worlds.map(deserialize);palette=item.palette in PALETTES?item.palette:palette;activeWorld=0;running=false;rebuildStage();updateUI();persist();closeSheet();notify('Мир восстановлен · пауза');}catch{notify('Сохранение повреждено');}
+      try{mode=item.mode;worlds=item.worlds.map(deserialize);palette=item.palette in PALETTES?item.palette:palette;activeWorld=0;running=false;editing=mode==='studio';history=[];rebuildStage();recordHistory('Мир из архива');updateUI();persist();closeSheet();notify('Мир восстановлен · пауза');}catch{notify('Сохранение повреждено');}
     }));
     body.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>{
       const item=archive.find(s=>s.id===b.dataset.delete);if(!item)return;
@@ -252,11 +400,12 @@ function galleryDialog(){
 }
 function splitWorld(){
   if(worlds.length===1){
-    worlds.push(mutate(worlds[0]));activeWorld=1;rebuildStage();updateUI();persist();notify('Мир B создан с изменённым законом');return;
+    recordHistory('До раздвоения');
+    worlds.push(mutate(worlds[0]));activeWorld=1;recordHistory('Мир B · мутация');rebuildStage();updateUI();persist();notify('Мир B создан с изменённым законом');return;
   }
   openSheet('РАЗДВОЕНИЕ','Какой мир оставить?','<p>Оба мира развивались независимо. Выбери один для продолжения наблюдения.</p><div class="sheet-buttons"><button id="keepA">Оставить A</button><button id="keepB">Оставить B</button><button id="stay" class="alt">Отмена</button></div>',body=>{
     for(let i=0;i<2;i++)body.querySelector(i?'#keepB':'#keepA').addEventListener('click',()=>{
-      worlds=[worlds[i]];activeWorld=0;rebuildStage();updateUI();persist();closeSheet();notify('Наблюдение продолжается');
+      recordHistory('До объединения');worlds=[worlds[i]];activeWorld=0;recordHistory('Продолжен мир '+(i===0?'A':'B'));rebuildStage();updateUI();persist();closeSheet();notify('Наблюдение продолжается');
     });
     body.querySelector('#stay').addEventListener('click',closeSheet);
   });
@@ -264,14 +413,20 @@ function splitWorld(){
 function resetDialog(){
   openSheet('НОВАЯ ВСЕЛЕННАЯ','Начать заново?','<p>Текущее состояние заменится новым миром. Перед этим можно сохранить открытие в архив.</p><div class="sheet-buttons"><button id="freshWorld">Создать новый мир</button><button id="saveFirst" class="alt">Сначала сохранить</button><button id="cancelReset" class="alt">Отмена</button></div>',body=>{
     body.querySelector('#freshWorld').addEventListener('click',()=>{
-      worlds=[createWorld(mode,freshSeed())];activeWorld=0;running=true;rebuildStage();updateUI();persist();closeSheet();notify('Запущена новая вселенная');
+      recordHistory('До нового мира');worlds=[createWorld(mode,freshSeed())];activeWorld=0;running=mode!=='studio';editing=mode==='studio';recordHistory('Новый мир');rebuildStage();updateUI();persist();closeSheet();notify('Запущена новая вселенная');
     });
     body.querySelector('#saveFirst').addEventListener('click',()=>{saveDiscovery();closeSheet();});
     body.querySelector('#cancelReset').addEventListener('click',closeSheet);
   });
 }
 function exportDialog(){
-  openSheet('ЭКСПОРТ НАБЛЮДЕНИЯ','Сохранить изображение','<p>Экспортируется мир '+(activeWorld===0?'A':'B')+'. Анимация рассчитывается из копии текущего состояния и не изменяет эксперимент.</p><div class="sheet-buttons"><button type="button" id="exportPng">PNG · 1280 px</button><button type="button" id="exportGif" class="alt">GIF · 22 кадра</button></div>',body=>{
+  openSheet('ЭКСПОРТ НАБЛЮДЕНИЯ','Сохранить изображение','<p>Экспортируется мир '+(activeWorld===0?'A':'B')+'. Анимация рассчитывается из копии текущего состояния и не изменяет эксперимент.</p><div class="sheet-buttons"><button type="button" id="exportPng">PNG · 1280 px</button><button type="button" id="exportGif" class="alt">GIF · 22 кадра</button>'+(mode==='studio'?'<button type="button" id="exportScenario" class="alt">Сценарий · JSON</button>':'')+'</div>',body=>{
+    const exportScene=body.querySelector('#exportScenario');if(exportScene)exportScene.addEventListener('click',()=>{
+      try{
+        const data={format:'kaskad-studio-scenario',version:1,name:'Мой эксперимент',created:new Date().toISOString(),activeWorld,worlds:worlds.map(serialize)};
+        saveBlob(new Blob([JSON.stringify(data)],{type:'application/json'}),'kaskad-scenario.json');closeSheet();notify('Сценарий экспортирован');
+      }catch(error){notify('Ошибка экспорта: '+error.message);}
+    });
     body.querySelector('#exportPng').addEventListener('click',async()=>{
       try{const blob=await makePng(stageCanvases[activeWorld]);saveBlob(blob,'kaskad-'+mode+'.png');closeSheet();notify('PNG готов');}catch(error){notify('Ошибка экспорта: '+error.message);}
     });
@@ -290,6 +445,7 @@ function animate(t){
   paintTime=t;
   try{
     for(const w of worlds)stepWorld(w,RATE[mode][speed]);
+    if(mode==='studio'&&t-lastHistoryAt>1600)recordHistory('Контрольная точка');
     paintAll();
     if(t-lastHud>220){updateHUD();lastHud=t;}
   }catch(error){running=false;updateUI();notify('Симуляция остановлена: '+error.message);console.error(error);}
@@ -298,21 +454,64 @@ let focused=false;
 function toggleFocus(value=!focused){focused=value;document.querySelector('.app-shell').classList.toggle('focus-mode',focused);$('focusLabel').textContent=focused?'Выйти':'На весь экран';$('focusBtn').setAttribute('aria-label',focused?'Вернуться к управлению':'Наблюдение на весь экран');}
 $('focusBtn').addEventListener('click',()=>toggleFocus());
 $('modeTabs').addEventListener('click',e=>{const button=e.target.closest('[data-mode]');if(button)switchMode(button.dataset.mode);});
-$('playBtn').addEventListener('click',()=>{running=!running;updateUI();persist();});
-$('stepBtn').addEventListener('click',()=>{running=false;worlds.forEach(w=>stepWorld(w,1));paintAll();updateUI();persist();});
+$('playBtn').addEventListener('click',()=>{running=!running;if(mode==='studio'&&running)editing=false;updateUI();persist();});
+$('stepBtn').addEventListener('click',()=>{if(mode==='studio')recordHistory('Перед шагом');running=false;worlds.forEach(w=>stepWorld(w,1));paintAll();updateUI();persist();});
 $('speed').addEventListener('input',e=>{speed=Number(e.target.value)-1;updateUI();});
 $('speed').addEventListener('change',persist);
 $('splitBtn').addEventListener('click',splitWorld);
 $('lawsBtn').addEventListener('click',ruleDialog);
 $('paletteBtn').addEventListener('click',paletteDialog);
-$('saveBtn').addEventListener('click',saveDiscovery);
+$('saveBtn').addEventListener('click',()=>{if(mode==='studio')saveScenarioDialog();else saveDiscovery();});
 $('galleryBtn').addEventListener('click',galleryDialog);
 $('resetBtn').addEventListener('click',resetDialog);
 $('exportBtn').addEventListener('click',exportDialog);
+$('historyBtn').addEventListener('click',historyDialog);
+$('studioBtn').addEventListener('click',()=>{
+  if(mode!=='studio')return;
+  editing=!editing;running=!editing;
+  updateUI();persist();notify(editing?'Рисуй по клеткам · симуляция на паузе':'Поле развивается');
+});
+$('editStates').addEventListener('click',e=>{
+  const target=e.target.closest('[data-state]');if(!target)return;
+  brushState=Number(target.dataset.state);refreshBrushes();
+});
+$('brushSize').addEventListener('change',e=>{brushRadius=Number(e.target.value);});
+$('symmetry').addEventListener('change',e=>{symmetry=e.target.value;});
+$('studioLibrary').addEventListener('click',libraryDialog);
+$('scatterBtn').addEventListener('click',()=>{
+  openSheet('РЕДАКТОР ПОЛЯ','Заполнить случайно?',
+    '<p>Начальные условия выбранного мира будут заменены случайным распределением клеток. Предыдущее поле сохранится в истории.</p><div class="sheet-buttons"><button id="yesScatter">Рассеять клетки</button><button id="noScatter" class="alt">Отмена</button></div>',body=>{
+      body.querySelector('#yesScatter').addEventListener('click',()=>{
+        recordHistory('До случайного заполнения');scatterStudio(worlds[activeWorld],.28);paintAll();updateHUD();persist();closeSheet();notify('Поле заполнено');
+      });
+      body.querySelector('#noScatter').addEventListener('click',closeSheet);
+  });
+});
+$('clearFieldBtn').addEventListener('click',()=>{
+  openSheet('РЕДАКТОР ПОЛЯ','Очистить поле?',
+    '<p>Все клетки выбранного мира станут пустыми. Вернуться к предыдущему состоянию можно через историю.</p><div class="sheet-buttons"><button id="yesClear">Очистить поле</button><button id="noClear" class="alt">Отмена</button></div>',body=>{
+      body.querySelector('#yesClear').addEventListener('click',()=>{
+        recordHistory('До очистки');worlds[activeWorld].a.fill(0);paintAll();updateHUD();persist();closeSheet();notify('Поле очищено · нарисуй новую форму');
+      });
+      body.querySelector('#noClear').addEventListener('click',closeSheet);
+  });
+});
 $('closeSheet').addEventListener('click',closeSheet);
 $('backdrop').addEventListener('click',closeSheet);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('overlay').hidden)closeSheet();else if(focused)toggleFocus(false);}if(e.code==='Space'&&$('overlay').hidden&&!['INPUT','BUTTON','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();running=!running;updateUI();}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)persist();else paintTime=0;});
 window.addEventListener('pagehide',persist);
 setInterval(()=>{if(!document.hidden)persist();},9000);
-load();rebuildStage();updateUI();requestAnimationFrame(animate);
+load();if(!history.length)recordHistory('Начало наблюдения');rebuildStage();updateUI();requestAnimationFrame(animate);
+createWorkshopMode({
+  appName:'Каскад: Узоры',
+  version:'1.1.0',
+  cachePrefix: 'kaskad-patterns-',
+  storageNamespace: 'pocket-works:kaskad-patterns',
+  onReset(){
+    localStorage.removeItem(KEY);
+    modeCache={};archive=[];history=[];mode='sand';
+    worlds=[createWorld('sand',freshSeed())];running=true;speed=3;palette='mineral';activeWorld=0;editing=false;
+    recordHistory('Новый сеанс');rebuildStage();updateUI();notify('Данные Каскада сброшены');
+  }
+});

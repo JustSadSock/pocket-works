@@ -80,3 +80,82 @@ button:active{transform:translateY(1px)}button:disabled{opacity:.4;cursor:not-al
 .focus-mode .stage.split .world-panel{width:min(calc((100vw - 42px)/2),92dvh)}
 .focus-mode .focus-button{top:calc(12px + env(safe-area-inset-top,0px))}
 @media(max-width:640px){.focus-button span{display:none}.focus-mode .focus-button span{display:inline}.focus-mode .stage.split{flex-direction:column}.focus-mode .stage.split .world-panel{width:min(95vw,44dvh);height:min(95vw,44dvh);flex-shrink:1}}
+
+/* Workshop: a tactile specimen tray, never a separate dead preview screen. */
+.history-button{position:absolute;z-index:9;right:164px;top:13px;height:40px;min-width:44px;padding:0 10px;display:flex;align-items:center;gap:6px;background:#152324dc;color:#cddbd4;border:1px solid #54706b;font-size:.7rem;font-weight:700}
+.history-button span{font:650 .63rem ui-monospace,Menlo,monospace;color:#d6b48b}
+.stage.editing{padding-bottom:145px}
+.edit-tools[hidden],#studioBtn[hidden]{display:none!important}
+.edit-tools{position:absolute;z-index:10;bottom:8px;left:50%;transform:translateX(-50%);width:min(670px,calc(100% - 16px));display:flex;flex-direction:column;gap:9px;background:#e8e4d9;color:#273432;padding:11px 13px 10px;border:1px solid #bdbbad;box-shadow:0 10px 28px #0a1114b3}
+.edit-head{display:flex;align-items:center;justify-content:space-between;font:700 .62rem ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#657269}
+.edit-head button{background:none;border:0;min-height:30px;font:.75rem system-ui,sans-serif;font-weight:750;color:#975b36}
+.edit-colors{display:flex;gap:5px;overflow-x:auto;min-height:40px;scrollbar-width:thin}
+.edit-colors button{display:flex;align-items:center;gap:6px;min-width:0;flex:1 0 auto;max-width:145px;min-height:38px;background:#f4f1e9;border:1px solid #c2c2b8;color:#45564e;font-size:.69rem;padding:4px 8px;font-weight:650;white-space:nowrap}
+.edit-colors button.active{border-color:#9e6a44;box-shadow:inset 0 0 0 1px #9e6a44;background:#fffaf0;color:#283830}
+.edit-colors .state-swatch{display:inline-block;width:16px;height:16px;flex:0 0 16px;border:1px solid #52625a55}
+.edit-bottom{display:flex;align-items:center;gap:7px;justify-content:space-between}
+.edit-bottom label{display:flex;align-items:center;gap:5px;font-size:.68rem;font-weight:650;white-space:nowrap;color:#687368}
+.edit-bottom select{border:1px solid #babfb5;background:#faf8f2;height:36px;padding:0 6px;color:#263532;font-size:.72rem;min-width:51px}
+.edit-bottom button{background:#283935;border:0;min-height:36px;padding:0 12px;color:#f5efe3;font-size:.71rem;font-weight:750;white-space:nowrap}
+.edit-bottom #clearFieldBtn{border:1px solid #b6bab0;background:transparent;color:#675949}
+.setting .rules-counts{display:flex;flex-wrap:wrap;gap:5px}
+.rule-count{height:41px;min-width:38px;border:1px solid #b6bdb4;background:#f6f4ed;color:#4b5b55;font:750 .82rem ui-monospace,Menlo,monospace}
+.rule-count.selected{background:#2d4a41;color:#fff;border-color:#2d4a41}
+.workshop-presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:10px 0 20px}
+.workshop-presets button{min-height:62px;text-align:left;padding:9px 11px;border:1px solid #b3baaf;background:#f6f4eb;color:#283833;font-size:.81rem;font-weight:700}
+.workshop-presets button.selected{border:2px solid #a6744f;background:#fff8ec}
+.workshop-presets small{display:block;margin-top:5px;color:#7a837a;font:.62rem ui-monospace,Menlo,monospace}
+.history-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #c7c9bf}
+.history-row b{display:block;font-size:.84rem}.history-row small{display:block;color:#778177;margin-top:3px;font-size:.69rem}
+.history-row button{min-height:42px;padding:0 12px;border:1px solid #a6b3a8;background:#293f39;color:#f6f5ed;font-size:.74rem;font-weight:700}
+.studio-bars{display:flex;align-items:stretch;width:100%;height:29px;overflow:hidden;background:#101a1d;margin:9px 0}
+.studio-bars i{display:block;height:100%;min-width:1px}
+.studio-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:14px 0}
+.studio-metrics div{border-top:1px solid #9da9a0;padding-top:8px;min-width:0}
+.studio-metrics b{display:block;font:750 1.1rem ui-monospace,Menlo,monospace;overflow:hidden;text-overflow:ellipsis}
+.studio-metrics small{display:block;margin-top:4px;font-size:.65rem;color:#707a70}
+.workshop-file{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 0}
+.workshop-file input{width:100%;font-size:.7rem}
+@media(max-width:640px){
+  .history-button{right:65px;top:8px;height:40px;font-size:.66rem}
+  .stage.editing{padding-bottom:158px}
+  .edit-tools{gap:7px;padding:7px 9px}
+  .edit-colors button{font-size:.62rem;padding:4px 6px}
+  .edit-head{font-size:.55rem}
+  .edit-bottom{gap:4px}
+  .edit-bottom label{font-size:.58rem;gap:3px}
+  .edit-bottom select{font-size:.61rem;padding:0 3px}
+  .edit-bottom button{padding:0 7px;font-size:.63rem}
+  .secondary-actions{overflow-x:auto;gap:5px;scrollbar-width:thin}
+  .secondary-actions button{flex-shrink:0}
+}
+@media(max-width:370px){
+  .stage.editing{padding-bottom:162px}
+  .edit-colors{min-height:36px}
+  .edit-colors button{min-height:34px}
+  .edit-bottom label{flex-direction:column;align-items:flex-start;gap:1px}
+  .workshop-presets{grid-template-columns:1fr}
+}
+.focus-mode .history-button{top:calc(12px + env(safe-area-inset-top,0px))}
+
+@media(max-width:370px){.mode{min-width:0;padding:0 9px;font-size:.73rem}.mode-number{display:none}.mode:first-child{padding-left:2px}.mode:first-child.active:after{left:0}}
+
+/* When editing, the specimen should not advertise injection gestures; on wide screens
+   the authoring tray lives beside the microscope, never covering the lattice. */
+.stage.editing .canvas-hint{display:none}
+@media(max-width:640px){.world-overlay span:last-child{display:none}}
+@media(min-width:1200px){
+  .stage.editing{padding-bottom:24px}
+  .edit-tools{left:auto;right:24px;top:50%;bottom:auto;transform:translateY(-50%);width:292px;gap:15px;padding:17px}
+  .edit-colors{display:grid;grid-template-columns:1fr 1fr;overflow:visible}
+  .edit-colors button{max-width:none;font-size:.68rem}
+  .edit-bottom{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .edit-bottom label{flex-direction:column;align-items:stretch;gap:5px}
+  .edit-bottom button{min-height:42px}
+}
+
+/* Small optional platform diagnostics control; not confused with the automata editor. */
+.mast-tools{justify-self:end;display:flex;align-items:center;gap:5px}
+.workshop-diagnostics{flex:0 0 auto;display:grid;place-items:center;width:36px;height:42px;padding:0;background:none;border:0;font-size:1.15rem;color:#6c756c;font-weight:700}
+.mast-tools .text-control{justify-self:auto}
+@media(max-width:370px){.workshop-diagnostics{width:31px}}

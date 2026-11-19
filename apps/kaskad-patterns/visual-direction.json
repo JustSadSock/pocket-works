@@ -18,10 +18,15 @@
     "navigation": "scene-zoom",
     "chromeTopology": "unframed-scene",
     "dominantMotion": "immediate",
-    "primaryVerb": "Tap or stroke a living lattice to inject a disturbance, then change the mathematical rule and observe the true evolving consequences.",
-    "physicalFeedback": "A perturbation appears on the touched cell immediately; pause, one-step, palette, branch and saved state redraw directly without fake progress.",
-    "spatialRationale": "The lattice occupies every available minute of phone height between the mode rail and playback controls, and dual specimens divide vertically rather than hiding either simulation.",
+    "primaryVerb": "Create an actual cell-state rule system, paint or mirror its initial condition on the specimen, and fork/rewind the result under alternate laws.",
+    "physicalFeedback": "Ink appears in the exact painted lattice cells immediately, real rules change synchronous transitions, and the historical checkpoint restores full cell and parameter arrays.",
+    "spatialRationale": "An unframed dark square microscope expands between the mode rail and control desk; only in authoring mode a tactile physical brush tray docks below it. Forking keeps paired live specimens.",
     "comparisons": [
+      {
+        "slug": "glyad",
+        "spatialDifference": "Glyad is a relief-editing optical illusion with a height painter and stereogram output, whereas this instrument keeps a black live pixel-cell microscope and docks a compact state-ink tray inside the stage only during editing.",
+        "interactionDifference": "Glyad hides edited terrain as a static depth illusion; the Kaskad editor assigns discrete transition laws and evolves, forks, saves and rewinds truly changing automata cells."
+      },
       {
         "slug": "skol-siege",
         "spatialDifference": "Skol Siege centers an authored medieval castle and a tactile trebuchet on an organic landscape; this app is a mathematically generated square pixel microscope that can duplicate vertically into two specimens.",
