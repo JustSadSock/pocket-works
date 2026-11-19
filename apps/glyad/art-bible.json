@@ -143,7 +143,7 @@
     {
       "id": "icon",
       "tool": "svg",
-      "source": "icons/icon.svg",
+      "source": "art-bible.json",
       "output": "icons/icon.svg",
       "role": "Медальон человеческого глаза с красной радужкой и угловыми оптическими метками.",
       "acceptance": "Узнаётся в 48×48, виден на светлом фоне.",
@@ -152,29 +152,30 @@
       "maxBytes": 3000
     }
   ],
-  "performance": {
-    "targets": [
-      "390x844 mobile portrait",
-      "1366x768 desktop landscape"
+  "constraints": {
+    "viewport": [
+      390,
+      844
     ],
-    "budget": {
-      "maxImagePixels": 1800000,
-      "renderFps": 30
-    },
-    "risks": [
-      "Результирующая 3D-иллюзия зависит от зрения пользователя и масштаба вывода.",
-      "Canvas отрисовывается после изменения размеров окна."
-    ],
-    "captures": [
-      "initial",
-      "editing",
-      "stereogram"
-    ]
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 30
   },
-  "review": {
-    "initial": "Первый экран показывает редактор и один готовый объёмный образец.",
-    "action": "Модификация глубины немедленно видна на матрице.",
-    "settled": "Стереограмма пересобрана и готова к PNG-экспорту.",
-    "status": "planned-for-ci-screenshot"
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "На коротком телефоне переключатель и сохранение PNG не должны выпадать за экран.",
+      "Зерно должно оставаться различимым при высоком DPI и неодинаковом размере Canvas.",
+      "При пустом рельефе 3D-сцена не должна ложно появляться."
+    ],
+    "comparisons": [
+      "skol-siege",
+      "bzyn",
+      "press"
+    ]
   }
 }
