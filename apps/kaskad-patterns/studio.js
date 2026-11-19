@@ -121,7 +121,7 @@ export function setStudioRule(w,key,value) {
   if(key==='threshold'&&r.family==='cyclic'){r.threshold=clamp(Math.round(Number(value)||1),1,r.neighbors);return true;}
   if(['spread','regrow','duration','recover'].includes(key)&&r.family==='spread'){
     const v=Number(value);if(!Number.isFinite(v))return false;
-    r[key]=clamp(v,key==='spread'||key==='duration'?.001:0,key==='regrow'?.08:1);return true;
+    r[key]=clamp(v,(key==='spread'||key==='duration')?0.001:0,key==='regrow'?0.08:1);return true;
   }
   return false;
 }
