@@ -556,7 +556,7 @@ function openMenu(){
 function closeMenu(){
   ui.menu.hidden=true;ui.confirm.hidden=true;
   mode=modeBeforeMenu;
-  if(mode==='result')showResult();
+  if(mode==='result' || (mode==='playing' && game.phase!=='playing'))showResult();
   syncUI();focusRestore?.focus?.();
 }
 function resetSave(){
