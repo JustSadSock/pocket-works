@@ -1,5 +1,6 @@
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {DEPTH_W,DEPTH_H,clamp,brush,stamp,fresh,stereogram} from './core.mjs';
+import {createWorkshopMode} from '../../shared/workshop-mode.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id),shell=document.querySelector('.app-shell');
 const editor=$('depthCanvas'),stereo=$('stereoCanvas'),ectx=editor.getContext('2d',{alpha:false}),sctx=stereo.getContext('2d',{alpha:false});
@@ -67,3 +68,18 @@ $('showEdit').onclick=()=>switchView('edit');$('showStereo').onclick=()=>switchV
 $('export').onclick=async()=>{const b=$('export');b.disabled=true;b.textContent='СОЗДАЮ PNG…';try{const c=document.createElement('canvas');c.width=1200;c.height=800;const ctx=c.getContext('2d');ctx.putImageData(new ImageData(stereogram(layer,c.width,c.height,seed,palette),c.width,c.height),0,0);const blob=await new Promise((resolve,reject)=>c.toBlob(x=>x?resolve(x):reject(new Error('PNG export failed')),'image/png'));const a=document.createElement('a');const url=URL.createObjectURL(blob);a.href=url;a.download='GLYAD-stereogram.png';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);announce('PNG готов · сохранён в загрузки')}catch(e){announce('Не удалось экспортировать PNG: '+(e.message||'ошибка'))}finally{b.disabled=false;b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg> СОХРАНИТЬ PNG <span aria-hidden="true">↗</span>'}};
 window.addEventListener('resize',()=>requestAnimationFrame(()=>repaint()));document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});window.addEventListener('pagehide',save);
 requestAnimationFrame(()=>repaint());announce('Рисуй по рельефу · затем открой «Секрет»');
+
+createWorkshopMode({
+  appName:'ГЛЯДЬ',
+  version:'1.0.0',
+  cachePrefix:'glyad-',
+  storageNamespace:'pocket-works:glyad',
+  onReset(){
+    localStorage.removeItem(KEY);
+    layer=stamp('heart');
+    stack=[];
+    $('undo').disabled=true;
+    repaint();
+    announce('Рисунок сброшен');
+  }
+});
