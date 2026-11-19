@@ -178,6 +178,7 @@ export function deserialize(snapshot) {
   }else w.a=mode==='sand'?new Uint32Array(data.buffer.slice(0)):data;
   if(mode==='sand')initSandQueue(w);
   if(mode==='studio')w.next=new Uint8Array(length);
+  const studioCells=mode==='studio'?w.a.slice():null;
   for(const [k,v] of Object.entries(snapshot.params||{})){
     if(mode==='sand' && k==='neighbors' && [4,8].includes(Number(v))){w.params.neighbors=Number(v);continue;}
     setRule(w,k,v);
@@ -187,6 +188,9 @@ export function deserialize(snapshot) {
     for(let i=0;i<length;i++)if(w.a[i]>=w.params.neighbors)enqueueSand(w,i);
   }
   if(mode==='ant'){w.ants=(Array.isArray(snapshot.ants)?snapshot.ants:[]).slice(0,12).filter(a=>Number.isInteger(a.x)&&Number.isInteger(a.y)&&a.x>=0&&a.x<n&&a.y>=0&&a.y<n&&Number.isInteger(a.d)&&a.d>=0&&a.d<4).map(a=>({...a}));if(!w.ants.length)w.ants.push({x:n>>1,y:n>>1,d:0});w.params.ants=w.ants.length;}
+  // Rule setters may normalize cells when changing family/state count. Never change
+  // a saved lattice while rebuilding its parameters from a serialized snapshot.
+  if(mode==='studio')w.a=studioCells;
   if(mode==='studio' && typeof snapshot.params?.name==='string')w.params.name=snapshot.params.name.slice(0,64);
   if(mode==='studio')for(const cell of w.a)if(cell>=w.params.states)throw Error('Повреждённые состояния клеток');
   w.seed=Number(snapshot.seed)|0;
