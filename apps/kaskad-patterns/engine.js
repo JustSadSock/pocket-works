@@ -27,20 +27,29 @@ export function createWorld(mode='sand',seed=0x71b246a9) {
   }
   return w;
 }
+const DIR4=[[-1,0],[1,0],[0,-1],[0,1]];
+const DIR8=[...DIR4,[-1,-1],[-1,1],[1,-1],[1,1]];
 export function addSand(w,x,y,amount=1000) {
   if(w.mode!=='sand')return;
-  const n=w.n,dirs=w.params.neighbors===8?[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]:[[-1,0],[1,0],[0,-1],[0,1]];
-  const threshold=dirs.length, stack=[],start=y*n+x;
+  const n=w.n,dirs=w.params.neighbors===8?DIR8:DIR4,threshold=dirs.length;
   if(x<0||y<0||x>=n||y>=n)return;
-  w.a[start]+=amount; if(w.a[start]>=threshold)stack.push(start);
-  let work=0;
-  while(stack.length && work<2400000){
-    const index=stack.pop(),v=w.a[index];if(v<threshold)continue;
-    const cycles=Math.floor(v/threshold);
-    w.a[index]=v%threshold;
-    const px=index%n,py=(index/n)|0;
-    for(const [dx,dy] of dirs){const xx=px+dx,yy=py+dy;if(xx<0||yy<0||xx>=n||yy>=n)continue;const k=yy*n+xx;w.a[k]+=cycles;if(w.a[k]>=threshold)stack.push(k);}
-    work++;
+  const index=y*n+x;
+  w.a[index]+=amount;
+  const queue=[index],queued=new Uint8Array(n*n);
+  queued[index]=1;
+  for(let head=0;head<queue.length;head++){
+    const i=queue[head];queued[i]=0;
+    const v=w.a[i],times=Math.floor(v/threshold);
+    if(times===0)continue;
+    w.a[i]=v%threshold;
+    const px=i%n,py=Math.floor(i/n);
+    for(const [dx,dy] of dirs){
+      const xx=px+dx,yy=py+dy;
+      if(xx<0||yy<0||xx>=n||yy>=n)continue;
+      const k=yy*n+xx;
+      w.a[k]+=times;
+      if(w.a[k]>=threshold&&!queued[k]){queued[k]=1;queue.push(k);}
+    }
   }
   w.ticks+=amount;
 }
@@ -143,6 +152,7 @@ export function deserialize(snapshot) {
   }else w.a=mode==='sand'?new Uint16Array(data.buffer.slice(0)):data;
   for(const [k,v] of Object.entries(snapshot.params||{}))setRule(w,k,v);
   if(mode==='ant'){w.ants=(Array.isArray(snapshot.ants)?snapshot.ants:[]).slice(0,12).filter(a=>Number.isInteger(a.x)&&Number.isInteger(a.y)&&a.x>=0&&a.x<n&&a.y>=0&&a.y<n&&Number.isInteger(a.d)&&a.d>=0&&a.d<4).map(a=>({...a}));if(!w.ants.length)w.ants.push({x:n>>1,y:n>>1,d:0});w.params.ants=w.ants.length;}
+  w.seed=Number(snapshot.seed)|0;
   return w;
 }
 export function cloneWorld(w){return deserialize(serialize(w));}
