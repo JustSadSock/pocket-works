@@ -5,10 +5,10 @@ import { makeGif,makePng,saveBlob } from './exporters.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id);
 const KEY='pocket-works:kaskad-patterns:session-v1';
-const RATE={sand:[1,1,2,4,8,16],ant:[4,16,64,256,1024,4096],reaction:[1,2,3,5,8,12]};
+const RATE={sand:[1,1,2,4,8,16],ant:[4,16,64,256,1024,4096],reaction:[1,1,2,3,4,6]};
 const HINTS={sand:'Коснись поля, чтобы насыпать песок',ant:'Коснись поля, чтобы выпустить муравья',reaction:'Проведи пальцем, чтобы добавить реагент'};
 const TITLE={sand:'ПЕСЧАНАЯ КУЧА',ant:'МУРАВЬИ ЛЭНГТОНА',reaction:'РЕАКЦИИ ГРЕЯ — СКОТТА'};
-let mode='sand',worlds=[createWorld('sand')],modeCache={},archive=[],running=true,speed=3,palette='mineral',activeWorld=0,stageCanvases=[],paintTime=0,lastHud=0,lastFocus=null,toastTimer=0;
+let mode='sand',worlds=[createWorld('sand')],modeCache={},archive=[],running=true,speed=3,palette='mineral',activeWorld=0,stageCanvases=[],stageCameras=[],paintTime=0,lastHud=0,lastFocus=null,toastTimer=0;
 const number=n=>new Intl.NumberFormat('ru-RU',{notation:n>=1e7?'compact':'standard',maximumFractionDigits:0}).format(Math.floor(n));
 function notify(message){
   const el=$('toast');el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);
@@ -50,6 +50,22 @@ function switchMode(next){
   }catch{worlds=[createWorld(next,freshSeed())];}
   rebuildStage();updateUI();persist();
 }
+function recommendedZoom(w){
+  if(w.mode==='reaction')return 1;
+  let minX=w.n,maxX=-1,minY=w.n,maxY=-1;
+  for(let i=0;i<w.a.length;i++){
+    if(w.a[i]===0)continue;
+    const x=i%w.n,y=(i/w.n)|0;
+    if(x<minX)minX=x;if(y<minY)minY=y;if(x>maxX)maxX=x;if(y>maxY)maxY=y;
+  }
+  if(w.mode==='ant')for(const ant of w.ants){
+    if(ant.x<minX)minX=ant.x;if(ant.y<minY)minY=ant.y;
+    if(ant.x>maxX)maxX=ant.x;if(ant.y>maxY)maxY=ant.y;
+  }
+  if(maxX<0)return 1;
+  const span=Math.max(14,maxX-minX+1,maxY-minY+1);
+  return Math.max(1,Math.min(3.2,w.n*.72/span));
+}
 function wrapStage(world,i){
   const panel=document.createElement('article');panel.className='world-panel';panel.dataset.world=String(i);
   const canvas=document.createElement('canvas');canvas.className=world.mode==='reaction'?'smooth':'';
@@ -60,13 +76,14 @@ function wrapStage(world,i){
   overlay.append(letter,description);
   const hint=document.createElement('span');hint.className='canvas-hint';hint.textContent='КАСАНИЕ · ВОЗДЕЙСТВИЕ / ЩИПОК · МАСШТАБ';
   panel.append(canvas,overlay,hint);
-  bindCanvas(panel,canvas,i);
-  return {panel,canvas};
+  const camera=bindCanvas(panel,canvas,i);
+  return {panel,canvas,camera};
 }
 function bindCanvas(panel,canvas,index){
   const points=new Map();
-  let zoom=1,tx=0,ty=0,pinch=null,lastStroke=0,lastCell=-1;
+  let zoom=recommendedZoom(worlds[index]),tx=0,ty=0,pinch=null,lastStroke=0,lastCell=-1,userCamera=false;
   const apply=()=>{canvas.style.transform='translate('+tx+'px,'+ty+'px) scale('+zoom+')';};
+  apply();
   function brush(e){
     const rect=canvas.getBoundingClientRect();if(rect.width<=0||rect.height<=0)return;
     const w=worlds[index];if(!w)return;
@@ -84,7 +101,7 @@ function bindCanvas(panel,canvas,index){
     if(e.pointerType==='mouse'&&e.button!==0)return;
     panel.setPointerCapture?.(e.pointerId);
     points.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(points.size===2){pinch={distance:Math.max(1,distance()),center:center(),zoom,tx,ty};}
+    if(points.size===2){userCamera=true;pinch={distance:Math.max(1,distance()),center:center(),zoom,tx,ty};}
     else if(points.size===1){lastCell=-1;brush(e);}
   });
   panel.addEventListener('pointermove',e=>{
@@ -100,18 +117,19 @@ function bindCanvas(panel,canvas,index){
   });
   function finish(e){points.delete(e.pointerId);if(points.size<2)pinch=null;lastCell=-1;try{panel.releasePointerCapture?.(e.pointerId);}catch{}}
   panel.addEventListener('pointerup',finish);panel.addEventListener('pointercancel',finish);panel.addEventListener('lostpointercapture',e=>{points.delete(e.pointerId);pinch=null;lastCell=-1;});
-  panel.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(1,Math.min(8,zoom*(e.deltaY<0?1.2:1/1.2)));if(zoom===1){tx=0;ty=0;}apply();},{passive:false});
+  panel.addEventListener('wheel',e=>{e.preventDefault();userCamera=true;zoom=Math.max(1,Math.min(8,zoom*(e.deltaY<0?1.2:1/1.2)));if(zoom===1){tx=0;ty=0;}apply();},{passive:false});
+  return w=>{if(userCamera||points.size)return;const target=recommendedZoom(w);if(Math.abs(target-zoom)>.005){zoom+=(target-zoom)*.1;apply();}};
 }
 function rebuildStage(){
   const stage=$('stage');stage.replaceChildren();stage.classList.toggle('split',worlds.length===2);
-  stageCanvases=[];
-  worlds.forEach((world,i)=>{const view=wrapStage(world,i);stage.append(view.panel);stageCanvases.push(view.canvas);});
+  stageCanvases=[];stageCameras=[];
+  worlds.forEach((world,i)=>{const view=wrapStage(world,i);stage.append(view.panel);stageCanvases.push(view.canvas);stageCameras.push(view.camera);});
   updateSelection();paintAll();
 }
 function updateSelection(){
   for(const panel of $('stage').querySelectorAll('.world-panel'))panel.classList.toggle('selected',worlds.length>1&&Number(panel.dataset.world)===activeWorld);
 }
-function paintAll(){worlds.forEach((w,i)=>{if(stageCanvases[i])paint(stageCanvases[i],w,palette);});}
+function paintAll(){worlds.forEach((w,i)=>{if(stageCanvases[i]){paint(stageCanvases[i],w,palette);stageCameras[i]?.(w);}});}
 function updateHUD(){
   $('liveDot').classList.toggle('paused',!running);
   $('worldStatus').textContent=(worlds.length===2?'A + B':'МИР A')+' · '+(running?'РАЗВИВАЕТСЯ':'ПАУЗА');
