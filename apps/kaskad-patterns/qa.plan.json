@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "engine",
+      "kind": "node-test",
+      "files": [
+        "engine.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#stage",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "#splitBtn"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#lawsBtn"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#closeSheet"
+        },
+        {
+          "action": "click",
+          "selector": "[data-mode=\"ant\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-mode=\"reaction\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#focusBtn"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#focusBtn"
+        },
+        {
+          "action": "click",
+          "selector": "#saveBtn"
+        },
+        {
+          "action": "click",
+          "selector": "#galleryBtn"
+        },
+        {
+          "action": "visible",
+          "selector": ".gallery-row"
+        }
+      ]
+    }
+  ]
+}
