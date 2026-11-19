@@ -153,3 +153,9 @@ button:active{transform:translateY(1px)}button:disabled{opacity:.4;cursor:not-al
   .edit-bottom label{flex-direction:column;align-items:stretch;gap:5px}
   .edit-bottom button{min-height:42px}
 }
+
+/* Small optional platform diagnostics control; not confused with the automata editor. */
+.mast-tools{justify-self:end;display:flex;align-items:center;gap:5px}
+.workshop-diagnostics{flex:0 0 auto;display:grid;place-items:center;width:36px;height:42px;padding:0;background:none;border:0;font-size:1.15rem;color:#6c756c;font-weight:700}
+.mast-tools .text-control{justify-self:auto}
+@media(max-width:370px){.workshop-diagnostics{width:31px}}
