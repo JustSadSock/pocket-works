@@ -107,9 +107,6 @@
           "selector": ".workshop-presets"
         },
         {
-          "action": "screenshot"
-        },
-        {
           "action": "click",
           "selector": "[data-studio-preset=\"cyclic\"]"
         },
@@ -134,9 +131,6 @@
         {
           "action": "click",
           "selector": "#lawsBtn"
-        },
-        {
-          "action": "screenshot"
         },
         {
           "action": "click",
