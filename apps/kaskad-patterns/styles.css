@@ -139,3 +139,17 @@ button:active{transform:translateY(1px)}button:disabled{opacity:.4;cursor:not-al
 .focus-mode .history-button{top:calc(12px + env(safe-area-inset-top,0px))}
 
 @media(max-width:370px){.mode{min-width:0;padding:0 9px;font-size:.73rem}.mode-number{display:none}.mode:first-child{padding-left:2px}.mode:first-child.active:after{left:0}}
+
+/* When editing, the specimen should not advertise injection gestures; on wide screens
+   the authoring tray lives beside the microscope, never covering the lattice. */
+.stage.editing .canvas-hint{display:none}
+@media(max-width:640px){.world-overlay span:last-child{display:none}}
+@media(min-width:1200px){
+  .stage.editing{padding-bottom:24px}
+  .edit-tools{left:auto;right:24px;top:50%;bottom:auto;transform:translateY(-50%);width:292px;gap:15px;padding:17px}
+  .edit-colors{display:grid;grid-template-columns:1fr 1fr;overflow:visible}
+  .edit-colors button{max-width:none;font-size:.68rem}
+  .edit-bottom{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .edit-bottom label{flex-direction:column;align-items:stretch;gap:5px}
+  .edit-bottom button{min-height:42px}
+}
