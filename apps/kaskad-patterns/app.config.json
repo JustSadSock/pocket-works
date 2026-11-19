@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "kaskad-patterns",
+  "name": "Каскад: Узоры",
+  "shortName": "Узоры",
+  "description": "Интерактивная лаборатория эмерджентности: песчаные лавины, муравьи Лэнгтона, органические реакции и параллельные миры.",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-20",
+  "releaseDateTime": "2026-11-20T00:10:00+02:00",
+  "changelog": [
+    "Три настоящих движка: песчаная куча BTW, муравьи Лэнгтона и реакция-диффузия Грея — Скотта.",
+    "Раздвоение и независимая настройка миров, прямое воздействие, масштабирование.",
+    "Локальный архив открытий, восстановление сессии, палитры и экспорт PNG/GIF."
+  ],
+  "status": "active",
+  "preset": "canvas",
+  "accent": "#b47142",
+  "backgroundColor": "#e8e6e0",
+  "themeColor": "#e8e6e0",
+  "orientation": "any",
+  "cacheName": "kaskad-patterns-v1.0.0",
+  "storageNamespace": "pocket-works:kaskad-patterns",
+  "tags": [
+    "simulation",
+    "emergence",
+    "cellular-automata",
+    "science",
+    "offline",
+    "PWA",
+    "canvas"
+  ],
+  "order": 94
+}
