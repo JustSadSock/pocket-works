@@ -96,7 +96,8 @@ function bindCanvas(panel,canvas,index){
     if(x<0||x>=w.n||y<0||y>=w.n)return;
     const cell=y*w.n+x,now=performance.now();
     if(lastCell===cell||now-lastStroke<(w.mode==='sand'?95:27))return;
-    lastCell=cell;lastStroke=now;activeWorld=index;
+    lastCell=cell;lastStroke=now;const previous=activeWorld;activeWorld=index;
+    if(previous!==index&&w.mode==='studio'&&editing)refreshBrushes();
     if(w.mode==='studio'&&editing){if(!paintStudio(w,x,y,brushState,brushRadius,symmetry))return;}
     else inject(w,x,y);
     updateSelection();paintAll();updateHUD();
