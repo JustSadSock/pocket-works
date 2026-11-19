@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "engine",
+      "kind": "node-test",
+      "files": [
+        "engine.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#stage",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "#splitBtn"
+        },
+        {
+          "action": "visible",
+          "selector": ".stage.split"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#lawsBtn"
+        },
+        {
+          "action": "visible",
+          "selector": "#sheetBody"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}
