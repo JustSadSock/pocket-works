@@ -418,7 +418,13 @@ function resetDialog(){
   });
 }
 function exportDialog(){
-  openSheet('ЭКСПОРТ НАБЛЮДЕНИЯ','Сохранить изображение','<p>Экспортируется мир '+(activeWorld===0?'A':'B')+'. Анимация рассчитывается из копии текущего состояния и не изменяет эксперимент.</p><div class="sheet-buttons"><button type="button" id="exportPng">PNG · 1280 px</button><button type="button" id="exportGif" class="alt">GIF · 22 кадра</button></div>',body=>{
+  openSheet('ЭКСПОРТ НАБЛЮДЕНИЯ','Сохранить изображение','<p>Экспортируется мир '+(activeWorld===0?'A':'B')+'. Анимация рассчитывается из копии текущего состояния и не изменяет эксперимент.</p><div class="sheet-buttons"><button type="button" id="exportPng">PNG · 1280 px</button><button type="button" id="exportGif" class="alt">GIF · 22 кадра</button>'+(mode==='studio'?'<button type="button" id="exportScenario" class="alt">Сценарий · JSON</button>':'')+'</div>',body=>{
+    const exportScene=body.querySelector('#exportScenario');if(exportScene)exportScene.addEventListener('click',()=>{
+      try{
+        const data={format:'kaskad-studio-scenario',version:1,name:'Мой эксперимент',created:new Date().toISOString(),activeWorld,worlds:worlds.map(serialize)};
+        saveBlob(new Blob([JSON.stringify(data)],{type:'application/json'}),'kaskad-scenario.json');closeSheet();notify('Сценарий экспортирован');
+      }catch(error){notify('Ошибка экспорта: '+error.message);}
+    });
     body.querySelector('#exportPng').addEventListener('click',async()=>{
       try{const blob=await makePng(stageCanvases[activeWorld]);saveBlob(blob,'kaskad-'+mode+'.png');closeSheet();notify('PNG готов');}catch(error){notify('Ошибка экспорта: '+error.message);}
     });
@@ -437,6 +443,7 @@ function animate(t){
   paintTime=t;
   try{
     for(const w of worlds)stepWorld(w,RATE[mode][speed]);
+    if(mode==='studio'&&t-lastHistoryAt>1600)recordHistory('Контрольная точка');
     paintAll();
     if(t-lastHud>220){updateHUD();lastHud=t;}
   }catch(error){running=false;updateUI();notify('Симуляция остановлена: '+error.message);console.error(error);}
@@ -445,21 +452,52 @@ let focused=false;
 function toggleFocus(value=!focused){focused=value;document.querySelector('.app-shell').classList.toggle('focus-mode',focused);$('focusLabel').textContent=focused?'Выйти':'На весь экран';$('focusBtn').setAttribute('aria-label',focused?'Вернуться к управлению':'Наблюдение на весь экран');}
 $('focusBtn').addEventListener('click',()=>toggleFocus());
 $('modeTabs').addEventListener('click',e=>{const button=e.target.closest('[data-mode]');if(button)switchMode(button.dataset.mode);});
-$('playBtn').addEventListener('click',()=>{running=!running;updateUI();persist();});
-$('stepBtn').addEventListener('click',()=>{running=false;worlds.forEach(w=>stepWorld(w,1));paintAll();updateUI();persist();});
+$('playBtn').addEventListener('click',()=>{running=!running;if(mode==='studio'&&running)editing=false;updateUI();persist();});
+$('stepBtn').addEventListener('click',()=>{if(mode==='studio')recordHistory('Перед шагом');running=false;worlds.forEach(w=>stepWorld(w,1));paintAll();updateUI();persist();});
 $('speed').addEventListener('input',e=>{speed=Number(e.target.value)-1;updateUI();});
 $('speed').addEventListener('change',persist);
 $('splitBtn').addEventListener('click',splitWorld);
 $('lawsBtn').addEventListener('click',ruleDialog);
 $('paletteBtn').addEventListener('click',paletteDialog);
-$('saveBtn').addEventListener('click',saveDiscovery);
+$('saveBtn').addEventListener('click',()=>{if(mode==='studio')saveScenarioDialog();else saveDiscovery();});
 $('galleryBtn').addEventListener('click',galleryDialog);
 $('resetBtn').addEventListener('click',resetDialog);
 $('exportBtn').addEventListener('click',exportDialog);
+$('historyBtn').addEventListener('click',historyDialog);
+$('studioBtn').addEventListener('click',()=>{
+  if(mode!=='studio')return;
+  editing=!editing;running=!editing;
+  updateUI();persist();notify(editing?'Рисуй по клеткам · симуляция на паузе':'Поле развивается');
+});
+$('editStates').addEventListener('click',e=>{
+  const target=e.target.closest('[data-state]');if(!target)return;
+  brushState=Number(target.dataset.state);refreshBrushes();
+});
+$('brushSize').addEventListener('change',e=>{brushRadius=Number(e.target.value);});
+$('symmetry').addEventListener('change',e=>{symmetry=e.target.value;});
+$('studioLibrary').addEventListener('click',libraryDialog);
+$('scatterBtn').addEventListener('click',()=>{
+  openSheet('РЕДАКТОР ПОЛЯ','Заполнить случайно?',
+    '<p>Начальные условия выбранного мира будут заменены случайным распределением клеток. Предыдущее поле сохранится в истории.</p><div class="sheet-buttons"><button id="yesScatter">Рассеять клетки</button><button id="noScatter" class="alt">Отмена</button></div>',body=>{
+      body.querySelector('#yesScatter').addEventListener('click',()=>{
+        recordHistory('До случайного заполнения');scatterStudio(worlds[activeWorld],.28);paintAll();updateHUD();persist();closeSheet();notify('Поле заполнено');
+      });
+      body.querySelector('#noScatter').addEventListener('click',closeSheet);
+  });
+});
+$('clearFieldBtn').addEventListener('click',()=>{
+  openSheet('РЕДАКТОР ПОЛЯ','Очистить поле?',
+    '<p>Все клетки выбранного мира станут пустыми. Вернуться к предыдущему состоянию можно через историю.</p><div class="sheet-buttons"><button id="yesClear">Очистить поле</button><button id="noClear" class="alt">Отмена</button></div>',body=>{
+      body.querySelector('#yesClear').addEventListener('click',()=>{
+        recordHistory('До очистки');worlds[activeWorld].a.fill(0);paintAll();updateHUD();persist();closeSheet();notify('Поле очищено · нарисуй новую форму');
+      });
+      body.querySelector('#noClear').addEventListener('click',closeSheet);
+  });
+});
 $('closeSheet').addEventListener('click',closeSheet);
 $('backdrop').addEventListener('click',closeSheet);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('overlay').hidden)closeSheet();else if(focused)toggleFocus(false);}if(e.code==='Space'&&$('overlay').hidden&&!['INPUT','BUTTON','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();running=!running;updateUI();}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)persist();else paintTime=0;});
 window.addEventListener('pagehide',persist);
 setInterval(()=>{if(!document.hidden)persist();},9000);
-load();rebuildStage();updateUI();requestAnimationFrame(animate);
+load();if(!history.length)recordHistory('Начало наблюдения');rebuildStage();updateUI();requestAnimationFrame(animate);
