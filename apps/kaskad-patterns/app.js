@@ -190,7 +190,7 @@ function ruleDialog(){
       body.querySelectorAll('[data-preset]').forEach(button=>button.addEventListener('click',()=>{
         setRule(worlds[activeWorld],'rule',button.dataset.preset);ruleDialog();paintAll();
       }));
-      const patterns={coral:[.0367,.0649],spots:[.025,.061],maze:[.029,.057]};
+      const patterns={coral:[.0545,.062],spots:[.0367,.0649],maze:[.029,.057]};
       body.querySelectorAll('[data-react]').forEach(button=>button.addEventListener('click',()=>{
         const [f,k]=patterns[button.dataset.react];setRule(worlds[activeWorld],'feed',f);setRule(worlds[activeWorld],'kill',k);
         ruleDialog();paintAll();
