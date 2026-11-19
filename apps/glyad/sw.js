@@ -1,0 +1,7 @@
+const PREFIX='glyad-',CACHE='glyad-v1.0.0';
+const FILES=['./','./index.html','./app.config.json','./styles.css','./app.js','./core.mjs','./manifest.webmanifest','./icons/icon.svg','../../shared/mobile-runtime.css','../../shared/mobile-runtime.js','../../shared/update-manager.css','../../shared/update-manager.js'];
+const scope=new URL('./',self.registration.scope),known=new Set(FILES.map(p=>new URL(p,scope).pathname));
+self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES))));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(PREFIX)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('message',e=>{if(e.data?.type==='SKIP_WAITING')self.skipWaiting();if(e.data?.type==='GET_UPDATE_INFO')e.ports?.[0]?.postMessage({version:'1.0.0',releaseDate:'2026-11-20',releaseNotes:['Глубинная кисть, стереограммы, PNG-экспорт и автономность.'],cacheName:CACHE,cacheProtocol:2})});
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==self.location.origin)return;if(e.request.mode==='navigate'&&u.pathname.startsWith(scope.pathname)){e.respondWith(fetch(e.request).catch(()=>caches.match('./')));return}if(!known.has(u.pathname))return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(net=>{if(net.ok&&net.type!=='opaque'){const copy=net.clone();caches.open(CACHE).then(c=>c.put(e.request,copy))}return net})))});

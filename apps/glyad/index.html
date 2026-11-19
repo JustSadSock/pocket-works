@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#dbe9e1">
+<meta name="description" content="ГЛЯДЬ — редактор оптических стереограмм. Нарисуй глубину и спрячь её в узоре.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ГЛЯДЬ">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="./styles.css">
+<title>ГЛЯДЬ — оптическая мастерская</title>
+</head>
+<body data-fullscreen-app data-view="edit">
+<main class="app-shell" data-app-shell>
+<header class="mast">
+ <a class="back" href="../../" data-app-control data-native-press>← Pocket Works</a>
+ <div class="brand"><svg aria-hidden="true" viewBox="0 0 64 64"><path d="M5 32Q32 3 59 32Q32 61 5 32Z" fill="none" stroke="currentColor" stroke-width="4"/><circle cx="32" cy="32" r="13" fill="#ce5a37"/><circle cx="32" cy="32" r="5" fill="#dbe9e1"/></svg><div><h1>ГЛЯДЬ</h1><p>мастерская второго взгляда</p></div></div>
+ <button class="plain-button help" id="help" data-native-press type="button">Как увидеть 3D <span aria-hidden="true">↗</span></button>
+</header>
+<section class="work" aria-label="Рабочее пространство">
+ <div class="worktop">
+  <div><span class="section-label">ОПТИЧЕСКИЙ ЭКСПЕРИМЕНТ / 001</span><h2>Нарисуй то, чего не видно.</h2></div>
+  <p>Слева — глубина. Справа — секрет, спрятанный в узоре.</p>
+ </div>
+ <div class="mobile-switch" role="group" aria-label="Просмотр на телефоне">
+   <button type="button" id="showEdit" aria-pressed="true" data-native-press>01 · Рельеф</button>
+   <button type="button" id="showStereo" aria-pressed="false" data-native-press>02 · Секрет</button>
+ </div>
+ <div class="canvases">
+  <section class="pane edit-pane" aria-labelledby="editTitle">
+   <div class="pane-heading"><div><span class="pane-index">01 / МАТРИЦА ГЛУБИНЫ</span><h3 id="editTitle">Рельеф</h3></div><span class="keyline">DRAW / SCULPT</span></div>
+   <div class="canvas-wrap editor-wrap">
+    <canvas id="depthCanvas" tabindex="0" data-gesture-surface data-block-callout aria-label="Поле рисования рельефа. Рисуйте пальцем или мышью." role="img"></canvas>
+    <span class="corner tl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
+    <div class="canvas-caption" aria-hidden="true">Z ↑ <span id="brushCursorLabel">ПОДНИМИ ПОВЕРХНОСТЬ</span></div>
+   </div>
+  </section>
+  <section class="pane stereo-pane" aria-labelledby="stereoTitle">
+   <div class="pane-heading"><div><span class="pane-index">02 / СКРЫТАЯ ГЕОМЕТРИЯ</span><h3 id="stereoTitle">Автостереограмма</h3></div><span class="keyline">LOOK BEYOND</span></div>
+   <div class="canvas-wrap stereo-wrap">
+    <div class="focus-dots" aria-hidden="true"><i></i><i></i></div>
+    <canvas id="stereoCanvas" role="img" aria-label="Стереограмма. Чтобы увидеть объём, сфокусируйте взгляд за плоскостью экрана."></canvas>
+    <div class="canvas-caption stereo-caption" aria-hidden="true">ПАРАЛЛЕЛЬНЫЙ ВЗГЛЯД <span id="stereoState">● ГОТОВО</span></div>
+   </div>
+  </section>
+ </div>
+ <div class="toolbox">
+  <div class="toolbox-section brush-settings">
+    <span class="tool-label">ИНСТРУМЕНТ</span>
+    <div class="tool-pair" role="group" aria-label="Инструмент рисования">
+     <button type="button" id="brush" class="tool-button active" aria-pressed="true" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20c5 .5 7-2 7-5l8-9 2 2-9 9c-1 4-4 6-8 3Z"/></svg> Кисть</button>
+     <button type="button" id="eraser" class="tool-button" aria-pressed="false" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 15 9-11 8 8-7 8H9zM10 20h11"/></svg> Ластик</button>
+    </div>
+  </div>
+  <div class="toolbox-section sliders">
+   <label class="range-label" for="size"><span>РАЗМЕР</span><strong id="sizeValue">14</strong></label>
+   <input id="size" type="range" min="4" max="36" value="14">
+   <label class="range-label" for="height"><span>ВЫСОТА</span><strong id="heightValue">85%</strong></label>
+   <input id="height" type="range" min="15" max="100" value="85">
+  </div>
+  <div class="toolbox-section presets">
+    <span class="tool-label">ПОПРОБУЙ ФИГУРУ</span>
+    <div class="presets-row">
+      <button type="button" data-preset="heart" data-native-press>♥ Сердце</button>
+      <button type="button" data-preset="orb" data-native-press>◌ Кольцо</button>
+      <button type="button" data-preset="wave" data-native-press>≈ Волна</button>
+    </div>
+  </div>
+ </div>
+ <div class="bottom-actions">
+  <div class="left-actions">
+   <button type="button" id="undo" class="subtle" data-native-press title="Отменить (Ctrl+Z)">↶ <span>Отменить</span></button>
+   <button type="button" id="clear" class="subtle" data-native-press>Очистить</button>
+   <span class="action-divider" aria-hidden="true"></span>
+   <button type="button" id="reshuffle" class="subtle" data-native-press title="Новый узор">⤨ <span>Другой узор</span></button>
+   <button type="button" id="palette" class="subtle" data-native-press title="Переключить цвет">◐ <span id="paletteLabel">Графит</span></button>
+  </div>
+  <button type="button" class="export-button" id="export" data-native-press><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg> СОХРАНИТЬ PNG <span aria-hidden="true">↗</span></button>
+ </div>
+</section>
+<footer class="foot"><span id="status" role="status" aria-live="polite">Рельеф сохранён на устройстве</span><span>ГЛЯДЬ / WILDCARD №01</span></footer>
+</main>
+<dialog id="helpDialog" class="modal"><div class="modal-top"><span>ИНСТРУКЦИЯ / ОПТИКА</span><button type="button" class="close" data-close="helpDialog" data-native-press aria-label="Закрыть">✕</button></div><h2>Смотри сквозь рисунок.</h2><div class="modal-dots" aria-hidden="true">● <span>●</span></div><p>Расслабь взгляд, словно смотришь на предмет <b>за экраном</b>. Две верхние точки должны превратиться в три. Когда средняя станет устойчивой, переведи внимание ниже, не меняя фокус.</p><p>Объём доступен не каждому зрению и не на любом расстоянии. Увеличение масштаба и просмотр с компьютера могут помочь.</p><button type="button" class="modal-main" data-close="helpDialog" data-native-press>ПОНЯТНО</button></dialog>
+<dialog id="clearDialog" class="modal"><div class="modal-top"><span>ОЧИСТКА</span><button type="button" class="close" data-close="clearDialog" data-native-press aria-label="Закрыть">✕</button></div><h2>Стереть рельеф?</h2><p>Поле станет чистым. Можно будет отменить действие.</p><div class="modal-actions"><button type="button" data-close="clearDialog" data-native-press>Оставить</button><button type="button" id="clearConfirm" class="modal-main" data-native-press>Очистить</button></div></dialog>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ГЛЯДЬ" data-app-version="1.0.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

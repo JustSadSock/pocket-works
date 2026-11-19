@@ -1,0 +1,24 @@
+{
+  "id": "/apps/glyad/",
+  "name": "ГЛЯДЬ — мастерская второго взгляда",
+  "short_name": "ГЛЯДЬ",
+  "description": "Рисуй глубину и превращай её в оптический секрет.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#dbe9e1",
+  "theme_color": "#dbe9e1",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
