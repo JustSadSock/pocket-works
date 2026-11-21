@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "engine",
+      "kind": "node-test",
+      "files": [
+        "tests/core.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#trains",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#times button"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    }
+  ]
+}
