@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 2,
+  "status": "ready",
+  "product": "single-track",
+  "direction": {
+    "premise": "Бумажный график железнодорожного диспетчера",
+    "composition": "Одна сетка времени с поездными рядами и панелью назначения",
+    "shapeLanguage": "Строгие прямоугольники, интервальные полосы",
+    "surfaceAndMaterial": "Кремовая бумага с плотными чернилами",
+    "paletteLogic": "Зелёный график, красный конфликт, светлое окно",
+    "typography": "Georgia для названия, системный шрифт для управления",
+    "signature": "Назначение времени сразу окрашивает интервалы и обнаруживает пересечение",
+    "distinction": "Не рисование как ГЛЯДЬ и не клеточная эволюция как Каскад: оптимизация расписания"
+  },
+  "architecture": {
+    "spatialLayout": "header-stage-footer",
+    "controlLocation": "contextual-panel",
+    "navigation": "level-select",
+    "chromeTopology": "tiled-grid",
+    "dominantMotion": "immediate",
+    "primaryVerb": "Назначить отправление",
+    "physicalFeedback": "Полоса времени сразу меняет цвет",
+    "spatialRationale": "Вся задача видна в единой сетке без горизонтального скролла",
+    "comparisons": [
+      {
+        "slug": "glyad",
+        "spatialDifference": "Одна временная сетка вместо двух оптических листов",
+        "interactionDifference": "Дискретный выбор интервала вместо рисования"
+      },
+      {
+        "slug": "kaskad-patterns",
+        "spatialDifference": "Строки поездов вместо клеточного поля",
+        "interactionDifference": "Оптимизация фиксированного расписания вместо эволюции автоматов"
+      }
+    ]
+  },
+  "production": {
+    "renderer": "DOM CSS grid",
+    "focalAsset": "График движения и вручную сделанная SVG иконка"
+  },
+  "motion": {
+    "character": "Немедленный отклик",
+    "action": "Выбор времени",
+    "anticipation": "Допустимые окна подсвечены",
+    "response": "Полосы заполняются",
+    "followThrough": "Конфликт окрашивается красным",
+    "interruption": "Любое новое назначение заменяет старое",
+    "reducedMotion": "Без обязательной анимации"
+  },
+  "evidence": {
+    "entry": "./",
+    "interaction": {
+      "type": "click",
+      "selector": "#times button"
+    },
+    "expectedChange": "Появляется полоса назначенного поезда",
+    "capture": [
+      "initial",
+      "action",
+      "settled"
+    ]
+  }
+}
