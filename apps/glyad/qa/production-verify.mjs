@@ -25,26 +25,26 @@ async function confirm(){
   if(!home.text.includes('ГЛЯДЬ')||!home.text.includes('app.js'))
     throw new Error('Published app HTML does not contain expected product and script');
   const config=JSON.parse((await get(PATH+'app.config.json')).text);
-  if(config.slug!=='glyad'||config.version!=='1.0.0'||config.cacheName!=='glyad-v1.0.0')
+  if(config.slug!=='glyad'||config.version!=='1.0.1'||config.cacheName!=='glyad-v1.0.1')
     throw new Error('Wrong production app metadata: '+JSON.stringify(config));
   const release=JSON.parse((await get(PATH+'release.json')).text);
-  if(release.slug!=='glyad'||release.version!=='1.0.0')
-    throw new Error('Production release fingerprint does not match 1.0.0');
+  if(release.slug!=='glyad'||release.version!=='1.0.1')
+    throw new Error('Production release fingerprint does not match 1.0.1');
   const reg=JSON.parse((await get('/apps.json')).text);
   const entries=Array.isArray(reg)?reg:Array.isArray(reg.apps)?reg.apps:[];
   const registered=entries.find(item=>item.slug==='glyad');
-  if(!registered||registered.version!=='1.0.0')
-    throw new Error('PocketWorks public launcher is missing GLYAD 1.0.0');
+  if(!registered||registered.version!=='1.0.1')
+    throw new Error('PocketWorks public launcher is missing GLYAD 1.0.1');
   for(const file of ['app.js','core.mjs','styles.css','sw.js','icons/icon.svg','manifest.webmanifest']){
     const [local,live]=await Promise.all([readFile(new URL(file,localRoot),'utf8'),get(PATH+file)]);
     // Production packaging adds a release banner to *.js and version pins
     // relative imports. It deliberately does not stamp *.mjs or other assets.
     let packaged=live.text;
     if(file.endsWith('.js')){
-      const banner='/* pocket-works-release:glyad@1.0.0:'+file+' */\n';
+      const banner='/* pocket-works-release:glyad@1.0.1:'+file+' */\n';
       if(!packaged.startsWith(banner))
         throw new Error('Published script has missing or wrong release banner: '+file);
-      packaged=packaged.slice(banner.length).replaceAll('?pw_release=1.0.0','');
+      packaged=packaged.slice(banner.length).replaceAll('?pw_release=1.0.1','');
     }
     if(file==='manifest.webmanifest'){
       const contentType=live.response.headers.get('content-type')||'unknown';
@@ -70,7 +70,7 @@ async function confirm(){
     }
     console.log('Verified '+file+' normalized SHA256 '+sha256(local).slice(0,20)+' HTTP '+live.response.status);
   }
-  console.log('PRODUCTION VERIFIED: '+ORIGIN+PATH+'; HTTP '+home.response.status+'; version 1.0.0; server '+(home.response.headers.get('server')||'unavailable'));
+  console.log('PRODUCTION VERIFIED: '+ORIGIN+PATH+'; HTTP '+home.response.status+'; version 1.0.1; server '+(home.response.headers.get('server')||'unavailable'));
   console.log('Live Cloudflare-hosted app, release and registry match repository source.');
 }
 let lastError;

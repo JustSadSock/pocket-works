@@ -43,13 +43,13 @@ function paintStereo(){
 }
 function repaint(includeStereo=true){paintEditor();if(includeStereo)paintStereo()}
 function queueStereo(){if(renderRequested)return;renderRequested=true;requestAnimationFrame(()=>{renderRequested=false;paintStereo()})}
-let cursor=null;
+let cursor=null,lastPoint=null;
 function position(e){const r=editor.getBoundingClientRect();return{x:clamp((e.clientX-r.left)/r.width,0,1),y:clamp((e.clientY-r.top)/r.height,0,1)}}
-function begin(e){if(mobile()&&shell.dataset.view!=='edit')return;if(e.button!==undefined&&e.button!==0)return;if(pointerId!==null)return;e.preventDefault();pointerId=e.pointerId;painting=true;pushHistory();editor.setPointerCapture(e.pointerId);stroke(e)}
-function stroke(e){const p=position(e);cursor=p;if(painting){brush(layer,p.x,p.y,size,height*2.55,mode==='erase');paintEditor();$('stereoState').textContent='● ОБНОВЛЯЕТСЯ'}else paintEditor()}
-function end(e){if(pointerId!==e.pointerId)return;painting=false;pointerId=null;cursor=null;try{if(editor.hasPointerCapture(e.pointerId))editor.releasePointerCapture(e.pointerId)}catch(_){};repaint();save();announce(mode==='erase'?'Фрагмент стёрт':'Рельеф изменён')}
+function begin(e){if(mobile()&&shell.dataset.view!=='edit')return;if(e.button!==undefined&&e.button!==0)return;if(pointerId!==null)return;e.preventDefault();pointerId=e.pointerId;painting=true;lastPoint=null;pushHistory();editor.setPointerCapture(e.pointerId);stroke(e)}
+function stroke(e){const p=position(e);cursor=p;if(painting){const prev=lastPoint||p;const steps=Math.max(1,Math.ceil(Math.hypot((p.x-prev.x)*DEPTH_W,(p.y-prev.y)*DEPTH_H)/Math.max(1,size/3)));for(let i=1;i<=steps;i++)brush(layer,prev.x+(p.x-prev.x)*i/steps,prev.y+(p.y-prev.y)*i/steps,size,height*2.55,mode==='erase');lastPoint=p;paintEditor();$('stereoState').textContent='● ОБНОВЛЯЕТСЯ'}else paintEditor()}
+function end(e){if(pointerId!==e.pointerId)return;painting=false;pointerId=null;cursor=null;lastPoint=null;try{if(editor.hasPointerCapture(e.pointerId))editor.releasePointerCapture(e.pointerId)}catch(_){};repaint();save();announce(mode==='erase'?'Фрагмент стёрт':'Рельеф изменён')}
 editor.addEventListener('pointerdown',begin);editor.addEventListener('pointermove',e=>{if(painting&&e.pointerId===pointerId)stroke(e);else if(e.pointerType==='mouse'){cursor=position(e);paintEditor()}});editor.addEventListener('pointerup',end);editor.addEventListener('pointercancel',end);editor.addEventListener('lostpointercapture',e=>{if(pointerId===e.pointerId)end(e)});editor.addEventListener('pointerleave',()=>{if(!painting){cursor=null;paintEditor()}});
-function tool(next){mode=next;for(const k of ['brush','eraser']){$(k).classList.toggle('active',k===next);$(k).setAttribute('aria-pressed',String(k===next))}$('brushCursorLabel').textContent=next==='erase'?'УБРАТЬ ВЫСОТУ':'ПОДНИМИ ПОВЕРХНОСТЬ';announce(next==='erase'?'Ластик выбран':'Кисть выбрана')}
+function tool(next){mode=next;for(const k of ['brush','eraser']){$(k).classList.toggle('active',k===(next==='erase'?'eraser':next));$(k).setAttribute('aria-pressed',String(k===(next==='erase'?'eraser':next)))}$('brushCursorLabel').textContent=next==='erase'?'УБРАТЬ ВЫСОТУ':'ПОДНИМИ ПОВЕРХНОСТЬ';announce(next==='erase'?'Ластик выбран':'Кисть выбрана')}
 $('brush').onclick=()=>tool('brush');$('eraser').onclick=()=>tool('erase');
 $('size').oninput=e=>{size=+e.target.value;$('sizeValue').textContent=size;paintEditor();save()};
 $('height').oninput=e=>{height=+e.target.value;$('heightValue').textContent=height+'%';save()};
@@ -71,7 +71,7 @@ requestAnimationFrame(()=>repaint());announce('Рисуй по рельефу ·
 
 createWorkshopMode({
   appName:'ГЛЯДЬ',
-  version:'1.0.0',
+  version:'1.0.1',
   cachePrefix: 'glyad-',
   storageNamespace: 'pocket-works:glyad',
   onReset(){
