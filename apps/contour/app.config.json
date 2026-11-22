@@ -1,11 +1,29 @@
 {
-  "id": "contour",
+  "schemaVersion": 1,
+  "runtime": "quick",
   "slug": "contour",
   "name": "КОНТУР",
-  "title": "КОНТУР",
-  "description": "Поворачивай проводники и зажигай все лампы",
+  "shortName": "Контур",
+  "description": "Поворачивай проводники, замыкай цепь и зажигай все лампы.",
   "version": "1.0.0",
-  "category": "games",
-  "icon": "./icons/icon.svg",
-  "entry": "./index.html"
+  "releaseDate": "2026-11-22",
+  "releaseDateTime": "2026-11-22T12:00:00+02:00",
+  "changelog": [
+    "Пять процедурно сгенерированных электрических головоломок, локальное сохранение, проверка цепи."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "accent": "#c26a45",
+  "backgroundColor": "#f2e9d8",
+  "themeColor": "#f2e9d8",
+  "orientation": "any",
+  "cacheName": "contour-v1.0.0",
+  "storageNamespace": "pocket-works:contour",
+  "tags": [
+    "puzzle",
+    "logic",
+    "wildcard",
+    "offline"
+  ],
+  "order": 463
 }
