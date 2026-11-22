@@ -1,0 +1,19 @@
+{
+  "id": "/apps/contour/",
+  "name": "КОНТУР",
+  "short_name": "Контур",
+  "description": "Поворотная головоломка об электрических цепях",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f2e9d8",
+  "theme_color": "#f2e9d8",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
