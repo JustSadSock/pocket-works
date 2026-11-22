@@ -1,0 +1,11 @@
+{
+  "id": "contour",
+  "slug": "contour",
+  "name": "КОНТУР",
+  "title": "КОНТУР",
+  "description": "Поворачивай проводники и зажигай все лампы",
+  "version": "1.0.0",
+  "category": "games",
+  "icon": "./icons/icon.svg",
+  "entry": "./index.html"
+}
