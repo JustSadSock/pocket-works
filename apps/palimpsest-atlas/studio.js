@@ -68,7 +68,9 @@ function customEntry(story,onOpen,onEdit){
 
 export function initStudio({onOpen,onNotify,builtins}){
   const screen=$('studio');
-  let library=loadLibrary(window.localStorage);
+  // Reading localStorage itself may throw in restricted WebKit contexts.
+  const storage=(()=>{try{return window.localStorage;}catch{return {getItem:()=>null,setItem:()=>{throw new Error('Локальное хранилище недоступно');}};}})();
+  let library=loadLibrary(storage);
   let draft=null, savedHash='',tab='events',selected=null,undo=[],redo=[],dirty=false;
   const board=$('studio-map');
   const ctx=board.getContext('2d');
@@ -367,7 +369,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     if(!draft)return false;
     try{
       const clean=parseStory(draft);
-      library=persistLibrary(upsertLibrary(library,clean),window.localStorage);
+      library=persistLibrary(upsertLibrary(library,clean),storage);
       draft=deep(clean);dirty=false;savedHash=JSON.stringify(draft);
       renderLibrary();renderEditor();
       status('История сохранена на этом устройстве.','success');
@@ -395,7 +397,7 @@ export function initStudio({onOpen,onNotify,builtins}){
       parsed={...parsed,id:newId('user'),title:parsed.title+' — импорт'};
     }
     try{
-      library=persistLibrary(upsertLibrary(library,parsed),window.localStorage);
+      library=persistLibrary(upsertLibrary(library,parsed),storage);
       renderLibrary();open(parsed);
       status('История импортирована. Теперь её можно редактировать или смотреть.','success');
     }catch(error){notify(error.message);}
@@ -413,7 +415,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     if(!exists){back();return;}
     if(!window.confirm('Безвозвратно удалить «'+draft.title+'» из локальной библиотеки? Сначала экспортируйте JSON для резервной копии.'))return;
     try{
-      library=persistLibrary(library.filter(s=>s.id!==draft.id),window.localStorage);
+      library=persistLibrary(library.filter(s=>s.id!==draft.id),storage);
       dirty=false;back();notify('История удалена из локальной библиотеки.');
     }catch(error){status(error.message,'error');}
   }
