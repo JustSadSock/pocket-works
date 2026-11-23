@@ -3,7 +3,8 @@ import { stories, getStory } from './stories.js';
 import { initStudio } from './studio.js';
 import { clamp, lerp, span, fraction, formatYear, displayYear, era,
   eventBefore, previousEvent, nextEvent, snapshotAt, zoomWindow,
-  fittedWindow, smartTicks, playbackStep, validateStory } from './core.js';
+  fittedWindow, smartTicks, playbackStep, validateStory,
+  eventLane,compareSnapshots,timelineClusters } from './core.js';
 
 installMobileRuntime();
 
@@ -42,7 +43,7 @@ const state = {
   camera:{x:500,y:350,zoom:1},playing:false,inspector:null,tab:'now',
   activeEventId:null,mapPointers:new Map(),timePointers:new Map(),
   mapPinch:null,timePinch:null,suppressMapTap:false,
-  dirty:true,lastFrame:0,lastSaved:0,
+  dirty:true,lastFrame:0,lastSaved:0,compareTime:null,
   sizes:{map:{width:1,height:1,dpr:1},time:{width:1,height:1,dpr:1}},
   hits:[],toastHandle:null
 };
@@ -82,7 +83,9 @@ function openStory(id) {
   const story=studioApi?.getStory(id)||getStory(id);
   state.story=story;state.playing=false;state.inspector=null;state.tab='now';
   state.activeEventId=null;state.mapPointers.clear();state.timePointers.clear();
-  state.mapPinch=null;state.timePinch=null;
+  state.mapPinch=null;state.timePinch=null;state.compareTime=null;
+  ui.compareToggle?.setAttribute('aria-pressed','false');
+  $('comparison-banner').hidden=true;
   restoreView(story);
   ui.library.hidden=true;$('studio').hidden=true;ui.viewer.hidden=false;ui.inspector.hidden=true;ui.outline.hidden=true;
   $('edit-story').hidden=story.type!=='custom';
@@ -97,7 +100,7 @@ function openStory(id) {
   save();
 }
 function toLibrary() {
-  state.playing=false;
+  state.playing=false;state.compareTime=null;
   ui.library.hidden=false;ui.viewer.hidden=true;
   ui.inspector.hidden=true;ui.outline.hidden=true;
   state.inspector=null;
@@ -159,6 +162,55 @@ ui.bookmark.addEventListener('pointerdown',()=>{
 for (const type of ['pointerup','pointercancel','pointerleave']) ui.bookmark.addEventListener(type,()=>clearTimeout(bookmarkTimer));
 ui.bookmark.addEventListener('click',()=>{if(ui.bookmark.dataset.long){delete ui.bookmark.dataset.long;return;}bookmarkAction();});
 
+
+function updateComparisonBanner(){
+  const active=Number.isFinite(state.compareTime);
+  $('comparison-banner').hidden=!active;
+  $('compare-toggle').setAttribute('aria-pressed',String(active));
+  $('compare-toggle').title=active?'Завершить сравнение':'Запомнить дату для сравнения';
+  if(!active)return;
+  const result=compareSnapshots(state.story,state.compareTime,state.time);
+  $('compare-label').textContent=formatYear(state.compareTime)+' → '+formatYear(state.time);
+  const prefix=result.forward?'Появилось: ':'При возврате: ';
+  $('compare-details').textContent=prefix+result.additions+' · исчезло: '+
+    result.removals+' · событий между датами: '+result.passedEvents;
+}
+function toggleCompare(){
+  state.compareTime=Number.isFinite(state.compareTime)?null:state.time;
+  updateComparisonBanner();state.dirty=true;
+  if(state.compareTime!=null)toast('Базовая дата закреплена. Перематывай время, чтобы сравнить состояния.');
+}
+function renderComparisonGhost(){
+  if(!Number.isFinite(state.compareTime))return;
+  const diff=compareSnapshots(state.story,state.compareTime,state.time);
+  const ctx=mapCtx;
+  ctx.save();
+  ctx.setLineDash([5,6]);
+  ctx.strokeStyle='rgba(72,108,116,.63)';
+  ctx.lineWidth=2;
+  for(const f of diff.sections.features.removed){
+    const p=project(f.x,f.y),z=scale();
+    ctx.beginPath();
+    ctx.ellipse(p.x,p.y,f.rx*z,f.ry*z,f.rotation||0,0,Math.PI*2);
+    ctx.stroke();
+  }
+  for(const e of diff.sections.entities.removed){
+    const p=project(e.x,e.y);
+    ctx.beginPath();ctx.arc(p.x,p.y,13,0,Math.PI*2);ctx.stroke();
+    textAt('− '+e.name,p.x,p.y-22,{size:10,color:'#5c8990',serif:true});
+  }
+  for(const path of diff.sections.paths.removed)line(path.points,'rgba(74,116,122,.55)',2,[5,6]);
+  ctx.setLineDash([]);
+  ctx.strokeStyle='#a4513b';ctx.lineWidth=2;
+  for(const e of diff.sections.entities.added){
+    const p=project(e.x,e.y);
+    ctx.beginPath();ctx.arc(p.x,p.y,19,0,Math.PI*2);ctx.stroke();
+  }
+  for(const f of diff.sections.features.added){
+    const p=project(f.x,f.y);ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.restore();
+}
 function refresh() {
   const story=state.story;
   const event=eventBefore(story,state.time);
@@ -176,6 +228,7 @@ function refresh() {
   ui.scrub.setAttribute('aria-valuetext',formatYear(state.time));
   ui.zoomLabel.textContent=state.camera.zoom>3?'ДЕТАЛИ МЕСТНОСТИ':state.camera.zoom>1.5?'ЛОКАЛЬНЫЕ ОБЪЕКТЫ':'ОБЗОР РЕГИОНА';
   updateBookmark();
+  updateComparisonBanner();
   if(previous!==event?.id){state.activeEventId=event?.id;drawOutline();}
   if(state.inspector) updateInspector();
   state.dirty=true;
@@ -424,7 +477,7 @@ function renderMap(){
   if(width<1||height<1)return;
   drawGrid(width,height);
   const snapshot=snapshotAt(state.story,state.time);
-  drawTerrain(snapshot);drawEntities(snapshot);drawSpot(snapshot);
+  drawTerrain(snapshot);renderComparisonGhost();drawEntities(snapshot);drawSpot(snapshot);
   // Thin atlas corner rules, a visible cue that this is a diagram, not a raster basemap.
   ctx.strokeStyle='rgba(82,89,76,.19)';ctx.lineWidth=1;
   ctx.strokeRect(8.5,8.5,width-17,height-17);
@@ -435,36 +488,55 @@ function canvasTimeline(){
   ctx.clearRect(0,0,w,h);
   const left=13,right=w-13,length=right-left;
   const calc=(time)=>left+fraction(time,window)*length;
+  const ruleY=Math.max(19,Math.min(27,h*.39));
+  const trackTop=ruleY+7;
+  const trackArea=Math.max(9,h-trackTop-7);
+  const row=(lane)=>trackTop+(lane+.5)*trackArea/3;
+  const laneIndex={politics:0,military:1,culture:2};
+  const current=clamp(calc(state.time),left,right);
   ctx.strokeStyle='#b5ac97';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(left,28.5);ctx.lineTo(right,28.5);ctx.stroke();
-  ctx.fillStyle='rgba(163,82,60,.15)';
-  const px=clamp(calc(state.time),left,right);
-  ctx.fillRect(left,26,px-left,5);
+  ctx.beginPath();ctx.moveTo(left,ruleY+.5);ctx.lineTo(right,ruleY+.5);ctx.stroke();
+  ctx.fillStyle='rgba(163,82,60,.17)';ctx.fillRect(left,ruleY-2,current-left,5);
   ctx.font='500 10px ui-sans-serif,system-ui';ctx.textAlign='center';
-  for(const tick of smartTicks(window,6)){
+  for(const tick of smartTicks(window,w<500?4:7)){
     const x=calc(tick);
     if(x<24||x>w-24)continue;
-    ctx.fillStyle='#857f6e';ctx.fillText(String(Math.abs(Math.trunc(tick))),x,12);
-    ctx.fillStyle='#b4aa94';ctx.fillRect(x-.5,18,1,6);
+    ctx.fillStyle='#857f6e';ctx.fillText(String(Math.abs(Math.trunc(tick))),x,11);
+    ctx.fillStyle='#b4aa94';ctx.fillRect(x-.5,ruleY-7,1,6);
   }
-  for(const event of state.story.events){
-    if(event.time<window[0]||event.time>window[1])continue;
-    const x=calc(event.time),importance=event.importance||1;
-    ctx.fillStyle=event.confidence==='tradition'?'#9d8064':'#9c5a45';
-    ctx.fillRect(x-1.5,29-importance*3,3,importance*3+7);
-    if(event.id===eventBefore(state.story,state.time)?.id){
-      ctx.beginPath();ctx.arc(x,27,5,0,Math.PI*2);
-      ctx.fillStyle='#a4513b';ctx.fill();
+  const colors={politics:'#9c5a45',military:'#4e6e73',culture:'#9c8660'};
+  for(const lane of ['politics','military','culture']){
+    const y=row(laneIndex[lane]);
+    ctx.strokeStyle='rgba(116,112,94,.16)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();
+  }
+  const active=eventBefore(state.story,state.time);
+  for(const cluster of timelineClusters(state.story.events,window,length,9)){
+    const x=left+cluster.x,y=row(laneIndex[cluster.lane]??2);
+    const radius=Math.min(7,2.4+Math.log2(cluster.events.length+1)*1.5);
+    ctx.fillStyle=colors[cluster.lane]||colors.culture;
+    ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fill();
+    if(cluster.events.some(e=>e.id===active?.id)){
+      ctx.strokeStyle='#f7eedc';ctx.lineWidth=2.3;ctx.stroke();
+    }
+    if(cluster.events.length>1){
+      ctx.fillStyle='#fff5df';ctx.font='800 8px ui-sans-serif,system-ui';
+      ctx.textAlign='center';ctx.fillText(String(cluster.events.length),x,y+2.3);
     }
   }
   const bm=stored.views[state.story.id]?.bookmark;
   if(Number.isFinite(bm)&&bm>=window[0]&&bm<=window[1]){
     const x=calc(bm);
-    ctx.fillStyle='#496d74';ctx.beginPath();ctx.moveTo(x,46);ctx.lineTo(x-5,51);ctx.lineTo(x+5,51);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#496d74';ctx.beginPath();ctx.moveTo(x,h-2);ctx.lineTo(x-5,h-9);ctx.lineTo(x+5,h-9);ctx.closePath();ctx.fill();
   }
-  ctx.beginPath();ctx.moveTo(px,18);ctx.lineTo(px,47);
+  if(Number.isFinite(state.compareTime)&&state.compareTime>=window[0]&&state.compareTime<=window[1]){
+    const x=calc(state.compareTime);
+    ctx.strokeStyle='#578790';ctx.lineWidth=2;ctx.setLineDash([4,3]);ctx.beginPath();
+    ctx.moveTo(x,ruleY-7);ctx.lineTo(x,h-3);ctx.stroke();ctx.setLineDash([]);
+  }
+  ctx.beginPath();ctx.moveTo(current,ruleY-10);ctx.lineTo(current,h-4);
   ctx.strokeStyle='#273931';ctx.lineWidth=2;ctx.stroke();
-  ctx.fillStyle='#273931';ctx.beginPath();ctx.arc(px,27,5.6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#273931';ctx.beginPath();ctx.arc(current,ruleY,5.6,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle='#f3eddb';ctx.lineWidth=2;ctx.stroke();
 }
 function locateTap(x,y){
@@ -606,6 +678,8 @@ function wireControls() {
   document.querySelectorAll('[data-story]').forEach(button=>
     button.addEventListener('click',()=>openStory(button.dataset.story)));
   $('back').addEventListener('click',toLibrary);
+  $('compare-toggle').addEventListener('click',toggleCompare);
+  $('compare-reset').addEventListener('click',()=>{state.compareTime=null;updateComparisonBanner();state.dirty=true;});
   $('edit-story').addEventListener('click',()=>{if(state.story.type==='custom'){setPlaying(false);save();studioApi.edit(state.story.id);}});
   ui.play.addEventListener('click',()=>{
     if(!state.playing&&state.time>=state.story.range[1]-.0001)seek(state.story.range[0]);
