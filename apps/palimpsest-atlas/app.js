@@ -504,8 +504,10 @@ function drawSettlement(p,kind,entity=null){
 }
 function drawEntities(snapshot){
   const ctx=mapCtx;state.hits=[];
-  const objects=snapshot.entities;
-  for(const entity of objects){
+  const battlefield=state.story.type==='battle';
+  const placements=[];
+  const labels=[];
+  for(const entity of snapshot.entities){
     if(entity.motion?.frames?.length&&state.camera.zoom<6){
       const trail=motionTrail(entity,state.time);
       if(entity.motion.mode==='illustrative'&&trail.length>1)
@@ -514,14 +516,72 @@ function drawEntities(snapshot){
     }
     const p=project(entity.x,entity.y);
     if(p.x<-70||p.x>state.sizes.map.width+90||p.y<-70||p.y>state.sizes.map.height+90)continue;
-    if(state.story.type==='origins' && state.camera.zoom<1.35 && ['capitoline','aventine'].includes(entity.id))continue;
+    if(state.story.type==='origins'&&state.camera.zoom<1.35&&['capitoline','aventine'].includes(entity.id))continue;
     const selected=state.inspector?.kind==='entity'&&state.inspector.id===entity.id;
     ctx.beginPath();ctx.arc(p.x,p.y,selected?19:14,0,Math.PI*2);
     ctx.fillStyle=selected?'rgba(163,78,57,.20)':'rgba(246,238,219,.7)';ctx.fill();
     drawSettlement(p,entity.type,entity);
-    const labelY=p.y+(entity.type==='hill'?19:23);
-    textAt(entity.name,p.x,labelY,{size:state.camera.zoom>3?13:11,color:selected?'#9f513b':'#41483c',serif:true,bold:selected});
     state.hits.push({entity,x:p.x,y:p.y,radius:Math.max(22,Math.min(39,22*state.camera.zoom))});
+    if(battle){
+      labels.push({p,name:entity.mapLabel||entity.name,selected,entity});
+    }else{
+      const labelY=p.y+(entity.type==='hill'?19:23);
+      textAt(entity.mapLabel||entity.name,p.x,labelY,{size:state.camera.zoom>3?13:11,color:selected?'#9f513b':'#41483c',serif:true,bold:selected});
+    }
+  }
+  if(!battle)return;
+  // Every icon retains the full hit target. The labels use short data-authored
+  // names and a greedy collision solver rather than overlapping formations.
+  for(const record of labels){
+    const {p,name,selected}=record;
+    const font=(selected?'700 ':'500 ')+(state.sizes.map.width<500?'11':'12')+'px Georgia,serif';
+    ctx.font=font;
+    const width=Math.ceil(ctx.measureText(name).width)+12;
+    const height=20;
+    const positions=[
+      {x:p.x,y:p.y+25},
+      {x:p.x,y:p.y-29},
+      {x:p.x+width/2+23,y:p.y},
+      {x:p.x-width/2-23,y:p.y},
+      {x:p.x,y:p.y+49},
+      {x:p.x,y:p.y-52},
+      {x:p.x+width/2+18,y:p.y+27},
+      {x:p.x-width/2-18,y:p.y-27}
+    ];
+    let winner=null;
+    for(let i=0;i<positions.length;i++){
+      const loc=positions[i];
+      const rect={x:loc.x-width/2,y:loc.y-height/2,w:width,h:height};
+      if(rect.x<5||rect.y<5||rect.x+rect.w>state.sizes.map.width-5||
+        rect.y+rect.h>state.sizes.map.height-5)continue;
+      let score=i*3;
+      for(const other of placements){
+        const overX=Math.max(0,Math.min(rect.x+rect.w,other.x+other.w)-Math.max(rect.x,other.x));
+        const overY=Math.max(0,Math.min(rect.y+rect.h,other.y+other.h)-Math.max(rect.y,other.y));
+        if(overX&&overY)score+=10000+overX*overY;
+      }
+      for(const target of labels){
+        if(target===record)continue;
+        if(target.p.x>rect.x-10&&target.p.x<rect.x+rect.w+10&&
+          target.p.y>rect.y-10&&target.p.y<rect.y+rect.h+10)score+=130;
+      }
+      if(!winner||score<winner.score)winner={loc,rect,score};
+    }
+    if(!winner)continue;
+    placements.push(winner.rect);
+    ctx.save();
+    ctx.fillStyle='rgba(244,234,213,.93)';
+    ctx.strokeStyle=selected?'#a0533d':'rgba(140,126,96,.32)';
+    ctx.lineWidth=selected?1.4:.8;
+    ctx.fillRect(winner.rect.x,winner.rect.y,winner.rect.w,winner.rect.h);
+    ctx.strokeRect(winner.rect.x+.5,winner.rect.y+.5,winner.rect.w-1,winner.rect.h-1);
+    if(Math.hypot(winner.loc.x-p.x,winner.loc.y-p.y)>31){
+      ctx.strokeStyle='rgba(90,94,81,.56)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(winner.loc.x,winner.loc.y);ctx.stroke();
+    }
+    textAt(name,winner.loc.x,winner.loc.y+1,{size:state.sizes.map.width<500?11:12,
+      color:selected?'#9f513b':'#41483c',serif:true,bold:selected,halo:false});
+    ctx.restore();
   }
 }
 function drawSpot(snapshot){
@@ -533,6 +593,9 @@ function drawSpot(snapshot){
   ctx.fillStyle='rgba(157,73,53,.07)';ctx.fill();
   ctx.strokeStyle=accent;ctx.lineWidth=1.5;ctx.setLineDash([4,5]);ctx.stroke();ctx.setLineDash([]);
   ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fillStyle=accent;ctx.fill();
+  // The phase title is already in the persistent chronology below. Avoid
+  // a second floating label obscuring crowded battle formations on phones.
+  if(state.story.type==='battle')return;
   const title=event.title;
   const y=p.y-33;
   ctx.font='700 11px ui-sans-serif,system-ui';
