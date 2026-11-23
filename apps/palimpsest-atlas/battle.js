@@ -27,49 +27,49 @@ export const battleScenario = {
   waterways:[],
   paths:[],
   entities:[
-    {id:'tilly',type:'army',name:'Пехота Тилли',x:500,y:215,from:1,
+    {id:'tilly',type:'army',name:'Пехота Тилли',mapLabel:'Тилли',x:500,y:215,from:1,
       confidence:'estimated',sources:['cgsc','histnet','britannica'],
       description:'Основной центр войск императора и Католической лиги под общим командованием Иоганна Церкласа фон Тилли. Позиции на этой схеме условны.',
       current:'Расположение показывает изменение направления усилий имперского центра по фазам боя.',
       motion:{mode:'illustrative',confidence:'estimated',frames:[
         {time:1,x:500,y:215},{time:3,x:446,y:306},{time:4,x:445,y:327},{time:5,x:585,y:158}
       ]}},
-    {id:'pappenheim',type:'army',name:'Кавалерия Паппенгейма',x:761,y:211,from:1,
+    {id:'pappenheim',type:'army',name:'Кавалерия Паппенгейма',mapLabel:'Паппенгейм',x:761,y:211,from:1,
       confidence:'estimated',sources:['britannica','histnet'],
       description:'Имперская кавалерия под командованием Готфрида Генриха фон Паппенгейма атаковала шведское правое крыло и была отбита.',
       current:'В фазах боевых действий показаны атаки и последующий отход кавалерии. Траектория не является измеренным маршрутом.',
       motion:{mode:'illustrative',confidence:'estimated',frames:[
         {time:1,x:761,y:211},{time:2,x:702,y:328},{time:3,x:758,y:238},{time:4,x:784,y:172},{time:5,x:864,y:117}
       ]}},
-    {id:'furstenberg',type:'army',name:'Кавалерия Фюрстенберга',x:220,y:214,from:1,
+    {id:'furstenberg',type:'army',name:'Кавалерия Фюрстенберга',mapLabel:'Фюрстенберг',x:220,y:214,from:1,
       confidence:'estimated',sources:['britannica','histnet'],
       description:'Правое крыло имперской кавалерии действовало против саксонских частей. Общий характер атаки подтверждён описаниями сражения.',
       current:'Условная стрелка отражает наступление имперского крыла к саксонцам.',
       motion:{mode:'illustrative',confidence:'estimated',frames:[
         {time:1,x:220,y:214},{time:2,x:232,y:281},{time:3,x:291,y:383},{time:4,x:320,y:358},{time:5,x:430,y:226}
       ]}},
-    {id:'swedish-centre',type:'army',name:'Шведский центр',x:560,y:490,from:1,
+    {id:'swedish-centre',type:'army',name:'Шведский центр',mapLabel:'Шведы · центр',x:560,y:490,from:1,
       confidence:'estimated',sources:['cgsc','histnet'],
       description:'Шведские бригады и пехотные подразделения в сравнительно гибких построениях. Здесь не показан недостоверно точный состав отдельных полков.',
       current:'Центр сохраняет боеспособность и участвует в перестроении и переходе в наступление.',
       motion:{mode:'illustrative',confidence:'estimated',frames:[
         {time:1,x:560,y:490},{time:2,x:572,y:476},{time:3,x:550,y:448},{time:4,x:535,y:382},{time:5,x:532,y:295}
       ]}},
-    {id:'swedish-right',type:'army',name:'Шведское правое крыло',x:730,y:486,from:1,
+    {id:'swedish-right',type:'army',name:'Шведское правое крыло',mapLabel:'Шведы · правые',x:730,y:486,from:1,
       confidence:'estimated',sources:['britannica','histnet'],
       description:'Правое крыло шведов отразило конные атаки Паппенгейма, после чего получило возможность участвовать в контратаке.',
       current:'Схематическая линия показывает оборону, а затем наступление правого крыла.',
       motion:{mode:'illustrative',confidence:'estimated',frames:[
         {time:1,x:730,y:486},{time:2,x:726,y:445},{time:3,x:745,y:402},{time:4,x:688,y:270},{time:5,x:598,y:204}
       ]}},
-    {id:'horn',type:'army',name:'Шведское левое крыло · Горн',x:427,y:494,from:1,
+    {id:'horn',type:'army',name:'Шведское левое крыло · Горн',mapLabel:'Горн',x:427,y:494,from:1,
       confidence:'estimated',sources:['cgsc','histnet'],
       description:'Под командованием Густава Горна шведские силы смогли перестроить фронт после отхода союзных саксонцев.',
       current:'После ухода саксонцев шведский левый фланг отреагировал на изменение линии боя.',
       motion:{mode:'illustrative',confidence:'estimated',frames:[
         {time:1,x:427,y:494},{time:2,x:438,y:471},{time:3,x:419,y:427},{time:4,x:380,y:340},{time:5,x:451,y:291}
       ]}},
-    {id:'saxons',type:'army',name:'Саксонские войска',x:252,y:487,from:1,
+    {id:'saxons',type:'army',name:'Саксонские войска',mapLabel:'Саксонцы',x:252,y:487,from:1,
       confidence:'estimated',sources:['britannica','histnet'],
       description:'Саксонские союзные силы на левом фланге общего построения были обращены в бегство имперским наступлением.',
       current:'В третьей фазе реконструкция показывает отступление. Конкретные пути отхода неизвестны.',
