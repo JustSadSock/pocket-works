@@ -84,7 +84,7 @@
       <div id="personal-stories" class="personal-stories" aria-label="Личные исторические сценарии"></div>
       <p id="studio-library-status" class="studio-library-status" role="status" aria-live="polite"></p>
     </section>
-    <footer class="lib-footer"><span>ИСТОРИЧЕСКИЕ ИНТЕРПРЕТАЦИИ И ОЦЕНКИ ЯВНО ОТМЕЧЕНЫ</span><span>V 0.4</span></footer>
+    <footer class="lib-footer"><span>ИСТОРИЧЕСКИЕ ИНТЕРПРЕТАЦИИ И ОЦЕНКИ ЯВНО ОТМЕЧЕНЫ</span><span>V 0.5</span></footer>
   </section>
 
   <section id="studio" class="studio-screen" hidden aria-label="Мастерская историй">
@@ -134,6 +134,8 @@
           <input id="studio-cursor" type="range" min="1200" max="1300" step="1" value="1200" aria-label="Предпросмотр положения объектов на дату">
           <div class="studio-frame-range"><span id="studio-cursor-start">1200 г.</span><span id="studio-cursor-end">1300 г.</span></div>
         </div>
+        <div class="studio-track-head"><button id="studio-track-toggle" type="button" data-native-press aria-expanded="false" aria-controls="studio-track-panel">▸ Дорожки истории <span id="studio-track-count">0 отметок</span></button><small>События · движение · границы · приказы</small></div>
+        <div id="studio-track-panel" class="studio-track-panel" hidden aria-label="Временные дорожки сцены"></div>
         <div class="studio-board-foot"><span id="studio-map-hint">Выбери объект, затем коснись карты.</span><span>1 : УСЛОВНАЯ СЦЕНА</span></div>
         <div class="studio-tools">
           <button id="studio-export" type="button" data-native-press>Экспорт JSON ↗</button>
@@ -175,11 +177,18 @@
         <button type="button" id="map-minus" data-native-press aria-label="Отдалить карту">−</button>
         <button type="button" id="map-home" data-native-press aria-label="Вся карта">⌖</button>
       </div>
+      <div id="compare-split-guide" class="compare-split-guide" hidden data-ui><span>БЫЛО</span><span>СТАЛО</span></div>
       <div class="comparison-banner" id="comparison-banner" hidden data-ui>
         <div class="comparison-content">
           <span>СРАВНЕНИЕ ДВУХ ДАТ</span>
           <strong id="compare-label">Базовая дата — текущая дата</strong>
           <small id="compare-details">Переместите время, чтобы увидеть изменения.</small>
+          <div class="compare-actions">
+            <button id="compare-mode" type="button" data-native-press aria-pressed="false">Разделить карту</button>
+            <label id="compare-split-control" hidden>Граница обзора
+              <input id="compare-split" type="range" min="15" max="85" step="1" value="50" aria-label="Положение линии разделения исторических карт">
+            </label>
+          </div>
         </div>
         <button id="compare-reset" type="button" data-native-press aria-label="Закончить сравнение">✕</button>
       </div>
@@ -227,7 +236,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </section>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Палимпсест: Атлас" data-app-version="0.4.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Палимпсест: Атлас" data-app-version="0.5.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
