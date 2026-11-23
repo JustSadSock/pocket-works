@@ -124,7 +124,7 @@ export function parseStory(packageOrStory) {
     assert(e.from==null||e.until==null||e.until>=e.from,'Объект исчезает раньше появления');
     assert(CONFIDENCE.has(e.confidence),'Необходимо указать достоверность объекта');
     if(e.confidence==='confirmed')assert(Array.isArray(e.sources)&&e.sources.length>0,'Для подтверждённого объекта нужен источник');
-    return {id:entityId,type:e.type,name:text(e.name,130),x:e.x,y:e.y,
+    return {id:entityId,type:e.type,name:text(e.name,130),...(text(e.mapLabel,70)?{mapLabel:text(e.mapLabel,70)}:{}),x:e.x,y:e.y,
       from:e.from??start,until:e.until??undefined,
       description:text(e.description,1500),current:text(e.current,1000),
       confidence:e.confidence,sources:sourceRefs(e.sources||[]),
