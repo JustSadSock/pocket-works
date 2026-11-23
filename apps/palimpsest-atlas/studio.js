@@ -66,11 +66,10 @@ function customEntry(story,onOpen,onEdit){
   return row;
 }
 
-export function initStudio({onOpen,onNotify}){
+export function initStudio({onOpen,onNotify,builtins}){
   const screen=$('studio');
   let library=loadLibrary(window.localStorage);
-  let draft=null, savedHash='',tab='events',selected=null,undo=[],redo=[],dirty=false,
-      mode='select',currentFocus=null;
+  let draft=null, savedHash='',tab='events',selected=null,undo=[],redo=[],dirty=false;
   const board=$('studio-map');
   const ctx=board.getContext('2d');
   const input=$('studio-import');
@@ -78,7 +77,7 @@ export function initStudio({onOpen,onNotify}){
     events:'title',entities:'name',features:'label',paths:'id',sources:'title'
   };
 
-  function notify(message){status(message);onNotify?.(message);}
+  function notify(message){status(message);$('studio-library-status').textContent=message;onNotify?.(message);}
   function markDirty(){dirty=true;updateToolbar();}
   function updateToolbar(){
     $('studio-undo').disabled=undo.length===0;
@@ -421,8 +420,8 @@ export function initStudio({onOpen,onNotify}){
   board.addEventListener('pointerup',onMapPoint);
   $('studio-back').addEventListener('click',back);
   $('studio-new').addEventListener('click',()=>open(createDraft()));
-  $('studio-clone-rome').addEventListener('click',()=>open(cloneAsDraft(window.__atlasStories[0])));
-  $('studio-clone-war').addEventListener('click',()=>open(cloneAsDraft(window.__atlasStories[1])));
+  $('studio-clone-rome').addEventListener('click',()=>open(cloneAsDraft(builtins[0])));
+  $('studio-clone-war').addEventListener('click',()=>open(cloneAsDraft(builtins[1])));
   $('studio-import-button').addEventListener('click',()=>input.click());
   input.addEventListener('change',async()=>{
     const file=input.files?.[0];input.value='';
@@ -445,17 +444,20 @@ export function initStudio({onOpen,onNotify}){
     button.addEventListener('click',()=>pickTab(button.dataset.studioTab));
   if('ResizeObserver' in window)new ResizeObserver(()=>{if(!screen.hidden)paint();}).observe(board);
   window.addEventListener('resize',paint);
-  window.addEventListener('pagehide',()=>{if(draft&&dirty)sessionStorage.setItem('atlas-studio-recovery',JSON.stringify(draft));});
+  window.addEventListener('pagehide',()=>{if(draft&&dirty){try{sessionStorage.setItem('atlas-studio-recovery',JSON.stringify(draft));}catch{}}});
   const recover=()=>{
     try{
       const s=sessionStorage.getItem('atlas-studio-recovery');
       if(!s)return;
       const recovered=JSON.parse(s);
-      const story=parseStory(recovered);
-      if(!library.some(x=>x.id===story.id))open(story);
+      if(recovered?.type!=='custom'||typeof recovered.id!=='string')throw new Error('Некорректный черновик');
+      open(recovered);dirty=true;updateToolbar();
       sessionStorage.removeItem('atlas-studio-recovery');
-    }catch{sessionStorage.removeItem('atlas-studio-recovery');}
+      status('Черновик восстановлен. Проверьте изменения и нажмите «Сохранить».','success');
+    }catch(error){sessionStorage.removeItem('atlas-studio-recovery');notify('Не удалось восстановить черновик: '+error.message);}
   };
+  $('studio-recover').addEventListener('click',recover);
+  try{if(sessionStorage.getItem('atlas-studio-recovery'))$('studio-recover').hidden=false;}catch{}
   renderLibrary();
   // Recovery is opt-in: no surprise editor opening on standard app entry.
   return {
