@@ -1,16 +1,16 @@
 const CACHE_PREFIX = 'palimpsest-atlas-';
-const CACHE_NAME = 'palimpsest-atlas-v0.1.0';
-const APP_VERSION = '0.1.0';
+const CACHE_NAME = 'palimpsest-atlas-v0.2.0';
+const APP_VERSION = '0.2.0';
 const RELEASE_DATE = '2026-11-23';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Первый исторический плеер с двумя независимыми сюжетами.',
-  'Временная шкала с масштабированием, карта, интерактивные объекты и источники.',
-  'Локальное сохранение, закладки и офлайн-работа.'
+  'Story Studio: создание собственных историй, объектов, событий, территорий и маршрутов.',
+  'Сравнение двух дат и параллельные линии событий на временной шкале.',
+  'Экспорт/импорт JSON, локальная библиотека и обратимый редактор.'
 ];
 const APP_SHELL = [
   './','./index.html','./app.config.json','./styles.css','./app.js','./core.js','./stories.js',
-  './manifest.webmanifest','./icons/icon.svg',
+  './manifest.webmanifest','./icons/icon.svg','./studio.js','./studio-data.js',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
   '../../shared/update-manager.css','../../shared/update-manager.js'
 ];
