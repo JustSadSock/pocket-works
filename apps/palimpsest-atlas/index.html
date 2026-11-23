@@ -82,7 +82,7 @@
       <div id="personal-stories" class="personal-stories" aria-label="Личные исторические сценарии"></div>
       <p id="studio-library-status" class="studio-library-status" role="status" aria-live="polite"></p>
     </section>
-    <footer class="lib-footer"><span>ИСТОРИЧЕСКИЕ ИНТЕРПРЕТАЦИИ И ОЦЕНКИ ЯВНО ОТМЕЧЕНЫ</span><span>V 0.2</span></footer>
+    <footer class="lib-footer"><span>ИСТОРИЧЕСКИЕ ИНТЕРПРЕТАЦИИ И ОЦЕНКИ ЯВНО ОТМЕЧЕНЫ</span><span>V 0.3</span></footer>
   </section>
 
   <section id="studio" class="studio-screen" hidden aria-label="Мастерская историй">
@@ -126,6 +126,11 @@
       <div class="studio-canvas-shell">
         <div class="studio-board-heading"><strong>Картографический стол</strong><span>КАСАНИЕ = ПОЛОЖЕНИЕ ОБЪЕКТА</span></div>
         <canvas id="studio-map" class="studio-map" aria-label="Редактор карты. Нажмите, чтобы поставить или переместить выбранный объект."></canvas>
+        <div class="studio-frame-ruler">
+          <div class="studio-frame-caption"><strong>ВРЕМЯ СЦЕНЫ</strong><output id="studio-cursor-label">1200 г.</output></div>
+          <input id="studio-cursor" type="range" min="1200" max="1300" step="1" value="1200" aria-label="Предпросмотр положения объектов на дату">
+          <div class="studio-frame-range"><span id="studio-cursor-start">1200 г.</span><span id="studio-cursor-end">1300 г.</span></div>
+        </div>
         <div class="studio-board-foot"><span id="studio-map-hint">Выбери объект, затем коснись карты.</span><span>1 : УСЛОВНАЯ СЦЕНА</span></div>
         <div class="studio-tools">
           <button id="studio-export" type="button" data-native-press>Экспорт JSON ↗</button>
