@@ -512,3 +512,25 @@ button:active{transform:translateY(1px)}
   .studio-map{min-height:70px}
   .compare-split-guide span{top:24px;font-size:8px;padding:4px}
 }
+
+/* v0.5 QA repair: the old comparison close-button selector was matching the
+   newly added mode switch, compressing its text into 29px. */
+.comparison-banner .compare-actions>button{
+  width:auto;height:auto;min-width:132px;max-width:100%;
+  flex-shrink:0;margin-left:0;white-space:nowrap;text-align:center;
+  line-height:1.2;padding:8px 10px;
+}
+.comparison-banner .compare-actions>label{flex:1;min-width:145px;margin:0}
+.comparison-banner .compare-actions input[type="range"]{flex:1;min-width:70px}
+.comparison-banner #compare-reset{align-self:flex-start;margin-top:0}
+@media(max-width:730px){
+  .comparison-banner{
+    left:9px;right:9px;bottom:8px;max-width:calc(100% - 18px);
+    gap:7px;padding:9px 10px 9px 12px;align-items:flex-start
+  }
+  .comparison-banner .comparison-content{flex:1;min-width:0}
+  .comparison-banner .compare-actions>button{min-width:124px;padding:6px 8px;font-size:10px}
+  .comparison-banner .compare-actions>label{min-width:133px;font-size:9px}
+  .comparison-banner .compare-actions>input{min-width:60px}
+  .comparison-banner #compare-reset{width:29px;min-width:29px;flex-shrink:0;padding:0}
+}
