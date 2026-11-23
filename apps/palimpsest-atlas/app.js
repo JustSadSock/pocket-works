@@ -178,7 +178,7 @@ function updateComparisonBanner(){
 function toggleCompare(){
   state.compareTime=Number.isFinite(state.compareTime)?null:state.time;
   updateComparisonBanner();state.dirty=true;
-  if(state.compareTime!=null)toast('Базовая дата закреплена. Перематывай время, чтобы сравнить состояния.');
+  // The persistent comparison banner supplies the result; no toast obscures it.
 }
 function renderComparisonGhost(){
   if(!Number.isFinite(state.compareTime))return;
@@ -407,7 +407,7 @@ function drawTerrain(snapshot){
   // Maps are deliberately generalized; avoid falsely precise geopolitical boundaries.
   ctx.save();ctx.globalAlpha=.26;
   const left=project(44,656);
-  textAt(story.type==='origins'?'LATIUM':'EUROPA CENTRALIS',left.x,left.y,{align:'left',size:20,serif:true,italic:true,color:'#73755f'});
+  textAt(story.type==='origins'?'LATIUM':story.type==='war'?'EUROPA CENTRALIS':'АВТОРСКАЯ СЦЕНА',left.x,left.y,{align:'left',size:20,serif:true,italic:true,color:'#73755f'});
   ctx.restore();
 }
 function drawSettlement(p,kind){
