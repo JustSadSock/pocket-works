@@ -224,7 +224,8 @@ export function initStudio({onOpen,onNotify,builtins}){
       if(item.kind==='boundary')renderBoundaryControls(form,item);
       else{add('Радиус по X','rx',{number:true});add('Радиус по Y','ry',{number:true});}
       add('Достоверность','confidence',{options:CONFIDENCE});
-      coords();renderMotionControls(form,item);
+      if(item.kind==='boundary'){sourceSelectItem(form,item);coords();}
+      else{coords();renderMotionControls(form,item);}
     }else if(tab==='paths'){
       add('Появление маршрута (год)','from',{number:true});
       add('Достоверность','confidence',{options:CONFIDENCE});
