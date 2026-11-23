@@ -173,14 +173,17 @@ export function parseStory(packageOrStory) {
     assert(featureKinds.has(f.kind),'Неверный тип территории');
     assert(inMap(f.x,f.y),'Территория за картой');
     assert(finite(f.rx)&&finite(f.ry)&&f.rx>=3&&f.rx<=w.width&&f.ry>=3&&f.ry<=w.height,'Размер территории не задан');
-    if(f.kind==='boundary')assert(validPolygon(f.points,w),'Граница должна быть замкнутым многоугольником из 3–40 допустимых точек');
+    if(f.kind==='boundary'){
+      assert(validPolygon(f.points,w),'Граница должна быть замкнутым многоугольником из 3–40 допустимых точек');
+      if(f.confidence==='confirmed')assert(Array.isArray(f.sources)&&f.sources.length>0,'Подтверждённая граница требует источника');
+    }
     assert(f.from==null||(finite(f.from)&&f.from>=start&&f.from<=end&&f.from!==0),'Неверная дата территории');
     assert(f.until==null||(finite(f.until)&&f.until>=start&&f.until<=end&&f.until!==0),'Неверная дата исчезновения территории');
     assert(f.from==null||f.until==null||f.until>=f.from,'Неверный период существования территории');
     return {id:featureId,kind:f.kind,x:f.x,y:f.y,rx:f.rx,ry:f.ry,
       label:text(f.label,110)||'Территория',rotation:finite(f.rotation)?clamp(f.rotation,-Math.PI,Math.PI):0,
       from:f.from??start,until:f.until??undefined,confidence:CONFIDENCE.has(f.confidence)?f.confidence:'hypothetical',
-      ...(f.kind==='boundary'?{points:f.points.map(p=>[p[0],p[1]])}:{}),
+      ...(f.kind==='boundary'?{points:f.points.map(p=>[p[0],p[1]]),sources:sourceRefs(f.sources||[])}:{}),
       ...(f.motion?{motion:cleanMotion(f)}:{})};
   });
   const paths=limitArray(raw.paths,100,'маршруты').map((p,i)=>{
