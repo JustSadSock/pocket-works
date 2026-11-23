@@ -1,0 +1,20 @@
+{
+  "id": "/apps/emergent-kingdoms/",
+  "name": "Emergent Kingdoms",
+  "short_name": "Kingdoms",
+  "description": "Автономная цивилизационная песочница с живой картой и альтернативными временными линиями.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f2efe2",
+  "theme_color": "#213b3d",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
