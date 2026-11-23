@@ -73,8 +73,10 @@
         <button type="button" id="studio-new" class="studio-main-action" data-native-press>+ Новая история</button>
       </div>
       <div class="studio-library-actions">
+        <button type="button" id="studio-new-battle" data-native-press>Новая битва · 5 фаз</button>
         <button type="button" id="studio-clone-rome" data-native-press>Взять за основу Рим</button>
         <button type="button" id="studio-clone-war" data-native-press>Взять за основу войну</button>
+        <button type="button" id="studio-clone-battle" data-native-press>Взять за основу Брейтенфельд</button>
         <button type="button" id="studio-import-button" data-native-press>Импорт JSON</button>
         <button type="button" id="studio-recover" hidden data-native-press>Восстановить черновик</button>
         <input id="studio-import" type="file" accept=".json,application/json" hidden>
@@ -82,7 +84,7 @@
       <div id="personal-stories" class="personal-stories" aria-label="Личные исторические сценарии"></div>
       <p id="studio-library-status" class="studio-library-status" role="status" aria-live="polite"></p>
     </section>
-    <footer class="lib-footer"><span>ИСТОРИЧЕСКИЕ ИНТЕРПРЕТАЦИИ И ОЦЕНКИ ЯВНО ОТМЕЧЕНЫ</span><span>V 0.3</span></footer>
+    <footer class="lib-footer"><span>ИСТОРИЧЕСКИЕ ИНТЕРПРЕТАЦИИ И ОЦЕНКИ ЯВНО ОТМЕЧЕНЫ</span><span>V 0.4</span></footer>
   </section>
 
   <section id="studio" class="studio-screen" hidden aria-label="Мастерская историй">
@@ -103,7 +105,7 @@
           <label>Подзаголовок <input id="studio-subtitle" type="text" maxlength="180"></label>
           <label>Описание <textarea id="studio-intro" rows="2" maxlength="1500"></textarea></label>
           <div class="studio-years"><label>От года <input id="studio-start" type="number" step="any"></label><label>До года <input id="studio-end" type="number" step="any"></label></div>
-          <p>До н. э. — отрицательные годы. Координаты карты условные.</p>
+          <p id="studio-eras-note">До н. э. — отрицательные годы. Координаты карты условные.</p>
         </section>
         <section class="studio-layers">
           <div class="studio-section-label">02 / СЛОИ РЕКОНСТРУКЦИИ</div>
@@ -113,6 +115,7 @@
             <button type="button" data-studio-tab="features" data-native-press>Зоны</button>
             <button type="button" data-studio-tab="paths" data-native-press>Пути</button>
             <button type="button" data-studio-tab="sources" data-native-press>Источники</button>
+            <button type="button" data-studio-tab="commands" data-native-press>Штабы</button>
           </nav>
           <div class="studio-list-head"><span id="studio-list-caption">События · 1</span><div class="studio-list-actions">
             <button id="studio-add" type="button" data-native-press aria-label="Добавить элемент">+</button>
@@ -148,6 +151,7 @@
       <div class="header-actions">
         <button id="detail-back" class="detail-back" type="button" hidden data-native-press aria-label="Вернуться к большой карте войны">↖ К войне</button>
         <button id="edit-story" class="icon-button" type="button" hidden title="Редактировать личную историю" aria-label="Редактировать историю">✎</button>
+        <button id="command-toggle" class="icon-button command-toggle" type="button" hidden data-native-press aria-label="Открыть структуру командования" aria-expanded="false" title="Штабы и подразделения">♟</button>
         <button id="compare-toggle" class="icon-button compare-icon" type="button" data-native-press aria-pressed="false" title="Запомнить дату для сравнения" aria-label="Сравнить исторические даты">⇄</button>
         <button id="bookmark" class="icon-button" type="button" data-native-press aria-pressed="false" title="Запомнить момент" aria-label="Сохранить закладку">◇</button>
         <button id="list-toggle" class="icon-button" type="button" data-native-press aria-label="Открыть список событий" aria-expanded="false">☷</button>
@@ -156,6 +160,15 @@
     <div id="stage" class="stage">
       <canvas id="scene" data-gesture-surface data-touch-action="none" aria-label="Интерактивная карта с объектами истории"></canvas>
       <button id="scene-portal" class="scene-portal" type="button" hidden data-native-press>↘ Приблизить поле боя <span>5 ФАЗ БРЕЙТЕНФЕЛЬДА</span></button>
+      <aside id="command-panel" class="command-panel" hidden data-ui aria-label="Командование и приказы">
+        <header class="command-panel-head">
+          <div><small>ШТАБНАЯ ВЕДОМОСТЬ</small><strong>Стороны и подразделения</strong></div>
+          <button id="command-close" type="button" data-native-press aria-label="Закрыть структуру командования">✕</button>
+        </header>
+        <p id="command-period" class="command-period">Фаза реконструкции</p>
+        <div id="command-roster" class="command-roster"></div>
+        <p class="command-caveat">Состав укрупнён, без неподтверждённых численностей и минутных маршрутов.</p>
+      </aside>
       <div class="stage-stamp" data-ui><span id="map-scale">ОБЗОР СЦЕНЫ</span><span id="map-caveat">СХЕМАТИЧЕСКАЯ КАРТА</span></div>
       <div class="scene-toolbar" data-ui>
         <button type="button" id="map-plus" data-native-press aria-label="Приблизить карту">+</button>
@@ -214,7 +227,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </section>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Палимпсест: Атлас" data-app-version="0.3.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Палимпсест: Атлас" data-app-version="0.4.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

@@ -1,16 +1,16 @@
 const CACHE_PREFIX = 'palimpsest-atlas-';
-const CACHE_NAME = 'palimpsest-atlas-v0.3.0';
-const APP_VERSION = '0.3.0';
+const CACHE_NAME = 'palimpsest-atlas-v0.4.0';
+const APP_VERSION = '0.4.0';
 const RELEASE_DATE = '2026-11-23';
 const CACHE_PROTOCOL = 2;
 const RELEASE_NOTES = [
-  'Брейтенфельд: пятифазная тактическая реконструкция и переход в битву с карты войны.',
-  'Движение по ключевым кадрам с честной маркировкой неточных траекторий.',
-  'Редактор: добавление и изменение исторических позиций во времени.'
+  'Штабной журнал: цепочки командования и приказы соединений по фазам.',
+  'Условные исторические границы-полигоны с датами и источниками.',
+  'Story Studio: собственные битвы, штабные группы и вершины границ.'
 ];
 const APP_SHELL = [
   './','./index.html','./app.config.json','./styles.css','./app.js','./core.js','./stories.js',
-  './manifest.webmanifest','./icons/icon.svg','./studio.js','./studio-data.js','./battle.js','./motion.js',
+  './manifest.webmanifest','./icons/icon.svg','./studio.js','./studio-data.js','./battle.js','./motion.js','./tactics.js',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
   '../../shared/update-manager.css','../../shared/update-manager.js'
 ];

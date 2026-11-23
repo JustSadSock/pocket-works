@@ -1,11 +1,12 @@
 import {clamp, formatYear} from './core.js';
 import {keyframeValue,motionTrail,formatStoryTime} from './motion.js';
-import {PALETTES, MAX_STORIES, createDraft,cloneAsDraft,exportPackage,
+import {PALETTES, MAX_STORIES, createDraft,createPhaseDraft,cloneAsDraft,exportPackage,
   loadLibrary,parseImport,parseStory,persistLibrary,upsertLibrary,newId} from './studio-data.js';
 
+import {COMMAND_ACTIONS,COMMAND_SIDES,validPolygon,polygonCenter} from './tactics.js';
 const $=(id)=>document.getElementById(id);
-const COLLECTIONS=['events','entities','features','paths','sources'];
-const LABELS={events:'События',entities:'Объекты',features:'Территории',paths:'Маршруты',sources:'Источники'};
+const COLLECTIONS=['events','entities','features','paths','sources','commands'];
+const LABELS={events:'События',entities:'Объекты',features:'Территории',paths:'Маршруты',sources:'Источники',commands:'Штабы'};
 const CONFIDENCE=[
   ['hypothetical','Гипотеза автора'],
   ['estimated','Приблизительная реконструкция'],
@@ -15,9 +16,9 @@ const CONFIDENCE=[
 ];
 const TYPE_OPTIONS=[
  ['place','Место'],['city','Город'],['settlement','Поселение'],['battle','Поле битвы'],
- ['person','Человек'],['army','Армия'],['hill','Холм'],['river','Река'],['legend','Легенда'],['region','Область']
+ ['person','Человек'],['army','Воинское соединение'],['hill','Холм'],['river','Река'],['legend','Легенда'],['region','Область']
 ];
-const FEATURE_OPTIONS=[['region','Регион'],['hill','Холм'],['zone','Выделенная зона']];
+const FEATURE_OPTIONS=[['region','Регион'],['hill','Холм'],['zone','Выделенная зона'],['boundary','Полигон границы']];
 const LANE_OPTIONS=[['politics','Политика'],['military','Война'],['culture','Общество']];
 const deep=(x)=>JSON.parse(JSON.stringify(x));
 const fmt=(t)=>Number.isFinite(t)?formatYear(t):'—';
@@ -60,7 +61,7 @@ function customEntry(story,onOpen,onEdit){
   const row=make('div','personal-ticket');
   const text=make('div','personal-ticket-copy');
   text.append(make('strong','',story.title));
-  text.append(make('small','',fmt(story.range[0])+' — '+fmt(story.range[1])+' · '+story.events.length+' событий'));
+  text.append(make('small','',formatStoryTime(story.range[0],story)+' — '+formatStoryTime(story.range[1],story)+' · '+story.events.length+' событий'));
   row.append(text);
   row.append(button('Смотреть',()=>onOpen(story.id),'personal-view'));
   row.append(button('Править',()=>onEdit(story),'personal-edit'));
@@ -73,12 +74,12 @@ export function initStudio({onOpen,onNotify,builtins}){
   const storage=(()=>{try{return window.localStorage;}catch{return {getItem:()=>null,setItem:()=>{throw new Error('Локальное хранилище недоступно');}};}})();
   let library=loadLibrary(storage);
   let draft=null, savedHash='',tab='events',selected=null,undo=[],redo=[],dirty=false,
-    cursor=null,activeFrameTime=null;
+    cursor=null,activeFrameTime=null,activeVertex=null;
   const board=$('studio-map');
   const ctx=board.getContext('2d');
   const input=$('studio-import');
   const selections={
-    events:'title',entities:'name',features:'label',paths:'id',sources:'title'
+    events:'title',entities:'name',features:'label',paths:'id',sources:'title',commands:'name'
   };
 
   function notify(message){status(message);$('studio-library-status').textContent=message;onNotify?.(message);}
@@ -91,10 +92,12 @@ export function initStudio({onOpen,onNotify,builtins}){
     $('studio-dirty').textContent=dirty?'НЕ СОХРАНЕНО':'СОХРАНЕНО';
     $('studio-dirty').classList.toggle('is-dirty',dirty);
     const active=current();
-    $('studio-map-hint').textContent=(tab==='entities'||tab==='features')&&activeFrameTime!=null&&active?.motion?.frames?.some(f=>f.time===activeFrameTime)?
+    $('studio-map-hint').textContent=tab==='features'&&active?.kind==='boundary'?
+      activeVertex!=null?'Коснись карты: изменить вершину №'+(activeVertex+1):'Коснись карты: добавить вершину границы.':
+      (tab==='entities'||tab==='features')&&activeFrameTime!=null&&active?.motion?.frames?.some(f=>f.time===activeFrameTime)?
       'Нажми на карте: изменится выбранный ключевой кадр на '+formatStoryTime(activeFrameTime,draft)+'.':tab==='paths'?
       'Нажми на карту, чтобы добавить точку маршрута. Последнюю точку можно удалить в форме.' :
-      tab==='sources'?'Выберите источник слева и укажите его URL.':
+      (tab==='sources'||tab==='commands')?'Параметры выбранной записи редактируются слева.':
       'Коснись карты, чтобы переместить выбранный объект или фокус события.';
   }
   function restore(snapshot,from){
@@ -113,7 +116,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     redo=[];markDirty();renderEditor();
   }
   function pickTab(next){
-    tab=next;selected=draft[tab]?.[0]?.id||null;activeFrameTime=null;
+    tab=next;selected=draft[tab]?.[0]?.id||null;activeFrameTime=null;activeVertex=null;
     renderEditor();
   }
   function renderCollection(){
@@ -124,11 +127,11 @@ export function initStudio({onOpen,onNotify,builtins}){
       const line=make('button','studio-record'+(item.id===selected?' active':''));
       line.type='button';
       const upper=make('strong','',name);
-      const sub=make('small','',tab==='events'?fmt(item.time):
-        tab==='entities'?fmt(item.from):tab==='features'?fmt(item.from):
-        tab==='paths'?item.points.length+' точек':'Ссылка на публикацию');
+      const sub=make('small','',tab==='events'?formatStoryTime(item.time,draft):
+        tab==='entities'?formatStoryTime(item.from,draft):tab==='features'?formatStoryTime(item.from,draft):
+        tab==='paths'?item.points.length+' точек':tab==='commands'?item.commander||'Командование':'Ссылка на публикацию');
       line.append(upper,sub);
-      line.addEventListener('click',()=>{selected=item.id;activeFrameTime=null;renderEditor();});
+      line.addEventListener('click',()=>{selected=item.id;activeFrameTime=null;activeVertex=null;renderEditor();});
       list.append(line);
     }
     if(!list.childNodes.length)list.append(make('p','studio-empty','Здесь пока пусто. Добавь первый элемент.'));
@@ -140,6 +143,11 @@ export function initStudio({onOpen,onNotify,builtins}){
     mutate((story)=>{
       const item=story[tab].find(i=>i.id===selected);
       if(!item)throw new Error('Выбери элемент');
+      if(tab==='features'&&key==='kind'&&value==='boundary'&&(!item.points||item.points.length<3)){
+        const x=clamp(item.x,65,story.world.width-65),y=clamp(item.y,55,story.world.height-55);
+        item.points=[[x-65,y-45],[x+65,y-45],[x+65,y+45],[x-65,y+45]];
+      }
+      if(tab==='entities'&&key==='commandId'&&value!==item.commandId)delete item.parentId;
       item[key]=value;
     });
   }
@@ -184,7 +192,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     };
     if(tab==='events'){
       add('Заголовок','title');add('Короткое пояснение','subtitle');
-      add('Год (отрицательный = до н. э.)','time',{number:true});
+      add(draft.timeUnit==='phase'?'Номер фазы':'Год (отрицательный = до н. э.)','time',{number:true});
       add('Подробное описание','text',{long:true});
       add('Категория','category');
       add('Линия событий','lane',{options:LANE_OPTIONS});
@@ -194,19 +202,31 @@ export function initStudio({onOpen,onNotify,builtins}){
       sourceSelectItem(form,item);
     }else if(tab==='entities'){
       add('Название','name');add('Короткая метка на карте','mapLabel');add('Тип','type',{options:TYPE_OPTIONS});
-      add('Появление (год)','from',{number:true});
-      add('Исчезновение (пусто = до конца)','until',{number:true});
+      add('Командир / описание руководства','commander');
+      const commandOptions=[['','Без штаба'],...draft.commands.map(c=>[c.id,c.name])];
+      form.append(field('Подчиняется штабу',item.commandId||'',v=>setValue('commandId',v),{options:commandOptions}));
+      const parents=draft.entities.filter(e=>e.id!==item.id&&e.commandId&&e.commandId===item.commandId
+        &&e.type==='army'&&!(()=>{let cursor=e,ids=new Set([item.id]);while(cursor.parentId){
+          if(ids.has(cursor.parentId))return true;
+          ids.add(cursor.parentId);cursor=draft.entities.find(x=>x.id===cursor.parentId)||{};
+        }return false;})()).map(e=>[e.id,e.name]);
+      form.append(field('Родительское соединение',item.parentId||'',v=>setValue('parentId',v),
+        {options:[['','Нет · напрямую штабу'],...parents]}));
+      add(draft.timeUnit==='phase'?'Появление (фаза)':'Появление (год)','from',{number:true});
+      add(draft.timeUnit==='phase'?'Исчезновение (фаза, пусто = конец)':'Исчезновение (пусто = до конца)','until',{number:true});
       add('Состояние в этот момент','current',{long:true});
       add('Общий контекст','description',{long:true});
       add('Достоверность','confidence',{options:CONFIDENCE});
-      coords();sourceSelectItem(form,item);renderMotionControls(form,item);
+      coords();sourceSelectItem(form,item);renderMotionControls(form,item);renderOrderControls(form,item);
     }else if(tab==='features'){
       add('Название на карте','label');add('Форма','kind',{options:FEATURE_OPTIONS});
       add('Появление (год)','from',{number:true});
       add('Исчезновение (пусто = до конца)','until',{number:true});
-      add('Радиус по X','rx',{number:true});add('Радиус по Y','ry',{number:true});
+      if(item.kind==='boundary')renderBoundaryControls(form,item);
+      else{add('Радиус по X','rx',{number:true});add('Радиус по Y','ry',{number:true});}
       add('Достоверность','confidence',{options:CONFIDENCE});
-      coords();renderMotionControls(form,item);
+      if(item.kind==='boundary'){sourceSelectItem(form,item);coords();}
+      else{coords();renderMotionControls(form,item);}
     }else if(tab==='paths'){
       add('Появление маршрута (год)','from',{number:true});
       add('Достоверность','confidence',{options:CONFIDENCE});
@@ -215,6 +235,12 @@ export function initStudio({onOpen,onNotify,builtins}){
         if(item.points.length<=2){status('Для маршрута необходимы минимум две точки','error');return;}
         mutate(story=>story.paths.find(p=>p.id===selected).points.pop());
       },'studio-secondary'));
+    }else if(tab==='commands'){
+      add('Название штаба','name');add('Командующий','commander');
+      add('Сторона','side',{options:COMMAND_SIDES});
+      sourceSelectItem(form,item);
+      const units=draft.entities.filter(e=>e.commandId===item.id);
+      form.append(make('p','studio-field-note','В подчинении: '+units.length+' соединений. Для нового штаба добавь объект во вкладке «Объекты» и назначь ему штаб.'));
     }else if(tab==='sources'){
       add('Название публикации','title');add('URL (https://...)','url',{url:true,placeholder:'https://...'});
       const cited=draft.events.filter(e=>(e.sources||[]).includes(item.id)).length+
@@ -226,6 +252,73 @@ export function initStudio({onOpen,onNotify,builtins}){
   function sourceSelectItem(node,item){
     const opts=[['','Без источника'],...draft.sources.map(s=>[s.id,s.title||s.id])];
     node.append(field('Привязанный источник',(item.sources||[])[0]||'',id=>setValue('sources',id?[id]:[]),{options:opts}));
+  }
+  function renderOrderControls(form,item){
+    if(!item.commandId&&!item.parentId)return;
+    const node=make('section','orders-controls');
+    node.append(make('div','studio-field-head','05 / ПРИКАЗЫ ПО ФАЗАМ'));
+    const atTime=(item.orders||[]).find(o=>Math.abs(o.time-cursor)<.000001);
+    if(!atTime){
+      node.append(make('p','studio-field-note','На '+formatStoryTime(cursor,draft)+' нет приказа. Выбери момент на шкале, затем добавь решение командования.'));
+      node.append(button('+ Добавить приказ в '+formatStoryTime(cursor,draft),()=>{
+        mutate(story=>{
+          const entity=story.entities.find(e=>e.id===selected);
+          if(!entity.orders)entity.orders=[];
+          if(entity.orders.length>=32)throw Error('Максимум 32 приказа для соединения');
+          if(entity.orders.some(o=>Math.abs(o.time-cursor)<.000001))return;
+          entity.orders.push({time:cursor,action:'hold',note:'',confidence:'hypothetical',sources:[]});
+          entity.orders.sort((a,b)=>a.time-b.time);
+        });
+      },'studio-secondary'));
+    }else{
+      const edit=(key,value)=>mutate(story=>{
+        const entity=story.entities.find(e=>e.id===selected);
+        const target=entity.orders.find(o=>Math.abs(o.time-cursor)<.000001);
+        if(target)target[key]=value;
+      });
+      node.append(field('Тактическое действие',atTime.action,v=>edit('action',v),{options:COMMAND_ACTIONS}));
+      node.append(field('Пояснение / приказ',atTime.note||'',v=>edit('note',v),{long:true}));
+      node.append(field('Достоверность',atTime.confidence,v=>edit('confidence',v),
+        {options:CONFIDENCE.filter(([id])=>id!=='tradition')}));
+      node.append(field('Источник',atTime.sources?.[0]||'',v=>edit('sources',v?[v]:[]),
+        {options:[['','Без источника'],...draft.sources.map(x=>[x.id,x.title])]}));
+      node.append(button('− Удалить приказ',()=>mutate(story=>{
+        const entity=story.entities.find(e=>e.id===selected);
+        entity.orders=(entity.orders||[]).filter(o=>Math.abs(o.time-cursor)>=.000001);
+      }),'studio-secondary'));
+    }
+    form.append(node);
+  }
+  function renderBoundaryControls(form,item){
+    const group=make('section','boundary-controls');
+    group.append(make('div','studio-field-head','05 / ВЕРШИНЫ ГРАНИЦЫ'));
+    group.append(make('p','studio-field-note','Полигон — условная линия. Перемещай вершины на карте или добавляй новые. Достоверность должна быть указана отдельно.'));
+    const list=make('div','boundary-vertices');
+    for(let i=0;i<(item.points||[]).length;i++){
+      const b=button('№'+(i+1),()=>{activeVertex=i;renderEditor();},
+        'boundary-vertex'+(activeVertex===i?' selected':''));
+      b.title='Переместить вершину №'+(i+1);
+      list.append(b);
+    }
+    group.append(list);
+    group.append(button('+ Добавить вершину касанием',()=>{activeVertex=null;updateToolbar();renderEditor();},'studio-secondary'));
+    if(activeVertex!=null&&item.points?.[activeVertex]){
+      const coords=make('div','field-pair');
+      for(const axis of [0,1])coords.append(field(axis===0?'X вершины':'Y вершины',
+        item.points[activeVertex][axis],value=>{
+          if(!Number.isFinite(value)||value<0||value>(axis===0?draft.world.width:draft.world.height)){
+            status('Точка находится вне карты','error');return;
+          }
+          const index=activeVertex;
+          mutate(story=>story.features.find(f=>f.id===selected).points[index][axis]=value);
+        },{number:true}));
+      group.append(coords);
+    }
+    group.append(button('− Удалить последнюю вершину',()=>{
+      if(item.points.length<=3){status('Для границы необходимо минимум три вершины','error');return;}
+      mutate(story=>{story.features.find(f=>f.id===selected).points.pop();activeVertex=null;});
+    },'studio-secondary'));
+    form.append(group);
   }
   function renderMotionControls(form,item){
     const group=make('section','motion-controls');
@@ -253,7 +346,7 @@ export function initStudio({onOpen,onNotify,builtins}){
       if(activeFrameTime!=null){
         const currentFrame=movement.frames.find(f=>f.time===activeFrameTime);
         if(currentFrame){
-          group.append(field('Год кадра',currentFrame.time,value=>{
+          group.append(field(draft.timeUnit==='phase'?'Номер фазы кадра':'Год кадра',currentFrame.time,value=>{
             if(!Number.isFinite(value)||value===0||value<(item.from??draft.range[0])||value>draft.range[1]){status('Некорректная дата кадра','error');return;}
             if(movement.frames.some(f=>f.time===value&&f.time!==activeFrameTime)){status('На эту дату уже есть кадр','error');return;}
             const old=activeFrameTime;
@@ -319,6 +412,9 @@ export function initStudio({onOpen,onNotify,builtins}){
     $('studio-intro').value=draft.intro||'';
     $('studio-start').value=draft.range[0];
     $('studio-end').value=draft.range[1];
+    $('studio-start').closest('label').firstChild.textContent=draft.timeUnit==='phase'?'От фазы ':'От года ';
+    $('studio-end').closest('label').firstChild.textContent=draft.timeUnit==='phase'?'До фазы ':'До года ';
+    $('studio-eras-note').textContent=draft.timeUnit==='phase'?'Фазы — порядковые этапы боя, не часы и минуты.':'До н. э. — отрицательные годы. Координаты карты условные.';
     cursor=Number.isFinite(cursor)?clamp(cursor,draft.range[0],draft.range[1]):draft.range[0];
     $('studio-cursor').min=String(draft.range[0]);
     $('studio-cursor').max=String(draft.range[1]);
@@ -364,6 +460,26 @@ export function initStudio({onOpen,onNotify,builtins}){
       ctx.strokeStyle='#79a0a1';ctx.lineWidth=Math.max(2,13*d.scale);ctx.stroke();
     }
     for(const item of draft.features){
+      if(item.kind==='boundary'){
+        const pts=item.points||[];if(pts.length<3)continue;
+        ctx.beginPath();pts.forEach(([x,y],i)=>{
+          const [px,py]=trans(x,y);if(!i)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        });ctx.closePath();
+        ctx.fillStyle='rgba(134,124,88,.12)';ctx.fill();
+        ctx.strokeStyle=item.id===selected?'#9e4b3d':'rgba(122,91,60,.78)';
+        ctx.setLineDash(item.confidence==='confirmed'?[]:[7,5]);
+        ctx.lineWidth=item.id===selected?2.5:1.6;ctx.stroke();ctx.setLineDash([]);
+        const [cx,cy]=polygonCenter(pts),[tx,ty]=trans(cx,cy);
+        ctx.fillStyle='#665846';ctx.font='11px Georgia';ctx.textAlign='center';
+        ctx.fillText(item.label,tx,ty);
+        if(item.id===selected)pts.forEach(([x,y],i)=>{
+          const [px,py]=trans(x,y);
+          ctx.fillStyle=activeVertex===i?'#a14f37':'#f5e9d0';
+          ctx.strokeStyle='#8a5641';ctx.lineWidth=1.4;
+          ctx.beginPath();ctx.arc(px,py,activeVertex===i?6:4,0,Math.PI*2);ctx.fill();ctx.stroke();
+        });
+        continue;
+      }
       const position=keyframeValue(item,cursor);
       const [x,y]=trans(position.x,position.y);ctx.beginPath();
       ctx.ellipse(x,y,item.rx*d.scale,item.ry*d.scale,item.rotation||0,0,Math.PI*2);
@@ -406,7 +522,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     ctx.fillText('МАКЕТ · КООРДИНАТЫ УСЛОВНЫ',d.x+8,d.y+15);
   }
   function onMapPoint(event){
-    if(!draft||!geometry||tab==='sources')return;
+    if(!draft||!geometry||tab==='sources'||tab==='commands')return;
     const rect=board.getBoundingClientRect();
     const x=clamp(Math.round((event.clientX-rect.left-geometry.x)/geometry.scale),0,draft.world.width);
     const y=clamp(Math.round((event.clientY-rect.top-geometry.y)/geometry.scale),0,draft.world.height);
@@ -415,6 +531,11 @@ export function initStudio({onOpen,onNotify,builtins}){
       const item=story[tab].find(v=>v.id===selected);
       if(tab==='events')item.focus=[x,y];
       else if(tab==='paths')item.points.push([x,y]);
+      else if(tab==='features'&&item.kind==='boundary'){
+        if(activeVertex!=null&&item.points?.[activeVertex])item.points[activeVertex]=[x,y];
+        else if(item.points.length<40)item.points.push([x,y]);
+        else throw Error('Для границы максимум 40 вершин');
+      }
       else if(activeFrameTime!=null&&item.motion?.frames?.some(f=>f.time===activeFrameTime)){
         const frame=item.motion.frames.find(f=>f.time===activeFrameTime);frame.x=x;frame.y=y;
       } else{item.x=x;item.y=y;}
@@ -433,10 +554,14 @@ export function initStudio({onOpen,onNotify,builtins}){
         x:500,y:350,rx:115,ry:75,rotation:0,from:story.range[0],confidence:'hypothetical'};
       else if(tab==='paths')item={id:newId('path'),kind:'track',points:[[350,340],[590,360]],
         from:story.range[0],confidence:'hypothetical'};
+      else if(tab==='commands')item={id:newId('command'),name:'Новый штаб',commander:'',
+        side:'neutral',sources:[]};
       else item={id:newId('src'),title:'Новый источник',url:'https://'};
       story[tab].push(item);selected=item.id;
     });
-    status(tab==='sources'?'Укажи точную HTTPS-ссылку на публикацию.':'Элемент добавлен. Коснись карты, чтобы задать положение.');
+    status(tab==='sources'?'Укажи точную HTTPS-ссылку на публикацию.':
+      tab==='commands'?'Задай название, сторону и командующего. Затем назначь штабу соединения.':
+      'Элемент добавлен. Коснись карты, чтобы задать положение.');
   }
   function removeItem(){
     const item=current();if(!item)return;
@@ -444,16 +569,21 @@ export function initStudio({onOpen,onNotify,builtins}){
     if(!window.confirm('Удалить «'+esc(item[selections[tab]]||item.id)+'»? Это действие можно отменить.'))return;
     mutate(story=>{
       story[tab]=story[tab].filter(x=>x.id!==selected);
-      if(tab==='sources')for(const el of [...story.events,...story.entities])
+      if(tab==='commands')for(const el of story.entities){
+        if(el.commandId===selected){delete el.commandId;delete el.parentId;}
+      }
+      if(tab==='sources')for(const el of [...story.events,...story.entities,...story.commands])
         el.sources=(el.sources||[]).filter(id=>id!==selected);
-      if(tab==='entities')for(const el of story.events)
-        if(el.entity===selected)delete el.entity;
+      if(tab==='entities'){
+        for(const el of story.events)if(el.entity===selected)delete el.entity;
+        for(const el of story.entities)if(el.parentId===selected)delete el.parentId;
+      }
       selected=story[tab][0]?.id||null;
     });
   }
   function open(draftStory){
     draft=deep(draftStory);savedHash=library.some(s=>s.id===draft.id)?JSON.stringify(draft):'';
-    dirty=!savedHash;undo=[];redo=[];tab='events';selected=draft.events[0]?.id||null;
+    dirty=!savedHash;undo=[];redo=[];tab='events';selected=draft.events[0]?.id||null;activeVertex=null;
     cursor=draft.range[0];activeFrameTime=null;
     $('library').hidden=true;$('viewer').hidden=true;screen.hidden=false;
     renderEditor();status(dirty?'Черновик ещё не сохранён.':'История открыта для редактирования.');
@@ -524,8 +654,10 @@ export function initStudio({onOpen,onNotify,builtins}){
   $('studio-cursor').addEventListener('change',()=>{if(tab==='entities'||tab==='features')renderEditor();});
   $('studio-back').addEventListener('click',back);
   $('studio-new').addEventListener('click',()=>open(createDraft()));
+  $('studio-new-battle').addEventListener('click',()=>open(createPhaseDraft()));
   $('studio-clone-rome').addEventListener('click',()=>open(cloneAsDraft(builtins[0])));
   $('studio-clone-war').addEventListener('click',()=>open(cloneAsDraft(builtins[1])));
+  $('studio-clone-battle').addEventListener('click',()=>open(cloneAsDraft(builtins[2])));
   $('studio-import-button').addEventListener('click',()=>input.click());
   input.addEventListener('change',async()=>{
     const file=input.files?.[0];input.value='';

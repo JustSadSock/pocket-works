@@ -1,4 +1,5 @@
 import {locateAt, validateMotion} from './motion.js';
+import {validateTactics} from './tactics.js';
 // Pure historical timeline functions. All story timestamps are year coordinates:
 // negative = BCE, positive = CE. Historical year zero is never valid in scenario data.
 export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -150,6 +151,7 @@ export function validateStory(story) {
     for (const reason of validateMotion(entity,story.range,story.world)) errors.push(entity.id+': '+reason);
   }
   for(const feature of story.features||[])for(const reason of validateMotion(feature,story.range,story.world))errors.push(feature.id+': '+reason);
+  errors.push(...validateTactics(story));
   return errors;
 }
 

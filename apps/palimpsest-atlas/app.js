@@ -2,6 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { stories, getStory } from './stories.js';
 import { initStudio } from './studio.js';
 import {keyframeValue,motionTrail,formatStoryTime,displayStoryTime,displayStoryEra,scenePortalCandidate} from './motion.js';
+import {commandAt,commandRoster,orderAt,COMMAND_ACTIONS,polygonCenter,pointInPolygon} from './tactics.js';
 import { clamp, lerp, span, fraction, formatYear, displayYear, era,
   eventBefore, previousEvent, nextEvent, snapshotAt, zoomWindow,
   fittedWindow, smartTicks, playbackStep, validateStory,
@@ -44,7 +45,7 @@ const state = {
   camera:{x:500,y:350,zoom:1},playing:false,inspector:null,tab:'now',
   activeEventId:null,mapPointers:new Map(),timePointers:new Map(),
   mapPinch:null,timePinch:null,suppressMapTap:false,
-  dirty:true,lastFrame:0,lastSaved:0,compareTime:null,parentView:null,
+  dirty:true,lastFrame:0,lastSaved:0,compareTime:null,parentView:null,commandOpen:false,
   sizes:{map:{width:1,height:1,dpr:1},time:{width:1,height:1,dpr:1}},
   hits:[],toastHandle:null
 };
@@ -91,6 +92,10 @@ function openStory(id,options={}) {
   restoreView(story);
   ui.library.hidden=true;$('studio').hidden=true;ui.viewer.hidden=false;ui.inspector.hidden=true;ui.outline.hidden=true;
   $('edit-story').hidden=story.type!=='custom';
+  state.commandOpen=false;
+  $('command-toggle').hidden=!(story.commands?.length>0);
+  $('command-toggle').setAttribute('aria-expanded','false');
+  $('command-panel').hidden=true;
   $('detail-back').hidden=!(state.parentView||story.parentId);
   $('timeline-caption').textContent=story.timeUnit==='phase'?'ПОСЛЕДОВАТЕЛЬНОСТЬ ФАЗ':'МАСШТАБ ВРЕМЕНИ';
   $('map-caveat').textContent=story.timeUnit==='phase'?'ПОСЛЕДОВАТЕЛЬНОСТЬ, НЕ МИНУТЫ':'СХЕМАТИЧЕСКАЯ КАРТА';
@@ -143,7 +148,8 @@ function exitDetail(){
   refresh();save();
 }
 function toLibrary() {
-  state.playing=false;state.compareTime=null;state.parentView=null;
+  state.playing=false;state.compareTime=null;state.parentView=null;state.commandOpen=false;
+  $('command-panel').hidden=true;
   ui.library.hidden=false;ui.viewer.hidden=true;
   ui.inspector.hidden=true;ui.outline.hidden=true;
   state.inspector=null;
@@ -206,6 +212,64 @@ for (const type of ['pointerup','pointercancel','pointerleave']) ui.bookmark.add
 ui.bookmark.addEventListener('click',()=>{if(ui.bookmark.dataset.long){delete ui.bookmark.dataset.long;return;}bookmarkAction();});
 
 
+
+function closeCommandPanel(){
+  state.commandOpen=false;
+  $('command-panel').hidden=true;
+  $('command-toggle').setAttribute('aria-expanded','false');
+}
+function renderCommandPanel(){
+  const list=$('command-roster');
+  if(!state.commandOpen||!state.story.commands?.length){list.replaceChildren();return;}
+  $('command-period').textContent=formatStoryTime(state.time,state.story)+' · отображаются только существующие соединения';
+  list.replaceChildren();
+  const roster=commandRoster(state.story,state.time);
+  const create=(tag,cls,value)=>{
+    const el=document.createElement(tag);if(cls)el.className=cls;
+    if(value!=null)el.textContent=value;return el;
+  };
+  for(const command of roster){
+    const section=create('section','command-group '+(command.side==='imperial'?'imperial':'allied'));
+    const header=create('div','command-group-head');
+    header.append(create('small','',command.side==='imperial'?'ИМПЕРСКАЯ СТОРОНА':
+      command.side==='allied'?'СОЮЗНЫЕ СИЛЫ':'ДРУГИЕ СТОРОНЫ'));
+    header.append(create('strong','',command.name));
+    if(command.commander)header.append(create('span','',command.commander));
+    header.append(create('small','',command.count+' соединений в сцене'));
+    section.append(header);
+    const entries=create('div','command-entries');
+    const addUnit=(unit,depth=0)=>{
+      const line=create('button','command-unit');
+      line.type='button';line.style.setProperty('--level',String(Math.min(depth,4)));
+      const name=create('strong','',unit.name);
+      const latest=unit.order;
+      const status=create('span','command-order',latest?
+        (COMMAND_ACTIONS.find(pair=>pair[0]===latest.action)?.[1]||latest.action):'Без приказа');
+      line.append(name,status);
+      if(latest?.note)line.title=latest.note;
+      line.addEventListener('click',()=>{
+        const visible=snapshotAt(state.story,state.time).entities.find(e=>e.id===unit.id);
+        if(visible){state.camera.x=visible.x;state.camera.y=visible.y;
+          state.camera.zoom=Math.max(1.4,state.camera.zoom);
+          refresh();}
+        closeCommandPanel();openInspector('entity',unit);state.dirty=true;
+      });
+      entries.append(line);
+      for(const child of unit.children||[])addUnit(child,depth+1);
+    };
+    for(const unit of command.units)addUnit(unit);
+    section.append(entries);
+    list.append(section);
+  }
+  if(!roster.length)list.append(create('p','command-empty','В выбранный момент нет отмеченных подразделений.'));
+}
+function toggleCommandPanel(){
+  if(!state.story.commands?.length)return;
+  state.commandOpen=!state.commandOpen;
+  $('command-panel').hidden=!state.commandOpen;
+  $('command-toggle').setAttribute('aria-expanded',String(state.commandOpen));
+  if(state.commandOpen){state.playing=false;renderCommandPanel();}
+}
 function updateComparisonBanner(){
   const active=Number.isFinite(state.compareTime);
   $('comparison-banner').hidden=!active;
@@ -232,6 +296,10 @@ function renderComparisonGhost(){
   ctx.strokeStyle='rgba(72,108,116,.63)';
   ctx.lineWidth=2;
   for(const f of diff.sections.features.removed){
+    if(f.kind==='boundary'){
+      line([...f.points,f.points[0]],'rgba(72,108,116,.65)',2,[5,6]);
+      continue;
+    }
     const p=project(f.x,f.y),z=scale();
     ctx.beginPath();
     ctx.ellipse(p.x,p.y,f.rx*z,f.ry*z,f.rotation||0,0,Math.PI*2);
@@ -254,6 +322,7 @@ function renderComparisonGhost(){
     ctx.beginPath();ctx.arc(p.x,p.y,19,0,Math.PI*2);ctx.stroke();
   }
   for(const f of diff.sections.features.added){
+    if(f.kind==='boundary'){line([...f.points,f.points[0]],'#a4513b',2.5,[5,6]);continue;}
     const p=project(f.x,f.y);ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.stroke();
   }
   ctx.restore();
@@ -278,6 +347,7 @@ function refresh() {
   updateComparisonBanner();
   if(previous!==event?.id){state.activeEventId=event?.id;drawOutline();}
   if(state.inspector) updateInspector();
+  if(state.commandOpen)renderCommandPanel();
   updatePortal();
   state.dirty=true;
 }
@@ -318,20 +388,29 @@ function sourceList(ids) {
 function openInspector(kind,item) {
   state.inspector={kind,id:item.id};state.tab='now';
   ui.inspector.hidden=false;ui.outline.hidden=true;
-  ui.list.setAttribute('aria-expanded','false');updateInspector();updatePortal();
+  ui.list.setAttribute('aria-expanded','false');
+  closeCommandPanel();updateInspector();updatePortal();
 }
 function updateInspector() {
   const record=state.inspector;if(!record)return;
   const item=record.kind==='event'?state.story.events.find(x=>x.id===record.id):
+    record.kind==='feature'?state.story.features.find(x=>x.id===record.id):
     state.story.entities.find(x=>x.id===record.id);
   if(!item){ui.inspector.hidden=true;state.inspector=null;return;}
-  ui.inspectorType.textContent=record.kind==='event'?'ИСТОРИЧЕСКОЕ СОБЫТИЕ':item.type.toUpperCase();
-  ui.inspectorName.textContent=record.kind==='event'?item.title:item.name;
+  ui.inspectorType.textContent=record.kind==='event'?'ИСТОРИЧЕСКОЕ СОБЫТИЕ':
+    record.kind==='feature'?'ГРАНИЦА / УСЛОВНАЯ РЕКОНСТРУКЦИЯ':item.type.toUpperCase();
+  ui.inspectorName.textContent=record.kind==='event'?item.title:record.kind==='feature'?item.label:item.name;
   ui.confidence.textContent=CONFIDENCE[item.confidence]||CONFIDENCE.estimated;
   ui.tabNow.classList.toggle('active',state.tab==='now');ui.tabGeneral.classList.toggle('active',state.tab==='general');
   ui.tabNow.setAttribute('aria-pressed',String(state.tab==='now'));
   ui.tabGeneral.setAttribute('aria-pressed',String(state.tab==='general'));
-  if(record.kind==='event'){
+  if(record.kind==='feature'){
+    ui.inspectorBody.textContent=(state.tab==='now'?'В выбранный момент: ':'Контекст: ')+
+      (item.confidence==='confirmed'?'Указанная граница подтверждается источником.':
+      'Граница условная, положение и конфигурация не гарантируют точную историческую географию.')+
+      '\n\nПоказана с '+formatStoryTime(item.from||state.story.range[0],state.story)+
+      (item.until!=null?' до '+formatStoryTime(item.until,state.story):' до конца сюжета');
+  }else if(record.kind==='event'){
     ui.inspectorBody.textContent=state.tab==='now'?
       formatStoryTime(item.time,state.story)+' · '+item.subtitle+'\n\n'+item.text :
       item.text+'\n\nПоказанный на сцене маршрут или граница может быть схематичным. Степень исторической уверенности указана выше.';
@@ -339,6 +418,18 @@ function updateInspector() {
     ui.inspectorBody.textContent=state.tab==='now'?
       (state.time < item.from ? 'На выбранную дату объект ещё не отмечен в этой реконструкции.' : item.current) :
       item.description;
+    const command=commandAt(state.story,item);
+    if(command){
+      const parent=state.story.entities.find(x=>x.id===item.parentId);
+      const parentLine=parent?' / '+parent.name:'';
+      ui.inspectorBody.textContent+='\n\nШтаб: '+command.name+parentLine+
+        (item.commander?'\nКомандир: '+item.commander:'');
+      const order=orderAt(item,state.time);
+      if(order)ui.inspectorBody.textContent+='\n\nПриказ: '+
+        (COMMAND_ACTIONS.find(a=>a[0]===order.action)?.[1]||order.action)+
+        (order.note?'\n'+order.note:'')+
+        '\nТочность: '+(CONFIDENCE[order.confidence]||CONFIDENCE.estimated);
+    }
     if(item.motion?.frames?.length){
       const p=keyframeValue(item,state.time);
       const label=p.interpolated?'Условное движение между кадрами.':'Положение по авторскому кадру.';
@@ -459,6 +550,26 @@ function drawTerrain(snapshot){
     const p=project(feature.x,feature.y);
     if(state.camera.zoom>1.2)textAt(feature.label,p.x,p.y,{size:12,serif:true,color:'#9b593b'});
   }
+  for(const feature of snapshot.features.filter(x=>x.kind==='boundary')){
+    const points=feature.points||[];
+    if(points.length<3)continue;
+    ctx.save();
+    ctx.beginPath();for(let i=0;i<points.length;i++){
+      const p=project(points[i][0],points[i][1]);
+      if(!i)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+    }
+    ctx.closePath();
+    const selected=state.inspector?.kind==='feature'&&state.inspector.id===feature.id;
+    ctx.fillStyle=selected?'rgba(170,86,59,.22)':'rgba(171,142,100,.14)';ctx.fill();
+    ctx.strokeStyle=selected?'#9e503a':'rgba(117,92,61,.85)';
+    ctx.lineWidth=selected?2.6:1.9;
+    ctx.setLineDash(feature.confidence==='confirmed'?[]:[7,5]);ctx.stroke();ctx.setLineDash([]);
+    const [cx,cy]=polygonCenter(points),p=project(cx,cy);
+    if(state.camera.zoom>1.1)textAt(feature.label,p.x,p.y,{
+      size:Math.min(12,10+state.camera.zoom*.35),serif:true,
+      color:'#786148',halo:'rgba(235,224,199,.7)'});
+    ctx.restore();
+  }
   for(const path of snapshot.paths){
     const dash=path.confidence==='estimated'?[5,7]:[];
     line(path.points,'rgba(130,96,66,.64)',Math.max(1.5,3*s),dash);
@@ -483,7 +594,7 @@ function drawSettlement(p,kind,entity=null){
     ctx.fillRect(-12,-11,5,18);ctx.fillRect(7,-11,5,18);
     ctx.fillStyle='#e5d9c2';ctx.fillRect(-2,1,4,6);
   } else if(kind==='army'){
-    const imperial=['tilly','pappenheim','furstenberg'].includes(entity?.id);
+    const imperial=commandAt(state.story,entity)?.side==='imperial'||['tilly','pappenheim','furstenberg'].includes(entity?.id);
     ctx.fillStyle=imperial?'#a25744':'#557f8b';
     ctx.strokeStyle='#f3e8d0';ctx.lineWidth=1.2;
     ctx.fillRect(-16,-8,32,16);ctx.strokeRect(-16,-8,32,16);
@@ -685,6 +796,10 @@ function locateTap(x,y){
     const p=project(current.focus[0],current.focus[1]);
     if(Math.hypot(p.x-x,p.y-y)<48){openInspector('event',current);return;}
   }
+  const scene=unproject(x,y);
+  const feature=(snapshotAt(state.story,state.time).features||[])
+    .filter(f=>f.kind==='boundary'&&pointInPolygon(scene.x,scene.y,f.points)).at(-1);
+  if(feature){setPlaying(false);openInspector('feature',feature);return;}
   if(!ui.inspector.hidden){ui.inspector.hidden=true;state.inspector=null;state.dirty=true;}
 }
 function pointerPosition(event,element){
@@ -813,6 +928,8 @@ function wireControls() {
   document.querySelectorAll('[data-story]').forEach(button=>
     button.addEventListener('click',()=>openStory(button.dataset.story)));
   $('back').addEventListener('click',()=>{if(state.parentView)exitDetail();else toLibrary();});
+  $('command-toggle').addEventListener('click',toggleCommandPanel);
+  $('command-close').addEventListener('click',closeCommandPanel);
   $('detail-back').addEventListener('click',exitDetail);
   $('scene-portal').addEventListener('click',()=>enterDetail());
   $('inspector-detail').addEventListener('click',()=>enterDetail());
@@ -838,7 +955,7 @@ function wireControls() {
   $('time-plus').addEventListener('click',()=>{state.window=zoomWindow(state.story.range,state.window,state.time,.5);refresh();save();});
   $('time-minus').addEventListener('click',()=>{state.window=zoomWindow(state.story.range,state.window,state.time,2);refresh();save();});
   ui.list.addEventListener('click',()=>{
-    ui.outline.hidden=!ui.outline.hidden;ui.inspector.hidden=true;state.inspector=null;
+    ui.outline.hidden=!ui.outline.hidden;closeCommandPanel();ui.inspector.hidden=true;state.inspector=null;
     ui.list.setAttribute('aria-expanded',String(!ui.outline.hidden));
   });
   $('outline-close').addEventListener('click',()=>{ui.outline.hidden=true;ui.list.setAttribute('aria-expanded','false');});
@@ -848,6 +965,7 @@ function wireControls() {
   document.addEventListener('keydown',(event)=>{
     if(event.key==='Escape'){
       if(studioApi?.isOpen()){$('studio-back').click();return;}
+      if(state.commandOpen){closeCommandPanel();return;}
       if(!ui.outline.hidden){ui.outline.hidden=true;ui.list.setAttribute('aria-expanded','false');}
       else if(!ui.inspector.hidden){ui.inspector.hidden=true;state.inspector=null;}
       else if(!ui.viewer.hidden)toLibrary();
