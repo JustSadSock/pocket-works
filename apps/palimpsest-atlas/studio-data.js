@@ -74,6 +74,7 @@ export function parseStory(packageOrStory) {
   assert(Array.isArray(raw.range)&&raw.range.length===2&&raw.range.every(finite),'Некорректный временной диапазон');
   const [start,end]=raw.range;
   assert(start!==0&&end!==0&&end>start&&start>=-10000&&end<=3000,'Диапазон должен лежать между 10000 до н.э. и 3000 н.э. без года 0');
+  assert((start<0&&end<0)||(start>0&&end>0),'Переход через границу эр пока недоступен. Создайте отдельный сюжет для каждой эры.');
   const w=raw.world;
   assert(w&&finite(w.width)&&finite(w.height)&&w.width>=200&&w.width<=4000&&w.height>=200&&w.height<=4000,'Неверный размер карты');
   const inMap=(x,y)=>finite(x)&&finite(y)&&x>=0&&y>=0&&x<=w.width&&y<=w.height;
@@ -81,7 +82,10 @@ export function parseStory(packageOrStory) {
     const sourceId=cleanId(s?.id,'источника #'+i);
     assert(typeof s.title==='string'&&s.title.trim().length>=2,'Источник без названия');
     assert(typeof s.url==='string'&&/^https:\/\/[^\s<>]+$/i.test(s.url)&&s.url.length<=1000,'Ссылка источника должна начинаться с https://');
-    return {id:sourceId,title:text(s.title,150),url:s.url};
+    let url;
+    try{url=new URL(s.url);}catch{fail('Некорректная ссылка на источник');}
+    assert(url.protocol==='https:'&&url.hostname&&!url.username&&!url.password,'Некорректная HTTPS-ссылка на источник');
+    return {id:sourceId,title:text(s.title,150),url:url.href};
   });
   const sourceSet=new Set(sources.map(s=>s.id));
   assert(sourceSet.size===sources.length,'Повторяется ID источника');
@@ -100,6 +104,7 @@ export function parseStory(packageOrStory) {
     assert(e.until==null||(finite(e.until)&&e.until>=start&&e.until<=end&&e.until!==0),'Неверная конечная дата объекта');
     assert(e.from==null||e.until==null||e.until>=e.from,'Объект исчезает раньше появления');
     assert(CONFIDENCE.has(e.confidence),'Необходимо указать достоверность объекта');
+    if(e.confidence==='confirmed')assert(Array.isArray(e.sources)&&e.sources.length>0,'Для подтверждённого объекта нужен источник');
     return {id:entityId,type:e.type,name:text(e.name,130),x:e.x,y:e.y,
       from:e.from??start,until:e.until??undefined,
       description:text(e.description,1500),current:text(e.current,1000),
@@ -140,6 +145,7 @@ export function parseStory(packageOrStory) {
     assert(text(e.title,120).length>=2,'Событие без названия');
     assert(point(e.focus)&&inMap(e.focus[0],e.focus[1]),'Точка события вне карты');
     assert(CONFIDENCE.has(e.confidence),'Не указана достоверность события');
+    if(e.confidence==='confirmed')assert(Array.isArray(e.sources)&&e.sources.length>0,'Для подтверждённого события нужен источник');
     return {id:eventId,time:e.time,title:text(e.title,120),subtitle:text(e.subtitle,200),
       text:text(e.text,2200),category:text(e.category,32)||'СОБЫТИЕ',
       lane:['politics','military','culture'].includes(e.lane)?e.lane:'culture',
