@@ -1,3 +1,4 @@
+import {battleScenario} from './battle.js';
 // Scenarios are data, not renderer branches. Maps are explicitly schematic,
 // and source claims distinguish archaeological evidence from later tradition.
 export const stories = [
@@ -59,6 +60,7 @@ export const stories = [
 },
 {
   id:'war',
+  sceneLinks:[{id:'breitenfeld-gateway',targetId:'breitenfeld',x:475,y:376,from:1631.60,until:1631.95,minZoom:2.9,radius:205}],
   title:'Тридцатилетняя война',
   subtitle:'Европейский конфликт 1618–1648',
   index:'02',
@@ -106,5 +108,7 @@ export const stories = [
     {id:'westphalia',time:1648.8,title:'Вестфальский мир',subtitle:'Завершается Тридцатилетняя война',text:'Мирные договоры, заключённые в Мюнстере и Оснабрюке в 1648 году, завершили основную войну в Священной Римской империи.',importance:5,category:'МИР',confidence:'confirmed',sources:['museum','whe'],focus:[267,314],entity:'muenster'}
   ]
 }
+,
+battleScenario
 ];
 export const getStory = (id) => stories.find((story) => story.id === id) || stories[0];

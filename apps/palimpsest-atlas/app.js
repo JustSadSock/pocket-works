@@ -1,6 +1,7 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { stories, getStory } from './stories.js';
 import { initStudio } from './studio.js';
+import {keyframeValue,motionTrail,formatStoryTime,displayStoryTime,displayStoryEra,scenePortalCandidate} from './motion.js';
 import { clamp, lerp, span, fraction, formatYear, displayYear, era,
   eventBefore, previousEvent, nextEvent, snapshotAt, zoomWindow,
   fittedWindow, smartTicks, playbackStep, validateStory,
@@ -43,7 +44,7 @@ const state = {
   camera:{x:500,y:350,zoom:1},playing:false,inspector:null,tab:'now',
   activeEventId:null,mapPointers:new Map(),timePointers:new Map(),
   mapPinch:null,timePinch:null,suppressMapTap:false,
-  dirty:true,lastFrame:0,lastSaved:0,compareTime:null,
+  dirty:true,lastFrame:0,lastSaved:0,compareTime:null,parentView:null,
   sizes:{map:{width:1,height:1,dpr:1},time:{width:1,height:1,dpr:1}},
   hits:[],toastHandle:null
 };
@@ -79,8 +80,9 @@ function restoreView(story) {
     : {x:story.world.width/2,y:story.world.height/2,zoom:1};
 }
 let studioApi=null;
-function openStory(id) {
+function openStory(id,options={}) {
   const story=studioApi?.getStory(id)||getStory(id);
+  state.parentView=options.parentView||null;
   state.story=story;state.playing=false;state.inspector=null;state.tab='now';
   state.activeEventId=null;state.mapPointers.clear();state.timePointers.clear();
   state.mapPinch=null;state.timePinch=null;state.compareTime=null;
@@ -89,18 +91,59 @@ function openStory(id) {
   restoreView(story);
   ui.library.hidden=true;$('studio').hidden=true;ui.viewer.hidden=false;ui.inspector.hidden=true;ui.outline.hidden=true;
   $('edit-story').hidden=story.type!=='custom';
+  $('detail-back').hidden=!(state.parentView||story.parentId);
+  $('timeline-caption').textContent=story.timeUnit==='phase'?'ПОСЛЕДОВАТЕЛЬНОСТЬ ФАЗ':'МАСШТАБ ВРЕМЕНИ';
+  $('map-caveat').textContent=story.timeUnit==='phase'?'ПОСЛЕДОВАТЕЛЬНОСТЬ, НЕ МИНУТЫ':'СХЕМАТИЧЕСКАЯ КАРТА';
   ui.list.setAttribute('aria-expanded','false');
   ui.title.textContent=story.title;
   ui.caption.textContent='ПАЛИМПСЕСТ / ИСТОРИЯ '+story.index;
   ui.outlineTitle.textContent=story.title;
-  $('map-caveat').textContent='СХЕМАТИЧЕСКАЯ КАРТА';
+  // Scene disclaimer is shown above the canvas.
   drawOutline();
   resize();
   refresh();
   save();
 }
+
+function candidatePortal(){
+  if(state.story.type!=='war')return null;
+  return scenePortalCandidate(state.story,state.time,{x:state.camera.x,y:state.camera.y},
+    Math.max(3,state.camera.zoom));
+}
+function updatePortal(){
+  const link=candidatePortal();
+  $('scene-portal').hidden=!link;
+  $('inspector-detail').hidden=!(link&&state.inspector?.kind==='event'&&
+    state.inspector?.id==='breitenfeld');
+}
+function enterDetail(targetId='breitenfeld'){
+  const link=(state.story.sceneLinks||[]).find(x=>x.targetId===targetId);
+  if(!link)return;
+  // The parent map is saved as an exact snapshot for a reversible semantic zoom.
+  const parentView={
+    storyId:state.story.id,time:state.time,window:[...state.window],
+    camera:{...state.camera}
+  };
+  save();
+  openStory(targetId,{parentView});
+  state.camera.zoom=1;
+  refresh();
+}
+function exitDetail(){
+  const parent=state.parentView;
+  if(!parent){
+    const parentId=state.story.parentId;
+    if(parentId)openStory(parentId);else toLibrary();
+    return;
+  }
+  openStory(parent.storyId);
+  state.time=parent.time;
+  state.window=[...parent.window];
+  state.camera={...parent.camera,zoom:Math.min(2.65,parent.camera.zoom)};
+  refresh();save();
+}
 function toLibrary() {
-  state.playing=false;state.compareTime=null;
+  state.playing=false;state.compareTime=null;state.parentView=null;
   ui.library.hidden=false;ui.viewer.hidden=true;
   ui.inspector.hidden=true;ui.outline.hidden=true;
   state.inspector=null;
@@ -170,10 +213,10 @@ function updateComparisonBanner(){
   $('compare-toggle').title=active?'Завершить сравнение':'Запомнить дату для сравнения';
   if(!active)return;
   const result=compareSnapshots(state.story,state.compareTime,state.time);
-  $('compare-label').textContent=formatYear(state.compareTime)+' → '+formatYear(state.time);
+  $('compare-label').textContent=formatStoryTime(state.compareTime,state.story)+' → '+formatStoryTime(state.time,state.story);
   const prefix=result.forward?'Появилось: ':'При возврате: ';
   $('compare-details').textContent=prefix+result.additions+' · исчезло: '+
-    result.removals+' · событий между датами: '+result.passedEvents;
+    result.removals+' · переместилось: '+result.movements+' · событий: '+result.passedEvents;
 }
 function toggleCompare(){
   state.compareTime=Number.isFinite(state.compareTime)?null:state.time;
@@ -200,6 +243,10 @@ function renderComparisonGhost(){
     textAt('− '+e.name,p.x,p.y-22,{size:10,color:'#5c8990',serif:true});
   }
   for(const path of diff.sections.paths.removed)line(path.points,'rgba(74,116,122,.55)',2,[5,6]);
+  for(const key of ['entities','features'])for(const {before,after} of diff.sections[key].moved){
+    line([[before.x,before.y],[after.x,after.y]],'rgba(67,117,125,.82)',2,[3,5]);
+    const p=project(before.x,before.y);ctx.beginPath();ctx.arc(p.x,p.y,9,0,Math.PI*2);ctx.stroke();
+  }
   ctx.setLineDash([]);
   ctx.strokeStyle='#a4513b';ctx.lineWidth=2;
   for(const e of diff.sections.entities.added){
@@ -215,22 +262,23 @@ function refresh() {
   const story=state.story;
   const event=eventBefore(story,state.time);
   const previous=state.activeEventId;
-  ui.date.textContent=displayYear(state.time);
-  ui.era.textContent=era(state.time);
+  ui.date.textContent=displayStoryTime(state.time,story);
+  ui.era.textContent=displayStoryEra(state.time,story);
   ui.eventTitle.textContent=event?.title || story.title;
   ui.eventSubtitle.textContent=event?.subtitle || story.intro;
   ui.eventClass.textContent=event?.category || 'ВСТУПЛЕНИЕ';
-  ui.timeLeft.textContent=formatYear(state.window[0]);
-  ui.timeRight.textContent=formatYear(state.window[1]);
+  ui.timeLeft.textContent=formatStoryTime(state.window[0],story);
+  ui.timeRight.textContent=formatStoryTime(state.window[1],story);
   ui.timeHelp.textContent=span(state.window)>=span(story.range)*.85?
     'Перетащи · разведи пальцы для деталей':'Разведи пальцы · сдвинь для перемотки';
   ui.scrub.setAttribute('aria-valuenow',String(Math.round(fraction(state.time,story.range)*1000)));
-  ui.scrub.setAttribute('aria-valuetext',formatYear(state.time));
+  ui.scrub.setAttribute('aria-valuetext',formatStoryTime(state.time,story));
   ui.zoomLabel.textContent=state.camera.zoom>3?'ДЕТАЛИ МЕСТНОСТИ':state.camera.zoom>1.5?'ЛОКАЛЬНЫЕ ОБЪЕКТЫ':'ОБЗОР РЕГИОНА';
   updateBookmark();
   updateComparisonBanner();
   if(previous!==event?.id){state.activeEventId=event?.id;drawOutline();}
   if(state.inspector) updateInspector();
+  updatePortal();
   state.dirty=true;
 }
 function drawOutline() {
@@ -240,7 +288,7 @@ function drawOutline() {
     const button=document.createElement('button');
     button.type='button';button.className='outline-item'+(active===event.id?' active':'');
     button.setAttribute('data-native-press','');
-    const date=document.createElement('time');date.textContent=formatYear(event.time);
+    const date=document.createElement('time');date.textContent=formatStoryTime(event.time,state.story);
     const body=document.createElement('span');
     const title=document.createElement('strong');title.textContent=event.title;
     const subtitle=document.createElement('small');subtitle.textContent=event.subtitle;
@@ -270,7 +318,7 @@ function sourceList(ids) {
 function openInspector(kind,item) {
   state.inspector={kind,id:item.id};state.tab='now';
   ui.inspector.hidden=false;ui.outline.hidden=true;
-  ui.list.setAttribute('aria-expanded','false');updateInspector();
+  ui.list.setAttribute('aria-expanded','false');updateInspector();updatePortal();
 }
 function updateInspector() {
   const record=state.inspector;if(!record)return;
@@ -285,12 +333,18 @@ function updateInspector() {
   ui.tabGeneral.setAttribute('aria-pressed',String(state.tab==='general'));
   if(record.kind==='event'){
     ui.inspectorBody.textContent=state.tab==='now'?
-      formatYear(item.time)+' · '+item.subtitle+'\n\n'+item.text :
+      formatStoryTime(item.time,state.story)+' · '+item.subtitle+'\n\n'+item.text :
       item.text+'\n\nПоказанный на сцене маршрут или граница может быть схематичным. Степень исторической уверенности указана выше.';
   } else {
     ui.inspectorBody.textContent=state.tab==='now'?
       (state.time < item.from ? 'На выбранную дату объект ещё не отмечен в этой реконструкции.' : item.current) :
       item.description;
+    if(item.motion?.frames?.length){
+      const p=keyframeValue(item,state.time);
+      const label=p.interpolated?'Условное движение между кадрами.':'Положение по авторскому кадру.';
+      ui.inspectorBody.textContent+='\n\n'+label+' Кадров: '+item.motion.frames.length+
+        '. Траектория: '+(item.motion.mode==='illustrative'?'иллюстративная, не точный марш':'только отмеченные позиции')+'.';
+    }
   }
   sourceList(item.sources);
 }
@@ -327,6 +381,11 @@ function zoomMap(point,factor) {
   const v=state.sizes.map,sc=scale();
   state.camera.x=clamp(old.x-(point.x-v.width/2)/sc,-260,1260);
   state.camera.y=clamp(old.y-(point.y-v.height/2)/sc,-260,960);
+  if(factor>1&&state.story.type==='war'){
+    const portal=scenePortalCandidate(state.story,state.time,state.camera,state.camera.zoom);
+    if(portal){enterDetail(portal.targetId);return;}
+  }
+  if(factor<1&&state.story.parentId&&state.parentView&&state.camera.zoom<=.76){exitDetail();return;}
   refresh();
 }
 function focusPoint(point) {
@@ -407,10 +466,10 @@ function drawTerrain(snapshot){
   // Maps are deliberately generalized; avoid falsely precise geopolitical boundaries.
   ctx.save();ctx.globalAlpha=.26;
   const left=project(44,656);
-  textAt(story.type==='origins'?'LATIUM':story.type==='war'?'EUROPA CENTRALIS':'АВТОРСКАЯ СЦЕНА',left.x,left.y,{align:'left',size:20,serif:true,italic:true,color:'#73755f'});
+  textAt(story.type==='origins'?'LATIUM':story.type==='war'?'EUROPA CENTRALIS':story.type==='battle'?'CAMPI BREITENFELD':'АВТОРСКАЯ СЦЕНА',left.x,left.y,{align:'left',size:20,serif:true,italic:true,color:'#73755f'});
   ctx.restore();
 }
-function drawSettlement(p,kind){
+function drawSettlement(p,kind,entity=null){
   const ctx=mapCtx;
   ctx.save();ctx.translate(p.x,p.y);
   if(kind==='settlement'){
@@ -423,6 +482,13 @@ function drawSettlement(p,kind){
     ctx.fillStyle='#a45b43';ctx.fillRect(-8,-6,16,13);
     ctx.fillRect(-12,-11,5,18);ctx.fillRect(7,-11,5,18);
     ctx.fillStyle='#e5d9c2';ctx.fillRect(-2,1,4,6);
+  } else if(kind==='army'){
+    const imperial=['tilly','pappenheim','furstenberg'].includes(entity?.id);
+    ctx.fillStyle=imperial?'#a25744':'#557f8b';
+    ctx.strokeStyle='#f3e8d0';ctx.lineWidth=1.2;
+    ctx.fillRect(-16,-8,32,16);ctx.strokeRect(-16,-8,32,16);
+    ctx.strokeStyle='#e8dcc7';ctx.lineWidth=1;
+    for(let x=-8;x<=8;x+=8){ctx.beginPath();ctx.moveTo(x,-5);ctx.lineTo(x,5);ctx.stroke();}
   } else if(kind==='legend'){
     ctx.strokeStyle='#a4513b';ctx.lineWidth=2;ctx.beginPath();
     ctx.arc(0,0,12,0,Math.PI*2);ctx.stroke();
@@ -438,18 +504,84 @@ function drawSettlement(p,kind){
 }
 function drawEntities(snapshot){
   const ctx=mapCtx;state.hits=[];
-  const objects=snapshot.entities;
-  for(const entity of objects){
+  const battlefield=state.story.type==='battle';
+  const placements=[];
+  const labels=[];
+  for(const entity of snapshot.entities){
+    if(entity.motion?.frames?.length&&state.camera.zoom<6){
+      const trail=motionTrail(entity,state.time);
+      if(entity.motion.mode==='illustrative'&&trail.length>1)
+        line(trail,'rgba(113,98,75,.57)',2,[4,7]);
+      else for(const [x,y] of trail){const p=project(x,y);ctx.beginPath();ctx.arc(p.x,p.y,2.5,0,Math.PI*2);ctx.fillStyle='#987e5b';ctx.fill();}
+    }
     const p=project(entity.x,entity.y);
     if(p.x<-70||p.x>state.sizes.map.width+90||p.y<-70||p.y>state.sizes.map.height+90)continue;
-    if(state.story.type==='origins' && state.camera.zoom<1.35 && ['capitoline','aventine'].includes(entity.id))continue;
+    if(state.story.type==='origins'&&state.camera.zoom<1.35&&['capitoline','aventine'].includes(entity.id))continue;
     const selected=state.inspector?.kind==='entity'&&state.inspector.id===entity.id;
     ctx.beginPath();ctx.arc(p.x,p.y,selected?19:14,0,Math.PI*2);
     ctx.fillStyle=selected?'rgba(163,78,57,.20)':'rgba(246,238,219,.7)';ctx.fill();
-    drawSettlement(p,entity.type);
-    const labelY=p.y+(entity.type==='hill'?19:23);
-    textAt(entity.name,p.x,labelY,{size:state.camera.zoom>3?13:11,color:selected?'#9f513b':'#41483c',serif:true,bold:selected});
+    drawSettlement(p,entity.type,entity);
     state.hits.push({entity,x:p.x,y:p.y,radius:Math.max(22,Math.min(39,22*state.camera.zoom))});
+    if(battlefield){
+      labels.push({p,name:entity.mapLabel||entity.name,selected,entity});
+    }else{
+      const labelY=p.y+(entity.type==='hill'?19:23);
+      textAt(entity.mapLabel||entity.name,p.x,labelY,{size:state.camera.zoom>3?13:11,color:selected?'#9f513b':'#41483c',serif:true,bold:selected});
+    }
+  }
+  if(!battlefield)return;
+  // Every icon retains the full hit target. The labels use short data-authored
+  // names and a greedy collision solver rather than overlapping formations.
+  for(const record of labels){
+    const {p,name,selected}=record;
+    const font=(selected?'700 ':'500 ')+(state.sizes.map.width<500?'11':'12')+'px Georgia,serif';
+    ctx.font=font;
+    const width=Math.ceil(ctx.measureText(name).width)+12;
+    const height=20;
+    const positions=[
+      {x:p.x,y:p.y+25},
+      {x:p.x,y:p.y-29},
+      {x:p.x+width/2+23,y:p.y},
+      {x:p.x-width/2-23,y:p.y},
+      {x:p.x,y:p.y+49},
+      {x:p.x,y:p.y-52},
+      {x:p.x+width/2+18,y:p.y+27},
+      {x:p.x-width/2-18,y:p.y-27}
+    ];
+    let winner=null;
+    for(let i=0;i<positions.length;i++){
+      const loc=positions[i];
+      const rect={x:loc.x-width/2,y:loc.y-height/2,w:width,h:height};
+      if(rect.x<5||rect.y<5||rect.x+rect.w>state.sizes.map.width-5||
+        rect.y+rect.h>state.sizes.map.height-5)continue;
+      let score=i*3;
+      for(const other of placements){
+        const overX=Math.max(0,Math.min(rect.x+rect.w,other.x+other.w)-Math.max(rect.x,other.x));
+        const overY=Math.max(0,Math.min(rect.y+rect.h,other.y+other.h)-Math.max(rect.y,other.y));
+        if(overX&&overY)score+=10000+overX*overY;
+      }
+      for(const target of labels){
+        if(target===record)continue;
+        if(target.p.x>rect.x-10&&target.p.x<rect.x+rect.w+10&&
+          target.p.y>rect.y-10&&target.p.y<rect.y+rect.h+10)score+=130;
+      }
+      if(!winner||score<winner.score)winner={loc,rect,score};
+    }
+    if(!winner)continue;
+    placements.push(winner.rect);
+    ctx.save();
+    ctx.fillStyle='rgba(244,234,213,.93)';
+    ctx.strokeStyle=selected?'#a0533d':'rgba(140,126,96,.32)';
+    ctx.lineWidth=selected?1.4:.8;
+    ctx.fillRect(winner.rect.x,winner.rect.y,winner.rect.w,winner.rect.h);
+    ctx.strokeRect(winner.rect.x+.5,winner.rect.y+.5,winner.rect.w-1,winner.rect.h-1);
+    if(Math.hypot(winner.loc.x-p.x,winner.loc.y-p.y)>31){
+      ctx.strokeStyle='rgba(90,94,81,.56)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(winner.loc.x,winner.loc.y);ctx.stroke();
+    }
+    textAt(name,winner.loc.x,winner.loc.y+1,{size:state.sizes.map.width<500?11:12,
+      color:selected?'#9f513b':'#41483c',serif:true,bold:selected,halo:false});
+    ctx.restore();
   }
 }
 function drawSpot(snapshot){
@@ -461,6 +593,9 @@ function drawSpot(snapshot){
   ctx.fillStyle='rgba(157,73,53,.07)';ctx.fill();
   ctx.strokeStyle=accent;ctx.lineWidth=1.5;ctx.setLineDash([4,5]);ctx.stroke();ctx.setLineDash([]);
   ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fillStyle=accent;ctx.fill();
+  // The phase title is already in the persistent chronology below. Avoid
+  // a second floating label obscuring crowded battle formations on phones.
+  if(state.story.type==='battle')return;
   const title=event.title;
   const y=p.y-33;
   ctx.font='700 11px ui-sans-serif,system-ui';
@@ -501,7 +636,7 @@ function canvasTimeline(){
   for(const tick of smartTicks(window,w<500?4:7)){
     const x=calc(tick);
     if(x<24||x>w-24)continue;
-    ctx.fillStyle='#857f6e';ctx.fillText(String(Math.abs(Math.trunc(tick))),x,11);
+    ctx.fillStyle='#857f6e';ctx.fillText(state.story.timeUnit==='phase'?formatStoryTime(tick,state.story).replace('ФАЗА ',''):String(Math.abs(Math.trunc(tick))),x,11);
     ctx.fillStyle='#b4aa94';ctx.fillRect(x-.5,ruleY-7,1,6);
   }
   const colors={politics:'#9c5a45',military:'#4e6e73',culture:'#9c8660'};
@@ -677,7 +812,10 @@ function registerTimePointers(){
 function wireControls() {
   document.querySelectorAll('[data-story]').forEach(button=>
     button.addEventListener('click',()=>openStory(button.dataset.story)));
-  $('back').addEventListener('click',toLibrary);
+  $('back').addEventListener('click',()=>{if(state.parentView)exitDetail();else toLibrary();});
+  $('detail-back').addEventListener('click',exitDetail);
+  $('scene-portal').addEventListener('click',()=>enterDetail());
+  $('inspector-detail').addEventListener('click',()=>enterDetail());
   $('compare-toggle').addEventListener('click',toggleCompare);
   $('compare-reset').addEventListener('click',()=>{state.compareTime=null;updateComparisonBanner();state.dirty=true;});
   $('edit-story').addEventListener('click',()=>{if(state.story.type==='custom'){setPlaying(false);save();studioApi.edit(state.story.id);}});

@@ -43,7 +43,7 @@
         <div class="art-index">FIG. 01 <span>URBS AETERNA</span></div>
       </div>
       <div class="story-section" data-ui>
-        <div class="section-title"><span>Открыть историю</span><span>02 ЭКСПОНАТА</span></div>
+        <div class="section-title"><span>Открыть историю</span><span>03 ЭКСПОНАТА</span></div>
         <div class="story-grid">
           <button class="story-ticket selected" type="button" data-story="rome" data-native-press>
             <span class="ticket-top"><span>01 / ИСТОКИ</span><span>↗</span></span>
@@ -56,6 +56,12 @@
             <span class="ticket-name">Тридцатилетняя война</span>
             <span class="ticket-description">Смена центров конфликта, вмешательство держав и путь к Вестфальскому миру.</span>
             <span class="ticket-foot">1618–1648 <span>10 событий</span></span>
+          </button>
+          <button class="story-ticket battle-ticket" type="button" data-story="breitenfeld" data-native-press>
+            <span class="ticket-top"><span>03 / ТАКТИЧЕСКИЙ РАЗБОР</span><span>↗</span></span>
+            <span class="ticket-name">Брейтенфельд · 1631</span>
+            <span class="ticket-description">Пять фаз сражения: от построений до разгрома Тилли. Условные траектории подразделений.</span>
+            <span class="ticket-foot">17 СЕНТЯБРЯ 1631 <span>5 фаз</span></span>
           </button>
         </div>
       </div>
@@ -76,7 +82,7 @@
       <div id="personal-stories" class="personal-stories" aria-label="Личные исторические сценарии"></div>
       <p id="studio-library-status" class="studio-library-status" role="status" aria-live="polite"></p>
     </section>
-    <footer class="lib-footer"><span>ИСТОРИЧЕСКИЕ ИНТЕРПРЕТАЦИИ И ОЦЕНКИ ЯВНО ОТМЕЧЕНЫ</span><span>V 0.2</span></footer>
+    <footer class="lib-footer"><span>ИСТОРИЧЕСКИЕ ИНТЕРПРЕТАЦИИ И ОЦЕНКИ ЯВНО ОТМЕЧЕНЫ</span><span>V 0.3</span></footer>
   </section>
 
   <section id="studio" class="studio-screen" hidden aria-label="Мастерская историй">
@@ -120,6 +126,11 @@
       <div class="studio-canvas-shell">
         <div class="studio-board-heading"><strong>Картографический стол</strong><span>КАСАНИЕ = ПОЛОЖЕНИЕ ОБЪЕКТА</span></div>
         <canvas id="studio-map" class="studio-map" aria-label="Редактор карты. Нажмите, чтобы поставить или переместить выбранный объект."></canvas>
+        <div class="studio-frame-ruler">
+          <div class="studio-frame-caption"><strong>ВРЕМЯ СЦЕНЫ</strong><output id="studio-cursor-label">1200 г.</output></div>
+          <input id="studio-cursor" type="range" min="1200" max="1300" step="1" value="1200" aria-label="Предпросмотр положения объектов на дату">
+          <div class="studio-frame-range"><span id="studio-cursor-start">1200 г.</span><span id="studio-cursor-end">1300 г.</span></div>
+        </div>
         <div class="studio-board-foot"><span id="studio-map-hint">Выбери объект, затем коснись карты.</span><span>1 : УСЛОВНАЯ СЦЕНА</span></div>
         <div class="studio-tools">
           <button id="studio-export" type="button" data-native-press>Экспорт JSON ↗</button>
@@ -135,6 +146,7 @@
       <button id="back" class="mark-button" type="button" data-native-press aria-label="К библиотеке историй">←</button>
       <div class="viewer-heading"><span id="story-caption">ПАЛИМПСЕСТ / ИСТОРИЯ 01</span><strong id="story-title">Как возник Рим</strong></div>
       <div class="header-actions">
+        <button id="detail-back" class="detail-back" type="button" hidden data-native-press aria-label="Вернуться к большой карте войны">↖ К войне</button>
         <button id="edit-story" class="icon-button" type="button" hidden title="Редактировать личную историю" aria-label="Редактировать историю">✎</button>
         <button id="compare-toggle" class="icon-button compare-icon" type="button" data-native-press aria-pressed="false" title="Запомнить дату для сравнения" aria-label="Сравнить исторические даты">⇄</button>
         <button id="bookmark" class="icon-button" type="button" data-native-press aria-pressed="false" title="Запомнить момент" aria-label="Сохранить закладку">◇</button>
@@ -143,6 +155,7 @@
     </header>
     <div id="stage" class="stage">
       <canvas id="scene" data-gesture-surface data-touch-action="none" aria-label="Интерактивная карта с объектами истории"></canvas>
+      <button id="scene-portal" class="scene-portal" type="button" hidden data-native-press>↘ Приблизить поле боя <span>5 ФАЗ БРЕЙТЕНФЕЛЬДА</span></button>
       <div class="stage-stamp" data-ui><span id="map-scale">ОБЗОР СЦЕНЫ</span><span id="map-caveat">СХЕМАТИЧЕСКАЯ КАРТА</span></div>
       <div class="scene-toolbar" data-ui>
         <button type="button" id="map-plus" data-native-press aria-label="Приблизить карту">+</button>
@@ -173,7 +186,7 @@
           <button id="prev" type="button" class="transport thin" data-native-press title="Предыдущее событие" aria-label="Предыдущее событие">←</button>
           <button id="play" type="button" class="transport play" data-native-press aria-label="Воспроизвести">▶</button>
           <button id="next" type="button" class="transport thin" data-native-press title="Следующее событие" aria-label="Следующее событие">→</button>
-          <span class="timeline-caption">МАСШТАБ ВРЕМЕНИ</span>
+          <span class="timeline-caption" id="timeline-caption">МАСШТАБ ВРЕМЕНИ</span>
           <button id="time-minus" class="time-zoom" type="button" data-native-press aria-label="Уменьшить масштаб времени">−</button>
           <button id="time-plus" class="time-zoom" type="button" data-native-press aria-label="Увеличить масштаб времени">+</button>
         </div>
@@ -190,6 +203,7 @@
       <div id="confidence" class="confidence"></div>
       <div class="inspector-tabs"><button type="button" id="tab-now" class="active" data-native-press aria-pressed="true">В выбранный момент</button><button type="button" id="tab-general" data-native-press aria-pressed="false">Контекст</button></div>
       <p id="inspector-description"></p>
+      <button id="inspector-detail" class="inspector-deep-link" hidden data-native-press>↘ Исследовать сражение</button>
       <div class="sources-title">ИСТОЧНИКИ</div>
       <div id="sources" class="sources"></div>
     </aside>
@@ -200,7 +214,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </section>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Палимпсест: Атлас" data-app-version="0.2.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Палимпсест: Атлас" data-app-version="0.3.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

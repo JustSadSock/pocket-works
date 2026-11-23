@@ -25,11 +25,15 @@ test('Story Studio: create 5 events, 2 regions, a route, save, replay, export an
     await page.locator('#studio-add').click();
     await page.locator('.editor-form [aria-label="Название на карте"]').fill('Область '+i);
     await page.locator('.editor-form [aria-label="Название на карте"]').press('Tab');
-    await page.locator('#studio-map').click({position:{x:120+i*85,y:60+i*38}});
+    const box=await page.locator('#studio-map').boundingBox();
+    if(!box)throw new Error('Карта редактора не отображается');
+    await page.locator('#studio-map').click({position:{x:box.width*(i===1?.34:.68),y:box.height*(i===1?.33:.66)}});
   }
   await page.locator('[data-studio-tab="paths"]').click();
   await page.locator('#studio-add').click();
-  await page.locator('#studio-map').click({position:{x:150,y:100}});
+  const mapBox=await page.locator('#studio-map').boundingBox();
+  if(!mapBox)throw new Error('Карта маршрута недоступна');
+  await page.locator('#studio-map').click({position:{x:mapBox.width*.42,y:mapBox.height*.55}});
   await expect(page.locator('.studio-field-note')).toContainText('3 точек');
   await page.locator('#studio-undo').click();
   await expect(page.locator('.studio-field-note')).toContainText('2 точек');

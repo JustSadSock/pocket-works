@@ -1,3 +1,4 @@
+import {validateMotion} from './motion.js';
 import {validateStory, clamp} from './core.js';
 
 export const LIBRARY_KEY = 'pocket-works:palimpsest-atlas:stories:v1';
@@ -96,6 +97,23 @@ export function parseStory(packageOrStory) {
     assert(ids.every(id=>sourceSet.has(id)),'Некоторые источники отсутствуют в библиографии');
     return [...new Set(ids)];
   }
+  function cleanMotion(item){
+    if(item.motion==null)return undefined;
+    assert(item.motion&&typeof item.motion==='object','Неверное движение объекта');
+    const mode=item.motion.mode;
+    assert(mode==='hold'||mode==='illustrative','Неверный тип движения');
+    assert(['estimated','disputed','hypothetical'].includes(item.motion.confidence),
+      'Маршрут требует отдельной маркировки неопределённости');
+    const frames=limitArray(item.motion.frames,64,'ключевые кадры').map(frame=>{
+      assert(frame&&finite(frame.time)&&finite(frame.x)&&finite(frame.y),'Кадр должен содержать год и координаты');
+      return {time:frame.time,x:frame.x,y:frame.y};
+    });
+    assert(frames.length>0,'Для движения нужен хотя бы один кадр');
+    const motion={mode,confidence:item.motion.confidence,frames:frames.sort((a,b)=>a.time-b.time)};
+    const errors=validateMotion({...item,motion},raw.range,w);
+    assert(!errors.length,'Недопустимое движение: '+(errors[0]||'ошибка'));
+    return motion;
+  }
   const entities=limitArray(raw.entities,250,'объекты').map((e,i)=>{
     const entityId=cleanId(e?.id,'объекта #'+i);
     assert(entityTypes.has(e.type),'Неизвестный тип объекта');
@@ -106,10 +124,11 @@ export function parseStory(packageOrStory) {
     assert(e.from==null||e.until==null||e.until>=e.from,'Объект исчезает раньше появления');
     assert(CONFIDENCE.has(e.confidence),'Необходимо указать достоверность объекта');
     if(e.confidence==='confirmed')assert(Array.isArray(e.sources)&&e.sources.length>0,'Для подтверждённого объекта нужен источник');
-    return {id:entityId,type:e.type,name:text(e.name,130),x:e.x,y:e.y,
+    return {id:entityId,type:e.type,name:text(e.name,130),...(text(e.mapLabel,70)?{mapLabel:text(e.mapLabel,70)}:{}),x:e.x,y:e.y,
       from:e.from??start,until:e.until??undefined,
       description:text(e.description,1500),current:text(e.current,1000),
-      confidence:e.confidence,sources:sourceRefs(e.sources||[])};
+      confidence:e.confidence,sources:sourceRefs(e.sources||[]),
+      ...(e.motion?{motion:cleanMotion(e)}:{})};
   });
   const featureList=limitArray(raw.features,150,'территории').map((f,i)=>{
     const featureId=cleanId(f?.id,'территории #'+i);
@@ -121,7 +140,8 @@ export function parseStory(packageOrStory) {
     assert(f.from==null||f.until==null||f.until>=f.from,'Неверный период существования территории');
     return {id:featureId,kind:f.kind,x:f.x,y:f.y,rx:f.rx,ry:f.ry,
       label:text(f.label,110)||'Территория',rotation:finite(f.rotation)?clamp(f.rotation,-Math.PI,Math.PI):0,
-      from:f.from??start,until:f.until??undefined,confidence:CONFIDENCE.has(f.confidence)?f.confidence:'hypothetical'};
+      from:f.from??start,until:f.until??undefined,confidence:CONFIDENCE.has(f.confidence)?f.confidence:'hypothetical',
+      ...(f.motion?{motion:cleanMotion(f)}:{})};
   });
   const paths=limitArray(raw.paths,100,'маршруты').map((p,i)=>{
     const pathId=cleanId(p?.id,'маршрута #'+i);
@@ -159,7 +179,7 @@ export function parseStory(packageOrStory) {
   unique(entities,'объекты');unique(events,'события');unique(featureList,'территории');unique(paths,'маршруты');
   for(const event of events)if(event.entity)assert(entities.some(e=>e.id===event.entity),'Неизвестный объект у события');
   const paletteId=Object.entries(PALETTES).find(([,p])=>JSON.stringify(p)===JSON.stringify(raw.palette))?.[0]||'parchment';
-  const story={schemaVersion:PACKAGE_VERSION,id,index:'МОЯ ИСТОРИЯ',type:'custom',
+  const story={schemaVersion:PACKAGE_VERSION,id,index:'МОЯ ИСТОРИЯ',type:'custom',timeUnit:raw.timeUnit==='phase'?'phase':'year',
     title,subtitle:text(raw.subtitle,180),intro:text(raw.intro,1500),
     disclaimer:text(raw.disclaimer,500)||'Авторская схематическая карта; объекты могут быть гипотетическими.',
     range:[start,end],world:{width:w.width,height:w.height},palette:{...PALETTES[paletteId]},

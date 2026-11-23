@@ -7,7 +7,8 @@
       "tier": "smoke",
       "files": [
         "tests/core.test.mjs",
-        "tests/studio-data.test.mjs"
+        "tests/studio-data.test.mjs",
+        "tests/motion.test.mjs"
       ]
     },
     {
@@ -61,7 +62,8 @@
       "tier": "smoke",
       "files": [
         "qa/player-flow.spec.ts",
-        "qa/studio-flow.spec.ts"
+        "qa/studio-flow.spec.ts",
+        "qa/depth-flow.spec.ts"
       ]
     },
     {
@@ -103,6 +105,48 @@
         {
           "action": "visible",
           "selector": "#studio-fields"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "battle-zoom-visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "#library",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-story=\"breitenfeld\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#scene"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#next"
+        },
+        {
+          "action": "click",
+          "selector": "#next"
+        },
+        {
+          "action": "visible",
+          "selector": "#event-title"
         },
         {
           "action": "screenshot"
