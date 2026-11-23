@@ -396,6 +396,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     const count=lanes.reduce((n,l)=>n+l.marks.length,0);
     $('studio-track-count').textContent=count+' '+(count===1?'отметка':'отметок');
     const panel=$('studio-track-panel');
+    board.closest('.studio-canvas-shell').classList.toggle('tracks-open',tracksVisible);
     panel.hidden=!tracksVisible;
     $('studio-track-toggle').setAttribute('aria-expanded',String(tracksVisible));
     $('studio-track-toggle').firstChild.textContent=(tracksVisible?'▾':'▸')+' Дорожки истории ';
