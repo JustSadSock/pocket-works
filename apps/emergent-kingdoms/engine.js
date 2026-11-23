@@ -5,7 +5,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), round=v=>Math.round(v*1000)/1000
 const copy=s=>JSON.parse(JSON.stringify(s));
 function hash(str){let h=2166136261;for(const c of String(str)){h=Math.imul(h^c.charCodeAt(0),16777619)}return h>>>0}
 function rand(s){s.rng=(Math.imul(s.rng,1664525)+1013904223)>>>0;return s.rng/4294967296}
-function noise(seed,x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,t=fx*fx*(3-2*fx),u=fy*fy*(3-2*fy);const v=(a,b)=>hash(seed+":"+a+":"+b)/4294967295;return (v(ix,iy)*(1-t)+v(ix+1,iy)*t)*(1-u)+(v(ix,iy+1)*(1-t)+v(ix+1,iy+1)*t)*u}
+function noise(seed,x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,t=fx*fx*(3-2*fx),u=fy*fy*(3-2*fy);const v=(a,b)=>{let h=(seed^Math.imul(a,0x9e3779b1)^Math.imul(b,0x85ebca77))>>>0;h=Math.imul(h^(h>>>16),0x7feb352d);h=Math.imul(h^(h>>>15),0x846ca68b);return ((h^(h>>>16))>>>0)/4294967295};return (v(ix,iy)*(1-t)+v(ix+1,iy)*t)*(1-u)+(v(ix,iy+1)*(1-t)+v(ix+1,iy+1)*t)*u}
 const adj=Array.from({length:N},(_,i)=>{let x=i%W,y=i/W|0;return [x>0?i-1:-1,x<W-1?i+1:-1,y>0?i-W:-1,y<H-1?i+W:-1].filter(j=>j>=0)});
 const pair=(a,b)=>a<b?a+":"+b:b+":"+a;
 const palette=["#b65f48","#56877a","#bd9753","#7778a3","#64854e","#b0768e","#5c819c","#a67c59","#8e6f9c","#b0a344","#559b9a","#aa695f"];
@@ -14,21 +14,32 @@ const tails=["ia","eth","or","an","en","ar","is","um"];
 function name(s){return stems[Math.floor(rand(s)*stems.length)]+tails[Math.floor(rand(s)*tails.length)]}
 function event(s,type,text,ids=[],cell=-1){s.events.push({year:s.year,type,text,ids,cell});}
 function terrain(seed){
-const cells=[];for(let i=0;i<N;i++){const x=i%W,y=i/W|0,xx=x/W,yy=y/H;
+const cells=[],centers=[];
+const gen={rng:seed>>>0};const count=2+Math.floor(rand(gen)*2);
+for(let k=0;k<count;k++){let x=.21+k*.58/Math.max(1,count-1)+(rand(gen)-.5)*.12,y=.31+rand(gen)*.38;centers.push({x,y,rx:.23+rand(gen)*.12,ry:.31+rand(gen)*.15})}
+for(let i=0;i<N;i++){const x=i%W,y=i/W|0,xx=x/W,yy=y/H;
+const wx=xx+(noise(seed+11,x/13,y/12)-.5)*.22,wy=yy+(noise(seed+12,x/12,y/13)-.5)*.23;
+let shape=0;for(const k of centers){let d=Math.hypot((wx-k.x)/k.rx,(wy-k.y)/k.ry);shape=Math.max(shape,Math.exp(-d*d*1.22))}
+const detail=.48*noise(seed,x/17,y/15)+.31*noise(seed+1,x/7,y/7)+.14*noise(seed+2,x/3,y/3)+.07*noise(seed+3,x/1.6,y/1.6);
 let edge=Math.max(Math.abs(xx-.5)*2,Math.abs(yy-.5)*2);
-let e= .60*noise(seed,x/19,y/17)+.26*noise(seed+1,x/8,y/8)+.14*noise(seed+2,x/3,y/3)-.39*Math.pow(edge,3)+.08;
-let land=e>.40, elev=round(clamp((e-.40)*2.35,0,1));
-let wet=round(clamp(.68*noise(seed+5,x/14,y/12)+.32*noise(seed+6,x/5,y/5)-elev*.18,0,1));
-let heat=round(clamp(1-Math.abs(yy-.5)*1.45-elev*.55,0,1));
-cells.push({land,elev,wet,heat,river:0,down:-1,forest:land&&wet>.48&&elev<.72&&heat>.18,fert:0,ore:land?round(clamp(elev*.75+noise(seed+9,x/4,y/4)*.35,0,1)):0,pop:0,owner:0,culture:0,stock:0,wealth:0,city:false});
+let e=.73*shape+.43*detail-.16*Math.pow(edge,5)-.10;
+let land=e>.40, elev=round(clamp((e-.40)*1.75+(land?Math.max(0,noise(seed+8,x/9,y/9)-.66)*.85:0),0,1));
+let wet=round(clamp(.61*noise(seed+5,x/15,y/12)+.27*noise(seed+6,x/5,y/5)+.12*(1-Math.abs(yy-.5)*2)-elev*.13,0,1));
+let heat=round(clamp(1-Math.abs(yy-.5)*1.5-elev*.62,0,1));
+cells.push({land,elev,wet,heat,river:0,down:-1,forest:land&&wet>.47&&elev<.75&&heat>.18,fert:0,ore:land?round(clamp(elev*.75+noise(seed+9,x/4,y/4)*.35,0,1)):0,pop:0,owner:0,culture:0,stock:0,wealth:0,city:false});
 }
-if(cells.filter(c=>c.land).length<250){for(let i=0;i<N;i++){let x=i%W-W/2,y=i/W|0;y-=H/2;if(x*x/350+y*y/170<1){cells[i].land=true;cells[i].elev=.18;cells[i].wet=.6;cells[i].heat=.7}}}
+if(cells.filter(c=>c.land).length<250){for(let i=0;i<N;i++){let x=i%W-W/2,y=(i/W|0)-H/2;if(x*x/350+y*y/170<1){cells[i].land=true;cells[i].elev=.18;cells[i].wet=.6;cells[i].heat=.7}}}
+// Multi-source priority flood: drain inland depressions via the lowest reachable saddle.
+// Every cell has an acyclic path to water. Ties are broken by index, never wall-clock time.
 const dist=new Int16Array(N).fill(32767),q=[];cells.forEach((c,i)=>{if(!c.land){dist[i]=0;q.push(i)}});for(let k=0;k<q.length;k++){let i=q[k];for(const j of adj[i])if(dist[j]>dist[i]+1){dist[j]=dist[i]+1;q.push(j)}}
-const flow=new Float64Array(N);cells.forEach((c,i)=>{if(!c.land)return;flow[i]=.5+c.wet;const potential=j=>cells[j].land?dist[j]*.025+cells[j].elev*.7:-1;let j=adj[i].reduce((a,b)=>potential(a)<potential(b)?a:b);if(potential(j)>=potential(i))j=adj[i].find(j=>dist[j]<dist[i])??-1;c.down=j});
- // Strictly descending distance for connected drainage, avoiding river loops.
-cells.forEach((c,i)=>{if(c.land&&c.down>=0&&dist[c.down]>=dist[i])c.down=adj[i].filter(j=>dist[j]<dist[i]).sort((a,b)=>cells[a].elev-cells[b].elev)[0]??-1});
-for(const i of q.slice().reverse()){let c=cells[i];if(!c.land)continue;c.river=flow[i]>7?round(Math.min(1,flow[i]/65)):0;if(c.down>=0)flow[c.down]+=flow[i]}
-cells.forEach((c,i)=>{if(c.land)c.fert=round(clamp(.12+c.wet*.55+c.heat*.22-c.elev*.68+c.river*.55+(dist[i]===1?.09:0),.04,1))});return cells;
+const heap=[],seen=new Uint8Array(N),order=[],level=new Float64Array(N);
+function push(node){let n=heap.length;heap.push(node);while(n>0){let p=(n-1)>>1;if(heap[p][0]<node[0]||(heap[p][0]===node[0]&&heap[p][1]<node[1]))break;heap[n]=heap[p];n=p;heap[n]=node}}
+function pop(){const out=heap[0],last=heap.pop();if(heap.length){let n=0;heap[0]=last;while(true){let l=n*2+1,r=l+1;if(l>=heap.length)break;let child=r<heap.length&&(heap[r][0]<heap[l][0]||(heap[r][0]===heap[l][0]&&heap[r][1]<heap[l][1]))?r:l;if(heap[child][0]>last[0]||(heap[child][0]===last[0]&&heap[child][1]>last[1]))break;heap[n]=heap[child];n=child;heap[n]=last}}return out}
+for(let i=0;i<N;i++)if(!cells[i].land){seen[i]=1;level[i]=-1;push([-1,i])}
+while(heap.length){let [v,i]=pop();order.push(i);for(const j of adj[i]){if(seen[j])continue;seen[j]=1;cells[j].down=i;level[j]=Math.max(cells[j].elev,v+.0008);push([level[j],j])}}
+const flow=new Float64Array(N);cells.forEach((c,i)=>{if(c.land)flow[i]=.35+c.wet*.9});
+for(let k=order.length-1;k>=0;k--){let i=order[k],c=cells[i];if(!c.land)continue;c.river=flow[i]>7?round(Math.min(1,Math.sqrt(flow[i]/90))):0;if(c.down>=0)flow[c.down]+=flow[i]}
+cells.forEach((c,i)=>{if(c.land)c.fert=round(clamp(.10+c.wet*.56+c.heat*.22-c.elev*.64+c.river*.38+(dist[i]===1?.09:0),.04,1))});return cells;
 }
 function create(seed="Mare-01",params={}){
 const s={version:VERSION,seed:String(seed),rng:hash(seed),year:0,cells:terrain(hash(seed)),nations:[],cultures:[],relations:{},routes:[],events:[],stats:[],params:{growth:1,aggression:1,trade:1,climate:0,...params}};
