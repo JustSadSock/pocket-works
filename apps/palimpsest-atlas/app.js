@@ -2,7 +2,7 @@ import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { stories, getStory } from './stories.js';
 import { initStudio } from './studio.js';
 import {keyframeValue,motionTrail,formatStoryTime,displayStoryTime,displayStoryEra,scenePortalCandidate} from './motion.js';
-import {commandAt,commandRoster,orderAt,COMMAND_ACTIONS,polygonCenter} from './tactics.js';
+import {commandAt,commandRoster,orderAt,COMMAND_ACTIONS,polygonCenter,pointInPolygon} from './tactics.js';
 import { clamp, lerp, span, fraction, formatYear, displayYear, era,
   eventBefore, previousEvent, nextEvent, snapshotAt, zoomWindow,
   fittedWindow, smartTicks, playbackStep, validateStory,
@@ -296,6 +296,10 @@ function renderComparisonGhost(){
   ctx.strokeStyle='rgba(72,108,116,.63)';
   ctx.lineWidth=2;
   for(const f of diff.sections.features.removed){
+    if(f.kind==='boundary'){
+      line([...f.points,f.points[0]],'rgba(72,108,116,.65)',2,[5,6]);
+      continue;
+    }
     const p=project(f.x,f.y),z=scale();
     ctx.beginPath();
     ctx.ellipse(p.x,p.y,f.rx*z,f.ry*z,f.rotation||0,0,Math.PI*2);
@@ -318,6 +322,7 @@ function renderComparisonGhost(){
     ctx.beginPath();ctx.arc(p.x,p.y,19,0,Math.PI*2);ctx.stroke();
   }
   for(const f of diff.sections.features.added){
+    if(f.kind==='boundary'){line([...f.points,f.points[0]],'#a4513b',2.5,[5,6]);continue;}
     const p=project(f.x,f.y);ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.stroke();
   }
   ctx.restore();
@@ -389,15 +394,23 @@ function openInspector(kind,item) {
 function updateInspector() {
   const record=state.inspector;if(!record)return;
   const item=record.kind==='event'?state.story.events.find(x=>x.id===record.id):
+    record.kind==='feature'?state.story.features.find(x=>x.id===record.id):
     state.story.entities.find(x=>x.id===record.id);
   if(!item){ui.inspector.hidden=true;state.inspector=null;return;}
-  ui.inspectorType.textContent=record.kind==='event'?'ИСТОРИЧЕСКОЕ СОБЫТИЕ':item.type.toUpperCase();
-  ui.inspectorName.textContent=record.kind==='event'?item.title:item.name;
+  ui.inspectorType.textContent=record.kind==='event'?'ИСТОРИЧЕСКОЕ СОБЫТИЕ':
+    record.kind==='feature'?'ГРАНИЦА / УСЛОВНАЯ РЕКОНСТРУКЦИЯ':item.type.toUpperCase();
+  ui.inspectorName.textContent=record.kind==='event'?item.title:record.kind==='feature'?item.label:item.name;
   ui.confidence.textContent=CONFIDENCE[item.confidence]||CONFIDENCE.estimated;
   ui.tabNow.classList.toggle('active',state.tab==='now');ui.tabGeneral.classList.toggle('active',state.tab==='general');
   ui.tabNow.setAttribute('aria-pressed',String(state.tab==='now'));
   ui.tabGeneral.setAttribute('aria-pressed',String(state.tab==='general'));
-  if(record.kind==='event'){
+  if(record.kind==='feature'){
+    ui.inspectorBody.textContent=(state.tab==='now'?'В выбранный момент: ':'Контекст: ')+
+      (item.confidence==='confirmed'?'Указанная граница подтверждается источником.':
+      'Граница условная, положение и конфигурация не гарантируют точную историческую географию.')+
+      '\n\nПоказана с '+formatStoryTime(item.from||state.story.range[0],state.story)+
+      (item.until!=null?' до '+formatStoryTime(item.until,state.story):' до конца сюжета');
+  }else if(record.kind==='event'){
     ui.inspectorBody.textContent=state.tab==='now'?
       formatStoryTime(item.time,state.story)+' · '+item.subtitle+'\n\n'+item.text :
       item.text+'\n\nПоказанный на сцене маршрут или граница может быть схематичным. Степень исторической уверенности указана выше.';
@@ -536,6 +549,26 @@ function drawTerrain(snapshot){
     else ellipseAt(feature,'rgba(156,118,70,.24)','rgba(130,102,62,.65)',fade);
     const p=project(feature.x,feature.y);
     if(state.camera.zoom>1.2)textAt(feature.label,p.x,p.y,{size:12,serif:true,color:'#9b593b'});
+  }
+  for(const feature of snapshot.features.filter(x=>x.kind==='boundary')){
+    const points=feature.points||[];
+    if(points.length<3)continue;
+    ctx.save();
+    ctx.beginPath();for(let i=0;i<points.length;i++){
+      const p=project(points[i][0],points[i][1]);
+      if(!i)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+    }
+    ctx.closePath();
+    const selected=state.inspector?.kind==='feature'&&state.inspector.id===feature.id;
+    ctx.fillStyle=selected?'rgba(170,86,59,.22)':'rgba(171,142,100,.14)';ctx.fill();
+    ctx.strokeStyle=selected?'#9e503a':'rgba(117,92,61,.85)';
+    ctx.lineWidth=selected?2.6:1.9;
+    ctx.setLineDash(feature.confidence==='confirmed'?[]:[7,5]);ctx.stroke();ctx.setLineDash([]);
+    const [cx,cy]=polygonCenter(points),p=project(cx,cy);
+    if(state.camera.zoom>1.1)textAt(feature.label,p.x,p.y,{
+      size:Math.min(12,10+state.camera.zoom*.35),serif:true,
+      color:'#786148',halo:'rgba(235,224,199,.7)'});
+    ctx.restore();
   }
   for(const path of snapshot.paths){
     const dash=path.confidence==='estimated'?[5,7]:[];
@@ -763,6 +796,10 @@ function locateTap(x,y){
     const p=project(current.focus[0],current.focus[1]);
     if(Math.hypot(p.x-x,p.y-y)<48){openInspector('event',current);return;}
   }
+  const scene=unproject(x,y);
+  const feature=(snapshotAt(state.story,state.time).features||[])
+    .filter(f=>f.kind==='boundary'&&pointInPolygon(scene.x,scene.y,f.points)).at(-1);
+  if(feature){setPlaying(false);openInspector('feature',feature);return;}
   if(!ui.inspector.hidden){ui.inspector.hidden=true;state.inspector=null;state.dirty=true;}
 }
 function pointerPosition(event,element){
