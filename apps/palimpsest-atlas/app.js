@@ -1,5 +1,6 @@
 import { installMobileRuntime } from '../../shared/mobile-runtime.js';
 import { stories, getStory } from './stories.js';
+import { initStudio } from './studio.js';
 import { clamp, lerp, span, fraction, formatYear, displayYear, era,
   eventBefore, previousEvent, nextEvent, snapshotAt, zoomWindow,
   fittedWindow, smartTicks, playbackStep, validateStory } from './core.js';
@@ -76,13 +77,15 @@ function restoreView(story) {
     ? {x:clamp(camera.x,-200,1200),y:clamp(camera.y,-200,900),zoom:clamp(camera.zoom,.75,7)}
     : {x:story.world.width/2,y:story.world.height/2,zoom:1};
 }
+let studioApi=null;
 function openStory(id) {
-  const story=getStory(id);
+  const story=studioApi?.getStory(id)||getStory(id);
   state.story=story;state.playing=false;state.inspector=null;state.tab='now';
   state.activeEventId=null;state.mapPointers.clear();state.timePointers.clear();
   state.mapPinch=null;state.timePinch=null;
   restoreView(story);
-  ui.library.hidden=true;ui.viewer.hidden=false;ui.inspector.hidden=true;ui.outline.hidden=true;
+  ui.library.hidden=true;$('studio').hidden=true;ui.viewer.hidden=false;ui.inspector.hidden=true;ui.outline.hidden=true;
+  $('edit-story').hidden=story.type!=='custom';
   ui.list.setAttribute('aria-expanded','false');
   ui.title.textContent=story.title;
   ui.caption.textContent='ПАЛИМПСЕСТ / ИСТОРИЯ '+story.index;
@@ -603,6 +606,7 @@ function wireControls() {
   document.querySelectorAll('[data-story]').forEach(button=>
     button.addEventListener('click',()=>openStory(button.dataset.story)));
   $('back').addEventListener('click',toLibrary);
+  $('edit-story').addEventListener('click',()=>{if(state.story.type==='custom'){setPlaying(false);save();studioApi.edit(state.story.id);}});
   ui.play.addEventListener('click',()=>{
     if(!state.playing&&state.time>=state.story.range[1]-.0001)seek(state.story.range[0]);
     setPlaying(!state.playing);
@@ -631,6 +635,7 @@ function wireControls() {
   ui.tabGeneral.addEventListener('click',()=>{state.tab='general';updateInspector();});
   document.addEventListener('keydown',(event)=>{
     if(event.key==='Escape'){
+      if(studioApi?.isOpen()){$('studio-back').click();return;}
       if(!ui.outline.hidden){ui.outline.hidden=true;ui.list.setAttribute('aria-expanded','false');}
       else if(!ui.inspector.hidden){ui.inspector.hidden=true;state.inspector=null;}
       else if(!ui.viewer.hidden)toLibrary();
@@ -668,6 +673,7 @@ function frame(timestamp) {
   }
   requestAnimationFrame(frame);
 }
+studioApi=initStudio({onOpen:openStory,onNotify:toast,builtins:stories});
 wireControls();
-if(stored.lastStory && stories.some(story=>story.id===stored.lastStory))openStory(stored.lastStory);
+if(stored.lastStory && (stories.some(story=>story.id===stored.lastStory)||studioApi.getStory(stored.lastStory)))openStory(stored.lastStory);
 requestAnimationFrame(frame);
