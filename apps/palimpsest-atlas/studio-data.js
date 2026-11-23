@@ -1,5 +1,6 @@
 import {validateMotion} from './motion.js';
 import {COMMAND_ACTIONS,COMMAND_SIDES,validPolygon} from './tactics.js';
+import {validateBoundaryFrames,MAX_BORDER_FRAMES} from './frontiers.js';
 import {validateStory, clamp} from './core.js';
 
 export const LIBRARY_KEY = 'pocket-works:palimpsest-atlas:stories:v1';
@@ -180,10 +181,24 @@ export function parseStory(packageOrStory) {
     assert(f.from==null||(finite(f.from)&&f.from>=start&&f.from<=end&&f.from!==0),'Неверная дата территории');
     assert(f.until==null||(finite(f.until)&&f.until>=start&&f.until<=end&&f.until!==0),'Неверная дата исчезновения территории');
     assert(f.from==null||f.until==null||f.until>=f.from,'Неверный период существования территории');
+    let boundaryFrames=[];
+    if(f.kind==='boundary'&&Array.isArray(f.boundaryFrames)&&f.boundaryFrames.length){
+      boundaryFrames=limitArray(f.boundaryFrames,MAX_BORDER_FRAMES,'ключевые границы').map(frame=>{
+        assert(frame&&finite(frame.time)&&frame.time!==0,'Укажите дату ключевой границы');
+        assert(validPolygon(frame.points,w),'Ключевая граница должна иметь от 3 до 40 корректных вершин');
+        assert(CONFIDENCE.has(frame.confidence)&&frame.confidence!=='tradition','Укажите достоверность изменения границы');
+        const refs=sourceRefs(frame.sources||[]);
+        assert(frame.confidence!=='confirmed'||refs.length>0,'Подтверждённая ключевая граница требует источника');
+        return {time:frame.time,points:frame.points.map(p=>[p[0],p[1]]),
+          confidence:frame.confidence,sources:refs};
+      }).sort((a,b)=>a.time-b.time);
+      assert(!validateBoundaryFrames({...f,boundaryFrames},[start,end],w,new Set(sources.map(source=>source.id))).length,
+        'Кадры границы вне периода, повторяются или содержат неверные источники');
+    }
     return {id:featureId,kind:f.kind,x:f.x,y:f.y,rx:f.rx,ry:f.ry,
       label:text(f.label,110)||'Территория',rotation:finite(f.rotation)?clamp(f.rotation,-Math.PI,Math.PI):0,
       from:f.from??start,until:f.until??undefined,confidence:CONFIDENCE.has(f.confidence)?f.confidence:'hypothetical',
-      ...(f.kind==='boundary'?{points:f.points.map(p=>[p[0],p[1]]),sources:sourceRefs(f.sources||[])}:{}),
+      ...(f.kind==='boundary'?{points:f.points.map(p=>[p[0],p[1]]),sources:sourceRefs(f.sources||[]),...(boundaryFrames.length?{boundaryFrames}:{})}:{}),
       ...(f.motion?{motion:cleanMotion(f)}:{})};
   });
   const paths=limitArray(raw.paths,100,'маршруты').map((p,i)=>{

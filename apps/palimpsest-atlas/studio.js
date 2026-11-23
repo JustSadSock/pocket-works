@@ -4,6 +4,7 @@ import {PALETTES, MAX_STORIES, createDraft,createPhaseDraft,cloneAsDraft,exportP
   loadLibrary,parseImport,parseStory,persistLibrary,upsertLibrary,newId} from './studio-data.js';
 
 import {COMMAND_ACTIONS,COMMAND_SIDES,validPolygon,polygonCenter} from './tactics.js';
+import {borderAt,storyTracks,MAX_BORDER_FRAMES} from './frontiers.js';
 const $=(id)=>document.getElementById(id);
 const COLLECTIONS=['events','entities','features','paths','sources','commands'];
 const LABELS={events:'События',entities:'Объекты',features:'Территории',paths:'Маршруты',sources:'Источники',commands:'Штабы'};
@@ -74,7 +75,7 @@ export function initStudio({onOpen,onNotify,builtins}){
   const storage=(()=>{try{return window.localStorage;}catch{return {getItem:()=>null,setItem:()=>{throw new Error('Локальное хранилище недоступно');}};}})();
   let library=loadLibrary(storage);
   let draft=null, savedHash='',tab='events',selected=null,undo=[],redo=[],dirty=false,
-    cursor=null,activeFrameTime=null,activeVertex=null;
+    cursor=null,activeFrameTime=null,activeVertex=null,tracksVisible=false;
   const board=$('studio-map');
   const ctx=board.getContext('2d');
   const input=$('studio-import');
@@ -93,7 +94,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     $('studio-dirty').classList.toggle('is-dirty',dirty);
     const active=current();
     $('studio-map-hint').textContent=tab==='features'&&active?.kind==='boundary'?
-      activeVertex!=null?'Коснись карты: изменить вершину №'+(activeVertex+1):'Коснись карты: добавить вершину границы.':
+      activeVertex!=null?'Коснись карты: изменить вершину №'+(activeVertex+1):'Коснись карты: добавить вершину '+(activeFrameTime!=null?'выбранной даты':'исходной формы')+'.':
       (tab==='entities'||tab==='features')&&activeFrameTime!=null&&active?.motion?.frames?.some(f=>f.time===activeFrameTime)?
       'Нажми на карте: изменится выбранный ключевой кадр на '+formatStoryTime(activeFrameTime,draft)+'.':tab==='paths'?
       'Нажми на карту, чтобы добавить точку маршрута. Последнюю точку можно удалить в форме.' :
@@ -291,34 +292,151 @@ export function initStudio({onOpen,onNotify,builtins}){
   }
   function renderBoundaryControls(form,item){
     const group=make('section','boundary-controls');
-    group.append(make('div','studio-field-head','05 / ВЕРШИНЫ ГРАНИЦЫ'));
-    group.append(make('p','studio-field-note','Полигон — условная линия. Перемещай вершины на карте или добавляй новые. Достоверность должна быть указана отдельно.'));
+    group.append(make('div','studio-field-head','05 / ГРАНИЦЫ ВО ВРЕМЕНИ'));
+    group.append(make('p','studio-field-note',
+      'Каждая форма — зафиксированный снимок, а не выдуманная анимация между датами. Сначала выбери дату, затем запиши её границу.'));
+    const frames=item.boundaryFrames||[];
+    const active=frames.find(f=>f.time===activeFrameTime);
+    const strip=make('div','border-keyframe-strip');
+    strip.append(button('Изначально',()=>{
+      activeFrameTime=null;activeVertex=null;cursor=item.from??draft.range[0];renderEditor();
+    },'border-keyframe'+(!active?' selected':'')));
+    for(const frame of frames){
+      strip.append(button(formatStoryTime(frame.time,draft),()=>{
+        activeFrameTime=frame.time;cursor=frame.time;activeVertex=null;renderEditor();
+      },'border-keyframe'+(active?.time===frame.time?' selected':'')));
+    }
+    group.append(strip);
+    group.append(make('p','studio-field-note',active?
+      'Редактируется граница на '+formatStoryTime(active.time,draft)+'.':
+      'Редактируется исходная граница. Для новой даты сначала запиши отдельную форму.'));
+    if(active){
+      group.append(field('Достоверность формы',active.confidence,value=>{
+        const time=active.time;mutate(story=>{
+          story.features.find(f=>f.id===selected).boundaryFrames.find(f=>f.time===time).confidence=value;
+        });
+      },{options:CONFIDENCE.filter(([id])=>id!=='tradition')}));
+      group.append(field('Источник формы',(active.sources||[])[0]||'',value=>{
+        const time=active.time;mutate(story=>{
+          story.features.find(f=>f.id===selected).boundaryFrames.find(f=>f.time===time).sources=value?[value]:[];
+        });
+      },{options:[['','Без источника'],...draft.sources.map(s=>[s.id,s.title||s.id])]}));
+    }
+    const actions=make('div','border-keyframe-actions');
+    actions.append(button('⊕ Записать форму в '+formatStoryTime(cursor,draft),()=>{
+      if(cursor<(item.from??draft.range[0])||cursor>(item.until??draft.range[1])){
+        status('Граница не существует в выбранную дату','error');return;
+      }
+      const existing=frames.find(f=>Math.abs(f.time-cursor)<.000001);
+      if(existing){activeFrameTime=existing.time;activeVertex=null;renderEditor();return;}
+      if(frames.length>=MAX_BORDER_FRAMES){status('Максимум '+MAX_BORDER_FRAMES+' карт для одной границы','error');return;}
+      mutate(story=>{
+        const feature=story.features.find(f=>f.id===selected);
+        const inherited=borderAt(feature,cursor);
+        if(!feature.boundaryFrames)feature.boundaryFrames=[];
+        feature.boundaryFrames.push({
+          time:cursor,points:deep(inherited.points),confidence:'hypothetical',sources:[]
+        });
+        feature.boundaryFrames.sort((a,b)=>a.time-b.time);
+        activeFrameTime=cursor;activeVertex=null;
+      });
+      status('Карта границы сохранена. Теперь двигай её вершины независимо от других дат.');
+    },'studio-secondary'));
+    if(active)actions.append(button('− Удалить форму на дату',()=>{
+      const time=active.time;mutate(story=>{
+        const feature=story.features.find(f=>f.id===selected);
+        feature.boundaryFrames=feature.boundaryFrames.filter(f=>f.time!==time);
+        if(!feature.boundaryFrames.length)delete feature.boundaryFrames;
+        activeFrameTime=null;activeVertex=null;
+      });
+    },'studio-secondary'));
+    group.append(actions);
+    group.append(make('div','studio-field-head','06 / ГЕОМЕТРИЯ'));
+    group.append(make('p','studio-field-note','Вершины можно двигать касанием карты. Добавление и удаление не изменяют предыдущие даты.'));
+    const pts=boundaryEditorPoints(item);
     const list=make('div','boundary-vertices');
-    for(let i=0;i<(item.points||[]).length;i++){
+    for(let i=0;i<pts.length;i++){
       const b=button('№'+(i+1),()=>{activeVertex=i;renderEditor();},
         'boundary-vertex'+(activeVertex===i?' selected':''));
       b.title='Переместить вершину №'+(i+1);
       list.append(b);
     }
     group.append(list);
-    group.append(button('+ Добавить вершину касанием',()=>{activeVertex=null;updateToolbar();renderEditor();},'studio-secondary'));
-    if(activeVertex!=null&&item.points?.[activeVertex]){
+    group.append(button('+ Добавить вершину касанием',()=>{
+      activeVertex=null;updateToolbar();renderEditor();
+    },'studio-secondary'));
+    if(activeVertex!=null&&pts[activeVertex]){
       const coords=make('div','field-pair');
       for(const axis of [0,1])coords.append(field(axis===0?'X вершины':'Y вершины',
-        item.points[activeVertex][axis],value=>{
+        pts[activeVertex][axis],value=>{
           if(!Number.isFinite(value)||value<0||value>(axis===0?draft.world.width:draft.world.height)){
             status('Точка находится вне карты','error');return;
           }
           const index=activeVertex;
-          mutate(story=>story.features.find(f=>f.id===selected).points[index][axis]=value);
+          mutate(story=>boundaryEditorPoints(story.features.find(f=>f.id===selected))[index][axis]=value);
         },{number:true}));
       group.append(coords);
     }
     group.append(button('− Удалить последнюю вершину',()=>{
-      if(item.points.length<=3){status('Для границы необходимо минимум три вершины','error');return;}
-      mutate(story=>{story.features.find(f=>f.id===selected).points.pop();activeVertex=null;});
+      if(pts.length<=3){status('Для границы необходимо минимум три вершины','error');return;}
+      mutate(story=>{boundaryEditorPoints(story.features.find(f=>f.id===selected)).pop();activeVertex=null;});
     },'studio-secondary'));
     form.append(group);
+  }
+  function boundaryEditorPoints(item){
+    if(activeFrameTime!=null){
+      const target=item.boundaryFrames?.find(f=>f.time===activeFrameTime);
+      if(target)return target.points;
+    }
+    return item.points;
+  }
+  function renderTracks(){
+    if(!draft)return;
+    const lanes=storyTracks(draft);
+    const count=lanes.reduce((n,l)=>n+l.marks.length,0);
+    $('studio-track-count').textContent=count+' '+(count===1?'отметка':'отметок');
+    const panel=$('studio-track-panel');
+    board.closest('.studio-canvas-shell').classList.toggle('tracks-open',tracksVisible);
+    panel.hidden=!tracksVisible;
+    $('studio-track-toggle').setAttribute('aria-expanded',String(tracksVisible));
+    $('studio-track-toggle').firstChild.textContent=(tracksVisible?'▾':'▸')+' Дорожки истории ';
+    if(!tracksVisible){panel.replaceChildren();return;}
+    const range=draft.range,span=range[1]-range[0];
+    panel.replaceChildren();
+    for(const lane of lanes){
+      const line=make('div','track-lane');
+      line.append(make('span','track-lane-label',lane.name));
+      const rail=make('div','track-rail');
+      rail.title='Нажми рядом с отметкой, чтобы перейти к её дате';
+      const max=150,visible=lane.marks.slice(0,max);
+      const navigate=(mark)=>{
+        tab=mark.tab;selected=mark.targetId;cursor=mark.time;
+        activeFrameTime=mark.borderTime??(lane.id==='motion'?mark.time:null);
+        activeVertex=null;renderEditor();
+      };
+      rail.addEventListener('click',event=>{
+        if(event.target.closest('.track-mark')||!visible.length)return;
+        const box=rail.getBoundingClientRect();
+        if(box.width<1)return;
+        const position=clamp((event.clientX-box.left)/box.width,0,1);
+        const selectedMark=visible.reduce((best,m)=>{
+          const dist=Math.abs((m.time-range[0])/span-position);
+          return !best||dist<best.dist?{mark:m,dist}:best;
+        },null);
+        if(selectedMark)navigate(selectedMark.mark);
+      });
+      for(const mark of visible){
+        const p=clamp(100*(mark.time-range[0])/span,1,99);
+        const element=button('',()=>navigate(mark),'track-mark track-'+lane.id);
+        element.style.left=p+'%';
+        element.title=mark.title+' · '+formatStoryTime(mark.time,draft);
+        element.setAttribute('aria-label',element.title);
+        element.classList.toggle('active',mark.targetId===selected&&Math.abs(mark.time-cursor)<.000001);
+        rail.append(element);
+      }
+      if(lane.marks.length>max)rail.append(make('small','track-overflow','+'+(lane.marks.length-max)+' событий'));
+      line.append(rail);panel.append(line);
+    }
   }
   function renderMotionControls(form,item){
     const group=make('section','motion-controls');
@@ -428,7 +546,7 @@ export function initStudio({onOpen,onNotify,builtins}){
       if(btn){btn.classList.toggle('active',t===tab);btn.setAttribute('aria-pressed',String(t===tab));}
     }
     if(!draft[tab].some(e=>e.id===selected))selected=draft[tab][0]?.id||null;
-    renderCollection();renderFields();updateToolbar();paint();
+    renderCollection();renderFields();renderTracks();updateToolbar();paint();
   }
   function dimensions(){
     const rect=board.getBoundingClientRect();
@@ -461,7 +579,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     }
     for(const item of draft.features){
       if(item.kind==='boundary'){
-        const pts=item.points||[];if(pts.length<3)continue;
+        const pts=(item.id===selected?boundaryEditorPoints(item):borderAt(item,cursor).points)||[];if(pts.length<3)continue;
         ctx.beginPath();pts.forEach(([x,y],i)=>{
           const [px,py]=trans(x,y);if(!i)ctx.moveTo(px,py);else ctx.lineTo(px,py);
         });ctx.closePath();
@@ -532,8 +650,9 @@ export function initStudio({onOpen,onNotify,builtins}){
       if(tab==='events')item.focus=[x,y];
       else if(tab==='paths')item.points.push([x,y]);
       else if(tab==='features'&&item.kind==='boundary'){
-        if(activeVertex!=null&&item.points?.[activeVertex])item.points[activeVertex]=[x,y];
-        else if(item.points.length<40)item.points.push([x,y]);
+        const pts=boundaryEditorPoints(item);
+        if(activeVertex!=null&&pts[activeVertex])pts[activeVertex]=[x,y];
+        else if(pts.length<40)pts.push([x,y]);
         else throw Error('Для границы максимум 40 вершин');
       }
       else if(activeFrameTime!=null&&item.motion?.frames?.some(f=>f.time===activeFrameTime)){
@@ -649,9 +768,13 @@ export function initStudio({onOpen,onNotify,builtins}){
     }catch(error){status(error.message,'error');}
   }
   board.addEventListener('pointerup',onMapPoint);
+  $('studio-track-toggle').addEventListener('click',()=>{tracksVisible=!tracksVisible;renderTracks();});
   $('studio-cursor').addEventListener('input',e=>{cursor=Number(e.target.value);activeFrameTime=null;
     $('studio-cursor-label').textContent=formatStoryTime(cursor,draft);paint();});
-  $('studio-cursor').addEventListener('change',()=>{if(tab==='entities'||tab==='features')renderEditor();});
+  $('studio-cursor').addEventListener('change',()=>{
+    if(tab==='features'&&current()?.kind==='boundary'&&current()?.boundaryFrames?.some(f=>Math.abs(f.time-cursor)<.000001))activeFrameTime=cursor;
+    if(tab==='entities'||tab==='features')renderEditor();else renderTracks();
+  });
   $('studio-back').addEventListener('click',back);
   $('studio-new').addEventListener('click',()=>open(createDraft()));
   $('studio-new-battle').addEventListener('click',()=>open(createPhaseDraft()));

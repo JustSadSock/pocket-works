@@ -33,6 +33,7 @@ export const battleScenario = {
     {id:'left-gap',kind:'zone',x:288,y:394,rx:170,ry:108,rotation:-0.15,label:'УЧАСТОК ОТХОДА САКСОНЦЕВ',from:3,confidence:'estimated'},
     {id:'line-of-contact',kind:'boundary',x:310,y:391,rx:125,ry:75,rotation:0,
       points:[[180,353],[257,309],[350,340],[423,405],[349,452],[244,442]],
+      boundaryFrames:[{time:4,points:[[218,300],[300,298],[392,348],[462,402],[411,465],[310,438]],confidence:'hypothetical',sources:[]}],
       label:'УСЛОВНАЯ ЛИНИЯ КОНТАКТА',from:3,until:4,confidence:'hypothetical'}
   ],
   waterways:[],

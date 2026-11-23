@@ -9,7 +9,8 @@
         "tests/core.test.mjs",
         "tests/studio-data.test.mjs",
         "tests/motion.test.mjs",
-        "tests/tactics.test.mjs"
+        "tests/tactics.test.mjs",
+        "tests/frontiers.test.mjs"
       ]
     },
     {
@@ -65,7 +66,8 @@
         "qa/player-flow.spec.ts",
         "qa/studio-flow.spec.ts",
         "qa/depth-flow.spec.ts",
-        "qa/tactics-flow.spec.ts"
+        "qa/tactics-flow.spec.ts",
+        "qa/frontier-flow.spec.ts"
       ]
     },
     {
@@ -199,6 +201,95 @@
         {
           "action": "visible",
           "selector": ".command-group"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "frontier-comparison-visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "#library",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-story='breitenfeld']"
+        },
+        {
+          "action": "click",
+          "selector": "#next"
+        },
+        {
+          "action": "click",
+          "selector": "#next"
+        },
+        {
+          "action": "click",
+          "selector": "#compare-toggle"
+        },
+        {
+          "action": "click",
+          "selector": "#next"
+        },
+        {
+          "action": "visible",
+          "selector": "#comparison-banner"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#compare-mode"
+        },
+        {
+          "action": "visible",
+          "selector": "#compare-split-guide"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "author-timeline-visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "#library",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "#studio-new-battle"
+        },
+        {
+          "action": "visible",
+          "selector": "#studio-map"
+        },
+        {
+          "action": "click",
+          "selector": "#studio-track-toggle"
+        },
+        {
+          "action": "visible",
+          "selector": "#studio-track-panel"
         },
         {
           "action": "screenshot"
