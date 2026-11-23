@@ -1,4 +1,5 @@
 import {clamp, formatYear} from './core.js';
+import {keyframeValue,motionTrail,formatStoryTime} from './motion.js';
 import {PALETTES, MAX_STORIES, createDraft,cloneAsDraft,exportPackage,
   loadLibrary,parseImport,parseStory,persistLibrary,upsertLibrary,newId} from './studio-data.js';
 
@@ -71,7 +72,8 @@ export function initStudio({onOpen,onNotify,builtins}){
   // Reading localStorage itself may throw in restricted WebKit contexts.
   const storage=(()=>{try{return window.localStorage;}catch{return {getItem:()=>null,setItem:()=>{throw new Error('Локальное хранилище недоступно');}};}})();
   let library=loadLibrary(storage);
-  let draft=null, savedHash='',tab='events',selected=null,undo=[],redo=[],dirty=false;
+  let draft=null, savedHash='',tab='events',selected=null,undo=[],redo=[],dirty=false,
+    cursor=null,activeFrameTime=null;
   const board=$('studio-map');
   const ctx=board.getContext('2d');
   const input=$('studio-import');
@@ -88,7 +90,9 @@ export function initStudio({onOpen,onNotify,builtins}){
     $('studio-preview').disabled=!draft;
     $('studio-dirty').textContent=dirty?'НЕ СОХРАНЕНО':'СОХРАНЕНО';
     $('studio-dirty').classList.toggle('is-dirty',dirty);
-    $('studio-map-hint').textContent=tab==='paths'?
+    const active=current();
+    $('studio-map-hint').textContent=(tab==='entities'||tab==='features')&&activeFrameTime!=null&&active?.motion?.frames?.some(f=>f.time===activeFrameTime)?
+      'Нажми на карте: изменится выбранный ключевой кадр на '+formatStoryTime(activeFrameTime,draft)+'.':tab==='paths'?
       'Нажми на карту, чтобы добавить точку маршрута. Последнюю точку можно удалить в форме.' :
       tab==='sources'?'Выберите источник слева и укажите его URL.':
       'Коснись карты, чтобы переместить выбранный объект или фокус события.';
@@ -109,7 +113,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     redo=[];markDirty();renderEditor();
   }
   function pickTab(next){
-    tab=next;selected=draft[tab]?.[0]?.id||null;
+    tab=next;selected=draft[tab]?.[0]?.id||null;activeFrameTime=null;
     renderEditor();
   }
   function renderCollection(){
@@ -124,7 +128,7 @@ export function initStudio({onOpen,onNotify,builtins}){
         tab==='entities'?fmt(item.from):tab==='features'?fmt(item.from):
         tab==='paths'?item.points.length+' точек':'Ссылка на публикацию');
       line.append(upper,sub);
-      line.addEventListener('click',()=>{selected=item.id;renderEditor();});
+      line.addEventListener('click',()=>{selected=item.id;activeFrameTime=null;renderEditor();});
       list.append(line);
     }
     if(!list.childNodes.length)list.append(make('p','studio-empty','Здесь пока пусто. Добавь первый элемент.'));
@@ -172,7 +176,8 @@ export function initStudio({onOpen,onNotify,builtins}){
     const add=(label,key,opts={})=>form.append(field(label,item[key]??'',value=>setValue(key,value),opts));
     const coords=()=>{
       const row=make('div','field-pair');
-      const getXY=tab==='events'?item.focus:[item.x,item.y];
+      const frame=(tab==='entities'||tab==='features')&&activeFrameTime!=null?item.motion?.frames?.find(f=>f.time===activeFrameTime):null;
+      const getXY=tab==='events'?item.focus:frame?[frame.x,frame.y]:[item.x,item.y];
       row.append(field('X',Math.round(getXY[0]),n=>changeCoords(0,n),{number:true}),
         field('Y',Math.round(getXY[1]),n=>changeCoords(1,n),{number:true}));
       form.append(row);
@@ -194,14 +199,14 @@ export function initStudio({onOpen,onNotify,builtins}){
       add('Состояние в этот момент','current',{long:true});
       add('Общий контекст','description',{long:true});
       add('Достоверность','confidence',{options:CONFIDENCE});
-      coords();sourceSelectItem(form,item);
+      coords();sourceSelectItem(form,item);renderMotionControls(form,item);
     }else if(tab==='features'){
       add('Название на карте','label');add('Форма','kind',{options:FEATURE_OPTIONS});
       add('Появление (год)','from',{number:true});
       add('Исчезновение (пусто = до конца)','until',{number:true});
       add('Радиус по X','rx',{number:true});add('Радиус по Y','ry',{number:true});
       add('Достоверность','confidence',{options:CONFIDENCE});
-      coords();
+      coords();renderMotionControls(form,item);
     }else if(tab==='paths'){
       add('Появление маршрута (год)','from',{number:true});
       add('Достоверность','confidence',{options:CONFIDENCE});
@@ -222,6 +227,78 @@ export function initStudio({onOpen,onNotify,builtins}){
     const opts=[['','Без источника'],...draft.sources.map(s=>[s.id,s.title||s.id])];
     node.append(field('Привязанный источник',(item.sources||[])[0]||'',id=>setValue('sources',id?[id]:[]),{options:opts}));
   }
+  function renderMotionControls(form,item){
+    const group=make('section','motion-controls');
+    group.append(make('div','studio-field-head','04 / ПОЛОЖЕНИЯ ВО ВРЕМЕНИ'));
+    group.append(make('p','studio-field-note',
+      'Запиши позиции в разные годы. Режим «без домыслов» переставляет объект только по кадрам; режим «условная траектория» показывает неточное движение пунктиром.'));
+    const movement=item.motion;
+    if(movement?.frames?.length){
+      group.append(field('Как показывать переход',movement.mode,mode=>{
+        mutate(story=>story[tab].find(i=>i.id===selected).motion.mode=mode);
+      },{options:[['hold','Без домыслов: только кадры'],['illustrative','Условная траектория (пунктир)']]}));
+      group.append(field('Точность траектории',movement.confidence,confidence=>{
+        mutate(story=>story[tab].find(i=>i.id===selected).motion.confidence=confidence);
+      },{options:[['hypothetical','Гипотеза автора'],['estimated','Приблизительная реконструкция'],['disputed','Спорная интерпретация']]}));
+      const strip=make('div','motion-keyframes');
+      for(const frame of movement.frames){
+        const frameButton=button(formatStoryTime(frame.time,draft),()=>{
+          cursor=frame.time;activeFrameTime=frame.time;renderEditor();
+          $('studio-cursor').focus({preventScroll:true});
+        },'motion-keyframe'+(frame.time===activeFrameTime?' selected':''));
+        frameButton.title='Изменить положение объекта на '+formatStoryTime(frame.time,draft);
+        strip.append(frameButton);
+      }
+      group.append(strip);
+      if(activeFrameTime!=null){
+        const currentFrame=movement.frames.find(f=>f.time===activeFrameTime);
+        if(currentFrame){
+          group.append(field('Год кадра',currentFrame.time,value=>{
+            if(!Number.isFinite(value)||value===0||value<(item.from??draft.range[0])||value>draft.range[1]){status('Некорректная дата кадра','error');return;}
+            if(movement.frames.some(f=>f.time===value&&f.time!==activeFrameTime)){status('На эту дату уже есть кадр','error');return;}
+            const old=activeFrameTime;
+            mutate(story=>{
+              const f=story[tab].find(i=>i.id===selected).motion.frames.find(v=>v.time===old);
+              f.time=value;story[tab].find(i=>i.id===selected).motion.frames.sort((a,b)=>a.time-b.time);
+              activeFrameTime=value;cursor=value;
+            });
+          },{number:true}));
+        }
+      }
+    }
+    const row=make('div','motion-actions');
+    row.append(button('⊕ Записать позицию в '+formatStoryTime(cursor,draft),()=>{
+      if(cursor<(item.from??draft.range[0])||item.until!=null&&cursor>item.until){
+        status('Объект не существует на выбранную дату','error');return;
+      }
+      const exists=item.motion?.frames?.some(frame=>Math.abs(frame.time-cursor)<.000001);
+      if(exists){activeFrameTime=item.motion.frames.find(f=>Math.abs(f.time-cursor)<.000001).time;renderEditor();return;}
+      mutate(story=>{
+        const target=story[tab].find(i=>i.id===selected);
+        if(!target.motion)target.motion={mode:'hold',confidence:'hypothetical',frames:[]};
+        if(target.motion.frames.length>=64)throw new Error('Достигнут лимит 64 кадров');
+        const pos=keyframeValue(target,cursor);
+        target.motion.frames.push({time:cursor,x:Math.round(pos.x),y:Math.round(pos.y)});
+        target.motion.frames.sort((a,b)=>a.time-b.time);
+        activeFrameTime=cursor;
+      });
+      status('Кадр записан. Коснись карты или введи X/Y, чтобы изменить положение.');
+    },'studio-secondary'));
+    if(movement?.frames?.length){
+      const removing=movement.frames.find(f=>f.time===activeFrameTime);
+      row.append(button('− Удалить кадр',()=>{
+        if(!removing){status('Выбери кадр сверху','error');return;}
+        mutate(story=>{
+          const target=story[tab].find(i=>i.id===selected);
+          target.motion.frames=target.motion.frames.filter(f=>f.time!==removing.time);
+          if(!target.motion.frames.length)delete target.motion;
+          activeFrameTime=null;
+        });
+      },'studio-secondary'));
+    }
+    group.append(row);
+    form.append(group);
+  }
   function changeCoords(axis,value){
     if(!Number.isFinite(value)||value<0||value>(axis===0?draft.world.width:draft.world.height)){
       status('Координаты должны находиться внутри карты','error');return;
@@ -229,6 +306,8 @@ export function initStudio({onOpen,onNotify,builtins}){
     mutate(story=>{
       const item=story[tab].find(i=>i.id===selected);
       if(tab==='events')item.focus[axis]=value;
+      else if(activeFrameTime!=null&&item.motion?.frames?.some(f=>f.time===activeFrameTime))
+        item.motion.frames.find(f=>f.time===activeFrameTime)[axis===0?'x':'y']=value;
       else item[axis===0?'x':'y']=value;
     });
   }
@@ -240,6 +319,14 @@ export function initStudio({onOpen,onNotify,builtins}){
     $('studio-intro').value=draft.intro||'';
     $('studio-start').value=draft.range[0];
     $('studio-end').value=draft.range[1];
+    cursor=Number.isFinite(cursor)?clamp(cursor,draft.range[0],draft.range[1]):draft.range[0];
+    $('studio-cursor').min=String(draft.range[0]);
+    $('studio-cursor').max=String(draft.range[1]);
+    $('studio-cursor').step=String(draft.timeUnit==='phase'?1:Math.min(1,Math.max(.01,(draft.range[1]-draft.range[0])/1000)));
+    $('studio-cursor').value=String(cursor);
+    $('studio-cursor-label').textContent=formatStoryTime(cursor,draft);
+    $('studio-cursor-start').textContent=formatStoryTime(draft.range[0],draft);
+    $('studio-cursor-end').textContent=formatStoryTime(draft.range[1],draft);
     for(const t of COLLECTIONS){
       const btn=document.querySelector('[data-studio-tab="'+t+'"]');
       if(btn){btn.classList.toggle('active',t===tab);btn.setAttribute('aria-pressed',String(t===tab));}
@@ -277,7 +364,8 @@ export function initStudio({onOpen,onNotify,builtins}){
       ctx.strokeStyle='#79a0a1';ctx.lineWidth=Math.max(2,13*d.scale);ctx.stroke();
     }
     for(const item of draft.features){
-      const [x,y]=trans(item.x,item.y);ctx.beginPath();
+      const position=keyframeValue(item,cursor);
+      const [x,y]=trans(position.x,position.y);ctx.beginPath();
       ctx.ellipse(x,y,item.rx*d.scale,item.ry*d.scale,item.rotation||0,0,Math.PI*2);
       ctx.fillStyle=item.id===selected?'rgba(161,83,54,.35)':'rgba(171,146,100,.24)';
       ctx.fill();ctx.strokeStyle=item.id===selected?'#9b523f':'rgba(92,79,56,.45)';ctx.stroke();
@@ -293,7 +381,15 @@ export function initStudio({onOpen,onNotify,builtins}){
       }
     }
     for(const item of draft.entities){
-      const [x,y]=trans(item.x,item.y);
+      const position=keyframeValue(item,cursor);
+      if(item.id===selected&&item.motion?.frames?.length){
+        const trail=motionTrail(item,cursor);
+        if(trail.length>1){
+          ctx.beginPath();trail.forEach(([lx,ly],i)=>{const [px,py]=trans(lx,ly);if(!i)ctx.moveTo(px,py);else ctx.lineTo(px,py);});
+          ctx.strokeStyle='#5b8d90';ctx.setLineDash([5,5]);ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([]);
+        }
+      }
+      const [x,y]=trans(position.x,position.y);
       ctx.beginPath();ctx.arc(x,y,item.id===selected?8:5,0,Math.PI*2);
       ctx.fillStyle=item.id===selected?'#ad543d':'#475e58';ctx.fill();
       ctx.fillStyle='#343e36';ctx.textAlign='center';ctx.font='12px Georgia';
@@ -319,7 +415,9 @@ export function initStudio({onOpen,onNotify,builtins}){
       const item=story[tab].find(v=>v.id===selected);
       if(tab==='events')item.focus=[x,y];
       else if(tab==='paths')item.points.push([x,y]);
-      else{item.x=x;item.y=y;}
+      else if(activeFrameTime!=null&&item.motion?.frames?.some(f=>f.time===activeFrameTime)){
+        const frame=item.motion.frames.find(f=>f.time===activeFrameTime);frame.x=x;frame.y=y;
+      } else{item.x=x;item.y=y;}
     });
   }
   function addItem(){
@@ -356,6 +454,7 @@ export function initStudio({onOpen,onNotify,builtins}){
   function open(draftStory){
     draft=deep(draftStory);savedHash=library.some(s=>s.id===draft.id)?JSON.stringify(draft):'';
     dirty=!savedHash;undo=[];redo=[];tab='events';selected=draft.events[0]?.id||null;
+    cursor=draft.range[0];activeFrameTime=null;
     $('library').hidden=true;$('viewer').hidden=true;screen.hidden=false;
     renderEditor();status(dirty?'Черновик ещё не сохранён.':'История открыта для редактирования.');
     requestAnimationFrame(paint);
@@ -420,6 +519,9 @@ export function initStudio({onOpen,onNotify,builtins}){
     }catch(error){status(error.message,'error');}
   }
   board.addEventListener('pointerup',onMapPoint);
+  $('studio-cursor').addEventListener('input',e=>{cursor=Number(e.target.value);activeFrameTime=null;
+    $('studio-cursor-label').textContent=formatStoryTime(cursor,draft);paint();});
+  $('studio-cursor').addEventListener('change',()=>{if(tab==='entities'||tab==='features')renderEditor();});
   $('studio-back').addEventListener('click',back);
   $('studio-new').addEventListener('click',()=>open(createDraft()));
   $('studio-clone-rome').addEventListener('click',()=>open(cloneAsDraft(builtins[0])));
