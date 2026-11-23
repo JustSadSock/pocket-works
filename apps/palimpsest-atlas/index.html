@@ -136,6 +136,7 @@
       <div class="viewer-heading"><span id="story-caption">ПАЛИМПСЕСТ / ИСТОРИЯ 01</span><strong id="story-title">Как возник Рим</strong></div>
       <div class="header-actions">
         <button id="edit-story" class="icon-button" type="button" hidden title="Редактировать личную историю" aria-label="Редактировать историю">✎</button>
+        <button id="compare-toggle" class="icon-button compare-icon" type="button" data-native-press aria-pressed="false" title="Запомнить дату для сравнения" aria-label="Сравнить исторические даты">⇄</button>
         <button id="bookmark" class="icon-button" type="button" data-native-press aria-pressed="false" title="Запомнить момент" aria-label="Сохранить закладку">◇</button>
         <button id="list-toggle" class="icon-button" type="button" data-native-press aria-label="Открыть список событий" aria-expanded="false">☷</button>
       </div>
@@ -147,6 +148,14 @@
         <button type="button" id="map-plus" data-native-press aria-label="Приблизить карту">+</button>
         <button type="button" id="map-minus" data-native-press aria-label="Отдалить карту">−</button>
         <button type="button" id="map-home" data-native-press aria-label="Вся карта">⌖</button>
+      </div>
+      <div class="comparison-banner" id="comparison-banner" hidden data-ui>
+        <div class="comparison-content">
+          <span>СРАВНЕНИЕ ДВУХ ДАТ</span>
+          <strong id="compare-label">Базовая дата — текущая дата</strong>
+          <small id="compare-details">Переместите время, чтобы увидеть изменения.</small>
+        </div>
+        <button id="compare-reset" type="button" data-native-press aria-label="Закончить сравнение">✕</button>
       </div>
       <div class="map-corner" data-ui><span class="compass-arrow">↑</span> N</div>
     </div>
