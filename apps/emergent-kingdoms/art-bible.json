@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "product": "emergent-kingdoms",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "palimpsest-atlas",
+      "evidence": "apps/palimpsest-atlas/index.html, visual-direction.json and app.config.json reviewed from main",
+      "lesson": "Documentary story selection is replaced by immediate autonomous map, quantitative observations and experiments."
+    },
+    {
+      "slug": "kaskad-patterns",
+      "evidence": "Existing comparative description in apps/palimpsest-atlas/visual-direction.json; direct screenshots not available.",
+      "lesson": "Simple rules are visible through their outcomes, but this sandbox needs geographic causality and branch comparison rather than a pattern grid."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://www.loc.gov/research-centers/geography-and-map/collections/",
+      "observation": "Collection encompasses atlases, maps and the aesthetic and technical development of cartography.",
+      "principle": "Map sheets should prioritize the geographic field and functional cartographic marks.",
+      "application": "A restrained atlas sheet, legible place names and separate legend surround the live geography.",
+      "avoid": "Do not reproduce a particular historical map or make invented locations look like historical evidence.",
+      "inspectedAt": "2026-11-24"
+    },
+    {
+      "url": "https://www.naturalearthdata.com/downloads/",
+      "observation": "Cultural, physical and raster themes are separated at several scales.",
+      "principle": "Distinct map layers should encode a specific measurable geographic attribute.",
+      "application": "Switch between political, terrain, density, culture, fertility, trade and technology layers.",
+      "avoid": "Do not copy real-world boundaries into a procedurally generated fictional geography.",
+      "inspectedAt": "2026-11-24"
+    },
+    {
+      "url": "https://www.redblobgames.com/maps/terrain-from-noise/",
+      "observation": "Procedural elevation shaping and moisture can produce differentiated landscapes.",
+      "principle": "Land and environmental conditions must be correlated spatial fields rather than independent random tiles.",
+      "application": "Use seeded multi-frequency noise and a spatial coastal falloff to derive the initial geography.",
+      "avoid": "Do not imply the simplified drainage rule is a physically accurate hydrological solver.",
+      "inspectedAt": "2026-11-24"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "field-station",
+      "medium": "Canvas cartography with authored SVG identity and a continuous text ledger.",
+      "composition": "One uninterrupted geographic sheet, side journal, shared year controls.",
+      "interaction": "Select an area and change its environmental conditions to compare divergent timelines.",
+      "motion": "Immediate geographic panning and discrete annual changes, with visible replay progress.",
+      "rationale": "A stable spatial frame makes cause and effect visible without hiding the world."
+    },
+    {
+      "id": "chronicle-scroll",
+      "medium": "A long illustrated HTML chronicle with small embedded map excerpts.",
+      "composition": "A vertical scroll of events where each map is an inline explanatory figure.",
+      "interaction": "Scroll to different years and open event-specific summaries as reading passages.",
+      "motion": "Chapter transitions reveal map excerpts after the associated text.",
+      "rationale": "Excellent for retrospective reading, poor for live experimentation and a continuous world."
+    },
+    {
+      "id": "globe",
+      "medium": "WebGL sphere with orbit camera, elevated terrain and rotating labels.",
+      "composition": "The spherical world dominates and all instruments appear as floating overlays.",
+      "interaction": "Orbit continents and select regions through raycast on the curved surface.",
+      "motion": "Inertial globe rotation and camera easing between distant areas.",
+      "rationale": "Makes the world attractive but impairs equal-scale branch comparison and adds GPU cost."
+    }
+  ],
+  "selection": {
+    "concept": "field-station",
+    "reason": "A map sheet with common scale and comparable metrics directly supports controlled experiments.",
+    "rejected": [
+      {
+        "concept": "chronicle-scroll",
+        "reason": "Reading order would interrupt simultaneous observation of geography and the current simulation."
+      },
+      {
+        "concept": "globe",
+        "reason": "Projection differences and hidden hemispheres obstruct fair comparison between branches."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "canvas-svg",
+      "availability": "available",
+      "reason": "Authored Canvas rendering and SVG icon require no third-party art services or online assets."
+    }
+  ],
+  "assets": [
+    {
+      "id": "identity",
+      "tool": "canvas-svg",
+      "source": "art-bible.json",
+      "output": "icons/icon.svg",
+      "role": "A globe cut by borders and crowned by a settlement marks the app in the catalog.",
+      "acceptance": "Recognizable at launcher size with a distinct silhouette and coherent colors.",
+      "integration": "Used by the manifest and HTML and included in the worker precache.",
+      "provenance": "Original SVG geometry authored for this app, with no imported imagery.",
+      "maxBytes": 8192
+    },
+    {
+      "id": "atlas",
+      "tool": "canvas-svg",
+      "source": "engine.js",
+      "output": "app.js",
+      "role": "Procedural map reveals geography and each simulated social property.",
+      "acceptance": "Land water and selected territory must remain visually distinguishable on small displays.",
+      "integration": "Canvas maps read the same state as the ledger and share a camera when compared.",
+      "provenance": "Seeded original geography and renderer, with no externally supplied raster assets.",
+      "maxBytes": 70000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 15
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Small map labels can collide; renderer skips intersecting labels.",
+      "Mobile transport controls must not block access to the journal."
+    ],
+    "comparisons": [
+      "Compare the lab view to Palimpsest's library-driven documentary layout.",
+      "Compare the map to Kaskad's pattern-centric working surface."
+    ]
+  }
+}
