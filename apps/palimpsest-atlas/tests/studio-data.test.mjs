@@ -53,16 +53,16 @@ test('full story with regions and route roundtrips and keeps provenance',()=>{
 });
 test('local library upsert, reload, replace and delete persist deterministically',()=>{
   const storage=memory();
-  const a=createDraft({title:'A'}),b=createDraft({title:'B'});
+  const a=createDraft({title:'Story A'}),b=createDraft({title:'Story B'});
   const list=upsertLibrary(upsertLibrary([],a),b);
   const saved=persistLibrary(list,storage);
   assert.equal(saved.length,2);
   assert.ok(storage.getItem(LIBRARY_KEY));
   assert.equal(loadLibrary(storage).length,2);
-  a.title='A revised';
+  a.title='Story A revised';
   const next=upsertLibrary(loadLibrary(storage),a);
   persistLibrary(next,storage);
-  assert.equal(loadLibrary(storage).find(s=>s.id===a.id).title,'A revised');
+  assert.equal(loadLibrary(storage).find(s=>s.id===a.id).title,'Story A revised');
   persistLibrary(next.filter(s=>s.id!==b.id),storage);
   assert.equal(loadLibrary(storage).length,1);
 });
