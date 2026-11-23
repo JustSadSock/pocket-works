@@ -61,7 +61,10 @@ test('editor authors dated polygon shapes and navigable timeline, roundtrips thr
   await expect(page.locator('#studio-track-panel')).toBeVisible();
   await expect(page.locator('.track-lane')).toHaveCount(4);
   await expect(page.locator('.track-mark.track-frontiers')).toHaveCount(2);
-  await page.locator('.track-mark.track-frontiers').nth(1).click();
+  const frontierRail=page.locator('.track-lane').nth(2).locator('.track-rail');
+  const frontierBox=await frontierRail.boundingBox();
+  if(!frontierBox)throw new Error('Дорожка границ недоступна');
+  await frontierRail.click({position:{x:frontierBox.width*.50,y:frontierBox.height*.50}});
   await expect(page.locator('#studio-cursor-label')).toContainText('ФАЗА III');
   await page.locator('#studio-save').click();
   await expect(page.locator('#studio-dirty')).toHaveText('СОХРАНЕНО');
