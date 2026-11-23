@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runtime": "quick",
+  "slug": "tidepool",
+  "name": "ПРИЛИВ",
+  "shortName": "Прилив",
+  "description": "Цветная экспедиция: присоединяй острова, меняя цвет территории.",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-23",
+  "releaseDateTime": "2026-11-23T10:00:00+02:00",
+  "changelog": [
+    "Остров дня, случайные карты, выбор цвета, подсчёт прироста, отмена хода и личные рекорды."
+  ],
+  "status": "experimental",
+  "preset": "interactive",
+  "accent": "#db735b",
+  "backgroundColor": "#f8f2e6",
+  "themeColor": "#f8f2e6",
+  "orientation": "any",
+  "cacheName": "tidepool-v1.0.0",
+  "storageNamespace": "pocket-works:tidepool",
+  "tags": [
+    "puzzle",
+    "colors",
+    "wildcard",
+    "offline"
+  ],
+  "order": 464
+}
