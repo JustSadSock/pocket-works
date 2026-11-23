@@ -407,15 +407,27 @@ export function initStudio({onOpen,onNotify,builtins}){
       const line=make('div','track-lane');
       line.append(make('span','track-lane-label',lane.name));
       const rail=make('div','track-rail');
-      const max=150;
-      for(const mark of lane.marks.slice(0,max)){
+      rail.title='Нажми рядом с отметкой, чтобы перейти к её дате';
+      const max=150,visible=lane.marks.slice(0,max);
+      const navigate=(mark)=>{
+        tab=mark.tab;selected=mark.targetId;cursor=mark.time;
+        activeFrameTime=mark.borderTime??(lane.id==='motion'?mark.time:null);
+        activeVertex=null;renderEditor();
+      };
+      rail.addEventListener('click',event=>{
+        if(event.target.closest('.track-mark')||!visible.length)return;
+        const box=rail.getBoundingClientRect();
+        if(box.width<1)return;
+        const position=clamp((event.clientX-box.left)/box.width,0,1);
+        const selectedMark=visible.reduce((best,m)=>{
+          const dist=Math.abs((m.time-range[0])/span-position);
+          return !best||dist<best.dist?{mark:m,dist}:best;
+        },null);
+        if(selectedMark)navigate(selectedMark.mark);
+      });
+      for(const mark of visible){
         const p=clamp(100*(mark.time-range[0])/span,1,99);
-        const element=button('',()=>{
-          tab=mark.tab;selected=mark.targetId;cursor=mark.time;
-          activeFrameTime=mark.borderTime??(lane.id==='motion'?mark.time:null);
-          activeVertex=null;
-          renderEditor();
-        },'track-mark track-'+lane.id);
+        const element=button('',()=>navigate(mark),'track-mark track-'+lane.id);
         element.style.left=p+'%';
         element.title=mark.title+' · '+formatStoryTime(mark.time,draft);
         element.setAttribute('aria-label',element.title);
