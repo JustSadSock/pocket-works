@@ -5,8 +5,8 @@ import {clamp,formatYear,displayYear,era,fraction,
   snapshotAt,previousEvent,nextEvent,eventBefore,
   playbackStep,zoomWindow,panWindow,smartTicks,validateStory} from '../core.js';
 
-test('both unrelated historical scenarios are valid and independently loaded',()=>{
-  assert.equal(stories.length,2);
+test('three independent historical scenarios cover BCE, modern years and ordinal battle phases',()=>{
+  assert.equal(stories.length,3);
   for(const s of stories)assert.deepEqual(validateStory(s),[],s.id);
   assert.notEqual(stories[0].type,stories[1].type);
 });
