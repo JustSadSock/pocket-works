@@ -534,3 +534,22 @@ button:active{transform:translateY(1px)}
   .comparison-banner .compare-actions>input{min-width:60px}
   .comparison-banner #compare-reset{width:29px;min-width:29px;flex-shrink:0;padding:0}
 }
+
+/* v0.5 QA repair: the timeline's flex item must never collapse behind its
+   own rail. Expand the workbench on mobile rather than clipping click targets. */
+.studio-track-panel:not([hidden]){flex:0 0 auto;min-height:142px;max-height:160px;
+  overflow-y:auto;align-content:start;isolation:isolate}
+.studio-track-panel .track-lane{position:relative;z-index:1;flex:0 0 auto}
+.studio-track-panel .track-rail{z-index:1}
+.studio-track-panel .track-mark{z-index:2;pointer-events:auto}
+.studio-canvas-shell{transition:height 180ms ease}
+@media(max-width:820px) and (min-height:621px){
+  .studio-canvas-shell.tracks-open{height:min(65vh,535px);min-height:475px}
+  .studio-canvas-shell.tracks-open .studio-map{min-height:120px}
+  .studio-canvas-shell.tracks-open .studio-track-panel{min-height:136px;max-height:146px}
+}
+@media(max-width:820px) and (max-height:620px){
+  .studio-canvas-shell.tracks-open{height:min(76vh,330px);min-height:248px;overflow-y:auto}
+  .studio-canvas-shell.tracks-open .studio-map{min-height:70px}
+  .studio-canvas-shell.tracks-open .studio-track-panel{min-height:124px;max-height:132px}
+}
