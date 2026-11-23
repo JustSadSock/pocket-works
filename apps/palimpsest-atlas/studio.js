@@ -193,7 +193,7 @@ export function initStudio({onOpen,onNotify,builtins}){
       coords();
       sourceSelectItem(form,item);
     }else if(tab==='entities'){
-      add('Название','name');add('Тип','type',{options:TYPE_OPTIONS});
+      add('Название','name');add('Короткая метка на карте','mapLabel');add('Тип','type',{options:TYPE_OPTIONS});
       add('Появление (год)','from',{number:true});
       add('Исчезновение (пусто = до конца)','until',{number:true});
       add('Состояние в этот момент','current',{long:true});
