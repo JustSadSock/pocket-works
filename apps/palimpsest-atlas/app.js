@@ -85,7 +85,7 @@ let studioApi=null;
 function openStory(id,options={}) {
   const story=studioApi?.getStory(id)||getStory(id);
   state.parentView=options.parentView||null;
-  state.story=story;state.playing=false;state.inspector=null;state.tab='now';
+  state.story=story;state.playing=false;state.inspector=null;state.inspectorMoment=null;state.tab='now';
   state.activeEventId=null;state.mapPointers.clear();state.timePointers.clear();
   state.mapPinch=null;state.timePinch=null;state.compareTime=null;state.compareMode='overlay';state.splitPercent=50;
   ui.compareToggle?.setAttribute('aria-pressed','false');
@@ -396,8 +396,8 @@ function sourceList(ids) {
   }
   ui.sources.append(fragment);
 }
-function openInspector(kind,item) {
-  state.inspector={kind,id:item.id};state.tab='now';
+function openInspector(kind,item,atTime=null) {
+  state.inspector={kind,id:item.id};state.inspectorMoment=Number.isFinite(atTime)?atTime:null;state.tab='now';
   ui.inspector.hidden=false;ui.outline.hidden=true;
   ui.list.setAttribute('aria-expanded','false');
   closeCommandPanel();updateInspector();updatePortal();
@@ -408,26 +408,30 @@ function updateInspector() {
     record.kind==='feature'?state.story.features.find(x=>x.id===record.id):
     state.story.entities.find(x=>x.id===record.id);
   if(!item){ui.inspector.hidden=true;state.inspector=null;return;}
+  const moment=Number.isFinite(state.inspectorMoment)?state.inspectorMoment:state.time;
+  const boundary=record.kind==='feature'?borderAt(item,moment):null;
   ui.inspectorType.textContent=record.kind==='event'?'ИСТОРИЧЕСКОЕ СОБЫТИЕ':
     record.kind==='feature'?'ГРАНИЦА / УСЛОВНАЯ РЕКОНСТРУКЦИЯ':item.type.toUpperCase();
   ui.inspectorName.textContent=record.kind==='event'?item.title:record.kind==='feature'?item.label:item.name;
-  ui.confidence.textContent=CONFIDENCE[item.confidence]||CONFIDENCE.estimated;
+  ui.confidence.textContent=CONFIDENCE[boundary?.confidence||item.confidence]||CONFIDENCE.estimated;
   ui.tabNow.classList.toggle('active',state.tab==='now');ui.tabGeneral.classList.toggle('active',state.tab==='general');
   ui.tabNow.setAttribute('aria-pressed',String(state.tab==='now'));
   ui.tabGeneral.setAttribute('aria-pressed',String(state.tab==='general'));
   if(record.kind==='feature'){
     ui.inspectorBody.textContent=(state.tab==='now'?'В выбранный момент: ':'Контекст: ')+
-      (item.confidence==='confirmed'?'Указанная граница подтверждается источником.':
+      (boundary.confidence==='confirmed'?'Указанная граница подтверждается источником.':
       'Граница условная, положение и конфигурация не гарантируют точную историческую географию.')+
       '\n\nПоказана с '+formatStoryTime(item.from||state.story.range[0],state.story)+
-      (item.until!=null?' до '+formatStoryTime(item.until,state.story):' до конца сюжета');
+      (item.until!=null?' до '+formatStoryTime(item.until,state.story):' до конца сюжета')+
+      '\n\nФорма на '+formatStoryTime(moment,state.story)+': '+
+      (boundary.activeBorderTime!=null?'картографический снимок от '+formatStoryTime(boundary.activeBorderTime,state.story):'исходная граница')+'.';
   }else if(record.kind==='event'){
     ui.inspectorBody.textContent=state.tab==='now'?
       formatStoryTime(item.time,state.story)+' · '+item.subtitle+'\n\n'+item.text :
       item.text+'\n\nПоказанный на сцене маршрут или граница может быть схематичным. Степень исторической уверенности указана выше.';
   } else {
     ui.inspectorBody.textContent=state.tab==='now'?
-      (state.time < item.from ? 'На выбранную дату объект ещё не отмечен в этой реконструкции.' : item.current) :
+      (moment < item.from ? 'На выбранную дату объект ещё не отмечен в этой реконструкции.' : item.current) :
       item.description;
     const command=commandAt(state.story,item);
     if(command){
@@ -435,20 +439,21 @@ function updateInspector() {
       const parentLine=parent?' / '+parent.name:'';
       ui.inspectorBody.textContent+='\n\nШтаб: '+command.name+parentLine+
         (item.commander?'\nКомандир: '+item.commander:'');
-      const order=orderAt(item,state.time);
+      const order=orderAt(item,moment);
       if(order)ui.inspectorBody.textContent+='\n\nПриказ: '+
         (COMMAND_ACTIONS.find(a=>a[0]===order.action)?.[1]||order.action)+
         (order.note?'\n'+order.note:'')+
         '\nТочность: '+(CONFIDENCE[order.confidence]||CONFIDENCE.estimated);
     }
     if(item.motion?.frames?.length){
-      const p=keyframeValue(item,state.time);
+      const p=keyframeValue(item,moment);
       const label=p.interpolated?'Условное движение между кадрами.':'Положение по авторскому кадру.';
       ui.inspectorBody.textContent+='\n\n'+label+' Кадров: '+item.motion.frames.length+
         '. Траектория: '+(item.motion.mode==='illustrative'?'иллюстративная, не точный марш':'только отмеченные позиции')+'.';
     }
   }
-  sourceList(item.sources);
+  if(Number.isFinite(state.inspectorMoment))ui.inspectorBody.textContent+='\n\nВыбранный исторический срез: '+formatStoryTime(moment,state.story)+'.';
+  sourceList(boundary?.sources||item.sources);
 }
 function resizeOne(canvas,record) {
   const rect=canvas.getBoundingClientRect();
@@ -823,16 +828,17 @@ function locateTap(x,y){
     .map(h=>({...h,d:Math.hypot(h.x-x,h.y-y)}))
     .filter(h=>h.d<h.radius)
     .sort((a,b)=>a.d-b.d)[0];
-  if(hit){setPlaying(false);openInspector('entity',hit.entity);return;}
-  const current=eventBefore(state.story,state.time);
+  if(hit){setPlaying(false);openInspector('entity',hit.entity,hit.viewTime);return;}
+  const activeTime=state.compareMode==='split'&&Number.isFinite(state.compareTime)&&x<state.sizes.map.width*state.splitPercent/100?state.compareTime:state.time;
+  const current=eventBefore(state.story,activeTime);
   if(current?.focus){
     const p=project(current.focus[0],current.focus[1]);
-    if(Math.hypot(p.x-x,p.y-y)<48){openInspector('event',current);return;}
+    if(Math.hypot(p.x-x,p.y-y)<48){openInspector('event',current,activeTime);return;}
   }
   const scene=unproject(x,y);
-  const feature=(snapshotAt(state.story,state.time).features||[])
+  const feature=(snapshotAt(state.story,activeTime).features||[])
     .filter(f=>f.kind==='boundary'&&pointInPolygon(scene.x,scene.y,f.points)).at(-1);
-  if(feature){setPlaying(false);openInspector('feature',feature);return;}
+  if(feature){setPlaying(false);openInspector('feature',feature,activeTime);return;}
   if(!ui.inspector.hidden){ui.inspector.hidden=true;state.inspector=null;state.dirty=true;}
 }
 function pointerPosition(event,element){
