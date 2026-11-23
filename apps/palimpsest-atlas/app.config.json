@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "slug": "palimpsest-atlas",
+  "name": "ПАЛИМПСЕСТ · АТЛАС",
+  "shortName": "Палимпсест",
+  "description": "Интерактивный исторический атлас: смотри развитие событий на живой карте, перематывай время и исследуй источники.",
+  "version": "0.1.0",
+  "releaseDate": "2026-11-23",
+  "releaseDateTime": "2026-11-23T02:41:00+02:00",
+  "changelog": [
+    "Первый исторический плеер с двумя независимыми сюжетами: возникновение Рима и Тридцатилетняя война.",
+    "Непрерывная перемотка и масштабирование хронологии, интерактивные объекты и карточки с источниками.",
+    "Сохранение позиции, закладки, офлайн-работа и адаптивное оформление атласа."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "runtime": "quick",
+  "accent": "#a1513b",
+  "backgroundColor": "#e9e0ca",
+  "themeColor": "#ede5d3",
+  "orientation": "any",
+  "cacheName": "palimpsest-atlas-v0.1.0",
+  "storageNamespace": "pocket-works:palimpsest-atlas",
+  "tags": [
+    "history",
+    "education",
+    "atlas",
+    "interactive",
+    "timeline",
+    "cartography",
+    "offline",
+    "stories",
+    "research",
+    "PWA"
+  ],
+  "order": 286
+}
