@@ -143,6 +143,10 @@ export function initStudio({onOpen,onNotify,builtins}){
     mutate((story)=>{
       const item=story[tab].find(i=>i.id===selected);
       if(!item)throw new Error('Выбери элемент');
+      if(tab==='features'&&key==='kind'&&value==='boundary'&&(!item.points||item.points.length<3)){
+        const x=clamp(item.x,65,story.world.width-65),y=clamp(item.y,55,story.world.height-55);
+        item.points=[[x-65,y-45],[x+65,y-45],[x+65,y+45],[x-65,y+45]];
+      }
       item[key]=value;
     });
   }
@@ -187,7 +191,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     };
     if(tab==='events'){
       add('Заголовок','title');add('Короткое пояснение','subtitle');
-      add('Год (отрицательный = до н. э.)','time',{number:true});
+      add(draft.timeUnit==='phase'?'Номер фазы':'Год (отрицательный = до н. э.)','time',{number:true});
       add('Подробное описание','text',{long:true});
       add('Категория','category');
       add('Линия событий','lane',{options:LANE_OPTIONS});
@@ -197,17 +201,28 @@ export function initStudio({onOpen,onNotify,builtins}){
       sourceSelectItem(form,item);
     }else if(tab==='entities'){
       add('Название','name');add('Короткая метка на карте','mapLabel');add('Тип','type',{options:TYPE_OPTIONS});
+      add('Командир / описание руководства','commander');
+      const commandOptions=[['','Без штаба'],...draft.commands.map(c=>[c.id,c.name])];
+      form.append(field('Подчиняется штабу',item.commandId||'',v=>setValue('commandId',v),{options:commandOptions}));
+      const parents=draft.entities.filter(e=>e.id!==item.id&&e.commandId&&e.commandId===item.commandId
+        &&e.type==='army'&&!(()=>{let cursor=e,ids=new Set([item.id]);while(cursor.parentId){
+          if(ids.has(cursor.parentId))return true;
+          ids.add(cursor.parentId);cursor=draft.entities.find(x=>x.id===cursor.parentId)||{};
+        }return false;})()).map(e=>[e.id,e.name]);
+      form.append(field('Родительское соединение',item.parentId||'',v=>setValue('parentId',v),
+        {options:[['','Нет · напрямую штабу'],...parents]}));
       add('Появление (год)','from',{number:true});
       add('Исчезновение (пусто = до конца)','until',{number:true});
       add('Состояние в этот момент','current',{long:true});
       add('Общий контекст','description',{long:true});
       add('Достоверность','confidence',{options:CONFIDENCE});
-      coords();sourceSelectItem(form,item);renderMotionControls(form,item);
+      coords();sourceSelectItem(form,item);renderMotionControls(form,item);renderOrderControls(form,item);
     }else if(tab==='features'){
       add('Название на карте','label');add('Форма','kind',{options:FEATURE_OPTIONS});
       add('Появление (год)','from',{number:true});
       add('Исчезновение (пусто = до конца)','until',{number:true});
-      add('Радиус по X','rx',{number:true});add('Радиус по Y','ry',{number:true});
+      if(item.kind==='boundary')renderBoundaryControls(form,item);
+      else{add('Радиус по X','rx',{number:true});add('Радиус по Y','ry',{number:true});}
       add('Достоверность','confidence',{options:CONFIDENCE});
       coords();renderMotionControls(form,item);
     }else if(tab==='paths'){
@@ -218,6 +233,12 @@ export function initStudio({onOpen,onNotify,builtins}){
         if(item.points.length<=2){status('Для маршрута необходимы минимум две точки','error');return;}
         mutate(story=>story.paths.find(p=>p.id===selected).points.pop());
       },'studio-secondary'));
+    }else if(tab==='commands'){
+      add('Название штаба','name');add('Командующий','commander');
+      add('Сторона','side',{options:COMMAND_SIDES});
+      sourceSelectItem(form,item);
+      const units=draft.entities.filter(e=>e.commandId===item.id);
+      form.append(make('p','studio-field-note','В подчинении: '+units.length+' соединений. Для нового штаба добавь объект во вкладке «Объекты» и назначь ему штаб.'));
     }else if(tab==='sources'){
       add('Название публикации','title');add('URL (https://...)','url',{url:true,placeholder:'https://...'});
       const cited=draft.events.filter(e=>(e.sources||[]).includes(item.id)).length+
@@ -229,6 +250,73 @@ export function initStudio({onOpen,onNotify,builtins}){
   function sourceSelectItem(node,item){
     const opts=[['','Без источника'],...draft.sources.map(s=>[s.id,s.title||s.id])];
     node.append(field('Привязанный источник',(item.sources||[])[0]||'',id=>setValue('sources',id?[id]:[]),{options:opts}));
+  }
+  function renderOrderControls(form,item){
+    if(!item.commandId&&!item.parentId)return;
+    const node=make('section','orders-controls');
+    node.append(make('div','studio-field-head','05 / ПРИКАЗЫ ПО ФАЗАМ'));
+    const atTime=(item.orders||[]).find(o=>Math.abs(o.time-cursor)<.000001);
+    if(!atTime){
+      node.append(make('p','studio-field-note','На '+formatStoryTime(cursor,draft)+' нет приказа. Выбери момент на шкале, затем добавь решение командования.'));
+      node.append(button('+ Добавить приказ в '+formatStoryTime(cursor,draft),()=>{
+        mutate(story=>{
+          const entity=story.entities.find(e=>e.id===selected);
+          if(!entity.orders)entity.orders=[];
+          if(entity.orders.length>=32)throw Error('Максимум 32 приказа для соединения');
+          if(entity.orders.some(o=>Math.abs(o.time-cursor)<.000001))return;
+          entity.orders.push({time:cursor,action:'hold',note:'',confidence:'hypothetical',sources:[]});
+          entity.orders.sort((a,b)=>a.time-b.time);
+        });
+      },'studio-secondary'));
+    }else{
+      const edit=(key,value)=>mutate(story=>{
+        const entity=story.entities.find(e=>e.id===selected);
+        const target=entity.orders.find(o=>Math.abs(o.time-cursor)<.000001);
+        if(target)target[key]=value;
+      });
+      node.append(field('Тактическое действие',atTime.action,v=>edit('action',v),{options:COMMAND_ACTIONS}));
+      node.append(field('Пояснение / приказ',atTime.note||'',v=>edit('note',v),{long:true}));
+      node.append(field('Достоверность',atTime.confidence,v=>edit('confidence',v),
+        {options:CONFIDENCE.filter(([id])=>id!=='tradition')}));
+      node.append(field('Источник',atTime.sources?.[0]||'',v=>edit('sources',v?[v]:[]),
+        {options:[['','Без источника'],...draft.sources.map(x=>[x.id,x.title])]}));
+      node.append(button('− Удалить приказ',()=>mutate(story=>{
+        const entity=story.entities.find(e=>e.id===selected);
+        entity.orders=(entity.orders||[]).filter(o=>Math.abs(o.time-cursor)>=.000001);
+      }),'studio-secondary'));
+    }
+    form.append(node);
+  }
+  function renderBoundaryControls(form,item){
+    const group=make('section','boundary-controls');
+    group.append(make('div','studio-field-head','05 / ВЕРШИНЫ ГРАНИЦЫ'));
+    group.append(make('p','studio-field-note','Полигон — условная линия. Перемещай вершины на карте или добавляй новые. Достоверность должна быть указана отдельно.'));
+    const list=make('div','boundary-vertices');
+    for(let i=0;i<(item.points||[]).length;i++){
+      const b=button('№'+(i+1),()=>{activeVertex=i;renderEditor();},
+        'boundary-vertex'+(activeVertex===i?' selected':''));
+      b.title='Переместить вершину №'+(i+1);
+      list.append(b);
+    }
+    group.append(list);
+    group.append(button('+ Добавить вершину касанием',()=>{activeVertex=null;updateToolbar();renderEditor();},'studio-secondary'));
+    if(activeVertex!=null&&item.points?.[activeVertex]){
+      const coords=make('div','field-pair');
+      for(const axis of [0,1])coords.append(field(axis===0?'X вершины':'Y вершины',
+        item.points[activeVertex][axis],value=>{
+          if(!Number.isFinite(value)||value<0||value>(axis===0?draft.world.width:draft.world.height)){
+            status('Точка находится вне карты','error');return;
+          }
+          const index=activeVertex;
+          mutate(story=>story.features.find(f=>f.id===selected).points[index][axis]=value);
+        },{number:true}));
+      group.append(coords);
+    }
+    group.append(button('− Удалить последнюю вершину',()=>{
+      if(item.points.length<=3){status('Для границы необходимо минимум три вершины','error');return;}
+      mutate(story=>{story.features.find(f=>f.id===selected).points.pop();activeVertex=null;});
+    },'studio-secondary'));
+    form.append(group);
   }
   function renderMotionControls(form,item){
     const group=make('section','motion-controls');
