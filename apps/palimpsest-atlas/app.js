@@ -93,7 +93,7 @@ function openStory(id,options={}) {
   $('edit-story').hidden=story.type!=='custom';
   $('detail-back').hidden=!(state.parentView||story.parentId);
   $('timeline-caption').textContent=story.timeUnit==='phase'?'ПОСЛЕДОВАТЕЛЬНОСТЬ ФАЗ':'МАСШТАБ ВРЕМЕНИ';
-  $('map-caveat').textContent=story.disclaimer||'СХЕМАТИЧЕСКАЯ КАРТА';
+  $('map-caveat').textContent=story.timeUnit==='phase'?'ПОСЛЕДОВАТЕЛЬНОСТЬ, НЕ МИНУТЫ':'СХЕМАТИЧЕСКАЯ КАРТА';
   ui.list.setAttribute('aria-expanded','false');
   ui.title.textContent=story.title;
   ui.caption.textContent='ПАЛИМПСЕСТ / ИСТОРИЯ '+story.index;
@@ -318,7 +318,7 @@ function sourceList(ids) {
 function openInspector(kind,item) {
   state.inspector={kind,id:item.id};state.tab='now';
   ui.inspector.hidden=false;ui.outline.hidden=true;
-  ui.list.setAttribute('aria-expanded','false');updateInspector();
+  ui.list.setAttribute('aria-expanded','false');updateInspector();updatePortal();
 }
 function updateInspector() {
   const record=state.inspector;if(!record)return;
