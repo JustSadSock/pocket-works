@@ -4,3 +4,5 @@
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 /* Keep document scroll available on narrow screens even within the shared mobile runtime. */
 @media(max-width:849px){#app[data-fullscreen-app]{height:auto;overflow:visible}.map-stage{max-height:52dvh}.time{position:sticky;bottom:0}.ledger{padding-bottom:24px}}
+
+@media(max-width:849px){#app[data-fullscreen-app]{padding-bottom:calc(160px + env(safe-area-inset-bottom,0px))}.mast{padding-top:max(10px,var(--app-safe-top))}.time{position:fixed;bottom:0;left:0;right:0;z-index:8;background:#e8e8db;box-shadow:0 -3px 10px #213b3d25}.map-stage{height:clamp(270px,40dvh,480px);min-height:270px}.timeline canvas{height:14px}.time-actions output{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ledger-tabs{z-index:5}.ledger-page{scroll-margin-top:52px}.time .timeline input[type=range]{min-height:28px}.map-foot{min-height:18px}.ledger-page select{font-size:16px}}
