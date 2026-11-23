@@ -458,6 +458,26 @@ export function initStudio({onOpen,onNotify,builtins}){
       ctx.strokeStyle='#79a0a1';ctx.lineWidth=Math.max(2,13*d.scale);ctx.stroke();
     }
     for(const item of draft.features){
+      if(item.kind==='boundary'){
+        const pts=item.points||[];if(pts.length<3)continue;
+        ctx.beginPath();pts.forEach(([x,y],i)=>{
+          const [px,py]=trans(x,y);if(!i)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+        });ctx.closePath();
+        ctx.fillStyle='rgba(134,124,88,.12)';ctx.fill();
+        ctx.strokeStyle=item.id===selected?'#9e4b3d':'rgba(122,91,60,.78)';
+        ctx.setLineDash(item.confidence==='confirmed'?[]:[7,5]);
+        ctx.lineWidth=item.id===selected?2.5:1.6;ctx.stroke();ctx.setLineDash([]);
+        const [cx,cy]=polygonCenter(pts),[tx,ty]=trans(cx,cy);
+        ctx.fillStyle='#665846';ctx.font='11px Georgia';ctx.textAlign='center';
+        ctx.fillText(item.label,tx,ty);
+        if(item.id===selected)pts.forEach(([x,y],i)=>{
+          const [px,py]=trans(x,y);
+          ctx.fillStyle=activeVertex===i?'#a14f37':'#f5e9d0';
+          ctx.strokeStyle='#8a5641';ctx.lineWidth=1.4;
+          ctx.beginPath();ctx.arc(px,py,activeVertex===i?6:4,0,Math.PI*2);ctx.fill();ctx.stroke();
+        });
+        continue;
+      }
       const position=keyframeValue(item,cursor);
       const [x,y]=trans(position.x,position.y);ctx.beginPath();
       ctx.ellipse(x,y,item.rx*d.scale,item.ry*d.scale,item.rotation||0,0,Math.PI*2);
@@ -500,7 +520,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     ctx.fillText('МАКЕТ · КООРДИНАТЫ УСЛОВНЫ',d.x+8,d.y+15);
   }
   function onMapPoint(event){
-    if(!draft||!geometry||tab==='sources')return;
+    if(!draft||!geometry||tab==='sources'||tab==='commands')return;
     const rect=board.getBoundingClientRect();
     const x=clamp(Math.round((event.clientX-rect.left-geometry.x)/geometry.scale),0,draft.world.width);
     const y=clamp(Math.round((event.clientY-rect.top-geometry.y)/geometry.scale),0,draft.world.height);
@@ -509,6 +529,11 @@ export function initStudio({onOpen,onNotify,builtins}){
       const item=story[tab].find(v=>v.id===selected);
       if(tab==='events')item.focus=[x,y];
       else if(tab==='paths')item.points.push([x,y]);
+      else if(tab==='features'&&item.kind==='boundary'){
+        if(activeVertex!=null&&item.points?.[activeVertex])item.points[activeVertex]=[x,y];
+        else if(item.points.length<40)item.points.push([x,y]);
+        else throw Error('Для границы максимум 40 вершин');
+      }
       else if(activeFrameTime!=null&&item.motion?.frames?.some(f=>f.time===activeFrameTime)){
         const frame=item.motion.frames.find(f=>f.time===activeFrameTime);frame.x=x;frame.y=y;
       } else{item.x=x;item.y=y;}
@@ -527,10 +552,14 @@ export function initStudio({onOpen,onNotify,builtins}){
         x:500,y:350,rx:115,ry:75,rotation:0,from:story.range[0],confidence:'hypothetical'};
       else if(tab==='paths')item={id:newId('path'),kind:'track',points:[[350,340],[590,360]],
         from:story.range[0],confidence:'hypothetical'};
+      else if(tab==='commands')item={id:newId('command'),name:'Новый штаб',commander:'',
+        side:'neutral',sources:[]};
       else item={id:newId('src'),title:'Новый источник',url:'https://'};
       story[tab].push(item);selected=item.id;
     });
-    status(tab==='sources'?'Укажи точную HTTPS-ссылку на публикацию.':'Элемент добавлен. Коснись карты, чтобы задать положение.');
+    status(tab==='sources'?'Укажи точную HTTPS-ссылку на публикацию.':
+      tab==='commands'?'Задай название, сторону и командующего. Затем назначь штабу соединения.':
+      'Элемент добавлен. Коснись карты, чтобы задать положение.');
   }
   function removeItem(){
     const item=current();if(!item)return;
@@ -538,10 +567,15 @@ export function initStudio({onOpen,onNotify,builtins}){
     if(!window.confirm('Удалить «'+esc(item[selections[tab]]||item.id)+'»? Это действие можно отменить.'))return;
     mutate(story=>{
       story[tab]=story[tab].filter(x=>x.id!==selected);
-      if(tab==='sources')for(const el of [...story.events,...story.entities])
+      if(tab==='commands')for(const el of story.entities){
+        if(el.commandId===selected){delete el.commandId;delete el.parentId;}
+      }
+      if(tab==='sources')for(const el of [...story.events,...story.entities,...story.commands])
         el.sources=(el.sources||[]).filter(id=>id!==selected);
-      if(tab==='entities')for(const el of story.events)
-        if(el.entity===selected)delete el.entity;
+      if(tab==='entities'){
+        for(const el of story.events)if(el.entity===selected)delete el.entity;
+        for(const el of story.entities)if(el.parentId===selected)delete el.parentId;
+      }
       selected=story[tab][0]?.id||null;
     });
   }
