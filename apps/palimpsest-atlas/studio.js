@@ -1,11 +1,12 @@
 import {clamp, formatYear} from './core.js';
 import {keyframeValue,motionTrail,formatStoryTime} from './motion.js';
-import {PALETTES, MAX_STORIES, createDraft,cloneAsDraft,exportPackage,
+import {PALETTES, MAX_STORIES, createDraft,createPhaseDraft,cloneAsDraft,exportPackage,
   loadLibrary,parseImport,parseStory,persistLibrary,upsertLibrary,newId} from './studio-data.js';
 
+import {COMMAND_ACTIONS,COMMAND_SIDES,validPolygon,polygonCenter} from './tactics.js';
 const $=(id)=>document.getElementById(id);
-const COLLECTIONS=['events','entities','features','paths','sources'];
-const LABELS={events:'События',entities:'Объекты',features:'Территории',paths:'Маршруты',sources:'Источники'};
+const COLLECTIONS=['events','entities','features','paths','sources','commands'];
+const LABELS={events:'События',entities:'Объекты',features:'Территории',paths:'Маршруты',sources:'Источники',commands:'Штабы'};
 const CONFIDENCE=[
   ['hypothetical','Гипотеза автора'],
   ['estimated','Приблизительная реконструкция'],
@@ -15,9 +16,9 @@ const CONFIDENCE=[
 ];
 const TYPE_OPTIONS=[
  ['place','Место'],['city','Город'],['settlement','Поселение'],['battle','Поле битвы'],
- ['person','Человек'],['army','Армия'],['hill','Холм'],['river','Река'],['legend','Легенда'],['region','Область']
+ ['person','Человек'],['army','Воинское соединение'],['hill','Холм'],['river','Река'],['legend','Легенда'],['region','Область']
 ];
-const FEATURE_OPTIONS=[['region','Регион'],['hill','Холм'],['zone','Выделенная зона']];
+const FEATURE_OPTIONS=[['region','Регион'],['hill','Холм'],['zone','Выделенная зона'],['boundary','Полигон границы']];
 const LANE_OPTIONS=[['politics','Политика'],['military','Война'],['culture','Общество']];
 const deep=(x)=>JSON.parse(JSON.stringify(x));
 const fmt=(t)=>Number.isFinite(t)?formatYear(t):'—';
@@ -73,12 +74,12 @@ export function initStudio({onOpen,onNotify,builtins}){
   const storage=(()=>{try{return window.localStorage;}catch{return {getItem:()=>null,setItem:()=>{throw new Error('Локальное хранилище недоступно');}};}})();
   let library=loadLibrary(storage);
   let draft=null, savedHash='',tab='events',selected=null,undo=[],redo=[],dirty=false,
-    cursor=null,activeFrameTime=null;
+    cursor=null,activeFrameTime=null,activeVertex=null;
   const board=$('studio-map');
   const ctx=board.getContext('2d');
   const input=$('studio-import');
   const selections={
-    events:'title',entities:'name',features:'label',paths:'id',sources:'title'
+    events:'title',entities:'name',features:'label',paths:'id',sources:'title',commands:'name'
   };
 
   function notify(message){status(message);$('studio-library-status').textContent=message;onNotify?.(message);}
@@ -91,10 +92,12 @@ export function initStudio({onOpen,onNotify,builtins}){
     $('studio-dirty').textContent=dirty?'НЕ СОХРАНЕНО':'СОХРАНЕНО';
     $('studio-dirty').classList.toggle('is-dirty',dirty);
     const active=current();
-    $('studio-map-hint').textContent=(tab==='entities'||tab==='features')&&activeFrameTime!=null&&active?.motion?.frames?.some(f=>f.time===activeFrameTime)?
+    $('studio-map-hint').textContent=tab==='features'&&active?.kind==='boundary'?
+      activeVertex!=null?'Коснись карты: изменить вершину №'+(activeVertex+1):'Коснись карты: добавить вершину границы.':
+      (tab==='entities'||tab==='features')&&activeFrameTime!=null&&active?.motion?.frames?.some(f=>f.time===activeFrameTime)?
       'Нажми на карте: изменится выбранный ключевой кадр на '+formatStoryTime(activeFrameTime,draft)+'.':tab==='paths'?
       'Нажми на карту, чтобы добавить точку маршрута. Последнюю точку можно удалить в форме.' :
-      tab==='sources'?'Выберите источник слева и укажите его URL.':
+      (tab==='sources'||tab==='commands')?'Параметры выбранной записи редактируются слева.':
       'Коснись карты, чтобы переместить выбранный объект или фокус события.';
   }
   function restore(snapshot,from){
@@ -113,7 +116,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     redo=[];markDirty();renderEditor();
   }
   function pickTab(next){
-    tab=next;selected=draft[tab]?.[0]?.id||null;activeFrameTime=null;
+    tab=next;selected=draft[tab]?.[0]?.id||null;activeFrameTime=null;activeVertex=null;
     renderEditor();
   }
   function renderCollection(){
@@ -126,9 +129,9 @@ export function initStudio({onOpen,onNotify,builtins}){
       const upper=make('strong','',name);
       const sub=make('small','',tab==='events'?fmt(item.time):
         tab==='entities'?fmt(item.from):tab==='features'?fmt(item.from):
-        tab==='paths'?item.points.length+' точек':'Ссылка на публикацию');
+        tab==='paths'?item.points.length+' точек':tab==='commands'?item.commander||'Командование':'Ссылка на публикацию');
       line.append(upper,sub);
-      line.addEventListener('click',()=>{selected=item.id;activeFrameTime=null;renderEditor();});
+      line.addEventListener('click',()=>{selected=item.id;activeFrameTime=null;activeVertex=null;renderEditor();});
       list.append(line);
     }
     if(!list.childNodes.length)list.append(make('p','studio-empty','Здесь пока пусто. Добавь первый элемент.'));
@@ -319,6 +322,9 @@ export function initStudio({onOpen,onNotify,builtins}){
     $('studio-intro').value=draft.intro||'';
     $('studio-start').value=draft.range[0];
     $('studio-end').value=draft.range[1];
+    $('studio-start').closest('label').firstChild.textContent=draft.timeUnit==='phase'?'От фазы ':'От года ';
+    $('studio-end').closest('label').firstChild.textContent=draft.timeUnit==='phase'?'До фазы ':'До года ';
+    $('studio-eras-note').textContent=draft.timeUnit==='phase'?'Фазы — порядковые этапы боя, не часы и минуты.':'До н. э. — отрицательные годы. Координаты карты условные.';
     cursor=Number.isFinite(cursor)?clamp(cursor,draft.range[0],draft.range[1]):draft.range[0];
     $('studio-cursor').min=String(draft.range[0]);
     $('studio-cursor').max=String(draft.range[1]);
@@ -453,7 +459,7 @@ export function initStudio({onOpen,onNotify,builtins}){
   }
   function open(draftStory){
     draft=deep(draftStory);savedHash=library.some(s=>s.id===draft.id)?JSON.stringify(draft):'';
-    dirty=!savedHash;undo=[];redo=[];tab='events';selected=draft.events[0]?.id||null;
+    dirty=!savedHash;undo=[];redo=[];tab='events';selected=draft.events[0]?.id||null;activeVertex=null;
     cursor=draft.range[0];activeFrameTime=null;
     $('library').hidden=true;$('viewer').hidden=true;screen.hidden=false;
     renderEditor();status(dirty?'Черновик ещё не сохранён.':'История открыта для редактирования.');
@@ -524,8 +530,10 @@ export function initStudio({onOpen,onNotify,builtins}){
   $('studio-cursor').addEventListener('change',()=>{if(tab==='entities'||tab==='features')renderEditor();});
   $('studio-back').addEventListener('click',back);
   $('studio-new').addEventListener('click',()=>open(createDraft()));
+  $('studio-new-battle').addEventListener('click',()=>open(createPhaseDraft()));
   $('studio-clone-rome').addEventListener('click',()=>open(cloneAsDraft(builtins[0])));
   $('studio-clone-war').addEventListener('click',()=>open(cloneAsDraft(builtins[1])));
+  $('studio-clone-battle').addEventListener('click',()=>open(cloneAsDraft(builtins[2])));
   $('studio-import-button').addEventListener('click',()=>input.click());
   input.addEventListener('change',async()=>{
     const file=input.files?.[0];input.value='';
