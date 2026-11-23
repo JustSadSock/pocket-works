@@ -53,6 +53,14 @@
           "action": "screenshot"
         }
       ]
+    },
+    {
+      "id": "player-flow",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/player-flow.spec.ts"
+      ]
     }
   ]
 }
