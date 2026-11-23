@@ -153,7 +153,6 @@ export function validateStory(story) {
   }
   for(const feature of story.features||[])for(const reason of validateMotion(feature,story.range,story.world))errors.push(feature.id+': '+reason);
   errors.push(...validateTactics(story));
-  const sourceIds=new Set((story.sources||[]).map(s=>s.id));
   for(const feature of story.features||[])for(const err of validateBoundaryFrames(feature,story.range,story.world,sourceIds))
     errors.push((feature.id||'граница')+': '+err);
   return errors;
