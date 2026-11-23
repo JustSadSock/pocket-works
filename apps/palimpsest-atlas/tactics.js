@@ -42,6 +42,15 @@ export function validPolygon(points,world){
   }
   return true;
 }
+export function pointInPolygon(x,y,points){
+  if(!Array.isArray(points)||points.length<3)return false;
+  let inside=false;
+  for(let i=0,j=points.length-1;i<points.length;j=i++){
+    const xi=points[i][0],yi=points[i][1],xj=points[j][0],yj=points[j][1];
+    if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)inside=!inside;
+  }
+  return inside;
+}
 export function polygonCenter(points){
   if(!Array.isArray(points)||!points.length)return [0,0];
   return points.reduce((o,p)=>[o[0]+p[0]/points.length,o[1]+p[1]/points.length],[0,0]);
