@@ -8,7 +8,8 @@
       "files": [
         "tests/core.test.mjs",
         "tests/studio-data.test.mjs",
-        "tests/motion.test.mjs"
+        "tests/motion.test.mjs",
+        "tests/tactics.test.mjs"
       ]
     },
     {
@@ -63,7 +64,8 @@
       "files": [
         "qa/player-flow.spec.ts",
         "qa/studio-flow.spec.ts",
-        "qa/depth-flow.spec.ts"
+        "qa/depth-flow.spec.ts",
+        "qa/tactics-flow.spec.ts"
       ]
     },
     {
@@ -147,6 +149,56 @@
         {
           "action": "visible",
           "selector": "#event-title"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "command-ledger-visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "#library",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-story='breitenfeld']"
+        },
+        {
+          "action": "visible",
+          "selector": "#scene"
+        },
+        {
+          "action": "click",
+          "selector": "#command-toggle"
+        },
+        {
+          "action": "visible",
+          "selector": "#command-panel"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#next"
+        },
+        {
+          "action": "click",
+          "selector": "#next"
+        },
+        {
+          "action": "visible",
+          "selector": ".command-group"
         },
         {
           "action": "screenshot"
