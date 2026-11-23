@@ -522,14 +522,14 @@ function drawEntities(snapshot){
     ctx.fillStyle=selected?'rgba(163,78,57,.20)':'rgba(246,238,219,.7)';ctx.fill();
     drawSettlement(p,entity.type,entity);
     state.hits.push({entity,x:p.x,y:p.y,radius:Math.max(22,Math.min(39,22*state.camera.zoom))});
-    if(battle){
+    if(battlefield){
       labels.push({p,name:entity.mapLabel||entity.name,selected,entity});
     }else{
       const labelY=p.y+(entity.type==='hill'?19:23);
       textAt(entity.mapLabel||entity.name,p.x,labelY,{size:state.camera.zoom>3?13:11,color:selected?'#9f513b':'#41483c',serif:true,bold:selected});
     }
   }
-  if(!battle)return;
+  if(!battlefield)return;
   // Every icon retains the full hit target. The labels use short data-authored
   // names and a greedy collision solver rather than overlapping formations.
   for(const record of labels){
