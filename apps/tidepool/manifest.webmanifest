@@ -1,0 +1,19 @@
+{
+  "id": "/apps/tidepool/",
+  "name": "ПРИЛИВ",
+  "short_name": "Прилив",
+  "description": "Цветная тактическая головоломка",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8f2e6",
+  "theme_color": "#f8f2e6",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
