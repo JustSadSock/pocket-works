@@ -60,7 +60,72 @@
         </div>
       </div>
     </div>
-    <footer class="lib-footer"><span>ИСТОРИЧЕСКИЕ ИНТЕРПРЕТАЦИИ И ОЦЕНКИ ЯВНО ОТМЕЧЕНЫ</span><span>V 0.1</span></footer>
+<section class="studio-library" data-ui aria-labelledby="studio-library-title">
+      <div class="section-title"><span id="studio-library-title">Моя мастерская</span><span id="personal-count">00 / 25</span></div>
+      <div class="studio-library-top">
+        <div class="studio-library-copy"><strong>История, которую создаёшь ты.</strong><span>Отметь события и места на карте — и сразу исследуй их как готовую историю. Работает без сети.</span></div>
+        <button type="button" id="studio-new" class="studio-main-action" data-native-press>+ Новая история</button>
+      </div>
+      <div class="studio-library-actions">
+        <button type="button" id="studio-clone-rome" data-native-press>Взять за основу Рим</button>
+        <button type="button" id="studio-clone-war" data-native-press>Взять за основу войну</button>
+        <button type="button" id="studio-import-button" data-native-press>Импорт JSON</button>
+        <input id="studio-import" type="file" accept=".json,application/json" hidden>
+      </div>
+      <div id="personal-stories" class="personal-stories" aria-label="Личные исторические сценарии"></div>
+    </section>
+    <footer class="lib-footer"><span>ИСТОРИЧЕСКИЕ ИНТЕРПРЕТАЦИИ И ОЦЕНКИ ЯВНО ОТМЕЧЕНЫ</span><span>V 0.2</span></footer>
+  </section>
+
+  <section id="studio" class="studio-screen" hidden aria-label="Мастерская историй">
+    <header class="studio-header" data-ui>
+      <button id="studio-back" type="button" class="mark-button" data-native-press aria-label="Вернуться в библиотеку">←</button>
+      <div class="studio-header-name"><span>ПАЛИМПСЕСТ / МАСТЕРСКАЯ</span><strong id="studio-name">Моя история</strong></div>
+      <span id="studio-dirty" class="studio-dirty is-dirty">НЕ СОХРАНЕНО</span>
+      <button type="button" id="studio-undo" class="studio-mini-button" data-native-press title="Отменить последнее изменение" aria-label="Отменить">↶</button>
+      <button type="button" id="studio-redo" class="studio-mini-button" data-native-press title="Повторить изменение" aria-label="Повторить">↷</button>
+      <button type="button" id="studio-save" class="studio-save" data-native-press>Сохранить</button>
+      <button type="button" id="studio-preview" class="studio-preview" data-native-press>▶ Смотреть</button>
+    </header>
+    <div class="studio-content">
+      <aside class="studio-editor" aria-label="Параметры истории">
+        <section class="studio-meta">
+          <div class="studio-section-label">01 / ПАСПОРТ ИСТОРИИ</div>
+          <label>Название <input id="studio-title" type="text" maxlength="90"></label>
+          <label>Подзаголовок <input id="studio-subtitle" type="text" maxlength="180"></label>
+          <label>Описание <textarea id="studio-intro" rows="2" maxlength="1500"></textarea></label>
+          <div class="studio-years"><label>От года <input id="studio-start" type="number" step="any"></label><label>До года <input id="studio-end" type="number" step="any"></label></div>
+          <p>До н. э. — отрицательные годы. Координаты карты условные.</p>
+        </section>
+        <section class="studio-layers">
+          <div class="studio-section-label">02 / СЛОИ РЕКОНСТРУКЦИИ</div>
+          <nav class="studio-tabs" aria-label="Разделы редактора">
+            <button type="button" data-studio-tab="events" class="active" data-native-press>События</button>
+            <button type="button" data-studio-tab="entities" data-native-press>Объекты</button>
+            <button type="button" data-studio-tab="features" data-native-press>Зоны</button>
+            <button type="button" data-studio-tab="paths" data-native-press>Пути</button>
+            <button type="button" data-studio-tab="sources" data-native-press>Источники</button>
+          </nav>
+          <div class="studio-list-head"><span id="studio-list-caption">События · 1</span><div class="studio-list-actions">
+            <button id="studio-add" type="button" data-native-press aria-label="Добавить элемент">+</button>
+            <button id="studio-remove" type="button" data-native-press aria-label="Удалить выбранный элемент">−</button>
+          </div></div>
+          <div id="studio-items" class="studio-records" aria-label="Элементы выбранного раздела"></div>
+          <div class="studio-field-head">03 / СВОЙСТВА ВЫБРАННОГО</div>
+          <div id="studio-fields" class="studio-fields"></div>
+        </section>
+      </aside>
+      <div class="studio-canvas-shell">
+        <div class="studio-board-heading"><strong>Картографический стол</strong><span>КАСАНИЕ = ПОЛОЖЕНИЕ ОБЪЕКТА</span></div>
+        <canvas id="studio-map" class="studio-map" aria-label="Редактор карты. Нажмите, чтобы поставить или переместить выбранный объект."></canvas>
+        <div class="studio-board-foot"><span id="studio-map-hint">Выбери объект, затем коснись карты.</span><span>1 : УСЛОВНАЯ СЦЕНА</span></div>
+        <div class="studio-tools">
+          <button id="studio-export" type="button" data-native-press>Экспорт JSON ↗</button>
+          <button id="studio-delete" type="button" class="danger" data-native-press>Удалить историю</button>
+          <span id="studio-status" role="status" aria-live="polite">Все изменения остаются на этом устройстве.</span>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section id="viewer" class="viewer" hidden aria-label="Историческая сцена">
@@ -68,6 +133,7 @@
       <button id="back" class="mark-button" type="button" data-native-press aria-label="К библиотеке историй">←</button>
       <div class="viewer-heading"><span id="story-caption">ПАЛИМПСЕСТ / ИСТОРИЯ 01</span><strong id="story-title">Как возник Рим</strong></div>
       <div class="header-actions">
+        <button id="edit-story" class="icon-button" type="button" hidden title="Редактировать личную историю" aria-label="Редактировать историю">✎</button>
         <button id="bookmark" class="icon-button" type="button" data-native-press aria-pressed="false" title="Запомнить момент" aria-label="Сохранить закладку">◇</button>
         <button id="list-toggle" class="icon-button" type="button" data-native-press aria-label="Открыть список событий" aria-expanded="false">☷</button>
       </div>
@@ -123,7 +189,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </section>
 </main>
-<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Палимпсест: Атлас" data-app-version="0.1.0"></script>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Палимпсест: Атлас" data-app-version="0.2.0"></script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
