@@ -1,3 +1,4 @@
+import {locateAt, validateMotion} from './motion.js';
 // Pure historical timeline functions. All story timestamps are year coordinates:
 // negative = BCE, positive = CE. Historical year zero is never valid in scenario data.
 export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -55,12 +56,13 @@ export function visibleAt(item, time) {
 }
 
 export function snapshotAt(story, time) {
+  const moment=clamp(time,story.range[0],story.range[1]);
   return {
-    time: clamp(time, story.range[0], story.range[1]),
-    entities: story.entities.filter((item) => visibleAt(item, time)),
-    features: (story.features || []).filter((item) => visibleAt(item, time)),
-    paths: (story.paths || []).filter((item) => visibleAt(item, time)),
-    currentEvent: eventBefore(story, time)
+    time: moment,
+    entities: story.entities.filter(item=>visibleAt(item,moment)).map(item=>locateAt(item,moment)),
+    features: (story.features||[]).filter(item=>visibleAt(item,moment)).map(item=>locateAt(item,moment)),
+    paths: (story.paths||[]).filter(item=>visibleAt(item,moment)),
+    currentEvent: eventBefore(story,moment)
   };
 }
 
@@ -145,7 +147,9 @@ export function validateStory(story) {
     entityIds.add(entity.id);
     if (!Number.isFinite(entity.x) || !Number.isFinite(entity.y)) errors.push('Нет координат ' + entity.id);
     for (const sourceId of entity.sources || []) if (!sourceIds.has(sourceId)) errors.push('Не найден источник ' + sourceId);
+    for (const reason of validateMotion(entity,story.range,story.world)) errors.push(entity.id+': '+reason);
   }
+  for(const feature of story.features||[])for(const reason of validateMotion(feature,story.range,story.world))errors.push(feature.id+': '+reason);
   return errors;
 }
 
@@ -176,7 +180,12 @@ export function compareSnapshots(story, fromTime, toTime) {
     const newMap=new Map(after[key].map(x=>[x.id,x]));
     detail[key]={
       added:after[key].filter(x=>!oldMap.has(x.id)),
-      removed:before[key].filter(x=>!newMap.has(x.id))
+      removed:before[key].filter(x=>!newMap.has(x.id)),
+      moved:after[key].filter(x=>{
+        const beforeItem=oldMap.get(x.id);
+        return beforeItem&&Number.isFinite(x.x)&&Number.isFinite(x.y)&&
+          (Math.abs(beforeItem.x-x.x)>.01||Math.abs(beforeItem.y-x.y)>.01);
+      }).map(item=>({before:oldMap.get(item.id),after:item}))
     };
   }
   const introduced=story.events.filter(e=>e.time>Math.min(fromTime,toTime)&&
@@ -184,8 +193,9 @@ export function compareSnapshots(story, fromTime, toTime) {
   const forward=toTime>=fromTime;
   const additions=sections.reduce((total,key)=>total+detail[key].added.length,0);
   const removals=sections.reduce((total,key)=>total+detail[key].removed.length,0);
+  const movements=sections.reduce((total,key)=>total+detail[key].moved.length,0);
   return {
-    before,after,sections:detail,forward,additions,removals,
+    before,after,sections:detail,forward,additions,removals,movements,
     passedEvents:introduced.length
   };
 }
