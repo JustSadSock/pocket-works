@@ -1,4 +1,5 @@
 import {validateMotion} from './motion.js';
+import {COMMAND_ACTIONS,COMMAND_SIDES,validPolygon} from './tactics.js';
 import {validateStory, clamp} from './core.js';
 
 export const LIBRARY_KEY = 'pocket-works:palimpsest-atlas:stories:v1';
@@ -15,7 +16,7 @@ export const PALETTES = Object.freeze({
 const ID = /^[a-z0-9][a-z0-9_-]{1,70}$/i;
 const CONFIDENCE = new Set(['confirmed','estimated','disputed','tradition','hypothetical']);
 const entityTypes = new Set(['city','settlement','hill','river','battle','legend','place','region','person','army']);
-const featureKinds = new Set(['region','hill','zone']);
+const featureKinds = new Set(['region','hill','zone','boundary']);
 const finite = Number.isFinite;
 const fail = (reason) => {throw new Error(reason);};
 const text = (value,limit=700) => typeof value==='string' ? value.trim().slice(0,limit) : '';
@@ -39,7 +40,7 @@ export function createDraft({title='Моя история',start=1200,end=1300}=
     intro:'Черновик собственной истории. Неподтверждённые данные отмечены как гипотезы.',
     disclaimer:'Авторская схематическая карта, не точная географическая реконструкция.',
     range:[start,end],world:{width:1000,height:700},palette:{...PALETTES.parchment},
-    waterways:[],features:[],paths:[],entities:[],sources:[],
+    waterways:[],features:[],paths:[],entities:[],sources:[],commands:[],
     events:[{id:newId('event'),time:start,title:'Начало истории',
       subtitle:'Первая отметка на временной шкале',text:'Опишите, что произошло и почему это важно.',
       category:'ЗАМЕТКА',lane:'culture',importance:3,confidence:'hypothetical',
@@ -97,6 +98,24 @@ export function parseStory(packageOrStory) {
     assert(ids.every(id=>sourceSet.has(id)),'Некоторые источники отсутствуют в библиографии');
     return [...new Set(ids)];
   }
+  const commands=limitArray(raw.commands||[],24,'штабы').map((c,i)=>{
+    const cid=cleanId(c?.id,'штаба #'+i);
+    assert(text(c.name,130).length>=2,'Укажите название штаба');
+    assert(COMMAND_SIDES.some(v=>v[0]===c.side),'Неизвестная сторона штаба');
+    return {id:cid,name:text(c.name,130),side:c.side,commander:text(c.commander,150),
+      sources:sourceRefs(c.sources||[])};
+  });
+  function cleanOrders(e){
+    return limitArray(e.orders||[],32,'приказы').map(o=>{
+      assert(finite(o?.time)&&o.time!==0&&o.time>=start&&o.time<=end,'Приказ вне выбранного периода');
+      assert(COMMAND_ACTIONS.some(v=>v[0]===o.action),'Неизвестный тип тактического действия');
+      assert(CONFIDENCE.has(o.confidence),'Не указана достоверность приказа');
+      const sources=sourceRefs(o.sources||[]);
+      assert(o.confidence!=='confirmed'||sources.length>0,'Подтверждённый приказ требует источника');
+      return {time:o.time,action:o.action,note:text(o.note,750),
+        confidence:o.confidence,sources};
+    }).sort((a,b)=>a.time-b.time);
+  }
   function cleanMotion(item){
     if(item.motion==null)return undefined;
     assert(item.motion&&typeof item.motion==='object','Неверное движение объекта');
@@ -128,6 +147,10 @@ export function parseStory(packageOrStory) {
       from:e.from??start,until:e.until??undefined,
       description:text(e.description,1500),current:text(e.current,1000),
       confidence:e.confidence,sources:sourceRefs(e.sources||[]),
+      ...(typeof e.commandId==='string'&&e.commandId?{commandId:cleanId(e.commandId,'штаба объекта')}:{}),
+      ...(typeof e.parentId==='string'&&e.parentId?{parentId:cleanId(e.parentId,'родителя объекта')}:{}),
+      ...(text(e.commander,150)?{commander:text(e.commander,150)}:{}),
+      ...(Array.isArray(e.orders)&&e.orders.length?{orders:cleanOrders(e)}:{}),
       ...(e.motion?{motion:cleanMotion(e)}:{})};
   });
   const featureList=limitArray(raw.features,150,'территории').map((f,i)=>{
@@ -135,12 +158,14 @@ export function parseStory(packageOrStory) {
     assert(featureKinds.has(f.kind),'Неверный тип территории');
     assert(inMap(f.x,f.y),'Территория за картой');
     assert(finite(f.rx)&&finite(f.ry)&&f.rx>=3&&f.rx<=w.width&&f.ry>=3&&f.ry<=w.height,'Размер территории не задан');
+    if(f.kind==='boundary')assert(validPolygon(f.points,w),'Граница должна быть замкнутым многоугольником из 3–40 допустимых точек');
     assert(f.from==null||(finite(f.from)&&f.from>=start&&f.from<=end&&f.from!==0),'Неверная дата территории');
     assert(f.until==null||(finite(f.until)&&f.until>=start&&f.until<=end&&f.until!==0),'Неверная дата исчезновения территории');
     assert(f.from==null||f.until==null||f.until>=f.from,'Неверный период существования территории');
     return {id:featureId,kind:f.kind,x:f.x,y:f.y,rx:f.rx,ry:f.ry,
       label:text(f.label,110)||'Территория',rotation:finite(f.rotation)?clamp(f.rotation,-Math.PI,Math.PI):0,
       from:f.from??start,until:f.until??undefined,confidence:CONFIDENCE.has(f.confidence)?f.confidence:'hypothetical',
+      ...(f.kind==='boundary'?{points:f.points.map(p=>[p[0],p[1]])}:{}),
       ...(f.motion?{motion:cleanMotion(f)}:{})};
   });
   const paths=limitArray(raw.paths,100,'маршруты').map((p,i)=>{
@@ -183,7 +208,7 @@ export function parseStory(packageOrStory) {
     title,subtitle:text(raw.subtitle,180),intro:text(raw.intro,1500),
     disclaimer:text(raw.disclaimer,500)||'Авторская схематическая карта; объекты могут быть гипотетическими.',
     range:[start,end],world:{width:w.width,height:w.height},palette:{...PALETTES[paletteId]},
-    sources,entities,features:featureList,paths,waterways,events};
+    sources,commands,entities,features:featureList,paths,waterways,events};
   const errors=validateStory(story);
   assert(!errors.length,errors[0]||'Проверка истории не пройдена');
   assert(new TextEncoder().encode(JSON.stringify(story)).length<=MAX_PACKAGE_BYTES,'История превышает ограничение 300 КБ');
