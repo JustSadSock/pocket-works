@@ -442,3 +442,73 @@ button:active{transform:translateY(1px)}
   .command-period,.command-caveat{padding:5px 11px}
   .command-roster{gap:5px}
 }
+
+/* v0.5 — an editorial time-table; every mark navigates to a real item. */
+.studio-track-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  border-bottom:1px solid #b7a589;padding:2px 1px 5px}
+.studio-track-head button{display:flex;align-items:center;gap:7px;border:0;background:transparent;
+  padding:4px 3px;color:#6f5340;font-size:11px;font-weight:850;text-align:left;min-height:29px}
+.studio-track-head button:hover{color:#a1533c}
+.studio-track-head button span{font-size:9px;font-weight:600;color:#817464}
+.studio-track-head small{font-size:9px;color:#877963}
+.studio-track-panel{display:grid;gap:5px;min-height:0;max-height:145px;overflow-y:auto;
+  padding:10px 8px;background:#f3e8d4;border:1px solid #b9a88b;scrollbar-width:thin}
+.studio-track-panel[hidden]{display:none!important}
+.track-lane{display:grid;grid-template-columns:91px minmax(0,1fr);gap:10px;align-items:center;
+  min-height:27px}
+.track-lane-label{font-size:9px;letter-spacing:.08em;font-weight:900;color:#6f6657}
+.track-rail{position:relative;height:26px;min-width:0;background:linear-gradient(to right,transparent 0 1%,
+  #c4b498 1% 99%,transparent 99%) center/100% 1px no-repeat}
+.track-mark{position:absolute;top:50%;transform:translate(-50%,-50%);min-width:17px;
+  min-height:23px;padding:0;border:1px solid #bba88d;border-radius:0;
+  background:#a15a40;box-shadow:0 1px 1px #4f47341b}
+.track-mark.track-motion{background:#537c84;border-color:#426772}
+.track-mark.track-frontiers{background:#aa8752;border-color:#977547}
+.track-mark.track-orders{background:#516557;border-color:#3f594b}
+.track-mark:hover,.track-mark:focus-visible,.track-mark.active{
+  min-width:22px;min-height:26px;z-index:2;outline:2px solid #f3ecdd;outline-offset:1px}
+.track-mark.active{box-shadow:0 0 0 2px #a3533d}
+.track-overflow{position:absolute;right:0;top:0;background:#f0e2cc;padding:2px 4px;
+  color:#736651;font-size:8px}
+.border-keyframe-strip{display:flex;gap:5px;flex-wrap:wrap}
+.border-keyframe{padding:8px 10px;font-size:11px;font-weight:750;border:1px solid #b6a282;
+  background:#f3e7d2;min-height:34px;color:#635c4f}
+.border-keyframe.selected{background:#9d5b40;color:#fff0dd;border-color:#99553c}
+.border-keyframe-actions{display:grid;gap:6px}
+.border-keyframe-actions button{min-height:38px;border:1px solid #ad9877;background:#f2e4cf;
+  padding:9px 10px;font-size:11px;text-align:left;font-weight:800}
+.border-keyframe-actions button:hover{border-color:#a45b3c}
+.compare-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:5px}
+.compare-actions button{font:800 10px/1.2 ui-sans-serif,system-ui;padding:7px 9px;min-height:30px;
+  background:#d9e2dc;border:1px solid #7a9c9d;color:#41656a;white-space:nowrap}
+.compare-actions button[aria-pressed="true"]{background:#527b81;color:#f7efdf}
+.compare-actions label{display:flex;align-items:center;gap:8px;min-width:150px;
+  font-size:10px;font-weight:700;color:#65766d}
+.compare-actions input[type="range"]{width:115px;max-width:100%;height:21px;accent-color:#4b7d87;cursor:ew-resize}
+.compare-split-guide{position:absolute;z-index:3;top:0;bottom:0;width:0;border-left:2px solid #517e88;
+  pointer-events:none}
+.compare-split-guide[hidden]{display:none!important}
+.compare-split-guide span{position:absolute;top:45px;white-space:nowrap;background:#426d73f0;
+  color:#fff0db;border:1px solid #d7e1d5;padding:5px 8px;letter-spacing:.15em;
+  font-size:9px;font-weight:900}
+.compare-split-guide span:first-child{right:12px}
+.compare-split-guide span:last-child{left:12px;background:#9e543d}
+@media(max-width:820px){
+  .studio-track-head small{display:none}
+  .studio-track-panel{max-height:110px;padding:6px}
+  .track-lane{grid-template-columns:73px minmax(0,1fr);gap:5px;min-height:25px}
+  .track-lane-label{font-size:8px}
+  .track-rail{height:22px}
+  .studio-canvas-shell{height:min(49vh,360px)}
+  .studio-map{min-height:105px}
+  .compare-actions{gap:4px}
+  .compare-actions button{padding:5px 7px}
+  .compare-actions label{min-width:120px;font-size:9px}
+  .compare-actions input[type="range"]{width:90px}
+}
+@media(max-height:620px) and (max-width:820px){
+  .studio-track-panel{max-height:85px}
+  .studio-canvas-shell{height:min(45vh,240px)}
+  .studio-map{min-height:70px}
+  .compare-split-guide span{top:24px;font-size:8px;padding:4px}
+}
