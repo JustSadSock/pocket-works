@@ -31,11 +31,11 @@ const cleanId=(value,name)=>{
   return value;
 };
 export const newId=(prefix='item')=>prefix+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
-export function createDraft({title='Моя история',start=1200,end=1300}={}) {
+export function createDraft({title='Моя история',start=1200,end=1300,timeUnit='year'}={}) {
   if(!finite(start)||!finite(end)||end<=start||start===0||end===0)throw new Error('Неверный период');
   const id=newId('user');
   return {
-    schemaVersion:PACKAGE_VERSION,id,index:'МОЯ ИСТОРИЯ',type:'custom',
+    schemaVersion:PACKAGE_VERSION,id,index:'МОЯ ИСТОРИЯ',type:'custom',timeUnit:timeUnit==='phase'?'phase':'year',
     title:text(title,90)||'Моя история',subtitle:'Личная историческая реконструкция',
     intro:'Черновик собственной истории. Неподтверждённые данные отмечены как гипотезы.',
     disclaimer:'Авторская схематическая карта, не точная географическая реконструкция.',
@@ -46,6 +46,21 @@ export function createDraft({title='Моя история',start=1200,end=1300}=
       category:'ЗАМЕТКА',lane:'culture',importance:3,confidence:'hypothetical',
       sources:[],focus:[500,350]}]
   };
+}
+export function createPhaseDraft(){
+  const draft=createDraft({title:'Новая тактическая реконструкция',start:1,end:5,timeUnit:'phase'});
+  draft.subtitle='Пять условных фаз — без выдуманных часов и минут';
+  draft.intro='Авторская реконструкция с поэтапным расположением сил. Добавьте исторические источники и отмечайте предположения.';
+  draft.events[0].title='Фаза I · Построения';
+  draft.events[0].category='ПОСТРОЕНИЕ';
+  draft.events[0].lane='military';
+  for(let time=2;time<=5;time++){
+    draft.events.push({id:newId('phase'),time,title:'Фаза '+['','I','II','III','IV','V'][time],
+      subtitle:'Опишите изменения в построениях',text:'Добавьте описание и источники.',
+      category:'ФАЗА',lane:'military',importance:3,confidence:'hypothetical',sources:[],
+      focus:[500,350]});
+  }
+  return draft;
 }
 export function cloneAsDraft(source) {
   const candidate=JSON.parse(JSON.stringify(source));
