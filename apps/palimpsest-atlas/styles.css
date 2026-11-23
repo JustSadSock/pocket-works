@@ -553,3 +553,6 @@ button:active{transform:translateY(1px)}
   .studio-canvas-shell.tracks-open .studio-map{min-height:70px}
   .studio-canvas-shell.tracks-open .studio-track-panel{min-height:124px;max-height:132px}
 }
+
+/* Entire timeline rail is a touch target; button marks remain keyboard-focusable. */
+.studio-track-panel .track-rail{cursor:pointer;touch-action:manipulation}
