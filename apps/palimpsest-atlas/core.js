@@ -148,3 +148,68 @@ export function validateStory(story) {
   }
   return errors;
 }
+
+
+/**
+ * Semantic lanes are derived from historical evidence metadata rather than
+ * inferred from arbitrary styling or the viewer's selected UI mode.
+ */
+export function eventLane(event) {
+  if (['politics','military','culture'].includes(event?.lane)) return event.lane;
+  const category = String(event?.category || '').toUpperCase();
+  if (/БИТВА|ОСАДА|ВОЙНА|АРМИЯ|ИНТЕРВЕНЦ|СРАЖЕН/.test(category)) return 'military';
+  if (/ПОЛИТИК|КОАЛИЦ|МИР|НАЧАЛО|ИНСТИТУТ/.test(category)) return 'politics';
+  return 'culture';
+}
+
+/**
+ * Comparison computes a true difference between two independently derived
+ * historical snapshots. The renderer never advances irreversible state.
+ */
+export function compareSnapshots(story, fromTime, toTime) {
+  const before=snapshotAt(story, fromTime);
+  const after=snapshotAt(story, toTime);
+  const sections=['entities','features','paths'];
+  const detail={};
+  for(const key of sections) {
+    const oldMap=new Map(before[key].map(x=>[x.id,x]));
+    const newMap=new Map(after[key].map(x=>[x.id,x]));
+    detail[key]={
+      added:after[key].filter(x=>!oldMap.has(x.id)),
+      removed:before[key].filter(x=>!newMap.has(x.id))
+    };
+  }
+  const introduced=story.events.filter(e=>e.time>Math.min(fromTime,toTime)&&
+    e.time<=Math.max(fromTime,toTime)).map(e=>e.id);
+  const forward=toTime>=fromTime;
+  const additions=sections.reduce((total,key)=>total+detail[key].added.length,0);
+  const removals=sections.reduce((total,key)=>total+detail[key].removed.length,0);
+  return {
+    before,after,sections:detail,forward,additions,removals,
+    passedEvents:introduced.length
+  };
+}
+
+/**
+ * Pixel-level density clustering ensures adjacent events remain discoverable
+ * even when a single month occupies less than a pixel.
+ */
+export function timelineClusters(events, window, width, radius=9) {
+  if (!Number.isFinite(width)||width<=0) return [];
+  const visible=events.filter(e=>e.time>=window[0]&&e.time<=window[1])
+    .map(event=>({event,x:fraction(event.time,window)*width}))
+    .sort((a,b)=>a.x-b.x);
+  const clusters=[];
+  for(const marker of visible){
+    const last=clusters[clusters.length-1];
+    if(last && marker.x-last.maxX<=radius &&
+       eventLane(marker.event)===last.lane) {
+      last.events.push(marker.event);
+      last.maxX=marker.x;
+      last.x=(last.x*(last.events.length-1)+marker.x)/last.events.length;
+    } else {
+      clusters.push({lane:eventLane(marker.event),x:marker.x,maxX:marker.x,events:[marker.event]});
+    }
+  }
+  return clusters;
+}

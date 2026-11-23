@@ -6,7 +6,8 @@
       "kind": "node-test",
       "tier": "smoke",
       "files": [
-        "tests/core.test.mjs"
+        "tests/core.test.mjs",
+        "tests/studio-data.test.mjs"
       ]
     },
     {
@@ -59,7 +60,53 @@
       "kind": "playwright",
       "tier": "smoke",
       "files": [
-        "qa/player-flow.spec.ts"
+        "qa/player-flow.spec.ts",
+        "qa/studio-flow.spec.ts"
+      ]
+    },
+    {
+      "id": "studio-visual",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "#studio-new",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#studio-new"
+        },
+        {
+          "action": "visible",
+          "selector": "#studio-map"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-studio-tab='features']"
+        },
+        {
+          "action": "click",
+          "selector": "#studio-add"
+        },
+        {
+          "action": "visible",
+          "selector": "#studio-fields"
+        },
+        {
+          "action": "screenshot"
+        }
       ]
     }
   ]
