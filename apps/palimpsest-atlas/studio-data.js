@@ -8,6 +8,7 @@ export const MAX_STORIES = 25;
 export const PALETTES = Object.freeze({
   parchment:{paper:'#e5dac1',ink:'#373c33',water:'#70989a',accent:'#a34e39'},
   twilight:{paper:'#d7d4c6',ink:'#313d43',water:'#79969b',accent:'#95694a'},
+  conflict:{paper:'#e2dbc9',ink:'#353d38',water:'#779a9f',accent:'#9b513d'},
   vellum:{paper:'#e5d9c5',ink:'#4a3e34',water:'#68929a',accent:'#8e6650'}
 });
 const ID = /^[a-z0-9][a-z0-9_-]{1,70}$/i;
