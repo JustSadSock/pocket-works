@@ -398,7 +398,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     const panel=$('studio-track-panel');
     panel.hidden=!tracksVisible;
     $('studio-track-toggle').setAttribute('aria-expanded',String(tracksVisible));
-    $('studio-track-toggle').textContent=(tracksVisible?'▾':'▸')+' Дорожки истории · '+count+' отметок';
+    $('studio-track-toggle').firstChild.textContent=(tracksVisible?'▾':'▸')+' Дорожки истории ';
     if(!tracksVisible){panel.replaceChildren();return;}
     const range=draft.range,span=range[1]-range[0];
     panel.replaceChildren();
