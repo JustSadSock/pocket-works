@@ -15,7 +15,10 @@ test('Breitenfeld frontier can be compared in overlay and split-date view',async
   await page.locator('#compare-mode').click();
   await expect(page.locator('#compare-split-guide')).toBeVisible();
   await expect(page.locator('#compare-mode')).toHaveAttribute('aria-pressed','true');
-  await page.locator('#compare-split').fill('68');
+  await page.locator('#compare-split').evaluate((el:HTMLInputElement)=>{
+    el.value='68';el.dispatchEvent(new Event('input',{bubbles:true}));
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+  });
   await expect(page.locator('#compare-split-guide')).toHaveAttribute('style',/left: 68%/);
   await page.screenshot({path:info.outputPath('01-battle-border-compare-split.png')});
   await page.locator('#compare-mode').click();
