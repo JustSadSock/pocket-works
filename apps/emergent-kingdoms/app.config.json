@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "slug": "emergent-kingdoms",
+  "name": "Emergent Kingdoms",
+  "shortName": "Kingdoms",
+  "description": "Автономная цивилизационная песочница с живой картой и альтернативными временными линиями.",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-24",
+  "releaseDateTime": "2026-11-24T01:00:00+02:00",
+  "changelog": [
+    "Детерминированный мир, демография, миграция, экономика, культуры и государства.",
+    "Семь слоёв карты, дипломатия, войны, торговля и история государств.",
+    "Вмешательства, разветвление истории, сравнение, архив и JSON-экспорт."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "runtime": "quick",
+  "accent": "#b56c39",
+  "backgroundColor": "#f2efe2",
+  "themeColor": "#213b3d",
+  "orientation": "any",
+  "cacheName": "emergent-kingdoms-v1.0.0",
+  "storageNamespace": "pocket-works:emergent-kingdoms",
+  "tags": [
+    "simulation",
+    "strategy",
+    "history",
+    "sandbox",
+    "atlas",
+    "offline",
+    "PWA"
+  ],
+  "order": 290
+}
