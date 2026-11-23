@@ -4,6 +4,7 @@ import {PALETTES, MAX_STORIES, createDraft,createPhaseDraft,cloneAsDraft,exportP
   loadLibrary,parseImport,parseStory,persistLibrary,upsertLibrary,newId} from './studio-data.js';
 
 import {COMMAND_ACTIONS,COMMAND_SIDES,validPolygon,polygonCenter} from './tactics.js';
+import {borderAt,storyTracks,MAX_BORDER_FRAMES} from './frontiers.js';
 const $=(id)=>document.getElementById(id);
 const COLLECTIONS=['events','entities','features','paths','sources','commands'];
 const LABELS={events:'События',entities:'Объекты',features:'Территории',paths:'Маршруты',sources:'Источники',commands:'Штабы'};
@@ -74,7 +75,7 @@ export function initStudio({onOpen,onNotify,builtins}){
   const storage=(()=>{try{return window.localStorage;}catch{return {getItem:()=>null,setItem:()=>{throw new Error('Локальное хранилище недоступно');}};}})();
   let library=loadLibrary(storage);
   let draft=null, savedHash='',tab='events',selected=null,undo=[],redo=[],dirty=false,
-    cursor=null,activeFrameTime=null,activeVertex=null;
+    cursor=null,activeFrameTime=null,activeVertex=null,tracksVisible=false;
   const board=$('studio-map');
   const ctx=board.getContext('2d');
   const input=$('studio-import');
@@ -320,6 +321,48 @@ export function initStudio({onOpen,onNotify,builtins}){
     },'studio-secondary'));
     form.append(group);
   }
+  function boundaryEditorPoints(item){
+    if(activeFrameTime!=null){
+      const target=item.boundaryFrames?.find(f=>f.time===activeFrameTime);
+      if(target)return target.points;
+    }
+    return item.points;
+  }
+  function renderTracks(){
+    if(!draft)return;
+    const lanes=storyTracks(draft);
+    const count=lanes.reduce((n,l)=>n+l.marks.length,0);
+    $('studio-track-count').textContent=count+' '+(count===1?'отметка':'отметок');
+    const panel=$('studio-track-panel');
+    panel.hidden=!tracksVisible;
+    $('studio-track-toggle').setAttribute('aria-expanded',String(tracksVisible));
+    $('studio-track-toggle').textContent=(tracksVisible?'▾':'▸')+' Дорожки истории · '+count+' отметок';
+    if(!tracksVisible){panel.replaceChildren();return;}
+    const range=draft.range,span=range[1]-range[0];
+    panel.replaceChildren();
+    for(const lane of lanes){
+      const line=make('div','track-lane');
+      line.append(make('span','track-lane-label',lane.name));
+      const rail=make('div','track-rail');
+      const max=150;
+      for(const mark of lane.marks.slice(0,max)){
+        const p=clamp(100*(mark.time-range[0])/span,1,99);
+        const element=button('',()=>{
+          tab=mark.tab;selected=mark.targetId;cursor=mark.time;
+          activeFrameTime=mark.borderTime??(lane.id==='motion'?mark.time:null);
+          activeVertex=null;
+          renderEditor();
+        },'track-mark track-'+lane.id);
+        element.style.left=p+'%';
+        element.title=mark.title+' · '+formatStoryTime(mark.time,draft);
+        element.setAttribute('aria-label',element.title);
+        element.classList.toggle('active',mark.targetId===selected&&Math.abs(mark.time-cursor)<.000001);
+        rail.append(element);
+      }
+      if(lane.marks.length>max)rail.append(make('small','track-overflow','+'+(lane.marks.length-max)+' событий'));
+      line.append(rail);panel.append(line);
+    }
+  }
   function renderMotionControls(form,item){
     const group=make('section','motion-controls');
     group.append(make('div','studio-field-head','04 / ПОЛОЖЕНИЯ ВО ВРЕМЕНИ'));
@@ -428,7 +471,7 @@ export function initStudio({onOpen,onNotify,builtins}){
       if(btn){btn.classList.toggle('active',t===tab);btn.setAttribute('aria-pressed',String(t===tab));}
     }
     if(!draft[tab].some(e=>e.id===selected))selected=draft[tab][0]?.id||null;
-    renderCollection();renderFields();updateToolbar();paint();
+    renderCollection();renderFields();renderTracks();updateToolbar();paint();
   }
   function dimensions(){
     const rect=board.getBoundingClientRect();
@@ -649,9 +692,13 @@ export function initStudio({onOpen,onNotify,builtins}){
     }catch(error){status(error.message,'error');}
   }
   board.addEventListener('pointerup',onMapPoint);
+  $('studio-track-toggle').addEventListener('click',()=>{tracksVisible=!tracksVisible;renderTracks();});
   $('studio-cursor').addEventListener('input',e=>{cursor=Number(e.target.value);activeFrameTime=null;
     $('studio-cursor-label').textContent=formatStoryTime(cursor,draft);paint();});
-  $('studio-cursor').addEventListener('change',()=>{if(tab==='entities'||tab==='features')renderEditor();});
+  $('studio-cursor').addEventListener('change',()=>{
+    if(tab==='features'&&current()?.kind==='boundary'&&current()?.boundaryFrames?.some(f=>Math.abs(f.time-cursor)<.000001))activeFrameTime=cursor;
+    if(tab==='entities'||tab==='features')renderEditor();else renderTracks();
+  });
   $('studio-back').addEventListener('click',back);
   $('studio-new').addEventListener('click',()=>open(createDraft()));
   $('studio-new-battle').addEventListener('click',()=>open(createPhaseDraft()));
