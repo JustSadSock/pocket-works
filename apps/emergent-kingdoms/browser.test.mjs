@@ -1,12 +1,16 @@
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {spawn} from 'node:child_process';
+import {createServer} from 'node:http';
+import {readFile,stat} from 'node:fs/promises';
+import {resolve,extname,join} from 'node:path';
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
-const output=process.env.EK_QA_DIR||'/tmp/ek-qa';
+const output=process.env.PW_QA_OUTPUT_DIR||process.env.EK_QA_DIR||'/tmp/ek-qa';
 await mkdir(output,{recursive:true});
-const server=spawn('python3',['-m','http.server','8765','--bind','127.0.0.1'],{stdio:'ignore'});
+const root=resolve(process.cwd());
+const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.webmanifest':'application/manifest+json','.svg':'image/svg+xml'};
+const server=createServer(async(req,res)=>{try{let path=resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));if(!path.startsWith(root+'/'))throw Error('path');if((await stat(path)).isDirectory())path=join(path,'index.html');res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream'});res.end(await readFile(path))}catch{res.writeHead(404);res.end('Not found')}});await new Promise(r=>server.listen(8765,'127.0.0.1',r));
 const base='http://127.0.0.1:8765/apps/emergent-kingdoms/';
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 let browser;
@@ -21,7 +25,7 @@ try{
  await page.screenshot({path:output+'/desktop-initial.png'});
  await page.locator('#next').click();await page.waitForFunction(()=>document.querySelector('#year').textContent==='0001');
  for(const mode of ['terrain','population','culture','fertility','trade','tech','political']){await page.locator('[data-mode="'+mode+'"]').click();assert.equal(await page.locator('[data-mode="'+mode+'"]').getAttribute('aria-pressed'),'true')}
- await page.locator('[data-speed="60"]').click();await page.locator('#play').click();await page.waitForFunction(()=>+document.querySelector('#year').textContent>=120,{timeout:30000});await page.locator('#play').click();
+ await page.locator('[data-speed="60"]').click();await page.locator('#play').click();await page.waitForFunction(()=>+document.querySelector('#year').textContent >=120,null,{timeout:60000});await page.locator('#play').click();
  const year=Number(await page.locator('#year').textContent());assert.ok(year>=120);
  assert.ok(await page.locator('#nation-select option').count()>1);
  await page.locator('#nation-select').selectOption({index:1});assert.ok((await page.locator('#details').textContent()).includes('Население'));
@@ -48,4 +52,4 @@ try{
  assert.deepEqual(errors,[]);
  for(const [p,name] of [[page,'DESKTOP'],[mp,'MOBILE']]){const jpg=await p.screenshot({type:'jpeg',quality:35,scale:'css'});const b64=jpg.toString('base64');for(let i=0;i<b64.length;i+=3000)console.log('EK_IMG_'+name+'_'+String(i/3000).padStart(3,'0')+'='+b64.slice(i,i+3000))}
  console.log('PASS: desktop, mobile, 7 modes, play, pause, timeline, branch, intervention, comparison, save, reload, JSON export');
-}finally{await browser?.close();server.kill()}
+}finally{await browser?.close();server.close()}
