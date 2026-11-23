@@ -280,3 +280,27 @@ button:active{transform:translateY(1px)}
   .studio-board-heading span{display:none}
   .studio-tools{display:none}
 }
+
+/* Readable comparison as an annotation, not a modal covering the map. */
+.comparison-icon[aria-pressed="true"]{background:#aec3c0;color:#2d5f68;border-color:#73969b}
+.comparison-banner{position:absolute;z-index:5;left:14px;bottom:13px;max-width:min(460px,calc(100% - 78px));display:flex;align-items:center;gap:11px;padding:10px 11px 10px 15px;background:#f0e8d6f5;border-left:3px solid #4e7e88;border-top:1px solid #b4a990;border-right:1px solid #b4a990;border-bottom:1px solid #b4a990;box-shadow:0 5px 18px #39433729}
+.comparison-content{min-width:0;display:grid;gap:3px}
+.comparison-content>span{font-size:9px;letter-spacing:.13em;color:#608189;font-weight:850}
+.comparison-content strong{font:600 16px/1.1 Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.comparison-content small{font-size:10px;line-height:1.4;color:#53665d}
+.comparison-banner button{margin-left:auto;flex-shrink:0;width:29px;height:31px;background:transparent;border:1px solid #b7b3a2;font-size:14px}
+.studio-library-status{margin:0;color:#96513e;font-size:11px;line-height:1.45}
+.time-surface{height:77px}
+@media(max-width:730px){
+  .comparison-banner{left:10px;bottom:9px;max-width:calc(100% - 68px);padding:7px 10px}
+  .comparison-content strong{font-size:13px}
+  .comparison-content small{font-size:9px}
+  .time-surface{height:68px}
+  .studio-library{gap:11px}
+}
+@media(max-height:620px) and (max-width:820px){
+  .studio-tools{display:flex;flex-wrap:nowrap}
+  .studio-tools button{font-size:9px;padding:5px 6px}
+  #studio-status{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+}
+@media(max-height:560px){.time-surface{height:48px}}
