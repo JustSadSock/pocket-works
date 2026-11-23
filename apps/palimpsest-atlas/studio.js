@@ -61,7 +61,7 @@ function customEntry(story,onOpen,onEdit){
   const row=make('div','personal-ticket');
   const text=make('div','personal-ticket-copy');
   text.append(make('strong','',story.title));
-  text.append(make('small','',fmt(story.range[0])+' — '+fmt(story.range[1])+' · '+story.events.length+' событий'));
+  text.append(make('small','',formatStoryTime(story.range[0],story)+' — '+formatStoryTime(story.range[1],story)+' · '+story.events.length+' событий'));
   row.append(text);
   row.append(button('Смотреть',()=>onOpen(story.id),'personal-view'));
   row.append(button('Править',()=>onEdit(story),'personal-edit'));
@@ -127,8 +127,8 @@ export function initStudio({onOpen,onNotify,builtins}){
       const line=make('button','studio-record'+(item.id===selected?' active':''));
       line.type='button';
       const upper=make('strong','',name);
-      const sub=make('small','',tab==='events'?fmt(item.time):
-        tab==='entities'?fmt(item.from):tab==='features'?fmt(item.from):
+      const sub=make('small','',tab==='events'?formatStoryTime(item.time,draft):
+        tab==='entities'?formatStoryTime(item.from,draft):tab==='features'?formatStoryTime(item.from,draft):
         tab==='paths'?item.points.length+' точек':tab==='commands'?item.commander||'Командование':'Ссылка на публикацию');
       line.append(upper,sub);
       line.addEventListener('click',()=>{selected=item.id;activeFrameTime=null;activeVertex=null;renderEditor();});
@@ -147,6 +147,7 @@ export function initStudio({onOpen,onNotify,builtins}){
         const x=clamp(item.x,65,story.world.width-65),y=clamp(item.y,55,story.world.height-55);
         item.points=[[x-65,y-45],[x+65,y-45],[x+65,y+45],[x-65,y+45]];
       }
+      if(tab==='entities'&&key==='commandId'&&value!==item.commandId)delete item.parentId;
       item[key]=value;
     });
   }
@@ -211,8 +212,8 @@ export function initStudio({onOpen,onNotify,builtins}){
         }return false;})()).map(e=>[e.id,e.name]);
       form.append(field('Родительское соединение',item.parentId||'',v=>setValue('parentId',v),
         {options:[['','Нет · напрямую штабу'],...parents]}));
-      add('Появление (год)','from',{number:true});
-      add('Исчезновение (пусто = до конца)','until',{number:true});
+      add(draft.timeUnit==='phase'?'Появление (фаза)':'Появление (год)','from',{number:true});
+      add(draft.timeUnit==='phase'?'Исчезновение (фаза, пусто = конец)':'Исчезновение (пусто = до конца)','until',{number:true});
       add('Состояние в этот момент','current',{long:true});
       add('Общий контекст','description',{long:true});
       add('Достоверность','confidence',{options:CONFIDENCE});
@@ -345,7 +346,7 @@ export function initStudio({onOpen,onNotify,builtins}){
       if(activeFrameTime!=null){
         const currentFrame=movement.frames.find(f=>f.time===activeFrameTime);
         if(currentFrame){
-          group.append(field('Год кадра',currentFrame.time,value=>{
+          group.append(field(draft.timeUnit==='phase'?'Номер фазы кадра':'Год кадра',currentFrame.time,value=>{
             if(!Number.isFinite(value)||value===0||value<(item.from??draft.range[0])||value>draft.range[1]){status('Некорректная дата кадра','error');return;}
             if(movement.frames.some(f=>f.time===value&&f.time!==activeFrameTime)){status('На эту дату уже есть кадр','error');return;}
             const old=activeFrameTime;
