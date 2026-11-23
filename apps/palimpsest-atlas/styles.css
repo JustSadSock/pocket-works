@@ -362,3 +362,15 @@ button:active{transform:translateY(1px)}
   .studio-frame-range{display:none}
   .studio-canvas-shell{height:min(34vh,225px)}
 }
+
+/* The timeline must not steal touch points from the authoring map.
+   Keep a real tap canvas on portrait phones even with the new keyframe ruler. */
+@media(max-width:820px) and (min-height:621px){
+  .studio-canvas-shell{height:clamp(310px,46vh,380px);min-height:310px}
+  .studio-map{flex:1 1 auto;min-height:175px}
+  .studio-tools{padding-top:4px}
+}
+@media(max-width:820px) and (max-height:620px){
+  .studio-canvas-shell{height:min(37vh,190px);min-height:0}
+  .studio-map{min-height:60px}
+}
