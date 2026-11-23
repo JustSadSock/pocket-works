@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ede5d3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Палимпсест">
+<title>Палимпсест — Атлас историй</title>
+<meta name="description" content="Наблюдай историю в пространстве и времени.">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="stylesheet" href="../../shared/mobile-runtime.css">
+<link rel="stylesheet" href="../../shared/update-manager.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<main id="app" class="app-shell" data-app-shell data-fullscreen-app>
+  <section id="library" class="library" aria-labelledby="brand-title">
+    <div class="library-grain" aria-hidden="true"></div>
+    <header class="lib-header" data-ui>
+      <div class="eyebrow"><span class="eye-dot"></span> POCKET WORKS <span class="eyebrow-sep">/</span> ИСТОРИЧЕСКАЯ МАСТЕРСКАЯ</div>
+      <a href="../../" class="exit-link" data-app-control>Pocket Works <span aria-hidden="true">↗</span></a>
+    </header>
+    <div class="library-body">
+      <div class="hero-copy">
+        <div class="edition">КОЛЛЕКЦИЯ 01 <span class="edition-rule"></span> 2026</div>
+        <h1 id="brand-title">Палимпсест<span>Атлас историй</span></h1>
+        <p>Перематывай века. Приближай события. Исследуй мир, каким он становился — слой за слоем.</p>
+      </div>
+      <div class="library-art" aria-hidden="true">
+        <svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid meet">
+          <path d="M15 130Q115 10 230 60T400 45 M-10 160Q100 35 225 85T390 70 M-20 190Q95 75 220 111T380 100 M10 220Q110 120 245 140T400 125 M30 245Q135 153 260 175T390 165" fill="none" stroke="#685c42" stroke-width="1" opacity=".35"/>
+          <path d="M70-20Q180 65 170 112S116 170 175 240s23 95 8 120" fill="none" stroke="#638c91" stroke-width="17" opacity=".67" stroke-linecap="round"/>
+          <path d="M70-20Q180 65 170 112S116 170 175 240s23 95 8 120" fill="none" stroke="#b0c8c4" stroke-width="6" opacity=".8" stroke-linecap="round"/>
+          <g fill="#aa8c57" stroke="#554a36" stroke-width="1.5"><ellipse cx="235" cy="120" rx="49" ry="32"/><ellipse cx="290" cy="180" rx="31" ry="20"/><ellipse cx="275" cy="75" rx="29" ry="19"/></g>
+          <path d="M213 136l-8-20 13-7 11 8 11-7 12 6-3 21z" fill="#e0d1af" opacity=".8"/>
+          <circle cx="235" cy="120" r="5" fill="#a44c38"/><circle cx="235" cy="120" r="16" fill="none" stroke="#a44c38" stroke-width="1.4" opacity=".7"/>
+          <g fill="#3f473f" font-size="12" font-family="Georgia,serif"><text x="252" y="119">Palatium</text><text x="302" y="183">Aventinus</text><text x="20" y="146" fill="#50767b">Tiberis</text></g>
+        </svg>
+        <div class="art-index">FIG. 01 <span>URBS AETERNA</span></div>
+      </div>
+      <div class="story-section" data-ui>
+        <div class="section-title"><span>Открыть историю</span><span>02 ЭКСПОНАТА</span></div>
+        <div class="story-grid">
+          <button class="story-ticket selected" type="button" data-story="rome" data-native-press>
+            <span class="ticket-top"><span>01 / ИСТОКИ</span><span>↗</span></span>
+            <span class="ticket-name">Как возник Рим</span>
+            <span class="ticket-description">От поселений на холмах до конца царской эпохи. Археология рядом с легендами.</span>
+            <span class="ticket-foot">1000–500 до н. э. <span>8 событий</span></span>
+          </button>
+          <button class="story-ticket" type="button" data-story="war" data-native-press>
+            <span class="ticket-top"><span>02 / ВОЙНА</span><span>↗</span></span>
+            <span class="ticket-name">Тридцатилетняя война</span>
+            <span class="ticket-description">Смена центров конфликта, вмешательство держав и путь к Вестфальскому миру.</span>
+            <span class="ticket-foot">1618–1648 <span>10 событий</span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <footer class="lib-footer"><span>ИСТОРИЧЕСКИЕ ИНТЕРПРЕТАЦИИ И ОЦЕНКИ ЯВНО ОТМЕЧЕНЫ</span><span>V 0.1</span></footer>
+  </section>
+
+  <section id="viewer" class="viewer" hidden aria-label="Историческая сцена">
+    <header class="viewer-header" data-ui>
+      <button id="back" class="mark-button" type="button" data-native-press aria-label="К библиотеке историй">←</button>
+      <div class="viewer-heading"><span id="story-caption">ПАЛИМПСЕСТ / ИСТОРИЯ 01</span><strong id="story-title">Как возник Рим</strong></div>
+      <div class="header-actions">
+        <button id="bookmark" class="icon-button" type="button" data-native-press aria-pressed="false" title="Запомнить момент" aria-label="Сохранить закладку">◇</button>
+        <button id="list-toggle" class="icon-button" type="button" data-native-press aria-label="Открыть список событий" aria-expanded="false">☷</button>
+      </div>
+    </header>
+    <div id="stage" class="stage">
+      <canvas id="scene" data-gesture-surface data-touch-action="none" aria-label="Интерактивная карта с объектами истории"></canvas>
+      <div class="stage-stamp" data-ui><span id="map-scale">ОБЗОР СЦЕНЫ</span><span id="map-caveat">СХЕМАТИЧЕСКАЯ КАРТА</span></div>
+      <div class="scene-toolbar" data-ui>
+        <button type="button" id="map-plus" data-native-press aria-label="Приблизить карту">+</button>
+        <button type="button" id="map-minus" data-native-press aria-label="Отдалить карту">−</button>
+        <button type="button" id="map-home" data-native-press aria-label="Вся карта">⌖</button>
+      </div>
+      <div class="map-corner" data-ui><span class="compass-arrow">↑</span> N</div>
+    </div>
+    <section class="dock" data-ui aria-label="Управление временем">
+      <div class="story-now">
+        <div class="story-now-text">
+          <span class="now-tag" id="event-class">ХРОНИКА</span>
+          <button type="button" id="inspect-event" class="now-title" data-native-press><span id="event-title">Начало истории</span><span aria-hidden="true">↗</span></button>
+          <p id="event-subtitle">Перемещай временную шкалу или нажми на событие.</p>
+        </div>
+        <div class="current-date"><span id="date-value">1000</span><small id="date-era">ДО Н. Э.</small></div>
+      </div>
+      <div class="timeline-zone">
+        <div class="timeline-control-row">
+          <button id="prev" type="button" class="transport thin" data-native-press title="Предыдущее событие" aria-label="Предыдущее событие">←</button>
+          <button id="play" type="button" class="transport play" data-native-press aria-label="Воспроизвести">▶</button>
+          <button id="next" type="button" class="transport thin" data-native-press title="Следующее событие" aria-label="Следующее событие">→</button>
+          <span class="timeline-caption">МАСШТАБ ВРЕМЕНИ</span>
+          <button id="time-minus" class="time-zoom" type="button" data-native-press aria-label="Уменьшить масштаб времени">−</button>
+          <button id="time-plus" class="time-zoom" type="button" data-native-press aria-label="Увеличить масштаб времени">+</button>
+        </div>
+        <div id="time-surface" class="time-surface" data-gesture-surface data-touch-action="none" role="slider" tabindex="0" aria-label="Временная шкала. Стрелки для перемещения, Page Up и Page Down для масштаба" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0" aria-valuetext="1000 год до н. э.">
+          <canvas id="time-canvas" aria-hidden="true"></canvas>
+        </div>
+        <div class="time-floor"><span id="time-left">1000 до н. э.</span><span id="time-help">Перетаскивай · своди пальцы для обзора</span><span id="time-right">500 до н. э.</span></div>
+      </div>
+    </section>
+    <aside id="inspector" class="inspector" hidden data-ui aria-label="Сведения об объекте">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="inspector-top"><span id="inspector-type">ОБЪЕКТ</span><button id="inspector-close" type="button" data-native-press aria-label="Закрыть сведения">✕</button></div>
+      <h2 id="inspector-name"></h2>
+      <div id="confidence" class="confidence"></div>
+      <div class="inspector-tabs"><button type="button" id="tab-now" class="active" data-native-press aria-pressed="true">В выбранный момент</button><button type="button" id="tab-general" data-native-press aria-pressed="false">Контекст</button></div>
+      <p id="inspector-description"></p>
+      <div class="sources-title">ИСТОЧНИКИ</div>
+      <div id="sources" class="sources"></div>
+    </aside>
+    <aside id="outline" class="outline" hidden data-ui aria-label="Список событий">
+      <div class="outline-head"><div><span>СОДЕРЖАНИЕ</span><strong id="outline-title">История</strong></div><button id="outline-close" type="button" data-native-press aria-label="Закрыть список событий">✕</button></div>
+      <div id="outline-items" class="outline-items"></div>
+    </aside>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </section>
+</main>
+<script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Палимпсест: Атлас" data-app-version="0.1.0"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

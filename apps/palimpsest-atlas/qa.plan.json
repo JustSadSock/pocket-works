@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "history-regression",
+      "kind": "node-test",
+      "tier": "smoke",
+      "files": [
+        "tests/core.test.mjs"
+      ]
+    },
+    {
+      "id": "atlas-journey",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "ready": "#library",
+      "steps": [
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-story='rome']"
+        },
+        {
+          "action": "visible",
+          "selector": "#scene"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "#next"
+        },
+        {
+          "action": "click",
+          "selector": "#inspect-event"
+        },
+        {
+          "action": "visible",
+          "selector": "#inspector"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "player-flow",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/player-flow.spec.ts"
+      ]
+    }
+  ]
+}
