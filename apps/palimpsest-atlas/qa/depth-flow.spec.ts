@@ -46,7 +46,9 @@ test('draft keyframes are placed on map, reversed, saved and replayed',async({pa
   });
   await page.locator('.motion-actions button').first().click();
   await expect(page.locator('.motion-keyframe')).toHaveCount(2);
-  await page.locator('#studio-map').click({position:{x:125,y:95}});
+  const mapBox=await page.locator('#studio-map').boundingBox();
+  if(!mapBox)throw new Error('Canvas редактора недоступен');
+  await page.locator('#studio-map').click({position:{x:mapBox.width*.35,y:mapBox.height*.45}});
   await page.locator('.editor-form [aria-label="Как показывать переход"]').selectOption('illustrative');
   await page.screenshot({path:info.outputPath('story-keyframe-editor.png')});
   await page.locator('#studio-save').click();
