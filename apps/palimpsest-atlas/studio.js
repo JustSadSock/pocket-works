@@ -94,7 +94,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     $('studio-dirty').classList.toggle('is-dirty',dirty);
     const active=current();
     $('studio-map-hint').textContent=tab==='features'&&active?.kind==='boundary'?
-      activeVertex!=null?'Коснись карты: изменить вершину №'+(activeVertex+1):'Коснись карты: добавить вершину границы.':
+      activeVertex!=null?'Коснись карты: изменить вершину №'+(activeVertex+1):'Коснись карты: добавить вершину '+(activeFrameTime!=null?'выбранной даты':'исходной формы')+'.':
       (tab==='entities'||tab==='features')&&activeFrameTime!=null&&active?.motion?.frames?.some(f=>f.time===activeFrameTime)?
       'Нажми на карте: изменится выбранный ключевой кадр на '+formatStoryTime(activeFrameTime,draft)+'.':tab==='paths'?
       'Нажми на карту, чтобы добавить точку маршрута. Последнюю точку можно удалить в форме.' :
@@ -292,32 +292,94 @@ export function initStudio({onOpen,onNotify,builtins}){
   }
   function renderBoundaryControls(form,item){
     const group=make('section','boundary-controls');
-    group.append(make('div','studio-field-head','05 / ВЕРШИНЫ ГРАНИЦЫ'));
-    group.append(make('p','studio-field-note','Полигон — условная линия. Перемещай вершины на карте или добавляй новые. Достоверность должна быть указана отдельно.'));
+    group.append(make('div','studio-field-head','05 / ГРАНИЦЫ ВО ВРЕМЕНИ'));
+    group.append(make('p','studio-field-note',
+      'Каждая форма — зафиксированный снимок, а не выдуманная анимация между датами. Сначала выбери дату, затем запиши её границу.'));
+    const frames=item.boundaryFrames||[];
+    const active=frames.find(f=>f.time===activeFrameTime);
+    const strip=make('div','border-keyframe-strip');
+    strip.append(button('Изначально',()=>{
+      activeFrameTime=null;activeVertex=null;cursor=item.from??draft.range[0];renderEditor();
+    },'border-keyframe'+(!active?' selected':'')));
+    for(const frame of frames){
+      strip.append(button(formatStoryTime(frame.time,draft),()=>{
+        activeFrameTime=frame.time;cursor=frame.time;activeVertex=null;renderEditor();
+      },'border-keyframe'+(active?.time===frame.time?' selected':'')));
+    }
+    group.append(strip);
+    group.append(make('p','studio-field-note',active?
+      'Редактируется граница на '+formatStoryTime(active.time,draft)+'.':
+      'Редактируется исходная граница. Для новой даты сначала запиши отдельную форму.'));
+    if(active){
+      group.append(field('Достоверность формы',active.confidence,value=>{
+        const time=active.time;mutate(story=>{
+          story.features.find(f=>f.id===selected).boundaryFrames.find(f=>f.time===time).confidence=value;
+        });
+      },{options:CONFIDENCE.filter(([id])=>id!=='tradition')}));
+      group.append(field('Источник формы',(active.sources||[])[0]||'',value=>{
+        const time=active.time;mutate(story=>{
+          story.features.find(f=>f.id===selected).boundaryFrames.find(f=>f.time===time).sources=value?[value]:[];
+        });
+      },{options:[['','Без источника'],...draft.sources.map(s=>[s.id,s.title||s.id])]}));
+    }
+    const actions=make('div','border-keyframe-actions');
+    actions.append(button('⊕ Записать форму в '+formatStoryTime(cursor,draft),()=>{
+      if(cursor<(item.from??draft.range[0])||cursor>(item.until??draft.range[1])){
+        status('Граница не существует в выбранную дату','error');return;
+      }
+      const existing=frames.find(f=>Math.abs(f.time-cursor)<.000001);
+      if(existing){activeFrameTime=existing.time;activeVertex=null;renderEditor();return;}
+      if(frames.length>=MAX_BORDER_FRAMES){status('Максимум '+MAX_BORDER_FRAMES+' карт для одной границы','error');return;}
+      mutate(story=>{
+        const feature=story.features.find(f=>f.id===selected);
+        const inherited=borderAt(feature,cursor);
+        if(!feature.boundaryFrames)feature.boundaryFrames=[];
+        feature.boundaryFrames.push({
+          time:cursor,points:deep(inherited.points),confidence:'hypothetical',sources:[]
+        });
+        feature.boundaryFrames.sort((a,b)=>a.time-b.time);
+        activeFrameTime=cursor;activeVertex=null;
+      });
+      status('Карта границы сохранена. Теперь двигай её вершины независимо от других дат.');
+    },'studio-secondary'));
+    if(active)actions.append(button('− Удалить форму на дату',()=>{
+      const time=active.time;mutate(story=>{
+        const feature=story.features.find(f=>f.id===selected);
+        feature.boundaryFrames=feature.boundaryFrames.filter(f=>f.time!==time);
+        if(!feature.boundaryFrames.length)delete feature.boundaryFrames;
+        activeFrameTime=null;activeVertex=null;
+      });
+    },'studio-secondary'));
+    group.append(actions);
+    group.append(make('div','studio-field-head','06 / ГЕОМЕТРИЯ'));
+    group.append(make('p','studio-field-note','Вершины можно двигать касанием карты. Добавление и удаление не изменяют предыдущие даты.'));
+    const pts=boundaryEditorPoints(item);
     const list=make('div','boundary-vertices');
-    for(let i=0;i<(item.points||[]).length;i++){
+    for(let i=0;i<pts.length;i++){
       const b=button('№'+(i+1),()=>{activeVertex=i;renderEditor();},
         'boundary-vertex'+(activeVertex===i?' selected':''));
       b.title='Переместить вершину №'+(i+1);
       list.append(b);
     }
     group.append(list);
-    group.append(button('+ Добавить вершину касанием',()=>{activeVertex=null;updateToolbar();renderEditor();},'studio-secondary'));
-    if(activeVertex!=null&&item.points?.[activeVertex]){
+    group.append(button('+ Добавить вершину касанием',()=>{
+      activeVertex=null;updateToolbar();renderEditor();
+    },'studio-secondary'));
+    if(activeVertex!=null&&pts[activeVertex]){
       const coords=make('div','field-pair');
       for(const axis of [0,1])coords.append(field(axis===0?'X вершины':'Y вершины',
-        item.points[activeVertex][axis],value=>{
+        pts[activeVertex][axis],value=>{
           if(!Number.isFinite(value)||value<0||value>(axis===0?draft.world.width:draft.world.height)){
             status('Точка находится вне карты','error');return;
           }
           const index=activeVertex;
-          mutate(story=>story.features.find(f=>f.id===selected).points[index][axis]=value);
+          mutate(story=>boundaryEditorPoints(story.features.find(f=>f.id===selected))[index][axis]=value);
         },{number:true}));
       group.append(coords);
     }
     group.append(button('− Удалить последнюю вершину',()=>{
-      if(item.points.length<=3){status('Для границы необходимо минимум три вершины','error');return;}
-      mutate(story=>{story.features.find(f=>f.id===selected).points.pop();activeVertex=null;});
+      if(pts.length<=3){status('Для границы необходимо минимум три вершины','error');return;}
+      mutate(story=>{boundaryEditorPoints(story.features.find(f=>f.id===selected)).pop();activeVertex=null;});
     },'studio-secondary'));
     form.append(group);
   }
@@ -504,7 +566,7 @@ export function initStudio({onOpen,onNotify,builtins}){
     }
     for(const item of draft.features){
       if(item.kind==='boundary'){
-        const pts=item.points||[];if(pts.length<3)continue;
+        const pts=(item.id===selected?boundaryEditorPoints(item):borderAt(item,cursor).points)||[];if(pts.length<3)continue;
         ctx.beginPath();pts.forEach(([x,y],i)=>{
           const [px,py]=trans(x,y);if(!i)ctx.moveTo(px,py);else ctx.lineTo(px,py);
         });ctx.closePath();
@@ -575,8 +637,9 @@ export function initStudio({onOpen,onNotify,builtins}){
       if(tab==='events')item.focus=[x,y];
       else if(tab==='paths')item.points.push([x,y]);
       else if(tab==='features'&&item.kind==='boundary'){
-        if(activeVertex!=null&&item.points?.[activeVertex])item.points[activeVertex]=[x,y];
-        else if(item.points.length<40)item.points.push([x,y]);
+        const pts=boundaryEditorPoints(item);
+        if(activeVertex!=null&&pts[activeVertex])pts[activeVertex]=[x,y];
+        else if(pts.length<40)pts.push([x,y]);
         else throw Error('Для границы максимум 40 вершин');
       }
       else if(activeFrameTime!=null&&item.motion?.frames?.some(f=>f.time===activeFrameTime)){
