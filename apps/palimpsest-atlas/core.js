@@ -1,5 +1,6 @@
 import {locateAt, validateMotion} from './motion.js';
 import {validateTactics} from './tactics.js';
+import {borderAt,boundaryChanged,validateBoundaryFrames} from './frontiers.js';
 // Pure historical timeline functions. All story timestamps are year coordinates:
 // negative = BCE, positive = CE. Historical year zero is never valid in scenario data.
 export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -61,7 +62,7 @@ export function snapshotAt(story, time) {
   return {
     time: moment,
     entities: story.entities.filter(item=>visibleAt(item,moment)).map(item=>locateAt(item,moment)),
-    features: (story.features||[]).filter(item=>visibleAt(item,moment)).map(item=>locateAt(item,moment)),
+    features: (story.features||[]).filter(item=>visibleAt(item,moment)).map(item=>borderAt(locateAt(item,moment),moment)),
     paths: (story.paths||[]).filter(item=>visibleAt(item,moment)),
     currentEvent: eventBefore(story,moment)
   };
@@ -152,6 +153,9 @@ export function validateStory(story) {
   }
   for(const feature of story.features||[])for(const reason of validateMotion(feature,story.range,story.world))errors.push(feature.id+': '+reason);
   errors.push(...validateTactics(story));
+  const sourceIds=new Set((story.sources||[]).map(s=>s.id));
+  for(const feature of story.features||[])for(const err of validateBoundaryFrames(feature,story.range,story.world,sourceIds))
+    errors.push((feature.id||'граница')+': '+err);
   return errors;
 }
 
@@ -187,7 +191,9 @@ export function compareSnapshots(story, fromTime, toTime) {
         const beforeItem=oldMap.get(x.id);
         return beforeItem&&Number.isFinite(x.x)&&Number.isFinite(x.y)&&
           (Math.abs(beforeItem.x-x.x)>.01||Math.abs(beforeItem.y-x.y)>.01);
-      }).map(item=>({before:oldMap.get(item.id),after:item}))
+      }).map(item=>({before:oldMap.get(item.id),after:item})),
+      reshaped:key==='features'?after[key].filter(x=>oldMap.has(x.id)&&boundaryChanged(oldMap.get(x.id),x))
+        .map(item=>({before:oldMap.get(item.id),after:item})):[]
     };
   }
   const introduced=story.events.filter(e=>e.time>Math.min(fromTime,toTime)&&
@@ -196,8 +202,9 @@ export function compareSnapshots(story, fromTime, toTime) {
   const additions=sections.reduce((total,key)=>total+detail[key].added.length,0);
   const removals=sections.reduce((total,key)=>total+detail[key].removed.length,0);
   const movements=sections.reduce((total,key)=>total+detail[key].moved.length,0);
+  const reshapes=detail.features.reshaped.length;
   return {
-    before,after,sections:detail,forward,additions,removals,movements,
+    before,after,sections:detail,forward,additions,removals,movements,reshapes,
     passedEvents:introduced.length
   };
 }
