@@ -175,3 +175,6 @@ button:active{transform:translateY(1px)}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
+
+/* Keep both navigation and collection identity visible on narrow iPhones. */
+@media(max-width:730px){.lib-header .eyebrow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lib-header .exit-link{flex:none;white-space:nowrap}}
