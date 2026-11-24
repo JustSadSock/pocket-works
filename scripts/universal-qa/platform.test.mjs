@@ -96,3 +96,16 @@ test('aggregate fails closed when reports are missing or failed', () => {
     assert.equal(summarize(f.root, ['x']).success, false);
   } finally { f.cleanup(); }
 });
+
+
+test('large maintenance PR keeps all tasks while manual request remains bounded', () => {
+ const f = createFixture();
+ try {
+  const apps = Array.from({length: 24}, (_,i) => 'app-'+i);
+  for(const app of apps){const dir=join(f.root,'apps',app);mkdirSync(dir,{recursive:true});writeFileSync(join(dir,'app.config.json'),'{}');writeFileSync(join(dir,'index.html'),'<!doctype html>');writeFileSync(join(dir,'model.test.mjs'),'');}
+  assert.throws(()=>resolveTasks(f.root,{apps}),/Too many QA jobs/);
+  const tasks=resolveTasks(f.root,{apps,pullRequest:true});
+  assert.equal(tasks.length,48);assert.equal(partition(tasks).cpu.include.length,24);assert.equal(partition(tasks).browser.include.length,24);
+  assert.equal(new Set(tasks.map(t=>t.key)).size,48);
+ } finally {f.cleanup();}
+});
