@@ -1042,3 +1042,15 @@ export function politicalArchitectureSnapshot(s,f){
  const a=s.society?.architecture;if(!a)return null;const g=a.governments[f],subjects=Object.values(a.subjects).filter(q=>s.cities.some(c=>c.id===q.city&&c.f===f)).map(q=>({...q,person:a.people[q.person],treasury:subjectAccount(s,q.id)?.obj.localTreasury??0}));const counts={};for(const t of Object.values(a.titles))if(subjectFaction(s,t.owner)===f)counts[t.kind]=(counts[t.kind]||0)+1;
  return {kind:governmentType(s,f),government:g,ruler:a.people[g.ruler],heir:a.people[g.heir],subjects,property:counts,factions:politicalFactions(s,f)};
 }
+
+export function societySandbox(config={}){
+ const s=discoverySandbox({...config,society:{government:config.government||'feudal',governments:config.governments,autonomy:config.autonomy??.45}});
+ s.sandboxKind='society';s.sandboxConfig={...config};
+ for(const st of s.states)if(Number.isFinite(config.tax))st.tax=clamp(config.tax,0,.5);
+ for(const c of s.cities){const d=c.society;if(Number.isFinite(config.privateWealth)){const desired=clamp(config.privateWealth,0,.8)*(c.cash+d.cohorts.reduce((n,q)=>n+q.cash,0)),current=d.cohorts.reduce((n,q)=>n+q.cash,0);if(desired>current){const delta=Math.min(c.cash,desired-current);c.cash-=delta;for(const q of d.cohorts)q.cash+=delta*q.pop/Math.max(1,c.pop);}else if(current>0){for(const q of d.cohorts)q.cash*=desired/current;c.cash+=current-desired;}}}
+ return s;
+}
+export function societySample(s){
+ const a=s.society.architecture;
+ return {day:s.day,states:s.states.map(st=>{const cs=s.cities.filter(c=>c.f===st.id),pop=cs.reduce((n,c)=>n+c.pop,0),g=a.governments[st.id];return {id:st.id,pop,gold:st.gold,kind:governmentType(s,st.id),ruler:g?.ruler,legitimacy:g?.legitimacy,local:cs.reduce((n,c)=>n+c.society.localTreasury,0),private:cs.reduce((n,c)=>n+c.society.cohorts.reduce((m,q)=>m+q.cash,0),0),market:cs.reduce((n,c)=>n+c.cash,0),autonomy:cs.reduce((n,c)=>n+c.society.autonomy*c.pop,0)/Math.max(1,pop),pressure:cs.reduce((n,c)=>n+c.society.pressure*c.pop,0)/Math.max(1,pop),groups:SOCIAL_GROUPS.map(([id])=>({id,pop:cs.reduce((n,c)=>n+c.society.cohorts.find(q=>q.id===id).pop,0),cash:cs.reduce((n,c)=>n+c.society.cohorts.find(q=>q.id===id).cash,0)}))};}),money:materialTotals(s).money,events:s.society.events.length,people:Object.values(a.people).filter(p=>p.alive).length,titles:Object.keys(a.titles).length};
+}
