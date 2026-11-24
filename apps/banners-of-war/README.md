@@ -91,3 +91,7 @@ Three representative-sector scenario definitions and atlas entry point, selectab
 
 - Objective-aware commander now estimates contested/uncontrolled objective zones using sanitized observations; holding an unoccupied objective from afar loses value. No side-specific bonuses.
 - Non-destructive timeline forks at any recorded round, switching and comparison of exact archived states, format 4 backwards-compatible saves. Transactional rollback if localStorage cannot hold both branches. Six full scenario experiments recorded separately in `chronicles-full-audit.json`. All 18 scenario/commander tests passed in JS harness. Browser validation pending.
+
+
+### Chronicles completion laboratory
+The 1008 original cases are regenerated using the original commander-lab case function and unchanged common physics. Separate independent tests vary forecast horizon at the same commander budget and compare difficulty levels. 300 historical cases cross six chapters, five series and ten deterministic initial perturbations with 120/360/900-second horizons. Eight QA shards emit per-battle JSONL, not merged into prior defective results. Local V8 smoke results are in completion-smoke.json; the complete matrix must be retrieved from GitHub Actions artifacts and validated before conclusions. Physical benchmark is ten simulated seconds, not browser FPS. Historical sector geometry and profile numbers are illustrative modelling assumptions.

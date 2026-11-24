@@ -132,6 +132,27 @@
         "qa/chronicles.spec.ts"
       ],
       "tier": "smoke"
+    },
+    {
+      "id": "completion-lab",
+      "kind": "node",
+      "entry": "completion-runner.mjs",
+      "args": [
+        "{seed}",
+        "8",
+        "{output}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "tier": "smoke"
     }
   ]
 }
