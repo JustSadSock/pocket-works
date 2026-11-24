@@ -1,0 +1,114 @@
+name: CI Overhaul Independent PR Replay
+
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['.github/workflows/ci-overhaul-migration.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ci-overhaul-migration
+  cancel-in-progress: false
+jobs:
+  cases:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.cases.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate controller tests and frozen case list
+        id: cases
+        run: |
+          node --test scripts/ci-overhaul/*.test.mjs
+          jq -e '.schema == 1 and (.cases|length) == 3 and ([.cases[].run]|unique|length) == 3' scripts/ci-overhaul/migration-cases.json
+          echo "matrix=$(jq -c '{include:.cases}' scripts/ci-overhaul/migration-cases.json)" >> "$GITHUB_OUTPUT"
+
+  replay:
+    needs: cases
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.cases.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: controller
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.checkout }}
+          path: frozen
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify frozen revision and historical run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CASE_RUN: ${{ matrix.run }}
+          CASE_HEAD: ${{ matrix.head }}
+          CASE_CHECKOUT: ${{ matrix.checkout }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/frozen"
+          test "$(git -C frozen rev-parse HEAD)" = "$CASE_CHECKOUT"
+          test "$(git -C frozen rev-parse HEAD^2)" = "$CASE_HEAD"
+          node --input-type=module -e '
+            const r=await fetch(process.env.GITHUB_API_URL+"/repos/"+process.env.GITHUB_REPOSITORY+"/actions/runs/"+process.env.CASE_RUN,{headers:{Authorization:"Bearer "+process.env.GH_TOKEN,Accept:"application/vnd.github+json"}});
+            if(!r.ok)throw Error("Historical API "+r.status);
+            const d=await r.json();
+            if(d.head_sha!==process.env.CASE_HEAD||d.name!=="Universal Pocket Works QA"||d.status!=="completed"||d.conclusion!=="success"||d.run_attempt!==1)throw Error("Frozen historical run mismatch");
+          '
+      - uses: actions/download-artifact@v4
+        with:
+          name: qa-summary-${{ matrix.run }}
+          run-id: ${{ matrix.run }}
+          github-token: ${{ github.token }}
+          path: legacy
+      - name: Replay exact legacy plan from historical merge revision
+        env:
+          QA_BASE_SHA: ${{ matrix.base }}
+          QA_HEAD_SHA: ${{ matrix.head }}
+        run: |
+          test ! -e frozen/scripts/ci-overhaul
+          cp -R controller/scripts/ci-overhaul frozen/scripts/ci-overhaul
+          printf '{}' > "$RUNNER_TEMP/replay-event.json"
+          cd frozen
+          GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$RUNNER_TEMP/replay-event.json" GITHUB_OUTPUT='' GITHUB_STEP_SUMMARY='' node scripts/universal-qa/plan.mjs > ../legacy-plan.txt
+      - name: Execute independent case and reconcile every result
+        env:
+          EXPECTED: ${{ matrix.expected }}
+        run: |
+          cd frozen
+          node scripts/ci-overhaul/replay-case.mjs ../legacy-plan.txt ../legacy/summary.json ../case-evidence "$EXPECTED"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: migration-case-${{ matrix.id }}-${{ github.run_attempt }}
+          path: case-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
+  gate:
+    needs: [cases, replay]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require all independent replays
+        env:
+          CASES: ${{ needs.cases.result }}
+          REPLAY: ${{ needs.replay.result }}
+        run: test "$CASES" = success && test "$REPLAY" = success
