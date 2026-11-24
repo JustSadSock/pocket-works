@@ -34,8 +34,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45423462734" |
-            jq -e '.head_sha == "5340689e15379db475cc7b2e5bcc7c99b82691b8" and .head_branch == "platform/ci-cd-overhaul" and .name == "CI Overhaul Full Shadow Lab" and .status == "completed" and .conclusion == "failure" and .run_attempt == 1'
+          node --input-type=module -e '
+            const res=await fetch(process.env.GITHUB_API_URL+"/repos/"+process.env.GITHUB_REPOSITORY+"/actions/runs/45423462734",{headers:{Authorization:"Bearer "+process.env.GH_TOKEN,Accept:"application/vnd.github+json"}});
+            if(!res.ok)throw Error("GitHub provenance API: "+res.status);
+            const r=await res.json();
+            if(r.head_sha!=="5340689e15379db475cc7b2e5bcc7c99b82691b8"||r.head_branch!=="platform/ci-cd-overhaul"||r.name!=="CI Overhaul Full Shadow Lab"||r.status!=="completed"||r.conclusion!=="failure"||r.run_attempt!==1)throw Error("Historical run provenance mismatch");
+            console.log("Historical run verified");
+          '
       - uses: actions/download-artifact@v4
         with:
           name: shadow-full-plan
@@ -64,6 +69,7 @@ jobs:
           path: frozen
           persist-credentials: false
       - name: Execute exactly the failed test on original revision
+        id: execute
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE/frozen"
           test "$(git -C frozen rev-parse HEAD)" = "5340689e15379db475cc7b2e5bcc7c99b82691b8"
@@ -72,7 +78,7 @@ jobs:
           cd frozen
           node scripts/ci-overhaul/run-shard.mjs
       - name: Reconcile without erasing original failure
-        if: always()
+        if: always() && steps.execute.outcome != 'skipped' && steps.execute.outcome != ''
         run: |
           node scripts/ci-overhaul/selective-retry.mjs reconcile prior-plan/plan.json prior-audit/audit.json frozen/qa-artifacts retry-evidence
       - uses: actions/upload-artifact@v4
