@@ -105,7 +105,8 @@
       "id": "commander",
       "kind": "node-test",
       "files": [
-        "commander.test.mjs"
+        "commander.test.mjs",
+        "allied-command.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -160,26 +161,9 @@
     {
       "id": "controlled-battles",
       "kind": "node",
-      "entry": "control-lab-run.mjs",
+      "entry": "control-lab-batch.mjs",
       "args": [
-        "shard:{seed}:6",
         "{output}"
-      ],
-      "seeds": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5
-      ],
-      "tier": "smoke"
-    },
-    {
-      "id": "allied-authority",
-      "kind": "node-test",
-      "files": [
-        "allied-command.test.mjs"
       ],
       "tier": "smoke"
     }
