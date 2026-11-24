@@ -1,0 +1,87 @@
+name: CI Overhaul Selective Retry Pilot
+
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['.github/workflows/ci-overhaul-retry.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ci-overhaul-selective-retry
+  cancel-in-progress: false
+
+jobs:
+  retry:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Trust only controller checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify historical run provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45423462734" |
+            jq -e '.head_sha == "5340689e15379db475cc7b2e5bcc7c99b82691b8" and .head_branch == "platform/ci-cd-overhaul" and .name == "CI Overhaul Full Shadow Lab" and .status == "completed" and .conclusion == "failure" and .run_attempt == 1'
+      - uses: actions/download-artifact@v4
+        with:
+          name: shadow-full-plan
+          run-id: 45423462734
+          github-token: ${{ github.token }}
+          path: prior-plan
+      - uses: actions/download-artifact@v4
+        with:
+          name: shadow-full-audit
+          run-id: 45423462734
+          github-token: ${{ github.token }}
+          path: prior-audit
+      - name: Test and select only failed task from prior audit
+        run: |
+          node --test scripts/ci-overhaul/selective-retry.test.mjs
+          mkdir retry-evidence
+          node scripts/ci-overhaul/selective-retry.mjs select prior-plan/plan.json prior-audit/audit.json retry-evidence/selection.json
+          node --input-type=module -e '
+            import {readFileSync} from "node:fs";
+            const s=JSON.parse(readFileSync("retry-evidence/selection.json","utf8"));
+            if(s.expected!==180||s.firstPass!==179||s.failed.length!==1||s.failed[0].key!=="crown-laws-visual"||s.shards[0].pool!=="browser")throw Error("Unexpected pilot scope");
+          '
+      - uses: actions/checkout@v4
+        with:
+          ref: 5340689e15379db475cc7b2e5bcc7c99b82691b8
+          path: frozen
+          persist-credentials: false
+      - name: Execute exactly the failed test on original revision
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/frozen"
+          test "$(git -C frozen rev-parse HEAD)" = "5340689e15379db475cc7b2e5bcc7c99b82691b8"
+          PW_QA_SHARD="$(node -p 'JSON.stringify(require("./retry-evidence/selection.json").shards[0])')"
+          export PW_QA_SHARD
+          cd frozen
+          node scripts/ci-overhaul/run-shard.mjs
+      - name: Reconcile without erasing original failure
+        if: always()
+        run: |
+          node scripts/ci-overhaul/selective-retry.mjs reconcile prior-plan/plan.json prior-audit/audit.json frozen/qa-artifacts retry-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: selective-retry-evidence
+          path: |
+            retry-evidence/
+            prior-audit/
+            frozen/qa-artifacts/
+          if-no-files-found: error
+          retention-days: 14
