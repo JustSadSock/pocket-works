@@ -35,3 +35,19 @@ Run `node --test apps/crown-and-marches/engine.test.mjs` at the repository root.
 Measured in the connector JavaScript runtime (not mobile hardware, no rendering): 180 steps at 0.1 s on a plain map, seed 123, both AI, 60% spears / 20% archers / 20% heavy cavalry, deployment shifted 70 toward the center on both sides. 500 soldiers median 9 ms / p95 12 ms; 1000 median 19 ms / p95 22 ms; 3000 median 64 ms / p95 85 ms. Mobile FPS and actual battery/thermal behavior remain unmeasured.
 
 Limitations: collision solver is approximate; no full navigation around obstacles, animation interpolation, persistent wounded prisoners, or advanced coordinated multi-army AI. Formation orders are discrete simulations, not a full historical physics model. Release remains experimental until CI and deployment are confirmed.
+
+
+## 0.3.0 — Living Lands (experimental, not released)
+
+The 0.2.0 Art of War commit is e67c6d8f4ee9e40fd41d030a27fc416f89ae166f. Its browser, mobile and regression suites passed; platform-wide contract failures still block production publication. The same application branch continues development without changing QA infrastructure.
+
+- New worlds: priority-flood drainage, strictly downhill river edges, connected ridges, watersheds, coastal deltas, climate and geological resource fields. Schema-1 saves retain their original geography.
+- Cell state: legal owner, occupier, district, accessible administration, control, development, devastation, occupation pressure, contenders, roads and bridges. Capture is gradual; occupied districts do not flip instantly with their center. Peace can transfer actually occupied parcels.
+- Weighted administrative expansion, isolation by terrain and hostile control, adjacent parcel transfer and subdivision into new centers. Automatic resource exploitation uses workforce, materials, security, roads and seasons. Settlement specialization changes labor allocation; industrial districts, markets and warehouses affect production, hauling and storage.
+- Road construction costs timber and treasury. Cargo is dispatched, travels cell by cell, can be blocked by hostile patrols, reroutes or is lost. Army movement, supply and migration use travel costs and safe routes.
+- Battlefield terrain samples the real strategic river graph, bridges, roads, relief, fields, buildings and fortifications. Prepared strategic defense selects the battlefield center; deployment is oriented along army approach.
+- Continuous map overlay, zoom-dependent trees and settlement footprint, road edges, moving caravan markers, development layer and explicit survey grid. Existing Art of War custom battles remain independent.
+
+Validation: `node --test apps/crown-and-marches/engine.test.mjs apps/crown-and-marches/living.test.mjs`. The nine Living Lands scenarios exercise drainage/geology, mountain barriers, partial iron occupation, road blockade, district isolation, fertile founding and investment, redistribution, bridge terrain and six autonomous states for 360 days. Browser performance suite measures 500/1000/3000 soldiers with simultaneous fixed-step simulation and canvas rendering in Chromium/WebKit mobile portrait/landscape emulation; real mobile hardware remains unverified.
+
+Limitations: terrain is an approximate raster model, river deltas are classified coastal mouths rather than branching channels, houses and roads are procedural symbols, sea shipments use abstract transit time, walls slow tactical movement rather than full destructible geometry, and AI remains heuristic. The global release must not be marked deployed until mandatory checks and Cloudflare availability actually pass.
