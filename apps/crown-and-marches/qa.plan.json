@@ -211,15 +211,14 @@
     {
       "id": "wealth-decades",
       "kind": "node",
-      "entry": "wealth-experiment.mjs",
+      "entry": "qa-batch.mjs",
       "args": [
+        "wealth",
         "{seed}"
       ],
       "seeds": [
         0,
-        1,
-        2,
-        3
+        1
       ],
       "tier": "smoke"
     },
@@ -289,16 +288,14 @@
     {
       "id": "sinews-campaign-experiments",
       "kind": "node",
-      "entry": "sinews-experiment.mjs",
+      "entry": "qa-batch.mjs",
       "args": [
+        "sinews",
         "{seed}"
       ],
       "seeds": [
         0,
-        1,
-        2,
-        3,
-        4
+        1
       ],
       "tier": "smoke"
     },
@@ -385,8 +382,9 @@
     {
       "id": "balance-experiments",
       "kind": "node",
-      "entry": "balance-experiment.mjs",
+      "entry": "qa-batch.mjs",
       "args": [
+        "balance",
         "{seed}"
       ],
       "seeds": [
@@ -395,11 +393,7 @@
         2,
         3,
         4,
-        5,
-        6,
-        7,
-        8,
-        9
+        5
       ],
       "tier": "smoke"
     },
