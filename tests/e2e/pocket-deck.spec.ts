@@ -444,3 +444,14 @@ test('globally pinned covers stay visible to guests without granting management 
   await expect(page.locator('#deck-batch-pin')).toBeHidden();
   await expect(page.locator('#deck-batch-unpin')).toBeHidden();
 });
+
+test('refreshing the same guest identity preserves the layout editor',async({page})=>{
+  await openDeck(page);
+  await page.locator('#deck-customize').click();
+  const rows=page.locator('#deck-editor-list .deck-editor-row');
+  const before=await rows.evaluateAll(items=>items.map(x=>x.getAttribute('data-edit-id')));
+  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('pocket-id:changed',{detail:{user:null}})));
+  await expect(page.locator('#deck-editor')).toBeVisible();
+  expect(await rows.evaluateAll(items=>items.map(x=>x.getAttribute('data-edit-id')))).toEqual(before);
+  await page.locator('#deck-editor-save').click();
+});

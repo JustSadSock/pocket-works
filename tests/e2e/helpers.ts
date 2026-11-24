@@ -121,3 +121,19 @@ export async function mockGuestShellServices(page:Page){
     };
   });
 }
+
+// The static preview does not host Cloudflare's account APIs. Model only the
+// known guest bootstrap responses; all real asset/network errors remain visible.
+export async function installGuestAccountPreview(page: Page) {
+  await page.addInitScript(()=>{
+    const original=window.fetch.bind(window);
+    window.fetch=(input,init)=>{
+      let url:URL;try{url=new URL(typeof input==='string'?input:input instanceof Request?input.url:String(input),location.href);}catch{return original(input,init);}
+      const method=String(init?.method||(input instanceof Request?input.method:'GET')).toUpperCase();
+      if(url.origin!==location.origin||method!=='GET')return original(input,init);
+      const replies:Record<string,unknown>={'/pocket-id/me':{user:null},'/pocket-id/config':{googleEnabled:false,avatars:[]},'/pocket-social/me':{profile:null},'/pocket-id/global-archive':{archived:[],pinned:[],canManage:false}};
+      if(!Object.hasOwn(replies,url.pathname))return original(input,init);
+      return Promise.resolve(new Response(JSON.stringify(replies[url.pathname]),{status:200,headers:{'content-type':'application/json'}}));
+    };
+  });
+}
