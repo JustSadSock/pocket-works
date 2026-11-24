@@ -1,3 +1,5 @@
+import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import {WORLD,FIXED_STEP,buildWave,rubber,launchVector,capVelocity,advanceBall,clamp,magnitude} from './physics.mjs';
 
 const $=id=>document.getElementById(id);
@@ -496,3 +498,6 @@ function frame(now){
   raf=requestAnimationFrame(frame);
 }
 newRound();resize();raf=requestAnimationFrame(frame);
+
+installMobileRuntime();
+createWorkshopMode({appName:"БЗЫНЬ!",version:"1.0.0",cachePrefix:"bzyn-",storageNamespace:"pocket-works:bzyn",onReset(){location.reload()}});
