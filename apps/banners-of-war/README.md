@@ -78,3 +78,9 @@ The previous physical kernel and legacy commander remain intact. New games opt i
 - Planning instrumentation separates perception, analysis, alternative scoring, order generation, physics, snapshots and Worker overhead without putting timing into deterministic state. Immutable intent data is shared within replay frames. Render-only changes include crop-limited terrain drawing, cached interpolation index, adaptive pixel ratio and soldier stride, and less repeated layout work. The Workshop diagnostics panel is app-scoped.
 - PWA cache version 0.4.0 includes the commander module and required Workshop dependencies. Canonical offline HTML is reconstructed from the cached entry to avoid redirect/encoding metadata problems. WebKit cold-offline navigation remains a release gate until actual browser retesting passes; no claim of installed-device validation.
 - PR #1362 repairs the two missing READMEs but exposes other repository-wide failures (134 mobile runtime, 336 update-contract, 1206 capability findings at run 45307466768). Its packaging passes but overall health fails. No QA bypass, no unrelated app edits in this PR, and no production deployment claim.
+
+
+### Enemy Minds continuation (development, not a release)
+- Positional value now samples approach capacity, flank obstruction, elevation, withdrawal routes, line of sight and actual available infantry frontage. Hold orders no longer fall through to attack at close contact.
+- Bounded one-to-three-round coarse forecasts compare observed enemy hypotheses. This is an approximation, not a second physical engine. No hidden orders are read. Existing physics and difficulty stats are unchanged.
+- 12 commander regressions passed in a JavaScript execution harness (not Node/Playwright). Four 180-second paired smoke trials are recorded in `position-audit.json`; not a statistically meaningful replacement for the 1008-battle matrix.

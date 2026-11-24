@@ -35,16 +35,57 @@ export function analyze(E,p){
  const observed=foes.filter(u=>u.confidence===1),advance=mean(observed,u=>-p.front*u.motionX),lateral=mean(observed,u=>Math.abs(u.motionY)),hypotheses=[{kind:"attack",weight:clamp(.4+advance*.12,.12,.8)},{kind:"hold",weight:clamp(.55-Math.abs(advance)*.12,.1,.65)},{kind:"flank",weight:clamp(.15+lateral*.2,.1,.7)},{kind:"withdraw",weight:clamp(.2-advance*.12,.05,.7)}].sort((a,b)=>b.weight-a.weight);
  return {home,enemy,foot,foes,cells,lanes,crises,hypotheses,field,ratio:foes.length?sum(p.own,power)/Math.max(1,sum(foes,u=>power(u)*u.confidence)):1,uncertainty:mean(foes,u=>1-u.confidence),near:foes.some(u=>dist(u,home)<220)}
 }
+
+// Tactical value is measured relative to an observed approach, not assigned to map tiles.
+// Sampling is side-relative to preserve 180-degree rotational symmetry.
+export function positionValue(E,p,b,q){
+ const f=p.front, land=E.sample(p.terrain,q.x,q.y), at=(dx,dy)=>E.sample(p.terrain,clamp(q.x+f*dx,0,E.W),clamp(q.y+f*dy,0,E.H));
+ const approaches=[-100,-50,0,50,100].map(y=>Math.min(at(45,y).move,at(90,y).move));
+ const width=sum(approaches,m=>clamp((m-.2)/.8,0,1))*50;
+ const flank=(2-at(0,-90).move-at(0,90).move)/2;
+ const retreat=mean([-40,0,40],y=>Math.min(at(-45,y).move,at(-90,y).move));
+ const rise=clamp((land.h-mean([-50,0,50],y=>at(90,y).h))/25,-1,1);
+ const ready=b.foot.filter(u=>dist(u,q)<160),frontage=sum(ready,u=>E.dims(u).w);
+ const screen=clamp(frontage/Math.max(45,width),0,1);
+ const reserve=mean(ready,u=>clamp(1-dist(u,q)/160,0,1)*(1-u.fatigue/100));
+ const sight=E.lineOfSight(p.terrain,q,b.enemy,420)?1:0;
+ const enemyDistance=dist(q,b.enemy), relevance=b.foes.length?clamp(1-enemyDistance/420,0,1):0;
+ const constriction=clamp(1-width/250,0,1);
+ const crossing=mean(approaches,m=>m<.4?1:0)*clamp(at(45,0).move,0,1);
+ const value=relevance*(1.1*constriction*screen+flank*.55+rise*.65+crossing*.45+reserve*.22+sight*.12)*clamp(retreat+.15,.15,1.15);
+ return {value,width,flank,retreat,rise,screen,reserve,sight,crossing};
+}
+// Deterministic coarse forward model. No orders or hidden enemy state are consulted.
+export function forecast(E,p,b,q,h,depth){
+ const f=p.front, lane=b.lanes.find(v=>v.wing===q.wing), goal=q.posture==="hold"||q.posture==="reinforce"||q.posture==="screen"?b.home:q.posture==="withdraw"?point(clamp(b.home.x-f*150,25,E.W-25),b.home.y):lane;
+ const copyUnit=u=>({x:u.x,y:u.y,type:u.type,n:u.n,cohesion:u.cohesion,morale:u.morale,fatigue:u.fatigue,confidence:u.confidence??1});
+ const own=p.own.filter(u=>u.type!=="guard").map(copyUnit),enemy=b.foes.filter(u=>u.type!=="guard").map(copyUnit);
+ const baseOwn=sum(own,power),baseEnemy=sum(enemy,u=>power(u)*u.confidence);
+ const move=(u,dest,seconds)=>{let distance=dist(u,dest);if(distance<1)return;let land=E.sample(p.terrain,u.x,u.y),speed=E.types[u.type].speed*land.move*(.45+.55*u.cohesion/100)*(1-u.fatigue/160),length=Math.min(distance,speed*seconds),x=clamp(u.x+(dest.x-u.x)*length/distance,25,E.W-25),y=clamp(u.y+(dest.y-u.y)*length/distance,25,E.H-25);let to=E.sample(p.terrain,x,y),slope=Math.abs(to.h-land.h)/Math.max(1,length),pass=Math.min(1,to.move/Math.max(.15,land.move))/(1+slope*3);u.x+=(x-u.x)*pass;u.y+=(y-u.y)*pass;u.fatigue=clamp(u.fatigue+length*.025*(2-land.move),0,100)};
+ const ownHome=b.home,enemyHome=b.enemy;let pressure=0,arrived=0;
+ for(let i=0;i<depth;i++){
+  for(const u of own){let t=E.types[u.type],offset=clamp(u.y-ownHome.y,-120,120),dest=point(goal.x,clamp(goal.y+offset,25,E.H-25));let nearest=enemy.reduce((best,v)=>!best||dist(u,v)<dist(u,best)?v:best,null);if(t.range&&nearest&&dist(u,nearest)<t.range*.8||nearest&&dist(u,nearest)<24&&q.posture!=="withdraw")continue;if(q.posture==="hold"||q.posture==="screen"){u.fatigue=Math.max(0,u.fatigue-2);continue}move(u,dest,30);if(q.posture==="reinforce"&&dist(u,ownHome)<75)arrived++}
+  for(const u of enemy){let dest=h.kind==="hold"?u:h.kind==="withdraw"?point(clamp(enemyHome.x+f*150,25,E.W-25),u.y):point(ownHome.x,clamp(ownHome.y+(u.y-enemyHome.y)+(h.kind==="flank"?f*100:0),25,E.H-25));if(!own.some(v=>dist(u,v)<24))move(u,dest,30)}
+  const losses=(a,c)=>a.map(u=>{let t=E.types[u.type],near=c.filter(v=>dist(u,v)<Math.max(36,E.types[v.type].range*.8)&&E.lineOfSight(p.terrain,v,u,220));let land=E.sample(p.terrain,u.x,u.y),hostile=sum(near,v=>power(v)*v.confidence*(E.types[v.type].range&&dist(u,v)>36?.28:1)),friendly=sum(a,v=>dist(u,v)<65?power(v):0),capacity=Math.max(30,100*land.move),ratio=Math.min(hostile,capacity*4)/Math.max(50,friendly),loss=clamp(ratio*.022,0,.075)*(1-t.armor*.6);return {loss,ratio}});
+  let a=losses(own,enemy),c=losses(enemy,own);
+  for(let [units,ls] of [[own,a],[enemy,c]])for(let j=0;j<units.length;j++){let u=units[j],l=ls[j];u.n*=1-l.loss;u.cohesion=clamp(u.cohesion-l.loss*90,0,100);u.morale=clamp(u.morale-l.loss*55,0,100);u.fatigue=clamp(u.fatigue+Math.min(3,l.ratio),0,100)}
+  pressure+=mean(a,v=>Math.max(0,v.ratio-1));
+ }
+ const ownRetention=sum(own,power)/Math.max(1,baseOwn),enemyRetention=sum(enemy,u=>power(u)*u.confidence)/Math.max(1,baseEnemy),progress=clamp(f*(mean(own,u=>u.x)-ownHome.x)/150,-1,1);
+ return {value:clamp((ownRetention-enemyRetention)*2.5,-1.5,1.5)+progress*(p.objective==="territory"?.25:.08)-Math.min(.6,pressure/Math.max(1,depth)*.12),ownRetention,enemyRetention,progress,pressure,arrived,depth};
+}
+
 export function alternatives(E,p,b,traits,level){
  const base=[{posture:"assault",wing:0},{posture:"hold",wing:0},{posture:"maneuver",wing:p.front},{posture:"maneuver",wing:-p.front},{posture:"reinforce",wing:0},{posture:"withdraw",wing:0},{posture:"assault",wing:p.front},{posture:"assault",wing:-p.front},{posture:"screen",wing:0}];
- const candidates=base.slice(0,level.variants);let crisis=b.crises[0]?.score||0;
+ const candidates=base.slice(0,level.variants);let crisis=b.crises[0]?.score||0;const position=positionValue(E,p,b,b.home),depth=level.depth??(level.variants>=9?3:level.variants>=7?2:1);
  return candidates.map(q=>{let l=b.lanes.find(v=>v.wing===q.wing),travel=dist(b.home,l),time=travel/Math.max(1,mean(p.own,u=>E.types[u.type].speed)),risk=Math.max(0,1-l.ratio)*(b.near?1:.32)+Math.max(0,1-l.capacity/100)+b.uncertainty*traits.uncertainty;
  let value=0;switch(q.posture){case "assault":value=.6+traits.aggression*2.1+traits.initiative*.8+Math.min(2,b.ratio)*.6-risk*(1+traits.caution-traits.risk*.35)-time/240;break;case "hold":value=1+traits.caution*1.3+traits.patience*.7+(b.ratio<.85?.9:0)+(l.height-E.sample(p.terrain,b.enemy.x,b.enemy.y).h)/50;break;case "maneuver":value=.6+traits.maneuver*2.7+Math.min(2,l.ratio)*.45-risk*.75-time/220;break;case "reinforce":value=.3+crisis/45+traits.preservation*.5;break;case "withdraw":value=(b.ratio<.75?2.7:0)+crisis/100+traits.preservation*.9-(p.remaining<100?1:0);break;case "screen":value=.5+traits.patience+mean(p.own,u=>E.types[u.type].range?1:0)*2}
  if(q.posture==="hold"&&b.foes.length&&p.remaining<150&&b.ratio>1.3)value-=.7;if(!b.near&&q.posture==="reinforce")value-=1.4;if(!b.foes.length){if(q.posture==="assault"||q.posture==="maneuver")value+=.35;if(q.posture==="withdraw")value-=2;}if(q.posture==="hold"&&p.objective==="territory"&&p.remaining<180)value-=.8;
- const outcomes=b.hypotheses.slice(0,level.hypotheses).map(h=>({against:h.kind,value:value+(h.kind==="flank"?(q.posture==="hold"||q.posture==="reinforce"?.35:-risk*.35):h.kind==="withdraw"?(q.posture==="assault"?.35:-.2):h.kind==="attack"?(q.posture==="hold"?.3:0):q.posture==="maneuver"?.2:0),weight:h.weight}));
+ if(q.posture==="hold"||q.posture==="reinforce")value+=position.value*1.4;else if(q.posture==="assault"||q.posture==="maneuver")value-=position.value*(1-traits.risk*.5);
+ const outcomes=b.hypotheses.slice(0,level.hypotheses).map(h=>{const prediction=forecast(E,p,b,q,h,depth);return {against:h.kind,prediction,value:value+prediction.value*.65+(h.kind==="flank"?(q.posture==="hold"||q.posture==="reinforce"?.35:-risk*.35):h.kind==="withdraw"?(q.posture==="assault"?.35:-.2):h.kind==="attack"?(q.posture==="hold"?.3:0):q.posture==="maneuver"?.2:0),weight:h.weight}});
  let robust=sum(outcomes,o=>o.value*o.weight)/Math.max(.001,sum(outcomes,o=>o.weight))*.65+Math.min(...outcomes.map(o=>o.value))*.35,change=p.memory?.posture&&(p.memory.posture!==q.posture||p.memory.wing!==q.wing);
  if(change)robust-=.65*(1-traits.adaptability)+Math.max(0,3-(p.round-(p.memory.started||p.round)))*.22;
- return {...q,score:robust,risk,time,capacity:l.capacity,outcomes}
+ return {...q,score:robust,risk,time,capacity:l.capacity,position,outcomes}
  }).sort((a,b)=>Math.abs(b.score-a.score)<1e-8?a.wing*p.front-b.wing*p.front||a.posture.localeCompare(b.posture):b.score-a.score)
 }
 export function route(E,p,b,u,dest,budget){
@@ -66,7 +107,7 @@ export function plan(E,s,side,profile=null){
  else if(u===reserve&&level.variants>=5){role="reserve";if(commit){kind="move";dest=relief?safe(crisis.unit.x-p.front*12,crisis.unit.y):safe(opportunity.x-p.front*15,opportunity.y);reason=relief?"reinforce crisis #"+crisis.id:"exploit weakened enemy #"+opportunity.id}else{kind=u.fatigue>30?"rally":"hold";reason="preserve uncommitted force"}}
  else if(t.range&&u.ammo>0){role="missiles";if(d<Math.min(65,t.range*.42)){kind="retreat";dest=safe(u.x-p.front*70,u.y);reason="avoid melee"}else if(d>t.range*.85||v&&v.confidence<1){kind="advance";dest=safe((v?.x??b.enemy.x)-p.front*t.range*.72,v?.y??u.y);reason="gain firing distance"}else{kind="shoot";target=v?.confidence===1?v.id:undefined;reason="fire on observed target"}}
  else if(t.horse){role="wing";if(v?.confidence===1&&d<65&&E.sample(p.terrain,u.x,u.y).move>.65&&u.cohesion>55){kind="charge";target=v.id;reason="available charge corridor"}else if(chosen.posture==="hold"||chosen.posture==="reinforce"){kind="brace";reason="protect flank"}else{kind="move";let w=chosen.wing|| (u.y<b.home.y?-1:1);dest=safe(b.enemy.x-p.front*35,b.enemy.y+w*(100+Math.abs(u.y-b.home.y)*.3));reason="seek flank with room"}}
- else if(chosen.posture==="hold"&&d>55){let local=b.cells.filter(q=>dist(q,u)<95&&q.move>.6&&q.threat<1.4).sort((a,b)=>{let q=(b.h*.06-b.threat)-(a.h*.06-a.threat);return Math.abs(q)<1e-8?p.front*(a.y-b.y||a.x-b.x):q});let q=local[0];if(q&&q.h>E.sample(p.terrain,u.x,u.y).h+5&&d>125){kind="move";dest=safe(q.x,q.y);reason="occupy nearby higher ground"}else{kind="brace";reason="hold ordered line"}}
+ else if(chosen.posture==="hold"){let local=b.cells.filter(q=>dist(q,u)<95&&q.move>.6&&q.threat<1.4).sort((a,b)=>{let q=(b.h*.06-b.threat)-(a.h*.06-a.threat);return Math.abs(q)<1e-8?p.front*(a.y-b.y||a.x-b.x):q});let q=local[0];if(q&&q.h>E.sample(p.terrain,u.x,u.y).h+5&&d>125&&positionValue(E,p,b,q).value>positionValue(E,p,b,u).value+.1){kind="move";dest=safe(q.x,q.y);reason="occupy nearby higher ground"}else{kind="brace";reason="hold ordered line; avoid abandoning frontage"}}
  else if(chosen.posture==="reinforce"&&crisis&&dist(u,crisis.unit)<100&&d>60){kind="advance";dest=safe(crisis.unit.x-p.front*15,u.y);reason="support threatened section"}
  else {let ordered=b.foes.slice().sort((a,b)=>p.front*(a.y-b.y)||a.id-b.id),assigned=ordered[Math.min(ordered.length-1,Math.floor(Math.max(0,line.indexOf(u))*ordered.length/Math.max(1,line.length)))]||v;
   if(assigned?.confidence===1&&dist(u,assigned)<85){kind="attack";target=assigned.id;reason="engage assigned frontage"}else{kind="advance";dest=safe((assigned?.x??b.enemy.x)-p.front*20,(assigned?.y??u.y)*.65+u.y*.35+(chosen.posture==="maneuver"?chosen.wing*35:0));reason="advance assigned lane"}}
