@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compileBlueprint, createRepairPacket, BLUEPRINT_EXAMPLE, BlueprintError } from '../src/blueprint-runtime.js';
+import { compileBlueprint, createRepairPacket, BLUEPRINT_EXAMPLE, BlueprintError } from '../src/blueprint.js';
+import {compileBlueprint as compileLiveBlueprint,createRepairPacket as createMigrationPacket} from '../src/blueprint-runtime.js';
 import { normalizeDocument, compileDocument } from '../src/engine.js';
 
 test('Blueprint compiles Gearfly into gears, frame and cover', () => {
@@ -32,4 +33,12 @@ test('repair packet preserves source and bans low-level gear drawing', () => {
   assert.match(repair, /Исходный Blueprint/);
   assert.match(repair, /Не рисуй шестерни/);
   assert.match(repair, /Нужен непустой массив parts/);
+});
+
+
+test('live import rejects legacy blueprints and provides a usable migration packet',()=>{
+ const source=JSON.stringify(BLUEPRINT_EXAMPLE);let failure;
+ assert.throws(()=>compileLiveBlueprint(BLUEPRINT_EXAMPLE),error=>{failure=error;return error instanceof BlueprintError&&/FORMA 2.0/.test(error.message);});
+ const packet=createMigrationPacket(source,failure);
+ assert.match(packet,/FORMA_PROJECT/);assert.match(packet,/contract/);assert.match(packet,/Не выдавай FormaBlueprint 1/);assert.ok(packet.includes(source));
 });

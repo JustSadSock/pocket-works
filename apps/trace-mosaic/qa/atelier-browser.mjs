@@ -51,7 +51,7 @@ async function metrics(page) {
 async function take(page, key, stage) {
   await page.screenshot({path:join(output,key+'-'+stage+'.png'),fullPage:false,animations:'disabled'});
 }
-async function drag(page, id) {
+async function drag(page, id, {final=false}={}) {
   const source=page.locator('.inventory-piece[data-piece-id="'+id+'"]');
   const target=page.locator('.board-cell[data-cell="'+id+'"]');
   await source.waitFor({state:'visible',timeout:8000});
@@ -63,7 +63,10 @@ async function drag(page, id) {
   await page.mouse.down();
   await page.mouse.move(b.x+b.width/2,b.y+b.height/2,{steps:8});
   await page.mouse.up();
-  await page.waitForFunction(index => {
+  if(final){
+    // A winning drop atomically replaces the board with the exhibition.
+    await page.locator('.result-exhibit').waitFor({state:'visible',timeout:15000});
+  }else await page.waitForFunction(index => {
     const placed=document.querySelector('.placed-piece[data-cell="'+index+'"]');
     return placed?.dataset.currentTile===String(index);
   },id,{timeout:9000});
@@ -118,7 +121,7 @@ try {
     entry.afterFirst=await metrics(page);
     await take(page,key,'board-after-first-drop');
     assert.equal(await page.locator('.placed-piece.correct[data-cell="0"]').count(),1,key+' snap missed');
-    for(let id=1;id<16;id++) await drag(page,id);
+    for(let id=1;id<16;id++) await drag(page,id,{final:id===15});
     await page.locator('.result-exhibit').waitFor({state:'visible',timeout:15000});
     assert.match(await page.locator('.exhibit-heading h2').textContent(),/Картина/,key+' round did not finish');
     await take(page,key,'results');

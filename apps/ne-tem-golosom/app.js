@@ -730,11 +730,11 @@ function updateMediaLab(){
   $('media-quality-label').textContent=qualityNames[Number($('media-quality').value)-1]||qualityNames[3];
   $('media-estimate').textContent='После обработки ≈ '+formatVideoBytes(size);
   $('media-fast-status').textContent=canSkipSceneEncoding()
-    ?'Можно использовать исходное качество без перекодирования'
+    ?'Можно использовать исходное качество без сжатия и перекодирования'
     :canUseLosslessCut()&&['original','mute'].includes(selectedSound())
     ?'MP4 H.264/AAC: попробуем быстро вырезать без перекодирования'
     :plan.kind==='reuse'
-    ?'Исходник помещается в комнату, но обрезка уменьшит объём передачи'
+    ?'Исходник помещается в комнату без сжатия; обрезка уменьшит объём передачи'
     :'Нужно подготовить фрагмент · весь файл слишком большой';
   $('media-render').disabled=!!videoExportController||!supportsVideoExport();
   $('media-render').classList.toggle('hidden',!!videoExportBlob);
