@@ -1,0 +1,38 @@
+name: CI Overhaul Rollback Drill
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['.github/workflows/ci-overhaul-rollback.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  drill:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify unchanged application and legacy QA inputs
+        run: git diff --exit-code d74bc10b1ee3e931f778ca8a11746dcb7eb7f1c3 HEAD -- . ':!scripts/ci-overhaul/**' ':!.github/workflows/ci-overhaul-*'
+      - run: node --test scripts/ci-overhaul/*.test.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: integrated-plan-1
+          run-id: 45483925251
+          github-token: ${{ github.token }}
+          path: frozen-plan
+      - name: Inject real process failures and run independent legacy fallback
+        run: node scripts/ci-overhaul/rollback-drill.mjs frozen-plan/legacy.txt rollback-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rollback-drill-evidence
+          path: rollback-evidence/
+          if-no-files-found: error
