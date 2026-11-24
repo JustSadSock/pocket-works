@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {E} from './engine.js';
 import {personality,perceive,analyze,alternatives,route} from './commander.js';
+import {reflect} from './doctrine-lab.mjs';
 const roster=['spear','sword','pike','archer','knight','lightHorse'];
 const make=(style='adaptive',arch='valley')=>{let s=E.create('Enemy Minds',roster,roster,style,arch);s.aiVersion=4;return s};
 const get=(s,side=1)=>{let o=E.command(s,side);return {orders:o,intent:o.intent}};
@@ -14,3 +15,5 @@ test('autonomous deployment is inside own zone and collision free for standard r
 test('staff orders only affect requested own units, can be prepared and remain normal editable orders',()=>{let s=make(),o=E.staff(s,[0,1,100],'cover',{x:450,y:350});assert.deepEqual(Object.keys(o),['0','1']);assert.ok(o[0].path.length&&o[1].path.length);assert.equal(o[0].group,o[1].group);E.prepare(s,o);assert.equal(s.units[0].order.kind,'move');assert.equal(s.units.find(u=>u.id===100).order.kind,'hold')});
 test('reserve responds to local crisis and new orders remain fixed within a WEGO round',()=>{let s=make('adaptive'),a=s.units.find(u=>u.id===100),b=s.units.find(u=>u.id===0);a.x=750;a.y=450;a.cohesion=10;a.morale=30;a.fatigue=90;b.x=690;b.y=450;let o=get(s);assert.ok(o.intent.crisis===100||o.intent.crisis!==null);assert.ok(o.intent.reserve!==null);E.prepare(s,o.orders);let prior=JSON.stringify(s.aiIntent);for(let i=0;i<20;i++)E.step(s);assert.equal(JSON.stringify(s.aiIntent),prior)});
 test('new round and JSON restored state resolve identically',()=>{let s=make('aggressive','ridge');s.fog=true;E.refreshVisibility(s);let a=E.resolve(s,{},true),b=E.resolve(JSON.parse(JSON.stringify(s)),{},true);assert.deepEqual(a,b);assert.equal(a.state.time,30);assert.ok(a.state.aiIntent[0].alternatives.length>0);assert.equal(a.frames[0].aiIntent[1].round,1)});
+
+test('canonical route cells produce mirrored full-battle outcomes on former rotation failures',()=>{for(let seed of ['Independent Minds 339','Independent Minds 57','Minds 40']){let s=E.create(seed,['spear','archer','knight','lightHorse','horseArcher'],['spear','spear','sword','crossbow','archer'],'adaptive','valley');s.fog=true;for(let u of s.units){let i=u.id%100;u.x=(u.side?760:640)+(u.type==='guard'?(u.side?60:-60):0);u.y=300+i*55}let t=reflect(s,{}).s;for(let [q,side] of [[s,0],[t,1]]){q.aiVersionBySide=side?[3,4]:[4,3];q.styleBySide=side?['adaptive','maneuver']:['maneuver','adaptive'];q.difficulty='commander';E.refreshVisibility(q)}for(let i=0;i<4;i++){s=E.resolve(s,{},true).state;t=E.resolve(t,{},true).state}assert.ok(Math.abs(E.power(s,0)/E.total(s,0)-E.power(t,1)/E.total(t,1))<.001);assert.ok(Math.abs(E.power(s,1)/E.total(s,1)-E.power(t,0)/E.total(t,0))<.001)}});
