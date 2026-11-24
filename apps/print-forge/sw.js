@@ -3,20 +3,28 @@ const CACHE_NAME = 'print-forge-v1.0.0-p1';
 const APP_VERSION = '1.0.0';
 const RELEASE_DATE = '2026-10-28';
 const CACHE_PROTOCOL = 1;
-const RELEASE_NOTES = [
-  'Параметрические шестерни, корпус-лоток и втулка с экспортом STL.',
-  'Интерактивный кинематический стенд с передачей вращения и реверсом.',
-  'Локальная проверка замкнутой поверхности, импорт и экспорт CAD-заданий.'
-];
+const RELEASE_NOTES = ["Новая мастерская Pocket Forge 3D: шестерни, корпус-лоток и втулка с размерами в миллиметрах.","Интерактивная кинематика зубчатой пары: запуск, пауза, реверс, регулировка скорости и вращение вручную.","Экспорт бинарного STL отдельных деталей, проверка замкнутости сетки, JSON-задания для CAD-сборщика и сохранение параметров."];
 const APP_SHELL = [
-  './','./index.html','./styles.css','./app.js','./geometry.js',
-  './app.config.json','./manifest.webmanifest','./icons/icon.svg',
-  '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
-  '../../shared/update-manager.css','../../shared/update-manager.js',
-  '../../shared/workshop-mode.css','../../shared/workshop-mode.js',
-  '../../shared/capabilities/motion.js','../../shared/capabilities/storage.js',
-  '../../shared/capabilities/transfer.js','../../shared/capabilities/audio.js',
-  '../../shared/capabilities/device.js','../../shared/capabilities/diagnostics.js'
+  "./",
+  "./index.html",
+  "./styles.css",
+  "./app.js",
+  "./geometry.js",
+  "./app.config.json",
+  "./manifest.webmanifest",
+  "./icons/icon.svg",
+  "../../shared/mobile-runtime.css",
+  "../../shared/mobile-runtime.js",
+  "../../shared/update-manager.css",
+  "../../shared/update-manager.js",
+  "../../shared/workshop-mode.css",
+  "../../shared/workshop-mode.js",
+  "../../shared/capabilities/motion.js",
+  "../../shared/capabilities/storage.js",
+  "../../shared/capabilities/transfer.js",
+  "../../shared/capabilities/audio.js",
+  "../../shared/capabilities/device.js",
+  "../../shared/capabilities/diagnostics.js"
 ];
 const SCOPE_URL = new URL('./', self.registration.scope);
 const BUILD_TOKEN = APP_VERSION + '-p' + CACHE_PROTOCOL;

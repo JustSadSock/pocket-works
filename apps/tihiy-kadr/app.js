@@ -1,3 +1,5 @@
+import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import {RATE,MAX_SECONDS,validRange,wavPCM16,elapsed,safeName} from './audio-utils.js';
 import {stereoPCM,comparisonMetrics} from './research-core.js';
 import {renderEnhancedPCM} from './audio-enhance.js';
@@ -716,11 +718,11 @@ $('study-csv').onclick=()=>{
 };
 renderStudyResults();
 
-// Install the versioned app service worker. The shell does not register an
-// isolated quick app's SW on its behalf.
-if('serviceWorker' in navigator)
- window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+
 
 window.addEventListener('pagehide',()=>{worker?.terminate();abort?.abort();pause();revoke(fileURL);revoke(audioURL)});
 if(mobile)$('chunk-size').value='5';
 uiBusy(false);
+
+installMobileRuntime();
+createWorkshopMode({appName:"ТИХИЙ КАДР",version:"1.9.0",cachePrefix:"tihiy-kadr-",storageNamespace:"pocket-works:tihiy-kadr",onReset(){location.reload()}});
