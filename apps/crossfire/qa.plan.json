@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "rules",
+      "kind": "node-test",
+      "files": [
+        "tests/rules.test.mjs"
+      ]
+    },
+    {
+      "id": "visual",
+      "kind": "visual",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "[data-mode=\"solo\"]",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-mode=\"solo\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#board .blue"
+        },
+        {
+          "action": "screenshot"
+        }
+      ]
+    },
+    {
+      "id": "solo-journey",
+      "kind": "playwright",
+      "files": [
+        "qa/solo.spec.js"
+      ]
+    }
+  ]
+}

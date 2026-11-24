@@ -2,11 +2,12 @@ import {createWorkshopMode} from '../../shared/workshop-mode.js';
 import {installMobileRuntime} from '../../shared/mobile-runtime.js';
 import {initial,actions,play,bot,count} from './rules.js';
 import {PocketNet} from '../../shared/capabilities/net.js';
+import {getPocketIdentity,preferredPocketName,pocketIdentitySessionKey} from '../../shared/capabilities/identity.js';
 installMobileRuntime();
 const $=id=>document.getElementById(id);
-let net=null,match=null,state=null,me=null,solo=false,busy=false,connected=false,pending=false,room='',timeout=0;
+let net=null,match=null,state=null,me=null,solo=false,busy=false,connected=false,pending=false,room='',timeout=0,attempt=0;
 const scope='pocket-works:crossfire:';
-const storage={getItem:k=>sessionStorage.getItem(scope+k),setItem:(k,v)=>sessionStorage.setItem(scope+k,v),removeItem:k=>sessionStorage.removeItem(scope+k)};
+const storage={getItem:k=>{try{return sessionStorage.getItem(scope+k)}catch{return null}},setItem:(k,v)=>{try{sessionStorage.setItem(scope+k,v)}catch{}},removeItem:k=>{try{sessionStorage.removeItem(scope+k)}catch{}}};
 const error=e=>$('error').textContent=String(e?.message||e||'');
 const clearPending=()=>{pending=false;clearTimeout(timeout);};
 function show(){ $('intro').hidden=true;$('menu').hidden=true;$('arena').hidden=false; }
@@ -51,10 +52,13 @@ function disconnect(){
  const client=net;net=null;connected=false;clearPending();
  if(client){try{if(client.roomId)client.leaveRoom()}catch{}client.roomId=null;client.persist();client.close();}
 }
-function reset(){disconnect();busy=false;solo=false;match=null;state=null;room='';me=null;$('arena').hidden=true;$('intro').hidden=false;$('menu').hidden=false;error('');}
+function reset(){attempt++;disconnect();busy=false;solo=false;match=null;state=null;room='';me=null;$('arena').hidden=true;$('intro').hidden=false;$('menu').hidden=false;error('');}
 async function online(mode,code){
  if(busy)return;disconnect();busy=true;solo=false;state=null;match=null;room='';error('');show();$('status').textContent='Подключение к PocketNet…';$('board').replaceChildren();$('wait').hidden=true;$('start').hidden=true;$('replay').hidden=true;$('copy').hidden=true;
- const client=new PocketNet({serverUrl:location.origin+'/pocketnet',name:'Commander',storage,identityKey:'crossfire'});
+ const token=++attempt;
+ const profile=await getPocketIdentity().catch(()=>null);
+ if(token!==attempt)return;
+ const client=new PocketNet({serverUrl:location.origin+'/pocketnet',name:preferredPocketName(profile,'Commander'),storage,identityKey:pocketIdentitySessionKey(profile)});
  // Explicit create/join is not a request to resume another room.
  client.roomId=null;client.persist();net=client;
  client.on('connected',m=>{if(net!==client)return;me=m.player.id;connected=true;});
@@ -63,7 +67,7 @@ async function online(mode,code){
   if(m.gameId!=='crossfire'){reset();error('Это код другой игры');return;}
   busy=false;clearTimeout(timeout);room=m.roomId;receive(m.state);
  });
- client.on('game_event',m=>{if(net===client&&m.event?.type==='state')receive(m.event.payload)});
+ client.on('game_event',m=>{if(net===client&&m.roomId===room&&m.event?.type==='state')receive(m.event.payload)});
  client.on('error',m=>{if(net!==client)return;clearPending();const message=m.message||m.code||m;if(!room){reset();error(message);}else{busy=false;error(message);render();}});
  client.on('room_closed',()=>{if(net===client){reset();error('Комната закрыта');}});
  client.on('room_kicked',()=>{if(net===client){reset();error('Вы покинули комнату');}});
@@ -72,7 +76,7 @@ async function online(mode,code){
   timeout=setTimeout(()=>{if(net===client&&!room){reset();error('Комната не ответила. Попробуйте снова.');}},12000);
  }catch(e){if(net===client){reset();error(e);}}
 }
-function startSolo(){disconnect();solo=true;me='local';match=initial('solo',[me]);state=null;room='';error('');render();}
+function startSolo(){attempt++;disconnect();solo=true;me='local';match=initial('solo',[me]);state=null;room='';error('');render();}
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>b.dataset.mode==='solo'?startSolo():online(b.dataset.mode));
 $('join').onclick=()=>{const c=$('code').value.trim();if(c)online(null,c);else error('Введите код комнаты')};
 $('wait').onclick=()=>act({type:'wait'});$('start').onclick=()=>remote({type:'start'});$('replay').onclick=startSolo;$('back').onclick=reset;
