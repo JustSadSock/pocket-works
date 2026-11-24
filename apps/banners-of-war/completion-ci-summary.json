@@ -1,0 +1,200 @@
+{
+  "commit": "782eb8d5c7af8b7bb7bbab5ada8ce6c29fcf99be",
+  "run": 45383381288,
+  "original": {
+    "n": 1008,
+    "wins": 356,
+    "losses": 124,
+    "draws": 528,
+    "meanDelta": 0.058970994961509184,
+    "sd": 0.10229347904820771,
+    "paired_seed_bootstrap_95": [
+      0.04994530853967682,
+      0.06768716574696375
+    ],
+    "mirror": {
+      "pairs": 504,
+      "max_delta_difference": 2.886579864025407e-15,
+      "outcome_mismatches": 0
+    }
+  },
+  "levels": {
+    "recruit": [
+      96,
+      122,
+      34,
+      0.06099589728713707
+    ],
+    "captain": [
+      84,
+      142,
+      26,
+      0.057783827034780945
+    ],
+    "commander": [
+      92,
+      126,
+      34,
+      0.06178116770601335
+    ],
+    "grandmaster": [
+      84,
+      138,
+      30,
+      0.05532308781810537
+    ]
+  },
+  "levelColumns": [
+    "wins",
+    "draws",
+    "losses",
+    "meanDelta"
+  ],
+  "depth": {
+    "seconds": [
+      30,
+      60,
+      90
+    ],
+    "nPerDepth": 12,
+    "meanDelta": [
+      0.03488759282089773,
+      0.03488759282089773,
+      0.03964476155857906
+    ],
+    "meanPlanMs": [
+      85.09817758332763,
+      101.31914374999997,
+      110.4406961666679
+    ],
+    "wins": [
+      4,
+      4,
+      4
+    ],
+    "draws": [
+      6,
+      6,
+      6
+    ],
+    "losses": [
+      2,
+      2,
+      2
+    ]
+  },
+  "historical": {
+    "lechfeld": [
+      30,
+      19,
+      1,
+      7,
+      3,
+      0.155070039,
+      0.396691797
+    ],
+    "hastings": [
+      50,
+      0,
+      0,
+      10,
+      0,
+      0.844531662,
+      0.094977897
+    ],
+    "bouvines": [
+      13,
+      29,
+      8,
+      5,
+      5,
+      0.056972001,
+      0.332731338
+    ],
+    "bannockburn": [
+      29,
+      19,
+      2,
+      3,
+      7,
+      0.003411609,
+      0.308594859
+    ],
+    "grunwald": [
+      1,
+      34,
+      15,
+      1,
+      9,
+      -0.258216128,
+      0.222541873
+    ],
+    "agincourt": [
+      48,
+      0,
+      2,
+      10,
+      0,
+      0.700803316,
+      0.057982419
+    ]
+  },
+  "historicalColumns": [
+    "win",
+    "loss",
+    "draw",
+    "fullWin",
+    "fullLoss",
+    "fullMeanScore",
+    "fullSD"
+  ],
+  "horizons": {
+    "120": 120,
+    "360": 120,
+    "900": 60
+  },
+  "performance": [
+    [
+      26,
+      29,
+      46,
+      191598
+    ],
+    [
+      40,
+      60,
+      70,
+      207113
+    ],
+    [
+      60,
+      67,
+      85,
+      228860
+    ],
+    [
+      100,
+      151,
+      257,
+      258253
+    ],
+    [
+      150,
+      248,
+      327,
+      314772
+    ]
+  ],
+  "performanceColumns": [
+    "units",
+    "planMs",
+    "physicsMs10s",
+    "snapshotChars"
+  ],
+  "limitations": [
+    "Representative sectors, not full historical armies",
+    "Series E uses different seed assignments across terrain groups; not a strictly paired causal estimate",
+    "Hastings and Agincourt favor defenders strongly; Grunwald coalition underperforms in this setup. No historical winner bonus.",
+    "Depth superiority not demonstrated consistently."
+  ]
+}
