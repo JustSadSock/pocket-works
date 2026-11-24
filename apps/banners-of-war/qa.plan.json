@@ -76,6 +76,14 @@
       "files": [
         "qa/journey.spec.ts"
       ]
+    },
+    {
+      "id": "living",
+      "kind": "playwright",
+      "tier": "smoke",
+      "files": [
+        "qa/living.spec.ts"
+      ]
     }
   ]
 }
