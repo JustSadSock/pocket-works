@@ -16,7 +16,13 @@ const canonical=value=>{
   throw Error('Non-canonical value');
 };
 const taskDigest=task=>digest(canonical(task));
-export const policyDigest=policy=>digest(canonical({repository:policy.repository,workflow:policy.workflow,ref:policy.ref,eligibleTaskDigests:[...policy.eligibleTaskDigests].sort()}));
+export const policyDigest=policy=>{
+  const p={repository:policy.repository,workflow:policy.workflow,ref:policy.ref,eligibleTaskDigests:[...policy.eligibleTaskDigests].sort()};
+  for(const key of ['schema','enabled','workflowId','issuerEnvironment','environmentFingerprint','publicKeyDigest']){
+    if(Object.hasOwn(policy,key))p[key]=policy[key];
+  }
+  return digest(canonical(p));
+};
 // An unknown or mutable runner image must never acquire an authoritative key.
 export function environmentFingerprint(env){
   if(!env||!HEX.test(env.imageDigest)||!HEX.test(env.toolchainDigest)||
@@ -29,6 +35,7 @@ function validateContext(context,policy){
   if(!context||!TREE.test(context.tree)||!HEX.test(context.environment)||
       !HEX.test(context.policyDigest)||context.policyDigest!==policyDigest(policy))
     throw Error('Unknown input or environment fingerprint');
+  if(policy.enabled===false)throw Error('Receipt policy disabled');
   if(!context.task||!['node-test','node'].includes(context.task.kind)||
       !Array.isArray(policy.eligibleTaskDigests)||!policy.eligibleTaskDigests.includes(taskDigest(context.task)))
     throw Error('Task is not explicitly approved as hermetic');
@@ -68,6 +75,7 @@ export function verifyReceipt({receipt,context,policy,evidence,publicKey,now=Dat
     if(!receipt||typeof receipt.signature!=='string'||!/^[A-Za-z0-9+/]{86}==$/.test(receipt.signature))
       throw Error('Missing or malformed signature');
     const key=publicKey?.type==='public'?publicKey:createPublicKey(publicKey);
+    if(Object.hasOwn(policy,'publicKeyDigest')&&(!HEX.test(policy.publicKeyDigest??'')||digest(key.export({type:'spki',format:'der'}))!==policy.publicKeyDigest))throw Error('Public key not pinned');
     if(key.asymmetricKeyType!=='ed25519'||
       !verify(null,Buffer.from(canonical(receipt.payload)),key,Buffer.from(receipt.signature,'base64')))
       throw Error('Signature verification failed');
