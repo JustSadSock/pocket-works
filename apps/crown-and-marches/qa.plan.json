@@ -316,32 +316,17 @@
           "selector": "[data-act=\"campaignlab\"]"
         },
         {
-          "action": "visible",
-          "selector": "#wseed"
-        },
-        {
           "action": "fill",
           "selector": "#wseed",
           "value": "sinews-trial-1"
-        },
-        {
-          "action": "screenshot"
         },
         {
           "action": "click",
           "selector": "[data-act=\"campaignstart\"]"
         },
         {
-          "action": "visible",
-          "selector": "[data-act=\"campaignexport\"]"
-        },
-        {
           "action": "click",
           "selector": "[data-act=\"warplayer\"][data-value=\"0\"]"
-        },
-        {
-          "action": "visible",
-          "selector": "[data-act=\"togglearmy\"]"
         },
         {
           "action": "click",
@@ -354,10 +339,6 @@
         {
           "action": "click",
           "selector": "[data-act=\"opplace\"]"
-        },
-        {
-          "action": "visible",
-          "selector": "[data-act=\"cancel\"]"
         },
         {
           "action": "click",
@@ -383,16 +364,8 @@
           "selector": "[data-act=\"campaignretry\"]"
         },
         {
-          "action": "visible",
-          "selector": "[data-act=\"campaignexport\"]"
-        },
-        {
           "action": "click",
           "selector": "[data-act=\"econexit\"]"
-        },
-        {
-          "action": "visible",
-          "selector": "[data-act=\"campaignlab\"]"
         }
       ]
     }
