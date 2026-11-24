@@ -50,6 +50,15 @@ jobs:
             const line="Legacy tasks: "+s.legacyJobs+"; proposed jobs: "+s.shardJobs+"; exact task parity verified";
             console.log(line);appendFileSync(process.env.GITHUB_STEP_SUMMARY,"## Shadow parity\n"+line+"\n");
           '
+      - name: Generate advisory impact report for original infrastructure change
+        run: |
+          node scripts/ci-overhaul/impact.mjs 327ebcdc3f32eb1120d7164f5113746c0e5cd92e d74bc10b1ee3e931f778ca8a11746dcb7eb7f1c3 > shadow-evidence/impact.json
+          node --input-type=module -e '
+            import {readFileSync} from "node:fs";
+            const r=JSON.parse(readFileSync("shadow-evidence/impact.json","utf8"));
+            if(r.canSkip!==false||!r.globalFallback||r.candidateApps.length!==r.requiredApps.length)throw Error("Unsafe infrastructure scope");
+            console.log("Impact advisory: "+r.direct.length+" directly changed apps, "+r.requiredApps.length+" required apps; full fallback");
+          '
       - name: Run bounded real-test pilot (individual versus batched)
         run: node scripts/ci-overhaul/pilot.mjs shadow-evidence/legacy-plan.txt
       - name: Upload pilot evidence
