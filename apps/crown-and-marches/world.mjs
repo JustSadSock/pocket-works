@@ -237,7 +237,7 @@ export function recruit(s,c,type=0){
  if(type===9&&st.tech[8]<1||type===3&&st.tech[5]<1)return 'Требуется технология';
  const need=zeros();need[9]=10;need[13]=u[1]*6;need[14]=[0,1,1,4,0,2,2,8,0,1][type];need[8]=type===6?6:type===7?8:0;need[1]=u[5]?2:0;need[11]=u[5]?1:0;
  const cost=12+u[1]*8;if(st.gold<cost||c.pop<180||need.some((q,k)=>q>c.stock[k]+st.reserves[k]))return 'Не хватает монет, населения или экипировки';
- let a=s.armies.find(a=>a.f===c.f&&a.i===c.i&&!a.path.length);if(!a){a={id:s.nextArmy++,f:c.f,i:c.i,origin:c.id,cohorts:[],units:Array(10).fill(0),equipment:zeros(),rations:0,path:[],supply:0,fatigue:0,morale:1,progress:0};s.armies.push(a);}
+ let a=s.armies.find(a=>a.f===c.f&&a.i===c.i&&!a.path.length);if(!a){a={id:s.nextArmy++,f:c.f,i:c.i,origin:c.id,cohorts:[],units:Array(10).fill(0),equipment:zeros(),rations:0,path:[],supply:0,fatigue:0,morale:1,progress:0};s.armies.push(a);warInit(s);}
  st.gold-=cost;c.cash+=cost;st.budget.wages+=cost;c.pop-=60;
  for(let k=0;k<17;k++){const local=Math.min(c.stock[k],need[k]);c.stock[k]-=local;st.reserves[k]-=need[k]-local;if(k===9)a.rations+=need[k];else a.equipment[k]+=need[k];}
  a.supply=clamp(a.rations*3,0,60);a.units[type]+=60;let cohort=a.cohorts.find(q=>q.city===c.id);if(!cohort){cohort={city:c.id,units:Array(10).fill(0)};a.cohorts.push(cohort);}cohort.units[type]+=60;cohort.service??=Array.from({length:10},()=>[]);const veterans=takeService(c.veteranService,Math.min(60,serviceCount(c.veteranService))),r=[...veterans,...freshService(s,60-serviceCount(veterans))];cohort.service[type].push(...r);registerService(s,c.f,r,'mobilize');st.service.remobilized+=serviceCount(veterans);st.service.mobilized+=60;s.warStats.mobilized=(s.warStats.mobilized||0)+60;return 'Нанято 60: '+u[0];
