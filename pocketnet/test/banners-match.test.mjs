@@ -58,3 +58,23 @@ test('Historical Command rejects overlapping assignments and unauthorized unit o
  const request=group=>({group,task:'advance',anchor:{x:700,y:450},autonomy:'bounded'});
  assert.throws(()=>validateOrders(m.battle,0,{commands:[request(h.nodes[0].id),request(n.id)]}),/overlapping_commands/);
 });
+
+test('free deployment preserves exact valid position and rejects illegal positions',async()=>{
+ const m=await match({deployment:'free',landscape:'flat'}),u=m.battle.units.find(u=>u.side===0&&u.type!=='guard');
+ const F=Local.forState(m.battle);
+ const before={x:u.x,y:u.y,a:u.a};
+ const target=Array.from({length:40},(_,i)=>({x:60+i*14,y:u.y,a:u.a})).find(p=>Math.abs(p.x-u.x)>=50&&p.x+F.dims(u).d/2<F.W/2-5&&!m.battle.units.some(v=>v!==u&&v.side===0&&F.alive(v)&&F.overlap({...u,...p},v)));
+ assert.ok(target);
+ act(m,a,'deploy',{placements:[{id:u.id,...target}]});
+ assert.deepEqual({x:u.x,y:u.y,a:u.a},target);
+ assert.deepEqual(viewMatch(m,a,start).units.find(v=>v.id===u.id).x,target.x);
+ const enemy=m.battle.units.find(v=>v.side===1&&v.type!=='guard');
+ assert.throws(()=>act(m,a,'deploy',{placements:[{id:enemy.id,x:100,y:100,a:0}]}),/invalid_deployment/);
+ assert.throws(()=>act(m,a,'deploy',{placements:[{id:u.id,x:F.W*.75,y:u.y,a:u.a}]}),/deployment_boundary/);
+ assert.deepEqual({x:u.x,y:u.y,a:u.a},target);
+ const neighbor=m.battle.units.find(v=>v.side===0&&v!==u&&v.type!=='guard');
+ // Invalid multi-unit deployment is discarded by the Durable Object, which reads a fresh state per action.
+ const copy=JSON.parse(JSON.stringify(m));
+ assert.throws(()=>act(copy,a,'deploy',{placements:[{id:u.id,x:neighbor.x,y:neighbor.y,a:u.a}]}),/deployment_overlap/);
+ assert.notDeepEqual(before,target);
+});

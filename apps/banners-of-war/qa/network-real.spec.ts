@@ -93,11 +93,30 @@ test('two real Pocket ID clients complete and reconnect',async({browser},info)=>
  const combatId=await roomCode(a);
  await joinAndAccept(a,b,combatId);
  let deploy=await waitPhase(a,combatId,['deployment']);
+ await expect(a.locator('#net-deploy-ready')).toBeVisible({timeout:20000});
+ await expect(b.locator('#net-deploy-ready')).toBeVisible({timeout:20000});
+ await a.locator('#net-fit').click();
  const regiment=deploy.units.find((u:any)=>u.side===deploy.side&&u.type!=='guard');
  expect(regiment).toBeTruthy();
  await mapTap(a,deploy,regiment.x,regiment.y);
+ await expect(a.locator('#net-selected')).toContainText('№'+(regiment.id%100+1));
+ const moved=a.waitForResponse(r=>r.url().endsWith('/'+combatId+'/action')&&r.request().method()==='POST'&&r.request().postDataJSON()?.type==='deploy');
  await mapTap(a,deploy,regiment.x-50,regiment.y);
+ const response=await moved;
+ expect(response.status(),await response.text()).toBe(200);
+ const command=response.request().postDataJSON();
+ expect(command.placements).toHaveLength(1);
+ expect(command.placements[0].id).toBe(regiment.id);
+ expect(Math.abs(command.placements[0].x-(regiment.x-50))).toBeLessThan(5);
+ // Reject a position outside our deployment half through the same UI.
+ 
  await expect.poll(async()=>Math.abs((await view(a,combatId)).units.find((u:any)=>u.id===regiment.id).x-(regiment.x-50)),{timeout:15000}).toBeLessThan(5);
+ const invalid=a.waitForResponse(r=>r.url().endsWith('/'+combatId+'/action')&&r.request().method()==='POST'&&r.request().postDataJSON()?.type==='deploy');
+ await mapTap(a,deploy,deploy.scenario.width*.75,regiment.y);
+ const rejected=await invalid;
+ expect(rejected.status()).toBe(400);
+ expect((await rejected.json()).error).toBe('deployment_boundary');
+ expect(Math.abs((await view(a,combatId)).units.find((u:any)=>u.id===regiment.id).x-(regiment.x-50))).toBeLessThan(5);
  await endDeployment(a,b,combatId);
  let state=await view(a,combatId);
  for(let guard=0;guard<7&&state.phase!=='finished';guard++){
@@ -134,6 +153,7 @@ test('two real Pocket ID clients complete and reconnect',async({browser},info)=>
  expect(archive.orders).toBeTruthy();
  expect(archive.after.units.some((u:any)=>(u.combatSeconds||0)>0)).toBe(true);
  await expect(a.locator('#net-desk h3')).toBeVisible({timeout:30000});
+ await a.locator('#net-round-select').selectOption('1');
  await expect(a.locator('#net-export')).toBeVisible({timeout:20000});
  await a.screenshot({path:info.outputPath('combat-finished.png')});
 
@@ -143,9 +163,10 @@ test('two real Pocket ID clients complete and reconnect',async({browser},info)=>
  expect(rematchId).not.toBe(combatId);
  await joinAndAccept(a,b,rematchId);
  await endDeployment(a,b,rematchId);
- for(const p of [a,b])await p.getByText('Военный совет',{exact:true}).click();
+ await a.getByText('Военный совет',{exact:true}).click();
  await a.locator('#net-draw').click();
  await expect(b.locator('#net-draw')).toContainText('Принять ничью',{timeout:20000});
+ if(!await b.locator('#net-draw').isVisible())await b.getByText('Военный совет',{exact:true}).click();
  await b.locator('#net-draw').click();
  expect((await waitPhase(a,rematchId,['finished'])).resultReason).toBe('agreement');
 
