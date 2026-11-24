@@ -99,3 +99,10 @@ The 1008 original cases are regenerated using the original commander-lab case fu
 
 ## 0.5.0 — completion evidence
 Six playable representative-sector reconstructions, profile-based equipment, schematic historical study, branch graph and personal archive. See completion-ci-summary.json for actual CI laboratory counts at 782eb8d. The historical/expanded scales add separate regiments to the same fixed battlefield; they do not simulate full historical populations. The 900 s horizon represents an extended tactical sector, not the duration of the original battles. Release remains conditional on required QA and deployed production verification.
+
+
+## 0.6.0 — Age of Antiquity (release candidate)
+- Six antique participating sectors, 26 antique profiles including team footprints for elephants and chariots. Crew-equivalent strengths are not exact person or animal casualties. Medieval compact geometry remains unchanged. Expanded maps add space in metres, not soldier scaling.
+- Group command uses deterministic transmission time and local group decisions; direct orders are available to observed units. Remote units use received report markers, not live exact data. Orders, reports and command decisions persist in battle/branch snapshots. Messenger routing and interception are simplified; group traits are illustrative, not documented commander psychology.
+- `antiquity-lab.mjs` extends the sharded CI suite with paired anomaly, command and organization trials. Time-limit scores are separate from combat-readiness results. `lane-v2` is a deliberately experimental planner, not enabled by default pending comparison.
+- Deployment and finite first-round checks are in `antiquity-six-audit.json`; the full CI run, visual tests and public deployment must be confirmed before describing 0.6.0 as released.

@@ -1,5 +1,5 @@
 import {plan as enemyPlan, deploy as enemyDeploy, delegate as staffOrders} from './commander.js';
-import {enqueueCommand,tickCommand} from './historical-command.js';
+import {enqueueCommand,tickCommand,hqObserves} from './historical-command.js';
 import {historicalScore} from './chronicles.js';
 import {troopSpec,weaponGeometry} from './historical-profiles.js';
 function engine(W=1400,H=900){
@@ -46,7 +46,7 @@ function engine(W=1400,H=900){
  function alive(u){return u.n>=1&&!u.escaped}
  function power(s,side){return s.units.filter(u=>u.side===side&&alive(u)&&!u.rout).reduce((a,u)=>a+u.n*(.35+.65*u.morale/100)*(.45+.55*u.cohesion/100),0)}
  function total(s,side){return s.units.filter(u=>u.side===side).reduce((a,u)=>a+u.initial,0)}
- function emit(s,u,text){s.events.push({round:s.round,time:Math.round(s.time),side:u.side,id:u.id,text,...(s.fog?{seen:[visible(s,0,u),visible(s,1,u)]}:{})});if(s.events.length>400){const i=s.events.findIndex(e=>e.text==="Вступил в рукопашную");s.events.splice(i<0?0:i,1)}}
+ function emit(s,u,text){s.events.push({round:s.round,time:Math.round(s.time),side:u.side,id:u.id,text,...(s.fog?{seen:[visible(s,0,u),visible(s,1,u)]}:{}),...(s.commandHierarchy?{hqSeen:hqObserves(api,s,u)}:{})});if(s.events.length>400){const i=s.events.findIndex(e=>e.text==="Вступил в рукопашную");s.events.splice(i<0?0:i,1)}}
  // Decisions use only current, executed physical state; pending player orders are never inspected.
  function ai(s,side){
  const own=s.units.filter(u=>u.side===side&&alive(u)&&!u.rout).sort((a,b)=>a.id-b.id),foes=s.units.filter(u=>u.side!==side&&alive(u)&&!u.rout&&visible(s,side,u)).sort((a,b)=>a.id-b.id),orders={};if(!own.length)return orders;if(!foes.length){let front=side?-1:1;for(let u of own){let known=Object.values(s.known?.[side]||{}).sort((a,b)=>dist(a,u)-dist(b,u)||a.id-b.id)[0];orders[u.id]=u.type==="guard"?{kind:"hold",path:[]}:{kind:"advance",path:[{x:clamp(known?.x??u.x+front*100,20,W-20),y:known?.y??u.y}]}}return orders}
