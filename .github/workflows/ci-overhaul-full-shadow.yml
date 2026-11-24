@@ -3,7 +3,7 @@ name: CI Overhaul Full Shadow Lab
 on:
   push:
     branches: [platform/ci-cd-overhaul]
-    paths: ['scripts/ci-overhaul/full-lab.request.json']
+    paths: ['scripts/ci-overhaul/full-lab.request.json', '.github/workflows/ci-overhaul-full-shadow.yml']
   workflow_dispatch:
 
 permissions:
@@ -110,6 +110,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Trust only this checked-out workspace inside container
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" rev-parse --verify HEAD
       - name: Execute browser tasks in isolated worktrees
         env:
           PW_QA_SHARD: ${{ toJSON(matrix) }}
