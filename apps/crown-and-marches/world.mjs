@@ -92,7 +92,7 @@ export function marketTrade(s){economicInit(s);s.routes=[];const cities=s.cities
  if(s.states[a.f].embargo.includes(b.f)||s.states[b.f].embargo.includes(a.f))continue;
  const opportunities=[];for(let k=0;k<17;k++){const from=a.market[k]<b.market[k]?a:b,to=from===a?b:a;let surplus=from.stock[k]-Math.max(2,from.demand[k]*2),need=Math.max(0,to.demand[k]*5+4-to.stock[k]-pending.get(to.id)[k]);if(surplus>.5&&need>.5&&to.market[k]>from.market[k]*1.12)opportunities.push({k,from,to,surplus,need});}if(!opportunities.length)continue;
  let sea=false,route=marketRoute(s,a,b);if((!route.length||route.length>dist(a.i,b.i)*1.7)&&s.states[a.f].tech[7]>0&&s.states[b.f].tech[7]>0){const water=seaRoute(s,a,b);if(water){route=water;sea=true;}}if(!route.length)continue;
- const length=sea?route.length*.55:route.reduce((n,k,j)=>n+travelCost(s,j?route[j-1]:a.i,k),0),fee=.04+length*.003,capacity=sea?24:Math.max(3,8+Math.min(...route.map(i=>s.road[i]))*4);
+ const length=sea?route.length*.55:route.reduce((n,k,j)=>n+travelCost(s,j?route[j-1]:a.i,k),0),fee=.04+length*.003,capacity=sea?Math.min(32,10+(a.infra+b.infra)*2):Math.max(3,8+Math.min(...route.map(i=>s.road[i]))*4);
  for(const from of [a,b]){const to=from===a?b:a;if(s.shipments.filter(sh=>sh.from===from.id&&sh.to===to.id).length>=2)continue;
  const path=from===a?route:sea?[...route].reverse():[...route.slice(0,-1).reverse(),a.i];if(!sea&&(traffic.get(path[0])||0)>=2+(s.road[path[0]]||0))continue;
  const goods=zeros();let escrow=0,volume=0,tariff=from.f===to.f?0:s.states[to.f].tariff;
@@ -102,7 +102,7 @@ export function marketTrade(s){economicInit(s);s.routes=[];const cities=s.cities
  }
 }
 function deliver(s,sh,from,to){for(let k=0;k<17;k++){to.stock[k]+=sh.goods[k];to.imports[k]+=sh.goods[k];to.tradeIn[k]+=sh.goods[k];from.tradeOut[k]+=sh.goods[k];const value=sh.goods[k]*(sh.prices?.[k]||from.market[k]);to.recentTrade+=value;from.recentTrade+=value;}if(sh.escrow){const tariff=sh.goods.reduce((n,q,k)=>n+q*sh.prices[k]*(sh.tariff||0),0);s.states[to.f].gold+=tariff;s.states[to.f].budget.tariff+=tariff;from.cash+=sh.escrow-tariff;}}
-function lostCargo(s,sh,to){for(let k=0;k<17;k++)s.ledger.sink[k]+=sh.goods[k];if(to)to.cash+=sh.escrow||0;else s.ledger.moneySink+=sh.escrow||0;}
+function lostCargo(s,sh,to,interceptor=null){if(interceptor){for(let k=0;k<17;k++){if(k===9)interceptor.rations+=sh.goods[k];else interceptor.equipment[k]+=sh.goods[k];}log(s,'Караван захвачен войсками '+s.states[interceptor.f].name);}else for(let k=0;k<17;k++)s.ledger.sink[k]+=sh.goods[k];if(to)to.cash+=sh.escrow||0;else s.ledger.moneySink+=sh.escrow||0;}
 function livingProduction(s,invest=false){economicInit(s);
  const by=new Map(s.cities.map(c=>[c.id,c])),cells=new Map(s.cities.map(c=>[c.id,[]]));
  for(const c of s.cities){c.potential.fill(0);c.developed=0;c.isolated=0;}
@@ -195,15 +195,15 @@ export function treaty(s,a,b,kind){if(a===b||!s.states[b])return 'Недопус
 s.obligations=(s.obligations||[]).filter(o=>!(o.lord===a&&o.subject===b||o.lord===b&&o.subject===a));if(kind==='tribute'||kind==='vassal')s.obligations.push({lord:a,subject:b,kind});s.relations[a][b]=s.relations[b][a]=kind;if(kind==='peace'&&old==='war'){for(const c of s.cities.filter(c=>c.occupation===a&&c.f===b||c.occupation===b&&c.f===a)){let oldF=c.f;c.f=c.occupation;c.capital=false;c.occupation=-1;c.siege=0;for(let i=0;i<N;i++)if(s.admin[i]===c.id&&s.occ[i]===c.f){s.owner[i]=c.f;s.occ[i]=-1;s.control[i]=.5;s.pressure[i]=0;s.contender[i]=-1;s.adminOverride[i]=-1}if(!s.cities.some(x=>x.f===oldF&&x.capital)){let next=s.cities.find(x=>x.f===oldF);if(next)next.capital=true}}for(let i=0;i<N;i++)if(s.occ[i]===a&&s.owner[i]===b||s.occ[i]===b&&s.owner[i]===a){if(s.pressure[i]>=.85){s.owner[i]=s.occ[i];s.admin[i]=-1;s.adminOverride[i]=-1;s.control[i]=.35;}s.occ[i]=-1;s.pressure[i]=0;s.contender[i]=-1;}recalcTerritory(s)}log(s,s.states[a].name+' / '+s.states[b].name+': '+kind);return 'Договор принят'}
 export function cargoBlocked(s,shipment,i){const f=controller(s,i),hostile=q=>atWar(s,shipment.fromFaction,q)||atWar(s,shipment.toFaction,q);return f>=0&&hostile(f)||s.armies.some(a=>a.i===i&&a.supply>2&&strength(a)>=40&&hostile(a.f));}
 export function transportStep(s){
- ensureLiving(s);economicInit(s);const alive=[];
+ ensureLiving(s);economicInit(s);const alive=[],roadTraffic=new Map();
  for(const sh of s.shipments){const from=s.cities.find(c=>c.id===sh.from),to=s.cities.find(c=>c.id===sh.to);if(!from||!to||to.f!==sh.toFaction||from.f!==sh.fromFaction){lostCargo(s,sh,to);continue;}
  if(sh.sea){if(blockade(s,to)||blockade(s,from)){sh.wait=(sh.wait||0)+1;if(sh.wait<25)alive.push(sh);else lostCargo(s,sh,to);continue;}sh.wait=0;sh.progress+=1;if(sh.path?.length){sh.index=Math.min(sh.path.length-1,Math.floor(sh.progress/sh.duration*sh.path.length));sh.i=sh.path[sh.index];}if(sh.progress>=sh.duration){deliver(s,sh,from,to);}else alive.push(sh);continue;}
  const next=sh.path[sh.index];
  if(next==null){deliver(s,sh,from,to);continue;}
  if(cargoBlocked(s,sh,next)||to.occupation>=0){sh.wait=(sh.wait||0)+1;
  if(sh.wait%4===0&&to.occupation<0){let alternate=pathfind(s,sh.i,to.i,-1,i=>!cargoBlocked(s,sh,i));if(alternate.length){sh.path=alternate;sh.index=0;sh.progress=0;sh.wait=0;}}
- if(sh.wait<20)alive.push(sh);else {lostCargo(s,sh,to);log(s,'Караван '+from.name+' — '+to.name+' потерян: дорога перекрыта');}continue;}
- sh.wait=0;sh.progress+=1.4/travelCost(s,sh.i,next);
+ const interceptor=s.armies.find(a=>a.i===next&&a.supply>2&&strength(a)>=40&&(atWar(s,a.f,sh.fromFaction)||atWar(s,a.f,sh.toFaction)));if(interceptor&&sh.wait>=8){lostCargo(s,sh,to,interceptor);continue;}if(sh.wait<20)alive.push(sh);else {lostCargo(s,sh,to);log(s,'Караван '+from.name+' — '+to.name+' потерян: дорога перекрыта');}continue;}
+ const load=roadTraffic.get(next)||0,limit=2+(s.road[next]||0)*2;if(load>=limit){alive.push(sh);continue;}roadTraffic.set(next,load+1);sh.wait=0;sh.progress+=1.4/travelCost(s,sh.i,next);
  if(sh.progress>=1){sh.progress-=1;sh.i=next;sh.index++;}
  if(sh.index>=sh.path.length){deliver(s,sh,from,to);}else alive.push(sh);
  }
