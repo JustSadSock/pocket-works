@@ -21,6 +21,7 @@ return {height,moisture,fert,land,terrain,river,resource,down}}
 class Heap{constructor(){this.a=[]}push(i,p){let a=this.a,k=a.length;a.push([i,p]);while(k){let j=(k-1)>>1;if(a[j][1]<=p)break;a[k]=a[j];k=j}a[k]=[i,p]}pop(){let a=this.a,r=a[0],v=a.pop();if(a.length){let k=0;while(k*2+1<a.length){let j=k*2+1;if(j+1<a.length&&a[j+1][1]<a[j][1])j++;if(a[j][1]>=v[1])break;a[k]=a[j];k=j}a[k]=v}return r}get length(){return this.a.length}}
 // A priority-flood drainage surface gives every inland cell a path to water.
 // Physical height is minimally raised at enclosed depressions; the original seed is stable.
+function drainageNeighbors(i){const x=xx(i),y=yy(i),out=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if((dx||dy)&&x+dx>=0&&x+dx<W&&y+dy>=0&&y+dy<H)out.push(idx(x+dx,y+dy));return out;}
 export function generate(seed,version=2){
  if(version===1)return generateLegacy(seed);
  const m=generateLegacy(seed),h=hash(seed),{height,land,moisture,fert,terrain,resource,river,down}=m;
@@ -28,15 +29,17 @@ export function generate(seed,version=2){
  for(let i=0;i<N;i++){const x=xx(i),y=yy(i),warp=noise(h^728,x,y,43)*18,r=1-Math.abs(noise(h^833,x+warp,y,34)*2-1);ridge[i]=r*r*noise(h^904,x,y,60);if(land[i])height[i]+=Math.max(0,ridge[i]-.25)*.35;}
  down.fill(-1);river.fill(0);
  for(let i=0;i<N;i++)if(!land[i]||xx(i)===0||xx(i)===W-1||yy(i)===0||yy(i)===H-1){seen[i]=1;queue.push(i,height[i]);basin[i]=i;}
- while(queue.length){const [i]=queue.pop();order.push(i);for(const j of neighbors(i)){if(seen[j])continue;seen[j]=1;down[j]=i;basin[j]=basin[i];height[j]=Math.max(height[j],height[i]+.000025);queue.push(j,height[j]);}}
+ while(queue.length){const [i]=queue.pop();order.push(i);for(const j of drainageNeighbors(i)){if(seen[j])continue;seen[j]=1;down[j]=i;basin[j]=basin[i];height[j]=Math.max(height[j],height[i]+.000025);queue.push(j,height[j]);}}
+ for(const i of order){if(!land[i]||down[i]<0)continue;let best=down[i],slope=-1;for(const j of drainageNeighbors(i)){if(height[j]>=height[i])continue;let q=(height[i]-height[j])/Math.hypot(xx(i)-xx(j),yy(i)-yy(j));if(q>slope){slope=q;best=j;}}down[i]=best;basin[i]=basin[best];}
  for(let i=0;i<N;i++)if(land[i]){let x=xx(i),y=yy(i),lat=Math.abs(y-H/2)/(H/2);temperature[i]=clamp(1-lat*.72-height[i]*.65,0,1);let shadow=noise(h^389,x+8,y,22)*.15;moisture[i]=clamp(moisture[i]*(.65+.45*temperature[i])+(1-height[i])*.15-shadow,0,1);flow[i]=.5+moisture[i]*1.5;coast[i]=neighbors(i).some(j=>!land[j])?1:0;}
- for(let k=order.length-1;k>=0;k--){const i=order[k];if(!land[i])continue;if(down[i]>=0)flow[down[i]]+=flow[i];river[i]=flow[i]>22?1:0;}
+ for(let k=order.length-1;k>=0;k--){const i=order[k];if(!land[i])continue;if(down[i]>=0)flow[down[i]]+=flow[i];river[i]=flow[i]>58?1:0;}
  for(let i=0;i<N;i++){if(!land[i]){down[i]=-1;resource[i]=-1;continue;}let x=xx(i),y=yy(i),e=height[i],wet=moisture[i],valley=river[i]||neighbors(i).some(j=>river[j]),nearWater=coast[i]||valley;delta[i]=coast[i]&&flow[i]>85?1:0;fert[i]=clamp(.30+wet*.44+temperature[i]*.20-e*.42+(valley?.20:0)+(delta[i]?.12:0),.05,1);terrain[i]=e>.55?4:e>.40?3:wet>.70&&e<.27&&nearWater?5:wet>.53?2:fert[i]>.44?1:6;
  const n=noise(h^930,x,y,13),vein=noise(h^185,x+ridge[i]*14,y,7);
  resource[i]=e>.36||ridge[i]>.34&&e>.25?(vein>.55?3:vein<.34?4:2):coast[i]&&n>.63?6:coast[i]||river[i]&&n>.72?5:terrain[i]===2?1:terrain[i]===6?(n>.54?7:8):fert[i]>.44?0:7;
  if(terrain[i]===3&&neighbors(i).filter(j=>terrain[j]===4||height[j]>.55).length>=2)pass[i]=1;
  }
- return {...m,flow,basin,temperature,ridge,pass,delta,coast};
+ const landmass=new Int32Array(N),visited=new Uint8Array(N);for(let i=0;i<N;i++)if(land[i]&&!visited[i]){const component=[i];visited[i]=1;for(let k=0;k<component.length;k++)for(const j of neighbors(component[k]))if(land[j]&&!visited[j]){visited[j]=1;component.push(j);}for(const j of component)landmass[j]=component.length;}
+ return {...m,flow,basin,temperature,ridge,pass,delta,coast,landmass};
 }
 export function ensureLiving(s){
  s.mapVersion??=1;s.development??=new Float32Array(N);s.devastation??=new Float32Array(N);s.pressure??=new Float32Array(N);s.contender??=new Int8Array(N).fill(-1);s.district??=new Uint8Array(N);s.bridge??=new Uint8Array(N);s.adminOverride??=new Int32Array(N).fill(-1);s.adminAccess??=new Uint8Array(N);s.shipments??=[];s.nextShipment??=0;
@@ -117,7 +120,7 @@ export function recalcTerritory(s,expand=true){ensureLiving(s);let d=new Float32
 while(heap.length){let [i,cost]=heap.pop();if(cost>d[i]+.001)continue;let c=by.get(assignment[i]);if(!c)continue;let reach=5+Math.sqrt(c.pop)/9+c.infra*1.5+(s.states[c.f].tech[4]||0)*1.5;for(const j of neighbors(i)){if(!s.map.land[j]||(s.owner[j]>=0&&s.owner[j]!==c.f))continue;if(controller(s,j)!==c.f&&s.owner[j]>=0)continue;if(s.adminOverride[j]>=0&&s.adminOverride[j]!==c.id)continue;let next=cost+travelCost(s,i,j);if(next>reach||next>=d[j]||(!expand&&s.owner[j]<0))continue;d[j]=next;assignment[j]=c.id;if(s.owner[j]<0){s.owner[j]=c.f;s.control[j]=.4;}else if(s.occ[j]<0)s.control[j]=Math.min(1,s.control[j]+.08);heap.push(j,next)}}
 s.adminAccess.fill(0);for(let i=0;i<N;i++){if(assignment[i]>=0){s.admin[i]=assignment[i];s.adminAccess[i]=1;}else if(!by.has(s.admin[i])||by.get(s.admin[i]).f!==s.owner[i])s.admin[i]=-1;}livingProduction(s);}
 export function newGame(seed){let s={seed:String(seed),rng:hash(seed),day:0,mapVersion:2,map:generate(seed),owner:new Int8Array(N).fill(-1),admin:new Int32Array(N).fill(-1),occ:new Int8Array(N).fill(-1),control:new Float32Array(N),road:new Uint8Array(N),states:FACTIONS.map((name,id)=>({id,name,gold:210,tech:Array(9).fill(0),research:0,focus:0,tax:.12,policy:'balanced'})),relations:FACTIONS.map((_,i)=>FACTIONS.map((_,j)=>i===j?'self':'peace')),cities:[],armies:[],routes:[],obligations:[],nextCity:0,nextArmy:0,news:[],battle:null,prices:Array(GOODS.length).fill(1)};
-let candidates=[];for(let i=0;i<N;i++)if(s.map.land[i]&&s.map.fert[i]>.39&&s.map.terrain[i]!==4&&xx(i)>9&&xx(i)<W-9&&yy(i)>9&&yy(i)<H-9)candidates.push(i);if(candidates.length<6)throw Error('Слишком мало пригодной земли. Выберите другой seed.');
+let candidates=[];for(let i=0;i<N;i++)if(s.map.land[i]&&s.map.fert[i]>.39&&s.map.terrain[i]!==4&&xx(i)>9&&xx(i)<W-9&&yy(i)>9&&yy(i)<H-9)candidates.push(i);if(candidates.length<6)throw Error('Слишком мало пригодной земли. Выберите другой seed.');const substantial=candidates.filter(i=>(s.map.landmass?.[i]||0)>=180&&neighbors(i).filter(j=>s.map.land[j]).length>=3);if(substantial.length>=30)candidates=substantial;
 for(let f=0;f<FACTIONS.length;f++){let best=-1,score=-Infinity;for(const i of candidates){let separation=s.cities.length?Math.min(...s.cities.map(c=>dist(i,c.i))):25;let v=Math.min(separation,50)*.06+s.map.fert[i]*2+(s.map.river[i]?.25:0)+random(s)*.4;if(separation>12&&v>score){best=i;score=v}}if(best<0)best=candidates.find(i=>!s.cities.some(c=>c.i===i));makeCity(s,f,best,['Вальмар','Остенбург','Эльден','Арден','Ривен','Нордхейм'][f],750+Math.floor(random(s)*220))}
 ensureLiving(s);for(const c of s.cities)for(const i of [c.i,...neighbors(c.i)])if(s.map.land[i])s.development[i]=i===c.i?.75:.30;recalcTerritory(s);log(s,'1080 год. Шесть домов начинают борьбу за пограничные земли.');return s}
 export function cityType(c){return c.capital?'Столица':c.fort>=3?'Крепость':c.pop>4200?'Крупный город':c.pop>1600?'Город':c.pop>900?'Торговое поселение':'Деревня'}
