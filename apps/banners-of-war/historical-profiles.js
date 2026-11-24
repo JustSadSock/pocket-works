@@ -30,7 +30,7 @@ export function profileFor(id,side,type,name){
  return null
 }
 const resolved=new WeakMap();
-export function troopSpec(types,u){let base=types[u.type],p=historicalProfiles[u.profile];if(!p||p.base!==u.type)return base;let map=resolved.get(types);if(!map){map=new Map();resolved.set(types,map)}if(!map.has(u.profile))map.set(u.profile,Object.freeze({...base,...p.physics}));return map.get(u.profile)}
+export function troopSpec(types,u){let base=types[u.type],p=historicalProfiles[u.profile];if(u.customSpec)return {...base,...(p?.base===u.type?p.physics:{}),...u.customSpec,name:u.historicalName||p?.name||base.name};if(!p||p.base!==u.type)return base;let map=resolved.get(types);if(!map){map=new Map();resolved.set(types,map)}if(!map.has(u.profile))map.set(u.profile,Object.freeze({...base,...p.physics,name:p.name||base.name}));return map.get(u.profile)}
 
 // Explicit model values, not reconstructed measurements. Lengths in metres, mass in kg.
 const arms=(length,space,ranks,shield,mass,sidearm)=>({length,space,ranks,shield,mass,sidearm});
