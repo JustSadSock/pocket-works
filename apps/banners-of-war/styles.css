@@ -58,3 +58,7 @@ dialog label{display:flex;flex-direction:column;gap:4px;margin:10px 0;font-size:
 #command-board{white-space:nowrap}#command-detail{font-size:.85rem;line-height:1.5;margin:.5rem 0;color:var(--muted,#64634d)}
 
 .command-tree{display:grid;gap:3px;padding:8px;border-left:2px solid #8c8164;margin:8px 0}.command-tree button{text-align:left;padding:7px 9px;font-size:.85rem}.command-tree button:disabled{opacity:1;background:#e3dbc2;font-weight:bold}.command-timing{display:grid;grid-template-columns:1fr 1fr;gap:8px}.command-timing input{width:100%;min-width:0}
+
+/* At army overview, commands belong to the formation, not the first regiment. */
+.statusbar .strength{min-width:0;flex:1;overflow:hidden}.statusbar .strength span{overflow-wrap:anywhere}.statusbar button{flex-shrink:0}.command-tree{max-height:210px;overflow:auto}.command-tree button{min-height:36px;padding:5px 8px}
+@media(max-width:600px) and (orientation:portrait){.statusbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:4px;padding:5px}.statusbar .strength{display:grid;gap:1px;font-size:10px;line-height:1.2}.statusbar button{font-size:12px;padding:4px 6px;min-width:40px}.statusbar #round{font-size:12px}.statusbar #phase{font-size:9px}.statusbar #minds:not([hidden]){grid-column:4}.command-tree{max-height:170px}}
