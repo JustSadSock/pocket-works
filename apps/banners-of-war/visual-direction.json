@@ -3,13 +3,13 @@
   "status": "draft",
   "product": "banners-of-war",
   "direction": {
-    "premise": "A working field commander's topographic atlas, where a decision is drawn into the landscape and executed against another army.",
-    "composition": "The battlefield is a continuous background beneath inset status and a collapsible command sheet; a landscape screen places the sheet on the right over the field.",
+    "premise": "A living medieval topographic battle atlas: connected shaded relief, muted forest and water marks, and actual formation sectors becoming legible individual warriors as the commander zooms in.",
+    "composition": "Continuous world canvas, narrow inset status, collapsible order sheet on the side or bottom only when needed; the same map shifts from field overview through tactical ranks to focused individual warriors.",
     "shapeLanguage": "Thin rectangular regiment footprints, individual ranks, forked heraldic pennants, dashed future routes and an unrounded ruled command ledger.",
-    "surfaceAndMaterial": "Procedural ink contour lines and wooded clusters on muted survey paper, with solid colored regiment marks rather than polished tiles.",
+    "surfaceAndMaterial": "Procedural shaded height contours, tree canopies with cast shadows, roads, wetland textures and muted field parcels, distinct from the plain abstract 0.2 map.",
     "paletteLogic": "Muted greens encode the landscape, blue and russet identify opposing armies, and ivory supports text; pressure and route lines use the side colors.",
     "typography": "A restrained Georgia heading recalls a printed field atlas; compact system labels keep numerical orders and status legible.",
-    "signature": "A hand-drawn command route ends in a ghost footprint showing formation orientation; later route stages have their own dashed marks and numbers.",
+    "signature": "A regiment's tactical blocks dissolve into the living rows of its physical sectors at higher scale; contact pressure and local cohesion are visible without a permanent diagnostic dashboard.",
     "distinction": "Compared with Doctrina's political atlas and Chernye Znamena's hex campaign, this map resolves continuous oriented footprints, timed multi-step paths and animated rank movement."
   },
   "architecture": {
@@ -19,7 +19,7 @@
     "chromeTopology": "layered-panels",
     "dominantMotion": "immediate",
     "primaryVerb": "Select a field regiment, draw its projected movement path, queue subsequent orders, and confirm a fixed-duration WEGO turn.",
-    "physicalFeedback": "A drawn route immediately renders its numbered stage and footprint; the committed round moves opposing regiments according to contact, acceleration and formation cohesion.",
+    "physicalFeedback": "Route strokes reveal end footprints and conditional stages. The focus command zooms into the same physical formation geometry; actual sector contact, movement, loss and bend alter its visible ranks.",
     "spatialRationale": "The canvas fills the battle workspace beneath controls. A fitted safe rectangle keeps orders visible; folding the inset command sheet restores additional battlefield space.",
     "comparisons": [
       {
@@ -81,8 +81,7 @@
     ]
   },
   "review": {
-    "baselineRun": 45300337365,
-    "observations": "Inspected 24 Chromium/WebKit mobile and desktop frames of 0.2.0. The portrait rotation corrected previous wasted map space. The new continuous battlefield and inset command sheet address the architectural overlap identified by the creative validator. Final current-build visual review pending.",
-    "status": "current build pending"
+    "baselineRun": 45306566752,
+    "observations": "Inspected captured Chromium and WebKit mobile/desktop 0.3.0 overview/command journey and zoom screenshots. The wide idle command dock now folds away; major improvement needed was a closer view of individual warriors. Increased focus scale to 6.4 CSS pixels/m and enabled smooth atlas sampling. Latest build screenshot revalidation still required. Prior online gameplay and visual suite passed; WebKit offline navigation was fixed separately and must be retested."
   }
 }
