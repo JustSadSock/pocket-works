@@ -125,6 +125,17 @@
       "integration": "Canvas draws individual rank marks and flags; the existing SVG is declared in the manifest and cached by the service worker.",
       "provenance": "Original app-owned SVG icon and procedural Canvas flags; no external graphic or type asset copied.",
       "maxBytes": 10000
+    },
+    {
+      "id": "living-landscape",
+      "tool": "canvas",
+      "source": "engine.js",
+      "output": "app.js",
+      "role": "Connected heightfield terrain, directional shaded relief, roads, forest canopy and sector-based miniature armies.",
+      "acceptance": "Four terrain archetypes, same deterministic geometry at all three camera scales, actual physical strips represented in rank positions.",
+      "integration": "Runtime terrain generator and cached Canvas rendering, with an app-local module worker for the physics.",
+      "provenance": "Original procedural assets and code; no third-party artwork.",
+      "maxBytes": 200000
     }
   ],
   "constraints": {
@@ -145,7 +156,9 @@
     "risks": [
       "Command sheet can cover the enemy front on small screens; verify fitted battlefield bounds after opening and closing.",
       "Dense ranks and labels may overlap; check path planning and replay at both browser engines.",
-      "Layout readbacks during render may harm frame time; cache geometry and inspect measured performance."
+      "Layout readbacks during render may harm frame time; cache geometry and inspect measured performance.",
+      "Detailed focus exposes raster sampling and troop readability; inspect close warrior screenshot after increasing zoom.",
+      "Offline WebKit navigation requires a complete activated versioned cache including the module worker."
     ],
     "comparisons": [
       "Compare mobile before/after frame for map coverage and control legibility.",
