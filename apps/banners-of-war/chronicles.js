@@ -37,3 +37,9 @@ export function createHistorical(E,id,options={}){
 }
 export function zoneStatus(E,s){return (s.objective?.zones||[]).map(q=>{let influence=[0,0];for(let u of s.units){let d=E.dist(u,q);if(!E.alive(u)||u.rout||d>=q.r)continue;influence[u.side]+=u.n*u.cohesion/100*(1-d/q.r)}let [a,b]=influence;return {...q,influence,control:a+b<1||Math.abs(a-b)/Math.max(a,b)<.18?0:a>b?1:-1}})}
 export function historicalScore(E,s){let zones=zoneStatus(E,s),territory=zones.reduce((a,q)=>a+q.weight*q.control,0)/Math.max(.001,zones.reduce((a,q)=>a+q.weight,0)),power=E.power(s,0)/Math.max(1,E.total(s,0))-E.power(s,1)/Math.max(1,E.total(s,1)),w=s.objective.weights;return {score:w.zone*territory+w.power*power,territory,power,zones}}
+
+// Timelines share immutable terrain; every physical and command state remains exact.
+export function packTimeline(t){return {...t,state:{...t.state,terrain:null},history:t.history.map(r=>({...r,before:{...r.before,terrain:null}}))}}
+export function unpackTimeline(t,terrain){return {...t,state:{...t.state,terrain},history:t.history.map(r=>({...r,before:{...r.before,terrain}}))}}
+export function forkTimeline(E,t,index,name){if(!Number.isInteger(index)||index<0||index>=t.history.length)throw Error("Invalid fork round");const r=t.history[index];return {name,state:E.snapshot(r.before),orders:E.copy(r.orders),history:t.history.slice(0,index),observer:!!r.observer,phase:"plan"}}
+export function timelineMetrics(E,t){return {name:t.name,round:t.state.round,time:t.state.time,result:t.state.result,power:[0,1].map(i=>E.power(t.state,i)/Math.max(1,E.total(t.state,i))),loss:[0,1].map(i=>t.state.units.filter(u=>u.side===i).reduce((a,u)=>a+u.initial-u.n,0))}}

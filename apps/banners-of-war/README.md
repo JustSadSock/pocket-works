@@ -88,3 +88,6 @@ The previous physical kernel and legacy commander remain intact. New games opt i
 
 ### Chronicles of War (unreleased development)
 Three representative-sector scenario definitions and atlas entry point, selectable sides, historical/free/alternate/observer modes, generic time-limit zone objectives, terrain grids and historical comparison. Reconstruction limitations in research/. Four scenario regressions executed in JS harness, six 120-second smoke trials in chronicles-audit.json. Browser test registered, not yet confirmed. Additional scenarios, full-scale aggregation, period equipment physics, interactive timeline, non-destructive branching and full experiments remain open. Existing version remains experimental until release gates pass.
+
+- Objective-aware commander now estimates contested/uncontrolled objective zones using sanitized observations; holding an unoccupied objective from afar loses value. No side-specific bonuses.
+- Non-destructive timeline forks at any recorded round, switching and comparison of exact archived states, format 4 backwards-compatible saves. Transactional rollback if localStorage cannot hold both branches. Six full scenario experiments recorded separately in `chronicles-full-audit.json`. All 18 scenario/commander tests passed in JS harness. Browser validation pending.
