@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   combat:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
         run: node --test apps/perekos/tests/*.test.mjs
 
   visual-and-gameplay:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/playwright:v1.55.0-noble
       options: --ipc=host
