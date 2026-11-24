@@ -100,6 +100,22 @@
       "files": [
         "qa/performance.spec.ts"
       ]
+    },
+    {
+      "id": "commander",
+      "kind": "node-test",
+      "files": [
+        "commander.test.mjs"
+      ],
+      "tier": "smoke"
+    },
+    {
+      "id": "minds",
+      "kind": "playwright",
+      "files": [
+        "qa/minds.spec.ts"
+      ],
+      "tier": "smoke"
     }
   ]
 }
