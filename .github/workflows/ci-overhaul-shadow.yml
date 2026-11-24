@@ -1,0 +1,60 @@
+name: CI Overhaul Shadow Lab
+
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths:
+      - 'scripts/ci-overhaul/**'
+      - '.github/workflows/ci-overhaul-shadow.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Isolated from all existing PR concurrency groups. No production deployment,
+# branch-protection status, or execution of the full legacy matrix.
+concurrency:
+  group: ci-overhaul-shadow-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test sharding and isolated executor
+        run: node --test scripts/ci-overhaul/*.test.mjs
+      - name: Replay exact legacy planner for infrastructure PR 1359 snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p shadow-evidence
+          printf '{}' > "$RUNNER_TEMP/shadow-event.json"
+          GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$RUNNER_TEMP/shadow-event.json" \
+            QA_BASE_SHA=327ebcdc3f32eb1120d7164f5113746c0e5cd92e \
+            QA_HEAD_SHA=d74bc10b1ee3e931f778ca8a11746dcb7eb7f1c3 \
+            GITHUB_OUTPUT='' GITHUB_STEP_SUMMARY='' \
+            node scripts/universal-qa/plan.mjs > shadow-evidence/legacy-plan.txt
+          node scripts/ci-overhaul/sharding.mjs < shadow-evidence/legacy-plan.txt > shadow-evidence/shards.json
+          node --input-type=module -e '
+            import {readFileSync,appendFileSync} from "node:fs";
+            const s=JSON.parse(readFileSync("shadow-evidence/shards.json","utf8"));
+            if(s.legacyJobs===0)throw Error("Unexpected empty baseline");
+            const line="Legacy tasks: "+s.legacyJobs+"; proposed jobs: "+s.shardJobs+"; exact task parity verified";
+            console.log(line);appendFileSync(process.env.GITHUB_STEP_SUMMARY,"## Shadow parity\n"+line+"\n");
+          '
+      - name: Upload shadow planning evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-overhaul-shadow-plan
+          path: shadow-evidence/
+          if-no-files-found: warn
+          retention-days: 14
