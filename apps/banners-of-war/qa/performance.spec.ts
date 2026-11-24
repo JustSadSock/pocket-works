@@ -13,3 +13,16 @@ test('browser performance: 26, 40, 60 and 100 regiments',async({page},info)=>{
  }
  await info.attach('living-browser-performance.json',{body:JSON.stringify(results,null,2),contentType:'application/json'});
 });
+
+test('historical group command planning and large army browser performance',async({page},info)=>{
+ test.setTimeout(180000);let results=[];const scenarios=[['leuctra','compact'],['cannae','compact'],['leuctra','historical'],['cannae','expanded'],['zama','expanded']];await page.goto('/apps/banners-of-war/');
+ for(let [id,scale] of scenarios){
+ await page.evaluate(async ({id,scale})=>{const {E}=await import('/apps/banners-of-war/engine.js'),{createHistorical}=await import('/apps/banners-of-war/chronicles.js');const s=createHistorical(E,id,{scale,historicalCommand:true,difficulty:'commander'});localStorage.setItem('pocket-works:banners-of-war:battle:1',JSON.stringify({format:3,state:s,orders:{},history:[],phase:'plan',observer:false,paletteAlt:false}))},{id,scale});
+ await page.reload();await page.locator('#resume').click();let t=Date.now();await page.locator('#command-board').click();await page.locator('#command-group').selectOption('army');await page.locator('#command-target').click();let map=page.locator('#map'),box=await map.boundingBox();if(!box)throw Error('No map');await map.click({position:{x:box.width*.5,y:box.height*.4}});await expect(page.locator('#maphint')).toContainText('Замысел записан');let planMs=Date.now()-t;
+ let draft=await page.evaluate(()=>{let x=JSON.parse(localStorage.getItem('pocket-works:banners-of-war:battle:1')!);return {count:x.state.units.length,nodes:x.state.commandHierarchy.nodes.length,planned:x.orders.__historical?.length??0,bytes:JSON.stringify(x).length}});expect(draft.planned).toBe(1);
+ if(scale==='expanded')await page.screenshot({path:info.outputPath('historical-large-'+id+'.png')});
+ t=Date.now();await page.locator('#confirm').click();await page.locator('#confirm').click();let inputMs=Date.now()-t;await expect(page.locator('#playback')).toBeVisible({timeout:45000});await page.locator('#skip').click();let measures=await page.evaluate(()=>{let get=(n:string)=>performance.getEntriesByName(n).at(-1)?.duration??null;return {round:get('banners:round'),physics:get('banners:physics'),planning:get('banners:planning'),snapshot:get('banners:snapshots'),heap:(performance as any).memory?.usedJSHeapSize??null}});expect(measures.round).toBeGreaterThan(0);results.push({id,scale,...draft,planningActions:4,planMs,inputMs,...measures,viewport:page.viewportSize()});
+ }
+ const v=page.viewportSize();if(v&&v.width<v.height){await page.setViewportSize({width:v.height,height:v.width});await page.locator('#command-board').click();await expect(page.locator('#command-tree')).toBeVisible();await page.screenshot({path:info.outputPath('historical-command-landscape.png')});await page.locator('#close').click();}
+ await info.attach('historical-command-performance.json',{body:JSON.stringify(results,null,2),contentType:'application/json'});console.log('HISTORICAL_COMMAND_PERF '+JSON.stringify(results));
+});
