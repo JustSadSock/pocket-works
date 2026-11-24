@@ -1,0 +1,48 @@
+name: CI Overhaul Impact Graph Lab
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['.github/workflows/ci-overhaul-impact.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  graph:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: crown
+            base: e0275d6d2971ddeaac02b3f93c7cd57ab0c788ac
+            head: 248a068d61ead10476049e3256a53d1dba122197
+          - id: infrastructure
+            base: 327ebcdc3f32eb1120d7164f5113746c0e5cd92e
+            head: d74bc10b1ee3e931f778ca8a11746dcb7eb7f1c3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - run: node --test scripts/ci-overhaul/impact-graph.integration.mjs
+      - name: Analyze both original snapshots
+        env:
+          BASE: ${{ matrix.base }}
+          HEAD: ${{ matrix.head }}
+        run: |
+          set -euo pipefail
+          git worktree add --detach "$RUNNER_TEMP/impact-base" "$BASE"
+          git worktree add --detach "$RUNNER_TEMP/impact-head" "$HEAD"
+          mkdir graph-evidence
+          node --max-old-space-size=4096 scripts/ci-overhaul/impact-graph.mjs "$RUNNER_TEMP/impact-base" "$RUNNER_TEMP/impact-head" "$BASE" "$HEAD" graph-evidence/graph.json
+          jq -e '.canSkip == false and (.requiredApps|length) > 0' graph-evidence/graph.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: impact-graph-${{ matrix.id }}
+          path: graph-evidence/
+          if-no-files-found: error
