@@ -16,9 +16,18 @@ const canonical=value=>{
   throw Error('Non-canonical value');
 };
 const taskDigest=task=>digest(canonical(task));
+export const policyDigest=policy=>digest(canonical({repository:policy.repository,workflow:policy.workflow,ref:policy.ref,eligibleTaskDigests:[...policy.eligibleTaskDigests].sort()}));
+// An unknown or mutable runner image must never acquire an authoritative key.
+export function environmentFingerprint(env){
+  if(!env||!HEX.test(env.imageDigest)||!HEX.test(env.toolchainDigest)||
+    !HEX.test(env.externalInputsDigest)||!['linux'].includes(env.os)||
+    !['x64','arm64'].includes(env.arch)||!/^v?\d+\.\d+\.\d+$/.test(env.node))
+    throw Error('Environment is not fully pinned');
+  return digest(canonical(env));
+}
 function validateContext(context,policy){
   if(!context||!TREE.test(context.tree)||!HEX.test(context.environment)||
-      !HEX.test(context.policyDigest)||context.policyDigest!==policy.digest)
+      !HEX.test(context.policyDigest)||context.policyDigest!==policyDigest(policy))
     throw Error('Unknown input or environment fingerprint');
   if(!context.task||!['node-test','node'].includes(context.task.kind)||
       !Array.isArray(policy.eligibleTaskDigests)||!policy.eligibleTaskDigests.includes(taskDigest(context.task)))
@@ -58,7 +67,7 @@ export function verifyReceipt({receipt,context,policy,evidence,publicKey,now=Dat
       throw Error('Invalid freshness policy');
     if(!receipt||typeof receipt.signature!=='string'||!/^[A-Za-z0-9+/]{86}==$/.test(receipt.signature))
       throw Error('Missing or malformed signature');
-    const key=createPublicKey(publicKey);
+    const key=publicKey?.type==='public'?publicKey:createPublicKey(publicKey);
     if(key.asymmetricKeyType!=='ed25519'||
       !verify(null,Buffer.from(canonical(receipt.payload)),key,Buffer.from(receipt.signature,'base64')))
       throw Error('Signature verification failed');
