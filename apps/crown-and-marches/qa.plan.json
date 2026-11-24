@@ -65,6 +65,71 @@
           "action": "screenshot"
         }
       ]
+    },
+    {
+      "id": "custom-battle",
+      "kind": "visual",
+      "tier": "smoke",
+      "viewports": [
+        "mobile",
+        "desktop"
+      ],
+      "ready": "#modalbody",
+      "steps": [
+        {
+          "action": "click",
+          "selector": "[data-act=\"lab\"]"
+        },
+        {
+          "action": "visible",
+          "selector": ".lab-sides"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"labstart\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "#panel .panelhead"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"1\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"speed\"][data-value=\"0\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"all\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"line\"]"
+        },
+        {
+          "action": "screenshot"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"menu\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-act=\"labexit\"]"
+        },
+        {
+          "action": "visible",
+          "selector": "[data-act=\"lab\"]"
+        }
+      ]
     }
   ]
 }
