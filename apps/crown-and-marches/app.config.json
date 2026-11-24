@@ -4,13 +4,13 @@
   "name": "Crown & Marches",
   "shortName": "Crown",
   "description": "Средневековая глобально-тактическая стратегия: государство, живой ландшафт, экономика и полки.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "releaseDate": "2026-11-24",
-  "releaseDateTime": "2026-11-24T02:23:00+02:00",
+  "releaseDateTime": "2026-11-24T02:48:00+02:00",
   "changelog": [
-    "Кампания на процедурной карте из 24 576 клеток.",
-    "Экономика, территориальный контроль, дипломатия, армии и осады.",
-    "Тактический режим с отдельными солдатами и сохранения."
+    "Art of War: физические столкновения, разгон конницы, оружие и снаряды.",
+    "Custom Battle: две настраиваемые армии до 3000 воинов, одинаковый seed и наблюдение за ИИ.",
+    "Рисование построений, группы, очередь команд, доктрины и точные потери по родам войск."
   ],
   "status": "experimental",
   "preset": "game-2d",
@@ -19,7 +19,7 @@
   "backgroundColor": "#273d41",
   "themeColor": "#29372e",
   "orientation": "any",
-  "cacheName": "crown-and-marches-v0.1.0",
+  "cacheName": "crown-and-marches-v0.2.0",
   "storageNamespace": "pocket-works:crown-and-marches",
   "tags": [
     "strategy",
