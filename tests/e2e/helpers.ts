@@ -5,7 +5,7 @@ export function monitorUnexpectedBrowserOutput(page: Page) {
   const dialogs: string[] = [];
 
   page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(`console: ${message.text()}`);
+    if (message.type() === 'error') errors.push(`console: ${message.text()}${message.location().url ? ' @ '+message.location().url : ''}`);
   });
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
   page.on('dialog', async (dialog) => {

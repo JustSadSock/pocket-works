@@ -8,3 +8,5 @@
 - Хранилище: `pocket-works:tidepool:state`. Ежедневное поле меняется по дате UTC.
 
 В корне Pocket Works запустите `npm run prepare:site` и откройте `/apps/tidepool/` через сервер проекта. Проверьте смену цвета, отмену, рестарт и восстановление после перезагрузки.
+
+Автоматические тесты: `node --test apps/tidepool/core.test.mjs`.

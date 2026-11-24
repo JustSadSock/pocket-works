@@ -710,3 +710,6 @@
  content:"";position:absolute;inset:-9px;pointer-events:none;
  border:3px dashed #f6c26b;opacity:.7;
 }
+
+/* Preserve the minimum touch target during fractional viewport layout. */
+.pws-dialog [data-pws=accept-invite]{min-height:46px;flex-shrink:0}

@@ -8,3 +8,5 @@
 - Хранилище: `pocket-works:contour:state`.
 
 В корне Pocket Works запустите `npm run prepare:site` и откройте `/apps/contour/` через сервер проекта. Для проверки пройдите уровень, перезагрузите страницу и проверьте восстановление состояния.
+
+Автоматические тесты: `node --test apps/contour/core.test.mjs`.
