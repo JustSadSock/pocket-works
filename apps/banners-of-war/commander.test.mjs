@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {E} from './engine.js';
-import {personality,perceive,analyze,alternatives,route} from './commander.js';
+import {personality,perceive,analyze,alternatives,route,objectivePressure} from './commander.js';
 import {reflect} from './doctrine-lab.mjs';
 const roster=['spear','sword','pike','archer','knight','lightHorse'];
 const make=(style='adaptive',arch='valley')=>{let s=E.create('Enemy Minds',roster,roster,style,arch);s.aiVersion=4;return s};
@@ -20,3 +20,17 @@ test('canonical route cells produce mirrored full-battle outcomes on former rota
 
 test('forward model is bounded, deterministic and does not read hidden orders',()=>{let s=make('defensive','valley');s.difficulty='grandmaster';let a=get(s,0);assert.ok(a.intent.alternatives.every(v=>v.outcomes.every(o=>o.prediction.depth===3&&Number.isFinite(o.prediction.value))));assert.deepEqual(a,get(s,0));let q=E.snapshot(s);for(let u of q.units.filter(u=>u.side===1))u.order={kind:'charge',path:[{x:200,y:500}]};assert.deepEqual(a,get(q,0))});
 test('a held front braces rather than advancing into close contact',()=>{let s=make('cautious','valley');for(let u of s.units){u.x=u.side?745:695;u.y=340+(u.id%100)*45}let o=get(s,0);assert.equal(o.intent.posture,'hold');for(let u of s.units.filter(u=>u.side===0&&!E.types[u.type].horse&&!E.types[u.type].range&&o.intent.roles[u.id]==='line'))assert.equal(o.orders[u.id].kind,'brace');assert.ok(o.intent.alternatives.every(q=>Number.isFinite(q.position.value)))});
+
+// A territorial objective is not secured simply because no enemy has been reported.
+test('territorial pressure distinguishes core, periphery, stale reports and inactive objectives',()=>{
+ const unit=(x,y=600,more={})=>({type:'spear',x,y,n:120,cohesion:90,...more});
+ const goal={x:700,y:600,r:230,weight:1},p={objective:'zones',time:0,goals:[goal],own:[unit(645,480)]},b={home:{x:645,y:480},foes:[]};
+ assert.ok(objectivePressure(p,b).deficit>0);
+ assert.equal(objectivePressure({...p,own:[unit(700)]},b).deficit,0);
+ assert.ok(objectivePressure({...p,own:[unit(700)]},{...b,foes:[unit(700)]}).deficit>0);
+ assert.equal(objectivePressure({...p,own:[unit(700)]},{...b,foes:[unit(700,600,{confidence:.15})]}).deficit,0);
+ assert.equal(objectivePressure({...p,objective:'power'},b).deficit,0);
+ assert.equal(objectivePressure({...p,goals:[{...goal,activeAt:90}]},b).deficit,0);
+ assert.ok(objectivePressure({...p,own:[unit(700,600,{type:'guard'})]},b).deficit>0);
+ assert.ok(objectivePressure({...p,own:[unit(700,600,{n:1})]},b).deficit>0);
+});

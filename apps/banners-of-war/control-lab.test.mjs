@@ -4,6 +4,7 @@ import {controlCases,controlTrial} from './control-lab.mjs';
 test('paired control matrix separates physical side and controller assignment',()=>{
  const cases=controlCases(),keys=new Set(cases.map(k=>JSON.stringify(k)));
  assert.equal(keys.size,cases.length);
+ assert.equal(cases.length,174);
  for(const k of cases)assert.ok(keys.has(JSON.stringify({...k,mirror:!k.mirror})));
  for(const k of controlCases('command'))assert.ok(keys.has(JSON.stringify({...k,swapPolicies:!k.swapPolicies})));
 });

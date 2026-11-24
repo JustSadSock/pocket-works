@@ -1,6 +1,6 @@
 // Controlled paired experiments; the original numbers-lab.mjs remains an archival protocol.
-import {E} from './engine.js';
-import {makeProject,flatTerrain,newTerrain,buildState,prepareTrialProject,metrics,validateScenarioProject} from './laboratory.js';
+import {E} from '../../pocketnet/banners-engine-v1/engine.js';
+import {makeProject,flatTerrain,newTerrain,buildState,prepareTrialProject,metrics,validateScenarioProject} from '../../pocketnet/banners-engine-v1/laboratory.js';
 
 const seeds=[11,47,91], mirrors=[false,true];
 const adaptive={version:4,style:'adaptive'}, legacy={version:3,style:'adaptive'}, cautious={version:4,style:'cautious'};

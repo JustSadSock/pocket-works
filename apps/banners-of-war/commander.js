@@ -78,10 +78,20 @@ export function forecast(E,p,b,q,h,depth){
 
 // Objective pressure uses only own forces and sanitized observations.
 export function objectivePressure(p,b){
- const goals=p.goals||[];if(!goals.length)return {deficit:0,target:null};
- const info=goals.map(z=>{let own=b.field(z,p.own,z.r),hostile=b.field(z,b.foes,z.r),secure=own>10&&own>hostile*1.22;return {...z,own,hostile,secure}});
- let total=sum(info,z=>z.weight),deficit=sum(info,z=>z.secure?0:z.weight)/Math.max(.001,total);
- let target=info.filter(z=>!z.secure).sort((a,c)=>{let v=c.weight-a.weight;return Math.abs(v)<1e-8?dist(a,b.home)-dist(c,b.home):v})[0]||null;
+ const goals=(p.objective==="zones"?p.goals||[]:[]).filter(z=>(z.activeAt||0)<=p.time);if(!goals.length)return {deficit:0,target:null};
+ // Use the same positional influence as the territorial objective, based only on observed/report data.
+ const influence=(z,list)=>sum(list,u=>u.rout?0:u.n*(u.cohesion/100)*(u.confidence??1)*Math.max(0,1-dist(u,z)/z.r));
+ const info=goals.map(z=>{
+  const own=influence(z,p.own),hostile=influence(z,b.foes);
+  const core=p.own.some(u=>u.type!=="guard"&&!u.rout&&u.cohesion>=40&&dist(u,z)<=z.r*.22);
+  const margin=own>10&&own>=hostile/0.82;
+  // Presence at the edge of a neutral zone is not possession. An absence of reports is not enemy absence.
+  const secure=margin&&core;
+  const deficit=secure?0:clamp(core?Math.max(.25,1-own/Math.max(1,hostile/0.82)):.75+(hostile>own?.25:0),0,1);
+  return {...z,own,hostile,core,secure,deficit}
+ });
+ const total=sum(info,z=>z.weight),deficit=sum(info,z=>z.deficit*z.weight)/Math.max(.001,total);
+ const target=info.filter(z=>!z.secure).sort((a,c)=>{let v=c.weight*c.deficit-a.weight*a.deficit;return Math.abs(v)<1e-8?dist(a,b.home)-dist(c,b.home):v})[0]||null;
  return {deficit,target}
 }
 export function alternatives(E,p,b,traits,level){
@@ -91,7 +101,7 @@ export function alternatives(E,p,b,traits,level){
  return candidates.map(q=>{let l=b.lanes.find(v=>v.wing===q.wing),travel=dist(b.home,l),time=travel/Math.max(1,mean(p.own,u=>E.spec(u).speed)),risk=Math.max(0,1-l.ratio)*(b.near?1:.32)+Math.max(0,1-l.capacity/100)+b.uncertainty*traits.uncertainty;
  let value=0;switch(q.posture){case "assault":value=.6+traits.aggression*2.1+traits.initiative*.8+Math.min(2,b.ratio)*.6-risk*(1+traits.caution-traits.risk*.35)-time/240;break;case "hold":value=1+traits.caution*1.3+traits.patience*.7+(b.ratio<.85?.9:0)+(l.height-E.sample(p.terrain,b.enemy.x,b.enemy.y).h)/50;break;case "maneuver":value=.6+traits.maneuver*2.7+Math.min(2,l.ratio)*.45-risk*.75-time/220;break;case "reinforce":value=.3+crisis/45+traits.preservation*.5;break;case "withdraw":value=withdrawalPressure*2.7+crisis/75+traits.preservation*.9-(p.remaining<100?1:0)-(b.near?0:.7);break;case "screen":value=.5+traits.patience+mean(p.own,u=>E.spec(u).range?1:0)*2}
  if(q.posture==="hold"&&b.foes.length&&p.remaining<150&&b.ratio>1.3)value-=.7;if(!b.near&&q.posture==="reinforce")value-=1.4;if(!b.foes.length){if(q.posture==="assault"||q.posture==="maneuver")value+=.35;if(q.posture==="withdraw")value-=2;}if(q.posture==="hold"&&p.objective==="territory"&&p.remaining<180)value-=.8;
- if(objective.deficit){let urgency=1+clamp(1-p.remaining/900,0,1)*.55;if(q.posture==="hold"||q.posture==="screen")value-=2.65*objective.deficit*urgency;else if(q.posture==="assault"||q.posture==="maneuver")value+=.8*objective.deficit;else if(q.posture==="withdraw")value-=.9*objective.deficit}
+ if(objective.deficit){let urgency=1+clamp(1-p.remaining/900,0,1)*.55;if(q.posture==="hold"||q.posture==="screen")value-=2.65*objective.deficit*urgency;else if(q.posture==="assault"||q.posture==="maneuver")value+=1.4*objective.deficit;else if(q.posture==="withdraw")value-=.9*objective.deficit}
  if(q.posture==="hold"||q.posture==="reinforce")value+=position.value*1.4;else if(q.posture==="assault"||q.posture==="maneuver")value-=position.value*(1-traits.risk*.5);
  if(level.adaptive){let fatigue=mean(p.own,u=>u.fatigue),strain=mean(p.own,u=>u.strain??0),readiness=(fatigue+strain*.6)/100;if(q.method==="relief")value+=readiness*1.4+crisis/100-.9;if(q.posture==="assault")value-=readiness*.9;if(q.posture==="maneuver")value-=readiness*.35;if(q.posture==="reinforce"||q.posture==="hold")value+=readiness*.5}const outcomes=b.hypotheses.slice(0,level.hypotheses).map(h=>{const prediction=forecast(E,p,b,q,h,depth);return {against:h.kind,prediction,value:value+prediction.value*(level.adaptive?1.15:.65)+(h.kind==="flank"?(q.posture==="hold"||q.posture==="reinforce"?.35:-risk*.35):h.kind==="withdraw"?(q.posture==="assault"?.35:-.2):h.kind==="attack"?(q.posture==="hold"?.3:0):q.posture==="maneuver"?.2:0),weight:h.weight}});
  let robust=sum(outcomes,o=>o.value*o.weight)/Math.max(.001,sum(outcomes,o=>o.weight))*.65+Math.min(...outcomes.map(o=>o.value))*.35,change=p.memory?.posture&&(p.memory.posture!==q.posture||p.memory.wing!==q.wing);
