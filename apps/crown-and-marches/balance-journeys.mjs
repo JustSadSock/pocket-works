@@ -26,3 +26,5 @@ try{let ready=false;for(let i=0;i<80;i++){try{if((await fetch(url)).ok){ready=tr
  await tap('econexit',null,'#panel');await p.locator('#modalbody [data-act="diplab"]').waitFor({state:'visible'});
  }finally{await context.close();}}finally{await browser.close();}}
 }finally{server.kill('SIGTERM');writeFileSync(join(output,'journeys.json'),JSON.stringify(reports,null,2));}
+
+await import('./discovery-journeys.mjs');
