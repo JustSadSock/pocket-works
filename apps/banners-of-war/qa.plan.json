@@ -84,6 +84,14 @@
       "files": [
         "qa/living.spec.ts"
       ]
+    },
+    {
+      "id": "breaking",
+      "kind": "node-test",
+      "files": [
+        "breaking.test.mjs"
+      ],
+      "tier": "smoke"
     }
   ]
 }
