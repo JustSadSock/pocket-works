@@ -198,8 +198,8 @@ function livingProduction(s,invest=false){economicInit(s);
  available.sort((a,b)=>score(b)-score(a)||a-b);
  let workers=budget,season=[1.1,1.35,.85,.30][Math.floor(s.day%360/90)];
  if(s.discovery&&invest&&c.stock[3]<4&&c.stock[11]<4&&c.lastFoodRatio>.8&&c.occupation<0&&workers>.6){
- const i=miningFrontier(s,c,available),st=s.states[c.f];
- if(i>=0&&st.gold>=.4&&c.stock[1]>=.25&&c.stock[2]>=.12){workers-=.6;st.gold-=.4;c.cash+=.4;st.budget.investment+=.4;consume(s,c,1,.25);consume(s,c,2,.12);s.development[i]=Math.min(1,s.development[i]+.025);c.metrics.frontierWork=(c.metrics.frontierWork||0)+.6;}
+ const i=miningFrontier(s,c,available),st=s.states[c.f],privateInvestor=s.society&&i>=0?miningInvestor(s,c,i):null;
+ if(i>=0&&(privateInvestor||st.gold>=.4)&&c.stock[1]>=.25&&c.stock[2]>=.12){workers-=.6;if(privateInvestor){debitAccount(s,privateInvestor,.4);c.metrics.privateMining=(c.metrics.privateMining||0)+.4;}else{st.gold-=.4;st.budget.investment+=.4;}c.cash+=.4;consume(s,c,1,.25);consume(s,c,2,.12);s.development[i]=Math.min(1,s.development[i]+.025);c.metrics.frontierWork=(c.metrics.frontierWork||0)+.6;}
  }
  // Give developed ore a labor opportunity when the material chain is blocked, without displacing famine relief.
  if(s.discovery&&c.stock[3]<4&&c.stock[11]<4&&c.lastFoodRatio>.8)available.sort((a,b)=>Number(s.map.resource[b]===3&&s.development[b]>.18)-Number(s.map.resource[a]===3&&s.development[a]>.18)||score(b)-score(a)||a-b);
@@ -320,7 +320,7 @@ export function economy(s){economicInit(s);const before=materialTotals(s),src=s.
  const need=c.pop/320;c.demand[9]+=need;c.demand[0]+=need*.4;const food=consume(s,c,9,need),grain=consume(s,c,0,Math.max(0,need-food)*1.2),ratio=need?Math.min(1,(food+grain/1.2)/need):1;
  consume(s,c,15,c.pop/9000);consume(s,c,6,c.pop/16000);const toolNeed=c.industryWorkers*.012;c.metrics.toolDemand+=toolNeed;c.metrics.toolMet+=consume(s,c,12,toolNeed);c.demand[12]+=c.industryWorkers*.05+.5+(s.discovery?(1+Object.keys(c.knowledge?.institutes||{}).length*.3):0);c.demand[2]+=.5+c.work.build*.12;c.demand[10]+=.4+c.work.build*.18;c.demand[13]+=.25*st.militaryBudget;c.demand[14]+=.25*st.militaryBudget;c.demand[8]+=.15*st.militaryBudget;c.demand[11]+=.1;c.demand[4]+=.12;c.demand[16]+=c.pop/18000;consume(s,c,4,c.pop/22000);consume(s,c,16,c.pop/18000);c.demand[15]+=c.pop/9000;c.demand[6]+=c.pop/16000;
  c.metrics.foodDemand+=need;c.metrics.foodMet+=need*ratio;c.lastFoodRatio=ratio;if(ratio<.85)c.shortageDays+=4;if(ratio<.5)c.crisisDays+=4;let returning=Math.min(c.returning,c.returning*.12+.1);c.returning-=returning;c.serviceReturnCredit+=returning;const mature=Math.min(Math.floor(c.serviceReturnCredit+1e-9),serviceCount(c.pendingService));if(mature){c.veteranService=unionService(c.veteranService,takeService(c.pendingService,mature));c.serviceReturnCredit-=mature;}if(!c.pendingService.length)c.serviceReturnCredit=0;c.pop=Math.max(0,c.pop*(ratio>.95?1.00022:1-.004*(1-ratio))+returning);if(serviceCount(c.veteranService)>Math.floor(c.pop))takeService(c.veteranService,serviceCount(c.veteranService)-Math.floor(c.pop));c.wealth=clamp(c.wealth+(ratio-.85)*.45-(st.tax-.12)*.6,0,100);
- const tax=Math.min(c.cash,Math.max(0,c.cash*st.tax*.025*security));c.cash-=tax;const local=s.society?societyDistrict(s,c):null,retained=local?tax*local.autonomy:0;if(local)local.localTreasury+=retained;st.gold+=tax-retained;st.budget.tax+=tax-retained;
+ const tax=Math.min(c.cash,Math.max(0,c.cash*st.tax*.025*security));c.cash-=tax;const local=s.society?societyDistrict(s,c):null,retained=local?tax*internalRetention(s,c):0;if(local)local.localTreasury+=retained;st.gold+=tax-retained;st.budget.tax+=tax-retained;
  const role=[['farming',c.output[0]*c.market[0]],['mining',c.output.slice(2,5).reduce((n,q,k)=>n+q*c.market[k+2],0)],['metallurgy',c.output[11]*c.market[11]],['craft',c.output.slice(10).reduce((n,q,k)=>n+(k+10===11||k+10===13||k+10===14?0:q*c.market[k+10]),0)],['military',c.output[13]*c.market[13]+c.output[14]*c.market[14]],[neighbors(c.i).some(i=>!s.map.land[i])&&s.states[c.f].tech[7]>0?'port':'trade',c.lastTrade*.35]];role.sort((a,b)=>b[1]-a[1]);c.economicRole=role[0][1]>0?role[0][0]:'balanced';updateMarket(c);c.imports.fill(0);
  }marketTrade(s);const cities=s.cities;for(let k=0;k<17;k++)s.prices[k]=cities.reduce((n,c)=>n+c.market[k],0)/(cities.length||1);
  const after=materialTotals(s);for(let k=0;k<17;k++)s.ledger.maxGoodsError=Math.max(s.ledger.maxGoodsError,Math.abs(after.goods[k]-before.goods[k]-(s.ledger.source[k]-src[k])+(s.ledger.sink[k]-sink[k])));s.ledger.maxMoneyError=Math.max(s.ledger.maxMoneyError,Math.abs(after.money-before.money));s.ledger.cycles++;
@@ -550,7 +550,7 @@ export function economicSnapshot(s){economicInit(s);const totals=materialTotals(
 export function sandboxGame(config={}){let s=newGame(String(config.seed||'wealth'),{states:config.states||6});s.autonomous=true;s.sandbox=true;s.sandboxConfig={...config};for(const c of s.cities){c.pop=Math.max(200,Number(config.population)||850);c.cash=c.pop*.55;c.stock=c.stock.map(q=>q*clamp(Number(config.stockScale??1),0,5));c.build=c.build.map((q,k)=>Math.max(0,Math.floor(q*clamp(Number(config.capacity??1),0,5))));if(config.capacity>1)c.build[2]=c.build[3]=1;}
 for(const st of s.states){st.tax=clamp(Number(config.tax??.12),0,.5);st.militaryBudget=clamp(Number(config.military??.22),0,1);st.tech[7]=config.sea?1:0;}if(config.trade)for(let i=0;i<s.states.length;i++)for(let j=i+1;j<s.states.length;j++)s.relations[i][j]=s.relations[j][i]='trade';if(config.resources==='iron-scarce'||config.resources==='wood-scarce'){const r=config.resources==='iron-scarce'?3:1;for(let i=0;i<N;i++)if(s.map.resource[i]===r&&s.owner[i]!==0)s.map.resource[i]=r===3?2:7;}recalcTerritory(s,false);return s;}
 export function serialize(s){ensureLiving(s);economicInit(s);return JSON.stringify({...s,map:undefined,owner:Array.from(s.owner),admin:Array.from(s.admin),occ:Array.from(s.occ),control:Array.from(s.control),road:Array.from(s.road),development:Array.from(s.development),devastation:Array.from(s.devastation),pressure:Array.from(s.pressure),contender:Array.from(s.contender),district:Array.from(s.district),bridge:Array.from(s.bridge),adminOverride:Array.from(s.adminOverride),adminAccess:Array.from(s.adminAccess),mapResource:Array.from(s.map.resource),schema:4},(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v)}
-export function restore(json){let s=JSON.parse(json);if(![1,2,3,4].includes(s.schema)||typeof s.seed!=='string'||!Array.isArray(s.cities)||s.owner?.length!==N||s.admin?.length!==N||s.occ?.length!==N||s.control?.length!==N||s.road?.length!==N||!(s.states?.length>=2&&s.states?.length<=6))throw Error('Несовместимое сохранение');s.obligations=s.obligations||[];s.map=generate(s.seed,s.mapVersion||1);if(s.mapResource!==undefined){if(!Array.isArray(s.mapResource)||s.mapResource.length!==N||s.mapResource.some(v=>!Number.isInteger(v)||v< -1||v>8))throw Error('Некорректная карта ресурсов');s.map.resource=Int8Array.from(s.mapResource);delete s.mapResource;}s.owner=Int8Array.from(s.owner);s.admin=Int32Array.from(s.admin);s.occ=Int8Array.from(s.occ);s.control=Float32Array.from(s.control);s.road=Uint8Array.from(s.road);for(const [k,T] of [['development',Float32Array],['devastation',Float32Array],['pressure',Float32Array],['contender',Int8Array],['district',Uint8Array],['bridge',Uint8Array],['adminOverride',Int32Array],['adminAccess',Uint8Array]])if(Array.isArray(s[k])&&s[k].length===N)s[k]=T.from(s[k]);else delete s[k];ensureLiving(s);if(s.schema===1){for(const c of s.cities)for(const i of [c.i,...neighbors(c.i)])if(s.map.land[i])s.development[i]=Math.max(s.development[i],.3);for(let i=0;i<N;i++)if(s.admin[i]>=0)s.adminAccess[i]=1;s.schema=3;}economicInit(s);if(s.discovery)enableDiscovery(s);s.schema=4;return s}
+export function restore(json){let s=JSON.parse(json);if(![1,2,3,4].includes(s.schema)||typeof s.seed!=='string'||!Array.isArray(s.cities)||s.owner?.length!==N||s.admin?.length!==N||s.occ?.length!==N||s.control?.length!==N||s.road?.length!==N||!(s.states?.length>=2&&s.states?.length<=6))throw Error('Несовместимое сохранение');s.obligations=s.obligations||[];s.map=generate(s.seed,s.mapVersion||1);if(s.mapResource!==undefined){if(!Array.isArray(s.mapResource)||s.mapResource.length!==N||s.mapResource.some(v=>!Number.isInteger(v)||v< -1||v>8))throw Error('Некорректная карта ресурсов');s.map.resource=Int8Array.from(s.mapResource);delete s.mapResource;}s.owner=Int8Array.from(s.owner);s.admin=Int32Array.from(s.admin);s.occ=Int8Array.from(s.occ);s.control=Float32Array.from(s.control);s.road=Uint8Array.from(s.road);for(const [k,T] of [['development',Float32Array],['devastation',Float32Array],['pressure',Float32Array],['contender',Int8Array],['district',Uint8Array],['bridge',Uint8Array],['adminOverride',Int32Array],['adminAccess',Uint8Array]])if(Array.isArray(s[k])&&s[k].length===N)s[k]=T.from(s[k]);else delete s[k];ensureLiving(s);if(s.schema===1){for(const c of s.cities)for(const i of [c.i,...neighbors(c.i)])if(s.map.land[i])s.development[i]=Math.max(s.development[i],.3);for(let i=0;i<N;i++)if(s.admin[i]>=0)s.adminAccess[i]=1;s.schema=3;}economicInit(s);if(s.discovery)enableDiscovery(s);if(s.society&&!s.society.architecture)enablePoliticalArchitecture(s);s.schema=4;return s}
 
 // Hash only authoritative serialized state, independent of wall-clock time.
 export function simulationHash(s){return hash(serialize(s)).toString(16).padStart(8,'0');}
@@ -856,9 +856,9 @@ function societyDistrict(s,c){
  return c.society={autonomy,localTreasury:0,pressure:0,reform:null,cohorts:SOCIAL_GROUPS.map(([id,name,share,skill],i)=>({id,pop:c.pop*share,skill,cash:cash*shares[i],income:0,tax:0,consumption:0,support:.5}))};
 }
 export function enableSociety(s,config={}){
- if(s.society)return s.society;economicInit(s);enableDiscovery(s);
+ if(s.society){if(!s.society.architecture)enablePoliticalArchitecture(s,config);return s.society;}economicInit(s);enableDiscovery(s);
  s.society={schema:1,initialAutonomy:clamp(Number.isFinite(+config.autonomy)?+config.autonomy:.45,.05,.9),events:[]};
- for(const c of s.cities)societyDistrict(s,c);return s.society;
+ for(const c of s.cities)societyDistrict(s,c);enablePoliticalArchitecture(s,config);return s.society;
 }
 function societyEvent(s,c,kind,detail){s.society.events.push({day:s.day,city:c.id,f:c.f,kind,detail});if(s.society.events.length>400)s.society.events.shift();}
 function syncCohorts(c,d){
@@ -884,6 +884,7 @@ export function requestCharter(s,c,target,compensation=0){
 }
 export function societyStep(s){
  if(!s.society)return;
+ if(!s.society.architecture)enablePoliticalArchitecture(s);
  for(const c of s.cities){const d=societyDistrict(s,c);syncCohorts(c,d);if(s.day%40!==0||c.occupation>=0)continue;
  const st=s.states[c.f],q=d.cohorts,food=clamp(c.lastFoodRatio,0,1),value=k=>c.output[k]*c.market[k],war=s.states.some(o=>atWar(s,c.f,o.id)),education=(c.knowledge?.institutes?.school||0)+(c.knowledge?.institutes?.university||0);
  // Employment demand follows actual production and trade, and mobility moves existing people.
@@ -896,7 +897,7 @@ export function societyStep(s){
  const wagePool=Math.min(c.cash*.025,demand.reduce((n,v)=>n+v,0)*.08),earned=demand.reduce((n,v,i)=>n+v*(.5+q[i].skill),0);
  c.cash-=wagePool;
  for(let i=0;i<q.length;i++){const g=q[i],income=wagePool*demand[i]*(.5+g.skill)/earned;g.cash+=income;g.income=income;
- const tax=Math.min(g.cash,income*st.tax),local=tax*d.autonomy;g.cash-=tax;d.localTreasury+=local;st.gold+=tax-local;st.budget.tax+=tax-local;g.tax=tax;
+ const tax=Math.min(g.cash,income*st.tax),local=tax*internalRetention(s,c);g.cash-=tax;d.localTreasury+=local;st.gold+=tax-local;st.budget.tax+=tax-local;g.tax=tax;
  const good=i===2||i===3?16:15,spend=Math.min(g.cash*.012,g.pop*.006,c.stock[good]*c.market[good]);g.cash-=spend;c.cash+=spend;consume(s,c,good,spend/Math.max(.001,c.market[good]));g.consumption=spend;
  g.support=clamp(.62+(food-.8)*.8-st.tax*.8+(i===3||i===4?d.autonomy*.18:0)-(war&&i!==5?.08:0),0,1);}
  // Local authorities have their own means and may rescue an exhausted market.
@@ -908,5 +909,136 @@ export function societyStep(s){
  else {r.progress=clamp(r.progress+capacity*(actual+r.consent)*.09,0,1);if(r.progress>=1){d.autonomy=r.target;societyEvent(s,c,'charter enacted',{autonomy:d.autonomy});d.reform=null;}}}
  else if(polAI(s,c.f)&&s.day%360===0){if(d.pressure>.57&&d.autonomy<.75)requestCharter(s,c,d.autonomy+.15);else if(d.pressure<.4&&st.gold>150&&c.infra>=2&&d.autonomy>.2)requestCharter(s,c,d.autonomy-.15,5);}
  }
+ if(s.day%40===0)politicalArchitectureStep(s);
 }
 export function societySnapshot(s,f=null){return {day:s.day,districts:s.cities.filter(c=>c.society&&(f==null||c.f===f)).map(c=>({id:c.id,name:c.name,f:c.f,pop:c.pop,autonomy:c.society.autonomy,treasury:c.society.localTreasury,pressure:c.society.pressure,reform:c.society.reform?{...c.society.reform}:null,cohorts:c.society.cohorts.map(q=>({...q})),centralSupport:charterSupport(s,c,Math.max(.05,c.society.autonomy-.15)).total})),events:s.society?.events.filter(e=>f==null||e.f===f)||[]};}
+
+// Political architecture: legal rights refer to existing assets and wallets.
+// No new balances are created by the registry; individuals hold offices, not copies of treasuries.
+export const CONSTITUTIONS={
+ feudal:{name:'Феодальная монархия',selection:'hereditary',legislature:'lords',treasury:'crown',military:'lords',diplomacy:'crown',veto:'lords',floor:.35},
+ central:{name:'Централизованная монархия',selection:'hereditary',legislature:'crown',treasury:'crown',military:'crown',diplomacy:'crown',veto:'crown',floor:.05},
+ estates:{name:'Сословная монархия',selection:'hereditary',legislature:'estates',treasury:'estates',military:'crown',diplomacy:'crown',veto:'estates',floor:.2},
+ merchant:{name:'Торговая республика',selection:'elective',legislature:'merchants',treasury:'merchants',military:'council',diplomacy:'council',veto:'merchants',floor:.25},
+ aristocratic:{name:'Аристократическая республика',selection:'elective',legislature:'lords',treasury:'lords',military:'lords',diplomacy:'council',veto:'lords',floor:.3},
+ theocracy:{name:'Теократия',selection:'appointed',legislature:'clergy',treasury:'clergy',military:'council',diplomacy:'council',veto:'clergy',floor:.2},
+ confederation:{name:'Конфедерация',selection:'elective',legislature:'districts',treasury:'districts',military:'lords',diplomacy:'council',veto:'districts',floor:.6}
+};
+const crownId=f=>'crown:'+f;
+const localId=c=>'district:'+c.id;
+const groupId=(c,g)=>'group:'+c.id+':'+g;
+function subjectAccount(s,id){
+ const p=String(id).split(':'),n=Number(p[1]);
+ if(p[0]==='crown'&&s.states[n])return {obj:s.states[n],key:'gold'};
+ const c=s.cities.find(q=>q.id===n);if(!c?.society)return null;
+ if(p[0]==='district')return {obj:c.society,key:'localTreasury'};
+ if(p[0]==='group'){const g=c.society.cohorts.find(q=>q.id===p[2]);if(g)return {obj:g,key:'cash'};}
+ return null;
+}
+function debitAccount(s,id,amount){const a=subjectAccount(s,id);if(!a||a.obj[a.key]+1e-9<amount)return false;a.obj[a.key]-=amount;return true;}
+function creditAccount(s,id,amount){const a=subjectAccount(s,id);if(!a)return false;a.obj[a.key]+=amount;return true;}
+function subjectFaction(s,id){const [kind,n]=String(id).split(':');return kind==='crown'?Number(n):s.cities.find(c=>c.id===Number(n))?.f;}
+function polityEvent(s,f,kind,detail){const c=s.cities.find(q=>q.f===f&&q.capital)||s.cities.find(q=>q.f===f);if(c)societyEvent(s,c,kind,detail);}
+function createPerson(s,f,role,office,age=25,dynasty=null){
+ const a=s.society.architecture,id=a.nextPerson++,h=hash(s.seed+':person:'+id),p={id,f,role,office,age,born:s.day-age*360,dynasty:dynasty??('house:'+f+':'+id),name:['Альрик','Эдрик','Марион','Леон','Адела','Роланд','Ирина','Теодор'][h%8]+' '+(id+1),competence:.25+(h%71)/100,ambition:.2+((h>>>8)%71)/100,alive:true};a.people[id]=p;return p;
+}
+function createGovernment(s,st,kind){
+ const a=s.society.architecture,profile=CONSTITUTIONS[kind]||CONSTITUTIONS.feudal,p=createPerson(s,st.id,'ruler',crownId(st.id),32+hash(s.seed+':age:'+st.id)%14);
+ const heir=createPerson(s,st.id,'heir',null,12,p.dynasty);
+ return a.governments[st.id]={institutions:{...profile},ruler:p.id,heir:heir.id,legitimacy:.75,regent:null,law:null};
+}
+export function governmentType(s,f){const g=s.society?.architecture?.governments[f];if(!g)return null;return Object.entries(CONSTITUTIONS).find(([_,p])=>['selection','legislature','treasury','military','diplomacy','veto','floor'].every(k=>p[k]===g.institutions[k]))?.[0]||'mixed';}
+function internalRetention(s,c){const d=c.society,g=s.society?.architecture?.governments[c.f],floor=g?.institutions.floor??0;return clamp(Math.max(d.autonomy,floor),0,.95);}
+function registerDistrict(s,c){
+ const a=s.society.architecture,d=societyDistrict(s,c),id=localId(c);
+ if(!a.subjects[id]){const p=createPerson(s,c.f,'lord',id,24+hash(s.seed+':lord:'+c.id)%24);a.subjects[id]={id,city:c.id,person:p.id,overlord:crownId(c.f),contract:{retention:d.autonomy,levy:60,justice:'local',trade:'open',fortification:false,inheritance:'hereditary',external:'restricted',protection:true},arrears:0};}
+ return a.subjects[id];
+}
+function defaultTitle(s,c,key,kind,cell=null){
+ const a=s.society.architecture;if(a.titles[key])return a.titles[key];
+ const group=kind==='land'?(s.map.resource[cell]===3||s.map.resource[cell]===4?'landowners':hash(s.seed+':land:'+cell)%7===0?'clergy':'landowners'):kind==='workshop'?'artisans':kind==='vessel'?'merchants':null;
+ const owner=group?groupId(c,group):localId(c),user=kind==='land'?groupId(c,'peasants'):owner;
+ return a.titles[key]={key,kind,cell,city:c.id,owner,user,beneficiary:owner,lease:null};
+}
+function refreshTitles(s){
+ const a=s.society.architecture,by=new Map(s.cities.map(c=>[c.id,c]));
+ for(const c of s.cities){registerDistrict(s,c);defaultTitle(s,c,'store:'+c.id,'warehouse');defaultTitle(s,c,'road:'+c.id,'infrastructure');for(let k=0;k<c.build.length;k++)for(let j=0;j<c.build[k];j++)defaultTitle(s,c,'workshop:'+c.id+':'+k+':'+j,'workshop');}
+ for(let i=0;i<N;i++){if(s.owner[i]<0||s.admin[i]<0||!s.map.land[i])continue;const c=by.get(s.admin[i]);if(c)defaultTitle(s,c,'land:'+i,'land',i);}
+ for(const v of s.fleets){const c=by.get(v.home);if(c)defaultTitle(s,c,'vessel:'+v.id,'vessel');}
+ const liveShips=new Set(s.fleets.map(v=>'vessel:'+v.id));
+ for(const [key,t] of Object.entries(a.titles)){if(t.kind==='vessel'&&!liveShips.has(key))delete a.titles[key];else if(t.kind==='workshop'){const [,city,k,j]=key.split(':').map(Number);if(!by.get(city)||by.get(city).build[k]<=j)delete a.titles[key];}else if(t.lease&&t.lease.end<=s.day){t.user=t.lease.previous;t.lease=null;}}
+}
+export function enablePoliticalArchitecture(s,config={}){
+ if(!s.society||s.society.architecture)return s.society?.architecture;
+ const a=s.society.architecture={schema:1,nextPerson:0,people:{},subjects:{},titles:{},governments:{}};
+ for(const st of s.states)createGovernment(s,st,config.governments?.[st.id]||config.government||'feudal');
+ refreshTitles(s);return a;
+}
+export function landRights(s,i){
+ const a=s.society?.architecture,t=a?.titles['land:'+i];if(!t)return null;
+ const c=s.cities.find(c=>c.id===s.admin[i]);return {...t,sovereign:s.owner[i],controller:controller(s,i),administrator:c?localId(c):null,resource:s.map.resource[i]};
+}
+export function transferTitle(s,key,actor,to,price=0,kind='sale'){
+ const a=s.society?.architecture,t=a?.titles[key];if(!t||!subjectAccount(s,to)||!Number.isFinite(price)||price<0||to===t.owner||!['sale','grant'].includes(kind)||actor!==t.owner||subjectFaction(s,actor)!==subjectFaction(s,to))return false;
+ if(t.lease)return false;
+ if(kind==='sale'&&price>0){if(!debitAccount(s,to,price))return false;creditAccount(s,actor,price);}
+ const old=t.owner;t.owner=to;if(t.beneficiary===old)t.beneficiary=to;if(t.user===old)t.user=to;polityEvent(s,subjectFaction(s,to),'title transferred',{key,from:old,to,price,kind});return true;
+}
+export function leaseTitle(s,key,owner,user,rent,duration=360){
+ const t=s.society?.architecture?.titles[key];if(!t||t.owner!==owner||t.lease||!subjectAccount(s,user)||user===owner||subjectFaction(s,user)!==subjectFaction(s,owner)||!Number.isFinite(rent)||rent<0||!Number.isFinite(duration)||duration<40)return false;
+ if(!debitAccount(s,user,rent))return false;creditAccount(s,owner,rent);t.lease={previous:t.user,end:s.day+Math.floor(duration)};t.user=user;return true;
+}
+function miningInvestor(s,c,i){
+ const a=s.society?.architecture;if(!a)return null;const t=a.titles['land:'+i],ids=[t?.beneficiary,groupId(c,'landowners'),groupId(c,'artisans'),localId(c)];
+ return ids.find(id=>{const v=subjectAccount(s,id);return v&&subjectFaction(s,id)===c.f&&id!==crownId(c.f)&&v.obj[v.key]>=.4;})||null;
+}
+export function politicalFactions(s,f){
+ const groups=['peasants','artisans','merchants','landowners','clergy','military','scholars'],cs=s.cities.filter(c=>c.f===f&&c.society),a=s.society.architecture,issues={tax:[],autonomy:[],trade:[],centralization:[]},totals=Object.fromEntries(groups.map(g=>[g,0])),titles=Object.fromEntries(groups.map(g=>[g,0]));
+ for(const t of Object.values(a.titles)){const p=t.owner.split(':');if(p[0]==='group'&&subjectFaction(s,t.owner)===f)titles[p[2]]++;}
+ for(const c of cs)for(const q of c.society.cohorts)totals[q.id]+=q.pop*.01+q.cash*.05;
+ for(const g of groups){const weight=totals[g]+titles[g]*.05,issue=g==='merchants'?'trade':g==='landowners'||g==='clergy'?'autonomy':g==='scholars'?'centralization':'tax';issues[issue].push({group:g,weight});}
+ return Object.entries(issues).map(([issue,members])=>({issue,members,power:members.reduce((n,q)=>n+q.weight,0)}));
+}
+export function succeedRuler(s,f){
+ const a=s.society?.architecture,g=a?.governments[f];if(!g)return false;
+ const old=a.people[g.ruler];if(old)old.alive=false;
+ let heir=a.people[g.heir];
+ if(g.institutions.selection==='elective'||g.institutions.selection==='appointed'){
+ const candidates=Object.values(a.people).filter(p=>p.alive&&p.f===f&&p.age>=18&&p.role==='lord').sort((a,b)=>b.competence-a.competence||a.id-b.id);
+ heir=candidates[0]||createPerson(s,f,'ruler',null,30);
+ if(heir.office&&a.subjects[heir.office]){const sub=a.subjects[heir.office],successor=createPerson(s,f,'lord',sub.id,24,heir.dynasty);sub.person=successor.id;}
+ }
+ if(!heir?.alive)heir=createPerson(s,f,'heir',null,18);
+ heir.role='ruler';heir.office=crownId(f);g.ruler=heir.id;g.regent=heir.age<18?Object.values(a.people).find(p=>p.alive&&p.f===f&&p.role==='lord'&&p.age>=18)?.id??null:null;
+ const next=createPerson(s,f,'heir',null,Math.max(0,heir.age-23),heir.dynasty);g.heir=next.id;g.legitimacy=clamp(g.legitimacy*.85+(g.regent?0:.1),0,1);
+ polityEvent(s,f,'succession',{old:old?.id??null,ruler:heir.id,regent:g.regent});return true;
+}
+export function proposeConstitution(s,f,kind){
+ const a=s.society?.architecture,g=a?.governments[f],profile=CONSTITUTIONS[kind],st=s.states[f];if(!g||!profile||g.law||governmentType(s,f)===kind)return 'Реформа недоступна';
+ const cs=s.cities.filter(c=>c.f===f&&c.occupation<0);if(!cs.length)return 'Нет управляемых владений';
+ const support=cs.reduce((n,c)=>n+charterSupport(s,c,profile.floor).total,0)/cs.length,cost=20+cs.length*8;
+ if(st.gold<cost||support<.43)return 'Недостаточно средств или политической поддержки';
+ st.gold-=cost;for(const c of cs)c.cash+=cost/cs.length;st.budget.investment+=cost;
+ g.law={kind,progress:0,consent:support};polityEvent(s,f,'constitution proposed',{kind,support});return 'Реформа принята к исполнению';
+}
+function politicalArchitectureStep(s){
+ const a=s.society.architecture;refreshTitles(s);
+ const counts={};
+ for(const t of Object.values(a.titles))if(t.kind==='land'&&s.admin[t.cell]>=0){const city=s.admin[t.cell];(counts[city]??={})[t.beneficiary]=(counts[city][t.beneficiary]||0)+s.development[t.cell];}
+ for(const c of s.cities){const sub=registerDistrict(s,c),d=c.society;sub.overlord=crownId(c.f);sub.contract.retention=internalRetention(s,c);const g=a.governments[c.f];
+ // Legal beneficiaries receive a bounded portion of actual market revenue, not generated rent.
+ if(c.occupation<0){const row=counts[c.id]||{},total=Object.values(row).reduce((n,v)=>n+v,0),pool=Math.min(c.cash*.004,total*.025);if(total>0&&pool>0)for(const [id,weight] of Object.entries(row)){const pay=pool*weight/total;if(creditAccount(s,id,pay))c.cash-=pay;}}
+ if(s.day%360===0&&c.occupation<0){const p=a.people[sub.person];if(p){p.age=Math.floor((s.day-p.born)/360);if(p.age>=65+hash(s.seed+':death:'+p.id)%21){p.alive=false;const heir=createPerson(s,c.f,'lord',sub.id,25,p.dynasty);sub.person=heir.id;polityEvent(s,c.f,'lord succession',{district:c.id,old:p.id,heir:heir.id});}}}
+ if(d.pressure>.62)sub.arrears++;else sub.arrears=Math.max(0,sub.arrears-1);
+ if(sub.arrears===3)polityEvent(s,c.f,'petition',{district:c.id,issue:'tax and autonomy'});
+ if(g&&c.colony?.kind==='overseas'&&c.colony.selfSufficiency>.8&&d.pressure>.52&&!d.reform&&d.autonomy<.75&&polAI(s,c.f))requestCharter(s,c,d.autonomy+.15);
+ }
+ for(const st of s.states){const g=a.governments[st.id];if(!g||st.defunct)continue;const cs=s.cities.filter(c=>c.f===st.id&&c.occupation<0);if(!cs.length)continue;
+ if(g.law){const r=g.law,capacity=cs.reduce((n,c)=>n+clamp(c.lastFoodRatio*(.2+c.infra*.12),0,1),0)/cs.length;if(capacity<.15){polityEvent(s,st.id,'constitution failed',{kind:r.kind});g.law=null;}else{r.progress=Math.min(1,r.progress+capacity*r.consent*.12);if(r.progress>=1){g.institutions={...CONSTITUTIONS[r.kind]};polityEvent(s,st.id,'constitution enacted',{kind:r.kind});g.law=null;}}}
+ if(s.day%360===0){for(const id of [g.ruler,g.heir]){const p=a.people[id];if(p)p.age=Math.floor((s.day-p.born)/360);}const ruler=a.people[g.ruler];if(ruler&&ruler.age>=60+hash(s.seed+':death:'+ruler.id)%25)succeedRuler(s,st.id);else if(ruler?.age>=18)g.regent=null;}
+ }
+}
+export function politicalArchitectureSnapshot(s,f){
+ const a=s.society?.architecture;if(!a)return null;const g=a.governments[f],subjects=Object.values(a.subjects).filter(q=>s.cities.some(c=>c.id===q.city&&c.f===f)).map(q=>({...q,person:a.people[q.person],treasury:subjectAccount(s,q.id)?.obj.localTreasury??0}));const counts={};for(const t of Object.values(a.titles))if(subjectFaction(s,t.owner)===f)counts[t.kind]=(counts[t.kind]||0)+1;
+ return {kind:governmentType(s,f),government:g,ruler:a.people[g.ruler],heir:a.people[g.heir],subjects,property:counts,factions:politicalFactions(s,f)};
+}
