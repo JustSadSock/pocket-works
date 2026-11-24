@@ -1,0 +1,32 @@
+{
+  "time": 112.5,
+  "tree": {
+    "0": 1,
+    "1": 6,
+    "2": 13,
+    "3": 24
+  },
+  "status": "executing",
+  "children": [
+    {
+      "status": "executing",
+      "children": [
+        "executing",
+        "executing"
+      ]
+    },
+    {
+      "status": "executing",
+      "children": [
+        "executing",
+        "executing"
+      ]
+    },
+    {
+      "status": "sent",
+      "children": []
+    }
+  ],
+  "ordered": 4,
+  "identical": true
+}
