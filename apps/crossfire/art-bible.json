@@ -43,26 +43,26 @@
   "concepts": [
     {
       "id": "field-sheet",
-      "medium": "DOM and SVG",
+      "medium": "DOM buttons with original SVG identity and a matte grid surface",
       "composition": "Fixed grid on sand paper",
-      "interaction": "Direct target selection",
-      "motion": "Short button press",
+      "interaction": "Direct selection of a legal move or enemy counter on the board",
+      "motion": "Short press displacement followed by a small counter arrival",
       "rationale": "Clear mobile tactics with no extra panels."
     },
     {
       "id": "radar",
-      "medium": "Canvas",
+      "medium": "Canvas-rendered circular screen with a surrounding directional dial",
       "composition": "Circular radar with a surrounding dial",
-      "interaction": "Rotate and choose a direction",
-      "motion": "Rotating sweep",
+      "interaction": "Rotate the dial and select a target direction on the radar",
+      "motion": "A continuous rotating sweep with short target confirmation",
       "rationale": "Atmospheric but obscures square distances."
     },
     {
       "id": "tabletop",
-      "medium": "CSS 3D",
+      "medium": "CSS three-dimensional tabletop with individually positioned pieces",
       "composition": "Tilted tabletop with pieces",
-      "interaction": "Drag counters",
-      "motion": "Piece movement",
+      "interaction": "Drag a counter across a projected grid to choose the target",
+      "motion": "Interpolate pieces across the perspective board after a turn",
       "rationale": "Expressive but less precise on small touch screens."
     }
   ],

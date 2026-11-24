@@ -4,7 +4,7 @@
   "product": "crossfire",
   "direction": {
     "premise": "A pocket field exercise with two squads fighting over one marked sector.",
-    "composition": "An exposed seven-column playing board dominates the exercise sheet, with a narrow score line and simple turn controls.",
+    "composition": "A compact framed field instrument holds the score readout, seven-column playing board and turn controls together; the title disappears in combat.",
     "shapeLanguage": "Square terrain tiles and solid diamond counters act as distinct geometric markers.",
     "surfaceAndMaterial": "Matte sand paper and dark ink frame the grid, without gradients or glass effects.",
     "paletteLogic": "Blue and rust separate squads, ochre marks the objective, green outlines legal moves.",
@@ -13,14 +13,14 @@
     "distinction": "A direct move-or-fire exercise with a scoring objective rather than hidden programmed commands."
   },
   "architecture": {
-    "spatialLayout": "header-stage-footer",
+    "spatialLayout": "single-instrument",
     "controlLocation": "direct-on-object",
     "navigation": "other",
     "chromeTopology": "tiled-grid",
-    "dominantMotion": "immediate",
+    "dominantMotion": "spring-settle",
     "primaryVerb": "Tap a neighboring square to move or tap an outlined enemy to shoot.",
     "physicalFeedback": "Buttons depress during contact and a changed counter or score confirms the action.",
-    "spatialRationale": "The seven-square width fits a narrow screen, keeping each action on its actual target.",
+    "spatialRationale": "In combat a compact board is the entire tactical instrument, with the scoreboard and turn controls integrated directly into its surrounding frame.",
     "comparisons": [
       {
         "slug": "emergent-kingdoms",
@@ -44,7 +44,7 @@
     "focalAsset": "An original crossed diagonal SVG with an ochre objective disc identifies the field exercise."
   },
   "motion": {
-    "character": "Brief press displacement and tile color changes keep each turn readable.",
+    "character": "A short spring-like counter arrival and pressed tile feedback make each accepted action visible.",
     "action": "A tap on an outlined destination triggers the corresponding legal move or attack.",
     "anticipation": "Only legal action destinations are outlined before the player selects a target.",
     "response": "The counter or its health value changes immediately after an accepted turn.",
