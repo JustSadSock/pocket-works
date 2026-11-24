@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#eee9de">
 <title>Тихий кадр · удаление диалогов</title><link rel="icon" href="./icons/icon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest">
-<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"></head>
+<link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="../../shared/update-manager.css"><link rel="stylesheet" href="../../shared/workshop-mode.css"></head>
 <body><main data-app-shell class="lab">
-<header class="top"><a class="back" href="../../" aria-label="Вернуться в PocketWorks">← PocketWorks</a><span class="tag">2 МОДЕЛИ · ЛОКАЛЬНО</span></header>
+<header class="top"><a class="back" href="../../" aria-label="Вернуться в PocketWorks">← PocketWorks</a><span class="tag">2 МОДЕЛИ · ЛОКАЛЬНО</span><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика мастерской">⚙</button></header>
 <section class="intro"><div><p class="eyebrow">НЕЙРОСЕТЕВАЯ ЛАБОРАТОРИЯ</p><h1>ТИХИЙ <em>КАДР</em></h1><p class="lead">Сравни быстрый Open-Unmix и более тщательную SCNet на одной сцене. Без цепочек, сторонних сервисов и отправки видео на сервер.</p></div><div class="mark" aria-hidden="true"><span class="line"></span><span class="cross">×</span><span class="line short"></span></div></section>
 <div class="layout">
 <section class="panel source" aria-labelledby="source-heading">
@@ -17,7 +17,7 @@
 <option value="umxhq-direct" selected>Быстро · Open-Unmix UMX-HQ</option>
 <option value="scnet-direct">Качественно · SCNet</option>
 </select></label><label>Размер задачи<select id="chunk-size"><option value="5">Для телефона · по 5 сек</option><option value="10">Умеренная память · по 10 сек</option><option value="20" selected>Быстрее на ПК · по 20 сек</option></select></label></div>
-<button id="process-btn" type="button" class="primary" disabled>Удалить голоса →</button>
+<button id="process-btn" data-native-press type="button" class="primary" disabled>Удалить голоса →</button>
 <div id="progress-wrap" class="progress hidden" role="status" aria-live="polite"><div class="progress-top"><b id="progress-heading">Подготовка...</b><button id="cancel-btn" type="button" class="cancel">Прервать</button></div><progress id="progress-bar"></progress><p id="progress-detail" class="hint"></p></div>
 <p id="error" class="error hidden" role="alert"></p>
 <p id="route-hint" class="hint fine">Open-Unmix обрабатывает быстро; SCNet лучше подавляет остаточные голоса и сохраняет музыку.</p>
@@ -81,4 +81,4 @@
 <p id="study-active-status" class="hint" role="status">Версии появятся здесь.</p>
 </section>
 <footer>SCNet by starrytong · Open-Unmix by SigSep · MIT / ONNX by audiojs. Оригинальное видео не загружается на сервер. Используйте материалы, на которые у вас есть права.</footer>
-</main><script type="module" src="./app.js"></script></body></html>
+</main><script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="ТИХИЙ КАДР" data-app-version="1.9.0"></script><script type="module" src="./app.js"></script></body></html>
