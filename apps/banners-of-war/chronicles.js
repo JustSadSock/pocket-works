@@ -41,14 +41,14 @@ function makeTerrain(E,d,reverse,ground=1){
 }
 export const scales={compact:1,historical:2,expanded:3};
 export function createHistorical(E,id,options={}){
- const d=validateScenario(scenario(id)),reverse=options.side===1,indices=reverse?[1,0]:[0,1],rot=(x,y)=>reverse?{x:E.W-x,y:E.H-y}:{x,y},forces=indices.map(i=>d.sides[i].forces.map(q=>({...q})));
+ const original=validateScenario(scenario(id)),scale=Object.hasOwn(scales,options.scale)?options.scale:"compact",factor=scales[scale],base=original.bounds||{width:1400,height:900},width=base.width+(factor-1)*240,height=base.height+(factor-1)*200,dx=(width-base.width)/2,dy=(height-base.height)/2,shift=q=>({...q,x:q.x+dx,y:q.y+dy}),d={...original,map:{...original.map,hills:(original.map.hills||[]).map(shift),woods:(original.map.woods||[]).map(shift),bogs:(original.map.bogs||[]).map(shift),stakes:(original.map.stakes||[]).map(shift),...(original.map.river?{river:{x:original.map.river.x+dx,ford:original.map.river.ford+dy}}:{})},zones:original.zones.map(shift),sides:original.sides.map(v=>({...v,forces:v.forces.map(shift),guard:shift(v.guard)}))};E=E.forMap?E.forMap(width,height):E;const reverse=options.side===1,indices=reverse?[1,0]:[0,1],rot=(x,y)=>reverse?{x:E.W-x,y:E.H-y}:{x,y},forces=indices.map(i=>d.sides[i].forces.map(q=>({...q})));
  if(options.alternative&&options.reserve)forces[0].push({type:"spear",x:d.sides[indices[0]].guard.x,y:d.sides[indices[0]].guard.y+100,form:"spears",name:"Дополнительный резерв",kit:"Копьё"});
- let scale=Object.hasOwn(scales,options.scale)?options.scale:"compact",factor=scales[scale],baseCounts=forces.map(f=>f.length);
+ let baseCounts=forces.map(f=>f.length);
  // Add separate physical regiments, never inflate one body or alter the speed of a warrior.
- // Fixed-size battlefield; additional ranks represent larger participating sectors, not a full historic army.
+ // Expand terrain in metres around the original sector; no physical warrior dimensions change.
  for(let side=0;side<2;side++){let original=forces[side].slice();for(let k=1;k<factor;k++)for(let q of original)forces[side].push({...q,additional:true})}
  let s=E.create("Chronicle "+id+(reverse?" reversed":""),...forces.map(f=>f.map(q=>q.type)),d.sides[indices[1]].style);
- s.terrain=makeTerrain(E,d,reverse,options.alternative?clamp(options.ground??1,.6,1.3):1);
+ s.bounds={width,height};s.terrain=makeTerrain(E,d,reverse,options.alternative?clamp(options.ground??1,.6,1.3):1);
  for(let side=0;side<2;side++){let units=s.units.filter(u=>u.side===side);units.forEach((u,i)=>{let q=forces[side][i]||d.sides[indices[side]].guard;Object.assign(u,rot(q.x,q.y));u.a=side?Math.PI:0;if(q.form){u.form=q.form;u.cols=E.forms[q.form].cols;u.historicalName=q.name;u.kit=q.kit;u.profile=profileFor(id,indices[side],u.type,q.name);let spec=troopSpec(E.types,u);u.morale=spec.morale;u.ammo=spec.ammo||0}if(options.alternative&&side===0)u.fatigue=clamp(options.fatigue??0,0,70)})}
  // Collision-free placement for all added ranks; canonical geometry is rotated for the selected side.
  for(let side=0;side<2;side++){let units=s.units.filter(u=>u.side===side),placed=units.filter((u,i)=>i<baseCounts[side]||u.type==="guard"),front=side?-1:1;
@@ -56,7 +56,7 @@ export function createHistorical(E,id,options={}){
  for(let x=40;x<E.W-35;x+=38)for(let y=35;y<E.H-30;y+=35){let p=side?{x:E.W-x,y:E.H-y}:{x,y};if((p.x-origin.x)*front>45|| (side?p.x<E.W*.51:p.x>E.W*.49))continue;let land=E.sample(s.terrain,p.x,p.y);if(land.water||land.move<.5)continue;candidates.push({...p,cost:Math.hypot(p.x-origin.x,p.y-origin.y)+(1-land.move)*100})}
  candidates.sort((a,b)=>a.cost-b.cost||front*(a.x-b.x||a.y-b.y));let p=candidates.find(p=>!placed.some(v=>E.overlap({...u,x:p.x,y:p.y},v,3)));if(!p)throw Error("No physical deployment space for "+id+" "+scale);u.x=p.x;u.y=p.y;placed.push(u)}}
  s.aiVersion=4;s.styleBySide=indices.map(i=>d.sides[i].style);s.difficulty=options.difficulty||"commander";s.fog=!!options.fog;s.objective={kind:"zones",seconds:d.seconds,weights:{...d.weights},zones:d.zones.map(q=>({...q,...rot(q.x,q.y)}))};
- s.historical={schema:1,id,indices,mode:options.mode||"historical",alternative:!!options.alternative,names:indices.map(i=>d.sides[i].name),commanders:indices.map(i=>d.sides[i].commander),historicalWinner:indices.indexOf(d.historicalWinner),scale,scaleDescription:"Participating sector; fixed 1400 × 900 m; physically separate regiments, not full historical totals",regiments:[0,1].map(i=>s.units.filter(u=>u.side===i).length),counts:[E.total(s,0),E.total(s,1)]};
+ s.historical={schema:1,id,indices,mode:options.mode||"historical",alternative:!!options.alternative,names:indices.map(i=>d.sides[i].name),commanders:indices.map(i=>d.sides[i].commander),historicalWinner:indices.indexOf(d.historicalWinner),scale,scaleDescription:"Participating sector; "+width+" × "+height+" m; physically separate regiments, not full historical totals",regiments:[0,1].map(i=>s.units.filter(u=>u.side===i).length),counts:[E.total(s,0),E.total(s,1)]};
  E.refreshVisibility(s);return s
 }
 export function zoneStatus(E,s){return (s.objective?.zones||[]).map(q=>{let influence=[0,0];for(let u of s.units){let d=E.dist(u,q);if(!E.alive(u)||u.rout||d>=q.r)continue;influence[u.side]+=u.n*u.cohesion/100*(1-d/q.r)}let [a,b]=influence;return {...q,influence,control:a+b<1||Math.abs(a-b)/Math.max(a,b)<.18?0:a>b?1:-1}})}
@@ -80,7 +80,7 @@ const movements={
 };
 export function studyInterpretations(id){return id==="grunwald"?[{id:"uncertain",label:"Отход части литовских хоругвей (причина не определена)"},{id:"ordered",label:"Гипотеза организованного манёвра"}]:id==="hastings"?[{id:"uncertain",label:"Отступление с неясной причиной"},{id:"ordered",label:"Гипотеза намеренного ложного отхода"}]:[{id:"uncertain",label:"Схематическая реконструкция"}]}
 export function studyFrame(E,id,phase,interpretation="uncertain"){
- const d=validateScenario(scenario(id)),i=clamp(Math.trunc(phase),0,d.phases.length-1),s=createHistorical(E,id),m=movements[id][i];
+ const d=validateScenario(scenario(id)),i=clamp(Math.trunc(phase),0,d.phases.length-1),s=createHistorical(E,id),m=movements[id][i];E=E.forState?E.forState(s):E;
  for(let u of s.units){const j=u.side*2,from={x:u.x,y:u.y};let dx=m[j],dy=m[j+1];
  // Unequal groups make the broad alternatives visible without claiming exact tracks.
  if(id==="grunwald"&&i===2&&u.side===0&&u.y<450){dx=interpretation==="ordered"?-105:-155;dy=interpretation==="ordered"?-40:70}

@@ -1,8 +1,8 @@
 import {plan as enemyPlan, deploy as enemyDeploy, delegate as staffOrders} from './commander.js';
 import {historicalScore} from './chronicles.js';
 import {troopSpec} from './historical-profiles.js';
-export const E = (function engine(){
- const W=1400,H=900,DT=.25,STEPS=120,clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),angle=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x),wrap=a=>{let v=Math.atan2(Math.sin(a),Math.cos(a));return Math.abs(Math.abs(v)-Math.PI)<1e-9?Math.PI:v},copy=x=>JSON.parse(JSON.stringify(x));
+function engine(W=1400,H=900){
+ const DT=.25,STEPS=120,clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),angle=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x),wrap=a=>{let v=Math.atan2(Math.sin(a),Math.cos(a));return Math.abs(Math.abs(v)-Math.PI)<1e-9?Math.PI:v},copy=x=>JSON.parse(JSON.stringify(x));
  const types={
  militia:{name:"Ополчение",n:140,cost:70,armor:.08,skill:.62,discipline:.55,morale:72,speed:1.65,reach:1.1,attack:1.1,range:0,horse:0},
  spear:{name:"Копейщики",n:120,cost:110,armor:.26,skill:1,discipline:.9,morale:88,speed:1.5,reach:2.8,attack:1.4,range:0,horse:0},
@@ -41,7 +41,7 @@ export const E = (function engine(){
  function visible(s,side,u){return !s.fog||u.side===side||!!s.vision?.[side]?.includes(u.id)}
  function dims(u){if(u.geometry)return u.geometry;const t=spec(u),f=forms[u.form],gap=f.gap*(t.horse?1.75:1),cols=clamp(u.cols||f.cols,3,Math.max(3,Math.ceil(u.n)));return {w:Math.max(gap,cols*gap),d:Math.max(gap,Math.ceil(u.n/cols)*gap*(t.horse?1.5:1)),cols,gap}}
  function unit(type,side,i,x,y){const t=types[type],form=t.horse?"wedge":t.range?"loose":type==="pike"?"spears":"line";return {id:side*100+i,side,type,x,y,a:side?Math.PI:0,form,cols:forms[form].cols,n:t.n,initial:t.n,morale:t.morale,cohesion:100,fatigue:0,ammo:t.ammo||0,v:0,shot:0,rout:false,escaped:false,recovered:0,order:{kind:"hold",path:[]},last:"",contact:0}}
- function create(seed,roster,enemy,style="adaptive",arch="legacy"){const t=arch==="legacy"?terrain(seed):landscape(seed,arch);function deploy(list,side){let arr=[...list,"guard"];return arr.map((type,i)=>{let row=Math.floor(i/8),col=i%8,count=Math.min(8,arr.length-row*8);return unit(type,side,i,(side?W-380:380)+(side?1:-1)*row*90,450+(col-(count-1)/2)*82)})}return {seed,terrain:t,units:[...deploy(roster,0),...deploy(enemy,1)],round:1,time:0,events:[],shots:[],style,result:null,control:[0,0]}}
+ function create(seed,roster,enemy,style="adaptive",arch="legacy"){const t=arch==="legacy"?terrain(seed):landscape(seed,arch);function deploy(list,side){let arr=[...list,"guard"];return arr.map((type,i)=>{let row=Math.floor(i/8),col=i%8,count=Math.min(8,arr.length-row*8);return unit(type,side,i,(side?W-380:380)+(side?1:-1)*row*90,450+(col-(count-1)/2)*82)})}return {seed,terrain:t,...(W===1400&&H===900?{}:{bounds:{width:W,height:H}}),units:[...deploy(roster,0),...deploy(enemy,1)],round:1,time:0,events:[],shots:[],style,result:null,control:[0,0]}}
  function alive(u){return u.n>=1&&!u.escaped}
  function power(s,side){return s.units.filter(u=>u.side===side&&alive(u)&&!u.rout).reduce((a,u)=>a+u.n*(.35+.65*u.morale/100)*(.45+.55*u.cohesion/100),0)}
  function total(s,side){return s.units.filter(u=>u.side===side).reduce((a,u)=>a+u.initial,0)}
@@ -178,4 +178,8 @@ let yieldNow=(u.causes?.yield||0)-(a.causes?.yield||0),advance=["attack","advanc
  function frameSnapshot(s){let t=s.terrain,intent=s.aiIntent;return {...copy({...s,terrain:null,aiIntent:null}),terrain:t,aiIntent:intent}}
  function resolve(state,orders,observer=false,profile=null){let clock=profile?.clock||(()=>0),start=clock(),s=snapshot(state);if(s.fog)refreshVisibility(s);let red=command(s,1,profile),blue=observer?command(s,0,profile):orders,op={...red,...blue};s.aiIntent={...(s.aiIntent||{})};if(red.intent)s.aiIntent[1]=red.intent;if(observer&&blue.intent)s.aiIntent[0]=blue.intent;prepare(s,op);let planned=clock(),frames=[frameSnapshot(s)],frameMs=clock()-planned,physicsMs=0;for(let i=0;i<STEPS&&!s.result;i++){let t=clock();step(s);physicsMs+=clock()-t;if(i%4===3||s.result){t=clock();frames.push(frameSnapshot(s));frameMs+=clock()-t}}if(s.fog)refreshVisibility(s);s.round++;if(profile){profile.planning=planned-start;profile.physics=physicsMs;profile.snapshots=frameMs}return {state:s,frames,orders:op}}
  const api={W,H,DT,STEPS,types,spec,forms,landscapes,landscape,riverHeight,lineOfSight,visibility,refreshVisibility,visible,clamp,copy,dist,angle,terrain,riverX,sample,dims,create,alive,power,total,ai,prepare,overlap,frontage,groupPaths,sectors,bodies,sectorContact,connectivity,passage,navigate,control,spatial,snapshot,step,resolve,command,deployAI,staff};return api;
-})();
+}
+
+const engines=new Map();export function engineFor(width=1400,height=900){if(!Number.isInteger(width)||!Number.isInteger(height)||width<600||height<600||width>3200||height>2400||width%20||height%20)throw Error("Unsupported map dimensions");const k=width+"x"+height;if(!engines.has(k))engines.set(k,engine(width,height));return engines.get(k)}
+export const E={...engineFor(),forMap:engineFor,forState:s=>engineFor(s?.bounds?.width??1400,s?.bounds?.height??900)};
+for(const name of ["step","resolve","command","deployAI","staff","ai","control"])E[name]=(s,...args)=>E.forState(s)[name](s,...args);
