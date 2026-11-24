@@ -420,12 +420,18 @@ function planAI(s,f){
  const home=cities.slice().sort((x,y)=>dist(a.i,x.i)-dist(a.i,y.i)||x.id-y.id)[0];
  if(!enemies.length){if(a.task){a.task=null;a.group=null;a.path=[];}if(a.i!==home.i&&!a.path.length){if(a.postwar){a.path=pathfind(s,a.i,home.i,-1,i=>s.owner[i]<0||s.owner[i]===a.f||s.owner[i]===a.withdrawFrom||['access','alliance'].includes(s.relations[a.f][s.owner[i]]));a.progress=0;}else move(s,a,home.i);}else if(a.i===home.i&&a.postwar){demobilize(s,a);}continue;}
  if(a.recovering){if(a.i!==home.i&&!a.path.length)a.path=safeRoute(s,a,home.i);continue;}if(a.task&&a.task.phase!=='retreat'&&a.task.phase!=='preparing'&&s.day-a.task.start<20)continue;
- const wars=s.wars.filter(w=>w.status==='active'&&(w.f===f||w.enemy===f)),ownClaims=wars.filter(w=>w.f===f).flatMap(w=>w.goals),target=enemies.slice().sort((x,y)=>(dist(a.i,x.i)+x.fort*4-(ownClaims.includes(x.i)?8:0))-(dist(a.i,y.i)+y.fort*4-(ownClaims.includes(y.i)?8:0))||x.id-y.id)[0];
- const p=operationEstimate(s,a,target.i),threat=visible.filter(q=>q.f===target.f&&dist(q.i,target.i)<6).reduce((n,q)=>n+q.estimate,0);
- const adverse=wars.some(w=>w.assessments?.[f]?.net<0),minDays=Math.max(3,Math.ceil(p.retreat)+2),defend=doctrine==='defensive'&&!ownClaims.length&&threat>0;
+ const wars=s.wars.filter(w=>w.status==='active'&&(w.f===f||w.enemy===f)),ownClaims=wars.filter(w=>w.f===f).flatMap(w=>w.goals),target=enemies.slice().sort((x,y)=>(dist(a.i,x.i)+x.fort*(doctrine==='maneuver'?8:4)-(ownClaims.includes(x.i)?8:0))-(dist(a.i,y.i)+y.fort*(doctrine==='maneuver'?8:4)-(ownClaims.includes(y.i)?8:0))||x.id-y.id)[0];
+ const relative=militaryPower(s,f)/(1+militaryPower(s,target.f));let objective=target.i,role=target.fort?'siege':'advance';
+ if(doctrine==='maneuver'&&target.fort&&a.i!==target.i){
+ const flank=neighbors(target.i).filter(i=>s.map.land[i]&&s.owner[i]===target.f&&controller(s,i)!==f).map(i=>({i,plan:operationEstimate(s,a,i),threat:visible.filter(q=>q.f===target.f&&dist(q.i,i)<2).reduce((n,q)=>n+q.estimate,0)})).filter(q=>q.plan.feasible).sort((x,y)=>(x.plan.days+x.threat/30-(s.road[x.i]||0)*2)-(y.plan.days+y.threat/30-(s.road[y.i]||0)*2)||x.i-y.i)[0];
+ if(flank&&a.i!==flank.i){objective=flank.i;role='raid';}
+ }
+
+ const p=operationEstimate(s,a,objective),threat=visible.filter(q=>q.f===target.f&&dist(q.i,objective)<6).reduce((n,q)=>n+q.estimate,0);
+ const adverse=wars.some(w=>w.assessments?.[f]?.net<0),minDays=Math.max(3,Math.ceil(p.retreat)+2),defend=doctrine==='defensive'&&relative<1.25;
  const attack=p.feasible&&!adverse&&!defend&&threat<=strength(a)*ratio&&(doctrine!=='logistics'||p.capacity>=strength(a)/170||p.required<=45)&&st.gold>=12&&a.organization>=.65;
- const kind=attack?target.fort?'siege':'advance':'rally',dest=attack?target.i:home.i;
- const conditions={minDays:attack?minDays:3,avoidRatio:ratio,support:false,marchDays:Math.min(90,(p.required||20)+(doctrine==='logistics'?6:0)),prepare:attack};
+ const kind=attack?role:defend?'hold':'rally',dest=attack?objective:home.i;
+ const conditions={minDays:attack?minDays:3,avoidRatio:ratio,support:false,marchDays:attack?Math.min(90,(p.required||20)+(doctrine==='logistics'?6:0)):20,prepare:attack};
  if(a.task?.kind===kind&&a.task.target===dest&&a.task.phase!=='retreat')continue;
  setOperation(s,f,[a.id],kind,dest,conditions);if(attack)a.task.phase='preparing';
  if(!attack&&a.i===home.i&&st.gold>40&&home.stock[9]>home.pop/320*8&&home.depot[9]<12)depotPurchase(s,home,9,Math.min(12-home.depot[9],home.stock[9]-home.pop/320*8));
