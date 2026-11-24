@@ -6,11 +6,11 @@ test('muster, deploy, issue orders, WEGO, replay and reload',async({page})=>{
  await page.screenshot({path:test.info().outputPath('deployment.png')});
  await page.locator('#confirm').click();await expect(page.locator('#phase')).toContainText('Планирование');
  const c=page.locator('#map'),b=await c.boundingBox();if(!b)throw new Error('Map unavailable');
- const k=Math.min(b.width/1400,b.height/900),x=(b.width-1400*k)/2,y=(b.height-900*k)/2;
- await c.click({position:{x:x+380*k,y:y+163*k}});await expect(page.locator('#unitname')).toContainText('Копейщики');
- await page.locator('[data-kind=move]').click();await c.click({position:{x:x+490*k,y:y+163*k}});
+ const position=async(wx:number,wy:number)=>{const rect=await c.boundingBox();if(!rect)throw new Error('No map');const portrait=await page.evaluate(()=>innerHeight>innerWidth);const w=portrait?900:1400,h=portrait?1400:900,k=Math.min(rect.width/w,rect.height/h);return {x:(rect.width-w*k)/2+(portrait?900-wy:wx)*k,y:(rect.height-h*k)/2+(portrait?wx:wy)*k}};
+ await c.click({position:await position(380,163)});await expect(page.locator('#unitname')).toContainText('Копейщики');
+ await page.locator('[data-kind=move]').click();await c.click({position:await position(490,163)});
  await expect(page.locator('#maphint')).toContainText('Приказ записан');
- await page.screenshot({path:test.info().outputPath('orders.png')});
+ await page.locator('#program').click();await page.locator('#condition').selectOption('time');await page.locator('#threshold').fill('12');await page.locator('#addStage').click();await page.locator('[data-kind=brace]').click();await expect(page.locator('#program')).toContainText('1');await page.screenshot({path:test.info().outputPath('orders.png')});
  await page.locator('#confirm').click();await page.locator('#confirm').click();
  await expect(page.locator('#playback')).toBeVisible();await page.locator('#pause').click();
  await expect(page.locator('#pause')).toHaveText('Играть');await page.locator('#skip').click();
