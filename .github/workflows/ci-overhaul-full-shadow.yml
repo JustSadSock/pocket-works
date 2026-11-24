@@ -1,0 +1,157 @@
+name: CI Overhaul Full Shadow Lab
+
+on:
+  push:
+    branches: [platform/ci-cd-overhaul]
+    paths: ['scripts/ci-overhaul/full-lab.request.json']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ci-overhaul-full-shadow
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      cpu: ${{ steps.plan.outputs.cpu }}
+      browser: ${{ steps.plan.outputs.browser }}
+      has_cpu: ${{ steps.plan.outputs.has_cpu }}
+      has_browser: ${{ steps.plan.outputs.has_browser }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require original Universal QA success and identical application inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45380288938" |
+            jq -e '.head_sha == "d74bc10b1ee3e931f778ca8a11746dcb7eb7f1c3" and .name == "Universal Pocket Works QA" and .status == "completed" and .conclusion == "success"'
+          git diff --exit-code d74bc10b1ee3e931f778ca8a11746dcb7eb7f1c3 HEAD -- . ':!scripts/ci-overhaul/**' ':!.github/workflows/ci-overhaul-*'
+      - name: Plan all original tasks
+        id: plan
+        run: |
+          set -euo pipefail
+          node --test scripts/ci-overhaul/*.test.mjs
+          mkdir -p full-plan
+          printf '{}' > "$RUNNER_TEMP/full-event.json"
+          GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$RUNNER_TEMP/full-event.json" \
+            QA_BASE_SHA=327ebcdc3f32eb1120d7164f5113746c0e5cd92e \
+            QA_HEAD_SHA=d74bc10b1ee3e931f778ca8a11746dcb7eb7f1c3 \
+            GITHUB_OUTPUT='' GITHUB_STEP_SUMMARY='' \
+            node scripts/universal-qa/plan.mjs > full-plan/legacy.txt
+          node scripts/ci-overhaul/full-lab.mjs plan full-plan/legacy.txt full-plan/plan.json
+          {
+            echo "cpu=$(jq -c .cpu full-plan/plan.json)"
+            echo "browser=$(jq -c .browser full-plan/plan.json)"
+            echo "has_cpu=$(jq -c .hasCpu full-plan/plan.json)"
+            echo "has_browser=$(jq -c .hasBrowser full-plan/plan.json)"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shadow-full-plan
+          path: full-plan/
+          if-no-files-found: error
+
+  cpu:
+    needs: plan
+    if: needs.plan.outputs.has_cpu == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.plan.outputs.cpu) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute original tasks in isolated worktrees
+        env:
+          PW_QA_SHARD: ${{ toJSON(matrix) }}
+        run: node scripts/ci-overhaul/run-shard.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shadow-shard-${{ matrix.id }}
+          path: qa-artifacts/
+          if-no-files-found: error
+
+  browser:
+    needs: plan
+    if: needs.plan.outputs.has_browser == 'true'
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.55.0-noble
+      options: --ipc=host
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.plan.outputs.browser) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute browser tasks in isolated worktrees
+        env:
+          PW_QA_SHARD: ${{ toJSON(matrix) }}
+        run: node scripts/ci-overhaul/run-shard.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shadow-shard-${{ matrix.id }}
+          path: qa-artifacts/
+          if-no-files-found: error
+
+  audit:
+    needs: [plan, cpu, browser]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: shadow-full-plan
+          path: full-plan
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shadow-shard-*
+          path: collected
+      - uses: actions/download-artifact@v4
+        with:
+          name: qa-summary-45380288938
+          run-id: 45380288938
+          github-token: ${{ github.token }}
+          path: legacy-summary
+      - name: Verify all original and sharded result identities
+        run: node scripts/ci-overhaul/full-lab.mjs audit full-plan/plan.json legacy-summary/summary.json collected full-audit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shadow-full-audit
+          path: full-audit/
+          if-no-files-found: warn
