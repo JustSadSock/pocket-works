@@ -1,13 +1,15 @@
 import {chromium,webkit} from '@playwright/test';
 import {spawn} from 'node:child_process';
+import {once} from 'node:events';
+import {runDiscoveryJourneys} from './discovery-journeys.mjs';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {join} from 'node:path';
 const output=process.env.PW_QA_OUTPUT_DIR||'qa-artifacts/balance-ui';mkdirSync(output,{recursive:true});
 const url='http://127.0.0.1:4189/apps/crown-and-marches/',key='pocket-works:crown-and-marches:campaign:diplomacy-lab';
-const server=spawn(process.execPath,['scripts/serve-site.mjs'],{env:{...process.env,PORT:'4189',POCKET_WORKS_SITE_ROOT:process.env.PW_QA_SITE_ROOT||process.cwd()},stdio:'ignore'});
-const reports=[];
-try{let ready=false;for(let i=0;i<80;i++){try{if((await fetch(url)).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,250));}assert.ok(ready);
+const server=spawn(process.execPath,['scripts/serve-site.mjs'],{env:{...process.env,PORT:'4189',POCKET_WORKS_SITE_ROOT:process.env.PW_QA_SITE_ROOT||process.cwd()},stdio:['ignore','inherit','inherit']});
+const reports=[];let serverError=null;server.on('error',error=>{serverError=error;});
+try{let ready=false,last='no response';for(let i=0;i<80;i++){if(serverError||server.exitCode!==null)throw Error('Preview exited: '+(serverError||server.exitCode)+' cwd='+process.cwd()+' root='+process.env.PW_QA_SITE_ROOT);try{const response=await fetch(url);last='HTTP '+response.status;if(response.ok){ready=true;break;}}catch(e){last=String(e);}await new Promise(r=>setTimeout(r,250));}assert.ok(ready,'Preview '+url+' '+last+' cwd='+process.cwd()+' root='+process.env.PW_QA_SITE_ROOT);
  for(const [engine,browserType] of [['chromium',chromium],['webkit',webkit]]){const browser=await browserType.launch({headless:true});try{const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,reducedMotion:'reduce'});try{
  const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));p.on('dialog',d=>d.accept());
  const tap=(a,v,scope='')=>p.locator(scope+' [data-act="'+a+'"]'+(v==null?'':'[data-value="'+v+'"]')).first().tap();
@@ -25,6 +27,6 @@ try{let ready=false;for(let i=0;i<80;i++){try{if((await fetch(url)).ok){ready=tr
  const timing=await p.evaluate(async()=>{const w=await import('/apps/crown-and-marches/world.mjs');const out=[];for(const n of [3,6]){const s=w.diplomacySandbox({seed:'balance-20-4',states:n,geography:'world',population:1000,stockScale:2,cityLimit:3,sea:false});const trace={timings:{},only:['economy','territory','strategicAI','diplomacy','politicalReview']};const review=[];for(let i=0;i<480;i++){const t=performance.now();w.step(s,trace);if(s.day%80===0)review.push(performance.now()-t);if(i%20===19)await new Promise(r=>setTimeout(r,0));}const percentile=a=>{a.sort((a,b)=>a-b);return a[Math.floor(a.length*.95)];};out.push({states:n,reviewTickP95:percentile(review),phaseP95:Object.fromEntries(Object.entries(trace.timings).map(([k,a])=>[k,percentile(a)]))});}return out;});reports.at(-1).frameTiming=frames;reports.at(-1).phaseTiming=timing;console.log(JSON.stringify({engine,frameTiming:frames,phaseTiming:timing}));assert.deepEqual(errors,[]);
  await tap('econexit',null,'#panel');await p.locator('#modalbody [data-act="diplab"]').waitFor({state:'visible'});
  }finally{await context.close();}}finally{await browser.close();}}
-}finally{server.kill('SIGTERM');writeFileSync(join(output,'journeys.json'),JSON.stringify(reports,null,2));}
+ await runDiscoveryJourneys(url);
+}finally{if(server.exitCode===null){server.kill('SIGTERM');await Promise.race([once(server,'exit'),new Promise(r=>setTimeout(r,2000))]);}writeFileSync(join(output,'journeys.json'),JSON.stringify(reports,null,2));}
 
-await import('./discovery-journeys.mjs');
