@@ -62,6 +62,7 @@ jobs:
           node --check pocketnet/session-tokens.mjs
           node --check pocketnet/admission-limits.mjs
           node --test pocketnet/test/session-tokens.test.mjs pocketnet/test/admission-limits.test.mjs
+          node --test pocketnet/test/banners-match.test.mjs
           node --check pocketnet/worker.mjs
           node --check pocket-id/hub.mjs
           node --check pocket-cloud/hub.mjs
@@ -112,14 +113,16 @@ jobs:
           node pocketnet/test/perekos.mjs
           node pocketnet/test/chyepukha-safety.mjs
           node pocketnet/test/chyepukha-longrun.mjs
+          node pocketnet/test/banners-real.mjs
       - name: Install real Fog browser QA and copy authentic app assets
         run: |
           mkdir -p dist-site/apps
           cp -R apps/fog-of-conquest dist-site/apps/fog-of-conquest
+          cp -R apps/banners-of-war dist-site/apps/banners-of-war
           cp -R shared dist-site/shared
           mkdir -p /tmp/fog-real-browser
           npm install --prefix /tmp/fog-real-browser --no-audit --no-fund @playwright/test@1.55.0
-          /tmp/fog-real-browser/node_modules/.bin/playwright install --with-deps chromium
+          /tmp/fog-real-browser/node_modules/.bin/playwright install --with-deps chromium webkit
           ln -s /tmp/fog-real-browser/node_modules node_modules
       - name: FoC real Durable Object and independent browser reconnection scenarios
         shell: bash
@@ -128,6 +131,15 @@ jobs:
           /tmp/pocketnet-wrangler/node_modules/.bin/wrangler dev --local --port 8787 > /tmp/pocketnet-fog.log 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true; tail -n 120 /tmp/pocketnet-fog.log' EXIT
+          node pocketnet/test/banners-real.mjs --resume
           node pocketnet/test/fog-real-worker.mjs
           node_modules/.bin/playwright test --config apps/fog-of-conquest/qa/worker.config.ts
 
+          node_modules/.bin/playwright test --config apps/banners-of-war/qa/network-real.config.ts
+      - name: Banners network browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: banners-network-browser
+          path: test-results/banners-network
+          if-no-files-found: ignore

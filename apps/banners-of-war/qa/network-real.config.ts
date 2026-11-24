@@ -1,0 +1,2 @@
+import {defineConfig,devices} from '@playwright/test';
+export default defineConfig({testDir:'.',testMatch:'network-real.spec.ts',timeout:120000,workers:1,use:{baseURL:'http://127.0.0.1:8787',trace:'retain-on-failure',screenshot:'only-on-failure'},projects:[{name:'mobile-chromium',use:{...devices['Pixel 7'],browserName:'chromium'}},{name:'mobile-webkit',use:{...devices['iPhone 13'],browserName:'webkit'}}],outputDir:'../../../test-results/banners-network'});
