@@ -49,6 +49,13 @@ export async function verifyBuild(site,manifest,context){
   if(!files.some(f=>f.path==='apps.json')||!files.some(f=>f.path==='index.html'))throw Error('Incomplete site output');
   return true;
 }
+// Generate only an isolated runner copy; the ordinary runner stays byte-for-byte
+// unchanged. Fail closed if its build contract changes.
+export function prebuiltRunnerSource(source){
+  const old="const before = await execute('npm', ['run', 'deploy:site'], { output, task, timeoutMs: 420_000 });\n        if (!before.success) throw Error('Enhanced site build failed: ' + JSON.stringify(before));";
+  if(source.split(old).length!==2)throw Error('Legacy build contract changed; review Build Once adapter');
+  return source.replace(old,"if (process.env.PW_QA_VERIFIED_BUILD !== '1') throw Error('Missing verified build');\n        result.buildMode = 'same-run-prebuilt';");
+}
 export async function stageBuild(bundle,work,context){
   const site=join(bundle,'dist-site'),manifest=JSON.parse(readFileSync(join(bundle,'manifest.json'),'utf8'));
   const target=join(work,'dist-site');
