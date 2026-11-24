@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   syntax-unit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
           node --input-type=module -e "import{readFileSync as r}from'node:fs';const a=JSON.parse(r('apps/tihiy-kadr/app.config.json'));const m=JSON.parse(r('apps/tihiy-kadr/manifest.webmanifest'));if(m.name!==a.name||m.description!==a.description||m.id!=='/apps/'+a.slug+'/')process.exit(1)"
   real-separation:
     needs: syntax-unit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +48,7 @@ jobs:
 
   webkit-separation:
     needs: syntax-unit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4

@@ -43,7 +43,7 @@ jobs:
        github.event.issue.title == '[qa] pocket-works' &&
        github.event.issue.user.login == 'JustSadSock' &&
        github.actor == 'JustSadSock')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       cpu_matrix: ${{ steps.plan.outputs.cpu_matrix }}
@@ -75,7 +75,7 @@ jobs:
       fail-fast: false
       max-parallel: 20
       matrix: ${{ fromJSON(needs.plan.outputs.cpu_matrix) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -107,7 +107,7 @@ jobs:
       fail-fast: false
       max-parallel: 8
       matrix: ${{ fromJSON(needs.plan.outputs.browser_matrix) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     container:
       image: mcr.microsoft.com/playwright:v1.55.0-noble
@@ -139,7 +139,7 @@ jobs:
   summary:
     if: always() && needs.plan.result == 'success' && needs.plan.outputs.expected != '[]'
     needs: [plan, cpu, browser]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
