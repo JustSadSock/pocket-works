@@ -2300,4 +2300,4 @@ async function startDebugPlay(){
 }
 void initializeIdentityAndRecovery();
 if(debugPlay)void startDebugPlay();
-if(!debugPlay&&'serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+
