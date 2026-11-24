@@ -403,6 +403,22 @@
       "kind": "browser-node",
       "entry": "balance-journeys.mjs",
       "tier": "smoke"
+    },
+    {
+      "id": "society-experiments",
+      "kind": "node",
+      "entry": "society-experiment.mjs",
+      "args": [
+        "{seed}"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "tier": "smoke"
     }
   ]
 }
