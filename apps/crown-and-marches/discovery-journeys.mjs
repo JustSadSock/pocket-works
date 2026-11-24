@@ -1,16 +1,17 @@
 import {chromium,webkit} from '@playwright/test';
-import {spawn} from 'node:child_process';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {join} from 'node:path';
 const output=process.env.PW_QA_OUTPUT_DIR||'qa-artifacts/discovery-ui';mkdirSync(output,{recursive:true});
-const url='http://127.0.0.1:4190/apps/crown-and-marches/',key='pocket-works:crown-and-marches:campaign:discovery-lab';
-const server=spawn(process.execPath,['scripts/serve-site.mjs'],{env:{...process.env,PORT:'4190',POCKET_WORKS_SITE_ROOT:process.env.PW_QA_SITE_ROOT||process.cwd()},stdio:'ignore'});const reports=[];
-try{let ready=false;for(let i=0;i<80;i++){try{if((await fetch(url)).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,250));}assert.ok(ready);
+export async function runDiscoveryJourneys(url){const key='pocket-works:crown-and-marches:campaign:discovery-lab';
+const reports=[];
+try{const response=await fetch(url);assert.ok(response.ok,'Prepared app HTTP '+response.status+' '+url);
 for(const [engine,browserType] of [['chromium',chromium],['webkit',webkit]]){const browser=await browserType.launch({headless:true});try{const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true,reducedMotion:'reduce'});try{
 const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));p.on('dialog',d=>d.accept());const tap=(a,v,scope='')=>p.locator(scope+' [data-act="'+a+'"]'+(v==null?'':'[data-value="'+v+'"]')).first().tap();const save=async()=>{await tap('menu');await tap('discsave',null,'#modalbody');const raw=await p.evaluate(k=>JSON.parse(localStorage.getItem(k)),key);await tap('resume');return JSON.parse(raw.state);};
 await p.goto(url,{waitUntil:'domcontentloaded'});await tap('disclab',null,'#modalbody');await p.locator('#discseed').fill('balance-20-2');await p.locator('#discstates').fill('6');await p.locator('#dischuman').selectOption('0');await p.locator('#discstock').fill('4');await tap('discstart',null,'#modalbody');await p.locator('#panel [data-act="discexport"]').waitFor({state:'visible'});let data=await save();assert.ok(data.discovery&&!data.discovery.fullMap);assert.equal(data.states.length,6);
 await tap('discinstitute','school','#panel');data=await save();assert.ok(data.cities.find(c=>c.f===0).knowledge.institutes.school);await tap('discnode',0,'#panel');await p.screenshot({path:join(output,engine+'-knowledge.png')});await tap('discview','expeditions','#panel');await tap('discsurvey','land-survey','#panel');await p.locator('#panel [data-act="cancel"]').waitFor({state:'visible'});await tap('cancel',null,'#panel');await tap('discview','history','#panel');await p.screenshot({path:join(output,engine+'-discovery-history.png')});
 await tap('discobserve',null,'#panel');await tap('speed',8);const frameTiming=await p.evaluate(()=>new Promise(resolve=>{const a=[];let previous=performance.now(),start=previous;const frame=t=>{a.push(t-previous);previous=t;if(t-start<4500)requestAnimationFrame(frame);else{a.sort((x,y)=>x-y);resolve({frames:a.length,p95:a[Math.floor(a.length*.95)],max:a.at(-1),over50:a.filter(v=>v>50).length});}};requestAnimationFrame(frame);}));await tap('speed',0);data=await save();assert.ok(data.day>0);await p.reload({waitUntil:'domcontentloaded'});await tap('discload',null,'#modalbody');const copy=await save();assert.equal(copy.day,data.day);assert.equal(copy.discovery.stats.inventions,data.discovery.stats.inventions);await tap('econexit',null,'#panel');
 await tap('navallab',null,'#modalbody');await p.locator('#nhuman').selectOption('0');await tap('navalstart',null,'#modalbody');await tap('navalall',null,'#panel');await tap('navalorder','line','#panel');await tap('speed',8);await p.waitForTimeout(1800);await tap('speed',0);await p.screenshot({path:join(output,engine+'-naval.png')});await tap('navalexit',null,'#panel');await p.locator('#modalbody [data-act="navallab"]').waitFor({state:'visible'});assert.deepEqual(errors,[]);reports.push({engine,day:data.day,frameTiming,knowledge:data.discovery.stats});console.log(JSON.stringify(reports.at(-1)));
-}finally{await context.close();}}finally{await browser.close();}}}finally{server.kill('SIGTERM');writeFileSync(join(output,'discovery-journeys.json'),JSON.stringify(reports,null,2));}
+}finally{await context.close();}}finally{await browser.close();}}}finally{writeFileSync(join(output,'discovery-journeys.json'),JSON.stringify(reports,null,2));}
+
+}
