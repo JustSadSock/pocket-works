@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "enabled": false,
+  "repository": "JustSadSock/pocket-works",
+  "workflow": ".github/workflows/verified-hermetic-qa.yml",
+  "workflowId": null,
+  "ref": "refs/heads/main",
+  "issuerEnvironment": "verified-results-signer",
+  "eligibleTaskDigests": [],
+  "environmentFingerprint": null,
+  "publicKeyDigest": null
+}
