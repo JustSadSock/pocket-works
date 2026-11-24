@@ -51,6 +51,16 @@
         "slug": "rivals-field-notes",
         "spatialDifference": "Вместо справочника характеристик героев с текстовыми разделами и навигацией по персонажам вся площадь представляет собой непрерывную эмалированную игровую доску.",
         "interactionDifference": "Вместо чтения и фильтрации описаний способностей игрок физически натягивает и отпускает резиновую шайбу, перехватывая её на лету."
+      },
+      {
+        "slug": "emergent-kingdoms",
+        "spatialDifference": "A single narrow pinball tray and elastic launch zone replace the map and comparative historical ledger.",
+        "interactionDifference": "Drag and release a moving ball to hit physical bells rather than intervene in yearly civilization rules."
+      },
+      {
+        "slug": "palimpsest-atlas",
+        "spatialDifference": "A continuous vertical physical toy replaces a documentary map and chronology panels.",
+        "interactionDifference": "Catch a moving ball and redirect momentum instead of selecting and replaying historical scenes."
       }
     ]
   },
