@@ -9,7 +9,8 @@
         "living.test.mjs",
         "wealth.test.mjs",
         "sinews.test.mjs",
-        "balance.test.mjs"
+        "balance.test.mjs",
+        "discovery.test.mjs"
       ],
       "tier": "smoke"
     },
