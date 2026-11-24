@@ -1,14 +1,10 @@
 const CACHE_PREFIX = 'palimpsest-atlas-';
 const CACHE_NAME = 'palimpsest-atlas-v0.5.0';
-const APP_VERSION = '0.5.0';
-const RELEASE_DATE = '2026-11-23';
+const APP_VERSION = "0.5.0";
+const RELEASE_DATE = "2026-11-23";
 const CACHE_PROTOCOL = 2;
-const RELEASE_NOTES = [
-  'Датированные снимки границ: временные полигоны без ложной интерполяции.',
-  'Сравнение двух эпох на разделённой карте с настраиваемым разрезом.',
-  'Четыре дорожки мастерской и независимые ключевые формы границ.'
-];
-const APP_SHELL = [
+const RELEASE_NOTES = ["Новая временная геометрия границ: явные полигональные снимки по датам без выдуманной интерполяции.","Разделённая карта двух дат: настраиваемая вертикальная граница, отдельное отображение эпох и актуальные источники.","Story Studio: четыре навигационные дорожки истории и независимое редактирование каждой формы границы с отменой, источниками и JSON-экспортом."];
+const APP_SHELL = ["../../shared/capabilities/motion.js","../../shared/capabilities/storage.js","../../shared/capabilities/transfer.js","../../shared/capabilities/audio.js","../../shared/capabilities/device.js","../../shared/capabilities/diagnostics.js","../../shared/workshop-mode.js","../../shared/workshop-mode.css","../../shared/pwa-utils.js","./workshop.js",
   './','./index.html','./app.config.json','./styles.css','./app.js','./core.js','./stories.js',
   './manifest.webmanifest','./icons/icon.svg','./studio.js','./studio-data.js','./battle.js','./motion.js','./tactics.js','./frontiers.js',
   '../../shared/mobile-runtime.css','../../shared/mobile-runtime.js',
