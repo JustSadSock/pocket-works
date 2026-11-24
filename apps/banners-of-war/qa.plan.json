@@ -121,7 +121,8 @@
       "id": "chronicles",
       "kind": "node-test",
       "files": [
-        "chronicles.test.mjs"
+        "chronicles.test.mjs",
+        "laboratory.test.mjs"
       ],
       "tier": "smoke"
     },
@@ -129,7 +130,8 @@
       "id": "chronicles-browser",
       "kind": "playwright",
       "files": [
-        "qa/chronicles.spec.ts"
+        "qa/chronicles.spec.ts",
+        "qa/laboratory.spec.ts"
       ],
       "tier": "smoke"
     },
