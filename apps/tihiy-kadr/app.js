@@ -1,8 +1,11 @@
+import { installMobileRuntime } from '../../shared/mobile-runtime.js';
+import { createWorkshopMode } from '../../shared/workshop-mode.js';
 import {RATE,MAX_SECONDS,validRange,wavPCM16,elapsed,safeName} from './audio-utils.js';
 import {stereoPCM,comparisonMetrics} from './research-core.js';
 import {renderEnhancedPCM} from './audio-enhance.js';
 import {selectProblemSegments,packProblemSegments,composeSelectivePatches,mixSelectivePatches} from './selective-scnet.js';
 import {ROUTES,routeById,makeRunKey,calculateSpeed} from './pipeline-config.js';
+installMobileRuntime();
 const $=id=>document.getElementById(id),video=$('result-video'),audio=$('monitor');
 const mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||
  (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -716,11 +719,11 @@ $('study-csv').onclick=()=>{
 };
 renderStudyResults();
 
-// Install the versioned app service worker. The shell does not register an
-// isolated quick app's SW on its behalf.
-if('serviceWorker' in navigator)
- window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+// The managed update entrypoint owns service worker registration.
 
 window.addEventListener('pagehide',()=>{worker?.terminate();abort?.abort();pause();revoke(fileURL);revoke(audioURL)});
 if(mobile)$('chunk-size').value='5';
 uiBusy(false);
+
+createWorkshopMode({appName:'ТИХИЙ КАДР',version:'1.9.0',cachePrefix: 'tihiy-kadr-',storageNamespace: 'pocket-works:tihiy-kadr',onReset(){cancel();reset();location.reload();}});
+window.addEventListener('workshopopen',pause);
