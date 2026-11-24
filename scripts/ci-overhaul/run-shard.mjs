@@ -1,11 +1,12 @@
 // Experimental executor. Every task runs the unchanged legacy executor in a
-// fresh worktree. Dependency installation/build reuse deliberately NOT enabled yet.
+// fresh worktree. Build reuse is opt-in and restricted to verified same-run artifacts.
 import { spawn } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ROOT, resolveTasks } from '../universal-qa/plan.mjs';
+import { identity as buildIdentity, stageBuild, prebuiltRunnerSource } from './build-once.mjs';
 
 const identity = t => JSON.stringify(Object.keys(t).sort().map(k=>[k,t[k]]));
 const poolFor = t => ['visual','playwright','browser-node'].includes(t.kind) ? 'browser' :
@@ -42,7 +43,7 @@ export function command(binary,args,{cwd,env=process.env,timeoutMs}) {
   });
 }
 
-export async function executeShard(root,shard) {
+export async function executeShard(root,shard,{buildBundle=null}={}) {
   if(process.platform!=='linux') throw Error('Pilot executor requires Linux process-group isolation');
   validateShard(root,shard);
   const artifacts=join(root,'qa-artifacts');
@@ -67,15 +68,25 @@ export async function executeShard(root,shard) {
           if(!browser.success) throw Error('Playwright version mismatch');
         }
       }
-      run=await command(process.execPath,['scripts/universal-qa/run.mjs'],{
-        cwd:work,timeoutMs:2700000,env:{...process.env,PW_QA_TASK:JSON.stringify(task)}
+      let runner='scripts/universal-qa/run.mjs', verified=false;
+      if(buildBundle&&shard.pool==='browser'){
+        const config=JSON.parse(readFileSync(join(work,'apps',task.app,'app.config.json'),'utf8'));
+        if(config.runtime!=='quick'){
+          await stageBuild(resolve(buildBundle),work,buildIdentity(work));
+          runner='scripts/universal-qa/run-build-once.mjs';
+          writeFileSync(join(work,runner),prebuiltRunnerSource(readFileSync(join(work,'scripts/universal-qa/run.mjs'),'utf8')),{flag:'wx'});
+          verified=true;
+        }
+      }
+      run=await command(process.execPath,[runner],{
+        cwd:work,timeoutMs:2700000,env:{...process.env,PW_QA_TASK:JSON.stringify(task),PW_QA_VERIFIED_BUILD:verified?'1':'0'}
       });
       const evidence=join(work,'qa-artifacts',task.key);
       if(existsSync(evidence)) cpSync(evidence,dest,{recursive:true});
       if(!run.success) throw Error('Legacy runner failed: '+JSON.stringify(run));
       const report=JSON.parse(readFileSync(join(dest,'result.json'),'utf8'));
       const reportedTask=Object.fromEntries(Object.keys(task).map(k=>[k,report[k]]));
-      if(report.schema!==1 || report.success!==true || identity(reportedTask)!==identity(task))
+      if(report.schema!==1 || report.success!==true || identity(reportedTask)!==identity(task) || (verified&&report.buildMode!=='same-run-prebuilt'))
         throw Error('Missing, mismatched or failed legacy evidence');
     } catch(e) { failure=e.message; }
     finally {
@@ -98,7 +109,7 @@ export async function executeShard(root,shard) {
 
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   try {
-    const report=await executeShard(ROOT,JSON.parse(process.env.PW_QA_SHARD||''));
+    const report=await executeShard(ROOT,JSON.parse(process.env.PW_QA_SHARD||''),{buildBundle:process.env.PW_QA_BUILD_BUNDLE||null});
     console.log(JSON.stringify(report));
     if(!report.success)process.exitCode=1;
   }catch(e){console.error(e);process.exitCode=1;}
