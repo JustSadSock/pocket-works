@@ -5,10 +5,11 @@
 <title>Венец — династическая хроника</title>
 <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../../shared/mobile-runtime.css"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./dev-inspector.css">
+<link rel="stylesheet" href="../../shared/workshop-mode.css">
 </head>
 <body data-fullscreen-app>
 <main id="root" class="app-shell" data-app-shell>
-<header class="app-header" data-ui>
+<header class="app-header" data-ui><button type="button" data-workshop-trigger data-native-press aria-label="Диагностика" title="Диагностика">⋯</button>
   <a class="home-link" href="../../" data-app-control data-native-press aria-label="В PocketWorks">← <span>PocketWorks</span></a>
   <span class="brand"><img class="brand-icon" src="./icons/icon.svg" alt="" aria-hidden="true"><strong>Венец</strong><small>АТЛАС · 1.1</small></span>
   <button id="back-menu" class="quiet-control" type="button" hidden data-native-press>Меню</button>
@@ -168,4 +169,5 @@
 </main>
 <script type="module" src="../../shared/update-manager.js" data-update-manager data-service-worker="./sw.js" data-app-name="Венец" data-app-version="1.1.0"></script>
 <script type="module" src="./app.js"></script>
+<script type="module" src="./workshop.js"></script>
 </body></html>
