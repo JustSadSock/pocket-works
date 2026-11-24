@@ -68,3 +68,13 @@ Experiments: `node --test apps/crown-and-marches/engine.test.mjs apps/crown-and-
 The overview battlefield layer is rasterized from individual soldier positions once per simulation tick, with a single cached surface at subsequent render frames. Close-up figures retain detailed sprite rendering. Benchmark is headless Chromium and WebKit mobile emulation, not a physical phone; it measures concurrent simulation and rendering.
 
 Remaining limits: standardized commodity lots are abstract rather than kilograms; the local private sector is a pooled household/merchant balance rather than individually owned enterprises; no dedicated naval combat or debt market; resource concentration in sandbox is an initial scenario, not a saved campaign terrain rewrite; economic AI remains heuristic. Repository-wide publication is not asserted until mandatory QA and Cloudflare confirm it.
+
+
+## 0.6.0 — Balance of Power (integration candidate)
+
+The main campaign and independent Diplomacy Sandbox share the political engine. Older campaign saves are migrated on entry without resetting land, military or economic state. The original tactical, economy and campaign laboratories remain available.
+
+- Directional trust, hostility, strategic estimates, dependence, historical interests, weighted memories and campaign lessons. Prospective war assessment uses actual route and food requirements, expected military and political costs, and earlier failures instead of an arbitrary war frequency quota.
+- Multi-clause agreements, target-specific guarantees, renewable/revisable obligations, independent conflict fronts, allied reconnaissance, logistics, landing and withdrawal after separate peace. Dependent states retain their own economic and military systems; total territorial defeat reconciles populations, stores, obligations and ownership.
+- Diplomacy Sandbox offers political history, reasons for decisions, actual state power samples, territorial history and same-seed comparisons (six recent experiments). JSON export includes contracts and the recent decision archive. The strategic world currently supports 2–6 factions; 12/20 require a future expansion of generation, palette, scenario and UI limits, not merely changing a benchmark constant.
+- Required QA: 76 regression cases, existing military/economic experiments, 20×20-year plus 5×50-year political runs, ten asymmetric political experiments, Chromium and WebKit diplomatic journeys and separate phase timing. Branch metadata and cache protocol identify the 0.6.0 candidate; no production deployment is implied. Full release requires repository-wide validation and Cloudflare/Launcher verification.
