@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "product": "crossfire",
+  "status": "ready",
+  "memoryReview": [
+    {
+      "slug": "emergent-kingdoms",
+      "evidence": "Reviewed its visual-direction.json on main.",
+      "lesson": "Keep a small combat board rather than an expandable atlas."
+    },
+    {
+      "slug": "crossline-5x5",
+      "evidence": "Reviewed its visual-direction.json and server rules on main.",
+      "lesson": "Direct visible turn actions replace hidden five-command planning."
+    }
+  ],
+  "references": [
+    {
+      "url": "https://github.com/JustSadSock/pocket-works/tree/main/apps/crossline-5x5",
+      "observation": "A square board supports compact tactical decisions.",
+      "principle": "Use the board as the main control surface.",
+      "application": "Click targets directly on the seven by seven field.",
+      "avoid": "Do not copy hidden command planning or its visual identity.",
+      "inspectedAt": "2026-11-24"
+    },
+    {
+      "url": "https://github.com/JustSadSock/pocket-works/tree/main/apps/emergent-kingdoms",
+      "observation": "Matte paper and restrained map marks communicate geographic information.",
+      "principle": "Keep colors tied to information.",
+      "application": "Sand tiles and strong team colors separate information.",
+      "avoid": "Avoid the atlas layout and research ledger.",
+      "inspectedAt": "2026-11-24"
+    },
+    {
+      "url": "https://github.com/JustSadSock/pocket-works/blob/main/docs/POCKETNET-CLOUDFLARE.md",
+      "observation": "Rooms maintain server-owned game state.",
+      "principle": "Show only confirmed actions.",
+      "application": "Render a board snapshot after server messages.",
+      "avoid": "Do not animate an unconfirmed online move as final.",
+      "inspectedAt": "2026-11-24"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "field-sheet",
+      "medium": "DOM and SVG",
+      "composition": "Fixed grid on sand paper",
+      "interaction": "Direct target selection",
+      "motion": "Short button press",
+      "rationale": "Clear mobile tactics with no extra panels."
+    },
+    {
+      "id": "radar",
+      "medium": "Canvas",
+      "composition": "Circular radar with a surrounding dial",
+      "interaction": "Rotate and choose a direction",
+      "motion": "Rotating sweep",
+      "rationale": "Atmospheric but obscures square distances."
+    },
+    {
+      "id": "tabletop",
+      "medium": "CSS 3D",
+      "composition": "Tilted tabletop with pieces",
+      "interaction": "Drag counters",
+      "motion": "Piece movement",
+      "rationale": "Expressive but less precise on small touch screens."
+    }
+  ],
+  "selection": {
+    "concept": "field-sheet",
+    "reason": "Direct targeting keeps one action per turn legible.",
+    "rejected": [
+      {
+        "concept": "radar",
+        "reason": "Circular topology makes distances unclear."
+      },
+      {
+        "concept": "tabletop",
+        "reason": "Perspective makes touch targets uneven."
+      }
+    ]
+  },
+  "tools": [
+    {
+      "id": "dom-svg",
+      "availability": "available",
+      "reason": "No external images needed for a geometric board."
+    }
+  ],
+  "assets": [
+    {
+      "id": "identity",
+      "tool": "dom-svg",
+      "source": "art-bible.json",
+      "output": "icons/icon.svg",
+      "role": "Crossed lines and central objective identify the game.",
+      "acceptance": "Recognizable at launcher scale.",
+      "integration": "Manifest and worker use the SVG.",
+      "provenance": "Original authored geometry.",
+      "maxBytes": 8192
+    },
+    {
+      "id": "board",
+      "tool": "dom-svg",
+      "source": "rules.js",
+      "output": "styles.css",
+      "role": "Grid encodes terrain and squad ownership.",
+      "acceptance": "Both teams and legal targets are distinct.",
+      "integration": "DOM renderer updates tile classes.",
+      "provenance": "Original CSS and geometric counters.",
+      "maxBytes": 16000
+    }
+  ],
+  "constraints": {
+    "viewport": [
+      390,
+      844
+    ],
+    "textureBytes": 0,
+    "triangles": 0,
+    "targetFps": 30
+  },
+  "verification": {
+    "states": [
+      "initial",
+      "action",
+      "settled"
+    ],
+    "risks": [
+      "Small landscape viewport can require scrolling.",
+      "Network failures must be visible."
+    ],
+    "comparisons": [
+      "Compare direct board targeting to Crossline's programmed orders.",
+      "Compare the single board to Emergent Kingdoms' map and ledger."
+    ]
+  }
+}
