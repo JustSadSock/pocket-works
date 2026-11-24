@@ -1,5 +1,5 @@
 export const E = (function engine(){
- const W=1400,H=900,DT=.25,STEPS=120,clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),angle=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x),wrap=a=>Math.atan2(Math.sin(a),Math.cos(a)),copy=x=>JSON.parse(JSON.stringify(x));
+ const W=1400,H=900,DT=.25,STEPS=120,clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),angle=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x),wrap=a=>{let v=Math.atan2(Math.sin(a),Math.cos(a));return Math.abs(Math.abs(v)-Math.PI)<1e-9?Math.PI:v},copy=x=>JSON.parse(JSON.stringify(x));
  const types={
  militia:{name:"Ополчение",n:140,cost:70,armor:.08,skill:.62,discipline:.55,morale:72,speed:1.65,reach:1.1,attack:1.1,range:0,horse:0},
  spear:{name:"Копейщики",n:120,cost:110,armor:.26,skill:1,discipline:.9,morale:88,speed:1.5,reach:2.8,attack:1.4,range:0,horse:0},
@@ -27,7 +27,7 @@ export const E = (function engine(){
  // Decisions use only current, executed physical state; pending player orders are never inspected.
  function ai(s,side){
  const own=s.units.filter(u=>u.side===side&&alive(u)&&!u.rout).sort((a,b)=>a.id-b.id),foes=s.units.filter(u=>u.side!==side&&alive(u)&&!u.rout).sort((a,b)=>a.id-b.id),orders={};if(!own.length||!foes.length)return orders;
- const front=side?-1:1,style=s.styleBySide?.[side]||s.style,foot=own.filter(u=>!types[u.type].horse&&!types[u.type].range),line=foot.slice().sort((a,b)=>a.y-b.y||a.id-b.id),enemyLine=foes.filter(u=>!types[u.type].range).sort((a,b)=>a.y-b.y||a.id-b.id);
+ const front=side?-1:1,style=s.styleBySide?.[side]||s.style,foot=own.filter(u=>!types[u.type].horse&&!types[u.type].range),line=foot.slice().sort((a,b)=>front*(a.y-b.y)||a.id-b.id),enemyLine=foes.filter(u=>!types[u.type].range).sort((a,b)=>front*(a.y-b.y)||a.id-b.id);
  const strength=u=>u.n*(.3+.7*u.cohesion/100)*(.3+.7*u.morale/100)*(1-u.fatigue/160);
  const local=(u,list,r)=>list.reduce((n,v)=>n+(dist(u,v)<r?strength(v)*(1-dist(u,v)/r*.6):0),0);
  const center=list=>({x:list.reduce((n,u)=>n+u.x,0)/list.length,y:list.reduce((n,u)=>n+u.y,0)/list.length});
@@ -37,18 +37,18 @@ export const E = (function engine(){
  const reserve=candidates.sort((a,b)=>front*(a.x-b.x)||b.morale-a.morale||a.id-b.id)[0];
  // A fresh reserve protects a threatened part of the front, rather than blindly attacking.
  const threatened=foot.filter(u=>u!==reserve&&u.contact&&local(u,foes,95)>local(u,own,95)*1.2).sort((a,b)=>strength(a)-strength(b)||a.id-b.id)[0];
- const memory=s.aiIntent?.[side];let wing=memory?.wing??(enemy.y<home.y?1:-1);
- if(!memory||s.round-memory.round>=4){let hi={x:enemy.x,y:clamp(enemy.y+100,30,H-30)},lo={x:enemy.x,y:clamp(enemy.y-100,30,H-30)};wing=local(hi,foes,140)<local(lo,foes,140)?1:-1;}
+ const memory=s.aiIntent?.[side];let wing=memory?.wing??(Math.abs(enemy.y-home.y)<1e-8?front:enemy.y<home.y?1:-1);
+ if(!memory||s.round-memory.round>=4){let hi={x:enemy.x,y:clamp(enemy.y+100,30,H-30)},lo={x:enemy.x,y:clamp(enemy.y-100,30,H-30)};let h=local(hi,foes,140),l=local(lo,foes,140);wing=Math.abs(h-l)<1e-8?front:h<l?1:-1;}
  // Persistent intent is stored by resolve after both decisions, not mutated in this function.
  const ratio=local(home,own,230)/Math.max(1,local(home,foes,230)),posture=ratio<.65&&nearby?"withdraw":style==="defensive"&&(!nearby||ratio<1.4)?"hold":style==="aggressive"?"assault":"maneuver";
- const retreatPoint=u=>{let candidates=[-45,0,45].map(dy=>({x:clamp(u.x-front*65,30,W-30),y:clamp(u.y+dy,30,H-30)}));return candidates.sort((a,b)=>local(a,foes,110)-local(b,foes,110)+100*(sample(s.terrain,b.x,b.y).move-sample(s.terrain,a.x,a.y).move)||Math.abs(a.y-u.y)-Math.abs(b.y-u.y))[0]};
+ const retreatPoint=u=>{let candidates=[-45*front,0,45*front].map(dy=>({x:clamp(u.x-front*65,30,W-30),y:clamp(u.y+dy,30,H-30)}));return candidates.sort((a,b)=>local(a,foes,110)-local(b,foes,110)+100*(sample(s.terrain,b.x,b.y).move-sample(s.terrain,a.x,a.y).move)||Math.abs(a.y-u.y)-Math.abs(b.y-u.y))[0]};
  for(const u of own){const t=types[u.type],near=foes.slice().sort((a,b)=>dist(a,u)-dist(b,u)||a.id-b.id)[0],d=dist(u,near),localRatio=local(u,own,100)/Math.max(1,local(u,foes,100));let kind="advance",path=[],target=near.id,a=angle(u,near),group;
  const rearThreat=foes.some(v=>dist(u,v)<85&&front*(v.x-u.x)<-15);
  const pursuit=((near.motionX||0)*(near.x-u.x)+(near.motionY||0)*(near.y-u.y))/Math.max(1,d)>.35; // observed motion/facing only
  if(u.type==="guard"){kind=d<75?"retreat":"hold";if(kind==="retreat")path=[retreatPoint(u)];else if(dist(u,home)>95){kind="move";path=[{x:clamp(home.x-front*55,25,W-25),y:home.y}]}}
  else if(u===weak&&d<120||posture==="withdraw"&&localRatio<.8){kind="retreat";path=[retreatPoint(u)]}
  else if(u.fatigue>72&&d>75||u.cohesion<40&&d>90){kind="rally"}
- else if(u===reserve&&(weak||threatened)&&nearby){let v=weak||threatened;kind="move";path=[{x:clamp(v.x-front*20,25,W-25),y:clamp(v.y+(v.y<home.y?-20:20),25,H-25)},{x:v.x,y:v.y}];a=v.a}
+ else if(u===reserve&&(weak||threatened)&&nearby){let v=weak||threatened;kind="move";path=[{x:clamp(v.x-front*20,25,W-25),y:clamp(v.y+(Math.abs(v.y-home.y)<1e-8?20*front:v.y<home.y?-20:20),25,H-25)},{x:v.x,y:v.y}];a=v.a}
  else if(t.range&&u.ammo>0){kind="shoot";if(d<Math.min(65,t.range*.45)){kind="retreat";path=[retreatPoint(u)]}else if(d>t.range*.9){kind="advance";path=[{x:near.x-front*t.range*.76,y:near.y}]}}
  else if(rearThreat){kind="brace";let threat=foes.filter(v=>dist(u,v)<85&&front*(v.x-u.x)<-15).sort((v,b)=>dist(u,v)-dist(u,b)||v.id-b.id)[0];a=angle(u,threat)}
  else if(u===reserve&&style!=="aggressive"&&!threatened&&(!nearby||ratio>1)){kind="hold"}
