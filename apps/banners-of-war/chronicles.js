@@ -67,3 +67,32 @@ export function packTimeline(t){return {...t,state:{...t.state,terrain:null},his
 export function unpackTimeline(t,terrain){return {...t,state:{...t.state,terrain},history:t.history.map(r=>({...r,before:{...r.before,terrain}}))}}
 export function forkTimeline(E,t,index,name){if(!Number.isInteger(index)||index<0||index>=t.history.length)throw Error("Invalid fork round");const r=t.history[index];return {name,state:E.snapshot(r.before),orders:E.copy(r.orders),history:t.history.slice(0,index),observer:!!r.observer,phase:"plan"}}
 export function timelineMetrics(E,t){return {name:t.name,round:t.state.round,time:t.state.time,result:t.state.result,power:[0,1].map(i=>E.power(t.state,i)/Math.max(1,E.total(t.state,i))),loss:[0,1].map(i=>t.state.units.filter(u=>u.side===i).reduce((a,u)=>a+u.initial-u.n,0))}}
+
+// Educational poses are authored schematic interpretations, never a simulated replay.
+// They deliberately do not assign historical casualties, morale or exact times.
+const movements={
+ lechfeld:[[0,0,0,0],[65,-10,-85,30],[145,0,-35,20],[205,0,105,-35]],
+ hastings:[[0,0,0,0],[0,0,-125,0],[30,0,-65,0],[40,0,-240,0]],
+ bouvines:[[0,0,0,0],[95,0,-90,0],[140,0,-125,0],[220,0,80,0]],
+ bannockburn:[[0,0,0,0],[85,0,-40,0],[160,0,-85,0],[220,0,85,0]],
+ grunwald:[[0,0,0,0],[100,0,-105,0],[125,0,-115,0],[210,0,60,0]],
+ agincourt:[[0,0,0,0],[40,0,-110,0],[45,0,-200,0],[65,0,-90,0]]
+};
+export function studyInterpretations(id){return id==="grunwald"?[{id:"uncertain",label:"Отход части литовских хоругвей (причина не определена)"},{id:"ordered",label:"Гипотеза организованного манёвра"}]:id==="hastings"?[{id:"uncertain",label:"Отступление с неясной причиной"},{id:"ordered",label:"Гипотеза намеренного ложного отхода"}]:[{id:"uncertain",label:"Схематическая реконструкция"}]}
+export function studyFrame(E,id,phase,interpretation="uncertain"){
+ const d=validateScenario(scenario(id)),i=clamp(Math.trunc(phase),0,d.phases.length-1),s=createHistorical(E,id),m=movements[id][i];
+ for(let u of s.units){const j=u.side*2,from={x:u.x,y:u.y};let dx=m[j],dy=m[j+1];
+ // Unequal groups make the broad alternatives visible without claiming exact tracks.
+ if(id==="grunwald"&&i===2&&u.side===0&&u.y<450){dx=interpretation==="ordered"?-105:-155;dy=interpretation==="ordered"?-40:70}
+ if(id==="hastings"&&i===2&&u.side===1&&u.y<450){dx=interpretation==="ordered"?40:95;dy=interpretation==="ordered"?-35:15}
+ if(u.type==="guard"){dx*=.35;dy*=.35}
+ u.x=clamp(u.x+dx,25,E.W-25);u.y=clamp(u.y+dy,25,E.H-25);u.studyFrom=from;
+ }
+ s.study={phase:i,total:d.phases.length,text:d.phases[i],interpretation};return s
+}
+export function battlePhases(E,t){
+ const states=[...t.history.map(r=>r.before),t.state],out=[];
+ for(let i=0;i<states.length;i++){let s=states[i],units=s.units.filter(u=>E.alive(u)),contact=units.filter(u=>u.contact).length,committed=Object.values(s.aiIntent||{}).some(v=>v?.committed),stage=s.result?"Исход":contact?"Боевой контакт":committed?"Ввод резерва":i===0?"Развёртывание":"Манёвр",metrics=timelineMetrics(E,{name:t.name,state:s});
+ out.push({...metrics,stage,contact,committed,cohesion:[0,1].map(side=>{let q=units.filter(u=>u.side===side);return q.reduce((n,u)=>n+u.cohesion,0)/Math.max(1,q.length)}),morale:[0,1].map(side=>{let q=units.filter(u=>u.side===side);return q.reduce((n,u)=>n+u.morale,0)/Math.max(1,q.length)}),goals:zoneStatus(E,s).map(q=>({name:q.name,control:q.control})),postures:[0,1].map(side=>s.aiIntent?.[side]?.posture||null)});
+ }return out
+}

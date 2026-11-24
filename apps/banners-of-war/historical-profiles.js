@@ -29,4 +29,5 @@ export function profileFor(id,side,type,name){
  if(id==="agincourt"||id==="grunwald")return ({sword:"plateFoot",knight:"plateRider",archer:id==="agincourt"&&side===0?"longbowman":"shortBow",crossbow:"crossbowman",lightHorse:"lateLight",horseArcher:"lateHorseBow",spear:"communalSpear"})[type]||null;
  return null
 }
-export function troopSpec(types,u){let base=types[u.type],p=historicalProfiles[u.profile];return p&&p.base===u.type?{...base,...p.physics}:base}
+const resolved=new WeakMap();
+export function troopSpec(types,u){let base=types[u.type],p=historicalProfiles[u.profile];if(!p||p.base!==u.type)return base;let map=resolved.get(types);if(!map){map=new Map();resolved.set(types,map)}if(!map.has(u.profile))map.set(u.profile,Object.freeze({...base,...p.physics}));return map.get(u.profile)}
