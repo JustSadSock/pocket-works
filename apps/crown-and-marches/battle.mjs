@@ -14,7 +14,7 @@ export function campaignTerrain(s,center){
  for(let y=0;y<32;y++)for(let x=0;x<50;x++){
  let wx=originX+(x+.5-25)/scale,wy=originY+(y+.5-16)/scale,i=cell(Math.floor(wx),Math.floor(wy)),cx=xx(i)+.5,cy=yy(i)+.5;
  let water=!m.land[i],road=false,bridge=false,nearRiver=Infinity;
- const r= [i,...neighbors(i)];
+ const r=[];for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){let x=xx(i)+ox,y=yy(i)+oy;if(x>=0&&x<W&&y>=0&&y<H)r.push(idx(x,y));}
  for(const j of r){let jx=xx(j)+.5,jy=yy(j)+.5,d=m.down[j];
  if(m.river[j]&&d>=0){let w=clamp(.065+Math.sqrt(m.flow?.[j]||20)*.006,.08,.22),distance=seg(wx,wy,jx,jy,xx(d)+.5,yy(d)+.5);nearRiver=Math.min(nearRiver,distance);if(distance<w)water=true;}
  if(s.road[j])for(const k of neighbors(j))if(s.road[k]&&seg(wx,wy,jx,jy,xx(k)+.5,yy(k)+.5)<.10)road=true;
