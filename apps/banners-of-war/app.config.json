@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "slug": "banners-of-war",
+  "name": "Banners of War",
+  "shortName": "Banners",
+  "description": "Средневековая тактика WEGO: физические строи, рельеф, натиск и мораль полков.",
+  "version": "0.1.0",
+  "releaseDate": "2026-11-24",
+  "releaseDateTime": "2026-11-24T02:25:00+02:00",
+  "changelog": [
+    "Одиночная тактическая битва и режим наблюдателя; одновременные 30-секундные раунды.",
+    "Десять типов войск, построения, маршруты, столкновения, стрелковый бой и паника.",
+    "Конструктор армии, развёртывание, журнал, повторы и альтернативные ветви."
+  ],
+  "status": "experimental",
+  "preset": "canvas",
+  "runtime": "quick",
+  "accent": "#a74831",
+  "backgroundColor": "#d8d5b8",
+  "themeColor": "#263b36",
+  "orientation": "any",
+  "cacheName": "banners-of-war-v0.1.0",
+  "storageNamespace": "pocket-works:banners-of-war",
+  "tags": [
+    "game",
+    "strategy",
+    "tactics",
+    "medieval",
+    "wego",
+    "offline"
+  ],
+  "order": 291
+}
