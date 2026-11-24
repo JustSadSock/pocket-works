@@ -14,3 +14,16 @@
 .lab-unit button{font-size:12px}
 .battlehud #panel{border-top:3px solid #c8a36c}
 @media(max-width:600px){.lab-sides{grid-template-columns:1fr;gap:10px}.battlehud #panel{bottom:calc(8px + env(safe-area-inset-bottom));max-height:44%}}
+
+/* Keep the strategic controls from overlapping the mobile statistics row. */
+@media(max-width:650px) and (orientation:portrait){
+ #hud{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"brand speed speed" "stats menu workshop";gap:4px;align-items:center}
+ #hud .brand{grid-area:brand;min-width:0}.brand b{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #hud .speed{grid-area:speed;margin-left:0;justify-self:end}.speed button{min-width:40px}
+ #hud #stats{grid-area:stats;order:0;width:auto;min-width:0;justify-content:flex-start;flex-wrap:wrap;gap:2px 8px;font-size:11px}
+ #hud [data-act="menu"]{grid-area:menu;min-width:44px}#hud [data-workshop-trigger]{grid-area:workshop;min-width:44px}
+ #layers{top:calc(env(safe-area-inset-top) + 106px);gap:3px}
+ #layers button{flex:0 0 auto;min-width:max-content}
+ #zoom{top:calc(env(safe-area-inset-top) + 155px)}.battlehud #zoom{top:calc(env(safe-area-inset-top) + 108px)}
+ .rows{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.rows div{min-width:0;flex-wrap:wrap;align-items:baseline}
+}
