@@ -6,11 +6,15 @@ test('muster, deploy, issue orders, WEGO, replay and reload',async({page})=>{
  await page.screenshot({path:test.info().outputPath('deployment.png')});
  await page.locator('#confirm').click();await expect(page.locator('#phase')).toContainText('Планирование');
  const c=page.locator('#map'),b=await c.boundingBox();if(!b)throw new Error('Map unavailable');
- const position=async(wx:number,wy:number)=>{const rect=await c.boundingBox();if(!rect)throw new Error('No map');const portrait=await page.evaluate(()=>innerHeight>innerWidth);const w=portrait?900:1400,h=portrait?1400:900,k=Math.min(rect.width/w,rect.height/h);return {x:(rect.width-w*k)/2+(portrait?900-wy:wx)*k,y:(rect.height-h*k)/2+(portrait?wx:wy)*k}};
+ const position=async(wx:number,wy:number)=>page.evaluate(({wx,wy})=>{const canvas=document.querySelector('#map')!,r=canvas.getBoundingClientRect(),status=document.querySelector('.statusbar')!.getBoundingClientRect(),desk=document.querySelector('#desk')!.getBoundingClientRect(),portrait=innerHeight>innerWidth,wide=innerWidth>=720&&!portrait,top=Math.max(0,status.bottom-r.top)+8,right=wide?Math.max(0,r.right-desk.left)+8:0,bottom=wide?8:Math.max(0,r.bottom-desk.top)+8,w=Math.max(40,r.width-right-16),h=Math.max(40,r.height-top-bottom),mw=portrait?900:1400,mh=portrait?1400:900,k=Math.min(w/mw,h/mh);return {x:8+(w-mw*k)/2+(portrait?900-wy:wx)*k,y:top+(h-mh*k)/2+(portrait?wx:wy)*k}},{wx,wy});
  await c.click({position:await position(380,163)});await expect(page.locator('#unitname')).toContainText('Копейщики');
  await page.locator('[data-kind=move]').click();await c.click({position:await position(490,163)});
  await expect(page.locator('#maphint')).toContainText('Приказ записан');
- await page.locator('#program').click();await page.locator('#condition').selectOption('time');await page.locator('#threshold').fill('12');await page.locator('#addStage').click();await page.locator('[data-kind=brace]').click();await expect(page.locator('#program')).toContainText('1');await page.screenshot({path:test.info().outputPath('orders.png')});
+ await page.locator('#program').click();await page.locator('#condition').selectOption('time');await page.locator('#threshold').fill('12');await page.locator('#addStage').click();await page.locator('[data-kind=brace]').click();await expect(page.locator('#program')).toContainText('1');
+ await page.locator('#program').click();await page.locator('[data-edit-stage="0"]').click();await page.locator('#threshold').fill('15');await page.locator('#addStage').click();await page.locator('[data-kind=hold]').click();
+ await page.locator('#undo').click();await page.locator('#redo').click();await page.locator('#program').click();await expect(page.locator('#dialogbody')).toContainText('15');await page.locator('#close').click();
+ await page.locator('#sheet').click();await expect(page.locator('#planning')).toBeHidden();await page.locator('#sheet').click();await expect(page.locator('#planning')).toBeVisible();
+ await page.screenshot({path:test.info().outputPath('orders.png')});
  await page.locator('#confirm').click();await page.locator('#confirm').click();
  await expect(page.locator('#playback')).toBeVisible();await page.locator('#pause').click();
  await expect(page.locator('#pause')).toHaveText('Играть');await page.locator('#skip').click();
